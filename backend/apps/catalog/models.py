@@ -1,10 +1,12 @@
 """
 Каталог: то, что гость видит и заказывает.
 
-Модель намеренно шире, чем нужно еде: у Category и Item есть `type`. Еда — это
-type=product. Когда придут SPA, экскурсии и трансфер, они лягут в те же
-таблицы с другим типом и своим набором полей в `attributes`, а не в новую
-параллельную иерархию.
+Одни и те же таблицы обслуживают все типы предложений. Еда — `product`
+(корзина, модификаторы, цена), заявка-услуга — `service_request` (форма полей,
+одна заявка, маршрут в свой отдел). Различия между типами собраны в
+offerings.py одной таблицей поведений, а не разбросаны условиями по коду.
+
+Правило на будущее и обоснования — docs/offering-types.md.
 """
 
 from __future__ import annotations
@@ -15,11 +17,12 @@ from django.db import models
 from apps.core.fields import TranslatableField
 from apps.core.models import TenantModel
 
+from .request_fields import FieldType
 
-class OfferingType(models.TextChoices):
-    PRODUCT = "product", "Товар/блюдо"
-    SERVICE = "service", "Услуга"
-    EXPERIENCE = "experience", "Впечатление"
+
+# Типы предложений и их поведения живут в offerings.py — там же собраны все
+# различия между ними. Здесь только реэкспорт, чтобы модели читались привычно.
+from .offerings import LocationMode, OfferingType, behaviour_for  # noqa: E402,F401
 
 
 class Category(TenantModel):
@@ -77,7 +80,16 @@ class Item(TenantModel):
     title = TranslatableField()
     description = TranslatableField()
 
-    price = models.IntegerField(default=0, help_text="В минимальных единицах (копейках)")
+    # null — «цена не указана» (у уборки её нет), а не «бесплатно».
+    price = models.IntegerField(
+        null=True, blank=True, default=0, help_text="В минимальных единицах (копейках)"
+    )
+    location_mode = models.CharField(
+        max_length=16,
+        choices=LocationMode.choices,
+        default=LocationMode.DELIVERY,
+        help_text="Спрашивать ли у гостя локацию доставки",
+    )
 
     # Пищевые метки (vegan, spicy, halal…) и аллергены — плоские словари-справочники,
     # намеренно без отдельных таблиц: они редко меняются и всегда читаются целиком.
@@ -124,6 +136,38 @@ class ItemImage(TenantModel):
 
     def __str__(self) -> str:
         return f"{self.item_id}#{self.sort_order}"
+
+
+class RequestField(TenantModel):
+    """
+    Поле формы заявки-услуги: «Куда», «Когда подать», «Сколько человек».
+
+    Для заявки — то же, чем ModifierGroup является для блюда: способ, которым
+    гость уточняет, чего именно он хочет. Разница лишь в том, что модификатор
+    меняет цену, а поле — содержание работы исполнителя.
+    """
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="request_fields")
+    code = models.SlugField(max_length=64)
+    label = TranslatableField()
+    help_text = TranslatableField()
+    field_type = models.CharField(max_length=16, choices=FieldType.choices, default=FieldType.TEXT)
+    is_required = models.BooleanField(default=False)
+    # [{"value": "econom", "label": {"ru": "Эконом"}}] — только для select.
+    options = models.JSONField(default=list, blank=True)
+    min_value = models.IntegerField(null=True, blank=True)
+    max_value = models.IntegerField(null=True, blank=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "catalog_request_field"
+        ordering = ["sort_order", "code"]
+        constraints = [
+            models.UniqueConstraint(fields=["item", "code"], name="uniq_request_field_per_item")
+        ]
+
+    def __str__(self) -> str:
+        return self.code
 
 
 class ModifierGroup(TenantModel):

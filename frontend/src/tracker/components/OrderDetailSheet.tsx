@@ -12,10 +12,11 @@ import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 
+import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
 import { OrderTimeline } from '@/guest/components/OrderTimeline';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
-import { formatClock, whenText, whereText } from '../orderText';
+import { formatClock, totalText, whenText, whereText } from '../orderText';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
@@ -55,6 +56,7 @@ export function OrderDetailSheet({
   const { t } = useTranslation();
   const language = useTrackerLanguage();
   const { format } = useTrackerMoney();
+  const fieldValues = order?.field_values ?? [];
 
   return (
     <Drawer
@@ -137,6 +139,10 @@ export function OrderDetailSheet({
 
             <Paper variant="outlined" sx={{ p: 1.5 }}>
               <Stack divider={<Divider flexItem />} spacing={1.25}>
+                {/* Same rule as on the card: answers for a request, lines for food. */}
+                {fieldValues.length ? (
+                  <OrderFieldValues values={fieldValues} testId="tracker-order-fields" />
+                ) : null}
                 {order.items.map((line) => (
                   <Stack key={line.id} direction="row" spacing={1.5} alignItems="flex-start">
                     <Typography variant="subtitle2" sx={{ minWidth: 28 }}>
@@ -155,15 +161,17 @@ export function OrderDetailSheet({
                         </Typography>
                       ) : null}
                     </Stack>
-                    <Typography variant="body2">
-                      {format(line.line_total, order.currency)}
-                    </Typography>
+                    {line.line_total !== null && line.line_total !== undefined ? (
+                      <Typography variant="body2">
+                        {format(line.line_total, order.currency)}
+                      </Typography>
+                    ) : null}
                   </Stack>
                 ))}
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="subtitle1">{t('tracker.detail.total')}</Typography>
-                  <Typography variant="subtitle1">
-                    {format(order.total, order.currency)}
+                  <Typography variant="subtitle1" data-testid="tracker-order-total">
+                    {totalText(order, format)}
                   </Typography>
                 </Stack>
               </Stack>

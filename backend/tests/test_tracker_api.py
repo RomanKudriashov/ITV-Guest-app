@@ -308,7 +308,9 @@ def test_category_without_route_falls_back_to_matching_point(
 def test_single_point_hotel_needs_no_routes(client, crystal, cms, django_capture_on_commit_callbacks):
     """Если исполнитель в отеле один — выбирать не из чего, маршрут не нужен."""
     with tenant_context(crystal):
-        ExecutionPoint.objects.filter(code="bar").update(is_active=False)
+        # Гасим все отделы кроме кухни: в сиде их несколько (бар, консьерж,
+        # хозслужба), и фолбэк «единственная точка» иначе не сработает.
+        ExecutionPoint.objects.exclude(code="kitchen").update(is_active=False)
         Route.objects.all().delete()
 
     with django_capture_on_commit_callbacks(execute=True):

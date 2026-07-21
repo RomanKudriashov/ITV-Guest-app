@@ -25,6 +25,8 @@ from django.utils import timezone
 
 from apps.catalog.availability import item_availability
 from apps.catalog.models import Category, Item, ModifierOption, Route
+from apps.catalog.offerings import LocationMode, behaviour_for
+from apps.catalog.request_fields import build_field_snapshot
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -79,6 +81,7 @@ class OrderInput:
     timing: str = "asap"
     requested_time: datetime | None = None
     comment: str = ""
+    field_values: dict[str, Any] = field(default_factory=dict)
 
 
 # --- Создание --------------------------------------------------------------
@@ -92,8 +95,16 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     if not data.lines:
         raise OrderValidationError("Заказ пустой", code="empty_order")
 
-    resolved_lines = [_resolve_line(line) for line in data.lines]
-    categories = {resolved["item"].category_id for resolved in resolved_lines}
+    items = [_resolve_item(line) for line in data.lines]
+    behaviour = _resolve_behaviour(items)
+
+    if not behaviour.allows_multiple_lines and len(items) > 1:
+        raise OrderValidationError(
+            "Заявка-услуга оформляется по одной за раз",
+            code="single_line_only",
+        )
+
+    categories = {item.category_id for item in items}
     if len(categories) > 1:
         # Ограничение осознанное: один заказ — одна точка исполнения. Корзину
         # из разных категорий фронт разбивает на несколько заказов.
@@ -102,8 +113,22 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
             code="mixed_categories",
         )
 
+    resolved_lines = [
+        {
+            "item": item,
+            "line": line,
+            "selected_options": (
+                _validate_modifiers(item, line.modifier_option_ids)
+                if behaviour.uses_modifiers
+                else _reject_modifiers(line)
+            ),
+        }
+        for item, line in zip(items, data.lines)
+    ]
+    field_values = _resolve_field_values(behaviour, items, data)
+
     execution_point = _resolve_execution_point(next(iter(categories)))
-    location = _resolve_location(data)
+    location = _resolve_location(data, items[0])
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
     status = _initial_status()
@@ -111,7 +136,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     order = Order.objects.create(
         hotel_id=hotel_id,
         number=_next_number(hotel_id),
-        type=Order.Type.CART,
+        type=behaviour.order_type,
         guest_session=guest_session,
         room=room,
         execution_point=execution_point,
@@ -121,15 +146,16 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         requested_time=requested_time,
         comment=data.comment,
         status=status,
-        total=0,
+        total=None,
         currency=hotel.currency,
+        field_values=field_values,
     )
 
-    total = 0
-    for resolved in resolved_lines:
-        total += _create_order_item(order, resolved).line_total
-
-    order.total = total
+    line_totals = [_create_order_item(order, resolved).line_total for resolved in resolved_lines]
+    # Ни у одной позиции нет цены → у заказа нет суммы. Ноль означал бы
+    # «бесплатно», а это другое утверждение.
+    priced = [total for total in line_totals if total is not None]
+    order.total = sum(priced) if priced else None
     order.save(update_fields=["total", "updated_at"])
 
     OrderStatusChange.objects.create(
@@ -151,10 +177,11 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     return order
 
 
-def _resolve_line(line: OrderLineInput) -> dict[str, Any]:
+def _resolve_item(line: OrderLineInput) -> Item:
+    """Позиция существует, доступна и запрошена в разумном количестве."""
     item = (
         Item.objects.select_related("category", "schedule", "category__schedule")
-        .prefetch_related("modifier_groups__options")
+        .prefetch_related("modifier_groups__options", "request_fields")
         .filter(pk=line.item_id)
         .first()
     )
@@ -170,8 +197,49 @@ def _resolve_line(line: OrderLineInput) -> dict[str, Any]:
 
     if line.quantity < 1:
         raise OrderValidationError("Количество должно быть положительным", code="bad_quantity")
+    return item
 
-    return {"item": item, "line": line, "selected_options": _validate_modifiers(item, line.modifier_option_ids)}
+
+def _resolve_behaviour(items: list[Item]):
+    """
+    Поведение заказа определяет тип позиций — и он обязан быть одинаковым.
+
+    Смешать в одном заказе блюдо и заявку на такси нельзя: у них разные
+    правила наполнения, разные исполнители и разный смысл суммы.
+    """
+    types = {item.type for item in items}
+    if len(types) > 1:
+        raise OrderValidationError(
+            "В одном заказе нельзя смешивать товары и заявки-услуги",
+            code="mixed_offering_types",
+        )
+    return behaviour_for(next(iter(types)))
+
+
+def _reject_modifiers(line: OrderLineInput) -> list[ModifierOption]:
+    """У типа без модификаторов их присылать нечем и незачем."""
+    if line.modifier_option_ids:
+        raise OrderValidationError(
+            "У этой услуги нет модификаторов",
+            code="modifiers_not_supported",
+            field="modifier_option_ids",
+        )
+    return []
+
+
+def _resolve_field_values(behaviour, items: list[Item], data: OrderInput) -> list[dict]:
+    """Ответы на поля заявки — снимком; у товаров их быть не должно."""
+    if not behaviour.uses_fields:
+        if data.field_values:
+            raise OrderValidationError(
+                "У этой позиции нет полей заявки",
+                code="fields_not_supported",
+                field="field_values",
+            )
+        return []
+
+    fields = list(items[0].request_fields.all())
+    return build_field_snapshot(fields, data.field_values, language=None)
 
 
 def _validate_modifiers(item: Item, option_ids: list[str]) -> list[ModifierOption]:
@@ -224,7 +292,10 @@ def _create_order_item(order: Order, resolved: dict[str, Any]) -> OrderItem:
     line: OrderLineInput = resolved["line"]
     options: list[ModifierOption] = resolved["selected_options"]
 
-    unit_price = item.price + sum(option.price_delta for option in options)
+    # У позиции без цены сумма строки тоже отсутствует — не ноль.
+    unit_price = (
+        None if item.price is None else item.price + sum(option.price_delta for option in options)
+    )
     return OrderItem.objects.create(
         hotel_id=order.hotel_id,
         order=order,
@@ -242,7 +313,7 @@ def _create_order_item(order: Order, resolved: dict[str, Any]) -> OrderItem:
             }
             for option in options
         ],
-        line_total=unit_price * line.quantity,
+        line_total=None if unit_price is None else unit_price * line.quantity,
         comment=line.comment[:255],
     )
 
@@ -285,7 +356,20 @@ def _resolve_execution_point(category_id) -> ExecutionPoint:
     )
 
 
-def _resolve_location(data: OrderInput) -> Location | None:
+def _resolve_location(data: OrderInput, item: Item) -> Location | None:
+    """
+    Спрашивать локацию имеет смысл не всегда: у такси точка подачи — поле
+    заявки, у уборки номер и так известен. Решает режим позиции, а не тип.
+    """
+    if item.location_mode != LocationMode.DELIVERY:
+        if data.location_id:
+            raise OrderValidationError(
+                "Для этой услуги локация не указывается",
+                code="location_not_supported",
+                field="location_id",
+            )
+        return None
+
     if not data.location_id:
         return None
     location = Location.objects.filter(pk=data.location_id, is_active=True).first()
@@ -530,6 +614,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
     return {
         "id": str(order.pk),
         "number": order.number,
+        "type": order.type,
         "created_at": hotel.to_local(order.created_at).isoformat(),
         "status": _status_payload(order.status, language),
         "status_flow": [
@@ -567,6 +652,18 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         "comment": order.comment,
         "total": order.total,
         "currency": order.currency,
+        # Непусто только у заявки-услуги. Трекер и витрина рисуют этим блоком
+        # тело карточки вместо списка позиций — но объект заказа один.
+        "field_values": [
+            {
+                "code": entry.get("code", ""),
+                "label": translate(entry.get("label"), language),
+                "field_type": entry.get("field_type", "text"),
+                "value": entry.get("value"),
+                "display": entry.get("display", ""),
+            }
+            for entry in (order.field_values or [])
+        ],
         "items": [
             {
                 "id": str(line.pk),

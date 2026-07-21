@@ -90,7 +90,25 @@
     "saved": "Item saved",
     "deleted": "Item deleted",
     "deleteTitle": "Delete item?",
-    "deleteBody": "Item “{{name}}” will be removed from the menu."
+    "deleteBody": "Item “{{name}}” will be removed from the menu.",
+    "type": "Item type",
+    "typeHint": "Chosen at creation and fixed afterwards",
+    "typeLocked": "The item type cannot be changed",
+    "types": {
+      "product": "Product",
+      "service_request": "Service request"
+    },
+    "priceOptionalHint": "May stay empty — \"price not set\"",
+    "locationMode": "Location",
+    "locationModes": {
+      "delivery": "Ask where to",
+      "deliveryHint": "The guest picks a delivery point, as with food",
+      "room": "Guest room",
+      "roomHint": "The room is taken silently, nothing is asked",
+      "none": "Do not ask",
+      "noneHint": "No location needed — a taxi pick-up address is a form field"
+    },
+    "noPrice": "Price not set"
   },
   "editor": {
     "translationsFilled": "Translations: {{filled}} of {{total}}",
@@ -175,7 +193,14 @@
     "requiredMinOne": "A required group needs a minimum of at least 1",
     "minLessThanMax": "Minimum cannot exceed maximum",
     "requiredGroupEmpty": "A required group needs at least one active option",
-    "notEnoughOptions": "Minimum exceeds the number of active options"
+    "notEnoughOptions": "Minimum exceeds the number of active options",
+    "priceRequired": "Set a price",
+    "labelRequired": "Enter a label",
+    "codeDuplicate": "This code is already used",
+    "selectWithoutOptions": "A select needs at least one option",
+    "invalidRange": "Min cannot exceed max",
+    "numberInvalid": "Not a valid number",
+    "optionValueRequired": "Enter the option value"
   },
   "errors": {
     "generic": "Something went wrong",
@@ -240,7 +265,11 @@
       "laundry": "Laundry",
       "spa": "Spa",
       "maintenance": "Maintenance",
-      "concierge": "Concierge"
+      "concierge": "Concierge",
+      "order": "Order",
+      "categories": "Service categories",
+      "emptyTitle": "No services yet",
+      "emptyHint": "The hotel is still setting its services up — check back later"
     },
     "menu": {
       "categories": "Menu categories",
@@ -308,7 +337,8 @@
       "cancelConfirmBody": "You can cancel until the hotel starts preparing it.",
       "allOrders": "All my orders",
       "offline": "Offline",
-      "inProgress": "Now"
+      "inProgress": "Now",
+      "noPrice": "—"
     },
     "orders": {
       "active": "Active",
@@ -328,7 +358,11 @@
       "refinementRequired": "Please specify the delivery spot",
       "requestedTimeInvalid": "Pick a time within the next 24 hours",
       "mixedCategories": "One order can only contain items from a single category",
-      "cancelNotAllowed": "The order is already being prepared and cannot be cancelled"
+      "cancelNotAllowed": "The order is already being prepared and cannot be cancelled",
+      "fieldRequired": "A required field of the request is empty",
+      "fieldInvalid": "That value does not fit the field",
+      "singleLineOnly": "A request may contain only one service",
+      "fieldsNotSupported": "This item does not use request fields"
     },
     "flags": {
       "popular": "Popular",
@@ -357,6 +391,24 @@
       "sulphites": "Sulphites",
       "lupin": "Lupin",
       "molluscs": "Molluscs"
+    },
+    "request": {
+      "submit": "Send request",
+      "sending": "Sending…",
+      "comment": "Comment",
+      "commentPlaceholder": "For example: call 10 minutes before",
+      "noFields": "Nothing to fill in for this service",
+      "errors": {
+        "required": "Please fill this in",
+        "number": "Enter a number",
+        "integer": "Enter a whole number",
+        "min": "No less than {{min}}",
+        "max": "No more than {{max}}",
+        "date": "Pick a date",
+        "time": "Pick a time",
+        "option": "Pick one of the options"
+      },
+      "selectPlaceholder": "Not selected"
     }
   },
   "tracker": {
@@ -430,6 +482,35 @@
       "server": "The server is not responding",
       "generic": "The action failed",
       "orderNotFound": "Order not found — it may be gone or belong to another point"
+    }
+  },
+  "requestFields": {
+    "title": "Request fields",
+    "hint": "These fields make up the form the guest fills in",
+    "addField": "Field",
+    "empty": "No fields yet",
+    "fieldN": "Field {{n}}",
+    "label": "Label",
+    "helpText": "Help text",
+    "type": "Field type",
+    "code": "Code",
+    "codeHint": "Answer key; generated when left empty",
+    "required": "Required",
+    "min": "Min",
+    "max": "Max",
+    "boundHint": "Empty — no limit",
+    "options": "Options",
+    "addOption": "Option",
+    "noOptions": "No options yet",
+    "optionValue": "Value",
+    "optionLabel": "Option label",
+    "types": {
+      "text": "Text",
+      "number": "Number",
+      "count": "Count",
+      "date": "Date",
+      "time": "Time",
+      "select": "Select"
     }
   }
 }

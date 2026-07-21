@@ -34,3 +34,16 @@ export function whenText(order: TrackerOrder, t: TFunction, language: string): s
 export function itemsSummary(order: TrackerOrder): string {
   return order.items.map((line) => `${line.quantity}× ${line.title}`).join(' · ');
 }
+
+/**
+ * The money on the card. `total: null` means the offering has no price at all —
+ * a dash is honest, "0 ₽" is not.
+ */
+export function totalText(
+  order: TrackerOrder,
+  format: (minor: number, currency?: string) => string,
+): string {
+  return order.total === null || order.total === undefined
+    ? '—'
+    : format(order.total, order.currency);
+}

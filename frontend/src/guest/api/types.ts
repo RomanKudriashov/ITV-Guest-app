@@ -6,6 +6,8 @@
  *  - money is an integer in minor units, the exponent is `currency_minor_units`.
  */
 
+import type { LocationMode, OfferingType } from '@/offerings/behaviour';
+import type { RequestFieldType } from '@/offerings/requestFields';
 import type { PartialBrandTokens } from '@/theme/tokens';
 
 export type GuestTrust = 'anonymous' | 'room_scanned' | 'pms_verified' | 'staff_verified';
@@ -76,18 +78,46 @@ export interface ModifierGroup {
   options: ModifierOption[];
 }
 
+/** One option of a `select` field, already localized. */
+export interface RequestFieldOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * A field of a request form, as the storefront receives it: labels are plain
+ * localized strings (the CMS keeps the `{lang: ...}` maps, the guest does not).
+ */
+export interface RequestField {
+  code: string;
+  label: string;
+  field_type: RequestFieldType;
+  is_required: boolean;
+  help_text?: string;
+  options?: RequestFieldOption[];
+  min_value?: number | null;
+  max_value?: number | null;
+  sort_order?: number;
+}
+
 export interface MenuItem {
   id: string;
   code: string;
   category_id: string;
   title: string;
   description: string;
-  price: number;
+  /** `null` — "price not set" (a request-service may be unpriced), not "free". */
+  price: number | null;
   images: string[];
   flags: string[];
   allergens: string[];
+  /** Offering type; the storefront asks the behaviour registry, never the string. */
+  type?: OfferingType;
+  location_mode?: LocationMode;
   has_modifiers?: boolean;
   has_required_modifiers?: boolean;
+  /** True when the item is filled in with a form instead of the cart. */
+  has_fields?: boolean;
   is_available: boolean;
   unavailable_reason: UnavailableReason | null;
   available_from?: string | null;
@@ -109,7 +139,8 @@ export interface MenuCategory {
   items: MenuItem[];
 }
 
-export interface GuestMenu {
+/** `GET /api/guest/catalog?type=…` — one envelope for every offering type. */
+export interface GuestCatalog {
   language: string;
   server_time?: string;
   categories: MenuCategory[];
@@ -118,6 +149,8 @@ export interface GuestMenu {
 export interface ItemDetail extends MenuItem {
   category_title?: string;
   modifier_groups: ModifierGroup[];
+  /** Empty for a product — the envelope is shared, the unused block is just empty. */
+  request_fields?: RequestField[];
 }
 
 export interface GuestLocation {
@@ -141,18 +174,25 @@ export type OrderTiming = 'asap' | 'scheduled';
 export interface OrderLinePayload {
   item_id: string;
   quantity: number;
-  modifier_option_ids: string[];
-  comment: string;
+  modifier_option_ids?: string[];
+  comment?: string;
 }
 
+/**
+ * One payload for both types (contract §4). A request-service is the same body
+ * with a single line and `field_values` filled in; location keys are omitted
+ * entirely when the item's `location_mode` is not `delivery`.
+ */
 export interface CreateOrderPayload {
   lines: OrderLinePayload[];
-  location_id: string;
-  location_refinement: string;
-  delivery_mode: string;
+  location_id?: string;
+  location_refinement?: string;
+  delivery_mode?: string;
   timing: OrderTiming;
   requested_time: string | null;
   comment: string;
+  /** `code` → answer. Empty for a product order. */
+  field_values?: Record<string, string | number>;
 }
 
 export interface OrderStatus {
@@ -189,11 +229,25 @@ export interface OrderItem {
   item_id: string;
   title: string;
   quantity: number;
-  unit_price: number;
-  line_total: number;
+  /** `null` when the item carries no price. */
+  unit_price: number | null;
+  line_total: number | null;
   comment: string;
   image_url: string | null;
   modifiers: OrderModifier[];
+}
+
+/**
+ * A snapshot of one answer of a request form: it must survive the field being
+ * renamed or deleted in the CMS, exactly like the price snapshot on a line.
+ */
+export interface OrderFieldValue {
+  code: string;
+  label: string;
+  field_type: RequestFieldType;
+  value: string | number | null;
+  /** Ready-to-print value — the UI never formats an answer itself. */
+  display: string;
 }
 
 export interface GuestOrder {
@@ -209,8 +263,13 @@ export interface GuestOrder {
   requested_time: string | null;
   eta_minutes: number | null;
   comment: string;
-  total: number;
+  /** `cart` for food, `request` for a service — see the behaviour registry. */
+  type?: 'cart' | 'request';
+  /** `null` when nothing in the order is priced — show a dash, never "0 ₽". */
+  total: number | null;
   currency: string;
+  /** Non-empty only for a request-service. */
+  field_values?: OrderFieldValue[];
   items: OrderItem[];
 }
 

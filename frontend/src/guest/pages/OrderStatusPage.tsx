@@ -18,6 +18,7 @@ import type { TFunction } from 'i18next';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ItemThumb } from '../components/ItemMeta';
+import { OrderFieldValues } from '../components/OrderFieldValues';
 import { OrderTimeline } from '../components/OrderTimeline';
 import { cancelOrder } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
@@ -32,7 +33,7 @@ export function OrderStatusPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { format } = useMoney();
+  const { formatOptional } = useMoney();
   const language = useGuestLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const justPlaced = searchParams.get('placed') === '1';
@@ -85,6 +86,8 @@ export function OrderStatusPage() {
       </Container>
     );
   }
+
+  const fieldValues = order.field_values ?? [];
 
   const created = (() => {
     try {
@@ -190,6 +193,10 @@ export function OrderStatusPage() {
 
         <Paper variant="outlined" sx={{ p: 1.5 }}>
           <Stack divider={<Divider flexItem />} spacing={1.5}>
+            {/* Body of the order: answers for a request, lines for food. */}
+            {fieldValues.length ? (
+              <OrderFieldValues values={fieldValues} testId="guest-order-fields" />
+            ) : null}
             {order.items.map((line) => (
               <Stack key={line.id} direction="row" spacing={1.5} alignItems="flex-start">
                 <ItemThumb src={line.image_url} alt={line.title} size={48} />
@@ -208,12 +215,17 @@ export function OrderStatusPage() {
                     </Typography>
                   ) : null}
                 </Stack>
-                <Typography variant="body2">{format(line.line_total)}</Typography>
+                {formatOptional(line.line_total) ? (
+                  <Typography variant="body2">{formatOptional(line.line_total)}</Typography>
+                ) : null}
               </Stack>
             ))}
+            {/* An unpriced order has no total — a dash, never "0 ₽". */}
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="subtitle1">{t('guest.cart.total')}</Typography>
-              <Typography variant="subtitle1">{format(order.total)}</Typography>
+              <Typography variant="subtitle1" data-testid="guest-order-total">
+                {formatOptional(order.total) ?? t('guest.order.noPrice')}
+              </Typography>
             </Stack>
           </Stack>
         </Paper>

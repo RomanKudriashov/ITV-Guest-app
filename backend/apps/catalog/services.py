@@ -21,7 +21,7 @@ from apps.hotels.models import Hotel
 from apps.media.services import image_url
 
 from .availability import category_availability, item_availability
-from .models import Category, Item, ModifierGroup, OfferingType
+from .models import Category, Item, ModifierGroup, OfferingType, RequestField
 
 
 @dataclass(slots=True)
@@ -99,34 +99,70 @@ def _current_hotel_id():
     return current_hotel_id()
 
 
-def _item_queryset(offering_type: str = OfferingType.PRODUCT):
-    return (
-        Item.objects.filter(type=offering_type, is_active=True)
+def _item_queryset(offering_type: str | None = OfferingType.PRODUCT):
+    """
+    offering_type=None — без фильтра по типу. Нужно при выборке одной позиции
+    по id: там тип уже задан самой позицией, и фильтр по умолчанию прятал бы
+    услуги, пришедшие по прямой ссылке.
+    """
+    queryset = (
+        Item.objects.filter(is_active=True)
         .select_related("schedule", "category", "category__schedule")
         .prefetch_related(
             "schedule__intervals",
             "category__schedule__intervals",
             "images__asset",
             "modifier_groups__options",
+            "request_fields",
         )
         .order_by("sort_order", "code")
     )
+    if offering_type is not None:
+        queryset = queryset.filter(type=offering_type)
+    return queryset
 
 
 def get_item_detail(item_id, *, language: str | None = None, moment: datetime | None = None) -> dict:
-    """Карточка блюда: то же, что в меню, плюс полные группы модификаторов."""
+    """
+    Карточка позиции любого типа: у товара непуст блок модификаторов, у
+    заявки-услуги — блок полей.
+    """
     from apps.core.errors import NotFoundError
 
-    item = _item_queryset().filter(pk=item_id).first()
+    item = _item_queryset(None).filter(pk=item_id).first()
     if item is None:
-        raise NotFoundError("Блюдо не найдено")
+        raise NotFoundError("Позиция не найдена")
 
     payload = _serialize_item(item, language, moment, item.category)
     payload["category_title"] = translate(item.category.title, language)
+    # Конверт один: у товара непуст блок модификаторов, у заявки — блок полей.
+    # Клиент смотрит на то, что пришло, а не на тип.
     payload["modifier_groups"] = [
         _serialize_modifier_group(group, language) for group in item.modifier_groups.all()
     ]
+    payload["request_fields"] = [
+        _serialize_request_field(request_field, language)
+        for request_field in item.request_fields.all()
+    ]
     return payload
+
+
+def _serialize_request_field(request_field: RequestField, language: str | None) -> dict[str, Any]:
+    return {
+        "id": str(request_field.pk),
+        "code": request_field.code,
+        "label": translate(request_field.label, language),
+        "help_text": translate(request_field.help_text, language),
+        "field_type": request_field.field_type,
+        "is_required": request_field.is_required,
+        "options": [
+            {"value": option.get("value"), "label": translate(option.get("label"), language)}
+            for option in (request_field.options or [])
+        ],
+        "min_value": request_field.min_value,
+        "max_value": request_field.max_value,
+        "sort_order": request_field.sort_order,
+    }
 
 
 def _serialize_item(
@@ -144,6 +180,8 @@ def _serialize_item(
     return {
         "id": str(item.pk),
         "code": item.code,
+        "type": item.type,
+        "location_mode": item.location_mode,
         "category_id": str(item.category_id),
         "title": translate(item.title, language),
         "description": translate(item.description, language),
@@ -155,6 +193,9 @@ def _serialize_item(
         # модификаторов можно добавить прямо из списка одним тапом.
         "has_modifiers": bool(groups),
         "has_required_modifiers": any(group.is_required for group in groups),
+        # Витрине хватает признака, чтобы решить, чем открывать позицию:
+        # карточкой с корзиной или формой заявки.
+        "has_fields": bool(item.request_fields.all()),
         **state.as_dict(),
     }
 

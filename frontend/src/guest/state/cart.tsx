@@ -167,8 +167,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         category_id: item.category_id,
         title: item.title,
         image_url: item.images?.[0] ?? null,
-        base_price: item.price,
-        unit_price: item.price,
+        // An unpriced item cannot reach the cart (it is filled in with a form),
+        // so the fallback here is a type guard, not a pricing decision.
+        base_price: item.price ?? 0,
+        unit_price: item.price ?? 0,
         quantity: 1,
         comment: '',
         modifiers: [],

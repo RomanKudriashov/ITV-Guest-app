@@ -1,11 +1,12 @@
 /** Guest storefront endpoints — one function per route in the contract. */
 
+import type { OfferingType } from '@/offerings/behaviour';
 import { guestApi, guestTokenStorage } from './client';
 import type {
   CreateOrderPayload,
   CreateSessionPayload,
+  GuestCatalog,
   GuestLocations,
-  GuestMenu,
   GuestOrder,
   GuestOrderList,
   GuestSession,
@@ -24,9 +25,14 @@ export function fetchSession(): Promise<GuestSession> {
   return guestApi.get<GuestSession>('/guest/session', { skipAuthRedirect: true });
 }
 
-export function fetchMenu(language?: string): Promise<GuestMenu> {
-  return guestApi.get<GuestMenu>('/guest/menu', {
-    query: { include_unavailable: true, lang: language },
+/**
+ * One catalog endpoint for every offering type (contract §2). The food menu is
+ * `type=product`; services are `type=service_request`. There is deliberately no
+ * second "services" endpoint and no branch here — only a query parameter.
+ */
+export function fetchCatalog(type: OfferingType, language?: string): Promise<GuestCatalog> {
+  return guestApi.get<GuestCatalog>('/guest/catalog', {
+    query: { type, include_unavailable: true, lang: language },
   });
 }
 

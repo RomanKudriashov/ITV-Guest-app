@@ -90,7 +90,25 @@
     "saved": "菜品已保存",
     "deleted": "菜品已删除",
     "deleteTitle": "删除菜品？",
-    "deleteBody": "菜品「{{name}}」将从菜单中移除。"
+    "deleteBody": "菜品「{{name}}」将从菜单中移除。",
+    "type": "条目类型",
+    "typeHint": "创建时选择，之后不可更改",
+    "typeLocked": "类型不可更改",
+    "types": {
+      "product": "商品",
+      "service_request": "服务申请"
+    },
+    "priceOptionalHint": "可留空——未定价",
+    "locationMode": "位置",
+    "locationModes": {
+      "delivery": "询问送达地点",
+      "deliveryHint": "客人选择送达点，与餐饮相同",
+      "room": "客人房间",
+      "roomHint": "直接使用房号，不询问",
+      "none": "不询问",
+      "noneHint": "无需位置，例如用车地址写在表单里"
+    },
+    "noPrice": "未定价"
   },
   "editor": {
     "translationsFilled": "翻译：{{filled}} / {{total}}",
@@ -175,7 +193,14 @@
     "requiredMinOne": "必选分组最少为 1",
     "minLessThanMax": "最少不能大于最多",
     "requiredGroupEmpty": "必选分组至少需要一个启用的选项",
-    "notEnoughOptions": "最少数量超过启用选项数"
+    "notEnoughOptions": "最少数量超过启用选项数",
+    "priceRequired": "请填写价格",
+    "labelRequired": "请填写标签",
+    "codeDuplicate": "该代码已被使用",
+    "selectWithoutOptions": "下拉至少需要一个选项",
+    "invalidRange": "最小值不能大于最大值",
+    "numberInvalid": "数字无效",
+    "optionValueRequired": "请填写选项值"
   },
   "errors": {
     "generic": "出现错误",
@@ -240,7 +265,11 @@
       "laundry": "洗衣",
       "spa": "水疗",
       "maintenance": "维修",
-      "concierge": "礼宾"
+      "concierge": "礼宾",
+      "order": "下单",
+      "categories": "服务分类",
+      "emptyTitle": "暂无服务",
+      "emptyHint": "酒店正在配置服务，请稍后再看"
     },
     "menu": {
       "categories": "菜单分类",
@@ -308,7 +337,8 @@
       "cancelConfirmBody": "在酒店开始制作前可以取消。",
       "allOrders": "我的全部订单",
       "offline": "无连接",
-      "inProgress": "进行中"
+      "inProgress": "进行中",
+      "noPrice": "—"
     },
     "orders": {
       "active": "进行中",
@@ -328,7 +358,11 @@
       "refinementRequired": "请补充送达位置",
       "requestedTimeInvalid": "请选择未来 24 小时内的时间",
       "mixedCategories": "一个订单只能包含同一分类的菜品",
-      "cancelNotAllowed": "订单已在制作中，无法取消"
+      "cancelNotAllowed": "订单已在制作中，无法取消",
+      "fieldRequired": "必填字段未填写",
+      "fieldInvalid": "字段值不符合要求",
+      "singleLineOnly": "一次申请只能包含一项服务",
+      "fieldsNotSupported": "该条目不使用申请字段"
     },
     "flags": {
       "popular": "热门",
@@ -357,6 +391,24 @@
       "sulphites": "亚硫酸盐",
       "lupin": "羽扇豆",
       "molluscs": "软体动物"
+    },
+    "request": {
+      "submit": "提交申请",
+      "sending": "提交中…",
+      "comment": "备注",
+      "commentPlaceholder": "例如：提前十分钟来电",
+      "noFields": "此服务无需填写",
+      "errors": {
+        "required": "请填写此项",
+        "number": "请输入数字",
+        "integer": "请输入整数",
+        "min": "不少于 {{min}}",
+        "max": "不超过 {{max}}",
+        "date": "请选择日期",
+        "time": "请选择时间",
+        "option": "请从列表中选择"
+      },
+      "selectPlaceholder": "未选择"
     }
   },
   "tracker": {
@@ -430,6 +482,35 @@
       "server": "服务器无响应",
       "generic": "操作失败",
       "orderNotFound": "未找到该订单，或它属于其他执行点"
+    }
+  },
+  "requestFields": {
+    "title": "申请字段",
+    "hint": "这些字段组成客人填写的表单",
+    "addField": "字段",
+    "empty": "暂无字段",
+    "fieldN": "字段 {{n}}",
+    "label": "标签",
+    "helpText": "提示",
+    "type": "字段类型",
+    "code": "代码",
+    "codeHint": "答案键，留空自动生成",
+    "required": "必填",
+    "min": "最小值",
+    "max": "最大值",
+    "boundHint": "留空表示不限",
+    "options": "选项",
+    "addOption": "选项",
+    "noOptions": "暂无选项",
+    "optionValue": "值",
+    "optionLabel": "选项标签",
+    "types": {
+      "text": "文本",
+      "number": "数字",
+      "count": "数量",
+      "date": "日期",
+      "time": "时间",
+      "select": "下拉"
     }
   }
 }

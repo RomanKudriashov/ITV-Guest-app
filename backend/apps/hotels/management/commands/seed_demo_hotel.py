@@ -23,12 +23,15 @@ from apps.catalog.models import (
     Category,
     Item,
     ItemImage,
+    LocationMode,
     ModifierGroup,
     ModifierOption,
     OfferingType,
+    RequestField,
     Route,
     ServiceLocation,
 )
+from apps.catalog.request_fields import FieldType
 from apps.core.context import tenant_context
 from apps.hotels.models import (
     BrandTheme,
@@ -152,13 +155,15 @@ class Command(BaseCommand):
         with tenant_context(hotel):
             theme = self._seed_brand(hotel)
             self._seed_languages()
-            kitchen = self._seed_execution_points()
-            self._seed_staff(hotel, kitchen)
+            points = self._seed_execution_points()
+            kitchen = points["kitchen"]
+            self._seed_staff(hotel, points)
             self._seed_statuses()
             rooms = self._seed_rooms()
             locations = self._seed_locations()
             schedules = self._seed_schedules()
             self._seed_catalog(kitchen, locations, schedules)
+            self._seed_services(points, schedules)
 
             hotel.default_theme = theme
             hotel.save(update_fields=["default_theme", "updated_at"])
@@ -191,40 +196,50 @@ class Command(BaseCommand):
                 defaults={"title": title, "is_default": is_default, "sort_order": order},
             )
 
-    def _seed_execution_points(self) -> ExecutionPoint:
-        kitchen, _ = ExecutionPoint.objects.get_or_create(
-            code="kitchen",
-            defaults={
-                "kind": ExecutionPoint.Kind.KITCHEN,
-                "title": {"ru": "Кухня ресторана", "en": "Restaurant kitchen"},
-            },
-        )
-        ExecutionPoint.objects.get_or_create(
-            code="bar",
-            defaults={
-                "kind": ExecutionPoint.Kind.BAR,
-                "title": {"ru": "Лобби-бар", "en": "Lobby bar"},
-            },
-        )
-        return kitchen
-
-    def _seed_staff(self, hotel: Hotel, kitchen: ExecutionPoint):
-        email = f"chef@{hotel.subdomain}.local"
-        user = User.objects.filter(email=email).first()
-        if user is None:
-            user = User.objects.create_user(
-                email=email,
-                password="chef12345",
-                hotel=hotel,
-                full_name="Пётр, повар",
-                language="ru",
-                is_staff_member=True,
+    def _seed_execution_points(self) -> dict[str, ExecutionPoint]:
+        """
+        Отделы отеля. Заявки-услуги уходят в свои: такси — консьержу, уборка —
+        в хозслужбу. Это обычная работа Route, а не отдельная механика.
+        """
+        specs = [
+            ("kitchen", ExecutionPoint.Kind.KITCHEN, "Кухня ресторана", "Restaurant kitchen", 20),
+            ("bar", ExecutionPoint.Kind.BAR, "Лобби-бар", "Lobby bar", 15),
+            ("concierge", ExecutionPoint.Kind.RECEPTION, "Консьерж", "Concierge", 10),
+            ("housekeeping", ExecutionPoint.Kind.HOUSEKEEPING, "Хозслужба", "Housekeeping", 45),
+        ]
+        points: dict[str, ExecutionPoint] = {}
+        for code, kind, ru, en, sla in specs:
+            point, _ = ExecutionPoint.objects.get_or_create(
+                code=code,
+                defaults={"kind": kind, "title": {"ru": ru, "en": en}, "sla_minutes": sla},
             )
-        StaffAssignment.objects.get_or_create(
-            user=user,
-            execution_point=kitchen,
-            defaults={"level": StaffAssignment.Level.LEAD},
-        )
+            points[code] = point
+        return points
+
+    def _seed_staff(self, hotel: Hotel, points: dict[str, ExecutionPoint]):
+        """Каждому отделу — свой сотрудник: доски не должны пересекаться."""
+        specs = [
+            ("chef", "Пётр, повар", "kitchen", StaffAssignment.Level.LEAD),
+            ("concierge", "Анна, консьерж", "concierge", StaffAssignment.Level.MEMBER),
+            ("maid", "Мария, горничная", "housekeeping", StaffAssignment.Level.MEMBER),
+        ]
+        for prefix, full_name, point_code, level in specs:
+            email = f"{prefix}@{hotel.subdomain}.local"
+            user = User.objects.filter(email=email).first()
+            if user is None:
+                user = User.objects.create_user(
+                    email=email,
+                    password="chef12345",
+                    hotel=hotel,
+                    full_name=full_name,
+                    language="ru",
+                    is_staff_member=True,
+                )
+            StaffAssignment.objects.get_or_create(
+                user=user,
+                execution_point=points[point_code],
+                defaults={"level": level},
+            )
 
     def _seed_statuses(self):
         for order, (
@@ -556,6 +571,128 @@ class Command(BaseCommand):
                     is_default=default,
                     sort_order=order,
                 )
+
+    # --- Заявки-услуги ----------------------------------------------------
+
+    def _seed_services(self, points: dict[str, ExecutionPoint], schedules: dict[str, Schedule]):
+        """
+        Второй тип предложения в тех же таблицах: та же Category, тот же Item,
+        тот же Route. Отличие — тип и поля формы вместо модификаторов.
+        """
+        taxi_category = self._seed_service_category(
+            code="transfer",
+            title={"ru": "Трансфер", "en": "Transfer"},
+            point=points["concierge"],
+            sort_order=10,
+            schedule=schedules["all_day"],
+        )
+        cleaning_category = self._seed_service_category(
+            code="housekeeping",
+            title={"ru": "Уборка", "en": "Housekeeping"},
+            point=points["housekeeping"],
+            sort_order=11,
+            schedule=schedules["all_day"],
+        )
+
+        taxi, created = Item.objects.get_or_create(
+            code="taxi",
+            defaults={
+                "category": taxi_category,
+                "type": OfferingType.SERVICE_REQUEST,
+                # Точка подачи — поле заявки, поэтому локацию не спрашиваем.
+                "location_mode": LocationMode.NONE,
+                "title": {"ru": "Такси", "en": "Taxi"},
+                "description": {
+                    "ru": "Подадим машину к выходу из отеля",
+                    "en": "We will bring a car to the hotel entrance",
+                },
+                # Цены нет: считает перевозчик по факту.
+                "price": None,
+                "sort_order": 0,
+            },
+        )
+        if created:
+            self._attach_image(taxi, "default", "Такси")
+            self._seed_request_fields(
+                taxi,
+                [
+                    ("destination", "Куда", "Where to", FieldType.TEXT, True,
+                     {"ru": "Адрес или название места"}, None, None, []),
+                    ("when", "Когда подать", "Pickup time", FieldType.TIME, True,
+                     {}, None, None, []),
+                    ("passengers", "Сколько человек", "Passengers", FieldType.COUNT, True,
+                     {}, 1, 8, []),
+                    ("car_class", "Класс машины", "Car class", FieldType.SELECT, False,
+                     {}, None, None,
+                     [
+                         {"value": "econom", "label": {"ru": "Эконом", "en": "Economy"}},
+                         {"value": "comfort", "label": {"ru": "Комфорт", "en": "Comfort"}},
+                         {"value": "minivan", "label": {"ru": "Минивэн", "en": "Minivan"}},
+                     ]),
+                ],
+            )
+
+        cleaning, created = Item.objects.get_or_create(
+            code="cleaning",
+            defaults={
+                "category": cleaning_category,
+                "type": OfferingType.SERVICE_REQUEST,
+                # Убирать будут в номере гостя — спрашивать локацию незачем.
+                "location_mode": LocationMode.ROOM,
+                "title": {"ru": "Уборка номера", "en": "Room cleaning"},
+                "description": {
+                    "ru": "Придём в удобное время",
+                    "en": "We will come at a convenient time",
+                },
+                "price": None,
+                "sort_order": 0,
+            },
+        )
+        if created:
+            self._attach_image(cleaning, "default", "Уборка")
+            self._seed_request_fields(
+                cleaning,
+                [
+                    ("when", "Когда убрать", "When", FieldType.TIME, True, {}, None, None, []),
+                    ("comment", "Пожелания", "Notes", FieldType.TEXT, False,
+                     {"ru": "Например: не трогать вещи на столе"}, None, None, []),
+                ],
+            )
+
+    def _seed_service_category(
+        self, *, code: str, title: dict, point: ExecutionPoint, sort_order: int, schedule: Schedule
+    ) -> Category:
+        category, _ = Category.objects.get_or_create(
+            code=code,
+            defaults={
+                "type": OfferingType.SERVICE_REQUEST,
+                "title": title,
+                "sort_order": sort_order,
+                "schedule": schedule,
+                "image": self._image_for(code, title.get("ru", code)),
+            },
+        )
+        Route.objects.get_or_create(
+            category=category, execution_point=point, defaults={"priority": 0}
+        )
+        return category
+
+    def _seed_request_fields(self, item: Item, specs):
+        for order, (code, ru, en, field_type, required, help_text, minimum, maximum, options) in enumerate(specs):
+            RequestField.objects.get_or_create(
+                item=item,
+                code=code,
+                defaults={
+                    "label": {"ru": ru, "en": en},
+                    "help_text": help_text,
+                    "field_type": field_type,
+                    "is_required": required,
+                    "min_value": minimum,
+                    "max_value": maximum,
+                    "options": options,
+                    "sort_order": order,
+                },
+            )
 
     # --- Медиа ------------------------------------------------------------
 

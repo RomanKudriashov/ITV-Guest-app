@@ -31,6 +31,7 @@ TENANT_TABLES = [
     "catalog_item_image",
     "catalog_modifier_group",
     "catalog_modifier_option",
+    "catalog_request_field",
     "catalog_route",
     "catalog_service_location",
     # orders

@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
+import type { OfferingType } from '@/offerings/behaviour';
 import {
+  fetchCatalog,
   fetchItem,
   fetchLocations,
-  fetchMenu,
   fetchOrder,
   fetchOrders,
 } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type {
+  GuestCatalog,
   GuestLocations,
-  GuestMenu,
   GuestOrder,
   GuestOrderList,
   ItemDetail,
@@ -24,13 +25,17 @@ export function useGuestLanguage(): string {
   return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
 }
 
-export function useGuestMenu() {
+/**
+ * The catalog of one offering type. Food and services differ by a query
+ * parameter and a cache key — not by a hook, a page or a code path.
+ */
+export function useGuestCatalog(type: OfferingType, enabled = true) {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();
-  return useQuery<GuestMenu>({
-    queryKey: guestKeys.menu(language),
-    queryFn: () => fetchMenu(language),
-    enabled: isReady,
+  return useQuery<GuestCatalog>({
+    queryKey: guestKeys.catalog(type, language),
+    queryFn: () => fetchCatalog(type, language),
+    enabled: isReady && enabled,
     staleTime: 60_000,
   });
 }
@@ -47,13 +52,18 @@ export function useGuestItem(itemId: string | null, initialData?: ItemDetail) {
   });
 }
 
-export function useGuestLocations() {
+/**
+ * Locations are only ever asked for when the item's `location_mode` is
+ * `delivery` — hence the `enabled` switch: a taxi request must not even fetch
+ * the list it will never show.
+ */
+export function useGuestLocations(enabled = true) {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();
   return useQuery<GuestLocations>({
     queryKey: guestKeys.locations(language),
     queryFn: () => fetchLocations(language),
-    enabled: isReady,
+    enabled: isReady && enabled,
     staleTime: 5 * 60_000,
   });
 }

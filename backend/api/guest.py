@@ -14,6 +14,7 @@ from ninja import Header, Router
 from apps.accounts.auth import GuestAuth
 from apps.accounts.models import TrustLevel
 from apps.accounts.services import AuthenticationFailed, create_guest_session
+from apps.catalog.offerings import OfferingType
 from apps.catalog.services import MenuOptions, build_menu, get_item_detail
 from apps.core.context import current_language
 from apps.core.errors import PermissionDenied
@@ -126,17 +127,44 @@ def read_session(request: HttpRequest):
 # --- Витрина ---------------------------------------------------------------
 
 
+def _catalog(request: HttpRequest, offering_type: str, include_unavailable: bool):
+    return build_menu(
+        MenuOptions(
+            language=current_language(),
+            include_unavailable=include_unavailable,
+            offering_type=offering_type,
+        ),
+        hotel=request.hotel,
+    )
+
+
+@router.get(
+    "/catalog",
+    response=MenuOut,
+    auth=guest_auth,
+    summary="Каталог любого типа: еда или заявки-услуги",
+)
+def get_catalog(
+    request: HttpRequest,
+    type: str = OfferingType.PRODUCT,
+    include_unavailable: bool = True,
+):
+    """
+    Один эндпоинт на все типы предложений — различается только тело позиции.
+    Заводить «/services» рядом с «/menu» значило бы удваивать всё, что
+    появится дальше: фильтры, локализацию, расписания.
+    """
+    return _catalog(request, type, include_unavailable)
+
+
 @router.get(
     "/menu",
     response=MenuOut,
     auth=guest_auth,
-    summary="Меню: локализовано, с доступностью по расписанию отеля",
+    summary="Меню (исторический псевдоним /catalog?type=product)",
 )
 def get_menu(request: HttpRequest, include_unavailable: bool = True):
-    return build_menu(
-        MenuOptions(language=current_language(), include_unavailable=include_unavailable),
-        hotel=request.hotel,
-    )
+    return _catalog(request, OfferingType.PRODUCT, include_unavailable)
 
 
 @router.get(
@@ -228,6 +256,7 @@ def place_order(
         timing=payload.timing,
         requested_time=payload.requested_time,
         comment=payload.comment,
+        field_values=payload.field_values or {},
     )
 
     def operation():

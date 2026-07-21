@@ -95,8 +95,17 @@ class Order(TenantModel):
     status = models.ForeignKey(
         StatusDefinition, on_delete=models.PROTECT, related_name="orders"
     )
-    total = models.IntegerField(default=0, help_text="В минимальных единицах")
+    # null — у позиции нет цены (заявка-услуга без прайса). Ноль означал бы
+    # «бесплатно», а это другое утверждение.
+    total = models.IntegerField(
+        null=True, blank=True, default=0, help_text="В минимальных единицах"
+    )
     currency = models.CharField(max_length=3, default="RUB")
+
+    # Снимок ответов на поля заявки-услуги. Пуст у обычного заказа с корзиной.
+    # Именно снимок: заявка обязана пережить переименование и удаление полей
+    # в CMS — исполнитель должен видеть, о чём его просили.
+    field_values = models.JSONField(default=list, blank=True)
 
     # Кто взял заказ в работу. Отдельным полем, а не выводом из истории
     # переходов: доска показывает исполнителя в каждой карточке, и считать его
@@ -145,9 +154,9 @@ class OrderItem(TenantModel):
 
     # Снапшоты: не выводить их из связанных объектов при чтении заказа.
     title_snapshot = TranslatableField()
-    unit_price_snapshot = models.IntegerField(default=0)
+    unit_price_snapshot = models.IntegerField(null=True, blank=True, default=0)
     modifiers_snapshot = models.JSONField(default=list, blank=True)
-    line_total = models.IntegerField(default=0)
+    line_total = models.IntegerField(null=True, blank=True, default=0)
     comment = models.CharField(max_length=255, blank=True)
 
     class Meta:

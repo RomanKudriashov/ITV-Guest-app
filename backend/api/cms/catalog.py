@@ -31,6 +31,9 @@ from .schemas import (
     ModifierOptionPatch,
     OkOut,
     ReorderIn,
+    RequestFieldIn,
+    RequestFieldOut,
+    RequestFieldPatch,
     StockIn,
     ToggleIn,
 )
@@ -42,8 +45,8 @@ router = Router(tags=["cms:catalog"])
 
 
 @router.get("/categories", response=list[CategoryTreeOut], summary="Дерево категорий")
-def list_categories(request: HttpRequest):
-    return svc.category_tree()
+def list_categories(request: HttpRequest, type: str = "product"):
+    return svc.category_tree(type)
 
 
 @router.post("/categories", response={201: CategoryTreeOut}, summary="Создать категорию")
@@ -91,8 +94,13 @@ def toggle_category(request: HttpRequest, category_id: str, payload: ToggleIn):
 
 
 @router.get("/items", response=list[ItemOut], summary="Список блюд")
-def list_items(request: HttpRequest, category_id: str | None = None, search: str = ""):
-    return svc.list_items(category_id=category_id, search=search)
+def list_items(
+    request: HttpRequest,
+    category_id: str | None = None,
+    search: str = "",
+    type: str | None = None,
+):
+    return svc.list_items(category_id=category_id, search=search, offering_type=type)
 
 
 @router.post("/items", response={201: ItemDetailOut}, summary="Создать блюдо")
@@ -211,3 +219,41 @@ def delete_modifier_option(request: HttpRequest, option_id: str):
 )
 def reorder_modifier_options(request: HttpRequest, group_id: str, payload: ReorderIn):
     return svc.reorder_modifier_options(group_id, [entry.dict() for entry in payload.items])
+
+
+# --- Поля заявки-услуги ----------------------------------------------------
+# Ровно та же форма CRUD, что у модификаторов: одинаковые вещи должны и
+# выглядеть одинаково, иначе редактор придётся писать дважды.
+
+
+@router.post(
+    "/items/{item_id}/request-fields",
+    response={201: RequestFieldOut},
+    summary="Создать поле заявки",
+)
+def create_request_field(request: HttpRequest, item_id: str, payload: RequestFieldIn):
+    entry = svc.create_request_field(item_id, payload.dict(exclude_unset=True))
+    return 201, svc.serialize_request_field(entry)
+
+
+@router.patch(
+    "/request-fields/{field_id}", response=RequestFieldOut, summary="Изменить поле заявки"
+)
+def update_request_field(request: HttpRequest, field_id: str, payload: RequestFieldPatch):
+    entry = svc.update_request_field(field_id, payload.dict(exclude_unset=True))
+    return svc.serialize_request_field(entry)
+
+
+@router.delete("/request-fields/{field_id}", response=OkOut, summary="Удалить поле заявки")
+def delete_request_field(request: HttpRequest, field_id: str):
+    svc.delete_request_field(field_id)
+    return {"ok": True}
+
+
+@router.post(
+    "/items/{item_id}/request-fields/reorder",
+    response=list[RequestFieldOut],
+    summary="Сортировка полей заявки",
+)
+def reorder_request_fields(request: HttpRequest, item_id: str, payload: ReorderIn):
+    return svc.reorder_request_fields(item_id, [entry.dict() for entry in payload.items])

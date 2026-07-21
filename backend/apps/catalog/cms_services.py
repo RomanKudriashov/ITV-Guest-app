@@ -31,7 +31,10 @@ from .models import (
     ModifierGroup,
     ModifierOption,
     OfferingType,
+    RequestField,
 )
+from .offerings import LocationMode, behaviour_for
+from .request_fields import BOUNDED_TYPES, FieldType
 from .vocabularies import ALLERGEN_CODES, FLAG_CODES
 
 # Транслитерация для кодов: slugify выбрасывает кириллицу целиком, и «Горячее»
@@ -137,6 +140,7 @@ def serialize_category(
         "id": str(category.pk),
         "parent_id": str(category.parent_id) if category.parent_id else None,
         "code": category.code,
+        "type": category.type,
         "title": category.title or {},
         "description": category.description or {},
         "image": serialize_asset(category.image),
@@ -150,15 +154,15 @@ def serialize_category(
     return payload
 
 
-def category_tree() -> list[dict]:
-    """Дерево категорий с числом блюд. Один запрос на уровень, без N+1."""
+def category_tree(offering_type: str = OfferingType.PRODUCT) -> list[dict]:
+    """Дерево категорий с числом позиций. Один запрос на уровень, без N+1."""
     categories = list(
-        Category.objects.filter(type=OfferingType.PRODUCT)
+        Category.objects.filter(type=offering_type)
         .select_related("image")
         .order_by("sort_order", "code")
     )
     counts = dict(
-        Category.objects.filter(type=OfferingType.PRODUCT)
+        Category.objects.filter(type=offering_type)
         .annotate(n=Count("items", filter=Q(items__deleted_at__isnull=True)))
         .values_list("pk", "n")
     )
@@ -221,7 +225,7 @@ def create_category(data: dict) -> Category:
     parent = _validate_parent(None, data.get("parent_id"))
 
     category = Category.objects.create(
-        type=OfferingType.PRODUCT,
+        type=data.get("type") or OfferingType.PRODUCT,
         code=data.get("code") or make_code(Category, title, prefix="category"),
         title=title,
         description=clean_translations(data.get("description"), field="description"),
@@ -306,7 +310,13 @@ def reorder_categories(entries: Iterable[dict]) -> list[dict]:
         category.sort_order = entry["sort_order"]
         category.save(update_fields=["parent", "sort_order", "updated_at"])
 
-    return category_tree()
+    return category_tree(_tree_type(categories.values()))
+
+
+def _tree_type(categories) -> str:
+    """Пересортировка идёт внутри одного типа — берём его у любой категории."""
+    first = next(iter(categories), None)
+    return first.type if first is not None else OfferingType.PRODUCT
 
 
 def toggle_category(category_id, *, is_active: bool) -> Category:
@@ -326,6 +336,8 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
         "id": str(item.pk),
         "category_id": str(item.category_id),
         "code": item.code,
+        "type": item.type,
+        "location_mode": item.location_mode,
         "title": item.title or {},
         "description": item.description or {},
         "price": item.price,
@@ -344,22 +356,26 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
         "in_stock": item.in_stock,
     }
     if with_modifiers:
+        # Оба блока приезжают всегда, лишний просто пуст: редактор смотрит на
+        # содержимое, а не разветвляется по типу на каждом обращении.
         payload["modifier_groups"] = [
             serialize_modifier_group(group) for group in item.modifier_groups.all()
+        ]
+        payload["request_fields"] = [
+            serialize_request_field(entry) for entry in item.request_fields.all()
         ]
     return payload
 
 
-def _item_queryset():
-    return (
-        Item.objects.filter(type=OfferingType.PRODUCT)
-        .select_related("category")
-        .prefetch_related("images__asset")
-    )
+def _item_queryset(offering_type: str | None = None):
+    queryset = Item.objects.select_related("category").prefetch_related("images__asset")
+    if offering_type:
+        queryset = queryset.filter(type=offering_type)
+    return queryset
 
 
-def list_items(*, category_id=None, search: str = "") -> list[dict]:
-    queryset = _item_queryset()
+def list_items(*, category_id=None, search: str = "", offering_type: str | None = None) -> list[dict]:
+    queryset = _item_queryset(offering_type)
     if category_id:
         queryset = queryset.filter(category_id=category_id)
     if search:
@@ -375,16 +391,17 @@ def list_items(*, category_id=None, search: str = "") -> list[dict]:
 def get_item(item_id, *, with_modifiers: bool = False) -> Item:
     queryset = _item_queryset()
     if with_modifiers:
-        queryset = queryset.prefetch_related("modifier_groups__options")
+        queryset = queryset.prefetch_related("modifier_groups__options", "request_fields")
     item = queryset.filter(pk=item_id).first()
     if item is None:
         raise NotFoundError("Блюдо не найдено")
     return item
 
 
-def _validate_price(price: Any) -> int:
+def _validate_price(price: Any) -> int | None:
+    """None — «цена не указана» (у уборки её нет), а не «бесплатно»."""
     if price is None:
-        return 0
+        return None
     try:
         value = int(price)
     except (TypeError, ValueError):
@@ -421,8 +438,14 @@ def create_item(data: dict) -> Item:
     title = require_translation(clean_translations(data.get("title"), field="title"), field="title")
     category = _resolve_category(data.get("category_id"))
 
+    offering_type = data.get("type") or OfferingType.PRODUCT
+    if offering_type not in dict(OfferingType.choices):
+        raise ValidationError(f"Неизвестный тип позиции: {offering_type}", field="type")
+    behaviour = behaviour_for(offering_type)
+
     item = Item.objects.create(
-        type=OfferingType.PRODUCT,
+        type=offering_type,
+        location_mode=data.get("location_mode") or behaviour.default_location_mode,
         category=category,
         code=data.get("code") or make_code(Item, title, prefix="item"),
         title=title,
@@ -454,6 +477,15 @@ def update_item(item_id, data: dict) -> Item:
         item.description = clean_translations(data["description"], field="description")
     if "category_id" in data:
         item.category = _resolve_category(data["category_id"])
+    if "type" in data and data["type"] and data["type"] != item.type:
+        # Тип задаётся при создании и дальше неизменен: у товара модификаторы и
+        # корзина, у заявки — поля и форма. Переключение осиротило бы одно из
+        # двух и оставило заказы, ссылающиеся на исчезнувшую механику.
+        raise ValidationError(
+            "Тип позиции нельзя изменить после создания", field="type", code="type_immutable"
+        )
+    if "location_mode" in data and data["location_mode"]:
+        item.location_mode = data["location_mode"]
     if "price" in data:
         item.price = _validate_price(data["price"])
     if "flags" in data:
@@ -485,6 +517,7 @@ def delete_item(item_id) -> None:
     ItemImage.objects.filter(item=item).delete()
     ModifierOption.objects.filter(group__item=item).delete()
     ModifierGroup.objects.filter(item=item).delete()
+    RequestField.objects.filter(item=item).delete()
     item.delete()
 
 
@@ -796,3 +829,179 @@ def reorder_modifier_options(group_id, entries: Iterable[dict]) -> list[dict]:
         option.sort_order = entry["sort_order"]
         option.save(update_fields=["sort_order", "updated_at"])
     return [serialize_modifier_option(o) for o in get_modifier_group(group_id).options.all()]
+
+
+# ===========================================================================
+# Поля заявки-услуги
+#
+# Устроено по образцу модификаторов: та же форма CRUD, та же сортировка, те же
+# правила «сервер проверяет, а не только форма». Разница в том, что модификатор
+# меняет цену, а поле — содержание работы исполнителя.
+# ===========================================================================
+
+
+def serialize_request_field(entry: RequestField) -> dict:
+    return {
+        "id": str(entry.pk),
+        "item_id": str(entry.item_id),
+        "code": entry.code,
+        "label": entry.label or {},
+        "help_text": entry.help_text or {},
+        "field_type": entry.field_type,
+        "is_required": entry.is_required,
+        "options": list(entry.options or []),
+        "min_value": entry.min_value,
+        "max_value": entry.max_value,
+        "sort_order": entry.sort_order,
+    }
+
+
+def get_request_field(field_id) -> RequestField:
+    entry = RequestField.objects.select_related("item").filter(pk=field_id).first()
+    if entry is None:
+        raise NotFoundError("Поле заявки не найдено")
+    return entry
+
+
+def _require_service_item(item: Item) -> None:
+    """Поля есть только у заявок — так же, как модификаторы только у товаров."""
+    if not behaviour_for(item.type).uses_fields:
+        raise ValidationError(
+            "У позиции этого типа нет полей заявки",
+            field="type",
+            code="fields_not_supported",
+        )
+
+
+def _clean_options(raw: Any, field_type: str) -> list[dict]:
+    """
+    Варианты нужны только `select`, и без них поле было бы неотвечаемым:
+    гость увидел бы пустой список и не смог отправить заявку.
+    """
+    options = []
+    for index, option in enumerate(raw or []):
+        value = str((option or {}).get("value", "")).strip()
+        if not value:
+            raise ValidationError(
+                "У варианта должно быть значение", field=f"options.{index}.value"
+            )
+        options.append(
+            {
+                "value": value,
+                "label": clean_translations(option.get("label"), field=f"options.{index}.label"),
+            }
+        )
+
+    if field_type == FieldType.SELECT and not options:
+        raise ValidationError(
+            "Список вариантов не может быть пустым",
+            field="options",
+            code="select_without_options",
+        )
+    if field_type != FieldType.SELECT and options:
+        raise ValidationError(
+            "Варианты задаются только для поля типа «выбор из списка»", field="options"
+        )
+    return options
+
+
+def _clean_bounds(data: dict, field_type: str, current: RequestField | None = None) -> tuple[int | None, int | None]:
+    minimum = data.get("min_value", current.min_value if current else None)
+    maximum = data.get("max_value", current.max_value if current else None)
+
+    if field_type not in BOUNDED_TYPES:
+        # Границы у текста или даты — бессмыслица, которая потом всплывёт
+        # непонятной ошибкой у гостя. Гасим сразу.
+        if minimum is not None or maximum is not None:
+            raise ValidationError(
+                "Границы задаются только для числа и количества", field="min_value"
+            )
+        return None, None
+
+    if minimum is not None and maximum is not None and minimum > maximum:
+        raise ValidationError(
+            "Минимум больше максимума", field="min_value", code="invalid_range"
+        )
+    return minimum, maximum
+
+
+@transaction.atomic
+def create_request_field(item_id, data: dict) -> RequestField:
+    item = get_item(item_id)
+    _require_service_item(item)
+
+    label = require_translation(clean_translations(data.get("label"), field="label"), field="label")
+    field_type = data.get("field_type") or FieldType.TEXT
+    if field_type not in dict(FieldType.choices):
+        raise ValidationError(f"Неизвестный тип поля: {field_type}", field="field_type")
+
+    options = _clean_options(data.get("options"), field_type)
+    minimum, maximum = _clean_bounds(data, field_type)
+
+    return RequestField.objects.create(
+        hotel_id=item.hotel_id,
+        item=item,
+        code=data.get("code")
+        or make_code(RequestField, label, prefix="field", extra_filter={"item": item}),
+        label=label,
+        help_text=clean_translations(data.get("help_text"), field="help_text"),
+        field_type=field_type,
+        is_required=data.get("is_required", False),
+        options=options,
+        min_value=minimum,
+        max_value=maximum,
+        sort_order=data.get("sort_order")
+        if data.get("sort_order") is not None
+        else _next_sort_order(RequestField.objects.filter(item=item)),
+    )
+
+
+@transaction.atomic
+def update_request_field(field_id, data: dict) -> RequestField:
+    entry = get_request_field(field_id)
+
+    if "label" in data:
+        entry.label = require_translation(
+            clean_translations(data["label"], field="label"), field="label"
+        )
+    if "help_text" in data:
+        entry.help_text = clean_translations(data["help_text"], field="help_text")
+    if "field_type" in data and data["field_type"]:
+        if data["field_type"] not in dict(FieldType.choices):
+            raise ValidationError(f"Неизвестный тип поля: {data['field_type']}", field="field_type")
+        entry.field_type = data["field_type"]
+    if "is_required" in data:
+        entry.is_required = data["is_required"]
+    if "sort_order" in data and data["sort_order"] is not None:
+        entry.sort_order = data["sort_order"]
+    if data.get("code"):
+        entry.code = data["code"]
+
+    entry.options = _clean_options(
+        data.get("options", entry.options), entry.field_type
+    )
+    entry.min_value, entry.max_value = _clean_bounds(data, entry.field_type, entry)
+
+    entry.save()
+    return entry
+
+
+@transaction.atomic
+def delete_request_field(field_id) -> None:
+    get_request_field(field_id).delete()
+
+
+@transaction.atomic
+def reorder_request_fields(item_id, entries: Iterable[dict]) -> list[dict]:
+    item = get_item(item_id)
+    known = {str(entry.pk): entry for entry in RequestField.objects.filter(item=item)}
+    for entry in entries:
+        stored = known.get(str(entry["id"]))
+        if stored is None:
+            raise ValidationError("Поле не принадлежит этой позиции", field="items")
+        stored.sort_order = entry["sort_order"]
+        stored.save(update_fields=["sort_order", "updated_at"])
+    return [
+        serialize_request_field(entry)
+        for entry in RequestField.objects.filter(item=item).order_by("sort_order", "code")
+    ]

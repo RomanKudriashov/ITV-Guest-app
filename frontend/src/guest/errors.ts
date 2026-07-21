@@ -19,6 +19,11 @@ const CODE_KEYS: Record<string, string> = {
   requested_time_invalid: 'guest.errors.requestedTimeInvalid',
   mixed_categories: 'guest.errors.mixedCategories',
   cancel_not_allowed: 'guest.errors.cancelNotAllowed',
+  // Request-service validation (contract §4).
+  field_required: 'guest.errors.fieldRequired',
+  field_invalid: 'guest.errors.fieldInvalid',
+  single_line_only: 'guest.errors.singleLineOnly',
+  fields_not_supported: 'guest.errors.fieldsNotSupported',
 };
 
 export function isNetworkError(error: unknown): boolean {

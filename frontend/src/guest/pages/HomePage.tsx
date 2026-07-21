@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -11,30 +12,83 @@ import LocalLaundryServiceOutlinedIcon from '@mui/icons-material/LocalLaundrySer
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
+import LocalTaxiOutlinedIcon from '@mui/icons-material/LocalTaxiOutlined';
+import RoomServiceOutlinedIcon from '@mui/icons-material/RoomServiceOutlined';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 
-interface ServiceTile {
+interface Tile {
+  /** Testid suffix: `guest-service-<code>`. */
   code: string;
+  label: string;
   icon: ReactNode;
   to?: string;
 }
 
-const TILES: ServiceTile[] = [
-  { code: 'restaurant', icon: <RestaurantMenuIcon fontSize="large" />, to: '/menu' },
-  { code: 'housekeeping', icon: <CleaningServicesOutlinedIcon fontSize="large" /> },
-  { code: 'laundry', icon: <LocalLaundryServiceOutlinedIcon fontSize="large" /> },
-  { code: 'spa', icon: <SpaOutlinedIcon fontSize="large" /> },
-  { code: 'maintenance', icon: <BuildOutlinedIcon fontSize="large" /> },
-  { code: 'concierge', icon: <SupportAgentOutlinedIcon fontSize="large" /> },
-];
+/**
+ * Icons are matched by the item/category code where we know one, so a hotel that
+ * names its service "taxi" gets a taxi glyph without any per-hotel config. An
+ * unknown code simply gets the neutral room-service icon.
+ */
+const ICONS: Record<string, ReactNode> = {
+  restaurant: <RestaurantMenuIcon fontSize="large" />,
+  housekeeping: <CleaningServicesOutlinedIcon fontSize="large" />,
+  cleaning: <CleaningServicesOutlinedIcon fontSize="large" />,
+  laundry: <LocalLaundryServiceOutlinedIcon fontSize="large" />,
+  spa: <SpaOutlinedIcon fontSize="large" />,
+  maintenance: <BuildOutlinedIcon fontSize="large" />,
+  concierge: <SupportAgentOutlinedIcon fontSize="large" />,
+  taxi: <LocalTaxiOutlinedIcon fontSize="large" />,
+};
+
+/** Placeholders shown until the hotel actually publishes its services. */
+const PLACEHOLDER_CODES = ['housekeeping', 'laundry', 'spa', 'maintenance', 'concierge'];
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { session, hotel } = useGuestSession();
+
+  // The same catalog endpoint as the services screen — the home tiles are just
+  // its shortest presentation, not a separate source of truth.
+  const servicesQuery = useGuestCatalog('service_request');
+
+  const tiles = useMemo<Tile[]>(() => {
+    const services = (servicesQuery.data?.categories ?? []).flatMap(
+      (category) => category.items,
+    );
+
+    const serviceTiles: Tile[] = services.map((item) => ({
+      code: item.code,
+      label: item.title,
+      icon: ICONS[item.code] ?? <RoomServiceOutlinedIcon fontSize="large" />,
+      // Straight to the request form of that service — the catalog screen and
+      // the sheet are the same ones the menu uses.
+      to: `/services?item=${item.id}`,
+    }));
+
+    const placeholders: Tile[] = serviceTiles.length
+      ? []
+      : PLACEHOLDER_CODES.map((code) => ({
+          code,
+          label: t(`guest.services.${code}`),
+          icon: ICONS[code],
+        }));
+
+    return [
+      {
+        code: 'restaurant',
+        label: t('guest.services.restaurant'),
+        icon: ICONS.restaurant,
+        to: '/menu',
+      },
+      ...serviceTiles,
+      ...placeholders,
+    ];
+  }, [servicesQuery.data, t]);
 
   return (
     <Container maxWidth="sm" sx={{ py: 3 }} data-testid="guest-home">
@@ -57,7 +111,7 @@ export function HomePage() {
             gap: 1.5,
           }}
         >
-          {TILES.map((tile) => {
+          {tiles.map((tile) => {
             const enabled = Boolean(tile.to);
             return (
               <ButtonBase
@@ -65,7 +119,7 @@ export function HomePage() {
                 disabled={!enabled}
                 onClick={() => tile.to && navigate(tile.to)}
                 data-testid={`guest-service-${tile.code}`}
-                aria-label={t(`guest.services.${tile.code}`)}
+                aria-label={tile.label}
                 sx={{
                   minHeight: 116,
                   p: 2,
@@ -85,7 +139,7 @@ export function HomePage() {
                 {tile.icon}
                 <Stack spacing={0.5} sx={{ width: '100%' }}>
                   <Typography variant="subtitle2" color="text.primary">
-                    {t(`guest.services.${tile.code}`)}
+                    {tile.label}
                   </Typography>
                   {!enabled ? (
                     <Chip

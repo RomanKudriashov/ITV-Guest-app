@@ -77,9 +77,16 @@ crystal` — заголовок принимается только при `DJAN
 
 ---
 
-## 2. Меню
+## 2. Каталог: меню и услуги
 
-### `GET /api/guest/menu?include_unavailable=true`
+Один эндпоинт на все типы предложений — см. [`offering-types.md`](offering-types.md).
+Различается только тело позиции, конверт общий.
+
+### `GET /api/guest/catalog?type=product&include_unavailable=true`
+
+`type`: `product` (еда — по умолчанию) · `service_request` (заявки-услуги).
+
+`GET /api/guest/menu` — исторический псевдоним для `type=product`.
 
 ```jsonc
 {
@@ -103,8 +110,11 @@ crystal` — заголовок принимается только при `DJAN
           "images": ["http://.../card.webp"],
           "flags": ["chef_choice"],
           "allergens": ["milk"],
+          "type": "product",
+          "location_mode": "delivery",     // delivery | room | none
           "has_modifiers": true,
           "has_required_modifiers": true,
+          "has_fields": false,             // у заявки-услуги — true
           "is_available": true,
           "unavailable_reason": null,      // "schedule" | "out_of_stock" | "inactive"
           "available_from": null           // "07:00" — UI пишет «с 07:00»
@@ -125,7 +135,10 @@ crystal` — заголовок принимается только при `DJAN
 
 ### `GET /api/guest/item/{id}`
 
-Блюдо целиком, с группами модификаторов:
+Позиция целиком. У товара приезжают группы модификаторов, у заявки-услуги —
+поля формы; конверт один и тот же, лишний блок просто пуст.
+
+**Товар (`type: product`):**
 
 ```jsonc
 {
@@ -143,9 +156,34 @@ crystal` — заголовок принимается только при `DJAN
          "price_delta": 0, "is_default": true}
       ]
     }
+  ],
+  "request_fields": []
+}
+```
+
+**Заявка-услуга (`type: service_request`):** `price` может быть `null` —
+«цена не указана», а не «бесплатно».
+
+```jsonc
+{
+  "id": "...", "code": "taxi", "type": "service_request",
+  "title": "Такси", "description": "Подадим машину к выходу",
+  "price": null, "location_mode": "none",
+  "modifier_groups": [],
+  "request_fields": [
+    {"code": "destination", "label": "Куда", "field_type": "text",
+     "is_required": true, "help_text": "Адрес или название места",
+     "options": [], "min_value": null, "max_value": null, "sort_order": 0},
+    {"code": "when", "label": "Когда подать", "field_type": "time",
+     "is_required": true, "options": [], "sort_order": 1},
+    {"code": "passengers", "label": "Сколько человек", "field_type": "count",
+     "is_required": true, "min_value": 1, "max_value": 8, "sort_order": 2}
   ]
 }
 ```
+
+Типы полей: `text` · `number` · `count` · `date` · `time` · `select`.
+Для `select` варианты лежат в `options`: `[{"value": "...", "label": "..."}]`.
 
 ---
 
@@ -185,12 +223,24 @@ crystal` — заголовок принимается только при `DJAN
     {"item_id": "...", "quantity": 2,
      "modifier_option_ids": ["..."], "comment": "без лука"}
   ],
-  "location_id": "...",
+  "location_id": "...",                 // только при location_mode=delivery
   "location_refinement": "",            // обязателен, если requires_refinement
   "delivery_mode": "delivery",
   "timing": "asap",                     // "asap" | "scheduled"
   "requested_time": null,               // ISO, обязательно при timing=scheduled
-  "comment": "к 19:00"
+  "comment": "к 19:00",
+  "field_values": {}                    // ответы на поля заявки-услуги
+}
+```
+
+**Заявка-услуга** отправляется тем же эндпоинтом, с одной позицией и
+заполненным `field_values` (ключ — `code` поля):
+
+```jsonc
+{
+  "lines": [{"item_id": "<такси>", "quantity": 1}],
+  "timing": "asap",
+  "field_values": {"destination": "Аэропорт Пулково", "when": "18:30", "passengers": 3}
 }
 ```
 
@@ -208,6 +258,10 @@ crystal` — заголовок принимается только при `DJAN
 | 422 | `refinement_required` | локация требует уточнения |
 | 422 | `requested_time_invalid` | время в прошлом или дальше 24 ч |
 | 422 | `mixed_categories` | позиции из разных категорий (один заказ — одна точка исполнения) |
+| 422 | `field_required` | не заполнено обязательное поле заявки (`field` — его код) |
+| 422 | `field_invalid` | значение не подходит типу поля или выходит за границы |
+| 422 | `single_line_only` | у заявки-услуги может быть только одна позиция |
+| 422 | `fields_not_supported` | `field_values` присланы для товара |
 
 `total` считает **сервер** по своим ценам; присланная клиентом сумма
 игнорируется. Деньги в этом прогоне не двигаются: `payment_state` = `none`.
@@ -263,7 +317,13 @@ crystal` — заголовок принимается только при `DJAN
   "requested_time": null,
   "eta_minutes": 25,                     // ожидаемое время, оценка сервера
   "comment": "к 19:00",
-  "total": 380000, "currency": "RUB",
+  "type": "cart",                        // "cart" у товаров, "request" у услуг
+  "total": 380000,                       // null, если у позиции нет цены
+  "currency": "RUB",
+  "field_values": [                      // непусто только у заявки-услуги
+    {"code": "destination", "label": "Куда", "field_type": "text",
+     "value": "Аэропорт Пулково", "display": "Аэропорт Пулково"}
+  ],
   "items": [
     {"id": "...", "item_id": "...", "title": "Стейк рибай", "quantity": 2,
      "unit_price": 190000, "line_total": 380000, "comment": "",

@@ -133,3 +133,20 @@ export async function guestOrders(
   expect(response.ok()).toBeTruthy()
   return response.json()
 }
+
+/* ── Заявки-услуги ─────────────────────────────────────────────────────── */
+
+/** Консьерж обслуживает такси — отдел, отличный от кухни. */
+export const CONCIERGE = { email: 'concierge@crystal.local', password: 'chef12345' }
+
+export async function staffToken(
+  request: APIRequestContext,
+  credentials: { email: string; password: string },
+): Promise<string> {
+  const response = await request.post(`${API}/api/staff/auth/login`, {
+    data: credentials,
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(response.ok(), `вход ${credentials.email} -> ${response.status()}`).toBeTruthy()
+  return (await response.json()).access
+}

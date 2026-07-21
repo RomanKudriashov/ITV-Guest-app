@@ -90,7 +90,25 @@
     "saved": "تم حفظ الطبق",
     "deleted": "تم حذف الطبق",
     "deleteTitle": "حذف الطبق؟",
-    "deleteBody": "سيتم حذف الطبق «{{name}}» من القائمة."
+    "deleteBody": "سيتم حذف الطبق «{{name}}» من القائمة.",
+    "type": "نوع العنصر",
+    "typeHint": "يُحدَّد عند الإنشاء ولا يتغيّر",
+    "typeLocked": "لا يمكن تغيير النوع",
+    "types": {
+      "product": "منتج",
+      "service_request": "طلب خدمة"
+    },
+    "priceOptionalHint": "يمكن تركه فارغًا",
+    "locationMode": "الموقع",
+    "locationModes": {
+      "delivery": "اسأل عن المكان",
+      "deliveryHint": "يختار الضيف نقطة التسليم",
+      "room": "غرفة الضيف",
+      "roomHint": "تُؤخذ الغرفة تلقائيًا",
+      "none": "بدون سؤال",
+      "noneHint": "لا حاجة للموقع"
+    },
+    "noPrice": "السعر غير محدد"
   },
   "editor": {
     "translationsFilled": "الترجمات: {{filled}} من {{total}}",
@@ -175,7 +193,14 @@
     "requiredMinOne": "المجموعة الإلزامية تحتاج حداً أدنى 1",
     "minLessThanMax": "الحد الأدنى لا يتجاوز الحد الأقصى",
     "requiredGroupEmpty": "المجموعة الإلزامية تحتاج خياراً فعالاً واحداً على الأقل",
-    "notEnoughOptions": "الحد الأدنى أكبر من عدد الخيارات الفعالة"
+    "notEnoughOptions": "الحد الأدنى أكبر من عدد الخيارات الفعالة",
+    "priceRequired": "أدخل السعر",
+    "labelRequired": "أدخل التسمية",
+    "codeDuplicate": "الرمز مستخدم",
+    "selectWithoutOptions": "أضف خيارًا واحدًا على الأقل",
+    "invalidRange": "الحد الأدنى أكبر من الأقصى",
+    "numberInvalid": "رقم غير صالح",
+    "optionValueRequired": "أدخل قيمة الخيار"
   },
   "errors": {
     "generic": "حدث خطأ ما",
@@ -240,7 +265,11 @@
       "laundry": "المغسلة",
       "spa": "سبا",
       "maintenance": "الصيانة",
-      "concierge": "الكونسيرج"
+      "concierge": "الكونسيرج",
+      "order": "اطلب",
+      "categories": "فئات الخدمات",
+      "emptyTitle": "لا خدمات بعد",
+      "emptyHint": "عد لاحقًا"
     },
     "menu": {
       "categories": "فئات القائمة",
@@ -308,7 +337,8 @@
       "cancelConfirmBody": "يمكنك الإلغاء قبل أن يبدأ الفندق بالتحضير.",
       "allOrders": "كل طلباتي",
       "offline": "لا يوجد اتصال",
-      "inProgress": "الآن"
+      "inProgress": "الآن",
+      "noPrice": "—"
     },
     "orders": {
       "active": "النشطة",
@@ -328,7 +358,11 @@
       "refinementRequired": "حدد مكان التسليم",
       "requestedTimeInvalid": "اختر وقتاً خلال الـ 24 ساعة القادمة",
       "mixedCategories": "يمكن أن يحتوي الطلب على عناصر من فئة واحدة فقط",
-      "cancelNotAllowed": "الطلب قيد التحضير ولا يمكن إلغاؤه"
+      "cancelNotAllowed": "الطلب قيد التحضير ولا يمكن إلغاؤه",
+      "fieldRequired": "حقل مطلوب فارغ",
+      "fieldInvalid": "قيمة غير صالحة",
+      "singleLineOnly": "خدمة واحدة لكل طلب",
+      "fieldsNotSupported": "لا تنطبق الحقول"
     },
     "flags": {
       "popular": "شائع",
@@ -357,6 +391,24 @@
       "sulphites": "الكبريتيت",
       "lupin": "الترمس",
       "molluscs": "الرخويات"
+    },
+    "request": {
+      "submit": "إرسال الطلب",
+      "sending": "جارٍ الإرسال…",
+      "comment": "تعليق",
+      "commentPlaceholder": "مثال: اتصل قبل ١٠ دقائق",
+      "noFields": "لا حقول لهذه الخدمة",
+      "errors": {
+        "required": "هذا الحقل مطلوب",
+        "number": "أدخل رقمًا",
+        "integer": "أدخل عددًا صحيحًا",
+        "min": "لا أقل من {{min}}",
+        "max": "لا أكثر من {{max}}",
+        "date": "اختر التاريخ",
+        "time": "اختر الوقت",
+        "option": "اختر من القائمة"
+      },
+      "selectPlaceholder": "غير محدد"
     }
   },
   "tracker": {
@@ -430,6 +482,35 @@
       "server": "الخادم لا يستجيب",
       "generic": "تعذّر تنفيذ الإجراء",
       "orderNotFound": "الطلب غير موجود أو يخص نقطة أخرى"
+    }
+  },
+  "requestFields": {
+    "title": "حقول الطلب",
+    "hint": "تُكوِّن هذه الحقول النموذج",
+    "addField": "حقل",
+    "empty": "لا حقول بعد",
+    "fieldN": "حقل {{n}}",
+    "label": "التسمية",
+    "helpText": "تلميح",
+    "type": "نوع الحقل",
+    "code": "الرمز",
+    "codeHint": "مفتاح الإجابة",
+    "required": "إلزامي",
+    "min": "الحد الأدنى",
+    "max": "الحد الأقصى",
+    "boundHint": "فارغ — بلا حد",
+    "options": "الخيارات",
+    "addOption": "خيار",
+    "noOptions": "لا خيارات",
+    "optionValue": "القيمة",
+    "optionLabel": "تسمية الخيار",
+    "types": {
+      "text": "نص",
+      "number": "رقم",
+      "count": "عدد",
+      "date": "تاريخ",
+      "time": "وقت",
+      "select": "قائمة"
     }
   }
 }

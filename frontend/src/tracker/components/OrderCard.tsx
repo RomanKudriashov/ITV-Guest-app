@@ -12,9 +12,10 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import { useTranslation } from 'react-i18next';
 
+import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
-import { itemsSummary, whenText, whereText } from '../orderText';
+import { itemsSummary, totalText, whenText, whereText } from '../orderText';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
@@ -45,6 +46,7 @@ export function OrderCard({
   const language = useTrackerLanguage();
   const { format } = useTrackerMoney();
   const slot = statusSlot(order.status.color_token);
+  const fieldValues = order.field_values ?? [];
 
   return (
     <Card
@@ -87,21 +89,30 @@ export function OrderCard({
             {whenText(order, t, language)}
           </Typography>
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {itemsSummary(order)}
-          </Typography>
+          {/*
+            The ONLY difference a service makes on this board: the body of the
+            card. Food shows its lines, a request shows the answers to its form.
+            Columns, actions, statuses and the socket know nothing about it.
+          */}
+          {fieldValues.length ? (
+            <OrderFieldValues values={fieldValues} testId="tracker-order-fields" dense />
+          ) : (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {itemsSummary(order)}
+            </Typography>
+          )}
 
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="subtitle2">{format(order.total, order.currency)}</Typography>
+            <Typography variant="subtitle2">{totalText(order, format)}</Typography>
             <Box sx={{ flexGrow: 1 }} />
             {order.assignee ? (
               <Stack direction="row" spacing={0.5} alignItems="center">

@@ -3,6 +3,9 @@
  * Money is always an integer in the currency's minor units (копейки).
  */
 
+import type { LocationMode, OfferingType } from '@/offerings/behaviour';
+import type { RequestFieldType } from '@/offerings/requestFields';
+
 /** Translatable field: `{"ru": "Горячее", "en": "Hot"}`. Empty languages absent. */
 export type Translated = Record<string, string>;
 
@@ -181,14 +184,53 @@ export interface ModifierGroupPayload {
   sort_order?: number;
 }
 
+/** One option of a `select` request field (contract §5a). */
+export interface RequestFieldOption {
+  value: string;
+  label: Translated;
+}
+
+/**
+ * A field of a request form — the counterpart of a modifier group, and present
+ * only on items whose behaviour `usesFields`.
+ */
+export interface RequestField {
+  id: string;
+  item_id?: string;
+  code?: string;
+  label: Translated;
+  help_text?: Translated;
+  field_type: RequestFieldType;
+  is_required: boolean;
+  options?: RequestFieldOption[];
+  min_value?: number | null;
+  max_value?: number | null;
+  sort_order: number;
+}
+
+export interface RequestFieldPayload {
+  label: Translated;
+  help_text?: Translated;
+  code?: string;
+  field_type: RequestFieldType;
+  is_required?: boolean;
+  options?: RequestFieldOption[];
+  min_value?: number | null;
+  max_value?: number | null;
+  sort_order?: number;
+}
+
 export interface Item {
   id: string;
   category_id: string;
   code: string;
+  /** Set at creation and immutable afterwards (`422 type_immutable`). */
+  type?: OfferingType;
+  location_mode?: LocationMode;
   title: Translated;
   description?: Translated;
-  /** Minor units. */
-  price: number;
+  /** Minor units; `null` — "price not set". */
+  price: number | null;
   images: MediaAsset[];
   flags: string[];
   allergens: string[];
@@ -197,6 +239,7 @@ export interface Item {
   is_active: boolean;
   in_stock: boolean;
   modifier_groups?: ModifierGroup[];
+  request_fields?: RequestField[];
 }
 
 export interface ItemPayload {
@@ -204,7 +247,10 @@ export interface ItemPayload {
   title: Translated;
   description?: Translated;
   code?: string;
-  price: number;
+  /** Only ever sent on creation — the server rejects a change of type. */
+  type?: OfferingType;
+  location_mode?: LocationMode;
+  price: number | null;
   flags?: string[];
   allergens?: string[];
   schedule_id?: string | null;

@@ -1,6 +1,9 @@
 /** One function per endpoint of docs/cms-api-contract.md. */
+import type { OfferingType } from '@/offerings/behaviour';
 import { api, request } from './client';
 import type {
+  RequestField,
+  RequestFieldPayload,
   Bootstrap,
   Category,
   CategoryPayload,
@@ -98,6 +101,8 @@ export function toggleCategory(id: string, isActive: boolean): Promise<Category>
 export function fetchItems(params: {
   category_id?: string;
   search?: string;
+  /** Filters the list by offering type; omitted means "every type". */
+  type?: OfferingType;
 }): Promise<Item[]> {
   return api.get<Item[]>('/cms/items', { query: params });
 }
@@ -136,6 +141,33 @@ export function toggleItem(id: string, isActive: boolean): Promise<Item> {
 /** Replaces the whole image set of the item, in the given order. */
 export function putItemImages(id: string, imageIds: string[]): Promise<MediaAsset[]> {
   return api.put<MediaAsset[]>(`/cms/items/${id}/images`, { image_ids: imageIds });
+}
+
+/* ── 5a. Request fields (contract §5a) ─────────────────────────────────── */
+
+export function createRequestField(
+  itemId: string,
+  payload: RequestFieldPayload,
+): Promise<RequestField> {
+  return api.post<RequestField>(`/cms/items/${itemId}/request-fields`, payload);
+}
+
+export function updateRequestField(
+  id: string,
+  payload: Partial<RequestFieldPayload>,
+): Promise<RequestField> {
+  return api.patch<RequestField>(`/cms/request-fields/${id}`, payload);
+}
+
+export function deleteRequestField(id: string): Promise<void> {
+  return api.delete<void>(`/cms/request-fields/${id}`);
+}
+
+export function reorderRequestFields(
+  itemId: string,
+  items: ReorderEntry[],
+): Promise<RequestField[]> {
+  return api.post<RequestField[]>(`/cms/items/${itemId}/request-fields/reorder`, { items });
 }
 
 /* ── 5. Modifier groups & options ──────────────────────────────────────── */

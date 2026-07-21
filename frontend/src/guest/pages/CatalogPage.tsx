@@ -13,12 +13,13 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
+import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
 import { FlagChips, ItemThumb } from '../components/ItemMeta';
 import { ItemSheet } from '../components/ItemSheet';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
 import { errorMessage } from '../errors';
-import { useGuestMenu } from '../hooks/useGuestQueries';
+import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
 import { useCart } from '../state/cart';
@@ -27,12 +28,26 @@ import type { MenuItem } from '../api/types';
 const HEADER_OFFSET = 56;
 const TABS_HEIGHT = 48;
 
-export function MenuPage() {
+export interface CatalogPageProps {
+  /** Which catalog to show. Everything else on this screen is type-agnostic. */
+  type: OfferingType;
+}
+
+/**
+ * ONE storefront catalog screen. `/menu` renders the `product` catalog,
+ * `/services` renders the `service_request` one — same request, same layout,
+ * same sheet. The type decides only the testid prefix, the wording and whether a
+ * row can be dropped into the cart, and all three come from the behaviour
+ * registry rather than from conditions spread over the markup.
+ */
+export function CatalogPage({ type }: CatalogPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { format } = useMoney();
+  const { format, formatOptional } = useMoney();
   const cart = useCart();
-  const { data, isLoading, error, refetch } = useGuestMenu();
+  const behaviour = behaviourFor(type);
+  const ns = behaviour.guestCatalogNamespace;
+  const { data, isLoading, error, refetch } = useGuestCatalog(type);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const openItemId = searchParams.get('item');
@@ -123,15 +138,17 @@ export function MenuPage() {
   if (!categories.length) {
     return (
       <EmptyState
-        title={t('guest.menu.emptyTitle')}
-        description={t('guest.menu.emptyHint')}
-        testId="guest-menu-empty"
+        title={t(`${ns}.emptyTitle`)}
+        description={t(`${ns}.emptyHint`)}
+        testId={`${behaviour.guestTestIdPrefix}-catalog-empty`}
       />
     );
   }
 
+  const showCartBar = behaviour.usesCart && !cart.isEmpty;
+
   return (
-    <Box data-testid="guest-menu">
+    <Box data-testid={behaviour.usesCart ? 'guest-menu' : 'guest-services'}>
       <Box
         sx={{
           position: 'sticky',
@@ -148,7 +165,7 @@ export function MenuPage() {
           variant="scrollable"
           scrollButtons={false}
           allowScrollButtonsMobile
-          aria-label={t('guest.menu.categories')}
+          aria-label={t(`${ns}.categories`)}
           sx={{ minHeight: TABS_HEIGHT }}
         >
           {categories.map((category) => (
@@ -163,7 +180,7 @@ export function MenuPage() {
         </Tabs>
       </Box>
 
-      <Container maxWidth="sm" sx={{ py: 2, pb: cart.isEmpty ? 2 : 12 }}>
+      <Container maxWidth="sm" sx={{ py: 2, pb: showCartBar ? 12 : 2 }}>
         <Stack spacing={3}>
           {categories.map((category) => (
             <Box
@@ -187,12 +204,13 @@ export function MenuPage() {
 
               <Stack divider={<Box sx={{ height: 1, bgcolor: 'divider' }} />}>
                 {category.items.map((item) => (
-                  <MenuRow
+                  <CatalogRow
                     key={item.id}
                     item={item}
+                    fallbackType={type}
                     categoryAvailable={category.is_available}
                     onOpen={() => openItem(item)}
-                    format={format}
+                    formatPrice={formatOptional}
                   />
                 ))}
               </Stack>
@@ -201,7 +219,7 @@ export function MenuPage() {
         </Stack>
       </Container>
 
-      {!cart.isEmpty ? (
+      {showCartBar ? (
         <StickyFooter offset={BOTTOM_NAV_HEIGHT}>
           <Button
             fullWidth
@@ -228,19 +246,34 @@ export function MenuPage() {
   );
 }
 
-interface MenuRowProps {
+interface CatalogRowProps {
   item: MenuItem;
+  /** Type of the catalog being shown — used when a row omits its own `type`. */
+  fallbackType: OfferingType;
   categoryAvailable: boolean;
   onOpen: () => void;
-  format: (minor: number) => string;
+  formatPrice: (minor: number | null | undefined) => string | null;
 }
 
-function MenuRow({ item, categoryAvailable, onOpen, format }: MenuRowProps) {
+function CatalogRow({
+  item,
+  fallbackType,
+  categoryAvailable,
+  onOpen,
+  formatPrice,
+}: CatalogRowProps) {
   const { t } = useTranslation();
   const cart = useCart();
+  const behaviour = behaviourFor(item.type ?? fallbackType);
+  const usesFields = item.has_fields ?? behaviour.usesFields;
   const available = item.is_available && categoryAvailable;
-  const needsSheet = item.has_required_modifiers ?? Boolean(item.modifier_groups?.some((g) => g.is_required));
+  // A form-filled offering always opens the sheet; a dish only when it has to be
+  // configured. Either way the guest ends up in the same sheet.
+  const needsSheet =
+    usesFields ||
+    (item.has_required_modifiers ?? Boolean(item.modifier_groups?.some((g) => g.is_required)));
   const quantity = cart.simpleQuantity(item.id);
+  const price = formatPrice(item.price);
 
   const unavailableNote = !available
     ? item.available_from
@@ -256,7 +289,7 @@ function MenuRow({ item, categoryAvailable, onOpen, format }: MenuRowProps) {
       spacing={1.5}
       alignItems="center"
       sx={{ py: 1.5, opacity: available ? 1 : 0.55 }}
-      data-testid={`guest-item-${item.code}`}
+      data-testid={`${behaviour.guestTestIdPrefix}-${item.code}`}
     >
       <ButtonBase
         onClick={onOpen}
@@ -293,7 +326,8 @@ function MenuRow({ item, categoryAvailable, onOpen, format }: MenuRowProps) {
           ) : null}
           <FlagChips flags={item.flags ?? []} />
           <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="subtitle2">{format(item.price)}</Typography>
+            {/* "No price" is a normal state for a service — never print "0 ₽". */}
+            {price ? <Typography variant="subtitle2">{price}</Typography> : null}
             {unavailableNote ? (
               <Typography variant="caption" color="text.secondary">
                 {unavailableNote}
@@ -312,7 +346,7 @@ function MenuRow({ item, categoryAvailable, onOpen, format }: MenuRowProps) {
             data-testid={`guest-qty-plus-${item.code}`}
             sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
           >
-            {t('guest.menu.choose')}
+            {usesFields ? t('guest.services.order') : t('guest.menu.choose')}
           </Button>
         ) : quantity > 0 ? (
           <QuantityStepper

@@ -96,12 +96,17 @@ function ItemRow({
 
   const title = pickTranslated(item.title, displayLanguage, fallbackLanguage) || item.code;
   const thumb = item.images?.find((image) => image.status === 'ready');
-  const price = formatMoney(
-    item.price,
-    bootstrap.hotel.currency,
-    bootstrap.hotel.currency_minor_units,
-    i18n.resolvedLanguage ?? 'ru',
-  );
+  // An item without a price is a normal state for a service — say so instead of
+  // printing a fake zero.
+  const price =
+    item.price === null || item.price === undefined
+      ? t('item.noPrice')
+      : formatMoney(
+          item.price,
+          bootstrap.hotel.currency,
+          bootstrap.hotel.currency_minor_units,
+          i18n.resolvedLanguage ?? 'ru',
+        );
 
   const flagTitle = (code: string) => {
     const flag = bootstrap.flags.find((entry) => entry.code === code);

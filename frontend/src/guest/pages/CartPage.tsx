@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -23,17 +22,15 @@ import { EmptyState } from '@/components/EmptyState';
 import { ItemThumb } from '../components/ItemMeta';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
-import { createOrder } from '../api/guest';
-import { guestKeys } from '../api/queryKeys';
 import { errorMessage, isRetryableOrderError } from '../errors';
-import { useGuestLanguage, useGuestLocations } from '../hooks/useGuestQueries';
-import { useIdempotencyKey } from '../hooks/useIdempotencyKey';
+import { useGuestLocations } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
+import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
-import type { CreateOrderPayload, GuestOrder, OrderTiming } from '../api/types';
+import type { CreateOrderPayload, OrderTiming } from '../api/types';
 
 interface CheckoutDraft {
   locationId: string | null;
@@ -59,11 +56,9 @@ function timeToIso(time: string): string | null {
 export function CartPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { format } = useMoney();
   const cart = useCart();
   const { canOrder } = useGuestSession();
-  const language = useGuestLanguage();
   const locationsQuery = useGuestLocations();
 
   const locations = useMemo(
@@ -103,21 +98,10 @@ export function CartPage() {
     [cart, draft, needsRefinement, locationsQuery.data],
   );
 
-  // One key per attempt; a changed body mints a new one (else the server 409s).
-  const [idempotencyKey, rotateKey] = useIdempotencyKey(JSON.stringify(payload));
-  const [failure, setFailure] = useState<unknown>(null);
-
-  const mutation = useMutation<GuestOrder, unknown, void>({
-    mutationFn: () => createOrder(payload, idempotencyKey, language),
-    onSuccess: (order) => {
-      setFailure(null);
-      queryClient.setQueryData(guestKeys.order(order.id), order);
-      void queryClient.invalidateQueries({ queryKey: ['guest', 'orders'] });
-      cart.clear();
-      rotateKey();
-      navigate(`/orders/${order.id}?placed=1`, { replace: true });
-    },
-    onError: (error) => setFailure(error),
+  // The same checkout the request form uses — one endpoint, one idempotency
+  // discipline, one confirmation screen for both offering types.
+  const { submit: place, isPending, failure } = useOrderSubmit(payload, {
+    onPlaced: () => cart.clear(),
   });
 
   const submit = () => {
@@ -126,7 +110,7 @@ export function CartPage() {
       setDraft((prev) => ({ ...prev, showErrors: true }));
       return;
     }
-    mutation.mutate();
+    place();
   };
 
   if (cart.isEmpty) {
@@ -329,7 +313,7 @@ export function CartPage() {
               data-testid="guest-order-error"
               action={
                 isRetryableOrderError(failure) ? (
-                  <Button color="inherit" size="small" onClick={() => mutation.mutate()}>
+                  <Button color="inherit" size="small" onClick={() => place()}>
                     {t('guest.common.retry')}
                   </Button>
                 ) : undefined
@@ -347,12 +331,12 @@ export function CartPage() {
           fullWidth
           size="large"
           variant="contained"
-          disabled={!canOrder || mutation.isPending || !locations.length}
+          disabled={!canOrder || isPending || !locations.length}
           onClick={submit}
           data-testid="guest-place-order"
           sx={{ minHeight: 52 }}
         >
-          {mutation.isPending
+          {isPending
             ? t('guest.cart.placing')
             : t('guest.cart.place', { price: format(cart.total) })}
         </Button>

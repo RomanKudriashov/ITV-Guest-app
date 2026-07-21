@@ -121,8 +121,10 @@ sort_order, is_active}`. `code` генерируется из title, если н
 ```jsonc
 {
   "id","category_id","code",
+  "type": "product",                 // product | service_request
+  "location_mode": "delivery",       // delivery | room | none
   "title":{...}, "description":{...},
-  "price": 190000,
+  "price": 190000,                   // null — «цена не указана»
   "images": [{"id","url","thumb_url","status","sort_order"}],
   "flags": ["chef_choice","gluten_free"],
   "allergens": ["milk"],
@@ -134,7 +136,7 @@ sort_order, is_active}`. `code` генерируется из title, если н
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET | `/api/cms/items?category_id=&search=` | список (без `modifier_groups`) |
+| GET | `/api/cms/items?category_id=&search=&type=` | список (без `modifier_groups`) |
 | POST | `/api/cms/items` | создать |
 | GET | `/api/cms/items/{id}` | полный объект **с** модификаторами |
 | PATCH | `/api/cms/items/{id}` | частичное обновление |
@@ -144,9 +146,47 @@ sort_order, is_active}`. `code` генерируется из title, если н
 | POST | `/api/cms/items/{id}/toggle` | `{"is_active": false}` |
 | PUT | `/api/cms/items/{id}/images` | `{"image_ids": ["...", "..."]}` — порядок |
 
-Валидация: `price >= 0`; `title` должен иметь непустое значение хотя бы на
-языке отеля по умолчанию (`422 field=title`); `flags`/`allergens` — только коды
-из `bootstrap`.
+Валидация: `price >= 0` либо `null`; `title` должен иметь непустое значение
+хотя бы на языке отеля по умолчанию (`422 field=title`); `flags`/`allergens` —
+только коды из `bootstrap`.
+
+`type` задаётся при создании и **не меняется** потом: у товара есть
+модификаторы и корзина, у заявки — поля и форма, и переключение типа на лету
+осиротило бы одно из двух. Смена типа — `422 type_immutable`.
+`location_mode` по умолчанию берётся из реестра поведений
+([`offering-types.md`](offering-types.md)), но отель может его переопределить.
+
+---
+
+## 5a. Поля заявки-услуги
+
+Есть только у позиций типа `service_request` — так же, как модификаторы есть
+только у товаров. Устроено по образцу групп модификаторов.
+
+```jsonc
+{
+  "id": "...", "item_id": "...", "code": "destination",
+  "label": {"ru": "Куда", "en": "Where to"},
+  "help_text": {"ru": "Адрес или название места"},
+  "field_type": "text",              // text|number|count|date|time|select
+  "is_required": true,
+  "options": [{"value": "econom", "label": {"ru": "Эконом"}}],
+  "min_value": null, "max_value": null,
+  "sort_order": 0
+}
+```
+
+| Метод | Путь |
+|---|---|
+| POST | `/api/cms/items/{item_id}/request-fields` |
+| PATCH / DELETE | `/api/cms/request-fields/{id}` |
+| POST | `/api/cms/items/{item_id}/request-fields/reorder` |
+
+Правила (проверяет сервер):
+* `select` без вариантов — `422 select_without_options`;
+* `min_value > max_value` — `422 invalid_range`;
+* границы задаются только для `number` и `count`;
+* поля у позиции типа `product` — `422 fields_not_supported`.
 
 ---
 

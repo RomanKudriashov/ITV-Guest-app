@@ -25,5 +25,15 @@ export function useMoney() {
     [currency, minorUnits, language],
   );
 
-  return { format, delta, currency, minorUnits };
+  /**
+   * `null` means "price not set" (a service may be unpriced) — the caller gets
+   * `null` back and hides the element instead of printing a misleading "0 ₽".
+   */
+  const formatOptional = useCallback(
+    (minor: number | null | undefined) =>
+      minor === null || minor === undefined ? null : format(minor),
+    [format],
+  );
+
+  return { format, formatOptional, delta, currency, minorUnits };
 }

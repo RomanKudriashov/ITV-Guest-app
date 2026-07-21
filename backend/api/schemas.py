@@ -65,21 +65,25 @@ class MenuOut(Schema):
 class ItemDetailOut(Schema):
     id: str
     code: str
+    type: str
+    location_mode: str
     category_id: str
     category_title: str
     title: str
     description: str
-    price: int
+    price: int | None
     images: list[str]
     flags: list[str]
     allergens: list[str]
     has_modifiers: bool
     has_required_modifiers: bool
+    has_fields: bool
     is_available: bool
     unavailable_reason: str | None
     available_from: str | None
     available_until: str | None
     modifier_groups: list[dict[str, Any]]
+    request_fields: list[dict[str, Any]]
 
 
 # --- Локации ---------------------------------------------------------------
@@ -109,6 +113,8 @@ class OrderIn(Schema):
     timing: str = "asap"
     requested_time: datetime | None = None
     comment: str = ""
+    # Ответы на поля заявки-услуги: {code поля: значение}. У товаров пусто.
+    field_values: dict[str, Any] = {}
 
 
 class CancelIn(Schema):
@@ -118,6 +124,7 @@ class CancelIn(Schema):
 class OrderOut(Schema):
     id: str
     number: int
+    type: str
     created_at: str
     status: dict[str, Any]
     status_flow: list[dict[str, Any]]
@@ -128,8 +135,9 @@ class OrderOut(Schema):
     requested_time: str | None
     eta_minutes: int | None
     comment: str
-    total: int
+    total: int | None
     currency: str
+    field_values: list[dict[str, Any]]
     items: list[dict[str, Any]]
 
 

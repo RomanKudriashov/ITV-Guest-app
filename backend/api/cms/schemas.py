@@ -90,6 +90,7 @@ class BootstrapOut(Schema):
 
 
 class CategoryIn(Schema):
+    type: str = "product"
     title: Translations
     description: Translations | None = None
     code: str | None = None
@@ -115,6 +116,7 @@ class CategoryOut(Schema):
     id: str
     parent_id: str | None
     code: str
+    type: str
     title: Translations
     description: Translations
     image: dict[str, Any] | None
@@ -133,10 +135,12 @@ class CategoryTreeOut(CategoryOut):
 
 class ItemIn(Schema):
     category_id: str
+    type: str = "product"
+    location_mode: str | None = None
     title: Translations
     description: Translations | None = None
     code: str | None = None
-    price: int = 0
+    price: int | None = 0
     flags: list[str] = []
     allergens: list[str] = []
     image_ids: list[str] | None = None
@@ -148,6 +152,8 @@ class ItemIn(Schema):
 
 class ItemPatch(Schema):
     category_id: str | None = None
+    type: str | None = None
+    location_mode: str | None = None
     title: Translations | None = None
     description: Translations | None = None
     code: str | None = None
@@ -169,9 +175,11 @@ class ItemOut(Schema):
     id: str
     category_id: str
     code: str
+    type: str
+    location_mode: str
     title: Translations
     description: Translations
-    price: int
+    price: int | None
     images: list[dict[str, Any]]
     flags: list[str]
     allergens: list[str]
@@ -183,6 +191,48 @@ class ItemOut(Schema):
 
 class ItemDetailOut(ItemOut):
     modifier_groups: list[dict[str, Any]] = []
+    request_fields: list[dict[str, Any]] = []
+
+
+# --- Поля заявки-услуги -----------------------------------------------------
+
+
+class RequestFieldIn(Schema):
+    label: Translations
+    help_text: Translations | None = None
+    code: str | None = None
+    field_type: str = "text"
+    is_required: bool = False
+    options: list[dict[str, Any]] = []
+    min_value: int | None = None
+    max_value: int | None = None
+    sort_order: int | None = None
+
+
+class RequestFieldPatch(Schema):
+    label: Translations | None = None
+    help_text: Translations | None = None
+    code: str | None = None
+    field_type: str | None = None
+    is_required: bool | None = None
+    options: list[dict[str, Any]] | None = None
+    min_value: int | None = None
+    max_value: int | None = None
+    sort_order: int | None = None
+
+
+class RequestFieldOut(Schema):
+    id: str
+    item_id: str
+    code: str
+    label: Translations
+    help_text: Translations
+    field_type: str
+    is_required: bool
+    options: list[dict[str, Any]]
+    min_value: int | None
+    max_value: int | None
+    sort_order: int
 
 
 # --- Модификаторы ----------------------------------------------------------

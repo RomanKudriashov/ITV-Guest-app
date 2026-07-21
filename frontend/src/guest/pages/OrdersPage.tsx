@@ -97,7 +97,7 @@ function Section({ title, orders }: { title: string; orders: GuestOrder[] }) {
 function OrderRow({ order }: { order: GuestOrder }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { format } = useMoney();
+  const { formatOptional } = useMoney();
 
   const created = (() => {
     try {
@@ -142,7 +142,10 @@ function OrderRow({ order }: { order: GuestOrder }) {
             {order.items.length > 1 ? ` +${order.items.length - 1}` : ''}
           </Typography>
         </Stack>
-        <Typography variant="body2">{format(order.total)}</Typography>
+        {/* No total is a valid state: a service may simply have no price. */}
+        {formatOptional(order.total) ? (
+          <Typography variant="body2">{formatOptional(order.total)}</Typography>
+        ) : null}
         <ChevronRightIcon fontSize="small" color="disabled" />
       </ButtonBase>
     </Paper>

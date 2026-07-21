@@ -78,8 +78,9 @@ JWT персонала — тот же, что у CMS (`POST /api/staff/auth/log
 
 ```jsonc
 {
-  // ...всё из гостевого объекта: id, number, status, status_flow, history,
-  // room, location, delivery_mode, requested_time, comment, total, items...
+  // ...всё из гостевого объекта: id, number, type, status, status_flow,
+  // history, room, location, delivery_mode, requested_time, comment, total,
+  // items, field_values...
   "execution_point": {"id": "...", "code": "kitchen", "title": "Кухня ресторана"},
   "assignee": {"id": "...", "name": "Пётр, повар"} | null,
   "accepted_at": "2026-07-21T19:06:00+03:00" | null,
@@ -94,6 +95,15 @@ JWT персонала — тот же, что у CMS (`POST /api/staff/auth/log
 
 `next_statuses` считает сервер: клиент не должен знать правила переходов, а
 кнопки на карточке обязаны совпадать с тем, что сервер реально примет.
+
+**Заявка-услуга приезжает на доску тем же объектом.** Отличается только тело
+карточки: у еды — список позиций, у заявки — ответы на поля (`field_values`).
+Доска, действия, статусы и WebSocket общие; отдельного «трекера услуг» нет и
+не должно появиться (см. [`offering-types.md`](offering-types.md)).
+
+Заявки маршрутизируются в свои отделы: такси — на консьержа, уборка — в
+хозслужбу. Доска кухни их не показывает, и наоборот — это обычная работа
+`Route`, а не новая логика.
 
 ---
 
