@@ -2,3 +2,7 @@
 
 pytest>=8.3,<9.0
 pytest-django>=4.9,<5.0
+
+# Только ради channels.testing: его пакетный __init__ импортирует daphne, даже
+# если брать один WebsocketCommunicator. Сервер мы гоняем на uvicorn.
+daphne>=4.1,<5.0

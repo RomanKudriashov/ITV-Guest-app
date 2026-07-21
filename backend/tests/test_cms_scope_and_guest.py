@@ -117,8 +117,16 @@ def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, categ
     assert item["title"] == "Борщ"
     assert item["price"] == 42000
     assert item["allergens"] == ["milk"]
-    assert item["modifier_groups"][0]["is_required"] is True
-    assert len(item["modifier_groups"][0]["options"]) == 2
+    assert item["has_required_modifiers"] is True
+
+    # Сами группы витрина берёт из карточки блюда, а не из списка меню.
+    detail = client.get(
+        f"/api/guest/item/{item['id']}",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    assert detail["modifier_groups"][0]["is_required"] is True
+    assert len(detail["modifier_groups"][0]["options"]) == 2
 
     english = _guest_menu(client, crystal, guest_token, language="en")
     assert _find_item(english, "borsch")["title"] == "Borsch"

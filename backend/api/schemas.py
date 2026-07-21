@@ -1,3 +1,5 @@
+"""Схемы гостевой витрины. Контракт — docs/guest-api-contract.md."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -9,9 +11,10 @@ from ninja import Schema
 class ErrorOut(Schema):
     detail: str
     code: str = "error"
+    field: str | None = None
 
 
-# --- Гостевая сессия -------------------------------------------------------
+# --- Сессия ----------------------------------------------------------------
 
 
 class GuestSessionIn(Schema):
@@ -19,13 +22,35 @@ class GuestSessionIn(Schema):
     language: str | None = None
 
 
+class HotelOut(Schema):
+    id: str
+    name: str
+    subdomain: str
+    currency: str
+    currency_minor_units: int
+    timezone: str
+    default_language: str
+    languages: list[dict[str, Any]]
+    theme: dict[str, Any]
+
+
 class GuestSessionOut(Schema):
-    token: str
+    token: str | None = None
     session_id: str
     trust: str
     expires_at: datetime
-    hotel: dict[str, Any]
+    language: str
     room: str | None = None
+    hotel: HotelOut
+
+
+class RoomNotFoundOut(Schema):
+    """Не ошибка сервера, а развилка сценария: ведём гостя на ручной ввод."""
+
+    detail: str
+    code: str = "room_not_found"
+    hint: str = "manual_entry"
+    hotel: HotelOut
 
 
 # --- Меню ------------------------------------------------------------------
@@ -33,7 +58,37 @@ class GuestSessionOut(Schema):
 
 class MenuOut(Schema):
     language: str | None
+    server_time: str | None
     categories: list[dict[str, Any]]
+
+
+class ItemDetailOut(Schema):
+    id: str
+    code: str
+    category_id: str
+    category_title: str
+    title: str
+    description: str
+    price: int
+    images: list[str]
+    flags: list[str]
+    allergens: list[str]
+    has_modifiers: bool
+    has_required_modifiers: bool
+    is_available: bool
+    unavailable_reason: str | None
+    available_from: str | None
+    available_until: str | None
+    modifier_groups: list[dict[str, Any]]
+
+
+# --- Локации ---------------------------------------------------------------
+
+
+class LocationsOut(Schema):
+    room: str | None
+    locations: list[dict[str, Any]]
+    delivery_modes: list[str]
 
 
 # --- Заказ -----------------------------------------------------------------
@@ -51,20 +106,41 @@ class OrderIn(Schema):
     location_id: str | None = None
     location_refinement: str = ""
     delivery_mode: str = "delivery"
+    timing: str = "asap"
     requested_time: datetime | None = None
     comment: str = ""
+
+
+class CancelIn(Schema):
+    reason: str = ""
 
 
 class OrderOut(Schema):
     id: str
     number: int
+    created_at: str
     status: dict[str, Any]
+    status_flow: list[dict[str, Any]]
+    history: list[dict[str, Any]]
     room: str
     location: dict[str, Any] | None
     delivery_mode: str
     requested_time: str | None
+    eta_minutes: int | None
     comment: str
     total: int
     currency: str
-    created_at: str
     items: list[dict[str, Any]]
+
+
+class OrdersOut(Schema):
+    active: list[OrderOut]
+    past: list[OrderOut]
+
+
+# --- Смена статуса (персонал) ----------------------------------------------
+
+
+class StatusChangeIn(Schema):
+    status: str
+    comment: str = ""

@@ -1,9 +1,13 @@
 """
-Сборка меню для гостя.
+Сборка витрины для гостя.
 
-Вся логика доступности — здесь, а не во вьюхе: расписание, стоп-лист,
-локализация, фолбэк картинок. Тот же код переиспользуют CMS-предпросмотр и
-будущий ТВ-модуль.
+Витрина отдаёт **уже локализованные строки**, а не словари переводов: гостю не
+нужен весь набор языков, ему нужен свой. Это же отличает выдачу от CMS, где
+переводы отдаются целиком.
+
+Доступность считает apps/catalog/availability.py — один расчёт и для показа, и
+для валидации заказа. Расхождение здесь дало бы худший баг витрины: позицию,
+которую видно, но нельзя заказать.
 """
 
 from __future__ import annotations
@@ -13,8 +17,10 @@ from datetime import datetime
 from typing import Any
 
 from apps.core.fields import translate
+from apps.hotels.models import Hotel
 from apps.media.services import image_url
 
+from .availability import category_availability, item_availability
 from .models import Category, Item, ModifierGroup, OfferingType
 
 
@@ -27,19 +33,20 @@ class MenuOptions:
     location_id: Any = None
 
 
-def build_menu(options: MenuOptions | None = None) -> dict[str, Any]:
+def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None) -> dict[str, Any]:
     """
-    Плоский по категориям, вложенный по позициям — ровно то, что нужно
-    витрине. Недоступные позиции по умолчанию НЕ прячем: гостю полезнее
-    увидеть «завтрак с 7:00», чем пустой раздел.
+    Плоский по категориям, вложенный по позициям — ровно то, что нужно витрине.
+
+    Недоступные позиции по умолчанию НЕ прячем: гостю полезнее увидеть
+    «завтрак с 07:00», чем пустой раздел. Заказать их всё равно не выйдет.
     """
     options = options or MenuOptions()
     language = options.language
 
     categories = (
         Category.objects.filter(type=options.offering_type, is_active=True)
-        .select_related("schedule", "image", "parent")
-        .prefetch_related("schedule__intervals")
+        .select_related("schedule", "image", "parent", "parent__schedule")
+        .prefetch_related("schedule__intervals", "parent__schedule__intervals")
         .order_by("sort_order", "code")
     )
     if options.location_id:
@@ -49,29 +56,19 @@ def build_menu(options: MenuOptions | None = None) -> dict[str, Any]:
         ).distinct()
 
     items_by_category: dict[Any, list[Item]] = {}
-    items = (
-        Item.objects.filter(type=options.offering_type, is_active=True)
-        .select_related("schedule")
-        .prefetch_related(
-            "schedule__intervals",
-            "images__asset",
-            "modifier_groups__options",
-        )
-        .order_by("sort_order", "code")
-    )
-    for item in items:
+    for item in _item_queryset(options.offering_type):
         items_by_category.setdefault(item.category_id, []).append(item)
 
     payload_categories = []
     for category in categories:
-        category_available = category.is_available_at(options.moment)
+        state = category_availability(category, options.moment)
         serialized_items = [
             _serialize_item(item, language, options.moment, category)
             for item in items_by_category.get(category.pk, [])
         ]
         if not options.include_unavailable:
-            serialized_items = [i for i in serialized_items if i["is_available"]]
-            if not (category_available and serialized_items):
+            serialized_items = [entry for entry in serialized_items if entry["is_available"]]
+            if not (state.is_available and serialized_items):
                 continue
 
         payload_categories.append(
@@ -81,39 +78,69 @@ def build_menu(options: MenuOptions | None = None) -> dict[str, Any]:
                 "parent_id": str(category.parent_id) if category.parent_id else None,
                 "title": translate(category.title, language),
                 "description": translate(category.description, language),
-                "image_url": image_url(
-                    category.image, variant="card", fallback_code=category.code
-                ),
+                "image_url": image_url(category.image, variant="card", fallback_code=category.code),
                 "sort_order": category.sort_order,
-                "is_available": category_available,
-                "unavailable_reason": None if category_available else "schedule",
+                **state.as_dict(),
                 "items": serialized_items,
             }
         )
 
-    return {"language": language, "categories": payload_categories}
+    hotel = hotel or Hotel.objects.filter(pk=_current_hotel_id()).first()
+    return {
+        "language": language,
+        "server_time": (hotel.local_now().isoformat() if hotel else None),
+        "categories": payload_categories,
+    }
+
+
+def _current_hotel_id():
+    from apps.core.context import current_hotel_id
+
+    return current_hotel_id()
+
+
+def _item_queryset(offering_type: str = OfferingType.PRODUCT):
+    return (
+        Item.objects.filter(type=offering_type, is_active=True)
+        .select_related("schedule", "category", "category__schedule")
+        .prefetch_related(
+            "schedule__intervals",
+            "category__schedule__intervals",
+            "images__asset",
+            "modifier_groups__options",
+        )
+        .order_by("sort_order", "code")
+    )
+
+
+def get_item_detail(item_id, *, language: str | None = None, moment: datetime | None = None) -> dict:
+    """Карточка блюда: то же, что в меню, плюс полные группы модификаторов."""
+    from apps.core.errors import NotFoundError
+
+    item = _item_queryset().filter(pk=item_id).first()
+    if item is None:
+        raise NotFoundError("Блюдо не найдено")
+
+    payload = _serialize_item(item, language, moment, item.category)
+    payload["category_title"] = translate(item.category.title, language)
+    payload["modifier_groups"] = [
+        _serialize_modifier_group(group, language) for group in item.modifier_groups.all()
+    ]
+    return payload
 
 
 def _serialize_item(
     item: Item, language: str | None, moment: datetime | None, category: Category
 ) -> dict[str, Any]:
-    available = item.is_available_at(moment) and category.is_available_at(moment)
-    reason = None
-    if not available:
-        if not item.in_stock:
-            reason = "out_of_stock"
-        elif item.schedule_id or category.schedule_id:
-            reason = "schedule"
-        else:
-            reason = "inactive"
+    state = item_availability(item, moment, category=category)
 
     images = [
         image_url(link.asset, variant="card", fallback_code=category.code)
         for link in item.images.all()
     ]
-    if not images:
-        images = [image_url(None, fallback_code=category.code)]
+    images = [url for url in images if url] or [image_url(None, fallback_code=category.code)]
 
+    groups = list(item.modifier_groups.all())
     return {
         "id": str(item.pk),
         "code": item.code,
@@ -124,12 +151,11 @@ def _serialize_item(
         "flags": list(item.flags or []),
         "allergens": list(item.allergens or []),
         "images": [url for url in images if url],
-        "is_available": available,
-        "unavailable_reason": reason,
-        "modifier_groups": [
-            _serialize_modifier_group(group, language)
-            for group in item.modifier_groups.all()
-        ],
+        # Витрине важно заранее знать, открывать ли карточку: позицию без
+        # модификаторов можно добавить прямо из списка одним тапом.
+        "has_modifiers": bool(groups),
+        "has_required_modifiers": any(group.is_required for group in groups),
+        **state.as_dict(),
     }
 
 

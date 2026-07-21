@@ -6,14 +6,15 @@ from apps.core.errors import DomainError
 from .cms import router as cms_router
 from .guest import router as guest_router
 from .health import router as health_router
+from .orders import router as orders_router
 from .staff import router as staff_router
 
 api = NinjaAPI(
     title="ITV Guest App API",
-    version="0.2.0",
+    version="0.3.0",
     description=(
-        "Мультиотельная гостевая платформа. Открыты дымовые гостевые "
-        "эндпоинты и CMS-раздел «Меню»."
+        "Мультиотельная гостевая платформа: гостевая витрина с заказом и "
+        "живым статусом, CMS-раздел «Меню», операции персонала над заказами."
     ),
     urls_namespace="guestapp",
 )
@@ -21,6 +22,9 @@ api = NinjaAPI(
 api.add_router("/health", health_router)
 api.add_router("/guest", guest_router)
 api.add_router("/staff", staff_router)
+# Операции персонала над заказами: тем же JWT, что и CMS. Трекер будет
+# ходить сюда же — эндпоинт писался сразу под переиспользование.
+api.add_router("/orders", orders_router, auth=StaffAuth())
 # Весь CMS-раздел закрыт JWT персонала по умолчанию: забыть auth на отдельном
 # эндпоинте невозможно — он задан на уровне роутера.
 api.add_router("/cms", cms_router, auth=StaffAuth())

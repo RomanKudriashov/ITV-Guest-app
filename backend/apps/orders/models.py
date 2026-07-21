@@ -30,6 +30,11 @@ class StatusDefinition(TenantModel):
     is_initial = models.BooleanField(default=False)
     is_terminal = models.BooleanField(default=False)
     is_cancelled = models.BooleanField(default=False)
+    # Можно ли отменить заказ, находящийся в этом статусе. Настройка отеля, а
+    # не константа в коде: где-то отменяют до «Готовится», где-то до самой
+    # выдачи. Гость видит кнопку ровно тогда, когда отмена действительно
+    # разрешена, — иначе он жмёт её и получает отказ.
+    allows_guest_cancel = models.BooleanField(default=False)
     # Имя токена темы, а не цвет: цвета живут только в токенах бренда.
     color_token = models.SlugField(max_length=64, blank=True)
 

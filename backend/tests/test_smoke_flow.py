@@ -40,7 +40,16 @@ def test_full_guest_flow(client, crystal, guest_token, django_capture_on_commit_
         if item["code"] == "ribeye"
     )
     assert steak["price"] == 190000, "цены — в копейках, целыми"
-    doneness = next(g for g in steak["modifier_groups"] if g["code"] == "doneness")
+    # В списке меню модификаторов нет — только признак, что они есть: витрине
+    # этого хватает, чтобы решить, открывать карточку или добавлять в один тап.
+    assert steak["has_required_modifiers"] is True
+    assert "modifier_groups" not in steak
+
+    detail = client.get(
+        f"/api/guest/item/{steak['id']}", HTTP_HOST=host, HTTP_AUTHORIZATION=auth
+    )
+    assert detail.status_code == 200
+    doneness = next(g for g in detail.json()["modifier_groups"] if g["code"] == "doneness")
     assert doneness["is_required"] is True
     assert len(doneness["options"]) == 4
 
@@ -148,8 +157,8 @@ def test_required_modifier_is_enforced(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
         HTTP_IDEMPOTENCY_KEY="smoke-3",
     )
-    assert response.status_code == 400
-    assert response.json()["code"] == "order_rejected"
+    assert response.status_code == 422
+    assert response.json()["code"] == "modifier_required"
 
 
 def test_health_endpoint_reports_dependencies(client):

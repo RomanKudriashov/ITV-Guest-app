@@ -57,13 +57,10 @@ class Category(TenantModel):
         return self.code
 
     def is_available_at(self, moment=None) -> bool:
-        if not self.is_active:
-            return False
-        if self.schedule_id and not self.schedule.is_open_at(moment):
-            return False
-        if self.parent_id:
-            return self.parent.is_available_at(moment)
-        return True
+        # Расчёт один на всю систему — см. apps/catalog/availability.py.
+        from .availability import category_availability
+
+        return category_availability(self, moment).is_available
 
 
 class Item(TenantModel):
@@ -106,11 +103,14 @@ class Item(TenantModel):
         return self.code
 
     def is_available_at(self, moment=None) -> bool:
-        if not (self.is_active and self.in_stock):
-            return False
-        if self.schedule_id and not self.schedule.is_open_at(moment):
-            return False
-        return True
+        from .availability import item_availability
+
+        return item_availability(self, moment).is_available
+
+    def availability_at(self, moment=None):
+        from .availability import item_availability
+
+        return item_availability(self, moment)
 
 
 class ItemImage(TenantModel):

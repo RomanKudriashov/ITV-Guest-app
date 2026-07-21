@@ -78,13 +78,14 @@ CRYSTAL_TOKENS = {
 }
 
 STATUS_PRESET = [
-    # code, ru, en, initial, terminal, cancelled, токен цвета
-    ("new", "Новый", "New", True, False, False, "info"),
-    ("accepted", "Принят", "Accepted", False, False, False, "info"),
-    ("preparing", "Готовится", "Preparing", False, False, False, "warning"),
-    ("on_the_way", "В пути", "On the way", False, False, False, "warning"),
-    ("done", "Доставлено", "Delivered", False, True, False, "success"),
-    ("cancelled", "Отменён", "Cancelled", False, True, True, "danger"),
+    # code, ru, en, initial, terminal, cancelled, токен цвета, отмена гостем
+    ("new", "Новый", "New", True, False, False, "info", True),
+    ("accepted", "Принят", "Accepted", False, False, False, "info", True),
+    # С «Готовится» отмена уже закрыта: продукты в работе.
+    ("preparing", "Готовится", "Preparing", False, False, False, "warning", False),
+    ("on_the_way", "В пути", "On the way", False, False, False, "warning", False),
+    ("done", "Доставлено", "Delivered", False, True, False, "success", False),
+    ("cancelled", "Отменён", "Cancelled", False, True, True, "danger", False),
 ]
 
 PLACEHOLDERS = [
@@ -226,10 +227,17 @@ class Command(BaseCommand):
         )
 
     def _seed_statuses(self):
-        for order, (code, ru, en, initial, terminal, cancelled, token) in enumerate(
-            STATUS_PRESET
-        ):
-            StatusDefinition.objects.get_or_create(
+        for order, (
+            code,
+            ru,
+            en,
+            initial,
+            terminal,
+            cancelled,
+            token,
+            guest_cancel,
+        ) in enumerate(STATUS_PRESET):
+            StatusDefinition.objects.update_or_create(
                 code=code,
                 defaults={
                     "title": {"ru": ru, "en": en},
@@ -238,6 +246,7 @@ class Command(BaseCommand):
                     "is_terminal": terminal,
                     "is_cancelled": cancelled,
                     "color_token": token,
+                    "allows_guest_cancel": guest_cancel,
                 },
             )
 
