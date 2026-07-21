@@ -1,19 +1,38 @@
 from ninja import NinjaAPI
 
+from apps.accounts.auth import StaffAuth
+from apps.core.errors import DomainError
+
+from .cms import router as cms_router
 from .guest import router as guest_router
 from .health import router as health_router
+from .staff import router as staff_router
 
 api = NinjaAPI(
     title="ITV Guest App API",
-    version="0.1.0",
+    version="0.2.0",
     description=(
-        "Фундамент мультиотельной гостевой платформы. В этом прогоне открыты "
-        "только дымовые гостевые эндпоинты."
+        "Мультиотельная гостевая платформа. Открыты дымовые гостевые "
+        "эндпоинты и CMS-раздел «Меню»."
     ),
     urls_namespace="guestapp",
 )
 
 api.add_router("/health", health_router)
 api.add_router("/guest", guest_router)
+api.add_router("/staff", staff_router)
+# Весь CMS-раздел закрыт JWT персонала по умолчанию: забыть auth на отдельном
+# эндпоинте невозможно — он задан на уровне роутера.
+api.add_router("/cms", cms_router, auth=StaffAuth())
+
+
+@api.exception_handler(DomainError)
+def handle_domain_error(request, exc: DomainError):
+    """
+    Единственное место, где доменная ошибка становится HTTP-ответом.
+    Сервисный слой при этом ничего не знает про HTTP.
+    """
+    return api.create_response(request, exc.to_response(), status=exc.status)
+
 
 __all__ = ["api"]

@@ -56,7 +56,11 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
         asset.variants = variants
         asset.status = MediaAsset.Status.READY
         asset.error = ""
-        asset.save(update_fields=["variants", "status", "error", "updated_at"])
+        # width/height проставляет _render_variants — их обязательно перечислить
+        # в update_fields, иначе размеры оригинала молча не сохранятся.
+        asset.save(
+            update_fields=["variants", "status", "error", "width", "height", "updated_at"]
+        )
         return {"status": "ready", "variants": list(variants)}
 
 

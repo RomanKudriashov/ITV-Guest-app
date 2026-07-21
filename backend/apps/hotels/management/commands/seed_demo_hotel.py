@@ -346,9 +346,9 @@ class Command(BaseCommand):
                     },
                 )
 
-        self._seed_items(categories)
+        self._seed_items(categories, schedules)
 
-    def _seed_items(self, categories: dict[str, Category]):
+    def _seed_items(self, categories: dict[str, Category], schedules: dict[str, Schedule]):
         steak, created = Item.objects.get_or_create(
             code="ribeye",
             defaults={
@@ -359,7 +359,7 @@ class Command(BaseCommand):
                     "en": "Marbled beef, 300 g, grilled",
                 },
                 "price": 190000,  # 1 900 ₽ в копейках
-                "flags": ["chef-choice", "gluten-free"],
+                "flags": ["chef_choice", "gluten_free"],
                 "allergens": [],
                 "sort_order": 0,
             },
@@ -450,6 +450,103 @@ class Command(BaseCommand):
         )
         if created:
             self._attach_image(lemonade, "drinks", "Лимонад")
+
+        # Ещё несколько позиций — чтобы в CMS было что сортировать и
+        # редактировать, а не один элемент на категорию.
+        pasta, created = Item.objects.get_or_create(
+            code="carbonara",
+            defaults={
+                "category": categories["hot"],
+                "title": {"ru": "Паста карбонара", "en": "Pasta carbonara"},
+                "description": {
+                    "ru": "Гуанчале, пекорино, яичный желток",
+                    "en": "Guanciale, pecorino, egg yolk",
+                },
+                "price": 69000,
+                "flags": ["popular"],
+                "allergens": ["gluten", "eggs", "milk"],
+                "sort_order": 1,
+            },
+        )
+        if created:
+            self._attach_image(pasta, "hot", "Паста карбонара")
+
+        greek, created = Item.objects.get_or_create(
+            code="greek-salad",
+            defaults={
+                "category": categories["salads"],
+                "title": {"ru": "Греческий салат", "en": "Greek salad"},
+                "description": {
+                    "ru": "Фета, огурцы, томаты, оливки",
+                    "en": "Feta, cucumber, tomatoes, olives",
+                },
+                "price": 48000,
+                "flags": ["vegetarian", "gluten_free"],
+                "allergens": ["milk"],
+                "sort_order": 1,
+            },
+        )
+        if created:
+            self._attach_image(greek, "salads", "Греческий салат")
+
+        # Позиция с day-parting: сырники есть только на завтрак.
+        syrniki, created = Item.objects.get_or_create(
+            code="syrniki",
+            defaults={
+                "category": categories["hot"],
+                "title": {"ru": "Сырники", "en": "Cottage cheese pancakes"},
+                "description": {
+                    "ru": "Со сметаной и вареньем, только на завтрак",
+                    "en": "With sour cream and jam, breakfast only",
+                },
+                "price": 45000,
+                "flags": ["vegetarian"],
+                "allergens": ["milk", "eggs", "gluten"],
+                "schedule": schedules["breakfast"],
+                "sort_order": 2,
+            },
+        )
+        if created:
+            self._attach_image(syrniki, "hot", "Сырники")
+
+        cappuccino, created = Item.objects.get_or_create(
+            code="cappuccino",
+            defaults={
+                "category": categories["drinks"],
+                "title": {"ru": "Капучино", "en": "Cappuccino"},
+                "description": {"ru": "На выбор молоко", "en": "Choice of milk"},
+                "price": 32000,
+                "allergens": ["milk"],
+                "sort_order": 1,
+            },
+        )
+        if created:
+            self._attach_image(cappuccino, "drinks", "Капучино")
+            milk = ModifierGroup.objects.create(
+                item=cappuccino,
+                code="milk",
+                title={"ru": "Молоко", "en": "Milk"},
+                selection=ModifierGroup.Selection.SINGLE,
+                is_required=True,
+                min_choices=1,
+                max_choices=1,
+                sort_order=0,
+            )
+            for order, (code, ru, en, price, default) in enumerate(
+                [
+                    ("regular", "Обычное", "Regular", 0, True),
+                    ("oat", "Овсяное", "Oat", 5000, False),
+                    ("almond", "Миндальное", "Almond", 7000, False),
+                ]
+            ):
+                ModifierOption.objects.create(
+                    group=milk,
+                    code=code,
+                    title={"ru": ru, "en": en},
+                    price_delta=price,
+                    is_default=default,
+                    sort_order=order,
+                )
 
     # --- Медиа ------------------------------------------------------------
 

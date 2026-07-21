@@ -1,0 +1,213 @@
+"""
+CMS: категории, блюда, модификаторы.
+
+Вьюхи намеренно тонкие — разобрать запрос, позвать сервис, отдать результат.
+Вся логика и валидация в apps/catalog/cms_services.py; доменные ошибки
+превращает в HTTP общий обработчик (api/__init__.py).
+"""
+
+from __future__ import annotations
+
+from django.http import HttpRequest
+from ninja import Router
+
+from apps.catalog import cms_services as svc
+
+from .schemas import (
+    CategoryIn,
+    CategoryPatch,
+    CategoryTreeOut,
+    ItemDetailOut,
+    ItemImagesIn,
+    ItemIn,
+    ItemOut,
+    ItemPatch,
+    ItemsReorderIn,
+    ModifierGroupIn,
+    ModifierGroupOut,
+    ModifierGroupPatch,
+    ModifierOptionIn,
+    ModifierOptionOut,
+    ModifierOptionPatch,
+    OkOut,
+    ReorderIn,
+    StockIn,
+    ToggleIn,
+)
+
+router = Router(tags=["cms:catalog"])
+
+
+# --- Категории -------------------------------------------------------------
+
+
+@router.get("/categories", response=list[CategoryTreeOut], summary="Дерево категорий")
+def list_categories(request: HttpRequest):
+    return svc.category_tree()
+
+
+@router.post("/categories", response={201: CategoryTreeOut}, summary="Создать категорию")
+def create_category(request: HttpRequest, payload: CategoryIn):
+    category = svc.create_category(payload.dict(exclude_unset=True))
+    return 201, svc.serialize_category(category, with_children=True)
+
+
+# ВНИМАНИЕ: статические пути (`/reorder`) обязаны объявляться РАНЬШЕ
+# параметризованных (`/{id}`) — Django резолвит URL по порядку регистрации, и
+# `/categories/{category_id}` иначе перехватит слово "reorder" и вернёт 405.
+@router.post(
+    "/categories/reorder", response=list[CategoryTreeOut], summary="Сортировка категорий"
+)
+def reorder_categories(request: HttpRequest, payload: ReorderIn):
+    return svc.reorder_categories([entry.dict() for entry in payload.items])
+
+
+@router.get("/categories/{category_id}", response=CategoryTreeOut, summary="Категория")
+def get_category(request: HttpRequest, category_id: str):
+    return svc.serialize_category(svc.get_category(category_id), with_children=True)
+
+
+@router.patch("/categories/{category_id}", response=CategoryTreeOut, summary="Изменить категорию")
+def update_category(request: HttpRequest, category_id: str, payload: CategoryPatch):
+    category = svc.update_category(category_id, payload.dict(exclude_unset=True))
+    return svc.serialize_category(category, with_children=True)
+
+
+@router.delete("/categories/{category_id}", response=OkOut, summary="Удалить категорию")
+def delete_category(request: HttpRequest, category_id: str, cascade: bool = False):
+    svc.delete_category(category_id, cascade=cascade)
+    return {"ok": True}
+
+
+@router.post(
+    "/categories/{category_id}/toggle", response=CategoryTreeOut, summary="Вкл/выкл категорию"
+)
+def toggle_category(request: HttpRequest, category_id: str, payload: ToggleIn):
+    category = svc.toggle_category(category_id, is_active=payload.is_active)
+    return svc.serialize_category(category, with_children=True)
+
+
+# --- Блюда -----------------------------------------------------------------
+
+
+@router.get("/items", response=list[ItemOut], summary="Список блюд")
+def list_items(request: HttpRequest, category_id: str | None = None, search: str = ""):
+    return svc.list_items(category_id=category_id, search=search)
+
+
+@router.post("/items", response={201: ItemDetailOut}, summary="Создать блюдо")
+def create_item(request: HttpRequest, payload: ItemIn):
+    item = svc.create_item(payload.dict(exclude_unset=True))
+    return 201, svc.serialize_item(svc.get_item(item.pk, with_modifiers=True), with_modifiers=True)
+
+
+@router.post("/items/reorder", response=list[ItemOut], summary="Сортировка блюд")
+def reorder_items(request: HttpRequest, payload: ItemsReorderIn):
+    return svc.reorder_items(
+        category_id=payload.category_id, entries=[entry.dict() for entry in payload.items]
+    )
+
+
+@router.get("/items/{item_id}", response=ItemDetailOut, summary="Блюдо с модификаторами")
+def get_item(request: HttpRequest, item_id: str):
+    return svc.serialize_item(svc.get_item(item_id, with_modifiers=True), with_modifiers=True)
+
+
+@router.patch("/items/{item_id}", response=ItemDetailOut, summary="Изменить блюдо")
+def update_item(request: HttpRequest, item_id: str, payload: ItemPatch):
+    svc.update_item(item_id, payload.dict(exclude_unset=True))
+    return svc.serialize_item(svc.get_item(item_id, with_modifiers=True), with_modifiers=True)
+
+
+@router.delete("/items/{item_id}", response=OkOut, summary="Удалить блюдо")
+def delete_item(request: HttpRequest, item_id: str):
+    svc.delete_item(item_id)
+    return {"ok": True}
+
+
+@router.post("/items/{item_id}/stock", response=ItemOut, summary="Стоп-лист")
+def set_item_stock(request: HttpRequest, item_id: str, payload: StockIn):
+    return svc.serialize_item(svc.set_item_stock(item_id, in_stock=payload.in_stock))
+
+
+@router.post("/items/{item_id}/toggle", response=ItemOut, summary="Вкл/выкл блюдо")
+def toggle_item(request: HttpRequest, item_id: str, payload: ToggleIn):
+    return svc.serialize_item(svc.toggle_item(item_id, is_active=payload.is_active))
+
+
+@router.put("/items/{item_id}/images", response=ItemDetailOut, summary="Набор и порядок фото")
+def set_item_images(request: HttpRequest, item_id: str, payload: ItemImagesIn):
+    svc.set_item_images(item_id, payload.image_ids)
+    return svc.serialize_item(svc.get_item(item_id, with_modifiers=True), with_modifiers=True)
+
+
+# --- Группы модификаторов --------------------------------------------------
+
+
+@router.post(
+    "/items/{item_id}/modifier-groups",
+    response={201: ModifierGroupOut},
+    summary="Создать группу модификаторов",
+)
+def create_modifier_group(request: HttpRequest, item_id: str, payload: ModifierGroupIn):
+    group = svc.create_modifier_group(item_id, payload.dict(exclude_unset=True))
+    return 201, svc.serialize_modifier_group(group)
+
+
+@router.patch(
+    "/modifier-groups/{group_id}", response=ModifierGroupOut, summary="Изменить группу"
+)
+def update_modifier_group(request: HttpRequest, group_id: str, payload: ModifierGroupPatch):
+    group = svc.update_modifier_group(group_id, payload.dict(exclude_unset=True))
+    return svc.serialize_modifier_group(group)
+
+
+@router.delete("/modifier-groups/{group_id}", response=OkOut, summary="Удалить группу")
+def delete_modifier_group(request: HttpRequest, group_id: str):
+    svc.delete_modifier_group(group_id)
+    return {"ok": True}
+
+
+@router.post(
+    "/items/{item_id}/modifier-groups/reorder",
+    response=list[ModifierGroupOut],
+    summary="Сортировка групп",
+)
+def reorder_modifier_groups(request: HttpRequest, item_id: str, payload: ReorderIn):
+    return svc.reorder_modifier_groups(item_id, [entry.dict() for entry in payload.items])
+
+
+# --- Опции -----------------------------------------------------------------
+
+
+@router.post(
+    "/modifier-groups/{group_id}/options",
+    response={201: ModifierOptionOut},
+    summary="Создать вариант",
+)
+def create_modifier_option(request: HttpRequest, group_id: str, payload: ModifierOptionIn):
+    option = svc.create_modifier_option(group_id, payload.dict(exclude_unset=True))
+    return 201, svc.serialize_modifier_option(option)
+
+
+@router.patch(
+    "/modifier-options/{option_id}", response=ModifierOptionOut, summary="Изменить вариант"
+)
+def update_modifier_option(request: HttpRequest, option_id: str, payload: ModifierOptionPatch):
+    option = svc.update_modifier_option(option_id, payload.dict(exclude_unset=True))
+    return svc.serialize_modifier_option(option)
+
+
+@router.delete("/modifier-options/{option_id}", response=OkOut, summary="Удалить вариант")
+def delete_modifier_option(request: HttpRequest, option_id: str):
+    svc.delete_modifier_option(option_id)
+    return {"ok": True}
+
+
+@router.post(
+    "/modifier-groups/{group_id}/options/reorder",
+    response=list[ModifierOptionOut],
+    summary="Сортировка вариантов",
+)
+def reorder_modifier_options(request: HttpRequest, group_id: str, payload: ReorderIn):
+    return svc.reorder_modifier_options(group_id, [entry.dict() for entry in payload.items])

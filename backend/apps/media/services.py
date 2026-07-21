@@ -51,6 +51,22 @@ def upload_asset(
     return asset
 
 
+def serialize_asset(asset: MediaAsset | None) -> dict | None:
+    """
+    Единый вид медиа-ассета для CMS. Пока варианты не нарезаны, URL'ы пустые —
+    UI показывает локальное превью и опрашивает статус.
+    """
+    if asset is None:
+        return None
+    return {
+        "id": str(asset.pk),
+        "status": asset.status,
+        "url": asset.url("card"),
+        "thumb_url": asset.url("thumb"),
+        "original_filename": asset.original_filename,
+    }
+
+
 def image_url(asset: MediaAsset | None, *, variant: str = "card", fallback_code: str = "") -> str:
     """Единая точка получения картинки: ассет → заглушка по категории → пусто."""
     if asset is not None:
