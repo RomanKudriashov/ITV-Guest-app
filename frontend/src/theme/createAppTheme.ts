@@ -42,6 +42,20 @@ export function createAppTheme(
   const headingFamily = typography.headingFontFamily ?? typography.fontFamily;
   const h = (rem: number) => `${(rem * typography.headingScale).toFixed(3)}rem`;
 
+  // How elevated surfaces (cards, sheets, popovers) are painted. `flat` keeps the
+  // current look, so a hotel that never sets a style sees no change.
+  const surfaceStyle = tokens.brand?.surfaceStyle ?? 'flat';
+  const surfaceSx =
+    surfaceStyle === 'soft'
+      ? { boxShadow: `0 10px 30px -18px ${c.scrim}`, border: `1px solid ${c.divider}` }
+      : surfaceStyle === 'glass'
+        ? {
+            backgroundColor: `color-mix(in srgb, ${c.surface} 76%, transparent)`,
+            backdropFilter: 'blur(14px)',
+            border: `1px solid ${c.divider}`,
+          }
+        : {};
+
   return createTheme({
     direction,
     spacing: spacingUnit,
@@ -86,11 +100,19 @@ export function createAppTheme(
         styleOverrides: {
           root: {
             borderRadius: shape.borderRadiusLarge,
+            ...surfaceSx,
           },
         },
       },
       MuiPaper: {
         defaultProps: { elevation: 0 },
+        styleOverrides: {
+          // `elevation === 0` covers the app bar / drop zones which must stay
+          // opaque; the surface style only dresses raised paper.
+          ...(surfaceStyle === 'flat'
+            ? {}
+            : { elevation1: surfaceSx, elevation2: surfaceSx, elevation3: surfaceSx }),
+        },
       },
       MuiButton: {
         styleOverrides: {

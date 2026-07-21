@@ -9,16 +9,21 @@ import { AllergenLine, FlagChips } from './ItemMeta';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
 
+export interface ItemHeadlineViewProps {
+  item: ItemDetail;
+  /** Already-formatted price, or `null` to hide it (unpriced service). */
+  priceLabel: string | null;
+}
+
 /**
  * The part of an item card that is identical for every offering type: picture,
  * title, price, description, flags, allergens and the "not available now" note.
- * Only what comes AFTER this block differs (modifiers vs a form of fields).
+ * Pure and presentational (takes a formatted price, reads no session/query) so
+ * the storefront sheet and the CMS brand preview render the same card body.
  */
-export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>(
-  function ItemHeadline({ item }, titleRef) {
+export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewProps>(
+  function ItemHeadlineView({ item, priceLabel }, titleRef) {
     const { t } = useTranslation();
-    const { formatOptional } = useMoney();
-    const price = formatOptional(item.price);
 
     return (
       <Stack spacing={2}>
@@ -42,9 +47,9 @@ export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>
             {item.title}
           </Typography>
           {/* No price is a legitimate state for a service — never print "0 ₽". */}
-          {price ? (
+          {priceLabel ? (
             <Typography variant="h6" color="primary.main">
-              {price}
+              {priceLabel}
             </Typography>
           ) : null}
           {item.description ? (
@@ -65,5 +70,13 @@ export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>
         ) : null}
       </Stack>
     );
+  },
+);
+
+/** Session-aware wrapper used by the storefront: formats the price, then delegates. */
+export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>(
+  function ItemHeadline({ item }, titleRef) {
+    const { formatOptional } = useMoney();
+    return <ItemHeadlineView ref={titleRef} item={item} priceLabel={formatOptional(item.price)} />;
   },
 );

@@ -39,7 +39,8 @@
     "roleAdmin": "Администратор отеля",
     "roleStaff": "Сотрудник",
     "tracker": "Трекер",
-    "notifications": "Уведомления"
+    "notifications": "Уведомления",
+    "brand": "Бренд"
   },
   "menu": {
     "categories": "Категории",
@@ -667,6 +668,70 @@
       "duplicateDelay": "Две ступени с одинаковой задержкой",
       "stepsOutOfOrder": "Задержки должны идти по возрастанию",
       "channelRequired": "Выберите канал"
+    }
+  },
+  "brand": {
+    "title": "Бренд",
+    "save": "Сохранить",
+    "reset": "Сбросить",
+    "dirty": "Есть несохранённые изменения",
+    "saved": "Бренд сохранён",
+    "saveFailed": "Не удалось сохранить бренд",
+    "loading": "Загрузка бренда…",
+    "loadFailed": "Не удалось загрузить бренд",
+    "presetsEmpty": "Пресетов пока нет",
+    "abstractionsEmpty": "Паттернов пока нет",
+    "primaryLight": "Основной (светлая)",
+    "primaryDark": "Основной (тёмная)",
+    "accent": "Акцент ({{mode}})",
+    "fontBody": "Основной шрифт",
+    "fontHeading": "Заголовочный шрифт",
+    "radius": "Скругление",
+    "radiusLarge": "Крупное скругление",
+    "dim": "Затемнение",
+    "bgKind": "Фон",
+    "bgColor": "Цвет заливки",
+    "gradientFrom": "Градиент от",
+    "gradientTo": "Градиент до",
+    "gradientAngle": "Угол",
+    "logoLight": "Логотип (светлый фон)",
+    "logoDark": "Логотип (тёмный фон)",
+    "defaultMode": "Тема по умолчанию",
+    "sections": {
+      "presets": "Пресеты",
+      "palette": "Палитра",
+      "fonts": "Шрифты",
+      "radius": "Скругления",
+      "surface": "Поверхности",
+      "background": "Фон",
+      "logos": "Логотипы",
+      "defaultMode": "Тема по умолчанию"
+    },
+    "surface": {
+      "flat": "Плоские",
+      "soft": "Мягкие",
+      "glass": "Стекло"
+    },
+    "bg": {
+      "solid": "Заливка",
+      "gradient": "Градиент",
+      "image": "Картинка",
+      "abstraction": "Паттерн"
+    },
+    "mode": {
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "system": "Системная"
+    },
+    "preview": {
+      "title": "Живое превью",
+      "mode": "Режим превью",
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "rtl": "RTL (арабский)",
+      "roomChip": "Номер 214",
+      "menuHeading": "Меню",
+      "addToCart": "В корзину"
     }
   }
 }

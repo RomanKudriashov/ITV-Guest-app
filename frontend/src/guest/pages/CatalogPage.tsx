@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import ButtonBase from '@mui/material/ButtonBase';
 import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
@@ -14,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
 import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
-import { FlagChips, ItemThumb } from '../components/ItemMeta';
+import { CatalogRowView } from '../components/CatalogRow';
 import { ItemSheet } from '../components/ItemSheet';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
@@ -283,93 +282,52 @@ function CatalogRow({
         : t('guest.menu.unavailable')
     : null;
 
-  return (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      alignItems="center"
-      sx={{ py: 1.5, opacity: available ? 1 : 0.55 }}
-      data-testid={`${behaviour.guestTestIdPrefix}-${item.code}`}
-    >
-      <ButtonBase
+  const action = available ? (
+    needsSheet ? (
+      <Button
+        variant="outlined"
+        size="small"
         onClick={onOpen}
-        disabled={!available}
-        aria-label={item.title}
-        sx={{
-          flexGrow: 1,
-          display: 'flex',
-          gap: 1.5,
-          alignItems: 'center',
-          textAlign: 'start',
-          minHeight: 44,
-          borderRadius: 2,
-        }}
+        data-testid={`guest-qty-plus-${item.code}`}
+        sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
       >
-        <ItemThumb src={item.images?.[0]} alt={item.title} dimmed={!available} />
-        <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="subtitle2" sx={{ lineHeight: 1.25 }}>
-            {item.title}
-          </Typography>
-          {item.description ? (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-            >
-              {item.description}
-            </Typography>
-          ) : null}
-          <FlagChips flags={item.flags ?? []} />
-          <Stack direction="row" spacing={1} alignItems="center">
-            {/* "No price" is a normal state for a service — never print "0 ₽". */}
-            {price ? <Typography variant="subtitle2">{price}</Typography> : null}
-            {unavailableNote ? (
-              <Typography variant="caption" color="text.secondary">
-                {unavailableNote}
-              </Typography>
-            ) : null}
-          </Stack>
-        </Stack>
-      </ButtonBase>
+        {usesFields ? t('guest.services.order') : t('guest.menu.choose')}
+      </Button>
+    ) : quantity > 0 ? (
+      <QuantityStepper
+        size="small"
+        code={item.code}
+        value={quantity}
+        removeAtZero
+        onIncrement={() => cart.addSimple(item)}
+        onDecrement={() => cart.decrementSimple(item.id)}
+      />
+    ) : (
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={() => cart.addSimple(item)}
+        data-testid={`guest-qty-plus-${item.code}`}
+        aria-label={t('guest.menu.addAria', { title: item.title })}
+        sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
+      >
+        +
+      </Button>
+    )
+  ) : null;
 
-      {available ? (
-        needsSheet ? (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={onOpen}
-            data-testid={`guest-qty-plus-${item.code}`}
-            sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
-          >
-            {usesFields ? t('guest.services.order') : t('guest.menu.choose')}
-          </Button>
-        ) : quantity > 0 ? (
-          <QuantityStepper
-            size="small"
-            code={item.code}
-            value={quantity}
-            removeAtZero
-            onIncrement={() => cart.addSimple(item)}
-            onDecrement={() => cart.decrementSimple(item.id)}
-          />
-        ) : (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => cart.addSimple(item)}
-            data-testid={`guest-qty-plus-${item.code}`}
-            aria-label={t('guest.menu.addAria', { title: item.title })}
-            sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
-          >
-            +
-          </Button>
-        )
-      ) : null}
-    </Stack>
+  return (
+    <CatalogRowView
+      testId={`${behaviour.guestTestIdPrefix}-${item.code}`}
+      title={item.title}
+      description={item.description}
+      imageSrc={item.images?.[0]}
+      flags={item.flags ?? []}
+      priceLabel={price}
+      unavailableNote={unavailableNote}
+      available={available}
+      onOpen={onOpen}
+      action={action}
+    />
   );
 }

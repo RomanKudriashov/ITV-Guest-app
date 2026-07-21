@@ -39,7 +39,8 @@
     "roleAdmin": "مدير الفندق",
     "roleStaff": "موظف",
     "tracker": "المتتبع",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "brand": "العلامة"
   },
   "menu": {
     "categories": "الفئات",
@@ -667,6 +668,70 @@
       "duplicateDelay": "خطوتان بنفس التأخير",
       "stepsOutOfOrder": "يجب أن يتزايد التأخير",
       "channelRequired": "اختر قناة"
+    }
+  },
+  "brand": {
+    "title": "العلامة التجارية",
+    "save": "حفظ",
+    "reset": "إعادة تعيين",
+    "dirty": "تغييرات غير محفوظة",
+    "saved": "تم الحفظ",
+    "saveFailed": "تعذّر الحفظ",
+    "loading": "جارٍ التحميل…",
+    "loadFailed": "تعذّر التحميل",
+    "presetsEmpty": "لا توجد قوالب",
+    "abstractionsEmpty": "لا توجد أنماط",
+    "primaryLight": "أساسي (فاتح)",
+    "primaryDark": "أساسي (داكن)",
+    "accent": "مميّز ({{mode}})",
+    "fontBody": "خط النص",
+    "fontHeading": "خط العناوين",
+    "radius": "الزوايا",
+    "radiusLarge": "زوايا كبيرة",
+    "dim": "تعتيم",
+    "bgKind": "الخلفية",
+    "bgColor": "اللون",
+    "gradientFrom": "تدرّج من",
+    "gradientTo": "تدرّج إلى",
+    "gradientAngle": "الزاوية",
+    "logoLight": "الشعار (خلفية فاتحة)",
+    "logoDark": "الشعار (خلفية داكنة)",
+    "defaultMode": "السمة الافتراضية",
+    "sections": {
+      "presets": "القوالب",
+      "palette": "الألوان",
+      "fonts": "الخطوط",
+      "radius": "الزوايا",
+      "surface": "الأسطح",
+      "background": "الخلفية",
+      "logos": "الشعارات",
+      "defaultMode": "السمة الافتراضية"
+    },
+    "surface": {
+      "flat": "مسطّح",
+      "soft": "ناعم",
+      "glass": "زجاجي"
+    },
+    "bg": {
+      "solid": "لون",
+      "gradient": "تدرّج",
+      "image": "صورة",
+      "abstraction": "نمط"
+    },
+    "mode": {
+      "light": "فاتح",
+      "dark": "داكن",
+      "system": "النظام"
+    },
+    "preview": {
+      "title": "معاينة حية",
+      "mode": "وضع المعاينة",
+      "light": "فاتح",
+      "dark": "داكن",
+      "rtl": "RTL (عربي)",
+      "roomChip": "غرفة 214",
+      "menuHeading": "القائمة",
+      "addToCart": "أضف"
     }
   }
 }

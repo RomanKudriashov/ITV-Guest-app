@@ -12,4 +12,8 @@ export const queryKeys = {
   notificationLog: (status: string, orderId: string, limit: number) =>
     ['cms', 'notification-log', status || 'all', orderId || 'all', limit] as const,
   staffUsers: ['cms', 'staff-users'] as const,
+  brand: ['cms', 'brand'] as const,
+  brandPresets: ['cms', 'brand', 'presets'] as const,
+  brandAbstractions: ['cms', 'brand', 'abstractions'] as const,
+  brandFonts: ['cms', 'brand', 'fonts'] as const,
 };

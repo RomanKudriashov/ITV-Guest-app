@@ -150,3 +150,15 @@ export async function staffToken(
   expect(response.ok(), `вход ${credentials.email} -> ${response.status()}`).toBeTruthy()
   return (await response.json()).access
 }
+
+/* ── Бренд ─────────────────────────────────────────────────────────────── */
+
+/** Текущая тема отеля глазами гостя — для проверки «сохранил → витрина отражает». */
+export async function guestTheme(request: APIRequestContext): Promise<Record<string, any>> {
+  const response = await request.post(`${API}/api/guest/session`, {
+    data: { room_number: DEMO_ROOM },
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(response.ok()).toBeTruthy()
+  return (await response.json()).hotel.theme
+}

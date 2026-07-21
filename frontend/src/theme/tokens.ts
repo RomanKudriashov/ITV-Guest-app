@@ -65,9 +65,53 @@ export interface BrandShapeTokens {
   borderRadiusLarge: number;
 }
 
+/** How surfaces (cards, sheets, app bar) are drawn — read when the theme is built. */
+export type SurfaceStyle = 'flat' | 'soft' | 'glass';
+
+/** Which mode the storefront opens in for a fresh guest. */
+export type DefaultMode = 'light' | 'dark' | 'system';
+
+export type BackgroundKind = 'solid' | 'gradient' | 'image' | 'abstraction';
+
+export interface BrandGradient {
+  from: string;
+  to: string;
+  /** Gradient angle in degrees. */
+  angle: number;
+}
+
+export interface BrandBackground {
+  kind: BackgroundKind;
+  /** For `solid` — otherwise the palette background is used. */
+  color?: string;
+  gradient?: BrandGradient;
+  /** For `kind === 'image'`. */
+  imageUrl?: string;
+  /** Code of a built-in abstraction pattern for `kind === 'abstraction'`. */
+  abstraction?: string;
+  /** Auto-dimming layer drawn over an image so text stays readable, 0..1. */
+  dim?: number;
+}
+
+/**
+ * Brand-only extras. Optional on purpose: older components ignore them and the
+ * platform default leaves them undefined so nothing changes until a hotel opts in.
+ */
+export interface BrandExtras {
+  /** Logo shown on a light surface. */
+  logoLight?: string;
+  /** Logo shown on a dark surface. */
+  logoDark?: string;
+  surfaceStyle?: SurfaceStyle;
+  defaultMode?: DefaultMode;
+  background?: BrandBackground;
+}
+
 export interface BrandTokens {
   /** Which hotel these tokens belong to (empty for the platform default). */
   hotelId?: string;
+  /** Code of the applied preset, or `custom` once a token is edited by hand. */
+  preset?: string;
   palette: {
     light: BrandColorSet;
     dark: BrandColorSet;
@@ -75,11 +119,21 @@ export interface BrandTokens {
   typography: BrandTypographyTokens;
   shape: BrandShapeTokens;
   spacingUnit: number;
+  brand?: BrandExtras;
+}
+
+export interface PartialBrandExtras {
+  logoLight?: string;
+  logoDark?: string;
+  surfaceStyle?: SurfaceStyle;
+  defaultMode?: DefaultMode;
+  background?: Partial<BrandBackground>;
 }
 
 /** Deep-partial shape used for a hotel's override coming from the backend. */
 export type PartialBrandTokens = {
   hotelId?: string;
+  preset?: string;
   palette?: {
     light?: Partial<BrandColorSet>;
     dark?: Partial<BrandColorSet>;
@@ -87,6 +141,7 @@ export type PartialBrandTokens = {
   typography?: Partial<BrandTypographyTokens>;
   shape?: Partial<BrandShapeTokens>;
   spacingUnit?: number;
+  brand?: PartialBrandExtras;
 };
 
 export const DEFAULT_BRAND_TOKENS: BrandTokens = {
@@ -148,6 +203,30 @@ export const DEFAULT_BRAND_TOKENS: BrandTokens = {
   spacingUnit: 8,
 };
 
+function mergeBrandExtras(
+  base: BrandExtras | undefined,
+  override: PartialBrandExtras | undefined,
+): BrandExtras | undefined {
+  if (!base && !override) return undefined;
+  const background =
+    base?.background || override?.background
+      ? {
+          ...base?.background,
+          ...override?.background,
+          // `kind` is required on the merged result; fall back to solid.
+          kind: override?.background?.kind ?? base?.background?.kind ?? 'solid',
+          gradient: override?.background?.gradient ?? base?.background?.gradient,
+        }
+      : undefined;
+  return {
+    logoLight: override?.logoLight ?? base?.logoLight,
+    logoDark: override?.logoDark ?? base?.logoDark,
+    surfaceStyle: override?.surfaceStyle ?? base?.surfaceStyle,
+    defaultMode: override?.defaultMode ?? base?.defaultMode,
+    background,
+  };
+}
+
 /** Merge a hotel's partial token override on top of the platform defaults. */
 export function mergeBrandTokens(
   override?: PartialBrandTokens,
@@ -157,6 +236,7 @@ export function mergeBrandTokens(
 
   return {
     hotelId: override.hotelId ?? base.hotelId,
+    preset: override.preset ?? base.preset,
     palette: {
       light: { ...base.palette.light, ...override.palette?.light },
       dark: { ...base.palette.dark, ...override.palette?.dark },
@@ -164,10 +244,30 @@ export function mergeBrandTokens(
     typography: { ...base.typography, ...override.typography },
     shape: { ...base.shape, ...override.shape },
     spacingUnit: override.spacingUnit ?? base.spacingUnit,
+    brand: mergeBrandExtras(base.brand, override.brand),
   };
 }
 
 /** Colors for the currently active mode. */
 export function colorsForMode(tokens: BrandTokens, mode: ThemeMode): BrandColorSet {
   return tokens.palette[mode];
+}
+
+/** The logo to show for a mode, falling back to the other mode's logo. */
+export function pickLogo(tokens: BrandTokens, mode: ThemeMode): string | undefined {
+  const extras = tokens.brand;
+  if (!extras) return undefined;
+  const primary = mode === 'dark' ? extras.logoDark : extras.logoLight;
+  const fallback = mode === 'dark' ? extras.logoLight : extras.logoDark;
+  return primary || fallback || undefined;
+}
+
+/** Resolve a concrete light/dark mode from the brand's `defaultMode` preference. */
+export function resolveDefaultMode(
+  tokens: BrandTokens,
+  systemPrefersDark: boolean,
+): ThemeMode {
+  const pref = tokens.brand?.defaultMode ?? 'light';
+  if (pref === 'system') return systemPrefersDark ? 'dark' : 'light';
+  return pref;
 }

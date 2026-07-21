@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import AppBar from '@mui/material/AppBar';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import BottomNavigation from '@mui/material/BottomNavigation';
@@ -9,8 +8,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
@@ -18,6 +15,9 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
+import { pickLogo } from '@/theme/tokens';
+import { useAppTheme } from '@/theme';
+import { GuestBrandHeader } from '../components/GuestBrandHeader';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { useCart } from '../state/cart';
 import { useGuestSession } from '../session/GuestSessionProvider';
@@ -38,6 +38,8 @@ export function GuestLayout() {
   const location = useLocation();
   const { session, hotel, isReady, isBootstrapping } = useGuestSession();
   const { count } = useCart();
+  const { tokens, mode } = useAppTheme();
+  const logoSrc = pickLogo(tokens, mode);
 
   const hotelName = hotel?.name ?? session?.hotel.name ?? '';
 
@@ -76,34 +78,23 @@ export function GuestLayout() {
         flexDirection: 'column',
       }}
     >
-      <AppBar
-        position="sticky"
-        color="default"
-        elevation={0}
-        sx={{
-          bgcolor: 'background.paper',
-          borderBottom: 1,
-          borderColor: 'divider',
-          pt: 'env(safe-area-inset-top, 0px)',
-        }}
-      >
-        <Toolbar sx={{ gap: 1, minHeight: 56 }}>
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 600 }}>
-              {hotelName}
-            </Typography>
-          </Box>
-          {session?.room ? (
-            <Chip
-              size="small"
-              label={t('guest.common.roomShort', { room: session.room })}
-              data-testid="guest-room-chip"
-            />
-          ) : null}
-          <GuestLanguageMenu />
-          <ThemeModeToggle />
-        </Toolbar>
-      </AppBar>
+      <GuestBrandHeader
+        hotelName={hotelName}
+        logoSrc={logoSrc}
+        rightSlot={
+          <>
+            {session?.room ? (
+              <Chip
+                size="small"
+                label={t('guest.common.roomShort', { room: session.room })}
+                data-testid="guest-room-chip"
+              />
+            ) : null}
+            <GuestLanguageMenu />
+            <ThemeModeToggle />
+          </>
+        }
+      />
 
       <Box component="main" sx={{ flexGrow: 1, pb: `${BOTTOM_NAV_HEIGHT}px` }}>
         <Outlet />

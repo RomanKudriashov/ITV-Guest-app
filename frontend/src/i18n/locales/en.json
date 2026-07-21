@@ -39,7 +39,8 @@
     "roleAdmin": "Hotel admin",
     "roleStaff": "Staff member",
     "tracker": "Tracker",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "brand": "Brand"
   },
   "menu": {
     "categories": "Categories",
@@ -667,6 +668,70 @@
       "duplicateDelay": "Two steps with the same delay",
       "stepsOutOfOrder": "Delays must increase",
       "channelRequired": "Choose a channel"
+    }
+  },
+  "brand": {
+    "title": "Brand",
+    "save": "Save",
+    "reset": "Reset",
+    "dirty": "Unsaved changes",
+    "saved": "Brand saved",
+    "saveFailed": "Could not save the brand",
+    "loading": "Loading brand…",
+    "loadFailed": "Could not load the brand",
+    "presetsEmpty": "No presets yet",
+    "abstractionsEmpty": "No patterns yet",
+    "primaryLight": "Primary (light)",
+    "primaryDark": "Primary (dark)",
+    "accent": "Accent ({{mode}})",
+    "fontBody": "Body font",
+    "fontHeading": "Heading font",
+    "radius": "Corner radius",
+    "radiusLarge": "Large radius",
+    "dim": "Dim",
+    "bgKind": "Background",
+    "bgColor": "Fill color",
+    "gradientFrom": "Gradient from",
+    "gradientTo": "Gradient to",
+    "gradientAngle": "Angle",
+    "logoLight": "Logo (light background)",
+    "logoDark": "Logo (dark background)",
+    "defaultMode": "Default theme",
+    "sections": {
+      "presets": "Presets",
+      "palette": "Palette",
+      "fonts": "Fonts",
+      "radius": "Corners",
+      "surface": "Surfaces",
+      "background": "Background",
+      "logos": "Logos",
+      "defaultMode": "Default theme"
+    },
+    "surface": {
+      "flat": "Flat",
+      "soft": "Soft",
+      "glass": "Glass"
+    },
+    "bg": {
+      "solid": "Solid",
+      "gradient": "Gradient",
+      "image": "Image",
+      "abstraction": "Pattern"
+    },
+    "mode": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "preview": {
+      "title": "Live preview",
+      "mode": "Preview mode",
+      "light": "Light",
+      "dark": "Dark",
+      "rtl": "RTL (Arabic)",
+      "roomChip": "Room 214",
+      "menuHeading": "Menu",
+      "addToCart": "Add to cart"
     }
   }
 }
