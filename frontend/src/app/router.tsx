@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { MenuPage } from '@/pages/menu/MenuPage';
 import { CategoryEditorPage } from '@/pages/category/CategoryEditorPage';
 import { ItemEditorPage } from '@/pages/item/ItemEditorPage';
+import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import App from '@/App';
 
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       { path: 'menu/categories/:id', element: <CategoryEditorPage /> },
       { path: 'menu/items/new', element: <ItemEditorPage /> },
       { path: 'menu/items/:id', element: <ItemEditorPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
     ],
   },
   {

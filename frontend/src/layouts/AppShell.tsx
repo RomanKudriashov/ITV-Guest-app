@@ -17,6 +17,7 @@ import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import RoomServiceIcon from '@mui/icons-material/RoomService';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -33,6 +34,8 @@ interface NavEntry {
   to?: string;
   icon: JSX.Element;
   disabled?: boolean;
+  /** Overrides the default `nav-<key>` testid where a screen names its own. */
+  testId?: string;
 }
 
 const NAV_ENTRIES: NavEntry[] = [
@@ -40,6 +43,12 @@ const NAV_ENTRIES: NavEntry[] = [
   // The tracker lives outside /cms (own mobile-first shell) but is reachable
   // from here: after one login a member of staff must find both halves.
   { key: 'tracker', to: '/tracker', icon: <DashboardCustomizeIcon fontSize="small" /> },
+  {
+    key: 'notifications',
+    to: '/cms/notifications',
+    icon: <NotificationsActiveIcon fontSize="small" />,
+    testId: 'cms-nav-notifications',
+  },
   { key: 'orders', icon: <ReceiptLongIcon fontSize="small" />, disabled: true },
   { key: 'services', icon: <RoomServiceIcon fontSize="small" />, disabled: true },
   { key: 'staff', icon: <PeopleAltIcon fontSize="small" />, disabled: true },
@@ -129,7 +138,7 @@ export function AppShell() {
                 key={entry.key}
                 component={NavLink}
                 to={entry.to}
-                data-testid={`nav-${entry.key}`}
+                data-testid={entry.testId ?? `nav-${entry.key}`}
                 sx={{
                   borderRadius: 2,
                   mb: 0.5,

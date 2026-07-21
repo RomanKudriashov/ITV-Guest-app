@@ -38,7 +38,8 @@
     "soon": "即将上线",
     "roleAdmin": "酒店管理员",
     "roleStaff": "员工",
-    "tracker": "订单看板"
+    "tracker": "订单看板",
+    "notifications": "通知"
   },
   "menu": {
     "categories": "分类",
@@ -511,6 +512,161 @@
       "date": "日期",
       "time": "时间",
       "select": "下拉"
+    }
+  },
+  "notifications": {
+    "title": "通知与升级",
+    "subtitle": "请求发往哪里、何时上报、实际发生了什么",
+    "tabs": {
+      "channels": "渠道",
+      "escalation": "升级",
+      "log": "日志"
+    },
+    "channels": {
+      "title": "渠道",
+      "hint": "酒店把请求发往何处",
+      "add": "渠道",
+      "empty": "暂无渠道",
+      "emptyHint": "没有渠道就没人看到请求",
+      "loadError": "无法加载渠道",
+      "saved": "渠道已保存",
+      "deleted": "渠道已删除",
+      "deleteTitle": "删除渠道？",
+      "deleteBody": "渠道“{{name}}”将不再接收通知。",
+      "newTitle": "新渠道",
+      "editTitle": "渠道",
+      "type": "类型",
+      "name": "名称",
+      "active": "启用",
+      "on": "开",
+      "off": "关",
+      "types": {
+        "telegram": "Telegram",
+        "email": "邮件",
+        "log": "日志"
+      },
+      "typeHint": {
+        "telegram": "机器人把消息发到指定聊天",
+        "email": "邮件发给列表中的所有收件人",
+        "log": "写入应用日志，总是成功"
+      },
+      "binding": "绑定",
+      "bindings": {
+        "hotel": "全酒店",
+        "point": "执行点",
+        "user": "员工"
+      },
+      "point": "执行点",
+      "user": "员工",
+      "noStaff": "员工列表暂不可用",
+      "config": "渠道配置",
+      "fields": {
+        "bot_token": "机器人令牌",
+        "chat_id": "聊天 ID",
+        "to": "收件人",
+        "from_email": "发件人"
+      },
+      "fieldHint": {
+        "chat_id": "例如 -100123456789",
+        "to": "每行一个地址",
+        "from_email": "留空则使用默认发件人"
+      },
+      "secretHint": "密钥保存在服务器且不会返回",
+      "secretStored": "已保存：{{masked}}。留空即保持不变",
+      "secretPlaceholder": "留空即保持不变",
+      "templates": "消息模板",
+      "placeholders": "占位符：",
+      "placeholderHint": {
+        "number": "请求编号",
+        "room": "客人房间",
+        "point": "执行点",
+        "summary": "请求摘要",
+        "comment": "客人备注"
+      },
+      "subject": "主题",
+      "body": "正文",
+      "test": "发送测试",
+      "testNeedsSave": "请先保存渠道",
+      "testOk": "测试消息已发送",
+      "testFailed": "测试消息发送失败"
+    },
+    "escalation": {
+      "title": "升级规则",
+      "hint": "无人接单的请求会逐级上报",
+      "loadError": "无法加载规则",
+      "saved": "规则已保存",
+      "deleted": "规则已删除",
+      "deleteTitle": "删除规则？",
+      "deleteBody": "规则“{{name}}”将不再上报请求。",
+      "rule": "规则",
+      "newRule": "新规则",
+      "name": "名称",
+      "point": "执行点",
+      "pointHint": "留空则为全酒店默认规则",
+      "hotelWide": "全酒店",
+      "active": "启用",
+      "stepsTitle": "步骤",
+      "stepsHint": "延时从下单时刻计算，而非上一步",
+      "addStep": "步骤",
+      "noSteps": "暂无步骤",
+      "stepN": "第 {{n}} 步",
+      "delay": "延时",
+      "delayHint": "0 表示下单即刻",
+      "minutes": "分钟",
+      "delayUnknown": "延时？",
+      "immediately": "立即",
+      "afterMinutes": "{{minutes}} 分钟后",
+      "target": "发给谁",
+      "targets": {
+        "point": "执行点",
+        "lead": "值班主管",
+        "manager": "经理",
+        "channel": "指定渠道"
+      },
+      "targetHint": {
+        "point": "该执行点的所有启用渠道",
+        "lead": "值班主管的个人渠道",
+        "manager": "经理的个人渠道",
+        "channel": "仅所选渠道"
+      },
+      "channel": "渠道",
+      "stepTitle": "说明"
+    },
+    "log": {
+      "title": "通知日志",
+      "hint": "标签页打开时每 10 秒刷新",
+      "loadError": "无法加载日志",
+      "empty": "暂无记录",
+      "emptyHint": "触发的步骤和已发消息将显示在这里",
+      "time": "时间",
+      "order": "订单",
+      "step": "步骤",
+      "stepN": "第 {{n}} 步",
+      "delivery": "发送",
+      "target": "目标",
+      "channel": "渠道",
+      "status": "状态",
+      "error": "错误",
+      "allStatuses": "全部状态",
+      "statuses": {
+        "scheduled": "已计划",
+        "sent": "已发送",
+        "failed": "失败",
+        "skipped": "已跳过",
+        "cancelled": "已取消"
+      }
+    },
+    "validation": {
+      "titleRequired": "请填写渠道名称",
+      "pointRequired": "请选择执行点",
+      "userRequired": "请选择员工",
+      "configRequired": "必填项",
+      "emailInvalid": "邮箱地址无效",
+      "ruleWithoutSteps": "规则至少需要一个步骤",
+      "delayInvalid": "延时必须是不小于零的整数分钟",
+      "duplicateDelay": "两个步骤延时相同",
+      "stepsOutOfOrder": "延时必须递增",
+      "channelRequired": "请选择渠道"
     }
   }
 }

@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.catalog",
     "apps.orders",
     "apps.media",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -179,6 +180,27 @@ JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TTL_MINUTES = int(os.getenv("JWT_ACCESS_TTL_MINUTES", "60"))
 JWT_REFRESH_TTL_DAYS = int(os.getenv("JWT_REFRESH_TTL_DAYS", "14"))
 GUEST_SESSION_TTL_HOURS = int(os.getenv("GUEST_SESSION_TTL_HOURS", "12"))
+
+
+# --- Уведомления и эскалация -----------------------------------------------
+
+# Глобальный выключатель. В тестах — 0, чтобы движок не планировал ступени на
+# каждый созданный заказ; тесты эскалации включают его точечно.
+NOTIFICATIONS_ENABLED = env_bool("NOTIFICATIONS_ENABLED", True)
+
+# База API Telegram — вынесена в настройку, чтобы тесты подменяли её на
+# локальную заглушку и не ходили наружу.
+TELEGRAM_API_URL = os.getenv("TELEGRAM_API_URL", "https://api.telegram.org")
+
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@guest.localhost")
 
 
 # --- Интеграционные швы ----------------------------------------------------

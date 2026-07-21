@@ -38,6 +38,9 @@ _subscribers: dict[str, list[Subscriber]] = defaultdict(list)
 # по месту вызова.
 
 ORDER_CREATED = "order.created"
+# Принятие заказа раньше было неотличимо от любой другой смены статуса, а
+# для эскалации это ключевой момент: с него подъём прекращается.
+ORDER_ACCEPTED = "order.accepted"
 ORDER_STATUS_CHANGED = "order.status_changed"
 ORDER_CANCELLED = "order.cancelled"
 

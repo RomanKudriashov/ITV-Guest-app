@@ -21,6 +21,8 @@ from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, Val
 from apps.core.fields import translate
 from apps.hotels.models import ExecutionPoint, Hotel
 
+from apps.events.bus import ORDER_ACCEPTED, emit
+
 from .models import Order, StatusDefinition
 from .services import change_status, order_queryset, serialize_order
 
@@ -278,6 +280,15 @@ def accept_order(user, order_id) -> Order:
     if target is not None and target.pk != order.status_id:
         change_status(order, to_code=target.code, actor_type="staff", actor_id=user.pk)
 
+    # Отдельное событие: для эскалации принятие — не «ещё одна смена статуса»,
+    # а момент, с которого подъём по ступеням прекращается.
+    emit(
+        ORDER_ACCEPTED,
+        {"order_id": str(order.pk), "number": order.number, "assignee_id": str(user.pk)},
+        hotel_id=order.hotel_id,
+        actor_type="staff",
+        actor_id=user.pk,
+    )
     return get_tracker_order(user, order_id)
 
 

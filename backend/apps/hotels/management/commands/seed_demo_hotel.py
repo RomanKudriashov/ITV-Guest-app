@@ -44,6 +44,13 @@ from apps.hotels.models import (
     ScheduleInterval,
 )
 from apps.media.models import CategoryPlaceholder, MediaAsset
+from apps.notifications.models import (
+    ChannelType,
+    EscalationRule,
+    EscalationStep,
+    NotificationChannel,
+    TargetKind,
+)
 from apps.orders.models import StatusDefinition
 
 # Токены бренда. Формат совпадает с BrandTokens во фронте — это один контракт,
@@ -157,13 +164,14 @@ class Command(BaseCommand):
             self._seed_languages()
             points = self._seed_execution_points()
             kitchen = points["kitchen"]
-            self._seed_staff(hotel, points)
+            users = self._seed_staff(hotel, points)
             self._seed_statuses()
             rooms = self._seed_rooms()
             locations = self._seed_locations()
             schedules = self._seed_schedules()
             self._seed_catalog(kitchen, locations, schedules)
             self._seed_services(points, schedules)
+            self._seed_notifications(points, users)
 
             hotel.default_theme = theme
             hotel.save(update_fields=["default_theme", "updated_at"])
@@ -216,13 +224,14 @@ class Command(BaseCommand):
             points[code] = point
         return points
 
-    def _seed_staff(self, hotel: Hotel, points: dict[str, ExecutionPoint]):
+    def _seed_staff(self, hotel: Hotel, points: dict[str, ExecutionPoint]) -> dict[str, User]:
         """Каждому отделу — свой сотрудник: доски не должны пересекаться."""
         specs = [
             ("chef", "Пётр, повар", "kitchen", StaffAssignment.Level.LEAD),
             ("concierge", "Анна, консьерж", "concierge", StaffAssignment.Level.MEMBER),
             ("maid", "Мария, горничная", "housekeeping", StaffAssignment.Level.MEMBER),
         ]
+        created_users: dict[str, User] = {}
         for prefix, full_name, point_code, level in specs:
             email = f"{prefix}@{hotel.subdomain}.local"
             user = User.objects.filter(email=email).first()
@@ -240,6 +249,8 @@ class Command(BaseCommand):
                 execution_point=points[point_code],
                 defaults={"level": level},
             )
+            created_users[prefix] = user
+        return created_users
 
     def _seed_statuses(self):
         for order, (
@@ -336,10 +347,14 @@ class Command(BaseCommand):
         schedules: dict[str, Schedule],
     ):
         categories = {}
+        # Категории круглосуточны намеренно. Ограничение по часам показывает
+        # «Сырники» (только завтрак) — так демо остаётся наглядным, а тесты,
+        # создающие заказы, перестают зависеть от времени суток: ночной прогон
+        # раньше падал на «доступно с 07:00».
         for order, (code, ru, en, schedule) in enumerate(
             [
-                ("hot", "Горячее", "Hot dishes", schedules["kitchen"]),
-                ("salads", "Салаты", "Salads", schedules["kitchen"]),
+                ("hot", "Горячее", "Hot dishes", schedules["all_day"]),
+                ("salads", "Салаты", "Salads", schedules["all_day"]),
                 ("drinks", "Напитки", "Drinks", schedules["all_day"]),
             ]
         ):
@@ -693,6 +708,69 @@ class Command(BaseCommand):
                     "sort_order": order,
                 },
             )
+
+    # --- Уведомления и эскалация ------------------------------------------
+
+    def _seed_notifications(self, points: dict[str, ExecutionPoint], users: dict[str, User]):
+        """
+        Канал и правило подъёма для кухни.
+
+        Тип канала — `log`: демо-стенд не должен требовать бота и SMTP, чтобы
+        показать, как работает эскалация. Сообщения видно в логах backend.
+        """
+        kitchen_chat, _ = NotificationChannel.objects.get_or_create(
+            title="Чат кухни",
+            defaults={
+                "type": ChannelType.LOG,
+                "execution_point": points["kitchen"],
+                "templates": {
+                    "ru": {
+                        "subject": "Заявка №{{number}} — {{point}}",
+                        "body": "{{room}}\n{{summary}}\n{{comment}}",
+                    },
+                    "en": {
+                        "subject": "Order #{{number}} — {{point}}",
+                        "body": "{{room}}\n{{summary}}\n{{comment}}",
+                    },
+                },
+            },
+        )
+
+        chef = users.get("chef")
+        if chef is not None:
+            NotificationChannel.objects.get_or_create(
+                title="Пётр — личный канал",
+                defaults={
+                    "type": ChannelType.LOG,
+                    "user": chef,
+                    "templates": {
+                        "ru": {
+                            "subject": "Заявку №{{number}} никто не взял",
+                            "body": "{{point}} · {{room}}\n{{summary}}",
+                        }
+                    },
+                },
+            )
+
+        rule, created = EscalationRule.objects.get_or_create(
+            name="Кухня: подъём по смене",
+            defaults={"execution_point": points["kitchen"]},
+        )
+        if created:
+            # Короткие тайминги — чтобы демо было видно за минуты, а не за час.
+            steps = [
+                (0, TargetKind.POINT, "Сразу — в чат кухни"),
+                (5, TargetKind.LEAD, "Через 5 минут — старшему смены"),
+                (15, TargetKind.MANAGER, "Через 15 минут — руководителю"),
+            ]
+            for index, (delay, target, title) in enumerate(steps):
+                EscalationStep.objects.create(
+                    rule=rule,
+                    sort_order=index,
+                    delay_minutes=delay,
+                    target_kind=target,
+                    title=title,
+                )
 
     # --- Медиа ------------------------------------------------------------
 

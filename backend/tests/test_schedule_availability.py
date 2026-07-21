@@ -97,10 +97,13 @@ def test_empty_schedule_means_never(crystal):
 # --- Доступность позиции ---------------------------------------------------
 
 
-def test_item_inherits_category_schedule(crystal):
+def test_item_inherits_category_schedule(crystal, kitchen_schedule):
     """У блюда своего расписания нет — работают часы категории."""
     with tenant_context(crystal):
-        item = Item.objects.get(code="ribeye")
+        # Привязываем ограниченное расписание прямо здесь: в сиде категории
+        # круглосуточны, чтобы прогон тестов не зависел от времени суток.
+        Category.objects.filter(code="hot").update(schedule=kitchen_schedule)
+        item = Item.objects.select_related("category__schedule").get(code="ribeye")
         assert item.schedule_id is None
         assert item.category.schedule_id is not None
 
@@ -113,7 +116,7 @@ def test_item_inherits_category_schedule(crystal):
 
 
 def test_item_schedule_narrows_category_hours(crystal):
-    """Сырники — только завтрак, хотя кухня открыта до 23:00."""
+    """Сырники — только на завтрак: у позиции своё расписание, уже категории."""
     with tenant_context(crystal):
         syrniki = Item.objects.get(code="syrniki")
 
@@ -125,13 +128,14 @@ def test_item_schedule_narrows_category_hours(crystal):
         assert lunch.available_from == "07:00"
 
 
-def test_stop_list_wins_over_schedule(crystal):
+def test_stop_list_wins_over_schedule(crystal, kitchen_schedule):
     """
     Со стоп-листом ждать бесполезно, а часов можно дождаться — поэтому
     «нет в наличии» гостю полезнее услышать, даже если верно и то и другое.
     """
     with tenant_context(crystal):
-        item = Item.objects.get(code="ribeye")
+        Category.objects.filter(code="hot").update(schedule=kitchen_schedule)
+        item = Item.objects.select_related("category__schedule").get(code="ribeye")
         item.in_stock = False
         item.save(update_fields=["in_stock"])
 
@@ -151,7 +155,7 @@ def test_disabled_category_hides_its_items(crystal):
         assert state.reason == "category_unavailable"
 
 
-def test_hotel_timezone_decides_not_server_timezone(crystal):
+def test_hotel_timezone_decides_not_server_timezone(crystal, kitchen_schedule):
     """
     Один и тот же момент UTC — разный ответ для отелей в разных часовых поясах.
     Именно поэтому расчёт нельзя делать «по серверу».
@@ -159,7 +163,9 @@ def test_hotel_timezone_decides_not_server_timezone(crystal):
     moment = utc(2026, 7, 21, 3, 0)  # 06:00 МСК — кухня ещё закрыта
 
     with tenant_context(crystal):
-        assert item_availability(Item.objects.get(code="ribeye"), moment).is_available is False
+        Category.objects.filter(code="hot").update(schedule=kitchen_schedule)
+        item = Item.objects.select_related("category__schedule").get(code="ribeye")
+        assert item_availability(item, moment).is_available is False
 
     Hotel.objects.filter(pk=crystal.pk).update(timezone="Asia/Novosibirsk")  # UTC+7 → 10:00
     crystal.refresh_from_db()

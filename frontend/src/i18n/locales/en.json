@@ -38,7 +38,8 @@
     "soon": "Soon",
     "roleAdmin": "Hotel admin",
     "roleStaff": "Staff member",
-    "tracker": "Tracker"
+    "tracker": "Tracker",
+    "notifications": "Notifications"
   },
   "menu": {
     "categories": "Categories",
@@ -511,6 +512,161 @@
       "date": "Date",
       "time": "Time",
       "select": "Select"
+    }
+  },
+  "notifications": {
+    "title": "Notifications and escalation",
+    "subtitle": "Where a request goes, when it is raised higher, and what actually happened",
+    "tabs": {
+      "channels": "Channels",
+      "escalation": "Escalation",
+      "log": "Journal"
+    },
+    "channels": {
+      "title": "Channels",
+      "hint": "Where the hotel sends requests: a department chat, e-mail, the log",
+      "add": "Channel",
+      "empty": "No channels yet",
+      "emptyHint": "Without a channel nobody sees the request — start with the department chat",
+      "loadError": "Could not load channels",
+      "saved": "Channel saved",
+      "deleted": "Channel deleted",
+      "deleteTitle": "Delete the channel?",
+      "deleteBody": "Channel “{{name}}” will stop receiving notifications.",
+      "newTitle": "New channel",
+      "editTitle": "Channel",
+      "type": "Type",
+      "name": "Name",
+      "active": "Active",
+      "on": "On",
+      "off": "Off",
+      "types": {
+        "telegram": "Telegram",
+        "email": "E-mail",
+        "log": "Log"
+      },
+      "typeHint": {
+        "telegram": "The bot posts the message into the given chat",
+        "email": "A letter goes to every recipient on the list",
+        "log": "Writes into the application log and always succeeds — for demos and CI"
+      },
+      "binding": "Bound to",
+      "bindings": {
+        "hotel": "Hotel-wide",
+        "point": "Execution point",
+        "user": "Member of staff"
+      },
+      "point": "Execution point",
+      "user": "Member of staff",
+      "noStaff": "The staff list is not available yet",
+      "config": "Channel configuration",
+      "fields": {
+        "bot_token": "Bot token",
+        "chat_id": "Chat ID",
+        "to": "Recipients",
+        "from_email": "From"
+      },
+      "fieldHint": {
+        "chat_id": "For example, -100123456789",
+        "to": "One address per line",
+        "from_email": "Empty — the default sender from the settings"
+      },
+      "secretHint": "The secret is stored on the server and never returned",
+      "secretStored": "Stored: {{masked}}. Leave empty to keep it",
+      "secretPlaceholder": "leave empty to keep the current value",
+      "templates": "Message templates",
+      "placeholders": "Placeholders:",
+      "placeholderHint": {
+        "number": "Request number",
+        "room": "Guest room",
+        "point": "Execution point",
+        "summary": "Short summary of the request",
+        "comment": "Guest comment"
+      },
+      "subject": "Subject",
+      "body": "Body",
+      "test": "Send a test",
+      "testNeedsSave": "Save the channel first",
+      "testOk": "Test message sent",
+      "testFailed": "Test message did not go through"
+    },
+    "escalation": {
+      "title": "Escalation rule",
+      "hint": "A request nobody took is raised step by step",
+      "loadError": "Could not load the rules",
+      "saved": "Rule saved",
+      "deleted": "Rule deleted",
+      "deleteTitle": "Delete the rule?",
+      "deleteBody": "Rule “{{name}}” will stop raising requests.",
+      "rule": "Rule",
+      "newRule": "New rule",
+      "name": "Name",
+      "point": "Execution point",
+      "pointHint": "Empty — the hotel-wide default rule",
+      "hotelWide": "Hotel-wide",
+      "active": "Active",
+      "stepsTitle": "Steps",
+      "stepsHint": "The delay counts from the creation of the order, not from the previous step",
+      "addStep": "Step",
+      "noSteps": "No steps yet",
+      "stepN": "Step {{n}}",
+      "delay": "Delay",
+      "delayHint": "0 — right when the order is created",
+      "minutes": "min",
+      "delayUnknown": "delay?",
+      "immediately": "immediately",
+      "afterMinutes": "after {{minutes}} min",
+      "target": "To whom",
+      "targets": {
+        "point": "Execution point",
+        "lead": "Shift lead",
+        "manager": "Manager",
+        "channel": "A specific channel"
+      },
+      "targetHint": {
+        "point": "Every active channel of the point",
+        "lead": "Personal channels of the shift leads",
+        "manager": "Personal channels of the managers",
+        "channel": "Exactly the chosen channel"
+      },
+      "channel": "Channel",
+      "stepTitle": "Note"
+    },
+    "log": {
+      "title": "Notification journal",
+      "hint": "Refreshes every 10 seconds while the tab is open",
+      "loadError": "Could not load the journal",
+      "empty": "No records yet",
+      "emptyHint": "Fired steps and sent messages will appear here",
+      "time": "Time",
+      "order": "Order",
+      "step": "Step",
+      "stepN": "Step {{n}}",
+      "delivery": "Delivery",
+      "target": "Target",
+      "channel": "Channel",
+      "status": "Status",
+      "error": "Error",
+      "allStatuses": "All statuses",
+      "statuses": {
+        "scheduled": "Scheduled",
+        "sent": "Sent",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "cancelled": "Cancelled"
+      }
+    },
+    "validation": {
+      "titleRequired": "Give the channel a name",
+      "pointRequired": "Choose an execution point",
+      "userRequired": "Choose a member of staff",
+      "configRequired": "Required field",
+      "emailInvalid": "Invalid e-mail address",
+      "ruleWithoutSteps": "A rule needs at least one step",
+      "delayInvalid": "The delay is a whole number of minutes, not less than zero",
+      "duplicateDelay": "Two steps with the same delay",
+      "stepsOutOfOrder": "Delays must increase",
+      "channelRequired": "Choose a channel"
     }
   }
 }

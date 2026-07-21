@@ -39,6 +39,11 @@ TENANT_TABLES = [
     "orders_order",
     "orders_order_item",
     "orders_order_status_change",
+    # notifications
+    "notifications_channel",
+    "notifications_escalation_rule",
+    "notifications_escalation_step",
+    "notifications_log",
     # media
     "media_asset",
     # core

@@ -15,6 +15,16 @@ from apps.hotels.models import Hotel
 
 
 @pytest.fixture(autouse=True)
+def _notifications_off(settings):
+    """
+    По умолчанию движок эскалации выключен: иначе каждый тест, создающий
+    заказ, дёргал бы брокер и планировал ступени. Тесты эскалации включают его
+    сами.
+    """
+    settings.NOTIFICATIONS_ENABLED = False
+
+
+@pytest.fixture(autouse=True)
 def _clean_context():
     """Контекст тенанта не должен протекать между тестами — ни в питоне, ни в БД."""
     clear_request_context()
