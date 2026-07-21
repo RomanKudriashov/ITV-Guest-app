@@ -83,3 +83,53 @@ export async function findItemByTitle(
   // искомого («Салат «Цезарь»» при поиске «Цезарь»).
   return items.find((item) => Object.values(item.title).some((value) => value.includes(title)))
 }
+
+/* ── Гостевая витрина ──────────────────────────────────────────────────── */
+
+export const DEMO_ROOM = '305'
+
+/** Токен персонала нужен E2E, чтобы двигать статус «от лица кухни». */
+export async function moveOrderStatus(
+  request: APIRequestContext,
+  token: string,
+  orderId: string,
+  status: string,
+): Promise<void> {
+  const response = await request.post(`${API}/api/orders/${orderId}/status`, {
+    data: { status },
+    headers: apiHeaders(token),
+  })
+  expect(response.ok(), `смена статуса на ${status} -> ${response.status()}`).toBeTruthy()
+}
+
+export interface GuestOrder {
+  id: string
+  number: number
+  status: { code: string; allows_guest_cancel: boolean }
+  total: number
+  items: Array<{ title: string; quantity: number }>
+}
+
+/** Гостевая сессия напрямую через API — для проверок мимо UI. */
+export async function guestSession(
+  request: APIRequestContext,
+  room = DEMO_ROOM,
+): Promise<string> {
+  const response = await request.post(`${API}/api/guest/session`, {
+    data: { room_number: room },
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(response.ok()).toBeTruthy()
+  return (await response.json()).token
+}
+
+export async function guestOrders(
+  request: APIRequestContext,
+  guestToken: string,
+): Promise<{ active: GuestOrder[]; past: GuestOrder[] }> {
+  const response = await request.get(`${API}/api/guest/orders`, {
+    headers: { Authorization: `Bearer ${guestToken}`, 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(response.ok()).toBeTruthy()
+  return response.json()
+}

@@ -81,7 +81,11 @@ def _load_guest_order(hotel, token: str, order_id: str, language: str):
     from apps.accounts.auth import authenticate_guest
     from apps.orders.services import get_order, serialize_order
 
-    with tenant_context(hotel, language=language or None):
+    # Язык по умолчанию — язык ОТЕЛЯ, а не глобальный en. У WebSocket нет ни
+    # middleware, ни Accept-Language, поэтому без этой подстановки снимок
+    # приезжал бы на английском в русском отеле.
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
         session = authenticate_guest(token)
         if session is None:
             return None, None
@@ -89,16 +93,17 @@ def _load_guest_order(hotel, token: str, order_id: str, language: str):
             order = get_order(order_id, guest_session=session)
         except Exception:  # noqa: BLE001 — чужой или несуществующий заказ
             return session, None
-        return session, serialize_order(order, language or None)
+        return session, serialize_order(order, language)
 
 
 @database_sync_to_async
 def _order_snapshot(hotel, order_id: str, language: str):
     from apps.orders.services import get_order, serialize_order
 
-    with tenant_context(hotel, language=language or None):
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
         try:
-            return serialize_order(get_order(order_id), language or None)
+            return serialize_order(get_order(order_id), language)
         except Exception:  # noqa: BLE001 — заказ мог быть удалён
             logger.warning("Не удалось собрать снимок заказа %s", order_id, exc_info=True)
             return None

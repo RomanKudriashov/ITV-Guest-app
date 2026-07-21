@@ -236,3 +236,26 @@ def test_unknown_hotel_is_rejected(crystal, guest_order):
         assert code == 4404
 
     async_to_sync(scenario)()
+
+
+def test_snapshot_language_defaults_to_the_hotel_language(crystal, guest_order):
+    """
+    У WebSocket нет ни middleware, ни Accept-Language. Без явной подстановки
+    языка отеля снимок приезжал бы на английском — в русском отеле это
+    выглядит как поломка, а не как «фолбэк».
+    """
+    order_id = guest_order["order"]["id"]
+
+    async def scenario():
+        # Namely без параметра lang.
+        communicator = WebsocketCommunicator(
+            application, f"/ws/guest/order/{order_id}/?token={guest_order['token']}&hotel=crystal"
+        )
+        assert (await communicator.connect(timeout=WS_TIMEOUT))[0]
+        snapshot = await communicator.receive_json_from(timeout=WS_TIMEOUT)
+
+        assert snapshot["order"]["status"]["title"] == "Новый"
+        assert snapshot["order"]["items"][0]["title"] == "Салат «Цезарь»"
+        await communicator.disconnect()
+
+    async_to_sync(scenario)()

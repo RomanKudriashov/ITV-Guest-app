@@ -18,6 +18,7 @@ import { directionForLanguage } from '@/i18n';
 import { createAppTheme } from './createAppTheme';
 import {
   DEFAULT_BRAND_TOKENS,
+  colorsForMode,
   mergeBrandTokens,
   type BrandTokens,
   type Direction,
@@ -108,6 +109,13 @@ export function AppThemeProvider({
     document.documentElement.setAttribute('lang', language || 'en');
     document.body.setAttribute('dir', direction);
   }, [direction, language]);
+
+  // PWA `theme-color` (the browser/status bar tint) is a color, so it comes from
+  // the tokens rather than being written into index.html.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', colorsForMode(tokens, mode).surface);
+  }, [tokens, mode]);
 
   const setMode = (next: ThemeMode) => {
     setModeState(next);

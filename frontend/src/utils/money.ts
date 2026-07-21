@@ -45,23 +45,34 @@ export function currencySymbol(currency: string, language: string): string {
   }
 }
 
+export interface FormatMoneyOptions {
+  /**
+   * Drop the fractional part when it is zero: menus read better as "1 900 ₽"
+   * than "1 900,00 ₽". Off by default so editors keep seeing exact amounts.
+   */
+  trimZeroFraction?: boolean;
+}
+
 /** Localized price for read-only display. */
 export function formatMoney(
   minor: number,
   currency: string,
   minorUnits: number,
   language: string,
+  options: FormatMoneyOptions = {},
 ): string {
-  const amount = minor / factor(minorUnits);
+  const scale = factor(minorUnits);
+  const amount = minor / scale;
+  const digits = options.trimZeroFraction && minor % scale === 0 ? 0 : decimals(minorUnits);
   try {
     return new Intl.NumberFormat(language, {
       style: 'currency',
       currency,
-      minimumFractionDigits: decimals(minorUnits),
-      maximumFractionDigits: decimals(minorUnits),
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(decimals(minorUnits))} ${currency}`;
+    return `${amount.toFixed(digits)} ${currency}`;
   }
 }
 
@@ -71,8 +82,9 @@ export function formatDelta(
   currency: string,
   minorUnits: number,
   language: string,
+  options: FormatMoneyOptions = {},
 ): string {
-  const formatted = formatMoney(Math.abs(minor), currency, minorUnits, language);
+  const formatted = formatMoney(Math.abs(minor), currency, minorUnits, language, options);
   if (minor === 0) return formatted;
   return `${minor > 0 ? '+' : '−'}${formatted}`;
 }

@@ -200,5 +200,162 @@
     "stateDirection": "الاتجاه",
     "stateLanguage": "اللغة",
     "stateMode": "الوضع"
+  },
+  "guest": {
+    "common": {
+      "loading": "جارٍ التحميل…",
+      "retry": "إعادة المحاولة",
+      "close": "إغلاق",
+      "roomShort": "غرفة {{room}}"
+    },
+    "nav": {
+      "home": "الرئيسية",
+      "menu": "القائمة",
+      "cart": "السلة",
+      "orders": "الطلبات"
+    },
+    "entry": {
+      "subtitle": "أدخل رقم غرفتك لتطلب إلى غرفتك",
+      "roomLabel": "رقم الغرفة",
+      "roomPlaceholder": "مثال: 305",
+      "roomHelper": "ستجده على بطاقة المفتاح",
+      "submit": "متابعة",
+      "connecting": "جارٍ الاتصال…",
+      "scanQr": "مسح رمز QR",
+      "qrHint": "وجّه كاميرا هاتفك إلى رمز QR في الغرفة — سيفتح التطبيق مع رقم الغرفة.",
+      "or": "أو",
+      "browseOnly": "تصفح القائمة فقط",
+      "roomNotFound": "لم يتم العثور على الغرفة «{{room}}». تحقق من الرقم وحاول مرة أخرى."
+    },
+    "home": {
+      "greeting": "أهلاً بك",
+      "roomLine": "{{hotel}} · غرفة {{room}}",
+      "noRoomLine": "أنت تتصفح دون رقم غرفة",
+      "soon": "قريباً"
+    },
+    "services": {
+      "restaurant": "المطعم",
+      "housekeeping": "التدبير المنزلي",
+      "laundry": "المغسلة",
+      "spa": "سبا",
+      "maintenance": "الصيانة",
+      "concierge": "الكونسيرج"
+    },
+    "menu": {
+      "categories": "فئات القائمة",
+      "availableFrom": "من {{time}}",
+      "unavailable": "غير متاح الآن",
+      "outOfStock": "غير متوفر",
+      "choose": "اختيار",
+      "addAria": "أضف «{{title}}»",
+      "increase": "إضافة واحدة",
+      "decrease": "إزالة واحدة",
+      "emptyTitle": "القائمة فارغة",
+      "emptyHint": "تفقّد لاحقاً — الفندق ما زال يجهز القائمة"
+    },
+    "item": {
+      "title": "طبق",
+      "required": "مطلوب",
+      "optional": "اختياري",
+      "upTo": "حتى {{count}}",
+      "chooseRequired": "اختر خياراً للمتابعة",
+      "comment": "ملاحظة",
+      "commentPlaceholder": "مثال: بدون بصل",
+      "quantity": "الكمية",
+      "addToCart": "أضف · {{price}}",
+      "allergens": "مسببات الحساسية"
+    },
+    "cart": {
+      "title": "طلبك",
+      "barItems": "{{count}} عنصر",
+      "barItems_one": "عنصر واحد",
+      "barItems_few": "{{count}} عناصر",
+      "barItems_many": "{{count}} عنصراً",
+      "barItems_other": "{{count}} عنصر",
+      "barGo": "إلى السلة",
+      "remove": "حذف",
+      "where": "مكان التوصيل",
+      "refinement": "تفاصيل",
+      "when": "الوقت",
+      "asap": "في أقرب وقت",
+      "scheduled": "في وقت محدد",
+      "time": "الوقت",
+      "comment": "ملاحظة على الطلب",
+      "commentPlaceholder": "مثال: اطرق الباب ولا ترن الجرس",
+      "total": "الإجمالي",
+      "totalHint": "يؤكد الفندق المبلغ النهائي",
+      "place": "إتمام · {{price}}",
+      "placing": "جارٍ الإرسال…",
+      "emptyTitle": "السلة فارغة",
+      "emptyHint": "اختر شيئاً من القائمة",
+      "toMenu": "إلى القائمة"
+    },
+    "confirmation": {
+      "title": "تم استلام الطلب",
+      "subtitle": "أرسلناه إلى المطبخ — تابع الحالة أدناه",
+      "track": "تتبع الحالة",
+      "toMenu": "إلى القائمة"
+    },
+    "order": {
+      "number": "طلب رقم {{number}}",
+      "eta": "الوقت المتوقع — حوالي {{minutes}} دقيقة",
+      "where": "أين",
+      "when": "متى",
+      "byTime": "بحلول {{time}}",
+      "cancel": "إلغاء الطلب",
+      "cancelConfirmTitle": "إلغاء الطلب؟",
+      "cancelConfirmBody": "يمكنك الإلغاء قبل أن يبدأ الفندق بالتحضير.",
+      "allOrders": "كل طلباتي",
+      "offline": "لا يوجد اتصال",
+      "inProgress": "الآن"
+    },
+    "orders": {
+      "active": "النشطة",
+      "past": "السابقة",
+      "emptyTitle": "لا توجد طلبات بعد",
+      "emptyHint": "ستظهر هنا طلباتك من المطعم والخدمات"
+    },
+    "errors": {
+      "generic": "حدث خطأ ما. حاول مرة أخرى.",
+      "server": "خادم الفندق لا يستجيب. نحاول مجدداً.",
+      "offline": "لا يوجد اتصال. تحقق من Wi-Fi وحاول مجدداً.",
+      "roomNotFound": "لا توجد غرفة بهذا الرقم. أدخل الرقم يدوياً.",
+      "idempotencyConflict": "تغيّر الطلب أثناء الإرسال. راجع العناصر وأعد الطلب.",
+      "trustRequired": "أدخل رقم غرفتك لتتمكن من الطلب",
+      "itemUnavailable": "أحد العناصر غير متاح الآن. حدّث سلتك.",
+      "modifierRequired": "لم يتم اختيار خيار مطلوب",
+      "refinementRequired": "حدد مكان التسليم",
+      "requestedTimeInvalid": "اختر وقتاً خلال الـ 24 ساعة القادمة",
+      "mixedCategories": "يمكن أن يحتوي الطلب على عناصر من فئة واحدة فقط",
+      "cancelNotAllowed": "الطلب قيد التحضير ولا يمكن إلغاؤه"
+    },
+    "flags": {
+      "popular": "شائع",
+      "new": "جديد",
+      "chef_choice": "اختيار الشيف",
+      "vegan": "نباتي صرف",
+      "vegetarian": "نباتي",
+      "spicy": "حار",
+      "halal": "حلال",
+      "gluten_free": "خالٍ من الغلوتين",
+      "lactose_free": "خالٍ من اللاكتوز",
+      "alcohol_18plus": "‏18+ / كحول"
+    },
+    "allergens": {
+      "gluten": "الغلوتين",
+      "crustaceans": "القشريات",
+      "eggs": "البيض",
+      "fish": "السمك",
+      "peanuts": "الفول السوداني",
+      "soy": "الصويا",
+      "milk": "الحليب",
+      "nuts": "المكسرات",
+      "celery": "الكرفس",
+      "mustard": "الخردل",
+      "sesame": "السمسم",
+      "sulphites": "الكبريتيت",
+      "lupin": "الترمس",
+      "molluscs": "الرخويات"
+    }
   }
 }

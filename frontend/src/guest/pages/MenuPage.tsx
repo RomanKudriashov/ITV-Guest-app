@@ -1,0 +1,341 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
+import CircularProgress from '@mui/material/CircularProgress';
+import Container from '@mui/material/Container';
+import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
+
+import { EmptyState } from '@/components/EmptyState';
+import { FlagChips, ItemThumb } from '../components/ItemMeta';
+import { ItemSheet } from '../components/ItemSheet';
+import { QuantityStepper } from '../components/QuantityStepper';
+import { StickyFooter } from '../components/StickyFooter';
+import { errorMessage } from '../errors';
+import { useGuestMenu } from '../hooks/useGuestQueries';
+import { useMoney } from '../hooks/useMoney';
+import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
+import { useCart } from '../state/cart';
+import type { MenuItem } from '../api/types';
+
+const HEADER_OFFSET = 56;
+const TABS_HEIGHT = 48;
+
+export function MenuPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { format } = useMoney();
+  const cart = useCart();
+  const { data, isLoading, error, refetch } = useGuestMenu();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openItemId = searchParams.get('item');
+
+  const categories = useMemo(() => data?.categories ?? [], [data]);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const suppressSpy = useRef(false);
+
+  const allItems = useMemo(() => {
+    const map = new Map<string, MenuItem>();
+    for (const category of categories) {
+      for (const item of category.items) map.set(item.id, item);
+    }
+    return map;
+  }, [categories]);
+
+  useEffect(() => {
+    if (!activeCategory && categories.length) setActiveCategory(categories[0].code);
+  }, [categories, activeCategory]);
+
+  // Scroll-spy: the category whose section crosses just under the sticky tabs wins.
+  useEffect(() => {
+    if (!categories.length) return;
+    const onScroll = () => {
+      if (suppressSpy.current) return;
+      const line = HEADER_OFFSET + TABS_HEIGHT + 8;
+      let current = categories[0].code;
+      for (const category of categories) {
+        const node = sectionRefs.current[category.code];
+        if (!node) continue;
+        if (node.getBoundingClientRect().top <= line) current = category.code;
+      }
+      setActiveCategory((prev) => (prev === current ? prev : current));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [categories]);
+
+  const scrollToCategory = useCallback((code: string) => {
+    const node = sectionRefs.current[code];
+    if (!node) return;
+    suppressSpy.current = true;
+    setActiveCategory(code);
+    const top = node.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET - TABS_HEIGHT;
+    window.scrollTo({ top, behavior: 'smooth' });
+    window.setTimeout(() => {
+      suppressSpy.current = false;
+    }, 600);
+  }, []);
+
+  const openItem = (item: MenuItem) => {
+    setSearchParams({ item: item.id }, { replace: false });
+  };
+
+  const closeSheet = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('item');
+    setSearchParams(next, { replace: true });
+  };
+
+  if (isLoading) {
+    return (
+      <Stack alignItems="center" sx={{ py: 8 }}>
+        <CircularProgress aria-label={t('guest.common.loading')} />
+      </Stack>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 4 }}>
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => void refetch()}>
+              {t('guest.common.retry')}
+            </Button>
+          }
+        >
+          {errorMessage(error, t)}
+        </Alert>
+      </Container>
+    );
+  }
+
+  if (!categories.length) {
+    return (
+      <EmptyState
+        title={t('guest.menu.emptyTitle')}
+        description={t('guest.menu.emptyHint')}
+        testId="guest-menu-empty"
+      />
+    );
+  }
+
+  return (
+    <Box data-testid="guest-menu">
+      <Box
+        sx={{
+          position: 'sticky',
+          top: HEADER_OFFSET,
+          zIndex: (theme) => theme.zIndex.appBar - 1,
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Tabs
+          value={activeCategory ?? categories[0].code}
+          onChange={(_event, value: string) => scrollToCategory(value)}
+          variant="scrollable"
+          scrollButtons={false}
+          allowScrollButtonsMobile
+          aria-label={t('guest.menu.categories')}
+          sx={{ minHeight: TABS_HEIGHT }}
+        >
+          {categories.map((category) => (
+            <Tab
+              key={category.id}
+              value={category.code}
+              label={category.title}
+              data-testid={`guest-category-tab-${category.code}`}
+              sx={{ minHeight: TABS_HEIGHT, minWidth: 44 }}
+            />
+          ))}
+        </Tabs>
+      </Box>
+
+      <Container maxWidth="sm" sx={{ py: 2, pb: cart.isEmpty ? 2 : 12 }}>
+        <Stack spacing={3}>
+          {categories.map((category) => (
+            <Box
+              key={category.id}
+              component="section"
+              ref={(node: HTMLElement | null) => {
+                sectionRefs.current[category.code] = node;
+              }}
+              aria-label={category.title}
+            >
+              <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="h6" component="h2">
+                  {category.title}
+                </Typography>
+                {!category.is_available && category.available_from ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {t('guest.menu.availableFrom', { time: category.available_from })}
+                  </Typography>
+                ) : null}
+              </Stack>
+
+              <Stack divider={<Box sx={{ height: 1, bgcolor: 'divider' }} />}>
+                {category.items.map((item) => (
+                  <MenuRow
+                    key={item.id}
+                    item={item}
+                    categoryAvailable={category.is_available}
+                    onOpen={() => openItem(item)}
+                    format={format}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          ))}
+        </Stack>
+      </Container>
+
+      {!cart.isEmpty ? (
+        <StickyFooter offset={BOTTOM_NAV_HEIGHT}>
+          <Button
+            fullWidth
+            size="large"
+            variant="contained"
+            onClick={() => navigate('/cart')}
+            data-testid="guest-cart-bar"
+            sx={{ minHeight: 52, justifyContent: 'space-between', px: 2 }}
+          >
+            <Box component="span">
+              {t('guest.cart.barItems', { count: cart.count })} · {format(cart.total)}
+            </Box>
+            <Box component="span">{t('guest.cart.barGo')}</Box>
+          </Button>
+        </StickyFooter>
+      ) : null}
+
+      <ItemSheet
+        itemId={openItemId}
+        listItem={openItemId ? (allItems.get(openItemId) ?? null) : null}
+        onClose={closeSheet}
+      />
+    </Box>
+  );
+}
+
+interface MenuRowProps {
+  item: MenuItem;
+  categoryAvailable: boolean;
+  onOpen: () => void;
+  format: (minor: number) => string;
+}
+
+function MenuRow({ item, categoryAvailable, onOpen, format }: MenuRowProps) {
+  const { t } = useTranslation();
+  const cart = useCart();
+  const available = item.is_available && categoryAvailable;
+  const needsSheet = item.has_required_modifiers ?? Boolean(item.modifier_groups?.some((g) => g.is_required));
+  const quantity = cart.simpleQuantity(item.id);
+
+  const unavailableNote = !available
+    ? item.available_from
+      ? t('guest.menu.availableFrom', { time: item.available_from })
+      : item.unavailable_reason === 'out_of_stock'
+        ? t('guest.menu.outOfStock')
+        : t('guest.menu.unavailable')
+    : null;
+
+  return (
+    <Stack
+      direction="row"
+      spacing={1.5}
+      alignItems="center"
+      sx={{ py: 1.5, opacity: available ? 1 : 0.55 }}
+      data-testid={`guest-item-${item.code}`}
+    >
+      <ButtonBase
+        onClick={onOpen}
+        disabled={!available}
+        aria-label={item.title}
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          gap: 1.5,
+          alignItems: 'center',
+          textAlign: 'start',
+          minHeight: 44,
+          borderRadius: 2,
+        }}
+      >
+        <ItemThumb src={item.images?.[0]} alt={item.title} dimmed={!available} />
+        <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography variant="subtitle2" sx={{ lineHeight: 1.25 }}>
+            {item.title}
+          </Typography>
+          {item.description ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {item.description}
+            </Typography>
+          ) : null}
+          <FlagChips flags={item.flags ?? []} />
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="subtitle2">{format(item.price)}</Typography>
+            {unavailableNote ? (
+              <Typography variant="caption" color="text.secondary">
+                {unavailableNote}
+              </Typography>
+            ) : null}
+          </Stack>
+        </Stack>
+      </ButtonBase>
+
+      {available ? (
+        needsSheet ? (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onOpen}
+            data-testid={`guest-qty-plus-${item.code}`}
+            sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
+          >
+            {t('guest.menu.choose')}
+          </Button>
+        ) : quantity > 0 ? (
+          <QuantityStepper
+            size="small"
+            code={item.code}
+            value={quantity}
+            removeAtZero
+            onIncrement={() => cart.addSimple(item)}
+            onDecrement={() => cart.decrementSimple(item.id)}
+          />
+        ) : (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => cart.addSimple(item)}
+            data-testid={`guest-qty-plus-${item.code}`}
+            aria-label={t('guest.menu.addAria', { title: item.title })}
+            sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
+          >
+            +
+          </Button>
+        )
+      ) : null}
+    </Stack>
+  );
+}

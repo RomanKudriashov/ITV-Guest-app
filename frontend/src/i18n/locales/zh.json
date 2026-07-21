@@ -148,7 +148,15 @@
     "dayPart": "时段",
     "addInterval": "添加时间段",
     "overnightHint": "跨零点的时间段（如 23:00–02:00）延续到次日",
-    "weekdays": ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+    "weekdays": [
+      "星期一",
+      "星期二",
+      "星期三",
+      "星期四",
+      "星期五",
+      "星期六",
+      "星期日"
+    ]
   },
   "dayParts": {
     "breakfast": "早餐",
@@ -192,5 +200,162 @@
     "stateDirection": "文字方向",
     "stateLanguage": "语言",
     "stateMode": "模式"
+  },
+  "guest": {
+    "common": {
+      "loading": "加载中…",
+      "retry": "重试",
+      "close": "关闭",
+      "roomShort": "房间 {{room}}"
+    },
+    "nav": {
+      "home": "首页",
+      "menu": "菜单",
+      "cart": "购物车",
+      "orders": "订单"
+    },
+    "entry": {
+      "subtitle": "输入房间号即可点餐送到房间",
+      "roomLabel": "房间号",
+      "roomPlaceholder": "例如 305",
+      "roomHelper": "房卡上可以找到",
+      "submit": "继续",
+      "connecting": "连接中…",
+      "scanQr": "扫描二维码",
+      "qrHint": "用手机摄像头扫描房间内的二维码，将自动填入房间号。",
+      "or": "或",
+      "browseOnly": "只看菜单",
+      "roomNotFound": "未找到房间“{{room}}”。请检查后重试。"
+    },
+    "home": {
+      "greeting": "欢迎",
+      "roomLine": "{{hotel}} · 房间 {{room}}",
+      "noRoomLine": "您正在无房间号浏览",
+      "soon": "即将推出"
+    },
+    "services": {
+      "restaurant": "餐厅",
+      "housekeeping": "客房清洁",
+      "laundry": "洗衣",
+      "spa": "水疗",
+      "maintenance": "维修",
+      "concierge": "礼宾"
+    },
+    "menu": {
+      "categories": "菜单分类",
+      "availableFrom": "{{time}} 起",
+      "unavailable": "当前不可用",
+      "outOfStock": "已售罄",
+      "choose": "选择",
+      "addAria": "添加“{{title}}”",
+      "increase": "增加一份",
+      "decrease": "减少一份",
+      "emptyTitle": "菜单暂时为空",
+      "emptyHint": "请稍后再看，酒店正在准备菜单"
+    },
+    "item": {
+      "title": "菜品",
+      "required": "必选",
+      "optional": "可选",
+      "upTo": "最多 {{count}} 项",
+      "chooseRequired": "请选择一项以继续",
+      "comment": "备注",
+      "commentPlaceholder": "例如：不要洋葱",
+      "quantity": "数量",
+      "addToCart": "加入 · {{price}}",
+      "allergens": "过敏原"
+    },
+    "cart": {
+      "title": "您的订单",
+      "barItems": "{{count}} 项",
+      "barItems_one": "{{count}} 项",
+      "barItems_few": "{{count}} 项",
+      "barItems_many": "{{count}} 项",
+      "barItems_other": "{{count}} 项",
+      "barGo": "去结算",
+      "remove": "删除",
+      "where": "送达地点",
+      "refinement": "补充说明",
+      "when": "时间",
+      "asap": "尽快",
+      "scheduled": "指定时间",
+      "time": "时间",
+      "comment": "订单备注",
+      "commentPlaceholder": "例如：请敲门，不要按铃",
+      "total": "合计",
+      "totalHint": "最终金额以酒店确认为准",
+      "place": "下单 · {{price}}",
+      "placing": "提交中…",
+      "emptyTitle": "购物车是空的",
+      "emptyHint": "从菜单中挑选一些吧",
+      "toMenu": "去菜单"
+    },
+    "confirmation": {
+      "title": "订单已收到",
+      "subtitle": "我们已通知厨房，可在下方查看状态",
+      "track": "查看状态",
+      "toMenu": "去菜单"
+    },
+    "order": {
+      "number": "订单 #{{number}}",
+      "eta": "预计约 {{minutes}} 分钟",
+      "where": "地点",
+      "when": "时间",
+      "byTime": "{{time}} 前",
+      "cancel": "取消订单",
+      "cancelConfirmTitle": "取消订单？",
+      "cancelConfirmBody": "在酒店开始制作前可以取消。",
+      "allOrders": "我的全部订单",
+      "offline": "无连接",
+      "inProgress": "进行中"
+    },
+    "orders": {
+      "active": "进行中",
+      "past": "历史",
+      "emptyTitle": "暂无订单",
+      "emptyHint": "您的餐饮及服务订单将显示在这里"
+    },
+    "errors": {
+      "generic": "出现问题，请重试。",
+      "server": "酒店服务器无响应，正在重试。",
+      "offline": "无网络连接，请检查 Wi-Fi 后重试。",
+      "roomNotFound": "找不到该房间，请手动输入房间号。",
+      "idempotencyConflict": "提交时订单已变更，请核对后重新下单。",
+      "trustRequired": "请填写房间号后再下单",
+      "itemUnavailable": "有菜品当前不可用，请更新购物车。",
+      "modifierRequired": "缺少必选项",
+      "refinementRequired": "请补充送达位置",
+      "requestedTimeInvalid": "请选择未来 24 小时内的时间",
+      "mixedCategories": "一个订单只能包含同一分类的菜品",
+      "cancelNotAllowed": "订单已在制作中，无法取消"
+    },
+    "flags": {
+      "popular": "热门",
+      "new": "新品",
+      "chef_choice": "主厨推荐",
+      "vegan": "纯素",
+      "vegetarian": "素食",
+      "spicy": "辣",
+      "halal": "清真",
+      "gluten_free": "无麸质",
+      "lactose_free": "无乳糖",
+      "alcohol_18plus": "18+ / 含酒精"
+    },
+    "allergens": {
+      "gluten": "麸质",
+      "crustaceans": "甲壳类",
+      "eggs": "蛋类",
+      "fish": "鱼类",
+      "peanuts": "花生",
+      "soy": "大豆",
+      "milk": "牛奶",
+      "nuts": "坚果",
+      "celery": "芹菜",
+      "mustard": "芥末",
+      "sesame": "芝麻",
+      "sulphites": "亚硫酸盐",
+      "lupin": "羽扇豆",
+      "molluscs": "软体动物"
+    }
   }
 }

@@ -200,5 +200,162 @@
     "stateDirection": "Direction",
     "stateLanguage": "Language",
     "stateMode": "Mode"
+  },
+  "guest": {
+    "common": {
+      "loading": "Loading…",
+      "retry": "Retry",
+      "close": "Close",
+      "roomShort": "Room {{room}}"
+    },
+    "nav": {
+      "home": "Home",
+      "menu": "Menu",
+      "cart": "Cart",
+      "orders": "Orders"
+    },
+    "entry": {
+      "subtitle": "Enter your room number to order to your room",
+      "roomLabel": "Room number",
+      "roomPlaceholder": "e.g. 305",
+      "roomHelper": "You will find it on your key card",
+      "submit": "Continue",
+      "connecting": "Connecting…",
+      "scanQr": "Scan QR",
+      "qrHint": "Point your phone camera at the QR code in your room — it opens this app with the room already filled in.",
+      "or": "or",
+      "browseOnly": "Just browse the menu",
+      "roomNotFound": "Room “{{room}}” was not found. Please check the number and try again."
+    },
+    "home": {
+      "greeting": "Welcome",
+      "roomLine": "{{hotel}} · room {{room}}",
+      "noRoomLine": "You are browsing without a room number",
+      "soon": "Soon"
+    },
+    "services": {
+      "restaurant": "Restaurant",
+      "housekeeping": "Housekeeping",
+      "laundry": "Laundry",
+      "spa": "Spa",
+      "maintenance": "Maintenance",
+      "concierge": "Concierge"
+    },
+    "menu": {
+      "categories": "Menu categories",
+      "availableFrom": "from {{time}}",
+      "unavailable": "Not available now",
+      "outOfStock": "Out of stock",
+      "choose": "Choose",
+      "addAria": "Add “{{title}}”",
+      "increase": "Add one",
+      "decrease": "Remove one",
+      "emptyTitle": "The menu is empty",
+      "emptyHint": "Please check back later — the hotel is still preparing the menu"
+    },
+    "item": {
+      "title": "Dish",
+      "required": "Required",
+      "optional": "Optional",
+      "upTo": "up to {{count}}",
+      "chooseRequired": "Pick an option to continue",
+      "comment": "Comment",
+      "commentPlaceholder": "For example: no onions",
+      "quantity": "Quantity",
+      "addToCart": "Add · {{price}}",
+      "allergens": "Allergens"
+    },
+    "cart": {
+      "title": "Your order",
+      "barItems": "{{count}} items",
+      "barItems_one": "{{count}} item",
+      "barItems_few": "{{count}} items",
+      "barItems_many": "{{count}} items",
+      "barItems_other": "{{count}} items",
+      "barGo": "Go to cart",
+      "remove": "Remove",
+      "where": "Where to deliver",
+      "refinement": "Details",
+      "when": "When",
+      "asap": "As soon as possible",
+      "scheduled": "At a set time",
+      "time": "Time",
+      "comment": "Order comment",
+      "commentPlaceholder": "For example: knock, do not ring",
+      "total": "Total",
+      "totalHint": "The hotel confirms the final amount",
+      "place": "Place order · {{price}}",
+      "placing": "Sending…",
+      "emptyTitle": "Your cart is empty",
+      "emptyHint": "Pick something from the menu",
+      "toMenu": "To the menu"
+    },
+    "confirmation": {
+      "title": "Order received",
+      "subtitle": "We have passed it to the kitchen — follow the status below",
+      "track": "Track status",
+      "toMenu": "To the menu"
+    },
+    "order": {
+      "number": "Order #{{number}}",
+      "eta": "Estimated time — about {{minutes}} min",
+      "where": "Where",
+      "when": "When",
+      "byTime": "By {{time}}",
+      "cancel": "Cancel order",
+      "cancelConfirmTitle": "Cancel the order?",
+      "cancelConfirmBody": "You can cancel until the hotel starts preparing it.",
+      "allOrders": "All my orders",
+      "offline": "Offline",
+      "inProgress": "Now"
+    },
+    "orders": {
+      "active": "Active",
+      "past": "Past",
+      "emptyTitle": "No orders yet",
+      "emptyHint": "Your restaurant and service orders will appear here"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "server": "The hotel server is not responding. We are retrying.",
+      "offline": "No connection. Check your Wi-Fi and try again.",
+      "roomNotFound": "No such room. Please enter the number manually.",
+      "idempotencyConflict": "The order changed while we were sending it. Check the items and place it again.",
+      "trustRequired": "Enter your room number to place an order",
+      "itemUnavailable": "One of the items is not available now. Please update your cart.",
+      "modifierRequired": "A required option is missing",
+      "refinementRequired": "Please specify the delivery spot",
+      "requestedTimeInvalid": "Pick a time within the next 24 hours",
+      "mixedCategories": "One order can only contain items from a single category",
+      "cancelNotAllowed": "The order is already being prepared and cannot be cancelled"
+    },
+    "flags": {
+      "popular": "Popular",
+      "new": "New",
+      "chef_choice": "Chef's choice",
+      "vegan": "Vegan",
+      "vegetarian": "Vegetarian",
+      "spicy": "Spicy",
+      "halal": "Halal",
+      "gluten_free": "Gluten free",
+      "lactose_free": "Lactose free",
+      "alcohol_18plus": "18+ / alcohol"
+    },
+    "allergens": {
+      "gluten": "Gluten",
+      "crustaceans": "Crustaceans",
+      "eggs": "Eggs",
+      "fish": "Fish",
+      "peanuts": "Peanuts",
+      "soy": "Soy",
+      "milk": "Milk",
+      "nuts": "Tree nuts",
+      "celery": "Celery",
+      "mustard": "Mustard",
+      "sesame": "Sesame",
+      "sulphites": "Sulphites",
+      "lupin": "Lupin",
+      "molluscs": "Molluscs"
+    }
   }
 }
