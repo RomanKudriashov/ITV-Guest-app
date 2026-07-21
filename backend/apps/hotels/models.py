@@ -151,6 +151,9 @@ class ExecutionPoint(TenantModel):
     title = TranslatableField()
     kind = models.CharField(max_length=32, choices=Kind.choices, default=Kind.OTHER)
     is_active = models.BooleanField(default=True)
+    # Через сколько минут ожидания заказ на доске считается просроченным.
+    # Настройка точки, а не константа: кухне и хозслужбе нужны разные пороги.
+    sla_minutes = models.PositiveSmallIntegerField(default=20)
 
     class Meta:
         db_table = "hotels_execution_point"

@@ -12,7 +12,7 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import type { ItemDetail, MenuItem, ModifierOption, OrderLinePayload } from '../api/types';
 
 /**
- * Cart store — kind 2 state ("unfinished user input") from `useDraftState.ts`.
+ * Cart store — kind 2 state ("unfinished user input") from `@/state/useDraftState`.
  *
  * It is NEVER derived from, or overwritten by, server data: a background menu
  * refetch must not drop what the guest has already picked. Prices shown in the

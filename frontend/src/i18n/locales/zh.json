@@ -37,7 +37,8 @@
     "settings": "设置",
     "soon": "即将上线",
     "roleAdmin": "酒店管理员",
-    "roleStaff": "员工"
+    "roleStaff": "员工",
+    "tracker": "订单看板"
   },
   "menu": {
     "categories": "分类",
@@ -356,6 +357,78 @@
       "sulphites": "亚硫酸盐",
       "lupin": "羽扇豆",
       "molluscs": "软体动物"
+    }
+  },
+  "tracker": {
+    "title": "订单看板",
+    "point": "执行点",
+    "loading": "加载中…",
+    "retry": "重试",
+    "offline": "已离线",
+    "liveOn": "实时更新",
+    "liveOff": "连接中断 — 每 15 秒刷新",
+    "toCms": "进入管理后台",
+    "sound": {
+      "on": "提示音已开",
+      "off": "开启提示音"
+    },
+    "scope": {
+      "active": "进行中",
+      "history": "历史"
+    },
+    "noPoints": {
+      "title": "尚未分配执行点",
+      "body": "请管理员将你关联到厨房或其他执行点。"
+    },
+    "board": {
+      "emptyColumn": "空",
+      "emptyTitle": "暂无订单",
+      "emptyBody": "新订单会自动出现，无需刷新",
+      "emptyHistoryTitle": "暂无历史",
+      "emptyHistoryBody": "这里显示最近 24 小时的已结束订单"
+    },
+    "card": {
+      "number": "第 {{number}} 号",
+      "room": "{{room}} 房",
+      "waiting": "{{minutes}} 分钟",
+      "asap": "尽快",
+      "byTime": "{{time}} 前"
+    },
+    "actions": {
+      "accept": "接单",
+      "cancel": "取消"
+    },
+    "detail": {
+      "where": "送达",
+      "when": "时间",
+      "waiting": "已等待",
+      "assignee": "负责人",
+      "unassigned": "未指派",
+      "acceptedAt": "接单时间",
+      "comment": "订单备注",
+      "total": "合计",
+      "timeline": "进度",
+      "close": "关闭",
+      "loading": "加载中…",
+      "notFound": "看板上没有该订单"
+    },
+    "cancel": {
+      "title": "取消第 {{number}} 号订单？",
+      "body": "客人会立即看到取消。",
+      "reason": "原因",
+      "reasonPlaceholder": "例如：原料用完",
+      "keep": "不取消",
+      "confirm": "取消订单"
+    },
+    "errors": {
+      "pointNotAssigned": "你未被分配到该执行点",
+      "invalidTransition": "该状态流转已失效",
+      "cancelNotAllowed": "该订单已无法取消",
+      "noRoute": "该分类未配置执行点",
+      "alreadyAccepted": "订单已被接单",
+      "alreadyAcceptedBy": "已由 {{name}} 接单",
+      "server": "服务器无响应",
+      "generic": "操作失败"
     }
   }
 }

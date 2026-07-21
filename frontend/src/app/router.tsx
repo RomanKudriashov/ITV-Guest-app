@@ -8,6 +8,8 @@ import { CategoryEditorPage } from '@/pages/category/CategoryEditorPage';
 import { ItemEditorPage } from '@/pages/item/ItemEditorPage';
 import App from '@/App';
 
+import { TrackerPage } from '@/tracker/pages/TrackerPage';
+
 import { GuestRoot } from '@/guest/GuestRoot';
 import { GuestLayout } from '@/guest/layout/GuestLayout';
 import { EntryPage } from '@/guest/pages/EntryPage';
@@ -21,8 +23,10 @@ import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
  * Data router — required for `useBlocker` (the unsaved-changes guard in the CMS).
  *
  * Layout of the app:
- *  - `/`      guest storefront (the product);
- *  - `/cms/*` + `/login` staff CMS, unchanged.
+ *  - `/`         guest storefront (the product);
+ *  - `/cms/*` + `/login` staff CMS, unchanged;
+ *  - `/tracker`  staff order board — same JWT as the CMS, its own shell
+ *                (a cook holds a phone, not a desktop sidebar).
  */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -42,6 +46,24 @@ export const router = createBrowserRouter([
       { path: 'menu/items/new', element: <ItemEditorPage /> },
       { path: 'menu/items/:id', element: <ItemEditorPage /> },
     ],
+  },
+  {
+    path: '/tracker',
+    element: (
+      <RequireAuth>
+        <TrackerPage />
+      </RequireAuth>
+    ),
+  },
+  {
+    // Deep link to one order: the board stays mounted underneath and opens the
+    // detail sheet, so the URL is shareable without a second data source.
+    path: '/tracker/order/:id',
+    element: (
+      <RequireAuth>
+        <TrackerPage />
+      </RequireAuth>
+    ),
   },
   {
     path: '/',

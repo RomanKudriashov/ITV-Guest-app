@@ -98,6 +98,18 @@ class Order(TenantModel):
     total = models.IntegerField(default=0, help_text="В минимальных единицах")
     currency = models.CharField(max_length=3, default="RUB")
 
+    # Кто взял заказ в работу. Отдельным полем, а не выводом из истории
+    # переходов: доска показывает исполнителя в каждой карточке, и считать его
+    # каждый раз из OrderStatusChange было бы и дорого, и неоднозначно.
+    assignee = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_orders",
+    )
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
     # Швы под будущее: оплату и PMS в этом прогоне не реализуем.
     payment_state = models.CharField(max_length=32, default="none")
     pms_folio_ref = models.CharField(max_length=128, blank=True)

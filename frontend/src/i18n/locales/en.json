@@ -37,7 +37,8 @@
     "settings": "Settings",
     "soon": "Soon",
     "roleAdmin": "Hotel admin",
-    "roleStaff": "Staff member"
+    "roleStaff": "Staff member",
+    "tracker": "Tracker"
   },
   "menu": {
     "categories": "Categories",
@@ -356,6 +357,78 @@
       "sulphites": "Sulphites",
       "lupin": "Lupin",
       "molluscs": "Molluscs"
+    }
+  },
+  "tracker": {
+    "title": "Tracker",
+    "point": "Execution point",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "offline": "Offline",
+    "liveOn": "The board updates in real time",
+    "liveOff": "Connection lost — refreshing every 15 seconds",
+    "toCms": "Go to the dashboard",
+    "sound": {
+      "on": "Sound is on",
+      "off": "Turn sound on"
+    },
+    "scope": {
+      "active": "In progress",
+      "history": "History"
+    },
+    "noPoints": {
+      "title": "You are not assigned to a point yet",
+      "body": "Ask the hotel admin to assign you to the kitchen, the bar or another execution point — the board will show up here right after that."
+    },
+    "board": {
+      "emptyColumn": "Empty",
+      "emptyTitle": "No orders",
+      "emptyBody": "New orders appear here on their own — no need to refresh",
+      "emptyHistoryTitle": "History is empty",
+      "emptyHistoryBody": "Closed orders of the last 24 hours will show up here"
+    },
+    "card": {
+      "number": "#{{number}}",
+      "room": "Room {{room}}",
+      "waiting": "{{minutes}} min",
+      "asap": "As soon as possible",
+      "byTime": "By {{time}}"
+    },
+    "actions": {
+      "accept": "Accept",
+      "cancel": "Cancel"
+    },
+    "detail": {
+      "where": "Where",
+      "when": "When",
+      "waiting": "Waiting",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "acceptedAt": "Accepted at",
+      "comment": "Order comment",
+      "total": "Total",
+      "timeline": "What happened",
+      "close": "Close",
+      "loading": "Loading the order…",
+      "notFound": "This order is not on the board"
+    },
+    "cancel": {
+      "title": "Cancel order #{{number}}?",
+      "body": "The guest sees the cancellation immediately. Add a reason — it goes into the order history.",
+      "reason": "Reason",
+      "reasonPlaceholder": "For example: out of ingredients",
+      "keep": "Keep it",
+      "confirm": "Cancel order"
+    },
+    "errors": {
+      "pointNotAssigned": "You are not assigned to this execution point",
+      "invalidTransition": "That transition is no longer available — the board has moved on",
+      "cancelNotAllowed": "This order can no longer be cancelled",
+      "noRoute": "No execution point is configured for this category",
+      "alreadyAccepted": "The order has already been accepted",
+      "alreadyAcceptedBy": "Already accepted by {{name}}",
+      "server": "The server is not responding",
+      "generic": "The action failed"
     }
   }
 }

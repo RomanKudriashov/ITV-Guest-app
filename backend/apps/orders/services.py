@@ -248,19 +248,41 @@ def _create_order_item(order: Order, resolved: dict[str, Any]) -> OrderItem:
 
 
 def _resolve_execution_point(category_id) -> ExecutionPoint:
+    """
+    Кто будет исполнять. Резолвится один раз при создании заказа и дальше не
+    пересчитывается — перенастройка маршрутов не должна переносить вчерашние
+    заказы на другую кухню.
+
+    Порядок с фолбэками, потому что категория, только что созданная в CMS,
+    маршрута ещё не имеет, а заказать её гость уже может. Молча ронять заказ
+    из-за ненастроенной админки — худший вариант из возможных.
+    """
     route = (
         Route.objects.select_related("execution_point")
         .filter(category_id=category_id, is_active=True, execution_point__is_active=True)
         .order_by("priority")
         .first()
     )
-    if route is None:
-        category = Category.objects.filter(pk=category_id).first()
-        raise RoutingError(
-            f"Для категории «{category.code if category else category_id}» "
-            "не настроен маршрут на точку исполнения"
-        )
-    return route.execution_point
+    if route is not None:
+        return route.execution_point
+
+    category = Category.objects.filter(pk=category_id).first()
+
+    # 2. Соглашение «категория = точка»: категория «bar» уходит на точку «bar».
+    if category is not None:
+        by_code = ExecutionPoint.objects.filter(code=category.code, is_active=True).first()
+        if by_code is not None:
+            return by_code
+
+    # 3. Один исполнитель на отель — выбирать не из чего.
+    points = list(ExecutionPoint.objects.filter(is_active=True)[:2])
+    if len(points) == 1:
+        return points[0]
+
+    raise RoutingError(
+        f"Для категории «{category.code if category else category_id}» "
+        "не настроен маршрут на точку исполнения"
+    )
 
 
 def _resolve_location(data: OrderInput) -> Location | None:

@@ -2,9 +2,13 @@
 WebSocket-слой (Channels).
 
 Два канала:
-  * /ws/tracker/            — доска исполнения (каркас; UI трекера — следующий
-                              прогон).
+  * /ws/tracker/<point>/    — доска точки исполнения для персонала.
   * /ws/guest/order/<id>/   — гость следит за своим заказом.
+
+У WebSocket НЕТ HTTP-middleware: ни аутентификации, ни резолвера тенанта, ни
+языка. Каждый консьюмер обязан делать это сам и явно — иначе канал окажется
+открыт наружу. Проверки берутся из тех же сервисных функций, что использует
+REST, чтобы правила не разъехались.
 
 ГЛАВНОЕ РЕШЕНИЕ: реконсиляция, а не дельты. Сервер шлёт ПОЛНЫЙ снимок заказа
 сразу после подключения и на каждое событие; клиент своё состояние не
@@ -59,17 +63,43 @@ def _resolve_hotel(scope):
 
 
 @database_sync_to_async
-def _authenticate_staff(hotel, token: str):
-    from apps.accounts.auth import authenticate_staff
+def _load_tracker_board(hotel, token: str, point_code: str, language: str):
+    """
+    Аутентификация + скоуп отеля + проверка привязки к точке + снимок доски —
+    одним походом в БД.
 
-    with tenant_context(hotel):
+    Всё перечисленное делается ЯВНО, потому что у WebSocket нет ни middleware
+    аутентификации, ни резолвера тенанта, ни языка. Проверки живут в
+    apps/orders/tracker.py, то есть буквально те же, что у REST: разъехаться
+    им негде.
+    """
+    from apps.accounts.auth import authenticate_staff
+    from apps.core.errors import DomainError
+    from apps.orders.tracker import build_board, require_point
+
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
         user = authenticate_staff(token)
         if user is None:
-            return None, []
-        points = list(
-            user.assignments.filter(is_active=True).values_list("execution_point_id", flat=True)
-        )
-        return user, [str(pk) for pk in points]
+            return None, None, None
+        try:
+            point = require_point(user, point_code)
+        except DomainError:
+            return user, None, None
+        return user, point, build_board(point, language=language)
+
+
+@database_sync_to_async
+def _board_snapshot(hotel, point_id, language: str):
+    from apps.hotels.models import ExecutionPoint
+    from apps.orders.tracker import build_board
+
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
+        point = ExecutionPoint.objects.filter(pk=point_id).first()
+        if point is None:
+            return None
+        return build_board(point, language=language)
 
 
 @database_sync_to_async
@@ -110,7 +140,11 @@ def _order_snapshot(hotel, order_id: str, language: str):
 
 
 class TrackerConsumer(AsyncJsonWebsocketConsumer):
-    """Доска исполнения. Подписка — только на свои точки исполнения."""
+    """
+    Доска точки исполнения. Подключиться можно только к СВОЕЙ точке — той, к
+    которой сотрудника привязали StaffAssignment. Повару с кухни незачем
+    видеть заявки SPA, а сотруднику соседнего отеля — вообще ничего.
+    """
 
     async def connect(self):
         hotel = await _resolve_hotel(self.scope)
@@ -118,27 +152,40 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=CLOSE_NO_TENANT)
             return
 
+        self.hotel = hotel
+        self.language = _query_param(self.scope, "lang")
+        point_code = self.scope["url_route"]["kwargs"]["point_code"]
         token = _query_param(self.scope, "token")
-        user, execution_point_ids = await _authenticate_staff(hotel, token)
+
+        user, point, board = await _load_tracker_board(
+            hotel, token, point_code, self.language
+        )
         if user is None:
             await self.close(code=CLOSE_UNAUTHORIZED)
             return
-        if not execution_point_ids:
+        if point is None:
+            # Одинаковый отказ и для «точки нет», и для «не твоя точка»:
+            # чужому незачем узнавать, какие точки существуют в отеле.
             await self.close(code=CLOSE_FORBIDDEN)
             return
 
-        self.hotel_id = str(hotel.pk)
-        self.groups_joined = [f"tracker.{self.hotel_id}.{pk}" for pk in execution_point_ids]
-        for group in self.groups_joined:
-            await self.channel_layer.group_add(group, self.channel_name)
-
+        self.point_id = str(point.pk)
+        self.group_name = f"tracker.{hotel.pk}.{point.pk}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+
         await self.send_json(
-            {"type": "connected", "hotel_id": self.hotel_id, "channels": self.groups_joined}
+            {
+                "type": "tracker.snapshot",
+                "event": "connected",
+                "order_id": None,
+                "board": board,
+            }
         )
 
     async def disconnect(self, code):
-        for group in getattr(self, "groups_joined", []):
+        group = getattr(self, "group_name", None)
+        if group:
             await self.channel_layer.group_discard(group, self.channel_name)
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -150,7 +197,25 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "pong"})
 
     async def order_event(self, message):
-        await self.send_json(message)
+        """
+        Событие из шины — повод переслать доску целиком, а не патч.
+
+        Полный снимок на каждое событие — осознанный размен: на кухне
+        одновременно живут единицы заказов, и простота инварианта важнее
+        экономии трафика. `order_id` отдаём отдельно, чтобы клиент знал, что
+        подсветить и на что дать звук.
+        """
+        board = await _board_snapshot(self.hotel, self.point_id, self.language)
+        if board is None:
+            return
+        await self.send_json(
+            {
+                "type": "tracker.snapshot",
+                "event": message.get("event", ""),
+                "order_id": (message.get("data") or {}).get("order_id"),
+                "board": board,
+            }
+        )
 
 
 class GuestOrderConsumer(AsyncJsonWebsocketConsumer):

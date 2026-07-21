@@ -15,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import RoomServiceIcon from '@mui/icons-material/RoomService';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -36,6 +37,9 @@ interface NavEntry {
 
 const NAV_ENTRIES: NavEntry[] = [
   { key: 'menu', to: '/cms/menu', icon: <RestaurantMenuIcon fontSize="small" /> },
+  // The tracker lives outside /cms (own mobile-first shell) but is reachable
+  // from here: after one login a member of staff must find both halves.
+  { key: 'tracker', to: '/tracker', icon: <DashboardCustomizeIcon fontSize="small" /> },
   { key: 'orders', icon: <ReceiptLongIcon fontSize="small" />, disabled: true },
   { key: 'services', icon: <RoomServiceIcon fontSize="small" />, disabled: true },
   { key: 'staff', icon: <PeopleAltIcon fontSize="small" />, disabled: true },

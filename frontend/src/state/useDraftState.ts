@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, type Dispatch, type SetStateAction } fro
 
 /**
  * ============================================================================
- * THE ONE STATE RULE OF THE GUEST STOREFRONT
+ * THE ONE STATE RULE OF THE APP (guest storefront, CMS, tracker)
  * ============================================================================
  *
  * There are exactly two kinds of state in this app, and they never mix:
@@ -22,7 +22,7 @@ import { useCallback, useRef, useState, type Dispatch, type SetStateAction } fro
  *
  *  3. LIVE STATUS — reconciliation only. A WebSocket snapshot is written straight
  *     into the query cache (`queryClient.setQueryData(key, snapshot)`); deltas are
- *     never applied on top of local state. See `useOrderLive`.
+ *     never applied on top of local state. See `guest/hooks/useOrderLive` and `tracker/hooks/useBoardLive`.
  *
  * Do not introduce a third mechanism. If a screen needs local input, it uses
  * this hook (or the cart store, which is built on the same principle).

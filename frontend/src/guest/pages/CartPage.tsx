@@ -32,7 +32,7 @@ import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
-import { useDraftState } from '../state/useDraftState';
+import { useDraftState } from '@/state/useDraftState';
 import type { CreateOrderPayload, GuestOrder, OrderTiming } from '../api/types';
 
 interface CheckoutDraft {

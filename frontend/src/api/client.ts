@@ -94,6 +94,8 @@ export interface RequestOptions {
   formData?: FormData;
   query?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;
+  /** Extra headers merged on top of the defaults (e.g. `Accept-Language`). */
+  headers?: Record<string, string>;
   /** Skip the 401 redirect (used by the login call itself). */
   skipAuthRedirect?: boolean;
 }
@@ -145,6 +147,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     Accept: 'application/json',
     // Dev tenant resolution — accepted by the backend only when DJANGO_DEBUG=1.
     'X-Hotel-Subdomain': HOTEL_SUBDOMAIN,
+    ...options.headers,
   };
 
   const token = tokenStorage.get();

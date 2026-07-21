@@ -37,7 +37,8 @@
     "settings": "الإعدادات",
     "soon": "قريباً",
     "roleAdmin": "مدير الفندق",
-    "roleStaff": "موظف"
+    "roleStaff": "موظف",
+    "tracker": "المتتبع"
   },
   "menu": {
     "categories": "الفئات",
@@ -356,6 +357,78 @@
       "sulphites": "الكبريتيت",
       "lupin": "الترمس",
       "molluscs": "الرخويات"
+    }
+  },
+  "tracker": {
+    "title": "المتتبع",
+    "point": "نقطة التنفيذ",
+    "loading": "جارٍ التحميل…",
+    "retry": "إعادة المحاولة",
+    "offline": "لا يوجد اتصال",
+    "liveOn": "تحديث مباشر",
+    "liveOff": "انقطع الاتصال — تحديث كل ١٥ ثانية",
+    "toCms": "لوحة التحكم",
+    "sound": {
+      "on": "الصوت مفعّل",
+      "off": "تفعيل الصوت"
+    },
+    "scope": {
+      "active": "قيد التنفيذ",
+      "history": "السجل"
+    },
+    "noPoints": {
+      "title": "لم يتم تعيينك لنقطة بعد",
+      "body": "اطلب من المسؤول ربطك بنقطة تنفيذ."
+    },
+    "board": {
+      "emptyColumn": "فارغ",
+      "emptyTitle": "لا توجد طلبات",
+      "emptyBody": "ستظهر الطلبات الجديدة تلقائيًا",
+      "emptyHistoryTitle": "السجل فارغ",
+      "emptyHistoryBody": "ستظهر هنا طلبات آخر ٢٤ ساعة"
+    },
+    "card": {
+      "number": "رقم {{number}}",
+      "room": "غرفة {{room}}",
+      "waiting": "{{minutes}} د",
+      "asap": "بأسرع وقت",
+      "byTime": "بحلول {{time}}"
+    },
+    "actions": {
+      "accept": "قبول",
+      "cancel": "إلغاء"
+    },
+    "detail": {
+      "where": "إلى أين",
+      "when": "متى",
+      "waiting": "الانتظار",
+      "assignee": "المسؤول",
+      "unassigned": "غير معيّن",
+      "acceptedAt": "وقت القبول",
+      "comment": "ملاحظة الطلب",
+      "total": "الإجمالي",
+      "timeline": "المسار",
+      "close": "إغلاق",
+      "loading": "جارٍ التحميل…",
+      "notFound": "الطلب غير موجود"
+    },
+    "cancel": {
+      "title": "إلغاء الطلب رقم {{number}}؟",
+      "body": "سيرى الضيف الإلغاء فورًا.",
+      "reason": "السبب",
+      "reasonPlaceholder": "مثال: نفدت المكونات",
+      "keep": "تراجع",
+      "confirm": "إلغاء الطلب"
+    },
+    "errors": {
+      "pointNotAssigned": "لست مرتبطًا بهذه النقطة",
+      "invalidTransition": "لم يعد هذا الانتقال متاحًا",
+      "cancelNotAllowed": "لا يمكن الإلغاء الآن",
+      "noRoute": "لا توجد نقطة تنفيذ لهذه الفئة",
+      "alreadyAccepted": "تم قبول الطلب مسبقًا",
+      "alreadyAcceptedBy": "قبله {{name}}",
+      "server": "الخادم لا يستجيب",
+      "generic": "تعذّر تنفيذ الإجراء"
     }
   }
 }
