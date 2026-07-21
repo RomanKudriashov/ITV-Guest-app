@@ -184,9 +184,15 @@ class Command(BaseCommand):
         )
 
     def _seed_brand(self, hotel: Hotel) -> BrandTheme:
-        theme, _ = BrandTheme.objects.get_or_create(
+        # Осмысленный стартовый пресет вместо голого набора: витрина сразу
+        # выглядит цельно. Разным отелям — разные пресеты, чтобы изоляция
+        # бренда была видна глазами (Crystal тёмный, Aurora бирюзовый).
+        from apps.hotels.brand_library import preset_tokens
+
+        preset = "tiffany_night" if hotel.subdomain == "aurora" else "evening_concierge"
+        theme, _ = BrandTheme.objects.update_or_create(
             name=f"{hotel.name} — основная",
-            defaults={"tokens": CRYSTAL_TOKENS, "is_preset": False},
+            defaults={"tokens": preset_tokens(preset), "is_preset": False},
         )
         return theme
 

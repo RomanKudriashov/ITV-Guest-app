@@ -57,7 +57,11 @@ def serialize_hotel(hotel: Hotel) -> dict:
     ошибки гость должен видеть бренд своего отеля, а не голую системную
     страницу.
     """
-    theme = hotel.default_theme
+    from apps.hotels.brand_services import get_or_create_brand
+
+    # Тема гарантированно есть: сервис заведёт её из пресета для отеля без
+    # темы. Так витрина никогда не падает на платформенные цвета.
+    theme = get_or_create_brand(hotel)
     languages = [
         {"code": language.code, "title": language.title or language.code.upper()}
         for language in hotel.hotellanguages.filter(is_active=True).order_by("sort_order")
