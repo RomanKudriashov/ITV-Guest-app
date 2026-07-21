@@ -1,0 +1,29 @@
+{
+  "app": {
+    "title": "ITV Guest App",
+    "subtitle": "Мультиотельный гостевой сервис"
+  },
+  "common": {
+    "language": "Язык",
+    "theme": "Тема",
+    "light": "Светлая",
+    "dark": "Тёмная"
+  },
+  "demo": {
+    "heading": "Демо каркаса",
+    "description": "Эта страница лишь подтверждает, что тема, токены, i18n и RTL-зеркалирование подключены. Экранов продукта пока нет.",
+    "cardTitle": "Обслуживание номеров",
+    "cardBody": "Заказывайте еду и услуги с телефона, отсканировав QR-код в номере.",
+    "primaryAction": "Заказать",
+    "secondaryAction": "Подробнее",
+    "inputLabel": "Номер комнаты",
+    "inputHelper": "Тестовое поле для проверки RTL",
+    "chipTokens": "Токены",
+    "chipRtl": "Готово к RTL",
+    "chipI18n": "4 языка",
+    "stateTitle": "Текущее состояние",
+    "stateDirection": "Направление",
+    "stateLanguage": "Язык",
+    "stateMode": "Режим"
+  }
+}

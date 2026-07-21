@@ -1,0 +1,29 @@
+{
+  "app": {
+    "title": "ITV Guest App",
+    "subtitle": "Multi-tenant hotel guest experience"
+  },
+  "common": {
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "demo": {
+    "heading": "Foundation demo",
+    "description": "This page only proves that theming, tokens, i18n and RTL mirroring are wired up. No product screens yet.",
+    "cardTitle": "Room service",
+    "cardBody": "Order food and services from your phone by scanning the QR code in your room.",
+    "primaryAction": "Order now",
+    "secondaryAction": "Learn more",
+    "inputLabel": "Room number",
+    "inputHelper": "Example field to check RTL mirroring",
+    "chipTokens": "Tokens",
+    "chipRtl": "RTL ready",
+    "chipI18n": "4 languages",
+    "stateTitle": "Current state",
+    "stateDirection": "Direction",
+    "stateLanguage": "Language",
+    "stateMode": "Mode"
+  }
+}

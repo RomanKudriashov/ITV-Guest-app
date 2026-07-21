@@ -1,0 +1,29 @@
+{
+  "app": {
+    "title": "ITV 客人应用",
+    "subtitle": "多酒店客人服务平台"
+  },
+  "common": {
+    "language": "语言",
+    "theme": "主题",
+    "light": "浅色",
+    "dark": "深色"
+  },
+  "demo": {
+    "heading": "基础框架演示",
+    "description": "此页面仅用于验证主题、设计令牌、国际化和 RTL 镜像已正确接入，暂无业务页面。",
+    "cardTitle": "客房服务",
+    "cardBody": "扫描房间内的二维码，即可用手机订购餐食和服务。",
+    "primaryAction": "立即下单",
+    "secondaryAction": "了解更多",
+    "inputLabel": "房间号",
+    "inputHelper": "用于检查 RTL 镜像的示例输入框",
+    "chipTokens": "设计令牌",
+    "chipRtl": "支持 RTL",
+    "chipI18n": "四种语言",
+    "stateTitle": "当前状态",
+    "stateDirection": "文字方向",
+    "stateLanguage": "语言",
+    "stateMode": "模式"
+  }
+}
