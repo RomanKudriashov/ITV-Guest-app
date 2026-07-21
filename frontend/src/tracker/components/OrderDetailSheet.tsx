@@ -1,5 +1,6 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
@@ -24,8 +25,10 @@ export interface OrderDetailSheetProps {
   open: boolean;
   busy: boolean;
   errorText?: string | null;
-  /** The board is still loading and the deep-linked order is not in it yet. */
+  /** The board (or the deep-link fetch) is still in flight. */
   loading?: boolean;
+  /** The deep-linked order could not be loaded — 403/404, spelled out. */
+  loadError?: string | null;
   onClose: () => void;
   onAccept: () => void;
   onStatus: (code: string) => void;
@@ -43,6 +46,7 @@ export function OrderDetailSheet({
   busy,
   errorText,
   loading,
+  loadError,
   onClose,
   onAccept,
   onStatus,
@@ -69,10 +73,19 @@ export function OrderDetailSheet({
       {busy ? <LinearProgress /> : null}
       <Box sx={{ p: 2, pb: 3 }} data-testid="tracker-order-detail">
         {!order ? (
-          <Stack spacing={1} sx={{ py: 4 }} alignItems="center">
-            <Typography variant="body2" color="text.secondary">
-              {loading ? t('tracker.detail.loading') : t('tracker.detail.notFound')}
-            </Typography>
+          <Stack spacing={2} sx={{ py: 3 }} alignItems="center">
+            {loading ? (
+              <Typography variant="body2" color="text.secondary">
+                {t('tracker.detail.loading')}
+              </Typography>
+            ) : (
+              <Alert severity={loadError ? 'error' : 'info'} sx={{ width: '100%' }}>
+                {loadError ?? t('tracker.detail.notFound')}
+              </Alert>
+            )}
+            <Button onClick={onClose} sx={{ minHeight: 44 }} data-testid="tracker-detail-close">
+              {t('tracker.detail.close')}
+            </Button>
           </Stack>
         ) : (
           <Stack spacing={2}>

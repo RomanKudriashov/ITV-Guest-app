@@ -428,7 +428,8 @@
       "alreadyAccepted": "The order has already been accepted",
       "alreadyAcceptedBy": "Already accepted by {{name}}",
       "server": "The server is not responding",
-      "generic": "The action failed"
+      "generic": "The action failed",
+      "orderNotFound": "Order not found — it may be gone or belong to another point"
     }
   }
 }

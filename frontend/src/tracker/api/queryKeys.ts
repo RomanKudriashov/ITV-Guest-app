@@ -7,4 +7,5 @@ export const trackerKeys = {
   boards: ['tracker', 'board'] as const,
   board: (point: string, scope: TrackerScope, language: string) =>
     ['tracker', 'board', point, scope, language] as const,
+  order: (id: string, language: string) => ['tracker', 'order', id, language] as const,
 };

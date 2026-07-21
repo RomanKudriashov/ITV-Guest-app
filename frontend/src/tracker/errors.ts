@@ -11,6 +11,8 @@ const CODE_KEYS: Record<string, string> = {
   invalid_transition: 'tracker.errors.invalidTransition',
   cancel_not_allowed: 'tracker.errors.cancelNotAllowed',
   no_route: 'tracker.errors.noRoute',
+  order_not_found: 'tracker.errors.orderNotFound',
+  not_found: 'tracker.errors.orderNotFound',
 };
 
 /** `409 already_accepted` carries the current executor — name them, don't hide it. */
@@ -32,6 +34,9 @@ export function trackerErrorMessage(error: unknown, t: TFunction): string {
     }
     const key = CODE_KEYS[error.code];
     if (key) return t(key);
+    // Django's own 404 page has no code — say what actually happened.
+    if (error.status === 404) return t('tracker.errors.orderNotFound');
+    if (error.status === 403) return t('tracker.errors.pointNotAssigned');
     if (error.detail && !/^HTTP \d+$/.test(error.detail)) return error.detail;
     if (error.status >= 500) return t('tracker.errors.server');
     return t('tracker.errors.generic');

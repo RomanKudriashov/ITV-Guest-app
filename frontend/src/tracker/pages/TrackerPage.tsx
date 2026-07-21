@@ -24,7 +24,7 @@ import { useBoardLive, type BoardLiveEvent } from '../hooks/useBoardLive';
 import { useOrderActions } from '../hooks/useOrderActions';
 import { usePointSelection } from '../hooks/usePointSelection';
 import { useTrackerSound } from '../hooks/useTrackerSound';
-import { useTrackerBoard, useTrackerPoints } from '../hooks/useTrackerQueries';
+import { useTrackerBoard, useTrackerOrder, useTrackerPoints } from '../hooks/useTrackerQueries';
 import { trackerErrorMessage } from '../errors';
 import type { TrackerOrder, TrackerScope } from '../api/types';
 
@@ -103,7 +103,16 @@ export function TrackerPage() {
     () => columns.flatMap((column) => column.orders),
     [columns],
   );
-  const openOrder = allOrders.find((order) => order.id === openOrderId) ?? null;
+  const boardOrder = allOrders.find((order) => order.id === openOrderId) ?? null;
+
+  // The snapshot wins: tapping a card must not cost a request. The dedicated
+  // endpoint is only for a cold deep link — another point, the history scope, or
+  // a page opened straight from a message.
+  const detailQuery = useTrackerOrder(
+    openOrderId ?? undefined,
+    Boolean(openOrderId) && !boardOrder && !boardQuery.isLoading,
+  );
+  const openOrder = boardOrder ?? detailQuery.data ?? null;
 
   const closeDetail = useCallback(() => navigate('/tracker'), [navigate]);
 
@@ -303,7 +312,10 @@ export function TrackerPage() {
       <OrderDetailSheet
         order={openOrder}
         open={Boolean(openOrderId)}
-        loading={boardQuery.isLoading}
+        loading={boardQuery.isLoading || detailQuery.isLoading}
+        loadError={
+          !openOrder && detailQuery.error ? trackerErrorMessage(detailQuery.error, t) : null
+        }
         busy={Boolean(openOrder && actions.pendingOrderId === openOrder.id)}
         errorText={openOrder ? errorFor(openOrder) : null}
         onClose={closeDetail}

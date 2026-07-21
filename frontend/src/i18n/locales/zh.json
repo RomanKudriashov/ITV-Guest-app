@@ -428,7 +428,8 @@
       "alreadyAccepted": "订单已被接单",
       "alreadyAcceptedBy": "已由 {{name}} 接单",
       "server": "服务器无响应",
-      "generic": "操作失败"
+      "generic": "操作失败",
+      "orderNotFound": "未找到该订单，或它属于其他执行点"
     }
   }
 }

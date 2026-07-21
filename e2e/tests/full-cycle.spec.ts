@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, DEMO_ROOM } from './helpers'
+import { apiToken, CREDENTIALS, DEMO_ROOM, moveOrderStatus } from './helpers'
 
 /**
  * Замкнутый цикл среза «еда», как он выглядит в жизни:
@@ -106,6 +106,41 @@ test.describe('Замкнутый цикл: гость → кухня → гос
     } finally {
       await guestContext.close()
       await staffContext.close()
+    }
+  })
+
+  test('прямая ссылка открывает завершённый заказ, которого нет на активной доске', async ({
+    browser,
+    request,
+  }) => {
+    const guestContext = await browser.newContext()
+    const guest = await guestContext.newPage()
+
+    try {
+      const order = await guestPlacesOrder(guest)
+      const orderId = order.url.split('/orders/')[1]?.split('?')[0] as string
+
+      const staffToken = await apiToken(request)
+      await moveOrderStatus(request, staffToken, orderId, 'done')
+
+      // «Холодный» переход: новая сессия, доска ещё не загружена, а заказ уже
+      // терминальный — на вкладке «В работе» его нет. Раньше это упиралось в
+      // «заказ не найден на доске».
+      const staffContext = await browser.newContext()
+      const staff = await staffContext.newPage()
+      try {
+        await staffOpensBoard(staff)
+        await staff.goto(`/tracker/order/${orderId}`)
+
+        const detail = staff.getByTestId('tracker-order-detail')
+        await expect(detail).toBeVisible({ timeout: 20_000 })
+        await expect(detail).toContainText(order.number)
+        await expect(detail).toContainText(/Доставлено/i)
+      } finally {
+        await staffContext.close()
+      }
+    } finally {
+      await guestContext.close()
     }
   })
 

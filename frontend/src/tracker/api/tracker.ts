@@ -37,6 +37,21 @@ export function fetchTrackerBoard(
   });
 }
 
+/**
+ * One order, straight from the server.
+ *
+ * Used only for a COLD deep link (`/tracker/order/:id` opened from a message or
+ * a bookmark): during normal work the order already travels in the board
+ * snapshot, and a card tap must not cost a request.
+ *
+ * `403 point_not_assigned` / `404` come back as ordinary `ApiError`s.
+ */
+export function fetchTrackerOrder(orderId: string, language?: string): Promise<TrackerOrder> {
+  return api.get<TrackerOrder>(`/tracker/order/${orderId}`, {
+    headers: langHeaders(language),
+  });
+}
+
 export function acceptTrackerOrder(orderId: string, language?: string): Promise<TrackerOrder> {
   return api.post<TrackerOrder>(`/tracker/order/${orderId}/accept`, {}, {
     headers: langHeaders(language),

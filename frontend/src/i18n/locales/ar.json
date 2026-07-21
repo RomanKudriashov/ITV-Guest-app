@@ -428,7 +428,8 @@
       "alreadyAccepted": "تم قبول الطلب مسبقًا",
       "alreadyAcceptedBy": "قبله {{name}}",
       "server": "الخادم لا يستجيب",
-      "generic": "تعذّر تنفيذ الإجراء"
+      "generic": "تعذّر تنفيذ الإجراء",
+      "orderNotFound": "الطلب غير موجود أو يخص نقطة أخرى"
     }
   }
 }

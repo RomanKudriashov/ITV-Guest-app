@@ -1,9 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { fetchTrackerBoard, fetchTrackerPoints } from '../api/tracker';
+import { ApiError } from '@/api/client';
+import { fetchTrackerBoard, fetchTrackerOrder, fetchTrackerPoints } from '../api/tracker';
 import { trackerKeys } from '../api/queryKeys';
-import type { TrackerBoard, TrackerPointsResponse, TrackerScope } from '../api/types';
+import type {
+  TrackerBoard,
+  TrackerOrder,
+  TrackerPointsResponse,
+  TrackerScope,
+} from '../api/types';
 
 /** Interface language, normalized — board texts arrive already localized. */
 export function useTrackerLanguage(): string {
@@ -37,5 +43,29 @@ export function useTrackerBoard(
     enabled: Boolean(point),
     staleTime: 10_000,
     refetchInterval: pollMs && pollMs > 0 ? pollMs : false,
+  });
+}
+
+/**
+ * A single order, fetched ONLY when the deep link points at something the
+ * current board snapshot does not contain (another point, another scope, a page
+ * opened cold). A normal tap on a card passes the order in and this stays idle.
+ *
+ * Not retried on 403/404: "not yours" and "does not exist" are answers, not
+ * hiccups, and repeating them just delays the message.
+ */
+export function useTrackerOrder(orderId: string | undefined, enabled: boolean) {
+  const language = useTrackerLanguage();
+  return useQuery<TrackerOrder>({
+    queryKey: trackerKeys.order(orderId ?? 'none', language),
+    queryFn: () => fetchTrackerOrder(orderId as string, language),
+    enabled: enabled && Boolean(orderId),
+    staleTime: 10_000,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+        return false;
+      }
+      return failureCount < 1;
+    },
   });
 }
