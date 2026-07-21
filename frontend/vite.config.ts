@@ -23,9 +23,11 @@ export default defineConfig(({ mode }) => {
         interval: 300,
       },
       // Keep HMR reachable when the dev server runs inside a container.
-      hmr: {
-        clientPort: 5173,
-      },
+      // The container publishes 5173 on a different host port (5183 by default),
+      // so the client port must follow the browser URL unless overridden.
+      hmr: env.VITE_HMR_CLIENT_PORT
+        ? { clientPort: Number(env.VITE_HMR_CLIENT_PORT) }
+        : true,
       proxy: {
         '/api': {
           target: proxyTarget,

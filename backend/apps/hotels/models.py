@@ -29,8 +29,9 @@ class Hotel(BaseModel):
     timezone = models.CharField(max_length=64, default="Europe/Moscow")
     default_language = models.CharField(max_length=8, default="en")
     currency = models.CharField(max_length=3, default="RUB")
-    # Сколько минимальных единиц в одной единице валюты. Цены везде хранятся
-    # в минимальных единицах (копейках) — целыми, без float.
+    # Число знаков после запятой, то есть ПОКАЗАТЕЛЬ СТЕПЕНИ, а не множитель:
+    # 2 → в рубле 10² = 100 копеек; 0 → в иене нет дробной части.
+    # Цены везде хранятся в минимальных единицах, целыми, без float.
     currency_minor_units = models.PositiveSmallIntegerField(default=2)
 
     default_theme = models.ForeignKey(

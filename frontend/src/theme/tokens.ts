@@ -25,6 +25,16 @@ export interface BrandColorSet {
   background: string;
   /** Cards, sheets, app bar. */
   surface: string;
+  /** Subtle filled surface — list rows, thumbnails placeholders, drop zones. */
+  surfaceMuted: string;
+  /** Hover state for rows / list items. */
+  surfaceHover: string;
+  /** Selected row / active navigation item background. */
+  surfaceSelected: string;
+  /** Scrim drawn over media (image action overlays). */
+  scrim: string;
+  /** Highlight for an active drag-and-drop drop target. */
+  dropActive: string;
   /** Text on background/surface. */
   text: string;
   textSecondary: string;
@@ -88,6 +98,11 @@ export const DEFAULT_BRAND_TOKENS: BrandTokens = {
       secondaryContrast: '#1B1B1B',
       background: '#F6F7F5',
       surface: '#FFFFFF',
+      surfaceMuted: '#EEF1EF',
+      surfaceHover: '#E7ECEA',
+      surfaceSelected: '#E1EDE8',
+      scrim: 'rgba(18, 33, 29, 0.55)',
+      dropActive: '#D5E9E2',
       text: '#12211D',
       textSecondary: '#5A6B66',
       divider: '#DCE3E0',
@@ -103,6 +118,11 @@ export const DEFAULT_BRAND_TOKENS: BrandTokens = {
       secondaryContrast: '#1B1B1B',
       background: '#0F1512',
       surface: '#18211E',
+      surfaceMuted: '#1F2A26',
+      surfaceHover: '#26332E',
+      surfaceSelected: '#1E3A32',
+      scrim: 'rgba(8, 15, 13, 0.65)',
+      dropActive: '#1E4438',
       text: '#E8F0ED',
       textSecondary: '#9CB0AA',
       divider: '#2A3733',

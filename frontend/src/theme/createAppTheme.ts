@@ -7,6 +7,28 @@ import {
 } from './tokens';
 
 /**
+ * Extra brand colors that have no MUI palette slot of their own.
+ * Components read them via `theme.palette.brand.*` so that the project rule
+ * "no hardcoded colors outside tokens.ts" still holds.
+ */
+export interface BrandPaletteExtension {
+  surfaceMuted: string;
+  surfaceHover: string;
+  surfaceSelected: string;
+  scrim: string;
+  dropActive: string;
+}
+
+declare module '@mui/material/styles' {
+  interface Palette {
+    brand: BrandPaletteExtension;
+  }
+  interface PaletteOptions {
+    brand?: BrandPaletteExtension;
+  }
+}
+
+/**
  * Builds a MUI theme exclusively from brand tokens.
  * No literal color may appear here — every color comes from `tokens`.
  */
@@ -34,6 +56,13 @@ export function createAppTheme(
       background: { default: c.background, paper: c.surface },
       text: { primary: c.text, secondary: c.textSecondary },
       divider: c.divider,
+      brand: {
+        surfaceMuted: c.surfaceMuted,
+        surfaceHover: c.surfaceHover,
+        surfaceSelected: c.surfaceSelected,
+        scrim: c.scrim,
+        dropActive: c.dropActive,
+      },
     },
     shape: {
       borderRadius: shape.borderRadius,
