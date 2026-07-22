@@ -15,6 +15,7 @@ from apps.catalog.models import Category
 from apps.catalog.offerings import OfferingType
 from apps.chat import services as chat_svc
 from apps.core.context import current_language
+from apps.core.errors import NotFoundError
 from apps.core.fields import translate
 from apps.hotels.models import Hotel
 from apps.orders.services import get_order
@@ -106,7 +107,12 @@ def guest_chat_read(request: HttpRequest):
 @guest_router.get("/order/{order_id}/review", auth=guest_auth, summary="Отзыв на заявку")
 def guest_get_review(request: HttpRequest, order_id: str):
     order = get_order(order_id, guest_session=request.guest_session)
-    return review_svc.get_review(order) or {}
+    review = review_svc.get_review(order)
+    # Отзыва ещё нет — это сценарий «не оценивал», а не ошибка. Отдаём 404,
+    # чтобы витрина показала форму, а не пустой «уже оставленный» отзыв.
+    if review is None:
+        raise NotFoundError("Отзыв ещё не оставлен")
+    return review
 
 
 @guest_router.post(

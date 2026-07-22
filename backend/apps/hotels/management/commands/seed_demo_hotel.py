@@ -123,12 +123,21 @@ class Command(BaseCommand):
             action="store_true",
             help="Досоздать недостающее в уже существующем отеле",
         )
+        parser.add_argument(
+            "--with-guest-history",
+            action="store_true",
+            help=(
+                "Досоздать демо-заявку с отзывом. По умолчанию выкл: реальная "
+                "заявка сдвигает нумерацию заказов, на которую опираются тесты."
+            ),
+        )
 
     def handle(self, *args, **options):
+        history = options["with_guest_history"]
         self._seed_placeholders()
-        self._seed_hotel(options["subdomain"], options["name"], options["force"])
+        self._seed_hotel(options["subdomain"], options["name"], options["force"], history)
         if options["with_second_hotel"]:
-            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"])
+            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history)
         self.stdout.write(self.style.SUCCESS("Сид завершён"))
 
     # --- Платформенный уровень ------------------------------------------
@@ -146,7 +155,7 @@ class Command(BaseCommand):
     # --- Отель ------------------------------------------------------------
 
     @transaction.atomic
-    def _seed_hotel(self, subdomain: str, name: str, force: bool):
+    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False):
         hotel, created = Hotel.objects.get_or_create(
             subdomain=subdomain,
             defaults={
@@ -175,7 +184,7 @@ class Command(BaseCommand):
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
             self._seed_notifications(points, users)
-            self._seed_chat_and_reviews(points)
+            self._seed_chat_and_reviews(points, with_history)
 
             hotel.default_theme = theme
             hotel.save(update_fields=["default_theme", "updated_at"])
@@ -886,8 +895,12 @@ class Command(BaseCommand):
 
     # --- Чат и отзывы -----------------------------------------------------
 
-    def _seed_chat_and_reviews(self, points):
-        """Пара сообщений в треде и отзыв на завершённую заявку — чтобы было что показать."""
+    def _seed_chat_and_reviews(self, points, with_history: bool = False):
+        """
+        Пара сообщений в треде всегда, и — по флагу — завершённая заявка с
+        отзывом. Сама заявка занимает номер заказа №1, поэтому создаётся только
+        при --with-guest-history: тесты витрины ждут, что их первый заказ — №1.
+        """
         from django.utils import timezone
 
         from apps.accounts.models import GuestSession, TrustLevel
@@ -926,9 +939,9 @@ class Command(BaseCommand):
             )
             ChatThread.objects.filter(pk=thread.pk).update(last_message_at=msg.created_at)
 
-        # Завершённая заявка с отзывом.
+        # Завершённая заявка с отзывом — только по флагу (сдвигает нумерацию).
         caesar = Item.objects.filter(code="caesar").first()
-        if caesar and not Review.objects.exists():
+        if with_history and caesar and not Review.objects.exists():
             order = create_order(
                 OrderInput(lines=[OrderLineInput(item_id=str(caesar.pk))], room_id=str(room.pk)),
                 guest_session=session,
