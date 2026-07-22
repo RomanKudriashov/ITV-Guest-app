@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, ValidationError
-from apps.events.bus import REVIEW_LOW, emit
+from apps.events.bus import REVIEW_CREATED, REVIEW_LOW, emit
 from apps.hotels.models import Hotel
 from apps.orders.models import Order
 
@@ -59,6 +59,14 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
         guest_session=guest_session,
         rating=int(rating),
         comment=(comment or "").strip()[:2000],
+    )
+
+    # Аналитике нужен КАЖДЫЙ отзыв, не только низкий — отдельным событием.
+    emit(
+        REVIEW_CREATED,
+        {"review_id": str(review.pk), "order_id": str(order.pk), "rating": review.rating},
+        hotel_id=order.hotel_id,
+        actor_type="guest",
     )
 
     hotel = Hotel.objects.get(pk=order.hotel_id)

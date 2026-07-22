@@ -38,7 +38,7 @@ case "$MODE" in
 
         if [ "${SEED_ON_START:-1}" = "1" ]; then
             echo "[entrypoint] seed_demo_hotel…"
-            python manage.py seed_demo_hotel --with-guest-history || echo "[entrypoint] сид пропущен (уже есть?)"
+            python manage.py seed_demo_hotel --with-guest-history --with-analytics-history || echo "[entrypoint] сид пропущен (уже есть?)"
         fi
 
         echo "[entrypoint] uvicorn (ASGI: HTTP + WebSocket)…"

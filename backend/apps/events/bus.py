@@ -45,6 +45,10 @@ ORDER_STATUS_CHANGED = "order.status_changed"
 ORDER_CANCELLED = "order.cancelled"
 CHAT_MESSAGE = "chat.message"
 REVIEW_LOW = "review.low"
+# Отзыв оставлен (любой оценки) и старт гостевой сессии — нужны аналитике,
+# которая питается событиями, а не оперативными таблицами.
+REVIEW_CREATED = "review.created"
+SESSION_STARTED = "session.started"
 
 
 @dataclasses.dataclass(slots=True)

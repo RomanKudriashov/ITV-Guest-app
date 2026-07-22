@@ -1,5 +1,6 @@
 from ninja import Router
 
+from .analytics import router as analytics_router
 from .brand import router as brand_router
 from .catalog import router as catalog_router
 from .reviews import router as reviews_router
@@ -14,5 +15,6 @@ router.add_router("", notifications_router)
 router.add_router("", brand_router)
 router.add_router("", hotel_admin_router)
 router.add_router("", reviews_router)
+router.add_router("", analytics_router)
 
 __all__ = ["router"]

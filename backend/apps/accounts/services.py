@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from apps.core.context import require_hotel_id
 from apps.core.models import AuditLog
+from apps.events.bus import SESSION_STARTED, emit
 from apps.hotels.models import Room
 
 from .models import GuestSession, ImpersonationGrant, TrustLevel, User
@@ -72,6 +73,14 @@ def create_guest_session(
         object_type="guest_session",
         object_id=session.pk,
         payload={"room": room_number or "", "trust": trust},
+    )
+    # Старт сессии — факт для аналитики трафика/конверсии (после коммита).
+    emit(
+        SESSION_STARTED,
+        {"session_id": str(session.pk), "trust": session.trust, "language": session.language},
+        hotel_id=hotel_id,
+        actor_type="guest",
+        actor_id=session.pk,
     )
     return IssuedGuestSession(session=session, token=raw_token)
 

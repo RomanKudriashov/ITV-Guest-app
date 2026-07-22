@@ -131,13 +131,23 @@ class Command(BaseCommand):
                 "заявка сдвигает нумерацию заказов, на которую опираются тесты."
             ),
         )
+        parser.add_argument(
+            "--with-analytics-history",
+            action="store_true",
+            help=(
+                "Сгенерировать несколько недель истории заказов для наглядности "
+                "дашборда. По умолчанию выкл: как и гостевая история, сдвигает "
+                "нумерацию заказов, на которую опираются тесты."
+            ),
+        )
 
     def handle(self, *args, **options):
         history = options["with_guest_history"]
+        analytics = options["with_analytics_history"]
         self._seed_placeholders()
-        self._seed_hotel(options["subdomain"], options["name"], options["force"], history)
+        self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics)
         if options["with_second_hotel"]:
-            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history)
+            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics)
         self.stdout.write(self.style.SUCCESS("Сид завершён"))
 
     # --- Платформенный уровень ------------------------------------------
@@ -155,7 +165,7 @@ class Command(BaseCommand):
     # --- Отель ------------------------------------------------------------
 
     @transaction.atomic
-    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False):
+    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False):
         hotel, created = Hotel.objects.get_or_create(
             subdomain=subdomain,
             defaults={
@@ -185,6 +195,8 @@ class Command(BaseCommand):
             self._seed_slot_resources(points, schedules)
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
+            if with_analytics:
+                self._seed_analytics_history(hotel, points, rooms, users)
 
             hotel.default_theme = theme
             hotel.save(update_fields=["default_theme", "updated_at"])
@@ -952,6 +964,131 @@ class Command(BaseCommand):
                 hotel_id=order.hotel_id, order=order, guest_session=session,
                 rating=5, comment="Очень вкусно, спасибо!",
             )
+
+    def _seed_analytics_history(self, hotel, points, rooms, users):
+        """
+        Несколько недель правдоподобной истории: разные типы/отделы/статусы/
+        отмены/отзывы и разброс по часам и дням. Даты проставляем задним числом,
+        затем восстанавливаем журнал аналитики из заказов и пересчитываем —
+        так дашборд наполнен, а числа получены тем же редьюсером, что и живьём.
+        """
+        from datetime import timedelta
+
+        from apps.accounts.models import GuestSession, TrustLevel
+        from apps.analytics.recompute import rebuild_raw_from_orders, recompute_aggregates
+        from apps.catalog.models import Item
+        from apps.orders.models import Order, OrderStatusChange
+        from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order
+        from apps.reviews.models import Review
+
+        # По одному живому предложению на тип, что реально создаёт заказ.
+        offerings = [
+            it for it in (
+                Item.objects.filter(type="product", is_active=True).first(),
+                Item.objects.filter(type="service_request", is_active=True).first(),
+            ) if it is not None
+        ]
+        if not offerings or not rooms:
+            return
+
+        staff = list(users.values())
+        trusts = [TrustLevel.ROOM_SCANNED, TrustLevel.ANONYMOUS, TrustLevel.PMS_VERIFIED]
+        agents = [
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0) Mobile",
+            "Mozilla/5.0 (iPad; CPU OS 16_0) Tablet",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Desktop",
+        ]
+        languages = ["ru", "en", "ar", "zh"]
+        base = hotel.local_now().replace(hour=12, minute=0, second=0, microsecond=0)
+
+        n = 0
+        # 21 день истории; в день — переменное число заказов с разбросом по часам.
+        for days_ago in range(21, 0, -1):
+            day_anchor = base - timedelta(days=days_ago)
+            per_day = 2 + (days_ago % 3)  # 2..4 заказа/день
+            for k in range(per_day):
+                item = offerings[(days_ago + k) % len(offerings)]
+                room = rooms[(days_ago * 2 + k) % len(rooms)]
+                created = day_anchor + timedelta(hours=(k * 4) - 6, minutes=(days_ago * 7) % 60)
+
+                session = GuestSession.objects.create(
+                    hotel_id=hotel.pk,
+                    room=room,
+                    token_hash=GuestSession.hash_token(f"seed-{hotel.subdomain}-{days_ago}-{k}"),
+                    trust=trusts[n % len(trusts)],
+                    language=languages[n % len(languages)],
+                    user_agent=agents[n % len(agents)],
+                    expires_at=GuestSession.default_expiry(),
+                )
+                GuestSession.objects.filter(pk=session.pk).update(created_at=created)
+                session.refresh_from_db()
+
+                order = create_order(
+                    OrderInput(
+                        lines=[OrderLineInput(item_id=str(item.pk), quantity=1 + (k % 2))],
+                        room_id=str(room.pk),
+                        field_values=self._demo_field_values(item),
+                    ),
+                    guest_session=session,
+                )
+                Order.objects.filter(pk=order.pk).update(created_at=created)
+                OrderStatusChange.objects.filter(order_id=order.pk, from_status__isnull=True).update(created_at=created)
+                order.refresh_from_db()
+
+                # Каждый седьмой — отмена; остальные проходят приёмку и завершение.
+                if n % 7 == 6:
+                    change_status(order, to_code="cancelled", actor_type="staff")
+                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code="cancelled").update(
+                        created_at=created + timedelta(minutes=8)
+                    )
+                else:
+                    actor = staff[n % len(staff)]
+                    Order.objects.filter(pk=order.pk).update(
+                        assignee=actor, accepted_at=created + timedelta(minutes=3 + (n % 5))
+                    )
+                    change_status(order, to_code="accepted", actor_type="staff", actor_id=actor.pk)
+                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code="accepted").update(
+                        created_at=created + timedelta(minutes=3 + (n % 5))
+                    )
+                    change_status(order.__class__.objects.get(pk=order.pk), to_code="done", actor_type="staff", actor_id=actor.pk)
+                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code="done").update(
+                        created_at=created + timedelta(minutes=20 + (n % 30))
+                    )
+                    # Часть завершённых — с отзывом (разброс оценок, включая низкие).
+                    if n % 3 == 0 and not Review.all_objects.filter(order_id=order.pk).exists():
+                        rating = 5 if n % 5 else 2
+                        review = Review.objects.create(
+                            hotel_id=hotel.pk, order_id=order.pk, guest_session=session,
+                            rating=rating, comment="Демо-отзыв",
+                        )
+                        Review.objects.filter(pk=review.pk).update(created_at=created + timedelta(minutes=40))
+                n += 1
+
+        # Журнал из заказов + пересчёт: наполнение получено тем же редьюсером.
+        rebuild_raw_from_orders(hotel.pk)
+        recompute_aggregates(hotel.pk)
+        self.stdout.write(f"  история аналитики: {n} заказов")
+
+    def _demo_field_values(self, item) -> dict:
+        """Значения обязательных полей заявки — чтобы service_request прошёл валидацию."""
+        from datetime import date as _date
+
+        values: dict = {}
+        for field in item.request_fields.all():
+            ftype = field.field_type
+            if ftype == "select":
+                options = field.options or []
+                if options:
+                    values[field.code] = str(options[0].get("value"))
+            elif ftype in ("number", "count"):
+                values[field.code] = str(field.min_value if field.min_value is not None else 1)
+            elif ftype == "date":
+                values[field.code] = _date.today().isoformat()
+            elif ftype == "time":
+                values[field.code] = "12:00"
+            else:
+                values[field.code] = "Демо"
+        return values
 
     # --- Медиа ------------------------------------------------------------
 

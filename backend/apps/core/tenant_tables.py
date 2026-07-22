@@ -53,6 +53,14 @@ TENANT_TABLES = [
     "chat_thread",
     "chat_message",
     "reviews_review",
+    # analytics
+    "analytics_event",
+    "analytics_order_daily",
+    "analytics_item_daily",
+    "analytics_modifier_daily",
+    "analytics_session_daily",
+    "analytics_review_daily",
+    "analytics_export",
 ]
 
 # Таблицы, где hotel_id необязателен (платформенные действия). Читать такие
