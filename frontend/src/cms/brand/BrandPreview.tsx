@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CacheProvider, type EmotionCache } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
@@ -36,6 +36,19 @@ const previewRtlCache: EmotionCache = createCache({
   stylisPlugins: [prefixer, rtlPlugin],
 });
 
+/**
+ * Preview-frame form factors. Each resizes ONLY the isolated preview frame
+ * (max width + aspect ratio), never the surrounding CMS. `tv` is a deliberately
+ * marked placeholder for a future large-screen target — not selectable yet.
+ */
+type PreviewDevice = 'phone' | 'tablet' | 'desktop';
+
+const DEVICE_FRAME: Record<PreviewDevice, { maxWidth: number; aspectRatio: string }> = {
+  phone: { maxWidth: 400, aspectRatio: '10 / 19' },
+  tablet: { maxWidth: 620, aspectRatio: '3 / 4' },
+  desktop: { maxWidth: 900, aspectRatio: '16 / 10' },
+};
+
 export interface BrandPreviewProps {
   /** Fully merged draft tokens — the preview repaints on every change. */
   tokens: BrandTokens;
@@ -60,6 +73,9 @@ export function BrandPreview({
   appLanguage,
 }: BrandPreviewProps) {
   const { t } = useTranslation();
+  // Device is preview-only local state; it never touches the CMS around it.
+  const [device, setDevice] = useState<PreviewDevice>('phone');
+  const frame = DEVICE_FRAME[device];
   const direction = rtl ? 'rtl' : 'ltr';
   const language = rtl ? 'ar' : appLanguage;
 
@@ -118,17 +134,41 @@ export function BrandPreview({
         </ToggleButton>
       </Stack>
 
+      {/* Device switch — resizes ONLY the preview frame below. */}
+      <ToggleButtonGroup
+        size="small"
+        exclusive
+        value={device}
+        onChange={(_e, next: PreviewDevice | null) => next && setDevice(next)}
+        aria-label={t('brand.preview.device', { defaultValue: 'Device' })}
+      >
+        <ToggleButton value="phone" data-testid="brand-preview-device-phone">
+          {t('brand.preview.phone', { defaultValue: 'Phone' })}
+        </ToggleButton>
+        <ToggleButton value="tablet" data-testid="brand-preview-device-tablet">
+          {t('brand.preview.tablet', { defaultValue: 'Tablet' })}
+        </ToggleButton>
+        <ToggleButton value="desktop" data-testid="brand-preview-device-desktop">
+          {t('brand.preview.desktop', { defaultValue: 'Desktop' })}
+        </ToggleButton>
+        {/* TV target is planned — placeholder slot, intentionally disabled. */}
+        <ToggleButton value="tv" disabled data-testid="brand-preview-device-tv">
+          {t('brand.preview.tv', { defaultValue: 'TV — soon' })}
+        </ToggleButton>
+      </ToggleButtonGroup>
+
       {/* The isolated subtree: own emotion cache, own theme, own direction/lang. */}
       <CacheProvider value={cache}>
         <I18nextProvider i18n={previewI18n}>
           <MuiThemeProvider theme={theme}>
             <Box
               dir={direction}
+              data-testid="brand-preview-frame"
               sx={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: 400,
-                height: 660,
+                maxWidth: frame.maxWidth,
+                aspectRatio: frame.aspectRatio,
                 mx: 'auto',
                 borderRadius: 4,
                 overflow: 'hidden',

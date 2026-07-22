@@ -48,7 +48,8 @@
     "rooms": "Rooms",
     "locations": "Locations",
     "departments": "Departments",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "styleguide": "Design system"
   },
   "menu": {
     "categories": "Categories",

@@ -1,4 +1,4 @@
-import { createTheme, type Theme } from '@mui/material/styles';
+import { createTheme, alpha, darken, lighten, type Theme } from '@mui/material/styles';
 import {
   colorsForMode,
   type BrandTokens,
@@ -10,6 +10,12 @@ import {
  * Extra brand colors that have no MUI palette slot of their own.
  * Components read them via `theme.palette.brand.*` so that the project rule
  * "no hardcoded colors outside tokens.ts" still holds.
+ *
+ * The base palette is 18 tokens per mode (fixed — the backend derives them from
+ * 4–5 anchors and tests pin the count). The richer redesign-v2 vocabulary —
+ * strong accent, soft fill, accent glow, a third text level, a radius scale and
+ * a depth scale — is DERIVED here from those 18 via pure colour math, so no
+ * hardcoded value leaks in and the stored token set stays 18.
  */
 export interface BrandPaletteExtension {
   surfaceMuted: string;
@@ -17,6 +23,18 @@ export interface BrandPaletteExtension {
   surfaceSelected: string;
   scrim: string;
   dropActive: string;
+  /** Deeper accent for hover/pressed on primary and display numerals. */
+  primaryStrong: string;
+  /** Low-alpha accent wash — chips, selected pills, quiet highlights. */
+  primarySoft: string;
+  /** Accent glow (ready-to-use box-shadow value) — the one bright signal. */
+  primaryGlow: string;
+  /** Third text level below textSecondary — captions, disabled hints. */
+  textTertiary: string;
+  /** Radius scale (px). */
+  radius: { sm: number; md: number; lg: number; pill: number };
+  /** Depth scale — box-shadow strings keyed by level. */
+  elevation: { sm: string; md: string; lg: string; glow: string };
 }
 
 declare module '@mui/material/styles' {
@@ -41,6 +59,28 @@ export function createAppTheme(
   const { typography, shape, spacingUnit } = tokens;
   const headingFamily = typography.headingFontFamily ?? typography.fontFamily;
   const h = (rem: number) => `${(rem * typography.headingScale).toFixed(3)}rem`;
+
+  // Derived redesign-v2 tokens — pure functions of the 18 base tokens, so the
+  // "colours only from tokens" rule holds and nothing hardcoded leaks in.
+  const isDark = mode === 'dark';
+  const shift = (color: string, amount: number) =>
+    isDark ? lighten(color, amount) : darken(color, amount);
+  const primaryStrong = shift(c.primary, 0.18);
+  const primarySoft = alpha(c.primary, isDark ? 0.16 : 0.1);
+  const primaryGlow = `0 0 0 1px ${alpha(c.primary, 0.35)}, 0 8px 30px -8px ${alpha(c.primary, 0.5)}`;
+  const textTertiary = alpha(c.textSecondary, 0.72);
+  const radius = {
+    sm: Math.round(shape.borderRadius * 0.6),
+    md: shape.borderRadius,
+    lg: shape.borderRadiusLarge,
+    pill: 999,
+  };
+  const elevation = {
+    sm: `0 1px 2px ${alpha(c.scrim, 0.5)}`,
+    md: `0 8px 24px -14px ${c.scrim}`,
+    lg: `0 24px 60px -28px ${c.scrim}`,
+    glow: primaryGlow,
+  };
 
   // How elevated surfaces (cards, sheets, popovers) are painted. `flat` keeps the
   // current look, so a hotel that never sets a style sees no change.
@@ -76,6 +116,12 @@ export function createAppTheme(
         surfaceSelected: c.surfaceSelected,
         scrim: c.scrim,
         dropActive: c.dropActive,
+        primaryStrong,
+        primarySoft,
+        primaryGlow,
+        textTertiary,
+        radius,
+        elevation,
       },
     },
     shape: {

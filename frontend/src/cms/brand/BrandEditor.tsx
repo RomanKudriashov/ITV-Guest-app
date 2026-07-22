@@ -440,10 +440,13 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
 
         {bgKind === 'image' ? (
           <>
+            {/* Operators upload their own image background here — the exact same
+                media-upload path used for logos, reused via LogoField. The
+                auto-dim slider below keeps one image readable in light + dark. */}
             <LogoField
               url={bg?.imageUrl}
               onChangeUrl={(u) => setBackground({ imageUrl: u })}
-              testId="brand-bg-image-upload"
+              testId="brand-background-upload"
             />
             <Box>
               <Typography variant="body2" gutterBottom>

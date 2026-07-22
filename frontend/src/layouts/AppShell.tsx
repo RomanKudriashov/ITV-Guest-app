@@ -27,6 +27,7 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 
+import { IconBrand } from '@/icons';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAuth } from '@/auth';
@@ -83,6 +84,12 @@ const NAV_ENTRIES: NavEntry[] = [
     to: '/cms/brand',
     icon: <PaletteOutlinedIcon fontSize="small" />,
     testId: 'cms-nav-brand',
+  },
+  {
+    key: 'styleguide',
+    to: '/cms/styleguide',
+    icon: <IconBrand size={20} />,
+    testId: 'cms-styleguide-nav',
   },
   {
     key: 'analytics',
