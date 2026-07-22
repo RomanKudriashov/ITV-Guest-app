@@ -11,7 +11,7 @@
  * `X-Hotel-Subdomain` on every request, errors parsed into `ApiError`.
  */
 
-import { ApiError, API_BASE, HOTEL_SUBDOMAIN } from '@/api/client';
+import { ApiError, API_BASE, HOTEL_SUBDOMAIN, WS_BASE } from '@/api/client';
 
 export const GUEST_TOKEN_KEY = 'itv.guest.token';
 export const GUEST_SESSION_KEY = 'itv.guest.session_id';
@@ -182,7 +182,7 @@ export function guestOrderSocketUrl(orderId: string, language?: string): string 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
   if (language) params.set('lang', language);
-  return `${protocol}//${window.location.host}/ws/guest/order/${orderId}/?${params.toString()}`;
+  return `${protocol}//${window.location.host}${WS_BASE}/guest/order/${orderId}/?${params.toString()}`;
 }
 
 /**
@@ -196,5 +196,5 @@ export function guestChatSocketUrl(language?: string): string | null {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
   if (language) params.set('lang', language);
-  return `${protocol}//${window.location.host}/ws/guest/chat/?${params.toString()}`;
+  return `${protocol}//${window.location.host}${WS_BASE}/guest/chat/?${params.toString()}`;
 }

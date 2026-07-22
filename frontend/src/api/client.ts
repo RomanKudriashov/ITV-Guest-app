@@ -2,14 +2,18 @@
  * Thin typed fetch client for the CMS API.
  *
  * Contract essentials (docs/cms-api-contract.md):
- *  - base URL `/api` (vite proxies it to the backend);
+ *  - base URL `/api/v1` (vite proxies it to the backend);
  *  - `Authorization: Bearer <jwt>` when a token is stored;
  *  - `X-Hotel-Subdomain` is sent on EVERY request (dev tenant resolution);
  *  - errors are parsed into `ApiError {status, code, detail, field}`;
  *  - a 401 clears the token and bounces to /login.
  */
 
-export const API_BASE = '/api';
+// ЕДИНСТВЕННОЕ место, где задаётся версия API/WS. Весь фронт ходит через эти
+// две константы — сменить версию или снять алиас можно правкой одной строки.
+// Пути в вызовах остаются без версии (`/guest/...`), префикс добавляется здесь.
+export const API_BASE = '/api/v1';
+export const WS_BASE = '/ws/v1';
 
 export const TOKEN_STORAGE_KEY = 'itv.cms.access';
 export const REFRESH_STORAGE_KEY = 'itv.cms.refresh';

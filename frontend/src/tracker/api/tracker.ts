@@ -6,7 +6,7 @@
  * instead of growing a client of its own.
  */
 
-import { api, HOTEL_SUBDOMAIN, tokenStorage } from '@/api/client';
+import { api, HOTEL_SUBDOMAIN, tokenStorage, WS_BASE } from '@/api/client';
 import type {
   StatusChangePayload,
   TrackerBoard,
@@ -95,7 +95,7 @@ export function trackerSocketUrl(pointCode: string, language?: string): string |
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
   if (language) params.set('lang', language);
-  return `${protocol}//${window.location.host}/ws/tracker/${encodeURIComponent(
+  return `${protocol}//${window.location.host}${WS_BASE}/tracker/${encodeURIComponent(
     pointCode,
   )}/?${params.toString()}`;
 }
@@ -155,7 +155,7 @@ export function staffChatSocketUrl(threadId: string, language?: string): string 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
   if (language) params.set('lang', language);
-  return `${protocol}//${window.location.host}/ws/staff/chat/${encodeURIComponent(
+  return `${protocol}//${window.location.host}${WS_BASE}/staff/chat/${encodeURIComponent(
     threadId,
   )}/?${params.toString()}`;
 }
