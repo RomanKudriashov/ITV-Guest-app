@@ -288,7 +288,11 @@ class Command(BaseCommand):
             for index in ("01", "05", "12"):
                 room, _ = Room.objects.get_or_create(
                     number=f"{floor}{index}",
-                    defaults={"floor": floor, "source": Room.Source.MANUAL},
+                    defaults={
+                        "floor": floor,
+                        "zone": "Главный корпус",
+                        "source": Room.Source.MANUAL,
+                    },
                 )
                 rooms.append(room)
         return rooms

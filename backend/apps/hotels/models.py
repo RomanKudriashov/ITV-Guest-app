@@ -67,6 +67,19 @@ class Hotel(BaseModel):
     def to_local(self, moment: datetime) -> datetime:
         return moment.astimezone(self.tzinfo)
 
+    def public_guest_url(self, path: str = "") -> str:
+        """
+        Публичный адрес витрины отеля — база для QR и ссылок.
+
+        Кастомный домен, если отель его привёл, иначе поддомен на базовом
+        домене платформы. Именно этот адрес кодирует QR: скан ведёт гостя на
+        рабочий deep-link /r/<номер>.
+        """
+        from django.conf import settings
+
+        host = self.custom_domain or f"{self.subdomain}.{settings.GUEST_APP_BASE_DOMAIN}"
+        return f"{settings.GUEST_APP_PUBLIC_SCHEME}://{host}{path}"
+
 
 class BrandTheme(TenantModel):
     """
@@ -117,6 +130,7 @@ class Room(TenantModel):
 
     number = models.CharField(max_length=32, db_index=True)
     floor = models.CharField(max_length=16, blank=True)
+    zone = models.CharField(max_length=64, blank=True, help_text="Корпус, крыло, зона")
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANUAL)
     external_id = models.CharField(max_length=128, blank=True)
     is_active = models.BooleanField(default=True)
@@ -151,6 +165,9 @@ class ExecutionPoint(TenantModel):
     title = TranslatableField()
     kind = models.CharField(max_length=32, choices=Kind.choices, default=Kind.OTHER)
     is_active = models.BooleanField(default=True)
+    schedule = models.ForeignKey(
+        "hotels.Schedule", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     # Через сколько минут ожидания заказ на доске считается просроченным.
     # Настройка точки, а не константа: кухне и хозслужбе нужны разные пороги.
     sla_minutes = models.PositiveSmallIntegerField(default=20)
@@ -188,6 +205,9 @@ class Location(TenantModel):
     title = TranslatableField()
     requires_refinement = models.BooleanField(default=False)
     refinement_label = TranslatableField()
+    schedule = models.ForeignKey(
+        "hotels.Schedule", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 

@@ -241,7 +241,7 @@ export function ChannelDialog({
                 sx={{ minWidth: 240 }}
                 SelectProps={{ native: true }}
                 InputLabelProps={{ shrink: true }}
-                inputProps={{ 'data-testid': 'cms-channel-user' }}
+                inputProps={{ 'data-testid': 'channel-user-select' }}
               >
                 <option value="">{t('common.none')}</option>
                 {staffUsers.map((user) => (

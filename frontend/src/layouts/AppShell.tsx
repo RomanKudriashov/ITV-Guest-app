@@ -20,6 +20,9 @@ import RoomServiceIcon from '@mui/icons-material/RoomService';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import PlaceIcon from '@mui/icons-material/Place';
+import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 
@@ -51,6 +54,30 @@ const NAV_ENTRIES: NavEntry[] = [
     testId: 'cms-nav-notifications',
   },
   {
+    key: 'rooms',
+    to: '/cms/rooms',
+    icon: <MeetingRoomIcon fontSize="small" />,
+    testId: 'cms-nav-rooms',
+  },
+  {
+    key: 'locations',
+    to: '/cms/locations',
+    icon: <PlaceIcon fontSize="small" />,
+    testId: 'cms-nav-locations',
+  },
+  {
+    key: 'departments',
+    to: '/cms/departments',
+    icon: <GroupWorkIcon fontSize="small" />,
+    testId: 'cms-nav-departments',
+  },
+  {
+    key: 'staff',
+    to: '/cms/staff',
+    icon: <PeopleAltIcon fontSize="small" />,
+    testId: 'cms-nav-staff',
+  },
+  {
     key: 'brand',
     to: '/cms/brand',
     icon: <PaletteOutlinedIcon fontSize="small" />,
@@ -58,7 +85,6 @@ const NAV_ENTRIES: NavEntry[] = [
   },
   { key: 'orders', icon: <ReceiptLongIcon fontSize="small" />, disabled: true },
   { key: 'services', icon: <RoomServiceIcon fontSize="small" />, disabled: true },
-  { key: 'staff', icon: <PeopleAltIcon fontSize="small" />, disabled: true },
   { key: 'settings', icon: <SettingsIcon fontSize="small" />, disabled: true },
 ];
 

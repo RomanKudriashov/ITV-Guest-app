@@ -79,17 +79,24 @@ export function fetchNotificationLog(
   });
 }
 
-/* ── Staff (optional) ──────────────────────────────────────────────────── */
+/* ── Staff (прогон 8) ──────────────────────────────────────────────────── */
 
 /**
- * A personal channel needs a `user_id`, but no endpoint listing staff is part
- * of any contract yet. The call is therefore best-effort: a 404 means "the
- * picker has nothing to offer", never a broken screen.
+ * A personal channel needs a `user_id`. Since прогон 8 the staff list has a real
+ * endpoint (`GET /api/cms/staff`, `docs/hotel-admin-api-contract.md` §4), so the
+ * personal-channel picker is populated from it. The call stays best-effort — a
+ * failure means "the picker has nothing to offer", never a broken screen.
  */
 export async function fetchStaffUsers(): Promise<NotificationStaffUser[]> {
   try {
-    const users = await request<NotificationStaffUser[]>('/cms/staff-users');
-    return Array.isArray(users) ? users : [];
+    const users = await request<NotificationStaffUser[]>('/cms/staff');
+    return Array.isArray(users)
+      ? users.map((user) => ({
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+        }))
+      : [];
   } catch {
     return [];
   }

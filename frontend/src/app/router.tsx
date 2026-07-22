@@ -7,6 +7,10 @@ import { MenuPage } from '@/pages/menu/MenuPage';
 import { CategoryEditorPage } from '@/pages/category/CategoryEditorPage';
 import { ItemEditorPage } from '@/pages/item/ItemEditorPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
+import { RoomsPage } from '@/pages/hotel/RoomsPage';
+import { LocationsPage } from '@/pages/hotel/LocationsPage';
+import { DepartmentsPage } from '@/pages/hotel/DepartmentsPage';
+import { StaffPage } from '@/pages/hotel/StaffPage';
 import { BrandPage } from '@/cms/brand/BrandPage';
 import App from '@/App';
 
@@ -48,6 +52,10 @@ export const router = createBrowserRouter([
       { path: 'menu/items/new', element: <ItemEditorPage /> },
       { path: 'menu/items/:id', element: <ItemEditorPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
+      { path: 'rooms', element: <RoomsPage /> },
+      { path: 'locations', element: <LocationsPage /> },
+      { path: 'departments', element: <DepartmentsPage /> },
+      { path: 'staff', element: <StaffPage /> },
       { path: 'brand', element: <BrandPage /> },
     ],
   },

@@ -12,6 +12,12 @@ export const queryKeys = {
   notificationLog: (status: string, orderId: string, limit: number) =>
     ['cms', 'notification-log', status || 'all', orderId || 'all', limit] as const,
   staffUsers: ['cms', 'staff-users'] as const,
+  /* ── Hotel admin (прогон 8) ─────────────────────────────────────────── */
+  rooms: ['cms', 'rooms'] as const,
+  locations: ['cms', 'locations'] as const,
+  locationMatrix: ['cms', 'locations', 'matrix'] as const,
+  departments: ['cms', 'departments'] as const,
+  staff: ['cms', 'staff'] as const,
   brand: ['cms', 'brand'] as const,
   brandPresets: ['cms', 'brand', 'presets'] as const,
   brandAbstractions: ['cms', 'brand', 'abstractions'] as const,

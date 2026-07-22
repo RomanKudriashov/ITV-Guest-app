@@ -134,6 +134,9 @@ GUEST_APP_RESERVED_SUBDOMAINS = set(
 # wildcard-DNS. В проде выключено жёстко.
 GUEST_APP_ALLOW_TENANT_OVERRIDE_HEADER = DEBUG
 
+# Схема публичного адреса отеля (для QR и ссылок). В проде https.
+GUEST_APP_PUBLIC_SCHEME = os.getenv("GUEST_APP_PUBLIC_SCHEME", "https" if not DEBUG else "http")
+
 DEFAULT_LANGUAGE = "en"
 SUPPORTED_LANGUAGES = ["ru", "en", "ar", "zh"]
 
