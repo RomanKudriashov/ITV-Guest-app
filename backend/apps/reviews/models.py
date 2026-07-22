@@ -39,4 +39,4 @@ class Review(TenantModel):
         indexes = [models.Index(fields=["hotel", "rating", "-created_at"])]
 
     def __str__(self) -> str:
-        return f"review:{self.order_id} {self.rating}★"
+        return f"review:{self.order_id} {self.rating}/5"

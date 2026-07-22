@@ -52,7 +52,7 @@ def notify_manager_of_low_rating(event: Event) -> None:
     """Низкая оценка → уведомление менеджеру отдела (service recovery)."""
     _notify_point(
         event,
-        subject=f"Низкая оценка ({event.payload.get('rating')}★) · заявка №{event.payload.get('number')}",
+        subject=f"Низкая оценка ({event.payload.get('rating')}/5) · заявка №{event.payload.get('number')}",
         body=event.payload.get("comment", "") or "Без комментария",
         target_level="manager",
     )
