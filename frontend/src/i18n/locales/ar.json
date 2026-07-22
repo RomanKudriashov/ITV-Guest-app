@@ -252,7 +252,9 @@
       "home": "الرئيسية",
       "menu": "القائمة",
       "cart": "السلة",
-      "orders": "الطلبات"
+      "orders": "الطلبات",
+      "chat": "الدردشة",
+      "info": "معلومات"
     },
     "entry": {
       "subtitle": "أدخل رقم غرفتك لتطلب إلى غرفتك",
@@ -271,7 +273,9 @@
       "greeting": "أهلاً بك",
       "roomLine": "{{hotel}} · غرفة {{room}}",
       "noRoomLine": "أنت تتصفح دون رقم غرفة",
-      "soon": "قريباً"
+      "soon": "قريباً",
+      "emptyTitle": "لا شيء بعد",
+      "emptyHint": "لم يضف الفندق أي خدمات بعد"
     },
     "services": {
       "restaurant": "المطعم",
@@ -448,6 +452,21 @@
       "bookAt": "احجز {{time}}",
       "booking": "جارٍ الحجز…",
       "choose": "احجز"
+    },
+    "chat": {
+      "placeholder": "رسالة…",
+      "send": "إرسال",
+      "offline": "لا اتصال",
+      "emptyHint": "راسلنا وسيرد الموظفون هنا"
+    },
+    "review": {
+      "title": "قيّم طلبك",
+      "submit": "إرسال التقييم",
+      "thanks": "شكراً، تم تسجيل تقييمك",
+      "privacy": "تقييمك مرئي للفندق فقط",
+      "yours": "تقييمك",
+      "commentPlaceholder": "تعليق (اختياري)",
+      "starAria": "{{n}} من 5"
     }
   },
   "tracker": {
@@ -501,7 +520,8 @@
       "timeline": "المسار",
       "close": "إغلاق",
       "loading": "جارٍ التحميل…",
-      "notFound": "الطلب غير موجود"
+      "notFound": "الطلب غير موجود",
+      "review": "تقييم الضيف"
     },
     "cancel": {
       "title": "إلغاء الطلب رقم {{number}}؟",
@@ -521,6 +541,15 @@
       "server": "الخادم لا يستجيب",
       "generic": "تعذّر تنفيذ الإجراء",
       "orderNotFound": "الطلب غير موجود أو يخص نقطة أخرى"
+    },
+    "chat": {
+      "title": "الدردشة",
+      "room": "غرفة {{room}}",
+      "noRoom": "ضيف",
+      "emptyTitle": "لا رسائل",
+      "emptyBody": "لا رسائل من الضيوف بعد",
+      "emptyThread": "ابدأ المحادثة",
+      "back": "رجوع"
     }
   },
   "requestFields": {

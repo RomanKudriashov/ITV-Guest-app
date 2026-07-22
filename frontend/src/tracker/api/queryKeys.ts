@@ -8,4 +8,6 @@ export const trackerKeys = {
   board: (point: string, scope: TrackerScope, language: string) =>
     ['tracker', 'board', point, scope, language] as const,
   order: (id: string, language: string) => ['tracker', 'order', id, language] as const,
+  chatThreads: (language: string) => ['tracker', 'chat', 'threads', language] as const,
+  chatThread: (id: string) => ['tracker', 'chat', 'thread', id] as const,
 };

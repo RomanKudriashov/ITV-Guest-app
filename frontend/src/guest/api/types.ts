@@ -310,6 +310,11 @@ export interface GuestOrder {
   /** Present only for a `booking` order — the reserved slot. */
   slot?: OrderSlot | null;
   items: OrderItem[];
+  /**
+   * The guest may leave a review: terminal, not cancelled, no review yet, and the
+   * hotel collects them. Purely a server verdict — the storefront never computes it.
+   */
+  can_review?: boolean;
 }
 
 export interface GuestOrderList {
@@ -329,3 +334,67 @@ export interface PingMessage {
 }
 
 export type GuestSocketMessage = OrderSnapshotMessage | PingMessage | { type: string };
+
+/* ── Home ──────────────────────────────────────────────────────────────── */
+
+/**
+ * One tile of the home screen, assembled by the server FROM DATA: a section only
+ * appears when the hotel has active categories of that type. The client learns
+ * the destination from `route` and the tile kind from `type` via the behaviour
+ * registry — never from comparing the type string.
+ */
+export interface GuestHomeSection {
+  type: OfferingType;
+  code: string;
+  title: string;
+  category_count: number;
+  route: string;
+}
+
+export interface GuestHome {
+  hotel: { name: string; theme?: PartialBrandTokens };
+  room: string | null;
+  sections: GuestHomeSection[];
+  /** Unread messages from staff — drives the chat tab badge. */
+  unread_chat: number;
+}
+
+/* ── Chat ──────────────────────────────────────────────────────────────── */
+
+export interface ChatMessage {
+  id: string;
+  author_type: 'guest' | 'staff';
+  author_name: string;
+  body: string;
+  created_at: string;
+  /** Computed by the server per requesting side: the guest's own messages, or staff's. */
+  mine: boolean;
+}
+
+/**
+ * Full thread snapshot — the body of `GET /api/guest/chat` and of every chat
+ * WebSocket frame. The client only ever REPLACES its cache with this; it never
+ * appends a delta, exactly like the order/board snapshots.
+ */
+export interface ChatSnapshot {
+  thread_id: string;
+  room: string | null;
+  messages: ChatMessage[];
+  /** Unread for the requesting side. */
+  unread: number;
+}
+
+/** WebSocket envelope for chat — `{type, event, thread}` (reconciliation only). */
+export interface ChatSnapshotMessage {
+  type: 'chat.snapshot';
+  event?: string;
+  thread: ChatSnapshot;
+}
+
+/* ── Reviews ───────────────────────────────────────────────────────────── */
+
+export interface GuestReview {
+  rating: number;
+  comment: string;
+  created_at?: string;
+}

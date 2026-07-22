@@ -19,12 +19,18 @@ import { BoardColumn } from '../components/BoardColumn';
 import { CancelDialog } from '../components/CancelDialog';
 import { OrderCard } from '../components/OrderCard';
 import { OrderDetailSheet } from '../components/OrderDetailSheet';
+import { TrackerChatPanel } from '../components/TrackerChatPanel';
 import { TrackerTopBar } from '../components/TrackerTopBar';
 import { useBoardLive, type BoardLiveEvent } from '../hooks/useBoardLive';
 import { useOrderActions } from '../hooks/useOrderActions';
 import { usePointSelection } from '../hooks/usePointSelection';
 import { useTrackerSound } from '../hooks/useTrackerSound';
-import { useTrackerBoard, useTrackerOrder, useTrackerPoints } from '../hooks/useTrackerQueries';
+import {
+  useTrackerBoard,
+  useTrackerChatThreads,
+  useTrackerOrder,
+  useTrackerPoints,
+} from '../hooks/useTrackerQueries';
 import { trackerErrorMessage } from '../errors';
 import type { TrackerOrder, TrackerScope } from '../api/types';
 
@@ -46,6 +52,12 @@ export function TrackerPage() {
   const [highlighted, setHighlighted] = useState<Record<string, number>>({});
   const [pollMs, setPollMs] = useState<number | undefined>(undefined);
   const [cancelTarget, setCancelTarget] = useState<TrackerOrder | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  // Threads drive the top-bar badge; the socket of an open thread invalidates
+  // this query so the count moves on its own.
+  const threadsQuery = useTrackerChatThreads();
+  const chatUnread = (threadsQuery.data ?? []).reduce((sum, thread) => sum + thread.unread, 0);
 
   const pointsQuery = useTrackerPoints();
   const points = pointsQuery.data?.points;
@@ -172,7 +184,10 @@ export function TrackerPage() {
           live={live}
           soundEnabled={sound.enabled}
           onToggleSound={sound.toggle}
+          chatUnread={chatUnread}
+          onOpenChat={() => setChatOpen(true)}
         />
+        <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
         <Box data-testid="tracker-no-points" sx={{ pt: 6 }}>
           <EmptyState
             icon={<GroupWorkOutlinedIcon fontSize="large" />}
@@ -201,6 +216,8 @@ export function TrackerPage() {
         live={live}
         soundEnabled={sound.enabled}
         onToggleSound={sound.toggle}
+        chatUnread={chatUnread}
+        onOpenChat={() => setChatOpen(true)}
       />
 
       <Tabs
@@ -323,6 +340,8 @@ export function TrackerPage() {
         onStatus={(code) => openOrder && void actions.changeStatus(openOrder.id, code)}
         onCancel={() => openOrder && setCancelTarget(openOrder)}
       />
+
+      <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
 
       <CancelDialog
         open={Boolean(cancelTarget)}

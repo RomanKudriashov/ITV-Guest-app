@@ -10,6 +10,8 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
 
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
@@ -59,6 +61,7 @@ export function OrderDetailSheet({
   const { format } = useTrackerMoney();
   const fieldValues = order?.field_values ?? [];
   const booking = order?.slot ?? null;
+  const review = order?.review ?? null;
 
   return (
     <Drawer
@@ -187,6 +190,28 @@ export function OrderDetailSheet({
                 </Stack>
               </Stack>
             </Paper>
+
+            {review ? (
+              <Paper variant="outlined" sx={{ p: 1.5 }} data-testid="tracker-order-review">
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2">{t('tracker.detail.review')}</Typography>
+                  <Stack direction="row" spacing={0.25}>
+                    {[1, 2, 3, 4, 5].map((n) =>
+                      n <= review.rating ? (
+                        <StarIcon key={n} sx={{ fontSize: 20, color: 'warning.main' }} />
+                      ) : (
+                        <StarBorderIcon key={n} sx={{ fontSize: 20, color: 'text.disabled' }} />
+                      ),
+                    )}
+                  </Stack>
+                  {review.comment ? (
+                    <Typography variant="body2" color="text.secondary">
+                      {review.comment}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              </Paper>
+            ) : null}
 
             <Paper variant="outlined" sx={{ p: 1.5 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>

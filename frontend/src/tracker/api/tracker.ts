@@ -10,6 +10,8 @@ import { api, HOTEL_SUBDOMAIN, tokenStorage } from '@/api/client';
 import type {
   StatusChangePayload,
   TrackerBoard,
+  TrackerChatSnapshot,
+  TrackerChatThread,
   TrackerOrder,
   TrackerPointsResponse,
   TrackerScope,
@@ -95,5 +97,65 @@ export function trackerSocketUrl(pointCode: string, language?: string): string |
   if (language) params.set('lang', language);
   return `${protocol}//${window.location.host}/ws/tracker/${encodeURIComponent(
     pointCode,
+  )}/?${params.toString()}`;
+}
+
+/* ── Chat (staff side) ─────────────────────────────────────────────────── */
+
+/** Threads of the hotel — last message + unread count (contract §3). */
+export function fetchChatThreads(language?: string): Promise<TrackerChatThread[]> {
+  return api.get<TrackerChatThread[]>('/tracker/chat/threads', {
+    headers: langHeaders(language),
+  });
+}
+
+/** One thread + its messages; `mine` is computed for the staff side. */
+export function fetchChatThread(
+  threadId: string,
+  language?: string,
+): Promise<TrackerChatSnapshot> {
+  return api.get<TrackerChatSnapshot>(`/tracker/chat/threads/${threadId}`, {
+    headers: langHeaders(language),
+  });
+}
+
+/** Reply in a thread; the response is the fresh full snapshot, not a delta. */
+export function sendChatReply(
+  threadId: string,
+  body: string,
+  language?: string,
+): Promise<TrackerChatSnapshot> {
+  return api.post<TrackerChatSnapshot>(
+    `/tracker/chat/threads/${threadId}`,
+    { body },
+    { headers: langHeaders(language) },
+  );
+}
+
+/** Mark the guest's messages in a thread as read. */
+export function markChatThreadRead(
+  threadId: string,
+  language?: string,
+): Promise<TrackerChatSnapshot> {
+  return api.post<TrackerChatSnapshot>(
+    `/tracker/chat/threads/${threadId}/read`,
+    {},
+    { headers: langHeaders(language) },
+  );
+}
+
+/**
+ * WS URL for one staff thread: `ws/staff/chat/{thread_id}/`. Same snapshot
+ * contract as the guest socket, only scoped to the hotel's thread (codes 4401
+ * token, 4403 foreign thread, 4404 hotel).
+ */
+export function staffChatSocketUrl(threadId: string, language?: string): string | null {
+  const token = tokenStorage.get();
+  if (!token) return null;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
+  if (language) params.set('lang', language);
+  return `${protocol}//${window.location.host}/ws/staff/chat/${encodeURIComponent(
+    threadId,
   )}/?${params.toString()}`;
 }

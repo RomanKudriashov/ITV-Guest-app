@@ -9,4 +9,8 @@ export const guestKeys = {
     ['guest', 'slots', itemId, date, language] as const,
   orders: (language: string) => ['guest', 'orders', language] as const,
   order: (id: string) => ['guest', 'order', id] as const,
+  home: (language: string) => ['guest', 'home', language] as const,
+  /** Single thread per guest — a stable key the WS snapshot overwrites. */
+  chat: ['guest', 'chat'] as const,
+  review: (orderId: string) => ['guest', 'review', orderId] as const,
 };

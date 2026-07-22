@@ -14,6 +14,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -30,6 +31,9 @@ export interface TrackerTopBarProps {
   live: LiveStatus;
   soundEnabled: boolean;
   onToggleSound: () => void;
+  /** Total unread guest messages across the hotel's threads. */
+  chatUnread?: number;
+  onOpenChat?: () => void;
 }
 
 export function TrackerTopBar({
@@ -39,6 +43,8 @@ export function TrackerTopBar({
   live,
   soundEnabled,
   onToggleSound,
+  chatUnread = 0,
+  onOpenChat,
 }: TrackerTopBarProps) {
   const { t } = useTranslation();
   const { logout } = useAuth();
@@ -90,6 +96,21 @@ export function TrackerTopBar({
             label={t('tracker.offline')}
             data-testid="tracker-offline"
           />
+        ) : null}
+
+        {onOpenChat ? (
+          <Tooltip title={t('tracker.chat.title')}>
+            <IconButton
+              onClick={onOpenChat}
+              aria-label={t('tracker.chat.title')}
+              data-testid="tracker-chat-open"
+              sx={{ minWidth: 44, minHeight: 44 }}
+            >
+              <Badge color="error" badgeContent={chatUnread} max={99}>
+                <ChatBubbleOutlineIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
         ) : null}
 
         <Tooltip title={soundEnabled ? t('tracker.sound.on') : t('tracker.sound.off')}>

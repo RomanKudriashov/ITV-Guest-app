@@ -21,6 +21,7 @@ import { ItemThumb } from '../components/ItemMeta';
 import { OrderFieldValues } from '../components/OrderFieldValues';
 import { OrderSlot } from '../components/OrderSlot';
 import { OrderTimeline } from '../components/OrderTimeline';
+import { ReviewBlock } from '../components/ReviewBlock';
 import { cancelOrder } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { errorMessage } from '../errors';
@@ -241,6 +242,10 @@ export function OrderStatusPage() {
             </Stack>
           </Stack>
         </Paper>
+
+        {/* "Rate it" — only after a terminal status, and only if the hotel
+            collects reviews. The block decides its own visibility from the order. */}
+        <ReviewBlock order={order} />
 
         {cancelError ? (
           <Alert severity="error">{errorMessage(cancelError, t)}</Alert>

@@ -2,10 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
-import { fetchTrackerBoard, fetchTrackerOrder, fetchTrackerPoints } from '../api/tracker';
+import {
+  fetchChatThread,
+  fetchChatThreads,
+  fetchTrackerBoard,
+  fetchTrackerOrder,
+  fetchTrackerPoints,
+} from '../api/tracker';
 import { trackerKeys } from '../api/queryKeys';
 import type {
   TrackerBoard,
+  TrackerChatSnapshot,
+  TrackerChatThread,
   TrackerOrder,
   TrackerPointsResponse,
   TrackerScope,
@@ -67,5 +75,34 @@ export function useTrackerOrder(orderId: string | undefined, enabled: boolean) {
       }
       return failureCount < 1;
     },
+  });
+}
+
+/**
+ * The hotel's chat threads. Kept lightly fresh; the WS of the open thread also
+ * invalidates it so unread counts move without a manual refetch.
+ */
+export function useTrackerChatThreads(enabled = true) {
+  const language = useTrackerLanguage();
+  return useQuery<TrackerChatThread[]>({
+    queryKey: trackerKeys.chatThreads(language),
+    queryFn: () => fetchChatThreads(language),
+    enabled,
+    staleTime: 15_000,
+    refetchInterval: enabled ? 20_000 : false,
+  });
+}
+
+/**
+ * One open thread. While the socket is up it is kept fresh by snapshots written
+ * straight into this cache entry (see `useChatLive`).
+ */
+export function useTrackerChatThread(threadId: string | null) {
+  const language = useTrackerLanguage();
+  return useQuery<TrackerChatSnapshot>({
+    queryKey: trackerKeys.chatThread(threadId ?? 'none'),
+    queryFn: () => fetchChatThread(threadId as string, language),
+    enabled: Boolean(threadId),
+    staleTime: 10_000,
   });
 }

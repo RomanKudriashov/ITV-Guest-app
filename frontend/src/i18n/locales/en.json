@@ -252,7 +252,9 @@
       "home": "Home",
       "menu": "Menu",
       "cart": "Cart",
-      "orders": "Orders"
+      "orders": "Orders",
+      "chat": "Chat",
+      "info": "Info"
     },
     "entry": {
       "subtitle": "Enter your room number to order to your room",
@@ -271,7 +273,9 @@
       "greeting": "Welcome",
       "roomLine": "{{hotel}} · room {{room}}",
       "noRoomLine": "You are browsing without a room number",
-      "soon": "Soon"
+      "soon": "Soon",
+      "emptyTitle": "Nothing here yet",
+      "emptyHint": "The hotel hasn't added anything yet"
     },
     "services": {
       "restaurant": "Restaurant",
@@ -448,6 +452,21 @@
       "bookAt": "Book {{time}}",
       "booking": "Booking…",
       "choose": "Book"
+    },
+    "chat": {
+      "placeholder": "Message…",
+      "send": "Send",
+      "offline": "No connection",
+      "emptyHint": "Message us — staff will reply right here"
+    },
+    "review": {
+      "title": "Rate your order",
+      "submit": "Send review",
+      "thanks": "Thanks, your review is noted",
+      "privacy": "Your review is visible only to the hotel",
+      "yours": "Your review",
+      "commentPlaceholder": "Comment (optional)",
+      "starAria": "{{n}} of 5"
     }
   },
   "tracker": {
@@ -501,7 +520,8 @@
       "timeline": "What happened",
       "close": "Close",
       "loading": "Loading the order…",
-      "notFound": "This order is not on the board"
+      "notFound": "This order is not on the board",
+      "review": "Guest review"
     },
     "cancel": {
       "title": "Cancel order #{{number}}?",
@@ -521,6 +541,15 @@
       "server": "The server is not responding",
       "generic": "The action failed",
       "orderNotFound": "Order not found — it may be gone or belong to another point"
+    },
+    "chat": {
+      "title": "Chat",
+      "room": "Room {{room}}",
+      "noRoom": "Guest",
+      "emptyTitle": "No messages",
+      "emptyBody": "No guests have written yet",
+      "emptyThread": "Start the conversation",
+      "back": "Back"
     }
   },
   "requestFields": {

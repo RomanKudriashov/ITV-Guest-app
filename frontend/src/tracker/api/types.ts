@@ -6,7 +6,7 @@
  * the timeline component and the money helpers keep working unchanged.
  */
 
-import type { GuestOrder } from '@/guest/api/types';
+import type { ChatSnapshot, GuestOrder, GuestReview } from '@/guest/api/types';
 
 export type TrackerScope = 'active' | 'history';
 
@@ -53,7 +53,22 @@ export interface TrackerOrder extends GuestOrder {
   is_overdue: boolean;
   next_statuses: TrackerNextStatus[];
   can_cancel: boolean;
+  /** The guest's private review, once left — shown on the card/detail if present. */
+  review?: GuestReview | null;
 }
+
+/** One row of the staff thread list (`GET /api/tracker/chat/threads`). */
+export interface TrackerChatThread {
+  thread_id: string;
+  room: string | null;
+  last_body?: string | null;
+  last_at?: string | null;
+  /** Unread guest messages in this thread. */
+  unread: number;
+}
+
+/** The staff chat snapshot is the same shape as the guest one (contract §3). */
+export type TrackerChatSnapshot = ChatSnapshot;
 
 export interface TrackerColumn {
   code: string;

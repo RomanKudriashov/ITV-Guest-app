@@ -10,8 +10,9 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
-import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
@@ -19,16 +20,22 @@ import { pickLogo } from '@/theme/tokens';
 import { useAppTheme } from '@/theme';
 import { GuestBrandHeader } from '../components/GuestBrandHeader';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
-import { useCart } from '../state/cart';
+import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 
 export const BOTTOM_NAV_HEIGHT = 60;
 
+/**
+ * The common product's navigation: Home / Menu / Orders / Chat / Info. It is not
+ * food-specific — Menu is simply the `product` section when a hotel has one, and
+ * both Info and the slot/service catalogs are reachable from the Home tiles too.
+ */
 const TABS = [
   { value: '/home', icon: <HomeOutlinedIcon />, labelKey: 'guest.nav.home' },
   { value: '/menu', icon: <RestaurantMenuIcon />, labelKey: 'guest.nav.menu' },
-  { value: '/cart', icon: <ShoppingBagOutlinedIcon />, labelKey: 'guest.nav.cart' },
   { value: '/orders', icon: <ReceiptLongOutlinedIcon />, labelKey: 'guest.nav.orders' },
+  { value: '/chat', icon: <ChatBubbleOutlineIcon />, labelKey: 'guest.nav.chat' },
+  { value: '/info', icon: <InfoOutlinedIcon />, labelKey: 'guest.nav.info' },
 ] as const;
 
 /** Shell for every screen behind the entry page: brand header + bottom navigation. */
@@ -37,7 +44,8 @@ export function GuestLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { session, hotel, isReady, isBootstrapping } = useGuestSession();
-  const { count } = useCart();
+  const home = useGuestHome();
+  const unreadChat = home.data?.unread_chat ?? 0;
   const { tokens, mode } = useAppTheme();
   const logoSrc = pickLogo(tokens, mode);
 
@@ -126,8 +134,13 @@ export function GuestLayout() {
               label={t(tab.labelKey)}
               data-testid={`guest-nav-${tab.value.slice(1)}`}
               icon={
-                tab.value === '/cart' ? (
-                  <Badge badgeContent={count} color="primary" max={99}>
+                tab.value === '/chat' ? (
+                  <Badge
+                    badgeContent={unreadChat}
+                    color="error"
+                    max={99}
+                    data-testid="guest-chat-unread"
+                  >
                     {tab.icon}
                   </Badge>
                 ) : (

@@ -4,19 +4,25 @@ import { useTranslation } from 'react-i18next';
 import type { OfferingType } from '@/offerings/behaviour';
 import {
   fetchCatalog,
+  fetchChat,
+  fetchHome,
   fetchItem,
   fetchLocations,
   fetchOrder,
   fetchOrders,
+  fetchReview,
   fetchSlots,
 } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type {
+  ChatSnapshot,
   GuestCatalog,
+  GuestHome,
   GuestLocations,
   GuestOrder,
   GuestOrderList,
+  GuestReview,
   GuestSlotAvailability,
   ItemDetail,
 } from '../api/types';
@@ -102,6 +108,53 @@ export function useGuestOrders() {
  * into the cache). `pollMs` is the fallback used while the socket is down, so a
  * guest on a flaky connection still sees the status move.
  */
+/**
+ * The home screen, assembled by the server from the hotel's real offerings. Also
+ * the source of the chat tab's unread badge (`unread_chat`).
+ */
+export function useGuestHome() {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestHome>({
+    queryKey: guestKeys.home(language),
+    queryFn: () => fetchHome(language),
+    enabled: isReady,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * The guest's chat thread. While the socket is up it is kept fresh by snapshots
+ * written straight into this cache entry (see `useChatLive`); the key is stable
+ * (there is only one thread per guest) so the WS can overwrite it blindly.
+ */
+export function useGuestChat() {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<ChatSnapshot>({
+    queryKey: guestKeys.chat,
+    queryFn: () => fetchChat(language),
+    enabled: isReady,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * The review left for one order, or `null` when none exists. Enabled only once
+ * the order is terminal (a review is impossible before then), so a live order
+ * never fires this request.
+ */
+export function useGuestReview(orderId: string | undefined, enabled: boolean) {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestReview | null>({
+    queryKey: guestKeys.review(orderId ?? 'none'),
+    queryFn: () => fetchReview(orderId as string, language),
+    enabled: isReady && enabled && Boolean(orderId),
+    staleTime: 30_000,
+  });
+}
+
 export function useGuestOrder(orderId: string | undefined, pollMs?: number) {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();

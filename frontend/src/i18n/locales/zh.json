@@ -252,7 +252,9 @@
       "home": "首页",
       "menu": "菜单",
       "cart": "购物车",
-      "orders": "订单"
+      "orders": "订单",
+      "chat": "聊天",
+      "info": "信息"
     },
     "entry": {
       "subtitle": "输入房间号即可点餐送到房间",
@@ -271,7 +273,9 @@
       "greeting": "欢迎",
       "roomLine": "{{hotel}} · 房间 {{room}}",
       "noRoomLine": "您正在无房间号浏览",
-      "soon": "即将推出"
+      "soon": "即将推出",
+      "emptyTitle": "暂无内容",
+      "emptyHint": "酒店尚未添加服务"
     },
     "services": {
       "restaurant": "餐厅",
@@ -448,6 +452,21 @@
       "bookAt": "预约 {{time}}",
       "booking": "预约中…",
       "choose": "预约"
+    },
+    "chat": {
+      "placeholder": "消息…",
+      "send": "发送",
+      "offline": "无连接",
+      "emptyHint": "给我们留言，工作人员会在此回复"
+    },
+    "review": {
+      "title": "评价订单",
+      "submit": "提交评价",
+      "thanks": "感谢，已收到您的评价",
+      "privacy": "您的评价仅酒店可见",
+      "yours": "您的评价",
+      "commentPlaceholder": "评论（可选）",
+      "starAria": "{{n}} / 5"
     }
   },
   "tracker": {
@@ -501,7 +520,8 @@
       "timeline": "进度",
       "close": "关闭",
       "loading": "加载中…",
-      "notFound": "看板上没有该订单"
+      "notFound": "看板上没有该订单",
+      "review": "客人评价"
     },
     "cancel": {
       "title": "取消第 {{number}} 号订单？",
@@ -521,6 +541,15 @@
       "server": "服务器无响应",
       "generic": "操作失败",
       "orderNotFound": "未找到该订单，或它属于其他执行点"
+    },
+    "chat": {
+      "title": "聊天",
+      "room": "{{room}} 房",
+      "noRoom": "客人",
+      "emptyTitle": "暂无消息",
+      "emptyBody": "还没有客人留言",
+      "emptyThread": "开始对话",
+      "back": "返回"
     }
   },
   "requestFields": {

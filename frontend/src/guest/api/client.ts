@@ -184,3 +184,17 @@ export function guestOrderSocketUrl(orderId: string, language?: string): string 
   if (language) params.set('lang', language);
   return `${protocol}//${window.location.host}/ws/guest/order/${orderId}/?${params.toString()}`;
 }
+
+/**
+ * WS URL for the guest chat thread. There is no id in the path: the socket
+ * resolves the guest's own thread from the token (contract §3). The snapshot it
+ * pushes has the same shape as `GET /api/guest/chat`.
+ */
+export function guestChatSocketUrl(language?: string): string | null {
+  const token = guestTokenStorage.get();
+  if (!token) return null;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
+  if (language) params.set('lang', language);
+  return `${protocol}//${window.location.host}/ws/guest/chat/?${params.toString()}`;
+}
