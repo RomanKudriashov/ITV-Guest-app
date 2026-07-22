@@ -21,6 +21,7 @@ from apps.hotels.models import Hotel
 from apps.media.services import image_url
 
 from .availability import category_availability, item_availability
+from .offerings import behaviour_for
 from .models import Category, Item, ModifierGroup, OfferingType, RequestField
 
 
@@ -194,8 +195,12 @@ def _serialize_item(
         "has_modifiers": bool(groups),
         "has_required_modifiers": any(group.is_required for group in groups),
         # Витрине хватает признака, чтобы решить, чем открывать позицию:
-        # карточкой с корзиной или формой заявки.
+        # карточкой с корзиной, формой заявки, страницей чтения или бронью.
         "has_fields": bool(item.request_fields.all()),
+        "has_content": bool(item.content),
+        "has_slots": behaviour_for(item.type).uses_slots,
+        "is_orderable": behaviour_for(item.type).creates_order,
+        "content": translate(item.content, language),
         **state.as_dict(),
     }
 

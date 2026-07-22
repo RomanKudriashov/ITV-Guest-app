@@ -139,6 +139,7 @@ class ItemIn(Schema):
     location_mode: str | None = None
     title: Translations
     description: Translations | None = None
+    content: Translations | None = None
     code: str | None = None
     price: int | None = 0
     flags: list[str] = []
@@ -156,6 +157,7 @@ class ItemPatch(Schema):
     location_mode: str | None = None
     title: Translations | None = None
     description: Translations | None = None
+    content: Translations | None = None
     code: str | None = None
     price: int | None = None
     flags: list[str] | None = None
@@ -179,6 +181,7 @@ class ItemOut(Schema):
     location_mode: str
     title: Translations
     description: Translations
+    content: Translations = {}
     price: int | None
     images: list[dict[str, Any]]
     flags: list[str]
@@ -339,3 +342,15 @@ class ScheduleOut(Schema):
     name: str
     is_always_open: bool
     intervals: list[dict[str, Any]]
+
+
+# --- Конфигурация брони -----------------------------------------------------
+
+
+class SlotConfigIn(Schema):
+    duration_minutes: int = 60
+    capacity: int = 1
+    schedule_id: str
+    execution_point_id: str
+    lead_minutes: int = 0
+    horizon_days: int = 14

@@ -16,6 +16,8 @@ from apps.accounts.models import TrustLevel
 from apps.accounts.services import AuthenticationFailed, create_guest_session
 from apps.catalog.offerings import OfferingType
 from apps.catalog.services import MenuOptions, build_menu, get_item_detail
+from apps.catalog.slots import available_slots
+from apps.catalog.models import Item
 from apps.core.context import current_language
 from apps.core.errors import PermissionDenied
 from apps.core.idempotency import IdempotencyConflict, run_idempotent
@@ -178,6 +180,16 @@ def get_item(request: HttpRequest, item_id: str):
     return get_item_detail(item_id, language=current_language())
 
 
+@router.get("/slots", auth=guest_auth, summary="Свободные слоты позиции на дату")
+def get_slots(request: HttpRequest, item_id: str, date: str):
+    item = Item.objects.filter(pk=item_id).first()
+    if item is None:
+        from apps.core.errors import NotFoundError
+
+        raise NotFoundError("Позиция не найдена")
+    return available_slots(item, date)
+
+
 @router.get(
     "/locations", response=LocationsOut, auth=guest_auth, summary="Куда доставить"
 )
@@ -261,6 +273,7 @@ def place_order(
         requested_time=payload.requested_time,
         comment=payload.comment,
         field_values=payload.field_values or {},
+        slot_start=payload.slot_start,
     )
 
     def operation():

@@ -78,6 +78,10 @@ class ItemDetailOut(Schema):
     has_modifiers: bool
     has_required_modifiers: bool
     has_fields: bool
+    has_content: bool = False
+    has_slots: bool = False
+    is_orderable: bool = True
+    content: str = ""
     is_available: bool
     unavailable_reason: str | None
     available_from: str | None
@@ -115,6 +119,8 @@ class OrderIn(Schema):
     comment: str = ""
     # Ответы на поля заявки-услуги: {code поля: значение}. У товаров пусто.
     field_values: dict[str, Any] = {}
+    # Выбранное время слота (тип slot), ISO 8601.
+    slot_start: str | None = None
 
 
 class CancelIn(Schema):
@@ -138,6 +144,7 @@ class OrderOut(Schema):
     total: int | None
     currency: str
     field_values: list[dict[str, Any]]
+    slot: dict[str, Any] | None = None
     items: list[dict[str, Any]]
 
 

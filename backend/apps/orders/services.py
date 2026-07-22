@@ -27,6 +27,7 @@ from apps.catalog.availability import item_availability
 from apps.catalog.models import Category, Item, ModifierOption, Route
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import build_field_snapshot
+from apps.catalog import slots as slot_svc
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -82,6 +83,7 @@ class OrderInput:
     requested_time: datetime | None = None
     comment: str = ""
     field_values: dict[str, Any] = field(default_factory=dict)
+    slot_start: str | None = None
 
 
 # --- Создание --------------------------------------------------------------
@@ -97,6 +99,12 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
 
     items = [_resolve_item(line) for line in data.lines]
     behaviour = _resolve_behaviour(items)
+
+    if not behaviour.creates_order:
+        # info — страница только для чтения: заказывать нечего.
+        raise OrderValidationError(
+            "Эту позицию нельзя заказать", code="not_orderable"
+        )
 
     if not behaviour.allows_multiple_lines and len(items) > 1:
         raise OrderValidationError(
@@ -150,6 +158,12 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         currency=hotel.currency,
         field_values=field_values,
     )
+
+    if behaviour.uses_slots:
+        # Транзакционная бронь: защита от двойной брони внутри блокировки
+        # SlotConfig. Внутри той же transaction.atomic — откат заказа снимет
+        # и бронь.
+        slot_svc.validate_and_reserve(items[0], data.slot_start, order=order)
 
     line_totals = [_create_order_item(order, resolved).line_total for resolved in resolved_lines]
     # Ни у одной позиции нет цены → у заказа нет суммы. Ноль означал бы
@@ -503,6 +517,11 @@ def change_status(
     order.status = target
     order.save(update_fields=["status", "updated_at"])
 
+    if target.is_cancelled:
+        # Отмена брони освобождает слот — одинаково для отмены гостем и
+        # персоналом, потому что живёт в общей смене статуса.
+        slot_svc.release_bookings(order)
+
     OrderStatusChange.objects.create(
         hotel_id=order.hotel_id,
         order=order,
@@ -664,6 +683,9 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
             }
             for entry in (order.field_values or [])
         ],
+        # Непусто только у брони: трекер и витрина рисуют этим блоком тело
+        # карточки вместо позиций — та же развилка «по данным», что и выше.
+        "slot": slot_svc.serialize_slot(order, language),
         "items": [
             {
                 "id": str(line.pk),

@@ -30,6 +30,7 @@ from apps.catalog.models import (
     RequestField,
     Route,
     ServiceLocation,
+    SlotConfig,
 )
 from apps.catalog.request_fields import FieldType
 from apps.core.context import tenant_context
@@ -171,6 +172,8 @@ class Command(BaseCommand):
             schedules = self._seed_schedules()
             self._seed_catalog(kitchen, locations, schedules)
             self._seed_services(points, schedules)
+            self._seed_info_pages()
+            self._seed_slot_resources(points, schedules)
             self._seed_notifications(points, users)
 
             hotel.default_theme = theme
@@ -220,6 +223,7 @@ class Command(BaseCommand):
             ("bar", ExecutionPoint.Kind.BAR, "Лобби-бар", "Lobby bar", 15),
             ("concierge", ExecutionPoint.Kind.RECEPTION, "Консьерж", "Concierge", 10),
             ("housekeeping", ExecutionPoint.Kind.HOUSEKEEPING, "Хозслужба", "Housekeeping", 45),
+            ("spa", ExecutionPoint.Kind.SPA, "SPA-центр", "SPA", 30),
         ]
         points: dict[str, ExecutionPoint] = {}
         for code, kind, ru, en, sla in specs:
@@ -236,6 +240,7 @@ class Command(BaseCommand):
             ("chef", "Пётр, повар", "kitchen", StaffAssignment.Level.LEAD),
             ("concierge", "Анна, консьерж", "concierge", StaffAssignment.Level.MEMBER),
             ("maid", "Мария, горничная", "housekeeping", StaffAssignment.Level.MEMBER),
+            ("spa", "Ирина, СПА-мастер", "spa", StaffAssignment.Level.LEAD),
         ]
         created_users: dict[str, User] = {}
         for prefix, full_name, point_code, level in specs:
@@ -781,6 +786,100 @@ class Command(BaseCommand):
                     target_kind=target,
                     title=title,
                 )
+
+    # --- Инфо-страницы и бронь --------------------------------------------
+
+    def _seed_info_pages(self):
+        """Тип info: страница только для чтения, без заказа."""
+        info_cat, _ = Category.objects.get_or_create(
+            code="info",
+            defaults={
+                "type": OfferingType.INFO,
+                "title": {"ru": "Об отеле", "en": "About"},
+                "sort_order": 20,
+            },
+        )
+        Item.objects.get_or_create(
+            code="wifi",
+            defaults={
+                "category": info_cat,
+                "type": OfferingType.INFO,
+                "location_mode": LocationMode.NONE,
+                "title": {"ru": "Wi-Fi и интернет", "en": "Wi-Fi & internet"},
+                "description": {"ru": "Как подключиться", "en": "How to connect"},
+                "content": {
+                    "ru": "## Сеть\nCrystal-Guest\n\n**Пароль:** welcome12345\n\n"
+                          "Интернет бесплатный на всей территории отеля.",
+                    "en": "## Network\nCrystal-Guest\n\n**Password:** welcome12345\n\n"
+                          "Wi-Fi is free across the hotel.",
+                },
+                "sort_order": 0,
+            },
+        )
+        Item.objects.get_or_create(
+            code="about",
+            defaults={
+                "category": info_cat,
+                "type": OfferingType.INFO,
+                "location_mode": LocationMode.NONE,
+                "title": {"ru": "О нашем отеле", "en": "About our hotel"},
+                "content": {
+                    "ru": "Отель «Кристалл» — пять звёзд у моря.\nЗавтрак 07:00–11:00, "
+                          "SPA до 22:00, ресепшен круглосуточно.",
+                    "en": "Crystal Hotel — five stars by the sea.",
+                },
+                "sort_order": 1,
+            },
+        )
+
+    def _seed_slot_resources(self, points, schedules):
+        """Тип slot: бронируемый ресурс с рабочими часами и вместимостью."""
+        spa_cat, _ = Category.objects.get_or_create(
+            code="spa",
+            defaults={
+                "type": OfferingType.SLOT,
+                "title": {"ru": "SPA и массаж", "en": "SPA & massage"},
+                "sort_order": 21,
+            },
+        )
+        massage, created = Item.objects.get_or_create(
+            code="massage",
+            defaults={
+                "category": spa_cat,
+                "type": OfferingType.SLOT,
+                "location_mode": LocationMode.NONE,
+                "title": {"ru": "Массаж 60 минут", "en": "Massage 60 min"},
+                "description": {"ru": "Классический массаж", "en": "Classic massage"},
+                "price": 350000,
+                "sort_order": 0,
+            },
+        )
+        Route.objects.get_or_create(
+            category=spa_cat, execution_point=points["spa"], defaults={"priority": 0}
+        )
+        # Слоты нарезаются по интервалам расписания, поэтому SPA нужны реальные
+        # рабочие часы, а не «круглосуточно» без интервалов. Конфиг заводим
+        # идемпотентно — вне ветки created, чтобы --force его чинил.
+        spa_hours, made = Schedule.objects.get_or_create(name="SPA 10:00–20:00")
+        if made:
+            for weekday in range(7):
+                ScheduleInterval.objects.create(
+                    schedule=spa_hours,
+                    weekday=weekday,
+                    start_time=time(10, 0),
+                    end_time=time(20, 0),
+                )
+        SlotConfig.objects.update_or_create(
+            item=massage,
+            defaults={
+                "duration_minutes": 60,
+                "capacity": 2,
+                "schedule": spa_hours,
+                "execution_point": points["spa"],
+                "lead_minutes": 30,
+                "horizon_days": 14,
+            },
+        )
 
     # --- Медиа ------------------------------------------------------------
 

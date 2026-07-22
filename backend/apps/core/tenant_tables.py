@@ -32,6 +32,8 @@ TENANT_TABLES = [
     "catalog_modifier_group",
     "catalog_modifier_option",
     "catalog_request_field",
+    "catalog_slot_config",
+    "catalog_slot_booking",
     "catalog_route",
     "catalog_service_location",
     # orders

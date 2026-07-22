@@ -26,6 +26,8 @@ from django.db import models
 class OfferingType(models.TextChoices):
     PRODUCT = "product", "Товар/блюдо"
     SERVICE_REQUEST = "service_request", "Заявка-услуга"
+    INFO = "info", "Инфо-страница"
+    SLOT = "slot", "Бронь слота"
 
 
 class LocationMode(models.TextChoices):
@@ -46,9 +48,15 @@ class LocationMode(models.TextChoices):
 class OfferingBehaviour:
     code: str
     order_type: str
+    # Создаёт ли тип заказ вообще. info — единственный, кто нет: это страница
+    # только для чтения. Ради этого флага гостевой поток получил ровно одну
+    # развилку «эту позицию нельзя заказать».
+    creates_order: bool
     allows_multiple_lines: bool
     uses_modifiers: bool
     uses_fields: bool
+    uses_content: bool
+    uses_slots: bool
     default_location_mode: str
     # Обязательна ли цена. «Цена не указана» — это свойство ПОЗИЦИИ (у такси
     # цена может быть, у уборки нет), поэтому здесь только требование, а не
@@ -60,19 +68,49 @@ BEHAVIOURS: dict[str, OfferingBehaviour] = {
     OfferingType.PRODUCT: OfferingBehaviour(
         code=OfferingType.PRODUCT,
         order_type="cart",
+        creates_order=True,
         allows_multiple_lines=True,
         uses_modifiers=True,
         uses_fields=False,
+        uses_content=False,
+        uses_slots=False,
         default_location_mode=LocationMode.DELIVERY,
         requires_price=True,
     ),
     OfferingType.SERVICE_REQUEST: OfferingBehaviour(
         code=OfferingType.SERVICE_REQUEST,
         order_type="request",
+        creates_order=True,
         allows_multiple_lines=False,
         uses_modifiers=False,
         uses_fields=True,
+        uses_content=False,
+        uses_slots=False,
         default_location_mode=LocationMode.ROOM,
+        requires_price=False,
+    ),
+    OfferingType.INFO: OfferingBehaviour(
+        code=OfferingType.INFO,
+        order_type="none",
+        creates_order=False,
+        allows_multiple_lines=False,
+        uses_modifiers=False,
+        uses_fields=False,
+        uses_content=True,
+        uses_slots=False,
+        default_location_mode=LocationMode.NONE,
+        requires_price=False,
+    ),
+    OfferingType.SLOT: OfferingBehaviour(
+        code=OfferingType.SLOT,
+        order_type="booking",
+        creates_order=True,
+        allows_multiple_lines=False,
+        uses_modifiers=False,
+        uses_fields=False,
+        uses_content=False,
+        uses_slots=True,
+        default_location_mode=LocationMode.NONE,
         requires_price=False,
     ),
 }

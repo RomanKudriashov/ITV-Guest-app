@@ -338,6 +338,7 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
         "code": item.code,
         "type": item.type,
         "location_mode": item.location_mode,
+        "content": item.content or {},
         "title": item.title or {},
         "description": item.description or {},
         "price": item.price,
@@ -450,6 +451,7 @@ def create_item(data: dict) -> Item:
         code=data.get("code") or make_code(Item, title, prefix="item"),
         title=title,
         description=clean_translations(data.get("description"), field="description"),
+        content=clean_translations(data.get("content"), field="content"),
         price=_validate_price(data.get("price")),
         flags=_validate_codes(data.get("flags"), FLAG_CODES, field="flags"),
         allergens=_validate_codes(data.get("allergens"), ALLERGEN_CODES, field="allergens"),
@@ -475,6 +477,8 @@ def update_item(item_id, data: dict) -> Item:
         )
     if "description" in data:
         item.description = clean_translations(data["description"], field="description")
+    if "content" in data:
+        item.content = clean_translations(data["content"], field="content")
     if "category_id" in data:
         item.category = _resolve_category(data["category_id"])
     if "type" in data and data["type"] and data["type"] != item.type:
@@ -1005,3 +1009,71 @@ def reorder_request_fields(item_id, entries: Iterable[dict]) -> list[dict]:
         serialize_request_field(entry)
         for entry in RequestField.objects.filter(item=item).order_by("sort_order", "code")
     ]
+
+
+# ===========================================================================
+# Конфигурация брони (тип slot)
+# ===========================================================================
+
+
+def serialize_slot_config(config) -> dict:
+    return {
+        "id": str(config.pk),
+        "item_id": str(config.item_id),
+        "duration_minutes": config.duration_minutes,
+        "capacity": config.capacity,
+        "schedule_id": str(config.schedule_id),
+        "execution_point_id": str(config.execution_point_id),
+        "lead_minutes": config.lead_minutes,
+        "horizon_days": config.horizon_days,
+    }
+
+
+def get_slot_config(item_id) -> dict | None:
+    from .models import SlotConfig
+
+    config = SlotConfig.objects.filter(item_id=item_id).first()
+    return serialize_slot_config(config) if config else None
+
+
+@transaction.atomic
+def upsert_slot_config(item_id, data: dict) -> dict:
+    from apps.hotels.models import ExecutionPoint, Schedule
+
+    from .models import SlotConfig
+    from .offerings import behaviour_for
+
+    item = get_item(item_id)
+    if not behaviour_for(item.type).uses_slots:
+        raise ValidationError(
+            "Бронь настраивается только у позиций типа «слот»",
+            field="type",
+            code="slots_not_supported",
+        )
+
+    duration = data.get("duration_minutes", 60)
+    if duration is None or duration < 5:
+        raise ValidationError("Длительность слота не меньше 5 минут", field="duration_minutes")
+    capacity = data.get("capacity", 1)
+    if capacity is None or capacity < 1:
+        raise ValidationError("Вместимость не меньше 1", field="capacity")
+
+    schedule = Schedule.objects.filter(pk=data.get("schedule_id")).first()
+    if schedule is None:
+        raise ValidationError("Выберите рабочее расписание", field="schedule_id")
+    point = ExecutionPoint.objects.filter(pk=data.get("execution_point_id")).first()
+    if point is None:
+        raise ValidationError("Выберите отдел-исполнитель", field="execution_point_id")
+
+    config, _ = SlotConfig.objects.update_or_create(
+        item=item,
+        defaults={
+            "duration_minutes": duration,
+            "capacity": capacity,
+            "schedule": schedule,
+            "execution_point": point,
+            "lead_minutes": data.get("lead_minutes", 0),
+            "horizon_days": data.get("horizon_days", 14),
+        },
+    )
+    return serialize_slot_config(config)

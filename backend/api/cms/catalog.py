@@ -32,6 +32,7 @@ from .schemas import (
     OkOut,
     ReorderIn,
     RequestFieldIn,
+    SlotConfigIn,
     RequestFieldOut,
     RequestFieldPatch,
     StockIn,
@@ -257,3 +258,16 @@ def delete_request_field(request: HttpRequest, field_id: str):
 )
 def reorder_request_fields(request: HttpRequest, item_id: str, payload: ReorderIn):
     return svc.reorder_request_fields(item_id, [entry.dict() for entry in payload.items])
+
+
+# --- Конфигурация брони (тип slot) -----------------------------------------
+
+
+@router.get("/items/{item_id}/slot-config", summary="Конфигурация брони")
+def get_slot_config(request: HttpRequest, item_id: str):
+    return svc.get_slot_config(item_id) or {}
+
+
+@router.put("/items/{item_id}/slot-config", summary="Сохранить конфигурацию брони")
+def put_slot_config(request: HttpRequest, item_id: str, payload: SlotConfigIn):
+    return svc.upsert_slot_config(item_id, payload.dict())
