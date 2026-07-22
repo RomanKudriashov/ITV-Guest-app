@@ -127,6 +127,18 @@ export interface MenuItem {
   available_from?: string | null;
   /** Some deployments inline the groups in the list response; the sheet still refetches. */
   modifier_groups?: ModifierGroup[];
+  /**
+   * Nutrition facts shown on the item card. Optional and every field within is
+   * optional too: a card renders only the blocks the item actually carries, it
+   * never branches on the offering type.
+   */
+  nutrition?: {
+    calories?: number;
+    protein?: number;
+    fat?: number;
+    carbs?: number;
+    composition?: string;
+  } | null;
 }
 
 export interface MenuCategory {

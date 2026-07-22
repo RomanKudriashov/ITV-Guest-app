@@ -4,41 +4,27 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { IconRestaurant } from '@/icons';
+import type { AppIconComponent } from '@/icons';
+import { KitImage } from './KitImage';
+import { pressableSx, revealSx } from './motion';
 
-/** Shared photo layer: image when present, else a token placeholder + icon. */
-function PhotoLayer({ src, alt }: { src?: string | null; alt: string }) {
-  if (src) {
-    return (
-      <Box
-        component="img"
-        src={src}
-        alt={alt}
-        loading="lazy"
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
-      />
-    );
-  }
+/**
+ * Shared photo layer: lazy image with a skeleton when present, else a DESIGNED
+ * fallback (a monochrome icon on a textured token surface) — never a flat circle.
+ */
+function PhotoLayer({
+  src,
+  alt,
+  fallbackIcon,
+  fallbackIconSize,
+}: {
+  src?: string | null;
+  alt: string;
+  fallbackIcon?: AppIconComponent;
+  fallbackIconSize?: number;
+}) {
   return (
-    <Box
-      aria-hidden
-      sx={{
-        position: 'absolute',
-        inset: 0,
-        display: 'grid',
-        placeItems: 'center',
-        bgcolor: 'brand.surfaceMuted',
-        color: 'brand.textTertiary',
-      }}
-    >
-      <IconRestaurant size={40} />
-    </Box>
+    <KitImage src={src} alt={alt} fill fallbackIcon={fallbackIcon} fallbackIconSize={fallbackIconSize} />
   );
 }
 
@@ -48,6 +34,8 @@ export interface PhotoCardProps {
   title: string;
   subtitle?: string;
   imageSrc?: string | null;
+  /** Icon drawn on the designed fallback when there is no image. */
+  fallbackIcon?: AppIconComponent;
   /** Overlaid top-start slot — badges, price pill, etc. */
   overlay?: ReactNode;
   onClick?: () => void;
@@ -59,6 +47,7 @@ export function PhotoCard({
   title,
   subtitle,
   imageSrc,
+  fallbackIcon,
   overlay,
   onClick,
   height = 200,
@@ -69,22 +58,25 @@ export function PhotoCard({
       onClick={onClick}
       focusRipple
       data-testid={testId}
-      sx={(theme) => ({
-        display: 'block',
-        position: 'relative',
-        width: '100%',
-        height,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
-        overflow: 'hidden',
-        textAlign: 'start',
-        boxShadow: theme.palette.brand.elevation.md,
-        '&.Mui-focusVisible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 2,
-        },
-      })}
+      sx={[
+        (theme) => ({
+          display: 'block',
+          position: 'relative',
+          width: '100%',
+          height,
+          borderRadius: `${theme.palette.brand.radius.lg}px`,
+          overflow: 'hidden',
+          textAlign: 'start',
+          boxShadow: theme.palette.brand.elevation.md,
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: 2,
+          },
+        }),
+        pressableSx,
+      ]}
     >
-      <PhotoLayer src={imageSrc} alt={title} />
+      <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} />
       {/* Scrim so the caption always reads over any photo. */}
       <Box
         aria-hidden
@@ -128,9 +120,17 @@ export interface MosaicTileProps {
   title: string;
   imageSrc?: string | null;
   icon?: ReactNode;
+  /** Icon drawn on the designed fallback when there is no image. */
+  fallbackIcon?: AppIconComponent;
   onClick?: () => void;
   /** Grid span in columns (for a masonry-style mosaic). */
   span?: number;
+  /** Grid span in rows (for a masonry-style mosaic). */
+  rowSpan?: number;
+  /** Minimum tile height (px) — lets a mosaic vary tile sizes. */
+  minHeight?: number;
+  /** Position in the mosaic — drives a staggered mount reveal. */
+  revealIndex?: number;
   testId?: string;
 }
 
@@ -138,8 +138,12 @@ export function MosaicTile({
   title,
   imageSrc,
   icon,
+  fallbackIcon,
   onClick,
   span = 1,
+  rowSpan = 1,
+  minHeight = 132,
+  revealIndex,
   testId = 'mosaic-tile',
 }: MosaicTileProps) {
   return (
@@ -147,21 +151,28 @@ export function MosaicTile({
       onClick={onClick}
       focusRipple
       data-testid={testId}
-      sx={(theme) => ({
-        position: 'relative',
-        gridColumn: `span ${span}`,
-        minHeight: 132,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
-        overflow: 'hidden',
-        textAlign: 'start',
-        boxShadow: theme.palette.brand.elevation.sm,
-        '&.Mui-focusVisible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 2,
-        },
-      })}
+      aria-label={title}
+      sx={[
+        (theme) => ({
+          position: 'relative',
+          gridColumn: `span ${span}`,
+          gridRow: `span ${rowSpan}`,
+          minHeight,
+          height: '100%',
+          borderRadius: `${theme.palette.brand.radius.lg}px`,
+          overflow: 'hidden',
+          textAlign: 'start',
+          boxShadow: theme.palette.brand.elevation.md,
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: 2,
+          },
+        }),
+        pressableSx,
+        revealIndex != null ? revealSx({ index: revealIndex }) : {},
+      ]}
     >
-      <PhotoLayer src={imageSrc} alt={title} />
+      <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={44} />
       <Box
         aria-hidden
         sx={(theme) => ({
@@ -190,6 +201,8 @@ export function MosaicTile({
 export interface CarouselItemProps {
   title: string;
   imageSrc?: string | null;
+  /** Icon drawn on the designed fallback when there is no image. */
+  fallbackIcon?: AppIconComponent;
   caption?: ReactNode;
   onClick?: () => void;
   width?: number;
@@ -199,6 +212,7 @@ export interface CarouselItemProps {
 export function CarouselItem({
   title,
   imageSrc,
+  fallbackIcon,
   caption,
   onClick,
   width = 168,
@@ -209,23 +223,27 @@ export function CarouselItem({
       onClick={onClick}
       focusRipple
       data-testid={testId}
-      sx={(theme) => ({
-        flex: '0 0 auto',
-        width,
-        display: 'block',
-        textAlign: 'start',
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
-        overflow: 'hidden',
-        bgcolor: 'background.paper',
-        boxShadow: theme.palette.brand.elevation.sm,
-        '&.Mui-focusVisible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 2,
-        },
-      })}
+      aria-label={title}
+      sx={[
+        (theme) => ({
+          flex: '0 0 auto',
+          width,
+          display: 'block',
+          textAlign: 'start',
+          borderRadius: `${theme.palette.brand.radius.lg}px`,
+          overflow: 'hidden',
+          bgcolor: 'background.paper',
+          boxShadow: theme.palette.brand.elevation.md,
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.palette.primary.main}`,
+            outlineOffset: 2,
+          },
+        }),
+        pressableSx,
+      ]}
     >
       <Box sx={{ position: 'relative', height: 112 }}>
-        <PhotoLayer src={imageSrc} alt={title} />
+        <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} />
       </Box>
       <Stack spacing={0.25} sx={{ p: 1.25 }}>
         <Typography variant="subtitle2" noWrap>
@@ -244,6 +262,8 @@ export interface OrderLineRowProps {
   qty: number;
   price: string;
   imageSrc?: string | null;
+  /** Icon drawn on the designed fallback when there is no image. */
+  fallbackIcon?: AppIconComponent;
   note?: string;
   action?: ReactNode;
   testId?: string;
@@ -254,6 +274,7 @@ export function OrderLineRow({
   qty,
   price,
   imageSrc,
+  fallbackIcon,
   note,
   action,
   testId = 'order-line-row',
@@ -276,7 +297,7 @@ export function OrderLineRow({
           overflow: 'hidden',
         }}
       >
-        <PhotoLayer src={imageSrc} alt={title} />
+        <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={22} />
       </Box>
       <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="subtitle2" noWrap>

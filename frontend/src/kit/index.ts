@@ -61,6 +61,20 @@ export {
 // Forms
 export { KitTextField, KitTabs, type KitTabsProps } from './forms';
 
+// Media
+export { KitImage, mediaFallbackSx, type KitImageProps } from './KitImage';
+
+// Motion (reduced-motion honored in one place)
+export {
+  MOTION,
+  usePrefersReducedMotion,
+  useSheetTransition,
+  revealSx,
+  fadeInSx,
+  pressableSx,
+  type RevealOptions,
+} from './motion';
+
 // Room controls (visual only)
 export {
   RingDimmer,

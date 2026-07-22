@@ -3,18 +3,41 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { alpha, type Theme } from '@mui/material/styles';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
+import { AuthAtmosphere } from '@/kit/AuthAtmosphere';
+import { KitButton } from '@/kit/buttons';
+import { KitTextField } from '@/kit/forms';
+
+/**
+ * Staggered mount reveal. Each element fades/rises into place a beat after the
+ * previous one. Under `prefers-reduced-motion: reduce` the animation is dropped
+ * entirely and the final resting state is shown immediately.
+ */
+const reveal = (order: number) => (theme: Theme) => ({
+  '@keyframes authReveal': {
+    from: { opacity: 0, transform: 'translateY(14px)' },
+    to: { opacity: 1, transform: 'translateY(0)' },
+  },
+  opacity: 0,
+  animation: `authReveal 0.6s ${theme.transitions.easing.easeOut} both`,
+  animationDelay: `${order * 130}ms`,
+  '@media (prefers-reduced-motion: reduce)': {
+    animation: 'none',
+    animationDelay: '0ms',
+    opacity: 1,
+    transform: 'none',
+  },
+});
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -52,79 +75,122 @@ export function LoginPage() {
   return (
     <Box
       sx={{
+        position: 'relative',
         minHeight: '100vh',
         bgcolor: 'background.default',
         display: 'grid',
         placeItems: 'center',
         p: 3,
+        overflow: 'hidden',
       }}
     >
-      <Stack spacing={2} sx={{ width: '100%', maxWidth: 420 }}>
-        <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1}>
+      <AuthAtmosphere />
+
+      <Stack
+        spacing={2}
+        sx={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 420 }}
+      >
+        <Stack
+          direction="row"
+          justifyContent="flex-end"
+          alignItems="center"
+          spacing={1}
+          sx={reveal(0)}
+        >
           <LanguageSwitcher compact />
           <ThemeModeToggle />
         </Stack>
 
-        <Card variant="outlined" sx={{ borderColor: 'divider' }}>
+        <Card
+          sx={(theme: Theme) => ({
+            // Glass surface: translucent paper + blur + hairline border.
+            backgroundColor: alpha(theme.palette.background.paper, 0.76),
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: theme.palette.brand.elevation.lg,
+          })}
+        >
           <CardContent sx={{ p: 4 }}>
             <Stack spacing={3} component="form" onSubmit={submit}>
-              <Stack spacing={1} alignItems="center">
+              <Stack spacing={1.5} alignItems="center" sx={reveal(1)}>
                 <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
+                  sx={(theme: Theme) => ({
+                    width: 64,
+                    height: 64,
                     borderRadius: '50%',
                     display: 'grid',
                     placeItems: 'center',
                     bgcolor: 'primary.main',
                     color: 'primary.contrastText',
-                  }}
+                    boxShadow: theme.palette.brand.elevation.glow,
+                  })}
                 >
-                  <RestaurantMenuIcon />
+                  <RestaurantMenuIcon fontSize="medium" />
                 </Box>
-                <Typography variant="h5">{t('auth.title')}</Typography>
+                <Typography
+                  variant="h3"
+                  textAlign="center"
+                  sx={(theme: Theme) => ({
+                    fontFamily: theme.typography.h1.fontFamily,
+                    lineHeight: 1.15,
+                  })}
+                >
+                  {t('auth.title')}
+                </Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center">
                   {t('auth.subtitle')}
                 </Typography>
               </Stack>
 
               {error ? (
-                <Alert severity="error" data-testid="login-error">
+                <Alert severity="error" data-testid="login-error" sx={reveal(2)}>
                   {error}
                 </Alert>
               ) : null}
 
-              <TextField
-                label={t('auth.email')}
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="username"
-                autoFocus
-                fullWidth
-                inputProps={{ 'data-testid': 'login-email' }}
-              />
-              <TextField
-                label={t('auth.password')}
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                fullWidth
-                inputProps={{ 'data-testid': 'login-password' }}
-              />
+              <Box sx={reveal(2)}>
+                <KitTextField
+                  label={t('auth.email')}
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="username"
+                  autoFocus
+                  inputProps={{ 'data-testid': 'login-email' }}
+                  sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                />
+              </Box>
+              <Box sx={reveal(3)}>
+                <KitTextField
+                  label={t('auth.password')}
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  inputProps={{ 'data-testid': 'login-password' }}
+                  sx={{ '& .MuiOutlinedInput-root': { minHeight: 48 } }}
+                />
+              </Box>
 
-              <Button
+              <KitButton
                 type="submit"
-                variant="contained"
                 size="large"
+                fullWidth
+                loading={busy}
                 disabled={!canSubmit}
                 data-testid="login-submit"
+                sx={reveal(4)}
               >
                 {busy ? t('auth.signingIn') : t('auth.submit')}
-              </Button>
+              </KitButton>
 
-              <Typography variant="caption" color="text.secondary" textAlign="center">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                textAlign="center"
+                sx={reveal(5)}
+              >
                 {t('auth.demoHint', {
                   email: 'chef@crystal.local',
                   password: 'chef12345',

@@ -277,7 +277,11 @@
       "noRoomLine": "Вы смотрите меню без номера комнаты",
       "soon": "Скоро",
       "emptyTitle": "Пока пусто",
-      "emptyHint": "Отель ещё не добавил услуги"
+      "emptyHint": "Отель ещё не добавил услуги",
+    "offers": "Рекомендуем сегодня",
+    "sectionsTitle": "Куда заглянуть",
+    "prev": "Назад",
+    "next": "Вперёд"
     },
     "services": {
       "restaurant": "Ресторан",
@@ -313,7 +317,15 @@
       "commentPlaceholder": "Например: без лука",
       "quantity": "Количество",
       "addToCart": "Добавить · {{price}}",
-      "allergens": "Аллергены"
+      "allergens": "Аллергены",
+      "nutritionTitle": "Пищевая ценность",
+      "calories": "Калории",
+      "protein": "Белки",
+      "fat": "Жиры",
+      "carbs": "Углеводы",
+      "composition": "Состав",
+      "kcal": "ккал",
+      "gram": "г"
     },
     "cart": {
       "title": "Ваш заказ",

@@ -277,7 +277,11 @@
       "noRoomLine": "You are browsing without a room number",
       "soon": "Soon",
       "emptyTitle": "Nothing here yet",
-      "emptyHint": "The hotel hasn't added anything yet"
+      "emptyHint": "The hotel hasn't added anything yet",
+    "offers": "Recommended today",
+    "sectionsTitle": "Where to look",
+    "prev": "Previous",
+    "next": "Next"
     },
     "services": {
       "restaurant": "Restaurant",
@@ -313,7 +317,15 @@
       "commentPlaceholder": "For example: no onions",
       "quantity": "Quantity",
       "addToCart": "Add · {{price}}",
-      "allergens": "Allergens"
+      "allergens": "Allergens",
+      "nutritionTitle": "Nutrition",
+      "calories": "Calories",
+      "protein": "Protein",
+      "fat": "Fat",
+      "carbs": "Carbs",
+      "composition": "Composition",
+      "kcal": "kcal",
+      "gram": "g"
     },
     "cart": {
       "title": "Your order",

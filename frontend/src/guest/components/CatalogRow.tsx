@@ -4,6 +4,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import type { AppIconComponent } from '@/icons';
 import { FlagChips, ItemThumb } from './ItemMeta';
 
 export interface CatalogRowViewProps {
@@ -11,6 +12,8 @@ export interface CatalogRowViewProps {
   title: string;
   description?: string;
   imageSrc?: string | null;
+  /** Icon on the designed fallback when the row has no photo. */
+  fallbackIcon?: AppIconComponent;
   flags: string[];
   /** Already-formatted price, or `null` to hide it (an unpriced service). */
   priceLabel: string | null;
@@ -32,6 +35,7 @@ export function CatalogRowView({
   title,
   description,
   imageSrc,
+  fallbackIcon,
   flags,
   priceLabel,
   unavailableNote,
@@ -61,7 +65,7 @@ export function CatalogRowView({
           borderRadius: 2,
         }}
       >
-        <ItemThumb src={imageSrc} alt={title} dimmed={!available} />
+        <ItemThumb src={imageSrc} alt={title} dimmed={!available} fallbackIcon={fallbackIcon} />
         <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ lineHeight: 1.25 }}>
             {title}

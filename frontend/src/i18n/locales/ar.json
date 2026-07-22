@@ -277,7 +277,11 @@
       "noRoomLine": "أنت تتصفح دون رقم غرفة",
       "soon": "قريباً",
       "emptyTitle": "لا شيء بعد",
-      "emptyHint": "لم يضف الفندق أي خدمات بعد"
+      "emptyHint": "لم يضف الفندق أي خدمات بعد",
+    "offers": "موصى به اليوم",
+    "sectionsTitle": "أين تذهب",
+    "prev": "السابق",
+    "next": "التالي"
     },
     "services": {
       "restaurant": "المطعم",
@@ -313,7 +317,15 @@
       "commentPlaceholder": "مثال: بدون بصل",
       "quantity": "الكمية",
       "addToCart": "أضف · {{price}}",
-      "allergens": "مسببات الحساسية"
+      "allergens": "مسببات الحساسية",
+      "nutritionTitle": "القيمة الغذائية",
+      "calories": "السعرات",
+      "protein": "بروتين",
+      "fat": "دهون",
+      "carbs": "كربوهيدرات",
+      "composition": "المكونات",
+      "kcal": "سعرة",
+      "gram": "غ"
     },
     "cart": {
       "title": "طلبك",

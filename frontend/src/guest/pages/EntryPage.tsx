@@ -100,17 +100,20 @@ export function EntryPage() {
           <Stack spacing={1.5} alignItems="center" textAlign="center">
             <Box
               aria-hidden
-              sx={{
-                width: 88,
-                height: 88,
-                borderRadius: '50%',
+              sx={(theme) => ({
+                width: 96,
+                height: 96,
+                borderRadius: `${theme.palette.brand.radius.lg}px`,
                 display: 'grid',
                 placeItems: 'center',
-                bgcolor: 'primary.main',
                 color: 'primary.contrastText',
-                fontSize: 34,
-                fontWeight: 700,
-              }}
+                // Depth, not a flat fill: an accent gradient with the accent glow.
+                backgroundImage: `linear-gradient(150deg, ${theme.palette.brand.primaryStrong}, ${theme.palette.primary.main})`,
+                boxShadow: theme.palette.brand.elevation.glow,
+                fontFamily: theme.typography.h1.fontFamily,
+                fontSize: 40,
+                fontWeight: theme.typography.fontWeightBold,
+              })}
             >
               {(hotel?.name ?? 'ITV').trim().charAt(0).toUpperCase()}
             </Box>

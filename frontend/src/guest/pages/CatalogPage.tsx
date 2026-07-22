@@ -3,17 +3,20 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
+import { SkeletonRow, revealSx } from '@/kit';
 import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
 import { CatalogRowView } from '../components/CatalogRow';
+import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { ItemSheet } from '../components/ItemSheet';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
@@ -42,6 +45,8 @@ export interface CatalogPageProps {
 export function CatalogPage({ type }: CatalogPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { format, formatOptional } = useMoney();
   const cart = useCart();
   const behaviour = behaviourFor(type);
@@ -111,9 +116,19 @@ export function CatalogPage({ type }: CatalogPageProps) {
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
-        <CircularProgress aria-label={t('guest.common.loading')} />
-      </Stack>
+      <Container maxWidth={isDesktop ? 'lg' : 'sm'} sx={{ py: 3 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' },
+            columnGap: 3,
+          }}
+        >
+          {Array.from({ length: isDesktop ? 6 : 4 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </Box>
+      </Container>
     );
   }
 
@@ -179,8 +194,8 @@ export function CatalogPage({ type }: CatalogPageProps) {
         </Tabs>
       </Box>
 
-      <Container maxWidth="sm" sx={{ py: 2, pb: showCartBar ? 12 : 2 }}>
-        <Stack spacing={3}>
+      <Container maxWidth={isDesktop ? 'lg' : 'sm'} sx={{ py: { xs: 2, md: 3 }, pb: showCartBar ? 12 : 3 }}>
+        <Stack spacing={{ xs: 3, md: 5 }}>
           {categories.map((category) => (
             <Box
               key={category.id}
@@ -190,8 +205,8 @@ export function CatalogPage({ type }: CatalogPageProps) {
               }}
               aria-label={category.title}
             >
-              <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
-                <Typography variant="h6" component="h2">
+              <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: { xs: 1, md: 1.5 } }}>
+                <Typography variant="h5" component="h2">
                   {category.title}
                 </Typography>
                 {!category.is_available && category.available_from ? (
@@ -201,18 +216,36 @@ export function CatalogPage({ type }: CatalogPageProps) {
                 ) : null}
               </Stack>
 
-              <Stack divider={<Box sx={{ height: 1, bgcolor: 'divider' }} />}>
-                {category.items.map((item) => (
-                  <CatalogRow
+              {/* Single column on phone (hairline separators), multi-column on desktop. */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' },
+                  columnGap: 3,
+                }}
+              >
+                {category.items.map((item, i) => (
+                  <Box
                     key={item.id}
-                    item={item}
-                    fallbackType={type}
-                    categoryAvailable={category.is_available}
-                    onOpen={() => openItem(item)}
-                    formatPrice={formatOptional}
-                  />
+                    sx={[
+                      {
+                        borderBottom: { xs: 1, md: 0 },
+                        borderColor: 'divider',
+                        '&:last-of-type': { borderBottom: 0 },
+                      },
+                      revealSx({ index: i }),
+                    ]}
+                  >
+                    <CatalogRow
+                      item={item}
+                      fallbackType={type}
+                      categoryAvailable={category.is_available}
+                      onOpen={() => openItem(item)}
+                      formatPrice={formatOptional}
+                    />
+                  </Box>
                 ))}
-              </Stack>
+              </Box>
             </Box>
           ))}
         </Stack>
@@ -331,6 +364,7 @@ function CatalogRow({
       title={item.title}
       description={item.description}
       imageSrc={item.images?.[0]}
+      fallbackIcon={fallbackIconFor(item.type ?? fallbackType)}
       flags={item.flags ?? []}
       priceLabel={price}
       unavailableNote={unavailableNote}

@@ -6,6 +6,8 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
+import { pressableSx } from '@/kit';
+
 export interface QuantityStepperProps {
   value: number;
   onIncrement: () => void;
@@ -52,7 +54,7 @@ export function QuantityStepper({
         data-testid={`guest-qty-minus-${code}`}
         disabled={value <= min}
         onClick={onDecrement}
-        sx={{ minWidth: TOUCH, minHeight: TOUCH }}
+        sx={[{ minWidth: TOUCH, minHeight: TOUCH }, pressableSx]}
       >
         {showBin ? <DeleteOutlineIcon fontSize="small" /> : <RemoveIcon fontSize="small" />}
       </IconButton>
@@ -70,7 +72,7 @@ export function QuantityStepper({
         data-testid={`guest-qty-plus-${code}`}
         disabled={value >= max}
         onClick={onIncrement}
-        sx={{ minWidth: TOUCH, minHeight: TOUCH }}
+        sx={[{ minWidth: TOUCH, minHeight: TOUCH }, pressableSx]}
       >
         <AddIcon fontSize="small" />
       </IconButton>

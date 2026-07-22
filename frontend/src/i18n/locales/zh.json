@@ -277,7 +277,11 @@
       "noRoomLine": "您正在无房间号浏览",
       "soon": "即将推出",
       "emptyTitle": "暂无内容",
-      "emptyHint": "酒店尚未添加服务"
+      "emptyHint": "酒店尚未添加服务",
+    "offers": "今日推荐",
+    "sectionsTitle": "去哪看看",
+    "prev": "上一个",
+    "next": "下一个"
     },
     "services": {
       "restaurant": "餐厅",
@@ -313,7 +317,15 @@
       "commentPlaceholder": "例如：不要洋葱",
       "quantity": "数量",
       "addToCart": "加入 · {{price}}",
-      "allergens": "过敏原"
+      "allergens": "过敏原",
+      "nutritionTitle": "营养成分",
+      "calories": "热量",
+      "protein": "蛋白质",
+      "fat": "脂肪",
+      "carbs": "碳水化合物",
+      "composition": "配料",
+      "kcal": "千卡",
+      "gram": "克"
     },
     "cart": {
       "title": "您的订单",
