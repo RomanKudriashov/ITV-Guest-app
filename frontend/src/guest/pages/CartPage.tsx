@@ -18,6 +18,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
+import { ctaGradientSx } from '@/kit';
 import { EmptyState } from '@/components/EmptyState';
 import { ItemThumb } from '../components/ItemMeta';
 import { QuantityStepper } from '../components/QuantityStepper';
@@ -257,6 +258,21 @@ export function CartPage() {
               onChange={(_event, value: OrderTiming | null) => {
                 if (value) setDraft((prev) => ({ ...prev, timing: value }));
               }}
+              sx={(theme) => ({
+                gap: '9px',
+                '& .MuiToggleButton-root': {
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: '12px !important',
+                  fontWeight: 700,
+                  color: 'text.secondary',
+                },
+                '& .MuiToggleButton-root.Mui-selected': {
+                  borderColor: theme.palette.primary.main,
+                  bgcolor: theme.palette.brand.primarySoft,
+                  color: theme.palette.text.primary,
+                  '&:hover': { bgcolor: theme.palette.brand.primarySoft },
+                },
+              })}
             >
               <ToggleButton value="asap" data-testid="guest-timing-asap" sx={{ minHeight: 48 }}>
                 {t('guest.cart.asap')}
@@ -297,9 +313,22 @@ export function CartPage() {
             inputProps={{ maxLength: 300, 'data-testid': 'guest-order-comment' }}
           />
 
-          <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+          {/* Reference `.totals .fin` — a hairline, then the final total emphasised. */}
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="baseline"
+            sx={{ pt: 1.5, borderTop: 1, borderColor: 'divider' }}
+          >
             <Typography variant="subtitle1">{t('guest.cart.total')}</Typography>
-            <Typography variant="h6" data-testid="guest-cart-total">
+            <Typography
+              data-testid="guest-cart-total"
+              sx={(theme) => ({
+                fontFamily: theme.typography.h1.fontFamily,
+                fontWeight: 800,
+                fontSize: '1.0625rem',
+              })}
+            >
               {format(cart.total)}
             </Typography>
           </Stack>
@@ -334,7 +363,7 @@ export function CartPage() {
           disabled={!canOrder || isPending || !locations.length}
           onClick={submit}
           data-testid="guest-place-order"
-          sx={{ minHeight: 52 }}
+          sx={[ctaGradientSx, { minHeight: 52 }]}
         >
           {isPending
             ? t('guest.cart.placing')

@@ -201,7 +201,7 @@ export function BrandPreview({
                     <Typography variant="h6" component="h2" gutterBottom>
                       {t('brand.preview.menuHeading')}
                     </Typography>
-                    <Stack divider={<Box sx={{ height: 1, bgcolor: 'divider' }} />}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                       {PREVIEW_ROWS.map((row) => (
                         <CatalogRowView
                           key={row.id}
@@ -213,13 +213,13 @@ export function BrandPreview({
                           priceLabel={priceOf(row.price)}
                           available
                           action={
-                            <Button variant="outlined" size="small" sx={{ minHeight: 44, minWidth: 44 }}>
+                            <Button variant="contained" size="small" sx={{ minHeight: 44, minWidth: 44 }}>
                               +
                             </Button>
                           }
                         />
                       ))}
-                    </Stack>
+                    </Box>
                   </Paper>
 
                   {/* 2. Item card body — the sheet content on a brand surface. */}

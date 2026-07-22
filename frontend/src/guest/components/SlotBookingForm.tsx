@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
 import { ItemHeadline } from './ItemHeadline';
+import { ctaGradientSx } from '@/kit';
 import { SheetFooter, SheetScroll } from './sheetLayout';
 import { errorMessage } from '../errors';
 import { useGuestLanguage, useGuestSlots } from '../hooks/useGuestQueries';
@@ -176,7 +177,7 @@ export function SlotBookingForm({ item, titleRef, onClose }: SlotBookingFormProp
           disabled={!canOrder || isPending || !item.is_available || !selected}
           onClick={handleBook}
           data-testid="guest-slot-book"
-          sx={{ minHeight: 52 }}
+          sx={[ctaGradientSx, { minHeight: 52 }]}
         >
           {isPending
             ? t('guest.slot.booking')

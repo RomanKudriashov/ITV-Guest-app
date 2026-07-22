@@ -161,18 +161,28 @@ function Stars({
   onChange?: (n: number) => void;
 }) {
   const { t } = useTranslation();
+  // Reference `.st` — a 44px rounded-square tile; `.st.on` fills a gold (secondary)
+  // tint with a gold border. Gold maps to `secondary.main` per the token map.
+  const tileSx = (on: boolean) => (theme: import('@mui/material/styles').Theme) => ({
+    width: 44,
+    height: 44,
+    borderRadius: '12px',
+    border: `1.5px solid ${on ? theme.palette.secondary.main : theme.palette.divider}`,
+    bgcolor: on ? `color-mix(in srgb, ${theme.palette.secondary.main} 12%, transparent)` : 'transparent',
+    color: on ? theme.palette.secondary.main : theme.palette.text.disabled,
+  });
   return (
-    <Box data-testid="guest-review-stars" sx={{ display: 'inline-flex' }}>
+    <Box data-testid="guest-review-stars" sx={{ display: 'inline-flex', gap: '9px' }}>
       {[1, 2, 3, 4, 5].map((n) => {
-        const filled = (hover || value) >= n;
-        const icon = filled ? (
-          <StarIcon sx={{ color: 'warning.main' }} />
-        ) : (
-          <StarBorderIcon sx={{ color: 'text.disabled' }} />
-        );
+        const on = (hover || value) >= n;
+        const icon = on ? <StarIcon /> : <StarBorderIcon />;
         if (readOnly) {
           return (
-            <Box key={n} sx={{ p: 0.25, display: 'inline-flex' }} aria-hidden>
+            <Box
+              key={n}
+              aria-hidden
+              sx={[tileSx(on), { display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }]}
+            >
               {icon}
             </Box>
           );
@@ -180,13 +190,12 @@ function Stars({
         return (
           <IconButton
             key={n}
-            size="small"
             onClick={() => onChange?.(n)}
             onMouseEnter={() => onHover?.(n)}
             onMouseLeave={() => onHover?.(0)}
             data-testid={`guest-review-star-${n}`}
             aria-label={t('guest.review.starAria', { n })}
-            sx={{ p: 0.25 }}
+            sx={tileSx(on)}
           >
             {icon}
           </IconButton>

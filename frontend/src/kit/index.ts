@@ -28,6 +28,7 @@ export {
   KitButton,
   QuantityStepper,
   StickyActionBar,
+  ctaGradientSx,
   type KitButtonProps,
   type KitButtonVariant,
   type QuantityStepperProps,

@@ -5,8 +5,9 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
+import { KitImage } from '@/kit';
 import type { ItemDetail } from '../api/types';
-import { FlagChips, ItemThumb, NutritionInline } from './ItemMeta';
+import { FlagChips, NutritionInline } from './ItemMeta';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -28,10 +29,13 @@ export interface CatalogRowViewProps {
 }
 
 /**
- * The presentational body of one catalog row: photo, title, description, flags,
- * price and the "not available now" note. It owns no cart or session state, so
- * the storefront (`CatalogPage`) and the CMS brand preview render identical rows
- * from it — the markup lives here once.
+ * The presentational body of one catalog card (reference R2b block 3, `.card`): a
+ * photo on top that dissolves nowhere — a fixed 146px image — then the body with
+ * title, a two-line description, the КБЖУ line, flag chips and a row that carries
+ * the price and the on-card action button. Unavailable cards dim to `.card.off`.
+ *
+ * It owns no cart or session state, so the storefront (`CatalogPage`) and the CMS
+ * brand preview render identical cards from it — the markup lives here once.
  */
 export function CatalogRowView({
   testId,
@@ -48,30 +52,47 @@ export function CatalogRowView({
   action,
 }: CatalogRowViewProps) {
   return (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      alignItems="center"
-      sx={{ py: 1.5, opacity: available ? 1 : 0.55 }}
+    <Box
       data-testid={testId}
+      sx={(theme) => ({
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        opacity: available ? 1 : 0.5,
+        transition: 'transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s',
+        '&:hover': available
+          ? { transform: 'translateY(-4px)', boxShadow: theme.palette.brand.elevation.lg }
+          : undefined,
+        '@media (prefers-reduced-motion: reduce)': { transition: 'none', '&:hover': { transform: 'none' } },
+      })}
     >
+      {/* Photo — the whole media + headline opens the sheet. */}
       <ButtonBase
         onClick={onOpen}
         disabled={!available}
         aria-label={title}
-        sx={{
-          flexGrow: 1,
-          display: 'flex',
-          gap: 1.5,
-          alignItems: 'center',
-          textAlign: 'start',
-          minHeight: 44,
-          borderRadius: 2,
-        }}
+        sx={{ display: 'block', textAlign: 'start', width: '100%' }}
       >
-        <ItemThumb src={imageSrc} alt={title} dimmed={!available} fallbackIcon={fallbackIcon} />
-        <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="subtitle2" sx={{ lineHeight: 1.25 }}>
+        <Box sx={{ position: 'relative', height: 146 }}>
+          <KitImage src={imageSrc} alt={title} fill fallbackIcon={fallbackIcon} fallbackIconSize={44} />
+        </Box>
+        <Box sx={{ px: '14px', pt: '13px' }}>
+          <Typography
+            variant="subtitle2"
+            sx={(theme) => ({
+              fontFamily: theme.typography.h1.fontFamily,
+              fontWeight: 800,
+              fontSize: '0.9375rem',
+              letterSpacing: '-0.01em',
+              lineHeight: 1.25,
+            })}
+          >
             {title}
           </Typography>
           {description ? (
@@ -79,6 +100,10 @@ export function CatalogRowView({
               variant="body2"
               color="text.secondary"
               sx={{
+                mt: 0.5,
+                fontSize: '0.75rem',
+                lineHeight: 1.4,
+                minHeight: 32,
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
@@ -88,21 +113,51 @@ export function CatalogRowView({
               {description}
             </Typography>
           ) : null}
-          <NutritionInline nutrition={nutrition} />
-          <FlagChips flags={flags} />
-          <Stack direction="row" spacing={1} alignItems="center">
-            {/* "No price" is a normal state for a service — never print "0 ₽". */}
-            {priceLabel ? <Typography variant="subtitle2">{priceLabel}</Typography> : null}
+        </Box>
+      </ButtonBase>
+
+      {/* Body — nutrition, flags, then the price / action row pinned to the bottom. */}
+      <Box sx={{ px: '14px', pb: '14px', pt: description ? 1 : '13px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        {nutrition ? (
+          <Box sx={{ mb: 1 }}>
+            <NutritionInline nutrition={nutrition} />
+          </Box>
+        ) : null}
+        {flags.length ? (
+          <Box sx={{ mb: 1.25 }}>
+            <FlagChips flags={flags} />
+          </Box>
+        ) : null}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1.25}
+          sx={{ mt: 'auto', minHeight: 40 }}
+        >
+          {/* "No price" is a normal state for a service — never print "0 ₽". */}
+          <Stack spacing={0} sx={{ minWidth: 0 }}>
+            {priceLabel ? (
+              <Typography
+                sx={(theme) => ({
+                  fontFamily: theme.typography.h1.fontFamily,
+                  fontWeight: 800,
+                  fontSize: '1.1875rem',
+                  letterSpacing: '-0.02em',
+                })}
+              >
+                {priceLabel}
+              </Typography>
+            ) : null}
             {unavailableNote ? (
               <Typography variant="caption" color="text.secondary">
                 {unavailableNote}
               </Typography>
             ) : null}
           </Stack>
+          {action ? <Box sx={{ flexShrink: 0 }}>{action}</Box> : null}
         </Stack>
-      </ButtonBase>
-
-      {action ? <Box sx={{ flexShrink: 0 }}>{action}</Box> : null}
-    </Stack>
+      </Box>
+    </Box>
   );
 }

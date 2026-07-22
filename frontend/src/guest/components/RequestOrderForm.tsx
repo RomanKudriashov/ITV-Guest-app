@@ -20,6 +20,7 @@ import {
 import { useDraftState } from '@/state/useDraftState';
 import { ItemHeadline } from './ItemHeadline';
 import { RequestFieldControl } from './RequestFieldControl';
+import { ctaGradientSx } from '@/kit';
 import { SheetFooter, SheetScroll } from './sheetLayout';
 import { errorMessage } from '../errors';
 import { useGuestLocations } from '../hooks/useGuestQueries';
@@ -269,7 +270,7 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
           disabled={!canOrder || isPending || !item.is_available || invalid}
           onClick={handleSubmit}
           data-testid="guest-request-submit"
-          sx={{ minHeight: 52 }}
+          sx={[ctaGradientSx, { minHeight: 52 }]}
         >
           {isPending ? t('guest.request.sending') : t('guest.request.submit')}
         </Button>

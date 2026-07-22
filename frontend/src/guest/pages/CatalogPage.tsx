@@ -13,7 +13,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
-import { SkeletonRow, revealSx } from '@/kit';
+import { SkeletonCard, revealSx } from '@/kit';
 import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
 import { CatalogRowView } from '../components/CatalogRow';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
@@ -120,12 +120,12 @@ export function CatalogPage({ type }: CatalogPageProps) {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' },
-            columnGap: 3,
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+            gap: '16px',
           }}
         >
-          {Array.from({ length: isDesktop ? 6 : 4 }).map((_, i) => (
-            <SkeletonRow key={i} />
+          {Array.from({ length: isDesktop ? 8 : 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
           ))}
         </Box>
       </Container>
@@ -205,10 +205,12 @@ export function CatalogPage({ type }: CatalogPageProps) {
               }}
               aria-label={category.title}
             >
-              <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: { xs: 1, md: 1.5 } }}>
+              {/* Reference `.secttl` — title, a flex hairline, then an aside note. */}
+              <Stack direction="row" alignItems="baseline" spacing={1.5} sx={{ mb: { xs: 1.25, md: 1.75 } }}>
                 <Typography variant="h5" component="h2">
                   {category.title}
                 </Typography>
+                <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
                 {!category.is_available && category.available_from ? (
                   <Typography variant="caption" color="text.secondary">
                     {t('guest.menu.availableFrom', { time: category.available_from })}
@@ -216,26 +218,16 @@ export function CatalogPage({ type }: CatalogPageProps) {
                 ) : null}
               </Stack>
 
-              {/* Single column on phone (hairline separators), multi-column on desktop. */}
+              {/* Dense card grid — 4 columns on desktop, 2 under 1100px (reference `.grid`). */}
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' },
-                  columnGap: 3,
+                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+                  gap: '16px',
                 }}
               >
                 {category.items.map((item, i) => (
-                  <Box
-                    key={item.id}
-                    sx={[
-                      {
-                        borderBottom: { xs: 1, md: 0 },
-                        borderColor: 'divider',
-                        '&:last-of-type': { borderBottom: 0 },
-                      },
-                      revealSx({ index: i }),
-                    ]}
-                  >
+                  <Box key={item.id} sx={revealSx({ index: i })}>
                     <CatalogRow
                       item={item}
                       fallbackType={type}
@@ -346,7 +338,7 @@ function CatalogRow({
       />
     ) : (
       <Button
-        variant="outlined"
+        variant="contained"
         size="small"
         onClick={() => cart.addSimple(item)}
         data-testid={`guest-qty-plus-${item.code}`}

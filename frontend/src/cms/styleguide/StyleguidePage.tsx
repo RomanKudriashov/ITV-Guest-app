@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
@@ -44,6 +45,7 @@ import {
   RunningIndicator,
   OfflineIndicator,
   FlagIcon,
+  ctaGradientSx,
   type OrderStatusKind,
 } from '@/kit';
 
@@ -168,6 +170,15 @@ export function StyleguidePage() {
               <KitButton kitVariant="primary" disabled>Disabled</KitButton>
               <KitButton kitVariant="primary" loading>Loading</KitButton>
               <KitButton kitVariant="secondary" loading>Saving</KitButton>
+            </Stack>
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              {/* Reference `.cta` — the sheet / cart primary action gradient. */}
+              <Button variant="contained" size="large" sx={[ctaGradientSx, { minHeight: 52, px: 3 }]}>
+                Gradient CTA
+              </Button>
+              <Button variant="contained" size="large" disabled sx={[ctaGradientSx, { minHeight: 52, px: 3 }]}>
+                Gradient CTA
+              </Button>
             </Stack>
           </Stack>
         </Section>

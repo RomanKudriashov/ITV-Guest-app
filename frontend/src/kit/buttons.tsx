@@ -5,8 +5,30 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import type { Theme } from '@mui/material/styles';
 
 import { IconAdd, IconMinus } from '@/icons';
+
+/**
+ * The reference `.cta` — the sheet's / cart's primary action: an accent gradient
+ * (bright accent → base accent) with the accent glow. Colours come from tokens
+ * only (`primaryStrong` → `primary`). Compose into a contained Button's `sx`.
+ */
+export const ctaGradientSx = (theme: Theme) => ({
+  background: `linear-gradient(120deg, ${theme.palette.brand.primaryStrong}, ${theme.palette.primary.main})`,
+  color: theme.palette.primary.contrastText,
+  boxShadow: theme.palette.brand.elevation.glow,
+  borderRadius: `${theme.palette.brand.radius.md}px`,
+  '&:hover': {
+    background: `linear-gradient(120deg, ${theme.palette.brand.primaryStrong}, ${theme.palette.primary.main})`,
+    boxShadow: theme.palette.brand.elevation.glow,
+  },
+  '&.Mui-disabled': {
+    background: theme.palette.action.disabledBackground,
+    color: theme.palette.action.disabled,
+    boxShadow: 'none',
+  },
+});
 
 /* ── KitButton ────────────────────────────────────────────────────────────── */
 

@@ -186,16 +186,22 @@ function Bubble({
       sx={{ alignItems: mine ? 'flex-end' : 'flex-start', width: '100%' }}
     >
       <Box
-        sx={{
+        sx={(theme) => ({
           maxWidth: '82%',
           px: 1.5,
           py: 1,
-          borderRadius: 2,
+          // Reference `.msg` — 15px radius with a 5px tail on the sender's side.
+          borderRadius: '15px',
+          ...(mine
+            ? { borderBottomRightRadius: '5px' }
+            : { borderBottomLeftRadius: '5px' }),
           border: mine ? 0 : 1,
           borderColor: 'divider',
-          bgcolor: mine ? 'primary.main' : 'action.hover',
-          color: mine ? 'primary.contrastText' : 'text.primary',
-        }}
+          background: mine
+            ? `linear-gradient(120deg, ${theme.palette.brand.primaryStrong}, ${theme.palette.primary.main})`
+            : theme.palette.background.paper,
+          color: mine ? theme.palette.primary.contrastText : theme.palette.text.primary,
+        })}
       >
         {!mine ? (
           <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, opacity: 0.85 }}>

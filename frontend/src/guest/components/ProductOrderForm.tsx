@@ -7,7 +7,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ChipOption } from '@/kit';
+import { ChipOption, ctaGradientSx } from '@/kit';
 import { useDraftState } from '@/state/useDraftState';
 import { ItemHeadline } from './ItemHeadline';
 import { QuantityStepper } from './QuantityStepper';
@@ -247,7 +247,7 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
           disabled={unavailable}
           onClick={handleAdd}
           data-testid="guest-add-to-cart"
-          sx={{ minHeight: 52 }}
+          sx={[ctaGradientSx, { minHeight: 52 }]}
         >
           {t('guest.item.addToCart', { price: format(totalPrice) })}
         </Button>

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -40,6 +40,33 @@ import type { MenuItem } from '../api/types';
  * overlaps it as one canvas, an offers carousel (a slice of the catalog), and a
  * varied-size mosaic of the server's sections.
  */
+/**
+ * Reference `.blkttl` — a caps overline label, a flex hairline, and an optional
+ * trailing action (the carousel arrows, a "see all" link). Structural, so every
+ * home block reads with the same quiet header.
+ */
+function BlockTitle({ label, action }: { label: string; action?: ReactNode }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={1.5}>
+      <Typography
+        component="h2"
+        sx={{
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+          color: 'text.secondary',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+      </Typography>
+      <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+      {action}
+    </Stack>
+  );
+}
+
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -184,31 +211,31 @@ export function HomePage() {
             {/* ── Offers carousel ─────────────────────────────────────────── */}
             {offers.length ? (
               <Stack spacing={1.5}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="h5" component="h2">
-                    {t('guest.home.offers')}
-                  </Typography>
-                  {isDesktop ? (
-                    <Stack direction="row" spacing={1}>
-                      <IconButton
-                        aria-label={t('guest.home.prev')}
-                        onClick={() => scrollRail(-1)}
-                        sx={{ border: 1, borderColor: 'divider', width: 44, height: 44 }}
-                      >
-                        <IconBack size={20} />
-                      </IconButton>
-                      <IconButton
-                        aria-label={t('guest.home.next')}
-                        onClick={() => scrollRail(1)}
-                        sx={{ border: 1, borderColor: 'divider', width: 44, height: 44 }}
-                      >
-                        <Box sx={{ display: 'flex', transform: 'scaleX(-1)' }}>
+                <BlockTitle
+                  label={t('guest.home.offers')}
+                  action={
+                    isDesktop ? (
+                      <Stack direction="row" spacing={1}>
+                        <IconButton
+                          aria-label={t('guest.home.prev')}
+                          onClick={() => scrollRail(-1)}
+                          sx={{ border: 1, borderColor: 'divider', width: 44, height: 44 }}
+                        >
                           <IconBack size={20} />
-                        </Box>
-                      </IconButton>
-                    </Stack>
-                  ) : null}
-                </Stack>
+                        </IconButton>
+                        <IconButton
+                          aria-label={t('guest.home.next')}
+                          onClick={() => scrollRail(1)}
+                          sx={{ border: 1, borderColor: 'divider', width: 44, height: 44 }}
+                        >
+                          <Box sx={{ display: 'flex', transform: 'scaleX(-1)' }}>
+                            <IconBack size={20} />
+                          </Box>
+                        </IconButton>
+                      </Stack>
+                    ) : undefined
+                  }
+                />
                 <Box
                   ref={railRef}
                   sx={{
@@ -244,19 +271,19 @@ export function HomePage() {
 
             {/* ── Mosaic of the server's sections (varied tile sizes) ─────── */}
             <Stack spacing={1.5}>
-              <Typography variant="h5" component="h2">
-                {t('guest.home.sectionsTitle')}
-              </Typography>
+              <BlockTitle label={t('guest.home.sectionsTitle')} />
+              {/* Reference `.mos` — a 1.6fr/1fr/1fr mosaic on 148px rows; the first
+                  section takes the tall column (`.mt.big`), the rest flow beside it. */}
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                  gridAutoRows: { xs: 128, md: 168 },
-                  gap: { xs: 1.5, md: 2 },
+                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: '1.6fr 1fr 1fr' },
+                  gridAutoRows: { xs: 128, md: 148 },
+                  gap: '14px',
                 }}
               >
                 {sections.map((section, i) => {
-                  // Give the first section a hero-sized tile so the mosaic varies.
+                  // Give the first section a tall tile so the mosaic varies.
                   const big = i === 0;
                   return (
                     <MosaicTile
@@ -264,7 +291,7 @@ export function HomePage() {
                       testId={`guest-home-section-${section.type}`}
                       title={section.title}
                       fallbackIcon={fallbackIconFor(section.type)}
-                      span={big ? 2 : 1}
+                      span={1}
                       rowSpan={big ? 2 : 1}
                       revealIndex={i}
                       onClick={() => navigate(section.route)}

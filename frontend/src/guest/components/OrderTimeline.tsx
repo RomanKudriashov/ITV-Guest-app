@@ -50,23 +50,34 @@ export function OrderTimeline({ order }: { order: GuestOrder }) {
   return (
     <Stack spacing={0} data-testid="guest-order-timeline" role="list">
       {steps.map((step, index) => (
-        <Stack key={`${step.code}-${index}`} direction="row" spacing={1.5} role="listitem">
+        <Stack
+          key={`${step.code}-${index}`}
+          direction="row"
+          spacing={1.5}
+          role="listitem"
+          sx={{ opacity: step.done || step.current ? 1 : 0.42 }}
+        >
           <Stack alignItems="center" sx={{ width: 28 }}>
             <Box
-              sx={{
+              sx={(theme) => ({
                 width: 24,
                 height: 24,
                 borderRadius: '50%',
                 display: 'grid',
                 placeItems: 'center',
-                bgcolor: step.done ? 'primary.main' : 'brand.surfaceMuted',
-                color: step.done ? 'primary.contrastText' : 'text.secondary',
-                border: step.current ? 2 : 0,
-                borderColor: 'primary.main',
+                // Reference `.tp` dots: current step glows accent, done steps fill
+                // success, future steps stay a quiet muted disc.
+                bgcolor: step.current
+                  ? 'primary.main'
+                  : step.done
+                    ? 'success.main'
+                    : 'brand.surfaceMuted',
+                color: step.current ? 'primary.contrastText' : 'success.contrastText',
+                boxShadow: step.current ? `0 0 0 5px ${theme.palette.brand.primarySoft}` : 'none',
                 flexShrink: 0,
-              }}
+              })}
             >
-              {step.done ? <CheckIcon sx={{ fontSize: 14 }} /> : null}
+              {step.done && !step.current ? <CheckIcon sx={{ fontSize: 14 }} /> : null}
             </Box>
             {index < steps.length - 1 ? (
               <Box
@@ -74,7 +85,7 @@ export function OrderTimeline({ order }: { order: GuestOrder }) {
                   width: 2,
                   flexGrow: 1,
                   minHeight: 24,
-                  bgcolor: step.done ? 'primary.main' : 'divider',
+                  bgcolor: step.done ? 'success.main' : 'divider',
                 }}
               />
             ) : null}
