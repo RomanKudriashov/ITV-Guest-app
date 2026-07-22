@@ -84,6 +84,9 @@ class OrderInput:
     comment: str = ""
     field_values: dict[str, Any] = field(default_factory=dict)
     slot_start: str | None = None
+    # Чаевые (A3+): либо своя сумма, либо процент от суммы позиций.
+    tip_minor: int | None = None
+    tip_percent: float | None = None
 
 
 # --- Создание --------------------------------------------------------------
@@ -165,13 +168,108 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         # и бронь.
         slot_svc.validate_and_reserve(items[0], data.slot_start, order=order)
 
-    line_totals = [_create_order_item(order, resolved).line_total for resolved in resolved_lines]
+    order_items = [_create_order_item(order, resolved) for resolved in resolved_lines]
+    line_totals = [oi.line_total for oi in order_items]
     # Ни у одной позиции нет цены → у заказа нет суммы. Ноль означал бы
     # «бесплатно», а это другое утверждение.
     priced = [total for total in line_totals if total is not None]
-    order.total = sum(priced) if priced else None
-    order.save(update_fields=["total", "updated_at"])
 
+    if not priced:
+        # Заявка/бронь без цены — начислений нет, поведение как раньше.
+        order.total = None
+        order.save(update_fields=["total", "updated_at"])
+    else:
+        _apply_charges(order, order_items, hotel, location, data)
+    return _finalize_created_order(order, hotel_id, guest_session, status)
+
+
+def _apply_charges(order, order_items, hotel, location, data) -> None:
+    """Считает начисления, проверяет минимум и фиксирует снимок в заказе."""
+    from .charges import compute_charges, minimum_order_minor, resolve_tip_minor
+
+    priced_lines = [
+        (oi.line_total or 0, _service_fee_applies(oi))
+        for oi in order_items
+        if oi.line_total is not None
+    ]
+    subtotal = sum(lt for lt, _ in priced_lines)
+
+    # Минимальная сумма — до фиксации: ниже порога оформление блокируется.
+    categories = {oi.item.category for oi in order_items if oi.item and oi.item.category_id}
+    minimum = minimum_order_minor(categories, order.execution_point)
+    if minimum and subtotal < minimum:
+        raise OrderValidationError(
+            "Сумма заказа ниже минимальной",
+            code="order_below_minimum",
+            minimum_minor=minimum,
+            shortfall_minor=minimum - subtotal,
+        )
+
+    tip = resolve_tip_minor(subtotal_minor=subtotal, tip_minor=data.tip_minor, tip_percent=data.tip_percent)
+    breakdown = compute_charges(hotel, priced_lines=priced_lines, location=location, tip_minor=tip)
+
+    order.subtotal_minor = breakdown.subtotal_minor
+    order.service_fee_minor = breakdown.service_fee_minor
+    order.tax_minor = breakdown.tax_minor
+    order.delivery_fee_minor = breakdown.delivery_fee_minor
+    order.tip_minor = breakdown.tip_minor
+    order.total = breakdown.total_minor
+    order.charges = breakdown.charges
+    order.save(
+        update_fields=[
+            "subtotal_minor", "service_fee_minor", "tax_minor", "delivery_fee_minor",
+            "tip_minor", "total", "charges", "updated_at",
+        ]
+    )
+
+
+def _service_fee_applies(order_item) -> bool:
+    category = order_item.item.category if order_item.item else None
+    return bool(getattr(category, "service_fee_applies", True))
+
+
+def quote_cart(data: OrderInput) -> dict[str, Any]:
+    """
+    Предпросчёт корзины БЕЗ создания заказа: суммы, минимум, блокировка. Витрина
+    показывает строки и «добавьте ещё N» до оформления, ничего не создавая.
+    """
+    from .charges import compute_charges, minimum_order_minor, resolve_tip_minor
+
+    hotel_id = require_hotel_id()
+    hotel = Hotel.objects.get(pk=hotel_id)
+
+    priced_lines: list[tuple[int, bool]] = []
+    categories = set()
+    for line in data.lines:
+        item = _resolve_item(line)
+        behaviour = behaviour_for(item.type)
+        options = _validate_modifiers(item, line.modifier_option_ids) if behaviour.uses_modifiers else []
+        unit_price = None if item.price is None else item.price + sum(o.price_delta for o in options)
+        line_total = None if unit_price is None else unit_price * line.quantity
+        if line_total is not None:
+            priced_lines.append((line_total, bool(getattr(item.category, "service_fee_applies", True))))
+            categories.add(item.category)
+
+    subtotal = sum(lt for lt, _ in priced_lines)
+    execution_point = _resolve_execution_point(next(iter(categories)).pk) if categories else None
+    location = Location.objects.filter(pk=data.location_id).first() if data.location_id else None
+
+    minimum = minimum_order_minor(categories, execution_point)
+    tip = resolve_tip_minor(subtotal_minor=subtotal, tip_minor=data.tip_minor, tip_percent=data.tip_percent)
+    breakdown = compute_charges(hotel, priced_lines=priced_lines, location=location, tip_minor=tip)
+
+    return {
+        **breakdown.as_dict(),
+        "tax_inclusive": bool(hotel.tax_inclusive),
+        "currency": hotel.currency,
+        "minimum_minor": minimum,
+        "below_minimum": bool(minimum and subtotal < minimum),
+        "shortfall_minor": max(minimum - subtotal, 0) if minimum else 0,
+        "tip_presets": list(hotel.tip_presets or []),
+    }
+
+
+def _finalize_created_order(order, hotel_id, guest_session, status):
     OrderStatusChange.objects.create(
         hotel_id=hotel_id,
         order=order,
@@ -600,7 +698,25 @@ def _eta_minutes(order: Order) -> int | None:
     if order.requested_time:
         minutes = int((order.requested_time - timezone.now()).total_seconds() // 60)
         return max(minutes, 0)
+    # Время подачи из позиций (A3+): дольше всех готовящаяся + буфер доставки.
+    prep = [
+        line.item.prep_minutes
+        for line in order.items.all()
+        if line.item and line.item.prep_minutes
+    ]
+    if prep:
+        return max(prep) + DEFAULT_ETA_MINUTES.get(order.delivery_mode, 25) - 25 + 5
     return DEFAULT_ETA_MINUTES.get(order.delivery_mode, 25)
+
+
+def _serve_by(order: Order, hotel) -> str | None:
+    """Ожидаемое время подачи как момент («подадут к 20:40»), в TZ отеля."""
+    if order.requested_time:
+        return hotel.to_local(order.requested_time).isoformat()
+    eta = _eta_minutes(order)
+    if eta is None:
+        return None
+    return hotel.to_local(timezone.now() + timedelta(minutes=eta)).isoformat()
 
 
 def _status_payload(status: StatusDefinition, language: str | None) -> dict[str, Any]:
@@ -683,6 +799,19 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         "comment": order.comment,
         "total": order.total,
         "currency": order.currency,
+        # Снимок начислений (A3+): витрина/статус рисуют строки сбора/доставки/
+        # налога/чаевых и итог из готового снимка, ничего не пересчитывая.
+        "charges": {
+            "subtotal_minor": order.subtotal_minor,
+            "service_fee_minor": order.service_fee_minor,
+            "tax_minor": order.tax_minor,
+            "tax_inclusive": bool((order.charges or {}).get("tax_inclusive")),
+            "delivery_fee_minor": order.delivery_fee_minor,
+            "tip_minor": order.tip_minor,
+            "total_minor": order.total,
+        },
+        # Ожидаемое время подачи (A3+): now + ETA, в TZ отеля. null — если ETA нет.
+        "serve_by": _serve_by(order, hotel),
         # Непусто только у заявки-услуги. Трекер и витрина рисуют этим блоком
         # тело карточки вместо списка позиций — но объект заказа один.
         "field_values": [

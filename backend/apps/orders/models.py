@@ -98,9 +98,21 @@ class Order(TenantModel):
     # null — у позиции нет цены (заявка-услуга без прайса). Ноль означал бы
     # «бесплатно», а это другое утверждение.
     total = models.IntegerField(
-        null=True, blank=True, default=0, help_text="В минимальных единицах"
+        null=True, blank=True, default=0, help_text="Итог к показу, в минимальных единицах"
     )
     currency = models.CharField(max_length=3, default="RUB")
+
+    # --- Снимок начислений (A3+) ---
+    # Фиксируется при оформлении, как цены/модификаторы в OrderItem: отель
+    # поменял сбор — старые заказы не меняются. `charges` хранит ставки/флаги
+    # на момент оформления (аудит). Пока коммерция выключена, всё по нулям и
+    # total == subtotal.
+    subtotal_minor = models.IntegerField(default=0)
+    service_fee_minor = models.IntegerField(default=0)
+    tax_minor = models.IntegerField(default=0)
+    delivery_fee_minor = models.IntegerField(default=0)
+    tip_minor = models.IntegerField(default=0)
+    charges = models.JSONField(default=dict, blank=True)
 
     # Снимок ответов на поля заявки-услуги. Пуст у обычного заказа с корзиной.
     # Именно снимок: заявка обязана пережить переименование и удаление полей

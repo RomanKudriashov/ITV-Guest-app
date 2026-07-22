@@ -50,6 +50,17 @@ class Hotel(BaseModel):
     review_enabled = models.BooleanField(default=True)
     review_low_threshold = models.PositiveSmallIntegerField(default=3)
 
+    # --- Коммерция (A3+). По умолчанию всё выключено: суммы = сумме позиций,
+    # поведение старых заказов не меняется, пока отель не включит в CMS. ---
+    # Сервисный сбор и налог — в базисных пунктах (1000 = 10.00%).
+    service_fee_bp = models.PositiveIntegerField(default=0)
+    tax_bp = models.PositiveIntegerField(default=0)
+    tax_inclusive = models.BooleanField(default=True)
+    tip_presets = models.JSONField(default=list, blank=True)
+    free_delivery_threshold_minor = models.IntegerField(null=True, blank=True)
+    # Округление итога к кратному (100 = до целой валютной единицы). 0/1 = нет.
+    price_round_to_minor = models.PositiveIntegerField(default=0)
+
     class Meta:
         db_table = "hotels_hotel"
         ordering = ["name"]
@@ -206,6 +217,8 @@ class ExecutionPoint(TenantModel):
     # Через сколько минут ожидания заказ на доске считается просроченным.
     # Настройка точки, а не константа: кухне и хозслужбе нужны разные пороги.
     sla_minutes = models.PositiveSmallIntegerField(default=20)
+    # Минимальная сумма заказа на точку (A3+); null = нет порога.
+    min_order_minor = models.IntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "hotels_execution_point"
@@ -245,6 +258,9 @@ class Location(TenantModel):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Стоимость доставки в эту локацию (A3+); 0 = бесплатно. Порог бесплатной
+    # доставки — на уровне отеля.
+    delivery_fee_minor = models.IntegerField(default=0)
 
     class Meta:
         db_table = "hotels_location"

@@ -227,6 +227,32 @@ def get_locations(request: HttpRequest):
 
 
 @router.post(
+    "/cart/quote",
+    auth=guest_auth,
+    summary="Предпросчёт корзины: суммы, минимум, блокировка (без создания заказа)",
+)
+def cart_quote(request: HttpRequest, payload: OrderIn):
+    from apps.orders.services import quote_cart
+
+    data = OrderInput(
+        lines=[
+            OrderLineInput(
+                item_id=line.item_id,
+                quantity=line.quantity,
+                modifier_option_ids=line.modifier_option_ids,
+                comment=line.comment,
+            )
+            for line in payload.lines
+        ],
+        location_id=payload.location_id,
+        delivery_mode=payload.delivery_mode,
+        tip_minor=payload.tip_minor,
+        tip_percent=payload.tip_percent,
+    )
+    return quote_cart(data)
+
+
+@router.post(
     "/order",
     response={201: OrderOut, 200: OrderOut, 400: ErrorOut, 409: ErrorOut},
     auth=guest_auth,
@@ -274,6 +300,8 @@ def place_order(
         comment=payload.comment,
         field_values=payload.field_values or {},
         slot_start=payload.slot_start,
+        tip_minor=payload.tip_minor,
+        tip_percent=payload.tip_percent,
     )
 
     def operation():
