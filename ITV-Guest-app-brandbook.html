@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITV Guest — Брендбук v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap&subset=cyrillic,cyrillic-ext,latin" rel="stylesheet">
+<style>
+:root[data-theme="dark"]{
+  --bg:#0C1420; --surface:#141F2E; --surface-muted:#1B283A; --surface-hover:#213247;
+  --line:#26364A; --text:#E8EFF7; --text-2:#9DB1C6; --text-3:rgba(157,177,198,.72);
+  --accent:#6EA8DC; --accent-strong:#8FBEE6; --accent-soft:rgba(110,168,220,.16);
+  --accent-contrast:#081524; --secondary:#C7A16A;
+  --success:#66BB6A; --warning:#FFA726; --error:#EF5350; --info:#5AA9DE;
+  --glow:0 0 0 1px rgba(110,168,220,.35), 0 8px 30px -8px rgba(110,168,220,.5);
+  --scrim:rgba(4,9,16,.66);
+}
+:root[data-theme="light"]{
+  --bg:#F4F6FB; --surface:#FFFFFF; --surface-muted:#EAEEF6; --surface-hover:#E4EAF4;
+  --line:#DCE3EC; --text:#12202F; --text-2:#5A6B7C; --text-3:rgba(90,107,124,.75);
+  --accent:#1E4E8C; --accent-strong:#173E70; --accent-soft:rgba(30,78,140,.1);
+  --accent-contrast:#FFFFFF; --secondary:#9C7A4E;
+  --success:#2E7D32; --warning:#ED6C02; --error:#C62828; --info:#0277BD;
+  --glow:0 0 0 1px rgba(30,78,140,.3), 0 8px 30px -10px rgba(30,78,140,.45);
+  --scrim:rgba(14,27,42,.55);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.6 "Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.display{font-family:"Prata",Georgia,serif;font-weight:400;letter-spacing:.2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 120px}
+header.hero{position:relative;overflow:hidden;padding:64px 24px 52px;
+  background:linear-gradient(160deg,var(--bg),#173456);border-bottom:1px solid var(--line)}
+header.hero .inner{max-width:1120px;margin:0 auto;position:relative;z-index:1}
+.kick{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);font-weight:700}
+header.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:12px 0 10px}
+header.hero p{color:var(--text-2);max-width:620px;font-size:18px;margin:0}
+.themebar{position:fixed;top:16px;right:16px;z-index:10;display:flex;gap:8px}
+.themebar button{font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer}
+.themebar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-family:"Prata",serif;font-weight:400;font-size:30px;margin:64px 0 6px}
+.n{color:var(--accent);margin-inline-end:10px}
+.lead{color:var(--text-2);margin:0 0 22px;max-width:680px}
+h3{font-size:15px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin:28px 0 12px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px}
+.card.soft{box-shadow:0 24px 60px -30px var(--scrim)}
+/* palette */
+.swatch{border-radius:14px;border:1px solid var(--line);overflow:hidden}
+.swatch .chip{height:68px}
+.swatch .meta{padding:10px 12px;font-size:12.5px}
+.swatch .meta b{display:block;font-size:13px;margin-bottom:2px}
+.mono{font:12px ui-monospace,Menlo,Consolas,monospace;color:var(--text-3)}
+/* type scale */
+.type-row{display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--line);padding:14px 0}
+.type-row .lbl{width:88px;flex:0 0 auto;color:var(--text-3);font-size:12px}
+/* icons */
+.icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.icons .i{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border:1px solid var(--line);
+  border-radius:14px;background:var(--surface);color:var(--text);font-size:11px;text-align:center}
+.icons svg{width:26px;height:26px}
+/* components */
+.btn{font:inherit;font-weight:600;border-radius:12px;padding:11px 18px;border:1px solid transparent;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;min-height:44px}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:var(--accent-contrast)}
+.btn.primary:hover{background:var(--accent-strong);box-shadow:var(--glow)}
+.btn.secondary{background:var(--surface-muted);color:var(--text)}
+.btn.ghost{background:transparent;color:var(--accent);border-color:var(--accent)}
+.btn.danger{background:var(--error);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12.5px;
+  font-weight:600;background:var(--accent-soft);color:var(--accent-strong)}
+.badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.badge.hit{background:var(--accent);color:var(--accent-contrast)}
+.badge.new{background:var(--secondary);color:#0E1B2A}
+.badge.chef{background:var(--surface-muted);color:var(--text);border:1px solid var(--line)}
+.price{display:inline-flex;font-family:"Prata",serif;font-size:22px;color:var(--text)}
+.stepper{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.stepper button{width:40px;height:40px;border:0;background:var(--surface-muted);color:var(--text);font-size:20px;cursor:pointer}
+.stepper span{min-width:40px;text-align:center;font-weight:700}
+.field{display:block;width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface-muted);color:var(--text)}
+.field:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.photocard{position:relative;border-radius:20px;overflow:hidden;min-height:200px;border:1px solid var(--line);
+  background:linear-gradient(135deg,#173456,#0C1420);display:flex;align-items:flex-end}
+.photocard .cap{position:relative;z-index:1;padding:18px;background:linear-gradient(0deg,var(--scrim),transparent)}
+.photocard .cap .t{font-family:"Prata",serif;font-size:22px}
+.photocard .cap .s{color:var(--text-2);font-size:13px}
+.roomtag{display:inline-flex;flex-direction:column;gap:2px;padding:14px 22px;border-radius:16px;
+  background:linear-gradient(145deg,var(--accent),var(--accent-strong));color:var(--accent-contrast);
+  box-shadow:var(--glow);border:1px solid rgba(255,255,255,.15)}
+.roomtag .k{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.85}
+.roomtag .v{font-family:"Prata",serif;font-size:26px;line-height:1}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%}
+.toast{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--surface);
+  border:1px solid var(--line);box-shadow:0 24px 60px -30px var(--scrim)}
+/* room controls */
+.ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--accent) 0 62%, var(--surface-muted) 62% 100%);position:relative}
+.ring::after{content:"";position:absolute;inset:12px;border-radius:50%;background:var(--surface)}
+.ring b{position:relative;z-index:1;font-family:"Prata",serif;font-size:26px}
+.thermo{display:flex;flex-direction:column;gap:6px;align-items:center}
+.thermo .cur{font-family:"Prata",serif;font-size:40px;line-height:1}
+.thermo .tgt{color:var(--accent);font-weight:700}
+.bigswitch{width:76px;height:42px;border-radius:999px;background:var(--accent);position:relative;border:0;cursor:pointer}
+.bigswitch::after{content:"";position:absolute;top:4px;inset-inline-start:38px;width:34px;height:34px;border-radius:50%;background:#fff;transition:.2s}
+.bigswitch.off{background:var(--surface-hover)}
+.bigswitch.off::after{inset-inline-start:4px}
+.vslider{width:60px;height:130px;border-radius:16px;background:var(--surface-muted);position:relative;overflow:hidden;border:1px solid var(--line)}
+.vslider .fill{position:absolute;inset-inline:0;bottom:0;height:45%;background:var(--accent)}
+.offline{color:var(--text-3);font-size:13px;display:inline-flex;gap:8px;align-items:center}
+.spinner{width:22px;height:22px;border-radius:50%;border:3px solid var(--accent-soft);border-top-color:var(--accent);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+.note{border-inline-start:3px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
+.presetcard .row{display:flex;gap:6px;margin-bottom:10px}
+.presetcard .row i{width:34px;height:34px;border-radius:9px;display:block}
+.small{color:var(--text-3);font-size:13px}
+ul{padding-inline-start:20px} li{margin:6px 0}
+</style>
+</head>
+<body>
+<div class="themebar">
+  <button onclick="document.documentElement.setAttribute('data-theme','dark')">Тёмная</button>
+  <button onclick="document.documentElement.setAttribute('data-theme','light')">Светлая</button>
+  <button onclick="document.documentElement.dir=(document.documentElement.dir==='rtl'?'ltr':'rtl')">RTL</button>
+</div>
+
+<header class="hero">
+  <div class="inner">
+    <div class="kick">ITV Guest · Design System</div>
+    <h1 class="display">Брендбук v2</h1>
+    <p>Тёмная база, насыщенный тёмно-синий акцент, крупная дисплейная типографика и глубина. Один яркий объект — эмалевая бирка номера. Всё построено на токенах: ни одного цвета мимо них.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2><span class="n">01</span><span class="display">Направление</span></h2>
+  <p class="lead">Не разреженная сетка одинаковых пилюль, а плотный, «жирный» интерфейс: фото во главе, тени и свечение акцента, крупные заголовки. Тёмно-синий — основной образ.</p>
+  <div class="grid g3">
+    <div class="card"><h3>База</h3><p class="small">Тёмная по умолчанию. Поверхности несколькими уровнями, линии тонкие.</p></div>
+    <div class="card"><h3>Акцент</h3><p class="small">Насыщенный тёмно-синий. Зелёный убран из акцента — остаётся только как статус «успех».</p></div>
+    <div class="card"><h3>Сигнатура</h3><p class="small">Эмалевая бирка номера — как ключ со стойки. Одно яркое пятно, остальное сдержанно.</p></div>
+  </div>
+
+  <h2><span class="n">02</span><span class="display">Палитра и токены</span></h2>
+  <p class="lead">Пресет задаёт 4–5 опорных цветов на режим; производные (поверхности, ховеры, делители, скримы) и богатый словарь (сильный акцент, мягкая заливка, свечение, третий текст, скругления, глубина) выводятся расчётом. Хранимый набор — ровно 18 токенов на режим.</p>
+  <div class="grid g4">
+    <div class="swatch"><div class="chip" style="background:var(--bg)"></div><div class="meta"><b>background</b><span class="mono">база</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--surface)"></div><div class="meta"><b>surface</b><span class="mono">карточки</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--surface-muted)"></div><div class="meta"><b>surfaceMuted</b><span class="mono">строки</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--accent)"></div><div class="meta"><b>primary</b><span class="mono">акцент</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--accent-strong)"></div><div class="meta"><b>primaryStrong</b><span class="mono">сильный</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--accent-soft)"></div><div class="meta"><b>primarySoft</b><span class="mono">заливка</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--secondary)"></div><div class="meta"><b>secondary</b><span class="mono">второй</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--text)"></div><div class="meta"><b>text</b><span class="mono">1 уровень</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--text-2)"></div><div class="meta"><b>textSecondary</b><span class="mono">2 уровень</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--text-3)"></div><div class="meta"><b>textTertiary</b><span class="mono">3 уровень</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--success)"></div><div class="meta"><b>success</b><span class="mono">статус</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--warning)"></div><div class="meta"><b>warning</b><span class="mono">статус</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--error)"></div><div class="meta"><b>error</b><span class="mono">статус</span></div></div>
+    <div class="swatch"><div class="chip" style="background:var(--info)"></div><div class="meta"><b>info</b><span class="mono">статус</span></div></div>
+  </div>
+  <div class="note">Свечение акцента (<span class="mono">primaryGlow</span>) и шкала глубины — отдельные токены, готовые как тень: <span class="mono">box-shadow: var(--glow)</span>. Одна картинка-подложка годится на обе темы за счёт токена затемнения <span class="mono">background.dim</span>.</div>
+
+  <h2><span class="n">03</span><span class="display">Типографика</span></h2>
+  <p class="lead">Дисплейный <b>Prata</b> — только заголовки и акцентные числа. Интерфейсный <b>Manrope</b> — весь текст и элементы. Обе с кириллицей.</p>
+  <div class="card">
+    <div class="type-row"><span class="lbl">Display / H1</span><span class="display" style="font-size:44px">Комната 305</span></div>
+    <div class="type-row"><span class="lbl">Display / H2</span><span class="display" style="font-size:30px">Ужин в номер</span></div>
+    <div class="type-row"><span class="lbl">Numerals</span><span class="display" style="font-size:34px">4 300 ₽</span></div>
+    <div class="type-row"><span class="lbl">Body</span><span style="font-size:16px">Manrope — интерфейсный текст, строки меню, подписи и кнопки.</span></div>
+    <div class="type-row"><span class="lbl">Caption</span><span style="font-size:13px;color:var(--text-2)">Второстепенный текст и подписи.</span></div>
+  </div>
+
+  <h2><span class="n">04</span><span class="display">Монохромные иконки</span></h2>
+  <p class="lead">Единый линейный набор: одна толщина штриха, наследуют цвет текста (<span class="mono">stroke: currentColor</span>), красятся токеном. Отдаются компонентами, не картинками. Ниже — образцы; полный набор — в галерее приложения.</p>
+  <div class="icons">
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4v16M4 7h9a3 3 0 0 1 0 6H4"/></svg>Меню</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h16M6 20V9l6-4 6 4v11"/><path d="M10 20v-5h4v5"/></svg>Услуги</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>Брони</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Инфо</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>Дом</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>Добавить</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 6L9 17l-5-5"/></svg>Готово</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Поиск</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Диммер</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16M6 4v16M18 4v16M6 12h12"/></svg>Шторы</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a4 4 0 0 1 4 4v7a4 4 0 1 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M12 18v0"/></svg>Термостат</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="8" width="16" height="8" rx="4"/><circle cx="16" cy="12" r="2.4"/></svg>Тумблер</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Замок</div>
+    <div class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0M12 20h.01"/></svg>Wi-Fi</div>
+  </div>
+  <div class="note"><b>Эмодзи не используем</b> — ни в интерфейсе, ни в данных и сиде. Любая иконка — компонент из набора, наследующий цвет текста.</div>
+
+  <h2><span class="n">05</span><span class="display">Компоненты</span></h2>
+  <div class="grid g2">
+    <div class="card"><h3>Кнопки и состояния</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary">Заказать</button>
+        <button class="btn secondary">В корзину</button>
+        <button class="btn ghost">Отмена</button>
+        <button class="btn danger">Удалить</button>
+        <button class="btn primary" disabled>Недоступно</button>
+      </div>
+    </div>
+    <div class="card"><h3>Чипы и бейджи</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="chip">Веган</span><span class="chip">Остро</span><span class="chip">Без глютена</span>
+        <span class="badge hit">Хит</span><span class="badge new">Новинка</span><span class="badge chef">Выбор шефа</span>
+      </div>
+    </div>
+    <div class="card"><h3>Цена и степпер</h3>
+      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <span class="price">4 300 ₽</span>
+        <span class="stepper"><button>−</button><span>2</span><button>+</button></span>
+      </div>
+    </div>
+    <div class="card"><h3>Поле ввода</h3>
+      <input class="field" placeholder="Комментарий к заказу">
+    </div>
+    <div class="card"><h3>Карточка-фото с подписью</h3>
+      <div class="photocard"><div class="cap"><div class="t display">Рибай</div><div class="s">Стейк из мраморной говядины</div></div></div>
+    </div>
+    <div class="card"><h3>Статусы и тосты</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <span class="status"><span class="dot" style="background:var(--info)"></span> Новый</span>
+        <span class="status"><span class="dot" style="background:var(--warning)"></span> Готовится</span>
+        <span class="status"><span class="dot" style="background:var(--success)"></span> Доставлено</span>
+        <div class="toast"><span class="dot" style="background:var(--success)"></span> Заказ отправлен на кухню</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Сигнатура — бирка номера</h3>
+  <div class="roomtag"><span class="k">Ваш номер</span><span class="v">Комната 305</span></div>
+
+  <h2><span class="n">06</span><span class="display">Контролы номера</span></h2>
+  <p class="lead">Визуальный язык управления номером — заложен сейчас, чтобы фаза управления вписалась в интерфейс. Пока только вид, без логики.</p>
+  <div class="grid g4">
+    <div class="card" style="text-align:center"><h3>Диммер</h3><div class="ring"><b>62%</b></div></div>
+    <div class="card" style="text-align:center"><h3>Термостат</h3><div class="thermo"><span class="cur display">22°</span><span class="tgt">цель 24°</span></div></div>
+    <div class="card" style="text-align:center"><h3>Шторы</h3><div class="vslider"><div class="fill"></div></div></div>
+    <div class="card" style="text-align:center"><h3>Свет</h3><div style="display:flex;flex-direction:column;gap:14px;align-items:center"><button class="bigswitch" aria-label="вкл"></button><button class="bigswitch off" aria-label="выкл"></button></div></div>
+    <div class="card" style="text-align:center"><h3>Сцена</h3><button class="btn secondary">Вечер</button></div>
+    <div class="card" style="text-align:center"><h3>Выполняется</h3><div class="spinner" role="status" aria-label="выполняется"></div></div>
+    <div class="card" style="text-align:center"><h3>Нет связи</h3><span class="offline"><span class="dot" style="background:var(--text-3)"></span> Нет связи</span></div>
+    <div class="card" style="text-align:center"><h3>Действие</h3><button class="btn primary">Открыть</button></div>
+  </div>
+
+  <h2><span class="n">07</span><span class="display">Пресеты</span></h2>
+  <p class="lead">Готовые цельные пресеты, светлые и тёмные, с преобладанием тёмно-синих акцентов. Вычисляются из опорных цветов. Ручная правка помечает тему как <span class="mono">custom</span>.</p>
+  <div class="grid g4">
+    <div class="card presetcard"><div class="row"><i style="background:#0C1420"></i><i style="background:#6EA8DC"></i><i style="background:#1E4E8C"></i></div><b>Полуночный синий</b><div class="small">Тёмный · сигнатурный</div></div>
+    <div class="card presetcard"><div class="row"><i style="background:#0A1020"></i><i style="background:#5B7CE0"></i><i style="background:#24305C"></i></div><b>Сапфир</b><div class="small">Тёмный</div></div>
+    <div class="card presetcard"><div class="row"><i style="background:#F4F6FB"></i><i style="background:#1E4E8C"></i><i style="background:#0C1420"></i></div><b>Фарфор и синий</b><div class="small">Светлый</div></div>
+    <div class="card presetcard"><div class="row"><i style="background:#EEF3FA"></i><i style="background:#20558F"></i><i style="background:#123B5C"></i></div><b>Гавань</b><div class="small">Светлый</div></div>
+  </div>
+
+  <h2><span class="n">08</span><span class="display">White-label, RTL, тон</span></h2>
+  <div class="grid g2">
+    <div class="card"><h3>White-label</h3>
+      <ul>
+        <li>Единственный источник цвета — токены; в компонентах нет литеральных значений.</li>
+        <li>Отель выбирает пресет и правит токены; свои шрифты — только из курируемого списка.</li>
+        <li>Логотип и подложка — через медиапайплайн; затемнение подложки токеном.</li>
+        <li>Тема отеля изолирована по <span class="mono">hotel_id</span> — A не видит B.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>RTL и доступность</h3>
+      <ul>
+        <li>Логические отступы (start/end), не left/right — раскладка зеркалится сама.</li>
+        <li>Видимый фокус клавиатуры, контраст, цели нажатия ≥ 44px.</li>
+        <li>Уважение к <span class="mono">prefers-reduced-motion</span>.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Тон текстов</h3>
+      <ul>
+        <li>Коротко, по-человечески, без канцелярита и без восклицаний.</li>
+        <li>Гостю — вежливо и спокойно; персоналу — конкретно и по делу.</li>
+        <li>Числа и статусы — акцентно; всё остальное — сдержанно.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Правило</h3>
+      <p><b>Эмодзи не используем.</b> Иконки — монохромный набор компонентов. Один яркий объект на экране — бирка номера или акцентное число, не пёстрая сетка.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
