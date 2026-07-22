@@ -1,0 +1,153 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITV-Guest-app — вход: A и C, доработка</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&display=swap');
+:root{--base:#0B1220;--line:rgba(180,205,255,.14);--txt:#EEF3FB;--txt2:#9FB0CC;--txt3:#6E809E;--acc:#2F62C4;--acc2:#5B93F0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070C15;color:var(--txt);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 20px 90px}
+.kick{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--acc2);font-weight:700}
+h1{font-family:'Onest',sans-serif;font-size:36px;font-weight:800;letter-spacing:-.025em;margin:10px 0 8px}
+.lede{color:var(--txt2);font-size:14.5px;max-width:720px}
+.sec{margin-top:44px;padding-top:22px;border-top:1px solid var(--line)}
+.sec h2{font-family:'Onest',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sec .note{color:var(--txt3);font-size:13px;margin:4px 0 16px}
+.fix{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0B1220;background:var(--acc2);border-radius:5px;padding:3px 8px;margin-right:7px}
+.browser{border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.chrome{height:34px;background:#0F1726;display:flex;align-items:center;gap:7px;padding:0 13px;border-bottom:1px solid var(--line)}
+.chrome i{width:9px;height:9px;border-radius:50%;background:#2B3A56}
+.chrome .u{margin-left:10px;font-size:11px;color:var(--txt3);background:#0A101B;border-radius:6px;padding:3px 11px}
+
+.scene{position:relative;height:530px;overflow:hidden;background:#0A0F19}
+.bg{position:absolute;inset:-4%;background-size:cover;background-position:center;animation:ken 28s ease-in-out infinite alternate}
+@keyframes ken{from{transform:scale(1)}to{transform:scale(1.09)}}
+@media(prefers-reduced-motion:reduce){.bg{animation:none}}
+
+/* логотип отеля вместо подписи капсом */
+.logo{display:flex;align-items:center;gap:12px;color:#fff}
+.logo svg{opacity:.92}
+.logo .wm{font-family:'Onest',sans-serif;font-size:15px;font-weight:600;letter-spacing:.34em;text-transform:uppercase;padding-top:2px}
+.logo.dark{color:var(--txt)}
+
+.topr{position:absolute;top:22px;right:24px;z-index:8;display:flex;gap:8px}
+.gh{height:34px;padding:0 13px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(10,15,25,.28);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px;cursor:pointer;transition:background .2s}
+.gh:hover{background:rgba(10,15,25,.6)}
+.fl{width:19px;height:13px;border-radius:2px;background-size:cover}
+.fl.ru{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Crect width='9' height='6' fill='%23fff'/%3E%3Crect y='2' width='9' height='4' fill='%230039A6'/%3E%3Crect y='4' width='9' height='2' fill='%23D52B1E'/%3E%3C/svg%3E")}
+.big{font-family:'Onest',sans-serif;font-weight:800;letter-spacing:-.035em;color:#fff;line-height:.98}
+.sub{color:rgba(255,255,255,.6);font-size:14.5px;margin-top:13px;max-width:400px}
+.lineinp{display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,.28);padding:13px 2px;transition:border-color .25s}
+.lineinp:hover{border-color:rgba(255,255,255,.6)}
+.lineinp span{font-size:19px;color:rgba(255,255,255,.42);flex:1;font-weight:500}
+.go{width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.06);color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:background .22s,transform .18s,color .22s}
+.go:hover{background:#fff;color:#0B1220;transform:translateX(3px)}
+.hint{font-size:12.5px;color:rgba(255,255,255,.4);margin-top:20px;display:flex;align-items:center;gap:9px}
+.hint u{width:26px;height:1px;background:rgba(255,255,255,.28);text-decoration:none;display:block}
+
+.a .scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,10,17,.9) 0%,rgba(6,10,17,.55) 44%,rgba(6,10,17,.15) 100%),linear-gradient(180deg,rgba(6,10,17,.5),transparent 32%,rgba(6,10,17,.7))}
+.a .mark{position:absolute;left:56px;top:34px;z-index:7}
+.a .body{position:absolute;left:56px;bottom:62px;z-index:6;width:min(470px,60%)}
+.a .big{font-size:58px}
+.a .lineinp{margin-top:34px}
+
+.c{display:grid;grid-template-columns:1.1fr 1fr}
+.c .left{position:relative;overflow:hidden}
+.c .left .scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,10,17,.2),rgba(11,18,32,.92))}
+.c .left .mark{position:absolute;left:40px;top:36px;z-index:5}
+.c .right{background:var(--base);padding:60px 54px;display:flex;flex-direction:column;justify-content:center;position:relative}
+.c .big{font-size:44px;color:var(--txt)}
+.c .sub{color:var(--txt3)}
+.c .lineinp{border-color:var(--line);margin-top:32px}
+.c .lineinp:hover{border-color:var(--acc2)}
+.c .lineinp span{color:var(--txt3)}
+.c .go{border-color:var(--acc2);background:var(--acc);color:#fff}
+.c .go:hover{background:var(--acc2);color:#fff;transform:translateX(3px)}
+.c .hint{color:var(--txt3)}
+.c .hint u{background:var(--line)}
+.c .rule{width:44px;height:2px;background:var(--acc2);border-radius:2px;margin-bottom:22px}
+
+.phone{width:330px;border-radius:34px;padding:8px;background:linear-gradient(150deg,#2A3550,#0D1420);margin:0 auto}
+.pscr{border-radius:27px;overflow:hidden;height:620px;position:relative;background:#0A0F19}
+.m .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,10,17,.55) 0%,rgba(6,10,17,.15) 30%,rgba(6,10,17,.92) 78%)}
+.m .mark{position:absolute;left:24px;top:26px;z-index:7}
+.m .topr{top:24px;right:20px}
+.m .body{position:absolute;left:24px;right:24px;bottom:44px;z-index:6}
+.m .big{font-size:38px}
+.m .sub{font-size:13.5px;margin-top:10px}
+.m .lineinp{margin-top:26px}
+.m .lineinp span{font-size:17px}
+.cap{font-size:12px;color:var(--txt3);margin-top:10px;text-align:center}
+.row2{display:grid;grid-template-columns:1fr 340px;gap:26px;align-items:start}
+@media(max-width:1000px){.row2{grid-template-columns:1fr}.c{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+<div class="kick">ITV-Guest-app · вход, доработка</div>
+<h1>A и C после правок</h1>
+<p class="lede"><span class="fix">1</span>Подпись капсом заменена на <b>логотип отеля</b> — он и так есть в бренд-токенах, отель загружает свой. <span class="fix">2</span>Слово «комната» убрано: в отеле говорят <b>«номер»</b>. Правка касается не только входа — на остальных экранах бирка тоже станет «Номер 305».</p>
+
+<div class="sec">
+  <h2>A · Полотно</h2>
+  <p class="note">Логотип сверху слева, приветствие внизу — кадр отеля работает во всю ширину</p>
+  <div class="row2">
+    <div>
+      <div class="browser"><div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app</span></div>
+      <div class="scene a">
+        <div class="bg" style="background-image:url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1600&q=80')"></div>
+        <div class="scrim"></div>
+        <div class="mark logo">
+          <svg viewBox="0 0 40 40" width="32" height="32" aria-hidden="true"><path d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 16 H34.5 M20 3.5 V36.5" fill="none" stroke="currentColor" stroke-width=".7" opacity=".5"/></svg>
+          <span class="wm">Crystal</span>
+        </div>
+        <div class="topr"><span class="gh"><span class="fl ru"></span>Русский</span><span class="gh">☾</span></div>
+        <div class="body">
+          <div class="big">Добрый<br>вечер</div>
+          <div class="sub">Введите номер — и всё, что есть в отеле, будет под рукой.</div>
+          <div class="lineinp"><span>Номер</span><button class="go" aria-label="Войти">→</button></div>
+          <div class="hint"><u></u>Или отсканируйте QR-код в номере</div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="phone"><div class="pscr m">
+        <div class="bg" style="background-image:url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=900&q=80')"></div>
+        <div class="scrim"></div>
+        <div class="mark logo"><svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true"><path d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 16 H34.5 M20 3.5 V36.5" fill="none" stroke="currentColor" stroke-width=".8" opacity=".5"/></svg><span class="wm" style="font-size:13px">Crystal</span></div>
+        <div class="topr"><span class="gh" style="height:30px;padding:0 11px"><span class="fl ru"></span>RU</span></div>
+        <div class="body">
+          <div class="big">Добрый<br>вечер</div>
+          <div class="sub">Всё, что есть в отеле — на вашем телефоне</div>
+          <div class="lineinp"><span>Номер</span><button class="go" style="width:42px;height:42px" aria-label="Войти">→</button></div>
+          <div class="hint"><u></u>Или отсканируйте QR в номере</div>
+        </div>
+      </div></div>
+      <div class="cap">Телефон — та же сцена</div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>C · Разворот</h2>
+  <p class="note">Логотип на кадре слева, вход справа. Вместо слова-заголовка — тонкая акцентная черта</p>
+  <div class="browser"><div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app</span></div>
+  <div class="scene c" style="height:490px">
+    <div class="left">
+      <div class="bg" style="background-image:url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80')"></div>
+      <div class="scrim"></div>
+      <div class="mark logo">
+        <svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true"><path d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 16 H34.5 M20 3.5 V36.5" fill="none" stroke="currentColor" stroke-width=".7" opacity=".5"/></svg>
+        <span class="wm">Crystal</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="topr" style="top:24px;right:28px"><span class="gh" style="border-color:var(--line);background:transparent;color:var(--txt2)"><span class="fl ru"></span>Русский</span></div>
+      <div class="rule"></div>
+      <div class="big">Добрый<br>вечер</div>
+      <div class="sub">Введите номер, чтобы открыть меню, услуги и связь с отелем.</div>
+      <div class="lineinp"><span>Номер</span><button class="go" aria-label="Войти">→</button></div>
+      <div class="hint"><u></u>Или отсканируйте QR-код в номере</div>
+    </div>
+  </div></div>
+</div>
+</div>

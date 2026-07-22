@@ -41,6 +41,23 @@ def contrast_on(color: str, *, dark_text: str = "#12211D", light_text: str = "#F
     return dark_text if _relative_luminance(color) > 0.55 else light_text
 
 
+def _linear_channel(value: float) -> float:
+    value /= 255
+    return value / 12.92 if value <= 0.03928 else ((value + 0.055) / 1.055) ** 2.4
+
+
+def _wcag_luminance(color: str) -> float:
+    r, g, b = _hex_to_rgb(color)
+    return 0.2126 * _linear_channel(r) + 0.7152 * _linear_channel(g) + 0.0722 * _linear_channel(b)
+
+
+def contrast_ratio(a: str, b: str) -> float:
+    """Контраст по WCAG: (L1+0.05)/(L2+0.05). Только hex-цвета (не rgba)."""
+    la, lb = _wcag_luminance(a), _wcag_luminance(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
 def build_color_set(
     *,
     mode: str,

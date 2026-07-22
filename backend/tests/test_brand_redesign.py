@@ -1,5 +1,5 @@
 """
-Редизайн v2: тёмно-синие пресеты, дисплейный Prata, загрузка подложки-картинки.
+Редизайн v2: тёмно-синие пресеты, дисплейный Onest, загрузка подложки-картинки.
 
 Дополняет test_brand: там проверено, что тема доезжает до гостя вообще; здесь —
 что новый фундамент (пресеты и подложка) доезжает так же.
@@ -40,9 +40,9 @@ def _png(width=1200, height=800) -> bytes:
 # --- Библиотека ------------------------------------------------------------
 
 
-def test_prata_is_in_curated_fonts(cms):
+def test_onest_is_in_curated_fonts(cms):
     fonts = cms.get("/api/cms/brand/fonts").json()["fonts"]
-    assert any(font["name"] == "Prata" for font in fonts)
+    assert any(font["name"] == "Onest" for font in fonts)
 
 
 def test_dark_blue_presets_are_available(cms):

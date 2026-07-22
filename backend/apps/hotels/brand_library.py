@@ -19,8 +19,8 @@ FONTS = [
     {"family": "'Manrope', system-ui, sans-serif", "name": "Manrope", "category": "sans"},
     {"family": "'Inter', system-ui, sans-serif", "name": "Inter", "category": "sans"},
     {"family": "'Golos Text', system-ui, sans-serif", "name": "Golos Text", "category": "sans"},
-    # Дисплейный шрифт редизайна v2 — засечный, для заголовков и акцентных чисел.
-    {"family": "'Prata', Georgia, serif", "name": "Prata", "category": "serif"},
+    # Дисплейный шрифт редизайна v2 — гротеск Onest, для заголовков, названий, цен.
+    {"family": "'Onest', system-ui, sans-serif", "name": "Onest", "category": "sans"},
     {"family": "'Cormorant Garamond', Georgia, serif", "name": "Cormorant Garamond", "category": "serif"},
     {"family": "'Playfair Display', Georgia, serif", "name": "Playfair Display", "category": "serif"},
     {"family": "'Lora', Georgia, serif", "name": "Lora", "category": "serif"},
@@ -70,7 +70,7 @@ def _typography(body: str, heading: str, scale: float = 1.0) -> dict:
     }
 
 
-_PRATA = "'Prata', Georgia, serif"
+_ONEST = "'Onest', system-ui, sans-serif"
 _MANROPE = "'Manrope', system-ui, sans-serif"
 
 # Опорные цвета пресета: (primary, secondary, bg, surface, text) на каждый режим.
@@ -78,15 +78,17 @@ _PRESET_SEEDS = {
     # --- Редизайн v2: тёмно-синие пресеты (образ по умолчанию) --------------
     "midnight_navy": {
         "name": "Полуночный синий",
-        "description": "Тёмная база, насыщенный синий акцент, дисплейный Prata — сигнатурный образ",
+        "description": "Тёмная база, насыщенный синий акцент, дисплейный Onest — сигнатурный образ (эталон витрины)",
         "default_mode": "dark",
         "surface_style": "glass",
         "radius": (12, 20),
-        "fonts": (_MANROPE, _PRATA, 1.12),
-        "swatch": ["#0C1420", "#6EA8DC", "#1E4E8C"],
-        "light": ("#1E4E8C", "#9C7A4E", "#F4F6FB", "#FFFFFF", "#12202F"),
-        "dark": ("#6EA8DC", "#C7A16A", "#0C1420", "#141F2E", "#E8EFF7"),
-        "background": {"kind": "gradient", "gradient": {"from": "#0C1420", "to": "#173456", "angle": 160}, "dim": 0.0},
+        "fonts": (_MANROPE, _ONEST, 1.12),
+        # Опорные цвета сведены к эталону: база #0B1220, поверхность #131C2E,
+        # акцент #2F62C4, золото бейджей #E3B23C, текст #EEF3FB.
+        "swatch": ["#0B1220", "#2F62C4", "#131C2E"],
+        "light": ("#2456A0", "#9C7A4E", "#F4F6FB", "#FFFFFF", "#12202F"),
+        "dark": ("#2F62C4", "#E3B23C", "#0B1220", "#131C2E", "#EEF3FB"),
+        "background": {"kind": "gradient", "gradient": {"from": "#0B1220", "to": "#16233C", "angle": 160}, "dim": 0.0},
     },
     "sapphire_dark": {
         "name": "Сапфир",
@@ -94,7 +96,7 @@ _PRESET_SEEDS = {
         "default_mode": "dark",
         "surface_style": "soft",
         "radius": (10, 18),
-        "fonts": (_MANROPE, _PRATA, 1.1),
+        "fonts": (_MANROPE, _ONEST, 1.1),
         "swatch": ["#0A1020", "#5B7CE0", "#24305C"],
         "light": ("#2A3D8F", "#7C6BB0", "#F2F3FB", "#FFFFFF", "#161A2E"),
         "dark": ("#7E9BEA", "#B7A6E0", "#0A1020", "#141A2E", "#E9ECF8"),
@@ -106,7 +108,7 @@ _PRESET_SEEDS = {
         "default_mode": "light",
         "surface_style": "soft",
         "radius": (12, 20),
-        "fonts": (_MANROPE, _PRATA, 1.12),
+        "fonts": (_MANROPE, _ONEST, 1.12),
         "swatch": ["#F4F6FB", "#1E4E8C", "#0C1420"],
         "light": ("#1E4E8C", "#9C7A4E", "#F4F6FB", "#FFFFFF", "#12202F"),
         "dark": ("#6EA8DC", "#C7A16A", "#0C1420", "#141F2E", "#E8EFF7"),
@@ -118,7 +120,7 @@ _PRESET_SEEDS = {
         "default_mode": "light",
         "surface_style": "flat",
         "radius": (14, 22),
-        "fonts": (_MANROPE, _PRATA, 1.08),
+        "fonts": (_MANROPE, _ONEST, 1.08),
         "swatch": ["#EEF3FA", "#20558F", "#123B5C"],
         "light": ("#20558F", "#3E7CA8", "#EEF3FA", "#FFFFFF", "#123B5C"),
         "dark": ("#6BA6D8", "#79B4CE", "#0B1622", "#132433", "#E4EFF7"),

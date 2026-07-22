@@ -402,7 +402,7 @@ def test_template_placeholders_are_filled(crystal, order, notifications_on):
 
         assert f"№{order.number}" in message.subject
         assert "Кухня ресторана" in message.subject
-        assert "Комната 305" in message.body
+        assert "Номер 305" in message.body
         assert "Цезарь" in message.body
 
 

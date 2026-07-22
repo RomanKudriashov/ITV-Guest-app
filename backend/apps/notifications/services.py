@@ -149,7 +149,7 @@ def _message_context(order: Order, step: EscalationStep | None, language: str) -
 
     return {
         "number": str(order.number),
-        "room": f"Комната {order.room.number}" if order.room_id else "",
+        "room": f"Номер {order.room.number}" if order.room_id else "",
         "point": translate(order.execution_point.title, language) or order.execution_point.code,
         "summary": "\n".join(lines),
         "comment": order.comment or "",

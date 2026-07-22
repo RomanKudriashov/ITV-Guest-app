@@ -54,7 +54,7 @@ def get_room(room_id) -> Room:
 def create_room(data: dict) -> Room:
     number = str(data.get("number") or "").strip()
     if not number:
-        raise ValidationError("Укажите номер комнаты", field="number")
+        raise ValidationError("Укажите номер", field="number")
     if Room.all_objects.filter(number=number).exists():
         raise ConflictError(f"Номер «{number}» уже существует", code="room_exists")
 
@@ -72,7 +72,7 @@ def update_room(room_id, data: dict) -> Room:
     if "number" in data:
         number = str(data["number"] or "").strip()
         if not number:
-            raise ValidationError("Укажите номер комнаты", field="number")
+            raise ValidationError("Укажите номер", field="number")
         if Room.all_objects.filter(number=number).exclude(pk=room.pk).exists():
             raise ConflictError(f"Номер «{number}» уже существует", code="room_exists")
         room.number = number

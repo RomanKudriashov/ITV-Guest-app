@@ -1,0 +1,480 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITV-Guest-app — эталон: все экраны гостя</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&family=Unbounded:wght@600;700;800&family=Oswald:wght@500;600;700&display=swap');
+:root{
+  --font-display:'Onest',sans-serif;
+  --base:#0B1220; --surf:#131C2E; --raise:#1B2740; --line:rgba(180,205,255,.13);
+  --txt:#EEF3FB; --txt2:#9FB0CC; --txt3:#6E809E;
+  --acc:#2F62C4; --acc2:#5B93F0; --acc-soft:rgba(47,98,196,.18); --gold:#E3B23C; --ok:#2E9E6B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070C15;color:var(--txt);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:1340px;margin:0 auto;padding:40px 20px 90px}
+h1,.sec h2,.secttl h3,.sheet h2,.herotext h2,.card .nm,.price,.cta,.opt .t,.rc .nm,.rc .pr,.mt .nm,.big-n{font-family:var(--font-display)}
+.kick{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--acc2);font-weight:700}
+h1{font-size:38px;font-weight:800;letter-spacing:-.025em;margin:10px 0 8px}
+.lede{color:var(--txt2);font-size:14.5px;max-width:720px}
+.fontbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:18px 0 4px}
+.fontbar .lb{font-size:12px;color:var(--txt3);margin-right:3px}
+.fontbar button{background:transparent;border:1px solid var(--line);color:var(--txt2);border-radius:999px;padding:7px 15px;font:700 12.5px 'Manrope';cursor:pointer}
+.fontbar button.on{border-color:var(--acc2);color:#fff;background:var(--acc-soft)}
+.sec{margin-top:48px;padding-top:24px;border-top:1px solid var(--line)}
+.sec h2{font-size:23px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+.sec .note{color:var(--txt3);font-size:13px;margin-bottom:18px}
+.fix{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0B1220;background:var(--acc2);border-radius:5px;padding:3px 8px;margin-right:7px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start}
+.cap{font-size:12px;color:var(--txt3);margin-top:9px;text-align:center}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--txt2);background:rgba(255,255,255,.03)}
+.badge{position:absolute;top:12px;left:12px;z-index:4;font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:5px 10px;border-radius:7px;background:var(--gold);color:#20180A}
+.badge.b2{background:var(--acc);color:#fff}
+.price{font-weight:800;font-size:19px;letter-spacing:-.02em}
+.ph{background-size:cover;background-position:center;background-color:#22314e}
+.browser{border-radius:14px;overflow:hidden;border:1px solid var(--line);box-shadow:0 40px 90px -40px #000}
+.chrome{height:34px;background:#0F1726;display:flex;align-items:center;gap:7px;padding:0 13px;border-bottom:1px solid var(--line)}
+.chrome i{width:9px;height:9px;border-radius:50%;background:#2B3A56}
+.chrome .u{margin-left:10px;font-size:11px;color:var(--txt3);background:#0A101B;border-radius:6px;padding:3px 11px}
+.app{background:var(--base)}
+.phone{width:330px;border-radius:34px;padding:8px;background:linear-gradient(150deg,#2A3550,#0D1420);box-shadow:0 30px 60px -28px #000;margin:0 auto}
+.pscr{border-radius:27px;overflow:hidden;background:var(--base);height:620px;position:relative;display:flex;flex-direction:column}
+
+/* шапка-фото */
+.cathero{position:relative;height:270px}
+.cathero .ph{position:absolute;inset:0}
+.cathero .vg{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,12,21,.6) 0%,rgba(7,12,21,.08) 36%,rgba(11,18,32,.72) 100%)}
+.floatbar{position:absolute;top:16px;left:20px;right:20px;z-index:6;display:flex;align-items:center;gap:9px}
+.fbtn{width:36px;height:36px;border-radius:50%;background:rgba(7,12,21,.45);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+.roomfloat{margin-left:auto;display:inline-flex;align-items:center;gap:9px;height:36px;padding:0 15px;border-radius:999px;background:rgba(7,12,21,.45);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:12.5px;font-weight:700}
+.roomfloat u{width:6px;height:6px;border-radius:50%;background:var(--acc2);text-decoration:none;box-shadow:0 0 0 3px rgba(91,147,240,.25)}
+.herotext{position:absolute;left:26px;bottom:44px;z-index:5}
+.herotext .sub{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.72);font-weight:700}
+.herotext h2{font-weight:800;letter-spacing:-.025em;font-size:40px;color:#fff;margin-top:8px;line-height:1.02;text-shadow:0 4px 30px rgba(0,0,0,.55)}
+.catsheet{position:relative;margin-top:-28px;border-radius:26px 26px 0 0;background:var(--base);z-index:4;padding:4px 0 0}
+.pad{padding:20px 26px 28px}
+
+.cattabs{display:flex;gap:22px;padding:16px 26px 0}
+.cattabs span{font-size:14px;font-weight:700;color:var(--txt3);padding-bottom:11px;border-bottom:2px solid transparent;cursor:pointer}
+.cattabs span.on{color:var(--txt);border-color:var(--acc2)}
+.secttl{display:flex;align-items:baseline;gap:12px;margin:6px 0 14px}
+.secttl h3{font-size:23px;font-weight:800;letter-spacing:-.02em}
+.secttl .ln{flex:1;height:1px;background:var(--line)}
+.secttl .cnt{font-size:12px;color:var(--txt3)}
+.blkttl{display:flex;align-items:center;gap:12px;margin:24px 0 13px}
+.blkttl b{font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt3);font-weight:800}
+.blkttl .ln{flex:1;height:1px;background:var(--line)}
+.blkttl a{font-size:12.5px;font-weight:700;color:var(--acc2);text-decoration:none}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative;transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s}
+.card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -20px rgba(0,0,0,.8)}
+.card .img{height:146px;position:relative}
+.card .img .ph{position:absolute;inset:0}
+.card .bd{padding:13px 14px 14px}
+.card .nm{font-size:15px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.card .ds{font-size:12px;color:var(--txt3);margin:4px 0 8px;line-height:1.4;min-height:32px}
+.nutri{font-size:11.5px;color:var(--txt3);margin-bottom:9px}
+.nutri b{color:var(--txt2);font-weight:700}
+.card .flags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.card .flags .chip{font-size:10.5px;padding:3px 8px}
+.card .rw{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.addbtn{display:inline-flex;align-items:center;gap:6px;background:var(--acc);color:#fff;border:none;border-radius:10px;padding:9px 14px;font:800 13px 'Manrope';cursor:pointer;transition:background .18s,transform .12s}
+.addbtn:hover{background:var(--acc2)} .addbtn:active{transform:scale(.96)}
+.addbtn.ghost{background:transparent;border:1px solid var(--acc2);color:var(--acc2)}
+.card.off{opacity:.5}
+
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:206px;gap:14px;overflow-x:auto;padding-bottom:6px}
+.rc{background:var(--surf);border:1px solid var(--line);border-radius:15px;overflow:hidden;position:relative;transition:transform .22s}
+.rc:hover{transform:translateY(-4px)}
+.rc .im{height:128px;position:relative}.rc .im .ph{position:absolute;inset:0}
+.rc .bd{padding:11px 12px 13px}
+.rc .nm{font-weight:800;font-size:14px;letter-spacing:-.01em;line-height:1.25}
+.rc .rw{display:flex;align-items:center;justify-content:space-between;margin-top:9px}
+.rc .pr{font-weight:800;font-size:15px}
+.mini{width:30px;height:30px;border-radius:9px;background:var(--acc);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer;line-height:1}
+
+.mos{display:grid;grid-template-columns:1.6fr 1fr 1fr;grid-auto-rows:148px;gap:14px}
+.mt{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);transition:transform .22s}
+.mt:hover{transform:translateY(-4px)}
+.mt .ph{position:absolute;inset:0}
+.mt .vg{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 38%,rgba(0,0,0,.82) 100%)}
+.mt .cc{position:absolute;left:16px;right:16px;bottom:14px;z-index:3}
+.mt .nm{font-weight:800;letter-spacing:-.02em;color:#fff;font-size:19px}
+.mt .sb{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:3px}
+.mt.big{grid-row:span 2}.mt.big .nm{font-size:27px}
+.mt.wide{grid-column:span 2}
+.q4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.qa{border:1px solid var(--line);background:var(--surf);border-radius:14px;padding:15px 16px;cursor:pointer;transition:border-color .18s,transform .18s}
+.qa:hover{border-color:var(--acc2);transform:translateY(-3px)}
+.qa .ic{width:34px;height:34px;border-radius:10px;background:var(--acc-soft);color:var(--acc2);display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
+.qa .t{font-weight:700;font-size:14px}
+.qa .s{font-size:11.5px;color:var(--txt3);margin-top:2px}
+
+.ordstrip{display:flex;align-items:center;gap:14px;border:1px solid var(--line);background:linear-gradient(120deg,var(--acc-soft),transparent 60%),var(--surf);border-radius:15px;padding:14px 16px}
+.ordstrip .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(46,158,107,.18);flex:none}
+.ordstrip .t{font-weight:700;font-size:14px}
+.ordstrip .s{font-size:12.5px;color:var(--txt3);margin-top:2px}
+.ordstrip .go{margin-left:auto;font-size:13px;font-weight:700;color:var(--acc2)}
+
+/* карточка позиции */
+.sheetwrap{border-radius:20px;overflow:hidden;border:1px solid var(--line);background:var(--base);box-shadow:0 40px 90px -40px #000}
+.hero{height:250px;position:relative}
+.hero .ph{position:absolute;inset:0}
+.hero .vg{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,12,21,.25) 0%,transparent 40%,rgba(11,18,32,.55) 100%)}
+.hero .close{position:absolute;top:14px;right:14px;z-index:5;width:34px;height:34px;border-radius:50%;background:rgba(7,12,21,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px}
+.sheet{position:relative;margin-top:-26px;border-radius:22px 22px 0 0;background:var(--base);padding:22px 22px 0;z-index:3}
+.sheet .cat{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--acc2);font-weight:700}
+.sheet h2{font-size:28px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin:7px 0 6px}
+.sheet .desc{color:var(--txt2);font-size:14px;line-height:1.55}
+.metarow{display:flex;gap:6px;flex-wrap:wrap;margin:13px 0 0}
+.nutriline{margin:12px 0 0;font-size:12.5px;color:var(--txt3);display:flex;gap:14px;flex-wrap:wrap}
+.nutriline span b{color:var(--txt);font-weight:800;font-size:14px;font-family:var(--font-display)}
+.grp{margin-top:20px}
+.grphd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
+.grphd b{font-size:15px;font-weight:700}
+.grphd em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--acc2);border:1px solid var(--acc2);border-radius:999px;padding:3px 9px}
+.grphd .o{font-size:12px;color:var(--txt3)}
+.opts{display:flex;gap:9px;flex-wrap:wrap}
+.opt{border:1.5px solid var(--line);background:rgba(255,255,255,.03);border-radius:12px;padding:11px 15px;cursor:pointer;transition:border-color .16s,background .16s,transform .12s;min-width:92px}
+.opt:hover{border-color:var(--acc2)}.opt:active{transform:scale(.97)}
+.opt .t{font-size:13.5px;font-weight:700}
+.opt .p{font-size:12px;color:var(--txt3);margin-top:2px}
+.opt.sel{border-color:var(--acc2);background:var(--acc-soft)}
+.opt.sel .p{color:var(--acc2);font-weight:700}
+.fieldbox{border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--txt3);font-size:13px;margin-top:18px;background:rgba(255,255,255,.02)}
+.bar{position:sticky;bottom:0;margin-top:20px;padding:14px 22px 18px;background:linear-gradient(180deg,rgba(11,18,32,0),var(--base) 22%);display:flex;gap:12px;align-items:center}
+.step{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-weight:800;font-size:14px}
+.step i{color:var(--acc2);font-style:normal;cursor:pointer}
+.cta{flex:1;background:linear-gradient(120deg,var(--acc2),var(--acc));border:none;border-radius:12px;padding:15px;color:#fff;font:800 15px 'Manrope';cursor:pointer;box-shadow:0 14px 30px -12px rgba(47,98,196,.7)}
+/* вход гостя */
+.login{position:relative;height:440px;overflow:hidden;background:radial-gradient(120% 90% at 50% 6%, #16233C 0%, var(--base) 58%);display:flex;align-items:center;justify-content:center}
+.login .fog{position:absolute;inset:-20%;background:radial-gradient(36% 30% at 24% 30%, rgba(47,98,196,.5), transparent 66%),radial-gradient(34% 28% at 76% 70%, rgba(47,98,196,.4), transparent 66%);filter:blur(30px);animation:drift 17s ease-in-out infinite alternate}
+.login .ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid var(--acc2);opacity:.13}
+.lcard{position:relative;z-index:4;width:360px;border-radius:20px;padding:26px;background:linear-gradient(165deg,rgba(27,39,64,.8),rgba(11,18,32,.72));border:1px solid rgba(255,255,255,.11);backdrop-filter:blur(22px);text-align:center}
+.lcard .mk{width:60px;height:60px;border-radius:17px;margin:0 auto 14px;background:linear-gradient(150deg,var(--acc2),var(--acc));display:flex;align-items:center;justify-content:center;font:800 24px var(--font-display);color:#fff;box-shadow:0 18px 40px -14px rgba(47,98,196,.8)}
+.lcard h3{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.02em}
+.lcard p{color:var(--txt3);font-size:13px;margin:6px 0 18px}
+.inp{border:1px solid var(--line);background:rgba(0,0,0,.28);border-radius:12px;padding:13px 15px;font-size:15px;color:var(--txt2);text-align:left;margin-bottom:11px}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(4%,-3%) scale(1.1)}}
+
+/* слоты */
+.dates{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px}
+.dt{border:1.5px solid var(--line);border-radius:13px;padding:10px 15px;text-align:center;min-width:66px;cursor:pointer;flex:none}
+.dt .d{font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.dt .n{font-family:var(--font-display);font-weight:800;font-size:19px;margin-top:3px}
+.dt.sel{border-color:var(--acc2);background:var(--acc-soft)}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;margin-top:16px}
+.sl{border:1.5px solid var(--line);border-radius:12px;padding:11px;text-align:center;cursor:pointer}
+.sl .t{font-weight:800;font-size:14.5px;font-family:var(--font-display)}
+.sl .c{font-size:11px;color:var(--txt3);margin-top:2px}
+.sl.sel{border-color:var(--acc2);background:var(--acc-soft)}
+.sl.no{opacity:.35}
+
+/* корзина / статус / история / чат */
+.li{display:flex;gap:13px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.li .th{width:56px;height:56px;border-radius:12px;flex:none;position:relative;overflow:hidden}
+.li .th .ph{position:absolute;inset:0}
+.li .nm{font-weight:700;font-size:14.5px}
+.li .sb{font-size:12px;color:var(--txt3);margin-top:3px}
+.li .pr{margin-left:auto;font-family:var(--font-display);font-weight:800;font-size:15px}
+.seg{display:flex;gap:9px;margin-top:10px}
+.sg{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:var(--txt2)}
+.sg.sel{border-color:var(--acc2);background:var(--acc-soft);color:var(--txt)}
+.totals{margin-top:16px;font-size:13.5px;color:var(--txt2)}
+.totals div{display:flex;justify-content:space-between;padding:7px 0}
+.totals .fin{border-top:1px solid var(--line);margin-top:6px;padding-top:12px;font-size:17px;color:var(--txt)}
+.totals .fin b{font-family:var(--font-display);font-weight:800}
+.tl{position:relative;padding-left:30px;margin-top:6px}
+.tl::before{content:"";position:absolute;left:9px;top:8px;bottom:14px;width:2px;background:var(--line)}
+.tp{position:relative;padding:11px 0}
+.tp::before{content:"";position:absolute;left:-26px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--base);border:2px solid var(--line)}
+.tp.done::before{background:var(--ok);border-color:var(--ok)}
+.tp.now::before{background:var(--acc2);border-color:var(--acc2);box-shadow:0 0 0 5px rgba(91,147,240,.2)}
+.tp .t{font-weight:700;font-size:14.5px}
+.tp .s{font-size:12px;color:var(--txt3);margin-top:2px}
+.tp.fut{opacity:.42}
+.msg{max-width:74%;padding:11px 14px;border-radius:15px;font-size:13.5px;margin-bottom:10px;line-height:1.45}
+.msg.them{background:var(--surf);border:1px solid var(--line);border-bottom-left-radius:5px}
+.msg.me{background:linear-gradient(120deg,var(--acc2),var(--acc));color:#fff;margin-left:auto;border-bottom-right-radius:5px}
+.msg .tm{font-size:10.5px;opacity:.6;margin-top:5px}
+.stars{display:flex;gap:9px;margin:14px 0 4px}
+.st{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--txt3);cursor:pointer}
+.st.on{border-color:var(--gold);color:var(--gold);background:rgba(227,178,60,.12)}
+.infobody h4{font-family:var(--font-display);font-size:19px;font-weight:800;margin:20px 0 8px;letter-spacing:-.02em}
+.infobody p{color:var(--txt2);font-size:14px;line-height:1.65;margin-bottom:10px}
+.infobody .kv{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.infobody .kv b{font-weight:700}
+.mnav{display:flex;justify-content:space-around;padding:9px 6px 13px;border-top:1px solid var(--line);background:rgba(12,18,32,.92);flex:none}
+.mnav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:var(--txt3);text-decoration:none}
+.mnav a.on{color:var(--acc2)}
+.mnav a i{font-style:normal;font-size:16px}
+.fl{width:23px;height:16px;border-radius:3px;flex:none;overflow:hidden;display:block;background-size:cover;box-shadow:0 0 0 1px rgba(255,255,255,.16) inset}
+@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.row2,.row3{grid-template-columns:1fr}.mos{grid-template-columns:1fr 1fr}}
+
+.fl.gb{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'%3E%3CclipPath id='c'%3E%3Cpath d='M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z'/%3E%3C/clipPath%3E%3Crect width='60' height='30' fill='%23012169'/%3E%3Cpath d='M0,0 L60,30 M60,0 L0,30' stroke='%23fff' stroke-width='6'/%3E%3Cpath d='M0,0 L60,30 M60,0 L0,30' clip-path='url(%23c)' stroke='%23C8102E' stroke-width='4'/%3E%3Cpath d='M30,0 v30 M0,15 h60' stroke='%23fff' stroke-width='10'/%3E%3Cpath d='M30,0 v30 M0,15 h60' stroke='%23C8102E' stroke-width='6'/%3E%3C/svg%3E")}
+.fl.ru{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Crect width='9' height='6' fill='%23fff'/%3E%3Crect y='2' width='9' height='4' fill='%230039A6'/%3E%3Crect y='4' width='9' height='2' fill='%23D52B1E'/%3E%3C/svg%3E")}
+.fl.sa{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='40' fill='%23165D31'/%3E%3Crect x='11' y='13' width='38' height='3.4' rx='1.7' fill='%23fff'/%3E%3Crect x='11' y='19' width='30' height='2.6' rx='1.3' fill='%23fff'/%3E%3Crect x='11' y='26' width='38' height='2.4' rx='1.2' fill='%23fff'/%3E%3Cpath d='M11 30 l5 3.4 h28 l5-3.4' fill='none' stroke='%23fff' stroke-width='1.8'/%3E%3C/svg%3E")}
+.fl.cn{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Crect width='60' height='40' fill='%23DE2910'/%3E%3Cg fill='%23FFDE00'%3E%3Cpath d='M11 4.6 L13 10.8 L19.3 10.8 L14.2 14.6 L16.2 20.8 L11 17 L5.8 20.8 L7.8 14.6 L2.7 10.8 L9 10.8 Z'/%3E%3Ccircle cx='22.5' cy='4' r='1.7'/%3E%3Ccircle cx='27' cy='8' r='1.7'/%3E%3Ccircle cx='27' cy='14' r='1.7'/%3E%3Ccircle cx='22.5' cy='18' r='1.7'/%3E%3C/g%3E%3C/svg%3E")}
+</style>
+<div class="wrap" id="root" data-font="onest">
+<div class="kick">ITV-Guest-app · эталон витрины</div>
+<h1>Все экраны гостя</h1>
+<p class="lede">Полный набор: вход, стартовая со всеми сервисами отеля, каталог, карточки всех типов, бронь, корзина, статус, история, чат, отзыв, инфо. Правим здесь, потом переносим в код один в один. Фото — заглушки под съёмку отеля.</p>
+<div class="fontbar"><span class="lb">Дисплейный шрифт</span>
+<button class="on" data-f="'Onest',sans-serif" onclick="setF(this)">Onest</button>
+<button data-f="'Unbounded',sans-serif" onclick="setF(this)">Unbounded</button>
+<button data-f="'Oswald',sans-serif" onclick="setF(this)">Oswald</button>
+<button data-f="'Manrope',sans-serif" onclick="setF(this)">Manrope</button></div>
+<div class="sec"><h2>1 · Вход</h2><p class="note">Скан QR из номера ведёт сразу внутрь; ручной ввод — запасной путь</p>
+<div class="browser"><div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app</span></div><div class="app"><div class="login">
+  <div class="fog"></div>
+  <div class="ring" style="width:300px;height:300px"></div><div class="ring" style="width:480px;height:480px"></div><div class="ring" style="width:660px;height:660px"></div>
+  <div class="lcard"><div class="mk">К</div><h3>Отель «Кристалл»</h3><p>Введите номер комнаты — или отсканируйте QR в номере</p>
+  <div class="inp">Номер</div><button class="cta" style="width:100%">Войти</button>
+  <div style="margin-top:14px;font-size:12px;color:var(--txt3)">Нужна помощь? Наберите 0 — ресепшн</div></div>
+</div></div></div></div>
+<div class="sec"><h2>2 · Стартовая — все сервисы отеля</h2><p class="note"><span class="fix">главная</span>фото-шапка · активный заказ · быстрые действия · подборка · все разделы блоками</p>
+<div class="browser"><div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app · номер 305</span></div><div class="app"><div class="cathero" style="height:300px">
+        <div class="ph" style="background-image:linear-gradient(120deg,#2A3550,#0D1420),url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1400&q=80')"></div><div class="vg"></div>
+        <div class="floatbar"><span class="fbtn">☰</span><span class="roomfloat"><u></u>Номер 305</span><span class="fbtn">RU</span><span class="fbtn">☾</span></div>
+        <div class="herotext"><div class="sub">Отель «Кристалл»</div><h2>Добрый вечер</h2><div style="color:rgba(255,255,255,.72);font-size:13.5px;margin-top:7px">Кухня до 23:00 · консьерж круглосуточно</div></div>
+      </div>
+<div class="catsheet"><div class="pad">
+  <div class="ordstrip"><span class="dot"></span><div><div class="t">Заказ №1042 готовится</div><div class="s">Стейк рибай, паста карбонара · подадут к 20:40</div></div><span class="go">Смотреть →</span></div>
+
+  <div class="blkttl"><b>Быстрые действия</b><span class="ln"></span></div>
+  <div class="q4">
+    <div class="qa"><div class="ic">◷</div><div class="t">Заказать в номер</div><div class="s">Круглосуточно</div></div>
+    <div class="qa"><div class="ic">✦</div><div class="t">Уборка номера</div><div class="s">Заявка за минуту</div></div>
+    <div class="qa"><div class="ic">◈</div><div class="t">Такси</div><div class="s">Подача от 10 мин</div></div>
+    <div class="qa"><div class="ic">✉</div><div class="t">Написать</div><div class="s">Ресепшн на связи</div></div>
+  </div>
+
+  <div class="blkttl"><b>Рекомендуем сегодня</b><span class="ln"></span><a>Всё меню →</a></div>
+  <div class="rail">
+    <div class="rc"><div class="im"><div class="ph" style="background-image:linear-gradient(120deg,#5A3320,#2C1A12),url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80')"></div><span class="badge">Выбор шефа</span></div><div class="bd"><div class="nm">Стейк рибай</div><div class="rw"><span class="pr">1 900 ₽</span><button class="mini">+</button></div></div></div>
+    <div class="rc"><div class="im"><div class="ph" style="background-image:linear-gradient(120deg,#6A4A2A,#2A1C12),url('https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80')"></div></div><div class="bd"><div class="nm">Паста карбонара</div><div class="rw"><span class="pr">690 ₽</span><button class="mini">+</button></div></div></div>
+    <div class="rc"><div class="im"><div class="ph" style="background-image:linear-gradient(120deg,#4A5A32,#1A2012),url('https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=700&q=80')"></div><span class="badge b2">Популярное</span></div><div class="bd"><div class="nm">Салат «Цезарь»</div><div class="rw"><span class="pr">550 ₽</span><button class="mini">+</button></div></div></div>
+    <div class="rc"><div class="im"><div class="ph" style="background-image:linear-gradient(120deg,#3E545F,#141C21),url('https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=700&q=80')"></div></div><div class="bd"><div class="nm">Капучино</div><div class="rw"><span class="pr">320 ₽</span><button class="mini">+</button></div></div></div>
+    <div class="rc"><div class="im"><div class="ph" style="background-image:linear-gradient(120deg,#4E4128,#1B1610),url('https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&w=700&q=80')"></div></div><div class="bd"><div class="nm">Сырники</div><div class="rw"><span class="pr">450 ₽</span><button class="mini">+</button></div></div></div>
+  </div>
+
+  <div class="blkttl"><b>Рестораны и бары</b><span class="ln"></span><a>Все заведения →</a></div>
+  <div class="mos">
+    <div class="mt big"><div class="ph" style="background-image:linear-gradient(120deg,#513627,#1C130E),url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Панорама</div><div class="sb">Авторская кухня · 12 этаж · до 23:00</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#43303C,#171016),url('https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Лобби-бар</div><div class="sb">До 02:00</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#4E4128,#1B1610),url('https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">В номер</div><div class="sb">Круглосуточно</div></div></div>
+    <div class="mt wide"><div class="ph" style="background-image:linear-gradient(120deg,#3B4450,#14171C),url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Бассейн и терраса</div><div class="sb">Подача к шезлонгу · 08:00–20:00</div></div></div>
+  </div>
+
+  <div class="blkttl"><b>Спа, фитнес и услуги</b><span class="ln"></span><a>Все услуги →</a></div>
+  <div class="mos" style="grid-template-columns:repeat(4,1fr);grid-auto-rows:132px">
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#3E545F,#141C21),url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Спа</div><div class="sb">4 слота сегодня</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#2E3A4E,#12161D),url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Фитнес</div><div class="sb">Круглосуточно</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#2E3A4E,#12161D),url('https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Уборка</div><div class="sb">MUR / не беспокоить</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#40372C,#191510),url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Трансфер</div><div class="sb">Такси и аэропорт</div></div></div>
+  </div>
+
+  <div class="blkttl"><b>Об отеле и городе</b><span class="ln"></span></div>
+  <div class="mos" style="grid-template-columns:repeat(3,1fr);grid-auto-rows:124px">
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#2A3550,#0D1420),url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1400&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Об отеле</div><div class="sb">Wi-Fi, заезд, правила</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#3A4A5E,#141A22),url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Куда сходить</div><div class="sb">Рядом с отелем</div></div></div>
+    <div class="mt"><div class="ph" style="background-image:linear-gradient(120deg,#43303C,#171016),url('https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><div class="cc"><div class="nm">Мероприятия</div><div class="sb">Афиша недели</div></div></div>
+  </div>
+</div></div></div></div></div><div class="sec"><h2>3 · Каталог</h2><p class="note">Шапка-фото заведения · липкие категории · плотная сетка · КБЖУ строкой, без таблицы · кнопка на карточке</p>
+<div class="browser"><div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app · Панорама</span></div><div class="app"><div class="cathero" style="height:270px">
+        <div class="ph" style="background-image:linear-gradient(120deg,#513627,#1C130E),url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80')"></div><div class="vg"></div>
+        <div class="floatbar"><span class="fbtn">☰</span><span class="roomfloat"><u></u>Номер 305</span><span class="fbtn">RU</span><span class="fbtn">☾</span></div>
+        <div class="herotext"><div class="sub">Отель «Кристалл»</div><h2>Ресторан «Панорама»</h2></div>
+      </div>
+<div class="catsheet">
+<div class="cattabs"><span class="on">Горячее</span><span>Салаты</span><span>Напитки</span><span>Завтрак</span></div>
+<div class="pad">
+  <div class="secttl"><h3>Горячее</h3><span class="ln"></span><span class="cnt">3 позиции</span></div>
+  <div class="grid">
+    <div class="card"><div class="img"><div class="ph" style="background-image:linear-gradient(120deg,#5A3320,#2C1A12),url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80')"></div><span class="badge">Выбор шефа</span></div>
+      <div class="bd"><div class="nm">Стейк рибай</div><div class="ds">Мраморная говядина, 300 г, гриль</div>
+      <div class="nutri"><b>506</b> ккал · Б 32 · Ж 27 · У 12</div>
+      <div class="flags"><span class="chip">Без глютена</span></div>
+      <div class="rw"><span class="price">1 900 ₽</span><button class="addbtn ghost">Выбрать</button></div></div></div>
+    <div class="card"><div class="img"><div class="ph" style="background-image:linear-gradient(120deg,#6A4A2A,#2A1C12),url('https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80')"></div><span class="badge b2">Популярное</span></div>
+      <div class="bd"><div class="nm">Паста карбонара</div><div class="ds">Гуанчале, пекорино, яичный желток</div>
+      <div class="nutri"><b>640</b> ккал · Б 24 · Ж 31 · У 58</div>
+      <div class="flags"><span class="chip">Острое</span></div>
+      <div class="rw"><span class="price">690 ₽</span><button class="addbtn">+ Добавить</button></div></div></div>
+    <div class="card off"><div class="img"><div class="ph" style="background-image:linear-gradient(120deg,#4E4128,#1B1610),url('https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&w=700&q=80')"></div></div>
+      <div class="bd"><div class="nm">Сырники</div><div class="ds">Со сметаной и вареньем, только на завтрак</div>
+      <div class="nutri"><b>420</b> ккал · Б 18 · Ж 16 · У 44</div>
+      <div class="flags"><span class="chip">Вегетарианское</span></div>
+      <div class="rw"><span class="price">450 ₽</span><button class="addbtn ghost">С 07:00</button></div></div></div>
+    <div class="card"><div class="img"><div class="ph" style="background-image:linear-gradient(120deg,#3E545F,#141C21),url('https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=700&q=80')"></div></div>
+      <div class="bd"><div class="nm">Капучино</div><div class="ds">На выбор молоко</div>
+      <div class="nutri"><b>120</b> ккал · Б 6 · Ж 5 · У 12</div>
+      <div class="flags"><span class="chip">3 варианта</span></div>
+      <div class="rw"><span class="price">320 ₽</span><button class="addbtn ghost">Выбрать</button></div></div></div>
+  </div>
+  <div class="secttl" style="margin-top:26px"><h3>Салаты</h3><span class="ln"></span><span class="cnt">2 позиции</span></div>
+  <div class="grid">
+    <div class="card"><div class="img"><div class="ph" style="background-image:linear-gradient(120deg,#4A5A32,#1A2012),url('https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=700&q=80')"></div><span class="badge b2">Популярное</span></div>
+      <div class="bd"><div class="nm">Салат «Цезарь»</div><div class="ds">Курица, пармезан, соус цезарь</div>
+      <div class="nutri"><b>380</b> ккал · Б 26 · Ж 22 · У 14</div><div class="flags"><span class="chip">Содержит яйцо</span></div>
+      <div class="rw"><span class="price">550 ₽</span><button class="addbtn">+ Добавить</button></div></div></div>
+    <div class="card"><div class="img"><div class="ph" style="background-image:linear-gradient(120deg,#4A5A32,#1A2012),url('https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=700&q=80')"></div></div>
+      <div class="bd"><div class="nm">Греческий салат</div><div class="ds">Фета, огурцы, томаты, оливки</div>
+      <div class="nutri"><b>290</b> ккал · Б 9 · Ж 21 · У 12</div><div class="flags"><span class="chip">Вегетарианское</span><span class="chip">Без глютена</span></div>
+      <div class="rw"><span class="price">480 ₽</span><button class="addbtn">+ Добавить</button></div></div></div>
+  </div>
+</div></div></div></div></div>
+<div class="sec"><h2>4 · Карточка блюда</h2><p class="note"><span class="fix">исправлено</span>таблицы КБЖУ нет — данные строкой под описанием · выбор чипсами-кнопками, не радио</p>
+<div class="row2"><div>
+<div class="sheetwrap">
+  <div class="hero"><div class="ph" style="background-image:linear-gradient(120deg,#5A3320,#2C1A12),url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><span class="badge">Выбор шефа</span><span class="close">✕</span></div>
+  <div class="sheet">
+    <div class="cat">Ресторан «Панорама»</div><h2>Стейк рибай</h2>
+    <div class="desc">Мраморная говядина 300 г на углях, розмарин и морская соль. Подаётся с овощами гриль и соусом на выбор.</div>
+    <div class="nutriline"><span><b>506</b> ккал</span><span><b>32</b> белки</span><span><b>27</b> жиры</span><span><b>12</b> углеводы</span></div>
+    <div class="metarow"><span class="chip">Без глютена</span><span class="chip">Острое</span><span class="chip">Подача ~25 мин</span></div>
+    <div class="grp"><div class="grphd"><b>Прожарка</b><em>обязательно</em></div>
+      <div class="opts"><div class="opt"><div class="t">С кровью</div></div><div class="opt sel"><div class="t">Медиум рэр</div></div><div class="opt"><div class="t">Медиум</div></div><div class="opt"><div class="t">Прожаренный</div></div></div></div>
+    <div class="grp"><div class="grphd"><b>Добавки</b><span class="o">до 3</span></div>
+      <div class="opts"><div class="opt sel"><div class="t">Перечный соус</div><div class="p">+150 ₽</div></div><div class="opt"><div class="t">Овощи гриль</div><div class="p">+250 ₽</div></div><div class="opt"><div class="t">Картофель с трюфелем</div><div class="p">+350 ₽</div></div></div></div>
+    <div class="fieldbox">Комментарий к блюду…</div>
+  </div>
+  <div class="bar"><div class="step"><i>−</i>1<i>+</i></div><button class="cta">Добавить · 2 050 ₽</button></div>
+</div></div>
+<div><div class="phone"><div class="pscr" style="overflow:auto">
+  <div class="hero" style="height:200px;flex:none"><div class="ph" style="background-image:linear-gradient(120deg,#5A3320,#2C1A12),url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><span class="badge">Выбор шефа</span><span class="close">✕</span></div>
+  <div class="sheet" style="padding:18px 16px 0">
+    <div class="cat">Ресторан «Панорама»</div><h2 style="font-size:23px">Стейк рибай</h2>
+    <div class="desc" style="font-size:13px">Мраморная говядина 300 г на углях, розмарин, морская соль.</div>
+    <div class="nutriline" style="font-size:12px;gap:11px"><span><b>506</b> ккал</span><span><b>32</b> Б</span><span><b>27</b> Ж</span><span><b>12</b> У</span></div>
+    <div class="metarow"><span class="chip">Без глютена</span><span class="chip">Острое</span></div>
+    <div class="grp"><div class="grphd"><b>Прожарка</b><em>обязательно</em></div>
+      <div class="opts"><div class="opt"><div class="t">С кровью</div></div><div class="opt sel"><div class="t">Медиум</div></div><div class="opt"><div class="t">Прожаренный</div></div></div></div>
+    <div class="grp"><div class="grphd"><b>Добавки</b><span class="o">до 3</span></div>
+      <div class="opts"><div class="opt sel"><div class="t">Перечный соус</div><div class="p">+150 ₽</div></div><div class="opt"><div class="t">Овощи гриль</div><div class="p">+250 ₽</div></div></div></div>
+    <div class="fieldbox">Комментарий…</div></div>
+  <div class="bar" style="padding:12px 16px 16px"><div class="step"><i>−</i>1<i>+</i></div><button class="cta">Добавить · 2 050 ₽</button></div>
+</div></div><div class="cap">Телефон — та же карточка шторкой</div></div></div></div><div class="sec"><h2>5 · Услуга-заявка, бронь слота, инфо-страница</h2><p class="note">Тот же приём шапки для всех типов — меняется только тело</p>
+<div class="row3">
+<div><div class="sheetwrap">
+  <div class="hero" style="height:190px"><div class="ph" style="background-image:linear-gradient(120deg,#40372C,#191510),url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><span class="close">✕</span></div>
+  <div class="sheet"><div class="cat">Консьерж</div><h2 style="font-size:24px">Такси</h2>
+  <div class="desc" style="font-size:13.5px">Подача от 10 минут. Оплата водителю или на счёт номера.</div>
+  <div class="grp"><div class="grphd"><b>Куда едем</b><em>обязательно</em></div><div class="fieldbox" style="margin-top:0">Адрес или «Аэропорт»</div></div>
+  <div class="grp"><div class="grphd"><b>Когда</b></div>
+    <div class="opts"><div class="opt sel"><div class="t">Сейчас</div></div><div class="opt"><div class="t">Ко времени</div></div></div></div>
+  <div class="grp"><div class="grphd"><b>Пассажиров</b></div>
+    <div class="opts"><div class="opt"><div class="t">1</div></div><div class="opt sel"><div class="t">2</div></div><div class="opt"><div class="t">3</div></div><div class="opt"><div class="t">4+</div></div></div></div>
+  <div class="fieldbox">Пожелания…</div></div>
+  <div class="bar"><button class="cta">Вызвать такси</button></div>
+</div><div class="cap">Заявка — поля вместо корзины</div></div>
+
+<div><div class="sheetwrap">
+  <div class="hero" style="height:190px"><div class="ph" style="background-image:linear-gradient(120deg,#3E545F,#141C21),url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><span class="close">✕</span></div>
+  <div class="sheet"><div class="cat">Спа-центр</div><h2 style="font-size:24px">Массаж 60 мин</h2>
+  <div class="desc" style="font-size:13.5px">Классический, кабинет на 3 этаже.</div>
+  <div class="grp"><div class="grphd"><b>Дата</b></div>
+    <div class="dates"><div class="dt"><div class="d">Пн</div><div class="n">21</div></div><div class="dt sel"><div class="d">Вт</div><div class="n">22</div></div><div class="dt"><div class="d">Ср</div><div class="n">23</div></div><div class="dt"><div class="d">Чт</div><div class="n">24</div></div></div></div>
+  <div class="grp"><div class="grphd"><b>Время</b><span class="o">свободно 4</span></div>
+    <div class="slots"><div class="sl no"><div class="t">10:00</div><div class="c">занято</div></div><div class="sl"><div class="t">12:00</div><div class="c">2 места</div></div><div class="sl sel"><div class="t">14:00</div><div class="c">1 место</div></div><div class="sl"><div class="t">16:00</div><div class="c">2 места</div></div></div></div></div>
+  <div class="bar"><button class="cta">Забронировать · 4 500 ₽</button></div>
+</div><div class="cap">Бронь — дата и слоты</div></div>
+
+<div><div class="sheetwrap">
+  <div class="hero" style="height:190px"><div class="ph" style="background-image:linear-gradient(120deg,#2A3550,#0D1420),url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1400&q=80')"></div><div class="vg"></div><span class="close">✕</span></div>
+  <div class="sheet infobody"><div class="cat">Информация</div><h2 style="font-size:24px">Об отеле</h2>
+  <p>Отель «Кристалл» — 180 номеров, ресторан на 12 этаже, спа и бассейн.</p>
+  <div class="kv"><span>Wi-Fi</span><b>crystal-guest</b></div>
+  <div class="kv"><span>Пароль</span><b>welcome2026</b></div>
+  <div class="kv"><span>Заезд</span><b>14:00</b></div>
+  <div class="kv"><span>Выезд</span><b>12:00</b></div>
+  <div class="kv"><span>Ресепшн</span><b>Наберите 0</b></div>
+  <h4>Завтрак</h4><p>07:00–11:00 на 12 этаже. В номер — по меню завтрака.</p>
+  <div style="height:14px"></div></div>
+</div><div class="cap">Инфо — только чтение, без кнопки заказа</div></div>
+</div></div>
+<div class="sec"><h2>6 · Корзина и статус заказа</h2><p class="note">Куда подать, когда, итог с сервисным сбором · живой таймлайн после оформления</p>
+<div class="row2">
+<div><div class="sheetwrap"><div class="sheet" style="margin-top:0;border-radius:20px 20px 0 0;padding-top:24px">
+  <div class="cat">Номер 305</div><h2 style="font-size:26px">Корзина</h2>
+  <div class="li"><div class="th"><div class="ph" style="background-image:linear-gradient(120deg,#5A3320,#2C1A12),url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm">Стейк рибай</div><div class="sb">Медиум рэр · перечный соус</div></div><span class="pr">2 050 ₽</span></div>
+  <div class="li"><div class="th"><div class="ph" style="background-image:linear-gradient(120deg,#6A4A2A,#2A1C12),url('https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm">Паста карбонара</div><div class="sb">×1</div></div><span class="pr">690 ₽</span></div>
+  <div class="blkttl"><b>Куда подать</b><span class="ln"></span></div>
+  <div class="seg"><div class="sg sel">В номер 305</div><div class="sg">К бассейну</div><div class="sg">В ресторан</div></div>
+  <div class="blkttl"><b>Когда</b><span class="ln"></span></div>
+  <div class="seg"><div class="sg sel">Как можно скорее</div><div class="sg">Ко времени</div></div>
+  <div class="fieldbox">Пожелания к заказу…</div>
+  <div class="totals"><div><span>Позиции</span><span>2 740 ₽</span></div><div><span>Сервисный сбор 10%</span><span>274 ₽</span></div><div class="fin"><span>Итого</span><b>3 014 ₽</b></div></div>
+  <div style="height:10px"></div></div>
+  <div class="bar"><button class="cta">Оформить заказ</button></div>
+</div><div class="cap">Корзина</div></div>
+
+<div><div class="sheetwrap"><div class="sheet" style="margin-top:0;border-radius:20px 20px 0 0;padding-top:24px">
+  <div class="cat">Заказ №1042 · номер 305</div><h2 style="font-size:26px">Готовится</h2>
+  <div class="desc" style="font-size:13.5px">Подадут примерно к 20:40</div>
+  <div class="tl">
+    <div class="tp done"><div class="t">Принят</div><div class="s">20:12 · кухня «Панорама»</div></div>
+    <div class="tp now"><div class="t">Готовится</div><div class="s">20:18 · повар взял в работу</div></div>
+    <div class="tp fut"><div class="t">В пути</div><div class="s">официант несёт в номер</div></div>
+    <div class="tp fut"><div class="t">Доставлено</div><div class="s">приятного аппетита</div></div>
+  </div>
+  <div class="blkttl"><b>Состав</b><span class="ln"></span></div>
+  <div class="li" style="border:none;padding:9px 0"><div class="th" style="width:44px;height:44px"><div class="ph" style="background-image:linear-gradient(120deg,#5A3320,#2C1A12),url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm" style="font-size:13.5px">Стейк рибай</div><div class="sb">Медиум рэр · перечный соус</div></div><span class="pr" style="font-size:14px">2 050 ₽</span></div>
+  <div class="li" style="padding:9px 0"><div class="th" style="width:44px;height:44px"><div class="ph" style="background-image:linear-gradient(120deg,#6A4A2A,#2A1C12),url('https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm" style="font-size:13.5px">Паста карбонара</div><div class="sb">×1</div></div><span class="pr" style="font-size:14px">690 ₽</span></div>
+  <div style="height:10px"></div></div>
+  <div class="bar"><button class="cta" style="background:transparent;border:1px solid var(--line);color:var(--txt2);box-shadow:none">Написать на кухню</button></div>
+</div><div class="cap">Живой статус — обновляется без перезагрузки</div></div>
+</div></div><div class="sec"><h2>7 · История, чат, отзыв</h2><p class="note">Чат — один тред на номер, живёт отдельно от заказов · отзыв только после выполнения, виден отелю</p>
+<div class="row3">
+<div><div class="phone"><div class="pscr">
+  <div class="sheet" style="margin-top:0;border-radius:0;padding:20px 16px 0;flex:1;overflow:auto">
+    <div class="cat">Номер 305</div><h2 style="font-size:23px">Мои заказы</h2>
+    <div class="blkttl"><b>Активные</b><span class="ln"></span></div>
+    <div class="ordstrip" style="padding:12px 13px"><span class="dot"></span><div><div class="t" style="font-size:13px">№1042 · готовится</div><div class="s">к 20:40</div></div><span class="go">→</span></div>
+    <div class="blkttl"><b>Прошлые</b><span class="ln"></span></div>
+    <div class="li" style="padding:11px 0"><div class="th" style="width:44px;height:44px"><div class="ph" style="background-image:linear-gradient(120deg,#4A5A32,#1A2012),url('https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm" style="font-size:13.5px">№1038 · Цезарь</div><div class="sb">вчера, 13:20 · выполнен</div></div><span class="pr" style="font-size:14px">550 ₽</span></div>
+    <div class="li" style="padding:11px 0"><div class="th" style="width:44px;height:44px"><div class="ph" style="background-image:linear-gradient(120deg,#3E545F,#141C21),url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm" style="font-size:13.5px">№1035 · Массаж</div><div class="sb">21 июля, 14:00 · выполнен</div></div><span class="pr" style="font-size:14px">4 500 ₽</span></div>
+    <div class="li" style="padding:11px 0"><div class="th" style="width:44px;height:44px"><div class="ph" style="background-image:linear-gradient(120deg,#40372C,#191510),url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=700&q=80')"></div></div><div><div class="nm" style="font-size:13.5px">№1031 · Такси</div><div class="sb">21 июля · отменён</div></div><span class="pr" style="font-size:14px">—</span></div>
+  </div>
+  <div class="mnav"><a><i>⌂</i>Главная</a><a><i>☰</i>Меню</a><a class="on"><i>◫</i>Заказы</a><a><i>✉</i>Чат</a><a><i>ⓘ</i>Инфо</a></div>
+</div></div><div class="cap">История заказов</div></div>
+
+<div><div class="phone"><div class="pscr">
+  <div class="sheet" style="margin-top:0;border-radius:0;padding:18px 16px 0;flex:1;overflow:auto;display:flex;flex-direction:column">
+    <div class="cat">Ресепшн · на связи</div><h2 style="font-size:22px">Чат с отелем</h2>
+    <div style="flex:1;margin-top:16px">
+      <div class="msg them">Добрый вечер! Чем можем помочь?<div class="tm">20:05</div></div>
+      <div class="msg me">Можно дополнительные полотенца в 305?<div class="tm">20:07</div></div>
+      <div class="msg them">Конечно, горничная поднимется в течение 15 минут.<div class="tm">20:08</div></div>
+      <div class="msg me">Спасибо!<div class="tm">20:08</div></div>
+    </div>
+    <div class="fieldbox" style="margin:0 0 12px">Сообщение…</div>
+  </div>
+  <div class="mnav"><a><i>⌂</i>Главная</a><a><i>☰</i>Меню</a><a><i>◫</i>Заказы</a><a class="on"><i>✉</i>Чат</a><a><i>ⓘ</i>Инфо</a></div>
+</div></div><div class="cap">Чат — один тред на номер</div></div>
+
+<div><div class="sheetwrap">
+  <div class="hero" style="height:150px"><div class="ph" style="background-image:linear-gradient(120deg,#4A5A32,#1A2012),url('https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=700&q=80')"></div><div class="vg"></div><span class="close">✕</span></div>
+  <div class="sheet"><div class="cat">Заказ №1038 выполнен</div><h2 style="font-size:23px">Как вам?</h2>
+  <div class="desc" style="font-size:13.5px">Оценка видна только отелю — другим гостям её не показываем.</div>
+  <div class="stars"><span class="st on">★</span><span class="st on">★</span><span class="st on">★</span><span class="st on">★</span><span class="st">★</span></div>
+  <div class="fieldbox">Что понравилось, что можно улучшить…</div>
+  <div style="height:12px"></div></div>
+  <div class="bar"><button class="cta">Отправить отзыв</button></div>
+</div><div class="cap">Отзыв — после выполнения, приватно</div></div>
+</div></div>
+<div class="sec"><h2>8 · Мелочи</h2><p class="note">Языки с векторными флагами · без эмодзи</p>
+<div style="width:220px;border:1px solid var(--line);border-radius:14px;background:var(--surf);overflow:hidden">
+<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line)"><span class="fl gb"></span>English</div>
+<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line);background:var(--acc-soft)"><span class="fl ru"></span>Русский</div>
+<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line)"><span class="fl sa"></span>العربية</div>
+<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;font-size:14px;font-weight:600"><span class="fl cn"></span>中文</div>
+</div></div>
+</div>
+<script>
+function setF(b){var r=document.getElementById('root');r.style.setProperty('--font-display',b.dataset.f);
+document.querySelectorAll('.fontbar button').forEach(function(x){x.classList.remove('on')});b.classList.add('on');}
+</script>
