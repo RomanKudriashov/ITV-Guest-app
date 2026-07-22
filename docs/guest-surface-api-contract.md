@@ -1,12 +1,12 @@
 # Контракт гостевого контура (прогон 10): главная, отмена, чат, отзывы
 
 Фиксируется **до** реализации. Завершает гостевую поверхность. Префиксы:
-`/api/guest`, `/api/tracker`, `/api/cms`. WS: `/ws/guest/chat/`,
-`/ws/staff/chat/{thread_id}/`.
+`/api/v1/guest`, `/api/v1/tracker`, `/api/v1/cms`. WS: `/ws/v1/guest/chat/`,
+`/ws/v1/staff/chat/{thread_id}/`.
 
 ## 1. Главная под все типы
 
-`GET /api/guest/home` — секции отеля, собранные **из данных** (какие типы
+`GET /api/v1/guest/home` — секции отеля, собранные **из данных** (какие типы
 реально наполнены), а не захардкоженные.
 
 ```jsonc
@@ -37,7 +37,7 @@
 
 Уже работает; приводится к единообразию для всех типов. У объекта заказа
 (`§6 guest-api`) — `status.allows_guest_cancel`. Отмена:
-`POST /api/guest/order/{id}/cancel {reason?}`. Для `slot` освобождает слот
+`POST /api/v1/guest/order/{id}/cancel {reason?}`. Для `slot` освобождает слот
 (готово). `409 cancel_not_allowed`, если статус уже не позволяет.
 
 ---
@@ -59,24 +59,24 @@
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/guest/chat` | текущий тред + сообщения (создаёт тред при первом обращении) |
-| POST | `/api/guest/chat` | `{body}` — отправить сообщение |
-| POST | `/api/guest/chat/read` | отметить прочитанными сообщения персонала |
+| GET | `/api/v1/guest/chat` | текущий тред + сообщения (создаёт тред при первом обращении) |
+| POST | `/api/v1/guest/chat` | `{body}` — отправить сообщение |
+| POST | `/api/v1/guest/chat/read` | отметить прочитанными сообщения персонала |
 
-`WS /ws/guest/chat/?token=<гостевой>&hotel=<subdomain>&lang=ru` —
+`WS /ws/v1/guest/chat/?token=<гостевой>&hotel=<subdomain>&lang=ru` —
 **реконсиляция снимком**: полный снимок треда при подключении и после каждого
-сообщения (любой стороны). Формат снимка = тело `GET /api/guest/chat`.
+сообщения (любой стороны). Формат снимка = тело `GET /api/v1/guest/chat`.
 
 ### Персонал (REST + WS)
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/tracker/chat/threads` | треды отеля (последнее сообщение, непрочитанные) |
-| GET | `/api/tracker/chat/threads/{id}` | тред + сообщения |
-| POST | `/api/tracker/chat/threads/{id}` | `{body}` — ответить |
-| POST | `/api/tracker/chat/threads/{id}/read` | отметить прочитанными сообщения гостя |
+| GET | `/api/v1/tracker/chat/threads` | треды отеля (последнее сообщение, непрочитанные) |
+| GET | `/api/v1/tracker/chat/threads/{id}` | тред + сообщения |
+| POST | `/api/v1/tracker/chat/threads/{id}` | `{body}` — ответить |
+| POST | `/api/v1/tracker/chat/threads/{id}/read` | отметить прочитанными сообщения гостя |
 
-`WS /ws/staff/chat/{thread_id}/?token=<JWT>&hotel=&lang=` — тот же снимок.
+`WS /ws/v1/staff/chat/{thread_id}/?token=<JWT>&hotel=&lang=` — тот же снимок.
 
 **У WS нет middleware** — авторизация/скоуп/язык резолвятся явно:
 гостевой токен ↔ **только свой** тред; сотрудник ↔ только треды **своего
@@ -114,8 +114,8 @@
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/guest/order/{id}/review` | отзыв, если оставлен; `404`, если ещё нет (сценарий «не оценивал», витрина показывает форму) |
-| POST | `/api/guest/order/{id}/review` | `{rating: 1..5, comment?}` |
+| GET | `/api/v1/guest/order/{id}/review` | отзыв, если оставлен; `404`, если ещё нет (сценарий «не оценивал», витрина показывает форму) |
+| POST | `/api/v1/guest/order/{id}/review` | `{rating: 1..5, comment?}` |
 
 Один отзыв на заказ (идемпотентно): повтор — `409 review_exists`.
 Отзыв до завершения заказа — `422 review_not_allowed`.
@@ -124,12 +124,12 @@
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/tracker/order/{id}` | объект заказа получает блок `review` |
-| GET | `/api/cms/reviews?rating=&limit=` | список отзывов отеля |
+| GET | `/api/v1/tracker/order/{id}` | объект заказа получает блок `review` |
+| GET | `/api/v1/cms/reviews?rating=&limit=` | список отзывов отеля |
 
 ### Настройка отеля (CMS)
 
-`GET/PATCH /api/cms/review-settings`:
+`GET/PATCH /api/v1/cms/review-settings`:
 ```jsonc
 {"enabled": true, "low_rating_threshold": 3}
 ```

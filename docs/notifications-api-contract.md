@@ -1,6 +1,6 @@
 # Контракт уведомлений и эскалации (прогон 6)
 
-Фиксируется **до** реализации. Префикс CMS-эндпоинтов: `/api/cms`.
+Фиксируется **до** реализации. Префикс CMS-эндпоинтов: `/api/v1/cms`.
 Аутентификация и тенант — как у остальной CMS (`docs/cms-api-contract.md`).
 
 ## Зачем это
@@ -157,10 +157,10 @@ order.accepted / order.status_changed(терминальный) / order.cancelle
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/cms/notification-channels` |
-| POST | `/api/cms/notification-channels` |
-| PATCH / DELETE | `/api/cms/notification-channels/{id}` |
-| POST | `/api/cms/notification-channels/{id}/test` |
+| GET | `/api/v1/cms/notification-channels` |
+| POST | `/api/v1/cms/notification-channels` |
+| PATCH / DELETE | `/api/v1/cms/notification-channels/{id}` |
+| POST | `/api/v1/cms/notification-channels/{id}/test` |
 
 `test` отправляет пробное сообщение и возвращает результат — настраивать канал
 вслепую и ждать первой настоящей заявки, чтобы узнать про опечатку в токене,
@@ -172,10 +172,10 @@ order.accepted / order.status_changed(терминальный) / order.cancelle
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/cms/escalation-rules` |
-| POST | `/api/cms/escalation-rules` (вместе со ступенями) |
-| PATCH | `/api/cms/escalation-rules/{id}` (`steps` заменяют набор целиком) |
-| DELETE | `/api/cms/escalation-rules/{id}` |
+| GET | `/api/v1/cms/escalation-rules` |
+| POST | `/api/v1/cms/escalation-rules` (вместе со ступенями) |
+| PATCH | `/api/v1/cms/escalation-rules/{id}` (`steps` заменяют набор целиком) |
+| DELETE | `/api/v1/cms/escalation-rules/{id}` |
 
 Правила:
 * `delay_minutes` неотрицательный, ступени упорядочены по возрастанию задержки —
@@ -188,7 +188,7 @@ order.accepted / order.status_changed(терминальный) / order.cancelle
 
 ### Журнал
 
-`GET /api/cms/notification-log?order_id=&status=&limit=` — новые сверху.
+`GET /api/v1/cms/notification-log?order_id=&status=&limit=` — новые сверху.
 
 ---
 

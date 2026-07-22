@@ -3,7 +3,7 @@
 Документ фиксирует контракт между бэкендом и CMS-фронтом. Пишется до
 реализации, чтобы обе стороны собирались параллельно.
 
-Базовый префикс: `/api/cms`. Аутентификация: `Authorization: Bearer <JWT>`.
+Базовый префикс: `/api/v1/cms`. Аутентификация: `Authorization: Bearer <JWT>`.
 
 ## Тенант
 
@@ -35,7 +35,7 @@ X-Hotel-Subdomain: crystal
 
 ## 1. Аутентификация персонала
 
-### `POST /api/staff/auth/login`
+### `POST /api/v1/staff/auth/login`
 ```jsonc
 // запрос
 {"email": "chef@crystal.local", "password": "chef12345"}
@@ -49,13 +49,13 @@ X-Hotel-Subdomain: crystal
 // 401 {"detail": "Неверный логин или пароль", "code": "auth_failed"}
 ```
 
-### `GET /api/staff/auth/me` → тот же объект `user` + `hotel`
+### `GET /api/v1/staff/auth/me` → тот же объект `user` + `hotel`
 
 ---
 
 ## 2. Bootstrap CMS
 
-### `GET /api/cms/bootstrap`
+### `GET /api/v1/cms/bootstrap`
 Всё, что редактору нужно знать до первого рендера.
 
 ```jsonc
@@ -91,13 +91,13 @@ X-Hotel-Subdomain: crystal
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET | `/api/cms/categories` | дерево (корни с `children`) |
-| POST | `/api/cms/categories` | создать |
-| GET | `/api/cms/categories/{id}` | одна категория (плоско) |
-| PATCH | `/api/cms/categories/{id}` | частичное обновление |
-| DELETE | `/api/cms/categories/{id}?cascade=false` | удалить |
-| POST | `/api/cms/categories/reorder` | сортировка/перенос |
-| POST | `/api/cms/categories/{id}/toggle` | вкл/выкл |
+| GET | `/api/v1/cms/categories` | дерево (корни с `children`) |
+| POST | `/api/v1/cms/categories` | создать |
+| GET | `/api/v1/cms/categories/{id}` | одна категория (плоско) |
+| PATCH | `/api/v1/cms/categories/{id}` | частичное обновление |
+| DELETE | `/api/v1/cms/categories/{id}?cascade=false` | удалить |
+| POST | `/api/v1/cms/categories/reorder` | сортировка/перенос |
+| POST | `/api/v1/cms/categories/{id}/toggle` | вкл/выкл |
 
 Тело POST/PATCH: `{title, description, code?, parent_id, image_id, schedule_id,
 sort_order, is_active}`. `code` генерируется из title, если не передан.
@@ -136,15 +136,15 @@ sort_order, is_active}`. `code` генерируется из title, если н
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET | `/api/cms/items?category_id=&search=&type=` | список (без `modifier_groups`) |
-| POST | `/api/cms/items` | создать |
-| GET | `/api/cms/items/{id}` | полный объект **с** модификаторами |
-| PATCH | `/api/cms/items/{id}` | частичное обновление |
-| DELETE | `/api/cms/items/{id}` | удалить |
-| POST | `/api/cms/items/reorder` | `{"category_id","items":[{"id","sort_order"}]}` |
-| POST | `/api/cms/items/{id}/stock` | `{"in_stock": false}` — стоп-лист |
-| POST | `/api/cms/items/{id}/toggle` | `{"is_active": false}` |
-| PUT | `/api/cms/items/{id}/images` | `{"image_ids": ["...", "..."]}` — порядок |
+| GET | `/api/v1/cms/items?category_id=&search=&type=` | список (без `modifier_groups`) |
+| POST | `/api/v1/cms/items` | создать |
+| GET | `/api/v1/cms/items/{id}` | полный объект **с** модификаторами |
+| PATCH | `/api/v1/cms/items/{id}` | частичное обновление |
+| DELETE | `/api/v1/cms/items/{id}` | удалить |
+| POST | `/api/v1/cms/items/reorder` | `{"category_id","items":[{"id","sort_order"}]}` |
+| POST | `/api/v1/cms/items/{id}/stock` | `{"in_stock": false}` — стоп-лист |
+| POST | `/api/v1/cms/items/{id}/toggle` | `{"is_active": false}` |
+| PUT | `/api/v1/cms/items/{id}/images` | `{"image_ids": ["...", "..."]}` — порядок |
 
 Валидация: `price >= 0` либо `null`; `title` должен иметь непустое значение
 хотя бы на языке отеля по умолчанию (`422 field=title`); `flags`/`allergens` —
@@ -178,9 +178,9 @@ sort_order, is_active}`. `code` генерируется из title, если н
 
 | Метод | Путь |
 |---|---|
-| POST | `/api/cms/items/{item_id}/request-fields` |
-| PATCH / DELETE | `/api/cms/request-fields/{id}` |
-| POST | `/api/cms/items/{item_id}/request-fields/reorder` |
+| POST | `/api/v1/cms/items/{item_id}/request-fields` |
+| PATCH / DELETE | `/api/v1/cms/request-fields/{id}` |
+| POST | `/api/v1/cms/items/{item_id}/request-fields/reorder` |
 
 Правила (проверяет сервер):
 * `select` без вариантов — `422 select_without_options`;
@@ -207,12 +207,12 @@ sort_order, is_active}`. `code` генерируется из title, если н
 
 | Метод | Путь |
 |---|---|
-| POST | `/api/cms/items/{item_id}/modifier-groups` |
-| PATCH / DELETE | `/api/cms/modifier-groups/{id}` |
-| POST | `/api/cms/items/{item_id}/modifier-groups/reorder` |
-| POST | `/api/cms/modifier-groups/{group_id}/options` |
-| PATCH / DELETE | `/api/cms/modifier-options/{id}` |
-| POST | `/api/cms/modifier-groups/{group_id}/options/reorder` |
+| POST | `/api/v1/cms/items/{item_id}/modifier-groups` |
+| PATCH / DELETE | `/api/v1/cms/modifier-groups/{id}` |
+| POST | `/api/v1/cms/items/{item_id}/modifier-groups/reorder` |
+| POST | `/api/v1/cms/modifier-groups/{group_id}/options` |
+| PATCH / DELETE | `/api/v1/cms/modifier-options/{id}` |
+| POST | `/api/v1/cms/modifier-groups/{group_id}/options/reorder` |
 
 Правила (проверяет сервер, а не только форма):
 * `selection=single` → `max_choices` принудительно 1;
@@ -225,7 +225,7 @@ sort_order, is_active}`. `code` генерируется из title, если н
 
 ## 6. Медиа
 
-### `POST /api/cms/media` — `multipart/form-data`
+### `POST /api/v1/cms/media` — `multipart/form-data`
 Поля: `file` (обязательно), `kind` (`item`|`category`|`brand`, по умолчанию `item`).
 
 Ответ `201`:
@@ -237,7 +237,7 @@ sort_order, is_active}`. `code` генерируется из title, если н
 `url`/`thumb_url` пустые — UI показывает превью из локального `URL.createObjectURL`
 и опрашивает статус.
 
-### `GET /api/cms/media/{id}` → тот же объект с актуальным `status` и URL'ами.
+### `GET /api/v1/cms/media/{id}` → тот же объект с актуальным `status` и URL'ами.
 
 Ограничения: не больше 10 МБ, только `image/jpeg|png|webp` — иначе
 `422 code=unsupported_media`.
@@ -256,10 +256,10 @@ sort_order, is_active}`. `code` генерируется из title, если н
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/cms/schedules` |
-| POST | `/api/cms/schedules` (вместе с `intervals`) |
-| PATCH | `/api/cms/schedules/{id}` (`intervals` заменяют набор целиком) |
-| DELETE | `/api/cms/schedules/{id}` |
+| GET | `/api/v1/cms/schedules` |
+| POST | `/api/v1/cms/schedules` (вместе с `intervals`) |
+| PATCH | `/api/v1/cms/schedules/{id}` (`intervals` заменяют набор целиком) |
+| DELETE | `/api/v1/cms/schedules/{id}` |
 
 Валидация: `start_time != end_time`; интервал через полночь разрешён
 (23:00–02:00) и трактуется как переход на следующие сутки.

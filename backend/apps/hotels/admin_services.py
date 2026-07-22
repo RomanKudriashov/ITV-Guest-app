@@ -33,7 +33,7 @@ def serialize_room(room: Room, *, hotel: Hotel | None = None) -> dict:
         "zone": room.zone,
         "source": room.source,
         "is_active": room.is_active,
-        "guest_url": hotel.public_guest_url(f"/r/{room.number}"),
+        "guest_url": hotel.room_deeplink(room.number),
     }
 
 

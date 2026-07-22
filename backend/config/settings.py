@@ -58,6 +58,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Переписывает /api/... → /api/v1/... до резолюции URL и вешает версию/
+    # Deprecation. Должен идти первым: остальное видит уже версионированный путь.
+    "apps.core.middleware.ApiVersionMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     # Тенант резолвится ДО всего прикладного кода: он выставляет и contextvar,
@@ -139,6 +142,30 @@ GUEST_APP_ALLOW_TENANT_OVERRIDE_HEADER = DEBUG
 
 # Схема публичного адреса отеля (для QR и ссылок). В проде https.
 GUEST_APP_PUBLIC_SCHEME = os.getenv("GUEST_APP_PUBLIC_SCHEME", "https" if not DEBUG else "http")
+
+
+# --- Версионирование API ---------------------------------------------------
+
+# Текущая версия прикладного API в путях (/api/v1/...). Отдаётся в X-API-Version.
+API_VERSION = os.getenv("API_VERSION", "v1")
+# Дата снятия безверсионных алиасов (RFC 8594 Sunset). Пусто — снятие не
+# анонсировано. Формат HTTP-date, напр. "Wed, 31 Dec 2025 23:59:59 GMT".
+API_LEGACY_SUNSET = os.getenv("API_LEGACY_SUNSET", "")
+
+
+# --- Deep-links и связь с приложением --------------------------------------
+
+# Файлы связи сайта с приложением (universal/app links) отдаются только когда
+# приложение существует. По умолчанию ВЫКЛ: до релиза приложения ассоциации
+# быть не должно (иначе ОС попытается открыть несуществующее приложение).
+APP_LINKS_ENABLED = env_bool("APP_LINKS_ENABLED", False)
+# Плейсхолдеры идентификаторов — НЕ реальные. Заполнить перед включением.
+IOS_APP_ID = os.getenv("IOS_APP_ID", "TEAMID000.com.itvguest.app")
+ANDROID_PACKAGE = os.getenv("ANDROID_PACKAGE", "com.itvguest.app")
+ANDROID_SHA256_FINGERPRINTS = env_list(
+    "ANDROID_SHA256_FINGERPRINTS",
+    "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00",
+)
 
 DEFAULT_LANGUAGE = "en"
 SUPPORTED_LANGUAGES = ["ru", "en", "ar", "zh"]

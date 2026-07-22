@@ -14,10 +14,13 @@ from .tracker import router as tracker_router
 
 api = NinjaAPI(
     title="ITV Guest App API",
-    version="0.3.0",
+    # Стабильный v1: маршруты под /api/v1/. Ломающие изменения — только в новой
+    # мажорной версии пути (/api/v2/), политика в docs/api-versioning.md.
+    version="1.0.0",
     description=(
         "Мультиотельная гостевая платформа: гостевая витрина с заказом и "
-        "живым статусом, CMS-раздел «Меню», операции персонала над заказами."
+        "живым статусом, CMS-раздел «Меню», операции персонала над заказами. "
+        "Все маршруты версионированы: /api/v1/. Политика — docs/api-versioning.md."
     ),
     urls_namespace="guestapp",
 )

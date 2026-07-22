@@ -10,7 +10,7 @@
 
 ### Каталог и карточка (гость)
 
-`GET /api/guest/catalog?type=info` — те же категории/позиции, что у остальных
+`GET /api/v1/guest/catalog?type=info` — те же категории/позиции, что у остальных
 типов. У позиции `info`:
 
 ```jsonc
@@ -25,7 +25,7 @@
 }
 ```
 
-`GET /api/guest/item/{id}` у `info` возвращает то же + `content`. Кнопки заказа
+`GET /api/v1/guest/item/{id}` у `info` возвращает то же + `content`. Кнопки заказа
 нет: `is_orderable=false`. Попытка заказать `info` — `422 not_orderable`.
 
 ### CMS
@@ -61,7 +61,7 @@
 
 ### Доступность (гость)
 
-`GET /api/guest/slots?item_id=<id>&date=YYYY-MM-DD`
+`GET /api/v1/guest/slots?item_id=<id>&date=YYYY-MM-DD`
 
 ```jsonc
 {
@@ -82,7 +82,7 @@
 
 ### Бронь (гость)
 
-`POST /api/guest/order` тем же эндпоинтом:
+`POST /api/v1/guest/order` тем же эндпоинтом:
 
 ```jsonc
 {"lines": [{"item_id": "<slot item>"}], "slot_start": "2026-07-25T10:00:00+03:00"}
@@ -120,7 +120,7 @@
 }
 ```
 
-Отмена (`POST /api/guest/order/{id}/cancel`) переводит бронь в терминальный
+Отмена (`POST /api/v1/guest/order/{id}/cancel`) переводит бронь в терминальный
 статус и освобождает слот — тем же кодом отмены, что у остальных типов.
 
 ### CMS
@@ -129,8 +129,8 @@
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/cms/items/{item_id}/slot-config` |
-| PUT | `/api/cms/items/{item_id}/slot-config` |
+| GET | `/api/v1/cms/items/{item_id}/slot-config` |
+| PUT | `/api/v1/cms/items/{item_id}/slot-config` |
 
 Тело PUT — поля `SlotConfig` (duration/capacity/schedule/execution_point/…).
 Правила: `duration_minutes ≥ 5`, `capacity ≥ 1`, расписание и отдел

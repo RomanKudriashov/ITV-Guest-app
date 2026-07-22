@@ -7,14 +7,26 @@ from .consumers import (
     TrackerConsumer,
 )
 
-websocket_urlpatterns = [
+# Каналы описываем один раз БЕЗ префикса ws/ — а затем публикуем под
+# версионированным `ws/v1/` и, на переходный период, под безверсионным `ws/`
+# алиасом. Один консюмер на оба адреса: логика не раздваивается.
+_WS_ROUTES = [
     # Точка задаётся кодом, а не UUID: код стабилен, читается в логах и его
     # удобно держать в адресе на планшете кухни.
-    path("ws/tracker/<slug:point_code>/", TrackerConsumer.as_asgi()),
-    path("ws/guest/order/<uuid:order_id>/", GuestOrderConsumer.as_asgi()),
-    path("ws/guest/chat/", GuestChatConsumer.as_asgi()),
-    path("ws/staff/chat/<uuid:thread_id>/", StaffChatConsumer.as_asgi()),
-    # Путь из первого прогона. Оставлен, чтобы старые вкладки не отваливались
-    # при выкатке; убрать после того, как клиенты перейдут на /ws/guest/.
-    path("ws/order/<uuid:order_id>/", GuestOrderConsumer.as_asgi()),
+    ("tracker/<slug:point_code>/", TrackerConsumer),
+    ("guest/order/<uuid:order_id>/", GuestOrderConsumer),
+    ("guest/chat/", GuestChatConsumer),
+    ("staff/chat/<uuid:thread_id>/", StaffChatConsumer),
 ]
+
+websocket_urlpatterns = [
+    path(f"ws/{prefix}{suffix}", consumer.as_asgi())
+    for prefix in ("v1/", "")
+    for suffix, consumer in _WS_ROUTES
+]
+
+# Путь из первого прогона. Оставлен, чтобы старые вкладки не отваливались
+# при выкатке; убрать после того, как клиенты перейдут на /ws/v1/guest/.
+websocket_urlpatterns.append(
+    path("ws/order/<uuid:order_id>/", GuestOrderConsumer.as_asgi())
+)

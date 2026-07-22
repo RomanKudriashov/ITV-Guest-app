@@ -92,7 +92,8 @@ def _serialize_export(export: AnalyticsExport) -> dict:
     }
     if export.status == AnalyticsExport.Status.READY:
         # Витрина ждёт поле `file` — прямую ссылку на скачивание готового среза.
-        data["file"] = f"/api/cms/analytics/export/{export.pk}/download"
+        # Версионированный путь: скачивание идёт по актуальному /api/v1/.
+        data["file"] = f"/api/v1/cms/analytics/export/{export.pk}/download"
         data["download_url"] = data["file"]
         data["filename"] = export.filename
     return data

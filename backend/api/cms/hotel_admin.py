@@ -155,7 +155,7 @@ def bulk_rooms(request: HttpRequest, payload: BulkRoomsIn):
 @router.get("/rooms/qr-sheet", summary="Печатный лист всех QR")
 def rooms_qr_sheet(request: HttpRequest):
     hotel, rooms = svc.room_qr_targets()
-    pairs = [(room.number, hotel.public_guest_url(f"/r/{room.number}")) for room in rooms]
+    pairs = [(room.number, hotel.room_deeplink(room.number)) for room in rooms]
     return HttpResponse(qr.qr_sheet_html(hotel.name, pairs), content_type="text/html")
 @router.patch("/rooms/{room_id}", response=RoomOut, summary="Изменить номер")
 def update_room(request: HttpRequest, room_id: str, payload: RoomPatch):
@@ -171,14 +171,14 @@ def delete_room(request: HttpRequest, room_id: str):
 @router.get("/rooms/{room_id}/qr.svg", summary="QR номера (SVG)")
 def room_qr_svg(request: HttpRequest, room_id: str):
     room = svc.get_room(room_id)
-    url = room.hotel.public_guest_url(f"/r/{room.number}")
+    url = room.hotel.room_deeplink(room.number)
     return HttpResponse(qr.qr_svg(url), content_type="image/svg+xml")
 
 
 @router.get("/rooms/{room_id}/qr.png", summary="QR номера (PNG)")
 def room_qr_png(request: HttpRequest, room_id: str):
     room = svc.get_room(room_id)
-    url = room.hotel.public_guest_url(f"/r/{room.number}")
+    url = room.hotel.room_deeplink(room.number)
     return HttpResponse(qr.qr_png(url), content_type="image/png")
 
 

@@ -1,6 +1,6 @@
 # Контракт админки отеля (прогон 8): номера/QR, локации, отделы, персонал
 
-Фиксируется **до** реализации. Префикс: `/api/cms`. Аутентификация и тенант —
+Фиксируется **до** реализации. Префикс: `/api/v1/cms`. Аутентификация и тенант —
 как у остальной CMS. Всё в скоупе отеля.
 
 ## 1. Номера
@@ -16,12 +16,12 @@
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET | `/api/cms/rooms` | список |
-| POST | `/api/cms/rooms` | один номер |
-| PATCH / DELETE | `/api/cms/rooms/{id}` | |
-| POST | `/api/cms/rooms/bulk` | добавить диапазоном |
-| GET | `/api/cms/rooms/{id}/qr.svg` · `.png` | QR одного номера |
-| GET | `/api/cms/rooms/qr-sheet` | печатный лист всех QR (HTML) |
+| GET | `/api/v1/cms/rooms` | список |
+| POST | `/api/v1/cms/rooms` | один номер |
+| PATCH / DELETE | `/api/v1/cms/rooms/{id}` | |
+| POST | `/api/v1/cms/rooms/bulk` | добавить диапазоном |
+| GET | `/api/v1/cms/rooms/{id}/qr.svg` · `.png` | QR одного номера |
+| GET | `/api/v1/cms/rooms/qr-sheet` | печатный лист всех QR (HTML) |
 
 **bulk** — генерация диапазона:
 ```jsonc
@@ -56,8 +56,8 @@
 
 | Метод | Путь |
 |---|---|
-| GET / POST | `/api/cms/locations` |
-| PATCH / DELETE | `/api/cms/locations/{id}` |
+| GET / POST | `/api/v1/cms/locations` |
+| PATCH / DELETE | `/api/v1/cms/locations/{id}` |
 
 `kind`: `in_room` | `common_point`. `requires_refinement=true` требует
 непустого `refinement_label` — иначе `422 refinement_label_required`.
@@ -68,7 +68,7 @@
 Где категория доставляется и как. Строится по существующей `ServiceLocation`.
 
 ```
-GET /api/cms/locations/matrix
+GET /api/v1/cms/locations/matrix
 {
   "locations": [{"id","code","title"}, ...],
   "rows": [
@@ -78,7 +78,7 @@ GET /api/cms/locations/matrix
   ]
 }
 
-PUT /api/cms/locations/matrix
+PUT /api/v1/cms/locations/matrix
 {"category_id": "...", "cells": [{"location_id","enabled","delivery_modes"}]}
 ```
 `enabled=false` убирает связку; матрица заменяет строку категории целиком.
@@ -99,8 +99,8 @@ PUT /api/cms/locations/matrix
 
 | Метод | Путь |
 |---|---|
-| GET / POST | `/api/cms/departments` |
-| PATCH / DELETE | `/api/cms/departments/{id}` |
+| GET / POST | `/api/v1/cms/departments` |
+| PATCH / DELETE | `/api/v1/cms/departments/{id}` |
 
 `kind` — из `ExecutionPoint.Kind` (kitchen/bar/housekeeping/spa/reception/other).
 Удаление отдела с заказами/каналами — `409 department_in_use`. Счётчики
@@ -111,7 +111,7 @@ PUT /api/cms/locations/matrix
 
 ## 4. Персонал
 
-Закрывает пробел прогона 6: `GET /api/cms/staff` даёт список сотрудников для
+Закрывает пробел прогона 6: `GET /api/v1/cms/staff` даёт список сотрудников для
 выбора в персональном канале уведомлений.
 
 Объект:
@@ -128,10 +128,10 @@ PUT /api/cms/locations/matrix
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET | `/api/cms/staff` | список сотрудников отеля (+ привязки) |
-| POST | `/api/cms/staff` | создать (с паролем) |
-| PATCH / DELETE | `/api/cms/staff/{id}` | |
-| PUT | `/api/cms/staff/{id}/assignments` | заменить набор привязок |
+| GET | `/api/v1/cms/staff` | список сотрудников отеля (+ привязки) |
+| POST | `/api/v1/cms/staff` | создать (с паролем) |
+| PATCH / DELETE | `/api/v1/cms/staff/{id}` | |
+| PUT | `/api/v1/cms/staff/{id}/assignments` | заменить набор привязок |
 
 Создание:
 ```jsonc

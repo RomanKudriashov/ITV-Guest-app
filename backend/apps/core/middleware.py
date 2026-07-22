@@ -19,12 +19,21 @@ from .context import clear_request_context, set_request_context
 logger = logging.getLogger(__name__)
 
 # Пути, которым отель не нужен: платформенный уровень, health и документация.
+# И версионированные (/api/v1/...), и устаревшие алиасы (/api/...): к моменту
+# TenantMiddleware ApiVersionMiddleware уже переписал путь в v1, но список
+# держим полным, чтобы порядок middleware не был скрытой зависимостью.
 PLATFORM_PATH_PREFIXES = (
+    "/api/v1/platform/",
+    "/api/v1/health",
+    "/api/v1/docs",
+    "/api/v1/openapi.json",
     "/api/platform/",
     "/api/health",
     "/api/docs",
     "/api/openapi.json",
     "/static/",
+    # Файлы связи с приложением — на уровне домена, отель им не нужен.
+    "/.well-known/",
 )
 
 
@@ -180,3 +189,46 @@ class LanguageMiddleware:
             weighted.append((quality, code.strip().lower().split("-")[0]))
         weighted.sort(key=lambda item: item[0], reverse=True)
         return [code for _, code in weighted if code]
+
+
+class ApiVersionMiddleware:
+    """
+    Версионирование маршрутов на входе.
+
+    Прикладной API смонтирован ТОЛЬКО под /api/v1/. Старые пути без версии
+    (/api/guest/..., /api/cms/...) переписываются в v1 ДО резолюции URL —
+    поэтому один набор вьюх обслуживает оба адреса, а не два параллельных
+    роутера, которые однажды разъедутся.
+
+    На всякий ответ /api/* вешаем X-API-Version. На устаревшие (безверсионные)
+    пути добавляем Deprecation/Sunset/Link — чтобы клиент узнал о переезде из
+    заголовков, а не из падения после снятия алиаса.
+    """
+
+    LEGACY_PREFIX = "/api/"
+    VERSIONED_PREFIX = "/api/v1/"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path_info
+        deprecated = False
+        if path.startswith(self.LEGACY_PREFIX) and not path.startswith(self.VERSIONED_PREFIX):
+            rewritten = self.VERSIONED_PREFIX + path[len(self.LEGACY_PREFIX):]
+            request.path_info = rewritten
+            request.path = rewritten
+            deprecated = True
+
+        response = self.get_response(request)
+
+        if request.path_info.startswith(self.LEGACY_PREFIX):
+            response["X-API-Version"] = getattr(settings, "API_VERSION", "v1")
+            if deprecated:
+                # RFC 8594 (Sunset) + RFC 8288 (Link на преемника).
+                response["Deprecation"] = "true"
+                sunset = getattr(settings, "API_LEGACY_SUNSET", "")
+                if sunset:
+                    response["Sunset"] = sunset
+                response["Link"] = '</api/v1/>; rel="successor-version"'
+        return response

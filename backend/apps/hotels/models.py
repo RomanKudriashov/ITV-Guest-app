@@ -85,6 +85,36 @@ class Hotel(BaseModel):
         host = self.custom_domain or f"{self.subdomain}.{settings.GUEST_APP_BASE_DOMAIN}"
         return f"{settings.GUEST_APP_PUBLIC_SCHEME}://{host}{path}"
 
+    # Канонический путь гостевого deep-link. ЕДИНСТВЕННОЕ место, где живёт
+    # префикс /r/: этот адрес зашит в печатные QR, менять его задним числом
+    # нельзя. Подробности — docs/deep-links.md.
+    DEEPLINK_ROOM_PREFIX = "/r/"
+
+    def room_deeplink(
+        self,
+        room_number: str,
+        *,
+        lang: str | None = None,
+        source: str | None = None,
+        token: str | None = None,
+    ) -> str:
+        """
+        Deep-link на вход гостя по номеру: `<адрес отеля>/r/<номер>`.
+
+        Собирается ТОЛЬКО здесь — и QR, и матрица номеров, и любой будущий
+        клиент зовут эту функцию, чтобы схемы не разъехались склейкой строк.
+        Необязательные параметры (язык, источник входа, разовый токен) —
+        задел под приложение/ТВ/ключи со стойки; сейчас просто прокидываются
+        в query, поведение витрины они не меняют.
+        """
+        from urllib.parse import urlencode
+
+        path = f"{self.DEEPLINK_ROOM_PREFIX}{room_number}"
+        params = [(key, value) for key, value in (("lang", lang), ("src", source), ("t", token)) if value]
+        if params:
+            path = f"{path}?{urlencode(params)}"
+        return self.public_guest_url(path)
+
 
 class BrandTheme(TenantModel):
     """

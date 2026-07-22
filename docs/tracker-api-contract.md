@@ -1,11 +1,11 @@
 # Контракт API трекера (прогон 4: доска кухни)
 
 Фиксируется **до** реализации, чтобы бэкенд и фронт собирались параллельно.
-Префикс REST: `/api/tracker`. Реальное время: `WS /ws/tracker/{point_code}`.
+Префикс REST: `/api/v1/tracker`. Реальное время: `WS /ws/v1/tracker/{point_code}`.
 
 ## Аутентификация и скоуп
 
-JWT персонала — тот же, что у CMS (`POST /api/staff/auth/login`).
+JWT персонала — тот же, что у CMS (`POST /api/v1/staff/auth/login`).
 `Authorization: Bearer <jwt>`; в деве плюс `X-Hotel-Subdomain: crystal`.
 
 **Три независимые проверки на каждом запросе и на подключении к WS:**
@@ -26,7 +26,7 @@ JWT персонала — тот же, что у CMS (`POST /api/staff/auth/log
 
 ## 1. Точки исполнения сотрудника
 
-### `GET /api/tracker/points`
+### `GET /api/v1/tracker/points`
 
 ```jsonc
 {
@@ -45,7 +45,7 @@ JWT персонала — тот же, что у CMS (`POST /api/staff/auth/log
 
 ## 2. Доска
 
-### `GET /api/tracker/orders?point=kitchen&scope=active`
+### `GET /api/v1/tracker/orders?point=kitchen&scope=active`
 
 `scope`: `active` (по умолчанию) — всё, что не в терминальном статусе;
 `history` — терминальные, за последние сутки, новыми сверху.
@@ -113,10 +113,10 @@ JWT персонала — тот же, что у CMS (`POST /api/staff/auth/log
 
 | Метод | Путь | Что делает |
 |---|---|---|
-| GET | `/api/tracker/order/{id}` | заказ отдельно от доски |
-| POST | `/api/tracker/order/{id}/accept` | берёт заказ в работу |
-| POST | `/api/tracker/order/{id}/status` | двигает статус |
-| POST | `/api/tracker/order/{id}/cancel` | отменяет |
+| GET | `/api/v1/tracker/order/{id}` | заказ отдельно от доски |
+| POST | `/api/v1/tracker/order/{id}/accept` | берёт заказ в работу |
+| POST | `/api/v1/tracker/order/{id}/status` | двигает статус |
+| POST | `/api/v1/tracker/order/{id}/cancel` | отменяет |
 
 `GET` нужен для прямой ссылки на заказ (`/tracker/order/{id}` в UI, ссылка из
 уведомления). Брать заказ из снимка доски для этого недостаточно: открытая
@@ -148,14 +148,14 @@ JWT персонала — тот же, что у CMS (`POST /api/staff/auth/log
 Ответ всех трёх — обновлённый объект заказа (§3).
 
 Каждый переход эмитит событие **после коммита**, поэтому изменение
-одновременно прилетает и гостю (`/ws/guest/order/{id}`), и на все остальные
+одновременно прилетает и гостю (`/ws/v1/guest/order/{id}`), и на все остальные
 устройства трекера.
 
 ---
 
 ## 5. WebSocket
 
-### `WS /ws/tracker/{point_code}?token=<jwt>&hotel=<subdomain>&lang=ru`
+### `WS /ws/v1/tracker/{point_code}?token=<jwt>&hotel=<subdomain>&lang=ru`
 
 `hotel` и `lang` — параметрами, потому что у WS нет ни заголовков от
 vite-прокси, ни Accept-Language. В проде отель берётся из Host.
@@ -171,7 +171,7 @@ WS с REST становится невозможной.
   "type": "tracker.snapshot",
   "event": "order.created",       // "connected" у первого снимка
   "order_id": "...",              // какой заказ дёрнулся — для звука и подсветки
-  "board": { /* тело GET /api/tracker/orders, §2 */ }
+  "board": { /* тело GET /api/v1/tracker/orders, §2 */ }
 }
 
 {"type": "ping"} → {"type": "pong"}
