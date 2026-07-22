@@ -43,6 +43,8 @@ ORDER_CREATED = "order.created"
 ORDER_ACCEPTED = "order.accepted"
 ORDER_STATUS_CHANGED = "order.status_changed"
 ORDER_CANCELLED = "order.cancelled"
+CHAT_MESSAGE = "chat.message"
+REVIEW_LOW = "review.low"
 
 
 @dataclasses.dataclass(slots=True)

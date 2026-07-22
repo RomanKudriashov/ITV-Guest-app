@@ -621,6 +621,18 @@ def _item_image(order_item: OrderItem) -> str:
     return image_url(link.asset if link else None, variant="thumb")
 
 
+def _can_review(order: Order) -> bool:
+    from apps.reviews.services import can_review
+
+    return can_review(order)
+
+
+def _order_review(order: Order) -> dict | None:
+    from apps.reviews.services import get_review
+
+    return get_review(order)
+
+
 def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]:
     """
     Один и тот же вид у REST и у WebSocket — чтобы клиент не собирал состояние
@@ -686,6 +698,8 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         # Непусто только у брони: трекер и витрина рисуют этим блоком тело
         # карточки вместо позиций — та же развилка «по данным», что и выше.
         "slot": slot_svc.serialize_slot(order, language),
+        "can_review": _can_review(order),
+        "review": _order_review(order),
         "items": [
             {
                 "id": str(line.pk),

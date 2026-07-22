@@ -175,6 +175,7 @@ class Command(BaseCommand):
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
             self._seed_notifications(points, users)
+            self._seed_chat_and_reviews(points)
 
             hotel.default_theme = theme
             hotel.save(update_fields=["default_theme", "updated_at"])
@@ -882,6 +883,62 @@ class Command(BaseCommand):
                 "horizon_days": 14,
             },
         )
+
+    # --- Чат и отзывы -----------------------------------------------------
+
+    def _seed_chat_and_reviews(self, points):
+        """Пара сообщений в треде и отзыв на завершённую заявку — чтобы было что показать."""
+        from django.utils import timezone
+
+        from apps.accounts.models import GuestSession, TrustLevel
+        from apps.catalog.models import Item
+        from apps.chat.models import ChatMessage, ChatThread
+        from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order
+        from apps.reviews.models import Review
+
+        room = Room.objects.filter(number="305").first()
+        if room is None:
+            return
+
+        # Гостевая сессия для демо-данных.
+        raw, token_hash = GuestSession.issue_token()
+        session = GuestSession.objects.filter(room=room).order_by("-created_at").first()
+        if session is None:
+            session = GuestSession.objects.create(
+                room=room,
+                token_hash=token_hash,
+                trust=TrustLevel.ROOM_SCANNED,
+                expires_at=GuestSession.default_expiry(),
+            )
+
+        thread, _ = ChatThread.objects.get_or_create(
+            room=room,
+            defaults={"guest_session": session, "execution_point": points.get("concierge")},
+        )
+        if not thread.messages.exists():
+            ChatMessage.objects.create(
+                hotel_id=thread.hotel_id, thread=thread, author_type="guest",
+                author_name="Гость", body="Добрый день! Во сколько завтрак?",
+            )
+            msg = ChatMessage.objects.create(
+                hotel_id=thread.hotel_id, thread=thread, author_type="staff",
+                author_name="Анна, консьерж", body="Здравствуйте! Завтрак с 07:00 до 11:00.",
+            )
+            ChatThread.objects.filter(pk=thread.pk).update(last_message_at=msg.created_at)
+
+        # Завершённая заявка с отзывом.
+        caesar = Item.objects.filter(code="caesar").first()
+        if caesar and not Review.objects.exists():
+            order = create_order(
+                OrderInput(lines=[OrderLineInput(item_id=str(caesar.pk))], room_id=str(room.pk)),
+                guest_session=session,
+            )
+            change_status(order, to_code="done", actor_type="staff")
+            order.refresh_from_db()
+            Review.objects.create(
+                hotel_id=order.hotel_id, order=order, guest_session=session,
+                rating=5, comment="Очень вкусно, спасибо!",
+            )
 
     # --- Медиа ------------------------------------------------------------
 

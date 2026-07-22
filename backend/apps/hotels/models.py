@@ -45,6 +45,11 @@ class Hotel(BaseModel):
     is_active = models.BooleanField(default=True)
     settings = models.JSONField(default=dict, blank=True)
 
+    # Отзывы: собирать ли оценку после завершения и порог «низкой» оценки,
+    # при которой уведомляется менеджер (service recovery).
+    review_enabled = models.BooleanField(default=True)
+    review_low_threshold = models.PositiveSmallIntegerField(default=3)
+
     class Meta:
         db_table = "hotels_hotel"
         ordering = ["name"]

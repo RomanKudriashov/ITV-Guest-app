@@ -145,6 +145,8 @@ class OrderOut(Schema):
     currency: str
     field_values: list[dict[str, Any]]
     slot: dict[str, Any] | None = None
+    can_review: bool = False
+    review: dict[str, Any] | None = None
     items: list[dict[str, Any]]
 
 

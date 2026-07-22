@@ -6,6 +6,8 @@ from apps.core.errors import DomainError
 from .cms import router as cms_router
 from .guest import router as guest_router
 from .health import router as health_router
+from .chat_reviews import guest_router as surface_guest_router
+from .chat_reviews import tracker_router as surface_tracker_router
 from .orders import router as orders_router
 from .staff import router as staff_router
 from .tracker import router as tracker_router
@@ -22,6 +24,7 @@ api = NinjaAPI(
 
 api.add_router("/health", health_router)
 api.add_router("/guest", guest_router)
+api.add_router("/guest", surface_guest_router)
 api.add_router("/staff", staff_router)
 # Операции персонала над заказами: тем же JWT, что и CMS. Трекер будет
 # ходить сюда же — эндпоинт писался сразу под переиспользование.
@@ -29,6 +32,7 @@ api.add_router("/orders", orders_router, auth=StaffAuth())
 # Трекер: та же аутентификация, но доступ к точке проверяет сервисный слой
 # — те же функции зовёт WebSocket-канал, у которого middleware нет.
 api.add_router("/tracker", tracker_router, auth=StaffAuth())
+api.add_router("/tracker", surface_tracker_router, auth=StaffAuth())
 # Весь CMS-раздел закрыт JWT персонала по умолчанию: забыть auth на отдельном
 # эндпоинте невозможно — он задан на уровне роутера.
 api.add_router("/cms", cms_router, auth=StaffAuth())

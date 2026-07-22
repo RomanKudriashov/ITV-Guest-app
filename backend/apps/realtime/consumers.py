@@ -274,3 +274,153 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
                 "order": snapshot,
             }
         )
+
+
+# --- Чат: гость и персонал -------------------------------------------------
+# Та же реконсиляция снимком. У WS нет middleware, поэтому авторизация и скоуп
+# резолвятся явно: гость ↔ ТОЛЬКО свой тред, сотрудник ↔ треды своего отеля.
+
+
+@database_sync_to_async
+def _load_guest_thread(hotel, token: str, language: str):
+    from apps.accounts.auth import authenticate_guest
+    from apps.chat.services import get_or_create_thread, thread_snapshot
+
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
+        session = authenticate_guest(token)
+        if session is None:
+            return None, None
+        thread = get_or_create_thread(session)
+        return thread, thread_snapshot(thread, side="guest")
+
+
+@database_sync_to_async
+def _guest_thread_snapshot(hotel, thread_id, language):
+    from apps.chat.models import ChatThread
+    from apps.chat.services import thread_snapshot
+
+    with tenant_context(hotel, language=language or hotel.default_language):
+        thread = ChatThread.objects.filter(pk=thread_id).first()
+        return thread_snapshot(thread, side="guest") if thread else None
+
+
+@database_sync_to_async
+def _load_staff_thread(hotel, token: str, thread_id: str, language: str):
+    from apps.accounts.auth import authenticate_staff
+    from apps.chat.models import ChatThread
+    from apps.chat.services import thread_snapshot
+
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
+        user = authenticate_staff(token)
+        if user is None:
+            return None, None
+        # Скоуп отеля обеспечивает RLS: чужой тред не найдётся.
+        thread = ChatThread.objects.filter(pk=thread_id).first()
+        if thread is None:
+            return user, None
+        return user, thread_snapshot(thread, side="staff")
+
+
+@database_sync_to_async
+def _staff_thread_snapshot(hotel, thread_id, language):
+    from apps.chat.models import ChatThread
+    from apps.chat.services import thread_snapshot
+
+    with tenant_context(hotel, language=language or hotel.default_language):
+        thread = ChatThread.objects.filter(pk=thread_id).first()
+        return thread_snapshot(thread, side="staff") if thread else None
+
+
+class GuestChatConsumer(AsyncJsonWebsocketConsumer):
+    """Чат гостя: подключается к своему треду (по номеру/сессии)."""
+
+    async def connect(self):
+        hotel = await _resolve_hotel(self.scope)
+        if hotel is None:
+            await self.close(code=CLOSE_NO_TENANT)
+            return
+
+        self.hotel = hotel
+        self.language = _query_param(self.scope, "lang")
+        token = _query_param(self.scope, "token")
+
+        thread, snapshot = await _load_guest_thread(hotel, token, self.language)
+        if thread is None:
+            await self.close(code=CLOSE_UNAUTHORIZED)
+            return
+
+        self.thread_id = str(thread.pk)
+        self.group_name = f"chat.{hotel.pk}.{self.thread_id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+        await self.send_json({"type": "chat.snapshot", "event": "connected", "thread": snapshot})
+
+    async def disconnect(self, code):
+        group = getattr(self, "group_name", None)
+        if group:
+            await self.channel_layer.group_discard(group, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        try:
+            message = json.loads(text_data or "{}")
+        except json.JSONDecodeError:
+            return
+        if message.get("type") == "ping":
+            await self.send_json({"type": "pong"})
+
+    async def chat_event(self, message):
+        snapshot = await _guest_thread_snapshot(self.hotel, self.thread_id, self.language)
+        if snapshot is not None:
+            await self.send_json(
+                {"type": "chat.snapshot", "event": message.get("event", ""), "thread": snapshot}
+            )
+
+
+class StaffChatConsumer(AsyncJsonWebsocketConsumer):
+    """Чат персонала: тред своего отеля (скоуп через RLS)."""
+
+    async def connect(self):
+        hotel = await _resolve_hotel(self.scope)
+        if hotel is None:
+            await self.close(code=CLOSE_NO_TENANT)
+            return
+
+        self.hotel = hotel
+        self.language = _query_param(self.scope, "lang")
+        self.thread_id = str(self.scope["url_route"]["kwargs"]["thread_id"])
+        token = _query_param(self.scope, "token")
+
+        user, snapshot = await _load_staff_thread(hotel, token, self.thread_id, self.language)
+        if user is None:
+            await self.close(code=CLOSE_UNAUTHORIZED)
+            return
+        if snapshot is None:
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
+
+        self.group_name = f"chat.{hotel.pk}.{self.thread_id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+        await self.send_json({"type": "chat.snapshot", "event": "connected", "thread": snapshot})
+
+    async def disconnect(self, code):
+        group = getattr(self, "group_name", None)
+        if group:
+            await self.channel_layer.group_discard(group, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        try:
+            message = json.loads(text_data or "{}")
+        except json.JSONDecodeError:
+            return
+        if message.get("type") == "ping":
+            await self.send_json({"type": "pong"})
+
+    async def chat_event(self, message):
+        snapshot = await _staff_thread_snapshot(self.hotel, self.thread_id, self.language)
+        if snapshot is not None:
+            await self.send_json(
+                {"type": "chat.snapshot", "event": message.get("event", ""), "thread": snapshot}
+            )

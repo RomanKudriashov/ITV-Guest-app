@@ -50,6 +50,9 @@ TENANT_TABLES = [
     "media_asset",
     # core
     "core_idempotency_key",
+    "chat_thread",
+    "chat_message",
+    "reviews_review",
 ]
 
 # Таблицы, где hotel_id необязателен (платформенные действия). Читать такие
