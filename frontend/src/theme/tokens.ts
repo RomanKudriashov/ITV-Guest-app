@@ -191,11 +191,11 @@ export const DEFAULT_BRAND_TOKENS: BrandTokens = {
     },
   },
   typography: {
-    // Дисплейный Prata (заголовки/акцентные числа) + интерфейсный Manrope.
+    // Дисплейный Onest (заголовки/названия/цены) + интерфейсный Manrope.
     // Обе с кириллицей. Загрузка шрифтов — в index.html.
     fontFamily:
       '"Manrope", system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", "Noto Sans SC", sans-serif',
-    headingFontFamily: '"Prata", "Cormorant Garamond", Georgia, serif',
+    headingFontFamily: '"Onest", system-ui, sans-serif',
     fontSizeBase: 16,
     fontWeightRegular: 400,
     fontWeightMedium: 500,

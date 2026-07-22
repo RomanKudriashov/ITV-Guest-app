@@ -50,16 +50,17 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
   const { t } = useTranslation();
   if (!nutrition) return null;
 
-  const g = t('guest.item.gram');
-  const macros: { label: string; value: string }[] = [];
+  // Reference R2b, block 4 ("исправлено"): NO КБЖУ table — the values read as a
+  // single line under the description, each number in the display face.
+  const macros: { label: string; value: number }[] = [];
   if (nutrition.calories != null)
-    macros.push({ label: t('guest.item.calories'), value: `${nutrition.calories} ${t('guest.item.kcal')}` });
+    macros.push({ label: t('guest.item.kcal'), value: nutrition.calories });
   if (nutrition.protein != null)
-    macros.push({ label: t('guest.item.protein'), value: `${nutrition.protein} ${g}` });
+    macros.push({ label: t('guest.item.protein'), value: nutrition.protein });
   if (nutrition.fat != null)
-    macros.push({ label: t('guest.item.fat'), value: `${nutrition.fat} ${g}` });
+    macros.push({ label: t('guest.item.fat'), value: nutrition.fat });
   if (nutrition.carbs != null)
-    macros.push({ label: t('guest.item.carbs'), value: `${nutrition.carbs} ${g}` });
+    macros.push({ label: t('guest.item.carbs'), value: nutrition.carbs });
 
   const composition = nutrition.composition?.trim();
   if (!macros.length && !composition) return null;
@@ -67,40 +68,31 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
   return (
     <Stack spacing={1.25} data-testid="guest-item-nutrition">
       {macros.length ? (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${macros.length}, minmax(0, 1fr))`,
-            gap: 1,
-          }}
+        <Stack
+          direction="row"
+          flexWrap="wrap"
+          useFlexGap
+          sx={{ columnGap: 1.75, rowGap: 0.5, color: 'text.secondary', fontSize: '0.78rem' }}
         >
           {macros.map((macro) => (
-            <Stack
-              key={macro.label}
-              spacing={0.25}
-              sx={(theme) => ({
-                px: 1,
-                py: 1,
-                borderRadius: `${theme.palette.brand.radius.md}px`,
-                bgcolor: theme.palette.brand.surfaceMuted,
-                textAlign: 'center',
-              })}
-            >
-              <Typography
-                variant="subtitle2"
+            <Box component="span" key={macro.label}>
+              <Box
+                component="b"
                 sx={(theme) => ({
+                  color: 'text.primary',
                   fontFamily: theme.typography.h1.fontFamily,
+                  fontWeight: theme.typography.fontWeightBold,
+                  fontSize: '0.875rem',
                   fontVariantNumeric: 'tabular-nums',
+                  mr: 0.5,
                 })}
               >
                 {macro.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {macro.label}
-              </Typography>
-            </Stack>
+              </Box>
+              {macro.label}
+            </Box>
           ))}
-        </Box>
+        </Stack>
       ) : null}
       {composition ? (
         <Typography variant="body2" color="text.secondary">
@@ -111,6 +103,54 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
         </Typography>
       ) : null}
     </Stack>
+  );
+}
+
+/**
+ * Compact one-line КБЖУ for a catalog card (reference `.nutri`): the calorie
+ * value reads in the display face, the macros follow as a muted, dot-separated
+ * run. Rendered only from the data the item actually carries. Units stay numeric
+ * (ккал / г) so the single line is correct in every language, not just RU.
+ */
+export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutrition'] }) {
+  const { t } = useTranslation();
+  if (!nutrition) return null;
+  const { calories, protein, fat, carbs } = nutrition;
+  const macros = [protein, fat, carbs].filter((v): v is number => v != null);
+  if (calories == null && !macros.length) return null;
+
+  return (
+    <Typography
+      component="div"
+      variant="caption"
+      color="text.secondary"
+      data-testid="guest-item-nutrition-inline"
+      sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}
+    >
+      {calories != null ? (
+        <Box component="span">
+          <Box
+            component="b"
+            sx={(theme) => ({
+              color: 'text.secondary',
+              fontFamily: theme.typography.h1.fontFamily,
+              fontWeight: theme.typography.fontWeightBold,
+              fontVariantNumeric: 'tabular-nums',
+              mr: 0.375,
+            })}
+          >
+            {calories}
+          </Box>
+          {t('guest.item.kcal')}
+        </Box>
+      ) : null}
+      {calories != null && macros.length ? <Box component="span">·</Box> : null}
+      {macros.length ? (
+        <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+          {macros.join(' · ')} {t('guest.item.gram')}
+        </Box>
+      ) : null}
+    </Typography>
   );
 }
 

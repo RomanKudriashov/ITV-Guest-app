@@ -12,11 +12,13 @@ export {
   PricePill,
   KitBadge,
   FlagChip,
+  ChipOption,
   StatusIndicator,
   type PricePillProps,
   type KitBadgeProps,
   type KitBadgeKind,
   type FlagChipProps,
+  type ChipOptionProps,
   type StatusIndicatorProps,
   type OrderStatusKind,
 } from './chips';
@@ -63,6 +65,9 @@ export { KitTextField, KitTabs, type KitTabsProps } from './forms';
 
 // Media
 export { KitImage, mediaFallbackSx, type KitImageProps } from './KitImage';
+
+// Vector flags (language switcher — block 8)
+export { FlagIcon, FLAG_FOR_LANGUAGE, type FlagIconProps, type FlagCode } from './FlagIcon';
 
 // Motion (reduced-motion honored in one place)
 export {

@@ -18,7 +18,7 @@ function dishSvg(monogram: string, hue: number): string {
     `<rect width='320' height='240' fill='url(#g)'/>` +
     `<circle cx='160' cy='120' r='78' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='2'/>` +
     `<circle cx='160' cy='120' r='58' fill='rgba(255,255,255,0.14)'/>` +
-    `<text x='50%' y='53%' font-family='Prata, Georgia, serif' font-size='96' ` +
+    `<text x='50%' y='53%' font-family='Onest, system-ui, sans-serif' font-size='96' ` +
     `fill='rgba(255,255,255,0.92)' text-anchor='middle' dominant-baseline='middle'>${monogram}</text>` +
     `</svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;

@@ -366,6 +366,7 @@ function CatalogRow({
       imageSrc={item.images?.[0]}
       fallbackIcon={fallbackIconFor(item.type ?? fallbackType)}
       flags={item.flags ?? []}
+      nutrition={item.nutrition}
       priceLabel={price}
       unavailableNote={unavailableNote}
       available={available}

@@ -1,15 +1,13 @@
 import { useMemo, type Ref } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
 import Divider from '@mui/material/Divider';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Radio from '@mui/material/Radio';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { ChipOption } from '@/kit';
 import { useDraftState } from '@/state/useDraftState';
 import { ItemHeadline } from './ItemHeadline';
 import { QuantityStepper } from './QuantityStepper';
@@ -148,57 +146,57 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
                 <Stack
                   direction="row"
                   alignItems="baseline"
-                  justifyContent="space-between"
-                  sx={{ mb: 0.5 }}
+                  spacing={1}
+                  sx={{ mb: 1 }}
                 >
                   <Typography variant="subtitle1">{group.title}</Typography>
-                  <Typography
-                    variant="caption"
-                    color={isMissing ? 'error.main' : 'text.secondary'}
-                  >
-                    {group.is_required
-                      ? t('guest.item.required')
-                      : group.selection === 'multi' && group.max_choices
+                  {group.is_required ? (
+                    // Reference `.grphd em` — an accent-outlined "обязательно" pill.
+                    <Box
+                      component="span"
+                      sx={(theme) => ({
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: isMissing ? 'error.main' : 'primary.main',
+                        border: `1px solid ${isMissing ? theme.palette.error.main : theme.palette.primary.main}`,
+                        borderRadius: `${theme.palette.brand.radius.pill}px`,
+                        px: 1,
+                        py: 0.25,
+                        lineHeight: 1.4,
+                      })}
+                    >
+                      {t('guest.item.required')}
+                    </Box>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      {group.selection === 'multi' && group.max_choices
                         ? t('guest.item.upTo', { count: group.max_choices })
                         : t('guest.item.optional')}
-                  </Typography>
+                    </Typography>
+                  )}
                 </Stack>
-                <Stack role={group.selection === 'single' ? 'radiogroup' : 'group'}>
-                  {group.options.map((option) => {
-                    const checked = chosen.includes(option.id);
-                    return (
-                      <FormControlLabel
-                        key={option.id}
-                        checked={checked}
-                        onChange={() => toggleOption(group, option.id)}
-                        data-testid={`guest-modifier-option-${option.code}`}
-                        control={group.selection === 'single' ? <Radio /> : <Checkbox />}
-                        sx={{
-                          minHeight: 44,
-                          m: 0,
-                          justifyContent: 'space-between',
-                          flexDirection: 'row-reverse',
-                        }}
-                        label={
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            justifyContent="space-between"
-                            sx={{ width: '100%' }}
-                          >
-                            <Typography variant="body2">{option.title}</Typography>
-                            {option.price_delta ? (
-                              <Typography variant="body2" color="text.secondary">
-                                {delta(option.price_delta)}
-                              </Typography>
-                            ) : null}
-                          </Stack>
-                        }
-                        slotProps={{ typography: { sx: { flexGrow: 1 } } }}
-                      />
-                    );
-                  })}
+                <Stack
+                  direction="row"
+                  flexWrap="wrap"
+                  useFlexGap
+                  spacing={0}
+                  sx={{ gap: 1.25 }}
+                  role={group.selection === 'single' ? 'radiogroup' : 'group'}
+                  aria-label={group.title}
+                >
+                  {group.options.map((option) => (
+                    <ChipOption
+                      key={option.id}
+                      testId={`guest-modifier-option-${option.code}`}
+                      role={group.selection === 'single' ? 'radio' : 'checkbox'}
+                      label={option.title}
+                      hint={option.price_delta ? delta(option.price_delta) : undefined}
+                      selected={chosen.includes(option.id)}
+                      onToggle={() => toggleOption(group, option.id)}
+                    />
+                  ))}
                 </Stack>
                 {isMissing ? (
                   <Typography variant="caption" color="error.main">

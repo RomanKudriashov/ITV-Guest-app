@@ -31,7 +31,13 @@
     "signingIn": "جارٍ الدخول…",
     "logout": "تسجيل الخروج",
     "networkError": "تعذر الاتصال بالخادم",
-    "demoHint": "حساب تجريبي: {{email}} / {{password}}"
+    "demoHint": "حساب تجريبي: {{email}} / {{password}}",
+    "greetings": {
+      "morning": "صباح الخير",
+      "afternoon": "نهارك سعيد",
+      "evening": "مساء الخير",
+      "night": "ليلة سعيدة"
+    }
   },
   "nav": {
     "menu": "القائمة",

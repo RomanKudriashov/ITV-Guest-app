@@ -31,7 +31,13 @@
     "signingIn": "Signing in…",
     "logout": "Sign out",
     "networkError": "Could not reach the server",
-    "demoHint": "Demo access: {{email}} / {{password}}"
+    "demoHint": "Demo access: {{email}} / {{password}}",
+    "greetings": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good night"
+    }
   },
   "nav": {
     "menu": "Menu",

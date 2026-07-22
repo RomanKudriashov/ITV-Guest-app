@@ -5,7 +5,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
-import { FlagChips, ItemThumb } from './ItemMeta';
+import type { ItemDetail } from '../api/types';
+import { FlagChips, ItemThumb, NutritionInline } from './ItemMeta';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -15,6 +16,8 @@ export interface CatalogRowViewProps {
   /** Icon on the designed fallback when the row has no photo. */
   fallbackIcon?: AppIconComponent;
   flags: string[];
+  /** КБЖУ line — shown only when the item carries nutrition data. */
+  nutrition?: ItemDetail['nutrition'];
   /** Already-formatted price, or `null` to hide it (an unpriced service). */
   priceLabel: string | null;
   unavailableNote?: string | null;
@@ -37,6 +40,7 @@ export function CatalogRowView({
   imageSrc,
   fallbackIcon,
   flags,
+  nutrition,
   priceLabel,
   unavailableNote,
   available,
@@ -84,6 +88,7 @@ export function CatalogRowView({
               {description}
             </Typography>
           ) : null}
+          <NutritionInline nutrition={nutrition} />
           <FlagChips flags={flags} />
           <Stack direction="row" spacing={1} alignItems="center">
             {/* "No price" is a normal state for a service — never print "0 ₽". */}

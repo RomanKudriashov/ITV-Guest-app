@@ -43,6 +43,7 @@ import {
   SceneButton,
   RunningIndicator,
   OfflineIndicator,
+  FlagIcon,
   type OrderStatusKind,
 } from '@/kit';
 
@@ -108,8 +109,8 @@ export function StyleguidePage() {
         {/* Signature */}
         <Section title="Signature — enamel room tag" subtitle="One bright object; everything else restrained.">
           <Stack direction="row" spacing={3} alignItems="flex-end" flexWrap="wrap" useFlexGap>
-            <RoomTag label="Комната" room="305" size="lg" />
-            <RoomTag label="Комната" room="1204" size="md" />
+            <RoomTag label="Номер" room="305" size="lg" />
+            <RoomTag label="Номер" room="1204" size="md" />
             <RoomTag room="7" size="sm" />
           </Stack>
         </Section>
@@ -220,6 +221,26 @@ export function StyleguidePage() {
                 <PricePill price="2 490 ₽" emphasis />
               </Stack>
             </Box>
+          </Stack>
+        </Section>
+
+        {/* Language flags */}
+        <Section
+          title="Language flags"
+          subtitle="Vector SVG flags for the language switcher (block 8) — no emoji flags."
+        >
+          <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
+            {([
+              { code: 'gb', label: 'English' },
+              { code: 'ru', label: 'Русский' },
+              { code: 'sa', label: 'العربية' },
+              { code: 'cn', label: '中文' },
+            ] as const).map((f) => (
+              <Stack key={f.code} direction="row" spacing={1} alignItems="center">
+                <FlagIcon code={f.code} width={28} />
+                <Typography variant="body2">{f.label}</Typography>
+              </Stack>
+            ))}
           </Stack>
         </Section>
 

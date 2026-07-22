@@ -90,6 +90,22 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
 
         <Stack spacing={1.5}>
           <Stack spacing={0.5}>
+            {/* Reference `.cat` — the category name as an accent overline. */}
+            {item.category_title ? (
+              <Typography
+                component="span"
+                sx={{
+                  color: 'primary.main',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                }}
+              >
+                {item.category_title}
+              </Typography>
+            ) : null}
             <Typography variant="h4" component="h2" ref={titleRef} tabIndex={-1}>
               {item.title}
             </Typography>
@@ -108,9 +124,11 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
               {item.description}
             </Typography>
           ) : null}
+          {/* Reference block 4: КБЖУ as a line under the description, then the
+              flag/allergen chips ("metarow"). */}
+          <NutritionBlock nutrition={item.nutrition} />
           <FlagChips flags={item.flags ?? []} />
           <AllergenLine allergens={item.allergens ?? []} />
-          <NutritionBlock nutrition={item.nutrition} />
         </Stack>
 
         {!item.is_available ? (

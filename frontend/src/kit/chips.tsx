@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { Theme } from '@mui/material/styles';
@@ -44,6 +45,91 @@ export function PricePill({ price, emphasis = false, testId = 'price-pill' }: Pr
         {price}
       </Typography>
     </Box>
+  );
+}
+
+/* ── ChipOption (selectable chip-button — reference `.opt` / `.opt.sel`) ────── */
+
+export interface ChipOptionProps {
+  /** Primary label (reference `.opt .t`). */
+  label: string;
+  /** Secondary line — a price delta such as "+150 ₽" (reference `.opt .p`). */
+  hint?: string;
+  selected?: boolean;
+  onToggle?: () => void;
+  /** ARIA semantics: single-select group → radio, multi-select → checkbox. */
+  role?: 'radio' | 'checkbox';
+  disabled?: boolean;
+  testId?: string;
+}
+
+/**
+ * A tap-to-select chip-button — the redesign's modifier / choice control. NOT a
+ * radio dot or a checkbox: the whole pill fills with a soft accent wash and an
+ * accent border when selected (reference `.opt.sel`). Keeps a ≥44px target and a
+ * visible focus ring, and announces itself as a radio/checkbox to assistive tech.
+ */
+export function ChipOption({
+  label,
+  hint,
+  selected = false,
+  onToggle,
+  role = 'checkbox',
+  disabled = false,
+  testId,
+}: ChipOptionProps) {
+  return (
+    <ButtonBase
+      onClick={onToggle}
+      disabled={disabled}
+      focusRipple
+      role={role}
+      aria-checked={selected}
+      data-testid={testId}
+      sx={(theme) => ({
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 0.25,
+        minWidth: 92,
+        minHeight: 44,
+        px: 1.75,
+        py: 1.25,
+        borderRadius: `${theme.palette.brand.radius.md}px`,
+        border: `1.5px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
+        bgcolor: selected ? theme.palette.brand.primarySoft : theme.palette.brand.surfaceMuted,
+        color: 'text.primary',
+        textAlign: 'start',
+        transition: 'border-color .16s, background-color .16s, transform .12s',
+        '&:hover': { borderColor: theme.palette.primary.main },
+        '&:active': { transform: 'scale(.97)' },
+        '&.Mui-focusVisible': {
+          outline: `2px solid ${theme.palette.primary.main}`,
+          outlineOffset: 2,
+        },
+        '@media (prefers-reduced-motion: reduce)': {
+          transition: 'none',
+          '&:active': { transform: 'none' },
+        },
+      })}
+    >
+      <Typography component="span" variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+        {label}
+      </Typography>
+      {hint ? (
+        <Typography
+          component="span"
+          variant="caption"
+          sx={{
+            color: selected ? 'primary.main' : 'text.secondary',
+            fontWeight: selected ? 700 : 400,
+            lineHeight: 1.2,
+          }}
+        >
+          {hint}
+        </Typography>
+      ) : null}
+    </ButtonBase>
   );
 }
 
