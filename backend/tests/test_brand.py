@@ -68,7 +68,7 @@ def test_fonts_and_abstractions_are_curated(cms):
 
 def test_get_brand_returns_seeded_preset(cms):
     body = cms.get("/api/cms/brand").json()
-    assert body["preset"] == "evening_concierge"
+    assert body["preset"] == "midnight_navy"
     assert body["tokens"]["brand"]["defaultMode"] == "dark"
 
 

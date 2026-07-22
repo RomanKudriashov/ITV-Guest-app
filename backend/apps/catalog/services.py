@@ -189,6 +189,9 @@ def _serialize_item(
         "price": item.price,
         "flags": list(item.flags or []),
         "allergens": list(item.allergens or []),
+        # Пищевая ценность и состав — из attributes (данные позиции). Карточка
+        # показывает секцию, только если значения есть.
+        "nutrition": _nutrition(item, language),
         "images": [url for url in images if url],
         # Витрине важно заранее знать, открывать ли карточку: позицию без
         # модификаторов можно добавить прямо из списка одним тапом.
@@ -202,6 +205,28 @@ def _serialize_item(
         "is_orderable": behaviour_for(item.type).creates_order,
         "content": translate(item.content, language),
         **state.as_dict(),
+    }
+
+
+def _nutrition(item, language: str | None = None) -> dict[str, Any] | None:
+    """
+    Пищевая ценность и состав из attributes. Форма:
+        attributes = {"nutrition": {"calories": 320, "protein": 12, "fat": 18,
+                                    "carbs": 9, "composition": {"ru": "..."}}}
+    Возвращает None, если данных нет — карточка тогда не рисует секцию.
+    """
+    data = (item.attributes or {}).get("nutrition") if isinstance(item.attributes, dict) else None
+    if not data:
+        return None
+    composition = data.get("composition")
+    if isinstance(composition, dict):
+        composition = translate(composition, language)
+    return {
+        "calories": data.get("calories"),
+        "protein": data.get("protein"),
+        "fat": data.get("fat"),
+        "carbs": data.get("carbs"),
+        "composition": composition or "",
     }
 
 

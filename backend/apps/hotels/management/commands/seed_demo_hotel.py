@@ -190,6 +190,7 @@ class Command(BaseCommand):
             locations = self._seed_locations()
             schedules = self._seed_schedules()
             self._seed_catalog(kitchen, locations, schedules)
+            self._seed_nutrition()
             self._seed_services(points, schedules)
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
@@ -210,11 +211,12 @@ class Command(BaseCommand):
 
     def _seed_brand(self, hotel: Hotel) -> BrandTheme:
         # Осмысленный стартовый пресет вместо голого набора: витрина сразу
-        # выглядит цельно. Разным отелям — разные пресеты, чтобы изоляция
-        # бренда была видна глазами (Crystal тёмный, Aurora бирюзовый).
+        # выглядит цельно. Разным отелям — разные пресеты, чтобы white-label
+        # читался с первого взгляда: Crystal — тёмно-синий образ по умолчанию,
+        # Aurora — светлый глубокий синий.
         from apps.hotels.brand_library import preset_tokens
 
-        preset = "tiffany_night" if hotel.subdomain == "aurora" else "evening_concierge"
+        preset = "harbor_light" if hotel.subdomain == "aurora" else "midnight_navy"
         theme, _ = BrandTheme.objects.update_or_create(
             name=f"{hotel.name} — основная",
             defaults={"tokens": preset_tokens(preset), "is_preset": False},
@@ -1100,7 +1102,7 @@ class Command(BaseCommand):
         try:
             from apps.media.services import upload_asset
 
-            content = _render_placeholder_png(label)
+            content = _render_placeholder_png(label, code)
             return upload_asset(
                 content=content,
                 filename=f"{code}.png",
@@ -1119,14 +1121,102 @@ class Command(BaseCommand):
         if asset is not None:
             ItemImage.objects.get_or_create(item=item, asset=asset, defaults={"sort_order": 0})
 
+    def _seed_nutrition(self):
+        """
+        Демо-КБЖУ и состав для товарных позиций — карточка блюда показывает их.
+        Числа детерминированы по коду (разнообразие без ручного подбора), состав
+        берём из описания позиции.
+        """
+        import hashlib
 
-def _render_placeholder_png(label: str) -> bytes:
-    """Однотонный прямоугольник с подписью — нужен только чтобы пайплайн реально отработал."""
-    from PIL import Image, ImageDraw
+        for item in Item.objects.filter(type="product"):
+            if isinstance(item.attributes, dict) and item.attributes.get("nutrition"):
+                continue
+            seed = int(hashlib.sha1(item.code.encode("utf-8")).hexdigest(), 16)
+            attrs = dict(item.attributes or {})
+            attrs["nutrition"] = {
+                "calories": 180 + seed % 420,
+                "protein": 6 + seed % 30,
+                "fat": 4 + (seed >> 3) % 28,
+                "carbs": 5 + (seed >> 6) % 40,
+                "composition": item.description or {"ru": ""},
+            }
+            item.attributes = attrs
+            item.save(update_fields=["attributes", "updated_at"])
 
-    image = Image.new("RGB", (1200, 800), (15, 118, 110))
-    draw = ImageDraw.Draw(image)
-    draw.text((40, 40), label, fill=(255, 255, 255))
+
+def _render_placeholder_png(label: str, code: str = "") -> bytes:
+    """
+    Спроектированная обложка вместо плоского прямоугольника: тёмно-синий
+    градиент, мягкое свечение акцента, лёгкая геометрическая текстура и крупная
+    монограмма. Это не фотография (её негде взять офлайн), но осмысленная
+    обложка бренда, раздаваемая настоящим медиапайплайном — реальное фото
+    подменяется той же загрузкой. Оттенок и мотив варьируются по коду, чтобы
+    мозаика не была монотонной. Ни одного зелёного пикселя, никаких эмодзи.
+    """
+    import hashlib
+
+    from PIL import Image, ImageDraw, ImageFilter
+
+    w, h = 1000, 667
+    seed = int(hashlib.sha1((code or label).encode("utf-8")).hexdigest(), 16)
+    # Вариация внутри тёмно-синей семьи: сдвиг тона по коду.
+    hue = (seed % 5) * 8  # 0..32
+    top = (12 + hue // 3, 20 + hue // 2, 32 + hue)
+    bottom = (18 + hue // 2, 44 + hue, 82 + hue)
+    accent = (110, 168, 220)
+
+    # Вертикальный градиент БЕЗ попиксельного цикла: строим колонку 1×h и
+    # растягиваем ресайзом (C-быстро), иначе сид тормозил бы каждый тест.
+    strip = Image.new("RGB", (1, h))
+    sp = strip.load()
+    for y in range(h):
+        t = y / (h - 1)
+        sp[0, y] = tuple(int(top[i] * (1 - t) + bottom[i] * t) for i in range(3))
+    base = strip.resize((w, h)).convert("RGBA")
+
+    # Свечение акцента: рисуем и блюрим на уменьшенном холсте, затем растягиваем.
+    gw, gh = w // 4, h // 4
+    glow = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    gdraw = ImageDraw.Draw(glow)
+    gcx = int(gw * (0.28 + 0.44 * ((seed >> 3) % 3) / 2))
+    gcy = int(gh * 0.32)
+    gdraw.ellipse([gcx - 80, gcy - 80, gcx + 80, gcy + 80], fill=(*accent, 95))
+    glow = glow.filter(ImageFilter.GaussianBlur(26)).resize((w, h))
+    base = Image.alpha_composite(base, glow)
+
+    draw = ImageDraw.Draw(base, "RGBA")
+    cx, cy = gcx * 4, gcy * 4
+
+    # Геометрическая текстура (вектор — дёшево): дуги / диагонали / кольца.
+    motif = (seed >> 5) % 3
+    if motif == 0:
+        for r in range(100, 760, 78):
+            draw.arc([w - r, h - r, w + r, h + r], 180, 270, fill=(*accent, 26), width=2)
+    elif motif == 1:
+        for i in range(-2, 11):
+            x0 = int(i * 110)
+            draw.line([(x0, h), (x0 + 220, 0)], fill=(255, 255, 255, 12), width=2)
+    else:
+        for r in range(70, 600, 100):
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(*accent, 22), width=2)
+
+    # Крупная монограмма (1–2 буквы метки). Без эмодзи.
+    initials = "".join(part[0] for part in label.split()[:2]).upper() or "·"
+    try:
+        from PIL import ImageFont
+
+        font = ImageFont.truetype("DejaVuSerif.ttf", 270)
+    except Exception:  # noqa: BLE001 — нет шрифта → дефолтный
+        font = None
+    if font is not None:
+        bbox = draw.textbbox((0, 0), initials, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        draw.text(((w - tw) / 2 - bbox[0], (h - th) / 2 - bbox[1] + 24), initials,
+                  fill=(233, 239, 247, 42), font=font)
+
+    draw.rectangle([0, 0, w - 1, h - 1], outline=(255, 255, 255, 18), width=2)
+
     buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
+    base.convert("RGB").save(buffer, format="PNG")
     return buffer.getvalue()
