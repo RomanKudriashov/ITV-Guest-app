@@ -47,7 +47,8 @@
     "brand": "Бренд",
     "rooms": "Номера",
     "locations": "Локации",
-    "departments": "Отделы"
+    "departments": "Отделы",
+    "analytics": "Аналитика"
   },
   "menu": {
     "categories": "Категории",
@@ -975,6 +976,180 @@
       "department": "Выберите отдел",
       "lead": "Не может быть отрицательным",
       "horizon": "Не меньше 1 дня"
+    }
+  },
+  "analytics": {
+    "title": "Аналитика",
+    "subtitle": "Заказы, выручка, операции и трафик гостей по отелю.",
+    "tabs": {
+      "sales": "Продажи",
+      "operations": "Операции",
+      "traffic": "Трафик",
+      "reviews": "Отзывы"
+    },
+    "presets": {
+      "today": "Сегодня",
+      "week": "Неделя",
+      "month": "Месяц"
+    },
+    "filters": {
+      "period": "Период",
+      "from": "С",
+      "to": "По",
+      "compare": "Сравнить с предыдущим периодом",
+      "dimensions": "Фильтры",
+      "clear": "Сбросить",
+      "all": "Все"
+    },
+    "dimensions": {
+      "type": "Тип",
+      "category": "Категория",
+      "item": "Позиция",
+      "point": "Точка",
+      "location": "Локация",
+      "entry_method": "Способ входа",
+      "device": "Устройство",
+      "language": "Язык",
+      "floor": "Этаж",
+      "room": "Номер",
+      "status": "Статус"
+    },
+    "values": {
+      "type": {
+        "product": "Товары",
+        "service_request": "Услуги",
+        "info": "Информация",
+        "slot": "Слоты"
+      },
+      "entry_method": {
+        "anonymous": "Аноним",
+        "room_scanned": "QR номера",
+        "pms_verified": "PMS",
+        "staff_verified": "Персонал"
+      },
+      "device": {
+        "mobile": "Телефон",
+        "tablet": "Планшет",
+        "desktop": "Компьютер",
+        "unknown": "Неизвестно"
+      },
+      "language": {
+        "ru": "Русский",
+        "en": "Английский",
+        "ar": "Арабский",
+        "zh": "Китайский"
+      }
+    },
+    "metrics": {
+      "orders": "Заказы",
+      "revenue": "Выручка",
+      "avg_check": "Средний чек",
+      "items_per_order": "Позиций / заказ",
+      "completed_rate": "Доля выполненных",
+      "cancel_rate": "Доля отмен",
+      "avg_reaction": "Среднее время реакции",
+      "avg_fulfil": "Среднее время выполнения",
+      "avg_rating": "Средняя оценка",
+      "sessions": "Сессии",
+      "conversion": "Конверсия"
+    },
+    "compare": {
+      "noPrevious": "Нет данных для сравнения"
+    },
+    "timeseries": {
+      "title": "Динамика",
+      "metric": "Метрика",
+      "granularity": "Детализация"
+    },
+    "series": {
+      "orders": "Заказы",
+      "revenue_minor": "Выручка",
+      "sessions": "Сессии"
+    },
+    "granularity": {
+      "hour": "Час",
+      "day": "День",
+      "week": "Неделя"
+    },
+    "breakdown": {
+      "title": "Разбивка",
+      "dimension": "Разбить по"
+    },
+    "columns": {
+      "label": "Название",
+      "orders": "Заказы",
+      "quantity": "Кол-во",
+      "revenue_minor": "Выручка",
+      "share": "Доля"
+    },
+    "drilldown": {
+      "title": "Заказы",
+      "count": "{{count}} заказов",
+      "viewOrders": "Показать заказы",
+      "columns": {
+        "number": "№",
+        "type": "Тип",
+        "point": "Точка",
+        "status": "Статус",
+        "total_minor": "Сумма",
+        "created_at": "Создан",
+        "room": "Номер",
+        "rating": "Оценка"
+      }
+    },
+    "empty": {
+      "breakdown": "Нет данных по этому срезу",
+      "drilldown": "Нет заказов по этому срезу",
+      "timeseries": "Нет динамики по этому срезу",
+      "operations": "Нет данных по операциям",
+      "reviews": "Нет отзывов по этому срезу"
+    },
+    "errors": {
+      "breakdown": "Не удалось загрузить разбивку",
+      "drilldown": "Не удалось загрузить заказы",
+      "timeseries": "Не удалось загрузить динамику",
+      "operations": "Не удалось загрузить операции",
+      "traffic": "Не удалось загрузить трафик",
+      "reviews": "Не удалось загрузить отзывы"
+    },
+    "operations": {
+      "avgReaction": "Среднее время реакции",
+      "avgFulfil": "Среднее время выполнения",
+      "cancelRate": "Доля отмен",
+      "offHours": "Вне часов работы",
+      "escalations": "Эскалации",
+      "byPoint": "По точкам",
+      "columns": {
+        "point": "Точка",
+        "orders": "Заказы",
+        "reaction": "Реакция",
+        "fulfil": "Выполнение",
+        "cancelRate": "Отмены",
+        "escalations": "Эскалации"
+      }
+    },
+    "reviews": {
+      "lowRate": "Доля низких оценок",
+      "count": "Отзывы",
+      "trend": "Динамика оценок",
+      "byPoint": "По точкам",
+      "columns": {
+        "point": "Точка",
+        "reviews": "Отзывы",
+        "share": "Доля"
+      }
+    },
+    "export": {
+      "button": "Экспорт",
+      "queuing": "Ставим в очередь…",
+      "working": "Готовим экспорт…",
+      "ready": "Экспорт готов",
+      "readyShort": "Готово · {{count}} строк",
+      "failed": "Ошибка экспорта",
+      "formats": {
+        "csv": "CSV",
+        "xlsx": "Excel (XLSX)"
+      }
     }
   }
 }

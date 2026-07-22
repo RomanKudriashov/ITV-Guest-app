@@ -47,7 +47,8 @@
     "brand": "Brand",
     "rooms": "Rooms",
     "locations": "Locations",
-    "departments": "Departments"
+    "departments": "Departments",
+    "analytics": "Analytics"
   },
   "menu": {
     "categories": "Categories",
@@ -975,6 +976,180 @@
       "department": "Choose a department",
       "lead": "Cannot be negative",
       "horizon": "At least 1 day"
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Orders, revenue, operations and guest traffic across your hotel.",
+    "tabs": {
+      "sales": "Sales",
+      "operations": "Operations",
+      "traffic": "Traffic",
+      "reviews": "Reviews"
+    },
+    "presets": {
+      "today": "Today",
+      "week": "Week",
+      "month": "Month"
+    },
+    "filters": {
+      "period": "Period",
+      "from": "From",
+      "to": "To",
+      "compare": "Compare with previous period",
+      "dimensions": "Filters",
+      "clear": "Clear",
+      "all": "All"
+    },
+    "dimensions": {
+      "type": "Type",
+      "category": "Category",
+      "item": "Item",
+      "point": "Point",
+      "location": "Location",
+      "entry_method": "Entry method",
+      "device": "Device",
+      "language": "Language",
+      "floor": "Floor",
+      "room": "Room",
+      "status": "Status"
+    },
+    "values": {
+      "type": {
+        "product": "Products",
+        "service_request": "Service requests",
+        "info": "Info",
+        "slot": "Slots"
+      },
+      "entry_method": {
+        "anonymous": "Anonymous",
+        "room_scanned": "Room QR",
+        "pms_verified": "PMS verified",
+        "staff_verified": "Staff verified"
+      },
+      "device": {
+        "mobile": "Mobile",
+        "tablet": "Tablet",
+        "desktop": "Desktop",
+        "unknown": "Unknown"
+      },
+      "language": {
+        "ru": "Russian",
+        "en": "English",
+        "ar": "Arabic",
+        "zh": "Chinese"
+      }
+    },
+    "metrics": {
+      "orders": "Orders",
+      "revenue": "Revenue",
+      "avg_check": "Average check",
+      "items_per_order": "Items / order",
+      "completed_rate": "Completed rate",
+      "cancel_rate": "Cancel rate",
+      "avg_reaction": "Avg reaction time",
+      "avg_fulfil": "Avg fulfilment time",
+      "avg_rating": "Average rating",
+      "sessions": "Sessions",
+      "conversion": "Conversion"
+    },
+    "compare": {
+      "noPrevious": "No comparison data"
+    },
+    "timeseries": {
+      "title": "Dynamics",
+      "metric": "Metric",
+      "granularity": "Granularity"
+    },
+    "series": {
+      "orders": "Orders",
+      "revenue_minor": "Revenue",
+      "sessions": "Sessions"
+    },
+    "granularity": {
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week"
+    },
+    "breakdown": {
+      "title": "Breakdown",
+      "dimension": "Break down by"
+    },
+    "columns": {
+      "label": "Name",
+      "orders": "Orders",
+      "quantity": "Qty",
+      "revenue_minor": "Revenue",
+      "share": "Share"
+    },
+    "drilldown": {
+      "title": "Orders",
+      "count": "{{count}} orders",
+      "viewOrders": "View orders",
+      "columns": {
+        "number": "No.",
+        "type": "Type",
+        "point": "Point",
+        "status": "Status",
+        "total_minor": "Total",
+        "created_at": "Created",
+        "room": "Room",
+        "rating": "Rating"
+      }
+    },
+    "empty": {
+      "breakdown": "No data for this slice",
+      "drilldown": "No orders for this slice",
+      "timeseries": "No dynamics for this slice",
+      "operations": "No operations data",
+      "reviews": "No reviews for this slice"
+    },
+    "errors": {
+      "breakdown": "Failed to load the breakdown",
+      "drilldown": "Failed to load orders",
+      "timeseries": "Failed to load dynamics",
+      "operations": "Failed to load operations",
+      "traffic": "Failed to load traffic",
+      "reviews": "Failed to load reviews"
+    },
+    "operations": {
+      "avgReaction": "Avg reaction time",
+      "avgFulfil": "Avg fulfilment time",
+      "cancelRate": "Cancel rate",
+      "offHours": "Off-hours share",
+      "escalations": "Escalations",
+      "byPoint": "By point",
+      "columns": {
+        "point": "Point",
+        "orders": "Orders",
+        "reaction": "Reaction",
+        "fulfil": "Fulfilment",
+        "cancelRate": "Cancel rate",
+        "escalations": "Escalations"
+      }
+    },
+    "reviews": {
+      "lowRate": "Low-rating share",
+      "count": "Reviews",
+      "trend": "Rating dynamics",
+      "byPoint": "By point",
+      "columns": {
+        "point": "Point",
+        "reviews": "Reviews",
+        "share": "Share"
+      }
+    },
+    "export": {
+      "button": "Export",
+      "queuing": "Queuing export…",
+      "working": "Preparing export…",
+      "ready": "Export ready",
+      "readyShort": "Ready · {{count}} rows",
+      "failed": "Export failed",
+      "formats": {
+        "csv": "CSV",
+        "xlsx": "Excel (XLSX)"
+      }
     }
   }
 }

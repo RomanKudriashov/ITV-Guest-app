@@ -47,7 +47,8 @@
     "brand": "العلامة",
     "rooms": "الغرف",
     "locations": "المواقع",
-    "departments": "الأقسام"
+    "departments": "الأقسام",
+    "analytics": "التحليلات"
   },
   "menu": {
     "categories": "الفئات",
@@ -975,6 +976,180 @@
       "department": "اختر القسم",
       "lead": "لا يمكن أن يكون سالبًا",
       "horizon": "يوم واحد على الأقل"
+    }
+  },
+  "analytics": {
+    "title": "التحليلات",
+    "subtitle": "الطلبات والإيرادات والعمليات وحركة الضيوف في فندقك.",
+    "tabs": {
+      "sales": "المبيعات",
+      "operations": "العمليات",
+      "traffic": "الحركة",
+      "reviews": "التقييمات"
+    },
+    "presets": {
+      "today": "اليوم",
+      "week": "أسبوع",
+      "month": "شهر"
+    },
+    "filters": {
+      "period": "الفترة",
+      "from": "من",
+      "to": "إلى",
+      "compare": "المقارنة بالفترة السابقة",
+      "dimensions": "عوامل التصفية",
+      "clear": "مسح",
+      "all": "الكل"
+    },
+    "dimensions": {
+      "type": "النوع",
+      "category": "الفئة",
+      "item": "العنصر",
+      "point": "النقطة",
+      "location": "الموقع",
+      "entry_method": "طريقة الدخول",
+      "device": "الجهاز",
+      "language": "اللغة",
+      "floor": "الطابق",
+      "room": "الغرفة",
+      "status": "الحالة"
+    },
+    "values": {
+      "type": {
+        "product": "المنتجات",
+        "service_request": "طلبات الخدمة",
+        "info": "معلومات",
+        "slot": "المواعيد"
+      },
+      "entry_method": {
+        "anonymous": "مجهول",
+        "room_scanned": "رمز الغرفة",
+        "pms_verified": "PMS",
+        "staff_verified": "الموظفون"
+      },
+      "device": {
+        "mobile": "الهاتف",
+        "tablet": "اللوحي",
+        "desktop": "الحاسوب",
+        "unknown": "غير معروف"
+      },
+      "language": {
+        "ru": "الروسية",
+        "en": "الإنجليزية",
+        "ar": "العربية",
+        "zh": "الصينية"
+      }
+    },
+    "metrics": {
+      "orders": "الطلبات",
+      "revenue": "الإيرادات",
+      "avg_check": "متوسط الفاتورة",
+      "items_per_order": "عناصر / طلب",
+      "completed_rate": "نسبة الإنجاز",
+      "cancel_rate": "نسبة الإلغاء",
+      "avg_reaction": "متوسط زمن الاستجابة",
+      "avg_fulfil": "متوسط زمن التنفيذ",
+      "avg_rating": "متوسط التقييم",
+      "sessions": "الجلسات",
+      "conversion": "التحويل"
+    },
+    "compare": {
+      "noPrevious": "لا توجد بيانات للمقارنة"
+    },
+    "timeseries": {
+      "title": "الديناميكية",
+      "metric": "المقياس",
+      "granularity": "التفصيل"
+    },
+    "series": {
+      "orders": "الطلبات",
+      "revenue_minor": "الإيرادات",
+      "sessions": "الجلسات"
+    },
+    "granularity": {
+      "hour": "ساعة",
+      "day": "يوم",
+      "week": "أسبوع"
+    },
+    "breakdown": {
+      "title": "التوزيع",
+      "dimension": "التوزيع حسب"
+    },
+    "columns": {
+      "label": "الاسم",
+      "orders": "الطلبات",
+      "quantity": "الكمية",
+      "revenue_minor": "الإيرادات",
+      "share": "الحصة"
+    },
+    "drilldown": {
+      "title": "الطلبات",
+      "count": "{{count}} طلب",
+      "viewOrders": "عرض الطلبات",
+      "columns": {
+        "number": "رقم",
+        "type": "النوع",
+        "point": "النقطة",
+        "status": "الحالة",
+        "total_minor": "الإجمالي",
+        "created_at": "أُنشئ",
+        "room": "الغرفة",
+        "rating": "التقييم"
+      }
+    },
+    "empty": {
+      "breakdown": "لا توجد بيانات لهذا المقطع",
+      "drilldown": "لا توجد طلبات لهذا المقطع",
+      "timeseries": "لا توجد ديناميكية لهذا المقطع",
+      "operations": "لا توجد بيانات عمليات",
+      "reviews": "لا توجد تقييمات لهذا المقطع"
+    },
+    "errors": {
+      "breakdown": "تعذر تحميل التوزيع",
+      "drilldown": "تعذر تحميل الطلبات",
+      "timeseries": "تعذر تحميل الديناميكية",
+      "operations": "تعذر تحميل العمليات",
+      "traffic": "تعذر تحميل الحركة",
+      "reviews": "تعذر تحميل التقييمات"
+    },
+    "operations": {
+      "avgReaction": "متوسط زمن الاستجابة",
+      "avgFulfil": "متوسط زمن التنفيذ",
+      "cancelRate": "نسبة الإلغاء",
+      "offHours": "خارج ساعات العمل",
+      "escalations": "التصعيدات",
+      "byPoint": "حسب النقطة",
+      "columns": {
+        "point": "النقطة",
+        "orders": "الطلبات",
+        "reaction": "الاستجابة",
+        "fulfil": "التنفيذ",
+        "cancelRate": "الإلغاء",
+        "escalations": "التصعيدات"
+      }
+    },
+    "reviews": {
+      "lowRate": "نسبة التقييمات المنخفضة",
+      "count": "التقييمات",
+      "trend": "ديناميكية التقييم",
+      "byPoint": "حسب النقطة",
+      "columns": {
+        "point": "النقطة",
+        "reviews": "التقييمات",
+        "share": "الحصة"
+      }
+    },
+    "export": {
+      "button": "تصدير",
+      "queuing": "جارٍ إضافته للطابور…",
+      "working": "جارٍ تحضير التصدير…",
+      "ready": "التصدير جاهز",
+      "readyShort": "جاهز · {{count}} صف",
+      "failed": "فشل التصدير",
+      "formats": {
+        "csv": "CSV",
+        "xlsx": "Excel (XLSX)"
+      }
     }
   }
 }

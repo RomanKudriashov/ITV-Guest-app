@@ -12,6 +12,7 @@ import { LocationsPage } from '@/pages/hotel/LocationsPage';
 import { DepartmentsPage } from '@/pages/hotel/DepartmentsPage';
 import { StaffPage } from '@/pages/hotel/StaffPage';
 import { BrandPage } from '@/cms/brand/BrandPage';
+import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 import App from '@/App';
 
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
       { path: 'departments', element: <DepartmentsPage /> },
       { path: 'staff', element: <StaffPage /> },
       { path: 'brand', element: <BrandPage /> },
+      { path: 'analytics', element: <AnalyticsPage /> },
     ],
   },
   {

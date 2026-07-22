@@ -47,7 +47,8 @@
     "brand": "品牌",
     "rooms": "房间",
     "locations": "位置",
-    "departments": "部门"
+    "departments": "部门",
+    "analytics": "分析"
   },
   "menu": {
     "categories": "分类",
@@ -975,6 +976,180 @@
       "department": "请选择部门",
       "lead": "不能为负",
       "horizon": "至少1天"
+    }
+  },
+  "analytics": {
+    "title": "分析",
+    "subtitle": "酒店的订单、收入、运营和访客流量。",
+    "tabs": {
+      "sales": "销售",
+      "operations": "运营",
+      "traffic": "流量",
+      "reviews": "评价"
+    },
+    "presets": {
+      "today": "今天",
+      "week": "本周",
+      "month": "本月"
+    },
+    "filters": {
+      "period": "时间段",
+      "from": "从",
+      "to": "至",
+      "compare": "与上一周期比较",
+      "dimensions": "筛选",
+      "clear": "清除",
+      "all": "全部"
+    },
+    "dimensions": {
+      "type": "类型",
+      "category": "类别",
+      "item": "项目",
+      "point": "点位",
+      "location": "位置",
+      "entry_method": "进入方式",
+      "device": "设备",
+      "language": "语言",
+      "floor": "楼层",
+      "room": "房间",
+      "status": "状态"
+    },
+    "values": {
+      "type": {
+        "product": "商品",
+        "service_request": "服务请求",
+        "info": "信息",
+        "slot": "时段"
+      },
+      "entry_method": {
+        "anonymous": "匿名",
+        "room_scanned": "房间二维码",
+        "pms_verified": "PMS 验证",
+        "staff_verified": "员工验证"
+      },
+      "device": {
+        "mobile": "手机",
+        "tablet": "平板",
+        "desktop": "电脑",
+        "unknown": "未知"
+      },
+      "language": {
+        "ru": "俄语",
+        "en": "英语",
+        "ar": "阿拉伯语",
+        "zh": "中文"
+      }
+    },
+    "metrics": {
+      "orders": "订单",
+      "revenue": "收入",
+      "avg_check": "平均客单价",
+      "items_per_order": "每单项目数",
+      "completed_rate": "完成率",
+      "cancel_rate": "取消率",
+      "avg_reaction": "平均响应时间",
+      "avg_fulfil": "平均完成时间",
+      "avg_rating": "平均评分",
+      "sessions": "会话",
+      "conversion": "转化率"
+    },
+    "compare": {
+      "noPrevious": "无对比数据"
+    },
+    "timeseries": {
+      "title": "趋势",
+      "metric": "指标",
+      "granularity": "粒度"
+    },
+    "series": {
+      "orders": "订单",
+      "revenue_minor": "收入",
+      "sessions": "会话"
+    },
+    "granularity": {
+      "hour": "小时",
+      "day": "天",
+      "week": "周"
+    },
+    "breakdown": {
+      "title": "细分",
+      "dimension": "按此细分"
+    },
+    "columns": {
+      "label": "名称",
+      "orders": "订单",
+      "quantity": "数量",
+      "revenue_minor": "收入",
+      "share": "占比"
+    },
+    "drilldown": {
+      "title": "订单",
+      "count": "{{count}} 个订单",
+      "viewOrders": "查看订单",
+      "columns": {
+        "number": "编号",
+        "type": "类型",
+        "point": "点位",
+        "status": "状态",
+        "total_minor": "总额",
+        "created_at": "创建时间",
+        "room": "房间",
+        "rating": "评分"
+      }
+    },
+    "empty": {
+      "breakdown": "该切片暂无数据",
+      "drilldown": "该切片暂无订单",
+      "timeseries": "该切片暂无趋势",
+      "operations": "暂无运营数据",
+      "reviews": "该切片暂无评价"
+    },
+    "errors": {
+      "breakdown": "加载细分失败",
+      "drilldown": "加载订单失败",
+      "timeseries": "加载趋势失败",
+      "operations": "加载运营数据失败",
+      "traffic": "加载流量失败",
+      "reviews": "加载评价失败"
+    },
+    "operations": {
+      "avgReaction": "平均响应时间",
+      "avgFulfil": "平均完成时间",
+      "cancelRate": "取消率",
+      "offHours": "非营业时段占比",
+      "escalations": "升级",
+      "byPoint": "按点位",
+      "columns": {
+        "point": "点位",
+        "orders": "订单",
+        "reaction": "响应",
+        "fulfil": "完成",
+        "cancelRate": "取消率",
+        "escalations": "升级"
+      }
+    },
+    "reviews": {
+      "lowRate": "低评分占比",
+      "count": "评价",
+      "trend": "评分趋势",
+      "byPoint": "按点位",
+      "columns": {
+        "point": "点位",
+        "reviews": "评价",
+        "share": "占比"
+      }
+    },
+    "export": {
+      "button": "导出",
+      "queuing": "正在排队…",
+      "working": "正在准备导出…",
+      "ready": "导出完成",
+      "readyShort": "完成 · {{count}} 行",
+      "failed": "导出失败",
+      "formats": {
+        "csv": "CSV",
+        "xlsx": "Excel (XLSX)"
+      }
     }
   }
 }

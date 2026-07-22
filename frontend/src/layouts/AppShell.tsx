@@ -18,6 +18,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import RoomServiceIcon from '@mui/icons-material/RoomService';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import InsightsIcon from '@mui/icons-material/Insights';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
@@ -82,6 +83,12 @@ const NAV_ENTRIES: NavEntry[] = [
     to: '/cms/brand',
     icon: <PaletteOutlinedIcon fontSize="small" />,
     testId: 'cms-nav-brand',
+  },
+  {
+    key: 'analytics',
+    to: '/cms/analytics',
+    icon: <InsightsIcon fontSize="small" />,
+    testId: 'cms-analytics-nav',
   },
   { key: 'orders', icon: <ReceiptLongIcon fontSize="small" />, disabled: true },
   { key: 'services', icon: <RoomServiceIcon fontSize="small" />, disabled: true },
