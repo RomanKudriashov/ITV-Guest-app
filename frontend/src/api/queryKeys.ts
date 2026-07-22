@@ -5,6 +5,7 @@ export const queryKeys = {
   items: (categoryId: string | undefined, search?: string) =>
     ['cms', 'items', categoryId ?? 'all', search ?? ''] as const,
   item: (id: string) => ['cms', 'items', 'detail', id] as const,
+  slotConfig: (id: string) => ['cms', 'items', 'slot-config', id] as const,
   schedules: ['cms', 'schedules'] as const,
   notificationChannels: ['cms', 'notification-channels'] as const,
   escalationRules: ['cms', 'escalation-rules'] as const,

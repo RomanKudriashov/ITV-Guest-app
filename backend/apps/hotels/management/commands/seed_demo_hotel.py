@@ -807,6 +807,7 @@ class Command(BaseCommand):
                 "location_mode": LocationMode.NONE,
                 "title": {"ru": "Wi-Fi и интернет", "en": "Wi-Fi & internet"},
                 "description": {"ru": "Как подключиться", "en": "How to connect"},
+                "price": None,
                 "content": {
                     "ru": "## Сеть\nCrystal-Guest\n\n**Пароль:** welcome12345\n\n"
                           "Интернет бесплатный на всей территории отеля.",
@@ -823,6 +824,7 @@ class Command(BaseCommand):
                 "type": OfferingType.INFO,
                 "location_mode": LocationMode.NONE,
                 "title": {"ru": "О нашем отеле", "en": "About our hotel"},
+                "price": None,
                 "content": {
                     "ru": "Отель «Кристалл» — пять звёзд у моря.\nЗавтрак 07:00–11:00, "
                           "SPA до 22:00, ресепшен круглосуточно.",

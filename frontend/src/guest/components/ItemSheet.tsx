@@ -9,8 +9,10 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 
 import { behaviourFor } from '@/offerings/behaviour';
+import { InfoView } from './InfoView';
 import { ProductOrderForm } from './ProductOrderForm';
 import { RequestOrderForm } from './RequestOrderForm';
+import { SlotBookingForm } from './SlotBookingForm';
 import { errorMessage } from '../errors';
 import { useGuestItem } from '../hooks/useGuestQueries';
 import type { ItemDetail, MenuItem } from '../api/types';
@@ -42,9 +44,11 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
   const { data, isLoading, error } = useGuestItem(itemId, seedDetail);
   const item = data ?? (listItem ? ({ ...listItem, modifier_groups: [] } as ItemDetail) : null);
 
-  // `has_fields` is a property of the item; the registry answers for the type
-  // when a leaner list payload does not carry the flag.
-  const usesFields = item ? (item.has_fields ?? behaviourFor(item.type).usesFields) : false;
+  // The registry chooses the body. `has_fields` is a property carried by the
+  // item, so it wins when present; everything else is a flag of the type. The
+  // sheet itself stays ignorant of which body it renders.
+  const behaviour = item ? behaviourFor(item.type) : null;
+  const usesFields = item ? (item.has_fields ?? behaviour!.usesFields) : false;
 
   // Move focus into the sheet so screen readers announce the item, not the page.
   useEffect(() => {
@@ -105,6 +109,10 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
               <Alert severity="error">{errorMessage(error, t)}</Alert>
             ) : null}
           </Box>
+        ) : behaviour?.usesContent ? (
+          <InfoView item={item} titleRef={titleRef} />
+        ) : behaviour?.usesSlots ? (
+          <SlotBookingForm item={item} titleRef={titleRef} onClose={onClose} />
         ) : usesFields ? (
           <RequestOrderForm item={item} titleRef={titleRef} onClose={onClose} />
         ) : (

@@ -88,10 +88,12 @@ export const router = createBrowserRouter([
         element: <GuestLayout />,
         children: [
           { path: 'home', element: <HomePage /> },
-          // Both catalogs are the same screen with a different offering type;
-          // there is deliberately no separate "services" page component.
+          // Every catalog is the same screen with a different offering type;
+          // there is deliberately no separate page component per type.
           { path: 'menu', element: <CatalogPage type="product" /> },
           { path: 'services', element: <CatalogPage type="service_request" /> },
+          { path: 'info', element: <CatalogPage type="info" /> },
+          { path: 'slots', element: <CatalogPage type="slot" /> },
           { path: 'cart', element: <CartPage /> },
           { path: 'orders', element: <OrdersPage /> },
           { path: 'orders/:id', element: <OrderStatusPage /> },

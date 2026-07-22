@@ -24,6 +24,12 @@ const CODE_KEYS: Record<string, string> = {
   field_invalid: 'guest.errors.fieldInvalid',
   single_line_only: 'guest.errors.singleLineOnly',
   fields_not_supported: 'guest.errors.fieldsNotSupported',
+  // Slot booking (contract §slot).
+  slot_required: 'guest.errors.slotRequired',
+  slot_not_offered: 'guest.errors.slotNotOffered',
+  slot_in_past: 'guest.errors.slotInPast',
+  slot_taken: 'guest.errors.slotTaken',
+  not_orderable: 'guest.errors.notOrderable',
 };
 
 export function isNetworkError(error: unknown): boolean {

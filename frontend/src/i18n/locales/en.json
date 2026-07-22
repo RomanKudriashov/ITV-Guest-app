@@ -105,7 +105,9 @@
     "typeLocked": "The item type cannot be changed",
     "types": {
       "product": "Product",
-      "service_request": "Service request"
+      "service_request": "Service request",
+      "info": "Info page",
+      "slot": "Bookable slot"
     },
     "priceOptionalHint": "May stay empty — \"price not set\"",
     "locationMode": "Location",
@@ -117,7 +119,10 @@
       "none": "Do not ask",
       "noneHint": "No location needed — a taxi pick-up address is a form field"
     },
-    "noPrice": "Price not set"
+    "noPrice": "Price not set",
+    "contentSection": "Content",
+    "content": "Page text",
+    "contentHint": "Markup: # heading, ## subheading, - bullet, **bold**"
   },
   "editor": {
     "translationsFilled": "Translations: {{filled}} of {{total}}",
@@ -371,7 +376,12 @@
       "fieldRequired": "A required field of the request is empty",
       "fieldInvalid": "That value does not fit the field",
       "singleLineOnly": "A request may contain only one service",
-      "fieldsNotSupported": "This item does not use request fields"
+      "fieldsNotSupported": "This item does not use request fields",
+      "slotRequired": "Please choose a time slot",
+      "slotNotOffered": "That time is not available",
+      "slotInPast": "That time has already passed",
+      "slotTaken": "That slot was just taken — please pick another",
+      "notOrderable": "This page cannot be ordered"
     },
     "flags": {
       "popular": "Popular",
@@ -418,6 +428,26 @@
         "option": "Pick one of the options"
       },
       "selectPlaceholder": "Not selected"
+    },
+    "info": {
+      "emptyTitle": "Nothing here yet",
+      "emptyHint": "The hotel has not published any info pages yet",
+      "categories": "Info sections",
+      "empty": "This page has no content yet."
+    },
+    "slot": {
+      "emptyTitle": "No bookings available",
+      "emptyHint": "The hotel has not opened any bookable services yet",
+      "categories": "Booking categories",
+      "date": "Date",
+      "none": "No free slots on this day",
+      "taken": "Taken",
+      "left": "{{count}} left",
+      "raceLost": "That slot was just taken — please pick another.",
+      "book": "Book",
+      "bookAt": "Book {{time}}",
+      "booking": "Booking…",
+      "choose": "Book"
     }
   },
   "tracker": {
@@ -888,6 +918,34 @@
       "emailTaken": "This email is already taken",
       "weakPassword": "Password too short (minimum 8 characters)",
       "cannotRemoveSelf": "You cannot delete or deactivate yourself"
+    }
+  },
+  "slotConfig": {
+    "section": "Booking setup",
+    "duration": "Slot length",
+    "durationHint": "At least 5 minutes",
+    "capacity": "Capacity",
+    "capacityHint": "Guests per slot",
+    "schedule": "Working hours",
+    "department": "Department",
+    "departmentHint": "Who fulfils the booking",
+    "departmentPlaceholder": "Select a department",
+    "lead": "Min. lead time",
+    "leadHint": "How long before start booking closes",
+    "horizon": "Booking horizon",
+    "horizonHint": "How many days ahead are open",
+    "minutes": "min",
+    "days": "days",
+    "save": "Save booking setup",
+    "saved": "Booking setup saved",
+    "saveItemFirst": "Save the item first, then configure its slots.",
+    "errors": {
+      "duration": "At least 5 minutes",
+      "capacity": "At least 1",
+      "schedule": "Choose working hours",
+      "department": "Choose a department",
+      "lead": "Cannot be negative",
+      "horizon": "At least 1 day"
     }
   }
 }

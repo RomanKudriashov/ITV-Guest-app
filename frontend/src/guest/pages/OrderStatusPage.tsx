@@ -19,6 +19,7 @@ import type { TFunction } from 'i18next';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ItemThumb } from '../components/ItemMeta';
 import { OrderFieldValues } from '../components/OrderFieldValues';
+import { OrderSlot } from '../components/OrderSlot';
 import { OrderTimeline } from '../components/OrderTimeline';
 import { cancelOrder } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
@@ -193,11 +194,22 @@ export function OrderStatusPage() {
 
         <Paper variant="outlined" sx={{ p: 1.5 }}>
           <Stack divider={<Divider flexItem />} spacing={1.5}>
-            {/* Body of the order: answers for a request, lines for food. */}
+            {/* Body of the order, chosen by the block that is present: a booked
+                slot, the answers of a request, or the lines of food. */}
+            {order.slot ? (
+              <OrderSlot
+                slot={order.slot}
+                language={language}
+                guestLabel={locationText(order, t)}
+                testId="guest-order-slot"
+              />
+            ) : null}
             {fieldValues.length ? (
               <OrderFieldValues values={fieldValues} testId="guest-order-fields" />
             ) : null}
-            {order.items.map((line) => (
+            {/* A booking's line is the slot item itself; the slot block above
+                already names it, so the raw line would only repeat it. */}
+            {(order.slot ? [] : order.items).map((line) => (
               <Stack key={line.id} direction="row" spacing={1.5} alignItems="flex-start">
                 <ItemThumb src={line.image_url} alt={line.title} size={48} />
                 <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -256,6 +268,7 @@ export function OrderStatusPage() {
 
       <ConfirmDialog
         open={confirmOpen}
+        testId="guest-cancel"
         title={t('guest.order.cancelConfirmTitle')}
         description={t('guest.order.cancelConfirmBody')}
         confirmLabel={t('guest.order.cancel')}

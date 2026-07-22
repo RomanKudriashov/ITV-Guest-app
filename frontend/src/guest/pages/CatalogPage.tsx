@@ -147,7 +147,7 @@ export function CatalogPage({ type }: CatalogPageProps) {
   const showCartBar = behaviour.usesCart && !cart.isEmpty;
 
   return (
-    <Box data-testid={behaviour.usesCart ? 'guest-menu' : 'guest-services'}>
+    <Box data-testid={behaviour.guestCatalogTestId}>
       <Box
         sx={{
           position: 'sticky',
@@ -266,13 +266,16 @@ function CatalogRow({
   const behaviour = behaviourFor(item.type ?? fallbackType);
   const usesFields = item.has_fields ?? behaviour.usesFields;
   const available = item.is_available && categoryAvailable;
-  // A form-filled offering always opens the sheet; a dish only when it has to be
-  // configured. Either way the guest ends up in the same sheet.
+  // A form-filled offering, a booking or a dish with required modifiers always
+  // opens the sheet; a plain dish only when it must be configured. Either way the
+  // guest ends up in the same sheet.
   const needsSheet =
     usesFields ||
+    behaviour.usesSlots ||
     (item.has_required_modifiers ?? Boolean(item.modifier_groups?.some((g) => g.is_required)));
   const quantity = cart.simpleQuantity(item.id);
-  const price = formatPrice(item.price);
+  // An `info` page has no price; a booking may or may not, like a service.
+  const price = behaviour.usesContent ? null : formatPrice(item.price);
 
   const unavailableNote = !available
     ? item.available_from
@@ -282,7 +285,9 @@ function CatalogRow({
         : t('guest.menu.unavailable')
     : null;
 
-  const action = available ? (
+  // An `info` row is a pure read link — the whole row opens the page, there is
+  // no order control at all (`behaviour.createsOrder === false`).
+  const action = !available || behaviour.usesContent ? null : (
     needsSheet ? (
       <Button
         variant="outlined"
@@ -291,7 +296,11 @@ function CatalogRow({
         data-testid={`guest-qty-plus-${item.code}`}
         sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
       >
-        {usesFields ? t('guest.services.order') : t('guest.menu.choose')}
+        {behaviour.usesSlots
+          ? t('guest.slot.choose')
+          : usesFields
+            ? t('guest.services.order')
+            : t('guest.menu.choose')}
       </Button>
     ) : quantity > 0 ? (
       <QuantityStepper
@@ -314,7 +323,7 @@ function CatalogRow({
         +
       </Button>
     )
-  ) : null;
+  );
 
   return (
     <CatalogRowView

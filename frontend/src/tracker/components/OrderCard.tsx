@@ -13,6 +13,7 @@ import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
+import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
 import { itemsSummary, totalText, whenText, whereText } from '../orderText';
@@ -45,15 +46,16 @@ export function OrderCard({
   const { t } = useTranslation();
   const language = useTrackerLanguage();
   const { format } = useTrackerMoney();
-  const slot = statusSlot(order.status.color_token);
+  const colorSlot = statusSlot(order.status.color_token);
   const fieldValues = order.field_values ?? [];
+  const booking = order.slot ?? null;
 
   return (
     <Card
       variant="outlined"
       data-testid={`tracker-order-${order.number}`}
       sx={{
-        borderColor: highlighted ? `${slot}.main` : 'divider',
+        borderColor: highlighted ? `${colorSlot}.main` : 'divider',
         borderWidth: highlighted ? 2 : 1,
         overflow: 'hidden',
       }}
@@ -66,7 +68,7 @@ export function OrderCard({
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
               {t('tracker.card.number', { number: order.number })}
             </Typography>
-            <Chip size="small" label={order.status.title} color={slot} variant="outlined" />
+            <Chip size="small" label={order.status.title} color={colorSlot} variant="outlined" />
             <Box sx={{ flexGrow: 1 }} />
             <Chip
               size="small"
@@ -90,11 +92,21 @@ export function OrderCard({
           </Typography>
 
           {/*
-            The ONLY difference a service makes on this board: the body of the
-            card. Food shows its lines, a request shows the answers to its form.
-            Columns, actions, statuses and the socket know nothing about it.
+            The ONLY difference a type makes on this board: the body of the
+            card. Food shows its lines, a request shows the answers to its form,
+            a booking shows the reserved slot. The choice is by the block that is
+            present, never by the type string; columns, actions, statuses and the
+            socket know nothing about it.
           */}
-          {fieldValues.length ? (
+          {booking ? (
+            <OrderSlot
+              slot={booking}
+              language={language}
+              guestLabel={whereText(order, t)}
+              testId="tracker-order-slot"
+              dense
+            />
+          ) : fieldValues.length ? (
             <OrderFieldValues values={fieldValues} testId="tracker-order-fields" dense />
           ) : (
             <Typography

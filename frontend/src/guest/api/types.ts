@@ -118,6 +118,10 @@ export interface MenuItem {
   has_required_modifiers?: boolean;
   /** True when the item is filled in with a form instead of the cart. */
   has_fields?: boolean;
+  /** False for an `info` page — the catalog then shows a read link, not an order. */
+  is_orderable?: boolean;
+  /** Body of an `info` page — markup-ish text, already localized to a string. */
+  content?: string;
   is_available: boolean;
   unavailable_reason: UnavailableReason | null;
   available_from?: string | null;
@@ -169,6 +173,24 @@ export interface GuestLocations {
   delivery_modes: string[];
 }
 
+/** One bookable interval of a `slot` offering (contract §slot availability). */
+export interface GuestSlot {
+  starts_at: string;
+  ends_at?: string;
+  /** Remaining capacity on this interval; `0` when fully booked. */
+  capacity_left: number;
+  /** `capacity_left > 0`, not in the past and within the horizon. */
+  available: boolean;
+}
+
+/** `GET /api/guest/slots?item_id=&date=` — availability for one day. */
+export interface GuestSlotAvailability {
+  date: string;
+  duration_minutes: number;
+  capacity: number;
+  slots: GuestSlot[];
+}
+
 export type OrderTiming = 'asap' | 'scheduled';
 
 export interface OrderLinePayload {
@@ -193,6 +215,8 @@ export interface CreateOrderPayload {
   comment: string;
   /** `code` → answer. Empty for a product order. */
   field_values?: Record<string, string | number>;
+  /** Start of the booked interval — required only for a `slot` offering. */
+  slot_start?: string;
 }
 
 export interface OrderStatus {
@@ -238,6 +262,19 @@ export interface OrderItem {
 }
 
 /**
+ * The booked slot of a `booking` order. Non-empty only for a slot offering;
+ * the storefront and the tracker draw the card body from it, the same way a
+ * request draws its body from `field_values` — by the presence of the block,
+ * never by the type string.
+ */
+export interface OrderSlot {
+  resource_title: string;
+  starts_at: string;
+  ends_at: string;
+  duration_minutes: number;
+}
+
+/**
  * A snapshot of one answer of a request form: it must survive the field being
  * renamed or deleted in the CMS, exactly like the price snapshot on a line.
  */
@@ -263,13 +300,15 @@ export interface GuestOrder {
   requested_time: string | null;
   eta_minutes: number | null;
   comment: string;
-  /** `cart` for food, `request` for a service — see the behaviour registry. */
-  type?: 'cart' | 'request';
+  /** `cart` for food, `request` for a service, `booking` for a slot. */
+  type?: 'cart' | 'request' | 'booking';
   /** `null` when nothing in the order is priced — show a dash, never "0 ₽". */
   total: number | null;
   currency: string;
   /** Non-empty only for a request-service. */
   field_values?: OrderFieldValue[];
+  /** Present only for a `booking` order — the reserved slot. */
+  slot?: OrderSlot | null;
   items: OrderItem[];
 }
 

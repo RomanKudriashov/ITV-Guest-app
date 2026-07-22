@@ -58,6 +58,7 @@ import {
 } from '@/offerings/behaviour';
 import { ModifierGroupsEditor } from './ModifierGroupsEditor';
 import { RequestFieldsEditor } from './RequestFieldsEditor';
+import { SlotConfigEditor } from './SlotConfigEditor';
 import {
   groupsToDrafts,
   syncModifierGroups,
@@ -78,6 +79,8 @@ interface ItemForm {
   location_mode: LocationMode;
   title: Translated;
   description: Translated;
+  /** Body of an `info` offering — translatable markup-ish text. */
+  content: Translated;
   /** Kept as typed text; an empty box means "price not set", not zero. */
   priceInput: string;
   is_active: boolean;
@@ -95,8 +98,9 @@ function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm
     location_mode: behaviour.defaultLocationMode,
     title: {},
     description: {},
+    content: {},
     // An unpriced offering is normal for a service, so it starts empty there.
-    priceInput: behaviour.priced === 'optional' ? '' : '0.00',
+    priceInput: behaviour.priced === 'always' ? '0.00' : '',
     is_active: true,
     in_stock: true,
     flags: [],
@@ -115,6 +119,7 @@ function formFromItem(item: Item, minorUnits: number): ItemForm {
       : behaviourFor(type).defaultLocationMode,
     title: { ...item.title },
     description: { ...(item.description ?? {}) },
+    content: { ...(item.content ?? {}) },
     priceInput: item.price === null || item.price === undefined
       ? ''
       : minorToInput(item.price, minorUnits),
@@ -294,6 +299,8 @@ export function ItemEditorPage() {
         category_id: form.category_id,
         title: compactTranslated(form.title),
         description: compactTranslated(form.description),
+        // Empty for every non-info type; the registry decides who edits it.
+        content: compactTranslated(form.content),
         location_mode: form.location_mode,
         price: priceMinor,
         flags: form.flags,
@@ -468,8 +475,10 @@ export function ItemEditorPage() {
                         // The default comes from the registry; the hotel may
                         // still override it right below.
                         location_mode: behaviourFor(value).defaultLocationMode,
+                        // Keep a typed price only where the type still charges;
+                        // an optional/never-priced type starts with an empty box.
                         priceInput:
-                          behaviourFor(value).priced === 'optional' ? '' : prev.priceInput,
+                          behaviourFor(value).priced === 'always' ? prev.priceInput : '',
                       }));
                     }}
                   >
@@ -543,52 +552,60 @@ export function ItemEditorPage() {
                     ))}
                   </TextField>
 
-                  {/* Native select: the value is a short enum and the OS picker
-                      is both simpler and testable. */}
-                  <TextField
-                    select
-                    size="small"
-                    label={t('item.locationMode')}
-                    value={form.location_mode}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        location_mode: event.target.value as LocationMode,
-                      }))
-                    }
-                    helperText={t(`item.locationModes.${form.location_mode}Hint`)}
-                    sx={{ minWidth: 220 }}
-                    SelectProps={{ native: true }}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ 'data-testid': 'cms-location-mode' }}
-                  >
-                    {LOCATION_MODES.map((mode) => (
-                      <option key={mode} value={mode}>
-                        {t(`item.locationModes.${mode}`)}
-                      </option>
-                    ))}
-                  </TextField>
+                  {/* Location mode only exists for the types that route to a
+                      place — a booking uses its department, an info page none. */}
+                  {behaviour.configuresLocation ? (
+                    <TextField
+                      select
+                      size="small"
+                      label={t('item.locationMode')}
+                      value={form.location_mode}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          location_mode: event.target.value as LocationMode,
+                        }))
+                      }
+                      helperText={t(`item.locationModes.${form.location_mode}Hint`)}
+                      sx={{ minWidth: 220 }}
+                      SelectProps={{ native: true }}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ 'data-testid': 'cms-location-mode' }}
+                    >
+                      {LOCATION_MODES.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {t(`item.locationModes.${mode}`)}
+                        </option>
+                      ))}
+                    </TextField>
+                  ) : null}
 
-                  <TextField
-                    size="small"
-                    label={t('item.price')}
-                    value={form.priceInput}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, priceInput: event.target.value }))
-                    }
-                    error={Boolean(formErrors.price)}
-                    helperText={
-                      formErrors.price ??
-                      (behaviour.priced === 'optional'
-                        ? t('item.priceOptionalHint')
-                        : t('item.priceHint'))
-                    }
-                    sx={{ width: 200 }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">{currency}</InputAdornment>,
-                    }}
-                    inputProps={{ 'data-testid': 'item-price-input', inputMode: 'decimal' }}
-                  />
+                  {/* An info page has no price at all — the box is hidden, not
+                      shown empty. Slots and services keep it (optionally). */}
+                  {behaviour.priced !== 'never' ? (
+                    <TextField
+                      size="small"
+                      label={t('item.price')}
+                      value={form.priceInput}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, priceInput: event.target.value }))
+                      }
+                      error={Boolean(formErrors.price)}
+                      helperText={
+                        formErrors.price ??
+                        (behaviour.priced === 'optional'
+                          ? t('item.priceOptionalHint')
+                          : t('item.priceHint'))
+                      }
+                      sx={{ width: 200 }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">{currency}</InputAdornment>
+                        ),
+                      }}
+                      inputProps={{ 'data-testid': 'item-price-input', inputMode: 'decimal' }}
+                    />
+                  ) : null}
 
                   <FormControlLabel
                     control={
@@ -625,9 +642,10 @@ export function ItemEditorPage() {
           </Card>
 
           {/*
-            Item body — ONE card, two possible contents, chosen by the registry
-            flags and nothing else. A dish is configured with modifier groups, a
-            service with the fields of its request form.
+            Item body — ONE card, one content chosen by the registry flags and
+            nothing else. A dish is configured with modifier groups, a service
+            with the fields of its request form, an info page with its content,
+            a slot with its booking config.
           */}
           <Card variant="outlined" sx={{ borderColor: 'divider' }}>
             <CardContent>
@@ -650,6 +668,35 @@ export function ItemEditorPage() {
                   languageLabels={languages.labels}
                   defaultLanguage={languages.defaultCode}
                   errors={requestFieldErrors}
+                />
+              ) : null}
+              {behaviour.usesContent ? (
+                <Stack spacing={1}>
+                  <Typography variant="subtitle1">{t('item.contentSection')}</Typography>
+                  <TranslatedField
+                    label={t('item.content')}
+                    value={form.content}
+                    onChange={(content) => setForm((prev) => ({ ...prev, content }))}
+                    languages={languages.codes}
+                    languageLabels={languages.labels}
+                    defaultLanguage={languages.defaultCode}
+                    multiline
+                    rows={10}
+                    helperText={t('item.contentHint')}
+                    testId="cms-info-content"
+                    activeLanguage={activeLanguage}
+                    onActiveLanguageChange={setActiveLanguage}
+                  />
+                </Stack>
+              ) : null}
+              {behaviour.usesSlots ? (
+                <SlotConfigEditor
+                  itemId={itemId}
+                  schedules={bootstrap.schedules}
+                  executionPoints={bootstrap.execution_points}
+                  dayParts={bootstrap.day_parts}
+                  displayLanguage={languages.displayLanguage}
+                  fallbackLanguage={languages.defaultCode}
                 />
               ) : null}
             </CardContent>

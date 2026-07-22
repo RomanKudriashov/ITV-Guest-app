@@ -11,6 +11,7 @@ import type {
   GuestOrderList,
   GuestSession,
   GuestSessionCreated,
+  GuestSlotAvailability,
   ItemDetail,
 } from './types';
 
@@ -42,6 +43,21 @@ export function fetchItem(itemId: string, language?: string): Promise<ItemDetail
 
 export function fetchLocations(language?: string): Promise<GuestLocations> {
   return guestApi.get<GuestLocations>('/guest/locations', { query: { lang: language } });
+}
+
+/**
+ * Availability of a `slot` offering for one day. There is no second "booking"
+ * catalog — the guest reaches here after opening a slot item, and the booking
+ * it makes goes through the very same `createOrder` below.
+ */
+export function fetchSlots(
+  itemId: string,
+  date: string,
+  language?: string,
+): Promise<GuestSlotAvailability> {
+  return guestApi.get<GuestSlotAvailability>('/guest/slots', {
+    query: { item_id: itemId, date, lang: language },
+  });
 }
 
 /**

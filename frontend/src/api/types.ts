@@ -229,6 +229,8 @@ export interface Item {
   location_mode?: LocationMode;
   title: Translated;
   description?: Translated;
+  /** Body of an `info` offering — translatable markup-ish text. */
+  content?: Translated;
   /** Minor units; `null` — "price not set". */
   price: number | null;
   images: MediaAsset[];
@@ -246,6 +248,8 @@ export interface ItemPayload {
   category_id: string;
   title: Translated;
   description?: Translated;
+  /** Body of an `info` offering; empty languages are dropped before sending. */
+  content?: Translated;
   code?: string;
   /** Only ever sent on creation — the server rejects a change of type. */
   type?: OfferingType;
@@ -262,4 +266,29 @@ export interface ItemPayload {
 export interface ReorderEntry {
   id: string;
   sort_order: number;
+}
+
+/**
+ * Configuration of a bookable (`slot`) item — a OneToOne to the item. Slots are
+ * built from `schedule_id`'s working hours cut into `duration_minutes` pieces;
+ * `execution_point_id` is the department that fulfils the booking.
+ */
+export interface SlotConfig {
+  id?: string;
+  item_id?: string;
+  duration_minutes: number;
+  capacity: number;
+  schedule_id: string | null;
+  execution_point_id: string | null;
+  lead_minutes: number;
+  horizon_days: number;
+}
+
+export interface SlotConfigPayload {
+  duration_minutes: number;
+  capacity: number;
+  schedule_id: string | null;
+  execution_point_id: string | null;
+  lead_minutes: number;
+  horizon_days: number;
 }

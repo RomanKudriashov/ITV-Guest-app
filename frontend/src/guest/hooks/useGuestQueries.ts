@@ -8,6 +8,7 @@ import {
   fetchLocations,
   fetchOrder,
   fetchOrders,
+  fetchSlots,
 } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
@@ -16,6 +17,7 @@ import type {
   GuestLocations,
   GuestOrder,
   GuestOrderList,
+  GuestSlotAvailability,
   ItemDetail,
 } from '../api/types';
 
@@ -65,6 +67,22 @@ export function useGuestLocations(enabled = true) {
     queryFn: () => fetchLocations(language),
     enabled: isReady && enabled,
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Availability of one `slot` offering on one day. Short-lived on purpose: a
+ * slot can be taken by another guest at any moment, so the picker refetches
+ * often and never trusts a stale grid.
+ */
+export function useGuestSlots(itemId: string | null, date: string, enabled = true) {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestSlotAvailability>({
+    queryKey: guestKeys.slots(itemId ?? 'none', date, language),
+    queryFn: () => fetchSlots(itemId as string, date, language),
+    enabled: isReady && enabled && Boolean(itemId) && Boolean(date),
+    staleTime: 10_000,
   });
 }
 

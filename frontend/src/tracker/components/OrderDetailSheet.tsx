@@ -13,6 +13,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
+import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderTimeline } from '@/guest/components/OrderTimeline';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
@@ -57,6 +58,7 @@ export function OrderDetailSheet({
   const language = useTrackerLanguage();
   const { format } = useTrackerMoney();
   const fieldValues = order?.field_values ?? [];
+  const booking = order?.slot ?? null;
 
   return (
     <Drawer
@@ -139,11 +141,20 @@ export function OrderDetailSheet({
 
             <Paper variant="outlined" sx={{ p: 1.5 }}>
               <Stack divider={<Divider flexItem />} spacing={1.25}>
-                {/* Same rule as on the card: answers for a request, lines for food. */}
+                {/* Same rule as on the card: a booked slot, the answers of a
+                    request, or the lines of food — by the block that is present. */}
+                {booking ? (
+                  <OrderSlot
+                    slot={booking}
+                    language={language}
+                    guestLabel={whereText(order, t)}
+                    testId="tracker-order-slot"
+                  />
+                ) : null}
                 {fieldValues.length ? (
                   <OrderFieldValues values={fieldValues} testId="tracker-order-fields" />
                 ) : null}
-                {order.items.map((line) => (
+                {(booking ? [] : order.items).map((line) => (
                   <Stack key={line.id} direction="row" spacing={1.5} alignItems="flex-start">
                     <Typography variant="subtitle2" sx={{ minWidth: 28 }}>
                       {line.quantity}×

@@ -105,7 +105,9 @@
     "typeLocked": "类型不可更改",
     "types": {
       "product": "商品",
-      "service_request": "服务申请"
+      "service_request": "服务申请",
+      "info": "信息页",
+      "slot": "预约时段"
     },
     "priceOptionalHint": "可留空——未定价",
     "locationMode": "位置",
@@ -117,7 +119,10 @@
       "none": "不询问",
       "noneHint": "无需位置，例如用车地址写在表单里"
     },
-    "noPrice": "未定价"
+    "noPrice": "未定价",
+    "contentSection": "内容",
+    "content": "页面文本",
+    "contentHint": "# 标题、## 副标题、- 项目、**粗体**"
   },
   "editor": {
     "translationsFilled": "翻译：{{filled}} / {{total}}",
@@ -371,7 +376,12 @@
       "fieldRequired": "必填字段未填写",
       "fieldInvalid": "字段值不符合要求",
       "singleLineOnly": "一次申请只能包含一项服务",
-      "fieldsNotSupported": "该条目不使用申请字段"
+      "fieldsNotSupported": "该条目不使用申请字段",
+      "slotRequired": "请选择时段",
+      "slotNotOffered": "该时间不可用",
+      "slotInPast": "该时间已过",
+      "slotTaken": "该时段刚被预订，请另选",
+      "notOrderable": "此页面无法下单"
     },
     "flags": {
       "popular": "热门",
@@ -418,6 +428,26 @@
         "option": "请从列表中选择"
       },
       "selectPlaceholder": "未选择"
+    },
+    "info": {
+      "emptyTitle": "暂无内容",
+      "emptyHint": "酒店尚未发布信息页",
+      "categories": "信息栏目",
+      "empty": "此页暂无内容。"
+    },
+    "slot": {
+      "emptyTitle": "暂无可预约",
+      "emptyHint": "酒店尚未开放预约服务",
+      "categories": "预约分类",
+      "date": "日期",
+      "none": "当天没有空闲时段",
+      "taken": "已占用",
+      "left": "剩 {{count}}",
+      "raceLost": "该时段刚被预订，请另选。",
+      "book": "预约",
+      "bookAt": "预约 {{time}}",
+      "booking": "预约中…",
+      "choose": "预约"
     }
   },
   "tracker": {
@@ -888,6 +918,34 @@
       "emailTaken": "该邮箱已被占用",
       "weakPassword": "密码过短",
       "cannotRemoveSelf": "不能删除或停用自己"
+    }
+  },
+  "slotConfig": {
+    "section": "预约设置",
+    "duration": "时段长度",
+    "durationHint": "至少5分钟",
+    "capacity": "容量",
+    "capacityHint": "每时段人数",
+    "schedule": "营业时间",
+    "department": "部门",
+    "departmentHint": "由谁执行",
+    "departmentPlaceholder": "选择部门",
+    "lead": "最短提前",
+    "leadHint": "开始前多久截止",
+    "horizon": "可预约天数",
+    "horizonHint": "提前开放的天数",
+    "minutes": "分钟",
+    "days": "天",
+    "save": "保存设置",
+    "saved": "已保存设置",
+    "saveItemFirst": "请先保存条目，再设置时段。",
+    "errors": {
+      "duration": "至少5分钟",
+      "capacity": "至少1",
+      "schedule": "请选择营业时间",
+      "department": "请选择部门",
+      "lead": "不能为负",
+      "horizon": "至少1天"
     }
   }
 }

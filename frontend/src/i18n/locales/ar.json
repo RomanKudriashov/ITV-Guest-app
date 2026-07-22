@@ -105,7 +105,9 @@
     "typeLocked": "لا يمكن تغيير النوع",
     "types": {
       "product": "منتج",
-      "service_request": "طلب خدمة"
+      "service_request": "طلب خدمة",
+      "info": "صفحة معلومات",
+      "slot": "حجز موعد"
     },
     "priceOptionalHint": "يمكن تركه فارغًا",
     "locationMode": "الموقع",
@@ -117,7 +119,10 @@
       "none": "بدون سؤال",
       "noneHint": "لا حاجة للموقع"
     },
-    "noPrice": "السعر غير محدد"
+    "noPrice": "السعر غير محدد",
+    "contentSection": "المحتوى",
+    "content": "نص الصفحة",
+    "contentHint": "# عنوان، ## عنوان فرعي، - نقطة، **غامق**"
   },
   "editor": {
     "translationsFilled": "الترجمات: {{filled}} من {{total}}",
@@ -371,7 +376,12 @@
       "fieldRequired": "حقل مطلوب فارغ",
       "fieldInvalid": "قيمة غير صالحة",
       "singleLineOnly": "خدمة واحدة لكل طلب",
-      "fieldsNotSupported": "لا تنطبق الحقول"
+      "fieldsNotSupported": "لا تنطبق الحقول",
+      "slotRequired": "اختر موعدًا",
+      "slotNotOffered": "هذا الوقت غير متاح",
+      "slotInPast": "مضى هذا الوقت",
+      "slotTaken": "حُجز الموعد للتو — اختر غيره",
+      "notOrderable": "لا يمكن طلب هذه الصفحة"
     },
     "flags": {
       "popular": "شائع",
@@ -418,6 +428,26 @@
         "option": "اختر من القائمة"
       },
       "selectPlaceholder": "غير محدد"
+    },
+    "info": {
+      "emptyTitle": "لا شيء هنا بعد",
+      "emptyHint": "لم ينشر الفندق صفحات معلومات بعد",
+      "categories": "أقسام المعلومات",
+      "empty": "لا يوجد محتوى بعد."
+    },
+    "slot": {
+      "emptyTitle": "لا حجوزات متاحة",
+      "emptyHint": "لم يفتح الفندق خدمات حجز بعد",
+      "categories": "فئات الحجز",
+      "date": "التاريخ",
+      "none": "لا مواعيد متاحة في هذا اليوم",
+      "taken": "محجوز",
+      "left": "متبقٍ {{count}}",
+      "raceLost": "حُجز الموعد للتو — اختر غيره.",
+      "book": "احجز",
+      "bookAt": "احجز {{time}}",
+      "booking": "جارٍ الحجز…",
+      "choose": "احجز"
     }
   },
   "tracker": {
@@ -888,6 +918,34 @@
       "emailTaken": "البريد مستخدَم",
       "weakPassword": "كلمة المرور قصيرة",
       "cannotRemoveSelf": "لا يمكنك حذف نفسك"
+    }
+  },
+  "slotConfig": {
+    "section": "إعداد الحجز",
+    "duration": "مدة الموعد",
+    "durationHint": "5 دقائق على الأقل",
+    "capacity": "السعة",
+    "capacityHint": "ضيوف لكل موعد",
+    "schedule": "ساعات العمل",
+    "department": "القسم",
+    "departmentHint": "من ينفّذ الحجز",
+    "departmentPlaceholder": "اختر القسم",
+    "lead": "الحد الأدنى قبل البدء",
+    "leadHint": "متى يُغلق الحجز قبل البدء",
+    "horizon": "أفق الحجز",
+    "horizonHint": "عدد الأيام المتاحة مسبقًا",
+    "minutes": "دقيقة",
+    "days": "يوم",
+    "save": "حفظ الإعداد",
+    "saved": "تم حفظ الإعداد",
+    "saveItemFirst": "احفظ العنصر أولاً ثم اضبط المواعيد.",
+    "errors": {
+      "duration": "5 دقائق على الأقل",
+      "capacity": "1 على الأقل",
+      "schedule": "اختر ساعات العمل",
+      "department": "اختر القسم",
+      "lead": "لا يمكن أن يكون سالبًا",
+      "horizon": "يوم واحد على الأقل"
     }
   }
 }

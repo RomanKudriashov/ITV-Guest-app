@@ -21,6 +21,8 @@ import type {
   ReorderEntry,
   Schedule,
   SchedulePayload,
+  SlotConfig,
+  SlotConfigPayload,
   StaffUser,
 } from './types';
 
@@ -168,6 +170,19 @@ export function reorderRequestFields(
   items: ReorderEntry[],
 ): Promise<RequestField[]> {
   return api.post<RequestField[]>(`/cms/items/${itemId}/request-fields/reorder`, { items });
+}
+
+/* ── 5b. Slot configuration (contract §slot CMS) ───────────────────────── */
+
+export function fetchSlotConfig(itemId: string): Promise<SlotConfig> {
+  return api.get<SlotConfig>(`/cms/items/${itemId}/slot-config`);
+}
+
+export function putSlotConfig(
+  itemId: string,
+  payload: SlotConfigPayload,
+): Promise<SlotConfig> {
+  return api.put<SlotConfig>(`/cms/items/${itemId}/slot-config`, payload);
 }
 
 /* ── 5. Modifier groups & options ──────────────────────────────────────── */
