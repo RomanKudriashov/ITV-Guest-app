@@ -21,6 +21,9 @@ async function guestPlacesOrder(page: Page): Promise<{ number: string; url: stri
 
   await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
   await page.getByTestId('guest-room-submit').click()
+  // После входа гость на главной; для заказа уходим в меню нижней навигацией.
+  await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+  await page.getByTestId('guest-nav-menu').click()
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 
   // Салат без обязательных модификаторов — добавляется прямо из списка.

@@ -41,7 +41,7 @@ export function EntryPage() {
     setError(null);
     try {
       await start(value);
-      navigate('/menu', { replace: true });
+      navigate('/home', { replace: true });
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'room_not_found') {
         setError(t('guest.entry.roomNotFound', { room: value ?? '' }));
@@ -61,7 +61,7 @@ export function EntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkRoom, isReady, isBootstrapping]);
 
-  if (isReady) return <Navigate to="/menu" replace />;
+  if (isReady) return <Navigate to="/home" replace />;
 
   if (isBootstrapping || (deepLinkRoom && busy)) {
     return (

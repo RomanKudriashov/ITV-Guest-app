@@ -24,6 +24,10 @@ async function enterAsGuest(page: Page, room = DEMO_ROOM): Promise<void> {
   await page.goto('/')
   await page.getByTestId('guest-room-input').fill(room)
   await page.getByTestId('guest-room-submit').click()
+  // Продуктовое поведение: после входа гость попадает на главную; для
+  // сценариев заказа сразу уходим в меню нижней навигацией.
+  await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+  await page.getByTestId('guest-nav-menu').click()
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 
@@ -44,7 +48,7 @@ test.describe('Гостевой контур', () => {
     page,
   }) => {
     await enterAsGuest(page)
-    // Со входа гость попадает в меню; на главную ведёт нижняя навигация.
+    // Со входа гость попадает на главную; сюда же ведёт нижняя навигация.
     await page.getByTestId('guest-nav-home').click()
     await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
 
