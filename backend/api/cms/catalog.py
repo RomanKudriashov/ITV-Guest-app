@@ -355,3 +355,31 @@ def cms_put_quick_actions(request: HttpRequest, payload: QuickActionsIn):
     hotel.settings = settings
     hotel.save(update_fields=["settings", "updated_at"])
     return {"available": available_quick_actions(), "selected": codes}
+
+
+# --- Настройки коммерции (A3+ шаг 5) ---------------------------------------
+
+
+class CommerceSettingsIn(Schema):
+    """Все поля необязательны — PATCH меняет только присланное."""
+
+    service_fee_bp: int | None = None
+    tax_bp: int | None = None
+    tax_inclusive: bool | None = None
+    tip_presets: list[int] | None = None
+    free_delivery_threshold_minor: int | None = None
+    price_round_to_minor: int | None = None
+
+
+@router.get("/commerce-settings", summary="Настройки коммерции отеля")
+def cms_get_commerce_settings(request: HttpRequest):
+    from apps.hotels.commerce_settings import serialize_commerce_settings
+
+    return serialize_commerce_settings(_hotel_for_settings())
+
+
+@router.patch("/commerce-settings", summary="Изменить настройки коммерции")
+def cms_patch_commerce_settings(request: HttpRequest, payload: CommerceSettingsIn):
+    from apps.hotels.commerce_settings import update_commerce_settings
+
+    return update_commerce_settings(_hotel_for_settings(), payload.dict(exclude_unset=True))

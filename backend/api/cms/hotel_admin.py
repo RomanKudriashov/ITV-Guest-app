@@ -76,6 +76,8 @@ class LocationPatch(Schema):
     schedule_id: str | None = None
     sort_order: int | None = None
     is_active: bool | None = None
+    # Стоимость доставки в эту локацию, копейки (A3+); 0 = бесплатно.
+    delivery_fee_minor: int | None = None
 
 
 class MatrixCell(Schema):

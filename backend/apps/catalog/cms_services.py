@@ -150,6 +150,8 @@ def serialize_category(
         "sort_order": category.sort_order,
         "is_active": category.is_active,
         "items_count": counts.get(category.pk, 0),
+        "service_fee_applies": category.service_fee_applies,
+        "min_order_minor": category.min_order_minor,
     }
     if with_children:
         payload["children"] = []
@@ -262,6 +264,10 @@ def update_category(category_id, data: dict) -> Category:
         category.sort_order = data["sort_order"]
     if "is_active" in data:
         category.is_active = data["is_active"]
+    if "service_fee_applies" in data:
+        category.service_fee_applies = bool(data["service_fee_applies"])
+    if "min_order_minor" in data:
+        category.min_order_minor = _validate_min_order(data["min_order_minor"])
     if data.get("code"):
         category.code = data["code"]
 
@@ -419,6 +425,32 @@ def _validate_price(price: Any) -> int | None:
     return value
 
 
+def _validate_min_order(value: Any) -> int | None:
+    """None — «нет порога». Иначе неотрицательные копейки."""
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValidationError(
+            "Минимальная сумма — неотрицательное целое копеек",
+            field="min_order_minor",
+            code="out_of_range",
+        )
+    return value
+
+
+def _validate_prep_minutes(value: Any) -> int | None:
+    """None — «не показывать чип времени подачи». Иначе неотрицательные минуты."""
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValidationError(
+            "Время подачи — неотрицательное целое минут",
+            field="prep_minutes",
+            code="out_of_range",
+        )
+    return value
+
+
 def _validate_codes(values: Any, allowed: set[str], *, field: str) -> list[str]:
     if not values:
         return []
@@ -511,6 +543,8 @@ def update_item(item_id, data: dict) -> Item:
         item.is_active = data["is_active"]
     if "in_stock" in data:
         item.in_stock = data["in_stock"]
+    if "prep_minutes" in data:
+        item.prep_minutes = _validate_prep_minutes(data["prep_minutes"])
     if data.get("code"):
         item.code = data["code"]
 

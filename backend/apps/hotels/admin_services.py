@@ -152,6 +152,7 @@ def serialize_location(location: Location) -> dict:
         "schedule_id": str(location.schedule_id) if location.schedule_id else None,
         "sort_order": location.sort_order,
         "is_active": location.is_active,
+        "delivery_fee_minor": location.delivery_fee_minor,
     }
 
 
@@ -239,6 +240,15 @@ def update_location(location_id, data: dict) -> Location:
         location.sort_order = data["sort_order"]
     if "is_active" in data:
         location.is_active = data["is_active"]
+    if "delivery_fee_minor" in data:
+        fee = data["delivery_fee_minor"]
+        if not isinstance(fee, int) or isinstance(fee, bool) or fee < 0:
+            raise ValidationError(
+                "Стоимость доставки — неотрицательное целое копеек",
+                field="delivery_fee_minor",
+                code="out_of_range",
+            )
+        location.delivery_fee_minor = fee
 
     _validate_refinement(location.requires_refinement, location.refinement_label or {})
     location.save()
