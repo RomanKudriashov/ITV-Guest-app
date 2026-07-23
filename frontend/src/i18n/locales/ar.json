@@ -20,7 +20,8 @@
     "on": "مفعّل",
     "off": "معطّل",
     "close": "إغلاق",
-    "saving": "جارٍ الحفظ…"
+    "saving": "جارٍ الحفظ…",
+    "add": "إضافة"
   },
   "auth": {
     "title": "لوحة الإدارة",
@@ -55,7 +56,10 @@
     "locations": "المواقع",
     "departments": "الأقسام",
     "analytics": "التحليلات",
-    "styleguide": "نظام التصميم"
+    "styleguide": "نظام التصميم",
+    "commerce": "التجارة",
+    "badges": "الشارات",
+    "quickActions": "إجراءات سريعة"
   },
   "menu": {
     "categories": "الفئات",
@@ -85,7 +89,12 @@
     "notEmpty": "الفئة غير فارغة — فعّل «الحذف مع المحتوى»",
     "deleteTitle": "حذف الفئة؟",
     "deleteBody": "سيتم حذف الفئة «{{name}}». عدد الأطباق: {{count}}.",
-    "deleteCascade": "الحذف مع الأطباق والفئات الفرعية"
+    "deleteCascade": "الحذف مع الأطباق والفئات الفرعية",
+    "commerceSection": "التجارة",
+    "serviceFeeApplies": "تُطبَّق رسوم الخدمة",
+    "minOrder": "الحد الأدنى لقيمة الطلب",
+    "minOrderHint": "فارغ — بلا حد أدنى",
+    "minOrderInvalid": "مبلغ غير صالح"
   },
   "item": {
     "newTitle": "طبق جديد",
@@ -130,7 +139,13 @@
     "noPrice": "السعر غير محدد",
     "contentSection": "المحتوى",
     "content": "نص الصفحة",
-    "contentHint": "# عنوان، ## عنوان فرعي، - نقطة، **غامق**"
+    "contentHint": "# عنوان، ## عنوان فرعي، - نقطة، **غامق**",
+    "prepMinutes": "وقت التحضير",
+    "prepMinutesHint": "فارغ — غير محدد",
+    "prepInvalid": "يُتوقع عدد صحيح غير سالب",
+    "minutesUnit": "دقيقة",
+    "badges": "الشارات",
+    "noBadges": "لا توجد شارات نشطة"
   },
   "editor": {
     "translationsFilled": "الترجمات: {{filled}} من {{total}}",
@@ -887,6 +902,8 @@
       "refinementLabel": "عنوان التوضيح",
       "refinementRequired": "أدخل عنوان التوضيح",
       "sortOrder": "الترتيب",
+      "deliveryFee": "رسوم التوصيل",
+      "deliveryFeeInvalid": "أدخل مبلغًا غير سالب",
       "active": "نشِط",
       "empty": "لا مواقع",
       "emptyHint": "أضِف مواقع",
@@ -1189,7 +1206,79 @@
       "fee": "رسوم",
       "delivery": "توصيل",
       "tax": "ضريبة",
-      "tip": "إكرامية"
+      "tip": "إكرامية",
+      "gross": "الإجمالي"
     }
+  },
+  "commerce": {
+    "title": "إعدادات التجارة",
+    "subtitle": "الرسوم والضريبة والإكراميات والتوصيل وتقريب الأسعار",
+    "saved": "تم حفظ الإعدادات",
+    "loadError": "تعذر تحميل الإعدادات",
+    "feesSection": "الرسوم والضريبة",
+    "serviceFee": "رسوم الخدمة",
+    "tax": "الضريبة",
+    "percentHint": "من 0 إلى 100٪",
+    "taxInclusive": "الضريبة مشمولة في السعر",
+    "taxExclusive": "الضريبة تُضاف فوق السعر",
+    "tipsSection": "الإكراميات",
+    "tipsHint": "نسب الإكرامية المعروضة للضيف",
+    "noTips": "لا توجد نسب",
+    "addTip": "نسبة جديدة",
+    "deliverySection": "التوصيل والتقريب",
+    "freeDelivery": "توصيل مجاني ابتداءً من",
+    "freeDeliveryHint": "فارغ — بلا حد",
+    "priceRound": "تقريب السعر",
+    "priceRoundHint": "الخطوة بالوحدات الصغرى؛ 0 — بلا تقريب",
+    "errors": {
+      "percentRange": "أدخل قيمة من 0 إلى 100٪",
+      "moneyInvalid": "مبلغ غير صالح",
+      "nonNegativeInt": "يُتوقع عدد صحيح غير سالب"
+    }
+  },
+  "badges": {
+    "title": "الشارات التسويقية",
+    "subtitle": "علامات مثل «الأكثر رواجًا» أو «جديد» للعناصر",
+    "add": "إضافة شارة",
+    "deleted": "تم حذف الشارة",
+    "loadError": "تعذر تحميل الشارات",
+    "empty": "لا توجد شارات بعد",
+    "emptyHint": "أنشئ أول شارة لعناصر القائمة",
+    "preview": "معاينة",
+    "role": "اللون",
+    "sortOrder": "الترتيب",
+    "active": "نشط",
+    "preset": "معد مسبقًا",
+    "roles": {
+      "accent": "مميّز",
+      "gold": "ذهبي",
+      "success": "نجاح",
+      "info": "معلومات"
+    },
+    "deleteTitle": "حذف الشارة؟",
+    "deleteBody": "سيتم حذف الشارة «{{name}}» وإزالتها من جميع العناصر.",
+    "newTitle": "شارة جديدة",
+    "editTitle": "تعديل الشارة",
+    "labelRu": "التسمية (RU)",
+    "labelEn": "التسمية (EN)",
+    "saved": "تم حفظ الشارة",
+    "livePreview": "معاينة",
+    "previewPlaceholder": "شارة"
+  },
+  "quickActions": {
+    "title": "الإجراءات السريعة",
+    "subtitle": "ما الذي يظهر في الصفحة الرئيسية للضيف وبأي ترتيب",
+    "saved": "تم حفظ الإجراءات السريعة",
+    "loadError": "تعذر تحميل الإجراءات السريعة",
+    "selectedSection": "المختارة",
+    "selectedHint": "الترتيب من الأعلى للأسفل يطابق الواجهة",
+    "noneSelected": "لم يتم اختيار شيء",
+    "noneSelectedHint": "أضف إجراءات من القائمة على اليمين",
+    "availableSection": "المتاحة",
+    "allSelected": "تمت إضافة كل الإجراءات",
+    "moveUp": "لأعلى",
+    "moveDown": "لأسفل",
+    "remove": "إزالة",
+    "add": "إضافة"
   }
 }

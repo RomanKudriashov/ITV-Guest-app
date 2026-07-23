@@ -10,6 +10,7 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
@@ -35,6 +36,7 @@ import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { findCategory, flattenCategories, subtreeIds } from '@/utils/categories';
+import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
 
 interface CategoryForm {
@@ -44,6 +46,10 @@ interface CategoryForm {
   sort_order: number;
   is_active: boolean;
   schedule_id: string | null;
+  /** Commerce (A3+): whether the service fee applies to this category. */
+  service_fee_applies: boolean;
+  /** Commerce (A3+): minimum order, major-unit text; empty = no minimum. */
+  minOrderInput: string;
 }
 
 const EMPTY_FORM: CategoryForm = {
@@ -53,6 +59,8 @@ const EMPTY_FORM: CategoryForm = {
   sort_order: 0,
   is_active: true,
   schedule_id: null,
+  service_fee_applies: true,
+  minOrderInput: '',
 };
 
 const ROOT = '__root__';
@@ -71,6 +79,7 @@ export function CategoryEditorPage() {
 
   const { data: bootstrap, isLoading: bootstrapLoading } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
+  const minorUnits = bootstrap?.hotel.currency_minor_units ?? 100;
 
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categories,
@@ -99,6 +108,11 @@ export function CategoryEditorPage() {
       sort_order: current.sort_order,
       is_active: current.is_active,
       schedule_id: current.schedule_id ?? null,
+      service_fee_applies: current.service_fee_applies ?? true,
+      minOrderInput:
+        current.min_order_minor === null || current.min_order_minor === undefined
+          ? ''
+          : minorToInput(current.min_order_minor, minorUnits),
     };
     const nextImage = current.image ? [mediaToEditable(current.image)] : [];
     setForm(nextForm);
@@ -121,8 +135,12 @@ export function CategoryEditorPage() {
         language: languages.labels[languages.defaultCode] ?? languages.defaultCode,
       });
     }
+    if (form.minOrderInput.trim()) {
+      const minor = inputToMinor(form.minOrderInput, minorUnits);
+      if (minor === null || minor < 0) errors.min_order_minor = t('category.minOrderInvalid');
+    }
     return { ...errors, ...serverErrors };
-  }, [form.title, languages, serverErrors, t]);
+  }, [form.title, form.minOrderInput, minorUnits, languages, serverErrors, t]);
 
   const isValid = Object.keys(fieldErrors).length === 0;
 
@@ -143,6 +161,10 @@ export function CategoryEditorPage() {
         is_active: form.is_active,
         schedule_id: form.schedule_id,
         image_id: imageIds[0] ?? null,
+        service_fee_applies: form.service_fee_applies,
+        min_order_minor: form.minOrderInput.trim()
+          ? inputToMinor(form.minOrderInput, minorUnits)
+          : null,
       };
       return categoryId ? updateCategory(categoryId, payload) : createCategory(payload);
     },
@@ -323,6 +345,47 @@ export function CategoryEditorPage() {
                   dayParts={bootstrap.day_parts}
                   testId="category-schedule-select"
                 />
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  {t('category.commerceSection')}
+                </Typography>
+                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="flex-start">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.service_fee_applies}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, service_fee_applies: event.target.checked }))
+                        }
+                        inputProps={
+                          { 'data-testid': 'cms-category-service-fee' } as Record<string, string>
+                        }
+                      />
+                    }
+                    label={t('category.serviceFeeApplies')}
+                  />
+                  <TextField
+                    size="small"
+                    label={t('category.minOrder')}
+                    value={form.minOrderInput}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, minOrderInput: event.target.value }))
+                    }
+                    error={Boolean(fieldErrors.min_order_minor)}
+                    helperText={fieldErrors.min_order_minor ?? t('category.minOrderHint')}
+                    sx={{ width: 220 }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {currencySymbol(bootstrap.hotel.currency, languages.displayLanguage)}
+                        </InputAdornment>
+                      ),
+                    }}
+                    inputProps={{ 'data-testid': 'cms-category-min-order', inputMode: 'decimal' }}
+                  />
+                </Stack>
               </Box>
             </Stack>
           </CardContent>

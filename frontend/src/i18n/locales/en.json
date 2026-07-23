@@ -20,7 +20,8 @@
     "on": "On",
     "off": "Off",
     "close": "Close",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "add": "Add"
   },
   "auth": {
     "title": "Management console",
@@ -55,7 +56,10 @@
     "locations": "Locations",
     "departments": "Departments",
     "analytics": "Analytics",
-    "styleguide": "Design system"
+    "styleguide": "Design system",
+    "commerce": "Commerce",
+    "badges": "Badges",
+    "quickActions": "Quick actions"
   },
   "menu": {
     "categories": "Categories",
@@ -85,7 +89,12 @@
     "notEmpty": "The category is not empty — tick “delete with contents”",
     "deleteTitle": "Delete category?",
     "deleteBody": "Category “{{name}}” will be deleted. Items inside: {{count}}.",
-    "deleteCascade": "Delete together with items and subcategories"
+    "deleteCascade": "Delete together with items and subcategories",
+    "commerceSection": "Commerce",
+    "serviceFeeApplies": "Service fee applies",
+    "minOrder": "Minimum order amount",
+    "minOrderHint": "Empty — no minimum",
+    "minOrderInvalid": "Invalid amount"
   },
   "item": {
     "newTitle": "New item",
@@ -130,7 +139,13 @@
     "noPrice": "Price not set",
     "contentSection": "Content",
     "content": "Page text",
-    "contentHint": "Markup: # heading, ## subheading, - bullet, **bold**"
+    "contentHint": "Markup: # heading, ## subheading, - bullet, **bold**",
+    "prepMinutes": "Prep time",
+    "prepMinutesHint": "Empty — not set",
+    "prepInvalid": "Expected a non-negative integer",
+    "minutesUnit": "min",
+    "badges": "Badges",
+    "noBadges": "No active badges"
   },
   "editor": {
     "translationsFilled": "Translations: {{filled}} of {{total}}",
@@ -887,6 +902,8 @@
       "refinementLabel": "Refinement label",
       "refinementRequired": "Fill in the refinement label",
       "sortOrder": "Order",
+      "deliveryFee": "Delivery fee",
+      "deliveryFeeInvalid": "Enter a non-negative amount",
       "active": "Active",
       "empty": "No locations yet",
       "emptyHint": "Add delivery and pickup locations",
@@ -1189,7 +1206,79 @@
       "fee": "Fee",
       "delivery": "Delivery",
       "tax": "Tax",
-      "tip": "Tip"
+      "tip": "Tip",
+      "gross": "Total"
     }
+  },
+  "commerce": {
+    "title": "Commerce settings",
+    "subtitle": "Fees, tax, tips, delivery and price rounding",
+    "saved": "Settings saved",
+    "loadError": "Failed to load settings",
+    "feesSection": "Fee and tax",
+    "serviceFee": "Service fee",
+    "tax": "Tax",
+    "percentHint": "From 0 to 100%",
+    "taxInclusive": "Tax included in price",
+    "taxExclusive": "Tax added on top",
+    "tipsSection": "Tips",
+    "tipsHint": "Tip presets in percent shown to the guest",
+    "noTips": "No presets",
+    "addTip": "New preset",
+    "deliverySection": "Delivery and rounding",
+    "freeDelivery": "Free delivery from",
+    "freeDeliveryHint": "Empty — no threshold",
+    "priceRound": "Price rounding",
+    "priceRoundHint": "Step in minor units; 0 — no rounding",
+    "errors": {
+      "percentRange": "Enter a value from 0 to 100%",
+      "moneyInvalid": "Invalid amount",
+      "nonNegativeInt": "Expected a non-negative integer"
+    }
+  },
+  "badges": {
+    "title": "Marketing badges",
+    "subtitle": "Tags like Hit or New for items",
+    "add": "Add badge",
+    "deleted": "Badge deleted",
+    "loadError": "Failed to load badges",
+    "empty": "No badges yet",
+    "emptyHint": "Create the first badge for menu items",
+    "preview": "Preview",
+    "role": "Color",
+    "sortOrder": "Order",
+    "active": "Active",
+    "preset": "Preset",
+    "roles": {
+      "accent": "Accent",
+      "gold": "Gold",
+      "success": "Success",
+      "info": "Info"
+    },
+    "deleteTitle": "Delete badge?",
+    "deleteBody": "Badge “{{name}}” will be deleted and removed from all items.",
+    "newTitle": "New badge",
+    "editTitle": "Edit badge",
+    "labelRu": "Label (RU)",
+    "labelEn": "Label (EN)",
+    "saved": "Badge saved",
+    "livePreview": "Preview",
+    "previewPlaceholder": "Badge"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "subtitle": "What to show on the guest home and in what order",
+    "saved": "Quick actions saved",
+    "loadError": "Failed to load quick actions",
+    "selectedSection": "Selected",
+    "selectedHint": "Top-to-bottom order matches the storefront",
+    "noneSelected": "Nothing selected",
+    "noneSelectedHint": "Add actions from the list on the right",
+    "availableSection": "Available",
+    "allSelected": "All actions are already added",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "add": "Add"
   }
 }

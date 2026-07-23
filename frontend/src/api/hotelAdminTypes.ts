@@ -58,6 +58,8 @@ export interface HotelLocation {
   schedule_id: string | null;
   sort_order: number;
   is_active: boolean;
+  /** Стоимость доставки в эту локацию, минорные единицы (A3+); 0 = бесплатно. */
+  delivery_fee_minor: number;
 }
 
 export interface LocationPayload {
@@ -69,6 +71,7 @@ export interface LocationPayload {
   schedule_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
+  delivery_fee_minor?: number;
 }
 
 /* ── Category → location matrix ────────────────────────────────────────── */

@@ -135,8 +135,10 @@ function DeltaBadge({
 }
 
 /**
- * Вторичное разложение выручки под заглавной цифрой (позиции + начисления).
- * Показываем только ненулевые компоненты; полноценный UI разложения — шаг 5.
+ * Разложение выручки под заглавной цифрой: позиции + начисления, построчно, с
+ * суммой = gross. Показываем только ненулевые компоненты. Заглавная цифра
+ * (`analytics-summary-value-revenue`) остаётся равной gross — здесь только
+ * детализация, без клиентской арифметики сумм.
  */
 function RevenueBreakdown({
   current,
@@ -158,17 +160,47 @@ function RevenueBreakdown({
   const hasCharges = parts.slice(1).some(([, value]) => value > 0);
   if (!hasCharges) return null;
 
+  const visible = parts.filter(([, value]) => value > 0);
+
   return (
-    <Typography
-      variant="caption"
-      color="text.secondary"
+    <Box
       data-testid="analytics-revenue-breakdown"
-      sx={{ display: 'block', mt: 0.5, lineHeight: 1.5 }}
+      sx={{ mt: 0.75, pt: 0.75, borderTop: 1, borderColor: 'divider' }}
     >
-      {parts
-        .filter(([, value]) => value > 0)
-        .map(([key, value]) => `${t(`analytics.revenue.${key}`)} ${fmt.value(value, 'money')}`)
-        .join(' · ')}
-    </Typography>
+      <Stack spacing={0.25}>
+        {visible.map(([key, value]) => (
+          <Stack
+            key={key}
+            direction="row"
+            alignItems="baseline"
+            justifyContent="space-between"
+            spacing={1}
+            data-testid={`analytics-revenue-part-${key}`}
+          >
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {t(`analytics.revenue.${key}`)}
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}>
+              {fmt.value(value, 'money')}
+            </Typography>
+          </Stack>
+        ))}
+        <Stack
+          direction="row"
+          alignItems="baseline"
+          justifyContent="space-between"
+          spacing={1}
+          sx={{ mt: 0.25 }}
+          data-testid="analytics-revenue-part-gross"
+        >
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {t('analytics.revenue.gross')}
+          </Typography>
+          <Typography variant="caption" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {fmt.value(current.gross_minor ?? 0, 'money')}
+          </Typography>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }

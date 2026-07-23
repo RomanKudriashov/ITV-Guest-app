@@ -14,6 +14,9 @@ import { StaffPage } from '@/pages/hotel/StaffPage';
 import { BrandPage } from '@/cms/brand/BrandPage';
 import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
+import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
+import { BadgesPage } from '@/cms/badges/BadgesPage';
+import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
 import App from '@/App';
 
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
@@ -62,6 +65,9 @@ export const router = createBrowserRouter([
       { path: 'brand', element: <BrandPage /> },
       { path: 'styleguide', element: <StyleguidePage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'commerce', element: <CommerceSettingsPage /> },
+      { path: 'badges', element: <BadgesPage /> },
+      { path: 'quick-actions', element: <QuickActionsPage /> },
     ],
   },
   {

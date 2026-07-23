@@ -4,11 +4,16 @@ import { api, request } from './client';
 import type {
   RequestField,
   RequestFieldPayload,
+  Badge,
+  BadgePayload,
   Bootstrap,
   Category,
   CategoryPayload,
   CategoryReorderEntry,
+  CommerceSettings,
+  CommerceSettingsPayload,
   Item,
+  ItemBadgeLink,
   ItemPayload,
   LoginResponse,
   MeResponse,
@@ -18,6 +23,7 @@ import type {
   ModifierGroupPayload,
   ModifierOption,
   ModifierOptionPayload,
+  QuickActions,
   ReorderEntry,
   Schedule,
   SchedulePayload,
@@ -273,4 +279,56 @@ export function updateSchedule(
 
 export function deleteSchedule(id: string): Promise<void> {
   return api.delete<void>(`/cms/schedules/${id}`);
+}
+
+/* ── 8. Commerce settings (A3+ step 5) ─────────────────────────────────── */
+
+export function fetchCommerceSettings(): Promise<CommerceSettings> {
+  return api.get<CommerceSettings>('/cms/commerce-settings');
+}
+
+/** PATCH sends only the changed keys. */
+export function updateCommerceSettings(
+  payload: CommerceSettingsPayload,
+): Promise<CommerceSettings> {
+  return api.patch<CommerceSettings>('/cms/commerce-settings', payload);
+}
+
+/* ── 9. Marketing badges (A3+) ─────────────────────────────────────────── */
+
+export function fetchBadges(): Promise<Badge[]> {
+  return api.get<Badge[]>('/cms/badges');
+}
+
+export function createBadge(payload: BadgePayload): Promise<Badge> {
+  return api.post<Badge>('/cms/badges', payload);
+}
+
+export function updateBadge(id: string, payload: Partial<BadgePayload>): Promise<Badge> {
+  return api.patch<Badge>(`/cms/badges/${id}`, payload);
+}
+
+export function deleteBadge(id: string): Promise<void> {
+  return api.delete<void>(`/cms/badges/${id}`);
+}
+
+/** Replaces the whole badge set of an item, in the given order. */
+export function assignItemBadges(
+  itemId: string,
+  badgeIds: string[],
+): Promise<{ badges: ItemBadgeLink[] }> {
+  return api.put<{ badges: ItemBadgeLink[] }>(`/cms/items/${itemId}/badges`, {
+    badge_ids: badgeIds,
+  });
+}
+
+/* ── 10. Quick actions (A3+ step 4) ────────────────────────────────────── */
+
+export function fetchQuickActions(): Promise<QuickActions> {
+  return api.get<QuickActions>('/cms/quick-actions');
+}
+
+/** Replaces the ordered set of selected quick actions. */
+export function putQuickActions(selected: string[]): Promise<QuickActions> {
+  return api.put<QuickActions>('/cms/quick-actions', { selected });
 }

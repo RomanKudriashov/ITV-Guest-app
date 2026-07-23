@@ -24,7 +24,9 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import { ApiError } from '@/api/client';
 import {
+  assignItemBadges,
   createItem,
+  fetchBadges,
   fetchCategories,
   fetchItem,
   putItemImages,
@@ -32,6 +34,7 @@ import {
 } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { Item, Translated } from '@/api/types';
+import { badgeRoleColor } from '@/kit/chips';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   ImageUploader,
@@ -88,6 +91,8 @@ interface ItemForm {
   flags: string[];
   allergens: string[];
   schedule_id: string | null;
+  /** Prep/serving time in minutes as typed text; empty = not set. */
+  prepInput: string;
 }
 
 function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm {
@@ -106,6 +111,7 @@ function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm
     flags: [],
     allergens: [],
     schedule_id: null,
+    prepInput: '',
   };
 }
 
@@ -128,7 +134,18 @@ function formFromItem(item: Item, minorUnits: number): ItemForm {
     flags: [...(item.flags ?? [])],
     allergens: [...(item.allergens ?? [])],
     schedule_id: item.schedule_id ?? null,
+    prepInput:
+      item.prep_minutes === null || item.prep_minutes === undefined
+        ? ''
+        : String(item.prep_minutes),
   };
+}
+
+/** Item badges (id + order) → an ordered list of badge ids for the form. */
+function badgeIdsFromItem(item: Item): string[] {
+  return [...(item.badges ?? [])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((link) => link.id);
 }
 
 export function ItemEditorPage() {
@@ -161,6 +178,12 @@ export function ItemEditorPage() {
     enabled: Boolean(itemId),
   });
 
+  const badgesQuery = useQuery({ queryKey: queryKeys.badges, queryFn: fetchBadges });
+  const activeBadges = useMemo(
+    () => (badgesQuery.data ?? []).filter((badge) => badge.is_active),
+    [badgesQuery.data],
+  );
+
   const [form, setForm] = useState<ItemForm>(() =>
     emptyForm(
       searchParams.get('category_id') ?? '',
@@ -170,6 +193,7 @@ export function ItemEditorPage() {
   const [images, setImages] = useState<EditableImage[]>([]);
   const [groups, setGroups] = useState<DraftGroup[]>([]);
   const [fields, setFields] = useState<DraftField[]>([]);
+  const [badgeIds, setBadgeIds] = useState<string[]>([]);
   const [baseline, setBaseline] = useState<string>('');
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [activeLanguage, setActiveLanguage] = useState<string | undefined>();
@@ -178,8 +202,8 @@ export function ItemEditorPage() {
 
   /** Snapshot used for the "unsaved changes" indicator. */
   const snapshot = useMemo(
-    () => JSON.stringify({ form, images: persistableImageIds(images), groups, fields }),
-    [form, images, groups, fields],
+    () => JSON.stringify({ form, images: persistableImageIds(images), groups, fields, badgeIds }),
+    [form, images, groups, fields, badgeIds],
   );
 
   /**
@@ -200,16 +224,19 @@ export function ItemEditorPage() {
     const nextImages = (item.images ?? []).map(mediaToEditable);
     const nextGroups = groupsToDrafts(item.modifier_groups, minorUnits);
     const nextFields = fieldsToDrafts(item.request_fields);
+    const nextBadgeIds = badgeIdsFromItem(item);
     setForm(nextForm);
     setImages(nextImages);
     setGroups(nextGroups);
     setFields(nextFields);
+    setBadgeIds(nextBadgeIds);
     setBaseline(
       JSON.stringify({
         form: nextForm,
         images: nextImages.map((image) => image.id),
         groups: nextGroups,
         fields: nextFields,
+        badgeIds: nextBadgeIds,
       }),
     );
   }, [itemQuery.data, minorUnits]);
@@ -228,7 +255,7 @@ export function ItemEditorPage() {
   // so the freshly opened form does not immediately look "dirty".
   useEffect(() => {
     if (!isNew || baseline || !form.category_id) return;
-    setBaseline(JSON.stringify({ form, images: [], groups: [], fields: [] }));
+    setBaseline(JSON.stringify({ form, images: [], groups: [], fields: [], badgeIds: [] }));
   }, [isNew, baseline, form]);
 
   const isDirty = baseline !== '' && snapshot !== baseline;
@@ -259,6 +286,10 @@ export function ItemEditorPage() {
       if (behaviour.priced === 'always') errors.price = t('validation.priceRequired');
     } else if (priceMinor === null) errors.price = t('validation.priceInvalid');
     else if (priceMinor < 0) errors.price = t('validation.priceNegative');
+    if (form.prepInput.trim()) {
+      const prep = Number(form.prepInput);
+      if (!Number.isInteger(prep) || prep < 0) errors.prep_minutes = t('item.prepInvalid');
+    }
     return { ...errors, ...serverErrors };
   }, [form, languages, priceEmpty, priceMinor, behaviour, serverErrors, t]);
 
@@ -308,6 +339,7 @@ export function ItemEditorPage() {
         schedule_id: form.schedule_id,
         is_active: form.is_active,
         in_stock: form.in_stock,
+        prep_minutes: form.prepInput.trim() ? Number(form.prepInput) : null,
       };
 
       // `type` travels only on creation: the server answers 422 `type_immutable`
@@ -337,6 +369,16 @@ export function ItemEditorPage() {
       }
       if (behaviour.usesFields) {
         await syncRequestFields(saved.id, fields, itemQuery.data?.request_fields ?? []);
+      }
+
+      // Badges are a replace-the-set operation, like images: PUT only when the
+      // ordered id list actually changed.
+      const originalBadgeIds = badgeIdsFromItem(itemQuery.data ?? ({ badges: [] } as unknown as Item));
+      if (
+        badgeIds.length !== originalBadgeIds.length ||
+        badgeIds.some((id, index) => id !== originalBadgeIds[index])
+      ) {
+        await assignItemBadges(saved.id, badgeIds);
       }
 
       return saved;
@@ -607,6 +649,25 @@ export function ItemEditorPage() {
                     />
                   ) : null}
 
+                  <TextField
+                    size="small"
+                    type="number"
+                    label={t('item.prepMinutes')}
+                    value={form.prepInput}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, prepInput: event.target.value }))
+                    }
+                    error={Boolean(formErrors.prep_minutes)}
+                    helperText={formErrors.prep_minutes ?? t('item.prepMinutesHint')}
+                    sx={{ width: 200 }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">{t('item.minutesUnit')}</InputAdornment>
+                      ),
+                    }}
+                    inputProps={{ 'data-testid': 'cms-item-prep-minutes', min: 0, step: 1 }}
+                  />
+
                   <FormControlLabel
                     control={
                       <Switch
@@ -781,6 +842,48 @@ export function ItemEditorPage() {
                     </Typography>
                   ) : null}
                 </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined" sx={{ borderColor: 'divider' }}>
+            <CardContent>
+              <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
+                {t('item.badges')}
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap data-testid="cms-item-badges">
+                {activeBadges.map((badge) => {
+                  const selected = badgeIds.includes(badge.id);
+                  const badgeLabel =
+                    pickTranslated(badge.label, languages.displayLanguage, languages.defaultCode) ||
+                    badge.id;
+                  return (
+                    <Chip
+                      key={badge.id}
+                      label={badgeLabel}
+                      variant={selected ? 'filled' : 'outlined'}
+                      onClick={() =>
+                        setBadgeIds((prev) =>
+                          prev.includes(badge.id)
+                            ? prev.filter((id) => id !== badge.id)
+                            : [...prev, badge.id],
+                        )
+                      }
+                      data-testid={`cms-item-badge-${badge.id}`}
+                      sx={(theme) => {
+                        const color = badgeRoleColor(badge.color_role, theme);
+                        return selected
+                          ? { bgcolor: color, color: theme.palette.getContrastText(color) }
+                          : { borderColor: color, color };
+                      }}
+                    />
+                  );
+                })}
+                {activeBadges.length === 0 ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {t('item.noBadges')}
+                  </Typography>
+                ) : null}
               </Stack>
             </CardContent>
           </Card>

@@ -256,6 +256,34 @@ export function statusTokenColor(token: string | undefined, theme: Theme): strin
   }
 }
 
+/* ── Badge color role → palette ───────────────────────────────────────────── */
+
+/** The four marketing-badge palette roles (mirror of backend `color_role`). */
+export const BADGE_COLOR_ROLES = ['accent', 'gold', 'success', 'info'] as const;
+export type BadgeColorRoleName = (typeof BADGE_COLOR_ROLES)[number];
+
+/**
+ * Maps a marketing badge `color_role` to a theme palette color — the single
+ * place a badge role becomes a color, so every badge surface (CMS editor,
+ * assignment control, future storefront) stays token-only, light and dark.
+ * `gold` reuses the warning token, the same "gold" signal the kit's Хит badge
+ * already uses.
+ */
+export function badgeRoleColor(role: string | undefined, theme: Theme): string {
+  switch (role) {
+    case 'accent':
+      return theme.palette.primary.main;
+    case 'gold':
+      return theme.palette.warning.main;
+    case 'success':
+      return theme.palette.success.main;
+    case 'info':
+      return theme.palette.info.main;
+    default:
+      return theme.palette.primary.main;
+  }
+}
+
 /* ── Status indicator ─────────────────────────────────────────────────────── */
 
 export type OrderStatusKind =

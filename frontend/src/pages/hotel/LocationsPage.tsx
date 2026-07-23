@@ -56,6 +56,7 @@ import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { flattenCategories } from '@/utils/categories';
+import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
 
 const LOCATION_KINDS: LocationKind[] = ['in_room', 'common_point'];
@@ -68,6 +69,8 @@ interface LocationForm {
   schedule_id: string | null;
   sort_order: number;
   is_active: boolean;
+  /** Money as a text input (major units); converted to minor on save. */
+  deliveryFeeInput: string;
 }
 
 const EMPTY_FORM: LocationForm = {
@@ -78,6 +81,7 @@ const EMPTY_FORM: LocationForm = {
   schedule_id: null,
   sort_order: 0,
   is_active: true,
+  deliveryFeeInput: '0',
 };
 
 export function LocationsPage() {
@@ -275,6 +279,9 @@ function LocationDialog({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const { data: bootstrap } = useBootstrap();
+  const minorUnits = bootstrap?.hotel?.currency_minor_units ?? 2;
+  const currency = bootstrap?.hotel?.currency ?? 'RUB';
 
   const [form, setForm] = useState<LocationForm>(
     location
@@ -286,6 +293,7 @@ function LocationDialog({
           schedule_id: location.schedule_id ?? null,
           sort_order: location.sort_order,
           is_active: location.is_active,
+          deliveryFeeInput: minorToInput(location.delivery_fee_minor ?? 0, minorUnits),
         }
       : EMPTY_FORM,
   );
@@ -294,6 +302,8 @@ function LocationDialog({
   const titleMissing = !form.title[languages.defaultCode]?.trim();
   const refinementMissing =
     form.requires_refinement && !form.refinement_label[languages.defaultCode]?.trim();
+  const deliveryFeeMinor = inputToMinor(form.deliveryFeeInput, minorUnits);
+  const deliveryFeeInvalid = deliveryFeeMinor === null || deliveryFeeMinor < 0;
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -307,6 +317,7 @@ function LocationDialog({
         schedule_id: form.schedule_id,
         sort_order: form.sort_order,
         is_active: form.is_active,
+        delivery_fee_minor: deliveryFeeMinor ?? 0,
       };
       return location ? updateLocation(location.id, payload) : createLocation(payload);
     },
@@ -381,6 +392,22 @@ function LocationDialog({
               inputProps={{ 'data-testid': 'location-sort' }}
             />
 
+            {/* Стоимость доставки в эту локацию (A3+); порог бесплатной — на
+                уровне отеля, в настройках коммерции. */}
+            <TextField
+              size="small"
+              label={t('hotel.locations.deliveryFee')}
+              value={form.deliveryFeeInput}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, deliveryFeeInput: event.target.value }))
+              }
+              error={deliveryFeeInvalid}
+              helperText={deliveryFeeInvalid ? t('hotel.locations.deliveryFeeInvalid') : undefined}
+              InputProps={{ endAdornment: currencySymbol(currency, languages.displayLanguage) }}
+              sx={{ width: 180 }}
+              inputProps={{ 'data-testid': 'cms-location-delivery-fee', inputMode: 'decimal' }}
+            />
+
             <FormControlLabel
               control={
                 <Switch
@@ -444,7 +471,7 @@ function LocationDialog({
         <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button
           variant="contained"
-          disabled={titleMissing || refinementMissing || mutation.isPending}
+          disabled={titleMissing || refinementMissing || deliveryFeeInvalid || mutation.isPending}
           onClick={() => mutation.mutate()}
           data-testid="location-save"
         >

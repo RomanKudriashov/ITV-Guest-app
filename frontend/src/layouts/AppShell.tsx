@@ -20,6 +20,9 @@ import RoomServiceIcon from '@mui/icons-material/RoomService';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import InsightsIcon from '@mui/icons-material/Insights';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
+import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import PlaceIcon from '@mui/icons-material/Place';
@@ -96,6 +99,24 @@ const NAV_ENTRIES: NavEntry[] = [
     to: '/cms/analytics',
     icon: <InsightsIcon fontSize="small" />,
     testId: 'cms-analytics-nav',
+  },
+  {
+    key: 'commerce',
+    to: '/cms/commerce',
+    icon: <PaymentsOutlinedIcon fontSize="small" />,
+    testId: 'cms-nav-commerce',
+  },
+  {
+    key: 'badges',
+    to: '/cms/badges',
+    icon: <LocalOfferOutlinedIcon fontSize="small" />,
+    testId: 'cms-nav-badges',
+  },
+  {
+    key: 'quickActions',
+    to: '/cms/quick-actions',
+    icon: <BoltOutlinedIcon fontSize="small" />,
+    testId: 'cms-nav-quick-actions',
   },
   { key: 'orders', icon: <ReceiptLongIcon fontSize="small" />, disabled: true },
   { key: 'services', icon: <RoomServiceIcon fontSize="small" />, disabled: true },

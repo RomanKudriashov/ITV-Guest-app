@@ -119,6 +119,10 @@ export interface Category {
   sort_order: number;
   is_active: boolean;
   items_count?: number;
+  /** Commerce (A3+): whether the service fee applies to this category. */
+  service_fee_applies?: boolean;
+  /** Commerce (A3+): minimum order amount, minor units; `null` — no minimum. */
+  min_order_minor?: number | null;
   children?: Category[];
 }
 
@@ -131,6 +135,10 @@ export interface CategoryPayload {
   schedule_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
+  /** Commerce (A3+): whether the service fee applies to this category. */
+  service_fee_applies?: boolean;
+  /** Commerce (A3+): minimum order amount, minor units; `null` — no minimum. */
+  min_order_minor?: number | null;
 }
 
 export interface CategoryReorderEntry {
@@ -240,6 +248,10 @@ export interface Item {
   sort_order: number;
   is_active: boolean;
   in_stock: boolean;
+  /** Preparation/serving time, minutes (A3+); `null` — not set. */
+  prep_minutes?: number | null;
+  /** Marketing badges assigned to the item, in display order. */
+  badges?: ItemBadgeLink[];
   modifier_groups?: ModifierGroup[];
   request_fields?: RequestField[];
 }
@@ -261,6 +273,8 @@ export interface ItemPayload {
   sort_order?: number;
   is_active?: boolean;
   in_stock?: boolean;
+  /** Preparation/serving time, minutes (A3+); `null` — not set. */
+  prep_minutes?: number | null;
 }
 
 export interface ReorderEntry {
@@ -291,4 +305,83 @@ export interface SlotConfigPayload {
   execution_point_id: string | null;
   lead_minutes: number;
   horizon_days: number;
+}
+
+/* ── Commerce settings (A3+ step 5) ────────────────────────────────────── */
+
+/**
+ * Hotel-wide commerce configuration. `*_bp` are basis points (10000 = 100 %);
+ * money fields are integer minor units. `currency` / `currency_minor_units`
+ * are read-only echoes so the UI can format amounts.
+ */
+export interface CommerceSettings {
+  service_fee_bp: number;
+  tax_bp: number;
+  tax_inclusive: boolean;
+  /** Tip presets as integer percents (0..100). */
+  tip_presets: number[];
+  /** Minor units; `null` — no free-delivery threshold. */
+  free_delivery_threshold_minor: number | null;
+  /** Rounding step in minor units; 0/1 — no rounding. */
+  price_round_to_minor: number;
+  currency: string;
+  currency_minor_units: number;
+}
+
+/** PATCH payload — only changed keys are sent. */
+export type CommerceSettingsPayload = Partial<
+  Pick<
+    CommerceSettings,
+    | 'service_fee_bp'
+    | 'tax_bp'
+    | 'tax_inclusive'
+    | 'tip_presets'
+    | 'free_delivery_threshold_minor'
+    | 'price_round_to_minor'
+  >
+>;
+
+/* ── Marketing badges (A3+) ────────────────────────────────────────────── */
+
+/** The four supported badge palette roles. */
+export type BadgeColorRole = 'accent' | 'gold' | 'success' | 'info';
+
+export interface Badge {
+  id: string;
+  label: Translated;
+  color_role: BadgeColorRole;
+  sort_order: number;
+  is_active: boolean;
+  /** Non-null for seeded presets (Хит/Новинка/…); read-only marker. */
+  preset?: string | null;
+}
+
+export interface BadgePayload {
+  label: Translated;
+  color_role: BadgeColorRole;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+/** One badge assigned to an item — id + display order. */
+export interface ItemBadgeLink {
+  id: string;
+  sort_order: number;
+}
+
+/* ── Quick actions (A3+ step 4) ────────────────────────────────────────── */
+
+/** One entry of the server-provided quick-action dictionary. */
+export interface QuickActionOption {
+  code: string;
+  route: string;
+  /** Material Symbols icon name from the server dictionary. */
+  icon: string;
+  title: Translated;
+}
+
+export interface QuickActions {
+  available: QuickActionOption[];
+  /** Ordered list of selected codes. */
+  selected: string[];
 }

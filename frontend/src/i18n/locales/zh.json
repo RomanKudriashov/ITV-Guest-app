@@ -20,7 +20,8 @@
     "on": "开",
     "off": "关",
     "close": "关闭",
-    "saving": "保存中…"
+    "saving": "保存中…",
+    "add": "添加"
   },
   "auth": {
     "title": "管理后台",
@@ -55,7 +56,10 @@
     "locations": "位置",
     "departments": "部门",
     "analytics": "分析",
-    "styleguide": "设计系统"
+    "styleguide": "设计系统",
+    "commerce": "商务",
+    "badges": "徽章",
+    "quickActions": "快捷操作"
   },
   "menu": {
     "categories": "分类",
@@ -85,7 +89,12 @@
     "notEmpty": "分类不为空，请勾选「连同内容一起删除」",
     "deleteTitle": "删除分类？",
     "deleteBody": "分类「{{name}}」将被删除，其中菜品：{{count}} 道。",
-    "deleteCascade": "连同菜品和子分类一起删除"
+    "deleteCascade": "连同菜品和子分类一起删除",
+    "commerceSection": "商务",
+    "serviceFeeApplies": "适用服务费",
+    "minOrder": "最低起订金额",
+    "minOrderHint": "留空表示无最低限额",
+    "minOrderInvalid": "金额无效"
   },
   "item": {
     "newTitle": "新建菜品",
@@ -130,7 +139,13 @@
     "noPrice": "未定价",
     "contentSection": "内容",
     "content": "页面文本",
-    "contentHint": "# 标题、## 副标题、- 项目、**粗体**"
+    "contentHint": "# 标题、## 副标题、- 项目、**粗体**",
+    "prepMinutes": "备餐时间",
+    "prepMinutesHint": "留空表示未设置",
+    "prepInvalid": "需为非负整数",
+    "minutesUnit": "分钟",
+    "badges": "徽章",
+    "noBadges": "无启用的徽章"
   },
   "editor": {
     "translationsFilled": "翻译：{{filled}} / {{total}}",
@@ -887,6 +902,8 @@
       "refinementLabel": "细化标签",
       "refinementRequired": "请填写细化标签",
       "sortOrder": "排序",
+      "deliveryFee": "配送费",
+      "deliveryFeeInvalid": "请输入非负金额",
       "active": "启用",
       "empty": "暂无位置",
       "emptyHint": "添加位置",
@@ -1189,7 +1206,79 @@
       "fee": "服务费",
       "delivery": "配送",
       "tax": "税",
-      "tip": "小费"
+      "tip": "小费",
+      "gross": "总计"
     }
+  },
+  "commerce": {
+    "title": "商务设置",
+    "subtitle": "费用、税费、小费、配送和价格取整",
+    "saved": "设置已保存",
+    "loadError": "无法加载设置",
+    "feesSection": "费用与税费",
+    "serviceFee": "服务费",
+    "tax": "税费",
+    "percentHint": "0 到 100%",
+    "taxInclusive": "税费含在价格内",
+    "taxExclusive": "税费另加",
+    "tipsSection": "小费",
+    "tipsHint": "向客人显示的小费百分比预设",
+    "noTips": "无预设",
+    "addTip": "新预设",
+    "deliverySection": "配送与取整",
+    "freeDelivery": "免配送门槛",
+    "freeDeliveryHint": "留空表示无门槛",
+    "priceRound": "价格取整",
+    "priceRoundHint": "以最小单位为步长；0 表示不取整",
+    "errors": {
+      "percentRange": "请输入 0 到 100% 的值",
+      "moneyInvalid": "金额无效",
+      "nonNegativeInt": "需为非负整数"
+    }
+  },
+  "badges": {
+    "title": "营销徽章",
+    "subtitle": "为商品设置如“热门”“新品”等标签",
+    "add": "添加徽章",
+    "deleted": "徽章已删除",
+    "loadError": "无法加载徽章",
+    "empty": "暂无徽章",
+    "emptyHint": "为菜单商品创建第一个徽章",
+    "preview": "预览",
+    "role": "颜色",
+    "sortOrder": "排序",
+    "active": "启用",
+    "preset": "预设",
+    "roles": {
+      "accent": "强调色",
+      "gold": "金色",
+      "success": "成功色",
+      "info": "信息色"
+    },
+    "deleteTitle": "删除徽章？",
+    "deleteBody": "徽章“{{name}}”将被删除并从所有商品移除。",
+    "newTitle": "新建徽章",
+    "editTitle": "编辑徽章",
+    "labelRu": "名称 (RU)",
+    "labelEn": "名称 (EN)",
+    "saved": "徽章已保存",
+    "livePreview": "预览",
+    "previewPlaceholder": "徽章"
+  },
+  "quickActions": {
+    "title": "快捷操作",
+    "subtitle": "在客人首页显示哪些内容及其顺序",
+    "saved": "快捷操作已保存",
+    "loadError": "无法加载快捷操作",
+    "selectedSection": "已选",
+    "selectedHint": "从上到下的顺序与前台一致",
+    "noneSelected": "未选择任何项",
+    "noneSelectedHint": "从右侧列表添加操作",
+    "availableSection": "可用",
+    "allSelected": "所有操作均已添加",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "remove": "移除",
+    "add": "添加"
   }
 }
