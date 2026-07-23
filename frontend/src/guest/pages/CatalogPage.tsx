@@ -9,12 +9,15 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard, revealSx } from '@/kit';
+import { useAppTheme } from '@/theme';
+import { resolveBackground } from '@/theme/brandBackground';
 import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
+import { useGuestSession } from '../session/GuestSessionProvider';
 import { CatalogRowView } from '../components/CatalogRow';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { ItemSheet } from '../components/ItemSheet';
@@ -48,6 +51,9 @@ export function CatalogPage({ type }: CatalogPageProps) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { format, formatOptional } = useMoney();
+  const { tokens, mode } = useAppTheme();
+  const { session, hotel } = useGuestSession();
+  const hotelName = hotel?.name ?? session?.hotel.name ?? '';
   const cart = useCart();
   const behaviour = behaviourFor(type);
   const ns = behaviour.guestCatalogNamespace;
@@ -163,14 +169,35 @@ export function CatalogPage({ type }: CatalogPageProps) {
 
   return (
     <Box data-testid={behaviour.guestCatalogTestId}>
+      {/* Full-bleed hero (reference `.cathero`): venue photo from brand settings
+          with a graceful fallback to the theme-token gradient while no photo is
+          set. The content panel below overlaps it with rounded top corners. */}
+      <CatalogHero
+        hotelName={hotelName}
+        sectionTitle={t(`${ns}.heroTitle`, { defaultValue: hotelName })}
+        tokens={tokens}
+        mode={mode}
+      />
+
+      <Box
+        sx={{
+          position: 'relative',
+          mt: '-28px',
+          zIndex: 4,
+          borderRadius: '26px 26px 0 0',
+          bgcolor: 'background.default',
+          pt: 0.5,
+        }}
+      >
       <Box
         sx={{
           position: 'sticky',
           top: HEADER_OFFSET,
           zIndex: (theme) => theme.zIndex.appBar - 1,
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
           borderBottom: 1,
           borderColor: 'divider',
+          borderRadius: '26px 26px 0 0',
         }}
       >
         <Tabs
@@ -242,6 +269,7 @@ export function CatalogPage({ type }: CatalogPageProps) {
           ))}
         </Stack>
       </Container>
+      </Box>
 
       {showCartBar ? (
         <StickyFooter offset={BOTTOM_NAV_HEIGHT}>
@@ -266,6 +294,70 @@ export function CatalogPage({ type }: CatalogPageProps) {
         listItem={openItemId ? (allItems.get(openItemId) ?? null) : null}
         onClose={closeSheet}
       />
+    </Box>
+  );
+}
+
+/**
+ * Reference `.cathero`: a full-bleed venue hero. The backdrop is the hotel's
+ * brand `background` token — a photo when the hotel set one (kind `image`),
+ * otherwise the theme-token gradient/abstraction (graceful fallback). A scrim
+ * darkens the top (so the floating glass controls read) and dissolves the bottom
+ * into the page so the overlapping content panel blends into one canvas.
+ */
+function CatalogHero({
+  hotelName,
+  sectionTitle,
+  tokens,
+  mode,
+}: {
+  hotelName: string;
+  sectionTitle: string;
+  tokens: ReturnType<typeof useAppTheme>['tokens'];
+  mode: ReturnType<typeof useAppTheme>['mode'];
+}) {
+  const bg = resolveBackground(tokens, mode);
+  const showSub = Boolean(hotelName) && sectionTitle !== hotelName;
+  return (
+    <Box aria-hidden={false} sx={{ position: 'relative', height: { xs: 218, md: 272 }, overflow: 'hidden' }}>
+      <Box aria-hidden sx={{ position: 'absolute', inset: 0, ...bg.css }} />
+      {bg.dim > 0 ? (
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: `rgba(0,0,0,${bg.dim})` }} />
+      ) : null}
+      <Box
+        aria-hidden
+        sx={(th) => ({
+          position: 'absolute',
+          inset: 0,
+          background: `linear-gradient(to top, ${th.palette.background.default} 0%, ${alpha(
+            th.palette.background.default, 0.55,
+          )} 22%, transparent 58%), linear-gradient(to bottom, ${alpha('#000', 0.42)} 0%, transparent 44%)`,
+        })}
+      />
+      <Box sx={{ position: 'absolute', insetInline: { xs: 20, md: 26 }, bottom: { xs: 40, md: 48 }, zIndex: 2 }}>
+        {showSub ? (
+          <Typography
+            sx={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha('#fff', 0.72), fontWeight: 700 }}
+          >
+            {hotelName}
+          </Typography>
+        ) : null}
+        <Typography
+          component="h1"
+          sx={(th) => ({
+            fontFamily: th.typography.h1.fontFamily,
+            fontWeight: 800,
+            letterSpacing: '-0.025em',
+            fontSize: { xs: 30, md: 40 },
+            color: '#fff',
+            lineHeight: 1.03,
+            textShadow: '0 4px 30px rgba(0,0,0,0.55)',
+            mt: showSub ? 0.75 : 0,
+          })}
+        >
+          {sectionTitle || hotelName}
+        </Typography>
+      </Box>
     </Box>
   );
 }
