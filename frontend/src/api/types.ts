@@ -385,3 +385,27 @@ export interface QuickActions {
   /** Ordered list of selected codes. */
   selected: string[];
 }
+
+/** One tile in the CMS showcase editor (includes hotel-hidden tiles). */
+export interface CmsShowcaseTile {
+  key: string;
+  type: string;
+  title: string;
+  size: 's' | 'm' | 'l';
+  order: number;
+  /** Shown on the guest home (CMS visibility toggle). */
+  shown: boolean;
+  /** Active/clickable tile (false for the room-control stub). */
+  enabled: boolean;
+  venue_count: number | null;
+}
+
+export interface ShowcaseSettings {
+  group_threshold: number;
+  tiles: CmsShowcaseTile[];
+}
+
+export interface ShowcaseSavePayload {
+  group_threshold?: number;
+  tiles?: { key: string; size?: string; sort_order?: number; is_enabled?: boolean }[];
+}

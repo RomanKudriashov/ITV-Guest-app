@@ -59,7 +59,29 @@
     "styleguide": "设计系统",
     "commerce": "商务",
     "badges": "徽章",
-    "quickActions": "快捷操作"
+    "quickActions": "快捷操作",
+    "showcase": "橱窗"
+  },
+  "showcaseCms": {
+    "title": "首页橱窗",
+    "subtitle": "服务磁贴的顺序、尺寸与显示；场所分组阈值",
+    "threshold": "分组阈值",
+    "thresholdHint": "同类场所数量超过阈值时，合并为一个分类磁贴",
+    "loading": "加载中…",
+    "saved": "橱窗已保存",
+    "saveError": "保存失败",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "size": "尺寸",
+    "shown": "显示",
+    "empty": "暂无磁贴——请添加场所和分类",
+    "venueCount_other": "{{count}} 家",
+    "type": {
+      "venue": "场所",
+      "service-category": "分类",
+      "info": "信息",
+      "room-control": "房间"
+    }
   },
   "menu": {
     "categories": "分类",

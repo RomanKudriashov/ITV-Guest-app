@@ -59,7 +59,30 @@
     "styleguide": "Design system",
     "commerce": "Commerce",
     "badges": "Badges",
-    "quickActions": "Quick actions"
+    "quickActions": "Quick actions",
+    "showcase": "Showcase"
+  },
+  "showcaseCms": {
+    "title": "Home showcase",
+    "subtitle": "Order, size and visibility of service tiles; the venue grouping threshold",
+    "threshold": "Grouping threshold",
+    "thresholdHint": "More venues of one kind than the threshold collapse into a single category tile",
+    "loading": "Loading…",
+    "saved": "Showcase saved",
+    "saveError": "Could not save",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "size": "Size",
+    "shown": "Show",
+    "empty": "No tiles yet — add venues and categories",
+    "venueCount_one": "{{count}} venue",
+    "venueCount_other": "{{count}} venues",
+    "type": {
+      "venue": "Venue",
+      "service-category": "Category",
+      "info": "Information",
+      "room-control": "Room"
+    }
   },
   "menu": {
     "categories": "Categories",

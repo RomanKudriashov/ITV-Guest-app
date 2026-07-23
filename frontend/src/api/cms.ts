@@ -27,6 +27,8 @@ import type {
   ReorderEntry,
   Schedule,
   SchedulePayload,
+  ShowcaseSavePayload,
+  ShowcaseSettings,
   SlotConfig,
   SlotConfigPayload,
   StaffUser,
@@ -331,4 +333,15 @@ export function fetchQuickActions(): Promise<QuickActions> {
 /** Replaces the ordered set of selected quick actions. */
 export function putQuickActions(selected: string[]): Promise<QuickActions> {
   return api.put<QuickActions>('/cms/quick-actions', { selected });
+}
+
+/* ── 11. Home showcase tiles ────────────────────────────────────────────── */
+
+export function fetchShowcase(): Promise<ShowcaseSettings> {
+  return api.get<ShowcaseSettings>('/cms/showcase');
+}
+
+/** Persists the grouping threshold and/or per-tile size/order/visibility. */
+export function putShowcase(payload: ShowcaseSavePayload): Promise<ShowcaseSettings> {
+  return api.put<ShowcaseSettings>('/cms/showcase', payload);
 }

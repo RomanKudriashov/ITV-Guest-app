@@ -357,6 +357,65 @@ def cms_put_quick_actions(request: HttpRequest, payload: QuickActionsIn):
     return {"available": available_quick_actions(), "selected": codes}
 
 
+# --- Плитки главной-витрины --------------------------------------------------
+
+
+class ShowcaseTileIn(Schema):
+    """Настройка одной плитки. Все поля, кроме key, необязательны."""
+
+    key: str
+    size: str | None = None
+    sort_order: int | None = None
+    is_enabled: bool | None = None
+
+
+class ShowcaseSettingsIn(Schema):
+    group_threshold: int | None = None
+    tiles: list[ShowcaseTileIn] | None = None
+
+
+def _showcase_payload(hotel):
+    from apps.catalog.showcase import build_showcase
+
+    return {
+        "group_threshold": hotel.showcase_group_threshold,
+        "tiles": build_showcase(hotel, moment=hotel.local_now(), include_hidden=True),
+    }
+
+
+@router.get("/showcase", summary="Плитки главной-витрины (порядок, размер, показ)")
+def cms_get_showcase(request: HttpRequest):
+    return _showcase_payload(_hotel_for_settings())
+
+
+@router.put("/showcase", summary="Сохранить настройки плиток главной")
+def cms_put_showcase(request: HttpRequest, payload: ShowcaseSettingsIn):
+    from apps.core.errors import ValidationError
+    from apps.hotels.models import ShowcaseTile
+
+    hotel = _hotel_for_settings()
+
+    if payload.group_threshold is not None:
+        hotel.showcase_group_threshold = max(0, payload.group_threshold)
+        hotel.save(update_fields=["showcase_group_threshold", "updated_at"])
+
+    valid_sizes = {choice.value for choice in ShowcaseTile.Size}
+    for tile in payload.tiles or []:
+        defaults: dict = {}
+        if tile.size is not None:
+            if tile.size not in valid_sizes:
+                raise ValidationError("Недопустимый размер плитки", code="invalid_tile_size")
+            defaults["size"] = tile.size
+        if tile.sort_order is not None:
+            defaults["sort_order"] = max(0, tile.sort_order)
+        if tile.is_enabled is not None:
+            defaults["is_enabled"] = tile.is_enabled
+        if defaults:
+            ShowcaseTile.objects.update_or_create(hotel=hotel, key=tile.key, defaults=defaults)
+
+    return _showcase_payload(hotel)
+
+
 # --- Настройки коммерции -----------------------------------------------------
 
 

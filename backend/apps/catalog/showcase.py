@@ -108,22 +108,40 @@ def _overlay_index(hotel: Hotel) -> dict[str, ShowcaseTile]:
     return {tile.key: tile for tile in ShowcaseTile.objects.all()}
 
 
-def _apply_overlay(tile: dict[str, Any], overlay: ShowcaseTile | None, default_order: int, default_size: str) -> dict[str, Any] | None:
-    """Наложить настройки CMS. Выключенная плитка исчезает (None)."""
-    if overlay is not None and not overlay.is_enabled:
+def _apply_overlay(
+    tile: dict[str, Any],
+    overlay: ShowcaseTile | None,
+    default_order: int,
+    default_size: str,
+    include_hidden: bool,
+) -> dict[str, Any] | None:
+    """
+    Наложить настройки CMS. Скрытая отелем плитка исчезает из гостевой выдачи
+    (None), но остаётся для CMS-редактора (include_hidden) с `shown=False`, чтобы
+    её можно было вернуть.
+    """
+    shown = not (overlay is not None and not overlay.is_enabled)
+    if not shown and not include_hidden:
         return None
     # Первая плитка по умолчанию крупная (L) — визуальный якорь bento; CMS
     # может переопределить размер.
     base_size = "l" if default_order == 0 else default_size
     tile["size"] = (overlay.size if overlay else base_size)
     tile["order"] = (overlay.sort_order if overlay and overlay.sort_order else default_order)
+    tile["shown"] = shown
     return tile
 
 
-def build_showcase(hotel: Hotel, *, language: str | None = None, moment: datetime | None = None) -> list[dict[str, Any]]:
-    """Плитки главной-витрины тенанта в порядке показа."""
+def build_showcase(
+    hotel: Hotel, *, language: str | None = None, moment: datetime | None = None, include_hidden: bool = False
+) -> list[dict[str, Any]]:
+    """Плитки главной-витрины тенанта в порядке показа.
+
+    include_hidden — вернуть и скрытые отелем плитки (для CMS-редактора).
+    """
     overlays = _overlay_index(hotel)
-    threshold = hotel.showcase_group_threshold or 3
+    # 0 — валидный порог («всегда сворачивать»); `or 3` съел бы его.
+    threshold = 3 if hotel.showcase_group_threshold is None else hotel.showcase_group_threshold
 
     # Заведения по группам, в стабильном порядке групп.
     groups: dict[str, list[ExecutionPoint]] = {key: [] for key in GROUP_ORDER}
@@ -152,7 +170,7 @@ def build_showcase(hotel: Hotel, *, language: str | None = None, moment: datetim
                 "route": f"/category/{group_key}",
                 "enabled": True,
             }
-            applied = _apply_overlay(base, overlays.get(group_key), order, "l")
+            applied = _apply_overlay(base, overlays.get(group_key), order, "l", include_hidden)
             if applied:
                 tiles.append(applied)
                 order += 1
@@ -171,7 +189,7 @@ def build_showcase(hotel: Hotel, *, language: str | None = None, moment: datetim
                     "route": f"/venue/{point.code}",
                     "enabled": True,
                 }
-                applied = _apply_overlay(base, overlays.get(point.code), order, "m")
+                applied = _apply_overlay(base, overlays.get(point.code), order, "m", include_hidden)
                 if applied:
                     tiles.append(applied)
                     order += 1
@@ -191,7 +209,7 @@ def build_showcase(hotel: Hotel, *, language: str | None = None, moment: datetim
             "route": "/info",
             "enabled": True,
         }
-        applied = _apply_overlay(info, overlays.get("info"), order, "s")
+        applied = _apply_overlay(info, overlays.get("info"), order, "s", include_hidden)
         if applied:
             tiles.append(applied)
             order += 1
@@ -212,7 +230,7 @@ def build_showcase(hotel: Hotel, *, language: str | None = None, moment: datetim
             "route": None,
             "enabled": False,
         }
-        applied = _apply_overlay(room, overlays.get("room-control"), order, "m")
+        applied = _apply_overlay(room, overlays.get("room-control"), order, "m", include_hidden)
         if applied:
             tiles.append(applied)
             order += 1

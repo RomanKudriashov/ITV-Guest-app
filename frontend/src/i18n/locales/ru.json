@@ -59,7 +59,32 @@
     "styleguide": "Дизайн-система",
     "commerce": "Коммерция",
     "badges": "Бейджи",
-    "quickActions": "Быстрые действия"
+    "quickActions": "Быстрые действия",
+    "showcase": "Витрина"
+  },
+  "showcaseCms": {
+    "title": "Главная-витрина",
+    "subtitle": "Порядок, размер и показ плиток сервисов; порог группировки заведений",
+    "threshold": "Порог группировки",
+    "thresholdHint": "Заведений одного рода больше порога — сворачиваются в одну плитку категории",
+    "loading": "Загрузка…",
+    "saved": "Витрина сохранена",
+    "saveError": "Не удалось сохранить",
+    "moveUp": "Выше",
+    "moveDown": "Ниже",
+    "size": "Размер",
+    "shown": "Показывать",
+    "empty": "Плиток пока нет — добавьте заведения и категории",
+    "venueCount_one": "{{count}} заведение",
+    "venueCount_few": "{{count}} заведения",
+    "venueCount_many": "{{count}} заведений",
+    "venueCount_other": "{{count}} заведения",
+    "type": {
+      "venue": "Заведение",
+      "service-category": "Категория",
+      "info": "Информация",
+      "room-control": "Номер"
+    }
   },
   "menu": {
     "categories": "Категории",

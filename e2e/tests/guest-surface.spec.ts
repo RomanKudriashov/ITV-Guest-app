@@ -44,7 +44,7 @@ async function staffOpensChat(page: Page): Promise<void> {
 }
 
 test.describe('Гостевой контур', () => {
-  test('главная собрана из данных: секции всех четырёх типов ведут на свои экраны', async ({
+  test('главная — bento сервисов: плитка заведения ведёт в его каталог, инфо — на инфо', async ({
     page,
   }) => {
     await enterAsGuest(page)
@@ -52,13 +52,20 @@ test.describe('Гостевой контур', () => {
     await page.getByTestId('guest-nav-home').click()
     await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
 
-    // Демо-отель наполнил все четыре типа — все четыре плитки на месте.
-    for (const type of ['product', 'service_request', 'slot', 'info']) {
-      await expect(page.getByTestId(`guest-home-section-${type}`)).toBeVisible()
-    }
+    // Витрина собрана из данных: ресторан-заведение, спа и инфо — плитками.
+    await expect(page.getByTestId('guest-home-bento')).toBeVisible()
+    await expect(page.getByTestId('guest-home-tile-kitchen')).toBeVisible()
+    await expect(page.getByTestId('guest-home-tile-spa')).toBeVisible()
 
-    // Плитка ведёт на маршрут из данных, а не по «зашитому» типу.
-    await page.getByTestId('guest-home-section-info').click()
+    // Плитка заведения ведёт в ЕГО каталог (уровень 3), а не в общее меню.
+    await page.getByTestId('guest-home-tile-kitchen').click()
+    await expect(page).toHaveURL(/\/venue\/kitchen/)
+    await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
+
+    // Инфо-плитка ведёт на инфо-экран.
+    await page.getByTestId('guest-nav-home').click()
+    await expect(page.getByTestId('guest-home-tile-info')).toBeVisible()
+    await page.getByTestId('guest-home-tile-info').click()
     await expect(page).toHaveURL(/\/info/)
   })
 

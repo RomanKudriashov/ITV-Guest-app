@@ -187,3 +187,47 @@ def test_catalog_unknown_point_is_empty(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     ).json()
     assert resp["categories"] == []
+
+
+# --- CMS-редактор витрины --------------------------------------------------
+
+
+def test_cms_showcase_get_lists_tiles(cms):
+    body = cms.get("/api/v1/cms/showcase").json()
+    assert body["group_threshold"] == 3
+    keys = {t["key"] for t in body["tiles"]}
+    assert "kitchen" in keys and "info" in keys
+    for tile in body["tiles"]:
+        assert tile["size"] in ("s", "m", "l") and "shown" in tile
+
+
+def test_cms_showcase_zero_threshold_groups(cms):
+    # Порог 0 — валидный: всегда сворачивать. `or`-баг съел бы ноль.
+    body = cms.put("/api/v1/cms/showcase", {"group_threshold": 0}).json()
+    assert body["group_threshold"] == 0
+    grouped = {t["key"] for t in body["tiles"] if t["type"] == "service-category"}
+    assert "restaurants" in grouped
+
+
+def test_cms_showcase_size_and_hide_reach_guest(client, crystal, cms, guest_token):
+    cms.put(
+        "/api/v1/cms/showcase",
+        {"tiles": [
+            {"key": "kitchen", "size": "s", "sort_order": 2},
+            {"key": "spa", "is_enabled": False},
+        ]},
+    )
+    home = client.get(
+        "/api/v1/guest/home", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {guest_token}"
+    ).json()
+    kitchen = next(t for t in home["tiles"] if t["key"] == "kitchen")
+    assert kitchen["size"] == "s"
+    # Скрытая плитка исчезает из гостевой выдачи, но остаётся в CMS.
+    assert not any(t["key"] == "spa" for t in home["tiles"])
+    cms_tiles = {t["key"]: t for t in cms.get("/api/v1/cms/showcase").json()["tiles"]}
+    assert cms_tiles["spa"]["shown"] is False
+
+
+def test_cms_showcase_rejects_bad_size(cms):
+    resp = cms.put("/api/v1/cms/showcase", {"tiles": [{"key": "kitchen", "size": "xl"}]})
+    assert resp.status_code == 422

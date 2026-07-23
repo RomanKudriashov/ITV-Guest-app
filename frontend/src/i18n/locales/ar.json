@@ -59,7 +59,34 @@
     "styleguide": "نظام التصميم",
     "commerce": "التجارة",
     "badges": "الشارات",
-    "quickActions": "إجراءات سريعة"
+    "quickActions": "إجراءات سريعة",
+    "showcase": "الواجهة"
+  },
+  "showcaseCms": {
+    "title": "واجهة الصفحة الرئيسية",
+    "subtitle": "ترتيب بطاقات الخدمات وحجمها وإظهارها؛ وحد تجميع الأماكن",
+    "threshold": "حد التجميع",
+    "thresholdHint": "عند تجاوز عدد الأماكن من نفس النوع للحد، تُجمَّع في بطاقة فئة واحدة",
+    "loading": "جارٍ التحميل…",
+    "saved": "تم حفظ الواجهة",
+    "saveError": "تعذّر الحفظ",
+    "moveUp": "أعلى",
+    "moveDown": "أسفل",
+    "size": "الحجم",
+    "shown": "إظهار",
+    "empty": "لا توجد بطاقات بعد — أضف أماكن وفئات",
+    "venueCount_zero": "{{count}} أماكن",
+    "venueCount_one": "مكان واحد",
+    "venueCount_two": "مكانان",
+    "venueCount_few": "{{count}} أماكن",
+    "venueCount_many": "{{count}} مكانًا",
+    "venueCount_other": "{{count}} مكان",
+    "type": {
+      "venue": "مكان",
+      "service-category": "فئة",
+      "info": "معلومات",
+      "room-control": "الغرفة"
+    }
   },
   "menu": {
     "categories": "الفئات",

@@ -38,4 +38,5 @@ export const queryKeys = {
   commerceSettings: ['cms', 'commerce-settings'] as const,
   badges: ['cms', 'badges'] as const,
   quickActions: ['cms', 'quick-actions'] as const,
+  showcase: ['cms', 'showcase'] as const,
 };
