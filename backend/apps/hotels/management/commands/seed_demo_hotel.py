@@ -172,22 +172,29 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False, with_badges: bool = False):
-        hotel, created = Hotel.objects.get_or_create(
-            subdomain=subdomain,
-            defaults={
-                "name": name,
-                "timezone": "Europe/Moscow",
-                "default_language": "ru",
-                "currency": "RUB",
-            },
-        )
-        if not created and not force:
+        from apps.hotels.provisioning import provision_hotel
+
+        existing = Hotel.objects.filter(subdomain=subdomain).first()
+        if existing and not force:
             self.stdout.write(f"Отель '{subdomain}' уже существует — пропускаю")
             return
 
+        # Каркас (hotel, языки, бренд, ресепшен, hotel-admin) — через единую
+        # точку создания отеля. Демо-контент кладём ПОВЕРХ, не дублируя создание.
+        # Разным отелям — разные пресеты, чтобы white-label читался сразу:
+        # Crystal — тёмно-синий, Aurora — светлый глубокий синий.
+        preset = "harbor_light" if subdomain == "aurora" else "midnight_navy"
+        hotel = provision_hotel(
+            subdomain=subdomain,
+            name=name,
+            admin_email=f"owner@{subdomain}.local",
+            languages=["ru", "en", "ar", "zh"],
+            preset=preset,
+            admin_password="chef12345",
+            exist_ok=True,
+        ).hotel
+
         with tenant_context(hotel):
-            theme = self._seed_brand(hotel)
-            self._seed_languages()
             points = self._seed_execution_points()
             kitchen = points["kitchen"]
             users = self._seed_staff(hotel, points)
@@ -207,43 +214,12 @@ class Command(BaseCommand):
             if with_analytics:
                 self._seed_analytics_history(hotel, points, rooms, users)
 
-            hotel.default_theme = theme
-            hotel.save(update_fields=["default_theme", "updated_at"])
-
         self.stdout.write(
             self.style.SUCCESS(
                 f"Отель '{subdomain}' готов: {len(rooms)} номеров, "
                 f"локации {[loc.code for loc in locations]}"
             )
         )
-
-    def _seed_brand(self, hotel: Hotel) -> BrandTheme:
-        # Осмысленный стартовый пресет вместо голого набора: витрина сразу
-        # выглядит цельно. Разным отелям — разные пресеты, чтобы white-label
-        # читался с первого взгляда: Crystal — тёмно-синий образ по умолчанию,
-        # Aurora — светлый глубокий синий.
-        from apps.hotels.brand_library import preset_tokens
-
-        preset = "harbor_light" if hotel.subdomain == "aurora" else "midnight_navy"
-        theme, _ = BrandTheme.objects.update_or_create(
-            name=f"{hotel.name} — основная",
-            defaults={"tokens": preset_tokens(preset), "is_preset": False},
-        )
-        return theme
-
-    def _seed_languages(self):
-        for order, (code, title, is_default) in enumerate(
-            [
-                ("ru", "Русский", True),
-                ("en", "English", False),
-                ("ar", "العربية", False),
-                ("zh", "中文", False),
-            ]
-        ):
-            HotelLanguage.objects.get_or_create(
-                code=code,
-                defaults={"title": title, "is_default": is_default, "sort_order": order},
-            )
 
     def _seed_execution_points(self) -> dict[str, ExecutionPoint]:
         """
