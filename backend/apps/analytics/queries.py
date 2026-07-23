@@ -139,6 +139,10 @@ def _order_totals(qs) -> dict:
     agg = qs.aggregate(
         orders=Sum("orders_count"),
         revenue=Sum("revenue_minor"),
+        service_fee=Sum("service_fee_minor"),
+        delivery=Sum("delivery_minor"),
+        tax=Sum("tax_minor"),
+        tip=Sum("tip_minor"),
         items=Sum("items_count"),
         cancelled=Sum("cancelled_count"),
         completed=Sum("completed_count"),
@@ -161,6 +165,12 @@ def _summary_block(scope: Scope, params: dict, period: Period) -> dict:
     block = {
         "orders": o["orders"],
         "revenue_minor": o["revenue"],
+        # Разложение выручки (A3+): позиции отдельно от начислений.
+        "service_fee_minor": o["service_fee"],
+        "delivery_minor": o["delivery"],
+        "tax_minor": o["tax"],
+        "tip_minor": o["tip"],
+        "gross_minor": o["revenue"] + o["service_fee"] + o["delivery"] + o["tax"] + o["tip"],
         "items_count": o["items"],
         "cancelled": o["cancelled"],
         "completed": o["completed"],

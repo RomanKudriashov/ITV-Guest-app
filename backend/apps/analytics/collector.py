@@ -129,6 +129,10 @@ def apply_event(raw: AnalyticsEvent) -> None:
             {
                 "orders_count": 1,
                 "revenue_minor": int(m.get("revenue_minor", 0)),
+                "service_fee_minor": int(m.get("service_fee_minor", 0)),
+                "delivery_minor": int(m.get("delivery_minor", 0)),
+                "tax_minor": int(m.get("tax_minor", 0)),
+                "tip_minor": int(m.get("tip_minor", 0)),
                 "items_count": int(m.get("items_count", 0)),
                 "off_hours_count": int(m.get("off_hours", 0)),
             },
@@ -242,7 +246,14 @@ def build_created(order, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
             "order_id": order.pk,
             "dimensions": dims,
             "measures": {
-                "revenue_minor": int(order.total or 0),
+                # Выручка по позициям = subtotal снимка. Обратная совместимость:
+                # у старых заказов без снимка subtotal_minor=0 → берём total (всё
+                # в позициях), компоненты по нулям.
+                "revenue_minor": int(order.subtotal_minor or order.total or 0),
+                "service_fee_minor": int(order.service_fee_minor or 0),
+                "delivery_minor": int(order.delivery_fee_minor or 0),
+                "tax_minor": int(order.tax_minor or 0),
+                "tip_minor": int(order.tip_minor or 0),
                 "items_count": items_count,
                 "off_hours": _is_off_hours(order),
             },
