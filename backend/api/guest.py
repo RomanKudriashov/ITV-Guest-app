@@ -123,6 +123,20 @@ def create_session(request: HttpRequest, payload: GuestSessionIn):
     return 200, _session_payload(issued.session, hotel, token=issued.token)
 
 
+@router.get("/hotel", auth=None, summary="Публичный бренд отеля по поддомену")
+def public_hotel(request: HttpRequest):
+    """
+    Бренд отеля до входа: тенант известен из поддомена, поэтому тема/фон/логотип
+    отдаются публично — экран входа темизируется до аутентификации.
+    """
+    hotel = getattr(request, "hotel", None)
+    if hotel is None:
+        from apps.core.errors import NotFoundError
+
+        raise NotFoundError("Отель не найден")
+    return serialize_hotel(hotel)
+
+
 @router.get(
     "/session", response=GuestSessionOut, auth=guest_auth, summary="Текущая сессия"
 )

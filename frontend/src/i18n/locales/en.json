@@ -280,14 +280,15 @@
       "info": "Info"
     },
     "entry": {
-      "subtitle": "Enter your room number to order to your room",
+      "subtitle": "Enter your room — everything the hotel offers is at hand.",
       "roomLabel": "Room number",
-      "roomPlaceholder": "e.g. 305",
+      "roomPlaceholder": "Room",
       "roomHelper": "You will find it on your key card",
       "submit": "Continue",
       "connecting": "Connecting…",
       "scanQr": "Scan QR",
       "qrHint": "Point your phone camera at the QR code in your room — it opens this app with the room already filled in.",
+      "qrShort": "Or scan the QR code in your room",
       "or": "or",
       "browseOnly": "Just browse the menu",
       "roomNotFound": "Room “{{room}}” was not found. Please check the number and try again."

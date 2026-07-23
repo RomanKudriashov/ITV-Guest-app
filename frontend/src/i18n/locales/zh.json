@@ -280,14 +280,15 @@
       "info": "信息"
     },
     "entry": {
-      "subtitle": "输入房间号即可点餐送到房间",
+      "subtitle": "输入房间号，酒店的一切尽在指尖。",
       "roomLabel": "房间号",
-      "roomPlaceholder": "例如 305",
+      "roomPlaceholder": "房间号",
       "roomHelper": "房卡上可以找到",
       "submit": "继续",
       "connecting": "连接中…",
       "scanQr": "扫描二维码",
       "qrHint": "用手机摄像头扫描房间内的二维码，将自动填入房间号。",
+      "qrShort": "或扫描房间内的二维码",
       "or": "或",
       "browseOnly": "只看菜单",
       "roomNotFound": "未找到房间“{{room}}”。请检查后重试。"

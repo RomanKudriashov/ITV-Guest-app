@@ -11,6 +11,7 @@ import type {
   GuestActiveOrders,
   GuestCatalog,
   GuestHome,
+  GuestHotel,
   GuestLocations,
   GuestOrder,
   GuestOrderList,
@@ -26,6 +27,11 @@ export function createSession(payload: CreateSessionPayload): Promise<GuestSessi
   return guestApi.post<GuestSessionCreated>('/guest/session', payload, {
     skipAuthRedirect: true,
   });
+}
+
+/** Public hotel brand by subdomain — themes the entry screen before login. */
+export function fetchPublicHotel(): Promise<GuestHotel> {
+  return guestApi.get<GuestHotel>('/guest/hotel');
 }
 
 export function fetchSession(): Promise<GuestSession> {
