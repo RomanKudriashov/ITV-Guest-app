@@ -13,6 +13,7 @@ import {
   fetchOrders,
   fetchReview,
   fetchSlots,
+  fetchVenues,
   quoteCart,
 } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
@@ -29,6 +30,7 @@ import type {
   GuestOrderList,
   GuestReview,
   GuestSlotAvailability,
+  GuestVenueList,
   ItemDetail,
 } from '../api/types';
 
@@ -42,12 +44,23 @@ export function useGuestLanguage(): string {
  * The catalog of one offering type. Food and services differ by a query
  * parameter and a cache key — not by a hook, a page or a code path.
  */
-export function useGuestCatalog(type: OfferingType, enabled = true) {
+export function useGuestCatalog(type: OfferingType, enabled = true, point?: string) {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();
   return useQuery<GuestCatalog>({
-    queryKey: guestKeys.catalog(type, language),
-    queryFn: () => fetchCatalog(type, language),
+    queryKey: guestKeys.catalog(type, language, point),
+    queryFn: () => fetchCatalog(type, language, point),
+    enabled: isReady && enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useGuestVenues(group: string, enabled = true) {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestVenueList>({
+    queryKey: guestKeys.venues(group, language),
+    queryFn: () => fetchVenues(group, language),
     enabled: isReady && enabled,
     staleTime: 60_000,
   });

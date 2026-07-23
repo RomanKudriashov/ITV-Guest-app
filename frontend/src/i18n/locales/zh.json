@@ -303,6 +303,13 @@
       "offers": "今日推荐",
       "sectionsTitle": "去哪看看",
       "quickActionsTitle": "快捷操作",
+      "comingSoon": "即将推出",
+      "venueCount_other": "{{count}} 家",
+      "group": {
+        "restaurants": "餐厅",
+        "spa": "水疗与养生",
+        "services": "服务"
+      },
       "activeOrder": {
         "title": "订单 #{{number}} · {{status}}",
         "serveBy": "{{time}} 送达",
@@ -311,6 +318,14 @@
       },
       "prev": "上一个",
       "next": "下一个"
+    },
+    "venue": {
+      "open": "营业中",
+      "until": "至 {{time}}",
+      "closed": "已打烊",
+      "opensAt": "{{time}} 开始",
+      "emptyTitle": "暂无场所",
+      "emptyHint": "此分类还没有添加内容"
     },
     "quickActions": {
       "menu": "菜单",

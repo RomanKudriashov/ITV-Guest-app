@@ -298,11 +298,21 @@
       "roomLine": "{{hotel}} · номер {{room}}",
       "noRoomLine": "Вы смотрите меню без номера комнаты",
       "soon": "Скоро",
+      "comingSoon": "Скоро",
       "emptyTitle": "Пока пусто",
       "emptyHint": "Отель ещё не добавил услуги",
       "offers": "Рекомендуем сегодня",
       "sectionsTitle": "Куда заглянуть",
       "quickActionsTitle": "Быстрые действия",
+      "venueCount_one": "{{count}} заведение",
+      "venueCount_few": "{{count}} заведения",
+      "venueCount_many": "{{count}} заведений",
+      "venueCount_other": "{{count}} заведения",
+      "group": {
+        "restaurants": "Рестораны",
+        "spa": "Спа и велнес",
+        "services": "Услуги"
+      },
       "activeOrder": {
         "title": "Заказ №{{number}} · {{status}}",
         "serveBy": "подадут к {{time}}",
@@ -311,6 +321,14 @@
       },
       "prev": "Назад",
       "next": "Вперёд"
+    },
+    "venue": {
+      "open": "Открыто",
+      "until": "до {{time}}",
+      "closed": "Закрыто",
+      "opensAt": "с {{time}}",
+      "emptyTitle": "Заведений пока нет",
+      "emptyHint": "В этой категории пока ничего не добавлено"
     },
     "quickActions": {
       "menu": "Меню",

@@ -420,6 +420,58 @@ export interface GuestHomeSection {
   route: string;
 }
 
+/** Open/closed status of a venue, computed server-side in the hotel timezone. */
+export interface GuestVenueStatus {
+  state: 'open' | 'closed';
+  /** Localised only for the pill: closing time when open (e.g. "23:00"). */
+  until: string | null;
+  /** Next opening time when closed (e.g. "07:00"). */
+  opens_at: string | null;
+}
+
+export type ShowcaseTileType = 'venue' | 'service-category' | 'info' | 'room-control';
+export type ShowcaseTileSize = 's' | 'm' | 'l';
+
+/**
+ * One bento tile of the home showcase, assembled server-side FROM DATA. The tile
+ * kind drives its anatomy; `route` is the destination (null → disabled stub). The
+ * client renders `image`, or falls back to a brand/gradient cover when it is null.
+ */
+export interface GuestShowcaseTile {
+  key: string;
+  type: ShowcaseTileType;
+  title: string;
+  subtitle: string | null;
+  kind: string | null;
+  /** Number of venues collapsed into a `service-category` tile. */
+  venue_count: number | null;
+  status: GuestVenueStatus | null;
+  image: string | null;
+  /** Up to 4 cover previews shown inside a collapsed category tile. */
+  cover_previews: string[];
+  route: string | null;
+  size: ShowcaseTileSize;
+  order: number;
+  enabled: boolean;
+}
+
+/** One venue card on the level-2 list (contract §1 «Уровень 2»). */
+export interface GuestVenue {
+  code: string;
+  title: string;
+  subtitle: string | null;
+  kind: string | null;
+  image: string | null;
+  status: GuestVenueStatus | null;
+  route: string;
+}
+
+export interface GuestVenueList {
+  group: string;
+  title: string;
+  venues: GuestVenue[];
+}
+
 /**
  * One quick-action tile of the home screen. The server names a Material Symbols
  * icon and a route; the client renders the icon through its own icon registry and
@@ -435,10 +487,11 @@ export interface GuestQuickAction {
 }
 
 export interface GuestHome {
-  hotel: { name: string; theme?: PartialBrandTokens };
+  hotel: { name: string; subdomain?: string; theme?: PartialBrandTokens };
   room: string | null;
-  sections: GuestHomeSection[];
-  /** Quick-action tiles rendered above the sections. */
+  /** Bento showcase of hotel services, ordered by the server. */
+  tiles: GuestShowcaseTile[];
+  /** Kept for the CMS/back-compat; the bento home does not render a separate row. */
   quick_actions?: GuestQuickAction[];
   /** Unread messages from staff — drives the chat tab badge. */
   unread_chat: number;

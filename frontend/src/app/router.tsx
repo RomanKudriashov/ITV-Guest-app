@@ -27,6 +27,8 @@ import { GuestLayout } from '@/guest/layout/GuestLayout';
 import { EntryPage } from '@/guest/pages/EntryPage';
 import { HomePage } from '@/guest/pages/HomePage';
 import { CatalogPage } from '@/guest/pages/CatalogPage';
+import { VenuePage } from '@/guest/pages/VenuePage';
+import { VenueListPage } from '@/guest/pages/VenueListPage';
 import { CartPage } from '@/guest/pages/CartPage';
 import { ChatPage } from '@/guest/pages/ChatPage';
 import { OrdersPage } from '@/guest/pages/OrdersPage';
@@ -109,6 +111,9 @@ export const router = createBrowserRouter([
           { path: 'services', element: <CatalogPage type="service_request" /> },
           { path: 'info', element: <CatalogPage type="info" /> },
           { path: 'slots', element: <CatalogPage type="slot" /> },
+          // Showcase levels 2 and 3: a group's venue list, and a venue's own catalog.
+          { path: 'category/:group', element: <VenueListPage /> },
+          { path: 'venue/:code', element: <VenuePage /> },
           { path: 'cart', element: <CartPage /> },
           { path: 'chat', element: <ChatPage /> },
           { path: 'orders', element: <OrdersPage /> },

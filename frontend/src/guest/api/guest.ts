@@ -19,6 +19,7 @@ import type {
   GuestSession,
   GuestSessionCreated,
   GuestSlotAvailability,
+  GuestVenueList,
   ItemDetail,
 } from './types';
 
@@ -43,10 +44,20 @@ export function fetchSession(): Promise<GuestSession> {
  * `type=product`; services are `type=service_request`. There is deliberately no
  * second "services" endpoint and no branch here — only a query parameter.
  */
-export function fetchCatalog(type: OfferingType, language?: string): Promise<GuestCatalog> {
+export function fetchCatalog(
+  type: OfferingType,
+  language?: string,
+  point?: string,
+): Promise<GuestCatalog> {
   return guestApi.get<GuestCatalog>('/guest/catalog', {
-    query: { type, include_unavailable: true, lang: language },
+    // `point` scopes the catalog to one venue (level 3); omitted → whole catalog.
+    query: { type, include_unavailable: true, lang: language, point },
   });
+}
+
+/** Level-2 list of venues in a showcase group (contract §1 «Уровень 2»). */
+export function fetchVenues(group: string, language?: string): Promise<GuestVenueList> {
+  return guestApi.get<GuestVenueList>('/guest/venues', { query: { group, lang: language } });
 }
 
 export function fetchItem(itemId: string, language?: string): Promise<ItemDetail> {

@@ -112,7 +112,10 @@ def _apply_overlay(tile: dict[str, Any], overlay: ShowcaseTile | None, default_o
     """Наложить настройки CMS. Выключенная плитка исчезает (None)."""
     if overlay is not None and not overlay.is_enabled:
         return None
-    tile["size"] = (overlay.size if overlay else default_size)
+    # Первая плитка по умолчанию крупная (L) — визуальный якорь bento; CMS
+    # может переопределить размер.
+    base_size = "l" if default_order == 0 else default_size
+    tile["size"] = (overlay.size if overlay else base_size)
     tile["order"] = (overlay.sort_order if overlay and overlay.sort_order else default_order)
     return tile
 

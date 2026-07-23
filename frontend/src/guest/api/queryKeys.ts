@@ -2,7 +2,9 @@
 export const guestKeys = {
   all: ['guest'] as const,
   session: ['guest', 'session'] as const,
-  catalog: (type: string, language: string) => ['guest', 'catalog', type, language] as const,
+  catalog: (type: string, language: string, point?: string) =>
+    ['guest', 'catalog', type, language, point ?? null] as const,
+  venues: (group: string, language: string) => ['guest', 'venues', group, language] as const,
   item: (id: string, language: string) => ['guest', 'item', id, language] as const,
   locations: (language: string) => ['guest', 'locations', language] as const,
   slots: (itemId: string, date: string, language: string) =>

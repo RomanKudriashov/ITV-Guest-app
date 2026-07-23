@@ -303,6 +303,18 @@
       "offers": "موصى به اليوم",
       "sectionsTitle": "أين تذهب",
       "quickActionsTitle": "إجراءات سريعة",
+      "comingSoon": "قريبًا",
+      "venueCount_zero": "{{count}} أماكن",
+      "venueCount_one": "مكان واحد",
+      "venueCount_two": "مكانان",
+      "venueCount_few": "{{count}} أماكن",
+      "venueCount_many": "{{count}} مكانًا",
+      "venueCount_other": "{{count}} مكان",
+      "group": {
+        "restaurants": "المطاعم",
+        "spa": "سبا وعافية",
+        "services": "الخدمات"
+      },
       "activeOrder": {
         "title": "الطلب رقم {{number}} · {{status}}",
         "serveBy": "بحلول {{time}}",
@@ -311,6 +323,14 @@
       },
       "prev": "السابق",
       "next": "التالي"
+    },
+    "venue": {
+      "open": "مفتوح",
+      "until": "حتى {{time}}",
+      "closed": "مغلق",
+      "opensAt": "من {{time}}",
+      "emptyTitle": "لا توجد أماكن بعد",
+      "emptyHint": "لم تتم إضافة أي شيء إلى هذه الفئة بعد"
     },
     "quickActions": {
       "menu": "القائمة",

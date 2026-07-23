@@ -303,6 +303,14 @@
       "offers": "Recommended today",
       "sectionsTitle": "Where to look",
       "quickActionsTitle": "Quick actions",
+      "comingSoon": "Soon",
+      "venueCount_one": "{{count}} venue",
+      "venueCount_other": "{{count}} venues",
+      "group": {
+        "restaurants": "Restaurants",
+        "spa": "Spa & wellness",
+        "services": "Services"
+      },
       "activeOrder": {
         "title": "Order #{{number}} · {{status}}",
         "serveBy": "by {{time}}",
@@ -311,6 +319,14 @@
       },
       "prev": "Previous",
       "next": "Next"
+    },
+    "venue": {
+      "open": "Open",
+      "until": "until {{time}}",
+      "closed": "Closed",
+      "opensAt": "from {{time}}",
+      "emptyTitle": "No venues yet",
+      "emptyHint": "Nothing has been added to this category yet"
     },
     "quickActions": {
       "menu": "Menu",

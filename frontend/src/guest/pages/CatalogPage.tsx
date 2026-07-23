@@ -36,6 +36,8 @@ const TABS_HEIGHT = 48;
 export interface CatalogPageProps {
   /** Which catalog to show. Everything else on this screen is type-agnostic. */
   type: OfferingType;
+  /** Scope to one venue (execution-point code) — the level-3 view. */
+  point?: string;
 }
 
 /**
@@ -45,7 +47,7 @@ export interface CatalogPageProps {
  * row can be dropped into the cart, and all three come from the behaviour
  * registry rather than from conditions spread over the markup.
  */
-export function CatalogPage({ type }: CatalogPageProps) {
+export function CatalogPage({ type, point }: CatalogPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -57,7 +59,7 @@ export function CatalogPage({ type }: CatalogPageProps) {
   const cart = useCart();
   const behaviour = behaviourFor(type);
   const ns = behaviour.guestCatalogNamespace;
-  const { data, isLoading, error, refetch } = useGuestCatalog(type);
+  const { data, isLoading, error, refetch } = useGuestCatalog(type, true, point);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const openItemId = searchParams.get('item');
