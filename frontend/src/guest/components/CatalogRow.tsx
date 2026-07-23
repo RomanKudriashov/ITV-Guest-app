@@ -6,8 +6,9 @@ import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from '@/kit';
-import type { ItemDetail } from '../api/types';
+import type { ItemDetail, MenuBadge } from '../api/types';
 import { FlagChips, NutritionInline } from './ItemMeta';
+import { ItemBadges, PrepMinutesChip } from './ItemBadges';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -17,6 +18,10 @@ export interface CatalogRowViewProps {
   /** Icon on the designed fallback when the row has no photo. */
   fallbackIcon?: AppIconComponent;
   flags: string[];
+  /** Marketing badges — shown as small filled chips over the media. */
+  badges?: MenuBadge[];
+  /** Prep-time chip ("~{n} мин") — shown only when the item carries it. */
+  prepMinutes?: number | null;
   /** КБЖУ line — shown only when the item carries nutrition data. */
   nutrition?: ItemDetail['nutrition'];
   /** Already-formatted price, or `null` to hide it (an unpriced service). */
@@ -44,6 +49,8 @@ export function CatalogRowView({
   imageSrc,
   fallbackIcon,
   flags,
+  badges,
+  prepMinutes,
   nutrition,
   priceLabel,
   unavailableNote,
@@ -81,6 +88,11 @@ export function CatalogRowView({
       >
         <Box sx={{ position: 'relative', height: 146 }}>
           <KitImage src={imageSrc} alt={title} fill fallbackIcon={fallbackIcon} fallbackIconSize={44} />
+          {badges?.length ? (
+            <Box sx={{ position: 'absolute', top: 8, insetInlineStart: 8, maxWidth: 'calc(100% - 16px)' }}>
+              <ItemBadges badges={badges} size="sm" />
+            </Box>
+          ) : null}
         </Box>
         <Box sx={{ px: '14px', pt: '13px' }}>
           <Typography
@@ -123,10 +135,11 @@ export function CatalogRowView({
             <NutritionInline nutrition={nutrition} />
           </Box>
         ) : null}
-        {flags.length ? (
-          <Box sx={{ mb: 1.25 }}>
+        {flags.length || prepMinutes != null ? (
+          <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" alignItems="center" sx={{ mb: 1.25 }}>
+            <PrepMinutesChip minutes={prepMinutes} />
             <FlagChips flags={flags} />
-          </Box>
+          </Stack>
         ) : null}
         <Stack
           direction="row"

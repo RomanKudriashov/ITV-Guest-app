@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import type { OfferingType } from '@/offerings/behaviour';
@@ -13,11 +13,14 @@ import {
   fetchOrders,
   fetchReview,
   fetchSlots,
+  quoteCart,
 } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type {
+  CartQuote,
   ChatSnapshot,
+  CreateOrderPayload,
   GuestActiveOrders,
   GuestCatalog,
   GuestHome,
@@ -91,6 +94,30 @@ export function useGuestSlots(itemId: string | null, date: string, enabled = tru
     queryFn: () => fetchSlots(itemId as string, date, language),
     enabled: isReady && enabled && Boolean(itemId) && Boolean(date),
     staleTime: 10_000,
+  });
+}
+
+/**
+ * Prices the cart on the server. THE single source of every charge line and of
+ * the grand total the checkout shows — the client renders `quote.total_minor`
+ * verbatim and never sums charges itself. Re-runs whenever the quote-relevant
+ * body (lines, location, delivery mode, tip) changes; `keepPreviousData` holds
+ * the last total on screen while the next quote is in flight so the layout never
+ * flickers. `signature` is a stable serialization of that body used as the key.
+ */
+export function useCartQuote(
+  payload: CreateOrderPayload,
+  signature: string,
+  enabled: boolean,
+) {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<CartQuote>({
+    queryKey: guestKeys.cartQuote(signature, language),
+    queryFn: () => quoteCart(payload, language),
+    enabled: isReady && enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
   });
 }
 

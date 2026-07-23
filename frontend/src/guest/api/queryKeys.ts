@@ -15,6 +15,9 @@ export const guestKeys = {
    */
   activeOrders: (language: string) => ['guest', 'orders', 'active', language] as const,
   order: (id: string) => ['guest', 'order', id] as const,
+  /** Server cart pricing, keyed on the quote-relevant body (lines + location + tip). */
+  cartQuote: (signature: string, language: string) =>
+    ['guest', 'cartQuote', signature, language] as const,
   home: (language: string) => ['guest', 'home', language] as const,
   /** Single thread per guest — a stable key the WS snapshot overwrites. */
   chat: ['guest', 'chat'] as const,

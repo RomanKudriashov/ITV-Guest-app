@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from '@/kit';
 import { AllergenLine, FlagChips, NutritionBlock } from './ItemMeta';
+import { ItemBadges, PrepMinutesChip } from './ItemBadges';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
@@ -89,6 +90,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
         {hideMedia ? null : <ItemMedia item={item} variant="top" fallbackIcon={fallbackIcon} />}
 
         <Stack spacing={1.5}>
+          {item.badges?.length ? <ItemBadges badges={item.badges} /> : null}
           <Stack spacing={0.5}>
             {/* Reference `.cat` — the category name as an accent overline. */}
             {item.category_title ? (
@@ -127,7 +129,10 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
           {/* Reference block 4: КБЖУ as a line under the description, then the
               flag/allergen chips ("metarow"). */}
           <NutritionBlock nutrition={item.nutrition} />
-          <FlagChips flags={item.flags ?? []} />
+          <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" alignItems="center">
+            <PrepMinutesChip minutes={item.prep_minutes} />
+            <FlagChips flags={item.flags ?? []} />
+          </Stack>
           <AllergenLine allergens={item.allergens ?? []} />
         </Stack>
 

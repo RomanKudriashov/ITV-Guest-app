@@ -100,6 +100,14 @@ export interface RequestField {
   sort_order?: number;
 }
 
+/** A marketing badge on a menu item; `label` arrives already localized. */
+export interface MenuBadge {
+  label: string;
+  /** Palette role (`accent`/`gold`/`success`/`info`) → fill color via `badgeRoleColor`. */
+  color_role: string;
+  sort_order: number;
+}
+
 export interface MenuItem {
   id: string;
   code: string;
@@ -111,6 +119,10 @@ export interface MenuItem {
   images: string[];
   flags: string[];
   allergens: string[];
+  /** Marketing badges, rendered sorted by `sort_order`. */
+  badges?: MenuBadge[];
+  /** Preparation time in minutes, or `null` when the item does not carry one. */
+  prep_minutes?: number | null;
   /** Offering type; the storefront asks the behaviour registry, never the string. */
   type?: OfferingType;
   location_mode?: LocationMode;
@@ -229,6 +241,45 @@ export interface CreateOrderPayload {
   field_values?: Record<string, string | number>;
   /** Start of the booked interval — required only for a `slot` offering. */
   slot_start?: string;
+  /** Custom tip in minor units. Mutually exclusive with `tip_percent`. */
+  tip_minor?: number;
+  /** Preset tip as a percentage of the subtotal. Mutually exclusive with `tip_minor`. */
+  tip_percent?: number;
+}
+
+/**
+ * `POST /cart/quote` — THE only source of every charge and of the grand total the
+ * cart shows. The client never computes any of these values itself; a change to
+ * the cart, the tip or the location re-requests this. Body is the order payload.
+ */
+export interface CartQuote {
+  subtotal_minor: number;
+  service_fee_minor: number;
+  tax_minor: number;
+  delivery_fee_minor: number;
+  tip_minor: number;
+  /** The grand total to display — never recomputed on the client. */
+  total_minor: number;
+  /** When true, tax is already inside the prices — shown as informational only. */
+  tax_inclusive: boolean;
+  currency: string;
+  /** Order minimum in minor units, or `null` when the hotel sets none. */
+  minimum_minor: number | null;
+  below_minimum: boolean;
+  shortfall_minor: number;
+  /** Percentage tip presets, e.g. `[5, 10, 15]`. */
+  tip_presets: number[];
+}
+
+/** Server-computed charge breakdown carried by a serialized order. */
+export interface OrderCharges {
+  subtotal_minor: number;
+  service_fee_minor: number;
+  tax_minor: number;
+  tax_inclusive: boolean;
+  delivery_fee_minor: number;
+  tip_minor: number;
+  total_minor: number;
 }
 
 export interface OrderStatus {
@@ -317,6 +368,10 @@ export interface GuestOrder {
   /** `null` when nothing in the order is priced — show a dash, never "0 ₽". */
   total: number | null;
   currency: string;
+  /** Server-computed charge breakdown (fee / tax / delivery / tip / total). */
+  charges?: OrderCharges | null;
+  /** ISO datetime with the hotel-TZ offset — the promised serve time. */
+  serve_by?: string | null;
   /** Non-empty only for a request-service. */
   field_values?: OrderFieldValue[];
   /** Present only for a `booking` order — the reserved slot. */

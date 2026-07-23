@@ -19,6 +19,9 @@ const CODE_KEYS: Record<string, string> = {
   requested_time_invalid: 'guest.errors.requestedTimeInvalid',
   mixed_categories: 'guest.errors.mixedCategories',
   cancel_not_allowed: 'guest.errors.cancelNotAllowed',
+  // The cart's grand total (from the quote) fell below the hotel's order minimum.
+  // The primary signal is the quote's `below_minimum`; this covers a 422 race.
+  order_below_minimum: 'guest.errors.belowMinimum',
   // Request-service validation (contract §4).
   field_required: 'guest.errors.fieldRequired',
   field_invalid: 'guest.errors.fieldInvalid',

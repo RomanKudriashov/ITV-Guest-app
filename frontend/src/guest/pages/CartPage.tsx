@@ -20,11 +20,14 @@ import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/api/client';
 import { ctaGradientSx } from '@/kit';
 import { EmptyState } from '@/components/EmptyState';
+import { inputToMinor } from '@/utils/money';
 import { ItemThumb } from '../components/ItemMeta';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
+import { TipSelector } from '../components/TipSelector';
+import { CartTotals } from '../components/CartTotals';
 import { errorMessage, isRetryableOrderError } from '../errors';
-import { useGuestLocations } from '../hooks/useGuestQueries';
+import { useCartQuote, useGuestLocations } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
@@ -32,6 +35,9 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
 import type { CreateOrderPayload, OrderTiming } from '../api/types';
+
+/** How the guest set the tip: none, a percentage preset, or a custom amount. */
+type TipKind = 'none' | 'preset' | 'custom';
 
 interface CheckoutDraft {
   locationId: string | null;
@@ -41,6 +47,11 @@ interface CheckoutDraft {
   time: string;
   comment: string;
   showErrors: boolean;
+  tipKind: TipKind;
+  /** Selected preset percent — only meaningful when `tipKind === 'preset'`. */
+  tipPercent: number | null;
+  /** Raw custom-amount input — only meaningful when `tipKind === 'custom'`. */
+  tipCustom: string;
 }
 
 /** "19:30" → ISO with offset. Times already past today are read as tomorrow. */
@@ -57,7 +68,7 @@ function timeToIso(time: string): string | null {
 export function CartPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { format } = useMoney();
+  const { format, minorUnits } = useMoney();
   const cart = useCart();
   const { canOrder } = useGuestSession();
   const locationsQuery = useGuestLocations();
@@ -77,6 +88,9 @@ export function CartPage() {
       time: '',
       comment: '',
       showErrors: false,
+      tipKind: 'none',
+      tipPercent: null,
+      tipCustom: '',
     }),
     locations.map((location) => location.id).join(','),
   );
@@ -85,6 +99,18 @@ export function CartPage() {
   const needsRefinement = Boolean(selectedLocation?.requires_refinement);
   const refinementMissing = needsRefinement && !draft.refinement.trim();
   const timeMissing = draft.timing === 'scheduled' && !timeToIso(draft.time);
+
+  // The guest's tip choice, resolved into the API's two mutually-exclusive fields:
+  // a preset sends `tip_percent`, a positive custom amount sends `tip_minor`, and
+  // "no tip" sends neither. The very same fields feed the quote and the order.
+  const customTipMinor =
+    draft.tipKind === 'custom' ? inputToMinor(draft.tipCustom, minorUnits) : null;
+  const tipFields: Pick<CreateOrderPayload, 'tip_minor' | 'tip_percent'> =
+    draft.tipKind === 'preset' && draft.tipPercent != null
+      ? { tip_percent: draft.tipPercent }
+      : draft.tipKind === 'custom' && customTipMinor != null && customTipMinor > 0
+        ? { tip_minor: customTipMinor }
+        : {};
 
   const payload = useMemo<CreateOrderPayload>(
     () => ({
@@ -95,9 +121,25 @@ export function CartPage() {
       timing: draft.timing,
       requested_time: draft.timing === 'scheduled' ? timeToIso(draft.time) : null,
       comment: draft.comment.trim(),
+      ...tipFields,
     }),
-    [cart, draft, needsRefinement, locationsQuery.data],
+    [cart, draft, needsRefinement, locationsQuery.data, tipFields.tip_minor, tipFields.tip_percent],
   );
+
+  // Server-priced cart — THE only source of every charge and of the grand total.
+  // Re-quoted whenever the quote-relevant body (lines, location, delivery mode,
+  // tip) changes; the client renders `quote.total_minor` verbatim and never sums
+  // charges itself.
+  const quoteSignature = JSON.stringify({
+    lines: payload.lines,
+    location_id: payload.location_id,
+    delivery_mode: payload.delivery_mode,
+    tip_minor: payload.tip_minor,
+    tip_percent: payload.tip_percent,
+  });
+  const quoteQuery = useCartQuote(payload, quoteSignature, !cart.isEmpty && canOrder);
+  const quote = quoteQuery.data;
+  const belowMinimum = Boolean(quote?.below_minimum);
 
   // The same checkout the request form uses — one endpoint, one idempotency
   // discipline, one confirmation screen for both offering types.
@@ -106,7 +148,7 @@ export function CartPage() {
   });
 
   const submit = () => {
-    if (!canOrder) return;
+    if (!canOrder || belowMinimum) return;
     if (!draft.locationId || refinementMissing || timeMissing) {
       setDraft((prev) => ({ ...prev, showErrors: true }));
       return;
@@ -313,28 +355,47 @@ export function CartPage() {
             inputProps={{ maxLength: 300, 'data-testid': 'guest-order-comment' }}
           />
 
-          {/* Reference `.totals .fin` — a hairline, then the final total emphasised. */}
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="baseline"
-            sx={{ pt: 1.5, borderTop: 1, borderColor: 'divider' }}
-          >
-            <Typography variant="subtitle1">{t('guest.cart.total')}</Typography>
-            <Typography
-              data-testid="guest-cart-total"
-              sx={(theme) => ({
-                fontFamily: theme.typography.h1.fontFamily,
-                fontWeight: 800,
-                fontSize: '1.0625rem',
-              })}
+          {/* Tips — presets (percent) from the quote, a custom amount or none.
+              The choice feeds BOTH the quote and the order body. */}
+          <TipSelector
+            presets={quote?.tip_presets ?? []}
+            kind={draft.tipKind}
+            percent={draft.tipPercent}
+            custom={draft.tipCustom}
+            onNone={() =>
+              setDraft((prev) => ({ ...prev, tipKind: 'none', tipPercent: null }))
+            }
+            onPreset={(pct) =>
+              setDraft((prev) => ({ ...prev, tipKind: 'preset', tipPercent: pct }))
+            }
+            onCustom={() => setDraft((prev) => ({ ...prev, tipKind: 'custom' }))}
+            onCustomChange={(value) =>
+              setDraft((prev) => ({ ...prev, tipKind: 'custom', tipCustom: value }))
+            }
+          />
+
+          {/* Every charge line and the grand total come ONLY from the quote — the
+              client never computes a charge or the total itself. */}
+          <CartTotals quote={quote} loading={quoteQuery.isLoading} />
+
+          {belowMinimum && quote ? (
+            <Alert severity="warning" data-testid="guest-cart-below-minimum">
+              {t('guest.cart.belowMinimum', { amount: format(quote.shortfall_minor) })}
+            </Alert>
+          ) : null}
+
+          {quoteQuery.isError ? (
+            <Alert
+              severity="error"
+              action={
+                <Button color="inherit" size="small" onClick={() => void quoteQuery.refetch()}>
+                  {t('guest.common.retry')}
+                </Button>
+              }
             >
-              {format(cart.total)}
-            </Typography>
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            {t('guest.cart.totalHint')}
-          </Typography>
+              {t('guest.cart.quoteError')}
+            </Alert>
+          ) : null}
 
           {failure ? (
             <Alert
@@ -360,14 +421,18 @@ export function CartPage() {
           fullWidth
           size="large"
           variant="contained"
-          disabled={!canOrder || isPending || !locations.length}
+          disabled={
+            !canOrder || isPending || !locations.length || belowMinimum || quoteQuery.isLoading
+          }
           onClick={submit}
           data-testid="guest-place-order"
           sx={[ctaGradientSx, { minHeight: 52 }]}
         >
           {isPending
             ? t('guest.cart.placing')
-            : t('guest.cart.place', { price: format(cart.total) })}
+            : quote
+              ? t('guest.cart.place', { price: format(quote.total_minor) })
+              : t('guest.cart.placeShort')}
         </Button>
       </StickyFooter>
     </Box>

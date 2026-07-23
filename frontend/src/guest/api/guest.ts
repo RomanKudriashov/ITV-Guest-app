@@ -4,6 +4,7 @@ import type { OfferingType } from '@/offerings/behaviour';
 import { ApiError } from '@/api/client';
 import { guestApi, guestTokenStorage } from './client';
 import type {
+  CartQuote,
   ChatSnapshot,
   CreateOrderPayload,
   CreateSessionPayload,
@@ -79,6 +80,16 @@ export function createOrder(
     headers: { 'Idempotency-Key': idempotencyKey },
     query: { lang: language },
   });
+}
+
+/**
+ * Prices the cart on the server — THE single source of every charge and of the
+ * grand total the checkout shows. The body is the order payload (lines, location,
+ * delivery mode and the optional tip); the client renders the result verbatim and
+ * never computes a charge or the total itself.
+ */
+export function quoteCart(payload: CreateOrderPayload, language?: string): Promise<CartQuote> {
+  return guestApi.post<CartQuote>('/guest/cart/quote', payload, { query: { lang: language } });
 }
 
 export function fetchOrders(language?: string): Promise<GuestOrderList> {

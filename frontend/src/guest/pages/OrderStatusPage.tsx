@@ -22,12 +22,15 @@ import { OrderFieldValues } from '../components/OrderFieldValues';
 import { OrderSlot } from '../components/OrderSlot';
 import { OrderTimeline } from '../components/OrderTimeline';
 import { ReviewBlock } from '../components/ReviewBlock';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+
 import { cancelOrder } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { errorMessage } from '../errors';
 import { useGuestLanguage, useGuestOrder } from '../hooks/useGuestQueries';
 import { useOrderLive } from '../hooks/useOrderLive';
 import { useMoney } from '../hooks/useMoney';
+import { serveByTime } from '../utils/serveBy';
 import type { GuestOrder } from '../api/types';
 
 export function OrderStatusPage() {
@@ -91,6 +94,20 @@ export function OrderStatusPage() {
 
   const fieldValues = order.field_values ?? [];
 
+  // The promised serve time, in the hotel's TZ. One chip, shown on the just-placed
+  // confirmation banner OR on the live status header — never both at once, so the
+  // `guest-serve-by` testid stays unique.
+  const serveBy = serveByTime(order.serve_by);
+  const serveByChip = serveBy ? (
+    <Chip
+      size="small"
+      variant="outlined"
+      icon={<ScheduleIcon sx={{ fontSize: 16 }} />}
+      label={t('guest.order.serveBy', { time: serveBy })}
+      data-testid="guest-serve-by"
+    />
+  ) : null;
+
   const created = (() => {
     try {
       return new Intl.DateTimeFormat(i18n.resolvedLanguage ?? 'en', {
@@ -129,6 +146,7 @@ export function OrderStatusPage() {
               <Typography variant="body2" color="text.secondary">
                 {t('guest.confirmation.subtitle')}
               </Typography>
+              {serveByChip}
               <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
                 <Button
                   variant="contained"
@@ -168,6 +186,7 @@ export function OrderStatusPage() {
               data-testid="guest-order-offline"
             />
           ) : null}
+          {!justPlaced ? serveByChip : null}
         </Stack>
         <Typography variant="caption" color="text.secondary">
           {created}
