@@ -18,13 +18,11 @@ async function enterAsGuest(page: Page, room = DEMO_ROOM): Promise<void> {
 }
 
 async function openMenu(page: Page): Promise<void> {
-  // После входа гость попадает на главную; в меню ведёт плитка ресторана.
-  const restaurant = page.getByTestId('guest-service-restaurant')
-  if (await restaurant.isVisible().catch(() => false)) {
-    await restaurant.click()
-  } else {
-    await page.getByTestId('guest-nav-menu').click()
-  }
+  // Продуктовое поведение C4: со входа гость на главной-витрине; в каталог
+  // ресторана ведёт его плитка (уровень 3), а не общее меню.
+  await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 15_000 })
+  await page.getByTestId('guest-home-tile-kitchen').click()
+  await expect(page).toHaveURL(/\/venue\/kitchen/)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 
