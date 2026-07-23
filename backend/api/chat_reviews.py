@@ -72,11 +72,15 @@ def guest_home(request: HttpRequest):
     thread = chat_svc.get_or_create_thread(request.guest_session)
     unread = chat_svc.thread_snapshot(thread, side="guest")["unread"]
 
+    from apps.catalog.home import quick_actions_for
+
     return {
         "hotel": {"name": hotel.name, "subdomain": hotel.subdomain},
         "room": request.guest_session.room.number if request.guest_session.room_id else None,
         "sections": sections,
         "unread_chat": unread,
+        # Быстрые действия (A3+ шаг 4): набор отеля или дефолт по наличию разделов.
+        "quick_actions": quick_actions_for(hotel, language),
     }
 
 

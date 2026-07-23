@@ -286,8 +286,22 @@
       "emptyHint": "The hotel hasn't added anything yet",
       "offers": "Recommended today",
       "sectionsTitle": "Where to look",
+      "quickActionsTitle": "Quick actions",
+      "activeOrder": {
+        "title": "Order #{{number}} · {{status}}",
+        "serveBy": "by {{time}}",
+        "more": "+{{count}} more",
+        "view": "View"
+      },
       "prev": "Previous",
       "next": "Next"
+    },
+    "quickActions": {
+      "menu": "Menu",
+      "services": "Services",
+      "slots": "Booking",
+      "info": "Info",
+      "chat": "Message"
     },
     "services": {
       "restaurant": "Restaurant",

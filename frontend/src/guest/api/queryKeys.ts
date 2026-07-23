@@ -8,6 +8,12 @@ export const guestKeys = {
   slots: (itemId: string, date: string, language: string) =>
     ['guest', 'slots', itemId, date, language] as const,
   orders: (language: string) => ['guest', 'orders', language] as const,
+  /**
+   * Live orders for the home strip. Nested UNDER `['guest','orders']` on purpose:
+   * the existing order WS invalidates that prefix on every snapshot, so this list
+   * refetches without a second channel.
+   */
+  activeOrders: (language: string) => ['guest', 'orders', 'active', language] as const,
   order: (id: string) => ['guest', 'order', id] as const,
   home: (language: string) => ['guest', 'home', language] as const,
   /** Single thread per guest — a stable key the WS snapshot overwrites. */

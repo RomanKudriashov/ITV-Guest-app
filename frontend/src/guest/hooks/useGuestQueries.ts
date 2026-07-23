@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { OfferingType } from '@/offerings/behaviour';
 import {
+  fetchActiveOrders,
   fetchCatalog,
   fetchChat,
   fetchHome,
@@ -17,6 +18,7 @@ import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type {
   ChatSnapshot,
+  GuestActiveOrders,
   GuestCatalog,
   GuestHome,
   GuestLocations,
@@ -98,6 +100,23 @@ export function useGuestOrders() {
   return useQuery<GuestOrderList>({
     queryKey: guestKeys.orders(language),
     queryFn: () => fetchOrders(language),
+    enabled: isReady,
+    staleTime: 15_000,
+  });
+}
+
+/**
+ * The guest's live orders for the home strip. Kept fresh by the existing order
+ * WS: every snapshot invalidates the `['guest','orders']` prefix (see
+ * `useOrderLive`), which this key sits under, so a status/serve-by change or an
+ * order going terminal is reconciled by REFETCHING the full list — never patched.
+ */
+export function useGuestActiveOrders() {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestActiveOrders>({
+    queryKey: guestKeys.activeOrders(language),
+    queryFn: () => fetchActiveOrders(language),
     enabled: isReady,
     staleTime: 15_000,
   });

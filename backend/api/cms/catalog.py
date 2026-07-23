@@ -320,3 +320,38 @@ def cms_delete_badge(request: HttpRequest, badge_id: str):
 @router.put("/items/{item_id}/badges", summary="Назначить бейджи позиции (заменяет набор)")
 def cms_assign_item_badges(request: HttpRequest, item_id: str, payload: ItemBadgesIn):
     return {"badges": svc.assign_item_badges(item_id, payload.badge_ids)}
+
+
+# --- Быстрые действия стартовой (A3+ шаг 4) --------------------------------
+
+
+class QuickActionsIn(Schema):
+    selected: list[str] = []
+
+
+def _hotel_for_settings():
+    from apps.core.context import require_hotel_id
+    from apps.hotels.models import Hotel
+
+    return Hotel.objects.get(pk=require_hotel_id())
+
+
+@router.get("/quick-actions", summary="Быстрые действия стартовой (словарь + выбор)")
+def cms_get_quick_actions(request: HttpRequest):
+    from apps.catalog.home import available_quick_actions, selected_codes
+
+    hotel = _hotel_for_settings()
+    return {"available": available_quick_actions(), "selected": selected_codes(hotel)}
+
+
+@router.put("/quick-actions", summary="Сохранить набор быстрых действий")
+def cms_put_quick_actions(request: HttpRequest, payload: QuickActionsIn):
+    from apps.catalog.home import available_quick_actions, validate_codes
+
+    hotel = _hotel_for_settings()
+    codes = validate_codes(payload.selected)
+    settings = dict(hotel.settings or {})
+    settings["quick_actions"] = codes
+    hotel.settings = settings
+    hotel.save(update_fields=["settings", "updated_at"])
+    return {"available": available_quick_actions(), "selected": codes}

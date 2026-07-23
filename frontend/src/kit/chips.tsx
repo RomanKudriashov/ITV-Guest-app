@@ -229,6 +229,33 @@ export function FlagChip({ code, label, tone = 'flag', testId }: FlagChipProps) 
   );
 }
 
+/* ── Status color token → palette ─────────────────────────────────────────── */
+
+/**
+ * Maps a backend `status.color_token` (`info`/`warning`/`success`/`danger`…) to a
+ * theme palette color — the single place a status token becomes a color, so the
+ * order strip and any future status surface stay token-only, light and dark.
+ */
+export function statusTokenColor(token: string | undefined, theme: Theme): string {
+  switch (token) {
+    case 'success':
+      return theme.palette.success.main;
+    case 'warning':
+      return theme.palette.warning.main;
+    case 'danger':
+    case 'error':
+      return theme.palette.error.main;
+    case 'info':
+      return theme.palette.info.main;
+    case 'primary':
+      return theme.palette.primary.main;
+    case 'secondary':
+      return theme.palette.secondary.main;
+    default:
+      return theme.palette.text.secondary;
+  }
+}
+
 /* ── Status indicator ─────────────────────────────────────────────────────── */
 
 export type OrderStatusKind =

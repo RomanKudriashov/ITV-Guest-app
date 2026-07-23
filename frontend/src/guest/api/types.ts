@@ -363,12 +363,61 @@ export interface GuestHomeSection {
   route: string;
 }
 
+/**
+ * One quick-action tile of the home screen. The server names a Material Symbols
+ * icon and a route; the client renders the icon through its own icon registry and
+ * prefers an i18n label over `title`, which is only a fallback.
+ */
+export interface GuestQuickAction {
+  code: string;
+  route: string;
+  /** Material Symbols name (e.g. `restaurant`, `room_service`, `event_available`). */
+  icon: string;
+  /** Fallback label — used only when no i18n key `guest.quickActions.<code>` exists. */
+  title: string;
+}
+
 export interface GuestHome {
   hotel: { name: string; theme?: PartialBrandTokens };
   room: string | null;
   sections: GuestHomeSection[];
+  /** Quick-action tiles rendered above the sections. */
+  quick_actions?: GuestQuickAction[];
   /** Unread messages from staff — drives the chat tab badge. */
   unread_chat: number;
+}
+
+/* ── Active orders (home strip) ────────────────────────────────────────────── */
+
+/** Status subset carried by an active-order row (contract §orders/active). */
+export interface GuestActiveOrderStatus {
+  code: string;
+  title: string;
+  /** Palette token (`info`/`warning`/`success`/`danger`) → status dot color. */
+  color_token?: string;
+}
+
+/**
+ * One row of the home active-order strip — a light projection of a live order.
+ * `serve_by` is an ISO datetime carrying the hotel-TZ offset; the strip formats
+ * its wall-clock `HH:MM` directly from that offset.
+ */
+export interface GuestActiveOrder {
+  id: string;
+  number: number;
+  type?: 'cart' | 'request' | 'booking';
+  status: GuestActiveOrderStatus;
+  serve_by: string | null;
+  total: number | null;
+  currency: string;
+  /** Short composition, already localized (e.g. «Стейк рибай, Паста карбонара»). */
+  summary: string;
+  /** How many further lines beyond `summary` — drives the «ещё N» tail. */
+  extra_count: number;
+}
+
+export interface GuestActiveOrders {
+  orders: GuestActiveOrder[];
 }
 
 /* ── Chat ──────────────────────────────────────────────────────────────── */

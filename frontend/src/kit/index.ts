@@ -14,6 +14,7 @@ export {
   FlagChip,
   ChipOption,
   StatusIndicator,
+  statusTokenColor,
   type PricePillProps,
   type KitBadgeProps,
   type KitBadgeKind,

@@ -286,8 +286,22 @@
       "emptyHint": "Отель ещё не добавил услуги",
       "offers": "Рекомендуем сегодня",
       "sectionsTitle": "Куда заглянуть",
+      "quickActionsTitle": "Быстрые действия",
+      "activeOrder": {
+        "title": "Заказ №{{number}} · {{status}}",
+        "serveBy": "подадут к {{time}}",
+        "more": "ещё {{count}}",
+        "view": "Смотреть"
+      },
       "prev": "Назад",
       "next": "Вперёд"
+    },
+    "quickActions": {
+      "menu": "Меню",
+      "services": "Услуги",
+      "slots": "Бронирование",
+      "info": "Информация",
+      "chat": "Написать"
     },
     "services": {
       "restaurant": "Ресторан",

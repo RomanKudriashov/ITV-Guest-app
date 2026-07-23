@@ -24,6 +24,8 @@ import {
 } from '@/kit';
 import { IconBack } from '@/icons';
 import { errorMessage } from '../errors';
+import { ActiveOrderStrip } from '../components/ActiveOrderStrip';
+import { QuickActions } from '../components/QuickActions';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestCatalog, useGuestHome } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
@@ -79,6 +81,7 @@ export function HomePage() {
   const { formatOptional } = useMoney();
 
   const sections = data?.sections ?? [];
+  const quickActions = data?.quick_actions ?? [];
   const room = data?.room ?? session?.room ?? null;
   const hotelName = data?.hotel?.name ?? hotel?.name ?? '';
 
@@ -177,6 +180,17 @@ export function HomePage() {
         maxWidth="lg"
         sx={{ position: 'relative', zIndex: 1, mt: { xs: -3, md: -5 }, pb: { xs: 5, md: 8 } }}
       >
+        {/* ── Live orders + quick actions sit above the sections, as one canvas ── */}
+        <Stack spacing={{ xs: 2, md: 2.5 }} sx={{ mb: { xs: 4, md: 6 } }}>
+          <ActiveOrderStrip />
+          {quickActions.length ? (
+            <Stack spacing={1.5}>
+              <BlockTitle label={t('guest.home.quickActionsTitle')} />
+              <QuickActions actions={quickActions} />
+            </Stack>
+          ) : null}
+        </Stack>
+
         {isLoading ? (
           <Box
             sx={{

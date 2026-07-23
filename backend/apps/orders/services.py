@@ -586,6 +586,50 @@ def list_guest_orders(guest_session, language: str | None = None) -> dict[str, l
     return {"active": active, "past": past}
 
 
+def list_active_orders(guest_session, language: str | None = None) -> dict[str, list[dict]]:
+    """
+    Активные заказы гостя для полосы на стартовой — лёгкий срез: статус,
+    время подачи, итог, короткий состав. Скоуп строго текущий гость.
+    """
+    orders = (
+        order_queryset()
+        .filter(guest_session_id=guest_session.pk, status__is_terminal=False)
+        .order_by("-created_at")
+    )
+    hotel = None
+    payload = []
+    for order in orders:
+        hotel = order.hotel
+        payload.append(
+            {
+                "id": str(order.pk),
+                "number": order.number,
+                "type": order.type,
+                "status": {
+                    "code": order.status.code,
+                    "title": translate(order.status.title, language),
+                    "color_token": order.status.color_token,
+                },
+                "serve_by": _serve_by(order, hotel),
+                "total": order.total,
+                "currency": order.currency,
+                **_order_summary(order, language),
+            }
+        )
+    return {"orders": payload}
+
+
+def _order_summary(order: Order, language: str | None) -> dict:
+    """Короткий состав: первые 1–2 позиции + «ещё N». У заявки — тип действия."""
+    items = list(order.items.all())
+    if items:
+        titles = [translate(line.title_snapshot, language) or "" for line in items[:2]]
+        return {"summary": ", ".join(t for t in titles if t), "extra_count": max(len(items) - 2, 0)}
+    # Заявка/бронь без позиций — резюме по названию (из field_values снимка нет
+    # названия услуги; берём тип), extra 0.
+    return {"summary": "", "extra_count": 0}
+
+
 # --- Смена статуса ---------------------------------------------------------
 
 

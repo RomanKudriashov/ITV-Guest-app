@@ -326,6 +326,13 @@ def list_orders(request: HttpRequest):
     return list_guest_orders(request.guest_session, current_language())
 
 
+@router.get("/orders/active", auth=guest_auth, summary="Активные заказы гостя (для стартовой)")
+def list_active(request: HttpRequest):
+    from apps.orders.services import list_active_orders
+
+    return list_active_orders(request.guest_session, current_language())
+
+
 @router.get(
     "/order/{order_id}", response=OrderOut, auth=guest_auth, summary="Заявка и её статус"
 )

@@ -7,6 +7,7 @@ import type {
   ChatSnapshot,
   CreateOrderPayload,
   CreateSessionPayload,
+  GuestActiveOrders,
   GuestCatalog,
   GuestHome,
   GuestLocations,
@@ -82,6 +83,15 @@ export function createOrder(
 
 export function fetchOrders(language?: string): Promise<GuestOrderList> {
   return guestApi.get<GuestOrderList>('/guest/orders', { query: { lang: language } });
+}
+
+/**
+ * The guest's live (non-terminal) orders, in the light shape the home strip needs.
+ * A terminal order simply drops out of this list, so the strip never has to decide
+ * whether a row is still active — it draws exactly what it receives.
+ */
+export function fetchActiveOrders(language?: string): Promise<GuestActiveOrders> {
+  return guestApi.get<GuestActiveOrders>('/guest/orders/active', { query: { lang: language } });
 }
 
 export function fetchOrder(orderId: string, language?: string): Promise<GuestOrder> {

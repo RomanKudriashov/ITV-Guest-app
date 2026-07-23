@@ -286,8 +286,22 @@
       "emptyHint": "لم يضف الفندق أي خدمات بعد",
       "offers": "موصى به اليوم",
       "sectionsTitle": "أين تذهب",
+      "quickActionsTitle": "إجراءات سريعة",
+      "activeOrder": {
+        "title": "الطلب رقم {{number}} · {{status}}",
+        "serveBy": "بحلول {{time}}",
+        "more": "و{{count}} أخرى",
+        "view": "عرض"
+      },
       "prev": "السابق",
       "next": "التالي"
+    },
+    "quickActions": {
+      "menu": "القائمة",
+      "services": "الخدمات",
+      "slots": "الحجز",
+      "info": "معلومات",
+      "chat": "مراسلة"
     },
     "services": {
       "restaurant": "المطعم",
