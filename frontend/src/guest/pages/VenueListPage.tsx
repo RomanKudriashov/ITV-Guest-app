@@ -105,7 +105,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
             sx={(th) => ({
               position: 'absolute',
               top: 10,
-              right: 10,
+              insetInlineEnd: 10,
               px: 1,
               py: 0.35,
               borderRadius: 999,

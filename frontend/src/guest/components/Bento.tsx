@@ -144,7 +144,7 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
       ) : null}
 
       {/* Status / "coming" pill, upper-right. */}
-      <Box sx={{ position: 'absolute', top: 10, right: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+      <Box sx={{ position: 'absolute', top: 10, insetInlineEnd: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
         {disabled ? (
           <StatusPill status={{ text: t('guest.home.comingSoon'), open: false }} />
         ) : status ? (
