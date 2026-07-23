@@ -4,10 +4,28 @@ import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
-import { KitImage, mediaFallbackSx } from '@/kit';
+import type { Theme } from '@mui/material/styles';
+
+import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { packBento, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
+
+/**
+ * Cover fallback for a tile without a photo. ALWAYS dark (with a brand-tinted
+ * glow), independent of the light/dark theme — the tile text is white in either
+ * mode, so a light fallback would break contrast. This is the last step of the
+ * cover cascade: point photo → category photo → this gradient.
+ */
+export function tileCoverFallbackSx(theme: Theme) {
+  return {
+    backgroundColor: '#0a0f18',
+    backgroundImage: [
+      `radial-gradient(120% 100% at 18% 0%, ${alpha(theme.palette.primary.main, 0.4)}, transparent 58%)`,
+      'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
+    ].join(','),
+  } as const;
+}
 
 /** Localised status-pill text, or null when the venue has no schedule. */
 function useStatusLabel() {
@@ -109,7 +127,7 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
       ) : tile.image ? (
         <KitImage src={tile.image} alt={tile.title} fill fallbackIcon={fallbackIconFor('product')} />
       ) : (
-        <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...mediaFallbackSx(th) })} />
+        <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })} />
       )}
 
       {/* Bottom-only scrim so the lower-left text reads; the centre stays clear. */}

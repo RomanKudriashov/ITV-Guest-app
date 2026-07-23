@@ -8,8 +8,9 @@ import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
-import { KitImage, SkeletonCard, mediaFallbackSx } from '@/kit';
+import { KitImage, SkeletonCard } from '@/kit';
 import { errorMessage } from '../errors';
+import { tileCoverFallbackSx } from '../components/Bento';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
@@ -93,7 +94,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
         {venue.image ? (
           <KitImage src={venue.image} alt={venue.title} fill fallbackIcon={fallbackIconFor('product')} />
         ) : (
-          <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...mediaFallbackSx(th) })} />
+          <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })} />
         )}
         <Box
           aria-hidden
@@ -118,7 +119,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
             {statusText}
           </Box>
         ) : null}
-        <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, p: 1.5 }}>
+        <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.5 }}>
           <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: 20, lineHeight: 1.1, textShadow: '0 2px 14px rgba(0,0,0,0.55)' })}>
             {venue.title}
           </Typography>
