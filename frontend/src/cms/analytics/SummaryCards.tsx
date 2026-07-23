@@ -22,7 +22,10 @@ interface MetricSpec {
 
 const METRICS: MetricSpec[] = [
   { id: 'orders', metric: 'orders', format: 'count', higherIsBetter: true },
-  { id: 'revenue', metric: 'revenue_minor', format: 'money', higherIsBetter: true },
+  // Заглавная «Выручка» — ПОЛНАЯ сумма (gross), а не только позиции: после
+  // шага 7 revenue_minor стало subtotal'ом, полная сумма — gross_minor.
+  // Разложение показываем вторично строкой под цифрой (см. breakdown ниже).
+  { id: 'revenue', metric: 'gross_minor', format: 'money', higherIsBetter: true },
   { id: 'avg_check', metric: 'avg_check_minor', format: 'money', higherIsBetter: true },
   { id: 'items_per_order', metric: 'items_per_order', format: 'decimal', higherIsBetter: true },
   { id: 'completed_rate', metric: 'completed_rate', format: 'percent', higherIsBetter: true },
@@ -72,12 +75,19 @@ export function SummaryCards({
               {isLoading ? (
                 <Skeleton variant="text" width="70%" height={32} />
               ) : (
-                <Typography variant="h6" sx={{ mt: 0.25 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ mt: 0.25 }}
+                  data-testid={`analytics-summary-value-${spec.id}`}
+                >
                   {current === undefined ? '—' : fmt.value(current, spec.format)}
                 </Typography>
               )}
               {compare && !isLoading ? (
                 <DeltaBadge value={delta} higherIsBetter={spec.higherIsBetter} />
+              ) : null}
+              {spec.id === 'revenue' && !isLoading && data?.current ? (
+                <RevenueBreakdown current={data.current} fmt={fmt} t={t} />
               ) : null}
             </CardContent>
           </Card>
@@ -121,5 +131,44 @@ function DeltaBadge({
         {fmt.signedPercent(value)}
       </Typography>
     </Stack>
+  );
+}
+
+/**
+ * Вторичное разложение выручки под заглавной цифрой (позиции + начисления).
+ * Показываем только ненулевые компоненты; полноценный UI разложения — шаг 5.
+ */
+function RevenueBreakdown({
+  current,
+  fmt,
+  t,
+}: {
+  current: SummaryMetrics;
+  fmt: ReturnType<typeof useMetricFormatters>;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const parts: Array<[string, number]> = [
+    ['positions', current.revenue_minor ?? 0],
+    ['fee', current.service_fee_minor ?? 0],
+    ['delivery', current.delivery_minor ?? 0],
+    ['tax', current.tax_minor ?? 0],
+    ['tip', current.tip_minor ?? 0],
+  ];
+  // Разложение имеет смысл, только когда есть начисления (gross ≠ позиции).
+  const hasCharges = parts.slice(1).some(([, value]) => value > 0);
+  if (!hasCharges) return null;
+
+  return (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      data-testid="analytics-revenue-breakdown"
+      sx={{ display: 'block', mt: 0.5, lineHeight: 1.5 }}
+    >
+      {parts
+        .filter(([, value]) => value > 0)
+        .map(([key, value]) => `${t(`analytics.revenue.${key}`)} ${fmt.value(value, 'money')}`)
+        .join(' · ')}
+    </Typography>
   );
 }

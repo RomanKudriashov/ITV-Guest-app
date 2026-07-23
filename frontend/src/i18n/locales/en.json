@@ -284,10 +284,10 @@
       "soon": "Soon",
       "emptyTitle": "Nothing here yet",
       "emptyHint": "The hotel hasn't added anything yet",
-    "offers": "Recommended today",
-    "sectionsTitle": "Where to look",
-    "prev": "Previous",
-    "next": "Next"
+      "offers": "Recommended today",
+      "sectionsTitle": "Where to look",
+      "prev": "Previous",
+      "next": "Next"
     },
     "services": {
       "restaurant": "Restaurant",
@@ -1169,6 +1169,13 @@
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
       }
+    },
+    "revenue": {
+      "positions": "Items",
+      "fee": "Fee",
+      "delivery": "Delivery",
+      "tax": "Tax",
+      "tip": "Tip"
     }
   }
 }

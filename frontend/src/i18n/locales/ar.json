@@ -284,10 +284,10 @@
       "soon": "قريباً",
       "emptyTitle": "لا شيء بعد",
       "emptyHint": "لم يضف الفندق أي خدمات بعد",
-    "offers": "موصى به اليوم",
-    "sectionsTitle": "أين تذهب",
-    "prev": "السابق",
-    "next": "التالي"
+      "offers": "موصى به اليوم",
+      "sectionsTitle": "أين تذهب",
+      "prev": "السابق",
+      "next": "التالي"
     },
     "services": {
       "restaurant": "المطعم",
@@ -1169,6 +1169,13 @@
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
       }
+    },
+    "revenue": {
+      "positions": "الأصناف",
+      "fee": "رسوم",
+      "delivery": "توصيل",
+      "tax": "ضريبة",
+      "tip": "إكرامية"
     }
   }
 }

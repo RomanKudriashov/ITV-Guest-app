@@ -284,10 +284,10 @@
       "soon": "Скоро",
       "emptyTitle": "Пока пусто",
       "emptyHint": "Отель ещё не добавил услуги",
-    "offers": "Рекомендуем сегодня",
-    "sectionsTitle": "Куда заглянуть",
-    "prev": "Назад",
-    "next": "Вперёд"
+      "offers": "Рекомендуем сегодня",
+      "sectionsTitle": "Куда заглянуть",
+      "prev": "Назад",
+      "next": "Вперёд"
     },
     "services": {
       "restaurant": "Ресторан",
@@ -1169,6 +1169,13 @@
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
       }
+    },
+    "revenue": {
+      "positions": "Позиции",
+      "fee": "Сбор",
+      "delivery": "Доставка",
+      "tax": "Налог",
+      "tip": "Чаевые"
     }
   }
 }

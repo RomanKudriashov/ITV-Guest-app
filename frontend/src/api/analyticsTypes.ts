@@ -67,7 +67,14 @@ export interface AnalyticsQuery {
 /** All headline metrics returned by `/analytics/summary`. */
 export interface SummaryMetrics {
   orders: number;
+  /** Выручка по позициям (subtotal). Полная сумма — `gross_minor`. */
   revenue_minor: number;
+  /** Разложение выручки (A3+ шаг 7): позиции + начисления. */
+  gross_minor: number;
+  service_fee_minor: number;
+  delivery_minor: number;
+  tax_minor: number;
+  tip_minor: number;
   avg_check_minor: number;
   items_per_order: number;
   completed_rate: number;
