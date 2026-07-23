@@ -238,4 +238,4 @@ def list_presets() -> list[dict]:
     ]
 
 
-DEFAULT_PRESET = "evening_concierge"
+DEFAULT_PRESET = "midnight_navy"
