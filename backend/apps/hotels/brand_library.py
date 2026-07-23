@@ -29,6 +29,17 @@ FONTS = [
 FONT_FAMILIES = {font["family"] for font in FONTS}
 
 
+# Роль цвета бейджа → поле палитры-заливки. Текст на бейдже витрина берёт по
+# контрасту к заливке; сторож test_brand_contrast проверяет читаемость для всех
+# пресетов, чтобы роль, выбранная под тёмную тему, не провалилась в светлой.
+BADGE_ROLE_FIELDS = {
+    "accent": "primary",
+    "gold": "secondary",
+    "success": "success",
+    "info": "info",
+}
+
+
 # --- Абстракции-подложки ---------------------------------------------------
 
 from .brand_patterns import abstraction_svg

@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from apps.hotels.brand_library import list_presets
-from apps.hotels.brand_palette import contrast_ratio
+from apps.hotels.brand_library import BADGE_ROLE_FIELDS, list_presets
+from apps.hotels.brand_palette import contrast_on, contrast_ratio
 
 # Пороги WCAG: основной текст — AA (4.5), вторичный текст и текст на заливках —
 # минимум для крупного/UI (3.0).
@@ -34,3 +34,18 @@ def test_preset_text_is_readable_in_both_modes(preset):
         # Контрастный текст на заливках акцента (кнопки, бейджи).
         assert contrast_ratio(p["primaryContrast"], p["primary"]) >= UI_MIN, (code, mode, "primaryContrast/primary")
         assert contrast_ratio(p["secondaryContrast"], p["secondary"]) >= UI_MIN, (code, mode, "secondaryContrast/secondary")
+
+
+@pytest.mark.parametrize("preset", list_presets(), ids=lambda p: p["code"])
+def test_badge_color_roles_are_readable(preset):
+    """
+    Бейдж (A3+): текст на заливке роли берётся по контрасту. Проверяем, что у
+    КАЖДОГО пресета в ОБОИХ режимах любая роль бейджа читаема — роль, выбранная
+    под тёмную тему, не должна провалить контраст в светлой.
+    """
+    for mode in ("light", "dark"):
+        palette = preset["tokens"]["palette"][mode]
+        for role, field in BADGE_ROLE_FIELDS.items():
+            fill = palette[field]
+            text = contrast_on(fill)
+            assert contrast_ratio(text, fill) >= UI_MIN, (preset["code"], mode, role, fill)

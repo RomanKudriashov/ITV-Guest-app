@@ -25,8 +25,10 @@ from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
 from .models import (
+    Badge,
     Category,
     Item,
+    ItemBadge,
     ItemImage,
     ModifierGroup,
     ModifierOption,
@@ -351,6 +353,11 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
         ],
         "flags": list(item.flags or []),
         "allergens": list(item.allergens or []),
+        "prep_minutes": item.prep_minutes,
+        "badges": [
+            {"id": str(link.badge_id), "sort_order": link.sort_order}
+            for link in item.item_badges.all()
+        ],
         "schedule_id": str(item.schedule_id) if item.schedule_id else None,
         "sort_order": item.sort_order,
         "is_active": item.is_active,
@@ -1077,3 +1084,89 @@ def upsert_slot_config(item_id, data: dict) -> dict:
         },
     )
     return serialize_slot_config(config)
+
+
+# --- Маркетинговые бейджи (A3+) --------------------------------------------
+
+_BADGE_ROLES = {choice.value for choice in Badge.ColorRole}
+
+
+def serialize_badge(badge: Badge) -> dict:
+    return {
+        "id": str(badge.pk),
+        "label": badge.label or {},
+        "color_role": badge.color_role,
+        "sort_order": badge.sort_order,
+        "is_active": badge.is_active,
+        "preset": badge.preset,
+    }
+
+
+def list_badges() -> list[dict]:
+    return [serialize_badge(b) for b in Badge.objects.all().order_by("sort_order", "id")]
+
+
+def _validate_role(role: str) -> str:
+    if role not in _BADGE_ROLES:
+        raise ValidationError(
+            f"Недопустимая роль цвета «{role}»", field="color_role", code="invalid_color_role"
+        )
+    return role
+
+
+def create_badge(data: dict) -> Badge:
+    label = data.get("label") or {}
+    if not any((label.get(lang) or "").strip() for lang in label):
+        raise ValidationError("Название бейджа обязательно", field="label")
+    badge = Badge.objects.create(
+        hotel_id=require_hotel_id(),
+        label=label,
+        color_role=_validate_role(data.get("color_role", Badge.ColorRole.ACCENT)),
+        sort_order=int(data.get("sort_order", 0)),
+        is_active=bool(data.get("is_active", True)),
+    )
+    return badge
+
+
+def update_badge(badge_id, data: dict) -> Badge:
+    badge = Badge.objects.filter(pk=badge_id).first()
+    if badge is None:
+        raise NotFoundError("Бейдж не найден")
+    if "label" in data:
+        badge.label = data["label"] or {}
+    if "color_role" in data:
+        badge.color_role = _validate_role(data["color_role"])
+    if "sort_order" in data:
+        badge.sort_order = int(data["sort_order"])
+    if "is_active" in data:
+        badge.is_active = bool(data["is_active"])
+    badge.save()
+    return badge
+
+
+def delete_badge(badge_id) -> None:
+    badge = Badge.objects.filter(pk=badge_id).first()
+    if badge is None:
+        raise NotFoundError("Бейдж не найден")
+    # Назначения снимаем жёстко (join), сам бейдж — мягко.
+    ItemBadge.objects.filter(badge=badge).hard_delete()
+    badge.delete()
+
+
+def assign_item_badges(item_id, badge_ids: list) -> list[dict]:
+    """Заменяет набор бейджей позиции. Join-строки удаляем жёстко."""
+    item = Item.objects.filter(pk=item_id).first()
+    if item is None:
+        raise NotFoundError("Позиция не найдена")
+
+    valid = list(Badge.objects.filter(pk__in=badge_ids).values_list("pk", flat=True))
+    ItemBadge.objects.filter(item=item).hard_delete()
+    for order, badge_id in enumerate(badge_ids):
+        if badge_id in {str(v) for v in valid} or badge_id in valid:
+            ItemBadge.objects.create(
+                hotel_id=item.hotel_id, item=item, badge_id=badge_id, sort_order=order
+            )
+    return [
+        {"id": str(link.badge_id), "sort_order": link.sort_order}
+        for link in item.item_badges.all().order_by("sort_order")
+    ]

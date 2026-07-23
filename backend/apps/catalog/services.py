@@ -189,6 +189,8 @@ def _serialize_item(
         "price": item.price,
         "flags": list(item.flags or []),
         "allergens": list(item.allergens or []),
+        # Маркетинговые бейджи (A3+) — отдельно от фактических флагов.
+        "badges": _badges(item, language),
         # Пищевая ценность и состав — из attributes (данные позиции). Карточка
         # показывает секцию, только если значения есть.
         "nutrition": _nutrition(item, language),
@@ -208,6 +210,23 @@ def _serialize_item(
         "content": translate(item.content, language),
         **state.as_dict(),
     }
+
+
+def _badges(item, language: str | None = None) -> list[dict[str, Any]]:
+    """Активные бейджи позиции в порядке назначения — без отдельного запроса."""
+    out = []
+    for link in item.item_badges.select_related("badge").all():
+        badge = link.badge
+        if badge is not None and badge.is_active:
+            out.append(
+                {
+                    "label": translate(badge.label, language),
+                    "color_role": badge.color_role,
+                    "sort_order": link.sort_order,
+                }
+            )
+    out.sort(key=lambda entry: entry["sort_order"])
+    return out
 
 
 def _nutrition(item, language: str | None = None) -> dict[str, Any] | None:

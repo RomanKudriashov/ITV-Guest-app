@@ -36,6 +36,8 @@ TENANT_TABLES = [
     "catalog_slot_booking",
     "catalog_route",
     "catalog_service_location",
+    "catalog_badge",
+    "catalog_item_badge",
     # orders
     "orders_status_definition",
     "orders_order",

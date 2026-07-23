@@ -140,14 +140,20 @@ class Command(BaseCommand):
                 "нумерацию заказов, на которую опираются тесты."
             ),
         )
+        parser.add_argument(
+            "--with-marketing-badges",
+            action="store_true",
+            help="Завести пресеты бейджей (Хит/Новинка/Выбор шефа) и повесить на позиции.",
+        )
 
     def handle(self, *args, **options):
         history = options["with_guest_history"]
         analytics = options["with_analytics_history"]
+        badges = options["with_marketing_badges"]
         self._seed_placeholders()
-        self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics)
+        self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics, badges)
         if options["with_second_hotel"]:
-            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics)
+            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics, badges)
         self.stdout.write(self.style.SUCCESS("Сид завершён"))
 
     # --- Платформенный уровень ------------------------------------------
@@ -165,7 +171,7 @@ class Command(BaseCommand):
     # --- Отель ------------------------------------------------------------
 
     @transaction.atomic
-    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False):
+    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False, with_badges: bool = False):
         hotel, created = Hotel.objects.get_or_create(
             subdomain=subdomain,
             defaults={
@@ -196,6 +202,8 @@ class Command(BaseCommand):
             self._seed_slot_resources(points, schedules)
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
+            if with_badges:
+                self._seed_marketing_badges()
             if with_analytics:
                 self._seed_analytics_history(hotel, points, rooms, users)
 
@@ -1120,6 +1128,32 @@ class Command(BaseCommand):
         asset = self._image_for(f"{category_code}-{item.code}", label)
         if asset is not None:
             ItemImage.objects.get_or_create(item=item, asset=asset, defaults={"sort_order": 0})
+
+    def _seed_marketing_badges(self):
+        """Пресеты бейджей и пара назначений — идемпотентно по коду пресета."""
+        from apps.catalog.models import Badge, Item, ItemBadge
+
+        presets = [
+            ("hit", {"ru": "Хит", "en": "Hit"}, Badge.ColorRole.ACCENT, 0),
+            ("new", {"ru": "Новинка", "en": "New"}, Badge.ColorRole.INFO, 1),
+            ("chef_choice", {"ru": "Выбор шефа", "en": "Chef's choice"}, Badge.ColorRole.GOLD, 2),
+            ("recommended", {"ru": "Рекомендуем", "en": "Recommended"}, Badge.ColorRole.SUCCESS, 3),
+        ]
+        badges = {}
+        for code, label, role, order in presets:
+            badge, _ = Badge.objects.get_or_create(
+                preset=code,
+                defaults={"label": label, "color_role": role, "sort_order": order},
+            )
+            badges[code] = badge
+
+        # Демо-назначения: рибай — «Выбор шефа», цезарь — «Хит».
+        for item_code, badge_code in (("ribeye", "chef_choice"), ("caesar", "hit")):
+            item = Item.objects.filter(code=item_code).first()
+            if item and badges.get(badge_code):
+                ItemBadge.objects.get_or_create(
+                    item=item, badge=badges[badge_code], defaults={"sort_order": 0}
+                )
 
     def _seed_nutrition(self):
         """

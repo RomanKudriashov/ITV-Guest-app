@@ -271,3 +271,52 @@ def get_slot_config(request: HttpRequest, item_id: str):
 @router.put("/items/{item_id}/slot-config", summary="Сохранить конфигурацию брони")
 def put_slot_config(request: HttpRequest, item_id: str, payload: SlotConfigIn):
     return svc.upsert_slot_config(item_id, payload.dict())
+
+
+# --- Маркетинговые бейджи (A3+) --------------------------------------------
+
+from ninja import Schema  # noqa: E402
+
+
+class BadgeIn(Schema):
+    label: dict = {}
+    color_role: str = "accent"
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class BadgePatch(Schema):
+    label: dict | None = None
+    color_role: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
+class ItemBadgesIn(Schema):
+    badge_ids: list[str] = []
+
+
+@router.get("/badges", summary="Маркетинговые бейджи отеля")
+def cms_list_badges(request: HttpRequest):
+    return svc.list_badges()
+
+
+@router.post("/badges", response={201: dict}, summary="Создать бейдж")
+def cms_create_badge(request: HttpRequest, payload: BadgeIn):
+    return 201, svc.serialize_badge(svc.create_badge(payload.dict()))
+
+
+@router.patch("/badges/{badge_id}", summary="Изменить бейдж")
+def cms_update_badge(request: HttpRequest, badge_id: str, payload: BadgePatch):
+    return svc.serialize_badge(svc.update_badge(badge_id, payload.dict(exclude_unset=True)))
+
+
+@router.delete("/badges/{badge_id}", response=OkOut, summary="Удалить бейдж")
+def cms_delete_badge(request: HttpRequest, badge_id: str):
+    svc.delete_badge(badge_id)
+    return {"ok": True}
+
+
+@router.put("/items/{item_id}/badges", summary="Назначить бейджи позиции (заменяет набор)")
+def cms_assign_item_badges(request: HttpRequest, item_id: str, payload: ItemBadgesIn):
+    return {"badges": svc.assign_item_badges(item_id, payload.badge_ids)}
