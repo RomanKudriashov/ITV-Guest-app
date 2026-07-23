@@ -17,6 +17,7 @@ import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
+import { PlatformConsole } from '@/platform/PlatformConsole';
 import App from '@/App';
 
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
@@ -43,6 +44,9 @@ import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/dev/theme', element: <App /> },
+  // Платформенная консоль на базовом домене. Своя область auth (scope: platform),
+  // не пересекается с тенантной CMS.
+  { path: '/platform', element: <PlatformConsole /> },
   {
     path: '/cms',
     element: (

@@ -1,6 +1,6 @@
 from ninja import NinjaAPI
 
-from apps.accounts.auth import StaffAuth
+from apps.accounts.auth import PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
 from .cms import router as cms_router
@@ -9,6 +9,7 @@ from .health import router as health_router
 from .chat_reviews import guest_router as surface_guest_router
 from .chat_reviews import tracker_router as surface_tracker_router
 from .orders import router as orders_router
+from .platform import router as platform_router
 from .staff import router as staff_router
 from .tracker import router as tracker_router
 
@@ -39,6 +40,9 @@ api.add_router("/tracker", surface_tracker_router, auth=StaffAuth())
 # Весь CMS-раздел закрыт JWT персонала по умолчанию: забыть auth на отдельном
 # эндпоинте невозможно — он задан на уровне роутера.
 api.add_router("/cms", cms_router, auth=StaffAuth())
+# Платформенная консоль на базовом домене: закрыта scope=platform токеном.
+# Тенантный staff-токен сюда не пускается (и наоборот) — проверка PlatformAuth.
+api.add_router("/platform", platform_router, auth=PlatformAuth())
 
 
 @api.exception_handler(DomainError)
