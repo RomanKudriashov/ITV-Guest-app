@@ -34,7 +34,7 @@ export interface CatalogRowViewProps {
 }
 
 /**
- * The presentational body of one catalog card (reference R2b block 3, `.card`): a
+ * The presentational body of one catalog card (the `.card` block): a
  * photo on top that dissolves nowhere — a fixed 146px image — then the body with
  * title, a two-line description, the КБЖУ line, flag chips and a row that carries
  * the price and the on-card action button. Unavailable cards dim to `.card.off`.

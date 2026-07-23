@@ -1120,7 +1120,7 @@ def upsert_slot_config(item_id, data: dict) -> dict:
     return serialize_slot_config(config)
 
 
-# --- Маркетинговые бейджи (A3+) --------------------------------------------
+# --- Маркетинговые бейджи ---------------------------------------------------
 
 _BADGE_ROLES = {choice.value for choice in Badge.ColorRole}
 

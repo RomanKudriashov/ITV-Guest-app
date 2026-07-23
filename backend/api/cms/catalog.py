@@ -273,7 +273,7 @@ def put_slot_config(request: HttpRequest, item_id: str, payload: SlotConfigIn):
     return svc.upsert_slot_config(item_id, payload.dict())
 
 
-# --- Маркетинговые бейджи (A3+) --------------------------------------------
+# --- Маркетинговые бейджи ---------------------------------------------------
 
 from ninja import Schema  # noqa: E402
 
@@ -322,7 +322,7 @@ def cms_assign_item_badges(request: HttpRequest, item_id: str, payload: ItemBadg
     return {"badges": svc.assign_item_badges(item_id, payload.badge_ids)}
 
 
-# --- Быстрые действия стартовой (A3+ шаг 4) --------------------------------
+# --- Быстрые действия стартовой ---------------------------------------------
 
 
 class QuickActionsIn(Schema):
@@ -357,7 +357,7 @@ def cms_put_quick_actions(request: HttpRequest, payload: QuickActionsIn):
     return {"available": available_quick_actions(), "selected": codes}
 
 
-# --- Настройки коммерции (A3+ шаг 5) ---------------------------------------
+# --- Настройки коммерции -----------------------------------------------------
 
 
 class CommerceSettingsIn(Schema):

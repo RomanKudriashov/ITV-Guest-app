@@ -189,12 +189,12 @@ def _serialize_item(
         "price": item.price,
         "flags": list(item.flags or []),
         "allergens": list(item.allergens or []),
-        # Маркетинговые бейджи (A3+) — отдельно от фактических флагов.
+        # Маркетинговые бейджи — отдельно от фактических флагов.
         "badges": _badges(item, language),
         # Пищевая ценность и состав — из attributes (данные позиции). Карточка
         # показывает секцию, только если значения есть.
         "nutrition": _nutrition(item, language),
-        # Время подачи, мин (A3+): чип в карточке; null — не показывать.
+        # Время подачи, мин: чип в карточке; null — не показывать.
         "prep_minutes": item.prep_minutes,
         "images": [url for url in images if url],
         # Витрине важно заранее знать, открывать ли карточку: позицию без

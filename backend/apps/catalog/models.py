@@ -45,7 +45,7 @@ class Category(TenantModel):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
-    # Коммерция (A3+): облагается ли категория сервисным сбором (еда — да,
+    # Коммерция: облагается ли категория сервисным сбором (еда — да,
     # такси — нет) и минимальная сумма заказа по категории.
     service_fee_applies = models.BooleanField(default=True)
     min_order_minor = models.IntegerField(null=True, blank=True)
@@ -110,7 +110,7 @@ class Item(TenantModel):
     is_active = models.BooleanField(default=True)
     in_stock = models.BooleanField(default=True, help_text="Стоп-лист кухни")
     attributes = models.JSONField(default=dict, blank=True)
-    # Время приготовления/подачи, мин (A3+): чип в карточке + слагаемое ETA.
+    # Время приготовления/подачи, мин: чип в карточке + слагаемое ETA.
     prep_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
@@ -149,7 +149,7 @@ class ItemImage(TenantModel):
 
 class Badge(TenantModel):
     """
-    Маркетинговый бейдж позиции (A3+): «Хит», «Новинка», «Выбор шефа». Отдельная
+    Маркетинговый бейдж позиции: «Хит», «Новинка», «Выбор шефа». Отдельная
     сущность, не флаги позиции (флаги фактические — аллергены/веган/острое).
     Цвет — РОЛЬ из токенов темы, не произвольный hex: иначе бейдж, заданный под
     тёмную тему, провалит контраст в светлой. Вешается на позицию любого типа.

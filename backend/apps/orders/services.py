@@ -84,7 +84,7 @@ class OrderInput:
     comment: str = ""
     field_values: dict[str, Any] = field(default_factory=dict)
     slot_start: str | None = None
-    # Чаевые (A3+): либо своя сумма, либо процент от суммы позиций.
+    # Чаевые: либо своя сумма, либо процент от суммы позиций.
     tip_minor: int | None = None
     tip_percent: float | None = None
 
@@ -742,7 +742,7 @@ def _eta_minutes(order: Order) -> int | None:
     if order.requested_time:
         minutes = int((order.requested_time - timezone.now()).total_seconds() // 60)
         return max(minutes, 0)
-    # Время подачи из позиций (A3+): дольше всех готовящаяся + буфер доставки.
+    # Время подачи из позиций: дольше всех готовящаяся + буфер доставки.
     prep = [
         line.item.prep_minutes
         for line in order.items.all()
@@ -843,7 +843,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         "comment": order.comment,
         "total": order.total,
         "currency": order.currency,
-        # Снимок начислений (A3+): витрина/статус рисуют строки сбора/доставки/
+        # Снимок начислений: витрина/статус рисуют строки сбора/доставки/
         # налога/чаевых и итог из готового снимка, ничего не пересчитывая.
         "charges": {
             "subtotal_minor": order.subtotal_minor,
@@ -854,7 +854,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
             "tip_minor": order.tip_minor,
             "total_minor": order.total,
         },
-        # Ожидаемое время подачи (A3+): now + ETA, в TZ отеля. null — если ETA нет.
+        # Ожидаемое время подачи: now + ETA, в TZ отеля. null — если ETA нет.
         "serve_by": _serve_by(order, hotel),
         # Непусто только у заявки-услуги. Трекер и витрина рисуют этим блоком
         # тело карточки вместо списка позиций — но объект заказа один.

@@ -43,7 +43,7 @@ def create_guest_session(
 
     Уровень доверия по умолчанию — ROOM_SCANNED: физический доступ к QR в
     номере уже что-то значит. Подъём до PMS_VERIFIED — задача PMS-адаптера,
-    его в этом прогоне нет.
+    его пока нет.
     """
     hotel_id = require_hotel_id()
 

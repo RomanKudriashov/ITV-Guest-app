@@ -237,7 +237,7 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@guest.localhost")
 
 
 # --- Интеграционные швы ----------------------------------------------------
-# Реализации в этом прогоне не пишем — только интерфейс и адаптер «нет».
+# Реализацию пока не пишем — только интерфейс и адаптер «нет».
 
 PMS_ADAPTER = os.getenv("PMS_ADAPTER", "null")
 PAYMENT_ADAPTER = os.getenv("PAYMENT_ADAPTER", "null")

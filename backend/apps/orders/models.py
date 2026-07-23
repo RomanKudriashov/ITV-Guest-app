@@ -102,7 +102,7 @@ class Order(TenantModel):
     )
     currency = models.CharField(max_length=3, default="RUB")
 
-    # --- Снимок начислений (A3+) ---
+    # --- Снимок начислений ---
     # Фиксируется при оформлении, как цены/модификаторы в OrderItem: отель
     # поменял сбор — старые заказы не меняются. `charges` хранит ставки/флаги
     # на момент оформления (аудит). Пока коммерция выключена, всё по нулям и
@@ -131,7 +131,7 @@ class Order(TenantModel):
     )
     accepted_at = models.DateTimeField(null=True, blank=True)
 
-    # Швы под будущее: оплату и PMS в этом прогоне не реализуем.
+    # Швы под будущее: оплату и PMS пока не реализуем.
     payment_state = models.CharField(max_length=32, default="none")
     pms_folio_ref = models.CharField(max_length=128, blank=True)
 

@@ -1,5 +1,5 @@
 /**
- * Types mirroring `docs/cms-api-contract.md` (прогон 2).
+ * Types mirroring `docs/cms-api-contract.md`.
  * Money is always an integer in the currency's minor units (копейки).
  */
 
@@ -119,9 +119,9 @@ export interface Category {
   sort_order: number;
   is_active: boolean;
   items_count?: number;
-  /** Commerce (A3+): whether the service fee applies to this category. */
+  /** Commerce: whether the service fee applies to this category. */
   service_fee_applies?: boolean;
-  /** Commerce (A3+): minimum order amount, minor units; `null` — no minimum. */
+  /** Commerce: minimum order amount, minor units; `null` — no minimum. */
   min_order_minor?: number | null;
   children?: Category[];
 }
@@ -135,9 +135,9 @@ export interface CategoryPayload {
   schedule_id?: string | null;
   sort_order?: number;
   is_active?: boolean;
-  /** Commerce (A3+): whether the service fee applies to this category. */
+  /** Commerce: whether the service fee applies to this category. */
   service_fee_applies?: boolean;
-  /** Commerce (A3+): minimum order amount, minor units; `null` — no minimum. */
+  /** Commerce: minimum order amount, minor units; `null` — no minimum. */
   min_order_minor?: number | null;
 }
 
@@ -248,7 +248,7 @@ export interface Item {
   sort_order: number;
   is_active: boolean;
   in_stock: boolean;
-  /** Preparation/serving time, minutes (A3+); `null` — not set. */
+  /** Preparation/serving time, minutes; `null` — not set. */
   prep_minutes?: number | null;
   /** Marketing badges assigned to the item, in display order. */
   badges?: ItemBadgeLink[];
@@ -273,7 +273,7 @@ export interface ItemPayload {
   sort_order?: number;
   is_active?: boolean;
   in_stock?: boolean;
-  /** Preparation/serving time, minutes (A3+); `null` — not set. */
+  /** Preparation/serving time, minutes; `null` — not set. */
   prep_minutes?: number | null;
 }
 
@@ -307,7 +307,7 @@ export interface SlotConfigPayload {
   horizon_days: number;
 }
 
-/* ── Commerce settings (A3+ step 5) ────────────────────────────────────── */
+/* ── Commerce settings ─────────────────────────────────────────────────── */
 
 /**
  * Hotel-wide commerce configuration. `*_bp` are basis points (10000 = 100 %);
@@ -341,7 +341,7 @@ export type CommerceSettingsPayload = Partial<
   >
 >;
 
-/* ── Marketing badges (A3+) ────────────────────────────────────────────── */
+/* ── Marketing badges ──────────────────────────────────────────────────── */
 
 /** The four supported badge palette roles. */
 export type BadgeColorRole = 'accent' | 'gold' | 'success' | 'info';
@@ -369,7 +369,7 @@ export interface ItemBadgeLink {
   sort_order: number;
 }
 
-/* ── Quick actions (A3+ step 4) ────────────────────────────────────────── */
+/* ── Quick actions ─────────────────────────────────────────────────────── */
 
 /** One entry of the server-provided quick-action dictionary. */
 export interface QuickActionOption {

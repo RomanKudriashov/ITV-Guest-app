@@ -13,7 +13,7 @@ export const queryKeys = {
   notificationLog: (status: string, orderId: string, limit: number) =>
     ['cms', 'notification-log', status || 'all', orderId || 'all', limit] as const,
   staffUsers: ['cms', 'staff-users'] as const,
-  /* ── Hotel admin (прогон 8) ─────────────────────────────────────────── */
+  /* ── Hotel admin ────────────────────────────────────────────────────── */
   rooms: ['cms', 'rooms'] as const,
   locations: ['cms', 'locations'] as const,
   locationMatrix: ['cms', 'locations', 'matrix'] as const,
@@ -34,7 +34,7 @@ export const queryKeys = {
   analyticsReviews: (slice: string) => ['cms', 'analytics', 'reviews', slice] as const,
   analyticsDrilldown: (slice: string) => ['cms', 'analytics', 'drilldown', slice] as const,
   analyticsExport: (id: string) => ['cms', 'analytics', 'export', id] as const,
-  /* ── Commerce & marketing (A3+ шаг 5) ───────────────────────────────── */
+  /* ── Commerce & marketing ───────────────────────────────────────────── */
   commerceSettings: ['cms', 'commerce-settings'] as const,
   badges: ['cms', 'badges'] as const,
   quickActions: ['cms', 'quick-actions'] as const,

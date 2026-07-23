@@ -50,7 +50,7 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
   const { t } = useTranslation();
   if (!nutrition) return null;
 
-  // Reference R2b, block 4 ("исправлено"): NO КБЖУ table — the values read as a
+  // NO КБЖУ table — the values read as a
   // single line under the description, each number in the display face.
   const macros: { label: string; value: number }[] = [];
   if (nutrition.calories != null)

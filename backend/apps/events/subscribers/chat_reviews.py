@@ -1,6 +1,6 @@
 """
 Подписчики чата и отзывов: разносят события по WS и уведомляют персонал через
-существующие каналы (прогон 6), без новой инфраструктуры.
+существующие каналы, без новой инфраструктуры.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def broadcast_chat_message(event: Event) -> None:
 
 @subscribe(CHAT_MESSAGE)
 def notify_staff_of_guest_message(event: Event) -> None:
-    """Сообщение гостя → уведомление отделу треда через каналы прогона 6."""
+    """Сообщение гостя → уведомление отделу треда через каналы уведомлений."""
     if event.payload.get("author_type") != "guest":
         return
     _notify_point(
@@ -61,7 +61,7 @@ def notify_manager_of_low_rating(event: Event) -> None:
 def _notify_point(event: Event, *, subject: str, body: str, target_level: str | None = None) -> None:
     """
     Отправка через существующие каналы уведомлений: каналы отдела треда/заявки.
-    Переиспользуем адаптеры и журнал прогона 6, ничего нового не заводя.
+    Переиспользуем существующие адаптеры и журнал, ничего нового не заводя.
     """
     from apps.notifications.channels.base import RenderedMessage
     from apps.notifications.models import NotificationChannel

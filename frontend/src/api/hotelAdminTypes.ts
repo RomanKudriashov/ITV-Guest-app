@@ -1,5 +1,5 @@
 /**
- * Types mirroring `docs/hotel-admin-api-contract.md` (прогон 8):
+ * Types mirroring `docs/hotel-admin-api-contract.md`:
  * rooms/QR, locations + category→location matrix, departments, staff.
  *
  * Kept apart from `api/types.ts` because it mirrors a different contract
@@ -58,7 +58,7 @@ export interface HotelLocation {
   schedule_id: string | null;
   sort_order: number;
   is_active: boolean;
-  /** Стоимость доставки в эту локацию, минорные единицы (A3+); 0 = бесплатно. */
+  /** Стоимость доставки в эту локацию, минорные единицы; 0 = бесплатно. */
   delivery_fee_minor: number;
 }
 
@@ -136,7 +136,7 @@ export interface Department {
   schedule_id: string | null;
   sla_minutes: number;
   is_active: boolean;
-  /** Counters that tie the department back to notifications (прогон 6). */
+  /** Counters that tie the department back to notifications. */
   staff_count: number;
   channel_count: number;
   has_escalation: boolean;

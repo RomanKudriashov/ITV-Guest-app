@@ -46,9 +46,9 @@ interface CategoryForm {
   sort_order: number;
   is_active: boolean;
   schedule_id: string | null;
-  /** Commerce (A3+): whether the service fee applies to this category. */
+  /** Commerce: whether the service fee applies to this category. */
   service_fee_applies: boolean;
-  /** Commerce (A3+): minimum order, major-unit text; empty = no minimum. */
+  /** Commerce: minimum order, major-unit text; empty = no minimum. */
   minOrderInput: string;
 }
 

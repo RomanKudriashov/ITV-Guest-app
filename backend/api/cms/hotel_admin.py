@@ -76,7 +76,7 @@ class LocationPatch(Schema):
     schedule_id: str | None = None
     sort_order: int | None = None
     is_active: bool | None = None
-    # Стоимость доставки в эту локацию, копейки (A3+); 0 = бесплатно.
+    # Стоимость доставки в эту локацию, копейки; 0 = бесплатно.
     delivery_fee_minor: int | None = None
 
 
@@ -159,6 +159,8 @@ def rooms_qr_sheet(request: HttpRequest):
     hotel, rooms = svc.room_qr_targets()
     pairs = [(room.number, hotel.room_deeplink(room.number)) for room in rooms]
     return HttpResponse(qr.qr_sheet_html(hotel.name, pairs), content_type="text/html")
+
+
 @router.patch("/rooms/{room_id}", response=RoomOut, summary="Изменить номер")
 def update_room(request: HttpRequest, room_id: str, payload: RoomPatch):
     return svc.serialize_room(svc.update_room(room_id, payload.dict(exclude_unset=True)))
@@ -207,6 +209,8 @@ def get_matrix(request: HttpRequest):
 @router.put("/locations/matrix", summary="Обновить строку матрицы")
 def put_matrix(request: HttpRequest, payload: MatrixRowIn):
     return svc.update_matrix_row(payload.category_id, [cell.dict() for cell in payload.cells])
+
+
 @router.patch("/locations/{location_id}", summary="Изменить локацию")
 def update_location(request: HttpRequest, location_id: str, payload: LocationPatch):
     return svc.serialize_location(svc.update_location(location_id, payload.dict(exclude_unset=True)))

@@ -1,4 +1,4 @@
-/** One function per endpoint of `docs/hotel-admin-api-contract.md` (прогон 8). */
+/** One function per endpoint of `docs/hotel-admin-api-contract.md`. */
 import { API_BASE, HOTEL_SUBDOMAIN, api, tokenStorage } from './client';
 import type {
   Department,

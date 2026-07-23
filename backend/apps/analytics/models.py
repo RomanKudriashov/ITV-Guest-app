@@ -71,7 +71,7 @@ class OrderDaily(TenantModel):
 
     orders_count = models.IntegerField(default=0)
     # revenue_minor — выручка ПО ПОЗИЦИЯМ (subtotal). Начисления разложены
-    # отдельными мерами (A3+), чтобы аналитика различала позиции/сбор/доставку/
+    # отдельными мерами, чтобы аналитика различала позиции/сбор/доставку/
     # налог/чаевые. Старые заказы без снимка — всё в revenue, компоненты по нулям.
     revenue_minor = models.BigIntegerField(default=0)
     service_fee_minor = models.BigIntegerField(default=0)

@@ -121,7 +121,7 @@ class OrderIn(Schema):
     field_values: dict[str, Any] = {}
     # Выбранное время слота (тип slot), ISO 8601.
     slot_start: str | None = None
-    # Чаевые (A3+): своя сумма ИЛИ процент от суммы позиций.
+    # Чаевые: своя сумма ИЛИ процент от суммы позиций.
     tip_minor: int | None = None
     tip_percent: float | None = None
 
@@ -146,7 +146,7 @@ class OrderOut(Schema):
     comment: str
     total: int | None
     currency: str
-    # Снимок начислений и ожидаемое время подачи (A3+).
+    # Снимок начислений и ожидаемое время подачи.
     charges: dict[str, Any] = {}
     serve_by: str | None = None
     field_values: list[dict[str, Any]]

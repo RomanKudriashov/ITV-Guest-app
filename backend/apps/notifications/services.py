@@ -249,7 +249,7 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
 
     order = log.order
     if escalation_should_stop(order):
-        # ГЛАВНАЯ проверка прогона: задача могла сработать ровно в тот момент,
+        # ГЛАВНАЯ проверка: задача могла сработать ровно в тот момент,
         # когда заказ приняли, и отмена задачи не успела бы.
         log.status = NotificationStatus.CANCELLED
         log.accepted_at_send = True

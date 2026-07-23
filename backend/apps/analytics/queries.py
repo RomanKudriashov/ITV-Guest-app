@@ -165,7 +165,7 @@ def _summary_block(scope: Scope, params: dict, period: Period) -> dict:
     block = {
         "orders": o["orders"],
         "revenue_minor": o["revenue"],
-        # Разложение выручки (A3+): позиции отдельно от начислений.
+        # Разложение выручки: позиции отдельно от начислений.
         "service_fee_minor": o["service_fee"],
         "delivery_minor": o["delivery"],
         "tax_minor": o["tax"],

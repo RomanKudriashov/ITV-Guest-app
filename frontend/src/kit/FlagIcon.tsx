@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 
 /**
- * Vector flag icon (redesign R2b, block 8 — language switcher).
+ * Vector flag icon for the language switcher.
  *
  * The four flags are the exact vector artwork from the approved reference
  * screens, ported from the reference's inline `data:image/svg+xml` marks to real

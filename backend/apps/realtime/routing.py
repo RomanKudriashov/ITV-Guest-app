@@ -25,7 +25,7 @@ websocket_urlpatterns = [
     for suffix, consumer in _WS_ROUTES
 ]
 
-# Путь из первого прогона. Оставлен, чтобы старые вкладки не отваливались
+# Старый путь. Оставлен, чтобы старые вкладки не отваливались
 # при выкатке; убрать после того, как клиенты перейдут на /ws/v1/guest/.
 websocket_urlpatterns.append(
     path("ws/order/<uuid:order_id>/", GuestOrderConsumer.as_asgi())

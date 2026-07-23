@@ -208,7 +208,7 @@ def test_step_is_idempotent(crystal, order, notifications_on, no_dispatch):
     assert len(no_dispatch["deliveries"]) == 1
 
 
-# --- Остановка при принятии (ядро прогона) ---------------------------------
+# --- Остановка при принятии --------------------------------------------------
 
 
 def test_accepted_order_stops_escalation_at_execution_time(

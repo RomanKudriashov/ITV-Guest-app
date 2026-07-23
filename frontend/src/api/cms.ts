@@ -281,7 +281,7 @@ export function deleteSchedule(id: string): Promise<void> {
   return api.delete<void>(`/cms/schedules/${id}`);
 }
 
-/* ── 8. Commerce settings (A3+ step 5) ─────────────────────────────────── */
+/* ── 8. Commerce settings ──────────────────────────────────────────────── */
 
 export function fetchCommerceSettings(): Promise<CommerceSettings> {
   return api.get<CommerceSettings>('/cms/commerce-settings');
@@ -294,7 +294,7 @@ export function updateCommerceSettings(
   return api.patch<CommerceSettings>('/cms/commerce-settings', payload);
 }
 
-/* ── 9. Marketing badges (A3+) ─────────────────────────────────────────── */
+/* ── 9. Marketing badges ───────────────────────────────────────────────── */
 
 export function fetchBadges(): Promise<Badge[]> {
   return api.get<Badge[]>('/cms/badges');
@@ -322,7 +322,7 @@ export function assignItemBadges(
   });
 }
 
-/* ── 10. Quick actions (A3+ step 4) ────────────────────────────────────── */
+/* ── 10. Quick actions ─────────────────────────────────────────────────── */
 
 export function fetchQuickActions(): Promise<QuickActions> {
   return api.get<QuickActions>('/cms/quick-actions');

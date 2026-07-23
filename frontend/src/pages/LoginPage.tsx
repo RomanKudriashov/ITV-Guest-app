@@ -22,7 +22,7 @@ import { revealSx } from '@/kit/motion';
 import { useAppTheme } from '@/theme';
 import { pickLogo } from '@/theme';
 
-/* ── vector glyphs (R1 line style, currentColor — no emoji, no raster) ─────── */
+/* ── vector glyphs (line style, currentColor — no emoji, no raster) ───────── */
 
 function Glyph({ children }: { children: ReactNode }) {
   return (

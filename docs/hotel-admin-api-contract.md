@@ -1,4 +1,4 @@
-# Контракт админки отеля (прогон 8): номера/QR, локации, отделы, персонал
+# Контракт админки отеля: номера/QR, локации, отделы, персонал
 
 Фиксируется **до** реализации. Префикс: `/api/v1/cms`. Аутентификация и тенант —
 как у остальной CMS. Всё в скоупе отеля.
@@ -93,7 +93,7 @@ PUT /api/v1/cms/locations/matrix
   "id": "...", "code": "kitchen", "title": {"ru": "Кухня ресторана"},
   "kind": "kitchen", "schedule_id": "..." | null, "sla_minutes": 20,
   "is_active": true,
-  "staff_count": 1, "channel_count": 1, "has_escalation": true   // связь с прогоном 6
+  "staff_count": 1, "channel_count": 1, "has_escalation": true   // связь с каналами и эскалацией
 }
 ```
 
@@ -105,13 +105,13 @@ PUT /api/v1/cms/locations/matrix
 `kind` — из `ExecutionPoint.Kind` (kitchen/bar/housekeeping/spa/reception/other).
 Удаление отдела с заказами/каналами — `409 department_in_use`. Счётчики
 `staff_count`/`channel_count`/`has_escalation` — чтобы из списка отделов было
-видно связь с каналами и эскалацией (прогон 6).
+видно связь с каналами и эскалацией.
 
 ---
 
 ## 4. Персонал
 
-Закрывает пробел прогона 6: `GET /api/v1/cms/staff` даёт список сотрудников для
+`GET /api/v1/cms/staff` даёт список сотрудников для
 выбора в персональном канале уведомлений.
 
 Объект:

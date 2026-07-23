@@ -79,10 +79,10 @@ export function fetchNotificationLog(
   });
 }
 
-/* ── Staff (прогон 8) ──────────────────────────────────────────────────── */
+/* ── Staff ─────────────────────────────────────────────────────────────── */
 
 /**
- * A personal channel needs a `user_id`. Since прогон 8 the staff list has a real
+ * A personal channel needs a `user_id`. The staff list has a real
  * endpoint (`GET /api/cms/staff`, `docs/hotel-admin-api-contract.md` §4), so the
  * personal-channel picker is populated from it. The call stays best-effort — a
  * failure means "the picker has nothing to offer", never a broken screen.

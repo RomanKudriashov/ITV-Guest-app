@@ -1,5 +1,5 @@
 /**
- * Types mirroring `docs/notifications-api-contract.md` (прогон 6).
+ * Types mirroring `docs/notifications-api-contract.md`.
  *
  * Kept apart from `api/types.ts` because they mirror a different contract
  * document — the same split the tracker makes.

@@ -1,8 +1,8 @@
 """
 Админка отеля: номера/QR, локации, матрица, отделы, персонал.
 
-Ключевые для прогона проверки: QR кодирует рабочий deep-link /r/<номер>, и
-GET /api/cms/staff отдаёт список сотрудников (пробел прогона 6 закрыт).
+Ключевые проверки: QR кодирует рабочий deep-link /r/<номер>, и
+GET /api/cms/staff отдаёт список сотрудников.
 """
 
 from __future__ import annotations
@@ -193,7 +193,7 @@ def test_matrix_update_toggles_a_link(cms, crystal):
 def test_departments_show_links_to_run6(cms):
     departments = cms.get("/api/cms/departments").json()
     kitchen = next(dept for dept in departments if dept["code"] == "kitchen")
-    # Из списка отделов видно связь с каналами и эскалацией (прогон 6).
+    # Из списка отделов видно связь с каналами и эскалацией.
     assert kitchen["staff_count"] >= 1
     assert kitchen["channel_count"] >= 1
     assert kitchen["has_escalation"] is True
@@ -242,11 +242,11 @@ def test_department_with_orders_cannot_be_deleted(cms, crystal, client):
     assert response.json()["code"] == "department_in_use"
 
 
-# --- Персонал (пробел прогона 6) -------------------------------------------
+# --- Персонал ---------------------------------------------------------------
 
 
 def test_staff_list_is_available(cms):
-    """Эндпоинт, которого не хватало прогону 6 для выбора сотрудника в канале."""
+    """Эндпоинт для выбора сотрудника в персональном канале."""
     staff = cms.get("/api/cms/staff").json()
     emails = {member["email"] for member in staff}
     assert "chef@crystal.local" in emails
@@ -340,7 +340,7 @@ def test_replace_assignments(cms, crystal):
     assert assignments[0]["level"] == "manager"
 
 
-# --- Персональный канал теперь настраивается (пробел прогона 6) -------------
+# --- Персональный канал теперь настраивается --------------------------------
 
 
 def test_personal_channel_can_target_a_listed_staffer(cms, crystal):

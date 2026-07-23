@@ -30,7 +30,7 @@ async function openMenu(page: Page): Promise<void> {
 
 test.describe('Гостевая витрина', () => {
   test.beforeEach(async ({ page }) => {
-    // Каждый тест — новый гость: чистим сессию и корзину прошлого прогона.
+    // Каждый тест — новый гость: чистим сессию и корзину от прошлого теста.
     await page.goto('/')
     await page.evaluate(() => {
       window.localStorage.clear()

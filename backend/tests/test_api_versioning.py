@@ -127,7 +127,7 @@ def test_deeplink_valid_and_session_fallback_for_unknown_room(client, crystal):
     # Ссылка строится даже для несуществующего номера — QR не «протухает».
     assert crystal.room_deeplink("999").endswith("/r/999")
 
-    # Вход по несуществующему номеру — аккуратный фолбэк на ручной ввод (прогон 3).
+    # Вход по несуществующему номеру — аккуратный фолбэк на ручной ввод.
     resp = client.post(
         "/api/v1/guest/session", data={"room_number": "999"},
         content_type="application/json", HTTP_HOST=host_for(crystal),

@@ -110,7 +110,7 @@ class CategoryPatch(Schema):
     schedule_id: str | None = None
     sort_order: int | None = None
     is_active: bool | None = None
-    # Коммерция (A3+): облагается ли сбором; минимальная сумма по категории.
+    # Коммерция: облагается ли сбором; минимальная сумма по категории.
     service_fee_applies: bool | None = None
     min_order_minor: int | None = None
 
@@ -172,7 +172,7 @@ class ItemPatch(Schema):
     sort_order: int | None = None
     is_active: bool | None = None
     in_stock: bool | None = None
-    # Время подачи, мин (A3+); null очищает — чип на витрине пропадает.
+    # Время подачи, мин; null очищает — чип на витрине пропадает.
     prep_minutes: int | None = None
 
 

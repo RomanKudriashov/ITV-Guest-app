@@ -4,7 +4,7 @@ import { alpha, type Theme } from '@mui/material/styles';
 import { resolveBackground, useAppTheme } from '@/theme';
 
 /**
- * Полотно входа — эталон `ITV-Guest-app-login-AC.html`, вариант A.
+ * Полотно входа — по дизайн-эталону `docs/design/login-ac.html`.
  *
  * Кадр отеля во всю ширину с медленным приближением (ken-burns, scale 1→1.09 за
  * 28s) и читаемым скримом поверх: на десктопе — тёмный слева→направо + сверху/

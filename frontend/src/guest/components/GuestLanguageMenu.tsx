@@ -12,7 +12,7 @@ import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/
 
 /**
  * Compact language picker for the guest header (the CMS one is a select).
- * Redesign R2b block 8: each language carries its vector flag; the trigger shows
+ * Each language carries its vector flag; the trigger shows
  * the active language's flag. No emoji flags.
  */
 export function GuestLanguageMenu() {

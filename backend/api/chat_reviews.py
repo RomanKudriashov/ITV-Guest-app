@@ -79,7 +79,7 @@ def guest_home(request: HttpRequest):
         "room": request.guest_session.room.number if request.guest_session.room_id else None,
         "sections": sections,
         "unread_chat": unread,
-        # Быстрые действия (A3+ шаг 4): набор отеля или дефолт по наличию разделов.
+        # Быстрые действия: набор отеля или дефолт по наличию разделов.
         "quick_actions": quick_actions_for(hotel, language),
     }
 
