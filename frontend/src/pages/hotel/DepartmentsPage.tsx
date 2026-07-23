@@ -50,6 +50,12 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
 import { SchedulePicker } from '@/components/SchedulePicker';
 import { TranslatedField } from '@/components/TranslatedField';
+import {
+  ImageUploader,
+  mediaToEditable,
+  persistableImageIds,
+  type EditableImage,
+} from '@/components/ImageUploader';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
@@ -304,6 +310,9 @@ function DepartmentDialog({
         }
       : EMPTY_FORM,
   );
+  const [image, setImage] = useState<EditableImage[]>(
+    department?.image ? [mediaToEditable(department.image)] : [],
+  );
 
   const titleMissing = !form.title[languages.defaultCode]?.trim();
 
@@ -315,6 +324,7 @@ function DepartmentDialog({
         schedule_id: form.schedule_id,
         sla_minutes: form.sla_minutes,
         is_active: form.is_active,
+        image_id: persistableImageIds(image)[0] ?? null,
       };
       return department ? updateDepartment(department.id, payload) : createDepartment(payload);
     },
@@ -350,6 +360,19 @@ function DepartmentDialog({
             }
             testId="department-title"
           />
+
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {t('hotel.departments.photo')}
+            </Typography>
+            <ImageUploader
+              value={image}
+              onChange={setImage}
+              kind="category"
+              multiple={false}
+              testId="department-image-uploader"
+            />
+          </Box>
 
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
             <TextField

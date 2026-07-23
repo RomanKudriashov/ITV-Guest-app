@@ -171,6 +171,8 @@ export interface MenuCategory {
 export interface GuestCatalog {
   language: string;
   server_time?: string;
+  /** Venue photo for the catalog hero; null → fall back to the brand background. */
+  hero_image?: string | null;
   categories: MenuCategory[];
 }
 

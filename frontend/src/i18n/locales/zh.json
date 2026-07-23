@@ -978,7 +978,8 @@
       "newTitle": "新建部门",
       "editTitle": "编辑部门",
       "deleteTitle": "删除部门？",
-      "deleteBody": "将删除“{{name}}”。"
+      "deleteBody": "将删除“{{name}}”。",
+      "photo": "场所照片"
     },
     "staff": {
       "title": "人员",

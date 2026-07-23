@@ -15,6 +15,8 @@ from apps.catalog.models import Category, ServiceLocation
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.core.fields import translate
+from apps.media.models import MediaAsset
+from apps.media.services import serialize_asset
 
 from .models import ExecutionPoint, Hotel, Location, Room, Schedule
 
@@ -350,7 +352,17 @@ def serialize_department(point: ExecutionPoint, *, counts: dict | None = None) -
         "staff_count": counts.get("staff", 0),
         "channel_count": counts.get("channels", 0),
         "has_escalation": counts.get("escalation", False),
+        "image": serialize_asset(point.image),
     }
+
+
+def _resolve_asset(asset_id) -> MediaAsset | None:
+    if not asset_id:
+        return None
+    asset = MediaAsset.objects.filter(pk=asset_id).first()
+    if asset is None:
+        raise ValidationError("Изображение не найдено", field="image_id")
+    return asset
 
 
 def list_departments() -> list[dict]:
@@ -413,6 +425,7 @@ def create_department(data: dict) -> ExecutionPoint:
         schedule=_resolve_schedule(data.get("schedule_id")),
         sla_minutes=data.get("sla_minutes", 20),
         is_active=data.get("is_active", True),
+        image=_resolve_asset(data.get("image_id")),
     )
 
 
@@ -432,6 +445,8 @@ def update_department(point_id, data: dict) -> ExecutionPoint:
         point.sla_minutes = data["sla_minutes"]
     if "is_active" in data:
         point.is_active = data["is_active"]
+    if "image_id" in data:
+        point.image = _resolve_asset(data["image_id"])
     point.save()
     return point
 

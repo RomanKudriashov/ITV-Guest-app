@@ -107,6 +107,11 @@ PUT /api/v1/cms/locations/matrix
 `staff_count`/`channel_count`/`has_escalation` — чтобы из списка отделов было
 видно связь с каналами и эскалацией.
 
+**Фото точки.** У отдела есть `image_id` (id ассета из медиапайплайна) на вход
+PATCH/POST и `image` (сериализованный ассет с `url`/`status`) на выходе. Фото
+грузится через `POST /api/v1/cms/media` (kind `category`), затем id передаётся в
+`image_id`. Фото витрина использует как hero каталога (см. guest-контракт).
+
 ---
 
 ## 4. Персонал

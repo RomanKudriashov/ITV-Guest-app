@@ -59,6 +59,7 @@ class RoomNotFoundOut(Schema):
 class MenuOut(Schema):
     language: str | None
     server_time: str | None
+    hero_image: str | None = None
     categories: list[dict[str, Any]]
 
 

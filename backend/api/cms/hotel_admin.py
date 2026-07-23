@@ -98,6 +98,7 @@ class DepartmentIn(Schema):
     schedule_id: str | None = None
     sla_minutes: int = 20
     is_active: bool = True
+    image_id: str | None = None
 
 
 class DepartmentPatch(Schema):
@@ -106,6 +107,7 @@ class DepartmentPatch(Schema):
     schedule_id: str | None = None
     sla_minutes: int | None = None
     is_active: bool | None = None
+    image_id: str | None = None
 
 
 class AssignmentIn(Schema):

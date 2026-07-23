@@ -978,7 +978,8 @@
       "newTitle": "قسم جديد",
       "editTitle": "تعديل القسم",
       "deleteTitle": "حذف القسم؟",
-      "deleteBody": "سيُحذف «{{name}}»."
+      "deleteBody": "سيُحذف «{{name}}».",
+      "photo": "صورة المكان"
     },
     "staff": {
       "title": "الموظفون",

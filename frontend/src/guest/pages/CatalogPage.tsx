@@ -175,6 +175,7 @@ export function CatalogPage({ type }: CatalogPageProps) {
       <CatalogHero
         hotelName={hotelName}
         sectionTitle={t(`${ns}.heroTitle`, { defaultValue: hotelName })}
+        heroImage={data?.hero_image ?? null}
         tokens={tokens}
         mode={mode}
       />
@@ -308,15 +309,29 @@ export function CatalogPage({ type }: CatalogPageProps) {
 function CatalogHero({
   hotelName,
   sectionTitle,
+  heroImage,
   tokens,
   mode,
 }: {
   hotelName: string;
   sectionTitle: string;
+  heroImage: string | null;
   tokens: ReturnType<typeof useAppTheme>['tokens'];
   mode: ReturnType<typeof useAppTheme>['mode'];
 }) {
-  const bg = resolveBackground(tokens, mode);
+  // Cascade: point photo (hero_image) → brand background photo/gradient → color.
+  const brand = resolveBackground(tokens, mode);
+  const bg = heroImage
+    ? {
+        css: {
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        },
+        dim: 0,
+      }
+    : brand;
   const showSub = Boolean(hotelName) && sectionTitle !== hotelName;
   return (
     <Box aria-hidden={false} sx={{ position: 'relative', height: { xs: 218, md: 272 }, overflow: 'hidden' }}>

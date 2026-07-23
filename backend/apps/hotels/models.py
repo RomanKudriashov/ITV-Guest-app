@@ -219,6 +219,10 @@ class ExecutionPoint(TenantModel):
     sla_minutes = models.PositiveSmallIntegerField(default=20)
     # Минимальная сумма заказа на точку; null = нет порога.
     min_order_minor = models.IntegerField(null=True, blank=True)
+    # Фото заведения (ресторан/бар/спа). Витрина берёт его как hero каталога.
+    image = models.ForeignKey(
+        "media.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
 
     class Meta:
         db_table = "hotels_execution_point"

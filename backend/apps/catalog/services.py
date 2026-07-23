@@ -90,8 +90,27 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
     return {
         "language": language,
         "server_time": (hotel.local_now().isoformat() if hotel else None),
+        "hero_image": _catalog_hero_image(),
         "categories": payload_categories,
     }
+
+
+def _catalog_hero_image() -> str | None:
+    """
+    Фото заведения для hero каталога: первая активная точка исполнения с готовым
+    фото. null → витрина берёт фон бренда/градиент (каскад завершает фронт).
+    """
+    from apps.hotels.models import ExecutionPoint
+
+    point = (
+        ExecutionPoint.objects.filter(is_active=True, image__isnull=False)
+        .select_related("image")
+        .order_by("code")
+        .first()
+    )
+    if point is None or point.image is None:
+        return None
+    return point.image.url("card") or None
 
 
 def _current_hotel_id():

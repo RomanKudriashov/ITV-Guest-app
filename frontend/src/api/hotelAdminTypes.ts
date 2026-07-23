@@ -140,6 +140,8 @@ export interface Department {
   staff_count: number;
   channel_count: number;
   has_escalation: boolean;
+  /** Venue photo — used as the catalog hero on the storefront. */
+  image: import('./types').MediaAsset | null;
 }
 
 export interface DepartmentPayload {
@@ -149,6 +151,7 @@ export interface DepartmentPayload {
   schedule_id?: string | null;
   sla_minutes?: number;
   is_active?: boolean;
+  image_id?: string | null;
 }
 
 /* ── 4. Staff ──────────────────────────────────────────────────────────── */

@@ -978,7 +978,8 @@
       "newTitle": "New department",
       "editTitle": "Edit department",
       "deleteTitle": "Delete department?",
-      "deleteBody": "Department “{{name}}” will be deleted."
+      "deleteBody": "Department “{{name}}” will be deleted.",
+      "photo": "Venue photo"
     },
     "staff": {
       "title": "Staff",
