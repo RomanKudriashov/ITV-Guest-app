@@ -27,7 +27,7 @@ import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
 
-const HEADER_OFFSET = 56;
+const HEADER_OFFSET = 0;
 const TABS_HEIGHT = 48;
 
 export interface CatalogPageProps {
@@ -180,7 +180,7 @@ export function CatalogPage({ type }: CatalogPageProps) {
           scrollButtons={false}
           allowScrollButtonsMobile
           aria-label={t(`${ns}.categories`)}
-          sx={{ minHeight: TABS_HEIGHT }}
+          sx={{ minHeight: TABS_HEIGHT, pr: '150px' }}
         >
           {categories.map((category) => (
             <Tab
