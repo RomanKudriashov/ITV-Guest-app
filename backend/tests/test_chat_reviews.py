@@ -73,22 +73,29 @@ def staff_call(client, hotel, login="concierge"):
 
 def test_home_is_built_from_data(guest):
     body = guest.get("/api/guest/home").json()
-    sections = {s["type"]: s for s in body["sections"]}
-    # Все четыре типа наполнены сидом — все секции присутствуют.
-    assert set(sections) == {"product", "service_request", "slot", "info"}
-    assert sections["product"]["route"] == "/menu"
-    assert sections["slot"]["route"] == "/slots"
+    tiles = body["tiles"]
+    venue_keys = {t["key"] for t in tiles if t["type"] == "venue"}
+    # Заведения-точки с наполненным каталогом стали плитками: ресторан (kitchen),
+    # спа (slot), консьерж/хозслужба (услуги).
+    assert "kitchen" in venue_keys
+    assert "spa" in venue_keys
+    # Инфо отеля наполнено сидом — плитка инфо присутствует.
+    assert any(t["type"] == "info" for t in tiles)
+    for tile in tiles:
+        assert tile["type"] in {"venue", "service-category", "info", "room-control"}
+    for venue in (t for t in tiles if t["type"] == "venue"):
+        assert venue["route"] == f"/venue/{venue['key']}"
 
 
-def test_home_hides_empty_sections(guest, crystal):
-    """Секция появляется только при наличии активных категорий этого типа."""
+def test_home_hides_empty_info(guest, crystal):
+    """Инфо-плитка появляется только при наличии активных инфо-категорий."""
     with tenant_context(crystal):
         from apps.catalog.models import Category
 
         Category.objects.filter(type="info").update(is_active=False)
 
     body = guest.get("/api/guest/home").json()
-    assert "info" not in {s["type"] for s in body["sections"]}
+    assert "info" not in {t["type"] for t in body["tiles"]}
 
 
 # --- Чат -------------------------------------------------------------------

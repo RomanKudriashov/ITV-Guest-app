@@ -61,6 +61,11 @@ class Hotel(BaseModel):
     # Округление итога к кратному (100 = до целой валютной единицы). 0/1 = нет.
     price_round_to_minor = models.PositiveIntegerField(default=0)
 
+    # Витрина главной: порог группировки заведений/услуг в bento. Заведений
+    # одного рода ≤ порога — отдельные плитки со своими обложками; больше —
+    # одна плитка-категория с превью обложек внутри.
+    showcase_group_threshold = models.PositiveSmallIntegerField(default=3)
+
     class Meta:
         db_table = "hotels_hotel"
         ordering = ["name"]
@@ -418,3 +423,33 @@ class ScheduleInterval(TenantModel):
         if weekday == self.weekday and moment >= self.start_time:
             return True
         return weekday == (self.weekday + 1) % 7 and moment < self.end_time
+
+
+class ShowcaseTile(TenantModel):
+    """
+    Настройки плитки главной-витрины: размер, порядок, показ. Наложение на
+    ВЫЧИСЛЯЕМЫЙ набор плиток — сами плитки строятся из данных отеля (заведения,
+    категории услуг, инфо), а эта таблица лишь переопределяет их вид. Ключ
+    стабилен: код точки исполнения, код группы («restaurants»/«services») или
+    служебный («info», «room-control»). Строки нет — плитка берёт дефолт.
+    """
+
+    class Size(models.TextChoices):
+        S = "s", "S"
+        M = "m", "M"
+        L = "l", "L"
+
+    key = models.SlugField(max_length=80)
+    size = models.CharField(max_length=1, choices=Size.choices, default=Size.M)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "hotels_showcase_tile"
+        ordering = ["sort_order", "key"]
+        constraints = [
+            models.UniqueConstraint(fields=["hotel", "key"], name="uniq_showcase_tile_per_hotel")
+        ]
+
+    def __str__(self) -> str:
+        return self.key

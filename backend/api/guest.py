@@ -147,12 +147,13 @@ def read_session(request: HttpRequest):
 # --- Витрина ---------------------------------------------------------------
 
 
-def _catalog(request: HttpRequest, offering_type: str, include_unavailable: bool):
+def _catalog(request: HttpRequest, offering_type: str, include_unavailable: bool, point_code: str | None = None):
     return build_menu(
         MenuOptions(
             language=current_language(),
             include_unavailable=include_unavailable,
             offering_type=offering_type,
+            point_code=point_code,
         ),
         hotel=request.hotel,
     )
@@ -168,13 +169,18 @@ def get_catalog(
     request: HttpRequest,
     type: str = OfferingType.PRODUCT,
     include_unavailable: bool = True,
+    point: str | None = None,
 ):
     """
     Один эндпоинт на все типы предложений — различается только тело позиции.
     Заводить «/services» рядом с «/menu» значило бы удваивать всё, что
     появится дальше: фильтры, локализацию, расписания.
+
+    `point` сужает каталог до одного заведения (кода точки исполнения) — это
+    третий уровень витрины при нескольких ресторанах. Без параметра — весь
+    каталог типа, как раньше.
     """
-    return _catalog(request, type, include_unavailable)
+    return _catalog(request, type, include_unavailable, point_code=point)
 
 
 @router.get(

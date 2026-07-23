@@ -4,32 +4,79 @@
 `/api/v1/guest`, `/api/v1/tracker`, `/api/v1/cms`. WS: `/ws/v1/guest/chat/`,
 `/ws/v1/staff/chat/{thread_id}/`.
 
-## 1. Главная под все типы
+## 1. Главная — bento-витрина сервисов
 
-`GET /api/v1/guest/home` — секции отеля, собранные **из данных** (какие типы
-реально наполнены), а не захардкоженные.
+`GET /api/v1/guest/home` — главная это витрина СЕРВИСОВ, а не блюд. Плитки
+собираются **из данных** отеля: заведения (точки исполнения с ≥1 активной
+категорией), группы-категории при их множестве, инфо, и заглушка управления
+номером за флагом.
 
 ```jsonc
 {
-  "hotel": {"name": "...", "theme": {...}},
+  "hotel": {"name": "...", "subdomain": "crystal"},
   "room": "305",
-  "sections": [
-    {"type": "product",         "code": "product", "title": "Ресторан",
-     "category_count": 3, "route": "/menu"},
-    {"type": "service_request", "code": "service", "title": "Услуги",
-     "category_count": 2, "route": "/services"},
-    {"type": "slot",            "code": "slot",    "title": "Бронь",
-     "category_count": 1, "route": "/slots"},
-    {"type": "info",            "code": "info",    "title": "Информация",
-     "category_count": 1, "route": "/info"}
+  "tiles": [
+    {
+      "key": "panorama",           // стабильный ключ (код точки/группы/служебный)
+      "type": "venue",             // venue | service-category | info | room-control
+      "title": "Панорама",         // локализовано; для venue — название точки
+      "subtitle": "Ресторан",      // подпись рода (venue) | null
+      "kind": "kitchen",           // род точки (venue) | null
+      "venue_count": null,         // число заведений (только service-category)
+      "status": {"state": "open", "until": "23:00", "opens_at": null},
+      "image": "https://…/card.webp",   // обложка (каскад) | null → фронт даёт градиент
+      "cover_previews": [],        // до 4 обложек внутри свёрнутой плитки-категории
+      "route": "/venue/panorama",  // цель перехода | null (disabled)
+      "size": "l",                 // s | m | l (наложение CMS)
+      "order": 0,                  // порядок показа
+      "enabled": true              // false → плитка-заглушка (room-control)
+    },
+    {"key": "restaurants", "type": "service-category", "title": "Рестораны",
+     "venue_count": 5, "cover_previews": ["…","…"], "route": "/category/restaurants",
+     "size": "l", "order": 0, "enabled": true},
+    {"key": "info", "type": "info", "title": "Об отеле", "route": "/info",
+     "size": "s", "order": 4, "enabled": true}
   ],
-  "unread_chat": 2                         // непрочитанных сообщений от персонала
+  "unread_chat": 2,                // непрочитанных сообщений от персонала
+  "quick_actions": [ … ]           // сохранены для CMS; новая главная навигирует плитками
 }
 ```
 
-Секция появляется, только если у отеля есть активные категории этого типа.
-Порядок — по существующему `sort_order` категорий. Тип секции клиент знает из
-реестра поведений, не из строки.
+Правила:
+- **Заведение = точка исполнения** (ExecutionPoint, в CMS «отдел»). Плитка venue
+  — только у точки с ≥1 активной замаршрутизированной категорией.
+- **Группировка по порогу** `hotel.showcase_group_threshold` (умолч. 3): точки
+  одного рода (рестораны = kitchen+bar, спа, услуги) ≤ порога — отдельные плитки;
+  больше — одна `service-category` с `cover_previews`.
+- **Обложка** — каскад: фото точки → фото первой её категории → `null` (фронт
+  завершает фоном бренда/градиентом).
+- **status** считается сервером из расписания точки в TZ отеля; строки пилюли
+  («открыто», «до 23:00», «откроется в 07:00», «закрыто») локализует фронт.
+- **size/order/показ** переопределяет `ShowcaseTile` (CMS) по `key`; выключенная
+  плитка исчезает.
+
+### Уровень 2 — список заведений группы
+
+`GET /api/v1/guest/venues?group=restaurants` — карточки заведений одной группы.
+
+```jsonc
+{
+  "group": "restaurants",
+  "title": "Рестораны",
+  "venues": [
+    {"code": "panorama", "title": "Панорама", "subtitle": "Ресторан",
+     "kind": "kitchen", "image": "…", "status": {"state":"open","until":"23:00"},
+     "route": "/venue/panorama"}
+  ]
+}
+```
+
+### Уровень 3 — каталог заведения
+
+`GET /api/v1/guest/catalog?type=product&point=panorama` — тот же эталонный
+каталог (§2 guest-api), но суженный до категорий, замаршрутизированных на точку
+`panorama`. Без `point` — весь каталог типа, как раньше. `hero_image` при скоупе
+— фото ИМЕННО этой точки.
 
 ---
 

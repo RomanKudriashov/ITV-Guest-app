@@ -1,0 +1,189 @@
+"""
+Витрина главной: bento-плитки сервисов (заведения/услуги/инфо), группировка по
+порогу, наложение настроек CMS, скоуп по тенанту, и скоуп каталога по заведению.
+Контракт — docs/guest-surface-api-contract.md.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from apps.catalog.models import Category, Route
+from apps.core.context import tenant_context
+from apps.hotels.models import ExecutionPoint, ShowcaseTile
+
+from .conftest import host_for
+
+pytestmark = pytest.mark.django_db
+
+
+def _home(client, hotel, token):
+    return client.get(
+        "/api/v1/guest/home", HTTP_HOST=host_for(hotel), HTTP_AUTHORIZATION=f"Bearer {token}"
+    ).json()
+
+
+def _add_restaurant(hotel, code: str):
+    """Ещё одно заведение-ресторан: точка kitchen + активная категория на неё."""
+    point = ExecutionPoint.objects.create(
+        hotel=hotel, code=code, kind=ExecutionPoint.Kind.KITCHEN, title={"ru": code, "en": code}
+    )
+    category = Category.objects.create(
+        hotel=hotel, code=f"{code}-menu", type="product", title={"ru": code, "en": code}, is_active=True
+    )
+    Route.objects.create(hotel=hotel, category=category, execution_point=point)
+    return point
+
+
+# --- Дефолтная раскладка ---------------------------------------------------
+
+
+def test_showcase_default_has_venue_service_info_tiles(client, crystal, guest_token):
+    home = _home(client, crystal, guest_token)
+    tiles = home["tiles"]
+    by_type: dict[str, list] = {}
+    for tile in tiles:
+        by_type.setdefault(tile["type"], []).append(tile)
+
+    # Кухня ресторана — venue; спа — venue; консьерж/хозслужба — venue; + инфо.
+    venue_keys = {t["key"] for t in by_type.get("venue", [])}
+    assert "kitchen" in venue_keys
+    assert "spa" in venue_keys
+    assert any(t["type"] == "info" for t in tiles)
+
+    for tile in tiles:
+        assert tile["size"] in ("s", "m", "l")
+        assert "order" in tile and tile["enabled"] in (True, False)
+    # Каждая venue-плитка ведёт в своё заведение.
+    for tile in by_type.get("venue", []):
+        assert tile["route"] == f"/venue/{tile['key']}"
+
+
+# --- Группировка по порогу -------------------------------------------------
+
+
+def test_showcase_venues_separate_at_or_below_threshold(client, crystal, guest_token):
+    # crystal по умолчанию: 1 ресторан (kitchen). Добавим ещё 2 → всего 3 = порог.
+    with tenant_context(crystal):
+        _add_restaurant(crystal, "panorama")
+        _add_restaurant(crystal, "asia")
+    home = _home(client, crystal, guest_token)
+    restaurant_venues = [t for t in home["tiles"] if t["type"] == "venue" and t["kind"] == "kitchen"]
+    assert len(restaurant_venues) == 3
+    # Свёрнутой плитки-категории ресторанов нет.
+    assert not any(t["type"] == "service-category" and t["key"] == "restaurants" for t in home["tiles"])
+
+
+def test_showcase_groups_restaurants_over_threshold(client, crystal, guest_token):
+    # 1 (kitchen) + 4 = 5 ресторанов > порога 3 → одна плитка-категория.
+    with tenant_context(crystal):
+        for code in ("panorama", "asia", "grill", "lounge"):
+            _add_restaurant(crystal, code)
+    home = _home(client, crystal, guest_token)
+    grouped = [t for t in home["tiles"] if t["type"] == "service-category" and t["key"] == "restaurants"]
+    assert len(grouped) == 1
+    tile = grouped[0]
+    assert tile["venue_count"] == 5
+    assert tile["route"] == "/category/restaurants"
+    # Отдельных venue-плиток ресторанов больше нет.
+    assert not any(t["type"] == "venue" and t["kind"] == "kitchen" for t in home["tiles"])
+
+
+def test_showcase_threshold_setting_changes_grouping(client, crystal, guest_token):
+    with tenant_context(crystal):
+        _add_restaurant(crystal, "panorama")  # теперь 2 ресторана
+        crystal.showcase_group_threshold = 1
+        crystal.save(update_fields=["showcase_group_threshold"])
+    home = _home(client, crystal, guest_token)
+    # 2 ресторана > порога 1 → свёрнуто.
+    assert any(t["type"] == "service-category" and t["key"] == "restaurants" for t in home["tiles"])
+
+
+# --- Наложение настроек CMS ------------------------------------------------
+
+
+def test_showcase_tile_overlay_size_order_and_disable(client, crystal, guest_token):
+    with tenant_context(crystal):
+        ShowcaseTile.objects.create(hotel=crystal, key="kitchen", size="l", sort_order=99)
+        ShowcaseTile.objects.create(hotel=crystal, key="spa", is_enabled=False)
+    home = _home(client, crystal, guest_token)
+    kitchen = next(t for t in home["tiles"] if t["key"] == "kitchen")
+    assert kitchen["size"] == "l"
+    # Выключенная плитка исчезает.
+    assert not any(t["key"] == "spa" for t in home["tiles"])
+    # order=99 уводит kitchen в конец.
+    assert home["tiles"][-1]["key"] == "kitchen"
+
+
+# --- Скоуп по тенанту ------------------------------------------------------
+
+
+def test_showcase_scoped_to_tenant(client, crystal, aurora, guest_token):
+    with tenant_context(crystal):
+        _add_restaurant(crystal, "crystal-only")
+    home = _home(client, crystal, guest_token)
+    assert any(t["key"] == "crystal-only" for t in home["tiles"])
+
+    aurora_token = client.post(
+        "/api/guest/session",
+        data={"room_number": "101"},
+        content_type="application/json",
+        HTTP_HOST=host_for(aurora),
+    ).json().get("token")
+    if aurora_token:
+        aurora_home = _home(client, aurora, aurora_token)
+        assert not any(t["key"] == "crystal-only" for t in aurora_home["tiles"])
+
+
+# --- Уровень 2: список заведений -------------------------------------------
+
+
+def test_venues_level2_lists_group(client, crystal, guest_token):
+    with tenant_context(crystal):
+        _add_restaurant(crystal, "panorama")
+    resp = client.get(
+        "/api/v1/guest/venues?group=restaurants",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    assert resp["group"] == "restaurants"
+    codes = {v["code"] for v in resp["venues"]}
+    assert "kitchen" in codes and "panorama" in codes
+    for venue in resp["venues"]:
+        assert venue["route"] == f"/venue/{venue['code']}"
+
+
+# --- Скоуп каталога по заведению -------------------------------------------
+
+
+def test_catalog_point_filter_scopes_to_venue(client, crystal, guest_token):
+    with tenant_context(crystal):
+        panorama = _add_restaurant(crystal, "panorama")
+
+    def catalog(query=""):
+        return client.get(
+            f"/api/v1/guest/catalog?type=product{query}",
+            HTTP_HOST=host_for(crystal),
+            HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+        ).json()
+
+    full = catalog()
+    scoped = catalog("&point=panorama")
+    full_codes = {c["code"] for c in full["categories"]}
+    scoped_codes = {c["code"] for c in scoped["categories"]}
+
+    # Каталог panorama — только её категория, это подмножество полного.
+    assert scoped_codes == {"panorama-menu"}
+    assert scoped_codes < full_codes
+    # Каталог кухни не содержит категорию panorama.
+    kitchen = catalog("&point=kitchen")
+    assert "panorama-menu" not in {c["code"] for c in kitchen["categories"]}
+
+
+def test_catalog_unknown_point_is_empty(client, crystal, guest_token):
+    resp = client.get(
+        "/api/v1/guest/catalog?type=product&point=nope",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    assert resp["categories"] == []

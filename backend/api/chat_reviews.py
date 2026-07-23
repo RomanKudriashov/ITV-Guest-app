@@ -11,8 +11,6 @@ from django.http import HttpRequest
 from ninja import Router, Schema
 
 from apps.accounts.auth import GuestAuth, StaffAuth
-from apps.catalog.models import Category
-from apps.catalog.offerings import OfferingType
 from apps.chat import services as chat_svc
 from apps.core.context import current_language
 from apps.core.errors import NotFoundError
@@ -40,48 +38,36 @@ class ReviewIn(Schema):
 
 # --- Главная (гость) -------------------------------------------------------
 
-# type секции → маршрут витрины. Единственное место, где тип связан с UI-путём;
-# сам набор секций строится из данных отеля.
-_SECTION_META = {
-    OfferingType.PRODUCT: ("product", "Ресторан", "/menu"),
-    OfferingType.SERVICE_REQUEST: ("service", "Услуги", "/services"),
-    OfferingType.SLOT: ("slot", "Бронь", "/slots"),
-    OfferingType.INFO: ("info", "Информация", "/info"),
-}
 
-
-@guest_router.get("/home", auth=guest_auth, summary="Главная: секции отеля из данных")
+@guest_router.get("/home", auth=guest_auth, summary="Главная: bento-витрина сервисов отеля")
 def guest_home(request: HttpRequest):
     language = current_language()
     hotel = request.hotel
 
-    counts: dict[str, int] = {}
-    for row in (
-        Category.objects.filter(is_active=True).values("type").order_by()
-    ):
-        counts[row["type"]] = counts.get(row["type"], 0) + 1
-
-    sections = []
-    for offering_type, (code, title, route) in _SECTION_META.items():
-        count = Category.objects.filter(type=offering_type, is_active=True).count()
-        if count:
-            sections.append(
-                {"type": offering_type, "code": code, "title": title, "category_count": count, "route": route}
-            )
+    from apps.catalog.home import quick_actions_for
+    from apps.catalog.showcase import build_showcase
 
     thread = chat_svc.get_or_create_thread(request.guest_session)
     unread = chat_svc.thread_snapshot(thread, side="guest")["unread"]
 
-    from apps.catalog.home import quick_actions_for
-
     return {
         "hotel": {"name": hotel.name, "subdomain": hotel.subdomain},
         "room": request.guest_session.room.number if request.guest_session.room_id else None,
-        "sections": sections,
+        # Главная — витрина СЕРВИСОВ: bento-плитки заведений/услуг/инфо.
+        "tiles": build_showcase(hotel, language=language, moment=hotel.local_now()),
         "unread_chat": unread,
-        # Быстрые действия: набор отеля или дефолт по наличию разделов.
+        # Быстрые действия сохраняются для CMS и старых потребителей; новая
+        # главная навигирует плитками, отдельный ряд действий не рисует.
         "quick_actions": quick_actions_for(hotel, language),
     }
+
+
+@guest_router.get("/venues", auth=guest_auth, summary="Уровень 2: заведения группы")
+def guest_venues(request: HttpRequest, group: str):
+    from apps.catalog.showcase import list_venues
+
+    hotel = request.hotel
+    return list_venues(hotel, group, language=current_language(), moment=hotel.local_now())
 
 
 # --- Чат (гость) -----------------------------------------------------------

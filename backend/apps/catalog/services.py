@@ -32,6 +32,9 @@ class MenuOptions:
     include_unavailable: bool = True
     offering_type: str = OfferingType.PRODUCT
     location_id: Any = None
+    # Скоуп по заведению: код точки исполнения. None — весь каталог типа (как
+    # раньше). Заданный — только категории, замаршрутизированные на эту точку.
+    point_code: str | None = None
 
 
 def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None) -> dict[str, Any]:
@@ -54,6 +57,12 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
         categories = categories.filter(
             service_locations__location_id=options.location_id,
             service_locations__is_enabled=True,
+        ).distinct()
+    if options.point_code:
+        # Скоуп заведения: только категории, замаршрутизированные на его точку.
+        categories = categories.filter(
+            routes__execution_point__code=options.point_code,
+            routes__is_active=True,
         ).distinct()
 
     items_by_category: dict[Any, list[Item]] = {}
@@ -90,24 +99,23 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
     return {
         "language": language,
         "server_time": (hotel.local_now().isoformat() if hotel else None),
-        "hero_image": _catalog_hero_image(),
+        "hero_image": _catalog_hero_image(options.point_code),
         "categories": payload_categories,
     }
 
 
-def _catalog_hero_image() -> str | None:
+def _catalog_hero_image(point_code: str | None = None) -> str | None:
     """
-    Фото заведения для hero каталога: первая активная точка исполнения с готовым
-    фото. null → витрина берёт фон бренда/градиент (каскад завершает фронт).
+    Фото заведения для hero каталога. При скоупе — фото ИМЕННО этой точки; иначе
+    первая активная точка с готовым фото. null → витрина берёт фон бренда/
+    градиент (каскад завершает фронт).
     """
     from apps.hotels.models import ExecutionPoint
 
-    point = (
-        ExecutionPoint.objects.filter(is_active=True, image__isnull=False)
-        .select_related("image")
-        .order_by("code")
-        .first()
-    )
+    points = ExecutionPoint.objects.filter(is_active=True, image__isnull=False).select_related("image")
+    if point_code:
+        points = points.filter(code=point_code)
+    point = points.order_by("code").first()
     if point is None or point.image is None:
         return None
     return point.image.url("card") or None
