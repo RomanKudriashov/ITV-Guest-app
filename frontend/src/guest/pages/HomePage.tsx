@@ -17,7 +17,6 @@ import {
   KitImage,
   MosaicTile,
   PricePill,
-  RoomTag,
   SkeletonCard,
   mediaFallbackSx,
   revealSx,
@@ -170,7 +169,6 @@ export function HomePage() {
                   : t('guest.home.noRoomLine')}
               </Typography>
             </Stack>
-            {room ? <RoomTag label={t('guest.common.roomShort', { room: '' }).trim()} room={room} size="md" /> : null}
           </Stack>
         </Container>
       </Box>

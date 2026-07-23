@@ -173,13 +173,16 @@ export function MosaicTile({
       ]}
     >
       <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={44} />
+      {/* Reference `.mt .vg` — a strong vertical bottom scrim so the label reads
+          on any backdrop, photo or the token fallback. */}
       <Box
         aria-hidden
-        sx={(theme) => ({
+        sx={{
           position: 'absolute',
           inset: 0,
-          background: `linear-gradient(135deg, transparent 40%, ${theme.palette.brand.scrim})`,
-        })}
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.08) 34%, rgba(0,0,0,0.52) 72%, rgba(0,0,0,0.86) 100%)',
+        }}
       />
       <Stack
         direction="row"
@@ -188,7 +191,17 @@ export function MosaicTile({
         sx={{ position: 'absolute', insetInline: 0, bottom: 0, p: 1.5, color: 'common.white' }}
       >
         {icon}
-        <Typography variant="subtitle1" component="span">
+        <Typography
+          component="span"
+          sx={(theme) => ({
+            fontFamily: theme.typography.h1.fontFamily,
+            fontWeight: 800,
+            fontSize: { xs: 16, md: 19 },
+            letterSpacing: '-0.02em',
+            lineHeight: 1.15,
+            textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+          })}
+        >
           {title}
         </Typography>
       </Stack>
