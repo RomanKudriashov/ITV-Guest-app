@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -20,6 +21,7 @@ import {
   DEFAULT_BRAND_TOKENS,
   colorsForMode,
   mergeBrandTokens,
+  resolveDefaultMode,
   type BrandTokens,
   type Direction,
   type PartialBrandTokens,
@@ -59,14 +61,24 @@ function readStoredMode(): ThemeMode | null {
   }
 }
 
-function preferredMode(): ThemeMode {
-  const stored = readStoredMode();
-  if (stored) return stored;
-  const prefersDark =
+function systemPrefersDark(): boolean {
+  return (
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches;
-  return prefersDark ? 'dark' : 'light';
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+}
+
+/**
+ * Initial mode when the guest has NOT explicitly toggled. A saved choice wins;
+ * otherwise the hotel's brand `defaultMode` decides (a dark brand like
+ * midnight_navy opens dark, matching the design reference), falling back to the
+ * system preference via `resolveDefaultMode`.
+ */
+function preferredMode(tokens: BrandTokens): ThemeMode {
+  const stored = readStoredMode();
+  if (stored) return stored;
+  return resolveDefaultMode(tokens, systemPrefersDark());
 }
 
 export interface AppThemeProviderProps {
@@ -83,7 +95,12 @@ export function AppThemeProvider({
   initialMode,
 }: AppThemeProviderProps) {
   const { i18n } = useTranslation();
-  const [mode, setModeState] = useState<ThemeMode>(() => initialMode ?? preferredMode());
+  const [mode, setModeState] = useState<ThemeMode>(
+    () => initialMode ?? preferredMode(mergeBrandTokens(brandTokens, DEFAULT_BRAND_TOKENS)),
+  );
+  // True once the guest toggles the mode by hand — from then on a later brand
+  // load must not override their choice.
+  const userChoseMode = useRef(false);
   const [override, setOverride] = useState<PartialBrandTokens | undefined>(brandTokens);
 
   useEffect(() => {
@@ -97,6 +114,13 @@ export function AppThemeProvider({
     () => mergeBrandTokens(override, DEFAULT_BRAND_TOKENS),
     [override],
   );
+
+  // The hotel brand often arrives after first paint (session fetch). Honor its
+  // defaultMode once it lands, unless the guest already chose or saved a mode.
+  useEffect(() => {
+    if (initialMode || userChoseMode.current || readStoredMode()) return;
+    setModeState(resolveDefaultMode(tokens, systemPrefersDark()));
+  }, [tokens, initialMode]);
 
   const theme = useMemo(
     () => createAppTheme(tokens, mode, direction),
@@ -118,6 +142,7 @@ export function AppThemeProvider({
   }, [tokens, mode]);
 
   const setMode = (next: ThemeMode) => {
+    userChoseMode.current = true;
     setModeState(next);
     try {
       window.localStorage.setItem(MODE_STORAGE_KEY, next);
