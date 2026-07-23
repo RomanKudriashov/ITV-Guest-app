@@ -1,0 +1,133 @@
+# Прод-стенд, отдельный от dev docker-compose.yml.
+# Наружу смотрит ТОЛЬКО nginx (:80). postgres/redis/minio портов не публикуют —
+# доступны лишь во внутренней сети compose. Секреты — в .env.prod НА СЕРВЕРЕ
+# (в репозиторий не коммитится).
+#
+# Запуск:  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+
+name: itv-guest-prod
+
+x-backend-env: &backend-env
+  # Топология сети compose (не секреты) — общая для backend/worker/beat.
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  CHANNELS_REDIS_URL: redis://redis:6379/3
+  MINIO_ENDPOINT: minio:9000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_SUPERUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      APP_DB_USER: ${POSTGRES_USER}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PLATFORM_DB_USER: ${POSTGRES_PLATFORM_USER}
+      PLATFORM_DB_PASSWORD: ${POSTGRES_PLATFORM_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  backend:
+    build: ./backend
+    command: ["api"]
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      <<: *backend-env
+      UVICORN_RELOAD: "0"          # прод: без авто-перезагрузки
+      WEB_CONCURRENCY: "3"
+    healthcheck:
+      # Готов = миграции применены и ASGI отвечает. start_period даёт время на
+      # migrate + минимальный seed на первом старте.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    networks: [internal]
+
+  worker:
+    build: ./backend
+    command: ["worker"]
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      <<: *backend-env
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
+  beat:
+    build: ./backend
+    command: ["beat"]
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      <<: *backend-env
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
+  nginx:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  internal:
+    driver: bridge

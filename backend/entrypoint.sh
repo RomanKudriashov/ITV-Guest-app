@@ -37,14 +37,26 @@ case "$MODE" in
         python manage.py migrate --database=platform --noinput
 
         if [ "${SEED_ON_START:-1}" = "1" ]; then
+            # SEED_ARGS управляет объёмом сида: в проде — минимум (пустая строка →
+            # только базовый демо-отель, чтобы резолвился поддомен); в dev —
+            # полная история для наглядных дашбордов.
             echo "[entrypoint] seed_demo_hotel…"
-            python manage.py seed_demo_hotel --with-guest-history --with-analytics-history || echo "[entrypoint] сид пропущен (уже есть?)"
+            # Одинарный дефис: подставляем дефолт только если SEED_ARGS НЕ задана.
+            # В проде SEED_ARGS="" (задана, но пустая) → минимальный сид.
+            python manage.py seed_demo_hotel ${SEED_ARGS---with-guest-history --with-analytics-history} \
+                || echo "[entrypoint] сид пропущен (уже есть?)"
         fi
 
         echo "[entrypoint] uvicorn (ASGI: HTTP + WebSocket)…"
-        exec uvicorn config.asgi:application \
-            --host 0.0.0.0 --port 8000 \
-            --reload --reload-dir /app
+        if [ "${UVICORN_RELOAD:-1}" = "1" ]; then
+            # dev: авто-перезагрузка на правках, один процесс.
+            exec uvicorn config.asgi:application --host 0.0.0.0 --port 8000 \
+                --reload --reload-dir /app
+        else
+            # prod: без reload, воркеры по числу ядер (WEB_CONCURRENCY).
+            exec uvicorn config.asgi:application --host 0.0.0.0 --port 8000 \
+                --workers "${WEB_CONCURRENCY:-3}"
+        fi
         ;;
     worker)
         exec celery -A config worker -l info

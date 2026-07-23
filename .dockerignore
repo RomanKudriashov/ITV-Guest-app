@@ -1,0 +1,17 @@
+# Контекст сборки nginx-образа — корень репозитория. Держим его лёгким.
+.git
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+frontend/dist
+e2e
+playwright-report
+test-results
+media_local
+staticfiles
+*.md
+.env
+.env.*
+.DS_Store
+**/.DS_Store

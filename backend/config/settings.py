@@ -39,6 +39,18 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "*")
 
+# Единый домен приложения. Одна переменная APP_DOMAIN задаёт и разрешённые
+# хосты (базовый + все тенант-поддомены), и доверенные CSRF-источники. Замена
+# sslip-заглушки на реальный домен потом — правка одного APP_DOMAIN.
+APP_DOMAIN = os.getenv("APP_DOMAIN", "").strip().lstrip(".")
+if APP_DOMAIN:
+    # Ведущая точка — wildcard поддоменов в Django: покрывает и сам домен, и
+    # любой <hotel>.APP_DOMAIN.
+    ALLOWED_HOSTS = env_list(
+        "DJANGO_ALLOWED_HOSTS", f".{APP_DOMAIN},{APP_DOMAIN},localhost,127.0.0.1"
+    )
+    CSRF_TRUSTED_ORIGINS = [f"https://*.{APP_DOMAIN}", f"http://*.{APP_DOMAIN}"]
+
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
@@ -129,7 +141,8 @@ DATABASE_ROUTERS = ["apps.core.routers.PlatformAliasRouter"]
 
 # Базовый домен, от которого отрезается поддомен отеля:
 #   crystal.guest.localhost -> subdomain "crystal"
-GUEST_APP_BASE_DOMAIN = os.getenv("GUEST_APP_BASE_DOMAIN", "guest.localhost")
+# По умолчанию берётся из единого APP_DOMAIN (если задан), иначе — dev-значение.
+GUEST_APP_BASE_DOMAIN = os.getenv("GUEST_APP_BASE_DOMAIN") or APP_DOMAIN or "guest.localhost"
 
 # Поддомены платформенного уровня — тенантом не считаются.
 GUEST_APP_RESERVED_SUBDOMAINS = set(

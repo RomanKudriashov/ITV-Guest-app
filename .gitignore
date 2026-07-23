@@ -1,4 +1,6 @@
 .env
+.env.prod
+!.env.prod.example
 *.pyc
 __pycache__/
 .pytest_cache/
