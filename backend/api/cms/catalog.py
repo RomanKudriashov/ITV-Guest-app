@@ -322,6 +322,64 @@ def cms_assign_item_badges(request: HttpRequest, item_id: str, payload: ItemBadg
     return {"badges": svc.assign_item_badges(item_id, payload.badge_ids)}
 
 
+# --- Справочники аллергенов и диетических маркеров ---------------------------
+
+
+class DictEntryIn(Schema):
+    title: dict = {}
+    code: str | None = None
+    is_active: bool = True
+    sort_order: int = 100
+
+
+class DictEntryPatch(Schema):
+    title: dict | None = None
+    is_active: bool | None = None
+    sort_order: int | None = None
+
+
+@router.get("/allergens", summary="Справочник аллергенов отеля")
+def cms_list_allergens(request: HttpRequest):
+    return svc.list_allergens()
+
+
+@router.post("/allergens", response={201: dict}, summary="Добавить свой аллерген")
+def cms_create_allergen(request: HttpRequest, payload: DictEntryIn):
+    return 201, svc._serialize_dict_entry(svc.create_allergen(payload.dict()))
+
+
+@router.patch("/allergens/{entry_id}", summary="Изменить аллерген (вкл/выкл, порядок)")
+def cms_update_allergen(request: HttpRequest, entry_id: str, payload: DictEntryPatch):
+    return svc._serialize_dict_entry(svc.update_allergen(entry_id, payload.dict(exclude_unset=True)))
+
+
+@router.delete("/allergens/{entry_id}", response=OkOut, summary="Удалить свой аллерген (системный нельзя)")
+def cms_delete_allergen(request: HttpRequest, entry_id: str):
+    svc.delete_allergen(entry_id)
+    return {"ok": True}
+
+
+@router.get("/markers", summary="Справочник диетических маркеров отеля")
+def cms_list_markers(request: HttpRequest):
+    return svc.list_markers()
+
+
+@router.post("/markers", response={201: dict}, summary="Добавить свой маркер")
+def cms_create_marker(request: HttpRequest, payload: DictEntryIn):
+    return 201, svc._serialize_dict_entry(svc.create_marker(payload.dict()))
+
+
+@router.patch("/markers/{entry_id}", summary="Изменить маркер (вкл/выкл, порядок)")
+def cms_update_marker(request: HttpRequest, entry_id: str, payload: DictEntryPatch):
+    return svc._serialize_dict_entry(svc.update_marker(entry_id, payload.dict(exclude_unset=True)))
+
+
+@router.delete("/markers/{entry_id}", response=OkOut, summary="Удалить свой маркер (системный нельзя)")
+def cms_delete_marker(request: HttpRequest, entry_id: str):
+    svc.delete_marker(entry_id)
+    return {"ok": True}
+
+
 # --- Быстрые действия стартовой ---------------------------------------------
 
 

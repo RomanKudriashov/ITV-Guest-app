@@ -244,6 +244,11 @@ export interface Item {
   images: MediaAsset[];
   flags: string[];
   allergens: string[];
+  /** Allergens/markers assigned from the tenant dictionaries (join). */
+  allergen_ids?: string[];
+  marker_ids?: string[];
+  /** Ordered name→value characteristics. */
+  characteristics?: CmsCharacteristic[];
   schedule_id?: string | null;
   sort_order: number;
   is_active: boolean;
@@ -254,6 +259,28 @@ export interface Item {
   badges?: ItemBadgeLink[];
   modifier_groups?: ModifierGroup[];
   request_fields?: RequestField[];
+}
+
+/** One entry of the allergen / dietary-marker tenant dictionary. */
+export interface DictEntry {
+  id: string;
+  code: string;
+  title: Translated;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface DictEntryPayload {
+  title: Translated;
+  code?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface CmsCharacteristic {
+  name: Translated;
+  value: Translated;
 }
 
 export interface ItemPayload {
@@ -269,6 +296,9 @@ export interface ItemPayload {
   price: number | null;
   flags?: string[];
   allergens?: string[];
+  allergen_ids?: string[];
+  marker_ids?: string[];
+  characteristics?: CmsCharacteristic[];
   schedule_id?: string | null;
   sort_order?: number;
   is_active?: boolean;

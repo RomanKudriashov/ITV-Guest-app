@@ -126,13 +126,21 @@ sort_order, is_active}`. `code` генерируется из title, если н
   "title":{...}, "description":{...},
   "price": 190000,                   // null — «цена не указана»
   "images": [{"id","url","thumb_url","status","sort_order"}],
-  "flags": ["chef_choice","gluten_free"],
-  "allergens": ["milk"],
+  "flags": ["chef_choice","gluten_free"],   // легаси, на выводе; заполнение — через словари
+  "allergens": ["milk"],                    // легаси-массив кодов (переходный)
+  "allergen_ids": ["<uuid>"],               // назначенные из словаря аллергенов (join)
+  "marker_ids": ["<uuid>"],                 // назначенные из словаря маркеров (join)
+  "characteristics": [{"name":{lang},"value":{lang}}],  // пары, порядок сохранён
   "schedule_id": null,
   "sort_order": 0, "is_active": true, "in_stock": true,
   "modifier_groups": [ ...см. §5... ]
 }
 ```
+
+Аллергены/маркеры/характеристики позиции задаются в `POST`/`PATCH` того же
+объекта: `allergen_ids`, `marker_ids` (UUID из словарей §4a), `characteristics`
+(`[{name:{lang}, value:{lang}}]`). Набор ЗАМЕНЯЕТСЯ целиком; join-строки
+удаляются жёстко. Пустой блок гостю не отдаётся.
 
 | Метод | Путь | Назначение |
 |---|---|---|
@@ -155,6 +163,25 @@ sort_order, is_active}`. `code` генерируется из title, если н
 осиротило бы одно из двух. Смена типа — `422 type_immutable`.
 `location_mode` по умолчанию берётся из реестра поведений
 ([`offering-types.md`](offering-types.md)), но отель может его переопределить.
+
+---
+
+## 4a. Справочники аллергенов и диетических маркеров
+
+Тенант-словари. Системные (14 аллергенов, 6 маркеров) засеиваются при
+провижининге с нашими переводами; их можно деактивировать, но **не удалить**.
+Объект: `{id, code, title:{lang}, is_system, is_active, sort_order}`.
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| GET | `/api/v1/cms/allergens` | список аллергенов отеля |
+| POST | `/api/v1/cms/allergens` | добавить свой: `{title:{lang}, code?, is_active?, sort_order?}` |
+| PATCH | `/api/v1/cms/allergens/{id}` | `{title?, is_active?, sort_order?}` |
+| DELETE | `/api/v1/cms/allergens/{id}` | удалить своё; системное → `409 system_protected` |
+| GET/POST/PATCH/DELETE | `/api/v1/cms/markers…` | то же для диетических маркеров |
+
+Аллерген — про безопасность («содержит»), маркер — про предпочтение
+(«подходит»); в витрине они выглядят по-разному (янтарные пилюли против зелёных).
 
 ---
 

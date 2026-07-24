@@ -60,7 +60,17 @@
     "commerce": "商务",
     "badges": "徽章",
     "quickActions": "快捷操作",
-    "showcase": "橱窗"
+    "showcase": "橱窗",
+    "dictionaries": "字典"
+  },
+  "dictionaries": {
+    "title": "卡片字典",
+    "subtitle": "过敏原（“含有”）与膳食标记（“适合”）。系统条目不可删除，只能停用。",
+    "allergens": "过敏原",
+    "markers": "膳食标记",
+    "system": "系统",
+    "addPlaceholder": "新条目名称",
+    "systemProtected": "系统条目不可删除——请停用"
   },
   "showcaseCms": {
     "title": "首页橱窗",
@@ -134,6 +144,12 @@
     "allergens": "过敏原",
     "noFlags": "未配置标签",
     "noAllergens": "未配置过敏原",
+    "markers": "膳食标记",
+    "noMarkers": "未配置标记",
+    "characteristics": "特性",
+    "characteristicName": "名称",
+    "characteristicValue": "值",
+    "addCharacteristic": "添加特性",
     "allergensCount": "{{count}} 项过敏原",
     "saved": "菜品已保存",
     "deleted": "菜品已删除",

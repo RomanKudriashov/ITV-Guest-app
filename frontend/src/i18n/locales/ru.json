@@ -60,7 +60,17 @@
     "commerce": "Коммерция",
     "badges": "Бейджи",
     "quickActions": "Быстрые действия",
-    "showcase": "Витрина"
+    "showcase": "Витрина",
+    "dictionaries": "Справочники"
+  },
+  "dictionaries": {
+    "title": "Справочники карточки",
+    "subtitle": "Аллергены («содержит») и диетические маркеры («подходит»). Системные не удаляются — только отключаются.",
+    "allergens": "Аллергены",
+    "markers": "Диетические маркеры",
+    "system": "Системный",
+    "addPlaceholder": "Название нового",
+    "systemProtected": "Системную запись нельзя удалить — отключите её"
   },
   "showcaseCms": {
     "title": "Главная-витрина",
@@ -137,6 +147,12 @@
     "allergens": "Аллергены",
     "noFlags": "Метки не настроены",
     "noAllergens": "Аллергены не настроены",
+    "markers": "Диетические маркеры",
+    "noMarkers": "Маркеры не настроены",
+    "characteristics": "Характеристики",
+    "characteristicName": "Название",
+    "characteristicValue": "Значение",
+    "addCharacteristic": "Добавить характеристику",
     "allergensCount": "Аллергенов: {{count}}",
     "saved": "Блюдо сохранено",
     "deleted": "Блюдо удалено",

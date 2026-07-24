@@ -18,6 +18,7 @@ import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
 import { ShowcaseEditorPage } from '@/cms/showcase/ShowcaseEditorPage';
+import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
 import { PlatformConsole } from '@/platform/PlatformConsole';
 import App from '@/App';
 
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
       { path: 'badges', element: <BadgesPage /> },
       { path: 'quick-actions', element: <QuickActionsPage /> },
       { path: 'showcase', element: <ShowcaseEditorPage /> },
+      { path: 'dictionaries', element: <DictionariesPage /> },
     ],
   },
   {

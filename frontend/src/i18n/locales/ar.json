@@ -60,7 +60,17 @@
     "commerce": "التجارة",
     "badges": "الشارات",
     "quickActions": "إجراءات سريعة",
-    "showcase": "الواجهة"
+    "showcase": "الواجهة",
+    "dictionaries": "القواميس"
+  },
+  "dictionaries": {
+    "title": "قواميس البطاقة",
+    "subtitle": "مسببات الحساسية («يحتوي») والوسوم الغذائية («مناسب»). لا يمكن حذف العناصر النظامية — فقط تعطيلها.",
+    "allergens": "مسببات الحساسية",
+    "markers": "الوسوم الغذائية",
+    "system": "نظامي",
+    "addPlaceholder": "اسم العنصر الجديد",
+    "systemProtected": "لا يمكن حذف عنصر نظامي — عطّله"
   },
   "showcaseCms": {
     "title": "واجهة الصفحة الرئيسية",
@@ -139,6 +149,12 @@
     "allergens": "مسببات الحساسية",
     "noFlags": "لا توجد وسوم",
     "noAllergens": "لا توجد مسببات حساسية",
+    "markers": "الوسوم الغذائية",
+    "noMarkers": "لا توجد وسوم",
+    "characteristics": "الخصائص",
+    "characteristicName": "الاسم",
+    "characteristicValue": "القيمة",
+    "addCharacteristic": "إضافة خاصية",
     "allergensCount": "{{count}} مسببات",
     "saved": "تم حفظ الطبق",
     "deleted": "تم حذف الطبق",

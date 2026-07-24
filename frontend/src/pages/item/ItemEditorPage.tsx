@@ -10,6 +10,7 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
@@ -21,19 +22,23 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
 
 import { ApiError } from '@/api/client';
 import {
   assignItemBadges,
   createItem,
+  fetchAllergens,
   fetchBadges,
   fetchCategories,
   fetchItem,
+  fetchMarkers,
   putItemImages,
   updateItem,
 } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
-import type { Item, Translated } from '@/api/types';
+import type { CmsCharacteristic, Item, Translated } from '@/api/types';
 import { badgeRoleColor } from '@/kit/chips';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
@@ -90,6 +95,10 @@ interface ItemForm {
   in_stock: boolean;
   flags: string[];
   allergens: string[];
+  /** Assigned from the tenant dictionaries (join). */
+  allergen_ids: string[];
+  marker_ids: string[];
+  characteristics: CmsCharacteristic[];
   schedule_id: string | null;
   /** Prep/serving time in minutes as typed text; empty = not set. */
   prepInput: string;
@@ -110,6 +119,9 @@ function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm
     in_stock: true,
     flags: [],
     allergens: [],
+    allergen_ids: [],
+    marker_ids: [],
+    characteristics: [],
     schedule_id: null,
     prepInput: '',
   };
@@ -133,6 +145,12 @@ function formFromItem(item: Item, minorUnits: number): ItemForm {
     in_stock: item.in_stock,
     flags: [...(item.flags ?? [])],
     allergens: [...(item.allergens ?? [])],
+    allergen_ids: [...(item.allergen_ids ?? [])],
+    marker_ids: [...(item.marker_ids ?? [])],
+    characteristics: (item.characteristics ?? []).map((c) => ({
+      name: { ...c.name },
+      value: { ...c.value },
+    })),
     schedule_id: item.schedule_id ?? null,
     prepInput:
       item.prep_minutes === null || item.prep_minutes === undefined
@@ -182,6 +200,17 @@ export function ItemEditorPage() {
   const activeBadges = useMemo(
     () => (badgesQuery.data ?? []).filter((badge) => badge.is_active),
     [badgesQuery.data],
+  );
+
+  const allergensQuery = useQuery({ queryKey: queryKeys.allergens, queryFn: fetchAllergens });
+  const markersQuery = useQuery({ queryKey: queryKeys.markers, queryFn: fetchMarkers });
+  const activeAllergens = useMemo(
+    () => (allergensQuery.data ?? []).filter((a) => a.is_active),
+    [allergensQuery.data],
+  );
+  const activeMarkers = useMemo(
+    () => (markersQuery.data ?? []).filter((m) => m.is_active),
+    [markersQuery.data],
   );
 
   const [form, setForm] = useState<ItemForm>(() =>
@@ -335,7 +364,11 @@ export function ItemEditorPage() {
         location_mode: form.location_mode,
         price: priceMinor,
         flags: form.flags,
-        allergens: form.allergens,
+        allergen_ids: form.allergen_ids,
+        marker_ids: form.marker_ids,
+        characteristics: form.characteristics
+          .map((c) => ({ name: compactTranslated(c.name), value: compactTranslated(c.value) }))
+          .filter((c) => Object.keys(c.name).length && Object.keys(c.value).length),
         schedule_id: form.schedule_id,
         is_active: form.is_active,
         in_stock: form.in_stock,
@@ -775,72 +808,129 @@ export function ItemEditorPage() {
             </CardContent>
           </Card>
 
-          <Card variant="outlined" sx={{ borderColor: 'divider' }}>
+          <Card variant="outlined" sx={{ borderColor: 'divider' }} data-testid="cms-item-facets">
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="subtitle1">{t('item.flags')}</Typography>
+                <Typography variant="subtitle1">{t('item.allergens')}</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {bootstrap.flags.map((flag) => {
-                    const selected = form.flags.includes(flag.code);
+                  {activeAllergens.map((allergen) => {
+                    const selected = form.allergen_ids.includes(allergen.id);
                     return (
                       <Chip
-                        key={flag.code}
+                        key={allergen.id}
                         label={
-                          pickTranslated(
-                            flag.title,
-                            languages.displayLanguage,
-                            languages.defaultCode,
-                          ) || flag.code
+                          pickTranslated(allergen.title, languages.displayLanguage, languages.defaultCode) ||
+                          allergen.code
                         }
-                        color={selected ? 'primary' : 'default'}
+                        color={selected ? 'warning' : 'default'}
                         variant={selected ? 'filled' : 'outlined'}
                         onClick={() =>
-                          setForm((prev) => ({ ...prev, flags: toggleCode(prev.flags, flag.code) }))
+                          setForm((prev) => ({ ...prev, allergen_ids: toggleCode(prev.allergen_ids, allergen.id) }))
                         }
-                        data-testid={`item-flag-${flag.code}`}
+                        data-testid={`item-allergen-${allergen.code}`}
                       />
                     );
                   })}
-                  {bootstrap.flags.length === 0 ? (
+                  {activeAllergens.length === 0 ? (
                     <Typography variant="caption" color="text.secondary">
-                      {t('item.noFlags')}
+                      {t('item.noAllergens')}
                     </Typography>
                   ) : null}
                 </Stack>
 
                 <Divider />
 
-                <Typography variant="subtitle1">{t('item.allergens')}</Typography>
+                <Typography variant="subtitle1">{t('item.markers')}</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {bootstrap.allergens.map((allergen) => {
-                    const selected = form.allergens.includes(allergen.code);
+                  {activeMarkers.map((marker) => {
+                    const selected = form.marker_ids.includes(marker.id);
                     return (
                       <Chip
-                        key={allergen.code}
+                        key={marker.id}
                         label={
-                          pickTranslated(
-                            allergen.title,
-                            languages.displayLanguage,
-                            languages.defaultCode,
-                          ) || allergen.code
+                          pickTranslated(marker.title, languages.displayLanguage, languages.defaultCode) ||
+                          marker.code
                         }
-                        color={selected ? 'warning' : 'default'}
+                        color={selected ? 'success' : 'default'}
                         variant={selected ? 'filled' : 'outlined'}
                         onClick={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            allergens: toggleCode(prev.allergens, allergen.code),
-                          }))
+                          setForm((prev) => ({ ...prev, marker_ids: toggleCode(prev.marker_ids, marker.id) }))
                         }
-                        data-testid={`item-allergen-${allergen.code}`}
+                        data-testid={`item-marker-${marker.code}`}
                       />
                     );
                   })}
-                  {bootstrap.allergens.length === 0 ? (
+                  {activeMarkers.length === 0 ? (
                     <Typography variant="caption" color="text.secondary">
-                      {t('item.noAllergens')}
+                      {t('item.noMarkers')}
                     </Typography>
                   ) : null}
+                </Stack>
+
+                <Divider />
+
+                <Typography variant="subtitle1">{t('item.characteristics')}</Typography>
+                <Stack spacing={1.5} data-testid="cms-item-characteristics">
+                  {form.characteristics.map((row, index) => (
+                    <Stack key={index} direction="row" spacing={1} alignItems="flex-start">
+                      <Box sx={{ flex: 1 }}>
+                        <TranslatedField
+                          label={t('item.characteristicName')}
+                          value={row.name}
+                          onChange={(name) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              characteristics: prev.characteristics.map((c, i) => (i === index ? { ...c, name } : c)),
+                            }))
+                          }
+                          languages={languages.codes}
+                          languageLabels={languages.labels}
+                          defaultLanguage={languages.defaultCode}
+                          testId={`characteristic-name-${index}`}
+                        />
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <TranslatedField
+                          label={t('item.characteristicValue')}
+                          value={row.value}
+                          onChange={(value) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              characteristics: prev.characteristics.map((c, i) => (i === index ? { ...c, value } : c)),
+                            }))
+                          }
+                          languages={languages.codes}
+                          languageLabels={languages.labels}
+                          defaultLanguage={languages.defaultCode}
+                          testId={`characteristic-value-${index}`}
+                        />
+                      </Box>
+                      <IconButton
+                        aria-label={t('common.delete')}
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            characteristics: prev.characteristics.filter((_, i) => i !== index),
+                          }))
+                        }
+                        data-testid={`characteristic-remove-${index}`}
+                        sx={{ mt: 0.5 }}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() =>
+                      setForm((prev) => ({ ...prev, characteristics: [...prev.characteristics, { name: {}, value: {} }] }))
+                    }
+                    data-testid="characteristic-add"
+                    sx={{ alignSelf: 'flex-start' }}
+                  >
+                    {t('item.addCharacteristic')}
+                  </Button>
                 </Stack>
               </Stack>
             </CardContent>

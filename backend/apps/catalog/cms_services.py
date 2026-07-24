@@ -25,10 +25,15 @@ from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
 from .models import (
+    Allergen,
     Badge,
     Category,
+    DietaryMarker,
     Item,
+    ItemAllergen,
     ItemBadge,
+    ItemCharacteristic,
+    ItemDietaryMarker,
     ItemImage,
     ModifierGroup,
     ModifierOption,
@@ -359,6 +364,14 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
         ],
         "flags": list(item.flags or []),
         "allergens": list(item.allergens or []),
+        # Назначенные из словарей (join) — редактор работает с ними, а не с
+        # легаси-массивом. characteristics — пары переводов.
+        "allergen_ids": [str(link.allergen_id) for link in item.item_allergens.all()],
+        "marker_ids": [str(link.marker_id) for link in item.item_markers.all()],
+        "characteristics": [
+            {"name": c.name or {}, "value": c.value or {}}
+            for c in item.characteristics.all()
+        ],
         "prep_minutes": item.prep_minutes,
         "badges": [
             {"id": str(link.badge_id), "sort_order": link.sort_order}
@@ -503,6 +516,7 @@ def create_item(data: dict) -> Item:
     )
     if data.get("image_ids"):
         set_item_images(item.pk, data["image_ids"])
+    _apply_item_facets(item, data)
     return item
 
 
@@ -551,6 +565,7 @@ def update_item(item_id, data: dict) -> Item:
     item.save()
     if "image_ids" in data:
         set_item_images(item.pk, data["image_ids"] or [])
+    _apply_item_facets(item, data)
     return item
 
 
@@ -1204,3 +1219,130 @@ def assign_item_badges(item_id, badge_ids: list) -> list[dict]:
         {"id": str(link.badge_id), "sort_order": link.sort_order}
         for link in item.item_badges.all().order_by("sort_order")
     ]
+
+
+# --- Справочники аллергенов и маркеров ---------------------------------------
+
+
+def _serialize_dict_entry(row) -> dict:
+    return {
+        "id": str(row.pk),
+        "code": row.code,
+        "title": row.title or {},
+        "is_system": row.is_system,
+        "is_active": row.is_active,
+        "sort_order": row.sort_order,
+    }
+
+
+def list_allergens() -> list[dict]:
+    return [_serialize_dict_entry(a) for a in Allergen.objects.all()]
+
+
+def list_markers() -> list[dict]:
+    return [_serialize_dict_entry(m) for m in DietaryMarker.objects.all()]
+
+
+def _create_dict_entry(model, data: dict, *, prefix: str):
+    title = clean_translations(data.get("title"), field="title")
+    if not any((title.get(lang) or "").strip() for lang in title):
+        raise ValidationError("Название обязательно", field="title")
+    code = data.get("code") or make_code(model, title, prefix=prefix)
+    if model.objects.filter(code=code).exists():
+        raise ConflictError("Код уже используется", code="code_exists")
+    return model.objects.create(
+        hotel_id=require_hotel_id(),
+        code=code,
+        title=title,
+        is_system=False,  # созданное отелем — не системное, его можно удалить
+        is_active=bool(data.get("is_active", True)),
+        sort_order=int(data.get("sort_order", 100)),
+    )
+
+
+def _update_dict_entry(model, entry_id, data: dict):
+    row = model.objects.filter(pk=entry_id).first()
+    if row is None:
+        raise NotFoundError("Запись справочника не найдена")
+    if "title" in data:
+        row.title = clean_translations(data["title"], field="title")
+    if "is_active" in data:
+        row.is_active = bool(data["is_active"])
+    if "sort_order" in data:
+        row.sort_order = int(data["sort_order"])
+    row.save()
+    return row
+
+
+def _delete_dict_entry(model, join_model, join_field: str, entry_id) -> None:
+    row = model.objects.filter(pk=entry_id).first()
+    if row is None:
+        raise NotFoundError("Запись справочника не найдена")
+    if row.is_system:
+        # Системные 14 аллергенов / маркеры не удаляем — только деактивируем.
+        raise ConflictError(
+            "Системную запись нельзя удалить — отключите её", code="system_protected"
+        )
+    join_model.objects.filter(**{join_field: row}).hard_delete()
+    row.delete()
+
+
+def create_allergen(data: dict):
+    return _create_dict_entry(Allergen, data, prefix="allergen")
+
+
+def update_allergen(entry_id, data: dict):
+    return _update_dict_entry(Allergen, entry_id, data)
+
+
+def delete_allergen(entry_id) -> None:
+    _delete_dict_entry(Allergen, ItemAllergen, "allergen", entry_id)
+
+
+def create_marker(data: dict):
+    return _create_dict_entry(DietaryMarker, data, prefix="marker")
+
+
+def update_marker(entry_id, data: dict):
+    return _update_dict_entry(DietaryMarker, entry_id, data)
+
+
+def delete_marker(entry_id) -> None:
+    _delete_dict_entry(DietaryMarker, ItemDietaryMarker, "marker", entry_id)
+
+
+# --- Назначение аллергенов/маркеров/характеристик позиции --------------------
+
+
+def _sync_join(item, join_model, fk: str, dict_model, ids: list) -> None:
+    """Заменяет набор связей позиции. Join-строки удаляем жёстко (как ItemBadge)."""
+    valid = {str(v) for v in dict_model.objects.filter(pk__in=ids).values_list("pk", flat=True)}
+    join_model.objects.filter(item=item).hard_delete()
+    seen = set()
+    for entry_id in ids:
+        key = str(entry_id)
+        if key in valid and key not in seen:
+            seen.add(key)
+            join_model.objects.create(hotel_id=item.hotel_id, item=item, **{f"{fk}_id": entry_id})
+
+
+def _sync_item_characteristics(item, rows: list) -> None:
+    ItemCharacteristic.objects.filter(item=item).hard_delete()
+    order = 0
+    for row in rows or []:
+        name = clean_translations(row.get("name"), field="name")
+        value = clean_translations(row.get("value"), field="value")
+        if name and value:
+            ItemCharacteristic.objects.create(
+                hotel_id=item.hotel_id, item=item, name=name, value=value, sort_order=order
+            )
+            order += 1
+
+
+def _apply_item_facets(item, data: dict) -> None:
+    if data.get("allergen_ids") is not None:
+        _sync_join(item, ItemAllergen, "allergen", Allergen, data["allergen_ids"] or [])
+    if data.get("marker_ids") is not None:
+        _sync_join(item, ItemDietaryMarker, "marker", DietaryMarker, data["marker_ids"] or [])
+    if data.get("characteristics") is not None:
+        _sync_item_characteristics(item, data["characteristics"] or [])

@@ -58,6 +58,9 @@ export interface CmsItem {
   title: Record<string, string>
   price: number
   flags: string[]
+  allergen_ids?: string[]
+  marker_ids?: string[]
+  characteristics?: Array<{ name: Record<string, string>; value: Record<string, string> }>
   is_active: boolean
   in_stock: boolean
   category_id: string

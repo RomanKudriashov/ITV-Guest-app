@@ -60,7 +60,17 @@
     "commerce": "Commerce",
     "badges": "Badges",
     "quickActions": "Quick actions",
-    "showcase": "Showcase"
+    "showcase": "Showcase",
+    "dictionaries": "Dictionaries"
+  },
+  "dictionaries": {
+    "title": "Card dictionaries",
+    "subtitle": "Allergens («contains») and dietary markers («suitable»). System entries cannot be deleted — only deactivated.",
+    "allergens": "Allergens",
+    "markers": "Dietary markers",
+    "system": "System",
+    "addPlaceholder": "New entry name",
+    "systemProtected": "A system entry cannot be deleted — deactivate it"
   },
   "showcaseCms": {
     "title": "Home showcase",
@@ -135,6 +145,12 @@
     "allergens": "Allergens",
     "noFlags": "No flags configured",
     "noAllergens": "No allergens configured",
+    "markers": "Dietary markers",
+    "noMarkers": "No markers configured",
+    "characteristics": "Characteristics",
+    "characteristicName": "Name",
+    "characteristicValue": "Value",
+    "addCharacteristic": "Add characteristic",
     "allergensCount": "{{count}} allergens",
     "saved": "Item saved",
     "deleted": "Item deleted",

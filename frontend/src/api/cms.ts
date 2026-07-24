@@ -23,6 +23,8 @@ import type {
   ModifierGroupPayload,
   ModifierOption,
   ModifierOptionPayload,
+  DictEntry,
+  DictEntryPayload,
   QuickActions,
   ReorderEntry,
   Schedule,
@@ -294,6 +296,33 @@ export function updateCommerceSettings(
   payload: CommerceSettingsPayload,
 ): Promise<CommerceSettings> {
   return api.patch<CommerceSettings>('/cms/commerce-settings', payload);
+}
+
+/* ── 9b. Allergen / dietary-marker dictionaries ────────────────────────── */
+
+export function fetchAllergens(): Promise<DictEntry[]> {
+  return api.get<DictEntry[]>('/cms/allergens');
+}
+export function createAllergen(payload: DictEntryPayload): Promise<DictEntry> {
+  return api.post<DictEntry>('/cms/allergens', payload);
+}
+export function updateAllergen(id: string, payload: Partial<DictEntryPayload>): Promise<DictEntry> {
+  return api.patch<DictEntry>(`/cms/allergens/${id}`, payload);
+}
+export function deleteAllergen(id: string): Promise<void> {
+  return api.delete<void>(`/cms/allergens/${id}`);
+}
+export function fetchMarkers(): Promise<DictEntry[]> {
+  return api.get<DictEntry[]>('/cms/markers');
+}
+export function createMarker(payload: DictEntryPayload): Promise<DictEntry> {
+  return api.post<DictEntry>('/cms/markers', payload);
+}
+export function updateMarker(id: string, payload: Partial<DictEntryPayload>): Promise<DictEntry> {
+  return api.patch<DictEntry>(`/cms/markers/${id}`, payload);
+}
+export function deleteMarker(id: string): Promise<void> {
+  return api.delete<void>(`/cms/markers/${id}`);
 }
 
 /* ── 9. Marketing badges ───────────────────────────────────────────────── */

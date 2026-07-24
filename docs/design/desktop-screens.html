@@ -1,0 +1,500 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITV-Guest-app — десктопный эталон витрины</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&display=swap');
+
+:root{
+  --page:#070C15;
+  --bg:#0C1420;
+  --surface:#141F2E;
+  --surface-muted:#1B283A;
+  --line:#26364A;
+  --line-soft:rgba(180,205,255,.10);
+  --text:#E8EFF7;
+  --text-2:#9DB1C6;
+  --text-3:rgba(157,177,198,.66);
+  --accent:#6EA8DC;
+  --accent-strong:#8FBEE6;
+  --gold:#C7A16A;
+  --scrim:rgba(4,9,16,.66);
+  --r-card:16px;
+  --r-sheet:26px;
+  --font-display:'Onest',sans-serif;
+  --font-hotel:'Onest',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--text);font-family:'Manrope',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1320px;margin:0 auto;padding:44px 24px 110px}
+
+/* ---------- page furniture ---------- */
+.kick{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent-strong);font-weight:700}
+h1{font-family:var(--font-display);font-size:38px;font-weight:800;letter-spacing:-.025em;margin:10px 0 10px}
+.lede{color:var(--text-2);font-size:14.5px;max-width:760px}
+.sec{margin-top:52px;padding-top:24px;border-top:1px solid var(--line-soft)}
+.sec>h2{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sec>.note{color:var(--text-3);font-size:13px;margin:5px 0 18px;max-width:820px}
+.tagline{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0B1220;background:var(--accent-strong);border-radius:5px;padding:3px 8px;margin-right:8px}
+
+.browser{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
+.chrome{height:34px;background:#0F1726;display:flex;align-items:center;gap:7px;padding:0 13px;border-bottom:1px solid var(--line)}
+.chrome i{width:9px;height:9px;border-radius:50%;background:#2B3A56}
+.chrome .u{margin-left:10px;font-size:11px;color:var(--text-3);background:#0A101B;border-radius:6px;padding:3px 11px}
+.chrome .w{margin-left:auto;font-size:10.5px;color:var(--text-3);letter-spacing:.08em}
+
+/* ---------- app shell: rail + content ---------- */
+.app{display:grid;grid-template-columns:236px 1fr;min-height:660px}
+.app.withcart{grid-template-columns:236px 1fr 316px}
+.rail{border-right:1px solid var(--line);background:var(--surface);padding:26px 18px;display:flex;flex-direction:column;gap:26px}
+.brandmark{display:flex;align-items:center;gap:11px;color:var(--text);padding:0 6px}
+.brandmark .wm{font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.30em;text-transform:uppercase;padding-top:2px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:var(--text-2);font-size:14px;font-weight:600;text-decoration:none;transition:background .18s,color .18s}
+.nav a svg{opacity:.85;flex:none}
+.nav a:hover{background:var(--surface-muted);color:var(--text)}
+.nav a.on{background:rgba(110,168,220,.14);color:var(--accent-strong)}
+.nav .grp{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3);font-weight:700;padding:16px 12px 6px}
+.railfoot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.roomchip{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--text-2)}
+.roomchip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.pills{display:flex;gap:8px}
+.pill{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--text-2);font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:7px;cursor:pointer;transition:border-color .18s,color .18s}
+.pill:hover{border-color:var(--accent);color:var(--text)}
+.fl{width:18px;height:12px;border-radius:2px;background-size:cover;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Crect width='9' height='6' fill='%23fff'/%3E%3Crect y='2' width='9' height='4' fill='%230039A6'/%3E%3Crect y='4' width='9' height='2' fill='%23D52B1E'/%3E%3C/svg%3E")}
+
+.content{padding:34px 40px 44px;background:var(--bg);min-width:0}
+.greet{font-family:var(--font-hotel);font-size:34px;font-weight:800;line-height:1.12;letter-spacing:-.03em}
+.greetsub{color:var(--text-3);font-size:13.5px;margin-top:7px}
+
+/* active order strip */
+.strip{margin-top:22px;display:flex;align-items:center;gap:16px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);padding:13px 18px}
+.strip .st{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-strong);font-weight:700}
+.strip .ttl{font-size:14px;font-weight:700;margin-top:2px}
+.strip .eta{margin-left:auto;font-size:13px;color:var(--text-2)}
+
+/* ---------- bento ---------- */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:158px;gap:14px;margin-top:26px}
+.tile{position:relative;border-radius:var(--r-card);overflow:hidden;border:1px solid var(--line);background:var(--surface-muted);cursor:pointer;transition:transform .22s cubic-bezier(.2,.7,.2,1)}
+.tile:hover{transform:translateY(-2px)}
+.tile .ph{position:absolute;inset:0;background-size:cover;background-position:center}
+.tile .sc{position:absolute;left:0;right:0;bottom:0;height:56%;background:linear-gradient(180deg,rgba(4,9,16,0),rgba(4,9,16,.86))}
+.tile .lb{position:absolute;left:16px;bottom:14px;right:16px}
+.tile .nm{font-family:var(--font-hotel);font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:#fff}
+.tile .mt{font-size:12px;color:rgba(255,255,255,.72);margin-top:3px}
+.tile .status{position:absolute;top:12px;right:12px;font-size:11px;font-weight:600;color:#fff;background:rgba(10,16,26,.55);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 10px;backdrop-filter:blur(6px)}
+.t-l{grid-column:span 2;grid-row:span 2}
+.t-l .nm{font-size:26px}
+.t-m{grid-column:span 2}
+.t-s .mt{display:none}
+
+/* ---------- catalog ---------- */
+.vhero{position:relative;height:290px;border-radius:var(--r-card);overflow:hidden;border:1px solid var(--line)}
+.vhero .ph{position:absolute;inset:0;background-size:cover;background-position:center}
+.vhero .sc{position:absolute;inset:0;background:linear-gradient(90deg,rgba(4,9,16,.86),rgba(4,9,16,.25) 62%,rgba(4,9,16,.05)),linear-gradient(180deg,rgba(4,9,16,.25),rgba(4,9,16,.55))}
+.vhero .in{position:absolute;left:34px;bottom:30px;right:34px}
+.vhero .nm{font-family:var(--font-hotel);font-size:38px;font-weight:800;letter-spacing:-.03em;color:#fff;line-height:1.08}
+.vhero .tg{color:rgba(255,255,255,.74);font-size:14px;margin-top:8px}
+.chips{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.2);color:#fff;background:rgba(10,16,26,.4)}
+.chip.open{border-color:rgba(102,187,106,.5);color:#9BE0A0}
+
+.cats{display:flex;gap:26px;margin:26px 0 20px;border-bottom:1px solid var(--line);padding-bottom:0}
+.cats a{font-size:14px;font-weight:600;color:var(--text-3);text-decoration:none;padding-bottom:11px;border-bottom:2px solid transparent;transition:color .18s}
+.cats a:hover{color:var(--text-2)}
+.cats a.on{color:var(--text);border-bottom-color:var(--accent)}
+
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.dish{border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;background:var(--surface);transition:transform .2s cubic-bezier(.2,.7,.2,1),border-color .2s}
+.dish:hover{transform:translateY(-2px);border-color:#33465F}
+.dish .ph{height:132px;background-size:cover;background-position:center}
+.dish .bd{padding:14px 15px 15px}
+.dish .nm{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.dish .ds{font-size:12.5px;color:var(--text-3);margin-top:4px;min-height:34px}
+.dish .nut{font-size:11.5px;color:var(--text-2);margin-top:9px}
+.dish .row{display:flex;align-items:center;justify-content:space-between;margin-top:13px}
+.dish .pr{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--text-2)}
+.badge.gold{border-color:rgba(199,161,106,.45);color:var(--gold)}
+.add{width:34px;height:34px;border-radius:10px;border:none;background:var(--accent);color:#081524;font-size:19px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .18s}
+.add:hover{background:var(--accent-strong)}
+
+/* ---------- cart drawer ---------- */
+.cart{border-left:1px solid var(--line);background:var(--surface);padding:26px 22px;display:flex;flex-direction:column}
+.cart h3{font-family:var(--font-display);font-size:17px;font-weight:800;letter-spacing:-.015em}
+.ci{display:flex;gap:11px;padding:14px 0;border-bottom:1px solid var(--line-soft)}
+.ci .q{font-size:12.5px;font-weight:700;color:var(--accent-strong);flex:none;width:22px}
+.ci .n{font-size:13.5px;font-weight:600;line-height:1.35}
+.ci .o{font-size:11.5px;color:var(--text-3);margin-top:2px}
+.ci .p{margin-left:auto;font-size:13px;font-weight:700;white-space:nowrap}
+.sum{margin-top:16px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--text-2)}
+.sum div{display:flex;justify-content:space-between}
+.sum .tot{margin-top:8px;padding-top:12px;border-top:1px solid var(--line);color:var(--text);font-size:16px;font-weight:800}
+.cta{margin-top:18px;height:48px;border-radius:12px;border:none;background:var(--gold);color:#1B1305;font-size:14.5px;font-weight:800;cursor:pointer;letter-spacing:-.01em;transition:filter .18s}
+.cta:hover{filter:brightness(1.07)}
+.cartnote{font-size:11.5px;color:var(--text-3);margin-top:10px;text-align:center}
+
+/* ---------- item modal ---------- */
+.stage{position:relative;background:var(--bg);padding:36px;min-height:560px;display:flex;align-items:center;justify-content:center}
+.stage .dim{position:absolute;inset:0;background:rgba(4,9,16,.62)}
+.modal{position:relative;width:min(920px,100%);display:grid;grid-template-columns:400px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.modal .ph{background-size:cover;background-position:center;min-height:460px}
+.modal .bd{padding:32px 34px}
+.eyebrow{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-3);font-weight:700}
+.modal h4{font-family:var(--font-hotel);font-size:30px;font-weight:800;letter-spacing:-.03em;margin:9px 0 8px;line-height:1.12}
+.modal .ds{font-size:13.5px;color:var(--text-2);max-width:420px}
+.nutline{margin:18px 0 0;padding:13px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);font-size:13px;color:var(--text-2)}
+.nutline b{color:var(--text);font-weight:700}
+.facts{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:15px}
+.facts span{font-size:12px;color:var(--text-3)}
+.facts b{display:block;font-size:13.5px;color:var(--text);font-weight:700;margin-bottom:1px}
+.allerg{margin-top:18px}
+.allerg .lbl{font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px}
+.alist{display:flex;gap:7px;flex-wrap:wrap}
+.al{font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid rgba(255,167,38,.34);color:#FFC078;background:rgba(255,167,38,.08)}
+.al.free{border-color:rgba(102,187,106,.34);color:#9BE0A0;background:rgba(102,187,106,.08)}
+.optlabel{font-size:12px;font-weight:700;color:var(--text-2);margin:18px 0 9px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--text-2);cursor:pointer;transition:border-color .18s,color .18s}
+.opt:hover{border-color:var(--accent)}
+.opt.on{border-color:var(--accent);color:var(--accent-strong);background:rgba(110,168,220,.12)}
+.foot{display:flex;align-items:center;gap:14px;margin-top:26px}
+.step{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:12px;padding:0 14px;height:48px}
+.step button{background:none;border:none;color:var(--text-2);font-size:18px;cursor:pointer}
+.step b{font-size:15px;min-width:16px;text-align:center}
+.foot .cta{margin-top:0;flex:1}
+
+/* ---------- rules table ---------- */
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);font-weight:700}
+td:first-child{color:var(--accent-strong);font-weight:700;white-space:nowrap}
+.cap{font-size:12px;color:var(--text-3);margin-top:11px}
+
+@media(max-width:1100px){
+  .app,.app.withcart{grid-template-columns:1fr}
+  .rail{display:none}
+  .bento,.grid3{grid-template-columns:repeat(2,1fr)}
+  .cart{display:none}
+  .modal{grid-template-columns:1fr}
+  .modal .ph{min-height:220px}
+}
+</style>
+
+<div class="wrap">
+
+<div class="kick">ITV-Guest-app · гостевая витрина</div>
+<h1>Десктопный эталон</h1>
+<p class="lede">Существующий эталон нарисован в телефонных кадрах, поэтому на широком экране витрина читается как растянутая мобильная версия. Здесь зафиксировано, что на десктопе устроено ИНАЧЕ: навигация уходит в левый рельс, нижнее меню исчезает, карточка блюда открывается модальным окном, а корзина живёт рядом с каталогом. Токены, шрифты и радиусы — те же, что в брендбуке: Onest 800 с плотным трекингом для заголовков, Manrope для интерфейса и текста, карточки 16px, лист 26px.</p>
+
+<!-- ============ 1. HOME ============ -->
+<div class="sec">
+  <h2>1 · Главная — витрина сервисов</h2>
+  <p class="note"><span class="tagline">Иначе, чем на мобиле</span>Нижнее меню заменено левым рельсом с логотипом отеля; bento раскладывается в 4 колонки с крупным якорем; приветствие и полоса заказа не занимают целый экран.</p>
+
+  <div class="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app</span><span class="w">1440 × 900</span></div>
+    <div class="app">
+
+      <aside class="rail">
+        <div class="brandmark">
+          <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true"><path d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 16 H34.5 M20 3.5 V36.5" fill="none" stroke="currentColor" stroke-width=".7" opacity=".5"/></svg>
+          <span class="wm">Crystal</span>
+        </div>
+
+        <nav class="nav">
+          <a class="on" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Главная</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3v8a3 3 0 0 0 6 0V3M9 11v10M18 3c-1.5 2-2 4-2 6s.5 3 2 3v9"/></svg>Рестораны</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 18h18M12 6a6 6 0 0 1 6 6H6a6 6 0 0 1 6-6zM12 6V4"/></svg>Услуги</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Мои заказы</a>
+          <div class="grp">Отель</div>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H8l-4 4z"/></svg>Чат</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.6"/></svg>Об отеле</a>
+        </nav>
+
+        <div class="railfoot">
+          <span class="roomchip"><span class="dot"></span>Номер 305</span>
+          <div class="pills">
+            <button class="pill"><span class="fl"></span>RU</button>
+            <button class="pill">☾</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="greet">Добрый вечер</div>
+        <div class="greetsub">Отель «Кристалл» · номер 305</div>
+
+        <div class="strip">
+          <div>
+            <div class="st">Готовится</div>
+            <div class="ttl">Стейк рибай, Домашний лимонад</div>
+          </div>
+          <div class="eta">Подадут к 20:40</div>
+        </div>
+
+        <div class="bento">
+          <div class="tile t-l">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80')"></div>
+            <div class="sc"></div>
+            <span class="status">до 23:00</span>
+            <div class="lb"><div class="nm">Панорама</div><div class="mt">Европейская кухня · 8 этаж</div></div>
+          </div>
+
+          <div class="tile t-m">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80')"></div>
+            <div class="sc"></div>
+            <span class="status">до 23:00</span>
+            <div class="lb"><div class="nm">Тайга-гриль</div><div class="mt">Мангал и вино</div></div>
+          </div>
+
+          <div class="tile t-s">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="sc"></div>
+            <span class="status">до 22:00</span>
+            <div class="lb"><div class="nm">Спа</div></div>
+          </div>
+
+          <div class="tile t-s">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="sc"></div>
+            <div class="lb"><div class="nm">Услуги номера</div></div>
+          </div>
+
+          <div class="tile t-m">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80')"></div>
+            <div class="sc"></div>
+            <div class="lb"><div class="nm">Экскурсии</div><div class="mt">6 маршрутов, запись у консьержа</div></div>
+          </div>
+
+          <div class="tile t-m">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=900&q=80')"></div>
+            <div class="sc"></div>
+            <div class="lb"><div class="nm">Об отеле</div><div class="mt">Завтрак, бассейн, Wi-Fi, выезд</div></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <p class="cap">Плитка: фото на всю площадь, скрим только снизу, название и мета в нижнем левом углу, статус в правом верхнем. Размер плитки (S / M / L) отель задаёт в CMS.</p>
+</div>
+
+<!-- ============ 2. CATALOG ============ -->
+<div class="sec">
+  <h2>2 · Каталог заведения</h2>
+  <p class="note"><span class="tagline">Иначе, чем на мобиле</span>Hero становится широким (без вертикального кадра 4:5), карточки идут по три в ряд, а корзина не отдельный экран — она справа и видна всё время, пока гость собирает заказ.</p>
+
+  <div class="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app/venue/panorama</span><span class="w">1440 × 900</span></div>
+    <div class="app withcart">
+
+      <aside class="rail">
+        <div class="brandmark">
+          <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true"><path d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 16 H34.5 M20 3.5 V36.5" fill="none" stroke="currentColor" stroke-width=".7" opacity=".5"/></svg>
+          <span class="wm">Crystal</span>
+        </div>
+        <nav class="nav">
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Главная</a>
+          <a class="on" href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3v8a3 3 0 0 0 6 0V3M9 11v10M18 3c-1.5 2-2 4-2 6s.5 3 2 3v9"/></svg>Рестораны</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 18h18M12 6a6 6 0 0 1 6 6H6a6 6 0 0 1 6-6zM12 6V4"/></svg>Услуги</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Мои заказы</a>
+          <div class="grp">Отель</div>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v11H8l-4 4z"/></svg>Чат</a>
+          <a href="#"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.6"/></svg>Об отеле</a>
+        </nav>
+        <div class="railfoot">
+          <span class="roomchip"><span class="dot"></span>Номер 305</span>
+          <div class="pills"><button class="pill"><span class="fl"></span>RU</button><button class="pill">☾</button></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="vhero">
+          <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80')"></div>
+          <div class="sc"></div>
+          <div class="in">
+            <div class="nm">Панорама</div>
+            <div class="tg">Европейская кухня, 8 этаж, вид на город</div>
+            <div class="chips">
+              <span class="chip open">Открыто до 23:00</span>
+              <span class="chip">Подача в номер</span>
+              <span class="chip">Среднее время 35 мин</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cats">
+          <a class="on" href="#">Горячее</a>
+          <a href="#">Закуски</a>
+          <a href="#">Салаты</a>
+          <a href="#">Десерты</a>
+          <a href="#">Напитки</a>
+        </div>
+
+        <div class="grid3">
+          <div class="dish">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="bd">
+              <div class="nm">Стейк рибай</div>
+              <div class="ds">Мраморная говядина, 300 г, гриль</div>
+              <div class="nut">506 ккал · 32 · 27 · 12 г</div>
+              <div class="row"><span class="badge gold">Выбор шефа</span></div>
+              <div class="row"><span class="pr">1 900 ₽</span><button class="add">+</button></div>
+            </div>
+          </div>
+
+          <div class="dish">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="bd">
+              <div class="nm">Паста карбонара</div>
+              <div class="ds">Гуанчале, пекорино, яичный желток</div>
+              <div class="nut">490 ккал · 16 · 7 · 20 г</div>
+              <div class="row"><span class="badge">Хит</span></div>
+              <div class="row"><span class="pr">690 ₽</span><button class="add">+</button></div>
+            </div>
+          </div>
+
+          <div class="dish">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="bd">
+              <div class="nm">Салат «Цезарь»</div>
+              <div class="ds">Курица, пармезан, соус цезарь</div>
+              <div class="nut">413 ккал · 29 · 15 · 43 г</div>
+              <div class="row"><span class="badge">Популярное</span></div>
+              <div class="row"><span class="pr">550 ₽</span><button class="add">+</button></div>
+            </div>
+          </div>
+
+          <div class="dish">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="bd">
+              <div class="nm">Греческий салат</div>
+              <div class="ds">Фета, огурцы, томаты, оливки</div>
+              <div class="nut">530 ккал · 26 · 23 · 16 г</div>
+              <div class="row"><span class="badge">Вегетарианское</span></div>
+              <div class="row"><span class="pr">480 ₽</span><button class="add">+</button></div>
+            </div>
+          </div>
+
+          <div class="dish">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="bd">
+              <div class="nm">Домашний лимонад</div>
+              <div class="ds">Лимон, мята, 400 мл</div>
+              <div class="nut">430 ккал · 16 · 24 · 21 г</div>
+              <div class="row"><span class="badge">Веган</span></div>
+              <div class="row"><span class="pr">390 ₽</span><button class="add">+</button></div>
+            </div>
+          </div>
+
+          <div class="dish">
+            <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=700&q=80')"></div>
+            <div class="bd">
+              <div class="nm">Капучино</div>
+              <div class="ds">На выбор молоко</div>
+              <div class="nut">457 ккал · 13 · 24 · 33 г</div>
+              <div class="row"><span class="badge">Новинка</span></div>
+              <div class="row"><span class="pr">320 ₽</span><button class="add">+</button></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="cart">
+        <h3>Заказ</h3>
+        <div class="ci"><span class="q">1×</span><div><div class="n">Стейк рибай</div><div class="o">Средняя прожарка</div></div><span class="p">1 900 ₽</span></div>
+        <div class="ci"><span class="q">2×</span><div><div class="n">Домашний лимонад</div></div><span class="p">780 ₽</span></div>
+        <div class="sum">
+          <div><span>Позиции</span><span>2 680 ₽</span></div>
+          <div><span>Сервисный сбор 12%</span><span>322 ₽</span></div>
+          <div><span>Доставка в номер</span><span>0 ₽</span></div>
+          <div><span>Чаевые 10%</span><span>268 ₽</span></div>
+          <div class="tot"><span>Итого</span><span>3 270 ₽</span></div>
+        </div>
+        <button class="cta">Оформить заказ</button>
+        <div class="cartnote">Подадут примерно к 20:40</div>
+      </aside>
+    </div>
+  </div>
+  <p class="cap">Корзина справа появляется, когда в заказе есть позиции; на пустой корзине колонка сворачивается, и каталог занимает всю ширину.</p>
+</div>
+
+<!-- ============ 3. ITEM MODAL ============ -->
+<div class="sec">
+  <h2>3 · Карточка позиции</h2>
+  <p class="note"><span class="tagline">Иначе, чем на мобиле</span>На телефоне это шторка снизу на весь экран. На десктопе — модальное окно по центру: фото слева, состав и выбор справа, каталог остаётся виден за затемнением.</p>
+
+  <div class="browser">
+    <div class="chrome"><i></i><i></i><i></i><span class="u">crystal.guest.app/venue/panorama/steak</span><span class="w">1440 × 900</span></div>
+    <div class="stage">
+      <div class="dim"></div>
+      <div class="modal">
+        <div class="ph" style="background-image:url('https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&w=900&q=80')"></div>
+        <div class="bd">
+          <div class="eyebrow">Горячее · Панорама</div>
+          <h4>Стейк рибай</h4>
+          <p class="ds">Мраморная говядина сухого вызревания, 300 г. Готовим на открытом огне, подаём с печёным чесноком и соусом на выбор.</p>
+
+          <div class="nutline"><b>506 ккал</b> · белки 32 г · жиры 27 г · углеводы 12 г · порция 300 г</div>
+
+          <div class="facts">
+            <span><b>25 мин</b>время подачи</span>
+            <span><b>Гриль</b>приготовление</span>
+            <span><b>Острое</b>вкус</span>
+          </div>
+
+          <div class="allerg">
+            <div class="lbl">Аллергены</div>
+            <div class="alist">
+              <span class="al">Молоко</span>
+              <span class="al">Горчица</span>
+              <span class="al">Сельдерей</span>
+              <span class="al free">Без глютена</span>
+            </div>
+          </div>
+
+          <div class="optlabel">Прожарка</div>
+          <div class="opts">
+            <span class="opt">Medium rare</span>
+            <span class="opt on">Medium</span>
+            <span class="opt">Well done</span>
+          </div>
+
+          <div class="optlabel">Соус — до двух</div>
+          <div class="opts">
+            <span class="opt on">Перечный</span>
+            <span class="opt">Грибной</span>
+            <span class="opt">Чимичурри · 120 ₽</span>
+          </div>
+
+          <div class="foot">
+            <div class="step"><button>−</button><b>1</b><button>+</button></div>
+            <button class="cta">В заказ · 1 900 ₽</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="cap">Состав карточки настраивается в CMS: аллергены — из справочника отеля (мультивыбор у позиции), КБЖУ, порция, время подачи, способ приготовления и прочие характеристики — поля позиции. Незаполненное поле не рендерится: карточка без аллергенов не показывает пустой блок.</p>
+</div>
+
+<!-- ============ 4. RULES ============ -->
+<div class="sec">
+  <h2>4 · Правила брейкпоинтов</h2>
+  <p class="note">Что именно различается. Всё, что не перечислено, остаётся общим: токены, шрифты, радиусы, тексты, логика.</p>
+
+  <table>
+    <tr><th>Элемент</th><th>Телефон · &lt; 768</th><th>Планшет · 768–1023</th><th>Десктоп · ≥ 1024</th></tr>
+    <tr><td>Навигация</td><td>Нижнее меню, плавающие стеклянные контролы</td><td>Нижнее меню, контент в две колонки</td><td>Левый рельс с логотипом; нижнего меню нет</td></tr>
+    <tr><td>Номер, язык, тема</td><td>Плавающие пилюли поверх кадра</td><td>Плавающие пилюли</td><td>Низ левого рельса</td></tr>
+    <tr><td>Bento главной</td><td>2 колонки</td><td>3 колонки</td><td>4 колонки, первая плитка — крупный якорь</td></tr>
+    <tr><td>Hero заведения</td><td>Вертикальный кадр, панель внахлёст</td><td>Кадр 3:2</td><td>Широкий кадр, текст слева, чипы статуса</td></tr>
+    <tr><td>Карточки меню</td><td>1 колонка</td><td>2 колонки</td><td>3 колонки</td></tr>
+    <tr><td>Карточка позиции</td><td>Шторка на весь экран</td><td>Шторка</td><td>Модальное окно 920 px, фото слева</td></tr>
+    <tr><td>Корзина</td><td>Отдельный экран</td><td>Отдельный экран</td><td>Колонка справа, видна при непустом заказе</td></tr>
+    <tr><td>Ширина контента</td><td>Во всю ширину</td><td>Во всю ширину</td><td>Рельс 236 px + контент до 1080 px, не растягивается бесконечно</td></tr>
+  </table>
+  <p class="cap">Планшет намеренно ближе к телефону: рельс требует ширины, на 900 px он съедает контент.</p>
+</div>
+
+</div>

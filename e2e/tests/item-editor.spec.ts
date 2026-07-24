@@ -46,9 +46,13 @@ test.describe('CMS: редактор блюда', () => {
     // --- Заполняем форму -----------------------------------------------
     await page.getByTestId('item-title-input').fill(title)
     await page.getByTestId('item-price-input').fill('2450')
-    await page.getByTestId('item-flag-chef_choice').click()
-    await page.getByTestId('item-flag-spicy').click()
+    // Данные карточки — из тенант-словарей (join): аллерген, маркер и
+    // характеристика (пара название→значение).
     await page.getByTestId('item-allergen-soy').click()
+    await page.getByTestId('item-marker-vegan').click()
+    await page.getByTestId('characteristic-add').click()
+    await page.getByTestId('characteristic-name-0').fill('Вкус')
+    await page.getByTestId('characteristic-value-0').fill('Острый')
 
     // Пока форма не сохранена — видно, что есть несохранённые изменения.
     await expect(page.getByTestId('item-dirty-badge')).toBeVisible()
@@ -66,7 +70,11 @@ test.describe('CMS: редактор блюда', () => {
 
     // Цена введена в рублях, а храниться обязана в копейках.
     expect(item!.price).toBe(245000)
-    expect(item!.flags.sort()).toEqual(['chef_choice', 'spicy'])
+    const full = await apiGet<CmsItem>(request, token, `/api/cms/items/${item!.id}`)
+    expect(full.allergen_ids).toHaveLength(1)
+    expect(full.marker_ids).toHaveLength(1)
+    expect(full.characteristics).toHaveLength(1)
+    expect(full.characteristics![0].name.ru).toBe('Вкус')
 
     // --- Добавляем обязательную группу модификаторов --------------------
     await page.getByTestId('modifier-group-add').click()
@@ -96,15 +104,16 @@ test.describe('CMS: редактор блюда', () => {
       0, 12000,
     ])
 
-    // --- Редактируем: меняем цену и снимаем флаг -------------------------
+    // --- Редактируем: меняем цену и снимаем маркер ----------------------
     await page.getByTestId('item-price-input').fill('2600')
-    await page.getByTestId('item-flag-spicy').click()
+    await page.getByTestId('item-marker-vegan').click() // снять маркер
     await page.getByTestId('item-save-button').click()
     await expect(page.getByTestId('item-dirty-badge')).toBeHidden({ timeout: 15_000 })
 
     const edited = await apiGet<CmsItem>(request, token, `/api/cms/items/${item!.id}`)
     expect(edited.price).toBe(260000)
-    expect(edited.flags).toEqual(['chef_choice'])
+    expect(edited.marker_ids).toEqual([]) // маркер снят, аллерген остался
+    expect(edited.allergen_ids).toHaveLength(1)
 
     // --- Изменения переживают перезагрузку страницы ----------------------
     await page.reload()

@@ -91,3 +91,58 @@ def test_language_picks_translation_with_english_fallback(client, crystal, guest
     # Язык без перевода у системных всё равно даёт значение (фолбэк, не пусто).
     zh = _item(_menu(client, crystal, guest_token, lang="zh"), "caesar")
     assert all(a["title"] for a in zh["allergens"])
+
+
+# --- CMS: словари и назначение позиции --------------------------------------
+
+
+def test_cms_lists_system_allergens_and_markers(cms):
+    allergens = cms.get("/api/v1/cms/allergens").json()
+    assert len([a for a in allergens if a["is_system"]]) == 14
+    markers = cms.get("/api/v1/cms/markers").json()
+    assert {"vegan", "gluten_free"} <= {m["code"] for m in markers}
+
+
+def test_cms_custom_allergen_crud_and_system_protected(cms):
+    created = cms.post("/api/v1/cms/allergens", {"title": {"ru": "Кориандр", "en": "Coriander"}}).json()
+    assert created["is_system"] is False
+    cms.patch(f"/api/v1/cms/allergens/{created['id']}", {"is_active": False})
+    # Своё — удаляется.
+    assert cms.delete(f"/api/v1/cms/allergens/{created['id']}").status_code == 200
+    # Системное — нет (409).
+    sysid = next(a["id"] for a in cms.get("/api/v1/cms/allergens").json() if a["is_system"])
+    resp = cms.delete(f"/api/v1/cms/allergens/{sysid}")
+    assert resp.status_code == 409
+
+
+def test_cms_assign_facets_reaches_guest(client, crystal, cms, guest_token):
+    allergens = {a["code"]: a["id"] for a in cms.get("/api/v1/cms/allergens").json()}
+    markers = {m["code"]: m["id"] for m in cms.get("/api/v1/cms/markers").json()}
+    item = next(
+        i for i in cms.get("/api/v1/cms/items").json() if i["code"] == "lemonade"
+    )
+    cms.patch(
+        f"/api/v1/cms/items/{item['id']}",
+        {
+            "allergen_ids": [allergens["milk"]],
+            "marker_ids": [markers["vegan"]],
+            "characteristics": [{"name": {"ru": "Подача"}, "value": {"ru": "Со льдом"}}],
+        },
+    )
+    guest = _item(_menu(client, crystal, guest_token, lang="ru"), "lemonade")
+    assert [a["code"] for a in guest["allergens"]] == ["milk"]
+    assert [m["code"] for m in guest["markers"]] == ["vegan"]
+    assert guest["characteristics"][0]["value"] == "Со льдом"
+    # CMS-выдача позиции отражает назначенное (для редактора).
+    cms_item = next(i for i in cms.get("/api/v1/cms/items").json() if i["code"] == "lemonade")
+    assert cms_item["allergen_ids"] == [allergens["milk"]]
+    assert cms_item["characteristics"][0]["value"]["ru"] == "Со льдом"
+
+
+def test_cms_assign_is_idempotent_replace(client, crystal, cms, guest_token):
+    markers = {m["code"]: m["id"] for m in cms.get("/api/v1/cms/markers").json()}
+    item = next(i for i in cms.get("/api/v1/cms/items").json() if i["code"] == "lemonade")
+    for _ in range(2):
+        cms.patch(f"/api/v1/cms/items/{item['id']}", {"marker_ids": [markers["vegan"], markers["halal"]]})
+    guest = _item(_menu(client, crystal, guest_token), "lemonade")
+    assert len(guest["markers"]) == 2  # замена, не накопление дублей
