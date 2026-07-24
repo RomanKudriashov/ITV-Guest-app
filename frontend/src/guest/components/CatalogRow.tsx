@@ -69,7 +69,7 @@ export function CatalogRowView({
         bgcolor: 'background.paper',
         border: 1,
         borderColor: 'divider',
-        borderRadius: '16px',
+        borderRadius: `${theme.palette.brand.radius.md}px`,
         overflow: 'hidden',
         opacity: available ? 1 : 0.5,
         transition: 'transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s',

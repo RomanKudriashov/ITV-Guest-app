@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
-import { alpha } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import type { Theme } from '@mui/material/styles';
@@ -82,6 +82,7 @@ interface BentoTileProps {
  */
 export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const statusLabel = useStatusLabel();
   const status = statusLabel(tile.status);
   const disabled = !tile.enabled || !tile.route;
@@ -89,10 +90,12 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
   const previews = tile.cover_previews ?? [];
   const collage = tile.type === 'service-category' && previews.length > 1;
 
+  // Подпись: tagline (subtitle), а если его нет — часы/статус. Тип точки на
+  // плитке не показываем никогда.
   const meta =
     tile.type === 'service-category' && tile.venue_count != null
       ? t('guest.home.venueCount', { count: tile.venue_count })
-      : tile.subtitle ?? null;
+      : tile.subtitle ?? status?.text ?? null;
 
   return (
     <ButtonBase
@@ -107,7 +110,7 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
         width: '100%',
         height: '100%',
         minHeight: 132,
-        borderRadius: 4,
+        borderRadius: `${theme.palette.brand.radius.md}px`,
         overflow: 'hidden',
         display: 'block',
         textAlign: 'start',

@@ -88,7 +88,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
       onClick={onOpen}
       data-testid={`guest-venue-${venue.code}`}
       aria-label={venue.title}
-      sx={{ display: 'block', textAlign: 'start', borderRadius: 4, overflow: 'hidden', width: '100%', color: 'common.white' }}
+      sx={(th) => ({ display: 'block', textAlign: 'start', borderRadius: `${th.palette.brand.radius.md}px`, overflow: 'hidden', width: '100%', color: 'common.white' })}
     >
       <Box sx={{ position: 'relative', height: { xs: 168, md: 190 } }}>
         {venue.image ? (
@@ -123,8 +123,10 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
           <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: 20, lineHeight: 1.1, textShadow: '0 2px 14px rgba(0,0,0,0.55)' })}>
             {venue.title}
           </Typography>
-          {venue.subtitle ? (
-            <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: alpha('#fff', 0.82) }}>{venue.subtitle}</Typography>
+          {venue.subtitle ?? statusText ? (
+            <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: alpha('#fff', 0.82) }}>
+              {venue.subtitle ?? statusText}
+            </Typography>
           ) : null}
         </Box>
       </Box>
