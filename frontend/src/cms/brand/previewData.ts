@@ -71,7 +71,11 @@ export const PREVIEW_DETAIL: ItemDetail = {
   price: 64000,
   images: [DESSERT_IMG],
   flags: ['chef_choice', 'vegetarian'],
-  allergens: ['egg', 'milk'],
+  allergens: [
+    { code: 'eggs', title: 'Eggs' },
+    { code: 'milk', title: 'Milk' },
+  ],
+  markers: [{ code: 'vegetarian', title: 'Vegetarian' }],
   type: 'product',
   is_available: true,
   unavailable_reason: null,

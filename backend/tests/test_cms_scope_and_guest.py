@@ -116,7 +116,10 @@ def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, categ
     assert item is not None
     assert item["title"] == "Борщ"
     assert item["price"] == 42000
-    assert item["allergens"] == ["milk"]
+    # Аллергены отдаются локализованными объектами (фолбэк на исторический
+    # массив кодов, переведённый словарём).
+    assert [a["code"] for a in item["allergens"]] == ["milk"]
+    assert item["allergens"][0]["title"]
     assert item["has_required_modifiers"] is True
 
     # Сами группы витрина берёт из карточки блюда, а не из списка меню.

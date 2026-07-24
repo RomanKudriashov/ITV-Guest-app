@@ -215,7 +215,13 @@ def _serialize_item(
         "description": translate(item.description, language),
         "price": item.price,
         "flags": list(item.flags or []),
-        "allergens": list(item.allergens or []),
+        # Аллергены («содержит») и диет-маркеры («подходит») — из тенант-словарей,
+        # локализованные, в порядке справочника. Пустое НЕ отдаём: карточка не
+        # рисует пустой блок.
+        "allergens": _allergens(item, language),
+        "markers": _markers(item, language),
+        # Характеристики: пары «название → значение», порядок сохранён.
+        "characteristics": _characteristics(item, language),
         # Маркетинговые бейджи — отдельно от фактических флагов.
         "badges": _badges(item, language),
         # Пищевая ценность и состав — из attributes (данные позиции). Карточка
@@ -256,6 +262,60 @@ def _badges(item, language: str | None = None) -> list[dict[str, Any]]:
     return out
 
 
+def _dict_facets(rows, language) -> list[dict[str, Any]]:
+    out = [
+        {"code": r.code, "title": translate(r.title, language), "sort_order": r.sort_order}
+        for r in rows
+        if r.is_active
+    ]
+    out.sort(key=lambda entry: entry["sort_order"])
+    return out
+
+
+def _allergens(item, language: str | None = None) -> list[dict[str, Any]]:
+    """
+    Аллергены позиции, локализованные, в порядке справочника. Источник — join
+    (ItemAllergen); пока отель не перешёл на него, падаем на исторический массив
+    item.allergens, переводя коды словарём. Пустое → [] (карточка не рисует блок).
+    """
+    from .models import Allergen
+
+    links = list(item.item_allergens.select_related("allergen").all())
+    if links:
+        return _dict_facets([link.allergen for link in links if link.allergen], language)
+    if item.allergens:
+        return _dict_facets(Allergen.objects.filter(code__in=list(item.allergens)), language)
+    return []
+
+
+def _markers(item, language: str | None = None) -> list[dict[str, Any]]:
+    """
+    Диетические маркеры позиции. Источник — join; фолбэк — маркер-подмножество
+    исторических флагов позиции, переведённое словарём.
+    """
+    from .models import DietaryMarker
+    from .vocabularies import DIETARY_MARKER_CODES
+
+    links = list(item.item_markers.select_related("marker").all())
+    if links:
+        return _dict_facets([link.marker for link in links if link.marker], language)
+    codes = [c for c in (item.flags or []) if c in DIETARY_MARKER_CODES]
+    if codes:
+        return _dict_facets(DietaryMarker.objects.filter(code__in=codes), language)
+    return []
+
+
+def _characteristics(item, language: str | None = None) -> list[dict[str, Any]]:
+    """Характеристики позиции: пары «название → значение», порядок сохранён."""
+    out = []
+    for row in item.characteristics.all():
+        name = translate(row.name, language)
+        value = translate(row.value, language)
+        if name and value:
+            out.append({"name": name, "value": value})
+    return out
+
+
 def _nutrition(item, language: str | None = None) -> dict[str, Any] | None:
     """
     Пищевая ценность и состав из attributes. Форма:
@@ -274,6 +334,8 @@ def _nutrition(item, language: str | None = None) -> dict[str, Any] | None:
         "protein": data.get("protein"),
         "fat": data.get("fat"),
         "carbs": data.get("carbs"),
+        # Порция (граммы) — в той же строке КБЖУ. Отдельного поля у позиции нет.
+        "portion": data.get("portion"),
         "composition": composition or "",
     }
 

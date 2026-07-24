@@ -118,7 +118,12 @@ export interface MenuItem {
   price: number | null;
   images: string[];
   flags: string[];
-  allergens: string[];
+  /** Allergens («contains») — localized dictionary entries, ordered. Empty → omit. */
+  allergens: ItemFacet[];
+  /** Dietary markers («suitable») — localized, rendered as green pills. Empty → omit. */
+  markers?: ItemFacet[];
+  /** Ordered name→value characteristics («Cooking → Grill»). Empty → omit. */
+  characteristics?: ItemCharacteristic[];
   /** Marketing badges, rendered sorted by `sort_order`. */
   badges?: MenuBadge[];
   /** Preparation time in minutes, or `null` when the item does not carry one. */
@@ -149,8 +154,22 @@ export interface MenuItem {
     protein?: number;
     fat?: number;
     carbs?: number;
+    /** Portion in grams — shown inline in the КБЖУ line. */
+    portion?: number;
     composition?: string;
   } | null;
+}
+
+/** One allergen or dietary-marker entry, localized to the request language. */
+export interface ItemFacet {
+  code: string;
+  title: string;
+  sort_order?: number;
+}
+
+export interface ItemCharacteristic {
+  name: string;
+  value: string;
 }
 
 export interface MenuCategory {

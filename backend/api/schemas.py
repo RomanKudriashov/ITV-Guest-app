@@ -75,7 +75,14 @@ class ItemDetailOut(Schema):
     price: int | None
     images: list[str]
     flags: list[str]
-    allergens: list[str]
+    # Аллергены/маркеры/характеристики — локализованные объекты; пустые не
+    # приходят (карточка не рисует пустой блок).
+    allergens: list[dict[str, Any]] = []
+    markers: list[dict[str, Any]] = []
+    characteristics: list[dict[str, Any]] = []
+    nutrition: dict[str, Any] | None = None
+    prep_minutes: int | None = None
+    badges: list[dict[str, Any]] = []
     has_modifiers: bool
     has_required_modifiers: bool
     has_fields: bool

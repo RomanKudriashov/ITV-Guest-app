@@ -204,6 +204,7 @@ class Command(BaseCommand):
             schedules = self._seed_schedules()
             self._seed_catalog(kitchen, locations, schedules)
             self._seed_nutrition()
+            self._seed_item_facets()
             self._seed_services(points, schedules)
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
@@ -1163,10 +1164,60 @@ class Command(BaseCommand):
                 "protein": 6 + seed % 30,
                 "fat": 4 + (seed >> 3) % 28,
                 "carbs": 5 + (seed >> 6) % 40,
+                "portion": 180 + (seed >> 9) % 160,  # граммы — в строку КБЖУ
                 "composition": item.description or {"ru": ""},
             }
             item.attributes = attrs
             item.save(update_fields=["attributes", "updated_at"])
+
+    def _seed_item_facets(self):
+        """
+        Демо-аллергены, маркеры и характеристики нескольким блюдам — карточка
+        показывает янтарные «содержит», зелёные маркеры и пары характеристик.
+        """
+        from apps.catalog.models import (
+            Allergen,
+            DietaryMarker,
+            ItemAllergen,
+            ItemCharacteristic,
+            ItemDietaryMarker,
+        )
+
+        allergens = {a.code: a for a in Allergen.objects.all()}
+        markers = {m.code: m for m in DietaryMarker.objects.all()}
+
+        facets: dict[str, dict] = {
+            "ribeye": {
+                "allergens": [], "markers": ["gluten_free", "halal"],
+                "chars": [({"ru": "Способ приготовления", "en": "Cooking"}, {"ru": "Гриль", "en": "Grill"}),
+                          ({"ru": "Вкус", "en": "Taste"}, {"ru": "Насыщенный", "en": "Rich"})],
+            },
+            "caesar": {
+                "allergens": ["eggs", "fish", "milk", "gluten"], "markers": [],
+                "chars": [({"ru": "Подача", "en": "Served"}, {"ru": "Холодная", "en": "Cold"})],
+            },
+            "carbonara": {
+                "allergens": ["gluten", "eggs", "milk"], "markers": [],
+                "chars": [({"ru": "Вкус", "en": "Taste"}, {"ru": "Сливочный", "en": "Creamy"})],
+            },
+            "syrniki": {
+                "allergens": ["gluten", "eggs", "milk"], "markers": ["vegetarian"],
+                "chars": [({"ru": "Подача", "en": "Served"}, {"ru": "Горячая", "en": "Hot"})],
+            },
+        }
+        for code, spec in facets.items():
+            item = Item.objects.filter(code=code).first()
+            if item is None:
+                continue
+            for ac in spec["allergens"]:
+                if ac in allergens:
+                    ItemAllergen.objects.get_or_create(item=item, allergen=allergens[ac])
+            for mc in spec["markers"]:
+                if mc in markers:
+                    ItemDietaryMarker.objects.get_or_create(item=item, marker=markers[mc])
+            if not item.characteristics.exists():
+                for order, (name, value) in enumerate(spec["chars"]):
+                    ItemCharacteristic.objects.create(item=item, name=name, value=value, sort_order=order)
 
 
 def _render_placeholder_png(label: str, code: str = "") -> bytes:

@@ -401,6 +401,7 @@
       "composition": "Composition",
       "kcal": "kcal",
       "gram": "g",
+      "portion": "portion",
       "prepMinutes": "~{{minutes}} min"
     },
     "cart": {

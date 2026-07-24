@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { KitImage } from '@/kit';
 import type { AppIconComponent } from '@/icons';
-import type { ItemDetail } from '../api/types';
+import type { ItemCharacteristic, ItemDetail, ItemFacet } from '../api/types';
 
 /** Dietary / kitchen flags. Unknown codes fall back to the raw code. */
 export function FlagChips({ flags, size = 'small' }: { flags: string[]; size?: 'small' | 'medium' }) {
@@ -27,16 +27,84 @@ export function FlagChips({ flags, size = 'small' }: { flags: string[]; size?: '
   );
 }
 
-export function AllergenLine({ allergens }: { allergens: string[] }) {
+/**
+ * Allergens («contains» — amber pills) and dietary markers («suitable» — green
+ * pills), reference desktop §3. Localized titles come from the payload. Renders
+ * nothing when the item carries neither — no empty «Аллергены» block.
+ */
+export function AllergensBlock({
+  allergens,
+  markers,
+}: {
+  allergens?: ItemFacet[];
+  markers?: ItemFacet[];
+}) {
   const { t } = useTranslation();
-  if (!allergens?.length) return null;
-  const list = allergens
-    .map((code) => t(`guest.allergens.${code}`, { defaultValue: code }))
-    .join(', ');
+  const hasAllergens = Boolean(allergens?.length);
+  const hasMarkers = Boolean(markers?.length);
+  if (!hasAllergens && !hasMarkers) return null;
+
   return (
-    <Typography variant="body2" color="text.secondary">
-      {t('guest.item.allergens')}: {list}
-    </Typography>
+    <Box data-testid="guest-item-allergens">
+      <Typography
+        sx={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', color: 'text.secondary', mb: 0.75 }}
+      >
+        {t('guest.item.allergens')}
+      </Typography>
+      <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+        {allergens?.map((a) => (
+          <FacetPill key={`a-${a.code}`} label={a.title} tone="contains" />
+        ))}
+        {markers?.map((m) => (
+          <FacetPill key={`m-${m.code}`} label={m.title} tone="suitable" />
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
+function FacetPill({ label, tone }: { label: string; tone: 'contains' | 'suitable' }) {
+  return (
+    <Box
+      component="span"
+      sx={(theme) => {
+        const base = tone === 'contains' ? theme.palette.warning.main : theme.palette.success.main;
+        return {
+          display: 'inline-flex',
+          alignItems: 'center',
+          px: 1,
+          py: 0.35,
+          borderRadius: `${theme.palette.brand.radius.sm}px`,
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          lineHeight: 1.4,
+          color: base,
+          bgcolor: `color-mix(in srgb, ${base} 14%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${base} 38%, transparent)`,
+        };
+      }}
+    >
+      {label}
+    </Box>
+  );
+}
+
+/** Ordered «name → value» characteristics (desktop §3). Empty → nothing. */
+export function CharacteristicsBlock({ characteristics }: { characteristics?: ItemCharacteristic[] }) {
+  if (!characteristics?.length) return null;
+  return (
+    <Stack spacing={0.5} data-testid="guest-item-characteristics">
+      {characteristics.map((row, i) => (
+        <Stack key={i} direction="row" spacing={1} sx={{ fontSize: '0.82rem' }}>
+          <Box component="span" sx={{ color: 'text.secondary', minWidth: 130 }}>
+            {row.name}
+          </Box>
+          <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>
+            {row.value}
+          </Box>
+        </Stack>
+      ))}
+    </Stack>
   );
 }
 
@@ -52,7 +120,7 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
 
   // NO КБЖУ table — the values read as a
   // single line under the description, each number in the display face.
-  const macros: { label: string; value: number }[] = [];
+  const macros: { label: string; value: number; lead?: string }[] = [];
   if (nutrition.calories != null)
     macros.push({ label: t('guest.item.kcal'), value: nutrition.calories });
   if (nutrition.protein != null)
@@ -61,6 +129,8 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
     macros.push({ label: t('guest.item.fat'), value: nutrition.fat });
   if (nutrition.carbs != null)
     macros.push({ label: t('guest.item.carbs'), value: nutrition.carbs });
+  if (nutrition.portion != null)
+    macros.push({ label: t('guest.item.gram'), value: nutrition.portion, lead: t('guest.item.portion') });
 
   const composition = nutrition.composition?.trim();
   if (!macros.length && !composition) return null;
@@ -76,6 +146,7 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
         >
           {macros.map((macro) => (
             <Box component="span" key={macro.label}>
+              {macro.lead ? <Box component="span" sx={{ mr: 0.5 }}>{macro.lead}</Box> : null}
               <Box
                 component="b"
                 sx={(theme) => ({
@@ -115,7 +186,7 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
 export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutrition'] }) {
   const { t } = useTranslation();
   if (!nutrition) return null;
-  const { calories, protein, fat, carbs } = nutrition;
+  const { calories, protein, fat, carbs, portion } = nutrition;
   const macros = [protein, fat, carbs].filter((v): v is number => v != null);
   if (calories == null && !macros.length) return null;
 
@@ -149,6 +220,14 @@ export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutriti
         <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>
           {macros.join(' · ')} {t('guest.item.gram')}
         </Box>
+      ) : null}
+      {portion != null ? (
+        <>
+          <Box component="span">·</Box>
+          <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+            {t('guest.item.portion')} {portion} {t('guest.item.gram')}
+          </Box>
+        </>
       ) : null}
     </Typography>
   );

@@ -399,6 +399,7 @@
       "composition": "配料",
       "kcal": "千卡",
       "gram": "克",
+      "portion": "份量",
       "prepMinutes": "约 {{minutes}} 分钟"
     },
     "cart": {
