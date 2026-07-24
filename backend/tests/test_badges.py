@@ -70,8 +70,8 @@ def test_assigned_badge_reaches_the_guest(client, crystal, cms, guest_token):
     assert caesar["badges"] == [
         {"label": "Выбор шефа", "color_role": "gold", "sort_order": 0}
     ]
-    # Бейджи отдельны от фактических флагов.
-    assert "badges" in caesar and "flags" in caesar
+    # Бейджи (маркетинг) отдельны от диет-маркеров позиции.
+    assert "badges" in caesar and "markers" in caesar
 
 
 def test_assignment_replaces_the_set(client, crystal, cms, guest_token):

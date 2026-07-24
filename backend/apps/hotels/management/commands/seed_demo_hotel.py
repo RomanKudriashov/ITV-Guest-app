@@ -436,8 +436,6 @@ class Command(BaseCommand):
                     "en": "Marbled beef, 300 g, grilled",
                 },
                 "price": 190000,  # 1 900 ₽ в копейках
-                "flags": ["chef_choice", "gluten_free"],
-                "allergens": [],
                 "sort_order": 0,
             },
         )
@@ -506,8 +504,6 @@ class Command(BaseCommand):
                     "en": "Chicken, parmesan, caesar dressing",
                 },
                 "price": 55000,
-                "flags": ["popular"],
-                "allergens": ["eggs", "milk", "gluten", "fish"],
                 "sort_order": 0,
             },
         )
@@ -521,7 +517,6 @@ class Command(BaseCommand):
                 "title": {"ru": "Домашний лимонад", "en": "Homemade lemonade"},
                 "description": {"ru": "Лимон, мята, 400 мл", "en": "Lemon, mint, 400 ml"},
                 "price": 39000,
-                "flags": ["vegan"],
                 "sort_order": 0,
             },
         )
@@ -540,8 +535,6 @@ class Command(BaseCommand):
                     "en": "Guanciale, pecorino, egg yolk",
                 },
                 "price": 69000,
-                "flags": ["popular"],
-                "allergens": ["gluten", "eggs", "milk"],
                 "sort_order": 1,
             },
         )
@@ -558,8 +551,6 @@ class Command(BaseCommand):
                     "en": "Feta, cucumber, tomatoes, olives",
                 },
                 "price": 48000,
-                "flags": ["vegetarian", "gluten_free"],
-                "allergens": ["milk"],
                 "sort_order": 1,
             },
         )
@@ -577,8 +568,6 @@ class Command(BaseCommand):
                     "en": "With sour cream and jam, breakfast only",
                 },
                 "price": 45000,
-                "flags": ["vegetarian"],
-                "allergens": ["milk", "eggs", "gluten"],
                 "schedule": schedules["breakfast"],
                 "sort_order": 2,
             },
@@ -593,7 +582,6 @@ class Command(BaseCommand):
                 "title": {"ru": "Капучино", "en": "Cappuccino"},
                 "description": {"ru": "На выбор молоко", "en": "Choice of milk"},
                 "price": 32000,
-                "allergens": ["milk"],
                 "sort_order": 1,
             },
         )
@@ -1204,6 +1192,9 @@ class Command(BaseCommand):
                 "allergens": ["gluten", "eggs", "milk"], "markers": ["vegetarian"],
                 "chars": [({"ru": "Подача", "en": "Served"}, {"ru": "Горячая", "en": "Hot"})],
             },
+            "lemonade": {"allergens": [], "markers": ["vegan"], "chars": []},
+            "greek-salad": {"allergens": ["milk"], "markers": ["vegetarian", "gluten_free"], "chars": []},
+            "cappuccino": {"allergens": ["milk"], "markers": ["vegetarian"], "chars": []},
         }
         for code, spec in facets.items():
             item = Item.objects.filter(code=code).first()

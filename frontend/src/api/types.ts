@@ -242,8 +242,6 @@ export interface Item {
   /** Minor units; `null` — "price not set". */
   price: number | null;
   images: MediaAsset[];
-  flags: string[];
-  allergens: string[];
   /** Allergens/markers assigned from the tenant dictionaries (join). */
   allergen_ids?: string[];
   marker_ids?: string[];
@@ -294,8 +292,6 @@ export interface ItemPayload {
   type?: OfferingType;
   location_mode?: LocationMode;
   price: number | null;
-  flags?: string[];
-  allergens?: string[];
   allergen_ids?: string[];
   marker_ids?: string[];
   characteristics?: CmsCharacteristic[];

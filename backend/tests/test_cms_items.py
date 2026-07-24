@@ -13,8 +13,6 @@ def _new_item(cms, category_id, **overrides):
         "title": {"ru": "Том ям", "en": "Tom yum"},
         "description": {"ru": "Острый суп"},
         "price": 78000,
-        "flags": ["spicy"],
-        "allergens": ["fish"],
         **overrides,
     }
     return cms.post("/api/cms/items", payload)
@@ -30,7 +28,6 @@ def test_create_and_read_item(cms, category_id):
 
     assert body["code"] == "tom-yum"
     assert body["price"] == 78000
-    assert body["flags"] == ["spicy"]
     assert body["modifier_groups"] == []
 
     fetched = cms.get(f"/api/cms/items/{body['id']}").json()
@@ -51,12 +48,11 @@ def test_update_item(cms, category_id):
     item = _new_item(cms, category_id).json()
     patched = cms.patch(
         f"/api/cms/items/{item['id']}",
-        {"price": 99000, "flags": ["spicy", "popular"], "description": {"en": "Spicy soup"}},
+        {"price": 99000, "description": {"en": "Spicy soup"}},
     )
     assert patched.status_code == 200
     body = patched.json()
     assert body["price"] == 99000
-    assert body["flags"] == ["spicy", "popular"]
     assert body["description"] == {"en": "Spicy soup"}
 
 
@@ -115,8 +111,6 @@ def test_reorder_rejects_items_from_another_category(cms, category_id):
     [
         ({"price": -1}, "price"),
         ({"title": {}}, "title"),
-        ({"flags": ["definitely-not-a-flag"]}, "flags"),
-        ({"allergens": ["plutonium"]}, "allergens"),
     ],
 )
 def test_item_validation(cms, category_id, payload, field):
@@ -273,14 +267,14 @@ def test_delete_modifier_group(cms, category_id):
     assert cms.get(f"/api/cms/items/{item['id']}").json()["modifier_groups"] == []
 
 
-def test_seeded_catalog_uses_known_vocabulary_codes(cms):
+def test_seeded_catalog_facets_resolve_to_dictionaries(cms):
     """
-    Сторож против расхождения сида и справочника: если сид заведёт флаг
-    «chef-choice», а словарь знает «chef_choice», CMS откажется сохранять
-    такое блюдо — и выяснится это только руками в редакторе.
+    Сторож целостности: назначенные позиции аллергены/маркеры существуют в
+    тенант-словарях — назначение идёт по id, а не по свободному коду.
     """
-    from apps.catalog.vocabularies import ALLERGEN_CODES, FLAG_CODES
+    allergen_ids = {a["id"] for a in cms.get("/api/v1/cms/allergens").json()}
+    marker_ids = {m["id"] for m in cms.get("/api/v1/cms/markers").json()}
 
     for item in cms.get("/api/cms/items").json():
-        assert set(item["flags"]) <= FLAG_CODES, f"{item['code']}: {item['flags']}"
-        assert set(item["allergens"]) <= ALLERGEN_CODES, f"{item['code']}: {item['allergens']}"
+        assert set(item["allergen_ids"]) <= allergen_ids, item["code"]
+        assert set(item["marker_ids"]) <= marker_ids, item["code"]

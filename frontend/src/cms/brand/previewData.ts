@@ -38,7 +38,6 @@ export const PREVIEW_ROWS: MenuItem[] = [
     description: 'Dry-aged, grilled to your liking, with roasted vegetables.',
     price: 249000,
     images: [RIBEYE_IMG],
-    flags: ['chef_choice', 'spicy'],
     allergens: [],
     type: 'product',
     is_available: true,
@@ -52,7 +51,6 @@ export const PREVIEW_ROWS: MenuItem[] = [
     description: 'Romaine, parmesan, garlic croutons, house dressing.',
     price: 89000,
     images: [SALAD_IMG],
-    flags: ['vegetarian'],
     allergens: [],
     type: 'product',
     is_available: true,
@@ -70,7 +68,6 @@ export const PREVIEW_DETAIL: ItemDetail = {
     'Crisp meringue, whipped vanilla cream and fresh seasonal berries — the house signature.',
   price: 64000,
   images: [DESSERT_IMG],
-  flags: ['chef_choice', 'vegetarian'],
   allergens: [
     { code: 'eggs', title: 'Eggs' },
     { code: 'milk', title: 'Milk' },

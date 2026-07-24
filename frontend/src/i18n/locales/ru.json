@@ -154,6 +154,7 @@
     "characteristicValue": "Значение",
     "addCharacteristic": "Добавить характеристику",
     "allergensCount": "Аллергенов: {{count}}",
+    "markersCount": "Маркеров: {{count}}",
     "saved": "Блюдо сохранено",
     "deleted": "Блюдо удалено",
     "deleteTitle": "Удалить блюдо?",

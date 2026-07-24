@@ -32,6 +32,30 @@ export function FlagChips({ flags, size = 'small' }: { flags: string[]; size?: '
  * pills), reference desktop §3. Localized titles come from the payload. Renders
  * nothing when the item carries neither — no empty «Аллергены» block.
  */
+/** Dietary markers as green chips — the catalog card keeps these (allergens do not). */
+export function MarkerChips({ markers, size = 'small' }: { markers?: ItemFacet[]; size?: 'small' | 'medium' }) {
+  if (!markers?.length) return null;
+  return (
+    <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+      {markers.map((marker) => (
+        <Chip
+          key={marker.code}
+          size={size}
+          variant="outlined"
+          label={marker.title}
+          data-testid={`guest-marker-${marker.code}`}
+          sx={(theme) => ({
+            height: 22,
+            fontSize: '0.7rem',
+            color: theme.palette.success.main,
+            borderColor: `color-mix(in srgb, ${theme.palette.success.main} 42%, transparent)`,
+          })}
+        />
+      ))}
+    </Stack>
+  );
+}
+
 export function AllergensBlock({
   allergens,
   markers,

@@ -209,7 +209,7 @@ export function BrandPreview({
                           title={row.title}
                           description={row.description}
                           imageSrc={row.images[0]}
-                          flags={row.flags}
+                          markers={row.markers}
                           priceLabel={priceOf(row.price)}
                           available
                           action={

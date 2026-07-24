@@ -151,6 +151,7 @@
     "characteristicValue": "值",
     "addCharacteristic": "添加特性",
     "allergensCount": "{{count}} 项过敏原",
+    "markersCount": "{{count}} 个标记",
     "saved": "菜品已保存",
     "deleted": "菜品已删除",
     "deleteTitle": "删除菜品？",

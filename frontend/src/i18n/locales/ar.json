@@ -156,6 +156,7 @@
     "characteristicValue": "القيمة",
     "addCharacteristic": "إضافة خاصية",
     "allergensCount": "{{count}} مسببات",
+    "markersCount": "{{count}} وسوم",
     "saved": "تم حفظ الطبق",
     "deleted": "تم حذف الطبق",
     "deleteTitle": "حذف الطبق؟",

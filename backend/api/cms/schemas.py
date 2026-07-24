@@ -147,8 +147,6 @@ class ItemIn(Schema):
     content: Translations | None = None
     code: str | None = None
     price: int | None = 0
-    flags: list[str] = []
-    allergens: list[str] = []
     # Назначение из словарей (join) + характеристики. Пусто/не задано — не трогаем.
     allergen_ids: list[str] | None = None
     marker_ids: list[str] | None = None
@@ -169,8 +167,6 @@ class ItemPatch(Schema):
     content: Translations | None = None
     code: str | None = None
     price: int | None = None
-    flags: list[str] | None = None
-    allergens: list[str] | None = None
     allergen_ids: list[str] | None = None
     marker_ids: list[str] | None = None
     characteristics: list[dict[str, Any]] | None = None
@@ -198,8 +194,6 @@ class ItemOut(Schema):
     content: Translations = {}
     price: int | None
     images: list[dict[str, Any]]
-    flags: list[str]
-    allergens: list[str]
     allergen_ids: list[str] = []
     marker_ids: list[str] = []
     characteristics: list[dict[str, Any]] = []

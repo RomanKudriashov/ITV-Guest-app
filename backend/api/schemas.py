@@ -74,7 +74,6 @@ class ItemDetailOut(Schema):
     description: str
     price: int | None
     images: list[str]
-    flags: list[str]
     # Аллергены/маркеры/характеристики — локализованные объекты; пустые не
     # приходят (карточка не рисует пустой блок).
     allergens: list[dict[str, Any]] = []

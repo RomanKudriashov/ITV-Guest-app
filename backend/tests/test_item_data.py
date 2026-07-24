@@ -146,3 +146,22 @@ def test_cms_assign_is_idempotent_replace(client, crystal, cms, guest_token):
         cms.patch(f"/api/v1/cms/items/{item['id']}", {"marker_ids": [markers["vegan"], markers["halal"]]})
     guest = _item(_menu(client, crystal, guest_token), "lemonade")
     assert len(guest["markers"]) == 2  # замена, не накопление дублей
+
+
+# --- После дропа flags: чипы каталога живы, пустые не ломаются ---------------
+
+
+def test_catalog_item_carries_markers_for_chips(client, crystal, guest_token):
+    # Чипы карточки каталога перешли с flags на markers — позиция их отдаёт.
+    lemonade = _item(_menu(client, crystal, guest_token), "lemonade")
+    assert any(m["code"] == "vegan" for m in lemonade["markers"])
+
+
+def test_item_without_facets_does_not_break(client, crystal, cms, guest_token, category_id):
+    created = cms.post(
+        "/api/cms/items",
+        {"category_id": category_id, "title": {"ru": "Вода", "en": "Water"}, "price": 5000},
+    ).json()
+    assert created["allergen_ids"] == [] and created["marker_ids"] == []
+    guest = _item(_menu(client, crystal, guest_token), created["code"])
+    assert guest["allergens"] == [] and guest["markers"] == [] and guest["characteristics"] == []

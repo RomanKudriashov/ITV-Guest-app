@@ -90,6 +90,7 @@ def _find_item(menu, code):
 
 
 def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, category_id):
+    milk_id = next(a["id"] for a in cms.get("/api/v1/cms/allergens").json() if a["code"] == "milk")
     created = cms.post(
         "/api/cms/items",
         {
@@ -97,8 +98,7 @@ def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, categ
             "title": {"ru": "Борщ", "en": "Borsch"},
             "description": {"ru": "Со сметаной"},
             "price": 42000,
-            "flags": ["popular"],
-            "allergens": ["milk"],
+            "allergen_ids": [milk_id],
         },
     ).json()
 
@@ -116,8 +116,7 @@ def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, categ
     assert item is not None
     assert item["title"] == "Борщ"
     assert item["price"] == 42000
-    # Аллергены отдаются локализованными объектами (фолбэк на исторический
-    # массив кодов, переведённый словарём).
+    # Аллергены отдаются локализованными объектами из словаря (join).
     assert [a["code"] for a in item["allergens"]] == ["milk"]
     assert item["allergens"][0]["title"]
     assert item["has_required_modifiers"] is True

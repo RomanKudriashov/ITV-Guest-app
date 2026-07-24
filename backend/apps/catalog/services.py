@@ -214,7 +214,6 @@ def _serialize_item(
         "title": translate(item.title, language),
         "description": translate(item.description, language),
         "price": item.price,
-        "flags": list(item.flags or []),
         # Аллергены («содержит») и диет-маркеры («подходит») — из тенант-словарей,
         # локализованные, в порядке справочника. Пустое НЕ отдаём: карточка не
         # рисует пустой блок.
@@ -273,36 +272,19 @@ def _dict_facets(rows, language) -> list[dict[str, Any]]:
 
 
 def _allergens(item, language: str | None = None) -> list[dict[str, Any]]:
-    """
-    Аллергены позиции, локализованные, в порядке справочника. Источник — join
-    (ItemAllergen); пока отель не перешёл на него, падаем на исторический массив
-    item.allergens, переводя коды словарём. Пустое → [] (карточка не рисует блок).
-    """
-    from .models import Allergen
+    """Аллергены позиции из словаря (join), локализованные, в порядке справочника.
 
-    links = list(item.item_allergens.select_related("allergen").all())
-    if links:
-        return _dict_facets([link.allergen for link in links if link.allergen], language)
-    if item.allergens:
-        return _dict_facets(Allergen.objects.filter(code__in=list(item.allergens)), language)
-    return []
+    Пустое → [] (карточка не рисует блок). Легаси-массив item.allergens и
+    транзитный фолбэк удалены вместе с колонкой — источник только join.
+    """
+    links = item.item_allergens.select_related("allergen").all()
+    return _dict_facets([link.allergen for link in links if link.allergen], language)
 
 
 def _markers(item, language: str | None = None) -> list[dict[str, Any]]:
-    """
-    Диетические маркеры позиции. Источник — join; фолбэк — маркер-подмножество
-    исторических флагов позиции, переведённое словарём.
-    """
-    from .models import DietaryMarker
-    from .vocabularies import DIETARY_MARKER_CODES
-
-    links = list(item.item_markers.select_related("marker").all())
-    if links:
-        return _dict_facets([link.marker for link in links if link.marker], language)
-    codes = [c for c in (item.flags or []) if c in DIETARY_MARKER_CODES]
-    if codes:
-        return _dict_facets(DietaryMarker.objects.filter(code__in=codes), language)
-    return []
+    """Диетические маркеры позиции из словаря (join)."""
+    links = item.item_markers.select_related("marker").all()
+    return _dict_facets([link.marker for link in links if link.marker], language)
 
 
 def _characteristics(item, language: str | None = None) -> list[dict[str, Any]]:

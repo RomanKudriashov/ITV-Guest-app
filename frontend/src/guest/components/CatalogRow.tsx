@@ -6,8 +6,8 @@ import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from '@/kit';
-import type { ItemDetail, MenuBadge } from '../api/types';
-import { FlagChips, NutritionInline } from './ItemMeta';
+import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
+import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
 
 export interface CatalogRowViewProps {
@@ -17,7 +17,8 @@ export interface CatalogRowViewProps {
   imageSrc?: string | null;
   /** Icon on the designed fallback when the row has no photo. */
   fallbackIcon?: AppIconComponent;
-  flags: string[];
+  /** Dietary markers («suitable») — green chips on the card. */
+  markers?: ItemFacet[];
   /** Marketing badges — shown as small filled chips over the media. */
   badges?: MenuBadge[];
   /** Prep-time chip ("~{n} мин") — shown only when the item carries it. */
@@ -48,7 +49,7 @@ export function CatalogRowView({
   description,
   imageSrc,
   fallbackIcon,
-  flags,
+  markers,
   badges,
   prepMinutes,
   nutrition,
@@ -128,17 +129,18 @@ export function CatalogRowView({
         </Box>
       </ButtonBase>
 
-      {/* Body — nutrition, flags, then the price / action row pinned to the bottom. */}
+      {/* Body — nutrition, markers, then the price / action row pinned to the bottom.
+          Markers stay on the catalog card (chips); allergens live inside the item. */}
       <Box sx={{ px: '14px', pb: '14px', pt: description ? 1 : '13px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         {nutrition ? (
           <Box sx={{ mb: 1 }}>
             <NutritionInline nutrition={nutrition} />
           </Box>
         ) : null}
-        {flags.length || prepMinutes != null ? (
+        {markers?.length || prepMinutes != null ? (
           <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" alignItems="center" sx={{ mb: 1.25 }}>
             <PrepMinutesChip minutes={prepMinutes} />
-            <FlagChips flags={flags} />
+            <MarkerChips markers={markers} />
           </Stack>
         ) : null}
         <Stack

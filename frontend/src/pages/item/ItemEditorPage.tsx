@@ -93,8 +93,6 @@ interface ItemForm {
   priceInput: string;
   is_active: boolean;
   in_stock: boolean;
-  flags: string[];
-  allergens: string[];
   /** Assigned from the tenant dictionaries (join). */
   allergen_ids: string[];
   marker_ids: string[];
@@ -117,8 +115,6 @@ function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm
     priceInput: behaviour.priced === 'always' ? '0.00' : '',
     is_active: true,
     in_stock: true,
-    flags: [],
-    allergens: [],
     allergen_ids: [],
     marker_ids: [],
     characteristics: [],
@@ -143,8 +139,6 @@ function formFromItem(item: Item, minorUnits: number): ItemForm {
       : minorToInput(item.price, minorUnits),
     is_active: item.is_active,
     in_stock: item.in_stock,
-    flags: [...(item.flags ?? [])],
-    allergens: [...(item.allergens ?? [])],
     allergen_ids: [...(item.allergen_ids ?? [])],
     marker_ids: [...(item.marker_ids ?? [])],
     characteristics: (item.characteristics ?? []).map((c) => ({
@@ -363,7 +357,6 @@ export function ItemEditorPage() {
         content: compactTranslated(form.content),
         location_mode: form.location_mode,
         price: priceMinor,
-        flags: form.flags,
         allergen_ids: form.allergen_ids,
         marker_ids: form.marker_ids,
         characteristics: form.characteristics

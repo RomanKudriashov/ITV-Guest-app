@@ -42,7 +42,6 @@ from .models import (
 )
 from .offerings import LocationMode, behaviour_for
 from .request_fields import BOUNDED_TYPES, FieldType
-from .vocabularies import ALLERGEN_CODES, FLAG_CODES
 
 # Транслитерация для кодов: slugify выбрасывает кириллицу целиком, и «Горячее»
 # превратилось бы в пустую строку. Коды попадают в URL и в интеграции, поэтому
@@ -362,10 +361,8 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
             }
             for link in item.images.all()
         ],
-        "flags": list(item.flags or []),
-        "allergens": list(item.allergens or []),
-        # Назначенные из словарей (join) — редактор работает с ними, а не с
-        # легаси-массивом. characteristics — пары переводов.
+        # Аллергены/маркеры/характеристики — из словарей (join). Легаси-массивы
+        # flags/allergens удалены вместе с колонками.
         "allergen_ids": [str(link.allergen_id) for link in item.item_allergens.all()],
         "marker_ids": [str(link.marker_id) for link in item.item_markers.all()],
         "characteristics": [
@@ -464,19 +461,6 @@ def _validate_prep_minutes(value: Any) -> int | None:
     return value
 
 
-def _validate_codes(values: Any, allowed: set[str], *, field: str) -> list[str]:
-    if not values:
-        return []
-    codes = [str(code) for code in values]
-    unknown = sorted(set(codes) - allowed)
-    if unknown:
-        raise ValidationError(
-            f"Неизвестные значения: {', '.join(unknown)}", field=field, code="unknown_code"
-        )
-    # Порядок сохраняем, дубликаты убираем.
-    return list(dict.fromkeys(codes))
-
-
 def _resolve_category(category_id) -> Category:
     if not category_id:
         raise ValidationError("Выберите категорию", field="category_id")
@@ -505,8 +489,6 @@ def create_item(data: dict) -> Item:
         description=clean_translations(data.get("description"), field="description"),
         content=clean_translations(data.get("content"), field="content"),
         price=_validate_price(data.get("price")),
-        flags=_validate_codes(data.get("flags"), FLAG_CODES, field="flags"),
-        allergens=_validate_codes(data.get("allergens"), ALLERGEN_CODES, field="allergens"),
         schedule=_resolve_schedule(data.get("schedule_id")),
         sort_order=data.get("sort_order")
         if data.get("sort_order") is not None
@@ -545,10 +527,6 @@ def update_item(item_id, data: dict) -> Item:
         item.location_mode = data["location_mode"]
     if "price" in data:
         item.price = _validate_price(data["price"])
-    if "flags" in data:
-        item.flags = _validate_codes(data["flags"], FLAG_CODES, field="flags")
-    if "allergens" in data:
-        item.allergens = _validate_codes(data["allergens"], ALLERGEN_CODES, field="allergens")
     if "schedule_id" in data:
         item.schedule = _resolve_schedule(data["schedule_id"])
     if "sort_order" in data and data["sort_order"] is not None:

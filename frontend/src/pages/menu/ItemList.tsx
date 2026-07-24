@@ -108,11 +108,6 @@ function ItemRow({
           i18n.resolvedLanguage ?? 'ru',
         );
 
-  const flagTitle = (code: string) => {
-    const flag = bootstrap.flags.find((entry) => entry.code === code);
-    return flag ? pickTranslated(flag.title, displayLanguage, fallbackLanguage) || code : code;
-  };
-
   return (
     <Paper
       ref={setNodeRef}
@@ -172,21 +167,22 @@ function ItemRow({
             <Typography variant="body2" color="text.secondary">
               {price}
             </Typography>
-            {item.flags?.map((code) => (
+            {item.marker_ids?.length ? (
               <Chip
-                key={code}
                 size="small"
+                color="success"
                 variant="outlined"
-                label={flagTitle(code)}
-                data-testid={`item-row-flag-${code}`}
+                label={t('item.markersCount', { count: item.marker_ids.length })}
+                data-testid="item-row-markers"
               />
-            ))}
-            {item.allergens?.length ? (
+            ) : null}
+            {item.allergen_ids?.length ? (
               <Chip
                 size="small"
                 color="warning"
                 variant="outlined"
-                label={t('item.allergensCount', { count: item.allergens.length })}
+                label={t('item.allergensCount', { count: item.allergen_ids.length })}
+                data-testid="item-row-allergens"
               />
             ) : null}
           </Stack>

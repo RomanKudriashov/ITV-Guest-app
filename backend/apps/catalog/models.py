@@ -98,10 +98,9 @@ class Item(TenantModel):
         help_text="Спрашивать ли у гостя локацию доставки",
     )
 
-    # Пищевые метки (vegan, spicy, halal…) и аллергены — плоские словари-справочники,
-    # намеренно без отдельных таблиц: они редко меняются и всегда читаются целиком.
-    flags = ArrayField(models.SlugField(max_length=32), default=list, blank=True)
-    allergens = ArrayField(models.SlugField(max_length=32), default=list, blank=True)
+    # Аллергены/маркеры/характеристики позиции живут в тенант-словарях и join'ах
+    # (Allergen/DietaryMarker/ItemCharacteristic), маркетинг — в Badge. Легаси
+    # flags/allergens удалены в C5 после бэкфилла (миграция catalog.0007→0008).
 
     schedule = models.ForeignKey(
         "hotels.Schedule", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"

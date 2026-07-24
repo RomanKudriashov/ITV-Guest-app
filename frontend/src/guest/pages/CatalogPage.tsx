@@ -466,7 +466,7 @@ function CatalogRow({
       description={item.description}
       imageSrc={item.images?.[0]}
       fallbackIcon={fallbackIconFor(item.type ?? fallbackType)}
-      flags={item.flags ?? []}
+      markers={item.markers}
       badges={item.badges}
       prepMinutes={item.prep_minutes}
       nutrition={item.nutrition}

@@ -152,6 +152,7 @@
     "characteristicValue": "Value",
     "addCharacteristic": "Add characteristic",
     "allergensCount": "{{count}} allergens",
+    "markersCount": "{{count}} markers",
     "saved": "Item saved",
     "deleted": "Item deleted",
     "deleteTitle": "Delete item?",

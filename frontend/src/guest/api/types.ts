@@ -117,7 +117,6 @@ export interface MenuItem {
   /** `null` — "price not set" (a request-service may be unpriced), not "free". */
   price: number | null;
   images: string[];
-  flags: string[];
   /** Allergens («contains») — localized dictionary entries, ordered. Empty → omit. */
   allergens: ItemFacet[];
   /** Dietary markers («suitable») — localized, rendered as green pills. Empty → omit. */
