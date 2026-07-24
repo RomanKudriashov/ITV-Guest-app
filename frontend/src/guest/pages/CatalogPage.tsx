@@ -128,7 +128,7 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
             gap: '16px',
           }}
         >
@@ -252,7 +252,7 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
                   gap: '16px',
                 }}
               >

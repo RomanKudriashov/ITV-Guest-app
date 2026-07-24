@@ -313,6 +313,7 @@
     },
     "nav": {
       "home": "Home",
+      "hotelGroup": "Hotel",
       "menu": "Menu",
       "cart": "Cart",
       "orders": "Orders",

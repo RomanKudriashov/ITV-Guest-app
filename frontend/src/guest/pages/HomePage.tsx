@@ -6,7 +6,6 @@ import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
@@ -26,15 +25,17 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { session, hotel } = useGuestSession();
   const { data, isLoading, error, refetch } = useGuestHome();
+
+  // Bento columns by spec §4: 2 (phone) / 3 (tablet) / 4 (desktop).
+  const isTablet = useMediaQuery('(min-width:768px)');
+  const isDesktop = useMediaQuery('(min-width:1024px)');
+  const columns = isDesktop ? 4 : isTablet ? 3 : 2;
 
   const tiles = data?.tiles ?? [];
   const room = data?.room ?? session?.room ?? null;
   const hotelName = data?.hotel?.name ?? hotel?.name ?? '';
-  const columns = isDesktop ? 4 : 2;
 
   return (
     <Box data-testid="guest-home">

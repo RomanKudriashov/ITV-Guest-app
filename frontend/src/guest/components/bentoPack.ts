@@ -64,7 +64,7 @@ export function packBento<T extends { size: BentoSize }>(tiles: T[], cols: numbe
     }
   }
 
-  absorbHoles(grid, placed, cols);
+  absorbHoles(placed, cols);
   return placed;
 }
 
@@ -80,45 +80,48 @@ function at<T>(placed: Placed<T>[], r: number, c: number): Placed<T> | undefined
 }
 
 /**
- * Grow neighbouring tiles over every empty cell so the grid has no holes. A gap
- * is absorbed by (in order of preference) the tile to its left, the tile above,
- * or the tile to its right — whichever can extend into it without overlapping.
+ * Grow neighbouring tiles over every empty cell so the grid has no holes AND no
+ * overlaps. A gap is absorbed by the tile to its left, above, or right — but only
+ * if the WHOLE new footprint of that tile is empty (a tall tile spans several
+ * rows, so widening it must not collide with a tile beside it on another row).
  */
-function absorbHoles<T>(grid: boolean[][], placed: Placed<T>[], cols: number): void {
-  const rows = grid.length;
-  const occupied = (r: number, c: number) => at(placed, r, c) !== undefined;
+function absorbHoles<T>(placed: Placed<T>[], cols: number): void {
+  const rectFree = (p: Placed<T>, colStart: number, colSpan: number, rowStart: number, rowSpan: number) => {
+    for (let r = rowStart - 1; r < rowStart - 1 + rowSpan; r += 1) {
+      for (let c = colStart - 1; c < colStart - 1 + colSpan; c += 1) {
+        if (c < 0 || c >= cols) return false;
+        const owner = at(placed, r, c);
+        if (owner && owner !== p) return false; // occupied by someone else
+      }
+    }
+    return true;
+  };
 
-  for (let r = 0; r < rows; r += 1) {
+  const rows = () => placed.reduce((m, p) => Math.max(m, p.rowStart - 1 + p.rowSpan), 0);
+
+  for (let r = 0; r < rows(); r += 1) {
     for (let c = 0; c < cols; c += 1) {
-      if (occupied(r, c)) continue;
+      if (at(placed, r, c)) continue;
 
-      // Left neighbour ends exactly at this column, on this row → widen it.
+      // Left neighbour ends at this column — widen it if its whole extended
+      // column (across all its rows) is free.
       const left = c > 0 ? at(placed, r, c - 1) : undefined;
-      if (left && left.colStart - 1 + left.colSpan === c) {
+      if (left && left.colStart - 1 + left.colSpan === c && rectFree(left, c + 1, 1, left.rowStart, left.rowSpan)) {
         left.colSpan += 1;
         continue;
       }
-      // Tile directly above ends at this row → extend it down.
+      // Tile above ends at this row — extend it down if its whole extended row is free.
       const above = r > 0 ? at(placed, r - 1, c) : undefined;
-      if (above && above.rowStart - 1 + above.rowSpan === r && above.colStart - 1 === c) {
+      if (above && above.rowStart - 1 + above.rowSpan === r && rectFree(above, above.colStart, above.colSpan, r + 1, 1)) {
         above.rowSpan += 1;
         continue;
       }
-      // Right neighbour starts just after the gap → pull it left over the gap.
+      // Right neighbour starts just after the gap — pull it left over the gap.
       const right = c + 1 < cols ? at(placed, r, c + 1) : undefined;
-      if (right && right.colStart - 1 === c + 1) {
+      if (right && right.colStart - 1 === c + 1 && rectFree(right, c + 1, 1, right.rowStart, right.rowSpan)) {
         right.colStart -= 1;
         right.colSpan += 1;
         continue;
-      }
-      // Fallback: any tile on this row extends to swallow the cell.
-      const same = placed.find((p) => p.rowStart - 1 <= r && r < p.rowStart - 1 + p.rowSpan);
-      if (same) {
-        if (same.colStart - 1 + same.colSpan === c) same.colSpan += 1;
-        else if (same.colStart - 1 === c + 1) {
-          same.colStart -= 1;
-          same.colSpan += 1;
-        }
       }
     }
   }
