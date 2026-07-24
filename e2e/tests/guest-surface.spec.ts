@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, CONCIERGE, DEMO_ROOM, moveOrderStatus } from './helpers'
+import { apiToken, CONCIERGE, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
 
 /**
  * Гостевой контур: главная из данных, чат гость↔персонал и отзыв после
@@ -127,9 +127,7 @@ test.describe('Гостевой контур', () => {
     await enterAsGuest(page)
     // Салат без обязательных модификаторов — добавляем прямо из списка.
     await page.getByTestId('guest-qty-plus-caesar').click()
-    await expect(page.getByTestId('guest-cart-bar')).toBeVisible()
-    await page.getByTestId('guest-cart-bar').click()
-    await expect(page.getByTestId('guest-cart')).toBeVisible()
+    await openCart(page)
     await page.getByTestId('guest-place-order').click()
 
     await expect(page.getByTestId('guest-confirmation')).toBeVisible({ timeout: 20_000 })

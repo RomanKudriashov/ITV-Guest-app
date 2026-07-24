@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { API, apiHeaders, apiToken, DEMO_ROOM } from './helpers'
+import { API, apiHeaders, apiToken, DEMO_ROOM, openCart } from './helpers'
 
 /**
  * Витрина главной (C4): три уровня иерархии.
@@ -39,7 +39,8 @@ test.describe('Витрина главной', () => {
     await expect(sheet).toBeVisible()
     await page.getByTestId('guest-add-to-cart').click()
     await expect(sheet).toBeHidden()
-    await expect(page.getByTestId('guest-cart-bar')).toBeVisible({ timeout: 15_000 })
+    // Заказ зарегистрирован: колонка корзины на десктопе, бар — на мобиле.
+    await openCart(page)
   })
 
   test('много заведений → плитка категории → список → каталог', async ({ page, request }) => {

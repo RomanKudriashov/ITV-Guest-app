@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, DEMO_ROOM, moveOrderStatus } from './helpers'
+import { apiToken, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
 
 /**
  * Полный гостевой поток: вход по номеру → меню → карточка блюда с обязательным
@@ -65,9 +65,7 @@ test.describe('Гостевая витрина', () => {
     await expect(sheet).toBeHidden()
 
     // --- Корзина ----------------------------------------------------------
-    await expect(page.getByTestId('guest-cart-bar')).toBeVisible()
-    await page.getByTestId('guest-cart-bar').click()
-    await expect(page.getByTestId('guest-cart')).toBeVisible()
+    await openCart(page)
 
     // Доставка в номер выбрана по умолчанию — гость пришёл из комнаты.
     await expect(page.getByTestId('guest-location-in_room')).toBeVisible()
@@ -114,13 +112,14 @@ test.describe('Гостевая витрина', () => {
 
     // Салат без обязательных модификаторов — добавляется прямо из списка.
     await page.getByTestId('guest-qty-plus-caesar').click()
-    await expect(page.getByTestId('guest-cart-bar')).toBeVisible()
+    // Заказ виден: колонка корзины на десктопе, бар — на мобиле; проверяем через openCart.
+    await openCart(page)
 
     await page.reload()
 
     // Незавершённый ввод гостя не должен исчезать от перезагрузки — это то же
     // правило состояния, что и «фоновый refetch не затирает корзину».
-    await expect(page.getByTestId('guest-cart-bar')).toBeVisible({ timeout: 15_000 })
+    await openCart(page)
   })
 
   test('неизвестный номер ведёт на ручной ввод, а не в тупик', async ({ page }) => {
@@ -139,7 +138,7 @@ test.describe('Гостевая витрина', () => {
     await openMenu(page)
 
     await page.getByTestId('guest-qty-plus-caesar').click()
-    await page.getByTestId('guest-cart-bar').click()
+    await openCart(page)
 
     // Доверие ограничивает действия, а не просмотр: меню видно, оформление — нет.
     await expect(page.getByTestId('guest-cart-trust')).toBeVisible()

@@ -52,6 +52,7 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isDesktopShell = useMediaQuery('(min-width:1024px)');
   const { format, formatOptional } = useMoney();
   const { tokens, mode } = useAppTheme();
   const { session, hotel } = useGuestSession();
@@ -128,7 +129,7 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+            gridTemplateColumns: isDesktopShell ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
             gap: '16px',
           }}
         >
@@ -167,7 +168,9 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
     );
   }
 
-  const showCartBar = behaviour.usesCart && !cart.isEmpty;
+  // On desktop the cart is a persistent column (spec §4), so the floating
+  // "view cart" bar is a phone/tablet affordance only.
+  const showCartBar = behaviour.usesCart && !cart.isEmpty && !isDesktopShell;
 
   return (
     <Box data-testid={behaviour.guestCatalogTestId}>
@@ -252,7 +255,7 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+                  gridTemplateColumns: isDesktopShell ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
                   gap: '16px',
                 }}
               >

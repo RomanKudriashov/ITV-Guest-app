@@ -72,6 +72,19 @@ export interface CmsItem {
   }>
 }
 
+/**
+ * Open the cart, whatever the width. On desktop (≥1024) it is a persistent right
+ * column — already visible with a non-empty order, no bar to tap. Below that it is
+ * a screen reached from the floating «view cart» bar. Same `guest-cart` either way.
+ */
+export async function openCart(page: Page): Promise<void> {
+  const width = page.viewportSize()?.width ?? 0;
+  if (width < 1024) {
+    await page.getByTestId('guest-cart-bar').click();
+  }
+  await expect(page.getByTestId('guest-cart')).toBeVisible({ timeout: 15_000 });
+}
+
 export async function findItemByTitle(
   request: APIRequestContext,
   token: string,

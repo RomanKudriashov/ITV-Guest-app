@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, CREDENTIALS, DEMO_ROOM, moveOrderStatus } from './helpers'
+import { apiToken, CREDENTIALS, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
 
 /**
  * Замкнутый цикл среза «еда», как он выглядит в жизни:
@@ -28,8 +28,7 @@ async function guestPlacesOrder(page: Page): Promise<{ number: string; url: stri
 
   // Салат без обязательных модификаторов — добавляется прямо из списка.
   await page.getByTestId('guest-qty-plus-caesar').click()
-  await page.getByTestId('guest-cart-bar').click()
-  await expect(page.getByTestId('guest-cart')).toBeVisible()
+  await openCart(page)
   await page.getByTestId('guest-place-order').click()
 
   await expect(page.getByTestId('guest-confirmation')).toBeVisible({ timeout: 20_000 })

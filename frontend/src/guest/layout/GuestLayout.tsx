@@ -28,13 +28,11 @@ import { fadeInSx } from '@/kit';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
+import { useCart } from '../state/cart';
+import { CartPage } from '../pages/CartPage';
+import { BOTTOM_NAV_HEIGHT, CART_WIDTH, CONTENT_MAX, DESKTOP_QUERY, RAIL_WIDTH } from './constants';
 
-export const BOTTOM_NAV_HEIGHT = 60;
-/** Desktop starts at 1024 (spec §4); below it the rail would eat the content. */
-export const DESKTOP_QUERY = '(min-width:1024px)';
-/** Rail + content are capped so the storefront never stretches indefinitely. */
-const RAIL_WIDTH = 236;
-const CONTENT_MAX = 1080;
+export { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from './constants';
 
 interface NavTab {
   value: string;
@@ -92,6 +90,9 @@ export function GuestLayout() {
   const activeTab = TABS.find((tab) => location.pathname.startsWith(tab.value))?.value ?? false;
   const badgeFor = (value: string) => (value === '/chat' ? unreadChat : 0);
   const room = session?.room ?? null;
+  // Cart lives as a right column on desktop, visible only with a non-empty order.
+  const cart = useCart();
+  const cartOpen = isDesktop && !cart.isEmpty;
   const content = (
     <Box key={location.pathname} sx={fadeInSx()}>
       <Outlet />
@@ -105,7 +106,9 @@ export function GuestLayout() {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: `${RAIL_WIDTH}px minmax(0, ${CONTENT_MAX}px)`,
+            gridTemplateColumns: cartOpen
+              ? `${RAIL_WIDTH}px minmax(0, ${CONTENT_MAX}px) ${CART_WIDTH}px`
+              : `${RAIL_WIDTH}px minmax(0, ${CONTENT_MAX}px)`,
             justifyContent: 'center',
             minHeight: '100dvh',
           }}
@@ -149,6 +152,8 @@ export function GuestLayout() {
           <Box component="main" sx={{ minWidth: 0 }}>
             {content}
           </Box>
+
+          {cartOpen ? <CartPage variant="column" /> : null}
         </Box>
       </Box>
     );

@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 
-import { API, apiToken, guestSession, HOTEL } from './helpers'
+import { API, apiToken, guestSession, HOTEL, openCart } from './helpers'
 
 /**
  * Финальный сценарий коммерции: включаем сбор/минимум/чаевые в CMS →
@@ -73,15 +73,19 @@ test('витрина: минимум блокирует, чаевые и сум�
     await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 
     await page.getByTestId('guest-qty-plus-caesar').click()
-    await page.getByTestId('guest-cart-bar').click()
-    await expect(page.getByTestId('guest-cart')).toBeVisible()
+    await openCart(page)
 
     // 1×Цезарь (550) ниже минимума (600): блок + подсказка «добавьте ещё».
     await expect(page.getByTestId('guest-cart-below-minimum')).toBeVisible({ timeout: 10_000 })
     await expect(page.getByTestId('guest-place-order')).toBeDisabled()
 
     // --- Добор снимает блок --------------------------------------------------
-    await page.getByTestId('guest-qty-plus-caesar').click() // теперь 2×Цезаря = 1100
+    // На десктопе каталог и колонка корзины видны одновременно — добираем из
+    // самой корзины (на мобиле это единственный видимый степпер).
+    await page
+      .getByTestId('guest-cart-line-caesar')
+      .getByTestId('guest-qty-plus-caesar')
+      .click() // теперь 2×Цезаря = 1100
     await expect(page.getByTestId('guest-cart-below-minimum')).toHaveCount(0)
 
     // --- Чаевые: пресет 10% --------------------------------------------------

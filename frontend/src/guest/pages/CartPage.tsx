@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, type ReactNode } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
@@ -30,7 +31,7 @@ import { errorMessage, isRetryableOrderError } from '../errors';
 import { useCartQuote, useGuestLocations } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
-import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
+import { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
@@ -65,9 +66,16 @@ function timeToIso(time: string): string | null {
   return target.toISOString();
 }
 
-export function CartPage() {
+/**
+ * The cart / checkout. ONE component, two shells (spec §4): a full screen on
+ * phone/tablet (`page`), a persistent right column on desktop (`column`). All the
+ * checkout logic — lines, location, tip, server quote, place-order — is shared;
+ * only the wrapper and the place button's placement differ.
+ */
+export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const { format, minorUnits } = useMoney();
   const cart = useCart();
   const { canOrder } = useGuestSession();
@@ -156,7 +164,16 @@ export function CartPage() {
     place();
   };
 
+  // On desktop the cart is the right column (rendered by GuestLayout), so the
+  // /cart route itself is redundant — bounce it to the menu.
+  if (variant === 'page' && isDesktop) {
+    return <Navigate to="/menu" replace />;
+  }
+
   if (cart.isEmpty) {
+    // The column only mounts when the cart is non-empty (GuestLayout guards it),
+    // so an empty state here is a page-only concern.
+    if (variant === 'column') return null;
     return (
       <Box data-testid="guest-cart">
         <EmptyState
@@ -175,10 +192,27 @@ export function CartPage() {
 
   const fieldError = failure instanceof ApiError ? failure.field : undefined;
 
+  const placeButton = (
+    <Button
+      fullWidth
+      size="large"
+      variant="contained"
+      disabled={!canOrder || isPending || !locations.length || belowMinimum || quoteQuery.isLoading}
+      onClick={submit}
+      data-testid="guest-place-order"
+      sx={[ctaGradientSx, { minHeight: 52 }]}
+    >
+      {isPending
+        ? t('guest.cart.placing')
+        : quote
+          ? t('guest.cart.place', { price: format(quote.total_minor) })
+          : t('guest.cart.placeShort')}
+    </Button>
+  );
+
   return (
-    <Box data-testid="guest-cart">
-      <Container maxWidth="sm" sx={{ py: 2, pb: 18 }}>
-        <Stack spacing={2.5}>
+    <CartShell variant={variant} footer={placeButton}>
+      <Stack spacing={2.5}>
           <Typography variant="h6" component="h1">
             {t('guest.cart.title')}
           </Typography>
@@ -414,27 +448,51 @@ export function CartPage() {
             </Alert>
           ) : null}
         </Stack>
-      </Container>
+    </CartShell>
+  );
+}
 
-      <StickyFooter offset={BOTTOM_NAV_HEIGHT}>
-        <Button
-          fullWidth
-          size="large"
-          variant="contained"
-          disabled={
-            !canOrder || isPending || !locations.length || belowMinimum || quoteQuery.isLoading
-          }
-          onClick={submit}
-          data-testid="guest-place-order"
-          sx={[ctaGradientSx, { minHeight: 52 }]}
-        >
-          {isPending
-            ? t('guest.cart.placing')
-            : quote
-              ? t('guest.cart.place', { price: format(quote.total_minor) })
-              : t('guest.cart.placeShort')}
-        </Button>
-      </StickyFooter>
+/**
+ * Two shells around the shared cart body. `page`: a centred column with the
+ * place button in a sticky footer above the bottom nav. `column`: a fixed-width
+ * sticky sidebar (spec §2) with its own scroll and the place button pinned at the
+ * foot. The `guest-cart` testid stays on both, so scenarios don't fork by width.
+ */
+function CartShell({
+  variant,
+  footer,
+  children,
+}: {
+  variant: 'page' | 'column';
+  footer: ReactNode;
+  children: ReactNode;
+}) {
+  if (variant === 'column') {
+    return (
+      <Box
+        data-testid="guest-cart"
+        sx={(th) => ({
+          position: 'sticky',
+          top: 0,
+          alignSelf: 'start',
+          height: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderInlineStart: `1px solid ${th.palette.divider}`,
+          bgcolor: 'background.paper',
+        })}
+      >
+        <Box sx={{ flex: 1, overflowY: 'auto', px: 2.5, pt: 3, pb: 2 }}>{children}</Box>
+        <Box sx={(th) => ({ p: 2.25, borderTop: `1px solid ${th.palette.divider}` })}>{footer}</Box>
+      </Box>
+    );
+  }
+  return (
+    <Box data-testid="guest-cart">
+      <Container maxWidth="sm" sx={{ py: 2, pb: 18 }}>
+        {children}
+      </Container>
+      <StickyFooter offset={BOTTOM_NAV_HEIGHT}>{footer}</StickyFooter>
     </Box>
   );
 }
