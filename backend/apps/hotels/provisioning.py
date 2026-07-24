@@ -59,6 +59,27 @@ def _clean_languages(languages) -> list[str]:
     return seen
 
 
+def seed_item_data_dictionaries() -> None:
+    """
+    Засеять системные аллергены (14 обязательных) и диетические маркеры с нашими
+    переводами. Идемпотентно (get_or_create по коду), под текущим тенантом.
+    Системные пометки не даём удалить в CMS; отель может деактивировать.
+    """
+    from apps.catalog.models import Allergen, DietaryMarker
+    from apps.catalog.vocabularies import ALLERGENS, DIETARY_MARKERS
+
+    for order, entry in enumerate(ALLERGENS):
+        Allergen.objects.get_or_create(
+            code=entry["code"],
+            defaults={"title": entry["title"], "is_system": True, "sort_order": order},
+        )
+    for order, entry in enumerate(DIETARY_MARKERS):
+        DietaryMarker.objects.get_or_create(
+            code=entry["code"],
+            defaults={"title": entry["title"], "is_system": True, "sort_order": order},
+        )
+
+
 @transaction.atomic
 def provision_hotel(
     *,
@@ -140,6 +161,8 @@ def provision_hotel(
                 "sla_minutes": 15,
             },
         )
+
+        seed_item_data_dictionaries()
 
         admin = User.objects.filter(email=admin_email).first()
         if admin is None:

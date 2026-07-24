@@ -43,7 +43,23 @@ ALLERGENS: list[dict] = [
     {"code": "molluscs", "title": {"ru": "Моллюски", "en": "Molluscs", "ar": "الرخويات", "zh": "软体动物"}},
 ]
 
+# Диетические маркеры («подходит») — отдельно от аллергенов («содержит») и от
+# маркетинговых бейджей. Подмножество исторического FLAGS: предпочтения и
+# предупреждение о возрасте. spicy — это вкус (характеристика), не маркер;
+# popular/new/chef_choice — маркетинг (модель Badge). Ими сеются тенант-словари
+# при провижининге; отель может добавить свои и деактивировать системные.
+DIETARY_MARKERS: list[dict] = [
+    entry
+    for entry in FLAGS
+    if entry["code"] in {"vegan", "vegetarian", "halal", "gluten_free", "lactose_free", "alcohol_18plus"}
+]
+
+# Маркетинговые коды из FLAGS, которые переезжают в модель Badge (единый
+# источник маркетинга). Пресеты бейджей заведены в brand-библиотеке.
+MARKETING_FLAG_CODES = {"popular", "new", "chef_choice"}
+
 DAY_PARTS: list[str] = ["breakfast", "lunch", "dinner", "late_night"]
 
 FLAG_CODES = {entry["code"] for entry in FLAGS}
 ALLERGEN_CODES = {entry["code"] for entry in ALLERGENS}
+DIETARY_MARKER_CODES = {entry["code"] for entry in DIETARY_MARKERS}

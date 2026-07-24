@@ -39,6 +39,11 @@ TENANT_TABLES = [
     "catalog_service_location",
     "catalog_badge",
     "catalog_item_badge",
+    "catalog_allergen",
+    "catalog_item_allergen",
+    "catalog_dietary_marker",
+    "catalog_item_dietary_marker",
+    "catalog_item_characteristic",
     # orders
     "orders_status_definition",
     "orders_order",
