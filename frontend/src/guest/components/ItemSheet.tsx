@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
 import Drawer from '@mui/material/Drawer';
+import Fade from '@mui/material/Fade';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import CloseIcon from '@mui/icons-material/Close';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { MOTION, useSheetTransition } from '@/kit';
@@ -21,6 +22,7 @@ import { ItemSheetLayoutContext } from './itemSheetLayout';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { errorMessage } from '../errors';
 import { useGuestItem } from '../hooks/useGuestQueries';
+import { DESKTOP_QUERY } from '../layout/constants';
 import type { ItemDetail, MenuItem } from '../api/types';
 
 export interface ItemSheetProps {
@@ -44,8 +46,9 @@ export interface ItemSheetProps {
  */
 export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
   const { t } = useTranslation();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  // ≥1024 is the desktop shell (rail, no bottom nav) — the item card there is a
+  // centered modal; below it (phone AND tablet) it stays a bottom sheet.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const transition = useSheetTransition();
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -96,6 +99,90 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
     <ProductOrderForm item={item} detailLoaded={Boolean(data)} titleRef={titleRef} onClose={onClose} />
   );
 
+  // The close affordance and the chosen body are identical either way; only the
+  // shell around them differs — a bottom sheet on phone/tablet, a centered modal
+  // on desktop with the photo in a 400px side column.
+  const closeButton = (
+    <Box
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 2,
+        display: 'flex',
+        justifyContent: 'flex-end',
+        p: 1,
+        // Transparent on desktop so the media/content read as one canvas;
+        // opaque on phone where it pins over scrolling content.
+        bgcolor: isDesktop ? 'transparent' : 'background.paper',
+      }}
+    >
+      <IconButton
+        onClick={onClose}
+        aria-label={t('guest.common.close')}
+        data-testid="guest-item-sheet-close"
+        sx={{ minWidth: 44, minHeight: 44 }}
+      >
+        <CloseIcon />
+      </IconButton>
+    </Box>
+  );
+
+  if (isDesktop) {
+    return (
+      <Dialog
+        open={Boolean(itemId)}
+        onClose={onClose}
+        keepMounted={false}
+        maxWidth={false}
+        TransitionComponent={Fade}
+        transitionDuration={transition}
+        // Dim the catalog behind the modal (spec .stage .dim).
+        slotProps={{ backdrop: { sx: { bgcolor: 'rgba(4,9,16,0.62)' } } }}
+        PaperProps={{
+          sx: (t) => ({
+            width: 'min(920px, 100%)',
+            maxWidth: 'min(920px, 100%)',
+            maxHeight: '88vh',
+            m: 2,
+            borderRadius: `${t.palette.brand.radius.lg}px`,
+            boxShadow: t.palette.brand.elevation.lg,
+            overflow: 'hidden',
+          }),
+        }}
+      >
+        <ItemSheetLayoutContext.Provider value={layout}>
+          <Box
+            data-testid="guest-item-sheet"
+            role="dialog"
+            aria-modal
+            aria-label={item?.title ?? t('guest.item.title')}
+            sx={{
+              display: 'grid',
+              // Photo left in a fixed 400px column, content right (spec .modal
+              // 400px 1fr); grid keeps the two cells the same height, so the photo
+              // always fills its side however tall the body grows. Single column
+              // if the modal is squeezed narrow.
+              gridTemplateColumns: { xs: '1fr', sm: '400px minmax(0, 1fr)' },
+              maxHeight: '88vh',
+            }}
+          >
+            {item ? (
+              <Box sx={{ minHeight: { xs: 220, sm: 460 }, overflow: 'hidden' }}>
+                <ItemMedia item={item} variant="rail" fallbackIcon={fallbackIcon} />
+              </Box>
+            ) : null}
+            {/* The content cell scrolls on its own; the CTA sits at the end of it
+                (spec .foot), the catalog behind stays dimmed. */}
+            <Box sx={{ position: 'relative', minWidth: 0, minHeight: 0, maxHeight: '88vh', overflowY: 'auto' }}>
+              {closeButton}
+              {body}
+            </Box>
+          </Box>
+        </ItemSheetLayoutContext.Provider>
+      </Dialog>
+    );
+  }
+
   return (
     <Drawer
       anchor="bottom"
@@ -108,19 +195,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
         sx: (t) => ({
           borderTopLeftRadius: t.palette.brand.radius.lg,
           borderTopRightRadius: t.palette.brand.radius.lg,
-          ...(isDesktop
-            ? {
-                // Floating centered panel on desktop — not a full-width banner.
-                borderRadius: `${t.palette.brand.radius.lg}px`,
-                width: 'min(940px, 94vw)',
-                marginInline: 'auto',
-                insetInline: 0,
-                bottom: 24,
-                maxHeight: '88vh',
-                boxShadow: t.palette.brand.elevation.lg,
-                overflow: 'hidden',
-              }
-            : { maxHeight: '92dvh' }),
+          maxHeight: '92dvh',
         }),
       }}
     >
@@ -132,13 +207,11 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
           aria-label={item?.title ?? t('guest.item.title')}
           sx={{
             display: 'flex',
-            flexDirection: isDesktop ? 'row' : 'column',
+            flexDirection: 'column',
             minHeight: 0,
-            maxHeight: isDesktop ? '88vh' : '92dvh',
+            maxHeight: '92dvh',
           }}
         >
-          {isDesktop && item ? <ItemMedia item={item} variant="rail" fallbackIcon={fallbackIcon} /> : null}
-
           <Box
             sx={{
               position: 'relative',
@@ -149,29 +222,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
               minHeight: 0,
             }}
           >
-            <Box
-              sx={{
-                position: 'sticky',
-                top: 0,
-                zIndex: 2,
-                display: 'flex',
-                justifyContent: 'flex-end',
-                p: 1,
-                // Transparent on desktop so the media/content read as one canvas;
-                // opaque on phone where it pins over scrolling content.
-                bgcolor: isDesktop ? 'transparent' : 'background.paper',
-              }}
-            >
-              <IconButton
-                onClick={onClose}
-                aria-label={t('guest.common.close')}
-                data-testid="guest-item-sheet-close"
-                sx={{ minWidth: 44, minHeight: 44 }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </Box>
-
+            {closeButton}
             {body}
           </Box>
         </Box>

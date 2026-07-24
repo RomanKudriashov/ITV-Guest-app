@@ -38,7 +38,7 @@ export function ItemMedia({
         position: 'relative',
         overflow: 'hidden',
         ...(isRail
-          ? { width: { md: 320, lg: 380 }, alignSelf: 'stretch', minHeight: '100%' }
+          ? { width: '100%', height: '100%', alignSelf: 'stretch', minHeight: '100%' }
           : {
               width: '100%',
               // Capped so a tall image never pushes the body off-screen (the desktop bug).
