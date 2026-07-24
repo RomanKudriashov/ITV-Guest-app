@@ -231,3 +231,88 @@ def test_cms_showcase_size_and_hide_reach_guest(client, crystal, cms, guest_toke
 def test_cms_showcase_rejects_bad_size(cms):
     resp = cms.put("/api/v1/cms/showcase", {"tiles": [{"key": "kitchen", "size": "xl"}]})
     assert resp.status_code == 422
+
+
+# --- Заведение ≠ отдел: гостевое имя и видимость -----------------------------
+
+
+def test_default_guest_facing_rule():
+    from apps.hotels.venue_defaults import default_guest_facing
+
+    # Заведение с гостевыми категориями — видимо; служебная хозслужба — нет;
+    # точка без категорий — нет.
+    assert default_guest_facing("kitchen", has_guest_categories=True) is True
+    assert default_guest_facing("housekeeping", has_guest_categories=True) is False
+    assert default_guest_facing("kitchen", has_guest_categories=False) is False
+
+
+def test_showcase_uses_public_name_and_tagline(client, crystal, guest_token):
+    home = _home(client, crystal, guest_token)
+    kitchen = next(t for t in home["tiles"] if t["key"] == "kitchen")
+    # Гостю показываем public_name/tagline, а не служебное «Кухня ресторана».
+    assert kitchen["title"] == "Панорама"
+    assert kitchen["subtitle"] == "Европейская кухня"
+
+
+def test_service_point_hidden_even_with_categories(client, crystal, guest_token):
+    # Хозслужба служебная (is_guest_facing=false) — плитки не даёт, хотя на неё
+    # замаршрутизирована услуга уборки.
+    home = _home(client, crystal, guest_token)
+    assert not any(t["key"] == "housekeeping" for t in home["tiles"])
+    venues = client.get(
+        "/api/v1/guest/venues?group=services",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    assert "housekeeping" not in {v["code"] for v in venues["venues"]}
+
+
+def test_toggling_guest_facing_shows_and_hides(client, crystal, guest_token):
+    with tenant_context(crystal):
+        point = ExecutionPoint.objects.create(
+            hotel=crystal, code="wine", kind=ExecutionPoint.Kind.BAR,
+            title={"ru": "Винотека"}, public_name={"ru": "Винотека"}, is_guest_facing=False,
+        )
+        category = Category.objects.create(
+            hotel=crystal, code="wine-menu", type="product", title={"ru": "Вина"}, is_active=True
+        )
+        Route.objects.create(hotel=crystal, category=category, execution_point=point)
+
+    def keys():
+        return {t["key"] for t in _home(client, crystal, guest_token)["tiles"]}
+
+    assert "wine" not in keys()  # служебная — скрыта
+    with tenant_context(crystal):
+        point.is_guest_facing = True
+        point.save(update_fields=["is_guest_facing"])
+    assert "wine" in keys()  # включили — появилась
+
+
+# --- CMS: гостевые поля отдела ----------------------------------------------
+
+
+def test_cms_department_exposes_guest_fields(cms):
+    departments = cms.get("/api/v1/cms/departments").json()
+    kitchen = next(d for d in departments if d["code"] == "kitchen")
+    assert kitchen["public_name"]["ru"] == "Панорама"
+    assert kitchen["is_guest_facing"] is True
+    housekeeping = next(d for d in departments if d["code"] == "housekeeping")
+    assert housekeeping["is_guest_facing"] is False
+
+
+def test_cms_create_department_defaults_public_name_to_title(cms):
+    created = cms.post(
+        "/api/v1/cms/departments",
+        {"title": {"ru": "Пляжный бар"}, "kind": "bar"},
+    ).json()
+    # Гостевое имя не задано — падает на служебное, точка не безымянна.
+    assert created["public_name"]["ru"] == "Пляжный бар"
+    assert created["is_guest_facing"] is True
+
+    updated = cms.patch(
+        f"/api/v1/cms/departments/{created['id']}",
+        {"public_name": {"ru": "У моря"}, "tagline": {"ru": "коктейли на закате"}, "is_guest_facing": False},
+    ).json()
+    assert updated["public_name"]["ru"] == "У моря"
+    assert updated["tagline"]["ru"] == "коктейли на закате"
+    assert updated["is_guest_facing"] is False

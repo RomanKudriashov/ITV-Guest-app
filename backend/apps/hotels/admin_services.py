@@ -345,6 +345,9 @@ def serialize_department(point: ExecutionPoint, *, counts: dict | None = None) -
         "id": str(point.pk),
         "code": point.code,
         "title": point.title or {},
+        "public_name": point.public_name or {},
+        "tagline": point.tagline or {},
+        "is_guest_facing": point.is_guest_facing,
         "kind": point.kind,
         "schedule_id": str(point.schedule_id) if point.schedule_id else None,
         "sla_minutes": point.sla_minutes,
@@ -418,9 +421,16 @@ def create_department(data: dict) -> ExecutionPoint:
     if not title:
         raise ValidationError("Заполните название отдела", field="title")
 
+    # Гостевое имя по умолчанию = служебное, чтобы точка не осталась безымянной
+    # на витрине, пока отель не задал отдельное.
+    public_name = _clean_translations(data.get("public_name"), field="public_name") or dict(title)
+    tagline = _clean_translations(data.get("tagline"), field="tagline")
     return ExecutionPoint.objects.create(
         code=data.get("code") or _make_department_code(title),
         title=title,
+        public_name=public_name,
+        tagline=tagline,
+        is_guest_facing=data.get("is_guest_facing", True),
         kind=data.get("kind", ExecutionPoint.Kind.OTHER),
         schedule=_resolve_schedule(data.get("schedule_id")),
         sla_minutes=data.get("sla_minutes", 20),
@@ -437,6 +447,12 @@ def update_department(point_id, data: dict) -> ExecutionPoint:
         if not title:
             raise ValidationError("Заполните название отдела", field="title")
         point.title = title
+    if "public_name" in data:
+        point.public_name = _clean_translations(data["public_name"], field="public_name")
+    if "tagline" in data:
+        point.tagline = _clean_translations(data["tagline"], field="tagline")
+    if "is_guest_facing" in data and data["is_guest_facing"] is not None:
+        point.is_guest_facing = data["is_guest_facing"]
     if "kind" in data:
         point.kind = data["kind"]
     if "schedule_id" in data:

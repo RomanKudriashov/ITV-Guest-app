@@ -990,6 +990,13 @@
       "subtitle": "Order fulfilment points",
       "add": "Add department",
       "name": "Name",
+      "nameHint": "Internal — for the tracker, staff and notifications. Guests never see it.",
+      "publicName": "Guest-facing name",
+      "publicNameHint": "How the venue appears on the storefront. Empty — the internal name is used.",
+      "tagline": "Tagline",
+      "taglineHint": "A short line under the name: “European cuisine”, “grill & wine”.",
+      "guestFacing": "Show to guests",
+      "guestFacingHint": "Off — the point is internal: guests won't see it on the home or venue list.",
       "kind": "Kind",
       "kinds": {
         "kitchen": "Kitchen",

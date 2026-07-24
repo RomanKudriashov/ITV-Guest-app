@@ -45,15 +45,6 @@ GROUP_TITLES = {
     "spa": {"ru": "Спа и велнес", "en": "Spa & wellness", "ar": "سبا وعافية", "zh": "水疗与养生"},
     "services": {"ru": "Услуги", "en": "Services", "ar": "الخدمات", "zh": "服务"},
 }
-# Подпись рода на плитке одиночного заведения.
-KIND_LABELS = {
-    ExecutionPoint.Kind.KITCHEN: {"ru": "Ресторан", "en": "Restaurant", "ar": "مطعم", "zh": "餐厅"},
-    ExecutionPoint.Kind.BAR: {"ru": "Бар", "en": "Bar", "ar": "بار", "zh": "酒吧"},
-    ExecutionPoint.Kind.SPA: {"ru": "Спа", "en": "Spa", "ar": "سبا", "zh": "水疗"},
-    ExecutionPoint.Kind.HOUSEKEEPING: {"ru": "Сервис", "en": "Service", "ar": "خدمة", "zh": "服务"},
-    ExecutionPoint.Kind.RECEPTION: {"ru": "Консьерж", "en": "Concierge", "ar": "الكونسيرج", "zh": "礼宾"},
-    ExecutionPoint.Kind.OTHER: {"ru": "Сервис", "en": "Service", "ar": "خدمة", "zh": "服务"},
-}
 INFO_TITLE = {"ru": "Об отеле", "en": "About the hotel", "ar": "عن الفندق", "zh": "酒店信息"}
 ROOM_CONTROL_TITLE = {"ru": "Мой номер", "en": "My room", "ar": "غرفتي", "zh": "我的房间"}
 
@@ -92,10 +83,17 @@ def _point_status(point: ExecutionPoint, moment: datetime | None) -> dict[str, A
 
 
 def _venue_points(hotel: Hotel) -> list[ExecutionPoint]:
-    """Точки с ≥1 активной категорией — те, у кого есть куда войти."""
+    """
+    Заведения для витрины: точки с ≥1 активной категорией И помеченные гостевыми.
+    Служебная точка (is_guest_facing=false) не появляется, даже если на неё
+    что-то замаршрутизировано.
+    """
     return list(
         ExecutionPoint.objects.filter(
-            is_active=True, routes__is_active=True, routes__category__is_active=True
+            is_active=True,
+            is_guest_facing=True,
+            routes__is_active=True,
+            routes__category__is_active=True,
         )
         .select_related("schedule", "image")
         .prefetch_related("schedule__intervals")
@@ -179,8 +177,10 @@ def build_showcase(
                 base = {
                     "key": point.code,
                     "type": "venue",
-                    "title": translate(point.title, language) or point.code,
-                    "subtitle": translate(KIND_LABELS.get(point.kind, {}), language) or None,
+                    "title": translate(point.public_title, language) or point.code,
+                    # Подпись — только tagline. Тип точки на плитке не показываем;
+                    # нет tagline → фронт покажет часы/статус.
+                    "subtitle": translate(point.tagline, language) or None,
                     "kind": point.kind,
                     "venue_count": None,
                     "status": _point_status(point, moment),
@@ -242,8 +242,8 @@ def build_showcase(
 def _venue_card(point: ExecutionPoint, language: str | None, moment: datetime | None) -> dict[str, Any]:
     return {
         "code": point.code,
-        "title": translate(point.title, language) or point.code,
-        "subtitle": translate(KIND_LABELS.get(point.kind, {}), language) or None,
+        "title": translate(point.public_title, language) or point.code,
+        "subtitle": translate(point.tagline, language) or None,
         "kind": point.kind,
         "image": _point_image(point),
         "status": _point_status(point, moment),

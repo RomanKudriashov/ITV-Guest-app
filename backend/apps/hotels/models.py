@@ -213,7 +213,16 @@ class ExecutionPoint(TenantModel):
         OTHER = "other", "Прочее"
 
     code = models.SlugField(max_length=64)
+    # Служебное название — его видят только персонал, трекер, эскалации,
+    # аналитика. Гостю оно не показывается.
     title = TranslatableField()
+    # Гостевое название заведения («Панорама») и короткая подпись под ним
+    # («европейская кухня»). Пустое public_name → на витрине падаем на title.
+    public_name = TranslatableField()
+    tagline = TranslatableField()
+    # Показывать ли точку гостю как заведение на витрине. Служебные точки
+    # (хозслужба, кухня рум-сервиса) — false: их гость не видит.
+    is_guest_facing = models.BooleanField(default=True)
     kind = models.CharField(max_length=32, choices=Kind.choices, default=Kind.OTHER)
     is_active = models.BooleanField(default=True)
     schedule = models.ForeignKey(
@@ -240,6 +249,11 @@ class ExecutionPoint(TenantModel):
 
     def __str__(self) -> str:
         return self.code
+
+    @property
+    def public_title(self) -> dict:
+        """Гостевое название с падением на служебное, если public_name пустой."""
+        return self.public_name or self.title or {}
 
     @property
     def realtime_group(self) -> str:

@@ -226,18 +226,32 @@ class Command(BaseCommand):
         Отделы отеля. Заявки-услуги уходят в свои: такси — консьержу, уборка —
         в хозслужбу. Это обычная работа Route, а не отдельная механика.
         """
+        # title — служебное (трекер/персонал); public/tagline — гостевое;
+        # guest — показывать ли точку гостю на витрине. Хозслужба служебная.
         specs = [
-            ("kitchen", ExecutionPoint.Kind.KITCHEN, "Кухня ресторана", "Restaurant kitchen", 20),
-            ("bar", ExecutionPoint.Kind.BAR, "Лобби-бар", "Lobby bar", 15),
-            ("concierge", ExecutionPoint.Kind.RECEPTION, "Консьерж", "Concierge", 10),
-            ("housekeeping", ExecutionPoint.Kind.HOUSEKEEPING, "Хозслужба", "Housekeeping", 45),
-            ("spa", ExecutionPoint.Kind.SPA, "SPA-центр", "SPA", 30),
+            ("kitchen", ExecutionPoint.Kind.KITCHEN, "Кухня ресторана", "Restaurant kitchen", 20,
+             ("Панорама", "Panorama"), ("Европейская кухня", "European cuisine"), True),
+            ("bar", ExecutionPoint.Kind.BAR, "Лобби-бар", "Lobby bar", 15,
+             ("Лобби-бар", "Lobby bar"), ("Коктейли и вино", "Cocktails & wine"), True),
+            ("concierge", ExecutionPoint.Kind.RECEPTION, "Консьерж", "Concierge", 10,
+             ("Консьерж", "Concierge"), ("Такси и экскурсии", "Taxi & tours"), True),
+            ("housekeeping", ExecutionPoint.Kind.HOUSEKEEPING, "Хозслужба", "Housekeeping", 45,
+             ("Хозслужба", "Housekeeping"), ("", ""), False),
+            ("spa", ExecutionPoint.Kind.SPA, "SPA-центр", "SPA", 30,
+             ("СПА «Кристалл»", "Crystal Spa"), ("Массаж и уход", "Massage & care"), True),
         ]
         points: dict[str, ExecutionPoint] = {}
-        for code, kind, ru, en, sla in specs:
+        for code, kind, ru, en, sla, public, tagline, guest in specs:
             point, _ = ExecutionPoint.objects.get_or_create(
                 code=code,
-                defaults={"kind": kind, "title": {"ru": ru, "en": en}, "sla_minutes": sla},
+                defaults={
+                    "kind": kind,
+                    "title": {"ru": ru, "en": en},
+                    "public_name": {"ru": public[0], "en": public[1]},
+                    "tagline": ({"ru": tagline[0], "en": tagline[1]} if tagline[0] else {}),
+                    "is_guest_facing": guest,
+                    "sla_minutes": sla,
+                },
             )
             points[code] = point
         return points

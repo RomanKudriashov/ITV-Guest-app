@@ -131,7 +131,14 @@ export const DEPARTMENT_KINDS: DepartmentKind[] = [
 export interface Department {
   id: string;
   code: string;
+  /** Internal name — staff, tracker, escalations, analytics. Never shown to guests. */
   title: Translated;
+  /** Guest-facing venue name («Панорама»); falls back to `title` when empty. */
+  public_name: Translated;
+  /** Short guest-facing tagline («европейская кухня»). */
+  tagline: Translated;
+  /** Whether this point appears to guests as a venue on the showcase. */
+  is_guest_facing: boolean;
   kind: DepartmentKind;
   schedule_id: string | null;
   sla_minutes: number;
@@ -147,6 +154,9 @@ export interface Department {
 export interface DepartmentPayload {
   code?: string;
   title: Translated;
+  public_name?: Translated;
+  tagline?: Translated;
+  is_guest_facing?: boolean;
   kind: DepartmentKind;
   schedule_id?: string | null;
   sla_minutes?: number;

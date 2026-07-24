@@ -988,6 +988,13 @@
       "subtitle": "订单履行点",
       "add": "添加部门",
       "name": "名称",
+      "nameHint": "内部名称——用于工单板、员工和通知，客人看不到。",
+      "publicName": "对客名称",
+      "publicNameHint": "场所在门店的显示名。留空则使用内部名称。",
+      "tagline": "副标题",
+      "taglineHint": "名称下的简短说明：“欧洲料理”“炭烤与美酒”。",
+      "guestFacing": "对客显示",
+      "guestFacingHint": "关闭后为内部点位：客人在首页和场所列表中看不到。",
       "kind": "类型",
       "kinds": {
         "kitchen": "厨房",

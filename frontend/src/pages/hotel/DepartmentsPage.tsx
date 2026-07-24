@@ -62,6 +62,9 @@ import { compactTranslated, pickTranslated } from '@/utils/translated';
 
 interface DepartmentForm {
   title: Translated;
+  public_name: Translated;
+  tagline: Translated;
+  is_guest_facing: boolean;
   kind: DepartmentKind;
   schedule_id: string | null;
   sla_minutes: number;
@@ -70,6 +73,9 @@ interface DepartmentForm {
 
 const EMPTY_FORM: DepartmentForm = {
   title: {},
+  public_name: {},
+  tagline: {},
+  is_guest_facing: true,
   kind: 'kitchen',
   schedule_id: null,
   sla_minutes: 20,
@@ -303,6 +309,9 @@ function DepartmentDialog({
     department
       ? {
           title: { ...department.title },
+          public_name: { ...(department.public_name ?? {}) },
+          tagline: { ...(department.tagline ?? {}) },
+          is_guest_facing: department.is_guest_facing ?? true,
           kind: department.kind,
           schedule_id: department.schedule_id ?? null,
           sla_minutes: department.sla_minutes,
@@ -320,6 +329,9 @@ function DepartmentDialog({
     mutationFn: () => {
       const payload = {
         title: compactTranslated(form.title),
+        public_name: compactTranslated(form.public_name),
+        tagline: compactTranslated(form.tagline),
+        is_guest_facing: form.is_guest_facing,
         kind: form.kind,
         schedule_id: form.schedule_id,
         sla_minutes: form.sla_minutes,
@@ -358,8 +370,45 @@ function DepartmentDialog({
                   })
                 : undefined
             }
+            helperText={t('hotel.departments.nameHint')}
             testId="department-title"
           />
+
+          <TranslatedField
+            label={t('hotel.departments.publicName')}
+            value={form.public_name}
+            onChange={(public_name) => setForm((prev) => ({ ...prev, public_name }))}
+            languages={languages.codes}
+            languageLabels={languages.labels}
+            defaultLanguage={languages.defaultCode}
+            helperText={t('hotel.departments.publicNameHint')}
+            testId="department-public-name"
+          />
+
+          <TranslatedField
+            label={t('hotel.departments.tagline')}
+            value={form.tagline}
+            onChange={(tagline) => setForm((prev) => ({ ...prev, tagline }))}
+            languages={languages.codes}
+            languageLabels={languages.labels}
+            defaultLanguage={languages.defaultCode}
+            helperText={t('hotel.departments.taglineHint')}
+            testId="department-tagline"
+          />
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={form.is_guest_facing}
+                onChange={(event) => setForm((prev) => ({ ...prev, is_guest_facing: event.target.checked }))}
+                inputProps={{ 'data-testid': 'department-guest-facing' } as never}
+              />
+            }
+            label={t('hotel.departments.guestFacing')}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>
+            {t('hotel.departments.guestFacingHint')}
+          </Typography>
 
           <Box>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>

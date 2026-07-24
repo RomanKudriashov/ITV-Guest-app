@@ -93,6 +93,9 @@ class MatrixRowIn(Schema):
 
 class DepartmentIn(Schema):
     title: dict[str, str]
+    public_name: dict[str, str] = {}
+    tagline: dict[str, str] = {}
+    is_guest_facing: bool = True
     code: str | None = None
     kind: str = "other"
     schedule_id: str | None = None
@@ -103,6 +106,9 @@ class DepartmentIn(Schema):
 
 class DepartmentPatch(Schema):
     title: dict[str, str] | None = None
+    public_name: dict[str, str] | None = None
+    tagline: dict[str, str] | None = None
+    is_guest_facing: bool | None = None
     kind: str | None = None
     schedule_id: str | None = None
     sla_minutes: int | None = None
