@@ -34,6 +34,7 @@ from apps.catalog.models import (
 )
 from apps.catalog.request_fields import FieldType
 from apps.core.context import tenant_context
+from apps.core.fields import translate
 from apps.hotels.models import (
     BrandTheme,
     ExecutionPoint,
@@ -829,6 +830,90 @@ class Command(BaseCommand):
                     target_kind=target,
                     title=title,
                 )
+
+        self._seed_service_escalation(points, users)
+
+    def _seed_service_escalation(self, points, users) -> None:
+        """
+        Эскалация на уровне сервиса (R3): у каждого заведения своё правило, и
+        «дольше нормы» — это его собственный SLA, а не общее число.
+
+        Норма разная по существу работы: кухня отдаёт за 20 минут, хозслужба
+        приходит в номер за 45, консьерж отвечает за 10. Поэтому ступень
+        «поднять управляющему» встаёт ровно на `sla_minutes` точки.
+
+        Каналом управляющего эскалация и заканчивается: выше него внутри
+        сервиса никого нет, а тревожить админа отеля каждой невзятой заявкой —
+        верный способ, чтобы он перестал их читать.
+        """
+        for code, point in points.items():
+            if code == "kitchen":
+                continue  # у кухни своё демо-правило с короткими таймингами
+
+            title = translate(point.title, "ru") or point.code
+            NotificationChannel.objects.get_or_create(
+                title=f"Чат: {title}",
+                defaults={
+                    "type": ChannelType.LOG,
+                    "execution_point": point,
+                    "templates": {
+                        "ru": {
+                            "subject": "Новая задача №{{number}} — {{point}}",
+                            "body": "{{room}}\n{{summary}}\n{{comment}}",
+                        },
+                        "en": {
+                            "subject": "New task #{{number}} — {{point}}",
+                            "body": "{{room}}\n{{summary}}\n{{comment}}",
+                        },
+                    },
+                },
+            )
+
+            rule, created = EscalationRule.objects.get_or_create(
+                name=f"{title}: подъём по норме",
+                defaults={"execution_point": point},
+            )
+            if created:
+                for index, (delay, target, step_title) in enumerate(
+                    [
+                        (0, TargetKind.POINT, "Сразу — в чат отдела"),
+                        (
+                            point.sla_minutes,
+                            TargetKind.MANAGER,
+                            f"Через {point.sla_minutes} мин — управляющему сервисом",
+                        ),
+                    ]
+                ):
+                    EscalationStep.objects.create(
+                        rule=rule,
+                        sort_order=index,
+                        delay_minutes=delay,
+                        target_kind=target,
+                        title=step_title,
+                    )
+
+        # Личный канал каждому управляющему: без него ступень MANAGER находит
+        # нужного человека, но отправить ему нечего — в журнале «skipped».
+        for prefix, user in users.items():
+            if not prefix.startswith("manager."):
+                continue
+            NotificationChannel.objects.get_or_create(
+                title=f"{user.full_name} — личный канал",
+                defaults={
+                    "type": ChannelType.LOG,
+                    "user": user,
+                    "templates": {
+                        "ru": {
+                            "subject": "Задача №{{number}} висит дольше нормы",
+                            "body": "{{point}} · {{room}}\n{{summary}}",
+                        },
+                        "en": {
+                            "subject": "Task #{{number}} is overdue",
+                            "body": "{{point}} · {{room}}\n{{summary}}",
+                        },
+                    },
+                },
+            )
 
     # --- Инфо-страницы и бронь --------------------------------------------
 

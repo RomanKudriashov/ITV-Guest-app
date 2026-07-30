@@ -481,3 +481,102 @@ def test_log_is_scoped_to_the_hotel(crystal, aurora, order, cms_aurora, notifica
         plan_escalation(order)
 
     assert cms_aurora.get("/api/cms/notification-log").json() == []
+
+
+# --- Эскалация на уровне сервиса (R3) --------------------------------------
+
+
+def test_overdue_task_reaches_the_manager_of_its_own_service(
+    client, crystal, notifications_on, no_dispatch
+):
+    """
+    Задача висит дольше нормы СВОЕГО заведения → поднимается его управляющему.
+
+    Проверяем и адресность: заявка хозслужбы не должна тревожить управляющего
+    рестораном. «Норма» у каждого заведения своя — это sla_minutes точки, а не
+    общее число по отелю.
+    """
+    from apps.accounts.models import User
+    from apps.hotels.models import ExecutionPoint
+    from apps.notifications.models import NotificationStatus
+    from apps.notifications.services import execute_step
+
+    order = _place_housekeeping_request(client, crystal)
+
+    with tenant_context(crystal):
+        point = ExecutionPoint.objects.get(code="housekeeping")
+        planned = plan_escalation(order)
+
+        # Две ступени: сразу в отдел, затем — по норме отдела — управляющему.
+        assert [log.target_kind for log in planned] == [TargetKind.POINT, TargetKind.MANAGER]
+        delays = [(log.scheduled_for - order.created_at).total_seconds() / 60 for log in planned]
+        assert delays == [0, point.sla_minutes]
+
+        # Ступень «дольше нормы» доходит до управляющего хозслужбой.
+        manager_step = execute_step(planned[1].pk)
+        assert manager_step.status == NotificationStatus.SENT, manager_step.error
+
+        recipients = {
+            delivery.channel.user_id for delivery in manager_step.deliveries.all()
+        }
+        housekeeping_manager = User.objects.get(email="manager.housekeeping@crystal.local")
+        restaurant_manager = User.objects.get(email="manager.restaurant@crystal.local")
+
+        assert housekeeping_manager.pk in recipients
+        assert restaurant_manager.pk not in recipients, "чужого управляющего не трогаем"
+
+
+def test_taken_task_stops_escalating_to_the_manager(
+    client, crystal, notifications_on, no_dispatch
+):
+    """Горничная взяла заявку — поднимать некого и незачем."""
+    from apps.notifications.models import NotificationStatus
+    from apps.notifications.services import execute_step
+    from apps.orders.tracker import accept_order
+    from apps.accounts.models import User
+
+    order = _place_housekeeping_request(client, crystal)
+
+    with tenant_context(crystal):
+        planned = plan_escalation(order)
+        maid = User.objects.get(email="maid@crystal.local")
+        accept_order(maid, order.pk)
+
+        manager_step = execute_step(planned[1].pk)
+        assert manager_step.status == NotificationStatus.CANCELLED
+        assert manager_step.accepted_at_send is True
+
+
+def _place_housekeeping_request(client, crystal) -> Order:
+    """Заявка на уборку гостевым потоком — задача очереди хозслужбы."""
+    token = client.post(
+        "/api/guest/session",
+        data={"room_number": "305"},
+        content_type="application/json",
+        HTTP_HOST=host_for(crystal),
+    ).json()["token"]
+    kwargs = {"HTTP_HOST": host_for(crystal), "HTTP_AUTHORIZATION": f"Bearer {token}"}
+
+    catalog = client.get("/api/guest/catalog?type=service_request", **kwargs).json()
+    cleaning = next(
+        entry
+        for category in catalog["categories"]
+        for entry in category["items"]
+        if entry["code"] == "cleaning"
+    )
+    response = client.post(
+        "/api/guest/order",
+        data={
+            "lines": [{"item_id": cleaning["id"], "quantity": 1}],
+            "timing": "asap",
+            "field_values": {"when": "14:00"},
+        },
+        content_type="application/json",
+        HTTP_IDEMPOTENCY_KEY="esc-hk",
+        **kwargs,
+    )
+    assert response.status_code == 201, response.content
+    with tenant_context(crystal):
+        return Order.objects.select_related("status", "execution_point").get(
+            pk=response.json()["id"]
+        )
