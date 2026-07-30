@@ -415,13 +415,21 @@ def _create_fanned_order(
         # Один снимок сумм — на parent, над всеми строками, коммерция агрегатора.
         _apply_charges(parent, all_items, hotel, location, data, service=aggregator)
 
-    # У parent — своя запись создания (для истории/агрегации), без ORDER_CREATED:
-    # на доску parent не идёт и эскалацию не поднимает; аналитику несёт он (C4).
+    # У parent — своя запись создания и событие ORDER_CREATED: аналитику несёт
+    # он (children пропускаются). На доску parent не попадает (исключён), а
+    # эскалация пропускает агрегат — работают только children.
     OrderStatusChange.objects.create(
         hotel_id=hotel_id,
         order=parent,
         from_status=None,
         to_status=status,
+        actor_type="guest" if guest_session else "system",
+        actor_id=guest_session.pk if guest_session else None,
+    )
+    emit(
+        ORDER_CREATED,
+        _event_payload(parent),
+        hotel_id=hotel_id,
         actor_type="guest" if guest_session else "system",
         actor_id=guest_session.pk if guest_session else None,
     )

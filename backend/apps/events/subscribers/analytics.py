@@ -48,11 +48,18 @@ def _ingest(hotel_id, raws) -> None:
         collector.record(hotel_id, raw)
 
 
+# Единица аналитики фанного заказа — parent (несёт деньги + агрегат позиций);
+# children (parent_id задан) — только исполнение, в аналитику не идут (иначе
+# двойной счёт / нулевая выручка). Обычный заказ — parent_id=None, как раньше.
+def _skip(order) -> bool:
+    return order is None or order.parent_id is not None
+
+
 @subscribe(ORDER_CREATED)
 def on_order_created(event: Event) -> None:
     with tenant_context(event.hotel_id):
         order = _order(event.payload.get("order_id"))
-        if order is None:
+        if _skip(order):
             return
         _ingest(event.hotel_id, collector.build_created(order, _hotel(event.hotel_id), bus_event_id=event.id))
 
@@ -61,7 +68,7 @@ def on_order_created(event: Event) -> None:
 def on_order_accepted(event: Event) -> None:
     with tenant_context(event.hotel_id):
         order = _order(event.payload.get("order_id"))
-        if order is None:
+        if _skip(order):
             return
         _ingest(event.hotel_id, collector.build_accepted(order, _hotel(event.hotel_id), bus_event_id=event.id))
 
@@ -70,7 +77,7 @@ def on_order_accepted(event: Event) -> None:
 def on_order_status_changed(event: Event) -> None:
     with tenant_context(event.hotel_id):
         order = _order(event.payload.get("order_id"))
-        if order is None or not order.status.is_terminal or order.status.is_cancelled:
+        if _skip(order) or not order.status.is_terminal or order.status.is_cancelled:
             return
         _ingest(event.hotel_id, collector.build_completed(order, _hotel(event.hotel_id), bus_event_id=event.id))
 
@@ -79,7 +86,7 @@ def on_order_status_changed(event: Event) -> None:
 def on_order_cancelled(event: Event) -> None:
     with tenant_context(event.hotel_id):
         order = _order(event.payload.get("order_id"))
-        if order is None:
+        if _skip(order):
             return
         _ingest(event.hotel_id, collector.build_cancelled(order, _hotel(event.hotel_id), bus_event_id=event.id))
 

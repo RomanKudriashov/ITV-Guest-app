@@ -231,9 +231,22 @@ def build_created(order, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
     session = order.guest_session
     bd = dim.business_date_for(hotel, order.created_at)
     dims = _order_dims(order, session)
-    items = list(order.items.select_related("item", "item__category").all())
+    # Позиции: у parent-агрегата — из children (каждая несёт своего исполнителя,
+    # так per-executor аналитика корректна); у обычного заказа — свои.
+    if order.parent_id is None and order.children.exists():
+        item_pairs = [
+            (line, str(child.execution_point_id))
+            for child in order.children.all()
+            for line in child.items.select_related("item", "item__category").all()
+        ]
+    else:
+        _own_point = str(order.execution_point_id) if order.execution_point_id else ""
+        item_pairs = [
+            (line, _own_point)
+            for line in order.items.select_related("item", "item__category").all()
+        ]
+    items = [line for line, _ in item_pairs]
     items_count = sum(i.quantity for i in items)
-    point_key = str(order.execution_point_id) if order.execution_point_id else ""
 
     raws: list[dict] = [
         {
@@ -260,7 +273,7 @@ def build_created(order, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
         }
     ]
 
-    for line in items:
+    for line, line_point in item_pairs:
         category_id = line.item.category_id if line.item else None
         offering_type = line.item.category.type if (line.item and line.item.category_id) else ""
         raws.append(
@@ -277,7 +290,7 @@ def build_created(order, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
                     "item_key": str(line.item_id),
                     "category_key": str(category_id) if category_id else "",
                     "offering_type": offering_type or "",
-                    "point_key": point_key,
+                    "point_key": line_point,
                 },
                 "measures": {
                     "quantity": line.quantity,
@@ -296,7 +309,7 @@ def build_created(order, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
                     "occurred_at": order.created_at,
                     "business_date": bd,
                     "order_id": order.pk,
-                    "dimensions": {"modifier_key": mod, "point_key": point_key},
+                    "dimensions": {"modifier_key": mod, "point_key": line_point},
                     "measures": {"quantity": line.quantity},
                 }
             )

@@ -36,6 +36,12 @@ def plan_escalation_for_new_order(event: Event) -> None:
     order_id = event.payload.get("order_id")
     if not order_id:
         return
+    # parent-агрегат не эскалируем — исполнение (и подъём) на children.
+    from apps.orders.models import Order
+
+    with tenant_context(event.hotel_id):
+        if Order.objects.filter(pk=order_id, children__isnull=False).exists():
+            return
     # В фон: создание заказа не должно ждать разбора правил и брокера.
     plan_escalation_task.delay(order_id, event.hotel_id)
 

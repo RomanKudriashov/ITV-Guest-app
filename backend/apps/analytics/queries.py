@@ -430,7 +430,13 @@ def drilldown(hotel: Hotel, user, params: dict, *, limit: int = 200) -> dict:
     period = resolve_period(params, hotel)
     from apps.orders.models import Order
 
-    qs = Order.objects.select_related("status", "execution_point", "room", "review").order_by("-created_at")
+    # children (исполнение фанного заказа) в ленту не идут — единица гостевого
+    # заказа это parent-агрегат (несёт деньги); иначе двойной счёт и дубли строк.
+    qs = (
+        Order.objects.filter(parent__isnull=True)
+        .select_related("status", "execution_point", "room", "review")
+        .order_by("-created_at")
+    )
 
     # Диапазон дат — в сутках отеля: границы дня переводим в аварные моменты.
     qs = qs.filter(

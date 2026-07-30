@@ -45,10 +45,12 @@ def rebuild_raw_from_orders(hotel_id) -> int:
             collector.write_raw(hotel_id, collector.build_session(session, hotel))
             written += 1
 
+        # children (parent_id задан) — исполнение; аналитику несёт parent-агрегат
+        # (build_created берёт их позиции). Так пересчёт совпадает с живым потоком.
         orders = (
             Order.objects.select_related("status", "guest_session", "execution_point", "location")
-            .prefetch_related("items__item__category")
-            .all()
+            .prefetch_related("items__item__category", "children__items__item__category")
+            .filter(parent__isnull=True)
         )
         for order in orders.iterator(chunk_size=200):
             collector.write_raw(hotel_id, collector.build_created(order, hotel))
