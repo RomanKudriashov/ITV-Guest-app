@@ -1,6 +1,6 @@
 from ninja import NinjaAPI
 
-from apps.accounts.auth import PlatformAuth, StaffAuth
+from apps.accounts.auth import CmsAuth, PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
 from .cms import router as cms_router
@@ -37,9 +37,11 @@ api.add_router("/orders", orders_router, auth=StaffAuth())
 # — те же функции зовёт WebSocket-канал, у которого middleware нет.
 api.add_router("/tracker", tracker_router, auth=StaffAuth())
 api.add_router("/tracker", surface_tracker_router, auth=StaffAuth())
-# Весь CMS-раздел закрыт JWT персонала по умолчанию: забыть auth на отдельном
-# эндпоинте невозможно — он задан на уровне роутера.
-api.add_router("/cms", cms_router, auth=StaffAuth())
+# Весь CMS-раздел закрыт JWT персонала И РОЛЬЮ: забыть проверку на отдельном
+# эндпоинте невозможно — она задана на уровне роутера. Линейный персонал сюда
+# не попадает вовсе (403), управляющий попадает, но видит только свой сервис —
+# это проверяет сервисный слой (apps/accounts/roles.py).
+api.add_router("/cms", cms_router, auth=CmsAuth())
 # Платформенная консоль на базовом домене: закрыта scope=platform токеном.
 # Тенантный staff-токен сюда не пускается (и наоборот) — проверка PlatformAuth.
 api.add_router("/platform", platform_router, auth=PlatformAuth())

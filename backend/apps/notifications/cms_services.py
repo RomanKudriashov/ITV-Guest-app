@@ -12,6 +12,11 @@ from typing import Any, Iterable
 
 from django.db import transaction
 
+from apps.accounts.roles import (
+    managed_point_ids_or_none,
+    require_hotel_admin,
+    require_point_scope,
+)
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import ExecutionPoint
 
@@ -29,6 +34,17 @@ MASK = "••••"
 
 
 # --- Каналы ----------------------------------------------------------------
+
+
+def _require_point(point_id, what: str) -> None:
+    """
+    Канал и правило привязаны к отделу — им распоряжается его управляющий.
+    Привязка к NULL (правило отеля по умолчанию, общий канал) — уровень отеля.
+    """
+    if point_id is None:
+        require_hotel_admin()
+        return
+    require_point_scope(point_id, what=what)
 
 
 def mask_config(channel: NotificationChannel) -> dict:
@@ -63,18 +79,20 @@ def serialize_channel(channel: NotificationChannel) -> dict:
 
 
 def list_channels() -> list[dict]:
-    return [
-        serialize_channel(channel)
-        for channel in NotificationChannel.objects.select_related(
-            "execution_point", "user"
-        ).order_by("title")
-    ]
+    queryset = NotificationChannel.objects.select_related("execution_point", "user")
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        # Канал управляющего — канал его отдела либо его собственный. Личные
+        # каналы чужих людей и общеотельные ему не показываем.
+        queryset = queryset.filter(execution_point_id__in=managed)
+    return [serialize_channel(channel) for channel in queryset.order_by("title")]
 
 
 def get_channel(channel_id) -> NotificationChannel:
     channel = NotificationChannel.objects.filter(pk=channel_id).first()
     if channel is None:
         raise NotFoundError("Канал не найден")
+    _require_point(channel.execution_point_id, "Канал")
     return channel
 
 
@@ -82,6 +100,7 @@ def _validate_binding(data: dict) -> None:
     point_id = data.get("execution_point_id")
     if point_id and not ExecutionPoint.objects.filter(pk=point_id).exists():
         raise ValidationError("Точка исполнения не найдена", field="execution_point_id")
+    _require_point(point_id, "Канал")
 
 
 def _merge_secrets(existing: dict, incoming: dict, adapter) -> dict:
@@ -192,16 +211,18 @@ def serialize_rule(rule: EscalationRule) -> dict:
 
 
 def list_rules() -> list[dict]:
-    return [
-        serialize_rule(rule)
-        for rule in EscalationRule.objects.prefetch_related("steps").order_by("name")
-    ]
+    queryset = EscalationRule.objects.prefetch_related("steps")
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        queryset = queryset.filter(execution_point_id__in=managed)
+    return [serialize_rule(rule) for rule in queryset.order_by("name")]
 
 
 def get_rule(rule_id) -> EscalationRule:
     rule = EscalationRule.objects.prefetch_related("steps").filter(pk=rule_id).first()
     if rule is None:
         raise NotFoundError("Правило не найдено")
+    _require_point(rule.execution_point_id, "Правило эскалации")
     return rule
 
 
@@ -281,6 +302,7 @@ def create_rule(data: dict) -> EscalationRule:
     point_id = data.get("execution_point_id") or None
     if point_id and not ExecutionPoint.objects.filter(pk=point_id).exists():
         raise ValidationError("Точка исполнения не найдена", field="execution_point_id")
+    _require_point(point_id, "Правило эскалации")
 
     is_active = data.get("is_active", True)
     if is_active:

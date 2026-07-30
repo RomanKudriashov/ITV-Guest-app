@@ -17,6 +17,12 @@ from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import ExecutionPoint
 
 from .models import StaffAssignment, User
+from .roles import (
+    NotMyService,
+    current_access,
+    managed_point_ids_or_none,
+    require_point_scope,
+)
 
 MIN_PASSWORD_LENGTH = 8
 
@@ -52,6 +58,11 @@ def list_staff() -> list[dict]:
         .prefetch_related("assignments__execution_point")
         .order_by("full_name", "email")
     )
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        # Управляющий распоряжается СВОИМ персоналом — теми, кто работает в его
+        # заведениях. Прочие сотрудники отеля для него не существуют.
+        users = users.filter(assignments__execution_point_id__in=managed).distinct()
     return [serialize_staff(user) for user in users]
 
 
@@ -63,7 +74,30 @@ def get_staff(user_id) -> User:
     )
     if user is None:
         raise NotFoundError("Сотрудник не найден")
+    _require_staff_scope(user)
     return user
+
+
+def _require_staff_scope(user: User) -> None:
+    """
+    Управляющий трогает сотрудника, только если тот работает в его заведении.
+
+    Отдельно закрыт админ отеля: иначе управляющий рестораном, получив в свою
+    смену админа, мог бы сменить ему пароль и забрать весь отель.
+    """
+    access = current_access()
+    if access.unrestricted:
+        return
+    if user.is_hotel_admin:
+        raise NotMyService("Учётную запись администратора отеля меняет только он сам")
+    points = {
+        str(point_id)
+        for point_id in user.assignments.filter(is_active=True).values_list(
+            "execution_point_id", flat=True
+        )
+    }
+    if not points & access.managed_point_ids:
+        raise NotMyService("Этот сотрудник работает не в вашем заведении")
 
 
 def _validate_password(password: str) -> None:
@@ -81,14 +115,25 @@ def _resolve_point(execution_point_id) -> ExecutionPoint:
     point = ExecutionPoint.objects.filter(pk=execution_point_id).first()
     if point is None:
         raise ValidationError("Отдел не найден", field="execution_point_id")
+    # Привязка — это раздача доступа. Управляющий раздаёт его только в свои
+    # заведения, иначе он мог бы завести себе повара на чужой кухне.
+    require_point_scope(point.pk, what="Отдел")
     return point
 
 
 @transaction.atomic
 def _replace_assignments(user: User, assignments: Iterable[dict]) -> None:
+    assignments = list(assignments or [])
+    if not assignments and not current_access().unrestricted:
+        # Сотрудник без привязок принадлежит отелю, а не заведению — управляющий
+        # такого не заводит и не отвязывает: иначе он выпустил бы человека из
+        # своей области и больше не смог бы им управлять.
+        raise ValidationError(
+            "Укажите хотя бы один отдел из ваших", field="assignments"
+        )
     StaffAssignment.objects.filter(user=user).hard_delete()
     valid_levels = set(dict(StaffAssignment.Level.choices))
-    for entry in assignments or []:
+    for entry in assignments:
         point = _resolve_point(entry.get("execution_point_id"))
         level = entry.get("level") or StaffAssignment.Level.MEMBER
         if level not in valid_levels:
@@ -108,6 +153,9 @@ def create_staff(data: dict) -> User:
 
     password = data.get("password") or ""
     _validate_password(password)
+
+    if data.get("is_hotel_admin") and not current_access().unrestricted:
+        raise NotMyService("Права администратора отеля выдаёт администратор отеля")
 
     user = User.objects.create(
         hotel_id=require_hotel_id(),
@@ -138,6 +186,9 @@ def update_staff(user_id, data: dict, *, acting_user_id=None) -> User:
     if "language" in data:
         user.language = str(data["language"] or "").strip()
     if "is_hotel_admin" in data:
+        if data["is_hotel_admin"] and not current_access().unrestricted:
+            # Иначе управляющий за один PATCH выписал бы себе весь отель.
+            raise NotMyService("Права администратора отеля выдаёт администратор отеля")
         user.is_hotel_admin = data["is_hotel_admin"]
     if "is_active" in data:
         if data["is_active"] is False:

@@ -274,9 +274,30 @@ class Command(BaseCommand):
         return points
 
     def _seed_staff(self, hotel: Hotel, points: dict[str, ExecutionPoint]) -> dict[str, User]:
-        """Каждому отделу — свой сотрудник: доски не должны пересекаться."""
+        """
+        Каждому сервису — свой управляющий и свои линейные: доски не должны
+        пересекаться, а роли должны быть проверяемы вживую.
+
+        Уровень привязки и ЕСТЬ роль (apps/accounts/roles.py): `manager` —
+        управляющий сервисом (правит своё меню, расписание, коммерцию, персонал,
+        видит свою аналитику), `member`/`lead` — линейный (только трекер).
+        Админ отеля — owner@<поддомен>.local, его завёл provision_hotel.
+        """
         specs = [
+            # Управляющие — по одному на сервис.
+            ("manager.restaurant", "Сергей, управляющий «Панорамой»", "kitchen",
+             StaffAssignment.Level.MANAGER),
+            ("manager.bar", "Ольга, управляющая баром", "bar",
+             StaffAssignment.Level.MANAGER),
+            ("manager.spa", "Елена, управляющая СПА", "spa",
+             StaffAssignment.Level.MANAGER),
+            ("manager.concierge", "Тимур, старший консьерж", "concierge",
+             StaffAssignment.Level.MANAGER),
+            ("manager.housekeeping", "Галина, управляющая хозслужбой", "housekeeping",
+             StaffAssignment.Level.MANAGER),
+            # Линейный персонал — по нему проверяется, что в CMS его не пускают.
             ("chef", "Пётр, повар", "kitchen", StaffAssignment.Level.LEAD),
+            ("barman", "Никита, бармен", "bar", StaffAssignment.Level.MEMBER),
             ("concierge", "Анна, консьерж", "concierge", StaffAssignment.Level.MEMBER),
             ("maid", "Мария, горничная", "housekeeping", StaffAssignment.Level.MEMBER),
             ("spa", "Ирина, СПА-мастер", "spa", StaffAssignment.Level.LEAD),

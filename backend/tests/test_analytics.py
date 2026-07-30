@@ -210,11 +210,17 @@ def test_business_date_uses_hotel_timezone(crystal):
 # --- Скоуп прав ------------------------------------------------------------
 
 
-def test_point_senior_sees_only_their_point(crystal):
+def test_analytics_scope_follows_the_role(crystal):
+    """
+    С R3 аналитика — инструмент управляющего, а не всякого, кто привязан к
+    точке. Повар (LEAD кухни) цифр не видит, управляющий рестораном видит свою
+    кухню, админ отеля — весь отель.
+    """
     with tenant_context(crystal):
         from apps.accounts.models import User
 
-        chef = User.objects.get(email="chef@crystal.local")  # LEAD кухни
+        chef = User.objects.get(email="chef@crystal.local")  # линейный, LEAD
+        manager = User.objects.get(email="manager.restaurant@crystal.local")
         admin = _admin(crystal)
         kitchen, concierge = _point_id("kitchen"), _point_id("concierge")
 
@@ -224,12 +230,15 @@ def test_point_senior_sees_only_their_point(crystal):
               {"offering_type": "service_request", "point_key": concierge}, {"revenue_minor": 0, "items_count": 1}, "c1")
 
         params = {"date_from": "2026-07-20", "date_to": "2026-07-20"}
-        assert queries.summary(crystal, chef, params)["current"]["orders"] == 1  # только кухня
+        assert queries.summary(crystal, manager, params)["current"]["orders"] == 1  # своя кухня
         assert queries.summary(crystal, admin, params)["current"]["orders"] == 2  # весь отель
+        assert queries.summary(crystal, chef, params)["current"]["orders"] == 0  # линейному нечего
 
-        # Трафик недоступен старшему точки (сессия не привязана к точке).
-        assert queries.traffic(crystal, chef, params)["available"] is False
-        assert scope_for(chef).all_points is False
+        # Трафик недоступен и управляющему: сессия не привязана к точке.
+        assert queries.traffic(crystal, manager, params)["available"] is False
+        assert scope_for(manager).all_points is False
+        assert scope_for(manager).point_ids == [str(kitchen)]
+        assert scope_for(chef).point_ids == []
         assert scope_for(admin).all_points is True
 
 
@@ -346,15 +355,17 @@ def test_export_xlsx_is_a_valid_zip(crystal):
 # --- API -------------------------------------------------------------------
 
 
-def test_summary_endpoint_scopes_to_point_senior(cms, crystal):
-    # chef — старший кухни: эндпоинт отвечает и отдаёт его срез.
-    response = cms.get("/api/cms/analytics/summary?preset=month")
+def test_summary_endpoint_scopes_to_service_manager(cms_manager, cms_line_staff):
+    """Управляющий получает срез своего заведения; линейного к цифрам не пускают."""
+    response = cms_manager.get("/api/cms/analytics/summary?preset=month")
     assert response.status_code == 200, response.content
     body = response.json()
     assert "current" in body and "orders" in body["current"]
-    # Старшему точки трафик не раскрывается.
+    # Трафик — уровень отеля: сессия гостя не привязана к заведению.
     assert body["current"]["sessions"] is None
 
-    scope = cms.get("/api/cms/analytics/scope").json()
+    scope = cms_manager.get("/api/cms/analytics/scope").json()
     assert scope["all_points"] is False
-    assert any(p["code"] == "kitchen" for p in scope["points"])
+    assert [p["code"] for p in scope["points"]] == ["kitchen"]
+
+    assert cms_line_staff.get("/api/cms/analytics/summary?preset=month").status_code == 403

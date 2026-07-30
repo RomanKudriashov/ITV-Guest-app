@@ -132,6 +132,14 @@ def actor_context(actor: Any) -> Iterator[None]:
         _actor.reset(token)
 
 
+def set_actor(actor: Any) -> None:
+    """
+    Императивно запомнить актора уже после того, как middleware выставил
+    контекст: кто именно пришёл, известно только классу аутентификации.
+    """
+    _actor.set(actor)
+
+
 def set_request_context(
     *, hotel: Any = None, language: str | None = None, actor: Any = None
 ) -> None:

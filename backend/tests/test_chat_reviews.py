@@ -249,9 +249,11 @@ def test_review_is_private_visible_to_staff_only(client, crystal, guest):
     order_id = _finished_order(client, crystal, guest, key="rev-priv")
     guest.post(f"/api/guest/order/{order_id}/review", {"rating": 5, "comment": "супер"})
 
-    # Персонал видит.
-    chef = staff_call(client, crystal, "chef")
-    reviews = chef("/api/cms/reviews").json()
+    # Отзывы читает управляющий, а не всякий сотрудник: с R3 в CMS пускают по
+    # роли, и линейный повар туда не входит.
+    assert staff_call(client, crystal, "chef")("/api/cms/reviews").status_code == 403
+
+    reviews = staff_call(client, crystal, "owner")("/api/cms/reviews").json()
     assert any(r["comment"] == "супер" for r in reviews)
 
     # Другой гость — нет: у отзыва нет публичного эндпоинта, а чужой заказ 404.

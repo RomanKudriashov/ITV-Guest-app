@@ -316,10 +316,11 @@ def test_patch_without_password_keeps_it(cms, crystal):
 
 
 def test_cannot_delete_self(cms, crystal):
+    # Действующий пользователь CMS — админ отеля (с R3 повара сюда не пускают).
     with tenant_context(crystal):
-        chef_id = str(User.objects.get(email="chef@crystal.local").pk)
+        own_id = str(User.objects.get(email="owner@crystal.local").pk)
 
-    response = cms.delete(f"/api/cms/staff/{chef_id}")
+    response = cms.delete(f"/api/cms/staff/{own_id}")
     assert response.status_code == 409
     assert response.json()["code"] == "cannot_remove_self"
 

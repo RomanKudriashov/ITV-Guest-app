@@ -1,8 +1,15 @@
 """
-Скоуп прав аналитики — теми же привязками, что и трекер.
+Скоуп прав аналитики.
 
 * платформенный админ и админ отеля — весь отель (все точки);
-* иначе сотрудник — только назначенные точки (`StaffAssignment`).
+* управляющий сервисом — только те заведения, которыми он УПРАВЛЯЕТ;
+* линейный персонал — аналитики не видит вовсе (в CMS его не пускают).
+
+Раньше скоуп строился по всем привязкам сотрудника, а не по управляемым: повар
+видел выручку своей кухни. С R3 аналитика — инструмент управляющего (карта
+продукта, Часть 3), и привязка «я тут работаю» права на цифры не даёт. Для
+управляющего это ещё и сужение: работая барменом в чужом баре, он видит
+аналитику своего ресторана, но не того бара.
 
 Скоуп применяется к КАЖДОМУ агрегатному запросу; заказ без точки виден только
 админу отеля. Тенант-изоляция сверх этого — RLS: отель A не видит строк B.
@@ -27,23 +34,21 @@ def scope_for(user) -> Scope:
     if getattr(user, "is_hotel_admin", False):
         return Scope(all_points=True, point_ids=None, is_hotel_admin=True, is_platform=False)
 
-    from apps.orders.tracker import assigned_points
+    from apps.accounts.roles import access_for
 
-    ids = [str(point.pk) for point in assigned_points(user)]
+    ids = sorted(access_for(user).managed_point_ids)
     return Scope(all_points=False, point_ids=ids, is_hotel_admin=False, is_platform=False)
 
 
 def scope_payload(user) -> dict:
     """Что доступно пользователю — фронт не гадает, какие фильтры показывать."""
-    from apps.orders.tracker import assigned_points
+    from apps.hotels.models import ExecutionPoint
 
     scope = scope_for(user)
-    if scope.all_points:
-        from apps.hotels.models import ExecutionPoint
-
-        points = list(ExecutionPoint.objects.filter(is_active=True).order_by("code"))
-    else:
-        points = assigned_points(user)
+    points = ExecutionPoint.objects.filter(is_active=True).order_by("code")
+    if not scope.all_points:
+        points = points.filter(pk__in=scope.point_ids or [])
+    points = list(points)
 
     return {
         "all_points": scope.all_points,

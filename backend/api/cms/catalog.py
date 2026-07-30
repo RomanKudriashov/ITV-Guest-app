@@ -388,9 +388,16 @@ class QuickActionsIn(Schema):
 
 
 def _hotel_for_settings():
+    """
+    Настройки уровня отеля: быстрые действия, витрина главной, коммерция
+    отеля. Управляющий сюда не ходит ни на чтение, ни на запись — это общее
+    всему отелю, а не его сервису. Одна калитка на все шесть эндпоинтов.
+    """
+    from apps.accounts.roles import require_hotel_admin
     from apps.core.context import require_hotel_id
     from apps.hotels.models import Hotel
 
+    require_hotel_admin()
     return Hotel.objects.get(pk=require_hotel_id())
 
 

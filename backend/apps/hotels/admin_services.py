@@ -12,6 +12,7 @@ from typing import Any, Iterable
 from django.db import transaction
 
 from apps.catalog.models import Category, ServiceLocation
+from apps.accounts.roles import HotelAdminOnly, require_hotel_admin, require_point_scope
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -55,6 +56,7 @@ def get_room(room_id) -> Room:
 
 @transaction.atomic
 def create_room(data: dict) -> Room:
+    require_hotel_admin()
     number = str(data.get("number") or "").strip()
     if not number:
         raise ValidationError("Укажите номер", field="number")
@@ -71,6 +73,7 @@ def create_room(data: dict) -> Room:
 
 @transaction.atomic
 def update_room(room_id, data: dict) -> Room:
+    require_hotel_admin()
     room = get_room(room_id)
     if "number" in data:
         number = str(data["number"] or "").strip()
@@ -90,6 +93,7 @@ def update_room(room_id, data: dict) -> Room:
 
 
 def delete_room(room_id) -> None:
+    require_hotel_admin()
     get_room(room_id).delete()
 
 
@@ -99,6 +103,7 @@ def bulk_create_rooms(data: dict) -> dict:
     Диапазон номеров одним действием. Уже существующие пропускаются молча —
     повторный вызов не падает и не двоит: заводить отель по частям это норма.
     """
+    require_hotel_admin()
     try:
         start = int(data["from"])
         end = int(data["to"])
@@ -204,6 +209,7 @@ def _validate_refinement(requires: bool, label: dict) -> None:
 
 @transaction.atomic
 def create_location(data: dict) -> Location:
+    require_hotel_admin()
     title = _clean_translations(data.get("title"), field="title")
     if not title:
         raise ValidationError("Заполните название локации", field="title")
@@ -225,6 +231,7 @@ def create_location(data: dict) -> Location:
 
 @transaction.atomic
 def update_location(location_id, data: dict) -> Location:
+    require_hotel_admin()
     location = get_location(location_id)
     if "title" in data:
         title = _clean_translations(data["title"], field="title")
@@ -259,6 +266,7 @@ def update_location(location_id, data: dict) -> Location:
 
 
 def delete_location(location_id) -> None:
+    require_hotel_admin()
     get_location(location_id).delete()
 
 
@@ -308,6 +316,7 @@ def location_matrix(language: str | None = None) -> dict:
 
 @transaction.atomic
 def update_matrix_row(category_id, cells: Iterable[dict]) -> dict:
+    require_hotel_admin()
     category = Category.objects.filter(pk=category_id).first()
     if category is None:
         raise ValidationError("Категория не найдена", field="category_id")
@@ -367,6 +376,11 @@ def serialize_department(
         "schedule_id": str(service.schedule_id) if (service and service.schedule_id) else None,
         "sla_minutes": point.sla_minutes,
         "is_active": point.is_active,
+        # Своя коммерция заведения: null = наследовать значение отеля.
+        "commerce": {
+            field: getattr(service, field) if service else None
+            for field in SERVICE_COMMERCE_FIELDS
+        },
         "staff_count": counts.get("staff", 0),
         "channel_count": counts.get("channels", 0),
         "has_escalation": counts.get("escalation", False),
@@ -387,7 +401,14 @@ def list_departments() -> list[dict]:
     from apps.accounts.models import StaffAssignment
     from apps.notifications.models import EscalationRule, NotificationChannel
 
-    points = list(ExecutionPoint.objects.order_by("code"))
+    from apps.accounts.roles import managed_point_ids_or_none
+
+    points = ExecutionPoint.objects.order_by("code")
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        # Управляющий видит в списке отделов только свои заведения.
+        points = points.filter(pk__in=managed)
+    points = list(points)
     services = {s.execution_point_id: s for s in Service.objects.all()}
     staff = _count_by_point(StaffAssignment.objects.filter(is_active=True))
     channels = _count_by_point(NotificationChannel.objects.filter(is_active=True))
@@ -434,6 +455,7 @@ def _make_department_code(title: dict) -> str:
 
 @transaction.atomic
 def create_department(data: dict) -> ExecutionPoint:
+    require_hotel_admin()
     title = _clean_translations(data.get("title"), field="title")
     if not title:
         raise ValidationError("Заполните название отдела", field="title")
@@ -467,8 +489,38 @@ def create_department(data: dict) -> ExecutionPoint:
     return point
 
 
+# Поля отдела, которые меняет ТОЛЬКО администратор отеля. Остальное —
+# наполнение заведения, и им распоряжается его управляющий.
+#   code/kind  — меняют тип-шаблон сервиса, то есть и вид трекера;
+#   title      — служебное имя отдела в отельных списках и эскалациях;
+#   is_active  — выключить заведение целиком.
+HOTEL_LEVEL_DEPARTMENT_FIELDS = frozenset({"code", "kind", "title", "is_active"})
+
+# Коммерция уровня сервиса (R1): null = наследовать значение отеля.
+SERVICE_COMMERCE_FIELDS = (
+    "service_fee_bp",
+    "tip_presets",
+    "min_order_minor",
+    "free_delivery_threshold_minor",
+    "price_round_to_minor",
+)
+
+
 @transaction.atomic
 def update_department(point_id, data: dict) -> ExecutionPoint:
+    """
+    Правка заведения. Администратор отеля меняет что угодно; управляющий —
+    только своё заведение и только его наполнение: гостевую идентичность,
+    расписание, обложку, SLA и свою коммерцию. Род, код и выключение отдела
+    остаются за отелем — они меняют и тип трекера, и место заведения на витрине.
+    """
+    access = require_point_scope(point_id, what="Отдел")
+    if not access.unrestricted:
+        forbidden = sorted(HOTEL_LEVEL_DEPARTMENT_FIELDS & set(data))
+        if forbidden:
+            raise HotelAdminOnly(
+                "Эти поля отдела меняет администратор отеля: " + ", ".join(forbidden)
+            )
     point = get_department(point_id)
     service = _service_for(point)
 
@@ -504,12 +556,38 @@ def update_department(point_id, data: dict) -> ExecutionPoint:
         # следует за родом, как было до модели сервиса.
         if "kind" in data:
             service.type = service_type_for_kind(data["kind"])
+        # Своя коммерция заведения (R1 завёл поля, править их было негде).
+        # null — осознанное «наследовать отель», поэтому проверяем присутствие
+        # ключа, а не истинность значения.
+        for field in SERVICE_COMMERCE_FIELDS:
+            if field in data:
+                setattr(service, field, _validate_service_commerce(field, data[field]))
         service.save()
     return point
 
 
+def _validate_service_commerce(field: str, value):
+    """Переопределение коммерции сервиса: либо null (наследовать), либо число."""
+    if value is None:
+        return None
+    if field == "tip_presets":
+        if not isinstance(value, list) or any(
+            not isinstance(x, int) or isinstance(x, bool) or x < 0 or x > 100 for x in value
+        ):
+            raise ValidationError(
+                "Пресеты чаевых — целые проценты от 0 до 100", field=field
+            )
+        return list(dict.fromkeys(value))
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValidationError("Ожидается неотрицательное целое", field=field)
+    if field == "service_fee_bp" and value > 10_000:
+        raise ValidationError("Сбор не может превышать 100%", field=field)
+    return value
+
+
 @transaction.atomic
 def delete_department(point_id) -> None:
+    require_hotel_admin()
     from apps.orders.models import Order
 
     point = get_department(point_id)

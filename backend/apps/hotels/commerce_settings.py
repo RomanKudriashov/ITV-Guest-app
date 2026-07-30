@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from apps.core.errors import ValidationError
+from apps.accounts.roles import require_hotel_admin
 from apps.hotels.models import Hotel
 
 # Базисные пункты: 10000 = 100%. Разумный потолок сбора/налога — 100%.
@@ -80,6 +81,9 @@ def _tip_presets(value: Any) -> list[int]:
 
 def update_commerce_settings(hotel: Hotel, data: dict[str, Any]) -> dict[str, Any]:
     """Частичное обновление: трогаем только присланные поля (PATCH-семантика)."""
+    # Валюта, налог и сбор отеля — единственная коммерция уровня отеля (карта
+    # продукта). Своя коммерция сервиса живёт на Service и правится управляющим.
+    require_hotel_admin()
     changed: list[str] = []
 
     if "service_fee_bp" in data:

@@ -62,10 +62,29 @@ def _get_service(service_id) -> Service:
     return service
 
 
+def _require_including_scope(service: Service) -> None:
+    """
+    Включением распоряжается ЗАЁМЩИК, а не источник.
+
+    Управляющий рум-сервисом вправе включить меню «Панорамы» к себе — он
+    настраивает своё заведение. Управляющий «Панорамой» этим включением не
+    управляет: содержимое остаётся его, а витрину, наценку и исполнителя
+    выбирает тот, кто одолжил.
+    """
+    from apps.accounts.roles import require_service_scope
+
+    require_service_scope(service, what="Включение")
+
+
 def _get_inclusion(inclusion_id) -> ServiceInclusion:
-    inclusion = ServiceInclusion.objects.filter(pk=inclusion_id).first()
+    inclusion = (
+        ServiceInclusion.objects.select_related("including_service")
+        .filter(pk=inclusion_id)
+        .first()
+    )
     if inclusion is None:
         raise NotFoundError("Включение не найдено")
+    _require_including_scope(inclusion.including_service)
     return inclusion
 
 
@@ -96,7 +115,7 @@ def serialize_inclusion(inclusion: ServiceInclusion) -> dict:
 
 
 def list_inclusions(service_id) -> list[dict]:
-    _get_service(service_id)
+    _require_including_scope(_get_service(service_id))
     return [
         serialize_inclusion(inclusion)
         for inclusion in ServiceInclusion.objects.filter(including_service_id=service_id)
@@ -126,6 +145,7 @@ def _sync_hidden(inclusion: ServiceInclusion, item_ids) -> None:
 @transaction.atomic
 def create_inclusion(service_id, data: dict) -> ServiceInclusion:
     including = _get_service(service_id)
+    _require_including_scope(including)
     source_id = data.get("source_service_id")
     if not source_id:
         raise ValidationError("Нужен сервис-источник", field="source_service_id")

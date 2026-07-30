@@ -18,6 +18,7 @@ from django.db.models import Count, Q, TextField
 from django.db.models.functions import Cast
 from django.utils.text import slugify
 
+from apps.accounts.roles import require_hotel_admin
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import Hotel, Schedule
@@ -162,10 +163,42 @@ def serialize_category(
     return payload
 
 
+# --- Область управляющего --------------------------------------------------
+#
+# Проверки стоят в функциях-«воротах», через которые объект вообще достаётся из
+# базы. Ставить их во вьюхах бессмысленно: эндпоинтов около сотни, и правило
+# «не забыть проверку в новой вьюхе» не выполняется.
+
+
+def _service_of_item(item: Item):
+    return item.category.service if item and item.category_id else None
+
+
+def _require_scope(service, what: str) -> None:
+    """Объект принадлежит сервису — управляющий обязан управлять именно им."""
+    from apps.accounts.roles import require_service_scope
+
+    require_service_scope(service, what=what)
+
+
+def _scoped(queryset):
+    """
+    Списки управляющего — только его сервисы. Это не дублирование проверки
+    выше, а её вторая половина: без фильтра управляющий видел бы чужие
+    категории в списке и получал 403 при попытке открыть — хуже, чем не видеть.
+    """
+    from apps.accounts.roles import managed_point_ids_or_none
+
+    point_ids = managed_point_ids_or_none()
+    if point_ids is None:
+        return queryset
+    return queryset.filter(service__execution_point_id__in=point_ids)
+
+
 def category_tree(offering_type: str = OfferingType.PRODUCT) -> list[dict]:
     """Дерево категорий с числом позиций. Один запрос на уровень, без N+1."""
     categories = list(
-        Category.objects.filter(type=offering_type)
+        _scoped(Category.objects.filter(type=offering_type))
         .select_related("image")
         .order_by("sort_order", "code")
     )
@@ -191,9 +224,12 @@ def category_tree(offering_type: str = OfferingType.PRODUCT) -> list[dict]:
 
 
 def get_category(category_id) -> Category:
-    category = Category.objects.select_related("image").filter(pk=category_id).first()
+    category = (
+        Category.objects.select_related("image", "service").filter(pk=category_id).first()
+    )
     if category is None:
         raise NotFoundError("Категория не найдена")
+    _require_scope(category.service, "Категория")
     return category
 
 
@@ -228,11 +264,51 @@ def _validate_parent(category_id, parent_id) -> Category | None:
 
 
 @transaction.atomic
+def _resolve_category_service(data: dict, parent: Category | None):
+    """
+    Кому принадлежит новая категория.
+
+    Явный `service_id` — если прислали; иначе наследуем от родителя (подраздел
+    живёт в том же заведении); иначе, для управляющего с одним сервисом, — его
+    сервис. Управляющему с несколькими нужен явный выбор: угадывать, в какое из
+    его заведений он добавляет раздел, нельзя.
+    """
+    from apps.accounts.roles import current_access
+    from apps.hotels.models import Service
+
+    service_id = data.get("service_id")
+    if service_id:
+        service = Service.objects.filter(pk=service_id).first()
+        if service is None:
+            raise ValidationError("Сервис не найден", field="service_id")
+        _require_scope(service, "Сервис")
+        return service
+
+    if parent is not None and parent.service_id:
+        return parent.service
+
+    access = current_access()
+    if access.unrestricted:
+        # Админ отеля вправе завести категорию вне заведения (инфо-раздел);
+        # привязку он проставит явно.
+        return None
+    managed = list(
+        Service.objects.filter(execution_point_id__in=access.managed_point_ids)
+    )
+    if len(managed) == 1:
+        return managed[0]
+    raise ValidationError(
+        "Укажите сервис, в котором создаётся раздел", field="service_id"
+    )
+
+
 def create_category(data: dict) -> Category:
     title = require_translation(clean_translations(data.get("title"), field="title"), field="title")
     parent = _validate_parent(None, data.get("parent_id"))
+    service = _resolve_category_service(data, parent)
 
     category = Category.objects.create(
+        service=service,
         type=data.get("type") or OfferingType.PRODUCT,
         code=data.get("code") or make_code(Category, title, prefix="category"),
         title=title,
@@ -391,6 +467,15 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
     return payload
 
 
+def _scoped_items(queryset):
+    from apps.accounts.roles import managed_point_ids_or_none
+
+    point_ids = managed_point_ids_or_none()
+    if point_ids is None:
+        return queryset
+    return queryset.filter(category__service__execution_point_id__in=point_ids)
+
+
 def _item_queryset(offering_type: str | None = None):
     queryset = Item.objects.select_related("category").prefetch_related("images__asset")
     if offering_type:
@@ -399,7 +484,7 @@ def _item_queryset(offering_type: str | None = None):
 
 
 def list_items(*, category_id=None, search: str = "", offering_type: str | None = None) -> list[dict]:
-    queryset = _item_queryset(offering_type)
+    queryset = _scoped_items(_item_queryset(offering_type))
     if category_id:
         queryset = queryset.filter(category_id=category_id)
     if search:
@@ -419,6 +504,7 @@ def get_item(item_id, *, with_modifiers: bool = False) -> Item:
     item = queryset.filter(pk=item_id).first()
     if item is None:
         raise NotFoundError("Блюдо не найдено")
+    _require_scope(item.category.service if item.category_id else None, "Позиция")
     return item
 
 
@@ -464,9 +550,12 @@ def _validate_prep_minutes(value: Any) -> int | None:
 def _resolve_category(category_id) -> Category:
     if not category_id:
         raise ValidationError("Выберите категорию", field="category_id")
-    category = Category.objects.filter(pk=category_id).first()
+    category = Category.objects.select_related("service").filter(pk=category_id).first()
     if category is None:
         raise ValidationError("Категория не найдена", field="category_id")
+    # И источник, и цель переноса позиции проходят через эту функцию: без
+    # проверки управляющий мог бы перекинуть блюдо в чужой сервис.
+    _require_scope(category.service, "Категория")
     return category
 
 
@@ -640,13 +729,14 @@ def serialize_modifier_option(option: ModifierOption) -> dict:
 
 def get_modifier_group(group_id) -> ModifierGroup:
     group = (
-        ModifierGroup.objects.select_related("item")
+        ModifierGroup.objects.select_related("item__category__service")
         .prefetch_related("options")
         .filter(pk=group_id)
         .first()
     )
     if group is None:
         raise NotFoundError("Группа модификаторов не найдена")
+    _require_scope(_service_of_item(group.item), "Группа модификаторов")
     return group
 
 
@@ -777,9 +867,14 @@ def reorder_modifier_groups(item_id, entries: Iterable[dict]) -> list[dict]:
 
 
 def get_modifier_option(option_id) -> ModifierOption:
-    option = ModifierOption.objects.select_related("group").filter(pk=option_id).first()
+    option = (
+        ModifierOption.objects.select_related("group__item__category__service")
+        .filter(pk=option_id)
+        .first()
+    )
     if option is None:
         raise NotFoundError("Вариант не найден")
+    _require_scope(_service_of_item(option.group.item), "Вариант модификатора")
     return option
 
 
@@ -895,9 +990,14 @@ def serialize_request_field(entry: RequestField) -> dict:
 
 
 def get_request_field(field_id) -> RequestField:
-    entry = RequestField.objects.select_related("item").filter(pk=field_id).first()
+    entry = (
+        RequestField.objects.select_related("item__category__service")
+        .filter(pk=field_id)
+        .first()
+    )
     if entry is None:
         raise NotFoundError("Поле заявки не найдено")
+    _require_scope(_service_of_item(entry.item), "Поле заявки")
     return entry
 
 
@@ -1142,6 +1242,7 @@ def _validate_role(role: str) -> str:
 
 
 def create_badge(data: dict) -> Badge:
+    require_hotel_admin()
     label = data.get("label") or {}
     if not any((label.get(lang) or "").strip() for lang in label):
         raise ValidationError("Название бейджа обязательно", field="label")
@@ -1156,6 +1257,7 @@ def create_badge(data: dict) -> Badge:
 
 
 def update_badge(badge_id, data: dict) -> Badge:
+    require_hotel_admin()
     badge = Badge.objects.filter(pk=badge_id).first()
     if badge is None:
         raise NotFoundError("Бейдж не найден")
@@ -1172,6 +1274,7 @@ def update_badge(badge_id, data: dict) -> Badge:
 
 
 def delete_badge(badge_id) -> None:
+    require_hotel_admin()
     badge = Badge.objects.filter(pk=badge_id).first()
     if badge is None:
         raise NotFoundError("Бейдж не найден")
@@ -1222,6 +1325,9 @@ def list_markers() -> list[dict]:
 
 
 def _create_dict_entry(model, data: dict, *, prefix: str):
+    # Справочники аллергенов и маркеров — общие всему отелю: одно и то же
+    # «содержит орехи» у всех заведений. Правит их администратор отеля.
+    require_hotel_admin()
     title = clean_translations(data.get("title"), field="title")
     if not any((title.get(lang) or "").strip() for lang in title):
         raise ValidationError("Название обязательно", field="title")
@@ -1239,6 +1345,7 @@ def _create_dict_entry(model, data: dict, *, prefix: str):
 
 
 def _update_dict_entry(model, entry_id, data: dict):
+    require_hotel_admin()
     row = model.objects.filter(pk=entry_id).first()
     if row is None:
         raise NotFoundError("Запись справочника не найдена")
@@ -1253,6 +1360,7 @@ def _update_dict_entry(model, entry_id, data: dict):
 
 
 def _delete_dict_entry(model, join_model, join_field: str, entry_id) -> None:
+    require_hotel_admin()
     row = model.objects.filter(pk=entry_id).first()
     if row is None:
         raise NotFoundError("Запись справочника не найдена")

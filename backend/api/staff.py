@@ -23,6 +23,8 @@ staff_auth = StaffAuth()
 
 
 def serialize_user(user: User) -> dict:
+    from apps.accounts.roles import access_for
+
     return {
         "id": str(user.pk),
         "email": user.email,
@@ -30,6 +32,9 @@ def serialize_user(user: User) -> dict:
         "language": user.language or "",
         "is_hotel_admin": user.is_hotel_admin,
         "is_platform_admin": user.is_platform_admin,
+        # Роль и её область — чтобы фронт вёл линейного сотрудника сразу в
+        # трекер и не рисовал ему разделы, которые всё равно ответят 403.
+        **access_for(user).payload(),
     }
 
 

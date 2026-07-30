@@ -212,7 +212,7 @@ def test_step_is_idempotent(crystal, order, notifications_on, no_dispatch):
 
 
 def test_accepted_order_stops_escalation_at_execution_time(
-    crystal, order, cms, notifications_on, no_dispatch, django_capture_on_commit_callbacks
+    crystal, order, tracker, notifications_on, no_dispatch, django_capture_on_commit_callbacks
 ):
     """
     ГЛАВНАЯ проверка: задача ступени могла уйти в исполнение ровно в ту
@@ -225,7 +225,7 @@ def test_accepted_order_stops_escalation_at_execution_time(
         planned = plan_escalation(order)
 
     with django_capture_on_commit_callbacks(execute=True):
-        accepted = cms.post(f"/api/tracker/order/{order.pk}/accept", {})
+        accepted = tracker.post(f"/api/tracker/order/{order.pk}/accept", {})
     assert accepted.status_code == 200
 
     with tenant_context(crystal):
@@ -255,14 +255,14 @@ def test_cancel_pending_quenches_scheduled_steps(crystal, order, notifications_o
 
 
 def test_accepting_through_the_tracker_cancels_the_rest(
-    crystal, order, cms, notifications_on, no_dispatch, django_capture_on_commit_callbacks
+    crystal, order, tracker, notifications_on, no_dispatch, django_capture_on_commit_callbacks
 ):
     """Событие order.accepted гасит ступени само, без ручного вызова."""
     with tenant_context(crystal):
         plan_escalation(order)
 
     with django_capture_on_commit_callbacks(execute=True):
-        cms.post(f"/api/tracker/order/{order.pk}/accept", {})
+        tracker.post(f"/api/tracker/order/{order.pk}/accept", {})
 
     with tenant_context(crystal):
         remaining = NotificationLog.objects.filter(
@@ -370,7 +370,7 @@ def test_permanent_channel_error_fails_immediately(
 
 
 def test_failed_channel_does_not_affect_the_order(
-    crystal, order, cms, notifications_on, no_dispatch, monkeypatch
+    crystal, order, tracker, notifications_on, no_dispatch, monkeypatch
 ):
     """Упавший Telegram не должен мешать кухне работать с заявкой."""
     from apps.notifications.channels import adapters
@@ -386,7 +386,7 @@ def test_failed_channel_does_not_affect_the_order(
         parent = execute_step(planned[0].pk)
         send_delivery(NotificationLog.objects.get(parent=parent).pk)
 
-    board = cms.get("/api/tracker/orders?point=kitchen").json()
+    board = tracker.get("/api/tracker/orders?point=kitchen").json()
     numbers = [entry["number"] for column in board["columns"] for entry in column["orders"]]
     assert order.number in numbers
 

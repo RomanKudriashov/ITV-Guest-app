@@ -114,6 +114,13 @@ class DepartmentPatch(Schema):
     sla_minutes: int | None = None
     is_active: bool | None = None
     image_id: str | None = None
+    # Своя коммерция заведения: null = наследовать значение отеля. Правит
+    # управляющий этого сервиса; отельные валюта и налог — не здесь.
+    service_fee_bp: int | None = None
+    tip_presets: list[int] | None = None
+    min_order_minor: int | None = None
+    free_delivery_threshold_minor: int | None = None
+    price_round_to_minor: int | None = None
 
 
 class AssignmentIn(Schema):

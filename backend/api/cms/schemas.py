@@ -60,6 +60,11 @@ class StaffUserOut(Schema):
     language: str
     is_hotel_admin: bool
     is_platform_admin: bool
+    # Роль внутри отеля: line_staff | service_manager | hotel_admin.
+    role: str = "line_staff"
+    has_cms_access: bool = False
+    managed_point_ids: list[str] = []
+    member_point_ids: list[str] = []
 
 
 class LoginOut(Schema):
@@ -94,6 +99,9 @@ class CategoryIn(Schema):
     title: Translations
     description: Translations | None = None
     code: str | None = None
+    # Заведение, которому принадлежит раздел. Управляющему несколькими
+    # сервисами обязателен — иначе непонятно, куда он добавляет раздел.
+    service_id: str | None = None
     parent_id: str | None = None
     image_id: str | None = None
     schedule_id: str | None = None

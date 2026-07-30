@@ -14,7 +14,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from ninja.security import HttpBearer
 
-from apps.core.context import current_hotel_id, platform_scope
+from apps.core.context import current_hotel_id, platform_scope, set_actor
 
 from .models import GuestSession, TrustLevel, User
 from .tokens import TokenError, decode_staff_token
@@ -106,6 +106,38 @@ class StaffAuth(HttpBearer):
         if user is None:
             return None
         request.user = user
+        # Актор в контекст: на него опирается проверка прав в сервисном слое
+        # (apps/accounts/roles.py). Иначе `user` пришлось бы протаскивать через
+        # сигнатуры сотни CMS-функций — и однажды забыть.
+        set_actor(user)
+        return user
+
+
+class CmsAuth(StaffAuth):
+    """
+    Вход в раздел управления.
+
+    До R3 весь /cms был закрыт только фактом «это сотрудник этого отеля» —
+    то есть повар мог править меню и настройки отеля. Здесь стоит грубый гейт
+    роли: линейный персонал в CMS не заходит вовсе. Точечная область
+    управляющего (свой сервис, а не чужой) проверяется в сервисном слое —
+    объект, к которому применяется правило, вьюхе ещё не известен.
+    """
+
+    def authenticate(self, request: HttpRequest, token: str):
+        user = super().authenticate(request, token)
+        if user is None:
+            return None
+        from .roles import NoCmsAccess, access_for
+
+        if not access_for(user).has_cms_access:
+            # 403, а не 401: токен настоящий и отель свой — не хватает роли.
+            # Ответить «не авторизован» значило бы отправить человека
+            # перелогиниваться от проблемы, которую логин не решает.
+            logger.info("Линейный сотрудник %s постучался в CMS", user.pk)
+            raise NoCmsAccess(
+                "Раздел управления доступен администратору отеля и управляющим сервисами"
+            )
         return user
 
 

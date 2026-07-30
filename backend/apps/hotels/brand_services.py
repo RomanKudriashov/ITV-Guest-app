@@ -14,6 +14,7 @@ from typing import Any
 from django.utils import timezone
 
 from apps.core.context import require_hotel_id
+from apps.accounts.roles import require_hotel_admin
 from apps.core.errors import NotFoundError, ValidationError
 
 from .brand_library import (
@@ -160,6 +161,7 @@ def _deep_merge(base: dict, patch: dict) -> dict:
 
 
 def update_brand(patch_tokens: dict) -> BrandTheme:
+    require_hotel_admin()
     theme = get_or_create_brand()
     validate_tokens_patch(patch_tokens)
 
@@ -181,6 +183,7 @@ def apply_preset(code: str) -> BrandTheme:
     не «поправить», а «начать с чистого набора», и мержить старые правки поверх
     нового пресета было бы сюрпризом.
     """
+    require_hotel_admin()
     tokens = preset_tokens(code)
     if tokens is None:
         raise NotFoundError(f"Пресет «{code}» не найден", code="unknown_preset")

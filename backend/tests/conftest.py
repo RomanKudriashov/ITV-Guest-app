@@ -78,10 +78,15 @@ def in_crystal(crystal):
 # --- CMS -------------------------------------------------------------------
 
 
-def staff_token_for(client, hotel) -> str:
+def staff_token_for(client, hotel, login: str = "chef") -> str:
+    """
+    JWT сотрудника. По умолчанию — повар: он линейный, и на нём проверяются
+    трекер и чат. В CMS его с R3 не пускают (роль), поэтому CMS-фикстуры ходят
+    под админом отеля — см. `cms` ниже.
+    """
     response = client.post(
         "/api/staff/auth/login",
-        data={"email": f"chef@{hotel.subdomain}.local", "password": "chef12345"},
+        data={"email": f"{login}@{hotel.subdomain}.local", "password": "chef12345"},
         content_type="application/json",
         HTTP_HOST=host_for(hotel),
     )
@@ -133,14 +138,43 @@ class CmsClient:
         return self.client.post(path, data={**(data or {}), **files}, **self._kwargs())
 
 
+# Админ отеля — его заводит provision_hotel. До R3 CMS-тесты ходили под
+# поваром, потому что раздел был открыт любому сотруднику; теперь роль решает,
+# и «править меню» — не работа линейного персонала.
+HOTEL_ADMIN = "owner"
+
+
 @pytest.fixture
 def cms(client, crystal):
-    return CmsClient(client, crystal, staff_token_for(client, crystal))
+    return CmsClient(client, crystal, staff_token_for(client, crystal, HOTEL_ADMIN))
 
 
 @pytest.fixture
 def cms_aurora(client, aurora):
-    return CmsClient(client, aurora, staff_token_for(client, aurora))
+    return CmsClient(client, aurora, staff_token_for(client, aurora, HOTEL_ADMIN))
+
+
+@pytest.fixture
+def cms_manager(client, crystal):
+    """Управляющий рестораном «Панорама»: своя кухня — да, чужой бар — нет."""
+    return CmsClient(
+        client, crystal, staff_token_for(client, crystal, "manager.restaurant")
+    )
+
+
+@pytest.fixture
+def cms_line_staff(client, crystal):
+    """Линейный повар — на нём проверяется, что в CMS его не пускают."""
+    return CmsClient(client, crystal, staff_token_for(client, crystal, "chef"))
+
+
+@pytest.fixture
+def tracker(client, crystal):
+    """
+    Клиент трекера — повар кухни. Доступ к доске даёт привязка к точке, а не
+    роль: админ отеля ни к какой точке не привязан и на доску не попадает.
+    """
+    return CmsClient(client, crystal, staff_token_for(client, crystal, "chef"))
 
 
 @pytest.fixture
