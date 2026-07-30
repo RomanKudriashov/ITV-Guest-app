@@ -147,15 +147,27 @@ class Command(BaseCommand):
             action="store_true",
             help="Завести пресеты бейджей (Хит/Новинка/Выбор шефа) и повесить на позиции.",
         )
+        parser.add_argument(
+            "--with-rich-catalog",
+            action="store_true",
+            help=(
+                "Наглядно наполнить «Кристалла»: доп. рестораны, рум-сервис, бар-"
+                "меню, 50+ позиций с фото/КБЖУ/фасетами, венью-часы, витринные "
+                "плитки, per-service коммерция, включённые модули. По умолчанию "
+                "выкл: тесты этот путь не гоняют (иначе пере-сид с фото на каждый "
+                "тест был бы неподъёмным), объём — только для демо-витрины."
+            ),
+        )
 
     def handle(self, *args, **options):
         history = options["with_guest_history"]
         analytics = options["with_analytics_history"]
         badges = options["with_marketing_badges"]
+        rich = options["with_rich_catalog"]
         self._seed_placeholders()
-        self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics, badges)
+        self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics, badges, rich)
         if options["with_second_hotel"]:
-            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics, badges)
+            self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics, badges, rich)
         self.stdout.write(self.style.SUCCESS("Сид завершён"))
 
     # --- Платформенный уровень ------------------------------------------
@@ -173,7 +185,7 @@ class Command(BaseCommand):
     # --- Отель ------------------------------------------------------------
 
     @transaction.atomic
-    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False, with_badges: bool = False):
+    def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False, with_badges: bool = False, with_rich: bool = False):
         from apps.hotels.provisioning import provision_hotel
 
         existing = Hotel.objects.filter(subdomain=subdomain).first()
@@ -210,6 +222,8 @@ class Command(BaseCommand):
             self._seed_services(points, schedules)
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
+            if with_rich:
+                self._seed_rich_catalog(hotel, points, locations, schedules)
             self._link_categories_to_services()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
@@ -1239,6 +1253,358 @@ class Command(BaseCommand):
             if not item.characteristics.exists():
                 for order, (name, value) in enumerate(spec["chars"]):
                     ItemCharacteristic.objects.create(item=item, name=name, value=value, sort_order=order)
+
+    # --- Наглядное наполнение (флаг --with-rich-catalog) --------------------
+    # Всё ниже гоняется ТОЛЬКО с флагом и НЕ входит в тестовую фикстуру: объём и
+    # генерация фото на каждый пере-сид были бы неподъёмны для набора тестов.
+
+    def _seed_rich_catalog(self, hotel, points, locations, schedules):
+        dinner = self._rich_schedule("Ресторан 12:00–23:00", time(12, 0), time(23, 0))
+        bar_hours = self._rich_schedule("Бар 16:00–02:00", time(16, 0), time(2, 0))
+
+        # Венью-часы существующим заведениям — витрина покажет «открыто до…».
+        self._set_service_schedule("kitchen", schedules["kitchen"])
+        self._set_service_schedule("bar", bar_hours)
+        self._set_service_schedule("spa", Schedule.objects.filter(name="SPA 10:00–20:00").first())
+
+        # Своя обложка каждому существующему заведению (не только через категорию)
+        # и гарантия видимости на витрине.
+        for code, label in [
+            ("kitchen", "Панорама"), ("bar", "Лобби-бар"),
+            ("spa", "СПА Кристалл"), ("concierge", "Консьерж"),
+        ]:
+            self._ensure_venue_cover(code, label)
+
+        self._make_restaurant(
+            code="terrace", public=("Терраса", "Terrace"),
+            tagline=("Средиземноморье у моря", "Mediterranean by the sea"),
+            schedule=dinner, locations=locations,
+            categories=[
+                ("terrace-starters", ("Закуски", "Starters"), [
+                    ("bruschetta", ("Брускетта", "Bruschetta"), ("Томаты, базилик, чиабатта", "Tomato, basil, ciabatta"), 42000),
+                    ("burrata", ("Буррата", "Burrata"), ("Крем-сыр буррата с песто", "Burrata with pesto"), 68000),
+                    ("octopus", ("Осьминог гриль", "Grilled octopus"), ("С томлёным картофелем", "With confit potato"), 96000),
+                ]),
+                ("terrace-mains", ("Основные блюда", "Mains"), [
+                    ("seabass", ("Сибас на гриле", "Grilled sea bass"), ("Целиком, с лимоном", "Whole, with lemon"), 128000),
+                    ("truffle-risotto", ("Ризотто с трюфелем", "Truffle risotto"), ("Карнароли, пармезан", "Carnaroli, parmesan"), 89000),
+                    ("lamb-rack", ("Каре ягнёнка", "Rack of lamb"), ("С розмарином и овощами", "Rosemary, vegetables"), 156000),
+                ]),
+                ("terrace-desserts", ("Десерты", "Desserts"), [
+                    ("tiramisu", ("Тирамису", "Tiramisu"), ("Классический, маскарпоне", "Classic, mascarpone"), 39000),
+                    ("pannacotta", ("Панна-котта", "Panna cotta"), ("С ягодным соусом", "Berry sauce"), 35000),
+                ]),
+            ],
+        )
+        self._make_restaurant(
+            code="sakura", public=("Сакура", "Sakura"),
+            tagline=("Японская кухня", "Japanese kitchen"),
+            schedule=dinner, locations=locations,
+            categories=[
+                ("sakura-sushi", ("Суши и роллы", "Sushi & rolls"), [
+                    ("philadelphia", ("Филадельфия", "Philadelphia"), ("Лосось, сливочный сыр", "Salmon, cream cheese"), 62000),
+                    ("california", ("Калифорния", "California"), ("Краб, авокадо, икра", "Crab, avocado, roe"), 58000),
+                    ("nigiri-set", ("Сет нигири", "Nigiri set"), ("8 шт., ассорти", "8 pcs, assorted"), 84000),
+                    ("unagi", ("Унаги ролл", "Unagi roll"), ("Копчёный угорь, соус", "Smoked eel, sauce"), 69000),
+                    ("spicy-tuna", ("Спайси тунец", "Spicy tuna"), ("Тунец, острый соус", "Tuna, spicy sauce"), 64000),
+                    ("veggie-roll", ("Овощной ролл", "Veggie roll"), ("Авокадо, огурец", "Avocado, cucumber"), 42000),
+                ]),
+                ("sakura-hot", ("Горячее", "Hot dishes"), [
+                    ("ramen", ("Рамен", "Ramen"), ("Свинина чашу, яйцо", "Chashu pork, egg"), 67000),
+                    ("tempura", ("Темпура", "Tempura"), ("Креветки в кляре", "Battered shrimp"), 72000),
+                    ("gyoza", ("Гёдза", "Gyoza"), ("Жареные пельмешки, 6 шт.", "Fried dumplings, 6 pcs"), 44000),
+                ]),
+                ("sakura-drinks", ("Напитки", "Drinks"), [
+                    ("matcha", ("Матча латте", "Matcha latte"), ("На выбор молоко", "Choice of milk"), 38000),
+                    ("sake", ("Саке", "Sake"), ("Тёплое, 150 мл", "Warm, 150 ml"), 52000),
+                ]),
+            ],
+        )
+
+        self._make_bar_menu(points["bar"], bar_hours, locations)
+        self._make_room_service(schedules["all_day"], locations)
+        self._expand_panorama()
+
+        self._seed_nutrition()      # КБЖУ для новых товарных позиций (идемпотентно)
+        self._seed_rich_facets()    # аллергены/маркеры части позиций
+
+        hotel.showcase_group_threshold = 8  # все рестораны — отдельными плитками
+        hotel.save(update_fields=["showcase_group_threshold", "updated_at"])
+        self._seed_showcase_tiles()
+        self._seed_rich_commerce(hotel)
+        self._seed_modules()
+
+    def _rich_schedule(self, name, start, end):
+        schedule, created = Schedule.objects.get_or_create(name=name)
+        if created:
+            for weekday in range(7):
+                ScheduleInterval.objects.create(
+                    schedule=schedule, weekday=weekday, start_time=start, end_time=end
+                )
+        return schedule
+
+    def _set_service_schedule(self, code, schedule):
+        if schedule is not None:
+            Service.objects.filter(code=code).update(schedule=schedule)
+
+    def _ensure_venue_cover(self, code, label):
+        service = Service.objects.filter(code=code).first()
+        if service is None:
+            return
+        fields: list[str] = []
+        if not service.is_guest_facing:
+            service.is_guest_facing = True
+            fields.append("is_guest_facing")
+        if service.image_id is None:
+            service.image = self._image_for(f"venue-{code}", label)
+            fields.append("image")
+        if fields:
+            service.save(update_fields=[*fields, "updated_at"])
+
+    def _rich_item(self, category, code, title, desc, price, sort_order, image_code):
+        item, created = Item.objects.get_or_create(
+            code=code,
+            defaults={
+                "category": category,
+                "type": OfferingType.PRODUCT,
+                "title": {"ru": title[0], "en": title[1]},
+                "description": {"ru": desc[0], "en": desc[1]},
+                "price": price,
+                "sort_order": sort_order,
+            },
+        )
+        if created:
+            self._attach_image(item, image_code, title[0])
+        return item
+
+    def _make_restaurant(self, *, code, public, tagline, schedule, locations, categories):
+        point, _ = ExecutionPoint.objects.get_or_create(
+            code=code,
+            defaults={
+                "kind": ExecutionPoint.Kind.KITCHEN,
+                "title": {"ru": public[0], "en": public[1]},
+                "sla_minutes": 25,
+            },
+        )
+        service, _ = Service.objects.get_or_create(
+            execution_point=point,
+            defaults={
+                "code": point.code,
+                "type": Service.Type.RESTAURANT,
+                "public_name": {"ru": public[0], "en": public[1]},
+                "tagline": {"ru": tagline[0], "en": tagline[1]},
+                "is_guest_facing": True,
+                "schedule": schedule,
+                "image": self._image_for(code, public[0]),
+            },
+        )
+        for order, (cat_code, cat_title, items) in enumerate(categories):
+            category, _ = Category.objects.get_or_create(
+                code=cat_code,
+                defaults={
+                    "type": OfferingType.PRODUCT,
+                    "title": {"ru": cat_title[0], "en": cat_title[1]},
+                    "sort_order": order,
+                    "schedule": schedule,
+                    "service": service,
+                    "image": self._image_for(cat_code, cat_title[0]),
+                },
+            )
+            Route.objects.get_or_create(
+                category=category, execution_point=point, defaults={"priority": 0}
+            )
+            for location in locations:
+                ServiceLocation.objects.get_or_create(
+                    category=category, location=location,
+                    defaults={"delivery_modes": [
+                        ServiceLocation.DeliveryMode.DELIVERY, ServiceLocation.DeliveryMode.PICKUP
+                    ]},
+                )
+            for i, (icode, ititle, idesc, price) in enumerate(items):
+                self._rich_item(category, icode, ititle, idesc, price, i, cat_code)
+        return service
+
+    def _make_bar_menu(self, bar_point, schedule, locations):
+        service = Service.objects.filter(execution_point=bar_point).first()
+        if service is not None:
+            service.schedule = schedule
+            service.save(update_fields=["schedule", "updated_at"])
+        category, _ = Category.objects.get_or_create(
+            code="bar-drinks",
+            defaults={
+                "type": OfferingType.PRODUCT,
+                "title": {"ru": "Коктейли и вино", "en": "Cocktails & wine"},
+                "sort_order": 5, "schedule": schedule, "service": service,
+                "image": self._image_for("bar-drinks", "Бар"),
+            },
+        )
+        Route.objects.get_or_create(
+            category=category, execution_point=bar_point, defaults={"priority": 0}
+        )
+        for location in locations:
+            ServiceLocation.objects.get_or_create(
+                category=category, location=location,
+                defaults={"delivery_modes": [ServiceLocation.DeliveryMode.DELIVERY]},
+            )
+        drinks = [
+            ("negroni", ("Негрони", "Negroni"), ("Джин, кампари, вермут", "Gin, campari, vermouth"), 52000),
+            ("aperol", ("Апероль шприц", "Aperol spritz"), ("Апероль, просекко", "Aperol, prosecco"), 48000),
+            ("mojito", ("Мохито", "Mojito"), ("Ром, мята, лайм", "Rum, mint, lime"), 46000),
+            ("margarita", ("Маргарита", "Margarita"), ("Текила, лайм, трипл-сек", "Tequila, lime, triple sec"), 50000),
+            ("wine-red", ("Бокал красного", "Glass of red"), ("Каберне совиньон", "Cabernet sauvignon"), 42000),
+            ("wine-white", ("Бокал белого", "Glass of white"), ("Совиньон блан", "Sauvignon blanc"), 42000),
+            ("old-fashioned", ("Олд фешен", "Old fashioned"), ("Бурбон, биттер, сахар", "Bourbon, bitters, sugar"), 56000),
+            ("virgin-mojito", ("Безалкогольный мохито", "Virgin mojito"), ("Мята, лайм, содовая", "Mint, lime, soda"), 32000),
+        ]
+        for i, (icode, ititle, idesc, price) in enumerate(drinks):
+            self._rich_item(category, icode, ititle, idesc, price, i, "bar-drinks")
+
+    def _make_room_service(self, schedule, locations):
+        point, _ = ExecutionPoint.objects.get_or_create(
+            code="room_service",
+            defaults={
+                "kind": ExecutionPoint.Kind.KITCHEN,
+                "title": {"ru": "Рум-сервис", "en": "Room service"},
+                "sla_minutes": 40,
+            },
+        )
+        service, _ = Service.objects.get_or_create(
+            execution_point=point,
+            defaults={
+                "code": point.code,
+                "type": Service.Type.ROOM_SERVICE,
+                "public_name": {"ru": "Рум-сервис", "en": "Room service"},
+                "tagline": {"ru": "Круглосуточно в номер", "en": "24/7 in-room"},
+                "is_guest_facing": True,
+                "schedule": schedule,
+                "image": self._image_for("room_service", "Рум-сервис"),
+            },
+        )
+        category, _ = Category.objects.get_or_create(
+            code="room-service-menu",
+            defaults={
+                "type": OfferingType.PRODUCT,
+                "title": {"ru": "В номер", "en": "In-room"},
+                "sort_order": 6, "schedule": schedule, "service": service,
+                "image": self._image_for("room-service-menu", "В номер"),
+            },
+        )
+        Route.objects.get_or_create(
+            category=category, execution_point=point, defaults={"priority": 0}
+        )
+        for location in locations:
+            ServiceLocation.objects.get_or_create(
+                category=category, location=location,
+                defaults={"delivery_modes": [ServiceLocation.DeliveryMode.DELIVERY]},
+            )
+        items = [
+            ("club-sandwich", ("Клубный сэндвич", "Club sandwich"), ("Курица, бекон, картофель фри", "Chicken, bacon, fries"), 62000),
+            ("burger-rs", ("Бургер", "Burger"), ("Говядина, чеддер, соус", "Beef, cheddar, sauce"), 71000),
+            ("caesar-rs", ("Цезарь в номер", "Caesar to room"), ("Курица, пармезан", "Chicken, parmesan"), 55000),
+            ("soup-day", ("Суп дня", "Soup of the day"), ("Уточните у оператора", "Ask the operator"), 34000),
+            ("fruit-plate", ("Фруктовая тарелка", "Fruit plate"), ("Сезонные фрукты", "Seasonal fruit"), 45000),
+            ("breakfast-box", ("Завтрак в номер", "Breakfast box"), ("Яйца, тосты, кофе", "Eggs, toast, coffee"), 58000),
+        ]
+        for i, (icode, ititle, idesc, price) in enumerate(items):
+            self._rich_item(category, icode, ititle, idesc, price, i, "room-service-menu")
+
+    def _expand_panorama(self):
+        extra = {
+            "hot": [
+                ("salmon-steak", ("Стейк из лосося", "Salmon steak"), ("С овощами гриль", "With grilled vegetables"), 118000),
+                ("mushroom-soup", ("Крем-суп из белых грибов", "Porcini cream soup"), ("С трюфельным маслом", "Truffle oil"), 52000),
+                ("duck-breast", ("Утиная грудка", "Duck breast"), ("С вишнёвым соусом", "Cherry sauce"), 134000),
+                ("beef-stroganoff", ("Бефстроганов", "Beef stroganoff"), ("С картофельным пюре", "With mashed potato"), 98000),
+            ],
+            "salads": [
+                ("burrata-salad", ("Салат с бурратой", "Burrata salad"), ("Томаты, руккола", "Tomato, arugula"), 74000),
+                ("nicoise", ("Салат Нисуаз", "Niçoise"), ("Тунец, яйцо, оливки", "Tuna, egg, olives"), 66000),
+                ("quinoa-salad", ("Салат с киноа", "Quinoa salad"), ("Овощи, авокадо", "Vegetables, avocado"), 58000),
+            ],
+            "drinks": [
+                ("fresh-orange", ("Фреш апельсиновый", "Fresh orange juice"), ("Свежевыжатый", "Freshly squeezed"), 34000),
+                ("espresso", ("Эспрессо", "Espresso"), ("Двойной", "Double"), 24000),
+                ("green-tea", ("Зелёный чай", "Green tea"), ("Сенча", "Sencha"), 28000),
+                ("iced-latte", ("Айс-латте", "Iced latte"), ("На выбор молоко", "Choice of milk"), 32000),
+            ],
+        }
+        for cat_code, items in extra.items():
+            category = Category.objects.filter(code=cat_code).first()
+            if category is None:
+                continue
+            base = category.items.count()
+            for i, (icode, ititle, idesc, price) in enumerate(items):
+                self._rich_item(category, icode, ititle, idesc, price, base + i, cat_code)
+
+    def _seed_rich_facets(self):
+        from apps.catalog.models import Allergen, DietaryMarker, ItemAllergen, ItemDietaryMarker
+
+        allergens = {a.code: a for a in Allergen.objects.all()}
+        markers = {m.code: m for m in DietaryMarker.objects.all()}
+        facets = {
+            "seabass": {"allergens": ["fish"], "markers": ["gluten_free"]},
+            "philadelphia": {"allergens": ["fish", "milk"], "markers": []},
+            "california": {"allergens": ["crustaceans", "fish"], "markers": []},
+            "burrata": {"allergens": ["milk"], "markers": ["vegetarian"]},
+            "tempura": {"allergens": ["crustaceans", "gluten"], "markers": []},
+            "salmon-steak": {"allergens": ["fish"], "markers": ["gluten_free"]},
+            "burrata-salad": {"allergens": ["milk"], "markers": ["vegetarian", "gluten_free"]},
+            "matcha": {"allergens": ["milk"], "markers": ["vegetarian"]},
+            "fruit-plate": {"allergens": [], "markers": ["vegan", "gluten_free"]},
+            "veggie-roll": {"allergens": [], "markers": ["vegan"]},
+        }
+        for code, spec in facets.items():
+            item = Item.objects.filter(code=code).first()
+            if item is None:
+                continue
+            for ac in spec["allergens"]:
+                if ac in allergens:
+                    ItemAllergen.objects.get_or_create(item=item, allergen=allergens[ac])
+            for mc in spec["markers"]:
+                if mc in markers:
+                    ItemDietaryMarker.objects.get_or_create(item=item, marker=markers[mc])
+
+    def _seed_showcase_tiles(self):
+        from apps.hotels.models import ShowcaseTile
+
+        tiles = [
+            ("kitchen", "l", 0), ("terrace", "m", 1), ("sakura", "m", 2),
+            ("bar", "m", 3), ("room_service", "s", 4), ("spa", "m", 5), ("info", "s", 9),
+        ]
+        for key, size, order in tiles:
+            ShowcaseTile.objects.update_or_create(
+                key=key, defaults={"size": size, "sort_order": order, "is_enabled": True}
+            )
+
+    def _seed_rich_commerce(self, hotel):
+        # Отельные ставки — чтобы разбивка заказа была видна.
+        hotel.service_fee_bp = 1000          # 10% сервисный сбор
+        hotel.tip_presets = [5, 10, 15]
+        hotel.free_delivery_threshold_minor = 300000  # бесплатная доставка от 3000 ₽
+        hotel.save(update_fields=[
+            "service_fee_bp", "tip_presets", "free_delivery_threshold_minor", "updated_at"
+        ])
+        # Наглядные per-service оверрайды поверх дефолтов отеля.
+        Service.objects.filter(code="bar").update(service_fee_bp=0)          # в баре сбора нет
+        Service.objects.filter(code="spa").update(service_fee_bp=0)
+        Service.objects.filter(code="room_service").update(
+            min_order_minor=50000, service_fee_bp=1500                       # минимум + выше сбор
+        )
+
+    def _seed_modules(self):
+        from apps.hotels.models import HotelModule
+
+        enabled = [
+            (HotelModule.Code.MULTI_RESTAURANT, "tariff", {}),
+            (HotelModule.Code.MARKETING, "tariff", {}),
+            (HotelModule.Code.EXTRA_LANGUAGES, "tariff", {}),
+            (HotelModule.Code.ANALYTICS_LEVEL, "tariff", {"level": "advanced"}),
+            (HotelModule.Code.PMS, "override", {}),
+        ]
+        for code, source, config in enabled:
+            HotelModule.objects.update_or_create(
+                code=code, defaults={"is_enabled": True, "source": source, "config": config}
+            )
 
 
 def _render_placeholder_png(label: str, code: str = "") -> bytes:
