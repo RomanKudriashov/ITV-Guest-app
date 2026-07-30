@@ -176,3 +176,95 @@ def delete_inclusion(inclusion_id) -> None:
     inclusion.selected_categories.all().hard_delete()
     inclusion.hidden_items.all().hard_delete()
     inclusion.delete(hard=True)
+
+
+# --- Резолв эффективного каталога (C2) --------------------------------------
+
+
+def active_inclusions(service) -> list[ServiceInclusion]:
+    """Активные включения сервиса, со всем нужным для резолва."""
+    return list(
+        ServiceInclusion.objects.filter(including_service=service, is_active=True)
+        .select_related("source_service", "source_service__execution_point", "schedule")
+        .prefetch_related("selected_categories__category", "hidden_items")
+        .order_by("sort_order", "id")
+    )
+
+
+def _block_categories(inclusion: ServiceInclusion, offering_type):
+    """Категории источника, входящие в блок включения (все или выбранные)."""
+    if inclusion.scope == ServiceInclusion.Scope.CATEGORIES:
+        cats = [
+            link.category
+            for link in inclusion.selected_categories.all()
+            if link.category.is_active
+        ]
+    else:
+        cats = list(
+            Category.objects.filter(service=inclusion.source_service, is_active=True)
+        )
+    if offering_type is not None:
+        cats = [c for c in cats if c.type == offering_type]
+    return cats
+
+
+def borrowed_blocks(service, offering_type=None) -> list[tuple]:
+    """
+    Список (category, inclusion, hidden_item_ids) — заимствованные категории
+    сервиса с их overlay-контекстом. Категории — те же строки источника (ссылка).
+    """
+    blocks = []
+    for inclusion in active_inclusions(service):
+        hidden = {str(link.item_id) for link in inclusion.hidden_items.all()}
+        for category in _block_categories(inclusion, offering_type):
+            blocks.append((category, inclusion, hidden))
+    return blocks
+
+
+def resolve_item_executor(service, item) -> tuple:
+    """
+    Эффективный исполнитель позиции в контексте сервиса-корзины:
+      своя позиция → точка сервиса (inclusion=None);
+      заимствованная → точка по overlay включения (источник или своя).
+    Возвращает (execution_point_id, inclusion|None). Один выбор решает и
+    маршрутизацию, и чьё расписание в силе.
+    """
+    if item.category.service_id and str(item.category.service_id) == str(service.pk):
+        return str(service.execution_point_id), None
+    # Ищем включение, чей источник содержит категорию этой позиции (и она не скрыта).
+    for inclusion in active_inclusions(service):
+        hidden = {str(link.item_id) for link in inclusion.hidden_items.all()}
+        if str(item.pk) in hidden:
+            continue
+        block_cat_ids = {str(c.pk) for c in _block_categories(inclusion, None)}
+        if str(item.category_id) in block_cat_ids:
+            if inclusion.executor == ServiceInclusion.Executor.OWN:
+                return str(inclusion.including_service.execution_point_id), inclusion
+            return str(inclusion.source_service.execution_point_id), inclusion
+    # Не своя и не заимствованная — исполнитель по умолчанию сам сервис.
+    return str(service.execution_point_id), None
+
+
+def _block_schedule(inclusion: ServiceInclusion):
+    """Расписание блока: overlay-переопределение, иначе венью-часы включающего."""
+    return inclusion.schedule or inclusion.including_service.schedule
+
+
+def apply_overlay_availability(base, inclusion: ServiceInclusion, moment):
+    """
+    Эффективная доступность заимствованной позиции = ПЕРЕСЕЧЕНИЕ доступности у
+    источника (base) и расписания блока (overlay/венью включающего). Источник
+    закрыт → закрыто; блок закрыт → закрыто; открыты оба → до ближайшего закрытия.
+    """
+    from .availability import REASON_SCHEDULE, Availability
+
+    schedule = _block_schedule(inclusion)
+    if schedule is None:
+        return base  # у блока нет расписания — ограничивает только источник
+    block = schedule.availability_at(moment)
+    if not block.is_open:
+        return Availability(False, REASON_SCHEDULE, available_from=block.available_from)
+    if not base.is_available:
+        return base
+    untils = [until for until in (base.available_until, block.available_until) if until]
+    return Availability(True, available_until=min(untils) if untils else None)

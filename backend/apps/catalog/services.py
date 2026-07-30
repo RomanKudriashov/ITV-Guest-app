@@ -95,6 +95,51 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
             }
         )
 
+    # Заимствованный контент: если сервис-скоуп что-то включает — доклеиваем его
+    # блоки (overlay: наценка/скрытие/доступность-пересечение) в то же меню.
+    # Не-заимствующий сервис не получает ни одной лишней категории — borrowed_blocks
+    # пуст, меню байт-в-байт как раньше.
+    if options.point_code:
+        from apps.hotels.models import Service
+
+        from .inclusions import borrowed_blocks
+
+        service = (
+            Service.objects.filter(code=options.point_code, is_active=True)
+            .select_related("execution_point", "schedule")
+            .first()
+        )
+        if service is not None:
+            own_ids = {entry["id"] for entry in payload_categories}
+            for block_cat, inclusion, hidden in borrowed_blocks(service, options.offering_type):
+                if str(block_cat.pk) in own_ids:
+                    continue
+                block_state = category_availability(block_cat, options.moment)
+                block_items = [
+                    _serialize_item(item, language, options.moment, block_cat, inclusion=inclusion)
+                    for item in items_by_category.get(block_cat.pk, [])
+                    if str(item.pk) not in hidden
+                ]
+                if not options.include_unavailable:
+                    block_items = [entry for entry in block_items if entry["is_available"]]
+                    if not (block_state.is_available and block_items):
+                        continue
+                payload_categories.append(
+                    {
+                        "id": str(block_cat.pk),
+                        "code": block_cat.code,
+                        "parent_id": None,
+                        "title": translate(block_cat.title, language),
+                        "description": translate(block_cat.description, language),
+                        "image_url": image_url(
+                            block_cat.image, variant="card", fallback_code=block_cat.code
+                        ),
+                        "sort_order": 1000 + block_cat.sort_order,
+                        **block_state.as_dict(),
+                        "items": block_items,
+                    }
+                )
+
     hotel = hotel or Hotel.objects.filter(pk=_current_hotel_id()).first()
     return {
         "language": language,
@@ -194,9 +239,18 @@ def _serialize_request_field(request_field: RequestField, language: str | None) 
 
 
 def _serialize_item(
-    item: Item, language: str | None, moment: datetime | None, category: Category
+    item: Item, language: str | None, moment: datetime | None, category: Category,
+    *, inclusion=None,
 ) -> dict[str, Any]:
     state = item_availability(item, moment, category=category)
+    price = item.price
+    if inclusion is not None:
+        # Заимствованная позиция: цена = источник + наценка overlay; доступность
+        # = пересечение доступности источника и расписания блока.
+        from .inclusions import apply_overlay_availability
+
+        price = inclusion.apply_markup(price)
+        state = apply_overlay_availability(state, inclusion, moment)
 
     images = [
         image_url(link.asset, variant="card", fallback_code=category.code)
@@ -213,7 +267,7 @@ def _serialize_item(
         "category_id": str(item.category_id),
         "title": translate(item.title, language),
         "description": translate(item.description, language),
-        "price": item.price,
+        "price": price,
         # Аллергены («содержит») и диет-маркеры («подходит») — из тенант-словарей,
         # локализованные, в порядке справочника. Пустое НЕ отдаём: карточка не
         # рисует пустой блок.
