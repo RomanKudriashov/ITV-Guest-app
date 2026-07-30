@@ -27,6 +27,7 @@ from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, ValidationError
 from apps.hotels.brand_library import preset_tokens
 from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Service
+from apps.orders.status_flows import ensure_status_flows
 
 DEFAULT_PRESET = "midnight_navy"
 DEFAULT_LANGUAGES = ("ru", "en")
@@ -173,6 +174,11 @@ def provision_hotel(
         )
 
         seed_item_data_dictionaries()
+        # Пресеты статусов — часть каркаса отеля, а не демо-контента. До R3 они
+        # жили только в демо-сиде, и свежесозданный отель падал на первом заказе
+        # («status_preset_missing»). Теперь заводятся все четыре потока сразу:
+        # какой понадобится, решает тип сервиса.
+        ensure_status_flows()
 
         admin = User.objects.filter(email=admin_email).first()
         if admin is None:

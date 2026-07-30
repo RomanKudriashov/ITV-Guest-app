@@ -354,7 +354,10 @@ def test_tracker_card_shows_fields_for_a_request(client, crystal, guest, taxi):
     # Тот же конверт, что у еды: отличается только наполнение тела.
     assert card["execution_point"]["code"] == "concierge"
     assert card["can_cancel"] is True
-    assert [status["code"] for status in card["next_statuses"]][0] == "accepted"
+    # Консьерж живёт в потоке заявок (R3), а не на доске кухни: подтвердить →
+    # выполнено, без «Готовится» и «В пути».
+    assert board["tracker_type"] == "requests"
+    assert [status["code"] for status in card["next_statuses"]] == ["confirmed", "fulfilled"]
     assert [(f["label"], f["display"]) for f in card["field_values"]][0] == (
         "Куда",
         "Аэропорт Пулково",
@@ -372,15 +375,19 @@ def test_request_moves_through_statuses_like_any_order(
     assert accepted.status_code == 200
     assert accepted.json()["assignee"]["name"] == "Анна, консьерж"
 
+    # Чужой поток по коду не достать: «preparing» — статус доски ресторана.
+    stray = concierge(f"/api/tracker/order/{order_id}/status", "post", {"status": "preparing"})
+    assert stray.status_code == 422
+
     with django_capture_on_commit_callbacks(execute=True):
         moved = concierge(
-            f"/api/tracker/order/{order_id}/status", "post", {"status": "preparing"}
+            f"/api/tracker/order/{order_id}/status", "post", {"status": "fulfilled"}
         )
     assert moved.status_code == 200
 
     # И гость видит это своим обычным эндпоинтом.
     guest_view = guest.get(f"/api/guest/order/{order_id}").json()
-    assert guest_view["status"]["code"] == "preparing"
+    assert guest_view["status"]["code"] == "fulfilled"
     assert guest_view["field_values"][0]["display"] == "Аэропорт Пулково"
 
 

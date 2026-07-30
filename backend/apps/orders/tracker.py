@@ -10,7 +10,7 @@ middleware аутентификации, ни резолвера тенанта,
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as datetime_timezone
 from typing import Any
 
 from django.db import transaction
@@ -23,8 +23,10 @@ from apps.hotels.models import ExecutionPoint, Hotel
 
 from apps.events.bus import ORDER_ACCEPTED, emit
 
+from . import status_flows
 from .models import Order, StatusDefinition
 from .services import change_status, order_queryset, serialize_order
+from .tracker_types import behaviour_for_type, tracker_type_for_point
 
 
 class PointNotAssigned(PermissionDenied):
@@ -84,12 +86,19 @@ def require_point_for_order(user, order: Order) -> ExecutionPoint:
 
 
 def serialize_point(point: ExecutionPoint, language: str | None = None, **extra) -> dict:
+    tracker_type = tracker_type_for_point(point)
+    behaviour = behaviour_for_type(tracker_type)
     return {
         "id": str(point.pk),
         "code": point.code,
         "title": translate(point.title, language) or point.code,
         "kind": point.kind,
         "sla_minutes": point.sla_minutes,
+        # Клиент рисует то, что прислал сервер: тип решает раскладку (колонки
+        # или лента) и подписи действий. Выводится из типа сервиса — отдельным
+        # полем не хранится.
+        "tracker_type": tracker_type,
+        "layout": behaviour.layout,
         **extra,
     }
 
@@ -132,15 +141,26 @@ HISTORY_WINDOW_HOURS = 24
 
 
 def build_board(
-    point: ExecutionPoint, *, scope: str = "active", language: str | None = None
+    point: ExecutionPoint,
+    *,
+    scope: str = "active",
+    language: str | None = None,
+    date: str | None = None,
 ) -> dict:
     """
-    Колонки строятся из ПРЕСЕТА СТАТУСОВ ОТЕЛЯ, а не из захардкоженного списка:
-    у ресторана «готовится → в пути», у SPA будет своё. Клиент рисует то, что
-    прислал сервер.
+    Колонки строятся из ПОТОКА СТАТУСОВ ЭТОЙ ТОЧКИ, а не из захардкоженного
+    списка и не из всех статусов отеля: у доски ресторана «готовится → в пути»,
+    у очереди хозслужбы «в работе → готово», у записей спа «пришёл → завершено».
+    Клиент рисует то, что прислал сервер.
+
+    Раскладок две (tracker_types.Layout). Колонки — доска, очередь, заявки.
+    Лента — записи спа: там задача привязана ко времени слота, и группировать
+    её по статусу бессмысленно, смотрят «кто следующий».
     """
     hotel = Hotel.objects.get(pk=point.hotel_id)
-    statuses = list(StatusDefinition.objects.order_by("sort_order"))
+    tracker_type = tracker_type_for_point(point)
+    behaviour = behaviour_for_type(tracker_type)
+    statuses = status_flows.statuses_for_flow(status_flows.flow_for_point(point))
 
     # parent-агрегат исключаем: на доску идёт исполнение (children и обычные).
     queryset = (
@@ -161,6 +181,8 @@ def build_board(
                 "orders": [serialize_tracker_order(o, language, statuses) for o in queryset],
             }
         ]
+    elif behaviour.layout == "timeline":
+        columns = [_timeline_column(queryset, hotel, language, statuses, date)]
     else:
         queryset = queryset.filter(status__is_terminal=False).order_by("created_at")
         grouped: dict[str, list] = {}
@@ -183,7 +205,64 @@ def build_board(
         "point": serialize_point(point, language),
         "scope": scope,
         "server_time": hotel.local_now().isoformat(),
+        "tracker_type": tracker_type,
+        "layout": behaviour.layout,
         "columns": columns,
+    }
+
+
+def _timeline_column(queryset, hotel, language, statuses, date: str | None = None) -> dict:
+    """
+    Записи одного дня (по умолчанию сегодняшнего) одной лентой по времени слота.
+
+    Завершённые из ленты НЕ уходят (`keeps_terminal_in_view`): мастеру нужен
+    день целиком, чтобы понимать, где он в расписании. Отменённые уходят —
+    их время освободилось. Сутки считаются в таймзоне отеля, а не серверной:
+    «сегодня» у отеля во Владивостоке своё.
+    """
+    local_now = hotel.local_now()
+    if date:
+        try:
+            day = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValidationError(
+                "Дата должна быть в формате ГГГГ-ММ-ДД", code="invalid_date", field="date"
+            ) from None
+        start_of_day = local_now.replace(
+            year=day.year, month=day.month, day=day.day,
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+    else:
+        start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_start = start_of_day.astimezone(datetime_timezone.utc)
+    day_end = day_start + timedelta(days=1)
+
+    # Идём от броней, а не от заказов: ленту упорядочивает время слота, а
+    # DISTINCT по заказу с ORDER BY по связанной таблице даёт дубли.
+    from apps.catalog.models import SlotBooking
+
+    booked_ids = list(
+        SlotBooking.objects.filter(
+            is_active=True, starts_at__gte=day_start, starts_at__lt=day_end
+        )
+        .order_by("starts_at")
+        .values_list("order_id", flat=True)
+    )
+    by_id = {
+        order.pk: order
+        for order in queryset.filter(pk__in=booked_ids, status__is_cancelled=False)
+    }
+    seen: set = set()
+    orders = []
+    for order_id in booked_ids:
+        if order_id in by_id and order_id not in seen:
+            seen.add(order_id)
+            orders.append(by_id[order_id])
+    return {
+        "code": "day",
+        "title": start_of_day.date().isoformat(),
+        "date": start_of_day.date().isoformat(),
+        "orders": [serialize_tracker_order(order, language, statuses) for order in orders],
     }
 
 
@@ -196,7 +275,7 @@ def next_statuses(order: Order, statuses: list[StatusDefinition] | None = None) 
     персонал кликать ради галочки. Отмена — отдельное действие, поэтому
     статусы отмены сюда не попадают.
     """
-    statuses = statuses or list(StatusDefinition.objects.order_by("sort_order"))
+    statuses = statuses or status_flows.statuses_for_flow(order.status.flow)
     return [
         status
         for status in statuses
@@ -301,10 +380,16 @@ def accept_order(user, order_id) -> Order:
 
 
 def _first_working_status(order: Order) -> StatusDefinition | None:
-    """Первый статус после начального — «Принят» в демо-пресете."""
+    """
+    Первый статус после начального В ПОТОКЕ ЗАКАЗА: «Принят» на доске,
+    «В работе» в очереди хозслужбы, «Пришёл» в записях спа.
+    """
     return (
         StatusDefinition.objects.filter(
-            sort_order__gt=order.status.sort_order, is_cancelled=False, is_terminal=False
+            flow=order.status.flow,
+            sort_order__gt=order.status.sort_order,
+            is_cancelled=False,
+            is_terminal=False,
         )
         .order_by("sort_order")
         .first()
@@ -338,10 +423,10 @@ def cancel_order_by_staff(user, order_id, *, reason: str = "") -> Order:
     if order.status.is_terminal:
         raise ConflictError("Заказ уже завершён", code="cancel_not_allowed")
 
-    cancelled = StatusDefinition.objects.filter(is_cancelled=True).order_by("sort_order").first()
+    cancelled = status_flows.cancelled_status(order.status.flow)
     if cancelled is None:
         raise ValidationError(
-            "В пресете статусов отеля нет статуса отмены", code="status_preset_missing"
+            f"В потоке «{order.status.flow}» нет статуса отмены", code="status_preset_missing"
         )
 
     change_status(

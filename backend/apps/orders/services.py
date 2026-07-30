@@ -40,6 +40,7 @@ from apps.events.bus import (
 from apps.hotels.models import ExecutionPoint, Hotel, Location, Room
 from apps.media.services import image_url
 
+from . import status_flows
 from .models import Order, OrderItem, OrderStatusChange, StatusDefinition
 
 # Насколько вперёд гость может запланировать заказ. Дальше — уже не «сегодня
@@ -167,7 +168,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     location = _resolve_location(data, items[0])
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
-    status = _initial_status()
+    status = _initial_status(execution_point)
 
     order = Order.objects.create(
         hotel_id=hotel_id,
@@ -361,7 +362,9 @@ def _create_fanned_order(
     location = _resolve_location(data, next(iter(groups.values()))[0]["item"])
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
-    status = _initial_status()
+    # Поток агрегата — агрегатора; у каждого child свой (см. ниже): коктейль
+    # уезжает на доску бара в статусах доски, даже если агрегатор — иного типа.
+    status = _initial_status(aggregator.execution_point)
 
     parent = Order.objects.create(
         hotel_id=hotel_id,
@@ -384,6 +387,7 @@ def _create_fanned_order(
     all_items: list[OrderItem] = []
     for ep_id, resolved_lines in groups.items():
         ep = ExecutionPoint.objects.get(pk=ep_id)
+        child_status = _initial_status(ep)
         child = Order.objects.create(
             hotel_id=hotel_id,
             number=_next_number(hotel_id),
@@ -397,7 +401,7 @@ def _create_fanned_order(
             delivery_mode=data.delivery_mode,
             requested_time=requested_time,
             comment=data.comment,
-            status=status,
+            status=child_status,
             total=None,
             currency=hotel.currency,
             field_values=[],
@@ -405,7 +409,7 @@ def _create_fanned_order(
         for resolved in resolved_lines:
             all_items.append(_create_order_item(child, resolved))
         # Каждый child — на свою доску + своя эскалация (эмитит ORDER_CREATED).
-        _finalize_created_order(child, hotel_id, guest_session, status)
+        _finalize_created_order(child, hotel_id, guest_session, child_status)
 
     priced = [oi.line_total for oi in all_items if oi.line_total is not None]
     if not priced:
@@ -693,8 +697,12 @@ def _validate_requested_time(data: OrderInput, hotel: Hotel) -> datetime | None:
     return moment
 
 
-def _initial_status() -> StatusDefinition:
-    status = StatusDefinition.objects.filter(is_initial=True).order_by("sort_order").first()
+def _initial_status(execution_point) -> StatusDefinition:
+    """
+    Начальный статус ПОТОКА исполнителя: заявка горничной стартует в очереди
+    хозслужбы, а не в «Новом» доски ресторана.
+    """
+    status = status_flows.initial_status(status_flows.flow_for_point(execution_point))
     if status is None:
         raise OrderValidationError(
             "Для отеля не настроен начальный статус заказа (нужен пресет статусов)",
@@ -822,7 +830,10 @@ def change_status(
     actor_id=None,
     comment: str = "",
 ) -> Order:
-    target = StatusDefinition.objects.filter(code=to_code).first()
+    # Код ищем ТОЛЬКО в потоке самого заказа: `done` есть и у доски, и у очереди
+    # хозслужбы, и это разные строки. Поиск по одному коду однажды увёл бы заказ
+    # в чужой поток, откуда нет обратной дороги.
+    target = status_flows.status_by_code(order.status.flow, to_code)
     if target is None:
         raise OrderValidationError(f"Статус '{to_code}' не настроен", code="unknown_status")
 
@@ -870,17 +881,34 @@ def change_status(
     return get_order(order.pk)
 
 
-def _aggregate_status(children) -> StatusDefinition:
+def _aggregate_status(parent: Order, children) -> StatusDefinition:
     """
     Статус-свод parent из children: наименее продвинутый активный; когда все
     терминальны — не-отменённый (готово), иначе отменён.
+
+    Сводим по СТУПЕНИ, а не по sort_order: children могут висеть на досках
+    разных типов (коктейль на доске бара, процедура в записях спа), и порядковые
+    номера их потоков между собой несравнимы. Результат возвращаем в потоке
+    parent — гость видит таймлайн своего заказа, а не чужой доски.
     """
     statuses = [child.status for child in children]
     active = [status for status in statuses if not status.is_terminal]
     if active:
-        return min(active, key=lambda status: status.sort_order)
-    non_cancelled = [status for status in statuses if not status.is_cancelled]
-    return non_cancelled[0] if non_cancelled else statuses[0]
+        least = min(active, key=lambda status: (status.stage_rank, status.sort_order))
+    else:
+        non_cancelled = [status for status in statuses if not status.is_cancelled]
+        least = non_cancelled[0] if non_cancelled else statuses[0]
+
+    if least.flow == parent.status.flow:
+        return least  # одинаковые потоки — тот же статус, что и до R3
+    own = [
+        status
+        for status in status_flows.statuses_for_flow(parent.status.flow)
+        if status.stage == least.stage
+    ]
+    # Ступени нет в потоке parent (потоки разной длины) — остаёмся на месте:
+    # соврать статусом хуже, чем не сдвинуться.
+    return own[0] if own else parent.status
 
 
 def _sync_parent_status(parent_id, *, actor_type, actor_id) -> None:
@@ -892,7 +920,7 @@ def _sync_parent_status(parent_id, *, actor_type, actor_id) -> None:
     children = list(Order.objects.filter(parent_id=parent_id).select_related("status"))
     if not children:
         return
-    target = _aggregate_status(children)
+    target = _aggregate_status(parent, children)
     if parent.status_id == target.pk:
         return
     previous = parent.status
@@ -926,28 +954,35 @@ def cancel_order_by_guest(order: Order, *, guest_session, reason: str = "") -> O
             code="cancel_not_allowed",
         )
 
-    cancelled = StatusDefinition.objects.filter(is_cancelled=True).order_by("sort_order").first()
-    if cancelled is None:
-        raise OrderValidationError(
-            "В пресете статусов отеля нет статуса отмены", code="status_preset_missing"
-        )
-
     actor_id = guest_session.pk if guest_session else None
-    children = list(order.children.all()) if order.parent_id is None else []
+    children = list(order.children.select_related("status")) if order.parent_id is None else []
     if children:
         # Агрегатор: гасим все не-терминальные children — parent сойдёт в отмену
-        # через статус-свод.
+        # через статус-свод. Код отмены берём в потоке КАЖДОГО child: у бара и
+        # у спа он может называться по-разному.
         for child in children:
-            if not child.status.is_terminal:
-                change_status(
-                    child, to_code=cancelled.code, actor_type="guest",
-                    actor_id=actor_id, comment=reason,
-                )
+            if child.status.is_terminal:
+                continue
+            child_cancelled = _require_cancelled_status(child.status.flow)
+            change_status(
+                child, to_code=child_cancelled.code, actor_type="guest",
+                actor_id=actor_id, comment=reason,
+            )
         return get_order(order.pk)
 
+    cancelled = _require_cancelled_status(order.status.flow)
     return change_status(
         order, to_code=cancelled.code, actor_type="guest", actor_id=actor_id, comment=reason
     )
+
+
+def _require_cancelled_status(flow: str) -> StatusDefinition:
+    status = status_flows.cancelled_status(flow)
+    if status is None:
+        raise OrderValidationError(
+            f"В потоке «{flow}» нет статуса отмены", code="status_preset_missing"
+        )
+    return status
 
 
 # --- Сериализация ----------------------------------------------------------
@@ -1036,7 +1071,11 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
     таймлайн рисуется без второго запроса и без знания пресета на клиенте.
     """
     hotel = order.hotel
-    flow = StatusDefinition.objects.filter(hotel_id=order.hotel_id).order_by("sort_order")
+    # Гостю показываем таймлайн ЕГО заказа — поток его исполнителя, а не все
+    # статусы отеля скопом (после R3 их четыре набора).
+    flow = StatusDefinition.objects.filter(
+        hotel_id=order.hotel_id, flow=order.status.flow
+    ).order_by("sort_order")
     item_lines = _order_lines(order)  # у parent-агрегата — позиции всех children
 
     return {

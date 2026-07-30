@@ -54,7 +54,7 @@ from apps.notifications.models import (
     NotificationChannel,
     TargetKind,
 )
-from apps.orders.models import StatusDefinition
+from apps.orders.status_flows import ensure_status_flows
 
 # Токены бренда. Формат совпадает с BrandTokens во фронте — это один контракт,
 # а не две похожие структуры.
@@ -89,17 +89,6 @@ CRYSTAL_TOKENS = {
     "shape": {"borderRadius": 14},
     "spacingUnit": 8,
 }
-
-STATUS_PRESET = [
-    # code, ru, en, initial, terminal, cancelled, токен цвета, отмена гостем
-    ("new", "Новый", "New", True, False, False, "info", True),
-    ("accepted", "Принят", "Accepted", False, False, False, "info", True),
-    # С «Готовится» отмена уже закрыта: продукты в работе.
-    ("preparing", "Готовится", "Preparing", False, False, False, "warning", False),
-    ("on_the_way", "В пути", "On the way", False, False, False, "warning", False),
-    ("done", "Доставлено", "Delivered", False, True, False, "success", False),
-    ("cancelled", "Отменён", "Cancelled", False, True, True, "danger", False),
-]
 
 PLACEHOLDERS = [
     ("default", "Заглушка по умолчанию"),
@@ -212,7 +201,9 @@ class Command(BaseCommand):
             points = self._seed_execution_points()
             kitchen = points["kitchen"]
             users = self._seed_staff(hotel, points)
-            self._seed_statuses()
+            # Пресеты статусов уже завёл provision_hotel; зовём повторно (это
+            # идемпотентно) на случай отеля, созданного до R3.
+            ensure_status_flows()
             rooms = self._seed_rooms()
             locations = self._seed_locations()
             schedules = self._seed_schedules()
@@ -310,30 +301,6 @@ class Command(BaseCommand):
             )
             created_users[prefix] = user
         return created_users
-
-    def _seed_statuses(self):
-        for order, (
-            code,
-            ru,
-            en,
-            initial,
-            terminal,
-            cancelled,
-            token,
-            guest_cancel,
-        ) in enumerate(STATUS_PRESET):
-            StatusDefinition.objects.update_or_create(
-                code=code,
-                defaults={
-                    "title": {"ru": ru, "en": en},
-                    "sort_order": order,
-                    "is_initial": initial,
-                    "is_terminal": terminal,
-                    "is_cancelled": cancelled,
-                    "color_token": token,
-                    "allows_guest_cancel": guest_cancel,
-                },
-            )
 
     def _seed_rooms(self) -> list[Room]:
         rooms = []

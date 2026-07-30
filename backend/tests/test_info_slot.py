@@ -371,15 +371,21 @@ def test_tracker_card_shows_the_slot(guest, crystal, cms):
         HTTP_IDEMPOTENCY_KEY="slot-track",
     )
 
-    spa = _spa_tracker(cms.client, crystal)
+    # Спа — не доска, а лента записей на день (R3): смотрим день брони.
     board = cms.client.get(
-        "/api/tracker/orders?point=spa",
+        f"/api/tracker/orders?point=spa&date={next_working_date()}",
         HTTP_HOST=host_for(crystal),
         HTTP_AUTHORIZATION=f"Bearer {_spa_token(cms.client, crystal)}",
     ).json()
+    assert board["tracker_type"] == "schedule"
+    assert board["layout"] == "timeline"
+    assert board["columns"][0]["date"] == next_working_date()
+
     card = board["columns"][0]["orders"][0]
     assert card["type"] == "booking"
     assert card["slot"]["resource_title"] == "Массаж 60 минут"
+    # Действия мастера: отметить приход → завершить.
+    assert [status["code"] for status in card["next_statuses"]] == ["arrived", "completed"]
 
 
 def _spa_token(client, hotel):

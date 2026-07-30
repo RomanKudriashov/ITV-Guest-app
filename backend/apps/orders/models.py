@@ -20,11 +20,26 @@ from apps.core.models import TenantModel
 
 class StatusDefinition(TenantModel):
     """
-    Статусы настраиваются на отель (пресет заводится сидом), а не захардкожены:
-    у ресторана «готовится → в пути», у SPA «подтверждено → оказано».
+    Статусы настраиваются на отель (пресеты заводит apps/orders/status_flows.py),
+    а не захардкожены: у ресторана «готовится → в пути», у спа «пришёл →
+    завершено».
+
+    С R3 у отеля не один пресет, а по одному на ТИП ТРЕКЕРА (`flow`): доска
+    заказов, очередь хозслужбы, записи спа, заявки консьержа. Код уникален
+    внутри потока, а не отеля — `new` у доски и `new` у заявок такси ведут в
+    разные стороны. Отсюда правило: искать статус по коду можно только вместе
+    с потоком (`status_by_code`), иначе однажды заказ уедет в чужой поток.
     """
 
     code = models.SlugField(max_length=64)
+    # Поток = тип трекера (apps/orders/tracker_types.py::TrackerType). Строкой,
+    # а не FK: это справочник кода, а не данные отеля.
+    flow = models.SlugField(max_length=32, default="board")
+    # Нормализованная ступень (status_flows.Stage) поверх потоков. Единственный
+    # способ сравнить продвинутость статусов из РАЗНЫХ потоков — этого требует
+    # статус-свод разъехавшегося заказа (R2), у которого children могут висеть
+    # на досках разных типов.
+    stage = models.SlugField(max_length=32, default="new")
     title = TranslatableField()
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_initial = models.BooleanField(default=False)
@@ -43,12 +58,18 @@ class StatusDefinition(TenantModel):
         ordering = ["sort_order"]
         constraints = [
             models.UniqueConstraint(
-                fields=["hotel", "code"], name="uniq_status_code_per_hotel"
+                fields=["hotel", "flow", "code"], name="uniq_status_code_per_flow"
             )
         ]
 
     def __str__(self) -> str:
-        return self.code
+        return f"{self.flow}:{self.code}"
+
+    @property
+    def stage_rank(self) -> int:
+        from .status_flows import STAGE_RANK
+
+        return STAGE_RANK.get(self.stage, 0)
 
 
 class Order(TenantModel):
