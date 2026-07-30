@@ -63,3 +63,20 @@ DAY_PARTS: list[str] = ["breakfast", "lunch", "dinner", "late_night"]
 FLAG_CODES = {entry["code"] for entry in FLAGS}
 ALLERGEN_CODES = {entry["code"] for entry in ALLERGENS}
 DIETARY_MARKER_CODES = {entry["code"] for entry in DIETARY_MARKERS}
+
+
+# Переводимые метки справочников включений (R2) — задел под управляющий UI R4.
+# 4 языка (ru/en/ar/zh), как весь контент. Ключ — code из TextChoices модели.
+INCLUSION_SCOPE_LABELS = {
+    "all":        {"ru": "Весь источник", "en": "Whole source", "ar": "المصدر بالكامل", "zh": "整个来源"},
+    "categories": {"ru": "Выбранные категории", "en": "Selected categories", "ar": "فئات مختارة", "zh": "选定类别"},
+}
+INCLUSION_MARKUP_LABELS = {
+    "none":    {"ru": "Без наценки", "en": "No markup", "ar": "بدون هامش", "zh": "无加价"},
+    "percent": {"ru": "Процент", "en": "Percent", "ar": "نسبة مئوية", "zh": "百分比"},
+    "amount":  {"ru": "Сумма", "en": "Amount", "ar": "مبلغ", "zh": "金额"},
+}
+INCLUSION_EXECUTOR_LABELS = {
+    "source": {"ru": "Точка источника", "en": "Source point", "ar": "نقطة المصدر", "zh": "来源执行点"},
+    "own":    {"ru": "Своя точка", "en": "Own point", "ar": "النقطة الخاصة", "zh": "自有执行点"},
+}
