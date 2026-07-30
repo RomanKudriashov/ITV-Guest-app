@@ -147,6 +147,54 @@ def test_fanout_guest_and_tracker_visibility(crystal):
         assert parent.number not in rs_numbers
 
 
+def test_borrowed_cocktail_lands_on_the_bar_board_with_its_source(crystal):
+    """
+    Стык R2 → R3: заимствованная позиция обязана доехать до доски СВОЕГО
+    исполнителя и назваться там своим происхождением.
+
+    Коктейль гость взял в рум-сервисе, а готовит его бар — на доске бара
+    появляется суб-заказ. Без пометки источника бармен видит заявку ниоткуда:
+    гость назовёт номер своего заказа, а такого номера на доске нет.
+    """
+    with tenant_context(crystal):
+        ctx = _setup()
+        parent = _place(ctx)
+
+        bar_board = build_board(ctx["bar_ep"])
+        cards = [order for column in bar_board["columns"] for order in column["orders"]]
+        assert len(cards) == 1, "коктейль не долетел до доски бара"
+        cocktail_card = cards[0]
+
+        titles = [line["title"] for line in cocktail_card["items"]]
+        assert titles == ["Коктейль"], "на доске бара оказался чужой стейк"
+
+        # Пометка источника: номер ГОСТЕВОГО заказа и сервис, через который он сделан.
+        assert cocktail_card["source_order"]["number"] == parent.number
+        assert cocktail_card["source_order"]["service_code"] == "rs"
+
+        # А на доске кухни — стейк, и со своей пометкой того же источника.
+        kitchen_cards = [
+            order for column in build_board(ctx["kitchen_ep"])["columns"] for order in column["orders"]
+        ]
+        assert [line["title"] for line in kitchen_cards[0]["items"]] == ["Стейк"]
+        assert kitchen_cards[0]["source_order"]["number"] == parent.number
+
+
+def test_plain_order_has_no_source_marking(crystal):
+    """Обычный заказ (один исполнитель) ничего не заимствует — пометки нет."""
+    with tenant_context(crystal):
+        ctx = _setup()
+        data = OrderInput(
+            lines=[OrderLineInput(item_id=str(ctx["cocktail"].pk))],
+            service_code="b",
+            room_id=str(ctx["room"].pk),
+        )
+        create_order(data, guest_session=ctx["session"])
+
+        cards = [o for column in build_board(ctx["bar_ep"])["columns"] for o in column["orders"]]
+        assert cards[0]["source_order"] is None
+
+
 def test_quote_overlay_reconciles_with_order(crystal):
     with tenant_context(crystal):
         ctx = _setup()

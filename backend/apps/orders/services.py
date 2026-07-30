@@ -727,7 +727,9 @@ def _next_number(hotel_id) -> int:
 
 def order_queryset():
     return Order.objects.select_related(
-        "status", "room", "location", "execution_point"
+        # parent нужен доске исполнителя: у суб-заказа она показывает номер
+        # гостевого заказа-агрегата («коктейль из заказа №41»).
+        "status", "room", "location", "execution_point", "parent"
     ).prefetch_related(
         "items__item__images__asset",
         "status_changes__to_status",

@@ -19,7 +19,7 @@ from django.utils import timezone
 from apps.accounts.models import StaffAssignment, User
 from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, ValidationError
 from apps.core.fields import translate
-from apps.hotels.models import ExecutionPoint, Hotel
+from apps.hotels.models import ExecutionPoint, Hotel, Service
 
 from apps.events.bus import ORDER_ACCEPTED, emit
 
@@ -307,6 +307,7 @@ def serialize_tracker_order(
                 if order.accepted_at
                 else None
             ),
+            "source_order": _source_order(order, language),
             "waiting_minutes": max(waiting, 0),
             "is_overdue": (
                 not order.status.is_terminal and waiting >= point.sla_minutes
@@ -319,6 +320,33 @@ def serialize_tracker_order(
         }
     )
     return payload
+
+
+def _source_order(order: Order, language: str | None) -> dict | None:
+    """
+    Пометка источника у заимствованной позиции (R2 → R3).
+
+    Коктейль из заказа рум-сервиса приезжает на доску БАРА отдельным
+    суб-заказом со своим номером. Без этой пометки бармен видит заявку
+    ниоткуда: гость назовёт номер СВОЕГО заказа (агрегата), а на доске такого
+    номера нет. Поэтому карточка несёт номер гостевого заказа и имя сервиса,
+    через который гость его сделал.
+
+    У обычного заказа (один исполнитель, `parent=None`) — None: никакого
+    источника, кроме себя, у него нет.
+    """
+    if order.parent_id is None:
+        return None
+    parent = order.parent
+    service = Service.objects.filter(execution_point_id=parent.execution_point_id).first()
+    return {
+        "id": str(parent.pk),
+        "number": parent.number,
+        "service_code": service.code if service else "",
+        "service_title": (
+            translate(service.public_title, language) if service else ""
+        ),
+    }
 
 
 def get_tracker_order(user, order_id) -> Order:
