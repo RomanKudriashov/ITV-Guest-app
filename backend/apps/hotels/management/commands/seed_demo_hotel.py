@@ -1408,6 +1408,10 @@ class Command(BaseCommand):
         self._seed_modules()
         self._seed_inclusions()          # рум-сервис включает Панораму + часть бара
         self._seed_fanout_demo_order(hotel)  # демо-заказ, разъезжающийся на 2 трекера
+        # Живая задача в каждый тип трекера. Под тем же флагом, что и остальной
+        # наглядный контент: базовый сид держат тесты, и молча подкладывать им
+        # заказы нельзя — половина проверок считает содержимое доски.
+        self._seed_tracker_demo_tasks(points, list(Room.objects.order_by("number")))
 
     def _rich_schedule(self, name, start, end):
         schedule, created = Schedule.objects.get_or_create(name=name)
@@ -1721,6 +1725,105 @@ class Command(BaseCommand):
                 "category_ids": [str(bar_cat.pk)] if bar_cat else [],
                 "hidden_item_ids": [str(i) for i in hidden],
             })
+
+    def _seed_tracker_demo_tasks(self, points, rooms):
+        """
+        По живой задаче в КАЖДЫЙ тип трекера (R3): доска ресторана, очередь
+        хозслужбы, лента записей спа, заявки консьержа.
+
+        Задача — это обычный заказ, а не отдельная сущность: у ресторана она
+        приходит корзиной, у хозслужбы и консьержа — заявкой с полями формы, у
+        спа — бронью слота. Поэтому и сеются они одним и тем же create_order,
+        которым пользуется витрина, — сид не должен уметь того, чего не умеет
+        гость.
+
+        Идемпотентно по точке: если на доске уже есть активная задача, второй
+        раз не заводим.
+        """
+        from apps.accounts.models import GuestSession, TrustLevel
+        from apps.catalog.models import Item, SlotConfig
+        from apps.orders.models import Order
+        from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+        room = next((r for r in rooms if r.number == "305"), None) or (rooms[0] if rooms else None)
+        if room is None:
+            return
+
+        _raw, token_hash = GuestSession.issue_token()
+        session = GuestSession.objects.create(
+            room=room, token_hash=token_hash, trust=TrustLevel.ROOM_SCANNED,
+            expires_at=GuestSession.default_expiry(),
+        )
+
+        specs = [
+            # точка, код позиции, ответы формы, комментарий
+            ("kitchen", "caesar", {}, "Без сухариков, пожалуйста"),
+            ("housekeeping", "cleaning", {"when": "14:00"}, "Свежие полотенца"),
+            ("concierge", "taxi",
+             {"destination": "Аэропорт Пулково", "when": "18:30", "passengers": 2}, ""),
+        ]
+        for point_code, item_code, field_values, comment in specs:
+            point = points.get(point_code)
+            item = Item.objects.filter(code=item_code).first()
+            if point is None or item is None:
+                continue
+            if Order.objects.filter(
+                execution_point=point, status__is_terminal=False
+            ).exists():
+                continue
+            create_order(
+                OrderInput(
+                    lines=[OrderLineInput(item_id=str(item.pk))],
+                    room_id=str(room.pk),
+                    field_values=field_values,
+                    comment=comment,
+                ),
+                guest_session=session,
+            )
+
+        self._seed_spa_demo_booking(points, room, session)
+
+    def _seed_spa_demo_booking(self, points, room, session):
+        """
+        Запись в ленту спа — на СЕГОДНЯ: лента показывает день, и вчерашняя
+        бронь оставила бы мастеру пустой экран.
+        """
+        from apps.catalog.models import Item, SlotConfig
+        from apps.orders.models import Order
+        from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+        spa = points.get("spa")
+        massage = Item.objects.filter(code="massage").first()
+        if spa is None or massage is None:
+            return
+        if Order.objects.filter(execution_point=spa, status__is_terminal=False).exists():
+            return
+
+        config = SlotConfig.objects.filter(item=massage).select_related("schedule").first()
+        if config is None:
+            return
+
+        from apps.catalog import slots as slot_svc
+
+        hotel = Hotel.objects.get(pk=spa.hotel_id)
+        today = hotel.local_now().date().isoformat()
+        available = slot_svc.available_slots(massage, today)["slots"]
+        free = next((slot for slot in available if slot.get("available")), None)
+        if free is None:
+            # Сегодня спа уже закрыто (поздний прогон сида) — не выдумываем
+            # бронь вне рабочих часов: доступность считает расписание, и
+            # обходить его сидом значило бы сеять то, чего система не создаёт.
+            self.stdout.write("Свободных слотов спа на сегодня нет — запись не завожу")
+            return
+
+        create_order(
+            OrderInput(
+                lines=[OrderLineInput(item_id=str(massage.pk))],
+                room_id=str(room.pk),
+                slot_start=free["starts_at"],
+            ),
+            guest_session=session,
+        )
 
     def _seed_fanout_demo_order(self, hotel):
         """

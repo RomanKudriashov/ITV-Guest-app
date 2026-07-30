@@ -14,27 +14,6 @@
 from django.db import migrations, models
 
 
-def set_stage_from_flags(apps, schema_editor):
-    StatusDefinition = apps.get_model("orders", "StatusDefinition")
-    # Порядок проверок = приоритет: отмена важнее терминальности, терминальность
-    # важнее начального. Оставшееся — работа.
-    StatusDefinition.objects.filter(is_cancelled=True).update(stage="cancelled")
-    StatusDefinition.objects.filter(is_cancelled=False, is_terminal=True).update(stage="done")
-    StatusDefinition.objects.filter(
-        is_cancelled=False, is_terminal=False, is_initial=True
-    ).update(stage="new")
-    StatusDefinition.objects.filter(
-        is_cancelled=False, is_terminal=False, is_initial=False
-    ).update(stage="working")
-    # «В пути» — единственная ступень готовности в демо-пресете; она есть не у
-    # каждого отеля, поэтому обновляем по коду и только внутри board.
-    StatusDefinition.objects.filter(flow="board", code="on_the_way").update(stage="ready")
-
-
-def noop(apps, schema_editor):
-    """Обратно ступень не нужна: колонки удаляются целиком."""
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -56,7 +35,6 @@ class Migration(migrations.Migration):
             name="stage",
             field=models.SlugField(default="new", max_length=32),
         ),
-        migrations.RunPython(set_stage_from_flags, noop),
         migrations.AddConstraint(
             model_name="statusdefinition",
             constraint=models.UniqueConstraint(
