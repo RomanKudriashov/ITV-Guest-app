@@ -75,6 +75,10 @@ class OrderLineInput:
 @dataclass(slots=True)
 class OrderInput:
     lines: list[OrderLineInput]
+    # Код сервиса-корзины (агрегатора). Задан → позиции резолвятся по включениям
+    # сервиса и заказ разъезжается по исполнителям; не задан → прежнее поведение
+    # (один исполнитель из маршрута категории).
+    service_code: str | None = None
     room_id: str | None = None
     location_id: str | None = None
     location_refinement: str = ""
@@ -115,15 +119,6 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
             code="single_line_only",
         )
 
-    categories = {item.category_id for item in items}
-    if len(categories) > 1:
-        # Ограничение осознанное: один заказ — одна точка исполнения. Корзину
-        # из разных категорий фронт разбивает на несколько заказов.
-        raise OrderValidationError(
-            "Позиции из разных категорий нельзя объединить в один заказ",
-            code="mixed_categories",
-        )
-
     resolved_lines = [
         {
             "item": item,
@@ -138,7 +133,37 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     ]
     field_values = _resolve_field_values(behaviour, items, data)
 
-    execution_point = _resolve_execution_point(next(iter(categories)))
+    # Резолв исполнителя: агрегатор (по service_code — с разъездом) или маршрут.
+    aggregator = _resolve_cart_service(data)
+    if aggregator is not None:
+        from apps.catalog.inclusions import resolve_item_executor
+
+        groups: dict[str, list] = {}
+        for resolved in resolved_lines:
+            ep_id, inclusion = resolve_item_executor(aggregator, resolved["item"])
+            resolved["inclusion"] = inclusion
+            groups.setdefault(ep_id, []).append(resolved)
+        if len(groups) > 1:
+            # Заказ-агрегатор с позициями от разных исполнителей — разъезжается.
+            return _create_fanned_order(
+                data, hotel, hotel_id, guest_session, behaviour, field_values, aggregator, groups
+            )
+        execution_point = ExecutionPoint.objects.get(pk=next(iter(groups)))
+        commerce_service = aggregator  # коммерция корзины — включающего сервиса
+    else:
+        categories = {item.category_id for item in items}
+        if len(categories) > 1:
+            # Один заказ — одна точка исполнения. Корзину из разных категорий без
+            # сервиса-агрегатора фронт разбивает на несколько заказов.
+            raise OrderValidationError(
+                "Позиции из разных категорий нельзя объединить в один заказ",
+                code="mixed_categories",
+            )
+        for resolved in resolved_lines:
+            resolved["inclusion"] = None
+        execution_point = _resolve_execution_point(next(iter(categories)))
+        commerce_service = None  # _apply_charges резолвит сервис из точки, как раньше
+
     location = _resolve_location(data, items[0])
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
@@ -179,15 +204,20 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         order.total = None
         order.save(update_fields=["total", "updated_at"])
     else:
-        _apply_charges(order, order_items, hotel, location, data)
+        _apply_charges(order, order_items, hotel, location, data, service=commerce_service)
     return _finalize_created_order(order, hotel_id, guest_session, status)
 
 
-def _apply_charges(order, order_items, hotel, location, data) -> None:
-    """Считает начисления, проверяет минимум и фиксирует снимок в заказе."""
+def _apply_charges(order, order_items, hotel, location, data, *, service=None) -> None:
+    """
+    Считает начисления, проверяет минимум и фиксирует снимок в заказе. service
+    задан → коммерция этого сервиса (агрегатор корзины); None → резолв из точки
+    заказа, как раньше (не-заёмный заказ — байт-в-байт).
+    """
     from .charges import compute_charges, minimum_order_minor, resolve_tip_minor
 
-    service = _service_for_point(order.execution_point)
+    if service is None:
+        service = _service_for_point(order.execution_point)
     priced_lines = [
         (oi.line_total or 0, _service_fee_applies(oi))
         for oi in order_items
@@ -241,21 +271,31 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
     hotel_id = require_hotel_id()
     hotel = Hotel.objects.get(pk=hotel_id)
 
+    aggregator = _resolve_cart_service(data)
     priced_lines: list[tuple[int, bool]] = []
     categories = set()
     for line in data.lines:
         item = _resolve_item(line)
         behaviour = behaviour_for(item.type)
         options = _validate_modifiers(item, line.modifier_option_ids) if behaviour.uses_modifiers else []
-        unit_price = None if item.price is None else item.price + sum(o.price_delta for o in options)
+        inclusion = None
+        if aggregator is not None:
+            from apps.catalog.inclusions import resolve_item_executor
+
+            _ep, inclusion = resolve_item_executor(aggregator, item)
+        base_price = item.price if inclusion is None else inclusion.apply_markup(item.price)
+        unit_price = None if base_price is None else base_price + sum(o.price_delta for o in options)
         line_total = None if unit_price is None else unit_price * line.quantity
         if line_total is not None:
             priced_lines.append((line_total, bool(getattr(item.category, "service_fee_applies", True))))
             categories.add(item.category)
 
     subtotal = sum(lt for lt, _ in priced_lines)
-    execution_point = _resolve_execution_point(next(iter(categories)).pk) if categories else None
-    service = _service_for_point(execution_point)
+    if aggregator is not None:
+        service = aggregator  # коммерция корзины — включающего сервиса
+    else:
+        execution_point = _resolve_execution_point(next(iter(categories)).pk) if categories else None
+        service = _service_for_point(execution_point)
     location = Location.objects.filter(pk=data.location_id).first() if data.location_id else None
 
     minimum = minimum_order_minor(categories, service)
@@ -293,6 +333,99 @@ def _finalize_created_order(order, hotel_id, guest_session, status):
         actor_id=guest_session.pk if guest_session else None,
     )
     return order
+
+
+def _resolve_cart_service(data):
+    """Сервис-корзина (агрегатор) по service_code; None → прежний резолв точки."""
+    code = getattr(data, "service_code", None)
+    if not code:
+        return None
+    from apps.hotels.models import Service
+
+    return (
+        Service.objects.filter(code=code, is_active=True)
+        .select_related("execution_point")
+        .first()
+    )
+
+
+def _create_fanned_order(
+    data, hotel, hotel_id, guest_session, behaviour, field_values, aggregator, groups
+) -> Order:
+    """
+    Заказ-агрегатор разъезжается: parent (гостевой агрегат — снимок сумм, канал,
+    статус-свод) + по child на исполнителя (каждый на своей доске трекера, со
+    своими позициями и эскалацией). Деньги — на parent, над ВСЕМИ позициями, с
+    коммерцией агрегатора; children денег не несут.
+    """
+    location = _resolve_location(data, next(iter(groups.values()))[0]["item"])
+    room = _resolve_room(data, guest_session)
+    requested_time = _validate_requested_time(data, hotel)
+    status = _initial_status()
+
+    parent = Order.objects.create(
+        hotel_id=hotel_id,
+        number=_next_number(hotel_id),
+        type=behaviour.order_type,
+        guest_session=guest_session,
+        room=room,
+        execution_point=aggregator.execution_point,
+        location=location,
+        location_refinement=data.location_refinement[:128],
+        delivery_mode=data.delivery_mode,
+        requested_time=requested_time,
+        comment=data.comment,
+        status=status,
+        total=None,
+        currency=hotel.currency,
+        field_values=field_values,
+    )
+
+    all_items: list[OrderItem] = []
+    for ep_id, resolved_lines in groups.items():
+        ep = ExecutionPoint.objects.get(pk=ep_id)
+        child = Order.objects.create(
+            hotel_id=hotel_id,
+            number=_next_number(hotel_id),
+            type=behaviour.order_type,
+            guest_session=guest_session,
+            room=room,
+            execution_point=ep,
+            parent=parent,
+            location=location,
+            location_refinement=data.location_refinement[:128],
+            delivery_mode=data.delivery_mode,
+            requested_time=requested_time,
+            comment=data.comment,
+            status=status,
+            total=None,
+            currency=hotel.currency,
+            field_values=[],
+        )
+        for resolved in resolved_lines:
+            all_items.append(_create_order_item(child, resolved))
+        # Каждый child — на свою доску + своя эскалация (эмитит ORDER_CREATED).
+        _finalize_created_order(child, hotel_id, guest_session, status)
+
+    priced = [oi.line_total for oi in all_items if oi.line_total is not None]
+    if not priced:
+        parent.total = None
+        parent.save(update_fields=["total", "updated_at"])
+    else:
+        # Один снимок сумм — на parent, над всеми строками, коммерция агрегатора.
+        _apply_charges(parent, all_items, hotel, location, data, service=aggregator)
+
+    # У parent — своя запись создания (для истории/агрегации), без ORDER_CREATED:
+    # на доску parent не идёт и эскалацию не поднимает; аналитику несёт он (C4).
+    OrderStatusChange.objects.create(
+        hotel_id=hotel_id,
+        order=parent,
+        from_status=None,
+        to_status=status,
+        actor_type="guest" if guest_session else "system",
+        actor_id=guest_session.pk if guest_session else None,
+    )
+    return parent
 
 
 def _resolve_item(line: OrderLineInput) -> Item:
@@ -409,10 +542,13 @@ def _create_order_item(order: Order, resolved: dict[str, Any]) -> OrderItem:
     item: Item = resolved["item"]
     line: OrderLineInput = resolved["line"]
     options: list[ModifierOption] = resolved["selected_options"]
+    # Заимствованная позиция: базовая цена = источник + наценка overlay включения.
+    inclusion = resolved.get("inclusion")
+    base_price = item.price if inclusion is None else inclusion.apply_markup(item.price)
 
     # У позиции без цены сумма строки тоже отсутствует — не ноль.
     unit_price = (
-        None if item.price is None else item.price + sum(option.price_delta for option in options)
+        None if base_price is None else base_price + sum(option.price_delta for option in options)
     )
     return OrderItem.objects.create(
         hotel_id=order.hotel_id,
@@ -576,7 +712,23 @@ def _next_number(hotel_id) -> int:
 def order_queryset():
     return Order.objects.select_related(
         "status", "room", "location", "execution_point"
-    ).prefetch_related("items__item__images__asset", "status_changes__to_status")
+    ).prefetch_related(
+        "items__item__images__asset",
+        "status_changes__to_status",
+        # Для parent-агрегата: позиции живут на children — подтягиваем их разом.
+        "children__items__item__images__asset",
+        "children__status",
+    )
+
+
+def _order_lines(order: Order) -> list[OrderItem]:
+    """
+    Позиции заказа: свои у обычного/дочернего заказа; у parent-агрегата —
+    объединение позиций children (сами позиции живут на исполнителях).
+    """
+    if order.parent_id is None and order.children.exists():
+        return [line for child in order.children.all() for line in child.items.all()]
+    return list(order.items.all())
 
 
 def get_order(order_id, *, guest_session=None) -> Order:
@@ -594,7 +746,12 @@ def list_guest_orders(guest_session, language: str | None = None) -> dict[str, l
     Разделение на активные и прошлые делает сервер: клиенту не нужно знать
     пресет статусов отеля, чтобы правильно разложить список.
     """
-    orders = order_queryset().filter(guest_session_id=guest_session.pk).order_by("-created_at")
+    # Гость видит parent-агрегат и обычные заказы; children (исполнение) — нет.
+    orders = (
+        order_queryset()
+        .filter(guest_session_id=guest_session.pk, parent__isnull=True)
+        .order_by("-created_at")
+    )
     active, past = [], []
     for order in orders:
         (past if order.status.is_terminal else active).append(serialize_order(order, language))
@@ -608,7 +765,7 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
     """
     orders = (
         order_queryset()
-        .filter(guest_session_id=guest_session.pk, status__is_terminal=False)
+        .filter(guest_session_id=guest_session.pk, status__is_terminal=False, parent__isnull=True)
         .order_by("-created_at")
     )
     hotel = None
@@ -636,7 +793,7 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
 
 def _order_summary(order: Order, language: str | None) -> dict:
     """Короткий состав: первые 1–2 позиции + «ещё N». У заявки — тип действия."""
-    items = list(order.items.all())
+    items = _order_lines(order)
     if items:
         titles = [translate(line.title_snapshot, language) or "" for line in items[:2]]
         return {"summary": ", ".join(t for t in titles if t), "extra_count": max(len(items) - 2, 0)}
@@ -699,7 +856,54 @@ def change_status(
         actor_type=actor_type,
         actor_id=actor_id,
     )
+    # Сдвинулся child — пересчитать статус-свод parent и дотолкнуть канал гостя.
+    if order.parent_id:
+        _sync_parent_status(order.parent_id, actor_type=actor_type, actor_id=actor_id)
     return get_order(order.pk)
+
+
+def _aggregate_status(children) -> StatusDefinition:
+    """
+    Статус-свод parent из children: наименее продвинутый активный; когда все
+    терминальны — не-отменённый (готово), иначе отменён.
+    """
+    statuses = [child.status for child in children]
+    active = [status for status in statuses if not status.is_terminal]
+    if active:
+        return min(active, key=lambda status: status.sort_order)
+    non_cancelled = [status for status in statuses if not status.is_cancelled]
+    return non_cancelled[0] if non_cancelled else statuses[0]
+
+
+def _sync_parent_status(parent_id, *, actor_type, actor_id) -> None:
+    """
+    Пересчитать статус-свод parent из children; изменился — сохранить, записать в
+    историю и эмитнуть событие (гость видит обновление своего заказа).
+    """
+    parent = Order.objects.select_for_update().select_related("status").get(pk=parent_id)
+    children = list(Order.objects.filter(parent_id=parent_id).select_related("status"))
+    if not children:
+        return
+    target = _aggregate_status(children)
+    if parent.status_id == target.pk:
+        return
+    previous = parent.status
+    parent.status = target
+    parent.save(update_fields=["status", "updated_at"])
+    OrderStatusChange.objects.create(
+        hotel_id=parent.hotel_id, order=parent, from_status=previous, to_status=target,
+        actor_type="system",
+    )
+    payload = _event_payload(parent)
+    payload["from_status"] = previous.code
+    payload["to_status"] = target.code
+    emit(
+        ORDER_CANCELLED if target.is_cancelled else ORDER_STATUS_CHANGED,
+        payload,
+        hotel_id=parent.hotel_id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+    )
 
 
 def cancel_order_by_guest(order: Order, *, guest_session, reason: str = "") -> Order:
@@ -720,12 +924,21 @@ def cancel_order_by_guest(order: Order, *, guest_session, reason: str = "") -> O
             "В пресете статусов отеля нет статуса отмены", code="status_preset_missing"
         )
 
+    actor_id = guest_session.pk if guest_session else None
+    children = list(order.children.all()) if order.parent_id is None else []
+    if children:
+        # Агрегатор: гасим все не-терминальные children — parent сойдёт в отмену
+        # через статус-свод.
+        for child in children:
+            if not child.status.is_terminal:
+                change_status(
+                    child, to_code=cancelled.code, actor_type="guest",
+                    actor_id=actor_id, comment=reason,
+                )
+        return get_order(order.pk)
+
     return change_status(
-        order,
-        to_code=cancelled.code,
-        actor_type="guest",
-        actor_id=guest_session.pk if guest_session else None,
-        comment=reason,
+        order, to_code=cancelled.code, actor_type="guest", actor_id=actor_id, comment=reason
     )
 
 
@@ -760,7 +973,7 @@ def _eta_minutes(order: Order) -> int | None:
     # Время подачи из позиций: дольше всех готовящаяся + буфер доставки.
     prep = [
         line.item.prep_minutes
-        for line in order.items.all()
+        for line in _order_lines(order)
         if line.item and line.item.prep_minutes
     ]
     if prep:
@@ -816,6 +1029,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
     """
     hotel = order.hotel
     flow = StatusDefinition.objects.filter(hotel_id=order.hotel_id).order_by("sort_order")
+    item_lines = _order_lines(order)  # у parent-агрегата — позиции всех children
 
     return {
         "id": str(order.pk),
@@ -907,6 +1121,6 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
                     for modifier in (line.modifiers_snapshot or [])
                 ],
             }
-            for line in order.items.all()
+            for line in item_lines
         ],
     }

@@ -63,6 +63,15 @@ class Order(TenantModel):
     number = models.PositiveIntegerField(help_text="Сквозной номер в рамках отеля")
     type = models.CharField(max_length=16, choices=Type.choices, default=Type.CART)
 
+    # Разъезд заказа (R2): у заказа-агрегатора (рум-сервис с заимствованным
+    # контентом от разных исполнителей) появляются дочерние заказы — по одному
+    # на исполнителя. parent = гостевой агрегат (снимок сумм, канал гостя,
+    # статус-свод), children = исполнение (каждый на своей доске трекера).
+    # Обычный заказ (один исполнитель) — parent=None и без children, как раньше.
+    parent = models.ForeignKey(
+        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
+    )
+
     guest_session = models.ForeignKey(
         "accounts.GuestSession",
         on_delete=models.SET_NULL,
@@ -146,6 +155,7 @@ class Order(TenantModel):
         indexes = [
             models.Index(fields=["hotel", "execution_point", "-created_at"]),
             models.Index(fields=["hotel", "status"]),
+            models.Index(fields=["hotel", "parent"]),
         ]
 
     def __str__(self) -> str:

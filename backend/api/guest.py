@@ -264,6 +264,7 @@ def cart_quote(request: HttpRequest, payload: OrderIn):
             )
             for line in payload.lines
         ],
+        service_code=payload.service_code,
         location_id=payload.location_id,
         delivery_mode=payload.delivery_mode,
         tip_minor=payload.tip_minor,
@@ -312,6 +313,7 @@ def place_order(
             )
             for line in payload.lines
         ],
+        service_code=payload.service_code,
         location_id=payload.location_id,
         location_refinement=payload.location_refinement,
         delivery_mode=payload.delivery_mode,

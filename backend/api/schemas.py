@@ -118,6 +118,10 @@ class OrderLineIn(Schema):
 
 class OrderIn(Schema):
     lines: list[OrderLineIn]
+    # Код сервиса-корзины (заведения). Задан → позиции резолвятся по включениям
+    # сервиса, заказ-агрегатор разъезжается по исполнителям. Не задан → прежнее
+    # поведение (один исполнитель из маршрута категории).
+    service_code: str | None = None
     location_id: str | None = None
     location_refinement: str = ""
     delivery_mode: str = "delivery"

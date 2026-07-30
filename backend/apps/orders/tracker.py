@@ -113,9 +113,11 @@ def points_payload(user, language: str | None = None) -> dict:
 
 def _counts_by_point(point_ids: list) -> dict:
     counts: dict[Any, dict[str, int]] = {}
-    orders = Order.objects.filter(
-        execution_point_id__in=point_ids, status__is_terminal=False
-    ).select_related("status")
+    orders = (
+        Order.objects.filter(execution_point_id__in=point_ids, status__is_terminal=False)
+        .exclude(children__isnull=False)  # parent-агрегат на доску не идёт
+        .select_related("status")
+    )
     for order in orders:
         bucket = counts.setdefault(order.execution_point_id, {"active": 0, "new": 0})
         bucket["active"] += 1
@@ -140,7 +142,13 @@ def build_board(
     hotel = Hotel.objects.get(pk=point.hotel_id)
     statuses = list(StatusDefinition.objects.order_by("sort_order"))
 
-    queryset = order_queryset().filter(execution_point=point).select_related("assignee")
+    # parent-агрегат исключаем: на доску идёт исполнение (children и обычные).
+    queryset = (
+        order_queryset()
+        .filter(execution_point=point)
+        .exclude(children__isnull=False)
+        .select_related("assignee")
+    )
     if scope == "history":
         since = timezone.now() - timedelta(hours=HISTORY_WINDOW_HOURS)
         queryset = queryset.filter(status__is_terminal=True, created_at__gte=since).order_by(
