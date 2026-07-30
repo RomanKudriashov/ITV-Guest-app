@@ -362,7 +362,7 @@ def serialize_department(
         "title": point.title or {},
         "public_name": (service.public_name if service else {}) or {},
         "tagline": (service.tagline if service else {}) or {},
-        "is_guest_facing": service.is_guest_facing if service else point.is_guest_facing,
+        "is_guest_facing": service.is_guest_facing if service else False,
         "kind": point.kind,
         "schedule_id": str(service.schedule_id) if (service and service.schedule_id) else None,
         "sla_minutes": point.sla_minutes,

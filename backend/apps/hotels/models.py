@@ -218,29 +218,15 @@ class ExecutionPoint(TenantModel):
 
     code = models.SlugField(max_length=64)
     # Служебное название — его видят только персонал, трекер, эскалации,
-    # аналитика. Гостю оно не показывается.
+    # аналитика. Гостю оно не показывается. Гостевая идентичность (public_name,
+    # tagline, фото, is_guest_facing) и венью-часы (schedule) переехали на
+    # Service — точка исполнения теперь чистый исполнитель.
     title = TranslatableField()
-    # Гостевое название заведения («Панорама») и короткая подпись под ним
-    # («европейская кухня»). Пустое public_name → на витрине падаем на title.
-    public_name = TranslatableField()
-    tagline = TranslatableField()
-    # Показывать ли точку гостю как заведение на витрине. Служебные точки
-    # (хозслужба, кухня рум-сервиса) — false: их гость не видит.
-    is_guest_facing = models.BooleanField(default=True)
     kind = models.CharField(max_length=32, choices=Kind.choices, default=Kind.OTHER)
     is_active = models.BooleanField(default=True)
-    schedule = models.ForeignKey(
-        "hotels.Schedule", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
-    )
     # Через сколько минут ожидания заказ на доске считается просроченным.
     # Настройка точки, а не константа: кухне и хозслужбе нужны разные пороги.
     sla_minutes = models.PositiveSmallIntegerField(default=20)
-    # Минимальная сумма заказа на точку; null = нет порога.
-    min_order_minor = models.IntegerField(null=True, blank=True)
-    # Фото заведения (ресторан/бар/спа). Витрина берёт его как hero каталога.
-    image = models.ForeignKey(
-        "media.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
-    )
 
     class Meta:
         db_table = "hotels_execution_point"
@@ -253,11 +239,6 @@ class ExecutionPoint(TenantModel):
 
     def __str__(self) -> str:
         return self.code
-
-    @property
-    def public_title(self) -> dict:
-        """Гостевое название с падением на служебное, если public_name пустой."""
-        return self.public_name or self.title or {}
 
     @property
     def realtime_group(self) -> str:
