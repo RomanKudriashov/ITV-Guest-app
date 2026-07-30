@@ -48,6 +48,8 @@ def test_registry_lists_all_codes_disabled_by_default(client, platform_token, cr
     body = _p(client, platform_token)("get", f"/hotels/{crystal.pk}/modules").json()
     assert {m["code"] for m in body["modules"]} == ALL_CODES
     assert all(m["is_enabled"] is False and m["source"] == "tariff" for m in body["modules"])
+    # Переводимая метка на 4 языках у каждого модуля.
+    assert all({"ru", "en", "ar", "zh"} <= set(m["title"]) for m in body["modules"])
 
 
 def test_put_enables_modules_tariff_and_override(client, platform_token, crystal):

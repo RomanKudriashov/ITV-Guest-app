@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from apps.core.context import tenant_context
 from apps.hotels.models import HotelModule
+from apps.hotels.vocabularies import MODULE_LABELS
 
 # Полный набор известных кодов модулей — реестр всегда отдаёт их все.
 ALL_CODES = [code.value for code in HotelModule.Code]
@@ -22,6 +23,7 @@ _VALID_SOURCES = {HotelModule.Source.TARIFF, HotelModule.Source.OVERRIDE}
 def _serialize(module: HotelModule) -> dict:
     return {
         "code": module.code,
+        "title": MODULE_LABELS.get(module.code, {}),
         "is_enabled": module.is_enabled,
         "source": module.source,
         "config": module.config or {},
@@ -31,6 +33,7 @@ def _serialize(module: HotelModule) -> dict:
 def _default_entry(code: str) -> dict:
     return {
         "code": code,
+        "title": MODULE_LABELS.get(code, {}),
         "is_enabled": False,
         "source": HotelModule.Source.TARIFF.value,
         "config": {},

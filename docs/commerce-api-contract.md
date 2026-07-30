@@ -18,17 +18,27 @@
 По умолчанию всё **выключено/ноль** — поведение существующих заказов не
 меняется, пока отель не включит коммерцию в CMS.
 
+**Коммерция уровня сервиса (R1).** Сбор, чаевые, минимум, порог доставки и
+округление — на **`Service`** как **nullable-оверрайды**: `null` = наследовать
+значение отеля. Так «у каждого сервиса своя коммерция» достигается без смены
+поведения — пока оверрайд `null`, суммы те же, что и раньше. **Налог, валюта и
+налоговый режим — только на отеле** (единственная коммерция уровня отеля).
+
 | Уровень | Поле | Смысл |
 |---|---|---|
-| Hotel | `service_fee_bp` | сервисный сбор, базисные пункты (1000 = 10.00%), 0 = выкл |
-| Hotel | `tax_bp` | налог/НДС, б.п.; 0 = выкл |
-| Hotel | `tax_inclusive` | налог уже в цене (true) или сверху (false) |
-| Hotel | `tip_presets` | пресеты чаевых в процентах, напр. `[5,10,15]` |
-| Hotel | `free_delivery_threshold_minor` | порог бесплатной доставки; null = нет |
-| Hotel | `price_round_to_minor` | округление итога к кратному (напр. 100 = до рубля); 0/1 = нет |
+| Hotel | `service_fee_bp` | сервисный сбор по умолчанию, б.п. (1000 = 10.00%), 0 = выкл |
+| Hotel | `tax_bp` | налог/НДС, б.п.; 0 = выкл — **только отель** |
+| Hotel | `tax_inclusive` | налог уже в цене (true) или сверху (false) — **только отель** |
+| Hotel | `tip_presets` | пресеты чаевых по умолчанию, проценты, напр. `[5,10,15]` |
+| Hotel | `free_delivery_threshold_minor` | порог бесплатной доставки по умолчанию; null = нет |
+| Hotel | `price_round_to_minor` | округление итога по умолчанию (100 = до рубля); 0/1 = нет |
+| **Service** | `service_fee_bp` | оверрайд сбора сервиса; **null = наследовать отель** |
+| **Service** | `tip_presets` | оверрайд пресетов чаевых; **null = наследовать отель** |
+| **Service** | `min_order_minor` | минимальная сумма заказа по сервису; null = нет |
+| **Service** | `free_delivery_threshold_minor` | оверрайд порога доставки; **null = наследовать** |
+| **Service** | `price_round_to_minor` | оверрайд округления; **null = наследовать** |
 | Category | `service_fee_applies` | облагается ли сбором (у еды да, у такси нет); default true |
 | Category | `min_order_minor` | минимальная сумма заказа по категории; null = нет |
-| ExecutionPoint | `min_order_minor` | минимальная сумма по точке; null = нет |
 | Location | `delivery_fee_minor` | стоимость доставки в локацию; 0 = бесплатно |
 | Item | `prep_minutes` | время приготовления/подачи, мин; null = не показывать |
 
@@ -49,10 +59,12 @@ charges               JSON-слепок ставок/флагов на моме�
 
 ## Расчёт (сервисный слой, чистая функция)
 
-`compute_charges(hotel, lines, *, location, tip)` → разбивка. Порядок:
+`compute_charges(hotel, lines, *, location, tip, service)` → разбивка. Сервис
+резолвится из исполнителя заказа (`ep.service`); эффективные ставки — оверрайд
+сервиса, иначе значение отеля. Порядок:
 
 1. `subtotal` = сумма `line_total`.
-2. `service_fee` = `subtotal_облагаемых_категорий * service_fee_bp / 10000`.
+2. `service_fee` = `subtotal_облагаемых_категорий * эфф(service_fee_bp) / 10000`.
 3. `delivery_fee` = `location.delivery_fee_minor`, но 0, если
    `subtotal ≥ free_delivery_threshold_minor`.
 4. `tax`: если `tax_inclusive` — налог уже в цене, отдельной строкой 0 к итогу
@@ -67,7 +79,7 @@ charges               JSON-слепок ставок/флагов на моме�
 ## Минимальная сумма
 
 Порог = максимум из `category.min_order_minor` (по позициям заказа) и
-`execution_point.min_order_minor`. Если `subtotal < порог` — оформление
+`service.min_order_minor`. Если `subtotal < порог` — оформление
 блокируется: `422 order_below_minimum`, в ответе `minimum_minor` и
 `shortfall_minor` (сколько не хватает), чтобы витрина показала «добавьте ещё N».
 
@@ -96,10 +108,14 @@ charges               JSON-слепок ставок/флагов на моме�
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| GET/PATCH | `/api/v1/cms/commerce-settings` | сборы/налог/чаевые/доставка/округление отеля |
+| GET/PATCH | `/api/v1/cms/commerce-settings` | сборы/налог/чаевые/доставка/округление **отеля** (дефолты) |
 | PATCH | `/api/v1/cms/categories/{id}` | `service_fee_applies`, `min_order_minor` |
 | PATCH | `/api/v1/cms/items/{id}` | `prep_minutes` |
 | PATCH | `/api/v1/cms/locations/{id}` | `delivery_fee_minor` |
+
+Редактор **per-service оверрайдов** коммерции (внутри «Сервисов») — отдельный
+прогон реорга CMS. В R1 оверрайды живут в модели и наполняются сидом; расчёт их
+уже читает (эффективное значение = оверрайд сервиса, иначе дефолт отеля).
 
 ## Аналитика
 

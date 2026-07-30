@@ -28,15 +28,16 @@ CMS-навигации — R4. Именно этот реестр решает, 
 
 ### `GET /api/v1/platform/hotels/{hotel_id}/modules`
 Полный реестр: **все** известные модули, включённые и нет (отсутствующая строка →
-`{is_enabled: false, source: "tariff", config: {}}`).
+`{is_enabled: false, source: "tariff", config: {}}`). `title` — переводимая метка
+модуля (4 языка) для UI.
 
 ```json
 {
   "tariff": "resort",
   "modules": [
-    {"code": "multi_restaurant", "is_enabled": true,  "source": "tariff",   "config": {}},
-    {"code": "pms",              "is_enabled": true,  "source": "override", "config": {"node": "local-1"}},
-    {"code": "payment",          "is_enabled": false, "source": "tariff",   "config": {}}
+    {"code": "multi_restaurant", "title": {"ru": "Мультиресторанность", "en": "Multi-restaurant", "ar": "…", "zh": "…"}, "is_enabled": true,  "source": "tariff",   "config": {}},
+    {"code": "pms",              "title": {"ru": "PMS", "en": "PMS", "ar": "PMS", "zh": "PMS"}, "is_enabled": true,  "source": "override", "config": {"node": "local-1"}},
+    {"code": "payment",          "title": {"ru": "Оплата", "en": "Payment", "ar": "…", "zh": "…"}, "is_enabled": false, "source": "tariff",   "config": {}}
   ]
 }
 ```
