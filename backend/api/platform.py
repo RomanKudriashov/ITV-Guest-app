@@ -19,6 +19,7 @@ from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError
 from apps.core.models import AuditLog
 from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage, Room
+from apps.hotels.module_registry import list_modules, set_modules
 from apps.hotels.provisioning import provision_hotel, set_hotel_admin
 
 router = Router(tags=["platform"])
@@ -44,11 +45,24 @@ class HotelPatchIn(Schema):
     currency: str | None = None
     languages: list[str] | None = None
     is_active: bool | None = None
+    tariff: str | None = None
 
 
 class AdminIn(Schema):
     email: str
     password: str | None = None
+
+
+class ModuleEntryIn(Schema):
+    code: str
+    is_enabled: bool = False
+    source: str = "tariff"
+    config: dict = {}
+
+
+class ModulesIn(Schema):
+    modules: list[ModuleEntryIn] = []
+    tariff: str | None = None
 
 
 class PlatformLoginIn(Schema):
@@ -119,6 +133,7 @@ def _profile(hotel: Hotel) -> dict[str, Any]:
         "currency": hotel.currency,
         "default_language": hotel.default_language,
         "languages": languages,
+        "tariff": hotel.tariff,
     }
 
 
@@ -181,7 +196,7 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
     hotel = _get_hotel(hotel_id)
     data = payload.dict(exclude_unset=True)
     fields: list[str] = []
-    for attr in ("name", "timezone", "currency"):
+    for attr in ("name", "timezone", "currency", "tariff"):
         if attr in data and data[attr] is not None:
             setattr(hotel, attr, data[attr])
             fields.append(attr)
@@ -212,6 +227,28 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
     user, password = set_hotel_admin(hotel, email=payload.email, password=payload.password)
     _audit(request, hotel, "platform.hotel.admin_set", {"email": user.email})
     return {"email": user.email, "password": password}
+
+
+# --- Реестр модулей --------------------------------------------------------
+# Данные + API (R1). Управляющий UI — R6, гейтинг CMS-навигации — R4.
+# Контракт — docs/module-registry-api-contract.md.
+
+
+@router.get("/hotels/{hotel_id}/modules", summary="Реестр модулей отеля")
+def get_modules(request: HttpRequest, hotel_id: str):
+    hotel = _get_hotel(hotel_id)
+    return {"tariff": hotel.tariff, "modules": list_modules(hotel)}
+
+
+@router.put("/hotels/{hotel_id}/modules", summary="Настроить реестр модулей")
+def put_modules(request: HttpRequest, hotel_id: str, payload: ModulesIn):
+    hotel = _get_hotel(hotel_id)
+    if payload.tariff is not None:
+        hotel.tariff = payload.tariff
+        hotel.save(update_fields=["tariff", "updated_at"])
+    modules = set_modules(hotel, [entry.dict() for entry in payload.modules])
+    _audit(request, hotel, "platform.hotel.modules_set", {"count": len(modules)})
+    return {"tariff": hotel.tariff, "modules": modules}
 
 
 def _replace_languages(hotel: Hotel, codes: list[str]) -> None:

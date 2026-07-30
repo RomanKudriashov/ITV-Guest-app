@@ -70,6 +70,18 @@ def bootstrap(request: HttpRequest):
     }
 
 
+# --- Реестр модулей (только чтение) ----------------------------------------
+
+
+@router.get("/modules", summary="Включённые модули отеля (для гейтинга навигации)")
+def hotel_modules(request: HttpRequest):
+    """Отель читает свой реестр модулей — основа гейтинга навигации CMS (R4)."""
+    from apps.hotels.module_registry import list_modules
+
+    hotel = Hotel.objects.get(pk=require_hotel_id())
+    return {"tariff": hotel.tariff, "modules": list_modules(hotel)}
+
+
 # --- Медиа -----------------------------------------------------------------
 
 
