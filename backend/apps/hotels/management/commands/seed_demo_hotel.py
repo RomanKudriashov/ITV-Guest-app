@@ -43,7 +43,9 @@ from apps.hotels.models import (
     Room,
     Schedule,
     ScheduleInterval,
+    Service,
 )
+from apps.hotels.venue_defaults import service_type_for_kind
 from apps.media.models import CategoryPlaceholder, MediaAsset
 from apps.notifications.models import (
     ChannelType,
@@ -208,6 +210,7 @@ class Command(BaseCommand):
             self._seed_services(points, schedules)
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
+            self._link_categories_to_services()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
             if with_badges:
@@ -248,10 +251,18 @@ class Command(BaseCommand):
                 defaults={
                     "kind": kind,
                     "title": {"ru": ru, "en": en},
+                    "sla_minutes": sla,
+                },
+            )
+            # Гостевая идентичность живёт на сервисе-контейнере (1:1 с точкой).
+            Service.objects.get_or_create(
+                execution_point=point,
+                defaults={
+                    "code": point.code,
+                    "type": service_type_for_kind(kind),
                     "public_name": {"ru": public[0], "en": public[1]},
                     "tagline": ({"ru": tagline[0], "en": tagline[1]} if tagline[0] else {}),
                     "is_guest_facing": guest,
-                    "sla_minutes": sla,
                 },
             )
             points[code] = point
@@ -699,6 +710,25 @@ class Command(BaseCommand):
                      {"ru": "Например: не трогать вещи на столе"}, None, None, []),
                 ],
             )
+
+    def _link_categories_to_services(self):
+        """
+        Привязать наполнение к сервису: category.service = сервис исполнителя,
+        на которого категория замаршрутизирована. Инфо-категория без маршрута
+        остаётся без сервиса. Идемпотентно (уже привязанные пропускаем).
+        """
+        services_by_ep = {s.execution_point_id: s.id for s in Service.objects.all()}
+        for category in Category.objects.filter(service__isnull=True):
+            route = (
+                Route.objects.filter(category=category, is_active=True)
+                .order_by("priority")
+                .first()
+            )
+            if route is None:
+                continue
+            service_id = services_by_ep.get(route.execution_point_id)
+            if service_id is not None:
+                Category.objects.filter(pk=category.pk).update(service_id=service_id)
 
     def _seed_service_category(
         self, *, code: str, title: dict, point: ExecutionPoint, sort_order: int, schedule: Schedule

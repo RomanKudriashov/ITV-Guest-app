@@ -5,14 +5,14 @@
 заведений категории; (3) существующий каталог продуктов заведения. Этот модуль
 строит первый уровень.
 
-«Заведение» = точка исполнения (ExecutionPoint, в CMS «отдел»): у неё есть фото,
-расписание, название, и на неё маршрутизируются категории (Route). Плитка
-заведения показывается только если у точки есть ≥1 активная категория — иначе
-входить некуда. Точки одного рода (рестораны = кухня+бар, спа, услуги)
-группируются: их ≤ порога — отдельные плитки, больше — одна плитка-категория.
+«Заведение» = гостевой сервис (Service): у него есть тип-шаблон, фото, венью-часы,
+имя и исполнитель (ExecutionPoint), на которого маршрутизируются категории
+(Route). Плитка показывается только если у исполнителя есть ≥1 активная категория —
+иначе входить некуда. Сервисы одного рода (рестораны, спа, услуги) группируются:
+их ≤ порога — отдельные плитки, больше — одна плитка-категория.
 
 Набор плиток ВЫЧИСЛЯЕМЫЙ; ShowcaseTile лишь накладывает размер/порядок/показ по
-стабильному ключу (код точки, код группы, «info», «room-control»).
+стабильному ключу (код сервиса, код группы, «info», «room-control»).
 """
 
 from __future__ import annotations
@@ -21,21 +21,29 @@ from datetime import datetime
 from typing import Any
 
 from apps.core.fields import translate
-from apps.hotels.models import ExecutionPoint, Hotel, ShowcaseTile
+from apps.hotels.models import Hotel, Service, ShowcaseTile
 from apps.media.services import image_url
 
 from .models import Category, OfferingType
 
-# Точка какого рода в какую группу главной попадает. Рестораны — это кухни и
-# бары вместе (у ресторана может быть и то, и другое). Порог группировки
-# считается ПО ГРУППЕ.
-KIND_GROUP = {
-    ExecutionPoint.Kind.KITCHEN: "restaurants",
-    ExecutionPoint.Kind.BAR: "restaurants",
-    ExecutionPoint.Kind.SPA: "spa",
-    ExecutionPoint.Kind.HOUSEKEEPING: "services",
-    ExecutionPoint.Kind.RECEPTION: "services",
-    ExecutionPoint.Kind.OTHER: "services",
+# Тип сервиса → группа главной. Рестораны — еда и напитки вместе (ресторан, бар,
+# рум-сервис, мини-бар); спа — спа и бассейн; остальное — услуги. Порог
+# группировки считается ПО ГРУППЕ. Синхронно с миграцией kind→type: kitchen→
+# restaurant→restaurants, bar→bar→restaurants, spa→spa, reception→concierge→
+# services, housekeeping→services — так группировка не меняется для старых точек.
+SERVICE_TYPE_GROUP = {
+    Service.Type.RESTAURANT: "restaurants",
+    Service.Type.BAR: "restaurants",
+    Service.Type.ROOM_SERVICE: "restaurants",
+    Service.Type.MINIBAR: "restaurants",
+    Service.Type.SPA: "spa",
+    Service.Type.POOL: "spa",
+    Service.Type.TRANSFER: "services",
+    Service.Type.CONCIERGE: "services",
+    Service.Type.EXCURSIONS: "services",
+    Service.Type.HOUSEKEEPING: "services",
+    Service.Type.INFO: "services",
+    Service.Type.CUSTOM: "services",
 }
 
 # Порядок групп на главной и их локализованный титул/подпись-плюрал.
@@ -49,19 +57,22 @@ INFO_TITLE = {"ru": "Об отеле", "en": "About the hotel", "ar": "عن ال
 ROOM_CONTROL_TITLE = {"ru": "Мой номер", "en": "My room", "ar": "غرفتي", "zh": "我的房间"}
 
 
-def _point_image(point: ExecutionPoint) -> str | None:
-    """Обложка заведения: фото точки → фото первой её категории → None.
+def _service_image(service: Service) -> str | None:
+    """Обложка заведения: фото сервиса → фото первой его категории → None.
 
     Дальше каскад продолжает фронт (фон бренда → градиент токенов), поэтому
     здесь на пустом фото возвращаем None, а не платформенную заглушку.
     """
-    if point.image_id:
-        url = point.image.url("card")
+    if service.image_id:
+        url = service.image.url("card")
         if url:
             return url
     category = (
         Category.objects.filter(
-            is_active=True, routes__execution_point=point, routes__is_active=True, image__isnull=False
+            is_active=True,
+            routes__execution_point_id=service.execution_point_id,
+            routes__is_active=True,
+            image__isnull=False,
         )
         .select_related("image")
         .order_by("sort_order", "code")
@@ -72,30 +83,31 @@ def _point_image(point: ExecutionPoint) -> str | None:
     return None
 
 
-def _point_status(point: ExecutionPoint, moment: datetime | None) -> dict[str, Any] | None:
-    """Структурный статус заведения по расписанию; строки локализует фронт."""
-    if point.schedule_id is None:
+def _service_status(service: Service, moment: datetime | None) -> dict[str, Any] | None:
+    """Структурный статус заведения по венью-расписанию; строки локализует фронт."""
+    if service.schedule_id is None:
         return None
-    avail = point.schedule.availability_at(moment)
+    avail = service.schedule.availability_at(moment)
     if avail.is_open:
         return {"state": "open", "until": avail.available_until, "opens_at": None}
     return {"state": "closed", "until": None, "opens_at": avail.available_from}
 
 
-def _venue_points(hotel: Hotel) -> list[ExecutionPoint]:
+def _venues(hotel: Hotel) -> list[Service]:
     """
-    Заведения для витрины: точки с ≥1 активной категорией И помеченные гостевыми.
-    Служебная точка (is_guest_facing=false) не появляется, даже если на неё
-    что-то замаршрутизировано.
+    Заведения для витрины: гостевые сервисы, у исполнителя которых есть ≥1
+    активная замаршрутизированная активная категория. Служебный сервис
+    (is_guest_facing=false) не появляется, даже если на него что-то
+    замаршрутизировано.
     """
     return list(
-        ExecutionPoint.objects.filter(
+        Service.objects.filter(
             is_active=True,
             is_guest_facing=True,
-            routes__is_active=True,
-            routes__category__is_active=True,
+            execution_point__routes__is_active=True,
+            execution_point__routes__category__is_active=True,
         )
-        .select_related("schedule", "image")
+        .select_related("schedule", "image", "execution_point")
         .prefetch_related("schedule__intervals")
         .distinct()
         .order_by("code")
@@ -142,26 +154,26 @@ def build_showcase(
     threshold = 3 if hotel.showcase_group_threshold is None else hotel.showcase_group_threshold
 
     # Заведения по группам, в стабильном порядке групп.
-    groups: dict[str, list[ExecutionPoint]] = {key: [] for key in GROUP_ORDER}
-    for point in _venue_points(hotel):
-        groups.setdefault(KIND_GROUP.get(point.kind, "services"), []).append(point)
+    groups: dict[str, list[Service]] = {key: [] for key in GROUP_ORDER}
+    for service in _venues(hotel):
+        groups.setdefault(SERVICE_TYPE_GROUP.get(service.type, "services"), []).append(service)
 
     tiles: list[dict[str, Any]] = []
     order = 0
     for group_key in GROUP_ORDER:
-        points = groups.get(group_key) or []
-        if not points:
+        services = groups.get(group_key) or []
+        if not services:
             continue
-        if len(points) > threshold:
+        if len(services) > threshold:
             # Свёрнутая плитка-категория с превью обложек заведений внутри.
-            previews = [img for img in (_point_image(p) for p in points) if img][:4]
+            previews = [img for img in (_service_image(s) for s in services) if img][:4]
             base = {
                 "key": group_key,
                 "type": "service-category",
                 "title": translate(GROUP_TITLES[group_key], language),
                 "subtitle": None,
                 "kind": None,
-                "venue_count": len(points),
+                "venue_count": len(services),
                 "status": None,
                 "image": previews[0] if previews else None,
                 "cover_previews": previews,
@@ -173,23 +185,25 @@ def build_showcase(
                 tiles.append(applied)
                 order += 1
         else:
-            for point in points:
+            for service in services:
                 base = {
-                    "key": point.code,
+                    "key": service.code,
                     "type": "venue",
-                    "title": translate(point.public_title, language) or point.code,
-                    # Подпись — только tagline. Тип точки на плитке не показываем;
+                    "title": translate(service.public_title, language) or service.code,
+                    # Подпись — только tagline. Тип на плитке не показываем;
                     # нет tagline → фронт покажет часы/статус.
-                    "subtitle": translate(point.tagline, language) or None,
-                    "kind": point.kind,
+                    "subtitle": translate(service.tagline, language) or None,
+                    # Род исполнителя (kitchen/bar/spa…) — как и раньше, чтобы
+                    # payload витрины не менялся.
+                    "kind": service.execution_point.kind,
                     "venue_count": None,
-                    "status": _point_status(point, moment),
-                    "image": _point_image(point),
+                    "status": _service_status(service, moment),
+                    "image": _service_image(service),
                     "cover_previews": [],
-                    "route": f"/venue/{point.code}",
+                    "route": f"/venue/{service.code}",
                     "enabled": True,
                 }
-                applied = _apply_overlay(base, overlays.get(point.code), order, "m", include_hidden)
+                applied = _apply_overlay(base, overlays.get(service.code), order, "m", include_hidden)
                 if applied:
                     tiles.append(applied)
                     order += 1
@@ -239,15 +253,15 @@ def build_showcase(
     return tiles
 
 
-def _venue_card(point: ExecutionPoint, language: str | None, moment: datetime | None) -> dict[str, Any]:
+def _venue_card(service: Service, language: str | None, moment: datetime | None) -> dict[str, Any]:
     return {
-        "code": point.code,
-        "title": translate(point.public_title, language) or point.code,
-        "subtitle": translate(point.tagline, language) or None,
-        "kind": point.kind,
-        "image": _point_image(point),
-        "status": _point_status(point, moment),
-        "route": f"/venue/{point.code}",
+        "code": service.code,
+        "title": translate(service.public_title, language) or service.code,
+        "subtitle": translate(service.tagline, language) or None,
+        "kind": service.execution_point.kind,
+        "image": _service_image(service),
+        "status": _service_status(service, moment),
+        "route": f"/venue/{service.code}",
     }
 
 
@@ -256,9 +270,9 @@ def list_venues(
 ) -> dict[str, Any]:
     """Уровень 2: карточки заведений одной группы (рестораны/спа/услуги)."""
     cards = [
-        _venue_card(point, language, moment)
-        for point in _venue_points(hotel)
-        if KIND_GROUP.get(point.kind, "services") == group
+        _venue_card(service, language, moment)
+        for service in _venues(hotel)
+        if SERVICE_TYPE_GROUP.get(service.type, "services") == group
     ]
     return {
         "group": group,

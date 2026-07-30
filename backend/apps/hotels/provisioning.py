@@ -26,7 +26,7 @@ from apps.accounts.models import User
 from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, ValidationError
 from apps.hotels.brand_library import preset_tokens
-from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage
+from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Service
 
 DEFAULT_PRESET = "midnight_navy"
 DEFAULT_LANGUAGES = ("ru", "en")
@@ -153,12 +153,22 @@ def provision_hotel(
             hotel.default_theme = theme
             hotel.save(update_fields=["default_theme", "updated_at"])
 
-        ExecutionPoint.objects.get_or_create(
+        reception, _ = ExecutionPoint.objects.get_or_create(
             code="reception",
             defaults={
                 "kind": ExecutionPoint.Kind.RECEPTION,
                 "title": {"ru": "Ресепшен", "en": "Reception"},
                 "sla_minutes": 15,
+            },
+        )
+        # Сервис-контейнер исполнителя (1:1). Каркасный ресепшен без категорий
+        # на витрине не появляется, но инвариант «у каждого исполнителя есть
+        # сервис» держим с самого создания отеля.
+        Service.objects.get_or_create(
+            execution_point=reception,
+            defaults={
+                "code": reception.code,
+                "type": Service.Type.CONCIERGE,
             },
         )
 

@@ -18,7 +18,8 @@ from apps.core.fields import translate
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
-from .models import ExecutionPoint, Hotel, Location, Room, Schedule
+from .models import ExecutionPoint, Hotel, Location, Room, Schedule, Service
+from .venue_defaults import service_type_for_kind
 
 MAX_BULK_RANGE = 500
 
@@ -339,23 +340,37 @@ def update_matrix_row(category_id, cells: Iterable[dict]) -> dict:
 # --- Отделы ----------------------------------------------------------------
 
 
-def serialize_department(point: ExecutionPoint, *, counts: dict | None = None) -> dict:
+def _service_for(point: ExecutionPoint) -> Service | None:
+    """Сервис-контейнер точки (1:1). Гостевая идентичность и венью-часы — на нём."""
+    return Service.objects.filter(execution_point=point).first()
+
+
+def serialize_department(
+    point: ExecutionPoint, *, counts: dict | None = None, service: Service | None = None
+) -> dict:
+    """
+    «Отдел» в CMS = исполнитель (ExecutionPoint) + его сервис (Service) вместе.
+    Гостевую идентичность и венью-часы читаем с сервиса, исполнение — с точки.
+    Форма ответа не изменилась.
+    """
     counts = counts or {}
+    if service is None:
+        service = _service_for(point)
     return {
         "id": str(point.pk),
         "code": point.code,
         "title": point.title or {},
-        "public_name": point.public_name or {},
-        "tagline": point.tagline or {},
-        "is_guest_facing": point.is_guest_facing,
+        "public_name": (service.public_name if service else {}) or {},
+        "tagline": (service.tagline if service else {}) or {},
+        "is_guest_facing": service.is_guest_facing if service else point.is_guest_facing,
         "kind": point.kind,
-        "schedule_id": str(point.schedule_id) if point.schedule_id else None,
+        "schedule_id": str(service.schedule_id) if (service and service.schedule_id) else None,
         "sla_minutes": point.sla_minutes,
         "is_active": point.is_active,
         "staff_count": counts.get("staff", 0),
         "channel_count": counts.get("channels", 0),
         "has_escalation": counts.get("escalation", False),
-        "image": serialize_asset(point.image),
+        "image": serialize_asset(service.image if service else None),
     }
 
 
@@ -373,6 +388,7 @@ def list_departments() -> list[dict]:
     from apps.notifications.models import EscalationRule, NotificationChannel
 
     points = list(ExecutionPoint.objects.order_by("code"))
+    services = {s.execution_point_id: s for s in Service.objects.all()}
     staff = _count_by_point(StaffAssignment.objects.filter(is_active=True))
     channels = _count_by_point(NotificationChannel.objects.filter(is_active=True))
     with_rules = set(
@@ -384,6 +400,7 @@ def list_departments() -> list[dict]:
     return [
         serialize_department(
             point,
+            service=services.get(point.pk),
             counts={
                 "staff": staff.get(point.pk, 0),
                 "channels": channels.get(point.pk, 0),
@@ -421,49 +438,73 @@ def create_department(data: dict) -> ExecutionPoint:
     if not title:
         raise ValidationError("Заполните название отдела", field="title")
 
-    # Гостевое имя по умолчанию = служебное, чтобы точка не осталась безымянной
-    # на витрине, пока отель не задал отдельное.
+    # Гостевое имя по умолчанию = служебное, чтобы заведение не осталось
+    # безымянным на витрине, пока отель не задал отдельное.
     public_name = _clean_translations(data.get("public_name"), field="public_name") or dict(title)
     tagline = _clean_translations(data.get("tagline"), field="tagline")
-    return ExecutionPoint.objects.create(
+    kind = data.get("kind", ExecutionPoint.Kind.OTHER)
+
+    # Исполнитель — только исполнение (род, SLA). Гостевая идентичность и венью-
+    # часы живут на его сервисе (1:1).
+    point = ExecutionPoint.objects.create(
         code=data.get("code") or _make_department_code(title),
         title=title,
+        kind=kind,
+        sla_minutes=data.get("sla_minutes", 20),
+        is_active=data.get("is_active", True),
+    )
+    Service.objects.create(
+        execution_point=point,
+        code=point.code,
+        type=service_type_for_kind(kind),
         public_name=public_name,
         tagline=tagline,
         is_guest_facing=data.get("is_guest_facing", True),
-        kind=data.get("kind", ExecutionPoint.Kind.OTHER),
         schedule=_resolve_schedule(data.get("schedule_id")),
-        sla_minutes=data.get("sla_minutes", 20),
-        is_active=data.get("is_active", True),
         image=_resolve_asset(data.get("image_id")),
+        is_active=data.get("is_active", True),
     )
+    return point
 
 
 @transaction.atomic
 def update_department(point_id, data: dict) -> ExecutionPoint:
     point = get_department(point_id)
+    service = _service_for(point)
+
+    # --- Исполнение (ExecutionPoint) ---
     if "title" in data:
         title = _clean_translations(data["title"], field="title")
         if not title:
             raise ValidationError("Заполните название отдела", field="title")
         point.title = title
-    if "public_name" in data:
-        point.public_name = _clean_translations(data["public_name"], field="public_name")
-    if "tagline" in data:
-        point.tagline = _clean_translations(data["tagline"], field="tagline")
-    if "is_guest_facing" in data and data["is_guest_facing"] is not None:
-        point.is_guest_facing = data["is_guest_facing"]
     if "kind" in data:
         point.kind = data["kind"]
-    if "schedule_id" in data:
-        point.schedule = _resolve_schedule(data["schedule_id"])
     if "sla_minutes" in data and data["sla_minutes"] is not None:
         point.sla_minutes = data["sla_minutes"]
     if "is_active" in data:
         point.is_active = data["is_active"]
-    if "image_id" in data:
-        point.image = _resolve_asset(data["image_id"])
     point.save()
+
+    # --- Гостевая идентичность и венью-часы (Service) ---
+    if service is not None:
+        if "public_name" in data:
+            service.public_name = _clean_translations(data["public_name"], field="public_name")
+        if "tagline" in data:
+            service.tagline = _clean_translations(data["tagline"], field="tagline")
+        if "is_guest_facing" in data and data["is_guest_facing"] is not None:
+            service.is_guest_facing = data["is_guest_facing"]
+        if "schedule_id" in data:
+            service.schedule = _resolve_schedule(data["schedule_id"])
+        if "image_id" in data:
+            service.image = _resolve_asset(data["image_id"])
+        if "is_active" in data:
+            service.is_active = data["is_active"]
+        # Смена рода тянет за собой тип-шаблон сервиса — так группировка витрины
+        # следует за родом, как было до модели сервиса.
+        if "kind" in data:
+            service.type = service_type_for_kind(data["kind"])
+        service.save()
     return point
 
 
@@ -478,4 +519,8 @@ def delete_department(point_id) -> None:
             "У отдела есть заказы — его нельзя удалить, только выключить",
             code="department_in_use",
         )
+    # Сервис ссылается на исполнителя (PROTECT) — снимаем его первым (мягко).
+    service = _service_for(point)
+    if service is not None:
+        service.delete()
     point.delete()

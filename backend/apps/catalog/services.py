@@ -106,19 +106,19 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
 
 def _catalog_hero_image(point_code: str | None = None) -> str | None:
     """
-    Фото заведения для hero каталога. При скоупе — фото ИМЕННО этой точки; иначе
-    первая активная точка с готовым фото. null → витрина берёт фон бренда/
-    градиент (каскад завершает фронт).
+    Фото заведения для hero каталога. При скоупе — фото ИМЕННО этого сервиса;
+    иначе первый активный сервис с готовым фото. null → витрина берёт фон бренда/
+    градиент (каскад завершает фронт). Код сервиса совпадает с кодом заведения.
     """
-    from apps.hotels.models import ExecutionPoint
+    from apps.hotels.models import Service
 
-    points = ExecutionPoint.objects.filter(is_active=True, image__isnull=False).select_related("image")
+    services = Service.objects.filter(is_active=True, image__isnull=False).select_related("image")
     if point_code:
-        points = points.filter(code=point_code)
-    point = points.order_by("code").first()
-    if point is None or point.image is None:
+        services = services.filter(code=point_code)
+    service = services.order_by("code").first()
+    if service is None or service.image is None:
         return None
-    return point.image.url("card") or None
+    return service.image.url("card") or None
 
 
 def _current_hotel_id():

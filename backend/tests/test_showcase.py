@@ -10,7 +10,7 @@ import pytest
 
 from apps.catalog.models import Category, Route
 from apps.core.context import tenant_context
-from apps.hotels.models import ExecutionPoint, ShowcaseTile
+from apps.hotels.models import ExecutionPoint, Service, ShowcaseTile
 
 from .conftest import host_for
 
@@ -24,12 +24,18 @@ def _home(client, hotel, token):
 
 
 def _add_restaurant(hotel, code: str):
-    """Ещё одно заведение-ресторан: точка kitchen + активная категория на неё."""
+    """Ещё одно заведение-ресторан: сервис + его исполнитель (kitchen) + активная
+    категория на него. Заведение на витрине — это Service, поэтому создаём его."""
     point = ExecutionPoint.objects.create(
         hotel=hotel, code=code, kind=ExecutionPoint.Kind.KITCHEN, title={"ru": code, "en": code}
     )
+    service = Service.objects.create(
+        hotel=hotel, execution_point=point, code=code, type=Service.Type.RESTAURANT,
+        public_name={"ru": code, "en": code}, is_guest_facing=True,
+    )
     category = Category.objects.create(
-        hotel=hotel, code=f"{code}-menu", type="product", title={"ru": code, "en": code}, is_active=True
+        hotel=hotel, code=f"{code}-menu", type="product", title={"ru": code, "en": code},
+        is_active=True, service=service,
     )
     Route.objects.create(hotel=hotel, category=category, execution_point=point)
     return point
@@ -270,11 +276,15 @@ def test_service_point_hidden_even_with_categories(client, crystal, guest_token)
 def test_toggling_guest_facing_shows_and_hides(client, crystal, guest_token):
     with tenant_context(crystal):
         point = ExecutionPoint.objects.create(
-            hotel=crystal, code="wine", kind=ExecutionPoint.Kind.BAR,
-            title={"ru": "Винотека"}, public_name={"ru": "Винотека"}, is_guest_facing=False,
+            hotel=crystal, code="wine", kind=ExecutionPoint.Kind.BAR, title={"ru": "Винотека"},
+        )
+        service = Service.objects.create(
+            hotel=crystal, execution_point=point, code="wine", type=Service.Type.BAR,
+            public_name={"ru": "Винотека"}, is_guest_facing=False,
         )
         category = Category.objects.create(
-            hotel=crystal, code="wine-menu", type="product", title={"ru": "Вина"}, is_active=True
+            hotel=crystal, code="wine-menu", type="product", title={"ru": "Вина"},
+            is_active=True, service=service,
         )
         Route.objects.create(hotel=crystal, category=category, execution_point=point)
 
@@ -283,8 +293,8 @@ def test_toggling_guest_facing_shows_and_hides(client, crystal, guest_token):
 
     assert "wine" not in keys()  # служебная — скрыта
     with tenant_context(crystal):
-        point.is_guest_facing = True
-        point.save(update_fields=["is_guest_facing"])
+        service.is_guest_facing = True
+        service.save(update_fields=["is_guest_facing"])
     assert "wine" in keys()  # включили — появилась
 
 

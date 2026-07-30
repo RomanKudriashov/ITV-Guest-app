@@ -187,6 +187,7 @@ def _apply_charges(order, order_items, hotel, location, data) -> None:
     """Считает начисления, проверяет минимум и фиксирует снимок в заказе."""
     from .charges import compute_charges, minimum_order_minor, resolve_tip_minor
 
+    service = _service_for_point(order.execution_point)
     priced_lines = [
         (oi.line_total or 0, _service_fee_applies(oi))
         for oi in order_items
@@ -196,7 +197,7 @@ def _apply_charges(order, order_items, hotel, location, data) -> None:
 
     # Минимальная сумма — до фиксации: ниже порога оформление блокируется.
     categories = {oi.item.category for oi in order_items if oi.item and oi.item.category_id}
-    minimum = minimum_order_minor(categories, order.execution_point)
+    minimum = minimum_order_minor(categories, service)
     if minimum and subtotal < minimum:
         raise OrderValidationError(
             "Сумма заказа ниже минимальной",
@@ -206,7 +207,9 @@ def _apply_charges(order, order_items, hotel, location, data) -> None:
         )
 
     tip = resolve_tip_minor(subtotal_minor=subtotal, tip_minor=data.tip_minor, tip_percent=data.tip_percent)
-    breakdown = compute_charges(hotel, priced_lines=priced_lines, location=location, tip_minor=tip)
+    breakdown = compute_charges(
+        hotel, priced_lines=priced_lines, location=location, tip_minor=tip, service=service
+    )
 
     order.subtotal_minor = breakdown.subtotal_minor
     order.service_fee_minor = breakdown.service_fee_minor
@@ -252,11 +255,14 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
 
     subtotal = sum(lt for lt, _ in priced_lines)
     execution_point = _resolve_execution_point(next(iter(categories)).pk) if categories else None
+    service = _service_for_point(execution_point)
     location = Location.objects.filter(pk=data.location_id).first() if data.location_id else None
 
-    minimum = minimum_order_minor(categories, execution_point)
+    minimum = minimum_order_minor(categories, service)
     tip = resolve_tip_minor(subtotal_minor=subtotal, tip_minor=data.tip_minor, tip_percent=data.tip_percent)
-    breakdown = compute_charges(hotel, priced_lines=priced_lines, location=location, tip_minor=tip)
+    breakdown = compute_charges(
+        hotel, priced_lines=priced_lines, location=location, tip_minor=tip, service=service
+    )
 
     return {
         **breakdown.as_dict(),
@@ -428,6 +434,15 @@ def _create_order_item(order: Order, resolved: dict[str, Any]) -> OrderItem:
         line_total=None if unit_price is None else unit_price * line.quantity,
         comment=line.comment[:255],
     )
+
+
+def _service_for_point(execution_point):
+    """Сервис исполнителя (1:1) — источник коммерч. оверрайдов заказа."""
+    if execution_point is None:
+        return None
+    from apps.hotels.models import Service
+
+    return Service.objects.filter(execution_point=execution_point).first()
 
 
 def _resolve_execution_point(category_id) -> ExecutionPoint:

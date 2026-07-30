@@ -46,19 +46,31 @@ def compute_charges(
     priced_lines: list[tuple[int, bool]],
     location=None,
     tip_minor: int = 0,
+    service=None,
 ) -> ChargeBreakdown:
     """
     priced_lines — список (line_total_minor, облагается_ли_сбором) по позициям.
     location — локация доставки (для стоимости доставки), может быть None.
+    service — сервис заказа: его коммерч. оверрайды (сбор, порог доставки,
+    округление) имеют приоритет над отелем; null-оверрайд наследует отель.
+    Налог, валюта и налоговый режим — уровень отеля. service=None → всё берётся
+    у отеля (обратная совместимость).
     """
+
+    def eff(field: str):
+        if service is not None:
+            return service.commerce_value(hotel, field)
+        return getattr(hotel, field)
+
     subtotal = sum(lt for lt, _ in priced_lines if lt)
     feeable = sum(lt for lt, applies in priced_lines if lt and applies)
 
-    service_fee = feeable * int(hotel.service_fee_bp or 0) // 10000
+    service_fee_bp = int(eff("service_fee_bp") or 0)
+    service_fee = feeable * service_fee_bp // 10000
 
     delivery_conf = int(getattr(location, "delivery_fee_minor", 0) or 0) if location else 0
     delivery = delivery_conf
-    threshold = hotel.free_delivery_threshold_minor
+    threshold = eff("free_delivery_threshold_minor")
     if threshold is not None and subtotal >= threshold:
         delivery = 0
 
@@ -73,26 +85,27 @@ def compute_charges(
 
     tip = max(int(tip_minor or 0), 0)
 
-    total = _round_to(subtotal + service_fee + delivery + tax_added + tip, int(hotel.price_round_to_minor or 0))
+    round_to = int(eff("price_round_to_minor") or 0)
+    total = _round_to(subtotal + service_fee + delivery + tax_added + tip, round_to)
 
     snapshot = {
-        "service_fee_bp": int(hotel.service_fee_bp or 0),
+        "service_fee_bp": service_fee_bp,
         "tax_bp": tax_bp,
         "tax_inclusive": bool(hotel.tax_inclusive),
         "delivery_fee_minor": delivery_conf,
         "delivery_free_by_threshold": bool(delivery_conf and delivery == 0),
         "free_delivery_threshold_minor": threshold,
-        "price_round_to_minor": int(hotel.price_round_to_minor or 0),
+        "price_round_to_minor": round_to,
     }
     return ChargeBreakdown(subtotal, service_fee, tax, delivery, tip, total, snapshot)
 
 
-def minimum_order_minor(categories, execution_point) -> int:
-    """Порог минимума = максимум из порогов категорий заказа и точки исполнения."""
+def minimum_order_minor(categories, service) -> int:
+    """Порог минимума = максимум из порогов категорий заказа и сервиса."""
     mins = [int(c.min_order_minor) for c in categories if getattr(c, "min_order_minor", None)]
-    ep_min = getattr(execution_point, "min_order_minor", None)
-    if ep_min:
-        mins.append(int(ep_min))
+    service_min = getattr(service, "min_order_minor", None)
+    if service_min:
+        mins.append(int(service_min))
     return max(mins) if mins else 0
 
 
