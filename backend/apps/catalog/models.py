@@ -43,6 +43,13 @@ class Category(TenantModel):
     schedule = models.ForeignKey(
         "hotels.Schedule", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # Сервис-контейнер, которому принадлежит категория (её «наполнение»).
+    # Проставляется из маршрута (Route.execution_point → его Service). Nullable:
+    # у инфо-категории маршрута нет. Исполнение по-прежнему решает Route —
+    # это лишь структурная привязка «меню внутри заведения».
+    service = models.ForeignKey(
+        "hotels.Service", on_delete=models.SET_NULL, null=True, blank=True, related_name="categories"
+    )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     # Коммерция: облагается ли категория сервисным сбором (еда — да,

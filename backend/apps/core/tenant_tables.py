@@ -22,6 +22,8 @@ TENANT_TABLES = [
     "hotels_schedule",
     "hotels_schedule_interval",
     "hotels_showcase_tile",
+    "hotels_service",
+    "hotels_hotel_module",
     # accounts
     "accounts_user",
     "accounts_staff_assignment",
