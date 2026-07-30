@@ -1333,6 +1333,8 @@ class Command(BaseCommand):
         self._seed_showcase_tiles()
         self._seed_rich_commerce(hotel)
         self._seed_modules()
+        self._seed_inclusions()          # рум-сервис включает Панораму + часть бара
+        self._seed_fanout_demo_order(hotel)  # демо-заказ, разъезжающийся на 2 трекера
 
     def _rich_schedule(self, name, start, end):
         schedule, created = Schedule.objects.get_or_create(name=name)
@@ -1605,6 +1607,81 @@ class Command(BaseCommand):
             HotelModule.objects.update_or_create(
                 code=code, defaults={"is_enabled": True, "source": source, "config": config}
             )
+
+    def _seed_inclusions(self):
+        """
+        Рум-сервис ВКЛЮЧАЕТ по ссылке: меню «Панорамы» целиком (+15% наценка,
+        своё круглосуточное расписание, «Сырники» скрыты как завтрак-only) и
+        коктейли бара (вино скрыто). Исполнители — кухня «Панорамы» и бар.
+        Идемпотентно (пропускаем уже заведённые включения).
+        """
+        from apps.catalog.inclusions import create_inclusion
+        from apps.catalog.models import Category, Item, ServiceInclusion
+
+        rs = Service.objects.filter(code="room_service").first()
+        kitchen = Service.objects.filter(code="kitchen").first()
+        bar = Service.objects.filter(code="bar").first()
+        if not (rs and kitchen and bar):
+            return
+        all_day = Schedule.objects.filter(is_always_open=True).first()
+
+        if not ServiceInclusion.objects.filter(including_service=rs, source_service=kitchen).exists():
+            hidden = list(
+                Item.objects.filter(code="syrniki").values_list("id", flat=True)
+            )
+            create_inclusion(rs.pk, {
+                "source_service_id": str(kitchen.pk),
+                "scope": "all",
+                "markup_kind": "percent",
+                "markup_value": 1500,
+                "schedule_id": str(all_day.pk) if all_day else None,
+                "hidden_item_ids": [str(i) for i in hidden],
+            })
+        if not ServiceInclusion.objects.filter(including_service=rs, source_service=bar).exists():
+            bar_cat = Category.objects.filter(code="bar-drinks").first()
+            hidden = list(
+                Item.objects.filter(code__in=["wine-red", "wine-white"]).values_list("id", flat=True)
+            )
+            create_inclusion(rs.pk, {
+                "source_service_id": str(bar.pk),
+                "scope": "categories",
+                "category_ids": [str(bar_cat.pk)] if bar_cat else [],
+                "hidden_item_ids": [str(i) for i in hidden],
+            })
+
+    def _seed_fanout_demo_order(self, hotel):
+        """
+        Демо-заказ в рум-сервисе: горячее «Панорамы» + коктейль бара → разъезд на
+        два трекера (кухня + бар). Идемпотентно (по наличию parent-заказа
+        рум-сервиса). Позиции без обязательных модификаторов, чтобы заказ прошёл.
+        """
+        from apps.accounts.models import GuestSession, TrustLevel
+        from apps.catalog.models import Item
+        from apps.orders.models import Order
+        from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+        room = Room.objects.filter(number="201").first() or Room.objects.first()
+        rs = Service.objects.filter(code="room_service").first()
+        dish = Item.objects.filter(code="carbonara").first()      # кухня «Панорамы»
+        cocktail = Item.objects.filter(code="negroni").first()    # бар
+        if not (room and rs and dish and cocktail):
+            return
+        if Order.objects.filter(execution_point__code="room_service", parent__isnull=True).exists():
+            return  # демо-заказ уже есть
+
+        _raw, token_hash = GuestSession.issue_token()
+        session = GuestSession.objects.create(
+            room=room, token_hash=token_hash, trust=TrustLevel.ROOM_SCANNED,
+            expires_at=GuestSession.default_expiry(),
+        )
+        create_order(
+            OrderInput(
+                lines=[OrderLineInput(item_id=str(dish.pk)), OrderLineInput(item_id=str(cocktail.pk))],
+                service_code="room_service",
+                room_id=str(room.pk),
+            ),
+            guest_session=session,
+        )
 
 
 def _render_placeholder_png(label: str, code: str = "") -> bytes:
