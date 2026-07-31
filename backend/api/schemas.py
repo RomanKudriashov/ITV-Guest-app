@@ -60,6 +60,9 @@ class MenuOut(Schema):
     language: str | None
     server_time: str | None
     hero_image: str | None = None
+    # Заполнен при скоупе на заведение: его имя, подпись, ТИП (по нему витрина
+    # выбирает блок контента) и статус часов. None — общий каталог отеля.
+    venue: dict[str, Any] | None = None
     categories: list[dict[str, Any]]
 
 

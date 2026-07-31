@@ -190,12 +190,32 @@ export interface MenuCategory {
   items: MenuItem[];
 }
 
+/**
+ * Кто это заведение — приходит, когда каталог сужен на него (R5).
+ *
+ * `type` решает, какой блок контента рисует витрина, и это ТОТ ЖЕ тип, из
+ * которого выводится вид трекера у персонала (R3): один источник правды на
+ * гостевую и рабочую стороны.
+ */
+export interface VenueIdentity {
+  code: string;
+  type: string;
+  title: string;
+  tagline: string;
+  image: string | null;
+  is_open: boolean;
+  available_until: string | null;
+  available_from: string | null;
+}
+
 /** `GET /api/guest/catalog?type=…` — one envelope for every offering type. */
 export interface GuestCatalog {
   language: string;
   server_time?: string;
   /** Venue photo for the catalog hero; null → fall back to the brand background. */
   hero_image?: string | null;
+  /** Заполнен при скоупе на заведение; null — общий каталог отеля. */
+  venue?: VenueIdentity | null;
   categories: MenuCategory[];
 }
 

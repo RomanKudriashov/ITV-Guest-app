@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useMatch } from 'react-router-dom';
 
 import { GuestSessionProvider } from './session/GuestSessionProvider';
 import { CartProvider } from './state/cart';
@@ -9,9 +9,17 @@ import { CartProvider } from './state/cart';
  * guest session nor the cart is created for a member of staff.
  */
 export function GuestRoot() {
+  // Какое заведение «активно», решает АДРЕС, а не порядок кликов: гость
+  // находится в пространстве заведения — значит, добавляет в его корзину.
+  // Корзина/оформление лежат вне /venue, поэтому берут заведение из своего
+  // адреса (?service=) — иначе, уйдя в корзину, гость терял бы контекст.
+  const inVenue = useMatch('/venue/:code');
+  const params = new URLSearchParams(window.location.search);
+  const serviceCode = inVenue?.params.code ?? params.get('service');
+
   return (
     <GuestSessionProvider>
-      <CartProvider>
+      <CartProvider serviceCode={serviceCode}>
         <Outlet />
       </CartProvider>
     </GuestSessionProvider>

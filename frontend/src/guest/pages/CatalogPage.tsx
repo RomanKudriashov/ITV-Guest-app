@@ -38,6 +38,11 @@ export interface CatalogPageProps {
   type: OfferingType;
   /** Scope to one venue (execution-point code) — the level-3 view. */
   point?: string;
+  /**
+   * Встроен в пространство заведения (R5): свою шапку не рисуем — заведение
+   * уже представилось собственной, и вторая была бы повтором.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -47,7 +52,7 @@ export interface CatalogPageProps {
  * row can be dropped into the cart, and all three come from the behaviour
  * registry rather than from conditions spread over the markup.
  */
-export function CatalogPage({ type, point }: CatalogPageProps) {
+export function CatalogPage({ type, point, embedded = false }: CatalogPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -177,13 +182,15 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
       {/* Full-bleed hero (reference `.cathero`): venue photo from brand settings
           with a graceful fallback to the theme-token gradient while no photo is
           set. The content panel below overlaps it with rounded top corners. */}
-      <CatalogHero
-        hotelName={hotelName}
-        sectionTitle={t(`${ns}.heroTitle`, { defaultValue: hotelName })}
-        heroImage={data?.hero_image ?? null}
-        tokens={tokens}
-        mode={mode}
-      />
+      {embedded ? null : (
+        <CatalogHero
+          hotelName={hotelName}
+          sectionTitle={t(`${ns}.heroTitle`, { defaultValue: hotelName })}
+          heroImage={data?.hero_image ?? null}
+          tokens={tokens}
+          mode={mode}
+        />
+      )}
 
       <Box
         sx={{
@@ -283,7 +290,9 @@ export function CatalogPage({ type, point }: CatalogPageProps) {
             fullWidth
             size="large"
             variant="contained"
-            onClick={() => navigate('/cart')}
+            // Заведение едет в адрес: корзина лежит вне /venue и иначе не
+            // знала бы, чья она.
+            onClick={() => navigate(point ? `/cart?service=${point}` : '/cart')}
             data-testid="guest-cart-bar"
             sx={{ minHeight: 52, justifyContent: 'space-between', px: 2 }}
           >

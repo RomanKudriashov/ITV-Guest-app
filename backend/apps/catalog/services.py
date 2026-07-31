@@ -145,7 +145,44 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
         "language": language,
         "server_time": (hotel.local_now().isoformat() if hotel else None),
         "hero_image": _catalog_hero_image(options.point_code),
+        "venue": _venue_identity(options.point_code, language, options.moment),
         "categories": payload_categories,
+    }
+
+
+def _venue_identity(point_code: str | None, language: str | None, moment) -> dict | None:
+    """
+    Кто это заведение: имя, подпись, тип и статус часов.
+
+    Без этого шапка пространства сервиса могла назвать только отель — гость
+    проваливался в «Панораму», а видел заголовок «Отель Кристалл». Тип нужен
+    витрине, чтобы выбрать блок контента: каталог, форма, слоты или страница.
+    """
+    if not point_code:
+        return None
+
+    from apps.hotels.models import Service
+
+    service = (
+        Service.objects.filter(code=point_code, is_active=True)
+        .select_related("schedule", "image")
+        .first()
+    )
+    if service is None:
+        return None
+
+    availability = (
+        service.schedule.availability_at(moment) if service.schedule_id else None
+    )
+    return {
+        "code": service.code,
+        "type": service.type,
+        "title": translate(service.public_title, language),
+        "tagline": translate(service.tagline, language),
+        "image": image_url(service.image, variant="card") or None,
+        "is_open": (availability.is_open if availability else True),
+        "available_until": (availability.available_until if availability else None),
+        "available_from": (availability.available_from if availability else None),
     }
 
 
