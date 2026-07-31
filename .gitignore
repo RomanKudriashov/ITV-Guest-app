@@ -27,3 +27,6 @@ staticfiles/
 # Local assistant/editor notes — kept out of the repo
 CLAUDE.md
 .claude/
+
+# Кэш демо-фотографий: качается `manage.py fetch_seed_photos`, в репозиторий не кладём.
+backend/.seed_photos/

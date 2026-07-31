@@ -218,6 +218,8 @@ class Command(BaseCommand):
             if with_rich:
                 self._seed_rich_catalog(hotel, points, locations, schedules)
             self._link_categories_to_services()
+            self._seed_venue_covers()
+            self._ensure_item_photos()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
             if with_badges:
@@ -1118,14 +1120,20 @@ class Command(BaseCommand):
                 room = rooms[(days_ago * 2 + k) % len(rooms)]
                 created = day_anchor + timedelta(hours=(k * 4) - 6, minutes=(days_ago * 7) % 60)
 
-                session = GuestSession.objects.create(
-                    hotel_id=hotel.pk,
-                    room=room,
+                # Хэш токена детерминирован НАМЕРЕННО (демо воспроизводимо),
+                # поэтому создаём через get_or_create: до R4 повторный
+                # `--force` на существующем отеле падал здесь на уникальном
+                # индексе, и пересеять стенд можно было только пересозданием БД.
+                session, _ = GuestSession.objects.get_or_create(
                     token_hash=GuestSession.hash_token(f"seed-{hotel.subdomain}-{days_ago}-{k}"),
-                    trust=trusts[n % len(trusts)],
-                    language=languages[n % len(languages)],
-                    user_agent=agents[n % len(agents)],
-                    expires_at=GuestSession.default_expiry(),
+                    defaults={
+                        "hotel_id": hotel.pk,
+                        "room": room,
+                        "trust": trusts[n % len(trusts)],
+                        "language": languages[n % len(languages)],
+                        "user_agent": agents[n % len(agents)],
+                        "expires_at": GuestSession.default_expiry(),
+                    },
                 )
                 GuestSession.objects.filter(pk=session.pk).update(created_at=created)
                 session.refresh_from_db()
@@ -1209,30 +1217,96 @@ class Command(BaseCommand):
 
     def _image_for(self, code: str, label: str) -> MediaAsset | None:
         """
-        Демо-картинка. Если MinIO недоступен — молча обходимся заглушкой:
-        сид не должен падать из-за необязательной зависимости.
+        Настоящая фотография из манифеста (apps/media/seed_photos.py), залитая
+        ТЕМ ЖЕ медиапайплайном, что и загрузка из CMS.
+
+        До R4 здесь рисовалась процедурная обложка с пометкой «фотографию негде
+        взять офлайн». Теперь снимки лежат в кэше, и офлайн — это про кэш, а не
+        про рисование.
+
+        Ни снимка, ни MinIO — обходимся без картинки: демо-данные не должны
+        быть причиной, по которой не поднимается окружение.
         """
+        from apps.media import seed_photos
+
+        content = seed_photos.fetch(code)
+        if content is None:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"Фото для '{code}' недоступно — позиция останется без снимка. "
+                    "Прогоните: manage.py fetch_seed_photos"
+                )
+            )
+            return None
+
         try:
             from apps.media.services import upload_asset
 
-            content = _render_placeholder_png(label, code)
             return upload_asset(
                 content=content,
-                filename=f"{code}.png",
+                filename=f"{code}.jpg",
                 kind=MediaAsset.Kind.CATEGORY,
-                content_type="image/png",
-                alt={"ru": label},
+                content_type="image/jpeg",
+                alt=seed_photos.alt_text(code) or {"ru": label},
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 — MinIO необязателен для старта
             self.stdout.write(
-                self.style.WARNING(f"Медиа для '{code}' пропущено ({exc}) — будет заглушка")
+                self.style.WARNING(f"Медиа для '{code}' пропущено ({exc})")
             )
             return None
 
     def _attach_image(self, item: Item, category_code: str, label: str):
-        asset = self._image_for(f"{category_code}-{item.code}", label)
+        # Ключ манифеста — код ПОЗИЦИИ: одно и то же блюдо в разных разделах
+        # должно получать одну и ту же фотографию.
+        asset = self._image_for(item.code, label)
         if asset is not None:
             ItemImage.objects.get_or_create(item=item, asset=asset, defaults={"sort_order": 0})
+
+    def _ensure_item_photos(self):
+        """
+        У каждой позиции — настоящая фотография.
+
+        Две задачи разом: добить тех, кто заводился в обход `_attach_image`
+        (инфо-страницы, бронируемые ресурсы), и ЗАМЕНИТЬ процедурные обложки
+        R1/R2 — ради этого прогон и затевался. Признак процедурной: она PNG,
+        настоящие снимки манифеста приходят JPEG.
+        """
+        from apps.media import seed_photos
+
+        real = set(
+            ItemImage.objects.filter(asset__content_type="image/jpeg").values_list(
+                "item_id", flat=True
+            )
+        )
+        for item in Item.objects.all():
+            if item.pk in real or item.code not in seed_photos.PHOTOS:
+                continue
+            label = (item.title or {}).get("ru") or item.code
+            asset = self._image_for(item.code, label)
+            if asset is None:
+                continue
+            # Старую связку убираем жёстко: это служебная строка, и держать
+            # рядом настоящее фото и нарисованную заглушку незачем.
+            ItemImage.objects.filter(item=item).hard_delete()
+            ItemImage.objects.create(item=item, asset=asset, sort_order=0)
+
+    def _seed_venue_covers(self):
+        """
+        Обложка каждому заведению — включая служебные.
+
+        Хозслужбу гость не видит, но админ видит её карточку в CMS, и «серый
+        прямоугольник вместо фото» там читается ровно так же плохо.
+        """
+        for service in Service.objects.select_related("execution_point", "image"):
+            # Процедурную обложку R1/R2 (PNG) считаем отсутствующей: её и
+            # пришли заменить настоящим снимком.
+            if service.image_id is not None and service.image.content_type == "image/jpeg":
+                continue
+            label = (service.public_name or {}).get("ru") or service.code
+            asset = self._image_for(f"venue-{service.code}", label)
+            if asset is not None:
+                service.image = asset
+                service.save(update_fields=["image", "updated_at"])
 
     def _seed_marketing_badges(self):
         """Пресеты бейджей и пара назначений — идемпотентно по коду пресета."""
@@ -1867,80 +1941,3 @@ class Command(BaseCommand):
             ),
             guest_session=session,
         )
-
-
-def _render_placeholder_png(label: str, code: str = "") -> bytes:
-    """
-    Спроектированная обложка вместо плоского прямоугольника: тёмно-синий
-    градиент, мягкое свечение акцента, лёгкая геометрическая текстура и крупная
-    монограмма. Это не фотография (её негде взять офлайн), но осмысленная
-    обложка бренда, раздаваемая настоящим медиапайплайном — реальное фото
-    подменяется той же загрузкой. Оттенок и мотив варьируются по коду, чтобы
-    мозаика не была монотонной. Ни одного зелёного пикселя, никаких эмодзи.
-    """
-    import hashlib
-
-    from PIL import Image, ImageDraw, ImageFilter
-
-    w, h = 1000, 667
-    seed = int(hashlib.sha1((code or label).encode("utf-8")).hexdigest(), 16)
-    # Вариация внутри тёмно-синей семьи: сдвиг тона по коду.
-    hue = (seed % 5) * 8  # 0..32
-    top = (12 + hue // 3, 20 + hue // 2, 32 + hue)
-    bottom = (18 + hue // 2, 44 + hue, 82 + hue)
-    accent = (110, 168, 220)
-
-    # Вертикальный градиент БЕЗ попиксельного цикла: строим колонку 1×h и
-    # растягиваем ресайзом (C-быстро), иначе сид тормозил бы каждый тест.
-    strip = Image.new("RGB", (1, h))
-    sp = strip.load()
-    for y in range(h):
-        t = y / (h - 1)
-        sp[0, y] = tuple(int(top[i] * (1 - t) + bottom[i] * t) for i in range(3))
-    base = strip.resize((w, h)).convert("RGBA")
-
-    # Свечение акцента: рисуем и блюрим на уменьшенном холсте, затем растягиваем.
-    gw, gh = w // 4, h // 4
-    glow = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
-    gdraw = ImageDraw.Draw(glow)
-    gcx = int(gw * (0.28 + 0.44 * ((seed >> 3) % 3) / 2))
-    gcy = int(gh * 0.32)
-    gdraw.ellipse([gcx - 80, gcy - 80, gcx + 80, gcy + 80], fill=(*accent, 95))
-    glow = glow.filter(ImageFilter.GaussianBlur(26)).resize((w, h))
-    base = Image.alpha_composite(base, glow)
-
-    draw = ImageDraw.Draw(base, "RGBA")
-    cx, cy = gcx * 4, gcy * 4
-
-    # Геометрическая текстура (вектор — дёшево): дуги / диагонали / кольца.
-    motif = (seed >> 5) % 3
-    if motif == 0:
-        for r in range(100, 760, 78):
-            draw.arc([w - r, h - r, w + r, h + r], 180, 270, fill=(*accent, 26), width=2)
-    elif motif == 1:
-        for i in range(-2, 11):
-            x0 = int(i * 110)
-            draw.line([(x0, h), (x0 + 220, 0)], fill=(255, 255, 255, 12), width=2)
-    else:
-        for r in range(70, 600, 100):
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(*accent, 22), width=2)
-
-    # Крупная монограмма (1–2 буквы метки). Без эмодзи.
-    initials = "".join(part[0] for part in label.split()[:2]).upper() or "·"
-    try:
-        from PIL import ImageFont
-
-        font = ImageFont.truetype("DejaVuSerif.ttf", 270)
-    except Exception:  # noqa: BLE001 — нет шрифта → дефолтный
-        font = None
-    if font is not None:
-        bbox = draw.textbbox((0, 0), initials, font=font)
-        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        draw.text(((w - tw) / 2 - bbox[0], (h - th) / 2 - bbox[1] + 24), initials,
-                  fill=(233, 239, 247, 42), font=font)
-
-    draw.rectangle([0, 0, w - 1, h - 1], outline=(255, 255, 255, 18), width=2)
-
-    buffer = io.BytesIO()
-    base.convert("RGB").save(buffer, format="PNG")
-    return buffer.getvalue()
