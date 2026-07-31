@@ -29,6 +29,11 @@ export interface GuestHotel {
   languages?: GuestLanguage[];
   /** Hotel brand tokens, applied through `setBrandTokens`. */
   theme?: PartialBrandTokens;
+  /**
+   * Обложка отеля для парадной главной (R5) — из «Бренд и витрина» (R4).
+   * Готовый url: витрина не резолвит ассеты и не собирает адреса строкой.
+   */
+  cover_image?: string | null;
 }
 
 export interface GuestSession {

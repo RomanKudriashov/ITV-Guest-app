@@ -126,6 +126,16 @@ def _validate_background(background: dict) -> None:
                 code="invalid_color",
             )
 
+    # kind="image" — обложка отеля: парадная главной у гостя (R5). Ссылка на
+    # загруженный ассет, а не произвольный URL: чужой домен в фоне витрины —
+    # это и внешняя зависимость, и дыра в CSP.
+    if background.get("kind") == "image" and not background.get("image_id"):
+        raise ValidationError(
+            "Для фона-изображения нужна загруженная картинка",
+            field="brand.background.image_id",
+            code="background_image_required",
+        )
+
     if background.get("abstraction") and background["abstraction"] not in ABSTRACTION_CODES:
         raise ValidationError(
             f"Неизвестная абстракция: {background['abstraction']}",

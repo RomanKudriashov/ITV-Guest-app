@@ -209,7 +209,13 @@ def build_showcase(
                     order += 1
 
     # Инфо-плитка — если у отеля есть активные инфо-категории.
-    if Category.objects.filter(type=OfferingType.INFO, is_active=True).exists():
+    info_category = (
+        Category.objects.filter(type=OfferingType.INFO, is_active=True)
+        .select_related("image")
+        .order_by("sort_order", "code")
+        .first()
+    )
+    if info_category is not None:
         info = {
             "key": "info",
             "type": "info",
@@ -218,7 +224,9 @@ def build_showcase(
             "kind": None,
             "venue_count": None,
             "status": None,
-            "image": None,
+            # Обложка берётся у инфо-раздела: плитка без фото среди
+            # фотографических соседей читается как незагрузившаяся.
+            "image": image_url(info_category.image, variant="card") or None,
             "cover_previews": [],
             "route": "/info",
             "enabled": True,

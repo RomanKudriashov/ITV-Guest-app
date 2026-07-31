@@ -4,7 +4,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +12,7 @@ import { SkeletonCard } from '@/kit';
 import { errorMessage } from '../errors';
 import { ActiveOrderStrip } from '../components/ActiveOrderStrip';
 import { BentoGrid } from '../components/Bento';
+import { HomeHero } from '../components/HomeHero';
 import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 
@@ -39,26 +39,19 @@ export function HomePage() {
 
   return (
     <Box data-testid="guest-home">
-      <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 }, pb: { xs: 5, md: 8 } }}>
-        {/* Greeting + live orders sit above the bento, as one canvas. */}
+      {/*
+        Парадная во всю ширину — вне контейнера: кадр отеля обрезанный полями
+        перестаёт быть парадной.
+      */}
+      <HomeHero
+        hotelName={hotelName}
+        greeting={t('guest.home.greeting')}
+        room={room}
+        cover={hotel?.cover_image ?? null}
+      />
+
+      <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 }, pb: { xs: 5, md: 8 } }}>
         <Stack spacing={{ xs: 2, md: 2.5 }} sx={{ mb: { xs: 3, md: 4 } }}>
-          <Stack spacing={0.5}>
-            <Typography
-              component="h1"
-              sx={(th) => ({
-                fontFamily: th.typography.h1.fontFamily,
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                fontSize: { xs: 26, md: 32 },
-                lineHeight: 1.1,
-              })}
-            >
-              {t('guest.home.greeting')}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {room ? t('guest.home.roomLine', { room, hotel: hotelName }) : t('guest.home.noRoomLine')}
-            </Typography>
-          </Stack>
           <ActiveOrderStrip />
         </Stack>
 

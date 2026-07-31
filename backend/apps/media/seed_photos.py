@@ -81,6 +81,9 @@ PHOTOS: dict[str, tuple[str, str, str]] = {
     "terrace-mains": ("1467003909585-2f8a72700288", "Jay Wennington", "Основные блюда"),
     "sakura-rolls": ("1579871494447-9811cf80d66c", "Riccardo Bergamini", "Роллы"),
 
+    # --- Обложка отеля (парадная главной) ---
+    "hotel-cover": ("1566073771259-6a8506099945", "Marten Bjork", "Отель «Кристалл»"),
+
     # --- Обложки заведений ---
     "venue-kitchen": ("1414235077428-338989a2e8c0", "Jason Leung", "Ресторан «Панорама»"),
     "venue-bar": ("1470337458703-46ad1756a187", "Adam Jaime", "Лобби-бар"),

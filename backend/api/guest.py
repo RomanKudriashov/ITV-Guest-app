@@ -53,6 +53,22 @@ guest_auth = GuestAuth()
 # --- Бренд отеля -----------------------------------------------------------
 
 
+def _brand_cover_url(tokens: dict) -> str | None:
+    """
+    Обложка отеля из «Бренд и витрина» (R4): фон вида `image`. Другие виды
+    фона (градиент, абстракция) обложкой не являются — витрина покажет их
+    собственным фоном, а парадная возьмёт заглушку-градиент прототипа.
+    """
+    from apps.media.models import MediaAsset
+    from apps.media.services import image_url
+
+    background = ((tokens or {}).get("brand") or {}).get("background") or {}
+    if background.get("kind") != "image" or not background.get("image_id"):
+        return None
+    asset = MediaAsset.objects.filter(pk=background["image_id"]).first()
+    return image_url(asset, variant="card") or None
+
+
 def serialize_hotel(hotel: Hotel) -> dict:
     """
     Отдаём вместе с сессией и вместе с ошибкой «номер не найден»: на экране
@@ -64,6 +80,7 @@ def serialize_hotel(hotel: Hotel) -> dict:
     # Тема гарантированно есть: сервис заведёт её из пресета для отеля без
     # темы. Так витрина никогда не падает на платформенные цвета.
     theme = get_or_create_brand(hotel)
+    tokens = (theme.tokens if theme else {}) or {}
     languages = [
         {"code": language.code, "title": language.title or language.code.upper()}
         for language in hotel.hotellanguages.filter(is_active=True).order_by("sort_order")
@@ -77,7 +94,11 @@ def serialize_hotel(hotel: Hotel) -> dict:
         "timezone": hotel.timezone,
         "default_language": hotel.default_language,
         "languages": languages,
-        "theme": (theme.tokens if theme else {}),
+        "theme": tokens,
+        # Обложка отеля для парадной главной (R5). Резолвим ассет здесь:
+        # витрина не должна знать, как из id картинки получается url, и уж
+        # тем более собирать его строкой.
+        "cover_image": _brand_cover_url(tokens),
     }
 
 

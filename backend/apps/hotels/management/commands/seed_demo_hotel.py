@@ -221,6 +221,7 @@ class Command(BaseCommand):
             self._seed_venue_covers()
             self._ensure_item_photos()
             self._ensure_category_photos()
+            self._seed_hotel_cover(hotel)
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
             if with_badges:
@@ -1262,6 +1263,29 @@ class Command(BaseCommand):
         asset = self._image_for(item.code, label)
         if asset is not None:
             ItemImage.objects.get_or_create(item=item, asset=asset, defaults={"sort_order": 0})
+
+    def _seed_hotel_cover(self, hotel):
+        """
+        Обложка отеля — парадная главной у гостя (R5). Живёт в токенах бренда
+        («Бренд и витрина», R4) как фон вида `image`.
+        """
+        from apps.hotels.brand_services import get_or_create_brand
+
+        theme = get_or_create_brand(hotel)
+        tokens = dict(theme.tokens or {})
+        brand = dict(tokens.get("brand") or {})
+        background = dict(brand.get("background") or {})
+        if background.get("kind") == "image" and background.get("image_id"):
+            return
+
+        asset = self._image_for("hotel-cover", hotel.name)
+        if asset is None:
+            return
+        background.update({"kind": "image", "image_id": str(asset.pk), "dim": 0.15})
+        brand["background"] = background
+        tokens["brand"] = brand
+        theme.tokens = tokens
+        theme.save(update_fields=["tokens", "updated_at"])
 
     def _ensure_category_photos(self):
         """
