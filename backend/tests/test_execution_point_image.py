@@ -57,9 +57,9 @@ def test_catalog_hero_image_comes_from_point_photo(client, cms, crystal, guest_t
             HTTP_AUTHORIZATION=f"Bearer {guest_token}",
         ).json()
 
-    # Начальное состояние задаём сами: с R4 сид даёт обложку КАЖДОМУ заведению,
-    # и «фото ещё нет» перестало быть свойством демо-отеля.
-    cms.patch(f"/api/cms/services/{_kitchen(cms)['id']}", {"image_id": None})
+    # С R4 обложка есть у каждого заведения, но в тестовой среде Celery не
+    # режет варианты — готового url ни у одной нет, и hero пуст. Это и
+    # проверяем: заведение с НЕобработанным снимком витрину не занимает.
     assert catalog()["hero_image"] is None
 
     asset_id = _upload_ready(cms, crystal)

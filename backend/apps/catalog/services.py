@@ -160,10 +160,16 @@ def _catalog_hero_image(point_code: str | None = None) -> str | None:
     services = Service.objects.filter(is_active=True, image__isnull=False).select_related("image")
     if point_code:
         services = services.filter(code=point_code)
-    service = services.order_by("code").first()
-    if service is None or service.image is None:
-        return None
-    return service.image.url("card") or None
+
+    # Первый сервис с ГОТОВЫМ фото, а не просто с привязанным. Пока
+    # медиапайплайн режет варианты, url("card") пуст — и заведение, чей снимок
+    # ещё обрабатывается, не должно гасить hero всей витрине. Раньше фото было
+    # только у одного заведения, и разница не проявлялась.
+    for service in services.order_by("code"):
+        url = service.image.url("card") if service.image else ""
+        if url:
+            return url
+    return None
 
 
 def _current_hotel_id():
