@@ -45,6 +45,24 @@ class Hotel(BaseModel):
     is_active = models.BooleanField(default=True)
     settings = models.JSONField(default=dict, blank=True)
 
+    # --- Происхождение отеля -------------------------------------------------
+    # Откуда он взялся: завела платформа, создал автотест или это витринное
+    # демо. Признак нужен ровно затем, чтобы тестовые отели было ЧЕМ отличить
+    # от настоящих — до него единственным способом было угадывание по имени
+    # («E2E …») и поддомену («e2e…»), а угадывание нельзя ни доверить чистке,
+    # ни объяснить тому, чей отель по ошибке назвали тестовым.
+    #
+    # Ставится в момент создания и потом не меняется: происхождение — факт
+    # биографии, а не текущее состояние.
+    class Origin(models.TextChoices):
+        LIVE = "live", "Боевой"
+        DEMO = "demo", "Демонстрационный"
+        TEST = "test", "Создан автотестом"
+
+    origin = models.CharField(
+        max_length=8, choices=Origin.choices, default=Origin.LIVE, db_index=True
+    )
+
     # Отзывы: собирать ли оценку после завершения и порог «низкой» оценки,
     # при которой уведомляется менеджер (service recovery).
     review_enabled = models.BooleanField(default=True)
@@ -68,7 +86,13 @@ class Hotel(BaseModel):
 
     # Тариф отеля — шов биллинга: проставляется руками (деньги вне системы).
     # Сам по себе лишь пометка уровня; какие модули включены — в HotelModule.
+    # Сетка тарифов объявлена кодом — apps/hotels/tariffs.py.
     tariff = models.CharField(max_length=64, blank=True)
+    # Когда тариф начался и когда истекает триал. Даты, а не моменты: у тарифа
+    # нет часа начала, он живёт в календаре платформы, и «до конца дня» —
+    # ровно то поведение, которого ждут от последнего дня триала.
+    tariff_started_on = models.DateField(null=True, blank=True)
+    trial_ends_at = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = "hotels_hotel"
@@ -589,3 +613,65 @@ class HotelModule(TenantModel):
 
     def __str__(self) -> str:
         return f"{self.code}={'on' if self.is_enabled else 'off'}"
+
+
+class OnPremNode(TenantModel):
+    """
+    Он-прем узел отеля (Local Connector).
+
+    Нужен, как только отелю включили GRMS или PMS: этими системами управляют из
+    локальной сети объекта, и облако не может дотянуться до них напрямую. Узел —
+    коробка на сервере отеля, которая ходит наружу сама и отмечается здесь.
+
+    Платформа держит про узел ровно то, что нужно, чтобы понять «жив ли он и
+    можно ли ему верить»: когда откликался и не отозван ли ключ. Ни адресов
+    внутренней сети, ни учёток оборудования тут нет — они остаются на объекте.
+
+    Хранится ХЭШ ключа, а не ключ: утечка этой таблицы не должна давать доступ
+    к чужому оборудованию. Сам ключ показывается один раз при выдаче.
+    """
+
+    class Purpose(models.TextChoices):
+        GRMS = "grms", "Управление номером"
+        PMS = "pms", "PMS"
+        BOTH = "both", "GRMS + PMS"
+
+    name = models.CharField(max_length=128)
+    purpose = models.CharField(max_length=16, choices=Purpose.choices, default=Purpose.GRMS)
+    key_hash = models.CharField(max_length=64, blank=True)
+    key_issued_at = models.DateTimeField(null=True, blank=True)
+    is_revoked = models.BooleanField(default=False)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    version = models.CharField(max_length=32, blank=True)
+
+    class Meta:
+        db_table = "hotels_onprem_node"
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(fields=["hotel", "name"], name="uniq_node_per_hotel"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.purpose})"
+
+    # Порог «жив»: узел отмечается раз в минуту, три пропуска подряд — уже не
+    # сетевая икота, а повод показать это платформе.
+    OFFLINE_AFTER_SECONDS = 180
+
+    @property
+    def seconds_since_seen(self) -> int | None:
+        if not self.last_seen_at:
+            return None
+        from django.utils import timezone as dj_timezone
+
+        return int((dj_timezone.now() - self.last_seen_at).total_seconds())
+
+    @property
+    def is_online(self) -> bool:
+        seconds = self.seconds_since_seen
+        return seconds is not None and seconds <= self.OFFLINE_AFTER_SECONDS
+
+    @property
+    def is_registered(self) -> bool:
+        """Зарегистрирован — значит ключ выдан и не отозван."""
+        return bool(self.key_hash) and not self.is_revoked

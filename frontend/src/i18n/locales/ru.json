@@ -1504,5 +1504,172 @@
     "byService": "По сервисам",
     "staffAndItems": "{{staff}} сотр. · {{items}} позиций",
     "noEscalation": "Нет эскалации"
+  },
+  "admin": {
+    "brand": {
+      "name": "ITV Platform",
+      "tagline": "Root · admin"
+    },
+    "nav": {
+      "overview": "Сводка",
+      "fleet": "Отели",
+      "platformGroup": "Платформа"
+    },
+    "role": {
+      "owner": "Владелец платформы",
+      "support": "Поддержка",
+      "read_only": "Только чтение"
+    },
+    "actor": {
+      "platform": "платформа",
+      "staff": "сотрудник",
+      "guest": "гость",
+      "system": "система"
+    },
+    "security": {
+      "on": "2FA",
+      "off": "без 2FA"
+    },
+    "actions": {
+      "logout": "Выйти",
+      "cancel": "Отмена",
+      "done": "Готово"
+    },
+    "login": {
+      "title": "Корневая админка",
+      "email": "Email",
+      "password": "Пароль",
+      "code": "Код из приложения",
+      "codeHint": "Шесть цифр из приложения-аутентификатора",
+      "submit": "Войти",
+      "confirm": "Подтвердить",
+      "failed": "Не удалось войти"
+    },
+    "overview": {
+      "title": "Сводка по платформе",
+      "subtitle": "{{count}} отелей на платформе",
+      "loadFailed": "Не удалось загрузить сводку",
+      "growth": "Новые отели по месяцам",
+      "health": "Здоровье системы",
+      "kpi": {
+        "hotels": "Отелей",
+        "hotelsHint": "{{active}} активных · {{trial}} триал · {{disabled}} откл.",
+        "orders": "Заказов сегодня",
+        "ordersHint": "по всем отелям",
+        "gross": "Оборот за день",
+        "grossHint": "позиции, сбор, доставка, налог, чаевые",
+        "sessions": "Живых сессий",
+        "sessionsHint": "гостей на витрине сейчас"
+      }
+    },
+    "health": {
+      "media_ok": "Медиапайплайн — норма",
+      "media_failed": "Медиа: ошибок обработки — {{count}}",
+      "media_stuck": "Медиа: зависло в обработке — {{count}}",
+      "trial_expiring": "Триал «{{hotel}}» истекает через {{days}} дн.",
+      "trial_expired": "Триал «{{hotel}}» истёк",
+      "node_offline": "Узел «{{hotel}}» офлайн"
+    },
+    "fleet": {
+      "title": "Отели",
+      "subtitle": "Все отели платформы",
+      "export": "Выгрузить CSV",
+      "create": "+ Создать отель",
+      "searchPlaceholder": "Название или поддомен…",
+      "sortByName": "По названию",
+      "selected": "Выбрано: {{count}}",
+      "bulkEnable": "Включить",
+      "bulkDisable": "Выключить",
+      "bulkResult": "изменено {{changed}} из {{requested}}",
+      "loadFailed": "Не удалось загрузить список",
+      "empty": "Ничего не найдено",
+      "prev": "Назад",
+      "next": "Вперёд",
+      "pageOf": "Страница {{page}} из {{pages}}",
+      "trialDays": "триал · {{days}} дн.",
+      "nodeOffline": "узел офлайн",
+      "status": {
+        "all": "Все",
+        "active": "Активные",
+        "trial": "Триал",
+        "disabled": "Отключённые"
+      },
+      "col": {
+        "hotel": "Отель",
+        "tariff": "Тариф",
+        "rooms": "Номера",
+        "services": "Сервисы",
+        "orders": "Заказов (7дн)",
+        "status": "Статус"
+      }
+    },
+    "hotel": {
+      "crumb": "Карточка отеля",
+      "back": "К списку",
+      "loadFailed": "Не удалось загрузить отель",
+      "tab": {
+        "profile": "Профиль",
+        "usage": "Использование",
+        "modules": "Модули",
+        "activity": "Активность",
+        "tariff": "Тариф"
+      },
+      "field": {
+        "name": "Название",
+        "subdomain": "Поддомен",
+        "subdomainLocked": "не меняется",
+        "timezone": "Таймзона",
+        "currency": "Валюта",
+        "languages": "Языки"
+      },
+      "activeOn": "Активен",
+      "activeOff": "Отключён — витрина и CMS не открываются",
+      "adminTitle": "Администратор отеля",
+      "adminEmail": "Email администратора",
+      "adminHint": "Заведёт или сбросит доступ. Пароль показывается один раз.",
+      "adminReset": "Завести / сбросить",
+      "adminPassword": "Новый пароль",
+      "trialLeft": "Триал: осталось {{days}} дн.",
+      "trialEnds": "Триал до {{date}}",
+      "limit": {
+        "services": "Сервисы",
+        "rooms": "Номера",
+        "staff": "Персонал",
+        "none": "без лимита"
+      },
+      "limitOver": "превышение: {{used}} при лимите {{limit}}",
+      "limitHint": "Превышение не отключает отель — платформа решает, что делать.",
+      "modulesTitle": "Модули (тариф {{tariff}})",
+      "moduleOverride": "вне тарифа",
+      "modulesHint": "Включённый модуль появляется в CMS отеля, выключенный — скрыт.",
+      "activityEmpty": "Записей пока нет",
+      "viaSupport": "поддержка",
+      "tariffLabel": "Тариф",
+      "tariffApply": "Записать",
+      "tariffForce": "Всё равно записать",
+      "tariffHint": "Тариф проставляется вручную.",
+      "tariffNoMoney": "Это запись, а не платёж: движения денег здесь нет.",
+      "downgradeTitle": "Понижение ниже использования",
+      "downgradeLimit": "{{what}}: используется {{used}}, лимит {{limit}}",
+      "downgradeModules": "Тариф не даёт модули: {{modules}}"
+    },
+    "create": {
+      "title": "Новый отель",
+      "name": "Название",
+      "subdomain": "Поддомен",
+      "subdomainHint": "Ключ тенанта, потом не меняется",
+      "adminEmail": "Email первого админа",
+      "currency": "Валюта",
+      "languages": "Языки",
+      "languagesHint": "через запятую",
+      "timezone": "Таймзона",
+      "preset": "Пресет",
+      "submit": "Создать отель",
+      "failed": "Не удалось создать",
+      "doneTitle": "Отель создан",
+      "doneAdmin": "Администратор",
+      "donePassword": "Пароль (показывается один раз)",
+      "doneHint": "Дальше отель настраивает себя сам в CMS."
+    }
   }
 }

@@ -1500,5 +1500,172 @@
     "byService": "By service",
     "staffAndItems": "{{staff}} staff · {{items}} items",
     "noEscalation": "No escalation"
+  },
+  "admin": {
+    "brand": {
+      "name": "ITV Platform",
+      "tagline": "Root · admin"
+    },
+    "nav": {
+      "overview": "Overview",
+      "fleet": "Hotels",
+      "platformGroup": "Platform"
+    },
+    "role": {
+      "owner": "Platform owner",
+      "support": "Support",
+      "read_only": "Read only"
+    },
+    "actor": {
+      "platform": "platform",
+      "staff": "staff",
+      "guest": "guest",
+      "system": "system"
+    },
+    "security": {
+      "on": "2FA",
+      "off": "no 2FA"
+    },
+    "actions": {
+      "logout": "Sign out",
+      "cancel": "Cancel",
+      "done": "Done"
+    },
+    "login": {
+      "title": "Root admin",
+      "email": "Email",
+      "password": "Password",
+      "code": "Authenticator code",
+      "codeHint": "Six digits from your authenticator app",
+      "submit": "Sign in",
+      "confirm": "Confirm",
+      "failed": "Sign-in failed"
+    },
+    "overview": {
+      "title": "Platform overview",
+      "subtitle": "{{count}} hotels on the platform",
+      "loadFailed": "Could not load the overview",
+      "growth": "New hotels by month",
+      "health": "System health",
+      "kpi": {
+        "hotels": "Hotels",
+        "hotelsHint": "{{active}} active · {{trial}} trial · {{disabled}} off",
+        "orders": "Orders today",
+        "ordersHint": "across all hotels",
+        "gross": "Gross today",
+        "grossHint": "items, fee, delivery, tax, tips",
+        "sessions": "Live sessions",
+        "sessionsHint": "guests browsing now"
+      }
+    },
+    "health": {
+      "media_ok": "Media pipeline — healthy",
+      "media_failed": "Media: failed jobs — {{count}}",
+      "media_stuck": "Media: stuck in processing — {{count}}",
+      "trial_expiring": "Trial for “{{hotel}}” ends in {{days}} days",
+      "trial_expired": "Trial for “{{hotel}}” has ended",
+      "node_offline": "Node “{{hotel}}” is offline"
+    },
+    "fleet": {
+      "title": "Hotels",
+      "subtitle": "Every hotel on the platform",
+      "export": "Export CSV",
+      "create": "+ New hotel",
+      "searchPlaceholder": "Name or subdomain…",
+      "sortByName": "By name",
+      "selected": "Selected: {{count}}",
+      "bulkEnable": "Enable",
+      "bulkDisable": "Disable",
+      "bulkResult": "changed {{changed}} of {{requested}}",
+      "loadFailed": "Could not load the list",
+      "empty": "Nothing found",
+      "prev": "Back",
+      "next": "Next",
+      "pageOf": "Page {{page}} of {{pages}}",
+      "trialDays": "trial · {{days}}d",
+      "nodeOffline": "node offline",
+      "status": {
+        "all": "All",
+        "active": "Active",
+        "trial": "Trial",
+        "disabled": "Disabled"
+      },
+      "col": {
+        "hotel": "Hotel",
+        "tariff": "Plan",
+        "rooms": "Rooms",
+        "services": "Services",
+        "orders": "Orders (7d)",
+        "status": "Status"
+      }
+    },
+    "hotel": {
+      "crumb": "Hotel",
+      "back": "Back to list",
+      "loadFailed": "Could not load the hotel",
+      "tab": {
+        "profile": "Profile",
+        "usage": "Usage",
+        "modules": "Modules",
+        "activity": "Activity",
+        "tariff": "Plan"
+      },
+      "field": {
+        "name": "Name",
+        "subdomain": "Subdomain",
+        "subdomainLocked": "cannot change",
+        "timezone": "Timezone",
+        "currency": "Currency",
+        "languages": "Languages"
+      },
+      "activeOn": "Active",
+      "activeOff": "Disabled — storefront and CMS are closed",
+      "adminTitle": "Hotel administrator",
+      "adminEmail": "Administrator email",
+      "adminHint": "Creates or resets access. The password is shown once.",
+      "adminReset": "Create / reset",
+      "adminPassword": "New password",
+      "trialLeft": "Trial: {{days}} days left",
+      "trialEnds": "Trial until {{date}}",
+      "limit": {
+        "services": "Services",
+        "rooms": "Rooms",
+        "staff": "Staff",
+        "none": "unlimited"
+      },
+      "limitOver": "over the limit: {{used}} of {{limit}}",
+      "limitHint": "Going over does not switch the hotel off — the platform decides.",
+      "modulesTitle": "Modules (plan {{tariff}})",
+      "moduleOverride": "off-plan",
+      "modulesHint": "An enabled module appears in the hotel CMS; a disabled one is hidden.",
+      "activityEmpty": "No entries yet",
+      "viaSupport": "support",
+      "tariffLabel": "Plan",
+      "tariffApply": "Save",
+      "tariffForce": "Save anyway",
+      "tariffHint": "The plan is set by hand.",
+      "tariffNoMoney": "This is a record, not a payment: no money moves here.",
+      "downgradeTitle": "Downgrade below current usage",
+      "downgradeLimit": "{{what}}: {{used}} in use, limit {{limit}}",
+      "downgradeModules": "The plan does not include: {{modules}}"
+    },
+    "create": {
+      "title": "New hotel",
+      "name": "Name",
+      "subdomain": "Subdomain",
+      "subdomainHint": "Tenant key, cannot be changed later",
+      "adminEmail": "First admin email",
+      "currency": "Currency",
+      "languages": "Languages",
+      "languagesHint": "comma separated",
+      "timezone": "Timezone",
+      "preset": "Preset",
+      "submit": "Create hotel",
+      "failed": "Could not create",
+      "doneTitle": "Hotel created",
+      "doneAdmin": "Administrator",
+      "donePassword": "Password (shown once)",
+      "doneHint": "The hotel sets itself up from here in its CMS."
+    }
   }
 }

@@ -1498,5 +1498,172 @@
     "byService": "按服务",
     "staffAndItems": "{{staff}} 名员工 · {{items}} 个条目",
     "noEscalation": "无升级规则"
+  },
+  "admin": {
+    "brand": {
+      "name": "ITV Platform",
+      "tagline": "Root · admin"
+    },
+    "nav": {
+      "overview": "概览",
+      "fleet": "酒店",
+      "platformGroup": "平台"
+    },
+    "role": {
+      "owner": "平台所有者",
+      "support": "支持",
+      "read_only": "只读"
+    },
+    "actor": {
+      "platform": "平台",
+      "staff": "员工",
+      "guest": "客人",
+      "system": "系统"
+    },
+    "security": {
+      "on": "2FA",
+      "off": "未启用 2FA"
+    },
+    "actions": {
+      "logout": "退出",
+      "cancel": "取消",
+      "done": "完成"
+    },
+    "login": {
+      "title": "根管理台",
+      "email": "邮箱",
+      "password": "密码",
+      "code": "验证码",
+      "codeHint": "验证器应用中的六位数字",
+      "submit": "登录",
+      "confirm": "确认",
+      "failed": "登录失败"
+    },
+    "overview": {
+      "title": "平台概览",
+      "subtitle": "平台上有 {{count}} 家酒店",
+      "loadFailed": "无法加载概览",
+      "growth": "每月新增酒店",
+      "health": "系统健康",
+      "kpi": {
+        "hotels": "酒店",
+        "hotelsHint": "{{active}} 活跃 · {{trial}} 试用 · {{disabled}} 停用",
+        "orders": "今日订单",
+        "ordersHint": "全部酒店",
+        "gross": "今日流水",
+        "grossHint": "商品、服务费、配送、税、小费",
+        "sessions": "在线会话",
+        "sessionsHint": "当前浏览的客人"
+      }
+    },
+    "health": {
+      "media_ok": "媒体处理正常",
+      "media_failed": "媒体：失败任务 {{count}} 个",
+      "media_stuck": "媒体：处理卡住 {{count}} 个",
+      "trial_expiring": "「{{hotel}}」试用将在 {{days}} 天后到期",
+      "trial_expired": "「{{hotel}}」试用已到期",
+      "node_offline": "「{{hotel}}」节点离线"
+    },
+    "fleet": {
+      "title": "酒店",
+      "subtitle": "平台上的所有酒店",
+      "export": "导出 CSV",
+      "create": "+ 新建酒店",
+      "searchPlaceholder": "名称或子域名…",
+      "sortByName": "按名称",
+      "selected": "已选 {{count}}",
+      "bulkEnable": "启用",
+      "bulkDisable": "停用",
+      "bulkResult": "已变更 {{changed}} / {{requested}}",
+      "loadFailed": "无法加载列表",
+      "empty": "未找到",
+      "prev": "上一页",
+      "next": "下一页",
+      "pageOf": "第 {{page}} / {{pages}} 页",
+      "trialDays": "试用 · {{days}} 天",
+      "nodeOffline": "节点离线",
+      "status": {
+        "all": "全部",
+        "active": "活跃",
+        "trial": "试用",
+        "disabled": "停用"
+      },
+      "col": {
+        "hotel": "酒店",
+        "tariff": "套餐",
+        "rooms": "客房",
+        "services": "服务",
+        "orders": "订单（7天）",
+        "status": "状态"
+      }
+    },
+    "hotel": {
+      "crumb": "酒店详情",
+      "back": "返回列表",
+      "loadFailed": "无法加载酒店",
+      "tab": {
+        "profile": "资料",
+        "usage": "用量",
+        "modules": "模块",
+        "activity": "动态",
+        "tariff": "套餐"
+      },
+      "field": {
+        "name": "名称",
+        "subdomain": "子域名",
+        "subdomainLocked": "不可更改",
+        "timezone": "时区",
+        "currency": "货币",
+        "languages": "语言"
+      },
+      "activeOn": "启用",
+      "activeOff": "已停用 — 门店页与后台均不可访问",
+      "adminTitle": "酒店管理员",
+      "adminEmail": "管理员邮箱",
+      "adminHint": "创建或重置访问权限。密码只显示一次。",
+      "adminReset": "创建 / 重置",
+      "adminPassword": "新密码",
+      "trialLeft": "试用：剩余 {{days}} 天",
+      "trialEnds": "试用至 {{date}}",
+      "limit": {
+        "services": "服务",
+        "rooms": "客房",
+        "staff": "员工",
+        "none": "不限"
+      },
+      "limitOver": "超出：已用 {{used}}，上限 {{limit}}",
+      "limitHint": "超出不会停用酒店 — 由平台决定。",
+      "modulesTitle": "模块（套餐 {{tariff}}）",
+      "moduleOverride": "套餐外",
+      "modulesHint": "启用的模块会出现在酒店后台，停用的则隐藏。",
+      "activityEmpty": "暂无记录",
+      "viaSupport": "支持",
+      "tariffLabel": "套餐",
+      "tariffApply": "保存",
+      "tariffForce": "仍然保存",
+      "tariffHint": "套餐由人工设置。",
+      "tariffNoMoney": "这是记录而非支付：此处没有资金流动。",
+      "downgradeTitle": "降级低于当前用量",
+      "downgradeLimit": "{{what}}：已用 {{used}}，上限 {{limit}}",
+      "downgradeModules": "套餐不包含：{{modules}}"
+    },
+    "create": {
+      "title": "新建酒店",
+      "name": "名称",
+      "subdomain": "子域名",
+      "subdomainHint": "租户键，之后不可更改",
+      "adminEmail": "首位管理员邮箱",
+      "currency": "货币",
+      "languages": "语言",
+      "languagesHint": "用逗号分隔",
+      "timezone": "时区",
+      "preset": "预设",
+      "submit": "创建酒店",
+      "failed": "创建失败",
+      "doneTitle": "酒店已创建",
+      "doneAdmin": "管理员",
+      "donePassword": "密码（仅显示一次）",
+      "doneHint": "酒店接下来在自己的后台完成配置。"
+    }
   }
 }

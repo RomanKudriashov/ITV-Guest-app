@@ -93,6 +93,7 @@ def provision_hotel(
     preset: str = DEFAULT_PRESET,
     admin_password: str | None = None,
     exist_ok: bool = False,
+    origin: str = Hotel.Origin.LIVE,
 ) -> ProvisionResult:
     """
     Заводит минимальный каркас отеля одной транзакцией (всё-или-ничего).
@@ -131,6 +132,11 @@ def provision_hotel(
         timezone=timezone,
         currency=currency,
         default_language=default_language,
+        # Происхождение проставляется ЗДЕСЬ, в единственной точке создания
+        # отеля: любой другой способ завести отель мимо провижининга сделал бы
+        # признак необязательным, а необязательному признаку чистка доверять
+        # не может.
+        origin=origin,
     )
     created = existing is None
     admin_password_out: str | None = None

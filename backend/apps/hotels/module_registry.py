@@ -51,20 +51,34 @@ def list_modules(hotel) -> list[dict]:
 
 
 def set_modules(hotel, entries: list[dict]) -> list[dict]:
-    """Upsert строк реестра по коду. Неизвестные коды и источники игнорируем."""
+    """
+    Upsert строк реестра по коду. Неизвестные коды игнорируем.
+
+    ИСТОЧНИК вычисляется здесь, а не приходит от клиента. Признак «выдано вне
+    тарифа» — это ответ на вопрос «даёт ли текущий тариф этот модуль», и знает
+    его только сервер: тарифная сетка объявлена в apps/hotels/tariffs.py.
+    Позволив клиенту прислать source, мы получили бы второй источник правды —
+    ровно то расхождение UI с моделью, от которого этот реестр и защищает.
+    """
+    from apps.hotels import tariffs
+
+    granted = tariffs.modules_for(hotel.tariff)
     valid_codes = set(ALL_CODES)
     with tenant_context(hotel):
         for entry in entries:
             code = entry.get("code")
             if code not in valid_codes:
                 continue
-            source = entry.get("source")
-            if source not in _VALID_SOURCES:
-                source = HotelModule.Source.TARIFF.value
+            enabled = bool(entry.get("is_enabled", False))
+            source = (
+                HotelModule.Source.OVERRIDE.value
+                if enabled and code not in granted
+                else HotelModule.Source.TARIFF.value
+            )
             HotelModule.objects.update_or_create(
                 code=code,
                 defaults={
-                    "is_enabled": bool(entry.get("is_enabled", False)),
+                    "is_enabled": enabled,
                     "source": source,
                     "config": entry.get("config") or {},
                 },

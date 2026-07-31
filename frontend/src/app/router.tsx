@@ -18,7 +18,7 @@ import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
 import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
-import { PlatformConsole } from '@/platform/PlatformConsole';
+import { AdminApp } from '@/admin/AdminApp';
 import App from '@/App';
 
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
@@ -54,7 +54,7 @@ export const router = createBrowserRouter([
   // отличает его от CMS одного отеля. Старый адрес уводим редиректом — он
   // остался в закладках и в переписке, а 404 на мастер-ключе выглядит как
   // «платформа упала».
-  { path: '/admin', element: <PlatformConsole /> },
+  { path: '/admin', element: <AdminApp /> },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
   {
     path: '/cms',

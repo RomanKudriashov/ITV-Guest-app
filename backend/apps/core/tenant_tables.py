@@ -74,6 +74,7 @@ TENANT_TABLES = [
     "analytics_session_daily",
     "analytics_review_daily",
     "analytics_export",
+    "hotels_onprem_node",
 ]
 
 # Таблицы, где hotel_id необязателен (платформенные действия). Читать такие

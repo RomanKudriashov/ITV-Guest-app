@@ -1508,5 +1508,172 @@
     "byService": "حسب الخدمة",
     "staffAndItems": "{{staff}} موظف · {{items}} صنف",
     "noEscalation": "لا تصعيد"
+  },
+  "admin": {
+    "brand": {
+      "name": "ITV Platform",
+      "tagline": "Root · admin"
+    },
+    "nav": {
+      "overview": "الملخص",
+      "fleet": "الفنادق",
+      "platformGroup": "المنصة"
+    },
+    "role": {
+      "owner": "مالك المنصة",
+      "support": "الدعم",
+      "read_only": "للقراءة فقط"
+    },
+    "actor": {
+      "platform": "المنصة",
+      "staff": "موظف",
+      "guest": "ضيف",
+      "system": "النظام"
+    },
+    "security": {
+      "on": "2FA",
+      "off": "بدون 2FA"
+    },
+    "actions": {
+      "logout": "تسجيل الخروج",
+      "cancel": "إلغاء",
+      "done": "تم"
+    },
+    "login": {
+      "title": "لوحة الجذر",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "code": "رمز التطبيق",
+      "codeHint": "ستة أرقام من تطبيق المصادقة",
+      "submit": "دخول",
+      "confirm": "تأكيد",
+      "failed": "تعذّر تسجيل الدخول"
+    },
+    "overview": {
+      "title": "ملخص المنصة",
+      "subtitle": "{{count}} فندقًا على المنصة",
+      "loadFailed": "تعذّر تحميل الملخص",
+      "growth": "الفنادق الجديدة شهريًا",
+      "health": "سلامة النظام",
+      "kpi": {
+        "hotels": "الفنادق",
+        "hotelsHint": "{{active}} نشط · {{trial}} تجريبي · {{disabled}} معطّل",
+        "orders": "طلبات اليوم",
+        "ordersHint": "في كل الفنادق",
+        "gross": "إجمالي اليوم",
+        "grossHint": "الأصناف والرسوم والتوصيل والضريبة والإكراميات",
+        "sessions": "جلسات نشطة",
+        "sessionsHint": "ضيوف يتصفحون الآن"
+      }
+    },
+    "health": {
+      "media_ok": "معالجة الوسائط — سليمة",
+      "media_failed": "الوسائط: مهام فاشلة — {{count}}",
+      "media_stuck": "الوسائط: عالقة في المعالجة — {{count}}",
+      "trial_expiring": "تجربة «{{hotel}}» تنتهي خلال {{days}} يومًا",
+      "trial_expired": "انتهت تجربة «{{hotel}}»",
+      "node_offline": "العقدة «{{hotel}}» غير متصلة"
+    },
+    "fleet": {
+      "title": "الفنادق",
+      "subtitle": "كل فنادق المنصة",
+      "export": "تصدير CSV",
+      "create": "+ فندق جديد",
+      "searchPlaceholder": "الاسم أو النطاق الفرعي…",
+      "sortByName": "حسب الاسم",
+      "selected": "المحدد: {{count}}",
+      "bulkEnable": "تفعيل",
+      "bulkDisable": "تعطيل",
+      "bulkResult": "تغيّر {{changed}} من {{requested}}",
+      "loadFailed": "تعذّر تحميل القائمة",
+      "empty": "لا نتائج",
+      "prev": "السابق",
+      "next": "التالي",
+      "pageOf": "صفحة {{page}} من {{pages}}",
+      "trialDays": "تجريبي · {{days}} يوم",
+      "nodeOffline": "العقدة غير متصلة",
+      "status": {
+        "all": "الكل",
+        "active": "نشطة",
+        "trial": "تجريبية",
+        "disabled": "معطّلة"
+      },
+      "col": {
+        "hotel": "الفندق",
+        "tariff": "الباقة",
+        "rooms": "الغرف",
+        "services": "الخدمات",
+        "orders": "الطلبات (7 أيام)",
+        "status": "الحالة"
+      }
+    },
+    "hotel": {
+      "crumb": "بطاقة الفندق",
+      "back": "إلى القائمة",
+      "loadFailed": "تعذّر تحميل الفندق",
+      "tab": {
+        "profile": "الملف",
+        "usage": "الاستخدام",
+        "modules": "الوحدات",
+        "activity": "النشاط",
+        "tariff": "الباقة"
+      },
+      "field": {
+        "name": "الاسم",
+        "subdomain": "النطاق الفرعي",
+        "subdomainLocked": "غير قابل للتغيير",
+        "timezone": "المنطقة الزمنية",
+        "currency": "العملة",
+        "languages": "اللغات"
+      },
+      "activeOn": "نشط",
+      "activeOff": "معطّل — الواجهة ولوحة الإدارة مغلقتان",
+      "adminTitle": "مدير الفندق",
+      "adminEmail": "بريد المدير",
+      "adminHint": "ينشئ الوصول أو يعيد ضبطه. تظهر كلمة المرور مرة واحدة.",
+      "adminReset": "إنشاء / إعادة ضبط",
+      "adminPassword": "كلمة مرور جديدة",
+      "trialLeft": "التجربة: بقي {{days}} يومًا",
+      "trialEnds": "التجربة حتى {{date}}",
+      "limit": {
+        "services": "الخدمات",
+        "rooms": "الغرف",
+        "staff": "الموظفون",
+        "none": "بلا حد"
+      },
+      "limitOver": "تجاوز: {{used}} والحد {{limit}}",
+      "limitHint": "التجاوز لا يوقف الفندق — المنصة تقرر.",
+      "modulesTitle": "الوحدات (باقة {{tariff}})",
+      "moduleOverride": "خارج الباقة",
+      "modulesHint": "الوحدة المفعّلة تظهر في لوحة الفندق، والمعطّلة مخفية.",
+      "activityEmpty": "لا سجلات بعد",
+      "viaSupport": "الدعم",
+      "tariffLabel": "الباقة",
+      "tariffApply": "حفظ",
+      "tariffForce": "احفظ على أي حال",
+      "tariffHint": "تُضبط الباقة يدويًا.",
+      "tariffNoMoney": "هذا سجل وليس دفعة: لا حركة أموال هنا.",
+      "downgradeTitle": "خفض أدنى من الاستخدام الحالي",
+      "downgradeLimit": "{{what}}: مستخدم {{used}} والحد {{limit}}",
+      "downgradeModules": "الباقة لا تشمل: {{modules}}"
+    },
+    "create": {
+      "title": "فندق جديد",
+      "name": "الاسم",
+      "subdomain": "النطاق الفرعي",
+      "subdomainHint": "مفتاح المستأجر، لا يتغير لاحقًا",
+      "adminEmail": "بريد أول مدير",
+      "currency": "العملة",
+      "languages": "اللغات",
+      "languagesHint": "مفصولة بفواصل",
+      "timezone": "المنطقة الزمنية",
+      "preset": "النمط",
+      "submit": "إنشاء الفندق",
+      "failed": "تعذّر الإنشاء",
+      "doneTitle": "تم إنشاء الفندق",
+      "doneAdmin": "المدير",
+      "donePassword": "كلمة المرور (تظهر مرة واحدة)",
+      "doneHint": "يكمل الفندق إعداد نفسه من لوحته."
+    }
   }
 }

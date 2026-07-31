@@ -8,15 +8,17 @@ apps/hotels/provisioning.
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any
 
 from django.http import HttpRequest
+from django.utils import timezone
 from ninja import Router, Schema
 
 from apps.catalog.models import Item
 from apps.accounts.models import User
 from apps.core.context import tenant_context
-from apps.core.errors import NotFoundError, ValidationError
+from apps.core.errors import NotFoundError, PermissionDenied, ValidationError
 from apps.core.models import AuditLog
 from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage, Room
 from apps.hotels.module_registry import list_modules, set_modules
@@ -37,6 +39,9 @@ class HotelCreateIn(Schema):
     languages: list[str] = ["ru", "en"]
     preset: str = "midnight_navy"
     admin_password: str | None = None
+    # Происхождение. Автотесты обязаны присылать "test" — только так их отели
+    # отличимы от настоящих не угадыванием по имени, а признаком.
+    origin: str = "live"
 
 
 class HotelPatchIn(Schema):
@@ -63,6 +68,19 @@ class ModuleEntryIn(Schema):
 class ModulesIn(Schema):
     modules: list[ModuleEntryIn] = []
     tariff: str | None = None
+
+
+class TariffIn(Schema):
+    tariff: str
+    started_on: date | None = None
+    trial_ends_at: date | None = None
+    # Осознанное подтверждение понижения ниже использования.
+    acknowledge_downgrade: bool = False
+
+
+class BulkActiveIn(Schema):
+    hotel_ids: list[str]
+    is_active: bool
 
 
 class PlatformLoginIn(Schema):
@@ -287,9 +305,64 @@ def _audit(request: HttpRequest, hotel: Hotel, action: str, payload: dict | None
 # --- Ручки -----------------------------------------------------------------
 
 
+# --- Сводка ----------------------------------------------------------------
+
+
+@router.get("/overview", summary="Сводка по платформе")
+def overview(request: HttpRequest):
+    from apps.hotels.platform_overview import build_overview
+
+    return build_overview()
+
+
 @router.get("/hotels", summary="Список отелей")
 def list_hotels(request: HttpRequest):
     return [_brief(h) for h in Hotel.objects.order_by("-created_at")]
+
+
+# --- Флот ------------------------------------------------------------------
+
+
+@router.get("/fleet", summary="Реестр отелей: поиск, фильтры, сортировка, страницы")
+def fleet(request: HttpRequest):
+    from apps.hotels.platform_fleet import fleet as build_fleet
+
+    return build_fleet(request.GET.dict())
+
+
+@router.get("/fleet/export", summary="Выгрузка флота в CSV")
+def fleet_export(request: HttpRequest):
+    from django.http import HttpResponse
+
+    from apps.hotels.platform_fleet import export_csv
+
+    body = export_csv(request.GET.dict())
+    _audit_platform(request, "platform.fleet.exported", payload={"bytes": len(body)})
+    response = HttpResponse(body, content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="fleet.csv"'
+    return response
+
+
+@router.post("/fleet/bulk", summary="Массово включить/выключить отели")
+def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.platform_fleet import bulk_set_active
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не меняет отели")
+
+    changed = bulk_set_active(payload.hotel_ids, payload.is_active)
+    action = "activated" if payload.is_active else "deactivated"
+    for hotel in changed:
+        _audit(request, hotel, f"platform.hotel.{action}", {"bulk": True})
+    _audit_platform(
+        request,
+        "platform.fleet.bulk",
+        payload={"action": action, "requested": len(payload.hotel_ids), "changed": len(changed)},
+    )
+    # Возвращаем СМЕНИВШИЕСЯ, а не запрошенные: «выключено 3 из 5» — честный
+    # ответ, «выключено 5» при двух уже выключенных — нет.
+    return {"changed": len(changed), "requested": len(payload.hotel_ids)}
 
 
 @router.post("/hotels", response={201: dict}, summary="Создать отель")
@@ -304,6 +377,7 @@ def create_hotel(request: HttpRequest, payload: HotelCreateIn):
         preset=payload.preset,
         admin_password=payload.admin_password,
         exist_ok=False,
+        origin=payload.origin,
     )
     _audit(request, result.hotel, "platform.hotel.created", {"subdomain": result.hotel.subdomain})
     return 201, {
@@ -353,6 +427,62 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
     user, password = set_hotel_admin(hotel, email=payload.email, password=payload.password)
     _audit(request, hotel, "platform.hotel.admin_set", {"email": user.email})
     return {"email": user.email, "password": password}
+
+
+# --- Использование против лимитов, активность, тариф -----------------------
+
+
+@router.get("/hotels/{hotel_id}/usage", summary="Использование против лимитов тарифа")
+def hotel_usage(request: HttpRequest, hotel_id: str):
+    from apps.hotels.platform_usage import usage_for
+
+    return usage_for(_get_hotel(hotel_id))
+
+
+@router.get("/hotels/{hotel_id}/activity", summary="Активность и журнал отеля")
+def hotel_activity(request: HttpRequest, hotel_id: str, limit: int = 50):
+    from apps.hotels.platform_usage import activity_for
+
+    return activity_for(_get_hotel(hotel_id), limit=limit)
+
+
+@router.put("/hotels/{hotel_id}/tariff", summary="Записать тариф отеля")
+def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
+    """
+    Тариф — ЗАПИСЬ, а не операция с деньгами: здесь нет ни сумм, ни счетов, ни
+    списаний. Шов под будущий биллинг: когда он появится, он будет читать эти
+    даты, а не заводить свои.
+    """
+    from apps.accounts.platform_access import can_manage_tariff
+    from apps.hotels import tariffs as tariff_registry
+    from apps.hotels.platform_usage import downgrade_warnings
+
+    if not can_manage_tariff(request.user):
+        raise PermissionDenied("Тариф меняет только владелец платформы")
+
+    hotel = _get_hotel(hotel_id)
+    if payload.tariff not in tariff_registry.TARIFFS:
+        raise ValidationError(f"Неизвестный тариф «{payload.tariff}»", field="tariff")
+
+    warnings = downgrade_warnings(hotel, payload.tariff)
+    # Понижение ниже использования НЕ запрещаем, но и не делаем молча: платформа
+    # обязана знать, что у отеля станет больше сервисов, чем позволяет тариф.
+    if warnings and not payload.acknowledge_downgrade:
+        return {"ok": False, "warnings": warnings, "code": "downgrade_blocked"}
+
+    hotel.tariff = payload.tariff
+    hotel.tariff_started_on = payload.started_on or timezone.localdate()
+    tariff = tariff_registry.get(payload.tariff)
+    if tariff.is_trial:
+        hotel.trial_ends_at = payload.trial_ends_at or (
+            hotel.tariff_started_on + timedelta(days=tariff.trial_days)
+        )
+    else:
+        hotel.trial_ends_at = None
+    hotel.save(update_fields=["tariff", "tariff_started_on", "trial_ends_at", "updated_at"])
+    _audit(request, hotel, "platform.hotel.tariff_set",
+           {"tariff": hotel.tariff, "trial_ends_at": str(hotel.trial_ends_at or "")})
+    return {"ok": True, "warnings": warnings, "profile": _profile(hotel)}
 
 
 # --- Реестр модулей --------------------------------------------------------
