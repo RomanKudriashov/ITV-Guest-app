@@ -42,6 +42,12 @@ def point_id(crystal, code: str) -> str:
         return str(ExecutionPoint.objects.get(code=code).pk)
 
 
+def service_id(crystal, code: str) -> str:
+    """С R4 ресурс CMS — сервис; точка исполнения живёт внутри него."""
+    with tenant_context(crystal):
+        return str(Service.objects.get(execution_point__code=code).pk)
+
+
 # --- 1. Линейный персонал: только трекер -----------------------------------
 
 
@@ -125,7 +131,7 @@ def test_manager_edits_his_service_commerce_and_schedule(cms_manager, crystal):
     Service завёл R1, править их до R3 было негде.
     """
     response = cms_manager.patch(
-        f"/api/cms/departments/{point_id(crystal, 'kitchen')}",
+        f"/api/cms/services/{service_id(crystal, 'kitchen')}",
         {"service_fee_bp": 700, "min_order_minor": 150000, "tagline": {"ru": "Кухня с видом"}},
     )
     assert response.status_code == 200, response.content
@@ -170,9 +176,9 @@ def test_manager_cannot_touch_another_service(cms_manager, crystal):
     assert cms_manager.patch(f"/api/cms/items/{foreign_item}", {"price": 1}).status_code == 403
 
 
-def test_manager_cannot_reassign_department_of_another_service(cms_manager, crystal):
+def test_manager_cannot_touch_another_service_card(cms_manager, crystal):
     response = cms_manager.patch(
-        f"/api/cms/departments/{point_id(crystal, 'bar')}", {"tagline": {"ru": "Моё"}}
+        f"/api/cms/services/{service_id(crystal, 'bar')}", {"tagline": {"ru": "Моё"}}
     )
     assert response.status_code == 403
     assert response.json()["code"] == "not_my_service"
@@ -187,7 +193,7 @@ def test_manager_cannot_touch_hotel_settings(cms_manager):
         ("post", "/api/cms/locations", {"title": {"ru": "Терраса"}}),
         ("put", "/api/cms/showcase", {"group_threshold": 1}),
         ("post", "/api/cms/allergens", {"title": {"ru": "Киви"}}),
-        ("post", "/api/cms/departments", {"title": {"ru": "Новый отдел"}}),
+        ("post", "/api/cms/services", {"type": "custom", "public_name": {"ru": "Новое заведение"}}),
     ]
     for method, path, body in cases:
         response = getattr(cms_manager, method)(path, body)
@@ -195,13 +201,13 @@ def test_manager_cannot_touch_hotel_settings(cms_manager):
         assert response.json()["code"] == "hotel_admin_only", path
 
 
-def test_manager_cannot_change_department_kind(cms_manager, crystal):
+def test_manager_cannot_change_service_type(cms_manager, crystal):
     """
-    Род отдела решает тип трекера и место на витрине — это уровень отеля,
-    даже для своего заведения.
+    Тип заведения решает вид трекера и место на витрине — это уровень отеля,
+    даже для своего сервиса.
     """
     response = cms_manager.patch(
-        f"/api/cms/departments/{point_id(crystal, 'kitchen')}", {"kind": "bar"}
+        f"/api/cms/services/{service_id(crystal, 'kitchen')}", {"type": "bar"}
     )
     assert response.status_code == 403
     assert response.json()["code"] == "hotel_admin_only"
@@ -242,7 +248,7 @@ def test_hotel_admin_keeps_full_access(cms, crystal):
     assert cms.patch("/api/cms/brand", {}).status_code == 200
     assert cms.get("/api/cms/analytics/scope").json()["all_points"] is True
     assert cms.patch(
-        f"/api/cms/departments/{point_id(crystal, 'bar')}", {"tagline": {"ru": "ок"}}
+        f"/api/cms/services/{service_id(crystal, 'bar')}", {"tagline": {"ru": "ок"}}
     ).status_code == 200
 
 

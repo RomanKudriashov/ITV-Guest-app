@@ -82,6 +82,23 @@ def hotel_modules(request: HttpRequest):
     return {"tariff": hotel.tariff, "modules": list_modules(hotel)}
 
 
+# --- Навигация -------------------------------------------------------------
+
+
+@router.get("/navigation", summary="Разделы CMS этого отеля и этой роли")
+def cms_navigation(request: HttpRequest):
+    """
+    Навигация приходит с сервера, а не собирается на клиенте: гейтинг решает
+    реестр модулей, и собери меню во фронте — список того, за что отель не
+    платил, всё равно уехал бы к нему в бандл.
+    """
+    from apps.accounts.roles import current_access
+    from apps.hotels.cms_navigation import build_navigation
+
+    hotel = Hotel.objects.get(pk=require_hotel_id())
+    return {"groups": build_navigation(hotel, access=current_access())}
+
+
 # --- Медиа -----------------------------------------------------------------
 
 

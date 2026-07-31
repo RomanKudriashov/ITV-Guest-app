@@ -187,32 +187,51 @@ def test_matrix_update_toggles_a_link(cms, crystal):
         assert link.delivery_modes == ["pickup"]
 
 
-# --- Отделы ----------------------------------------------------------------
+# --- Сервисы ----------------------------------------------------------------
 
 
-def test_departments_show_links_to_run6(cms):
-    departments = cms.get("/api/cms/departments").json()
-    kitchen = next(dept for dept in departments if dept["code"] == "kitchen")
-    # Из списка отделов видно связь с каналами и эскалацией.
+def test_services_show_links_to_staff_and_escalation(cms):
+    services = cms.get("/api/cms/services").json()
+    kitchen = next(entry for entry in services if entry["code"] == "kitchen")
+    # Из списка сервисов видно связь с персоналом, каналами и эскалацией.
     assert kitchen["staff_count"] >= 1
     assert kitchen["channel_count"] >= 1
     assert kitchen["has_escalation"] is True
+    # Исполнитель — внутри: снаружи отель настраивает заведение, а не бригаду.
+    assert kitchen["execution_point"]["code"] == "kitchen"
+    # И сразу видно, какой рабочий экран получит персонал (R3).
+    assert kitchen["tracker_type"] == "board"
 
 
-def test_create_department(cms):
+def test_create_service_from_template(cms):
+    """Отель выбирает ЗАВЕДЕНИЕ — бригаду под него сервер заводит сам."""
     response = cms.post(
-        "/api/cms/departments",
-        {"title": {"ru": "Прачечная"}, "kind": "housekeeping", "sla_minutes": 60},
+        "/api/cms/services",
+        {"type": "housekeeping", "public_name": {"ru": "Прачечная"}, "sla_minutes": 60},
     )
     assert response.status_code == 201, response.content
-    assert response.json()["sla_minutes"] == 60
+    body = response.json()
+
+    assert body["type"] == "housekeeping"
+    assert body["execution_point"]["kind"] == "housekeeping"
+    assert body["execution_point"]["sla_minutes"] == 60
+    # Хозслужба — служебная: гостю на витрине её не показываем.
+    assert body["is_guest_facing"] is False
+    assert body["tracker_type"] == "queue"
 
 
-def test_department_with_orders_cannot_be_deleted(cms, crystal, client):
-    """Заказы ссылаются на отдел через PROTECT — удаление осиротило бы историю."""
-    from .test_service_requests import place  # noqa
+def test_service_templates_cover_every_type(cms):
+    templates = cms.get("/api/cms/services/templates").json()
+    types = {entry["type"] for entry in templates}
 
-    # Оформим заказ на кухню и попробуем удалить кухню.
+    assert {"restaurant", "bar", "spa", "concierge", "housekeeping", "info"} <= types
+    spa = next(entry for entry in templates if entry["type"] == "spa")
+    assert spa["bricks"] == ["slot"]
+    assert spa["tracker_type"] == "schedule"
+
+
+def test_service_with_orders_cannot_be_deleted(cms, crystal, client):
+    """Заказы ссылаются на исполнителя через PROTECT — удаление осиротило бы историю."""
     token = client.post(
         "/api/guest/session",
         data={"room_number": "305"},
@@ -231,15 +250,13 @@ def test_department_with_orders_cannot_be_deleted(cms, crystal, client):
         content_type="application/json",
         HTTP_HOST=host_for(crystal),
         HTTP_AUTHORIZATION=f"Bearer {token}",
-        HTTP_IDEMPOTENCY_KEY="dept-order",
+        HTTP_IDEMPOTENCY_KEY="svc-order",
     )
 
-    with tenant_context(crystal):
-        kitchen_id = str(ExecutionPoint.objects.get(code="kitchen").pk)
-
-    response = cms.delete(f"/api/cms/departments/{kitchen_id}")
+    kitchen = next(s for s in cms.get("/api/cms/services").json() if s["code"] == "kitchen")
+    response = cms.delete(f"/api/cms/services/{kitchen['id']}")
     assert response.status_code == 409
-    assert response.json()["code"] == "department_in_use"
+    assert response.json()["code"] == "service_has_orders"
 
 
 # --- Персонал ---------------------------------------------------------------

@@ -12,7 +12,12 @@ from typing import Any, Iterable
 from django.db import transaction
 
 from apps.catalog.models import Category, ServiceLocation
-from apps.accounts.roles import HotelAdminOnly, require_hotel_admin, require_point_scope
+from apps.accounts.roles import (
+    HotelAdminOnly,
+    current_access,
+    require_hotel_admin,
+    require_point_scope,
+)
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -346,46 +351,49 @@ def update_matrix_row(category_id, cells: Iterable[dict]) -> dict:
     return location_matrix()
 
 
-# --- Отделы ----------------------------------------------------------------
+
+
+# ===========================================================================
+# Сервисы — верхний уровень CMS
+# ===========================================================================
+#
+# До R4 то же самое звалось «отделами» и адресовалось id ТОЧКИ ИСПОЛНЕНИЯ.
+# Это было наследство прежней модели: снаружи отель настраивает заведение
+# («Панорама»), а не бригаду за ним. Ключ ресурса переехал на сервис, точка
+# ушла внутрь — потому что включения (R2) адресуются сервисом, и без его id
+# CMS не могла ни показать, ни настроить заимствованный контент.
+
+# Тип сервиса → род исполнителя за ним. Обратная сторона KIND_TO_SERVICE_TYPE:
+# отель выбирает ЗАВЕДЕНИЕ, а бригаду под него мы заводим сами.
+SERVICE_TYPE_TO_KIND = {
+    Service.Type.RESTAURANT: ExecutionPoint.Kind.KITCHEN,
+    Service.Type.BAR: ExecutionPoint.Kind.BAR,
+    Service.Type.ROOM_SERVICE: ExecutionPoint.Kind.KITCHEN,
+    Service.Type.MINIBAR: ExecutionPoint.Kind.OTHER,
+    Service.Type.SPA: ExecutionPoint.Kind.SPA,
+    Service.Type.POOL: ExecutionPoint.Kind.SPA,
+    Service.Type.EXCURSIONS: ExecutionPoint.Kind.RECEPTION,
+    Service.Type.TRANSFER: ExecutionPoint.Kind.RECEPTION,
+    Service.Type.CONCIERGE: ExecutionPoint.Kind.RECEPTION,
+    Service.Type.HOUSEKEEPING: ExecutionPoint.Kind.HOUSEKEEPING,
+    Service.Type.INFO: ExecutionPoint.Kind.OTHER,
+    Service.Type.CUSTOM: ExecutionPoint.Kind.OTHER,
+}
+
+# Разумный порог просрочки на доске по роду работы (минуты). Отель правит.
+DEFAULT_SLA = {
+    ExecutionPoint.Kind.KITCHEN: 20,
+    ExecutionPoint.Kind.BAR: 15,
+    ExecutionPoint.Kind.SPA: 30,
+    ExecutionPoint.Kind.HOUSEKEEPING: 45,
+    ExecutionPoint.Kind.RECEPTION: 10,
+    ExecutionPoint.Kind.OTHER: 20,
+}
 
 
 def _service_for(point: ExecutionPoint) -> Service | None:
-    """Сервис-контейнер точки (1:1). Гостевая идентичность и венью-часы — на нём."""
+    """Сервис-контейнер точки (1:1)."""
     return Service.objects.filter(execution_point=point).first()
-
-
-def serialize_department(
-    point: ExecutionPoint, *, counts: dict | None = None, service: Service | None = None
-) -> dict:
-    """
-    «Отдел» в CMS = исполнитель (ExecutionPoint) + его сервис (Service) вместе.
-    Гостевую идентичность и венью-часы читаем с сервиса, исполнение — с точки.
-    Форма ответа не изменилась.
-    """
-    counts = counts or {}
-    if service is None:
-        service = _service_for(point)
-    return {
-        "id": str(point.pk),
-        "code": point.code,
-        "title": point.title or {},
-        "public_name": (service.public_name if service else {}) or {},
-        "tagline": (service.tagline if service else {}) or {},
-        "is_guest_facing": service.is_guest_facing if service else False,
-        "kind": point.kind,
-        "schedule_id": str(service.schedule_id) if (service and service.schedule_id) else None,
-        "sla_minutes": point.sla_minutes,
-        "is_active": point.is_active,
-        # Своя коммерция заведения: null = наследовать значение отеля.
-        "commerce": {
-            field: getattr(service, field) if service else None
-            for field in SERVICE_COMMERCE_FIELDS
-        },
-        "staff_count": counts.get("staff", 0),
-        "channel_count": counts.get("channels", 0),
-        "has_escalation": counts.get("escalation", False),
-        "image": serialize_asset(service.image if service else None),
-    }
 
 
 def _resolve_asset(asset_id) -> MediaAsset | None:
@@ -397,106 +405,216 @@ def _resolve_asset(asset_id) -> MediaAsset | None:
     return asset
 
 
-def list_departments() -> list[dict]:
-    from apps.accounts.models import StaffAssignment
-    from apps.notifications.models import EscalationRule, NotificationChannel
-
-    from apps.accounts.roles import managed_point_ids_or_none
-
-    points = ExecutionPoint.objects.order_by("code")
-    managed = managed_point_ids_or_none()
-    if managed is not None:
-        # Управляющий видит в списке отделов только свои заведения.
-        points = points.filter(pk__in=managed)
-    points = list(points)
-    services = {s.execution_point_id: s for s in Service.objects.all()}
-    staff = _count_by_point(StaffAssignment.objects.filter(is_active=True))
-    channels = _count_by_point(NotificationChannel.objects.filter(is_active=True))
-    with_rules = set(
-        EscalationRule.objects.filter(is_active=True, execution_point__isnull=False).values_list(
-            "execution_point_id", flat=True
-        )
-    )
-
-    return [
-        serialize_department(
-            point,
-            service=services.get(point.pk),
-            counts={
-                "staff": staff.get(point.pk, 0),
-                "channels": channels.get(point.pk, 0),
-                "escalation": point.pk in with_rules,
-            },
-        )
-        for point in points
-    ]
-
-
 def _count_by_point(queryset) -> dict:
     counts: dict = {}
     for point_id in queryset.values_list("execution_point_id", flat=True):
-        if point_id:
-            counts[point_id] = counts.get(point_id, 0) + 1
+        counts[point_id] = counts.get(point_id, 0) + 1
     return counts
 
 
-def get_department(point_id) -> ExecutionPoint:
-    point = ExecutionPoint.objects.filter(pk=point_id).first()
-    if point is None:
-        raise NotFoundError("Отдел не найден")
-    return point
+def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
+    """
+    Сервис глазами CMS: гостевая идентичность + исполнение + коммерция вместе.
+
+    `tracker_type` отдаём здесь же (R3 выводит его из типа сервиса): админ,
+    меняя тип заведения, должен видеть, какой рабочий экран получит персонал,
+    а не узнавать это по факту.
+    """
+    from apps.orders.tracker_types import tracker_type_for_service_type
+
+    counts = counts or {}
+    point = service.execution_point
+    return {
+        "id": str(service.pk),
+        "code": service.code,
+        "type": service.type,
+        "public_name": service.public_name or {},
+        "tagline": service.tagline or {},
+        "is_guest_facing": service.is_guest_facing,
+        "is_active": service.is_active,
+        "sort_order": service.sort_order,
+        "schedule_id": str(service.schedule_id) if service.schedule_id else None,
+        "image": serialize_asset(service.image),
+        "tracker_type": tracker_type_for_service_type(service.type),
+        # Исполнение — внутри: снаружи отель настраивает заведение, а бригада
+        # за ним детали реализации.
+        "execution_point": {
+            "id": str(point.pk),
+            "code": point.code,
+            "title": point.title or {},
+            "kind": point.kind,
+            "sla_minutes": point.sla_minutes,
+        },
+        "commerce": {
+            field: getattr(service, field) for field in SERVICE_COMMERCE_FIELDS
+        },
+        "category_count": counts.get("categories", 0),
+        "item_count": counts.get("items", 0),
+        "staff_count": counts.get("staff", 0),
+        "channel_count": counts.get("channels", 0),
+        "inclusion_count": counts.get("inclusions", 0),
+        "has_escalation": counts.get("escalation", False),
+    }
 
 
-def _make_department_code(title: dict) -> str:
-    from apps.catalog.cms_services import make_code
+def list_services() -> list[dict]:
+    from django.db.models import Count, Q
 
-    return make_code(ExecutionPoint, title, prefix="dept")
+    from apps.accounts.models import StaffAssignment
+    from apps.accounts.roles import managed_point_ids_or_none
+    from apps.catalog.models import ServiceInclusion
+    from apps.notifications.models import EscalationRule, NotificationChannel
+
+    services = Service.objects.select_related("execution_point", "image").order_by(
+        "sort_order", "code"
+    )
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        services = services.filter(execution_point_id__in=managed)
+    services = list(services)
+
+    # Счётчики одним проходом на таблицу — карточка списка не должна стоить
+    # запроса на сервис.
+    by_service = dict(
+        Category.objects.filter(service__isnull=False)
+        .values_list("service_id")
+        .annotate(n=Count("id"))
+    )
+    items_by_service = dict(
+        Category.objects.filter(service__isnull=False)
+        .annotate(n=Count("items", filter=Q(items__deleted_at__isnull=True)))
+        .values_list("service_id", "n")
+    )
+    staff = _count_by_point(StaffAssignment.objects.filter(is_active=True))
+    channels = _count_by_point(NotificationChannel.objects.filter(is_active=True))
+    inclusions = dict(
+        ServiceInclusion.objects.values_list("including_service_id").annotate(n=Count("id"))
+    )
+    with_rules = set(
+        EscalationRule.objects.filter(
+            is_active=True, execution_point__isnull=False
+        ).values_list("execution_point_id", flat=True)
+    )
+
+    return [
+        serialize_service(
+            service,
+            counts={
+                "categories": by_service.get(service.pk, 0),
+                "items": items_by_service.get(service.pk, 0),
+                "staff": staff.get(service.execution_point_id, 0),
+                "channels": channels.get(service.execution_point_id, 0),
+                "inclusions": inclusions.get(service.pk, 0),
+                "escalation": service.execution_point_id in with_rules,
+            },
+        )
+        for service in services
+    ]
+
+
+def get_service(service_id) -> Service:
+    service = (
+        Service.objects.select_related("execution_point", "image")
+        .filter(pk=service_id)
+        .first()
+    )
+    if service is None:
+        raise NotFoundError("Сервис не найден")
+    require_point_scope(service.execution_point_id, what="Сервис")
+    return service
+
+
+def service_templates() -> list[dict]:
+    """
+    Шаблоны для «+ добавить сервис»: тип, из каких кирпичей собран и какой
+    рабочий экран получит персонал. Список строится из самих справочников —
+    новый тип сервиса появляется здесь сам, без правки шаблонов.
+    """
+    from apps.catalog.offerings import OfferingType
+    from apps.hotels.vocabularies import SERVICE_TYPE_LABELS
+    from apps.orders.tracker_types import tracker_type_for_service_type
+
+    # Из каких кирпичей собран тип — это и есть «шаблон» карты продукта.
+    BRICKS = {
+        Service.Type.RESTAURANT: [OfferingType.PRODUCT],
+        Service.Type.BAR: [OfferingType.PRODUCT],
+        Service.Type.ROOM_SERVICE: [OfferingType.PRODUCT],
+        Service.Type.MINIBAR: [OfferingType.PRODUCT],
+        Service.Type.SPA: [OfferingType.SLOT],
+        Service.Type.POOL: [OfferingType.SLOT],
+        Service.Type.EXCURSIONS: [OfferingType.SLOT],
+        Service.Type.TRANSFER: [OfferingType.SERVICE_REQUEST],
+        Service.Type.CONCIERGE: [OfferingType.SERVICE_REQUEST],
+        Service.Type.HOUSEKEEPING: [OfferingType.SERVICE_REQUEST],
+        Service.Type.INFO: [OfferingType.INFO],
+        Service.Type.CUSTOM: [OfferingType.PRODUCT, OfferingType.SERVICE_REQUEST],
+    }
+    return [
+        {
+            "type": value,
+            "title": SERVICE_TYPE_LABELS.get(value, {}),
+            "bricks": [str(b) for b in BRICKS.get(value, [])],
+            "tracker_type": tracker_type_for_service_type(value),
+            "default_guest_facing": value != Service.Type.HOUSEKEEPING,
+        }
+        for value, _label in Service.Type.choices
+    ]
 
 
 @transaction.atomic
-def create_department(data: dict) -> ExecutionPoint:
+def create_service(data: dict) -> Service:
+    """
+    Завести заведение. Исполнителя под него создаём сами: отель выбирает
+    «ресторан», а не «кухня + ресторан» — вторая половина всегда одна и та же,
+    и просить её у пользователя значит просить лишнего.
+    """
     require_hotel_admin()
-    title = _clean_translations(data.get("title"), field="title")
-    if not title:
-        raise ValidationError("Заполните название отдела", field="title")
 
-    # Гостевое имя по умолчанию = служебное, чтобы заведение не осталось
-    # безымянным на витрине, пока отель не задал отдельное.
-    public_name = _clean_translations(data.get("public_name"), field="public_name") or dict(title)
-    tagline = _clean_translations(data.get("tagline"), field="tagline")
-    kind = data.get("kind", ExecutionPoint.Kind.OTHER)
+    service_type = data.get("type") or Service.Type.CUSTOM
+    if service_type not in dict(Service.Type.choices):
+        raise ValidationError(f"Неизвестный тип сервиса: {service_type}", field="type")
 
-    # Исполнитель — только исполнение (род, SLA). Гостевая идентичность и венью-
-    # часы живут на его сервисе (1:1).
+    public_name = _clean_translations(data.get("public_name"), field="public_name")
+    if not public_name:
+        raise ValidationError("Заполните название заведения", field="public_name")
+
+    from apps.catalog.cms_services import make_code
+
+    code = data.get("code") or make_code(Service, public_name, prefix="service")
+    if Service.all_objects.filter(code=code).exists():
+        raise ConflictError(f"Сервис «{code}» уже существует", code="service_exists")
+
+    kind = SERVICE_TYPE_TO_KIND.get(service_type, ExecutionPoint.Kind.OTHER)
+    point_code = code if not ExecutionPoint.all_objects.filter(code=code).exists() else f"{code}-ep"
     point = ExecutionPoint.objects.create(
-        code=data.get("code") or _make_department_code(title),
-        title=title,
+        code=point_code,
+        # Служебное имя бригады = гостевое имя заведения, пока отель не задал
+        # своё: безымянный отдел в эскалациях и на трекере читается как ошибка.
+        title=dict(public_name),
         kind=kind,
-        sla_minutes=data.get("sla_minutes", 20),
-        is_active=data.get("is_active", True),
+        sla_minutes=data.get("sla_minutes") or DEFAULT_SLA.get(kind, 20),
+        is_active=True,
     )
-    Service.objects.create(
+    return Service.objects.create(
         execution_point=point,
-        code=point.code,
-        type=service_type_for_kind(kind),
+        code=code,
+        type=service_type,
         public_name=public_name,
-        tagline=tagline,
-        is_guest_facing=data.get("is_guest_facing", True),
+        tagline=_clean_translations(data.get("tagline"), field="tagline"),
+        is_guest_facing=data.get(
+            "is_guest_facing", service_type != Service.Type.HOUSEKEEPING
+        ),
         schedule=_resolve_schedule(data.get("schedule_id")),
         image=_resolve_asset(data.get("image_id")),
         is_active=data.get("is_active", True),
+        sort_order=data.get("sort_order") or 0,
     )
-    return point
 
 
-# Поля отдела, которые меняет ТОЛЬКО администратор отеля. Остальное —
-# наполнение заведения, и им распоряжается его управляющий.
-#   code/kind  — меняют тип-шаблон сервиса, то есть и вид трекера;
-#   title      — служебное имя отдела в отельных списках и эскалациях;
-#   is_active  — выключить заведение целиком.
-HOTEL_LEVEL_DEPARTMENT_FIELDS = frozenset({"code", "kind", "title", "is_active"})
+# Поля заведения, которые меняет ТОЛЬКО администратор отеля: они двигают тип
+# трекера, место на витрине и само существование отдела.
+HOTEL_LEVEL_SERVICE_FIELDS = frozenset({"code", "type", "is_active"})
 
-# Коммерция уровня сервиса (R1): null = наследовать значение отеля.
 SERVICE_COMMERCE_FIELDS = (
     "service_fee_bp",
     "tip_presets",
@@ -507,63 +625,58 @@ SERVICE_COMMERCE_FIELDS = (
 
 
 @transaction.atomic
-def update_department(point_id, data: dict) -> ExecutionPoint:
+def update_service(service_id, data: dict) -> Service:
     """
-    Правка заведения. Администратор отеля меняет что угодно; управляющий —
-    только своё заведение и только его наполнение: гостевую идентичность,
-    расписание, обложку, SLA и свою коммерцию. Род, код и выключение отдела
-    остаются за отелем — они меняют и тип трекера, и место заведения на витрине.
+    Админ отеля меняет что угодно; управляющий — только своё заведение и только
+    его наполнение: идентичность, расписание, обложку, SLA и свою коммерцию.
     """
-    access = require_point_scope(point_id, what="Отдел")
+    # get_service сам проверяет область — второй раз спрашивать нечего;
+    # у него же берём права, чтобы отсечь поля уровня отеля.
+    service = get_service(service_id)
+    access = current_access()
     if not access.unrestricted:
-        forbidden = sorted(HOTEL_LEVEL_DEPARTMENT_FIELDS & set(data))
+        forbidden = sorted(HOTEL_LEVEL_SERVICE_FIELDS & set(data))
         if forbidden:
             raise HotelAdminOnly(
-                "Эти поля отдела меняет администратор отеля: " + ", ".join(forbidden)
+                "Эти поля заведения меняет администратор отеля: " + ", ".join(forbidden)
             )
-    point = get_department(point_id)
-    service = _service_for(point)
 
-    # --- Исполнение (ExecutionPoint) ---
-    if "title" in data:
-        title = _clean_translations(data["title"], field="title")
-        if not title:
-            raise ValidationError("Заполните название отдела", field="title")
-        point.title = title
-    if "kind" in data:
-        point.kind = data["kind"]
+    point = service.execution_point
+
+    if "public_name" in data:
+        public_name = _clean_translations(data["public_name"], field="public_name")
+        if not public_name:
+            raise ValidationError("Заполните название заведения", field="public_name")
+        service.public_name = public_name
+    if "tagline" in data:
+        service.tagline = _clean_translations(data["tagline"], field="tagline")
+    if "is_guest_facing" in data and data["is_guest_facing"] is not None:
+        service.is_guest_facing = data["is_guest_facing"]
+    if "schedule_id" in data:
+        service.schedule = _resolve_schedule(data["schedule_id"])
+    if "image_id" in data:
+        service.image = _resolve_asset(data["image_id"])
+    if "sort_order" in data and data["sort_order"] is not None:
+        service.sort_order = data["sort_order"]
+    if "type" in data and data["type"]:
+        if data["type"] not in dict(Service.Type.choices):
+            raise ValidationError(f"Неизвестный тип сервиса: {data['type']}", field="type")
+        service.type = data["type"]
+        # Тип решает и род бригады, и вид трекера — держим их вместе.
+        point.kind = SERVICE_TYPE_TO_KIND.get(data["type"], ExecutionPoint.Kind.OTHER)
+    if "is_active" in data and data["is_active"] is not None:
+        service.is_active = data["is_active"]
+        point.is_active = data["is_active"]
     if "sla_minutes" in data and data["sla_minutes"] is not None:
         point.sla_minutes = data["sla_minutes"]
-    if "is_active" in data:
-        point.is_active = data["is_active"]
-    point.save()
 
-    # --- Гостевая идентичность и венью-часы (Service) ---
-    if service is not None:
-        if "public_name" in data:
-            service.public_name = _clean_translations(data["public_name"], field="public_name")
-        if "tagline" in data:
-            service.tagline = _clean_translations(data["tagline"], field="tagline")
-        if "is_guest_facing" in data and data["is_guest_facing"] is not None:
-            service.is_guest_facing = data["is_guest_facing"]
-        if "schedule_id" in data:
-            service.schedule = _resolve_schedule(data["schedule_id"])
-        if "image_id" in data:
-            service.image = _resolve_asset(data["image_id"])
-        if "is_active" in data:
-            service.is_active = data["is_active"]
-        # Смена рода тянет за собой тип-шаблон сервиса — так группировка витрины
-        # следует за родом, как было до модели сервиса.
-        if "kind" in data:
-            service.type = service_type_for_kind(data["kind"])
-        # Своя коммерция заведения (R1 завёл поля, править их было негде).
-        # null — осознанное «наследовать отель», поэтому проверяем присутствие
-        # ключа, а не истинность значения.
-        for field in SERVICE_COMMERCE_FIELDS:
-            if field in data:
-                setattr(service, field, _validate_service_commerce(field, data[field]))
-        service.save()
-    return point
+    for field in SERVICE_COMMERCE_FIELDS:
+        if field in data:
+            setattr(service, field, _validate_service_commerce(field, data[field]))
+
+    point.save()
+    service.save()
+    return get_service(service_id)
 
 
 def _validate_service_commerce(field: str, value):
@@ -574,9 +687,7 @@ def _validate_service_commerce(field: str, value):
         if not isinstance(value, list) or any(
             not isinstance(x, int) or isinstance(x, bool) or x < 0 or x > 100 for x in value
         ):
-            raise ValidationError(
-                "Пресеты чаевых — целые проценты от 0 до 100", field=field
-            )
+            raise ValidationError("Пресеты чаевых — целые проценты от 0 до 100", field=field)
         return list(dict.fromkeys(value))
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValidationError("Ожидается неотрицательное целое", field=field)
@@ -586,19 +697,17 @@ def _validate_service_commerce(field: str, value):
 
 
 @transaction.atomic
-def delete_department(point_id) -> None:
+def delete_service(service_id) -> None:
     require_hotel_admin()
     from apps.orders.models import Order
 
-    point = get_department(point_id)
+    service = get_service(service_id)
+    point = service.execution_point
     # Заказы ссылаются на точку через PROTECT — удаление осиротило бы историю.
     if Order.all_objects.filter(execution_point=point).exists():
         raise ConflictError(
-            "У отдела есть заказы — его нельзя удалить, только выключить",
-            code="department_in_use",
+            "У заведения есть заказы — его можно только выключить",
+            code="service_has_orders",
         )
-    # Сервис ссылается на исполнителя (PROTECT) — снимаем его первым (мягко).
-    service = _service_for(point)
-    if service is not None:
-        service.delete()
+    service.delete()
     point.delete()

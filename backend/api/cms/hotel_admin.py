@@ -1,5 +1,5 @@
 """
-CMS: номера/QR, локации, отделы, персонал.
+CMS: номера/QR, локации, СЕРВИСЫ, персонал.
 Контракт — docs/hotel-admin-api-contract.md.
 """
 
@@ -91,31 +91,32 @@ class MatrixRowIn(Schema):
     cells: list[MatrixCell]
 
 
-class DepartmentIn(Schema):
-    title: dict[str, str]
-    public_name: dict[str, str] = {}
+class ServiceIn(Schema):
+    """Отель заводит ЗАВЕДЕНИЕ; бригаду под него сервер создаёт сам."""
+
+    type: str = "custom"
+    public_name: dict[str, str]
     tagline: dict[str, str] = {}
-    is_guest_facing: bool = True
+    is_guest_facing: bool | None = None
     code: str | None = None
-    kind: str = "other"
     schedule_id: str | None = None
-    sla_minutes: int = 20
+    sla_minutes: int | None = None
     is_active: bool = True
     image_id: str | None = None
+    sort_order: int | None = None
 
 
-class DepartmentPatch(Schema):
-    title: dict[str, str] | None = None
+class ServicePatch(Schema):
+    type: str | None = None
     public_name: dict[str, str] | None = None
     tagline: dict[str, str] | None = None
     is_guest_facing: bool | None = None
-    kind: str | None = None
     schedule_id: str | None = None
     sla_minutes: int | None = None
     is_active: bool | None = None
     image_id: str | None = None
-    # Своя коммерция заведения: null = наследовать значение отеля. Правит
-    # управляющий этого сервиса; отельные валюта и налог — не здесь.
+    sort_order: int | None = None
+    # Своя коммерция заведения: null = наследовать значение отеля.
     service_fee_bp: int | None = None
     tip_presets: list[int] | None = None
     min_order_minor: int | None = None
@@ -239,27 +240,40 @@ def delete_location(request: HttpRequest, location_id: str):
 
 
 
-# --- Отделы ----------------------------------------------------------------
+# --- Сервисы (верхний уровень CMS) ------------------------------------------
 
 
-@router.get("/departments", summary="Список отделов")
-def list_departments(request: HttpRequest):
-    return svc.list_departments()
+# ВНИМАНИЕ: статический `/services/templates` объявляется РАНЬШЕ
+# параметризованного `/services/{id}` — иначе слово "templates" уедет в id.
+@router.get("/services/templates", summary="Шаблоны для «+ добавить сервис»")
+def cms_service_templates(request: HttpRequest):
+    return svc.service_templates()
 
 
-@router.post("/departments", response={201: dict}, summary="Создать отдел")
-def create_department(request: HttpRequest, payload: DepartmentIn):
-    return 201, svc.serialize_department(svc.create_department(payload.dict()))
+@router.get("/services", summary="Сервисы отеля (верхний уровень CMS)")
+def cms_list_services(request: HttpRequest):
+    return svc.list_services()
 
 
-@router.patch("/departments/{point_id}", summary="Изменить отдел")
-def update_department(request: HttpRequest, point_id: str, payload: DepartmentPatch):
-    return svc.serialize_department(svc.update_department(point_id, payload.dict(exclude_unset=True)))
+@router.post("/services", response={201: dict}, summary="Создать сервис из шаблона")
+def cms_create_service(request: HttpRequest, payload: ServiceIn):
+    service = svc.create_service(payload.dict(exclude_unset=True))
+    return 201, svc.serialize_service(service)
 
 
-@router.delete("/departments/{point_id}", response=OkOut, summary="Удалить отдел")
-def delete_department(request: HttpRequest, point_id: str):
-    svc.delete_department(point_id)
+@router.get("/services/{service_id}", summary="Сервис")
+def cms_get_service(request: HttpRequest, service_id: str):
+    return svc.serialize_service(svc.get_service(service_id))
+
+
+@router.patch("/services/{service_id}", summary="Изменить сервис")
+def cms_update_service(request: HttpRequest, service_id: str, payload: ServicePatch):
+    return svc.serialize_service(svc.update_service(service_id, payload.dict(exclude_unset=True)))
+
+
+@router.delete("/services/{service_id}", response=OkOut, summary="Удалить сервис")
+def cms_delete_service(request: HttpRequest, service_id: str):
+    svc.delete_service(service_id)
     return {"ok": True}
 
 

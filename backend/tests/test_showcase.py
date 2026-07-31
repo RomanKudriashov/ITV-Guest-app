@@ -298,29 +298,31 @@ def test_toggling_guest_facing_shows_and_hides(client, crystal, guest_token):
     assert "wine" in keys()  # включили — появилась
 
 
-# --- CMS: гостевые поля отдела ----------------------------------------------
+# --- CMS: гостевые поля сервиса ---------------------------------------------
 
 
-def test_cms_department_exposes_guest_fields(cms):
-    departments = cms.get("/api/v1/cms/departments").json()
-    kitchen = next(d for d in departments if d["code"] == "kitchen")
+def test_cms_service_exposes_guest_fields(cms):
+    services = cms.get("/api/v1/cms/services").json()
+    kitchen = next(d for d in services if d["code"] == "kitchen")
     assert kitchen["public_name"]["ru"] == "Панорама"
     assert kitchen["is_guest_facing"] is True
-    housekeeping = next(d for d in departments if d["code"] == "housekeeping")
+    housekeeping = next(d for d in services if d["code"] == "housekeeping")
     assert housekeeping["is_guest_facing"] is False
 
 
-def test_cms_create_department_defaults_public_name_to_title(cms):
+def test_cms_create_service_names_its_crew_after_the_venue(cms):
     created = cms.post(
-        "/api/v1/cms/departments",
-        {"title": {"ru": "Пляжный бар"}, "kind": "bar"},
+        "/api/v1/cms/services",
+        {"type": "bar", "public_name": {"ru": "Пляжный бар"}},
     ).json()
-    # Гостевое имя не задано — падает на служебное, точка не безымянна.
+    # Служебное имя бригады = имя заведения, пока отель не задал своё:
+    # безымянный отдел в эскалациях и на трекере читается как ошибка.
     assert created["public_name"]["ru"] == "Пляжный бар"
+    assert created["execution_point"]["title"]["ru"] == "Пляжный бар"
     assert created["is_guest_facing"] is True
 
     updated = cms.patch(
-        f"/api/v1/cms/departments/{created['id']}",
+        f"/api/v1/cms/services/{created['id']}",
         {"public_name": {"ru": "У моря"}, "tagline": {"ru": "коктейли на закате"}, "is_guest_facing": False},
     ).json()
     assert updated["public_name"]["ru"] == "У моря"
