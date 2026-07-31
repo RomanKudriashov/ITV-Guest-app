@@ -544,6 +544,55 @@ def offboard_hotel(request: HttpRequest, hotel_id: str, payload: OffboardIn):
     return {"marked": state}
 
 
+@router.delete("/hotels/{hotel_id}", summary="Удалить отель целиком")
+def delete_hotel(request: HttpRequest, hotel_id: str, confirm_subdomain: str = ""):
+    """
+    Полное удаление отеля вместе со строкой — то, чего офбординг НЕ делает.
+
+    Два разных сценария и потому две разные операции. Живой отель уходит через
+    офбординг: его данные стираются, но строка остаётся, потому что платформа
+    обязана уметь ответить, что он был. А вот отель, заведённый автотестом или
+    по ошибке, не должен оставаться в реестре памятником — ему там нечего
+    помнить.
+
+    Защита — не галочка, а ввод поддомена: имя удаляемого набирают, только
+    посмотрев на него. Для отелей с признаком `test` подтверждение не нужно:
+    их и завели затем, чтобы удалить.
+    """
+    from apps.accounts.platform_access import can_manage_tariff
+    from apps.core.context import platform_scope
+    from apps.hotels.offboarding import mark_for_offboarding, purge_hotel
+
+    if not can_manage_tariff(request.user):
+        raise PermissionDenied("Удаление отеля проводит только владелец платформы")
+
+    hotel = _get_hotel(hotel_id)
+    is_test = hotel.origin == Hotel.Origin.TEST
+    if not is_test and (confirm_subdomain or "").strip().lower() != hotel.subdomain:
+        raise ValidationError(
+            "Поддомен введён неверно — отель не удалён",
+            field="confirm_subdomain",
+            code="confirm_mismatch",
+        )
+
+    # Данные стираем тем же кодом, что и офбординг: два способа удалять одно и
+    # то же однажды разъедутся, и один из них забудет новую таблицу.
+    if not hotel.settings.get("offboarding"):
+        mark_for_offboarding(hotel, reason="удаление отеля", actor_id=request.user.pk)
+    result = purge_hotel(hotel, confirm_subdomain=hotel.subdomain, actor_id=request.user.pk)
+
+    _audit_platform(
+        request,
+        "platform.hotel.deleted",
+        payload={"subdomain": hotel.subdomain, "origin": hotel.origin, "removed": result["removed"]},
+    )
+    # Журнал отеля уходит вместе с ним: он тенантный и без отеля не читается.
+    with platform_scope():
+        AuditLog.all_objects.using("platform").filter(hotel_id=hotel.pk).delete()
+    Hotel.objects.filter(pk=hotel.pk).delete()
+    return {"deleted": True, "subdomain": hotel.subdomain, "removed": result["removed"]}
+
+
 @router.post("/hotels/{hotel_id}/purge", summary="Необратимо стереть данные отеля")
 def purge_hotel_data(request: HttpRequest, hotel_id: str, payload: PurgeIn):
     from apps.accounts.platform_access import can_manage_tariff
