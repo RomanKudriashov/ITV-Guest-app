@@ -17,6 +17,7 @@ from ninja.security import HttpBearer
 from apps.core.context import current_hotel_id, platform_scope, set_actor
 
 from .models import GuestSession, TrustLevel, User
+from .platform_access import client_ip, ip_allowed
 from .tokens import TokenError, decode_staff_token
 
 logger = logging.getLogger(__name__)
@@ -148,9 +149,20 @@ class PlatformAuth(HttpBearer):
     """
     Супер-админ платформы. У него hotel = NULL, поэтому строку пользователя не
     видно роли приложения из-за RLS — читаем через платформенное подключение.
+
+    Здесь же оба рубежа усиленного входа (R6). Они НАДСТРОЕНЫ над прежней
+    проверкой, а не заменяют её: решение «пустить ли» по-прежнему принимается
+    ровно в одном месте, и второго источника правды об этом не появилось.
     """
 
     def authenticate(self, request: HttpRequest, token: str):
+        # Рубеж «откуда»: адрес вне allowlist не пускают ни с каким токеном.
+        # Проверка идёт ДО разбора токена — украденный токен не должен даже
+        # доходить до сверки подписи с чужой сети.
+        if not ip_allowed(request):
+            logger.warning("Платформа: адрес %s вне allowlist", client_ip(request))
+            return None
+
         try:
             claims = decode_staff_token(token)
         except TokenError:
@@ -166,5 +178,13 @@ class PlatformAuth(HttpBearer):
             )
         if user is None:
             return None
+
+        # Рубеж «чем подтвердили»: у кого 2FA включена, тот получает токен
+        # только после кода — признак вшит в токен при выдаче. Токен, выданный
+        # до включения 2FA, признака не несёт и перестаёт работать сразу.
+        if user.totp_enabled and not claims.get("mfa"):
+            logger.warning("Платформа: токен без подтверждения 2FA, user=%s", user.pk)
+            return None
+
         request.user = user
         return user

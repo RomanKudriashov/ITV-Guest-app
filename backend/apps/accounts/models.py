@@ -95,6 +95,25 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     is_hotel_admin = models.BooleanField(default=False, help_text="Админ отеля")
     is_platform_admin = models.BooleanField(default=False, help_text="Супер-админ платформы")
 
+    # --- Роль в команде платформы (значима только при is_platform_admin) ---
+    # Уровень доступа к /admin. Отдельно от ролей внутри отеля: там роль
+    # определяется назначением на сервис (R3), здесь — самим пользователем,
+    # потому что платформенный админ ни к какому отелю не привязан.
+    class PlatformRole(models.TextChoices):
+        OWNER = "owner", "Владелец"
+        SUPPORT = "support", "Поддержка"
+        READ_ONLY = "read_only", "Только чтение"
+
+    platform_role = models.CharField(
+        max_length=16, choices=PlatformRole.choices, default=PlatformRole.OWNER
+    )
+
+    # --- Усиленный вход (2FA). /admin — мастер-ключ ко всем отелям ---
+    # Секрет хранится, пока 2FA не подтверждена кодом: между «показали QR» и
+    # «ввели код» пользователь должен успеть завести его в приложении.
+    totp_secret = models.CharField(max_length=64, blank=True)
+    totp_enabled = models.BooleanField(default=False)
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
 

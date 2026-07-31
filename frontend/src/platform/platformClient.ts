@@ -103,10 +103,42 @@ export interface CreateHotelResult {
   admin: { email: string; password: string | null };
 }
 
-export async function platformLogin(email: string, password: string): Promise<void> {
-  const data = await request<{ access: string }>('/auth/login', 'POST', { email, password });
+export interface PlatformMe {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'owner' | 'support' | 'read_only';
+  totp_enabled: boolean;
+}
+
+/**
+ * Вход. Второй фактор приходит ВТОРЫМ шагом: первый вызов отвечает
+ * `mfa_required`, и только тогда UI спрашивает код. Спрашивать его сразу у
+ * всех значило бы показывать поле тем, у кого 2FA не заведена.
+ */
+export async function platformLogin(
+  email: string,
+  password: string,
+  totpCode?: string,
+): Promise<void> {
+  const data = await request<{ access: string }>('/auth/login', 'POST', {
+    email,
+    password,
+    totp_code: totpCode || null,
+  });
   platformToken.set(data.access);
 }
+
+export const getMe = () => request<PlatformMe>('/auth/me');
+export const totpSetup = () =>
+  request<{ secret: string; otpauth_url: string }>('/auth/2fa/setup', 'POST');
+export async function totpEnable(code: string): Promise<void> {
+  // Ответ несёт НОВЫЙ токен: прежний выписан до включения 2FA и перестал
+  // действовать. Без подмены включивший 2FA выкинул бы сам себя.
+  const data = await request<{ access: string }>('/auth/2fa/enable', 'POST', { code });
+  platformToken.set(data.access);
+}
+export const totpDisable = () => request<{ ok: boolean }>('/auth/2fa/disable', 'POST');
 
 export const listHotels = () => request<HotelBrief[]>('/hotels');
 export const getHotel = (id: string) => request<HotelProfile>(`/hotels/${id}`);

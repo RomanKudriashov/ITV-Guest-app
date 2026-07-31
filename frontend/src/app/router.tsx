@@ -47,9 +47,15 @@ import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/dev/theme', element: <App /> },
-  // Платформенная консоль на базовом домене. Своя область auth (scope: platform),
+  // Корневая админка на базовом домене. Своя область auth (scope: platform),
   // не пересекается с тенантной CMS.
-  { path: '/platform', element: <PlatformConsole /> },
+  //
+  // Адрес /admin, а не /platform: это уровень ВЛАДЕЛЬЦА, и короткое «admin»
+  // отличает его от CMS одного отеля. Старый адрес уводим редиректом — он
+  // остался в закладках и в переписке, а 404 на мастер-ключе выглядит как
+  // «платформа упала».
+  { path: '/admin', element: <PlatformConsole /> },
+  { path: '/platform', element: <Navigate to="/admin" replace /> },
   {
     path: '/cms',
     element: (

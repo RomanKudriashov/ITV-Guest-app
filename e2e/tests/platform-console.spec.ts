@@ -16,7 +16,10 @@ test('платформа: создание отеля, вход admin, деак�
   const adminEmail = `admin@${sub}.test`
 
   // --- Вход в консоль -------------------------------------------------------
+  // Заходим по СТАРОМУ адресу: он обязан увести на /admin, а не в 404 —
+  // ссылка на мастер-ключ платформы осталась в закладках.
   await page.goto('/platform')
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 })
   await page.getByTestId('platform-login-email').fill('platform@itv.local')
   await page.getByTestId('platform-login-password').fill('platform12345')
   await page.getByTestId('platform-login-submit').click()

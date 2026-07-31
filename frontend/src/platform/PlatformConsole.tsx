@@ -56,6 +56,11 @@ export function PlatformConsole() {
 function PlatformLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  // Второй шаг открывается по ответу сервера, а не по догадке клиента: знать,
+  // заведена ли у этого адреса 2FA, до проверки пароля клиент не должен —
+  // иначе форма входа сама рассказывала бы, какие учётки защищены слабее.
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -63,10 +68,15 @@ function PlatformLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await platformLogin(email.trim(), password);
+      await platformLogin(email.trim(), password, needsCode ? code.trim() : undefined);
       onLoggedIn();
     } catch (e) {
-      setError(e instanceof PlatformError ? e.message : 'Не удалось войти');
+      if (e instanceof PlatformError && e.code === 'mfa_required') {
+        setNeedsCode(true);
+        setError(null);
+      } else {
+        setError(e instanceof PlatformError ? e.message : 'Не удалось войти');
+      }
     } finally {
       setBusy(false);
     }
@@ -91,9 +101,18 @@ function PlatformLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
               autoComplete="current-password" inputProps={{ 'data-testid': 'platform-login-password' }}
               onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
             />
-            <Button variant="contained" disabled={busy || !email || !password}
+            {needsCode ? (
+              <TextField
+                label="Код из приложения" value={code} onChange={(e) => setCode(e.target.value)}
+                autoFocus autoComplete="one-time-code"
+                helperText="Шесть цифр из приложения-аутентификатора"
+                inputProps={{ 'data-testid': 'platform-login-totp', inputMode: 'numeric', maxLength: 6 }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
+              />
+            ) : null}
+            <Button variant="contained" disabled={busy || !email || !password || (needsCode && code.length < 6)}
               onClick={() => void submit()} data-testid="platform-login-submit">
-              Войти
+              {needsCode ? 'Подтвердить' : 'Войти'}
             </Button>
           </Stack>
         </CardContent>

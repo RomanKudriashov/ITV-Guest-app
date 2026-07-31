@@ -16,7 +16,7 @@ from ninja import Router, Schema
 from apps.catalog.models import Item
 from apps.accounts.models import User
 from apps.core.context import tenant_context
-from apps.core.errors import NotFoundError
+from apps.core.errors import NotFoundError, ValidationError
 from apps.core.models import AuditLog
 from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage, Room
 from apps.hotels.module_registry import list_modules, set_modules
@@ -68,6 +68,12 @@ class ModulesIn(Schema):
 class PlatformLoginIn(Schema):
     email: str
     password: str
+    # Второй фактор. Приходит вторым шагом — первый отвечает `mfa_required`.
+    totp_code: str | None = None
+
+
+class TotpEnableIn(Schema):
+    code: str
 
 
 # --- Вход платформенного админа --------------------------------------------
@@ -75,12 +81,23 @@ class PlatformLoginIn(Schema):
 # Отдельно от /staff/auth/login: у платформенного админа hotel = NULL, и обычный
 # staff-логин (привязанный к тенанту) его не пускает. Ищем через платформенное
 # подключение (BYPASSRLS) на базовом домене.
-@router.post("/auth/login", auth=None, response={200: dict, 401: dict}, summary="Вход платформенного админа")
+@router.post("/auth/login", auth=None, response={200: dict, 401: dict, 403: dict}, summary="Вход платформенного админа")
 def platform_login(request: HttpRequest, payload: PlatformLoginIn):
     from django.contrib.auth.hashers import check_password
 
+    from apps.accounts.platform_access import client_ip, ip_allowed
     from apps.accounts.tokens import encode_refresh_token, encode_staff_token
+    from apps.accounts.totp import verify as verify_totp
     from apps.core.context import platform_scope
+
+    # Рубеж «откуда» проверяем и на входе: иначе с чужой сети можно было бы
+    # перебирать пароли, узнавая по ответу, какой из них верный.
+    if not ip_allowed(request):
+        return 403, {
+            "detail": "Вход в платформу с этого адреса запрещён",
+            "code": "ip_not_allowed",
+            "ip": client_ip(request),
+        }
 
     with platform_scope():
         user = (
@@ -90,11 +107,91 @@ def platform_login(request: HttpRequest, payload: PlatformLoginIn):
         )
     if user is None or not check_password(payload.password, user.password):
         return 401, {"detail": "Неверный логин или пароль", "code": "auth_failed"}
+
+    if user.totp_enabled:
+        if not payload.totp_code:
+            # Не ошибка, а второй шаг: пароль принят, ждём код.
+            return 401, {"detail": "Нужен код подтверждения", "code": "mfa_required"}
+        if not verify_totp(user.totp_secret, payload.totp_code):
+            return 401, {"detail": "Неверный код подтверждения", "code": "mfa_invalid"}
+
+    _audit_platform(request, "platform.login", actor=user, payload={"mfa": user.totp_enabled})
     return 200, {
-        "access": encode_staff_token(user),
+        "access": encode_staff_token(user, mfa=user.totp_enabled),
         "refresh": encode_refresh_token(user),
-        "user": {"id": str(user.pk), "email": user.email, "is_platform_admin": True},
+        "user": _me(user),
     }
+
+
+def _me(user: User) -> dict[str, Any]:
+    return {
+        "id": str(user.pk),
+        "email": user.email,
+        "full_name": user.full_name,
+        "is_platform_admin": True,
+        "role": user.platform_role,
+        "totp_enabled": user.totp_enabled,
+    }
+
+
+@router.get("/auth/me", summary="Текущий платформенный админ")
+def platform_me(request: HttpRequest):
+    return _me(request.user)
+
+
+# --- Управление вторым фактором --------------------------------------------
+
+
+@router.post("/auth/2fa/setup", summary="Завести секрет 2FA (показать QR)")
+def totp_setup(request: HttpRequest):
+    from apps.accounts.totp import generate_secret, provisioning_uri
+
+    user = request.user
+    if user.totp_enabled:
+        raise ValidationError("2FA уже включена", field="totp")
+    # Секрет пересоздаём на каждый заход в мастер: незавершённая прошлая
+    # попытка не должна оставлять пригодный секрет, который никто не помнит.
+    secret = generate_secret()
+    _save_platform_user(user, totp_secret=secret)
+    return {"secret": secret, "otpauth_url": provisioning_uri(secret, account=user.email)}
+
+
+@router.post("/auth/2fa/enable", summary="Включить 2FA, подтвердив кодом")
+def totp_enable(request: HttpRequest, payload: TotpEnableIn):
+    from apps.accounts.tokens import encode_staff_token
+    from apps.accounts.totp import verify as verify_totp
+
+    user = request.user
+    if not user.totp_secret:
+        raise ValidationError("Сначала заведите секрет", field="totp")
+    if not verify_totp(user.totp_secret, payload.code):
+        raise ValidationError("Код не подошёл", field="code")
+    _save_platform_user(user, totp_enabled=True)
+    _audit_platform(request, "platform.2fa.enabled")
+    # Выдаём новый токен с признаком: текущий выписан до включения 2FA и
+    # перестанет действовать — иначе включивший 2FA выкинул бы сам себя.
+    return {"ok": True, "access": encode_staff_token(user, mfa=True)}
+
+
+@router.post("/auth/2fa/disable", summary="Выключить 2FA")
+def totp_disable(request: HttpRequest):
+    user = request.user
+    _save_platform_user(user, totp_enabled=False, totp_secret="")
+    _audit_platform(request, "platform.2fa.disabled")
+    return {"ok": True}
+
+
+def _save_platform_user(user: User, **fields) -> None:
+    """
+    Запись строки платформенного админа. Идёт через платформенное подключение:
+    у него hotel = NULL, и роль приложения его строку не видит из-за RLS.
+    """
+    from apps.core.context import platform_scope
+
+    for name, value in fields.items():
+        setattr(user, name, value)
+    with platform_scope():
+        User.all_objects.using("platform").filter(pk=user.pk).update(**fields)
 
 
 # --- Сериализация ----------------------------------------------------------
@@ -142,6 +239,35 @@ def _get_hotel(hotel_id: str) -> Hotel:
     if hotel is None:
         raise NotFoundError("Отель не найден")
     return hotel
+
+
+def _audit_platform(
+    request: HttpRequest,
+    action: str,
+    *,
+    actor: User | None = None,
+    payload: dict | None = None,
+) -> None:
+    """
+    Запись действия, которое НЕ принадлежит отелю (вход, 2FA, команда).
+
+    Пишется платформенным подключением: у таких строк hotel_id = NULL, а
+    политика RLS показывает их только роли с BYPASSRLS — платформенной. Роль
+    приложения не должна видеть журнал платформы даже случайно.
+    """
+    from apps.core.context import platform_scope
+
+    who = actor or getattr(request, "user", None)
+    with platform_scope():
+        AuditLog.all_objects.using("platform").create(
+            hotel=None,
+            actor_type=AuditLog.ActorType.PLATFORM,
+            actor_id=getattr(who, "pk", None),
+            action=action,
+            object_type="platform",
+            payload=payload or {},
+            ip_address=request.META.get("REMOTE_ADDR"),
+        )
 
 
 def _audit(request: HttpRequest, hotel: Hotel, action: str, payload: dict | None = None) -> None:

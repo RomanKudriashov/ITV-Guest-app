@@ -31,10 +31,15 @@ def encode_staff_token(
     execution_point_ids: list[uuid.UUID] | None = None,
     impersonated_by: uuid.UUID | None = None,
     ttl_minutes: int | None = None,
+    mfa: bool = False,
 ) -> str:
     """
     `imp` — клейм impersonation. Он попадает и в аудит: действие поддержки от
     имени сотрудника обязано оставаться отличимым от действия самого сотрудника.
+
+    `mfa` — подтверждён ли вход вторым фактором. Признак живёт в ТОКЕНЕ, а не в
+    сессии на сервере: иначе включение 2FA не обесценивало бы токены, выданные
+    до неё, и рубеж поднимался бы только для новых входов.
     """
     issued = _now()
     payload: dict[str, Any] = {
@@ -54,6 +59,8 @@ def encode_staff_token(
     }
     if impersonated_by:
         payload["imp"] = str(impersonated_by)
+    if mfa:
+        payload["mfa"] = True
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
