@@ -1750,7 +1750,7 @@ class Command(BaseCommand):
         раз не заводим.
         """
         from apps.accounts.models import GuestSession, TrustLevel
-        from apps.catalog.models import Item, SlotConfig
+        from apps.catalog.models import Item
         from apps.orders.models import Order
         from apps.orders.services import OrderInput, OrderLineInput, create_order
 
