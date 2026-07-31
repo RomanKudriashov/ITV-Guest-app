@@ -27,6 +27,7 @@ import { errorMessage } from '../errors';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
+import { layout as storefrontLayout } from '../storefrontTokens';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
 
@@ -195,7 +196,9 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
       <Box
         sx={{
           position: 'relative',
-          mt: '-28px',
+          // Скругление панели наезжает на кадр над ней (герой каталога или
+          // шапка заведения). Величина нахлёста — общая: см. storefrontTokens.
+          mt: `-${storefrontLayout.panelOverlap}px`,
           zIndex: 4,
           borderRadius: '26px 26px 0 0',
           bgcolor: 'background.default',

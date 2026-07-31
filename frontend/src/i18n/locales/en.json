@@ -374,7 +374,8 @@
       "emptyHint": "Nothing has been added to this category yet",
       "openUntil": "Open until {{time}}",
       "notFound": "Venue not found",
-      "viewOnly": "You are browsing without a room — ordering is available from a room or via its QR."
+      "viewOnly": "You are browsing without a room — ordering is available from a room or via its QR.",
+      "back": "All services"
     },
     "quickActions": {
       "menu": "Menu",

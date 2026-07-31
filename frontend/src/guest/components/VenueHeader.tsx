@@ -1,7 +1,10 @@
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { IconBack } from '@/icons';
 import { glass, layout, scrim } from '../storefrontTokens';
 import type { VenueIdentity } from '../api/types';
 
@@ -18,6 +21,7 @@ import type { VenueIdentity } from '../api/types';
  */
 export function VenueHeader({ venue }: { venue: VenueIdentity }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   return (
     <Box
@@ -52,12 +56,62 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
         }}
       />
 
+      {/*
+        Выход из заведения. Ведёт на главную ЯВНО, а не через историю браузера:
+        гость мог прийти сюда из другого заведения, из ссылки в чате или по
+        прямому адресу, и «шаг назад» высадил бы его каждый раз в разном месте.
+        Кнопка обещает витрину сервисов — и всегда её и открывает.
+
+        Живёт в шапке, а значит есть на всех четырёх типах содержимого: шапку
+        рисует `VenuePage` до выбора блока (каталог / заявка / слоты / инфо).
+      */}
+      <ButtonBase
+        onClick={() => navigate('/home')}
+        data-testid="guest-venue-back"
+        aria-label={t('guest.venue.back')}
+        sx={{
+          position: 'absolute',
+          insetInlineStart: { xs: 14, md: 26 },
+          top: {
+            xs: 'calc(14px + env(safe-area-inset-top, 0px))',
+            md: 22,
+          },
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.75,
+          height: 36,
+          px: 1.5,
+          borderRadius: 999,
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: '#fff',
+          ...glass.chip,
+          '&:hover': { bgcolor: 'rgba(255,255,255,.18)' },
+        }}
+      >
+        {/* Стрелка рисуется влево; в RTL «назад» — вправо, поэтому зеркалим. */}
+        <Box
+          sx={(th) => ({
+            display: 'flex',
+            transform: th.direction === 'rtl' ? 'scaleX(-1)' : 'none',
+          })}
+        >
+          <IconBack size={16} />
+        </Box>
+        {t('guest.venue.back')}
+      </ButtonBase>
+
+      {/*
+        Нижний отступ учитывает нахлёст панели контента: она подтянута вверх и
+        накрывает низ кадра скруглением. Без этого запаса чип статуса уезжал
+        под полосу категорий — наполовину видимый и нечитаемый.
+      */}
       <Box
         sx={{
           position: 'absolute',
           left: { xs: 18, md: 34 },
           right: 18,
-          bottom: { xs: 14, md: 30 },
+          bottom: { xs: 14 + layout.panelOverlap, md: 30 + layout.panelOverlap },
         }}
       >
         <Typography

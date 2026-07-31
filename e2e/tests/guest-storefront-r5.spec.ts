@@ -186,6 +186,81 @@ test.describe('Посервисная корзина и разъезд', () => {
   })
 })
 
+test.describe('Выход из сервиса', () => {
+  // Заходы по четырём типам на трёх ширинах — десяток загрузок страницы.
+  test.slow()
+
+  const VIEWPORTS = [
+    { name: 'телефон', size: { width: 390, height: 844 } },
+    { name: 'планшет', size: { width: 834, height: 1112 } },
+    { name: 'десктоп', size: { width: 1440, height: 900 } },
+  ]
+
+  test('стрелка в шапке возвращает на главную с любого типа и на любой ширине', async ({
+    page,
+    request,
+  }) => {
+    // Инфо-сервиса в демо-отеле нет, а проверить нужно ВСЕ четыре типа: заводим
+    // свой и убираем за собой, чтобы витрина отеля не обрастала мусором тестов.
+    const token = await apiToken(request, ADMIN)
+    const h = apiHeaders(token)
+    const info = await request
+      .post(`${API}/api/cms/services`, {
+        data: { type: 'info', public_name: { ru: `Об отеле ${Date.now().toString(36)}` } },
+        headers: h,
+      })
+      .then((r) => r.json())
+
+    try {
+      const venues: Array<[string, string]> = [
+        ['kitchen', 'product'],
+        ['concierge', 'service_request'],
+        ['spa', 'slot'],
+        [info.execution_point.code, 'info'],
+      ]
+
+      await enterAsGuest(page)
+
+      for (const { name, size } of VIEWPORTS) {
+        await page.setViewportSize(size)
+        for (const [code, content] of venues) {
+          await page.goto(`/venue/${code}`)
+          const venue = page.getByTestId('guest-venue')
+          await expect(venue, `${name}: ${code} не открылся`).toBeVisible({ timeout: 15_000 })
+          await expect(venue).toHaveAttribute('data-content', content)
+
+          // Один клик — и гость снова на витрине сервисов.
+          await page.getByTestId('guest-venue-back').click()
+          await expect(page.getByTestId('guest-home'), `${name}: ${code} не вышел`).toBeVisible({
+            timeout: 15_000,
+          })
+          await expect(page).toHaveURL(/\/home$/)
+        }
+      }
+    } finally {
+      await request.delete(`${API}/api/cms/services/${info.id}`, { headers: h })
+    }
+  })
+
+  test('нижнее меню и верхняя строка тоже ведут на главную', async ({ page }) => {
+    await enterAsGuest(page)
+
+    // Один и тот же testid на обеих раскладках: на телефоне это нижнее
+    // стеклянное меню, на десктопе — верхняя стеклянная строка.
+    for (const size of [
+      { width: 390, height: 844 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(size)
+      await page.goto('/venue/spa')
+      await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 15_000 })
+
+      await page.getByTestId('guest-nav-home').click()
+      await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+    }
+  })
+})
+
 test.describe('Вход', () => {
   test('QR лобби без номера — видит витрину, но не заказывает', async ({ page }) => {
     await page.goto('/')
