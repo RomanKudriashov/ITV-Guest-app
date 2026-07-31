@@ -158,6 +158,21 @@ const inputSx = (theme: Theme) => {
     },
     '& input::-webkit-input-placeholder': placeholder,
     '& input::-moz-placeholder': placeholder,
+    // Автозаполнение — вот откуда брались «белые прямоугольники» на входе в
+    // CMS: WebKit кладёт СВОЙ фон поверх любого background и по спецификации
+    // не даёт его перекрасить. Обходится единственным способом — тенью в
+    // 1000px внутрь, которая закрашивает поле изнутри; заодно возвращаем цвет
+    // текста, который автозаполнение тоже переопределяет.
+    '& input:-webkit-autofill': {
+      WebkitBoxShadow: `0 0 0 1000px ${alpha(theme.palette.common.black, 0.28)} inset`,
+      WebkitTextFillColor: theme.palette.common.white,
+      caretColor: theme.palette.common.white,
+      borderRadius: 0,
+      transition: 'background-color 9999s ease-in-out 0s',
+    },
+    '& input:-webkit-autofill:focus': {
+      WebkitBoxShadow: `0 0 0 1000px ${alpha(theme.palette.common.black, 0.28)} inset`,
+    },
   };
 };
 
@@ -459,7 +474,14 @@ export function LoginPage() {
             </Box>
           ) : null}
 
-          {/* hint (reference `.hint` — dash + text) */}
+          {/*
+            Подсказка (reference `.hint` — тире + текст).
+
+            Здесь были демо-креды. Экран входа в панель отеля — не витрина
+            демо-стенда: логин и пароль, напечатанные под формой, работают
+            ровно как приглашение войти чужому, и первый же реальный отель
+            увидел бы их на своём поддомене.
+          */}
           <Box
             sx={(theme: Theme) => ({
               mt: '20px',
@@ -480,10 +502,7 @@ export function LoginPage() {
                 backgroundColor: alpha(theme.palette.common.white, 0.28),
               })}
             />
-            {t('auth.demoHint', {
-              email: 'chef@crystal.local',
-              password: 'chef12345',
-            })}
+            {t('auth.accessHint')}
           </Box>
         </Box>
       </Box>

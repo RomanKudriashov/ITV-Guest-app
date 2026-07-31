@@ -32,13 +32,13 @@
     "signingIn": "Signing in…",
     "logout": "Sign out",
     "networkError": "Could not reach the server",
-    "demoHint": "Demo access: {{email}} / {{password}}",
     "greetings": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
       "evening": "Good evening",
       "night": "Good night"
-    }
+    },
+    "accessHint": "Your hotel administrator grants access"
   },
   "nav": {
     "menu": "Menu",

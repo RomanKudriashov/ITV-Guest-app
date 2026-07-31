@@ -32,13 +32,13 @@
     "signingIn": "جارٍ الدخول…",
     "logout": "تسجيل الخروج",
     "networkError": "تعذر الاتصال بالخادم",
-    "demoHint": "حساب تجريبي: {{email}} / {{password}}",
     "greetings": {
       "morning": "صباح الخير",
       "afternoon": "نهارك سعيد",
       "evening": "مساء الخير",
       "night": "ليلة سعيدة"
-    }
+    },
+    "accessHint": "يمنح مدير الفندق حق الوصول"
   },
   "nav": {
     "menu": "القائمة",

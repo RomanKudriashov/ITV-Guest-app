@@ -32,13 +32,13 @@
     "signingIn": "Входим…",
     "logout": "Выйти",
     "networkError": "Не удалось связаться с сервером",
-    "demoHint": "Демо-доступ: {{email}} / {{password}}",
     "greetings": {
       "morning": "Доброе утро",
       "afternoon": "Добрый день",
       "evening": "Добрый вечер",
       "night": "Доброй ночи"
-    }
+    },
+    "accessHint": "Доступ выдаёт администратор отеля"
   },
   "nav": {
     "menu": "Меню",
