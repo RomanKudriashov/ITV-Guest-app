@@ -4,7 +4,6 @@ import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
-import ButtonBase from '@mui/material/ButtonBase';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
@@ -18,7 +17,6 @@ import { useAppTheme } from '@/theme';
 import { pickLogo } from '@/theme/tokens';
 import {
   IconHome,
-  IconRestaurant,
   IconOrders,
   IconChat,
   IconInfo,
@@ -30,7 +28,9 @@ import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { CartPage } from '../pages/CartPage';
-import { BOTTOM_NAV_HEIGHT, CART_WIDTH, CONTENT_MAX, DESKTOP_QUERY, RAIL_WIDTH } from './constants';
+import { GuestTopBar } from './GuestTopBar';
+import { layout as storefrontLayout } from '../storefrontTokens';
+import { BOTTOM_NAV_HEIGHT, CART_WIDTH, CONTENT_MAX, DESKTOP_QUERY } from './constants';
 
 export { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from './constants';
 
@@ -42,9 +42,10 @@ interface NavTab {
 
 // Same roles as the bottom nav — one testid per role, whatever the viewport,
 // so E2E scenarios don't fork by width. Grouped for the rail («Отель»).
+// «Меню» больше не раздел: плоского каталога отеля не существует, меню живёт
+// внутри заведения и открывается его плиткой на главной.
 const PRIMARY_TABS: NavTab[] = [
   { value: '/home', Icon: IconHome, labelKey: 'guest.nav.home' },
-  { value: '/menu', Icon: IconRestaurant, labelKey: 'guest.nav.menu' },
   { value: '/orders', Icon: IconOrders, labelKey: 'guest.nav.orders' },
 ];
 const HOTEL_TABS: NavTab[] = [
@@ -52,13 +53,16 @@ const HOTEL_TABS: NavTab[] = [
   { value: '/info', Icon: IconInfo, labelKey: 'guest.nav.info' },
 ];
 const TABS = [...PRIMARY_TABS, ...HOTEL_TABS];
+const TOP_BAR_HEIGHT = storefrontLayout.topBar;
 
 /**
- * ONE shell for every storefront screen, adaptive by width (spec §4). The shared
- * business logic (session, unread badge, active tab) is computed once; only the
- * chrome differs: below 1024 a bottom bar with floating glass controls; at 1024+
- * a left rail with the room/language/theme at its foot and no bottom bar. The
- * cart lives as a right column on desktop and as its own screen on mobile.
+ * Один шелл на все экраны витрины, адаптивный по ширине.
+ *
+ * Общая логика (сессия, счётчик непрочитанного, активный раздел) считается
+ * один раз; различается только обвязка: до 1024 — нижнее стеклянное меню и
+ * плавающие чипы, от 1024 — ВЕРХНЯЯ стеклянная строка (R5; левый рельс убран:
+ * он съедал ширину на экране, где ценность — кадры заведений во всю ширину).
+ * Корзина — колонка справа на десктопе и отдельный экран на телефоне.
  */
 export function GuestLayout() {
   const { t } = useTranslation();
@@ -99,60 +103,34 @@ export function GuestLayout() {
     </Box>
   );
 
-  // ── Desktop: left rail + capped content (+ cart column, added next step) ──
+  // ── Планшет и десктоп: верхняя стеклянная строка, контент, корзина колонкой ──
   if (isDesktop) {
     return (
       <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
+        <GuestTopBar
+          hotelName={hotelName}
+          logo={pickLogo(tokens, mode) ?? null}
+          tabs={TABS.map((tab) => ({ value: tab.value, labelKey: tab.labelKey }))}
+          active={activeTab}
+          room={room}
+          cartCount={cart.count}
+          unreadChat={unreadChat}
+          onNavigate={navigate}
+          onOpenCart={() => navigate('/cart')}
+        />
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: cartOpen
-              ? `${RAIL_WIDTH}px minmax(0, ${CONTENT_MAX}px) ${CART_WIDTH}px`
-              : `${RAIL_WIDTH}px minmax(0, ${CONTENT_MAX}px)`,
+              ? `minmax(0, ${CONTENT_MAX}px) ${CART_WIDTH}px`
+              : `minmax(0, ${CONTENT_MAX}px)`,
             justifyContent: 'center',
-            minHeight: '100dvh',
+            minHeight: `calc(100dvh - ${TOP_BAR_HEIGHT}px)`,
           }}
         >
-          <Box
-            component="aside"
-            sx={(th) => ({
-              position: 'sticky',
-              top: 0,
-              alignSelf: 'start',
-              height: '100dvh',
-              borderInlineEnd: `1px solid ${th.palette.divider}`,
-              bgcolor: 'background.paper',
-              px: 2.25,
-              py: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-            })}
-          >
-            <RailBrand name={hotelName} logo={pickLogo(tokens, mode)} />
-            <RailNav
-              groups={[
-                { tabs: PRIMARY_TABS },
-                { label: t('guest.nav.hotelGroup'), tabs: HOTEL_TABS },
-              ]}
-              active={activeTab}
-              badgeFor={badgeFor}
-              onNavigate={navigate}
-              t={t}
-            />
-            <Stack spacing={1.25} sx={{ mt: 'auto' }}>
-              {room ? <RoomChip room={room} /> : null}
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <GuestLanguageMenu />
-                <ThemeModeToggle />
-              </Stack>
-            </Stack>
-          </Box>
-
           <Box component="main" sx={{ minWidth: 0 }}>
             {content}
           </Box>
-
           {cartOpen ? <CartPage variant="column" /> : null}
         </Box>
       </Box>
@@ -234,103 +212,6 @@ export function GuestLayout() {
 }
 
 /** Rail header: brand logo (or vector monogram) + hotel wordmark. */
-function RailBrand({ name, logo }: { name: string; logo?: string }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 0.75, color: 'text.primary' }}>
-      {logo ? (
-        <Box component="img" src={logo} alt={name} data-testid="guest-brand-logo" sx={{ height: 26, maxWidth: 180, objectFit: 'contain' }} />
-      ) : (
-        <>
-          <Box component="svg" viewBox="0 0 40 40" width={26} height={26} aria-hidden sx={{ color: 'inherit', flex: 'none' }}>
-            <path d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z" fill="none" stroke="currentColor" strokeWidth={1.3} />
-            <path d="M5.5 16 H34.5 M20 3.5 V36.5" fill="none" stroke="currentColor" strokeWidth={0.7} opacity={0.5} />
-          </Box>
-          <Typography
-            component="span"
-            noWrap
-            sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontSize: 13, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' })}
-          >
-            {name}
-          </Typography>
-        </>
-      )}
-    </Box>
-  );
-}
-
-interface RailNavGroup {
-  label?: string;
-  tabs: NavTab[];
-}
-
-function RailNav({
-  groups,
-  active,
-  badgeFor,
-  onNavigate,
-  t,
-}: {
-  groups: RailNavGroup[];
-  active: string | false;
-  badgeFor: (value: string) => number;
-  onNavigate: (to: string) => void;
-  t: (key: string) => string;
-}) {
-  return (
-    <Box component="nav" sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-      {groups.map((group, gi) => (
-        <Box key={gi}>
-          {group.label ? (
-            <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'text.disabled', px: 1.5, pt: 2, pb: 0.75 }}>
-              {group.label}
-            </Typography>
-          ) : null}
-          {group.tabs.map((tab) => {
-            const on = active === tab.value;
-            const badge = badgeFor(tab.value);
-            return (
-              <ButtonBase
-                key={tab.value}
-                onClick={() => onNavigate(tab.value)}
-                data-testid={`guest-nav-${tab.value.slice(1)}`}
-                aria-current={on ? 'page' : undefined}
-                sx={(th) => ({
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  justifyContent: 'flex-start',
-                  width: '100%',
-                  px: 1.5,
-                  py: 1.25,
-                  borderRadius: 2.5,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: on ? th.palette.primary.main : th.palette.text.secondary,
-                  bgcolor: on ? alpha(th.palette.primary.main, 0.14) : 'transparent',
-                  '&:hover': { bgcolor: on ? alpha(th.palette.primary.main, 0.18) : th.palette.action.hover, color: on ? th.palette.primary.main : th.palette.text.primary },
-                })}
-              >
-                {badge ? (
-                  <Badge badgeContent={badge} color="error" max={99} data-testid="guest-chat-unread">
-                    <tab.Icon size={19} />
-                  </Badge>
-                ) : (
-                  <tab.Icon size={19} />
-                )}
-                <Box component="span">{t(tab.labelKey)}</Box>
-              </ButtonBase>
-            );
-          })}
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
-/**
- * Quiet room indicator (reference `.roomfloat`): an outlined pill with a small
- * accent dot and «Номер 305» — not a filled block.
- */
 function RoomChip({ room }: { room: string }) {
   const { t } = useTranslation();
   return (

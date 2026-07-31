@@ -318,8 +318,7 @@
     "nav": {
       "home": "Home",
       "hotelGroup": "Hotel",
-      "menu": "Menu",
-      "cart": "Cart",
+      "cart": "Order",
       "orders": "Orders",
       "chat": "Chat",
       "info": "Info"
@@ -363,15 +362,18 @@
         "view": "View"
       },
       "prev": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "room": "Room {{room}}"
     },
     "venue": {
       "open": "Open",
       "until": "until {{time}}",
       "closed": "Closed",
-      "opensAt": "from {{time}}",
+      "opensAt": "Opens at {{time}}",
       "emptyTitle": "No venues yet",
-      "emptyHint": "Nothing has been added to this category yet"
+      "emptyHint": "Nothing has been added to this category yet",
+      "openUntil": "Open until {{time}}",
+      "notFound": "Venue not found"
     },
     "quickActions": {
       "menu": "Menu",

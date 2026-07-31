@@ -129,7 +129,10 @@ export const router = createBrowserRouter([
           { path: 'home', element: <HomePage /> },
           // Every catalog is the same screen with a different offering type;
           // there is deliberately no separate page component per type.
-          { path: 'menu', element: <CatalogPage type="product" /> },
+          // Плоского каталога отеля больше нет: меню живёт внутри заведения.
+          // Старую ссылку уводим на главную, а не в 404 — она могла остаться
+          // в закладке или в переписке.
+          { path: 'menu', element: <Navigate to="/home" replace /> },
           { path: 'services', element: <CatalogPage type="service_request" /> },
           { path: 'info', element: <CatalogPage type="info" /> },
           { path: 'slots', element: <CatalogPage type="slot" /> },

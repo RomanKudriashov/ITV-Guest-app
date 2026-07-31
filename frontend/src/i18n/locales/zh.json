@@ -317,8 +317,7 @@
     "nav": {
       "home": "首页",
       "hotelGroup": "酒店",
-      "menu": "菜单",
-      "cart": "购物车",
+      "cart": "订单",
       "orders": "订单",
       "chat": "聊天",
       "info": "信息"
@@ -361,15 +360,18 @@
         "view": "查看"
       },
       "prev": "上一个",
-      "next": "下一个"
+      "next": "下一个",
+      "room": "{{room}} 房"
     },
     "venue": {
       "open": "营业中",
       "until": "至 {{time}}",
       "closed": "已打烊",
-      "opensAt": "{{time}} 开始",
+      "opensAt": "{{time}} 开始营业",
       "emptyTitle": "暂无场所",
-      "emptyHint": "此分类还没有添加内容"
+      "emptyHint": "此分类还没有添加内容",
+      "openUntil": "营业至 {{time}}",
+      "notFound": "未找到该场所"
     },
     "quickActions": {
       "menu": "菜单",
