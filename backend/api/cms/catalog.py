@@ -322,6 +322,32 @@ def cms_assign_item_badges(request: HttpRequest, item_id: str, payload: ItemBadg
     return {"badges": svc.assign_item_badges(item_id, payload.badge_ids)}
 
 
+# --- Маршрутизация категории на исполнителя ----------------------------------
+
+
+class RouteEntryIn(Schema):
+    execution_point_id: str
+    is_active: bool = True
+
+
+class RoutesIn(Schema):
+    """Порядок списка = приоритет: первый и есть основной исполнитель."""
+
+    routes: list[RouteEntryIn] = []
+
+
+@router.get("/categories/{category_id}/routes", summary="Кто исполняет категорию")
+def cms_category_routes(request: HttpRequest, category_id: str):
+    return svc.category_routes(category_id)
+
+
+@router.put("/categories/{category_id}/routes", summary="Назначить исполнителей категории")
+def cms_replace_category_routes(request: HttpRequest, category_id: str, payload: RoutesIn):
+    return svc.replace_category_routes(
+        category_id, [entry.dict() for entry in payload.routes]
+    )
+
+
 # --- Справочники аллергенов и диетических маркеров ---------------------------
 
 

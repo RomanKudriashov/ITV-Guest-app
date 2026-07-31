@@ -1432,3 +1432,124 @@ def _apply_item_facets(item, data: dict) -> None:
         _sync_join(item, ItemDietaryMarker, "marker", DietaryMarker, data["marker_ids"] or [])
     if data.get("characteristics") is not None:
         _sync_item_characteristics(item, data["characteristics"] or [])
+
+
+# ===========================================================================
+# Маршрутизация: категория → исполнитель
+# ===========================================================================
+#
+# До R4 маршруты заводил только сид: в CMS их не было вовсе, и отель, создавший
+# категорию через админку, не мог сказать, кто её исполняет. Работало это лишь
+# потому, что резолвер заказа падает на соглашения (см. ниже) — то есть система
+# угадывала за отель и иногда угадывала неверно, молча.
+
+
+def _route_fallback(category: Category) -> dict:
+    """
+    Кто исполнит категорию, если явного маршрута нет.
+    Зеркалит порядок фолбэков резолвера заказа (`orders.services`), потому что
+    CMS обязана показывать ТУ ЖЕ правду, что применится к реальному заказу.
+    """
+    from apps.hotels.models import ExecutionPoint
+
+    by_code = ExecutionPoint.objects.filter(code=category.code, is_active=True).first()
+    if by_code is not None:
+        return {"point": by_code, "source": "convention"}
+
+    points = list(ExecutionPoint.objects.filter(is_active=True)[:2])
+    if len(points) == 1:
+        return {"point": points[0], "source": "single_point"}
+
+    return {"point": None, "source": "none"}
+
+
+def serialize_route(route) -> dict:
+    return {
+        "id": str(route.pk),
+        "execution_point_id": str(route.execution_point_id),
+        "execution_point_code": route.execution_point.code,
+        "priority": route.priority,
+        "is_active": route.is_active,
+    }
+
+
+def category_routes(category_id) -> dict:
+    """
+    Маршруты категории плюс ЭФФЕКТИВНЫЙ исполнитель с указанием источника.
+
+    Источник показываем честно: `route` — так решил отель, `convention` —
+    совпали коды категории и точки, `single_point` — исполнитель в отеле один,
+    `none` — заказ упадёт. Без этого админ видит пустой список и думает, что
+    маршрут не настроен, хотя заказы уходят и исполняются.
+    """
+    from .models import Route
+
+    category = get_category(category_id)
+    routes = list(
+        Route.objects.select_related("execution_point")
+        .filter(category=category)
+        .order_by("priority")
+    )
+    active = [r for r in routes if r.is_active and r.execution_point.is_active]
+    if active:
+        effective, source = active[0].execution_point, "route"
+    else:
+        fallback = _route_fallback(category)
+        effective, source = fallback["point"], fallback["source"]
+
+    return {
+        "category_id": str(category.pk),
+        "routes": [serialize_route(route) for route in routes],
+        "effective": (
+            {
+                "execution_point_id": str(effective.pk),
+                "execution_point_code": effective.code,
+                "title": effective.title or {},
+            }
+            if effective is not None
+            else None
+        ),
+        "effective_source": source,
+    }
+
+
+@transaction.atomic
+def replace_category_routes(category_id, entries: Iterable[dict]) -> dict:
+    """
+    Полная замена набора маршрутов категории — та же семантика, что у набора
+    картинок позиции и привязок сотрудника: клиент присылает желаемое
+    состояние целиком, а не дифф.
+
+    Приоритет берём из ПОРЯДКА списка: «первый в списке и есть основной
+    исполнитель» — то, что админ видит на экране, и то, что применит резолвер.
+    """
+    from apps.hotels.models import ExecutionPoint
+
+    from .models import Route
+
+    category = get_category(category_id)
+    entries = list(entries or [])
+
+    point_ids = [str(entry.get("execution_point_id") or "") for entry in entries]
+    points = {
+        str(point.pk): point
+        for point in ExecutionPoint.objects.filter(pk__in=[p for p in point_ids if p])
+    }
+    unknown = [p for p in point_ids if p not in points]
+    if unknown:
+        raise ValidationError("Отдел не найден", field="execution_point_id")
+    if len(set(point_ids)) != len(point_ids):
+        raise ValidationError(
+            "Один отдел указан дважды", field="execution_point_id", code="duplicate_route"
+        )
+
+    # Маршрут — служебная связка, хранить её мягко незачем (как ItemImage).
+    Route.objects.filter(category=category).hard_delete()
+    for index, entry in enumerate(entries):
+        Route.objects.create(
+            category=category,
+            execution_point=points[str(entry["execution_point_id"])],
+            priority=index,
+            is_active=bool(entry.get("is_active", True)),
+        )
+    return category_routes(category.pk)
