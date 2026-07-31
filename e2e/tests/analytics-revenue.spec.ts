@@ -25,7 +25,8 @@ test('дашборд: заглавная «Выручка» — это gross, а
   })
   expect(placed.ok(), await placed.text()).toBeTruthy()
 
-  // Дашборд: chef — старший кухни; заказ caesar на кухне попадает в его скоуп.
+  // Дашборд смотрим админом отеля: с R3 аналитика — не работа линейного повара,
+  // и скоуп у админа общеотельный, как и у токена ниже.
   await login(page)
   await page.getByTestId('cms-analytics-nav').click()
   await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 20_000 })
@@ -43,10 +44,17 @@ test('дашборд: заглавная «Выручка» — это gross, а
   expect(current.gross_minor).toBeGreaterThan(current.revenue_minor)
 
   // Заглавная цифра карточки «Выручка» = gross (в мажорных единицах), НЕ позиции.
+  // Сравниваем ЧИСЛА, а не строки цифр: формат показывает копейки, когда они
+  // есть, и «30 951,04» против «30951» разошлось бы на пустом месте.
   const headline = page.getByTestId('analytics-summary-value-revenue')
-  const digits = (await headline.innerText()).replace(/[^\d]/g, '')
-  expect(digits).toBe(String(Math.round(current.gross_minor / 100)))
-  expect(digits).not.toBe(String(Math.round(current.revenue_minor / 100)))
+  const shown = Number(
+    (await headline.innerText())
+      .replace(/[^\d,.-]/g, '')
+      .replace(/\s/g, '')
+      .replace(',', '.'),
+  )
+  expect(shown).toBeCloseTo(current.gross_minor / 100, 1)
+  expect(shown).not.toBeCloseTo(current.revenue_minor / 100, 1)
 
   // Разложение показано вторично.
   await expect(page.getByTestId('analytics-revenue-breakdown')).toBeVisible()

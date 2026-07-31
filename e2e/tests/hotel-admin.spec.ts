@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, CREDENTIALS, HOTEL } from './helpers'
+import { apiToken, ADMIN, HOTEL } from './helpers'
 
 /**
  * Админка отеля: номера/QR, персонал, локации.
@@ -14,8 +14,8 @@ const uniq = () => Date.now().toString().slice(-6)
 
 async function openAdmin(page: Page, path: string): Promise<void> {
   await page.goto('/login')
-  await page.getByTestId('login-email').fill(CREDENTIALS.email)
-  await page.getByTestId('login-password').fill(CREDENTIALS.password)
+  await page.getByTestId('login-email').fill(ADMIN.email)
+  await page.getByTestId('login-password').fill(ADMIN.password)
   await page.getByTestId('login-submit').click()
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
   await page.goto(path)

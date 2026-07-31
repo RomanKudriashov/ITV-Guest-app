@@ -408,20 +408,8 @@ def accept_order(user, order_id) -> Order:
 
 
 def _first_working_status(order: Order) -> StatusDefinition | None:
-    """
-    Первый статус после начального В ПОТОКЕ ЗАКАЗА: «Принят» на доске,
-    «В работе» в очереди хозслужбы, «Пришёл» в записях спа.
-    """
-    return (
-        StatusDefinition.objects.filter(
-            flow=order.status.flow,
-            sort_order__gt=order.status.sort_order,
-            is_cancelled=False,
-            is_terminal=False,
-        )
-        .order_by("sort_order")
-        .first()
-    )
+    """Первый статус после текущего В ПОТОКЕ ЗАКАЗА — правило живёт в потоках."""
+    return status_flows.first_working_status(order.status.flow, order.status.sort_order)
 
 
 @transaction.atomic

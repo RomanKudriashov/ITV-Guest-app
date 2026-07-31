@@ -55,6 +55,7 @@ from apps.notifications.models import (
     NotificationChannel,
     TargetKind,
 )
+from apps.orders import status_flows
 from apps.orders.status_flows import ensure_status_flows
 
 # Токены бренда. Формат совпадает с BrandTokens во фронте — это один контракт,
@@ -1141,10 +1142,18 @@ class Command(BaseCommand):
                 OrderStatusChange.objects.filter(order_id=order.pk, from_status__isnull=True).update(created_at=created)
                 order.refresh_from_db()
 
+                # Коды статусов берём ИЗ ПОТОКА ЗАКАЗА, а не из доски ресторана:
+                # история копится по всем отделам, а у хозслужбы, спа и
+                # консьержа с R3 свои потоки — «accepted» там просто нет.
+                flow = order.status.flow
+                cancelled_code = status_flows.cancelled_status(flow).code
+                working_code = status_flows.first_working_status(flow, order.status.sort_order).code
+                done_code = status_flows.terminal_status(flow).code
+
                 # Каждый седьмой — отмена; остальные проходят приёмку и завершение.
                 if n % 7 == 6:
-                    change_status(order, to_code="cancelled", actor_type="staff")
-                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code="cancelled").update(
+                    change_status(order, to_code=cancelled_code, actor_type="staff")
+                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code=cancelled_code).update(
                         created_at=created + timedelta(minutes=8)
                     )
                 else:
@@ -1152,12 +1161,12 @@ class Command(BaseCommand):
                     Order.objects.filter(pk=order.pk).update(
                         assignee=actor, accepted_at=created + timedelta(minutes=3 + (n % 5))
                     )
-                    change_status(order, to_code="accepted", actor_type="staff", actor_id=actor.pk)
-                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code="accepted").update(
+                    change_status(order, to_code=working_code, actor_type="staff", actor_id=actor.pk)
+                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code=working_code).update(
                         created_at=created + timedelta(minutes=3 + (n % 5))
                     )
-                    change_status(order.__class__.objects.get(pk=order.pk), to_code="done", actor_type="staff", actor_id=actor.pk)
-                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code="done").update(
+                    change_status(order.__class__.objects.get(pk=order.pk), to_code=done_code, actor_type="staff", actor_id=actor.pk)
+                    OrderStatusChange.objects.filter(order_id=order.pk, to_status__code=done_code).update(
                         created_at=created + timedelta(minutes=20 + (n % 30))
                     )
                     # Часть завершённых — с отзывом (разброс оценок, включая низкие).

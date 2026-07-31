@@ -43,11 +43,13 @@ export function useTrackerBoard(
   point: string | undefined,
   scope: TrackerScope,
   pollMs?: number,
+  /** Timeline layout only: the day of appointments being viewed. */
+  date?: string,
 ) {
   const language = useTrackerLanguage();
   return useQuery<TrackerBoard>({
-    queryKey: trackerKeys.board(point ?? 'none', scope, language),
-    queryFn: () => fetchTrackerBoard(point as string, scope, language),
+    queryKey: trackerKeys.board(point ?? 'none', scope, language, date ?? ''),
+    queryFn: () => fetchTrackerBoard(point as string, scope, language, date),
     enabled: Boolean(point),
     staleTime: 10_000,
     refetchInterval: pollMs && pollMs > 0 ? pollMs : false,

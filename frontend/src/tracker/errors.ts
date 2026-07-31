@@ -13,6 +13,11 @@ const CODE_KEYS: Record<string, string> = {
   no_route: 'tracker.errors.noRoute',
   order_not_found: 'tracker.errors.orderNotFound',
   not_found: 'tracker.errors.orderNotFound',
+  // Роль (R3). Три разных «нельзя», и путать их дорого: первое лечится сменой
+  // роли, второе — ничем (это чужой сервис), третье — обращением к админу.
+  no_cms_access: 'tracker.errors.noCmsAccess',
+  not_my_service: 'tracker.errors.notMyService',
+  hotel_admin_only: 'tracker.errors.hotelAdminOnly',
 };
 
 /** `409 already_accepted` carries the current executor — name them, don't hide it. */
@@ -36,6 +41,7 @@ export function trackerErrorMessage(error: unknown, t: TFunction): string {
     if (key) return t(key);
     // Django's own 404 page has no code — say what actually happened.
     if (error.status === 404) return t('tracker.errors.orderNotFound');
+    // 403 без кода — только про привязку к точке: у отказов по роли код есть.
     if (error.status === 403) return t('tracker.errors.pointNotAssigned');
     if (error.detail && !/^HTTP \d+$/.test(error.detail)) return error.detail;
     if (error.status >= 500) return t('tracker.errors.server');

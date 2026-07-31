@@ -63,7 +63,11 @@ export function TrackerPage() {
   const points = pointsQuery.data?.points;
   const { selected: pointCode, select } = usePointSelection(points);
 
-  const boardQuery = useTrackerBoard(pointCode, scope, pollMs);
+  // День ленты записей. Пустая строка = «сегодня по времени отеля»: считать
+  // сегодняшнюю дату на клиенте нельзя — у отеля своя таймзона, и в полночь
+  // клиент и сервер разошлись бы на сутки.
+  const [day, setDay] = useState('');
+  const boardQuery = useTrackerBoard(pointCode, scope, pollMs, day || undefined);
   const sound = useTrackerSound();
   const actions = useOrderActions();
 
@@ -103,6 +107,23 @@ export function TrackerPage() {
   }, [highlighted]);
 
   const columns = useMemo(() => boardQuery.data?.columns ?? [], [boardQuery.data]);
+
+  // Which shape the server asked for. Records (spa) come as one ordered day —
+  // grouping an appointment by status would hide the only thing that matters
+  // there, which is who comes next.
+  const timeline = boardQuery.data?.layout === 'timeline' && scope === 'active';
+
+  // Сервер отвечает, какой день показал (в таймзоне отеля) — от него и шагаем.
+  const shownDay = columns[0]?.date ?? '';
+  const shiftDay = useCallback(
+    (days: number) => {
+      if (!shownDay) return;
+      const next = new Date(`${shownDay}T12:00:00Z`);
+      next.setUTCDate(next.getUTCDate() + days);
+      setDay(next.toISOString().slice(0, 10));
+    },
+    [shownDay],
+  );
 
   // Keep the phone tab valid when the preset changes under our feet.
   useEffect(() => {
@@ -240,7 +261,7 @@ export function TrackerPage() {
         />
       </Tabs>
 
-      {!wide && columns.length ? (
+      {!wide && columns.length && !timeline ? (
         <Tabs
           value={currentColumn?.code ?? false}
           onChange={(_event, next: string) => setActiveColumn(next)}
@@ -286,7 +307,9 @@ export function TrackerPage() {
           >
             {trackerErrorMessage(boardQuery.error, t)}
           </Alert>
-        ) : !allOrders.length ? (
+        ) : !allOrders.length && !timeline ? (
+          // У ленты пустой день — не пустая доска: переключатель дня обязан
+          // остаться, иначе из пустого сегодня некуда шагнуть.
           <Box data-testid="tracker-empty">
             <EmptyState
               title={
@@ -300,6 +323,55 @@ export function TrackerPage() {
                   : t('tracker.board.emptyBody')
               }
             />
+          </Box>
+        ) : timeline ? (
+          // Лента записей: один день по времени слота, во всю ширину. Колонок
+          // здесь нет по существу задачи, а не ради экономии места.
+          <Box
+            sx={{ maxWidth: 720, mx: 'auto' }}
+            data-testid="tracker-timeline"
+            // День, который РЕАЛЬНО показан, — в таймзоне отеля. Клиенту он
+            // нужен и для шага по дням, и чтобы не вычислять «сегодня» самому.
+            data-day={shownDay}
+          >
+            {columns.map((column) => (
+              <Stack key={column.code} spacing={1.5}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Button
+                    size="small"
+                    onClick={() => shiftDay(-1)}
+                    data-testid="tracker-day-prev"
+                    sx={{ minWidth: 44 }}
+                  >
+                    ←
+                  </Button>
+                  <Typography variant="overline" color="text.secondary" sx={{ flexGrow: 1 }}>
+                    {t('tracker.board.day', { date: column.date ?? column.title })}
+                  </Typography>
+                  {day ? (
+                    <Button size="small" onClick={() => setDay('')} data-testid="tracker-day-today">
+                      {t('tracker.board.today')}
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="small"
+                    onClick={() => shiftDay(1)}
+                    data-testid="tracker-day-next"
+                    sx={{ minWidth: 44 }}
+                  >
+                    →
+                  </Button>
+                </Stack>
+                {column.orders.length ? (
+                  column.orders.map(renderCard)
+                ) : (
+                  <EmptyState
+                    title={t('tracker.board.emptyTimelineTitle')}
+                    description={t('tracker.board.emptyTimelineBody')}
+                  />
+                )}
+              </Stack>
+            ))}
           </Box>
         ) : wide ? (
           <Stack direction="row" spacing={2} alignItems="flex-start">

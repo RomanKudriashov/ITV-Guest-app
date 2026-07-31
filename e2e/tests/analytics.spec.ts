@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS } from './helpers'
+import { ADMIN } from './helpers'
 
 /**
  * CMS «Аналитика»: дашборд читает предагрегаты, фильтр применяется, drill-down
@@ -12,8 +12,8 @@ import { CREDENTIALS } from './helpers'
 
 async function openAnalytics(page: Page): Promise<void> {
   await page.goto('/login')
-  await page.getByTestId('login-email').fill(CREDENTIALS.email)
-  await page.getByTestId('login-password').fill(CREDENTIALS.password)
+  await page.getByTestId('login-email').fill(ADMIN.email)
+  await page.getByTestId('login-password').fill(ADMIN.password)
   await page.getByTestId('login-submit').click()
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
   await page.getByTestId('cms-analytics-nav').click()

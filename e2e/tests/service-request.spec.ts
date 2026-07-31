@@ -78,13 +78,15 @@ test.describe('Заявка-услуга', () => {
       await expect(card).toBeVisible({ timeout: 20_000 })
       await expect(card.getByTestId('tracker-order-fields')).toContainText('Аэропорт Пулково')
 
+      // Консьерж живёт в потоке ЗАЯВОК (R3): подтвердить → выполнено. Ни
+      // «готовится», ни «в пути» у подачи машины нет.
       await staff.getByTestId(`tracker-accept-${number}`).click()
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Принят/i, {
+      await expect(guest.getByTestId('guest-order-status')).toContainText(/Подтверждена/i, {
         timeout: 20_000,
       })
 
-      await staff.getByTestId(`tracker-status-${number}-preparing`).click()
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Готовится/i, {
+      await staff.getByTestId(`tracker-status-${number}-fulfilled`).click()
+      await expect(guest.getByTestId('guest-order-status')).toContainText(/Выполнена/i, {
         timeout: 20_000,
       })
     } finally {

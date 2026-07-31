@@ -125,6 +125,37 @@ def initial_status(flow: str):
     )
 
 
+def first_working_status(flow: str, after_sort_order: int = -1):
+    """
+    Первый рабочий статус после указанного: «Принят» на доске, «В работе» в
+    очереди хозслужбы, «Пришёл» в записях спа. Именно сюда переводит «взять
+    задачу», и именно его ищет сид, наполняя историю по всем отделам.
+    """
+    from .models import StatusDefinition
+
+    return (
+        StatusDefinition.objects.filter(
+            flow=flow,
+            sort_order__gt=after_sort_order,
+            is_cancelled=False,
+            is_terminal=False,
+        )
+        .order_by("sort_order")
+        .first()
+    )
+
+
+def terminal_status(flow: str):
+    """Завершающий статус потока: «Доставлено» / «Готово» / «Выполнена», не отмена."""
+    from .models import StatusDefinition
+
+    return (
+        StatusDefinition.objects.filter(flow=flow, is_terminal=True, is_cancelled=False)
+        .order_by("sort_order")
+        .first()
+    )
+
+
 def cancelled_status(flow: str):
     from .models import StatusDefinition
 

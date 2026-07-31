@@ -10,11 +10,23 @@ import type { ChatSnapshot, GuestOrder, GuestReview } from '@/guest/api/types';
 
 export type TrackerScope = 'active' | 'history';
 
+/**
+ * Kind of tracker, derived by the server from the service type — never guessed
+ * here. A board for a restaurant, a queue for housekeeping, a day of bookings
+ * for a spa, a request list for the concierge.
+ */
+export type TrackerType = 'board' | 'queue' | 'schedule' | 'requests';
+
+/** How to draw the tasks. The server says which; the client never decides. */
+export type TrackerLayout = 'columns' | 'timeline';
+
 export interface TrackerPoint {
   id: string;
   code: string;
   title: string;
   kind?: string;
+  tracker_type?: TrackerType;
+  layout?: TrackerLayout;
   /** Staff level on this point ("lead", "member", …) — informational. */
   level?: string;
   active_count?: number;
@@ -29,6 +41,23 @@ export interface TrackerPointRef {
   id: string;
   code: string;
   title: string;
+  tracker_type?: TrackerType;
+  layout?: TrackerLayout;
+}
+
+/**
+ * Where a borrowed task came from (R2 fan-out → R3 board).
+ *
+ * A cocktail ordered through room service is prepared by the bar and lands on
+ * the bar's board as its own sub-order with its own number. Without this the
+ * bartender sees a task from nowhere: the guest will quote the number of *their*
+ * order, and that number is not on the board.
+ */
+export interface TrackerSourceOrder {
+  id: string;
+  number: number;
+  service_code: string;
+  service_title: string;
 }
 
 export interface TrackerAssignee {
@@ -53,6 +82,8 @@ export interface TrackerOrder extends GuestOrder {
   is_overdue: boolean;
   next_statuses: TrackerNextStatus[];
   can_cancel: boolean;
+  /** Set only on a sub-order of a fanned-out guest order; null on a plain one. */
+  source_order?: TrackerSourceOrder | null;
   /** The guest's private review, once left — shown on the card/detail if present. */
   review?: GuestReview | null;
 }
@@ -74,13 +105,17 @@ export interface TrackerColumn {
   code: string;
   title: string;
   orders: TrackerOrder[];
+  /** Timeline layout only: which day this column shows (YYYY-MM-DD). */
+  date?: string;
 }
 
 export interface TrackerBoard {
   point: TrackerPointRef;
   scope: TrackerScope;
   server_time: string;
-  /** Built from the hotel's status preset — never hard-coded on the client. */
+  tracker_type?: TrackerType;
+  layout?: TrackerLayout;
+  /** Built from the point's status FLOW — never hard-coded on the client. */
   columns: TrackerColumn[];
 }
 

@@ -8,6 +8,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CallSplitIcon from '@mui/icons-material/CallSplit';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import { useTranslation } from 'react-i18next';
@@ -79,6 +80,27 @@ export function OrderCard({
               data-testid={`tracker-waiting-${order.number}`}
             />
           </Stack>
+
+          {/*
+            A borrowed task says where it came from. The bartender is holding a
+            sub-order with its own number, while the guest will quote the number
+            of the order they actually placed — without this line the two never
+            meet.
+          */}
+          {order.source_order ? (
+            <Chip
+              size="small"
+              variant="outlined"
+              color="info"
+              icon={<CallSplitIcon sx={{ fontSize: 16 }} />}
+              data-testid={`tracker-source-${order.number}`}
+              label={t('tracker.card.fromOrder', {
+                number: order.source_order.number,
+                service: order.source_order.service_title,
+              })}
+              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+            />
+          ) : null}
 
           <Stack direction="row" spacing={0.75} alignItems="flex-start">
             <PlaceOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: '2px' }} />

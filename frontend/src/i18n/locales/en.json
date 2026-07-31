@@ -620,14 +620,19 @@
       "emptyTitle": "No orders",
       "emptyBody": "New orders appear here on their own — no need to refresh",
       "emptyHistoryTitle": "History is empty",
-      "emptyHistoryBody": "Closed orders of the last 24 hours will show up here"
+      "emptyHistoryBody": "Closed orders of the last 24 hours will show up here",
+      "day": "Appointments for {{date}}",
+      "emptyTimelineTitle": "No appointments for this day",
+      "emptyTimelineBody": "New bookings will appear here on their own",
+      "today": "Today"
     },
     "card": {
       "number": "#{{number}}",
       "room": "Room {{room}}",
       "waiting": "{{minutes}} min",
       "asap": "As soon as possible",
-      "byTime": "By {{time}}"
+      "byTime": "By {{time}}",
+      "fromOrder": "From order #{{number}} · {{service}}"
     },
     "actions": {
       "accept": "Accept",
@@ -665,7 +670,10 @@
       "alreadyAcceptedBy": "Already accepted by {{name}}",
       "server": "The server is not responding",
       "generic": "The action failed",
-      "orderNotFound": "Order not found — it may be gone or belong to another point"
+      "orderNotFound": "Order not found — it may be gone or belong to another point",
+      "noCmsAccess": "The management section is for service managers and the hotel administrator",
+      "notMyService": "This belongs to a service you do not manage",
+      "hotelAdminOnly": "This is a hotel-level setting — the hotel administrator changes it"
     },
     "chat": {
       "title": "Chat",

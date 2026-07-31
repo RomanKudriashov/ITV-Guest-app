@@ -32,9 +32,11 @@ export function fetchTrackerBoard(
   point: string,
   scope: TrackerScope,
   language?: string,
+  /** Timeline layout only (spa): which day of appointments to show. */
+  date?: string,
 ): Promise<TrackerBoard> {
   return api.get<TrackerBoard>('/tracker/orders', {
-    query: { point, scope },
+    query: date ? { point, scope, date } : { point, scope },
     headers: langHeaders(language),
   });
 }

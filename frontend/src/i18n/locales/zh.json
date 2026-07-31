@@ -618,14 +618,19 @@
       "emptyTitle": "暂无订单",
       "emptyBody": "新订单会自动出现，无需刷新",
       "emptyHistoryTitle": "暂无历史",
-      "emptyHistoryBody": "这里显示最近 24 小时的已结束订单"
+      "emptyHistoryBody": "这里显示最近 24 小时的已结束订单",
+      "day": "{{date}} 的预约",
+      "emptyTimelineTitle": "当天没有预约",
+      "emptyTimelineBody": "新预约会自动显示在这里",
+      "today": "今天"
     },
     "card": {
       "number": "第 {{number}} 号",
       "room": "{{room}} 房",
       "waiting": "{{minutes}} 分钟",
       "asap": "尽快",
-      "byTime": "{{time}} 前"
+      "byTime": "{{time}} 前",
+      "fromOrder": "来自订单 #{{number}} · {{service}}"
     },
     "actions": {
       "accept": "接单",
@@ -663,7 +668,10 @@
       "alreadyAcceptedBy": "已由 {{name}} 接单",
       "server": "服务器无响应",
       "generic": "操作失败",
-      "orderNotFound": "未找到该订单，或它属于其他执行点"
+      "orderNotFound": "未找到该订单，或它属于其他执行点",
+      "noCmsAccess": "管理区仅向服务经理和酒店管理员开放",
+      "notMyService": "该内容属于您不负责的服务",
+      "hotelAdminOnly": "这是酒店级设置，由酒店管理员修改"
     },
     "chat": {
       "title": "聊天",

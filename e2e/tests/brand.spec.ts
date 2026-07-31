@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, CREDENTIALS, guestTheme, HOTEL } from './helpers'
+import { apiToken, ADMIN, guestTheme, HOTEL } from './helpers'
 
 /**
  * Бренд-настройки с живым превью.
@@ -12,8 +12,8 @@ import { apiToken, CREDENTIALS, guestTheme, HOTEL } from './helpers'
 
 async function openBrand(page: Page): Promise<void> {
   await page.goto('/login')
-  await page.getByTestId('login-email').fill(CREDENTIALS.email)
-  await page.getByTestId('login-password').fill(CREDENTIALS.password)
+  await page.getByTestId('login-email').fill(ADMIN.email)
+  await page.getByTestId('login-password').fill(ADMIN.password)
   await page.getByTestId('login-submit').click()
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
 

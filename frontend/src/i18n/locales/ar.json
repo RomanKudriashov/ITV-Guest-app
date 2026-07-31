@@ -628,14 +628,19 @@
       "emptyTitle": "لا توجد طلبات",
       "emptyBody": "ستظهر الطلبات الجديدة تلقائيًا",
       "emptyHistoryTitle": "السجل فارغ",
-      "emptyHistoryBody": "ستظهر هنا طلبات آخر ٢٤ ساعة"
+      "emptyHistoryBody": "ستظهر هنا طلبات آخر ٢٤ ساعة",
+      "day": "حجوزات يوم {{date}}",
+      "emptyTimelineTitle": "لا حجوزات في هذا اليوم",
+      "emptyTimelineBody": "ستظهر الحجوزات الجديدة هنا تلقائياً",
+      "today": "اليوم"
     },
     "card": {
       "number": "رقم {{number}}",
       "room": "غرفة {{room}}",
       "waiting": "{{minutes}} د",
       "asap": "بأسرع وقت",
-      "byTime": "بحلول {{time}}"
+      "byTime": "بحلول {{time}}",
+      "fromOrder": "من الطلب رقم {{number}} · {{service}}"
     },
     "actions": {
       "accept": "قبول",
@@ -673,7 +678,10 @@
       "alreadyAcceptedBy": "قبله {{name}}",
       "server": "الخادم لا يستجيب",
       "generic": "تعذّر تنفيذ الإجراء",
-      "orderNotFound": "الطلب غير موجود أو يخص نقطة أخرى"
+      "orderNotFound": "الطلب غير موجود أو يخص نقطة أخرى",
+      "noCmsAccess": "قسم الإدارة متاح لمديري الخدمات ومدير الفندق",
+      "notMyService": "هذا يخص خدمة لا تديرها",
+      "hotelAdminOnly": "هذا إعداد على مستوى الفندق — يغيّره مدير الفندق"
     },
     "chat": {
       "title": "الدردشة",

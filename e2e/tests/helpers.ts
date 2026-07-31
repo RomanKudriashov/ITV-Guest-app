@@ -2,28 +2,68 @@ import { expect, type Page, type APIRequestContext } from '@playwright/test'
 
 export const HOTEL = 'crystal'
 export const API = process.env.E2E_API_URL ?? 'http://localhost:8010'
+/**
+ * Повар — ЛИНЕЙНЫЙ сотрудник: трекер и операции над заказами, но не CMS.
+ * С R3 раздел управления закрыт ролью, и под ним туда больше не войти.
+ */
 export const CREDENTIALS = { email: 'chef@crystal.local', password: 'chef12345' }
+
+/** Админ отеля — им заводится отель (provision_hotel). Вся CMS. */
+export const ADMIN = { email: 'owner@crystal.local', password: 'chef12345' }
+
+/** Управляющий рестораном «Панорама»: своя кухня — да, чужой бар — нет. */
+export const RESTAURANT_MANAGER = {
+  email: 'manager.restaurant@crystal.local',
+  password: 'chef12345',
+}
+
+/** Горничная — линейный персонал очереди хозслужбы. */
+export const MAID = { email: 'maid@crystal.local', password: 'chef12345' }
+
+/** Бармен — линейный персонал доски бара (туда падает заимствованный коктейль). */
+export const BARMAN = { email: 'barman@crystal.local', password: 'chef12345' }
 
 /** Уникальный суффикс, чтобы прогоны не мешали друг другу в общем демо-отеле. */
 export function unique(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}`
 }
 
-export async function login(page: Page): Promise<void> {
+/** Вход в CMS. По умолчанию админом отеля — раздел закрыт ролью (R3). */
+export async function login(
+  page: Page,
+  credentials: { email: string; password: string } = ADMIN,
+): Promise<void> {
   await page.goto('/login')
-  await page.getByTestId('login-email').fill(CREDENTIALS.email)
-  await page.getByTestId('login-password').fill(CREDENTIALS.password)
+  await page.getByTestId('login-email').fill(credentials.email)
+  await page.getByTestId('login-password').fill(credentials.password)
   await page.getByTestId('login-submit').click()
   await expect(page).toHaveURL(/\/cms\/menu/)
+}
+
+/** Вход в трекер: доступ даёт привязка к точке, а не роль. */
+export async function loginToTracker(
+  page: Page,
+  credentials: { email: string; password: string },
+): Promise<void> {
+  await page.goto('/login')
+  await page.getByTestId('login-email').fill(credentials.email)
+  await page.getByTestId('login-password').fill(credentials.password)
+  await page.getByTestId('login-submit').click()
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
+  await page.goto('/tracker')
+  await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
 }
 
 /**
  * Прямой доступ к API — чтобы проверять РЕЗУЛЬТАТ действий в UI на бэкенде,
  * а не только то, что нарисовал фронт.
  */
-export async function apiToken(request: APIRequestContext): Promise<string> {
+export async function apiToken(
+  request: APIRequestContext,
+  credentials: { email: string; password: string } = ADMIN,
+): Promise<string> {
   const response = await request.post(`${API}/api/staff/auth/login`, {
-    data: CREDENTIALS,
+    data: credentials,
     headers: { 'X-Hotel-Subdomain': HOTEL },
   })
   expect(response.ok()).toBeTruthy()

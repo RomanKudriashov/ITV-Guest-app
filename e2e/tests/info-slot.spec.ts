@@ -76,14 +76,65 @@ test.describe('Тип slot', () => {
       const form = guest.getByTestId('guest-slot-form')
       await expect(form).toBeVisible()
 
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const dateStr = tomorrow.toISOString().slice(0, 10)
+      // «Завтра» считаем ОТ ОТЕЛЯ, а не от машины с тестом: у отеля своя
+      // таймзона, и около полуночи локальное «завтра» оказывается вчерашним
+      // днём отеля. Ленту записей спа сервер уже подписал своим днём.
+      const timelineBox = staff.getByTestId('tracker-timeline')
+      await expect(timelineBox).toBeVisible({ timeout: 20_000 })
+      const hotelToday = (await timelineBox.getAttribute('data-day')) as string
+      expect(hotelToday, 'сервер обязан назвать показанный день').toBeTruthy()
+      const next = new Date(`${hotelToday}T12:00:00Z`)
+      next.setUTCDate(next.getUTCDate() + 1)
+      const dateStr = next.toISOString().slice(0, 10)
       await guest.getByTestId('guest-slot-date').fill(dateStr)
 
-      // Первый доступный слот кликабелен.
-      const firstSlot = guest.locator('[data-testid^="guest-slot-"][data-testid*="T"]').first()
+      // Первый доступный слот кликабелен. Запоминаем ИМЕННО ЕГО время: проверять
+      // потом «весь день пуст» нельзя — в демо-отеле у спа есть и свои записи,
+      // и тест не про них, а про то, что освободилась забронированная им ячейка.
+      // Именно первый ДОСТУПНЫЙ: занятая ячейка тоже отрисована, просто
+      // выключена, и `.first()` без этого фильтра выбирал бы её.
+      const firstSlot = guest
+        .locator('[data-testid^="guest-slot-"][data-testid*="T"]:not([disabled])')
+        .first()
       await expect(firstSlot).toBeVisible({ timeout: 15_000 })
+      const bookedStart = (await firstSlot.getAttribute('data-testid'))!.replace(
+        'guest-slot-',
+        '',
+      )
+      expect(bookedStart.slice(0, 10), 'сетка обязана показать выбранный день').toBe(dateStr)
+
+      // Свободная вместимость ЭТОЙ ячейки до брони — эталон, к которому она
+      // обязана вернуться после отмены.
+      const guestApiToken = await request
+        .post('http://localhost:8010/api/guest/session', {
+          data: { room_number: DEMO_ROOM },
+          headers: { 'X-Hotel-Subdomain': HOTEL },
+        })
+        .then((r) => r.json())
+        .then((j) => j.token)
+      const catalog = await request
+        .get('http://localhost:8010/api/guest/catalog?type=slot', {
+          headers: { Authorization: `Bearer ${guestApiToken}`, 'X-Hotel-Subdomain': HOTEL },
+        })
+        .then((r) => r.json())
+      const massageId = catalog.categories
+        .flatMap((c: { items: { code: string; id: string }[] }) => c.items)
+        .find((i: { code: string }) => i.code === 'massage').id
+      const bookedDate = bookedStart.slice(0, 10)
+
+      const capacityOf = async (): Promise<number | undefined> => {
+        const slots = await request
+          .get(`http://localhost:8010/api/guest/slots?item_id=${massageId}&date=${bookedDate}`, {
+            headers: { Authorization: `Bearer ${guestApiToken}`, 'X-Hotel-Subdomain': HOTEL },
+          })
+          .then((r) => r.json())
+        return (slots.slots as Array<{ starts_at: string; capacity_left: number }>).find(
+          (slot) => slot.starts_at === bookedStart,
+        )?.capacity_left
+      }
+      const capacityBefore = await capacityOf()
+      expect(capacityBefore).toBeGreaterThan(0)
+
       await firstSlot.click()
 
       await guest.getByTestId('guest-slot-book').click()
@@ -96,8 +147,13 @@ test.describe('Тип slot', () => {
       await guest.getByTestId('guest-track-order').click()
       await expect(guest.getByTestId('guest-order-timeline')).toBeVisible()
 
-      // Бронь на доске SPA — тело карточки показывает слот.
+      // Спа — не доска, а ЛЕНТА ЗАПИСЕЙ на день (R3). Бронь на завтра видна,
+      // только если мастер перелистнул день: сегодня её там и не должно быть.
       const card = staff.getByTestId(`tracker-order-${number}`)
+      await expect(staff.getByTestId('tracker-timeline')).toBeVisible({ timeout: 20_000 })
+      await expect(card).toBeHidden()
+
+      await staff.getByTestId('tracker-day-next').click()
       await expect(card).toBeVisible({ timeout: 20_000 })
       await expect(card.getByTestId('tracker-order-slot')).toContainText(/Массаж/)
 
@@ -117,37 +173,8 @@ test.describe('Тип slot', () => {
         })
       }
 
-      // Слот снова свободен: capacity_left вернулось (спустя отмену).
-      const guestApiToken = await request
-        .post('http://localhost:8010/api/guest/session', {
-          data: { room_number: DEMO_ROOM },
-          headers: { 'X-Hotel-Subdomain': HOTEL },
-        })
-        .then((r) => r.json())
-        .then((j) => j.token)
-
-      // Находим item id массажа и проверяем доступность.
-      const catalog = await request
-        .get('http://localhost:8010/api/guest/catalog?type=slot', {
-          headers: { Authorization: `Bearer ${guestApiToken}`, 'X-Hotel-Subdomain': HOTEL },
-        })
-        .then((r) => r.json())
-      const massageId = catalog.categories
-        .flatMap((c: { items: { code: string; id: string }[] }) => c.items)
-        .find((i: { code: string }) => i.code === 'massage').id
-
-      await expect
-        .poll(async () => {
-          const slots = await request
-            .get(
-              `http://localhost:8010/api/guest/slots?item_id=${massageId}&date=${dateStr}`,
-              { headers: { Authorization: `Bearer ${guestApiToken}`, 'X-Hotel-Subdomain': HOTEL } },
-            )
-            .then((r) => r.json())
-          // после отмены все слоты снова с полной вместимостью
-          return slots.slots.every((s: { capacity_left: number }) => s.capacity_left === 2)
-        })
-        .toBeTruthy()
+      // Отменённая бронь вернула СВОЮ ячейку — вместимость та же, что и до неё.
+      await expect.poll(capacityOf).toBe(capacityBefore)
     } finally {
       await guestContext.close()
       await staffContext.close()

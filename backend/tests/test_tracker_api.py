@@ -65,10 +65,10 @@ def place_guest_order(client, hotel, *, item_code="caesar", key="tracker-1", roo
     return {"token": token, "order": response.json()}
 
 
-@pytest.fixture
-def tracker(cms):
-    """Клиент трекера — тот же JWT персонала, что у CMS."""
-    return cms
+# Клиент трекера живёт в conftest и ходит под ПОВАРОМ. Раньше он был алиасом
+# CMS-клиента — «тот же JWT персонала». С R3 это разошлось: в CMS пускают по
+# роли (админ отеля), а на доску — по привязке к точке, и админ ни к какой
+# точке не привязан.
 
 
 @pytest.fixture
@@ -252,12 +252,18 @@ def test_actions_on_another_points_order_are_refused(tracker, order, crystal):
 # --- Изоляция отелей -------------------------------------------------------
 
 
-def test_staff_of_another_hotel_sees_nothing(client, crystal, aurora, cms_aurora, order):
+def test_staff_of_another_hotel_sees_nothing(client, crystal, aurora, order):
     """Сотрудник Aurora не видит заказ «Кристалла» даже зная его id."""
-    board = cms_aurora.get("/api/tracker/orders?point=kitchen").json()
+    from .conftest import CmsClient, staff_token_for
+
+    # Именно повар Aurora: у него есть кухня — но своя. Админ отеля сюда не
+    # годится, он вообще не привязан к точкам.
+    aurora_chef = CmsClient(client, aurora, staff_token_for(client, aurora, "chef"))
+
+    board = aurora_chef.get("/api/tracker/orders?point=kitchen").json()
     assert all(not column["orders"] for column in board["columns"])
 
-    assert cms_aurora.get(f"/api/tracker/order/{order['id']}").status_code == 404
+    assert aurora_chef.get(f"/api/tracker/order/{order['id']}").status_code == 404
 
 
 def test_guest_token_cannot_reach_the_tracker(client, crystal, guest_token):
