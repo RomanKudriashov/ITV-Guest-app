@@ -1507,7 +1507,11 @@
     "nav": {
       "overview": "概览",
       "fleet": "酒店",
-      "platformGroup": "平台"
+      "platformGroup": "平台",
+      "modules": "模块与套餐",
+      "nodes": "本地节点",
+      "team": "团队",
+      "audit": "审计"
     },
     "role": {
       "owner": "平台所有者",
@@ -1562,7 +1566,7 @@
       "media_stuck": "媒体：处理卡住 {{count}} 个",
       "trial_expiring": "「{{hotel}}」试用将在 {{days}} 天后到期",
       "trial_expired": "「{{hotel}}」试用已到期",
-      "node_offline": "「{{hotel}}」节点离线"
+      "node_offline": "{{hotel}} 的节点离线"
     },
     "fleet": {
       "title": "酒店",
@@ -1664,6 +1668,129 @@
       "doneAdmin": "管理员",
       "donePassword": "密码（仅显示一次）",
       "doneHint": "酒店接下来在自己的后台完成配置。"
+    },
+    "module": {
+      "room_control": "客房控制",
+      "payment": "支付",
+      "pms": "PMS",
+      "mobile_key": "手机钥匙",
+      "multi_restaurant": "多餐厅",
+      "marketing": "营销",
+      "extra_languages": "附加语言",
+      "native_app": "原生应用",
+      "analytics_level": "分析级别"
+    },
+    "modules": {
+      "title": "模块与套餐",
+      "subtitle": "每个套餐开放的内容 · 计费为人工",
+      "trialDays": "{{days}} 天",
+      "base": "基础能力",
+      "col": {
+        "tariff": "套餐",
+        "hotels": "酒店",
+        "modules": "模块",
+        "limits": "限额"
+      },
+      "note": "套餐开放一组模块；也可以为单个酒店开通套餐外的功能，例如试点。启用的模块出现在酒店后台，停用的隐藏。降级到低于当前用量时会提示并需要决策。"
+    },
+    "nodes": {
+      "title": "本地节点",
+      "subtitle": "Local Connector — 启用 GRMS 或 PMS 后必需",
+      "empty": "暂无节点。启用 GRMS 或 PMS 的酒店才会出现。",
+      "keyOnce": "密钥（仅显示一次）",
+      "online": "在线",
+      "offline": "离线",
+      "revoked": "密钥已吊销",
+      "never": "从未",
+      "secondsAgo": "{{seconds}} 秒前",
+      "revoke": "吊销密钥",
+      "reissue": "签发密钥",
+      "purpose": {
+        "grms": "客房控制",
+        "pms": "PMS",
+        "both": "GRMS + PMS"
+      },
+      "col": {
+        "hotel": "酒店",
+        "purpose": "用途",
+        "status": "状态",
+        "seen": "最后心跳",
+        "key": "密钥"
+      }
+    },
+    "team": {
+      "title": "平台团队",
+      "subtitle": "谁可以访问 /admin",
+      "email": "邮箱",
+      "role": "角色",
+      "invite": "邀请",
+      "inviteFailed": "邀请失败",
+      "changeFailed": "修改失败",
+      "issued": "{{email}} 的密码",
+      "disable": "停用",
+      "enable": "启用",
+      "col": {
+        "member": "成员",
+        "role": "角色",
+        "access": "访问",
+        "twofa": "2FA"
+      }
+    },
+    "audit": {
+      "title": "审计",
+      "subtitle": "平台的全部操作 — 谁、做了什么、何时",
+      "empty": "暂无记录"
+    },
+    "action": {
+      "platform": {
+        "login": "登录平台",
+        "2fa": {
+          "enabled": "启用 2FA",
+          "disabled": "停用 2FA"
+        },
+        "hotel": {
+          "created": "创建酒店",
+          "updated": "修改酒店资料",
+          "activated": "启用酒店",
+          "deactivated": "停用酒店",
+          "admin_set": "设置酒店管理员",
+          "modules_set": "修改模块",
+          "tariff_set": "记录套餐",
+          "entered": "进入酒店"
+        },
+        "node": {
+          "registered": "注册节点",
+          "revoked": "吊销节点密钥",
+          "reissued": "重新签发节点密钥"
+        },
+        "team": {
+          "invited": "邀请加入团队",
+          "updated": "修改团队成员"
+        },
+        "fleet": {
+          "bulk": "批量操作酒店",
+          "exported": "导出酒店列表"
+        }
+      },
+      "impersonation": {
+        "started": "以酒店管理员身份开始操作"
+      }
+    },
+    "enter": {
+      "button": "进入酒店 →",
+      "title": "进入「{{hotel}}」",
+      "hint": "以平台身份打开酒店后台。必须填写原因，会话有时限，全部记入审计。",
+      "reason": "进入原因",
+      "ttl": "访问时长",
+      "minutes": "{{minutes}} 分钟",
+      "submit": "进入",
+      "failed": "进入失败",
+      "grantedTitle": "已授予「{{hotel}}」的访问权",
+      "asUser": "以此身份：{{email}}",
+      "left": "剩余 {{time}}",
+      "expired": "已过期",
+      "audited": "本次会话中的每个操作都会标记为支持人员的修改。",
+      "open": "打开后台"
     }
   }
 }

@@ -9,6 +9,7 @@ from .health import router as health_router
 from .chat_reviews import guest_router as surface_guest_router
 from .chat_reviews import tracker_router as surface_tracker_router
 from .orders import router as orders_router
+from .onprem import router as onprem_router
 from .platform import router as platform_router
 from .staff import router as staff_router
 from .tracker import router as tracker_router
@@ -45,6 +46,9 @@ api.add_router("/cms", cms_router, auth=CmsAuth())
 # Платформенная консоль на базовом домене: закрыта scope=platform токеном.
 # Тенантный staff-токен сюда не пускается (и наоборот) — проверка PlatformAuth.
 api.add_router("/platform", platform_router, auth=PlatformAuth())
+# Он-прем узел отмечается сам и представляется своим ключом — не токеном
+# платформы: доступ железки в отеле не должен быть частью мастер-ключа.
+api.add_router("/onprem", onprem_router)
 
 
 @api.exception_handler(DomainError)

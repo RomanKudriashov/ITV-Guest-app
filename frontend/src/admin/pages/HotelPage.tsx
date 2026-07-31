@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
+import { EnterHotelDialog } from '../EnterHotelDialog';
 import {
   getActivity,
   getHotel,
@@ -40,6 +41,7 @@ type Tab = (typeof TABS)[number];
 export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('profile');
+  const [entering, setEntering] = useState(false);
   const profile = useQuery({ queryKey: ['admin', 'hotel', id], queryFn: () => getHotel(id) });
 
   if (profile.isLoading) {
@@ -66,6 +68,9 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         </Box>
         <Button onClick={onBack} data-testid="admin-hotel-back" sx={{ color: ink.mid }}>
           {t('admin.hotel.back')}
+        </Button>
+        <Button onClick={() => setEntering(true)} data-testid="admin-hotel-enter" sx={primaryButtonSx}>
+          {t('admin.enter.button')}
         </Button>
       </Box>
 
@@ -97,6 +102,10 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         {tab === 'activity' ? <ActivityTab id={id} /> : null}
         {tab === 'tariff' ? <TariffTab id={id} /> : null}
       </Box>
+
+      {entering ? (
+        <EnterHotelDialog hotelId={id} hotelName={hotel.name} onClose={() => setEntering(false)} />
+      ) : null}
     </Box>
   );
 }

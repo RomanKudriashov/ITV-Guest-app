@@ -189,7 +189,7 @@ export interface TariffBrief {
 export interface PlatformOverview {
   hotels: { total: number; active: number; trial: number; disabled: number };
   orders_today: number;
-  gross_today_minor: number;
+  gross_today: { currency: string; minor: number }[];
   live_sessions: number;
   growth: { month: string; hotels: number }[];
   health: OverviewHealth[];
@@ -335,3 +335,78 @@ export const setTariff = (
   body: { tariff: string; trial_ends_at?: string | null; acknowledge_downgrade?: boolean },
 ) =>
   request<{ ok: boolean; warnings: DowngradeWarning[]; code?: string }>(`/hotels/${id}/tariff`, 'PUT', body);
+
+/* ── Тарифы, узлы, команда, аудит, вход в отель ─────────────────────────── */
+
+export interface TariffRow {
+  code: string;
+  title: Record<string, string>;
+  modules: string[];
+  limits: { services: number | null; rooms: number | null; staff: number | null };
+  is_trial: boolean;
+  trial_days: number;
+  hotels: number;
+}
+
+export interface NodeRow {
+  id: string;
+  hotel: string;
+  hotel_id: string;
+  subdomain: string;
+  name: string;
+  purpose: 'grms' | 'pms' | 'both';
+  is_registered: boolean;
+  is_online: boolean;
+  is_revoked: boolean;
+  seconds_since_seen: number | null;
+  last_seen_at: string | null;
+  key_issued_at: string | null;
+  version: string;
+}
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'owner' | 'support' | 'read_only';
+  is_active: boolean;
+  totp_enabled: boolean;
+}
+
+export interface AuditRow {
+  id: string;
+  at: string;
+  actor: string;
+  action: string;
+  hotel: string | null;
+  subdomain: string | null;
+  payload: Record<string, unknown>;
+}
+
+export interface EnterResult {
+  access: string;
+  expires_at: string;
+  ttl_minutes: number;
+  as_user: string;
+  cms_url: string;
+  subdomain: string;
+}
+
+export const getTariffs = () => request<TariffRow[]>('/tariffs');
+export const getNodes = () => request<NodeRow[]>('/nodes');
+export const createNode = (hotelId: string, body: { name: string; purpose: string }) =>
+  request<{ node: NodeRow; key: string }>(`/hotels/${hotelId}/nodes`, 'POST', body);
+export const revokeNode = (id: string) => request<NodeRow>(`/nodes/${id}/revoke`, 'POST');
+export const reissueNode = (id: string) =>
+  request<{ node: NodeRow; key: string }>(`/nodes/${id}/reissue`, 'POST');
+
+export const getTeam = () => request<TeamMember[]>('/team');
+export const inviteMember = (body: { email: string; role: string; full_name?: string }) =>
+  request<{ member: TeamMember; password: string }>('/team', 'POST', body);
+export const patchMember = (id: string, body: { role?: string; is_active?: boolean }) =>
+  request<TeamMember>(`/team/${id}`, 'PATCH', body);
+
+export const getAudit = (limit = 100) => request<AuditRow[]>(`/audit?limit=${limit}`);
+
+export const enterHotel = (id: string, body: { reason: string; ttl_minutes: number }) =>
+  request<EnterResult>(`/hotels/${id}/enter`, 'POST', body);

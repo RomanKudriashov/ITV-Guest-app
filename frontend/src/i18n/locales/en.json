@@ -1509,7 +1509,11 @@
     "nav": {
       "overview": "Overview",
       "fleet": "Hotels",
-      "platformGroup": "Platform"
+      "platformGroup": "Platform",
+      "modules": "Modules & plans",
+      "nodes": "On-prem nodes",
+      "team": "Team",
+      "audit": "Audit"
     },
     "role": {
       "owner": "Platform owner",
@@ -1564,7 +1568,7 @@
       "media_stuck": "Media: stuck in processing — {{count}}",
       "trial_expiring": "Trial for “{{hotel}}” ends in {{days}} days",
       "trial_expired": "Trial for “{{hotel}}” has ended",
-      "node_offline": "Node “{{hotel}}” is offline"
+      "node_offline": "Node at {{hotel}} is offline"
     },
     "fleet": {
       "title": "Hotels",
@@ -1666,6 +1670,129 @@
       "doneAdmin": "Administrator",
       "donePassword": "Password (shown once)",
       "doneHint": "The hotel sets itself up from here in its CMS."
+    },
+    "module": {
+      "room_control": "Room control",
+      "payment": "Payments",
+      "pms": "PMS",
+      "mobile_key": "Mobile key",
+      "multi_restaurant": "Multi-restaurant",
+      "marketing": "Marketing",
+      "extra_languages": "Extra languages",
+      "native_app": "Native app",
+      "analytics_level": "Analytics level"
+    },
+    "modules": {
+      "title": "Modules & plans",
+      "subtitle": "What each plan opens · billing is manual",
+      "trialDays": "{{days}} days",
+      "base": "base features",
+      "col": {
+        "tariff": "Plan",
+        "hotels": "Hotels",
+        "modules": "Modules",
+        "limits": "Limits"
+      },
+      "note": "A plan opens a set of modules; a single hotel can be given a feature off-plan — a pilot, for instance. An enabled module appears in the hotel CMS, a disabled one is hidden. Downgrading below current usage is flagged and needs a decision."
+    },
+    "nodes": {
+      "title": "On-prem nodes",
+      "subtitle": "Local Connector — required once GRMS or PMS is on",
+      "empty": "No nodes yet. They appear for hotels with GRMS or PMS.",
+      "keyOnce": "Key (shown once)",
+      "online": "online",
+      "offline": "offline",
+      "revoked": "key revoked",
+      "never": "never",
+      "secondsAgo": "{{seconds}}s ago",
+      "revoke": "Revoke key",
+      "reissue": "Issue key",
+      "purpose": {
+        "grms": "Room control",
+        "pms": "PMS",
+        "both": "GRMS + PMS"
+      },
+      "col": {
+        "hotel": "Hotel",
+        "purpose": "Purpose",
+        "status": "Status",
+        "seen": "Last seen",
+        "key": "Key"
+      }
+    },
+    "team": {
+      "title": "Platform team",
+      "subtitle": "Who can reach /admin",
+      "email": "Email",
+      "role": "Role",
+      "invite": "Invite",
+      "inviteFailed": "Could not invite",
+      "changeFailed": "Could not change",
+      "issued": "Password for {{email}}",
+      "disable": "Disable",
+      "enable": "Enable",
+      "col": {
+        "member": "Member",
+        "role": "Role",
+        "access": "Access",
+        "twofa": "2FA"
+      }
+    },
+    "audit": {
+      "title": "Audit",
+      "subtitle": "Every platform action — who, what, when",
+      "empty": "No entries"
+    },
+    "action": {
+      "platform": {
+        "login": "Signed in to the platform",
+        "2fa": {
+          "enabled": "2FA enabled",
+          "disabled": "2FA disabled"
+        },
+        "hotel": {
+          "created": "Hotel created",
+          "updated": "Hotel profile changed",
+          "activated": "Hotel enabled",
+          "deactivated": "Hotel disabled",
+          "admin_set": "Hotel admin set",
+          "modules_set": "Modules changed",
+          "tariff_set": "Plan recorded",
+          "entered": "Entered the hotel"
+        },
+        "node": {
+          "registered": "Node registered",
+          "revoked": "Node key revoked",
+          "reissued": "Node key reissued"
+        },
+        "team": {
+          "invited": "Invited to the team",
+          "updated": "Team member changed"
+        },
+        "fleet": {
+          "bulk": "Bulk action on hotels",
+          "exported": "Fleet exported"
+        }
+      },
+      "impersonation": {
+        "started": "Started acting as hotel admin"
+      }
+    },
+    "enter": {
+      "button": "Enter hotel →",
+      "title": "Enter “{{hotel}}”",
+      "hint": "Opens the hotel CMS on behalf of the platform. A reason is required, the session expires, everything is audited.",
+      "reason": "Reason",
+      "ttl": "Access window",
+      "minutes": "{{minutes}} minutes",
+      "submit": "Enter",
+      "failed": "Could not enter",
+      "grantedTitle": "Access to “{{hotel}}” granted",
+      "asUser": "Acting as: {{email}}",
+      "left": "{{time}} left",
+      "expired": "Expired",
+      "audited": "Every action in this session is marked as a support edit.",
+      "open": "Open CMS"
     }
   }
 }

@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 # держим полным, чтобы порядок middleware не был скрытой зависимостью.
 PLATFORM_PATH_PREFIXES = (
     "/api/v1/platform/",
+    # Он-прем узел отмечается с базового домена: он знает свой ключ, но не
+    # знает поддомена отеля в нашей базе — отель определяется ПО КЛЮЧУ.
+    "/api/v1/onprem/",
+    "/api/onprem/",
     "/api/v1/health",
     "/api/v1/docs",
     "/api/v1/openapi.json",

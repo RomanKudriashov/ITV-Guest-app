@@ -9,6 +9,10 @@ import { AdminShell, type AdminSection } from './AdminShell';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
+import { ModulesPage } from './pages/ModulesPage';
+import { NodesPage } from './pages/NodesPage';
+import { TeamPage } from './pages/TeamPage';
+import { AuditPage } from './pages/AuditPage';
 import { accent, ink } from './adminTokens';
 import { getMe, platformToken } from './adminClient';
 
@@ -22,6 +26,13 @@ import { getMe, platformToken } from './adminClient';
 const SECTIONS: AdminSection[] = [
   { key: 'overview', labelKey: 'admin.nav.overview' },
   { key: 'fleet', labelKey: 'admin.nav.fleet' },
+  // Ниже — то, что относится к самой платформе, а не к отелям. Группировка та
+  // же, что в CMS (R4): плоская простыня одинаковых пунктов не даёт понять,
+  // где кончаются отели и начинается платформа.
+  { key: 'modules', labelKey: 'admin.nav.modules', group: 'admin.nav.platformGroup' },
+  { key: 'nodes', labelKey: 'admin.nav.nodes', group: 'admin.nav.platformGroup' },
+  { key: 'team', labelKey: 'admin.nav.team', group: 'admin.nav.platformGroup' },
+  { key: 'audit', labelKey: 'admin.nav.audit', group: 'admin.nav.platformGroup' },
 ];
 
 export function AdminApp() {
@@ -82,6 +93,10 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'fleet' && hotelId ? (
         <HotelPage id={hotelId} onBack={() => setHotelId(null)} />
       ) : null}
+      {section === 'modules' ? <ModulesPage /> : null}
+      {section === 'nodes' ? <NodesPage /> : null}
+      {section === 'team' ? <TeamPage /> : null}
+      {section === 'audit' ? <AuditPage /> : null}
     </AdminShell>
   );
 }

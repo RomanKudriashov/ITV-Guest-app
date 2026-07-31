@@ -70,6 +70,27 @@ class ModulesIn(Schema):
     tariff: str | None = None
 
 
+class EnterHotelIn(Schema):
+    reason: str
+    ttl_minutes: int = 30
+
+
+class NodeIn(Schema):
+    name: str
+    purpose: str = "grms"
+
+
+class TeamInviteIn(Schema):
+    email: str
+    role: str = "support"
+    full_name: str = ""
+
+
+class TeamPatchIn(Schema):
+    role: str | None = None
+    is_active: bool | None = None
+
+
 class TariffIn(Schema):
     tariff: str
     started_on: date | None = None
@@ -427,6 +448,204 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
     user, password = set_hotel_admin(hotel, email=payload.email, password=payload.password)
     _audit(request, hotel, "platform.hotel.admin_set", {"email": user.email})
     return {"email": user.email, "password": password}
+
+
+# --- Вход в отель ----------------------------------------------------------
+
+
+@router.post("/hotels/{hotel_id}/enter", summary="Войти в отель от лица платформы")
+def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
+    """
+    Impersonation с таймером и записью в аудит.
+
+    Смысл механизма — РАЗДЕЛИМОСТЬ: правка, сделанная поддержкой, обязана
+    отличаться от правки самого отеля. Поэтому вход идёт не «под общим
+    техническим пользователем», а под конкретным админом отеля, но с клеймом
+    `imp` в токене и грантом в базе; каждое действие пишется в журнал отеля с
+    пометкой, кто был настоящим актором.
+
+    Срок жизни короткий и обязательный: доступ ко всем данным отеля не должен
+    висеть открытым дольше, чем длится разбор обращения.
+    """
+    from apps.accounts.platform_access import can_write
+    from apps.accounts.services import start_impersonation
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не входит в отели")
+
+    hotel = _get_hotel(hotel_id)
+    reason = (payload.reason or "").strip()
+    if not reason:
+        # Причина обязательна: журнал без причины отвечает «кто и когда», но не
+        # «зачем», а разбирают инциденты именно по «зачем».
+        raise ValidationError("Укажите причину входа", field="reason")
+
+    with tenant_context(hotel):
+        target = (
+            User.objects.filter(is_hotel_admin=True, is_active=True).order_by("created_at").first()
+        )
+    if target is None:
+        raise ValidationError(
+            "У отеля нет активного администратора — сначала заведите его", field="hotel"
+        )
+
+    ttl = max(5, min(payload.ttl_minutes or 30, 120))
+    # Грант и запись аудита принадлежат ОТЕЛЮ, и писать их надо в его контексте:
+    # платформенный запрос идёт без тенанта, и RLS справедливо отвергает строку,
+    # у которой hotel_id не совпадает с сессионной переменной. Это не помеха, а
+    # ровно то поведение, ради которого политика и заведена.
+    with tenant_context(hotel):
+        result = start_impersonation(
+            actor=request.user, target_user=target, reason=reason, ttl_minutes=ttl
+        )
+    _audit(request, hotel, "platform.hotel.entered", {"reason": reason, "ttl_minutes": ttl})
+    return {
+        "access": result["access"],
+        "expires_at": result["expires_at"].isoformat(),
+        "ttl_minutes": ttl,
+        "as_user": target.email,
+        "cms_url": hotel.public_guest_url("/cms"),
+        "subdomain": hotel.subdomain,
+    }
+
+
+# --- Тарифная сетка --------------------------------------------------------
+
+
+@router.get("/tariffs", summary="Сетка тарифов: что открывает и какие лимиты")
+def list_tariffs(request: HttpRequest):
+    from dataclasses import asdict
+
+    from apps.hotels import tariffs as registry
+
+    hotels = list(Hotel.objects.filter(origin=Hotel.Origin.LIVE))
+    return [
+        {
+            "code": tariff.code,
+            "title": tariff.title,
+            "modules": list(tariff.modules),
+            "limits": asdict(tariff.limits),
+            "is_trial": tariff.is_trial,
+            "trial_days": tariff.trial_days,
+            "hotels": sum(1 for hotel in hotels if registry.get(hotel.tariff).code == tariff.code),
+        }
+        for tariff in registry.TARIFFS.values()
+    ]
+
+
+# --- Он-прем узлы ----------------------------------------------------------
+
+
+@router.get("/nodes", summary="Реестр он-прем узлов по всем отелям")
+def list_nodes(request: HttpRequest):
+    from apps.hotels.onprem import all_nodes
+
+    return all_nodes()
+
+
+@router.post("/hotels/{hotel_id}/nodes", response={201: dict}, summary="Завести узел и выдать ключ")
+def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.onprem import register_node
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не заводит узлы")
+    hotel = _get_hotel(hotel_id)
+    node, key = register_node(hotel, name=payload.name, purpose=payload.purpose)
+    _audit(request, hotel, "platform.node.registered", {"node": node.name, "purpose": node.purpose})
+    # Ключ показывается ОДИН раз: в базе лежит только его хэш.
+    return 201, {"node": _node_row(node, hotel), "key": key}
+
+
+@router.post("/nodes/{node_id}/revoke", summary="Отозвать ключ узла")
+def revoke_node(request: HttpRequest, node_id: str):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.onprem import revoke_key
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не отзывает ключи")
+    node, hotel = revoke_key(node_id)
+    _audit(request, hotel, "platform.node.revoked", {"node": node.name})
+    return _node_row(node, hotel)
+
+
+@router.post("/nodes/{node_id}/reissue", summary="Перевыпустить ключ узла")
+def reissue_node(request: HttpRequest, node_id: str):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.onprem import reissue_key
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не выдаёт ключи")
+    node, hotel, key = reissue_key(node_id)
+    _audit(request, hotel, "platform.node.reissued", {"node": node.name})
+    return {"node": _node_row(node, hotel), "key": key}
+
+
+def _node_row(node, hotel) -> dict[str, Any]:
+    from apps.hotels.onprem import serialize_node
+
+    return serialize_node(node, hotel)
+
+
+# --- Команда платформы -----------------------------------------------------
+
+
+@router.get("/team", summary="Команда платформы")
+def list_team(request: HttpRequest):
+    from apps.hotels.platform_team import list_members
+
+    return list_members()
+
+
+@router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")
+def invite_member(request: HttpRequest, payload: TeamInviteIn):
+    from apps.accounts.platform_access import can_manage_team
+    from apps.hotels.platform_team import invite
+
+    if not can_manage_team(request.user):
+        raise PermissionDenied("Команду платформы ведёт только владелец")
+    member, password = invite(email=payload.email, role=payload.role, full_name=payload.full_name)
+    _audit_platform(request, "platform.team.invited", payload={"email": member.email, "role": member.platform_role})
+    return 201, {"member": _member(member), "password": password}
+
+
+@router.patch("/team/{user_id}", summary="Сменить роль или отключить участника")
+def patch_member(request: HttpRequest, user_id: str, payload: TeamPatchIn):
+    from apps.accounts.platform_access import can_manage_team
+    from apps.hotels.platform_team import update_member
+
+    if not can_manage_team(request.user):
+        raise PermissionDenied("Команду платформы ведёт только владелец")
+    member = update_member(
+        user_id,
+        role=payload.role,
+        is_active=payload.is_active,
+        actor_id=request.user.pk,
+    )
+    _audit_platform(request, "platform.team.updated",
+                    payload={"email": member.email, "role": member.platform_role, "active": member.is_active})
+    return _member(member)
+
+
+def _member(user: User) -> dict[str, Any]:
+    return {
+        "id": str(user.pk),
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.platform_role,
+        "is_active": user.is_active,
+        "totp_enabled": user.totp_enabled,
+    }
+
+
+# --- Аудит платформы -------------------------------------------------------
+
+
+@router.get("/audit", summary="Журнал действий платформы")
+def platform_audit(request: HttpRequest, limit: int = 100):
+    from apps.hotels.platform_team import audit_feed
+
+    return audit_feed(limit=limit)
 
 
 # --- Использование против лимитов, активность, тариф -----------------------

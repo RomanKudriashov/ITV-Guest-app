@@ -71,11 +71,31 @@ def test_put_enables_modules_tariff_and_override(client, platform_token, crystal
     assert body["tariff"] == "resort"
     modules = {m["code"]: m for m in body["modules"]}
     assert modules["multi_restaurant"]["is_enabled"] is True
-    assert modules["pms"]["source"] == "override" and modules["pms"]["config"]["node"] == "local-1"
+    # Источник вычисляет СЕРВЕР по тарифной сетке (R6), а не присылает клиент:
+    # признак «выдано вне тарифа» — это ответ на вопрос о тарифе, и второй
+    # источник правды о нём означал бы расхождение UI админки с моделью.
+    # Resort даёт PMS, поэтому присланное клиентом "override" не принимается.
+    assert modules["pms"]["source"] == "tariff" and modules["pms"]["config"]["node"] == "local-1"
     assert "bogus" not in modules
     # Идемпотентность: повторный GET отдаёт то же.
     again = call("get", f"/hotels/{crystal.pk}/modules").json()
     assert {m["code"]: m["is_enabled"] for m in again["modules"]}["multi_restaurant"] is True
+
+
+def test_module_outside_tariff_is_marked_as_override(client, platform_token, crystal):
+    """
+    Обратная сторона того же правила: модуль, которого тариф НЕ даёт, помечается
+    переопределением сам — иначе через месяц никто не вспомнит, почему у отеля
+    работает фича, за которую он не платит.
+    """
+    call = _p(client, platform_token)
+    body = call(
+        "put",
+        f"/hotels/{crystal.pk}/modules",
+        {"tariff": "standard", "modules": [{"code": "pms", "is_enabled": True}]},
+    ).json()
+    modules = {m["code"]: m for m in body["modules"]}
+    assert modules["pms"]["source"] == "override"
 
 
 def test_cms_reads_own_registry(client, platform_token, crystal, cms):

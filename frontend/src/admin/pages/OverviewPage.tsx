@@ -33,11 +33,21 @@ export function OverviewPage() {
   }
 
   const data = overview.data;
-  const money = new Intl.NumberFormat(i18n.language, {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  }).format(data.gross_today_minor / 100);
+  // Оборот показываем ПО ВАЛЮТАМ: у отелей платформы они могут различаться, и
+  // одна сумма поверх разных минимальных единиц была бы числом, которое ничего
+  // не значит, но выглядит как деньги.
+  const money =
+    data.gross_today.length === 0
+      ? '—'
+      : data.gross_today
+          .map((entry) =>
+            new Intl.NumberFormat(i18n.language, {
+              style: 'currency',
+              currency: entry.currency,
+              maximumFractionDigits: 0,
+            }).format(entry.minor / 100),
+          )
+          .join(' · ');
   const peak = Math.max(1, ...data.growth.map((point) => point.hotels));
 
   return (

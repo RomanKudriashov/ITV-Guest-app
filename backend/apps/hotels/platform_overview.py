@@ -64,18 +64,26 @@ def _growth(hotels: list[Hotel], today: date) -> list[dict]:
     return [{"month": key, "hotels": value} for key, value in sorted(buckets.items())]
 
 
-def _orders_block(today: date) -> dict:
+def _orders_block(hotels: list[Hotel], today: date) -> dict:
     """
     Заказы и оборот за день по всей платформе — одним запросом поверх тенантов.
 
     Оборот — gross (позиции + сбор + доставка + налог + чаевые), как и в
     аналитике отеля: платформа и отель обязаны называть «оборотом» одно и то же.
+
+    Оборот разложен ПО ВАЛЮТАМ, а не сложен в одно число. Минимальные единицы
+    разных валют — разные величины: сложив рубли с иенами, платформа получила
+    бы число, которое ничего не значит, но выглядит как деньги. Пока все отели
+    в одной валюте, это список из одной строки; как только появится второй —
+    сводка не соврёт молча.
     """
+    currency_by_hotel = {hotel.pk: hotel.currency for hotel in hotels}
     with platform_scope():
-        agg = (
+        rows = list(
             OrderDaily.all_objects.using("platform")
             .filter(business_date=today)
-            .aggregate(
+            .values("hotel_id")
+            .annotate(
                 orders=Sum("orders_count"),
                 revenue=Sum("revenue_minor"),
                 service_fee=Sum("service_fee_minor"),
@@ -84,12 +92,24 @@ def _orders_block(today: date) -> dict:
                 tip=Sum("tip_minor"),
             )
         )
-    values = {key: (value or 0) for key, value in agg.items()}
+
+    orders = 0
+    gross: dict[str, int] = {}
+    for row in rows:
+        orders += row["orders"] or 0
+        currency = currency_by_hotel.get(row["hotel_id"])
+        if currency is None:
+            # Заказы отеля, которого нет в выборке, в оборот не идут: иначе
+            # платформа показала бы деньги без владельца.
+            continue
+        gross[currency] = gross.get(currency, 0) + sum(
+            row[key] or 0 for key in ("revenue", "service_fee", "delivery", "tax", "tip")
+        )
     return {
-        "orders_today": values["orders"],
-        "gross_today_minor": (
-            values["revenue"] + values["service_fee"] + values["delivery"] + values["tax"] + values["tip"]
-        ),
+        "orders_today": orders,
+        "gross_today": [
+            {"currency": currency, "minor": amount} for currency, amount in sorted(gross.items())
+        ],
     }
 
 
@@ -176,7 +196,7 @@ def build_overview() -> dict:
     today = timezone.localdate()
     return {
         "hotels": _hotel_states(hotels, today),
-        **_orders_block(today),
+        **_orders_block(hotels, today),
         "live_sessions": _live_sessions(),
         "growth": _growth(hotels, today),
         "health": _health(hotels, today),
