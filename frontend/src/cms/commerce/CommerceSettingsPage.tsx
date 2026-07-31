@@ -67,7 +67,12 @@ function formFromSettings(settings: CommerceSettings): CommerceForm {
   };
 }
 
-export function CommerceSettingsPage() {
+export interface CommerceSettingsPageProps {
+  /** Встроен в другой раздел: свой заголовок и внешние отступы не рисуем. */
+  embedded?: boolean;
+}
+
+export function CommerceSettingsPage({ embedded = false }: CommerceSettingsPageProps = {}) {
   const { t } = useTranslation();
   const language = useAnalyticsLanguage();
   const queryClient = useQueryClient();
@@ -197,10 +202,10 @@ export function CommerceSettingsPage() {
     patch({ tipPresets: form.tipPresets.filter((value) => value !== percent) });
 
   return (
-    <Box sx={{ p: 3, pb: 10 }}>
+    <Box sx={{ p: embedded ? 0 : 3, pb: embedded ? 0 : 10 }}>
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
         <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h5">{t('commerce.title')}</Typography>
+          {embedded ? null : <Typography variant="h5">{t('commerce.title')}</Typography>}
           <Typography variant="body2" color="text.secondary">
             {t('commerce.subtitle')}
           </Typography>

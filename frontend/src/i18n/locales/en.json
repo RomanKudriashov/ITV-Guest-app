@@ -41,27 +41,31 @@
     "accessHint": "Your hotel administrator grants access"
   },
   "nav": {
-    "menu": "Menu",
-    "orders": "Orders",
     "services": "Services",
     "staff": "Staff",
-    "settings": "Settings",
-    "soon": "Soon",
+    "settings": "Hotel settings",
     "roleAdmin": "Hotel admin",
     "roleStaff": "Staff member",
     "tracker": "Tracker",
     "notifications": "Notifications",
-    "brand": "Brand",
+    "brand": "Brand & storefront",
     "rooms": "Rooms",
-    "locations": "Locations",
-    "departments": "Departments",
     "analytics": "Analytics",
-    "styleguide": "Design system",
-    "commerce": "Commerce",
-    "badges": "Badges",
-    "quickActions": "Quick actions",
-    "showcase": "Showcase",
-    "dictionaries": "Dictionaries"
+    "dictionaries": "Dictionaries",
+    "groups": {
+      "operations": "Operations",
+      "structure": "Hotel structure",
+      "appearance": "Appearance",
+      "analytics": "Analytics",
+      "settings": "Settings",
+      "modules": "Modules"
+    },
+    "dashboard": "Dashboard",
+    "marketing": "Marketing",
+    "roomControl": "Room control",
+    "payments": "Payments",
+    "pms": "PMS",
+    "mobileKey": "Mobile key"
   },
   "dictionaries": {
     "title": "Card dictionaries",
@@ -931,6 +935,10 @@
       "roomChip": "Room 214",
       "menuHeading": "Menu",
       "addToCart": "Add to cart"
+    },
+    "tabs": {
+      "brand": "Brand",
+      "showcase": "Home storefront"
     }
   },
   "hotel": {
@@ -1372,5 +1380,121 @@
     "moveDown": "Move down",
     "remove": "Remove",
     "add": "Add"
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "Venues and hotel services. Content lives inside each one.",
+    "add": "Add service",
+    "hiddenFromGuest": "Hidden from guests",
+    "disabled": "Disabled",
+    "itemCount": "{{count}} items",
+    "inclusionCount": "inclusions: {{count}}",
+    "backToList": "Back to services",
+    "notFound": "Service not found",
+    "schedule": "Opening hours",
+    "scheduleAlways": "Around the clock",
+    "scheduleHint": "Hours of the venue itself. Item availability also honours its own schedule.",
+    "sla": "Response target, min",
+    "slaHint": "Past this a task counts as overdue and is raised to the manager.",
+    "guestFacing": "Show to guests on the storefront",
+    "staffCount": "Staff: {{count}}",
+    "toStaff": "To staff",
+    "deliveryHint": "Serving locations are a hotel-wide list; a venue picks its own from it.",
+    "deliveryMatrixHint": "Locations and delivery pricing are configured in Hotel settings.",
+    "toLocations": "To locations",
+    "tabs": {
+      "menu": "Menu",
+      "schedule": "Schedule",
+      "delivery": "Delivery & locations",
+      "commerce": "Commerce",
+      "staff": "Staff",
+      "inclusions": "Included content"
+    },
+    "types": {
+      "restaurant": "Restaurant",
+      "bar": "Bar",
+      "room_service": "Room service",
+      "spa": "Spa",
+      "pool": "Pool",
+      "transfer": "Transfer",
+      "concierge": "Concierge",
+      "excursions": "Excursions",
+      "housekeeping": "Housekeeping",
+      "minibar": "Mini-bar",
+      "info": "Info",
+      "custom": "Custom"
+    },
+    "trackers": {
+      "board": "Order board",
+      "queue": "Request queue",
+      "schedule": "Day of bookings",
+      "requests": "Requests"
+    },
+    "bricks": {
+      "product": "catalog",
+      "service_request": "request form",
+      "slot": "slots",
+      "info": "info page"
+    },
+    "create": {
+      "title": "New service",
+      "type": "Venue type",
+      "name": "Guest-facing name",
+      "submit": "Create",
+      "bricks": "Built from: {{bricks}}",
+      "tracker": "Staff will get: {{tracker}}"
+    },
+    "commerce": {
+      "explainer": "An empty field inherits the hotel value. Zero means “no fee” — that is different.",
+      "inherited": "as hotel",
+      "fee": "Service fee, bp",
+      "feeHint": "1500 = 15%",
+      "minOrder": "Minimum order, minor units",
+      "minOrderHint": "Below it checkout is blocked",
+      "freeDelivery": "Free delivery from, minor units",
+      "freeDeliveryHint": "Empty — as hotel"
+    }
+  },
+  "inclusions": {
+    "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",
+    "empty": "Nothing included yet",
+    "addSource": "Include content of",
+    "active": "Active",
+    "scopeLabel": "What to include",
+    "scope": {
+      "all": "Whole source",
+      "categories": "Selected sections"
+    },
+    "markupKind": "Markup",
+    "markup": {
+      "none": "None",
+      "percent": "Percent",
+      "fixed": "Fixed"
+    },
+    "markupValue": "Amount",
+    "bp": "bp",
+    "executor": "Who prepares it",
+    "executorSource": "Source's executor",
+    "executorOwn": "We do",
+    "executorHint": "This choice drives both order routing and whose schedule applies",
+    "hiddenCount": "hidden items: {{count}}"
+  },
+  "settings": {
+    "title": "Hotel settings",
+    "subtitle": "Hotel-wide only. A venue's own settings live on its tabs.",
+    "commerce": "Currency, tax and fee",
+    "commerceHint": "The only hotel-level commerce: the rest belongs to each venue.",
+    "locations": "Serving locations",
+    "locationsHint": "A shared list: a venue picks its own and sets its own delivery price."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "What is happening now. Period totals live in Analytics.",
+    "ordersToday": "Orders today",
+    "venues": "Venues on the storefront",
+    "services": "Services in total",
+    "byService": "By service",
+    "staffAndItems": "{{staff}} staff · {{items}} items",
+    "noEscalation": "No escalation"
   }
 }

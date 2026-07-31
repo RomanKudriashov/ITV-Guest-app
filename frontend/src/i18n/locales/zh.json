@@ -41,27 +41,31 @@
     "accessHint": "访问权限由酒店管理员授予"
   },
   "nav": {
-    "menu": "菜单",
-    "orders": "订单",
     "services": "服务",
     "staff": "员工",
-    "settings": "设置",
-    "soon": "即将上线",
+    "settings": "酒店设置",
     "roleAdmin": "酒店管理员",
     "roleStaff": "员工",
     "tracker": "订单看板",
     "notifications": "通知",
-    "brand": "品牌",
-    "rooms": "房间",
-    "locations": "位置",
-    "departments": "部门",
+    "brand": "品牌与门店",
+    "rooms": "客房",
     "analytics": "分析",
-    "styleguide": "设计系统",
-    "commerce": "商务",
-    "badges": "徽章",
-    "quickActions": "快捷操作",
-    "showcase": "橱窗",
-    "dictionaries": "字典"
+    "dictionaries": "字典",
+    "groups": {
+      "operations": "运营",
+      "structure": "酒店结构",
+      "appearance": "外观",
+      "analytics": "分析",
+      "settings": "设置",
+      "modules": "模块"
+    },
+    "dashboard": "仪表板",
+    "marketing": "营销",
+    "roomControl": "客房控制",
+    "payments": "支付",
+    "pms": "PMS",
+    "mobileKey": "手机钥匙"
   },
   "dictionaries": {
     "title": "卡片字典",
@@ -929,6 +933,10 @@
       "roomChip": "房间 214",
       "menuHeading": "菜单",
       "addToCart": "加入购物车"
+    },
+    "tabs": {
+      "brand": "品牌",
+      "showcase": "首页门店"
     }
   },
   "hotel": {
@@ -1370,5 +1378,121 @@
     "moveDown": "下移",
     "remove": "移除",
     "add": "添加"
+  },
+  "services": {
+    "title": "服务",
+    "subtitle": "酒店的场所与服务，内容各自归属。",
+    "add": "添加服务",
+    "hiddenFromGuest": "对客隐藏",
+    "disabled": "已停用",
+    "itemCount": "{{count}} 个条目",
+    "inclusionCount": "引入：{{count}}",
+    "backToList": "返回服务列表",
+    "notFound": "未找到服务",
+    "schedule": "营业时间",
+    "scheduleAlways": "全天",
+    "scheduleHint": "场所自身的营业时间。单品是否可点还取决于它自己的时段。",
+    "sla": "响应时限（分钟）",
+    "slaHint": "超过后任务视为超时，并上报给管理者。",
+    "guestFacing": "在门店展示给客人",
+    "staffCount": "员工：{{count}}",
+    "toStaff": "前往员工",
+    "deliveryHint": "送达地点是酒店级清单，场所从中选择自己的。",
+    "deliveryMatrixHint": "地点与配送费在「酒店设置」中配置。",
+    "toLocations": "前往地点清单",
+    "tabs": {
+      "menu": "菜单",
+      "schedule": "时段",
+      "delivery": "配送与地点",
+      "commerce": "商务",
+      "staff": "员工",
+      "inclusions": "引入的内容"
+    },
+    "types": {
+      "restaurant": "餐厅",
+      "bar": "酒吧",
+      "room_service": "送餐服务",
+      "spa": "水疗",
+      "pool": "泳池",
+      "transfer": "接送",
+      "concierge": "礼宾",
+      "excursions": "游览",
+      "housekeeping": "客房服务",
+      "minibar": "迷你吧",
+      "info": "信息",
+      "custom": "自定义"
+    },
+    "trackers": {
+      "board": "订单看板",
+      "queue": "请求队列",
+      "schedule": "当日预约",
+      "requests": "请求"
+    },
+    "bricks": {
+      "product": "目录",
+      "service_request": "申请表单",
+      "slot": "时段",
+      "info": "信息页"
+    },
+    "create": {
+      "title": "新建服务",
+      "type": "场所类型",
+      "name": "对客名称",
+      "submit": "创建",
+      "bricks": "由此构成：{{bricks}}",
+      "tracker": "员工将获得：{{tracker}}"
+    },
+    "commerce": {
+      "explainer": "留空表示继承酒店数值。零表示「不收费」，二者不同。",
+      "inherited": "同酒店",
+      "fee": "服务费（基点）",
+      "feeHint": "1500 = 15%",
+      "minOrder": "最低消费",
+      "minOrderHint": "低于此值无法下单",
+      "freeDelivery": "免配送门槛",
+      "freeDeliveryHint": "留空即同酒店"
+    }
+  },
+  "inclusions": {
+    "explainer": "引入是链接而非复制：源头的修改会立即体现，隐藏某项也不会从其归属方删除。",
+    "empty": "尚未引入任何内容",
+    "addSource": "引入服务的内容",
+    "active": "启用",
+    "scopeLabel": "引入范围",
+    "scope": {
+      "all": "整个来源",
+      "categories": "所选分区"
+    },
+    "markupKind": "加价",
+    "markup": {
+      "none": "不加价",
+      "percent": "百分比",
+      "fixed": "固定"
+    },
+    "markupValue": "数值",
+    "bp": "基点",
+    "executor": "由谁制作",
+    "executorSource": "来源方执行",
+    "executorOwn": "我们自己",
+    "executorHint": "该选择同时决定订单去向与适用的时段",
+    "hiddenCount": "已隐藏条目：{{count}}"
+  },
+  "settings": {
+    "title": "酒店设置",
+    "subtitle": "仅限全酒店范围。场所自身的设置在其标签页中。",
+    "commerce": "货币、税与服务费",
+    "commerceHint": "唯一的酒店级商务设置，其余归各场所。",
+    "locations": "送达地点",
+    "locationsHint": "共享清单：场所从中选择并设定自己的配送价。"
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "subtitle": "当前状况。周期汇总请见分析。",
+    "ordersToday": "今日订单",
+    "venues": "门店场所",
+    "services": "服务总数",
+    "byService": "按服务",
+    "staffAndItems": "{{staff}} 名员工 · {{items}} 个条目",
+    "noEscalation": "无升级规则"
   }
 }

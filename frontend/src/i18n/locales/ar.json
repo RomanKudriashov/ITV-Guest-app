@@ -41,27 +41,31 @@
     "accessHint": "يمنح مدير الفندق حق الوصول"
   },
   "nav": {
-    "menu": "القائمة",
-    "orders": "الطلبات",
     "services": "الخدمات",
     "staff": "الموظفون",
-    "settings": "الإعدادات",
-    "soon": "قريباً",
+    "settings": "إعدادات الفندق",
     "roleAdmin": "مدير الفندق",
     "roleStaff": "موظف",
     "tracker": "المتتبع",
     "notifications": "الإشعارات",
-    "brand": "العلامة",
+    "brand": "الهوية والواجهة",
     "rooms": "الغرف",
-    "locations": "المواقع",
-    "departments": "الأقسام",
     "analytics": "التحليلات",
-    "styleguide": "نظام التصميم",
-    "commerce": "التجارة",
-    "badges": "الشارات",
-    "quickActions": "إجراءات سريعة",
-    "showcase": "الواجهة",
-    "dictionaries": "القواميس"
+    "dictionaries": "القوائم المرجعية",
+    "groups": {
+      "operations": "التشغيل",
+      "structure": "هيكل الفندق",
+      "appearance": "المظهر",
+      "analytics": "التحليلات",
+      "settings": "الإعدادات",
+      "modules": "الوحدات"
+    },
+    "dashboard": "لوحة المتابعة",
+    "marketing": "التسويق",
+    "roomControl": "التحكم بالغرفة",
+    "payments": "المدفوعات",
+    "pms": "نظام إدارة الفندق",
+    "mobileKey": "المفتاح الرقمي"
   },
   "dictionaries": {
     "title": "قواميس البطاقة",
@@ -939,6 +943,10 @@
       "roomChip": "غرفة 214",
       "menuHeading": "القائمة",
       "addToCart": "أضف"
+    },
+    "tabs": {
+      "brand": "الهوية",
+      "showcase": "واجهة الصفحة الرئيسية"
     }
   },
   "hotel": {
@@ -1380,5 +1388,121 @@
     "moveDown": "لأسفل",
     "remove": "إزالة",
     "add": "إضافة"
+  },
+  "services": {
+    "title": "الخدمات",
+    "subtitle": "منشآت الفندق وخدماته. المحتوى داخل كل منها.",
+    "add": "إضافة خدمة",
+    "hiddenFromGuest": "مخفي عن الضيف",
+    "disabled": "معطّل",
+    "itemCount": "{{count}} عنصر",
+    "inclusionCount": "التضمينات: {{count}}",
+    "backToList": "إلى قائمة الخدمات",
+    "notFound": "الخدمة غير موجودة",
+    "schedule": "ساعات العمل",
+    "scheduleAlways": "على مدار الساعة",
+    "scheduleHint": "ساعات المنشأة نفسها. توفّر الصنف يخضع أيضاً لجدوله الخاص.",
+    "sla": "زمن الاستجابة، دقيقة",
+    "slaHint": "بعده تُعدّ المهمة متأخرة وتُرفع إلى المدير.",
+    "guestFacing": "إظهار للضيوف في الواجهة",
+    "staffCount": "الموظفون: {{count}}",
+    "toStaff": "إلى الموظفين",
+    "deliveryHint": "مواقع التقديم قائمة عامة للفندق؛ تختار المنشأة منها.",
+    "deliveryMatrixHint": "تُضبط المواقع وأسعار التوصيل في إعدادات الفندق.",
+    "toLocations": "إلى المواقع",
+    "tabs": {
+      "menu": "القائمة",
+      "schedule": "الجدول",
+      "delivery": "التوصيل والمواقع",
+      "commerce": "التجارة",
+      "staff": "الموظفون",
+      "inclusions": "المحتوى المضمّن"
+    },
+    "types": {
+      "restaurant": "مطعم",
+      "bar": "بار",
+      "room_service": "خدمة الغرف",
+      "spa": "سبا",
+      "pool": "مسبح",
+      "transfer": "نقل",
+      "concierge": "الكونسيرج",
+      "excursions": "رحلات",
+      "housekeeping": "التدبير المنزلي",
+      "minibar": "ميني بار",
+      "info": "معلومات",
+      "custom": "مخصص"
+    },
+    "trackers": {
+      "board": "لوحة الطلبات",
+      "queue": "طابور الطلبات",
+      "schedule": "حجوزات اليوم",
+      "requests": "الطلبات"
+    },
+    "bricks": {
+      "product": "كتالوج",
+      "service_request": "نموذج طلب",
+      "slot": "مواعيد",
+      "info": "صفحة معلومات"
+    },
+    "create": {
+      "title": "خدمة جديدة",
+      "type": "نوع المنشأة",
+      "name": "الاسم الظاهر للضيف",
+      "submit": "إنشاء",
+      "bricks": "مبنية من: {{bricks}}",
+      "tracker": "سيحصل الموظفون على: {{tracker}}"
+    },
+    "commerce": {
+      "explainer": "الحقل الفارغ يرث قيمة الفندق. الصفر يعني «بلا رسوم» وهو أمر مختلف.",
+      "inherited": "كالفندق",
+      "fee": "رسوم الخدمة، ن.أ",
+      "feeHint": "1500 = 15%",
+      "minOrder": "الحد الأدنى للطلب",
+      "minOrderHint": "دونه يُمنع إتمام الطلب",
+      "freeDelivery": "توصيل مجاني ابتداءً من",
+      "freeDeliveryHint": "فارغ — كالفندق"
+    }
+  },
+  "inclusions": {
+    "explainer": "التضمين رابط لا نسخة: تعديل المصدر يظهر هنا فوراً، وإخفاء صنف لا يحذفه من مالكه.",
+    "empty": "لا يوجد محتوى مضمّن بعد",
+    "addSource": "تضمين محتوى خدمة",
+    "active": "مفعّل",
+    "scopeLabel": "ما الذي نضمّنه",
+    "scope": {
+      "all": "المصدر كاملاً",
+      "categories": "أقسام مختارة"
+    },
+    "markupKind": "هامش السعر",
+    "markup": {
+      "none": "بلا هامش",
+      "percent": "نسبة",
+      "fixed": "ثابت"
+    },
+    "markupValue": "القيمة",
+    "bp": "ن.أ",
+    "executor": "من ينفّذ",
+    "executorSource": "منفّذ المصدر",
+    "executorOwn": "نحن",
+    "executorHint": "هذا الاختيار يحدّد توجيه الطلب وأي جدول يسري",
+    "hiddenCount": "أصناف مخفية: {{count}}"
+  },
+  "settings": {
+    "title": "إعدادات الفندق",
+    "subtitle": "ما يخصّ الفندق كله. إعدادات المنشأة في تبويباتها.",
+    "commerce": "العملة والضريبة والرسوم",
+    "commerceHint": "التجارة الوحيدة على مستوى الفندق؛ الباقي لكل منشأة.",
+    "locations": "مواقع التقديم",
+    "locationsHint": "قائمة مشتركة: تختار المنشأة منها وتحدّد سعر توصيلها."
+  },
+  "dashboard": {
+    "title": "لوحة المتابعة",
+    "subtitle": "ما يجري الآن. إجماليات الفترة في التحليلات.",
+    "ordersToday": "طلبات اليوم",
+    "venues": "منشآت في الواجهة",
+    "services": "إجمالي الخدمات",
+    "byService": "حسب الخدمة",
+    "staffAndItems": "{{staff}} موظف · {{items}} صنف",
+    "noEscalation": "لا تصعيد"
   }
 }

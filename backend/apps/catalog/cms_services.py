@@ -195,10 +195,20 @@ def _scoped(queryset):
     return queryset.filter(service__execution_point_id__in=point_ids)
 
 
-def category_tree(offering_type: str = OfferingType.PRODUCT) -> list[dict]:
-    """Дерево категорий с числом позиций. Один запрос на уровень, без N+1."""
+def category_tree(
+    offering_type: str = OfferingType.PRODUCT, *, service_id=None
+) -> list[dict]:
+    """
+    Дерево категорий с числом позиций. Один запрос на уровень, без N+1.
+
+    `service_id` — наполнение ОДНОГО заведения: рабочее пространство сервиса
+    (R4) показывает меню именно его, а не всю кучу отеля.
+    """
+    queryset = Category.objects.filter(type=offering_type)
+    if service_id:
+        queryset = queryset.filter(service_id=service_id)
     categories = list(
-        _scoped(Category.objects.filter(type=offering_type))
+        _scoped(queryset)
         .select_related("image")
         .order_by("sort_order", "code")
     )
@@ -483,8 +493,12 @@ def _item_queryset(offering_type: str | None = None):
     return queryset
 
 
-def list_items(*, category_id=None, search: str = "", offering_type: str | None = None) -> list[dict]:
+def list_items(
+    *, category_id=None, search: str = "", offering_type: str | None = None, service_id=None
+) -> list[dict]:
     queryset = _scoped_items(_item_queryset(offering_type))
+    if service_id:
+        queryset = queryset.filter(category__service_id=service_id)
     if category_id:
         queryset = queryset.filter(category_id=category_id)
     if search:

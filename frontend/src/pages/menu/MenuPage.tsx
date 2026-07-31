@@ -42,7 +42,16 @@ import { pickTranslated } from '@/utils/translated';
 import { CategoryTree } from './CategoryTree';
 import { ItemList } from './ItemList';
 
-export function MenuPage() {
+export interface MenuPageProps {
+  /**
+   * Меню ОДНОГО заведения. Задан — экран живёт внутри рабочего пространства
+   * сервиса (R4) и показывает только его наполнение; не задан — прежнее
+   * поведение, всё меню отеля.
+   */
+  serviceId?: string;
+}
+
+export function MenuPage({ serviceId }: MenuPageProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -58,8 +67,9 @@ export function MenuPage() {
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
 
   const categoriesQuery = useQuery({
-    queryKey: queryKeys.categories,
-    queryFn: fetchCategories,
+    // Ключ несёт заведение: иначе кэш меню «Панорамы» показался бы в баре.
+    queryKey: [...queryKeys.categories, serviceId ?? 'all'],
+    queryFn: () => fetchCategories(serviceId),
   });
 
   const tree = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
@@ -74,8 +84,13 @@ export function MenuPage() {
   const selectedCategory = selectedId ? findCategory(tree, selectedId) : null;
 
   const itemsQuery = useQuery({
-    queryKey: queryKeys.items(selectedId ?? undefined, search),
-    queryFn: () => fetchItems({ category_id: selectedId ?? undefined, search: search || undefined }),
+    queryKey: [...queryKeys.items(selectedId ?? undefined, search), serviceId ?? 'all'],
+    queryFn: () =>
+      fetchItems({
+        category_id: selectedId ?? undefined,
+        search: search || undefined,
+        service_id: serviceId,
+      }),
     enabled: Boolean(selectedId),
   });
 

@@ -16,6 +16,10 @@ import { resolveDefaultMode, type ThemeMode } from '@/theme/tokens';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth';
 import { BrandEditor } from './BrandEditor';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+
+import { ShowcaseEditorPage } from '@/cms/showcase/ShowcaseEditorPage';
 import { BrandPreview } from './BrandPreview';
 import { useBrandDraft } from './useBrandDraft';
 
@@ -30,6 +34,7 @@ export function BrandPage() {
   const { dirty, isLoading, loadError, isSaving, merged, draft } = brand;
 
   const [previewMode, setPreviewMode] = useState<ThemeMode>('light');
+  const [section, setSection] = useState<'brand' | 'showcase'>('brand');
   const [rtl, setRtl] = useState(false);
 
   // Open the preview in the brand's own default mode once, when data first lands.
@@ -110,6 +115,26 @@ export function BrandPage() {
         </Button>
       </Stack>
 
+      {/*
+        Бренд и витрина слиты в один раздел: и палитра, и раскладка плиток
+        отвечают на один вопрос — «как отель выглядит гостю». Разведённые по
+        разным пунктам, они заставляли админа держать соответствие в голове и
+        прыгать туда-обратно, чтобы увидеть результат.
+      */}
+      <Tabs
+        value={section}
+        onChange={(_event, next: 'brand' | 'showcase') => setSection(next)}
+        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+      >
+        <Tab value="brand" label={t('brand.tabs.brand')} data-testid="brand-tab-brand" />
+        <Tab value="showcase" label={t('brand.tabs.showcase')} data-testid="brand-tab-showcase" />
+      </Tabs>
+
+      {section === 'showcase' ? (
+        <Box data-testid="brand-showcase-section">
+          <ShowcaseEditorPage embedded />
+        </Box>
+      ) : (
       <Box
         sx={{
           display: 'grid',
@@ -133,6 +158,7 @@ export function BrandPage() {
           />
         </Box>
       </Box>
+      )}
     </Box>
   );
 }

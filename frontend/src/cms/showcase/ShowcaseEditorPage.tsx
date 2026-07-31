@@ -30,7 +30,12 @@ const SIZES: Array<CmsShowcaseTile['size']> = ['s', 'm', 'l'];
  * several venues collapse into a single category tile. The tile SET is computed
  * from data — the hotel tunes presentation, it does not hand-author tiles.
  */
-export function ShowcaseEditorPage() {
+export interface ShowcaseEditorPageProps {
+  /** Встроен в другой раздел: свой заголовок и внешние отступы не рисуем. */
+  embedded?: boolean;
+}
+
+export function ShowcaseEditorPage({ embedded = false }: ShowcaseEditorPageProps = {}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -94,7 +99,10 @@ export function ShowcaseEditorPage() {
   }
 
   return (
-    <Box data-testid="cms-showcase" sx={{ maxWidth: 760, mx: 'auto', p: { xs: 2, md: 3 } }}>
+    <Box
+      data-testid="cms-showcase"
+      sx={{ maxWidth: 760, mx: 'auto', p: embedded ? 0 : { xs: 2, md: 3 } }}
+    >
       <Stack spacing={0.5} sx={{ mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           {t('showcaseCms.title')}

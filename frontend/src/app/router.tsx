@@ -3,21 +3,20 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { RequireAuth } from '@/auth';
 import { AppShell } from '@/layouts/AppShell';
 import { LoginPage } from '@/pages/LoginPage';
-import { MenuPage } from '@/pages/menu/MenuPage';
 import { CategoryEditorPage } from '@/pages/category/CategoryEditorPage';
 import { ItemEditorPage } from '@/pages/item/ItemEditorPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 import { RoomsPage } from '@/pages/hotel/RoomsPage';
-import { LocationsPage } from '@/pages/hotel/LocationsPage';
-import { DepartmentsPage } from '@/pages/hotel/DepartmentsPage';
 import { StaffPage } from '@/pages/hotel/StaffPage';
 import { BrandPage } from '@/cms/brand/BrandPage';
+import { ServicesPage } from '@/cms/services/ServicesPage';
+import { ServiceWorkspacePage } from '@/cms/services/ServiceWorkspacePage';
+import { SettingsPage } from '@/cms/settings/SettingsPage';
+import { DashboardPage } from '@/cms/dashboard/DashboardPage';
 import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
-import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
-import { ShowcaseEditorPage } from '@/cms/showcase/ShowcaseEditorPage';
 import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
 import { PlatformConsole } from '@/platform/PlatformConsole';
 import App from '@/App';
@@ -59,25 +58,44 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <Navigate to="/cms/menu" replace /> },
-      { path: 'menu', element: <MenuPage /> },
+      { index: true, element: <Navigate to="/cms/dashboard" replace /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+
+      // Структура отеля: сервисы верхним уровнем, меню — внутри сервиса.
+      { path: 'services', element: <ServicesPage /> },
+      { path: 'services/:id', element: <ServiceWorkspacePage /> },
+      { path: 'rooms', element: <RoomsPage /> },
+      { path: 'staff', element: <StaffPage /> },
+
+      // Редакторы позиции и категории — общие, вызываются из меню сервиса.
+      { path: 'menu', element: <Navigate to="/cms/services" replace /> },
       { path: 'menu/categories/new', element: <CategoryEditorPage /> },
       { path: 'menu/categories/:id', element: <CategoryEditorPage /> },
       { path: 'menu/items/new', element: <ItemEditorPage /> },
       { path: 'menu/items/:id', element: <ItemEditorPage /> },
-      { path: 'notifications', element: <NotificationsPage /> },
-      { path: 'rooms', element: <RoomsPage /> },
-      { path: 'locations', element: <LocationsPage /> },
-      { path: 'departments', element: <DepartmentsPage /> },
-      { path: 'staff', element: <StaffPage /> },
+
+      // Оформление: бренд и витрина — один раздел.
       { path: 'brand', element: <BrandPage /> },
-      { path: 'styleguide', element: <StyleguidePage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
-      { path: 'commerce', element: <CommerceSettingsPage /> },
-      { path: 'badges', element: <BadgesPage /> },
-      { path: 'quick-actions', element: <QuickActionsPage /> },
-      { path: 'showcase', element: <ShowcaseEditorPage /> },
+
+      // Настройки: сюда растворилась «Коммерция» и переехал справочник локаций.
+      { path: 'settings', element: <SettingsPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
       { path: 'dictionaries', element: <DictionariesPage /> },
+
+      // Модульные разделы: пункт в навигации появляется только с модулем,
+      // но маршрут существует всегда — иначе прямая ссылка ломалась бы молча.
+      { path: 'marketing', element: <BadgesPage /> },
+
+      // Служебное: витрина отдельным адресом больше не нужна (слита с брендом),
+      // старые ссылки уводим туда же, а не в 404.
+      { path: 'showcase', element: <Navigate to="/cms/brand" replace /> },
+      { path: 'commerce', element: <Navigate to="/cms/settings" replace /> },
+      { path: 'locations', element: <Navigate to="/cms/settings" replace /> },
+      { path: 'departments', element: <Navigate to="/cms/services" replace /> },
+      { path: 'badges', element: <Navigate to="/cms/marketing" replace /> },
+      { path: 'quick-actions', element: <QuickActionsPage /> },
+      { path: 'styleguide', element: <StyleguidePage /> },
     ],
   },
   {

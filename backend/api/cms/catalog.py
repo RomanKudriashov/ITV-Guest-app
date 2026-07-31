@@ -46,8 +46,8 @@ router = Router(tags=["cms:catalog"])
 
 
 @router.get("/categories", response=list[CategoryTreeOut], summary="Дерево категорий")
-def list_categories(request: HttpRequest, type: str = "product"):
-    return svc.category_tree(type)
+def list_categories(request: HttpRequest, type: str = "product", service_id: str = None):
+    return svc.category_tree(type, service_id=service_id)
 
 
 @router.post("/categories", response={201: CategoryTreeOut}, summary="Создать категорию")
@@ -100,8 +100,11 @@ def list_items(
     category_id: str | None = None,
     search: str = "",
     type: str | None = None,
+    service_id: str | None = None,
 ):
-    return svc.list_items(category_id=category_id, search=search, offering_type=type)
+    return svc.list_items(
+        category_id=category_id, search=search, offering_type=type, service_id=service_id
+    )
 
 
 @router.post("/items", response={201: ItemDetailOut}, summary="Создать блюдо")

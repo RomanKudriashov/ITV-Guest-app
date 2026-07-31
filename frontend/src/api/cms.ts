@@ -73,8 +73,12 @@ export function fetchBootstrap(): Promise<Bootstrap> {
 
 /* ── 3. Categories ─────────────────────────────────────────────────────── */
 
-export function fetchCategories(): Promise<Category[]> {
-  return api.get<Category[]>('/cms/categories');
+export function fetchCategories(serviceId?: string): Promise<Category[]> {
+  // `service_id` — наполнение одного заведения: рабочее пространство сервиса
+  // показывает меню именно его, а не всю кучу отеля.
+  return api.get<Category[]>('/cms/categories', {
+    query: serviceId ? { service_id: serviceId } : undefined,
+  });
 }
 
 export function fetchCategory(id: string): Promise<Category> {
@@ -115,6 +119,8 @@ export function fetchItems(params: {
   search?: string;
   /** Filters the list by offering type; omitted means "every type". */
   type?: OfferingType;
+  /** Scopes the list to one venue — the service workspace (R4). */
+  service_id?: string;
 }): Promise<Item[]> {
   return api.get<Item[]>('/cms/items', { query: params });
 }

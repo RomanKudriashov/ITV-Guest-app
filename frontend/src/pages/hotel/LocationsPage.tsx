@@ -84,7 +84,12 @@ const EMPTY_FORM: LocationForm = {
   deliveryFeeInput: '0',
 };
 
-export function LocationsPage() {
+export interface LocationsPageProps {
+  /** Встроен в другой раздел: свой заголовок и внешние отступы не рисуем. */
+  embedded?: boolean;
+}
+
+export function LocationsPage({ embedded = false }: LocationsPageProps = {}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -117,13 +122,13 @@ export function LocationsPage() {
     location.code;
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: embedded ? 0 : 3 }}>
       <Stack spacing={3}>
         <Card variant="outlined" sx={{ borderColor: 'divider' }}>
           <CardContent sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
               <Stack>
-                <Typography variant="h5">{t('hotel.locations.title')}</Typography>
+                {embedded ? null : <Typography variant="h5">{t('hotel.locations.title')}</Typography>}
                 <Typography variant="body2" color="text.secondary">
                   {t('hotel.locations.subtitle')}
                 </Typography>
@@ -503,7 +508,7 @@ function LocationMatrix({ languages }: { languages: ReturnType<typeof useContent
   });
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categories,
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(),
   });
 
   // Local edits per category row: they override server data so a background

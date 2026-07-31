@@ -13,7 +13,6 @@ import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import RoomServiceIcon from '@mui/icons-material/RoomService';
@@ -27,7 +26,6 @@ import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
-import PlaceIcon from '@mui/icons-material/Place';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -36,111 +34,42 @@ import { IconBrand } from '@/icons';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAuth } from '@/auth';
+import { useNavigation } from '@/hooks/useNavigation';
 import { useBootstrap } from '@/hooks/useBootstrap';
 
 const DRAWER_WIDTH = 248;
 
-interface NavEntry {
-  key: string;
-  to?: string;
-  icon: JSX.Element;
-  disabled?: boolean;
-  /** Overrides the default `nav-<key>` testid where a screen names its own. */
-  testId?: string;
-}
+/**
+ * Иконка на ключ раздела. Сам СПИСОК разделов приходит с сервера
+ * (`useNavigation`): гейтинг модулями и роль решаются на бэкенде, и держать
+ * здесь второй список значило бы держать два источника правды о том, что у
+ * отеля есть.
+ */
+const NAV_ICONS: Record<string, JSX.Element> = {
+  dashboard: <DashboardCustomizeIcon fontSize="small" />,
+  tracker: <ReceiptLongIcon fontSize="small" />,
+  services: <RoomServiceIcon fontSize="small" />,
+  rooms: <MeetingRoomIcon fontSize="small" />,
+  staff: <PeopleAltIcon fontSize="small" />,
+  brand: <PaletteOutlinedIcon fontSize="small" />,
+  analytics: <InsightsIcon fontSize="small" />,
+  settings: <SettingsIcon fontSize="small" />,
+  notifications: <NotificationsActiveIcon fontSize="small" />,
+  dictionaries: <ScienceOutlinedIcon fontSize="small" />,
+  marketing: <LocalOfferOutlinedIcon fontSize="small" />,
+  roomControl: <BoltOutlinedIcon fontSize="small" />,
+  payments: <PaymentsOutlinedIcon fontSize="small" />,
+  pms: <GridViewOutlinedIcon fontSize="small" />,
+  mobileKey: <IconBrand size={20} />,
+};
 
-const NAV_ENTRIES: NavEntry[] = [
-  { key: 'menu', to: '/cms/menu', icon: <RestaurantMenuIcon fontSize="small" /> },
-  // The tracker lives outside /cms (own mobile-first shell) but is reachable
-  // from here: after one login a member of staff must find both halves.
-  { key: 'tracker', to: '/tracker', icon: <DashboardCustomizeIcon fontSize="small" /> },
-  {
-    key: 'notifications',
-    to: '/cms/notifications',
-    icon: <NotificationsActiveIcon fontSize="small" />,
-    testId: 'cms-nav-notifications',
-  },
-  {
-    key: 'rooms',
-    to: '/cms/rooms',
-    icon: <MeetingRoomIcon fontSize="small" />,
-    testId: 'cms-nav-rooms',
-  },
-  {
-    key: 'locations',
-    to: '/cms/locations',
-    icon: <PlaceIcon fontSize="small" />,
-    testId: 'cms-nav-locations',
-  },
-  {
-    key: 'departments',
-    to: '/cms/departments',
-    icon: <GroupWorkIcon fontSize="small" />,
-    testId: 'cms-nav-departments',
-  },
-  {
-    key: 'staff',
-    to: '/cms/staff',
-    icon: <PeopleAltIcon fontSize="small" />,
-    testId: 'cms-nav-staff',
-  },
-  {
-    key: 'brand',
-    to: '/cms/brand',
-    icon: <PaletteOutlinedIcon fontSize="small" />,
-    testId: 'cms-nav-brand',
-  },
-  {
-    key: 'styleguide',
-    to: '/cms/styleguide',
-    icon: <IconBrand size={20} />,
-    testId: 'cms-styleguide-nav',
-  },
-  {
-    key: 'analytics',
-    to: '/cms/analytics',
-    icon: <InsightsIcon fontSize="small" />,
-    testId: 'cms-analytics-nav',
-  },
-  {
-    key: 'commerce',
-    to: '/cms/commerce',
-    icon: <PaymentsOutlinedIcon fontSize="small" />,
-    testId: 'cms-nav-commerce',
-  },
-  {
-    key: 'badges',
-    to: '/cms/badges',
-    icon: <LocalOfferOutlinedIcon fontSize="small" />,
-    testId: 'cms-nav-badges',
-  },
-  {
-    key: 'quickActions',
-    to: '/cms/quick-actions',
-    icon: <BoltOutlinedIcon fontSize="small" />,
-    testId: 'cms-nav-quick-actions',
-  },
-  {
-    key: 'showcase',
-    to: '/cms/showcase',
-    icon: <GridViewOutlinedIcon fontSize="small" />,
-    testId: 'cms-nav-showcase',
-  },
-  {
-    key: 'dictionaries',
-    to: '/cms/dictionaries',
-    icon: <ScienceOutlinedIcon fontSize="small" />,
-    testId: 'cms-nav-dictionaries',
-  },
-  { key: 'orders', icon: <ReceiptLongIcon fontSize="small" />, disabled: true },
-  { key: 'services', icon: <RoomServiceIcon fontSize="small" />, disabled: true },
-  { key: 'settings', icon: <SettingsIcon fontSize="small" />, disabled: true },
-];
+const FALLBACK_ICON = <GroupWorkIcon fontSize="small" />;
 
 export function AppShell() {
   const { t } = useTranslation();
   const { user, hotel, logout } = useAuth();
   const { data: bootstrap } = useBootstrap();
+  const navigation = useNavigation();
 
   const hotelName = bootstrap?.hotel?.name ?? hotel?.name ?? t('app.title');
 
@@ -193,48 +122,47 @@ export function AppShell() {
       >
         <Toolbar />
         <List sx={{ px: 1.5, py: 2 }} data-testid="main-nav">
-          {NAV_ENTRIES.map((entry) => {
-            const label = t(`nav.${entry.key}`);
-            const content = (
-              <>
-                <ListItemIcon sx={{ minWidth: 36 }}>{entry.icon}</ListItemIcon>
-                <ListItemText
-                  primary={label}
-                  secondary={entry.disabled ? t('nav.soon') : undefined}
-                  primaryTypographyProps={{ variant: 'body2' }}
-                  secondaryTypographyProps={{ variant: 'caption' }}
-                />
-              </>
-            );
-
-            if (entry.disabled || !entry.to) {
-              return (
-                <ListItemButton key={entry.key} disabled sx={{ borderRadius: 2, mb: 0.5 }}>
-                  {content}
-                </ListItemButton>
-              );
-            }
-
-            return (
-              <ListItemButton
-                key={entry.key}
-                component={NavLink}
-                to={entry.to}
-                data-testid={entry.testId ?? `nav-${entry.key}`}
-                sx={{
-                  borderRadius: 2,
-                  mb: 0.5,
-                  '&.active': {
-                    bgcolor: 'brand.surfaceSelected',
-                    color: 'primary.main',
-                    '& .MuiListItemIcon-root': { color: 'primary.main' },
-                  },
-                }}
+          {(navigation.data?.groups ?? []).map((group) => (
+            <Box key={group.key} sx={{ mb: 1.5 }} data-testid={`nav-group-${group.key}`}>
+              {/*
+                Заголовок группы — не украшение: он и есть починка «плоской
+                простыни». Шестнадцать равнозначных пунктов подряд читаются
+                как свалка, потому что не отвечают на вопрос «где искать».
+              */}
+              <Typography
+                variant="overline"
+                sx={{ px: 2, color: 'text.secondary', letterSpacing: '.08em' }}
               >
-                {content}
-              </ListItemButton>
-            );
-          })}
+                {t(`nav.groups.${group.key}`)}
+              </Typography>
+
+              {group.items.map((item) => (
+                <ListItemButton
+                  key={item.key}
+                  component={NavLink}
+                  to={item.to}
+                  data-testid={`cms-nav-${item.key}`}
+                  sx={{
+                    borderRadius: 2,
+                    mb: 0.5,
+                    '&.active': {
+                      bgcolor: 'brand.surfaceSelected',
+                      color: 'primary.main',
+                      '& .MuiListItemIcon-root': { color: 'primary.main' },
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    {NAV_ICONS[item.key] ?? FALLBACK_ICON}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={t(`nav.${item.key}`)}
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItemButton>
+              ))}
+            </Box>
+          ))}
         </List>
       </Drawer>
 

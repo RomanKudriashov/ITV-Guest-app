@@ -177,7 +177,7 @@ export function ItemEditorPage() {
 
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categories,
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(),
   });
   const flatCategories = useMemo(
     () => flattenCategories(categoriesQuery.data ?? []),

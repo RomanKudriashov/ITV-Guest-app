@@ -83,7 +83,7 @@ export function CategoryEditorPage() {
 
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categories,
-    queryFn: fetchCategories,
+    queryFn: () => fetchCategories(),
   });
   const tree = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
   const current = categoryId ? findCategory(tree, categoryId) : null;
