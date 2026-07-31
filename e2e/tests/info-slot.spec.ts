@@ -19,10 +19,10 @@ async function enterAsGuest(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
   await page.getByTestId('guest-room-submit').click()
-  // Продуктовое поведение: после входа гость попадает на главную; для
-  // сценариев заказа сразу уходим в меню нижней навигацией.
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
-  await page.getByTestId('guest-nav-menu').click()
+  // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
+  // и путь теста совпадает с путём живого гостя — плитка на главной.
+  await page.getByTestId('guest-home-tile-kitchen').click()
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 
@@ -68,7 +68,7 @@ test.describe('Тип slot', () => {
       await staffOpensBoard(staff, SPA)
 
       await enterAsGuest(guest)
-      await guest.goto('/slots')
+      await guest.goto('/venue/spa')
       await expect(guest.getByTestId('guest-slot-massage')).toBeVisible({ timeout: 15_000 })
       await guest.getByTestId('guest-slot-massage').click()
 

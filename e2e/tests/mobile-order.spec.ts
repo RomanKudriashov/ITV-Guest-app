@@ -24,8 +24,9 @@ test('телефон: полный заказ через нижнюю навиг
   await page.getByTestId('guest-room-submit').click()
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
 
-  // Мобильный каркас: нижняя навигация на месте (рельса тут быть не должно).
-  await page.getByTestId('guest-nav-menu').click()
+  // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
+  // и путь теста совпадает с путём живого гостя — плитка на главной.
+  await page.getByTestId('guest-home-tile-kitchen').click()
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 
   // Салат без обязательных модификаторов — добавляется прямо из списка.

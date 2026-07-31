@@ -47,7 +47,9 @@ test.describe('Типизированные трекеры', () => {
       await loginToTracker(staff, CREDENTIALS)
 
       await enterAsGuest(guest)
-      await guest.getByTestId('guest-nav-menu').click()
+      // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
+      // и путь теста совпадает с путём живого гостя — плитка на главной.
+      await guest.getByTestId('guest-home-tile-kitchen').click()
       await expect(guest.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
       await guest.getByTestId('guest-qty-plus-caesar').click()
       await openCart(guest)
@@ -99,7 +101,7 @@ test.describe('Типизированные трекеры', () => {
       await expect(staff.getByTestId('tracker-tab-preparing')).toHaveCount(0)
 
       await enterAsGuest(guest)
-      await guest.goto('/services')
+      await guest.goto('/venue/concierge')
       await expect(guest.getByTestId('guest-service-cleaning')).toBeVisible({ timeout: 15_000 })
       await guest.getByTestId('guest-service-cleaning').click()
 

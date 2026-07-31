@@ -129,13 +129,18 @@ export const router = createBrowserRouter([
           { path: 'home', element: <HomePage /> },
           // Every catalog is the same screen with a different offering type;
           // there is deliberately no separate page component per type.
-          // Плоского каталога отеля больше нет: меню живёт внутри заведения.
-          // Старую ссылку уводим на главную, а не в 404 — она могла остаться
-          // в закладке или в переписке.
+          // Плоских каталогов отеля больше нет: и блюда, и заявки, и слоты
+          // живут внутри заведения, которое их исполняет. Старые ссылки уводим
+          // на главную, а не в 404 — они могли остаться в закладке или в
+          // переписке.
+          //
+          // `info` — исключение по устройству данных, а не по недоделке: у
+          // инфо-раздела нет сервиса-исполнителя (некому исполнять «пароль от
+          // wi-fi»), это раздел ОТЕЛЯ, и он остаётся плоским.
           { path: 'menu', element: <Navigate to="/home" replace /> },
-          { path: 'services', element: <CatalogPage type="service_request" /> },
+          { path: 'services', element: <Navigate to="/home" replace /> },
+          { path: 'slots', element: <Navigate to="/home" replace /> },
           { path: 'info', element: <CatalogPage type="info" /> },
-          { path: 'slots', element: <CatalogPage type="slot" /> },
           // Showcase levels 2 and 3: a group's venue list, and a venue's own catalog.
           { path: 'category/:group', element: <VenueListPage /> },
           { path: 'venue/:code', element: <VenuePage /> },
