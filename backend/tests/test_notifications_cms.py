@@ -133,11 +133,19 @@ def test_seeded_rule_has_three_steps(cms):
 
 
 def test_create_rule_for_another_point(cms):
+    # С R3 правило есть у КАЖДОГО заведения (подъём по его же SLA), поэтому
+    # «завести правило другому отделу» теперь означает заменить дефолтное:
+    # второе активное правило на точку система не даёт по построению.
+    concierge_id = _point_id(cms, "concierge")
+    for rule in cms.get("/api/cms/escalation-rules").json():
+        if rule["execution_point_id"] == concierge_id:
+            assert cms.delete(f"/api/cms/escalation-rules/{rule['id']}").status_code == 200
+
     response = cms.post(
         "/api/cms/escalation-rules",
         {
             "name": "Консьерж",
-            "execution_point_id": _point_id(cms, "concierge"),
+            "execution_point_id": concierge_id,
             "steps": [
                 {"delay_minutes": 0, "target_kind": "point"},
                 {"delay_minutes": 10, "target_kind": "manager"},
