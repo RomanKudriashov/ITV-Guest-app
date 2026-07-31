@@ -81,6 +81,25 @@ def test_photos_come_from_the_cache_not_the_network(crystal):
         assert seed_photos.cached_path(code).exists(), f"нет в кэше: {code}"
 
 
+def test_hotel_cover_is_a_real_photo_not_a_placeholder(crystal):
+    """
+    Обложка отеля хранится в токенах бренда СТРОКОЙ url. Записать её, пока
+    медиапайплайн не нарезал варианты, — значит навсегда прописать в бренд
+    заглушку: `image_url` в этот момент возвращает именно её.
+    """
+    from apps.hotels.brand_services import get_or_create_brand
+
+    with tenant_context(crystal):
+        tokens = get_or_create_brand(crystal).tokens or {}
+    background = (tokens.get("brand") or {}).get("background") or {}
+
+    if background.get("kind") != "image":
+        pytest.skip("у отеля фон не фотографический")
+    url = background.get("imageUrl") or ""
+    assert url, "фон вида image обязан нести картинку"
+    assert "placeholder" not in url, f"в бренде осела заглушка: {url}"
+
+
 def test_manifest_names_its_authors():
     """Лицензия Unsplash атрибуции не требует — но чужая работа названа."""
     for code in seed_photos.PHOTOS:

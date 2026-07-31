@@ -34,6 +34,7 @@ from apps.catalog.models import (
 )
 from apps.catalog.request_fields import FieldType
 from apps.core.context import tenant_context
+from apps.core.errors import DomainError
 from apps.core.fields import translate
 from apps.hotels.models import (
     BrandTheme,
@@ -1140,14 +1141,22 @@ class Command(BaseCommand):
                 GuestSession.objects.filter(pk=session.pk).update(created_at=created)
                 session.refresh_from_db()
 
-                order = create_order(
-                    OrderInput(
-                        lines=[OrderLineInput(item_id=str(item.pk), quantity=1 + (k % 2))],
-                        room_id=str(room.pk),
-                        field_values=self._demo_field_values(item),
-                    ),
-                    guest_session=session,
-                )
+                try:
+                    order = create_order(
+                        OrderInput(
+                            lines=[OrderLineInput(item_id=str(item.pk), quantity=1 + (k % 2))],
+                            room_id=str(room.pk),
+                            field_values=self._demo_field_values(item),
+                        ),
+                        guest_session=session,
+                    )
+                except DomainError as exc:
+                    # Демо-история — украшение, а не условие существования отеля.
+                    # Отель мог настроить минимум заказа или стоп-лист так, что
+                    # конкретная строка истории не проходит: пропускаем её, а не
+                    # роняем создание отеля целиком.
+                    self.stdout.write(f"История: заказ пропущен ({exc})")
+                    continue
                 Order.objects.filter(pk=order.pk).update(created_at=created)
                 OrderStatusChange.objects.filter(order_id=order.pk, from_status__isnull=True).update(created_at=created)
                 order.refresh_from_db()
@@ -1275,13 +1284,35 @@ class Command(BaseCommand):
         tokens = dict(theme.tokens or {})
         brand = dict(tokens.get("brand") or {})
         background = dict(brand.get("background") or {})
-        if background.get("kind") == "image" and background.get("image_id"):
+        current = background.get("imageUrl") or ""
+        # Заглушка в токенах — это НЕ настроенная обложка: считаем её
+        # отсутствием и перезаписываем настоящим снимком.
+        if background.get("kind") == "image" and current and "placeholder" not in current:
             return
 
         asset = self._image_for("hotel-cover", hotel.name)
         if asset is None:
             return
-        background.update({"kind": "image", "image_id": str(asset.pk), "dim": 0.15})
+
+        # Обложка хранится в токенах бренда СТРОКОЙ url, а не ссылкой на ассет,
+        # поэтому её нельзя записать, пока медиапайплайн не нарезал варианты:
+        # `image_url` вернул бы заглушку, и она осела бы в бренде навсегда.
+        # Дорезаем синхронно и берём НАСТОЯЩИЙ url — у ассета, а не через
+        # резолвер с фолбэком.
+        from apps.media.tasks import process_media_asset
+
+        try:
+            process_media_asset.apply(args=(str(asset.pk), str(hotel.pk))).get()
+        except Exception as exc:  # noqa: BLE001 — MinIO необязателен для старта
+            self.stdout.write(self.style.WARNING(f"Обложка отеля не нарезана ({exc})"))
+            return
+
+        asset.refresh_from_db()
+        url = asset.url("card")
+        if not url:
+            self.stdout.write("Обложка отеля ещё не готова — пропускаю")
+            return
+        background.update({"kind": "image", "imageUrl": url, "dim": 0.15})
         brand["background"] = background
         tokens["brand"] = brand
         theme.tokens = tokens

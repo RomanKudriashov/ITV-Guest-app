@@ -55,18 +55,17 @@ guest_auth = GuestAuth()
 
 def _brand_cover_url(tokens: dict) -> str | None:
     """
-    Обложка отеля из «Бренд и витрина» (R4): фон вида `image`. Другие виды
-    фона (градиент, абстракция) обложкой не являются — витрина покажет их
-    собственным фоном, а парадная возьмёт заглушку-градиент прототипа.
-    """
-    from apps.media.models import MediaAsset
-    from apps.media.services import image_url
+    Обложка отеля из «Бренд и витрина» (R4): фон вида `image`.
 
+    Отдаём отдельным полем, хотя url лежит и в токенах: парадная спрашивает
+    «есть ли кадр отеля», а не «какой у него фон», и знать про устройство
+    токенов ей незачем. Градиент и абстракция обложкой не являются — там
+    парадная возьмёт фирменный градиент.
+    """
     background = ((tokens or {}).get("brand") or {}).get("background") or {}
-    if background.get("kind") != "image" or not background.get("image_id"):
+    if background.get("kind") != "image":
         return None
-    asset = MediaAsset.objects.filter(pk=background["image_id"]).first()
-    return image_url(asset, variant="card") or None
+    return background.get("imageUrl") or None
 
 
 def serialize_hotel(hotel: Hotel) -> dict:
