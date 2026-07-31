@@ -13,6 +13,7 @@ import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
 import { TeamPage } from './pages/TeamPage';
 import { AuditPage } from './pages/AuditPage';
+import { TemplatesPage } from './pages/TemplatesPage';
 import { accent, ink } from './adminTokens';
 import { getMe, platformToken } from './adminClient';
 
@@ -31,6 +32,7 @@ const SECTIONS: AdminSection[] = [
   // где кончаются отели и начинается платформа.
   { key: 'modules', labelKey: 'admin.nav.modules', group: 'admin.nav.platformGroup' },
   { key: 'nodes', labelKey: 'admin.nav.nodes', group: 'admin.nav.platformGroup' },
+  { key: 'templates', labelKey: 'admin.nav.templates', group: 'admin.nav.platformGroup' },
   { key: 'team', labelKey: 'admin.nav.team', group: 'admin.nav.platformGroup' },
   { key: 'audit', labelKey: 'admin.nav.audit', group: 'admin.nav.platformGroup' },
 ];
@@ -95,6 +97,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
       ) : null}
       {section === 'modules' ? <ModulesPage /> : null}
       {section === 'nodes' ? <NodesPage /> : null}
+      {section === 'templates' ? <TemplatesPage /> : null}
       {section === 'team' ? <TeamPage /> : null}
       {section === 'audit' ? <AuditPage /> : null}
     </AdminShell>

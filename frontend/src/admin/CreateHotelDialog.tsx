@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -13,8 +13,14 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, primaryButtonSx } from './adminTokens';
-import { BRAND_PRESETS, createHotel, PlatformError, type CreateHotelResult } from './adminClient';
+import { accent, ink, primaryButtonSx, surface } from './adminTokens';
+import {
+  BRAND_PRESETS,
+  createHotel,
+  getTemplates,
+  PlatformError,
+  type CreateHotelResult,
+} from './adminClient';
 
 /**
  * Заведение отеля платформой.
@@ -39,9 +45,14 @@ export function CreateHotelDialog({
     languages: 'ru,en',
     preset: 'midnight_navy',
   });
+  const [template, setTemplate] = useState<string>('blank');
   const [error, setError] = useState<string | null>(null);
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  // Шаблоны редактируются платформой, поэтому список приходит с сервера, а не
+  // зашит в диалог: иначе он отстал бы от реестра в первый же день.
+  const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: getTemplates });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -53,6 +64,7 @@ export function CreateHotelDialog({
         timezone: form.timezone,
         languages: form.languages.split(',').map((code) => code.trim()).filter(Boolean),
         preset: form.preset,
+        template,
       }),
     onSuccess: onCreated,
     onError: (e) => setError(e instanceof PlatformError ? e.message : t('admin.create.failed')),
@@ -100,6 +112,38 @@ export function CreateHotelDialog({
               sx={{ flexGrow: 1 }}
             />
           </Stack>
+          <Box>
+            <Typography sx={{ fontSize: 11, fontWeight: 700, color: ink.mid, mb: 1 }}>
+              {t('admin.create.template')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {(templates.data ?? [])
+                .filter((entry) => entry.is_active)
+                .map((entry) => (
+                  <Box
+                    key={entry.code}
+                    component="button"
+                    type="button"
+                    onClick={() => setTemplate(entry.code)}
+                    data-testid={`admin-create-template-${entry.code}`}
+                    data-active={template === entry.code ? 'true' : undefined}
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: 999,
+                      cursor: 'pointer',
+                      color: template === entry.code ? accent.soft : ink.mid,
+                      bgcolor: template === entry.code ? accent.washSoft : 'transparent',
+                      border: `1px solid ${template === entry.code ? accent.main : surface.line}`,
+                    }}
+                  >
+                    {entry.title.ru ?? entry.title.en ?? entry.code}
+                  </Box>
+                ))}
+            </Box>
+          </Box>
           <Stack direction="row" spacing={2}>
             <TextField
               label={t('admin.create.timezone')}
@@ -144,9 +188,11 @@ export function CreateHotelDialog({
 /** Разовый показ пароля заведённого администратора. */
 export function CreatedAdminDialog({
   admin,
+  services,
   onClose,
 }: {
   admin: CreateHotelResult['admin'];
+  services: string[];
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -162,6 +208,11 @@ export function CreatedAdminDialog({
             <Alert severity="info" data-testid="admin-created-password">
               {t('admin.create.donePassword')}: <b>{admin.password}</b>
             </Alert>
+          ) : null}
+          {services.length ? (
+            <Box sx={{ fontSize: 12, color: ink.mid }} data-testid="admin-created-services">
+              {t('admin.create.doneServices', { count: services.length })}: {services.join(', ')}
+            </Box>
           ) : null}
           <Box sx={{ fontSize: 12, color: ink.low }}>{t('admin.create.doneHint')}</Box>
         </Stack>

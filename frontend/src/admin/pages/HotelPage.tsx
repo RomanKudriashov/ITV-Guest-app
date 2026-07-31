@@ -14,12 +14,16 @@ import { useTranslation } from 'react-i18next';
 import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import {
+  cancelOffboarding,
+  downloadHotelExport,
   getActivity,
   getHotel,
   getModules,
   getUsage,
   patchHotel,
   putModules,
+  markOffboarding,
+  purgeHotel,
   setHotelAdmin,
   setTariff,
   type DowngradeWarning,
@@ -27,7 +31,7 @@ import {
   type ModuleEntry,
 } from '../adminClient';
 
-const TABS = ['profile', 'usage', 'modules', 'activity', 'tariff'] as const;
+const TABS = ['profile', 'usage', 'modules', 'activity', 'tariff', 'data'] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -101,6 +105,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         {tab === 'modules' ? <ModulesTab id={id} /> : null}
         {tab === 'activity' ? <ActivityTab id={id} /> : null}
         {tab === 'tariff' ? <TariffTab id={id} /> : null}
+        {tab === 'data' ? <DataTab hotel={hotel} /> : null}
       </Box>
 
       {entering ? (
@@ -470,6 +475,132 @@ function Kv({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <Box component="b" sx={{ color: ink.hi, fontWeight: 600, textAlign: 'right' }}>
         {value}
+      </Box>
+    </Box>
+  );
+}
+
+
+/* ── Данные отеля: экспорт и офбординг ──────────────────────────────────── */
+
+/**
+ * Экспорт и офбординг стоят рядом намеренно: это две стороны одного разговора
+ * «отель уходит». Но действия у них разной природы, и разделены они не только
+ * кнопками — экспорт обратим и делается сколько угодно раз, удаление требует
+ * пометки, ввода поддомена и роли владельца.
+ */
+function DataTab({ hotel }: { hotel: HotelProfile }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [reason, setReason] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  const marked = hotel.offboarding;
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
+  };
+
+  const mark = useMutation({
+    mutationFn: () => markOffboarding(hotel.id, reason.trim()),
+    onSuccess: refresh,
+    onError: (e) => setError(e instanceof Error ? e.message : t('admin.data.markFailed')),
+  });
+  const cancel = useMutation({
+    mutationFn: () => cancelOffboarding(hotel.id),
+    onSuccess: refresh,
+  });
+  const purge = useMutation({
+    mutationFn: () => purgeHotel(hotel.id, confirm.trim()),
+    onSuccess: (data) => {
+      setResult(t('admin.data.purged', { count: Object.values(data.removed).reduce((a, b) => a + b, 0) }));
+      setError(null);
+      refresh();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : t('admin.data.purgeFailed')),
+  });
+
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 1.75 }}
+      data-testid="admin-hotel-data">
+      <Box sx={panelSx}>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1 }}>
+          {t('admin.data.exportTitle')}
+        </Typography>
+        <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.75 }}>
+          {t('admin.data.exportHint')}
+        </Typography>
+        <Button
+          onClick={() => void downloadHotelExport(hotel.id, hotel.subdomain)}
+          data-testid="admin-hotel-export"
+          sx={primaryButtonSx}
+        >
+          {t('admin.data.export')}
+        </Button>
+      </Box>
+
+      <Box sx={{ ...panelSx, borderColor: `${state.bad}55` }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: state.bad }}>
+          {t('admin.data.offboardTitle')}
+        </Typography>
+        <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.75 }}>
+          {t('admin.data.offboardHint')}
+        </Typography>
+
+        {error ? <Alert severity="error" sx={{ mb: 1.5 }} data-testid="admin-data-error">{error}</Alert> : null}
+        {result ? <Alert severity="success" sx={{ mb: 1.5 }} data-testid="admin-data-purged">{result}</Alert> : null}
+
+        {marked ? (
+          <>
+            <Alert severity="warning" sx={{ mb: 1.5 }} data-testid="admin-data-marked">
+              {t('admin.data.marked')}
+            </Alert>
+            {/* Второй шаг. Поддомен вводят руками: галочку ставят не глядя, а
+                имя удаляемого набирают, только посмотрев на него. */}
+            <TextField
+              size="small"
+              fullWidth
+              label={t('admin.data.confirmLabel', { subdomain: hotel.subdomain })}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              inputProps={{ 'data-testid': 'admin-data-confirm' }}
+            />
+            <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+              <Button
+                disabled={confirm.trim() !== hotel.subdomain || purge.isPending}
+                onClick={() => purge.mutate()}
+                data-testid="admin-data-purge"
+                sx={{ color: state.bad, border: `1px solid ${state.bad}55` }}
+              >
+                {t('admin.data.purge')}
+              </Button>
+              <Button onClick={() => cancel.mutate()} data-testid="admin-data-cancel" sx={{ color: ink.mid }}>
+                {t('admin.data.cancel')}
+              </Button>
+            </Box>
+          </>
+        ) : (
+          <>
+            <TextField
+              size="small"
+              fullWidth
+              label={t('admin.data.reason')}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              inputProps={{ 'data-testid': 'admin-data-reason' }}
+            />
+            <Button
+              disabled={reason.trim().length < 3 || mark.isPending}
+              onClick={() => mark.mutate()}
+              data-testid="admin-data-mark"
+              sx={{ mt: 1.5, color: state.warn, border: `1px solid ${state.warn}55` }}
+            >
+              {t('admin.data.mark')}
+            </Button>
+          </>
+        )}
       </Box>
     </Box>
   );

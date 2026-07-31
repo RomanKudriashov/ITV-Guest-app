@@ -1513,7 +1513,8 @@
       "modules": "Modules & plans",
       "nodes": "On-prem nodes",
       "team": "Team",
-      "audit": "Audit"
+      "audit": "Audit",
+      "templates": "Templates & dictionaries"
     },
     "role": {
       "owner": "Platform owner",
@@ -1612,7 +1613,8 @@
         "usage": "Usage",
         "modules": "Modules",
         "activity": "Activity",
-        "tariff": "Plan"
+        "tariff": "Plan",
+        "data": "Data"
       },
       "field": {
         "name": "Name",
@@ -1669,7 +1671,9 @@
       "doneTitle": "Hotel created",
       "doneAdmin": "Administrator",
       "donePassword": "Password (shown once)",
-      "doneHint": "The hotel sets itself up from here in its CMS."
+      "doneHint": "The hotel sets itself up from here in its CMS.",
+      "template": "Starting template",
+      "doneServices": "Services created: {{count}}"
     },
     "module": {
       "room_control": "Room control",
@@ -1758,7 +1762,11 @@
           "admin_set": "Hotel admin set",
           "modules_set": "Modules changed",
           "tariff_set": "Plan recorded",
-          "entered": "Entered the hotel"
+          "entered": "Entered the hotel",
+          "exported": "Hotel data exported",
+          "offboard_marked": "Hotel marked for offboarding",
+          "offboard_cancelled": "Offboarding mark removed",
+          "purged": "Hotel data erased"
         },
         "node": {
           "registered": "Node registered",
@@ -1772,6 +1780,13 @@
         "fleet": {
           "bulk": "Bulk action on hotels",
           "exported": "Fleet exported"
+        },
+        "template": {
+          "created": "Template created",
+          "updated": "Template changed"
+        },
+        "dictionary": {
+          "updated": "Dictionary changed"
         }
       },
       "impersonation": {
@@ -1793,6 +1808,43 @@
       "expired": "Expired",
       "audited": "Every action in this session is marked as a support edit.",
       "open": "Open CMS"
+    },
+    "templates": {
+      "title": "Templates & dictionaries",
+      "subtitle": "What the platform fills new hotels with",
+      "tab": {
+        "templates": "Onboarding templates",
+        "dictionary": "System dictionary"
+      },
+      "noServices": "No services — the hotel adds its own",
+      "modules": "Modules",
+      "note": "A template only sets the START. It is not tied to the hotel: editing it later changes nothing for hotels already created.",
+      "dictKind": "Kind",
+      "dictCode": "Code",
+      "dictTitle": "Name",
+      "dictSave": "Save",
+      "dictFailed": "Could not save",
+      "kind": {
+        "allergen": "Allergens",
+        "marker": "Dietary markers"
+      },
+      "dictNote": "A hotel gets its own copy on creation and may deactivate entries. Edits here reach new hotels."
+    },
+    "data": {
+      "exportTitle": "Data export",
+      "export": "Download JSON",
+      "exportHint": "Hand the hotel its data. Reversible, can be done any number of times.",
+      "offboardTitle": "Offboarding (data protection)",
+      "offboardHint": "Stopping processing. Two steps: marking disables the hotel, erasure is irreversible.",
+      "reason": "Reason for offboarding",
+      "mark": "Mark for offboarding",
+      "markFailed": "Could not mark",
+      "marked": "The hotel is marked for offboarding and disabled.",
+      "confirmLabel": "Type “{{subdomain}}” to confirm",
+      "purge": "Erase data",
+      "purgeFailed": "Could not erase",
+      "purged": "Data erased: {{count}} records",
+      "cancel": "Cancel marking"
     }
   }
 }

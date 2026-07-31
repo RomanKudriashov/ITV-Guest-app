@@ -1511,7 +1511,8 @@
       "modules": "模块与套餐",
       "nodes": "本地节点",
       "team": "团队",
-      "audit": "审计"
+      "audit": "审计",
+      "templates": "模板与字典"
     },
     "role": {
       "owner": "平台所有者",
@@ -1610,7 +1611,8 @@
         "usage": "用量",
         "modules": "模块",
         "activity": "动态",
-        "tariff": "套餐"
+        "tariff": "套餐",
+        "data": "数据"
       },
       "field": {
         "name": "名称",
@@ -1667,7 +1669,9 @@
       "doneTitle": "酒店已创建",
       "doneAdmin": "管理员",
       "donePassword": "密码（仅显示一次）",
-      "doneHint": "酒店接下来在自己的后台完成配置。"
+      "doneHint": "酒店接下来在自己的后台完成配置。",
+      "template": "起始模板",
+      "doneServices": "已创建服务：{{count}}"
     },
     "module": {
       "room_control": "客房控制",
@@ -1756,7 +1760,11 @@
           "admin_set": "设置酒店管理员",
           "modules_set": "修改模块",
           "tariff_set": "记录套餐",
-          "entered": "进入酒店"
+          "entered": "进入酒店",
+          "exported": "导出酒店数据",
+          "offboard_marked": "标记酒店退出",
+          "offboard_cancelled": "取消退出标记",
+          "purged": "删除酒店数据"
         },
         "node": {
           "registered": "注册节点",
@@ -1770,6 +1778,13 @@
         "fleet": {
           "bulk": "批量操作酒店",
           "exported": "导出酒店列表"
+        },
+        "template": {
+          "created": "创建模板",
+          "updated": "修改模板"
+        },
+        "dictionary": {
+          "updated": "修改字典"
         }
       },
       "impersonation": {
@@ -1791,6 +1806,43 @@
       "expired": "已过期",
       "audited": "本次会话中的每个操作都会标记为支持人员的修改。",
       "open": "打开后台"
+    },
+    "templates": {
+      "title": "模板与字典",
+      "subtitle": "平台用来填充新酒店的内容",
+      "tab": {
+        "templates": "开通模板",
+        "dictionary": "系统字典"
+      },
+      "noServices": "无服务 — 由酒店自行添加",
+      "modules": "模块",
+      "note": "模板只决定起点。它与酒店不绑定：之后的修改不会改变已创建的酒店。",
+      "dictKind": "类型",
+      "dictCode": "代码",
+      "dictTitle": "名称",
+      "dictSave": "保存",
+      "dictFailed": "保存失败",
+      "kind": {
+        "allergen": "过敏原",
+        "marker": "膳食标记"
+      },
+      "dictNote": "酒店在创建时获得自己的副本，可自行停用条目。此处的修改对新酒店生效。"
+    },
+    "data": {
+      "exportTitle": "数据导出",
+      "export": "下载 JSON",
+      "exportHint": "把数据交还酒店。可逆，可重复执行。",
+      "offboardTitle": "退出与数据删除",
+      "offboardHint": "停止处理。分两步：标记会停用酒店，删除不可逆。",
+      "reason": "退出原因",
+      "mark": "标记为退出",
+      "markFailed": "标记失败",
+      "marked": "该酒店已标记退出并被停用。",
+      "confirmLabel": "输入「{{subdomain}}」以确认",
+      "purge": "删除数据",
+      "purgeFailed": "删除失败",
+      "purged": "已删除数据：{{count}} 条",
+      "cancel": "取消标记"
     }
   }
 }

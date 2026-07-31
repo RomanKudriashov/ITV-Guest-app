@@ -42,6 +42,8 @@ class HotelCreateIn(Schema):
     # Происхождение. Автотесты обязаны присылать "test" — только так их отели
     # отличимы от настоящих не угадыванием по имени, а признаком.
     origin: str = "live"
+    # Стартовый шаблон. Пусто — отель заводится голым, как и раньше.
+    template: str | None = None
 
 
 class HotelPatchIn(Schema):
@@ -68,6 +70,36 @@ class ModuleEntryIn(Schema):
 class ModulesIn(Schema):
     modules: list[ModuleEntryIn] = []
     tariff: str | None = None
+
+
+class OffboardIn(Schema):
+    reason: str = ""
+    cancel: bool = False
+
+
+class PurgeIn(Schema):
+    # Поддомен вводят руками: галочку ставят не глядя, имя набирают, посмотрев.
+    confirm_subdomain: str
+
+
+class TemplateIn(Schema):
+    code: str | None = None
+    title: dict | None = None
+    description: dict | None = None
+    tariff: str | None = None
+    services: list[dict] | None = None
+    modules: list[str] | None = None
+    languages: list[str] | None = None
+    preset: str | None = None
+    is_active: bool | None = None
+    sort_order: int | None = None
+
+
+class DictionaryEntryIn(Schema):
+    kind: str
+    code: str
+    title: dict
+    is_active: bool = True
 
 
 class EnterHotelIn(Schema):
@@ -270,7 +302,17 @@ def _profile(hotel: Hotel) -> dict[str, Any]:
         "default_language": hotel.default_language,
         "languages": languages,
         "tariff": hotel.tariff,
+        # Состояние офбординга отдаём ОТДЕЛЬНЫМ полем, а не сырыми settings:
+        # settings отеля — свалка внутренних ключей, и выставлять её наружу
+        # значит однажды показать в интерфейсе что-то, чего там быть не должно.
+        "offboarding": _offboarding_state(hotel),
     }
+
+
+def _offboarding_state(hotel: Hotel) -> dict | None:
+    from apps.hotels.offboarding import offboarding_state
+
+    return offboarding_state(hotel)
 
 
 def _get_hotel(hotel_id: str) -> Hotel:
@@ -400,8 +442,23 @@ def create_hotel(request: HttpRequest, payload: HotelCreateIn):
         exist_ok=False,
         origin=payload.origin,
     )
-    _audit(request, result.hotel, "platform.hotel.created", {"subdomain": result.hotel.subdomain})
+    applied: list[str] = []
+    if payload.template:
+        from apps.hotels.onboarding import apply_template, ensure_seed, get_template
+
+        ensure_seed()
+        template = get_template(payload.template)
+        applied = [service.code for service in apply_template(result.hotel, template)]
+
+    _audit(
+        request,
+        result.hotel,
+        "platform.hotel.created",
+        {"subdomain": result.hotel.subdomain, "template": payload.template or "", "services": applied},
+    )
     return 201, {
+        "template": payload.template,
+        "services": applied,
         "hotel": _profile(result.hotel),
         "admin": {"email": result.admin.email, "password": result.admin_password},
     }
@@ -448,6 +505,135 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
     user, password = set_hotel_admin(hotel, email=payload.email, password=payload.password)
     _audit(request, hotel, "platform.hotel.admin_set", {"email": user.email})
     return {"email": user.email, "password": password}
+
+
+# --- Экспорт и офбординг (152-ФЗ) ------------------------------------------
+
+
+@router.get("/hotels/{hotel_id}/export", summary="Выгрузить данные отеля")
+def export_hotel_data(request: HttpRequest, hotel_id: str):
+    from django.http import HttpResponse
+
+    from apps.hotels.offboarding import export_json
+
+    hotel = _get_hotel(hotel_id)
+    body = export_json(hotel)
+    _audit(request, hotel, "platform.hotel.exported", {"bytes": len(body)})
+    response = HttpResponse(body, content_type="application/json; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{hotel.subdomain}-export.json"'
+    return response
+
+
+@router.post("/hotels/{hotel_id}/offboard", summary="Пометить отель к офбордингу")
+def offboard_hotel(request: HttpRequest, hotel_id: str, payload: OffboardIn):
+    from apps.accounts.platform_access import can_manage_tariff
+    from apps.hotels.offboarding import mark_for_offboarding, unmark
+
+    # Офбординг — договорное решение, а не операционное: его принимает владелец.
+    if not can_manage_tariff(request.user):
+        raise PermissionDenied("Офбординг проводит только владелец платформы")
+
+    hotel = _get_hotel(hotel_id)
+    if payload.cancel:
+        unmark(hotel)
+        _audit(request, hotel, "platform.hotel.offboard_cancelled")
+        return {"marked": None}
+
+    state = mark_for_offboarding(hotel, reason=payload.reason or "", actor_id=request.user.pk)
+    _audit(request, hotel, "platform.hotel.offboard_marked", {"reason": state["reason"]})
+    return {"marked": state}
+
+
+@router.post("/hotels/{hotel_id}/purge", summary="Необратимо стереть данные отеля")
+def purge_hotel_data(request: HttpRequest, hotel_id: str, payload: PurgeIn):
+    from apps.accounts.platform_access import can_manage_tariff
+    from apps.hotels.offboarding import purge_hotel
+
+    if not can_manage_tariff(request.user):
+        raise PermissionDenied("Удаление данных проводит только владелец платформы")
+
+    hotel = _get_hotel(hotel_id)
+    result = purge_hotel(hotel, confirm_subdomain=payload.confirm_subdomain, actor_id=request.user.pk)
+    _audit(request, hotel, "platform.hotel.purged", result)
+    return result
+
+
+# --- Шаблоны онбординга и системные справочники ----------------------------
+
+
+@router.get("/templates", summary="Шаблоны онбординга")
+def list_onboarding_templates(request: HttpRequest):
+    from apps.hotels.onboarding import ensure_seed, list_templates
+
+    # Пустая база даёт владельцу платформы пустой экран и вопрос «а что бывает».
+    ensure_seed()
+    return list_templates()
+
+
+@router.post("/templates", response={201: dict}, summary="Создать шаблон")
+def create_template(request: HttpRequest, payload: TemplateIn):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.models import OnboardingTemplate
+    from apps.hotels.onboarding import serialize_template
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не правит шаблоны")
+    data = payload.dict(exclude_unset=True)
+    code = (data.get("code") or "").strip().lower()
+    if not code:
+        raise ValidationError("Нужен код шаблона", field="code")
+    if OnboardingTemplate.objects.filter(code=code).exists():
+        raise ValidationError(f"Шаблон «{code}» уже есть", field="code")
+    template = OnboardingTemplate.objects.create(**{**data, "code": code})
+    _audit_platform(request, "platform.template.created", payload={"code": code})
+    return 201, serialize_template(template)
+
+
+@router.patch("/templates/{template_id}", summary="Изменить шаблон")
+def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.models import OnboardingTemplate
+    from apps.hotels.onboarding import serialize_template
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не правит шаблоны")
+    template = OnboardingTemplate.objects.filter(pk=template_id).first()
+    if template is None:
+        raise NotFoundError("Шаблон не найден")
+    data = payload.dict(exclude_unset=True)
+    # Код шаблона не меняем: на него ссылаются журнал и внешние скрипты.
+    data.pop("code", None)
+    for field, value in data.items():
+        setattr(template, field, value)
+    template.save()
+    _audit_platform(request, "platform.template.updated", payload={"code": template.code})
+    return serialize_template(template)
+
+
+@router.get("/dictionaries", summary="Системный справочник платформы")
+def get_system_dictionary(request: HttpRequest, kind: str | None = None):
+    from apps.hotels.onboarding import ensure_seed, list_dictionary
+
+    ensure_seed()
+    return list_dictionary(kind)
+
+
+@router.put("/dictionaries", summary="Добавить/изменить запись справочника")
+def put_system_dictionary(request: HttpRequest, payload: DictionaryEntryIn):
+    from apps.accounts.platform_access import can_write
+    from apps.hotels.onboarding import upsert_dictionary_entry
+
+    if not can_write(request.user):
+        raise PermissionDenied("Роль «только чтение» не правит справочники")
+    entry = upsert_dictionary_entry(
+        kind=payload.kind, code=payload.code, title=payload.title, is_active=payload.is_active
+    )
+    _audit_platform(request, "platform.dictionary.updated",
+                    payload={"kind": entry.kind, "code": entry.code})
+    return {
+        "id": str(entry.pk), "kind": entry.kind, "code": entry.code,
+        "title": entry.title, "is_active": entry.is_active, "sort_order": entry.sort_order,
+    }
 
 
 # --- Вход в отель ----------------------------------------------------------

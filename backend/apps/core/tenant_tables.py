@@ -87,5 +87,9 @@ NULLABLE_TENANT_TABLES = [
 
 PLATFORM_TABLES = [
     "hotels_hotel",
+    # Шаблоны онбординга и системный справочник принадлежат ПЛАТФОРМЕ, а не
+    # отелю: отель получает их копию при заведении и дальше живёт своей.
+    "hotels_onboarding_template",
+    "hotels_system_dictionary",
     "media_category_placeholder",
 ]

@@ -44,7 +44,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
   const [query, setQuery] = useState<FleetQuery>({ status: '', page: 1, page_size: 25 });
   const [selected, setSelected] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
-  const [createdAdmin, setCreatedAdmin] = useState<CreateHotelResult['admin'] | null>(null);
+  const [created, setCreated] = useState<CreateHotelResult | null>(null);
 
   const fleet = useQuery({ queryKey: ['admin', 'fleet', query], queryFn: () => getFleet(query) });
   const bulk = useMutation({
@@ -233,14 +233,18 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           onClose={() => setCreating(false)}
           onCreated={(result) => {
             setCreating(false);
-            setCreatedAdmin(result.admin);
+            setCreated(result);
             void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
             void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
           }}
         />
       ) : null}
-      {createdAdmin ? (
-        <CreatedAdminDialog admin={createdAdmin} onClose={() => setCreatedAdmin(null)} />
+      {created ? (
+        <CreatedAdminDialog
+          admin={created.admin}
+          services={created.services ?? []}
+          onClose={() => setCreated(null)}
+        />
       ) : null}
 
       {fleet.data && fleet.data.pages > 1 ? (

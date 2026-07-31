@@ -89,12 +89,15 @@ export interface HotelProfile extends HotelBrief {
   currency: string;
   default_language: string;
   languages: HotelLanguageBrief[];
+  tariff?: string;
+  offboarding?: OffboardState | null;
 }
 
 export interface CreateHotelInput {
   subdomain: string;
   name: string;
   admin_email: string;
+  template?: string | null;
   timezone?: string;
   currency?: string;
   languages?: string[];
@@ -105,6 +108,8 @@ export interface CreateHotelInput {
 export interface CreateHotelResult {
   hotel: HotelProfile;
   admin: { email: string; password: string | null };
+  template: string | null;
+  services: string[];
 }
 
 export interface PlatformMe {
@@ -410,3 +415,74 @@ export const getAudit = (limit = 100) => request<AuditRow[]>(`/audit?limit=${lim
 
 export const enterHotel = (id: string, body: { reason: string; ttl_minutes: number }) =>
   request<EnterResult>(`/hotels/${id}/enter`, 'POST', body);
+
+/* ── Шаблоны онбординга и системный справочник ──────────────────────────── */
+
+export interface OnboardingTemplate {
+  id: string;
+  code: string;
+  title: Record<string, string>;
+  description: Record<string, string>;
+  tariff: string;
+  services: { type: string; name: Record<string, string> }[];
+  modules: string[];
+  languages: string[];
+  preset: string;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface DictionaryEntry {
+  id: string;
+  kind: 'allergen' | 'marker';
+  code: string;
+  title: Record<string, string>;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export const getTemplates = () => request<OnboardingTemplate[]>('/templates');
+export const patchTemplate = (id: string, body: Partial<OnboardingTemplate>) =>
+  request<OnboardingTemplate>(`/templates/${id}`, 'PATCH', body);
+export const getDictionary = () => request<DictionaryEntry[]>('/dictionaries');
+export const putDictionaryEntry = (body: {
+  kind: string;
+  code: string;
+  title: Record<string, string>;
+  is_active?: boolean;
+}) => request<DictionaryEntry>('/dictionaries', 'PUT', body);
+
+/* ── Экспорт и офбординг ────────────────────────────────────────────────── */
+
+export interface OffboardState {
+  marked_at: string;
+  marked_by: string;
+  reason: string;
+  purged_at?: string;
+  removed?: Record<string, number>;
+}
+
+export const markOffboarding = (id: string, reason: string) =>
+  request<{ marked: OffboardState | null }>(`/hotels/${id}/offboard`, 'POST', { reason });
+export const cancelOffboarding = (id: string) =>
+  request<{ marked: null }>(`/hotels/${id}/offboard`, 'POST', { cancel: true });
+export const purgeHotel = (id: string, confirmSubdomain: string) =>
+  request<{ removed: Record<string, number>; purged_on: string }>(`/hotels/${id}/purge`, 'POST', {
+    confirm_subdomain: confirmSubdomain,
+  });
+
+/** Выгрузка отеля файлом: ответ — JSON-документ, а не данные для экрана. */
+export async function downloadHotelExport(id: string, subdomain: string): Promise<void> {
+  const token = platformToken.get();
+  const res = await fetch(`${BASE}/hotels/${id}/export`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new PlatformError(res.status, `Ошибка ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${subdomain}-export.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
