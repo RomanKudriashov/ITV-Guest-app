@@ -16,7 +16,7 @@ async function openAnalytics(page: Page): Promise<void> {
   await page.getByTestId('login-password').fill(ADMIN.password)
   await page.getByTestId('login-submit').click()
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
-  await page.getByTestId('cms-analytics-nav').click()
+  await page.getByTestId('cms-nav-analytics').click()
   await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 20_000 })
 }
 

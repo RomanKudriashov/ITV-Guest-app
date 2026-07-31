@@ -60,6 +60,9 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
 
+  // Ключ несёт заведение: иначе кэш меню «Панорамы» показался бы в баре.
+  const categoriesKey = [...queryKeys.categories, serviceId ?? 'all'];
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
@@ -67,8 +70,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
 
   const categoriesQuery = useQuery({
-    // Ключ несёт заведение: иначе кэш меню «Панорамы» показался бы в баре.
-    queryKey: [...queryKeys.categories, serviceId ?? 'all'],
+    queryKey: categoriesKey,
     queryFn: () => fetchCategories(serviceId),
   });
 
@@ -105,36 +107,36 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       toggleCategory(id, isActive),
     onMutate: async ({ id, isActive }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.categories });
-      const previous = queryClient.getQueryData<Category[]>(queryKeys.categories);
-      queryClient.setQueryData<Category[]>(queryKeys.categories, (current) =>
+      await queryClient.cancelQueries({ queryKey: categoriesKey });
+      const previous = queryClient.getQueryData<Category[]>(categoriesKey);
+      queryClient.setQueryData<Category[]>(categoriesKey, (current) =>
         current ? patchCategory(current, id, { is_active: isActive }) : current,
       );
       return { previous };
     },
     onError: (error, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.categories, context.previous);
+      if (context?.previous) queryClient.setQueryData(categoriesKey, context.previous);
       showError(error);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: categoriesKey }),
   });
 
   const reorderCategoriesMutation = useMutation({
     mutationFn: (entries: CategoryReorderEntry[]) => reorderCategories(entries),
     onError: (error, _vars, context: { previous?: Category[] } | undefined) => {
-      if (context?.previous) queryClient.setQueryData(queryKeys.categories, context.previous);
+      if (context?.previous) queryClient.setQueryData(categoriesKey, context.previous);
       showError(error, 'errors.reorderFailed');
     },
     onSuccess: (updated) => {
       if (Array.isArray(updated) && updated.length) {
-        queryClient.setQueryData(queryKeys.categories, updated);
+        queryClient.setQueryData(categoriesKey, updated);
       }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: categoriesKey }),
   });
 
   const handleCategoryReorder = (parentId: string | null, orderedIds: string[]) => {
-    const previous = queryClient.getQueryData<Category[]>(queryKeys.categories);
+    const previous = queryClient.getQueryData<Category[]>(categoriesKey);
     if (!previous) return;
 
     const siblings = parentId
@@ -150,7 +152,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
 
     // Optimistic tree, rolled back by onError.
     queryClient.setQueryData<Category[]>(
-      queryKeys.categories,
+      categoriesKey,
       replaceSiblings(previous, parentId, nextSiblings),
     );
 
@@ -161,7 +163,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
     }));
 
     reorderCategoriesMutation.mutate(entries, {
-      onError: () => queryClient.setQueryData(queryKeys.categories, previous),
+      onError: () => queryClient.setQueryData(categoriesKey, previous),
     });
   };
 
@@ -172,7 +174,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
       toast.show(t('category.deleted'), 'success');
       setPendingDelete(null);
       setCascade(false);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      void queryClient.invalidateQueries({ queryKey: categoriesKey });
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === 'category_not_empty') {
@@ -187,7 +189,10 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
 
   /* ── Item mutations ─────────────────────────────────────────────────── */
 
-  const itemsKey = queryKeys.items(selectedId ?? undefined, search);
+  // ТОТ ЖЕ ключ, что у самого запроса: точечная запись в кэш по укороченному
+  // ключу молча уходит в никуда — список остаётся прежним, и переключатель
+  // читает устаревшее состояние.
+  const itemsKey = [...queryKeys.items(selectedId ?? undefined, search), serviceId ?? 'all'];
 
   const patchItemsCache = (id: string, patch: Partial<Item>) => {
     queryClient.setQueryData<Item[]>(itemsKey, (current) =>
@@ -257,7 +262,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
       toast.show(t('item.deleted'), 'success');
       setItemToDelete(null);
       void queryClient.invalidateQueries({ queryKey: itemsKey });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      void queryClient.invalidateQueries({ queryKey: categoriesKey });
     },
     onError: (error) => showError(error),
   });

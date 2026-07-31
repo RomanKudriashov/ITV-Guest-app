@@ -133,18 +133,70 @@ test.describe('Типизированные трекеры', () => {
     page,
     request,
   }) => {
-    // Заказ-агрегатор оформляем через API: гостевая витрина начнёт слать
-    // service_code только в R5, а разъезд нужен уже сейчас (см. отчёт R2).
+    // Фикстуру разъезда собираем ЧЕРЕЗ ПУБЛИЧНЫЙ API — до R4 это было
+    // невозможно: у маршрутов (категория → исполнитель) не было CMS-эндпоинта,
+    // и созданная через админку категория оставалась без исполнителя. Из-за
+    // этого тест и стоял в skip.
     const token = await apiToken(request, ADMIN)
-    const menu = await request.get(`${API}/api/cms/items`, { headers: apiHeaders(token) })
-    expect(menu.ok()).toBeTruthy()
-    const items = (await menu.json()) as Array<{ id: string; code: string }>
-    const dish = items.find((item) => item.code === 'carbonara')
-    const cocktail = items.find((item) => item.code === 'negroni')
-    test.skip(
-      !dish || !cocktail,
-      'нужен наглядный каталог: seed_demo_hotel --with-rich-catalog',
-    )
+    const h = apiHeaders(token)
+    const tag = Date.now().toString(36)
+
+    const services = (await request.get(`${API}/api/cms/services`, { headers: h }).then((r) =>
+      r.json(),
+    )) as Array<{ id: string; code: string }>
+    const kitchen = services.find((s) => s.code === 'kitchen')!
+    const bar = services.find((s) => s.code === 'bar')!
+    const barPointId = (
+      await request.get(`${API}/api/cms/services/${bar.id}`, { headers: h }).then((r) => r.json())
+    ).execution_point.id
+
+    // 1. Бару — свой раздел и коктейль в нём.
+    const barCategory = await request
+      .post(`${API}/api/cms/categories`, {
+        data: { type: 'product', title: { ru: `Коктейли ${tag}` }, service_id: bar.id },
+        headers: h,
+      })
+      .then((r) => r.json())
+
+    // 2. Маршрут раздела на бар — ради этого эндпоинта R4 и заводился.
+    await request.put(`${API}/api/cms/categories/${barCategory.id}/routes`, {
+      data: { routes: [{ execution_point_id: barPointId }] },
+      headers: h,
+    })
+
+    const cocktail = await request
+      .post(`${API}/api/cms/items`, {
+        data: {
+          category_id: barCategory.id,
+          type: 'product',
+          title: { ru: `Негрони ${tag}` },
+          price: 65000,
+        },
+        headers: h,
+      })
+      .then((r) => r.json())
+
+    // 3. Сервис-агрегатор, включающий кухню и бар по ссылке (модель R2).
+    const aggregator = await request
+      .post(`${API}/api/cms/services`, {
+        data: { type: 'room_service', public_name: { ru: `Рум-сервис ${tag}` } },
+        headers: h,
+      })
+      .then((r) => r.json())
+
+    for (const sourceId of [kitchen.id, bar.id]) {
+      const included = await request.post(
+        `${API}/api/cms/services/${aggregator.id}/inclusions`,
+        { data: { source_service_id: sourceId }, headers: h },
+      )
+      expect(included.ok(), await included.text()).toBeTruthy()
+    }
+
+    // 4. Гость заказывает у агрегатора блюдо кухни и коктейль бара.
+    const menuItems = (await request
+      .get(`${API}/api/cms/items?service_id=${kitchen.id}`, { headers: h })
+      .then((r) => r.json())) as Array<{ id: string; code: string }>
+    const dish = menuItems.find((item) => item.code === 'caesar')!
 
     const session = await request.post(`${API}/api/guest/session`, {
       data: { room_number: DEMO_ROOM, language: 'ru' },
@@ -154,14 +206,17 @@ test.describe('Типизированные трекеры', () => {
 
     const placed = await request.post(`${API}/api/guest/order`, {
       data: {
-        lines: [{ item_id: dish!.id, quantity: 1 }, { item_id: cocktail!.id, quantity: 1 }],
-        service_code: 'room_service',
+        lines: [
+          { item_id: dish.id, quantity: 1 },
+          { item_id: cocktail.id, quantity: 1 },
+        ],
+        service_code: aggregator.code,
         timing: 'asap',
       },
       headers: {
         Authorization: `Bearer ${guestToken}`,
         'X-Hotel-Subdomain': 'crystal',
-        'Idempotency-Key': `e2e-fanout-${Date.now().toString(36)}`,
+        'Idempotency-Key': `e2e-fanout-${tag}`,
       },
     })
     expect(placed.ok(), await placed.text()).toBeTruthy()
@@ -175,10 +230,10 @@ test.describe('Типизированные трекеры', () => {
     await expect(source.first()).toBeVisible({ timeout: 20_000 })
     await expect(source.first()).toContainText(/рум-сервис/i)
 
-    // И на доске бара только коктейль: паста осталась на кухне.
+    // И на доске бара только коктейль: салат остался на кухне.
     const board = page.getByTestId('tracker-board')
-    await expect(board).toContainText(/негрони/i)
-    await expect(board).not.toContainText(/карбонара/i)
+    await expect(board).toContainText(new RegExp(`Негрони ${tag}`, 'i'))
+    await expect(board).not.toContainText(/цезарь/i)
   })
 })
 

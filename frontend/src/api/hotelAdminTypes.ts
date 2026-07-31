@@ -109,59 +109,19 @@ export interface MatrixUpdatePayload {
   cells: MatrixCell[];
 }
 
-/* ── 3. Departments (execution points) ─────────────────────────────────── */
+/* ── 3. Отдел-исполнитель (для привязки сотрудника) ────────────────────── */
 
-export type DepartmentKind =
-  | 'kitchen'
-  | 'bar'
-  | 'housekeeping'
-  | 'spa'
-  | 'reception'
-  | 'other';
-
-export const DEPARTMENT_KINDS: DepartmentKind[] = [
-  'kitchen',
-  'bar',
-  'housekeeping',
-  'spa',
-  'reception',
-  'other',
-];
-
-export interface Department {
+/**
+ * Узкий тип: всё, что нужно, чтобы выбрать отдел в привязке сотрудника.
+ *
+ * Толстый `Department` описывал удалённый `/cms/departments` — с R4 ресурс CMS
+ * это СЕРВИС (`@/cms/services/api`), а исполнитель живёт внутри него. Держать
+ * рядом устаревшее описание значило бы приглашать писать против него.
+ */
+export interface StaffDepartment {
   id: string;
   code: string;
-  /** Internal name — staff, tracker, escalations, analytics. Never shown to guests. */
   title: Translated;
-  /** Guest-facing venue name («Панорама»); falls back to `title` when empty. */
-  public_name: Translated;
-  /** Short guest-facing tagline («европейская кухня»). */
-  tagline: Translated;
-  /** Whether this point appears to guests as a venue on the showcase. */
-  is_guest_facing: boolean;
-  kind: DepartmentKind;
-  schedule_id: string | null;
-  sla_minutes: number;
-  is_active: boolean;
-  /** Counters that tie the department back to notifications. */
-  staff_count: number;
-  channel_count: number;
-  has_escalation: boolean;
-  /** Venue photo — used as the catalog hero on the storefront. */
-  image: import('./types').MediaAsset | null;
-}
-
-export interface DepartmentPayload {
-  code?: string;
-  title: Translated;
-  public_name?: Translated;
-  tagline?: Translated;
-  is_guest_facing?: boolean;
-  kind: DepartmentKind;
-  schedule_id?: string | null;
-  sla_minutes?: number;
-  is_active?: boolean;
-  image_id?: string | null;
 }
 
 /* ── 4. Staff ──────────────────────────────────────────────────────────── */

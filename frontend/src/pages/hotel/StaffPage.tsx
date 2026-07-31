@@ -30,17 +30,17 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 
 import { ApiError } from '@/api/client';
+import { fetchServices } from '@/cms/services/api';
 import {
   createStaff,
   deleteStaff,
-  fetchDepartments,
   fetchStaff,
   updateStaff,
   updateStaffAssignments,
 } from '@/api/hotelAdmin';
 import {
   STAFF_LEVELS,
-  type Department,
+  type StaffDepartment,
   type StaffLevel,
   type StaffMember,
 } from '@/api/hotelAdminTypes';
@@ -83,9 +83,16 @@ export function StaffPage() {
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
 
   const staffQuery = useQuery({ queryKey: queryKeys.staff, queryFn: fetchStaff });
+  // Отделы читаем из СЕРВИСОВ: с R4 ресурс CMS — заведение, исполнитель
+  // живёт внутри него. Привязка сотрудника по-прежнему к точке исполнения.
   const departmentsQuery = useQuery({
-    queryKey: queryKeys.departments,
-    queryFn: fetchDepartments,
+    queryKey: ['cms', 'services'],
+    queryFn: async () =>
+      (await fetchServices()).map((service) => ({
+        id: service.execution_point.id,
+        code: service.execution_point.code,
+        title: service.public_name,
+      })),
   });
   const staff = staffQuery.data ?? [];
   const departments = departmentsQuery.data ?? [];
@@ -287,7 +294,7 @@ function StaffDialog({
   onSaved,
 }: {
   member: StaffMember | null;
-  departments: Department[];
+  departments: StaffDepartment[];
   languageCodes: string[];
   languageLabels: Record<string, string>;
   defaultLanguage: string;
@@ -318,7 +325,7 @@ function StaffDialog({
   const emailInvalid = !form.email.trim();
   const passwordInvalid = isNew && form.password.trim().length < 8;
 
-  const departmentLabel = (department: Department) =>
+  const departmentLabel = (department: StaffDepartment) =>
     pickTranslated(department.title, displayLanguage, fallbackLanguage) || department.code;
 
   const mutation = useMutation({

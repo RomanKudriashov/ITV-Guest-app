@@ -28,7 +28,7 @@ test('дашборд: заглавная «Выручка» — это gross, а
   // Дашборд смотрим админом отеля: с R3 аналитика — не работа линейного повара,
   // и скоуп у админа общеотельный, как и у токена ниже.
   await login(page)
-  await page.getByTestId('cms-analytics-nav').click()
+  await page.getByTestId('cms-nav-analytics').click()
   await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('analytics-filter-preset-today').click()
   await expect(page.getByTestId('analytics-summary')).toBeVisible({ timeout: 15_000 })

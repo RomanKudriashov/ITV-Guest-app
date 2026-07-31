@@ -245,7 +245,9 @@ function CreateServiceDialog({
             label={t('services.create.name')}
             value={name}
             onChange={(event) => setName(event.target.value)}
-            data-testid="service-create-name"
+            // testid — на сам input: у MUI TextField атрибут корня садится на
+            // обёртку, и .fill() упирается в div.
+            inputProps={{ 'data-testid': 'service-create-name' }}
             autoFocus
           />
 

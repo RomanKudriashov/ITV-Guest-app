@@ -1,8 +1,6 @@
 /** One function per endpoint of `docs/hotel-admin-api-contract.md`. */
 import { API_BASE, HOTEL_SUBDOMAIN, api, tokenStorage } from './client';
 import type {
-  Department,
-  DepartmentPayload,
   HotelLocation,
   LocationMatrix,
   LocationPayload,
@@ -128,27 +126,6 @@ export function fetchLocationMatrix(): Promise<LocationMatrix> {
 /** Replaces one category row of the matrix in full. */
 export function updateLocationMatrix(payload: MatrixUpdatePayload): Promise<LocationMatrix> {
   return api.put<LocationMatrix>('/cms/locations/matrix', payload);
-}
-
-/* ── 3. Departments ────────────────────────────────────────────────────── */
-
-export function fetchDepartments(): Promise<Department[]> {
-  return api.get<Department[]>('/cms/departments');
-}
-
-export function createDepartment(payload: DepartmentPayload): Promise<Department> {
-  return api.post<Department>('/cms/departments', payload);
-}
-
-export function updateDepartment(
-  id: string,
-  payload: Partial<DepartmentPayload>,
-): Promise<Department> {
-  return api.patch<Department>(`/cms/departments/${id}`, payload);
-}
-
-export function deleteDepartment(id: string): Promise<void> {
-  return api.delete<void>(`/cms/departments/${id}`);
 }
 
 /* ── 4. Staff ──────────────────────────────────────────────────────────── */

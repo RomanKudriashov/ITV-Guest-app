@@ -37,7 +37,9 @@ export async function login(
   await page.getByTestId('login-email').fill(credentials.email)
   await page.getByTestId('login-password').fill(credentials.password)
   await page.getByTestId('login-submit').click()
-  await expect(page).toHaveURL(/\/cms\/menu/)
+  // После R4 вход ведёт на дашборд: «Меню» больше не самостоятельный
+  // раздел, наполнение живёт внутри сервиса.
+  await expect(page).toHaveURL(/\/cms\//)
 }
 
 /** Вход в трекер: доступ даёт привязка к точке, а не роль. */

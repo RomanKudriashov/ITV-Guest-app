@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 import {
+  API,
+  HOTEL,
   apiDelete,
   apiGet,
   apiToken,
@@ -35,6 +37,9 @@ test.describe('CMS: редактор блюда', () => {
     const token = await apiToken(request)
 
     await login(page)
+    // С R4 меню живёт ВНУТРИ заведения: «меню какого ресторана» теперь имеет
+    // ответ, и путь к блюду идёт через рабочее пространство сервиса.
+    await openKitchenMenu(page, request)
 
     // --- Выбираем категорию и заходим в создание блюда ------------------
     await expect(page.getByTestId('menu-category-list')).toBeVisible()
@@ -126,6 +131,7 @@ test.describe('CMS: редактор блюда', () => {
     const token = await apiToken(request)
 
     await login(page)
+    await openKitchenMenu(page, request)
     await page.getByTestId('category-item-hot').click()
     await page.getByTestId('add-item-button').click()
 
@@ -167,7 +173,17 @@ test.describe('CMS: редактор блюда', () => {
   test('стоп-лист и выключение блюда переключаются из списка', async ({ page, request }) => {
     const token = await apiToken(request)
 
+    // Переключатель меняет состояние ОТНОСИТЕЛЬНО текущего, поэтому начальное
+    // задаём сами: тест, предполагающий состояние вместо того, чтобы его
+    // выставить, ломается от любого прерванного прогона до него.
+    const caesar = await findItemByTitle(request, token, 'Цезарь')
+    await request.post(`${API}/api/cms/items/${caesar!.id}/stock`, {
+      data: { in_stock: true },
+      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+
     await login(page)
+    await openKitchenMenu(page, request)
     await page.getByTestId('category-item-salads').click()
     await expect(page.getByTestId('item-row-caesar')).toBeVisible()
 
@@ -185,3 +201,24 @@ test.describe('CMS: редактор блюда', () => {
       .toBe(true)
   })
 })
+
+/**
+ * Меню кухни «Панорама».
+ *
+ * С R4 меню — вкладка внутри заведения, а не стартовый экран CMS: раньше меню
+ * отеля было одной кучей, и вопрос «меню какого ресторана» ответа не имел.
+ */
+async function openKitchenMenu(
+  page: import('@playwright/test').Page,
+  request: import('@playwright/test').APIRequestContext,
+): Promise<void> {
+  const token = await apiToken(request)
+  const services = (await request
+    .get(`${API}/api/cms/services`, {
+      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+    .then((r) => r.json())) as Array<{ id: string; code: string }>
+  const kitchen = services.find((service) => service.code === 'kitchen')!
+  await page.goto(`/cms/services/${kitchen.id}`)
+  await expect(page.getByTestId('service-menu')).toBeVisible({ timeout: 20_000 })
+}

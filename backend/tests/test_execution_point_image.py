@@ -57,7 +57,9 @@ def test_catalog_hero_image_comes_from_point_photo(client, cms, crystal, guest_t
             HTTP_AUTHORIZATION=f"Bearer {guest_token}",
         ).json()
 
-    # Пока фото точки нет — hero_image пуст (витрина возьмёт фон бренда).
+    # Начальное состояние задаём сами: с R4 сид даёт обложку КАЖДОМУ заведению,
+    # и «фото ещё нет» перестало быть свойством демо-отеля.
+    cms.patch(f"/api/cms/services/{_kitchen(cms)['id']}", {"image_id": None})
     assert catalog()["hero_image"] is None
 
     asset_id = _upload_ready(cms, crystal)

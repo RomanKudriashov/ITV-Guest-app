@@ -103,7 +103,7 @@ export function InclusionsTab({ service }: { service: CmsService }) {
           value=""
           sx={{ minWidth: 260 }}
           onChange={(event) => add.mutate(event.target.value)}
-          data-testid="inclusion-add-source"
+          SelectProps={{ SelectDisplayProps: { 'data-testid': 'inclusion-add-source' } as never }}
           disabled={!candidates.length}
         >
           {candidates.map((candidate) => (
