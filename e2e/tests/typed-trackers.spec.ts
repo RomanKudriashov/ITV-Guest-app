@@ -101,7 +101,9 @@ test.describe('Типизированные трекеры', () => {
       await expect(staff.getByTestId('tracker-tab-preparing')).toHaveCount(0)
 
       await enterAsGuest(guest)
-      await guest.goto('/venue/concierge')
+      // Уборка — заявка ХОЗСЛУЖБЫ, а не консьержа: у каждой свой исполнитель и
+      // своя доска, и заходить за ней гость должен в её заведение.
+      await guest.goto('/venue/housekeeping')
       await expect(guest.getByTestId('guest-service-cleaning')).toBeVisible({ timeout: 15_000 })
       await guest.getByTestId('guest-service-cleaning').click()
 
