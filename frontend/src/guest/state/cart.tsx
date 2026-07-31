@@ -12,16 +12,24 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import type { ItemDetail, MenuItem, ModifierOption, OrderLinePayload } from '../api/types';
 
 /**
- * Cart store — kind 2 state ("unfinished user input") from `@/state/useDraftState`.
+ * Корзина — НА СЕРВИС, а не одна на отель.
  *
- * It is NEVER derived from, or overwritten by, server data: a background menu
- * refetch must not drop what the guest has already picked. Prices shown in the
- * cart are the ones captured at add time; the authoritative total is recomputed
- * by the server at checkout (per the contract), so a stale price here is a
- * cosmetic issue, not a correctness one.
+ * У каждого заведения своя коммерция (сбор, минимум, доставка, чаевые), и одна
+ * общая корзина не могла бы честно ответить, по чьим правилам считать. Стейк в
+ * «Панораме» и коктейль в баре — два заказа; заказ в рум-сервисе один, а
+ * разъезжается уже на исполнении (fan-out R2/R3).
  *
- * The cart survives a page reload (localStorage, scoped to the session id) and
- * is cleared after a successful checkout.
+ * Отсюда же берётся `service_code` при оформлении. До R5 клиент его не слал,
+ * и реальные заказы оставались плоскими — это было записано отклонением R2.
+ * Посервисная корзина честна ровно потому, что витрина R5 не даёт добавить
+ * позицию вне заведения: плоского каталога больше нет.
+ *
+ * Состояние 2-го рода («незавершённый ввод»): НИКОГДА не выводится из ответа
+ * сервера и не перетирается им — фоновое обновление меню не должно ронять то,
+ * что гость уже выбрал. Цены здесь — снятые на момент добавления; итог считает
+ * сервер при оформлении, поэтому устаревшая цена тут косметика, а не ошибка.
+ *
+ * Переживает перезагрузку (localStorage по сессии) и чистится после оформления.
  */
 
 const CART_STORAGE_PREFIX = 'itv.guest.cart.';
@@ -50,8 +58,16 @@ export interface CartLine {
   modifiers: CartModifier[];
 }
 
+/** Строки всех заведений: код сервиса → его корзина. */
+export type CartsByService = Record<string, CartLine[]>;
+
 interface CartContextValue {
+  /** Строки АКТИВНОГО заведения (того, в чьём пространстве находится гость). */
   lines: CartLine[];
+  /** Код активного заведения; null — гость вне заведения (главная, история). */
+  serviceCode: string | null;
+  /** Заведения с непустой корзиной — для значка «ещё есть заказ в баре». */
+  serviceCodesWithLines: string[];
   count: number;
   total: number;
   isEmpty: boolean;
@@ -62,6 +78,7 @@ interface CartContextValue {
   decrementSimple: (itemId: string) => void;
   setQuantity: (uid: string, quantity: number) => void;
   removeLine: (uid: string) => void;
+  /** Чистит корзину активного заведения; остальные не трогает. */
   clear: () => void;
   toPayloadLines: () => OrderLinePayload[];
 }
@@ -72,14 +89,19 @@ function storageKey(sessionId: string | null): string {
   return `${CART_STORAGE_PREFIX}${sessionId ?? 'anonymous'}`;
 }
 
-function readStored(sessionId: string | null): CartLine[] {
+function readStored(sessionId: string | null): CartsByService {
   try {
     const raw = window.localStorage.getItem(storageKey(sessionId));
-    if (!raw) return [];
+    if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as CartLine[]) : [];
+    if (!parsed || typeof parsed !== 'object') return {};
+    // Корзина, сохранённая до R5, была плоским массивом. Восстанавливать её
+    // некуда — заведение неизвестно, — поэтому просто начинаем с пустой:
+    // молча приписать чужие строки первому попавшемуся сервису хуже.
+    if (Array.isArray(parsed)) return {};
+    return parsed as CartsByService;
   } catch {
-    return [];
+    return {};
   }
 }
 
@@ -113,32 +135,53 @@ export function toCartModifier(
   };
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({
+  children,
+  serviceCode,
+}: {
+  children: ReactNode;
+  /**
+   * Заведение, в чьём пространстве находится гость. Приходит из маршрута —
+   * корзина сама его не выбирает: «какая это корзина» решает то, где гость
+   * стоит, а не порядок кликов.
+   */
+  serviceCode?: string | null;
+}) {
   const { session } = useGuestSession();
   const sessionId = session?.session_id ?? null;
+  const active = serviceCode ?? null;
 
-  // The cart is bound to a session id: a new session starts from an empty cart,
-  // a reload of the same session restores it from localStorage.
-  const [state, setState] = useState<{ sid: string | null; lines: CartLine[] }>(() => ({
+  // Корзина привязана к сессии: новая сессия начинается с пустой, перезагрузка
+  // той же — восстанавливается из localStorage.
+  const [state, setState] = useState<{ sid: string | null; carts: CartsByService }>(() => ({
     sid: sessionId,
-    lines: readStored(sessionId),
+    carts: readStored(sessionId),
   }));
 
-  let lines = state.lines;
+  let carts = state.carts;
   if (state.sid !== sessionId) {
-    lines = readStored(sessionId);
-    setState({ sid: sessionId, lines });
+    carts = readStored(sessionId);
+    setState({ sid: sessionId, carts });
   }
+
+  const lines = active ? (carts[active] ?? []) : [];
 
   const setLines = useCallback(
     (updater: (prev: CartLine[]) => CartLine[]) =>
-      setState((prev) => ({ ...prev, lines: updater(prev.lines) })),
-    [],
+      setState((prev) => {
+        if (!active) return prev;   // вне заведения добавлять некуда
+        const next = updater(prev.carts[active] ?? []);
+        const carts = { ...prev.carts };
+        if (next.length) carts[active] = next;
+        else delete carts[active];  // пустую корзину не храним
+        return { ...prev, carts };
+      }),
+    [active],
   );
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(storageKey(state.sid), JSON.stringify(state.lines));
+      window.localStorage.setItem(storageKey(state.sid), JSON.stringify(state.carts));
     } catch {
       /* storage unavailable — cart lives in memory for this visit */
     }
@@ -213,6 +256,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const total = lines.reduce((sum, line) => sum + line.unit_price * line.quantity, 0);
     return {
       lines,
+      serviceCode: active,
+      serviceCodesWithLines: Object.keys(carts).filter((code) => carts[code].length > 0),
       count,
       total,
       isEmpty: lines.length === 0,
@@ -236,7 +281,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           comment: line.comment,
         })),
     };
-  }, [lines, addLine, addSimple, decrementSimple, setQuantity, removeLine, clear]);
+  }, [lines, carts, active, addLine, addSimple, decrementSimple, setQuantity, removeLine, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

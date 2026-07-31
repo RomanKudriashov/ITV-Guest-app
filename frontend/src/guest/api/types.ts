@@ -250,6 +250,11 @@ export interface OrderLinePayload {
  * entirely when the item's `location_mode` is not `delivery`.
  */
 export interface CreateOrderPayload {
+  /**
+   * Заведение, чья это корзина. Решает и коммерцию (сбор/минимум/доставка),
+   * и разъезд заказа по исполнителям, если заведение заимствует чужой контент.
+   */
+  service_code?: string;
   lines: OrderLinePayload[];
   location_id?: string;
   location_refinement?: string;

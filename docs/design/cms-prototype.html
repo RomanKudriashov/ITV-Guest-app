@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMS отеля — интерактивный прототип</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&display=swap');
+:root{
+  --void:#05080E;--bg:#0A0F17;--surf:#101825;--surf2:#16212F;--surf3:#1B2838;
+  --line:rgba(155,185,225,.12);--hair:rgba(155,185,225,.07);
+  --glass:rgba(16,24,36,.55);--glassBar:rgba(18,27,40,.5);
+  --txt:#EAF1F8;--txt2:#A6B6C9;--txt3:#6C7E93;
+  --acc:#77ADE0;--acc2:#9BC6EE;--gold:#CBA96C;--gold2:#E0C588;--ok:#79D488;--warn:#E0A657;
+  --grad:linear-gradient(150deg,#1c2b43,#0b1220);--disp:'Onest',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(1100px 600px at 12% -8%,rgba(40,70,120,.14),transparent 60%),var(--void);
+  color:var(--txt);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px}
+.tb{margin-bottom:18px;text-align:center}
+.tb .t{font-family:var(--disp);font-weight:800;font-size:15px;color:var(--txt2)}
+.tb .n{font-size:11.5px;color:var(--txt3);margin-top:4px}
+
+#frame{width:1180px;max-width:100%;border-radius:16px;padding:8px;background:linear-gradient(155deg,#28344B,#0B111B);
+  box-shadow:0 44px 100px -34px rgba(0,0,0,.8)}
+#app{height:722px;border-radius:12px;overflow:hidden;background:var(--bg);display:grid;grid-template-columns:246px 1fr}
+
+/* ===== nav ===== */
+.nav{background:var(--surf);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto}
+.nav::-webkit-scrollbar{width:0}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 14px;color:#fff}
+.brand svg{opacity:.9}.brand .wm{font-family:var(--disp);font-size:12px;font-weight:700;letter-spacing:.02em}
+.brand .wm small{display:block;font-size:10px;color:var(--txt3);font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+.grp{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt3);font-weight:700;padding:14px 18px 6px}
+.nav a{display:flex;align-items:center;gap:11px;margin:1px 10px;padding:9px 11px;border-radius:10px;color:var(--txt2);font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none}
+.nav a svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;opacity:.85;flex:none}
+.nav a:hover{background:var(--surf2);color:var(--txt)}
+.nav a.on{background:rgba(119,173,224,.15);color:var(--acc2)}
+.nav a .badge{margin-left:auto;font-size:10px;font-weight:700;background:var(--surf3);color:var(--txt2);border-radius:999px;padding:1px 7px}
+.nav a.mod{color:var(--txt3)}
+.navfoot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--hair);display:flex;align-items:center;gap:10px}
+.av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#3a5580,#1d2c44);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.navfoot .nm{font-size:12.5px;font-weight:600}.navfoot .rl{font-size:10.5px;color:var(--txt3)}
+
+/* ===== main ===== */
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:58px;flex:none;display:flex;align-items:center;gap:14px;padding:0 24px;
+  background:var(--glassBar);backdrop-filter:blur(24px) saturate(1.5);border-bottom:1px solid var(--hair)}
+.crumb{font-size:13px;color:var(--txt3)}.crumb b{color:var(--txt);font-weight:700}
+.top .rt{margin-left:auto;display:flex;align-items:center;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:600;color:var(--txt2);border:1px solid var(--line);cursor:pointer}
+.fl{width:16px;height:11px;border-radius:2px;background-size:cover;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Crect width='9' height='6' fill='%23fff'/%3E%3Crect y='2' width='9' height='4' fill='%230039A6'/%3E%3Crect y='4' width='9' height='2' fill='%23D52B1E'/%3E%3C/svg%3E")}
+.content{flex:1;overflow-y:auto;padding:24px}
+.content::-webkit-scrollbar{width:8px}.content::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:8px}
+.view{display:none}.view.active{display:block}
+.h1{font-family:var(--disp);font-size:24px;font-weight:800;letter-spacing:-.02em}
+.sub{color:var(--txt3);font-size:13px;margin-top:4px}
+.btn{height:38px;padding:0 15px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn.pri{background:linear-gradient(180deg,var(--acc2),var(--acc));color:#08121e}
+.btn.gold{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1c1405}
+.btn.ghost{background:var(--surf2);color:var(--txt);border:1px solid var(--line)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+
+/* dashboard */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px}
+.kpi .k{font-size:11px;color:var(--txt3);font-weight:600}
+.kpi .v{font-family:var(--disp);font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+.kpi .d{font-size:11px;margin-top:5px;color:var(--ok)}
+.kpi .d.warn{color:var(--warn)}
+.panels{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-top:14px}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px}
+.panel h3{font-family:var(--disp);font-size:14px;font-weight:700;margin-bottom:10px}
+.oi{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--hair)}
+.oi .st{font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+.oi .st.cook{background:rgba(224,166,87,.16);color:var(--warn)}
+.oi .st.new{background:rgba(119,173,224,.16);color:var(--acc2)}
+.oi .st.done{background:rgba(121,212,136,.16);color:var(--ok)}
+.oi .n{font-size:13px;font-weight:600}.oi .m{font-size:11px;color:var(--txt3)}
+.oi .p{margin-left:auto;font-size:12.5px;font-weight:700}
+.att{display:flex;align-items:center;gap:9px;padding:9px 0;font-size:12.5px;color:var(--txt2);border-bottom:1px solid var(--hair)}
+.att .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.rev{padding:9px 0;border-bottom:1px solid var(--hair)}
+.rev .s{color:var(--gold2);font-size:12px}.rev .t{font-size:12px;color:var(--txt2);margin-top:3px}
+
+/* services list */
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.svc{background:var(--surf);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;transition:border-color .2s,transform .2s}
+.svc:hover{border-color:#33465f;transform:translateY(-2px)}
+.svc .cov{height:104px;background-size:cover;background-position:center;background-image:var(--grad);position:relative}
+.svc .tp{position:absolute;top:9px;left:9px;font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(9,14,22,.6);color:#fff;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+.svc .st{position:absolute;top:9px;right:9px;font-size:9.5px;font-weight:600;padding:3px 8px;border-radius:999px;backdrop-filter:blur(6px)}
+.svc .st.on{background:rgba(121,212,136,.2);color:#9BE7A6;border:1px solid rgba(121,212,136,.35)}
+.svc .st.off{background:rgba(140,150,165,.16);color:var(--txt3);border:1px solid var(--line)}
+.svc .bd{padding:13px 15px}
+.svc .nm{font-family:var(--disp);font-size:16px;font-weight:700}
+.svc .tg{font-size:11.5px;color:var(--txt3);margin-top:3px}
+.svc .meta{font-size:11px;color:var(--txt2);margin-top:10px;display:flex;gap:12px}
+.svc.add{display:flex;align-items:center;justify-content:center;border-style:dashed;color:var(--txt3);font-size:13px;font-weight:600;min-height:200px}
+.svc.hidden{opacity:.55}
+
+/* service detail */
+.tabs{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs a{font-size:13px;font-weight:600;color:var(--txt3);padding:10px 13px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs a.on{color:var(--txt);border-bottom-color:var(--acc)}
+.tabpane{display:none;padding-top:18px}.tabpane.on{display:block}
+.menucols{display:grid;grid-template-columns:210px 1fr;gap:18px}
+.catlist{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:8px}
+.catlist .ci{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;font-weight:600;color:var(--txt2);cursor:pointer}
+.catlist .ci.on{background:rgba(119,173,224,.14);color:var(--acc2)}
+.catlist .ci .c{margin-left:auto;font-size:11px;color:var(--txt3)}
+.catlist .add{color:var(--acc2);font-size:12.5px;font-weight:600;padding:9px 10px;cursor:pointer}
+.item{display:flex;align-items:center;gap:13px;background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:10px}
+.item .ph{width:56px;height:56px;border-radius:10px;flex:none;background-size:cover;background-position:center;background-image:var(--grad)}
+.item .nm{font-size:13.5px;font-weight:700}.item .mm{font-size:11.5px;color:var(--txt3);margin-top:2px}
+.item .tags{display:flex;gap:5px;margin-top:6px}
+.tag{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--txt2)}
+.tag.gold{border-color:rgba(203,169,108,.4);color:var(--gold2)}
+.tag.al{border-color:rgba(224,166,87,.34);color:#F0BE76}
+.item .pr{margin-left:auto;font-size:14px;font-weight:800}
+.tgl{width:38px;height:22px;border-radius:999px;background:var(--acc);position:relative;flex:none;cursor:pointer}
+.tgl:after{content:"";position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff}
+.tgl.off{background:var(--surf3)}.tgl.off:after{left:2px;right:auto}
+.ic{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--surf2);color:var(--txt2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px}
+.ph-note{background:var(--surf);border:1px dashed var(--line);border-radius:14px;padding:20px;color:var(--txt3);font-size:13px;line-height:1.6}
+.ph-note b{color:var(--txt2)}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:640px}
+.fld .l{font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:6px}
+.fld .inp{height:42px;border-radius:11px;border:1px solid var(--line);background:var(--surf2);display:flex;align-items:center;padding:0 12px;font-size:13px;color:var(--txt2)}
+.chks{display:flex;flex-direction:column;gap:9px}
+.chk{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--txt2)}
+.box{width:19px;height:19px;border-radius:6px;border:1px solid var(--line);background:var(--surf2);flex:none}
+.box.on{background:var(--acc);border-color:var(--acc)}
+
+/* generic table */
+.tbl{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line)}
+.tbl td{padding:12px;border-bottom:1px solid var(--hair);color:var(--txt2)}
+.tbl td b{color:var(--txt);font-weight:700}
+.pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.pill.g{background:rgba(121,212,136,.14);color:#9BE7A6}.pill.b{background:rgba(119,173,224,.14);color:var(--acc2)}
+</style>
+
+<div class="tb"><div class="t">Crystal · CMS администратора отеля</div><div class="n">Кликай пункты слева и «Сервисы» → проваливайся в ресторан. Веб-версия (десктоп).</div></div>
+
+<div id="frame"><div id="app">
+
+  <!-- NAV -->
+  <aside class="nav">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" width="26" height="26"><path d="M20 4 L34 16 L20 36 L6 16 Z" fill="none" stroke="#9BC6EE" stroke-width="1.4"/><path d="M6 16H34M20 4V36" stroke="#9BC6EE" stroke-width=".6" opacity=".5"/></svg>
+      <span class="wm">Кристалл<small>Управление</small></span>
+    </div>
+    <a data-v="dash" class="on" onclick="go('dash')"><svg viewBox="0 0 24 24"><path d="M4 13h7V4H4zM13 20h7v-9h-7zM13 4v5h7V4zM4 20h7v-5H4z"/></svg>Дашборд</a>
+
+    <div class="grp">Структура</div>
+    <a data-v="svc" onclick="go('svc')"><svg viewBox="0 0 24 24"><path d="M6 3v7a3 3 0 006 0V3M18 3v18M9 10v11"/></svg>Сервисы<span class="badge">5</span></a>
+    <a data-v="rooms" onclick="go('rooms')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Номерной фонд<span class="badge">28</span></a>
+    <a data-v="staff" onclick="go('staff')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 6a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg>Персонал<span class="badge">11</span></a>
+
+    <div class="grp">Оформление</div>
+    <a data-v="brand" onclick="go('brand')"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1 0 2-1 2-2s-1-1-1-2 1-2 2-2h2a3 3 0 003-3c0-4-4-7-9-7z"/></svg>Бренд и витрина</a>
+
+    <div class="grp">Аналитика</div>
+    <a data-v="an" onclick="go('an')"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Аналитика</a>
+
+    <div class="grp">Настройки</div>
+    <a data-v="set" onclick="go('set')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M18.4 5.6l-2 2M7.6 16.4l-2 2"/></svg>Настройки</a>
+    <a data-v="mod" class="mod" onclick="go('mod')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M17 14v6M14 17h6"/></svg>Модули</a>
+
+    <div class="navfoot"><div class="av">ПП</div><div><div class="nm">Пётр Петров</div><div class="rl">Администратор отеля</div></div></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="top">
+      <div class="crumb" id="crumb"><b>Дашборд</b></div>
+      <div class="rt"><span class="chip"><span class="fl"></span>RU</span><span class="chip">☾</span></div>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="v-dash">
+        <div class="row"><div><div class="h1">Добрый вечер, Пётр</div><div class="sub">Отель «Кристалл» · вторник, 20:28</div></div><button class="btn ghost">Отчёт за день</button></div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Заказов сегодня</div><div class="v">37</div><div class="d">+8 к вчера</div></div>
+          <div class="kpi"><div class="k">Выручка</div><div class="v">148 200 ₽</div><div class="d">+12%</div></div>
+          <div class="kpi"><div class="k">Активные заявки</div><div class="v">6</div><div class="d warn">2 ждут ответа</div></div>
+          <div class="kpi"><div class="k">Средняя оценка</div><div class="v">4.8</div><div class="d">за неделю</div></div>
+        </div>
+        <div class="panels">
+          <div class="panel">
+            <h3>Заказы сейчас</h3>
+            <div class="oi"><span class="st cook">Готовится</span><div><div class="n">Стейк рибай, Лимонад ×2</div><div class="m">Панорама · номер 305</div></div><span class="p">3 270 ₽</span></div>
+            <div class="oi"><span class="st new">Новый</span><div><div class="n">Негрони, Капучино</div><div class="m">Лобби-бар · лобби</div></div><span class="p">1 010 ₽</span></div>
+            <div class="oi"><span class="st cook">Уборка</span><div><div class="n">Замена полотенец</div><div class="m">Хозслужба · номер 412</div></div><span class="p">—</span></div>
+            <div class="oi"><span class="st done">Подано</span><div><div class="n">Греческий салат</div><div class="m">Панорама · номер 118</div></div><span class="p">480 ₽</span></div>
+          </div>
+          <div>
+            <div class="panel" style="margin-bottom:14px">
+              <h3>Требует внимания</h3>
+              <div class="att"><span class="dot" style="background:var(--warn)"></span>Заявка на трансфер ждёт 8 мин</div>
+              <div class="att"><span class="dot" style="background:var(--warn)"></span>«Сырники» в стоп-листе</div>
+              <div class="att"><span class="dot" style="background:var(--acc)"></span>Узел GRMS: онлайн</div>
+            </div>
+            <div class="panel">
+              <h3>Свежие отзывы</h3>
+              <div class="rev"><div class="s">★★★★★</div><div class="t">«Быстрая подача, всё вкусно»</div></div>
+              <div class="rev"><div class="s">★★★★☆</div><div class="t">«Спа — отлично, чуть ждали»</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVICES LIST -->
+      <div class="view" id="v-svc">
+        <div class="row"><div><div class="h1">Сервисы</div><div class="sub">Заведения и службы отеля · гость видит их на главной</div></div><button class="btn pri" onclick="alert('Выбор шаблона: Ресторан · Бар · Спа · Такси · Экскурсии · Инфо · Свой')">+ Добавить сервис</button></div>
+        <div class="svc-grid">
+          <div class="svc" onclick="go('svcd')"><div class="cov" style="background-image:url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=500&q=80')"><span class="tp">Ресторан</span><span class="st on">Показан</span></div><div class="bd"><div class="nm">Панорама</div><div class="tg">Европейская кухня · 8 этаж</div><div class="meta"><span>32 позиции</span><span>4 кат.</span></div></div></div>
+          <div class="svc" onclick="go('svcd')"><div class="cov" style="background-image:url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=500&q=80')"><span class="tp">Бар</span><span class="st on">Показан</span></div><div class="bd"><div class="nm">Лобби-бар</div><div class="tg">Коктейли и вино</div><div class="meta"><span>18 позиций</span><span>3 кат.</span></div></div></div>
+          <div class="svc" onclick="go('svcd')"><div class="cov" style="background-image:url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=500&q=80')"><span class="tp">Спа</span><span class="st on">Показан</span></div><div class="bd"><div class="nm">Спа «Кристалл»</div><div class="tg">Массаж и уход · слоты</div><div class="meta"><span>9 услуг</span></div></div></div>
+          <div class="svc" onclick="go('svcd')"><div class="cov" style="background-image:url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=500&q=80')"><span class="tp">Консьерж</span><span class="st on">Показан</span></div><div class="bd"><div class="nm">Консьерж</div><div class="tg">Трансфер, экскурсии · заявки</div><div class="meta"><span>6 услуг</span></div></div></div>
+          <div class="svc hidden" onclick="go('svcd')"><div class="cov"><span class="tp">Хозслужба</span><span class="st off">Скрыт от гостя</span></div><div class="bd"><div class="nm">Хозслужба</div><div class="tg">Внутренняя служба</div><div class="meta"><span>заявки</span></div></div></div>
+          <div class="svc add" onclick="go('svc')">+ Добавить сервис</div>
+        </div>
+      </div>
+
+      <!-- SERVICE DETAIL -->
+      <div class="view" id="v-svcd">
+        <div class="crumb" style="margin-bottom:12px"><span style="color:var(--acc2);cursor:pointer" onclick="go('svc')">Сервисы</span> › <b>Панорама</b></div>
+        <div class="row"><div><div class="h1">Панорама</div><div class="sub">Ресторан · европейская кухня · открыт до 23:00</div></div><div style="display:flex;gap:8px"><button class="btn ghost">Предпросмотр</button><button class="btn gold">Сохранить</button></div></div>
+        <div class="tabs">
+          <a class="on" onclick="tab(this,'t-menu')">Меню</a>
+          <a onclick="tab(this,'t-sched')">Расписание</a>
+          <a onclick="tab(this,'t-deliv')">Доставка и локации</a>
+          <a onclick="tab(this,'t-comm')">Коммерция</a>
+          <a onclick="tab(this,'t-staff')">Персонал</a>
+          <a onclick="tab(this,'t-borrow')">Включённый контент</a>
+        </div>
+
+        <div class="tabpane on" id="t-menu">
+          <div class="menucols">
+            <div>
+              <div class="catlist">
+                <div class="ci on">Горячее<span class="c">3</span></div>
+                <div class="ci">Закуски<span class="c">5</span></div>
+                <div class="ci">Салаты<span class="c">4</span></div>
+                <div class="ci">Десерты<span class="c">6</span></div>
+                <div class="add">+ Категория</div>
+              </div>
+            </div>
+            <div>
+              <div class="row" style="margin-bottom:12px"><div style="font-family:var(--disp);font-weight:700;font-size:15px">Горячее</div><button class="btn pri" style="height:34px">+ Блюдо</button></div>
+              <div class="item"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&w=200&q=80')"></div><div><div class="nm">Стейк рибай</div><div class="mm">506 ккал · 300 г</div><div class="tags"><span class="tag gold">Выбор шефа</span><span class="tag al">Молоко</span><span class="tag">Без глютена</span></div></div><span class="pr">1 900 ₽</span><span class="tgl"></span><span class="ic">✎</span></div>
+              <div class="item"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=200&q=80')"></div><div><div class="nm">Паста карбонара</div><div class="mm">490 ккал</div><div class="tags"><span class="tag">Хит</span></div></div><span class="pr">690 ₽</span><span class="tgl"></span><span class="ic">✎</span></div>
+              <div class="item" style="opacity:.6"><div class="ph" style="background-image:url('https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=200&q=80')"></div><div><div class="nm">Сырники</div><div class="mm">463 ккал · только завтрак</div><div class="tags"><span class="tag">Стоп-лист</span></div></div><span class="pr">450 ₽</span><span class="tgl off"></span><span class="ic">✎</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpane" id="t-sched"><div class="ph-note"><b>Расписание работы.</b> Завтрак 07:00–11:00, основное меню 12:00–23:00. Гость видит статус «открыто/закрыто», а заимствованные блюда доступны только в часы этой кухни.</div></div>
+        <div class="tabpane" id="t-deliv">
+          <div style="font-family:var(--disp);font-weight:700;margin-bottom:10px">Куда возим</div>
+          <div class="chks" style="max-width:420px">
+            <label class="chk"><span class="box on"></span>В номер — 0 ₽ (бесплатно от 1 500 ₽)</label>
+            <label class="chk"><span class="box on"></span>В лобби — 0 ₽</label>
+            <label class="chk"><span class="box on"></span>К бассейну — 150 ₽</label>
+            <label class="chk"><span class="box"></span>На пляж — недоступно</label>
+          </div>
+          <div class="ph-note" style="margin-top:14px">Локации — общий справочник отеля; здесь выбираем свои и ставим цену доставки.</div>
+        </div>
+        <div class="tabpane" id="t-comm">
+          <div class="formgrid">
+            <div class="fld"><div class="l">Сервисный сбор</div><div class="inp">12 %</div></div>
+            <div class="fld"><div class="l">Налог</div><div class="inp">в цене</div></div>
+            <div class="fld"><div class="l">Минимальный заказ</div><div class="inp">800 ₽</div></div>
+            <div class="fld"><div class="l">Пресеты чаевых</div><div class="inp">10 · 15 · 20 %</div></div>
+          </div>
+          <div class="ph-note" style="margin-top:14px;max-width:640px">Коммерция задаётся на уровне сервиса — у бара и спа она своя.</div>
+        </div>
+        <div class="tabpane" id="t-staff"><div class="ph-note"><b>Персонал заведения.</b> Шеф-повар (управляющий), 3 повара, 2 официанта. Заказы падают в их трекер, эскалация — на управляющего.</div></div>
+        <div class="tabpane" id="t-borrow"><div class="ph-note"><b>Включённый контент.</b> «Рум-сервис» включает меню «Панорамы» целиком с наценкой +15%, готовит — кухня «Панорамы». Правки блюда здесь применяются и там автоматически.</div></div>
+      </div>
+
+      <!-- ROOMS -->
+      <div class="view" id="v-rooms">
+        <div class="row"><div><div class="h1">Номерной фонд</div><div class="sub">28 номеров · 4 категории · QR-коды</div></div><button class="btn pri">+ Номер</button></div>
+        <table class="tbl"><tr><th>Номер</th><th>Этаж</th><th>Категория</th><th>QR</th><th>Статус</th></tr>
+          <tr><td><b>305</b></td><td>3</td><td>Стандарт</td><td>напечатан</td><td><span class="pill g">активен</span></td></tr>
+          <tr><td><b>412</b></td><td>4</td><td>Улучшенный</td><td>напечатан</td><td><span class="pill g">активен</span></td></tr>
+          <tr><td><b>118</b></td><td>1</td><td>Стандарт</td><td>напечатан</td><td><span class="pill g">активен</span></td></tr>
+          <tr><td><b>801</b></td><td>8</td><td>Люкс</td><td>—</td><td><span class="pill b">черновик</span></td></tr>
+        </table>
+      </div>
+
+      <!-- STAFF -->
+      <div class="view" id="v-staff">
+        <div class="row"><div><div class="h1">Персонал</div><div class="sub">11 сотрудников · роли и сервисы</div></div><button class="btn pri">+ Сотрудник</button></div>
+        <table class="tbl"><tr><th>Имя</th><th>Роль</th><th>Сервис</th><th>Уведомления</th></tr>
+          <tr><td><b>Пётр Петров</b></td><td>Администратор отеля</td><td>—</td><td>всё</td></tr>
+          <tr><td><b>Игорь Чен</b></td><td>Управляющий</td><td>Панорама</td><td>заказы, эскалации</td></tr>
+          <tr><td><b>Анна Лей</b></td><td>Официант</td><td>Панорама</td><td>заказы</td></tr>
+          <tr><td><b>Мария Гурт</b></td><td>Спа-администратор</td><td>Спа «Кристалл»</td><td>записи</td></tr>
+          <tr><td><b>Олег Дым</b></td><td>Горничная</td><td>Хозслужба</td><td>заявки</td></tr>
+        </table>
+      </div>
+
+      <!-- BRAND -->
+      <div class="view" id="v-brand">
+        <div class="row"><div><div class="h1">Бренд и витрина</div><div class="sub">Как отель выглядит гостю — всё в одном месте</div></div><button class="btn ghost">Открыть предпросмотр →</button></div>
+        <div class="panels" style="margin-top:20px">
+          <div class="panel">
+            <h3>Тема</h3>
+            <div class="formgrid" style="grid-template-columns:1fr">
+              <div class="fld"><div class="l">Пресет</div><div class="inp">Midnight Navy (тёмный)</div></div>
+              <div class="fld"><div class="l">Акцент</div><div class="inp">● Синий · золото для действий</div></div>
+              <div class="fld"><div class="l">Логотип · фон-обложка</div><div class="inp">загружены</div></div>
+            </div>
+            <div style="font-family:var(--disp);font-weight:700;margin:18px 0 10px">Плитки главной (витрина)</div>
+            <div class="ph-note">Размер (S/M/L) и порядок плиток сервисов; порог «сколько ресторанов показывать отдельно».</div>
+          </div>
+          <div class="panel"><h3>Предпросмотр</h3><div style="border-radius:12px;overflow:hidden;border:1px solid var(--line);height:260px;background-image:linear-gradient(180deg,rgba(5,8,14,.2),rgba(10,15,23,.9)),url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=500&q=80');background-size:cover;background-position:center;display:flex;align-items:flex-end;padding:16px"><div style="font-family:var(--disp);font-weight:800;font-size:22px;color:#fff">Добрый вечер</div></div></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="view" id="v-an">
+        <div class="row"><div><div class="h1">Аналитика</div><div class="sub">За период · разложение выручки · по сервисам</div></div><button class="btn ghost">Экспорт</button></div>
+        <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi"><div class="k">Выручка за 7 дней</div><div class="v">982 400 ₽</div><div class="d">+9%</div></div>
+          <div class="kpi"><div class="k">Средний чек</div><div class="v">2 140 ₽</div><div class="d">+4%</div></div>
+          <div class="kpi"><div class="k">Заказов</div><div class="v">459</div><div class="d">+31</div></div>
+        </div>
+        <div class="panel" style="margin-top:14px"><h3>Разложение выручки</h3>
+          <div style="display:flex;gap:2px;height:120px;align-items:flex-end;margin-top:8px">
+            <div style="flex:1;background:linear-gradient(180deg,var(--acc2),var(--acc));height:80%;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;background:linear-gradient(180deg,var(--acc2),var(--acc));height:95%;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;background:linear-gradient(180deg,var(--acc2),var(--acc));height:60%;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;background:linear-gradient(180deg,var(--acc2),var(--acc));height:100%;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;background:linear-gradient(180deg,var(--acc2),var(--acc));height:75%;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;background:linear-gradient(180deg,var(--gold2),var(--gold));height:88%;border-radius:6px 6px 0 0"></div>
+            <div style="flex:1;background:linear-gradient(180deg,var(--gold2),var(--gold));height:92%;border-radius:6px 6px 0 0"></div>
+          </div>
+          <div style="font-size:11px;color:var(--txt3);margin-top:8px">Позиции · сбор · доставка · налог · чаевые — из снимка заказа</div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="v-set">
+        <div class="row"><div><div class="h1">Настройки отеля</div><div class="sub">Общие параметры</div></div></div>
+        <div class="formgrid" style="margin-top:20px">
+          <div class="fld"><div class="l">Языки</div><div class="inp">RU · EN · AR · ZH</div></div>
+          <div class="fld"><div class="l">Часовой пояс</div><div class="inp">Europe/Moscow</div></div>
+          <div class="fld"><div class="l">Валюта · налог</div><div class="inp">RUB · 0%</div></div>
+          <div class="fld"><div class="l">Вход гостя</div><div class="inp">QR + номер комнаты</div></div>
+          <div class="fld"><div class="l">Локации подачи</div><div class="inp">Номер · Лобби · Бассейн · Пляж</div></div>
+          <div class="fld"><div class="l">Справочники</div><div class="inp">Аллергены · маркеры</div></div>
+          <div class="fld"><div class="l">Юридические страницы</div><div class="inp">Правила · политика</div></div>
+          <div class="fld"><div class="l">Интеграции</div><div class="inp">Он-прем узел · PMS</div></div>
+        </div>
+      </div>
+
+      <!-- MODULES -->
+      <div class="view" id="v-mod">
+        <div class="row"><div><div class="h1">Модули</div><div class="sub">Подключено платформой по тарифу · выключенные скрыты из меню</div></div></div>
+        <table class="tbl"><tr><th>Модуль</th><th>Статус</th><th>Что даёт</th></tr>
+          <tr><td><b>Управление номером (GRMS)</b></td><td><span class="pill g">включён</span></td><td>климат, шторы, свет · раздел в номерном фонде</td></tr>
+          <tr><td><b>Мультиресторанность</b></td><td><span class="pill g">включён</span></td><td>несколько заведений</td></tr>
+          <tr><td><b>Маркетинг</b></td><td><span class="pill g">включён</span></td><td>бейджи, акции</td></tr>
+          <tr><td><b>PMS</b></td><td><span class="pill b">выключен</span></td><td>синхронизация с системой отеля</td></tr>
+          <tr><td><b>Мобильный ключ</b></td><td><span class="pill b">выключен</span></td><td>открытие двери телефоном</td></tr>
+          <tr><td><b>Оплата онлайн</b></td><td><span class="pill b">выключен</span></td><td>приём платежей</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div></div>
+
+<script>
+var titles={dash:"Дашборд",svc:"Сервисы",svcd:"Сервисы › Панорама",rooms:"Номерной фонд",staff:"Персонал",brand:"Бренд и витрина",an:"Аналитика",set:"Настройки",mod:"Модули"};
+function go(v){
+ document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active")});
+ var el=document.getElementById("v-"+v);if(el){el.classList.add("active");document.querySelector(".content").scrollTop=0}
+ document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.v===v)});
+ var navkey=v==="svcd"?"svc":v;
+ document.querySelectorAll(".nav a").forEach(function(a){if(a.dataset.v===navkey)a.classList.add("on")});
+ document.getElementById("crumb").innerHTML="<b>"+(titles[v]||"")+"</b>";
+}
+function tab(el,pane){
+ el.parentNode.querySelectorAll("a").forEach(function(a){a.classList.remove("on")});el.classList.add("on");
+ document.querySelectorAll(".tabpane").forEach(function(p){p.classList.remove("on")});
+ document.getElementById(pane).classList.add("on");
+}
+</script>
+</html>

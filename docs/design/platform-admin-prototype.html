@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Корневая админка /admin — прототип</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&display=swap');
+:root{
+  --void:#05080E;--bg:#0A0F17;--surf:#101825;--surf2:#16212F;--surf3:#1B2838;
+  --line:rgba(155,185,225,.12);--hair:rgba(155,185,225,.07);
+  --glassBar:rgba(18,27,40,.5);
+  --txt:#EAF1F8;--txt2:#A6B6C9;--txt3:#6C7E93;
+  --acc:#77ADE0;--acc2:#9BC6EE;--gold:#CBA96C;--gold2:#E0C588;--ok:#79D488;--warn:#E0A657;--bad:#E0736E;
+  --grad:linear-gradient(150deg,#1c2b43,#0b1220);--disp:'Onest',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(1100px 600px at 12% -8%,rgba(60,50,110,.16),transparent 60%),var(--void);
+  color:var(--txt);font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px}
+.tb{margin-bottom:18px;text-align:center}
+.tb .t{font-family:var(--disp);font-weight:800;font-size:15px;color:var(--txt2)}
+.tb .n{font-size:11.5px;color:var(--txt3);margin-top:4px}
+.tb .n b{color:var(--acc2)}
+
+#frame{width:1180px;max-width:100%;border-radius:16px;padding:8px;background:linear-gradient(155deg,#2b3350,#0B111B);
+  box-shadow:0 44px 100px -34px rgba(0,0,0,.8)}
+#app{height:722px;border-radius:12px;overflow:hidden;background:var(--bg);display:grid;grid-template-columns:236px 1fr}
+
+.nav{background:var(--surf);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto}
+.nav::-webkit-scrollbar{width:0}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;color:#fff}
+.brand .mk{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#8A7BE0,#4b3fa0);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:14px}
+.brand .wm{font-family:var(--disp);font-size:12.5px;font-weight:700}
+.brand .wm small{display:block;font-size:10px;color:var(--txt3);font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+.grp{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt3);font-weight:700;padding:14px 18px 6px}
+.nav a{display:flex;align-items:center;gap:11px;margin:1px 10px;padding:9px 11px;border-radius:10px;color:var(--txt2);font-size:13.5px;font-weight:600;cursor:pointer}
+.nav a svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;opacity:.85;flex:none}
+.nav a:hover{background:var(--surf2);color:var(--txt)}
+.nav a.on{background:rgba(138,123,224,.18);color:#c3b8f2}
+.nav a .badge{margin-left:auto;font-size:10px;font-weight:700;background:var(--surf3);color:var(--txt2);border-radius:999px;padding:1px 7px}
+.navfoot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--hair);display:flex;align-items:center;gap:10px}
+.av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#8A7BE0,#3a3170);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.navfoot .nm{font-size:12.5px;font-weight:600}.navfoot .rl{font-size:10.5px;color:var(--txt3)}
+.lock{margin-left:auto;font-size:10px;color:var(--warn)}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.top{height:58px;flex:none;display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--glassBar);backdrop-filter:blur(24px) saturate(1.5);border-bottom:1px solid var(--hair)}
+.crumb{font-size:13px;color:var(--txt3)}.crumb b{color:var(--txt);font-weight:700}
+.search{margin-left:auto;width:280px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--surf2);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--txt3);font-size:12.5px}
+.search svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.content{flex:1;overflow-y:auto;padding:24px}
+.content::-webkit-scrollbar{width:8px}.content::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:8px}
+.view{display:none}.view.active{display:block}
+.h1{font-family:var(--disp);font-size:24px;font-weight:800;letter-spacing:-.02em}
+.sub{color:var(--txt3);font-size:13px;margin-top:4px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.btn{height:38px;padding:0 15px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn.pri{background:linear-gradient(180deg,#a99bf0,#8A7BE0);color:#0b0a1e}
+.btn.ghost{background:var(--surf2);color:var(--txt);border:1px solid var(--line)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px}
+.kpi .k{font-size:11px;color:var(--txt3);font-weight:600}
+.kpi .v{font-family:var(--disp);font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+.kpi .d{font-size:11px;margin-top:5px;color:var(--ok)}.kpi .d.warn{color:var(--warn)}
+.panels{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:14px}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:16px}
+.panel h3{font-family:var(--disp);font-size:14px;font-weight:700;margin-bottom:12px}
+.spark{display:flex;gap:3px;height:90px;align-items:flex-end}
+.spark div{flex:1;background:linear-gradient(180deg,#a99bf0,#8A7BE0);border-radius:4px 4px 0 0}
+.alert{display:flex;align-items:center;gap:9px;padding:9px 0;font-size:12.5px;color:var(--txt2);border-bottom:1px solid var(--hair)}
+.alert .dot{width:7px;height:7px;border-radius:50%;flex:none}
+
+.toolbar{display:flex;gap:8px;margin:18px 0 4px;flex-wrap:wrap}
+.tf{height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surf2);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer}
+.tf.on{border-color:var(--acc);color:var(--acc2);background:rgba(119,173,224,.12)}
+.tbl{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.tbl th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);font-weight:700;padding:11px 12px;border-bottom:1px solid var(--line)}
+.tbl td{padding:13px 12px;border-bottom:1px solid var(--hair);color:var(--txt2)}
+.tbl tr.hotelrow{cursor:pointer}
+.tbl tr.hotelrow:hover td{background:var(--surf2)}
+.hn{display:flex;align-items:center;gap:11px}
+.hlogo{width:34px;height:34px;border-radius:9px;background-size:cover;background-position:center;background-image:var(--grad);flex:none}
+.hn b{color:var(--txt);font-weight:700}.hn .sd{font-size:11px;color:var(--txt3)}
+.pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.pill.g{background:rgba(121,212,136,.14);color:#9BE7A6}
+.pill.b{background:rgba(119,173,224,.14);color:var(--acc2)}
+.pill.o{background:rgba(140,150,165,.14);color:var(--txt3)}
+.pill.w{background:rgba(224,166,87,.16);color:var(--warn)}
+.tier{font-size:11px;font-weight:700;color:var(--gold2)}
+.act{color:var(--acc2);font-size:12px;font-weight:600;cursor:pointer;margin-right:14px}
+
+.det-head{display:flex;align-items:center;gap:16px;margin-top:6px}
+.det-head .lg{width:60px;height:60px;border-radius:14px;background-size:cover;background-position:center;background-image:var(--grad);flex:none}
+.enter{background:linear-gradient(180deg,#a99bf0,#8A7BE0);color:#0b0a1e}
+.cards2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.mini{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:15px}
+.mini h4{font-family:var(--disp);font-size:13px;font-weight:700;margin-bottom:10px}
+.kv{display:flex;justify-content:space-between;padding:7px 0;font-size:12.5px;color:var(--txt2);border-bottom:1px solid var(--hair)}
+.kv b{color:var(--txt);font-weight:600}
+.modrow{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--hair)}
+.tgl{width:36px;height:20px;border-radius:999px;background:var(--acc);position:relative;flex:none;cursor:pointer;margin-left:auto}
+.tgl:after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tgl.off{background:var(--surf3)}.tgl.off:after{left:2px;right:auto}
+.note{background:var(--surf);border:1px dashed var(--line);border-radius:14px;padding:16px;color:var(--txt3);font-size:12.5px;line-height:1.6;margin-top:14px}
+.note b{color:var(--txt2)}
+
+.ov{position:absolute;inset:0;z-index:40;display:none}.ov.active{display:flex;align-items:center;justify-content:center}
+.ov .dim{position:absolute;inset:0;background:rgba(4,8,14,.66);backdrop-filter:blur(4px)}
+.modal{position:relative;width:520px;max-height:88%;overflow-y:auto;background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:22px}
+.modal h3{font-family:var(--disp);font-size:18px;font-weight:800}
+.modal .ms{font-size:12px;color:var(--txt3);margin:4px 0 16px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld{margin-bottom:2px}.fld.full{grid-column:1/-1}
+.fld .l{font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:6px}
+.fld .inp{height:42px;border-radius:11px;border:1px solid var(--line);background:var(--surf2);display:flex;align-items:center;padding:0 12px;font-size:13px;color:var(--txt2)}
+.tpl{display:flex;gap:8px;flex-wrap:wrap}
+.tpl .t{font-size:12px;font-weight:600;padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--txt2);cursor:pointer}
+.tpl .t.on{border-color:#8A7BE0;color:#c3b8f2;background:rgba(138,123,224,.14)}
+</style>
+
+<div class="tb"><div class="t">Платформа · корневая админка <b>/admin</b></div><div class="n">Уровень <b>владельца SaaS</b> — управление отелями как сущностями (не путать с CMS одного отеля). Кликай строки отелей и «Создать отель».</div></div>
+
+<div id="frame"><div id="app">
+
+  <aside class="nav">
+    <div class="brand"><div class="mk">IT</div><span class="wm">ITV Platform<small>Root · admin</small></span></div>
+    <a data-v="dash" class="on" onclick="go('dash')"><svg viewBox="0 0 24 24"><path d="M4 13h7V4H4zM13 20h7v-9h-7zM13 4v5h7V4zM4 20h7v-5H4z"/></svg>Сводка</a>
+    <a data-v="fleet" onclick="go('fleet')"><svg viewBox="0 0 24 24"><path d="M3 21V8l6-4 6 4v13M15 21V11l6 4v6M6 12h.01M6 16h.01"/></svg>Отели<span class="badge">18</span></a>
+
+    <div class="grp">Платформа</div>
+    <a data-v="mods" onclick="go('mods')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M17 14v6M14 17h6"/></svg>Модули и тарифы</a>
+    <a data-v="nodes" onclick="go('nodes')"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/><path d="M8 7.5h.01M8 16.5h.01"/></svg>Он-прем узлы<span class="badge">2</span></a>
+    <a data-v="team" onclick="go('team')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0M16 6a3 3 0 010 6M18 20a6 6 0 00-3-5"/></svg>Команда</a>
+    <a data-v="audit" onclick="go('audit')"><svg viewBox="0 0 24 24"><path d="M9 5h6M9 5a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2M9 11h6M9 15h4"/></svg>Аудит</a>
+
+    <div class="navfoot"><div class="av">СА</div><div><div class="nm">Сергей А.</div><div class="rl">Владелец платформы</div></div><span class="lock">2FA</span></div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="crumb" id="crumb"><b>Сводка</b></div>
+      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Поиск отеля по названию или поддомену…</div>
+    </div>
+    <div class="content">
+
+      <div class="view active" id="v-dash">
+        <div class="row"><div><div class="h1">Сводка по платформе</div><div class="sub">18 отелей · вторник, 20:30</div></div><button class="btn pri" onclick="openCreate()">+ Создать отель</button></div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Отелей</div><div class="v">18</div><div class="d">15 активных · 2 триал · 1 откл.</div></div>
+          <div class="kpi"><div class="k">Заказов сегодня</div><div class="v">612</div><div class="d">по всем отелям</div></div>
+          <div class="kpi"><div class="k">Оборот за день</div><div class="v">2.14 млн ₽</div><div class="d">+9%</div></div>
+          <div class="kpi"><div class="k">Живых сессий</div><div class="v">248</div><div class="d">гостей сейчас</div></div>
+        </div>
+        <div class="panels">
+          <div class="panel"><h3>Новые отели за 3 месяца</h3><div class="spark"><div style="height:30%"></div><div style="height:45%"></div><div style="height:40%"></div><div style="height:60%"></div><div style="height:55%"></div><div style="height:75%"></div><div style="height:70%"></div><div style="height:90%"></div><div style="height:85%"></div><div style="height:100%"></div></div></div>
+          <div class="panel"><h3>Здоровье системы</h3>
+            <div class="alert"><span class="dot" style="background:var(--ok)"></span>Медиапайплайн — норма</div>
+            <div class="alert"><span class="dot" style="background:var(--ok)"></span>Фоновые задачи — 0 в очереди</div>
+            <div class="alert"><span class="dot" style="background:var(--warn)"></span>Узел «Морской» — оффлайн 4 мин</div>
+            <div class="alert"><span class="dot" style="background:var(--warn)"></span>Триал «Восток» истекает через 2 дня</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" id="v-fleet">
+        <div class="row"><div><div class="h1">Отели</div><div class="sub">Все отели платформы</div></div><button class="btn pri" onclick="openCreate()">+ Создать отель</button></div>
+        <div class="toolbar"><span class="tf on">Все · 18</span><span class="tf">Активные · 15</span><span class="tf">Триал · 2</span><span class="tf">Отключённые · 1</span></div>
+        <table class="tbl">
+          <tr><th>Отель</th><th>Тариф</th><th>Номера</th><th>Сервисы</th><th>Заказов (7дн)</th><th>Статус</th><th></th></tr>
+          <tr class="hotelrow" onclick="go('hotel')"><td><div class="hn"><div class="hlogo" style="background-image:url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=100&q=80')"></div><div><b>Отель «Кристалл»</b><div class="sd">crystal.itv.app</div></div></div></td><td><span class="tier">Business</span></td><td>28</td><td>5</td><td>459</td><td><span class="pill g">активен</span></td><td><span class="act">Профиль</span><span class="act">Войти →</span></td></tr>
+          <tr class="hotelrow" onclick="go('hotel')"><td><div class="hn"><div class="hlogo" style="background-image:url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=100&q=80')"></div><div><b>Морской</b><div class="sd">morskoy.itv.app</div></div></div></td><td><span class="tier">Resort</span></td><td>140</td><td>9</td><td>1 204</td><td><span class="pill w">узел офлайн</span></td><td><span class="act">Профиль</span><span class="act">Войти →</span></td></tr>
+          <tr class="hotelrow" onclick="go('hotel')"><td><div class="hn"><div class="hlogo" style="background-image:url('https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=100&q=80')"></div><div><b>Аврора</b><div class="sd">aurora.itv.app</div></div></div></td><td><span class="tier">Boutique</span></td><td>24</td><td>4</td><td>312</td><td><span class="pill g">активен</span></td><td><span class="act">Профиль</span><span class="act">Войти →</span></td></tr>
+          <tr class="hotelrow" onclick="go('hotel')"><td><div class="hn"><div class="hlogo" style="background-image:url('https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=100&q=80')"></div><div><b>Восток</b><div class="sd">vostok.itv.app</div></div></div></td><td><span class="tier">Trial</span></td><td>40</td><td>3</td><td>86</td><td><span class="pill b">триал · 2 дня</span></td><td><span class="act">Профиль</span><span class="act">Войти →</span></td></tr>
+          <tr class="hotelrow" onclick="go('hotel')"><td><div class="hn"><div class="hlogo"></div><div><b>Тайга-лодж</b><div class="sd">taiga.itv.app</div></div></div></td><td><span class="tier">Standard</span></td><td>18</td><td>4</td><td>0</td><td><span class="pill o">отключён</span></td><td><span class="act">Профиль</span><span class="act">Войти →</span></td></tr>
+        </table>
+        <div class="note">Тестовые отели из автотестов сюда не попадают — список чистый (отдельный фильтр окружения).</div>
+      </div>
+
+      <div class="view" id="v-hotel">
+        <div class="crumb" style="margin-bottom:12px"><span style="color:var(--acc2);cursor:pointer" onclick="go('fleet')">Отели</span> › <b>Кристалл</b></div>
+        <div class="det-head"><div class="lg" style="background-image:url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=150&q=80')"></div>
+          <div style="flex:1"><div class="h1">Отель «Кристалл»</div><div class="sub">crystal.itv.app · Business · создан 12.03.2026</div></div>
+          <button class="btn enter" onclick="alert('Вход в отель с таймером — все действия в аудите')">Войти в отель →</button>
+        </div>
+        <div class="cards2">
+          <div class="mini"><h4>Профиль</h4>
+            <div class="kv"><span>Название</span><b>Отель «Кристалл»</b></div>
+            <div class="kv"><span>Поддомен</span><b>crystal (не меняется)</b></div>
+            <div class="kv"><span>Таймзона</span><b>Europe/Moscow</b></div>
+            <div class="kv"><span>Валюта</span><b>RUB</b></div>
+            <div class="kv"><span>Языки</span><b>RU · EN</b></div>
+            <div class="kv"><span>Админ отеля</span><b>Пётр Петров · сбросить</b></div>
+          </div>
+          <div class="mini"><h4>Модули (тариф Business)</h4>
+            <div class="modrow">Управление номером (GRMS)<span class="tgl"></span></div>
+            <div class="modrow">Мультиресторанность<span class="tgl"></span></div>
+            <div class="modrow">Маркетинг<span class="tgl"></span></div>
+            <div class="modrow">PMS<span class="tgl off"></span></div>
+            <div class="modrow">Мобильный ключ<span class="tgl off"></span></div>
+            <div class="modrow" style="border:none">Оплата онлайн<span class="tgl off"></span></div>
+          </div>
+        </div>
+        <div class="note"><b>Полный доступ:</b> «Войти в отель» открывает CMS этого отеля от лица платформы — с таймером и записью в аудит, чтобы правки поддержки отделялись от правок самого отеля. Отключение отеля здесь → его витрина и CMS перестают открываться, но на платформе он остаётся.</div>
+      </div>
+
+      <div class="view" id="v-mods">
+        <div class="row"><div><div class="h1">Модули и тарифы</div><div class="sub">Что открывает каждый тариф · биллинг пока вручную</div></div></div>
+        <table class="tbl">
+          <tr><th>Тариф</th><th>Отелей</th><th>Модули</th><th>Лимиты</th></tr>
+          <tr><td><b>Standard</b></td><td>6</td><td>меню, заявки, витрина</td><td>1 ресторан · 30 номеров</td></tr>
+          <tr><td><b>Business</b></td><td>7</td><td>+ мультиресторан, GRMS, маркетинг, аналитика</td><td>5 сервисов · 200 номеров</td></tr>
+          <tr><td><b>Resort</b></td><td>2</td><td>+ PMS, мобильный ключ, доп. языки</td><td>без лимита</td></tr>
+          <tr><td><b>Trial</b></td><td>2</td><td>Business на 14 дней</td><td>demo</td></tr>
+        </table>
+        <div class="note"><b>Реестр модулей.</b> Тариф открывает набор модулей; отдельному отелю можно выдать фичу вне тарифа (например, пилоту). Включённый модуль появляется в CMS отеля, выключенный — скрыт. Понижение тарифа ниже использования (5 сервисов → лимит 3) подсвечивается и требует решения.</div>
+      </div>
+
+      <div class="view" id="v-nodes">
+        <div class="row"><div><div class="h1">Он-прем узлы</div><div class="sub">Local Connector — нужен, когда включён GRMS или PMS</div></div></div>
+        <table class="tbl">
+          <tr><th>Отель</th><th>Назначение</th><th>Статус</th><th>Последний отклик</th><th>Ключ</th></tr>
+          <tr><td><b>Кристалл</b></td><td>GRMS (iRidi)</td><td><span class="pill g">онлайн</span></td><td>12 сек назад</td><td>выдан</td></tr>
+          <tr><td><b>Морской</b></td><td>GRMS + PMS</td><td><span class="pill w">офлайн 4 мин</span></td><td>4 мин назад</td><td>выдан · отозвать</td></tr>
+        </table>
+        <div class="note">Как только отелю включают GRMS или PMS — ему нужна коробка на его сервере. Здесь видно, жив ли узел и когда откликался; ключ можно выдать или отозвать.</div>
+      </div>
+
+      <div class="view" id="v-team">
+        <div class="row"><div><div class="h1">Команда платформы</div><div class="sub">Кто имеет доступ к /admin</div></div><button class="btn pri">+ Пригласить</button></div>
+        <table class="tbl">
+          <tr><th>Имя</th><th>Роль</th><th>Доступ</th><th>2FA</th></tr>
+          <tr><td><b>Сергей А.</b></td><td>Владелец</td><td>полный</td><td><span class="pill g">вкл</span></td></tr>
+          <tr><td><b>Дина К.</b></td><td>Поддержка</td><td>вход в отели, без биллинга</td><td><span class="pill g">вкл</span></td></tr>
+          <tr><td><b>Марк Т.</b></td><td>Только чтение</td><td>дашборды, без правок</td><td><span class="pill w">нет</span></td></tr>
+        </table>
+        <div class="note"><b>/admin — мастер-ключ ко всем отелям.</b> Поэтому усиленный вход (2FA / IP-allowlist) и аудит всех действий.</div>
+      </div>
+
+      <div class="view" id="v-audit">
+        <div class="row"><div><div class="h1">Аудит</div><div class="sub">Все действия платформы — кто, что, когда</div></div></div>
+        <table class="tbl">
+          <tr><th>Время</th><th>Кто</th><th>Действие</th></tr>
+          <tr><td>20:14</td><td>Дина К.</td><td>Вход в отель «Морской» (сессия 15 мин)</td></tr>
+          <tr><td>19:40</td><td>Сергей А.</td><td>Создан отель «Восток» (триал)</td></tr>
+          <tr><td>18:22</td><td>Дина К.</td><td>Включён модуль GRMS для «Кристалл»</td></tr>
+          <tr><td>17:05</td><td>система</td><td>Отозван ключ узла «Тайга-лодж»</td></tr>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="ov" id="ov-create">
+    <div class="dim" onclick="closeCreate()"></div>
+    <div class="modal">
+      <h3>Создать отель</h3>
+      <div class="ms">Заведём отель как сущность и первого администратора. Дальше он настраивает в CMS.</div>
+      <div class="fg">
+        <div class="fld full"><div class="l">Название</div><div class="inp">Гранд Отель</div></div>
+        <div class="fld"><div class="l">Поддомен</div><div class="inp">grand</div></div>
+        <div class="fld"><div class="l">Валюта</div><div class="inp">RUB</div></div>
+        <div class="fld"><div class="l">Таймзона</div><div class="inp">Europe/Moscow</div></div>
+        <div class="fld"><div class="l">Языки</div><div class="inp">RU · EN</div></div>
+        <div class="fld full"><div class="l">Тариф</div><div class="inp">Business</div></div>
+        <div class="fld full"><div class="l">Стартовый шаблон</div><div class="tpl"><span class="t on">Ресторанный отель</span><span class="t">Курорт</span><span class="t">С нуля</span></div></div>
+        <div class="fld full"><div class="l">E-mail первого админа</div><div class="inp">admin@grand.ru</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:18px"><button class="btn ghost" onclick="closeCreate()">Отмена</button><button class="btn pri" style="flex:1" onclick="closeCreate();go('hotel')">Создать отель</button></div>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+var titles={dash:"Сводка",fleet:"Отели",hotel:"Отели › Кристалл",mods:"Модули и тарифы",nodes:"Он-прем узлы",team:"Команда",audit:"Аудит"};
+function go(v){
+ document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active")});
+ var el=document.getElementById("v-"+v);if(el){el.classList.add("active");document.querySelector(".content").scrollTop=0}
+ var navkey=v==="hotel"?"fleet":v;
+ document.querySelectorAll(".nav a").forEach(function(a){a.classList.toggle("on",a.dataset.v===navkey)});
+ document.getElementById("crumb").innerHTML="<b>"+(titles[v]||"")+"</b>";
+}
+function openCreate(){document.getElementById("ov-create").classList.add("active")}
+function closeCreate(){document.getElementById("ov-create").classList.remove("active")}
+</script>
+</html>

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Трекеры персонала v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&display=swap');
+
+/* ===== theme tokens (scoped to #app) ===== */
+#app.dark{
+  --bg:#0A0F17;--surf:#101825;--surf2:#16212F;--surf3:#1B2838;--elev:#1a2troop;
+  --card:#131E2C;--line:rgba(155,185,225,.12);--hair:rgba(155,185,225,.07);
+  --glass:rgba(18,27,40,.55);--glassStrong:rgba(10,15,22,.82);
+  --txt:#EAF1F8;--txt2:#A6B6C9;--txt3:#6C7E93;
+  --teal:#4FBFB2;--teal2:#79D8CD;--tealSoft:rgba(79,191,178,.14);
+  --new:#77ADE0;--cook:#E0A657;--ready:#79D488;--served:#7C8CA0;--bad:#E0736E;
+  --newSoft:rgba(119,173,224,.16);--cookSoft:rgba(224,166,87,.16);--readySoft:rgba(121,212,136,.16);--badSoft:rgba(224,115,110,.14);
+  --shadow:0 20px 50px -20px rgba(0,0,0,.6);
+}
+#app.light{
+  --bg:#EDF1F7;--surf:#FFFFFF;--surf2:#F4F7FB;--surf3:#E7EDF5;
+  --card:#FFFFFF;--line:rgba(30,50,80,.13);--hair:rgba(30,50,80,.08);
+  --glass:rgba(255,255,255,.72);--glassStrong:rgba(255,255,255,.9);
+  --txt:#15212F;--txt2:#4A5B6E;--txt3:#8193A6;
+  --teal:#1F9E90;--teal2:#178578;--tealSoft:rgba(31,158,144,.12);
+  --new:#3B7FD0;--cook:#C6851F;--ready:#3FA357;--served:#8193A6;--bad:#D0524C;
+  --newSoft:rgba(59,127,208,.1);--cookSoft:rgba(198,133,31,.12);--readySoft:rgba(63,163,87,.12);--badSoft:rgba(208,82,76,.1);
+  --shadow:0 16px 40px -18px rgba(30,50,80,.25);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070A10;color:#8494A6;font-family:'Manrope',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;align-items:center;padding:22px 16px 60px}
+.tb{margin-bottom:14px;display:flex;flex-direction:column;align-items:center;gap:9px}
+.tbrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+.tb .t{font-family:'Onest',sans-serif;font-weight:800;font-size:15px;color:#A6B6C9}
+.tb .n{font-size:11.5px;color:#6C7E93}
+.dsw{display:flex;background:#101825;border:1px solid rgba(155,185,225,.12);border-radius:11px;padding:3px;gap:2px}
+.dsw button{border:none;background:none;color:#A6B6C9;font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:8px;cursor:pointer;font-family:inherit}
+.dsw button.on{background:rgba(79,191,178,.18);color:#79D8CD}
+
+#frame{border-radius:26px;padding:9px;background:linear-gradient(155deg,#28344B,#0B111B);box-shadow:0 40px 90px -30px rgba(0,0,0,.85);transition:width .3s}
+#app{border-radius:20px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;position:relative;transition:background .25s}
+.device-tablet #frame{width:1000px}.device-tablet #app{height:664px}
+.device-phone #frame{width:392px;border-radius:38px;padding:10px}.device-phone #app{height:722px;border-radius:30px}
+
+/* top */
+.top{flex:none;display:flex;align-items:center;gap:12px;padding:0 18px;height:58px;background:var(--glass);backdrop-filter:blur(24px) saturate(1.5);border-bottom:1px solid var(--hair);z-index:5}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.who .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#1d3a36);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex:none}
+.who .nm{font-size:13px;font-weight:700;color:var(--txt);white-space:nowrap}.who .rl{font-size:10.5px;color:var(--txt3);white-space:nowrap}
+.shift{margin-left:4px;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;font-size:11px;font-weight:600;color:var(--teal2);background:var(--tealSoft);border:1px solid var(--teal);white-space:nowrap}
+.device-phone .shift{display:none}
+.shift .dot{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+.tsearch{margin-left:auto;width:210px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--surf2);display:flex;align-items:center;gap:8px;padding:0 11px;color:var(--txt3);font-size:12px}
+.device-phone .tsearch{width:auto;flex:1;margin-left:8px}
+.tsearch svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex:none}
+.iconbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--surf2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;position:relative;color:var(--txt2)}
+.iconbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.iconbtn .b{position:absolute;top:-5px;right:-5px;background:var(--bad);color:#fff;font-size:9px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+
+/* service switcher */
+.svcbar{flex:none;display:flex;gap:6px;padding:11px 18px 0;overflow-x:auto}
+.svcbar::-webkit-scrollbar{height:0}
+.svctab{flex:none;display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:11px;border:1px solid var(--line);background:var(--surf);color:var(--txt2);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.svctab .c{background:var(--surf3);border-radius:999px;font-size:10px;padding:1px 6px;color:var(--txt2)}
+.svctab.on{border-color:var(--teal);color:var(--teal2);background:var(--tealSoft)}
+.svctab.esc .c{background:var(--bad);color:#fff}
+
+/* pane toolbar */
+.ptool{display:flex;align-items:center;gap:10px;padding:12px 18px 0;flex-wrap:wrap}
+.vtoggle{display:flex;background:var(--surf2);border:1px solid var(--line);border-radius:9px;padding:2px}
+.vtoggle button{border:none;background:none;color:var(--txt2);font-size:12px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit}
+.vtoggle button svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+.vtoggle button.on{background:var(--tealSoft);color:var(--teal2)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surf);color:var(--txt2);font-size:11.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.fchip.on{border-color:var(--teal);color:var(--teal2);background:var(--tealSoft)}
+.fchip .dt{width:7px;height:7px;border-radius:50%}
+.sortbtn{margin-left:auto;height:30px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surf);color:var(--txt2);font-size:11.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.sortbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+.device-phone .sortbtn{margin-left:0}
+
+.body{flex:1;overflow-y:auto;padding:14px 18px 20px}
+.body::-webkit-scrollbar{width:8px}.body::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:8px}
+.pane{display:none}.pane.on{display:block}
+.d-new{background:var(--new)}.d-cook{background:var(--cook)}.d-ready{background:var(--ready)}.d-served{background:var(--served)}
+
+/* ===== board ===== */
+.kb{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.device-phone .kb{grid-template-columns:1fr;gap:14px}
+.col{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:11px;min-height:110px}
+.colh{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--txt2);margin-bottom:11px}
+.colh .d{width:8px;height:8px;border-radius:50%}
+.colh .c{margin-left:auto;font-size:10.5px;color:var(--txt3);background:var(--surf3);border-radius:999px;padding:1px 7px}
+.ord{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,transform .1s,box-shadow .15s;box-shadow:var(--shadow)}
+.ord:hover{border-color:var(--teal);transform:translateY(-1px)}
+.ord.esc{border-color:var(--bad)}
+.ord .r1{display:flex;align-items:center;justify-content:space-between}
+.ord .rm{font-size:13px;font-weight:800;color:var(--txt)}
+.ord .tm{font-size:10.5px;color:var(--txt3);display:inline-flex;align-items:center;gap:4px}
+.ord.esc .tm{color:var(--bad);font-weight:700}
+.ord .it{font-size:11.5px;color:var(--txt2);margin-top:6px;line-height:1.4}
+.ord .meter{height:3px;border-radius:999px;background:var(--surf3);margin-top:9px;overflow:hidden}
+.ord .meter i{display:block;height:100%;border-radius:999px}
+.ord .adv{margin-top:9px;height:30px;border-radius:8px;border:none;width:100%;font-size:11.5px;font-weight:700;cursor:pointer;background:var(--tealSoft);color:var(--teal2)}
+.hint{font-size:11px;color:var(--txt3);margin-top:12px}
+
+/* ===== table ===== */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surf);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tbl th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);font-weight:700;padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer}
+.tbl th .ar{opacity:.5;font-size:9px}
+.tbl td{padding:12px 13px;border-bottom:1px solid var(--hair);color:var(--txt2)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.rowc{cursor:pointer}.tbl tr.rowc:hover td{background:var(--surf2)}
+.tbl td b{color:var(--txt);font-weight:700}
+.stbadge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+.stbadge .d{width:6px;height:6px;border-radius:50%}
+.stbadge.new{background:var(--newSoft);color:var(--new)}
+.stbadge.cook{background:var(--cookSoft);color:var(--cook)}
+.stbadge.ready{background:var(--readySoft);color:var(--ready)}
+.stbadge.served{background:var(--surf3);color:var(--served)}
+.esctxt{color:var(--bad);font-weight:700}
+
+/* list (housekeeping/concierge) */
+.lgroup{margin-bottom:15px}
+.lgh{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--txt3);font-weight:700;margin-bottom:9px}
+.task{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:9px;cursor:pointer;transition:border-color .15s}
+.task:hover{border-color:var(--teal)}
+.task.esc{border-color:var(--bad)}
+.tk-ic{width:38px;height:38px;border-radius:10px;background:var(--surf3);display:flex;align-items:center;justify-content:center;flex:none;color:var(--teal2)}
+.tk-ic svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7}
+.task .nm{font-size:13px;font-weight:700;color:var(--txt)}.task .mm{font-size:11.5px;color:var(--txt3);margin-top:2px}
+.task .mm.esc{color:var(--bad);font-weight:600}
+.task .rt{margin-left:auto;display:flex;gap:7px;align-items:center}
+.tkbtn{height:32px;padding:0 13px;border-radius:9px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.tkbtn.pri{background:linear-gradient(180deg,var(--teal2),var(--teal));color:#fff}
+.tkbtn.gh{background:var(--surf2);color:var(--txt2);border:1px solid var(--line)}
+.chip{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--surf3);color:var(--txt2)}
+
+/* spa timeline */
+.tl{position:relative;padding-left:60px}
+.tl .slot{position:relative;padding:5px 0 14px}
+.tl .tm{position:absolute;left:0;top:7px;font-size:12px;font-weight:700;color:var(--txt2);width:46px}
+.tl .card{background:var(--surf);border:1px solid var(--line);border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
+.tl .card.now{border-color:var(--teal)}
+.tl .card.free{border-style:dashed;color:var(--txt3);justify-content:center;font-size:12px;cursor:default}
+.tl .g{font-size:13px;font-weight:700;color:var(--txt)}.tl .s{font-size:11.5px;color:var(--txt3);margin-top:2px}
+.tl .rt{margin-left:auto}
+.stpill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px}
+.stpill.done{background:var(--readySoft);color:var(--ready)}.stpill.here{background:var(--tealSoft);color:var(--teal2)}.stpill.wait{background:var(--newSoft);color:var(--new)}
+
+/* ===== detail drawer ===== */
+.ovd{position:absolute;inset:0;z-index:30;display:none}
+.ovd.open{display:block}
+.ovd .dim{position:absolute;inset:0;background:rgba(4,8,14,.5);backdrop-filter:blur(3px)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:380px;background:var(--surf);border-left:1px solid var(--line);display:flex;flex-direction:column;box-shadow:-20px 0 50px -20px rgba(0,0,0,.5);transform:translateX(8px);animation:sl .22s forwards}
+@keyframes sl{to{transform:translateX(0)}}
+.device-phone .drawer{width:100%;top:auto;height:86%;border-left:none;border-top:1px solid var(--line);border-radius:22px 22px 0 0}
+.dh{flex:none;padding:18px;border-bottom:1px solid var(--hair);display:flex;align-items:flex-start;gap:12px}
+.dh .rm{font-family:'Onest',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--txt)}
+.dh .mt{font-size:12px;color:var(--txt3);margin-top:3px}
+.dx{margin-left:auto;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surf2);color:var(--txt2);cursor:pointer;font-size:14px;flex:none}
+.dbody{flex:1;overflow-y:auto;padding:18px}
+.dbody::-webkit-scrollbar{width:6px}.dbody::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:6px}
+.dsect{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--txt3);font-weight:700;margin:4px 0 10px}
+.mini-tl{position:relative;padding-left:22px;margin-bottom:6px}
+.mini-tl:before{content:"";position:absolute;left:6px;top:5px;bottom:5px;width:2px;background:var(--line)}
+.mstep{position:relative;padding:5px 0}
+.mdot{position:absolute;left:-19px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--surf3);border:2px solid var(--line)}
+.mstep.done .mdot{background:var(--ready);border-color:var(--ready)}
+.mstep.now .mdot{background:var(--teal);border-color:var(--teal);box-shadow:0 0 0 4px var(--tealSoft)}
+.mstep .ss{font-size:12.5px;font-weight:700;color:var(--txt)}.mstep.pend .ss{color:var(--txt3);font-weight:600}
+.mstep .sd{font-size:10.5px;color:var(--txt3)}
+.ditem{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--hair)}
+.ditem .q{font-size:12px;font-weight:800;color:var(--teal2);width:22px;flex:none}
+.ditem .n{font-size:13px;font-weight:600;color:var(--txt)}.ditem .o{font-size:11px;color:var(--txt3);margin-top:2px}
+.ditem .p{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--txt)}
+.dsum{margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--txt2)}
+.dsum div{display:flex;justify-content:space-between}
+.dsum .tot{margin-top:6px;padding-top:10px;border-top:1px solid var(--line);color:var(--txt);font-size:15px;font-weight:800}
+.dfoot{flex:none;padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
+.dfoot .btn{flex:1;height:44px;border-radius:11px;border:none;font-size:13px;font-weight:800;cursor:pointer}
+.dfoot .btn.pri{background:linear-gradient(180deg,var(--teal2),var(--teal));color:#fff}
+.dfoot .btn.gh{flex:none;width:48px;background:var(--surf2);border:1px solid var(--line);color:var(--txt2);font-size:16px}
+</style>
+
+<div class="tb">
+  <div class="tbrow"><span class="t">Crystal · трекеры персонала</span>
+    <div class="dsw" id="devsel"><button data-d="tablet" class="on">Планшет</button><button data-d="phone">Телефон</button></div>
+  </div>
+  <div class="n">Переключай сервис, вид Доска/Таблица и тему (солнце/луна вверху). Кликни заказ — откроются детали.</div>
+</div>
+
+<div class="device-tablet" id="root">
+<div id="frame"><div class="dark" id="app">
+
+  <div class="top">
+    <div class="who"><div class="av">ИЧ</div><div><div class="nm">Игорь Чен</div><div class="rl">Управляющий · Панорама</div></div></div>
+    <span class="shift"><span class="dot"></span>На смене до 23:00</span>
+    <div class="tsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Поиск по номеру…</div>
+    <div class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Тема">🌙</div>
+    <div class="iconbtn"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6M10 20a2 2 0 004 0"/></svg><span class="b">3</span></div>
+  </div>
+
+  <div class="svcbar">
+    <div class="svctab on" onclick="sw(this,'p-rest')">Кухня «Панорама» <span class="c">4</span></div>
+    <div class="svctab" onclick="sw(this,'p-bar')">Лобби-бар <span class="c">2</span></div>
+    <div class="svctab esc" onclick="sw(this,'p-house')">Хозслужба <span class="c">3</span></div>
+    <div class="svctab" onclick="sw(this,'p-spa')">Спа <span class="c">5</span></div>
+    <div class="svctab" onclick="sw(this,'p-conc')">Консьерж <span class="c">2</span></div>
+  </div>
+
+  <div class="body">
+
+    <!-- RESTAURANT -->
+    <div class="pane on" id="p-rest">
+      <div class="ptool">
+        <div class="vtoggle"><button class="on" onclick="vw(this,'rest','board')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>Доска</button><button onclick="vw(this,'rest','table')"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Таблица</button></div>
+        <div class="chips"><span class="fchip on">Все</span><span class="fchip"><span class="dt d-new"></span>Новые</span><span class="fchip"><span class="dt d-cook"></span>Готовятся</span><span class="fchip"><span class="dt d-ready"></span>Готово</span></div>
+        <span class="sortbtn"><svg viewBox="0 0 24 24"><path d="M3 6h12M3 12h8M3 18h5M17 6v12M17 18l3-3M17 18l-3-3"/></svg>По времени</span>
+      </div>
+
+      <div id="rest-board" style="margin-top:14px">
+        <div class="kb">
+          <div class="col"><div class="colh"><span class="d d-new"></span>Новые<span class="c">1</span></div>
+            <div class="ord" onclick="openOrder('o305')"><div class="r1"><span class="rm">№305</span><span class="tm">🕐 2 мин</span></div><div class="it">Стейк рибай, Лимонад ×2</div><div class="meter"><i style="width:15%;background:var(--new)"></i></div><button class="adv" onclick="event.stopPropagation();adv(this)">Взять в работу →</button></div>
+          </div>
+          <div class="col"><div class="colh"><span class="d d-cook"></span>Готовятся<span class="c">2</span></div>
+            <div class="ord esc" onclick="openOrder('o118')"><div class="r1"><span class="rm">№118</span><span class="tm">🕐 28 мин · долго</span></div><div class="it">Паста карбонара, Греческий салат</div><div class="meter"><i style="width:95%;background:var(--bad)"></i></div><button class="adv" onclick="event.stopPropagation();adv(this)">Готово →</button></div>
+            <div class="ord" onclick="openOrder('o402')"><div class="r1"><span class="rm">№402</span><span class="tm">🕐 9 мин</span></div><div class="it">Цезарь, Капучино</div><div class="meter"><i style="width:45%;background:var(--cook)"></i></div><button class="adv" onclick="event.stopPropagation();adv(this)">Готово →</button></div>
+          </div>
+          <div class="col"><div class="colh"><span class="d d-ready"></span>Готово<span class="c">1</span></div>
+            <div class="ord" onclick="openOrder('o210')"><div class="r1"><span class="rm">№210</span><span class="tm">ждёт официанта</span></div><div class="it">Тирамису ×2</div><div class="meter"><i style="width:100%;background:var(--ready)"></i></div><button class="adv" onclick="event.stopPropagation();adv(this)">Подано →</button></div>
+          </div>
+          <div class="col"><div class="colh"><span class="d d-served"></span>Подано<span class="c">1</span></div>
+            <div class="ord" style="opacity:.6" onclick="openOrder('o117')"><div class="r1"><span class="rm">№117</span><span class="tm">20:12</span></div><div class="it">Рибай, Вино</div></div>
+          </div>
+        </div>
+        <div class="hint">Красная рамка и полоса — заказ висит дольше нормы, эскалация ушла управляющему.</div>
+      </div>
+
+      <div id="rest-table" style="display:none;margin-top:14px">
+        <table class="tbl">
+          <tr><th>Заказ <span class="ar">▾</span></th><th>Локация</th><th>Позиции</th><th>Сумма</th><th>Время</th><th>Статус</th></tr>
+          <tr class="rowc" onclick="openOrder('o305')"><td><b>№1305</b></td><td>Номер 305</td><td>Стейк рибай, Лимонад ×2</td><td><b>3 270 ₽</b></td><td>2 мин</td><td><span class="stbadge new"><span class="d"></span>Новый</span></td></tr>
+          <tr class="rowc" onclick="openOrder('o118')"><td><b>№1298</b></td><td>Номер 118</td><td>Карбонара, Греческий салат</td><td><b>1 170 ₽</b></td><td class="esctxt">28 мин</td><td><span class="stbadge cook"><span class="d"></span>Готовится</span></td></tr>
+          <tr class="rowc" onclick="openOrder('o402')"><td><b>№1301</b></td><td>Номер 402</td><td>Цезарь, Капучино</td><td><b>870 ₽</b></td><td>9 мин</td><td><span class="stbadge cook"><span class="d"></span>Готовится</span></td></tr>
+          <tr class="rowc" onclick="openOrder('o210')"><td><b>№1295</b></td><td>Номер 210</td><td>Тирамису ×2</td><td><b>700 ₽</b></td><td>готово</td><td><span class="stbadge ready"><span class="d"></span>Готово</span></td></tr>
+          <tr class="rowc" onclick="openOrder('o117')"><td><b>№1290</b></td><td>Номер 117</td><td>Рибай, Вино</td><td><b>2 400 ₽</b></td><td>20:12</td><td><span class="stbadge served"><span class="d"></span>Подано</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- BAR -->
+    <div class="pane" id="p-bar">
+      <div class="ptool">
+        <div class="vtoggle"><button class="on" onclick="vw(this,'bar','board')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>Доска</button><button onclick="vw(this,'bar','table')"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Таблица</button></div>
+        <div class="chips"><span class="fchip on">Все</span><span class="fchip">Новые</span><span class="fchip">Готовятся</span></div>
+      </div>
+      <div id="bar-board" style="margin-top:14px">
+        <div class="kb">
+          <div class="col"><div class="colh"><span class="d d-new"></span>Новые<span class="c">1</span></div><div class="ord" onclick="openOrder('b1')"><div class="r1"><span class="rm">Лобби</span><span class="tm">🕐 1 мин</span></div><div class="it">Негрони, Капучино</div><button class="adv" onclick="event.stopPropagation();adv(this)">Взять →</button></div></div>
+          <div class="col"><div class="colh"><span class="d d-cook"></span>Готовятся<span class="c">1</span></div><div class="ord" onclick="openOrder('b2')"><div class="r1"><span class="rm">№305</span><span class="tm">🕐 3 мин</span></div><div class="it">Домашний лимонад ×2</div><button class="adv" onclick="event.stopPropagation();adv(this)">Готово →</button></div></div>
+          <div class="col"><div class="colh"><span class="d d-ready"></span>Готово<span class="c">0</span></div></div>
+          <div class="col"><div class="colh"><span class="d d-served"></span>Подано<span class="c">0</span></div></div>
+        </div>
+      </div>
+      <div id="bar-table" style="display:none;margin-top:14px">
+        <table class="tbl"><tr><th>Заказ</th><th>Локация</th><th>Позиции</th><th>Время</th><th>Статус</th></tr>
+          <tr class="rowc" onclick="openOrder('b1')"><td><b>№1306</b></td><td>Лобби</td><td>Негрони, Капучино</td><td>1 мин</td><td><span class="stbadge new"><span class="d"></span>Новый</span></td></tr>
+          <tr class="rowc" onclick="openOrder('b2')"><td><b>№1304</b></td><td>Номер 305</td><td>Лимонад ×2</td><td>3 мин</td><td><span class="stbadge cook"><span class="d"></span>Готовится</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- HOUSEKEEPING -->
+    <div class="pane" id="p-house">
+      <div class="ptool">
+        <div class="vtoggle"><button class="on" onclick="vw(this,'house','board')"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Список</button><button onclick="vw(this,'house','table')"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Таблица</button></div>
+        <div class="chips"><span class="fchip on">Все</span><span class="fchip">Новые</span><span class="fchip">В работе</span></div>
+      </div>
+      <div id="house-board" style="margin-top:14px">
+        <div class="lgroup"><div class="lgh">Новые · 2</div>
+          <div class="task esc" onclick="openOrder('h1')"><div class="tk-ic"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V9l6-4 6 4v11"/></svg></div><div><div class="nm">Замена полотенец · №412</div><div class="mm esc">ждёт 12 мин · эскалация</div></div><div class="rt"><button class="tkbtn pri" onclick="event.stopPropagation();done(this)">Взять</button></div></div>
+          <div class="task" onclick="openOrder('h2')"><div class="tk-ic"><svg viewBox="0 0 24 24"><path d="M3 7h18M6 7V5a2 2 0 012-2h8a2 2 0 012 2v2M8 7v13M16 7v13"/></svg></div><div><div class="nm">Уборка номера · №118</div><div class="mm">после выезда · 5 мин</div></div><div class="rt"><button class="tkbtn pri" onclick="event.stopPropagation();done(this)">Взять</button></div></div>
+        </div>
+        <div class="lgroup"><div class="lgh">В работе · 1</div>
+          <div class="task" onclick="openOrder('h3')"><div class="tk-ic"><svg viewBox="0 0 24 24"><path d="M14 3l7 7-9 9H5v-7z"/></svg></div><div><div class="nm">Замена лампы · №207</div><div class="mm">Олег Д. · 8 мин</div></div><div class="rt"><span class="chip">Олег Д.</span><button class="tkbtn pri" onclick="event.stopPropagation();done(this)">Готово</button></div></div>
+        </div>
+      </div>
+      <div id="house-table" style="display:none;margin-top:14px">
+        <table class="tbl"><tr><th>Заявка</th><th>Номер</th><th>Ждёт</th><th>Исполнитель</th><th>Статус</th></tr>
+          <tr class="rowc" onclick="openOrder('h1')"><td><b>Полотенца</b></td><td>412</td><td class="esctxt">12 мин</td><td>—</td><td><span class="stbadge new"><span class="d"></span>Новая</span></td></tr>
+          <tr class="rowc" onclick="openOrder('h2')"><td><b>Уборка</b></td><td>118</td><td>5 мин</td><td>—</td><td><span class="stbadge new"><span class="d"></span>Новая</span></td></tr>
+          <tr class="rowc" onclick="openOrder('h3')"><td><b>Замена лампы</b></td><td>207</td><td>8 мин</td><td>Олег Д.</td><td><span class="stbadge cook"><span class="d"></span>В работе</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- SPA -->
+    <div class="pane" id="p-spa">
+      <div class="ptool"><div class="chips"><span class="fchip on">Сегодня</span><span class="fchip">Завтра</span><span class="fchip">Неделя</span></div><span class="sortbtn">Вт, 15 · 5 записей</span></div>
+      <div class="tl" style="margin-top:16px">
+        <div class="slot"><span class="tm">11:30</span><div class="card" onclick="openOrder('s1')"><div><div class="g">Массаж 60 мин</div><div class="s">Гость · номер 118</div></div><span class="stpill done rt">завершён</span></div></div>
+        <div class="slot"><span class="tm">13:00</span><div class="card now" onclick="openOrder('s2')"><div><div class="g">Массаж 60 мин</div><div class="s">Гость · номер 305</div></div><div class="rt"><button class="tkbtn pri" onclick="event.stopPropagation();checkin(this)">Приход</button></div></div></div>
+        <div class="slot"><span class="tm">14:30</span><div class="card" onclick="openOrder('s3')"><div><div class="g">Спа-уход 90 мин</div><div class="s">Гость · номер 402</div></div><span class="stpill wait rt">записан</span></div></div>
+        <div class="slot"><span class="tm">16:00</span><div class="card free">свободно</div></div>
+        <div class="slot"><span class="tm">17:30</span><div class="card" onclick="openOrder('s4')"><div><div class="g">Массаж 60 мин</div><div class="s">Гость · номер 210</div></div><span class="stpill wait rt">записан</span></div></div>
+      </div>
+    </div>
+
+    <!-- CONCIERGE -->
+    <div class="pane" id="p-conc">
+      <div class="ptool"><div class="vtoggle"><button class="on" onclick="vw(this,'conc','board')"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Список</button><button onclick="vw(this,'conc','table')"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Таблица</button></div><div class="chips"><span class="fchip on">Все</span><span class="fchip">Новые</span></div></div>
+      <div id="conc-board" style="margin-top:14px">
+        <div class="lgroup"><div class="lgh">Новые · 1</div>
+          <div class="task esc" onclick="openOrder('c1')"><div class="tk-ic"><svg viewBox="0 0 24 24"><path d="M5 16l1-5h12l1 5M6 16h12v3H6zM8 19v2M16 19v2"/></svg></div><div><div class="nm">Трансфер в аэропорт · №305</div><div class="mm esc">ждёт 8 мин · сейчас · комфорт</div></div><div class="rt"><button class="tkbtn gh" onclick="event.stopPropagation();done(this)">Назначить</button><button class="tkbtn pri" onclick="event.stopPropagation();done(this)">Подтвердить</button></div></div>
+        </div>
+        <div class="lgroup"><div class="lgh">Подтверждено · 1</div>
+          <div class="task" onclick="openOrder('c2')"><div class="tk-ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5-7-11a7 7 0 0114 0c0 6-7 11-7 11z"/></svg></div><div><div class="nm">Обзорная экскурсия · №118</div><div class="mm">завтра 10:00 · 2 гостя</div></div><div class="rt"><span class="chip">гид назначен</span></div></div>
+        </div>
+      </div>
+      <div id="conc-table" style="display:none;margin-top:14px">
+        <table class="tbl"><tr><th>Заявка</th><th>Номер</th><th>Когда</th><th>Статус</th></tr>
+          <tr class="rowc" onclick="openOrder('c1')"><td><b>Трансфер</b></td><td>305</td><td>сейчас</td><td><span class="stbadge new"><span class="d"></span>Новая</span></td></tr>
+          <tr class="rowc" onclick="openOrder('c2')"><td><b>Экскурсия</b></td><td>118</td><td>завтра 10:00</td><td><span class="stbadge ready"><span class="d"></span>Подтв.</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DETAIL DRAWER -->
+  <div class="ovd" id="ovd"><div class="dim" onclick="closeOrder()"></div>
+    <div class="drawer" id="drawer"></div>
+  </div>
+
+</div></div>
+</div>
+
+<script>
+var DATA={
+ o305:{rm:"№305",mt:"Панорама · в номер · Гость 305",badge:"new",steps:[["Принят","20:26","done"],["Готовится","—","pend"],["Готово","—","pend"],["Подано","—","pend"]],items:[["1×","Стейк рибай","Medium · перечный","1 900 ₽"],["2×","Домашний лимонад","","780 ₽"]],sum:[["Позиции","2 680 ₽"],["Сбор 12%","322 ₽"],["Чаевые","268 ₽"]],tot:"3 270 ₽",act:"Взять в работу"},
+ o118:{rm:"№118",mt:"Панорама · в номер · Гость 118 · ЭСКАЛАЦИЯ",badge:"cook",steps:[["Принят","19:58","done"],["Готовится","20:04","now"],["Готово","—","pend"],["Подано","—","pend"]],items:[["1×","Паста карбонара","","690 ₽"],["1×","Греческий салат","без лука","480 ₽"]],sum:[["Позиции","1 170 ₽"],["Сбор 12%","140 ₽"]],tot:"1 310 ₽",act:"Отметить готово"},
+ o402:{rm:"№402",mt:"Панорама · в номер · Гость 402",badge:"cook",steps:[["Принят","20:19","done"],["Готовится","20:22","now"],["Готово","—","pend"],["Подано","—","pend"]],items:[["1×","Салат «Цезарь»","","550 ₽"],["1×","Капучино","овсяное молоко","320 ₽"]],sum:[["Позиции","870 ₽"],["Сбор 12%","104 ₽"]],tot:"974 ₽",act:"Отметить готово"},
+ o210:{rm:"№210",mt:"Панорама · в номер · Гость 210",badge:"ready",steps:[["Принят","20:02","done"],["Готовится","20:07","done"],["Готово","20:20","now"],["Подано","—","pend"]],items:[["2×","Тирамису","","700 ₽"]],sum:[["Позиции","700 ₽"],["Сбор 12%","84 ₽"]],tot:"784 ₽",act:"Отметить подано"},
+ o117:{rm:"№117",mt:"Панорама · завершён 20:12",badge:"served",steps:[["Принят","19:40","done"],["Готовится","19:45","done"],["Готово","20:05","done"],["Подано","20:12","done"]],items:[["1×","Стейк рибай","Well done","1 900 ₽"],["1×","Бокал вина","","500 ₽"]],sum:[["Позиции","2 400 ₽"]],tot:"2 400 ₽",act:"Заказ завершён"},
+ b1:{rm:"Лобби",mt:"Лобби-бар · Гость у стойки",badge:"new",steps:[["Принят","20:27","done"],["Готовится","—","pend"],["Готово","—","pend"]],items:[["1×","Негрони","","690 ₽"],["1×","Капучино","","320 ₽"]],sum:[["Позиции","1 010 ₽"]],tot:"1 010 ₽",act:"Взять"},
+ b2:{rm:"№305",mt:"Лобби-бар · в номер",badge:"cook",steps:[["Принят","20:24","done"],["Готовится","20:25","now"],["Готово","—","pend"]],items:[["2×","Домашний лимонад","","780 ₽"]],sum:[["Позиции","780 ₽"]],tot:"780 ₽",act:"Готово"},
+ h1:{rm:"№412",mt:"Хозслужба · ЭСКАЛАЦИЯ · ждёт 12 мин",badge:"new",steps:[["Заявка","20:16","now"],["В работе","—","pend"],["Готово","—","pend"]],items:[["","Замена полотенец","2 комплекта",""]],sum:[],tot:"",act:"Взять в работу"},
+ h2:{rm:"№118",mt:"Хозслужба · уборка после выезда",badge:"new",steps:[["Заявка","20:23","now"],["В работе","—","pend"],["Готово","—","pend"]],items:[["","Уборка номера","стандарт",""]],sum:[],tot:"",act:"Взять в работу"},
+ h3:{rm:"№207",mt:"Хозслужба · Олег Д. · 8 мин",badge:"cook",steps:[["Заявка","20:10","done"],["В работе","20:20","now"],["Готово","—","pend"]],items:[["","Замена лампы","прикроватная",""]],sum:[],tot:"",act:"Отметить готово"},
+ s1:{rm:"11:30",mt:"Спа · завершён",badge:"ready",steps:[["Записан","вчера","done"],["Пришёл","11:28","done"],["Завершён","12:30","done"]],items:[["","Массаж 60 мин","Гость 118","4 500 ₽"]],sum:[["Услуга","4 500 ₽"]],tot:"4 500 ₽",act:"Завершено"},
+ s2:{rm:"13:00",mt:"Спа · сейчас",badge:"cook",steps:[["Записан","сегодня","done"],["Пришёл","—","now"],["Завершён","—","pend"]],items:[["","Массаж 60 мин","Гость 305","4 500 ₽"]],sum:[["Услуга","4 500 ₽"]],tot:"4 500 ₽",act:"Отметить приход"},
+ s3:{rm:"14:30",mt:"Спа · записан",badge:"new",steps:[["Записан","сегодня","now"],["Пришёл","—","pend"],["Завершён","—","pend"]],items:[["","Спа-уход 90 мин","Гость 402","6 800 ₽"]],sum:[["Услуга","6 800 ₽"]],tot:"6 800 ₽",act:"Отметить приход"},
+ s4:{rm:"17:30",mt:"Спа · записан",badge:"new",steps:[["Записан","сегодня","now"],["Пришёл","—","pend"],["Завершён","—","pend"]],items:[["","Массаж 60 мин","Гость 210","4 500 ₽"]],sum:[["Услуга","4 500 ₽"]],tot:"4 500 ₽",act:"Отметить приход"},
+ c1:{rm:"Трансфер",mt:"Консьерж · ЭСКАЛАЦИЯ · сейчас",badge:"new",steps:[["Заявка","20:20","now"],["Подтверждён","—","pend"],["Выполнен","—","pend"]],items:[["","Аэропорт Шереметьево","комфорт · сейчас",""],["","Гость","номер 305",""]],sum:[],tot:"",act:"Подтвердить"},
+ c2:{rm:"Экскурсия",mt:"Консьерж · подтверждён",badge:"ready",steps:[["Заявка","вчера","done"],["Подтверждён","вчера","done"],["Гид назначен","сегодня","now"]],items:[["","Обзорная экскурсия","2 гостя · завтра 10:00",""]],sum:[],tot:"",act:"Готово"}
+};
+var badgeName={new:"Новый",cook:"В работе",ready:"Готово",served:"Подано"};
+function openOrder(id){
+ var o=DATA[id];if(!o)return;
+ var steps=o.steps.map(function(s){return '<div class="mstep '+s[2]+'"><div class="mdot"></div><div class="ss">'+s[0]+'</div><div class="sd">'+s[1]+'</div></div>'}).join("");
+ var items=o.items.map(function(it){return '<div class="ditem"><span class="q">'+it[0]+'</span><div><div class="n">'+it[1]+'</div>'+(it[2]?'<div class="o">'+it[2]+'</div>':'')+'</div>'+(it[3]?'<span class="p">'+it[3]+'</span>':'')+'</div>'}).join("");
+ var sum=o.sum.length?('<div class="dsum">'+o.sum.map(function(s){return '<div><span>'+s[0]+'</span><span>'+s[1]+'</span></div>'}).join("")+(o.tot?'<div class="tot"><span>Итого</span><span>'+o.tot+'</span></div>':'')+'</div>'):'';
+ document.getElementById("drawer").innerHTML=
+   '<div class="dh"><div><div class="rm">'+o.rm+'</div><div class="mt">'+o.mt+'</div></div><button class="dx" onclick="closeOrder()">✕</button></div>'+
+   '<div class="dbody"><div class="dsect">Ход выполнения</div><div class="mini-tl">'+steps+'</div>'+
+   '<div class="dsect" style="margin-top:16px">Состав</div>'+items+sum+'</div>'+
+   '<div class="dfoot"><button class="btn pri" onclick="closeOrder()">'+o.act+'</button><button class="btn gh" title="Написать гостю">✉</button><button class="btn gh" title="Печать">🖨</button></div>';
+ document.getElementById("ovd").classList.add("open");
+}
+function closeOrder(){document.getElementById("ovd").classList.remove("open")}
+function adv(btn){var ord=btn.closest(".ord");var col=ord.closest(".col");var cols=col.parentNode.children;var i=[].indexOf.call(cols,col);if(i<cols.length-1){cols[i+1].appendChild(ord);ord.classList.remove("esc");var b=ord.querySelector(".adv");var lbls=["Взять в работу →","Готово →","Подано →"];if(cols[i+1]===cols[cols.length-1]){if(b)b.remove();ord.style.opacity=".6"}else if(b){b.textContent=lbls[i+1]||"→"}[].forEach.call(cols,function(c){c.querySelector(".colh .c").textContent=c.querySelectorAll(".ord").length})}}
+function done(btn){var t=btn.closest(".task");t.style.opacity=".4";t.querySelector(".rt").innerHTML='<span class="chip">готово</span>'}
+function checkin(btn){btn.closest(".rt").outerHTML='<span class="stpill here rt">пришёл</span>'}
+function sw(el,pane){document.querySelectorAll(".svctab").forEach(function(t){t.classList.remove("on")});el.classList.add("on");document.querySelectorAll(".pane").forEach(function(p){p.classList.remove("on")});document.getElementById(pane).classList.add("on");document.querySelector(".body").scrollTop=0}
+function vw(el,key,mode){el.parentNode.querySelectorAll("button").forEach(function(b){b.classList.remove("on")});el.classList.add("on");document.getElementById(key+"-board").style.display=mode==="board"?"block":"none";document.getElementById(key+"-table").style.display=mode==="table"?"block":"none"}
+function toggleTheme(){var a=document.getElementById("app");var d=a.classList.contains("dark");a.classList.toggle("dark",!d);a.classList.toggle("light",d);document.getElementById("themeBtn").textContent=d?"☀":"🌙"}
+document.getElementById("devsel").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;document.querySelectorAll("#devsel button").forEach(function(x){x.classList.remove("on")});b.classList.add("on");document.getElementById("root").className="device-"+b.dataset.d});
+</script>
+</html>

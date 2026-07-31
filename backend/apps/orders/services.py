@@ -337,17 +337,33 @@ def _finalize_created_order(order, hotel_id, guest_session, status):
 
 
 def _resolve_cart_service(data):
-    """Сервис-корзина (агрегатор) по service_code; None → прежний резолв точки."""
+    """
+    Заведение-корзина по `service_code`; None (код не прислан) → прежний резолв
+    точки по маршруту категории.
+
+    Неизвестный код — ОШИБКА, а не повод молча уйти на старый путь. Пока код
+    слали только тесты, тихий фолбэк был безобиден; с R5 его шлёт витрина на
+    каждом заказе, и опечатка или устаревшая ссылка означала бы заказ,
+    посчитанный по чужой коммерции и не разъехавшийся по исполнителям, —
+    внешне «успешный».
+    """
     code = getattr(data, "service_code", None)
     if not code:
         return None
     from apps.hotels.models import Service
 
-    return (
+    service = (
         Service.objects.filter(code=code, is_active=True)
         .select_related("execution_point")
         .first()
     )
+    if service is None:
+        raise OrderValidationError(
+            f"Заведение «{code}» не найдено или выключено",
+            code="unknown_service",
+            field="service_code",
+        )
+    return service
 
 
 def _create_fanned_order(

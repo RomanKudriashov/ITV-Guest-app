@@ -41,6 +41,24 @@ def test_every_item_has_a_real_photo(crystal):
     assert without == [], f"позиции без настоящего фото: {without}"
 
 
+def test_every_menu_section_has_a_real_photo(crystal):
+    """
+    Раздел меню виден гостю не меньше блюда. В R4 аудит их не покрывал, и часть
+    осталась с процедурной обложкой R1/R2.
+    """
+    from apps.catalog.models import Category
+    from apps.media import seed_photos
+
+    with tenant_context(crystal):
+        without = [
+            category.code
+            for category in Category.objects.select_related("image")
+            if category.code in seed_photos.PHOTOS
+            and (category.image_id is None or category.image.content_type != "image/jpeg")
+        ]
+    assert without == [], f"разделы без настоящего фото: {without}"
+
+
 def test_manifest_covers_everything_the_seed_creates(crystal):
     """
     Новая позиция в сиде без снимка в манифесте — это будущий плейсхолдер.

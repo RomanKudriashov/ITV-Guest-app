@@ -66,6 +66,21 @@ PHOTOS: dict[str, tuple[str, str, str]] = {
     "cleaning": ("1581578731548-c64695cc6952", "No Revisions", "Уборка номера"),
     "wifi": ("1563986768609-322da13575f3", "Bernard Hermant", "Wi-Fi"),
     "about": ("1566073771259-6a8506099945", "Marten Bjork", "Об отеле"),
+    # --- Разделы меню ---
+    # Категории тоже показываются гостю (шапки разделов, плитки), и в R4 их
+    # аудит не покрывал: часть осталась с процедурными обложками, часть без.
+    "hot": ("1546069901-ba9599a7e63c", "Brooke Lark", "Горячие блюда"),
+    "salads": ("1512621776951-a57141f2eefd", "Anna Pelzer", "Салаты"),
+    "drinks": ("1514362545857-3bc16c4c7d1b", "Kelsey Chance", "Напитки"),
+    "transfer": ("1502877338535-766e1452684a", "why kei", "Трансфер"),
+    "housekeeping": ("1584622650111-993a426fbf0a", "Anthony Tran", "Уборка"),
+    "info": ("1551632436-cbf8dd35adfa", "Sander Crombach", "Информация"),
+    "spa": ("1600334089648-b0d9d3028eb2", "Antonika Chanel", "СПА и массаж"),
+    "bar-drinks": ("1470337458703-46ad1756a187", "Adam Jaime", "Барная карта"),
+    "terrace-starters": ("1476224203421-9ac39bcb3327", "Brooke Lark", "Закуски"),
+    "terrace-mains": ("1467003909585-2f8a72700288", "Jay Wennington", "Основные блюда"),
+    "sakura-rolls": ("1579871494447-9811cf80d66c", "Riccardo Bergamini", "Роллы"),
+
     # --- Обложки заведений ---
     "venue-kitchen": ("1414235077428-338989a2e8c0", "Jason Leung", "Ресторан «Панорама»"),
     "venue-bar": ("1470337458703-46ad1756a187", "Adam Jaime", "Лобби-бар"),

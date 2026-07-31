@@ -220,6 +220,7 @@ class Command(BaseCommand):
             self._link_categories_to_services()
             self._seed_venue_covers()
             self._ensure_item_photos()
+            self._ensure_category_photos()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
             if with_badges:
@@ -1261,6 +1262,24 @@ class Command(BaseCommand):
         asset = self._image_for(item.code, label)
         if asset is not None:
             ItemImage.objects.get_or_create(item=item, asset=asset, defaults={"sort_order": 0})
+
+    def _ensure_category_photos(self):
+        """
+        Раздел меню тоже виден гостю. В R4 аудит их не покрывал — часть осталась
+        с процедурной обложкой, часть без фото вовсе.
+        """
+        from apps.media import seed_photos
+
+        for category in Category.objects.select_related("image"):
+            if category.code not in seed_photos.PHOTOS:
+                continue
+            if category.image_id and category.image.content_type == "image/jpeg":
+                continue
+            label = (category.title or {}).get("ru") or category.code
+            asset = self._image_for(category.code, label)
+            if asset is not None:
+                category.image = asset
+                category.save(update_fields=["image", "updated_at"])
 
     def _ensure_item_photos(self):
         """

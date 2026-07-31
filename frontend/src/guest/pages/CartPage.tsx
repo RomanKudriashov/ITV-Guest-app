@@ -122,6 +122,10 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
 
   const payload = useMemo<CreateOrderPayload>(
     () => ({
+      // КОД ЗАВЕДЕНИЯ — то, чего не хватало реальным заказам до R5. С ним
+      // сервер считает по коммерции этого заведения и разъезжает заказ по
+      // исполнителям (fan-out R2); без него заказ оставался плоским.
+      service_code: cart.serviceCode ?? undefined,
       lines: cart.toPayloadLines(),
       location_id: draft.locationId ?? '',
       location_refinement: needsRefinement ? draft.refinement.trim() : '',
@@ -139,6 +143,9 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   // tip) changes; the client renders `quote.total_minor` verbatim and never sums
   // charges itself.
   const quoteSignature = JSON.stringify({
+    // Заведение — часть подписи: у каждого своя коммерция, и без него ответ
+    // одного заведения переиспользовался бы для другого.
+    service_code: payload.service_code,
     lines: payload.lines,
     location_id: payload.location_id,
     delivery_mode: payload.delivery_mode,
