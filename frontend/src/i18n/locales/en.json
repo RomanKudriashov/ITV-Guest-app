@@ -373,7 +373,8 @@
       "emptyTitle": "No venues yet",
       "emptyHint": "Nothing has been added to this category yet",
       "openUntil": "Open until {{time}}",
-      "notFound": "Venue not found"
+      "notFound": "Venue not found",
+      "viewOnly": "You are browsing without a room — ordering is available from a room or via its QR."
     },
     "quickActions": {
       "menu": "Menu",

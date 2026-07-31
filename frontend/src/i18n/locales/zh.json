@@ -371,7 +371,8 @@
       "emptyTitle": "暂无场所",
       "emptyHint": "此分类还没有添加内容",
       "openUntil": "营业至 {{time}}",
-      "notFound": "未找到该场所"
+      "notFound": "未找到该场所",
+      "viewOnly": "您正在无房间模式下浏览——下单需在房间内或通过房间二维码。"
     },
     "quickActions": {
       "menu": "菜单",

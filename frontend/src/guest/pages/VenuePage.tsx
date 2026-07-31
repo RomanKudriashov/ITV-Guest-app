@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { CatalogPage } from './CatalogPage';
 import { VenueHeader } from '../components/VenueHeader';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
+import { useGuestSession } from '../session/GuestSessionProvider';
 import { errorMessage } from '../errors';
 
 /**
@@ -46,6 +47,7 @@ const CONTENT_BY_TYPE: Record<string, 'product' | 'service_request' | 'slot' | '
 export function VenuePage() {
   const { code = '' } = useParams<{ code: string }>();
   const { t } = useTranslation();
+  const { canOrder } = useGuestSession();
 
   // Идентичность заведения читаем товарным каталогом: он отвечает всегда, даже
   // когда товаров у заведения нет, и несёт блок `venue`.
@@ -81,6 +83,19 @@ export function VenuePage() {
   return (
     <Box data-testid="guest-venue" data-venue-type={venue.type} data-content={content}>
       <VenueHeader venue={venue} />
+
+      {/*
+        Режим «только просмотр» (QR в лобби без номера). Говорим об этом СРАЗУ,
+        а не на кнопке оформления: гость, собравший корзину и узнавший о запрете
+        в самом конце, потратил время зря.
+      */}
+      {!canOrder ? (
+        <Box sx={{ px: { xs: 2, md: 0 }, pt: 2 }}>
+          <Alert severity="info" data-testid="guest-view-only-notice">
+            {t('guest.venue.viewOnly')}
+          </Alert>
+        </Box>
+      ) : null}
       {/*
         Содержимое рисует тот же экран каталога — он умеет все четыре типа
         (см. offerings). Отдельная страница на тип означала бы четыре копии

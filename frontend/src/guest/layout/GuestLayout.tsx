@@ -73,6 +73,11 @@ export function GuestLayout() {
   const home = useGuestHome();
   const unreadChat = home.data?.unread_chat ?? 0;
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  // ВСЕ хуки — до ранних возвратов. useCart() стоял после них: пока корзина
+  // была одна на отель и не перерисовывалась, порядок вызовов случайно
+  // совпадал; с посервисной корзиной (R5) он поехал, и React справедливо
+  // ругался на смену порядка хуков.
+  const cart = useCart();
 
   const hotelName = hotel?.name ?? session?.hotel.name ?? '';
 
@@ -94,8 +99,7 @@ export function GuestLayout() {
   const activeTab = TABS.find((tab) => location.pathname.startsWith(tab.value))?.value ?? false;
   const badgeFor = (value: string) => (value === '/chat' ? unreadChat : 0);
   const room = session?.room ?? null;
-  // Cart lives as a right column on desktop, visible only with a non-empty order.
-  const cart = useCart();
+  // Корзина — колонка справа на десктопе, видна только с непустым заказом.
   const cartOpen = isDesktop && !cart.isEmpty;
   const content = (
     <Box key={location.pathname} sx={fadeInSx()}>
