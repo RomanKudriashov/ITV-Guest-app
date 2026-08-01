@@ -3,7 +3,11 @@ import { NavLink, Outlet } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
+import { useState } from 'react';
 import Drawer from '@mui/material/Drawer';
+import MenuIcon from '@mui/icons-material/Menu';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import type { Theme } from '@mui/material/styles';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -70,6 +74,8 @@ export function AppShell() {
   const { user, hotel, logout } = useAuth();
   const { data: bootstrap } = useBootstrap();
   const navigation = useNavigation();
+  const isNarrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
+  const [navOpen, setNavOpen] = useState(false);
 
   const hotelName = bootstrap?.hotel?.name ?? hotel?.name ?? t('app.title');
 
@@ -86,6 +92,20 @@ export function AppShell() {
         }}
       >
         <Toolbar sx={{ gap: 2 }}>
+          {/*
+            На узком экране навигация уезжает в выдвижную панель: постоянная
+            занимала 246px из 390 и оставляла контенту колонку в одно слово.
+            Видно её только там, где она нужна, — на широком экране панель
+            и так открыта.
+          */}
+          <IconButton
+            onClick={() => setNavOpen(true)}
+            data-testid="nav-toggle"
+            aria-label={t('nav.open')}
+            sx={{ display: { xs: 'inline-flex', md: 'none' }, ml: -1 }}
+          >
+            <MenuIcon />
+          </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1 }} data-testid="hotel-name">
             {hotelName}
           </Typography>
@@ -107,9 +127,12 @@ export function AppShell() {
       </AppBar>
 
       <Drawer
-        variant="permanent"
+        variant={isNarrow ? 'temporary' : 'permanent'}
+        open={isNarrow ? navOpen : true}
+        onClose={() => setNavOpen(false)}
+        ModalProps={{ keepMounted: true }}
         sx={{
-          width: DRAWER_WIDTH,
+          width: isNarrow ? 0 : DRAWER_WIDTH,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
             width: DRAWER_WIDTH,
@@ -121,7 +144,7 @@ export function AppShell() {
         }}
       >
         <Toolbar />
-        <List sx={{ px: 1.5, py: 2 }} data-testid="main-nav">
+        <List sx={{ px: 1.5, py: 2 }} data-testid="main-nav" onClick={() => setNavOpen(false)}>
           {(navigation.data?.groups ?? []).map((group) => (
             <Box key={group.key} sx={{ mb: 1.5 }} data-testid={`nav-group-${group.key}`}>
               {/*

@@ -65,7 +65,8 @@
     "roomControl": "Room control",
     "payments": "Payments",
     "pms": "PMS",
-    "mobileKey": "Mobile key"
+    "mobileKey": "Mobile key",
+    "open": "Open menu"
   },
   "dictionaries": {
     "title": "Card dictionaries",
@@ -1518,7 +1519,8 @@
       "nodes": "On-prem nodes",
       "team": "Team",
       "audit": "Audit",
-      "templates": "Templates & dictionaries"
+      "templates": "Templates & dictionaries",
+      "open": "Open menu"
     },
     "role": {
       "owner": "Platform owner",

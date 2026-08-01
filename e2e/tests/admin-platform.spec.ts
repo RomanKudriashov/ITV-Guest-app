@@ -226,3 +226,20 @@ test.describe('Реестры платформы', () => {
     // Отель убирается глобальным teardown — снимок стенда сделан до прогона.
   })
 })
+
+test.describe('Узкий экран', () => {
+  test('на телефоне разделы админки достижимы через шторку', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await loginToAdmin(page)
+
+    // До этого навигации на телефоне не было ВОВСЕ: панель скрывалась, а
+    // замены не появилось — разделы были недостижимы.
+    await page.getByTestId('admin-nav-toggle').click()
+    await expect(page.getByTestId('admin-nav-drawer')).toBeVisible()
+
+    await page.getByTestId('admin-nav-drawer').getByTestId('admin-nav-team').click()
+    await expect(page.getByTestId('admin-team')).toBeVisible({ timeout: 15_000 })
+    // Шторка закрывается за собой, а не остаётся поверх открытого раздела.
+    await expect(page.getByTestId('admin-nav-drawer')).toBeHidden()
+  })
+})

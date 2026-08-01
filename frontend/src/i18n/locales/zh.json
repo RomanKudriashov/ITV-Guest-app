@@ -65,7 +65,8 @@
     "roomControl": "客房控制",
     "payments": "支付",
     "pms": "PMS",
-    "mobileKey": "手机钥匙"
+    "mobileKey": "手机钥匙",
+    "open": "打开菜单"
   },
   "dictionaries": {
     "title": "卡片字典",
@@ -1516,7 +1517,8 @@
       "nodes": "本地节点",
       "team": "团队",
       "audit": "审计",
-      "templates": "模板与字典"
+      "templates": "模板与字典",
+      "open": "打开菜单"
     },
     "role": {
       "owner": "平台所有者",

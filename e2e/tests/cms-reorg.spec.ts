@@ -224,3 +224,20 @@ async function guestMenu(
     c.items.map((i) => i.code),
   )
 }
+
+test('на телефоне навигация CMS уезжает в шторку и открывает раздел', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/login')
+  await page.getByTestId('login-email').fill(ADMIN.email)
+  await page.getByTestId('login-password').fill(ADMIN.password)
+  await page.getByTestId('login-submit').click()
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
+  await page.goto('/cms/dashboard')
+
+  // Постоянная панель занимала 246px из 390 и оставляла контенту колонку в
+  // одно слово. Теперь она открывается по кнопке.
+  await page.getByTestId('nav-toggle').click()
+  await expect(page.getByTestId('main-nav')).toBeVisible()
+  await page.getByTestId('cms-nav-analytics').click()
+  await expect(page).toHaveURL(/\/cms\/analytics/, { timeout: 15_000 })
+})

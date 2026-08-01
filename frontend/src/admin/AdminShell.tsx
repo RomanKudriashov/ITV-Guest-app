@@ -1,7 +1,11 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
@@ -44,6 +48,8 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const isNarrow = useMediaQuery('(max-width:899px)');
+  const [navOpen, setNavOpen] = useState(false);
   const groups = sections.reduce<{ group: string | undefined; items: AdminSection[] }[]>(
     (acc, section) => {
       const last = acc[acc.length - 1];
@@ -54,26 +60,10 @@ export function AdminShell({
     [],
   );
 
-  return (
-    <Box
-      data-testid="admin-shell"
-      sx={{
-        minHeight: '100dvh',
-        background: pageBackground,
-        color: ink.hi,
-        display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: `${layout.nav}px 1fr` },
-      }}
-    >
-      <Box
-        component="aside"
-        sx={{
-          display: { xs: 'none', md: 'flex' },
-          flexDirection: 'column',
-          bgcolor: surface.s1,
-          borderRight: `1px solid ${surface.line}`,
-        }}
-      >
+  // Одна и та же разметка навигации служит и постоянной панели, и шторке:
+  // две копии списка разделов однажды разъехались бы.
+  const navigation = (
+    <>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: '20px 18px 16px' }}>
           <Box
             sx={{
@@ -203,6 +193,52 @@ export function AdminShell({
             {me?.totp_enabled ? t('admin.security.on') : t('admin.security.off')}
           </Box>
         </Box>
+    </>
+  );
+
+  return (
+    <Box
+      data-testid="admin-shell"
+      sx={{
+        minHeight: '100dvh',
+        background: pageBackground,
+        color: ink.hi,
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: `${layout.nav}px 1fr` },
+      }}
+    >
+      {/*
+        На узком экране навигация уезжает в шторку. До этого её попросту не
+        было: панель скрывалась через `display: none`, а замены не появилось —
+        разделы админки на телефоне были недостижимы вовсе.
+      */}
+      {isNarrow ? (
+        <Drawer
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          PaperProps={{ sx: { width: layout.nav, bgcolor: surface.s1, color: ink.hi } }}
+        >
+          <Box
+            sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+            onClick={() => setNavOpen(false)}
+            data-testid="admin-nav-drawer"
+          >
+            {navigation}
+          </Box>
+        </Drawer>
+      ) : null}
+
+      <Box
+        component="aside"
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
+          bgcolor: surface.s1,
+          borderRight: `1px solid ${surface.line}`,
+        }}
+      >
+        {navigation}
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -219,6 +255,14 @@ export function AdminShell({
             borderBottom: `1px solid ${surface.hair}`,
           }}
         >
+          <IconButton
+            onClick={() => setNavOpen(true)}
+            data-testid="admin-nav-toggle"
+            aria-label={t('admin.nav.open')}
+            sx={{ display: { xs: 'inline-flex', md: 'none' }, color: ink.mid, ml: -1 }}
+          >
+            <MenuIcon />
+          </IconButton>
           <Box sx={{ fontSize: 13, color: ink.low }} data-testid="admin-crumb">
             {crumb}
           </Box>
