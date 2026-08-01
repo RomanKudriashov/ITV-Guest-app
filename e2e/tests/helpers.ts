@@ -220,3 +220,29 @@ export async function guestTheme(request: APIRequestContext): Promise<Record<str
   expect(response.ok()).toBeTruthy()
   return (await response.json()).hotel.theme
 }
+
+/**
+ * Перевести заказ в статус на доске трекера.
+ *
+ * Главное действие карточки видно сразу, остальные переходы живут в меню
+ * («ещё») — так карточка перестала быть стеной из шести одинаковых кнопок.
+ * Тесту незачем знать, какой из переходов сегодня главный: пробуем нажать
+ * напрямую, а если кнопка спрятана — открываем меню.
+ */
+export async function moveOrderTo(page: Page, number: string, code: string): Promise<void> {
+  // Меню, оставшееся открытым от прошлого шага, накрывает доску прозрачным
+  // слоем: кнопка «видна», но клик уходит в него, и статус не меняется.
+  // Сначала закрываем всё открытое.
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.MuiMenu-root')).toHaveCount(0)
+
+  const direct = page.getByTestId(`tracker-status-${number}-${code}`)
+  if (await direct.isVisible().catch(() => false)) {
+    await direct.click()
+  } else {
+    await page.getByTestId(`tracker-more-${number}`).click()
+    await direct.click()
+  }
+  // Ждём, пока меню действительно закроется, иначе следующий шаг попадёт в него.
+  await expect(page.locator('.MuiMenu-root')).toHaveCount(0)
+}

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CONCIERGE, DEMO_ROOM } from './helpers'
+import { CONCIERGE, DEMO_ROOM, moveOrderTo } from './helpers'
 
 /**
  * Второй тип предложения проходит тот же путь, что и еда.
@@ -85,7 +85,7 @@ test.describe('Заявка-услуга', () => {
         timeout: 20_000,
       })
 
-      await staff.getByTestId(`tracker-status-${number}-fulfilled`).click()
+      await moveOrderTo(staff, number, 'fulfilled')
       await expect(guest.getByTestId('guest-order-status')).toContainText(/Выполнена/i, {
         timeout: 20_000,
       })

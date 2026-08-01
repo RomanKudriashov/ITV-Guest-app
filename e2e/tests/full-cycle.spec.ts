@@ -1,6 +1,13 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, CREDENTIALS, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
+import {
+  apiToken,
+  CREDENTIALS,
+  DEMO_ROOM,
+  moveOrderStatus,
+  moveOrderTo,
+  openCart,
+} from './helpers'
 
 /**
  * Замкнутый цикл среза «еда», как он выглядит в жизни:
@@ -83,20 +90,20 @@ test.describe('Замкнутый цикл: гость → кухня → гос
       })
 
       // 3. И дальше по статусам.
-      await staff.getByTestId(`tracker-status-${order.number}-preparing`).click()
+      await moveOrderTo(staff, order.number, 'preparing')
       await expect(guest.getByTestId('guest-order-status')).toContainText(/Готовится/i, {
         timeout: 20_000,
       })
       // Отмена гостем на «Готовится» уже закрыта — кнопка обязана исчезнуть.
       await expect(guest.getByTestId('guest-cancel-order')).toBeHidden({ timeout: 15_000 })
 
-      await staff.getByTestId(`tracker-status-${order.number}-on_the_way`).click()
+      await moveOrderTo(staff, order.number, 'on_the_way')
       await expect(guest.getByTestId('guest-order-status')).toContainText(/В пути/i, {
         timeout: 20_000,
       })
 
       // 4. Завершение — заказ уходит с активной доски в историю.
-      await staff.getByTestId(`tracker-status-${order.number}-done`).click()
+      await moveOrderTo(staff, order.number, 'done')
       await expect(guest.getByTestId('guest-order-status')).toContainText(/Доставлено/i, {
         timeout: 20_000,
       })

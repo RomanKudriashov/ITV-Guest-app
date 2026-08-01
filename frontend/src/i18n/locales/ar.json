@@ -657,7 +657,8 @@
     },
     "actions": {
       "accept": "قبول",
-      "cancel": "إلغاء"
+      "cancel": "إلغاء",
+      "more": "إجراءات أخرى"
     },
     "detail": {
       "where": "إلى أين",

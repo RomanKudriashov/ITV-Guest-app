@@ -1,6 +1,11 @@
+import { useState } from 'react';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import CheckIcon from '@mui/icons-material/Check';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useTranslation } from 'react-i18next';
 
 import { statusSlot } from '../statusColor';
@@ -17,9 +22,20 @@ export interface OrderActionsProps {
 }
 
 /**
- * Buttons come from the server: `next_statuses` and `can_cancel` are computed
- * server-side, so what the cook can press always matches what the API accepts.
- * The client knows no transition rules and translates no status title.
+ * Действия по заказу: ОДНО главное и меню для остального.
+ *
+ * Раньше карточка показывала все переходы сразу — пять-шесть равнозначных
+ * кнопок в ряд. На доске это давало стену: карточка вдвое выше нужного, а
+ * повар в спешке читал четыре похожие надписи вместо того, чтобы нажать
+ * очевидную. На телефоне доска становилась почти нечитаемой.
+ *
+ * Главное действие — то, которое сервер поставил ПЕРВЫМ в `next_statuses`
+ * (или «принять», пока заказ не принят). Остальные переходы никуда не делись:
+ * они нужны, когда надо перескочить или вернуть шаг назад, — но это
+ * исправление, а не обычный ход, и его место в меню.
+ *
+ * Список переходов по-прежнему целиком с сервера: клиент не знает правил и не
+ * переводит названия статусов.
  */
 export function OrderActions({
   order,
@@ -30,12 +46,25 @@ export function OrderActions({
   size = 'medium',
 }: OrderActionsProps) {
   const { t } = useTranslation();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const canAccept = !order.accepted_at && !order.status.is_terminal;
 
   if (!canAccept && !order.next_statuses.length && !order.can_cancel) return null;
 
+  // Пока заказ не принят, главное — принять его; дальше главным становится
+  // следующий шаг потока. Всё, что осталось, уходит в меню.
+  const [primaryStatus, ...restStatuses] = canAccept ? [] : order.next_statuses;
+  const overflow = canAccept ? order.next_statuses : restStatuses;
+  const hasOverflow = overflow.length > 0 || order.can_cancel;
+
+  const close = () => setAnchor(null);
+  const pick = (code: string) => {
+    close();
+    onStatus(code);
+  };
+
   return (
-    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+    <Stack direction="row" spacing={1} alignItems="center" useFlexGap>
       {canAccept ? (
         <Button
           variant="contained"
@@ -50,35 +79,56 @@ export function OrderActions({
         </Button>
       ) : null}
 
-      {/* The natural next step is the loud one; the rest stay quiet, so a cook
-          in a hurry does not have to read four identical green buttons. */}
-      {order.next_statuses.map((next, index) => (
+      {primaryStatus ? (
         <Button
-          key={next.code}
-          variant={!canAccept && index === 0 ? 'contained' : 'outlined'}
+          variant="contained"
           size={size}
-          color={statusSlot(next.color_token)}
+          color={statusSlot(primaryStatus.color_token)}
           disabled={busy}
-          onClick={() => onStatus(next.code)}
-          data-testid={`tracker-status-${order.number}-${next.code}`}
+          onClick={() => onStatus(primaryStatus.code)}
+          data-testid={`tracker-status-${order.number}-${primaryStatus.code}`}
           sx={{ minHeight: 44, flexGrow: 1 }}
         >
-          {next.title}
+          {primaryStatus.title}
         </Button>
-      ))}
+      ) : null}
 
-      {order.can_cancel ? (
-        <Button
-          variant="text"
-          size={size}
-          color="error"
-          disabled={busy}
-          onClick={onCancel}
-          data-testid={`tracker-cancel-${order.number}`}
-          sx={{ minHeight: 44 }}
-        >
-          {t('tracker.actions.cancel')}
-        </Button>
+      {hasOverflow ? (
+        <>
+          <IconButton
+            size={size}
+            disabled={busy}
+            onClick={(event) => setAnchor(event.currentTarget)}
+            data-testid={`tracker-more-${order.number}`}
+            aria-label={t('tracker.actions.more')}
+            sx={{ minHeight: 44, minWidth: 44, flex: 'none' }}
+          >
+            <MoreVertIcon fontSize="small" />
+          </IconButton>
+          <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={close}>
+            {overflow.map((next) => (
+              <MenuItem
+                key={next.code}
+                onClick={() => pick(next.code)}
+                data-testid={`tracker-status-${order.number}-${next.code}`}
+              >
+                {next.title}
+              </MenuItem>
+            ))}
+            {order.can_cancel ? (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  onCancel();
+                }}
+                data-testid={`tracker-cancel-${order.number}`}
+                sx={{ color: 'error.main' }}
+              >
+                {t('tracker.actions.cancel')}
+              </MenuItem>
+            ) : null}
+          </Menu>
+        </>
       ) : null}
     </Stack>
   );

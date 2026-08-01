@@ -647,7 +647,8 @@
     },
     "actions": {
       "accept": "接单",
-      "cancel": "取消"
+      "cancel": "取消",
+      "more": "更多操作"
     },
     "detail": {
       "where": "送达",

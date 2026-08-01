@@ -649,7 +649,8 @@
     },
     "actions": {
       "accept": "Accept",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "more": "More actions"
     },
     "detail": {
       "where": "Where",

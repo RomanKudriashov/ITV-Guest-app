@@ -11,6 +11,7 @@ import {
   loginToTracker,
   MAID,
   RESTAURANT_MANAGER,
+  moveOrderTo,
   openCart,
 } from './helpers'
 
@@ -70,12 +71,12 @@ test.describe('Типизированные трекеры', () => {
         timeout: 15_000,
       })
 
-      await staff.getByTestId(`tracker-status-${number}-preparing`).click()
+      await moveOrderTo(staff, number, 'preparing')
       await expect(staff.getByTestId(`tracker-order-${number}`)).toContainText(/Готовится/i, {
         timeout: 15_000,
       })
 
-      await staff.getByTestId(`tracker-status-${number}-done`).click()
+      await moveOrderTo(staff, number, 'done')
       // Завершённая карточка уходит с активной доски — это и есть «доставлено».
       await expect(staff.getByTestId(`tracker-order-${number}`)).toBeHidden({ timeout: 15_000 })
       await expect(board).toBeVisible()
@@ -125,7 +126,7 @@ test.describe('Типизированные трекеры', () => {
       await staff.getByTestId(`tracker-accept-${number}`).click()
       await expect(card).toContainText(/В работе/i, { timeout: 15_000 })
 
-      await staff.getByTestId(`tracker-status-${number}-done`).click()
+      await moveOrderTo(staff, number, 'done')
       await expect(staff.getByTestId(`tracker-order-${number}`)).toBeHidden({ timeout: 15_000 })
     } finally {
       await guestContext.close()
