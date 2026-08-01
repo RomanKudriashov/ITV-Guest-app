@@ -113,8 +113,25 @@ export async function cleanupStand(): Promise<void> {
     for (const id of newCategories) {
       if (tenant) await request.delete(`${API}/api/cms/categories/${id}`, { headers: tenant })
     }
+    // Сервис, через который успел пройти заказ, продукт удалять отказывается —
+    // и правильно: удаление утащило бы историю заказов. Такие выключаем: с
+    // парадной гостя они уходят, история остаётся целой. Молча считать их
+    // убранными нельзя, поэтому счётчики раздельные.
+    let deletedServices = 0
+    let disabledServices = 0
     for (const id of newServices) {
-      if (tenant) await request.delete(`${API}/api/cms/services/${id}`, { headers: tenant })
+      if (!tenant) break
+      const removed = await request.delete(`${API}/api/cms/services/${id}`, { headers: tenant })
+      if (removed.ok()) {
+        deletedServices += 1
+        continue
+      }
+      const disabled = await request.patch(`${API}/api/cms/services/${id}`, {
+        data: { is_active: false, is_guest_facing: false },
+        headers: tenant,
+      })
+      if (disabled.ok()) disabledServices += 1
+      else console.warn(`[стенд] сервис ${id} не убран: ${removed.status()}/${disabled.status()}`)
     }
     for (const id of newHotels) {
       await request.delete(`${API}/api/v1/platform/hotels/${id}`, {
@@ -124,7 +141,8 @@ export async function cleanupStand(): Promise<void> {
     }
 
     console.log(
-      `[стенд] убрано: ${newHotels.length} отелей, ${newServices.length} сервисов, ` +
+      `[стенд] убрано: ${newHotels.length} отелей, ${deletedServices} сервисов удалено` +
+        `${disabledServices ? ` + ${disabledServices} выключено (есть заказы)` : ''}, ` +
         `${newCategories.length} разделов`,
     )
   } finally {
