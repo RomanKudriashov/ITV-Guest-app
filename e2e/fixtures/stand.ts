@@ -27,6 +27,7 @@ export interface StandSnapshot {
   hotelIds: string[]
   serviceIds: string[]
   categoryIds: string[]
+  itemIds: string[]
 }
 
 async function platformToken(request: APIRequestContext): Promise<string> {
@@ -66,13 +67,18 @@ async function readStand(request: APIRequestContext): Promise<StandSnapshot> {
 
   let serviceIds: string[] = []
   let categoryIds: string[] = []
+  let itemIds: string[] = []
   if (tenant) {
     const services = await request.get(`${API}/api/cms/services`, { headers: tenant })
     if (services.ok()) serviceIds = ((await services.json()) as { id: string }[]).map((s) => s.id)
     const categories = await request.get(`${API}/api/cms/categories`, { headers: tenant })
     if (categories.ok()) categoryIds = ((await categories.json()) as { id: string }[]).map((c) => c.id)
+    // Позиции тоже переживали прогон: раздел уборка сносила, а блюдо внутри
+    // него — нет, и оно всплывало в меню заведения.
+    const items = await request.get(`${API}/api/cms/items`, { headers: tenant })
+    if (items.ok()) itemIds = ((await items.json()) as { id: string }[]).map((i) => i.id)
   }
-  return { hotelIds, serviceIds, categoryIds }
+  return { hotelIds, serviceIds, categoryIds, itemIds }
 }
 
 export async function snapshotStand(): Promise<void> {
@@ -108,6 +114,15 @@ export async function cleanupStand(): Promise<void> {
     const newHotels = after.hotelIds.filter((id) => !before.hotelIds.includes(id))
     const newServices = after.serviceIds.filter((id) => !before.serviceIds.includes(id))
     const newCategories = after.categoryIds.filter((id) => !before.categoryIds.includes(id))
+    const newItems = after.itemIds.filter((id) => !before.itemIds.includes(id))
+
+    // Позиции удаляем ДО разделов: раздел с позициями удалить нельзя.
+    let deletedItems = 0
+    for (const id of newItems) {
+      if (!tenant) break
+      const removed = await request.delete(`${API}/api/cms/items/${id}`, { headers: tenant })
+      if (removed.ok()) deletedItems += 1
+    }
 
     // Разделы удаляем ПЕРВЫМИ: они ссылаются на сервисы.
     for (const id of newCategories) {
@@ -140,10 +155,16 @@ export async function cleanupStand(): Promise<void> {
       })
     }
 
+    // Переписку убрать через API нечем, и это правильно: удаление сообщений
+    // гостя было бы модерацией, которой в продукте нет и заводить её ради
+    // тестов нельзя. Поэтому чат чистит команда стенда — инструмент разработки,
+    // а не возможность продукта. Нет докера под рукой — молча пропускаем.
+    const chat = await cleanChatResidue()
+
     console.log(
       `[стенд] убрано: ${newHotels.length} отелей, ${deletedServices} сервисов удалено` +
         `${disabledServices ? ` + ${disabledServices} выключено (есть заказы)` : ''}, ` +
-        `${newCategories.length} разделов`,
+        `${newCategories.length} разделов, ${deletedItems} позиций${chat}`,
     )
   } finally {
     await request.dispose()
@@ -159,4 +180,25 @@ async function subdomainOf(
     headers: { Authorization: `Bearer ${token}` },
   })
   return resp.ok() ? (await resp.json()).subdomain : ''
+}
+
+
+/**
+ * Остатки переписки убираем командой бэкенда: API продукта удалять сообщения
+ * гостя не умеет — и не должен.
+ */
+async function cleanChatResidue(): Promise<string> {
+  const { execFile } = await import('node:child_process')
+  const { promisify } = await import('node:util')
+  const run = promisify(execFile)
+  try {
+    const { stdout } = await run('docker', [
+      'compose', 'exec', '-T', 'backend',
+      'python', 'manage.py', 'clean_test_residue', '--apply',
+    ], { cwd: process.cwd() + '/..', timeout: 60_000 })
+    const line = stdout.trim().split('\n').pop() ?? ''
+    return line.includes('сообщений') ? `, чат: ${line.split('сообщений')[1].trim()}` : ''
+  } catch {
+    return ''
+  }
 }
