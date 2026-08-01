@@ -44,6 +44,16 @@ def patch_brand(request: HttpRequest, payload: BrandPatch):
     return svc.serialize_brand(theme)
 
 
+@router.put("/brand", response=BrandOut, summary="Заменить набор токенов целиком")
+def put_brand(request: HttpRequest, payload: BrandPatch):
+    """
+    PATCH правит, PUT заменяет. Разница принципиальна для ВОЗВРАТА состояния:
+    deep-merge не умеет убрать ключ, а значит не умеет откатить.
+    """
+    theme = svc.replace_brand(payload.tokens or {})
+    return svc.serialize_brand(theme)
+
+
 @router.get("/brand/presets", summary="Библиотека пресетов")
 def presets(request: HttpRequest):
     return {"presets": list_presets()}

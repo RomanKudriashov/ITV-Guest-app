@@ -22,13 +22,38 @@ async function openBrand(page: Page): Promise<void> {
 }
 
 test.describe('Бренд-настройки', () => {
-  // Тесты правят общую тему демо-отеля — гоняем по одному и восстанавливаем.
-  test.afterEach(async ({ request }) => {
+  /**
+   * Тесты правят общую тему демо-отеля, поэтому её нужно ВЕРНУТЬ — именно ту,
+   * что была, а не «какую-нибудь».
+   *
+   * Раньше здесь применялся пресет `evening_concierge`. Это не восстановление,
+   * а подмена: каждый прогон уносил обложку отеля (пресет несёт свой фон) и
+   * менял заголовочную гарнитуру на другую. Дрейф был необратимым — сид
+   * досевает обложку только с `--force`.
+   *
+   * Теперь снимаем СНИМОК настоящих токенов до теста и кладём его обратно
+   * целиком через PUT: PATCH тут не годится, он deep-merge и не умеет убрать
+   * ключ, появившийся во время теста (загруженную подложку, например).
+   */
+  let snapshot: unknown = null
+
+  test.beforeEach(async ({ request }) => {
     const token = await apiToken(request)
-    await request.post('http://localhost:8010/api/cms/brand/apply-preset', {
-      data: { preset: 'evening_concierge' },
+    const resp = await request.get('http://localhost:8010/api/cms/brand', {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
+    expect(resp.ok(), await resp.text()).toBeTruthy()
+    snapshot = (await resp.json()).tokens
+  })
+
+  test.afterEach(async ({ request }) => {
+    if (!snapshot) return
+    const token = await apiToken(request)
+    const restored = await request.put('http://localhost:8010/api/cms/brand', {
+      data: { tokens: snapshot },
+      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+    expect(restored.ok(), `бренд не восстановлен: ${await restored.text()}`).toBeTruthy()
   })
 
   test('сменил пресет → сохранил → витрина отражает', async ({ page, request }) => {

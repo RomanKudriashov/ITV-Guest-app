@@ -186,6 +186,37 @@ def update_brand(patch_tokens: dict) -> BrandTheme:
     return theme
 
 
+def replace_brand(tokens: dict) -> BrandTheme:
+    """
+    Замена набора токенов ЦЕЛИКОМ на присланный.
+
+    Зачем отдельно от PATCH: PATCH — это deep-merge, он умеет добавить и
+    переписать ключ, но не умеет его УБРАТЬ. Значит им нельзя вернуть бренд в
+    прежнее состояние: снятый снимок наложится поверх, а всё лишнее, что
+    появилось после снимка (загруженная подложка, добавленный шрифт), останется.
+    Ровно на этом автотест бренда необратимо портил демо-отель.
+
+    С моделью пресетов не конфликтует и её не подменяет: `apply_preset` —
+    «начать с чистого набора из библиотеки», а здесь — «поставить ровно эти
+    токены». Логотипы, как и при пресете, сохраняются: они принадлежат отелю,
+    а не набору цветов.
+    """
+    require_hotel_admin()
+    validate_tokens_patch(tokens or {})
+
+    theme = get_or_create_brand()
+    existing_brand = (theme.tokens or {}).get("brand", {})
+    next_tokens = dict(tokens or {})
+    brand_section = dict(next_tokens.get("brand") or {})
+    brand_section.setdefault("logoLight", existing_brand.get("logoLight", ""))
+    brand_section.setdefault("logoDark", existing_brand.get("logoDark", ""))
+    next_tokens["brand"] = brand_section
+
+    theme.tokens = next_tokens
+    theme.save(update_fields=["tokens", "updated_at"])
+    return theme
+
+
 def apply_preset(code: str) -> BrandTheme:
     """
     Замена токенов целиком набором пресета. Отдельно от PATCH намеренно: смысл

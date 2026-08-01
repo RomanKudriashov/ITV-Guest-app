@@ -111,3 +111,52 @@ def test_background_image_upload_reaches_guest(cms, crystal):
         HTTP_HOST=host_for(crystal),
     )
     assert response.json()["hotel"]["cover_image"] == url
+
+
+# --- Возврат состояния -----------------------------------------------------
+
+
+def test_put_replaces_tokens_wholesale_unlike_patch(cms, crystal):
+    """
+    PUT обязан УБИРАТЬ ключи, которых нет в присланном наборе, — иначе им нельзя
+    откатить бренд. Именно на этом автотест бренда необратимо портил демо-отель:
+    «восстановление» делалось PATCH-подобной операцией и оставляло за собой
+    подложку и чужую гарнитуру.
+    """
+    # Базу задаём явно: у сидового отеля уже есть обложка, и на ней разницы
+    # между merge и replace не увидеть — оба вернут её обратно.
+    clean = cms.get("/api/cms/brand").json()["tokens"]
+    clean = {
+        **clean,
+        "brand": {**clean["brand"], "background": {"kind": "gradient", "dim": 0.0}},
+    }
+    before = cms.put("/api/cms/brand", {"tokens": clean}).json()["tokens"]
+    assert "imageUrl" not in before["brand"]["background"]
+
+    # Тест «пачкает» бренд: добавляет ключ, которого в снимке не было.
+    cms.patch(
+        "/api/cms/brand",
+        {"tokens": {"brand": {"background": {"kind": "image", "imageUrl": "http://x/y.webp"}}}},
+    )
+    dirty = cms.get("/api/cms/brand").json()["tokens"]
+    assert dirty["brand"]["background"]["imageUrl"] == "http://x/y.webp"
+
+    # PATCH снимком НЕ вернул бы состояние: deep-merge оставит imageUrl.
+    merged = cms.patch("/api/cms/brand", {"tokens": before}).json()["tokens"]
+    assert merged["brand"]["background"].get("imageUrl") == "http://x/y.webp"
+
+    # PUT — возвращает ровно снимок.
+    restored = cms.put("/api/cms/brand", {"tokens": before}).json()["tokens"]
+    assert restored["brand"]["background"].get("imageUrl", "") in ("", None)
+    assert restored["preset"] == before["preset"]
+    assert restored["typography"]["headingFontFamily"] == before["typography"]["headingFontFamily"]
+
+
+def test_put_keeps_logos_that_do_not_belong_to_a_colour_set(cms, crystal):
+    """Логотип принадлежит отелю, а не набору цветов, и заменой не теряется."""
+    cms.patch("/api/cms/brand", {"tokens": {"brand": {"logoDark": "http://x/logo.svg"}}})
+    snapshot = cms.get("/api/cms/brand").json()["tokens"]
+    stripped = {**snapshot, "brand": {k: v for k, v in snapshot["brand"].items() if k != "logoDark"}}
+
+    restored = cms.put("/api/cms/brand", {"tokens": stripped}).json()["tokens"]
+    assert restored["brand"]["logoDark"] == "http://x/logo.svg"
