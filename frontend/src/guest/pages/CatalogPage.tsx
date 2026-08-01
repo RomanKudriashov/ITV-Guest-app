@@ -31,7 +31,16 @@ import { layout as storefrontLayout } from '../storefrontTokens';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
 
-const HEADER_OFFSET = 0;
+/**
+ * На сколько липкая строка категорий отступает от верха окна.
+ *
+ * На широком экране над ней стоит своя липкая строка витрины, и без этого
+ * отступа категории «прилипали» под неё — то есть уезжали из виду, хотя
+ * технически оставались приклеенными. На телефоне верхней строки нет, и
+ * отступ равен нулю.
+ */
+const HEADER_OFFSET_WIDE = storefrontLayout.topBar;
+const HEADER_OFFSET_NARROW = 0;
 const TABS_HEIGHT = 48;
 
 export interface CatalogPageProps {
@@ -59,6 +68,9 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const isDesktopShell = useMediaQuery('(min-width:1024px)');
+  // Отступ липкой строки категорий зависит от того, есть ли над ней
+  // верхняя строка витрины — она появляется на той же ширине, что и шелл.
+  const headerOffset = isDesktopShell ? HEADER_OFFSET_WIDE : HEADER_OFFSET_NARROW;
   const { format, formatOptional } = useMoney();
   const { tokens, mode } = useAppTheme();
   const { session, hotel } = useGuestSession();
@@ -93,7 +105,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
     if (!categories.length) return;
     const onScroll = () => {
       if (suppressSpy.current) return;
-      const line = HEADER_OFFSET + TABS_HEIGHT + 8;
+      const line = headerOffset + TABS_HEIGHT + 8;
       let current = categories[0].code;
       for (const category of categories) {
         const node = sectionRefs.current[category.code];
@@ -105,19 +117,19 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [categories]);
+  }, [categories, headerOffset]);
 
   const scrollToCategory = useCallback((code: string) => {
     const node = sectionRefs.current[code];
     if (!node) return;
     suppressSpy.current = true;
     setActiveCategory(code);
-    const top = node.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET - TABS_HEIGHT;
+    const top = node.getBoundingClientRect().top + window.scrollY - headerOffset - TABS_HEIGHT;
     window.scrollTo({ top, behavior: 'smooth' });
     window.setTimeout(() => {
       suppressSpy.current = false;
     }, 600);
-  }, []);
+  }, [headerOffset]);
 
   const openItem = (item: MenuItem) => {
     setSearchParams({ item: item.id }, { replace: false });
@@ -208,7 +220,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
       <Box
         sx={{
           position: 'sticky',
-          top: HEADER_OFFSET,
+          top: headerOffset,
           zIndex: (theme) => theme.zIndex.appBar - 1,
           bgcolor: 'background.default',
           borderBottom: 1,

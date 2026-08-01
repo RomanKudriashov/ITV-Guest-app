@@ -130,7 +130,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
               (amber «contains») and markers (green «suitable»). Prep-time chip
               stays. Flags no longer render here — markers/characteristics/badges
               replace them; the catalog list card keeps its flag chips. */}
-          <NutritionBlock nutrition={item.nutrition} />
+          <NutritionBlock nutrition={item.nutrition} description={item.description} />
           <CharacteristicsBlock characteristics={item.characteristics} />
           <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" alignItems="center">
             <PrepMinutesChip minutes={item.prep_minutes} />

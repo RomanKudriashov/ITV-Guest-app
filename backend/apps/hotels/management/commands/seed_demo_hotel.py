@@ -1481,7 +1481,10 @@ class Command(BaseCommand):
                 "fat": 4 + (seed >> 3) % 28,
                 "carbs": 5 + (seed >> 6) % 40,
                 "portion": 180 + (seed >> 9) % 160,  # граммы — в строку КБЖУ
-                "composition": item.description or {"ru": ""},
+                # Состав НЕ копируем из описания: в карточке они стоят рядом, и
+                # гость читал одну и ту же строку дважды. Пусто честнее копии —
+                # настоящий состав отель заполняет сам в CMS.
+                "composition": {"ru": ""},
             }
             item.attributes = attrs
             item.save(update_fields=["attributes", "updated_at"])

@@ -138,7 +138,14 @@ export function CharacteristicsBlock({ characteristics }: { characteristics?: It
  * when it is filled in. It never branches on the offering type: a service or a
  * booking with a `nutrition` block would render the very same way.
  */
-export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutrition'] }) {
+export function NutritionBlock({
+  nutrition,
+  description,
+}: {
+  nutrition?: ItemDetail['nutrition'];
+  /** Описание позиции — чтобы не печатать состав, если это тот же текст. */
+  description?: string | null;
+}) {
   const { t } = useTranslation();
   if (!nutrition) return null;
 
@@ -156,7 +163,12 @@ export function NutritionBlock({ nutrition }: { nutrition?: ItemDetail['nutritio
   if (nutrition.portion != null)
     macros.push({ label: t('guest.item.gram'), value: nutrition.portion, lead: t('guest.item.portion') });
 
-  const composition = nutrition.composition?.trim();
+  // Состав и описание часто оказываются одним текстом (в сиде так и было —
+  // состав копировался из описания). Гостю незачем читать одну строку дважды:
+  // если они совпадают, состав не показываем — описание уже сказало это выше.
+  const rawComposition = nutrition.composition?.trim();
+  const composition =
+    rawComposition && rawComposition !== (description ?? '').trim() ? rawComposition : undefined;
   if (!macros.length && !composition) return null;
 
   return (
