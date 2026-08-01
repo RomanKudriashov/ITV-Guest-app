@@ -69,19 +69,27 @@ def test_showcase_default_has_venue_service_info_tiles(client, crystal, guest_to
 
 
 def test_showcase_venues_separate_at_or_below_threshold(client, crystal, guest_token):
-    # crystal по умолчанию: 1 ресторан (kitchen). Добавим ещё 2 → всего 3 = порог.
+    # crystal по умолчанию: ДВА заведения группы «Рестораны» — кухня и бар.
+    # Бар попал в группу не случайно: витрина держит еду и напитки вместе
+    # (SERVICE_TYPE_GROUP), а собственная карта у бара появилась вместе с
+    # чисткой демо-данных — до этого он был пуст и на витрину не выходил.
+    # Добавим ещё один → всего 3 = порог.
     with tenant_context(crystal):
         _add_restaurant(crystal, "panorama")
-        _add_restaurant(crystal, "asia")
     home = _home(client, crystal, guest_token)
-    restaurant_venues = [t for t in home["tiles"] if t["type"] == "venue" and t["kind"] == "kitchen"]
+    # Считаем ГРУППУ, а не один вид: в «Рестораны» входят и кухня, и бар, и
+    # рум-сервис. Фильтр по `kind == "kitchen"` пропускал бы бар и отвечал бы
+    # не на тот вопрос — «сколько кухонь», а не «свернулась ли группа».
+    restaurant_venues = [
+        t for t in home["tiles"] if t["type"] == "venue" and t["kind"] in {"kitchen", "bar"}
+    ]
     assert len(restaurant_venues) == 3
     # Свёрнутой плитки-категории ресторанов нет.
     assert not any(t["type"] == "service-category" and t["key"] == "restaurants" for t in home["tiles"])
 
 
 def test_showcase_groups_restaurants_over_threshold(client, crystal, guest_token):
-    # 1 (kitchen) + 4 = 5 ресторанов > порога 3 → одна плитка-категория.
+    # 2 (кухня и бар) + 4 = 6 заведений группы > порога 3 → одна плитка-категория.
     with tenant_context(crystal):
         for code in ("panorama", "asia", "grill", "lounge"):
             _add_restaurant(crystal, code)
@@ -89,7 +97,7 @@ def test_showcase_groups_restaurants_over_threshold(client, crystal, guest_token
     grouped = [t for t in home["tiles"] if t["type"] == "service-category" and t["key"] == "restaurants"]
     assert len(grouped) == 1
     tile = grouped[0]
-    assert tile["venue_count"] == 5
+    assert tile["venue_count"] == 6
     assert tile["route"] == "/category/restaurants"
     # Отдельных venue-плиток ресторанов больше нет.
     assert not any(t["type"] == "venue" and t["kind"] == "kitchen" for t in home["tiles"])
@@ -97,7 +105,7 @@ def test_showcase_groups_restaurants_over_threshold(client, crystal, guest_token
 
 def test_showcase_threshold_setting_changes_grouping(client, crystal, guest_token):
     with tenant_context(crystal):
-        _add_restaurant(crystal, "panorama")  # теперь 2 ресторана
+        _add_restaurant(crystal, "panorama")  # теперь 3: кухня, бар, «Панорама»
         crystal.showcase_group_threshold = 1
         crystal.save(update_fields=["showcase_group_threshold"])
     home = _home(client, crystal, guest_token)
