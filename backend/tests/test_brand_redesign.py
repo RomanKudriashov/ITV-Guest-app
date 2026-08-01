@@ -99,3 +99,15 @@ def test_background_image_upload_reaches_guest(cms, crystal):
     guest_bg = _guest_theme(cms.client, crystal)["brand"]["background"]
     assert guest_bg["imageUrl"] == url
     assert guest_bg["dim"] == 0.4
+
+    # Отдельным полем — тоже. Проверяем именно HTTP-ответ, а не сериализатор:
+    # схема ответа выбрасывает всё, чего в ней не объявлено, и обложка однажды
+    # уже пропала так — сервер её отдавал, гость не получал, и тест на
+    # `theme` (сквозной словарь) этого не замечал.
+    response = cms.client.post(
+        "/api/guest/session",
+        data={"room_number": "305"},
+        content_type="application/json",
+        HTTP_HOST=host_for(crystal),
+    )
+    assert response.json()["hotel"]["cover_image"] == url

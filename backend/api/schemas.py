@@ -32,6 +32,10 @@ class HotelOut(Schema):
     default_language: str
     languages: list[dict[str, Any]]
     theme: dict[str, Any]
+    # Обложка отеля для парадной главной (R5). Поле обязано быть В СХЕМЕ:
+    # ninja отдаёт ровно то, что она описывает, и не объявленный ключ он
+    # выбрасывает молча — сервер отдавал обложку, а гость её не получал.
+    cover_image: str | None = None
 
 
 class GuestSessionOut(Schema):
