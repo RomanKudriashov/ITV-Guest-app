@@ -105,3 +105,37 @@ def test_manifest_names_its_authors():
     for code in seed_photos.PHOTOS:
         assert seed_photos.attribution(code).endswith("Unsplash"), code
         assert seed_photos.alt_text(code), code
+
+
+def test_cache_file_name_carries_the_photo_id(crystal):
+    """
+    Имя файла кэша обязано содержать идентификатор снимка.
+
+    Иначе манифест и кэш расходятся МОЛЧА: заменили в манифесте неудачную
+    фотографию, а на диске лежит прежний файл под тем же именем — и сид
+    продолжает ставить старую. Ровно так «Такси» оставалось складом, хотя
+    в манифесте уже стоял автомобиль.
+    """
+    from apps.media import seed_photos
+
+    for code, entry in list(seed_photos.PHOTOS.items())[:5]:
+        assert entry[0] in seed_photos.cached_path(code).name, code
+
+
+def test_bar_has_its_own_menu(crystal):
+    """
+    «Лобби-бар» стоит на парадной с подписью «Коктейли и вино», и его меню не
+    должно быть пустым: заведение без содержимого — дыра, которую гость
+    встречает первым же тапом. До этого всё, что там показывалось, приносили
+    автотесты.
+    """
+    from apps.catalog.models import Category, Item
+    from apps.core.context import tenant_context
+
+    with tenant_context(crystal):
+        category = Category.objects.filter(code="bar-cocktails").first()
+        assert category is not None, "у бара нет своей категории"
+        items = list(Item.objects.filter(category=category, is_active=True))
+        assert len(items) >= 3
+        for item in items:
+            assert item.images.exists(), f"{item.code} без снимка"

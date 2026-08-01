@@ -58,11 +58,12 @@ PHOTOS: dict[str, tuple[str, str, str]] = {
     "negroni": ("1551024709-8f23befc6f87", "Adam Jaime", "Коктейль «Негрони»"),
     "mojito": ("1551538827-9c037cb4f32a", "Kobby Mendez", "Мохито"),
     "aperol": ("1560512823-829485b8bf24", "Sylvie Tittel", "Апероль-шприц"),
+    "mojito-zero": ("1513558161293-cdaf765ed2fd", "Kobby Mendez", "Мохито без алкоголя"),
     "wine-red": ("1510812431401-41d2bd2722f3", "Kelsey Knight", "Красное вино"),
     "wine-white": ("1553361371-9b22f78e8b1d", "Kym Ellis", "Белое вино"),
     # --- Услуги ---
     "massage": ("1544161515-4ab6ce6db874", "Toa Heftiba", "Массаж"),
-    "taxi": ("1549194388-f61be84a6e9e", "Ambitious Studio", "Трансфер"),
+    "taxi": ("1502877338535-766e1452684a", "Vlad B", "Трансфер"),
     "cleaning": ("1581578731548-c64695cc6952", "No Revisions", "Уборка номера"),
     "wifi": ("1563986768609-322da13575f3", "Bernard Hermant", "Wi-Fi"),
     "about": ("1566073771259-6a8506099945", "Marten Bjork", "Об отеле"),
@@ -74,7 +75,7 @@ PHOTOS: dict[str, tuple[str, str, str]] = {
     "drinks": ("1514362545857-3bc16c4c7d1b", "Kelsey Chance", "Напитки"),
     "transfer": ("1502877338535-766e1452684a", "why kei", "Трансфер"),
     "housekeeping": ("1584622650111-993a426fbf0a", "Anthony Tran", "Уборка"),
-    "info": ("1551632436-cbf8dd35adfa", "Sander Crombach", "Информация"),
+    "info": ("1564501049412-61c2a3083791", "Manuel Moreno", "Об отеле"),
     "spa": ("1600334089648-b0d9d3028eb2", "Antonika Chanel", "СПА и массаж"),
     "bar-drinks": ("1470337458703-46ad1756a187", "Adam Jaime", "Барная карта"),
     "terrace-starters": ("1476224203421-9ac39bcb3327", "Brooke Lark", "Закуски"),
@@ -102,7 +103,17 @@ def photo_url(photo_id: str) -> str:
 
 
 def cached_path(code: str) -> pathlib.Path:
-    return CACHE_DIR / f"{code}.jpg"
+    """
+    Путь кэша включает ИДЕНТИФИКАТОР снимка, а не только код.
+
+    Иначе кэш и манифест расходятся молча: подменили в манифесте неудачный
+    снимок — а на диске лежит старый файл под тем же именем, и сид продолжает
+    ставить прежнюю картинку. Ровно так «Такси» много релизов оставалось
+    складом: id в манифесте правился, кэш — нет.
+    """
+    entry = PHOTOS.get(code)
+    suffix = f"-{entry[0]}" if entry else ""
+    return CACHE_DIR / f"{code}{suffix}.jpg"
 
 
 def fetch(code: str, *, force: bool = False, timeout: int = 30) -> bytes | None:

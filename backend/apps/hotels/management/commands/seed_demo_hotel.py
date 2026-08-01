@@ -218,6 +218,7 @@ class Command(BaseCommand):
             self._seed_slot_resources(points, schedules)
             if with_rich:
                 self._seed_rich_catalog(hotel, points, locations, schedules)
+            self._seed_bar_menu(points)
             self._link_categories_to_services()
             self._seed_venue_covers()
             self._ensure_item_photos()
@@ -719,6 +720,59 @@ class Command(BaseCommand):
                      {"ru": "Например: не трогать вещи на столе"}, None, None, []),
                 ],
             )
+
+    def _seed_bar_menu(self, points: dict[str, ExecutionPoint]):
+        """
+        Своя карта бару.
+
+        До этого «Лобби-бар» стоял на парадной с подписью «Коктейли и вино» и
+        ПУСТЫМ меню: напитки принадлежали ресторану, а всё, что гость видел в
+        баре, приносили автотесты. Заведение без содержимого — дыра, которую
+        гость встречает первым же тапом.
+        """
+        bar_point = points.get("bar")
+        if bar_point is None:
+            return
+
+        category, _ = Category.objects.get_or_create(
+            code="bar-cocktails",
+            defaults={
+                "type": OfferingType.PRODUCT,
+                "title": {"ru": "Коктейли", "en": "Cocktails"},
+                "sort_order": 0,
+                "image": self._image_for("bar-drinks", "Барная карта"),
+            },
+        )
+        Route.objects.get_or_create(
+            category=category, execution_point=bar_point, defaults={"priority": 0}
+        )
+
+        for order, (code, ru, en, price, desc) in enumerate(
+            [
+                ("negroni", "Негрони", "Negroni", 78000,
+                 {"ru": "Джин, кампари, красный вермут", "en": "Gin, Campari, sweet vermouth"}),
+                ("aperol", "Апероль-шприц", "Aperol spritz", 69000,
+                 {"ru": "Апероль, просекко, содовая", "en": "Aperol, prosecco, soda"}),
+                ("mojito-zero", "Мохито без алкоголя", "Zero-proof mojito", 52000,
+                 {"ru": "Лайм, мята, содовая", "en": "Lime, mint, soda"}),
+            ]
+        ):
+            item, created = Item.objects.get_or_create(
+                code=code,
+                defaults={
+                    "category": category,
+                    "type": OfferingType.PRODUCT,
+                    "title": {"ru": ru, "en": en},
+                    "description": desc,
+                    "price": price,
+                    "sort_order": order,
+                },
+            )
+            if created or not item.images.exists():
+                # У каждой позиции свой снимок из манифеста: `_attach_image`
+                # ищет ключ по КОДУ позиции, и «одолжить» чужой кадр здесь
+                # нельзя — да и не нужно, у каждого напитка он свой.
+                self._attach_image(item, category.code, ru)
 
     def _link_categories_to_services(self):
         """
