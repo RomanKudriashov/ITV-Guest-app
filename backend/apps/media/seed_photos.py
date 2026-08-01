@@ -89,7 +89,7 @@ PHOTOS: dict[str, tuple[str, str, str]] = {
     "venue-kitchen": ("1414235077428-338989a2e8c0", "Jason Leung", "Ресторан «Панорама»"),
     "venue-bar": ("1470337458703-46ad1756a187", "Adam Jaime", "Лобби-бар"),
     "venue-spa": ("1540555700478-4be289fbecef", "Roberto Nickson", "СПА"),
-    "venue-concierge": ("1566073771259-6a8506099945", "Marten Bjork", "Консьерж"),
+    "venue-concierge": ("1582719508461-905c673771fd", "Sasha Kaunas", "Консьерж"),
     "venue-housekeeping": ("1631049307264-da0ec9d70304", "Vojtech Bruzek", "Хозслужба"),
     "venue-reception": ("1551882547-ff40c63fe5fa", "Jean-Philippe Delberghe", "Ресепшен"),
     "venue-terrace": ("1533777419517-3e4017e2e15a", "Toa Heftiba", "Терраса"),
