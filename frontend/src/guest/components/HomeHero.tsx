@@ -1,8 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { useTranslation } from 'react-i18next';
 
-import { glass, layout, scrim } from '../storefrontTokens';
+import { layout, scrim } from '../storefrontTokens';
 
 /**
  * Парадная отеля — первый кадр главной.
@@ -17,15 +16,12 @@ import { glass, layout, scrim } from '../storefrontTokens';
 export function HomeHero({
   hotelName,
   greeting,
-  room,
   cover,
 }: {
   hotelName: string;
   greeting: string;
-  room: string | null;
   cover: string | null;
 }) {
-  const { t } = useTranslation();
 
   return (
     <Box
@@ -55,29 +51,6 @@ export function HomeHero({
       {/* Скрим: белый текст поверх произвольного кадра иначе нечитаем. */}
       <Box aria-hidden sx={{ position: 'absolute', inset: 0, background: scrim.hero }} />
 
-      {room ? (
-        <Box
-          data-testid="guest-hero-room"
-          sx={{
-            position: 'absolute',
-            top: 16,
-            left: { xs: 14, md: 34 },
-            display: { xs: 'inline-flex', md: 'none' },
-            alignItems: 'center',
-            gap: 0.9,
-            height: 34,
-            px: 1.75,
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 600,
-            color: '#fff',
-            ...glass.chip,
-          }}
-        >
-          <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' }} />
-          {t('guest.home.room', { room })}
-        </Box>
-      ) : null}
 
       <Box
         sx={{

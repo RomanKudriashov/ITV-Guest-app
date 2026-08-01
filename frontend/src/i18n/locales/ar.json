@@ -608,6 +608,10 @@
       "yours": "تقييمك",
       "commentPlaceholder": "تعليق (اختياري)",
       "starAria": "{{n}} من 5"
+    },
+    "session": {
+      "current": "أنت في الغرفة {{room}}",
+      "leave": "الخروج من الفندق"
     }
   },
   "tracker": {

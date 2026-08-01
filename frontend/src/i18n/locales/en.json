@@ -600,6 +600,10 @@
       "yours": "Your review",
       "commentPlaceholder": "Comment (optional)",
       "starAria": "{{n}} of 5"
+    },
+    "session": {
+      "current": "You are in room {{room}}",
+      "leave": "Leave the hotel"
     }
   },
   "tracker": {

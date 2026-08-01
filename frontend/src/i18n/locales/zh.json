@@ -598,6 +598,10 @@
       "yours": "您的评价",
       "commentPlaceholder": "评论（可选）",
       "starAria": "{{n}} / 5"
+    },
+    "session": {
+      "current": "您在 {{room}} 房",
+      "leave": "退出酒店"
     }
   },
   "tracker": {

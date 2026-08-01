@@ -604,6 +604,10 @@
       "yours": "Ваш отзыв",
       "commentPlaceholder": "Комментарий (необязательно)",
       "starAria": "{{n}} из 5"
+    },
+    "session": {
+      "current": "Вы в номере {{room}}",
+      "leave": "Выйти из отеля"
     }
   },
   "tracker": {

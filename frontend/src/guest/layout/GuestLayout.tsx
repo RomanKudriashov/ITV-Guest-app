@@ -7,7 +7,6 @@ import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +23,7 @@ import {
 } from '@/icons';
 import { fadeInSx } from '@/kit';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
+import { RoomMenu } from '../components/RoomMenu';
 import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
@@ -161,7 +161,7 @@ export function GuestLayout() {
           boxShadow: `0 8px 24px -14px ${alpha('#000', 0.6)}`,
         })}
       >
-        {room ? <RoomChip room={room} /> : null}
+        {room ? <RoomMenu room={room} variant="floating" /> : null}
         <GuestLanguageMenu />
         <ThemeModeToggle />
       </Stack>
@@ -211,44 +211,6 @@ export function GuestLayout() {
           ))}
         </BottomNavigation>
       </Paper>
-    </Box>
-  );
-}
-
-/** Rail header: brand logo (or vector monogram) + hotel wordmark. */
-function RoomChip({ room }: { room: string }) {
-  const { t } = useTranslation();
-  return (
-    <Box
-      data-testid="guest-room-chip"
-      sx={(th) => ({
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.75,
-        alignSelf: 'flex-start',
-        height: 36,
-        px: 1.25,
-        borderRadius: 999,
-        border: `1px solid ${th.palette.divider}`,
-        color: 'text.primary',
-        fontSize: 12.5,
-        fontWeight: 700,
-        whiteSpace: 'nowrap',
-      })}
-    >
-      <Box
-        aria-hidden
-        sx={(th) => ({
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          bgcolor: 'primary.main',
-          boxShadow: `0 0 0 3px ${alpha(th.palette.primary.main, 0.25)}`,
-        })}
-      />
-      <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1 }}>
-        {t('guest.common.roomShort', { room })}
-      </Typography>
     </Box>
   );
 }

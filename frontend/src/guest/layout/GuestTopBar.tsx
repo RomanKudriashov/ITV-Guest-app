@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
+import { RoomMenu } from '../components/RoomMenu';
 import { glass, goldCta, layout } from '../storefrontTokens';
 
 export interface TopBarTab {
@@ -113,27 +114,7 @@ export function GuestTopBar({
       </Box>
 
       <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-        {room ? (
-          <Box
-            data-testid="guest-topbar-room"
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.9,
-              height: 34,
-              px: 1.6,
-              borderRadius: 999,
-              fontSize: 12,
-              fontWeight: 600,
-              color: '#fff',
-              bgcolor: 'rgba(255,255,255,.06)',
-              border: '1px solid rgba(255,255,255,.14)',
-            }}
-          >
-            <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' }} />
-            {t('guest.home.room', { room })}
-          </Box>
-        ) : null}
+        {room ? <RoomMenu room={room} /> : null}
 
         <GuestLanguageMenu />
         <ThemeModeToggle />

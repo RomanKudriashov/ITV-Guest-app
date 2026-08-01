@@ -281,3 +281,29 @@ test.describe('Вход', () => {
     await expect(page.getByTestId('guest-view-only-notice')).toBeVisible()
   })
 })
+
+test.describe('Выход из отеля', () => {
+  test('гость выходит из отеля и попадает на экран входа', async ({ page }) => {
+    await enterAsGuest(page)
+
+    // Чип номера — он же вход в меню сессии. Владелец у него один: до этого
+    // на телефоне чип рисовали и шелл, и шапка героя, и гость видел два.
+    await expect(page.getByTestId('guest-room-chip')).toHaveCount(1)
+    await page.getByTestId('guest-room-chip').click()
+    await page.getByTestId('guest-leave-hotel').click()
+
+    // Экран входа, а не /login: у гостя нет учётки, он представляется номером.
+    await expect(page.getByTestId('guest-room-input')).toBeVisible({ timeout: 15_000 })
+    await expect(page).toHaveURL(/\/$/)
+
+    // Сессия действительно закончилась: возврат на главную снова просит номер.
+    await page.goto('/home')
+    await expect(page.getByTestId('guest-room-input')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('на телефоне чип номера тоже один', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await enterAsGuest(page)
+    await expect(page.getByTestId('guest-room-chip')).toHaveCount(1)
+  })
+})

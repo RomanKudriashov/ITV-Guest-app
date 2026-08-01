@@ -25,7 +25,7 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { session, hotel } = useGuestSession();
+  const { hotel } = useGuestSession();
   const { data, isLoading, error, refetch } = useGuestHome();
 
   // Bento columns by spec §4: 2 (phone) / 3 (tablet) / 4 (desktop).
@@ -34,7 +34,6 @@ export function HomePage() {
   const columns = isDesktop ? 4 : isTablet ? 3 : 2;
 
   const tiles = data?.tiles ?? [];
-  const room = data?.room ?? session?.room ?? null;
   const hotelName = data?.hotel?.name ?? hotel?.name ?? '';
 
   return (
@@ -43,10 +42,14 @@ export function HomePage() {
         Парадная во всю ширину — вне контейнера: кадр отеля обрезанный полями
         перестаёт быть парадной.
       */}
+      {/*
+        Номер комнаты рисует ШЕЛЛ, и только он: до этого чип был и в шапке
+        героя, и в плавающей группе — на телефоне гость видел его дважды.
+        У элемента должен быть один владелец.
+      */}
       <HomeHero
         hotelName={hotelName}
         greeting={t('guest.home.greeting')}
-        room={room}
         cover={hotel?.cover_image ?? null}
       />
 
