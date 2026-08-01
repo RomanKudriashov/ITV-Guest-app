@@ -41,8 +41,12 @@ def aggregator(crystal):
             code="bar-drinks", type="product", title={"ru": "Напитки бара"}, service=bar
         )
         Route.objects.create(category=bar_category, execution_point=bar_point)
+        # Код фикстуры НЕ должен совпадать с кодом сидового блюда: у бара
+        # теперь есть своя карта, и «negroni» там настоящий. Тестовые данные не
+        # занимают имена продуктовых — иначе сид и фикстура дерутся за
+        # уникальность кода, и падает не тот, кто виноват.
         cocktail = Item.objects.create(
-            code="negroni", category=bar_category, type="product",
+            code="negroni-fanout-fixture", category=bar_category, type="product",
             title={"ru": "Негрони"}, price=65000,
         )
 
