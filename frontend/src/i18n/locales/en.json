@@ -1853,5 +1853,70 @@
       "purged": "Data erased: {{count}} records",
       "cancel": "Cancel marking"
     }
+  },
+  "roomControl": {
+    "title": "Room control",
+    "import": {
+      "title": "Import variables",
+      "hint": "Commissioning file with commands and feedback channels. The import creates technical variables only — you build the interface yourself.",
+      "preview": "Parse file",
+      "confirm": "Confirm and save",
+      "reconcile": "Check against hardware",
+      "typesFound": "Types found",
+      "roomsFound": "Rooms found",
+      "variablesFound": "Variables found"
+    },
+    "warning": {
+      "type_unclear": "Room type is ambiguous",
+      "command_without_feedback": "Command without feedback — nothing to confirm it with",
+      "feedback_without_command": "Feedback without a command — read-only parameter",
+      "range_unparsed": "Value range not recognised",
+      "variable_reused": "Variable used twice",
+      "room_without_type": "Rooms with no type",
+      "room_in_two_types": "Room assigned to several types",
+      "type_without_rooms": "Type has no room list",
+      "unexpected_structure": "File structure differs from the expected one"
+    },
+    "reconcile": {
+      "title": "Hardware check",
+      "hint": "Excel is a variable map, not the truth. The check reads the reference room and shows discrepancies.",
+      "ok": "Matches",
+      "missing_on_server": "Absent on hardware",
+      "extra_on_server": "Present on hardware but missing from the file",
+      "device_missing": "Device not found",
+      "not_checked": "Not checked — connector offline",
+      "notBlocking": "The check could not run. You can still save the import."
+    },
+    "builder": {
+      "title": "Interface builder",
+      "zones": "Zones",
+      "addZone": "Add zone",
+      "elements": "Elements",
+      "addElement": "Add element",
+      "bind": "Bind to variable",
+      "hidden": "Hidden — will not be published",
+      "hiddenHint": "This element is not bound to any variable. Guests will not see it.",
+      "deviceTemplate": "Device name template",
+      "deviceOverride": "Device name for this room"
+    },
+    "check": {
+      "title": "Test on a room",
+      "run": "Test",
+      "readOnly": "Read only",
+      "confirmed": "Confirmed by feedback",
+      "no_feedback_channel": "Sent. The channel has no feedback — nothing to confirm",
+      "feedback_dead": "Command accepted, but feedback did not change. This is the stand's state, not a configuration error",
+      "unconfirmed": "Command accepted, state not confirmed",
+      "failed": "Command failed"
+    },
+    "publish": {
+      "title": "Publishing",
+      "publish": "Publish",
+      "rollback": "Roll back",
+      "version": "Version",
+      "current": "Current",
+      "rolledBackFrom": "Rolled back from version {{version}}",
+      "nothingToPublish": "Nothing to publish: no element is bound to a variable"
+    }
   }
 }

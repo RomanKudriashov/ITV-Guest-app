@@ -1851,5 +1851,70 @@
       "purged": "已删除数据：{{count}} 条",
       "cancel": "取消标记"
     }
+  },
+  "roomControl": {
+    "title": "房间控制",
+    "import": {
+      "title": "导入变量",
+      "hint": "调试团队的文件，含命令与反馈通道。导入仅创建技术变量——界面由您自行搭建。",
+      "preview": "解析文件",
+      "confirm": "确认并保存",
+      "reconcile": "与设备核对",
+      "typesFound": "发现房型",
+      "roomsFound": "发现房间",
+      "variablesFound": "发现变量"
+    },
+    "warning": {
+      "type_unclear": "房型识别不明确",
+      "command_without_feedback": "命令无反馈通道——无法确认执行",
+      "feedback_without_command": "仅有反馈无命令——只读参数",
+      "range_unparsed": "取值范围无法识别",
+      "variable_reused": "变量被使用两次",
+      "room_without_type": "房间未指定房型",
+      "room_in_two_types": "房间被分配到多个房型",
+      "type_without_rooms": "该房型没有房间列表",
+      "unexpected_structure": "文件结构与预期不符"
+    },
+    "reconcile": {
+      "title": "设备核对",
+      "hint": "Excel 是变量图纸而非事实。核对会读取样板房并显示差异。",
+      "ok": "一致",
+      "missing_on_server": "设备上不存在",
+      "extra_on_server": "设备上存在但文件中没有",
+      "device_missing": "未找到设备",
+      "not_checked": "未核对——连接器离线",
+      "notBlocking": "核对未能执行。仍可保存导入结果。"
+    },
+    "builder": {
+      "title": "界面搭建",
+      "zones": "区域",
+      "addZone": "添加区域",
+      "elements": "元素",
+      "addElement": "添加元素",
+      "bind": "绑定变量",
+      "hidden": "隐藏——不会发布",
+      "hiddenHint": "该元素未绑定任何变量，客人将看不到它。",
+      "deviceTemplate": "设备名称模板",
+      "deviceOverride": "该房间的设备名称"
+    },
+    "check": {
+      "title": "在房间测试",
+      "run": "测试",
+      "readOnly": "仅读取",
+      "confirmed": "已由反馈确认",
+      "no_feedback_channel": "已发送。该通道无反馈——无需确认",
+      "feedback_dead": "命令已接受，但反馈未变化。这是测试台状态，并非配置错误",
+      "unconfirmed": "命令已接受，状态未确认",
+      "failed": "命令执行失败"
+    },
+    "publish": {
+      "title": "发布",
+      "publish": "发布",
+      "rollback": "回滚",
+      "version": "版本",
+      "current": "当前",
+      "rolledBackFrom": "从版本 {{version}} 回滚",
+      "nothingToPublish": "无内容可发布：没有元素绑定变量"
+    }
   }
 }
