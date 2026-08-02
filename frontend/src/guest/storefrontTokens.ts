@@ -135,8 +135,12 @@ const DARK: StorefrontTokens = {
   mediaFallback: 'linear-gradient(150deg,#1c2b43,#0b1220)',
   openOnMedia: { color: '#9BE7A6', border: 'rgba(121,212,136,.5)' },
   dialogBackdrop: 'rgba(4,9,16,0.62)',
+  // Ровно `.a .scrim` из `login-ac.html`: затемнение идёт СБОКУ, оттуда же,
+  // где стоит форма. Чисто вертикальный скрим оставлял середину кадра почти
+  // открытой — подсказка про QR и «просто посмотреть меню» ложились на
+  // светлую часть фотографии и переставали читаться.
   entryScrim:
-    'linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,.15) 40%, rgba(0,0,0,.62) 100%)',
+    'linear-gradient(90deg,rgba(6,10,17,.9) 0%,rgba(6,10,17,.55) 44%,rgba(6,10,17,.15) 100%),linear-gradient(180deg,rgba(6,10,17,.5),transparent 32%,rgba(6,10,17,.7))',
   tile: {
     fallbackColor: '#0a0f18',
     fallbackGradient: 'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
@@ -209,10 +213,12 @@ const LIGHT: StorefrontTokens = {
   mediaFallback: 'linear-gradient(150deg,#C6D3E4,#9FB2CC)',
   openOnMedia: { color: '#C4F5CD', border: 'rgba(121,212,136,.62)' },
   dialogBackdrop: 'rgba(18,32,47,0.38)',
-  // Экран входа в обеих темах стоит на фотографии отеля, поэтому затемнение
-  // остаётся — лишь мягче, чтобы кадр читался светлее.
+  // Экран входа стоит на фотографии отеля в ОБЕИХ темах, и форма на нём одна
+  // и та же — белая по кадру. Ослаблять затемнение «ради светлой темы» здесь
+  // значит сделать форму нечитаемой: режим интерфейса не меняет того, что под
+  // текстом лежит снимок. Держим тот же скрим, что и в тёмной.
   entryScrim:
-    'linear-gradient(180deg, rgba(0,0,0,.38) 0%, rgba(0,0,0,.10) 40%, rgba(0,0,0,.52) 100%)',
+    'linear-gradient(90deg,rgba(6,10,17,.9) 0%,rgba(6,10,17,.55) 44%,rgba(6,10,17,.15) 100%),linear-gradient(180deg,rgba(6,10,17,.5),transparent 32%,rgba(6,10,17,.7))',
   // Плитка одинакова в обеих темах — см. комментарий у `tile` в типе.
   tile: {
     fallbackColor: '#0a0f18',
