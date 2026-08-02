@@ -1462,7 +1462,8 @@
       "minOrderHint": "低于此值无法下单",
       "freeDelivery": "免配送门槛",
       "freeDeliveryHint": "留空即同酒店"
-    }
+    },
+    "archive_other": "已停用 · {{count}}"
   },
   "inclusions": {
     "explainer": "引入是链接而非复制：源头的修改会立即体现，隐藏某项也不会从其归属方删除。",

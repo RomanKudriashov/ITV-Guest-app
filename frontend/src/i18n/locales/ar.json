@@ -1472,7 +1472,13 @@
       "minOrderHint": "دونه يُمنع إتمام الطلب",
       "freeDelivery": "توصيل مجاني ابتداءً من",
       "freeDeliveryHint": "فارغ — كالفندق"
-    }
+    },
+    "archive_zero": "المعطّلة · {{count}}",
+    "archive_one": "المعطّلة · {{count}}",
+    "archive_two": "المعطّلة · {{count}}",
+    "archive_few": "المعطّلة · {{count}}",
+    "archive_many": "المعطّلة · {{count}}",
+    "archive_other": "المعطّلة · {{count}}"
   },
   "inclusions": {
     "explainer": "التضمين رابط لا نسخة: تعديل المصدر يظهر هنا فوراً، وإخفاء صنف لا يحذفه من مالكه.",

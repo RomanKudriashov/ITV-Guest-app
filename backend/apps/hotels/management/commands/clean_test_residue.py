@@ -15,6 +15,17 @@
 ЧТО НЕ УДАЛЯЕТСЯ НИКОГДА: позиция, на которую ссылается строка заказа. Такая
 позиция — часть истории: удалив её, мы порвём чек, который отель уже отдал
 гостю. Её выключают, и она перестаёт быть видимой гостю, оставаясь в истории.
+
+ЗАВИСШИЕ ЗАКАЗЫ. Каждый прогон E2E оставляет заказы в рабочих статусах: их
+никто не доводит до конца, и они копятся. На доске это выглядит как отказ
+системы — «2515 мин» красным на каждой карточке, — а счётчики колонок растут от
+прогона к прогону. Такие заказы НЕ УДАЛЯЮТСЯ: заказ это история и выручка.
+Они переводятся в терминальный «отменён» своего потока — с доски уходят,
+в истории и аналитике остаются целиком.
+
+Порог намеренно крупный (STALE_HOURS): заказ, открытый дольше суток, — это уже
+не «в работе», а брошенный. Живой заказ, которым занимаются прямо сейчас, под
+правило не попадает, и это главное, что здесь нельзя сломать.
 """
 
 from __future__ import annotations
@@ -31,6 +42,10 @@ from apps.hotels.models import Hotel
 TEST_SUFFIX = re.compile(r"-ms[0-9a-z]{6,}$")
 CHAT_BODY = re.compile(r"^(вопрос|ответ|ещё)-ms[0-9a-z]{6,}$")
 
+# Через сколько часов открытый заказ считается брошенным. Сутки с запасом:
+# смена длится меньше, и ни один живой заказ столько в работе не висит.
+STALE_HOURS = 24
+
 
 class Command(BaseCommand):
     help = "Показать (и по флагу убрать) остатки автотестов в отеле"
@@ -42,11 +57,21 @@ class Command(BaseCommand):
             action="store_true",
             help="Действительно убрать. Без флага — только показать, что нашлось",
         )
+        parser.add_argument(
+            "--stale-hours",
+            type=int,
+            default=STALE_HOURS,
+            help=f"С какого возраста открытый заказ считать брошенным (по умолчанию {STALE_HOURS})",
+        )
 
     def handle(self, *args, **options):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
         from apps.catalog.models import Category, Item
         from apps.chat.models import ChatMessage
-        from apps.orders.models import OrderItem
+        from apps.orders.models import Order, OrderItem, StatusDefinition
 
         hotel = Hotel.objects.filter(subdomain=options["subdomain"]).first()
         if hotel is None:
@@ -59,6 +84,22 @@ class Command(BaseCommand):
             categories = [c for c in Category.objects.all() if TEST_SUFFIX.search(c.code)]
             messages = [m for m in ChatMessage.objects.all() if CHAT_BODY.match((m.body or "").strip())]
 
+            # Заказы, брошенные прогонами: открыты дольше порога. Опознаём по
+            # возрасту и незавершённости, а не по имени — у заказа нет кода, за
+            # который можно зацепиться, и придумывать его ради уборки нельзя.
+            now = timezone.now()
+            cutoff = now - timedelta(hours=options["stale_hours"])
+            stale = [
+                order
+                for order in Order.objects.select_related("status").filter(created_at__lt=cutoff)
+                if not order.status.is_terminal
+                # Бронь на БУДУЩЕЕ брошенной не является, даже если оформлена
+                # давно: спа-слот на следующую неделю заводят заранее, и его
+                # `created_at` стар по определению. Возраст заказа тут не
+                # признак — признак в том, прошло ли назначенное время.
+                and not (order.requested_time and order.requested_time > now)
+            ]
+
             # Позиции делим по одному признаку: есть ли на них заказ.
             keep, drop = [], []
             for item in items:
@@ -66,7 +107,8 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 f"Найдено: позиций {len(items)} (удалить {len(drop)}, выключить {len(keep)} — "
-                f"на них есть заказы), разделов {len(categories)}, сообщений чата {len(messages)}"
+                f"на них есть заказы), разделов {len(categories)}, сообщений чата {len(messages)}, "
+                f"брошенных заказов {len(stale)} (открыты дольше {options['stale_hours']} ч)"
             )
             for item in keep:
                 self.stdout.write(f"  выключить: {item.code}")
@@ -91,10 +133,31 @@ class Command(BaseCommand):
 
             deleted_msgs = ChatMessage.objects.filter(pk__in=[m.pk for m in messages]).delete()
 
+            # Заказ НЕ удаляем: это история и выручка. Переводим в терминальный
+            # «отменён» СВОЕГО потока — статусы у потоков разные, и один общий
+            # код здесь поставил бы заказу чужой статус.
+            cancelled_by_flow: dict[str, StatusDefinition] = {}
+            closed = 0
+            for order in stale:
+                flow = order.status.flow
+                terminal = cancelled_by_flow.get(flow)
+                if terminal is None:
+                    terminal = StatusDefinition.objects.filter(
+                        flow=flow, code="cancelled"
+                    ).first()
+                    if terminal is None:
+                        self.stderr.write(f"У потока «{flow}» нет статуса отмены — пропускаю")
+                        continue
+                    cancelled_by_flow[flow] = terminal
+                order.status = terminal
+                order.save(update_fields=["status", "updated_at"])
+                closed += 1
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Убрано: позиций удалено {deleted_items}, выключено {hidden}; "
                 f"разделов удалено {deleted_cats}, выключено {hidden_cats}; "
-                f"сообщений удалено {deleted_msgs}"
+                f"сообщений удалено {deleted_msgs}; "
+                f"брошенных заказов закрыто {closed}"
             )
         )
