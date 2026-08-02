@@ -46,7 +46,7 @@ export interface ItemSheetProps {
  * side rail beside the scrolling content (branch on the viewport, never the type).
  */
 export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
-  const { dialogBackdrop } = useStorefront();
+  const { dialogBackdrop, glass } = useStorefront();
   const { t } = useTranslation();
   // ≥1024 is the desktop shell (rail, no bottom nav) — the item card there is a
   // centered modal; below it (phone AND tablet) it stays a bottom sheet.
@@ -118,11 +118,16 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
         bgcolor: isDesktop ? 'transparent' : 'background.paper',
       }}
     >
+      {/*
+        Закрытие — стеклянный чип, как в прототипе, а не голая иконка. Кнопка
+        лежит поверх кадра позиции, и без подложки крестик пропадал на светлых
+        снимках ровно там, где он нужен.
+      */}
       <IconButton
         onClick={onClose}
         aria-label={t('guest.common.close')}
         data-testid="guest-item-sheet-close"
-        sx={{ minWidth: 44, minHeight: 44 }}
+        sx={{ minWidth: 44, minHeight: 44, ...glass.chip }}
       >
         <CloseIcon />
       </IconButton>

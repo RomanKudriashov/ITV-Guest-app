@@ -64,6 +64,7 @@ export interface CatalogPageProps {
  * registry rather than from conditions spread over the markup.
  */
 export function CatalogPage({ type, point, embedded = false }: CatalogPageProps) {
+  const { glass } = useStorefront();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -223,9 +224,10 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           position: 'sticky',
           top: headerOffset,
           zIndex: (theme) => theme.zIndex.appBar - 1,
-          bgcolor: 'background.default',
-          borderBottom: 1,
-          borderColor: 'divider',
+          // Липкая строка — накладной слой: под ней продолжается меню, и
+          // глухой фон страницы здесь читался как обрыв. Стекло из словаря,
+          // то же, что у верхней строки.
+          ...glass.bar,
           borderRadius: '26px 26px 0 0',
         }}
       >

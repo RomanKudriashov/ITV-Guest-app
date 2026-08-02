@@ -8,7 +8,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
@@ -30,6 +29,7 @@ import { useCart } from '../state/cart';
 import { CartPage } from '../pages/CartPage';
 import { GuestTopBar } from './GuestTopBar';
 import { layout as storefrontLayout } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 import { BOTTOM_NAV_HEIGHT, CART_WIDTH, CONTENT_MAX, DESKTOP_QUERY } from './constants';
 
 export { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from './constants';
@@ -70,6 +70,7 @@ export function GuestLayout() {
   const location = useLocation();
   const { session, hotel, isReady, isBootstrapping } = useGuestSession();
   const { tokens, mode } = useAppTheme();
+  const { glass } = useStorefront();
   const home = useGuestHome();
   const unreadChat = home.data?.unread_chat ?? 0;
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
@@ -155,9 +156,10 @@ export function GuestLayout() {
           zIndex: th.zIndex.appBar + 2,
           borderRadius: 999,
           px: 0.5,
-          bgcolor: alpha(th.palette.background.paper, 0.55),
-          backdropFilter: 'blur(12px)',
-          border: `1px solid ${th.palette.divider}`,
+          // Плавающая группа и отдельный чип номера рядом были из разных
+          // источников стиля — стеклянная группа и плотный чип. Теперь оба
+          // берут стекло из словаря витрины и выглядят одним слоем.
+          ...glass.chip,
           boxShadow: th.shadows[6],
         })}
       >
@@ -181,8 +183,10 @@ export function GuestLayout() {
           borderTop: 1,
           borderColor: 'divider',
           pb: 'env(safe-area-inset-bottom, 0px)',
-          bgcolor: alpha(th.palette.background.paper, 0.94),
-          backdropFilter: 'blur(10px)',
+          // Прототип держит нижнее меню ЗАМЕТНО прозрачнее (.6 + blur 28), чем
+          // почти глухие .94: под меню должен продолжаться контент, иначе
+          // накладной слой читается как вторая страница.
+          ...glass.sheet,
         })}
       >
         <BottomNavigation

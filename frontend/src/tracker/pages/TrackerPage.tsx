@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMatch, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
-import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -10,7 +9,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import GroupWorkOutlinedIcon from '@mui/icons-material/GroupWorkOutlined';
 import { useTranslation } from 'react-i18next';
 
@@ -275,16 +274,35 @@ export function TrackerPage() {
               value={column.code}
               data-testid={`tracker-tab-${column.code}`}
               sx={{ minHeight: 48 }}
+              /*
+                Счётчик стоит В СТРОКЕ с названием, а не значком поверх него.
+                Значок висел на `right: -12`, то есть ЗА границей вкладки, и на
+                телефоне его срезало вместе с числом: «4|5» вместо «4» и «5» —
+                повар видел обрубок и не понимал, сколько заказов в колонке.
+                Строка ужимается вместе с вкладкой и обрезаться не может.
+              */
               label={
-                <Badge
-                  color="primary"
-                  badgeContent={column.orders.length}
-                  sx={{ '& .MuiBadge-badge': { right: -12, top: 2 } }}
+                <Box
+                  component="span"
+                  sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}
                 >
-                  <Box component="span" sx={{ pr: 1.5 }}>
-                    {column.title}
+                  {column.title}
+                  <Box
+                    component="span"
+                    sx={(th) => ({
+                      minWidth: 20,
+                      px: 0.6,
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      lineHeight: '18px',
+                      bgcolor: alpha(th.palette.primary.main, 0.16),
+                      color: th.palette.primary.main,
+                    })}
+                  >
+                    {column.orders.length}
                   </Box>
-                </Badge>
+                </Box>
               }
             />
           ))}
