@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from './KitImage';
 import { pressableSx, revealSx } from './motion';
+import { MEDIA_OVERLAY } from '@/theme/tokens';
 
 /**
  * Shared photo layer: lazy image with a skeleton when present, else a DESIGNED
@@ -180,8 +181,7 @@ export function MosaicTile({
         sx={{
           position: 'absolute',
           inset: 0,
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.08) 34%, rgba(0,0,0,0.52) 72%, rgba(0,0,0,0.86) 100%)',
+          background: MEDIA_OVERLAY.cardScrim,
         }}
       />
       <Stack
@@ -199,7 +199,7 @@ export function MosaicTile({
             fontSize: { xs: 16, md: 19 },
             letterSpacing: '-0.02em',
             lineHeight: 1.15,
-            textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+            textShadow: MEDIA_OVERLAY.titleShadow,
           })}
         >
           {title}

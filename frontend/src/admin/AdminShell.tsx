@@ -9,7 +9,8 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
-import { accent, ink, layout, pageBackground, surface } from './adminTokens';
+import { useAppTheme } from '@/theme';
+import { adminCssVars, accent, ink, layout, pageBackground, state, surface } from './adminTokens';
 import type { PlatformMe } from './adminClient';
 
 export interface AdminSection {
@@ -48,6 +49,7 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const { mode } = useAppTheme();
   const isNarrow = useMediaQuery('(max-width:899px)');
   const [navOpen, setNavOpen] = useState(false);
   const groups = sections.reduce<{ group: string | undefined; items: AdminSection[] }[]>(
@@ -70,18 +72,18 @@ export function AdminShell({
               width: 28,
               height: 28,
               borderRadius: '8px',
-              background: `linear-gradient(135deg,${accent.main},#4b3fa0)`,
+              background: `linear-gradient(135deg,${accent.main},${accent.deep})`,
               display: 'grid',
               placeItems: 'center',
               fontWeight: 800,
               fontSize: 14,
-              color: '#fff',
+              color: accent.onBrand,
             }}
           >
             IT
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: accent.onBrand, lineHeight: 1.2 }}>
               {t('admin.brand.name')}
             </Typography>
             <Typography
@@ -165,12 +167,12 @@ export function AdminShell({
               width: 30,
               height: 30,
               borderRadius: '50%',
-              background: `linear-gradient(135deg,${accent.main},#3a3170)`,
+              background: `linear-gradient(135deg,${accent.main},${accent.deep2})`,
               display: 'grid',
               placeItems: 'center',
               fontSize: 11,
               fontWeight: 700,
-              color: '#fff',
+              color: accent.onBrand,
             }}
           >
             {(me?.email ?? '?').slice(0, 2).toUpperCase()}
@@ -187,7 +189,7 @@ export function AdminShell({
               «второй фактор не включён» должно мозолить глаза, а не прятаться
               в настройках. */}
           <Box
-            sx={{ ml: 'auto', fontSize: 10, fontWeight: 700, color: me?.totp_enabled ? accent.soft : '#E0A657' }}
+            sx={{ ml: 'auto', fontSize: 10, fontWeight: 700, color: me?.totp_enabled ? accent.soft : state.warn }}
             data-testid="admin-me-2fa"
           >
             {me?.totp_enabled ? t('admin.security.on') : t('admin.security.off')}
@@ -201,6 +203,9 @@ export function AdminShell({
       data-testid="admin-shell"
       sx={{
         minHeight: '100dvh',
+        // Переменные админки — здесь, на корне: всё дерево ниже читает их
+        // имена и переключается вместе с темой.
+        ...adminCssVars(mode),
         background: pageBackground,
         color: ink.hi,
         display: 'grid',

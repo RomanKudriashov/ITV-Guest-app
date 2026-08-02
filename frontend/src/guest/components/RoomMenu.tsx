@@ -4,6 +4,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -51,7 +52,11 @@ export function RoomMenu({
         data-testid="guest-room-chip"
         sx={
           variant === 'bar'
-            ? {
+            ? // Чип в верхней строке лежит на стекле НАД СТРАНИЦЕЙ, а не над
+              // кадром: цвет обязан переключаться вместе с темой. Раньше он был
+              // жёстко белым на белесой подложке и на светлой оставался тёмным
+              // островом — единственный элемент строки, не заметивший режим.
+              (th) => ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 0.9,
@@ -60,10 +65,10 @@ export function RoomMenu({
                 borderRadius: 999,
                 fontSize: 12,
                 fontWeight: 600,
-                color: '#fff',
-                bgcolor: 'rgba(255,255,255,.06)',
-                border: '1px solid rgba(255,255,255,.14)',
-              }
+                color: th.palette.text.primary,
+                bgcolor: alpha(th.palette.text.primary, 0.06),
+                border: `1px solid ${alpha(th.palette.text.primary, 0.14)}`,
+              })
             : (th) => ({
                 display: 'inline-flex',
                 alignItems: 'center',

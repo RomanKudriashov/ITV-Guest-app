@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { IconBack } from '@/icons';
-import { glass, layout, scrim } from '../storefrontTokens';
+import { layout } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
 
 /**
@@ -22,6 +23,7 @@ import type { VenueIdentity } from '../api/types';
 export function VenueHeader({ venue }: { venue: VenueIdentity }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { glass, scrim, onMedia, mediaFallback } = useStorefront();
 
   return (
     <Box
@@ -32,7 +34,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
         borderRadius: { xs: 0, md: '20px' },
         overflow: 'hidden',
         mt: { xs: 0, md: 1 },
-        backgroundImage: 'linear-gradient(150deg,#1c2b43,#0b1220)',
+        backgroundImage: mediaFallback,
       }}
     >
       {venue.image ? (
@@ -84,9 +86,9 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
           borderRadius: 999,
           fontSize: 12.5,
           fontWeight: 700,
-          color: '#fff',
+          color: onMedia.primary,
           ...glass.chip,
-          '&:hover': { bgcolor: 'rgba(255,255,255,.18)' },
+          '&:hover': { bgcolor: onMedia.hover },
         }}
       >
         {/* Стрелка рисуется влево; в RTL «назад» — вправо, поэтому зеркалим. */}
@@ -121,7 +123,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
             fontWeight: 800,
             letterSpacing: '-.03em',
             lineHeight: 1,
-            color: '#fff',
+            color: onMedia.primary,
             fontSize: { xs: 27, md: 42 },
           })}
           data-testid="guest-venue-name"
@@ -131,7 +133,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
 
         {venue.tagline ? (
           <Typography
-            sx={{ color: 'rgba(255,255,255,.74)', fontSize: { xs: 12, md: 14 }, mt: 0.75 }}
+            sx={{ color: onMedia.secondary, fontSize: { xs: 12, md: 14 }, mt: 0.75 }}
           >
             {venue.tagline}
           </Typography>
@@ -161,6 +163,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
 }
 
 function Chip({ label, open }: { label: string; open: boolean }) {
+  const { glass, onMedia, openOnMedia } = useStorefront();
   return (
     <Box
       data-testid="guest-venue-status"
@@ -170,9 +173,9 @@ function Chip({ label, open }: { label: string; open: boolean }) {
         px: 1.25,
         py: 0.6,
         borderRadius: 999,
-        color: open ? '#9BE7A6' : '#fff',
+        color: open ? openOnMedia.color : onMedia.primary,
         ...glass.chip,
-        borderColor: open ? 'rgba(121,212,136,.5)' : 'rgba(255,255,255,.18)',
+        borderColor: open ? openOnMedia.border : onMedia.chipBorder,
       }}
     >
       {label}

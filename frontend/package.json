@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
-    "build": "tsc && vite build",
+    "build": "node scripts/check-colors.mjs && tsc && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5173",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:colors": "node scripts/check-colors.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

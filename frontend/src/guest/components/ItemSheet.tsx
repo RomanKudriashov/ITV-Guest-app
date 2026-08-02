@@ -19,6 +19,7 @@ import { ProductOrderForm } from './ProductOrderForm';
 import { RequestOrderForm } from './RequestOrderForm';
 import { SlotBookingForm } from './SlotBookingForm';
 import { ItemSheetLayoutContext } from './itemSheetLayout';
+import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { errorMessage } from '../errors';
 import { useGuestItem } from '../hooks/useGuestQueries';
@@ -45,6 +46,7 @@ export interface ItemSheetProps {
  * side rail beside the scrolling content (branch on the viewport, never the type).
  */
 export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
+  const { dialogBackdrop } = useStorefront();
   const { t } = useTranslation();
   // ≥1024 is the desktop shell (rail, no bottom nav) — the item card there is a
   // centered modal; below it (phone AND tablet) it stays a bottom sheet.
@@ -137,7 +139,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
         TransitionComponent={Fade}
         transitionDuration={transition}
         // Dim the catalog behind the modal (spec .stage .dim).
-        slotProps={{ backdrop: { sx: { bgcolor: 'rgba(4,9,16,0.62)' } } }}
+        slotProps={{ backdrop: { sx: { bgcolor: dialogBackdrop } } }}
         PaperProps={{
           sx: (t) => ({
             width: 'min(920px, 100%)',

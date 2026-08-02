@@ -10,6 +10,8 @@ import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { packBento, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
+import { storefrontTokens } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 
 /**
  * Cover fallback for a tile without a photo. ALWAYS dark (with a brand-tinted
@@ -18,11 +20,12 @@ import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
  * cover cascade: point photo → category photo → this gradient.
  */
 export function tileCoverFallbackSx(theme: Theme) {
+  const { tile } = storefrontTokens(theme.palette.mode);
   return {
-    backgroundColor: '#0a0f18',
+    backgroundColor: tile.fallbackColor,
     backgroundImage: [
       `radial-gradient(120% 100% at 18% 0%, ${alpha(theme.palette.primary.main, 0.4)}, transparent 58%)`,
-      'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
+      tile.fallbackGradient,
     ].join(','),
   } as const;
 }
@@ -83,6 +86,8 @@ interface BentoTileProps {
 export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
   const { t } = useTranslation();
   const theme = useTheme();
+  // `tileTokens`, а не `tile`: проп плитки уже занял это имя.
+  const { tile: tileTokens, onMedia } = useStorefront();
   const statusLabel = useStatusLabel();
   const status = statusLabel(tile.status);
   const disabled = !tile.enabled || !tile.route;
@@ -139,11 +144,11 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
         sx={{
           position: 'absolute',
           inset: 0,
-          background: `linear-gradient(to top, ${alpha('#05070c', 0.82)} 0%, ${alpha('#05070c', 0.5)} 22%, transparent 46%)`,
+          background: tileTokens.scrim,
         }}
       />
       {disabled ? (
-        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: alpha('#05070c', 0.35) }} />
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: tileTokens.disabledVeil }} />
       ) : null}
 
       {/* Status / "coming" pill, upper-right. */}
@@ -165,13 +170,15 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
             letterSpacing: '-0.01em',
             fontSize: compact ? 16 : 20,
             lineHeight: 1.1,
-            textShadow: '0 2px 14px rgba(0,0,0,0.6)',
+            textShadow: tileTokens.titleShadow,
           })}
         >
           {tile.title}
         </Typography>
         {!compact && meta ? (
-          <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: alpha('#fff', 0.82), textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}>
+          <Typography
+            sx={{ fontSize: 12.5, fontWeight: 500, color: onMedia.secondary, textShadow: tileTokens.metaShadow }}
+          >
             {meta}
           </Typography>
         ) : null}

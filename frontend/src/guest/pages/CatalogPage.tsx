@@ -28,6 +28,7 @@ import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
 import { layout as storefrontLayout } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
 
@@ -348,6 +349,7 @@ function CatalogHero({
   tokens: ReturnType<typeof useAppTheme>['tokens'];
   mode: ReturnType<typeof useAppTheme>['mode'];
 }) {
+  const { onMedia, tile } = useStorefront();
   // Cascade: point photo (hero_image) → brand background photo/gradient → color.
   const brand = resolveBackground(tokens, mode);
   const bg = heroImage
@@ -366,7 +368,7 @@ function CatalogHero({
     <Box aria-hidden={false} sx={{ position: 'relative', height: { xs: 218, md: 272 }, overflow: 'hidden' }}>
       <Box aria-hidden sx={{ position: 'absolute', inset: 0, ...bg.css }} />
       {bg.dim > 0 ? (
-        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: `rgba(0,0,0,${bg.dim})` }} />
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, bg.dim) }} />
       ) : null}
       <Box
         aria-hidden
@@ -375,13 +377,13 @@ function CatalogHero({
           inset: 0,
           background: `linear-gradient(to top, ${th.palette.background.default} 0%, ${alpha(
             th.palette.background.default, 0.55,
-          )} 22%, transparent 58%), linear-gradient(to bottom, ${alpha('#000', 0.42)} 0%, transparent 44%)`,
+          )} 22%, transparent 58%), linear-gradient(to bottom, ${alpha(onMedia.dimBase, 0.42)} 0%, transparent 44%)`,
         })}
       />
       <Box sx={{ position: 'absolute', insetInline: { xs: 20, md: 26 }, bottom: { xs: 40, md: 48 }, zIndex: 2 }}>
         {showSub ? (
           <Typography
-            sx={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha('#fff', 0.72), fontWeight: 700 }}
+            sx={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha(onMedia.primary, 0.72), fontWeight: 700 }}
           >
             {hotelName}
           </Typography>
@@ -393,9 +395,9 @@ function CatalogHero({
             fontWeight: 800,
             letterSpacing: '-0.025em',
             fontSize: { xs: 30, md: 40 },
-            color: '#fff',
+            color: onMedia.primary,
             lineHeight: 1.03,
-            textShadow: '0 4px 30px rgba(0,0,0,0.55)',
+            textShadow: tile.titleShadow,
             mt: showSub ? 0.75 : 0,
           })}
         >

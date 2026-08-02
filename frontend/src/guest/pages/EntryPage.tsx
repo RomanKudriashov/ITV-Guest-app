@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
 import { useAppTheme } from '@/theme';
+import { useStorefront } from '../useStorefront';
 import { pickLogo } from '@/theme/tokens';
 import { resolveBackground } from '@/theme/brandBackground';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
@@ -61,6 +62,7 @@ export function EntryPage() {
   const { roomNumber: deepLinkRoom } = useParams<{ roomNumber: string }>();
   const { hotel, isReady, isBootstrapping, start } = useGuestSession();
   const { tokens, mode, setBrandTokens } = useAppTheme();
+  const { onMedia, entryScrim, tile } = useStorefront();
 
   const [publicHotel, setPublicHotel] = useState<GuestHotel | null>(null);
   const [room, setRoom] = useState(deepLinkRoom ?? '');
@@ -153,7 +155,7 @@ export function EntryPage() {
         }}
       />
       {backdrop.dim > 0 ? (
-        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: `rgba(0,0,0,${backdrop.dim})` }} />
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, backdrop.dim) }} />
       ) : null}
       {/* Scrim: radial glow + darker edges so text and controls read. */}
       <Box
@@ -161,7 +163,7 @@ export function EntryPage() {
         sx={(th) => ({
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(120% 90% at 50% 8%, ${alpha(th.palette.primary.main, 0.18)}, transparent 60%), linear-gradient(180deg, ${alpha('#000', 0.45)} 0%, ${alpha('#000', 0.15)} 40%, ${alpha('#000', 0.62)} 100%)`,
+          background: `radial-gradient(120% 90% at 50% 8%, ${alpha(th.palette.primary.main, 0.18)}, transparent 60%), ${entryScrim}`,
         })}
       />
 
@@ -232,12 +234,12 @@ export function EntryPage() {
               letterSpacing: '-0.035em',
               fontSize: { xs: 40, md: 52 },
               lineHeight: 0.98,
-              textShadow: '0 4px 30px rgba(0,0,0,0.55)',
+              textShadow: tile.titleShadow,
             }}
           >
             {t(greetingKey())}
           </Typography>
-          <Typography sx={{ color: alpha('#fff', 0.82), mt: 1, fontSize: 15 }}>
+          <Typography sx={{ color: onMedia.secondary, mt: 1, fontSize: 15 }}>
             {t('guest.entry.subtitle')}
           </Typography>
 
@@ -260,10 +262,10 @@ export function EntryPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1.5,
-                borderBottom: `1px solid ${alpha('#fff', 0.3)}`,
+                borderBottom: `1px solid ${alpha(onMedia.primary, 0.3)}`,
                 pb: 1,
                 transition: 'border-color .25s',
-                '&:focus-within': { borderColor: alpha('#fff', 0.7) },
+                '&:focus-within': { borderColor: alpha(onMedia.primary, 0.7) },
               }}
             >
               <InputBase
@@ -297,10 +299,10 @@ export function EntryPage() {
                   height: 46,
                   flex: 'none',
                   color: 'common.white',
-                  border: `1.5px solid ${alpha('#fff', 0.55)}`,
+                  border: `1.5px solid ${alpha(onMedia.primary, 0.55)}`,
                   transition: 'background-color .18s, transform .12s',
                   '&:hover': { bgcolor: th.palette.primary.main, borderColor: th.palette.primary.main, transform: 'translateX(2px)' },
-                  '&.Mui-disabled': { color: alpha('#fff', 0.35), borderColor: alpha('#fff', 0.2) },
+                  '&.Mui-disabled': { color: alpha(onMedia.primary, 0.35), borderColor: alpha(onMedia.primary, 0.2) },
                 })}
               >
                 <ArrowForwardIcon />
@@ -310,9 +312,9 @@ export function EntryPage() {
             <Box
               data-testid="guest-scan-qr"
               title={t('guest.entry.qrHint')}
-              sx={{ mt: 2.5, display: 'flex', alignItems: 'center', gap: 1.25, color: alpha('#fff', 0.42), fontSize: 12.5 }}
+              sx={{ mt: 2.5, display: 'flex', alignItems: 'center', gap: 1.25, color: alpha(onMedia.primary, 0.42), fontSize: 12.5 }}
             >
-              <Box aria-hidden sx={{ width: 26, height: '1px', bgcolor: alpha('#fff', 0.28), flex: 'none' }} />
+              <Box aria-hidden sx={{ width: 26, height: '1px', bgcolor: alpha(onMedia.primary, 0.28), flex: 'none' }} />
               {t('guest.entry.qrShort')}
             </Box>
 
@@ -321,7 +323,7 @@ export function EntryPage() {
               disabled={busy}
               onClick={() => void submit(null)}
               data-testid="guest-browse-only"
-              sx={{ mt: 3, color: alpha('#fff', 0.8), minHeight: 44, px: 0 }}
+              sx={{ mt: 3, color: alpha(onMedia.primary, 0.8), minHeight: 44, px: 0 }}
             >
               {t('guest.entry.browseOnly')}
             </Button>

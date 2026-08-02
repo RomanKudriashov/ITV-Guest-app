@@ -10,7 +10,7 @@ import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, pillSx, primaryButtonSx, surface } from '../adminTokens';
+import { accent, ink, pillSx, primaryButtonSx, state, surface } from '../adminTokens';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
   bulkSetActive,
@@ -339,7 +339,7 @@ function Row({
         </ButtonBase>
       </Box>
       <Box component="td" sx={cell}>
-        <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: '#E0C588' }}>
+        <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: state.gold }}>
           {row.tariff_title[language] ?? row.tariff_title.en ?? row.tariff}
         </Typography>
       </Box>

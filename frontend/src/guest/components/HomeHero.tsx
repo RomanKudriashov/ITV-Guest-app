@@ -1,7 +1,8 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { layout, scrim } from '../storefrontTokens';
+import { layout } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 
 /**
  * Парадная отеля — первый кадр главной.
@@ -22,6 +23,7 @@ export function HomeHero({
   greeting: string;
   cover: string | null;
 }) {
+  const { scrim, onMedia, mediaFallback } = useStorefront();
 
   return (
     <Box
@@ -32,7 +34,7 @@ export function HomeHero({
         borderRadius: { xs: 0, md: '20px' },
         overflow: 'hidden',
         mt: { xs: 0, md: 1 },
-        backgroundImage: 'linear-gradient(150deg,#1c2b43,#0b1220)',
+        backgroundImage: mediaFallback,
       }}
     >
       {cover ? (
@@ -67,13 +69,13 @@ export function HomeHero({
             fontWeight: 800,
             letterSpacing: '-.03em',
             lineHeight: 1.02,
-            color: '#fff',
+            color: onMedia.primary,
             fontSize: { xs: 33, md: 46 },
           })}
         >
           {greeting}
         </Typography>
-        <Typography sx={{ color: 'rgba(255,255,255,.74)', fontSize: 13, mt: 0.9 }}>
+        <Typography sx={{ color: onMedia.secondary, fontSize: 13, mt: 0.9 }}>
           {hotelName}
         </Typography>
       </Box>

@@ -158,7 +158,7 @@ export function GuestLayout() {
           bgcolor: alpha(th.palette.background.paper, 0.55),
           backdropFilter: 'blur(12px)',
           border: `1px solid ${th.palette.divider}`,
-          boxShadow: `0 8px 24px -14px ${alpha('#000', 0.6)}`,
+          boxShadow: th.shadows[6],
         })}
       >
         {room ? <RoomMenu room={room} variant="floating" /> : null}

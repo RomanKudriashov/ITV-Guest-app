@@ -7,7 +7,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, pageBackground, panelSx, primaryButtonSx } from './adminTokens';
+import { useAppTheme } from '@/theme';
+import { adminCssVars, accent, ink, pageBackground, panelSx, primaryButtonSx } from './adminTokens';
 import { platformLogin, PlatformError } from './adminClient';
 
 /**
@@ -19,6 +20,7 @@ import { platformLogin, PlatformError } from './adminClient';
  */
 export function AdminLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { t } = useTranslation();
+  const { mode } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -44,7 +46,16 @@ export function AdminLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   };
 
   return (
-    <Box sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 2, background: pageBackground }}>
+    <Box
+      sx={{
+        minHeight: '100dvh',
+        display: 'grid',
+        placeItems: 'center',
+        p: 2,
+        ...adminCssVars(mode),
+        background: pageBackground,
+      }}
+    >
       <Box sx={{ ...panelSx, width: 380, maxWidth: '100%', p: 3 }} data-testid="admin-login">
         <Stack spacing={2}>
           <Box>

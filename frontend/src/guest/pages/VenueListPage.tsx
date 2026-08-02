@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { KitImage, SkeletonCard } from '@/kit';
 import { errorMessage } from '../errors';
 import { tileCoverFallbackSx } from '../components/Bento';
+import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
@@ -70,6 +71,7 @@ export function VenueListPage() {
 }
 
 function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void }) {
+  const { tile, onMedia } = useStorefront();
   const { t } = useTranslation();
   const status = venue.status;
   const statusText = status
@@ -98,7 +100,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
         )}
         <Box
           aria-hidden
-          sx={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${alpha('#05070c', 0.82)} 0%, ${alpha('#05070c', 0.45)} 26%, transparent 52%)` }}
+          sx={{ position: 'absolute', inset: 0, background: tile.scrim }}
         />
         {statusText ? (
           <Box
@@ -120,11 +122,11 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
           </Box>
         ) : null}
         <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.5 }}>
-          <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: 20, lineHeight: 1.1, textShadow: '0 2px 14px rgba(0,0,0,0.55)' })}>
+          <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: 20, lineHeight: 1.1, textShadow: tile.titleShadow })}>
             {venue.title}
           </Typography>
           {venue.subtitle ?? statusText ? (
-            <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: alpha('#fff', 0.82) }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: onMedia.secondary }}>
               {venue.subtitle ?? statusText}
             </Typography>
           ) : null}

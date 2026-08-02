@@ -1,3 +1,4 @@
+import { alpha } from '@mui/material/styles';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -7,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { RoomMenu } from '../components/RoomMenu';
-import { glass, goldCta, layout } from '../storefrontTokens';
+import { layout } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 
 export interface TopBarTab {
   value: string;
@@ -46,6 +48,7 @@ export function GuestTopBar({
   onOpenCart: () => void;
 }) {
   const { t } = useTranslation();
+  const { glass, goldCta } = useStorefront();
 
   return (
     <Box
@@ -78,7 +81,10 @@ export function GuestTopBar({
             fontWeight: 600,
             letterSpacing: '.28em',
             textTransform: 'uppercase',
-            color: '#fff',
+            // Строка стеклянная и лежит над страницей, а не над кадром: имя
+            // отеля обязано читаться в обеих темах, поэтому цвет текстовый, а
+            // не белый. Белым он был всегда — и на светлой пропадал.
+            color: th.palette.text.primary,
           })}
         >
           {hotelName}
@@ -91,16 +97,21 @@ export function GuestTopBar({
             key={tab.value}
             onClick={() => onNavigate(tab.value)}
             data-testid={`guest-nav-${tab.value.replace('/', '')}`}
-            sx={{
+            sx={(th) => ({
               fontSize: 13,
               fontWeight: 600,
               px: 1.6,
               py: 1,
               borderRadius: '9px',
-              color: active === tab.value ? 'primary.light' : 'rgba(166,182,201,1)',
-              bgcolor: active === tab.value ? 'rgba(119,173,224,.16)' : 'transparent',
-              '&:hover': { bgcolor: 'rgba(255,255,255,.06)' },
-            }}
+              color: active === tab.value ? th.palette.primary.main : th.palette.text.secondary,
+              // Активная вкладка держится подложкой из акцента, а не готовым
+              // светлым прямоугольником: прежняя `rgba(119,173,224,.16)` поверх
+              // тёмного читалась как отдельная светлая плашка (Г22), а на
+              // светлой теме не читалась вовсе.
+              bgcolor:
+                active === tab.value ? alpha(th.palette.primary.main, 0.14) : 'transparent',
+              '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
+            })}
           >
             <Badge
               color="primary"
@@ -139,7 +150,16 @@ export function GuestTopBar({
             }}
           >
             {t('guest.nav.cart')}
-            <Box sx={{ bgcolor: 'rgba(0,0,0,.22)', borderRadius: 999, px: 0.75, fontSize: 11 }}>
+            {/* Счётчик — затемнение поверх золота, поэтому берётся от цвета
+                надписи на кнопке, а не отдельным чёрным литералом. */}
+            <Box
+              sx={{
+                bgcolor: alpha(goldCta.color, 0.18),
+                borderRadius: 999,
+                px: 0.75,
+                fontSize: 11,
+              }}
+            >
               {cartCount}
             </Box>
           </ButtonBase>
