@@ -226,6 +226,50 @@ for (const mode of ['dark', 'light'] as const) {
       }
     })
 
+    test(`платформа и вход: плашки вмещают текст: ${mode}, ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+
+      // Экран входа гостя — единственный, который гость видит ДО сессии.
+      await page.goto('/')
+      await page.evaluate(
+        ([key, value]) => {
+          localStorage.clear()
+          sessionStorage.clear()
+          localStorage.setItem(key, value)
+        },
+        [THEME_KEY, mode],
+      )
+      await page.goto('/')
+      await expect(page.getByTestId('guest-room-submit')).toBeVisible({ timeout: 15_000 })
+      expect(await clippedTexts(page), `вход гостя (${mode}/${vp.name})`).toEqual([])
+
+      // Экран входа персонала.
+      await page.goto('/login')
+      await page.waitForTimeout(800)
+      expect(await clippedTexts(page), `/login (${mode}/${vp.name})`).toEqual([])
+
+      // Платформенная консоль: сводка и флот — экраны с плотными счётчиками,
+      // где чипы и плашки обрезаются в первую очередь.
+      await page.goto('/admin')
+      await page.getByTestId('admin-login-email').fill('platform@itv.local')
+      await page.getByTestId('admin-login-password').fill('platform12345')
+      await page.getByTestId('admin-login-submit').click()
+      await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 20_000 })
+      await page.waitForTimeout(1200)
+      expect(await clippedTexts(page), `/admin сводка (${mode}/${vp.name})`).toEqual([])
+
+      // Флот — только там, где до него есть навигация. Консоль платформы
+      // десктопная, и на узком экране боковое меню свёрнуто: гоняться за ним
+      // здесь значило бы проверять не переполнение текста, а вёрстку меню.
+      const fleetNav = page.getByTestId('admin-nav-fleet')
+      if (await fleetNav.isVisible().catch(() => false)) {
+        await fleetNav.click()
+        await expect(page.getByTestId('admin-fleet')).toBeVisible({ timeout: 20_000 })
+        await page.waitForTimeout(1200)
+        expect(await clippedTexts(page), `/admin флот (${mode}/${vp.name})`).toEqual([])
+      }
+    })
+
     test(`трекер: плашки вмещают текст: ${mode}, ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height })
       await page.goto('/')
