@@ -101,6 +101,18 @@ PLACEHOLDERS = [
 ]
 
 
+def _venue_photo_code(service_code: str) -> str:
+    """
+    Ключ снимка заведения по коду сервиса.
+
+    Коды сервисов пишутся через подчёркивание (`room_service`), ключи реестра
+    снимков — через дефис (`venue-room-service`). Без приведения рум-сервис
+    молча оставался без обложки: снимок в реестре есть, а искали его под
+    несуществующим именем.
+    """
+    return f"venue-{service_code.replace('_', '-')}"
+
+
 class Command(BaseCommand):
     help = "Наполняет демо-отель данными для дымового сценария"
 
@@ -1431,7 +1443,7 @@ class Command(BaseCommand):
             if service.image_id is not None and service.image.content_type == "image/jpeg":
                 continue
             label = (service.public_name or {}).get("ru") or service.code
-            asset = self._image_for(f"venue-{service.code}", label)
+            asset = self._image_for(_venue_photo_code(service.code), label)
             if asset is not None:
                 service.image = asset
                 service.save(update_fields=["image", "updated_at"])
@@ -1649,7 +1661,7 @@ class Command(BaseCommand):
             service.is_guest_facing = True
             fields.append("is_guest_facing")
         if service.image_id is None:
-            service.image = self._image_for(f"venue-{code}", label)
+            service.image = self._image_for(_venue_photo_code(code), label)
             fields.append("image")
         if fields:
             service.save(update_fields=[*fields, "updated_at"])
