@@ -38,27 +38,37 @@ test.describe('Навигация CMS', () => {
   test('модуль выключен — его раздела нет; включён — появляется', async ({ page, request }) => {
     const token = await apiToken(request, ADMIN)
 
+    // Исходное состояние модуля — не наше дело: наглядный «Кристалл»
+    // (`--with-rich-catalog`) включает маркетинг, чтобы демо-витрина была
+    // полной. Тест проверяет ПЕРЕКЛЮЧЕНИЕ, поэтому обе точки — «выключен» и
+    // «включён» — расставляет сам, а в конце возвращает стенд как было.
+    const wasEnabled = await moduleEnabled(request, 'marketing')
+    await enableModule(request, 'marketing', false)
+
     await login(page)
-    await expect(page.getByTestId('nav-group-modules')).toHaveCount(0)
-    await expect(page.getByTestId('cms-nav-marketing')).toHaveCount(0)
-
-    // Включаем маркетинг платформенным реестром модулей (R1).
-    const modules = await request
-      .get(`${API}/api/cms/navigation`, { headers: apiHeaders(token) })
-      .then((r) => r.json())
-    expect(modules.groups.some((g: { key: string }) => g.key === 'modules')).toBeFalsy()
-
-    await enableModule(request, 'marketing', true)
     try {
+      // Проверяем отсутствие ПУНКТА маркетинга, а не всей группы «Модули»:
+      // на наглядном стенде группу держит другой включённый модуль (PMS).
+      await expect(page.getByTestId('cms-nav-marketing')).toHaveCount(0)
+
+      // Спрашиваем про САМ маркетинг, а не про существование группы «Модули»:
+      // на наглядном стенде группа остаётся из-за других включённых модулей
+      // (PMS), и «группы нет» проверяло бы не то, ради чего написан тест.
+      expect(await navItems(request, token, 'modules')).not.toContain('marketing')
+
+      // Включаем маркетинг платформенным реестром модулей (R1).
+      await enableModule(request, 'marketing', true)
       await page.reload()
       await expect(page.getByTestId('nav-group-modules')).toBeVisible({ timeout: 15_000 })
       await expect(page.getByTestId('cms-nav-marketing')).toBeVisible()
-    } finally {
-      await enableModule(request, 'marketing', false)
-    }
+      expect(await navItems(request, token, 'modules')).toContain('marketing')
 
-    await page.reload()
-    await expect(page.getByTestId('cms-nav-marketing')).toHaveCount(0)
+      await enableModule(request, 'marketing', false)
+      await page.reload()
+      await expect(page.getByTestId('cms-nav-marketing')).toHaveCount(0)
+    } finally {
+      await enableModule(request, 'marketing', wasEnabled)
+    }
   })
 })
 
@@ -198,6 +208,49 @@ async function enableModule(
     headers: { Authorization: `Bearer ${token}` },
   })
   expect(response.ok(), await response.text()).toBeTruthy()
+}
+
+/** Ключи пунктов в группе навигации CMS (пустой список, если группы нет). */
+async function navItems(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  group: string,
+): Promise<string[]> {
+  const nav = (await request
+    .get(`${API}/api/cms/navigation`, { headers: apiHeaders(token) })
+    .then((r) => r.json())) as {
+    groups: Array<{ key: string; items?: Array<{ key: string }> }>
+  }
+  const found = nav.groups.find((g) => g.key === group)
+  return (found?.items ?? []).map((i) => i.key)
+}
+
+/** Текущее состояние модуля — чтобы вернуть стенд ровно как было. */
+async function moduleEnabled(
+  request: import('@playwright/test').APIRequestContext,
+  code: string,
+): Promise<boolean> {
+  const platform = await request.post(`${API}/api/platform/auth/login`, {
+    data: { email: 'platform@itv.local', password: 'platform12345' },
+  })
+  expect(platform.ok(), await platform.text()).toBeTruthy()
+  const token = (await platform.json()).access
+
+  const hotels = await request
+    .get(`${API}/api/platform/hotels`, { headers: { Authorization: `Bearer ${token}` } })
+    .then((r) => r.json())
+  const crystal = (hotels.items ?? hotels).find(
+    (hotel: { subdomain: string }) => hotel.subdomain === 'crystal',
+  )
+
+  const response = await request.get(`${API}/api/platform/hotels/${crystal.id}/modules`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  const { modules } = (await response.json()) as {
+    modules: Array<{ code: string; is_enabled: boolean }>
+  }
+  return Boolean(modules.find((m) => m.code === code)?.is_enabled)
 }
 
 /**

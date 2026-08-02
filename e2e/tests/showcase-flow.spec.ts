@@ -55,6 +55,15 @@ test.describe('Витрина главной', () => {
       expect(resp.ok()).toBeTruthy()
     }
 
+    // Возвращать надо ИМЕННО то, что было, а не значение по умолчанию модели:
+    // наглядный «Кристалл» держит порог 8, чтобы рестораны стояли отдельными
+    // плитками. Возврат к «3» молча сворачивал их в группу — и следующие
+    // тесты, которые ищут плитку заведения на главной, падали на пустом месте.
+    const before = (await request
+      .get(`${API}/api/cms/showcase`, { headers: apiHeaders(token) })
+      .then((r) => r.json())) as { group_threshold: number }
+    expect(typeof before.group_threshold).toBe('number')
+
     await setThreshold(0)
     try {
       await enterAsGuest(page)
@@ -69,7 +78,7 @@ test.describe('Витрина главной', () => {
       await expect(page).toHaveURL(/\/venue\/kitchen/)
       await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
     } finally {
-      await setThreshold(3) // вернуть общий стенд в исходное состояние
+      await setThreshold(before.group_threshold) // вернуть общий стенд как было
     }
   })
 })
