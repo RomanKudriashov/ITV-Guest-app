@@ -62,10 +62,18 @@ test.describe('Экран входа — раскладка «Полотно»',
   }
 })
 
-test.describe('Мобильная: строка категорий и плавающий чип', () => {
+// Плавающая группа живёт в ветке «телефон/планшет» (десктоп-шелл начинается с
+// 1024), поэтому проверять надо обе узкие ширины, а не только телефон.
+const NARROW: Array<[string, number, number]> = [
+  ['телефон', 390, 844],
+  ['планшет', 834, 1112],
+]
+
+test.describe('Узкий экран: строка категорий и плавающий чип', () => {
+  for (const [label, width, height] of NARROW)
   for (const mode of ['dark', 'light'] as const) {
-    test(`${mode}: не пересекаются при прокрутке`, async ({ page }) => {
-      await page.setViewportSize({ width: 390, height: 844 })
+    test(`${label}, ${mode}: не пересекаются при прокрутке`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
       await venueMenu(page, mode)
 
       const chip = page
@@ -84,7 +92,7 @@ test.describe('Мобильная: строка категорий и плава
         const barBox = (await bar.boundingBox())!
         expect(
           chipBox.y + chipBox.height,
-          `${mode}, прокрутка ${offset}: чип наезжает на строку категорий`,
+          `${label}/${mode}, прокрутка ${offset}: чип наезжает на строку категорий`,
         ).toBeLessThanOrEqual(barBox.y + 1)
       }
     })
@@ -92,9 +100,10 @@ test.describe('Мобильная: строка категорий и плава
 })
 
 test.describe('Карточка позиции', () => {
+  for (const [label, width, height] of SIZES.filter(([l]) => l !== 'планшет'))
   for (const mode of ['dark', 'light'] as const) {
-    test(`${mode}: кадр от самого верха, крестик поверх него`, async ({ page }) => {
-      await page.setViewportSize({ width: 390, height: 844 })
+    test(`${label}, ${mode}: кадр от самого верха и до краёв`, async ({ page }) => {
+      await page.setViewportSize({ width, height })
       await venueMenu(page, mode)
       await page.locator('[data-testid^="guest-item-"]').first().click()
 
@@ -110,11 +119,27 @@ test.describe('Карточка позиции', () => {
       // сдвигала его вниз на ~60px.
       expect(
         media.y - sheetBox.y,
-        `${mode}: между верхом карточки и кадром не должно быть полосы`,
+        `${label}/${mode}: между верхом карточки и кадром не должно быть полосы`,
       ).toBeLessThan(12)
 
-      // И во всю ширину карточки.
-      expect(media.width).toBeGreaterThan(sheetBox.width - 4)
+      /*
+        И упирается в края — проверяем именно КРАЯ, а не ширину.
+
+        Прошлая версия сторожа сравнивала только ширину, и пропустила ровно то,
+        ради чего написана: кадр был нужной ширины, но сдвинут вправо на 16px —
+        слева белая полоска, справа вылет за карточку. Ширина сходилась,
+        картинка не стояла на месте.
+      */
+      expect(
+        media.x - sheetBox.x,
+        `${label}/${mode}: зазор слева между кадром и краем карточки`,
+      ).toBeLessThan(2)
+      // Справа кадр не должен вылезать за карточку (на десктопе он занимает
+      // свою колонку, поэтому сверяем с её правым краем, а не с краем окна).
+      expect(
+        media.x + media.width,
+        `${label}/${mode}: кадр вылезает за правый край карточки`,
+      ).toBeLessThanOrEqual(sheetBox.x + sheetBox.width + 2)
 
       // Крестик лежит НА кадре, а не над ним.
       expect(close.y).toBeGreaterThanOrEqual(media.y - 1)

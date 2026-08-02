@@ -44,9 +44,17 @@ export function ItemMedia({
   const isRail = variant === 'rail';
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
         position: 'relative',
         overflow: 'hidden',
+        // Кадр упирается в верхние углы карточки — скругляем по её же радиусу,
+        // иначе прямой угол снимка торчит из скруглённой шторки.
+        ...(bleed
+          ? {
+              borderTopLeftRadius: `${theme.palette.brand.radius.lg}px`,
+              borderTopRightRadius: `${theme.palette.brand.radius.lg}px`,
+            }
+          : {}),
         ...(isRail
           ? { width: '100%', height: '100%', alignSelf: 'stretch', minHeight: '100%' }
           : {
@@ -55,17 +63,25 @@ export function ItemMedia({
               // высокая картинка не должна выталкивать тело за экран.
               height: { xs: 268, sm: 300 },
               flexShrink: 0,
-              // Явные значения, а не шорткат `mx`: содержимое шторки лежит в
-              // прокрутке с 16px по бокам, и кадр обязан ровно на них выйти.
+              /*
+                Вынос за поля СДВИГОМ, а не отрицательным полем.
+
+                Родитель — `Stack`, а он в MUI сбрасывает `margin: 0` у всех
+                прямых детей селектором с большей специфичностью, чем класс
+                самого элемента. Поэтому и `mx: -2`, и явный
+                `marginInlineStart` молча обнулялись: ширина применялась, а
+                сдвиг нет — кадр становился шире карточки, но упирался не в
+                левый край, а в границу отступа, оставляя слева белую полоску и
+                вылезая справа.
+
+                `position: relative` у этого блока уже есть, а `inset*` Stack не
+                трогает.
+              */
               ...(bleed
-                ? {
-                    width: 'calc(100% + 32px)',
-                    marginInlineStart: '-16px',
-                    marginInlineEnd: '-16px',
-                  }
+                ? { width: 'calc(100% + 32px)', insetInlineStart: '-16px' }
                 : { width: '100%' }),
             }),
-      }}
+      })}
     >
       <KitImage src={item.images?.[0]} alt={item.title} fill fallbackIcon={icon} fallbackIconSize={isRail ? 64 : 48} />
       {/* Dissolve edge — the media melts into the content's background. */}
