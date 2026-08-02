@@ -109,13 +109,29 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
       sx={{
         position: 'sticky',
         top: 0,
-        zIndex: 2,
+        zIndex: 3,
         display: 'flex',
         justifyContent: 'flex-end',
-        p: 1,
-        // Transparent on desktop so the media/content read as one canvas;
-        // opaque on phone where it pins over scrolling content.
-        bgcolor: isDesktop ? 'transparent' : 'background.paper',
+        /*
+          ВЫСОТА НОЛЬ — и это главное здесь.
+
+          Раньше это была настоящая полоса высотой в кнопку, да ещё и залитая
+          цветом поверхности на телефоне: карточка открывалась белым бруском,
+          фотография начиналась под ним, а крестик сидел на бруске, а не на
+          кадре. Полоса ничего не держала — она существовала только чтобы
+          где-то разместить кнопку.
+
+          Нулевая высота с `overflow: visible` убирает брусок из потока:
+          кадр начинается от самого верха карточки, а кнопка ложится поверх
+          него. `sticky` при этом сохраняется — крестик остаётся на месте, пока
+          содержимое прокручивается под ним.
+        */
+        height: 0,
+        overflow: 'visible',
+        // Сквозные клики: полоса нулевая, но она всё ещё перекрывает верх
+        // кадра прямоугольником — без этого по фото нельзя было бы попасть.
+        pointerEvents: 'none',
+        '& > *': { pointerEvents: 'auto' },
       }}
     >
       {/*
@@ -127,7 +143,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
         onClick={onClose}
         aria-label={t('guest.common.close')}
         data-testid="guest-item-sheet-close"
-        sx={{ minWidth: 44, minHeight: 44, ...glass.chip }}
+        sx={{ m: 1, minWidth: 44, minHeight: 44, ...glass.chip }}
       >
         <CloseIcon />
       </IconButton>

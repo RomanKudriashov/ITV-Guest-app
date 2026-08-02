@@ -10,7 +10,6 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { alpha } from '@mui/material/styles';
-import { keyframes } from '@mui/system';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
@@ -26,11 +25,6 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import type { GuestHotel } from '../api/types';
 
 const ONEST = '"Onest", system-ui, sans-serif';
-
-const kenBurns = keyframes`
-  from { transform: scale(1.06) translate(0, 0); }
-  to   { transform: scale(1.16) translate(1.5%, -1.2%); }
-`;
 
 function greetingKey(): string {
   const h = new Date().getHours();
@@ -147,11 +141,20 @@ export function EntryPage() {
       <Box
         aria-hidden
         sx={{
+          /*
+            Кадр отеля во всю ширину и БЕЗ движения.
+
+            Здесь был «кен-бёрнс»: полотно вылезало на -4% за экран и медленно
+            ехало от scale(1.06) к scale(1.16) со сдвигом. Эффекта нет ни в
+            прототипе, ни в макете входа, а стоил он ровно того, на что жалуются:
+            кадр наезжал по-разному на каждой ширине и в каждый момент времени,
+            и «осмысленный фокус» существовать не мог — центр снимка всё время
+            уезжал. Статичный `cover` из центра кадрируется предсказуемо на
+            любой ширине.
+          */
           position: 'absolute',
-          inset: '-4%',
+          inset: 0,
           ...backdrop.css,
-          animation: `${kenBurns} 32s ease-in-out infinite alternate`,
-          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
         }}
       />
       {backdrop.dim > 0 ? (
@@ -169,10 +172,12 @@ export function EntryPage() {
 
       {/* Logo top-left (brand token or monogram fallback). */}
       <Box
+        data-testid="guest-entry-mark"
         sx={{
           position: 'absolute',
-          top: `calc(18px + env(safe-area-inset-top, 0px))`,
-          insetInlineStart: 22,
+          // `.a .mark` / `.m .mark` прототипа: 56/34 на широком, 24/26 на узком.
+          top: { xs: 'calc(26px + env(safe-area-inset-top, 0px))', md: 'calc(34px + env(safe-area-inset-top, 0px))' },
+          insetInlineStart: { xs: 24, md: 56 },
           zIndex: 3,
           display: 'flex',
           alignItems: 'center',
@@ -204,8 +209,9 @@ export function EntryPage() {
         alignItems="center"
         sx={(th) => ({
           position: 'absolute',
-          top: `calc(14px + env(safe-area-inset-top, 0px))`,
-          insetInlineEnd: 14,
+          // `.topr` прототипа: 22 сверху, 24 справа.
+          top: `calc(22px + env(safe-area-inset-top, 0px))`,
+          insetInlineEnd: 24,
           zIndex: 3,
           borderRadius: 999,
           px: 0.5,
@@ -219,9 +225,30 @@ export function EntryPage() {
         <ThemeModeToggle />
       </Stack>
 
-      {/* Centered content. */}
-      <Box sx={{ position: 'relative', zIndex: 2, flexGrow: 1, display: 'flex', alignItems: 'center', px: 3 }}>
-        <Box sx={{ width: '100%', maxWidth: 460, mx: 'auto' }}>
+      {/*
+        Приветствие и форма — ВНИЗУ СЛЕВА, как `.a .body` / `.m .body` в
+        прототипе (`bottom: 62/44`, `left: 56/24`, ширина `min(470px, 60%)`).
+        Раньше блок стоял по центру экрана: `alignItems: 'center'` плюс
+        `mx: 'auto'`. По центру он спорил с кадром — снимок отеля закрывался
+        текстом ровно там, где у фотографии смысловой центр, и «полотно»
+        переставало быть полотном.
+
+        Раскладка ОДНА на все ширины: меняются только отступы и ширина колонки,
+        а логика «кадр во всю ширину, подпись прижата к низу слева» общая — как
+        и в прототипе, где веб и телефон это одна сцена.
+      */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          flexGrow: 1,
+          display: 'flex',
+          alignItems: 'flex-end',
+          pb: { xs: '44px', md: '62px' },
+          px: { xs: '24px', md: '56px' },
+        }}
+      >
+        <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: 'min(470px, 60%)' } }}>
           <Typography
             component="h1"
             sx={{
