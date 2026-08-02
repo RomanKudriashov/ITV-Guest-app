@@ -125,7 +125,8 @@ export function GuestTopBar({
       </Box>
 
       <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-        {room ? <RoomMenu room={room} /> : null}
+        {/* Без номера — кнопка «войти по номеру», см. RoomMenu. */}
+        <RoomMenu room={room} />
 
         <GuestLanguageMenu />
         <ThemeModeToggle />

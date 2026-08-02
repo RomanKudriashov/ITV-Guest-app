@@ -163,7 +163,9 @@ export function GuestLayout() {
           boxShadow: th.shadows[6],
         })}
       >
-        {room ? <RoomMenu room={room} variant="floating" /> : null}
+        {/* Без номера чип не исчезает, а становится входом по номеру:
+            иначе из режима просмотра некуда вернуться. */}
+        <RoomMenu room={room} variant="floating" />
         <GuestLanguageMenu />
         <ThemeModeToggle />
       </Stack>

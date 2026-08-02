@@ -220,6 +220,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
         }}
       >
       <Box
+        data-testid="guest-category-bar"
         sx={{
           position: 'sticky',
           top: headerOffset,

@@ -604,7 +604,8 @@
     },
     "session": {
       "current": "You are in room {{room}}",
-      "leave": "Leave the hotel"
+      "leave": "Leave the hotel",
+      "identify": "Enter room number"
     }
   },
   "tracker": {
