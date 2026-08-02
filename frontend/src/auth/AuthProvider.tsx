@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { setUnauthorizedHandler, tokenStorage } from '@/api/client';
 import { fetchMe, login as loginRequest, normalizeMe } from '@/api/cms';
 import type { HotelInfo, StaffUser } from '@/api/types';
+import { useAppTheme } from '@/theme';
 
 interface AuthContextValue {
   token: string | null;
@@ -28,6 +29,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  // Бренд отеля персоналу. Провайдер темы смонтирован один раз в `main.tsx` без
+  // токенов, и подставляла их раньше только гостевая сессия — поэтому CMS и
+  // трекер работали на платформенном дефолте и открывались светлыми. Здесь та
+  // же подстановка для персонала: точка одна, поверхностей — все.
+  const { setBrandTokens } = useAppTheme();
   const [token, setToken] = useState<string | null>(() => tokenStorage.get());
   const [user, setUser] = useState<StaffUser | null>(null);
   const [hotel, setHotel] = useState<HotelInfo | null>(null);
@@ -72,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setUser(normalizeMe(me));
         if (me.hotel) setHotel(me.hotel);
+        if (me.theme) setBrandTokens(me.theme);
       })
       .catch(() => {
         if (!cancelled) logout();
@@ -85,12 +92,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [token, user, logout]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const response = await loginRequest(email, password);
-    tokenStorage.set(response.access, response.refresh);
-    setToken(response.access);
-    setUser(response.user);
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const response = await loginRequest(email, password);
+      tokenStorage.set(response.access, response.refresh);
+      setToken(response.access);
+      setUser(response.user);
+      if (response.theme) setBrandTokens(response.theme);
+    },
+    [setBrandTokens],
+  );
 
   const value = useMemo<AuthContextValue>(
     () => ({

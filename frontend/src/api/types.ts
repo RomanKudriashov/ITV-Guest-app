@@ -5,6 +5,7 @@
 
 import type { LocationMode, OfferingType } from '@/offerings/behaviour';
 import type { RequestFieldType } from '@/offerings/requestFields';
+import type { PartialBrandTokens } from '@/theme/tokens';
 
 /** Translatable field: `{"ru": "Горячее", "en": "Hot"}`. Empty languages absent. */
 export type Translated = Record<string, string>;
@@ -43,11 +44,15 @@ export interface LoginResponse {
   access: string;
   refresh: string;
   user: StaffUser;
+  /** Бренд отеля уже во входе — первый кадр после логина сразу в цветах отеля. */
+  theme?: PartialBrandTokens;
 }
 
 export interface MeResponse {
   user?: StaffUser;
   hotel?: HotelInfo;
+  /** Токены бренда отеля — CMS и трекер тоже white-label, см. AuthProvider. */
+  theme?: PartialBrandTokens;
   /** Some backends flatten the user onto the root — tolerated by `normalizeMe`. */
   id?: string;
   email?: string;

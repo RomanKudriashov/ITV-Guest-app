@@ -45,17 +45,24 @@ def login(request: HttpRequest, payload: LoginIn):
     except AuthenticationFailed as exc:
         return 401, {"detail": str(exc), "code": "auth_failed"}
 
+    from apps.hotels.brand_services import get_or_create_brand
+
     user = User.objects.get(pk=tokens["user_id"])
+    theme = get_or_create_brand(Hotel.objects.get(pk=require_hotel_id()))
     return 200, {
         "access": tokens["access"],
         "refresh": tokens["refresh"],
         "user": serialize_user(user),
+        "theme": (theme.tokens if theme else {}) or {},
     }
 
 
 @router.get("/auth/me", response=MeOut, auth=staff_auth, summary="Текущий пользователь")
 def me(request: HttpRequest):
+    from apps.hotels.brand_services import get_or_create_brand
+
     hotel = Hotel.objects.get(pk=require_hotel_id())
+    theme = get_or_create_brand(hotel)
     return {
         "user": serialize_user(request.user),
         "hotel": {
@@ -65,4 +72,8 @@ def me(request: HttpRequest):
             "currency": hotel.currency,
             "default_language": hotel.default_language,
         },
+        # Тот же набор токенов, что получает гость: у отеля одна тема, и
+        # персонал обязан видеть её же — иначе «бренд» существует только на
+        # витрине, а сотрудник работает в чужих цветах.
+        "theme": (theme.tokens if theme else {}) or {},
     }
