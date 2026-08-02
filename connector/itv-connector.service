@@ -1,0 +1,40 @@
+; Вариант установки без Docker — прямо на Ubuntu-сервер NaviBoard.
+;
+; Оба требования ТЗ §15 закрыты здесь: автозапуск после перезагрузки
+; (WantedBy=multi-user.target) и автоматическое переподключение. Второе — на
+; двух уровнях: коннектор сам переподключается с джиттером внутри процесса, а
+; systemd поднимает процесс, если тот всё же умер.
+;
+;   sudo cp itv-connector.service /etc/systemd/system/
+;   sudo systemctl enable --now itv-connector
+
+[Unit]
+Description=ITV Guest App — Local Connector (GRMS)
+Documentation=file:///opt/itv-connector/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=itv
+Group=itv
+WorkingDirectory=/opt/itv-connector
+Environment=ITV_CONNECTOR_CONFIG=/etc/itv-connector/config.json
+ExecStart=/opt/itv-connector/venv/bin/python -m itv_connector
+
+Restart=always
+RestartSec=5s
+
+; Узлу нужен только исходящий доступ и чтение своего конфига. Всё остальное
+; закрыто: на сервере отеля стоят чужие системы, и коннектор не должен быть
+; удобной точкой опоры, если его когда-нибудь скомпрометируют.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/etc/itv-connector
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -62,8 +62,14 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       CHANNELS_REDIS_URL: redis://redis:6379/3
       MINIO_ENDPOINT: minio:9000
+      # Коннектор — отдельный сервис, но он же и часть монорепо. Его пакет
+      # виден backend'у ТОЛЬКО ради тестов round-trip: они обязаны гонять
+      # настоящий исполнитель коннектора, а не его копию. В проде backend
+      # этот код не импортирует.
+      PYTHONPATH: /app:/connector
     volumes:
       - ./backend:/app
+      - ./connector:/connector:ro
     ports:
       - "${BACKEND_HOST_PORT:-8010}:8000"
     depends_on:
@@ -105,6 +111,41 @@ services:
       - "${FRONTEND_HOST_PORT:-5183}:5173"
     depends_on:
       - backend
+
+  # --- GRMS: эмулятор iRidi и коннектор ------------------------------------
+  # Оба под профилем `grms`: обычный `docker compose up` их не поднимает.
+  # Эмулятор изображает оборудование, и молча запускать его вместе со стендом
+  # значило бы однажды перепутать его с настоящим объектом.
+
+  iridi-emulator:
+    profiles: ["grms"]
+    build: ./backend
+    # Чистый stdlib, поэтому запускается тем же образом, что и backend, но
+    # ничего из Django не импортирует.
+    command: ["python", "-m", "apps.grms.emulator"]
+    environment:
+      IRIDI_EMULATOR_PORT: "1085"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "${IRIDI_EMULATOR_PORT:-1085}:1085"
+
+  connector:
+    profiles: ["grms"]
+    build: ./connector
+    # Узел обязан подниматься сам после перезагрузки сервера объекта —
+    # инженер туда не поедет.
+    restart: unless-stopped
+    environment:
+      ITV_CONNECTOR_CONFIG: /etc/itv-connector/config.json
+      # Ключ узла выдаётся в админке платформы и в конфиг НЕ пишется:
+      # конфиг попадает в бэкапы и логи развёртывания, ключ — не должен.
+      ITV_CONNECTOR_KEY: "${ITV_CONNECTOR_KEY:-}"
+    volumes:
+      - ./connector/config.dev.json:/etc/itv-connector/config.json:ro
+    depends_on:
+      - backend
+      - iridi-emulator
 
 volumes:
   postgres_data:

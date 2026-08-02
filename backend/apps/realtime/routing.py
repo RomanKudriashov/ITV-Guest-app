@@ -1,5 +1,7 @@
 from django.urls import path
 
+from apps.grms.consumers import ConnectorConsumer
+
 from .consumers import (
     GuestChatConsumer,
     GuestOrderConsumer,
@@ -17,6 +19,9 @@ _WS_ROUTES = [
     ("guest/order/<uuid:order_id>/", GuestOrderConsumer),
     ("guest/chat/", GuestChatConsumer),
     ("staff/chat/<uuid:thread_id>/", StaffChatConsumer),
+    # Он-прем узел. Без слеша на конце: адрес зашит в конфиг коробки на
+    # объекте, и лишний слеш там стоил бы выезда инженера.
+    ("onprem/connector", ConnectorConsumer),
 ]
 
 websocket_urlpatterns = [
