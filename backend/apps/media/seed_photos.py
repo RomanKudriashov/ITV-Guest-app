@@ -82,6 +82,57 @@ PHOTOS: dict[str, tuple[str, str, str]] = {
     "terrace-mains": ("1467003909585-2f8a72700288", "Jay Wennington", "Основные блюда"),
     "sakura-rolls": ("1579871494447-9811cf80d66c", "Riccardo Bergamini", "Роллы"),
 
+    # --- Наглядный каталог R7: меню «Террасы», «Сакуры» и рум-сервиса ---
+    # Заводились под конкретное блюдо, а не «что-нибудь съедобное»: без них
+    # 36 из 57 активных позиций стояли пустыми карточками.
+    "beef-stroganoff": ("1644592219048-5c070fd3c91c", "Karyna Panchenko", "Бефстроганов"),
+    "club-sandwich": ("1676300184084-de35d56a9a70", "Orkun Orcan", "Клубный сэндвич"),
+    "burger-rs": ("1568901346375-23c9450c58cd", "Amirali Mirhashemian", "Бургер"),
+    "mushroom-soup": ("1771089278772-7ad0d9c03f2f", "Unsplash", "Грибной крем-суп"),
+    "bruschetta": ("1572695157366-5e585ab2b69f", "Alexandra Kusper", "Брускетта"),
+    "duck-breast": ("1774921677530-9031f1ea00ec", "Unsplash", "Утиная грудка"),
+    "lamb-rack": ("1761983723667-99c7fd98af53", "Unsplash", "Каре ягнёнка"),
+    "salmon-steak": ("1519708227418-c8fd9a32b7a2", "Casey Lee", "Стейк из лосося"),
+    "seabass": ("1680405104108-a249b7c3ddf9", "Unsplash", "Сибас"),
+    "truffle-risotto": ("1476124369491-e7addf5db371", "Ben Lei", "Ризотто с трюфелем"),
+    "nigiri-set": ("1617196034796-73dfa7b1fd56", "Mahmoud Fawzy", "Сет нигири"),
+    "philadelphia": ("1759646828324-c215a83828ae", "Vlad Deep", "Ролл «Филадельфия»"),
+    "ramen": ("1569718212165-3a8278d5f624", "Cherry Lin", "Рамен"),
+    "tempura": ("1759823338930-7996c1787c3b", "Unsplash", "Темпура"),
+    "gyoza": ("1708782341487-6544f0d9efe8", "Unsplash", "Гёдза"),
+    "unagi": ("1763627719044-5d1d6a6b809c", "note thanun", "Унаги"),
+    "california": ("1559410545-0bdcd187e0a6", "Riccardo Bergamini", "Ролл «Калифорния»"),
+    "sake": ("1571762450239-f0f047321444", "Kelsey Chance", "Саке"),
+    "matcha": ("1515823064-d6e0c04616a7", "Jason Leung", "Матча"),
+    "pannacotta": ("1518710101263-54e0350377bb", "Sara Cervera", "Панна-котта"),
+    "fresh-orange": ("1600271886742-f049cd451bba", "Mateusz Feliksik", "Апельсиновый фреш"),
+    "green-tea": ("1606377695906-236fdfcef767", "Ilya Mashkov", "Зелёный чай"),
+    "iced-latte": ("1461023058943-07fcbe16d735", "Demi DeHerrera", "Айс-латте"),
+    "margarita": ("1556855810-ac404aa91e85", "Kobby Mendez", "Маргарита"),
+    "old-fashioned": ("1621873495884-845a939892d1", "Adam Jaime", "Олд-фешен"),
+    "nicoise": ("1655271553809-d200a1240bf6", "Unsplash", "Салат «Нисуаз»"),
+    "quinoa-salad": ("1763000215238-38350d3e41ac", "Unsplash", "Салат с киноа"),
+    "breakfast-box": ("1641924676578-ed2792eb24de", "Unsplash", "Завтрак в номер"),
+    "fruit-plate": ("1523033904333-243d0283acae", "Vitalii Chernopyskyi", "Фруктовая тарелка"),
+    "octopus": ("1764397514747-8272f2da3f36", "Unsplash", "Осьминог на гриле"),
+    "spicy-tuna": ("1580821082847-c53037ecfe0a", "Derek Duran", "Спайси с тунцом"),
+    "veggie-roll": ("1562158074-1602c2f19a08", "Alexandra Kusper", "Овощной ролл"),
+    "virgin-mojito": ("1634496064950-02f043806b09", "Unsplash", "Безалкогольный мохито"),
+    "soup-day": ("1692776407523-8f3c4678ad36", "Unsplash", "Суп дня"),
+    "burrata-salad": ("1760023570385-ee484f7076b3", "Unsplash", "Салат с бурратой"),
+    # Тот же «Цезарь», что в меню «Панорамы»: блюдо одно, снимок обязан быть тот
+    # же — разные кадры одного блюда в двух меню читаются как разные блюда.
+    "caesar-rs": ("1550304943-4f24f54ddde9", "Sara Dubler", "Салат «Цезарь»"),
+
+    # --- Обложки разделов наглядного каталога ---
+    # Раздел показывает СВОЁ блюдо: так делает любое меню, и «обложка секции»
+    # тут честнее случайного стока. Кадры те же, что у позиций внутри раздела.
+    "sakura-sushi": ("1579871494447-9811cf80d66c", "Riccardo Bergamini", "Роллы"),
+    "sakura-hot": ("1569718212165-3a8278d5f624", "Cherry Lin", "Горячее"),
+    "sakura-drinks": ("1515823064-d6e0c04616a7", "Jason Leung", "Напитки"),
+    "terrace-desserts": ("1571877227200-a0d98ea607e9", "American Heritage Chocolate", "Десерты"),
+    "room-service-menu": ("1592861956120-e524fc739696", "Roam In Color", "Меню рум-сервиса"),
+
     # --- Обложка отеля (парадная главной) ---
     "hotel-cover": ("1566073771259-6a8506099945", "Marten Bjork", "Отель «Кристалл»"),
 
