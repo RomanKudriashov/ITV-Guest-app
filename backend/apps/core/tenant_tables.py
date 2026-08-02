@@ -75,6 +75,16 @@ TENANT_TABLES = [
     "analytics_review_daily",
     "analytics_export",
     "hotels_onprem_node",
+    # grms — управление номером. Конфигурация типа описывает, какая команда
+    # уходит в какое физическое оборудование: ошибка в скоупе здесь означает
+    # управление чужим номером, а не показ лишней строки.
+    "grms_room_type",
+    "grms_room_type_room",
+    "grms_zone",
+    "grms_variable",
+    "grms_control_element",
+    "grms_binding",
+    "grms_published_config",
 ]
 
 # Таблицы, где hotel_id необязателен (платформенные действия). Читать такие
