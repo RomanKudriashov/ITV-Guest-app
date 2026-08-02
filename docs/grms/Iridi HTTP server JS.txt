@@ -1,0 +1,103 @@
+// For PC force working
+
+var port = 1085;
+var max_clients = 60;
+var max_http_clients = 50;
+var ThreadSleep = 1;
+var http_server = IR.CreateDevice(IR.DEVICE_CUSTOM_SERVER_HTTP, "HttpServer", "", port, max_clients);
+http_server.SetParameters({"MaxHttpClients":max_http_clients});
+
+IR.AddListener(IR.EVENT_ONLINE, http_server, function(text)
+{
+   IR.Log("Server is ONLINE");
+});
+
+
+var l_sBadRequestResult = JSON.Stringify(
+         {
+            "requestID": null,
+            "status": false
+         })
+         
+var l_sRequestIDPart = '{ "requestID" : "'         
+var l_sStatusPart = '", "status" : "'       
+var l_sTrueStatusPart = '", "status" : "true'       
+var l_sValuePart = '", "value" : "'       
+var l_sEndPart = '" }'      
+
+var l_oResponse = {
+         "Headers" : {
+          "Content-Type" : "text/json",
+          "Data" : "Mon, 26 Jun 2017 11:15:14 GMT",
+          "Server" : "iRidium Server\1.1.7",
+          "Charset" : "utf-8"
+         },
+         "Data" : [l_sBadRequestResult],
+         "Code" : 200,
+         };
+
+function SetStatus(result, id)
+{
+   l_oResponse["Data"] = [l_sRequestIDPart + id + l_sStatusPart + result + l_sEndPart];
+}
+
+function SetResult(value, id)
+{
+   l_oResponse["Data"] = [l_sRequestIDPart + id + l_sTrueStatusPart + l_sValuePart + value + l_sEndPart];
+}   
+
+http_server.RegApiCallback(
+   {
+      Response : true,
+      Url : "",
+      cbRequest : function(in_sPath, in_sBody, in_sRequestType, in_oPathParams, in_oPostParams, in_oHeaders)
+      {
+         l_oResponse["Data"] = [l_sBadRequestResult];
+
+         if(in_sBody)
+         {
+            try
+            {
+               var json = JSON.Parse(in_sBody);
+
+               if(json.hasOwnProperty("request") &&
+                  json.hasOwnProperty("device") && 
+                  (json["request"] == "GET" || json["request"] == "SET"))
+               {
+                  var result = false;
+                  var _device = IR.GetDevice(json["device"]); 
+                  if(_device)
+                  {
+                     if(json["request"] == "SET")
+                     {
+                        if(json["channel"])
+                           result = _device.Set((json["subdevice"]? json["subdevice"] + ":": "") + json["channel"], json["value"]);
+                           
+                        SetStatus(result, json["requestID"]); 
+                     }
+                     else
+                     {
+                        if(json["feedback"])
+                        {
+                           var value = _device.GetFeedback((json["subdevice"]? json["subdevice"] + ":": "") + json["feedback"]); 
+                           SetResult(value, json["requestID"]); 
+                        }
+                        else
+                           SetStatus(result, json["requestID"]); 
+                     }
+                  }
+                  else
+                    SetStatus(result, json["requestID"]); 
+               }
+            }
+            catch(e)
+            {
+                IR.Log(e)
+                IR.Log(in_sBody)
+            }
+         }
+        //IR.Log(in_sBody);
+        //reciveHttp(in_sBody);
+         return l_oResponse;
+      }
+   });

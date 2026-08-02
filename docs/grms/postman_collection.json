@@ -1,0 +1,97 @@
+{
+	"info": {
+		"_postman_id": "4f9293b0-12c4-40fa-980b-44e7ecee5d9e",
+		"name": "Hoteza",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "5730438"
+	},
+	"item": [
+		{
+			"name": "Http_POST",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"request\": \"SET\",\r\n\"device\": \"Modbus TCP Server (Slave mode) Network\",\r\n\"subdevice\": \"Custom\",\r\n\"channel\": \"Channel\",\r\n\"value\": 0\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:80/",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "80",
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Http_GET",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"request\": \"GET\",\r\n\"device\": \"Modbus TCP Server (Slave mode) Network\",\r\n\"subdevice\": \"Custom\",\r\n\"feedback\": \"Feedback\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:80/",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "80",
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

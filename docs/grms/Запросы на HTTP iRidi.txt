@@ -1,0 +1,22 @@
+http://127.0.0.1:80/
+
+Send value (POST)
+
+Body:
+{
+"request": "SET",
+"device": "Modbus TCP Server (Slave mode) Network",
+"subdevice": "Custom",
+"channel": "Channel",
+"value": 1
+}
+
+Recive value (GET)
+
+Body:
+{
+"request": "GET",
+"device": "Modbus TCP Server (Slave mode) Network",
+"subdevice": "Custom",
+"feedback": "Feedback"
+}

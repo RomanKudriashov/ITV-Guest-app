@@ -1,0 +1,72 @@
+"room_415": {
+    "endpointUrl": "192.168.79.108:1085",
+
+    "light": {
+      "lamptable": {
+        "device": "Room 415",
+        "subdevice": "",
+        "command": "Lamp Table",
+        "feedback": "Lamp Table",
+        "values_on": "1",
+        "values_off": "0"
+      }
+    },
+    "dnd": {
+      "dnd": {
+        "device": "Room 415",
+        "subdevice": "",
+        "command": "Do not disturb",
+        "values_on": "1",
+        "values_off": "0",
+        "feedback": "Do not disturb"
+      },
+      "mur": {
+        "device": "Room 415",
+        "subdevice": "",
+        "command": "Remove Room",
+        "values_on": "1",
+        "values_off": "0",
+        "feedback": "Remove Room"
+      }
+    },
+    "fcu": {
+      "fcu": {
+        "device": "Room 415",
+        "subdevice": "",
+        "command_mode": "Fancloil On Off",
+        "values_mode_off": "0",
+        "values_mode_auto": "1",
+        "values_mode_cooling": "2", по факту не используем
+        "values_mode_heating": "3", по факту не используем
+        "command_fan": "Speed Fan",
+        "values_fan_off": "0",
+        "values_fan_low": "1",
+        "values_fan_normal": "2",
+        "values_fan_high": "3",
+        "command_temp": "Set Point",   от 16 до 32
+        "feedback_mode": "Fancloil On Off",
+        "feedback_fan": "Speed Fan",
+        "feedback_temp": "Set Point",
+        "feedback_curTemp": "Temperature"
+      }
+    }
+  },
+
+"scene": {
+      "MASTER_OFF": {
+        "device": "SHUN_1_2",
+        "subdevice": "",
+        "command": "2/3/59 213_MASTER_OFF_S",
+        "values_on": "0",
+        "values_off": "0"
+      },
+
+"curtain": {
+      "BLACKOUT_S": {
+        "device": "SHUN_1_2",
+        "subdevice": "",
+        "command": "2/2/22 213_BLACKOUT_S_DIRECTION",
+        "feedback": "2/2/22 213_BLACKOUT_S_DIRECTION",
+        "values_close": "0",
+        "values_open": "1"
+      },
