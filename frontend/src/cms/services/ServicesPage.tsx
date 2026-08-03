@@ -16,7 +16,9 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Collapse from '@mui/material/Collapse';
 import AddIcon from '@mui/icons-material/Add';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { useTranslation } from 'react-i18next';
 
@@ -35,8 +37,13 @@ export function ServicesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const services = useQuery({ queryKey: ['cms', 'services'], queryFn: fetchServices });
+
+  const all = services.data ?? [];
+  const active = all.filter((service) => service.is_active);
+  const archived = all.filter((service) => !service.is_active);
 
   const label = (value: Record<string, string> | undefined, fallback: string) =>
     value?.[i18n.resolvedLanguage ?? 'ru'] ?? value?.ru ?? value?.en ?? fallback;
@@ -71,22 +78,49 @@ export function ServicesPage() {
 
       {services.error ? <Alert severity="error">{String(services.error)}</Alert> : null}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
-        }}
-      >
-        {(services.data ?? []).map((service) => (
-          <ServiceCard
-            key={service.id}
-            service={service}
-            label={label}
-            onOpen={() => navigate(`/cms/services/${service.id}`)}
-          />
-        ))}
-      </Box>
+      {/*
+        Рабочее и архивное — врозь.
+
+        Выключенный сервис остаётся полноправной карточкой в общей сетке, и на
+        стенде это давало двадцать «Рум-сервис ms…» поверх шести настоящих:
+        оператор искал свой ресторан глазами среди мусора. Выключенные никуда
+        не деваются (их нельзя удалить — на них висят заказы), но лежат
+        свёрнутыми и не мешают работе.
+      */}
+      <ServiceGrid
+        services={active}
+        label={label}
+        onOpen={(id) => navigate(`/cms/services/${id}`)}
+      />
+
+      {archived.length ? (
+        <Box sx={{ mt: 3 }}>
+          <Button
+            onClick={() => setArchiveOpen((open) => !open)}
+            data-testid="services-archive-toggle"
+            startIcon={
+              <ExpandMoreIcon
+                sx={{
+                  transform: archiveOpen ? 'rotate(180deg)' : 'none',
+                  transition: 'transform .2s',
+                }}
+              />
+            }
+            sx={{ color: 'text.secondary' }}
+          >
+            {t('services.archive', { count: archived.length })}
+          </Button>
+          <Collapse in={archiveOpen} unmountOnExit>
+            <Box sx={{ mt: 2 }} data-testid="services-archive">
+              <ServiceGrid
+                services={archived}
+                label={label}
+                onOpen={(id) => navigate(`/cms/services/${id}`)}
+              />
+            </Box>
+          </Collapse>
+        </Box>
+      ) : null}
 
       <CreateServiceDialog
         open={creating}
@@ -266,5 +300,36 @@ function CreateServiceDialog({
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+/** Сетка карточек — одна и та же для рабочих и для архивных. */
+function ServiceGrid({
+  services,
+  label,
+  onOpen,
+}: {
+  services: CmsService[];
+  /** Тот же резолвер перевода, что у страницы: значение по языку + запасное. */
+  label: (value: Record<string, string> | undefined, fallback: string) => string;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gap: 2,
+        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
+      }}
+    >
+      {services.map((service) => (
+        <ServiceCard
+          key={service.id}
+          service={service}
+          label={label}
+          onOpen={() => onOpen(service.id)}
+        />
+      ))}
+    </Box>
   );
 }

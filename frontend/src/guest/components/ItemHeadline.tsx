@@ -25,27 +25,63 @@ export function ItemMedia({
   item,
   variant = 'top',
   fallbackIcon,
+  bleed = false,
 }: {
   item: ItemDetail;
   variant?: 'top' | 'rail';
   fallbackIcon?: AppIconComponent;
+  /**
+   * Вынести кадр за горизонтальные поля контейнера.
+   *
+   * Нужно в шторке позиции: её содержимое лежит в прокрутке с `px: 2`, и кадр
+   * наследовал эти 16px с каждой стороны — «во всю ширину» он не был. Флаг, а
+   * не всегда: этот же блок рисует живое превью бренда в CMS, а там карточка
+   * скруглённая, и кадр, вылезший за её поля, срезал бы углы.
+   */
+  bleed?: boolean;
 }) {
   const icon = fallbackIcon ?? fallbackIconFor(item.type);
   const isRail = variant === 'rail';
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
         position: 'relative',
         overflow: 'hidden',
+        // Кадр упирается в верхние углы карточки — скругляем по её же радиусу,
+        // иначе прямой угол снимка торчит из скруглённой шторки.
+        ...(bleed
+          ? {
+              borderTopLeftRadius: `${theme.palette.brand.radius.lg}px`,
+              borderTopRightRadius: `${theme.palette.brand.radius.lg}px`,
+            }
+          : {}),
         ...(isRail
           ? { width: '100%', height: '100%', alignSelf: 'stretch', minHeight: '100%' }
           : {
-              width: '100%',
-              // Capped so a tall image never pushes the body off-screen (the desktop bug).
-              height: { xs: 200, sm: 240 },
+              // Кадр держит ВЕРХ карточки, а не ленточку под заголовком:
+              // 200px на телефоне читались полоской. Потолок остаётся —
+              // высокая картинка не должна выталкивать тело за экран.
+              height: { xs: 268, sm: 300 },
               flexShrink: 0,
+              /*
+                Вынос за поля СДВИГОМ, а не отрицательным полем.
+
+                Родитель — `Stack`, а он в MUI сбрасывает `margin: 0` у всех
+                прямых детей селектором с большей специфичностью, чем класс
+                самого элемента. Поэтому и `mx: -2`, и явный
+                `marginInlineStart` молча обнулялись: ширина применялась, а
+                сдвиг нет — кадр становился шире карточки, но упирался не в
+                левый край, а в границу отступа, оставляя слева белую полоску и
+                вылезая справа.
+
+                `position: relative` у этого блока уже есть, а `inset*` Stack не
+                трогает.
+              */
+              ...(bleed
+                ? { width: 'calc(100% + 32px)', insetInlineStart: '-16px' }
+                : { width: '100%' }),
             }),
-      }}
+      })}
     >
       <KitImage src={item.images?.[0]} alt={item.title} fill fallbackIcon={icon} fallbackIconSize={isRail ? 64 : 48} />
       {/* Dissolve edge — the media melts into the content's background. */}
@@ -69,6 +105,8 @@ export interface ItemHeadlineViewProps {
   priceLabel: string | null;
   /** Skip the media block — the sheet placed the photo in a side rail. */
   hideMedia?: boolean;
+  /** Вынести кадр за поля контейнера — см. `ItemMedia`. */
+  bleedMedia?: boolean;
   /** Icon for the designed fallback when the item has no photo. */
   fallbackIcon?: AppIconComponent;
 }
@@ -82,12 +120,17 @@ export interface ItemHeadlineViewProps {
  * storefront sheet and the CMS brand preview render the same card body.
  */
 export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewProps>(
-  function ItemHeadlineView({ item, priceLabel, hideMedia = false, fallbackIcon }, titleRef) {
+  function ItemHeadlineView(
+    { item, priceLabel, hideMedia = false, fallbackIcon, bleedMedia = false },
+    titleRef,
+  ) {
     const { t } = useTranslation();
 
     return (
       <Stack spacing={2}>
-        {hideMedia ? null : <ItemMedia item={item} variant="top" fallbackIcon={fallbackIcon} />}
+        {hideMedia ? null : (
+          <ItemMedia item={item} variant="top" fallbackIcon={fallbackIcon} bleed={bleedMedia} />
+        )}
 
         <Stack spacing={1.5}>
           {item.badges?.length ? <ItemBadges badges={item.badges} /> : null}
@@ -161,6 +204,7 @@ export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>
         item={item}
         priceLabel={formatOptional(item.price)}
         hideMedia={mediaBeside}
+        bleedMedia
         fallbackIcon={fallbackIcon}
       />
     );

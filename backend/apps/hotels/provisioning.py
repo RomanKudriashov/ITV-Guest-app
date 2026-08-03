@@ -164,20 +164,36 @@ def provision_hotel(
             code="reception",
             defaults={
                 "kind": ExecutionPoint.Kind.RECEPTION,
-                "title": {"ru": "Ресепшен", "en": "Reception"},
+                "title": {"ru": "Ресепшен", "en": "Reception", "ar": "الاستقبال", "zh": "前台"},
                 "sla_minutes": 15,
             },
         )
         # Сервис-контейнер исполнителя (1:1). Каркасный ресепшен без категорий
         # на витрине не появляется, но инвариант «у каждого исполнителя есть
         # сервис» держим с самого создания отеля.
-        Service.objects.get_or_create(
+        # Имя даём на всех языках отеля сразу. Без него CMS показывала сервис
+        # по КОДУ — латинское «reception» в списке русских названий: у точки
+        # исполнения перевод был, а у её сервиса нет, и подпись бралась откуда
+        # придётся.
+        reception_name = {
+            "ru": "Ресепшен",
+            "en": "Reception",
+            "ar": "الاستقبال",
+            "zh": "前台",
+        }
+        reception_service, created_service = Service.objects.get_or_create(
             execution_point=reception,
             defaults={
                 "code": reception.code,
                 "type": Service.Type.CONCIERGE,
+                "public_name": reception_name,
             },
         )
+        # Починка уже заведённых отелей: на стендах, созданных до этой правки,
+        # сервис ресепшена лежит без имени, и `get_or_create` его не тронет.
+        if not created_service and not reception_service.public_name:
+            reception_service.public_name = reception_name
+            reception_service.save(update_fields=["public_name", "updated_at"])
 
         seed_item_data_dictionaries()
         # Пресеты статусов — часть каркаса отеля, а не демо-контента. До R3 они
