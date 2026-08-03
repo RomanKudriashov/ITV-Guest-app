@@ -239,6 +239,10 @@ function RoomBody({
             sx={{
               display: 'flex',
               flexWrap: 'wrap',
+              // Плитки не тянутся по высоте самого высокого соседа: рядом с
+              // климатом они иначе вырастают втрое и перестают читаться как
+              // плитки.
+              alignItems: 'flex-start',
               gap: 1.5,
               p: 1.5,
               borderRadius: (theme) => `${theme.palette.brand.radius.lg}px`,

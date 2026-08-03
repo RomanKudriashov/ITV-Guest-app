@@ -386,7 +386,21 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
 # и склеивать дельты ему не из чего.
 
 
-@database_sync_to_async
+# thread_sensitive=False — НЕ оптимизация, а условие работоспособности.
+#
+# Сборка снимка внутри себя ждёт ответов от коннектора: это сетевой обмен по
+# channel layer, а не только запрос в базу. По умолчанию `database_sync_to_async`
+# выполняется в ЕДИНСТВЕННОМ общем потоке ASGI, и пока снимок в нём ждёт железо
+# (до 5 секунд TTL на канал), этот поток занят — вместе со всем, чему он нужен,
+# включая обработку сообщений самого коннектора. Практический результат был
+# ровно такой: снимок по REST собирался, а тот же снимок из WS-консьюмера
+# получал TTL_EXPIRED по КАЖДОМУ каналу и показывал гостю исправный номер как
+# «нет связи».
+def _room_db(func):
+    return database_sync_to_async(func, thread_sensitive=False)
+
+
+@_room_db
 def _load_room_state(hotel, token: str, language: str):
     """
     Аутентификация, ПРОВЕРКА ПРАВА НА ПОДПИСКУ и снимок — одним походом.
@@ -412,7 +426,7 @@ def _load_room_state(hotel, token: str, language: str):
         return session, snapshot
 
 
-@database_sync_to_async
+@_room_db
 def _room_snapshot(hotel, token: str, language: str):
     from apps.accounts.auth import authenticate_guest
     from apps.core.errors import DomainError

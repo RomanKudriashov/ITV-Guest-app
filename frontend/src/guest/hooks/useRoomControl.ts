@@ -28,7 +28,7 @@ export function useRoomState(enabled = true) {
   const { isReady } = useGuestSession();
   return useQuery<RoomStateSnapshot>({
     queryKey: guestKeys.room,
-    queryFn: () => guestApi.get<RoomStateSnapshot>('/room/state'),
+    queryFn: () => guestApi.get<RoomStateSnapshot>('/guest/room/state'),
     enabled: isReady && enabled,
     staleTime: 0,
     // Возврат доступности после сбоя гость проверять руками не должен
@@ -58,7 +58,7 @@ export function useRoomCommand() {
   const queryClient = useQueryClient();
   return useMutation<RoomCommandAccepted, unknown, RoomCommandInput>({
     mutationFn: (input) =>
-      guestApi.post<RoomCommandAccepted>('/room/command', {
+      guestApi.post<RoomCommandAccepted>('/guest/room/command', {
         controlId: input.controlId,
         capability: input.capability ?? '',
         value: input.value ?? null,
@@ -74,7 +74,7 @@ export function useRoomCommand() {
 export function useRoomVerify() {
   const queryClient = useQueryClient();
   return useMutation<{ can_command: boolean }, unknown, { pin: string }>({
-    mutationFn: (input) => guestApi.post('/room/verify', { pin: input.pin }),
+    mutationFn: (input) => guestApi.post('/guest/room/verify', { pin: input.pin }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: guestKeys.room });
       void queryClient.invalidateQueries({ queryKey: guestKeys.session });
