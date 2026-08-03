@@ -151,10 +151,11 @@ export function GuestLayout() {
         alignItems="center"
         sx={(th) => ({
           position: 'fixed',
-          top: `calc(10px + env(safe-area-inset-top, 0px))`,
+          top: `calc(${storefrontLayout.floatingTop}px + env(safe-area-inset-top, 0px))`,
           insetInlineEnd: 12,
           zIndex: th.zIndex.appBar + 2,
           borderRadius: 999,
+          minHeight: storefrontLayout.floatingHeight,
           px: 0.5,
           // Плавающая группа и отдельный чип номера рядом были из разных
           // источников стиля — стеклянная группа и плотный чип. Теперь оба
@@ -163,7 +164,9 @@ export function GuestLayout() {
           boxShadow: th.shadows[6],
         })}
       >
-        {room ? <RoomMenu room={room} variant="floating" /> : null}
+        {/* Без номера чип не исчезает, а становится входом по номеру:
+            иначе из режима просмотра некуда вернуться. */}
+        <RoomMenu room={room} variant="floating" />
         <GuestLanguageMenu />
         <ThemeModeToggle />
       </Stack>

@@ -604,7 +604,8 @@
     },
     "session": {
       "current": "You are in room {{room}}",
-      "leave": "Leave the hotel"
+      "leave": "Leave the hotel",
+      "identify": "Enter room number"
     }
   },
   "tracker": {
@@ -1463,7 +1464,9 @@
       "minOrderHint": "Below it checkout is blocked",
       "freeDelivery": "Free delivery from, minor units",
       "freeDeliveryHint": "Empty — as hotel"
-    }
+    },
+    "archive_one": "Disabled · {{count}}",
+    "archive_other": "Disabled · {{count}}"
   },
   "inclusions": {
     "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",

@@ -24,12 +24,20 @@ import { useGuestSession } from '../session/GuestSessionProvider';
  *
  * Один компонент на обе раскладки: у номера должен быть ОДИН владелец —
  * дублирование чипа на телефоне уже было и путало.
+ *
+ * РЕЖИМ ПРОСМОТРА (`room === null`) живёт здесь же, а не отдельным компонентом.
+ * Гость, вошедший «просто посмотреть меню», номера не имеет — чип не рисовался
+ * вовсе, и вернуться к вводу номера было НЕЧЕМ: ни кнопки, ни пункта меню,
+ * назад по истории — на ту же витрину. Единственным выходом оставалась чистка
+ * хранилища руками. Место у этого действия ровно то же: чип отвечает на вопрос
+ * «кто я сейчас», и «я пока никто, хочу представиться» — тот же вопрос.
  */
 export function RoomMenu({
   room,
   variant = 'bar',
 }: {
-  room: string;
+  /** `null` — гость смотрит витрину без номера (режим просмотра). */
+  room: string | null;
   variant?: 'bar' | 'floating';
 }) {
   const { t } = useTranslation();
@@ -44,6 +52,33 @@ export function RoomMenu({
     // представляется номером.
     navigate('/', { replace: true });
   };
+
+  // Режим просмотра: не меню, а одно действие — представиться номером. Меню
+  // с единственным пунктом здесь было бы лишним шагом.
+  if (room === null) {
+    return (
+      <ButtonBase
+        onClick={leave}
+        data-testid="guest-identify"
+        sx={(th) => ({
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.75,
+          height: variant === 'bar' ? 34 : 36,
+          px: variant === 'bar' ? 1.6 : 1.25,
+          borderRadius: 999,
+          fontSize: variant === 'bar' ? 12 : 12.5,
+          fontWeight: 700,
+          whiteSpace: 'nowrap',
+          color: th.palette.primary.main,
+          border: `1px solid ${alpha(th.palette.primary.main, 0.4)}`,
+          bgcolor: alpha(th.palette.primary.main, 0.08),
+        })}
+      >
+        {t('guest.session.identify')}
+      </ButtonBase>
+    );
+  }
 
   return (
     <>
