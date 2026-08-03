@@ -100,6 +100,31 @@ test.describe('Управление номером', () => {
       .not.toBe(before)
   })
 
+  test('арабский: направление меняется и экран не разъезжается', async ({ page }) => {
+    await enterRoom(page)
+    await expect(page.getByTestId('room-control-light.living')).toBeVisible({ timeout: 20_000 })
+
+    await page.getByTestId('guest-language').click()
+    await page.getByTestId('guest-language-ar').click()
+
+    // Направление документа переключилось по-настоящему.
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.dir), { timeout: 15_000 })
+      .toBe('rtl')
+    await expect(page.getByTestId('room-page')).toBeVisible()
+    await expect(page.getByTestId('room-control-light.living')).toBeVisible({ timeout: 20_000 })
+
+    // Горизонтального разъезда нет: в RTL он появляется ровно там, где вместо
+    // логических свойств использованы left/right.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
+    expect(overflow, 'экран номера уехал по горизонтали в RTL').toBeLessThanOrEqual(1)
+
+    // Заголовки приехали на арабском — то есть локаль раздела полная.
+    await expect(page.getByTestId('room-page')).not.toContainText('Управление номером')
+  })
+
   test('связи нет — контролы блокируются и устаревшее не показывается', async ({ page }) => {
     await enterRoom(page)
     await expect(page.getByTestId('room-control-light.living')).toBeVisible({ timeout: 20_000 })
