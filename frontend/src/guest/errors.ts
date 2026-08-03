@@ -33,6 +33,14 @@ const CODE_KEYS: Record<string, string> = {
   slot_in_past: 'guest.errors.slotInPast',
   slot_taken: 'guest.errors.slotTaken',
   not_orderable: 'guest.errors.notOrderable',
+  // Управление номером (contracts/guest-api.md). Тексты нейтральные: почему
+  // именно нет связи, гость не узнаёт ни здесь, ни где-либо ещё — техническая
+  // причина остаётся в журнале.
+  room_unavailable: 'guest.errors.roomUnavailable',
+  control_unknown: 'guest.errors.controlUnknown',
+  command_in_flight: 'guest.errors.commandInFlight',
+  PIN_INVALID: 'guest.roomControl.pinInvalid',
+  PIN_THROTTLED: 'guest.roomControl.pinThrottled',
 };
 
 export function isNetworkError(error: unknown): boolean {

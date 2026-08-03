@@ -33,6 +33,7 @@ import { VenueListPage } from '@/guest/pages/VenueListPage';
 import { CartPage } from '@/guest/pages/CartPage';
 import { ChatPage } from '@/guest/pages/ChatPage';
 import { OrdersPage } from '@/guest/pages/OrdersPage';
+import { RoomPage } from '@/guest/pages/RoomPage';
 import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
 
 /**
@@ -152,6 +153,10 @@ export const router = createBrowserRouter([
           { path: 'venue/:code', element: <VenuePage /> },
           { path: 'cart', element: <CartPage /> },
           { path: 'chat', element: <ChatPage /> },
+          // Управление номером. Гейт по модулю отеля живёт НА СЕРВЕРЕ:
+          // маршрут доступен, но данные без модуля не отдаются (403).
+          // Скрытый на клиенте пункт — удобство, а не защита.
+          { path: 'room', element: <RoomPage /> },
           { path: 'orders', element: <OrdersPage /> },
           { path: 'orders/:id', element: <OrderStatusPage /> },
         ],

@@ -322,7 +322,8 @@
       "cart": "Order",
       "orders": "Orders",
       "chat": "Chat",
-      "info": "Info"
+      "info": "Info",
+      "room": "Room"
     },
     "entry": {
       "subtitle": "Enter your room — everything the hotel offers is at hand.",
@@ -519,7 +520,10 @@
       "slotNotOffered": "That time is not available",
       "slotInPast": "That time has already passed",
       "slotTaken": "That slot was just taken — please pick another",
-      "notOrderable": "This page cannot be ordered"
+      "notOrderable": "This page cannot be ordered",
+      "roomUnavailable": "Room control is temporarily unavailable. Please contact the reception desk.",
+      "controlUnknown": "There is no such control in your room",
+      "commandInFlight": "The previous action is still running"
     },
     "flags": {
       "popular": "Popular",
@@ -606,6 +610,38 @@
       "current": "You are in room {{room}}",
       "leave": "Leave the hotel",
       "identify": "Enter room number"
+    },
+    "roomControl": {
+      "title": "Room control",
+      "subtitle": "Lights, curtains and climate",
+      "unavailable": "Room control is temporarily unavailable. Please contact the reception desk.",
+      "empty": "Nothing to control in this room yet",
+      "emptyHint": "Please contact reception — the equipment is not configured yet.",
+      "offline": "No connection",
+      "running": "Working",
+      "confirmed": "Done",
+      "unconfirmed": "Could not confirm. Showing the actual state.",
+      "failed": "Could not apply. Please try again.",
+      "liveOffline": "Updates paused — reconnecting",
+      "on": "On",
+      "off": "Off",
+      "open": "Open",
+      "close": "Close",
+      "fanAuto": "Auto",
+      "fanSpeed": "Fan speed",
+      "setpoint": "Target",
+      "currentTemp": "Room now",
+      "decrease": "Decrease",
+      "increase": "Increase",
+      "pinTitle": "Confirm you are in the room",
+      "pinHint": "Enter the stay PIN from the reception desk. You only enter it once.",
+      "pinLabel": "Stay PIN",
+      "pinSubmit": "Confirm",
+      "pinInvalid": "That code did not match",
+      "pinAttempts_one": "{{count}} attempt left",
+      "pinAttempts_other": "{{count}} attempts left",
+      "pinThrottled": "Too many attempts. Please try again later.",
+      "readOnly": "View only"
     }
   },
   "tracker": {

@@ -321,7 +321,8 @@
       "cart": "订单",
       "orders": "订单",
       "chat": "聊天",
-      "info": "信息"
+      "info": "信息",
+      "room": "客房"
     },
     "entry": {
       "subtitle": "输入房间号，酒店的一切尽在指尖。",
@@ -517,7 +518,10 @@
       "slotNotOffered": "该时间不可用",
       "slotInPast": "该时间已过",
       "slotTaken": "该时段刚被预订，请另选",
-      "notOrderable": "此页面无法下单"
+      "notOrderable": "此页面无法下单",
+      "roomUnavailable": "客房控制暂时不可用。请联系前台。",
+      "controlUnknown": "您的房间没有该控制项",
+      "commandInFlight": "上一个操作仍在执行"
     },
     "flags": {
       "popular": "热门",
@@ -604,6 +608,37 @@
       "current": "您在 {{room}} 房",
       "leave": "退出酒店",
       "identify": "输入房间号"
+    },
+    "roomControl": {
+      "title": "客房控制",
+      "subtitle": "灯光、窗帘与空调",
+      "unavailable": "客房控制暂时不可用。请联系前台。",
+      "empty": "此客房暂无可控设备",
+      "emptyHint": "请联系前台——设备尚未配置。",
+      "offline": "无连接",
+      "running": "执行中",
+      "confirmed": "完成",
+      "unconfirmed": "无法确认。已显示实际状态。",
+      "failed": "执行失败，请重试。",
+      "liveOffline": "更新已暂停——正在重新连接",
+      "on": "开",
+      "off": "关",
+      "open": "打开",
+      "close": "关闭",
+      "fanAuto": "自动",
+      "fanSpeed": "风速",
+      "setpoint": "设定温度",
+      "currentTemp": "当前室温",
+      "decrease": "调低",
+      "increase": "调高",
+      "pinTitle": "请确认您在房间内",
+      "pinHint": "请输入前台提供的入住 PIN 码，只需输入一次。",
+      "pinLabel": "入住 PIN 码",
+      "pinSubmit": "确认",
+      "pinInvalid": "验证码不正确",
+      "pinAttempts_other": "还剩 {{count}} 次机会",
+      "pinThrottled": "尝试次数过多，请稍后再试。",
+      "readOnly": "仅查看"
     }
   },
   "tracker": {

@@ -198,3 +198,17 @@ export function guestChatSocketUrl(language?: string): string | null {
   if (language) params.set('lang', language);
   return `${protocol}//${window.location.host}${WS_BASE}/guest/chat/?${params.toString()}`;
 }
+
+/**
+ * WS URL живого состояния номера. Комнаты в адресе нет намеренно: она
+ * резолвится из токена сессии, как и тред чата. Прислать сюда чужой номер
+ * физически нечем.
+ */
+export function guestRoomSocketUrl(language?: string): string | null {
+  const token = guestTokenStorage.get();
+  if (!token) return null;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const params = new URLSearchParams({ token, hotel: HOTEL_SUBDOMAIN });
+  if (language) params.set('lang', language);
+  return `${protocol}//${window.location.host}${WS_BASE}/guest/room/?${params.toString()}`;
+}

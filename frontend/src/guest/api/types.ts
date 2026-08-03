@@ -34,6 +34,13 @@ export interface GuestHotel {
    * Готовый url: витрина не резолвит ассеты и не собирает адреса строкой.
    */
   cover_image?: string | null;
+  /**
+   * Включён ли у отеля модуль «Управление номером».
+   *
+   * УЗКИЙ флаг, а не список модулей: гостю незачем знать платный обвес отеля.
+   * Отвечает ровно на один вопрос — показывать ли пункт «Номер».
+   */
+  room_control_enabled?: boolean;
 }
 
 export interface GuestSession {
@@ -616,4 +623,76 @@ export interface GuestReview {
   rating: number;
   comment: string;
   created_at?: string;
+}
+
+/* ── Управление номером (GRMS) ──────────────────────────────────────────────
+ *
+ * Фронт знает про `controlId` и значение, и больше ни про что. Номер комнаты,
+ * endpoint, имя устройства iRidi, имена команд и обратной связи сюда не
+ * приезжают — это не «пока не добавили», а условие контракта
+ * (docs/grms/contracts/guest-api.md §8).
+ */
+
+/** Ветвление идёт ПО ЭТОМУ, никогда по `kind` и никогда по `controlId`. */
+export type RoomCapability =
+  | 'toggle'
+  | 'trigger'
+  | 'fan_speed'
+  | 'setpoint'
+  | 'current_temp'
+  | 'position'
+  | 'level';
+
+export type RoomControlState = 'confirmed' | 'pending' | 'offline';
+
+export interface RoomRange {
+  min: number;
+  max: number;
+  step: number;
+}
+
+export interface RoomControl {
+  controlId: string;
+  /** Только для иконки и заголовка по умолчанию. В условиях поведения — нет. */
+  kind: string;
+  title: string;
+  capabilities: RoomCapability[];
+  /**
+   * Скаляр у простого элемента, объект у составного (кондиционер — ОДИН
+   * элемент на четыре ручки). `null` — значения нет: элемент недоступен,
+   * в процессе, или это сцена, у которой состояния не бывает.
+   */
+  value: number | Record<string, number> | null;
+  range?: Partial<Record<RoomCapability, RoomRange>>;
+  state: RoomControlState;
+  readonly: boolean;
+}
+
+export interface RoomZone {
+  code: string;
+  title: string;
+  controls: RoomControl[];
+}
+
+export interface RoomStateSnapshot {
+  availability: 'online' | 'unavailable';
+  /** Готовый текст для гостя. Техническая причина остаётся на сервере. */
+  message: string | null;
+  checked_at: string;
+  trust: GuestTrust;
+  can_command: boolean;
+  zones: RoomZone[];
+}
+
+export interface RoomCommandAccepted {
+  commandId: string;
+  controlId: string;
+  state: 'pending';
+}
+
+/** Исход конкретной команды, доносимый вместе со снимком по WS. */
+export interface RoomCommandOutcome {
+  commandId: string;
+  controlId: string;
+  result: 'confirmed' | 'unconfirmed' | 'accepted' | 'failed' | null;
 }

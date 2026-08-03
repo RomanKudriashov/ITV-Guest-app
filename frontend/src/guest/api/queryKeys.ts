@@ -23,5 +23,10 @@ export const guestKeys = {
   home: (language: string) => ['guest', 'home', language] as const,
   /** Single thread per guest — a stable key the WS snapshot overwrites. */
   chat: ['guest', 'chat'] as const,
+  /**
+   * Состояние номера. Ключ стабильный, без языка: снимок приходит по WS и
+   * перезаписывает эту запись целиком, а язык уже применён на сервере.
+   */
+  room: ['guest', 'room'] as const,
   review: (orderId: string) => ['guest', 'review', orderId] as const,
 };

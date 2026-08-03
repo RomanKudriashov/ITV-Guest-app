@@ -82,11 +82,14 @@ export {
   type RevealOptions,
 } from './motion';
 
-// Room controls (visual only)
+// Room controls. Витринными они были до G5: Thermostat получил onChange,
+// добавились сегменты скорости вентилятора — единственная capability из
+// словаря, которую кит не закрывал ничем.
 export {
   RingDimmer,
   PositionSlider,
   Thermostat,
+  FanSpeed,
   LargeToggle,
   ActionButton,
   SceneButton,
@@ -95,6 +98,7 @@ export {
   type RingDimmerProps,
   type PositionSliderProps,
   type ThermostatProps,
+  type FanSpeedProps,
   type LargeToggleProps,
   type RoomTileButtonProps,
   type RoomStatusProps,

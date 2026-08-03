@@ -18,6 +18,7 @@ import {
   IconOrders,
   IconChat,
   IconInfo,
+  IconRoom,
   type AppIconComponent,
 } from '@/icons';
 import { fadeInSx } from '@/kit';
@@ -52,7 +53,10 @@ const HOTEL_TABS: NavTab[] = [
   { value: '/chat', Icon: IconChat, labelKey: 'guest.nav.chat' },
   { value: '/info', Icon: IconInfo, labelKey: 'guest.nav.info' },
 ];
-const TABS = [...PRIMARY_TABS, ...HOTEL_TABS];
+// Управление номером — платный модуль отеля и раздел, которому нужен номер.
+// Живёт отдельной константой, чтобы гейт был виден в одном месте, а не
+// растворился в фильтре по всему массиву.
+const ROOM_TAB: NavTab = { value: '/room', Icon: IconRoom, labelKey: 'guest.nav.room' };
 const TOP_BAR_HEIGHT = storefrontLayout.topBar;
 
 /**
@@ -97,9 +101,19 @@ export function GuestLayout() {
     return <Navigate to="/" replace state={{ from: location.pathname }} />;
   }
 
+  const room = session?.room ?? null;
+  // Пункт «Номер» показывается при ДВУХ условиях сразу:
+  //
+  //  * модуль включён у отеля — иначе раздела не существует, и сервер ответит
+  //    403 на маршрут, а не отдаст пустой экран;
+  //  * у сессии есть номер — в режиме «просто посмотреть» управлять нечем, и
+  //    ссылка вела бы в никуда. Это единственное, что мы делаем с режимом
+  //    просмотра: не показываем бессмысленную ссылку. Сам режим не трогаем.
+  const roomControl = Boolean(session?.hotel.room_control_enabled ?? hotel?.room_control_enabled);
+  const TABS = [...PRIMARY_TABS, ...HOTEL_TABS, ...(roomControl && room ? [ROOM_TAB] : [])];
+
   const activeTab = TABS.find((tab) => location.pathname.startsWith(tab.value))?.value ?? false;
   const badgeFor = (value: string) => (value === '/chat' ? unreadChat : 0);
-  const room = session?.room ?? null;
   // Корзина — колонка справа на десктопе, видна только с непустым заказом.
   const cartOpen = isDesktop && !cart.isEmpty;
   const content = (
