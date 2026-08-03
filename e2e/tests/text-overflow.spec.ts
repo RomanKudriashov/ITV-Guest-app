@@ -132,7 +132,10 @@ async function enterWithRoom(page: Page, mode: 'dark' | 'light') {
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
 }
 
-const GUEST_ROUTES = ['/home', '/venue/kitchen', '/info', '/cart', '/orders']
+// `/room` — управление номером (G5). Экран плиточный и с липкой шапкой,
+// то есть ровно тот класс, к которому предрасположены и обрезка подписи,
+// и перекрытие соседом.
+const GUEST_ROUTES = ['/home', '/venue/kitchen', '/info', '/cart', '/orders', '/room']
 
 for (const mode of ['dark', 'light'] as const) {
   for (const vp of VIEWPORTS) {

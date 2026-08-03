@@ -97,6 +97,33 @@ test.describe('Тема: переключение на всех поверхно
     expect(luminance(await pageBackground(page))).toBeGreaterThan(dark)
   })
 
+  test('экран управления номером живёт в обеих темах', async ({ page }) => {
+    await clearTheme(page)
+    await enterAsGuest(page)
+
+    await page.getByTestId('guest-nav-room').click()
+    await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('room-control-light.living')).toBeVisible({ timeout: 20_000 })
+
+    const dark = luminance(await pageBackground(page))
+    expect(dark, 'демо-отель тёмный — экран номера открывается тёмным').toBeLessThan(90)
+
+    // Плитка контрола обязана взять цвет из ТОКЕНОВ, а не остаться тёмным
+    // островом: ровно этой болезнью болели чип номера и нижнее меню до R7.
+    const tileInk = await page
+      .getByTestId('room-control-light.living')
+      .evaluate((node) => getComputedStyle(node).color)
+
+    const { after: light } = await toggleAndMeasure(page)
+    expect(light, 'после тумблера экран номера светлый').toBeGreaterThan(dark)
+
+    const tileInkLight = await page
+      .getByTestId('room-control-light.living')
+      .evaluate((node) => getComputedStyle(node).color)
+    expect(tileInkLight, 'текст плитки обязан смениться вместе с темой').not.toBe(tileInk)
+    expect(luminance(tileInkLight), 'на светлой теме текст плитки тёмный').toBeLessThan(150)
+  })
+
   test('CMS открывается в бренде отеля и переключается', async ({ page }) => {
     await clearTheme(page)
     await login(page, ADMIN)

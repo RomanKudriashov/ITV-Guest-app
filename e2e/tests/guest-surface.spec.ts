@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, CONCIERGE, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
+import { API, apiToken, CONCIERGE, DEMO_ROOM, HOTEL, moveOrderStatus, openCart } from './helpers'
 
 /**
  * Гостевой контур: главная из данных, чат гость↔персонал и отзыв после
@@ -164,5 +164,76 @@ test.describe('Гостевой контур', () => {
     )
     expect(review.ok()).toBeTruthy()
     expect((await review.json()).rating).toBe(5)
+  })
+})
+
+/**
+ * Пункт «Номер» — гейт модуля, а не украшение.
+ *
+ * Проверяются оба положения. Один только «пункт есть» ничего не доказывает:
+ * до G5 массив навигации был статичным, и раздел показался бы ВСЕМ отелям,
+ * включая те, у которых GRMS нет и не куплен.
+ */
+test.describe('Управление номером: гейт пункта навигации', () => {
+  test('с включённым модулем пункт есть и ведёт на экран', async ({ page }) => {
+    await page.goto('/')
+    await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
+    await page.getByTestId('guest-room-submit').click()
+
+    await expect(page.getByTestId('guest-nav-room')).toBeVisible({ timeout: 20_000 })
+    await page.getByTestId('guest-nav-room').click()
+    await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('без модуля пункта нет, а сервер не отдаёт состояние', async ({ page, request }) => {
+    // Модуль отеля включает ПЛАТФОРМА: это платный обвес, и отель себе его
+    // сам не выдаёт. Поэтому и выключаем платформенным токеном.
+    const auth = await request.post(`${API}/api/v1/platform/auth/login`, {
+      data: { email: 'platform@itv.local', password: 'platform12345' },
+    })
+    expect(auth.ok(), 'вход в платформу').toBeTruthy()
+    const headers = { Authorization: `Bearer ${(await auth.json()).access}` }
+
+    const fleet = await request.get(`${API}/api/v1/platform/fleet?origin=all&page_size=200`, {
+      headers,
+    })
+    expect(fleet.ok()).toBeTruthy()
+    const hotel = ((await fleet.json()).items as { id: string; subdomain: string }[]).find(
+      (row) => row.subdomain === HOTEL,
+    )
+    expect(hotel, `отель ${HOTEL} в реестре платформы`).toBeTruthy()
+
+    const setModule = (enabled: boolean) =>
+      request.put(`${API}/api/v1/platform/hotels/${hotel!.id}/modules`, {
+        data: { modules: [{ code: 'room_control', is_enabled: enabled }] },
+        headers,
+      })
+
+    const off = await setModule(false)
+    expect(off.ok(), `выключение модуля -> ${off.status()}`).toBeTruthy()
+
+    try {
+      await page.goto('/')
+      await page.evaluate(() => window.localStorage.clear())
+      await page.goto('/')
+      await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
+      await page.getByTestId('guest-room-submit').click()
+      await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
+
+      // Пункта нет вовсе.
+      await expect(page.getByTestId('guest-nav-room')).toHaveCount(0)
+
+      // И это не только про клиент: маршрут закрыт НА СЕРВЕРЕ. Скрытый пункт —
+      // удобство, а не защита: адрес можно набрать руками.
+      const guestToken = await page.evaluate(() =>
+        window.localStorage.getItem('itv.guest.token'),
+      )
+      const state = await request.get(`${API}/api/v1/guest/room/state`, {
+        headers: { Authorization: `Bearer ${guestToken}`, 'X-Hotel-Subdomain': HOTEL },
+      })
+      expect(state.status(), 'модуль выключен — состояние не отдаётся').toBe(403)
+    } finally {
+      await setModule(true)
+    }
   })
 })
