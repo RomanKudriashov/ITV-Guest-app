@@ -5,6 +5,9 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+
+import { ApiError } from '@/api/client';
 
 import {
   FanSpeed,
@@ -448,6 +451,14 @@ function iconFor(kind: string) {
 
 /* ── Слабая сессия: форма PIN прямо на экране ─────────────────────────────── */
 
+/** «Осталась одна попытка» / «попробуйте через N минут» — из тела ответа. */
+function attemptsHint(error: unknown, t: TFunction): string {
+  if (!(error instanceof ApiError)) return '';
+  const left = error.payload.attempts_left;
+  if (typeof left === 'number') return t('guest.roomControl.pinAttempts', { count: left });
+  return '';
+}
+
 /**
  * Форма ввода PIN живёт НА САМОМ ЭКРАНЕ, а не редиректом в отдельный шаг:
  * гость пришёл сюда управлять номером, и увести его на пустую страницу «нужно
@@ -465,7 +476,11 @@ function PinPanel() {
     verify.mutate(
       { pin },
       {
-        onError: (err) => setError(errorMessage(err, t)),
+        // Сколько попыток осталось — говорим честно. Молчаливый счётчик
+        // приводит к тому, что гость упирается в блокировку внезапно и идёт на
+        // ресепшен уже раздражённым; про саму блокировку сервер сообщает
+        // временем ожидания, и его тоже показываем.
+        onError: (err) => setError([errorMessage(err, t), attemptsHint(err, t)].filter(Boolean).join(' ')),
         onSuccess: () => setPin(''),
       },
     );
