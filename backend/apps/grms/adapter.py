@@ -147,10 +147,22 @@ class IridiResult:
     value: int | str | None = None
     error: str | None = None
     raw: str = ""
+    # Значение ДО приведения к числу. Нужно ровно для одного различения, и оно
+    # существенное: булев `false` в поле value — это картина боевого стенда,
+    # где обмен с GRMS не поднят и все теги отдают `false` (прозвон §7). После
+    # `_coerce` он превращается в 0 и становится неотличим от честного «свет
+    # выключен». Гостю нельзя показать «всё выключено» там, где на самом деле
+    # «нам никто не отвечает», — поэтому сырое значение доезжает до вызывающего.
+    raw_value: object = None
 
     @property
     def failed(self) -> bool:
         return not self.ok
+
+    @property
+    def is_dead_sentinel(self) -> bool:
+        """Канал ответил булевым `false` — значения нет, а не «ноль»."""
+        return self.raw_value is False
 
 
 def _coerce(value: str) -> int | str:
@@ -214,4 +226,4 @@ def parse_response(raw_body: str, *, request_id: str, is_read: bool) -> IridiRes
         # гостю строку «undefined» как состояние.
         return IridiResult(ok=False, error=CHANNEL_NOT_FOUND, raw=raw_body)
 
-    return IridiResult(ok=True, value=_coerce(value), raw=raw_body)
+    return IridiResult(ok=True, value=_coerce(value), raw=raw_body, raw_value=value)

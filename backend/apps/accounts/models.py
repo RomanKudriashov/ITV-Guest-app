@@ -188,6 +188,17 @@ class GuestSession(TenantModel):
     revoked_at = models.DateTimeField(null=True, blank=True)
     user_agent = models.CharField(max_length=512, blank=True)
 
+    # Устройство подтвердило PIN проживания (управление номером, G5).
+    #
+    # ОТДЕЛЬНОЕ ПОЛЕ, А НЕ УРОВЕНЬ ДОВЕРИЯ, и это принципиально. Напрашивалось
+    # поднимать сессию до `pms_verified`, но этот уровень означает «сверено с
+    # PMS». PMS-интеграции нет; заняв уровень подтверждением по PIN, мы бы
+    # получили систему, где `pms_verified` больше не значит того, что написано,
+    # — и в тот день, когда PMS появится, отличить настоящую сверку от ввода
+    # четырёх цифр стало бы нечем. Лестница доверия остаётся нетронутой,
+    # `pms_verified` — пустым слотом под настоящую интеграцию.
+    room_verified_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         db_table = "accounts_guest_session"
         ordering = ["-created_at"]

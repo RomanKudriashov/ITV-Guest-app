@@ -92,7 +92,14 @@ def test_import_preview_confirm_build_publish(cms, crystal):
     confirm = cms.post("/api/v1/cms/grms/import/confirm", {"preview": parsed})
     assert confirm.status_code == 200, confirm.content
 
-    types = cms.get("/api/v1/cms/grms/types").json()["types"]
+    # Считаем ИМПОРТИРОВАННЫЕ типы, а не все типы отеля. С G5 демо-отель
+    # приезжает из сида уже с типом гостевого экрана, и «сколько всего типов»
+    # перестало быть утверждением про импорт.
+    from apps.grms.management.commands.seed_grms_demo import TYPE_CODE as DEMO_TYPE
+
+    types = [
+        t for t in cms.get("/api/v1/cms/grms/types").json()["types"] if t["code"] != DEMO_TYPE
+    ]
     assert len(types) == 3
     code = types[0]["code"]
     assert types[0]["variables"], "переменные обязаны появиться"

@@ -85,6 +85,9 @@ TENANT_TABLES = [
     "grms_control_element",
     "grms_binding",
     "grms_published_config",
+    # PIN проживания. Утечка через дырявый скоуп означала бы чужой номер
+    # ровно так же, как утечка маппинга.
+    "grms_room_pin",
 ]
 
 # Таблицы, где hotel_id необязателен (платформенные действия). Читать такие

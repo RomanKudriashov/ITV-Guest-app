@@ -98,7 +98,19 @@ def serialize_hotel(hotel: Hotel) -> dict:
         # витрина не должна знать, как из id картинки получается url, и уж
         # тем более собирать его строкой.
         "cover_image": _brand_cover_url(tokens),
+        # УЗКИЙ флаг, а не список модулей отеля. Гостю незачем знать платный
+        # обвес: «у нас есть аналитика и PMS» — это разговор отеля с
+        # платформой, а не с человеком в номере. Флаг отвечает ровно на один
+        # вопрос фронта: показывать ли пункт «Номер».
+        "room_control_enabled": _room_control_enabled(hotel),
     }
+
+
+def _room_control_enabled(hotel: Hotel) -> bool:
+    from apps.hotels.models import HotelModule
+    from apps.hotels.module_registry import enabled_module_codes
+
+    return HotelModule.Code.ROOM_CONTROL in enabled_module_codes(hotel)
 
 
 def _session_payload(session, hotel: Hotel, *, token: str | None = None) -> dict:

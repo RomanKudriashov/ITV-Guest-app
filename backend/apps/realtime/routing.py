@@ -5,6 +5,7 @@ from apps.grms.consumers import ConnectorConsumer
 from .consumers import (
     GuestChatConsumer,
     GuestOrderConsumer,
+    RoomStateConsumer,
     StaffChatConsumer,
     TrackerConsumer,
 )
@@ -18,6 +19,9 @@ _WS_ROUTES = [
     ("tracker/<slug:point_code>/", TrackerConsumer),
     ("guest/order/<uuid:order_id>/", GuestOrderConsumer),
     ("guest/chat/", GuestChatConsumer),
+    # Комнаты в адресе нет намеренно: она резолвится из токена сессии, как и
+    # тред чата. Прислать чужой номер этому каналу нечем.
+    ("guest/room/", RoomStateConsumer),
     ("staff/chat/<uuid:thread_id>/", StaffChatConsumer),
     # Он-прем узел. Без слеша на конце: адрес зашит в конфиг коробки на
     # объекте, и лишний слеш там стоил бы выезда инженера.

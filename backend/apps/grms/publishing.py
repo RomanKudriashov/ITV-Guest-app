@@ -94,7 +94,38 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
             "device_name_template": room_type.device_name_template,
             "subdevice": room_type.subdevice or "",
             "zones": sorted(zones.values(), key=lambda z: (z["sort_order"], z["code"])),
+            "plan": _plan(room_type),
         }
+
+
+def _plan(room_type) -> dict:
+    """
+    Геометрия плана номера — ВНУТРИ снимка, а не отдельной таблицей.
+
+    Условие совместимости, а не вкусовщина: снимок самодостаточен, и откат к v2
+    обязан вернуть геометрию v2. Отдельная таблица это свойство ломает —
+    откат конфигурации оставил бы новую разметку поверх старых элементов, то
+    есть точки управления оказались бы не там, где оборудование.
+
+    Всё в ПРОЦЕНТАХ от кадра: рендер и разметка иначе разъедутся при смене
+    размера картинки, а новый тип номера с другим рендером должен подключаться
+    без правки фронта.
+
+    Заполняется в G5b (план-двойник). Здесь резервируется форма — по образцу
+    docs/design/grms-concept/plan-geometry.json, — чтобы следующий прогон не
+    тянул за собой ни миграцию, ни смену формата опубликованных версий.
+    """
+    return {
+        # UUID ассета рендера (MediaAsset.Kind.ROOM_PLAN). URL резолвит
+        # backend — фронт не собирает адреса строкой.
+        "asset_id": None,
+        # Соотношение сторон кадра: чтобы сверстать плиту до загрузки картинки.
+        "aspect": None,
+        # [{"code", "title", "hit": {x,y,w,h}, "mask": {x,y,w,h}}]
+        "zones": [],
+        # [{"controlId", "x", "y"}]
+        "points": [],
+    }
 
 
 def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:

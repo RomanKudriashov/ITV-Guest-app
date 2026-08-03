@@ -378,6 +378,125 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
             )
 
 
+# --- Состояние номера (GRMS) ----------------------------------------------
+# Тот же приём, что у заказа и треда: группа на сущность, ПОЛНЫЙ снимок на
+# подключение и на каждое событие. Здесь он не «так уж вышло», а единственный
+# рабочий вариант: в номере два телефона, свет включили с одного — второй обязан
+# показать это без перезагрузки, а подключиться он мог в произвольный момент,
+# и склеивать дельты ему не из чего.
+
+
+@database_sync_to_async
+def _load_room_state(hotel, token: str, language: str):
+    """
+    Аутентификация, ПРОВЕРКА ПРАВА НА ПОДПИСКУ и снимок — одним походом.
+
+    Право проверяется на СЕРВЕРЕ: гость подписывается на канал своей комнаты,
+    и комната берётся из сессии. Прислать чужой `room_id` в адресе физически
+    нечем — его в адресе нет.
+    """
+    from apps.accounts.auth import authenticate_guest
+    from apps.core.errors import DomainError
+    from apps.grms import guest as room_guest
+
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
+        session = authenticate_guest(token)
+        if session is None or session.room_id is None:
+            return None, None
+        try:
+            snapshot = room_guest.build_state(hotel, session, language=language)
+        except DomainError:
+            # Модуль у отеля выключен — канала для этого гостя не существует.
+            return session, None
+        return session, snapshot
+
+
+@database_sync_to_async
+def _room_snapshot(hotel, token: str, language: str):
+    from apps.accounts.auth import authenticate_guest
+    from apps.core.errors import DomainError
+    from apps.grms import guest as room_guest
+
+    language = language or hotel.default_language
+    with tenant_context(hotel, language=language):
+        session = authenticate_guest(token)
+        if session is None or session.room_id is None:
+            return None
+        try:
+            return room_guest.build_state(hotel, session, language=language)
+        except DomainError:
+            return None
+
+
+class RoomStateConsumer(AsyncJsonWebsocketConsumer):
+    """Живое состояние номера для гостя, который в этом номере находится."""
+
+    async def connect(self):
+        hotel = await _resolve_hotel(self.scope)
+        if hotel is None:
+            await self.close(code=CLOSE_NO_TENANT)
+            return
+
+        self.hotel = hotel
+        self.language = _query_param(self.scope, "lang")
+        self.token = _query_param(self.scope, "token")
+
+        session, snapshot = await _load_room_state(hotel, self.token, self.language)
+        if session is None:
+            await self.close(code=CLOSE_UNAUTHORIZED)
+            return
+        if snapshot is None:
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
+
+        self.room_id = str(session.room_id)
+        self.group_name = f"room.{hotel.pk}.{self.room_id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+        # Первый снимок — сразу, и он ПЕРЕЧИТАН, а не взят из кэша. Именно это
+        # делает переподключение самолечащимся: после обрыва гость получает
+        # фактическое состояние номера, а не то, что было до обрыва.
+        await self.send_json(
+            {"type": "room.snapshot", "event": "connected", "command": None, "room": snapshot}
+        )
+
+    async def disconnect(self, code):
+        group = getattr(self, "group_name", None)
+        if group:
+            await self.channel_layer.group_discard(group, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        try:
+            message = json.loads(text_data or "{}")
+        except json.JSONDecodeError:
+            return
+        if message.get("type") == "ping":
+            await self.send_json({"type": "pong"})
+
+    async def room_event(self, message):
+        """
+        Событие из воркера — повод перечитать состояние номера целиком.
+
+        Само сообщение состояния не несёт: снимок собирается здесь, языком
+        своей сессии и со своим правом на команды. `command` доносит исход
+        конкретной команды — без него гость не отличил бы «подтвердилось» от
+        «вернулось на место», потому что в обоих случаях приезжает снимок.
+        """
+        snapshot = await _room_snapshot(self.hotel, self.token, self.language)
+        if snapshot is None:
+            return
+        await self.send_json(
+            {
+                "type": "room.snapshot",
+                "event": message.get("event", "updated"),
+                "command": message.get("command"),
+                "room": snapshot,
+            }
+        )
+
+
 class StaffChatConsumer(AsyncJsonWebsocketConsumer):
     """Чат персонала: тред своего отеля (скоуп через RLS)."""
 

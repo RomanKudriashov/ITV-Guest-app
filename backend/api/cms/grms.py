@@ -15,8 +15,9 @@ from django.http import HttpRequest
 from ninja import File, Router, Schema
 from ninja.files import UploadedFile
 
-from apps.core.context import require_hotel_id
-from apps.core.errors import DomainError, ValidationError
+from apps.core.context import require_hotel_id, tenant_context
+from apps.core.errors import DomainError, NotFoundError, ValidationError
+from apps.core.models import AuditLog
 from apps.grms import builder, catalog, importer, publishing, reconcile, roomcheck
 from apps.grms.models import RoomType, Variable
 from apps.hotels.models import Hotel, HotelModule
@@ -278,3 +279,112 @@ def rollback(request: HttpRequest, code: str, payload: RollbackIn):
 @router.get("/grms/types/{code}/versions", summary="История версий")
 def versions(request: HttpRequest, code: str):
     return {"versions": publishing.history(_hotel(), code)}
+
+
+# --- Доступ гостя: PIN проживания и демо-вход -------------------------------
+
+
+class PinIn(Schema):
+    room_number: str
+    # Пусто — снять PIN с номера.
+    pin: str = ""
+
+
+class DemoEntryIn(Schema):
+    enabled: bool
+
+
+# Текст, который администратор обязан увидеть рядом с переключателем. Живёт на
+# сервере, а не в вёрстке: послабление продуктовое, и формулировка не должна
+# зависеть от того, какой экран его показывает.
+DEMO_ENTRY_WARNING = (
+    "Демо-вход ОСЛАБЛЯЕТ доступ к управлению номером: подтвердить номер можно "
+    "будет без PIN проживания, по одному лишь номеру комнаты. Включать только "
+    "на время демонстрации."
+)
+
+
+@router.get("/grms/access", summary="Кто может управлять номером: PIN и демо-вход")
+def access_state(request: HttpRequest):
+    """
+    Показывает и состояние демо-входа, и у каких номеров заведён PIN.
+
+    Сам PIN не возвращается никогда — в базе лежит только хэш. Ресепшен видит
+    код в момент заведения, а не «посмотреть, какой там был».
+    """
+    from apps.grms.models import RoomPin
+    from apps.grms.guest import demo_entry_enabled
+
+    hotel = _hotel()
+    with tenant_context(hotel):
+        rooms = [
+            {
+                "room": record.room.number,
+                "issued_at": record.issued_at,
+                "valid_until": record.valid_until,
+                "is_active": record.is_active,
+            }
+            for record in RoomPin.objects.select_related("room").order_by("room__number")
+        ]
+    return {
+        "demo_entry": {
+            "enabled": demo_entry_enabled(hotel),
+            "warning": DEMO_ENTRY_WARNING,
+        },
+        "pins": rooms,
+    }
+
+
+@router.post("/grms/access/pin", summary="Завести или снять PIN проживания номера")
+def set_room_pin(request: HttpRequest, payload: PinIn):
+    """
+    PIN виден ресепшену ровно один раз — в момент заведения его назвал сам
+    администратор. Смена PIN сбрасывает подтверждение у всех устройств этой
+    комнаты: именно этим отмечается смена гостя, пока нет выезда по PMS.
+    """
+    from apps.grms import pin as room_pin
+    from apps.hotels.models import Room
+
+    hotel = _hotel()
+    with tenant_context(hotel):
+        room = Room.objects.filter(number=payload.room_number).first()
+    if room is None:
+        raise NotFoundError(f"Номер «{payload.room_number}» не найден")
+
+    if not payload.pin:
+        room_pin.clear_pin(hotel, room)
+        return {"room": room.number, "has_pin": False}
+
+    record = room_pin.set_pin(hotel, room, pin=payload.pin)
+    return {"room": room.number, "has_pin": True, "issued_at": record.issued_at}
+
+
+@router.post("/grms/access/demo-entry", summary="Демо-вход без PIN (временное послабление)")
+def set_demo_entry(request: HttpRequest, payload: DemoEntryIn):
+    """
+    ВРЕМЕННОЕ ПОСЛАБЛЕНИЕ MVP, а не штатное поведение. Выключено по умолчанию.
+
+    Ослабляет РОВНО step-up: резолв по-прежнему идёт из сессии, чужой номер
+    по-прежнему недостижим, тело команды по-прежнему `{controlId, value}`.
+    Каждый вход без PIN пишется в журнал отдельным событием.
+    """
+    hotel = _hotel()
+    with tenant_context(hotel):
+        module = HotelModule.objects.filter(code=HotelModule.Code.ROOM_CONTROL).first()
+        if module is None:
+            raise NotFoundError("Модуль «Управление номером» не подключён")
+        config = dict(module.config or {})
+        config["guest_entry_demo"] = bool(payload.enabled)
+        module.config = config
+        module.save(update_fields=["config", "updated_at"])
+
+    AuditLog.record(
+        "grms.demo_entry_toggled",
+        actor_type=AuditLog.ActorType.STAFF,
+        actor_id=getattr(request.user, "pk", None),
+        object_type="grms.hotel",
+        object_id=hotel.pk,
+        payload={"enabled": bool(payload.enabled)},
+        hotel_id=hotel.pk,
+    )
+    return {"enabled": bool(payload.enabled), "warning": DEMO_ENTRY_WARNING}

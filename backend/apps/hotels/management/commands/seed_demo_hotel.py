@@ -15,6 +15,7 @@ from __future__ import annotations
 import io
 from datetime import time
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -172,6 +173,18 @@ class Command(BaseCommand):
         self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics, badges, rich)
         if options["with_second_hotel"]:
             self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics, badges, rich)
+        # Управление номером — только ДЕМО-отелю, и только ему.
+        #
+        # Второй отель остаётся без модуля намеренно: на нём проверяется, что
+        # выключенный модуль означает отсутствие раздела, а не пустой экран.
+        # Демо-вход без PIN включается тоже только здесь — это временное
+        # послабление MVP, и разъезжаться по всем отелям оно не должно.
+        call_command(
+            "seed_grms_demo",
+            subdomain=options["subdomain"],
+            demo_entry=True,
+            verbosity=0,
+        )
         self.stdout.write(self.style.SUCCESS("Сид завершён"))
 
     # --- Платформенный уровень ------------------------------------------

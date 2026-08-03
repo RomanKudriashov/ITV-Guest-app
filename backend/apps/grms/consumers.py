@@ -55,6 +55,20 @@ def _touch(key: str, version: str) -> None:
     touch(key, version=version)
 
 
+@database_sync_to_async
+def _remember_endpoints(hotel_id: str, endpoints) -> None:
+    from apps.grms import liveness
+
+    liveness.remember_endpoints(hotel_id, endpoints)
+
+
+@database_sync_to_async
+def _forget_endpoints(hotel_id: str) -> None:
+    from apps.grms import liveness
+
+    liveness.forget(hotel_id)
+
+
 class ConnectorConsumer(AsyncJsonWebsocketConsumer):
     """
     Держит соединение с одним узлом и работает мостом в обе стороны.
@@ -107,12 +121,22 @@ class ConnectorConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        node = getattr(self, "node", None)
+        if node:
+            # Узел отключился — прежние пробы endpoint'ов больше ничего не
+            # значат. Оставить их значило бы отвечать гостю «связь есть» по
+            # замеру, сделанному до обрыва.
+            await _forget_endpoints(node["hotel_id"])
 
     async def receive_json(self, content, **kwargs):
         kind = content.get("type")
 
         if kind == "connector.heartbeat":
             await _touch(self.key, content.get("version") or "")
+            # Коннектор прикладывает результат ЛОКАЛЬНОЙ пробы каждого
+            # endpoint'а. До G5 это поле никто не читал; гостевой признак
+            # доступности собирается в том числе из него.
+            await _remember_endpoints(self.node["hotel_id"], content.get("endpoints"))
             return
 
         if kind == "connector.response":

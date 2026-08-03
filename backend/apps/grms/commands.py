@@ -93,6 +93,90 @@ def read(hotel, *, device: str, feedback: str, subdevice: str = "", room: str = 
     return result
 
 
+def read_many(
+    hotel, *, device: str, feedbacks: list[str], subdevice: str = "", room: str = ""
+) -> dict[str, adapter.IridiResult]:
+    """
+    Прочитать пачку feedback'ов одного устройства. Возвращает {feedback: результат}.
+
+    Гостевой экран открывается на 15+ каналов сразу (свет по зонам, шторы,
+    фанкойл, DND). Последовательным чтением это 15 ходок до объекта и обратно
+    подряд — гость смотрел бы на скелетон секундами. Поэтому ходки идут
+    параллельно.
+
+    Параллелизм ОГРАНИЧЕН: коннектор объявляет `max_concurrent_requests` (8), и
+    превысить его значит получить отказы вместо ответов. Ограничитель стоит
+    здесь, потому что здесь единственное место, где запросы порождаются пачкой.
+
+    Журналируем ОДНОЙ записью на пачку, а не по записи на канал. Пятнадцать
+    строк `grms.read` на каждое открытие экрана в каждом номере — это не
+    диагностика, это способ утопить журнал: искать в нём команду гостя стало бы
+    нечем. Что именно прочитано, в записи видно поимённо.
+    """
+    if not feedbacks:
+        return {}
+
+    started = time.monotonic()
+    if not transport.node_is_online(hotel):
+        # Узел офлайн — ходить некуда, и ждать TTL по каждому каналу тем более.
+        results = {
+            feedback: adapter.IridiResult(ok=False, error=adapter.CONNECTOR_OFFLINE)
+            for feedback in feedbacks
+        }
+    else:
+        results = _read_batch(hotel, device=device, feedbacks=feedbacks, subdevice=subdevice)
+
+    _journal(
+        "grms.read",
+        hotel=hotel,
+        room=room,
+        payload={
+            "device": device,
+            "batch": len(feedbacks),
+            "values": {
+                feedback: (result.value if result.ok else None)
+                for feedback, result in results.items()
+            },
+            "errors": {
+                feedback: result.error
+                for feedback, result in results.items()
+                if not result.ok
+            },
+            "duration_ms": int((time.monotonic() - started) * 1000),
+        },
+    )
+    return results
+
+
+def _read_batch(hotel, *, device: str, feedbacks: list[str], subdevice: str) -> dict:
+    import asyncio
+
+    from asgiref.sync import async_to_sync
+
+    # Ровно столько, сколько объявляет коннектор в своём конфиге.
+    max_parallel = 8
+
+    async def run() -> dict:
+        semaphore = asyncio.Semaphore(max_parallel)
+
+        async def one(feedback: str):
+            request_id = adapter.new_request_id()
+            body = adapter.build_read(
+                device=device, feedback=feedback, request_id=request_id, subdevice=subdevice
+            )
+            envelope = adapter.envelope(request_id=request_id, body=body)
+            async with semaphore:
+                raw = await transport.asend(
+                    str(hotel.pk), envelope, ttl_ms=int(envelope["ttl_ms"])
+                )
+            return feedback, _interpret(raw, request_id=request_id, is_read=True)
+
+        pairs = await asyncio.gather(*(one(feedback) for feedback in feedbacks))
+        return dict(pairs)
+
+    return async_to_sync(run)()
+
+
 def _interpret(raw: dict, *, request_id: str, is_read: bool) -> adapter.IridiResult:
     """Транспортный отказ до разбора протокола: разбирать нечего."""
     if not raw.get("ok"):
