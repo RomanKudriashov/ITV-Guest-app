@@ -27,7 +27,7 @@ import { errorMessage } from '../errors';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
-import { layout as storefrontLayout } from '../storefrontTokens';
+import { layout as storefrontLayout, stickyUnderFloating } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
@@ -41,7 +41,10 @@ import type { MenuItem } from '../api/types';
  * отступ равен нулю.
  */
 const HEADER_OFFSET_WIDE = storefrontLayout.topBar;
-const HEADER_OFFSET_NARROW = 0;
+// Под плавающей группой, а не вровень с ней: на узком экране верхней строки
+// витрины нет, и раньше строка категорий пинилась в самый верх — туда же, где
+// висит чип номера.
+const HEADER_OFFSET_NARROW = stickyUnderFloating;
 const TABS_HEIGHT = 48;
 
 export interface CatalogPageProps {
@@ -220,6 +223,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
         }}
       >
       <Box
+        data-testid="guest-category-bar"
         sx={{
           position: 'sticky',
           top: headerOffset,
@@ -238,7 +242,8 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           scrollButtons={false}
           allowScrollButtonsMobile
           aria-label={t(`${ns}.categories`)}
-          sx={{ minHeight: TABS_HEIGHT, pr: '150px' }}
+          // Запас справа больше не нужен: полосы разведены по вертикали.
+          sx={{ minHeight: TABS_HEIGHT }}
         >
           {categories.map((category) => (
             <Tab

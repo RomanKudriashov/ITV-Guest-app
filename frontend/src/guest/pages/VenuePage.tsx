@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { CatalogPage } from './CatalogPage';
 import { VenueHeader } from '../components/VenueHeader';
+import { layout as storefrontLayout } from '../storefrontTokens';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { errorMessage } from '../errors';
@@ -90,7 +91,27 @@ export function VenuePage() {
         в самом конце, потратил время зря.
       */}
       {!canOrder ? (
-        <Box sx={{ px: { xs: 2, md: 0 }, pt: 2 }}>
+        <Box
+          sx={{
+            px: { xs: 2, md: 0 },
+            pt: 2,
+            // Панель каталога ниже подтянута вверх на `panelOverlap` — она
+            // задумана наезжать скруглением на КАДР заведения. Плашка встаёт
+            // между ними и попадала под этот нахлёст: текст был на месте и
+            // нужного контраста, но нижнюю половину строки закрывала панель, и
+            // читалось это как «невидимое уведомление». Отдаём нахлёсту пустое
+            // место, а не строку.
+            pb: `${storefrontLayout.panelOverlap}px`,
+            // Второй рубеж, и он важнее первого. Отступ выше — это ДОГОВОР о
+            // числе: он держится, пока `panelOverlap` панели и этот отступ
+            // равны. Слой — свойство самой плашки: даже если нахлёст вырастет
+            // или под плашкой окажется другой подтянутый блок, текст останется
+            // СВЕРХУ, а не уедет под соседа. Уведомление, которое не видно,
+            // хуже отсутствующего: гость молча упирается в запрет заказа.
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <Alert severity="info" data-testid="guest-view-only-notice">
             {t('guest.venue.viewOnly')}
           </Alert>
