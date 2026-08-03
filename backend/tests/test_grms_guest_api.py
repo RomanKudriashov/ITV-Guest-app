@@ -568,3 +568,30 @@ def _room_id(hotel):
 
     with tenant_context(hotel):
         return Room.objects.get(number=DEMO_ROOM).pk
+
+
+def test_a_stand_where_every_channel_answers_false_is_unavailable(guest, monkeypatch):
+    """
+    ⛔ Картина боевого стенда: обмен с GRMS не поднят, и ВСЕ теги отдают
+    булев `false` (прозвон §7).
+
+    После приведения к числу это неотличимо от честного «всё выключено», и
+    показать гостю выключенный свет значило бы соврать. Комната с поголовными
+    `false` обязана считаться недоступной.
+
+    На эмуляторе такого не бывает — он отвечает настоящими значениями, — поэтому
+    картина воспроизводится подменой ответа адаптера, а не подкруткой стенда.
+    """
+    from apps.grms import adapter, commands
+
+    def all_false(hotel, *, device, feedbacks, subdevice="", room=""):
+        return {
+            feedback: adapter.IridiResult(ok=True, value=0, raw="", raw_value=False)
+            for feedback in feedbacks
+        }
+
+    monkeypatch.setattr(commands, "read_many", all_false)
+
+    payload = guest.get("/api/v1/guest/room/state").json()
+    assert payload["availability"] == "unavailable"
+    assert payload["zones"] == []
