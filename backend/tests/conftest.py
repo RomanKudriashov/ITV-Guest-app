@@ -25,6 +25,22 @@ def _notifications_off(settings):
 
 
 @pytest.fixture(autouse=True)
+def _clean_cache():
+    """
+    Кэш общий на процесс (Redis), и между тестами он не должен протекать.
+
+    С G5 в нём живут счётчики попыток PIN, признак «команда в полёте» и
+    доступность endpoint'ов узла. Не почистить — и тест, начинающийся с
+    заблокированного номера, падал бы через раз в зависимости от соседа.
+    """
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
+@pytest.fixture(autouse=True)
 def _clean_context():
     """Контекст тенанта не должен протекать между тестами — ни в питоне, ни в БД."""
     clear_request_context()
