@@ -43,7 +43,11 @@ case "$MODE" in
             echo "[entrypoint] seed_demo_hotel…"
             # Одинарный дефис: подставляем дефолт только если SEED_ARGS НЕ задана.
             # В проде SEED_ARGS="" (задана, но пустая) → минимальный сид.
-            python manage.py seed_demo_hotel ${SEED_ARGS---with-guest-history --with-analytics-history} \
+            # `--with-room-control` — только в dev-умолчании: демо-конфигурация
+            # GRMS нужна стенду (на ней живёт весь E2E), но в проде отелю
+            # незачем получать чужой тип номера с опубликованной конфигурацией.
+            # В проде SEED_ARGS задана и пуста → сюда этот флаг не попадает.
+            python manage.py seed_demo_hotel ${SEED_ARGS---with-guest-history --with-analytics-history --with-room-control} \
                 || echo "[entrypoint] сид пропущен (уже есть?)"
         fi
 

@@ -71,8 +71,19 @@ def _session(client, hotel, room: str = DEMO_ROOM) -> str:
 
 @pytest.fixture
 def stand(crystal, settings):
-    """Живой стенд: эмулятор с отложенным feedback + коннектор без сокета."""
+    """
+    Живой стенд: демо-конфигурация + эмулятор с отложенным feedback + коннектор.
+
+    Демо-конфигурация сеется ЗДЕСЬ, а не приезжает из общего сида отеля.
+    Первая версия добавляла её всем — и чужие тесты начали падать на «сколько
+    всего типов у отеля», то есть на вопросе про импорт, а не про GRMS. База,
+    от которой отсчитывают все остальные, не должна двигаться ради одного
+    прогона.
+    """
+    from django.core.management import call_command
+
     settings.CELERY_TASK_ALWAYS_EAGER = True
+    call_command("seed_grms_demo", subdomain=crystal.subdomain, demo_entry=True, verbosity=0)
     context, finish = wire(crystal)
     yield context
     finish()

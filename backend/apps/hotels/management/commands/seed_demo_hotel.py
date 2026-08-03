@@ -148,6 +148,16 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--with-room-control",
+            action="store_true",
+            help=(
+                "Засеять демо-конфигурацию управления номером (GRMS) и включить "
+                "модуль демо-отелю. По умолчанию выкл: тесты отсчитывают базу от "
+                "чистого отеля, а тип номера с элементами и опубликованной "
+                "конфигурацией эту базу сдвигает."
+            ),
+        )
+        parser.add_argument(
             "--with-marketing-badges",
             action="store_true",
             help="Завести пресеты бейджей (Хит/Новинка/Выбор шефа) и повесить на позиции.",
@@ -173,18 +183,26 @@ class Command(BaseCommand):
         self._seed_hotel(options["subdomain"], options["name"], options["force"], history, analytics, badges, rich)
         if options["with_second_hotel"]:
             self._seed_hotel("aurora", "Aurora Boutique Hotel", options["force"], history, analytics, badges, rich)
-        # Управление номером — только ДЕМО-отелю, и только ему.
+        # Управление номером — ЗА ФЛАГОМ и только ДЕМО-отелю.
+        #
+        # За флагом, а не всегда: базовый сид — это то, от чего отсчитывают
+        # ВСЕ тесты, и добавить в него тип номера, четырнадцать элементов и
+        # опубликованную конфигурацию значит сдвинуть базу под чужими
+        # проверками. Первая версия так и сделала, и чужие тесты сразу начали
+        # падать на «сколько всего типов у отеля» — вопрос, который про импорт,
+        # а не про GRMS-демо.
         #
         # Второй отель остаётся без модуля намеренно: на нём проверяется, что
         # выключенный модуль означает отсутствие раздела, а не пустой экран.
-        # Демо-вход без PIN включается тоже только здесь — это временное
-        # послабление MVP, и разъезжаться по всем отелям оно не должно.
-        call_command(
-            "seed_grms_demo",
-            subdomain=options["subdomain"],
-            demo_entry=True,
-            verbosity=0,
-        )
+        # Демо-вход без PIN включается только здесь — это временное послабление
+        # MVP, и разъезжаться по всем отелям оно не должно.
+        if options["with_room_control"]:
+            call_command(
+                "seed_grms_demo",
+                subdomain=options["subdomain"],
+                demo_entry=True,
+                verbosity=0,
+            )
         self.stdout.write(self.style.SUCCESS("Сид завершён"))
 
     # --- Платформенный уровень ------------------------------------------
