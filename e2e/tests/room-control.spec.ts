@@ -306,6 +306,8 @@ test.describe('Управление номером', () => {
     await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('room-plan-neutral')).toBeVisible()
     await expect(page.getByText(/ресепшен/i).first()).toBeVisible()
+    // Плита не считает горящие зоны, а честно говорит, что не знает.
+    await expect(page.getByTestId('room-plan')).toHaveAttribute('data-lit', 'unknown')
 
     // КРИТИЧНОЕ: ни одна зона не утверждает ни «включено», ни «выключено»,
     // и нажать её нельзя.
@@ -389,6 +391,37 @@ test.describe('Управление номером', () => {
     await expect(page.getByTestId('room-plan')).toHaveCount(0)
     // Ни рамки, ни заглушки: плана просто нет.
     await expect(page.locator('[data-testid^="room-plan-"]')).toHaveCount(0)
+  })
+
+  test('prefers-reduced-motion: движения нет, состояния читаются', async ({ page }) => {
+    // Режим включаем на странице, а не опцией контекста: `test.use` завёл бы
+    // отдельный контекст, а один контекст на файл здесь — осознанное
+    // ограничение, а не случайность.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await enterRoom(page)
+    const plate = page.getByTestId('room-plan')
+    await expect(plate).toBeVisible({ timeout: 20_000 })
+
+    // Через poll: медиазапрос подхватывается после первого кадра, и
+    // мгновенная проверка ловила бы этот кадр, а не режим.
+    await expect
+      .poll(
+        async () =>
+          plate.evaluate(
+            (el) =>
+              [el, ...Array.from(el.querySelectorAll<HTMLElement>('*'))].filter(
+                (node) => parseFloat(getComputedStyle(node).transitionDuration) > 0,
+              ).length,
+          ),
+        { timeout: 10_000, message: 'на плите остались анимации' },
+      )
+      .toBe(0)
+
+    // Гасим движение, а не смысл: зона по-прежнему говорит своё состояние.
+    await expect(page.getByTestId('room-plan-zone-living')).toHaveAttribute(
+      'aria-pressed',
+      /true|false/,
+    )
   })
 
   test('без доверия команда отклоняется, а форма PIN живёт на самом экране', async ({
