@@ -117,7 +117,6 @@ export function RoomPage() {
       // Состояния не читаются — плита нейтральна: она не показывает свет ни
       // включённым, ни выключенным, потому что и то и другое было бы враньём.
       neutral={snapshot?.availability === 'unavailable'}
-      neutralMessage={snapshot?.message}
       widthPercent={isDesktop ? 100 : planWidth}
       // Тап по комнате идёт ТЕМ ЖЕ путём, что и тумблер в списке: один
       // обработчик, одна проверка доверия, один дедуп в полёте на сервере.

@@ -56,8 +56,6 @@ export interface RoomPlanPlateProps {
   readings: Record<string, PlanReading>;
   /** Состояний нет вовсе: плита нейтральна и не кликабельна. */
   neutral?: boolean;
-  /** Текст поверх нейтральной плиты. */
-  neutralMessage?: string | null;
   /** Ширина плиты в процентах контейнера — сжатие липкой плиты при скролле. */
   widthPercent?: number;
   onToggle: (controlId: string, next: number) => void;
@@ -74,7 +72,6 @@ export function RoomPlanPlate({
   plan,
   readings,
   neutral = false,
-  neutralMessage,
   widthPercent = 100,
   onToggle,
 }: RoomPlanPlateProps) {
@@ -249,8 +246,13 @@ export function RoomPlanPlate({
             background: tokens.offlineVeil,
           }}
         >
+          {/*
+            Коротко. Полный текст с адресом на ресепшен уже стоит рядом, в
+            месте контролов, и повторять его поверх плиты значит сказать
+            гостю одно и то же дважды разными шрифтами.
+          */}
           <Typography variant="body2" sx={{ color: (theme) => theme.palette.common.white }}>
-            {neutralMessage ?? t('guest.roomControl.unavailable')}
+            {t('guest.roomControl.offline')}
           </Typography>
         </Box>
       ) : null}
@@ -371,7 +373,7 @@ function PlanWindow({
               : (['start', 'end'] as const).map((side) => (
                   <Box
                     key={`blackout-${side}`}
-                    data-testid={`room-plan-blackout-${window.code}`}
+                    data-testid={`room-plan-blackout-${window.code}-${side}`}
                     style={{
                       ...panel(side, '54%'),
                       transform: blackoutOpen ? blackoutGathered : closed,
