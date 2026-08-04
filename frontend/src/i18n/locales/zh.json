@@ -610,8 +610,6 @@
       "identify": "输入房间号"
     },
     "roomControl": {
-      "title": "客房控制",
-      "subtitle": "灯光、窗帘与空调",
       "unavailable": "客房控制暂时不可用。请联系前台。",
       "empty": "此客房暂无可控设备",
       "emptyHint": "请联系前台——设备尚未配置。",
@@ -640,7 +638,29 @@
       "pinThrottled": "尝试次数过多，请稍后再试。",
       "readOnly": "仅查看",
       "planZone": "客房区域",
-      "planTitle": "客房平面图"
+      "planTitle": "客房平面图",
+      "tab": {
+        "light": "灯光",
+        "climate": "空调",
+        "curtain": "窗帘",
+        "scene": "场景",
+        "service": "服务"
+      },
+      "pillTemp": "房间 {{value}}°",
+      "pillZones_other": "{{count}} 个区域已开启",
+      "pillDndOn": "请勿打扰 开",
+      "pillDndOff": "请勿打扰 关",
+      "curtainOpen": "窗帘已打开",
+      "curtainClosed": "窗帘已关闭",
+      "curtainHintOpen": "点击打开",
+      "curtainHintClose": "点击关闭",
+      "stateOn": "已开启",
+      "stateOff": "已关闭",
+      "stateOpen": "已打开",
+      "stateClosed": "已关闭",
+      "allLightsOff": "关闭全部灯光",
+      "dialCurrent": "当前",
+      "dialSensor": "传感器读数"
     }
   },
   "tracker": {

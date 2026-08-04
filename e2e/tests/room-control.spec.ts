@@ -95,6 +95,31 @@ test.beforeAll(async ({ request }) => {
   expect(on.ok(), `включение демо-входа -> ${on.status()}`).toBeTruthy()
 })
 
+/** Свайп пальцем по горизонтали — жест, а не клик: тапом вкладку не листают. */
+async function swipe(page: Page, x: number, y: number, dx: number): Promise<void> {
+  await page.evaluate(
+    ([startX, startY, deltaX]) => {
+      const target = document.elementFromPoint(startX, startY)
+      if (!target) throw new Error('свайпать не по чему')
+      const fire = (type: string, clientX: number) => {
+        const point = new Touch({ identifier: 1, target, clientX, clientY: startY })
+        target.dispatchEvent(
+          new TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches: type === 'touchend' ? [] : [point],
+            targetTouches: type === 'touchend' ? [] : [point],
+            changedTouches: [point],
+          }),
+        )
+      }
+      fire('touchstart', startX)
+      fire('touchend', startX + deltaX)
+    },
+    [x, y, dx] as const,
+  )
+}
+
 test.describe('Управление номером', () => {
   test('пункт «Номер» ведёт на экран с живым состоянием из feedback', async ({ page }) => {
     await enterRoom(page)
@@ -105,9 +130,11 @@ test.describe('Управление номером', () => {
     await expect(light).toBeVisible({ timeout: 20_000 })
     await expect(light).toHaveAttribute('aria-pressed', /true|false/, { timeout: 20_000 })
 
-    // Зоны разложены так же, как на плане номера.
-    await expect(page.getByTestId('room-zone-living')).toBeVisible()
-    await expect(page.getByTestId('room-zone-bedroom')).toBeVisible()
+    // Управление сгруппировано ПО ТИПУ: свет к свету, климат к климату.
+    // Раньше здесь проверялись секции-комнаты — их не стало вместе с
+    // группировкой по комнатам, а не вместе с проверкой.
+    await expect(page.getByTestId('room-panel-light')).toBeVisible()
+    await expect(page.getByTestId('room-control-light.bedroom')).toBeVisible()
 
     // Контролов, которых нет в железе, на экране нет.
     await expect(page.getByTestId('room-ring-dimmer')).toHaveCount(0)
@@ -123,16 +150,20 @@ test.describe('Управление номером', () => {
 
     await light.click()
 
-    // «В процессе» — и элемент заблокирован: состояние ещё не изменилось.
-    // Именно этого не было бы при оптимистичном переключении.
-    await expect(page.getByTestId('room-running-light.bedroom')).toBeVisible({ timeout: 10_000 })
+    // Идёт обмен — и элемент заблокирован. Состояние при этом ОСТАЁТСЯ
+    // прежним: ни желаемым (оптимизм), ни выключенным (так было до G5c —
+    // сервер в полёте значений не отдаёт, а список их не помнил).
+    await expect(light).toHaveAttribute('aria-busy', 'true', { timeout: 10_000 })
     await expect(light).toBeDisabled()
+    expect(await light.getAttribute('aria-pressed'), 'состояние подменили на время обмена').toBe(
+      before,
+    )
 
     // Подтверждение приходит КАНАЛОМ, без перезагрузки страницы.
     await expect
       .poll(async () => light.getAttribute('aria-pressed'), { timeout: 30_000 })
       .not.toBe(before)
-    await expect(page.getByTestId('room-running-light.bedroom')).toHaveCount(0)
+    await expect(light).not.toHaveAttribute('aria-busy', /.*/)
   })
 
   test('сцена не показывается «включённой» — состояния у неё нет', async ({ page }) => {
@@ -153,14 +184,17 @@ test.describe('Управление номером', () => {
     const dial = page.getByTestId('room-thermostat-ac.1')
     await expect(dial).toBeVisible({ timeout: 20_000 })
 
-    const spin = dial.locator('[role="spinbutton"]')
+    const spin = dial.locator('[role="slider"]')
     // Диапазон приезжает С СЕРВЕРА: 16–32 на фронте не зашиты.
     await expect(spin).toHaveAttribute('aria-valuemin', '16')
     await expect(spin).toHaveAttribute('aria-valuemax', '32')
 
     const before = await spin.getAttribute('aria-valuenow')
     await spin.focus()
-    await page.keyboard.press('ArrowUp')
+    // Направление выбирается от текущего значения: стенд общий, и предыдущие
+    // прогоны могли оставить уставку на краю диапазона — вверх с 32° она не
+    // поедет, и тест мерил бы упор, а не клавиатуру.
+    await page.keyboard.press(before === '32' ? 'ArrowDown' : 'ArrowUp')
     await expect
       .poll(async () => spin.getAttribute('aria-valuenow'), { timeout: 30_000 })
       .not.toBe(before)
@@ -187,8 +221,15 @@ test.describe('Управление номером', () => {
     )
     expect(overflow, 'экран номера уехал по горизонтали в RTL').toBeLessThanOrEqual(1)
 
-    // Заголовки приехали на арабском — то есть локаль раздела полная.
-    await expect(page.getByTestId('room-page')).not.toContainText('Управление номером')
+    // Локаль раздела полная: название раздела «Свет» приехало на арабском.
+    // Проверка переехала с заголовка страницы на название панели — заголовка
+    // в макете нет, а вопрос «перевелось ли» остался тем же. Берём вкладку
+    // или заголовок панели: прогон идёт на десктопной ширине, где вкладок нет.
+    const sectionLabel = (await page.getByTestId('room-tabs-light').count())
+      ? page.getByTestId('room-tabs-light')
+      : page.getByTestId('room-panel-light').locator('h2')
+    await expect(sectionLabel).not.toHaveText('Свет')
+    await expect(sectionLabel).toHaveText(/[\u0600-\u06FF]/)
   })
 
   test('связи нет — контролы блокируются и устаревшее не показывается', async ({ page }) => {
@@ -296,7 +337,11 @@ test.describe('Управление номером', () => {
 
     // Пока идёт обмен: зона показывает это и НЕ переключается. Именно этого не
     // было бы при оптимистичном переключении — там она мигнула бы сразу.
-    await expect(page.getByTestId('room-running-light.bedroom')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('room-control-light.bedroom')).toHaveAttribute(
+      'aria-busy',
+      'true',
+      { timeout: 10_000 },
+    )
     await expect(zone).toHaveAttribute('aria-busy', 'true')
     expect(await zone.getAttribute('aria-pressed'), 'зона переключилась до подтверждения').toBe(
       before,
@@ -318,6 +363,35 @@ test.describe('Управление номером', () => {
         { timeout: 10_000 },
       )
       .toBe(before !== 'true' ? '1' : '0')
+  })
+
+  test('телефон: вкладки переключаются тапом и свайпом', async ({ page }) => {
+    // Прогон идёт на десктопной ширине, где вкладок нет вовсе: сужаемся
+    // внутри теста, а не заводим второй контекст — два контекста сразу это
+    // тот самый известный флейк.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await enterRoom(page)
+    await expect(page.getByTestId('room-tabs')).toBeVisible({ timeout: 20_000 })
+
+    // Стартуем со света: панель одна, а не все сразу.
+    await expect(page.getByTestId('room-panel-light')).toBeVisible()
+    await expect(page.getByTestId('room-panel-climate')).toHaveCount(0)
+
+    // Тап.
+    await page.getByTestId('room-tabs-climate').click()
+    await expect(page.getByTestId('room-panel-climate')).toBeVisible()
+    await expect(page.getByTestId('room-panel-light')).toHaveCount(0)
+    await expect(page.getByTestId('room-tabs-climate')).toHaveAttribute('aria-selected', 'true')
+
+    // Свайп влево — следующая вкладка.
+    const panel = await page.getByTestId('room-panel-climate').boundingBox()
+    await swipe(page, panel!.x + panel!.width - 20, panel!.y + 8, -180)
+    await expect(page.getByTestId('room-panel-curtain')).toBeVisible()
+
+    // И вправо — обратно.
+    const back = await page.getByTestId('room-panel-curtain').boundingBox()
+    await swipe(page, back!.x + 20, back!.y + 8, 180)
+    await expect(page.getByTestId('room-panel-climate')).toBeVisible()
   })
 
   test('оффлайн: план не показывает свет ни включённым, ни выключенным', async ({

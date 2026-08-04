@@ -616,8 +616,6 @@
       "identify": "Войти по номеру"
     },
     "roomControl": {
-      "title": "Управление номером",
-      "subtitle": "Свет, шторы и климат",
       "unavailable": "Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.",
       "empty": "В этом номере пока нечем управлять",
       "emptyHint": "Обратитесь на ресепшен — оборудование ещё не настроено.",
@@ -648,7 +646,31 @@
       "pinThrottled": "Слишком много попыток. Попробуйте позже.",
       "readOnly": "Только просмотр",
       "planZone": "Зона номера",
-      "planTitle": "План номера"
+      "planTitle": "План номера",
+      "tab": {
+        "light": "Свет",
+        "climate": "Климат",
+        "curtain": "Шторы",
+        "scene": "Сцены",
+        "service": "Сервис"
+      },
+      "pillTemp": "{{value}}° в номере",
+      "pillZones_one": "{{count}} зона включена",
+      "pillZones_few": "{{count}} зоны включено",
+      "pillZones_many": "{{count}} зон включено",
+      "pillDndOn": "Не беспокоить вкл",
+      "pillDndOff": "Не беспокоить выкл",
+      "curtainOpen": "Штора открыта",
+      "curtainClosed": "Штора закрыта",
+      "curtainHintOpen": "Нажмите, чтобы открыть",
+      "curtainHintClose": "Нажмите, чтобы закрыть",
+      "stateOn": "включено",
+      "stateOff": "выключено",
+      "stateOpen": "открыта",
+      "stateClosed": "закрыта",
+      "allLightsOff": "Выключить весь свет",
+      "dialCurrent": "сейчас",
+      "dialSensor": "показание датчика"
     }
   },
   "tracker": {

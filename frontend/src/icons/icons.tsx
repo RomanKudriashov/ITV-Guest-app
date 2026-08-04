@@ -475,3 +475,64 @@ export const IconRoom = createIcon(
     <path d="M10 19v-4.5h4V19" />
   </>,
 );
+
+/* ── Управление номером: виды элементов из каталога GRMS ──────────────────── */
+
+/**
+ * Иконка на строке управления выбирается по `kind` — ЕДИНСТВЕННОЕ, на что он
+ * влияет. Ни одно решение о поведении элемента по нему не принимается: это
+ * правило G5a, и здесь оно не ослабляется.
+ */
+export const IconLightGroup = createIcon(
+  'light-group',
+  <>
+    <path d="M9 18h6" />
+    <path d="M10 21h4" />
+    <path d="M12 3a6 6 0 0 1 3.5 10.9c-.6.4-1 1-1 1.7V16h-5v-.4c0-.7-.4-1.3-1-1.7A6 6 0 0 1 12 3z" />
+  </>,
+);
+
+export const IconBlackout = createIcon(
+  'blackout',
+  <>
+    <path d="M3 4h18" />
+    <path d="M3 20h18" />
+    <rect x="6" y="4" width="12" height="13" rx="1.5" />
+    <path d="M9 7v7M12 7v7M15 7v7" />
+  </>,
+);
+
+export const IconAirConditioner = createIcon(
+  'air-conditioner',
+  <>
+    <rect x="3" y="5" width="18" height="7" rx="2" />
+    <path d="M7 9h10" />
+    <path d="M8 15c0 1.5 1.5 1.5 1.5 3" />
+    <path d="M12 15c0 1.5 1.5 1.5 1.5 3" />
+    <path d="M16 15c0 1.5 1.5 1.5 1.5 3" />
+  </>,
+);
+
+export const IconDoNotDisturb = createIcon(
+  'do-not-disturb',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 12h8" />
+  </>,
+);
+
+export const IconMakeUpRoom = createIcon(
+  'make-up-room',
+  <>
+    <path d="M4 20V9l8-5 8 5v11" />
+    <path d="M9 20v-6h6v6" />
+  </>,
+);
+
+export const IconPower = createIcon(
+  'power',
+  <>
+    <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+    <path d="M12 2v10" />
+  </>,
+);

@@ -612,8 +612,6 @@
       "identify": "Enter room number"
     },
     "roomControl": {
-      "title": "Room control",
-      "subtitle": "Lights, curtains and climate",
       "unavailable": "Room control is temporarily unavailable. Please contact the reception desk.",
       "empty": "Nothing to control in this room yet",
       "emptyHint": "Please contact reception — the equipment is not configured yet.",
@@ -643,7 +641,30 @@
       "pinThrottled": "Too many attempts. Please try again later.",
       "readOnly": "View only",
       "planZone": "Room zone",
-      "planTitle": "Room plan"
+      "planTitle": "Room plan",
+      "tab": {
+        "light": "Light",
+        "climate": "Climate",
+        "curtain": "Curtains",
+        "scene": "Scenes",
+        "service": "Service"
+      },
+      "pillTemp": "{{value}}° in the room",
+      "pillZones_one": "{{count}} zone on",
+      "pillZones_other": "{{count}} zones on",
+      "pillDndOn": "Do not disturb on",
+      "pillDndOff": "Do not disturb off",
+      "curtainOpen": "Curtain open",
+      "curtainClosed": "Curtain closed",
+      "curtainHintOpen": "Tap to open",
+      "curtainHintClose": "Tap to close",
+      "stateOn": "on",
+      "stateOff": "off",
+      "stateOpen": "open",
+      "stateClosed": "closed",
+      "allLightsOff": "Turn off all lights",
+      "dialCurrent": "now",
+      "dialSensor": "sensor reading"
     }
   },
   "tracker": {

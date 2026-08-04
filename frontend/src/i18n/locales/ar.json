@@ -620,8 +620,6 @@
       "identify": "الدخول برقم الغرفة"
     },
     "roomControl": {
-      "title": "التحكم في الغرفة",
-      "subtitle": "الإضاءة والستائر والمناخ",
       "unavailable": "التحكم في الغرفة غير متاح مؤقتًا. يرجى التواصل مع مكتب الاستقبال.",
       "empty": "لا يوجد ما يمكن التحكم به في هذه الغرفة بعد",
       "emptyHint": "يرجى التواصل مع مكتب الاستقبال — لم يتم إعداد الأجهزة بعد.",
@@ -651,7 +649,30 @@
       "pinThrottled": "محاولات كثيرة. حاول لاحقًا.",
       "readOnly": "عرض فقط",
       "planZone": "منطقة الغرفة",
-      "planTitle": "مخطط الغرفة"
+      "planTitle": "مخطط الغرفة",
+      "tab": {
+        "light": "الإضاءة",
+        "climate": "المناخ",
+        "curtain": "الستائر",
+        "scene": "المشاهد",
+        "service": "الخدمة"
+      },
+      "pillTemp": "{{value}}° في الغرفة",
+      "pillZones_one": "منطقة {{count}} مضاءة",
+      "pillZones_other": "{{count}} مناطق مضاءة",
+      "pillDndOn": "عدم الإزعاج مفعّل",
+      "pillDndOff": "عدم الإزعاج متوقف",
+      "curtainOpen": "الستارة مفتوحة",
+      "curtainClosed": "الستارة مغلقة",
+      "curtainHintOpen": "اضغط للفتح",
+      "curtainHintClose": "اضغط للإغلاق",
+      "stateOn": "مشغّل",
+      "stateOff": "متوقف",
+      "stateOpen": "مفتوحة",
+      "stateClosed": "مغلقة",
+      "allLightsOff": "إطفاء كل الإضاءة",
+      "dialCurrent": "الآن",
+      "dialSensor": "قراءة المستشعر"
     }
   },
   "tracker": {
