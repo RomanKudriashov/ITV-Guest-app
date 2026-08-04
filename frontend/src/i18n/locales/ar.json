@@ -649,7 +649,9 @@
       "pinAttempts_one": "بقيت محاولة {{count}}",
       "pinAttempts_other": "بقيت {{count}} محاولات",
       "pinThrottled": "محاولات كثيرة. حاول لاحقًا.",
-      "readOnly": "عرض فقط"
+      "readOnly": "عرض فقط",
+      "planZone": "منطقة الغرفة",
+      "planTitle": "مخطط الغرفة"
     }
   },
   "tracker": {

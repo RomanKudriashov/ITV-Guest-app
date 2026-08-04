@@ -641,7 +641,9 @@
       "pinAttempts_one": "{{count}} attempt left",
       "pinAttempts_other": "{{count}} attempts left",
       "pinThrottled": "Too many attempts. Please try again later.",
-      "readOnly": "View only"
+      "readOnly": "View only",
+      "planZone": "Room zone",
+      "planTitle": "Room plan"
     }
   },
   "tracker": {

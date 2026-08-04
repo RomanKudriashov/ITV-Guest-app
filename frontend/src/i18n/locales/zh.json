@@ -638,7 +638,9 @@
       "pinInvalid": "验证码不正确",
       "pinAttempts_other": "还剩 {{count}} 次机会",
       "pinThrottled": "尝试次数过多，请稍后再试。",
-      "readOnly": "仅查看"
+      "readOnly": "仅查看",
+      "planZone": "客房区域",
+      "planTitle": "客房平面图"
     }
   },
   "tracker": {

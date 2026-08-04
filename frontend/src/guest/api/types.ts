@@ -674,6 +674,53 @@ export interface RoomZone {
   controls: RoomControl[];
 }
 
+/** Прямоугольник плана в ПРОЦЕНТАХ от кадра. Пикселей здесь нет и не будет. */
+export interface RoomPlanRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface RoomPlanZone {
+  code: string;
+  /** Элемент, которым управляет тап по комнате. Разбирать строкой нельзя. */
+  controlId: string;
+  /** Область нажатия. */
+  hit: RoomPlanRect;
+  /** Область затемнения — шире хита под растушёвку градиента. */
+  mask: RoomPlanRect;
+}
+
+export interface RoomPlanWindow extends RoomPlanRect {
+  code: string;
+  /** Вертикальное окно на боковой стене собирает полотна вверх и вниз. */
+  orientation: 'horizontal' | 'vertical';
+  curtainId: string;
+  /** Отдельный слой на том же окне. Пусто — блэкаута на этом окне нет. */
+  blackoutId: string;
+}
+
+/** Точка на плане: пока это выход воздуха фанкойла. */
+export interface RoomPlanPoint {
+  controlId: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * План-двойник номера. Приезжает ГОТОВЫМ: URL собрал сервер, координаты
+ * замерены по рендеру. Ключа нет вовсе — у типа номера плана нет, и экран
+ * работает списком контролов.
+ */
+export interface RoomPlan {
+  image: string;
+  aspect: number | null;
+  zones: RoomPlanZone[];
+  windows: RoomPlanWindow[];
+  points: RoomPlanPoint[];
+}
+
 export interface RoomStateSnapshot {
   availability: 'online' | 'unavailable';
   /** Готовый текст для гостя. Техническая причина остаётся на сервере. */
@@ -682,6 +729,7 @@ export interface RoomStateSnapshot {
   trust: GuestTrust;
   can_command: boolean;
   zones: RoomZone[];
+  plan?: RoomPlan;
 }
 
 export interface RoomCommandAccepted {

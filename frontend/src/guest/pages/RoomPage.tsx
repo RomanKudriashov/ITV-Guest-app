@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -23,8 +31,10 @@ import {
 } from '@/kit';
 import { ActionButton } from '@/kit/room';
 import { IconCurtain, IconOffline, IconRoom, IconScene, IconSwitch } from '@/icons';
+import { RoomPlanPlate, type PlanReading } from '../components/RoomPlanPlate';
 import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
+import { DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { layout, stickyUnderFloating } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
@@ -88,8 +98,30 @@ export function RoomPage() {
     });
   };
 
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const plan = snapshot?.plan;
+  const readings = usePlanReadings(snapshot);
+  const planWidth = usePlanShrink(Boolean(plan) && !isDesktop);
+  const { ref: headerRef, height: headerHeight } = useMeasuredHeight();
+
+  const plate = plan ? (
+    <RoomPlanPlate
+      plan={plan}
+      readings={readings}
+      // Состояния не читаются — плита нейтральна: она не показывает свет ни
+      // включённым, ни выключенным, потому что и то и другое было бы враньём.
+      neutral={snapshot?.availability === 'unavailable'}
+      neutralMessage={snapshot?.message}
+      widthPercent={isDesktop ? 100 : planWidth}
+      // Тап по комнате идёт ТЕМ ЖЕ путём, что и тумблер в списке: один
+      // обработчик, одна проверка доверия, один дедуп в полёте на сервере.
+      onToggle={(controlId, value) => send({ controlId, capability: 'toggle', value })}
+    />
+  ) : null;
+
   const header = (
     <Stack
+      ref={headerRef}
       spacing={0.5}
       sx={{
         // Липкая шапка пинится ПОД плавающей группой контролов, а не в top: 0.
@@ -110,6 +142,26 @@ export function RoomPage() {
       <Typography variant="body2" color="text.secondary">
         {t('guest.roomControl.subtitle')}
       </Typography>
+      {/*
+        На узком экране план едет ВНУТРИ липкой шапки, а не отдельной липкой
+        поверхностью под ней. Так их на экране остаётся ровно одна: две липкие
+        полосы в одном столбце — это тот самый случай, когда одна накрывает
+        другую, и лечится он не подбором `top`, а тем, что полоса одна.
+      */}
+      {!isDesktop && plate ? (
+        <Box
+          sx={{
+            width: '100%',
+            // Потолок ширины — ради планшета: без него кадр 16:10 в колонке
+            // 800px занимает пол-экрана, и до контролов нужно скроллить.
+            maxWidth: `${layout.planMaxNarrow}px`,
+            alignSelf: 'center',
+            pt: 1,
+          }}
+        >
+          {plate}
+        </Box>
+      ) : null}
     </Stack>
   );
 
@@ -147,10 +199,126 @@ export function RoomPage() {
           notice={notice}
           onDismissNotice={() => setNotice(null)}
           onCommand={send}
+          // На десктопе план стоит колонкой слева и залипает ПОД шапкой:
+          // высота шапки измеряется, а не вписывается числом — она зависит от
+          // языка и размера шрифта, и подобранная константа разъедется.
+          plate={isDesktop ? plate : null}
+          plateTop={stickyUnderFloating + headerHeight}
         />
       ) : null}
     </Box>
   );
+}
+
+/**
+ * Высота элемента, на которую опирается чужое липкое позиционирование.
+ *
+ * Измеряется, а не берётся константой: шапка меняет высоту от языка (арабский
+ * и китайский переносят иначе) и от системного размера шрифта.
+ */
+function useMeasuredHeight() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [height, setHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = () => setHeight(node.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, height };
+}
+
+/**
+ * Сжатие липкой плиты при скролле.
+ *
+ * Уменьшается ШИРИНА, пропорции сохраняются — поэтому маски, заданные в
+ * процентах от кадра, остаются выровненными сами собой и пересчитывать их не
+ * приходится. Числа из словаря витрины.
+ */
+function usePlanShrink(active: boolean): number {
+  const [width, setWidth] = useState(100);
+
+  useEffect(() => {
+    if (!active) {
+      setWidth(100);
+      return;
+    }
+    let scheduled = false;
+    const apply = () => {
+      scheduled = false;
+      const progress = Math.min(window.scrollY / layout.planShrinkScroll, 1);
+      setWidth(100 - layout.planShrink * 100 * progress);
+    };
+    const onScroll = () => {
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(apply);
+    };
+    apply();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [active]);
+
+  return width;
+}
+
+/**
+ * Что план показывает по каждому элементу.
+ *
+ * Здесь живёт единственная тонкость всего экрана: пока команда в полёте,
+ * сервер значений НЕ отдаёт (он их не перечитывал — и правильно делает), а
+ * план обязан показывать фактическое состояние комнаты, а не гаснуть на
+ * секунду и возвращаться. Поэтому клиент помнит ПОСЛЕДНЕЕ ПОДТВЕРЖДЁННОЕ
+ * значение и показывает его, пока идёт обмен.
+ *
+ * Память стирается, как только элемент ушёл в `offline`: там состояния нет, и
+ * «что было» — это ровно то враньё, ради запрета которого написан весь экран.
+ */
+function usePlanReadings(snapshot: RoomStateSnapshot | undefined): Record<string, PlanReading> {
+  const memory = useRef<Record<string, Partial<Record<RoomCapability, number>>>>({});
+
+  return useMemo(() => {
+    const zones = snapshot?.zones ?? [];
+    const readings: Record<string, PlanReading> = {};
+    const canCommand = Boolean(snapshot?.can_command);
+
+    for (const zone of zones) {
+      for (const control of zone.controls) {
+        const id = control.controlId;
+        if (control.state === 'confirmed') {
+          const values: Partial<Record<RoomCapability, number>> = {};
+          for (const capability of control.capabilities) {
+            const value = readValue(control, capability);
+            if (value !== null) values[capability] = value;
+          }
+          memory.current[id] = values;
+        } else if (control.state === 'offline') {
+          delete memory.current[id];
+        }
+
+        const known =
+          control.state === 'confirmed'
+            ? memory.current[id]
+            : control.state === 'pending'
+              ? memory.current[id]
+              : undefined;
+
+        readings[id] = {
+          title: control.title,
+          on: known && known.toggle !== undefined ? known.toggle === 1 : null,
+          fan: known && known.fan_speed !== undefined ? known.fan_speed : null,
+          pending: control.state === 'pending',
+          disabled: control.state !== 'confirmed' || !canCommand || control.readonly,
+        };
+      }
+    }
+    return readings;
+  }, [snapshot]);
 }
 
 function RoomSkeleton() {
@@ -176,42 +344,98 @@ function RoomBody({
   notice,
   onDismissNotice,
   onCommand,
+  plate,
+  plateTop,
 }: {
   snapshot: RoomStateSnapshot;
   liveOffline: boolean;
   notice: { severity: 'success' | 'warning' | 'error'; text: string } | null;
   onDismissNotice: () => void;
   onCommand: (input: { controlId: string; capability?: string; value?: number | null }) => void;
+  /** Плита плана колонкой слева — только на десктопе. */
+  plate: ReactNode;
+  plateTop: number;
 }) {
   const { t } = useTranslation();
   const { glass } = useStorefront();
 
-  if (snapshot.availability === 'unavailable') {
-    // Нейтральный текст и НИ ОДНОГО значения: элемент без связи состояния не
-    // имеет, и показать «что было» здесь означало бы показать неправду.
-    return (
+  const zones = snapshot.zones.filter((zone) => zone.controls.length > 0);
+
+  const controls =
+    snapshot.availability === 'unavailable' ? (
+      // Нейтральный текст и НИ ОДНОГО значения: элемент без связи состояния не
+      // имеет, и показать «что было» здесь означало бы показать неправду.
       <KitEmptyState
         icon={<IconOffline size={28} />}
         title={snapshot.message ?? t('guest.roomControl.unavailable')}
         testId="room-unavailable"
       />
-    );
-  }
-
-  const zones = snapshot.zones.filter((zone) => zone.controls.length > 0);
-  if (zones.length === 0) {
-    return (
+    ) : zones.length === 0 ? (
       <KitEmptyState
         icon={<IconRoom size={28} />}
         title={t('guest.roomControl.empty')}
         description={t('guest.roomControl.emptyHint')}
         testId="room-empty"
       />
+    ) : (
+      <RoomControls
+        snapshot={snapshot}
+        zones={zones}
+        liveOffline={liveOffline}
+        notice={notice}
+        onDismissNotice={onDismissNotice}
+        onCommand={onCommand}
+        glassPanel={glass.panel}
+      />
     );
-  }
+
+  if (!plate) return <Box sx={{ px: 2, pt: 2 }}>{controls}</Box>;
+
+  /**
+   * Десктоп: две колонки. План слева и залипает — на широком экране он не
+   * мешает списку, и держать его перед глазами дешевле, чем скроллить туда и
+   * обратно. Список остаётся ПОЛНОЦЕННЫМ путём управления: план — альтернатива,
+   * а не единственный способ.
+   */
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 1fr)',
+        alignItems: 'start',
+        gap: 2,
+        px: 2,
+        pt: 2,
+      }}
+      data-testid="room-two-columns"
+    >
+      <Box sx={{ position: 'sticky', top: `${plateTop}px` }}>{plate}</Box>
+      <Box sx={{ minWidth: 0 }}>{controls}</Box>
+    </Box>
+  );
+}
+
+function RoomControls({
+  snapshot,
+  zones,
+  liveOffline,
+  notice,
+  onDismissNotice,
+  onCommand,
+  glassPanel,
+}: {
+  snapshot: RoomStateSnapshot;
+  zones: RoomStateSnapshot['zones'];
+  liveOffline: boolean;
+  notice: { severity: 'success' | 'warning' | 'error'; text: string } | null;
+  onDismissNotice: () => void;
+  onCommand: (input: { controlId: string; capability?: string; value?: number | null }) => void;
+  glassPanel: ReturnType<typeof useStorefront>['glass']['panel'];
+}) {
+  const { t } = useTranslation();
 
   return (
-    <Stack spacing={3} sx={{ px: 2, pt: 2 }}>
+    <Stack spacing={3}>
       {!snapshot.can_command ? <PinPanel /> : null}
 
       {liveOffline ? (
@@ -249,7 +473,7 @@ function RoomBody({
               gap: 1.5,
               p: 1.5,
               borderRadius: (theme) => `${theme.palette.brand.radius.lg}px`,
-              ...glass.panel,
+              ...glassPanel,
             }}
           >
             {zone.controls.map((control) => (

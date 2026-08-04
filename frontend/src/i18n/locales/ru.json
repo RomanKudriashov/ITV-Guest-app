@@ -646,7 +646,9 @@
       "pinAttempts_few": "Осталось {{count}} попытки",
       "pinAttempts_many": "Осталось {{count}} попыток",
       "pinThrottled": "Слишком много попыток. Попробуйте позже.",
-      "readOnly": "Только просмотр"
+      "readOnly": "Только просмотр",
+      "planZone": "Зона номера",
+      "planTitle": "План номера"
     }
   },
   "tracker": {
