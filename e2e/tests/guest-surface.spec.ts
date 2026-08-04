@@ -203,9 +203,24 @@ test.describe('Управление номером: гейт пункта нав
     )
     expect(hotel, `отель ${HOTEL} в реестре платформы`).toBeTruthy()
 
+    // Конфигурацию модуля забираем ДО выключения и возвращаем обратно.
+    // `set_modules` пишет `config` целиком: запрос без него затирает
+    // настройки модуля — в нашем случае флаг демо-входа, на который
+    // опирается room-control.spec.ts. Тест не имеет права оставлять стенд
+    // в другом состоянии, чем взял.
+    const current = await request.get(
+      `${API}/api/v1/platform/hotels/${hotel!.id}/modules`,
+      { headers },
+    )
+    expect(current.ok()).toBeTruthy()
+    const savedConfig =
+      ((await current.json()).modules as { code: string; config?: object }[]).find(
+        (m) => m.code === 'room_control',
+      )?.config ?? {}
+
     const setModule = (enabled: boolean) =>
       request.put(`${API}/api/v1/platform/hotels/${hotel!.id}/modules`, {
-        data: { modules: [{ code: 'room_control', is_enabled: enabled }] },
+        data: { modules: [{ code: 'room_control', is_enabled: enabled, config: savedConfig }] },
         headers,
       })
 

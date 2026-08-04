@@ -29,6 +29,31 @@ async function enterRoom(page: Page, room = DEMO_ROOM): Promise<void> {
   await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 15_000 })
 }
 
+/**
+ * Демо-вход обязан быть ВКЛЮЧЁН до начала: без него команды запрещены и все
+ * проверки экрана упрутся в заблокированные контролы.
+ *
+ * Раньше это подразумевалось — и подвело. `guest-surface.spec.ts` идёт раньше
+ * по алфавиту, выключает модуль отеля и восстанавливает его платформенным
+ * `PUT /hotels/{id}/modules`, а тот пишет `config` целиком: запрос без
+ * `config` ЗАТИРАЕТ конфигурацию модуля вместе с флагом демо-входа. Тест,
+ * который полагается на состояние, оставленное соседним файлом, — это не тест,
+ * а совпадение.
+ */
+test.beforeAll(async ({ request }) => {
+  const staff = await request.post(`${API}/api/staff/auth/login`, {
+    data: ADMIN,
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(staff.ok(), 'вход администратора отеля').toBeTruthy()
+  const token = (await staff.json()).access
+  const on = await request.post(`${API}/api/v1/cms/grms/access/demo-entry`, {
+    data: { enabled: true },
+    headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(on.ok(), `включение демо-входа -> ${on.status()}`).toBeTruthy()
+})
+
 test.describe('Управление номером', () => {
   test('пункт «Номер» ведёт на экран с живым состоянием из feedback', async ({ page }) => {
     await enterRoom(page)
