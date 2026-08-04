@@ -156,6 +156,10 @@ ELEMENTS = [
 CONCEPT_DIR = Path(settings.BASE_DIR).parent / "docs" / "design" / "grms-concept"
 GEOMETRY_FILE = CONCEPT_DIR / "plan-geometry.json"
 RENDER_FILE = CONCEPT_DIR / "render-type1.png"
+# Ночной кадр ПОСЧИТАН из светлого (bake_dark_plate.py), поэтому совмещён с ним
+# по построению. Нарисованный отдельно render-type1-dark.png не годится:
+# габариты комнаты расходятся примерно на 21%, мебель двоится на границе зоны.
+RENDER_OFF_FILE = CONCEPT_DIR / "render-type1-off.png"
 
 # Код зоны из plan-geometry.json → элемент, которым управляет тап по комнате.
 # Связь ЯВНАЯ, а не «первый светильник в зоне»: догадка на фронте или на
@@ -181,6 +185,21 @@ PLAN_WINDOW_CURTAINS = {
 
 # Точка выхода воздуха: густота потока = скорость вентилятора этого элемента.
 PLAN_AC_CONTROL = "ac.1"
+
+# Описания кадров. Гостю они не показываются — кадр на плите декоративен, —
+# но в медиатеке администратор обязан отличать светлый от ночного.
+PLAN_ALT = {
+    "ru": "План демо-люкса, свет включён",
+    "en": "Demo suite floor plan, lights on",
+    "ar": "مخطط الجناح التجريبي، الإضاءة مشغّلة",
+    "zh": "演示套房平面图，灯光开启",
+}
+PLAN_OFF_ALT = {
+    "ru": "План демо-люкса, свет выключен",
+    "en": "Demo suite floor plan, lights off",
+    "ar": "مخطط الجناح التجريبي، الإضاءة مطفأة",
+    "zh": "演示套房平面图，灯光关闭",
+}
 
 
 class Command(BaseCommand):
@@ -324,9 +343,11 @@ class Command(BaseCommand):
         geometry = self._geometry()
         if geometry is None:
             return
-        asset_id = self._plan_asset()
+        asset_id = self._plan_asset(RENDER_FILE, PLAN_ALT)
         if not asset_id:
             return
+        # Ночного кадра может не быть — тогда плита работает затемняющей маской.
+        asset_off_id = self._plan_asset(RENDER_OFF_FILE, PLAN_OFF_ALT)
 
         zones = [
             {
@@ -364,6 +385,7 @@ class Command(BaseCommand):
 
         plan = {
             "asset_id": asset_id,
+            "asset_off_id": asset_off_id,
             "aspect": geometry.get("aspect"),
             "zones": zones,
             "windows": windows,
@@ -383,22 +405,22 @@ class Command(BaseCommand):
             self.stderr.write(f"Замеры плана не читаются: {exc}")
             return None
 
-    def _plan_asset(self) -> str:
+    def _plan_asset(self, path: Path, alt: dict) -> str:
         """
         Рендер через ТОТ ЖЕ медиапайплайн, что и загрузка из CMS: MinIO, потом
         Celery режет варианты. Отдельного пути для демо-картинки нет — он бы и
         тестировался отдельно.
 
         Идемпотентность по имени файла и виду: повторный сид не грузит второй
-        экземпляр 1,6 МБ и не двигает asset_id, из-за которого пришлось бы
-        публиковать новую версию конфигурации на ровном месте.
+        экземпляр в полтора мегабайта и не двигает asset_id, из-за которого
+        пришлось бы публиковать новую версию конфигурации на ровном месте.
         """
         from apps.media.models import MediaAsset
         from apps.media.services import upload_asset
 
         existing = (
             MediaAsset.objects.filter(
-                kind=MediaAsset.Kind.ROOM_PLAN, original_filename=RENDER_FILE.name
+                kind=MediaAsset.Kind.ROOM_PLAN, original_filename=path.name
             )
             .exclude(status=MediaAsset.Status.FAILED)
             .order_by("-created_at")
@@ -407,21 +429,16 @@ class Command(BaseCommand):
         if existing is not None:
             return str(existing.pk)
 
-        if not RENDER_FILE.exists():
-            self.stderr.write(f"Рендера плана нет ({RENDER_FILE}) — тип остаётся без плана")
+        if not path.exists():
+            self.stderr.write(f"Кадра плана нет ({path}) — тип остаётся без него")
             return ""
 
         asset = upload_asset(
-            content=RENDER_FILE.read_bytes(),
-            filename=RENDER_FILE.name,
+            content=path.read_bytes(),
+            filename=path.name,
             kind=MediaAsset.Kind.ROOM_PLAN,
             content_type="image/png",
-            alt={
-                "ru": "План демо-люкса",
-                "en": "Demo suite floor plan",
-                "ar": "مخطط الجناح التجريبي",
-                "zh": "演示套房平面图",
-            },
+            alt=alt,
         )
         return str(asset.pk)
 

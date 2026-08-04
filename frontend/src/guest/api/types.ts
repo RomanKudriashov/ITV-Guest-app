@@ -714,7 +714,13 @@ export interface RoomPlanPoint {
  * работает списком контролов.
  */
 export interface RoomPlan {
+  /** Светлый кадр: показывается только там, где свет подтверждённо включён. */
   image: string;
+  /**
+   * Ночной кадр, посчитанный из светлого и совмещённый с ним попиксельно.
+   * Пусто — ночного кадра у типа нет, и плита работает затемняющей маской.
+   */
+  image_off: string;
   aspect: number | null;
   zones: RoomPlanZone[];
   windows: RoomPlanWindow[];

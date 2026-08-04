@@ -1,5 +1,15 @@
 """
-План-двойник номера: геометрия в конфиге, рендер — в медиапайплайне.
+План-двойник номера: геометрия в конфиге, рендеры — в медиапайплайне.
+
+Кадров ДВА, и они попиксельно совмещены: нижний ночной виден всегда, верхний
+светлый показывается только там, где свет подтверждённо включён. Ночной
+СЧИТАЕТСЯ из светлого (docs/design/grms-concept/bake_dark_plate.py), поэтому
+совмещён по построению — нарисованный отдельно тёмный рендер расходился с
+светлым по габаритам примерно на 21% и давал двойную мебель на границе зоны.
+
+Ночного кадра может не быть: тогда плита работает по-старому — один кадр и
+затемняющая маска по выключенной зоне. Это хуже на вид, но честно, и новый тип
+номера подключается без ночного рендера, а не с битой картинкой.
 
 Два правила, из которых следует весь модуль.
 
@@ -136,6 +146,9 @@ def normalize(raw: object, *, control_ids: set[str]) -> dict:
 
     return {
         "asset_id": asset_id,
+        # Ночной кадр. Пусто — плита падает назад на затемняющую маску: у типа
+        # может не быть посчитанного кадра, и это не повод не показывать план.
+        "asset_off_id": str(raw.get("asset_off_id") or ""),
         "aspect": aspect,
         "zones": zones,
         "windows": windows,
@@ -157,20 +170,17 @@ def for_guest(plan: object) -> dict:
     if not isinstance(plan, dict) or not plan.get("asset_id"):
         return {}
 
-    from django.core.exceptions import ValidationError as DjangoValidationError
-
-    from apps.media.models import MediaAsset
-
-    try:
-        asset = MediaAsset.objects.filter(pk=plan["asset_id"]).first()
-    except (DjangoValidationError, TypeError, ValueError):
-        # Не-UUID в конфиге — повод показать экран списком, а не 500 гостю.
-        return {}
+    asset = _asset(plan.get("asset_id"))
     if asset is None:
         return {}
     image = asset.url(PLATE_VARIANT)
     if not image:
         return {}
+
+    # Ночной кадр необязателен и на своих условиях: не готов — плита обходится
+    # маской, а не ждёт его и не показывает битую картинку.
+    off_asset = _asset(plan.get("asset_off_id"))
+    image_off = off_asset.url(PLATE_VARIANT) if off_asset is not None else ""
 
     aspect = plan.get("aspect")
     if not aspect and asset.width and asset.height:
@@ -182,8 +192,24 @@ def for_guest(plan: object) -> dict:
         # Технического id ассета гостю не отдаём: ему принадлежит картинка, а
         # не запись о ней.
         "image": image,
+        "image_off": image_off,
         "aspect": aspect or None,
         "zones": plan.get("zones") or [],
         "windows": plan.get("windows") or [],
         "points": plan.get("points") or [],
     }
+
+
+def _asset(asset_id: object):
+    """Ассет по id из конфигурации. Мусор вместо UUID — не 500, а «нет ассета»."""
+    if not asset_id:
+        return None
+
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    from apps.media.models import MediaAsset
+
+    try:
+        return MediaAsset.objects.filter(pk=asset_id).first()
+    except (DjangoValidationError, TypeError, ValueError):
+        return None

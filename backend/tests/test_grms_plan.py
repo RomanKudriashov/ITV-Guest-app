@@ -183,24 +183,62 @@ def test_a_type_without_a_plan_publishes_without_one(seeded):
 # --- Картинка ---------------------------------------------------------------
 
 
-def test_the_server_resolves_the_asset_and_hands_out_a_ready_url(seeded):
+def test_the_server_resolves_both_frames_and_hands_out_ready_urls(seeded):
     """
-    Гость получает АДРЕС, а не идентификатор записи: адрес зависит от варианта,
-    готовности нарезки и настроек стенда, и собранный на фронте он ломается
-    ровно там, где его некому чинить.
+    Гость получает АДРЕСА, а не идентификаторы записей: адрес зависит от
+    варианта, готовности нарезки и настроек стенда, и собранный на фронте он
+    ломается ровно там, где его некому чинить.
     """
     hotel = seeded
     plan = _current(hotel)["plan"]
     with tenant_context(hotel):
         asset = MediaAsset.objects.get(pk=plan["asset_id"])
-        assert asset.kind == MediaAsset.Kind.ROOM_PLAN
-        assert asset.status == MediaAsset.Status.READY
+        off_asset = MediaAsset.objects.get(pk=plan["asset_off_id"])
+        assert {asset.kind, off_asset.kind} == {MediaAsset.Kind.ROOM_PLAN}
+        assert asset.status == off_asset.status == MediaAsset.Status.READY
         exposed = plan_geometry.for_guest(plan)
 
     assert exposed["image"] == asset.url(plan_geometry.PLATE_VARIANT)
+    assert exposed["image_off"] == off_asset.url(plan_geometry.PLATE_VARIANT)
     assert exposed["image"].startswith("http")
-    assert "asset_id" not in exposed
+    # Два РАЗНЫХ кадра: ночной посчитан из светлого, но это отдельный объект.
+    assert exposed["image_off"] != exposed["image"]
+    assert "asset_id" not in exposed and "asset_off_id" not in exposed
     assert exposed["aspect"] == plan["aspect"]
+
+
+def test_the_night_frame_is_pixel_aligned_with_the_lit_one(seeded):
+    """
+    Кадры совпадают по размеру — иначе на границе включённой зоны поедет мебель.
+
+    Ночной кадр не рисуется отдельно, а СЧИТАЕТСЯ из светлого
+    (docs/design/grms-concept/bake_dark_plate.py), поэтому совмещение здесь —
+    свойство, а не удача; проверка стоит на случай, если кадр однажды подменят
+    руками.
+    """
+    hotel = seeded
+    plan = _current(hotel)["plan"]
+    with tenant_context(hotel):
+        lit = MediaAsset.objects.get(pk=plan["asset_id"])
+        off = MediaAsset.objects.get(pk=plan["asset_off_id"])
+    assert (lit.width, lit.height) == (off.width, off.height)
+
+
+def test_a_type_without_a_night_frame_still_gets_a_plan(seeded):
+    """
+    Ночного кадра нет — план остаётся, плита работает затемняющей маской.
+
+    Это запасной путь для типа, которому кадр не посчитали: показать план
+    хуже, чем с двумя кадрами, но лучше, чем не показать вовсе.
+    """
+    hotel = seeded
+    plan = dict(_current(hotel)["plan"], asset_off_id="")
+    with tenant_context(hotel):
+        exposed = plan_geometry.for_guest(plan)
+
+    assert exposed["image"]
+    assert exposed["image_off"] == ""
+    assert exposed["zones"]
 
 
 def test_an_unprocessed_asset_means_no_plan_at_all(seeded):
@@ -242,6 +280,8 @@ def test_reseeding_neither_duplicates_the_asset_nor_bumps_the_version(seeded):
     before = _current(hotel)
     with tenant_context(hotel):
         assets = MediaAsset.objects.filter(kind=MediaAsset.Kind.ROOM_PLAN).count()
+    # Кадра два — светлый и ночной, и повторный сид не делает из них четыре.
+    assert assets == 2
 
     call_command("seed_grms_demo", subdomain=hotel.subdomain, verbosity=0)
 

@@ -206,6 +206,7 @@ def test_no_technical_fields_ever_leave_the_server(guest):
     # отстала бы от этого списка. Убеждаемся, что план в ответе есть: иначе
     # сторож ниже честно прошёл бы по снимку без плана и ничего не доказал.
     assert payload["plan"]["zones"], "план не доехал — сторож проверил бы пустоту"
+    assert payload["plan"]["image_off"], "ночной кадр не доехал"
     assert "asset_id" not in payload["plan"]
 
     forbidden_keys = {
@@ -219,9 +220,10 @@ def test_no_technical_fields_ever_leave_the_server(guest):
         "room_number",
         "endpoint",
         "device",
-        # Идентификатор записи медиа: гостю принадлежит картинка, а не строка
-        # в таблице ассетов.
+        # Идентификаторы записей медиа: гостю принадлежат картинки, а не
+        # строки в таблице ассетов.
         "asset_id",
+        "asset_off_id",
     }
 
     def walk(node, path="root"):

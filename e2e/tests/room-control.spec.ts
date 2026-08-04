@@ -228,7 +228,7 @@ test.describe('Управление номером', () => {
     await expect(plate).toBeVisible({ timeout: 20_000 })
 
     // Кадр приезжает АДРЕСОМ с сервера, а не собирается на фронте.
-    const src = await plate.locator('img').getAttribute('src')
+    const src = await plate.locator('> img').getAttribute('src')
     expect(src, 'плита без кадра').toMatch(/^https?:\/\//)
 
     const frame = (await plate.boundingBox())!
@@ -257,6 +257,35 @@ test.describe('Управление номером', () => {
     await expect(zone).toHaveAttribute('aria-label', /.+/)
   })
 
+  test('плита — два совмещённых кадра: ночной снизу, светлый по включённым зонам', async ({
+    page,
+    request,
+  }) => {
+    const live = await roomStateFromApi(request)
+    const plan = live.plan as { image: string; image_off: string }
+    expect(plan.image_off, 'ночной кадр не приехал — проверять нечего').toBeTruthy()
+    expect(plan.image_off).not.toBe(plan.image)
+
+    await enterRoom(page)
+    const plate = page.getByTestId('room-plan')
+    await expect(plate).toBeVisible({ timeout: 20_000 })
+
+    // Снизу ВСЕГДА ночной кадр: выключенная зона показывает настоящую тёмную
+    // комнату, а не дневную под серой плёнкой.
+    await expect(plate.locator('> img')).toHaveAttribute('src', plan.image_off)
+
+    // Светлый кадр — окном по каждой зоне, и окно видно ровно тогда, когда
+    // свет в этой зоне подтверждён.
+    for (const code of ['living', 'bedroom', 'entry', 'wardrobe', 'bathroom']) {
+      const lit = page.getByTestId(`room-plan-lit-${code}`)
+      await expect(lit.locator('img')).toHaveAttribute('src', plan.image)
+      const pressed = await page.getByTestId(`room-plan-zone-${code}`).getAttribute('aria-pressed')
+      await expect
+        .poll(async () => lit.evaluate((el) => getComputedStyle(el).opacity), { timeout: 5_000 })
+        .toBe(pressed === 'true' ? '1' : '0')
+    }
+  })
+
   test('тап по комнате меняет зону только ПОСЛЕ подтверждения', async ({ page }) => {
     await enterRoom(page)
     const zone = page.getByTestId('room-plan-zone-bedroom')
@@ -281,6 +310,14 @@ test.describe('Управление номером', () => {
       'aria-pressed',
       String(before !== 'true'),
     )
+    // И светлый кадр по этой комнате появился (или ушёл) вместе с состоянием.
+    await expect
+      .poll(
+        async () =>
+          page.getByTestId('room-plan-lit-bedroom').evaluate((el) => getComputedStyle(el).opacity),
+        { timeout: 10_000 },
+      )
+      .toBe(before !== 'true' ? '1' : '0')
   })
 
   test('оффлайн: план не показывает свет ни включённым, ни выключенным', async ({
@@ -308,6 +345,18 @@ test.describe('Управление номером', () => {
     await expect(page.getByText(/ресепшен/i).first()).toBeVisible()
     // Плита не считает горящие зоны, а честно говорит, что не знает.
     await expect(page.getByTestId('room-plan')).toHaveAttribute('data-lit', 'unknown')
+
+    // Показан ЦЕЛИКОМ ночной кадр: ни одного окна светлого поверх него.
+    await expect(page.getByTestId('room-plan').locator('> img')).toHaveAttribute(
+      'src',
+      (live.plan as { image_off: string }).image_off,
+    )
+    for (const code of ['living', 'bedroom', 'entry', 'wardrobe', 'bathroom']) {
+      await expect(
+        page.getByTestId(`room-plan-lit-${code}`),
+        `зона ${code} показывает свет в оффлайне`,
+      ).toHaveCSS('opacity', '0')
+    }
 
     // КРИТИЧНОЕ: ни одна зона не утверждает ни «включено», ни «выключено»,
     // и нажать её нельзя.

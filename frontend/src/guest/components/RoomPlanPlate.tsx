@@ -8,14 +8,25 @@ import { useStorefront } from '../useStorefront';
 import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../api/types';
 
 /**
- * План-двойник номера: один рендер + слои, которые следуют ПОДТВЕРЖДЁННОМУ
+ * План-двойник номера: ДВА СОВМЕЩЁННЫХ КАДРА, следующих ПОДТВЕРЖДЁННОМУ
  * состоянию.
  *
- * Почему один рендер, а не два (со светом и без). Замерено на самих кадрах:
- * при одинаковом размере 1586×992 габариты комнаты расходятся примерно на 21%
- * (светлый x 310–1260, тёмный x 217–1365). Подогнав их по стенам, получаем
- * двоящуюся мебель — поэтому свет выключен = затемняющая маска по зоне, а
- * второй кадр остаётся референсом настроения и в приложение не попадает.
+ * Нижний слой — ночной кадр, он виден всегда. Верхний — светлый, показанный
+ * только в тех зонах, где свет подтверждённо включён; края зоны растушёваны,
+ * поэтому свет не обрывается по прямой, которой в комнате нет. Зона выключена —
+ * сквозь неё видна настоящая тёмная комната, а не дневная под серой плёнкой.
+ * Глобального затемнения и вуалей поверх кадра здесь нет.
+ *
+ * Совмещение — условие работы, а не пожелание: разойдись кадры на несколько
+ * пикселей, и на границе включённой зоны появится двойная мебель. Поэтому
+ * ночной кадр СЧИТАЕТСЯ из светлого (docs/design/grms-concept/bake_dark_plate.py)
+ * и совмещён по построению. Нарисованный отдельно тёмный рендер этого не даёт:
+ * при одинаковом кадре 1586×992 габариты комнаты расходятся примерно на 21%
+ * (светлый x 310–1260, тёмный x 217–1365).
+ *
+ * Ночного кадра может не быть (`image_off` пуст) — тогда плита падает назад на
+ * прежнее поведение: один кадр и затемняющая маска по выключенной зоне. Хуже на
+ * вид, но честно, и новый тип номера подключается без ночного рендера.
  *
  * Ни одной цифры геометрии здесь нет: всё приезжает в `plan` из опубликованной
  * конфигурации типа. Новый тип номера с другим рендером подключается правкой
@@ -33,6 +44,9 @@ import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../a
  * рамы, а не приезжает из конфигурации. Свет разливается только внутрь.
  */
 const SPILL = { along: 3, depth: 3.2, sideDepth: 4.5 } as const;
+
+/** Переключение зоны — плавное: свет в комнате не щёлкает кадрами. */
+const ZONE_FADE_MS = 600;
 
 /** Плотность потока по скорости вентилятора: 0 — потока нет вовсе. */
 const AIRFLOW_DENSITY = [0, 7, 13, 21] as const;
@@ -89,10 +103,14 @@ export function RoomPlanPlate({
 
   const lit = plan.zones.filter((zone) => read(zone.controlId)?.on === true).length;
   const off = plan.zones.filter((zone) => read(zone.controlId)?.on === false).length;
-  // Глобальное затемнение — по доле ТОЧНО выключенных зон. Зона, состояние
-  // которой не прочитано, в долю не входит: она не «выключена».
-  const dim = plan.zones.length ? (0.5 * off) / plan.zones.length : 0;
   const motion = calm ? 'none' : undefined;
+
+  // Два кадра или один с маской — решает НАЛИЧИЕ ночного кадра, а не тип
+  // номера и не тема: без него плита обязана работать по-прежнему.
+  const twoFrames = Boolean(plan.image_off);
+  // Глобальное затемнение живёт только в запасном режиме. С двумя кадрами оно
+  // не нужно и вредно: тёмное — это сам ночной кадр, а не плёнка поверх.
+  const dim = twoFrames || !plan.zones.length ? 0 : (0.5 * off) / plan.zones.length;
 
   return (
     <Box
@@ -112,12 +130,15 @@ export function RoomPlanPlate({
       }}
     >
       {/*
-        Кадр ДЕКОРАТИВЕН: управление живёт в кнопках зон и, полностью, в списке
-        контролов рядом. Описывать словами картинку комнаты нечем и незачем.
+        Кадры ДЕКОРАТИВНЫ: управление живёт в кнопках зон и, полностью, в
+        списке контролов рядом. Описывать словами картинку комнаты нечем.
+
+        Нижний слой — ночной, если он есть. Нет ночного — снизу лежит светлый,
+        и выключенные зоны накрываются маской, как раньше.
       */}
       <Box
         component="img"
-        src={plan.image}
+        src={twoFrames ? plan.image_off : plan.image}
         alt=""
         aria-hidden
         sx={{
@@ -126,24 +147,58 @@ export function RoomPlanPlate({
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          // В нейтральном состоянии кадр обесцвечен: так видно, что это
-          // фотография комнаты, а не её текущий свет.
-          filter: neutral ? 'grayscale(1)' : 'none',
+          // Плита без ночного кадра в недоступности обесцвечивается: иначе
+          // снизу остался бы СВЕТЛЫЙ кадр, то есть «во всём номере горит
+          // свет» — ровно то враньё, которого здесь быть не должно. С ночным
+          // кадром обесцвечивать нечего: он и есть нейтральное состояние.
+          filter: neutral && !twoFrames ? 'grayscale(1)' : 'none',
         }}
       />
 
       {plan.zones.map((zone) => {
-        const reading = read(zone.controlId);
-        return (
+        const on = read(zone.controlId)?.on === true;
+        return twoFrames ? (
+          // Верхний, светлый кадр — окном по зоне. Внутри окна он растянут до
+          // размеров всей плиты и сдвинут так, что пиксели совпадают с нижним:
+          // иначе на границе зоны поехала бы мебель.
+          <Box
+            key={`lit-${zone.code || zone.controlId}`}
+            aria-hidden
+            data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
+            style={{ ...pct(zone.mask), opacity: on ? 1 : 0 }}
+            sx={{
+              position: 'absolute',
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              maskImage: tokens.zoneWindow,
+              WebkitMaskImage: tokens.zoneWindow,
+              transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
+            }}
+          >
+            <Box
+              component="img"
+              src={plan.image}
+              alt=""
+              style={{
+                position: 'absolute',
+                left: `${(-zone.mask.x / zone.mask.w) * 100}%`,
+                top: `${(-zone.mask.y / zone.mask.h) * 100}%`,
+                width: `${(100 / zone.mask.w) * 100}%`,
+                height: `${(100 / zone.mask.h) * 100}%`,
+                objectFit: 'cover',
+              }}
+            />
+          </Box>
+        ) : (
           <Box
             key={`mask-${zone.code || zone.controlId}`}
             aria-hidden
-            style={{ ...pct(zone.mask), opacity: reading?.on === false ? 1 : 0 }}
+            style={{ ...pct(zone.mask), opacity: read(zone.controlId)?.on === false ? 1 : 0 }}
             sx={{
               position: 'absolute',
               pointerEvents: 'none',
               background: tokens.maskOff,
-              transition: motion ?? 'opacity .7s ease',
+              transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
             }}
           />
         );
@@ -243,7 +298,11 @@ export function RoomPlanPlate({
             placeItems: 'center',
             textAlign: 'center',
             p: 3,
-            background: tokens.offlineVeil,
+            // С ночным кадром закрывать нечего: он и есть нейтральное
+            // состояние, и плотная заливка сделала бы из комнаты чёрный
+            // прямоугольник. Без него под плашкой лежит СВЕТЛЫЙ кадр, и его
+            // приходится закрывать всерьёз.
+            background: twoFrames ? tokens.offlineHint : tokens.offlineVeil,
           }}
         >
           {/*
