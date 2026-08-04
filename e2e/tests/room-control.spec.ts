@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
 import { ADMIN, API, DEMO_ROOM, HOTEL } from './helpers'
 
@@ -27,6 +27,47 @@ async function enterRoom(page: Page, room = DEMO_ROOM): Promise<void> {
   await expect(page.getByTestId('guest-nav-room')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('guest-nav-room').click()
   await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 15_000 })
+}
+
+/**
+ * Геометрия плана из живого ответа — тем же путём, что её видит гость.
+ *
+ * Своя сессия, а не заглядывание в localStorage страницы: план принадлежит
+ * ТИПУ номера и одинаков для всех сессий этой комнаты, а лезть во внутреннее
+ * хранилище приложения ради него значит завязать тест на его устройство.
+ */
+async function roomStateFromApi(request: APIRequestContext): Promise<Record<string, unknown>> {
+  const session = await request.post(`${API}/api/v1/guest/session`, {
+    data: { room_number: DEMO_ROOM, language: 'ru' },
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(session.ok(), 'гостевая сессия').toBeTruthy()
+  const state = await request.get(`${API}/api/v1/guest/room/state`, {
+    headers: {
+      Authorization: `Bearer ${(await session.json()).token}`,
+      'X-Hotel-Subdomain': HOTEL,
+    },
+  })
+  expect(state.ok(), 'снимок номера').toBeTruthy()
+  return await state.json()
+}
+
+/**
+ * Подменить снимок на весь оставшийся тест — вместе с КАНАЛОМ.
+ *
+ * Глушить один REST бесполезно: сервер шлёт полный снимок на подключение
+ * сокета, и живое «всё работает» затирает подставленное состояние через долю
+ * секунды. Проверка при этом не падает, а становится гонкой, что хуже.
+ */
+async function freezeState(page: Page, snapshot: Record<string, unknown>): Promise<void> {
+  await page.routeWebSocket('**/ws/**', (ws) => ws.close())
+  await page.route('**/api/v1/guest/room/state', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(snapshot),
+    })
+  })
 }
 
 /**
@@ -177,6 +218,177 @@ test.describe('Управление номером', () => {
     await expect(page.locator('[data-testid^="room-control-"]')).toHaveCount(0)
     // Техническая причина гостю не показывается.
     await expect(page.getByText(/CONNECTOR|TIMEOUT|iRidi|Modbus/i)).toHaveCount(0)
+  })
+
+  /* ── План-двойник ───────────────────────────────────────────────────────── */
+
+  test('план отрисован, зоны стоят там, где комнаты', async ({ page }) => {
+    await enterRoom(page)
+    const plate = page.getByTestId('room-plan')
+    await expect(plate).toBeVisible({ timeout: 20_000 })
+
+    // Кадр приезжает АДРЕСОМ с сервера, а не собирается на фронте.
+    const src = await plate.locator('img').getAttribute('src')
+    expect(src, 'плита без кадра').toMatch(/^https?:\/\//)
+
+    const frame = (await plate.boundingBox())!
+    const at = async (code: string) => {
+      const box = (await page.getByTestId(`room-plan-zone-${code}`).boundingBox())!
+      return { x: (box.x - frame.x) / frame.width, y: (box.y - frame.y) / frame.height }
+    }
+
+    // Взаимное расположение — то же, что на рендере: гостиная слева от
+    // спальни, гардеробная и ванная внизу, ванная справа от гардеробной.
+    // Абсолютные проценты не проверяем: они живут в конфигурации, и сторож,
+    // повторяющий их числами, ломался бы на каждом новом типе номера.
+    const [living, bedroom, wardrobe, bathroom] = await Promise.all([
+      at('living'),
+      at('bedroom'),
+      at('wardrobe'),
+      at('bathroom'),
+    ])
+    expect(living.x).toBeLessThan(bedroom.x)
+    expect(wardrobe.y).toBeGreaterThan(living.y)
+    expect(bathroom.x).toBeGreaterThan(wardrobe.x)
+
+    // Зона — настоящая кнопка с состоянием, а не картинка с обработчиком.
+    const zone = page.getByTestId('room-plan-zone-living')
+    await expect(zone).toHaveAttribute('aria-pressed', /true|false/)
+    await expect(zone).toHaveAttribute('aria-label', /.+/)
+  })
+
+  test('тап по комнате меняет зону только ПОСЛЕ подтверждения', async ({ page }) => {
+    await enterRoom(page)
+    const zone = page.getByTestId('room-plan-zone-bedroom')
+    await expect(zone).toBeVisible({ timeout: 20_000 })
+    const before = await zone.getAttribute('aria-pressed')
+
+    await zone.click()
+
+    // Пока идёт обмен: зона показывает это и НЕ переключается. Именно этого не
+    // было бы при оптимистичном переключении — там она мигнула бы сразу.
+    await expect(page.getByTestId('room-running-light.bedroom')).toBeVisible({ timeout: 10_000 })
+    await expect(zone).toHaveAttribute('aria-busy', 'true')
+    expect(await zone.getAttribute('aria-pressed'), 'зона переключилась до подтверждения').toBe(
+      before,
+    )
+
+    await expect
+      .poll(async () => zone.getAttribute('aria-pressed'), { timeout: 30_000 })
+      .not.toBe(before)
+    // Тумблер в списке следует за тем же состоянием: путь один, а не два.
+    await expect(page.getByTestId('room-control-light.bedroom')).toHaveAttribute(
+      'aria-pressed',
+      String(before !== 'true'),
+    )
+  })
+
+  test('оффлайн: план не показывает свет ни включённым, ни выключенным', async ({
+    page,
+    request,
+  }) => {
+    await enterRoom(page)
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+
+    // Настоящую геометрию берём из живого ответа: разметка комнаты остаётся
+    // верной, врать может только свет на ней.
+    const live = await roomStateFromApi(request)
+    expect(live.plan, 'план не приехал — проверять нечего').toBeTruthy()
+
+    await freezeState(page, {
+      ...live,
+      availability: 'unavailable',
+      message: 'Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.',
+      zones: [],
+    })
+    await page.reload()
+
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('room-plan-neutral')).toBeVisible()
+    await expect(page.getByText(/ресепшен/i).first()).toBeVisible()
+
+    // КРИТИЧНОЕ: ни одна зона не утверждает ни «включено», ни «выключено»,
+    // и нажать её нельзя.
+    const zones = page.locator('[data-testid^="room-plan-zone-"]')
+    await expect(zones).not.toHaveCount(0)
+    for (const zone of await zones.all()) {
+      await expect(zone).toBeDisabled()
+      await expect(zone).not.toHaveAttribute('aria-pressed', /.*/)
+    }
+  })
+
+  test('обе темы: плита остаётся тёмной, меняется обрамление', async ({ page }) => {
+    await enterRoom(page)
+    const plate = page.getByTestId('room-plan')
+    await expect(plate).toBeVisible({ timeout: 20_000 })
+
+    const look = () =>
+      plate.evaluate((el) => {
+        const style = getComputedStyle(el)
+        return { background: style.backgroundColor, border: style.borderColor }
+      })
+
+    const dark = await look()
+    await page.getByTestId('theme-toggle').first().click()
+    await expect
+      .poll(async () => (await look()).border, { timeout: 10_000 })
+      .not.toBe(dark.border)
+    const light = await look()
+
+    // Плита — ФОТОГРАФИЯ, а не поверхность интерфейса: подложка та же в обеих
+    // темах. Светлая плита означала бы, что в номере включили свет.
+    expect(light.background).toBe(dark.background)
+    const channels = light.background.match(/\d+/g)!.slice(0, 3).map(Number)
+    expect(Math.max(...channels), 'плита посветлела вместе с темой').toBeLessThan(40)
+  })
+
+  test('RTL: план не зеркалится — это комната, а не раскладка', async ({ page }) => {
+    await enterRoom(page)
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+
+    const layout = async () => {
+      const frame = (await page.getByTestId('room-plan').boundingBox())!
+      const one = async (code: string) => {
+        const box = (await page.getByTestId(`room-plan-zone-${code}`).boundingBox())!
+        return Number(((box.x - frame.x) / frame.width).toFixed(3))
+      }
+      return { living: await one('living'), bathroom: await one('bathroom') }
+    }
+
+    const ltr = await layout()
+
+    await page.getByTestId('guest-language').click()
+    await page.getByTestId('guest-language-ar').click()
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.dir), { timeout: 15_000 })
+      .toBe('rtl')
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+
+    const rtl = await layout()
+
+    // Ванная не переезжает налево оттого, что интерфейс на арабском.
+    expect(rtl.living, 'план зеркалится в RTL').toBeCloseTo(ltr.living, 2)
+    expect(rtl.bathroom, 'план зеркалится в RTL').toBeCloseTo(ltr.bathroom, 2)
+    expect(rtl.bathroom).toBeGreaterThan(rtl.living)
+  })
+
+  test('тип без плана: экран работает списком, без заглушек и битых картинок', async ({
+    page,
+    request,
+  }) => {
+    // Снимок без плана — ровно то, что отдаёт тип, у которого рендера нет.
+    // Подменяем на клиенте, а не сносим план у демо-типа: соседние проверки
+    // работают на том же стенде, и чинить его за собой пришлось бы вслепую.
+    const live = await roomStateFromApi(request)
+    delete live.plan
+    await freezeState(page, live)
+
+    await enterRoom(page)
+
+    await expect(page.getByTestId('room-control-light.living')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('room-plan')).toHaveCount(0)
+    // Ни рамки, ни заглушки: плана просто нет.
+    await expect(page.locator('[data-testid^="room-plan-"]')).toHaveCount(0)
   })
 
   test('без доверия команда отклоняется, а форма PIN живёт на самом экране', async ({
