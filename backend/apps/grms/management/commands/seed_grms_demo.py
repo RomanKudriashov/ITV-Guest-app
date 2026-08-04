@@ -13,7 +13,10 @@
   * фанкойл ОДНИМ элементом на четыре переменные — а не четырьмя элементами;
   * две шторы разными элементами: основная и блэкаут;
   * сцены, DND и «Убрать номер» из каталога;
-  * мастер-выключатель НЕ ПРИВЯЗАН намеренно (см. ниже).
+  * мастер-выключатель НЕ ПРИВЯЗАН намеренно (см. ниже);
+  * план-двойник: рендер через медиапайплайн и геометрия из замеров
+    docs/design/grms-concept/plan-geometry.json — координаты копируются как
+    есть, потому что замерены по стенам кадра.
 
 Чего здесь нет и не будет: диммирования, цветовой температуры, процентов
 открытия шторы, режимов «охлаждение/нагрев», влажности, AQI и CO₂. Не потому
@@ -23,6 +26,10 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.core.context import tenant_context
@@ -141,6 +148,40 @@ ELEMENTS = [
      []),
 ]
 
+# --- План-двойник ----------------------------------------------------------
+#
+# Рендер и замеры лежат в docs/ и попадают в приложение НЕ оттуда: картинка
+# идёт через медиапайплайн (MinIO + нарезка вариантов), геометрия — в конфиг
+# типа. docs остаётся источником, а не хранилищем ассетов.
+CONCEPT_DIR = Path(settings.BASE_DIR).parent / "docs" / "design" / "grms-concept"
+GEOMETRY_FILE = CONCEPT_DIR / "plan-geometry.json"
+RENDER_FILE = CONCEPT_DIR / "render-type1.png"
+
+# Код зоны из plan-geometry.json → элемент, которым управляет тап по комнате.
+# Связь ЯВНАЯ, а не «первый светильник в зоне»: догадка на фронте или на
+# сервере однажды выберет не тот элемент, и объяснить это гостю будет нечем.
+PLAN_ZONE_LIGHTS = {
+    "living": "light.living",
+    "bedroom": "light.bedroom",
+    "entry": "light.entry",
+    "wardrobe": "light.wardrobe",
+    "bathroom": "light.bathroom",
+}
+
+# Код окна → (основная штора, блэкаут). Какой привод обслуживает какое окно —
+# свойство ОБЪЕКТА, а не догадка: у ПНР два канала штор на весь номер, и Excel
+# не говорит, где именно висит каждый. В демо главная штора на всех окнах,
+# блэкаут — отдельным слоем на окне спальни, где он и стоит по конфигурации
+# (элемент curtain.blackout лежит в зоне bedroom).
+PLAN_WINDOW_CURTAINS = {
+    "win-living-top": ("curtain.main", ""),
+    "win-living-side": ("curtain.main", ""),
+    "win-bed-top": ("curtain.main", "curtain.blackout"),
+}
+
+# Точка выхода воздуха: густота потока = скорость вентилятора этого элемента.
+PLAN_AC_CONTROL = "ac.1"
+
 
 class Command(BaseCommand):
     help = "Засеять демо-конфигурацию управления номером (идемпотентно)"
@@ -168,6 +209,7 @@ class Command(BaseCommand):
             self._zones(room_type)
             self._variables(room_type)
             self._elements(hotel, room_type)
+            self._plan(room_type)
             linked = self._link_room(room_type)
         self._pin(hotel, linked)
         version = self._publish(hotel)
@@ -266,6 +308,122 @@ class Command(BaseCommand):
                     variable_key=variable_key,
                     trigger_value=trigger,
                 )
+
+    def _plan(self, room_type: RoomType) -> None:
+        """
+        План-двойник демо-типа: ассет рендера + геометрия из замеров.
+
+        Координаты НЕ пересчитываются и не подгоняются: они замерены по стенам
+        рендера, и «поправить на глаз» здесь означает развести разметку с
+        картинкой на глазах у гостя. Файл замеров — единственный источник.
+
+        Ни файла, ни картинки — тип остаётся БЕЗ плана, и это не авария: экран
+        обязан работать списком контролов. Демо-данные не должны быть причиной,
+        по которой не поднимается стенд.
+        """
+        geometry = self._geometry()
+        if geometry is None:
+            return
+        asset_id = self._plan_asset()
+        if not asset_id:
+            return
+
+        zones = [
+            {
+                "code": zone["code"],
+                "controlId": PLAN_ZONE_LIGHTS[zone["code"]],
+                "hit": zone["hit"],
+                "mask": zone["mask"],
+            }
+            for zone in geometry.get("zones", [])
+            if zone.get("code") in PLAN_ZONE_LIGHTS
+        ]
+        windows = []
+        for window in geometry.get("windows", []):
+            curtain, blackout = PLAN_WINDOW_CURTAINS.get(window.get("code"), ("", ""))
+            if not curtain:
+                continue
+            windows.append(
+                {
+                    "code": window["code"],
+                    "x": window["x"],
+                    "y": window["y"],
+                    "w": window["w"],
+                    "h": window["h"],
+                    "orientation": window.get("orientation") or "horizontal",
+                    "curtainId": curtain,
+                    "blackoutId": blackout,
+                }
+            )
+        ac = geometry.get("ac") or {}
+        points = (
+            [{"controlId": PLAN_AC_CONTROL, "x": ac["x"], "y": ac["y"]}]
+            if "x" in ac and "y" in ac
+            else []
+        )
+
+        plan = {
+            "asset_id": asset_id,
+            "aspect": geometry.get("aspect"),
+            "zones": zones,
+            "windows": windows,
+            "points": points,
+        }
+        if room_type.plan != plan:
+            room_type.plan = plan
+            room_type.save(update_fields=["plan", "updated_at"])
+
+    def _geometry(self) -> dict | None:
+        if not GEOMETRY_FILE.exists():
+            self.stderr.write(f"Замеров плана нет ({GEOMETRY_FILE}) — тип остаётся без плана")
+            return None
+        try:
+            return json.loads(GEOMETRY_FILE.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            self.stderr.write(f"Замеры плана не читаются: {exc}")
+            return None
+
+    def _plan_asset(self) -> str:
+        """
+        Рендер через ТОТ ЖЕ медиапайплайн, что и загрузка из CMS: MinIO, потом
+        Celery режет варианты. Отдельного пути для демо-картинки нет — он бы и
+        тестировался отдельно.
+
+        Идемпотентность по имени файла и виду: повторный сид не грузит второй
+        экземпляр 1,6 МБ и не двигает asset_id, из-за которого пришлось бы
+        публиковать новую версию конфигурации на ровном месте.
+        """
+        from apps.media.models import MediaAsset
+        from apps.media.services import upload_asset
+
+        existing = (
+            MediaAsset.objects.filter(
+                kind=MediaAsset.Kind.ROOM_PLAN, original_filename=RENDER_FILE.name
+            )
+            .exclude(status=MediaAsset.Status.FAILED)
+            .order_by("-created_at")
+            .first()
+        )
+        if existing is not None:
+            return str(existing.pk)
+
+        if not RENDER_FILE.exists():
+            self.stderr.write(f"Рендера плана нет ({RENDER_FILE}) — тип остаётся без плана")
+            return ""
+
+        asset = upload_asset(
+            content=RENDER_FILE.read_bytes(),
+            filename=RENDER_FILE.name,
+            kind=MediaAsset.Kind.ROOM_PLAN,
+            content_type="image/png",
+            alt={
+                "ru": "План демо-люкса",
+                "en": "Demo suite floor plan",
+                "ar": "مخطط الجناح التجريبي",
+                "zh": "演示套房平面图",
+            },
+        )
+        return str(asset.pk)
 
     def _link_room(self, room_type: RoomType) -> Room | None:
         room = Room.objects.filter(number=DEMO_ROOM).first()

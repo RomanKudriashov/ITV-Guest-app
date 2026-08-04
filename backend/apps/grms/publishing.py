@@ -23,6 +23,7 @@ from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError, ValidationError
 from apps.core.models import AuditLog
 from apps.grms import builder, catalog
+from apps.grms import plan as plan_geometry
 from apps.grms.models import Binding, ControlElement, PublishedConfig, RoomType
 
 
@@ -88,17 +89,18 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                 }
             zone["controls"].append(control)
 
+        published = sorted(zones.values(), key=lambda z: (z["sort_order"], z["code"]))
         return {
             "type": room_type.code,
             "title": room_type.title,
             "device_name_template": room_type.device_name_template,
             "subdevice": room_type.subdevice or "",
-            "zones": sorted(zones.values(), key=lambda z: (z["sort_order"], z["code"])),
-            "plan": _plan(room_type),
+            "zones": published,
+            "plan": _plan(room_type, published),
         }
 
 
-def _plan(room_type) -> dict:
+def _plan(room_type, zones: list[dict]) -> dict:
     """
     Геометрия плана номера — ВНУТРИ снимка, а не отдельной таблицей.
 
@@ -111,21 +113,18 @@ def _plan(room_type) -> dict:
     размера картинки, а новый тип номера с другим рендером должен подключаться
     без правки фронта.
 
-    Заполняется в G5b (план-двойник). Здесь резервируется форма — по образцу
-    docs/design/grms-concept/plan-geometry.json, — чтобы следующий прогон не
-    тянул за собой ни миграцию, ни смену формата опубликованных версий.
+    Нормализация идёт по УЖЕ СОБРАННЫМ зонам снимка: на плане не остаётся ни
+    одной ссылки на элемент, которого в этой версии нет. Правило то же, по
+    которому непривязанный элемент не попадает в снимок, — просто применённое
+    к разметке.
     """
-    return {
-        # UUID ассета рендера (MediaAsset.Kind.ROOM_PLAN). URL резолвит
-        # backend — фронт не собирает адреса строкой.
-        "asset_id": None,
-        # Соотношение сторон кадра: чтобы сверстать плиту до загрузки картинки.
-        "aspect": None,
-        # [{"code", "title", "hit": {x,y,w,h}, "mask": {x,y,w,h}}]
-        "zones": [],
-        # [{"controlId", "x", "y"}]
-        "points": [],
+    control_ids = {
+        control.get("controlId")
+        for zone in zones
+        for control in zone.get("controls", [])
+        if control.get("controlId")
     }
+    return plan_geometry.normalize(room_type.plan, control_ids=control_ids)
 
 
 def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:

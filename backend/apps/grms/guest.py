@@ -24,6 +24,7 @@ from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, Val
 from apps.core.fields import translate
 from apps.core.models import AuditLog
 from apps.grms import catalog, commands, inflight, liveness, transport
+from apps.grms import plan as plan_geometry
 from apps.grms.models import PublishedConfig, RoomTypeRoom
 
 logger = logging.getLogger(__name__)
@@ -254,7 +255,27 @@ def build_state(hotel, session, *, language: str = "") -> dict:
         "trust": session.trust if session else "anonymous",
         "can_command": allowed,
         "zones": _serialize_zones(context, readings, language=language),
+        **_plan(context),
     }
+
+
+def _plan(context: RoomContext | None) -> dict:
+    """
+    План-двойник: картинка и геометрия. КОНФИГУРАЦИЯ, а не состояние.
+
+    Поэтому он отдаётся и в недоступности тоже: разметка комнаты не перестаёт
+    быть верной оттого, что каналы молчат. Врал бы не план, а свет на нём —
+    но света в недоступном снимке нет: зоны пустые, значений нет ни у одного
+    элемента, и рисовать по ним нечего.
+
+    Плана нет — ключа нет вовсе. Тип без плана обязан работать списком, а не
+    получать пустую рамку и заглушку вместо кадра.
+    """
+    if context is None:
+        return {}
+    with tenant_context(context.hotel):
+        plan = plan_geometry.for_guest(context.payload.get("plan"))
+    return {"plan": plan} if plan else {}
 
 
 def _link_reason(hotel) -> str:
@@ -312,6 +333,7 @@ def _unavailable(session, reason: str, *, language: str, allowed: bool, context=
         "trust": session.trust if session else "anonymous",
         "can_command": allowed,
         "zones": [],
+        **_plan(context),
     }
 
 
