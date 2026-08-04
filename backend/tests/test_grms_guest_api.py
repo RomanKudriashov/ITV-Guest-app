@@ -201,6 +201,13 @@ def test_no_technical_fields_ever_leave_the_server(guest):
     response = guest.get("/api/v1/guest/room/state")
     payload = response.json()
 
+    # План проверяется ТЕМ ЖЕ сторожем, а не отдельным: он приезжает в том же
+    # ответе, и заведи мы для него вторую проверку — она рано или поздно
+    # отстала бы от этого списка. Убеждаемся, что план в ответе есть: иначе
+    # сторож ниже честно прошёл бы по снимку без плана и ничего не доказал.
+    assert payload["plan"]["zones"], "план не доехал — сторож проверил бы пустоту"
+    assert "asset_id" not in payload["plan"]
+
     forbidden_keys = {
         "channels",
         "command",
@@ -212,6 +219,9 @@ def test_no_technical_fields_ever_leave_the_server(guest):
         "room_number",
         "endpoint",
         "device",
+        # Идентификатор записи медиа: гостю принадлежит картинка, а не строка
+        # в таблице ассетов.
+        "asset_id",
     }
 
     def walk(node, path="root"):
@@ -411,6 +421,34 @@ def test_offline_node_hides_every_value_instead_of_showing_stale_ones(guest, cry
     # Нейтральный текст без технической причины.
     assert "ресепшен" in payload["message"]
     assert "CONNECTOR" not in payload["message"]
+
+    # Геометрия плана при этом остаётся: разметка комнаты не перестаёт быть
+    # верной оттого, что каналы молчат. Врать может только СВЕТ на плане, а
+    # света в этом снимке нет вовсе — зоны пустые, значений нет ни у одного
+    # элемента, и подставить их плану неоткуда.
+    assert payload["plan"]["zones"], "план — конфигурация, а не состояние"
+
+
+def test_a_type_without_a_plan_gets_a_snapshot_without_one(guest, crystal):
+    """
+    Плана у типа нет — ключа в снимке нет, и экран работает списком.
+
+    Штатный сценарий: рендер будет далеко не у каждого типа номера, и снимок
+    обязан собираться без него, а не отдавать пустую рамку.
+    """
+    from apps.grms import publishing
+    from apps.grms.management.commands.seed_grms_demo import TYPE_CODE
+    from apps.grms.models import RoomType
+
+    with tenant_context(crystal):
+        RoomType.objects.filter(code=TYPE_CODE).update(plan={})
+    publishing.publish(crystal, TYPE_CODE)
+
+    payload = guest.get("/api/v1/guest/room/state").json()
+
+    assert payload["availability"] == "online"
+    assert "plan" not in payload
+    assert _controls(payload)["light.living"]["value"] is not None
 
 
 def test_command_is_refused_while_the_room_is_unavailable(guest, crystal):
