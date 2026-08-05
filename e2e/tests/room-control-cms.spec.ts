@@ -247,7 +247,12 @@ test('план: кадр, разметка мышью, привязка к оп�
   await page.mouse.down()
   await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.85, { steps: 8 })
   await page.mouse.up()
-  expect(await zoneCount()).toBe(before + 1)
+  // Ожидание с повтором, а не мгновенный подсчёт: пока считается ночной кадр,
+  // план перезапрашивается каждые три секунды, и перерисовка может встать
+  // ровно между «отпустил» и проверкой.
+  await expect(page.locator('[data-testid^="grms-plan-zone-"]')).toHaveCount(before + 1, {
+    timeout: 15_000,
+  })
 
   // Привязка — ВЫБОР ИЗ СПИСКА опубликованных элементов, а не ввод controlId.
   await expect(page.getByTestId('grms-plan-form-zone')).toBeVisible()

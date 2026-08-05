@@ -100,9 +100,18 @@ export function RoomPage() {
   const state = useRoomState(enabled);
   const live = useRoomLive(enabled);
   const command = useRoomCommand(live.status === 'online');
-  const [notice, setNotice] = useState<{ severity: 'success' | 'warning' | 'error'; text: string } | null>(
-    null,
-  );
+  /*
+    Положительные отклики здесь ИНФОРМАЦИОННЫЕ, а не «успех».
+
+    Зелёный на этом экране не значит ничего: активное состояние — золото,
+    холодный конец шкалы — синий. Зелёная галочка рядом с «оборудование приняло
+    команду» вводила третий цвет статуса, которого в языке экрана нет, — и
+    вдобавок обещала подтверждение там, где его не бывает.
+  */
+  const [notice, setNotice] = useState<{
+    severity: 'info' | 'warning' | 'error';
+    text: string;
+  } | null>(null);
 
   const snapshot = state.data;
 
@@ -113,12 +122,27 @@ export function RoomPage() {
   const clearOutcome = live.clearLastCommand;
   useEffect(() => {
     if (!outcome) return;
-    if (outcome.result === 'confirmed' || outcome.result === 'accepted') {
+    if (outcome.result === 'confirmed') {
       // Короткая вибрация — ТОЛЬКО на подтверждение, не на нажатие. Нажатие
       // гость и так чувствует пальцем; смысл здесь в другом: оборудование
       // ответило. Вибрация на нажатии обещала бы это раньше времени.
       buzz();
       setNotice(null);
+    } else if (outcome.result === 'accepted') {
+      /*
+        ПРИНЯТО — ЭТО НЕ ПОДТВЕРЖДЕНО, и стирать отклик здесь было нельзя.
+
+        Так ломались сцены, и ломались молча: команда уходила, доезжала до
+        оборудования, возвращалась с исходом «accepted» (подтверждать нечем —
+        тега F_Scene_* не существует) — и этот же исход стирал единственную
+        надпись, которую гость успевал увидеть. Через полсекунды экран
+        выглядел так, будто нажатия не было вовсе.
+
+        Вибрации здесь нет намеренно: «приняли» и «сделали» — разные
+        утверждения, и подтверждать телом то, что не подтверждено каналом,
+        значит обещать больше, чем известно.
+      */
+      setNotice({ severity: 'info', text: t('guest.roomControl.commandAccepted') });
     } else if (outcome.result === 'unconfirmed') {
       setNotice({ severity: 'warning', text: t('guest.roomControl.unconfirmed') });
     } else if (outcome.result === 'failed') {
@@ -143,7 +167,7 @@ export function RoomPage() {
    */
   const sendScene = (controlId: string) => {
     send({ controlId, capability: 'trigger' });
-    setNotice({ severity: 'success', text: t('guest.roomControl.sceneSent') });
+    setNotice({ severity: 'info', text: t('guest.roomControl.sceneSent') });
   };
 
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
@@ -411,11 +435,23 @@ function Pills({
   const lit = groups.light.filter((control) => readingOn(readings[control.controlId]) === true).length;
   const known = groups.light.filter((control) => readingOn(readings[control.controlId]) !== null).length;
 
-  const curtain = groups.curtain[0];
+  // Штора и блэкаут лежат в одной группе — различаем ВИДОМ, а не порядком:
+  // порядок приходит из снимка, и первой в нём может оказаться любая из двух.
+  const curtain = groups.curtain.find((control) => control.kind === 'curtain');
   const curtainOn = curtain ? readingOn(readings[curtain.controlId]) : null;
+  const blackout = groups.curtain.find((control) => control.kind === 'curtain_blackout');
+  const blackoutOn = blackout ? readingOn(readings[blackout.controlId]) : null;
   const service = groups.service.find((control) => control.kind === 'dnd');
   const dnd = service ? readingOn(readings[service.controlId]) : null;
+  const cleaning = groups.service.find((control) => control.kind === 'mur');
+  const cleaningOn = cleaning ? readingOn(readings[cleaning.controlId]) : null;
 
+  /*
+    ПОРЯДОК ЗДЕСЬ — ЭТО ПРИОРИТЕТ: температура, свет, шторы, блэкаут, уборка,
+    «не беспокоить». Строка одна и прокручивается, поэтому вопрос не «влезет
+    ли», а «что гость увидит, не прокручивая»; заодно ряд не может вырасти
+    вниз и наехать на план.
+  */
   const pills: ReactNode[] = [];
   // Пилюля рисуется, ТОЛЬКО если её значение прочитано. «—» вместо градусов
   // это не честность, а просто другой способ ничего не сказать.
@@ -430,7 +466,7 @@ function Pills({
     pills.push(
       <StatusPill
         key="lit"
-        tone={lit > 0 ? 'warm' : 'neutral'}
+        tone={lit > 0 ? 'active' : 'neutral'}
         icon={<IconLightGroup size={13} />}
         testId="room-pill-lit"
       >
@@ -442,7 +478,7 @@ function Pills({
     pills.push(
       <StatusPill
         key="curtain"
-        tone={curtainOn ? 'ok' : 'neutral'}
+        tone={curtainOn ? 'active' : 'neutral'}
         icon={<IconCurtain size={13} />}
         testId="room-pill-curtain"
       >
@@ -450,11 +486,42 @@ function Pills({
       </StatusPill>,
     );
   }
+  /*
+    БЛЭКАУТ И УБОРКА ПОКАЗЫВАЮТСЯ ТОЛЬКО В СВОЁМ СОСТОЯНИИ.
+
+    Открытый блэкаут и незаказанная уборка — это ничего не значащие «нет», и
+    занимать ими строку значит вытеснить из виду то, что происходит. Пилюля
+    появляется, когда состояние наступило, и исчезает, когда оно снято.
+  */
+  if (blackoutOn === false) {
+    pills.push(
+      <StatusPill
+        key="blackout"
+        tone="active"
+        icon={<IconBlackout size={13} />}
+        testId="room-pill-blackout"
+      >
+        {t('guest.roomControl.pillBlackoutClosed')}
+      </StatusPill>,
+    );
+  }
+  if (cleaningOn === true) {
+    pills.push(
+      <StatusPill
+        key="cleaning"
+        tone="active"
+        icon={<IconMakeUpRoom size={13} />}
+        testId="room-pill-cleaning"
+      >
+        {t('guest.roomControl.pillCleaning')}
+      </StatusPill>,
+    );
+  }
   if (dnd !== null) {
     pills.push(
       <StatusPill
         key="dnd"
-        tone={dnd ? 'ok' : 'neutral'}
+        tone={dnd ? 'active' : 'neutral'}
         icon={<IconDoNotDisturb size={13} />}
         testId="room-pill-dnd"
       >

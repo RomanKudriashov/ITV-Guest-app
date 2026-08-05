@@ -163,8 +163,6 @@ export interface StorefrontTokens {
     accentGlow: string;
     /** Холодный конец шкалы уставки и признак обмена. */
     cold: string;
-    /** Точка «включено» на пилюле статуса. */
-    ok: string;
     /** Подложка иконки выключенной строки. */
     rowIcon: string;
     /** Волосяная линия между строками — вместо воздуха между карточками. */
@@ -292,7 +290,6 @@ const DARK: StorefrontTokens = {
     accentSoft: 'rgba(227,178,60,.2)',
     accentGlow: '0 0 18px -3px #E3B23C',
     cold: '#5B93F0',
-    ok: '#34D399',
     rowIcon: 'rgba(255,255,255,.06)',
     rowDivider: '1px solid rgba(255,255,255,.07)',
     switchOff: 'rgba(255,255,255,.14)',
@@ -398,7 +395,6 @@ const LIGHT: StorefrontTokens = {
     accentSoft: 'rgba(184,145,47,.18)',
     accentGlow: '0 0 16px -4px rgba(184,145,47,.8)',
     cold: '#3C6FD0',
-    ok: '#1F9D6B',
     rowIcon: 'rgba(18,32,47,.06)',
     rowDivider: '1px solid rgba(18,32,47,.09)',
     switchOff: 'rgba(18,32,47,.18)',

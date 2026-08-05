@@ -185,6 +185,83 @@ test.describe('Управление номером', () => {
     await expect(scene).not.toHaveAttribute('aria-pressed', /.*/)
   })
 
+  test('сцена отвечает гостю: команда ушла и оборудование её приняло', async ({ page }) => {
+    /*
+      Сцены «не работали» ровно здесь. Команда уходила, доезжала до
+      оборудования и возвращалась с исходом «принято» — а обработчик исхода
+      считал «принято» тем же, что «подтверждено», и СТИРАЛ единственную
+      надпись, которую гость успевал увидеть. Через полсекунды экран выглядел
+      так, будто нажатия не было.
+    */
+    await enterRoom(page)
+
+    const scene = page.getByTestId('room-control-scene.night')
+    await expect(scene).toBeVisible({ timeout: 20_000 })
+    await scene.click()
+
+    const notice = page.getByTestId('room-notice')
+    await expect(notice).toBeVisible({ timeout: 20_000 })
+    // Отклик держится и ПОСЛЕ прихода исхода, а не гаснет вместе с ним.
+    await page.waitForTimeout(3_000)
+    await expect(notice).toBeVisible()
+    // И при этом сцена по-прежнему не притворяется включённой.
+    await expect(scene).not.toHaveAttribute('aria-pressed', /.*/)
+  })
+
+  test('пилюли: активные состояния золотые, зелёного тона нет', async ({ page }) => {
+    await enterRoom(page)
+
+    const pills = page.locator('[data-testid^="room-pill-"]')
+    await expect(pills.first()).toBeVisible({ timeout: 20_000 })
+
+    const tones = await pills.evaluateAll((els) =>
+      els.map((el) => (el as HTMLElement).dataset.tone ?? ''),
+    )
+    expect(tones.length).toBeGreaterThan(0)
+    // Тонов ровно три: холодный (термометр), активный (золото) и нейтральный.
+    expect(tones.every((tone) => ['cold', 'active', 'neutral'].includes(tone))).toBeTruthy()
+
+    // Порядок — это приоритет: температура, свет, шторы, блэкаут, уборка, «не
+    // беспокоить». Ряд один и прокручивается, поэтому важно, что гость видит
+    // первым, не прокручивая.
+    const order = await pills.evaluateAll((els) =>
+      els.map((el) => (el as HTMLElement).dataset.testid ?? ''),
+    )
+    const rank = [
+      'room-pill-temp',
+      'room-pill-lit',
+      'room-pill-curtain',
+      'room-pill-blackout',
+      'room-pill-cleaning',
+      'room-pill-dnd',
+    ]
+    const positions = order.map((id) => rank.indexOf(id))
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+  })
+
+  test('пилюли блэкаута и уборки появляются по состоянию и уходят вместе с ним', async ({
+    page,
+  }) => {
+    await enterRoom(page)
+
+    const blackout = page.getByTestId('room-control-curtain.blackout')
+    await expect(blackout).toBeVisible({ timeout: 20_000 })
+
+    // Пилюля блэкаута — про ЗАКРЫТО: открытый блэкаут ничего не сообщает.
+    const wasOpen = (await blackout.getAttribute('aria-pressed')) === 'true'
+    if (wasOpen) {
+      await blackout.click()
+      await expect(page.getByTestId('room-pill-blackout')).toBeVisible({ timeout: 30_000 })
+      await blackout.click()
+      await expect(page.getByTestId('room-pill-blackout')).toBeHidden({ timeout: 30_000 })
+    } else {
+      await expect(page.getByTestId('room-pill-blackout')).toBeVisible({ timeout: 30_000 })
+      await blackout.click()
+      await expect(page.getByTestId('room-pill-blackout')).toBeHidden({ timeout: 30_000 })
+      await blackout.click()
+    }
+  })
+
   test('термостат: уставка меняется стрелками с клавиатуры', async ({ page }) => {
     await enterRoom(page)
 

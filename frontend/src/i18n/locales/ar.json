@@ -683,7 +683,10 @@
       "pillZones_other": "{{count}} منطقة مضاءة",
       "sceneSent": "تم إرسال المشهد",
       "pinWhere": "الرمز مطبوع على بطاقة النزيل أو يمكنك طلبه من الاستقبال.",
-      "liveConnecting": "جارٍ الاتصال بالغرفة…"
+      "liveConnecting": "جارٍ الاتصال بالغرفة…",
+      "commandAccepted": "قبِل الجهاز الأمر. لا وسيلة لتأكيده — هذا العنصر بلا تغذية راجعة.",
+      "pillBlackoutClosed": "ستارة العتمة مغلقة",
+      "pillCleaning": "طُلب التنظيف"
     }
   },
   "tracker": {

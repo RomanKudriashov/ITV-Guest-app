@@ -671,7 +671,10 @@
       "setpointSending": "Sending the setpoint…",
       "sceneSent": "Scene sent",
       "pinWhere": "The code is printed on your key card or the reception desk will tell you.",
-      "liveConnecting": "Connecting to the room…"
+      "liveConnecting": "Connecting to the room…",
+      "commandAccepted": "The equipment accepted the command. There is nothing to confirm it with — this control has no feedback.",
+      "pillBlackoutClosed": "Blackout closed",
+      "pillCleaning": "Cleaning requested"
     }
   },
   "tracker": {

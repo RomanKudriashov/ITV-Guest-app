@@ -27,7 +27,15 @@ import { surfaceRadius } from '../storefrontTokens';
 
 /* ── Пилюля статуса ───────────────────────────────────────────────────────── */
 
-export type PillTone = 'neutral' | 'cold' | 'warm' | 'ok';
+/*
+  Тонов ровно три, и «зелёного» среди них больше нет.
+
+  Активное состояние на этом экране — ЗОЛОТО: тумблер, иконка включённой
+  строки, подчёркивание вкладки, состояние шторы. Пилюли «Штора открыта» и «Не
+  беспокоить» были зелёными, и на золотом экране это читалось как другой,
+  неизвестно чей статус. Синий остался холодным концом шкалы термостата.
+*/
+export type PillTone = 'neutral' | 'cold' | 'active';
 
 export function StatusPill({
   tone = 'neutral',
@@ -43,7 +51,7 @@ export function StatusPill({
   testId?: string;
 }) {
   const { roomControl: t } = useStorefront();
-  const color = tone === 'cold' ? t.cold : tone === 'warm' ? t.accent : tone === 'ok' ? t.ok : '';
+  const color = tone === 'cold' ? t.cold : tone === 'active' ? t.accent : '';
 
   return (
     <Stack

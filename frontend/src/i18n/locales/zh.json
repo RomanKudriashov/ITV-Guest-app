@@ -667,7 +667,10 @@
       "setpointSending": "正在发送设定温度…",
       "sceneSent": "场景已发送",
       "pinWhere": "密码印在房卡上，也可以在前台询问。",
-      "liveConnecting": "正在连接客房…"
+      "liveConnecting": "正在连接客房…",
+      "commandAccepted": "设备已接受该指令。无法确认——此设备没有反馈通道。",
+      "pillBlackoutClosed": "遮光帘已关闭",
+      "pillCleaning": "已申请清洁"
     }
   },
   "tracker": {
