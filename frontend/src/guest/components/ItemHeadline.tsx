@@ -13,6 +13,7 @@ import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
+import { itemCard } from '../storefrontTokens';
 
 /**
  * Item media — a capped-height cover photo (or the DESIGNED fallback) whose
@@ -61,7 +62,7 @@ export function ItemMedia({
               // Кадр держит ВЕРХ карточки, а не ленточку под заголовком:
               // 200px на телефоне читались полоской. Потолок остаётся —
               // высокая картинка не должна выталкивать тело за экран.
-              height: { xs: 268, sm: 300 },
+              height: itemCard.mediaHeight,
               flexShrink: 0,
               /*
                 Вынос за поля СДВИГОМ, а не отрицательным полем.
@@ -90,9 +91,15 @@ export function ItemMedia({
         sx={(theme) => ({
           position: 'absolute',
           inset: 0,
+          /*
+            Растворение края кадра, а не вуаль поверх него. Прежние 60% съедали
+            почти половину снимка: на светлой теме правая часть фотографии
+            превращалась в туман, и блюдо было видно только слева. Кромка
+            должна лишь стыковать кадр с текстом.
+          */
           background: isRail
-            ? `linear-gradient(${theme.direction === 'rtl' ? 'to left' : 'to right'}, transparent 60%, ${theme.palette.background.paper})`
-            : `linear-gradient(to top, ${theme.palette.background.paper}, transparent 45%)`,
+            ? `linear-gradient(${theme.direction === 'rtl' ? 'to left' : 'to right'}, transparent 82%, ${theme.palette.background.paper})`
+            : `linear-gradient(to top, ${theme.palette.background.paper}, transparent 38%)`,
         })}
       />
     </Box>
@@ -127,14 +134,16 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
     const { t } = useTranslation();
 
     return (
-      <Stack spacing={2}>
+      // Ритм карточки — из словаря: между кадром и содержимым столько же, сколько
+      // между содержимым и группами модификаторов ниже.
+      <Stack spacing={itemCard.section}>
         {hideMedia ? null : (
           <ItemMedia item={item} variant="top" fallbackIcon={fallbackIcon} bleed={bleedMedia} />
         )}
 
-        <Stack spacing={1.5}>
+        <Stack spacing={itemCard.block}>
           {item.badges?.length ? <ItemBadges badges={item.badges} /> : null}
-          <Stack spacing={0.5}>
+          <Stack spacing={itemCard.tight}>
             {/* Reference `.cat` — the category name as an accent overline. */}
             {item.category_title ? (
               <Typography
@@ -175,7 +184,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
               replace them; the catalog list card keeps its flag chips. */}
           <NutritionBlock nutrition={item.nutrition} description={item.description} />
           <CharacteristicsBlock characteristics={item.characteristics} />
-          <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" alignItems="center">
+          <Stack direction="row" spacing={itemCard.tight} useFlexGap flexWrap="wrap" alignItems="center">
             <PrepMinutesChip minutes={item.prep_minutes} />
           </Stack>
           <AllergensBlock allergens={item.allergens} markers={item.markers} />

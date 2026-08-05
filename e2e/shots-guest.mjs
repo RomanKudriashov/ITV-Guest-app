@@ -6,8 +6,8 @@ import { chromium } from '@playwright/test'
  * Запуск: node shots-guest.mjs before | node shots-guest.mjs after
  */
 const stage = process.argv[2] ?? 'before'
-const BASE = process.env.BASE ?? 'http://192.168.1.79:5183'
-const OUT = `../docs/design/guest-panels/${stage}`
+const BASE = process.env.BASE ?? 'http://localhost:5183'
+const OUT = process.env.OUT ?? `../docs/design/guest-panels/${stage}`
 
 const SCREENS = [
   ['home', '/home'],

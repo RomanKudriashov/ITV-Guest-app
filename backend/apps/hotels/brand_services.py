@@ -55,7 +55,7 @@ def get_or_create_brand(hotel: Hotel | None = None) -> BrandTheme:
 
 
 def serialize_brand(theme: BrandTheme) -> dict:
-    tokens = theme.tokens or {}
+    tokens = resolve_media(theme.tokens or {})
     return {
         "id": str(theme.pk),
         "name": theme.name,
@@ -63,6 +63,81 @@ def serialize_brand(theme: BrandTheme) -> dict:
         "tokens": tokens,
         "updated_at": theme.updated_at.isoformat(),
     }
+
+
+# --- Картинки бренда: ссылка на ассет, а не замороженный адрес --------------
+#
+# ОБЛОЖКА ХРАНИТСЯ ССЫЛКОЙ НА АССЕТ, А АДРЕС СОБИРАЕТСЯ ПРИ ЧТЕНИИ.
+#
+# Так было не всегда, и цена прежнего устройства известна поимённо. Обложка
+# лежала в токенах СТРОКОЙ url, и строка переживала всё, что с этим адресом
+# случалось: смену публичного хоста медиа (`localhost` → адрес машины в сети —
+# с телефона такая обложка не грузилась вовсе), пересев фотографий (объект с
+# прежним ключом исчезал), перенарезку вариантов. Проверено на стенде: у всех
+# трёх демо-отелей в бренде остался адрес с `localhost`, а у «Кристалла» и сам
+# объект отсутствовал — при 91 живом ассете рядом.
+#
+# Починить это пересевом нельзя: сторож идемпотентности в сиде считал «строка
+# есть → обложка настроена» и обходил починку стороной. Поэтому лечится не
+# данными, а устройством: `imageAssetId` — источник истины, `imageUrl` —
+# производное, которое пересобирается на каждом чтении.
+
+
+def _asset_url(asset_id: Any, variant: str = "card") -> str:
+    """Адрес варианта по id ассета. Мусор вместо id — не 500, а «нет адреса»."""
+    if not asset_id:
+        return ""
+
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    from apps.media.models import MediaAsset
+
+    try:
+        asset = MediaAsset.objects.filter(pk=asset_id).first()
+    except (DjangoValidationError, TypeError, ValueError):
+        return ""
+    return (asset.url(variant) or "") if asset is not None else ""
+
+
+def resolve_media(tokens: dict) -> dict:
+    """
+    Токены на выдачу: адреса картинок бренда пересобраны из ассетов.
+
+    Ассета нет (удалён вместе с пересевом) — адрес ПУСТ, и это честно: витрина
+    покажет фирменный градиент вместо битой картинки, а сид увидит, что
+    обложки нет, и заведёт её заново.
+
+    Ассет не указан (старые данные или адрес со стороны) — строка остаётся как
+    есть: не наша картинка, и распоряжаться ею мы не вправе.
+    """
+    brand = (tokens or {}).get("brand")
+    if not isinstance(brand, dict):
+        return tokens
+
+    background = brand.get("background")
+    if not isinstance(background, dict) or not background.get("imageAssetId"):
+        return tokens
+
+    resolved = dict(background)
+    resolved["imageUrl"] = _asset_url(background["imageAssetId"])
+    return {**tokens, "brand": {**brand, "background": resolved}}
+
+
+def cover_is_alive(tokens: dict) -> bool:
+    """
+    Есть ли у отеля обложка, которую действительно можно показать.
+
+    Спрашивает сид: наличие строки в токенах — НЕ ответ на этот вопрос, ровно
+    из-за него обложка и оставалась мёртвой от пересева к пересеву.
+    """
+    background = ((tokens or {}).get("brand") or {}).get("background") or {}
+    if background.get("kind") != "image":
+        return False
+    asset_id = background.get("imageAssetId")
+    if asset_id:
+        return bool(_asset_url(asset_id))
+    # Без ссылки на ассет судить не о чем: адрес мог протухнуть молча.
+    return False
 
 
 # --- Валидация -------------------------------------------------------------
@@ -169,12 +244,34 @@ def _deep_merge(base: dict, patch: dict) -> dict:
     return result
 
 
+def _forget_stale_cover_asset(merged: dict, patch: dict) -> dict:
+    """
+    Сменили адрес обложки, не назвав ассет — ссылка на прежний ассет снимается.
+
+    Иначе deep-merge оставил бы её, а адрес собирался бы из СТАРОЙ картинки:
+    оператор поменял обложку, увидел прежнюю и не понял, за что. Клиент,
+    который умеет про ассеты, шлёт оба поля разом и сюда не попадает.
+    """
+    background = ((patch or {}).get("brand") or {}).get("background")
+    if not isinstance(background, dict):
+        return merged
+    if "imageUrl" not in background or "imageAssetId" in background:
+        return merged
+
+    brand = dict(merged.get("brand") or {})
+    current = dict(brand.get("background") or {})
+    if not current.pop("imageAssetId", None):
+        return merged
+    brand["background"] = current
+    return {**merged, "brand": brand}
+
+
 def update_brand(patch_tokens: dict) -> BrandTheme:
     require_hotel_admin()
     theme = get_or_create_brand()
     validate_tokens_patch(patch_tokens)
 
-    merged = _deep_merge(theme.tokens or {}, patch_tokens)
+    merged = _forget_stale_cover_asset(_deep_merge(theme.tokens or {}, patch_tokens), patch_tokens)
 
     # Любая ручная правка снимает ярлык пресета: набор больше не «чистый».
     # Исключение — если сам preset пришёл в патче (это применение пресета).

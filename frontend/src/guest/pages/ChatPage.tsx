@@ -11,7 +11,7 @@ import { markChatRead, sendChatMessage } from '../api/guest';
 import { guestKeys } from '../api/queryKeys';
 import { errorMessage } from '../errors';
 import { useGuestChat, useGuestLanguage } from '../hooks/useGuestQueries';
-import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
+import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
 import type { ChatSnapshot } from '../api/types';
 
 const HEADER_OFFSET = 56;
@@ -66,7 +66,7 @@ export function ChatPage() {
   return (
     <Box
       sx={{
-        height: `calc(100dvh - ${HEADER_OFFSET + BOTTOM_NAV_HEIGHT}px)`,
+        height: `calc(100dvh - ${HEADER_OFFSET + BOTTOM_NAV_SPACE}px)`,
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,

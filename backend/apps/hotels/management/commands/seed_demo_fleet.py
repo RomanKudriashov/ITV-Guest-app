@@ -378,6 +378,7 @@ class Command(BaseCommand):
             self._staff(hotel, profile["staff"], services)
             self._showcase(profile, services)
             self._cover(hotel, profile["cover"])
+            self._fill_translations()
 
         self.stdout.write(
             f"Отель «{profile['name']}» ({profile['subdomain']}): "
@@ -394,6 +395,17 @@ class Command(BaseCommand):
         """
         from apps.media import seed_photos
         from apps.media.services import upload_asset
+
+        # Тот же кадр во второй раз НЕ заливаем. Раньше `_image` вызывался в
+        # `defaults=` каждого get_or_create, то есть на КАЖДОМ прогоне, и на
+        # существующей строке результат просто выбрасывался: объект оставался в
+        # MinIO, строка в базе — в базе. Один прогон сида — десяток осиротевших
+        # ассетов.
+        existing = MediaAsset.objects.filter(
+            original_filename=f"{code}.jpg", status=MediaAsset.Status.READY
+        ).first()
+        if existing is not None:
+            return existing
 
         content = seed_photos.fetch(code)
         if content is None:
@@ -414,6 +426,33 @@ class Command(BaseCommand):
         except Exception as exc:  # noqa: BLE001 — MinIO необязателен для старта
             self.stdout.write(self.style.WARNING(f"Медиа для «{code}» пропущено ({exc})"))
             return None
+
+    def _ensure_image(self, obj, code: str, label: str) -> None:
+        """
+        Кадр объекту, у которого его нет.
+
+        Раньше картинка передавалась в `defaults=` и доставалась ТОЛЬКО тем,
+        кого этот прогон создал. На стенде это выглядело так: отель заведён
+        раньше, чем в реестр добавили снимки, — и остался без единой картинки
+        навсегда. Ни один пересев его не чинил: строки-то на месте.
+        """
+        if getattr(obj, "image_id", None):
+            return
+        asset = self._image(code, label)
+        if asset is None:
+            return
+        obj.image = asset
+        obj.save(update_fields=["image", "updated_at"])
+
+    def _ensure_photo(self, item, code: str, label: str) -> None:
+        """Фотография позиции — по тому же правилу, что и кадр заведения."""
+        from apps.catalog.models import ItemImage
+
+        if ItemImage.objects.filter(item=item).exists():
+            return
+        asset = self._image(code, label)
+        if asset is not None:
+            ItemImage.objects.create(item=item, asset=asset, sort_order=0)
 
     def _schedule(self, name: str, start: time, end: time) -> Schedule:
         schedule, created = Schedule.objects.get_or_create(name=name)
@@ -461,9 +500,9 @@ class Command(BaseCommand):
                 "tagline": {"ru": spec["tagline"][0], "en": spec["tagline"][1]},
                 "is_guest_facing": True,
                 "schedule": schedule,
-                "image": self._image(f"venue-{spec['code']}", spec["public"][0]),
             },
         )
+        self._ensure_image(service, f"venue-{spec['code']}", spec["public"][0])
         for order, (cat_code, cat_title, cover, items) in enumerate(spec["categories"]):
             category, _ = Category.objects.get_or_create(
                 code=cat_code,
@@ -473,9 +512,9 @@ class Command(BaseCommand):
                     "sort_order": order,
                     "schedule": schedule,
                     "service": service,
-                    "image": self._image(cover, cat_title[0]),
                 },
             )
+            self._ensure_image(category, cover, cat_title[0])
             Route.objects.get_or_create(
                 category=category, execution_point=point, defaults={"priority": 0}
             )
@@ -495,9 +534,7 @@ class Command(BaseCommand):
         return service
 
     def _product(self, category, code, title, desc, price, order) -> Item:
-        from apps.catalog.models import ItemImage
-
-        item, created = Item.objects.get_or_create(
+        item, _ = Item.objects.get_or_create(
             code=code,
             defaults={
                 "category": category,
@@ -508,13 +545,8 @@ class Command(BaseCommand):
                 "sort_order": order,
             },
         )
-        if created:
-            # Ключ снимка — код позиции: одно блюдо, один кадр во всех отелях.
-            asset = self._image(code, title[0])
-            if asset is not None:
-                ItemImage.objects.get_or_create(
-                    item=item, asset=asset, defaults={"sort_order": 0}
-                )
+        # Ключ снимка — код позиции: одно блюдо, один кадр во всех отелях.
+        self._ensure_photo(item, code, title[0])
         return item
 
     def _slot_venue(self, spec: dict) -> Service:
@@ -537,9 +569,9 @@ class Command(BaseCommand):
                 "tagline": {"ru": spec["tagline"][0], "en": spec["tagline"][1]},
                 "is_guest_facing": True,
                 "schedule": schedule,
-                "image": self._image(f"venue-{spec['code']}", spec["public"][0]),
             },
         )
+        self._ensure_image(service, f"venue-{spec['code']}", spec["public"][0])
         category, _ = Category.objects.get_or_create(
             code=f"{spec['code']}-slots",
             defaults={
@@ -547,14 +579,14 @@ class Command(BaseCommand):
                 "title": {"ru": spec["public"][0], "en": spec["public"][1]},
                 "sort_order": 0,
                 "service": service,
-                "image": self._image(spec["photo"], spec["public"][0]),
             },
         )
+        self._ensure_image(category, spec["photo"], spec["public"][0])
         Route.objects.get_or_create(
             category=category, execution_point=point, defaults={"priority": 0}
         )
         for index, (code, title, desc, price, minutes, capacity) in enumerate(spec["items"]):
-            item, created = Item.objects.get_or_create(
+            item, _ = Item.objects.get_or_create(
                 code=code,
                 defaults={
                     "category": category,
@@ -566,14 +598,7 @@ class Command(BaseCommand):
                     "sort_order": index,
                 },
             )
-            if created:
-                from apps.catalog.models import ItemImage
-
-                asset = self._image(spec["photo"], title[0])
-                if asset is not None:
-                    ItemImage.objects.get_or_create(
-                        item=item, asset=asset, defaults={"sort_order": 0}
-                    )
+            self._ensure_photo(item, spec["photo"], title[0])
             # Конфиг вне ветки created — повторный запуск чинит недостающее.
             SlotConfig.objects.update_or_create(
                 item=item,
@@ -605,9 +630,9 @@ class Command(BaseCommand):
                 "public_name": {"ru": spec["public"][0], "en": spec["public"][1]},
                 "tagline": {"ru": spec["tagline"][0], "en": spec["tagline"][1]},
                 "is_guest_facing": spec.get("guest_facing", True),
-                "image": self._image(spec["photo"], spec["public"][0]),
             },
         )
+        self._ensure_image(service, spec["photo"], spec["public"][0])
         category, _ = Category.objects.get_or_create(
             code=f"{spec['code']}-requests",
             defaults={
@@ -615,9 +640,9 @@ class Command(BaseCommand):
                 "title": {"ru": spec["public"][0], "en": spec["public"][1]},
                 "sort_order": 0,
                 "service": service,
-                "image": self._image(spec["photo"], spec["public"][0]),
             },
         )
+        self._ensure_image(category, spec["photo"], spec["public"][0])
         Route.objects.get_or_create(
             category=category, execution_point=point, defaults={"priority": 0}
         )
@@ -634,14 +659,8 @@ class Command(BaseCommand):
                     "sort_order": index,
                 },
             )
+            self._ensure_photo(item, photo, title[0])
             if created:
-                from apps.catalog.models import ItemImage
-
-                asset = self._image(photo, title[0])
-                if asset is not None:
-                    ItemImage.objects.get_or_create(
-                        item=item, asset=asset, defaults={"sort_order": 0}
-                    )
                 for order, (fcode, ru, en, ftype, required) in enumerate(
                     [
                         ("when", "Когда", "When", FieldType.TIME, True),
@@ -677,9 +696,9 @@ class Command(BaseCommand):
                 "public_name": {"ru": spec["public"][0], "en": spec["public"][1]},
                 "tagline": {"ru": spec["tagline"][0], "en": spec["tagline"][1]},
                 "is_guest_facing": True,
-                "image": self._image(spec["photo"], spec["public"][0]),
             },
         )
+        self._ensure_image(service, spec["photo"], spec["public"][0])
         category, _ = Category.objects.get_or_create(
             code=f"{spec['code']}-pages",
             defaults={
@@ -687,11 +706,11 @@ class Command(BaseCommand):
                 "title": {"ru": spec["public"][0], "en": spec["public"][1]},
                 "sort_order": 0,
                 "service": service,
-                "image": self._image(spec["photo"], spec["public"][0]),
             },
         )
+        self._ensure_image(category, spec["photo"], spec["public"][0])
         for index, (code, title, body) in enumerate(spec["pages"]):
-            item, created = Item.objects.get_or_create(
+            item, _ = Item.objects.get_or_create(
                 code=code,
                 defaults={
                     "category": category,
@@ -703,14 +722,7 @@ class Command(BaseCommand):
                     "sort_order": index,
                 },
             )
-            if created:
-                from apps.catalog.models import ItemImage
-
-                asset = self._image(spec["photo"], title[0])
-                if asset is not None:
-                    ItemImage.objects.get_or_create(
-                        item=item, asset=asset, defaults={"sort_order": 0}
-                    )
+            self._ensure_photo(item, spec["photo"], title[0])
         return {spec["code"]: service}
 
     def _room_service(self, spec: dict, services: dict[str, Service], locations) -> Service:
@@ -737,9 +749,9 @@ class Command(BaseCommand):
                 "public_name": {"ru": spec["public"][0], "en": spec["public"][1]},
                 "tagline": {"ru": spec["tagline"][0], "en": spec["tagline"][1]},
                 "is_guest_facing": True,
-                "image": self._image(spec["photo"], spec["public"][0]),
             },
         )
+        self._ensure_image(service, spec["photo"], spec["public"][0])
         own_code, own_title, own_cover, own_items = spec["own"]
         category, _ = Category.objects.get_or_create(
             code=own_code,
@@ -748,9 +760,9 @@ class Command(BaseCommand):
                 "title": {"ru": own_title[0], "en": own_title[1]},
                 "sort_order": 0,
                 "service": service,
-                "image": self._image(own_cover, own_title[0]),
             },
         )
+        self._ensure_image(category, own_cover, own_title[0])
         Route.objects.get_or_create(
             category=category, execution_point=point, defaults={"priority": 0}
         )
@@ -837,21 +849,36 @@ class Command(BaseCommand):
                 },
             )
 
+    def _fill_translations(self) -> None:
+        """Арабский и китайский к ru/en — общий реестр `seed_translations`."""
+        from apps.hotels.seed_translations import fill_translations
+
+        filled = fill_translations()
+        if filled:
+            summary = ", ".join(f"{code}: {count}" for code, count in sorted(filled.items()))
+            self.stdout.write(f"Переводы дописаны — {summary}")
+
     def _cover(self, hotel: Hotel, code: str) -> None:
-        from apps.hotels.brand_services import get_or_create_brand
+        from apps.hotels.brand_services import cover_is_alive, get_or_create_brand
         from apps.media.tasks import process_media_asset
+
+        theme = get_or_create_brand(hotel)
+        # ОБЛОЖКА ЕСТЬ — это вопрос о картинке, а не о строке в токенах.
+        # Прежний сторож жил в сиде отеля и спрашивал «непустой ли url»;
+        # строка переживала и пересев фотографий, и смену публичного адреса
+        # медиа, а картинка за ней — нет.
+        if cover_is_alive(theme.tokens or {}):
+            return
 
         asset = self._image(code, hotel.name)
         if asset is None:
             return
-        theme = get_or_create_brand(hotel)
         tokens = dict(theme.tokens or {})
         brand = dict(tokens.get("brand") or {})
         background = dict(brand.get("background") or {})
 
-        # Обложка хранится в токенах СТРОКОЙ url, а не ссылкой на ассет, и
-        # записать её можно только после нарезки вариантов: иначе в бренде
-        # навсегда осядет заглушка. Дорезаем синхронно и берём настоящий url.
+        # Адрес можно записать только после нарезки вариантов: иначе в бренде
+        # осядет заглушка. Дорезаем синхронно и берём настоящий url.
         try:
             process_media_asset.apply(args=(str(asset.pk), str(hotel.pk))).get()
         except Exception as exc:  # noqa: BLE001 — MinIO необязателен для старта
@@ -862,7 +889,10 @@ class Command(BaseCommand):
         if not url:
             self.stdout.write(f"Обложка «{hotel.name}» ещё не готова — пропускаю")
             return
-        background.update({"kind": "image", "imageUrl": url, "dim": 0.15})
+        # Ссылка на ассет — источник истины, адрес рядом — производное.
+        background.update(
+            {"kind": "image", "imageUrl": url, "imageAssetId": str(asset.pk), "dim": 0.15}
+        )
         brand["background"] = background
         tokens["brand"] = brand
         theme.tokens = tokens

@@ -42,6 +42,14 @@ from apps.hotels.models import Hotel
 TEST_SUFFIX = re.compile(r"-ms[0-9a-z]{6,}$")
 CHAT_BODY = re.compile(r"^(вопрос|ответ|ещё)-ms[0-9a-z]{6,}$")
 
+# Типы номеров, которые заводит прогон раздела GRMS в CMS: он импортирует
+# настоящий файл ПНР, и на стенде остаются ТИП1/ТИП2/ТИП3. Опознаём ПАРОЙ
+# признаков — код из файла И разметка, которую кладёт только тест. У живого
+# отеля тип с тем же именем есть, но зоны и элементы у него свои, и под
+# правило он не попадёт.
+GRMS_IMPORTED_CODES = {"tip1", "tip2", "tip3"}
+GRMS_TEST_MARKS = {"e2e-zone", "e2e.light"}
+
 # Через сколько часов открытый заказ считается брошенным. Сутки с запасом:
 # смена длится меньше, и ни один живой заказ столько в работе не висит.
 STALE_HOURS = 24
@@ -71,6 +79,7 @@ class Command(BaseCommand):
 
         from apps.catalog.models import Category, Item
         from apps.chat.models import ChatMessage
+        from apps.grms.models import ControlElement, RoomType, Zone  # noqa: F401
         from apps.orders.models import Order, OrderItem, StatusDefinition
 
         hotel = Hotel.objects.filter(subdomain=options["subdomain"]).first()
@@ -100,6 +109,23 @@ class Command(BaseCommand):
                 and not (order.requested_time and order.requested_time > now)
             ]
 
+            # Типы номеров из прогона раздела GRMS. Тип уносит с собой всё
+            # своё: переменные, зоны, элементы, привязки и опубликованные
+            # версии — на них ссылается только он сам.
+            grms_types = []
+            for room_type in RoomType.objects.filter(code__in=GRMS_IMPORTED_CODES):
+                marks = set(
+                    Zone.objects.filter(room_type=room_type).values_list("code", flat=True)
+                ) | set(
+                    ControlElement.objects.filter(room_type=room_type).values_list(
+                        "slug", flat=True
+                    )
+                )
+                # Пустой тип — тоже след прогона: импорт заводит переменные, а
+                # интерфейс к ним собирает уже человек.
+                if not marks or marks & GRMS_TEST_MARKS:
+                    grms_types.append(room_type)
+
             # Позиции делим по одному признаку: есть ли на них заказ.
             keep, drop = [], []
             for item in items:
@@ -108,8 +134,11 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"Найдено: позиций {len(items)} (удалить {len(drop)}, выключить {len(keep)} — "
                 f"на них есть заказы), разделов {len(categories)}, сообщений чата {len(messages)}, "
-                f"брошенных заказов {len(stale)} (открыты дольше {options['stale_hours']} ч)"
+                f"брошенных заказов {len(stale)} (открыты дольше {options['stale_hours']} ч), "
+                f"типов номеров из прогона GRMS {len(grms_types)}"
             )
+            for room_type in grms_types:
+                self.stdout.write(f"  удалить тип: {room_type.code}")
             for item in keep:
                 self.stdout.write(f"  выключить: {item.code}")
             if not apply:
@@ -132,6 +161,15 @@ class Command(BaseCommand):
             hidden_cats = Category.objects.filter(pk__in=[c.pk for c in busy]).update(is_active=False)
 
             deleted_msgs = ChatMessage.objects.filter(pk__in=[m.pk for m in messages]).delete()
+            # ЖЁСТКО, а не мягко. Мягкое удаление оставляет строку с тем же
+            # кодом, и следующий импорт того же файла падает на уникальности
+            # `(отель, код)`: тип «уже есть», хотя его не видно. Проверено
+            # прогоном — импорт перестал заводить ТИП3 ровно после того, как
+            # уборка научилась убирать типы.
+            deleted_types = 0
+            for room_type in grms_types:
+                _drop_room_type(room_type)
+                deleted_types += 1
 
             # Заказ НЕ удаляем: это история и выручка. Переводим в терминальный
             # «отменён» СВОЕГО потока — статусы у потоков разные, и один общий
@@ -158,6 +196,37 @@ class Command(BaseCommand):
                 f"Убрано: позиций удалено {deleted_items}, выключено {hidden}; "
                 f"разделов удалено {deleted_cats}, выключено {hidden_cats}; "
                 f"сообщений удалено {deleted_msgs}; "
+                f"типов номеров удалено {deleted_types}; "
                 f"брошенных заказов закрыто {closed}"
             )
         )
+
+
+def _drop_room_type(room_type) -> None:
+    """
+    Убрать тип номера со всем, что на нём висит.
+
+    Порядок продиктован ссылками: переменная защищена привязкой (`PROTECT`),
+    поэтому сначала уходят привязки, потом элементы и зоны, потом переменные,
+    снимки версий и связи с комнатами — и только затем сам тип.
+    """
+    from apps.grms.models import (
+        Binding,
+        ControlElement,
+        PublishedConfig,
+        RoomTypeRoom,
+        Variable,
+        Zone,
+    )
+
+    for model, lookup in (
+        (Binding, {"element__room_type": room_type}),
+        (ControlElement, {"room_type": room_type}),
+        (Zone, {"room_type": room_type}),
+        (Variable, {"room_type": room_type}),
+        (PublishedConfig, {"room_type": room_type}),
+        (RoomTypeRoom, {"room_type": room_type}),
+    ):
+        for row in model.all_objects.filter(**lookup):
+            row.delete(hard=True)
+    room_type.delete(hard=True)

@@ -62,6 +62,9 @@ def _brand_cover_url(tokens: dict) -> str | None:
     токенов ей незачем. Градиент и абстракция обложкой не являются — там
     парадная возьмёт фирменный градиент.
     """
+    # Токены сюда приходят уже с пересобранными адресами (`resolve_media`):
+    # строка в токенах переживает и смену публичного хоста медиа, и пересев
+    # фотографий, а картинка за ней — нет.
     background = ((tokens or {}).get("brand") or {}).get("background") or {}
     if background.get("kind") != "image":
         return None
@@ -74,12 +77,15 @@ def serialize_hotel(hotel: Hotel) -> dict:
     ошибки гость должен видеть бренд своего отеля, а не голую системную
     страницу.
     """
-    from apps.hotels.brand_services import get_or_create_brand
+    from apps.hotels.brand_services import get_or_create_brand, resolve_media
 
     # Тема гарантированно есть: сервис заведёт её из пресета для отеля без
     # темы. Так витрина никогда не падает на платформенные цвета.
+    #
+    # Адреса картинок бренда пересобираются ЗДЕСЬ, до выдачи: гостю уезжает
+    # рабочая ссылка, а не та, что осела в токенах при прошлом адресе стенда.
     theme = get_or_create_brand(hotel)
-    tokens = (theme.tokens if theme else {}) or {}
+    tokens = resolve_media((theme.tokens if theme else {}) or {})
     languages = [
         {"code": language.code, "title": language.title or language.code.upper()}
         for language in hotel.hotellanguages.filter(is_active=True).order_by("sort_order")

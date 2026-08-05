@@ -150,7 +150,7 @@ export function GuestTopBar({
               gap: 0.9,
               height: 34,
               px: 1.75,
-              borderRadius: 999,
+              borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
               fontSize: 12,
               ...goldCta,
             }}
@@ -161,7 +161,7 @@ export function GuestTopBar({
             <Box
               sx={{
                 bgcolor: alpha(goldCta.color, 0.18),
-                borderRadius: 999,
+                borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
                 px: 0.75,
                 fontSize: 11,
               }}

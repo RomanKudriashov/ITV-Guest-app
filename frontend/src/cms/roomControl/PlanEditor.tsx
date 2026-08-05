@@ -141,6 +141,16 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  /*
+    Рамка, которую сейчас тянут, живёт И в состоянии, И в ссылке.
+
+    Состояние нужно, чтобы её было видно; ссылка — чтобы её было НЕ ПОТЕРЯТЬ.
+    Пока считается ночной кадр, план перезапрашивается каждые три секунды, и
+    ответ, пришедший между «нажал» и «отпустил», перерисовывает компонент.
+    Обводка в этот момент обрывалась молча: обработчик отпускания читал
+    состояние, которого в его замыкании уже не было.
+  */
+  const dragRef = useRef<PlanRect | null>(null);
   gaveUpRef.current = bakeGaveUp;
   const draftRef = useRef(draft);
   const baselineRef = useRef(baseline);
@@ -294,19 +304,22 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
       return;
     }
     dragStart.current = point;
-    setDrag({ x: point.x, y: point.y, w: 0, h: 0 });
+    dragRef.current = { x: point.x, y: point.y, w: 0, h: 0 };
+    setDrag(dragRef.current);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!dragStart.current) return;
     const point = percentAt(event.clientX, event.clientY);
-    setDrag(rectFromDrag(dragStart.current.x, dragStart.current.y, point.x, point.y));
+    dragRef.current = rectFromDrag(dragStart.current.x, dragStart.current.y, point.x, point.y);
+    setDrag(dragRef.current);
   };
 
   const onPointerUp = () => {
-    const rect = drag;
+    const rect = dragRef.current;
     dragStart.current = null;
+    dragRef.current = null;
     setDrag(null);
     if (rect && rect.w >= MIN_SIZE && rect.h >= MIN_SIZE) addShape(rect);
   };

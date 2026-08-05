@@ -31,7 +31,7 @@ import { errorMessage, isRetryableOrderError } from '../errors';
 import { useCartQuote, useGuestLocations } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
-import { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from '../layout/constants';
+import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
@@ -500,7 +500,7 @@ function CartShell({
       <Container maxWidth="sm" sx={{ py: 2, pb: 18 }}>
         {children}
       </Container>
-      <StickyFooter offset={BOTTOM_NAV_HEIGHT}>{footer}</StickyFooter>
+      <StickyFooter offset={BOTTOM_NAV_SPACE}>{footer}</StickyFooter>
     </Box>
   );
 }

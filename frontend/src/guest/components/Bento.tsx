@@ -55,7 +55,7 @@ function StatusPill({ status }: { status: { text: string; open: boolean } }) {
         alignSelf: 'flex-start',
         px: 1,
         py: 0.35,
-        borderRadius: 999,
+        borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
         fontSize: 11,
         fontWeight: 700,
         lineHeight: 1.4,

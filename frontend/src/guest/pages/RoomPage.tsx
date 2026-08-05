@@ -58,7 +58,7 @@ import {
 } from '../components/roomKit';
 import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
-import { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from '../layout/constants';
+import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { layout, stickyTopCss, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
@@ -268,7 +268,7 @@ export function RoomPage() {
         // «выключить весь свет» иначе оказываются под ним и недоступны.
         pb: isDesktop
           ? 6
-          : `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom) + ${layout.panelOverlap}px)`,
+          : `calc(${BOTTOM_NAV_SPACE}px + env(safe-area-inset-bottom) + ${layout.panelOverlap}px)`,
         px: 2,
         // Сверху — ровно столько, чтобы пилюли прошли ПОД плавающей группой
         // контролов, а не под ней. Число из словаря: группа и содержимое уже

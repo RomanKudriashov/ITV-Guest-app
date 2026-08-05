@@ -23,6 +23,7 @@ import { fetchPublicHotel } from '../api/guest';
 import { errorMessage } from '../errors';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type { GuestHotel } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 const ONEST = '"Onest", system-ui, sans-serif';
 
@@ -213,7 +214,7 @@ export function EntryPage() {
           top: `calc(22px + env(safe-area-inset-top, 0px))`,
           insetInlineEnd: 24,
           zIndex: 3,
-          borderRadius: 999,
+          borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
           px: 0.5,
           bgcolor: alpha(th.palette.common.black, 0.32),
           backdropFilter: 'blur(12px)',

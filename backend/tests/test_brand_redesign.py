@@ -160,3 +160,104 @@ def test_put_keeps_logos_that_do_not_belong_to_a_colour_set(cms, crystal):
 
     restored = cms.put("/api/cms/brand", {"tokens": stripped}).json()["tokens"]
     assert restored["brand"]["logoDark"] == "http://x/logo.svg"
+
+
+# --- Обложка живёт ссылкой на ассет, а не адресом ---------------------------
+
+
+def _upload_cover(cms, crystal) -> tuple[str, str]:
+    """Загрузить картинку и дорезать варианты. Возвращает (id ассета, адрес)."""
+    uploaded = cms.upload(
+        "/api/cms/media",
+        {"file": SimpleUploadedFile("cover.png", _png(), content_type="image/png")},
+        {"kind": "brand"},
+    )
+    assert uploaded.status_code == 201, uploaded.content
+    asset_id = uploaded.json()["id"]
+
+    from apps.media.tasks import process_media_asset
+
+    process_media_asset.apply(args=(asset_id, str(crystal.pk))).get()
+    return asset_id, cms.get(f"/api/cms/media/{asset_id}").json()["url"]
+
+
+def test_cover_url_is_rebuilt_from_the_asset_not_frozen_in_tokens(cms, crystal, settings):
+    """
+    Адрес обложки СОБИРАЕТСЯ ПРИ ЧТЕНИИ, а не хранится замороженным.
+
+    Так витрина переживает смену публичного адреса медиа. Раньше не переживала:
+    в токенах лежала строка с `localhost`, стенд открывали с телефона — и
+    обложки не было ни у одного из трёх демо-отелей.
+    """
+    asset_id, url = _upload_cover(cms, crystal)
+    cms.patch(
+        "/api/cms/brand",
+        {
+            "tokens": {
+                "brand": {
+                    "background": {"kind": "image", "imageUrl": url, "imageAssetId": asset_id}
+                }
+            }
+        },
+    )
+
+    # Публичный адрес медиа сменился — так и было при переезде стенда в сеть.
+    settings.MINIO_PUBLIC_ENDPOINT = "10.0.0.7:59000"
+
+    fresh = cms.get("/api/cms/brand").json()["tokens"]["brand"]["background"]["imageUrl"]
+    assert "10.0.0.7" in fresh, "адрес обложки не пересобрался из ассета"
+
+    guest = _guest_theme(cms.client, crystal)["brand"]["background"]["imageUrl"]
+    assert "10.0.0.7" in guest
+
+
+def test_a_cover_whose_asset_is_gone_is_no_cover_at_all(cms, crystal):
+    """
+    Ассет унесло пересевом — обложки НЕТ, и витрина показывает градиент.
+
+    Битая картинка хуже её отсутствия: гость видит рамку с крестиком там, где
+    должен быть кадр отеля. Сид спрашивает то же самое и заводит обложку заново
+    — прежний сторож считал наличие строки за настроенность и не чинил никогда.
+    """
+    from apps.hotels.brand_services import cover_is_alive
+    from apps.media.models import MediaAsset
+
+    asset_id, url = _upload_cover(cms, crystal)
+    cms.patch(
+        "/api/cms/brand",
+        {
+            "tokens": {
+                "brand": {"background": {"kind": "image", "imageUrl": url, "imageAssetId": asset_id}}
+            }
+        },
+    )
+
+    from apps.core.context import tenant_context
+
+    with tenant_context(crystal):
+        assert cover_is_alive(crystal.default_theme.tokens or {})
+        MediaAsset.objects.filter(pk=asset_id).delete()
+        crystal.refresh_from_db()
+        assert not cover_is_alive(crystal.default_theme.tokens or {})
+
+    response = cms.client.post(
+        "/api/guest/session",
+        data={"room_number": "305"},
+        content_type="application/json",
+        HTTP_HOST=host_for(crystal),
+    )
+    assert response.json()["hotel"]["cover_image"] in (None, "")
+
+
+def test_a_cover_without_an_asset_reference_is_not_trusted(crystal):
+    """
+    Строка без ссылки на ассет — не обложка.
+
+    Именно на такой строке всё и держалось: она пережила и пересев, и смену
+    хоста, и осталась указывать в пустоту, а сид считал работу сделанной.
+    """
+    from apps.hotels.brand_services import cover_is_alive
+
+    assert not cover_is_alive(
+        {"brand": {"background": {"kind": "image", "imageUrl": "http://localhost:59000/x.webp"}}}
+    )

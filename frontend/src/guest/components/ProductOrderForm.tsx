@@ -15,6 +15,7 @@ import { SheetFooter, SheetScroll } from './sheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import { toCartModifier, unitPriceOf, useCart } from '../state/cart';
 import type { ItemDetail, ModifierGroup } from '../api/types';
+import { itemCard } from '../storefrontTokens';
 
 interface ProductDraft {
   /** group id → selected option ids. */
@@ -134,7 +135,7 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
   return (
     <>
       <SheetScroll>
-        <Stack spacing={2}>
+        <Stack spacing={itemCard.section}>
           <ItemHeadline item={item} ref={titleRef} />
 
           {groups.map((group) => {
@@ -142,12 +143,12 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
             const isMissing = draft.showErrors && missing.some((g) => g.id === group.id);
             return (
               <Box key={group.id}>
-                <Divider sx={{ mb: 1.5 }} />
+                <Divider sx={{ mb: itemCard.block }} />
                 <Stack
                   direction="row"
                   alignItems="baseline"
                   spacing={1}
-                  sx={{ mb: 1 }}
+                  sx={{ mb: itemCard.block }}
                 >
                   <Typography variant="subtitle1">{group.title}</Typography>
                   {group.is_required ? (

@@ -2,12 +2,13 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { KitImage } from '@/kit';
 import type { AppIconComponent } from '@/icons';
 import type { ItemCharacteristic, ItemDetail, ItemFacet } from '../api/types';
-import { surfaceRadius } from '../storefrontTokens';
+import { itemCard, surfaceRadius } from '../storefrontTokens';
 
 /** Dietary / kitchen flags. Unknown codes fall back to the raw code. */
 export function FlagChips({ flags, size = 'small' }: { flags: string[]; size?: 'small' | 'medium' }) {
@@ -69,22 +70,60 @@ export function AllergensBlock({
   const hasMarkers = Boolean(markers?.length);
   if (!hasAllergens && !hasMarkers) return null;
 
+  /*
+    ДВА РАЗНЫХ УТВЕРЖДЕНИЯ — ДВЕ РАЗНЫЕ ПОДПИСИ.
+
+    Аллергены отвечают «что здесь есть, если вам нельзя», маркеры — «кому это
+    подходит». Раньше обе группы стояли под одной шапкой «Аллергены», и на
+    стенде это читалось как «аллергены: халяль, без глютена». Ошибка не
+    косметическая: гость с аллергией читает именно эту строку.
+  */
   return (
-    <Box data-testid="guest-item-allergens">
-      <Typography
-        sx={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', color: 'text.secondary', mb: 0.75 }}
-      >
-        {t('guest.item.allergens')}
-      </Typography>
-      <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
-        {allergens?.map((a) => (
-          <FacetPill key={`a-${a.code}`} label={a.title} tone="contains" />
-        ))}
-        {markers?.map((m) => (
-          <FacetPill key={`m-${m.code}`} label={m.title} tone="suitable" />
-        ))}
+    <Stack spacing={itemCard.block} data-testid="guest-item-allergens">
+      {hasAllergens ? (
+        <FacetGroup caption={t('guest.item.contains')}>
+          {allergens!.map((a) => (
+            <FacetPill key={`a-${a.code}`} label={a.title} tone="contains" />
+          ))}
+        </FacetGroup>
+      ) : null}
+      {hasMarkers ? (
+        <FacetGroup caption={t('guest.item.suitableFor')}>
+          {markers!.map((m) => (
+            <FacetPill key={`m-${m.code}`} label={m.title} tone="suitable" />
+          ))}
+        </FacetGroup>
+      ) : null}
+    </Stack>
+  );
+}
+
+/** Подпись и ряд пилюль под ней — общая рамка для обеих групп. */
+function FacetGroup({ caption, children }: { caption: string; children: ReactNode }) {
+  return (
+    <Box>
+      <MetaCaption>{caption}</MetaCaption>
+      <Stack direction="row" spacing={itemCard.tight} useFlexGap flexWrap="wrap">
+        {children}
       </Stack>
     </Box>
+  );
+}
+
+/** Подпись над блоком карточки: одна на КБЖУ, характеристики и пилюли. */
+function MetaCaption({ children }: { children: ReactNode }) {
+  return (
+    <Typography
+      sx={{
+        fontSize: '0.72rem',
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        color: 'text.secondary',
+        mb: itemCard.tight,
+      }}
+    >
+      {children}
+    </Typography>
   );
 }
 
@@ -117,19 +156,35 @@ function FacetPill({ label, tone }: { label: string; tone: 'contains' | 'suitabl
 /** Ordered «name → value» characteristics (desktop §3). Empty → nothing. */
 export function CharacteristicsBlock({ characteristics }: { characteristics?: ItemCharacteristic[] }) {
   if (!characteristics?.length) return null;
+  /*
+    СЕТКА, А НЕ РЯД ИЗ ДВУХ ЯЧЕЕК. Пока каждая строка верстала себя сама с
+    `minWidth: 130`, длинное название («Способ приготовления») эту ширину
+    перебивало и уносило своё значение вправо, а короткое («Вкус») оставляло
+    значение на месте — колонка значений шла лесенкой. Grid держит обе строки
+    в одной сетке по определению.
+  */
   return (
-    <Stack spacing={0.5} data-testid="guest-item-characteristics">
+    <Box
+      data-testid="guest-item-characteristics"
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: `minmax(0, ${itemCard.labelColumn}px) minmax(0, 1fr)`,
+        columnGap: 1.5,
+        rowGap: 0.5,
+        fontSize: '0.82rem',
+      }}
+    >
       {characteristics.map((row, i) => (
-        <Stack key={i} direction="row" spacing={1} sx={{ fontSize: '0.82rem' }}>
-          <Box component="span" sx={{ color: 'text.secondary', minWidth: 130 }}>
+        <Fragment key={i}>
+          <Box component="span" sx={{ color: 'text.secondary' }}>
             {row.name}
           </Box>
           <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>
             {row.value}
           </Box>
-        </Stack>
+        </Fragment>
       ))}
-    </Stack>
+    </Box>
   );
 }
 
@@ -150,19 +205,22 @@ export function NutritionBlock({
   const { t } = useTranslation();
   if (!nutrition) return null;
 
-  // NO КБЖУ table — the values read as a
-  // single line under the description, each number in the display face.
-  const macros: { label: string; value: number; lead?: string }[] = [];
+  // Ячейки, а не таблица: у карточки нет колонок, есть ритм.
+  const macros: { label: string; value: number }[] = [];
   if (nutrition.calories != null)
     macros.push({ label: t('guest.item.kcal'), value: nutrition.calories });
+  // Единица в подписи, а не подразумевается. Белки, жиры, углеводы и порция
+  // измеряются в граммах, и в ячейке «32 / Белки» это сказать больше негде:
+  // раньше единицу держала соседняя подпись в общей строке.
+  const grams = (label: string) => `${label}, ${t('guest.item.gram')}`;
   if (nutrition.protein != null)
-    macros.push({ label: t('guest.item.protein'), value: nutrition.protein });
+    macros.push({ label: grams(t('guest.item.protein')), value: nutrition.protein });
   if (nutrition.fat != null)
-    macros.push({ label: t('guest.item.fat'), value: nutrition.fat });
+    macros.push({ label: grams(t('guest.item.fat')), value: nutrition.fat });
   if (nutrition.carbs != null)
-    macros.push({ label: t('guest.item.carbs'), value: nutrition.carbs });
+    macros.push({ label: grams(t('guest.item.carbs')), value: nutrition.carbs });
   if (nutrition.portion != null)
-    macros.push({ label: t('guest.item.gram'), value: nutrition.portion, lead: t('guest.item.portion') });
+    macros.push({ label: grams(t('guest.item.portion')), value: nutrition.portion });
 
   // Состав и описание часто оказываются одним текстом (в сиде так и было —
   // состав копировался из описания). Гостю незачем читать одну строку дважды:
@@ -172,43 +230,54 @@ export function NutritionBlock({
     rawComposition && rawComposition !== (description ?? '').trim() ? rawComposition : undefined;
   if (!macros.length && !composition) return null;
 
+  /*
+    ЯЧЕЙКА НА КАЖДОЕ ЗНАЧЕНИЕ: число сверху, подпись под ним.
+
+    Раньше это была одна строка вида «506 ккал 32 Белки 27 Жиры 12 Углеводы
+    порция 185 г»: числа и подписи чередовались без единой паузы и слипались
+    в поток, где «32 Белки» читается как одно слово. Порция вдобавок шла в
+    обратном порядке — сначала подпись, потом число. Теперь у всех ячеек один
+    порядок и одна сетка, а «порция» — такая же ячейка, как остальные.
+  */
   return (
-    <Stack spacing={1.25} data-testid="guest-item-nutrition">
+    <Stack spacing={itemCard.block} data-testid="guest-item-nutrition">
       {macros.length ? (
-        <Stack
-          direction="row"
-          flexWrap="wrap"
-          useFlexGap
-          sx={{ columnGap: 1.75, rowGap: 0.5, color: 'text.secondary', fontSize: '0.78rem' }}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(auto-fit, minmax(${itemCard.macroMinWidth}px, max-content))`,
+            columnGap: 2.5,
+            rowGap: 1,
+          }}
         >
           {macros.map((macro) => (
-            <Box component="span" key={macro.label}>
-              {macro.lead ? <Box component="span" sx={{ mr: 0.5 }}>{macro.lead}</Box> : null}
+            <Box key={macro.label}>
               <Box
-                component="b"
                 sx={(theme) => ({
                   color: 'text.primary',
                   fontFamily: theme.typography.h1.fontFamily,
                   fontWeight: theme.typography.fontWeightBold,
-                  fontSize: '0.875rem',
+                  fontSize: '1.0625rem',
+                  lineHeight: 1.2,
                   fontVariantNumeric: 'tabular-nums',
-                  mr: 0.5,
                 })}
               >
                 {macro.value}
               </Box>
-              {macro.label}
+              <Box sx={{ color: 'text.secondary', fontSize: '0.72rem', lineHeight: 1.4 }}>
+                {macro.label}
+              </Box>
             </Box>
           ))}
-        </Stack>
+        </Box>
       ) : null}
       {composition ? (
-        <Typography variant="body2" color="text.secondary">
-          <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-            {t('guest.item.composition')}:{' '}
-          </Box>
-          {composition}
-        </Typography>
+        <Box>
+          <MetaCaption>{t('guest.item.composition')}</MetaCaption>
+          <Typography variant="body2" color="text.secondary">
+            {composition}
+          </Typography>
+        </Box>
       ) : null}
     </Stack>
   );

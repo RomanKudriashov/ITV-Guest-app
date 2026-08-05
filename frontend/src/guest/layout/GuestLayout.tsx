@@ -28,11 +28,18 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { CartPage } from '../pages/CartPage';
 import { GuestTopBar } from './GuestTopBar';
-import { layout as storefrontLayout } from '../storefrontTokens';
+import { layout as storefrontLayout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
-import { BOTTOM_NAV_HEIGHT, CART_WIDTH, CONTENT_MAX, DESKTOP_QUERY } from './constants';
+import {
+  BOTTOM_NAV_HEIGHT,
+  BOTTOM_NAV_INSET,
+  BOTTOM_NAV_SPACE,
+  CART_WIDTH,
+  CONTENT_MAX,
+  DESKTOP_QUERY,
+} from './constants';
 
-export { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from './constants';
+export { BOTTOM_NAV_HEIGHT, BOTTOM_NAV_SPACE, DESKTOP_QUERY } from './constants';
 
 interface NavTab {
   value: string;
@@ -206,7 +213,7 @@ export function GuestLayout() {
           top: `calc(${storefrontLayout.floatingTop}px + env(safe-area-inset-top, 0px))`,
           insetInlineEnd: 12,
           zIndex: th.zIndex.appBar + 2,
-          borderRadius: 999,
+          borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
           minHeight: storefrontLayout.floatingHeight,
           px: 0.5,
           // Плавающая группа и отдельный чип номера рядом были из разных
@@ -226,21 +233,38 @@ export function GuestLayout() {
         <GuestQuickMenu />
       </Stack>
 
-      <Box component="main" sx={{ flexGrow: 1, pb: `${BOTTOM_NAV_HEIGHT}px` }}>
+      {/* Место под плавающее меню: его высота плюс отступы сверху и снизу. */}
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, pb: `${BOTTOM_NAV_SPACE}px` }}
+      >
         {content}
       </Box>
 
+      {/*
+        Нижнее меню — ПЛАВАЮЩИЙ блок, скруглённый со всех сторон, а не полоса
+        во всю ширину с прямыми углами. Прежняя полоса упиралась в края экрана
+        и обрывалась прямым краем ровно там, где остальная витрина скруглена:
+        карточки, панели, липкая строка категорий. Меню — такая же поверхность,
+        и выпадать из общей пластики ему незачем.
+
+        Отступ снизу считается от безопасной зоны, а не задан числом: на
+        телефоне с домашней полосой блок обязан встать НАД ней, иначе жест
+        «домой» приходится делать поверх кнопок.
+      */}
       <Paper
-        square
         elevation={0}
         sx={(th) => ({
           position: 'fixed',
-          insetInline: 0,
-          bottom: 0,
+          insetInline: `${BOTTOM_NAV_INSET}px`,
+          bottom: `calc(${BOTTOM_NAV_INSET}px + env(safe-area-inset-bottom, 0px))`,
           zIndex: th.zIndex.appBar + 1,
-          borderTop: 1,
+          border: 1,
           borderColor: 'divider',
-          pb: 'env(safe-area-inset-bottom, 0px)',
+          borderRadius: surfaceRadius.panel(th.palette.brand.radius),
+          overflow: 'hidden',
+          maxWidth: 720,
+          mx: 'auto',
           // Прототип держит нижнее меню ЗАМЕТНО прозрачнее (.6 + blur 28), чем
           // почти глухие .94: под меню должен продолжаться контент, иначе
           // накладной слой читается как вторая страница.
@@ -251,7 +275,7 @@ export function GuestLayout() {
           showLabels
           value={activeTab}
           onChange={(_event, value: string) => navigate(value)}
-          sx={{ height: BOTTOM_NAV_HEIGHT, bgcolor: 'transparent', maxWidth: 720, mx: 'auto' }}
+          sx={{ height: BOTTOM_NAV_HEIGHT, bgcolor: 'transparent' }}
         >
           {TABS.map((tab) => (
             <BottomNavigationAction

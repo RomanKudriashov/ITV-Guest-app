@@ -26,7 +26,7 @@ import { StickyFooter } from '../components/StickyFooter';
 import { errorMessage } from '../errors';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
-import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
+import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
 import {
   layout as storefrontLayout,
   stickyTopCss,
@@ -225,8 +225,11 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           // Радиус панели — из словаря поверхностей: он же у карточек позиций,
           // у панелей номера и у плиток витрины. Здесь было 26 px числом,
           // и панель заведения отличалась от всего остального экрана.
-          borderRadius: (theme) =>
-            `${surfaceRadius.panel(theme.palette.brand.radius)} ${surfaceRadius.panel(theme.palette.brand.radius)} 0 0`,
+          //
+          // СО ВСЕХ ЧЕТЫРЁХ СТОРОН. Скругление «только сверху» держалось на
+          // допущении, что панель уходит за нижний край экрана. Она туда не
+          // уходит: под ней кончается меню, и низ панели читался обрубленным.
+          borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
           bgcolor: 'background.default',
           pt: 0.5,
         }}
@@ -244,8 +247,11 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           // глухой фон страницы здесь читался как обрыв. Стекло из словаря,
           // то же, что у верхней строки.
           ...glass.bar,
-          borderRadius: (theme) =>
-            `${surfaceRadius.panel(theme.palette.brand.radius)} ${surfaceRadius.panel(theme.palette.brand.radius)} 0 0`,
+          // Липкая строка — накладной блок, а не срез панели: у неё скруглены
+          // все четыре угла, иначе снизу она обрывается прямым краем прямо
+          // посреди списка.
+          borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
+          overflow: 'hidden',
         }}
       >
         <Tabs
@@ -321,7 +327,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
       </Box>
 
       {showCartBar ? (
-        <StickyFooter offset={BOTTOM_NAV_HEIGHT}>
+        <StickyFooter offset={BOTTOM_NAV_SPACE}>
           <Button
             fullWidth
             size="large"

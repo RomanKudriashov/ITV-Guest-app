@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useGuestSession } from '../session/GuestSessionProvider';
+import { surfaceRadius } from '../storefrontTokens';
 
 /**
  * Чип номера с выходом из отеля.
@@ -66,7 +67,7 @@ export function RoomMenu({
           gap: 0.75,
           height: variant === 'bar' ? 34 : 36,
           px: variant === 'bar' ? 1.6 : 1.25,
-          borderRadius: 999,
+          borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
           fontSize: variant === 'bar' ? 12 : 12.5,
           fontWeight: 700,
           whiteSpace: 'nowrap',
@@ -97,7 +98,7 @@ export function RoomMenu({
                 gap: 0.9,
                 height: 34,
                 px: 1.6,
-                borderRadius: 999,
+                borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
                 fontSize: 12,
                 fontWeight: 600,
                 color: th.palette.text.primary,
@@ -110,7 +111,7 @@ export function RoomMenu({
                 gap: 0.75,
                 height: 36,
                 px: 1.25,
-                borderRadius: 999,
+                borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
                 border: `1px solid ${th.palette.divider}`,
                 color: 'text.primary',
                 fontSize: 12.5,

@@ -7,6 +7,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
 import { pressableSx } from '@/kit';
+import { surfaceRadius } from '../storefrontTokens';
 
 export interface QuantityStepperProps {
   value: number;
@@ -42,7 +43,7 @@ export function QuantityStepper({
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
-        borderRadius: 999,
+        borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
         border: 1,
         borderColor: 'divider',
         bgcolor: 'background.paper',

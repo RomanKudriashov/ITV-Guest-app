@@ -112,7 +112,12 @@ function LogoField({
   testId,
 }: {
   url: string | undefined;
-  onChangeUrl: (url: string | undefined) => void;
+  /**
+   * Второй аргумент — id ассета. Обложка обязана храниться ССЫЛКОЙ, а не
+   * замороженным адресом: адрес переживает и смену публичного хоста медиа, и
+   * пересев фотографий, а картинка за ним — нет.
+   */
+  onChangeUrl: (url: string | undefined, assetId?: string) => void;
   testId: string;
 }) {
   // An empty string from the server means "no logo" — treat it and `undefined`
@@ -135,7 +140,7 @@ function LogoField({
     const next = ready?.url;
     if (norm(next) !== norm(lastEmitted.current)) {
       lastEmitted.current = next;
-      onChangeUrl(next);
+      onChangeUrl(next, ready?.id);
     }
   }, [images, onChangeUrl]);
 
@@ -445,7 +450,11 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
                 auto-dim slider below keeps one image readable in light + dark. */}
             <LogoField
               url={bg?.imageUrl}
-              onChangeUrl={(u) => setBackground({ imageUrl: u })}
+              onChangeUrl={(u, assetId) =>
+                // Пустая строка, а не undefined: id надо УБРАТЬ, когда картинку
+                // сняли, иначе сервер продолжит собирать адрес по старой ссылке.
+                setBackground({ imageUrl: u, imageAssetId: u ? (assetId ?? '') : '' })
+              }
               testId="brand-background-upload"
             />
             <Box>

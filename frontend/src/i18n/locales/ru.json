@@ -435,7 +435,9 @@
       "kcal": "ккал",
       "gram": "г",
       "portion": "порция",
-      "prepMinutes": "~{{minutes}} мин"
+      "prepMinutes": "~{{minutes}} мин",
+      "contains": "Содержит",
+      "suitableFor": "Подходит"
     },
     "cart": {
       "title": "Ваш заказ",

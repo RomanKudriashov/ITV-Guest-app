@@ -439,7 +439,9 @@
       "kcal": "سعرة",
       "gram": "غ",
       "portion": "الحصة",
-      "prepMinutes": "~{{minutes}} دقيقة"
+      "prepMinutes": "~{{minutes}} دقيقة",
+      "contains": "يحتوي على",
+      "suitableFor": "مناسب لـ"
     },
     "cart": {
       "title": "طلبك",

@@ -111,7 +111,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
               insetInlineEnd: 10,
               px: 1,
               py: 0.35,
-              borderRadius: 999,
+              borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
               fontSize: 11,
               fontWeight: 700,
               bgcolor: alpha(th.palette.common.black, 0.42),

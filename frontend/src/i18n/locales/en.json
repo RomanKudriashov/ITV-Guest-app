@@ -431,7 +431,9 @@
       "kcal": "kcal",
       "gram": "g",
       "portion": "portion",
-      "prepMinutes": "~{{minutes}} min"
+      "prepMinutes": "~{{minutes}} min",
+      "contains": "Contains",
+      "suitableFor": "Suitable for"
     },
     "cart": {
       "title": "Your order",

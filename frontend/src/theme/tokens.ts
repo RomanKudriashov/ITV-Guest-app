@@ -85,8 +85,14 @@ export interface BrandBackground {
   /** For `solid` — otherwise the palette background is used. */
   color?: string;
   gradient?: BrandGradient;
-  /** For `kind === 'image'`. */
+  /**
+   * For `kind === 'image'`. Derived: the server rebuilds it from
+   * `imageAssetId` on every read, so a changed media host or a re-seeded photo
+   * can no longer leave a dead link frozen in the theme.
+   */
   imageUrl?: string;
+  /** The asset the cover really is. Source of truth for `imageUrl`. */
+  imageAssetId?: string;
   /** Code of a built-in abstraction pattern for `kind === 'abstraction'`. */
   abstraction?: string;
   /** Auto-dimming layer drawn over an image so text stays readable, 0..1. */

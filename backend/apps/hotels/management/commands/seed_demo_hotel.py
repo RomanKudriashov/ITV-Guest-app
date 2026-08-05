@@ -267,6 +267,7 @@ class Command(BaseCommand):
             self._ensure_item_photos()
             self._ensure_category_photos()
             self._seed_hotel_cover(hotel)
+            self._fill_translations()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
             if with_badges:
@@ -1370,6 +1371,21 @@ class Command(BaseCommand):
         if asset is not None:
             ItemImage.objects.get_or_create(item=item, asset=asset, defaults={"sort_order": 0})
 
+    def _fill_translations(self) -> None:
+        """
+        Арабский и китайский к уже написанным ru/en.
+
+        Отдельным проходом, а не полями в структурах выше: сид создаёт запись
+        один раз и больше к ней не возвращается, а перевести нужно и то, что
+        заведено прошлыми прогонами. Реестр — `apps/hotels/seed_translations`.
+        """
+        from apps.hotels.seed_translations import fill_translations
+
+        filled = fill_translations()
+        if filled:
+            summary = ", ".join(f"{code}: {count}" for code, count in sorted(filled.items()))
+            self.stdout.write(f"Переводы дописаны — {summary}")
+
     def _seed_hotel_cover(self, hotel):
         """
         Обложка отеля — парадная главной у гостя (R5). Живёт в токенах бренда
@@ -1377,14 +1393,19 @@ class Command(BaseCommand):
         """
         from apps.hotels.brand_services import get_or_create_brand
 
+        from apps.hotels.brand_services import cover_is_alive
+
         theme = get_or_create_brand(hotel)
         tokens = dict(theme.tokens or {})
         brand = dict(tokens.get("brand") or {})
         background = dict(brand.get("background") or {})
-        current = background.get("imageUrl") or ""
-        # Заглушка в токенах — это НЕ настроенная обложка: считаем её
-        # отсутствием и перезаписываем настоящим снимком.
-        if background.get("kind") == "image" and current and "placeholder" not in current:
+        # НАСТРОЕНА ЛИ ОБЛОЖКА — вопрос о картинке, а не о строке в токенах.
+        # Прежний сторож спрашивал «есть ли непустой url» и на этом успокаивался.
+        # Строка переживала и пересев фотографий, и смену публичного адреса
+        # медиа, а картинка за ней — нет: у всех трёх демо-отелей в бренде
+        # остался адрес с `localhost`, у «Кристалла» вдобавок исчез сам объект.
+        # Починить это было нечем — сторож считал обложку настроенной.
+        if cover_is_alive(theme.tokens or {}):
             return
 
         asset = self._image_for("hotel-cover", hotel.name)
@@ -1409,7 +1430,12 @@ class Command(BaseCommand):
         if not url:
             self.stdout.write("Обложка отеля ещё не готова — пропускаю")
             return
-        background.update({"kind": "image", "imageUrl": url, "dim": 0.15})
+        # Пишем И ссылку на ассет, и адрес. Ссылка — источник истины, из неё
+        # адрес пересобирается при каждом чтении; адрес рядом нужен тому, кто
+        # читает токены мимо резолвера (например, старый клиент).
+        background.update(
+            {"kind": "image", "imageUrl": url, "imageAssetId": str(asset.pk), "dim": 0.15}
+        )
         brand["background"] = background
         tokens["brand"] = brand
         theme.tokens = tokens
