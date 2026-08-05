@@ -730,3 +730,51 @@ def test_a_silent_channel_does_not_hold_the_whole_snapshot(guest, monkeypatch):
 
     assert response.status_code == 200
     assert spent < 6, f"снимок собирался {spent:.1f} с — бюджет чтения не сработал"
+
+
+# --- Иконки и подписи ---------------------------------------------------------
+
+
+def test_every_control_carries_its_own_glyph_and_words(guest):
+    """
+    Глиф и подписи состояния приходят С СЕРВЕРА — и они РАЗНЫЕ.
+
+    Пока их не было, фронту оставалось выводить их самому, а отличить элементы
+    он может только разбором `controlId`, который ему запрещён: три сцены
+    получали один значок, свет во всех комнатах — одну лампочку, а «Блэкаут»
+    подписывался женским родом «открыта».
+    """
+    controls = _controls(guest.get("/api/v1/guest/room/state").json())
+
+    # Сцены различаются между собой: вид у них один, глиф — свой у каждой.
+    scenes = {key: value["icon"] for key, value in controls.items() if key.startswith("scene.")}
+    assert len(scenes) >= 3
+    assert len(set(scenes.values())) == len(scenes), f"сцены с одинаковым значком: {scenes}"
+
+    # Свет берёт глиф ЗОНЫ: спальня — кровать, ванная — ванна.
+    assert controls["light.bedroom"]["icon"] != controls["light.bathroom"]["icon"]
+
+    # А штора остаётся шторой, хотя лежит в зоне гостиной: глиф зоны берут
+    # только те виды, которые об этом просят.
+    assert controls["curtain.main"]["icon"] == "curtain"
+    assert controls["ac.1"]["icon"] == "air-conditioner"
+
+    # Подписи состояния — по смыслу элемента и в роде элемента.
+    assert controls["curtain.main"]["labels"] == {"on": "открыта", "off": "закрыта"}
+    assert controls["curtain.blackout"]["labels"] == {"on": "открыт", "off": "закрыт"}
+    assert controls["dnd"]["labels"]["on"] == "персонал не побеспокоит"
+
+
+def test_labels_are_localized_like_titles(client, crystal, stand):
+    """Подписи локализованы тем же языком, что и заголовки, а не только по-русски."""
+    token = _session(client, crystal)
+    english = GuestClient(client, crystal, token)
+    response = english.client.get(
+        "/api/v1/guest/room/state",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+        HTTP_ACCEPT_LANGUAGE="en",
+    )
+    controls = _controls(response.json())
+    assert controls["curtain.main"]["labels"] == {"on": "open", "off": "closed"}
+    assert controls["dnd"]["labels"]["on"] == "staff will not disturb"
