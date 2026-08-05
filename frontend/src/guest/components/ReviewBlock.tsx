@@ -20,6 +20,7 @@ import { guestKeys } from '../api/queryKeys';
 import { errorMessage } from '../errors';
 import { useGuestLanguage, useGuestReview } from '../hooks/useGuestQueries';
 import type { GuestOrder, GuestReview } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 export interface ReviewBlockProps {
   order: GuestOrder;
@@ -166,7 +167,7 @@ function Stars({
   const tileSx = (on: boolean) => (theme: import('@mui/material/styles').Theme) => ({
     width: 44,
     height: 44,
-    borderRadius: '12px',
+    borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
     border: `1.5px solid ${on ? theme.palette.secondary.main : theme.palette.divider}`,
     bgcolor: on ? `color-mix(in srgb, ${theme.palette.secondary.main} 12%, transparent)` : 'transparent',
     color: on ? theme.palette.secondary.main : theme.palette.text.disabled,

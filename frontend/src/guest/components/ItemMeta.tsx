@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { KitImage } from '@/kit';
 import type { AppIconComponent } from '@/icons';
 import type { ItemCharacteristic, ItemDetail, ItemFacet } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 /** Dietary / kitchen flags. Unknown codes fall back to the raw code. */
 export function FlagChips({ flags, size = 'small' }: { flags: string[]; size?: 'small' | 'medium' }) {
@@ -294,7 +295,7 @@ export function ItemThumb({
         width: size,
         height: size,
         flexShrink: 0,
-        borderRadius: 2,
+        borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
         overflow: 'hidden',
         opacity: dimmed ? 0.5 : 1,
       }}

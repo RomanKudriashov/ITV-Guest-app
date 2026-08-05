@@ -48,7 +48,7 @@ import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
 import { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { layout, stickyUnderFloating } from '../storefrontTokens';
+import { layout, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type {
   RoomCapability,
@@ -300,9 +300,15 @@ export function RoomPage() {
                 // уменьшенной плитой оставалась бы дыра.
                 top: `${stickyUnderFloating + plateHeight * planScale}px`,
                 zIndex: 1,
-                pt: 1,
                 mb: `${layout.panelOverlap}px`,
-                ...glass.bar,
+                // Строка вкладок живёт В БЛОКЕ, а не висит голой на фоне: на
+                // соседних экранах витрины строка категорий тоже лежит на
+                // скруглённой панели, и голая полоса выбивалась из общего
+                // языка. Радиус и стекло — те же, что у панелей разделов.
+                px: 1.5,
+                pt: 0.5,
+                borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
+                ...glass.panel,
               }}
             >
               <RoomTabs
@@ -513,7 +519,7 @@ function Panel({ title, children, testId }: { title: string | null; children: Re
       data-testid={testId}
       sx={(theme) => ({
         p: 2,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         ...glass.panel,
       })}
     >
@@ -1151,7 +1157,7 @@ function PinPanel() {
       }}
       sx={(theme) => ({
         p: 2,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         ...glass.panel,
       })}
       data-testid="room-pin-panel"

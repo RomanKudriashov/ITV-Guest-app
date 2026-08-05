@@ -27,7 +27,7 @@ import { errorMessage } from '../errors';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
-import { layout as storefrontLayout, stickyUnderFloating } from '../storefrontTokens';
+import { layout as storefrontLayout, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
@@ -217,7 +217,11 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           // шапка заведения). Величина нахлёста — общая: см. storefrontTokens.
           mt: `-${storefrontLayout.panelOverlap}px`,
           zIndex: 4,
-          borderRadius: '26px 26px 0 0',
+          // Радиус панели — из словаря поверхностей: он же у карточек позиций,
+          // у панелей номера и у плиток витрины. Здесь было 26 px числом,
+          // и панель заведения отличалась от всего остального экрана.
+          borderRadius: (theme) =>
+            `${surfaceRadius.panel(theme.palette.brand.radius)} ${surfaceRadius.panel(theme.palette.brand.radius)} 0 0`,
           bgcolor: 'background.default',
           pt: 0.5,
         }}
@@ -232,7 +236,8 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           // глухой фон страницы здесь читался как обрыв. Стекло из словаря,
           // то же, что у верхней строки.
           ...glass.bar,
-          borderRadius: '26px 26px 0 0',
+          borderRadius: (theme) =>
+            `${surfaceRadius.panel(theme.palette.brand.radius)} ${surfaceRadius.panel(theme.palette.brand.radius)} 0 0`,
         }}
       >
         <Tabs

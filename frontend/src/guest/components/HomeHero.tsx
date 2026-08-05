@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { layout } from '../storefrontTokens';
+import { layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -31,7 +31,7 @@ export function HomeHero({
       sx={{
         position: 'relative',
         height: { xs: layout.heroPhone, md: layout.heroWide },
-        borderRadius: { xs: 0, md: '20px' },
+        borderRadius: (theme) => ({ xs: 0, md: surfaceRadius.panel(theme.palette.brand.radius) }),
         overflow: 'hidden',
         mt: { xs: 0, md: 1 },
         backgroundImage: mediaFallback,

@@ -9,6 +9,7 @@ import { KitImage } from '@/kit';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
+import { surfaceRadius } from '../storefrontTokens';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -70,7 +71,7 @@ export function CatalogRowView({
         bgcolor: 'background.paper',
         border: 1,
         borderColor: 'divider',
-        borderRadius: `${theme.palette.brand.radius.md}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         overflow: 'hidden',
         opacity: available ? 1 : 0.5,
         transition: 'transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s',

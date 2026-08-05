@@ -10,7 +10,7 @@ import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { packBento, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
-import { storefrontTokens } from '../storefrontTokens';
+import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -115,7 +115,7 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
         width: '100%',
         height: '100%',
         minHeight: 132,
-        borderRadius: `${theme.palette.brand.radius.md}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         overflow: 'hidden',
         display: 'block',
         textAlign: 'start',

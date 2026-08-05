@@ -15,6 +15,7 @@ import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 /**
  * Level 2 of the showcase: the venues of one group (restaurants / spa / services).
@@ -90,7 +91,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
       onClick={onOpen}
       data-testid={`guest-venue-${venue.code}`}
       aria-label={venue.title}
-      sx={(th) => ({ display: 'block', textAlign: 'start', borderRadius: `${th.palette.brand.radius.md}px`, overflow: 'hidden', width: '100%', color: 'common.white' })}
+      sx={(th) => ({ display: 'block', textAlign: 'start', borderRadius: surfaceRadius.panel(th.palette.brand.radius), overflow: 'hidden', width: '100%', color: 'common.white' })}
     >
       <Box sx={{ position: 'relative', height: { xs: 168, md: 190 } }}>
         {venue.image ? (

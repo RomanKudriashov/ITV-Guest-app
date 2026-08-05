@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { RoomMenu } from '../components/RoomMenu';
-import { layout } from '../storefrontTokens';
+import { layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
 export interface TopBarTab {
@@ -68,7 +68,12 @@ export function GuestTopBar({
     >
       <ButtonBase
         onClick={() => onNavigate('/home')}
-        sx={{ display: 'flex', alignItems: 'center', gap: 1.1, borderRadius: 1 }}
+        sx={(theme) => ({
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.1,
+          borderRadius: surfaceRadius.chip(theme.palette.brand.radius),
+        })}
         data-testid="guest-topbar-brand"
       >
         {logo ? (
@@ -102,7 +107,7 @@ export function GuestTopBar({
               fontWeight: 600,
               px: 1.6,
               py: 1,
-              borderRadius: '9px',
+              borderRadius: (theme) => surfaceRadius.chip(theme.palette.brand.radius),
               color: active === tab.value ? th.palette.primary.main : th.palette.text.secondary,
               // Активная вкладка держится подложкой из акцента, а не готовым
               // светлым прямоугольником: прежняя `rgba(119,173,224,.16)` поверх

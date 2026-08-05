@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 
 import { useStorefront } from '../useStorefront';
+import { surfaceRadius } from '../storefrontTokens';
 
 /**
  * Части экрана управления номером по утверждённому макету
@@ -138,7 +139,7 @@ export function ControlRow({
         px: 0.5,
         py: 1.25,
         textAlign: 'start',
-        borderRadius: `${theme.palette.brand.radius.md}px`,
+        borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
         '& + &': { borderTop: t.rowDivider },
         '&:disabled': { opacity: 0.55 },
         '&.Mui-focusVisible': { outline: `2px solid ${t.cold}`, outlineOffset: 2 },
@@ -152,7 +153,7 @@ export function ControlRow({
           flex: 'none',
           display: 'grid',
           placeItems: 'center',
-          borderRadius: '11px',
+          borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
           background: on ? t.accentSoft : t.rowIcon,
           color: on ? t.accent : 'text.secondary',
           boxShadow: on ? t.accentGlow : 'none',
@@ -250,7 +251,7 @@ export function Segmented({
         flex: fullWidth ? 1 : 'none',
         minWidth: 0,
         border: `1px solid ${t.pillBorder}`,
-        borderRadius: `${theme.palette.brand.radius.md}px`,
+        borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
         overflow: 'hidden',
         background: t.pillBackground,
         opacity: disabled ? 0.4 : 1,
@@ -327,7 +328,7 @@ export function CurtainArrows({
         height: 52,
         flex: 'none',
         border: `1px solid ${t.pillBorder}`,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         background: t.pillBackground,
         overflow: 'hidden',
       })}
@@ -401,7 +402,7 @@ export function SceneTile({
         aspectRatio: '1',
         flexDirection: 'column',
         gap: 0.75,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         border: `1px solid ${active ? 'transparent' : t.pillBorder}`,
         background: active ? t.accent : t.pillBackground,
         color: active ? t.accentContrast : 'text.secondary',
@@ -445,7 +446,7 @@ export function OutlineWideButton({
         width: '100%',
         gap: 1,
         py: 1.4,
-        borderRadius: `${theme.palette.brand.radius.md}px`,
+        borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
         border: `1px solid ${t.pillBorder}`,
         color: 'text.secondary',
         fontSize: theme.typography.body2.fontSize,
@@ -935,7 +936,7 @@ export function RoomTabs({ items, active, onChange, testId = 'room-tabs' }: Room
           position: 'absolute',
           bottom: 0,
           height: '1.5px',
-          borderRadius: 2,
+          borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
           background: t.accent,
           zIndex: 1,
           transition: 'left .3s cubic-bezier(.3,.8,.2,1), width .3s cubic-bezier(.3,.8,.2,1)',

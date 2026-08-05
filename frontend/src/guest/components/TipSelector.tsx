@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { currencySymbol } from '@/utils/money';
 import { useMoney } from '../hooks/useMoney';
 import { useGuestLanguage } from '../hooks/useGuestQueries';
+import { surfaceRadius } from '../storefrontTokens';
 
 export type TipKind = 'none' | 'preset' | 'custom';
 
@@ -65,7 +66,7 @@ export function TipSelector({
           gap: '9px',
           '& .MuiToggleButton-root': {
             border: `1.5px solid ${theme.palette.divider}`,
-            borderRadius: '12px !important',
+            borderRadius: (theme) => `${surfaceRadius.inner(theme.palette.brand.radius)} !important`,
             fontWeight: 700,
             color: 'text.secondary',
             px: 2,

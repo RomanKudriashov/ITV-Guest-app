@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { IconBack } from '@/icons';
-import { layout } from '../storefrontTokens';
+import { layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
 
@@ -31,7 +31,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
       sx={{
         position: 'relative',
         height: { xs: layout.venueHeadPhone, md: layout.venueHeadWide },
-        borderRadius: { xs: 0, md: '20px' },
+        borderRadius: (theme) => ({ xs: 0, md: surfaceRadius.panel(theme.palette.brand.radius) }),
         overflow: 'hidden',
         mt: { xs: 0, md: 1 },
         backgroundImage: mediaFallback,

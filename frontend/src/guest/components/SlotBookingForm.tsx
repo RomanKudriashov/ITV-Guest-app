@@ -19,6 +19,7 @@ import { useGuestLanguage, useGuestSlots } from '../hooks/useGuestQueries';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type { CreateOrderPayload, GuestSlot, ItemDetail } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 export interface SlotBookingFormProps {
   item: ItemDetail;
@@ -226,7 +227,7 @@ function SlotButton({
         py: 1,
         px: 0.5,
         minHeight: 52,
-        borderRadius: 2,
+        borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
         border: 1,
         borderColor: selected ? 'primary.main' : 'divider',
         bgcolor: selected ? 'primary.main' : 'background.paper',

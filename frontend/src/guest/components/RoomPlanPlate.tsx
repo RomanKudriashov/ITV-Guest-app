@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useStorefront } from '../useStorefront';
 import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 /**
  * План-двойник номера: ДВА СОВМЕЩЁННЫХ КАДРА, следующих ПОДТВЕРЖДЁННОМУ
@@ -154,7 +155,7 @@ export function RoomPlanPlate({
         mx: 'auto',
         maxWidth: '100%',
         overflow: 'hidden',
-        borderRadius: (theme) => `${theme.palette.brand.radius.lg}px`,
+        borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
         border: tokens.frame,
         boxShadow: tokens.shadow,
         background: tokens.fallback,
@@ -292,7 +293,7 @@ export function RoomPlanPlate({
               border: 'none',
               cursor: 'pointer',
               background: reading?.pending ? tokens.zonePending : 'transparent',
-              borderRadius: (theme) => `${theme.palette.brand.radius.md}px`,
+              borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
               transition: motion ?? 'background .25s ease',
               '&:hover:not(:disabled)': { background: tokens.zoneHover },
               '&:disabled': { cursor: 'default' },
@@ -316,7 +317,7 @@ export function RoomPlanPlate({
               position: 'absolute',
               pointerEvents: 'none',
               background: tokens.unknown,
-              borderRadius: (theme) => `${theme.palette.brand.radius.md}px`,
+              borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
             }}
           />
         ) : null,

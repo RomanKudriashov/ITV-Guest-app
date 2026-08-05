@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { pressableSx, revealSx } from '@/kit';
 import { ICON_REGISTRY, IconServices, type AppIconComponent } from '@/icons';
 import type { GuestQuickAction } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 /**
  * The project ships its own line-icon set (`ICON_REGISTRY`), not a Material
@@ -72,7 +73,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
               height: '100%',
               px: 1.75,
               py: 1.75,
-              borderRadius: `${theme.palette.brand.radius.md + 4}px`,
+              borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
               border: `1px solid ${theme.palette.divider}`,
               bgcolor: theme.palette.background.paper,
               transition: `border-color ${theme.transitions.duration.shorter}ms`,
@@ -92,7 +93,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
                 width: 36,
                 height: 36,
                 mb: 1.25,
-                borderRadius: `${theme.palette.brand.radius.sm + 2}px`,
+                borderRadius: surfaceRadius.chip(theme.palette.brand.radius),
                 bgcolor: theme.palette.brand.primarySoft,
                 color: theme.palette.primary.main,
               })}

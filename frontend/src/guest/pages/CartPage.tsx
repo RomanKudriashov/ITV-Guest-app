@@ -36,6 +36,7 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
 import type { CreateOrderPayload, OrderTiming } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 /** How the guest set the tip: none, a percentage preset, or a custom amount. */
 type TipKind = 'none' | 'preset' | 'custom';
@@ -345,7 +346,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                 gap: '9px',
                 '& .MuiToggleButton-root': {
                   border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: '12px !important',
+                  borderRadius: (theme) => `${surfaceRadius.inner(theme.palette.brand.radius)} !important`,
                   fontWeight: 700,
                   color: 'text.secondary',
                 },

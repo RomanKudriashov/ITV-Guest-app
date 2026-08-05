@@ -11,6 +11,7 @@ import { useGuestActiveOrders } from '../hooks/useGuestQueries';
 import { useOrderLive } from '../hooks/useOrderLive';
 import { serveByTime } from '../utils/serveBy';
 import type { GuestActiveOrder } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 /**
  * Home active-order strip (reference `.ordstrip`). One row per live order,
@@ -63,7 +64,7 @@ function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: numb
         textAlign: 'start',
         px: 2,
         py: 1.75,
-        borderRadius: `${theme.palette.brand.radius.lg}px`,
+        borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         border: `1px solid ${theme.palette.divider}`,
         background: `linear-gradient(120deg, ${theme.palette.brand.primarySoft}, transparent 60%), ${theme.palette.background.paper}`,
         ...revealSx({ index }),

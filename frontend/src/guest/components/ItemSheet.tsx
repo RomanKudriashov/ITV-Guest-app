@@ -25,6 +25,7 @@ import { errorMessage } from '../errors';
 import { useGuestItem } from '../hooks/useGuestQueries';
 import { DESKTOP_QUERY } from '../layout/constants';
 import type { ItemDetail, MenuItem } from '../api/types';
+import { surfaceRadius } from '../storefrontTokens';
 
 export interface ItemSheetProps {
   itemId: string | null;
@@ -167,7 +168,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
             maxWidth: 'min(920px, 100%)',
             maxHeight: '88vh',
             m: 2,
-            borderRadius: `${t.palette.brand.radius.lg}px`,
+            borderRadius: surfaceRadius.panel(t.palette.brand.radius),
             boxShadow: t.palette.brand.elevation.lg,
             overflow: 'hidden',
           }),
