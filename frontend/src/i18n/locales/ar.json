@@ -659,8 +659,6 @@
         "service": "الخدمة"
       },
       "pillTemp": "{{value}}° في الغرفة",
-      "pillZones_one": "منطقة {{count}} مضاءة",
-      "pillZones_other": "{{count}} مناطق مضاءة",
       "pillDndOn": "عدم الإزعاج مفعّل",
       "pillDndOff": "عدم الإزعاج متوقف",
       "curtainOpen": "الستارة مفتوحة",
@@ -674,7 +672,13 @@
       "allLightsOff": "إطفاء كل الإضاءة",
       "dialCurrent": "الآن",
       "dialSensor": "قراءة المستشعر",
-      "setpointSending": "جارٍ إرسال درجة الحرارة…"
+      "setpointSending": "جارٍ إرسال درجة الحرارة…",
+      "pillZones_zero": "لا توجد مناطق مضاءة",
+      "pillZones_one": "منطقة واحدة مضاءة",
+      "pillZones_two": "منطقتان مضاءتان",
+      "pillZones_few": "{{count}} مناطق مضاءة",
+      "pillZones_many": "{{count}} منطقة مضاءة",
+      "pillZones_other": "{{count}} منطقة مضاءة"
     }
   },
   "tracker": {
