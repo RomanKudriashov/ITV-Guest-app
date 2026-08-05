@@ -134,6 +134,12 @@ class Zone(TenantModel):
     title = TranslatableField()
     sort_order = models.PositiveSmallIntegerField(default=0)
 
+    # Глиф зоны: спальня — кровать, ванная — ванна. Пусто — берётся иконка вида
+    # элемента. Живёт ЗДЕСЬ, а не на фронте: отличить спальню от гардеробной
+    # фронт мог бы только разбором кода зоны, а код произволен на каждом
+    # объекте. Неизвестный глиф на фронте падает на умолчание.
+    icon = models.CharField(max_length=32, blank=True)
+
     class Meta:
         db_table = "grms_zone"
         ordering = ["sort_order", "code"]
@@ -219,6 +225,11 @@ class ControlElement(TenantModel):
     # Пусто → берётся заголовок вида из каталога.
     title = TranslatableField()
     sort_order = models.PositiveSmallIntegerField(default=0)
+
+    # Пусто → иконка зоны, а если и её нет — иконка вида из каталога. Нужна
+    # там, где вид один, а элементы разные: у трёх сцен один `kind`, и
+    # различить их фронт может только присланным глифом.
+    icon = models.CharField(max_length=32, blank=True)
 
     class Meta:
         db_table = "grms_control_element"

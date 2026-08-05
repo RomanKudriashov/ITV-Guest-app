@@ -662,7 +662,8 @@
       "allLightsOff": "关闭全部灯光",
       "dialCurrent": "当前",
       "dialSensor": "传感器读数",
-      "setpointSending": "正在发送设定温度…"
+      "setpointSending": "正在发送设定温度…",
+      "sceneSent": "场景已发送"
     }
   },
   "tracker": {

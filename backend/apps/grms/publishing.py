@@ -59,6 +59,7 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                     "code": zone_code,
                     "title": element.zone.title if element.zone else {},
                     "sort_order": element.zone.sort_order if element.zone else 0,
+                    "icon": element.zone.icon if element.zone else "",
                     "controls": [],
                 },
             )
@@ -67,6 +68,25 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                 "controlId": element.slug,
                 "kind": element.kind,
                 "title": element.title or {"ru": kind.title_ru},
+                # Глиф и подписи состояния кладутся В СНИМОК, а не выводятся на
+                # фронте: разбирать controlId строкой ему запрещено, а по kind
+                # он умеет отличать разве что свет от шторы — сцены между собой
+                # и комнаты между собой не различает вовсе.
+                #
+                # Приоритет: элемент → зона (только там, где вид этого просит)
+                # → вид из каталога. Так три сцены получают три разных значка,
+                # свет в спальне — кровать, а штора в гостиной остаётся шторой,
+                # а не превращается в диван.
+                "icon": (
+                    element.icon
+                    or (
+                        (element.zone.icon if element.zone else "")
+                        if kind.prefers_zone_icon
+                        else ""
+                    )
+                    or kind.icon
+                ),
+                "states": kind.states,
                 "capabilities": [],
                 "channels": {},
                 "range": {},

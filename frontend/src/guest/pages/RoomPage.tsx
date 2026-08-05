@@ -20,16 +20,27 @@ import { ApiError } from '@/api/client';
 import { KitEmptyState, KitToast, SkeletonCard, SkeletonLine } from '@/kit';
 import {
   IconAirConditioner,
+  IconBath,
+  IconBed,
   IconBlackout,
+  IconBook,
   IconCurtain,
   IconDoNotDisturb,
+  IconDoor,
+  IconHeating,
   IconLightGroup,
   IconMakeUpRoom,
+  IconMoon,
+  IconMovie,
   IconOffline,
   IconPower,
   IconRoom,
   IconScene,
+  IconSofa,
+  IconSunrise,
   IconSwitch,
+  IconThermostat,
+  IconWardrobe,
 } from '@/icons';
 import { RoomPlanPlate, type PlanReading } from '../components/RoomPlanPlate';
 import {
@@ -42,13 +53,13 @@ import {
   SceneTile,
   Segmented,
   StatusPill,
-  useSwipe,
+  SwipeDeck,
 } from '../components/roomKit';
 import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
 import { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { layout, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
+import { layout, stickyTopCss, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type {
   RoomCapability,
@@ -102,6 +113,10 @@ export function RoomPage() {
   useEffect(() => {
     if (!outcome) return;
     if (outcome.result === 'confirmed' || outcome.result === 'accepted') {
+      // Короткая вибрация — ТОЛЬКО на подтверждение, не на нажатие. Нажатие
+      // гость и так чувствует пальцем; смысл здесь в другом: оборудование
+      // ответило. Вибрация на нажатии обещала бы это раньше времени.
+      buzz();
       setNotice(null);
     } else if (outcome.result === 'unconfirmed') {
       setNotice({ severity: 'warning', text: t('guest.roomControl.unconfirmed') });
@@ -116,6 +131,18 @@ export function RoomPage() {
     command.mutate(input, {
       onError: (error) => setNotice({ severity: 'error', text: errorMessage(error, t) }),
     });
+  };
+
+  /**
+   * Сцена отзывается сразу «отправлено».
+   *
+   * Подтверждать у неё нечего — тега `F_Scene_*` на объекте не существует, и
+   * включённой она не показывается никогда. Но без всякого отклика гость жмёт
+   * второй раз, а сцена уходит в оборудование дважды.
+   */
+  const sendScene = (controlId: string) => {
+    send({ controlId, capability: 'trigger' });
+    setNotice({ severity: 'success', text: t('guest.roomControl.sceneSent') });
   };
 
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
@@ -138,11 +165,7 @@ export function RoomPage() {
     if (tabs.length && !tabs.some((item) => item.value === tab)) setTab(tabs[0].value as GroupKey);
   }, [tabs, tab]);
 
-  const swipe = useSwipe((direction) => {
-    const index = tabs.findIndex((item) => item.value === tab);
-    const next = tabs[Math.max(0, Math.min(tabs.length - 1, index + direction))];
-    if (next) setTab(next.value as GroupKey);
-  });
+  const tabIndex = Math.max(0, tabs.findIndex((item) => item.value === tab));
 
   if (!enabled) {
     // Сюда обычно не попасть — пункта навигации нет, — но прямой заход по
@@ -180,6 +203,7 @@ export function RoomPage() {
       only={isDesktop ? null : tab}
       canCommand={Boolean(snapshot?.can_command)}
       onCommand={send}
+      onScene={sendScene}
     />
   );
 
@@ -259,8 +283,8 @@ export function RoomPage() {
           }}
           data-testid="room-two-columns"
         >
-          <Box sx={{ position: 'sticky', top: `${stickyUnderFloating}px` }}>
-            <PlateWithTag plate={plate} groups={groups} readings={readings} />
+          <Box sx={{ position: 'sticky', top: stickyTopCss() }}>
+            <PlateBlock plate={plate} />
           </Box>
           <Stack spacing={2} sx={{ minWidth: 0 }}>
             {notices}
@@ -274,7 +298,9 @@ export function RoomPage() {
               ref={plateRef}
               sx={{
                 position: 'sticky',
-                top: `${stickyUnderFloating}px`,
+                // С безопасной зоной: без неё на телефоне с вырезом плавающая
+                // группа съезжает вниз и накрывает плиту.
+                top: stickyTopCss(),
                 zIndex: 2,
                 mt: 1.5,
                 width: '100%',
@@ -282,7 +308,7 @@ export function RoomPage() {
                 mx: 'auto',
               }}
             >
-              <PlateWithTag plate={plate} groups={groups} readings={readings} />
+              <PlateBlock plate={plate} />
             </Box>
           ) : null}
 
@@ -298,7 +324,7 @@ export function RoomPage() {
                 // (плита сжимается масштабом, а не шириной), поэтому измеряем
                 // один раз, а за сжатием следуем тем же множителем — иначе под
                 // уменьшенной плитой оставалась бы дыра.
-                top: `${stickyUnderFloating + plateHeight * planScale}px`,
+                top: stickyTopCss(plateHeight * planScale),
                 zIndex: 1,
                 mb: `${layout.panelOverlap}px`,
                 // Строка вкладок живёт В БЛОКЕ, а не висит голой на фоне: на
@@ -319,9 +345,20 @@ export function RoomPage() {
             </Box>
           ) : null}
 
-          <Box {...swipe} sx={{ mt: 2 }}>
-            {body}
-          </Box>
+          {/* Лента: панель едет за пальцем и доворачивается к ближайшей
+              вкладке. Экраны без вкладок (недоступность, пустой номер) в ленту
+              не заворачиваются — листать там нечего. */}
+          {tabs.length > 1 && !unavailable ? (
+            <SwipeDeck
+              index={tabIndex}
+              count={tabs.length}
+              onIndexChange={(next) => setTab(tabs[next].value as GroupKey)}
+            >
+              <Box sx={{ mt: 2 }}>{body}</Box>
+            </SwipeDeck>
+          ) : (
+            <Box sx={{ mt: 2 }}>{body}</Box>
+          )}
         </>
       )}
     </Box>
@@ -331,55 +368,13 @@ export function RoomPage() {
 /* ── Плита и плашка состояния шторы ───────────────────────────────────────── */
 
 /**
- * Поверх плиты — стеклянная пилюля состояния шторы, как в макете. Она стоит
- * именно на плите, а не в списке: штора видна на плане, и подпись рядом с ней
- * отвечает на вопрос «что это там на окнах» без перевода взгляда.
+ * Плита плана. Плашки состояния шторы на ней БОЛЬШЕ НЕТ: она слово в слово
+ * повторяла пилюлю в верхнем ряду, а две одинаковые подписи на одном экране
+ * читаются как два разных сообщения, и гость ищет разницу там, где её нет.
  */
-function PlateWithTag({
-  plate,
-  groups,
-  readings,
-}: {
-  plate: ReactNode;
-  groups: Groups;
-  readings: Readings;
-  }) {
-  const { t } = useTranslation();
-  const { glass, roomControl } = useStorefront();
+function PlateBlock({ plate }: { plate: ReactNode }) {
   if (!plate) return null;
-
-  const curtain = groups.curtain[0];
-  const reading = curtain ? readings[curtain.controlId] : undefined;
-  const on = reading ? readingOn(reading) : null;
-
-  return (
-    <Box sx={{ position: 'relative' }}>
-      {plate}
-      {on !== null ? (
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={0.75}
-          data-testid="room-curtain-tag"
-          sx={(theme) => ({
-            position: 'absolute',
-            insetInlineEnd: '3%',
-            top: '4%',
-            px: 1.25,
-            py: 0.75,
-            borderRadius: `${theme.palette.brand.radius.pill}px`,
-            fontSize: 11,
-            fontWeight: 700,
-            color: on ? roomControl.accent : 'text.secondary',
-            ...glass.chip,
-          })}
-        >
-          <IconCurtain size={13} />
-          <span>{on ? t('guest.roomControl.curtainOpen') : t('guest.roomControl.curtainClosed')}</span>
-        </Stack>
-      ) : null}
-    </Box>
-  );
+  return <Box sx={{ position: 'relative' }}>{plate}</Box>;
 }
 
 /* ── Пилюли статуса ───────────────────────────────────────────────────────── */
@@ -412,28 +407,43 @@ function Pills({
   // это не честность, а просто другой способ ничего не сказать.
   if (typeof temperature === 'number') {
     pills.push(
-      <StatusPill key="temp" tone="cold" testId="room-pill-temp">
+      <StatusPill key="temp" tone="cold" icon={<IconThermostat size={13} />} testId="room-pill-temp">
         {t('guest.roomControl.pillTemp', { value: temperature })}
       </StatusPill>,
     );
   }
   if (known > 0) {
     pills.push(
-      <StatusPill key="lit" tone={lit > 0 ? 'warm' : 'neutral'} testId="room-pill-lit">
+      <StatusPill
+        key="lit"
+        tone={lit > 0 ? 'warm' : 'neutral'}
+        icon={<IconLightGroup size={13} />}
+        testId="room-pill-lit"
+      >
         {t('guest.roomControl.pillZones', { count: lit })}
       </StatusPill>,
     );
   }
   if (curtainOn !== null) {
     pills.push(
-      <StatusPill key="curtain" tone={curtainOn ? 'ok' : 'neutral'} testId="room-pill-curtain">
+      <StatusPill
+        key="curtain"
+        tone={curtainOn ? 'ok' : 'neutral'}
+        icon={<IconCurtain size={13} />}
+        testId="room-pill-curtain"
+      >
         {curtainOn ? t('guest.roomControl.curtainOpen') : t('guest.roomControl.curtainClosed')}
       </StatusPill>,
     );
   }
   if (dnd !== null) {
     pills.push(
-      <StatusPill key="dnd" tone={dnd ? 'ok' : 'neutral'} testId="room-pill-dnd">
+      <StatusPill
+        key="dnd"
+        tone={dnd ? 'ok' : 'neutral'}
+        icon={<IconDoNotDisturb size={13} />}
+        testId="room-pill-dnd"
+      >
         {dnd ? t('guest.roomControl.pillDndOn') : t('guest.roomControl.pillDndOff')}
       </StatusPill>,
     );
@@ -471,6 +481,7 @@ function Panels({
   only,
   canCommand,
   onCommand,
+  onScene,
 }: {
   groups: Groups;
   readings: Readings;
@@ -478,6 +489,7 @@ function Panels({
   only: GroupKey | null;
   canCommand: boolean;
   onCommand: (input: { controlId: string; capability?: string; value?: number | null }) => void;
+  onScene: (controlId: string) => void;
 }) {
   const { t } = useTranslation();
   const keys = (Object.keys(groups) as GroupKey[]).filter(
@@ -495,15 +507,15 @@ function Panels({
           testId={`room-panel-${key}`}
         >
           {key === 'light' ? (
-            <LightPanel controls={groups.light} readings={readings} canCommand={canCommand} onCommand={onCommand} />
+            <LightPanel controls={groups.light} readings={readings} canCommand={canCommand} onCommand={onCommand} onScene={onScene} />
           ) : key === 'climate' ? (
-            <ClimatePanel controls={groups.climate} readings={readings} canCommand={canCommand} onCommand={onCommand} />
+            <ClimatePanel controls={groups.climate} readings={readings} canCommand={canCommand} onCommand={onCommand} onScene={onScene} />
           ) : key === 'curtain' ? (
-            <CurtainPanel controls={groups.curtain} readings={readings} canCommand={canCommand} onCommand={onCommand} />
+            <CurtainPanel controls={groups.curtain} readings={readings} canCommand={canCommand} onCommand={onCommand} onScene={onScene} />
           ) : key === 'scene' ? (
-            <ScenePanel controls={groups.scene} readings={readings} canCommand={canCommand} onCommand={onCommand} />
+            <ScenePanel controls={groups.scene} readings={readings} canCommand={canCommand} onCommand={onCommand} onScene={onScene} />
           ) : (
-            <ServicePanel controls={groups.service} readings={readings} canCommand={canCommand} onCommand={onCommand} />
+            <ServicePanel controls={groups.service} readings={readings} canCommand={canCommand} onCommand={onCommand} onScene={onScene} />
           )}
         </Panel>
       ))}
@@ -551,7 +563,7 @@ function LightPanel({ controls, readings, canCommand, onCommand }: PanelProps) {
             reading={readings[control.controlId]}
             canCommand={canCommand}
             onCommand={onCommand}
-            icon={<IconLightGroup size={18} />}
+            icon={glyph(control)}
           />
         ))}
       </Box>
@@ -637,7 +649,7 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
           reading={reading}
           canCommand={canCommand}
           onCommand={onCommand}
-          icon={<IconAirConditioner size={18} />}
+          icon={glyph(control)}
         />
       ) : null}
 
@@ -682,13 +694,13 @@ function CurtainPanel({ controls, readings, canCommand, onCommand }: PanelProps)
           <ControlRow
             key={control.controlId}
             testId={`room-control-${control.controlId}`}
-            icon={control.kind === 'curtain_blackout' ? <IconBlackout size={18} /> : <IconCurtain size={18} />}
+            icon={glyph(control)}
             title={control.title}
             on={on === true}
             busy={reading?.busy}
             disabled={locked}
             pressed={on ?? undefined}
-            ariaLabel={`${control.title}: ${stateWord(on, t, 'curtain')}`}
+            ariaLabel={`${control.title}: ${stateWord(control, on, t)}`}
             onClick={() => set(on ? 0 : 1)}
             subtitle={
               <Box component="span" sx={{ display: 'inline-flex', flexDirection: 'column' }}>
@@ -703,7 +715,7 @@ function CurtainPanel({ controls, readings, canCommand, onCommand }: PanelProps)
                     color: on ? tokens.accent : 'text.secondary',
                   })}
                 >
-                  {stateWord(on, t, 'curtain')}
+                  {stateWord(control, on, t)}
                 </Box>
                 <Box component="span" sx={{ color: 'text.disabled' }}>
                   {reading?.busy
@@ -734,7 +746,7 @@ function CurtainPanel({ controls, readings, canCommand, onCommand }: PanelProps)
   );
 }
 
-function ScenePanel({ controls, readings, canCommand, onCommand }: PanelProps) {
+function ScenePanel({ controls, readings, canCommand, onScene }: PanelProps) {
   return (
     <Box
       data-swipe-guard
@@ -745,13 +757,13 @@ function ScenePanel({ controls, readings, canCommand, onCommand }: PanelProps) {
         return (
           <SceneTile
             key={control.controlId}
-            icon={<IconScene size={22} />}
+            icon={glyph(control, 22)}
             label={control.title}
             // Сцена НИКОГДА не показывается включённой: подтверждать нечего —
             // тега F_Scene_* на объекте не существует.
             active={false}
             disabled={isLocked(reading, canCommand)}
-            onClick={() => onCommand({ controlId: control.controlId, capability: 'trigger' })}
+            onClick={() => onScene(control.controlId)}
             testId={`room-control-${control.controlId}`}
           />
         );
@@ -770,7 +782,7 @@ function ServicePanel({ controls, readings, canCommand, onCommand }: PanelProps)
           reading={readings[control.controlId]}
           canCommand={canCommand}
           onCommand={onCommand}
-          icon={iconForService(control.kind)}
+          icon={glyph(control)}
         />
       ))}
     </Box>
@@ -807,13 +819,13 @@ function ToggleRow({
       // Состояния нет — нет и `aria-pressed`. Пока идёт обмен состояние ЕСТЬ:
       // это последнее подтверждённое, и подменять его выключенным нельзя.
       pressed={on ?? undefined}
-      ariaLabel={`${control.title}: ${stateWord(on, t, 'switch')}`}
+      ariaLabel={`${control.title}: ${stateWord(control, on, t)}`}
       subtitle={
         reading?.busy
           ? t('guest.roomControl.running')
           : reading?.unreadable
             ? t('guest.roomControl.offline')
-            : stateWord(on, t, 'switch')
+            : stateWord(control, on, t)
       }
       onClick={() => onCommand({ controlId: control.controlId, capability: 'toggle', value: on ? 0 : 1 })}
       action={<RowSwitch on={on === true} dimmed={reading?.busy || on === null} />}
@@ -844,11 +856,19 @@ function isLocked(reading: Reading | undefined, canCommand: boolean): boolean {
   return reading.busy || reading.unreadable || reading.readonly || !canCommand;
 }
 
-function stateWord(on: boolean | null, t: TFunction, kind: 'switch' | 'curtain'): string {
+/**
+ * Подпись состояния. Слова приходят С СЕРВЕРА вместе с элементом: у шторы
+ * «открыта», у блэкаута «закрыт», у «не беспокоить» — «персонал не побеспокоит».
+ *
+ * Фронт их не выбирает и не склоняет: различить элементы он мог бы только
+ * разбором `controlId`, а это ключ, а не признак типа. Свои слова остаются
+ * ровно на два случая, у которых нет состояния: «нет связи» и умолчание для
+ * элемента, чей вид сервер подписями не снабдил.
+ */
+function stateWord(control: RoomControl, on: boolean | null, t: TFunction): string {
   if (on === null) return t('guest.roomControl.offline');
-  if (kind === 'curtain') {
-    return on ? t('guest.roomControl.stateOpen') : t('guest.roomControl.stateClosed');
-  }
+  const fromServer = on ? control.labels?.on : control.labels?.off;
+  if (fromServer) return fromServer;
   return on ? t('guest.roomControl.stateOn') : t('guest.roomControl.stateOff');
 }
 
@@ -976,6 +996,19 @@ function useSetpointDraft(
   return { shown: draft ?? confirmed, change, sending: draft !== null };
 }
 
+/**
+ * Короткая вибрация подтверждения.
+ *
+ * Там, где браузер это умеет: Safari на iOS `navigator.vibrate` не
+ * поддерживает, и это не повод не делать — на Android отклик будет, а там, где
+ * его нет, ничего не ломается.
+ */
+function buzz(): void {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    navigator.vibrate(12);
+  }
+}
+
 /* ── Группировка по типу ──────────────────────────────────────────────────── */
 
 export type GroupKey = 'light' | 'climate' | 'curtain' | 'scene' | 'service';
@@ -986,6 +1019,8 @@ interface PanelProps {
   readings: Readings;
   canCommand: boolean;
   onCommand: (input: { controlId: string; capability?: string; value?: number | null }) => void;
+  /** Сцена уходит своим путём: у неё нет подтверждения, но отклик нужен. */
+  onScene: (controlId: string) => void;
 }
 
 /**
@@ -1012,10 +1047,42 @@ function groupControls(zones: RoomZone[]): Groups {
   return groups;
 }
 
-function iconForService(kind: string) {
-  if (kind === 'dnd') return <IconDoNotDisturb size={18} />;
-  if (kind === 'mur') return <IconMakeUpRoom size={18} />;
-  return <IconSwitch size={18} />;
+/**
+ * Реестр глифов. КОД ВЫБИРАЕТ СЕРВЕР — из вида элемента, из зоны или из самого
+ * элемента; фронт только знает, как каждый код нарисовать.
+ *
+ * Так три сцены получают три разных значка, а свет в спальне — кровать, и при
+ * этом на фронте нет ни разбора `controlId`, ни догадок по коду зоны: обе
+ * попытки сделать это иначе упирались в правило «идентификатор — не признак
+ * типа».
+ *
+ * Неизвестный код падает на умолчание: новый вид элемента на сервере не должен
+ * ломать экран у гостя со старым бандлом.
+ */
+const GLYPHS: Record<string, (size: number) => ReactNode> = {
+  light: (size) => <IconLightGroup size={size} />,
+  sofa: (size) => <IconSofa size={size} />,
+  bed: (size) => <IconBed size={size} />,
+  door: (size) => <IconDoor size={size} />,
+  wardrobe: (size) => <IconWardrobe size={size} />,
+  bath: (size) => <IconBath size={size} />,
+  curtain: (size) => <IconCurtain size={size} />,
+  blackout: (size) => <IconBlackout size={size} />,
+  'air-conditioner': (size) => <IconAirConditioner size={size} />,
+  heating: (size) => <IconHeating size={size} />,
+  'do-not-disturb': (size) => <IconDoNotDisturb size={size} />,
+  'make-up-room': (size) => <IconMakeUpRoom size={size} />,
+  power: (size) => <IconPower size={size} />,
+  scene: (size) => <IconScene size={size} />,
+  moon: (size) => <IconMoon size={size} />,
+  sunrise: (size) => <IconSunrise size={size} />,
+  movie: (size) => <IconMovie size={size} />,
+  book: (size) => <IconBook size={size} />,
+};
+
+function glyph(control: RoomControl, size = 18): ReactNode {
+  const draw = GLYPHS[control.icon ?? ''];
+  return draw ? draw(size) : <IconSwitch size={size} />;
 }
 
 /* ── Раскладка ────────────────────────────────────────────────────────────── */

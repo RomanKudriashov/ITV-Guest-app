@@ -678,7 +678,8 @@
       "pillZones_two": "منطقتان مضاءتان",
       "pillZones_few": "{{count}} مناطق مضاءة",
       "pillZones_many": "{{count}} منطقة مضاءة",
-      "pillZones_other": "{{count}} منطقة مضاءة"
+      "pillZones_other": "{{count}} منطقة مضاءة",
+      "sceneSent": "تم إرسال المشهد"
     }
   },
   "tracker": {

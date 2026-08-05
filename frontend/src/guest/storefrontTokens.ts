@@ -524,6 +524,21 @@ interface BrandRadius {
 /** Куда пинить липкую строку, чтобы она прошла ПОД плавающей группой. */
 export const stickyUnderFloating = layout.floatingTop + layout.floatingHeight + 8;
 
+/**
+ * То же значение для CSS — С БЕЗОПАСНОЙ ЗОНОЙ устройства.
+ *
+ * Плавающая группа стоит на `calc(floatingTop + env(safe-area-inset-top))`, а
+ * липкие полосы пинились числом. На телефоне без выреза они совпадали, а на
+ * iPhone с вырезом группа съезжала вниз на высоту зоны (около 47 px) и
+ * наезжала на план — именно это и видел пользователь: «плашка едет и
+ * закрывает плиту».
+ *
+ * `extra` — сколько ещё занято сверху: например, высотой плиты, под которой
+ * пинятся вкладки.
+ */
+export const stickyTopCss = (extra = 0): string =>
+  `calc(env(safe-area-inset-top, 0px) + ${stickyUnderFloating + extra}px)`;
+
 /** Размеры плиток bento. Крупная занимает две строки, широкая — две колонки. */
 export type TileSize = 'S' | 'M' | 'L';
 

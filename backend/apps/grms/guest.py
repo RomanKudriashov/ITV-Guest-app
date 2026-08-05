@@ -398,6 +398,15 @@ def _serialize_control(control: dict, readings: dict, *, busy: dict, language: s
         "controlId": control_id,
         "kind": control.get("kind") or "",
         "title": translate(control.get("title"), language),
+        # Глиф и подписи состояния — ЛОКАЛИЗОВАННЫЕ и готовые. Фронт не
+        # придумывает слова за элемент: «Блэкаут открыта» получалось именно
+        # так, а у трёх сцен был один значок, потому что различить их без
+        # разбора controlId он не мог.
+        "icon": control.get("icon") or "",
+        "labels": {
+            key: translate(text, language)
+            for key, text in (control.get("states") or {}).items()
+        },
         "capabilities": capabilities,
         "value": _value_for(capabilities, values, state),
         "state": state,

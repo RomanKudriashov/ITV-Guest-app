@@ -666,7 +666,8 @@
       "allLightsOff": "Turn off all lights",
       "dialCurrent": "now",
       "dialSensor": "sensor reading",
-      "setpointSending": "Sending the setpoint…"
+      "setpointSending": "Sending the setpoint…",
+      "sceneSent": "Scene sent"
     }
   },
   "tracker": {

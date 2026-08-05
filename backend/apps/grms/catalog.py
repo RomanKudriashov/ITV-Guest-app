@@ -71,12 +71,31 @@ class ElementKind:
     Вид, иконка, логика, тип значений и способ показа состояния фиксированы
     (ТЗ §11). Администратор выбирает элемент, кладёт в зону, задаёт порядок,
     связывает с переменными и может переопределить заголовок — и всё.
+
+    ИКОНКА И ПОДПИСИ СОСТОЯНИЯ ЖИВУТ ЗДЕСЬ, а не на фронте, и это не мелочь.
+    Отличить свет от шторы фронт может только по `kind` или по `controlId`, а
+    разбирать идентификатор строкой ему запрещено: это ключ, а не признак типа.
+    Оставался единственный способ — придумывать слова и глифы на клиенте, и
+    тогда «Блэкаут» получал подпись «ОТКРЫТА», а все сцены — один значок.
+
+    `icon` — код глифа из реестра фронта; неизвестный код там падает на
+    умолчание, поэтому новый вид элемента не ломает экран.
+
+    `states` — что написать под названием, когда элемент включён и когда
+    выключен. Слова разные по смыслу: у шторы «открыта», у блэкаута «закрыт»,
+    у «не беспокоить» — «персонал не побеспокоит».
     """
 
     code: str
     title_ru: str
     required: tuple[str, ...]
     optional: tuple[str, ...] = field(default_factory=tuple)
+    icon: str = "switch"
+    states: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Брать глиф ЗОНЫ, если он задан. Верно ровно для групп света: «свет в
+    # спальне» читается кроватью, а не лампочкой. Штора в гостиной остаётся
+    # шторой, и подставлять ей диван — терять смысл значка.
+    prefers_zone_icon: bool = False
 
     @property
     def capabilities(self) -> tuple[str, ...]:
@@ -86,16 +105,56 @@ class ElementKind:
 ELEMENTS: dict[str, ElementKind] = {
     e.code: e
     for e in [
-        ElementKind("dnd", "Не беспокоить", ("toggle",)),
-        ElementKind("mur", "Убрать номер", ("toggle",)),
+        ElementKind(
+            "dnd", "Не беспокоить", ("toggle",),
+            icon="do-not-disturb",
+            states={
+                "on": {"ru": "персонал не побеспокоит", "en": "staff will not disturb",
+                       "ar": "لن يزعجك الطاقم", "zh": "员工不会打扰"},
+                "off": {"ru": "выключено", "en": "off", "ar": "متوقف", "zh": "已关闭"},
+            },
+        ),
+        ElementKind(
+            "mur", "Убрать номер", ("toggle",),
+            icon="make-up-room",
+            states={
+                "on": {"ru": "заявка передана", "en": "request sent",
+                       "ar": "تم إرسال الطلب", "zh": "已发送请求"},
+                "off": {"ru": "выключено", "en": "off", "ar": "متوقف", "zh": "已关闭"},
+            },
+        ),
         # На объектах реализуется сценой (MASTER_OFF), а не отдельным каналом:
         # тега F_MasterSw на стенде нет.
-        ElementKind("master_switch", "Мастер-выключатель", ("trigger",)),
-        ElementKind("light_group", "Группа света", ("toggle",)),
+        ElementKind("master_switch", "Мастер-выключатель", ("trigger",), icon="power"),
+        ElementKind(
+            "light_group", "Группа света", ("toggle",),
+            icon="light",
+            prefers_zone_icon=True,
+            states={
+                "on": {"ru": "включено", "en": "on", "ar": "مشغّل", "zh": "已开启"},
+                "off": {"ru": "выключено", "en": "off", "ar": "متوقف", "zh": "已关闭"},
+            },
+        ),
         # Шторы на этом объекте бинарные (0-Close, 1-Open); position — задел
         # под приводы с позиционированием.
-        ElementKind("curtain", "Шторы", ("toggle",), ("position",)),
-        ElementKind("curtain_blackout", "Блэкаут-шторы", ("toggle",), ("position",)),
+        ElementKind(
+            "curtain", "Шторы", ("toggle",), ("position",),
+            icon="curtain",
+            states={
+                "on": {"ru": "открыта", "en": "open", "ar": "مفتوحة", "zh": "已打开"},
+                "off": {"ru": "закрыта", "en": "closed", "ar": "مغلقة", "zh": "已关闭"},
+            },
+        ),
+        ElementKind(
+            "curtain_blackout", "Блэкаут-шторы", ("toggle",), ("position",),
+            icon="blackout",
+            # Мужской род и по смыслу затемнения: «Блэкаут открыта» — это не
+            # опечатка вида, а слово, придуманное не за тот элемент.
+            states={
+                "on": {"ru": "открыт", "en": "open", "ar": "مفتوح", "zh": "已打开"},
+                "off": {"ru": "закрыт", "en": "closed", "ar": "مغلق", "zh": "已关闭"},
+            },
+        ),
         # Составной элемент: ОДИН controlId на четыре переменные. Резать его на
         # четыре независимых нельзя — тогда термостат собирал бы фронт.
         ElementKind(
@@ -103,9 +162,21 @@ ELEMENTS: dict[str, ElementKind] = {
             "Кондиционер",
             ("toggle",),
             ("fan_speed", "setpoint", "current_temp"),
+            icon="air-conditioner",
+            states={
+                "on": {"ru": "включён", "en": "on", "ar": "مشغّل", "zh": "已开启"},
+                "off": {"ru": "выключен", "en": "off", "ar": "متوقف", "zh": "已关闭"},
+            },
         ),
-        ElementKind("heating", "Отопление", ("toggle",), ("setpoint", "current_temp")),
-        ElementKind("scene", "Сцена", ("trigger",)),
+        ElementKind(
+            "heating", "Отопление", ("toggle",), ("setpoint", "current_temp"),
+            icon="heating",
+            states={
+                "on": {"ru": "включено", "en": "on", "ar": "مشغّل", "zh": "已开启"},
+                "off": {"ru": "выключено", "en": "off", "ar": "متوقف", "zh": "已关闭"},
+            },
+        ),
+        ElementKind("scene", "Сцена", ("trigger",), icon="scene"),
     ]
 }
 

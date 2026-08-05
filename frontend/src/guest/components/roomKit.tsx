@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 
+import { IconCurtainClose, IconCurtainOpen } from '@/icons';
 import { useStorefront } from '../useStorefront';
 import { surfaceRadius } from '../storefrontTokens';
 
@@ -30,10 +31,14 @@ export type PillTone = 'neutral' | 'cold' | 'warm' | 'ok';
 
 export function StatusPill({
   tone = 'neutral',
+  icon,
   children,
   testId,
 }: {
   tone?: PillTone;
+  /** Значок вместо точки: температура, свет, штора и «не беспокоить» читаются
+   *  с одного взгляда, а цветная точка одинакова у всех и ничего не говорит. */
+  icon?: ReactNode;
   children: ReactNode;
   testId?: string;
 }) {
@@ -62,17 +67,23 @@ export function StatusPill({
         whiteSpace: 'nowrap',
       })}
     >
-      <Box
-        aria-hidden
-        sx={{
-          width: 6,
-          height: 6,
-          flex: 'none',
-          borderRadius: '50%',
-          background: color || t.pillDot,
-          boxShadow: color ? `0 0 7px ${color}` : 'none',
-        }}
-      />
+      {icon ? (
+        <Box aria-hidden sx={{ display: 'flex', flex: 'none', color: 'inherit' }}>
+          {icon}
+        </Box>
+      ) : (
+        <Box
+          aria-hidden
+          sx={{
+            width: 6,
+            height: 6,
+            flex: 'none',
+            borderRadius: '50%',
+            background: color || t.pillDot,
+            boxShadow: color ? `0 0 7px ${color}` : 'none',
+          }}
+        />
+      )}
       <Box component="span">{children}</Box>
     </Stack>
   );
@@ -357,21 +368,13 @@ export function CurtainArrows({
   );
 }
 
+/**
+ * Значки шторы. Раньше здесь были «)(» и «()» — ребус: гость не понимал, где
+ * открыть, а где закрыть. Теперь полотна СВОДЯТСЯ к центру и РАЗВОДЯТСЯ от
+ * него, и направление читается без подписи.
+ */
 function ArrowGlyph({ direction }: { direction: 'open' | 'close' }) {
-  return (
-    <Box
-      component="svg"
-      viewBox="0 0 24 24"
-      aria-hidden
-      sx={{ width: 17, height: 17, fill: 'none', stroke: 'currentColor', strokeWidth: 1.7 }}
-    >
-      {direction === 'open' ? (
-        <path d="M8 5 3 12l5 7M16 5l5 7-5 7" strokeLinecap="round" strokeLinejoin="round" />
-      ) : (
-        <path d="M4 5l5 7-5 7M20 5l-5 7 5 7" strokeLinecap="round" strokeLinejoin="round" />
-      )}
-    </Box>
-  );
+  return direction === 'open' ? <IconCurtainOpen size={17} /> : <IconCurtainClose size={17} />;
 }
 
 /* ── Плитка сцены ─────────────────────────────────────────────────────────── */
@@ -563,9 +566,13 @@ export function RoomDial({
   // уходит наружу, и обрыв на границе читается как «диск заело».
   useEffect(() => {
     if (!dragging) return;
-    const move = (event: PointerEvent) => fromPointer(event.clientX, event.clientY);
+    const move = (event: PointerEvent) => {
+      // Пока кольцо ведёт, страница не скроллится и лента не листается.
+      if (event.cancelable) event.preventDefault();
+      fromPointer(event.clientX, event.clientY);
+    };
     const stop = () => setDragging(false);
-    window.addEventListener('pointermove', move);
+    window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', stop);
     window.addEventListener('pointercancel', stop);
     return () => {
@@ -590,9 +597,27 @@ export function RoomDial({
           data-testid={`${testId}-surface`}
           onPointerDown={(event) => {
             if (disabled) return;
+            // ЗАХВАТ УКАЗАТЕЛЯ: дальше все движения приходят кольцу, даже если
+            // палец ушёл за его границу. Без захвата жест перехватывали то
+            // прокрутка страницы, то лента вкладок — на устройстве диск просто
+            // не тянулся, хотя в эмуляции работал.
+            try {
+              (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+            } catch {
+              /* браузер без захвата — ведение всё равно идёт по window */
+            }
+            event.preventDefault();
+            event.stopPropagation();
             setDragging(true);
             fromPointer(event.clientX, event.clientY);
           }}
+          // Соседние жесты (лента вкладок) не должны видеть это касание.
+          onTouchStart={(event) => event.stopPropagation()}
+          onTouchMove={(event) => {
+            if (!disabled) event.preventDefault();
+            event.stopPropagation();
+          }}
+          data-swipe-guard
           onKeyDown={(event) => {
             const map: Record<string, number> = {
               ArrowUp: step,
@@ -948,33 +973,116 @@ export function RoomTabs({ items, active, onChange, testId = 'room-tabs' }: Room
 }
 
 /**
- * Свайп по панели вкладок.
+ * Лента панелей: панель едет ЗА ПАЛЬЦЕМ, с довёрткой к ближайшей вкладке.
  *
- * Жесты, начатые на органах управления, игнорируются: диск, тумблер, сегменты
- * и стрелки сами обрабатывают протяжку, и без этого исключения ведение уставки
- * пальцем каждый раз перелистывало бы вкладку.
+ * Раньше свайп был скачкообразной подменой: жест распознавался при отпускании,
+ * и до этого момента экран не отзывался вовсе — палец едет, картинка стоит.
+ * Теперь смещение ленты следует за пальцем, а при отпускании она доворачивается
+ * к ближайшей вкладке; быстрый короткий бросок листает, даже если пройдено
+ * меньше половины.
+ *
+ * RTL: направление ЗЕРКАЛИТСЯ — на арабском следующая вкладка справа налево.
+ * Плита рядом при этом не зеркалится, и это не противоречие: раскладка
+ * следует языку, а физическая комната — нет.
+ *
+ * Жест, начатый на органе управления (кольцо уставки, тумблер, сегменты,
+ * стрелки), лента не забирает: у них своя протяжка, и без этого исключения
+ * ведение уставки пальцем каждый раз перелистывало бы вкладку.
  */
-export function useSwipe(onSwipe: (direction: 1 | -1) => void) {
-  const start = useRef<{ x: number; y: number } | null>(null);
+export function SwipeDeck({
+  index,
+  count,
+  onIndexChange,
+  children,
+  testId = 'room-deck',
+}: {
+  index: number;
+  count: number;
+  onIndexChange: (next: number) => void;
+  children: ReactNode;
+  testId?: string;
+}) {
+  const theme = useTheme();
+  const rtl = theme.direction === 'rtl';
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const start = useRef<{ x: number; y: number; at: number } | null>(null);
+  // Смещение живёт И В ССЫЛКЕ, и в состоянии. Состояние — чтобы нарисовать
+  // сдвиг, ссылка — чтобы обработчик отпускания читал ПОСЛЕДНЕЕ значение:
+  // быстрый бросок укладывается в один кадр, React в этот кадр не
+  // перерисовывается, и обработчик из старого рендера увидел бы ноль.
+  const dragRef = useRef(0);
+  const [drag, setDrag] = useState(0);
+  const [settling, setSettling] = useState(false);
 
-  return {
-    onTouchStart: (event: React.TouchEvent) => {
-      const target = event.target as HTMLElement;
-      if (target.closest('[data-swipe-guard]')) {
-        start.current = null;
-        return;
-      }
-      const touch = event.touches[0];
-      start.current = { x: touch.clientX, y: touch.clientY };
-    },
-    onTouchEnd: (event: React.TouchEvent) => {
-      const from = start.current;
+  const width = () => trackRef.current?.offsetWidth ?? 1;
+
+  const onTouchStart = (event: React.TouchEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-swipe-guard]')) {
       start.current = null;
-      if (!from) return;
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - from.x;
-      const dy = touch.clientY - from.y;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) onSwipe(dx < 0 ? 1 : -1);
-    },
+      return;
+    }
+    const touch = event.touches[0];
+    start.current = { x: touch.clientX, y: touch.clientY, at: Date.now() };
+    setSettling(false);
   };
+
+  const onTouchMove = (event: React.TouchEvent) => {
+    const from = start.current;
+    if (!from) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - from.x;
+    const dy = touch.clientY - from.y;
+    // Вертикальный жест — это скролл страницы, лента его не забирает.
+    if (Math.abs(dy) > Math.abs(dx)) {
+      start.current = null;
+      dragRef.current = 0;
+      setDrag(0);
+      return;
+    }
+    const direction = rtl ? -dx : dx;
+    // На краях лента упирается: тянется заметно неохотнее и дальше не идёт.
+    const atEdge = (direction > 0 && index === 0) || (direction < 0 && index === count - 1);
+    dragRef.current = atEdge ? direction * 0.35 : direction;
+    setDrag(dragRef.current);
+  };
+
+  const onTouchEnd = () => {
+    const from = start.current;
+    start.current = null;
+    if (!from) return;
+    const moved = dragRef.current;
+    const passed = Math.abs(moved);
+    // Быстрый короткий бросок листает, даже если пройдено меньше трети:
+    // так листают фотографии, и палец не обязан доезжать до середины.
+    const quick = Date.now() - from.at < 300 && passed > 40;
+    const next = passed > width() / 3 || quick ? index + (moved < 0 ? 1 : -1) : index;
+    dragRef.current = 0;
+    setSettling(true);
+    setDrag(0);
+    const clamped = Math.max(0, Math.min(count - 1, next));
+    if (clamped !== index) onIndexChange(clamped);
+  };
+
+  return (
+    <Box
+      ref={trackRef}
+      data-testid={testId}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      sx={{ overflow: 'hidden' }}
+    >
+      <Box
+        style={{ transform: drag ? `translateX(${rtl ? -drag : drag}px)` : undefined }}
+        sx={{
+          transition: settling && !drag ? 'transform .28s cubic-bezier(.3,.8,.2,1)' : 'none',
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+        }}
+      >
+        {children}
+      </Box>
+    </Box>
+  );
 }

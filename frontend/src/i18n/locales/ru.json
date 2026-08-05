@@ -672,7 +672,8 @@
       "allLightsOff": "Выключить весь свет",
       "dialCurrent": "сейчас",
       "dialSensor": "показание датчика",
-      "setpointSending": "Отправляем уставку…"
+      "setpointSending": "Отправляем уставку…",
+      "sceneSent": "Сцена отправлена"
     }
   },
   "tracker": {

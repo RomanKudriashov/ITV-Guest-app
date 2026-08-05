@@ -95,7 +95,13 @@ test.beforeAll(async ({ request }) => {
   expect(on.ok(), `включение демо-входа -> ${on.status()}`).toBeTruthy()
 })
 
-/** Свайп пальцем по горизонтали — жест, а не клик: тапом вкладку не листают. */
+/**
+ * Свайп пальцем по горизонтали.
+ *
+ * С ПРОМЕЖУТОЧНЫМИ `touchmove`, а не «начал и отпустил»: лента едет за пальцем
+ * и решает по пройденному пути, а жест без единого движения — это не свайп,
+ * а долгое нажатие. Настоящий палец всегда даёт промежуточные события.
+ */
 async function swipe(page: Page, x: number, y: number, dx: number): Promise<void> {
   await page.evaluate(
     ([startX, startY, deltaX]) => {
@@ -114,6 +120,7 @@ async function swipe(page: Page, x: number, y: number, dx: number): Promise<void
         )
       }
       fire('touchstart', startX)
+      for (let step = 1; step <= 6; step += 1) fire('touchmove', startX + (deltaX * step) / 6)
       fire('touchend', startX + deltaX)
     },
     [x, y, dx] as const,

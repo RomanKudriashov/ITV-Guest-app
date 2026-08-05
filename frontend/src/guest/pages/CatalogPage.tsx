@@ -27,7 +27,12 @@ import { errorMessage } from '../errors';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_HEIGHT } from '../layout/GuestLayout';
-import { layout as storefrontLayout, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
+import {
+  layout as storefrontLayout,
+  stickyTopCss,
+  stickyUnderFloating,
+  surfaceRadius,
+} from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
@@ -230,7 +235,10 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
         data-testid="guest-category-bar"
         sx={{
           position: 'sticky',
-          top: headerOffset,
+          // Число остаётся для расчёта прокрутки, а в CSS уходит значение с
+          // безопасной зоной: иначе на телефоне с вырезом липкая строка
+          // оказывается под плавающей группой.
+          top: isDesktopShell ? `${headerOffset}px` : stickyTopCss(),
           zIndex: (theme) => theme.zIndex.appBar - 1,
           // Липкая строка — накладной слой: под ней продолжается меню, и
           // глухой фон страницы здесь читался как обрыв. Стекло из словаря,

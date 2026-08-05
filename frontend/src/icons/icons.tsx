@@ -536,3 +536,108 @@ export const IconPower = createIcon(
     <path d="M12 2v10" />
   </>,
 );
+
+/* ── Зоны номера и сцены (глифы приходят с сервера) ───────────────────────── */
+
+export const IconSofa = createIcon(
+  'sofa',
+  <>
+    <path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" />
+    <rect x="2" y="11" width="20" height="7" rx="2" />
+    <path d="M6 18v2M18 18v2" />
+  </>,
+);
+
+export const IconBed = createIcon(
+  'bed',
+  <>
+    <path d="M3 20V5" />
+    <path d="M3 10h14a4 4 0 0 1 4 4v6" />
+    <path d="M3 16h18" />
+    <path d="M7 10V7.5A1.5 1.5 0 0 1 8.5 6h3A1.5 1.5 0 0 1 13 7.5V10" />
+  </>,
+);
+
+export const IconDoor = createIcon(
+  'door',
+  <>
+    <path d="M6 21V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v17" />
+    <path d="M3 21h18" />
+    <circle cx="13" cy="12" r="0.9" fill="currentColor" stroke="none" />
+  </>,
+);
+
+export const IconWardrobe = createIcon(
+  'wardrobe',
+  <>
+    <rect x="4" y="3" width="16" height="18" rx="1.5" />
+    <path d="M12 3v18" />
+    <path d="M9.5 11h.6M13.9 11h.6" />
+  </>,
+);
+
+export const IconBath = createIcon(
+  'bath',
+  <>
+    <path d="M4 12V6a2 2 0 0 1 4 0" />
+    <path d="M2 12h20v3a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4v-3z" />
+    <path d="M6.5 19l-1 2M17.5 19l1 2" />
+  </>,
+);
+
+export const IconMoon = createIcon(
+  'moon',
+  <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+);
+
+export const IconSunrise = createIcon(
+  'sunrise',
+  <>
+    <path d="M17 18a5 5 0 0 0-10 0" />
+    <path d="M2 18h2M20 18h2M12 3v4M5.2 8.2l1.4 1.4M17.4 9.6l1.4-1.4" />
+    <path d="M9 6l3-3 3 3" />
+  </>,
+);
+
+export const IconMovie = createIcon(
+  'movie',
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4" />
+  </>,
+);
+
+export const IconBook = createIcon(
+  'book',
+  <>
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+    <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20" />
+  </>,
+);
+
+export const IconHeating = createIcon(
+  'heating',
+  <>
+    <path d="M6 4v16M10 4v16M14 4v16M18 4v16" />
+    <path d="M4 8h16M4 16h16" />
+  </>,
+);
+
+/** Однозначные значки шторы: свести полотна и развести. */
+export const IconCurtainClose = createIcon(
+  'curtain-close',
+  <>
+    <path d="M12 4v16" />
+    <path d="M8 8l3.2 3.2a1 1 0 0 1 0 1.6L8 16" />
+    <path d="M16 8l-3.2 3.2a1 1 0 0 0 0 1.6L16 16" />
+  </>,
+);
+
+export const IconCurtainOpen = createIcon(
+  'curtain-open',
+  <>
+    <path d="M12 4v16" />
+    <path d="M6.5 8L3.3 11.2a1 1 0 0 0 0 1.6L6.5 16" />
+    <path d="M17.5 8l3.2 3.2a1 1 0 0 1 0 1.6L17.5 16" />
+  </>,
+);

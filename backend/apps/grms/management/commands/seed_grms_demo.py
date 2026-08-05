@@ -53,13 +53,16 @@ DEVICE_TEMPLATE = "Modbus TCP Server (Slave mode) {room}"
 
 # Зоны — коды РОВНО как в plan-geometry.json. `room` — общая для того, что не
 # принадлежит ни одной комнате: сцены, «не беспокоить», «убрать номер».
+# (код, заголовок, порядок, глиф). Глиф зоны уезжает гостю в снимке: отличить
+# спальню от гардеробной фронт мог бы только разбором кода зоны, а код
+# произволен на каждом объекте.
 ZONES = [
-    ("room", {"ru": "Весь номер", "en": "Whole room", "ar": "الغرفة بالكامل", "zh": "整间客房"}, 0),
-    ("living", {"ru": "Гостиная", "en": "Living room", "ar": "غرفة المعيشة", "zh": "客厅"}, 1),
-    ("bedroom", {"ru": "Спальня", "en": "Bedroom", "ar": "غرفة النوم", "zh": "卧室"}, 2),
-    ("entry", {"ru": "Прихожая", "en": "Entrance", "ar": "المدخل", "zh": "玄关"}, 3),
-    ("wardrobe", {"ru": "Гардеробная", "en": "Wardrobe", "ar": "غرفة الملابس", "zh": "衣帽间"}, 4),
-    ("bathroom", {"ru": "Ванная", "en": "Bathroom", "ar": "الحمام", "zh": "浴室"}, 5),
+    ("room", {"ru": "Весь номер", "en": "Whole room", "ar": "الغرفة بالكامل", "zh": "整间客房"}, 0, ""),
+    ("living", {"ru": "Гостиная", "en": "Living room", "ar": "غرفة المعيشة", "zh": "客厅"}, 1, "sofa"),
+    ("bedroom", {"ru": "Спальня", "en": "Bedroom", "ar": "غرفة النوم", "zh": "卧室"}, 2, "bed"),
+    ("entry", {"ru": "Прихожая", "en": "Entrance", "ar": "المدخل", "zh": "玄关"}, 3, "door"),
+    ("wardrobe", {"ru": "Гардеробная", "en": "Wardrobe", "ar": "غرفة الملابس", "zh": "衣帽间"}, 4, "wardrobe"),
+    ("bathroom", {"ru": "Ванная", "en": "Bathroom", "ar": "الحمام", "zh": "浴室"}, 5, "bath"),
 ]
 
 BINARY = Variable.ValueKind.BINARY
@@ -92,9 +95,13 @@ VARIABLES = [
     ("scene_night", "C_Scene_1", "", BINARY, 0, 1, "0/1"),
     ("scene_morning", "C_Scene_2", "", BINARY, 0, 1, "0/1"),
     ("scene_movie", "C_Scene_3", "", BINARY, 0, 1, "0/1"),
+    ("scene_read", "C_Scene_4", "", BINARY, 0, 1, "0/1"),
 ]
 
-# (slug, kind, zone, sort, заголовок, [(capability, variable, trigger_value)])
+# (slug, kind, zone, sort, заголовок, [(capability, variable, trigger_value)], глиф).
+# Глиф пуст — берётся иконка зоны, а если и её нет — иконка вида из каталога.
+# Сценам он обязателен: вид у всех трёх один, и различить их фронт может
+# только тем, что прислал сервер, — разбирать controlId ему запрещено.
 ELEMENTS = [
     ("light.living", "light_group", "living", 10,
      {"ru": "Свет в гостиной", "en": "Living room light", "ar": "إضاءة غرفة المعيشة", "zh": "客厅灯光"},
@@ -120,7 +127,9 @@ ELEMENTS = [
     # ОДИН элемент на четыре переменные. Резать фанкойл на четыре независимых
     # нельзя: тогда термостат собирал бы фронт, чего он делать не должен.
     ("ac.1", "air_conditioner", "bedroom", 30,
-     {"ru": "Климат", "en": "Climate", "ar": "المناخ", "zh": "空调"},
+     # «Кондиционер», а не «Климат»: «Климат» — это раздел, и строка внутри
+     # него повторяла собственный заголовок панели.
+     {"ru": "Кондиционер", "en": "Air conditioner", "ar": "مكيّف الهواء", "zh": "空调"},
      [("toggle", "fcu_power", None), ("fan_speed", "fcu_speed", None),
       ("setpoint", "fcu_setpoint", None), ("current_temp", "fcu_temp", None)]),
     ("dnd", "dnd", "room", 1,
@@ -131,13 +140,18 @@ ELEMENTS = [
      [("toggle", "mur", None)]),
     ("scene.night", "scene", "room", 40,
      {"ru": "Ночь", "en": "Night", "ar": "ليل", "zh": "夜间"},
-     [("trigger", "scene_night", 1)]),
+     [("trigger", "scene_night", 1)], "moon"),
     ("scene.morning", "scene", "room", 41,
      {"ru": "Утро", "en": "Morning", "ar": "صباح", "zh": "早晨"},
-     [("trigger", "scene_morning", 1)]),
+     [("trigger", "scene_morning", 1)], "sunrise"),
     ("scene.movie", "scene", "room", 42,
      {"ru": "Кино", "en": "Movie", "ar": "فيلم", "zh": "观影"},
-     [("trigger", "scene_movie", 1)]),
+     [("trigger", "scene_movie", 1)], "movie"),
+    # Четвёртая сцена из макета. Канал у неё есть (профиль демо-номера в
+    # эмуляторе), feedback'а — как и у остальных — нет.
+    ("scene.read", "scene", "room", 43,
+     {"ru": "Чтение", "en": "Reading", "ar": "قراءة", "zh": "阅读"},
+     [("trigger", "scene_read", 1)], "book"),
     # НАМЕРЕННО БЕЗ ПРИВЯЗКИ. Мастер-выключатель на этом объекте реализуется
     # сценой, отдельного канала (F_MasterSw) у ПНР нет. Элемент стоит в типе,
     # но в опубликованный снимок не попадает и гостю не показывается: кнопка,
@@ -174,12 +188,15 @@ PLAN_ZONE_LIGHTS = {
 
 # Код окна → (основная штора, блэкаут). Какой привод обслуживает какое окно —
 # свойство ОБЪЕКТА, а не догадка: у ПНР два канала штор на весь номер, и Excel
-# не говорит, где именно висит каждый. В демо главная штора на всех окнах,
-# блэкаут — отдельным слоем на окне спальни, где он и стоит по конфигурации
-# (элемент curtain.blackout лежит в зоне bedroom).
+# не говорит, где именно висит каждый.
+#
+# Оба привода — на ВСЕХ окнах. Так это и работает: одна команда закрывает
+# затемнение по всему номеру, а не в одной комнате, и плита обязана показывать
+# то же самое. Блэкаут на одном окне из трёх был домыслом разметки, из-за
+# которого гость видел, как «закрылось» только одно окно.
 PLAN_WINDOW_CURTAINS = {
-    "win-living-top": ("curtain.main", ""),
-    "win-living-side": ("curtain.main", ""),
+    "win-living-top": ("curtain.main", "curtain.blackout"),
+    "win-living-side": ("curtain.main", "curtain.blackout"),
     "win-bed-top": ("curtain.main", "curtain.blackout"),
 }
 
@@ -278,11 +295,11 @@ class Command(BaseCommand):
         return room_type
 
     def _zones(self, room_type: RoomType) -> None:
-        for code, title, order in ZONES:
+        for code, title, order, icon in ZONES:
             Zone.objects.update_or_create(
                 room_type=room_type,
                 code=code,
-                defaults={"title": title, "sort_order": order},
+                defaults={"title": title, "sort_order": order, "icon": icon},
             )
 
     def _variables(self, room_type: RoomType) -> None:
@@ -301,7 +318,9 @@ class Command(BaseCommand):
             )
 
     def _elements(self, hotel, room_type: RoomType) -> None:
-        for slug, kind, zone_code, order, title, bindings in ELEMENTS:
+        for entry in ELEMENTS:
+            slug, kind, zone_code, order, title, bindings = entry[:6]
+            icon = entry[6] if len(entry) > 6 else ""
             zone = Zone.objects.filter(room_type=room_type, code=zone_code).first()
             element, _ = ControlElement.objects.update_or_create(
                 room_type=room_type,
@@ -311,6 +330,7 @@ class Command(BaseCommand):
                     "zone": zone,
                     "title": title,
                     "sort_order": order,
+                    "icon": icon,
                 },
             )
             # Привязки чистим перед пересозданием: переменная не может
