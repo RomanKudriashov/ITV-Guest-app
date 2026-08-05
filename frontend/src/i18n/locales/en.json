@@ -619,9 +619,9 @@
       "offline": "No connection",
       "running": "Working",
       "confirmed": "Done",
-      "unconfirmed": "Could not confirm. Showing the actual state.",
-      "failed": "Could not apply. Please try again.",
-      "liveOffline": "Updates paused — reconnecting",
+      "unconfirmed": "The command was sent but the equipment did not confirm it. The actual state is shown.",
+      "failed": "The command did not reach the room. Please try again.",
+      "liveOffline": "Connection to the room is lost. Reconnecting — the state will refresh itself.",
       "on": "On",
       "off": "Off",
       "open": "Open",
@@ -667,7 +667,9 @@
       "dialCurrent": "now",
       "dialSensor": "sensor reading",
       "setpointSending": "Sending the setpoint…",
-      "sceneSent": "Scene sent"
+      "sceneSent": "Scene sent",
+      "pinWhere": "The code is printed on your key card or the reception desk will tell you.",
+      "liveConnecting": "Connecting to the room…"
     }
   },
   "tracker": {

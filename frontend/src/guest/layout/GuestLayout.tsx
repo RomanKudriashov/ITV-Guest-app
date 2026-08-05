@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
@@ -67,6 +67,43 @@ const TOP_BAR_HEIGHT = storefrontLayout.topBar;
  * он съедал ширину на экране, где ценность — кадры заведений во всю ширину).
  * Корзина — колонка справа на десктопе и отдельный экран на телефоне.
  */
+/**
+ * Нижний край плавающей группы — в переменную CSS.
+ *
+ * Липкие полосы экранов пинятся ПОД группой, и раньше они считали её край
+ * сами: `floatingTop + высота`. Совпадало ровно до первого телефона с вырезом —
+ * там группа стоит с добавкой безопасной зоны, съезжает вниз примерно на 47 px
+ * и ложится на плиту плана. Эмуляция такого не показывает, поэтому дефект
+ * дожил до живого устройства.
+ *
+ * Теперь край ИЗМЕРЯЕТСЯ и раздаётся всем: любой вырез, любая высота группы,
+ * любой шрифт — полосы следуют за реальным элементом, а не за арифметикой.
+ */
+function useFloatingBottom() {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const publish = () => {
+      const bottom = Math.round(node.getBoundingClientRect().bottom);
+      document.documentElement.style.setProperty('--guest-floating-bottom', `${bottom}px`);
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    window.addEventListener('resize', publish);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publish);
+      // Группы больше нет (десктоп) — полосы обязаны вернуться к умолчанию.
+      document.documentElement.style.removeProperty('--guest-floating-bottom');
+    };
+  }, []);
+
+  return ref;
+}
+
 export function GuestLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -82,6 +119,7 @@ export function GuestLayout() {
   // совпадал; с посервисной корзиной (R5) он поехал, и React справедливо
   // ругался на смену порядка хуков.
   const cart = useCart();
+  const floatingRef = useFloatingBottom();
 
   const hotelName = hotel?.name ?? session?.hotel.name ?? '';
 
@@ -159,6 +197,7 @@ export function GuestLayout() {
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
       <Stack
+        ref={floatingRef}
         direction="row"
         spacing={0.5}
         alignItems="center"

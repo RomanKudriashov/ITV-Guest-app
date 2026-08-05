@@ -17,7 +17,7 @@ import type { TFunction } from 'i18next';
 
 import { ApiError } from '@/api/client';
 
-import { KitEmptyState, KitToast, SkeletonCard, SkeletonLine } from '@/kit';
+import { KitEmptyState, KitToast, SkeletonLine } from '@/kit';
 import {
   IconAirConditioner,
   IconBath,
@@ -29,6 +29,7 @@ import {
   IconDoor,
   IconHeating,
   IconLightGroup,
+  IconLock,
   IconMakeUpRoom,
   IconMoon,
   IconMovie,
@@ -227,8 +228,19 @@ export function RoomPage() {
   const notices = (
     <Stack spacing={1.5}>
       {snapshot && !snapshot.can_command ? <PinPanel /> : null}
-      {live.status === 'offline' ? (
-        <KitToast severity="info" message={t('guest.roomControl.liveOffline')} testId="room-live-offline" />
+      {/* Обрыв канала: гость должен понимать, ПОЧЕМУ тумблеры не отвечают, и
+          видеть, что связь восстанавливается сама. Молчание здесь читается как
+          «приложение сломалось». */}
+      {live.status !== 'online' ? (
+        <KitToast
+          severity="warning"
+          message={t(
+            live.status === 'connecting'
+              ? 'guest.roomControl.liveConnecting'
+              : 'guest.roomControl.liveOffline',
+          )}
+          testId="room-live-offline"
+        />
       ) : null}
       {notice ? (
         <KitToast
@@ -267,7 +279,9 @@ export function RoomPage() {
     >
       <Pills snapshot={snapshot} groups={groups} readings={readings} />
 
-      {state.isPending ? <RoomSkeleton /> : null}
+      {/* Пропорция плиты берётся из прошлого снимка, если он был: тогда
+          заглушка совпадает с кадром и раскладка не прыгает вовсе. */}
+      {state.isPending ? <RoomSkeleton aspect={snapshot?.plan?.aspect ?? PLATE_FALLBACK_ASPECT} /> : null}
 
       {isDesktop ? (
         /* Десктоп: две колонки как в макете — план слева и залипает, панели
@@ -943,6 +957,15 @@ function readValue(control: RoomControl, capability: RoomCapability): number | n
 
 /* ── Уставка: черновик и одна команда ─────────────────────────────────────── */
 
+/**
+ * Пропорция плиты для скелетона, пока снимка ещё нет.
+ *
+ * Ровно кадр демо-рендера. Число здесь ни на что не влияет, кроме высоты
+ * заглушки: настоящая пропорция приезжает с сервером, и как только снимок
+ * пришёл, берётся она.
+ */
+const PLATE_FALLBACK_ASPECT = 1.6;
+
 /** Пауза после последнего изменения, по истечении которой уходит команда. */
 const SETPOINT_SETTLE_MS = 500;
 
@@ -1087,13 +1110,37 @@ function glyph(control: RoomControl, size = 18): ReactNode {
 
 /* ── Раскладка ────────────────────────────────────────────────────────────── */
 
-function RoomSkeleton() {
+/**
+ * Скелетон повторяет РАСКЛАДКУ экрана: ряд пилюль, плита, вкладки, строки.
+ *
+ * Не «две карточки в столбик»: экран собирается 0.4–0.9 секунды, и если
+ * заглушка не совпадает с тем, что придёт, раскладка прыгает ровно в тот
+ * момент, когда гость уже потянулся пальцем.
+ */
+function RoomSkeleton({ aspect }: { aspect: number }) {
   return (
-    <Stack spacing={2} sx={{ pt: 2 }} data-testid="room-skeleton">
-      <SkeletonLine width="42%" height={18} />
-      <Stack direction="row" spacing={1.5}>
-        <SkeletonCard />
-        <SkeletonCard />
+    <Stack spacing={2} sx={{ pt: 1 }} data-testid="room-skeleton">
+      <Stack direction="row" spacing={1}>
+        <SkeletonLine width={120} height={31} />
+        <SkeletonLine width={140} height={31} />
+      </Stack>
+      {/* Плита занимает своё место сразу: высота считается из пропорции, и
+          когда кадр приедет, ничего не сдвинется. */}
+      <Box
+        aria-hidden
+        style={{ aspectRatio: String(aspect) }}
+        sx={(theme) => ({
+          width: '100%',
+          borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
+          bgcolor: theme.palette.brand.surfaceMuted,
+          opacity: 0.6,
+        })}
+      />
+      <SkeletonLine width="100%" height={44} />
+      <Stack spacing={1.5} sx={{ pt: 1 }}>
+        {[0, 1, 2, 3].map((row) => (
+          <SkeletonLine key={row} width="100%" height={56} />
+        ))}
       </Stack>
     </Stack>
   );
@@ -1196,7 +1243,7 @@ function attemptsHint(error: unknown, t: TFunction): string {
  */
 function PinPanel() {
   const { t } = useTranslation();
-  const { glass } = useStorefront();
+  const { glass, roomControl } = useStorefront();
   const verify = useRoomVerify();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -1216,42 +1263,88 @@ function PinPanel() {
 
   return (
     <Stack
-      spacing={1.5}
+      spacing={2}
+      alignItems="center"
       component="form"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
       sx={(theme) => ({
-        p: 2,
+        p: 3,
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
+        textAlign: 'center',
         ...glass.panel,
       })}
       data-testid="room-pin-panel"
     >
-      <Typography variant="subtitle1">{t('guest.roomControl.pinTitle')}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {t('guest.roomControl.pinHint')}
-      </Typography>
+      <Box
+        aria-hidden
+        sx={{
+          width: 52,
+          height: 52,
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: '50%',
+          color: roomControl.accent,
+          background: roomControl.accentSoft,
+          boxShadow: roomControl.accentGlow,
+        }}
+      >
+        <IconLock size={24} />
+      </Box>
+
+      <Stack spacing={0.75} alignItems="center">
+        <Typography variant="h6" component="h2" sx={(theme) => ({ fontFamily: theme.typography.h1.fontFamily })}>
+          {t('guest.roomControl.pinTitle')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>
+          {t('guest.roomControl.pinHint')}
+        </Typography>
+      </Stack>
+
+      {/* Крупное поле кода: цифры набирают на ходу, и мелкое поле формы здесь
+          читается как второстепенная деталь, хотя это единственное действие
+          на экране. */}
       <TextField
         value={pin}
         onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 12))}
-        label={t('guest.roomControl.pinLabel')}
+        placeholder="••••"
         inputMode="numeric"
         autoComplete="one-time-code"
-        size="small"
+        autoFocus
         error={Boolean(error)}
         helperText={error ?? ' '}
-        inputProps={{ 'data-testid': 'room-pin-input' }}
+        inputProps={{
+          'data-testid': 'room-pin-input',
+          'aria-label': t('guest.roomControl.pinLabel'),
+          style: {
+            textAlign: 'center',
+            fontSize: 30,
+            letterSpacing: '.4em',
+            fontWeight: 700,
+            paddingInlineStart: '.4em',
+          },
+        }}
+        sx={{ width: '100%', maxWidth: 260 }}
       />
+
       <Button
         type="submit"
         variant="contained"
+        fullWidth
         disabled={pin.length < 4 || verify.isPending}
         data-testid="room-pin-submit"
+        sx={{ maxWidth: 260, py: 1.2 }}
       >
         {t('guest.roomControl.pinSubmit')}
       </Button>
+
+      {/* Где взять код — отдельной строкой, а не намёком в подсказке: гость,
+          у которого кода нет, иначе упирается в тупик. */}
+      <Typography variant="caption" color="text.disabled" sx={{ maxWidth: 300 }}>
+        {t('guest.roomControl.pinWhere')}
+      </Typography>
     </Stack>
   );
 }

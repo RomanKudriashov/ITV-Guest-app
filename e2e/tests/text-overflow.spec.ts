@@ -192,6 +192,48 @@ for (const mode of ['dark', 'light'] as const) {
   }
 }
 
+/**
+ * Плавающая группа не накрывает план — НА РАЗНЫХ ПОЗИЦИЯХ СКРОЛЛА.
+ *
+ * Прошлая проверка смотрела только начало страницы и потому пропустила дефект:
+ * группа стоит с учётом безопасной зоны устройства, а липкие полосы пинились
+ * числом, и на телефоне с вырезом группа съезжала вниз и ложилась на плиту.
+ * Статическая проверка этого не видит — перекрытие появляется в движении.
+ */
+for (const mode of ['dark', 'light'] as const) {
+  for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
+    test(`плавающая группа не закрывает план: ${mode}, ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await enterWithRoom(page, mode)
+      await page.goto('/room')
+      await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+      await page.waitForTimeout(1500)
+
+      for (const y of [0, 40, 90, 140, 200, 320, 500]) {
+        await page.evaluate((to) => window.scrollTo(0, to), y)
+        await page.waitForTimeout(180)
+        const probe = await page.evaluate(() => {
+          const chip = document.querySelector('[data-testid="guest-room-chip"]')
+          const plate = document.querySelector('[data-testid="room-plan"]')
+          if (!chip || !plate) return null
+          // Плавающая группа — стеклянная полоса, в которой лежит чип номера.
+          const group = chip.closest('.MuiStack-root') ?? chip
+          const a = group.getBoundingClientRect()
+          const b = plate.getBoundingClientRect()
+          const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left)
+          const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+          return { overlap: Math.round(Math.min(dx, dy)), scroll: Math.round(window.scrollY) }
+        })
+        expect(probe, 'плита или чип не найдены').not.toBeNull()
+        expect(
+          probe!.overlap,
+          `${mode}/${vp.name}: на скролле ${probe!.scroll} группа накрывает план на ${probe!.overlap}px`,
+        ).toBeLessThanOrEqual(0)
+      }
+    })
+  }
+}
+
 /*
  * Поверхности персонала. Тема здесь ОТЕЛЬНАЯ (демо-отель тёмный), поэтому
  * режим переключаем тем же ключом: у CMS и трекера ровно те же плашки и чипы,

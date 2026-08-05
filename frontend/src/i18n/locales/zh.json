@@ -617,9 +617,9 @@
       "offline": "无连接",
       "running": "执行中",
       "confirmed": "完成",
-      "unconfirmed": "无法确认。已显示实际状态。",
-      "failed": "执行失败，请重试。",
-      "liveOffline": "更新已暂停——正在重新连接",
+      "unconfirmed": "指令已发送，但设备未确认。显示的是实际状态。",
+      "failed": "指令未送达客房，请重试。",
+      "liveOffline": "与客房的连接已断开，正在重连，状态将自动更新。",
       "on": "开",
       "off": "关",
       "open": "打开",
@@ -663,7 +663,9 @@
       "dialCurrent": "当前",
       "dialSensor": "传感器读数",
       "setpointSending": "正在发送设定温度…",
-      "sceneSent": "场景已发送"
+      "sceneSent": "场景已发送",
+      "pinWhere": "密码印在房卡上，也可以在前台询问。",
+      "liveConnecting": "正在连接客房…"
     }
   },
   "tracker": {
