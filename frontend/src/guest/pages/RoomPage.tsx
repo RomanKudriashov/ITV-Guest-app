@@ -121,7 +121,7 @@ export function RoomPage() {
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const readings = useRoomReadings(snapshot);
   const groups = useMemo(() => groupControls(snapshot?.zones ?? []), [snapshot]);
-  const planWidth = usePlanShrink(Boolean(snapshot?.plan) && !isDesktop);
+  const planScale = usePlanShrink(Boolean(snapshot?.plan) && !isDesktop);
   const { ref: plateRef, height: plateHeight } = useMeasuredHeight();
 
   const tabs = useMemo(
@@ -166,7 +166,7 @@ export function RoomPage() {
       // Состояния не читаются — плита нейтральна: она не показывает свет ни
       // включённым, ни выключенным, потому что и то и другое было бы враньём.
       neutral={unavailable}
-      widthPercent={isDesktop ? 100 : planWidth}
+      scale={isDesktop ? 1 : planScale}
       // Тап по комнате идёт ТЕМ ЖЕ путём, что и тумблер в списке: один
       // обработчик, одна проверка доверия, один дедуп в полёте на сервере.
       onToggle={(controlId, value) => send({ controlId, capability: 'toggle', value })}
@@ -294,9 +294,11 @@ export function RoomPage() {
             <Box
               sx={{
                 position: 'sticky',
-                // Вкладки пинятся ПОД плитой: её высота меняется при сжатии,
-                // поэтому она измеряется, а не вписывается числом.
-                top: `${stickyUnderFloating + plateHeight}px`,
+                // Вкладки пинятся ПОД плитой. Высота места под неё постоянна
+                // (плита сжимается масштабом, а не шириной), поэтому измеряем
+                // один раз, а за сжатием следуем тем же множителем — иначе под
+                // уменьшенной плитой оставалась бы дыра.
+                top: `${stickyUnderFloating + plateHeight * planScale}px`,
                 zIndex: 1,
                 pt: 1,
                 mb: `${layout.panelOverlap}px`,
@@ -1050,34 +1052,58 @@ function useMeasuredHeight() {
 /**
  * Сжатие липкой плиты при скролле.
  *
- * Уменьшается ШИРИНА, пропорции сохраняются — поэтому окна зон, заданные в
- * процентах от кадра, остаются выровненными сами собой. Числа из словаря.
+ * Возвращает МАСШТАБ, а не ширину, и это главное здесь. Ширина меняла высоту
+ * плиты, высота плиты — высоту документа, а браузер на смену высоты документа
+ * поправляет позицию скролла; поправка запускала пересчёт заново, и экран
+ * начинал трястись, стоило докрутить до места, где плита ужимается. Масштаб
+ * раскладку не трогает вовсе: место под плиту зарезервировано и постоянно.
+ *
+ * Пересчёт — один раз за кадр и ТОЛЬКО от позиции скролла: никаких чтений
+ * размеров элементов в том же кадре, в котором мы их меняем. Читать то, что
+ * сам же меняешь, и есть способ завести петлю.
+ *
+ * ГИСТЕРЕЗИС. Сжатие начинается на `planShrinkStart`, а обратный рост — на
+ * точке ниже (`planShrinkRelease`). Без него на самой границе любое дрожание
+ * пальца или инерция резины у края переключали состояние туда-сюда, и плита
+ * мигала.
  */
 function usePlanShrink(active: boolean): number {
-  const [width, setWidth] = useState(100);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     if (!active) {
-      setWidth(100);
+      setScale(1);
       return;
     }
     let scheduled = false;
+    let shrinking = false;
+
     const apply = () => {
       scheduled = false;
-      const progress = Math.min(window.scrollY / layout.planShrinkScroll, 1);
-      setWidth(100 - layout.planShrink * 100 * progress);
+      // Резина у края (отрицательный scrollY на iOS) — это не «прокрутили
+      // вверх сильнее нуля», а тот же ноль.
+      const offset = Math.max(0, window.scrollY);
+      const start = shrinking ? layout.planShrinkRelease : layout.planShrinkStart;
+      const progress = Math.min(
+        1,
+        Math.max(0, (offset - start) / Math.max(1, layout.planShrinkScroll - start)),
+      );
+      shrinking = progress > 0;
+      setScale(1 - layout.planShrink * progress);
     };
+
     const onScroll = () => {
       if (scheduled) return;
       scheduled = true;
       window.requestAnimationFrame(apply);
     };
+
     apply();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [active]);
 
-  return width;
+  return scale;
 }
 
 /* ── Слабая сессия: форма PIN прямо на экране ─────────────────────────────── */

@@ -70,8 +70,16 @@ export interface RoomPlanPlateProps {
   readings: Record<string, PlanReading>;
   /** Состояний нет вовсе: плита нейтральна и не кликабельна. */
   neutral?: boolean;
-  /** Ширина плиты в процентах контейнера — сжатие липкой плиты при скролле. */
-  widthPercent?: number;
+  /**
+   * Масштаб липкой плиты при скролле: 1 — во всю ширину колонки.
+   *
+   * Именно МАСШТАБ, а не ширина. Ширина меняет высоту плиты (у неё задано
+   * соотношение сторон), высота плиты — высоту документа, а браузер на смену
+   * высоты документа поправляет позицию скролла. Поправка запускала пересчёт
+   * заново, и экран начинал трястись. `transform` не трогает раскладку вовсе:
+   * место под плиту остаётся зарезервированным, меняется только картинка.
+   */
+  scale?: number;
   onToggle: (controlId: string, next: number) => void;
 }
 
@@ -105,7 +113,7 @@ export function RoomPlanPlate({
   plan,
   readings,
   neutral = false,
-  widthPercent = 100,
+  scale = 1,
   onToggle,
 }: RoomPlanPlateProps) {
   const { t } = useTranslation();
@@ -135,9 +143,14 @@ export function RoomPlanPlate({
     <Box
       data-testid="room-plan"
       data-lit={neutral ? 'unknown' : String(lit)}
-      style={{ width: `${widthPercent}%`, aspectRatio: String(plan.aspect) }}
+      style={{
+        aspectRatio: String(plan.aspect),
+        transform: scale === 1 ? undefined : `scale(${scale})`,
+        transformOrigin: 'top center',
+      }}
       sx={{
         position: 'relative',
+        width: '100%',
         mx: 'auto',
         maxWidth: '100%',
         overflow: 'hidden',
@@ -145,7 +158,10 @@ export function RoomPlanPlate({
         border: tokens.frame,
         boxShadow: tokens.shadow,
         background: tokens.fallback,
-        transition: calm ? 'none' : 'width .18s ease-out',
+        // Плавности здесь НЕТ намеренно: масштаб пересчитывается каждый кадр от
+        // позиции скролла, и переход поверх него дал бы отставание картинки от
+        // пальца — то самое «плывёт», которое читается как тормоза.
+        willChange: 'transform',
       }}
     >
       {/*

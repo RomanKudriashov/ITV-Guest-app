@@ -430,6 +430,38 @@ test.describe('Управление номером', () => {
     expect(commands[0]).toContain(`"value":${before + (up ? 5 : -5)}`)
   })
 
+  test('телефон: сжатие плиты не меняет высоту документа', async ({ page }) => {
+    // Прогон идёт на десктопной ширине, где плита не сжимается вовсе.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await enterRoom(page)
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+    await page.waitForTimeout(1500)
+
+    const scaleAt = async (y: number) => {
+      await page.evaluate((to) => window.scrollTo(0, to), y)
+      await page.waitForTimeout(150)
+      return page.evaluate(() => ({
+        height: document.body.scrollHeight,
+        scale: getComputedStyle(document.querySelector('[data-testid="room-plan"]')!).transform,
+      }))
+    }
+
+    const probes = []
+    for (const y of [0, 60, 120, 200, 400, 200, 60, 0]) probes.push(await scaleAt(y))
+
+    // Высота документа при скролле не меняется ВООБЩЕ. Именно её изменение
+    // заводило петлю: сжали плиту → изменилась высота → браузер поправил
+    // позицию скролла → пересчитали сжатие → экран затрясся.
+    const heights = [...new Set(probes.map((p) => p.height))]
+    expect(heights.length, `высота документа гуляет: ${heights.join(', ')}`).toBe(1)
+
+    // При этом плита действительно сжимается и возвращается.
+    const scaleOf = (value: string) => Number((value.match(/matrix\(([\d.]+)/) ?? [, '1'])[1])
+    expect(scaleOf(probes[0].scale)).toBeCloseTo(1, 2)
+    expect(scaleOf(probes[4].scale)).toBeLessThan(0.8)
+    expect(scaleOf(probes[probes.length - 1].scale)).toBeCloseTo(1, 2)
+  })
+
   test('оффлайн: план не показывает свет ни включённым, ни выключенным', async ({
     page,
     request,
