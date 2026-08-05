@@ -580,6 +580,12 @@ def _fill_compositions(item_model, filled: dict[str, int]) -> None:
         attributes = dict(item.attributes or {})
         nutrition = dict(attributes.get("nutrition") or {})
         composition = dict(nutrition.get("composition") or {})
+        # ПЕРЕВОДИМ ТО, ЧТО ЕСТЬ, а не заводим новое. У позиции с тем же кодом в
+        # другом отеле состава может не быть вовсе — дописав туда перевод, мы
+        # выдумали бы содержимое и вдобавок создали пустой блок КБЖУ, в котором
+        # нет ни одной цифры.
+        if not any((value or "").strip() for value in composition.values()):
+            continue
         changed = False
         for code, text in languages.items():
             if (composition.get(code) or "").strip():
