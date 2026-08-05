@@ -112,10 +112,24 @@ def save_import(hotel, preview, *, replace: bool = False) -> dict:
     }
 
 
+# Кириллица в латиницу для кода типа. Без неё от русского имени не оставалось
+# ничего: «ТИП1» из настоящего файла ПНР превращался в код «1», а имя без
+# цифры — в общее «type», то есть два таких типа схлопнулись бы в один вместе
+# со своими переменными. Найдено E2E-прогоном раздела CMS на присланном файле.
+_TRANSLIT = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "c", "ч": "ch", "ш": "sh", "щ": "sch", "ъ": "",
+    "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+}
+
+
 def _slug(name: str) -> str:
     import re
 
-    return re.sub(r"[^a-z0-9]+", "-", name.strip().lower()).strip("-") or "type"
+    lowered = "".join(_TRANSLIT.get(char, char) for char in name.strip().lower())
+    return re.sub(r"[^a-z0-9]+", "-", lowered).strip("-") or "type"
 
 
 # --- Зоны -------------------------------------------------------------------
@@ -278,9 +292,15 @@ def type_status(hotel, room_type_code: str) -> dict:
     Непривязанные элементы — НЕ ошибка публикации, а нормальное состояние
     объекта, где такого оборудования нет. Они просто не попадают в
     опубликованную конфигурацию.
+
+    Кроме приговора отдаётся и САМ ЧЕРНОВИК деревом «зона → элементы →
+    привязки». Конструктору в CMS без него нечего показывать: администратор
+    иначе добавлял бы вслепую и узнавал о том, что уже добавил, только по
+    ошибке «такой элемент уже есть».
     """
     with tenant_context(hotel):
         room_type = _type(room_type_code)
+        zones = list(Zone.objects.filter(room_type=room_type).order_by("sort_order", "code"))
         elements = list(
             ControlElement.objects.filter(room_type=room_type)
             .select_related("zone")
@@ -293,6 +313,21 @@ def type_status(hotel, room_type_code: str) -> dict:
             bindings.setdefault(binding.element_id, []).append(binding)
 
         statuses = [element_status(e, bindings.get(e.pk, [])) for e in elements]
+        draft = [
+            {
+                "slug": element.slug,
+                "kind": element.kind,
+                "title": element.title or {},
+                "zone": element.zone.code if element.zone_id else "",
+                "publishable": status.publishable,
+                "problems": status.problems,
+                "bindings": [
+                    {"capability": b.capability, "variable": b.variable.key}
+                    for b in sorted(bindings.get(element.pk, []), key=lambda b: b.capability)
+                ],
+            }
+            for element, status in zip(elements, statuses)
+        ]
 
     return {
         "type": room_type_code,
@@ -302,6 +337,11 @@ def type_status(hotel, room_type_code: str) -> dict:
             for s in statuses
             if not s.publishable
         ],
+        "zones": [
+            {"code": zone.code, "title": zone.title or {}, "sort_order": zone.sort_order}
+            for zone in zones
+        ],
+        "elements": draft,
     }
 
 

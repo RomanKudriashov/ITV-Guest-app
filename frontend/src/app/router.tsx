@@ -17,6 +17,7 @@ import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
+import { RoomControlPage } from '@/cms/roomControl/RoomControlPage';
 import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
 import { AdminApp } from '@/admin/AdminApp';
 import App from '@/App';
@@ -93,6 +94,7 @@ export const router = createBrowserRouter([
       // Модульные разделы: пункт в навигации появляется только с модулем,
       // но маршрут существует всегда — иначе прямая ссылка ломалась бы молча.
       { path: 'marketing', element: <BadgesPage /> },
+      { path: 'room-control', element: <RoomControlPage /> },
 
       // Служебное: витрина отдельным адресом больше не нужна (слита с брендом),
       // старые ссылки уводим туда же, а не в 404.

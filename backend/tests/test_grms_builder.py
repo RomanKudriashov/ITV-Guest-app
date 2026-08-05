@@ -288,3 +288,33 @@ def test_every_catalog_kind_can_be_placed(furnished):
     """Каталог не должен содержать вид, который конструктор не умеет поставить."""
     for index, kind in enumerate(catalog.ELEMENTS):
         builder.add_element(furnished, room_type_code=TYPE, kind=kind, slug=f"e{index}")
+
+
+# --- Черновик для конструктора ----------------------------------------------
+
+
+def test_status_returns_the_draft_tree_for_the_editor(furnished):
+    """
+    Конструктору в CMS нужен не только приговор «опубликуется/скрыт», но и сам
+    черновик: зоны, элементы и привязки. Без него администратор добавляет
+    вслепую и узнаёт о добавленном по ошибке «такой элемент уже есть».
+    """
+    builder.add_zone(furnished, room_type_code=TYPE, code="bedroom",
+                     title={"ru": "Спальня"}, sort_order=1)
+    builder.add_element(furnished, room_type_code=TYPE, kind="light_group",
+                        slug="light.main", zone_code="bedroom", title={"ru": "Свет"})
+    builder.bind(furnished, room_type_code=TYPE, element_slug="light.main",
+                 capability="toggle", variable_key="light_1")
+    builder.add_element(furnished, room_type_code=TYPE, kind="master_switch", slug="master")
+
+    status = builder.type_status(furnished, TYPE)
+
+    assert [z["code"] for z in status["zones"]] == ["bedroom"]
+    by_slug = {e["slug"]: e for e in status["elements"]}
+    assert by_slug["light.main"]["zone"] == "bedroom"
+    assert by_slug["light.main"]["title"] == {"ru": "Свет"}
+    assert by_slug["light.main"]["bindings"] == [{"capability": "toggle", "variable": "light_1"}]
+    assert by_slug["light.main"]["publishable"] is True
+    # Непривязанный виден в том же дереве и объясняет себя сам.
+    assert by_slug["master"]["publishable"] is False
+    assert by_slug["master"]["problems"]

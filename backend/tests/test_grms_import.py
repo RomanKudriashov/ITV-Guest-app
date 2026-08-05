@@ -220,3 +220,19 @@ def _synthetic(*, range_cell: str = "0/1", duplicate: bool = False,
     with zipfile.ZipFile(buffer, "w") as book:
         book.writestr("xl/worksheets/sheet1.xml", sheet)
     return buffer.getvalue()
+
+
+def test_cyrillic_type_names_do_not_collapse_into_one_code():
+    """
+    Код типа читается человеком и остаётся разным у разных типов.
+
+    Первая версия слага выбрасывала всё, кроме латиницы и цифр: «ТИП1»
+    превращался в «1», а имя без цифры — в общее «type», и два таких типа
+    получили бы ОДИН код, сложившись в один вместе со своими переменными.
+    Найдено E2E-прогоном раздела CMS на настоящем присланном файле.
+    """
+    from apps.grms.builder import _slug
+
+    codes = [_slug(name) for name in ("ТИП1", "ТИП2", "ТИП3")]
+    assert codes == ["tip1", "tip2", "tip3"]
+    assert len(set(codes)) == 3

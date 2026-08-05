@@ -735,6 +735,12 @@ export interface RoomPlan {
    */
   image_off: string;
   aspect: number | null;
+  /**
+   * Зеркальная планировка: комната напротив по коридору — та же, отражённая.
+   * Отражается плита целиком, кадры вместе с геометрией. Это свойство КОМНАТЫ,
+   * а не раскладки: с RTL оно не связано никак.
+   */
+  mirrored?: boolean;
   zones: RoomPlanZone[];
   windows: RoomPlanWindow[];
   points: RoomPlanPoint[];

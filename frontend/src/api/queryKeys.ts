@@ -39,6 +39,13 @@ export const queryKeys = {
   badges: ['cms', 'badges'] as const,
   quickActions: ['cms', 'quick-actions'] as const,
   showcase: ['cms', 'showcase'] as const,
+  /* ── Управление номером (модуль room_control) ───────────────────────── */
+  grmsCatalog: ['cms', 'grms', 'catalog'] as const,
+  grmsTypes: ['cms', 'grms', 'types'] as const,
+  grmsStatus: (code: string) => ['cms', 'grms', 'types', code, 'status'] as const,
+  grmsVersions: (code: string) => ['cms', 'grms', 'types', code, 'versions'] as const,
+  grmsPlan: (code: string) => ['cms', 'grms', 'types', code, 'plan'] as const,
+  grmsAccess: ['cms', 'grms', 'access'] as const,
   allergens: ['cms', 'allergens'] as const,
   markers: ['cms', 'markers'] as const,
 };

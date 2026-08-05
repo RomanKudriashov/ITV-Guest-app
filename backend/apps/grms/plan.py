@@ -150,6 +150,11 @@ def normalize(raw: object, *, control_ids: set[str]) -> dict:
         # может не быть посчитанного кадра, и это не повод не показывать план.
         "asset_off_id": str(raw.get("asset_off_id") or ""),
         "aspect": aspect,
+        # Зеркальная планировка: номера по разные стороны коридора — одна и та
+        # же комната, отражённая. Отражается ПЛИТА ЦЕЛИКОМ (кадры вместе с
+        # геометрией), а не координаты по отдельности: раздельное отражение
+        # разошлось бы при первой же правке разметки.
+        "mirrored": bool(raw.get("mirrored")),
         "zones": zones,
         "windows": windows,
         "points": points,
@@ -234,6 +239,7 @@ def for_guest(plan: object) -> dict:
         "image": image,
         "image_off": image_off,
         "aspect": aspect or None,
+        "mirrored": bool(plan.get("mirrored")),
         "zones": plan.get("zones") or [],
         "windows": plan.get("windows") or [],
         "points": plan.get("points") or [],

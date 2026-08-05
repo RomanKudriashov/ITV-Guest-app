@@ -306,3 +306,41 @@ def test_reseeding_neither_duplicates_the_asset_nor_bumps_the_version(seeded):
         assert MediaAsset.objects.filter(kind=MediaAsset.Kind.ROOM_PLAN).count() == assets
         assert PublishedConfig.objects.filter(room_type__code=TYPE_CODE).count() == 1
     assert _current(hotel) == before
+
+
+# --- Зеркальная планировка --------------------------------------------------
+
+
+def test_mirrored_layout_travels_to_the_guest(seeded):
+    """
+    Номера по разные стороны коридора — одна планировка, отражённая. Флажок
+    едет гостю ЧЕРЕЗ СНИМОК, как и вся геометрия: иначе он остался бы в
+    черновике и не пережил бы откат.
+
+    Координаты при этом НЕ пересчитываются: отражается плита целиком, кадры
+    вместе с разметкой. Пересчёт координат был бы вторым источником истины,
+    который разойдётся с первым на первой же правке.
+    """
+    room_type = _type(seeded)
+    with tenant_context(seeded):
+        draft = dict(room_type.plan or {})
+        draft["mirrored"] = True
+        room_type.plan = draft
+        room_type.save(update_fields=["plan", "updated_at"])
+
+    publishing.publish(seeded, TYPE_CODE)
+    payload = _current(seeded)
+    assert payload["plan"]["mirrored"] is True
+
+    with tenant_context(seeded):
+        for_guest = plan_geometry.for_guest(payload["plan"])
+    assert for_guest["mirrored"] is True
+    # Ни один прямоугольник не сдвинулся.
+    assert for_guest["zones"][0]["hit"] == payload["plan"]["zones"][0]["hit"]
+
+
+def test_a_plan_without_the_flag_is_not_mirrored(seeded):
+    payload = _current(seeded)
+    assert payload["plan"]["mirrored"] is False
+    with tenant_context(seeded):
+        assert plan_geometry.for_guest(payload["plan"])["mirrored"] is False

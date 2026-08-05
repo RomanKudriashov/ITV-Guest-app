@@ -144,9 +144,17 @@ export function RoomPlanPlate({
     <Box
       data-testid="room-plan"
       data-lit={neutral ? 'unknown' : String(lit)}
+      data-mirrored={plan.mirrored ? 'true' : undefined}
       style={{
         aspectRatio: String(plan.aspect),
-        transform: scale === 1 ? undefined : `scale(${scale})`,
+        // Зеркальная планировка отражает плиту ЦЕЛИКОМ — кадры вместе с
+        // геометрией и хит-зонами. Отражать координаты по отдельности значило
+        // бы завести второй источник истины, который разойдётся с первым.
+        // К RTL это отношения не имеет: там плита не зеркалится никогда.
+        transform:
+          [scale === 1 ? '' : `scale(${scale})`, plan.mirrored ? 'scaleX(-1)' : '']
+            .filter(Boolean)
+            .join(' ') || undefined,
         transformOrigin: 'top center',
       }}
       sx={{

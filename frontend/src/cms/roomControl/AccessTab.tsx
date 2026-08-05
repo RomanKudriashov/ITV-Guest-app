@@ -1,0 +1,190 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Skeleton from '@mui/material/Skeleton';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+
+import { ApiError } from '@/api/client';
+import { fetchAccess, setDemoEntry, setRoomPin } from '@/api/grms';
+import { queryKeys } from '@/api/queryKeys';
+import { useToast } from '@/components/ToastProvider';
+
+/**
+ * Доступ гостя к управлению номером: PIN проживания и демо-вход.
+ *
+ * PIN НЕ ПОКАЗЫВАЕТСЯ никогда — в базе лежит только хэш. Ресепшен называет код
+ * в момент заведения; «посмотреть, какой там был» — это уже не подтверждение
+ * проживания, а список ключей от всех номеров.
+ *
+ * Предупреждение о демо-входе берётся С СЕРВЕРА и показывается рядом с самим
+ * переключателем. Формулировка послабления не должна зависеть от того, какой
+ * экран его показывает, — и от того, вспомнил ли о ней верстальщик.
+ */
+export function AccessTab() {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({ queryKey: queryKeys.grmsAccess, queryFn: fetchAccess });
+
+  const [room, setRoom] = useState('');
+  const [pin, setPin] = useState('');
+
+  const failure = (error: unknown) =>
+    toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.grmsAccess });
+
+  const demoMutation = useMutation({
+    mutationFn: (enabled: boolean) => setDemoEntry(enabled),
+    onSuccess: () => void refresh(),
+    onError: failure,
+  });
+
+  const pinMutation = useMutation({
+    mutationFn: (payload: { room: string; pin: string }) => setRoomPin(payload.room, payload.pin),
+    onSuccess: (result) => {
+      setPin('');
+      void refresh();
+      toast.show(
+        result.has_pin ? t('roomControl.access.pinSet') : t('roomControl.access.pinCleared'),
+        'success',
+      );
+    },
+    onError: failure,
+  });
+
+  if (query.isLoading) return <Skeleton variant="rounded" height={320} />;
+  if (query.isError || !query.data) {
+    return <Alert severity="error">{t('roomControl.access.loadError')}</Alert>;
+  }
+
+  const state = query.data;
+
+  return (
+    <Stack spacing={2} data-testid="grms-access">
+      <Card variant="outlined" sx={{ borderColor: 'divider' }}>
+        <CardContent>
+          <Typography variant="subtitle1">{t('roomControl.access.demoTitle')}</Typography>
+          <Divider sx={{ my: 1.5 }} />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={state.demo_entry.enabled}
+                onChange={(e) => demoMutation.mutate(e.target.checked)}
+                data-testid="grms-demo-entry"
+              />
+            }
+            label={t('roomControl.access.demoLabel')}
+          />
+          {/* Текст предупреждения — с сервера, дословно. */}
+          <Alert
+            severity={state.demo_entry.enabled ? 'warning' : 'info'}
+            sx={{ mt: 1 }}
+            data-testid="grms-demo-warning"
+          >
+            <AlertTitle>{t('roomControl.access.demoWarningTitle')}</AlertTitle>
+            {state.demo_entry.warning}
+          </Alert>
+        </CardContent>
+      </Card>
+
+      <Card variant="outlined" sx={{ borderColor: 'divider' }}>
+        <CardContent>
+          <Typography variant="subtitle1">{t('roomControl.access.pinTitle')}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('roomControl.access.pinHint')}
+          </Typography>
+          <Divider sx={{ my: 1.5 }} />
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+            <TextField
+              size="small"
+              label={t('roomControl.builder.room')}
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              data-testid="grms-pin-room"
+            />
+            <TextField
+              size="small"
+              label={t('roomControl.access.pin')}
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              data-testid="grms-pin-value"
+            />
+            <Button
+              variant="contained"
+              disabled={!room.trim() || !pin.trim() || pinMutation.isPending}
+              onClick={() => pinMutation.mutate({ room: room.trim(), pin: pin.trim() })}
+              data-testid="grms-pin-save"
+            >
+              {t('roomControl.access.pinSave')}
+            </Button>
+          </Stack>
+
+          {state.pins.length === 0 ? (
+            <Typography variant="caption" color="text.secondary">
+              {t('roomControl.access.noPins')}
+            </Typography>
+          ) : (
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('roomControl.builder.room')}</TableCell>
+                  <TableCell>{t('roomControl.access.issuedAt')}</TableCell>
+                  <TableCell>{t('roomControl.access.state')}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {state.pins.map((record) => (
+                  <TableRow key={record.room} data-testid={`grms-pin-${record.room}`}>
+                    <TableCell>{record.room}</TableCell>
+                    <TableCell>{new Date(record.issued_at).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        color={record.is_active ? 'success' : 'default'}
+                        label={
+                          record.is_active
+                            ? t('roomControl.access.active')
+                            : t('roomControl.access.inactive')
+                        }
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        color="error"
+                        disabled={pinMutation.isPending}
+                        onClick={() => pinMutation.mutate({ room: record.room, pin: '' })}
+                        data-testid={`grms-pin-clear-${record.room}`}
+                      >
+                        {t('roomControl.access.pinClear')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </Stack>
+  );
+}
