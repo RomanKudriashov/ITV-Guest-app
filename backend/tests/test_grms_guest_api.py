@@ -646,3 +646,87 @@ def test_a_stand_where_every_channel_answers_false_is_unavailable(guest, monkeyp
     payload = guest.get("/api/v1/guest/room/state").json()
     assert payload["availability"] == "unavailable"
     assert payload["zones"] == []
+
+
+# --- Отзывчивость -----------------------------------------------------------
+
+
+def test_concurrent_snapshots_share_one_read_of_the_hardware(guest, monkeypatch):
+    """
+    Пять открытых телефонов в одном номере дают ОДНУ ходку до оборудования.
+
+    Без схлопывания каждый снимок опрашивал тринадцать каналов сам: пять
+    телефонов — шестьдесят пять запросов в железо на ровном месте, и они же
+    выстраиваются в очередь за ограничителем параллелизма коннектора.
+
+    Это защита от лавины, а не кэш состояния: окно измеряется секундой с
+    небольшим, а собственная команда его сбрасывает — иначе гость увидел бы
+    снимок, собранный ДО его нажатия.
+    """
+    from apps.grms import commands
+
+    calls = []
+    original = commands._read_batch
+
+    def counted(hotel, **kwargs):
+        calls.append(kwargs["feedbacks"])
+        return original(hotel, **kwargs)
+
+    monkeypatch.setattr(commands, "_read_batch", counted)
+
+    for _ in range(5):
+        assert guest.get("/api/v1/guest/room/state").status_code == 200
+
+    assert len(calls) == 1, f"оборудование опрошено {len(calls)} раз вместо одного"
+
+
+def test_a_command_drops_the_shared_read(guest, crystal):
+    """
+    После собственной команды снимок собирается ЗАНОВО.
+
+    Схлопывание не должно превратиться в показ устаревшего: момент, когда мы
+    точно знаем, что состояние изменилось, — это наша же команда.
+    """
+    from apps.grms import commands
+    from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
+    from apps.hotels.models import Room
+
+    guest.get("/api/v1/guest/room/state")
+
+    with tenant_context(crystal):
+        room = Room.objects.get(number=DEMO_ROOM)
+    device = f"Modbus TCP Server (Slave mode) {room.number}"
+    feedbacks = ["F_Light 1", "F_Light 2"]
+    key = commands._coalesce_key(crystal.pk, device, sorted(feedbacks))
+
+    from django.core.cache import cache
+
+    cache.set(key, {"F_Light 1": {"ok": True, "value": 1}}, 5)
+    commands.forget_reads(crystal, device, feedbacks)
+    assert cache.get(key) is None
+
+
+def test_a_silent_channel_does_not_hold_the_whole_snapshot(guest, monkeypatch):
+    """
+    Канал, который молчит, помечается непрочитанным — и экран открывается.
+
+    Раньше он держал заложником весь снимок: TTL на запрос плюс две волны
+    параллельного чтения давали больше десяти секунд на скелетоне.
+    """
+    import time as time_module
+
+    from apps.grms import commands, transport
+
+    async def never_answers(hotel_id, envelope, ttl_ms):
+        await __import__("asyncio").sleep(30)
+        return {"ok": False}
+
+    monkeypatch.setattr(transport, "asend", never_answers)
+    monkeypatch.setattr(commands, "READ_BUDGET_S", 1.0)
+
+    started = time_module.monotonic()
+    response = guest.get("/api/v1/guest/room/state")
+    spent = time_module.monotonic() - started
+
+    assert response.status_code == 200
+    assert spent < 6, f"снимок собирался {spent:.1f} с — бюджет чтения не сработал"

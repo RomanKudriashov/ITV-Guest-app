@@ -269,7 +269,7 @@ test.describe('Управление номером', () => {
     await expect(plate).toBeVisible({ timeout: 20_000 })
 
     // Кадр приезжает АДРЕСОМ с сервера, а не собирается на фронте.
-    const src = await plate.locator('> img').getAttribute('src')
+    const src = await page.getByTestId('room-plan-base').getAttribute('src')
     expect(src, 'плита без кадра').toMatch(/^https?:\/\//)
 
     const frame = (await plate.boundingBox())!
@@ -313,13 +313,16 @@ test.describe('Управление номером', () => {
 
     // Снизу ВСЕГДА ночной кадр: выключенная зона показывает настоящую тёмную
     // комнату, а не дневную под серой плёнкой.
-    await expect(plate.locator('> img')).toHaveAttribute('src', plan.image_off)
+    await expect(page.getByTestId('room-plan-base')).toHaveAttribute('src', plan.image_off)
 
     // Светлый кадр — окном по каждой зоне, и окно видно ровно тогда, когда
     // свет в этой зоне подтверждён.
     for (const code of ['living', 'bedroom', 'entry', 'wardrobe', 'bathroom']) {
+      // Светлый кадр лежит ЦЕЛИКОМ поверх ночного, а видно его в окне зоны:
+      // отдельного контейнера с обрезкой больше нет — на живом iOS обрезка
+      // съедала маску и зона выходила жёстким прямоугольником.
       const lit = page.getByTestId(`room-plan-lit-${code}`)
-      await expect(lit.locator('img')).toHaveAttribute('src', plan.image)
+      await expect(lit).toHaveAttribute('src', plan.image)
       const pressed = await page.getByTestId(`room-plan-zone-${code}`).getAttribute('aria-pressed')
       await expect
         .poll(async () => lit.evaluate((el) => getComputedStyle(el).opacity), { timeout: 5_000 })
@@ -394,6 +397,39 @@ test.describe('Управление номером', () => {
     await expect(page.getByTestId('room-panel-climate')).toBeVisible()
   })
 
+  test('уставка: серия нажатий даёт ОДНУ команду, число едет сразу', async ({ page }) => {
+    const commands: string[] = []
+    page.on('request', (request) => {
+      if (request.url().includes('/guest/room/command') && request.method() === 'POST') {
+        commands.push(String(request.postData()))
+      }
+    })
+
+    await enterRoom(page)
+    const dial = page.getByTestId('room-thermostat-ac.1')
+    await expect(dial).toBeVisible({ timeout: 20_000 })
+    const spin = dial.locator('[role="slider"]')
+    const before = Number(await spin.getAttribute('aria-valuenow'))
+    // Направление от текущего значения: стенд общий, уставка могла остаться
+    // на краю диапазона, и упор в край мерил бы не то.
+    const up = before < 28
+    const step = page.getByTestId(`room-thermostat-ac.1-${up ? 'plus' : 'minus'}`)
+
+    commands.length = 0
+    for (let i = 0; i < 5; i += 1) await step.click()
+
+    // Число под пальцем едет СРАЗУ, не дожидаясь оборудования: это запрос
+    // гостя, и он подписан «отправляем уставку».
+    await expect(spin).toHaveAttribute('aria-valuenow', String(before + (up ? 5 : -5)))
+    await expect(page.getByTestId('room-thermostat-ac.1-hint')).toHaveText(/./)
+    expect(commands.length, 'команда ушла до того, как гость закончил крутить').toBe(0)
+
+    // И ровно ОДНА команда — с последним значением. Раньше их уходило пять,
+    // из которых четыре отбивались дедупом как «предыдущее ещё выполняется».
+    await expect.poll(() => commands.length, { timeout: 5_000 }).toBe(1)
+    expect(commands[0]).toContain(`"value":${before + (up ? 5 : -5)}`)
+  })
+
   test('оффлайн: план не показывает свет ни включённым, ни выключенным', async ({
     page,
     request,
@@ -421,7 +457,7 @@ test.describe('Управление номером', () => {
     await expect(page.getByTestId('room-plan')).toHaveAttribute('data-lit', 'unknown')
 
     // Показан ЦЕЛИКОМ ночной кадр: ни одного окна светлого поверх него.
-    await expect(page.getByTestId('room-plan').locator('> img')).toHaveAttribute(
+    await expect(page.getByTestId('room-plan-base')).toHaveAttribute(
       'src',
       (live.plan as { image_off: string }).image_off,
     )

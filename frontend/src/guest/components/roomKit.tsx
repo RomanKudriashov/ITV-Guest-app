@@ -47,22 +47,25 @@ export function StatusPill({
       data-testid={testId}
       data-tone={tone}
       sx={(theme) => ({
-        px: 1.75,
-        py: 1,
+        // Тот же кегль и та же плотность, что у стеклянного чипа состояния
+        // шторы на плите: две одинаковые по смыслу подписи не должны быть
+        // разного размера, а вдвое более высокая пилюля съедала экран до плана.
+        px: 1.25,
+        py: 0.75,
         borderRadius: `${theme.palette.brand.radius.pill}px`,
-        border: `1.4px solid ${color || t.pillBorder}`,
+        border: `1px solid ${color || t.pillBorder}`,
         background: t.pillBackground,
         color: tone === 'neutral' ? 'text.secondary' : color,
-        fontSize: theme.typography.body2.fontSize,
-        fontWeight: 600,
+        fontSize: 11,
+        fontWeight: 700,
         whiteSpace: 'nowrap',
       })}
     >
       <Box
         aria-hidden
         sx={{
-          width: 7,
-          height: 7,
+          width: 6,
+          height: 6,
           flex: 'none',
           borderRadius: '50%',
           background: color || t.pillDot,
@@ -474,6 +477,8 @@ export interface RoomDialProps {
   decreaseLabel: string;
   increaseLabel: string;
   onChange: (next: number) => void;
+  /** «Отправляем уставку» — пока значение под пальцем не стало состоянием. */
+  hint?: string | null;
   testId?: string;
 }
 
@@ -508,6 +513,7 @@ export function RoomDial({
   decreaseLabel,
   increaseLabel,
   onChange,
+  hint = null,
   testId = 'room-dial',
 }: RoomDialProps) {
   const theme = useTheme();
@@ -569,7 +575,7 @@ export function RoomDial({
   }, [dragging, fromPointer]);
 
   return (
-    <Stack alignItems="center" data-testid={testId}>
+    <Stack alignItems="center" spacing={0.5} data-testid={testId}>
       <Box ref={ringRef} sx={{ position: 'relative', width: 214, maxWidth: '100%', aspectRatio: '1' }}>
         <Box
           role="slider"
@@ -751,6 +757,14 @@ export function RoomDial({
           />
         </Box>
       </Box>
+      <Typography
+        variant="caption"
+        aria-live="polite"
+        data-testid={`${testId}-hint`}
+        sx={{ minHeight: 16, color: hint ? t.cold : 'transparent' }}
+      >
+        {hint ?? '\u00a0'}
+      </Typography>
     </Stack>
   );
 }

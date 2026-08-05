@@ -21,7 +21,8 @@
     "off": "关",
     "close": "关闭",
     "saving": "保存中…",
-    "add": "添加"
+    "add": "添加",
+    "settings": "设置"
   },
   "auth": {
     "title": "管理后台",
@@ -660,7 +661,8 @@
       "stateClosed": "已关闭",
       "allLightsOff": "关闭全部灯光",
       "dialCurrent": "当前",
-      "dialSensor": "传感器读数"
+      "dialSensor": "传感器读数",
+      "setpointSending": "正在发送设定温度…"
     }
   },
   "tracker": {

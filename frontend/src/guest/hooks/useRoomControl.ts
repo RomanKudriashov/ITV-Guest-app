@@ -54,7 +54,7 @@ export interface RoomCommandInput {
  * сразу значило бы соврать гостю о номере в единственный момент, когда он на
  * этот экран и смотрит.
  */
-export function useRoomCommand() {
+export function useRoomCommand(liveOnline = false) {
   const queryClient = useQueryClient();
   return useMutation<RoomCommandAccepted, unknown, RoomCommandInput>({
     mutationFn: (input) =>
@@ -63,10 +63,31 @@ export function useRoomCommand() {
         capability: input.capability ?? '',
         value: input.value ?? null,
       }),
-    onSuccess: () => {
-      // Сервер уже пометил элемент как «в полёте» — перечитываем, чтобы
-      // показать «в процессе» даже если WS в этот момент не поднят.
-      void queryClient.invalidateQueries({ queryKey: guestKeys.room });
+    onSuccess: (accepted) => {
+      // «Идёт обмен» ставится ИЗ ОТВЕТА СЕРВЕРА, а не перечитыванием снимка.
+      // Сервер ответил 202 и `state: pending` — он принял команду и пометил
+      // элемент в полёте; это факт, который у нас уже на руках. Значение при
+      // этом НЕ трогается: состояние номера по-прежнему меняется только
+      // подтверждением.
+      queryClient.setQueryData<RoomStateSnapshot>(guestKeys.room, (snapshot) =>
+        snapshot
+          ? {
+              ...snapshot,
+              zones: snapshot.zones.map((zone) => ({
+                ...zone,
+                controls: zone.controls.map((control) =>
+                  control.controlId === accepted.controlId
+                    ? { ...control, state: 'pending' as const }
+                    : control,
+                ),
+              })),
+            }
+          : snapshot,
+      );
+      // Перечитываем ТОЛЬКО когда канал не поднят: при живом канале снимок и
+      // так придёт им, а лишний GET на каждую команду — это ещё тринадцать
+      // опросов оборудования на ровном месте.
+      if (!liveOnline) void queryClient.invalidateQueries({ queryKey: guestKeys.room });
     },
   });
 }

@@ -10,7 +10,6 @@ import Stack from '@mui/material/Stack';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
-import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAppTheme } from '@/theme';
 import { pickLogo } from '@/theme/tokens';
 import {
@@ -22,7 +21,7 @@ import {
   type AppIconComponent,
 } from '@/icons';
 import { fadeInSx } from '@/kit';
-import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
+import { GuestQuickMenu } from '../components/GuestQuickMenu';
 import { RoomMenu } from '../components/RoomMenu';
 import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
@@ -181,8 +180,11 @@ export function GuestLayout() {
         {/* Без номера чип не исчезает, а становится входом по номеру:
             иначе из режима просмотра некуда вернуться. */}
         <RoomMenu room={room} variant="floating" />
-        <GuestLanguageMenu />
-        <ThemeModeToggle />
+        {/* Язык и тема — под одной кнопкой. Полоса `fixed` висит над контентом
+            любого экрана, и тремя кнопками она накрывала то заголовок, то
+            первую строку списка. Чип номера остался снаружи: он статус, а не
+            настройка. */}
+        <GuestQuickMenu />
       </Stack>
 
       <Box component="main" sx={{ flexGrow: 1, pb: `${BOTTOM_NAV_HEIGHT}px` }}>

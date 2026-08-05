@@ -75,6 +75,25 @@ export interface RoomPlanPlateProps {
   onToggle: (controlId: string, next: number) => void;
 }
 
+/**
+ * Окно зоны на светлом кадре: эллипс, вписанный в прямоугольник зоны.
+ *
+ * Проценты радиусов считаются от кадра, а кадр лежит ровно на плите — поэтому
+ * окно садится на комнату без пересчётов и без вложенного масштабирования.
+ * Инлайновым стилем, как и вся геометрия: в RTL emotion развернул бы позицию.
+ */
+const zoneWindow = (rect: RoomPlanRect, stops: string): CSSProperties => {
+  const gradient =
+    `radial-gradient(${rect.w / 2}% ${rect.h / 2}% at ` +
+    `${rect.x + rect.w / 2}% ${rect.y + rect.h / 2}%, ${stops})`;
+  return {
+    maskImage: gradient,
+    WebkitMaskImage: gradient,
+    maskRepeat: 'no-repeat',
+    WebkitMaskRepeat: 'no-repeat',
+  };
+};
+
 const pct = (rect: RoomPlanRect) => ({
   left: `${rect.x}%`,
   top: `${rect.y}%`,
@@ -141,6 +160,7 @@ export function RoomPlanPlate({
         src={twoFrames ? plan.image_off : plan.image}
         alt=""
         aria-hidden
+        data-testid="room-plan-base"
         sx={{
           position: 'absolute',
           inset: 0,
@@ -158,37 +178,35 @@ export function RoomPlanPlate({
       {plan.zones.map((zone) => {
         const on = read(zone.controlId)?.on === true;
         return twoFrames ? (
-          // Верхний, светлый кадр — окном по зоне. Внутри окна он растянут до
-          // размеров всей плиты и сдвинут так, что пиксели совпадают с нижним:
-          // иначе на границе зоны поехала бы мебель.
+          /*
+            Верхний, светлый кадр — ЦЕЛИКОМ поверх нижнего, а видно его только
+            в окне зоны: окно вырезано маской-эллипсом, вписанным в
+            прямоугольник зоны, с растушёванным краем.
+
+            Именно так, а не «окошко с overflow: hidden и уменьшенной копией
+            кадра внутри»: на живом iOS сочетание маски и обрезки контейнера
+            даёт жёсткий прямоугольник — маска теряется, остаётся клип, и плита
+            выглядит сломанной. Здесь обрезки нет вовсе, а кадр не масштабируется
+            и потому совпадает с нижним пиксель в пиксель по построению.
+          */
           <Box
             key={`lit-${zone.code || zone.controlId}`}
+            component="img"
+            src={plan.image}
+            alt=""
             aria-hidden
             data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
-            style={{ ...pct(zone.mask), opacity: on ? 1 : 0 }}
+            style={{ opacity: on ? 1 : 0, ...zoneWindow(zone.mask, tokens.zoneWindowStops) }}
             sx={{
               position: 'absolute',
-              overflow: 'hidden',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
               pointerEvents: 'none',
-              maskImage: tokens.zoneWindow,
-              WebkitMaskImage: tokens.zoneWindow,
               transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
             }}
-          >
-            <Box
-              component="img"
-              src={plan.image}
-              alt=""
-              style={{
-                position: 'absolute',
-                left: `${(-zone.mask.x / zone.mask.w) * 100}%`,
-                top: `${(-zone.mask.y / zone.mask.h) * 100}%`,
-                width: `${(100 / zone.mask.w) * 100}%`,
-                height: `${(100 / zone.mask.h) * 100}%`,
-                objectFit: 'cover',
-              }}
-            />
-          </Box>
+          />
         ) : (
           <Box
             key={`mask-${zone.code || zone.controlId}`}

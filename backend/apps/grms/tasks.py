@@ -110,7 +110,7 @@ def _execute(hotel, room_id: str, control_id: str, capability: str, value) -> di
         # перечтения для неё не запускается (контракт §6).
         feedback = ""
 
-    return commands.send_command(
+    outcome = commands.send_command(
         hotel,
         device=context.device,
         channel=command_name,
@@ -119,6 +119,21 @@ def _execute(hotel, room_id: str, control_id: str, capability: str, value) -> di
         subdevice=context.payload.get("subdevice") or "",
         room=context.room.number,
     )
+
+    # Схлопывание одновременных чтений сбрасывается СРАЗУ после команды: после
+    # неё состояние заведомо другое, и снимок, собранный до неё, отдавать нельзя
+    # даже секунду — а именно секунду с небольшим он и жил бы.
+    commands.forget_reads(
+        hotel,
+        context.device,
+        [
+            channel.get("feedback")
+            for control in context.controls
+            for channel in (control.get("channels") or {}).values()
+            if channel.get("feedback")
+        ],
+    )
+    return outcome
 
 
 class _SessionLike:

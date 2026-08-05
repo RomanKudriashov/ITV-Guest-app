@@ -46,7 +46,7 @@ import {
 } from '../components/roomKit';
 import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
-import { DESKTOP_QUERY } from '../layout/constants';
+import { BOTTOM_NAV_HEIGHT, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { layout, stickyUnderFloating } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
@@ -87,7 +87,7 @@ export function RoomPage() {
 
   const state = useRoomState(enabled);
   const live = useRoomLive(enabled);
-  const command = useRoomCommand();
+  const command = useRoomCommand(live.status === 'online');
   const [notice, setNotice] = useState<{ severity: 'success' | 'warning' | 'error'; text: string } | null>(
     null,
   );
@@ -227,7 +227,12 @@ export function RoomPage() {
   return (
     <Box
       sx={{
-        pb: 6,
+        // Нижнее меню телефона плавает поверх контента, поэтому запас снизу —
+        // его высота плюс безопасная зона: последняя строка панели и кнопка
+        // «выключить весь свет» иначе оказываются под ним и недоступны.
+        pb: isDesktop
+          ? 6
+          : `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom) + ${layout.panelOverlap}px)`,
         px: 2,
         // Сверху — ровно столько, чтобы пилюли прошли ПОД плавающей группой
         // контролов, а не под ней. Число из словаря: группа и содержимое уже
@@ -381,6 +386,7 @@ function Pills({
   readings: Readings;
 }) {
   const { t } = useTranslation();
+  const { roomControl } = useStorefront();
   if (!snapshot || snapshot.availability === 'unavailable') return null;
 
   const climate = groups.climate[0];
@@ -432,9 +438,13 @@ function Pills({
       sx={{
         // Одной строкой с прокруткой, а не переносом: три ряда пилюль на
         // телефоне съедали экран до того, как гость видел план.
-        gap: 1.25,
+        gap: 1,
         overflowX: 'auto',
         pb: 0.5,
+        // Край прокрутки виден: строка, обрезанная ровно по границе экрана,
+        // читается как обрыв вёрстки, а не как «дальше есть ещё».
+        maskImage: roomControl.fadeEdge,
+        WebkitMaskImage: roomControl.fadeEdge,
         scrollbarWidth: 'none',
         '&::-webkit-scrollbar': { display: 'none' },
       }}
@@ -560,10 +570,17 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
   const control = controls[0];
   const reading = readings[control.controlId];
   const locked = isLocked(reading, canCommand);
+  // Уставку крутят подряд: диск остаётся живым, пока идёт обмен, иначе
+  // после первого же нажатия он на секунды каменеет.
+  const dialLocked = !canCommand || Boolean(reading?.unreadable) || Boolean(reading?.readonly);
   const setpointRange = control.range?.setpoint;
   const fanRange = control.range?.fan_speed;
-  const setpoint = reading?.values.setpoint ?? null;
+  const confirmedSetpoint = reading?.values.setpoint ?? null;
   const current = reading?.values.current_temp ?? null;
+  const setpointDraft = useSetpointDraft(confirmedSetpoint, Boolean(reading?.busy), (next) =>
+    onCommand({ controlId: control.controlId, capability: 'setpoint', value: next }),
+  );
+  const setpoint = setpointDraft.shown;
   const power = readingOn(reading);
   const fan = reading?.values.fan_speed ?? null;
 
@@ -589,16 +606,18 @@ function ClimatePanel({ controls, readings, canCommand, onCommand }: PanelProps)
             min={setpointRange.min}
             max={setpointRange.max}
             step={setpointRange.step || 1}
-            disabled={locked}
+            disabled={dialLocked}
             label={t('guest.roomControl.setpoint')}
             captionSetpoint={t('guest.roomControl.setpoint')}
             captionCurrent={t('guest.roomControl.dialCurrent')}
             captionSensor={t('guest.roomControl.dialSensor')}
             decreaseLabel={t('guest.roomControl.decrease')}
             increaseLabel={t('guest.roomControl.increase')}
-            onChange={(next) =>
-              onCommand({ controlId: control.controlId, capability: 'setpoint', value: next })
-            }
+            onChange={setpointDraft.change}
+            // Пока значение ещё не отправлено или ждёт подтверждения — так и
+            // написано. Число под пальцем это ЗАПРОС гостя, а не состояние
+            // номера, и подписывать их одинаково нельзя.
+            hint={setpointDraft.sending ? t('guest.roomControl.setpointSending') : null}
             testId={`room-thermostat-${control.controlId}`}
           />
         </Box>
@@ -892,6 +911,61 @@ function readValue(control: RoomControl, capability: RoomCapability): number | n
   }
   const found = control.value[key];
   return typeof found === 'number' ? found : null;
+}
+
+/* ── Уставка: черновик и одна команда ─────────────────────────────────────── */
+
+/** Пауза после последнего изменения, по истечении которой уходит команда. */
+const SETPOINT_SETTLE_MS = 500;
+
+/**
+ * Уставка отправляется ОДИН раз, когда гость закончил крутить.
+ *
+ * Раньше команда уходила на каждое нажатие: пять нажатий «+» давали пять
+ * команд в оборудование, из которых четыре отбивались дедупом как «предыдущее
+ * действие ещё выполняется», а число на диске не двигалось вовсе — сервер в
+ * полёте значений не отдаёт. Гость видел зависший диск и ошибку.
+ *
+ * Теперь число под пальцем меняется сразу, а команда уходит одна, с последним
+ * значением. Это НЕ оптимизм: черновик — то, что гость ЗАПРАШИВАЕТ, и он
+ * подписан «отправляем уставку». Состояние номера по-прежнему приезжает только
+ * подтверждением, и как только оно пришло, черновик снимается — включая случай
+ * «не подтвердилось», где на диск возвращается фактическое значение.
+ */
+function useSetpointDraft(
+  confirmed: number | null,
+  busy: boolean,
+  send: (next: number) => void,
+): { shown: number | null; change: (next: number) => void; sending: boolean } {
+  const [draft, setDraft] = useState<number | null>(null);
+  const timer = useRef<number | null>(null);
+  const queued = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Черновик живёт до ответа: пока команда не ушла (queued) или ещё в полёте
+    // (busy), показываем запрошенное. Как только пришло подтверждённое —
+    // показываем его, каким бы оно ни было.
+    if (draft === null || busy || queued.current !== null) return;
+    if (confirmed !== null) setDraft(null);
+  }, [confirmed, busy, draft]);
+
+  useEffect(() => () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+  }, []);
+
+  const change = (next: number) => {
+    setDraft(next);
+    queued.current = next;
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      const value = queued.current;
+      queued.current = null;
+      if (value !== null) send(value);
+    }, SETPOINT_SETTLE_MS);
+  };
+
+  return { shown: draft ?? confirmed, change, sending: draft !== null };
 }
 
 /* ── Группировка по типу ──────────────────────────────────────────────────── */

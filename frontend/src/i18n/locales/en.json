@@ -21,7 +21,8 @@
     "off": "Off",
     "close": "Close",
     "saving": "Saving…",
-    "add": "Add"
+    "add": "Add",
+    "settings": "Settings"
   },
   "auth": {
     "title": "Management console",
@@ -664,7 +665,8 @@
       "stateClosed": "closed",
       "allLightsOff": "Turn off all lights",
       "dialCurrent": "now",
-      "dialSensor": "sensor reading"
+      "dialSensor": "sensor reading",
+      "setpointSending": "Sending the setpoint…"
     }
   },
   "tracker": {

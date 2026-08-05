@@ -28,6 +28,21 @@ from apps.grms import adapter, transport
 
 logger = logging.getLogger(__name__)
 
+# Окно схлопывания одновременных чтений одного устройства. Секунда с небольшим:
+# столько живёт «лавина» из открытых телефонов и подряд идущих команд, и за это
+# окно состояние номера физически не успевает измениться иначе как нашей же
+# командой — а она окно сбрасывает.
+READ_COALESCE_S = 1.5
+
+# Бюджет на всю пачку чтения. Канал, не ответивший за него, помечается
+# непрочитанным — и элемент уходит в «нет связи», честно и сразу.
+#
+# Без бюджета молчащий канал держал заложником весь экран: TTL на запрос плюс
+# две волны параллельного чтения давали больше десяти секунд, в течение которых
+# гость смотрел на скелетон. Экран обязан открываться, даже когда часть каналов
+# молчит: пять работающих выключателей полезнее, чем ожидание шестого.
+READ_BUDGET_S = 2.5
+
 # Паузы перед попытками перечитать. Сумма — окно подтверждения (~3.7 с).
 # Числа подобраны под наблюдаемую задержку GRMS и подлежат калибровке на
 # объекте; форма важнее чисел: несколько попыток с ростом паузы, а не одна.
@@ -93,8 +108,40 @@ def read(hotel, *, device: str, feedback: str, subdevice: str = "", room: str = 
     return result
 
 
+def _coalesce_key(hotel_id, device: str, feedbacks: list[str]) -> str:
+    """
+    Ключ схлопывания. Имя устройства уходит В ХЭШ, а не в ключ строкой: оно
+    приходит из конфигурации отеля и содержит пробелы и скобки («Modbus TCP
+    Server (Slave mode) 305»), а такой ключ кэша ломается на бэкендах строже
+    Redis и уже сыпал предупреждениями.
+    """
+    from hashlib import blake2s
+
+    digest = blake2s("|".join([device, *feedbacks]).encode(), digest_size=12).hexdigest()
+    return f"grms:read:{hotel_id}:{digest}"
+
+
+def forget_reads(hotel, device: str, feedbacks: list[str]) -> None:
+    """
+    Забыть последнее чтение устройства.
+
+    Вызывается сразу после команды: собственная команда — единственный момент,
+    когда мы ТОЧНО знаем, что состояние изменилось, и отдавать снимок, собранный
+    до неё, нельзя даже секунду.
+    """
+    from django.core.cache import cache
+
+    cache.delete(_coalesce_key(hotel.pk, device, sorted(set(feedbacks))))
+
+
 def read_many(
-    hotel, *, device: str, feedbacks: list[str], subdevice: str = "", room: str = ""
+    hotel,
+    *,
+    device: str,
+    feedbacks: list[str],
+    subdevice: str = "",
+    room: str = "",
+    coalesce_s: float = READ_COALESCE_S,
 ) -> dict[str, adapter.IridiResult]:
     """
     Прочитать пачку feedback'ов одного устройства. Возвращает {feedback: результат}.
@@ -112,9 +159,29 @@ def read_many(
     строк `grms.read` на каждое открытие экрана в каждом номере — это не
     диагностика, это способ утопить журнал: искать в нём команду гостя стало бы
     нечем. Что именно прочитано, в записи видно поимённо.
+
+    ОДНОВРЕМЕННЫЕ чтения одного устройства схлопываются: результат живёт
+    `coalesce_s` секунд, и пять открытых телефонов в одном номере дают одну
+    ходку до оборудования, а не пять. Это ЗАЩИТА ОТ ЛАВИНЫ, а не кэш состояния:
+    окно измеряется секундой-двумя, собственная команда его сбрасывает
+    (`forget_reads`), а подтверждение команды сюда вообще не ходит — оно читает
+    канал напрямую. Показать гостю устаревшее по-прежнему нельзя, и окно
+    выбрано так, чтобы «устареть» было физически нечему.
     """
     if not feedbacks:
         return {}
+
+    from django.core.cache import cache
+
+    # Ключ по НАБОРУ каналов, а не по их порядку: снимок и сброс после команды
+    # обязаны попадать в одну и ту же запись.
+    key = _coalesce_key(hotel.pk, device, sorted(set(feedbacks)))
+    if coalesce_s > 0:
+        shared = cache.get(key)
+        if shared is not None:
+            return {
+                feedback: adapter.IridiResult(**payload) for feedback, payload in shared.items()
+            }
 
     started = time.monotonic()
     if not transport.node_is_online(hotel):
@@ -145,6 +212,21 @@ def read_many(
             "duration_ms": int((time.monotonic() - started) * 1000),
         },
     )
+    if coalesce_s > 0:
+        cache.set(
+            key,
+            {
+                feedback: {
+                    "ok": result.ok,
+                    "value": result.value,
+                    "error": result.error,
+                    "raw": result.raw,
+                    "raw_value": result.raw_value,
+                }
+                for feedback, result in results.items()
+            },
+            coalesce_s,
+        )
     return results
 
 
@@ -171,8 +253,21 @@ def _read_batch(hotel, *, device: str, feedbacks: list[str], subdevice: str) -> 
                 )
             return feedback, _interpret(raw, request_id=request_id, is_read=True)
 
-        pairs = await asyncio.gather(*(one(feedback) for feedback in feedbacks))
-        return dict(pairs)
+        # Бюджет на всю пачку: не ответившие за него каналы отменяются и
+        # помечаются непрочитанными, а прочитанные доезжают до гостя.
+        tasks = {asyncio.ensure_future(one(feedback)): feedback for feedback in feedbacks}
+        done, pending = await asyncio.wait(tasks.keys(), timeout=READ_BUDGET_S)
+
+        results: dict = {}
+        for task in done:
+            feedback, result = task.result()
+            results[feedback] = result
+        for task in pending:
+            task.cancel()
+            results[tasks[task]] = adapter.IridiResult(
+                ok=False, error=adapter.TTL_EXPIRED
+            )
+        return results
 
     return async_to_sync(run)()
 

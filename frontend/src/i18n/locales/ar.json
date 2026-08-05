@@ -21,7 +21,8 @@
     "off": "معطّل",
     "close": "إغلاق",
     "saving": "جارٍ الحفظ…",
-    "add": "إضافة"
+    "add": "إضافة",
+    "settings": "الإعدادات"
   },
   "auth": {
     "title": "لوحة الإدارة",
@@ -672,7 +673,8 @@
       "stateClosed": "مغلقة",
       "allLightsOff": "إطفاء كل الإضاءة",
       "dialCurrent": "الآن",
-      "dialSensor": "قراءة المستشعر"
+      "dialSensor": "قراءة المستشعر",
+      "setpointSending": "جارٍ إرسال درجة الحرارة…"
     }
   },
   "tracker": {
