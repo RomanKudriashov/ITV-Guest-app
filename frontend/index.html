@@ -14,16 +14,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="ITV Guest" />
     <meta name="format-detection" content="telephone=no" />
-    <!-- Webfonts: Onest (display — headings, item names, prices) and Manrope
-         (interface). Both carry Cyrillic subsets, matching the token font stacks
-         in src/theme/tokens.ts and the design reference screens.
-         Google Fonts is fine for dev. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Onest:wght@400;600;700;800&display=swap&subset=cyrillic,cyrillic-ext,latin,latin-ext"
-    />
+    <!-- Шрифты: Onest (дисплейный — заголовки, названия, цены) и Manrope
+         (интерфейсный). Оба с кириллицей, стек описан в src/theme/tokens.ts.
+
+         ЛЕЖАТ ЛОКАЛЬНО (public/fonts), а не приезжают с fonts.gstatic.com:
+         внешняя ссылка означала, что фирменный шрифт доходит до гостя только
+         при доступе в интернет с ЕГО устройства. В гостиничном Wi-Fi с
+         закрытым внешним доступом — и на стенде в локальной сети — интерфейс
+         рисовался системным шрифтом, то есть выглядел чужим ровно там, где
+         его показывают. -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-400-latin.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-400-cyrillic.woff2" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
 
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
