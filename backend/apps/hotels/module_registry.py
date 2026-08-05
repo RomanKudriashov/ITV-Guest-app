@@ -75,14 +75,28 @@ def set_modules(hotel, entries: list[dict]) -> list[dict]:
                 if enabled and code not in granted
                 else HotelModule.Source.TARIFF.value
             )
-            HotelModule.objects.update_or_create(
+            # ЧАСТИЧНОЕ обновление, а не перезапись. Запрос без `config`
+            # означает «настройки не трогать», а не «стереть их».
+            #
+            # Перезапись стоила ровно того, ради чего реестр и заводили:
+            # в конфигурации модуля управления номером лежит флаг демо-входа,
+            # и один заход в платформенную консоль — переключить любой другой
+            # модуль — молча стирал его. Гость после этого упирался в PIN,
+            # которого никто не знает, а связь с «мы тут галочку двигали»
+            # обнаруживалась не сразу.
+            module, created = HotelModule.objects.get_or_create(
                 code=code,
-                defaults={
-                    "is_enabled": enabled,
-                    "source": source,
-                    "config": entry.get("config") or {},
-                },
+                defaults={"is_enabled": enabled, "source": source, "config": entry.get("config") or {}},
             )
+            if created:
+                continue
+            module.is_enabled = enabled
+            module.source = source
+            if "config" in entry and entry["config"] is not None:
+                # Слияние, а не замена: клиент присылает то, что меняет, и не
+                # обязан знать про чужие ключи в той же конфигурации.
+                module.config = {**(module.config or {}), **entry["config"]}
+            module.save(update_fields=["is_enabled", "source", "config", "updated_at"])
     return list_modules(hotel)
 
 

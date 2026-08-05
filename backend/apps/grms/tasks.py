@@ -179,3 +179,65 @@ def broadcast_room(hotel_id, room_id, *, event: str, command: dict | None = None
 def room_group(hotel_id, room_id) -> str:
     """Группа комнаты — по образцу `order.{hotel}.{order}` (контракт §7)."""
     return f"room.{hotel_id}.{room_id}"
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=3,
+    acks_late=True,
+)
+def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id: str) -> dict:
+    """
+    Посчитать ночной кадр плана из светлого и положить его в конфигурацию типа.
+
+    Фоновой задачей, а не по кнопке синхронно: расчёт идёт секунды, а
+    администратор в это время должен продолжать размечать план. Рядом с
+    нарезкой вариантов медиа и по тем же правилам — оригинал в MinIO, варианты
+    режет медиапайплайн.
+
+    Раньше это был скрипт в docs/: для разработчика нормально, для
+    администратора отеля — нет. Он не запустит питон, чтобы завести номер, и
+    остался бы либо без ночного кадра, либо с парой кадров, снятых как попало.
+    """
+    from apps.core.context import tenant_context
+    from apps.grms import nightframe
+    from apps.grms.models import RoomType
+    from apps.hotels.models import Hotel
+    from apps.media.models import MediaAsset
+    from apps.media.services import upload_asset
+    from apps.media import storage
+
+    hotel = Hotel.objects.filter(pk=hotel_id).first()
+    if hotel is None:
+        return {"status": "no_hotel"}
+
+    with tenant_context(hotel):
+        lit = MediaAsset.objects.filter(pk=lit_asset_id).first()
+        if lit is None:
+            return {"status": "no_asset"}
+
+        raw = storage.get_bytes(lit.object_key)
+        baked, _size = nightframe.bake_bytes(raw)
+        night = upload_asset(
+            content=baked,
+            filename=f"night-{lit.original_filename or 'plan.png'}",
+            kind=MediaAsset.Kind.ROOM_PLAN,
+            content_type="image/png",
+            alt={"ru": "План номера, свет выключен (посчитан из светлого кадра)"},
+        )
+
+        room_type = RoomType.objects.filter(code=room_type_code).first()
+        if room_type is None:
+            return {"status": "no_type"}
+        plan = dict(room_type.plan or {})
+        plan["asset_off_id"] = str(night.pk)
+        # Признак происхождения: посчитанный кадр совмещён по построению, и
+        # проверять его парность незачем — в отличие от принесённой пары.
+        plan["asset_off_source"] = "baked"
+        room_type.plan = plan
+        room_type.save(update_fields=["plan", "updated_at"])
+
+    return {"status": "ready", "asset_off_id": str(night.pk)}

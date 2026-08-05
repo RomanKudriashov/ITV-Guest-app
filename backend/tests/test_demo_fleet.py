@@ -153,3 +153,44 @@ def test_seed_is_idempotent(fleet):
     before = snapshot()
     call_command("seed_demo_fleet", verbosity=0)
     assert snapshot() == before
+
+
+def test_module_settings_survive_a_registry_switch(crystal):
+    """
+    Переключение модуля НЕ стирает его настройки.
+
+    Реестр перезаписывал `config` целиком, и запрос без него молча очищал
+    конфигурацию. В управлении номером там лежит флаг демо-входа: один заход в
+    платформенную консоль перед показом — и гость упирается в PIN, которого
+    никто не знает.
+    """
+    from apps.core.context import tenant_context
+    from apps.hotels.models import HotelModule
+    from apps.hotels import module_registry
+
+    with tenant_context(crystal):
+        HotelModule.objects.update_or_create(
+            code=HotelModule.Code.ROOM_CONTROL,
+            defaults={
+                "is_enabled": True,
+                "source": HotelModule.Source.OVERRIDE,
+                "config": {"guest_entry_demo": True},
+            },
+        )
+
+    # Запрос БЕЗ config — «поменяй включённость, настройки не трогай».
+    module_registry.set_modules(
+        crystal, [{"code": HotelModule.Code.ROOM_CONTROL, "is_enabled": True}]
+    )
+    with tenant_context(crystal):
+        module = HotelModule.objects.get(code=HotelModule.Code.ROOM_CONTROL)
+    assert module.config.get("guest_entry_demo") is True, "настройки модуля стёрты переключением"
+
+    # Присланный ключ сливается с существующими, а не заменяет их целиком.
+    module_registry.set_modules(
+        crystal,
+        [{"code": HotelModule.Code.ROOM_CONTROL, "is_enabled": True, "config": {"note": "показ"}}],
+    )
+    with tenant_context(crystal):
+        module = HotelModule.objects.get(code=HotelModule.Code.ROOM_CONTROL)
+    assert module.config == {"guest_entry_demo": True, "note": "показ"}

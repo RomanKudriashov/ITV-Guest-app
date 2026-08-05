@@ -162,6 +162,31 @@ def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:
             field="elements",
         )
 
+    # Разметка плана, ссылающаяся в пустоту, БЛОКИРУЕТ публикацию.
+    #
+    # Раньше такие ссылки молча выбрасывались, и это было хуже: администратор
+    # разметил зону, потом снял или переименовал элемент — зона на плане
+    # перестала быть кликабельной, а он об этом не узнал. Ошибку нашли бы в
+    # номере, причём не он.
+    with tenant_context(hotel):
+        draft = builder._type(room_type_code).plan
+    control_ids = {
+        control["controlId"] for zone in snapshot["zones"] for control in zone["controls"]
+    }
+    broken = plan_geometry.dangling(draft, control_ids=control_ids)
+    if broken:
+        zones = [item["code"] or "—" for item in broken if item["kind"] == "zone"]
+        refs = sorted({item["ref"] for item in broken if item["ref"]})
+        parts = []
+        if zones:
+            parts.append("зоны без рабочего элемента: " + ", ".join(zones))
+        if refs:
+            parts.append("нет таких элементов: " + ", ".join(refs))
+        raise ValidationError(
+            "План ссылается на то, чего не будет в этой версии — " + "; ".join(parts),
+            field="plan",
+        )
+
     with tenant_context(hotel):
         room_type = builder._type(room_type_code)
         with transaction.atomic():

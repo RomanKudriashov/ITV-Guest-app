@@ -156,6 +156,46 @@ def normalize(raw: object, *, control_ids: set[str]) -> dict:
     }
 
 
+def dangling(raw: object, *, control_ids: set[str]) -> list[dict]:
+    """
+    Ссылки разметки, за которыми нет опубликованного элемента.
+
+    Такие ссылки НЕ выбрасываются молча при публикации, а блокируют её. Молчание
+    здесь дороже: администратор разметил зону, переименовал или снял элемент — и
+    зона на плане перестала быть кликабельной, а он об этом не узнал. Ошибку
+    нашли бы в номере, причём не он.
+    """
+    if not isinstance(raw, dict):
+        return []
+
+    broken: list[dict] = []
+    for zone in raw.get("zones") or []:
+        if not isinstance(zone, dict):
+            continue
+        control_id = str(zone.get("controlId") or "")
+        if not control_id:
+            broken.append({"kind": "zone", "code": str(zone.get("code") or ""), "ref": ""})
+        elif control_id not in control_ids:
+            broken.append({"kind": "zone", "code": str(zone.get("code") or ""), "ref": control_id})
+
+    for window in raw.get("windows") or []:
+        if not isinstance(window, dict):
+            continue
+        for field_name in ("curtainId", "blackoutId"):
+            ref = str(window.get(field_name) or "")
+            if ref and ref not in control_ids:
+                broken.append({"kind": "window", "code": str(window.get("code") or ""), "ref": ref})
+
+    for point in raw.get("points") or []:
+        if not isinstance(point, dict):
+            continue
+        ref = str(point.get("controlId") or "")
+        if ref and ref not in control_ids:
+            broken.append({"kind": "point", "code": "", "ref": ref})
+
+    return broken
+
+
 def for_guest(plan: object) -> dict:
     """
     Снимок → то, что видит гость: готовый URL, пропорция и геометрия.

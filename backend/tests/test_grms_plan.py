@@ -137,30 +137,47 @@ def test_rollback_returns_the_geometry_of_its_own_version(seeded):
     assert _type(hotel).plan["zones"][0]["hit"]["x"] == moved["zones"][0]["hit"]["x"]
 
 
-def test_publish_drops_plan_points_without_a_published_element(seeded):
+def test_publish_is_blocked_when_the_plan_points_at_a_missing_element(seeded):
     """
-    Ссылка на элемент, которого в этой версии нет, с плана уходит.
+    Ссылка разметки в пустоту БЛОКИРУЕТ публикацию — и называет, чего нет.
 
-    Кликабельная комната без канала — это обещание без исполнителя, ровно то
-    же, из-за чего непривязанный элемент не попадает в снимок.
+    Раньше такие ссылки молча выбрасывались. Это было хуже: администратор
+    разметил зону, потом снял или переименовал элемент — зона на плане
+    перестала быть кликабельной, а он об этом не узнал. Ошибку нашли бы в
+    номере, причём не он.
     """
+    from apps.core.errors import ValidationError
+
     hotel = seeded
     room_type = _type(hotel)
     broken = json.loads(json.dumps(room_type.plan))
     broken["zones"][0]["controlId"] = "light.nowhere"
-    broken["windows"][0]["curtainId"] = "curtain.nowhere"
-    broken["points"][0]["controlId"] = "ac.nowhere"
     with tenant_context(hotel):
         RoomType.objects.filter(pk=room_type.pk).update(plan=broken)
 
-    plan = publishing.publish(hotel, TYPE_CODE).payload["plan"]
+    with pytest.raises(ValidationError) as failure:
+        publishing.publish(hotel, TYPE_CODE)
+    assert "light.nowhere" in str(failure.value)
 
-    assert "light.nowhere" not in [zone["controlId"] for zone in plan["zones"]]
-    assert len(plan["zones"]) == len(broken["zones"]) - 1
-    assert [window["code"] for window in plan["windows"]] == [
-        window["code"] for window in broken["windows"][1:]
-    ]
-    assert plan["points"] == []
+    # Опубликованная версия при этом осталась прежней: неудачная публикация
+    # ничего не меняет в номере.
+    assert _current(hotel)["plan"]["zones"][0]["controlId"] == "light.living"
+
+
+def test_publish_is_blocked_when_a_zone_has_no_element_at_all(seeded):
+    """Зона без привязки — та же поломка, только заметить её ещё труднее."""
+    from apps.core.errors import ValidationError
+
+    hotel = seeded
+    room_type = _type(hotel)
+    empty = json.loads(json.dumps(room_type.plan))
+    empty["zones"][0]["controlId"] = ""
+    with tenant_context(hotel):
+        RoomType.objects.filter(pk=room_type.pk).update(plan=empty)
+
+    with pytest.raises(ValidationError) as failure:
+        publishing.publish(hotel, TYPE_CODE)
+    assert "зоны без рабочего элемента" in str(failure.value)
 
 
 def test_a_type_without_a_plan_publishes_without_one(seeded):
