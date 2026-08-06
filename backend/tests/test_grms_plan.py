@@ -30,7 +30,11 @@ from django.core.management import call_command
 from apps.core.context import tenant_context
 from apps.grms import plan as plan_geometry
 from apps.grms import publishing
-from apps.grms.management.commands.seed_grms_demo import GEOMETRY_FILE, TYPE_CODE
+from apps.grms.management.commands.seed_grms_demo import (
+    GEOMETRY_FILE,
+    PLAN_ZONE_LIGHTS,
+    TYPE_CODE,
+)
 from apps.grms.models import PublishedConfig, RoomType
 from apps.media.models import MediaAsset
 
@@ -93,9 +97,21 @@ def test_geometry_reaches_the_snapshot_exactly_as_measured(seeded):
         # признак обязан доехать, иначе оно поедет как горизонтальное.
         assert window["orientation"] == source["orientation"], source["code"]
 
-    assert plan["points"] == [
+    # Точки плана — это И поток воздуха, И метки света: формат один, а чем
+    # окажется точка, решает элемент, на который она ссылается. Координаты
+    # обеих групп берутся из файла замеров без единой правки.
+    expected_points = [
         {"controlId": "ac.1", "x": measured["ac"]["x"], "y": measured["ac"]["y"]}
+    ] + [
+        {
+            "controlId": PLAN_ZONE_LIGHTS[light["zone"]],
+            "x": light["x"],
+            "y": light["y"],
+        }
+        for light in measured.get("lights", [])
+        if light["zone"] in PLAN_ZONE_LIGHTS
     ]
+    assert plan["points"] == expected_points
 
 
 def test_zone_codes_match_the_published_zones(seeded):
