@@ -433,7 +433,9 @@
       "portion": "portion",
       "prepMinutes": "~{{minutes}} min",
       "contains": "Contains",
-      "suitableFor": "Suitable for"
+      "suitableFor": "Suitable for",
+      "addonAdd": "Add {{title}}",
+      "addonRemove": "Remove {{title}}"
     },
     "cart": {
       "title": "Your order",

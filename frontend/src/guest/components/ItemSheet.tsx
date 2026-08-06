@@ -25,7 +25,7 @@ import { errorMessage } from '../errors';
 import { useGuestItem } from '../hooks/useGuestQueries';
 import { DESKTOP_QUERY } from '../layout/constants';
 import type { ItemDetail, MenuItem } from '../api/types';
-import { surfaceRadius } from '../storefrontTokens';
+import { itemCard, surfaceRadius } from '../storefrontTokens';
 
 export interface ItemSheetProps {
   itemId: string | null;
@@ -191,8 +191,13 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
             }}
           >
             {item ? (
-              <Box sx={{ minHeight: { xs: 220, sm: 460 }, overflow: 'hidden' }}>
-                <ItemMedia item={item} variant="rail" fallbackIcon={fallbackIcon} />
+              <Box sx={{ minHeight: itemCard.railMinHeight, overflow: 'hidden' }}>
+                <ItemMedia
+                  item={item}
+                  variant="rail"
+                  fallbackIcon={fallbackIcon}
+                  categoryLabel={item.category_title}
+                />
               </Box>
             ) : null}
             {/* The content cell scrolls on its own; the CTA sits at the end of it

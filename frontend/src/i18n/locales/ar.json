@@ -441,7 +441,9 @@
       "portion": "الحصة",
       "prepMinutes": "~{{minutes}} دقيقة",
       "contains": "يحتوي على",
-      "suitableFor": "مناسب لـ"
+      "suitableFor": "مناسب لـ",
+      "addonAdd": "إضافة {{title}}",
+      "addonRemove": "إزالة {{title}}"
     },
     "cart": {
       "title": "طلبك",

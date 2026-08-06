@@ -6,7 +6,14 @@ import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { KitImage } from '@/kit';
-import type { AppIconComponent } from '@/icons';
+import {
+  IconCarbs,
+  IconFat,
+  IconKcal,
+  IconPortion,
+  IconProtein,
+  type AppIconComponent,
+} from '@/icons';
 import type { ItemCharacteristic, ItemDetail, ItemFacet } from '../api/types';
 import { itemCard, surfaceRadius } from '../storefrontTokens';
 
@@ -170,20 +177,32 @@ export function CharacteristicsBlock({ characteristics }: { characteristics?: It
         display: 'grid',
         gridTemplateColumns: `minmax(0, ${itemCard.labelColumn}px) minmax(0, 1fr)`,
         columnGap: 1.5,
-        rowGap: 0.5,
         fontSize: '0.82rem',
       }}
     >
-      {characteristics.map((row, i) => (
-        <Fragment key={i}>
-          <Box component="span" sx={{ color: 'text.secondary' }}>
-            {row.name}
-          </Box>
-          <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>
-            {row.value}
-          </Box>
-        </Fragment>
-      ))}
+      {characteristics.map((row, i) => {
+        /*
+          Разделитель — ЛИНИЯ МЕЖДУ СТРОКАМИ, а не рамка вокруг блока: строки
+          читаются парами «название → значение», и без паузы между парами
+          длинный список сливается в столбик слов. Последняя строка линии не
+          получает — снизу уже отступ блока.
+        */
+        const line = i < characteristics.length - 1;
+        const cell = {
+          py: itemCard.tight,
+          ...(line ? { borderBottom: 1, borderColor: 'divider' } : {}),
+        } as const;
+        return (
+          <Fragment key={i}>
+            <Box component="span" sx={{ ...cell, color: 'text.secondary' }}>
+              {row.name}
+            </Box>
+            <Box component="span" sx={{ ...cell, color: 'text.primary', fontWeight: 500 }}>
+              {row.value}
+            </Box>
+          </Fragment>
+        );
+      })}
     </Box>
   );
 }
@@ -206,21 +225,21 @@ export function NutritionBlock({
   if (!nutrition) return null;
 
   // Ячейки, а не таблица: у карточки нет колонок, есть ритм.
-  const macros: { label: string; value: number }[] = [];
+  const macros: { label: string; value: number; Icon: AppIconComponent }[] = [];
   if (nutrition.calories != null)
-    macros.push({ label: t('guest.item.kcal'), value: nutrition.calories });
+    macros.push({ label: t('guest.item.kcal'), value: nutrition.calories, Icon: IconKcal });
   // Единица в подписи, а не подразумевается. Белки, жиры, углеводы и порция
   // измеряются в граммах, и в ячейке «32 / Белки» это сказать больше негде:
   // раньше единицу держала соседняя подпись в общей строке.
   const grams = (label: string) => `${label}, ${t('guest.item.gram')}`;
   if (nutrition.protein != null)
-    macros.push({ label: grams(t('guest.item.protein')), value: nutrition.protein });
+    macros.push({ label: grams(t('guest.item.protein')), value: nutrition.protein, Icon: IconProtein });
   if (nutrition.fat != null)
-    macros.push({ label: grams(t('guest.item.fat')), value: nutrition.fat });
+    macros.push({ label: grams(t('guest.item.fat')), value: nutrition.fat, Icon: IconFat });
   if (nutrition.carbs != null)
-    macros.push({ label: grams(t('guest.item.carbs')), value: nutrition.carbs });
+    macros.push({ label: grams(t('guest.item.carbs')), value: nutrition.carbs, Icon: IconCarbs });
   if (nutrition.portion != null)
-    macros.push({ label: grams(t('guest.item.portion')), value: nutrition.portion });
+    macros.push({ label: grams(t('guest.item.portion')), value: nutrition.portion, Icon: IconPortion });
 
   // Состав и описание часто оказываются одним текстом (в сиде так и было —
   // состав копировался из описания). Гостю незачем читать одну строку дважды:
@@ -231,13 +250,17 @@ export function NutritionBlock({
   if (!macros.length && !composition) return null;
 
   /*
-    ЯЧЕЙКА НА КАЖДОЕ ЗНАЧЕНИЕ: число сверху, подпись под ним.
+    ЯЧЕЙКА НА КАЖДОЕ ЗНАЧЕНИЕ: знак, число, подпись с единицей.
 
     Раньше это была одна строка вида «506 ккал 32 Белки 27 Жиры 12 Углеводы
     порция 185 г»: числа и подписи чередовались без единой паузы и слипались
     в поток, где «32 Белки» читается как одно слово. Порция вдобавок шла в
-    обратном порядке — сначала подпись, потом число. Теперь у всех ячеек один
-    порядок и одна сетка, а «порция» — такая же ячейка, как остальные.
+    обратном порядке — сначала подпись, потом число.
+
+    Знак перед числом — не украшение: четыре одинаковых числа в ряд
+    различаются только подписью, и её приходится дочитывать. Ячейки лежат в
+    общей сетке равными колонками, поэтому на широком экране они не
+    разъезжаются по остатку строки, а на узком переносятся целиком.
   */
   return (
     <Stack spacing={itemCard.block} data-testid="guest-item-nutrition">
@@ -245,25 +268,33 @@ export function NutritionBlock({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: `repeat(auto-fit, minmax(${itemCard.macroMinWidth}px, max-content))`,
-            columnGap: 2.5,
-            rowGap: 1,
+            gridTemplateColumns: `repeat(auto-fit, minmax(${itemCard.macroMinWidth}px, 1fr))`,
+            columnGap: 1.5,
+            rowGap: itemCard.block,
           }}
         >
           {macros.map((macro) => (
-            <Box key={macro.label}>
-              <Box
-                sx={(theme) => ({
-                  color: 'text.primary',
-                  fontFamily: theme.typography.h1.fontFamily,
-                  fontWeight: theme.typography.fontWeightBold,
-                  fontSize: '1.0625rem',
-                  lineHeight: 1.2,
-                  fontVariantNumeric: 'tabular-nums',
-                })}
-              >
-                {macro.value}
-              </Box>
+            <Box key={macro.label} data-testid="guest-item-macro" sx={{ minWidth: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+                <Box
+                  aria-hidden
+                  sx={{ display: 'flex', color: 'primary.main', flex: 'none' }}
+                >
+                  <macro.Icon size={itemCard.macroIcon} />
+                </Box>
+                <Box
+                  sx={(theme) => ({
+                    color: 'text.primary',
+                    fontFamily: theme.typography.h1.fontFamily,
+                    fontWeight: theme.typography.fontWeightBold,
+                    fontSize: '1.0625rem',
+                    lineHeight: 1.2,
+                    fontVariantNumeric: 'tabular-nums',
+                  })}
+                >
+                  {macro.value}
+                </Box>
+              </Stack>
               <Box sx={{ color: 'text.secondary', fontSize: '0.72rem', lineHeight: 1.4 }}>
                 {macro.label}
               </Box>

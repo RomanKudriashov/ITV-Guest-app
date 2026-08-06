@@ -307,3 +307,112 @@ test.describe('Выход из отеля', () => {
     await expect(page.getByTestId('guest-room-chip')).toHaveCount(1)
   })
 })
+
+/**
+ * КАРТОЧКА ПОЗИЦИИ: раскладка данных.
+ *
+ * Проверяется не «красиво ли», а то, что карточка ЧИТАЕТСЯ ИЗ ДАННЫХ: метка
+ * категории стоит на кадре, добавка набирается кнопкой и пересчитывает цену,
+ * ограничение группы соблюдается, а позиция без единого блока данных не
+ * оставляет пустых заголовков.
+ */
+test.describe('Карточка позиции', () => {
+  /** Открыть карточку ссылкой — порядок позиций в меню на это не влияет. */
+  async function openItem(page: Page, code: string): Promise<void> {
+    await enterAsGuest(page)
+    await page.getByTestId('guest-home-tile-kitchen').click()
+    await expect(page.getByTestId(`guest-qty-plus-${code}`)).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId(`guest-item-${code}`).click()
+    await expect(page.getByTestId('guest-item-sheet')).toBeVisible()
+  }
+
+  test('метка категории стоит на кадре, а не строкой над названием', async ({ page }) => {
+    await openItem(page, 'ribeye')
+    const chip = page.getByTestId('guest-item-category')
+    await expect(chip).toBeVisible()
+    await expect(chip).toContainText(/Горячее/i)
+
+    // Метка лежит ВНУТРИ кадра: у неё общий предок с картинкой позиции, и
+    // верхний край метки ниже верхнего края кадра.
+    const inside = await chip.evaluate((el) => {
+      const media = el.parentElement
+      const image = media?.querySelector('img')
+      if (!media || !image) return false
+      const chipBox = el.getBoundingClientRect()
+      const mediaBox = media.getBoundingClientRect()
+      return chipBox.top >= mediaBox.top - 1 && chipBox.bottom <= mediaBox.bottom + 1
+    })
+    expect(inside, 'метка категории должна лежать на кадре').toBeTruthy()
+  })
+
+  test('добавка набирается кнопкой, цена в подвале растёт, предел соблюдается', async ({
+    page,
+  }) => {
+    await openItem(page, 'ribeye')
+    const add = page.getByTestId('guest-add-to-cart')
+    await expect(add).toContainText('1 900')
+
+    // Карточка добавки — с ценой и кнопкой, а не голый чип.
+    const sauce = page.getByTestId('guest-modifier-option-sauce_pepper')
+    await expect(sauce).toHaveAttribute('data-kind', 'addon')
+    await expect(sauce).toContainText('150')
+    await expect(sauce).toHaveAttribute('data-selected', 'false')
+
+    await sauce.click()
+    await expect(sauce).toHaveAttribute('data-selected', 'true')
+    await expect(add).toContainText('2 050')
+
+    // Предел группы — «до 3»: набираем все три и убеждаемся, что подвал
+    // сложил их все, а не последнюю.
+    await expect(page.getByTestId('guest-addon-limit')).toContainText('3')
+    const addons = page.locator('[data-kind="addon"]')
+    const total = await addons.count()
+    for (let i = 0; i < total; i += 1) {
+      const card = addons.nth(i)
+      if ((await card.getAttribute('data-selected')) === 'false') await card.click()
+    }
+    // 1 900 + 150 + 250 + 350 = 2 650 ₽.
+    await expect(add).toContainText('2 650')
+
+    // Снятая добавка возвращает цену — набор именно набирается, а не копится.
+    await sauce.click()
+    await expect(add).toContainText('2 500')
+  })
+
+  test('позиция без данных: ни пустых заголовков, ни разъехавшейся раскладки', async ({
+    page,
+  }) => {
+    // В сиде такой позиции нет — подменяем ответ, чтобы проверить поведение
+    // карточки на пустых полях, а не наличие такой позиции в меню.
+    await page.route('**/guest/item/**', async (route) => {
+      const response = await route.fetch()
+      const body = await response.json()
+      await route.fulfill({
+        json: {
+          ...body,
+          images: [],
+          nutrition: null,
+          characteristics: [],
+          allergens: [],
+          markers: [],
+          badges: [],
+          modifier_groups: [],
+          description: null,
+        },
+      })
+    })
+    await openItem(page, 'ribeye')
+
+    const sheet = page.getByTestId('guest-item-sheet')
+    await expect(sheet.getByTestId('guest-item-nutrition')).toHaveCount(0)
+    await expect(sheet.getByTestId('guest-item-characteristics')).toHaveCount(0)
+    await expect(sheet.getByTestId('guest-item-allergens')).toHaveCount(0)
+    await expect(sheet.locator('[data-kind="addon"]')).toHaveCount(0)
+    // Ни одной подписи блока, под которой ничего нет.
+    await expect(sheet.getByText(/Состав|Содержит|Подходит/)).toHaveCount(0)
+
+    // Заказать по-прежнему можно: карточка не развалилась.
+    await expect(page.getByTestId('guest-add-to-cart')).toBeEnabled()
+    await expect(page.getByTestId('guest-item-comment')).toBeVisible()
+  })
+})

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ChipOption, ctaGradientSx } from '@/kit';
 import { useDraftState } from '@/state/useDraftState';
+import { AddonGroup, isAddonGroup } from './ItemAddons';
 import { ItemHeadline } from './ItemHeadline';
 import { QuantityStepper } from './QuantityStepper';
 import { SheetFooter, SheetScroll } from './sheetLayout';
@@ -141,6 +142,21 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
           {groups.map((group) => {
             const chosen = draft.selections[group.id] ?? [];
             const isMissing = draft.showErrors && missing.some((g) => g.id === group.id);
+            // Добавки — карточки с ценой и кнопкой, модификаторы — чипы.
+            // Признак берётся из данных группы, а не из её кода: см. `isAddonGroup`.
+            if (isAddonGroup(group)) {
+              return (
+                <Box key={group.id}>
+                  <Divider sx={{ mb: itemCard.block }} />
+                  <AddonGroup
+                    group={group}
+                    chosen={chosen}
+                    priceOf={(option) => (option.price_delta ? delta(option.price_delta) : null)}
+                    onToggle={(optionId) => toggleOption(group, optionId)}
+                  />
+                </Box>
+              );
+            }
             return (
               <Box key={group.id}>
                 <Divider sx={{ mb: itemCard.block }} />

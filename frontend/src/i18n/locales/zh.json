@@ -431,7 +431,9 @@
       "portion": "份量",
       "prepMinutes": "约 {{minutes}} 分钟",
       "contains": "含有",
-      "suitableFor": "适合"
+      "suitableFor": "适合",
+      "addonAdd": "添加{{title}}",
+      "addonRemove": "移除{{title}}"
     },
     "cart": {
       "title": "您的订单",

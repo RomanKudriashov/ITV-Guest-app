@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from '@/kit';
 import { AllergensBlock, CharacteristicsBlock, NutritionBlock } from './ItemMeta';
+import { useStorefront } from '../useStorefront';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
@@ -27,10 +28,17 @@ export function ItemMedia({
   variant = 'top',
   fallbackIcon,
   bleed = false,
+  categoryLabel,
 }: {
   item: ItemDetail;
   variant?: 'top' | 'rail';
   fallbackIcon?: AppIconComponent;
+  /**
+   * Название категории — чипом в углу кадра. Приходит сверху, а не читается
+   * из позиции: подпись рисуется РОВНО ОДИН РАЗ, а кадр карточка показывает то
+   * над содержимым, то в боковой колонке.
+   */
+  categoryLabel?: string | null;
   /**
    * Вынести кадр за горизонтальные поля контейнера.
    *
@@ -41,8 +49,10 @@ export function ItemMedia({
    */
   bleed?: boolean;
 }) {
-  const icon = fallbackIcon ?? fallbackIconFor(item.type);
+  const Icon = fallbackIcon ?? fallbackIconFor(item.type);
+  const icon = Icon;
   const isRail = variant === 'rail';
+  const { glass } = useStorefront();
   return (
     <Box
       sx={(theme) => ({
@@ -85,23 +95,51 @@ export function ItemMedia({
       })}
     >
       <KitImage src={item.images?.[0]} alt={item.title} fill fallbackIcon={icon} fallbackIconSize={isRail ? 64 : 48} />
-      {/* Dissolve edge — the media melts into the content's background. */}
-      <Box
-        aria-hidden
-        sx={(theme) => ({
-          position: 'absolute',
-          inset: 0,
-          /*
-            Растворение края кадра, а не вуаль поверх него. Прежние 60% съедали
-            почти половину снимка: на светлой теме правая часть фотографии
-            превращалась в туман, и блюдо было видно только слева. Кромка
-            должна лишь стыковать кадр с текстом.
-          */
-          background: isRail
-            ? `linear-gradient(${theme.direction === 'rtl' ? 'to left' : 'to right'}, transparent 82%, ${theme.palette.background.paper})`
-            : `linear-gradient(to top, ${theme.palette.background.paper}, transparent 38%)`,
-        })}
-      />
+      {/*
+        РАСТВОРЕНИЯ КРАЯ БОЛЬШЕ НЕТ.
+
+        Кромка задумывалась как стык кадра с текстом, но съедала полосу самой
+        фотографии: в боковой колонке — правую часть блюда, сверху — нижнюю. У
+        карточки и так есть край: скруглённый угол шторки и поля содержимого.
+        Кадр теперь заполняет свою панель целиком, как в референсе.
+      */}
+      {categoryLabel ? (
+        // Метка категории — НА КАДРЕ, как в референсе. Подписью над названием
+        // она стояла отдельной строкой и терялась между ценой и описанием.
+        <Box
+          data-testid="guest-item-category"
+          sx={(theme) => ({
+            position: 'absolute',
+            top: itemCard.categoryChipInset,
+            insetInlineStart: itemCard.categoryChipInset,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            maxWidth: `calc(100% - ${itemCard.categoryChipInset * 2}px)`,
+            px: 1,
+            py: 0.5,
+            borderRadius: `${theme.palette.brand.radius.pill}px`,
+            fontSize: '0.6875rem',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            lineHeight: 1.2,
+            // Стекло — наш собственный приём для подписей поверх снимка: он же
+            // держит кнопку закрытия, и метка не заводит второй язык.
+            ...glass.chip,
+          })}
+        >
+          <Box aria-hidden sx={{ display: 'flex', flex: 'none' }}>
+            <Icon size={itemCard.categoryChipIcon} />
+          </Box>
+          <Box
+            component="span"
+            sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {categoryLabel}
+          </Box>
+        </Box>
+      ) : null}
     </Box>
   );
 }
@@ -138,29 +176,38 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
       // между содержимым и группами модификаторов ниже.
       <Stack spacing={itemCard.section}>
         {hideMedia ? null : (
-          <ItemMedia item={item} variant="top" fallbackIcon={fallbackIcon} bleed={bleedMedia} />
+          <ItemMedia
+            item={item}
+            variant="top"
+            fallbackIcon={fallbackIcon}
+            bleed={bleedMedia}
+            categoryLabel={item.category_title}
+          />
         )}
 
         <Stack spacing={itemCard.block}>
           {item.badges?.length ? <ItemBadges badges={item.badges} /> : null}
           <Stack spacing={itemCard.tight}>
-            {/* Reference `.cat` — the category name as an accent overline. */}
-            {item.category_title ? (
-              <Typography
-                component="span"
-                sx={{
-                  color: 'primary.main',
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  lineHeight: 1,
-                }}
-              >
-                {item.category_title}
-              </Typography>
-            ) : null}
-            <Typography variant="h4" component="h2" ref={titleRef} tabIndex={-1}>
+            {/* Категория живёт МЕТКОЙ НА КАДРЕ (см. `ItemMedia`). Здесь её
+                больше нет: подписью над названием она стояла отдельной строкой
+                и терялась между ценой и описанием. */}
+            <Typography
+              variant="h4"
+              component="h2"
+              ref={titleRef}
+              tabIndex={-1}
+              /*
+                Карточка при открытии переводит фокус на название — иначе
+                читалка объявила бы страницу позади шторки. Но фокус этот
+                ПРОГРАММНЫЙ: гость его не просил, а браузер рисовал вокруг
+                заголовка рамку, и карточка открывалась с синим прямоугольником
+                поперёк названия.
+                Рамку убираем, объявление остаётся: заголовок не в цепочке
+                табуляции (`tabIndex={-1}`), клавиатурой на него не попасть, и
+                отнимать у гостя признак фокуса здесь не у кого.
+              */
+              sx={{ outline: 'none' }}
+            >
               {item.title}
             </Typography>
             {/* No price is a legitimate state for a service — never print "0 ₽". */}

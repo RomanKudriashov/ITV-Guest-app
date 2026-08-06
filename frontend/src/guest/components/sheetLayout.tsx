@@ -1,6 +1,9 @@
 import Box from '@mui/material/Box';
 import type { ReactNode } from 'react';
 
+import { useItemSheetLayout } from './itemSheetLayout';
+import { itemCard } from '../storefrontTokens';
+
 /**
  * Layout slots of the item sheet. Both bodies (a dish and a request form) live
  * inside the very same scroll area and the very same sticky footer — the sheet
@@ -8,7 +11,28 @@ import type { ReactNode } from 'react';
  */
 
 export function SheetScroll({ children }: { children: ReactNode }) {
-  return <Box sx={{ overflowY: 'auto', px: 2, pb: 2, flexGrow: 1 }}>{children}</Box>;
+  const { mediaBeside } = useItemSheetLayout();
+  return (
+    <Box
+      sx={{
+        overflowY: 'auto',
+        px: 2,
+        pb: 2,
+        flexGrow: 1,
+        /*
+          Место под кнопку закрытия — ТОЛЬКО когда кадр стоит сбоку.
+
+          На телефоне крестик лежит поверх фотографии, и отступ сверху оторвал
+          бы кадр от края карточки. На десктопе кадра над содержимым нет, и
+          кнопка оказывалась ровно на названии позиции: заголовок начинался в
+          той же строке, где висит крестик.
+        */
+        pt: mediaBeside ? itemCard.closeClearance : 0,
+      }}
+    >
+      {children}
+    </Box>
+  );
 }
 
 export function SheetFooter({ children }: { children: ReactNode }) {
