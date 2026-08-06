@@ -686,7 +686,10 @@
       "liveConnecting": "جارٍ الاتصال بالغرفة…",
       "commandAccepted": "قبِل الجهاز الأمر. لا وسيلة لتأكيده — هذا العنصر بلا تغذية راجعة.",
       "pillBlackoutClosed": "ستارة العتمة مغلقة",
-      "pillCleaning": "طُلب التنظيف"
+      "pillCleaning": "طُلب التنظيف",
+      "myRequests": "طلباتي",
+      "requestNumber": "الطلب رقم {{number}}",
+      "quickTitle": "إجراءات سريعة"
     }
   },
   "tracker": {

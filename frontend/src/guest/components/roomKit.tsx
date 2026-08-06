@@ -7,7 +7,7 @@ import { useTheme } from '@mui/material/styles';
 
 import { IconCurtainClose, IconCurtainOpen } from '@/icons';
 import { useStorefront } from '../useStorefront';
-import { surfaceRadius } from '../storefrontTokens';
+import { roomCard, surfaceRadius } from '../storefrontTokens';
 
 /**
  * Части экрана управления номером по утверждённому макету
@@ -390,6 +390,7 @@ function ArrowGlyph({ direction }: { direction: 'open' | 'close' }) {
 export function SceneTile({
   icon,
   label,
+  hint,
   active = false,
   disabled = false,
   onClick,
@@ -397,6 +398,8 @@ export function SceneTile({
 }: {
   icon: ReactNode;
   label: string;
+  /** Короткая подпись С СЕРВЕРА. Пусто — карточка обходится названием. */
+  hint?: string;
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -410,22 +413,56 @@ export function SceneTile({
       disabled={disabled}
       data-testid={testId}
       sx={(theme) => ({
-        aspectRatio: '1',
-        flexDirection: 'column',
-        gap: 0.75,
+        // КАРТОЧКА, а не квадратная плитка: подпись под названием требует
+        // строки текста, и квадрат её обрезал бы на втором слове.
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        textAlign: 'start',
+        gap: roomCard.block,
+        px: 1.75,
+        py: 1.5,
+        minHeight: roomCard.cardMinHeight,
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         border: `1px solid ${active ? 'transparent' : t.pillBorder}`,
         background: active ? t.accent : t.pillBackground,
-        color: active ? t.accentContrast : 'text.secondary',
+        color: active ? t.accentContrast : 'text.primary',
         boxShadow: active ? t.accentGlow : 'none',
+        transition: 'background .2s ease, border-color .2s ease, transform .12s ease',
+        '@media (hover: hover)': {
+          '&:hover:not(:disabled)': { background: t.rowIcon, borderColor: t.accent },
+        },
+        '&:active:not(:disabled)': { transform: 'scale(.985)' },
         '&:disabled': { opacity: 0.5 },
         '&.Mui-focusVisible': { outline: `2px solid ${t.cold}`, outlineOffset: 2 },
       })}
     >
-      {icon}
-      <Typography variant="caption" sx={{ fontWeight: 700, color: 'inherit' }}>
-        {label}
-      </Typography>
+      <Box
+        aria-hidden
+        sx={(theme) => ({
+          display: 'flex',
+          flex: 'none',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: roomCard.iconBox,
+          height: roomCard.iconBox,
+          borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
+          background: t.rowIcon,
+          color: 'inherit',
+        })}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="body2" sx={{ fontWeight: 700, color: 'inherit' }} noWrap>
+          {label}
+        </Typography>
+        {hint ? (
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+            {hint}
+          </Typography>
+        ) : null}
+      </Box>
     </ButtonBase>
   );
 }

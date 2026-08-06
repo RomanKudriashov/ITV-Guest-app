@@ -1,6 +1,7 @@
 import { chromium } from '@playwright/test'
 const b = await chromium.launch()
-const p = await b.newPage({ viewport: {width: 900, height: 900}, locale: 'ru-RU' })
+const p = await b.newPage({ viewport: {width: 430, height: 900}, locale: 'ru-RU' })
+p.on('pageerror', e => console.log('PAGEERROR', String(e).slice(0,200)))
 await p.goto('http://localhost:5183')
 await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
 await p.goto('http://localhost:5183')
@@ -9,10 +10,8 @@ await p.getByTestId('guest-room-submit').click()
 await p.getByTestId('guest-nav-room').click()
 await p.getByTestId('room-page').waitFor({ timeout: 20000 })
 await p.waitForTimeout(2500)
-for (const id of ['room-pill-temp','room-pill-lit','room-pill-curtain','room-pill-blackout','room-pill-cleaning','room-pill-dnd']) {
-  const el = p.getByTestId(id)
-  const n = await el.count()
-  console.log(id.padEnd(20), n, n ? (await el.innerText()).replace('\n',' ') + ' | тон: ' + await el.getAttribute('data-tone') : '')
-}
-console.log('порядок в DOM:', await p.locator('[data-testid^="room-pill-"]').evaluateAll(els => els.map(e => e.dataset.testid)))
+console.log('быстрые действия:', await p.getByTestId('room-quick-actions').count())
+const q = p.locator('[data-testid^="room-quick-"]')
+console.log('кнопок:', await q.count(), await q.allInnerTexts())
+console.log('статусы заявок:', await p.getByTestId('room-request-statuses').count())
 await b.close()

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
+import { IconLightGroup } from '@/icons';
 import { useStorefront } from '../useStorefront';
 import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
@@ -61,6 +62,14 @@ export interface PlanReading {
   on: boolean | null;
   /** Скорость вентилятора для точки воздуха. */
   fan: number | null;
+  /**
+   * Точка этого элемента — ПОТОК ВОЗДУХА, а не лампа.
+   *
+   * Признак берётся из возможностей элемента (`fan_speed`), а не из значения:
+   * выключенный фанкойл скорости не отдаёт, и по «скорости нет» точка воздуха
+   * превратилась бы в лампочку ровно тогда, когда кондиционер выключен.
+   */
+  air: boolean;
   /** Идёт обмен: зона показывает это, но не переключается. */
   pending: boolean;
   disabled: boolean;
@@ -120,6 +129,13 @@ export function RoomPlanPlate({
   const { t } = useTranslation();
   const { roomPlan: tokens } = useStorefront();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
+  /*
+    ВЫБРАННАЯ ЗОНА — ЧИСТО ВИЗУАЛЬНОЕ ЭХО последнего касания, и живёт оно
+    здесь, а не в странице: наверх выбор ничего не меняет — управление
+    происходит тем же нажатием. Держать его в состоянии страницы значило бы
+    завести второй источник истины о том, чего гость коснулся.
+  */
+  const [selected, setSelected] = useState<string>('');
 
   // Пропорция приезжает с сервером и нужна ДО загрузки кадра: без неё плита
   // схлопывается в ноль, а потом прыгает на высоту картинки — ровно в тот
@@ -271,6 +287,27 @@ export function RoomPlanPlate({
 
       <Airflow points={plan.points} readings={neutral ? {} : readings} tint={tokens.airflowTint} calm={calm} />
 
+      {/*
+        Зона, состояние которой не читается, накрывается НЕЙТРАЛЬНОЙ вуалью, а
+        не маской: маска означает «свет выключен», и подставить её здесь значит
+        ответить на вопрос, ответа на который у нас нет.
+      */}
+      {plan.zones.map((zone) =>
+        read(zone.controlId)?.on === null || (!neutral && !readings[zone.controlId]) ? (
+          <Box
+            key={`unknown-${zone.code || zone.controlId}`}
+            aria-hidden
+            style={pct(zone.hit)}
+            sx={{
+              position: 'absolute',
+              pointerEvents: 'none',
+              background: tokens.unknown,
+              borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
+            }}
+          />
+        ) : null,
+      )}
+
       {plan.zones.map((zone) => {
         const reading = read(zone.controlId);
         const on = reading?.on ?? null;
@@ -292,7 +329,10 @@ export function RoomPlanPlate({
             // сцена никогда не показывается включённой.
             aria-pressed={unknown ? undefined : on}
             aria-label={`${reading?.title ?? t('guest.roomControl.planZone')}: ${state}`}
-            onClick={() => onToggle(zone.controlId, on ? 0 : 1)}
+            onClick={() => {
+              setSelected(zone.controlId);
+              onToggle(zone.controlId, on ? 0 : 1);
+            }}
             style={pct(zone.hit)}
             sx={{
               position: 'absolute',
@@ -302,7 +342,10 @@ export function RoomPlanPlate({
               cursor: 'pointer',
               background: reading?.pending ? tokens.zonePending : 'transparent',
               borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
-              transition: motion ?? 'background .25s ease',
+              // Выбранная зона обведена — это ответ на «куда я нажал», а не
+              // состояние света: состояние говорит сам кадр.
+              boxShadow: selected === zone.controlId ? tokens.selectedRing : 'none',
+              transition: motion ?? 'background .25s ease, box-shadow .25s ease',
               '&:hover:not(:disabled)': { background: tokens.zoneHover },
               '&:disabled': { cursor: 'default' },
             }}
@@ -311,25 +354,72 @@ export function RoomPlanPlate({
       })}
 
       {/*
-        Зона, состояние которой не читается, накрывается НЕЙТРАЛЬНОЙ вуалью, а
-        не маской: маска означает «свет выключен», и подставить её здесь значит
-        ответить на вопрос, ответа на который у нас нет.
+        МЕТКИ СВЕТА — ПОСЛЕДНИМ СЛОЕМ.
+
+        Точка плана — это `controlId` и координаты в процентах; чем она
+        окажется, лампой или потоком воздуха, решает ЭЛЕМЕНТ, на который она
+        ссылается: у фанкойла есть возможность «скорость вентилятора», у группы
+        света её нет. Разбирать `controlId` строкой фронту запрещено, а второго
+        поля в геометрии заводить незачем — признак уже есть в данных.
+
+        Слой последний, потому что метка мельче зоны и лежит внутри неё: рисуй
+        мы её раньше, прямоугольник зоны перехватывал бы нажатие, и по метке
+        нельзя было бы попасть вовсе.
+
+        Состояние не читается — метки нет вовсе: гореть или не гореть, мы не
+        знаем, а нарисовать «потушена» значило бы ответить за оборудование.
       */}
-      {plan.zones.map((zone) =>
-        read(zone.controlId)?.on === null || (!neutral && !readings[zone.controlId]) ? (
+      {plan.points.map((point) => {
+        const reading = read(point.controlId);
+        if (!reading || reading.air || reading.on === null) return null;
+        const on = reading.on;
+        return (
           <Box
-            key={`unknown-${zone.code || zone.controlId}`}
-            aria-hidden
-            style={pct(zone.hit)}
+            component="button"
+            type="button"
+            key={`marker-${point.controlId}`}
+            data-testid={`room-plan-marker-${point.controlId}`}
+            data-on={String(on)}
+            disabled={reading.disabled}
+            aria-busy={reading.pending || undefined}
+            aria-pressed={on}
+            aria-label={`${reading.title}: ${
+              on ? t('guest.roomControl.on') : t('guest.roomControl.off')
+            }`}
+            onClick={() => {
+              setSelected(point.controlId);
+              // ОБЩИЙ обработчик с тумблером и зоной — не копия логики.
+              onToggle(point.controlId, on ? 0 : 1);
+            }}
+            style={{ left: `${point.x}%`, top: `${point.y}%` }}
             sx={{
               position: 'absolute',
-              pointerEvents: 'none',
-              background: tokens.unknown,
-              borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
+              width: 26,
+              height: 26,
+              ml: '-13px',
+              mt: '-13px',
+              p: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              border: `1px solid ${on ? tokens.markerOn : tokens.markerBorder}`,
+              background: on ? tokens.markerOnFill : tokens.markerOffFill,
+              color: on ? tokens.markerOn : tokens.markerOff,
+              boxShadow: on ? tokens.markerOnGlow : 'none',
+              // Свет не щёлкает: метка разгорается и гаснет тем же временем,
+              // что и окно зоны на кадре.
+              transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
+              '&:disabled': { cursor: 'default', opacity: 0.5 },
             }}
-          />
-        ) : null,
-      )}
+          >
+            <IconLightGroup size={14} />
+          </Box>
+        );
+      })}
+
+
 
       {neutral ? (
         <Box

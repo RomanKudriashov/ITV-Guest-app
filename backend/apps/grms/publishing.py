@@ -87,6 +87,10 @@ def build_snapshot(hotel, room_type_code: str) -> dict:
                     or kind.icon
                 ),
                 "states": kind.states,
+                # Подпись элемента — оттуда же, откуда глиф: с сервера. Пусто у
+                # большинства элементов, и это нормально — карточка обходится
+                # названием.
+                "hint": element.hint or {},
                 "capabilities": [],
                 "channels": {},
                 "range": {},

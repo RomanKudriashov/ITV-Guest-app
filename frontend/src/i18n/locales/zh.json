@@ -670,7 +670,10 @@
       "liveConnecting": "正在连接客房…",
       "commandAccepted": "设备已接受该指令。无法确认——此设备没有反馈通道。",
       "pillBlackoutClosed": "遮光帘已关闭",
-      "pillCleaning": "已申请清洁"
+      "pillCleaning": "已申请清洁",
+      "myRequests": "我的请求",
+      "requestNumber": "请求 #{{number}}",
+      "quickTitle": "快捷操作"
     }
   },
   "tracker": {

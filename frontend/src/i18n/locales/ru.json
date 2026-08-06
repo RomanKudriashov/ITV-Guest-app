@@ -680,7 +680,10 @@
       "liveConnecting": "Подключаемся к номеру…",
       "commandAccepted": "Оборудование приняло команду. Подтвердить её нечем — у этого элемента нет обратной связи.",
       "pillBlackoutClosed": "Блэкаут закрыт",
-      "pillCleaning": "Уборка заказана"
+      "pillCleaning": "Уборка заказана",
+      "myRequests": "Мои заявки",
+      "requestNumber": "Заявка № {{number}}",
+      "quickTitle": "Быстрые действия"
     }
   },
   "tracker": {

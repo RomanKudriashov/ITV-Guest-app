@@ -98,7 +98,7 @@ VARIABLES = [
     ("scene_read", "C_Scene_4", "", BINARY, 0, 1, "0/1"),
 ]
 
-# (slug, kind, zone, sort, заголовок, [(capability, variable, trigger_value)], глиф).
+# (slug, kind, zone, sort, заголовок, [(capability, variable, trigger_value)], глиф, подпись).
 # Глиф пуст — берётся иконка зоны, а если и её нет — иконка вида из каталога.
 # Сценам он обязателен: вид у всех трёх один, и различить их фронт может
 # только тем, что прислал сервер, — разбирать controlId ему запрещено.
@@ -138,20 +138,30 @@ ELEMENTS = [
     ("mur", "mur", "room", 2,
      {"ru": "Убрать номер", "en": "Make up room", "ar": "تنظيف الغرفة", "zh": "打扫房间"},
      [("toggle", "mur", None)]),
+    # Подпись у сцены — ОТ ЭЛЕМЕНТА, а не от вида: `kind` у всех четырёх один,
+    # и различает их только то, что прислал сервер.
     ("scene.night", "scene", "room", 40,
      {"ru": "Ночь", "en": "Night", "ar": "ليل", "zh": "夜间"},
-     [("trigger", "scene_night", 1)], "moon"),
+     [("trigger", "scene_night", 1)], "moon",
+     {"ru": "всё готово ко сну", "en": "everything ready for sleep",
+      "ar": "كل شيء جاهز للنوم", "zh": "一切就绪，安然入睡"}),
     ("scene.morning", "scene", "room", 41,
      {"ru": "Утро", "en": "Morning", "ar": "صباح", "zh": "早晨"},
-     [("trigger", "scene_morning", 1)], "sunrise"),
+     [("trigger", "scene_morning", 1)], "sunrise",
+     {"ru": "мягкое пробуждение", "en": "a gentle wake-up",
+      "ar": "استيقاظ لطيف", "zh": "轻柔唤醒"}),
     ("scene.movie", "scene", "room", 42,
      {"ru": "Кино", "en": "Movie", "ar": "فيلم", "zh": "观影"},
-     [("trigger", "scene_movie", 1)], "movie"),
+     [("trigger", "scene_movie", 1)], "movie",
+     {"ru": "идеально для просмотра", "en": "perfect for watching",
+      "ar": "مثالي للمشاهدة", "zh": "观影最佳氛围"}),
     # Четвёртая сцена из макета. Канал у неё есть (профиль демо-номера в
     # эмуляторе), feedback'а — как и у остальных — нет.
     ("scene.read", "scene", "room", 43,
      {"ru": "Чтение", "en": "Reading", "ar": "قراءة", "zh": "阅读"},
-     [("trigger", "scene_read", 1)], "book"),
+     [("trigger", "scene_read", 1)], "book",
+     {"ru": "тёплый свет для книги", "en": "warm light for a book",
+      "ar": "إضاءة دافئة للقراءة", "zh": "适合阅读的暖光"}),
     # НАМЕРЕННО БЕЗ ПРИВЯЗКИ. Мастер-выключатель на этом объекте реализуется
     # сценой, отдельного канала (F_MasterSw) у ПНР нет. Элемент стоит в типе,
     # но в опубликованный снимок не попадает и гостю не показывается: кнопка,
@@ -321,6 +331,7 @@ class Command(BaseCommand):
         for entry in ELEMENTS:
             slug, kind, zone_code, order, title, bindings = entry[:6]
             icon = entry[6] if len(entry) > 6 else ""
+            hint = entry[7] if len(entry) > 7 else {}
             zone = Zone.objects.filter(room_type=room_type, code=zone_code).first()
             element, _ = ControlElement.objects.update_or_create(
                 room_type=room_type,
@@ -331,6 +342,7 @@ class Command(BaseCommand):
                     "title": title,
                     "sort_order": order,
                     "icon": icon,
+                    "hint": hint,
                 },
             )
             # Привязки чистим перед пересозданием: переменная не может
@@ -402,6 +414,15 @@ class Command(BaseCommand):
             if "x" in ac and "y" in ac
             else []
         )
+        # Метки света — ТОЧКИ ПЛАНА, а не выдумка фронта. Формат тот же, что у
+        # точки воздуха: `controlId` и координаты в процентах. Чем именно
+        # окажется точка — лампой или потоком воздуха, — решает элемент, на
+        # который она ссылается, и решает это гость по присланному состоянию.
+        for light in geometry.get("lights", []):
+            control_id = PLAN_ZONE_LIGHTS.get(light.get("zone"))
+            if not control_id:
+                continue
+            points.append({"controlId": control_id, "x": light["x"], "y": light["y"]})
 
         plan = {
             "asset_id": asset_id,

@@ -778,3 +778,26 @@ def test_labels_are_localized_like_titles(client, crystal, stand):
     controls = _controls(response.json())
     assert controls["curtain.main"]["labels"] == {"on": "open", "off": "closed"}
     assert controls["dnd"]["labels"]["on"] == "staff will not disturb"
+
+
+def test_scene_hint_travels_from_the_element_to_the_guest(guest):
+    """
+    Короткая подпись сцены приходит С СЕРВЕРА и различает элементы одного вида.
+
+    У четырёх сцен один `kind`, и отличить «Ночь» от «Кино» фронт может только
+    тем, что прислал сервер: глифом, названием и этой строкой. Придумать её на
+    клиенте он мог бы, лишь разобрав `controlId`, — а это ключ, а не признак
+    типа.
+    """
+    state = guest.get("/api/v1/guest/room/state").json()
+    scenes = [
+        control
+        for zone in state["zones"]
+        for control in zone["controls"]
+        if control["kind"] == "scene"
+    ]
+    assert scenes, "в демо-номере нет сцен"
+    hints = {scene["controlId"]: scene.get("hint") for scene in scenes}
+    assert all(hints.values()), f"сцена без подписи: {hints}"
+    # Подписи РАЗНЫЕ: одна на всех означала бы, что она у вида, а не у элемента.
+    assert len(set(hints.values())) == len(hints)

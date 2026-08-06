@@ -403,6 +403,9 @@ def _serialize_control(control: dict, readings: dict, *, busy: dict, language: s
         # так, а у трёх сцен был один значок, потому что различить их без
         # разбора controlId он не мог.
         "icon": control.get("icon") or "",
+        # Короткая подпись карточки («всё готово ко сну») — локализованная и
+        # готовая, как и подписи состояний.
+        "hint": translate(control.get("hint"), language),
         "labels": {
             key: translate(text, language)
             for key, text in (control.get("states") or {}).items()

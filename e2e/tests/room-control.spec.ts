@@ -208,6 +208,99 @@ test.describe('Управление номером', () => {
     await expect(scene).not.toHaveAttribute('aria-pressed', /.*/)
   })
 
+  test('метки света на плане: из конфигурации, тапом управляют, в оффлайне их нет', async ({
+    page,
+  }) => {
+    await enterRoom(page)
+
+    const markers = page.locator('[data-testid^="room-plan-marker-"]')
+    await expect(markers.first()).toBeVisible({ timeout: 20_000 })
+
+    // Метки берутся ИЗ payload.plan: сколько точек прислал сервер (минус точка
+    // воздуха), столько и меток. Ни одна координата на фронте не задана.
+    const points = await roomStateFromApi(page.request).then(
+      (state) => ((state.plan as { points?: unknown[] } | undefined)?.points ?? []) as unknown[],
+    )
+    const lightPoints = points.filter(
+      (point) => !String((point as { controlId: string }).controlId).startsWith('ac.'),
+    )
+    expect(await markers.count()).toBe(lightPoints.length)
+
+    // Тап по метке управляет тем же элементом, что и тумблер в списке.
+    const marker = page.getByTestId('room-plan-marker-light.living')
+    const before = await marker.getAttribute('data-on')
+    await marker.click()
+    await expect
+      .poll(async () => marker.getAttribute('data-on'), { timeout: 30_000 })
+      .not.toBe(before)
+
+    const row = page.getByTestId('room-control-light.living')
+    await expect(row).toHaveAttribute('aria-pressed', String(before !== 'true'))
+
+    // Возвращаем как было — стенд общий.
+    await marker.click()
+    await expect.poll(async () => marker.getAttribute('data-on'), { timeout: 30_000 }).toBe(before)
+  })
+
+  test('на экране нет ни одного контрола, которого нет в железе', async ({ page }) => {
+    /*
+      СТОРОЖ КОРНЯ ЧЕСТНОСТИ ПРОЕКТА.
+
+      В утверждённом референсе нарисовано то, чего на объекте не существует:
+      ползунок яркости и цвет света (свет БИНАРНЫЙ, диммера нет), влажность,
+      качество воздуха и уровень шума (датчиков нет), проценты и пресеты шторы
+      (только открыть/закрыть), режимы кондиционера (не используются).
+      Нарисованный ползунок яркости на объекте не сделает НИЧЕГО — и об этом
+      узнает гость, а не мы.
+
+      Тест смотрит на живой экран целиком, включая все вкладки: сторож на один
+      компонент пропустил бы то же самое, добавленное в соседний.
+    */
+    await enterRoom(page)
+    await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 20_000 })
+
+    const tabs = page.getByRole('tab')
+    const count = await tabs.count()
+    let text = ''
+    for (let index = 0; index < Math.max(count, 1); index += 1) {
+      if (count) {
+        await tabs.nth(index).click()
+        await page.waitForTimeout(400)
+      }
+      text += ' ' + ((await page.getByTestId('room-page').innerText()) ?? '')
+      // Ползунков на экране номера быть не должно нигде, кроме шкалы уставки
+      // термостата: она и есть единственный диапазон, который умеет железо.
+      const sliders = page.getByTestId('room-page').getByRole('slider')
+      for (const slider of await sliders.all()) {
+        const label = (await slider.getAttribute('aria-label')) ?? ''
+        const testId = (await slider.getAttribute('data-testid')) ?? ''
+        const inThermostat = await slider
+          .locator('xpath=ancestor::*[starts-with(@data-testid, "room-thermostat")]')
+          .count()
+        expect(
+          inThermostat > 0,
+          `посторонний ползунок на экране: ${testId || label}`,
+        ).toBeTruthy()
+      }
+    }
+
+    const forbidden = [
+      /яркост/i,
+      /brightness/i,
+      /влажност/i,
+      /humidity/i,
+      /\bAQI\b/,
+      /уровень шума/i,
+      /охлаждени[ея]/i,
+      /обогрев/i,
+      /осушени/i,
+      /вентиляци/i,
+    ]
+    for (const pattern of forbidden) {
+      expect(text, `на экране появилось «${pattern}» — этого нет в железе`).not.toMatch(pattern)
+    }
+  })
+
   test('пилюли: активные состояния золотые, зелёного тона нет', async ({ page }) => {
     await enterRoom(page)
 
@@ -259,6 +352,29 @@ test.describe('Управление номером', () => {
       await blackout.click()
       await expect(page.getByTestId('room-pill-blackout')).toBeHidden({ timeout: 30_000 })
       await blackout.click()
+    }
+  })
+
+  test('быстрые действия ведут в существующие разделы витрины', async ({ page }) => {
+    /*
+      Блок — МОСТ в то, что уже есть, а не новая сущность. Проверяем это по
+      результату: кнопка уводит на существующий маршрут витрины, и там
+      открывается настоящий экран, а не заглушка.
+
+      Уборки среди кнопок нет намеренно: она живёт элементом номера (MUR) в
+      панели «Сервис», и второй способ попросить её означал бы два источника
+      правды об одном и том же.
+    */
+    await enterRoom(page)
+
+    const quick = page.getByTestId('room-quick-actions')
+    await expect(quick).toBeVisible({ timeout: 20_000 })
+
+    const chat = page.getByTestId('room-quick-chat')
+    if (await chat.count()) {
+      await chat.click()
+      await expect(page).toHaveURL(/\/chat/)
+      await expect(page.getByTestId('guest-chat')).toBeVisible({ timeout: 15_000 })
     }
   })
 

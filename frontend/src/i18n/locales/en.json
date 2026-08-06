@@ -674,7 +674,10 @@
       "liveConnecting": "Connecting to the room…",
       "commandAccepted": "The equipment accepted the command. There is nothing to confirm it with — this control has no feedback.",
       "pillBlackoutClosed": "Blackout closed",
-      "pillCleaning": "Cleaning requested"
+      "pillCleaning": "Cleaning requested",
+      "myRequests": "My requests",
+      "requestNumber": "Request #{{number}}",
+      "quickTitle": "Quick actions"
     }
   },
   "tracker": {

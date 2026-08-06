@@ -44,6 +44,7 @@ import {
   IconWardrobe,
 } from '@/icons';
 import { RoomPlanPlate, type PlanReading } from '../components/RoomPlanPlate';
+import { RoomQuickActions } from '../components/RoomQuickActions';
 import {
   ControlRow,
   CurtainArrows,
@@ -60,7 +61,7 @@ import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
 import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { layout, stickyTopCss, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
+import { layout, roomCard, stickyTopCss, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type {
   RoomCapability,
@@ -221,16 +222,26 @@ export function RoomPage() {
     />
   ) : null;
 
-  const panels = (
+  const panelsFor = (keys: GroupKey[] | null) => (
     <Panels
       groups={groups}
       readings={readings}
-      only={isDesktop ? null : tab}
+      only={keys}
+      // Заголовок панели нужен там, где её никто не назвал. На телефоне панель
+      // названа вкладкой, и второй заголовок — повтор того же слова.
+      titled={isDesktop}
       canCommand={Boolean(snapshot?.can_command)}
       onCommand={send}
       onScene={sendScene}
     />
   );
+
+  // Телефон показывает одну панель — выбранную вкладкой; десктоп все сразу.
+  const panels = panelsFor(isDesktop ? null : [tab]);
+
+  // Есть ли вообще чем управлять: пустой номер и недоступность показывают
+  // заглушку, а не разложенные по сетке пустые панели.
+  const hasControls = Boolean(snapshot && snapshot.zones.some((zone) => zone.controls.length > 0));
 
   const body = unavailable ? (
     <KitEmptyState
@@ -247,6 +258,17 @@ export function RoomPage() {
     />
   ) : (
     panels
+  );
+
+  /*
+    Быстрые действия — мост в остальное приложение, а не часть номера. Поэтому
+    они лежат ПОД управлением и одинаково на обеих раскладках: гость сначала
+    видит комнату, а уже потом «а ещё можно заказать».
+  */
+  const quickActions = (
+    <Panel title={t('guest.roomControl.quickTitle')} testId="room-panel-quick">
+      <RoomQuickActions />
+    </Panel>
   );
 
   const notices = (
@@ -311,24 +333,48 @@ export function RoomPage() {
         /* Десктоп: две колонки как в макете — план слева и залипает, панели
            стопкой справа. Вкладок нет: на широком экране прятать половину
            управления за переключателем незачем. */
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: '1.25fr 0.95fr',
-            alignItems: 'start',
-            gap: 2,
-            mt: 2,
-          }}
-          data-testid="room-two-columns"
-        >
-          <Box sx={{ position: 'sticky', top: stickyTopCss() }}>
-            <PlateBlock plate={plate} />
+        <>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '1.25fr 0.95fr',
+              alignItems: 'start',
+              gap: roomCard.section,
+              mt: 2,
+            }}
+            data-testid="room-two-columns"
+          >
+            <Box sx={{ position: 'sticky', top: stickyTopCss() }}>
+              <PlateBlock plate={plate} />
+            </Box>
+            <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
+              {notices}
+              {unavailable || !hasControls ? body : panelsFor(['light', 'climate'])}
+            </Stack>
           </Box>
-          <Stack spacing={2} sx={{ minWidth: 0 }}>
-            {notices}
-            {body}
-          </Stack>
-        </Box>
+
+          {/*
+            Остальные панели — РЯДОМ КАРТОЧЕК ПОД ОБЕИМИ КОЛОНКАМИ, как в
+            референсе. Пока они стояли стопкой в правой колонке, под планом
+            оставалась пустая половина экрана, а шторы и сцены уезжали за
+            нижний край.
+          */}
+          {unavailable || !hasControls ? null : (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                alignItems: 'start',
+                gap: roomCard.section,
+                mt: roomCard.section,
+              }}
+              data-testid="room-card-row"
+            >
+              {panelsFor(['curtain', 'scene', 'service'])}
+              {quickActions}
+            </Box>
+          )}
+        </>
       ) : (
         <>
           {plate ? (
@@ -397,6 +443,11 @@ export function RoomPage() {
           ) : (
             <Box sx={{ mt: 2 }}>{body}</Box>
           )}
+
+          {/* Быстрые действия ВНЕ ленты вкладок: это не шестая группа
+              оборудования, а выход в остальное приложение, и листать его
+              вместе со светом и климатом незачем. */}
+          {unavailable ? null : <Box sx={{ mt: 2 }}>{quickActions}</Box>}
         </>
       )}
     </Box>
@@ -560,31 +611,34 @@ function Panels({
   groups,
   readings,
   only,
+  titled,
   canCommand,
   onCommand,
   onScene,
 }: {
   groups: Groups;
   readings: Readings;
-  /** Телефон показывает одну панель — выбранную вкладкой. */
-  only: GroupKey | null;
+  /** Какие группы показать. `null` — все: так делает десктоп. */
+  only: GroupKey[] | null;
+  /** Показывать ли заголовок над панелью. */
+  titled: boolean;
   canCommand: boolean;
   onCommand: (input: { controlId: string; capability?: string; value?: number | null }) => void;
   onScene: (controlId: string) => void;
 }) {
   const { t } = useTranslation();
   const keys = (Object.keys(groups) as GroupKey[]).filter(
-    (key) => groups[key].length > 0 && (only === null || key === only),
+    (key) => groups[key].length > 0 && (only === null || only.includes(key)),
   );
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={roomCard.section}>
       {keys.map((key) => (
         <Panel
           key={key}
           // На телефоне панель уже названа вкладкой, и второй заголовок над
           // ней — просто повтор того же слова другим кеглем.
-          title={only === null ? t(`guest.roomControl.tab.${key}`) : null}
+          title={titled ? t(`guest.roomControl.tab.${key}`) : null}
           testId={`room-panel-${key}`}
         >
           {key === 'light' ? (
@@ -831,7 +885,20 @@ function ScenePanel({ controls, readings, canCommand, onScene }: PanelProps) {
   return (
     <Box
       data-swipe-guard
-      sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.25 }}
+      sx={{
+        display: 'grid',
+        /*
+          Колонки считает КОНТЕЙНЕР, а не ширина окна.
+
+          На десктопе панели живут в правой колонке примерно 600 px, и
+          `md: repeat(4)` резал названия сцен до одной буквы: «Н.», «У.»,
+          «К.» — брейкпоинт смотрел на окно, а место кончалось в колонке.
+          `auto-fill` от минимальной ширины карточки решает это одинаково и на
+          телефоне, и в узкой колонке, и в широком макете.
+        */
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+        gap: roomCard.block,
+      }}
     >
       {controls.map((control) => {
         const reading = readings[control.controlId];
@@ -840,6 +907,9 @@ function ScenePanel({ controls, readings, canCommand, onScene }: PanelProps) {
             key={control.controlId}
             icon={glyph(control, 22)}
             label={control.title}
+            // Подпись С СЕРВЕРА: различить четыре сцены фронт мог бы только
+            // разбором controlId, а это ключ, а не признак типа.
+            hint={control.hint}
             // Сцена НИКОГДА не показывается включённой: подтверждать нечего —
             // тега F_Scene_* на объекте не существует.
             active={false}
@@ -1004,6 +1074,7 @@ function planReadings(readings: Readings): Record<string, PlanReading> {
       title: reading.control.title,
       on: readingOn(reading),
       fan: reading.values.fan_speed ?? null,
+      air: reading.control.capabilities.includes('fan_speed'),
       pending: reading.busy,
       disabled: reading.busy || reading.unreadable || reading.readonly,
     };
