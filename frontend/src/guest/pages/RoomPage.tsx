@@ -94,7 +94,6 @@ import type {
  */
 export function RoomPage() {
   const { t } = useTranslation();
-  const { glass } = useStorefront();
   const { session, hotel } = useGuestSession();
   const enabled = Boolean(hotel?.room_control_enabled ?? session?.hotel.room_control_enabled);
 
@@ -182,7 +181,13 @@ export function RoomPage() {
     считается масштаб (см. эффект ниже).
   */
   const plateLayer = useStickyLayer<HTMLDivElement>(STICKY.plate, {
-    gap: 8,
+    /*
+      Воздуха под плитой НЕТ — его добавляет собственным полем следующий слой.
+      Щель между двумя липкими слоями прозрачна, и в неё на прокрутке
+      заглядывают строки списка; отдать её слою с плотным фоном — значит
+      закрыть её тем же движением, каким она создаётся.
+    */
+    gap: 0,
     enabled: !isDesktop,
     // Полоса плиты — её ВИДИМЫЙ размер: измеренная высота × масштаб сжатия.
     scale: planScale,
@@ -432,6 +437,7 @@ export function RoomPage() {
                 width: '100%',
                 maxWidth: `${layout.planMaxNarrow}px`,
                 mx: 'auto',
+
               }}
             >
               {/* Внутренняя обёртка — ЛИПКИЙ ЭЛЕМЕНТ стека: её видимый размер
@@ -460,11 +466,24 @@ export function RoomPage() {
                 // Строка вкладок живёт В БЛОКЕ, а не висит голой на фоне: на
                 // соседних экранах витрины строка категорий тоже лежит на
                 // скруглённой панели, и голая полоса выбивалась из общего
-                // языка. Радиус и стекло — те же, что у панелей разделов.
+                // языка.
                 px: 1.5,
-                pt: 0.5,
+                // Воздух между плитой и вкладками живёт ЗДЕСЬ, на плотном фоне.
+                pt: 1,
                 borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
-                ...glass.panel,
+                /*
+                  ПЛОТНЫЙ ФОН, а не стекло, и это единственное место витрины,
+                  где так.
+
+                  Под липкой строкой вкладок едет список из строк с крупным
+                  текстом и тумблерами. На стекле (даже плотном, .6 с блюром)
+                  сорок процентов чужого текста проступают сквозь названия
+                  вкладок — ровно то «всё наезжает друг на друга», с которого
+                  начался этот прогон. Стекло красиво над фотографией, а не над
+                  списком.
+                */
+                bgcolor: 'background.default',
+                border: (theme) => `1px solid ${theme.palette.divider}`,
               }}
             >
               <RoomTabs
