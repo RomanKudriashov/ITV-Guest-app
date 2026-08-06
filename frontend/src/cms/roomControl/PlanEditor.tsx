@@ -108,9 +108,11 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
 
-  // Объявлен ДО запроса: `refetchInterval` спрашивают уже на первом ответе, а
-  // объявленная ниже константа к тому моменту ещё не инициализирована.
+  // Объявлены ДО запроса: `refetchInterval` спрашивают уже на первом ответе, а
+  // объявленные ниже константы к тому моменту ещё не инициализированы.
   const gaveUpRef = useRef(false);
+  /** Есть ли несохранённая разметка. См. `refetchInterval` ниже. */
+  const dirtyRef = useRef(false);
 
   const query = useQuery({
     queryKey: queryKeys.grmsPlan(code),
@@ -121,6 +123,15 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
     refetchInterval: (q) => {
       const data = q.state.data as PlanState | undefined;
       if (gaveUpRef.current) return false;
+      /*
+        ПОКА РАЗМЕТКУ ПРАВЯТ — НЕ ОПРАШИВАЕМ.
+
+        Опрос нужен ровно для одного: заметить посчитанный ночной кадр. Ждать
+        его можно и до конца правки, а перерисовка каждые три секунды посреди
+        обводки зоны — это гонка на ровном месте: ответ приходит между «нажал»
+        и «отпустил», компонент перерисовывается, и жест теряется.
+      */
+      if (dirtyRef.current) return false;
       return data?.frames.lit && !data.frames.off ? 3000 : false;
     },
   });
@@ -192,6 +203,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
 
   const plateStops = useMemo(() => storefrontTokens('dark').roomPlan.zoneWindowStops, []);
   const isDirty = baseline !== '' && JSON.stringify(draft) !== baseline;
+  dirtyRef.current = isDirty;
 
   const controlsById = useMemo(() => {
     const map = new Map<string, string>();
