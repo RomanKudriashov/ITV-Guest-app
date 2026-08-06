@@ -912,3 +912,116 @@ test.describe('Управление номером', () => {
     }
   })
 })
+
+/**
+ * ОБВОДКА ЗОНЫ — ПРИЗНАК ВЗАИМОДЕЙСТВИЯ, А НЕ ВЫБОРА.
+ *
+ * Отдельный блок ради тач-контекста: на десктопной мыши симптома не видно —
+ * рамка снималась следующим наведением, и залипание было заметно только там,
+ * где указателю некуда уйти. Контекст здесь свой, но не второй одновременный:
+ * блоки идут последовательно, а именно одновременность и роднила известные
+ * флейки.
+ */
+test.describe('План: обводка зоны', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+
+  /** Обводка читается вычисленным стилем — тем же, что видит гость. */
+  const ringOf = (zone: ReturnType<Page['getByTestId']>) =>
+    zone.evaluate((el) => getComputedStyle(el).boxShadow)
+
+  const RING = 'rgba(227, 178, 60'
+
+  test('тап пальцем: обводка держится, пока идёт команда, и уходит с исходом', async ({
+    page,
+  }) => {
+    await enterRoom(page)
+    const zone = page.getByTestId('room-plan-zone-bedroom')
+    await expect(zone).toBeVisible({ timeout: 20_000 })
+    await expect(zone).toHaveAttribute('aria-pressed', /true|false/, { timeout: 20_000 })
+    expect(await ringOf(zone), 'до касания обводки быть неоткуда').toBe('none')
+
+    /*
+      Палец ставим В САМУ ЗОНУ, а не в её середину: посередине комнаты лежит
+      метка света — она мельче зоны и перехватывает нажатие. Тап по центру
+      уходил бы метке, и проверка обводки зоны стала бы проверкой ни о чём.
+    */
+    const box = (await zone.boundingBox())!
+    const x = box.x + box.width * 0.15
+    const y = box.y + box.height * 0.2
+    expect(
+      await page.evaluate(
+        ([px, py]) => document.elementFromPoint(px, py)?.getAttribute('data-testid'),
+        [x, y],
+      ),
+      'палец должен попасть в зону, а не в метку',
+    ).toBe('room-plan-zone-bedroom')
+    await page.touchscreen.tap(x, y)
+
+    // Пока палец на зоне, обводка — ответ на нажатие; здесь тап уже отпущен,
+    // и дальше её держит только команда.
+
+    // Палец уже убран, а обводка на месте: держит её команда в полёте.
+    await expect(zone).toHaveAttribute('aria-busy', 'true', { timeout: 15_000 })
+    expect(await ringOf(zone), 'команда идёт, а обводки нет').toContain(RING)
+
+    // Исход пришёл — обводка снята. Раньше она оставалась висеть навсегда:
+    // ставилась по нажатию и снималась только следующим наведением мыши,
+    // которого на телефоне не бывает.
+    await expect.poll(() => zone.getAttribute('aria-busy'), { timeout: 30_000 }).toBeNull()
+    await expect
+      .poll(() => ringOf(zone), { timeout: 5_000, message: 'обводка залипла после исхода' })
+      .toBe('none')
+  })
+
+  test('неподтверждённый исход снимает обводку так же, как подтверждённый', async ({
+    page,
+    request,
+  }) => {
+    /*
+      Исход приезжает КАНАЛОМ, им же и проверяем: сокет здесь наш, снимки в
+      него кладём сами. Без этого «неподтверждённо» на живом стенде не
+      воспроизвести — оборудование демо-номера отвечает подтверждением.
+    */
+    const live = await roomStateFromApi(request)
+    const CONTROL = 'light.bedroom'
+    const withState = (state: string) => ({
+      ...live,
+      zones: (live.zones as { controls: { controlId: string }[] }[]).map((zone) => ({
+        ...zone,
+        controls: zone.controls.map((control) =>
+          control.controlId === CONTROL ? { ...control, state } : control,
+        ),
+      })),
+    })
+
+    let socket: { send: (data: string) => void } | null = null
+    await page.routeWebSocket(/\/ws\/v1\/guest\/room/, (ws) => {
+      socket = ws
+    })
+    await enterRoom(page)
+    const zone = page.getByTestId('room-plan-zone-bedroom')
+    await expect(zone).toBeVisible({ timeout: 20_000 })
+    await expect.poll(() => Boolean(socket), { timeout: 20_000 }).toBe(true)
+
+    const push = async (state: string, command?: Record<string, unknown>) => {
+      socket!.send(JSON.stringify({ type: 'room.snapshot', room: withState(state), command }))
+    }
+
+    // Команда в полёте — обводка есть, хотя пальца на экране нет.
+    await push('pending')
+    await expect
+      .poll(() => ringOf(zone), { timeout: 10_000, message: 'команда идёт, а обводки нет' })
+      .toContain(RING)
+
+    // Оборудование не подтвердило. Значение остаётся прежним — это правило
+    // экрана, — а обводка уходит: взаимодействие кончилось.
+    await push('unconfirmed', { controlId: CONTROL, result: 'unconfirmed' })
+    await expect
+      .poll(() => ringOf(zone), {
+        timeout: 10_000,
+        message: 'после неподтверждённого исхода обводка осталась',
+      })
+      .toBe('none')
+    await expect(page.getByTestId('room-notice')).toBeVisible()
+  })
+})

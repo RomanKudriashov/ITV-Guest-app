@@ -130,12 +130,21 @@ export function RoomPlanPlate({
   const { roomPlan: tokens } = useStorefront();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
   /*
-    ВЫБРАННАЯ ЗОНА — ЧИСТО ВИЗУАЛЬНОЕ ЭХО последнего касания, и живёт оно
-    здесь, а не в странице: наверх выбор ничего не меняет — управление
-    происходит тем же нажатием. Держать его в состоянии страницы значило бы
-    завести второй источник истины о том, чего гость коснулся.
+    ОБВОДКА ЖИВЁТ РОВНО СТОЛЬКО, СКОЛЬКО ИДЁТ ВЗАИМОДЕЙСТВИЕ.
+
+    Раньше здесь лежала «выбранная зона»: её ставили по нажатию и не снимали
+    никогда — снять было некому. На мыши это скрывалось следующим наведением, а
+    на телефоне рамка оставалась висеть навсегда, хотя команда давно выполнена.
+    Выбора у плана нет: нажатие СРАЗУ переключает свет, и «выбранная зона» —
+    состояние, которому нечего означать после того, как жест кончился.
+
+    Теперь обводка складывается из двух живых признаков: палец (или кнопка
+    мыши) сейчас на этой зоне, либо по ней летит команда. Первый снимается
+    отпусканием, отменой касания и уходом за пределы зоны; второй — приходом
+    любого исхода: `pending` держится только в состоянии `pending`, а
+    `confirmed`, `unconfirmed`, `accepted` и `failed` его снимают.
   */
-  const [selected, setSelected] = useState<string>('');
+  const [pressing, setPressing] = useState<string>('');
 
   // Пропорция приезжает с сервером и нужна ДО загрузки кадра: без неё плита
   // схлопывается в ноль, а потом прыгает на высоту картинки — ровно в тот
@@ -350,10 +359,29 @@ export function RoomPlanPlate({
             // сцена никогда не показывается включённой.
             aria-pressed={unknown ? undefined : on}
             aria-label={`${reading?.title ?? t('guest.roomControl.planZone')}: ${state}`}
-            onClick={() => {
-              setSelected(zone.controlId);
-              onToggle(zone.controlId, on ? 0 : 1);
+            onPointerDown={() => setPressing(zone.controlId)}
+            onPointerUp={() => setPressing('')}
+            onPointerCancel={() => setPressing('')}
+            onPointerLeave={() => setPressing('')}
+            /*
+              Палец увели за пределы зоны — жест отменён.
+
+              Отдельной проверкой, а не одним `pointerleave`: касание браузер
+              захватывает на цель, и пока палец не отпущен, границу зоны он не
+              считает пересечённой. Сравниваем координаты с прямоугольником
+              сами — это работает и пальцем, и мышью.
+            */
+            onPointerMove={(event) => {
+              if (pressing !== zone.controlId) return;
+              const box = event.currentTarget.getBoundingClientRect();
+              const inside =
+                event.clientX >= box.left &&
+                event.clientX <= box.right &&
+                event.clientY >= box.top &&
+                event.clientY <= box.bottom;
+              if (!inside) setPressing('');
             }}
+            onClick={() => onToggle(zone.controlId, on ? 0 : 1)}
             style={pct(zone.hit)}
             sx={{
               position: 'absolute',
@@ -363,11 +391,19 @@ export function RoomPlanPlate({
               cursor: 'pointer',
               background: reading?.pending ? tokens.zonePending : 'transparent',
               borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
-              // Выбранная зона обведена — это ответ на «куда я нажал», а не
+              // Обводка — ответ на «куда я нажал» и «команда ещё идёт», а не
               // состояние света: состояние говорит сам кадр.
-              boxShadow: selected === zone.controlId ? tokens.selectedRing : 'none',
+              boxShadow:
+                pressing === zone.controlId || reading?.pending ? tokens.selectedRing : 'none',
               transition: motion ?? 'background .25s ease, box-shadow .25s ease',
-              '&:hover:not(:disabled)': { background: tokens.zoneHover },
+              // Подсветка наведения — ТОЛЬКО там, где есть чем наводить. На
+              // телефоне браузер оставляет `:hover` на последнем нажатом
+              // элементе до следующего касания, и подсветка зоны залипала бы
+              // ровно так же, как обводка. Список и быстрые действия закрыты
+              // этим же условием — здесь оно было забыто.
+              '@media (hover: hover)': {
+                '&:hover:not(:disabled)': { background: tokens.zoneHover },
+              },
               '&:disabled': { cursor: 'default' },
             }}
           />
@@ -407,11 +443,11 @@ export function RoomPlanPlate({
             aria-label={`${reading.title}: ${
               on ? t('guest.roomControl.on') : t('guest.roomControl.off')
             }`}
-            onClick={() => {
-              setSelected(point.controlId);
-              // ОБЩИЙ обработчик с тумблером и зоной — не копия логики.
-              onToggle(point.controlId, on ? 0 : 1);
-            }}
+            // Метка своей обводки не рисует и чужую не зажигает: раньше она
+            // ставила ту же «выбранную зону», и нажатие на лампу оставляло
+            // рамку висеть вокруг всей комнаты.
+            // ОБЩИЙ обработчик с тумблером и зоной — не копия логики.
+            onClick={() => onToggle(point.controlId, on ? 0 : 1)}
             style={{ left: `${point.x}%`, top: `${point.y}%` }}
             sx={{
               position: 'absolute',
