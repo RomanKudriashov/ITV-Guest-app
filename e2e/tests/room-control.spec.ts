@@ -432,11 +432,22 @@ test.describe('Управление номером', () => {
     await expect(sectionLabel).toHaveText(/[\u0600-\u06FF]/)
   })
 
-  test('связи нет — контролы блокируются и устаревшее не показывается', async ({ page }) => {
+  test('связи нет — раскладка остаётся, но ни одного значения', async ({ page }) => {
+    /*
+      РАСКЛАДКА ПЕРЕЖИВАЕТ ОБРЫВ, ЧЕСТНОСТЬ — ТОЖЕ.
+
+      Раньше экран схлопывался в заглушку: сервер, когда оборудование молчит
+      долго, не присылает ни зон, ни элементов. Выглядело это поломкой
+      приложения. Теперь последняя известная СТРУКТУРА остаётся — названия,
+      строки, план, — а состояния гаснут и контролы блокируются. Значения при
+      этом не переносятся: устаревшее не выдаётся за текущее.
+    */
+    // Живой сокет отключаем: снимок должен приходить одним путём, иначе
+    // проверяем не обрыв, а гонку двух источников.
+    await page.routeWebSocket(/\/ws\/v1\/guest\/room/, (ws) => ws.close())
     await enterRoom(page)
     await expect(page.getByTestId('room-control-light.living')).toBeVisible({ timeout: 20_000 })
 
-    // Обрываем ответ сервера на снапшот и отдаём честное «недоступно».
     await page.route('**/api/v1/guest/room/state', async (route) => {
       await route.fulfill({
         status: 200,
@@ -451,13 +462,48 @@ test.describe('Управление номером', () => {
         }),
       })
     })
-    await page.reload()
+    // Уходим и возвращаемся — так гость и делает: заглянул в чат, вернулся в
+    // номер. Структура при этом не забывается, а состояния приезжают новые.
+    await page.getByTestId('guest-nav-chat').click()
+    await page.getByTestId('guest-nav-room').click()
 
-    // Нейтральный баннер, НИ ОДНОГО значения и ни одного контрола.
+    const row = page.getByTestId('room-control-light.living')
+    await expect(row).toContainText(/нет связи/i, { timeout: 30_000 })
+
+    // Раскладка на месте: строка, её название и план никуда не делись.
+    await expect(row).toBeVisible()
+    await expect(row).toContainText(/свет в гостиной/i)
+    await expect(page.getByTestId('room-plan')).toBeVisible()
+    // Управлять нечем: строка заблокирована целиком.
+    await expect(row).toBeDisabled()
+    // Техническая причина гостю не показывается.
+    await expect(page.getByText(/CONNECTOR|TIMEOUT|iRidi|Modbus/i)).toHaveCount(0)
+  })
+
+  test('связи нет с первого открытия — честная заглушка', async ({ page }) => {
+    /*
+      Показывать нечего и вспомнить нечего: гость открыл номер, когда канал уже
+      молчал. Придумывать структуру мы не станем — остаётся баннер сервера.
+    */
+    await page.route('**/api/v1/guest/room/state', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          availability: 'unavailable',
+          message: 'Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.',
+          checked_at: new Date().toISOString(),
+          trust: 'room_scanned',
+          can_command: true,
+          zones: [],
+        }),
+      })
+    })
+    await enterRoom(page)
+
     await expect(page.getByTestId('room-unavailable')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText(/ресепшен/i)).toBeVisible()
     await expect(page.locator('[data-testid^="room-control-"]')).toHaveCount(0)
-    // Техническая причина гостю не показывается.
     await expect(page.getByText(/CONNECTOR|TIMEOUT|iRidi|Modbus/i)).toHaveCount(0)
   })
 
@@ -658,7 +704,14 @@ test.describe('Управление номером', () => {
     // При этом плита действительно сжимается и возвращается.
     const scaleOf = (value: string) => Number((value.match(/matrix\(([\d.]+)/) ?? [, '1'])[1])
     expect(scaleOf(probes[0].scale)).toBeCloseTo(1, 2)
-    expect(scaleOf(probes[4].scale)).toBeLessThan(0.8)
+    /*
+      Сжалась — и осталась читаемой. Прежний порог «меньше 0.64» описывал не
+      правило, а конкретную глубину: на ней план превращался в марку, и глубину
+      подняли. Правило же остаётся прежним: при скролле плита уменьшается, а
+      при возврате наверх — восстанавливается.
+    */
+    expect(scaleOf(probes[4].scale)).toBeLessThan(0.95)
+    expect(scaleOf(probes[4].scale)).toBeGreaterThanOrEqual(0.7)
     expect(scaleOf(probes[probes.length - 1].scale)).toBeCloseTo(1, 2)
   })
 

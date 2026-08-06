@@ -1408,17 +1408,22 @@ function RoomSkeleton({ aspect }: { aspect: number }) {
  * Памяти нет (первое открытие при мёртвом канале) — остаётся прежняя честная
  * заглушка: показывать нечего, и придумывать нечего.
  */
-function useRoomStructureMemory(snapshot: RoomStateSnapshot | undefined) {
-  const memory = useRef<RoomStateSnapshot | null>(null);
+/**
+ * Память живёт ВНЕ компонента: гость ушёл в чат и вернулся — структура номера
+ * не должна забываться вместе с размонтированием экрана. Одна сессия — один
+ * номер, поэтому и память одна.
+ */
+let rememberedRoom: RoomStateSnapshot | null = null;
 
+function useRoomStructureMemory(snapshot: RoomStateSnapshot | undefined) {
   return useMemo(() => {
     if (!snapshot) return snapshot;
     const hasControls = snapshot.zones.some((zone) => zone.controls.length > 0);
     if (hasControls) {
-      memory.current = snapshot;
+      rememberedRoom = snapshot;
       return snapshot;
     }
-    const remembered = memory.current;
+    const remembered = rememberedRoom;
     if (!remembered) return snapshot;
 
     return {
