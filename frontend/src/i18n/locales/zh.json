@@ -673,7 +673,11 @@
       "pillCleaning": "已申请清洁",
       "myRequests": "我的请求",
       "requestNumber": "请求 #{{number}}",
-      "quickTitle": "快捷操作"
+      "quickTitle": "快捷操作",
+      "panelLit": "{{total}} 组中 {{lit}} 组已开",
+      "panelSetpoint": "设定 {{min}}–{{max}}°",
+      "panelCurtain": "开启 / 关闭",
+      "panelScene": "无反馈确认"
     }
   },
   "tracker": {

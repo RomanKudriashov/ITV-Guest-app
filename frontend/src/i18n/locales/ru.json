@@ -683,7 +683,11 @@
       "pillCleaning": "Уборка заказана",
       "myRequests": "Мои заявки",
       "requestNumber": "Заявка № {{number}}",
-      "quickTitle": "Быстрые действия"
+      "quickTitle": "Быстрые действия",
+      "panelLit": "{{lit}} из {{total}} горит",
+      "panelSetpoint": "уставка {{min}}–{{max}}°",
+      "panelCurtain": "открыть / закрыть",
+      "panelScene": "без подтверждения"
     }
   },
   "tracker": {

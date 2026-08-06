@@ -677,7 +677,11 @@
       "pillCleaning": "Cleaning requested",
       "myRequests": "My requests",
       "requestNumber": "Request #{{number}}",
-      "quickTitle": "Quick actions"
+      "quickTitle": "Quick actions",
+      "panelLit": "{{lit}} of {{total}} on",
+      "panelSetpoint": "setpoint {{min}}–{{max}}°",
+      "panelCurtain": "open / close",
+      "panelScene": "no confirmation"
     }
   },
   "tracker": {

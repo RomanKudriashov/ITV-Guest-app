@@ -1,0 +1,20 @@
+import { chromium } from '@playwright/test'
+const b = await chromium.launch()
+const p = await b.newPage({ viewport: {width: 430, height: 900}, locale: 'ru-RU' })
+await p.goto('http://localhost:5183')
+await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+await p.goto('http://localhost:5183')
+await p.getByTestId('guest-room-input').fill('305')
+await p.getByTestId('guest-room-submit').click()
+await p.getByTestId('guest-nav-room').click()
+await p.getByTestId('room-page').waitFor({ timeout: 20000 })
+await p.waitForTimeout(3500)
+for (const id of ['room-skeleton','room-plan','room-tabs','room-panel-light','room-unavailable','room-live-offline','room-quick-actions']) {
+  console.log(id.padEnd(20), await p.getByTestId(id).count())
+}
+const rows = await p.locator('[data-testid^="room-control-"]').count()
+console.log('строк управления:', rows)
+const first = p.locator('[data-testid^="room-control-"]').first()
+if (rows) console.log('первая строка:', (await first.innerText()).replace('\n',' | '), '| disabled:', await first.isDisabled().catch(()=>'?'))
+await p.screenshot({ path: '/tmp/offline-room.png' })
+await b.close()

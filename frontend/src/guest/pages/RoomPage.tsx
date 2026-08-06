@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -61,7 +60,8 @@ import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
 import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { layout, roomCard, stickyTopCss, stickyUnderFloating, surfaceRadius } from '../storefrontTokens';
+import { layout, roomCard, surfaceRadius } from '../storefrontTokens';
+import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useStorefront } from '../useStorefront';
 import type {
   RoomCapability,
@@ -114,7 +114,7 @@ export function RoomPage() {
     text: string;
   } | null>(null);
 
-  const snapshot = state.data;
+  const snapshot = useRoomStructureMemory(state.data);
 
   // Исход команды показывается ОДИН раз и по факту, а не по надежде: снимок
   // приезжает и на подтверждении, и на возврате в исходное, и без этой
@@ -175,7 +175,19 @@ export function RoomPage() {
   const readings = useRoomReadings(snapshot);
   const groups = useMemo(() => groupControls(snapshot?.zones ?? []), [snapshot]);
   const planScale = usePlanShrink(Boolean(snapshot?.plan) && !isDesktop);
-  const { ref: plateRef, height: plateHeight } = useMeasuredHeight();
+  /*
+    Плита и вкладки — слои ОБЩЕГО стека, а не два места, где складывают
+    отступы. Плита сжимается трансформом, `ResizeObserver` этого не видит —
+    поэтому свою видимую высоту она публикует сама, в том же кадре, где
+    считается масштаб (см. эффект ниже).
+  */
+  const plateLayer = useStickyLayer<HTMLDivElement>(STICKY.plate, {
+    gap: 8,
+    enabled: !isDesktop,
+    // Полоса плиты — её ВИДИМЫЙ размер: измеренная высота × масштаб сжатия.
+    scale: planScale,
+  });
+  const tabsLayer = useStickyLayer<HTMLDivElement>(STICKY.bar, { gap: 8, enabled: !isDesktop });
 
   const tabs = useMemo(
     () =>
@@ -207,7 +219,14 @@ export function RoomPage() {
     );
   }
 
-  const unavailable = snapshot?.availability === 'unavailable';
+  /*
+    «Недоступно» без единого элемента — показывать нечего, остаётся заглушка.
+    Если же структура известна из памяти, экран остаётся экраном номера: все
+    состояния погашены, контролы заблокированы, сверху спокойная строка.
+  */
+  const unavailable =
+    snapshot?.availability === 'unavailable' &&
+    !snapshot.zones.some((zone) => zone.controls.length > 0);
   const plate = snapshot?.plan ? (
     <RoomPlanPlate
       plan={snapshot.plan}
@@ -243,6 +262,20 @@ export function RoomPage() {
   // заглушку, а не разложенные по сетке пустые панели.
   const hasControls = Boolean(snapshot && snapshot.zones.some((zone) => zone.controls.length > 0));
 
+  /*
+    Оборудование не отвечает: снимок пришёл, но НИ ОДИН элемент не читается.
+    Это не «недоступность» (её объявляет сервер) и не обрыв сокета — это
+    молчание номера, и сказать о нём должен экран, а не догадаться гость.
+  */
+  const readableControls = (snapshot?.zones ?? [])
+    .flatMap((zone) => zone.controls)
+    // Сцену читать нечем ВСЕГДА — не потому, что связи нет. Считать её
+    // «отвечающей» значит никогда не заметить молчание номера.
+    .filter((control) => !control.capabilities.every((capability) => capability === 'trigger'));
+  const roomUnreachable =
+    readableControls.length > 0 &&
+    readableControls.every((control) => control.state === 'offline');
+
   const body = unavailable ? (
     <KitEmptyState
       icon={<IconOffline size={28} />}
@@ -277,7 +310,17 @@ export function RoomPage() {
       {/* Обрыв канала: гость должен понимать, ПОЧЕМУ тумблеры не отвечают, и
           видеть, что связь восстанавливается сама. Молчание здесь читается как
           «приложение сломалось». */}
-      {live.status !== 'online' ? (
+      {/*
+        Спокойная строка вместо обвала раскладки.
+
+        Связь рвётся в двух местах, и гостю всё равно, в каком: канал до
+        приложения (`live`) или канал до оборудования (снимок приезжает, но все
+        элементы `offline`). Раньше второй случай не говорил ничего — экран
+        просто гас подписями, и это читалось как поломка. Раскладка при этом
+        остаётся целой: плита, вкладки, строки и названия на месте, гаснут
+        только состояния и блокируются контролы.
+      */}
+      {live.status !== 'online' || roomUnreachable ? (
         <KitToast
           severity="warning"
           message={t(
@@ -316,10 +359,10 @@ export function RoomPage() {
           ? 6
           : `calc(${BOTTOM_NAV_SPACE}px + env(safe-area-inset-bottom) + ${layout.panelOverlap}px)`,
         px: 2,
-        // Сверху — ровно столько, чтобы пилюли прошли ПОД плавающей группой
-        // контролов, а не под ней. Число из словаря: группа и содержимое уже
-        // однажды столкнулись в одной полосе.
-        pt: isDesktop ? 2 : `${stickyUnderFloating}px`,
+        // Сверху — ровно столько, сколько занимает шелл. Измеренное, а не
+        // «floatingTop + высота + 8»: на телефоне с вырезом эта арифметика
+        // расходилась с реальностью примерно на 47 px.
+        pt: isDesktop ? 2 : `${plateLayer.top}px`,
       }}
       data-testid="room-page"
     >
@@ -344,7 +387,7 @@ export function RoomPage() {
             }}
             data-testid="room-two-columns"
           >
-            <Box sx={{ position: 'sticky', top: stickyTopCss() }}>
+            <Box sx={{ position: 'sticky', top: `${plateLayer.top}px` }}>
               <PlateBlock plate={plate} />
             </Box>
             <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
@@ -379,12 +422,11 @@ export function RoomPage() {
         <>
           {plate ? (
             <Box
-              ref={plateRef}
               sx={{
                 position: 'sticky',
-                // С безопасной зоной: без неё на телефоне с вырезом плавающая
-                // группа съезжает вниз и накрывает плиту.
-                top: stickyTopCss(),
+                // Позиция — из стека: под плавающей группой, измеренной, а не
+                // досчитанной. Безопасная зона уже внутри измерения.
+                top: `${plateLayer.top}px`,
                 zIndex: 2,
                 mt: 1.5,
                 width: '100%',
@@ -392,7 +434,11 @@ export function RoomPage() {
                 mx: 'auto',
               }}
             >
-              <PlateBlock plate={plate} />
+              {/* Внутренняя обёртка — ЛИПКИЙ ЭЛЕМЕНТ стека: её видимый размер
+                  и есть полоса, под которую пинятся вкладки. */}
+              <Box ref={plateLayer.ref}>
+                <PlateBlock plate={plate} />
+              </Box>
             </Box>
           ) : null}
 
@@ -402,13 +448,13 @@ export function RoomPage() {
 
           {tabs.length > 1 && !unavailable ? (
             <Box
+              ref={tabsLayer.ref}
               sx={{
                 position: 'sticky',
-                // Вкладки пинятся ПОД плитой. Высота места под неё постоянна
-                // (плита сжимается масштабом, а не шириной), поэтому измеряем
-                // один раз, а за сжатием следуем тем же множителем — иначе под
-                // уменьшенной плитой оставалась бы дыра.
-                top: stickyTopCss(plateHeight * planScale),
+                // ПОД ПЛИТОЙ — по её ИЗМЕРЕННОМУ видимому краю. Ни высоты
+                // плиты, ни масштаба, ни выреза здесь больше нет: всё это уже
+                // учтено полосой, которую плита опубликовала в стек.
+                top: `${tabsLayer.top}px`,
                 zIndex: 1,
                 mb: `${layout.panelOverlap}px`,
                 // Строка вкладок живёт В БЛОКЕ, а не висит голой на фоне: на
@@ -464,6 +510,34 @@ export function RoomPage() {
 function PlateBlock({ plate }: { plate: ReactNode }) {
   if (!plate) return null;
   return <Box sx={{ position: 'relative' }}>{plate}</Box>;
+}
+
+/**
+ * Короткая справка в шапке панели — как в макете.
+ *
+ * Говорит РОВНО ТО, ЧТО ИЗВЕСТНО: сколько зон горит из читаемых, какой
+ * диапазон уставки прислал сервер, что умеет штора и что сцена не
+ * подтверждается. Ничего не выводится «по виду элемента» и не придумывается.
+ */
+function panelHint(
+  key: GroupKey,
+  groups: Groups,
+  readings: Readings,
+  t: TFunction,
+): string | null {
+  if (key === 'light') {
+    const known = groups.light.filter((control) => readingOn(readings[control.controlId]) !== null);
+    if (!known.length) return null;
+    const lit = known.filter((control) => readingOn(readings[control.controlId]) === true).length;
+    return t('guest.roomControl.panelLit', { lit, total: known.length });
+  }
+  if (key === 'climate') {
+    const range = groups.climate[0]?.range?.setpoint;
+    return range ? t('guest.roomControl.panelSetpoint', { min: range.min, max: range.max }) : null;
+  }
+  if (key === 'curtain') return t('guest.roomControl.panelCurtain');
+  if (key === 'scene') return t('guest.roomControl.panelScene');
+  return null;
 }
 
 /* ── Пилюли статуса ───────────────────────────────────────────────────────── */
@@ -639,6 +713,7 @@ function Panels({
           // На телефоне панель уже названа вкладкой, и второй заголовок над
           // ней — просто повтор того же слова другим кеглем.
           title={titled ? t(`guest.roomControl.tab.${key}`) : null}
+          hint={panelHint(key, groups, readings, t)}
           testId={`room-panel-${key}`}
         >
           {key === 'light' ? (
@@ -658,7 +733,18 @@ function Panels({
   );
 }
 
-function Panel({ title, children, testId }: { title: string | null; children: ReactNode; testId: string }) {
+function Panel({
+  title,
+  hint,
+  children,
+  testId,
+}: {
+  title: string | null;
+  /** Правая подпись шапки: «1 из 5 горит», «уставка 16–32°», «без подтверждения». */
+  hint?: string | null;
+  children: ReactNode;
+  testId: string;
+}) {
   const { glass } = useStorefront();
   return (
     <Stack
@@ -670,14 +756,35 @@ function Panel({ title, children, testId }: { title: string | null; children: Re
         ...glass.panel,
       })}
     >
-      {title ? (
-        <Typography
-          variant="caption"
-          component="h2"
-          sx={{ letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 700, color: 'text.secondary' }}
-        >
-          {title}
-        </Typography>
+      {title || hint ? (
+        // Шапка панели как в макете: название слева, короткая справка справа.
+        <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={1}>
+          {title ? (
+            <Typography
+              variant="caption"
+              component="h2"
+              sx={{
+                letterSpacing: '.06em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                color: 'text.secondary',
+              }}
+            >
+              {title}
+            </Typography>
+          ) : (
+            <span />
+          )}
+          {hint ? (
+            <Typography
+              variant="caption"
+              sx={{ color: 'text.secondary' }}
+              data-testid={`${testId}-hint`}
+            >
+              {hint}
+            </Typography>
+          ) : null}
+        </Stack>
       ) : null}
       {children}
     </Stack>
@@ -1285,26 +1392,50 @@ function RoomSkeleton({ aspect }: { aspect: number }) {
 }
 
 /**
- * Высота элемента, на которую опирается чужое липкое позиционирование.
+ * ПАМЯТЬ СТРУКТУРЫ НОМЕРА: раскладка переживает обрыв связи.
  *
- * Измеряется, а не берётся константой: плита сжимается при скролле, и вкладки
- * обязаны ехать за её нижним краем, а не за когда-то подобранным числом.
+ * Когда оборудование замолкает надолго, сервер отвечает «недоступно» и НЕ
+ * присылает ни зон, ни элементов — сказать о них ему нечего. Экран из-за этого
+ * схлопывался: вместо номера оставалась заглушка, и выглядело это поломкой
+ * приложения, а не молчанием железа.
+ *
+ * Здесь запоминается ПОСЛЕДНЯЯ ИЗВЕСТНАЯ СТРУКТУРА — зоны, элементы, названия,
+ * план — и подставляется, пока связи нет. Со всеми состояниями `offline` и
+ * значениями `null`: правило «устаревшее не выдаётся за текущее» не
+ * ослабляется ни на шаг. Гость видит свой номер и честное «связь
+ * восстанавливается», а не серую пустоту.
+ *
+ * Памяти нет (первое открытие при мёртвом канале) — остаётся прежняя честная
+ * заглушка: показывать нечего, и придумывать нечего.
  */
-function useMeasuredHeight() {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [height, setHeight] = useState(0);
+function useRoomStructureMemory(snapshot: RoomStateSnapshot | undefined) {
+  const memory = useRef<RoomStateSnapshot | null>(null);
 
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const measure = () => setHeight(node.offsetHeight);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+  return useMemo(() => {
+    if (!snapshot) return snapshot;
+    const hasControls = snapshot.zones.some((zone) => zone.controls.length > 0);
+    if (hasControls) {
+      memory.current = snapshot;
+      return snapshot;
+    }
+    const remembered = memory.current;
+    if (!remembered) return snapshot;
 
-  return { ref, height };
+    return {
+      ...snapshot,
+      plan: snapshot.plan ?? remembered.plan,
+      zones: remembered.zones.map((zone) => ({
+        ...zone,
+        controls: zone.controls.map((control) => ({
+          ...control,
+          // Значения НЕ переносятся: они устарели в тот момент, когда пропала
+          // связь, и выдать их за текущие — ровно то, чего делать нельзя.
+          value: null,
+          state: 'offline' as const,
+        })),
+      })),
+    };
+  }, [snapshot]);
 }
 
 /**

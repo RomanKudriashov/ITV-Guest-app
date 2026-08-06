@@ -1,5 +1,6 @@
 import { Outlet, useMatch } from 'react-router-dom';
 
+import { StickyStackProvider } from './layout/stickyStack';
 import { GuestSessionProvider } from './session/GuestSessionProvider';
 import { CartProvider } from './state/cart';
 
@@ -20,7 +21,11 @@ export function GuestRoot() {
   return (
     <GuestSessionProvider>
       <CartProvider serviceCode={serviceCode}>
-        <Outlet />
+        {/* Стек липких слоёв — ОДИН на всю витрину: шелл и экраны кладут свои
+            полосы в него, а не считают чужие высоты у себя. */}
+        <StickyStackProvider>
+          <Outlet />
+        </StickyStackProvider>
       </CartProvider>
     </GuestSessionProvider>
   );

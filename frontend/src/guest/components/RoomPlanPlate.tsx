@@ -147,6 +147,9 @@ export function RoomPlanPlate({
 
   const lit = plan.zones.filter((zone) => read(zone.controlId)?.on === true).length;
   const off = plan.zones.filter((zone) => read(zone.controlId)?.on === false).length;
+  // Ни одна зона не читается — это не «пять неизвестных зон», а одно «нет
+  // связи»: плита говорит это одним слоем, а не пятью заплатами.
+  const allUnknown = plan.zones.length > 0 && lit === 0 && off === 0;
   const motion = calm ? 'none' : undefined;
 
   // Два кадра или один с маской — решает НАЛИЧИЕ ночного кадра, а не тип
@@ -291,21 +294,39 @@ export function RoomPlanPlate({
         Зона, состояние которой не читается, накрывается НЕЙТРАЛЬНОЙ вуалью, а
         не маской: маска означает «свет выключен», и подставить её здесь значит
         ответить на вопрос, ответа на который у нас нет.
+
+        ЕСЛИ НЕ ЧИТАЕТСЯ НИ ОДНА — вуаль ОДНА на весь кадр, мягкая, без
+        прямоугольников. Пять серых заплат поверх плана выглядели поломкой
+        интерфейса, а сообщают они ровно одно и то же: связи нет. Одно
+        сообщение — один слой.
       */}
-      {plan.zones.map((zone) =>
-        read(zone.controlId)?.on === null || (!neutral && !readings[zone.controlId]) ? (
-          <Box
-            key={`unknown-${zone.code || zone.controlId}`}
-            aria-hidden
-            style={pct(zone.hit)}
-            sx={{
-              position: 'absolute',
-              pointerEvents: 'none',
-              background: tokens.unknown,
-              borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
-            }}
-          />
-        ) : null,
+      {allUnknown ? (
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: tokens.offlineHint,
+            transition: motion ?? 'opacity .4s ease',
+          }}
+        />
+      ) : (
+        plan.zones.map((zone) =>
+          read(zone.controlId)?.on === null || (!neutral && !readings[zone.controlId]) ? (
+            <Box
+              key={`unknown-${zone.code || zone.controlId}`}
+              aria-hidden
+              style={pct(zone.hit)}
+              sx={{
+                position: 'absolute',
+                pointerEvents: 'none',
+                background: tokens.unknown,
+                borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
+              }}
+            />
+          ) : null,
+        )
       )}
 
       {plan.zones.map((zone) => {

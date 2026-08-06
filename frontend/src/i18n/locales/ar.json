@@ -689,7 +689,11 @@
       "pillCleaning": "طُلب التنظيف",
       "myRequests": "طلباتي",
       "requestNumber": "الطلب رقم {{number}}",
-      "quickTitle": "إجراءات سريعة"
+      "quickTitle": "إجراءات سريعة",
+      "panelLit": "{{lit}} من {{total}} مضاء",
+      "panelSetpoint": "الضبط {{min}}–{{max}}°",
+      "panelCurtain": "فتح / إغلاق",
+      "panelScene": "بلا تأكيد"
     }
   },
   "tracker": {

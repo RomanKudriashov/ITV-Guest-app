@@ -10,6 +10,7 @@ import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { RoomMenu } from '../components/RoomMenu';
 import { layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
+import { STICKY, useStickyLayer } from './stickyStack';
 
 export interface TopBarTab {
   value: string;
@@ -49,11 +50,15 @@ export function GuestTopBar({
 }) {
   const { t } = useTranslation();
   const { glass, goldCta } = useStorefront();
+  // Тот же нулевой слой стека, что и плавающая группа телефона: на одной
+  // ширине существует ровно один из них.
+  const layer = useStickyLayer<HTMLDivElement>(STICKY.shell);
 
   return (
     <Box
       component="header"
       data-testid="guest-topbar"
+      ref={layer.ref}
       sx={{
         position: 'sticky',
         top: 0,

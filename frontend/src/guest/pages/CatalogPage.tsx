@@ -25,31 +25,17 @@ import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
 import { errorMessage } from '../errors';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
+import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
 import {
   layout as storefrontLayout,
-  stickyTopCss,
-  stickyUnderFloating,
   surfaceRadius,
 } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import type { MenuItem } from '../api/types';
 
-/**
- * На сколько липкая строка категорий отступает от верха окна.
- *
- * На широком экране над ней стоит своя липкая строка витрины, и без этого
- * отступа категории «прилипали» под неё — то есть уезжали из виду, хотя
- * технически оставались приклеенными. На телефоне верхней строки нет, и
- * отступ равен нулю.
- */
-const HEADER_OFFSET_WIDE = storefrontLayout.topBar;
-// Под плавающей группой, а не вровень с ней: на узком экране верхней строки
-// витрины нет, и раньше строка категорий пинилась в самый верх — туда же, где
-// висит чип номера.
-const HEADER_OFFSET_NARROW = stickyUnderFloating;
 const TABS_HEIGHT = 48;
 
 export interface CatalogPageProps {
@@ -78,9 +64,14 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const isDesktopShell = useMediaQuery('(min-width:1024px)');
-  // Отступ липкой строки категорий зависит от того, есть ли над ней
-  // верхняя строка витрины — она появляется на той же ширине, что и шелл.
-  const headerOffset = isDesktopShell ? HEADER_OFFSET_WIDE : HEADER_OFFSET_NARROW;
+  /*
+    Строка категорий — слой общего стека. Её `top` и есть «сколько занято
+    сверху»: на десктопе это верхняя строка витрины, на телефоне — плавающая
+    группа. Прокрутка к разделу считает от того же числа, поэтому заголовок
+    раздела больше не может уехать под полосу.
+  */
+  const barLayer = useStickyLayer<HTMLDivElement>(STICKY.bar);
+  const headerOffset = barLayer.top;
   const { format, formatOptional } = useMoney();
   const { tokens, mode } = useAppTheme();
   const { session, hotel } = useGuestSession();
@@ -236,12 +227,17 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
       >
       <Box
         data-testid="guest-category-bar"
+        ref={barLayer.ref}
         sx={{
           position: 'sticky',
           // Число остаётся для расчёта прокрутки, а в CSS уходит значение с
           // безопасной зоной: иначе на телефоне с вырезом липкая строка
           // оказывается под плавающей группой.
-          top: isDesktopShell ? `${headerOffset}px` : stickyTopCss(),
+          // Позиция строки категорий — из ОБЩЕГО стека: под верхней строкой
+          // десктопа или под плавающей группой телефона, смотря что там есть.
+          // Раньше здесь было два разных источника: число из словаря и
+          // переменная CSS, и они расходились на каждой новой ширине.
+          top: `${barLayer.top}px`,
           zIndex: (theme) => theme.zIndex.appBar - 1,
           // Липкая строка — накладной слой: под ней продолжается меню, и
           // глухой фон страницы здесь читался как обрыв. Стекло из словаря,
