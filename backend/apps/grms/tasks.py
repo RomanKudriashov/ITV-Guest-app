@@ -204,6 +204,7 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
     """
     from apps.core.context import tenant_context
     from apps.grms import nightframe
+    from apps.grms import plan as plan_geometry
     from apps.grms.models import RoomType
     from apps.hotels.models import Hotel
     from apps.media.models import MediaAsset
@@ -232,12 +233,16 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
         room_type = RoomType.objects.filter(code=room_type_code).first()
         if room_type is None:
             return {"status": "no_type"}
-        plan = dict(room_type.plan or {})
-        plan["asset_off_id"] = str(night.pk)
-        # Признак происхождения: посчитанный кадр совмещён по построению, и
-        # проверять его парность незачем — в отличие от принесённой пары.
-        plan["asset_off_source"] = "baked"
-        room_type.plan = plan
-        room_type.save(update_fields=["plan", "updated_at"])
+
+        def apply(plan: dict) -> None:
+            plan["asset_off_id"] = str(night.pk)
+            # Признак происхождения: посчитанный кадр совмещён по построению, и
+            # проверять его парность незачем — в отличие от принесённой пары.
+            plan["asset_off_source"] = "baked"
+
+        # ТОЛЬКО СВОЁ ПОЛЕ И ПОД БЛОКИРОВКОЙ. Расчёт идёт секунды, и всё это
+        # время администратор размечает план; запись целиком своей копией
+        # стирала бы обведённые за эти секунды зоны. См. `plan.edit`.
+        plan_geometry.edit(room_type, apply)
 
     return {"status": "ready", "asset_off_id": str(night.pk)}

@@ -487,21 +487,26 @@ def put_plan(request: HttpRequest, code: str, payload: PlanGeometryIn):
     уезжает в номер мимо публикации, а откат конфигурации возвращает геометрию
     своей версии.
     """
+    from apps.grms import plan as plan_geometry
+
     hotel = _hotel()
     with tenant_context(hotel):
         room_type = builder._type(code)
-        plan = dict(room_type.plan or {})
-        plan.update(
-            {
-                "aspect": payload.aspect or plan.get("aspect"),
-                "zones": payload.zones,
-                "windows": payload.windows,
-                "points": payload.points,
-                "mirrored": payload.mirrored,
-            }
-        )
-        room_type.plan = plan
-        room_type.save(update_fields=["plan", "updated_at"])
+
+        def apply(plan: dict) -> None:
+            plan.update(
+                {
+                    "aspect": payload.aspect or plan.get("aspect"),
+                    "zones": payload.zones,
+                    "windows": payload.windows,
+                    "points": payload.points,
+                    "mirrored": payload.mirrored,
+                }
+            )
+
+        # Под блокировкой: рядом может идти фоновый расчёт ночного кадра, и он
+        # пишет в ту же колонку. См. `plan.edit`.
+        plan_geometry.edit(room_type, apply)
 
         AuditLog.record(
             "grms.plan_saved",
@@ -532,6 +537,7 @@ def upload_plan_frames(
     построением, а не удачей.
     """
     from apps.grms import nightframe, pair
+    from apps.grms import plan as plan_geometry
     from apps.grms.tasks import bake_room_plan_night
     from apps.media.models import MediaAsset
     from apps.media.services import upload_asset
@@ -565,11 +571,7 @@ def upload_plan_frames(
             content_type=lit.content_type or "image/png",
             alt={"ru": "План номера, свет включён"},
         )
-        plan = dict(room_type.plan or {})
-        plan["asset_id"] = str(lit_asset.pk)
-        plan.pop("asset_off_id", None)
-        plan["asset_off_source"] = ""
-
+        off_asset = None
         if off_raw is not None:
             off_asset = upload_asset(
                 content=off_raw,
@@ -578,22 +580,32 @@ def upload_plan_frames(
                 content_type=off.content_type or "image/png",
                 alt={"ru": "План номера, свет выключен"},
             )
-            plan["asset_off_id"] = str(off_asset.pk)
-            plan["asset_off_source"] = "uploaded"
 
         # Пропорция берётся ИЗ ФАЙЛА: спрашивать её у администратора значит
         # спрашивать то, что и так известно, и однажды получить неверный ответ.
+        aspect = None
         try:
             from PIL import Image
             import io as _io
 
             with Image.open(_io.BytesIO(lit_raw)) as image:
-                plan["aspect"] = round(image.width / image.height, 4)
+                aspect = round(image.width / image.height, 4)
         except Exception:  # noqa: BLE001 — не смогли прочитать, спросим позже
-            pass
+            aspect = None
 
-        room_type.plan = plan
-        room_type.save(update_fields=["plan", "updated_at"])
+        def apply(plan: dict) -> None:
+            plan["asset_id"] = str(lit_asset.pk)
+            plan.pop("asset_off_id", None)
+            plan["asset_off_source"] = ""
+            if off_asset is not None:
+                plan["asset_off_id"] = str(off_asset.pk)
+                plan["asset_off_source"] = "uploaded"
+            if aspect:
+                plan["aspect"] = aspect
+
+        # Разметка при этом СОХРАНЯЕТСЯ: кадр меняют и на размеченном типе,
+        # а координаты в процентах переживают смену рендера. См. `plan.edit`.
+        plan_geometry.edit(room_type, apply)
 
     if off_raw is None:
         # Считаем ночной кадр фоном: расчёт идёт секунды, а размечать план
@@ -625,6 +637,8 @@ def copy_plan(request: HttpRequest, code: str, payload: PlanCopyIn):
     этого типа нет такого элемента, публикация не пройдёт и скажет, чего не
     хватает.
     """
+    from apps.grms import plan as plan_geometry
+
     hotel = _hotel()
     with tenant_context(hotel):
         source = builder._type(payload.source)
@@ -635,15 +649,17 @@ def copy_plan(request: HttpRequest, code: str, payload: PlanCopyIn):
         if not donor.get("zones"):
             raise ValidationError("У выбранного типа нет разметки", field="source")
 
-        plan = dict(target.plan or {})
-        plan.update(
-            {
-                "zones": donor.get("zones") or [],
-                "windows": donor.get("windows") or [],
-                "points": donor.get("points") or [],
-                "mirrored": bool(donor.get("mirrored")),
-            }
-        )
-        target.plan = plan
-        target.save(update_fields=["plan", "updated_at"])
+        def apply(plan: dict) -> None:
+            plan.update(
+                {
+                    "zones": donor.get("zones") or [],
+                    "windows": donor.get("windows") or [],
+                    "points": donor.get("points") or [],
+                    "mirrored": bool(donor.get("mirrored")),
+                }
+            )
+
+        # Кадры остаются свои — копируется РАЗМЕТКА. Под блокировкой: рядом
+        # может считаться ночной кадр этого же типа. См. `plan.edit`.
+        plan_geometry.edit(target, apply)
     return get_plan(request, code)

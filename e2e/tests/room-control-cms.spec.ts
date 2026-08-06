@@ -260,7 +260,13 @@ test('план: кадр, разметка мышью, привязка к оп�
   await page.locator(`li[data-value="${ELEMENT}"]`).click()
 
   await page.getByTestId('grms-plan-save').click()
-  await expect(page.getByTestId('grms-plan-save')).toBeDisabled({ timeout: 20_000 })
+  // Ждём ИМЕННО «сохранено», а не погасшую кнопку: кнопка гаснет и на время
+  // самого запроса, и раньше проверка спрашивала сервер, пока PUT ещё летел —
+  // на нагруженном стенде получала план без зоны и обвиняла в этом редактор.
+  await expect(page.getByTestId('toast')).toContainText('Разметка сохранена', {
+    timeout: 30_000,
+  })
+  await expect(page.getByTestId('grms-plan-save')).toBeDisabled()
 
   const plan = await apiGet<{ geometry: PlanGeometryPayload }>(
     request,

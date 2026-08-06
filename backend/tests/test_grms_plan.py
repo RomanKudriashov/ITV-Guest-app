@@ -360,3 +360,55 @@ def test_a_plan_without_the_flag_is_not_mirrored(seeded):
     assert payload["plan"]["mirrored"] is False
     with tenant_context(seeded):
         assert plan_geometry.for_guest(payload["plan"])["mirrored"] is False
+
+
+# --- Двое пишут в один план -------------------------------------------------
+
+
+def test_night_frame_does_not_wipe_zones_drawn_while_it_was_baking(seeded):
+    """
+    Ночной кадр считается СЕКУНДЫ, и всё это время администратор размечает
+    план: обвести зону сразу после загрузки кадра — обычный ход работы, а не
+    редкое совпадение.
+
+    Раньше оба писателя читали план целиком, меняли своё поле и писали обратно
+    своей копией: задача, прочитавшая план ДО сохранения разметки, затирала
+    только что обведённые зоны — тихо, без ошибки, и администратор узнавал об
+    этом, когда план оказывался пустым. Ниже воспроизведён ровно этот порядок:
+    читаем план в «задачу», сохраняем зону из «редактора», и только потом
+    задача дописывает свой кадр.
+    """
+    room_type = _type(seeded)
+    with tenant_context(seeded):
+        # Копия плана «в руках» задачи: прочитана ДО того, как редактор сохранил
+        # зону, и до конца расчёта в память задачи ничего нового не попадёт.
+        baking = RoomType.objects.get(pk=room_type.pk)
+        before = len(baking.plan.get("zones") or [])
+
+        zone = {
+            "code": "zone-нарисована",
+            "controlId": PLAN_ZONE_LIGHTS["living"],
+            "hit": {"x": 10, "y": 10, "w": 10, "h": 10},
+            "mask": {"x": 9, "y": 9, "w": 12, "h": 12},
+        }
+        editor = RoomType.objects.get(pk=room_type.pk)
+        plan_geometry.edit(
+            editor, lambda plan: plan.update({"zones": [*(plan.get("zones") or []), zone]})
+        )
+
+        # А теперь задача дописывает СВОЁ поле, держа устаревшую копию.
+        plan_geometry.edit(
+            baking,
+            lambda plan: plan.update(
+                {
+                    "asset_off_id": "00000000-0000-0000-0000-000000000000",
+                    "asset_off_source": "baked",
+                }
+            ),
+        )
+
+        fresh = RoomType.objects.get(pk=room_type.pk)
+
+    assert len(fresh.plan["zones"]) == before + 1, "зона пережила расчёт ночного кадра"
+    assert fresh.plan["zones"][-1]["code"] == "zone-нарисована"
+    assert fresh.plan["asset_off_source"] == "baked"

@@ -39,6 +39,35 @@ ORIENTATIONS = ("horizontal", "vertical")
 PLATE_VARIANT = "full"
 
 
+def edit(room_type, mutate) -> dict:
+    """
+    Изменить план типа ПОД БЛОКИРОВКОЙ СТРОКИ и вернуть получившийся план.
+
+    План — одна колонка JSON, а пишут в неё трое: сохранение разметки, загрузка
+    кадров и фоновый расчёт ночного кадра. Каждый читал план, менял своё поле и
+    писал обратно целиком, и «прочитал — посчитал — записал» у двоих сразу
+    означало, что поздний писатель затирает чужое: администратор обводит зону
+    ровно в те секунды, пока фоном считается ночной кадр, — это не редкий
+    случай, а ОБЫЧНЫЙ ход работы, потому что размечать план он начинает сразу
+    после загрузки кадра.
+
+    Поэтому чтение и запись идут одной транзакцией с `select_for_update`:
+    каждый писатель видит чужие правки, а не свою устаревшую копию.
+    """
+    from django.db import transaction
+
+    from apps.grms.models import RoomType
+
+    with transaction.atomic():
+        locked = RoomType.objects.select_for_update().get(pk=room_type.pk)
+        plan = dict(locked.plan or {})
+        mutate(plan)
+        locked.plan = plan
+        locked.save(update_fields=["plan", "updated_at"])
+    room_type.plan = plan
+    return plan
+
+
 def _rect(raw: object) -> dict | None:
     """Прямоугольник в процентах. Отрицательный x/y допустим намеренно."""
     if not isinstance(raw, dict):
