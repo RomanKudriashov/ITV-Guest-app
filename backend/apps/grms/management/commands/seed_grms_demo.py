@@ -410,7 +410,16 @@ class Command(BaseCommand):
             )
         ac = geometry.get("ac") or {}
         points = (
-            [{"controlId": PLAN_AC_CONTROL, "x": ac["x"], "y": ac["y"]}]
+            [
+                {
+                    "controlId": PLAN_AC_CONTROL,
+                    "x": ac["x"],
+                    "y": ac["y"],
+                    # Куда дует. Из ЗАМЕРОВ, а не из кода: фанкойл висит на
+                    # стене, и сторону задаёт тот, кто размечал план.
+                    "dir": ac.get("dir") or "down",
+                }
+            ]
             if "x" in ac and "y" in ac
             else []
         )

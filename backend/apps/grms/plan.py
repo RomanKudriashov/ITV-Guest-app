@@ -33,6 +33,15 @@ from __future__ import annotations
 
 ORIENTATIONS = ("horizontal", "vertical")
 
+# Куда дует точка воздуха. Свойство РАЗМЕТКИ, а не кода: фанкойл висит на
+# стене, и в какую сторону от неё идёт струя, знает тот, кто размечал план, —
+# у зеркальной планировки та же стена смотрит в другую сторону.
+#
+# Точкам света поле безразлично: чем окажется точка — лампой или воздухом, —
+# решает элемент, на который она ссылается.
+POINT_DIRECTIONS = ("up", "down", "left", "right")
+DEFAULT_POINT_DIRECTION = "down"
+
 # Вариант рендера для плиты. `card` (600px) на планшете и десктопе заметно
 # мылит стены, `full` — 1200px — это тот же кадр, ужатый вдвое от исходных
 # 1586, и разметка на него садится один в один: координаты в процентах.
@@ -164,7 +173,15 @@ def normalize(raw: object, *, control_ids: set[str]) -> dict:
         coords = _point(point)
         if coords is None:
             continue
-        points.append({"controlId": control_id, "x": coords[0], "y": coords[1]})
+        direction = str(point.get("dir") or "")
+        points.append(
+            {
+                "controlId": control_id,
+                "x": coords[0],
+                "y": coords[1],
+                "dir": direction if direction in POINT_DIRECTIONS else DEFAULT_POINT_DIRECTION,
+            }
+        )
 
     aspect = None
     try:

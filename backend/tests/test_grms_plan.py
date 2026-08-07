@@ -100,13 +100,22 @@ def test_geometry_reaches_the_snapshot_exactly_as_measured(seeded):
     # Точки плана — это И поток воздуха, И метки света: формат один, а чем
     # окажется точка, решает элемент, на который она ссылается. Координаты
     # обеих групп берутся из файла замеров без единой правки.
+    # Направление струи — тоже ЗАМЕР, а не умолчание кода: фанкойл висит на
+    # стене, и сторону задаёт тот, кто размечал план. Точкам света поле
+    # безразлично, у них остаётся общее умолчание.
     expected_points = [
-        {"controlId": "ac.1", "x": measured["ac"]["x"], "y": measured["ac"]["y"]}
+        {
+            "controlId": "ac.1",
+            "x": measured["ac"]["x"],
+            "y": measured["ac"]["y"],
+            "dir": measured["ac"]["dir"],
+        }
     ] + [
         {
             "controlId": PLAN_ZONE_LIGHTS[light["zone"]],
             "x": light["x"],
             "y": light["y"],
+            "dir": "down",
         }
         for light in measured.get("lights", [])
         if light["zone"] in PLAN_ZONE_LIGHTS

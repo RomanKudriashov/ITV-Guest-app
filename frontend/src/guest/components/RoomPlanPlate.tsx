@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
-import { IconLightGroup } from '@/icons';
+import { IconAirConditioner, IconLightGroup } from '@/icons';
 import { useStorefront } from '../useStorefront';
 import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
@@ -51,7 +51,26 @@ const SPILL = { along: 3, depth: 3.2, sideDepth: 4.5 } as const;
 const ZONE_FADE_MS = 600;
 
 /** Плотность потока по скорости вентилятора: 0 — потока нет вовсе. */
-const AIRFLOW_DENSITY = [0, 7, 13, 21] as const;
+const AIRFLOW_DENSITY = [0, 26, 40, 56] as const;
+
+/**
+ * Геометрия струи, в долях от короткой стороны плиты.
+ *
+ * `mouth` — ширина сопла: частицы рождаются НА ОТРЕЗКЕ поперёк направления, а
+ * не облаком вокруг точки. Облако читалось как шум на фотографии — с него и
+ * начался вопрос «что это за частицы».
+ * `reach` — докуда струя добивает; дальше частица гаснет.
+ * `spread` — насколько её разносит вбок к концу пути.
+ */
+const JET = { mouth: 0.05, reach: 0.4, spread: 0.16 } as const;
+
+/** Единичные векторы направлений струи. */
+const JET_VECTORS = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+} as const;
 
 export interface PlanReading {
   title: string;
@@ -476,6 +495,52 @@ export function RoomPlanPlate({
         );
       })}
 
+      {/*
+        МЕТКА ФАНКОЙЛА — ИСТОЧНИК СТРУИ.
+
+        Без неё поток начинался ниоткуда и читался как артефакт рендера: с
+        этого вопроса — «что это за частицы» — правка и началась. Метка стоит в
+        ТОЙ ЖЕ точке разметки, из которой бьёт струя, поэтому источник у неё
+        всегда один и разъехаться они не могут.
+
+        Она НЕ кнопка, в отличие от меток света. Нажатие на фанкойл — это не
+        «включить/выключить» одним касанием: у него скорость, уставка и режим,
+        и все они живут на вкладке климата. Кружок, который выглядит как
+        выключатель, но им не является, хуже отсутствия кружка.
+      */}
+      {plan.points.map((point) => {
+        const reading = read(point.controlId);
+        if (!reading || !reading.air || reading.on === null) return null;
+        const on = reading.on;
+        return (
+          <Box
+            key={`air-${point.controlId}`}
+            data-testid={`room-plan-air-${point.controlId}`}
+            data-on={String(on)}
+            aria-hidden
+            style={{ left: `${point.x}%`, top: `${point.y}%` }}
+            sx={{
+              position: 'absolute',
+              width: 24,
+              height: 24,
+              ml: '-12px',
+              mt: '-12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              pointerEvents: 'none',
+              border: `1px solid ${on ? tokens.markerOn : tokens.markerBorder}`,
+              background: on ? tokens.markerOnFill : tokens.markerOffFill,
+              color: on ? tokens.markerOn : tokens.markerOff,
+              boxShadow: on ? tokens.markerOnGlow : 'none',
+              transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
+            }}
+          >
+            <IconAirConditioner size={13} />
+          </Box>
+        );
+      })}
 
 
       {neutral ? (
@@ -657,6 +722,15 @@ interface Particle {
   vy: number;
   life: number;
   span: number;
+  /** Пройденный путь: им гасим струю, а не координатой — сторона у неё своя. */
+  travel: number;
+}
+
+interface AirflowSource {
+  x: number;
+  y: number;
+  dir: 'up' | 'down' | 'left' | 'right';
+  level: number;
 }
 
 /**
@@ -690,16 +764,21 @@ function Airflow({
           // `0` у вентилятора — АВТО, а не «выключено»: поток есть, просто
           // самый слабый. Выключение фанкойла — это toggle.
           const level = reading.fan && reading.fan > 0 ? reading.fan : 1;
-          return { x: point.x, y: point.y, level: Math.min(level, AIRFLOW_DENSITY.length - 1) };
+          return {
+            x: point.x,
+            y: point.y,
+            dir: point.dir ?? 'down',
+            level: Math.min(level, AIRFLOW_DENSITY.length - 1),
+          };
         })
-        .filter(Boolean) as { x: number; y: number; level: number }[],
+        .filter(Boolean) as AirflowSource[],
     [points, readings],
   );
 
   // Цикл перезапускается по СОДЕРЖИМОМУ источников, а не по ссылке: снимок
   // приезжает раз в минуту и по каждому событию, и на каждой новой ссылке
   // поток начинался бы с нуля — воздух дёргался бы в такт опросу.
-  const signature = sources.map((s) => `${s.x}:${s.y}:${s.level}`).join('|');
+  const signature = sources.map((s) => `${s.x}:${s.y}:${s.dir}:${s.level}`).join('|');
   const sourcesRef = useRef(sources);
   sourcesRef.current = sources;
 
@@ -726,23 +805,56 @@ function Airflow({
     // пустоту, всё равно будит телефон каждый кадр.
     if (!sources.length || !width || !height) return;
 
+    // Короткая сторона — общая мера для геометрии струи: иначе на широком
+    // экране струя вытягивается, а на узком скукоживается, хотя комната та же.
+    const unit = Math.min(width, height);
+    const reach = unit * JET.reach;
+
     const particles: Particle[] = [];
-    const spawn = (source: { x: number; y: number; level: number }, aged: boolean) => ({
-      x: (width * source.x) / 100 + (Math.random() - 0.5) * width * 0.07,
-      y: (height * source.y) / 100,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: 0.5 + Math.random() * 0.6 * source.level,
-      life: aged ? Math.random() * 80 : 0,
-      span: 85 + Math.random() * 55,
-    });
+
+    /**
+     * Частица рождается НА СОПЛЕ — отрезке поперёк направления, — и летит
+     * вдоль него. Никакого облака вокруг точки: один читаемый поток от
+     * источника, а не рассеянная взвесь по всей комнате.
+     */
+    const spawn = (source: AirflowSource, aged: boolean): Particle => {
+      const vector = JET_VECTORS[source.dir] ?? JET_VECTORS.down;
+      // Поперечная ось: та же пара координат, повёрнутая на четверть оборота.
+      const across = { x: -vector.y, y: vector.x };
+      const offset = (Math.random() - 0.5) * unit * JET.mouth;
+      const speed = 0.55 + 0.28 * source.level + Math.random() * 0.3;
+      // Разлёт вбок — доля продольной скорости, поэтому струя расширяется
+      // конусом, а не рвётся на отдельные ниточки.
+      const drift = (Math.random() - 0.5) * speed * JET.spread;
+      return {
+        x: (width * source.x) / 100 + across.x * offset,
+        y: (height * source.y) / 100 + across.y * offset,
+        vx: vector.x * speed + across.x * drift,
+        vy: vector.y * speed + across.y * drift,
+        life: aged ? Math.random() * 110 : 0,
+        span: 150 + Math.random() * 70,
+        // Путь считаем сами: гасить по координате нельзя — у каждой стороны
+        // она своя, и правило «ниже середины» работало только вниз.
+        travel: 0,
+      };
+    };
 
     const draw = () => {
       const size = fit();
       context.clearRect(0, 0, canvas.width, canvas.height);
       for (const particle of particles) {
         const age = particle.life / particle.span;
-        const alpha = Math.max(0, 1 - age) * 0.28;
-        const radius = 2 + age * 12;
+        /*
+          ПЛОТНО У СОПЛА, ТАЕТ К КОНЦУ — так читается направление.
+
+          Наоборот (прозрачно у источника, крупные пятна в хвосте) струя
+          собиралась комком на отлёте и выглядела висящей в воздухе кляксой,
+          оторванной от фанкойла. Короткий разгон в первые кадры оставлен,
+          чтобы частица не возникала из ничего ровно на метке.
+        */
+        const fade = Math.min(1, age * 40) * (1 - age) ** 1.4;
+        const alpha = Math.max(0, fade) * 0.9;
+        const radius = unit * 0.011 + age * unit * 0.026;
         const gradient = context.createRadialGradient(
           particle.x,
           particle.y,
@@ -752,6 +864,7 @@ function Airflow({
           radius,
         );
         gradient.addColorStop(0, `rgba(${tint},${alpha})`);
+        gradient.addColorStop(0.55, `rgba(${tint},${alpha * 0.45})`);
         gradient.addColorStop(1, `rgba(${tint},0)`);
         context.fillStyle = gradient;
         context.beginPath();
@@ -761,12 +874,21 @@ function Airflow({
       return size;
     };
 
+    const step = (particle: Particle) => {
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.life += 1;
+      particle.travel += Math.hypot(particle.vx, particle.vy);
+    };
+
     if (calm) {
-      // Один статичный кадр: густота читается, движения нет.
+      // Один статичный кадр: густота и направление читаются, движения нет.
       for (const source of sources) {
         for (let i = 0; i < AIRFLOW_DENSITY[source.level]; i += 1) {
           const particle = spawn(source, true);
-          particle.y += particle.vy * particle.life;
+          const steps = particle.life;
+          particle.life = 0;
+          for (let s = 0; s < steps; s += 1) step(particle);
           particles.push(particle);
         }
       }
@@ -779,17 +901,29 @@ function Airflow({
       // Фоновая вкладка: кадр не рисуем. Браузер и сам душит rAF, но частицы
       // при возврате иначе прыгают на сотню кадров вперёд.
       if (!document.hidden) {
-        const size = fit();
+        fit();
         const target = sources.reduce((sum, source) => sum + AIRFLOW_DENSITY[source.level], 0);
         while (particles.length < target) {
-          particles.push(spawn(sources[particles.length % sources.length], false));
+          /*
+            Досев — С РАЗБРОСОМ ПО ВОЗРАСТУ, и это не украшение.
+
+            Пачка, рождённая одним кадром в одной точке, летит СГУСТКОМ:
+            появляется у сопла, уезжает целиком и разом гаснет. На экране это
+            читалось как два-три пятна, а не как струя, — ровно то, что и
+            назвали «частицами непонятно чего». Разбросав возраст, получаем
+            заполненный по всей длине поток, который дальше сам себя
+            поддерживает: сроки жизни у частиц разные, и гаснут они вразнобой.
+          */
+          const particle = spawn(sources[particles.length % sources.length], true);
+          const steps = particle.life;
+          particle.life = 0;
+          for (let s = 0; s < steps; s += 1) step(particle);
+          particles.push(particle);
         }
         for (let index = particles.length - 1; index >= 0; index -= 1) {
           const particle = particles[index];
-          particle.x += particle.vx;
-          particle.y += particle.vy;
-          particle.life += 1;
-          if (particle.life > particle.span || particle.y > size.height * 0.55) {
+          step(particle);
+          if (particle.life > particle.span || particle.travel > reach) {
             particles.splice(index, 1);
           }
         }
