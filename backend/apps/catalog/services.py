@@ -144,7 +144,7 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
     return {
         "language": language,
         "server_time": (hotel.local_now().isoformat() if hotel else None),
-        "hero_image": _catalog_hero_image(options.point_code),
+        "hero_image": _catalog_hero_image(options.point_code, options.offering_type),
         "venue": _venue_identity(options.point_code, language, options.moment),
         "categories": payload_categories,
     }
@@ -186,24 +186,46 @@ def _venue_identity(point_code: str | None, language: str | None, moment) -> dic
     }
 
 
-def _catalog_hero_image(point_code: str | None = None) -> str | None:
+def _catalog_hero_image(
+    point_code: str | None = None, offering_type: str | None = None
+) -> str | None:
     """
-    Фото заведения для hero каталога. При скоупе — фото ИМЕННО этого сервиса;
-    иначе первый активный сервис с готовым фото. null → витрина берёт фон бренда/
-    градиент (каскад завершает фронт). Код сервиса совпадает с кодом заведения.
+    Кадр в шапке каталога — ТОГО, ЧТО ОТКРЫТО, а не первого попавшегося.
+
+    ПОЧЕМУ ЭТО ПЕРЕПИСАНО. Раньше без скоупа брался «первый активный сервис с
+    готовым фото» по алфавиту кода. Для раздела «Об отеле» скоупа нет — он
+    принадлежит отелю, а не заведению, — и в шапку садилось фото бара: у
+    «Кристалла» `bar` идёт первым по алфавиту. Ошибка не хранилась нигде: hero
+    считается на каждый запрос, поэтому пересев её не лечил и она возвращалась
+    после любой починки следствия.
+
+    Теперь правило одно: кадр берётся у того, чей это каталог.
+      * есть заведение — его снимок;
+      * нет заведения (плоский каталог типа) — обложка первой активной
+        категории ЭТОГО типа;
+      * нечего показать — null, и витрина падает на фон бренда.
     """
     from apps.hotels.models import Service
 
-    services = Service.objects.filter(is_active=True, image__isnull=False).select_related("image")
     if point_code:
-        services = services.filter(code=point_code)
+        services = (
+            Service.objects.filter(is_active=True, image__isnull=False, code=point_code)
+            .select_related("image")
+            .order_by("code")
+        )
+        # Первый сервис с ГОТОВЫМ фото, а не просто с привязанным: пока
+        # медиапайплайн режет варианты, url("card") пуст.
+        for service in services:
+            url = service.image.url("card") if service.image else ""
+            if url:
+                return url
+        return None
 
-    # Первый сервис с ГОТОВЫМ фото, а не просто с привязанным. Пока
-    # медиапайплайн режет варианты, url("card") пуст — и заведение, чей снимок
-    # ещё обрабатывается, не должно гасить hero всей витрине. Раньше фото было
-    # только у одного заведения, и разница не проявлялась.
-    for service in services.order_by("code"):
-        url = service.image.url("card") if service.image else ""
+    categories = Category.objects.filter(is_active=True, image__isnull=False)
+    if offering_type:
+        categories = categories.filter(type=offering_type)
+    for category in categories.select_related("image").order_by("sort_order", "code"):
+        url = category.image.url("card") if category.image else ""
         if url:
             return url
     return None

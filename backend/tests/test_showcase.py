@@ -336,3 +336,67 @@ def test_cms_create_service_names_its_crew_after_the_venue(cms):
     assert updated["public_name"]["ru"] == "У моря"
     assert updated["tagline"]["ru"] == "коктейли на закате"
     assert updated["is_guest_facing"] is False
+
+
+# --- Кадр в шапке каталога --------------------------------------------------
+
+
+def _catalog(client, hotel, token, offering_type: str, point: str | None = None):
+    query = f"?type={offering_type}" + (f"&point={point}" if point else "")
+    return client.get(
+        f"/api/v1/guest/catalog{query}",
+        HTTP_HOST=host_for(hotel),
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    ).json()
+
+
+def test_flat_catalog_wears_its_own_cover_not_the_first_venue(crystal, monkeypatch):
+    """
+    РАЗДЕЛ ОТЕЛЯ НЕ НОСИТ ФОТО ЧУЖОГО ЗАВЕДЕНИЯ.
+
+    «Об отеле» принадлежит отелю, а не заведению, поэтому скоупа по заведению у
+    него нет. Раньше в этом случае кадр брался у «первого активного сервиса с
+    готовым фото» по алфавиту кода — и в шапку раздела садился снимок бара
+    (`bar` идёт первым). Дефект нигде не хранился: кадр считается на каждый
+    запрос, поэтому пересев его не лечил, и однажды починенный он вернулся.
+
+    Проверяется ПРАВИЛО, а не конкретная картинка: варианты в тестовом окружении
+    не нарезаны, поэтому подменяем адрес меткой ассета — вопрос ведь в том, ЧЕЙ
+    снимок выбран, а не как он назван.
+    """
+    from apps.catalog.services import _catalog_hero_image
+    from apps.media.models import MediaAsset
+
+    monkeypatch.setattr(MediaAsset, "url", lambda self, variant=None: f"asset:{self.pk}")
+
+    with tenant_context(crystal):
+        info_category = (
+            Category.objects.filter(type="info", is_active=True, image__isnull=False)
+            .select_related("image")
+            .order_by("sort_order", "code")
+            .first()
+        )
+        assert info_category is not None, "у демо-отеля нет инфо-раздела с обложкой"
+        venue_covers = {
+            f"asset:{service.image_id}"
+            for service in Service.objects.filter(is_active=True, image__isnull=False)
+        }
+        hero = _catalog_hero_image(None, "info")
+
+    assert hero == f"asset:{info_category.image_id}", "шапка раздела показывает не свою обложку"
+    assert hero not in venue_covers, "в шапке раздела снимок заведения"
+
+
+def test_venue_catalog_still_wears_the_venue_photo(crystal, monkeypatch):
+    """Скоуп по заведению не сломан: там кадр как раз обязан быть его."""
+    from apps.catalog.services import _catalog_hero_image
+    from apps.media.models import MediaAsset
+
+    monkeypatch.setattr(MediaAsset, "url", lambda self, variant=None: f"asset:{self.pk}")
+
+    with tenant_context(crystal):
+        service = Service.objects.filter(is_active=True, image__isnull=False, code="bar").first()
+        assert service is not None
+        hero = _catalog_hero_image("bar", "product")
+
+    assert hero == f"asset:{service.image_id}"
