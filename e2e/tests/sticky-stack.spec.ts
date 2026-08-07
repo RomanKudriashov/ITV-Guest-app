@@ -272,3 +272,73 @@ test('вкладки идут под плитой на всём пути про�
     expect(gap!, `на скролле ${y} вкладки заехали под плиту (${gap}px)`).toBeGreaterThanOrEqual(0)
   }
 })
+
+/**
+ * СТОРОЖ: вкладку ловит сама вкладка, а не то, что над ней.
+ *
+ * Найдено на живом телефоне: после небольшой прокрутки полоса вкладок видна и
+ * на тапы не отвечает. Причина не в вкладках — плита сжимается трансформом, а
+ * раскладку трансформ не меняет: её липкая обёртка остаётся прежней высоты и,
+ * стоя выше по z, забирает нажатие себе.
+ *
+ * Проверяется поэтому не «видно ли вкладку», а КТО получит нажатие в её
+ * середине. Геометрия соседей это пропускала: перекрытия по прямоугольникам
+ * нет, потому что перекрывает невидимая часть обёртки.
+ */
+test.describe('вкладки номера ловят нажатие сами', () => {
+  for (const view of VIEWPORTS) {
+    for (const mode of ['dark', 'light'] as const) {
+      test(`нажатие достаётся вкладке: ${view.name}, ${mode}`, async ({ page }) => {
+        await page.setViewportSize({ width: view.width, height: view.height })
+        await enterRoom(page, mode)
+        await page.goto('/room')
+        await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 20_000 })
+        await page.waitForTimeout(1200)
+
+        const tabs = page.locator('[role="tab"]')
+        const count = await tabs.count()
+        test.skip(count === 0, 'у этого номера нет вкладок')
+
+        // Позиции ЗА пределами начала страницы: именно там плита сжата и
+        // обёртка успевает наехать на вкладки.
+        for (const y of [0, 120, 200, 320, 500]) {
+          await page.evaluate((to) => window.scrollTo(0, to), y)
+          await page.waitForTimeout(250)
+
+          const thieves = await page.evaluate(() => {
+            const out: { tab: string; hit: string }[] = []
+            for (const tab of document.querySelectorAll('[role="tab"]')) {
+              const r = tab.getBoundingClientRect()
+              // Вкладка уехала за экран — на этой позиции её не нажимают.
+              if (r.bottom <= 0 || r.top >= window.innerHeight || r.width === 0) continue
+              const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+              if (hit && (hit === tab || tab.contains(hit))) continue
+              out.push({
+                tab: tab.textContent ?? '?',
+                hit: hit
+                  ? hit.tagName.toLowerCase() +
+                    (hit.getAttribute('data-testid') ? `[${hit.getAttribute('data-testid')}]` : '')
+                  : '(никто)',
+              })
+            }
+            return out
+          })
+
+          expect(
+            thieves,
+            `на скролле ${y} нажатие по вкладке достаётся не ей: ` +
+              thieves.map((t) => `${t.tab} → ${t.hit}`).join(', '),
+          ).toEqual([])
+        }
+
+        // И нажатие действительно переключает: проверка выше говорит «дойдёт»,
+        // эта — «сработало».
+        await page.evaluate(() => window.scrollTo(0, 320))
+        await page.waitForTimeout(250)
+        const last = tabs.nth(count - 1)
+        await last.click()
+        await expect(last).toHaveAttribute('aria-selected', 'true')
+      })
+    }
+  }
+})
