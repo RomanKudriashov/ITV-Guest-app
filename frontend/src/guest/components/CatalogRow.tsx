@@ -9,7 +9,7 @@ import { KitImage } from '@/kit';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
-import { cardSubtitleColor, surfaceRadius } from '../storefrontTokens';
+import { cardSubtitleColor, storefrontTokens, surfaceRadius } from '../storefrontTokens';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -110,38 +110,77 @@ export function CatalogRowView({
             {title}
           </Typography>
           {description ? (
-            <Typography
-              variant="body2"
-              /*
-                Подпись — В ЦВЕТ, тем же приёмом, что липкая строка категорий:
-                акцент отеля, уведённый в стеклянный подтон и приглушённый
-                прозрачностью. Ни цвета, ни его рецепта здесь нет — компонент
-                называет цвет, считает его словарь, и у отеля с другим брендом
-                подпись будет своего цвета.
+            /*
+              ПОДЛОЖКА ОПИСАНИЯ — СТЕКЛО ИЗ СЛОВАРЯ, а не свой набор значений.
 
-                Режим берётся из ТЕМЫ, а не из хука витрины: эта карточка
-                рисуется ещё и в превью бренда CMS, где тема своя — та, которую
-                оператор прямо сейчас правит, — и хук приложения показал бы там
-                чужой режим.
-              */
+              Тот же `glass.panel`, которым сделаны верхняя панель и полоса
+              активного заказа: полупрозрачная поверхность с размытием, тёмная
+              в тёмной теме и светлая в светлой. Заводить здесь второй рецепт
+              значило бы получить два стекла, которые разойдутся на первой же
+              правке одного из них.
+
+              Набор берётся по режиму ТЕМЫ, а не из хука витрины: карточка
+              рисуется ещё и в превью бренда CMS, где тема своя.
+
+              Нет описания — нет и подложки: пустой стеклянный прямоугольник
+              под названием читался бы как оборванная загрузка.
+            */
+            <Box
               sx={(theme) => ({
-                color: cardSubtitleColor(
-                  theme.palette.primary.main,
-                  theme.palette.background.paper,
-                  theme.palette.mode,
-                ),
-                mt: 0.5,
-                fontSize: '0.75rem',
-                lineHeight: 1.4,
-                minHeight: 32,
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
+                ...storefrontTokens(theme.palette.mode).glass.panel,
+                // Радиус — ВНУТРЕННИЙ: блок лежит внутри карточки, у которой
+                // свой, панельный. Совпади они, угол подложки лёг бы ровно на
+                // угол карточки и съел бы её кант.
+                borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
+                mt: 0.75,
+                /*
+                  ПОЛЯ ПОДЛОЖКИ НЕ ОТНИМАЮТ ШИРИНУ У ТЕКСТА.
+
+                  Описание обрезается по второй строке, и ширина строки решает,
+                  что в эти две строки поместится. Подложка с полями по 8px
+                  забрала у колонки 16 пикселей из 155 на телефоне — и
+                  «Гуанчале, пекорино, яичный желток» стало «яичны…», а всего
+                  оборвалось два описания из восемнадцати. Поэтому поле внутрь
+                  ровно настолько, насколько блок выпущен наружу: текст стоит
+                  там же, где стоял, а стекло дышит.
+                */
+                mx: '-6px',
+                px: '6px',
+                py: 0.75,
               })}
             >
-              {description}
-            </Typography>
+              <Typography
+                variant="body2"
+                /*
+                  Подпись — В ЦВЕТ, тем же приёмом, что липкая строка категорий:
+                  акцент отеля, уведённый в стеклянный подтон и приглушённый
+                  прозрачностью. Ни цвета, ни его рецепта здесь нет — компонент
+                  называет цвет, считает его словарь, и у отеля с другим брендом
+                  подпись будет своего цвета.
+
+                  Режим берётся из ТЕМЫ, а не из хука витрины: эта карточка
+                  рисуется ещё и в превью бренда CMS, где тема своя — та, которую
+                  оператор прямо сейчас правит, — и хук приложения показал бы там
+                  чужой режим.
+                */
+                sx={(theme) => ({
+                  color: cardSubtitleColor(
+                    theme.palette.primary.main,
+                    theme.palette.background.paper,
+                    theme.palette.mode,
+                  ),
+                  fontSize: '0.75rem',
+                  lineHeight: 1.4,
+                  minHeight: 32,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                })}
+              >
+                {description}
+              </Typography>
+            </Box>
           ) : null}
         </Box>
       </ButtonBase>

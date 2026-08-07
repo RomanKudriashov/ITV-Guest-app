@@ -15,7 +15,7 @@ import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
-import { cardSubtitleColor, itemCard } from '../storefrontTokens';
+import { cardSubtitleColor, itemCard, storefrontTokens, surfaceRadius } from '../storefrontTokens';
 
 /**
  * Item media — a capped-height cover photo (or the DESIGNED fallback) whose
@@ -222,22 +222,33 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
             ) : null}
           </Stack>
           {item.description ? (
-            // ТОТ ЖЕ ПРИЁМ, ЧТО НА КАРТОЧКЕ СПИСКА, и тем же вызовом, а не
-            // повторённым по памяти: подпись в списке и подпись в открытой
-            // позиции — один и тот же текст, и разъехаться в цвете они могут
-            // только если считать его в двух местах.
-            <Typography
-              variant="body2"
+            /*
+              ТОТ ЖЕ ПРИЁМ, ЧТО НА КАРТОЧКЕ СПИСКА, и теми же вызовами, а не
+              повторённый по памяти: подпись в списке и подпись в открытой
+              позиции — один и тот же текст, и разъехаться — цветом ли,
+              подложкой ли — они могут только если собирать их порознь.
+            */
+            <Box
               sx={(theme) => ({
-                color: cardSubtitleColor(
-                  theme.palette.primary.main,
-                  theme.palette.background.paper,
-                  theme.palette.mode,
-                ),
+                ...storefrontTokens(theme.palette.mode).glass.panel,
+                borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
+                px: 1.25,
+                py: 1,
               })}
             >
-              {item.description}
-            </Typography>
+              <Typography
+                variant="body2"
+                sx={(theme) => ({
+                  color: cardSubtitleColor(
+                    theme.palette.primary.main,
+                    theme.palette.background.paper,
+                    theme.palette.mode,
+                  ),
+                })}
+              >
+                {item.description}
+              </Typography>
+            </Box>
           ) : null}
           {/* Desktop §3: КБЖУ+portion line, then characteristics, then allergens
               (amber «contains») and markers (green «suitable»). Prep-time chip
