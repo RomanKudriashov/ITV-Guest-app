@@ -309,7 +309,22 @@ export function RoomPage() {
     </Panel>
   );
 
-  const notices = (
+  /*
+    ЕСТЬ ЛИ ЧТО ПОКАЗЫВАТЬ — СПРАШИВАЕМ ДО РЕНДЕРА.
+
+    Блок плашек рисовался всегда, даже когда все три условия молчат: пустой
+    `Stack` высоты не имеет, но остаётся РЕБЁНКОМ колонки и забирает себе один
+    зазор. На десктопе из-за этого правая колонка начиналась на 16px ниже
+    плиты — верхние края двух соседних блоков не совпадали.
+  */
+  const hasNotices =
+    Boolean(snapshot && !snapshot.can_command) ||
+    live.status !== 'online' ||
+    roomUnreachable ||
+    Boolean(notice) ||
+    Boolean(!snapshot && state.isError);
+
+  const notices = !hasNotices ? null : (
     <Stack spacing={1.5}>
       {snapshot && !snapshot.can_command ? <PinPanel /> : null}
       {/* Обрыв канала: гость должен понимать, ПОЧЕМУ тумблеры не отвечают, и
@@ -381,48 +396,58 @@ export function RoomPage() {
         /* Десктоп: две колонки как в макете — план слева и залипает, панели
            стопкой справа. Вкладок нет: на широком экране прятать половину
            управления за переключателем незачем. */
-        <>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1.25fr 0.95fr',
-              alignItems: 'start',
-              gap: roomCard.section,
-              mt: 2,
-            }}
-            data-testid="room-two-columns"
-          >
-            <Box sx={{ position: 'sticky', top: `${plateLayer.top}px` }}>
+        /*
+          ДВЕ КОЛОНКИ ДО САМОГО НИЗА, А НЕ ДВЕ СВЕРХУ И РЯД ВНИЗУ.
+
+          Прежняя раскладка ставила план и две панели в сетку, а остальное — в
+          отдельный ряд под ними. Из-за этого под планом зияла пустота почти в
+          высоту экрана: левая колонка кончалась планом (367px), правая шла
+          дальше на 946px, и шторы со сценами начинались только там, где
+          кончилась правая. Быстрые действия при этом оставались одни во второй
+          ячейке нижнего ряда.
+
+          Теперь колонки идут насквозь, а панели разложены по ним так, чтобы
+          низ расходился минимально. Раскладка ПОДОБРАНА ПО ФАКТИЧЕСКИМ
+          высотам, а не по смыслу групп: климат — самая высокая панель после
+          света, и она уравновешивает план слева.
+        */
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            alignItems: 'start',
+            gap: roomCard.section,
+            mt: 2,
+          }}
+          data-testid="room-two-columns"
+        >
+          <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
+            {/*
+              План липкий и стоит ПЕРВЫМ в своей колонке — как и был. Панели
+              под ним уезжают под него на прокрутке ровно так же, как список
+              контролов на телефоне: это уже язык экрана, а не новое поведение.
+            */}
+            <Box sx={{ position: 'sticky', top: `${plateLayer.top}px`, zIndex: 1 }}>
               <PlateBlock plate={plate} />
             </Box>
-            <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
-              {notices}
-              {unavailable || !hasControls ? body : panelsFor(['light', 'climate'])}
-            </Stack>
-          </Box>
+            {unavailable || !hasControls ? null : panelsFor(['climate'])}
+            {unavailable || !hasControls ? null : panelsFor(['curtain'])}
+          </Stack>
 
-          {/*
-            Остальные панели — РЯДОМ КАРТОЧЕК ПОД ОБЕИМИ КОЛОНКАМИ, как в
-            референсе. Пока они стояли стопкой в правой колонке, под планом
-            оставалась пустая половина экрана, а шторы и сцены уезжали за
-            нижний край.
-          */}
-          {unavailable || !hasControls ? null : (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                alignItems: 'start',
-                gap: roomCard.section,
-                mt: roomCard.section,
-              }}
-              data-testid="room-card-row"
-            >
-              {panelsFor(['curtain', 'scene', 'service'])}
-              {quickActions}
-            </Box>
-          )}
-        </>
+          <Stack spacing={roomCard.section} sx={{ minWidth: 0 }}>
+            {notices}
+            {unavailable || !hasControls ? (
+              body
+            ) : (
+              <>
+                {panelsFor(['light'])}
+                {panelsFor(['scene'])}
+                {panelsFor(['service'])}
+                {quickActions}
+              </>
+            )}
+          </Stack>
+        </Box>
       ) : (
         <>
           {plate ? (
