@@ -85,7 +85,7 @@ def guest(client, crystal, room="305"):
 
 
 def dish_id(call, code: str) -> str:
-    menu = call("/api/guest/menu").json()
+    menu = call("/api/guest/catalog?type=product").json()
     return next(
         item["id"]
         for category in menu["categories"]

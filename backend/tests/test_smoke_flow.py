@@ -27,7 +27,7 @@ def test_full_guest_flow(client, crystal, guest_token, django_capture_on_commit_
     auth = f"Bearer {guest_token}"
 
     # --- Меню --------------------------------------------------------
-    menu = client.get("/api/guest/menu", HTTP_HOST=host, HTTP_AUTHORIZATION=auth)
+    menu = client.get("/api/guest/catalog?type=product", HTTP_HOST=host, HTTP_AUTHORIZATION=auth)
     assert menu.status_code == 200
     body = menu.json()
     codes = {category["code"] for category in body["categories"]}
@@ -95,7 +95,7 @@ def test_language_negotiation(client, crystal, guest_token):
     auth = f"Bearer {guest_token}"
 
     english = client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host,
         HTTP_AUTHORIZATION=auth,
         HTTP_ACCEPT_LANGUAGE="en-GB,en;q=0.9",
@@ -104,7 +104,7 @@ def test_language_negotiation(client, crystal, guest_token):
     assert titles["hot"] == "Hot dishes"
 
     russian = client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host,
         HTTP_AUTHORIZATION=auth,
         HTTP_ACCEPT_LANGUAGE="ru-RU,ru;q=0.9",

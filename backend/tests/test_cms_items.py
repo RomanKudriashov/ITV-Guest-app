@@ -40,7 +40,9 @@ def test_list_items_by_category_and_search(cms, category_id):
     codes = {item["code"] for item in listed}
     assert {"ribeye", "tom-yum"} <= codes
 
-    found = cms.get("/api/cms/items?search=Том").json()
+    # Ищем ПОЛНОЕ название: «Том» подстрокой входит и в «аренду авТОМобиля»,
+    # и поиск честно её находил — тест ловил не поиск, а бедность демо-данных.
+    found = cms.get("/api/cms/items?search=Том ям").json()
     assert [item["code"] for item in found] == ["tom-yum"]
 
 

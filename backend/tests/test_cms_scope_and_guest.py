@@ -74,7 +74,7 @@ def test_cannot_move_item_into_another_hotels_category(cms, cms_aurora, category
 
 def _guest_menu(client, hotel, token, language="ru"):
     return client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host_for(hotel),
         HTTP_AUTHORIZATION=f"Bearer {token}",
         HTTP_ACCEPT_LANGUAGE=language,

@@ -14,7 +14,7 @@ pytestmark = pytest.mark.django_db
 
 def _menu_items(client, crystal, guest_token):
     response = client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host_for(crystal),
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )

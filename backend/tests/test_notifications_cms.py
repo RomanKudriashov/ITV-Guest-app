@@ -236,7 +236,7 @@ def test_log_shows_step_and_its_deliveries(client, crystal, cms, settings):
         HTTP_HOST=host_for(crystal),
     ).json()["token"]
     menu = client.get(
-        "/api/guest/menu", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
+        "/api/guest/catalog?type=product", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
     ).json()
     item_id = next(
         entry["id"]

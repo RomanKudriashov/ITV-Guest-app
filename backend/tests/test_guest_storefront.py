@@ -110,7 +110,7 @@ def test_session_without_room_is_anonymous(anonymous_guest):
 
 
 def test_menu_is_localized_and_carries_server_time(guest):
-    body = guest.get("/api/guest/menu", HTTP_ACCEPT_LANGUAGE="en").json()
+    body = guest.get("/api/guest/catalog?type=product", HTTP_ACCEPT_LANGUAGE="en").json()
     titles = {c["code"]: c["title"] for c in body["categories"]}
     assert titles["hot"] == "Hot dishes"
     # Время отеля нужно витрине, чтобы считать «осталось 20 минут» без веры в
@@ -125,7 +125,7 @@ def test_menu_marks_unavailable_items_instead_of_hiding_them(guest, crystal):
         item.in_stock = False
         item.save(update_fields=["in_stock"])
 
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     ribeye = next(
         entry
         for category in menu["categories"]
@@ -137,7 +137,7 @@ def test_menu_marks_unavailable_items_instead_of_hiding_them(guest, crystal):
 
 
 def test_menu_flags_items_with_required_modifiers(guest):
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     by_code = {
         entry["code"]: entry
         for category in menu["categories"]
@@ -148,7 +148,7 @@ def test_menu_flags_items_with_required_modifiers(guest):
 
 
 def test_item_detail_returns_modifier_groups(guest):
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     steak_id = next(
         entry["id"]
         for category in menu["categories"]
@@ -192,7 +192,7 @@ def test_guest_without_room_gets_no_in_room_option(anonymous_guest):
 
 
 def order_body(guest, *, item_code="caesar", **overrides):
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     item = next(
         entry
         for category in menu["categories"]

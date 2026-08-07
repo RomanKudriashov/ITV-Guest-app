@@ -37,7 +37,7 @@ def place_guest_order(client, hotel, *, item_code="caesar", key="tracker-1", roo
             path, HTTP_HOST=host_for(hotel), HTTP_AUTHORIZATION=f"Bearer {token}"
         ).json()
 
-    menu = guest_get("/api/guest/menu")
+    menu = guest_get("/api/guest/catalog?type=product")
     item = next(
         entry
         for category in menu["categories"]

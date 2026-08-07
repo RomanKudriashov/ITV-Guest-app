@@ -199,26 +199,36 @@ def _catalog_hero_image(
     считается на каждый запрос, поэтому пересев её не лечил и она возвращалась
     после любой починки следствия.
 
-    Теперь правило одно: кадр берётся у того, чей это каталог.
+    Теперь правило одно: кадр берётся у того, кто ЭТОТ каталог обслуживает.
       * есть заведение — его снимок;
-      * нет заведения (плоский каталог типа) — обложка первой активной
-        категории ЭТОГО типа;
-      * нечего показать — null, и витрина падает на фон бренда.
+      * нет заведения (плоский каталог типа) — снимок заведения, которое такой
+        тип вообще исполняет: у еды это ресторан, у заявок — консьерж;
+      * никто не исполняет (у «Об отеле» исполнителя нет — это раздел ОТЕЛЯ) —
+        обложка первой активной категории этого типа;
+      * нечего показать — null, и витрина честно падает на фон бренда.
     """
     from apps.hotels.models import Service
 
+    services = Service.objects.filter(is_active=True, image__isnull=False)
     if point_code:
-        services = (
-            Service.objects.filter(is_active=True, image__isnull=False, code=point_code)
-            .select_related("image")
-            .order_by("code")
-        )
-        # Первый сервис с ГОТОВЫМ фото, а не просто с привязанным: пока
-        # медиапайплайн режет варианты, url("card") пуст.
-        for service in services:
-            url = service.image.url("card") if service.image else ""
-            if url:
-                return url
+        services = services.filter(code=point_code)
+    elif offering_type:
+        # Заведения, у которых есть замаршрутизированный раздел ЭТОГО типа.
+        # Без этого условия в шапку садился первый по алфавиту сервис отеля —
+        # так «Об отеле» и получал фото бара.
+        services = services.filter(
+            execution_point__routes__category__type=offering_type,
+            execution_point__routes__category__is_active=True,
+        ).distinct()
+
+    # Первый сервис с ГОТОВЫМ фото, а не просто с привязанным: пока
+    # медиапайплайн режет варианты, url("card") пуст.
+    for service in services.select_related("image").order_by("code"):
+        url = service.image.url("card") if service.image else ""
+        if url:
+            return url
+
+    if point_code:
         return None
 
     categories = Category.objects.filter(is_active=True, image__isnull=False)

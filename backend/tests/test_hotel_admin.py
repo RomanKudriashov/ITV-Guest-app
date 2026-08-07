@@ -239,7 +239,7 @@ def test_service_with_orders_cannot_be_deleted(cms, crystal, client):
         HTTP_HOST=host_for(crystal),
     ).json()["token"]
     menu = client.get(
-        "/api/guest/menu", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
+        "/api/guest/catalog?type=product", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
     ).json()
     item_id = next(
         i["id"] for c in menu["categories"] for i in c["items"] if i["code"] == "caesar"

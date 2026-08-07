@@ -45,7 +45,7 @@ def guest_order(client, crystal):
             path, HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
         ).json()
 
-    menu = guest_get("/api/guest/menu")
+    menu = guest_get("/api/guest/catalog?type=product")
     item = next(
         entry
         for category in menu["categories"]

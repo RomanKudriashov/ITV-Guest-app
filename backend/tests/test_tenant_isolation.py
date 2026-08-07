@@ -119,14 +119,14 @@ def test_rls_policy_is_enabled_and_forced(crystal):
 def test_guest_token_does_not_work_on_another_hotel(client, crystal, aurora, guest_token):
     """Токен, выданный «Кристаллом», на поддомене Aurora — чужой."""
     ok = client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host_for(crystal),
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
     assert ok.status_code == 200
 
     denied = client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host_for(aurora),
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
@@ -135,7 +135,7 @@ def test_guest_token_does_not_work_on_another_hotel(client, crystal, aurora, gue
 
 def test_menu_returns_only_own_hotel_items(client, crystal, aurora, guest_token):
     crystal_menu = client.get(
-        "/api/guest/menu",
+        "/api/guest/catalog?type=product",
         HTTP_HOST=host_for(crystal),
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     ).json()
@@ -153,6 +153,6 @@ def test_menu_returns_only_own_hotel_items(client, crystal, aurora, guest_token)
 
 
 def test_unknown_subdomain_is_rejected(client):
-    response = client.get("/api/guest/menu", HTTP_HOST="nosuchhotel.guest.localhost")
+    response = client.get("/api/guest/catalog?type=product", HTTP_HOST="nosuchhotel.guest.localhost")
     assert response.status_code == 404
     assert response.json()["code"] == "unknown_tenant"

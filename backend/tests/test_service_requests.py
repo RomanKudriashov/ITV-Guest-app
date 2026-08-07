@@ -109,15 +109,30 @@ def test_catalog_serves_both_types_through_one_endpoint(guest):
     food = guest.get("/api/guest/catalog?type=product").json()
     services = guest.get("/api/guest/catalog?type=service_request").json()
 
-    assert {c["code"] for c in food["categories"]} >= {"hot", "salads", "drinks"}
-    assert {c["code"] for c in services["categories"]} == {"transfer", "housekeeping"}
+    food_codes = {c["code"] for c in food["categories"]}
+    service_codes = {c["code"] for c in services["categories"]}
+    assert food_codes >= {"hot", "salads", "drinks"}
+    assert service_codes >= {"transfer", "housekeeping"}
+    # Важно не «сколько разделов у услуг», а что типы не перетекают друг в
+    # друга: перечислять содержимое демо-сида значит переписывать тест каждый
+    # раз, когда в отеле появляется новая услуга.
+    assert food_codes.isdisjoint(service_codes)
     # Конверт один и тот же — различается только содержимое.
     assert food.keys() == services.keys()
 
 
-def test_menu_alias_still_returns_only_food(guest):
-    """Старый /menu не должен внезапно начать отдавать такси."""
-    menu = guest.get("/api/guest/menu").json()
+def test_menu_alias_is_gone_and_catalog_returns_only_food(guest):
+    """
+    Псевдонима «/menu» больше нет, а еда по-прежнему приходит одна.
+
+    Он принимал только `include_unavailable`, а `venue` и `type` молча
+    проглатывал: «/menu?venue=kitchen» отдавал ВЕСЬ каталог отеля и выглядел
+    рабочим. Неизвестный адрес обязан отвечать 404, а не правдоподобным
+    ответом не на тот вопрос.
+    """
+    assert guest.get("/api/guest/menu").status_code == 404
+
+    menu = guest.get("/api/guest/catalog?type=product").json()
     codes = {i["code"] for c in menu["categories"] for i in c["items"]}
     assert "taxi" not in codes
     assert "ribeye" in codes
@@ -143,7 +158,7 @@ def test_service_item_detail_carries_fields_instead_of_modifiers(guest, taxi):
 
 def test_food_item_detail_has_empty_field_block(guest):
     """Оба блока приезжают всегда: клиент смотрит на содержимое, не на тип."""
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     steak = next(
         i for c in menu["categories"] for i in c["items"] if i["code"] == "ribeye"
     )
@@ -248,7 +263,7 @@ def test_optional_field_may_be_omitted(guest, taxi):
 
 
 def test_fields_are_rejected_for_products(guest):
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     caesar = next(i for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
 
     response = place(
@@ -286,7 +301,7 @@ def test_service_request_allows_only_one_line(guest, taxi, crystal):
 
 
 def test_food_and_services_cannot_be_mixed(guest, taxi):
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     caesar = next(i for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
 
     body = taxi_order(taxi)
@@ -314,7 +329,7 @@ def test_departments_see_only_their_own_orders(client, crystal, guest, taxi):
     """Кухня не видит такси, консьерж не видит еду — обычная работа Route."""
     place(guest, taxi_order(taxi), "svc-board")
 
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     caesar = next(i for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
     location_id = next(
         entry["id"]
@@ -394,7 +409,7 @@ def test_request_moves_through_statuses_like_any_order(
 def test_guest_history_mixes_both_types(guest, taxi):
     place(guest, taxi_order(taxi), "svc-hist")
 
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     caesar = next(i for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
     place(
         guest,
@@ -453,8 +468,9 @@ def test_cms_category_tree_is_filtered_by_type(cms):
 
     food_codes = {node["code"] for node in food}
     assert {"hot", "salads", "drinks"} <= food_codes
-    assert food_codes.isdisjoint({"transfer", "housekeeping"})
-    assert {node["code"] for node in services} == {"transfer", "housekeeping"}
+    service_codes = {node["code"] for node in services}
+    assert food_codes.isdisjoint(service_codes)
+    assert service_codes >= {"transfer", "housekeeping"}
 
 
 def test_cms_item_type_cannot_be_changed(cms, crystal):

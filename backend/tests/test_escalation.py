@@ -85,7 +85,7 @@ def order(client, crystal):
     ).json()["token"]
 
     menu = client.get(
-        "/api/guest/menu", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
+        "/api/guest/catalog?type=product", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
     ).json()
     item_id = next(
         entry["id"]

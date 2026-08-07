@@ -190,7 +190,7 @@ def test_guest_cannot_reach_staff_chat(client, crystal, guest):
 
 def _finished_order(client, crystal, guest, key="rev-1"):
     """Оформляет и завершает заказ, возвращает его id."""
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     item_id = next(i["id"] for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
     order_id = guest.post(
         "/api/guest/order",
@@ -223,7 +223,7 @@ def test_review_can_be_left_after_completion(client, crystal, guest):
 
 
 def test_review_before_completion_is_refused(client, crystal, guest):
-    menu = guest.get("/api/guest/menu").json()
+    menu = guest.get("/api/guest/catalog?type=product").json()
     item_id = next(i["id"] for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
     order_id = guest.post(
         "/api/guest/order",
