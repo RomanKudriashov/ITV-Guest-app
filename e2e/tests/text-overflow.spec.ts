@@ -330,3 +330,144 @@ for (const mode of ['dark', 'light'] as const) {
     })
   }
 }
+
+/**
+ * БЫСТРЫЕ ДЕЙСТВИЯ — НА ЧЕТЫРЁХ ЯЗЫКАХ.
+ *
+ * Карточка действия — самое узкое место экрана номера: подпись приходит одним
+ * словом, дорожка сетки задана числом, а элемент сетки по умолчанию не станет
+ * уже своего содержимого. Так «Бронирование» и вынесло карточку за правый край
+ * панели: у панели появлялась СОБСТВЕННАЯ горизонтальная прокрутка — то есть
+ * переполнялся блок, а не только текст, и проверка на обрезку текста этого не
+ * видела. Поэтому здесь меряется и то и другое: и прокрутка панели, и границы
+ * карточек, и высота самой подписи.
+ *
+ * Языки — все четыре, потому что длина подписи у каждого своя: русский даёт
+ * самое длинное слово, арабский вдобавок разворачивает раскладку, китайский
+ * ужимает до двух знаков (и на нём дефект не воспроизводится вовсе — сторож на
+ * одном языке был бы сторожем ни о чём).
+ *
+ * ЯЗЫК ПЕРЕКЛЮЧАЕТСЯ ЗАПРОСОМ `?lang=`, и это единственная короткая дорога,
+ * которая работает: детектор смотрит querystring первым, а в localStorage
+ * ключ `itv.lang` — не `i18nextLng`, которым это пытались делать раньше и
+ * молча получали русский (см. shots-langs.mjs).
+ */
+const LANGS = ['ru', 'en', 'ar', 'zh'] as const
+
+/** Экран номера на выбранном языке — тем же входом, что у гостя. */
+async function enterRoomInLanguage(page: Page, lang: string) {
+  await page.goto('/')
+  await page.evaluate(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+  await page.goto('/')
+  await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
+  await page.getByTestId('guest-room-submit').click()
+  await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+  await page.goto(`/room?lang=${lang}`)
+  await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('room-quick-actions')).toBeVisible({ timeout: 20_000 })
+  await page.waitForTimeout(900)
+}
+
+for (const lang of LANGS) {
+  for (const vp of VIEWPORTS) {
+    test(`быстрые действия вмещают подписи: ${lang}, ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      await enterRoomInLanguage(page, lang)
+
+      const probe = await page.evaluate(() => {
+        const panel = document.querySelector<HTMLElement>('[data-testid="room-panel-quick"]')
+        if (!panel) return null
+        // Сами карточки, без обёртки блока: у неё тот же префикс, и попади
+        // она в список — сообщение о переполнении указывало бы на контейнер
+        // вместо карточки, которая из него вылезла.
+        const cards = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '[data-testid^="room-quick-"]:not([data-testid="room-quick-actions"])',
+          ),
+        )
+        const box = panel.getBoundingClientRect()
+        return {
+          // Панель прокручивается вбок — значит, её содержимое из неё вылезло.
+          panelOverflow: panel.scrollWidth - panel.clientWidth,
+          count: cards.length,
+          cards: cards.map((card) => {
+            const rect = card.getBoundingClientRect()
+            // Именно подпись, а не первый попавшийся потомок: внутри кнопки
+            // лежит ещё и слой ряби нажатия, метрики которого ничего не значат.
+            const label = card.querySelector<HTMLElement>('.MuiTypography-root') ?? card
+            return {
+              id: card.getAttribute('data-testid'),
+              text: (card.textContent ?? '').trim(),
+              // Карточка шире собственной рамки — подпись торчит из неё.
+              selfOverflowX: card.scrollWidth - card.clientWidth,
+              selfOverflowY: card.scrollHeight - card.clientHeight,
+              // Подпись перенеслась, а карточка за ней не выросла.
+              labelOverflowY: label.scrollHeight - label.clientHeight,
+              // Насколько карточка вылезла за панель. Отрицательное — внутри.
+              outLeft: Math.round(box.left - rect.left),
+              outRight: Math.round(rect.right - box.right),
+            }
+          }),
+        }
+      })
+
+      expect(probe, 'блок быстрых действий не найден').not.toBeNull()
+      expect(probe!.count, 'быстрых действий нет вовсе').toBeGreaterThan(0)
+      expect(
+        probe!.panelOverflow,
+        `${lang}/${vp.name}: панель прокручивается вбок на ${probe!.panelOverflow}px — карточка вылезла`,
+      ).toBeLessThanOrEqual(1)
+
+      for (const card of probe!.cards) {
+        expect(card.text.length, `${card.id} (${lang}): подпись пустая`).toBeGreaterThan(0)
+        expect(
+          card.selfOverflowX,
+          `${card.id} (${lang}/${vp.name}): подпись торчит из карточки на ${card.selfOverflowX}px`,
+        ).toBeLessThanOrEqual(1)
+        expect(
+          card.selfOverflowY,
+          `${card.id} (${lang}/${vp.name}): подпись обрезана по высоте на ${card.selfOverflowY}px`,
+        ).toBeLessThanOrEqual(1)
+        expect(
+          card.labelOverflowY,
+          `${card.id} (${lang}/${vp.name}): текст подписи обрезан на ${card.labelOverflowY}px`,
+        ).toBeLessThanOrEqual(1)
+        // Границы панели — с допуском в пиксель на скруглениях и субпикселях.
+        expect(
+          card.outLeft,
+          `${card.id} (${lang}/${vp.name}): карточка вылезла за левый край панели на ${card.outLeft}px`,
+        ).toBeLessThanOrEqual(1)
+        expect(
+          card.outRight,
+          `${card.id} (${lang}/${vp.name}): карточка вылезла за правый край панели на ${card.outRight}px`,
+        ).toBeLessThanOrEqual(1)
+      }
+
+      // Арабский разворачивает раскладку целиком — иначе проверка на нём
+      // проходила бы «по совпадению», не дождавшись самого перевода.
+      if (lang === 'ar') {
+        expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl')
+      }
+
+      // Заодно весь экран номера на этом языке: плашки, чипы и пилюли. Длина
+      // подписи у каждого языка своя, и обрезка вылезает не там, где ждёшь.
+      expect(await clippedTexts(page), `/room (${lang}/${vp.name}): текст обрезан`).toEqual([])
+
+      // И страница не разъезжается вбок целиком. Это ловится только так:
+      // элемент может быть цел, а лежать за краем окна — на арабском, где
+      // раскладка развёрнута, дефект уходит за ЛЕВЫЙ край, которого никто не
+      // проверяет глазами.
+      const sideways = await page.evaluate(() => ({
+        doc: document.documentElement.scrollWidth,
+        win: window.innerWidth,
+      }))
+      expect(
+        sideways.doc - sideways.win,
+        `/room (${lang}/${vp.name}): страница разъехалась вбок на ${sideways.doc - sideways.win}px`,
+      ).toBeLessThanOrEqual(1)
+    })
+  }
+}
