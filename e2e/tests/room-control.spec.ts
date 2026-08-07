@@ -820,9 +820,14 @@ test.describe('Управление номером', () => {
     await page.waitForTimeout(800)
     const short = await layout()
 
-    // Обрезка действительно случилась, и по ВЫСОТЕ, а не по ширине.
+    // Обрезка действительно случилась, и по ВЫСОТЕ, а не по ширине. Ширина
+    // при этом может отдать пару пикселей — на дне обрезки потолок начинает
+    // сужать плиту, — но не десятки: сузься она всерьёз, кадр бы уже не
+    // обрезался, а уменьшался целиком, и смысл потолка потерялся бы.
     expect(short.plate.height, 'плита не обрезалась').toBeLessThan(short.frame.height - 4)
-    expect(short.plate.width, 'обрезали ширину вместо высоты').toBeCloseTo(tall.plate.width, 0)
+    expect(short.plate.width, 'обрезали ширину вместо высоты').toBeGreaterThan(
+      tall.plate.width * 0.97,
+    )
 
     // …а разметка не шелохнулась: доли КАДРА те же, что на целом кадре.
     for (const key of ['living', 'bedroom', 'bathroom'] as const) {
@@ -844,6 +849,35 @@ test.describe('Управление номером', () => {
         plateBottom + 1,
       )
     }
+
+    /*
+      АЛЬБОМНАЯ ОРИЕНТАЦИЯ — ДНО ОБРЕЗКИ.
+
+      Тут потолок высоты требовал бы оставить от кадра около 39%: верхнюю
+      полосу комнаты с двумя лампами из пяти, а нижний ряд меток повис бы
+      половинками на самом обрезе. Дойдя до дна, потолок перестаёт обрезать и
+      начинает сужать плиту — кадр снова помещается целиком, пусть и мельче.
+    */
+    await page.setViewportSize({ width: 844, height: 390 })
+    await page.waitForTimeout(800)
+    const wide = await layout()
+    expect(wide.plate.width, 'плита в альбомной не сузилась').toBeLessThan(short.plate.width)
+    expect(
+      wide.plate.height / wide.frame.height,
+      'от кадра осталась полоса — дно обрезки не сработало',
+    ).toBeGreaterThan(0.8)
+    const wideBottom = wide.plate.y + wide.plate.height
+    for (const [key, marker] of Object.entries(wide.markers)) {
+      expect(marker.bottom, `метка ${key} вылезла за обрез в альбомной`).toBeLessThanOrEqual(
+        wideBottom + 1,
+      )
+    }
+    for (const key of ['living', 'bedroom', 'bathroom'] as const) {
+      expect(wide.zones[key].y, `зона ${key} уехала в альбомной`).toBeCloseTo(tall.zones[key].y, 2)
+    }
+
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.waitForTimeout(800)
 
     /*
       И ГЛАВНОЕ: до первой строки контролов можно дотянуться пальцем, не
