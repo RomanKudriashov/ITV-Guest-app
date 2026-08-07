@@ -221,14 +221,14 @@ def get_catalog(
     return _catalog(request, type, include_unavailable, point_code=point)
 
 
-@router.get(
-    "/menu",
-    response=MenuOut,
-    auth=guest_auth,
-    summary="Меню (исторический псевдоним /catalog?type=product)",
-)
-def get_menu(request: HttpRequest, include_unavailable: bool = True):
-    return _catalog(request, OfferingType.PRODUCT, include_unavailable)
+# Псевдонима «/menu» больше нет — и это не уборка ради уборки.
+#
+# Он принимал ровно `include_unavailable`, а всё остальное молча проглатывал:
+# запрос «/menu?venue=kitchen» отдавал ВЕСЬ каталог отеля и выглядел рабочим.
+# На это уже потрачено время дважды: сначала при разборе карточки позиции,
+# потом при съёмке кадров. Каталог теперь один — «/catalog» с явными `type` и
+# `point`, а неизвестный адрес честно отвечает 404 вместо правдоподобного
+# ответа не на тот вопрос.
 
 
 @router.get(

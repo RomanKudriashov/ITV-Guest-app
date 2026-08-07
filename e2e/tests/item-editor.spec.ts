@@ -154,7 +154,7 @@ test.describe('CMS: редактор блюда', () => {
     const guestToken = (await sessionResponse.json()).token
 
     const menuResponse = await request.get(
-      `${process.env.E2E_API_URL ?? 'http://localhost:8010'}/api/guest/menu`,
+      `${process.env.E2E_API_URL ?? 'http://localhost:8010'}/api/guest/catalog`,
       {
         headers: {
           Authorization: `Bearer ${guestToken}`,

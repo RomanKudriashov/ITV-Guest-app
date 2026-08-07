@@ -29,7 +29,7 @@ for (const stand of STANDS) {
   })
   const token = (await session.json()).token
   const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': stand.hotel }
-  const menu = await (await api.request.get(`${API}/guest/menu`, { headers })).json()
+  const menu = await (await api.request.get(`${API}/guest/catalog`, { headers })).json()
   const items = (menu.categories ?? []).flatMap((c) => c.items ?? [])
 
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' })

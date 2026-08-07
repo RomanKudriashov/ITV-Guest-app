@@ -40,7 +40,7 @@ const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
 
 /** Идентификатор позиции по коду; без кода — первая позиция заведения. */
 async function itemId(venue, code) {
-  const menu = await api.request.get(`${API}/guest/menu?venue=${venue}`, { headers })
+  const menu = await api.request.get(`${API}/guest/catalog?type=product`, { headers })
   const body = await menu.json()
   const items = (body.categories ?? []).flatMap((c) => c.items ?? [])
   if (!items.length) return null
