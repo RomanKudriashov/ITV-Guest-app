@@ -366,7 +366,12 @@
       },
       "prev": "Previous",
       "next": "Next",
-      "room": "Room {{room}}"
+      "room": "Room {{room}}",
+      "roomStrip": {
+        "title": "Your room",
+        "open": "Open room controls",
+        "offline": "Room state is unavailable right now"
+      }
     },
     "venue": {
       "open": "Open",
@@ -691,6 +696,23 @@
       "panelSetpoint": "setpoint {{min}}–{{max}}°",
       "panelCurtain": "open / close",
       "panelScene": "no confirmation"
+    },
+    "weather": {
+      "title": "Weather",
+      "attribution": "Weather: Open-Meteo",
+      "localTime": "Local time",
+      "clear": "Clear",
+      "partly": "Partly cloudy",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "rain": "Rain",
+      "freezing": "Freezing rain",
+      "snow": "Snow",
+      "showers": "Showers",
+      "thunder": "Thunderstorm",
+      "unknown": "Weather",
+      "degrees": "{{value}}°"
     }
   },
   "tracker": {
@@ -2144,6 +2166,23 @@
       "loadError": "Could not load the plan",
       "noFrame": "There is no plan frame yet — upload a lit frame above.",
       "previewNeedsNight": "The light preview will show the difference once the night frame is ready."
+    }
+  },
+  "cms": {
+    "homeBlocks": {
+      "title": "Home screen",
+      "hint": "What the guest sees first: weather with local time and their room state.",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "weather": "Show weather",
+      "weatherNeedsPoint": "Set the hotel coordinates — without them there is no weather",
+      "attribution": "Guests will see a link next to the weather:",
+      "roomStatus": "Show room state",
+      "roomStatusHint": "The same pills as on the room screen; tapping opens it",
+      "roomStatusNeedsModule": "Requires the room control module",
+      "saved": "Home settings saved",
+      "saveFailed": "Could not save",
+      "loadFailed": "Could not load home settings"
     }
   }
 }

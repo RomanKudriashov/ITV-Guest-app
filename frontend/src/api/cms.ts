@@ -370,6 +370,31 @@ export function putQuickActions(selected: string[]): Promise<QuickActions> {
   return api.put<QuickActions>('/cms/quick-actions', { selected });
 }
 
+/* ── 10a. Home blocks: weather, coordinates, room status ─────────────────── */
+
+export interface HomeSettings {
+  weather: boolean;
+  room_status: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  /** Погоду нельзя включить без координат — сервер говорит об этом прямо. */
+  weather_available: boolean;
+  /** Строка номера имеет смысл только с модулем управления. */
+  room_status_available: boolean;
+  /** Кого атрибутировать у гостя: условие лицензии провайдера. */
+  weather_provider: { name: string; url: string };
+}
+
+export function fetchHomeSettings(): Promise<HomeSettings> {
+  return api.get<HomeSettings>('/cms/home-settings');
+}
+
+export function putHomeSettings(
+  payload: Pick<HomeSettings, 'weather' | 'room_status' | 'latitude' | 'longitude'>,
+): Promise<HomeSettings> {
+  return api.put<HomeSettings>('/cms/home-settings', payload);
+}
+
 /* ── 11. Home showcase tiles ────────────────────────────────────────────── */
 
 export function fetchShowcase(): Promise<ShowcaseSettings> {

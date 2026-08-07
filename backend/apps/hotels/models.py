@@ -28,6 +28,18 @@ class Hotel(BaseModel):
     custom_domain = models.CharField(max_length=255, blank=True, db_index=True)
 
     timezone = models.CharField(max_length=64, default="Europe/Moscow")
+
+    # Координаты отеля — для погоды на главной витрины. Пусто у подавляющего
+    # большинства отелей, и это нормальное состояние, а не незаполненность:
+    # блок погоды без координат просто не показывается.
+    #
+    # Хранятся числами, а не строкой «55.75, 37.62»: их отдают провайдеру
+    # погоды, и разбирать строку перед каждым запросом — способ однажды
+    # отправить в него мусор. Точность 6 знаков после запятой — около 10 см,
+    # больше отелю не нужно.
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
     default_language = models.CharField(max_length=8, default="en")
     currency = models.CharField(max_length=3, default="RUB")
     # Число знаков после запятой, то есть ПОКАЗАТЕЛЬ СТЕПЕНИ, а не множитель:

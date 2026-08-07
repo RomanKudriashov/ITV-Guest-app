@@ -16,6 +16,8 @@ import io
 from datetime import time
 
 from django.core.management import call_command
+from decimal import Decimal
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -268,6 +270,7 @@ class Command(BaseCommand):
             self._ensure_item_photos()
             self._ensure_category_photos()
             self._seed_hotel_cover(hotel)
+            self._seed_home_blocks(hotel)
             self._fill_translations()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
@@ -2152,6 +2155,22 @@ class Command(BaseCommand):
             ShowcaseTile.objects.update_or_create(
                 key=key, defaults={"size": size, "sort_order": order, "is_enabled": True}
             )
+
+    def _seed_home_blocks(self, hotel):
+        """
+        Координаты отеля и блоки главной.
+
+        Координаты — МОСКОВСКИЕ, под часовой пояс демо-отеля: показывать погоду
+        Дубая рядом с московским временем значит поставить на витрину две
+        правды сразу. Погода включена, чтобы блок был виден на стенде; у
+        настоящего отеля это решение оператора и по умолчанию она выключена.
+        """
+        hotel.latitude = Decimal("55.755800")
+        hotel.longitude = Decimal("37.617300")
+        settings = dict(hotel.settings or {})
+        settings["home"] = {"weather": True, "room_status": True}
+        hotel.settings = settings
+        hotel.save(update_fields=["latitude", "longitude", "settings", "updated_at"])
 
     def _seed_rich_commerce(self, hotel):
         # Отельные ставки — чтобы разбивка заказа была видна.

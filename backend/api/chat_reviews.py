@@ -47,12 +47,31 @@ def guest_home(request: HttpRequest):
     from apps.catalog.home import quick_actions_for
     from apps.catalog.showcase import build_showcase
 
+    from apps.integrations.weather import service as weather
+
     thread = chat_svc.get_or_create_thread(request.guest_session)
     unread = chat_svc.thread_snapshot(thread, side="guest")["unread"]
 
+    home_settings = (hotel.settings or {}).get("home") or {}
+
     return {
-        "hotel": {"name": hotel.name, "subdomain": hotel.subdomain},
+        "hotel": {
+            "name": hotel.name,
+            "subdomain": hotel.subdomain,
+            # Часовой пояс отеля — чтобы витрина показывала МЕСТНОЕ время и
+            # тикала сама, а не спрашивала сервер каждую минуту.
+            "timezone": hotel.timezone,
+        },
         "room": request.guest_session.room.number if request.guest_session.room_id else None,
+        # Погода приезжает ГОТОВОЙ и только с сервера: адреса провайдера
+        # витрина не знает и в него не ходит. `None` — показывать нечего:
+        # отель не включал погоду, нет координат, провайдер молчит или значение
+        # протухло. Разбираться в причине гостю незачем.
+        "weather": weather.current_for(hotel),
+        # Показывать ли на главной строку состояния номера. Данные для неё
+        # витрина берёт из СВОЕГО существующего снимка номера — второго
+        # источника здесь не заводится, отсюда едет только разрешение.
+        "room_status": bool(home_settings.get("room_status", True)),
         # Главная — витрина СЕРВИСОВ: bento-плитки заведений/услуг/инфо.
         "tiles": build_showcase(hotel, language=language, moment=hotel.local_now()),
         "unread_chat": unread,

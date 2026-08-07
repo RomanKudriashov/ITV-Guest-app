@@ -451,6 +451,81 @@ def cms_put_quick_actions(request: HttpRequest, payload: QuickActionsIn):
     return {"available": available_quick_actions(), "selected": codes}
 
 
+# --- Настройки главной: погода и строка номера -------------------------------
+
+
+class HomeSettingsIn(Schema):
+    """
+    Настройки главной. Координаты — ПАРОЙ: одна широта без долготы не точка, и
+    хранить половину координаты незачем. Пустая пара — «координат нет», и это
+    законное состояние, а не ошибка ввода.
+    """
+
+    weather: bool = False
+    room_status: bool = True
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+def _home_settings_payload(hotel) -> dict:
+    home = (hotel.settings or {}).get("home") or {}
+    return {
+        "weather": bool(home.get("weather", False)),
+        "room_status": bool(home.get("room_status", True)),
+        "latitude": float(hotel.latitude) if hotel.latitude is not None else None,
+        "longitude": float(hotel.longitude) if hotel.longitude is not None else None,
+        # Отель без координат раздела погоды не видит: показывать переключатель,
+        # который ничего не включает, — обманывать оператора.
+        "weather_available": hotel.latitude is not None and hotel.longitude is not None,
+        # Строка состояния номера имеет смысл только с модулем управления.
+        "room_status_available": _room_control_enabled(hotel),
+        # Атрибуция провайдера — условие лицензии, и оператор должен видеть,
+        # что именно появится у гостя.
+        "weather_provider": {"name": "Open-Meteo", "url": "https://open-meteo.com"},
+    }
+
+
+def _room_control_enabled(hotel) -> bool:
+    from apps.hotels.models import HotelModule
+    from apps.hotels.module_registry import enabled_module_codes
+
+    return HotelModule.Code.ROOM_CONTROL in enabled_module_codes(hotel)
+
+
+@router.get("/home-settings", summary="Настройки главной: погода, координаты, строка номера")
+def cms_get_home_settings(request: HttpRequest):
+    return _home_settings_payload(_hotel_for_settings())
+
+
+@router.put("/home-settings", summary="Сохранить настройки главной")
+def cms_put_home_settings(request: HttpRequest, payload: HomeSettingsIn):
+    from apps.core.errors import ValidationError
+
+    hotel = _hotel_for_settings()
+
+    has_point = payload.latitude is not None and payload.longitude is not None
+    if (payload.latitude is None) != (payload.longitude is None):
+        raise ValidationError("Координаты задаются парой: широта и долгота", field="latitude")
+    if has_point:
+        if not -90 <= payload.latitude <= 90:
+            raise ValidationError("Широта вне диапазона −90…90", field="latitude")
+        if not -180 <= payload.longitude <= 180:
+            raise ValidationError("Долгота вне диапазона −180…180", field="longitude")
+
+    hotel.latitude = payload.latitude
+    hotel.longitude = payload.longitude
+    settings = dict(hotel.settings or {})
+    home = dict(settings.get("home") or {})
+    # Погоду нельзя включить без координат: включённый флаг без точки — это
+    # блок, которого гость никогда не увидит, и вопрос «почему не работает».
+    home["weather"] = bool(payload.weather) and has_point
+    home["room_status"] = bool(payload.room_status)
+    settings["home"] = home
+    hotel.settings = settings
+    hotel.save(update_fields=["latitude", "longitude", "settings", "updated_at"])
+    return _home_settings_payload(hotel)
+
+
 # --- Плитки главной-витрины --------------------------------------------------
 
 

@@ -68,6 +68,11 @@ INSTALLED_APPS = [
     "apps.reviews",
     "apps.analytics",
     "apps.grms",
+    # Пакет интеграций — приложение без моделей. В списке он ради одного:
+    # Celery ищет задачи только в `<приложение>.tasks` установленных
+    # приложений, и без этой строки фоновое обновление погоды воркеру не видно
+    # («Received unregistered task»).
+    "apps.integrations",
 ]
 
 MIDDLEWARE = [
@@ -230,6 +235,22 @@ EVENT_BUS_CHANNEL_PREFIX = "guestapp.events"
 # команду не знает.
 #
 # База 4: 0 занят приложением, 1/2 — Celery, 3 — Channels.
+# --- Погода на главной витрины --------------------------------------------
+#
+# Провайдер сменяем, адрес — настройкой. По умолчанию публичный Open-Meteo: он
+# не требует ключа, и стенд работает сразу. ДЛЯ ПРОДАКШЕНА это не годится:
+# публичный доступ бесплатен только для некоммерческого использования и до
+# 10 000 запросов в сутки, а продукт коммерческий. Нужен платный план либо свой
+# экземпляр — он открытый и ставится в Docker; тогда сюда пишется его адрес.
+# Порядок действий и условия лицензии: docs/ops/weather.md.
+WEATHER_PROVIDER = os.getenv("WEATHER_PROVIDER", "open-meteo")
+WEATHER_API_URL = os.getenv("WEATHER_API_URL", "https://api.open-meteo.com")
+# Как часто ходим за погодой и докуда значение остаётся правдой. Второе больше
+# первого с запасом на одну пропущенную попытку.
+WEATHER_REFRESH_SECONDS = int(os.getenv("WEATHER_REFRESH_SECONDS", "1200"))
+WEATHER_FRESH_SECONDS = int(os.getenv("WEATHER_FRESH_SECONDS", "2700"))
+
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",

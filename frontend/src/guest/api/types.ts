@@ -553,9 +553,36 @@ export interface GuestQuickAction {
   title: string;
 }
 
+/**
+ * Погода отеля — ГОТОВАЯ, с сервера.
+ *
+ * Витрина к провайдеру не ходит и адреса его не знает: у сервера один вызов на
+ * отель раз в двадцать минут, а у тысячи гостей был бы миллион. Поле
+ * необязательное, и его отсутствие — нормальное состояние: нет координат, нет
+ * ответа, значение протухло, отель погоду не включал. Для экрана это один
+ * случай — показывать нечего.
+ */
+export interface GuestWeather {
+  temperature_c: number;
+  /** Код состояния WMO — витрина переводит его СВОИМИ строками. */
+  code: number;
+  is_day: boolean;
+  observed_at: string;
+}
+
 export interface GuestHome {
-  hotel: { name: string; subdomain?: string; theme?: PartialBrandTokens };
+  hotel: {
+    name: string;
+    subdomain?: string;
+    theme?: PartialBrandTokens;
+    /** Часовой пояс отеля: местное время витрина тикает сама. */
+    timezone?: string;
+  };
   room: string | null;
+  /** Погода или ничего. Устаревшего здесь не бывает — сервер его не отдаёт. */
+  weather?: GuestWeather | null;
+  /** Разрешение отеля показывать на главной строку состояния номера. */
+  room_status?: boolean;
   /** Bento showcase of hotel services, ordered by the server. */
   tiles: GuestShowcaseTile[];
   /** Kept for the CMS/back-compat; the bento home does not render a separate row. */

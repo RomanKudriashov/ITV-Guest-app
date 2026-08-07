@@ -13,6 +13,8 @@ import { errorMessage } from '../errors';
 import { ActiveOrderStrip } from '../components/ActiveOrderStrip';
 import { BentoGrid } from '../components/Bento';
 import { HomeHero } from '../components/HomeHero';
+import { HomeRoomStatus } from '../components/HomeRoomStatus';
+import { HomeWeather } from '../components/HomeWeather';
 import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 
@@ -54,7 +56,15 @@ export function HomePage() {
       />
 
       <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 }, pb: { xs: 5, md: 8 } }}>
-        <Stack spacing={{ xs: 2, md: 2.5 }} sx={{ mb: { xs: 3, md: 4 } }}>
+        {/*
+          Полоса «прямо сейчас»: погода с местным временем, состояние номера и
+          активный заказ. Каждый блок решает сам, показываться ли ему, и
+          отсутствие любого из них — нормальное состояние главной, а не дыра:
+          ни заглушек, ни зарезервированного места под то, чего нет.
+        */}
+        <Stack spacing={{ xs: 1.5, md: 2 }} sx={{ mb: { xs: 3, md: 4 } }}>
+          <HomeWeather weather={data?.weather} timezone={data?.hotel?.timezone ?? hotel?.timezone} />
+          <HomeRoomStatus allowed={data?.room_status !== false} />
           <ActiveOrderStrip />
         </Stack>
 

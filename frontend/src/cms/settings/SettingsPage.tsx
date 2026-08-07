@@ -4,6 +4,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { HomeBlocksSection } from './HomeBlocksSection';
+
 import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { LocationsPage } from '@/pages/hotel/LocationsPage';
 
@@ -36,6 +38,14 @@ export function SettingsPage() {
       </Typography>
 
       <Stack spacing={4}>
+        {/* Главная витрины: погода, координаты, строка состояния номера. Стоит
+            первой — это то, что гость видит раньше всего остального. */}
+        <Box data-testid="settings-home-blocks">
+          <HomeBlocksSection />
+        </Box>
+
+        <Divider />
+
         <Box data-testid="settings-commerce">
           <Typography variant="h6" sx={{ mb: 1 }}>
             {t('settings.commerce')}

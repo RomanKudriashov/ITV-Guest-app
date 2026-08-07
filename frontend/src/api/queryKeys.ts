@@ -38,6 +38,7 @@ export const queryKeys = {
   commerceSettings: ['cms', 'commerce-settings'] as const,
   badges: ['cms', 'badges'] as const,
   quickActions: ['cms', 'quick-actions'] as const,
+  homeSettings: ['cms', 'home-settings'] as const,
   showcase: ['cms', 'showcase'] as const,
   /* ── Управление номером (модуль room_control) ───────────────────────── */
   grmsCatalog: ['cms', 'grms', 'catalog'] as const,

@@ -364,7 +364,12 @@
       },
       "prev": "上一个",
       "next": "下一个",
-      "room": "{{room}} 房"
+      "room": "{{room}} 房",
+      "roomStrip": {
+        "title": "您的房间",
+        "open": "打开客房控制",
+        "offline": "暂时无法获取房间状态"
+      }
     },
     "venue": {
       "open": "营业中",
@@ -687,6 +692,23 @@
       "panelSetpoint": "设定 {{min}}–{{max}}°",
       "panelCurtain": "开启 / 关闭",
       "panelScene": "无反馈确认"
+    },
+    "weather": {
+      "title": "天气",
+      "attribution": "天气数据：Open-Meteo",
+      "localTime": "当地时间",
+      "clear": "晴",
+      "partly": "少云",
+      "cloudy": "多云",
+      "fog": "雾",
+      "drizzle": "毛毛雨",
+      "rain": "雨",
+      "freezing": "冻雨",
+      "snow": "雪",
+      "showers": "阵雨",
+      "thunder": "雷暴",
+      "unknown": "天气",
+      "degrees": "{{value}}°"
     }
   },
   "tracker": {
@@ -2139,6 +2161,23 @@
       "loadError": "无法加载平面",
       "noFrame": "还没有平面图像——请在上方上传亮场图。",
       "previewNeedsNight": "夜景图就绪后，灯光预览才能显示差别。"
+    }
+  },
+  "cms": {
+    "homeBlocks": {
+      "title": "首页展示",
+      "hint": "客人最先看到的内容：天气与当地时间，以及房间状态。",
+      "latitude": "纬度",
+      "longitude": "经度",
+      "weather": "显示天气",
+      "weatherNeedsPoint": "请填写酒店坐标——没有坐标就没有天气",
+      "attribution": "客人将在天气旁看到链接：",
+      "roomStatus": "显示房间状态",
+      "roomStatusHint": "与客房控制页相同的状态条；点击可进入",
+      "roomStatusNeedsModule": "需要开通客房控制模块",
+      "saved": "首页设置已保存",
+      "saveFailed": "保存失败",
+      "loadFailed": "无法加载首页设置"
     }
   }
 }

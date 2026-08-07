@@ -174,6 +174,14 @@ export const IconBack = createIcon(
   </>,
 );
 
+export const IconForward = createIcon(
+  'forward',
+  <>
+    <path d="M4 12h16" />
+    <path d="M14 6l6 6-6 6" />
+  </>,
+);
+
 export const IconClose = createIcon(
   'close',
   <>
@@ -588,6 +596,64 @@ export const IconBath = createIcon(
 export const IconMoon = createIcon(
   'moon',
   <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+);
+
+/* ── Погода ───────────────────────────────────────────────────────────────
+   Той же пластикой, что весь набор: линия, скруглённые концы, 24×24. Групп
+   ровно столько, сколько различает витрина по коду WMO, — гостю нужен «дождь»,
+   а не «слабая замерзающая морось». */
+
+export const IconSunny = createIcon(
+  'sunny',
+  <>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </>,
+);
+
+export const IconPartlyCloudy = createIcon(
+  'partly-cloudy',
+  <>
+    <path d="M8 6.5a3.5 3.5 0 1 1 3.2 5" />
+    <path d="M7 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 7 13.6 3.2 3.2 0 0 0 7 20z" />
+  </>,
+);
+
+export const IconCloudy = createIcon(
+  'cloudy',
+  <path d="M7 19h9.5a3.5 3.5 0 0 0 .3-7A5.5 5.5 0 0 0 7 11.5 3.75 3.75 0 0 0 7 19z" />,
+);
+
+export const IconRain = createIcon(
+  'rain',
+  <>
+    <path d="M7 15h9.5a3.5 3.5 0 0 0 .3-7A5.5 5.5 0 0 0 7 7.5 3.75 3.75 0 0 0 7 15z" />
+    <path d="M9 18l-1 3M13 18l-1 3M17 18l-1 3" />
+  </>,
+);
+
+export const IconSnow = createIcon(
+  'snow',
+  <>
+    <path d="M7 15h9.5a3.5 3.5 0 0 0 .3-7A5.5 5.5 0 0 0 7 7.5 3.75 3.75 0 0 0 7 15z" />
+    <path d="M9 19h.01M13 19h.01M17 19h.01M11 21.5h.01M15 21.5h.01" />
+  </>,
+);
+
+export const IconFog = createIcon(
+  'fog',
+  <>
+    <path d="M7 13h9.5a3.5 3.5 0 0 0 .3-7A5.5 5.5 0 0 0 7 5.5 3.75 3.75 0 0 0 7 13z" />
+    <path d="M4 17h16M6 21h12" />
+  </>,
+);
+
+export const IconThunder = createIcon(
+  'thunder',
+  <>
+    <path d="M7 14h9.5a3.5 3.5 0 0 0 .3-7A5.5 5.5 0 0 0 7 6.5 3.75 3.75 0 0 0 7 14z" />
+    <path d="M13 16l-3 4h4l-3 4" />
+  </>,
 );
 
 export const IconSunrise = createIcon(

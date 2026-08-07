@@ -39,10 +39,19 @@ import {
   IconSofa,
   IconSunrise,
   IconSwitch,
-  IconThermostat,
   IconWardrobe,
 } from '@/icons';
 import { RoomPlanPlate, type PlanReading } from '../components/RoomPlanPlate';
+import { RoomStatusPills } from '../components/RoomStatusPills';
+import {
+  groupControls,
+  readingOn,
+  useRoomReadings,
+  type GroupKey,
+  type Groups,
+  type Reading,
+  type Readings,
+} from '../roomSnapshot';
 import { RoomQuickActions } from '../components/RoomQuickActions';
 import {
   ControlRow,
@@ -53,7 +62,6 @@ import {
   RowSwitch,
   SceneTile,
   Segmented,
-  StatusPill,
   SwipeDeck,
 } from '../components/roomKit';
 import { errorMessage } from '../errors';
@@ -64,10 +72,8 @@ import { layout, roomCard, surfaceRadius } from '../storefrontTokens';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useStorefront } from '../useStorefront';
 import type {
-  RoomCapability,
   RoomControl,
   RoomStateSnapshot,
-  RoomZone,
 } from '../api/types';
 
 /**
@@ -395,7 +401,7 @@ export function RoomPage() {
       }}
       data-testid="room-page"
     >
-      <Pills snapshot={snapshot} groups={groups} readings={readings} />
+      <RoomStatusPills snapshot={snapshot} />
 
       {/* Пропорция плиты берётся из прошлого снимка, если он был: тогда
           заглушка совпадает с кадром и раскладка не прыгает вовсе. */}
@@ -619,143 +625,6 @@ function panelHint(
 }
 
 /* ── Пилюли статуса ───────────────────────────────────────────────────────── */
-
-function Pills({
-  snapshot,
-  groups,
-  readings,
-}: {
-  snapshot: RoomStateSnapshot | undefined;
-  groups: Groups;
-  readings: Readings;
-}) {
-  const { t } = useTranslation();
-  const { roomControl } = useStorefront();
-  if (!snapshot || snapshot.availability === 'unavailable') return null;
-
-  const climate = groups.climate[0];
-  const temperature = climate ? readings[climate.controlId]?.values.current_temp : undefined;
-  const lit = groups.light.filter((control) => readingOn(readings[control.controlId]) === true).length;
-  const known = groups.light.filter((control) => readingOn(readings[control.controlId]) !== null).length;
-
-  // Штора и блэкаут лежат в одной группе — различаем ВИДОМ, а не порядком:
-  // порядок приходит из снимка, и первой в нём может оказаться любая из двух.
-  const curtain = groups.curtain.find((control) => control.kind === 'curtain');
-  const curtainOn = curtain ? readingOn(readings[curtain.controlId]) : null;
-  const blackout = groups.curtain.find((control) => control.kind === 'curtain_blackout');
-  const blackoutOn = blackout ? readingOn(readings[blackout.controlId]) : null;
-  const service = groups.service.find((control) => control.kind === 'dnd');
-  const dnd = service ? readingOn(readings[service.controlId]) : null;
-  const cleaning = groups.service.find((control) => control.kind === 'mur');
-  const cleaningOn = cleaning ? readingOn(readings[cleaning.controlId]) : null;
-
-  /*
-    ПОРЯДОК ЗДЕСЬ — ЭТО ПРИОРИТЕТ: температура, свет, шторы, блэкаут, уборка,
-    «не беспокоить». Строка одна и прокручивается, поэтому вопрос не «влезет
-    ли», а «что гость увидит, не прокручивая»; заодно ряд не может вырасти
-    вниз и наехать на план.
-  */
-  const pills: ReactNode[] = [];
-  // Пилюля рисуется, ТОЛЬКО если её значение прочитано. «—» вместо градусов
-  // это не честность, а просто другой способ ничего не сказать.
-  if (typeof temperature === 'number') {
-    pills.push(
-      <StatusPill key="temp" tone="cold" icon={<IconThermostat size={13} />} testId="room-pill-temp">
-        {t('guest.roomControl.pillTemp', { value: temperature })}
-      </StatusPill>,
-    );
-  }
-  if (known > 0) {
-    pills.push(
-      <StatusPill
-        key="lit"
-        tone={lit > 0 ? 'active' : 'neutral'}
-        icon={<IconLightGroup size={13} />}
-        testId="room-pill-lit"
-      >
-        {t('guest.roomControl.pillZones', { count: lit })}
-      </StatusPill>,
-    );
-  }
-  if (curtainOn !== null) {
-    pills.push(
-      <StatusPill
-        key="curtain"
-        tone={curtainOn ? 'active' : 'neutral'}
-        icon={<IconCurtain size={13} />}
-        testId="room-pill-curtain"
-      >
-        {curtainOn ? t('guest.roomControl.curtainOpen') : t('guest.roomControl.curtainClosed')}
-      </StatusPill>,
-    );
-  }
-  /*
-    БЛЭКАУТ И УБОРКА ПОКАЗЫВАЮТСЯ ТОЛЬКО В СВОЁМ СОСТОЯНИИ.
-
-    Открытый блэкаут и незаказанная уборка — это ничего не значащие «нет», и
-    занимать ими строку значит вытеснить из виду то, что происходит. Пилюля
-    появляется, когда состояние наступило, и исчезает, когда оно снято.
-  */
-  if (blackoutOn === false) {
-    pills.push(
-      <StatusPill
-        key="blackout"
-        tone="active"
-        icon={<IconBlackout size={13} />}
-        testId="room-pill-blackout"
-      >
-        {t('guest.roomControl.pillBlackoutClosed')}
-      </StatusPill>,
-    );
-  }
-  if (cleaningOn === true) {
-    pills.push(
-      <StatusPill
-        key="cleaning"
-        tone="active"
-        icon={<IconMakeUpRoom size={13} />}
-        testId="room-pill-cleaning"
-      >
-        {t('guest.roomControl.pillCleaning')}
-      </StatusPill>,
-    );
-  }
-  if (dnd !== null) {
-    pills.push(
-      <StatusPill
-        key="dnd"
-        tone={dnd ? 'active' : 'neutral'}
-        icon={<IconDoNotDisturb size={13} />}
-        testId="room-pill-dnd"
-      >
-        {dnd ? t('guest.roomControl.pillDndOn') : t('guest.roomControl.pillDndOff')}
-      </StatusPill>,
-    );
-  }
-  if (!pills.length) return null;
-
-  return (
-    <Stack
-      direction="row"
-      sx={{
-        // Одной строкой с прокруткой, а не переносом: три ряда пилюль на
-        // телефоне съедали экран до того, как гость видел план.
-        gap: 1,
-        overflowX: 'auto',
-        pb: 0.5,
-        // Край прокрутки виден: строка, обрезанная ровно по границе экрана,
-        // читается как обрыв вёрстки, а не как «дальше есть ещё».
-        maskImage: roomControl.fadeEdge,
-        WebkitMaskImage: roomControl.fadeEdge,
-        scrollbarWidth: 'none',
-        '&::-webkit-scrollbar': { display: 'none' },
-      }}
-      data-testid="room-pills"
-    >
-      {pills}
-    </Stack>
-  );
-}
 
 /* ── Панели ───────────────────────────────────────────────────────────────── */
 
@@ -1171,22 +1040,6 @@ function ToggleRow({
 
 /* ── Чтение состояния ─────────────────────────────────────────────────────── */
 
-export interface Reading {
-  control: RoomControl;
-  /** ПОСЛЕДНИЕ ПОДТВЕРЖДЁННЫЕ значения. Пусто — состояние не читается. */
-  values: Partial<Record<RoomCapability, number>>;
-  busy: boolean;
-  unreadable: boolean;
-  readonly: boolean;
-}
-
-export type Readings = Record<string, Reading>;
-
-function readingOn(reading: Reading | undefined): boolean | null {
-  if (!reading || reading.values.toggle === undefined) return null;
-  return reading.values.toggle === 1;
-}
-
 function isLocked(reading: Reading | undefined, canCommand: boolean): boolean {
   if (!reading) return true;
   return reading.busy || reading.unreadable || reading.readonly || !canCommand;
@@ -1208,48 +1061,6 @@ function stateWord(control: RoomControl, on: boolean | null, t: TFunction): stri
   return on ? t('guest.roomControl.stateOn') : t('guest.roomControl.stateOff');
 }
 
-/**
- * Чтение по каждому элементу с ПАМЯТЬЮ последнего подтверждённого значения.
- *
- * Ради этой памяти хук и существует. Сервер в полёте значений не отдаёт — он
- * их не перечитывал, — и без памяти список рисовал бы элемент ВЫКЛЮЧЕННЫМ на
- * время обмена: гость нажимал «включить», видел, как свет гаснет на экране, и
- * через секунду загорается. Это враньё, и оно жило на экране с G5a: плану
- * память завели, а списку — нет.
- *
- * Память стирается, как только элемент ушёл в `offline`: там состояния нет, и
- * «что было» — ровно то враньё, ради запрета которого написан весь экран.
- */
-function useRoomReadings(snapshot: RoomStateSnapshot | undefined): Readings {
-  const memory = useRef<Record<string, Partial<Record<RoomCapability, number>>>>({});
-
-  return useMemo(() => {
-    const readings: Readings = {};
-    for (const zone of snapshot?.zones ?? []) {
-      for (const control of zone.controls) {
-        const id = control.controlId;
-        if (control.state === 'confirmed') {
-          const values: Partial<Record<RoomCapability, number>> = {};
-          for (const capability of control.capabilities) {
-            const value = readValue(control, capability);
-            if (value !== null) values[capability] = value;
-          }
-          memory.current[id] = values;
-        } else if (control.state === 'offline') {
-          delete memory.current[id];
-        }
-        readings[id] = {
-          control,
-          values: control.state === 'offline' ? {} : (memory.current[id] ?? {}),
-          busy: control.state === 'pending',
-          unreadable: control.state === 'offline',
-          readonly: control.readonly,
-        };
-      }
-    }
-    return readings;
-  }, [snapshot]);
-}
 
 /** Чтение для плиты плана — тот же источник, что и у списка. */
 function planReadings(readings: Readings): Record<string, PlanReading> {
@@ -1267,16 +1078,6 @@ function planReadings(readings: Readings): Record<string, PlanReading> {
   return out;
 }
 
-/** Значение ручки: скаляр у простого элемента, поле объекта у составного. */
-function readValue(control: RoomControl, capability: RoomCapability): number | null {
-  const key = capability === 'toggle' ? 'on' : capability;
-  if (control.value === null || control.value === undefined) return null;
-  if (typeof control.value === 'number') {
-    return control.capabilities.length === 1 ? control.value : null;
-  }
-  const found = control.value[key];
-  return typeof found === 'number' ? found : null;
-}
 
 /* ── Уставка: черновик и одна команда ─────────────────────────────────────── */
 
@@ -1357,8 +1158,6 @@ function buzz(): void {
 
 /* ── Группировка по типу ──────────────────────────────────────────────────── */
 
-export type GroupKey = 'light' | 'climate' | 'curtain' | 'scene' | 'service';
-export type Groups = Record<GroupKey, RoomControl[]>;
 
 interface PanelProps {
   controls: RoomControl[];
@@ -1367,30 +1166,6 @@ interface PanelProps {
   onCommand: (input: { controlId: string; capability?: string; value?: number | null }) => void;
   /** Сцена уходит своим путём: у неё нет подтверждения, но отклик нужен. */
   onScene: (controlId: string) => void;
-}
-
-/**
- * Раскладка элементов по панелям: свет, климат, шторы, сцены, сервис.
- *
- * Там, где вид элемента виден по CAPABILITY, решает она: уставка — климат,
- * триггер — сцена. Свет от шторы и от сервиса capability не отличает (у всех
- * один `toggle`), и там решает `kind` — код каталога, который ровно и говорит,
- * ЧЕМ элемент является. Это по-прежнему решение о показе, а не о поведении:
- * команда собирается из capability, и ни одна ветка отправки на kind не
- * смотрит.
- */
-function groupControls(zones: RoomZone[]): Groups {
-  const groups: Groups = { light: [], climate: [], curtain: [], scene: [], service: [] };
-  for (const zone of zones) {
-    for (const control of zone.controls) {
-      if (control.capabilities.includes('setpoint')) groups.climate.push(control);
-      else if (control.capabilities.includes('trigger')) groups.scene.push(control);
-      else if (control.kind.startsWith('light')) groups.light.push(control);
-      else if (control.kind.startsWith('curtain')) groups.curtain.push(control);
-      else groups.service.push(control);
-    }
-  }
-  return groups;
 }
 
 /**
