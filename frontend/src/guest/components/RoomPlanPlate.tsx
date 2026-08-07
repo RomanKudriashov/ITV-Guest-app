@@ -109,6 +109,21 @@ export interface RoomPlanPlateProps {
    * место под плиту остаётся зарезервированным, меняется только картинка.
    */
   scale?: number;
+  /**
+   * Потолок ВЫСОТЫ плиты — любая CSS-длина, или ничего, если потолка нет.
+   *
+   * Ширину плите задаёт колонка, высоту — пропорция кадра; на почти квадратном
+   * кадре высота съедает телефонный экран, и до контролов под плитой нельзя
+   * дотянуться. Упёршись в потолок, плита КАДР ОБРЕЗАЕТ, а не сжимает: кадр
+   * лежит отдельным слоем полной высоты, и вся геометрия остаётся в процентах
+   * ОТ КАДРА. Сожми мы кадр — разметка поехала бы относительно картинки.
+   *
+   * Обрезается НИЗ. На плане номера окна идут по наружным стенам вверху кадра,
+   * и симметричная обрезка срезала бы их вместе со шторами — то есть ровно то,
+   * что плита показывает движением. Внизу же у кадра запас: тёмное поле и
+   * порог входной двери.
+   */
+  maxHeight?: string;
   onToggle: (controlId: string, next: number) => void;
 }
 
@@ -143,6 +158,7 @@ export function RoomPlanPlate({
   readings,
   neutral = false,
   scale = 1,
+  maxHeight,
   onToggle,
 }: RoomPlanPlateProps) {
   const { t } = useTranslation();
@@ -194,6 +210,9 @@ export function RoomPlanPlate({
       data-mirrored={plan.mirrored ? 'true' : undefined}
       style={{
         aspectRatio: String(plan.aspect),
+        // Потолок высоты: плита ниже кадра, кадр внутри обрезается снизу.
+        // Ширина при этом не трогается — её задаёт колонка.
+        maxHeight,
         // Зеркальная планировка отражает плиту ЦЕЛИКОМ — кадры вместе с
         // геометрией и хит-зонами. Отражать координаты по отдельности значило
         // бы завести второй источник истины, который разойдётся с первым.
@@ -221,326 +240,345 @@ export function RoomPlanPlate({
       }}
     >
       {/*
-        Кадры ДЕКОРАТИВНЫ: управление живёт в кнопках зон и, полностью, в
-        списке контролов рядом. Описывать словами картинку комнаты нечем.
+        КАДР — ОТДЕЛЬНЫЙ СЛОЙ ПОЛНОЙ ВЫСОТЫ, а плита его окно.
 
-        Нижний слой — ночной, если он есть. Нет ночного — снизу лежит светлый,
-        и выключенные зоны накрываются маской, как раньше.
+        Пока потолка высоты нет, слой ровно совпадает с плитой и ничего не
+        меняет. Упёршись в потолок, плита становится ниже кадра и обрезает его
+        нижний край — но ВСЯ ГЕОМЕТРИЯ по-прежнему считается в процентах от
+        ЭТОГО слоя, то есть от кадра. Считай её плита от себя, зоны, маски,
+        окна и метки поехали бы относительно картинки ровно в тот момент, когда
+        обрезка включилась.
+
+        Позиция — инлайновым стилем, как и вся геометрия плиты: emotion в RTL
+        развернул бы `left` на `right`.
       */}
       <Box
-        component="img"
-        src={twoFrames ? plan.image_off : plan.image}
-        alt=""
-        aria-hidden
-        data-testid="room-plan-base"
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          // Плита без ночного кадра в недоступности обесцвечивается: иначе
-          // снизу остался бы СВЕТЛЫЙ кадр, то есть «во всём номере горит
-          // свет» — ровно то враньё, которого здесь быть не должно. С ночным
-          // кадром обесцвечивать нечего: он и есть нейтральное состояние.
-          filter: neutral && !twoFrames ? 'grayscale(1)' : 'none',
-        }}
-      />
+        data-testid="room-plan-frame"
+        style={{ position: 'absolute', left: 0, top: 0, aspectRatio: String(plan.aspect) }}
+        sx={{ width: '100%' }}
+      >
+        {/*
+          Кадры ДЕКОРАТИВНЫ: управление живёт в кнопках зон и, полностью, в
+          списке контролов рядом. Описывать словами картинку комнаты нечем.
 
-      {plan.zones.map((zone) => {
-        const on = read(zone.controlId)?.on === true;
-        return twoFrames ? (
-          /*
-            Верхний, светлый кадр — ЦЕЛИКОМ поверх нижнего, а видно его только
-            в окне зоны: окно вырезано маской-эллипсом, вписанным в
-            прямоугольник зоны, с растушёванным краем.
-
-            Именно так, а не «окошко с overflow: hidden и уменьшенной копией
-            кадра внутри»: на живом iOS сочетание маски и обрезки контейнера
-            даёт жёсткий прямоугольник — маска теряется, остаётся клип, и плита
-            выглядит сломанной. Здесь обрезки нет вовсе, а кадр не масштабируется
-            и потому совпадает с нижним пиксель в пиксель по построению.
-          */
-          <Box
-            key={`lit-${zone.code || zone.controlId}`}
-            component="img"
-            src={plan.image}
-            alt=""
-            aria-hidden
-            data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
-            style={{ opacity: on ? 1 : 0, ...zoneWindow(zone.mask, tokens.zoneWindowStops) }}
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              pointerEvents: 'none',
-              transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
-            }}
-          />
-        ) : (
-          <Box
-            key={`mask-${zone.code || zone.controlId}`}
-            aria-hidden
-            style={{ ...pct(zone.mask), opacity: read(zone.controlId)?.on === false ? 1 : 0 }}
-            sx={{
-              position: 'absolute',
-              pointerEvents: 'none',
-              background: tokens.maskOff,
-              transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
-            }}
-          />
-        );
-      })}
-
-      <Box
-        aria-hidden
-        style={{ opacity: dim }}
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background: tokens.dim,
-          transition: motion ?? 'opacity .7s ease',
-        }}
-      />
-
-      {plan.windows.map((window) => (
-        <PlanWindow
-          key={window.code}
-          window={window}
-          curtain={read(window.curtainId)?.on ?? null}
-          blackout={window.blackoutId ? (read(window.blackoutId)?.on ?? null) : undefined}
-          calm={calm}
+          Нижний слой — ночной, если он есть. Нет ночного — снизу лежит светлый,
+          и выключенные зоны накрываются маской, как раньше.
+        */}
+        <Box
+          component="img"
+          src={twoFrames ? plan.image_off : plan.image}
+          alt=""
+          aria-hidden
+          data-testid="room-plan-base"
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            // Плита без ночного кадра в недоступности обесцвечивается: иначе
+            // снизу остался бы СВЕТЛЫЙ кадр, то есть «во всём номере горит
+            // свет» — ровно то враньё, которого здесь быть не должно. С ночным
+            // кадром обесцвечивать нечего: он и есть нейтральное состояние.
+            filter: neutral && !twoFrames ? 'grayscale(1)' : 'none',
+          }}
         />
-      ))}
 
-      <Airflow points={plan.points} readings={neutral ? {} : readings} tint={tokens.airflowTint} calm={calm} />
+        {plan.zones.map((zone) => {
+          const on = read(zone.controlId)?.on === true;
+          return twoFrames ? (
+            /*
+              Верхний, светлый кадр — ЦЕЛИКОМ поверх нижнего, а видно его только
+              в окне зоны: окно вырезано маской-эллипсом, вписанным в
+              прямоугольник зоны, с растушёванным краем.
 
-      {/*
-        Зона, состояние которой не читается, накрывается НЕЙТРАЛЬНОЙ вуалью, а
-        не маской: маска означает «свет выключен», и подставить её здесь значит
-        ответить на вопрос, ответа на который у нас нет.
+              Именно так, а не «окошко с overflow: hidden и уменьшенной копией
+              кадра внутри»: на живом iOS сочетание маски и обрезки контейнера
+              даёт жёсткий прямоугольник — маска теряется, остаётся клип, и плита
+              выглядит сломанной. Здесь обрезки нет вовсе, а кадр не масштабируется
+              и потому совпадает с нижним пиксель в пиксель по построению.
+            */
+            <Box
+              key={`lit-${zone.code || zone.controlId}`}
+              component="img"
+              src={plan.image}
+              alt=""
+              aria-hidden
+              data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
+              style={{ opacity: on ? 1 : 0, ...zoneWindow(zone.mask, tokens.zoneWindowStops) }}
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                pointerEvents: 'none',
+                transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
+              }}
+            />
+          ) : (
+            <Box
+              key={`mask-${zone.code || zone.controlId}`}
+              aria-hidden
+              style={{ ...pct(zone.mask), opacity: read(zone.controlId)?.on === false ? 1 : 0 }}
+              sx={{
+                position: 'absolute',
+                pointerEvents: 'none',
+                background: tokens.maskOff,
+                transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
+              }}
+            />
+          );
+        })}
 
-        ЕСЛИ НЕ ЧИТАЕТСЯ НИ ОДНА — вуаль ОДНА на весь кадр, мягкая, без
-        прямоугольников. Пять серых заплат поверх плана выглядели поломкой
-        интерфейса, а сообщают они ровно одно и то же: связи нет. Одно
-        сообщение — один слой.
-      */}
-      {allUnknown ? (
         <Box
           aria-hidden
+          style={{ opacity: dim }}
           sx={{
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            background: tokens.offlineHint,
-            transition: motion ?? 'opacity .4s ease',
+            background: tokens.dim,
+            transition: motion ?? 'opacity .7s ease',
           }}
         />
-      ) : (
-        plan.zones.map((zone) =>
-          read(zone.controlId)?.on === null || (!neutral && !readings[zone.controlId]) ? (
+
+        {plan.windows.map((window) => (
+          <PlanWindow
+            key={window.code}
+            window={window}
+            curtain={read(window.curtainId)?.on ?? null}
+            blackout={window.blackoutId ? (read(window.blackoutId)?.on ?? null) : undefined}
+            calm={calm}
+          />
+        ))}
+
+        <Airflow points={plan.points} readings={neutral ? {} : readings} tint={tokens.airflowTint} calm={calm} />
+
+        {/*
+          Зона, состояние которой не читается, накрывается НЕЙТРАЛЬНОЙ вуалью, а
+          не маской: маска означает «свет выключен», и подставить её здесь значит
+          ответить на вопрос, ответа на который у нас нет.
+
+          ЕСЛИ НЕ ЧИТАЕТСЯ НИ ОДНА — вуаль ОДНА на весь кадр, мягкая, без
+          прямоугольников. Пять серых заплат поверх плана выглядели поломкой
+          интерфейса, а сообщают они ровно одно и то же: связи нет. Одно
+          сообщение — один слой.
+        */}
+        {allUnknown ? (
+          <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: tokens.offlineHint,
+              transition: motion ?? 'opacity .4s ease',
+            }}
+          />
+        ) : (
+          plan.zones.map((zone) =>
+            read(zone.controlId)?.on === null || (!neutral && !readings[zone.controlId]) ? (
+              <Box
+                key={`unknown-${zone.code || zone.controlId}`}
+                aria-hidden
+                style={pct(zone.hit)}
+                sx={{
+                  position: 'absolute',
+                  pointerEvents: 'none',
+                  background: tokens.unknown,
+                  borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
+                }}
+              />
+            ) : null,
+          )
+        )}
+
+        {plan.zones.map((zone) => {
+          const reading = read(zone.controlId);
+          const on = reading?.on ?? null;
+          const unknown = on === null;
+          const state = unknown
+            ? t('guest.roomControl.offline')
+            : on
+              ? t('guest.roomControl.on')
+              : t('guest.roomControl.off');
+          return (
             <Box
-              key={`unknown-${zone.code || zone.controlId}`}
-              aria-hidden
+              component="button"
+              type="button"
+              key={`hit-${zone.code || zone.controlId}`}
+              data-testid={`room-plan-zone-${zone.code || zone.controlId}`}
+              disabled={unknown || Boolean(reading?.disabled)}
+              aria-busy={reading?.pending || undefined}
+              // Состояния нет — нет и `aria-pressed`: то же правило, по которому
+              // сцена никогда не показывается включённой.
+              aria-pressed={unknown ? undefined : on}
+              aria-label={`${reading?.title ?? t('guest.roomControl.planZone')}: ${state}`}
+              onPointerDown={() => setPressing(zone.controlId)}
+              onPointerUp={() => setPressing('')}
+              onPointerCancel={() => setPressing('')}
+              onPointerLeave={() => setPressing('')}
+              /*
+                Палец увели за пределы зоны — жест отменён.
+
+                Отдельной проверкой, а не одним `pointerleave`: касание браузер
+                захватывает на цель, и пока палец не отпущен, границу зоны он не
+                считает пересечённой. Сравниваем координаты с прямоугольником
+                сами — это работает и пальцем, и мышью.
+              */
+              onPointerMove={(event) => {
+                if (pressing !== zone.controlId) return;
+                const box = event.currentTarget.getBoundingClientRect();
+                const inside =
+                  event.clientX >= box.left &&
+                  event.clientX <= box.right &&
+                  event.clientY >= box.top &&
+                  event.clientY <= box.bottom;
+                if (!inside) setPressing('');
+              }}
+              onClick={() => onToggle(zone.controlId, on ? 0 : 1)}
               style={pct(zone.hit)}
               sx={{
                 position: 'absolute',
-                pointerEvents: 'none',
-                background: tokens.unknown,
+                appearance: 'none',
+                padding: 0,
+                border: 'none',
+                cursor: 'pointer',
+                background: reading?.pending ? tokens.zonePending : 'transparent',
                 borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
+                // Обводка — ответ на «куда я нажал» и «команда ещё идёт», а не
+                // состояние света: состояние говорит сам кадр.
+                boxShadow:
+                  pressing === zone.controlId || reading?.pending ? tokens.selectedRing : 'none',
+                transition: motion ?? 'background .25s ease, box-shadow .25s ease',
+                // Подсветка наведения — ТОЛЬКО там, где есть чем наводить. На
+                // телефоне браузер оставляет `:hover` на последнем нажатом
+                // элементе до следующего касания, и подсветка зоны залипала бы
+                // ровно так же, как обводка. Список и быстрые действия закрыты
+                // этим же условием — здесь оно было забыто.
+                '@media (hover: hover)': {
+                  '&:hover:not(:disabled)': { background: tokens.zoneHover },
+                },
+                '&:disabled': { cursor: 'default' },
               }}
             />
-          ) : null,
-        )
-      )}
+          );
+        })}
 
-      {plan.zones.map((zone) => {
-        const reading = read(zone.controlId);
-        const on = reading?.on ?? null;
-        const unknown = on === null;
-        const state = unknown
-          ? t('guest.roomControl.offline')
-          : on
-            ? t('guest.roomControl.on')
-            : t('guest.roomControl.off');
-        return (
-          <Box
-            component="button"
-            type="button"
-            key={`hit-${zone.code || zone.controlId}`}
-            data-testid={`room-plan-zone-${zone.code || zone.controlId}`}
-            disabled={unknown || Boolean(reading?.disabled)}
-            aria-busy={reading?.pending || undefined}
-            // Состояния нет — нет и `aria-pressed`: то же правило, по которому
-            // сцена никогда не показывается включённой.
-            aria-pressed={unknown ? undefined : on}
-            aria-label={`${reading?.title ?? t('guest.roomControl.planZone')}: ${state}`}
-            onPointerDown={() => setPressing(zone.controlId)}
-            onPointerUp={() => setPressing('')}
-            onPointerCancel={() => setPressing('')}
-            onPointerLeave={() => setPressing('')}
-            /*
-              Палец увели за пределы зоны — жест отменён.
+        {/*
+          МЕТКИ СВЕТА — ПОСЛЕДНИМ СЛОЕМ.
 
-              Отдельной проверкой, а не одним `pointerleave`: касание браузер
-              захватывает на цель, и пока палец не отпущен, границу зоны он не
-              считает пересечённой. Сравниваем координаты с прямоугольником
-              сами — это работает и пальцем, и мышью.
-            */
-            onPointerMove={(event) => {
-              if (pressing !== zone.controlId) return;
-              const box = event.currentTarget.getBoundingClientRect();
-              const inside =
-                event.clientX >= box.left &&
-                event.clientX <= box.right &&
-                event.clientY >= box.top &&
-                event.clientY <= box.bottom;
-              if (!inside) setPressing('');
-            }}
-            onClick={() => onToggle(zone.controlId, on ? 0 : 1)}
-            style={pct(zone.hit)}
-            sx={{
-              position: 'absolute',
-              appearance: 'none',
-              padding: 0,
-              border: 'none',
-              cursor: 'pointer',
-              background: reading?.pending ? tokens.zonePending : 'transparent',
-              borderRadius: (theme) => surfaceRadius.inner(theme.palette.brand.radius),
-              // Обводка — ответ на «куда я нажал» и «команда ещё идёт», а не
-              // состояние света: состояние говорит сам кадр.
-              boxShadow:
-                pressing === zone.controlId || reading?.pending ? tokens.selectedRing : 'none',
-              transition: motion ?? 'background .25s ease, box-shadow .25s ease',
-              // Подсветка наведения — ТОЛЬКО там, где есть чем наводить. На
-              // телефоне браузер оставляет `:hover` на последнем нажатом
-              // элементе до следующего касания, и подсветка зоны залипала бы
-              // ровно так же, как обводка. Список и быстрые действия закрыты
-              // этим же условием — здесь оно было забыто.
-              '@media (hover: hover)': {
-                '&:hover:not(:disabled)': { background: tokens.zoneHover },
-              },
-              '&:disabled': { cursor: 'default' },
-            }}
-          />
-        );
-      })}
+          Точка плана — это `controlId` и координаты в процентах; чем она
+          окажется, лампой или потоком воздуха, решает ЭЛЕМЕНТ, на который она
+          ссылается: у фанкойла есть возможность «скорость вентилятора», у группы
+          света её нет. Разбирать `controlId` строкой фронту запрещено, а второго
+          поля в геометрии заводить незачем — признак уже есть в данных.
 
-      {/*
-        МЕТКИ СВЕТА — ПОСЛЕДНИМ СЛОЕМ.
+          Слой последний, потому что метка мельче зоны и лежит внутри неё: рисуй
+          мы её раньше, прямоугольник зоны перехватывал бы нажатие, и по метке
+          нельзя было бы попасть вовсе.
 
-        Точка плана — это `controlId` и координаты в процентах; чем она
-        окажется, лампой или потоком воздуха, решает ЭЛЕМЕНТ, на который она
-        ссылается: у фанкойла есть возможность «скорость вентилятора», у группы
-        света её нет. Разбирать `controlId` строкой фронту запрещено, а второго
-        поля в геометрии заводить незачем — признак уже есть в данных.
+          Состояние не читается — метки нет вовсе: гореть или не гореть, мы не
+          знаем, а нарисовать «потушена» значило бы ответить за оборудование.
+        */}
+        {plan.points.map((point) => {
+          const reading = read(point.controlId);
+          if (!reading || reading.air || reading.on === null) return null;
+          const on = reading.on;
+          return (
+            <Box
+              component="button"
+              type="button"
+              key={`marker-${point.controlId}`}
+              data-testid={`room-plan-marker-${point.controlId}`}
+              data-on={String(on)}
+              disabled={reading.disabled}
+              aria-busy={reading.pending || undefined}
+              aria-pressed={on}
+              aria-label={`${reading.title}: ${
+                on ? t('guest.roomControl.on') : t('guest.roomControl.off')
+              }`}
+              // Метка своей обводки не рисует и чужую не зажигает: раньше она
+              // ставила ту же «выбранную зону», и нажатие на лампу оставляло
+              // рамку висеть вокруг всей комнаты.
+              // ОБЩИЙ обработчик с тумблером и зоной — не копия логики.
+              onClick={() => onToggle(point.controlId, on ? 0 : 1)}
+              style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              sx={{
+                position: 'absolute',
+                width: 26,
+                height: 26,
+                ml: '-13px',
+                mt: '-13px',
+                p: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                border: `1px solid ${on ? tokens.markerOn : tokens.markerBorder}`,
+                background: on ? tokens.markerOnFill : tokens.markerOffFill,
+                color: on ? tokens.markerOn : tokens.markerOff,
+                boxShadow: on ? tokens.markerOnGlow : 'none',
+                // Свет не щёлкает: метка разгорается и гаснет тем же временем,
+                // что и окно зоны на кадре.
+                transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
+                '&:disabled': { cursor: 'default', opacity: 0.5 },
+              }}
+            >
+              <IconLightGroup size={14} />
+            </Box>
+          );
+        })}
 
-        Слой последний, потому что метка мельче зоны и лежит внутри неё: рисуй
-        мы её раньше, прямоугольник зоны перехватывал бы нажатие, и по метке
-        нельзя было бы попасть вовсе.
+        {/*
+          МЕТКА ФАНКОЙЛА — ИСТОЧНИК СТРУИ.
 
-        Состояние не читается — метки нет вовсе: гореть или не гореть, мы не
-        знаем, а нарисовать «потушена» значило бы ответить за оборудование.
-      */}
-      {plan.points.map((point) => {
-        const reading = read(point.controlId);
-        if (!reading || reading.air || reading.on === null) return null;
-        const on = reading.on;
-        return (
-          <Box
-            component="button"
-            type="button"
-            key={`marker-${point.controlId}`}
-            data-testid={`room-plan-marker-${point.controlId}`}
-            data-on={String(on)}
-            disabled={reading.disabled}
-            aria-busy={reading.pending || undefined}
-            aria-pressed={on}
-            aria-label={`${reading.title}: ${
-              on ? t('guest.roomControl.on') : t('guest.roomControl.off')
-            }`}
-            // Метка своей обводки не рисует и чужую не зажигает: раньше она
-            // ставила ту же «выбранную зону», и нажатие на лампу оставляло
-            // рамку висеть вокруг всей комнаты.
-            // ОБЩИЙ обработчик с тумблером и зоной — не копия логики.
-            onClick={() => onToggle(point.controlId, on ? 0 : 1)}
-            style={{ left: `${point.x}%`, top: `${point.y}%` }}
-            sx={{
-              position: 'absolute',
-              width: 26,
-              height: 26,
-              ml: '-13px',
-              mt: '-13px',
-              p: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              border: `1px solid ${on ? tokens.markerOn : tokens.markerBorder}`,
-              background: on ? tokens.markerOnFill : tokens.markerOffFill,
-              color: on ? tokens.markerOn : tokens.markerOff,
-              boxShadow: on ? tokens.markerOnGlow : 'none',
-              // Свет не щёлкает: метка разгорается и гаснет тем же временем,
-              // что и окно зоны на кадре.
-              transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
-              '&:disabled': { cursor: 'default', opacity: 0.5 },
-            }}
-          >
-            <IconLightGroup size={14} />
-          </Box>
-        );
-      })}
+          Без неё поток начинался ниоткуда и читался как артефакт рендера: с
+          этого вопроса — «что это за частицы» — правка и началась. Метка стоит в
+          ТОЙ ЖЕ точке разметки, из которой бьёт струя, поэтому источник у неё
+          всегда один и разъехаться они не могут.
 
-      {/*
-        МЕТКА ФАНКОЙЛА — ИСТОЧНИК СТРУИ.
-
-        Без неё поток начинался ниоткуда и читался как артефакт рендера: с
-        этого вопроса — «что это за частицы» — правка и началась. Метка стоит в
-        ТОЙ ЖЕ точке разметки, из которой бьёт струя, поэтому источник у неё
-        всегда один и разъехаться они не могут.
-
-        Она НЕ кнопка, в отличие от меток света. Нажатие на фанкойл — это не
-        «включить/выключить» одним касанием: у него скорость, уставка и режим,
-        и все они живут на вкладке климата. Кружок, который выглядит как
-        выключатель, но им не является, хуже отсутствия кружка.
-      */}
-      {plan.points.map((point) => {
-        const reading = read(point.controlId);
-        if (!reading || !reading.air || reading.on === null) return null;
-        const on = reading.on;
-        return (
-          <Box
-            key={`air-${point.controlId}`}
-            data-testid={`room-plan-air-${point.controlId}`}
-            data-on={String(on)}
-            aria-hidden
-            style={{ left: `${point.x}%`, top: `${point.y}%` }}
-            sx={{
-              position: 'absolute',
-              width: 24,
-              height: 24,
-              ml: '-12px',
-              mt: '-12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              pointerEvents: 'none',
-              border: `1px solid ${on ? tokens.markerOn : tokens.markerBorder}`,
-              background: on ? tokens.markerOnFill : tokens.markerOffFill,
-              color: on ? tokens.markerOn : tokens.markerOff,
-              boxShadow: on ? tokens.markerOnGlow : 'none',
-              transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
-            }}
-          >
-            <IconAirConditioner size={13} />
-          </Box>
-        );
-      })}
+          Она НЕ кнопка, в отличие от меток света. Нажатие на фанкойл — это не
+          «включить/выключить» одним касанием: у него скорость, уставка и режим,
+          и все они живут на вкладке климата. Кружок, который выглядит как
+          выключатель, но им не является, хуже отсутствия кружка.
+        */}
+        {plan.points.map((point) => {
+          const reading = read(point.controlId);
+          if (!reading || !reading.air || reading.on === null) return null;
+          const on = reading.on;
+          return (
+            <Box
+              key={`air-${point.controlId}`}
+              data-testid={`room-plan-air-${point.controlId}`}
+              data-on={String(on)}
+              aria-hidden
+              style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              sx={{
+                position: 'absolute',
+                width: 24,
+                height: 24,
+                ml: '-12px',
+                mt: '-12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                pointerEvents: 'none',
+                border: `1px solid ${on ? tokens.markerOn : tokens.markerBorder}`,
+                background: on ? tokens.markerOnFill : tokens.markerOffFill,
+                color: on ? tokens.markerOn : tokens.markerOff,
+                boxShadow: on ? tokens.markerOnGlow : 'none',
+                transition: motion ?? `background ${ZONE_FADE_MS}ms ease, box-shadow ${ZONE_FADE_MS}ms ease, color ${ZONE_FADE_MS}ms ease`,
+              }}
+            >
+              <IconAirConditioner size={13} />
+            </Box>
+          );
+        })}
+      </Box>
 
 
       {neutral ? (

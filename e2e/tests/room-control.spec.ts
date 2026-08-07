@@ -763,6 +763,108 @@ test.describe('Управление номером', () => {
     expect(scaleOf(probes[probes.length - 1].scale)).toBeCloseTo(1, 2)
   })
 
+  test('телефон: плита не съедает управление, а обрезка не двигает разметку', async ({
+    page,
+  }) => {
+    /**
+     * Разметка ОТНОСИТЕЛЬНО КАДРА, а не относительно плиты.
+     *
+     * Плита на телефоне упирается в потолок высоты и обрезает кадр снизу;
+     * кадр при этом остаётся полной высоты отдельным слоем. Стоит начать
+     * считать проценты от плиты — и зоны, окна и метки поедут относительно
+     * картинки ровно в тот момент, когда обрезка включится, причём тем
+     * сильнее, чем ниже экран.
+     */
+    const layout = async () => {
+      const plate = (await page.getByTestId('room-plan').boundingBox())!
+      const frame = (await page.getByTestId('room-plan-frame').boundingBox())!
+      const at = async (testId: string) => {
+        const box = (await page.getByTestId(testId).boundingBox())!
+        return {
+          x: Number(((box.x - frame.x) / frame.width).toFixed(3)),
+          y: Number(((box.y - frame.y) / frame.height).toFixed(3)),
+          bottom: box.y + box.height,
+        }
+      }
+      return {
+        plate,
+        frame,
+        zones: {
+          living: await at('room-plan-zone-living'),
+          bedroom: await at('room-plan-zone-bedroom'),
+          bathroom: await at('room-plan-zone-bathroom'),
+        },
+        windows: { top: await at('room-plan-window-win-living-top') },
+        markers: {
+          living: await at('room-plan-marker-light.living'),
+          entry: await at('room-plan-marker-light.entry'),
+          bathroom: await at('room-plan-marker-light.bathroom'),
+        },
+      }
+    }
+
+    // Высокий экран: потолок не достаётся, кадр цел — это эталон разметки.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await enterRoom(page)
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+    await page.waitForTimeout(800)
+    const tall = await layout()
+
+    /*
+      А это — живой телефон: 664 px видимой высоты у iPhone 12 в Safari,
+      где над страницей стоит строка браузера. Именно здесь плита кадром
+      1.056 отнимала у списка столько, что первая строка контролов уезжала
+      под нижнюю навигацию.
+    */
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.waitForTimeout(800)
+    const short = await layout()
+
+    // Обрезка действительно случилась, и по ВЫСОТЕ, а не по ширине.
+    expect(short.plate.height, 'плита не обрезалась').toBeLessThan(short.frame.height - 4)
+    expect(short.plate.width, 'обрезали ширину вместо высоты').toBeCloseTo(tall.plate.width, 0)
+
+    // …а разметка не шелохнулась: доли КАДРА те же, что на целом кадре.
+    for (const key of ['living', 'bedroom', 'bathroom'] as const) {
+      expect(short.zones[key].x, `зона ${key} уехала по X`).toBeCloseTo(tall.zones[key].x, 2)
+      expect(short.zones[key].y, `зона ${key} уехала по Y`).toBeCloseTo(tall.zones[key].y, 2)
+    }
+    expect(short.windows.top.y, 'окно уехало относительно кадра').toBeCloseTo(tall.windows.top.y, 2)
+    for (const key of ['living', 'entry', 'bathroom'] as const) {
+      expect(short.markers[key].y, `метка ${key} уехала относительно кадра`).toBeCloseTo(
+        tall.markers[key].y,
+        2,
+      )
+    }
+
+    // Обрезано снизу: ни одна метка не повисла полукруглым огрызком на краю.
+    const plateBottom = short.plate.y + short.plate.height
+    for (const [key, marker] of Object.entries(short.markers)) {
+      expect(marker.bottom, `метка ${key} вылезла за обрез плиты`).toBeLessThanOrEqual(
+        plateBottom + 1,
+      )
+    }
+
+    /*
+      И ГЛАВНОЕ: до первой строки контролов можно дотянуться пальцем, не
+      прокручивая. Проверяем не координатами, а тем же вопросом, который
+      задаёт себе браузер по нажатию, — кто лежит в этой точке. Раньше здесь
+      оказывалась нижняя навигация, и тап уходил ей.
+     */
+    const first = page.locator('[data-testid^="room-control-"]').first()
+    await expect(first).toBeVisible()
+    const row = (await first.boundingBox())!
+    const under = await page.evaluate(
+      ([x, y]) =>
+        document
+          .elementFromPoint(x, y)
+          ?.closest('[data-testid]')
+          ?.getAttribute('data-testid') ?? null,
+      [row.x + row.width / 2, row.y + row.height / 2],
+    )
+    expect(under, 'до первой строки контролов не дотянуться').toMatch(/^room-control-/)
+  })
+
   test('оффлайн: план не показывает свет ни включённым, ни выключенным', async ({
     page,
     request,
