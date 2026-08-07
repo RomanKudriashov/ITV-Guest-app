@@ -13,6 +13,20 @@ import { dirname, join } from 'node:path'
  * Почему это лежит здесь, а не в каждом тесте: тест может упасть, зависнуть или
  * быть убитым (и тогда его собственный `finally` не выполнится — этому нас
  * научил R5). Глобальный teardown отрабатывает в любом исходе прогона.
+ *
+ * ПУСТОЙ СНИМОК — НЕ «НИЧЕГО НЕ БЫЛО», А «НЕ УЗНАЛИ».
+ *
+ * Здесь была мина. Снимок читался мягко: не прошёл запрос — список молча
+ * оставался пустым. Дальше правило «всё, чего не было до прогона, создано
+ * прогоном» превращало эту пустоту в приговор ВСЕМУ содержимому отеля: сервисы
+ * без заказов удалялись, остальные выключались, а вместе с отелями сносился и
+ * сам демо-стенд. Одна неудачная авторизация в момент снимка — и показывать
+ * клиенту нечего.
+ *
+ * Теперь у пустоты два разных смысла, и они разведены:
+ *   • снимок НЕ СМОГ прочитать состав — падаем громко, прогон не начинается;
+ *   • снимок прочитан и по какому-то виду пуст — уборка этот вид НЕ ТРОГАЕТ.
+ * Оба правила односторонние: они умеют только не убрать лишнего.
  */
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:8010'
@@ -22,6 +36,9 @@ const PLATFORM = {
   password: process.env.E2E_PLATFORM_PASSWORD ?? 'platform12345',
 }
 const SNAPSHOT = join(process.cwd(), '.stand-snapshot.json')
+
+/** Путь к снимку — сторожу уборки он нужен, чтобы подсунуть свой. */
+export const SNAPSHOT_PATH = SNAPSHOT
 
 export interface StandSnapshot {
   hotelIds: string[]
@@ -39,8 +56,9 @@ async function platformToken(request: APIRequestContext): Promise<string> {
 }
 
 async function staffToken(request: APIRequestContext): Promise<string | null> {
-  // Учётка админа демо-отеля. Если её нет — просто не чистим сервисы: молчаливо
-  // падать в teardown хуже, чем оставить след и сказать об этом.
+  // Учётка админа демо-отеля. Не пустили — возвращаем `null`, а решает уже
+  // вызывающий: СНИМКУ это отказ (падаем), уборке — повод не трогать
+  // содержимое отеля вовсе.
   const resp = await request.post(`${API}/api/staff/auth/login`, {
     data: {
       email: process.env.E2E_ADMIN_EMAIL ?? 'owner@crystal.local',
@@ -51,39 +69,70 @@ async function staffToken(request: APIRequestContext): Promise<string | null> {
   return resp.ok() ? (await resp.json()).access : null
 }
 
+/**
+ * Ответ обязан быть успешным. Иначе — исключение с телом ответа: читать состав
+ * стенда «как получится» здесь нельзя, на этом списке стоит удаление.
+ */
+async function requireJson<T>(
+  response: { ok: () => boolean; status: () => number; text: () => Promise<string>; json: () => Promise<unknown> },
+  what: string,
+): Promise<T> {
+  if (!response.ok()) {
+    throw new Error(
+      `[стенд] не удалось прочитать ${what}: ${response.status()} ${(await response.text()).slice(0, 200)}`,
+    )
+  }
+  return (await response.json()) as T
+}
+
+/**
+ * Состав стенда. КАЖДЫЙ отказ — исключение, ни одного мягкого падения на
+ * пустой список: на этих списках стоит удаление, и «не прочитали» не должно
+ * превращаться в «там ничего не было».
+ */
 async function readStand(request: APIRequestContext): Promise<StandSnapshot> {
   const platform = await platformToken(request)
-  const fleet = await request.get(`${API}/api/v1/platform/fleet?origin=all&page_size=200`, {
-    headers: { Authorization: `Bearer ${platform}` },
-  })
-  const hotelIds: string[] = fleet.ok()
-    ? ((await fleet.json()).items as { id: string }[]).map((row) => row.id)
-    : []
+  const fleet = await requireJson<{ items: { id: string }[] }>(
+    await request.get(`${API}/api/v1/platform/fleet?origin=all&page_size=200`, {
+      headers: { Authorization: `Bearer ${platform}` },
+    }),
+    'список отелей',
+  )
+  const hotelIds = fleet.items.map((row) => row.id)
 
   const staff = await staffToken(request)
-  const tenant = staff
-    ? { Authorization: `Bearer ${staff}`, 'X-Hotel-Subdomain': HOTEL }
-    : null
+  if (!staff) throw new Error('[стенд] админ демо-отеля не пустил — состав отеля не прочитать')
+  const tenant = { Authorization: `Bearer ${staff}`, 'X-Hotel-Subdomain': HOTEL }
 
-  let serviceIds: string[] = []
-  let categoryIds: string[] = []
-  let itemIds: string[] = []
-  if (tenant) {
-    const services = await request.get(`${API}/api/cms/services`, { headers: tenant })
-    if (services.ok()) serviceIds = ((await services.json()) as { id: string }[]).map((s) => s.id)
-    const categories = await request.get(`${API}/api/cms/categories`, { headers: tenant })
-    if (categories.ok()) categoryIds = ((await categories.json()) as { id: string }[]).map((c) => c.id)
-    // Позиции тоже переживали прогон: раздел уборка сносила, а блюдо внутри
-    // него — нет, и оно всплывало в меню заведения.
-    const items = await request.get(`${API}/api/cms/items`, { headers: tenant })
-    if (items.ok()) itemIds = ((await items.json()) as { id: string }[]).map((i) => i.id)
+  const services = await requireJson<{ id: string }[]>(
+    await request.get(`${API}/api/cms/services`, { headers: tenant }),
+    'сервисы отеля',
+  )
+  const categories = await requireJson<{ id: string }[]>(
+    await request.get(`${API}/api/cms/categories`, { headers: tenant }),
+    'разделы отеля',
+  )
+  // Позиции тоже переживали прогон: раздел уборка сносила, а блюдо внутри
+  // него — нет, и оно всплывало в меню заведения.
+  const items = await requireJson<{ id: string }[]>(
+    await request.get(`${API}/api/cms/items`, { headers: tenant }),
+    'позиции отеля',
+  )
+
+  return {
+    hotelIds,
+    serviceIds: services.map((s) => s.id),
+    categoryIds: categories.map((c) => c.id),
+    itemIds: items.map((i) => i.id),
   }
-  return { hotelIds, serviceIds, categoryIds, itemIds }
 }
 
 export async function snapshotStand(): Promise<void> {
   const request = await playwrightRequest.newContext()
   try {
+    // Исключение отсюда роняет globalSetup, а значит — весь прогон, и до
+    // уборки дело не доходит вовсе. Это и нужно: прогон без снимка опаснее,
+    // чем непройденный прогон.
     const snapshot = await readStand(request)
     mkdirSync(dirname(SNAPSHOT), { recursive: true })
     writeFileSync(SNAPSHOT, JSON.stringify(snapshot))
@@ -96,6 +145,36 @@ export async function snapshotStand(): Promise<void> {
   }
 }
 
+/**
+ * ЧТО ИМЕННО УБИРАТЬ — отдельным решением, до единого запроса на удаление.
+ *
+ * Вынесено из уборки не ради красоты: здесь жила мина, и проверять её на живом
+ * стенде значит ломать стенд ровно тогда, когда защита отвалилась. Решение —
+ * чистая функция от двух снимков, у неё нет ни сети, ни прав, ни последствий,
+ * и сторож проверяет именно её.
+ *
+ * Пустой вид в снимке «до» — ЗАПРЕТ на уборку этого вида: правило «нового не
+ * было в снимке» работает, только если снимок этот вид видел. Пустой список
+ * значит обратное — сравнивать не с чем, и любое «новое» здесь это весь отель.
+ */
+export function plannedRemovals(
+  before: StandSnapshot,
+  after: StandSnapshot,
+): { hotels: string[]; services: string[]; categories: string[]; items: string[]; blind: string[] } {
+  const fresh = (kind: keyof StandSnapshot) =>
+    before[kind].length ? after[kind].filter((id) => !before[kind].includes(id)) : []
+  const blind = (['hotelIds', 'serviceIds', 'categoryIds', 'itemIds'] as const)
+    .filter((kind) => before[kind].length === 0)
+    .map((kind) => kind.replace('Ids', ''))
+  return {
+    hotels: fresh('hotelIds'),
+    services: fresh('serviceIds'),
+    categories: fresh('categoryIds'),
+    items: fresh('itemIds'),
+    blind,
+  }
+}
+
 export async function cleanupStand(): Promise<void> {
   if (!existsSync(SNAPSHOT)) {
     console.log('[стенд] снимка нет — уборка пропущена')
@@ -104,6 +183,28 @@ export async function cleanupStand(): Promise<void> {
   const before: StandSnapshot = JSON.parse(readFileSync(SNAPSHOT, 'utf-8'))
   const request = await playwrightRequest.newContext()
   try {
+    /*
+      ПУСТОЙ ВИД В СНИМКЕ — ЗАПРЕТ НА УБОРКУ ЭТОГО ВИДА.
+
+      Правило «нового не было в снимке» работает, только если снимок этот вид
+      действительно видел. Пустой список означает ровно обратное: сравнивать не
+      с чем, и любое «новое» здесь — весь отель целиком. Поэтому каждый вид
+      убирается только при непустом снимке по нему, и решение принимается ДО
+      первого запроса на удаление.
+    */
+    const blindKinds = plannedRemovals(before, before).blind
+    if (blindKinds.length) {
+      console.warn(
+        `[стенд] СНИМОК ПУСТ по видам: ${blindKinds.join(', ')} — уборка по ним ПРОПУЩЕНА. ` +
+          'Пустой снимок значит «не прочитали», а не «ничего не было»: убирать по нему — ' +
+          'снести стенд целиком.',
+      )
+    }
+    if (blindKinds.length === 4) {
+      console.warn('[стенд] снимок пуст целиком — уборка не делает ничего')
+      return
+    }
+
     const after = await readStand(request)
     const platform = await platformToken(request)
     const staff = await staffToken(request)
@@ -111,10 +212,11 @@ export async function cleanupStand(): Promise<void> {
       ? { Authorization: `Bearer ${staff}`, 'X-Hotel-Subdomain': HOTEL }
       : null
 
-    const newHotels = after.hotelIds.filter((id) => !before.hotelIds.includes(id))
-    const newServices = after.serviceIds.filter((id) => !before.serviceIds.includes(id))
-    const newCategories = after.categoryIds.filter((id) => !before.categoryIds.includes(id))
-    const newItems = after.itemIds.filter((id) => !before.itemIds.includes(id))
+    const planned = plannedRemovals(before, after)
+    const newHotels = planned.hotels
+    const newServices = planned.services
+    const newCategories = planned.categories
+    const newItems = planned.items
 
     // Позиции удаляем ДО разделов: раздел с позициями удалить нельзя.
     let deletedItems = 0
