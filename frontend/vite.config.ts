@@ -59,11 +59,22 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: 5173,
       strictPort: true,
-      // Docker bind-mounts on macOS/Windows don't propagate fs events reliably.
-      watch: {
-        usePolling: true,
-        interval: 300,
-      },
+      // WHY NOT POLLING. Polling used to be the safe default for Docker
+      // bind-mounts, and it is what made the dev server serve stale modules:
+      // in polling mode chokidar notices a NEW file only when the directory's
+      // mtime moves, and on this mount the directory mtime never moves — the
+      // file shows up in `ls` while `stat` on the folder stays frozen. So any
+      // file created after the server started was transformed once, on first
+      // request, and every later edit to it was invisible until the container
+      // was restarted. Files that existed at startup kept updating, which is
+      // why it read as random flakiness rather than a rule.
+      //
+      // Native events do arrive through the mount (verified: both `add` and
+      // `change` fire), so we use them. Polling stays available for mounts
+      // where they genuinely don't — one env var, not a permanent tax.
+      watch: env.VITE_WATCH_POLLING
+        ? { usePolling: true, interval: 300 }
+        : undefined,
       // Keep HMR reachable when the dev server runs inside a container.
       // The container publishes 5173 on a different host port (5183 by default),
       // so the client port must follow the browser URL unless overridden.
