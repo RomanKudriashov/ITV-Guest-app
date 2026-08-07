@@ -23,7 +23,26 @@ import { ADMIN, API, apiGet, apiHeaders, login } from './helpers'
  * безопасен для гостевого прогона.
  */
 
-const SHOTS = path.resolve(__dirname, '../../docs/design/g6-shots')
+/*
+  КАДРЫ ПРОГОНА — ВО ВРЕМЕННЫЙ КАТАЛОГ, А НЕ В `docs/`.
+
+  Раньше эта спека писала прямо в `docs/design/g6-shots`, и каждый полный
+  прогон оставлял три изменённых PNG в рабочем дереве. Отличались они одним
+  байтовым шумом — содержательно ничего не менялось, — но дерево после прогона
+  переставало быть чистым, и их дважды откатывали руками.
+
+  Съёмка для документации — отдельное действие, запускаемое ОСОЗНАННО: скрипты
+  `shots-*.mjs` рядом делают ровно это. Здесь кадры нужны для разбора упавшего
+  прогона, и место им там же, где отчёты Playwright.
+
+  Положить их в `docs/` по-прежнему можно — переменной, а не молча:
+      SHOTS_OUT=../docs/design/g6-shots npx playwright test tests/room-control-cms.spec.ts
+*/
+const SHOTS = path.resolve(
+  __dirname,
+  '..',
+  process.env.SHOTS_OUT ?? 'test-results/g6-shots',
+)
 const PNR = path.resolve(__dirname, '../../backend/tests/fixtures/pnr-variables.xlsx')
 const RENDER = path.resolve(__dirname, '../../docs/design/grms-concept/render-type1.png')
 
