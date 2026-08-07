@@ -208,6 +208,40 @@ test.describe('Управление номером', () => {
     await expect(scene).not.toHaveAttribute('aria-pressed', /.*/)
   })
 
+  test('сцена меняет номер, а не только надпись', async ({ page }) => {
+    /*
+      Найдено на живом телефоне: «Ночь» отвечала «оборудование приняло
+      команду», и номер оставался прежним — свет горит, шторы стоят. Причина
+      была в ДЕМО-ОБОРУДОВАНИИ: эмулятор принимал команду сцены и не трогал ни
+      одного канала, потому что у сцены нет feedback'а. На объекте сцену
+      раскладывает контроллер.
+
+      Здесь проверяется то, что видит гость: после сцены состояния каналов
+      ПРИЕХАЛИ ДРУГИЕ — обычным перечитыванием feedback, без единого намёка на
+      то, что сцена «включена».
+    */
+    await enterRoom(page)
+
+    // Зажечь свет заранее, чтобы «Ночь» было чем гасить: иначе номер и так
+    // тёмный, и проверка ничего не различает.
+    const lamp = page.getByTestId('room-control-light.living')
+    await expect(lamp).toBeVisible({ timeout: 20_000 })
+    if ((await lamp.getAttribute('aria-pressed')) !== 'true') {
+      await lamp.click()
+      await expect(lamp).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 })
+    }
+
+    await page.getByTestId('room-control-scene.night').click()
+
+    // Свет гаснет сам — командой по своему каналу никто не щёлкал.
+    await expect(lamp).toHaveAttribute('aria-pressed', 'false', { timeout: 25_000 })
+    // А сцена так и не притворилась включённой.
+    await expect(page.getByTestId('room-control-scene.night')).not.toHaveAttribute(
+      'aria-pressed',
+      /.*/,
+    )
+  })
+
   test('метки света на плане: из конфигурации, тапом управляют, в оффлайне их нет', async ({
     page,
   }) => {

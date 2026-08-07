@@ -103,6 +103,69 @@ DEFAULT_ROOMS = [
     "201", "202", "203", "301", "305", "401", "415", "501", "601", "701", "706", "708"
 ]
 
+# Что сцена ДЕЛАЕТ с каналами.
+#
+# У сцены нет feedback'а — читать её состояние неоткуда, и это правда о железе
+# (§8.3). Но на объекте нажатие сцены не проходит бесследно: контроллер сам
+# раскладывает свет, шторы и климат. Эмулятор без этого принимал команду и не
+# менял ничего — на экране «оборудование приняло команду», а номер как стоял,
+# так и стоит, и демо выглядит сломанным.
+#
+# Наборы живут ЗДЕСЬ, рядом с профилем каналов: это поведение ДЕМО-ЖЕЛЕЗА, а не
+# фронта. Гость по-прежнему не видит сцену «включённой» — новое состояние
+# приезжает обычным перечитыванием feedback по свету, шторам и климату.
+#
+# Шторы бинарные: 0 — закрыта, 1 — открыта (см. VARIABLES в seed_grms_demo).
+SCENE_PRESETS: dict[str, dict[str, dict[str, int]]] = {
+    # Демо-номер: 5 групп света по зонам плана, штора и блэкаут, один фанкойл.
+    "305": {
+        # Ночь: гасим всё, закрываем обе шторы, прохладнее и тише.
+        "Scene_1": {
+            "Light 1": 0, "Light 2": 0, "Light 3": 0, "Light 4": 0, "Light 5": 0,
+            "Curtain 1": 0, "Curtain 2": 0,
+            "FCU_MainSw 1": 1, "FCU_Speed 1": 1, "FCU_Setpoint 1": 20,
+        },
+        # Утро: гостиная и ванная, шторы настежь, теплее и живее.
+        "Scene_2": {
+            "Light 1": 1, "Light 2": 0, "Light 3": 0, "Light 4": 0, "Light 5": 1,
+            "Curtain 1": 1, "Curtain 2": 1,
+            "FCU_MainSw 1": 1, "FCU_Speed 1": 2, "FCU_Setpoint 1": 23,
+        },
+        # Кино: темно, кроме дежурного света в прихожей; шторы закрыты.
+        "Scene_3": {
+            "Light 1": 0, "Light 2": 0, "Light 3": 1, "Light 4": 0, "Light 5": 0,
+            "Curtain 1": 0, "Curtain 2": 0,
+            "FCU_MainSw 1": 1, "FCU_Speed 1": 1, "FCU_Setpoint 1": 22,
+        },
+        # Чтение: только спальня, штора открыта.
+        "Scene_4": {
+            "Light 1": 0, "Light 2": 1, "Light 3": 0, "Light 4": 0, "Light 5": 0,
+            "Curtain 1": 1, "Curtain 2": 1,
+            "FCU_MainSw 1": 1, "FCU_Speed 1": 1, "FCU_Setpoint 1": 22,
+        },
+    },
+}
+
+
+def _fallback_scene(index: int, profile: dict[str, int]) -> dict[str, int]:
+    """
+    Набор для номера, которому явный не прописан.
+
+    Комнат с боевого стенда несколько, и у каждой свой состав каналов. Чётные
+    сцены поднимают номер, нечётные гасят — этого достаточно, чтобы нажатие
+    было ВИДНО, и не требует выдумывать сценарий для каждой комнаты отдельно.
+    """
+    on = index % 2 == 0
+    preset: dict[str, int] = {}
+    for i in range(1, profile["lights"] + 1):
+        preset[f"Light {i}"] = 1 if on else 0
+    for i in range(1, profile["curtains"] + 1):
+        preset[f"Curtain {i}"] = 1 if on else 0
+    for i in range(1, profile["fcus"] + 1):
+        preset[f"FCU_MainSw {i}"] = 1
+        preset[f"FCU_Setpoint {i}"] = 23 if on else 20
+    return preset
+
 
 class IridiEmulator:
     """
@@ -141,6 +204,43 @@ class IridiEmulator:
                 self._current[device][tag] = value
                 del pending[tag]
 
+    def _play_scene(self, device: str, tag: str) -> None:
+        """
+        Отыграть сцену: разложить каналы так, как это сделал бы контроллер.
+
+        Идёт тем же путём, что и обычная команда, — через отложенные изменения
+        с той же задержкой. Значит, гость увидит новое состояние обычным
+        перечитыванием feedback, а не мгновенным скачком, которого на железе не
+        бывает. Вызывается под уже взятым `self._lock`.
+        """
+        room = self._room_of(device)
+        preset = SCENE_PRESETS.get(room, {}).get(tag)
+        if preset is None:
+            try:
+                index = int(tag.split("_", 1)[1])
+            except (IndexError, ValueError):
+                return
+            profile = ROOM_PROFILES.get(
+                room, {"lights": 4, "curtains": 1, "fcus": 1, "scenes": 2}
+            )
+            preset = _fallback_scene(index, profile)
+
+        channels = self._current[device]
+        for channel_tag, value in preset.items():
+            # Канала может не быть: набор описан для профиля, а профиль мог
+            # разойтись с ним при правке. Молча пропускаем — эмулятор не место
+            # для падений из-за опечатки в демо-данных.
+            if channel_tag in channels:
+                self._pending[device][channel_tag] = (
+                    value,
+                    time.monotonic() + self._latency(),
+                )
+
+    @staticmethod
+    def _room_of(device: str) -> str:
+        """Номер комнаты из имени устройства (`DEVICE_TEMPLATE`)."""
+        return device.rsplit(" ", 1)[-1]
+
     def _latency(self) -> float:
         low, high = self.latency_range
         if high <= low:
@@ -168,8 +268,13 @@ class IridiEmulator:
                 numeric = int(str(value))
             except (TypeError, ValueError):
                 return False
-            # Сцена состояния не имеет: команду принимаем, feedback не трогаем.
+            # Сцена состояния не имеет: её собственный канал в feedback не
+            # попадает никогда. Но САМА КОМАНДА не бесследна — контроллер
+            # раскладывает по ней свет, шторы и климат, и эмулятор обязан
+            # делать то же, иначе нажатие выглядит как поломка.
             if (device, tag) in self._no_feedback:
+                if numeric:
+                    self._play_scene(device, tag)
                 return True
             self._pending[device][tag] = (numeric, time.monotonic() + self._latency())
             return True

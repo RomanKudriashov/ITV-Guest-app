@@ -23,6 +23,49 @@ from apps.grms import commands, inflight
 
 logger = logging.getLogger(__name__)
 
+# Через сколько секунд перечитать комнату после сцены. Два захода: раскладка
+# идёт разное время, и один заход попадает либо слишком рано (свет ещё не
+# погас), либо слишком поздно (гость успел решить, что не сработало).
+RESETTLE_DELAYS = (2, 6)
+
+
+@shared_task(acks_late=True, max_retries=0, ignore_result=True)
+def resettle_room(hotel_id: str, room_id: str, device: str) -> None:
+    """
+    Перечитать комнату и разбудить сессии — БЕЗ команды.
+
+    Нужна там, где состояние меняет не наша команда, а оборудование по своему
+    решению: сцена трогает свет, шторы и климат, а подтверждать её нечем.
+    Ничего не отправляет: только сбрасывает схлопывание чтений и говорит
+    сессиям собрать снимок заново.
+    """
+    from apps.grms.guest import resolve_context
+    from apps.hotels.models import Hotel, Room
+
+    hotel = Hotel.objects.filter(pk=hotel_id).first()
+    if hotel is None:
+        return
+    with tenant_context(hotel):
+        room = Room.objects.filter(pk=room_id).first()
+    if room is None:
+        return
+    context, _reason = resolve_context(hotel, _SessionLike(room))
+    if context is None:
+        return
+
+    commands.forget_reads(
+        hotel,
+        device or context.device,
+        [
+            channel.get("feedback")
+            for control in context.controls
+            for channel in (control.get("channels") or {}).values()
+            if channel.get("feedback")
+        ],
+    )
+    # Без `command`: это не исход нажатия, а «состояние приехало другое».
+    broadcast_room(hotel_id, room_id, event="state")
+
 
 @shared_task(acks_late=True, max_retries=0, ignore_result=True)
 def execute_room_command(
@@ -133,6 +176,24 @@ def _execute(hotel, room_id: str, control_id: str, capability: str, value) -> di
             if channel.get("feedback")
         ],
     )
+
+    if capability == "trigger":
+        # СЦЕНА МЕНЯЕТ ЧУЖИЕ КАНАЛЫ, И УЗНАТЬ ОБ ЭТОМ НЕОТКУДА.
+        #
+        # У сцены нет feedback'а, поэтому цикл перечитывания для неё не идёт —
+        # и на этом всё заканчивалось: команда принята, рассылка ушла, а
+        # контроллер раскладывает свет и шторы ПОСЛЕ приёма. Снимок, собранный
+        # по рассылке, успевал прочитать ещё старые значения, и гость видел
+        # прежний номер — ровно то, с чем пришли с живого телефона.
+        #
+        # Поэтому комнату перечитываем ещё раз, погодя. Двумя заходами, а не
+        # одним: сколько именно займёт раскладка, не знает никто — на объекте
+        # это зависит от приводов штор.
+        for delay in RESETTLE_DELAYS:
+            resettle_room.apply_async(
+                args=[str(hotel.pk), str(room_id), str(context.device)],
+                countdown=delay,
+            )
     return outcome
 
 
