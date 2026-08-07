@@ -180,29 +180,24 @@ export function CharacteristicsBlock({ characteristics }: { characteristics?: It
         fontSize: '0.82rem',
       }}
     >
-      {characteristics.map((row, i) => {
-        /*
-          Разделитель — ЛИНИЯ МЕЖДУ СТРОКАМИ, а не рамка вокруг блока: строки
-          читаются парами «название → значение», и без паузы между парами
-          длинный список сливается в столбик слов. Последняя строка линии не
-          получает — снизу уже отступ блока.
-        */
-        const line = i < characteristics.length - 1;
-        const cell = {
-          py: itemCard.tight,
-          ...(line ? { borderBottom: 1, borderColor: 'divider' } : {}),
-        } as const;
-        return (
-          <Fragment key={i}>
-            <Box component="span" sx={{ ...cell, color: 'text.secondary' }}>
-              {row.name}
-            </Box>
-            <Box component="span" sx={{ ...cell, color: 'text.primary', fontWeight: 500 }}>
-              {row.value}
-            </Box>
-          </Fragment>
-        );
-      })}
+      {/*
+        ЛИНИЙ МЕЖДУ СТРОКАМИ НЕТ.
+
+        В референсе характеристики — плотный список пар, а разделитель стоит
+        между БЛОКАМИ: под КБЖУ и перед группами модификаторов. Линия под
+        каждой парой превращала короткий список в таблицу и растягивала его
+        вдвое.
+      */}
+      {characteristics.map((row, i) => (
+        <Fragment key={i}>
+          <Box component="span" sx={{ py: 0.35, color: 'text.secondary' }}>
+            {row.name}
+          </Box>
+          <Box component="span" sx={{ py: 0.35, color: 'text.primary', fontWeight: 500 }}>
+            {row.value}
+          </Box>
+        </Fragment>
+      ))}
     </Box>
   );
 }
@@ -268,9 +263,17 @@ export function NutritionBlock({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: `repeat(auto-fit, minmax(${itemCard.macroMinWidth}px, 1fr))`,
-            columnGap: 1.5,
-            rowGap: itemCard.block,
+            /*
+              РОВНО СТОЛЬКО КОЛОНОК, СКОЛЬКО ЯЧЕЕК — и ни одного переноса.
+
+              В референсе КБЖУ стоит одним рядом и на десктопе, и на телефоне.
+              С `auto-fit` ряд переносился на узком экране: пятая ячейка
+              уезжала вниз, и пищевая ценность читалась двумя этажами. Колонки
+              равные, поэтому подписи стоят по одной сетке, а не по остатку
+              строки.
+            */
+            gridTemplateColumns: `repeat(${macros.length}, minmax(0, 1fr))`,
+            columnGap: 1,
           }}
         >
           {macros.map((macro) => (
@@ -295,7 +298,7 @@ export function NutritionBlock({
                   {macro.value}
                 </Box>
               </Stack>
-              <Box sx={{ color: 'text.secondary', fontSize: '0.72rem', lineHeight: 1.4 }}>
+              <Box sx={{ color: 'text.secondary', fontSize: itemCard.macroLabel, lineHeight: 1.3 }}>
                 {macro.label}
               </Box>
             </Box>

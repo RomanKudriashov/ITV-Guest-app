@@ -1,5 +1,6 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { forwardRef } from 'react';
@@ -206,7 +207,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
                 табуляции (`tabIndex={-1}`), клавиатурой на него не попасть, и
                 отнимать у гостя признак фокуса здесь не у кого.
               */
-              sx={{ outline: 'none' }}
+              sx={{ outline: 'none', fontSize: itemCard.titleSize }}
             >
               {item.title}
             </Typography>
@@ -230,6 +231,10 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
               stays. Flags no longer render here — markers/characteristics/badges
               replace them; the catalog list card keeps its flag chips. */}
           <NutritionBlock nutrition={item.nutrition} description={item.description} />
+          {/* Линия между БЛОКАМИ, как в референсе: пищевая ценность отделена от
+              характеристик, характеристики от групп ниже (их линию рисует сама
+              группа). Внутри блоков линий нет. */}
+          {item.nutrition && item.characteristics?.length ? <Divider /> : null}
           <CharacteristicsBlock characteristics={item.characteristics} />
           <Stack direction="row" spacing={itemCard.tight} useFlexGap flexWrap="wrap" alignItems="center">
             <PrepMinutesChip minutes={item.prep_minutes} />
