@@ -18,6 +18,8 @@
  * ослаблены, потому что затемнять нужно меньше.
  */
 
+import { alpha, decomposeColor, recomposeColor } from '@mui/material/styles';
+
 import type { ThemeMode } from '@/theme/tokens';
 
 export interface GlassSurface {
@@ -194,6 +196,32 @@ export interface StorefrontTokens {
      */
     fadeEdge: string;
   };
+  /**
+   * Подпись под названием позиции — «Свежевыжатый», «Томаты, руккола».
+   *
+   * Тот же приём, что у липкой строки категорий: акцент ОТЕЛЯ, уведённый в
+   * стеклянный подтон и приглушённый прозрачностью. Сам акцент сюда не
+   * записан и записан быть не может — он приезжает из темы отеля, а здесь
+   * лежит только РЕЦЕПТ, по которому из него получается цвет подписи. У отеля
+   * с другим брендом подпись будет своего цвета, и это условие, а не побочный
+   * эффект.
+   *
+   * Значения РАЗНЫЕ у тем, и не ради симметрии: одна и та же прозрачность на
+   * белой карточке уводит текст к фону вдвое сильнее, чем на тёмной, и то, что
+   * в тёмной проходит с запасом, в светлой проваливает контраст.
+   *
+   * ЧИТАЕМОСТЬ ВАЖНЕЕ ВИДА. Числа подобраны замером контраста к фону карточки
+   * (`background.paper`) и держат AA (≥4.5:1) на обеих темах — смотри
+   * `guest-storefront-r5.spec.ts`, там это проверяется, а не подразумевается.
+   */
+  cardSubtitle: {
+    /** Стеклянный подтон, в который уводится акцент. */
+    tint: string;
+    /** Насколько уводится: 0 — чистый акцент отеля, 1 — чистый подтон. */
+    tintWeight: number;
+    /** Прозрачность поверх карточки. */
+    opacity: number;
+  };
   /** Затемнение позади модалок и шторок. */
   dialogBackdrop: string;
   /** Скрим экрана входа: кадр отеля во весь экран, форма поверх него. */
@@ -307,6 +335,9 @@ const DARK: StorefrontTokens = {
     frame: '1px solid rgba(255,255,255,.12)',
     shadow: '0 18px 60px rgba(0,0,0,.6)',
   },
+  // Подтон холодно-белый: на тёмной карточке акцент отеля сам по себе звучит
+  // глухо, и капля белого возвращает ему воздух, не уводя в серый.
+  cardSubtitle: { tint: '#E6EFFA', tintWeight: 0.24, opacity: 0.92 },
   roomControl: {
     accent: '#E3B23C',
     accentContrast: '#20180A',
@@ -412,6 +443,10 @@ const LIGHT: StorefrontTokens = {
   // Золото глубже, линии темнее: на белом прототипные значения не читаются.
   // Сам НАБОР ролей тот же — активное остаётся золотым в обеих темах, иначе
   // на светлой вернулся бы разнобой «синий вентилятор при золотой дуге».
+  // На белой карточке акцент уводится не в белое, а в ХОЛОДНЫЙ ТЁМНЫЙ: белый
+  // подтон вместе с прозрачностью съедал контраст вдвое быстрее, чем на тёмной
+  // теме, и подпись уходила в бледность. Прозрачность здесь тоже плотнее.
+  cardSubtitle: { tint: '#22364C', tintWeight: 0.2, opacity: 0.94 },
   roomControl: {
     accent: '#B8912F',
     accentContrast: '#231903',
@@ -451,6 +486,90 @@ const LIGHT: StorefrontTokens = {
 /** Набор витрины для активного режима. */
 export function storefrontTokens(mode: ThemeMode): StorefrontTokens {
   return mode === 'dark' ? DARK : LIGHT;
+}
+
+/**
+ * Цвет подписи под названием позиции — из АКЦЕНТА ОТЕЛЯ по рецепту словаря.
+ *
+ * Живёт здесь, а не по месту, по двум причинам сразу. Во-первых, смешение
+ * цветов — это работа с цветом, а ей место в словаре: компонент обязан уметь
+ * назвать цвет, а не посчитать. Во-вторых, подпись рисуется в ДВУХ местах — на
+ * карточке списка и в шторке позиции, — и разъехаться они могут только если
+ * считать в каждом отдельно.
+ *
+ * ЧИТАЕМОСТЬ — ПОЛ, А НЕ ПОЖЕЛАНИЕ. Рецепт из словаря — начальная точка, а не
+ * последнее слово: акцент приезжает от отеля, и брендов, на которых красивая
+ * прозрачность проваливает контраст, ровно столько же, сколько отелей. Поэтому
+ * подтон подмешивается ДО ТЕХ ПОР, пока контраст к фону карточки не дотянет до
+ * AA. У «Кристалла» на тёмной теме стартовый рецепт давал 4.1:1 — пол поднял
+ * его сам, и подбирать число руками под каждый бренд больше не нужно.
+ */
+const AA_CONTRAST = 4.5;
+/**
+ * Запас поверх порога. Браузер округляет и цвет, и результат наложения, и
+ * значение, посчитанное ровно в 4.50, замеряется на живой странице как 4.49.
+ * Порог, который проходит «в притирку», — не порог.
+ */
+const AA_MARGIN = 0.15;
+/** Шаг подмеса подтона. Мельче — дольше считать, крупнее — заметный перескок. */
+const MIX_STEP = 0.02;
+
+type Rgb = [number, number, number];
+
+const rgbOf = (color: string): Rgb => decomposeColor(color).values.slice(0, 3) as Rgb;
+
+const mix = (from: Rgb, to: Rgb, weight: number): Rgb =>
+  from.map((v, i) => v + (to[i] - v) * weight) as Rgb;
+
+/** Что реально увидит глаз: полупрозрачный текст поверх фона карточки. */
+const flatten = (color: Rgb, opacity: number, surface: Rgb): Rgb =>
+  color.map((v, i) => v * opacity + surface[i] * (1 - opacity)) as Rgb;
+
+/** Относительная яркость по WCAG 2.1. */
+const luminance = ([r, g, b]: Rgb): number => {
+  const channel = (value: number) => {
+    const v = value / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+};
+
+const contrast = (a: Rgb, b: Rgb): number => {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+};
+
+const cache = new Map<string, string>();
+
+export function cardSubtitleColor(accent: string, surface: string, mode: ThemeMode): string {
+  const key = `${mode}|${accent}|${surface}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const recipe = storefrontTokens(mode).cardSubtitle;
+  const accentRgb = rgbOf(accent);
+  const tintRgb = rgbOf(recipe.tint);
+  const surfaceRgb = rgbOf(surface);
+
+  // Считаем на ОКРУГЛЁННОМ цвете — том самом, который уедет в CSS. Проверять
+  // дробный, а отдавать округлённый значит проверять не то, что показываем.
+  let weight = recipe.tintWeight;
+  let color = mix(accentRgb, tintRgb, weight).map(Math.round) as Rgb;
+  // Подтон выбран так, чтобы САМ проходил контраст к своей карточке (светлый
+  // на тёмной теме, глубокий на светлой), — цикл поэтому всегда сходится, а
+  // не упирается в потолок с нечитаемым результатом.
+  while (
+    weight < 1 &&
+    contrast(flatten(color, recipe.opacity, surfaceRgb), surfaceRgb) <
+      AA_CONTRAST + AA_MARGIN
+  ) {
+    weight = Math.min(1, weight + MIX_STEP);
+    color = mix(accentRgb, tintRgb, weight).map(Math.round) as Rgb;
+  }
+
+  const value = alpha(recomposeColor({ type: 'rgb', values: color }), recipe.opacity);
+  cache.set(key, value);
+  return value;
 }
 
 /** Высоты, на которые опирается липкое позиционирование. Режима не касаются. */

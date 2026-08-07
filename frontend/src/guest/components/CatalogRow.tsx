@@ -9,7 +9,7 @@ import { KitImage } from '@/kit';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
-import { surfaceRadius } from '../storefrontTokens';
+import { cardSubtitleColor, surfaceRadius } from '../storefrontTokens';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -112,8 +112,24 @@ export function CatalogRowView({
           {description ? (
             <Typography
               variant="body2"
-              color="text.secondary"
-              sx={{
+              /*
+                Подпись — В ЦВЕТ, тем же приёмом, что липкая строка категорий:
+                акцент отеля, уведённый в стеклянный подтон и приглушённый
+                прозрачностью. Ни цвета, ни его рецепта здесь нет — компонент
+                называет цвет, считает его словарь, и у отеля с другим брендом
+                подпись будет своего цвета.
+
+                Режим берётся из ТЕМЫ, а не из хука витрины: эта карточка
+                рисуется ещё и в превью бренда CMS, где тема своя — та, которую
+                оператор прямо сейчас правит, — и хук приложения показал бы там
+                чужой режим.
+              */
+              sx={(theme) => ({
+                color: cardSubtitleColor(
+                  theme.palette.primary.main,
+                  theme.palette.background.paper,
+                  theme.palette.mode,
+                ),
                 mt: 0.5,
                 fontSize: '0.75rem',
                 lineHeight: 1.4,
@@ -122,7 +138,7 @@ export function CatalogRowView({
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
-              }}
+              })}
             >
               {description}
             </Typography>

@@ -416,3 +416,155 @@ test.describe('Карточка позиции', () => {
     await expect(page.getByTestId('guest-item-comment')).toBeVisible()
   })
 })
+
+/**
+ * ПОДПИСЬ ПОД НАЗВАНИЕМ — В ЦВЕТ, НО ЧИТАЕМАЯ.
+ *
+ * Краткое описание позиции («Мраморная говядина, 300 г») взято в акцент отеля
+ * со стеклянным подтоном и прозрачностью — тем же приёмом, что липкая строка
+ * категорий. Приём хорош ровно до тех пор, пока текст читается: акцент с
+ * прозрачностью уходит к фону карточки, и на тёмной теме стартовый рецепт
+ * давал 4.1:1 при пороге AA 4.5:1.
+ *
+ * Сторож меряет то же, что глаз: цвет текста НАЛОЖЕННЫЙ на фактический фон
+ * карточки, а не заявленный в стилях. Порог — AA для основного кегля.
+ * Проверяются обе темы и оба места, где подпись живёт: список и открытая
+ * позиция. Разъедься они — сравнение цветов это поймает.
+ */
+const AA = 4.5
+
+/** Контраст текста к его фактическому фону — по WCAG 2.1, на живом рендере. */
+const CONTRAST_PROBE = `(selector) => {
+  const parse = (value) => {
+    const match = value.match(/rgba?\\(([^)]+)\\)/)
+    if (!match) return null
+    const parts = match[1].split(',').map((v) => parseFloat(v))
+    return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 }
+  }
+  const over = (fg, bg) => ({
+    r: fg.r * fg.a + bg.r * (1 - fg.a),
+    g: fg.g * fg.a + bg.g * (1 - fg.a),
+    b: fg.b * fg.a + bg.b * (1 - fg.a),
+    a: 1,
+  })
+  // Фон под текстом складывается из ВСЕХ непрозрачных слоёв над страницей:
+  // карточка может лежать на панели, панель на фоне.
+  const backdrop = (el) => {
+    const stack = []
+    for (let node = el; node; node = node.parentElement) {
+      const color = parse(getComputedStyle(node).backgroundColor)
+      if (color && color.a > 0) stack.push(color)
+    }
+    let bg = { r: 255, g: 255, b: 255, a: 1 }
+    for (let i = stack.length - 1; i >= 0; i -= 1) bg = over(stack[i], bg)
+    return bg
+  }
+  const luminance = (c) => {
+    const channel = (value) => {
+      const v = value / 255
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+    }
+    return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
+  }
+  const el = document.querySelector(selector)
+  if (!el) return null
+  const fg = parse(getComputedStyle(el).color)
+  const bg = backdrop(el)
+  const [light, dark] = [luminance(over(fg, bg)), luminance(bg)].sort((a, b) => b - a)
+  return {
+    color: getComputedStyle(el).color,
+    ratio: Math.round(((light + 0.05) / (dark + 0.05)) * 100) / 100,
+    text: (el.textContent || '').trim(),
+  }
+}`
+
+for (const mode of ['dark', 'light'] as const) {
+  test(`подпись позиции: в цвет отеля и не ниже AA — ${mode}`, async ({ page }) => {
+    /*
+      Тема ставится ПОСЛЕ входа, и это не перестраховка: `enterAsGuest` сам
+      чистит localStorage — поставь режим до него, и он же его сотрёт. Ровно
+      так «светлый» прогон этого сторожа однажды прошёл в тёмной теме и
+      отчитался зелёным, ничего не проверив.
+    */
+    await enterAsGuest(page)
+    await page.evaluate(
+      ([key, value]) => localStorage.setItem(key, value),
+      ['itv.theme-mode', mode],
+    )
+    await page.reload()
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+
+    // И проверяем, что тема ДОЕХАЛА: светлая карточка светлая, тёмная тёмная.
+    const paperIsDark = await page.evaluate(() => {
+      const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).map(Number)
+      return (r + g + b) / 3 < 128
+    })
+    expect(paperIsDark, `тема ${mode} не доехала до страницы`).toBe(mode === 'dark')
+
+    await page.getByTestId('guest-home-tile-kitchen').click()
+    await expect(page.getByTestId('guest-item-ribeye')).toBeVisible({ timeout: 15_000 })
+    await page.waitForTimeout(800)
+
+    const probe = new Function('return ' + CONTRAST_PROBE)()
+    const card = await page.evaluate(probe, '[data-testid="guest-item-ribeye"] p')
+    expect(card, 'подпись на карточке не найдена').not.toBeNull()
+    expect(card.text.length, 'подпись пустая').toBeGreaterThan(0)
+    expect(
+      card.ratio,
+      `${mode}: подпись на карточке ${card.color} даёт контраст ${card.ratio}:1 при пороге ${AA}:1`,
+    ).toBeGreaterThanOrEqual(AA)
+
+    /*
+      ЦВЕТ — АКЦЕНТА ОТЕЛЯ, А НЕ НЕЙТРАЛЬНЫЙ. Конкретное значение не проверяем:
+      оно принадлежит бренду, и у другого отеля будет другим. Проверяем, что
+      подпись УШЛА от нейтрального текста витрины — до правки она была ровно
+      им, и это единственное сравнение, которое поймает откат.
+
+      Сосед для сравнения — строка КБЖУ той же карточки: она осталась
+      нейтральной намеренно (иерархия), и стоит рядом в тех же условиях.
+    */
+    const neutral = await page.evaluate(
+      (selector) => {
+        const el = document.querySelector(selector)
+        return el ? getComputedStyle(el).color : null
+      },
+      '[data-testid="guest-item-ribeye"] [data-testid="guest-item-nutrition-inline"]',
+    )
+    expect(neutral, 'нейтрального соседа на карточке не нашлось').not.toBeNull()
+    expect(card.color, 'подпись осталась нейтральной, как была').not.toBe(neutral)
+
+    // Та же подпись в открытой позиции — тем же цветом, что в списке.
+    await page.getByTestId('guest-item-ribeye').click()
+    await expect(page.getByTestId('guest-item-sheet')).toBeVisible()
+    await page.waitForTimeout(600)
+    const sheet = await page.evaluate(probe, '[data-testid="guest-item-sheet"] p')
+    expect(sheet, 'подпись в шторке не найдена').not.toBeNull()
+    expect(
+      sheet.ratio,
+      `${mode}: подпись в шторке ${sheet.color} даёт контраст ${sheet.ratio}:1`,
+    ).toBeGreaterThanOrEqual(AA)
+    expect(sheet.color, 'список и открытая позиция разошлись в цвете').toBe(card.color)
+
+    /*
+      ИЕРАРХИЯ НА МЕСТЕ. Красить всё подряд нельзя: подписи единиц КБЖУ и
+      заголовки блоков остаются нейтральными, иначе экран превращается в
+      одноцветный список, где ничто не главнее другого.
+    */
+    const inSheet = await page.evaluate(() => {
+      const pick = (selector: string) => {
+        const el = document.querySelector(selector)
+        return el ? getComputedStyle(el).color : null
+      }
+      return {
+        nutrition: pick('[data-testid="guest-item-sheet"] [data-testid="guest-item-nutrition"]'),
+        heading: pick('[data-testid="guest-item-sheet"] h6'),
+      }
+    })
+    if (inSheet.nutrition) {
+      expect(inSheet.nutrition, 'КБЖУ покрасили вместе с описанием').not.toBe(sheet.color)
+    }
+    if (inSheet.heading) {
+      expect(inSheet.heading, 'заголовок блока покрасили вместе с описанием').not.toBe(sheet.color)
+    }
+  })
+}

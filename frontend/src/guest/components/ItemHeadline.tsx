@@ -15,7 +15,7 @@ import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
-import { itemCard } from '../storefrontTokens';
+import { cardSubtitleColor, itemCard } from '../storefrontTokens';
 
 /**
  * Item media — a capped-height cover photo (or the DESIGNED fallback) whose
@@ -222,7 +222,20 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
             ) : null}
           </Stack>
           {item.description ? (
-            <Typography variant="body2" color="text.secondary">
+            // ТОТ ЖЕ ПРИЁМ, ЧТО НА КАРТОЧКЕ СПИСКА, и тем же вызовом, а не
+            // повторённым по памяти: подпись в списке и подпись в открытой
+            // позиции — один и тот же текст, и разъехаться в цвете они могут
+            // только если считать его в двух местах.
+            <Typography
+              variant="body2"
+              sx={(theme) => ({
+                color: cardSubtitleColor(
+                  theme.palette.primary.main,
+                  theme.palette.background.paper,
+                  theme.palette.mode,
+                ),
+              })}
+            >
               {item.description}
             </Typography>
           ) : null}
