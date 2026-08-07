@@ -61,8 +61,12 @@ export function RoomQuickActions() {
         <Box
           sx={{
             display: 'grid',
-            // Как и у сцен: колонки от места в контейнере, а не от окна.
-            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            /*
+              Колонки от места в контейнере, а не от окна. `min(100%, …)` — не
+              украшение: без него дорожка остаётся заданной ширины даже там,
+              где контейнер уже неё, и сетка вылезает целиком.
+            */
+            gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${roomCard.quickTrack}px), 1fr))`,
             gap: roomCard.block,
           }}
         >
@@ -75,6 +79,17 @@ export function RoomQuickActions() {
                 data-testid={`room-quick-${action.code}`}
                 sx={(theme) => ({
                   justifyContent: 'flex-start',
+                  /*
+                    ЭЛЕМЕНТ СЕТКИ УМЕЕТ СЖИМАТЬСЯ.
+
+                    У него `min-width: auto` по умолчанию, то есть он не станет
+                    уже своего содержимого. Одно длинное слово — «Бронирование»
+                    — требовало 173px при дорожке в 154 и выносило карточку за
+                    правый край панели. Замер: у панели появлялась собственная
+                    горизонтальная прокрутка, то есть переполнялся сам блок, а
+                    не только текст.
+                  */
+                  minWidth: 0,
                   gap: roomCard.block,
                   px: 1.5,
                   py: 1.5,
@@ -106,7 +121,20 @@ export function RoomQuickActions() {
                 >
                   <Icon size={18} />
                 </Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    minWidth: 0,
+                    /*
+                      Сжаться карточке мало — надо, чтобы было ЧЕМУ переноситься.
+                      Русские и немецкие подписи из одного длинного слова иначе
+                      просто торчат наружу: переносить внутри слова браузер сам
+                      не станет.
+                    */
+                    overflowWrap: 'anywhere',
+                  }}
+                >
                   {t(`guest.quickActions.${action.code}`, { defaultValue: action.title })}
                 </Typography>
               </ButtonBase>
