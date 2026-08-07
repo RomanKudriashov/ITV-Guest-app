@@ -94,10 +94,27 @@ export function OrderStatusPage() {
 
   const fieldValues = order.field_values ?? [];
 
+  /*
+    ЧЕМ ЭТА КАРТОЧКА ОТВЕЧАЕТ ГОСТЮ — решает СЕРВЕР.
+
+    Вид приезжает из того же реестра, что и тип трекера персонала: гость и
+    стойка не должны расходиться в том, что это за заявка. Падение на «доставку»
+    здесь только для старого ответа без поля — новый его всегда несёт.
+
+    Карточка была одна на все сервисы, и запись на массаж показывала поля
+    доставки: «Куда — номер 305», «Когда — как можно скорее», «подадут к 01:21»,
+    хотя сеанс назначен на 11:00 и лежал ниже, в позиции.
+  */
+  const kind =
+    order.card_kind ?? (order.slot ? 'booking' : fieldValues.length ? 'request' : 'delivery');
+  // Обещания времени подачи — только там, где подача есть. У записи время
+  // назначено, у заявки его никто не обещал.
+  const promisesServeTime = kind === 'delivery';
+
   // The promised serve time, in the hotel's TZ. One chip, shown on the just-placed
   // confirmation banner OR on the live status header — never both at once, so the
   // `guest-serve-by` testid stays unique.
-  const serveBy = serveByTime(order.serve_by);
+  const serveBy = promisesServeTime ? serveByTime(order.serve_by) : null;
   const serveByChip = serveBy ? (
     <Chip
       size="small"
@@ -119,15 +136,64 @@ export function OrderStatusPage() {
     }
   })();
 
-  const whenText =
-    order.requested_time
-      ? t('guest.order.byTime', {
-          time: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? 'en', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }).format(new Date(order.requested_time)),
-        })
-      : t('guest.cart.asap');
+  const locale = i18n.resolvedLanguage ?? 'en';
+  const at = (iso: string, options: Intl.DateTimeFormatOptions) => {
+    try {
+      return new Intl.DateTimeFormat(locale, options).format(new Date(iso));
+    } catch {
+      return iso;
+    }
+  };
+  const clock = { hour: '2-digit', minute: '2-digit' } as const;
+
+  const whenText = order.requested_time
+    ? t('guest.order.byTime', { time: at(order.requested_time, clock) })
+    : t('guest.cart.asap');
+
+  /*
+    ФАКТЫ ПО ВИДУ КАРТОЧКИ.
+
+    Ни одного поля, которое для этого вида бессмысленно, и ни одной пустой
+    заглушки: строка появляется, только если её есть чем заполнить. «Как можно
+    скорее» осталось ровно там, где оно правда бывает, — у доставки и у подачи
+    машины.
+  */
+  const facts: { label: string; value: string }[] = [];
+  const push = (label: string, value: string | null | undefined) => {
+    if (value) facts.push({ label, value });
+  };
+  const where = locationText(order, t);
+  if (kind === 'booking') {
+    const slot = order.slot;
+    push(
+      t('guest.order.sessionAt'),
+      slot
+        ? `${at(slot.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}, ` +
+            `${at(slot.starts_at, clock)} – ${at(slot.ends_at, clock)}`
+        : null,
+    );
+    push(
+      t('guest.order.duration'),
+      slot?.duration_minutes
+        ? t('guest.order.durationMinutes', { minutes: slot.duration_minutes })
+        : null,
+    );
+    // Где проходит сеанс: имя ресурса, а не «номер 305» — массаж делают в спа.
+    push(t('guest.order.place'), order.slot?.resource_title ?? null);
+  } else if (kind === 'ride') {
+    // Откуда и куда лежат в ответах формы и показаны блоком ниже: повторять их
+    // здесь значило бы напечатать маршрут дважды.
+    push(t('guest.order.pickup'), whenText);
+  } else if (kind === 'request') {
+    push(
+      t('guest.order.asked'),
+      order.items.length ? order.items.map((line) => line.title).join(' · ') : null,
+    );
+    push(t('guest.order.acceptedAt'), at(order.created_at, { ...clock, dateStyle: undefined }));
+  } else {
+    push(t('guest.order.where'), where === '—' ? null : where);
+    push(t('guest.order.when'), whenText);
+  }
 
   return (
     <Container maxWidth="sm" sx={{ py: 2 }} data-testid="guest-order-status">
@@ -192,7 +258,7 @@ export function OrderStatusPage() {
           {created}
         </Typography>
 
-        {order.eta_minutes ? (
+        {order.eta_minutes && promisesServeTime ? (
           <Alert severity="info" icon={false} data-testid="guest-order-eta">
             {t('guest.order.eta', { minutes: order.eta_minutes })}
           </Alert>
@@ -202,10 +268,11 @@ export function OrderStatusPage() {
           <OrderTimeline order={order} />
         </Paper>
 
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper variant="outlined" sx={{ p: 2 }} data-testid="guest-order-facts" data-kind={kind}>
           <Stack spacing={1}>
-            <Row label={t('guest.order.where')} value={locationText(order, t)} />
-            <Row label={t('guest.order.when')} value={whenText} />
+            {facts.map((fact) => (
+              <Row key={fact.label} label={fact.label} value={fact.value} />
+            ))}
             {order.comment ? (
               <Row label={t('guest.cart.comment')} value={order.comment} />
             ) : null}
@@ -216,7 +283,10 @@ export function OrderStatusPage() {
           <Stack divider={<Divider flexItem />} spacing={1.5}>
             {/* Body of the order, chosen by the block that is present: a booked
                 slot, the answers of a request, or the lines of food. */}
-            {order.slot ? (
+            {/* Слот показан фактами выше (когда, сколько, где) — второй раз
+                та же тройка читалась бы как две разные записи. Блок остаётся
+                для брони без разобранных фактов: ресурс назван в нём. */}
+            {order.slot && kind !== 'booking' ? (
               <OrderSlot
                 slot={order.slot}
                 language={language}

@@ -499,7 +499,14 @@
       "allOrders": "Все мои заявки",
       "offline": "Нет связи",
       "inProgress": "Сейчас",
-      "noPrice": "—"
+      "noPrice": "—",
+      "sessionAt": "Когда сеанс",
+      "duration": "Сколько длится",
+      "place": "Где",
+      "pickup": "Подача",
+      "asked": "Что просили",
+      "acceptedAt": "Когда приняли",
+      "durationMinutes": "{{minutes}} мин"
     },
     "orders": {
       "active": "Активные",

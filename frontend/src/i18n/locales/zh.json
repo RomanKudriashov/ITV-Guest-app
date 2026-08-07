@@ -493,7 +493,14 @@
       "allOrders": "我的全部订单",
       "offline": "无连接",
       "inProgress": "进行中",
-      "noPrice": "—"
+      "noPrice": "—",
+      "sessionAt": "预约时间",
+      "duration": "时长",
+      "place": "地点",
+      "pickup": "接送时间",
+      "asked": "请求内容",
+      "acceptedAt": "受理时间",
+      "durationMinutes": "{{minutes}} 分钟"
     },
     "orders": {
       "active": "进行中",

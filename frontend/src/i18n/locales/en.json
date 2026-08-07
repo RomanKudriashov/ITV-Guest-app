@@ -495,7 +495,14 @@
       "allOrders": "All my orders",
       "offline": "Offline",
       "inProgress": "Now",
-      "noPrice": "—"
+      "noPrice": "—",
+      "sessionAt": "Session",
+      "duration": "Duration",
+      "place": "Where",
+      "pickup": "Pick-up",
+      "asked": "Request",
+      "acceptedAt": "Accepted",
+      "durationMinutes": "{{minutes}} min"
     },
     "orders": {
       "active": "Active",

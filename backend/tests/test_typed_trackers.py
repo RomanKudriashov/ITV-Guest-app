@@ -237,3 +237,39 @@ def test_ensure_status_flows_is_idempotent(crystal):
         ensure_status_flows()
         ensure_status_flows()
         assert StatusDefinition.objects.count() == before
+
+
+# --- Вид гостевой карточки --------------------------------------------------
+
+
+def test_guest_card_covers_every_service_type():
+    """
+    КАЖДЫЙ тип сервиса назван в обеих картах реестра.
+
+    Карточка гостя и трекер персонала читают один вход — тип сервиса. Пропуск в
+    одной из карт означает, что новый сервис молча падает в умолчание: гость
+    увидит заявку там, где на самом деле запись, и заметит это не он, а мы —
+    через неделю после запуска.
+    """
+    from apps.hotels.models import Service
+    from apps.orders.tracker_types import SERVICE_TYPE_TO_GUEST_CARD, SERVICE_TYPE_TO_TRACKER
+
+    declared = {value for value, _ in Service.Type.choices}
+    assert declared == set(SERVICE_TYPE_TO_TRACKER), "тип сервиса без трекера"
+    assert declared == set(SERVICE_TYPE_TO_GUEST_CARD), "тип сервиса без гостевой карточки"
+
+
+def test_guest_card_of_a_booking_is_a_booking_whatever_the_service():
+    """
+    Слот делает карточку записью независимо от сервиса.
+
+    Это свойство ЗАКАЗА, а не сервиса: у брони есть назначенное время, и
+    «как можно скорее» рядом с ним — прямое враньё. Ровно это и показывала
+    универсальная карточка на записи в спа.
+    """
+    from apps.orders.tracker_types import GuestCard, guest_card_for_service_type
+
+    assert guest_card_for_service_type("spa") == GuestCard.BOOKING
+    assert guest_card_for_service_type("transfer") == GuestCard.RIDE
+    assert guest_card_for_service_type("housekeeping") == GuestCard.REQUEST
+    assert guest_card_for_service_type("restaurant") == GuestCard.DELIVERY

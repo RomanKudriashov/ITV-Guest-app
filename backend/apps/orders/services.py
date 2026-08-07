@@ -28,6 +28,7 @@ from apps.catalog.models import Category, Item, ModifierOption, Route
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import build_field_snapshot
 from apps.catalog import slots as slot_svc
+from apps.orders.tracker_types import guest_card_for_order
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -1130,6 +1131,10 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
             else None
         ),
         "delivery_mode": order.delivery_mode,
+        # ЧЕМ КАРТОЧКА ОТВЕЧАЕТ ГОСТЮ: запись, доставка, поездка или заявка.
+        # Из того же реестра, что и тип трекера персонала (apps/orders/
+        # tracker_types.py) — второй источник разошёлся бы с первым.
+        "card_kind": guest_card_for_order(order),
         "requested_time": (
             hotel.to_local(order.requested_time).isoformat() if order.requested_time else None
         ),

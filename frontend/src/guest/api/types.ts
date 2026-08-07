@@ -417,6 +417,18 @@ export interface GuestOrder {
   room: string | null;
   location: { code: string; title: string; refinement: string } | null;
   delivery_mode: string;
+  /**
+   * ЧЕМ КАРТОЧКА ОТВЕЧАЕТ ГОСТЮ — из реестра сервера, а не из догадки клиента.
+   *
+   * `booking` — запись по слоту (когда сеанс, сколько длится, где);
+   * `delivery` — доставка (куда, когда, ожидаемое время);
+   * `ride` — поездка (подача, откуда, куда);
+   * `request` — заявка (что просили, когда приняли, статус).
+   *
+   * Считается там же, где тип трекера персонала: у гостя и у стойки один
+   * источник правды о том, что это за заявка.
+   */
+  card_kind?: 'booking' | 'delivery' | 'ride' | 'request';
   requested_time: string | null;
   eta_minutes: number | null;
   comment: string;

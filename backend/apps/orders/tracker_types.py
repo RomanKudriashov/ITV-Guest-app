@@ -146,3 +146,87 @@ def tracker_behaviour(point) -> TrackerBehaviour:
 
 def behaviour_for_type(tracker_type: str) -> TrackerBehaviour:
     return BEHAVIOURS.get(tracker_type, BEHAVIOURS[TrackerType.BOARD])
+
+
+class GuestCard(models.TextChoices):
+    """
+    Чем карточка заказа отвечает ГОСТЮ.
+
+    Тот же вопрос, что у трекера, но с другой стороны стойки: трекер решает, как
+    персоналу вести работу, карточка — какие поля показать тому, кто заказал.
+    Живут они в ОДНОМ реестре и читают ОДИН вход (`Service.Type`), иначе на
+    первом же переименовании сервиса гость и трекер разошлись бы в том, что это
+    вообще за заявка.
+
+    Карточка была одна на все сервисы, и запись на массаж показывалась полями
+    доставки: «Куда — Номер 305», «Когда — как можно скорее», «подадут к 01:21».
+    Сеанс при этом стоял в календаре на 11:00 — и лежал ниже, в позиции.
+    """
+
+    BOOKING = "booking", "Запись по слоту"
+    DELIVERY = "delivery", "Доставка"
+    RIDE = "ride", "Поездка"
+    REQUEST = "request", "Заявка"
+
+
+# Тип сервиса → вид гостевой карточки. Ключи те же, что у трекеров: добавили
+# сервис — добавили строку в обе карты, иначе тест ниже покажет пропуск.
+SERVICE_TYPE_TO_GUEST_CARD: dict[str, str] = {
+    "restaurant": GuestCard.DELIVERY,
+    "bar": GuestCard.DELIVERY,
+    "room_service": GuestCard.DELIVERY,
+    "minibar": GuestCard.DELIVERY,
+    "spa": GuestCard.BOOKING,
+    "pool": GuestCard.BOOKING,
+    "excursions": GuestCard.BOOKING,
+    "transfer": GuestCard.RIDE,
+    "concierge": GuestCard.REQUEST,
+    "housekeeping": GuestCard.REQUEST,
+    # info гостю без действия; custom собирается из своих кирпичей — и то и
+    # другое честнее показать заявкой: она не обещает ни времени подачи, ни
+    # маршрута, которых у сервиса может не быть.
+    "info": GuestCard.REQUEST,
+    "custom": GuestCard.REQUEST,
+}
+
+
+def guest_card_for_service_type(service_type: str) -> str:
+    """Неизвестный тип сервиса — заявка: карточка, ничего не обещающая сверх статуса."""
+    return SERVICE_TYPE_TO_GUEST_CARD.get(service_type, GuestCard.REQUEST)
+
+
+def guest_card_for_point(point) -> str:
+    service = _service_of(point)
+    if service is not None:
+        return guest_card_for_service_type(service.type)
+    return _POINT_KIND_TO_GUEST_CARD.get(point.kind, GuestCard.REQUEST)
+
+
+# Падение для точки без сервиса — продолжение POINT_KIND_TO_TRACKER.
+_POINT_KIND_TO_GUEST_CARD: dict[str, str] = {
+    "kitchen": GuestCard.DELIVERY,
+    "bar": GuestCard.DELIVERY,
+    "housekeeping": GuestCard.REQUEST,
+    "spa": GuestCard.BOOKING,
+    "reception": GuestCard.REQUEST,
+    "other": GuestCard.REQUEST,
+}
+
+
+def guest_card_for_order(order) -> str:
+    """
+    Вид карточки конкретного заказа.
+
+    Забронированный слот делает карточку записью независимо от типа сервиса:
+    слот — это факт заказа, а не свойство сервиса, и «как можно скорее» рядом с
+    назначенным временем было бы прямым враньём. Всё остальное решает тип
+    сервиса из реестра.
+
+    Заказ с позициями у сервиса-заявки остаётся заявкой: полотенца приносят по
+    заявке хозслужбы, и «ожидаемое время подачи» там обещает то, чего никто не
+    обещал.
+    """
+    if order.slot_bookings.exists():
+        return GuestCard.BOOKING
+    point = getattr(order, "execution_point", None)
+    return guest_card_for_point(point) if point is not None else GuestCard.REQUEST

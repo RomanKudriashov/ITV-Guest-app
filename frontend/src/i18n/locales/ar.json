@@ -503,7 +503,14 @@
       "allOrders": "كل طلباتي",
       "offline": "لا يوجد اتصال",
       "inProgress": "الآن",
-      "noPrice": "—"
+      "noPrice": "—",
+      "sessionAt": "موعد الجلسة",
+      "duration": "المدة",
+      "place": "المكان",
+      "pickup": "وقت الوصول",
+      "asked": "الطلب",
+      "acceptedAt": "وقت الاستلام",
+      "durationMinutes": "{{minutes}} دقيقة"
     },
     "orders": {
       "active": "النشطة",

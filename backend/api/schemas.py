@@ -163,6 +163,9 @@ class OrderOut(Schema):
     room: str
     location: dict[str, Any] | None
     delivery_mode: str
+    # Вид гостевой карточки: booking | delivery | ride | request. Считается из
+    # того же реестра, что и тип трекера (apps/orders/tracker_types.py).
+    card_kind: str = "request"
     requested_time: str | None
     eta_minutes: int | None
     comment: str
