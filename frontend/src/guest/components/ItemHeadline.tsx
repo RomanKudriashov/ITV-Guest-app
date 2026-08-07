@@ -231,6 +231,14 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
             <Box
               sx={(theme) => ({
                 ...storefrontTokens(theme.palette.mode).glass.panel,
+                // Непрозрачная основа под стеклом — ровно та же причина, что и
+                // на карточке списка, и здесь она главная: под шторкой лежит
+                // размытое фото блюда, и без основы фон под подписью зависел бы
+                // от того, светлое оно или тёмное.
+                backgroundColor: theme.palette.background.paper,
+                backgroundImage: `linear-gradient(${
+                  storefrontTokens(theme.palette.mode).glass.panel.background
+                }, ${storefrontTokens(theme.palette.mode).glass.panel.background})`,
                 borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
                 px: 1.25,
                 py: 1,

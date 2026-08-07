@@ -421,60 +421,60 @@ test.describe('Карточка позиции', () => {
  * ПОДПИСЬ ПОД НАЗВАНИЕМ — В ЦВЕТ, НО ЧИТАЕМАЯ.
  *
  * Краткое описание позиции («Мраморная говядина, 300 г») взято в акцент отеля
- * со стеклянным подтоном и прозрачностью — тем же приёмом, что липкая строка
- * категорий. Приём хорош ровно до тех пор, пока текст читается: акцент с
- * прозрачностью уходит к фону карточки, и на тёмной теме стартовый рецепт
- * давал 4.1:1 при пороге AA 4.5:1.
+ * со стеклянным подтоном — тем же приёмом, что липкая строка категорий. Приём
+ * хорош ровно до тех пор, пока текст читается.
  *
- * Сторож меряет то же, что глаз: цвет текста НАЛОЖЕННЫЙ на фактический фон
- * карточки, а не заявленный в стилях. Порог — AA для основного кегля.
- * Проверяются обе темы и оба места, где подпись живёт: список и открытая
- * позиция. Разъедься они — сравнение цветов это поймает.
+ * МЕРЯЕМ ПИКСЕЛЯМИ СНИМКА, А НЕ ВЫЧИСЛЕННЫМИ СТИЛЯМИ, и это выстрадано.
+ * Прошлая версия сторожа складывала `background-color` предков и на этом
+ * основании отчитывалась о 4.81:1. На экране в шторке было 3.93:1: под
+ * стеклом шторки лежит РАЗМЫТОЕ ФОТО БЛЮДА, никакого `background-color` у
+ * него нет, и сумма цветов предков его не видела. Гость увидел «серую»
+ * подпись там, где сторож видел зелёный тест. Пиксели снимка врать не умеют:
+ * что нарисовано, то и померено — вместе со стеклом, размытием и фотографией.
  */
 const AA = 4.5
 
-/** Контраст текста к его фактическому фону — по WCAG 2.1, на живом рендере. */
-const CONTRAST_PROBE = `(selector) => {
-  const parse = (value) => {
-    const match = value.match(/rgba?\\(([^)]+)\\)/)
-    if (!match) return null
-    const parts = match[1].split(',').map((v) => parseFloat(v))
-    return { r: parts[0], g: parts[1], b: parts[2], a: parts.length > 3 ? parts[3] : 1 }
+/**
+ * Контраст текста к фону ПО ПИКСЕЛЯМ кадра.
+ *
+ * Фон — самый частый цвет кадра, текст — самый далёкий от него по яркости из
+ * тех, что занимают заметную долю: ядро глифов, а не кайма сглаживания.
+ */
+const PIXEL_CONTRAST = `async (src) => {
+  const img = new Image(); img.src = src; await img.decode()
+  const canvas = document.createElement('canvas')
+  canvas.width = img.width; canvas.height = img.height
+  const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0)
+  const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const counts = new Map()
+  for (let i = 0; i < data.length; i += 4) {
+    const key = data[i] + ',' + data[i + 1] + ',' + data[i + 2]
+    counts.set(key, (counts.get(key) || 0) + 1)
   }
-  const over = (fg, bg) => ({
-    r: fg.r * fg.a + bg.r * (1 - fg.a),
-    g: fg.g * fg.a + bg.g * (1 - fg.a),
-    b: fg.b * fg.a + bg.b * (1 - fg.a),
-    a: 1,
-  })
-  // Фон под текстом складывается из ВСЕХ непрозрачных слоёв над страницей:
-  // карточка может лежать на панели, панель на фоне.
-  const backdrop = (el) => {
-    const stack = []
-    for (let node = el; node; node = node.parentElement) {
-      const color = parse(getComputedStyle(node).backgroundColor)
-      if (color && color.a > 0) stack.push(color)
-    }
-    let bg = { r: 255, g: 255, b: 255, a: 1 }
-    for (let i = stack.length - 1; i >= 0; i -= 1) bg = over(stack[i], bg)
-    return bg
-  }
+  const total = data.length / 4
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1])
+  const bg = sorted[0][0].split(',').map(Number)
   const luminance = (c) => {
-    const channel = (value) => {
-      const v = value / 255
-      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+    const channel = (v) => {
+      const s = v / 255
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
     }
-    return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
+    return 0.2126 * channel(c[0]) + 0.7152 * channel(c[1]) + 0.0722 * channel(c[2])
   }
-  const el = document.querySelector(selector)
-  if (!el) return null
-  const fg = parse(getComputedStyle(el).color)
-  const bg = backdrop(el)
-  const [light, dark] = [luminance(over(fg, bg)), luminance(bg)].sort((a, b) => b - a)
+  const bgLuminance = luminance(bg)
+  let text = bg
+  let far = 0
+  for (const [key, count] of sorted) {
+    if (count / total < 0.0005) continue
+    const rgb = key.split(',').map(Number)
+    const distance = Math.abs(luminance(rgb) - bgLuminance)
+    if (distance > far) { far = distance; text = rgb }
+  }
+  const [light, dark] = [luminance(text), bgLuminance].sort((a, b) => b - a)
   return {
-    color: getComputedStyle(el).color,
+    bg: 'rgb(' + bg.join(',') + ')',
+    text: 'rgb(' + text.join(',') + ')',
     ratio: Math.round(((light + 0.05) / (dark + 0.05)) * 100) / 100,
-    text: (el.textContent || '').trim(),
   }
 }`
 
@@ -496,22 +496,28 @@ for (const mode of ['dark', 'light'] as const) {
 
     // И проверяем, что тема ДОЕХАЛА: светлая карточка светлая, тёмная тёмная.
     const paperIsDark = await page.evaluate(() => {
-      const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).map(Number)
+      const [r, g, b] = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g)!.map(Number)
       return (r + g + b) / 3 < 128
     })
     expect(paperIsDark, `тема ${mode} не доехала до страницы`).toBe(mode === 'dark')
 
     await page.getByTestId('guest-home-tile-kitchen').click()
     await expect(page.getByTestId('guest-item-ribeye')).toBeVisible({ timeout: 15_000 })
-    await page.waitForTimeout(800)
+    await page.waitForTimeout(1200)
 
-    const probe = new Function('return ' + CONTRAST_PROBE)()
-    const card = await page.evaluate(probe, '[data-testid="guest-item-ribeye"] p')
-    expect(card, 'подпись на карточке не найдена').not.toBeNull()
-    expect(card.text.length, 'подпись пустая').toBeGreaterThan(0)
+    const measure = new Function('return ' + PIXEL_CONTRAST)()
+    /** Снимок самой подписи → пиксельный контраст того, что видит гость. */
+    const onScreen = async (selector: string) => {
+      const shot = await page.locator(selector).first().screenshot()
+      return page.evaluate(measure, `data:image/png;base64,${shot.toString('base64')}`)
+    }
+    const cssColor = (selector: string) =>
+      page.locator(selector).first().evaluate((el) => getComputedStyle(el).color)
+
+    const card = await onScreen('[data-testid="guest-item-ribeye"] p')
     expect(
       card.ratio,
-      `${mode}: подпись на карточке ${card.color} даёт контраст ${card.ratio}:1 при пороге ${AA}:1`,
+      `${mode}: подпись на карточке ${card.text} на фоне ${card.bg} — контраст ${card.ratio}:1 при пороге ${AA}:1`,
     ).toBeGreaterThanOrEqual(AA)
 
     /*
@@ -523,27 +529,32 @@ for (const mode of ['dark', 'light'] as const) {
       Сосед для сравнения — строка КБЖУ той же карточки: она осталась
       нейтральной намеренно (иерархия), и стоит рядом в тех же условиях.
     */
-    const neutral = await page.evaluate(
-      (selector) => {
-        const el = document.querySelector(selector)
-        return el ? getComputedStyle(el).color : null
-      },
+    const cardColor = await cssColor('[data-testid="guest-item-ribeye"] p')
+    const neutral = await cssColor(
       '[data-testid="guest-item-ribeye"] [data-testid="guest-item-nutrition-inline"]',
     )
-    expect(neutral, 'нейтрального соседа на карточке не нашлось').not.toBeNull()
-    expect(card.color, 'подпись осталась нейтральной, как была').not.toBe(neutral)
+    expect(cardColor, 'подпись осталась нейтральной, как была').not.toBe(neutral)
 
-    // Та же подпись в открытой позиции — тем же цветом, что в списке.
+    /*
+      ТА ЖЕ ПОДПИСЬ В ОТКРЫТОЙ ПОЗИЦИИ. Здесь под стеклом шторки лежит
+      размытое фото блюда, и без непрозрачной основы под подложкой фон
+      получался светлее карточки — тот самый случай, когда цвет один, а
+      читаемость разная.
+    */
     await page.getByTestId('guest-item-ribeye').click()
     await expect(page.getByTestId('guest-item-sheet')).toBeVisible()
-    await page.waitForTimeout(600)
-    const sheet = await page.evaluate(probe, '[data-testid="guest-item-sheet"] p')
-    expect(sheet, 'подпись в шторке не найдена').not.toBeNull()
+    await page.waitForTimeout(1200)
+
+    const sheet = await onScreen('[data-testid="guest-item-sheet"] p')
     expect(
       sheet.ratio,
-      `${mode}: подпись в шторке ${sheet.color} даёт контраст ${sheet.ratio}:1`,
+      `${mode}: подпись в шторке ${sheet.text} на фоне ${sheet.bg} — контраст ${sheet.ratio}:1`,
     ).toBeGreaterThanOrEqual(AA)
-    expect(sheet.color, 'список и открытая позиция разошлись в цвете').toBe(card.color)
+    expect(sheet.bg, 'фон под подписью в шторке разошёлся с карточкой').toBe(card.bg)
+    expect(
+      await cssColor('[data-testid="guest-item-sheet"] p'),
+      'список и открытая позиция разошлись в цвете',
+    ).toBe(cardColor)
 
     /*
       ИЕРАРХИЯ НА МЕСТЕ. Красить всё подряд нельзя: подписи единиц КБЖУ и
@@ -561,10 +572,10 @@ for (const mode of ['dark', 'light'] as const) {
       }
     })
     if (inSheet.nutrition) {
-      expect(inSheet.nutrition, 'КБЖУ покрасили вместе с описанием').not.toBe(sheet.color)
+      expect(inSheet.nutrition, 'КБЖУ покрасили вместе с описанием').not.toBe(cardColor)
     }
     if (inSheet.heading) {
-      expect(inSheet.heading, 'заголовок блока покрасили вместе с описанием').not.toBe(sheet.color)
+      expect(inSheet.heading, 'заголовок блока покрасили вместе с описанием').not.toBe(cardColor)
     }
   })
 }
