@@ -981,9 +981,9 @@ class Command(BaseCommand):
             )
             if created:
                 self._seed_request_fields(item, fields)
-            # Ключ манифеста совпадает с кодом позиции — снимок настоящий и
-            # приезжает тем же пайплайном, что фотографии блюд.
-            self._attach_image(item, code, ru)
+            # Снимок ставит общий проход `_ensure_item_photos`: ключ манифеста
+            # совпадает с кодом позиции. Своя загрузка здесь заводила бы НОВЫЙ
+            # ассет на каждый прогон — сид перестал бы быть идемпотентным.
 
     #: Подпись консьержа до G12 — по ней узнаём нетронутый стенд.
     CONCIERGE_STALE_TAGLINE = "Такси и экскурсии"
@@ -1529,7 +1529,9 @@ class Command(BaseCommand):
 
             return upload_asset(
                 content=content,
-                filename=f"{code}.jpg",
+                # Имя файла несёт идентификатор снимка: по нему видно, что
+                # ассет поставил сид и КАКОЙ кадр манифеста в нём лежит.
+                filename=f"{code}--{seed_photos.photo_id(code)}.jpg",
                 kind=MediaAsset.Kind.CATEGORY,
                 content_type="image/jpeg",
                 alt=seed_photos.alt_text(code) or {"ru": label},
@@ -1539,6 +1541,29 @@ class Command(BaseCommand):
                 self.style.WARNING(f"Медиа для '{code}' пропущено ({exc})")
             )
             return None
+
+    def _from_stale_manifest(self, asset, code: str) -> bool:
+        """
+        Снимок поставлен сидом, но в манифесте с тех пор другой кадр.
+
+        Иначе исправление манифеста ничего не меняет на поднятом стенде:
+        обложка «Консьержа» так и осталась шезлонгами на пляже после того, как
+        кадр в манифесте заменили на вывеску отеля. Загрузку АДМИНИСТРАТОРА
+        это не трогает — у неё другое имя файла, и правка руками сильнее сида.
+        """
+        from apps.media import seed_photos
+
+        if asset is None:
+            return False
+        name = asset.original_filename or ""
+        # Старое имя (без идентификатора) не говорит, какой кадр внутри, —
+        # значит, доверять ему нельзя: переснимаем один раз, дальше имя
+        # отвечает за себя само.
+        if name == f"{code}.jpg":
+            return True
+        if not name.startswith(f"{code}--"):
+            return False
+        return name != f"{code}--{seed_photos.photo_id(code)}.jpg"
 
     def _attach_image(self, item: Item, category_code: str, label: str):
         # Ключ манифеста — код ПОЗИЦИИ: одно и то же блюдо в разных разделах
@@ -1627,7 +1652,11 @@ class Command(BaseCommand):
         for category in Category.objects.select_related("image"):
             if category.code not in seed_photos.PHOTOS:
                 continue
-            if category.image_id and category.image.content_type == "image/jpeg":
+            if (
+                category.image_id
+                and category.image.content_type == "image/jpeg"
+                and not self._from_stale_manifest(category.image, category.code)
+            ):
                 continue
             label = (category.title or {}).get("ru") or category.code
             asset = self._image_for(category.code, label)
@@ -1646,13 +1675,20 @@ class Command(BaseCommand):
         """
         from apps.media import seed_photos
 
-        real = set(
-            ItemImage.objects.filter(asset__content_type="image/jpeg").values_list(
-                "item_id", flat=True
-            )
-        )
+        real: dict = {}
+        for row in ItemImage.objects.filter(
+            asset__content_type="image/jpeg"
+        ).select_related("asset"):
+            real.setdefault(row.item_id, []).append(row.asset)
+
         for item in Item.objects.all():
-            if item.pk in real or item.code not in seed_photos.PHOTOS:
+            if item.code not in seed_photos.PHOTOS:
+                continue
+            assets = real.get(item.pk, [])
+            # Ровно один настоящий снимок, и он из текущего манифеста — не
+            # трогаем. Два снимка — тоже повод пересобрать: гость увидел бы
+            # галерею из одной и той же услуги.
+            if len(assets) == 1 and not self._from_stale_manifest(assets[0], item.code):
                 continue
             label = (item.title or {}).get("ru") or item.code
             asset = self._image_for(item.code, label)
@@ -1672,11 +1708,14 @@ class Command(BaseCommand):
         """
         for service in Service.objects.select_related("execution_point", "image"):
             # Процедурную обложку R1/R2 (PNG) считаем отсутствующей: её и
-            # пришли заменить настоящим снимком.
-            if service.image_id is not None and service.image.content_type == "image/jpeg":
+            # пришли заменить настоящим снимком. Устаревший кадр манифеста —
+            # тоже повод переснять.
+            photo_code = _venue_photo_code(service.code)
+            fresh = service.image_id is not None and service.image.content_type == "image/jpeg"
+            if fresh and not self._from_stale_manifest(service.image, photo_code):
                 continue
             label = (service.public_name or {}).get("ru") or service.code
-            asset = self._image_for(_venue_photo_code(service.code), label)
+            asset = self._image_for(photo_code, label)
             if asset is not None:
                 service.image = asset
                 service.save(update_fields=["image", "updated_at"])

@@ -181,6 +181,12 @@ def photo_url(photo_id: str) -> str:
     return f"https://images.unsplash.com/photo-{photo_id}?w={_WIDTH}&q={_QUALITY}&fm=jpg"
 
 
+def photo_id(code: str) -> str:
+    """Идентификатор снимка из манифеста; пусто — кода в манифесте нет."""
+    entry = PHOTOS.get(code)
+    return entry[0] if entry else ""
+
+
 def cached_path(code: str) -> pathlib.Path:
     """
     Путь кэша включает ИДЕНТИФИКАТОР снимка, а не только код.

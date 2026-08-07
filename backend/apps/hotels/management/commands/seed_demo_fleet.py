@@ -401,8 +401,11 @@ class Command(BaseCommand):
         # существующей строке результат просто выбрасывался: объект оставался в
         # MinIO, строка в базе — в базе. Один прогон сида — десяток осиротевших
         # ассетов.
+        # Имя несёт идентификатор кадра: заменили снимок в манифесте — прежний
+        # ассет больше не подходит, и повторно он не переиспользуется.
+        name = f"{code}--{seed_photos.photo_id(code)}.jpg"
         existing = MediaAsset.objects.filter(
-            original_filename=f"{code}.jpg", status=MediaAsset.Status.READY
+            original_filename=name, status=MediaAsset.Status.READY
         ).first()
         if existing is not None:
             return existing
@@ -418,7 +421,7 @@ class Command(BaseCommand):
         try:
             return upload_asset(
                 content=content,
-                filename=f"{code}.jpg",
+                filename=name,
                 kind=MediaAsset.Kind.CATEGORY,
                 content_type="image/jpeg",
                 alt=seed_photos.alt_text(code) or {"ru": label},
@@ -436,7 +439,7 @@ class Command(BaseCommand):
         раньше, чем в реестр добавили снимки, — и остался без единой картинки
         навсегда. Ни один пересев его не чинил: строки-то на месте.
         """
-        if getattr(obj, "image_id", None):
+        if getattr(obj, "image_id", None) and not self._stale(obj.image, code):
             return
         asset = self._image(code, label)
         if asset is None:
@@ -444,12 +447,34 @@ class Command(BaseCommand):
         obj.image = asset
         obj.save(update_fields=["image", "updated_at"])
 
+    def _stale(self, asset, code: str) -> bool:
+        """
+        Кадр поставлен сидом, а в манифесте с тех пор другой.
+
+        Без этого исправление манифеста не доезжает до поднятого стенда:
+        обложка консьержа осталась бы пляжем и после того, как кадр заменили.
+        Загрузку администратора правило не трогает — у неё своё имя файла.
+        """
+        from apps.media import seed_photos
+
+        if asset is None:
+            return False
+        name = asset.original_filename or ""
+        if name == f"{code}.jpg":  # старое имя: какой кадр внутри — неизвестно
+            return True
+        if not name.startswith(f"{code}--"):
+            return False
+        return name != f"{code}--{seed_photos.photo_id(code)}.jpg"
+
     def _ensure_photo(self, item, code: str, label: str) -> None:
         """Фотография позиции — по тому же правилу, что и кадр заведения."""
         from apps.catalog.models import ItemImage
 
-        if ItemImage.objects.filter(item=item).exists():
+        rows = list(ItemImage.objects.filter(item=item).select_related("asset"))
+        if len(rows) == 1 and not self._stale(rows[0].asset, code):
             return
+        if rows:
+            ItemImage.objects.filter(item=item).hard_delete()
         asset = self._image(code, label)
         if asset is not None:
             ItemImage.objects.create(item=item, asset=asset, sort_order=0)
