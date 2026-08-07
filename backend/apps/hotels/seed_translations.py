@@ -75,7 +75,7 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
     },
     "concierge": {
         "public_name": {"ar": "الكونسيرج", "zh": "礼宾服务"},
-        "tagline": {"ar": "سيارات أجرة وجولات", "zh": "出租车与观光"},
+        "tagline": {"ar": "تنقلات وجولات ومهام", "zh": "接送、观光与代办"},
     },
     "azure-concierge": {
         "public_name": {"ar": "الكونسيرج", "zh": "礼宾服务"},
@@ -141,6 +141,8 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
     "azure-night": {"title": {"ar": "قائمة الليل", "zh": "夜宵菜单"}},
     "lumen-night": {"title": {"ar": "قائمة الليل", "zh": "夜宵菜单"}},
     "transfer": {"title": {"ar": "التنقل", "zh": "接送"}},
+    "concierge-tours": {"title": {"ar": "الجولات والترفيه", "zh": "观光与休闲"}},
+    "concierge-errands": {"title": {"ar": "المهام", "zh": "代办事项"}},
     "info": {"title": {"ar": "عن الفندق", "zh": "关于酒店"}},
     "azure-info-pages": {"title": {"ar": "عن الفندق", "zh": "关于酒店"}},
     "lumen-info-pages": {"title": {"ar": "عن الفندق", "zh": "关于酒店"}},
@@ -374,6 +376,70 @@ TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
     "taxi": {
         "title": {"ar": "سيارة أجرة", "zh": "出租车"},
         "description": {"ar": "نُحضر السيارة إلى مدخل الفندق", "zh": "将车安排到酒店门口"},
+    },
+    # --- Услуги консьержа (G12) -------------------------------------------
+    "airport-pickup": {
+        "title": {"ar": "الاستقبال من المطار", "zh": "机场接机"},
+        "description": {
+            "ar": "نستقبلك بلافتة ونوصلك إلى الفندق",
+            "zh": "举牌接机并送至酒店",
+        },
+    },
+    "airport-dropoff": {
+        "title": {"ar": "التوصيل إلى المطار", "zh": "送机服务"},
+        "description": {
+            "ar": "سيارة عند المدخل ومساعدة في الأمتعة",
+            "zh": "门口备车并协助搬运行李",
+        },
+    },
+    "car-rental": {
+        "title": {"ar": "تأجير سيارة", "zh": "租车"},
+        "description": {
+            "ar": "نختار السيارة وننهي الأوراق",
+            "zh": "为您选车并办妥手续",
+        },
+    },
+    "city-tour": {
+        "title": {"ar": "الجولات السياحية", "zh": "导览游"},
+        "description": {
+            "ar": "جولات عامة وموضوعية مع مرشد",
+            "zh": "城市与主题线路，配导游",
+        },
+    },
+    "tickets": {
+        "title": {"ar": "التذاكر", "zh": "票务"},
+        "description": {
+            "ar": "مسرح وحفلات ومتاحف — نجدها ونشتريها",
+            "zh": "剧院、演出、博物馆，代找代购",
+        },
+    },
+    "table-booking": {
+        "title": {"ar": "حجز المطاعم", "zh": "餐厅预订"},
+        "description": {
+            "ar": "نحجز لك طاولة في المدينة باسمك",
+            "zh": "以您的名义预订城中餐位",
+        },
+    },
+    "flowers": {
+        "title": {"ar": "توصيل الزهور", "zh": "鲜花配送"},
+        "description": {
+            "ar": "نجهّز الباقة ونوصلها في الوقت المحدد",
+            "zh": "配好花束并按时送达",
+        },
+    },
+    "babysitter": {
+        "title": {"ar": "جليسة أطفال", "zh": "临时保姆"},
+        "description": {
+            "ar": "جليسة موثوقة لبضع ساعات",
+            "zh": "可靠保姆，按小时安排",
+        },
+    },
+    "laundry-service": {
+        "title": {"ar": "الغسيل والكي", "zh": "洗衣与熨烫"},
+        "description": {
+            "ar": "نأخذ الملابس من الغرفة ونعيدها جاهزة",
+            "zh": "从客房取走，整理妥当送回",
+        },
     },
     "transfer-azure": {
         "title": {"ar": "التنقل", "zh": "接送"},

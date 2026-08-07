@@ -257,6 +257,7 @@ class Command(BaseCommand):
             self._seed_nutrition()
             self._seed_item_facets()
             self._seed_services(points, schedules)
+            self._seed_concierge(points, schedules)
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
             if with_rich:
@@ -295,7 +296,7 @@ class Command(BaseCommand):
             ("bar", ExecutionPoint.Kind.BAR, "Лобби-бар", "Lobby bar", 15,
              ("Лобби-бар", "Lobby bar"), ("Коктейли и вино", "Cocktails & wine"), True),
             ("concierge", ExecutionPoint.Kind.RECEPTION, "Консьерж", "Concierge", 10,
-             ("Консьерж", "Concierge"), ("Такси и экскурсии", "Taxi & tours"), True),
+             ("Консьерж", "Concierge"), ("Поездки, экскурсии и поручения", "Rides, tours & errands"), True),
             ("housekeeping", ExecutionPoint.Kind.HOUSEKEEPING, "Хозслужба", "Housekeeping", 45,
              ("Хозслужба", "Housekeeping"), ("", ""), False),
             ("spa", ExecutionPoint.Kind.SPA, "SPA-центр", "SPA", 30,
@@ -837,9 +838,184 @@ class Command(BaseCommand):
             if service_id is not None:
                 Category.objects.filter(pk=category.pk).update(service_id=service_id)
 
+    # --- Консьерж ----------------------------------------------------------
+
+    #: Услуги консьержа: код, раздел, название, описание, цена (None — «по
+    #: запросу»), поля заявки. Цена в минорных единицах, как везде.
+    #: Раздел «transfer» уже заведён `_seed_services` — там живёт такси.
+    CONCIERGE_SERVICES = [
+        ("airport-pickup", "transfer",
+         ("Трансфер из аэропорта", "Airport pickup"),
+         ("Встретим с табличкой и довезём до отеля",
+          "We meet you with a sign and drive you to the hotel"),
+         450000,
+         [("flight", "Номер рейса", "Flight number", FieldType.TEXT, True,
+           {"ru": "Например, SU 6003"}, None, None, []),
+          ("when", "Время прилёта", "Arrival time", FieldType.TIME, True, {}, None, None, []),
+          ("passengers", "Сколько человек", "Passengers", FieldType.COUNT, True, {}, 1, 8, [])]),
+        ("airport-dropoff", "transfer",
+         ("Трансфер в аэропорт", "Airport drop-off"),
+         ("Подадим машину к выходу и поможем с багажом",
+          "A car at the entrance and a hand with the luggage"),
+         450000,
+         [("when", "Когда подать", "Pickup time", FieldType.TIME, True, {}, None, None, []),
+          ("flight", "Номер рейса", "Flight number", FieldType.TEXT, False, {}, None, None, []),
+          ("passengers", "Сколько человек", "Passengers", FieldType.COUNT, True, {}, 1, 8, [])]),
+        ("car-rental", "transfer",
+         ("Аренда автомобиля", "Car rental"),
+         ("Подберём машину и оформим документы",
+          "We pick the car and handle the paperwork"),
+         None,
+         [("days", "На сколько дней", "How many days", FieldType.COUNT, True, {}, 1, 30, []),
+          ("car_class", "Класс машины", "Car class", FieldType.SELECT, False, {}, None, None,
+           [{"value": "econom", "label": {"ru": "Эконом", "en": "Economy"}},
+            {"value": "comfort", "label": {"ru": "Комфорт", "en": "Comfort"}},
+            {"value": "suv", "label": {"ru": "Внедорожник", "en": "SUV"}}])]),
+        ("city-tour", "concierge-tours",
+         ("Экскурсии", "Guided tours"),
+         ("Обзорные и тематические маршруты с гидом",
+          "City and themed routes with a guide"),
+         320000,
+         [("date", "Дата", "Date", FieldType.DATE, True, {}, None, None, []),
+          ("guests", "Сколько человек", "Guests", FieldType.COUNT, True, {}, 1, 12, []),
+          ("language", "Язык гида", "Guide language", FieldType.SELECT, False, {}, None, None,
+           [{"value": "ru", "label": {"ru": "Русский", "en": "Russian"}},
+            {"value": "en", "label": {"ru": "Английский", "en": "English"}}])]),
+        ("tickets", "concierge-tours",
+         ("Билеты", "Tickets"),
+         ("Театр, концерты, музеи — найдём и выкупим",
+          "Theatre, concerts, museums — we find and buy them"),
+         None,
+         [("event", "Что нужно", "What for", FieldType.TEXT, True,
+           {"ru": "Событие или площадка"}, None, None, []),
+          ("date", "Дата", "Date", FieldType.DATE, True, {}, None, None, []),
+          ("guests", "Сколько билетов", "How many tickets", FieldType.COUNT, True, {}, 1, 10, [])]),
+        ("table-booking", "concierge-errands",
+         ("Бронирование ресторанов", "Restaurant booking"),
+         ("Забронируем стол в городе на ваше имя",
+          "We book a table in town in your name"),
+         None,
+         [("place", "Где", "Where", FieldType.TEXT, True,
+           {"ru": "Название ресторана"}, None, None, []),
+          ("when", "Когда", "When", FieldType.TIME, True, {}, None, None, []),
+          ("guests", "Сколько человек", "Guests", FieldType.COUNT, True, {}, 1, 12, [])]),
+        ("flowers", "concierge-errands",
+         ("Доставка цветов", "Flower delivery"),
+         ("Соберём букет и привезём к назначенному часу",
+          "A bouquet made and delivered on time"),
+         550000,
+         [("when", "Когда доставить", "Delivery time", FieldType.TIME, True, {}, None, None, []),
+          ("note", "Открытка", "Card message", FieldType.TEXT, False,
+           {"ru": "Текст на открытке"}, None, None, [])]),
+        ("babysitter", "concierge-errands",
+         ("Няня", "Babysitter"),
+         ("Проверенная няня на несколько часов",
+          "A vetted babysitter for a few hours"),
+         None,
+         [("when", "Со скольких", "From", FieldType.TIME, True, {}, None, None, []),
+          ("hours", "На сколько часов", "For how many hours", FieldType.COUNT, True, {}, 1, 12, []),
+          ("kids", "Сколько детей", "Children", FieldType.COUNT, True, {}, 1, 5, [])]),
+        ("laundry-service", "concierge-errands",
+         ("Прачечная и глажка", "Laundry & ironing"),
+         ("Заберём вещи из номера и вернём готовыми",
+          "We collect from the room and bring everything back ready"),
+         None,
+         [("when", "Когда забрать", "Pickup time", FieldType.TIME, True, {}, None, None, []),
+          ("express", "Срочно, за 4 часа", "Express, 4 hours", FieldType.SELECT, False,
+           {}, None, None,
+           [{"value": "yes", "label": {"ru": "Да", "en": "Yes"}},
+            {"value": "no", "label": {"ru": "Нет", "en": "No"}}])]),
+    ]
+
+    #: Новые разделы консьержа: код, название, порядок, ключ снимка.
+    CONCIERGE_CATEGORIES = [
+        ("concierge-tours", {"ru": "Экскурсии и досуг", "en": "Tours & leisure"}, 12,
+         "venue-excursions"),
+        ("concierge-errands", {"ru": "Поручения", "en": "Errands"}, 13, "venue-concierge"),
+    ]
+
+    def _seed_concierge(self, points: dict[str, ExecutionPoint], schedules: dict[str, Schedule]):
+        """
+        Консьерж — это не одно «Такси».
+
+        До этого прогона у заведения была ровно одна позиция при подписи «Такси
+        и экскурсии»: экскурсий не существовало. Гость открывал витрину и видел
+        там, где отель обещал услуги, единственную карточку.
+
+        Заводится ровно тем же способом, что остальные заявки: те же Category /
+        Item / RequestField, тот же медиапайплайн для снимков, тот же реестр
+        переводов. Идемпотентно по коду — повторный прогон не двоит позиции и
+        не переписывает правку, сделанную в CMS.
+        """
+        point = points["concierge"]
+        self._retitle_concierge(point)
+        categories = {
+            code: self._seed_service_category(
+                code=code, title=title, point=point, sort_order=order,
+                schedule=schedules["all_day"], photo=photo,
+            )
+            for code, title, order, photo in self.CONCIERGE_CATEGORIES
+        }
+        categories["transfer"] = Category.objects.get(code="transfer")
+
+        orders: dict[str, int] = {}
+        for code, category_code, (ru, en), (desc_ru, desc_en), price, fields in self.CONCIERGE_SERVICES:
+            # Внутри «Трансфера» уже стоит такси с нулевым порядком.
+            orders[category_code] = orders.get(category_code, 0) + 1
+            item, created = Item.objects.get_or_create(
+                code=code,
+                defaults={
+                    "category": categories[category_code],
+                    "type": OfferingType.SERVICE_REQUEST,
+                    # Где исполнять, знает сама услуга: машину подают к выходу,
+                    # бельё забирают из номера. Спрашивать локацию у гостя
+                    # значило бы переспрашивать уже известное.
+                    "location_mode": LocationMode.NONE,
+                    "title": {"ru": ru, "en": en},
+                    "description": {"ru": desc_ru, "en": desc_en},
+                    # None — «по запросу»: сумму считает исполнитель по факту, и
+                    # выдуманное число в карточке было бы обещанием отеля.
+                    "price": price,
+                    "sort_order": orders[category_code],
+                },
+            )
+            if created:
+                self._seed_request_fields(item, fields)
+            # Ключ манифеста совпадает с кодом позиции — снимок настоящий и
+            # приезжает тем же пайплайном, что фотографии блюд.
+            self._attach_image(item, code, ru)
+
+    #: Подпись консьержа до G12 — по ней узнаём нетронутый стенд.
+    CONCIERGE_STALE_TAGLINE = "Такси и экскурсии"
+
+    def _retitle_concierge(self, point: ExecutionPoint) -> None:
+        """
+        Подпись сервиса — по содержимому, а не по историческому обещанию.
+
+        Сервис заводится `get_or_create`, поэтому одной правки кортежа мало:
+        на уже поднятом стенде подпись осталась бы старой. Меняем ТОЛЬКО если
+        она дословно совпадает с сидовой — иначе это правка администратора, и
+        она сильнее сида. Арабский с китайским чистим, чтобы реестр переводов
+        дописал их заново: иначе гость на арабском читал бы прежнее обещание.
+        """
+        service = Service.objects.filter(execution_point=point).first()
+        if service is None:
+            return
+        tagline = dict(service.tagline or {})
+        if tagline.get("ru") != self.CONCIERGE_STALE_TAGLINE:
+            return
+        service.tagline = {
+            "ru": "Поездки, экскурсии и поручения",
+            "en": "Rides, tours & errands",
+        }
+        service.save(update_fields=["tagline", "updated_at"])
+
     def _seed_service_category(
-        self, *, code: str, title: dict, point: ExecutionPoint, sort_order: int, schedule: Schedule
+        self, *, code: str, title: dict, point: ExecutionPoint, sort_order: int,
+        schedule: Schedule, photo: str | None = None
     ) -> Category:
+        # `photo` — когда у раздела нет своего кадра в манифесте и незачем
+        # заводить второй ради обложки: берём уже проверенный.
         category, _ = Category.objects.get_or_create(
             code=code,
             defaults={
@@ -847,7 +1023,7 @@ class Command(BaseCommand):
                 "title": title,
                 "sort_order": sort_order,
                 "schedule": schedule,
-                "image": self._image_for(code, title.get("ru", code)),
+                "image": self._image_for(photo or code, title.get("ru", code)),
             },
         )
         Route.objects.get_or_create(
