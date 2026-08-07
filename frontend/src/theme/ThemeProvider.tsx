@@ -12,6 +12,7 @@ import createCache, { type EmotionCache } from '@emotion/cache';
 import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
 import CssBaseline from '@mui/material/CssBaseline';
+import GlobalStyles from '@mui/material/GlobalStyles';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
@@ -168,6 +169,30 @@ export function AppThemeProvider({
       <CacheProvider value={direction === 'rtl' ? rtlCache : ltrCache}>
         <MuiThemeProvider theme={theme}>
           <CssBaseline />
+          {/*
+            iOS САМ УВЕЛИЧИВАЕТ ТЕКСТ, И РАЗМЕТКА ЭТОГО НЕ ЖДЁТ.
+
+            Safari на телефоне раздувает текст в блоках по своему усмотрению
+            (text-size-adjust: auto — умолчание). MUI v6 в CssBaseline это
+            больше не пинит, хотя раньше пинил.
+
+            Ломается там, где две части одного элемента считаются РАЗНЫМИ
+            путями. Подпись поля ввода — это `<label>` с `scale(.75)`, а вырез
+            в рамке под неё — `<legend>` с `font-size: .75em`. Раздуй Safari
+            первую и не тронь вторую — граница поля пойдёт сквозь подпись,
+            ровно как на живом телефоне.
+
+            ВАЖНО: причина НЕ подтверждена на устройстве — в Chromium и в
+            WebKit на профиле iPhone вырез считается верно, и симптом не
+            воспроизводится. Правка сделана по механизму: она лишь запрещает
+            браузеру менять авторские кегли, то есть возвращает поведение всех
+            остальных браузеров, и сломать ей нечего.
+          */}
+          <GlobalStyles
+            styles={{
+              html: { WebkitTextSizeAdjust: '100%', textSizeAdjust: '100%' },
+            }}
+          />
           {children}
         </MuiThemeProvider>
       </CacheProvider>
