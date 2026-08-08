@@ -1,0 +1,561 @@
+{
+  "/api/v1/cms/allergens": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/allergens/{entry_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/analytics/breakdown": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/drilldown": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/export": [
+    "POST"
+  ],
+  "/api/v1/cms/analytics/export/{export_id}": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/export/{export_id}/download": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/operations": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/reviews": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/scope": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/summary": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/timeseries": [
+    "GET"
+  ],
+  "/api/v1/cms/analytics/traffic": [
+    "GET"
+  ],
+  "/api/v1/cms/badges": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/badges/{badge_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/bootstrap": [
+    "GET"
+  ],
+  "/api/v1/cms/brand": [
+    "GET",
+    "PATCH",
+    "PUT"
+  ],
+  "/api/v1/cms/brand/abstractions": [
+    "GET"
+  ],
+  "/api/v1/cms/brand/apply-preset": [
+    "POST"
+  ],
+  "/api/v1/cms/brand/fonts": [
+    "GET"
+  ],
+  "/api/v1/cms/brand/presets": [
+    "GET"
+  ],
+  "/api/v1/cms/categories": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/categories/reorder": [
+    "POST"
+  ],
+  "/api/v1/cms/categories/{category_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/categories/{category_id}/routes": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/categories/{category_id}/toggle": [
+    "POST"
+  ],
+  "/api/v1/cms/commerce-settings": [
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/escalation-rules": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/escalation-rules/{rule_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/grms/access": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/access/demo-entry": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/access/pin": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/catalog": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/import/confirm": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/import/preview": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/import/reconcile": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/types/{code}/bindings": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/check": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/device-override": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/elements": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/plan": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/grms/types/{code}/plan/copy": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/plan/frames": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/publish": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/rollback": [
+    "POST"
+  ],
+  "/api/v1/cms/grms/types/{code}/status": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/types/{code}/versions": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/types/{code}/zones": [
+    "POST"
+  ],
+  "/api/v1/cms/home-settings": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/inclusions/{inclusion_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/items": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/items/reorder": [
+    "POST"
+  ],
+  "/api/v1/cms/items/{item_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/items/{item_id}/badges": [
+    "PUT"
+  ],
+  "/api/v1/cms/items/{item_id}/images": [
+    "PUT"
+  ],
+  "/api/v1/cms/items/{item_id}/modifier-groups": [
+    "POST"
+  ],
+  "/api/v1/cms/items/{item_id}/modifier-groups/reorder": [
+    "POST"
+  ],
+  "/api/v1/cms/items/{item_id}/request-fields": [
+    "POST"
+  ],
+  "/api/v1/cms/items/{item_id}/request-fields/reorder": [
+    "POST"
+  ],
+  "/api/v1/cms/items/{item_id}/slot-config": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/items/{item_id}/stock": [
+    "POST"
+  ],
+  "/api/v1/cms/items/{item_id}/toggle": [
+    "POST"
+  ],
+  "/api/v1/cms/locations": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/locations/matrix": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/locations/{location_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/markers": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/markers/{entry_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/media": [
+    "POST"
+  ],
+  "/api/v1/cms/media/{asset_id}": [
+    "GET"
+  ],
+  "/api/v1/cms/modifier-groups/{group_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/modifier-groups/{group_id}/options": [
+    "POST"
+  ],
+  "/api/v1/cms/modifier-groups/{group_id}/options/reorder": [
+    "POST"
+  ],
+  "/api/v1/cms/modifier-options/{option_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/modules": [
+    "GET"
+  ],
+  "/api/v1/cms/navigation": [
+    "GET"
+  ],
+  "/api/v1/cms/notification-channels": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/notification-channels/{channel_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/notification-channels/{channel_id}/test": [
+    "POST"
+  ],
+  "/api/v1/cms/notification-log": [
+    "GET"
+  ],
+  "/api/v1/cms/quick-actions": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/request-fields/{field_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/review-settings": [
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/reviews": [
+    "GET"
+  ],
+  "/api/v1/cms/rooms": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/rooms/bulk": [
+    "POST"
+  ],
+  "/api/v1/cms/rooms/qr-sheet": [
+    "GET"
+  ],
+  "/api/v1/cms/rooms/{room_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/rooms/{room_id}/qr.png": [
+    "GET"
+  ],
+  "/api/v1/cms/rooms/{room_id}/qr.svg": [
+    "GET"
+  ],
+  "/api/v1/cms/schedules": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/schedules/{schedule_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/search-settings": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/services": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/services/templates": [
+    "GET"
+  ],
+  "/api/v1/cms/services/{service_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/services/{service_id}/inclusions": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/showcase": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/cms/staff": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/staff/{user_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/cms/staff/{user_id}/assignments": [
+    "PUT"
+  ],
+  "/api/v1/guest/cart/quote": [
+    "POST"
+  ],
+  "/api/v1/guest/catalog": [
+    "GET"
+  ],
+  "/api/v1/guest/chat": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/guest/chat/read": [
+    "POST"
+  ],
+  "/api/v1/guest/home": [
+    "GET"
+  ],
+  "/api/v1/guest/hotel": [
+    "GET"
+  ],
+  "/api/v1/guest/item/{item_id}": [
+    "GET"
+  ],
+  "/api/v1/guest/locations": [
+    "GET"
+  ],
+  "/api/v1/guest/order": [
+    "POST"
+  ],
+  "/api/v1/guest/order/{order_id}": [
+    "GET"
+  ],
+  "/api/v1/guest/order/{order_id}/cancel": [
+    "POST"
+  ],
+  "/api/v1/guest/order/{order_id}/review": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/guest/orders": [
+    "GET"
+  ],
+  "/api/v1/guest/orders/active": [
+    "GET"
+  ],
+  "/api/v1/guest/room/command": [
+    "POST"
+  ],
+  "/api/v1/guest/room/state": [
+    "GET"
+  ],
+  "/api/v1/guest/room/verify": [
+    "POST"
+  ],
+  "/api/v1/guest/search": [
+    "GET"
+  ],
+  "/api/v1/guest/session": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/guest/slots": [
+    "GET"
+  ],
+  "/api/v1/guest/venues": [
+    "GET"
+  ],
+  "/api/v1/health": [
+    "GET"
+  ],
+  "/api/v1/onprem/heartbeat": [
+    "POST"
+  ],
+  "/api/v1/orders/{order_id}": [
+    "GET"
+  ],
+  "/api/v1/orders/{order_id}/status": [
+    "POST"
+  ],
+  "/api/v1/platform/audit": [
+    "GET"
+  ],
+  "/api/v1/platform/auth/2fa/disable": [
+    "POST"
+  ],
+  "/api/v1/platform/auth/2fa/enable": [
+    "POST"
+  ],
+  "/api/v1/platform/auth/2fa/setup": [
+    "POST"
+  ],
+  "/api/v1/platform/auth/login": [
+    "POST"
+  ],
+  "/api/v1/platform/auth/me": [
+    "GET"
+  ],
+  "/api/v1/platform/dictionaries": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/platform/fleet": [
+    "GET"
+  ],
+  "/api/v1/platform/fleet/bulk": [
+    "POST"
+  ],
+  "/api/v1/platform/fleet/export": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/activity": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/admins": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/enter": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/export": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/modules": [
+    "GET",
+    "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/nodes": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/offboard": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/purge": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/tariff": [
+    "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/usage": [
+    "GET"
+  ],
+  "/api/v1/platform/nodes": [
+    "GET"
+  ],
+  "/api/v1/platform/nodes/{node_id}/reissue": [
+    "POST"
+  ],
+  "/api/v1/platform/nodes/{node_id}/revoke": [
+    "POST"
+  ],
+  "/api/v1/platform/overview": [
+    "GET"
+  ],
+  "/api/v1/platform/tariffs": [
+    "GET"
+  ],
+  "/api/v1/platform/team": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/team/{user_id}": [
+    "PATCH"
+  ],
+  "/api/v1/platform/templates": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/templates/{template_id}": [
+    "PATCH"
+  ],
+  "/api/v1/staff/auth/login": [
+    "POST"
+  ],
+  "/api/v1/staff/auth/me": [
+    "GET"
+  ],
+  "/api/v1/tracker/chat/threads": [
+    "GET"
+  ],
+  "/api/v1/tracker/chat/threads/{thread_id}": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/tracker/chat/threads/{thread_id}/read": [
+    "POST"
+  ],
+  "/api/v1/tracker/order/{order_id}": [
+    "GET"
+  ],
+  "/api/v1/tracker/order/{order_id}/accept": [
+    "POST"
+  ],
+  "/api/v1/tracker/order/{order_id}/cancel": [
+    "POST"
+  ],
+  "/api/v1/tracker/order/{order_id}/status": [
+    "POST"
+  ],
+  "/api/v1/tracker/orders": [
+    "GET"
+  ],
+  "/api/v1/tracker/points": [
+    "GET"
+  ]
+}

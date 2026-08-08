@@ -1,0 +1,12 @@
+[
+  "apps.analytics.tasks.run_export_task",
+  "apps.grms.tasks.bake_room_plan_night",
+  "apps.grms.tasks.execute_room_command",
+  "apps.grms.tasks.resettle_room",
+  "apps.integrations.weather.tasks.refresh_hotel_weather",
+  "apps.media.tasks.process_media_asset",
+  "apps.media.tasks.purge_media_asset",
+  "apps.notifications.tasks.deliver_notification",
+  "apps.notifications.tasks.plan_escalation_task",
+  "apps.notifications.tasks.run_escalation_step"
+]
