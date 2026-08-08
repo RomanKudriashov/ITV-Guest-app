@@ -156,3 +156,22 @@ class CommerceSettingsIn(Schema):
     tip_presets: list[int] | None = None
     free_delivery_threshold_minor: int | None = None
     price_round_to_minor: int | None = None
+
+
+# --- Бренд -------------------------------------------------------------------
+
+
+class BrandOut(Schema):
+    id: str
+    name: str
+    preset: str
+    tokens: dict[str, Any]
+    updated_at: str
+
+
+class BrandPatch(Schema):
+    tokens: dict[str, Any] = {}
+
+
+class ApplyPresetIn(Schema):
+    preset: str

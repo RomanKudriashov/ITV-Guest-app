@@ -51,6 +51,16 @@ def upload_asset(
     return asset
 
 
+def get_asset(asset_id) -> MediaAsset:
+    """Ассет по идентификатору. Выборка — работа сервиса, вьюха её зовёт."""
+    from apps.core.errors import NotFoundError
+
+    asset = MediaAsset.objects.filter(pk=asset_id).first()
+    if asset is None:
+        raise NotFoundError("Изображение не найдено")
+    return asset
+
+
 def serialize_asset(asset: MediaAsset | None) -> dict | None:
     """
     Единый вид медиа-ассета для CMS. Пока варианты не нарезаны, URL'ы пустые —

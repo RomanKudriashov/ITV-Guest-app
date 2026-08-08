@@ -1,36 +1,19 @@
 """
 CMS: бренд-настройки. Контракт — docs/brand-api-contract.md.
 
-Вьюхи тонкие: вся валидация и merge — в apps/hotels/brand_services.py.
+Вьюхи тонкие: вся валидация и merge — в apps/hotels/services/brand_services.py.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
 from django.http import HttpRequest
-from ninja import Router, Schema
+from ninja import Router
 
-from apps.hotels.services import brand_services as svc
 from apps.hotels.brand_library import ABSTRACTIONS, FONTS, list_presets
+from apps.hotels.schemas.cms import ApplyPresetIn, BrandOut, BrandPatch
+from apps.hotels.services import brand_services as svc
 
 router = Router(tags=["cms:brand"])
-
-
-class BrandOut(Schema):
-    id: str
-    name: str
-    preset: str
-    tokens: dict[str, Any]
-    updated_at: str
-
-
-class BrandPatch(Schema):
-    tokens: dict[str, Any] = {}
-
-
-class ApplyPresetIn(Schema):
-    preset: str
 
 
 @router.get("/brand", response=BrandOut, summary="Текущая тема отеля")

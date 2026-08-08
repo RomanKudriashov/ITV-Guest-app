@@ -45,7 +45,6 @@ ALLOWED = {
     "api/platform.py": "партия 3: платформенные вьюхи уезжают в apps/hotels/api/platform",
     "api/cms/analytics.py": "партия 5: уезжает в apps/analytics",
     "api/cms/grms.py": "партия 4: уезжает в apps/grms/api/cms",
-    "api/cms/common.py": "партия 3: уезжает в apps/hotels/api/cms",
     "api/cms/reviews.py": "партия 5: уезжает в apps/reviews",
 }
 
@@ -79,10 +78,14 @@ def main() -> int:
     known_clean.extend(sorted(set(ALLOWED) - seen))
 
     if known_clean:
+        # КРАСНЫМ, а не заметкой. Сторож, который замечает протухшую строку и
+        # всё равно отвечает «всё хорошо», — это сторож, чей список исключений
+        # через три партии перестанет что-либо значить.
         print("Эти вьюхи ОЧИСТИЛИСЬ — уберите их из ALLOWED в scripts/check_views.py:")
         for relative in known_clean:
             print(f"  {relative}")
         print()
+        return 1
 
     if offenders:
         print("ORM во вьюхе. Выборка — работа сервиса, вьюха её зовёт:")
