@@ -228,6 +228,11 @@ export interface GuestCatalog {
 
 export interface ItemDetail extends MenuItem {
   category_title?: string;
+  /**
+   * Средняя яркость первого кадра (0..1) — по ней подбирается плотность вуали
+   * под стеклянной панелью. Считает сервер; витрина чужие пиксели не читает.
+   */
+  image_luminance?: number | null;
   modifier_groups: ModifierGroup[];
   /** Empty for a product — the envelope is shared, the unused block is just empty. */
   request_fields?: RequestField[];

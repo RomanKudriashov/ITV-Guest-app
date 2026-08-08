@@ -78,6 +78,10 @@ class ItemDetailOut(Schema):
     id: str
     code: str
     type: str
+    # Средняя яркость кадра (0..1). Витрина подбирает по ней плотность
+    # затемнения под стеклянной панелью; `None` — кадра нет или он ещё не
+    # обработан, и витрина возьмёт безопасное умолчание.
+    image_luminance: float | None = None
     location_mode: str
     category_id: str
     category_title: str

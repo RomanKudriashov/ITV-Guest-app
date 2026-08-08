@@ -331,6 +331,12 @@ def _serialize_item(
         image_url(link.asset, variant="card", fallback_code=category.code)
         for link in item.images.all()
     ]
+    # ЯРКОСТЬ ПЕРВОГО КАДРА — витрине, чтобы подобрать плотность затемнения под
+    # стеклянной панелью: над тёмным стейком хватает лёгкой вуали, светлая
+    # моцарелла пробивает её насквозь. Считает сервер при обработке кадра;
+    # витрина чужие пиксели не читает.
+    first_asset = next((link.asset for link in item.images.all() if link.asset), None)
+    image_luminance = getattr(first_asset, "luminance", None) if first_asset else None
     images = [url for url in images if url] or [image_url(None, fallback_code=category.code)]
 
     groups = list(item.modifier_groups.all())
@@ -338,6 +344,7 @@ def _serialize_item(
         "id": str(item.pk),
         "code": item.code,
         "type": item.type,
+        "image_luminance": image_luminance,
         "location_mode": item.location_mode,
         "category_id": str(item.category_id),
         "title": translate(item.title, language),

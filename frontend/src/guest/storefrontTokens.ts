@@ -539,6 +539,77 @@ const contrast = (a: Rgb, b: Rgb): number => {
   return (light + 0.05) / (dark + 0.05);
 };
 
+/**
+ * ПЛОТНОСТЬ ЗАТЕМНЕНИЯ ПОД СТЕКЛЯННОЙ ПАНЕЛЬЮ — ПО ЯРКОСТИ КАДРА.
+ *
+ * Стекло показывает то, что под ним, и под панелью карточки лежит размытая
+ * фотография блюда. Фиксированная прозрачность закрывает один случай и ломает
+ * другой: над тёмным стейком хватает лёгкой вуали, а светлая моцарелла
+ * пробивает её насквозь, и подпись перестаёт читаться. Замер это уже показал —
+ * 3.93:1 при пороге 4.5.
+ *
+ * Поэтому вуаль подбирается: плотность растёт, пока контраст текста к
+ * фактическому фону не дотянет до AA с тем же запасом, что у цвета подписи.
+ * Яркость кадра приезжает с сервера (он считает её один раз при обработке);
+ * витрина чужие пиксели не читает.
+ *
+ * ЦВЕТ ВУАЛИ — ИЗ СЛОВАРЯ, и он разный у тем: на тёмной затемняем, на светлой
+ * ОСВЕТЛЯЕМ. Светлая вуаль поверх светлой карточки — это то же стекло, только
+ * плотнее; тёмная превратила бы светлую тему в тёмную.
+ *
+ * Кадра нет или он ещё не обработан — берём безопасное умолчание: считаем кадр
+ * светлым. Ошибиться в сторону «читается, но плотнее» дешевле, чем наоборот.
+ */
+const UNKNOWN_LUMINANCE = 0.75;
+/** Шаг подбора. Мельче — дольше считать, крупнее — заметный скачок плотности. */
+const SCRIM_STEP = 0.04;
+
+/** Яркость (0..1) → серый той же яркости, чтобы считать наложение по цвету. */
+function greyOf(luminance: number): Rgb {
+  const clamped = Math.min(1, Math.max(0, luminance));
+  const channel =
+    clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * clamped ** (1 / 2.4) - 0.055;
+  const value = Math.round(channel * 255);
+  return [value, value, value];
+}
+
+export function panelScrim(
+  imageLuminance: number | null | undefined,
+  mode: ThemeMode,
+  surface: string,
+  textColor: string,
+): string {
+  const tokens = storefrontTokens(mode);
+  const key = `${mode}|${imageLuminance ?? 'x'}|${surface}|${textColor}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const photo = greyOf(imageLuminance ?? UNKNOWN_LUMINANCE);
+  const glass = decomposeColor(tokens.glass.panel.background);
+  const glassRgb = glass.values.slice(0, 3).map(Math.round) as Rgb;
+  const glassAlpha = glass.values.length > 3 ? (glass.values[3] ?? 1) : 1;
+  // На тёмной теме гасим чёрным (база затемнения из словаря), на светлой —
+  // поверхностью самой карточки: вуаль обязана осветлять, а не темнить.
+  const veil = rgbOf(mode === 'dark' ? tokens.onMedia.dimBase : surface);
+  const text = decomposeColor(textColor);
+  const textRgb = text.values.slice(0, 3).map(Math.round) as Rgb;
+  const textAlpha = text.values.length > 3 ? (text.values[3] ?? 1) : 1;
+
+  let alpha = 0;
+  let background = flatten(glassRgb, glassAlpha, photo);
+  while (
+    alpha < 1 &&
+    contrast(flatten(textRgb, textAlpha, background), background) < AA_CONTRAST + AA_MARGIN
+  ) {
+    alpha = Math.min(1, alpha + SCRIM_STEP);
+    background = flatten(veil, alpha, flatten(glassRgb, glassAlpha, photo));
+  }
+
+  const value = `rgba(${veil.join(",")},${alpha.toFixed(2)})`;
+  cache.set(key, value);
+  return value;
+}
+
 const cache = new Map<string, string>();
 
 export function cardSubtitleColor(accent: string, surface: string, mode: ThemeMode): string {

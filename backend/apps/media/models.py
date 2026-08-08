@@ -46,6 +46,18 @@ class MediaAsset(TenantModel):
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
 
+    # Средняя ЯРКОСТЬ кадра (0..1, по WCAG) — считается один раз при обработке.
+    #
+    # Нужна витрине, чтобы подобрать плотность затемнения под стеклом: над
+    # тёмным стейком хватает лёгкой вуали, а светлая моцарелла пробивает её
+    # насквозь, и текст на ней перестаёт читаться. Фиксированная прозрачность
+    # закрывает один случай и ломает другой.
+    #
+    # Считает СЕРВЕР, а не витрина: читать пиксели чужого домена в канвасе
+    # браузер разрешает не всегда, а платить за это на каждом открытии
+    # карточки — тем более незачем. Значение не меняется после загрузки.
+    luminance = models.FloatField(null=True, blank=True)
+
     # {"thumb": "hotels/<id>/thumb/....webp", "card": "...", "full": "..."}
     variants = models.JSONField(default=dict, blank=True)
     alt = TranslatableField()

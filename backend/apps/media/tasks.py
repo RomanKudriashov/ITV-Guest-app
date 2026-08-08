@@ -59,9 +59,41 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
         # width/height проставляет _render_variants — их обязательно перечислить
         # в update_fields, иначе размеры оригинала молча не сохранятся.
         asset.save(
-            update_fields=["variants", "status", "error", "width", "height", "updated_at"]
+            update_fields=[
+                "variants",
+                "status",
+                "error",
+                "width",
+                "height",
+                "luminance",
+                "updated_at",
+            ]
         )
         return {"status": "ready", "variants": list(variants)}
+
+
+def _mean_luminance(image) -> float:
+    """
+    Средняя относительная яркость кадра по WCAG 2.1, 0..1.
+
+    Считается по уменьшенной копии: разница со средним по оригиналу — третий
+    знак, а времени в сотни раз меньше. Формула та же, что у контраста, — иначе
+    витрина подбирала бы затемнение по одной шкале, а проверяла по другой.
+    """
+    small = image.copy()
+    small.thumbnail((64, 64), Image.Resampling.BILINEAR)
+    pixels = list(small.getdata())
+    if not pixels:
+        return 0.5
+
+    def channel(value: int) -> float:
+        v = value / 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+    total = 0.0
+    for r, g, b in pixels:
+        total += 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+    return round(total / len(pixels), 4)
 
 
 def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
@@ -70,6 +102,7 @@ def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
         image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
         asset.width, asset.height = image.size
+        asset.luminance = _mean_luminance(image)
 
         variants: dict[str, str] = {}
         for name, width in settings.MEDIA_VARIANTS.items():

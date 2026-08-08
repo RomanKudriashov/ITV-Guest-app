@@ -15,7 +15,13 @@ import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
-import { cardSubtitleColor, itemCard, storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import {
+  cardSubtitleColor,
+  itemCard,
+  panelScrim,
+  storefrontTokens,
+  surfaceRadius,
+} from '../storefrontTokens';
 
 /**
  * Item media — a capped-height cover photo (or the DESIGNED fallback) whose
@@ -229,20 +235,43 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
               подложкой ли — они могут только если собирать их порознь.
             */
             <Box
-              sx={(theme) => ({
-                ...storefrontTokens(theme.palette.mode).glass.panel,
-                // Непрозрачная основа под стеклом — ровно та же причина, что и
-                // на карточке списка, и здесь она главная: под шторкой лежит
-                // размытое фото блюда, и без основы фон под подписью зависел бы
-                // от того, светлое оно или тёмное.
-                backgroundColor: theme.palette.background.paper,
-                backgroundImage: `linear-gradient(${
-                  storefrontTokens(theme.palette.mode).glass.panel.background
-                }, ${storefrontTokens(theme.palette.mode).glass.panel.background})`,
-                borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
-                px: 1.25,
-                py: 1,
-              })}
+              sx={(theme) => {
+                /*
+                  СТЕКЛО, А НЕ ГЛУХАЯ ПОВЕРХНОСТЬ. Под панелью просвечивает
+                  размытое фото блюда — как и задумано. Непрозрачная основа,
+                  стоявшая здесь раньше, была вынужденной: стекло над фото
+                  давало 3.93:1 при пороге 4.5, и читаемость купили ценой вида.
+                  Теперь платить не нужно.
+                  
+                  ЧИТАЕМОСТЬ ДЕРЖИТ АДАПТИВНАЯ ВУАЛЬ. Её плотность подбирается
+                  под фактическую яркость кадра, пока контраст подписи не
+                  дотянет до AA с запасом: над тёмным стейком она почти
+                  прозрачна, над светлым лимонадом плотнее. Фиксированная
+                  прозрачность закрыла бы один случай и сломала другой.
+                */
+                const glass = storefrontTokens(theme.palette.mode).glass.panel;
+                const color = cardSubtitleColor(
+                  theme.palette.primary.main,
+                  theme.palette.background.paper,
+                  theme.palette.mode,
+                );
+                const scrim = panelScrim(
+                  item.image_luminance,
+                  theme.palette.mode,
+                  theme.palette.background.paper,
+                  color,
+                );
+                return {
+                  ...glass,
+                  // Вуаль лежит НАД стеклом и ПОД текстом: оба слоя
+                  // полупрозрачны, поэтому фотография остаётся видна.
+                  backgroundColor: glass.background,
+                  backgroundImage: `linear-gradient(${scrim}, ${scrim})`,
+                  borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
+                  px: 1.25,
+                  py: 1,
+                };
+              }}
             >
               <Typography
                 variant="body2"
