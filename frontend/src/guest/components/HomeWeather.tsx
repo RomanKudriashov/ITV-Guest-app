@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
-import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -36,8 +35,20 @@ import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
  * есть не на всех наших языках, и «Mainly clear» посреди арабского интерфейса
  * — это не погода, это брак. Код превращается в нашу строку здесь.
  *
- * АТРИБУЦИЯ — УСЛОВИЕ ЛИЦЕНЗИИ, а не подпись для красоты. Ссылка на провайдера
- * стоит рядом с данными и снимается только вместе с самим блоком.
+ * АТРИБУЦИИ ЗДЕСЬ НЕТ — И ЭТО РЕШЕНИЕ ВЛАДЕЛЬЦА ПРОДУКТА, А НЕ НЕДОСМОТР.
+ *
+ * Подпись «Погода: Open-Meteo» стояла рядом с данными и была снята по прямому
+ * указанию. Записано здесь, чтобы следующий читающий не восстановил её «как
+ * очевидно забытую» и не удалил повторно, не зная цены вопроса: данные
+ * Open-Meteo распространяются под CC BY 4.0, и указание источника требуется
+ * при любом способе использования — включая платный план и свой экземпляр,
+ * потому что сами данные приходят из чужих источников (DWD, ECMWF и другие).
+ *
+ * Пока витрина показывает погоду Open-Meteo без указания источника, условие
+ * лицензии не выполняется. Снимается это ровно двумя способами: вернуть
+ * указание (в любом виде — строкой, значком, строкой в разделе «Инфо») или
+ * перейти на провайдера, чьи условия подписи не требуют. Подробности и
+ * порядок — docs/ops/weather.md.
  */
 
 /** Группы состояний WMO: гостю нужен «дождь», а не «слабая замерзающая морось». */
@@ -173,23 +184,6 @@ export function HomeWeather({ weather, timezone }: HomeWeatherProps) {
         </Stack>
       ) : null}
 
-      {weather ? (
-        <Link
-          href="https://open-meteo.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="caption"
-          data-testid="guest-home-weather-attribution"
-          sx={{
-            ml: 'auto',
-            color: 'text.secondary',
-            textDecorationColor: 'currentcolor',
-            '@media (hover: hover)': { '&:hover': { color: 'primary.main' } },
-          }}
-        >
-          {t('guest.weather.attribution')}
-        </Link>
-      ) : null}
     </Box>
   );
 }

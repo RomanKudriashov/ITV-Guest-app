@@ -695,7 +695,6 @@
     },
     "weather": {
       "title": "天气",
-      "attribution": "天气数据：Open-Meteo",
       "localTime": "当地时间",
       "clear": "晴",
       "partly": "少云",
@@ -2171,13 +2170,13 @@
       "longitude": "经度",
       "weather": "显示天气",
       "weatherNeedsPoint": "请填写酒店坐标——没有坐标就没有天气",
-      "attribution": "客人将在天气旁看到链接：",
       "roomStatus": "显示房间状态",
       "roomStatusHint": "与客房控制页相同的状态条；点击可进入",
       "roomStatusNeedsModule": "需要开通客房控制模块",
       "saved": "首页设置已保存",
       "saveFailed": "保存失败",
-      "loadFailed": "无法加载首页设置"
+      "loadFailed": "无法加载首页设置",
+      "source": "数据来源："
     }
   }
 }

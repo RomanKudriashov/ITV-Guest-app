@@ -26,9 +26,10 @@ import { useToast } from '@/components/ToastProvider';
  * писать в поддержку, и будет прав. Сервер держит то же правило, поэтому
  * обойти его формой нельзя.
  *
- * АТРИБУЦИЯ ПОКАЗАНА ЗДЕСЬ ЖЕ. Провайдер погоды требует ссылку рядом с
- * данными, и оператор должен видеть, что именно появится на витрине: это
- * условие лицензии, а не украшение, и убрать его нельзя.
+ * ИСТОЧНИК ДАННЫХ НАЗВАН ЗДЕСЬ, А НЕ У ГОСТЯ. Подпись на витрине снята
+ * решением владельца продукта; оператор при этом обязан знать, чьи данные
+ * показывает его отель, — хотя бы затем, чтобы ответить на вопрос гостя.
+ * Лицензионная сторона: docs/ops/weather.md.
  */
 export function HomeBlocksSection() {
   const { t } = useTranslation();
@@ -117,7 +118,7 @@ export function HomeBlocksSection() {
                 <Typography variant="caption" color="text.secondary">
                   {point ? (
                     <>
-                      {t('cms.homeBlocks.attribution')}{' '}
+                      {t('cms.homeBlocks.source')}{' '}
                       <Link href={provider.url} target="_blank" rel="noopener noreferrer">
                         {provider.name}
                       </Link>
