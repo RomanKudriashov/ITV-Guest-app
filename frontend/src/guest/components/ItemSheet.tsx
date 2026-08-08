@@ -25,7 +25,7 @@ import { errorMessage } from '../errors';
 import { useGuestItem } from '../hooks/useGuestQueries';
 import { DESKTOP_QUERY } from '../layout/constants';
 import type { ItemDetail, MenuItem } from '../api/types';
-import { itemCard, surfaceRadius } from '../storefrontTokens';
+import { itemCard, storefrontTokens, surfaceRadius } from '../storefrontTokens';
 
 export interface ItemSheetProps {
   itemId: string | null;
@@ -171,6 +171,13 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
             borderRadius: surfaceRadius.panel(t.palette.brand.radius),
             boxShadow: t.palette.brand.elevation.lg,
             overflow: 'hidden',
+            /*
+              БУМАГА ДИАЛОГА ПРОЗРАЧНА — иначе никакое стекло внутри не поможет:
+              глухая поверхность закрывает витрину раньше, чем до неё дойдёт
+              полупрозрачный слой. Плотность держит сама колонка, ниже.
+            */
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
           }),
         }}
       >
@@ -202,7 +209,22 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
             ) : null}
             {/* The content cell scrolls on its own; the CTA sits at the end of it
                 (spec .foot), the catalog behind stays dimmed. */}
-            <Box sx={{ position: 'relative', minWidth: 0, minHeight: 0, maxHeight: '88vh', overflowY: 'auto' }}>
+            {/*
+              ПРАВАЯ КОЛОНКА — СТЕКЛО, а не поверхность: тот же рецепт
+              `glass.sheet`, которым сделаны строка категорий и нижнее меню.
+              Сквозь неё видно размытую витрину под шторкой — ровно то, чем
+              живёт вся навигация продукта.
+            */}
+            <Box
+              sx={(t) => ({
+                position: 'relative',
+                minWidth: 0,
+                minHeight: 0,
+                maxHeight: '88vh',
+                overflowY: 'auto',
+                ...storefrontTokens(t.palette.mode).glass.sheet,
+              })}
+            >
               {closeButton}
               {body}
             </Box>
@@ -225,6 +247,11 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
           borderTopLeftRadius: t.palette.brand.radius.lg,
           borderTopRightRadius: t.palette.brand.radius.lg,
           maxHeight: '92dvh',
+          // Та же прозрачность, что у десктопной колонки: шторка на телефоне —
+          // это та же панель, только снизу.
+          backgroundColor: 'transparent',
+          backgroundImage: 'none',
+          ...storefrontTokens(t.palette.mode).glass.sheet,
         }),
       }}
     >
