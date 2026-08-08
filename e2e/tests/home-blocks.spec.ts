@@ -71,6 +71,25 @@ test.describe('Главная: погода и время', () => {
       включая платный план и свой экземпляр.
     */
     await expect(page.getByTestId('guest-home-weather-attribution')).toHaveCount(0)
+
+    /*
+      ГОРОД ПОДПИСАН. Гость, приехавший издалека, читает «21°» и «01:58» как
+      «здесь», а «здесь» у него своё: без подписи цифры отвечают не на тот
+      вопрос. Подпись одна на весь блок — и градусы, и часы про одно место.
+    */
+    await expect(page.getByTestId('guest-home-city')).toHaveText(/\S+/)
+  })
+
+  test('города нет — подписи нет, а погода остаётся', async ({ page }) => {
+    await homeAnswers(page, {
+      weather: { temperature_c: 7, code: 3, is_day: true, observed_at: new Date().toISOString() },
+      hotel: { name: 'Отель «Кристалл»', subdomain: 'crystal', timezone: 'Europe/Moscow' },
+    })
+    await enterRoom(page)
+
+    await expect(page.getByTestId('guest-home-weather-now')).toBeVisible({ timeout: 15_000 })
+    // Выдумывать город по координатам мы не станем: не заполнен — не показан.
+    await expect(page.getByTestId('guest-home-city')).toHaveCount(0)
   })
 
   test('погоды нет — блока нет вовсе: ни прочерков, ни заглушек', async ({ page }) => {

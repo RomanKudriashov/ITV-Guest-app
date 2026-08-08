@@ -109,9 +109,15 @@ function sameOffset(timezone: string | undefined): boolean {
 export interface HomeWeatherProps {
   weather?: GuestWeather | null;
   timezone?: string;
+  /**
+   * Город отеля на языке гостя. ОДНА подпись на весь блок: и градусы, и часы
+   * относятся к одному месту, и повторять его дважды значит сказать гостю
+   * одно и то же двумя строками.
+   */
+  city?: string;
 }
 
-export function HomeWeather({ weather, timezone }: HomeWeatherProps) {
+export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
   const { t, i18n } = useTranslation();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
   const clock = useHotelClock(timezone, i18n.language);
@@ -154,6 +160,23 @@ export function HomeWeather({ weather, timezone }: HomeWeatherProps) {
         },
       })}
     >
+      {/*
+        ГОРОД ВПЕРЕДИ, и это не украшение: гость, приехавший издалека, читает
+        «21°» и «01:58» как «здесь», а «здесь» у него своё. Подпись отвечает на
+        вопрос, который иначе задаёт себе он сам.
+
+        Нет города — нет подписи: выдумывать его по координатам мы не станем.
+      */}
+      {city ? (
+        <Typography
+          variant="subtitle2"
+          data-testid="guest-home-city"
+          sx={{ fontWeight: 700, color: 'text.primary' }}
+        >
+          {city}
+        </Typography>
+      ) : null}
+
       {weather && Icon ? (
         <Stack direction="row" alignItems="center" spacing={1} data-testid="guest-home-weather-now">
           <Box sx={{ display: 'flex', color: 'primary.main' }} aria-hidden>

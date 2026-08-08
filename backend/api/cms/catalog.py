@@ -465,6 +465,8 @@ class HomeSettingsIn(Schema):
     room_status: bool = True
     latitude: float | None = None
     longitude: float | None = None
+    # Город — подпись к погоде и часам, на языке гостя. Переводы, а не строка.
+    city: dict = {}
 
 
 def _home_settings_payload(hotel) -> dict:
@@ -474,6 +476,7 @@ def _home_settings_payload(hotel) -> dict:
         "room_status": bool(home.get("room_status", True)),
         "latitude": float(hotel.latitude) if hotel.latitude is not None else None,
         "longitude": float(hotel.longitude) if hotel.longitude is not None else None,
+        "city": hotel.city or {},
         # Отель без координат раздела погоды не видит: показывать переключатель,
         # который ничего не включает, — обманывать оператора.
         "weather_available": hotel.latitude is not None and hotel.longitude is not None,
@@ -514,6 +517,9 @@ def cms_put_home_settings(request: HttpRequest, payload: HomeSettingsIn):
 
     hotel.latitude = payload.latitude
     hotel.longitude = payload.longitude
+    # Пустые переводы не храним: город, которого нет ни на одном языке, — это
+    # не город, а пустая подпись под погодой.
+    hotel.city = {code: text for code, text in (payload.city or {}).items() if text}
     settings = dict(hotel.settings or {})
     home = dict(settings.get("home") or {})
     # Погоду нельзя включить без координат: включённый флаг без точки — это
@@ -522,7 +528,7 @@ def cms_put_home_settings(request: HttpRequest, payload: HomeSettingsIn):
     home["room_status"] = bool(payload.room_status)
     settings["home"] = home
     hotel.settings = settings
-    hotel.save(update_fields=["latitude", "longitude", "settings", "updated_at"])
+    hotel.save(update_fields=["latitude", "longitude", "city", "settings", "updated_at"])
     return _home_settings_payload(hotel)
 
 

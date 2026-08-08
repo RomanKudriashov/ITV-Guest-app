@@ -2197,7 +2197,8 @@
       "saved": "Home settings saved",
       "saveFailed": "Could not save",
       "loadFailed": "Could not load home settings",
-      "source": "Data source:"
+      "source": "Data source:",
+      "city": "City (label for weather and clock)"
     },
     "search": {
       "title": "Guest search",

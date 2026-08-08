@@ -63,7 +63,11 @@ export function HomePage() {
           ни заглушек, ни зарезервированного места под то, чего нет.
         */}
         <Stack spacing={{ xs: 1.5, md: 2 }} sx={{ mb: { xs: 3, md: 4 } }}>
-          <HomeWeather weather={data?.weather} timezone={data?.hotel?.timezone ?? hotel?.timezone} />
+          <HomeWeather
+            weather={data?.weather}
+            timezone={data?.hotel?.timezone ?? hotel?.timezone}
+            city={data?.hotel?.city}
+          />
           <HomeRoomStatus allowed={data?.room_status !== false} />
           <ActiveOrderStrip />
         </Stack>

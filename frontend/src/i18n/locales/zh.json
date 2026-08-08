@@ -2192,7 +2192,8 @@
       "saved": "首页设置已保存",
       "saveFailed": "保存失败",
       "loadFailed": "无法加载首页设置",
-      "source": "数据来源："
+      "source": "数据来源：",
+      "city": "城市（天气与时间的标签）"
     },
     "search": {
       "title": "客人搜索",

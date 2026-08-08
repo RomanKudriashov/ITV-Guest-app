@@ -2167,10 +2167,13 @@ class Command(BaseCommand):
         """
         hotel.latitude = Decimal("55.755800")
         hotel.longitude = Decimal("37.617300")
+        # Город — подпись к погоде и часам, на всех четырёх языках: гость
+        # читает её на своём.
+        hotel.city = {"ru": "Москва", "en": "Moscow", "ar": "موسكو", "zh": "莫斯科"}
         settings = dict(hotel.settings or {})
         settings["home"] = {"weather": True, "room_status": True}
         hotel.settings = settings
-        hotel.save(update_fields=["latitude", "longitude", "settings", "updated_at"])
+        hotel.save(update_fields=["latitude", "longitude", "city", "settings", "updated_at"])
 
     def _seed_rich_commerce(self, hotel):
         # Отельные ставки — чтобы разбивка заказа была видна.

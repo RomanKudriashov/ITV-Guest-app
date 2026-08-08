@@ -377,6 +377,8 @@ export interface HomeSettings {
   room_status: boolean;
   latitude: number | null;
   longitude: number | null;
+  /** Город — подпись к погоде и часам, переводами. */
+  city: Record<string, string>;
   /** Погоду нельзя включить без координат — сервер говорит об этом прямо. */
   weather_available: boolean;
   /** Строка номера имеет смысл только с модулем управления. */
@@ -390,7 +392,7 @@ export function fetchHomeSettings(): Promise<HomeSettings> {
 }
 
 export function putHomeSettings(
-  payload: Pick<HomeSettings, 'weather' | 'room_status' | 'latitude' | 'longitude'>,
+  payload: Pick<HomeSettings, 'weather' | 'room_status' | 'latitude' | 'longitude' | 'city'>,
 ): Promise<HomeSettings> {
   return api.put<HomeSettings>('/cms/home-settings', payload);
 }

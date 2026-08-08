@@ -17,6 +17,7 @@ import { ApiError } from '@/api/client';
 import { fetchHomeSettings, putHomeSettings } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
+import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 
 /**
  * Настройки главной витрины: погода, координаты отеля, строка состояния номера.
@@ -36,12 +37,18 @@ export function HomeBlocksSection() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
+  const { data: bootstrap } = useBootstrap();
+  const contentLanguages = useContentLanguages(bootstrap);
   const query = useQuery({ queryKey: queryKeys.homeSettings, queryFn: fetchHomeSettings });
 
   const [weather, setWeather] = useState(false);
   const [roomStatus, setRoomStatus] = useState(true);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+  // Город — подпись к погоде и часам у гостя, поэтому переводами, как весь
+  // гостевой текст: «Москва» в арабском интерфейсе читается не лучше, чем
+  // «Mainly clear».
+  const [city, setCity] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!query.data) return;
@@ -49,6 +56,7 @@ export function HomeBlocksSection() {
     setRoomStatus(query.data.room_status);
     setLatitude(query.data.latitude === null ? '' : String(query.data.latitude));
     setLongitude(query.data.longitude === null ? '' : String(query.data.longitude));
+    setCity(query.data.city ?? {});
   }, [query.data]);
 
   const save = useMutation({
@@ -58,6 +66,7 @@ export function HomeBlocksSection() {
         room_status: roomStatus,
         latitude: latitude.trim() === '' ? null : Number(latitude),
         longitude: longitude.trim() === '' ? null : Number(longitude),
+        city,
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.homeSettings, data);
@@ -71,6 +80,7 @@ export function HomeBlocksSection() {
   if (query.isError) return <Alert severity="error">{t('cms.homeBlocks.loadFailed')}</Alert>;
 
   const point = latitude.trim() !== '' && longitude.trim() !== '';
+  const languages = contentLanguages;
   const provider = query.data.weather_provider;
 
   return (
@@ -101,6 +111,26 @@ export function HomeBlocksSection() {
               fullWidth
               size="small"
             />
+          </Stack>
+
+          {/* Город — подпись к погоде и часам. Пусто — подписи у гостя нет. */}
+          <Stack spacing={1}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {t('cms.homeBlocks.city')}
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              {languages.codes.map((code) => (
+                <TextField
+                  key={code}
+                  size="small"
+                  label={code.toUpperCase()}
+                  value={city[code] ?? ''}
+                  onChange={(event) => setCity({ ...city, [code]: event.target.value })}
+                  inputProps={{ 'data-testid': `cms-home-city-${code}` }}
+                  fullWidth
+                />
+              ))}
+            </Stack>
           </Stack>
 
           <FormControlLabel

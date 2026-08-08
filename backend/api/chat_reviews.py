@@ -61,6 +61,9 @@ def guest_home(request: HttpRequest):
             # Часовой пояс отеля — чтобы витрина показывала МЕСТНОЕ время и
             # тикала сама, а не спрашивала сервер каждую минуту.
             "timezone": hotel.timezone,
+            # Город — подпись к погоде и часам на языке гостя. Пусто — подписи
+            # не будет: выдумывать город по координатам мы не станем.
+            "city": translate(hotel.city, language),
         },
         "room": request.guest_session.room.number if request.guest_session.room_id else None,
         # Погода приезжает ГОТОВОЙ и только с сервера: адреса провайдера
