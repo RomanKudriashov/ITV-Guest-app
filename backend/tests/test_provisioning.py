@@ -12,7 +12,7 @@ from apps.accounts.models import User
 from apps.core.context import tenant_context
 from apps.core.errors import ConflictError
 from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage
-from apps.hotels.provisioning import provision_hotel
+from apps.hotels.services.provisioning import provision_hotel
 
 pytestmark = pytest.mark.django_db
 

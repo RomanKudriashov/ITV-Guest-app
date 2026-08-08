@@ -23,7 +23,7 @@ from django.utils import timezone
 from apps.accounts.models import GuestSession
 from apps.analytics.models import OrderDaily
 from apps.core.context import platform_scope
-from apps.hotels import tariffs
+from apps.hotels.services import tariffs
 from apps.hotels.models import Hotel
 from apps.media.models import MediaAsset
 

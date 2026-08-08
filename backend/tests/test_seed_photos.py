@@ -87,7 +87,7 @@ def test_hotel_cover_is_a_real_photo_not_a_placeholder(crystal):
     медиапайплайн не нарезал варианты, — значит навсегда прописать в бренд
     заглушку: `image_url` в этот момент возвращает именно её.
     """
-    from apps.hotels.brand_services import get_or_create_brand
+    from apps.hotels.services.brand_services import get_or_create_brand
 
     with tenant_context(crystal):
         tokens = get_or_create_brand(crystal).tokens or {}

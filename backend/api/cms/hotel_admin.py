@@ -25,8 +25,8 @@ from apps.hotels.schemas.cms import (
 
 from apps.accounts import cms_services as staff_svc
 from apps.core.context import current_language
-from apps.hotels import admin_services as svc
-from apps.hotels import qr
+from apps.hotels.services import admin_services as svc
+from apps.hotels.services import qr
 
 
 router = Router(tags=["cms:hotel-admin"])

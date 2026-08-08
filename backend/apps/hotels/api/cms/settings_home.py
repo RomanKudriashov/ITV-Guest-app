@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.hotels import hotel_settings as svc
+from apps.hotels.services import hotel_settings as svc
 from apps.hotels.schemas.cms import HomeSettingsIn
 from apps.catalog.schemas.cms import QuickActionsIn
 

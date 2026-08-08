@@ -219,7 +219,7 @@ def test_a_cover_whose_asset_is_gone_is_no_cover_at_all(cms, crystal):
     должен быть кадр отеля. Сид спрашивает то же самое и заводит обложку заново
     — прежний сторож считал наличие строки за настроенность и не чинил никогда.
     """
-    from apps.hotels.brand_services import cover_is_alive
+    from apps.hotels.services.brand_services import cover_is_alive
     from apps.media.models import MediaAsset
 
     asset_id, url = _upload_cover(cms, crystal)
@@ -256,7 +256,7 @@ def test_a_cover_without_an_asset_reference_is_not_trusted(crystal):
     Именно на такой строке всё и держалось: она пережила и пересев, и смену
     хоста, и осталась указывать в пустоту, а сид считал работу сделанной.
     """
-    from apps.hotels.brand_services import cover_is_alive
+    from apps.hotels.services.brand_services import cover_is_alive
 
     assert not cover_is_alive(
         {"brand": {"background": {"kind": "image", "imageUrl": "http://localhost:59000/x.webp"}}}

@@ -16,9 +16,9 @@ import pytest
 from apps.accounts.models import User
 from apps.core.context import platform_scope, tenant_context
 from apps.core.models import AuditLog
-from apps.hotels import tariffs
+from apps.hotels.services import tariffs
 from apps.hotels.models import Hotel, HotelModule, OnPremNode, Service
-from apps.hotels.provisioning import ensure_platform_admin, provision_hotel
+from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
 pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
@@ -139,7 +139,7 @@ def test_module_toggle_changes_cms_navigation(api, client):
     Проверяем не строку в базе, а НАВИГАЦИЮ, которую увидит отель.
     """
     from apps.accounts.roles import access_for
-    from apps.hotels.cms_navigation import build_navigation
+    from apps.hotels.services.cms_navigation import build_navigation
 
     hotel = _hotel("modnav", "Модульный")
 

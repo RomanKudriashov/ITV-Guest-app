@@ -21,7 +21,7 @@ from channels.testing import WebsocketCommunicator
 
 from apps.grms import adapter
 from apps.grms.emulator import serve_in_thread
-from apps.hotels.onprem import register_node, revoke_key
+from apps.hotels.services.onprem import register_node, revoke_key
 from itv_connector.executor import Endpoint, execute
 
 DEVICE = "Modbus TCP Server (Slave mode) 701"

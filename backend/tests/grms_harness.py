@@ -22,7 +22,7 @@ from apps.core.context import tenant_context
 from apps.grms.consumers import group_name
 from apps.grms.emulator import serve_in_thread
 from apps.hotels.models import OnPremNode
-from apps.hotels.onprem import register_node
+from apps.hotels.services.onprem import register_node
 from itv_connector.executor import Endpoint, execute
 
 

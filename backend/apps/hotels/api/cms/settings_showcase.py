@@ -6,7 +6,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.catalog.schemas.cms import ShowcaseSettingsIn
-from apps.hotels import hotel_settings as svc
+from apps.hotels.services import hotel_settings as svc
 
 router = Router(tags=["cms:catalog"])
 

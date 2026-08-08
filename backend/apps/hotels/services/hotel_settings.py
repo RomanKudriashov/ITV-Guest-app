@@ -18,8 +18,8 @@ from apps.accounts.roles import require_hotel_admin
 from apps.core.context import require_hotel_id
 from apps.core.errors import ValidationError
 
-from .models import Hotel, HotelModule, Service, ShowcaseTile
-from .module_registry import enabled_module_codes
+from apps.hotels.models import Hotel, HotelModule, Service, ShowcaseTile
+from apps.hotels.module_registry import enabled_module_codes
 
 
 def hotel_for_settings() -> Hotel:

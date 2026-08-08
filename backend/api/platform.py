@@ -40,7 +40,7 @@ from apps.core.errors import NotFoundError, PermissionDenied, ValidationError
 from apps.core.models import AuditLog
 from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage, Room
 from apps.hotels.module_registry import list_modules, set_modules
-from apps.hotels.provisioning import provision_hotel, set_hotel_admin
+from apps.hotels.services.provisioning import provision_hotel, set_hotel_admin
 
 router = Router(tags=["platform"])
 
@@ -245,7 +245,7 @@ def _profile(hotel: Hotel) -> dict[str, Any]:
 
 
 def _offboarding_state(hotel: Hotel) -> dict | None:
-    from apps.hotels.offboarding import offboarding_state
+    from apps.hotels.services.offboarding import offboarding_state
 
     return offboarding_state(hotel)
 
@@ -308,7 +308,7 @@ def _audit(request: HttpRequest, hotel: Hotel, action: str, payload: dict | None
 
 @router.get("/overview", summary="Сводка по платформе")
 def overview(request: HttpRequest):
-    from apps.hotels.platform_overview import build_overview
+    from apps.hotels.services.platform.overview import build_overview
 
     return build_overview()
 
@@ -323,7 +323,7 @@ def list_hotels(request: HttpRequest):
 
 @router.get("/fleet", summary="Реестр отелей: поиск, фильтры, сортировка, страницы")
 def fleet(request: HttpRequest):
-    from apps.hotels.platform_fleet import fleet as build_fleet
+    from apps.hotels.services.platform.fleet import fleet as build_fleet
 
     return build_fleet(request.GET.dict())
 
@@ -332,7 +332,7 @@ def fleet(request: HttpRequest):
 def fleet_export(request: HttpRequest):
     from django.http import HttpResponse
 
-    from apps.hotels.platform_fleet import export_csv
+    from apps.hotels.services.platform.fleet import export_csv
 
     body = export_csv(request.GET.dict())
     _audit_platform(request, "platform.fleet.exported", payload={"bytes": len(body)})
@@ -344,7 +344,7 @@ def fleet_export(request: HttpRequest):
 @router.post("/fleet/bulk", summary="Массово включить/выключить отели")
 def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
     from apps.accounts.platform_access import can_write
-    from apps.hotels.platform_fleet import bulk_set_active
+    from apps.hotels.services.platform.fleet import bulk_set_active
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не меняет отели")
@@ -379,7 +379,7 @@ def create_hotel(request: HttpRequest, payload: HotelCreateIn):
     )
     applied: list[str] = []
     if payload.template:
-        from apps.hotels.onboarding import apply_template, ensure_seed, get_template
+        from apps.hotels.services.onboarding import apply_template, ensure_seed, get_template
 
         ensure_seed()
         template = get_template(payload.template)
@@ -449,7 +449,7 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
 def export_hotel_data(request: HttpRequest, hotel_id: str):
     from django.http import HttpResponse
 
-    from apps.hotels.offboarding import export_json
+    from apps.hotels.services.offboarding import export_json
 
     hotel = _get_hotel(hotel_id)
     body = export_json(hotel)
@@ -462,7 +462,7 @@ def export_hotel_data(request: HttpRequest, hotel_id: str):
 @router.post("/hotels/{hotel_id}/offboard", summary="Пометить отель к офбордингу")
 def offboard_hotel(request: HttpRequest, hotel_id: str, payload: OffboardIn):
     from apps.accounts.platform_access import can_manage_tariff
-    from apps.hotels.offboarding import mark_for_offboarding, unmark
+    from apps.hotels.services.offboarding import mark_for_offboarding, unmark
 
     # Офбординг — договорное решение, а не операционное: его принимает владелец.
     if not can_manage_tariff(request.user):
@@ -496,7 +496,7 @@ def delete_hotel(request: HttpRequest, hotel_id: str, confirm_subdomain: str = "
     """
     from apps.accounts.platform_access import can_manage_tariff
     from apps.core.context import platform_scope
-    from apps.hotels.offboarding import mark_for_offboarding, purge_hotel
+    from apps.hotels.services.offboarding import mark_for_offboarding, purge_hotel
 
     if not can_manage_tariff(request.user):
         raise PermissionDenied("Удаление отеля проводит только владелец платформы")
@@ -531,7 +531,7 @@ def delete_hotel(request: HttpRequest, hotel_id: str, confirm_subdomain: str = "
 @router.post("/hotels/{hotel_id}/purge", summary="Необратимо стереть данные отеля")
 def purge_hotel_data(request: HttpRequest, hotel_id: str, payload: PurgeIn):
     from apps.accounts.platform_access import can_manage_tariff
-    from apps.hotels.offboarding import purge_hotel
+    from apps.hotels.services.offboarding import purge_hotel
 
     if not can_manage_tariff(request.user):
         raise PermissionDenied("Удаление данных проводит только владелец платформы")
@@ -547,7 +547,7 @@ def purge_hotel_data(request: HttpRequest, hotel_id: str, payload: PurgeIn):
 
 @router.get("/templates", summary="Шаблоны онбординга")
 def list_onboarding_templates(request: HttpRequest):
-    from apps.hotels.onboarding import ensure_seed, list_templates
+    from apps.hotels.services.onboarding import ensure_seed, list_templates
 
     # Пустая база даёт владельцу платформы пустой экран и вопрос «а что бывает».
     ensure_seed()
@@ -558,7 +558,7 @@ def list_onboarding_templates(request: HttpRequest):
 def create_template(request: HttpRequest, payload: TemplateIn):
     from apps.accounts.platform_access import can_write
     from apps.hotels.models import OnboardingTemplate
-    from apps.hotels.onboarding import serialize_template
+    from apps.hotels.services.onboarding import serialize_template
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не правит шаблоны")
@@ -577,7 +577,7 @@ def create_template(request: HttpRequest, payload: TemplateIn):
 def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
     from apps.accounts.platform_access import can_write
     from apps.hotels.models import OnboardingTemplate
-    from apps.hotels.onboarding import serialize_template
+    from apps.hotels.services.onboarding import serialize_template
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не правит шаблоны")
@@ -596,7 +596,7 @@ def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
 
 @router.get("/dictionaries", summary="Системный справочник платформы")
 def get_system_dictionary(request: HttpRequest, kind: str | None = None):
-    from apps.hotels.onboarding import ensure_seed, list_dictionary
+    from apps.hotels.services.onboarding import ensure_seed, list_dictionary
 
     ensure_seed()
     return list_dictionary(kind)
@@ -605,7 +605,7 @@ def get_system_dictionary(request: HttpRequest, kind: str | None = None):
 @router.put("/dictionaries", summary="Добавить/изменить запись справочника")
 def put_system_dictionary(request: HttpRequest, payload: DictionaryEntryIn):
     from apps.accounts.platform_access import can_write
-    from apps.hotels.onboarding import upsert_dictionary_entry
+    from apps.hotels.services.onboarding import upsert_dictionary_entry
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не правит справочники")
@@ -686,7 +686,7 @@ def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
 def list_tariffs(request: HttpRequest):
     from dataclasses import asdict
 
-    from apps.hotels import tariffs as registry
+    from apps.hotels.services import tariffs as registry
 
     hotels = list(Hotel.objects.filter(origin=Hotel.Origin.LIVE))
     return [
@@ -708,7 +708,7 @@ def list_tariffs(request: HttpRequest):
 
 @router.get("/nodes", summary="Реестр он-прем узлов по всем отелям")
 def list_nodes(request: HttpRequest):
-    from apps.hotels.onprem import all_nodes
+    from apps.hotels.services.onprem import all_nodes
 
     return all_nodes()
 
@@ -716,7 +716,7 @@ def list_nodes(request: HttpRequest):
 @router.post("/hotels/{hotel_id}/nodes", response={201: dict}, summary="Завести узел и выдать ключ")
 def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
     from apps.accounts.platform_access import can_write
-    from apps.hotels.onprem import register_node
+    from apps.hotels.services.onprem import register_node
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не заводит узлы")
@@ -730,7 +730,7 @@ def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
 @router.post("/nodes/{node_id}/revoke", summary="Отозвать ключ узла")
 def revoke_node(request: HttpRequest, node_id: str):
     from apps.accounts.platform_access import can_write
-    from apps.hotels.onprem import revoke_key
+    from apps.hotels.services.onprem import revoke_key
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не отзывает ключи")
@@ -742,7 +742,7 @@ def revoke_node(request: HttpRequest, node_id: str):
 @router.post("/nodes/{node_id}/reissue", summary="Перевыпустить ключ узла")
 def reissue_node(request: HttpRequest, node_id: str):
     from apps.accounts.platform_access import can_write
-    from apps.hotels.onprem import reissue_key
+    from apps.hotels.services.onprem import reissue_key
 
     if not can_write(request.user):
         raise PermissionDenied("Роль «только чтение» не выдаёт ключи")
@@ -752,7 +752,7 @@ def reissue_node(request: HttpRequest, node_id: str):
 
 
 def _node_row(node, hotel) -> dict[str, Any]:
-    from apps.hotels.onprem import serialize_node
+    from apps.hotels.services.onprem import serialize_node
 
     return serialize_node(node, hotel)
 
@@ -762,7 +762,7 @@ def _node_row(node, hotel) -> dict[str, Any]:
 
 @router.get("/team", summary="Команда платформы")
 def list_team(request: HttpRequest):
-    from apps.hotels.platform_team import list_members
+    from apps.hotels.services.platform.team import list_members
 
     return list_members()
 
@@ -770,7 +770,7 @@ def list_team(request: HttpRequest):
 @router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")
 def invite_member(request: HttpRequest, payload: TeamInviteIn):
     from apps.accounts.platform_access import can_manage_team
-    from apps.hotels.platform_team import invite
+    from apps.hotels.services.platform.team import invite
 
     if not can_manage_team(request.user):
         raise PermissionDenied("Команду платформы ведёт только владелец")
@@ -782,7 +782,7 @@ def invite_member(request: HttpRequest, payload: TeamInviteIn):
 @router.patch("/team/{user_id}", summary="Сменить роль или отключить участника")
 def patch_member(request: HttpRequest, user_id: str, payload: TeamPatchIn):
     from apps.accounts.platform_access import can_manage_team
-    from apps.hotels.platform_team import update_member
+    from apps.hotels.services.platform.team import update_member
 
     if not can_manage_team(request.user):
         raise PermissionDenied("Команду платформы ведёт только владелец")
@@ -813,7 +813,7 @@ def _member(user: User) -> dict[str, Any]:
 
 @router.get("/audit", summary="Журнал действий платформы")
 def platform_audit(request: HttpRequest, limit: int = 100):
-    from apps.hotels.platform_team import audit_feed
+    from apps.hotels.services.platform.team import audit_feed
 
     return audit_feed(limit=limit)
 
@@ -823,14 +823,14 @@ def platform_audit(request: HttpRequest, limit: int = 100):
 
 @router.get("/hotels/{hotel_id}/usage", summary="Использование против лимитов тарифа")
 def hotel_usage(request: HttpRequest, hotel_id: str):
-    from apps.hotels.platform_usage import usage_for
+    from apps.hotels.services.platform.usage import usage_for
 
     return usage_for(_get_hotel(hotel_id))
 
 
 @router.get("/hotels/{hotel_id}/activity", summary="Активность и журнал отеля")
 def hotel_activity(request: HttpRequest, hotel_id: str, limit: int = 50):
-    from apps.hotels.platform_usage import activity_for
+    from apps.hotels.services.platform.usage import activity_for
 
     return activity_for(_get_hotel(hotel_id), limit=limit)
 
@@ -843,8 +843,8 @@ def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
     даты, а не заводить свои.
     """
     from apps.accounts.platform_access import can_manage_tariff
-    from apps.hotels import tariffs as tariff_registry
-    from apps.hotels.platform_usage import downgrade_warnings
+    from apps.hotels.services import tariffs as tariff_registry
+    from apps.hotels.services.platform.usage import downgrade_warnings
 
     if not can_manage_tariff(request.user):
         raise PermissionDenied("Тариф меняет только владелец платформы")
@@ -897,7 +897,7 @@ def put_modules(request: HttpRequest, hotel_id: str, payload: ModulesIn):
 
 
 def _replace_languages(hotel: Hotel, codes: list[str]) -> None:
-    from apps.hotels.provisioning import _LANGUAGE_TITLES, _clean_languages
+    from apps.hotels.services.provisioning import _LANGUAGE_TITLES, _clean_languages
 
     codes = _clean_languages(codes)
     default_language = codes[0]

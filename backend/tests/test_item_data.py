@@ -49,7 +49,7 @@ def test_provision_seeds_14_allergens_and_markers(crystal):
 
 
 def test_seeding_is_idempotent(crystal):
-    from apps.hotels.provisioning import seed_item_data_dictionaries
+    from apps.hotels.services.provisioning import seed_item_data_dictionaries
 
     with tenant_context(crystal):
         seed_item_data_dictionaries()

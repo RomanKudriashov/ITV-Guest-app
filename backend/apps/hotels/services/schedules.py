@@ -16,7 +16,7 @@ from django.db import transaction
 
 from apps.core.errors import NotFoundError, ValidationError
 
-from .models import Schedule, ScheduleInterval
+from apps.hotels.models import Schedule, ScheduleInterval
 
 
 def parse_time(value: Any, *, field: str) -> time:

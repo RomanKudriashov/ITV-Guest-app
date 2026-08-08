@@ -11,7 +11,7 @@ from typing import Any
 from django.http import HttpRequest
 from ninja import Router, Schema
 
-from apps.hotels import brand_services as svc
+from apps.hotels.services import brand_services as svc
 from apps.hotels.brand_library import ABSTRACTIONS, FONTS, list_presets
 
 router = Router(tags=["cms:brand"])

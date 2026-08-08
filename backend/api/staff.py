@@ -45,7 +45,7 @@ def login(request: HttpRequest, payload: LoginIn):
     except AuthenticationFailed as exc:
         return 401, {"detail": str(exc), "code": "auth_failed"}
 
-    from apps.hotels.brand_services import get_or_create_brand
+    from apps.hotels.services.brand_services import get_or_create_brand
 
     user = User.objects.get(pk=tokens["user_id"])
     theme = get_or_create_brand(Hotel.objects.get(pk=require_hotel_id()))
@@ -59,7 +59,7 @@ def login(request: HttpRequest, payload: LoginIn):
 
 @router.get("/auth/me", response=MeOut, auth=staff_auth, summary="Текущий пользователь")
 def me(request: HttpRequest):
-    from apps.hotels.brand_services import get_or_create_brand
+    from apps.hotels.services.brand_services import get_or_create_brand
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
     theme = get_or_create_brand(hotel)

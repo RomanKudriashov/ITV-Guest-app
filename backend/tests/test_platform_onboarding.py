@@ -16,7 +16,7 @@ import pytest
 
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, OnboardingTemplate, Service, SystemDictionaryEntry
-from apps.hotels.provisioning import ensure_platform_admin, provision_hotel
+from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
 pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 

@@ -17,7 +17,7 @@ from apps.core.context import require_hotel_id
 from apps.accounts.roles import require_hotel_admin
 from apps.core.errors import NotFoundError, ValidationError
 
-from .brand_library import (
+from apps.hotels.brand_library import (
     ABSTRACTION_CODES,
     BACKGROUND_KINDS,
     DEFAULT_MODES,
@@ -26,7 +26,7 @@ from .brand_library import (
     SURFACE_STYLES,
     preset_tokens,
 )
-from .models import BrandTheme, Hotel
+from apps.hotels.models import BrandTheme, Hotel
 
 _HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 _RGBA = re.compile(r"^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*[01](?:\.\d+)?\s*)?\)$")

@@ -340,7 +340,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def _seed(self, profile: dict):
-        from apps.hotels.provisioning import provision_hotel
+        from apps.hotels.services.provisioning import provision_hotel
         from apps.orders.status_flows import ensure_status_flows
 
         hotel = provision_hotel(
@@ -884,7 +884,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Переводы дописаны — {summary}")
 
     def _cover(self, hotel: Hotel, code: str) -> None:
-        from apps.hotels.brand_services import cover_is_alive, get_or_create_brand
+        from apps.hotels.services.brand_services import cover_is_alive, get_or_create_brand
         from apps.media.tasks import process_media_asset
 
         theme = get_or_create_brand(hotel)

@@ -223,7 +223,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def _seed_hotel(self, subdomain: str, name: str, force: bool, with_history: bool = False, with_analytics: bool = False, with_badges: bool = False, with_rich: bool = False):
-        from apps.hotels.provisioning import provision_hotel
+        from apps.hotels.services.provisioning import provision_hotel
 
         existing = Hotel.objects.filter(subdomain=subdomain).first()
         if existing and not force:
@@ -1595,9 +1595,9 @@ class Command(BaseCommand):
         Обложка отеля — парадная главной у гостя (R5). Живёт в токенах бренда
         («Бренд и витрина», R4) как фон вида `image`.
         """
-        from apps.hotels.brand_services import get_or_create_brand
+        from apps.hotels.services.brand_services import get_or_create_brand
 
-        from apps.hotels.brand_services import cover_is_alive
+        from apps.hotels.services.brand_services import cover_is_alive
 
         theme = get_or_create_brand(hotel)
         tokens = dict(theme.tokens or {})

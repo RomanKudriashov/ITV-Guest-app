@@ -102,7 +102,7 @@ def _decode_qr(png_bytes: bytes) -> str:
     образе. QR-генерация детерминирована, поэтому сверяем с эталоном: если
     байты совпали с QR того же URL — значит закодирован именно он.
     """
-    from apps.hotels.qr import qr_png
+    from apps.hotels.services.qr import qr_png
 
     expected = "http://crystal.guest.localhost/r/305"
     return expected if png_bytes == qr_png(expected) else "mismatch"

@@ -25,7 +25,7 @@ class HeartbeatIn(Schema):
 
 @router.post("/heartbeat", auth=None, response={200: dict, 401: dict}, summary="Отметка узла")
 def heartbeat(request: HttpRequest, payload: HeartbeatIn):
-    from apps.hotels.onprem import touch
+    from apps.hotels.services.onprem import touch
 
     node = touch(payload.key, version=payload.version)
     if node is None:

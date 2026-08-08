@@ -24,8 +24,8 @@ from apps.core.fields import translate
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
-from .models import ExecutionPoint, Hotel, Location, Room, Schedule, Service
-from .venue_defaults import service_type_for_kind
+from apps.hotels.models import ExecutionPoint, Hotel, Location, Room, Schedule, Service
+from apps.hotels.venue_defaults import service_type_for_kind
 
 MAX_BULK_RANGE = 500
 

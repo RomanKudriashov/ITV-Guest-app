@@ -15,7 +15,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.core.errors import DomainError
-from apps.hotels.provisioning import DEFAULT_PRESET, provision_hotel
+from apps.hotels.services.provisioning import DEFAULT_PRESET, provision_hotel
 
 
 class Command(BaseCommand):

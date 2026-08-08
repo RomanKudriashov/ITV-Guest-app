@@ -5,8 +5,8 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.hotels import hotel_settings as svc
-from apps.hotels.commerce_settings import serialize_commerce_settings, update_commerce_settings
+from apps.hotels.services import hotel_settings as svc
+from apps.hotels.services.commerce_settings import serialize_commerce_settings, update_commerce_settings
 from apps.hotels.schemas.cms import CommerceSettingsIn
 
 router = Router(tags=["cms:catalog"])

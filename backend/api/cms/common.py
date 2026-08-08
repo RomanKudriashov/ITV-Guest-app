@@ -16,7 +16,7 @@ from ninja.files import UploadedFile
 from apps.catalog.vocabularies import ALLERGENS, DAY_PARTS, FLAGS
 from apps.core.context import require_hotel_id
 from apps.core.errors import NotFoundError, ValidationError
-from apps.hotels import services as schedule_svc
+from apps.hotels.services import schedules as schedule_svc
 from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset, upload_asset
@@ -89,7 +89,7 @@ def cms_navigation(request: HttpRequest):
     платил, всё равно уехал бы к нему в бандл.
     """
     from apps.accounts.roles import current_access
-    from apps.hotels.cms_navigation import build_navigation
+    from apps.hotels.services.cms_navigation import build_navigation
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
     return {"groups": build_navigation(hotel, access=current_access())}

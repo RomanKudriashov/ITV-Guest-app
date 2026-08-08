@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from apps.core.context import tenant_context
-from apps.hotels.cms_navigation import ALWAYS_AVAILABLE, NAVIGATION
+from apps.hotels.services.cms_navigation import ALWAYS_AVAILABLE, NAVIGATION
 from apps.hotels.models import HotelModule
 
 pytestmark = pytest.mark.django_db

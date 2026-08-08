@@ -35,7 +35,7 @@ def _authenticate(key: str):
     Ключ → узел. Попутно отмечаем «жив»: подключение — такой же признак
     жизни, как и heartbeat, и расходиться они не должны.
     """
-    from apps.hotels.onprem import touch
+    from apps.hotels.services.onprem import touch
 
     node = touch(key)
     if node is None:
@@ -50,7 +50,7 @@ def _authenticate(key: str):
 
 @database_sync_to_async
 def _touch(key: str, version: str) -> None:
-    from apps.hotels.onprem import touch
+    from apps.hotels.services.onprem import touch
 
     touch(key, version=version)
 

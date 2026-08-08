@@ -26,7 +26,7 @@ from apps.accounts.models import User
 from apps.analytics.models import OrderDaily
 from apps.catalog.models import Item
 from apps.core.context import platform_scope
-from apps.hotels import tariffs
+from apps.hotels.services import tariffs
 from apps.hotels.models import Hotel, OnPremNode, Room, Service
 
 ORDERS_WINDOW_DAYS = 7

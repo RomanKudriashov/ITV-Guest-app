@@ -16,7 +16,7 @@ from apps.accounts import totp
 from apps.accounts.models import User
 from apps.core.context import platform_scope
 from apps.core.models import AuditLog
-from apps.hotels.provisioning import ensure_platform_admin
+from apps.hotels.services.provisioning import ensure_platform_admin
 
 pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 

@@ -18,7 +18,7 @@ from dataclasses import asdict
 
 from apps.core.context import platform_scope, tenant_context
 from apps.core.models import AuditLog
-from apps.hotels import tariffs
+from apps.hotels.services import tariffs
 from apps.hotels.models import Hotel, Room, Service
 
 

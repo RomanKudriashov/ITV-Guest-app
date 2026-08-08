@@ -60,7 +60,7 @@ def set_modules(hotel, entries: list[dict]) -> list[dict]:
     Позволив клиенту прислать source, мы получили бы второй источник правды —
     ровно то расхождение UI с моделью, от которого этот реестр и защищает.
     """
-    from apps.hotels import tariffs
+    from apps.hotels.services import tariffs
 
     granted = tariffs.modules_for(hotel.tariff)
     valid_codes = set(ALL_CODES)

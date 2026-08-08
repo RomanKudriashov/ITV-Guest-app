@@ -10,7 +10,7 @@ import json
 import pytest
 
 from apps.hotels.models import HotelModule
-from apps.hotels.provisioning import ensure_platform_admin
+from apps.hotels.services.provisioning import ensure_platform_admin
 
 pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
