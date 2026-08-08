@@ -8,14 +8,26 @@ from __future__ import annotations
 from typing import Any
 
 from django.http import HttpRequest, HttpResponse
-from ninja import Field, Router, Schema
+from ninja import Router
+from apps.accounts.schemas.cms import AssignmentsIn, StaffIn, StaffPatch
+from apps.core.schemas import OkOut
+from apps.hotels.schemas.cms import (
+    BulkRoomsIn,
+    LocationIn,
+    LocationPatch,
+    MatrixRowIn,
+    RoomIn,
+    RoomOut,
+    RoomPatch,
+    ServiceIn,
+    ServicePatch,
+)
 
 from apps.accounts import cms_services as staff_svc
 from apps.core.context import current_language
 from apps.hotels import admin_services as svc
 from apps.hotels import qr
 
-from .schemas import OkOut
 
 router = Router(tags=["cms:hotel-admin"])
 
@@ -23,133 +35,32 @@ router = Router(tags=["cms:hotel-admin"])
 # --- Схемы -----------------------------------------------------------------
 
 
-class RoomIn(Schema):
-    number: str
-    floor: str = ""
-    zone: str = ""
-    is_active: bool = True
 
 
-class RoomPatch(Schema):
-    number: str | None = None
-    floor: str | None = None
-    zone: str | None = None
-    is_active: bool | None = None
 
 
-class RoomOut(Schema):
-    id: str
-    number: str
-    floor: str
-    zone: str
-    source: str
-    is_active: bool
-    guest_url: str
 
 
-class BulkRoomsIn(Schema):
-    # `from` — ключевое слово Python; принимаем его по alias, в коде — from_.
-    from_: int = Field(alias="from")
-    to: int
-    floor: str = ""
-    zone: str = ""
-    prefix: str = ""
-    suffix: str = ""
 
 
-class LocationIn(Schema):
-    title: dict[str, str]
-    code: str | None = None
-    kind: str = "in_room"
-    requires_refinement: bool = False
-    refinement_label: dict[str, str] = {}
-    schedule_id: str | None = None
-    sort_order: int = 0
-    is_active: bool = True
 
 
-class LocationPatch(Schema):
-    title: dict[str, str] | None = None
-    kind: str | None = None
-    requires_refinement: bool | None = None
-    refinement_label: dict[str, str] | None = None
-    schedule_id: str | None = None
-    sort_order: int | None = None
-    is_active: bool | None = None
-    # Стоимость доставки в эту локацию, копейки; 0 = бесплатно.
-    delivery_fee_minor: int | None = None
 
 
-class MatrixCell(Schema):
-    location_id: str
-    enabled: bool = False
-    delivery_modes: list[str] = []
 
 
-class MatrixRowIn(Schema):
-    category_id: str
-    cells: list[MatrixCell]
 
 
-class ServiceIn(Schema):
-    """Отель заводит ЗАВЕДЕНИЕ; бригаду под него сервер создаёт сам."""
-
-    type: str = "custom"
-    public_name: dict[str, str]
-    tagline: dict[str, str] = {}
-    is_guest_facing: bool | None = None
-    code: str | None = None
-    schedule_id: str | None = None
-    sla_minutes: int | None = None
-    is_active: bool = True
-    image_id: str | None = None
-    sort_order: int | None = None
 
 
-class ServicePatch(Schema):
-    type: str | None = None
-    public_name: dict[str, str] | None = None
-    tagline: dict[str, str] | None = None
-    is_guest_facing: bool | None = None
-    schedule_id: str | None = None
-    sla_minutes: int | None = None
-    is_active: bool | None = None
-    image_id: str | None = None
-    sort_order: int | None = None
-    # Своя коммерция заведения: null = наследовать значение отеля.
-    service_fee_bp: int | None = None
-    tip_presets: list[int] | None = None
-    min_order_minor: int | None = None
-    free_delivery_threshold_minor: int | None = None
-    price_round_to_minor: int | None = None
 
 
-class AssignmentIn(Schema):
-    execution_point_id: str
-    level: str = "member"
 
 
-class StaffIn(Schema):
-    email: str
-    full_name: str = ""
-    password: str
-    language: str = ""
-    is_hotel_admin: bool = False
-    assignments: list[AssignmentIn] = []
 
 
-class StaffPatch(Schema):
-    email: str | None = None
-    full_name: str | None = None
-    password: str | None = None
-    language: str | None = None
-    is_hotel_admin: bool | None = None
-    is_active: bool | None = None
-    assignments: list[AssignmentIn] | None = None
 
 
-class AssignmentsIn(Schema):
-    assignments: list[AssignmentIn]
 
 
 # --- Номера ----------------------------------------------------------------

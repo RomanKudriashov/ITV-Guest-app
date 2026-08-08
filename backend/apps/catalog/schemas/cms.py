@@ -1,9 +1,14 @@
 """
-Схемы CMS.
+Схемы каталога — CMS.
 
-PATCH-эндпоинты разбирают тело через `payload.dict(exclude_unset=True)`:
-только так «поле не прислали» отличается от «поле обнулили». Для nullable
-полей (`parent_id`, `schedule_id`, `image_id`) разница принципиальна.
+Схемы объявлены ЗДЕСЬ, а не рядом со вьюхой: схема — это контракт домена, и
+жить она должна там же, где модель и сервис, которые его исполняют. Пока
+объявления лежали во вьюхах, один и тот же ресурс описывался в трёх местах, а
+общее уезжало в общий `api/schemas.py`, куда сваливалось всё подряд.
+
+Раскладка по ПОТРЕБИТЕЛЮ (guest / cms / platform / staff): у одного ресурса
+разные права и разные поля наружу, и складывать их в один файл значит однажды
+отдать гостю поле, которое собирали для оператора.
 """
 
 from __future__ import annotations
@@ -12,97 +17,12 @@ from typing import Any
 
 from ninja import Schema
 
-Translations = dict[str, str]
+from apps.core.schemas import Translations
 
-
-# --- Общее -----------------------------------------------------------------
-
-
-class OkOut(Schema):
-    ok: bool = True
-
-
-class ReorderEntry(Schema):
-    id: str
-    sort_order: int
-    parent_id: str | None = None
-
-
-class ReorderIn(Schema):
-    items: list[ReorderEntry]
-
-
-class ItemsReorderIn(Schema):
-    category_id: str
-    items: list[ReorderEntry]
-
-
-class ToggleIn(Schema):
-    is_active: bool
 
 
 class StockIn(Schema):
     in_stock: bool
-
-
-# --- Аутентификация --------------------------------------------------------
-
-
-class LoginIn(Schema):
-    email: str
-    password: str
-
-
-class StaffUserOut(Schema):
-    id: str
-    email: str
-    full_name: str
-    language: str
-    is_hotel_admin: bool
-    is_platform_admin: bool
-    # Роль внутри отеля: line_staff | service_manager | hotel_admin.
-    role: str = "line_staff"
-    has_cms_access: bool = False
-    managed_point_ids: list[str] = []
-    member_point_ids: list[str] = []
-
-
-class LoginOut(Schema):
-    access: str
-    refresh: str
-    user: StaffUserOut
-    # Тема приходит уже со входом, а не отдельным запросом следом: иначе первый
-    # кадр после логина сотрудник видит в платформенных цветах, и только потом
-    # экран перекрашивается в бренд отеля.
-    theme: dict[str, Any] = {}
-
-
-class MeOut(Schema):
-    user: StaffUserOut
-    hotel: dict[str, Any]
-    # Токены бренда отеля. Лежат здесь, а не в отдельном эндпоинте, потому что
-    # `/auth/me` — единственный вызов, который делает КАЖДАЯ поверхность
-    # персонала (CMS, трекер). Пока темы тут не было, CMS и трекер работали на
-    # платформенном дефолте: белые, с чужим акцентом, и отель видел не свой
-    # бренд в собственной админке.
-    theme: dict[str, Any]
-
-
-# --- Bootstrap -------------------------------------------------------------
-
-
-class BootstrapOut(Schema):
-    hotel: dict[str, Any]
-    languages: list[dict[str, Any]]
-    flags: list[dict[str, Any]]
-    allergens: list[dict[str, Any]]
-    schedules: list[dict[str, Any]]
-    execution_points: list[dict[str, Any]]
-    day_parts: list[str]
-
-
-# --- Категории -------------------------------------------------------------
-
 
 class CategoryIn(Schema):
     type: str = "product"
@@ -118,7 +38,6 @@ class CategoryIn(Schema):
     sort_order: int | None = None
     is_active: bool = True
 
-
 class CategoryPatch(Schema):
     title: Translations | None = None
     description: Translations | None = None
@@ -131,7 +50,6 @@ class CategoryPatch(Schema):
     # Коммерция: облагается ли сбором; минимальная сумма по категории.
     service_fee_applies: bool | None = None
     min_order_minor: int | None = None
-
 
 class CategoryOut(Schema):
     id: str
@@ -148,13 +66,8 @@ class CategoryOut(Schema):
     service_fee_applies: bool = True
     min_order_minor: int | None = None
 
-
 class CategoryTreeOut(CategoryOut):
     children: list[dict[str, Any]] = []
-
-
-# --- Блюда -----------------------------------------------------------------
-
 
 class ItemIn(Schema):
     category_id: str
@@ -174,7 +87,6 @@ class ItemIn(Schema):
     sort_order: int | None = None
     is_active: bool = True
     in_stock: bool = True
-
 
 class ItemPatch(Schema):
     category_id: str | None = None
@@ -196,10 +108,8 @@ class ItemPatch(Schema):
     # Время подачи, мин; null очищает — чип на витрине пропадает.
     prep_minutes: int | None = None
 
-
 class ItemImagesIn(Schema):
     image_ids: list[str]
-
 
 class ItemOut(Schema):
     id: str
@@ -222,14 +132,9 @@ class ItemOut(Schema):
     prep_minutes: int | None = None
     badges: list[dict[str, Any]] = []
 
-
 class ItemDetailOut(ItemOut):
     modifier_groups: list[dict[str, Any]] = []
     request_fields: list[dict[str, Any]] = []
-
-
-# --- Поля заявки-услуги -----------------------------------------------------
-
 
 class RequestFieldIn(Schema):
     label: Translations
@@ -242,7 +147,6 @@ class RequestFieldIn(Schema):
     max_value: int | None = None
     sort_order: int | None = None
 
-
 class RequestFieldPatch(Schema):
     label: Translations | None = None
     help_text: Translations | None = None
@@ -253,7 +157,6 @@ class RequestFieldPatch(Schema):
     min_value: int | None = None
     max_value: int | None = None
     sort_order: int | None = None
-
 
 class RequestFieldOut(Schema):
     id: str
@@ -268,10 +171,6 @@ class RequestFieldOut(Schema):
     max_value: int | None
     sort_order: int
 
-
-# --- Модификаторы ----------------------------------------------------------
-
-
 class ModifierOptionIn(Schema):
     title: Translations
     code: str | None = None
@@ -280,7 +179,6 @@ class ModifierOptionIn(Schema):
     is_active: bool = True
     sort_order: int | None = None
 
-
 class ModifierOptionPatch(Schema):
     title: Translations | None = None
     code: str | None = None
@@ -288,7 +186,6 @@ class ModifierOptionPatch(Schema):
     is_default: bool | None = None
     is_active: bool | None = None
     sort_order: int | None = None
-
 
 class ModifierGroupIn(Schema):
     title: Translations
@@ -300,7 +197,6 @@ class ModifierGroupIn(Schema):
     sort_order: int | None = None
     options: list[ModifierOptionIn] = []
 
-
 class ModifierGroupPatch(Schema):
     title: Translations | None = None
     code: str | None = None
@@ -309,7 +205,6 @@ class ModifierGroupPatch(Schema):
     min_choices: int | None = None
     max_choices: int | None = None
     sort_order: int | None = None
-
 
 class ModifierOptionOut(Schema):
     id: str
@@ -320,7 +215,6 @@ class ModifierOptionOut(Schema):
     is_default: bool
     is_active: bool
     sort_order: int
-
 
 class ModifierGroupOut(Schema):
     id: str
@@ -334,50 +228,6 @@ class ModifierGroupOut(Schema):
     sort_order: int
     options: list[dict[str, Any]]
 
-
-# --- Медиа -----------------------------------------------------------------
-
-
-class MediaOut(Schema):
-    id: str
-    status: str
-    url: str
-    thumb_url: str
-    original_filename: str
-
-
-# --- Расписания ------------------------------------------------------------
-
-
-class ScheduleIntervalIn(Schema):
-    weekday: int
-    start_time: str
-    end_time: str
-    day_part: str = ""
-
-
-class ScheduleIn(Schema):
-    name: str
-    is_always_open: bool = False
-    intervals: list[ScheduleIntervalIn] = []
-
-
-class SchedulePatch(Schema):
-    name: str | None = None
-    is_always_open: bool | None = None
-    intervals: list[ScheduleIntervalIn] | None = None
-
-
-class ScheduleOut(Schema):
-    id: str
-    name: str
-    is_always_open: bool
-    intervals: list[dict[str, Any]]
-
-
-# --- Конфигурация брони -----------------------------------------------------
-
-
 class SlotConfigIn(Schema):
     duration_minutes: int = 60
     capacity: int = 1
@@ -385,3 +235,67 @@ class SlotConfigIn(Schema):
     execution_point_id: str
     lead_minutes: int = 0
     horizon_days: int = 14
+
+class BadgeIn(Schema):
+    label: dict = {}
+    color_role: str = "accent"
+    sort_order: int = 0
+    is_active: bool = True
+
+class BadgePatch(Schema):
+    label: dict | None = None
+    color_role: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+class ItemBadgesIn(Schema):
+    badge_ids: list[str] = []
+
+class RouteEntryIn(Schema):
+    execution_point_id: str
+    is_active: bool = True
+
+class RoutesIn(Schema):
+    """Порядок списка = приоритет: первый и есть основной исполнитель."""
+
+    routes: list[RouteEntryIn] = []
+
+class DictEntryIn(Schema):
+    title: dict = {}
+    code: str | None = None
+    is_active: bool = True
+    sort_order: int = 100
+
+class DictEntryPatch(Schema):
+    title: dict | None = None
+    is_active: bool | None = None
+    sort_order: int | None = None
+
+class QuickActionsIn(Schema):
+    selected: list[str] = []
+
+class SearchSettingsIn(Schema):
+    """
+    Что участвует в выдаче и что из неё исключено.
+
+    Подсказки — список переводов: одна заготовка на четыре языка. Не строкой:
+    «завтрак» по-арабски пишет отель, а не мы.
+    """
+
+    services: bool = True
+    items: bool = True
+    info: bool = True
+    excluded_services: list[str] = []
+    suggestions: list[dict] = []
+
+class ShowcaseTileIn(Schema):
+    """Настройка одной плитки. Все поля, кроме key, необязательны."""
+
+    key: str
+    size: str | None = None
+    sort_order: int | None = None
+    is_enabled: bool | None = None
+
+class ShowcaseSettingsIn(Schema):
+    group_threshold: int | None = None
+    tiles: list[ShowcaseTileIn] | None = None

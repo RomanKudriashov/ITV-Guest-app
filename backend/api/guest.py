@@ -10,6 +10,15 @@ from __future__ import annotations
 
 from django.http import HttpRequest
 from ninja import Header, Router
+from apps.accounts.schemas.guest import GuestSessionIn, GuestSessionOut, RoomNotFoundOut
+from apps.catalog.schemas.guest import ItemDetailOut, LocationsOut, MenuOut
+from apps.core.schemas import ErrorOut
+from apps.orders.schemas.guest import (
+    CancelIn,
+    OrderIn,
+    OrderOut,
+    OrdersOut,
+)
 
 from apps.accounts.auth import GuestAuth
 from apps.accounts.models import TrustLevel
@@ -32,19 +41,6 @@ from apps.orders.services import (
     serialize_order,
 )
 
-from .schemas import (
-    CancelIn,
-    ErrorOut,
-    GuestSessionIn,
-    GuestSessionOut,
-    ItemDetailOut,
-    LocationsOut,
-    MenuOut,
-    OrderIn,
-    OrderOut,
-    OrdersOut,
-    RoomNotFoundOut,
-)
 
 router = Router(tags=["guest"])
 guest_auth = GuestAuth()

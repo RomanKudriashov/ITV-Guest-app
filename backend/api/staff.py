@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from django.http import HttpRequest
 from ninja import Router
+from apps.accounts.schemas.cms import LoginIn, LoginOut, MeOut
 
 from apps.accounts.auth import StaffAuth
 from apps.accounts.models import User
@@ -16,7 +17,6 @@ from apps.accounts.services import AuthenticationFailed, authenticate_staff_cred
 from apps.core.context import require_hotel_id
 from apps.hotels.models import Hotel
 
-from .cms.schemas import LoginIn, LoginOut, MeOut
 
 router = Router(tags=["staff"])
 staff_auth = StaffAuth()

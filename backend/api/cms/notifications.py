@@ -9,11 +9,11 @@ from typing import Any
 
 from django.http import HttpRequest
 from ninja import Router, Schema
+from apps.core.schemas import OkOut
 
 from apps.notifications import cms_services as svc
 from apps.notifications.services import send_test_message
 
-from .schemas import OkOut
 
 router = Router(tags=["cms:notifications"])
 

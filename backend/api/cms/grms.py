@@ -12,7 +12,21 @@ CMS: управление номером (GRMS) — импорт, констру
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import File, Router, Schema
+from ninja import File, Router
+from apps.grms.schemas.cms import (
+    BindingIn,
+    CheckIn,
+    ConfirmIn,
+    DemoEntryIn,
+    ElementIn,
+    OverrideIn,
+    PinIn,
+    PlanCopyIn,
+    PlanGeometryIn,
+    ReconcileIn,
+    RollbackIn,
+    ZoneIn,
+)
 from ninja.files import UploadedFile
 
 from apps.core.context import require_hotel_id, tenant_context
@@ -96,8 +110,6 @@ def import_preview(request: HttpRequest, file: UploadedFile = File(...)):
     return preview.as_dict()
 
 
-class ReconcileIn(Schema):
-    preview: dict
 
 
 @router.post("/grms/import/reconcile", summary="Сверить разобранное с живым iRidi")
@@ -119,9 +131,6 @@ def import_reconcile(request: HttpRequest, payload: ReconcileIn):
     }
 
 
-class ConfirmIn(Schema):
-    preview: dict
-    replace: bool = False
 
 
 @router.post("/grms/import/confirm", summary="Сохранить подтверждённый импорт")
@@ -168,10 +177,6 @@ def list_types(request: HttpRequest):
 # --- Конструктор ------------------------------------------------------------
 
 
-class ZoneIn(Schema):
-    code: str
-    title: dict
-    sort_order: int = 0
 
 
 @router.post("/grms/types/{code}/zones", summary="Добавить зону")
@@ -183,12 +188,6 @@ def add_zone(request: HttpRequest, code: str, payload: ZoneIn):
     return {"code": zone.code}
 
 
-class ElementIn(Schema):
-    kind: str
-    slug: str
-    zone_code: str = ""
-    title: dict | None = None
-    sort_order: int = 0
 
 
 @router.post("/grms/types/{code}/elements", summary="Поставить элемент каталога")
@@ -200,11 +199,6 @@ def add_element(request: HttpRequest, code: str, payload: ElementIn):
     return {"slug": element.slug, "kind": element.kind}
 
 
-class BindingIn(Schema):
-    element_slug: str
-    capability: str
-    variable_key: str
-    trigger_value: int | None = None
 
 
 @router.post("/grms/types/{code}/bindings", summary="Связать возможность с переменной")
@@ -222,9 +216,6 @@ def type_status(request: HttpRequest, code: str):
     return builder.type_status(_hotel(), code)
 
 
-class OverrideIn(Schema):
-    room_number: str
-    device_name: str
 
 
 @router.post("/grms/types/{code}/device-override", summary="Имя устройства для комнаты")
@@ -238,13 +229,6 @@ def device_override(request: HttpRequest, code: str, payload: OverrideIn):
 # --- Проверка на живом номере -----------------------------------------------
 
 
-class CheckIn(Schema):
-    element_slug: str
-    room_number: str
-    capability: str = ""
-    # Без значения выполняется ТОЛЬКО чтение: проверить маппинг в занятом
-    # номере, ничего там не переключая.
-    value: int | None = None
 
 
 @router.post("/grms/types/{code}/check", summary="Прогнать элемент на комнате")
@@ -265,8 +249,6 @@ def publish(request: HttpRequest, code: str):
     return {"version": config.version, "published_at": config.published_at}
 
 
-class RollbackIn(Schema):
-    to_version: int
 
 
 @router.post("/grms/types/{code}/rollback", summary="Откатиться на версию")
@@ -287,14 +269,8 @@ def versions(request: HttpRequest, code: str):
 # --- Доступ гостя: PIN проживания и демо-вход -------------------------------
 
 
-class PinIn(Schema):
-    room_number: str
-    # Пусто — снять PIN с номера.
-    pin: str = ""
 
 
-class DemoEntryIn(Schema):
-    enabled: bool
 
 
 # Текст, который администратор обязан увидеть рядом с переключателем. Живёт на
@@ -402,15 +378,6 @@ def set_demo_entry(request: HttpRequest, payload: DemoEntryIn):
 # всплывёт на объекте, когда номер уже сдан.
 
 
-class PlanGeometryIn(Schema):
-    """Черновик разметки. Всё в ПРОЦЕНТАХ от кадра — пикселей здесь нет."""
-
-    aspect: float | None = None
-    zones: list[dict] = []
-    windows: list[dict] = []
-    points: list[dict] = []
-    # Номера в коридоре зеркальны: один план закрывает вдвое больше комнат.
-    mirrored: bool = False
 
 
 @router.get("/grms/types/{code}/plan", summary="План типа: кадры, разметка, что можно привязать")
@@ -622,8 +589,6 @@ def upload_plan_frames(
     }
 
 
-class PlanCopyIn(Schema):
-    source: str
 
 
 @router.post("/grms/types/{code}/plan/copy", summary="Скопировать разметку с другого типа")

@@ -7,6 +7,10 @@ from __future__ import annotations
 from django.conf import settings
 from django.http import HttpRequest
 from ninja import File, Router
+from apps.accounts.schemas.cms import BootstrapOut
+from apps.core.schemas import OkOut
+from apps.hotels.schemas.cms import ScheduleIn, ScheduleOut, SchedulePatch
+from apps.media.schemas import MediaOut
 from ninja.files import UploadedFile
 
 from apps.catalog.vocabularies import ALLERGENS, DAY_PARTS, FLAGS
@@ -17,14 +21,6 @@ from apps.hotels.models import ExecutionPoint, Hotel, HotelLanguage
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset, upload_asset
 
-from .schemas import (
-    BootstrapOut,
-    MediaOut,
-    OkOut,
-    ScheduleIn,
-    ScheduleOut,
-    SchedulePatch,
-)
 
 router = Router(tags=["cms"])
 

@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from django.http import HttpRequest
 from ninja import Router
+from apps.orders.schemas.guest import OrderOut
+from apps.orders.schemas.staff import StatusChangeIn
 
 from apps.core.context import current_language
 from apps.orders.services import change_status, get_order, serialize_order
 
-from .schemas import OrderOut, StatusChangeIn
 
 router = Router(tags=["orders"])
 

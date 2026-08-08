@@ -10,34 +10,46 @@ from __future__ import annotations
 
 from django.http import HttpRequest
 from ninja import Router
-
-from apps.catalog import cms_services as svc
-
-from .schemas import (
+from apps.catalog.schemas.cms import (
+    BadgeIn,
+    BadgePatch,
     CategoryIn,
     CategoryPatch,
     CategoryTreeOut,
+    DictEntryIn,
+    DictEntryPatch,
+    ItemBadgesIn,
     ItemDetailOut,
     ItemImagesIn,
     ItemIn,
     ItemOut,
     ItemPatch,
-    ItemsReorderIn,
     ModifierGroupIn,
     ModifierGroupOut,
     ModifierGroupPatch,
     ModifierOptionIn,
     ModifierOptionOut,
     ModifierOptionPatch,
-    OkOut,
-    ReorderIn,
+    QuickActionsIn,
     RequestFieldIn,
-    SlotConfigIn,
     RequestFieldOut,
     RequestFieldPatch,
+    RoutesIn,
+    SearchSettingsIn,
+    ShowcaseSettingsIn,
+    SlotConfigIn,
     StockIn,
+)
+from apps.core.schemas import (
+    ItemsReorderIn,
+    OkOut,
+    ReorderIn,
     ToggleIn,
 )
+from apps.hotels.schemas.cms import CommerceSettingsIn, HomeSettingsIn
+
+from apps.catalog import cms_services as svc
+
 
 router = Router(tags=["cms:catalog"])
 
@@ -278,25 +290,10 @@ def put_slot_config(request: HttpRequest, item_id: str, payload: SlotConfigIn):
 
 # --- Маркетинговые бейджи ---------------------------------------------------
 
-from ninja import Schema  # noqa: E402
 
 
-class BadgeIn(Schema):
-    label: dict = {}
-    color_role: str = "accent"
-    sort_order: int = 0
-    is_active: bool = True
 
 
-class BadgePatch(Schema):
-    label: dict | None = None
-    color_role: str | None = None
-    sort_order: int | None = None
-    is_active: bool | None = None
-
-
-class ItemBadgesIn(Schema):
-    badge_ids: list[str] = []
 
 
 @router.get("/badges", summary="Маркетинговые бейджи отеля")
@@ -328,15 +325,8 @@ def cms_assign_item_badges(request: HttpRequest, item_id: str, payload: ItemBadg
 # --- Маршрутизация категории на исполнителя ----------------------------------
 
 
-class RouteEntryIn(Schema):
-    execution_point_id: str
-    is_active: bool = True
 
 
-class RoutesIn(Schema):
-    """Порядок списка = приоритет: первый и есть основной исполнитель."""
-
-    routes: list[RouteEntryIn] = []
 
 
 @router.get("/categories/{category_id}/routes", summary="Кто исполняет категорию")
@@ -354,17 +344,8 @@ def cms_replace_category_routes(request: HttpRequest, category_id: str, payload:
 # --- Справочники аллергенов и диетических маркеров ---------------------------
 
 
-class DictEntryIn(Schema):
-    title: dict = {}
-    code: str | None = None
-    is_active: bool = True
-    sort_order: int = 100
 
 
-class DictEntryPatch(Schema):
-    title: dict | None = None
-    is_active: bool | None = None
-    sort_order: int | None = None
 
 
 @router.get("/allergens", summary="Справочник аллергенов отеля")
@@ -412,8 +393,6 @@ def cms_delete_marker(request: HttpRequest, entry_id: str):
 # --- Быстрые действия стартовой ---------------------------------------------
 
 
-class QuickActionsIn(Schema):
-    selected: list[str] = []
 
 
 def _hotel_for_settings():
@@ -454,19 +433,6 @@ def cms_put_quick_actions(request: HttpRequest, payload: QuickActionsIn):
 # --- Настройки главной: погода и строка номера -------------------------------
 
 
-class HomeSettingsIn(Schema):
-    """
-    Настройки главной. Координаты — ПАРОЙ: одна широта без долготы не точка, и
-    хранить половину координаты незачем. Пустая пара — «координат нет», и это
-    законное состояние, а не ошибка ввода.
-    """
-
-    weather: bool = False
-    room_status: bool = True
-    latitude: float | None = None
-    longitude: float | None = None
-    # Город — подпись к погоде и часам, на языке гостя. Переводы, а не строка.
-    city: dict = {}
 
 
 def _home_settings_payload(hotel) -> dict:
@@ -535,19 +501,6 @@ def cms_put_home_settings(request: HttpRequest, payload: HomeSettingsIn):
 # --- Настройки поиска --------------------------------------------------------
 
 
-class SearchSettingsIn(Schema):
-    """
-    Что участвует в выдаче и что из неё исключено.
-
-    Подсказки — список переводов: одна заготовка на четыре языка. Не строкой:
-    «завтрак» по-арабски пишет отель, а не мы.
-    """
-
-    services: bool = True
-    items: bool = True
-    info: bool = True
-    excluded_services: list[str] = []
-    suggestions: list[dict] = []
 
 
 def _search_settings_payload(hotel) -> dict:
@@ -599,18 +552,8 @@ def cms_put_search_settings(request: HttpRequest, payload: SearchSettingsIn):
 # --- Плитки главной-витрины --------------------------------------------------
 
 
-class ShowcaseTileIn(Schema):
-    """Настройка одной плитки. Все поля, кроме key, необязательны."""
-
-    key: str
-    size: str | None = None
-    sort_order: int | None = None
-    is_enabled: bool | None = None
 
 
-class ShowcaseSettingsIn(Schema):
-    group_threshold: int | None = None
-    tiles: list[ShowcaseTileIn] | None = None
 
 
 def _showcase_payload(hotel):
@@ -658,15 +601,6 @@ def cms_put_showcase(request: HttpRequest, payload: ShowcaseSettingsIn):
 # --- Настройки коммерции -----------------------------------------------------
 
 
-class CommerceSettingsIn(Schema):
-    """Все поля необязательны — PATCH меняет только присланное."""
-
-    service_fee_bp: int | None = None
-    tax_bp: int | None = None
-    tax_inclusive: bool | None = None
-    tip_presets: list[int] | None = None
-    free_delivery_threshold_minor: int | None = None
-    price_round_to_minor: int | None = None
 
 
 @router.get("/commerce-settings", summary="Настройки коммерции отеля")

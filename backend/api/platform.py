@@ -8,12 +8,30 @@ apps/hotels/provisioning.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 from django.http import HttpRequest
 from django.utils import timezone
-from ninja import Router, Schema
+from ninja import Router
+from apps.hotels.schemas.platform import (
+    AdminIn,
+    BulkActiveIn,
+    DictionaryEntryIn,
+    EnterHotelIn,
+    HotelCreateIn,
+    HotelPatchIn,
+    ModulesIn,
+    NodeIn,
+    OffboardIn,
+    PlatformLoginIn,
+    PurgeIn,
+    TariffIn,
+    TeamInviteIn,
+    TeamPatchIn,
+    TemplateIn,
+    TotpEnableIn,
+)
 
 from apps.catalog.models import Item
 from apps.accounts.models import User
@@ -30,121 +48,38 @@ router = Router(tags=["platform"])
 # --- Схемы -----------------------------------------------------------------
 
 
-class HotelCreateIn(Schema):
-    subdomain: str
-    name: str
-    admin_email: str
-    timezone: str = "Europe/Moscow"
-    currency: str = "RUB"
-    languages: list[str] = ["ru", "en"]
-    preset: str = "midnight_navy"
-    admin_password: str | None = None
-    # Происхождение. Автотесты обязаны присылать "test" — только так их отели
-    # отличимы от настоящих не угадыванием по имени, а признаком.
-    origin: str = "live"
-    # Стартовый шаблон. Пусто — отель заводится голым, как и раньше.
-    template: str | None = None
 
 
-class HotelPatchIn(Schema):
-    name: str | None = None
-    timezone: str | None = None
-    currency: str | None = None
-    languages: list[str] | None = None
-    is_active: bool | None = None
-    tariff: str | None = None
 
 
-class AdminIn(Schema):
-    email: str
-    password: str | None = None
 
 
-class ModuleEntryIn(Schema):
-    code: str
-    is_enabled: bool = False
-    source: str = "tariff"
-    config: dict = {}
 
 
-class ModulesIn(Schema):
-    modules: list[ModuleEntryIn] = []
-    tariff: str | None = None
 
 
-class OffboardIn(Schema):
-    reason: str = ""
-    cancel: bool = False
 
 
-class PurgeIn(Schema):
-    # Поддомен вводят руками: галочку ставят не глядя, имя набирают, посмотрев.
-    confirm_subdomain: str
 
 
-class TemplateIn(Schema):
-    code: str | None = None
-    title: dict | None = None
-    description: dict | None = None
-    tariff: str | None = None
-    services: list[dict] | None = None
-    modules: list[str] | None = None
-    languages: list[str] | None = None
-    preset: str | None = None
-    is_active: bool | None = None
-    sort_order: int | None = None
 
 
-class DictionaryEntryIn(Schema):
-    kind: str
-    code: str
-    title: dict
-    is_active: bool = True
 
 
-class EnterHotelIn(Schema):
-    reason: str
-    ttl_minutes: int = 30
 
 
-class NodeIn(Schema):
-    name: str
-    purpose: str = "grms"
 
 
-class TeamInviteIn(Schema):
-    email: str
-    role: str = "support"
-    full_name: str = ""
 
 
-class TeamPatchIn(Schema):
-    role: str | None = None
-    is_active: bool | None = None
 
 
-class TariffIn(Schema):
-    tariff: str
-    started_on: date | None = None
-    trial_ends_at: date | None = None
-    # Осознанное подтверждение понижения ниже использования.
-    acknowledge_downgrade: bool = False
 
 
-class BulkActiveIn(Schema):
-    hotel_ids: list[str]
-    is_active: bool
 
 
-class PlatformLoginIn(Schema):
-    email: str
-    password: str
-    # Второй фактор. Приходит вторым шагом — первый отвечает `mfa_required`.
-    totp_code: str | None = None
 
 
-class TotpEnableIn(Schema):
-    code: str
 
 
 # --- Вход платформенного админа --------------------------------------------
