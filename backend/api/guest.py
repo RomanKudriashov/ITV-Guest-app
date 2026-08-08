@@ -11,7 +11,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Header, Router
 from apps.accounts.schemas.guest import GuestSessionIn, GuestSessionOut, RoomNotFoundOut
-from apps.catalog.schemas.guest import ItemDetailOut, LocationsOut, MenuOut
+from apps.catalog.schemas.guest import LocationsOut
 from apps.core.schemas import ErrorOut
 from apps.orders.schemas.guest import (
     CancelIn,
@@ -23,10 +23,6 @@ from apps.orders.schemas.guest import (
 from apps.accounts.auth import GuestAuth
 from apps.accounts.models import TrustLevel
 from apps.accounts.services import AuthenticationFailed, create_guest_session
-from apps.catalog.offerings import OfferingType
-from apps.catalog.services import MenuOptions, build_menu, get_item_detail
-from apps.catalog.slots import available_slots
-from apps.catalog.models import Item
 from apps.core.context import current_language
 from apps.core.errors import PermissionDenied
 from apps.core.idempotency import IdempotencyConflict, run_idempotent
@@ -179,69 +175,9 @@ def read_session(request: HttpRequest):
 
 
 # --- Витрина ---------------------------------------------------------------
-
-
-def _catalog(request: HttpRequest, offering_type: str, include_unavailable: bool, point_code: str | None = None):
-    return build_menu(
-        MenuOptions(
-            language=current_language(),
-            include_unavailable=include_unavailable,
-            offering_type=offering_type,
-            point_code=point_code,
-        ),
-        hotel=request.hotel,
-    )
-
-
-@router.get(
-    "/catalog",
-    response=MenuOut,
-    auth=guest_auth,
-    summary="Каталог любого типа: еда или заявки-услуги",
-)
-def get_catalog(
-    request: HttpRequest,
-    type: str = OfferingType.PRODUCT,
-    include_unavailable: bool = True,
-    point: str | None = None,
-):
-    """
-    Один эндпоинт на все типы предложений — различается только тело позиции.
-    Заводить «/services» рядом с «/menu» значило бы удваивать всё, что
-    появится дальше: фильтры, локализацию, расписания.
-
-    `point` сужает каталог до одного заведения (кода точки исполнения) — это
-    третий уровень витрины при нескольких ресторанах. Без параметра — весь
-    каталог типа, как раньше.
-    """
-    return _catalog(request, type, include_unavailable, point_code=point)
-
-
-# Псевдонима «/menu» больше нет — и это не уборка ради уборки.
 #
-# Он принимал ровно `include_unavailable`, а всё остальное молча проглатывал:
-# запрос «/menu?venue=kitchen» отдавал ВЕСЬ каталог отеля и выглядел рабочим.
-# На это уже потрачено время дважды: сначала при разборе карточки позиции,
-# потом при съёмке кадров. Каталог теперь один — «/catalog» с явными `type` и
-# `point`, а неизвестный адрес честно отвечает 404 вместо правдоподобного
-# ответа не на тот вопрос.
-
-
-@router.get(
-    "/item/{item_id}", response=ItemDetailOut, auth=guest_auth, summary="Карточка блюда"
-)
-def get_item(request: HttpRequest, item_id: str):
-    return get_item_detail(item_id, language=current_language())
-
-
-@router.get("/slots", auth=guest_auth, summary="Свободные слоты позиции на дату")
-def get_slots(request: HttpRequest, item_id: str, date: str):
-    item = Item.objects.filter(pk=item_id).first()
-    if item is None:
-        from apps.core.errors import NotFoundError
-
-        raise NotFoundError("Позиция не найдена")
-    return available_slots(item, date)
+# Каталог, карточка позиции и слоты уехали в apps/catalog/api/guest/ — вьюха
+# живёт рядом со своим доменом. Здесь остаётся то, что каталогом не является.
 
 
 @router.get(

@@ -24,7 +24,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VIEWS = ROOT / "api"
+
+# ГДЕ ИСКАТЬ ВЬЮХИ. Смотреть только в `api/` было достаточно ровно до тех пор,
+# пока вьюхи там жили. С партии 2 они переезжают в свои домены — и сторож,
+# который об этом не знает, позеленел бы не потому, что ORM ушла из вьюх, а
+# потому, что вьюхи ушли из его поля зрения. Это худший вид зелёного.
+VIEW_ROOTS = [ROOT / "api", *sorted((ROOT / "apps").glob("*/api"))]
 
 # Обращение к ORM: менеджер модели или конструктор запроса.
 ORM = re.compile(r"\.objects\.|\bQ\(|\.select_related\(|\.prefetch_related\(")
@@ -33,10 +38,11 @@ ORM = re.compile(r"\.objects\.|\bQ\(|\.select_related\(|\.prefetch_related\(")
 # Список ТОЛЬКО сокращается. Растёт он лишь одним способом: кто-то осознанно
 # решил, что новое место оправдано, и написал здесь почему.
 ALLOWED = {
-    "api/guest.py": "партия 2: каталог и сессия уезжают в apps/catalog, apps/accounts",
+    # Каталог отсюда уехал (партия 2). Осталась выборка локаций доставки —
+    # это модель отеля, и сервис ей нужен в apps/hotels.
+    "api/guest.py": "партия 3: локации доставки уезжают в apps/hotels",
     "api/staff.py": "партия 5: персонал уезжает в apps/accounts",
     "api/platform.py": "партия 3: платформенные вьюхи уезжают в apps/hotels/api/platform",
-    "api/cms/catalog.py": "партия 2: 55 эндпоинтов режутся по ресурсам apps/catalog",
     "api/cms/analytics.py": "партия 5: уезжает в apps/analytics",
     "api/cms/grms.py": "партия 4: уезжает в apps/grms/api/cms",
     "api/cms/common.py": "партия 3: уезжает в apps/hotels/api/cms",
@@ -48,21 +54,29 @@ def main() -> int:
     offenders: list[str] = []
     known_clean: list[str] = []
 
-    for path in sorted(VIEWS.rglob("*.py")):
-        relative = path.relative_to(ROOT).as_posix()
-        hits = [
-            (number, line.strip())
-            for number, line in enumerate(path.read_text().splitlines(), 1)
-            if ORM.search(line) and not line.strip().startswith("#")
-        ]
-        if hits and relative not in ALLOWED:
-            first = hits[0]
-            offenders.append(
-                f"  {relative}:{first[0]} — {first[1][:80]}"
-                + (f"  (и ещё {len(hits) - 1})" if len(hits) > 1 else "")
-            )
-        if not hits and relative in ALLOWED:
-            known_clean.append(relative)
+    seen: set[str] = set()
+    for root in VIEW_ROOTS:
+        for path in sorted(root.rglob("*.py")):
+            relative = path.relative_to(ROOT).as_posix()
+            seen.add(relative)
+            hits = [
+                (number, line.strip())
+                for number, line in enumerate(path.read_text().splitlines(), 1)
+                if ORM.search(line) and not line.strip().startswith("#")
+            ]
+            if hits and relative not in ALLOWED:
+                first = hits[0]
+                offenders.append(
+                    f"  {relative}:{first[0]} — {first[1][:80]}"
+                    + (f"  (и ещё {len(hits) - 1})" if len(hits) > 1 else "")
+                )
+            if not hits and relative in ALLOWED:
+                known_clean.append(relative)
+
+    # Файл из списка исчез — значит вьюха переехала или удалена, и запись
+    # протухла. Молчать об этом нельзя: список исключений живёт ровно до тех
+    # пор, пока каждая строка в нём означает конкретное место в коде.
+    known_clean.extend(sorted(set(ALLOWED) - seen))
 
     if known_clean:
         print("Эти вьюхи ОЧИСТИЛИСЬ — уберите их из ALLOWED в scripts/check_views.py:")

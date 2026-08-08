@@ -10,7 +10,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router, Schema
 
-from apps.catalog import inclusions as svc
+from apps.catalog.services import inclusions as svc
 
 router = Router(tags=["cms"])
 

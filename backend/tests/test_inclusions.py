@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from django.db import IntegrityError, transaction
 
-from apps.catalog import inclusions as svc
+from apps.catalog.services import inclusions as svc
 from apps.catalog.models import Category, ServiceInclusion
 from apps.core.context import tenant_context
 from apps.core.errors import ConflictError

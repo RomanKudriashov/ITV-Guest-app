@@ -19,7 +19,7 @@ from django.utils import timezone
 from apps.core.errors import ConflictError, ValidationError
 from apps.core.fields import translate
 
-from .models import Item, SlotBooking, SlotConfig
+from apps.catalog.models import Item, SlotBooking, SlotConfig
 
 
 class SlotError(ValidationError):
@@ -78,6 +78,19 @@ def _candidate_starts(config: SlotConfig, local_date, tzinfo) -> list[datetime]:
             starts.append(cursor)
             cursor += step
     return sorted(set(starts))
+
+
+def available_slots_for_item(item_id, date_str: str) -> dict:
+    """
+    То же, что `available_slots`, но по идентификатору: выборку позиции делает
+    сервис, а не вьюха. Вьюхе остаётся разобрать запрос и вернуть результат.
+    """
+    from apps.core.errors import NotFoundError
+
+    item = Item.objects.filter(pk=item_id).first()
+    if item is None:
+        raise NotFoundError("Позиция не найдена")
+    return available_slots(item, date_str)
 
 
 def available_slots(item: Item, date_str: str) -> dict:

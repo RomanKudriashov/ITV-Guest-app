@@ -12,7 +12,7 @@ from datetime import datetime, time
 
 import pytest
 
-from apps.catalog.availability import item_availability
+from apps.catalog.services.availability import item_availability
 from apps.catalog.models import Category, Item
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, Schedule, ScheduleInterval

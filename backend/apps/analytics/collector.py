@@ -216,7 +216,7 @@ def _order_dims(order, session) -> dict:
 
 def _is_off_hours(order) -> int:
     """Заказ вне часов позиции — упущенный/внеурочный спрос. Считаем при записи."""
-    from apps.catalog.availability import item_availability  # локально: тяжёлый импорт
+    from apps.catalog.services.availability import item_availability  # локально: тяжёлый импорт
 
     item = order.items.select_related("item", "item__schedule", "item__category__schedule").first()
     if item is None or item.item is None:

@@ -21,8 +21,8 @@ from apps.hotels.models import Hotel
 from apps.media.services import image_url
 
 from .availability import category_availability, item_availability
-from .offerings import behaviour_for
-from .models import Category, Item, ModifierGroup, OfferingType, RequestField
+from apps.catalog.offerings import behaviour_for
+from apps.catalog.models import Category, Item, ModifierGroup, OfferingType, RequestField
 
 
 @dataclass(slots=True)

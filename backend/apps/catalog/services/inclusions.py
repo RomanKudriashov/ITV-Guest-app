@@ -14,7 +14,7 @@ from django.db import transaction
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import Schedule, Service
 
-from .models import (
+from apps.catalog.models import (
     Category,
     Item,
     ServiceInclusion,

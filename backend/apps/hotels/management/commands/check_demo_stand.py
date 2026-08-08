@@ -27,7 +27,7 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.catalog.models import Category, Item
-from apps.catalog.showcase import build_showcase
+from apps.catalog.services.showcase import build_showcase
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, Service
 

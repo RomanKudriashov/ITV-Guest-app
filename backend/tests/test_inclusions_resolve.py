@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from apps.catalog import inclusions as inc_svc
+from apps.catalog.services import inclusions as inc_svc
 from apps.catalog.models import Category, Item, Route
-from apps.catalog.services import MenuOptions, build_menu
+from apps.catalog.services.menu import MenuOptions, build_menu
 from apps.core.context import tenant_context
 from apps.hotels.models import ExecutionPoint, Schedule, Service
 

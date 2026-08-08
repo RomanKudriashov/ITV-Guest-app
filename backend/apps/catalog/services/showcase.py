@@ -24,7 +24,7 @@ from apps.core.fields import translate
 from apps.hotels.models import Hotel, Service, ShowcaseTile
 from apps.media.services import image_url
 
-from .models import Category, OfferingType
+from apps.catalog.models import Category, OfferingType
 
 # Тип сервиса → группа главной. Рестораны — еда и напитки вместе (ресторан, бар,
 # рум-сервис, мини-бар); спа — спа и бассейн; остальное — услуги. Порог

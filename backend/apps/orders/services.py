@@ -23,11 +23,11 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from apps.catalog.availability import item_availability
+from apps.catalog.services.availability import item_availability
 from apps.catalog.models import Category, Item, ModifierOption, Route
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import build_field_snapshot
-from apps.catalog import slots as slot_svc
+from apps.catalog.services import slots as slot_svc
 from apps.orders.tracker_types import guest_card_for_order
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
@@ -138,7 +138,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     # Резолв исполнителя: агрегатор (по service_code — с разъездом) или маршрут.
     aggregator = _resolve_cart_service(data)
     if aggregator is not None:
-        from apps.catalog.inclusions import resolve_item_executor
+        from apps.catalog.services.inclusions import resolve_item_executor
 
         groups: dict[str, list] = {}
         for resolved in resolved_lines:
@@ -282,7 +282,7 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         options = _validate_modifiers(item, line.modifier_option_ids) if behaviour.uses_modifiers else []
         inclusion = None
         if aggregator is not None:
-            from apps.catalog.inclusions import resolve_item_executor
+            from apps.catalog.services.inclusions import resolve_item_executor
 
             _ep, inclusion = resolve_item_executor(aggregator, item)
         base_price = item.price if inclusion is None else inclusion.apply_markup(item.price)

@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from apps.accounts.models import GuestSession, TrustLevel
-from apps.catalog import inclusions as inc_svc
+from apps.catalog.services import inclusions as inc_svc
 from apps.catalog.models import Category, Item, Route
 from apps.core.context import tenant_context
 from apps.hotels.models import ExecutionPoint, Room, Service

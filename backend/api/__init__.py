@@ -3,6 +3,8 @@ from ninja import NinjaAPI
 from apps.accounts.auth import CmsAuth, PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
+from apps.catalog.api.router import guest_router as catalog_guest_router
+
 from .cms import router as cms_router
 from .guest import router as guest_router
 from .guest_room import router as guest_room_router
@@ -30,6 +32,8 @@ api = NinjaAPI(
 
 api.add_router("/health", health_router)
 api.add_router("/guest", guest_router)
+# Витрина, карточка, слоты, главная и поиск — домен каталога, свой роутер.
+api.add_router("/guest", catalog_guest_router)
 api.add_router("/guest", surface_guest_router)
 # Управление номером (GRMS). Гейт по модулю отеля и step-up по PIN — внутри
 # сервисного слоя: маршрут обязан быть закрыт на СЕРВЕРЕ, а не только скрыт

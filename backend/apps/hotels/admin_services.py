@@ -189,7 +189,7 @@ def _clean_translations(value: Any, *, field: str) -> dict:
 
 
 def _make_location_code(title: dict) -> str:
-    from apps.catalog.cms_services import make_code
+    from apps.catalog.services.cms import make_code
 
     return make_code(Location, title, prefix="location")
 
@@ -578,7 +578,7 @@ def create_service(data: dict) -> Service:
     if not public_name:
         raise ValidationError("Заполните название заведения", field="public_name")
 
-    from apps.catalog.cms_services import make_code
+    from apps.catalog.services.cms import make_code
 
     code = data.get("code") or make_code(Service, public_name, prefix="service")
     if Service.all_objects.filter(code=code).exists():

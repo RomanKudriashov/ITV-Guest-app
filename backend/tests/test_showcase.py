@@ -364,7 +364,7 @@ def test_flat_catalog_wears_its_own_cover_not_the_first_venue(crystal, monkeypat
     не нарезаны, поэтому подменяем адрес меткой ассета — вопрос ведь в том, ЧЕЙ
     снимок выбран, а не как он назван.
     """
-    from apps.catalog.services import _catalog_hero_image
+    from apps.catalog.services.menu import _catalog_hero_image
     from apps.media.models import MediaAsset
 
     monkeypatch.setattr(MediaAsset, "url", lambda self, variant=None: f"asset:{self.pk}")
@@ -389,7 +389,7 @@ def test_flat_catalog_wears_its_own_cover_not_the_first_venue(crystal, monkeypat
 
 def test_venue_catalog_still_wears_the_venue_photo(crystal, monkeypatch):
     """Скоуп по заведению не сломан: там кадр как раз обязан быть его."""
-    from apps.catalog.services import _catalog_hero_image
+    from apps.catalog.services.menu import _catalog_hero_image
     from apps.media.models import MediaAsset
 
     monkeypatch.setattr(MediaAsset, "url", lambda self, variant=None: f"asset:{self.pk}")

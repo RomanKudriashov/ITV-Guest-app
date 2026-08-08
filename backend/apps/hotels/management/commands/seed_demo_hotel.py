@@ -2212,7 +2212,7 @@ class Command(BaseCommand):
         коктейли бара (вино скрыто). Исполнители — кухня «Панорамы» и бар.
         Идемпотентно (пропускаем уже заведённые включения).
         """
-        from apps.catalog.inclusions import create_inclusion
+        from apps.catalog.services.inclusions import create_inclusion
         from apps.catalog.models import Category, Item, ServiceInclusion
 
         rs = Service.objects.filter(code="room_service").first()
@@ -2323,7 +2323,7 @@ class Command(BaseCommand):
         if config is None:
             return
 
-        from apps.catalog import slots as slot_svc
+        from apps.catalog.services import slots as slot_svc
 
         hotel = Hotel.objects.get(pk=spa.hotel_id)
         today = hotel.local_now().date().isoformat()

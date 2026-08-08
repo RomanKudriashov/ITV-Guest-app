@@ -28,7 +28,11 @@ class MenuOut(Schema):
     venue: dict[str, Any] | None = None
     categories: list[dict[str, Any]]
 
-class ItemDetailOut(Schema):
+# Имя РАЗВЕДЕНО с одноимённой CMS-схемой (apps/catalog/schemas/cms.py).
+# Компонент OpenAPI называется по имени класса, поэтому два разных класса с
+# одним именем давали один компонент — и половина эндпоинтов была
+# документирована чужим телом. Тела ответов при разведении не менялись.
+class GuestItemDetailOut(Schema):
     id: str
     code: str
     type: str

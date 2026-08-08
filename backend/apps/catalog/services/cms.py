@@ -25,7 +25,7 @@ from apps.hotels.models import Hotel, Schedule
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
-from .models import (
+from apps.catalog.models import (
     Allergen,
     Badge,
     Category,
@@ -41,8 +41,8 @@ from .models import (
     OfferingType,
     RequestField,
 )
-from .offerings import LocationMode, behaviour_for
-from .request_fields import BOUNDED_TYPES, FieldType
+from apps.catalog.offerings import LocationMode, behaviour_for
+from apps.catalog.request_fields import BOUNDED_TYPES, FieldType
 
 # Транслитерация для кодов: slugify выбрасывает кириллицу целиком, и «Горячее»
 # превратилось бы в пустую строку. Коды попадают в URL и в интеграции, поэтому
@@ -1178,7 +1178,7 @@ def serialize_slot_config(config) -> dict:
 
 
 def get_slot_config(item_id) -> dict | None:
-    from .models import SlotConfig
+    from apps.catalog.models import SlotConfig
 
     config = SlotConfig.objects.filter(item_id=item_id).first()
     return serialize_slot_config(config) if config else None
@@ -1188,8 +1188,8 @@ def get_slot_config(item_id) -> dict | None:
 def upsert_slot_config(item_id, data: dict) -> dict:
     from apps.hotels.models import ExecutionPoint, Schedule
 
-    from .models import SlotConfig
-    from .offerings import behaviour_for
+    from apps.catalog.models import SlotConfig
+    from apps.catalog.offerings import behaviour_for
 
     item = get_item(item_id)
     if not behaviour_for(item.type).uses_slots:
@@ -1496,7 +1496,7 @@ def category_routes(category_id) -> dict:
     `none` — заказ упадёт. Без этого админ видит пустой список и думает, что
     маршрут не настроен, хотя заказы уходят и исполняются.
     """
-    from .models import Route
+    from apps.catalog.models import Route
 
     category = get_category(category_id)
     routes = list(
@@ -1539,7 +1539,7 @@ def replace_category_routes(category_id, entries: Iterable[dict]) -> dict:
     """
     from apps.hotels.models import ExecutionPoint
 
-    from .models import Route
+    from apps.catalog.models import Route
 
     category = get_category(category_id)
     entries = list(entries or [])

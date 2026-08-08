@@ -13,7 +13,7 @@ from apps.accounts.models import GuestSession, TrustLevel
 from apps.analytics import collector
 from apps.analytics.models import ItemDaily, OrderDaily
 from apps.analytics.recompute import rebuild_raw_from_orders, recompute_aggregates
-from apps.catalog import inclusions as inc_svc
+from apps.catalog.services import inclusions as inc_svc
 from apps.catalog.models import Category, Item, Route
 from apps.core.context import tenant_context
 from apps.hotels.models import ExecutionPoint, Room, Service

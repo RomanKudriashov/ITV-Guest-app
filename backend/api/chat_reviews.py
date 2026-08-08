@@ -1,21 +1,20 @@
 """
-Гостевые и персональные эндпоинты чата, отзывов и главной.
+Гостевые и персональные эндпоинты чата и отзывов.
 Контракт — docs/guest-surface-api-contract.md.
+
+Главная витрины, поиск и уровень заведений уехали в apps/catalog/api/guest/:
+они оказались здесь потому, что файл резался по свободному роутеру, а не по
+ресурсу.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
 from django.http import HttpRequest
 from ninja import Router, Schema
 
-from apps.accounts.auth import GuestAuth, StaffAuth
+from apps.accounts.auth import GuestAuth
 from apps.chat import services as chat_svc
-from apps.core.context import current_language
 from apps.core.errors import NotFoundError
-from apps.core.fields import translate
-from apps.hotels.models import Hotel
 from apps.orders.services import get_order
 from apps.reviews import services as review_svc
 
@@ -34,82 +33,6 @@ class MessageIn(Schema):
 class ReviewIn(Schema):
     rating: int
     comment: str = ""
-
-
-# --- Главная (гость) -------------------------------------------------------
-
-
-@guest_router.get("/home", auth=guest_auth, summary="Главная: bento-витрина сервисов отеля")
-def guest_home(request: HttpRequest):
-    language = current_language()
-    hotel = request.hotel
-
-    from apps.catalog.home import quick_actions_for
-    from apps.catalog.showcase import build_showcase
-
-    from apps.integrations.weather import service as weather
-
-    thread = chat_svc.get_or_create_thread(request.guest_session)
-    unread = chat_svc.thread_snapshot(thread, side="guest")["unread"]
-
-    home_settings = (hotel.settings or {}).get("home") or {}
-
-    return {
-        "hotel": {
-            "name": hotel.name,
-            "subdomain": hotel.subdomain,
-            # Часовой пояс отеля — чтобы витрина показывала МЕСТНОЕ время и
-            # тикала сама, а не спрашивала сервер каждую минуту.
-            "timezone": hotel.timezone,
-            # Город — подпись к погоде и часам на языке гостя. Пусто — подписи
-            # не будет: выдумывать город по координатам мы не станем.
-            "city": translate(hotel.city, language),
-        },
-        "room": request.guest_session.room.number if request.guest_session.room_id else None,
-        # Погода приезжает ГОТОВОЙ и только с сервера: адреса провайдера
-        # витрина не знает и в него не ходит. `None` — показывать нечего:
-        # отель не включал погоду, нет координат, провайдер молчит или значение
-        # протухло. Разбираться в причине гостю незачем.
-        "weather": weather.current_for(hotel),
-        # Показывать ли на главной строку состояния номера. Данные для неё
-        # витрина берёт из СВОЕГО существующего снимка номера — второго
-        # источника здесь не заводится, отсюда едет только разрешение.
-        "room_status": bool(home_settings.get("room_status", True)),
-        # Главная — витрина СЕРВИСОВ: bento-плитки заведений/услуг/инфо.
-        "tiles": build_showcase(hotel, language=language, moment=hotel.local_now()),
-        "unread_chat": unread,
-        # Быстрые действия сохраняются для CMS и старых потребителей; новая
-        # главная навигирует плитками, отдельный ряд действий не рисует.
-        "quick_actions": quick_actions_for(hotel, language),
-    }
-
-
-@guest_router.get("/search", auth=guest_auth, summary="Глобальный поиск гостя")
-def guest_search(request: HttpRequest, q: str = ""):
-    """
-    Поиск по всему, что отель показывает гостю: заведения, позиции, инфо.
-
-    ОТЕЛЬ БЕРЁТСЯ ИЗ СЕССИИ, а не из запроса. Это единственное место продукта,
-    куда гость передаёт произвольный текст, и подмешать сюда чужой отель нельзя
-    ничем: ни параметром, ни заголовком — их тут просто нет.
-    """
-    from apps.catalog.search import search, suggestions_of
-
-    language = current_language()
-    hotel = request.hotel
-    result = search(hotel, q, language=language)
-    # Подсказки едут вместе с результатом: пустое поле показывает их, и
-    # отдельный запрос ради трёх строк был бы лишним обменом.
-    result["suggestions"] = suggestions_of(hotel, language)
-    return result
-
-
-@guest_router.get("/venues", auth=guest_auth, summary="Уровень 2: заведения группы")
-def guest_venues(request: HttpRequest, group: str):
-    from apps.catalog.showcase import list_venues
-
-    hotel = request.hotel
-    return list_venues(hotel, group, language=current_language(), moment=hotel.local_now())
 
 
 # --- Чат (гость) -----------------------------------------------------------

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from apps.catalog.search import search
+from apps.catalog.services.search import search
 from apps.core.context import tenant_context
 
 pytestmark = pytest.mark.django_db
