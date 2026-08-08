@@ -526,6 +526,70 @@ def cms_put_home_settings(request: HttpRequest, payload: HomeSettingsIn):
     return _home_settings_payload(hotel)
 
 
+# --- Настройки поиска --------------------------------------------------------
+
+
+class SearchSettingsIn(Schema):
+    """
+    Что участвует в выдаче и что из неё исключено.
+
+    Подсказки — список переводов: одна заготовка на четыре языка. Не строкой:
+    «завтрак» по-арабски пишет отель, а не мы.
+    """
+
+    services: bool = True
+    items: bool = True
+    info: bool = True
+    excluded_services: list[str] = []
+    suggestions: list[dict] = []
+
+
+def _search_settings_payload(hotel) -> dict:
+    from apps.catalog.search import SearchSettings
+    from apps.hotels.models import Service
+
+    settings = SearchSettings.of(hotel)
+    raw = (hotel.settings or {}).get("search") or {}
+    return {
+        "services": settings.services,
+        "items": settings.items,
+        "info": settings.info,
+        "excluded_services": list(settings.excluded_services),
+        "suggestions": raw.get("suggestions") or [],
+        # Из чего выбирать: только гостевые заведения — прятать от поиска то,
+        # чего гость и так не видит, незачем.
+        "available_services": [
+            {"code": service.code, "title": service.public_title}
+            for service in Service.objects.filter(is_active=True, is_guest_facing=True)
+        ],
+    }
+
+
+@router.get("/search-settings", summary="Настройки поиска: слои, исключения, подсказки")
+def cms_get_search_settings(request: HttpRequest):
+    return _search_settings_payload(_hotel_for_settings())
+
+
+@router.put("/search-settings", summary="Сохранить настройки поиска")
+def cms_put_search_settings(request: HttpRequest, payload: SearchSettingsIn):
+    hotel = _hotel_for_settings()
+    settings = dict(hotel.settings or {})
+    settings["search"] = {
+        "layers": {
+            "services": bool(payload.services),
+            "items": bool(payload.items),
+            "info": bool(payload.info),
+        },
+        "excluded_services": [str(code) for code in payload.excluded_services],
+        # Пустые переводы выбрасываем: подсказка, которой нет ни на одном
+        # языке, — это пустая кнопка на экране поиска.
+        "suggestions": [entry for entry in payload.suggestions if any((entry or {}).values())],
+    }
+    hotel.settings = settings
+    hotel.save(update_fields=["settings", "updated_at"])
+    return _search_settings_payload(hotel)
+
+
 # --- Плитки главной-витрины --------------------------------------------------
 
 

@@ -323,7 +323,8 @@
       "orders": "订单",
       "chat": "聊天",
       "info": "信息",
-      "room": "客房"
+      "room": "客房",
+      "search": "搜索"
     },
     "entry": {
       "subtitle": "输入房间号，酒店的一切尽在指尖。",
@@ -708,6 +709,21 @@
       "thunder": "雷暴",
       "unknown": "天气",
       "degrees": "{{value}}°"
+    },
+    "search": {
+      "title": "搜索",
+      "placeholder": "菜品、服务、场所",
+      "clear": "清除",
+      "suggestions": "试试",
+      "recent": "最近搜索",
+      "nothingTitle": "未找到与“{{query}}”相关的内容",
+      "nothingHint": "请检查拼写，或直接问我们，我们帮您找。",
+      "askReception": "联系前台",
+      "group": {
+        "services": "场所与服务",
+        "items": "菜单项目",
+        "info": "信息"
+      }
     }
   },
   "tracker": {
@@ -2177,6 +2193,19 @@
       "saveFailed": "保存失败",
       "loadFailed": "无法加载首页设置",
       "source": "数据来源："
+    },
+    "search": {
+      "title": "客人搜索",
+      "hint": "哪些内容参与搜索结果，以及空白输入框中显示什么。",
+      "services": "场所与服务",
+      "items": "菜单项目",
+      "info": "信息页面",
+      "excluded": "不在搜索中显示",
+      "suggestions": "空白输入框的提示",
+      "addSuggestion": "添加提示",
+      "saved": "搜索设置已保存",
+      "saveFailed": "保存失败",
+      "loadFailed": "无法加载搜索设置"
     }
   }
 }

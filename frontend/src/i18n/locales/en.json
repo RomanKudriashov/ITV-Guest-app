@@ -324,7 +324,8 @@
       "orders": "Orders",
       "chat": "Chat",
       "info": "Info",
-      "room": "Room"
+      "room": "Room",
+      "search": "Search"
     },
     "entry": {
       "subtitle": "Enter your room — everything the hotel offers is at hand.",
@@ -712,6 +713,21 @@
       "thunder": "Thunderstorm",
       "unknown": "Weather",
       "degrees": "{{value}}°"
+    },
+    "search": {
+      "title": "Search",
+      "placeholder": "Dish, service, venue",
+      "clear": "Clear",
+      "suggestions": "Try",
+      "recent": "You searched",
+      "nothingTitle": "Nothing found for “{{query}}”",
+      "nothingHint": "Check the spelling or ask us — we will find it for you.",
+      "askReception": "Message the front desk",
+      "group": {
+        "services": "Venues and services",
+        "items": "Menu items",
+        "info": "Information"
+      }
     }
   },
   "tracker": {
@@ -2182,6 +2198,19 @@
       "saveFailed": "Could not save",
       "loadFailed": "Could not load home settings",
       "source": "Data source:"
+    },
+    "search": {
+      "title": "Guest search",
+      "hint": "What takes part in results and what the guest sees in an empty field.",
+      "services": "Venues and services",
+      "items": "Menu items",
+      "info": "Information pages",
+      "excluded": "Hide from search",
+      "suggestions": "Suggestions for an empty field",
+      "addSuggestion": "Add a suggestion",
+      "saved": "Search settings saved",
+      "saveFailed": "Could not save",
+      "loadFailed": "Could not load search settings"
     }
   }
 }

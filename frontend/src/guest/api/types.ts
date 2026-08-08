@@ -820,3 +820,34 @@ export interface RoomCommandOutcome {
   controlId: string;
   result: 'confirmed' | 'unconfirmed' | 'accepted' | 'failed' | null;
 }
+
+
+/* ── Глобальный поиск ──────────────────────────────────────────────────── */
+
+/**
+ * Одна строка выдачи. `venue` — где искать: гость помнит блюдо, но не помнит
+ * заведение, и это ровно то, ради чего поиск заводился.
+ */
+export interface GuestSearchRow {
+  kind: 'service' | 'item' | 'info';
+  code: string;
+  id?: string;
+  title: string;
+  subtitle: string;
+  venue?: string;
+  venue_code?: string;
+  /** Маршрут витрины: ведёт ПРЯМО в карточку или заведение, не в список. */
+  route: string;
+  image: string | null;
+  price?: number | null;
+}
+
+export interface GuestSearchResult {
+  query: string;
+  services: GuestSearchRow[];
+  items: GuestSearchRow[];
+  info: GuestSearchRow[];
+  total: number;
+  /** Заготовки отеля для пустого поля. Пусто — значит отель их не завёл. */
+  suggestions?: string[];
+}

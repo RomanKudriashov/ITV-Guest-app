@@ -5,6 +5,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { HomeBlocksSection } from './HomeBlocksSection';
+import { SearchSection } from './SearchSection';
 
 import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { LocationsPage } from '@/pages/hotel/LocationsPage';
@@ -42,6 +43,12 @@ export function SettingsPage() {
             первой — это то, что гость видит раньше всего остального. */}
         <Box data-testid="settings-home-blocks">
           <HomeBlocksSection />
+        </Box>
+
+        <Divider />
+
+        <Box data-testid="settings-search">
+          <SearchSection />
         </Box>
 
         <Divider />

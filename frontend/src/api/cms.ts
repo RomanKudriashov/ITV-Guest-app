@@ -395,6 +395,28 @@ export function putHomeSettings(
   return api.put<HomeSettings>('/cms/home-settings', payload);
 }
 
+/* ── 10b. Guest search ───────────────────────────────────────────────────── */
+
+export interface SearchSettings {
+  services: boolean;
+  items: boolean;
+  info: boolean;
+  excluded_services: string[];
+  /** Подсказка — перевод на четыре языка, а не строка. */
+  suggestions: Record<string, string>[];
+  available_services: { code: string; title: Record<string, string> }[];
+}
+
+export function fetchSearchSettings(): Promise<SearchSettings> {
+  return api.get<SearchSettings>('/cms/search-settings');
+}
+
+export function putSearchSettings(
+  payload: Omit<SearchSettings, 'available_services'>,
+): Promise<SearchSettings> {
+  return api.put<SearchSettings>('/cms/search-settings', payload);
+}
+
 /* ── 11. Home showcase tiles ────────────────────────────────────────────── */
 
 export function fetchShowcase(): Promise<ShowcaseSettings> {

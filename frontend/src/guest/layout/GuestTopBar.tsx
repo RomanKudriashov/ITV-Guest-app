@@ -1,10 +1,12 @@
 import { alpha } from '@mui/material/styles';
 import Badge from '@mui/material/Badge';
+import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { IconSearch } from '@/icons';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { RoomMenu } from '../components/RoomMenu';
@@ -135,6 +137,23 @@ export function GuestTopBar({
       </Box>
 
       <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/*
+          ПОИСК — ЗНАЧКОМ, а не пунктом навигации. Он не раздел витрины, а
+          способ добраться до любого раздела, и место ему рядом с номером и
+          языком: там же, где живут инструменты, а не содержимое.
+        */}
+        <IconButton
+          onClick={() => onNavigate('/search')}
+          data-testid="guest-topbar-search"
+          aria-label={t('guest.search.title')}
+          size="small"
+          sx={(th) => ({
+            color: active === '/search' ? th.palette.primary.main : th.palette.text.secondary,
+          })}
+        >
+          <IconSearch size={18} />
+        </IconButton>
+
         {/* Без номера — кнопка «войти по номеру», см. RoomMenu. */}
         <RoomMenu room={room} />
 

@@ -14,6 +14,7 @@ import { useAppTheme } from '@/theme';
 import { pickLogo } from '@/theme/tokens';
 import {
   IconHome,
+  IconSearch,
   IconOrders,
   IconChat,
   IconInfo,
@@ -54,6 +55,9 @@ interface NavTab {
 // внутри заведения и открывается его плиткой на главной.
 const PRIMARY_TABS: NavTab[] = [
   { value: '/home', Icon: IconHome, labelKey: 'guest.nav.home' },
+  // Поиск стоит вторым, а не последним: на телефоне это единственная точка
+  // входа в него, и прятать её в хвост ряда — то же, что не делать вовсе.
+  { value: '/search', Icon: IconSearch, labelKey: 'guest.nav.search' },
   { value: '/orders', Icon: IconOrders, labelKey: 'guest.nav.orders' },
 ];
 const HOTEL_TABS: NavTab[] = [
