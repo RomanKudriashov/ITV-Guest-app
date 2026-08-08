@@ -42,7 +42,6 @@ ALLOWED = {
     # это модель отеля, и сервис ей нужен в apps/hotels.
     "api/guest.py": "партия 3: локации доставки уезжают в apps/hotels",
     "api/staff.py": "партия 5: персонал уезжает в apps/accounts",
-    "api/platform.py": "партия 3: платформенные вьюхи уезжают в apps/hotels/api/platform",
     "api/cms/analytics.py": "партия 5: уезжает в apps/analytics",
     "api/cms/grms.py": "партия 4: уезжает в apps/grms/api/cms",
     "api/cms/reviews.py": "партия 5: уезжает в apps/reviews",

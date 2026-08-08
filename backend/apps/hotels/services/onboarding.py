@@ -219,3 +219,31 @@ def upsert_dictionary_entry(*, kind: str, code: str, title: dict, is_active: boo
         defaults={"title": title, "is_active": is_active},
     )
     return entry
+
+
+def create_template(data: dict) -> OnboardingTemplate:
+    """
+    Заведение шаблона. Проверка прав остаётся во вьюхе — здесь только операция.
+    """
+    from apps.core.errors import ValidationError
+
+    code = (data.get("code") or "").strip().lower()
+    if not code:
+        raise ValidationError("Нужен код шаблона", field="code")
+    if OnboardingTemplate.objects.filter(code=code).exists():
+        raise ValidationError(f"Шаблон «{code}» уже есть", field="code")
+    return OnboardingTemplate.objects.create(**{**data, "code": code})
+
+
+def update_template(template_id: str, data: dict) -> OnboardingTemplate:
+    from apps.core.errors import NotFoundError
+
+    template = OnboardingTemplate.objects.filter(pk=template_id).first()
+    if template is None:
+        raise NotFoundError("Шаблон не найден")
+    # Код шаблона не меняем: на него ссылаются журнал и внешние скрипты.
+    data.pop("code", None)
+    for field, value in data.items():
+        setattr(template, field, value)
+    template.save()
+    return template

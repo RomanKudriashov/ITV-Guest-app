@@ -226,3 +226,50 @@ def test_views_do_not_touch_orm():
         cwd=root,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+# --- 6. Один путь — один модуль ---------------------------------------------
+
+
+def test_each_path_is_declared_in_one_module():
+    """
+    Путь, объявленный в ДВУХ модулях, ломает разбор метода — и делает это тихо.
+
+    django-ninja группирует операции по пути ВНУТРИ роутера. Если `GET /hotels`
+    объявлен в одном файле, а `POST /hotels` — в другом, получаются два
+    url-паттерна на один адрес: Django берёт первый и отвечает 405 на метод,
+    которого в нём нет. Ни снимок карты адресов, ни сверка OpenAPI этого не
+    видят — набор путей и методов остаётся прежним.
+
+    Поймано в партии 3 переносом платформенной консоли; сторож написан, чтобы
+    следующий раз это увидел прогон, а не разбор упавшего теста.
+    """
+    import collections
+
+    from api import api
+
+    where: dict[str, set[str]] = collections.defaultdict(set)
+
+    def walk(router, prefix: str) -> None:
+        # Обходим ВЛОЖЕННЫЕ роутеры тоже. Первая версия сторожа смотрела только
+        # верхний уровень `api._routers` — а домены подключаются своими
+        # роутерами, и все их пути лежали ниже. Сторож молчал не потому, что
+        # всё в порядке, а потому, что не туда смотрел.
+        for path, view in router.path_operations.items():
+            for operation in view.operations:
+                where[prefix + path].add(operation.view_func.__module__)
+        # Запись вложенного роутера — кортеж (prefix, router, ...): длина у
+        # версий ninja разная, поэтому берём первые два поля, а не всё.
+        for entry in getattr(router, "_routers", []):
+            sub_prefix, sub_router = entry[0], entry[1]
+            walk(sub_router, prefix + sub_prefix)
+
+    for prefix, router in api._routers:
+        walk(router, prefix)
+
+    split = {path: sorted(modules) for path, modules in where.items() if len(modules) > 1}
+    assert not split, (
+        "Один адрес объявлен в разных модулях — Django ответит 405 на «чужой» "
+        "метод. Соберите операции пути в одном файле:\n  "
+        + "\n  ".join(f"{path}: {', '.join(modules)}" for path, modules in split.items())
+    )
