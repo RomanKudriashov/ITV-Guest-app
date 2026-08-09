@@ -947,29 +947,71 @@ test.describe('Управление номером', () => {
     }
   })
 
-  test('обе темы: плита остаётся тёмной, меняется обрамление', async ({ page }) => {
+  test('обе темы: плита светлеет вместе с темой, но выключенное темнее включённого', async ({ page }) => {
     await enterRoom(page)
     const plate = page.getByTestId('room-plan')
     await expect(plate).toBeVisible({ timeout: 20_000 })
 
-    const look = () =>
+    /*
+      ПРАВИЛО ИЗМЕНИЛОСЬ, И ЭТО ОСОЗНАННО.
+
+      Раньше здесь проверялось обратное: «плита остаётся тёмной в обеих темах,
+      потому что это фотография, а не поверхность интерфейса». Довод был про
+      честность — светлая плита читалась бы как «в номере включили свет».
+
+      Что этот довод не учитывал: ночной кадр в среднем 27 из 255, и на белой
+      странице он читается не как ночь, а как чёрная дыра, выпадающая из темы.
+      Настоящая комната днём с выключенным светом тоже светлая — тёмной её
+      делает ночь, а не выключатель.
+
+      Поэтому теперь кадры поднимаются экспозицией под тему, а честность
+      обеспечивает ИНВАРИАНТ, который и проверяется ниже: выключенный свет
+      обязан быть темнее включённого — в любой теме. Поднимать один ночной
+      кадр было нельзя ровно поэтому: светлый кадр в среднем 54, и ночной,
+      поднятый до «дневного» уровня, оказался бы ЯРЧЕ него.
+    */
+    const exposure = () =>
       plate.evaluate((el) => {
-        const style = getComputedStyle(el)
-        return { background: style.backgroundColor, border: style.borderColor }
+        const style = (node: Element | null) => (node ? getComputedStyle(node).filter : '');
+        const brightness = (value: string) => {
+          const match = value.match(/brightness\(([\d.]+)\)/);
+          return match ? Number(match[1]) : 1;
+        };
+        const off = style(el.querySelector('[data-testid="room-plan-base"]'));
+        const on = style(el.querySelector('[data-testid^="room-plan-lit-"]'));
+        return {
+          off,
+          on,
+          offBrightness: brightness(off),
+          onBrightness: brightness(on),
+          backdrop: getComputedStyle(el).backgroundColor,
+        };
       })
 
-    const dark = await look()
+    const dark = await exposure()
+    // Тёмная тема: кадры показываются как сняты, поднимать нечего.
+    expect(dark.off).toBe('none')
+    expect(dark.on).toBe('none')
+
     await page.getByTestId('theme-toggle').first().click()
     await expect
-      .poll(async () => (await look()).border, { timeout: 10_000 })
-      .not.toBe(dark.border)
-    const light = await look()
+      .poll(async () => (await exposure()).backdrop, { timeout: 10_000 })
+      .not.toBe(dark.backdrop)
+    const light = await exposure()
 
-    // Плита — ФОТОГРАФИЯ, а не поверхность интерфейса: подложка та же в обеих
-    // темах. Светлая плита означала бы, что в номере включили свет.
-    expect(light.background).toBe(dark.background)
-    const channels = light.background.match(/\d+/g)!.slice(0, 3).map(Number)
-    expect(Math.max(...channels), 'плита посветлела вместе с темой').toBeLessThan(40)
+    // Светлая тема: подняты ОБА кадра, иначе плита врёт про свет.
+    expect(light.off).not.toBe('none')
+    expect(light.on).not.toBe('none')
+    expect(light.offBrightness).toBeGreaterThan(dark.offBrightness)
+    expect(
+      light.offBrightness * 1.15,
+      'ночной кадр поднят почти как светлый — разрыв между включено и выключено съеден',
+    ).toBeGreaterThan(light.onBrightness)
+
+    // Подложка плиты светлеет вместе с темой: чёрный прямоугольник, мигающий
+    // до загрузки кадра, — та же дыра на белой странице.
+    const channels = light.backdrop.match(/\d+/g)!.slice(0, 3).map(Number)
+    expect(Math.max(...channels), 'подложка плиты осталась тёмной').toBeGreaterThan(120)
   })
 
   test('RTL: план не зеркалится — это комната, а не раскладка', async ({ page }) => {

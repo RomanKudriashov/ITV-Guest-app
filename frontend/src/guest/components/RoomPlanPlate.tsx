@@ -289,7 +289,10 @@ export function RoomPlanPlate({
             // снизу остался бы СВЕТЛЫЙ кадр, то есть «во всём номере горит
             // свет» — ровно то враньё, которого здесь быть не должно. С ночным
             // кадром обесцвечивать нечего: он и есть нейтральное состояние.
-            filter: neutral && !twoFrames ? 'grayscale(1)' : 'none',
+            //
+            // Экспозиция кадра — из словаря: на светлой теме ночной кадр
+            // поднимается, чтобы плита не была чёрным пятном на белой странице.
+            filter: neutral && !twoFrames ? 'grayscale(1)' : tokens.framesOff,
           }}
         />
 
@@ -316,6 +319,7 @@ export function RoomPlanPlate({
               data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
               style={{
                 opacity: on ? 1 : 0,
+                filter: tokens.framesOn,
                 ...zoneWindowStyle(zone.hit, zone.mask, tokens.zoneWindowInk, tokens.zoneWindowEdge),
               }}
               sx={{
