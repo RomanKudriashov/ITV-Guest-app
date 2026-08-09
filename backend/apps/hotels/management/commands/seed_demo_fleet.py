@@ -393,7 +393,7 @@ class Command(BaseCommand):
         CMS. Нет снимка или MinIO — карточка останется без фото: демо-данные не
         должны быть причиной, по которой не поднимается окружение.
         """
-        from apps.media import seed_photos
+        from apps.media.services import seed_photos
         from apps.media.services import upload_asset
 
         # Тот же кадр во второй раз НЕ заливаем. Раньше `_image` вызывался в
@@ -455,7 +455,7 @@ class Command(BaseCommand):
         обложка консьержа осталась бы пляжем и после того, как кадр заменили.
         Загрузку администратора правило не трогает — у неё своё имя файла.
         """
-        from apps.media import seed_photos
+        from apps.media.services import seed_photos
 
         if asset is None:
             return False

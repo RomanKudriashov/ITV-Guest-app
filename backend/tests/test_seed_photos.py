@@ -15,7 +15,7 @@ import pytest
 from apps.catalog.models import Item, ItemImage
 from apps.core.context import tenant_context
 from apps.hotels.models import Service
-from apps.media import seed_photos
+from apps.media.services import seed_photos
 
 pytestmark = pytest.mark.django_db
 
@@ -47,7 +47,7 @@ def test_every_menu_section_has_a_real_photo(crystal):
     осталась с процедурной обложкой R1/R2.
     """
     from apps.catalog.models import Category
-    from apps.media import seed_photos
+    from apps.media.services import seed_photos
 
     with tenant_context(crystal):
         without = [
@@ -116,7 +116,7 @@ def test_cache_file_name_carries_the_photo_id(crystal):
     продолжает ставить старую. Ровно так «Такси» оставалось складом, хотя
     в манифесте уже стоял автомобиль.
     """
-    from apps.media import seed_photos
+    from apps.media.services import seed_photos
 
     for code, entry in list(seed_photos.PHOTOS.items())[:5]:
         assert entry[0] in seed_photos.cached_path(code).name, code

@@ -11,9 +11,8 @@ from django.db import transaction
 
 from apps.core.context import require_hotel_id
 
-from . import storage
-from .models import CategoryPlaceholder, MediaAsset
-from .tasks import process_media_asset
+from apps.media.services import storage
+from apps.media.models import CategoryPlaceholder, MediaAsset
 
 
 def upload_asset(
@@ -42,6 +41,11 @@ def upload_asset(
         size_bytes=len(content),
         alt=alt or {},
     )
+    # Задача импортируется ЗДЕСЬ, а не в шапке: пакет сервисов реэкспортирует
+    # этот модуль, а задача берёт из него же хранилище — импорт в шапке
+    # замыкает кольцо и роняет сборку.
+    from apps.media.tasks import process_media_asset
+
     # Строго после коммита: воркер живёт в другом процессе и, поставленный в
     # очередь раньше, успевает прочитать базу до того, как в ней появится
     # ассет. То же правило, что и для событийной шины.

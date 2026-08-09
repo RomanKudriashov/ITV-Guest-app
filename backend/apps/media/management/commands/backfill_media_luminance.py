@@ -12,7 +12,7 @@ from django.core.management.base import BaseCommand
 
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel
-from apps.media import storage
+from apps.media.services import storage
 from apps.media.models import MediaAsset
 
 

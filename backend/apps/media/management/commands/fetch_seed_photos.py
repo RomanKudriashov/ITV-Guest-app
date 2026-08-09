@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand
 
-from apps.media.seed_photos import PHOTOS, cached_path, fetch
+from apps.media.services.seed_photos import PHOTOS, cached_path, fetch
 
 
 class Command(BaseCommand):

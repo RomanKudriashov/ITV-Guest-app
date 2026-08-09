@@ -36,7 +36,7 @@ def _check_redis() -> dict:
 
 def _check_minio() -> dict:
     try:
-        from apps.media.storage import get_client
+        from apps.media.services.storage import get_client
 
         get_client().bucket_exists(settings.MINIO_BUCKET)
         return {"ok": True}

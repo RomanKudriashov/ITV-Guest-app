@@ -1515,7 +1515,7 @@ class Command(BaseCommand):
         Ни снимка, ни MinIO — обходимся без картинки: демо-данные не должны
         быть причиной, по которой не поднимается окружение.
         """
-        from apps.media import seed_photos
+        from apps.media.services import seed_photos
 
         content = seed_photos.fetch(code)
         if content is None:
@@ -1554,7 +1554,7 @@ class Command(BaseCommand):
         кадр в манифесте заменили на вывеску отеля. Загрузку АДМИНИСТРАТОРА
         это не трогает — у неё другое имя файла, и правка руками сильнее сида.
         """
-        from apps.media import seed_photos
+        from apps.media.services import seed_photos
 
         if asset is None:
             return False
@@ -1650,7 +1650,7 @@ class Command(BaseCommand):
         Раздел меню тоже виден гостю. В R4 аудит их не покрывал — часть осталась
         с процедурной обложкой, часть без фото вовсе.
         """
-        from apps.media import seed_photos
+        from apps.media.services import seed_photos
 
         for category in Category.objects.select_related("image"):
             if category.code not in seed_photos.PHOTOS:
@@ -1676,7 +1676,7 @@ class Command(BaseCommand):
         R1/R2 — ради этого прогон и затевался. Признак процедурной: она PNG,
         настоящие снимки манифеста приходят JPEG.
         """
-        from apps.media import seed_photos
+        from apps.media.services import seed_photos
 
         real: dict = {}
         for row in ItemImage.objects.filter(

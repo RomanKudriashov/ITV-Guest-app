@@ -270,7 +270,7 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
     from apps.hotels.models import Hotel
     from apps.media.models import MediaAsset
     from apps.media.services import upload_asset
-    from apps.media import storage
+    from apps.media.services import storage
 
     hotel = Hotel.objects.filter(pk=hotel_id).first()
     if hotel is None:

@@ -14,7 +14,7 @@ from PIL import Image, ImageOps
 
 from apps.core.context import tenant_context
 
-from . import storage
+from apps.media.services import storage
 from .models import MediaAsset
 
 logger = logging.getLogger(__name__)
