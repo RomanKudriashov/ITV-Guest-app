@@ -16,7 +16,7 @@ import pytest
 from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError, ValidationError
 from apps.core.models import AuditLog
-from apps.grms import builder, catalog, publishing, roomcheck
+from apps.grms.services import builder, catalog, publishing, roomcheck
 from apps.grms.models import PublishedConfig, RoomType, Variable
 from apps.hotels.models import Room
 

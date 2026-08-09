@@ -411,7 +411,7 @@ def _load_room_state(hotel, token: str, language: str):
     """
     from apps.accounts.auth import authenticate_guest
     from apps.core.errors import DomainError
-    from apps.grms import guest as room_guest
+    from apps.grms.services import guest as room_guest
 
     language = language or hotel.default_language
     with tenant_context(hotel, language=language):
@@ -430,7 +430,7 @@ def _load_room_state(hotel, token: str, language: str):
 def _room_snapshot(hotel, token: str, language: str):
     from apps.accounts.auth import authenticate_guest
     from apps.core.errors import DomainError
-    from apps.grms import guest as room_guest
+    from apps.grms.services import guest as room_guest
 
     language = language or hotel.default_language
     with tenant_context(hotel, language=language):

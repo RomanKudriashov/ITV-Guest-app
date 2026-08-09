@@ -44,7 +44,7 @@ def room_state(request: HttpRequest):
     Полный снимок. Частичных апдейтов в контракте нет: гость открывает страницу
     в произвольный момент, и склеивать дельты ему не из чего.
     """
-    from apps.grms import guest as room_guest
+    from apps.grms.services import guest as room_guest
 
     return room_guest.build_state(
         request.hotel, request.guest_session, language=current_language()
@@ -63,7 +63,7 @@ def room_command(request: HttpRequest, payload: CommandIn):
     что команда ПРИНЯТА, а не что оборудование в этом состоянии (ТЗ §12).
     Подтверждение приходит отдельно, снимком по WS.
     """
-    from apps.grms import guest as room_guest
+    from apps.grms.services import guest as room_guest
 
     return 202, room_guest.submit_command(
         request.hotel,
@@ -85,8 +85,8 @@ def room_verify(request: HttpRequest, payload: VerifyIn):
     `PIN_THROTTLED` с `retry_after_s`. Ответ константного времени — без
     подсказок, чем именно не подошёл код.
     """
-    from apps.grms import guest as room_guest
-    from apps.grms.pin import verify
+    from apps.grms.services import guest as room_guest
+    from apps.grms.services.pin import verify
 
     room_guest.require_module(request.hotel)
     return verify(request.hotel, request.guest_session, pin=payload.pin)

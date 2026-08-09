@@ -32,7 +32,7 @@ from ninja.files import UploadedFile
 from apps.core.context import require_hotel_id, tenant_context
 from apps.core.errors import DomainError, NotFoundError, ValidationError
 from apps.core.models import AuditLog
-from apps.grms import builder, catalog, importer, publishing, reconcile, roomcheck
+from apps.grms.services import builder, catalog, importer, publishing, reconcile, roomcheck
 from apps.grms.models import RoomType, Variable
 from apps.hotels.models import Hotel, HotelModule
 from apps.hotels.module_registry import enabled_module_codes
@@ -292,7 +292,7 @@ def access_state(request: HttpRequest):
     код в момент заведения, а не «посмотреть, какой там был».
     """
     from apps.grms.models import RoomPin
-    from apps.grms.guest import demo_entry_enabled
+    from apps.grms.services.guest import demo_entry_enabled
 
     hotel = _hotel()
     with tenant_context(hotel):
@@ -321,7 +321,7 @@ def set_room_pin(request: HttpRequest, payload: PinIn):
     администратор. Смена PIN сбрасывает подтверждение у всех устройств этой
     комнаты: именно этим отмечается смена гостя, пока нет выезда по PMS.
     """
-    from apps.grms import pin as room_pin
+    from apps.grms.services import pin as room_pin
     from apps.hotels.models import Room
 
     hotel = _hotel()
@@ -390,7 +390,7 @@ def get_plan(request: HttpRequest, code: str):
     опубликованного конфига, а не ввод кода руками: набранный руками
     `controlId` живёт до первого переименования элемента.
     """
-    from apps.grms import plan as plan_geometry
+    from apps.grms.services import plan as plan_geometry
     from apps.media.models import MediaAsset
 
     hotel = _hotel()
@@ -454,7 +454,7 @@ def put_plan(request: HttpRequest, code: str, payload: PlanGeometryIn):
     уезжает в номер мимо публикации, а откат конфигурации возвращает геометрию
     своей версии.
     """
-    from apps.grms import plan as plan_geometry
+    from apps.grms.services import plan as plan_geometry
 
     hotel = _hotel()
     with tenant_context(hotel):
@@ -503,8 +503,8 @@ def upload_plan_frames(
     предлагаем посчитать ночной кадр из светлого; тогда совмещение гарантировано
     построением, а не удачей.
     """
-    from apps.grms import nightframe, pair
-    from apps.grms import plan as plan_geometry
+    from apps.grms.services import nightframe, pair
+    from apps.grms.services import plan as plan_geometry
     from apps.grms.tasks import bake_room_plan_night
     from apps.media.models import MediaAsset
     from apps.media.services import upload_asset
@@ -602,7 +602,7 @@ def copy_plan(request: HttpRequest, code: str, payload: PlanCopyIn):
     этого типа нет такого элемента, публикация не пройдёт и скажет, чего не
     хватает.
     """
-    from apps.grms import plan as plan_geometry
+    from apps.grms.services import plan as plan_geometry
 
     hotel = _hotel()
     with tenant_context(hotel):

@@ -19,7 +19,7 @@ import logging
 from celery import shared_task
 
 from apps.core.context import tenant_context
-from apps.grms import commands, inflight
+from apps.grms.services import commands, inflight
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def resettle_room(hotel_id: str, room_id: str, device: str) -> None:
     Ничего не отправляет: только сбрасывает схлопывание чтений и говорит
     сессиям собрать снимок заново.
     """
-    from apps.grms.guest import resolve_context
+    from apps.grms.services.guest import resolve_context
     from apps.hotels.models import Hotel, Room
 
     hotel = Hotel.objects.filter(pk=hotel_id).first()
@@ -118,7 +118,7 @@ def execute_room_command(
 
 
 def _execute(hotel, room_id: str, control_id: str, capability: str, value) -> dict:
-    from apps.grms.guest import resolve_context
+    from apps.grms.services.guest import resolve_context
     from apps.hotels.models import Room
 
     with tenant_context(hotel):
@@ -264,8 +264,8 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
     остался бы либо без ночного кадра, либо с парой кадров, снятых как попало.
     """
     from apps.core.context import tenant_context
-    from apps.grms import nightframe
-    from apps.grms import plan as plan_geometry
+    from apps.grms.services import nightframe
+    from apps.grms.services import plan as plan_geometry
     from apps.grms.models import RoomType
     from apps.hotels.models import Hotel
     from apps.media.models import MediaAsset

@@ -31,9 +31,10 @@ from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.core.models import AuditLog
-from apps.grms import adapter, commands
+from apps.grms.transport import adapter
+from apps.grms.services import commands
 from apps.grms.consumers import group_name
-from apps.grms.emulator import serve_in_thread
+from apps.grms.transport.emulator import serve_in_thread
 from apps.hotels.models import OnPremNode
 from apps.hotels.services.onprem import register_node
 from itv_connector.executor import Endpoint, execute
@@ -172,7 +173,7 @@ def test_a_single_immediate_read_would_have_failed(wired):
     body = adapter.build_set(
         device=DEVICE, channel="C_Light 2", value=1, request_id=request_id
     )
-    from apps.grms import transport
+    from apps.grms.transport import transport
 
     raw = transport.send(hotel, adapter.envelope(request_id=request_id, body=body))
     assert adapter.parse_response(

@@ -17,7 +17,8 @@ from __future__ import annotations
 
 from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError, ValidationError
-from apps.grms import adapter, builder, catalog, commands
+from apps.grms.transport import adapter
+from apps.grms.services import builder, catalog, commands
 from apps.grms.models import Binding, ControlElement
 
 # Итоги проверки, отличные от исходов команды: администратору важно не только

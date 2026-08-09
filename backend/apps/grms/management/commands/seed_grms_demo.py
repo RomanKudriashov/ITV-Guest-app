@@ -33,7 +33,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.core.context import tenant_context
-from apps.grms import builder, publishing
+from apps.grms.services import builder, publishing
 from apps.grms.models import (
     Binding,
     ControlElement,
@@ -518,7 +518,7 @@ class Command(BaseCommand):
         """PIN проживания демо-номера. Тот же, что показывает ресепшен в демо."""
         if room is None:
             return
-        from apps.grms import pin as room_pin
+        from apps.grms.services import pin as room_pin
         from apps.grms.models import RoomPin
 
         with tenant_context(hotel):

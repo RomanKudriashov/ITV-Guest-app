@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from apps.grms import adapter
+from apps.grms.transport import adapter
 
 GOOD_ID = "ce3ba8ef-a30b-4812-97c6-37e90ccb4d1c"
 DEVICE = "Modbus TCP Server (Slave mode) 701"

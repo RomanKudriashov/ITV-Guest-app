@@ -31,7 +31,7 @@ import os
 
 import pytest
 
-from apps.grms import adapter
+from apps.grms.transport import adapter
 from itv_connector.executor import Endpoint, execute
 
 REAL = os.getenv("GRMS_REAL_SERVER") == "1"

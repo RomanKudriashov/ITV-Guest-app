@@ -24,7 +24,7 @@ import logging
 import time
 
 from apps.core.models import AuditLog
-from apps.grms import adapter, transport
+from apps.grms.transport import adapter, transport
 
 logger = logging.getLogger(__name__)
 

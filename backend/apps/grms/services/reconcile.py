@@ -28,7 +28,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from apps.grms import adapter, commands, transport
+from apps.grms.transport import adapter, transport
+from apps.grms.services import commands
 
 # Насколько дальше последнего номера из Excel заглядывать в поисках лишних
 # каналов. Шесть — компромисс: находит забытые в файле группы (у ТИП1 их две),

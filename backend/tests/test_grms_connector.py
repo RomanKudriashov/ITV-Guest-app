@@ -19,8 +19,8 @@ import pytest
 from asgiref.sync import async_to_sync
 from channels.testing import WebsocketCommunicator
 
-from apps.grms import adapter
-from apps.grms.emulator import serve_in_thread
+from apps.grms.transport import adapter
+from apps.grms.transport.emulator import serve_in_thread
 from apps.hotels.services.onprem import register_node, revoke_key
 from itv_connector.executor import Endpoint, execute
 

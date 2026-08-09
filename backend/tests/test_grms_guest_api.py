@@ -23,7 +23,7 @@ import pytest
 
 from apps.core.context import platform_scope, tenant_context
 from apps.core.models import AuditLog
-from apps.grms import catalog, commands, inflight
+from apps.grms.services import catalog, commands, inflight
 from apps.grms.management.commands.seed_grms_demo import DEMO_PIN, DEMO_ROOM
 from apps.hotels.models import HotelModule, OnPremNode
 from tests.conftest import host_for
@@ -438,7 +438,7 @@ def test_a_type_without_a_plan_gets_a_snapshot_without_one(guest, crystal):
     Штатный сценарий: рендер будет далеко не у каждого типа номера, и снимок
     обязан собираться без него, а не отдавать пустую рамку.
     """
-    from apps.grms import publishing
+    from apps.grms.services import publishing
     from apps.grms.management.commands.seed_grms_demo import TYPE_CODE
     from apps.grms.models import RoomType
 
@@ -633,7 +633,8 @@ def test_a_stand_where_every_channel_answers_false_is_unavailable(guest, monkeyp
     На эмуляторе такого не бывает — он отвечает настоящими значениями, — поэтому
     картина воспроизводится подменой ответа адаптера, а не подкруткой стенда.
     """
-    from apps.grms import adapter, commands
+    from apps.grms.transport import adapter
+    from apps.grms.services import commands
 
     def all_false(hotel, *, device, feedbacks, subdevice="", room=""):
         return {
@@ -663,7 +664,7 @@ def test_concurrent_snapshots_share_one_read_of_the_hardware(guest, monkeypatch)
     небольшим, а собственная команда его сбрасывает — иначе гость увидел бы
     снимок, собранный ДО его нажатия.
     """
-    from apps.grms import commands
+    from apps.grms.services import commands
 
     calls = []
     original = commands._read_batch
@@ -687,7 +688,7 @@ def test_a_command_drops_the_shared_read(guest, crystal):
     Схлопывание не должно превратиться в показ устаревшего: момент, когда мы
     точно знаем, что состояние изменилось, — это наша же команда.
     """
-    from apps.grms import commands
+    from apps.grms.services import commands
     from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
     from apps.hotels.models import Room
 
@@ -715,7 +716,8 @@ def test_a_silent_channel_does_not_hold_the_whole_snapshot(guest, monkeypatch):
     """
     import time as time_module
 
-    from apps.grms import commands, transport
+    from apps.grms.transport import transport
+    from apps.grms.services import commands
 
     async def never_answers(hotel_id, envelope, ttl_ms):
         await __import__("asyncio").sleep(30)

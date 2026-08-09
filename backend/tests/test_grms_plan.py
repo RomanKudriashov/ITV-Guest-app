@@ -28,8 +28,8 @@ import pytest
 from django.core.management import call_command
 
 from apps.core.context import tenant_context
-from apps.grms import plan as plan_geometry
-from apps.grms import publishing
+from apps.grms.services import plan as plan_geometry
+from apps.grms.services import publishing
 from apps.grms.management.commands.seed_grms_demo import (
     GEOMETRY_FILE,
     PLAN_ZONE_LIGHTS,

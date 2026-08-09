@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError, ValidationError
-from apps.grms import catalog
+from apps.grms.services import catalog
 from apps.grms.models import (
     Binding,
     ControlElement,

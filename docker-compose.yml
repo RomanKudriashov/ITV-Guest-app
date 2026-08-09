@@ -140,7 +140,7 @@ services:
     build: ./backend
     # Чистый stdlib, поэтому запускается тем же образом, что и backend, но
     # ничего из Django не импортирует.
-    command: ["python", "-m", "apps.grms.emulator"]
+    command: ["python", "-m", "apps.grms.transport.emulator"]
     environment:
       IRIDI_EMULATOR_PORT: "1085"
     volumes:

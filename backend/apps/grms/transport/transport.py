@@ -19,7 +19,7 @@ import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from apps.grms import adapter
+from apps.grms.transport import adapter
 from apps.grms.consumers import group_name
 
 logger = logging.getLogger(__name__)

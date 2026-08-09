@@ -18,7 +18,7 @@
 
 import pytest
 
-from apps.grms.emulator import (
+from apps.grms.transport.emulator import (
     DEVICE_TEMPLATE,
     ROOM_PROFILES,
     SCENE_PRESETS,

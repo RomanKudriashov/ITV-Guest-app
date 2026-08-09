@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from apps.core.context import tenant_context
-from apps.grms import builder, publishing, reconcile, roomcheck
+from apps.grms.services import builder, publishing, reconcile, roomcheck
 from apps.grms.models import RoomType, Variable
 
 from .grms_harness import wire

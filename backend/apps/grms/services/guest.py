@@ -23,8 +23,9 @@ from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, ValidationError
 from apps.core.fields import translate
 from apps.core.models import AuditLog
-from apps.grms import catalog, commands, inflight, liveness, transport
-from apps.grms import plan as plan_geometry
+from apps.grms.transport import transport
+from apps.grms.services import catalog, commands, inflight, liveness
+from apps.grms.services import plan as plan_geometry
 from apps.grms.models import PublishedConfig, RoomTypeRoom
 
 logger = logging.getLogger(__name__)

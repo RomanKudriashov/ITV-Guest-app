@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from apps.core.context import tenant_context
-from apps.grms import builder, importer
+from apps.grms.services import builder, importer
 from apps.grms.models import ControlElement, RoomType, RoomTypeRoom, Variable
 from apps.hotels.models import Room
 
@@ -231,7 +231,7 @@ def test_cyrillic_type_names_do_not_collapse_into_one_code():
     получили бы ОДИН код, сложившись в один вместе со своими переменными.
     Найдено E2E-прогоном раздела CMS на настоящем присланном файле.
     """
-    from apps.grms.builder import _slug
+    from apps.grms.services.builder import _slug
 
     codes = [_slug(name) for name in ("ТИП1", "ТИП2", "ТИП3")]
     assert codes == ["tip1", "tip2", "tip3"]

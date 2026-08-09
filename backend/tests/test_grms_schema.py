@@ -18,7 +18,7 @@ from django.db import connection, transaction
 from django.db.utils import ProgrammingError
 
 from apps.core.context import tenant_context
-from apps.grms import catalog
+from apps.grms.services import catalog
 from apps.grms.models import (
     Binding,
     ControlElement,

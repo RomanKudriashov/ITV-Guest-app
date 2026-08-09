@@ -22,8 +22,8 @@ from django.utils import timezone
 from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError, ValidationError
 from apps.core.models import AuditLog
-from apps.grms import builder, catalog
-from apps.grms import plan as plan_geometry
+from apps.grms.services import builder, catalog
+from apps.grms.services import plan as plan_geometry
 from apps.grms.models import Binding, ControlElement, PublishedConfig, RoomType
 
 

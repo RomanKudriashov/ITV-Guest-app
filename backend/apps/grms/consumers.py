@@ -57,14 +57,14 @@ def _touch(key: str, version: str) -> None:
 
 @database_sync_to_async
 def _remember_endpoints(hotel_id: str, endpoints) -> None:
-    from apps.grms import liveness
+    from apps.grms.services import liveness
 
     liveness.remember_endpoints(hotel_id, endpoints)
 
 
 @database_sync_to_async
 def _forget_endpoints(hotel_id: str) -> None:
-    from apps.grms import liveness
+    from apps.grms.services import liveness
 
     liveness.forget(hotel_id)
 

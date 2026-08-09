@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from django.core.cache import cache
 
-from apps.grms import adapter
+from apps.grms.transport import adapter
 
 # Тот же порог, что у «узел жив»: три пропущенных отметки. Своей константы
 # здесь заводить нельзя — разъедутся.
