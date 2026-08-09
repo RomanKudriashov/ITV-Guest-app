@@ -28,9 +28,9 @@ from apps.core.context import require_hotel_id
 from apps.core.fields import translate
 from apps.orders.models import Order
 
-from .channels.adapters import get_adapter
-from .channels.base import ChannelError, RenderedMessage
-from .models import (
+from apps.notifications.channels.adapters import get_adapter
+from apps.notifications.channels.base import ChannelError, RenderedMessage
+from apps.notifications.models import (
     ChannelType,
     EscalationRule,
     EscalationStep,
@@ -182,7 +182,7 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
     if not steps:
         return []
 
-    from .tasks import run_escalation_step
+    from apps.notifications.tasks import run_escalation_step
 
     planned: list[NotificationLog] = []
     for index, step in enumerate(steps):
@@ -266,7 +266,7 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
         return log
 
     language = order.hotel.default_language
-    from .tasks import deliver_notification
+    from apps.notifications.tasks import deliver_notification
 
     for channel in channels:
         message = render_message(channel, order, log.step, language)

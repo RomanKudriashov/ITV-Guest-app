@@ -20,8 +20,8 @@ from apps.accounts.roles import (
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import ExecutionPoint
 
-from .channels.adapters import get_adapter
-from .models import (
+from apps.notifications.channels.adapters import get_adapter
+from apps.notifications.models import (
     ChannelType,
     EscalationRule,
     EscalationStep,

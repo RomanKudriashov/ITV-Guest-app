@@ -1,6 +1,7 @@
 from ninja import Router
 
 from apps.catalog.api.router import cms_router as catalog_router
+from apps.notifications.api.router import cms_router as notifications_router
 from apps.reviews.api.router import cms_router as reviews_router
 from apps.grms.api.router import cms_router as grms_router
 from apps.accounts.api.cms.staff import router as staff_router
@@ -9,7 +10,6 @@ from apps.media.api.cms.media import router as media_router
 
 from .analytics import router as analytics_router
 from .inclusions import router as inclusions_router
-from .notifications import router as notifications_router
 
 router = Router()
 router.add_router("", hotel_router)
