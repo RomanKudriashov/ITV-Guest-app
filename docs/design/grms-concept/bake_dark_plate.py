@@ -1,159 +1,72 @@
 #!/usr/bin/env python3
 """
-Ночной кадр плана — СЧИТАЕТСЯ из светлого, а не рисуется отдельно.
+Печёт кадр «свет выключен» ИЗ светлого рендера — попиксельно совмещённый с ним.
 
-Зачем именно так. Плита плана — два попиксельно совмещённых кадра: нижний
-ночной виден всегда, верхний светлый показывается только в тех зонах, где свет
-подтверждённо включён. Совмещение здесь не пожелание, а условие работы: стоит
-кадрам разойтись на несколько пикселей, и на границе включённой зоны появится
-двойная мебель.
+Зачем: два отдельно сгенерированных рендера (со светом и без) не совмещаются —
+на реальных кадрах габариты комнаты разошлись примерно на 21%, мебель двоится.
+Кадр, посчитанный из светлого, совпадает с ним всегда и по построению.
 
-Нарисованный отдельно тёмный рендер этого условия не выполняет. Замерено на
-render-type1-dark.png: при одинаковом размере кадра 1586x992 габариты комнаты
-расходятся примерно на 21% (светлый x 310-1260, тёмный x 217-1365). Он остаётся
-в репозитории референсом настроения и в приложение не попадает.
+Как это работает: сильное размытие яркости даёт оценку запечённого в кадр света;
+деление на неё оставляет материал (альбедо) почти без световых пятен. Дальше
+материал заново «освещается» плоским холодным светом — получается ночная комната,
+а не затонированная дневная.
 
-Кадр, посчитанный ИЗ светлого, совмещён по построению: это те же пиксели, к
-которым применена цветовая функция. Никакой геометрии скрипт не трогает —
-только яркость и цвет.
+    pip install pillow numpy --break-system-packages -q
+    python3 bake_dark_plate.py render-type1.png render-type1-off.png
 
-Что делает функция, по шагам:
-
-  1. ДЕЛИТ КАДР НА ОСВЕЩЁННОСТЬ. В рендере светлое — это освещённое: пятна
-     под светильниками, белая плитка ванной под спотами, покрывало под лампой.
-     «Выключить свет» — значит снять именно освещённость, оставив собственный
-     цвет поверхностей: кадр делится на размытую светлоту, то есть на грубую
-     оценку того, сколько света на это место попало.
-
-     Почему делением, а не затемнением. Затемнение множит всё на одно число:
-     пятно под лампой остаётся ярче стены ровно во столько же раз, и ванная
-     остаётся светлым пятном, читаемым как «там горит свет». Деление убирает
-     сам перепад — белая плитка остаётся чуть светлее тёмного дерева, потому
-     что она белая, а не потому что на неё падает свет.
-
-     Тёплое гасится ДОПОЛНИТЕЛЬНО: деление снимает силу лампы, но оставляет
-     её тёплый оттенок на стене, а тёплая полутьма читается как «свет
-     притушили». Мера теплоты — превышение красного над синим. Обе карты
-     размываются гауссом: убираем ПЯТНО СВЕТА, а не текстуру под ним.
-
-  2. ЖМЁТ ЯРКОСТЬ гаммой и коэффициентом, оставляя крошечную подложку: в
-     реальной ночной комнате есть отражённый свет из коридора и от окна, и
-     абсолютно чёрный кадр читается как дыра, а не как комната.
-
-  3. УВОДИТ В ХОЛОД. Ночью глаз видит синее (эффект Пуркинье), и тёплая
-     полутьма выглядит как «свет притушили», а не «свет выключили».
-
-Запуск (Pillow, без numpy — чтобы шло и на хосте, и в контейнере backend):
-
-    python3 docs/design/grms-concept/bake_dark_plate.py
-
-Перезапуск идемпотентен: из одного и того же светлого кадра получается один и
-тот же ночной. Результат КОММИТИТСЯ — сид берёт готовый файл и не считает
-картинки на старте стенда.
+Параметры подгоняются под конкретный рендер:
+    --exposure   общая яркость ночного кадра (по умолчанию 0.30)
+    --desat      обесцвечивание, 0..1 (0.80)
+    --tint       холодный тон, три числа (0.55 0.66 0.95)
+    --sigma      радиус оценки света в пикселях (70)
 """
-
-from __future__ import annotations
-
 import argparse
-from pathlib import Path
+import numpy as np
+from PIL import Image, ImageFilter
 
-from PIL import Image, ImageChops, ImageFilter
+LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
 
-HERE = Path(__file__).resolve().parent
-SOURCE = HERE / "render-type1.png"
-TARGET = HERE / "render-type1-off.png"
+ap = argparse.ArgumentParser()
+ap.add_argument("src")
+ap.add_argument("dst")
+ap.add_argument("--exposure", type=float, default=0.30)
+ap.add_argument("--desat", type=float, default=0.80)
+ap.add_argument("--tint", type=float, nargs=3, default=[0.55, 0.66, 0.95])
+ap.add_argument("--sigma", type=float, default=70)
+ap.add_argument("--no-extinguish", action="store_true",
+                help="не гасить сами светильники (по умолчанию гасим)")
+a = ap.parse_args()
 
-# --- Коэффициенты. Подобраны на этом кадре и вынесены сюда, чтобы новый рендер
-# --- правился числами, а не переписыванием функции.
+img = Image.open(a.src).convert("RGB")
+rgb = np.array(img).astype(np.float32) / 255.0
+lum = rgb @ LUMA
 
-# Радиус размытия карты освещённости, в долях ширины кадра. Меньше — начнёт
-# съедать фактуру, больше — перестанет различать соседние комнаты.
-LIGHT_BLUR = 0.010
-# Опорная освещённость деления и добавка в знаменатель. Добавка не даёт
-# делению взорваться в тенях, где света и так нет.
-LIGHT_PIVOT = 118
-LIGHT_FLOOR = 26
+# оценка запечённого света
+blur = Image.fromarray((np.clip(lum, 0, 1) * 255).astype("uint8")).filter(
+    ImageFilter.GaussianBlur(a.sigma)
+)
+light = np.array(blur).astype(np.float32) / 255.0
 
-# Насколько гасится тёплый оттенок, оставшийся после деления.
-WARM_DAMP = 0.42
-# Усиление меры «теплоты» перед размытием: разница R-B у лампы невелика.
-WARM_GAIN = 1.7
-WARM_BLUR = 0.006
+# материал без световых пятен
+albedo = np.clip(rgb / (light[..., None] + 0.10), 0, 1.6)
 
-# Сжатие альбедо к общему уровню: 1.0 — оставить как есть, 0 — залить всё
-# одним тоном. Опорный уровень примерно соответствует стене номера.
-ALBEDO_CONTRAST = 0.46
-ALBEDO_PIVOT = 104
+# ночь: обесцветить и заново осветить плоским холодным светом
+gray = np.repeat((albedo @ LUMA)[..., None], 3, axis=2)
+out = (gray * a.desat + albedo * (1 - a.desat)) * np.array(a.tint, np.float32) * a.exposure
 
-# Гамма >1 давит полутона: ночью видно контуры, а не фактуру.
-GAMMA = 1.2
-# Остатки света по каналам. Синий выше остальных — холодная полутьма.
-GAIN = {"R": 0.27, "G": 0.31, "B": 0.43}
-# Подложка: не даём кадру стать чёрным прямоугольником.
-FLOOR = {"R": 0.012, "G": 0.016, "B": 0.026}
+# Гасим САМИ ИСТОЧНИКИ. Деление на освещённость убирает разлив света, но не может
+# выключить лампу: её пиксели ярки собственным свечением, и материал читается как белый.
+# Поэтому светильники и светодиодные ленты остаются «включёнными» на ночном кадре.
+# Находим яркие тёплые области и заменяем их размытым окружением ночного кадра.
+if not a.no_extinguish:
+    warm = rgb[:, :, 0] - rgb[:, :, 2]
+    emitters = ((lum > 0.62) & (warm > 0.06)) | (lum > 0.85)
+    mask = Image.fromarray((emitters * 255).astype("uint8"))
+    mask = mask.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(6))
+    alpha = (np.array(mask).astype(np.float32) / 255.0)[..., None]
+    around = Image.fromarray((np.clip(out, 0, 1) * 255).astype("uint8"))
+    around = np.array(around.filter(ImageFilter.GaussianBlur(28))).astype(np.float32) / 255.0
+    out = out * (1 - alpha) + around * 0.75 * alpha
 
-
-def _channel_curve(gain: float, floor: float) -> list[int]:
-    """LUT канала: сжатие альбедо к общему уровню, подложка, гамма, яркость."""
-    curve = []
-    for value in range(256):
-        # Сжатие к опорному уровню. Без него белая плитка ванной остаётся
-        # заметно светлее всей комнаты и читается как «там горит свет»: в
-        # тёмной комнате глаз воспринимает такой перепад как источник, а не
-        # как белую поверхность.
-        toned = ALBEDO_PIVOT + (value - ALBEDO_PIVOT) * ALBEDO_CONTRAST
-        toned = max(0.0, min(255.0, toned)) / 255
-        curve.append(max(0, min(255, round(255 * (floor + (1 - floor) * toned**GAMMA * gain)))))
-    return curve
-
-
-def bake(source: Image.Image) -> Image.Image:
-    """Светлый кадр → ночной. Геометрия не меняется ни на пиксель."""
-    image = source.convert("RGB")
-    red, green, blue = image.split()
-
-    # 1а. Деление на освещённость. Делителя у Pillow нет, поэтому обратная
-    # величина считается таблицей и применяется умножением: multiply(a, b)
-    # это a*b/255, а значит multiply(кадр, 255*pivot/L) даёт кадр*pivot/L.
-    lightness = image.convert("L").filter(ImageFilter.GaussianBlur(image.width * LIGHT_BLUR))
-    inverse = lightness.point(
-        lambda value: min(255, round(255 * LIGHT_PIVOT / (value + LIGHT_FLOOR)))
-    )
-    red, green, blue = (ImageChops.multiply(band, inverse) for band in (red, green, blue))
-
-    # 1б. Карта «теплоты»: превышение красного над синим, размытое до пятен.
-    warmth = ImageChops.subtract(red, blue)
-    warmth = warmth.point(lambda value: min(255, round(value * WARM_GAIN)))
-    warmth = warmth.filter(ImageFilter.GaussianBlur(image.width * WARM_BLUR))
-    damp = warmth.point(lambda value: 255 - round(value * WARM_DAMP))
-    red, green, blue = (ImageChops.multiply(band, damp) for band in (red, green, blue))
-
-    # 2–3. Яркость и холод — по каналам.
-    red = red.point(_channel_curve(GAIN["R"], FLOOR["R"]))
-    green = green.point(_channel_curve(GAIN["G"], FLOOR["G"]))
-    blue = blue.point(_channel_curve(GAIN["B"], FLOOR["B"]))
-
-    return Image.merge("RGB", (red, green, blue))
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=SOURCE)
-    parser.add_argument("--target", type=Path, default=TARGET)
-    options = parser.parse_args()
-
-    with Image.open(options.source) as source:
-        size = source.size
-        result = bake(source)
-
-    result.save(options.target, format="PNG", optimize=True)
-    print(
-        f"{options.source.name} {size[0]}x{size[1]} → {options.target.name} "
-        f"{result.size[0]}x{result.size[1]}"
-    )
-    if result.size != size:
-        raise SystemExit("размер кадра изменился — кадры перестанут совмещаться")
-
-
-if __name__ == "__main__":
-    main()
+Image.fromarray((np.clip(out, 0, 1) * 255).astype("uint8")).save(a.dst)
+print(f"готово: {a.dst} ({img.size[0]}×{img.size[1]}, совмещён с {a.src} попиксельно)")
