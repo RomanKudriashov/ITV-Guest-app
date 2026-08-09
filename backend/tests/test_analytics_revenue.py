@@ -12,9 +12,9 @@ from __future__ import annotations
 import pytest
 from django.db.models import Sum
 
-from apps.analytics import collector
+from apps.analytics.services import collector
 from apps.analytics.models import OrderDaily
-from apps.analytics.recompute import recompute_aggregates
+from apps.analytics.services.recompute import recompute_aggregates
 from apps.catalog.models import Item
 from apps.core.context import tenant_context
 from apps.orders.services import OrderInput, OrderLineInput, create_order
@@ -142,7 +142,7 @@ def test_component_increment_is_idempotent(crystal):
 
 def test_summary_exposes_decomposition(crystal, django_capture_on_commit_callbacks):
     from apps.accounts.models import User
-    from apps.analytics import queries
+    from apps.analytics.services import queries
 
     with tenant_context(crystal):
         crystal.service_fee_bp = 1000

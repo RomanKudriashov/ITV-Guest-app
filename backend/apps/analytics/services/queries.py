@@ -12,18 +12,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from django.db.models import Count, Sum
+from django.db.models import Sum
 
 from apps.hotels.models import Hotel
 
-from .models import (
+from apps.analytics.models import (
     ItemDaily,
     ModifierDaily,
     OrderDaily,
     ReviewDaily,
     SessionDaily,
 )
-from .scope import Scope, scope_for
+from apps.analytics.services.scope import Scope, scope_for
 
 
 # --- Период ----------------------------------------------------------------

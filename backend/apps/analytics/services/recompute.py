@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from apps.core.context import tenant_context
 
-from . import collector
-from .models import DAILY_MODELS, AnalyticsEvent
+from apps.analytics.services import collector
+from apps.analytics.models import DAILY_MODELS, AnalyticsEvent
 
 
 def recompute_aggregates(hotel_id) -> int:

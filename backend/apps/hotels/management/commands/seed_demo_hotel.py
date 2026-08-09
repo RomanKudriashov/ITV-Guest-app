@@ -1364,7 +1364,7 @@ class Command(BaseCommand):
         from datetime import timedelta
 
         from apps.accounts.models import GuestSession, TrustLevel
-        from apps.analytics.recompute import rebuild_raw_from_orders, recompute_aggregates
+        from apps.analytics.services.recompute import rebuild_raw_from_orders, recompute_aggregates
         from apps.catalog.models import Item
         from apps.orders.models import Order, OrderStatusChange
         from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order

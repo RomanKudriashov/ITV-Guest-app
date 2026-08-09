@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 
-from apps.analytics import collector
+from apps.analytics.services import collector
 from apps.core.context import tenant_context
 from apps.events.bus import (
     ORDER_ACCEPTED,

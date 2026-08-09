@@ -14,7 +14,7 @@ logger = logging.getLogger("apps.analytics")
 
 @shared_task(bind=True, max_retries=2, acks_late=True)
 def run_export_task(self, export_id: str, hotel_id: str) -> dict:
-    from .export import execute_export
+    from apps.analytics.services.export import execute_export
 
     try:
         export = execute_export(export_id, hotel_id)

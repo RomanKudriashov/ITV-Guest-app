@@ -9,21 +9,23 @@ CMS: аналитика отеля. Контракт — docs/analytics-api-cont
 from __future__ import annotations
 
 from django.http import HttpRequest, HttpResponse
-from ninja import Router, Schema
+from ninja import Router
 
-from apps.analytics import export as export_svc
-from apps.analytics import queries
+from apps.analytics.schemas import ExportIn
 from apps.analytics.models import AnalyticsExport
-from apps.analytics.scope import scope_payload
+from apps.analytics.services import export as export_svc
+from apps.analytics.services import queries
+from apps.analytics.services.scope import scope_payload
 from apps.core.context import require_hotel_id
-from apps.core.errors import NotFoundError
 from apps.hotels.models import Hotel
+from apps.hotels.services.hotel import current_hotel
 
 router = Router(tags=["cms:analytics"])
 
 
 def _hotel() -> Hotel:
-    return Hotel.objects.get(pk=require_hotel_id())
+    # Отель запроса отдаёт сервис отеля — тот же, что зовут CMS и платформа.
+    return current_hotel()
 
 
 def _params(request: HttpRequest) -> dict:
@@ -75,12 +77,6 @@ def analytics_drilldown(request: HttpRequest):
 # --- Экспорт ---------------------------------------------------------------
 
 
-class ExportIn(Schema):
-    kind: str = "breakdown"
-    format: str = "csv"
-    params: dict = {}
-
-
 def _serialize_export(export: AnalyticsExport) -> dict:
     data = {
         "id": str(export.pk),
@@ -113,17 +109,12 @@ def analytics_export_create(request: HttpRequest, payload: ExportIn):
 
 @router.get("/analytics/export/{export_id}", summary="Статус экспорта")
 def analytics_export_status(request: HttpRequest, export_id: str):
-    export = AnalyticsExport.objects.filter(pk=export_id).first()
-    if export is None:
-        raise NotFoundError("Экспорт не найден")
-    return _serialize_export(export)
+    return _serialize_export(export_svc.get_export(export_id))
 
 
 @router.get("/analytics/export/{export_id}/download", summary="Скачать готовый файл")
 def analytics_export_download(request: HttpRequest, export_id: str):
-    export = AnalyticsExport.objects.filter(pk=export_id).first()
-    if export is None or export.status != AnalyticsExport.Status.READY or export.content is None:
-        raise NotFoundError("Файл ещё не готов")
+    export = export_svc.get_ready_export(export_id)
     response = HttpResponse(bytes(export.content), content_type=export.content_type or "application/octet-stream")
     response["Content-Disposition"] = f'attachment; filename="{export.filename or "export"}"'
     return response

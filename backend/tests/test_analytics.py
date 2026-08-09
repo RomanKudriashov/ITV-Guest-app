@@ -13,16 +13,16 @@ from datetime import date, datetime, timezone as dt_timezone
 
 import pytest
 
-from apps.analytics import collector, queries
-from apps.analytics.export import create_export, execute_export, render_csv
+from apps.analytics.services import collector, queries
+from apps.analytics.services.export import create_export, execute_export, render_csv
 from apps.analytics.models import (
     ItemDaily,
     OrderDaily,
     ReviewDaily,
     SessionDaily,
 )
-from apps.analytics.recompute import recompute_aggregates
-from apps.analytics.scope import scope_for
+from apps.analytics.services.recompute import recompute_aggregates
+from apps.analytics.services.scope import scope_for
 from apps.core.context import tenant_context
 
 from .conftest import host_for
@@ -199,7 +199,7 @@ def _snapshot() -> dict:
 
 
 def test_business_date_uses_hotel_timezone(crystal):
-    from apps.analytics.dimensions import business_date_for
+    from apps.analytics.services.dimensions import business_date_for
 
     # 22:30 UTC 20-го июля в Москве (+3) — это уже 21-е июля по времени отеля.
     moment = datetime(2026, 7, 20, 22, 30, tzinfo=dt_timezone.utc)
@@ -342,7 +342,7 @@ def test_export_xlsx_is_a_valid_zip(crystal):
     data = render_csv(["a", "b"], [[1, 2]])  # csv sanity
     assert b"a,b" in data
 
-    from apps.analytics.export import render_xlsx
+    from apps.analytics.services.export import render_xlsx
 
     blob = render_xlsx(["metric", "value"], [["orders", 5]])
     with zipfile.ZipFile(io.BytesIO(blob)) as zf:

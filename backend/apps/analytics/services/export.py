@@ -17,8 +17,8 @@ from xml.sax.saxutils import escape
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel
 
-from . import queries
-from .models import AnalyticsExport
+from apps.analytics.services import queries
+from apps.analytics.models import AnalyticsExport
 
 
 # --- Набор данных ----------------------------------------------------------
@@ -156,7 +156,7 @@ def create_export(hotel_id, user, *, kind: str, export_format: str, params: dict
             requested_by=getattr(user, "pk", None),
             status=AnalyticsExport.Status.PENDING,
         )
-    from .tasks import run_export_task
+    from apps.analytics.tasks import run_export_task
 
     export_id, hid = str(export.pk), str(hotel_id)
     # Считаем в воркере после коммита строки-задачи.
@@ -216,3 +216,23 @@ class _AllScopeActor:
     is_platform_admin = False
     is_hotel_admin = True
     pk = None
+
+
+def get_export(export_id):
+    """Выгрузка по идентификатору. Перенос дословный из вьюхи."""
+    from apps.core.errors import NotFoundError
+
+    export = AnalyticsExport.objects.filter(pk=export_id).first()
+    if export is None:
+        raise NotFoundError("Экспорт не найден")
+    return export
+
+
+def get_ready_export(export_id):
+    """Готовая выгрузка: и «нет такой», и «ещё не готова» — один ответ."""
+    from apps.core.errors import NotFoundError
+
+    export = AnalyticsExport.objects.filter(pk=export_id).first()
+    if export is None or export.status != AnalyticsExport.Status.READY or export.content is None:
+        raise NotFoundError("Файл ещё не готов")
+    return export

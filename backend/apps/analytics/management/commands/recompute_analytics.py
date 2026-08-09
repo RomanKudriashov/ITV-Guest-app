@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.analytics.recompute import rebuild_raw_from_orders, recompute_aggregates
+from apps.analytics.services.recompute import rebuild_raw_from_orders, recompute_aggregates
 from apps.hotels.models import Hotel
 
 

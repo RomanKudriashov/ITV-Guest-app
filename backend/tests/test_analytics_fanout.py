@@ -10,9 +10,9 @@ import pytest
 from django.db.models import Sum
 
 from apps.accounts.models import GuestSession, TrustLevel
-from apps.analytics import collector
+from apps.analytics.services import collector
 from apps.analytics.models import ItemDaily, OrderDaily
-from apps.analytics.recompute import rebuild_raw_from_orders, recompute_aggregates
+from apps.analytics.services.recompute import rebuild_raw_from_orders, recompute_aggregates
 from apps.catalog.services import inclusions as inc_svc
 from apps.catalog.models import Category, Item, Route
 from apps.core.context import tenant_context

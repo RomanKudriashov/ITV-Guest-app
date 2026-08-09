@@ -24,8 +24,8 @@ from django.utils import timezone
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel
 
-from . import dimensions as dim
-from .models import (
+from apps.analytics.services import dimensions as dim
+from apps.analytics.models import (
     AnalyticsEvent,
     ItemDaily,
     ModifierDaily,
