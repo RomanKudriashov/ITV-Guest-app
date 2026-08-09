@@ -59,8 +59,8 @@ from apps.notifications.models import (
     NotificationChannel,
     TargetKind,
 )
-from apps.orders import status_flows
-from apps.orders.status_flows import ensure_status_flows
+from apps.orders.services import status_flows
+from apps.orders.services.status_flows import ensure_status_flows
 
 # Токены бренда. Формат совпадает с BrandTokens во фронте — это один контракт,
 # а не две похожие структуры.

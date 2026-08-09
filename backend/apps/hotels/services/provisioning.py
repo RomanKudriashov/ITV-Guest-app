@@ -27,7 +27,7 @@ from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, ValidationError
 from apps.hotels.brand_library import preset_tokens
 from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Service
-from apps.orders.status_flows import ensure_status_flows
+from apps.orders.services.status_flows import ensure_status_flows
 
 DEFAULT_PRESET = "midnight_navy"
 DEFAULT_LANGUAGES = ("ru", "en")

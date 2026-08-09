@@ -75,7 +75,7 @@ def _load_tracker_board(hotel, token: str, point_code: str, language: str):
     """
     from apps.accounts.services.auth import authenticate_staff
     from apps.core.errors import DomainError
-    from apps.orders.tracker import build_board, require_point
+    from apps.orders.services.tracker import build_board, require_point
 
     language = language or hotel.default_language
     with tenant_context(hotel, language=language):
@@ -92,7 +92,7 @@ def _load_tracker_board(hotel, token: str, point_code: str, language: str):
 @database_sync_to_async
 def _board_snapshot(hotel, point_id, language: str):
     from apps.hotels.models import ExecutionPoint
-    from apps.orders.tracker import build_board
+    from apps.orders.services.tracker import build_board
 
     language = language or hotel.default_language
     with tenant_context(hotel, language=language):

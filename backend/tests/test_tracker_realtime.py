@@ -96,7 +96,7 @@ def _place_order_async(guest, crystal, key):
 @database_sync_to_async
 def _accept(crystal, staff_email, order_id):
     from apps.accounts.models import User
-    from apps.orders.tracker import accept_order
+    from apps.orders.services.tracker import accept_order
 
     with tenant_context(crystal):
         user = User.objects.get(email=staff_email)

@@ -16,6 +16,7 @@ from ninja import Router
 
 from .cms import categories as cms_categories
 from .cms import dictionaries as cms_dictionaries
+from .cms import inclusions as cms_inclusions
 from .cms import items as cms_items
 from .cms import modifiers as cms_modifiers
 from .guest import catalog as guest_catalog
@@ -36,5 +37,6 @@ cms_router.add_router("", cms_categories.router)
 cms_router.add_router("", cms_items.router)
 cms_router.add_router("", cms_modifiers.router)
 cms_router.add_router("", cms_dictionaries.router)
+cms_router.add_router("", cms_inclusions.router)
 
 __all__ = ["cms_router", "guest_router"]

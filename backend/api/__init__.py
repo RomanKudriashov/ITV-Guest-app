@@ -4,19 +4,21 @@ from apps.accounts.services.auth import CmsAuth, PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
 from apps.catalog.api.router import guest_router as catalog_guest_router
+from apps.accounts.api.guest.session import router as guest_session_router
 from apps.accounts.api.router import staff_router
 from apps.chat.api.router import guest_router as chat_guest_router
 from apps.reviews.api.router import guest_router as reviews_guest_router
 from apps.chat.api.router import staff_router as chat_staff_router
 from apps.grms.api.router import guest_router as guest_room_router
+from apps.hotels.api.router import guest_router as hotel_guest_router
+from apps.orders.api.router import guest_router as orders_guest_router
+from apps.orders.api.router import staff_router as orders_router
+from apps.orders.api.router import tracker_router
 from apps.grms.api.router import onprem_router
 from apps.hotels.api.platform import router as platform_router
 
 from .cms import router as cms_router
-from .guest import router as guest_router
-from .health import router as health_router
-from .orders import router as orders_router
-from .tracker import router as tracker_router
+from apps.core.api.health import router as health_router
 
 api = NinjaAPI(
     title="ITV Guest App API",
@@ -32,7 +34,9 @@ api = NinjaAPI(
 )
 
 api.add_router("/health", health_router)
-api.add_router("/guest", guest_router)
+api.add_router("/guest", guest_session_router)
+api.add_router("/guest", hotel_guest_router)
+api.add_router("/guest", orders_guest_router)
 # Витрина, карточка, слоты, главная и поиск — домен каталога, свой роутер.
 api.add_router("/guest", catalog_guest_router)
 api.add_router("/guest", chat_guest_router)

@@ -81,7 +81,7 @@ def _feed(hotel, kind, bd, dims, measures, key):
 def test_order_lifecycle_populates_aggregates(crystal, django_capture_on_commit_callbacks):
     from apps.accounts.models import User
     from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order, get_order
-    from apps.orders.tracker import accept_order
+    from apps.orders.services.tracker import accept_order
 
     with tenant_context(crystal):
         chef = User.objects.get(email="chef@crystal.local")
@@ -158,7 +158,7 @@ def test_repeat_event_does_not_double_count(crystal):
 def test_recompute_matches_online(crystal, django_capture_on_commit_callbacks):
     from apps.accounts.models import User
     from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order, get_order
-    from apps.orders.tracker import accept_order
+    from apps.orders.services.tracker import accept_order
 
     with tenant_context(crystal):
         chef = User.objects.get(email="chef@crystal.local")

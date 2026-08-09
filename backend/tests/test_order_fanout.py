@@ -24,7 +24,7 @@ from apps.orders.services import (
     list_guest_orders,
     quote_cart,
 )
-from apps.orders.tracker import build_board
+from apps.orders.services.tracker import build_board
 
 pytestmark = pytest.mark.django_db
 

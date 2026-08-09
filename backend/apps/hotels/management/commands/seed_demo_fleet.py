@@ -341,7 +341,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def _seed(self, profile: dict):
         from apps.hotels.services.provisioning import provision_hotel
-        from apps.orders.status_flows import ensure_status_flows
+        from apps.orders.services.status_flows import ensure_status_flows
 
         hotel = provision_hotel(
             subdomain=profile["subdomain"],

@@ -28,7 +28,7 @@ from apps.catalog.models import Category, Item, ModifierOption, Route
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import build_field_snapshot
 from apps.catalog.services import slots as slot_svc
-from apps.orders.tracker_types import guest_card_for_order
+from apps.orders.services.tracker_types import guest_card_for_order
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -41,8 +41,8 @@ from apps.events.bus import (
 from apps.hotels.models import ExecutionPoint, Hotel, Location, Room
 from apps.media.services import image_url
 
-from . import status_flows
-from .models import Order, OrderItem, OrderStatusChange, StatusDefinition
+from apps.orders.services import status_flows
+from apps.orders.models import Order, OrderItem, OrderStatusChange, StatusDefinition
 
 # Насколько вперёд гость может запланировать заказ. Дальше — уже не «сегодня
 # вечером», а планирование, которого витрина не умеет.
@@ -216,7 +216,7 @@ def _apply_charges(order, order_items, hotel, location, data, *, service=None) -
     задан → коммерция этого сервиса (агрегатор корзины); None → резолв из точки
     заказа, как раньше (не-заёмный заказ — байт-в-байт).
     """
-    from .charges import compute_charges, minimum_order_minor, resolve_tip_minor
+    from apps.orders.services.charges import compute_charges, minimum_order_minor, resolve_tip_minor
 
     if service is None:
         service = _service_for_point(order.execution_point)
@@ -268,7 +268,7 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
     Предпросчёт корзины БЕЗ создания заказа: суммы, минимум, блокировка. Витрина
     показывает строки и «добавьте ещё N» до оформления, ничего не создавая.
     """
-    from .charges import compute_charges, minimum_order_minor, resolve_tip_minor
+    from apps.orders.services.charges import compute_charges, minimum_order_minor, resolve_tip_minor
 
     hotel_id = require_hotel_id()
     hotel = Hotel.objects.get(pk=hotel_id)

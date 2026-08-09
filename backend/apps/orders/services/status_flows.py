@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from django.db import models
 
-from .tracker_types import TrackerType
+from apps.orders.services.tracker_types import TrackerType
 
 
 class Stage(models.TextChoices):
@@ -98,25 +98,25 @@ STATUS_FLOWS: dict[str, list[tuple]] = {
 
 def flow_for_point(point) -> str:
     """Поток статусов точки исполнения = её тип трекера."""
-    from .tracker_types import tracker_type_for_point
+    from apps.orders.services.tracker_types import tracker_type_for_point
 
     return tracker_type_for_point(point)
 
 
 def statuses_for_flow(flow: str) -> list:
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     return list(StatusDefinition.objects.filter(flow=flow).order_by("sort_order"))
 
 
 def status_by_code(flow: str, code: str):
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     return StatusDefinition.objects.filter(flow=flow, code=code).first()
 
 
 def initial_status(flow: str):
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     return (
         StatusDefinition.objects.filter(flow=flow, is_initial=True)
@@ -131,7 +131,7 @@ def first_working_status(flow: str, after_sort_order: int = -1):
     очереди хозслужбы, «Пришёл» в записях спа. Именно сюда переводит «взять
     задачу», и именно его ищет сид, наполняя историю по всем отделам.
     """
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     return (
         StatusDefinition.objects.filter(
@@ -147,7 +147,7 @@ def first_working_status(flow: str, after_sort_order: int = -1):
 
 def terminal_status(flow: str):
     """Завершающий статус потока: «Доставлено» / «Готово» / «Выполнена», не отмена."""
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     return (
         StatusDefinition.objects.filter(flow=flow, is_terminal=True, is_cancelled=False)
@@ -157,7 +157,7 @@ def terminal_status(flow: str):
 
 
 def cancelled_status(flow: str):
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     return (
         StatusDefinition.objects.filter(flow=flow, is_cancelled=True)
@@ -174,7 +174,7 @@ def ensure_status_flows() -> int:
     пресет жил только в сиде — свежесозданный отель оставался без статусов и
     падал на первом же заказе.
     """
-    from .models import StatusDefinition
+    from apps.orders.models import StatusDefinition
 
     written = 0
     for flow, rows in STATUS_FLOWS.items():

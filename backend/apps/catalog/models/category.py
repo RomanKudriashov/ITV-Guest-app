@@ -59,6 +59,6 @@ class Category(TenantModel):
 
     def is_available_at(self, moment=None) -> bool:
         # Расчёт один на всю систему — см. apps/catalog/availability.py.
-        from .availability import category_availability
+        from apps.catalog.services.availability import category_availability
 
         return category_availability(self, moment).is_available

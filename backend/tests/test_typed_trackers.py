@@ -16,8 +16,8 @@ import pytest
 
 from apps.core.context import tenant_context
 from apps.hotels.models import ExecutionPoint, Service
-from apps.orders.status_flows import ensure_status_flows
-from apps.orders.tracker_types import TrackerType, tracker_type_for_point
+from apps.orders.services.status_flows import ensure_status_flows
+from apps.orders.services.tracker_types import TrackerType, tracker_type_for_point
 
 from .conftest import host_for
 
@@ -221,7 +221,7 @@ def test_status_codes_are_scoped_to_the_flow(client, crystal):
 
 def test_every_flow_has_an_initial_and_a_cancel_status(crystal):
     """Без начального статуса поток не примет заказ, без отмены — не отпустит."""
-    from apps.orders.status_flows import STATUS_FLOWS, cancelled_status, initial_status
+    from apps.orders.services.status_flows import STATUS_FLOWS, cancelled_status, initial_status
 
     with tenant_context(crystal):
         for flow in STATUS_FLOWS:
@@ -252,7 +252,7 @@ def test_guest_card_covers_every_service_type():
     через неделю после запуска.
     """
     from apps.hotels.models import Service
-    from apps.orders.tracker_types import SERVICE_TYPE_TO_GUEST_CARD, SERVICE_TYPE_TO_TRACKER
+    from apps.orders.services.tracker_types import SERVICE_TYPE_TO_GUEST_CARD, SERVICE_TYPE_TO_TRACKER
 
     declared = {value for value, _ in Service.Type.choices}
     assert declared == set(SERVICE_TYPE_TO_TRACKER), "тип сервиса без трекера"
@@ -267,7 +267,7 @@ def test_guest_card_of_a_booking_is_a_booking_whatever_the_service():
     «как можно скорее» рядом с ним — прямое враньё. Ровно это и показывала
     универсальная карточка на записи в спа.
     """
-    from apps.orders.tracker_types import GuestCard, guest_card_for_service_type
+    from apps.orders.services.tracker_types import GuestCard, guest_card_for_service_type
 
     assert guest_card_for_service_type("spa") == GuestCard.BOOKING
     assert guest_card_for_service_type("transfer") == GuestCard.RIDE

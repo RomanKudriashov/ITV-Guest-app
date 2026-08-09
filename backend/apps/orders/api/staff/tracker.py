@@ -1,32 +1,20 @@
 """
 REST трекера. Контракт — docs/tracker-api-contract.md.
 
-Вьюхи тонкие. Вся авторизация — в apps/orders/tracker.py, потому что те же
+Вьюхи тонкие. Вся авторизация — в apps/orders/services/tracker.py, потому что те же
 проверки обязан выполнять WebSocket-канал, у которого нет middleware.
 """
 
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router, Schema
+from ninja import Router
 
 from apps.core.context import current_language
-from apps.orders import tracker as svc
+from apps.orders.schemas.tracker import AcceptIn, CancelIn, StatusIn
+from apps.orders.services import tracker as svc
 
 router = Router(tags=["tracker"])
-
-
-class StatusIn(Schema):
-    status: str
-    comment: str = ""
-
-
-class CancelIn(Schema):
-    reason: str = ""
-
-
-class AcceptIn(Schema):
-    pass
 
 
 @router.get("/points", summary="Точки исполнения сотрудника")

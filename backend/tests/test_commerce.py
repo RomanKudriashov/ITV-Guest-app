@@ -13,7 +13,7 @@ import pytest
 from apps.catalog.models import Category, Item
 from apps.core.context import tenant_context
 from apps.hotels.models import Location
-from apps.orders.charges import compute_charges
+from apps.orders.services.charges import compute_charges
 from apps.orders.services import OrderInput, OrderLineInput, create_order, get_order, quote_cart
 
 from .conftest import host_for

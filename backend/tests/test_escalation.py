@@ -532,7 +532,7 @@ def test_taken_task_stops_escalating_to_the_manager(
     """Горничная взяла заявку — поднимать некого и незачем."""
     from apps.notifications.models import NotificationStatus
     from apps.notifications.services import execute_step
-    from apps.orders.tracker import accept_order
+    from apps.orders.services.tracker import accept_order
     from apps.accounts.models import User
 
     order = _place_housekeeping_request(client, crystal)

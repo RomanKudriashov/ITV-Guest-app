@@ -420,7 +420,7 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
     меняя тип заведения, должен видеть, какой рабочий экран получит персонал,
     а не узнавать это по факту.
     """
-    from apps.orders.tracker_types import tracker_type_for_service_type
+    from apps.orders.services.tracker_types import tracker_type_for_service_type
 
     counts = counts or {}
     point = service.execution_point
@@ -532,7 +532,7 @@ def service_templates() -> list[dict]:
     """
     from apps.catalog.offerings import OfferingType
     from apps.hotels.vocabularies import SERVICE_TYPE_LABELS
-    from apps.orders.tracker_types import tracker_type_for_service_type
+    from apps.orders.services.tracker_types import tracker_type_for_service_type
 
     # Из каких кирпичей собран тип — это и есть «шаблон» карты продукта.
     BRICKS = {

@@ -67,12 +67,12 @@ class Item(TenantModel):
         return self.code
 
     def is_available_at(self, moment=None) -> bool:
-        from .availability import item_availability
+        from apps.catalog.services.availability import item_availability
 
         return item_availability(self, moment).is_available
 
     def availability_at(self, moment=None):
-        from .availability import item_availability
+        from apps.catalog.services.availability import item_availability
 
         return item_availability(self, moment)
 

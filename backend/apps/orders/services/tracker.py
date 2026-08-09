@@ -23,10 +23,10 @@ from apps.hotels.models import ExecutionPoint, Hotel, Service
 
 from apps.events.bus import ORDER_ACCEPTED, emit
 
-from . import status_flows
-from .models import Order, StatusDefinition
-from .services import change_status, order_queryset, serialize_order
-from .tracker_types import behaviour_for_type, tracker_type_for_point
+from apps.orders.services import status_flows
+from apps.orders.models import Order, StatusDefinition
+from apps.orders.services.services import change_status, order_queryset, serialize_order
+from apps.orders.services.tracker_types import behaviour_for_type, tracker_type_for_point
 
 
 class PointNotAssigned(PermissionDenied):
