@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ChatConversation } from '@/components/chat/ChatConversation';
@@ -12,9 +13,9 @@ import { guestKeys } from '../api/queryKeys';
 import { errorMessage } from '../errors';
 import { useGuestChat, useGuestLanguage } from '../hooks/useGuestQueries';
 import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
+import { STICKY, useStickyLayer } from '../layout/stickyStack';
+import { useStorefront } from '../useStorefront';
 import type { ChatSnapshot } from '../api/types';
-
-const HEADER_OFFSET = 56;
 
 /**
  * Guest chat screen. The thread is reconciled by `useChatLive` (full snapshot in,
@@ -26,6 +27,19 @@ export function ChatPage() {
   const { t } = useTranslation();
   const language = useGuestLanguage();
   const queryClient = useQueryClient();
+  const { glass, chatHint } = useStorefront();
+  /*
+    ЧАТ ПОДКЛЮЧЁН К ОБЩЕМУ СТЕКУ ЛИПКИХ СЛОЁВ.
+
+    Здесь стояло `HEADER_OFFSET = 56` — число, взятое на глаз. Плавающая группа
+    с номером и «⋯» висит поверх контента, и её реальная высота зависит от
+    выреза, безопасной зоны и языка. Отсюда и перекрытое первое сообщение:
+    экран начинался с нулевой отметки, а группа лежала поверх.
+
+    Слоя своего чат не заводит — он только СПРАШИВАЕТ, сколько занято сверху.
+    Заводить свой липкий слой здесь нельзя: это уже чинили дважды.
+  */
+  const shell = useStickyLayer<HTMLDivElement>(STICKY.plate);
 
   const { data: snapshot, isLoading, error } = useGuestChat();
 
@@ -66,7 +80,19 @@ export function ChatPage() {
   return (
     <Box
       sx={{
-        height: `calc(100dvh - ${HEADER_OFFSET + BOTTOM_NAV_SPACE}px)`,
+        /*
+          ВЫСОТА СЧИТАЕТСЯ ОДИН РАЗ, а не дважды.
+
+          Раньше из высоты вычитались И шапка, И место под нижнее меню — при
+          том, что место под меню УЖЕ зарезервировано отступом в раскладке
+          (`main` держит `pb: BOTTOM_NAV_SPACE`). Замер на 390×844: строка ввода
+          заканчивалась на 704, меню начиналось на 770 — шестьдесят шесть
+          пикселей пустоты, ровно эта двойная арифметика.
+        */
+        pt: `${shell.top}px`,
+        // Отступ сверху уже ВНУТРИ высоты: коробка считается по border-box, и
+        // вычитать его второй раз значит укоротить экран на высоту шапки.
+        height: `calc(100dvh - ${BOTTOM_NAV_SPACE}px)`,
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
@@ -84,6 +110,23 @@ export function ChatPage() {
         sending={sendMutation.isPending}
         draftIdentity="guest-chat"
         emptyHint={t('guest.chat.emptyHint')}
+        emptyState={
+          <>
+            <Typography variant="subtitle1" fontWeight={600} textAlign="center">
+              {t('guest.chat.emptyTitle')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              {t('guest.chat.emptyHint')}
+            </Typography>
+          </>
+        }
+        // Стекло — существующее, из словаря: то же, на чём стоит нижнее меню.
+        hintColor={chatHint}
+        inputSurface={{
+          background: glass.sheet.background,
+          backdropFilter: glass.sheet.backdropFilter,
+          WebkitBackdropFilter: glass.sheet.backdropFilter,
+        }}
         onSend={(body) => sendMutation.mutate(body)}
         testIds={{
           root: 'guest-chat',

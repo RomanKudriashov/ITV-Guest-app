@@ -611,7 +611,8 @@
       "placeholder": "消息…",
       "send": "发送",
       "offline": "无连接",
-      "emptyHint": "给我们留言，工作人员会在此回复"
+      "emptyHint": "给我们留言，工作人员会在此回复",
+      "emptyTitle": "给我们留言 — 我们在线"
     },
     "review": {
       "title": "评价订单",

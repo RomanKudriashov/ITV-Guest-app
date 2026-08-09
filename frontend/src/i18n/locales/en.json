@@ -613,7 +613,8 @@
       "placeholder": "Message…",
       "send": "Send",
       "offline": "No connection",
-      "emptyHint": "Message us — staff will reply right here"
+      "emptyHint": "Message us — staff will reply right here",
+      "emptyTitle": "Say hello — we're here"
     },
     "review": {
       "title": "Rate your order",

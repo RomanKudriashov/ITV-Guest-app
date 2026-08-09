@@ -51,6 +51,14 @@ export interface StorefrontScrim {
 
 export interface StorefrontTokens {
   glass: StorefrontGlass;
+  /**
+   * Подсказка в строке ввода чата.
+   *
+   * Отдельным тоном, а не `text.secondary`: на светлой теме тот даёт 4.08 на
+   * стекле при пороге AA 4.5. Родной `placeholder` перекрасить нельзя —
+   * правило `::placeholder` в рантайме роняет префиксер stylis.
+   */
+  chatHint: string;
   scrim: StorefrontScrim;
   /** Золото — цвет действия, ведущего к заказу. */
   goldCta: { background: string; color: string; fontWeight: number };
@@ -305,6 +313,8 @@ const ROOM_PLATE = {
 } as const;
 
 const DARK: StorefrontTokens = {
+  // Замер по пикселям снимка: 6.18 на стекле строки ввода.
+  chatHint: '#99A2AE',
   glass: {
     chip: {
       background: 'rgba(14,21,33,.44)',
@@ -404,6 +414,8 @@ const DARK: StorefrontTokens = {
  * подписи на плитках нечитаемыми.
  */
 const LIGHT: StorefrontTokens = {
+  // Тон подсказки на светлой теме: 6.71 против 4.08 у text.secondary.
+  chatHint: '#545C66',
   glass: {
     chip: {
       background: 'rgba(255,255,255,.62)',

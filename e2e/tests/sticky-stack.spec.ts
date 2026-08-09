@@ -23,7 +23,11 @@ const VIEWPORTS = [
   { name: 'десктоп', width: 1440, height: 900 },
 ]
 
-const ROUTES = ['/home', '/venue/kitchen', '/orders', '/info', '/room']
+// Чат добавлен после того, как плавающая группа накрыла его первое сообщение:
+// экран не спрашивал общий стек и начинался с нулевой отметки. Сторож обязан
+// видеть каждый маршрут, где есть липкие слои, — иначе чинить приходится по
+// жалобе, а не по прогону.
+const ROUTES = ['/home', '/venue/kitchen', '/orders', '/info', '/room', '/chat']
 
 /** Сколько пикселей перекрытия считаем шумом округления. */
 const TOLERANCE = 2
@@ -142,19 +146,55 @@ async function coveredAtRest(page: Page): Promise<string[]> {
       if (rect.height <= 0 || style.visibility === 'hidden' || style.opacity === '0') return false
       return rect.top + rect.height / 2 < window.innerHeight / 2
     })
-    const victims = [...document.querySelectorAll<HTMLElement>(
-      'h1, h2, h3, [role="tab"], [data-testid^="room-control-"], [data-testid^="room-pill-"]',
-    )].filter((el) => {
-      const rect = el.getBoundingClientRect()
-      return rect.height > 6 && rect.bottom > 0 && rect.top < window.innerHeight
-    })
+    const victimNodes = [...document.querySelectorAll<HTMLElement>(
+      /*
+        Сообщения чата — тоже жертвы, и это не догадка: плашка номера накрывала
+        первое сообщение, а сторож молчал, потому что в списке были только
+        заголовки и кнопки. Первый экран переписки — ровно то содержимое, ради
+        которого страницу открывают.
+      */
+      'h1, h2, h3, [role="tab"], [data-testid^="room-control-"], [data-testid^="room-pill-"],' +
+        ' [data-testid^="guest-chat-message-"]',
+    )]
+    /*
+      ВИДИМАЯ часть жертвы, обрезанная прокручиваемыми предками.
+
+      `getBoundingClientRect` отдаёт положение так, будто ничего не обрезает:
+      сообщение, укатившееся вверх внутри ленты чата, по этой рамке лежит
+      поверх шапки — хотя гость его не видит вовсе. Сторож без обрезки объявлял
+      бы дефектом любой внутренний скролл.
+    */
+    const clipped = (el: HTMLElement): DOMRect | null => {
+      let box = el.getBoundingClientRect()
+      for (let node = el.parentElement; node; node = node.parentElement) {
+        const style = getComputedStyle(node)
+        if (style.overflow === 'visible' && style.overflowY === 'visible') continue
+        const c = node.getBoundingClientRect()
+        const top = Math.max(box.top, c.top)
+        const bottom = Math.min(box.bottom, c.bottom)
+        const left = Math.max(box.left, c.left)
+        const right = Math.min(box.right, c.right)
+        if (bottom - top <= 0 || right - left <= 0) return null
+        box = new DOMRect(left, top, right - left, bottom - top)
+      }
+      return box
+    }
+
+    const victims = victimNodes
+      .map((el) => ({ el, box: clipped(el) }))
+      .filter(
+        (item): item is { el: HTMLElement; box: DOMRect } =>
+          item.box !== null &&
+          item.box.height > 6 &&
+          item.box.bottom > 0 &&
+          item.box.top < window.innerHeight,
+      )
     const found: string[] = []
     for (const layer of sticky) {
       const a = layer.getBoundingClientRect()
-      for (const victim of victims) {
+      for (const { el: victim, box: b } of victims) {
         if (layer.contains(victim) || victim.contains(layer)) continue
         if (sticky.some((other) => other !== layer && other.contains(victim))) continue
-        const b = victim.getBoundingClientRect()
         const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left)
         const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
         if (Math.min(dx, dy) > tolerance) {
@@ -212,7 +252,24 @@ for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
     for (const route of ROUTES) {
       await page.goto(route)
       await page.waitForTimeout(1200)
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      /*
+        Прокрутка ДО УСТОЯВШЕЙСЯ высоты, а не один раз.
+
+        Картинки витрины догружаются и удлиняют страницу: прокрутка «в конец»,
+        сделанная до этого, оказывается серединой, и кнопки под меню находятся
+        там, где их через мгновение не будет. Под параллельной нагрузкой это
+        уже дало ложное падение на кухне — измерять страницу на полпути нельзя.
+      */
+      let settled = 0
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const height = await page.evaluate(() => {
+          window.scrollTo(0, document.documentElement.scrollHeight)
+          return document.documentElement.scrollHeight
+        })
+        if (height === settled) break
+        settled = height
+        await page.waitForTimeout(400)
+      }
       await page.waitForTimeout(400)
 
       const hidden = await page.evaluate(() => {
