@@ -8,7 +8,6 @@ from django.db import models
 
 from apps.core.models import TenantModel
 
-from .element import ControlElement
 from .room_type import RoomType
 
 

@@ -13,14 +13,11 @@ NAT, и снаружи его просто нет.
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router, Schema
+from ninja import Router
+
+from apps.grms.schemas.onprem import HeartbeatIn
 
 router = Router(tags=["onprem"])
-
-
-class HeartbeatIn(Schema):
-    key: str
-    version: str = ""
 
 
 @router.post("/heartbeat", auth=None, response={200: dict, 401: dict}, summary="Отметка узла")

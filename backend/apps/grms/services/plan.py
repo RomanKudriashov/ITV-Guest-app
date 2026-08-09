@@ -305,3 +305,24 @@ def _asset(asset_id: object):
         return MediaAsset.objects.filter(pk=asset_id).first()
     except (DjangoValidationError, TypeError, ValueError):
         return None
+
+
+def frame_payload(asset_id: str | None) -> dict | None:
+    """
+    Кадр плана по идентификатору ассета. Перенос дословный из вьюхи: выборка —
+    работа сервиса, вьюха её зовёт.
+    """
+    from apps.media.models import MediaAsset
+
+    if not asset_id:
+        return None
+    asset = MediaAsset.objects.filter(pk=asset_id).first()
+    if asset is None:
+        return None
+    return {
+        "id": str(asset.pk),
+        "status": asset.status,
+        "url": asset.url(PLATE_VARIANT) or asset.url("card"),
+        "width": asset.width,
+        "height": asset.height,
+    }

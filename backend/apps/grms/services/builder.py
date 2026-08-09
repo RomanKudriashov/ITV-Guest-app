@@ -381,3 +381,36 @@ def _type(code: str) -> RoomType:
     if room_type is None:
         raise NotFoundError(f"Тип номера «{code}» не найден")
     return room_type
+
+
+def list_types_with_variables(hotel) -> list[dict]:
+    """
+    Типы номеров с их переменными — снимок для конструктора CMS.
+    Перенос дословный из вьюхи `api/cms/grms.py`.
+    """
+    from apps.core.context import tenant_context
+
+    from apps.grms.models import RoomType, Variable
+
+    with tenant_context(hotel):
+        result = []
+        for room_type in RoomType.objects.all():
+            result.append(
+                {
+                    "code": room_type.code,
+                    "title": room_type.title,
+                    "device_name_template": room_type.device_name_template,
+                    "rooms": list(
+                        room_type.rooms.select_related("room").values_list(
+                            "room__number", flat=True
+                        )
+                    ),
+                    "variables": list(
+                        Variable.objects.filter(room_type=room_type).values(
+                            "key", "command", "feedback", "value_kind",
+                            "min_value", "max_value", "raw_range", "description",
+                        )
+                    ),
+                }
+            )
+    return result

@@ -4,16 +4,16 @@ from apps.accounts.auth import CmsAuth, PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
 from apps.catalog.api.router import guest_router as catalog_guest_router
+from apps.grms.api.router import guest_router as guest_room_router
+from apps.grms.api.router import onprem_router
 from apps.hotels.api.platform import router as platform_router
 
 from .cms import router as cms_router
 from .guest import router as guest_router
-from .guest_room import router as guest_room_router
 from .health import router as health_router
 from .chat_reviews import guest_router as surface_guest_router
 from .chat_reviews import tracker_router as surface_tracker_router
 from .orders import router as orders_router
-from .onprem import router as onprem_router
 from .staff import router as staff_router
 from .tracker import router as tracker_router
 

@@ -1,12 +1,12 @@
 from ninja import Router
 
 from apps.catalog.api.router import cms_router as catalog_router
+from apps.grms.api.router import cms_router as grms_router
 from apps.accounts.api.cms.staff import router as staff_router
 from apps.hotels.api.cms import router as hotel_router
 from apps.media.api.cms.media import router as media_router
 
 from .analytics import router as analytics_router
-from .grms import router as grms_router
 from .inclusions import router as inclusions_router
 from .reviews import router as reviews_router
 from .notifications import router as notifications_router

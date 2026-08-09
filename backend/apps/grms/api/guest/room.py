@@ -6,36 +6,25 @@
 Смешав его с витриной, мы получили бы файл, в котором «что можно отдать гостю»
 решается по-разному в соседних функциях.
 
-Все 14 маршрутов GRMS под `/cms` остаются на месте и здесь не участвуют: там
-CmsAuth и конструктор конфигурации, тут гостевой токен и `{controlId, value}`.
+CMS-маршруты GRMS живут рядом, в `apps/grms/api/cms/`: там CmsAuth и
+конструктор конфигурации, тут гостевой токен и `{controlId, value}`.
 
 Вьюхи тонкие: разобрать запрос, позвать сервис, отдать результат. Вся логика —
-в `apps/grms/guest.py` и `apps/grms/pin.py`, доменные ошибки превращает в HTTP
+в `apps/grms/services/guest.py` и `apps/grms/services/pin.py`, доменные ошибки превращает в HTTP
 общий обработчик (`api/__init__.py`).
 """
 
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router, Schema
+from ninja import Router
 
 from apps.accounts.auth import GuestAuth
 from apps.core.context import current_language
+from apps.grms.schemas.guest import CommandIn, VerifyIn
 
 router = Router(tags=["guest-room"])
 guest_auth = GuestAuth()
-
-
-class VerifyIn(Schema):
-    pin: str
-
-
-class CommandIn(Schema):
-    controlId: str
-    # Нужен только составным элементам: у кондиционера четыре ручки под одним
-    # controlId. Для простых опускается.
-    capability: str = ""
-    value: int | None = None
 
 
 @router.get("/room/state", auth=guest_auth, summary="Состояние номера (полный снапшот)")
