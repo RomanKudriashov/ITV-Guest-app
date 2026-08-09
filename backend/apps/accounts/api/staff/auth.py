@@ -11,11 +11,10 @@ from django.http import HttpRequest
 from ninja import Router
 from apps.accounts.schemas.cms import LoginIn, LoginOut, MeOut
 
-from apps.accounts.auth import StaffAuth
+from apps.accounts.services.auth import StaffAuth
 from apps.accounts.models import User
 from apps.accounts.services import AuthenticationFailed, authenticate_staff_credentials
-from apps.core.context import require_hotel_id
-from apps.hotels.models import Hotel
+from apps.accounts.services.session import staff_user, staff_login_hotel
 
 
 router = Router(tags=["staff"])
@@ -23,7 +22,7 @@ staff_auth = StaffAuth()
 
 
 def serialize_user(user: User) -> dict:
-    from apps.accounts.roles import access_for
+    from apps.accounts.services.roles import access_for
 
     return {
         "id": str(user.pk),
@@ -47,8 +46,8 @@ def login(request: HttpRequest, payload: LoginIn):
 
     from apps.hotels.services.brand_services import get_or_create_brand
 
-    user = User.objects.get(pk=tokens["user_id"])
-    theme = get_or_create_brand(Hotel.objects.get(pk=require_hotel_id()))
+    user = staff_user(tokens["user_id"])
+    theme = get_or_create_brand(staff_login_hotel())
     return 200, {
         "access": tokens["access"],
         "refresh": tokens["refresh"],
@@ -61,7 +60,7 @@ def login(request: HttpRequest, payload: LoginIn):
 def me(request: HttpRequest):
     from apps.hotels.services.brand_services import get_or_create_brand
 
-    hotel = Hotel.objects.get(pk=require_hotel_id())
+    hotel = staff_login_hotel()
     theme = get_or_create_brand(hotel)
     return {
         "user": serialize_user(request.user),

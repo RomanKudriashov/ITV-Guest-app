@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.accounts.auth import GuestAuth
+from apps.accounts.services.auth import GuestAuth
 from apps.core.errors import NotFoundError
 from apps.orders.services import get_order
 from apps.reviews import services as review_svc

@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.accounts.auth import GuestAuth
+from apps.accounts.services.auth import GuestAuth
 from apps.catalog.services.search import search, suggestions_of
 from apps.core.context import current_language
 

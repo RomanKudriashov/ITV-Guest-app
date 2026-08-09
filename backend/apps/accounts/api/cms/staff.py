@@ -11,7 +11,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.accounts import cms_services as staff_svc
+from apps.accounts.services import cms_services as staff_svc
 from apps.accounts.schemas.cms import AssignmentsIn, StaffIn, StaffPatch
 from apps.core.schemas import OkOut
 

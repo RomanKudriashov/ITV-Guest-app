@@ -71,7 +71,7 @@ def _require_including_scope(service: Service) -> None:
     управляет: содержимое остаётся его, а витрину, наценку и исполнителя
     выбирает тот, кто одолжил.
     """
-    from apps.accounts.roles import require_service_scope
+    from apps.accounts.services.roles import require_service_scope
 
     require_service_scope(service, what="Включение")
 

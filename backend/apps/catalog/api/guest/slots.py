@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.accounts.auth import GuestAuth
+from apps.accounts.services.auth import GuestAuth
 from apps.catalog.services.slots import available_slots_for_item
 
 router = Router(tags=["guest"])

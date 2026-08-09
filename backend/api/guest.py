@@ -20,7 +20,7 @@ from apps.orders.schemas.guest import (
     OrdersOut,
 )
 
-from apps.accounts.auth import GuestAuth
+from apps.accounts.services.auth import GuestAuth
 from apps.accounts.models import TrustLevel
 from apps.accounts.services import AuthenticationFailed, create_guest_session
 from apps.core.context import current_language

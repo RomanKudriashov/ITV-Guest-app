@@ -39,7 +39,7 @@ def fleet_export(request: HttpRequest):
 
 @router.post("/fleet/bulk", summary="Массово включить/выключить отели")
 def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.platform.fleet import bulk_set_active
 
     if not can_write(request.user):

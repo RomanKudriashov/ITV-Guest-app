@@ -39,7 +39,7 @@ def cms_navigation(request: HttpRequest):
     реестр модулей, и собери меню во фронте — список того, за что отель не
     платил, всё равно уехал бы к нему в бандл.
     """
-    from apps.accounts.roles import current_access
+    from apps.accounts.services.roles import current_access
     from apps.hotels.services.cms_navigation import build_navigation
 
     return {"groups": build_navigation(current_hotel(), access=current_access())}

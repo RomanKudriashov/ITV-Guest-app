@@ -21,9 +21,9 @@ router = Router(tags=["platform"])
 def platform_login(request: HttpRequest, payload: PlatformLoginIn):
     from django.contrib.auth.hashers import check_password
 
-    from apps.accounts.platform_access import client_ip, ip_allowed
-    from apps.accounts.tokens import encode_refresh_token, encode_staff_token
-    from apps.accounts.totp import verify as verify_totp
+    from apps.accounts.services.platform_access import client_ip, ip_allowed
+    from apps.accounts.services.tokens import encode_refresh_token, encode_staff_token
+    from apps.accounts.services.totp import verify as verify_totp
 
     # Рубеж «откуда» проверяем и на входе: иначе с чужой сети можно было бы
     # перебирать пароли, узнавая по ответу, какой из них верный.
@@ -68,7 +68,7 @@ def platform_me(request: HttpRequest):
 
 @router.post("/auth/2fa/setup", summary="Завести секрет 2FA (показать QR)")
 def totp_setup(request: HttpRequest):
-    from apps.accounts.totp import generate_secret, provisioning_uri
+    from apps.accounts.services.totp import generate_secret, provisioning_uri
 
     user = request.user
     if user.totp_enabled:
@@ -82,8 +82,8 @@ def totp_setup(request: HttpRequest):
 
 @router.post("/auth/2fa/enable", summary="Включить 2FA, подтвердив кодом")
 def totp_enable(request: HttpRequest, payload: TotpEnableIn):
-    from apps.accounts.tokens import encode_staff_token
-    from apps.accounts.totp import verify as verify_totp
+    from apps.accounts.services.tokens import encode_staff_token
+    from apps.accounts.services.totp import verify as verify_totp
 
     user = request.user
     if not user.totp_secret:

@@ -12,7 +12,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.accounts.auth import GuestAuth
+from apps.accounts.services.auth import GuestAuth
 from apps.catalog.services.home import quick_actions_for
 from apps.catalog.services.showcase import build_showcase, list_venues
 from apps.chat import services as chat_svc

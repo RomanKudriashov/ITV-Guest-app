@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from apps.core.errors import ValidationError
-from apps.accounts.roles import require_hotel_admin
+from apps.accounts.services.roles import require_hotel_admin
 from apps.hotels.models import Hotel
 
 # Базисные пункты: 10000 = 100%. Разумный потолок сбора/налога — 100%.

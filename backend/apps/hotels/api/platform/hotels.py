@@ -154,7 +154,7 @@ def export_hotel_data(request: HttpRequest, hotel_id: str):
 
 @router.post("/hotels/{hotel_id}/offboard", summary="Пометить отель к офбордингу")
 def offboard_hotel(request: HttpRequest, hotel_id: str, payload: OffboardIn):
-    from apps.accounts.platform_access import can_manage_tariff
+    from apps.accounts.services.platform_access import can_manage_tariff
     from apps.hotels.services.offboarding import mark_for_offboarding, unmark
 
     # Офбординг — договорное решение, а не операционное: его принимает владелец.
@@ -190,7 +190,7 @@ def delete_hotel(request: HttpRequest, hotel_id: str, confirm_subdomain: str = "
     посмотрев на него. Для отелей с признаком `test` подтверждение не нужно:
     их и завели затем, чтобы удалить.
     """
-    from apps.accounts.platform_access import can_manage_tariff
+    from apps.accounts.services.platform_access import can_manage_tariff
     from apps.hotels.services.offboarding import mark_for_offboarding, purge_hotel
 
     if not can_manage_tariff(request.user):
@@ -223,7 +223,7 @@ def delete_hotel(request: HttpRequest, hotel_id: str, confirm_subdomain: str = "
 
 @router.post("/hotels/{hotel_id}/purge", summary="Необратимо стереть данные отеля")
 def purge_hotel_data(request: HttpRequest, hotel_id: str, payload: PurgeIn):
-    from apps.accounts.platform_access import can_manage_tariff
+    from apps.accounts.services.platform_access import can_manage_tariff
     from apps.hotels.services.offboarding import purge_hotel
 
     if not can_manage_tariff(request.user):
@@ -254,7 +254,7 @@ def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
     Срок жизни короткий и обязательный: доступ ко всем данным отеля не должен
     висеть открытым дольше, чем длится разбор обращения.
     """
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.accounts.services import start_impersonation
 
     if not can_write(request.user):
@@ -323,7 +323,7 @@ def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
     списаний. Шов под будущий биллинг: когда он появится, он будет читать эти
     даты, а не заводить свои.
     """
-    from apps.accounts.platform_access import can_manage_tariff
+    from apps.accounts.services.platform_access import can_manage_tariff
     from apps.hotels.services import tariffs as tariff_registry
     from apps.hotels.services.platform.usage import downgrade_warnings
 

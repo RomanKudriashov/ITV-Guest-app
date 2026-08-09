@@ -18,7 +18,7 @@ from django.db.models import Count, Q, TextField
 from django.db.models.functions import Cast
 from django.utils.text import slugify
 
-from apps.accounts.roles import require_hotel_admin
+from apps.accounts.services.roles import require_hotel_admin
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import Hotel, Schedule
@@ -176,7 +176,7 @@ def _service_of_item(item: Item):
 
 def _require_scope(service, what: str) -> None:
     """Объект принадлежит сервису — управляющий обязан управлять именно им."""
-    from apps.accounts.roles import require_service_scope
+    from apps.accounts.services.roles import require_service_scope
 
     require_service_scope(service, what=what)
 
@@ -187,7 +187,7 @@ def _scoped(queryset):
     выше, а её вторая половина: без фильтра управляющий видел бы чужие
     категории в списке и получал 403 при попытке открыть — хуже, чем не видеть.
     """
-    from apps.accounts.roles import managed_point_ids_or_none
+    from apps.accounts.services.roles import managed_point_ids_or_none
 
     point_ids = managed_point_ids_or_none()
     if point_ids is None:
@@ -283,7 +283,7 @@ def _resolve_category_service(data: dict, parent: Category | None):
     сервис. Управляющему с несколькими нужен явный выбор: угадывать, в какое из
     его заведений он добавляет раздел, нельзя.
     """
-    from apps.accounts.roles import current_access
+    from apps.accounts.services.roles import current_access
     from apps.hotels.models import Service
 
     service_id = data.get("service_id")
@@ -478,7 +478,7 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
 
 
 def _scoped_items(queryset):
-    from apps.accounts.roles import managed_point_ids_or_none
+    from apps.accounts.services.roles import managed_point_ids_or_none
 
     point_ids = managed_point_ids_or_none()
     if point_ids is None:

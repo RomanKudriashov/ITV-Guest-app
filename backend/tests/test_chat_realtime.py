@@ -173,7 +173,7 @@ def test_staff_sees_guest_message_live(client, crystal, guest_token):
 
 @database_sync_to_async
 def _guest_send(crystal, token, body):
-    from apps.accounts.auth import authenticate_guest
+    from apps.accounts.services.auth import authenticate_guest
     from apps.chat.services import guest_send
 
     with tenant_context(crystal):

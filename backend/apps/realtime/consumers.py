@@ -73,7 +73,7 @@ def _load_tracker_board(hotel, token: str, point_code: str, language: str):
     apps/orders/tracker.py, то есть буквально те же, что у REST: разъехаться
     им негде.
     """
-    from apps.accounts.auth import authenticate_staff
+    from apps.accounts.services.auth import authenticate_staff
     from apps.core.errors import DomainError
     from apps.orders.tracker import build_board, require_point
 
@@ -108,7 +108,7 @@ def _load_guest_order(hotel, token: str, order_id: str, language: str):
     Аутентификация и снимок одним походом в БД: соединение либо сразу
     осмысленно, либо не открывается.
     """
-    from apps.accounts.auth import authenticate_guest
+    from apps.accounts.services.auth import authenticate_guest
     from apps.orders.services import get_order, serialize_order
 
     # Язык по умолчанию — язык ОТЕЛЯ, а не глобальный en. У WebSocket нет ни
@@ -283,7 +283,7 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
 
 @database_sync_to_async
 def _load_guest_thread(hotel, token: str, language: str):
-    from apps.accounts.auth import authenticate_guest
+    from apps.accounts.services.auth import authenticate_guest
     from apps.chat.services import get_or_create_thread, thread_snapshot
 
     language = language or hotel.default_language
@@ -307,7 +307,7 @@ def _guest_thread_snapshot(hotel, thread_id, language):
 
 @database_sync_to_async
 def _load_staff_thread(hotel, token: str, thread_id: str, language: str):
-    from apps.accounts.auth import authenticate_staff
+    from apps.accounts.services.auth import authenticate_staff
     from apps.chat.models import ChatThread
     from apps.chat.services import thread_snapshot
 
@@ -409,7 +409,7 @@ def _load_room_state(hotel, token: str, language: str):
     и комната берётся из сессии. Прислать чужой `room_id` в адресе физически
     нечем — его в адресе нет.
     """
-    from apps.accounts.auth import authenticate_guest
+    from apps.accounts.services.auth import authenticate_guest
     from apps.core.errors import DomainError
     from apps.grms.services import guest as room_guest
 
@@ -428,7 +428,7 @@ def _load_room_state(hotel, token: str, language: str):
 
 @_room_db
 def _room_snapshot(hotel, token: str, language: str):
-    from apps.accounts.auth import authenticate_guest
+    from apps.accounts.services.auth import authenticate_guest
     from apps.core.errors import DomainError
     from apps.grms.services import guest as room_guest
 

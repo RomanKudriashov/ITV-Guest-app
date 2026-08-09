@@ -16,8 +16,8 @@ from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.models import ExecutionPoint
 
-from .models import StaffAssignment, User
-from .roles import (
+from apps.accounts.models import StaffAssignment, User
+from apps.accounts.services.roles import (
     NotMyService,
     current_access,
     managed_point_ids_or_none,

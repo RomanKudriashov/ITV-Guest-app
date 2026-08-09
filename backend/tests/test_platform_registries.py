@@ -138,7 +138,7 @@ def test_module_toggle_changes_cms_navigation(api, client):
     Стоп-guard прогона: тумблер модуля в /admin обязан сойтись с гейтингом R4.
     Проверяем не строку в базе, а НАВИГАЦИЮ, которую увидит отель.
     """
-    from apps.accounts.roles import access_for
+    from apps.accounts.services.roles import access_for
     from apps.hotels.services.cms_navigation import build_navigation
 
     hotel = _hotel("modnav", "Модульный")
@@ -404,7 +404,7 @@ def test_enter_token_is_marked_as_impersonation(api):
     Инвариант механизма: действие поддержки обязано быть отличимо от действия
     самого отеля. Отличие живёт в токене — клеймом `imp`.
     """
-    from apps.accounts.tokens import decode_staff_token
+    from apps.accounts.services.tokens import decode_staff_token
 
     hotel = _hotel("markme", "Метка")
     body = api("post", f"/hotels/{hotel.pk}/enter", {"reason": "проверка"}).json()

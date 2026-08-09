@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from apps.accounts.roles import require_hotel_admin
+from apps.accounts.services.roles import require_hotel_admin
 from apps.core.context import require_hotel_id
 from apps.core.errors import ValidationError
 

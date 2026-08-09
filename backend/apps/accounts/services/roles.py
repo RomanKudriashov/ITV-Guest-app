@@ -38,7 +38,7 @@ import dataclasses
 from apps.core.context import current_actor
 from apps.core.errors import PermissionDenied
 
-from .models import StaffAssignment
+from apps.accounts.models import StaffAssignment
 
 
 class NotMyService(PermissionDenied):

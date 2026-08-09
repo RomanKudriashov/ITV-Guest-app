@@ -12,7 +12,7 @@ from typing import Any, Iterable
 from django.db import transaction
 
 from apps.catalog.models import Category, ServiceLocation
-from apps.accounts.roles import (
+from apps.accounts.services.roles import (
     HotelAdminOnly,
     current_access,
     require_hotel_admin,
@@ -461,7 +461,7 @@ def list_services() -> list[dict]:
     from django.db.models import Count, Q
 
     from apps.accounts.models import StaffAssignment
-    from apps.accounts.roles import managed_point_ids_or_none
+    from apps.accounts.services.roles import managed_point_ids_or_none
     from apps.catalog.models import ServiceInclusion
     from apps.notifications.models import EscalationRule, NotificationChannel
 

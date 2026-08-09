@@ -12,7 +12,7 @@ from typing import Any, Iterable
 
 from django.db import transaction
 
-from apps.accounts.roles import (
+from apps.accounts.services.roles import (
     managed_point_ids_or_none,
     require_hotel_admin,
     require_point_scope,

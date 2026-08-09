@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from apps.accounts import totp
+from apps.accounts.services import totp
 from apps.accounts.models import User
 from apps.core.context import platform_scope
 from apps.core.models import AuditLog

@@ -34,7 +34,7 @@ def scope_for(user) -> Scope:
     if getattr(user, "is_hotel_admin", False):
         return Scope(all_points=True, point_ids=None, is_hotel_admin=True, is_platform=False)
 
-    from apps.accounts.roles import access_for
+    from apps.accounts.services.roles import access_for
 
     ids = sorted(access_for(user).managed_point_ids)
     return Scope(all_points=False, point_ids=ids, is_hotel_admin=False, is_platform=False)

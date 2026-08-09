@@ -1,9 +1,10 @@
 from ninja import NinjaAPI
 
-from apps.accounts.auth import CmsAuth, PlatformAuth, StaffAuth
+from apps.accounts.services.auth import CmsAuth, PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
 from apps.catalog.api.router import guest_router as catalog_guest_router
+from apps.accounts.api.router import staff_router
 from apps.chat.api.router import guest_router as chat_guest_router
 from apps.reviews.api.router import guest_router as reviews_guest_router
 from apps.chat.api.router import staff_router as chat_staff_router
@@ -15,7 +16,6 @@ from .cms import router as cms_router
 from .guest import router as guest_router
 from .health import router as health_router
 from .orders import router as orders_router
-from .staff import router as staff_router
 from .tracker import router as tracker_router
 
 api = NinjaAPI(

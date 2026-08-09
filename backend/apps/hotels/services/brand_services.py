@@ -14,7 +14,7 @@ from typing import Any
 from django.utils import timezone
 
 from apps.core.context import require_hotel_id
-from apps.accounts.roles import require_hotel_admin
+from apps.accounts.services.roles import require_hotel_admin
 from apps.core.errors import NotFoundError, ValidationError
 
 from apps.hotels.brand_library import (

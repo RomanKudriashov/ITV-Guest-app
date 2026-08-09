@@ -17,8 +17,8 @@ from apps.core.models import AuditLog
 from apps.events.bus import SESSION_STARTED, emit
 from apps.hotels.models import Room
 
-from .models import GuestSession, ImpersonationGrant, TrustLevel, User
-from .tokens import encode_refresh_token, encode_staff_token
+from apps.accounts.models import GuestSession, ImpersonationGrant, TrustLevel, User
+from apps.accounts.services.tokens import encode_refresh_token, encode_staff_token
 
 
 class AuthenticationFailed(Exception):

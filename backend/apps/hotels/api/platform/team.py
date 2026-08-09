@@ -21,7 +21,7 @@ def list_team(request: HttpRequest):
 
 @router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")
 def invite_member(request: HttpRequest, payload: TeamInviteIn):
-    from apps.accounts.platform_access import can_manage_team
+    from apps.accounts.services.platform_access import can_manage_team
     from apps.hotels.services.platform.team import invite
 
     if not can_manage_team(request.user):
@@ -38,7 +38,7 @@ def invite_member(request: HttpRequest, payload: TeamInviteIn):
 
 @router.patch("/team/{user_id}", summary="Сменить роль или отключить участника")
 def patch_member(request: HttpRequest, user_id: str, payload: TeamPatchIn):
-    from apps.accounts.platform_access import can_manage_team
+    from apps.accounts.services.platform_access import can_manage_team
     from apps.hotels.services.platform.team import update_member
 
     if not can_manage_team(request.user):

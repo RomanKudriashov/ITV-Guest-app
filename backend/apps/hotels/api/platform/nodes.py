@@ -23,7 +23,7 @@ def list_nodes(request: HttpRequest):
 
 @router.post("/hotels/{hotel_id}/nodes", response={201: dict}, summary="Завести узел и выдать ключ")
 def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onprem import register_node
 
     if not can_write(request.user):
@@ -43,7 +43,7 @@ def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
 
 @router.post("/nodes/{node_id}/revoke", summary="Отозвать ключ узла")
 def revoke_node(request: HttpRequest, node_id: str):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onprem import revoke_key
 
     if not can_write(request.user):
@@ -58,7 +58,7 @@ def revoke_node(request: HttpRequest, node_id: str):
 
 @router.post("/nodes/{node_id}/reissue", summary="Перевыпустить ключ узла")
 def reissue_node(request: HttpRequest, node_id: str):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onprem import reissue_key
 
     if not can_write(request.user):

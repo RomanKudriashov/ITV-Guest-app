@@ -23,7 +23,7 @@ def list_onboarding_templates(request: HttpRequest):
 
 @router.post("/templates", response={201: dict}, summary="Создать шаблон")
 def create_template(request: HttpRequest, payload: TemplateIn):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services import onboarding
 
     if not can_write(request.user):
@@ -40,7 +40,7 @@ def create_template(request: HttpRequest, payload: TemplateIn):
 
 @router.patch("/templates/{template_id}", summary="Изменить шаблон")
 def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services import onboarding
 
     if not can_write(request.user):
@@ -65,7 +65,7 @@ def get_system_dictionary(request: HttpRequest, kind: str | None = None):
 
 @router.put("/dictionaries", summary="Добавить/изменить запись справочника")
 def put_system_dictionary(request: HttpRequest, payload: DictionaryEntryIn):
-    from apps.accounts.platform_access import can_write
+    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onboarding import upsert_dictionary_entry
 
     if not can_write(request.user):
