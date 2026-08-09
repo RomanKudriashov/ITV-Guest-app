@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /**
  * Кадры всех гостевых экранов в обеих темах — для сверки «до/после».
@@ -32,7 +33,7 @@ for (const mode of ['dark', 'light']) {
   await page.evaluate((m) => {
     localStorage.clear()
     sessionStorage.clear()
-    localStorage.setItem('itv.theme-mode', m)
+    localStorage.setItem(STORAGE_KEYS.theme, m)
   }, mode)
   await page.goto(BASE)
   await page.getByTestId('guest-room-input').fill('305')

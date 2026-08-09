@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { DEMO_ROOM } from './helpers'
+import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
  * СТОРОЖ ЛИПКИХ СЛОЁВ.
@@ -29,11 +30,14 @@ const TOLERANCE = 2
 
 async function enterRoom(page: Page, mode: 'dark' | 'light'): Promise<void> {
   await page.goto('/')
-  await page.evaluate((m) => {
-    window.localStorage.clear()
-    window.sessionStorage.clear()
-    window.localStorage.setItem('itv.theme-mode', m)
-  }, mode)
+  await page.evaluate(
+    ([key, m]) => {
+      window.localStorage.clear()
+      window.sessionStorage.clear()
+      window.localStorage.setItem(key, m)
+    },
+    [STORAGE_KEYS.theme, mode] as const,
+  )
   await page.goto('/')
   await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
   await page.getByTestId('guest-room-submit').click()

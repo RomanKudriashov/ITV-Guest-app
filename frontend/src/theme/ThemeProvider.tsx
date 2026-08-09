@@ -17,6 +17,7 @@ import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { directionForLanguage } from '@/i18n';
+import { STORAGE_KEYS } from '@/storageKeys';
 import { createAppTheme } from './createAppTheme';
 import {
   DEFAULT_BRAND_TOKENS,
@@ -29,7 +30,7 @@ import {
   type ThemeMode,
 } from './tokens';
 
-const MODE_STORAGE_KEY = 'itv.theme-mode';
+const MODE_STORAGE_KEY = STORAGE_KEYS.theme;
 
 interface AppThemeContextValue {
   tokens: BrandTokens;
@@ -134,6 +135,18 @@ export function AppThemeProvider({
     document.documentElement.setAttribute('lang', language || 'en');
     document.body.setAttribute('dir', direction);
   }, [direction, language]);
+
+  /*
+    РЕШЕНИЕ О ТЕМЕ — НАБЛЮДАЕМОЕ, а не выводимое из пикселей.
+
+    Раньше «применилась ли тема» проверяли по фону страницы. На экране входа
+    фон не тематический, и такая проверка молча соглашалась с чем угодно: она
+    и пропустила съёмку «светлой темы», сделанную в тёмной. Атрибут говорит
+    прямо, что решило приложение, — и одинаково работает на любом экране.
+  */
+  useEffect(() => {
+    document.documentElement.dataset.theme = mode;
+  }, [mode]);
 
   // PWA `theme-color` (the browser/status bar tint) is a color, so it comes from
   // the tokens rather than being written into index.html.

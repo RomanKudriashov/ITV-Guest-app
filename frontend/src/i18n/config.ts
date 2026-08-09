@@ -7,6 +7,8 @@ import ru from './locales/ru.json';
 import ar from './locales/ar.json';
 import zh from './locales/zh.json';
 
+import { STORAGE_KEYS } from '@/storageKeys';
+
 export const SUPPORTED_LANGUAGES = ['en', 'ru', 'ar', 'zh'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
@@ -27,7 +29,7 @@ export function directionForLanguage(lng: string | undefined): 'ltr' | 'rtl' {
   return (RTL_LANGUAGES as readonly string[]).includes(base) ? 'rtl' : 'ltr';
 }
 
-export const LANGUAGE_STORAGE_KEY = 'itv.lang';
+export const LANGUAGE_STORAGE_KEY = STORAGE_KEYS.language;
 
 void i18n
   .use(LanguageDetector)

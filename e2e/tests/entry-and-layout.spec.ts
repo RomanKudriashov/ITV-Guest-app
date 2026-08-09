@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
  * Раскладки, которые уже один раз разъехались, — под сторожем.
@@ -10,21 +11,27 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function entry(page: Page, mode: 'dark' | 'light'): Promise<void> {
   await page.goto('/')
-  await page.evaluate((m) => {
-    window.localStorage.clear()
-    window.sessionStorage.clear()
-    window.localStorage.setItem('itv.theme-mode', m)
-  }, mode)
+  await page.evaluate(
+    ([key, m]) => {
+      window.localStorage.clear()
+      window.sessionStorage.clear()
+      window.localStorage.setItem(key, m)
+    },
+    [STORAGE_KEYS.theme, mode] as const,
+  )
   await page.goto('/')
   await expect(page.getByTestId('guest-room-input')).toBeVisible({ timeout: 20_000 })
 }
 
 async function venueMenu(page: Page, mode: 'dark' | 'light'): Promise<void> {
   await page.goto('/')
-  await page.evaluate((m) => {
-    window.localStorage.clear()
-    window.localStorage.setItem('itv.theme-mode', m)
-  }, mode)
+  await page.evaluate(
+    ([key, m]) => {
+      window.localStorage.clear()
+      window.localStorage.setItem(key, m)
+    },
+    [STORAGE_KEYS.theme, mode] as const,
+  )
   await page.goto('/')
   await page.getByTestId('guest-browse-only').click()
   await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 20_000 })

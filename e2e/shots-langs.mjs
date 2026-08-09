@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /**
  * Витрина на четырёх языках: главная, заведение и карточка позиции.
@@ -30,7 +31,7 @@ for (const lang of LANGS) {
   await page.evaluate(() => {
     localStorage.clear()
     sessionStorage.clear()
-    localStorage.setItem('itv.theme-mode', 'dark')
+    localStorage.setItem(STORAGE_KEYS.theme, 'dark')
   })
   await page.goto(`${BASE}/?lang=${lang}`)
   await page.getByTestId('guest-room-input').fill('305')

@@ -1,4 +1,5 @@
 import { webkit, request as pwRequest } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /**
  * Кадры состояний экрана номера, которых гость встречает, а мы ни разу не
@@ -38,7 +39,7 @@ async function open(mode, { prepare } = {}) {
   })
   const page = await ctx.newPage()
   await page.goto(BASE)
-  await page.evaluate((m) => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('itv.theme-mode', m) }, mode)
+  await page.evaluate((m) => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem(STORAGE_KEYS.theme, m) }, mode)
   if (prepare) await prepare(page)
   await page.goto(BASE)
   await page.getByTestId('guest-room-input').fill('305')

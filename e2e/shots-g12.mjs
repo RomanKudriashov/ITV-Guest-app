@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /**
  * Кадры G12: типовые карточки заявок, витрина консьержа и раздел «Об отеле».
@@ -39,7 +40,7 @@ for (const mode of ['dark', 'light']) {
   await page.evaluate((m) => {
     localStorage.clear()
     sessionStorage.clear()
-    localStorage.setItem('itv.theme-mode', m)
+    localStorage.setItem(STORAGE_KEYS.theme, m)
   }, mode)
   await page.goto(BASE)
   await page.getByTestId('guest-room-input').fill(ROOM)

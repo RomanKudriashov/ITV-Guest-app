@@ -1,8 +1,9 @@
 import { chromium } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 const b = await chromium.launch()
 const p = await b.newPage({ viewport: {width: 390, height: 844}, locale: 'ru-RU', deviceScaleFactor: 2 })
 await p.goto('http://localhost:5183')
-await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('itv.theme-mode','dark') })
+await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem(STORAGE_KEYS.theme,'dark') })
 await p.goto('http://localhost:5183')
 await p.getByTestId('guest-room-input').fill('305')
 await p.getByTestId('guest-room-submit').click()

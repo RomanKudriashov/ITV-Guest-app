@@ -1,6 +1,7 @@
 import { chromium } from '@playwright/test'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /**
  * Кадры G10: три ширины, обе темы, несколько позиций прокрутки — и макет
@@ -29,7 +30,7 @@ for (const [device, viewport] of WIDTHS) {
     await page.evaluate((m) => {
       localStorage.clear()
       sessionStorage.clear()
-      localStorage.setItem('itv.theme-mode', m)
+      localStorage.setItem(STORAGE_KEYS.theme, m)
     }, mode)
     await page.goto(BASE)
     await page.getByTestId('guest-room-input').fill('305')

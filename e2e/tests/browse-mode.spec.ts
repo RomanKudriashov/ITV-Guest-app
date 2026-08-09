@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { DEMO_ROOM } from './helpers'
+import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
  * Режим просмотра — гость вошёл «просто посмотреть меню», без номера.
@@ -50,10 +51,13 @@ test.describe('Режим просмотра без номера', () => {
   for (const mode of ['dark', 'light'] as const) {
     test(`плашка о режиме просмотра читается целиком (${mode})`, async ({ page }) => {
       await page.goto('/')
-      await page.evaluate((m) => {
-        window.localStorage.clear()
-        window.localStorage.setItem('itv.theme-mode', m)
-      }, mode)
+      await page.evaluate(
+        ([key, m]) => {
+          window.localStorage.clear()
+          window.localStorage.setItem(key, m)
+        },
+        [STORAGE_KEYS.theme, mode] as const,
+      )
       await browseWithoutRoom(page)
       await page.getByTestId('guest-home-tile-kitchen').click()
 

@@ -11,6 +11,7 @@
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 const BASE = process.env.BASE ?? 'http://localhost:5183'
 const OUT = process.env.OUT ?? '../docs/design/item-subtitle'
@@ -41,7 +42,7 @@ for (const device of DEVICES) {
     await page.evaluate((m) => {
       window.localStorage.clear()
       window.sessionStorage.clear()
-      window.localStorage.setItem('itv.theme-mode', m)
+      window.localStorage.setItem(STORAGE_KEYS.theme, m)
     }, mode)
     await page.goto(BASE)
     await page.getByTestId('guest-room-input').fill(ROOM)

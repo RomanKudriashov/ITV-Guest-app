@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { STORAGE_KEYS } from '../fixtures/appState'
+
 import {
   ADMIN,
   API,
@@ -489,7 +491,7 @@ for (const mode of ['dark', 'light'] as const) {
     await enterAsGuest(page)
     await page.evaluate(
       ([key, value]) => localStorage.setItem(key, value),
-      ['itv.theme-mode', mode],
+      [STORAGE_KEYS.theme, mode],
     )
     await page.reload()
     await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })

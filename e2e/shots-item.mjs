@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /**
  * Кадры КАРТОЧКИ ПОЗИЦИИ: телефон и десктоп, обе темы, и отдельно — трудные
@@ -42,7 +43,7 @@ for (const [device, viewport] of [
     await page.evaluate((m) => {
       localStorage.clear()
       sessionStorage.clear()
-      localStorage.setItem('itv.theme-mode', m)
+      localStorage.setItem(STORAGE_KEYS.theme, m)
     }, mode)
     await page.goto(BASE)
     await page.getByTestId('guest-room-input').fill('305')

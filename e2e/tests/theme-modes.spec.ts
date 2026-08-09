@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { ADMIN, CREDENTIALS, DEMO_ROOM, login, loginToTracker } from './helpers'
+import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
  * R7: обе темы на ВСЕХ поверхностях.
@@ -42,13 +43,13 @@ function luminance(color: string): number {
  */
 async function clearTheme(page: Page): Promise<void> {
   await page.goto('/')
-  await page.evaluate(() => {
+  await page.evaluate((key) => {
     try {
-      window.localStorage.removeItem('itv.theme-mode')
+      window.localStorage.removeItem(key)
     } catch {
       /* приватный режим — выбора и так нет */
     }
-  })
+  }, STORAGE_KEYS.theme)
 }
 
 async function enterAsGuest(page: Page): Promise<void> {

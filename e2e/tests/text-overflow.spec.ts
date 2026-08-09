@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { ADMIN, CREDENTIALS, DEMO_ROOM, login, loginToTracker } from './helpers'
+import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
  * Сторож невлезающего текста.
@@ -23,7 +24,7 @@ import { ADMIN, CREDENTIALS, DEMO_ROOM, login, loginToTracker } from './helpers'
  * и в тёмной, и в светлой, и «починили в светлой» ничего не значило.
  */
 
-const THEME_KEY = 'itv.theme-mode'
+const THEME_KEY = STORAGE_KEYS.theme
 
 const VIEWPORTS = [
   { name: 'телефон', width: 390, height: 844 },

@@ -1,4 +1,5 @@
 import { chromium } from '@playwright/test'
+import { STORAGE_KEYS } from './fixtures/appState.mjs'
 
 /** Экран номера: пилюли статуса и сцены в обеих темах. */
 const BASE = process.env.BASE ?? 'http://localhost:5183'
@@ -9,7 +10,7 @@ for (const mode of ['dark', 'light']) {
   const ctx = await browser.newContext({ viewport: { width: 430, height: 844 }, locale: 'ru-RU', deviceScaleFactor: 2 })
   const page = await ctx.newPage()
   await page.goto(BASE)
-  await page.evaluate((m) => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('itv.theme-mode', m) }, mode)
+  await page.evaluate((m) => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem(STORAGE_KEYS.theme, m) }, mode)
   await page.goto(BASE)
   await page.getByTestId('guest-room-input').fill('305')
   await page.getByTestId('guest-room-submit').click()
