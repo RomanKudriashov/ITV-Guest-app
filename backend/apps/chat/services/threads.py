@@ -17,7 +17,7 @@ from apps.core.context import require_hotel_id
 from apps.core.errors import NotFoundError, ValidationError
 from apps.events.bus import CHAT_MESSAGE, emit
 
-from .models import ChatMessage, ChatThread
+from apps.chat.models import ChatMessage, ChatThread
 
 MAX_BODY = 2000
 

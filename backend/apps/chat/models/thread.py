@@ -44,21 +44,3 @@ class ChatThread(TenantModel):
 
     def __str__(self) -> str:
         return f"thread:{self.room.number if self.room_id else self.pk}"
-
-
-class ChatMessage(TenantModel):
-    thread = models.ForeignKey(ChatThread, on_delete=models.CASCADE, related_name="messages")
-    author_type = models.CharField(max_length=16, choices=ChatThread.AuthorType.choices)
-    author_id = models.UUIDField(null=True, blank=True)
-    author_name = models.CharField(max_length=128, blank=True)
-    body = models.TextField()
-    read_by_staff_at = models.DateTimeField(null=True, blank=True)
-    read_by_guest_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = "chat_message"
-        ordering = ["created_at"]
-        indexes = [models.Index(fields=["hotel", "thread", "created_at"])]
-
-    def __str__(self) -> str:
-        return f"{self.author_type}: {self.body[:32]}"

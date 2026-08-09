@@ -13,7 +13,6 @@ from django.http import HttpRequest
 from ninja import Router, Schema
 
 from apps.accounts.auth import GuestAuth
-from apps.chat import services as chat_svc
 from apps.core.errors import NotFoundError
 from apps.orders.services import get_order
 from apps.reviews import services as review_svc
@@ -33,27 +32,6 @@ class MessageIn(Schema):
 class ReviewIn(Schema):
     rating: int
     comment: str = ""
-
-
-# --- Чат (гость) -----------------------------------------------------------
-
-
-@guest_router.get("/chat", auth=guest_auth, summary="Тред гостя")
-def guest_chat(request: HttpRequest):
-    thread = chat_svc.get_or_create_thread(request.guest_session)
-    return chat_svc.thread_snapshot(thread, side="guest")
-
-
-@guest_router.post("/chat", auth=guest_auth, summary="Отправить сообщение")
-def guest_chat_send(request: HttpRequest, payload: MessageIn):
-    return chat_svc.guest_send(request.guest_session, payload.body)
-
-
-@guest_router.post("/chat/read", auth=guest_auth, summary="Отметить прочитанными")
-def guest_chat_read(request: HttpRequest):
-    thread = chat_svc.get_or_create_thread(request.guest_session)
-    chat_svc.mark_read(thread, side="guest")
-    return chat_svc.thread_snapshot(thread, side="guest")
 
 
 # --- Отзыв (гость) ---------------------------------------------------------
@@ -82,30 +60,3 @@ def guest_post_review(request: HttpRequest, order_id: str, payload: ReviewIn):
         order, guest_session=request.guest_session, rating=payload.rating, comment=payload.comment
     )
     return 201, review_svc.serialize_review(review)
-
-
-# --- Чат (персонал) --------------------------------------------------------
-
-
-@tracker_router.get("/chat/threads", summary="Треды отеля")
-def staff_threads(request: HttpRequest):
-    return chat_svc.list_threads()
-
-
-@tracker_router.get("/chat/threads/{thread_id}", summary="Тред с сообщениями")
-def staff_thread(request: HttpRequest, thread_id: str):
-    thread = chat_svc.get_thread(thread_id)
-    return chat_svc.thread_snapshot(thread, side="staff")
-
-
-@tracker_router.post("/chat/threads/{thread_id}", summary="Ответить в тред")
-def staff_thread_send(request: HttpRequest, thread_id: str, payload: MessageIn):
-    thread = chat_svc.get_thread(thread_id)
-    return chat_svc.staff_send(thread, request.user, payload.body)
-
-
-@tracker_router.post("/chat/threads/{thread_id}/read", summary="Отметить прочитанными")
-def staff_thread_read(request: HttpRequest, thread_id: str):
-    thread = chat_svc.get_thread(thread_id)
-    chat_svc.mark_read(thread, side="staff")
-    return chat_svc.thread_snapshot(thread, side="staff")

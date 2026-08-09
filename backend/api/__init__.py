@@ -4,6 +4,8 @@ from apps.accounts.auth import CmsAuth, PlatformAuth, StaffAuth
 from apps.core.errors import DomainError
 
 from apps.catalog.api.router import guest_router as catalog_guest_router
+from apps.chat.api.router import guest_router as chat_guest_router
+from apps.chat.api.router import staff_router as chat_staff_router
 from apps.grms.api.router import guest_router as guest_room_router
 from apps.grms.api.router import onprem_router
 from apps.hotels.api.platform import router as platform_router
@@ -35,6 +37,7 @@ api.add_router("/guest", guest_router)
 # Витрина, карточка, слоты, главная и поиск — домен каталога, свой роутер.
 api.add_router("/guest", catalog_guest_router)
 api.add_router("/guest", surface_guest_router)
+api.add_router("/guest", chat_guest_router)
 # Управление номером (GRMS). Гейт по модулю отеля и step-up по PIN — внутри
 # сервисного слоя: маршрут обязан быть закрыт на СЕРВЕРЕ, а не только скрыт
 # в бандле.
@@ -47,6 +50,7 @@ api.add_router("/orders", orders_router, auth=StaffAuth())
 # — те же функции зовёт WebSocket-канал, у которого middleware нет.
 api.add_router("/tracker", tracker_router, auth=StaffAuth())
 api.add_router("/tracker", surface_tracker_router, auth=StaffAuth())
+api.add_router("/tracker", chat_staff_router, auth=StaffAuth())
 # Весь CMS-раздел закрыт JWT персонала И РОЛЬЮ: забыть проверку на отдельном
 # эндпоинте невозможно — она задана на уровне роутера. Линейный персонал сюда
 # не попадает вовсе (403), управляющий попадает, но видит только свой сервис —
