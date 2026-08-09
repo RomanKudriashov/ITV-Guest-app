@@ -85,7 +85,9 @@ def test_new_route_actually_moves_the_order(cms, crystal, client):
     Ради этого эндпоинт и заводился: назначение в CMS обязано менять то, куда
     реально уедет заказ, а не только строку в базе.
     """
-    from apps.orders.services import _resolve_execution_point
+    # Приватная функция — из СВОЕГО модуля: звёздный реэкспорт пакета
+    # приватные имена не переносит, и это правильно.
+    from apps.orders.services.services import _resolve_execution_point
 
     category = category_id_by_code(crystal, "hot")
     with tenant_context(crystal):
