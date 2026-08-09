@@ -48,7 +48,7 @@ import {
   maskOf,
   rectFromDrag,
   round1,
-  zoneWindowMask,
+  zoneWindowStyle,
 } from './planShapes';
 
 /**
@@ -201,7 +201,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
     return () => clearTimeout(timer);
   }, [litId, offId]);
 
-  const plateStops = useMemo(() => storefrontTokens('dark').roomPlan.zoneWindowStops, []);
+  const plate = useMemo(() => storefrontTokens('dark').roomPlan, []);
   const isDirty = baseline !== '' && JSON.stringify(draft) !== baseline;
   dirtyRef.current = isDirty;
 
@@ -582,12 +582,12 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                       src={litUrl}
                       alt=""
                       draggable={false}
-                      style={{
-                        maskImage: zoneWindowMask(zone.mask, plateStops),
-                        WebkitMaskImage: zoneWindowMask(zone.mask, plateStops),
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskRepeat: 'no-repeat',
-                      }}
+                      style={zoneWindowStyle(
+                        zone.hit,
+                        zone.mask,
+                        plate.zoneWindowInk,
+                        plate.zoneWindowEdge,
+                      )}
                       sx={{
                         position: 'absolute',
                         inset: 0,

@@ -54,12 +54,8 @@ export function rectFromDrag(ax: number, ay: number, bx: number, by: number): Pl
 export const clampPercent = (value: number) => round1(Math.max(0, Math.min(100, value)));
 
 /**
- * Окно света на светлом кадре — тот же эллипс, что и у гостя: редактор обязан
- * показывать ровно то, что увидит гость, иначе разметку правят вслепую.
+ * Окно света на светлом кадре — ТОТ ЖЕ помощник, что у гостя: редактор обязан
+ * показывать ровно то, что увидит гость, иначе разметку правят вслепую. Своей
+ * копии формы здесь нет намеренно — две копии однажды разъедутся.
  */
-export function zoneWindowMask(rect: PlanRect, stops: string): string {
-  return (
-    `radial-gradient(${rect.w / 2}% ${rect.h / 2}% at ` +
-    `${rect.x + rect.w / 2}% ${rect.y + rect.h / 2}%, ${stops})`
-  );
-}
+export { zoneWindowStyle } from '@/guest/roomPlanMask';

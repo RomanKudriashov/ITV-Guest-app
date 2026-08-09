@@ -8,6 +8,7 @@ import { IconAirConditioner, IconLightGroup } from '@/icons';
 import { useStorefront } from '../useStorefront';
 import type { RoomPlan, RoomPlanPoint, RoomPlanRect, RoomPlanWindow } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
+import { zoneWindowStyle } from '../roomPlanMask';
 
 /**
  * План-двойник номера: ДВА СОВМЕЩЁННЫХ КАДРА, следующих ПОДТВЕРЖДЁННОМУ
@@ -145,25 +146,6 @@ export interface RoomPlanPlateProps {
   maxHeight?: string;
   onToggle: (controlId: string, next: number) => void;
 }
-
-/**
- * Окно зоны на светлом кадре: эллипс, вписанный в прямоугольник зоны.
- *
- * Проценты радиусов считаются от кадра, а кадр лежит ровно на плите — поэтому
- * окно садится на комнату без пересчётов и без вложенного масштабирования.
- * Инлайновым стилем, как и вся геометрия: в RTL emotion развернул бы позицию.
- */
-const zoneWindow = (rect: RoomPlanRect, stops: string): CSSProperties => {
-  const gradient =
-    `radial-gradient(${rect.w / 2}% ${rect.h / 2}% at ` +
-    `${rect.x + rect.w / 2}% ${rect.y + rect.h / 2}%, ${stops})`;
-  return {
-    maskImage: gradient,
-    WebkitMaskImage: gradient,
-    maskRepeat: 'no-repeat',
-    WebkitMaskRepeat: 'no-repeat',
-  };
-};
 
 const pct = (rect: RoomPlanRect) => ({
   left: `${rect.x}%`,
@@ -332,7 +314,10 @@ export function RoomPlanPlate({
               alt=""
               aria-hidden
               data-testid={`room-plan-lit-${zone.code || zone.controlId}`}
-              style={{ opacity: on ? 1 : 0, ...zoneWindow(zone.mask, tokens.zoneWindowStops) }}
+              style={{
+                opacity: on ? 1 : 0,
+                ...zoneWindowStyle(zone.hit, zone.mask, tokens.zoneWindowInk, tokens.zoneWindowEdge),
+              }}
               sx={{
                 position: 'absolute',
                 inset: 0,
