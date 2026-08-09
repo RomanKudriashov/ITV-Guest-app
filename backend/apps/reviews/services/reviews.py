@@ -14,7 +14,7 @@ from apps.events.bus import REVIEW_CREATED, REVIEW_LOW, emit
 from apps.hotels.models import Hotel
 from apps.orders.models import Order
 
-from .models import Review
+from apps.reviews.models import Review
 
 
 def can_review(order: Order) -> bool:
@@ -102,3 +102,26 @@ def list_reviews(*, rating: int | None = None, limit: int = 100) -> list[dict]:
         }
         for review in queryset[: min(int(limit or 100), 500)]
     ]
+
+
+def settings_payload(hotel) -> dict:
+    """Настройка сбора отзывов. Перенос дословный из вьюхи."""
+    return {"enabled": hotel.review_enabled, "low_rating_threshold": hotel.review_low_threshold}
+
+
+def get_settings() -> dict:
+    from apps.hotels.services.hotel import current_hotel
+
+    return settings_payload(current_hotel())
+
+
+def update_settings(*, enabled: bool | None, low_rating_threshold: int | None) -> dict:
+    from apps.hotels.services.hotel import current_hotel
+
+    hotel = current_hotel()
+    if enabled is not None:
+        hotel.review_enabled = enabled
+    if low_rating_threshold is not None:
+        hotel.review_low_threshold = max(1, min(5, low_rating_threshold))
+    hotel.save(update_fields=["review_enabled", "review_low_threshold", "updated_at"])
+    return settings_payload(hotel)

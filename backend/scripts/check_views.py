@@ -43,7 +43,6 @@ ALLOWED = {
     "api/guest.py": "партия 3: локации доставки уезжают в apps/hotels",
     "api/staff.py": "партия 5: персонал уезжает в apps/accounts",
     "api/cms/analytics.py": "партия 5: уезжает в apps/analytics",
-    "api/cms/reviews.py": "партия 5: уезжает в apps/reviews",
 }
 
 
