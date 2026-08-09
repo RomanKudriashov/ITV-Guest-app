@@ -94,3 +94,45 @@ def delete_object(key: str) -> None:
 
 def object_key(hotel_id, kind: str, filename: str, *, variant: str = "original") -> str:
     return f"hotels/{hotel_id}/{kind}/{variant}/{filename}"
+
+
+def delete_objects(keys: list[str]) -> dict[str, list[str]]:
+    """
+    Удалить набор объектов и ЧЕСТНО сказать, что не получилось.
+
+    `delete_object` глушит отказ предупреждением в лог — для одной картинки это
+    приемлемо. Для офбординга неприемлемо: «данные удалены» не должно
+    основываться на записи в логе, которую никто не читает.
+    """
+    deleted: list[str] = []
+    failed: list[str] = []
+    client = get_client()
+    for key in keys:
+        try:
+            client.remove_object(settings.MINIO_BUCKET, key)
+            deleted.append(key)
+        except S3Error:
+            logger.warning("Не удалось удалить объект %s", key, exc_info=True)
+            failed.append(key)
+    return {"deleted": deleted, "failed": failed}
+
+
+def list_keys(prefix: str = "") -> list[str]:
+    """
+    Ключи объектов в бакете. Нужен ревизору: сверять хранилище с базой можно
+    только зная, что в хранилище лежит.
+    """
+    client = get_client()
+    return [
+        item.object_name
+        for item in client.list_objects(settings.MINIO_BUCKET, prefix=prefix, recursive=True)
+    ]
+
+
+def hotel_prefix(hotel_id) -> str:
+    """
+    Префикс всех объектов отеля. Совпадает с `object_key` по построению — и это
+    единственное место, где такое знание записано, чтобы ревизор и офбординг не
+    расходились в понимании раскладки бакета.
+    """
+    return f"hotels/{hotel_id}/"

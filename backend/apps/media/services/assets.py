@@ -88,3 +88,42 @@ def image_url(asset: MediaAsset | None, *, variant: str = "card", fallback_code:
         if url:
             return url
     return CategoryPlaceholder.url_for(fallback_code or "default")
+
+
+def object_keys_of(asset: MediaAsset) -> list[str]:
+    """
+    Все объекты ассета: оригинал и нарезанные варианты.
+
+    Вариантов может не быть (нарезка не дошла) — тогда останется один оригинал.
+    Пустые значения отбрасываем: ключ, которого нет, удалять нечего.
+    """
+    keys = [asset.object_key, *(asset.variants or {}).values()]
+    seen: list[str] = []
+    for key in keys:
+        if key and key not in seen:
+            seen.append(key)
+    return seen
+
+
+def hotel_object_keys(hotel) -> tuple[int, list[str]]:
+    """
+    Ключи всех объектов отеля — ПО БАЗЕ, а не по префиксу в бакете.
+
+    Возвращает число ассетов и список ключей. Именно этот список уезжает в
+    удаление: перечисление по базе означает, что мы удаляем ровно то, что сами
+    же и записали, а не всё, что похоже на путь отеля.
+
+    Читаем В КОНТЕКСТЕ ОТЕЛЯ, а не платформенным подключением: строки медиа
+    закрыты RLS по `hotel_id`, и роль без BYPASSRLS увидит пустой список —
+    молча, без ошибки. Тогда офбординг решил бы, что удалять нечего.
+
+    `all_objects` — потому что мягко удалённый ассет это тоже файл в бакете.
+    """
+    from apps.core.context import tenant_context
+
+    with tenant_context(hotel):
+        assets = list(MediaAsset.all_objects.all())
+    keys: list[str] = []
+    for asset in assets:
+        keys.extend(object_keys_of(asset))
+    return len(assets), keys

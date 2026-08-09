@@ -165,6 +165,13 @@ def purge_hotel(hotel: Hotel, *, confirm_subdomain: str, actor_id) -> dict:
     from apps.orders.models import Order
     from apps.reviews.models import Review
 
+    # КЛЮЧИ СОБИРАЕМ ДО УДАЛЕНИЯ СТРОК: после `hard_delete()` спрашивать, какие
+    # объекты принадлежали отелю, будет уже не у кого — именно так файлы и
+    # оставались в хранилище навсегда.
+    from apps.media.services.assets import hotel_object_keys
+
+    asset_count, object_keys = hotel_object_keys(hotel)
+
     removed: dict[str, int] = {}
     with tenant_context(hotel):
         # ЖЁСТКОЕ удаление, а не мягкое. Во всём остальном проекте `delete()`
@@ -202,8 +209,55 @@ def purge_hotel(hotel: Hotel, *, confirm_subdomain: str, actor_id) -> dict:
         "purged_at": timezone.now().isoformat(),
         "purged_by": str(actor_id),
         "removed": removed,
+        # СТРОКИ УДАЛЕНЫ, ОБЪЕКТЫ — ЕЩЁ НЕТ. Пока хранилище не отчиталось,
+        # отель НЕ считается полностью очищенным: `state` останется `pending`,
+        # и это видно оператору в профиле отеля.
+        "storage": {
+            "state": "pending",
+            "assets": asset_count,
+            "objects": len(object_keys),
+            "queued_at": timezone.now().isoformat(),
+        },
     }
     hotel.settings = settings
     hotel.is_active = False
     hotel.save(update_fields=["settings", "is_active", "updated_at"])
-    return {"removed": removed, "purged_on": str(date.today())}
+
+    # Строго после коммита: воркер живёт в другом процессе, и поставленная
+    # раньше задача успела бы прочитать отель до того, как в нём появится
+    # отметка, которую она же и обновляет.
+    if object_keys:
+        from apps.media.tasks import purge_hotel_media
+
+        transaction.on_commit(
+            lambda: purge_hotel_media.delay(str(hotel.pk), object_keys, asset_count)
+        )
+
+    return {
+        "removed": removed,
+        "purged_on": str(date.today()),
+        "storage": {"assets": asset_count, "objects": len(object_keys), "state": "pending"},
+    }
+
+
+def record_storage_purge(hotel_id, outcome: dict) -> None:
+    """
+    Записать в отель исход удаления объектов.
+
+    Зовётся фоновой задачей, когда тенантный контекст уже закрыт. Обычным
+    подключением, а не платформенным: отель — таблица платформенного уровня,
+    RLS на неё не вешается (см. apps/hotels/models), и городить сюда
+    BYPASSRLS значило бы усложнять без причины.
+    """
+    hotel = Hotel.all_objects.filter(pk=hotel_id).first()
+    if hotel is None:
+        return
+    settings = dict(hotel.settings or {})
+    mark = dict(settings.get(_MARK_KEY) or {})
+    mark["storage"] = {
+        **(mark.get("storage") or {}),
+        **outcome,
+        "finished_at": timezone.now().isoformat(),
+    }
+    settings[_MARK_KEY] = mark
+    Hotel.all_objects.filter(pk=hotel_id).update(settings=settings)

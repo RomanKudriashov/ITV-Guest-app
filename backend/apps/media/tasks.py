@@ -126,3 +126,34 @@ def purge_media_asset(object_keys: list[str]) -> int:
     for key in object_keys:
         storage.delete_object(key)
     return len(object_keys)
+
+
+@shared_task(acks_late=True, max_retries=0, ignore_result=True)
+def purge_hotel_media(hotel_id: str, object_keys: list[str], asset_count: int) -> dict:
+    """
+    Удалить объекты отеля из хранилища и ЗАПИСАТЬ ИСХОД В ОТЕЛЬ.
+
+    ФОНОВОЙ ЗАДАЧЕЙ, а не в запросе: у отеля бывают тысячи объектов, и
+    офбординг крупного отеля повесил бы HTTP-запрос до таймаута.
+
+    ИСХОД ПИШЕТСЯ В ОТМЕТКУ ОФБОРДИНГА, а не только в лог. «Данные отеля
+    удалены» — обещание, которое отель может проверить; основывать его на
+    строке в логе, которую никто не читает, нельзя. Пока хранилище не
+    отчиталось, отметка держит состояние `pending`, а при отказе — `failed`
+    вместе с числом неудалённых объектов, чтобы оператор увидел и повторил.
+    """
+    from apps.hotels.services.offboarding import record_storage_purge
+    from apps.media.services import storage
+
+    result = storage.delete_objects(object_keys)
+    outcome = {
+        "state": "done" if not result["failed"] else "failed",
+        "assets": asset_count,
+        "objects": len(object_keys),
+        "deleted": len(result["deleted"]),
+        "failed": len(result["failed"]),
+        # Ключи, которые не ушли, — чтобы повтор не начинался с нуля.
+        "failed_keys": result["failed"][:200],
+    }
+    record_storage_purge(hotel_id, outcome)
+    return outcome
