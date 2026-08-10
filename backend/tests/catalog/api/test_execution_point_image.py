@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from apps.media.tasks import process_media_asset
 
 from tests.conftest import host_for
-from tests.media.api.test_cms_media_schedules import png_bytes
+from tests.helpers import png_bytes
 
 pytestmark = pytest.mark.django_db
 

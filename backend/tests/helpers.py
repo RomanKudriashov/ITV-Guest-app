@@ -43,3 +43,21 @@ def order_payload(hotel, *, item_code: str = "caesar", quantity: int = 1) -> dic
             "delivery_mode": "delivery",
             "comment": "без лука",
         }
+
+
+def png_bytes(size: tuple[int, int] = (800, 600)) -> bytes:
+    """
+    Настоящий PNG для проверок медиапайплайна.
+
+    Живёт ЗДЕСЬ, а не в тесте медиа: помощник понадобился и каталогу (фото
+    точки исполнения), и тест каталога стал импортировать тестовый модуль
+    соседнего домена. Тест, зависящий от другого теста, ломается от правки,
+    к нему не относящейся, — и порядок раскладки этого не показывает.
+    """
+    import io
+
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGB", size, (12, 34, 56)).save(buffer, format="PNG")
+    return buffer.getvalue()

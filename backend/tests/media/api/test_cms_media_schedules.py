@@ -2,24 +2,17 @@
 
 from __future__ import annotations
 
-import io
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+
+from tests.helpers import png_bytes
 
 from apps.core.context import tenant_context
 from apps.media.models import MediaAsset
 from apps.media.tasks import process_media_asset
 
 pytestmark = pytest.mark.django_db
-
-
-def png_bytes(size=(800, 600)) -> bytes:
-    from PIL import Image
-
-    buffer = io.BytesIO()
-    Image.new("RGB", size, (12, 34, 56)).save(buffer, format="PNG")
-    return buffer.getvalue()
 
 
 # --- Медиа -----------------------------------------------------------------
