@@ -59,6 +59,23 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: 5173,
       strictPort: true,
+      /*
+        ИМЯ МАШИНЫ ВМЕСТО АДРЕСА. Стенд открывают и с ноутбука, и с телефона, а
+        LAN-адрес ноутбука уплывает при каждой смене сети: домашний Wi-Fi,
+        раздача с телефона, перезагрузка роутера — и ссылки на картинки ведут в
+        никуда, потому что адрес зашит в MINIO_PUBLIC_ENDPOINT. mDNS-имя
+        `<hostname>.local` переживает всё это: его раздаёт сама машина.
+
+        Vite с 5.4.12 блокирует запросы с незнакомым заголовком Host (защита от
+        DNS rebinding) и отвечает 403 — на имя `.local` в том числе. Точка в
+        начале записи означает «домен и всё, что под ним», поэтому переименование
+        машины список не ломает.
+
+        Адреса и localhost Vite пропускает сам, отдельной записи им не нужно.
+      */
+      allowedHosts: env.VITE_ALLOWED_HOSTS
+        ? env.VITE_ALLOWED_HOSTS.split(',').map((entry) => entry.trim())
+        : ['.local'],
       // WHY NOT POLLING. Polling used to be the safe default for Docker
       // bind-mounts, and it is what made the dev server serve stale modules:
       // in polling mode chokidar notices a NEW file only when the directory's
