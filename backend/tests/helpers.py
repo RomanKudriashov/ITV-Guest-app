@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from apps.catalog.models import Item, ModifierGroup
 from apps.core.context import tenant_context
 from apps.hotels.models import Location
+
+# ОДНО МЕСТО ДЛЯ КОРНЕЙ. Считать путь от `__file__` через `parents[N]` внутри
+# теста нельзя: стоит файлу переехать на уровень глубже, и «корень репозитория»
+# молча превращается в другую папку — а тест, читающий картинку, падает не там,
+# где ошибка.
+TESTS_DIR = Path(__file__).resolve().parent
+FIXTURES = TESTS_DIR / "fixtures"
+REPO_ROOT = TESTS_DIR.parent.parent
 
 
 def order_payload(hotel, *, item_code: str = "caesar", quantity: int = 1) -> dict:
