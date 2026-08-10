@@ -701,7 +701,6 @@
     },
     "weather": {
       "title": "Weather",
-      "localTime": "Local time",
       "clear": "Clear",
       "partly": "Partly cloudy",
       "cloudy": "Cloudy",
@@ -2199,7 +2198,9 @@
       "saveFailed": "Could not save",
       "loadFailed": "Could not load home settings",
       "source": "Data source:",
-      "city": "City (label for weather and clock)"
+      "city": "City (label for weather and clock)",
+      "timezone": "Time zone",
+      "timezoneHint": "The home screen clock and venue schedules are computed from it"
     },
     "search": {
       "title": "Guest search",

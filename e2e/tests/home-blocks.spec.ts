@@ -73,11 +73,15 @@ test.describe('Главная: погода и время', () => {
     await expect(page.getByTestId('guest-home-weather-attribution')).toHaveCount(0)
 
     /*
-      ГОРОД ПОДПИСАН. Гость, приехавший издалека, читает «21°» и «01:58» как
-      «здесь», а «здесь» у него своё: без подписи цифры отвечают не на тот
-      вопрос. Подпись одна на весь блок — и градусы, и часы про одно место.
+      ГОРОД ПОДПИСЫВАЕТ ЧАСЫ. Гость, приехавший издалека, читает «01:58» как
+      «здесь», а «здесь» у него своё. Отвечать на этот вопрос должна та цифра,
+      из-за которой он и возникает, — время; температура в подписи не нуждается.
+
+      Слова «местное время» на этот вопрос не отвечали: местное для кого?
     */
-    await expect(page.getByTestId('guest-home-city')).toHaveText(/\S+/)
+    const clock = page.getByTestId('guest-home-clock')
+    await expect(clock.getByTestId('guest-home-city')).toHaveText(/\S+/)
+    await expect(clock).not.toContainText(/местное время/i)
   })
 
   test('города нет — подписи нет, а погода остаётся', async ({ page }) => {
@@ -90,6 +94,12 @@ test.describe('Главная: погода и время', () => {
     await expect(page.getByTestId('guest-home-weather-now')).toBeVisible({ timeout: 15_000 })
     // Выдумывать город по координатам мы не станем: не заполнен — не показан.
     await expect(page.getByTestId('guest-home-city')).toHaveCount(0)
+    /*
+      Но часы без подписи не остаются: место называет имя зоны — «Vladivostok»
+      вместо «Asia/Vladivostok». Латиница здесь вынужденная: в базе IANA имена
+      только такие, и потому заполненный город всегда предпочтительнее.
+    */
+    await expect(page.getByTestId('guest-home-clock-zone')).toHaveText('Moscow')
   })
 
   test('погоды нет — блока нет вовсе: ни прочерков, ни заглушек', async ({ page }) => {

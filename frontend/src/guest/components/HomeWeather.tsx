@@ -93,6 +93,23 @@ function useHotelClock(timezone: string | undefined, language: string): string |
   }, [timezone, language, now]);
 }
 
+/**
+ * Подпись к часам — НАЗВАНИЕ МЕСТА, а не слова «местное время».
+ *
+ * «Местное» — для кого? Гость читает эту строку именно потому, что не уверен,
+ * чьё время перед ним. Город отвечает на вопрос сразу; если города у отеля нет,
+ * отвечает имя зоны — «Asia/Vladivostok» превращается во «Vladivostok».
+ *
+ * Имя зоны переводу не поддаётся: в базе IANA оно всегда латиницей. Поэтому
+ * город, заполненный переводами, всегда предпочтительнее.
+ */
+function clockLabel(city: string | undefined, timezone: string | undefined): string | null {
+  if (city) return city;
+  if (!timezone) return null;
+  const tail = timezone.split('/').pop() ?? timezone;
+  return tail.replace(/_/g, ' ');
+}
+
 /** Смещение отеля и устройства совпадают — своё время гость и так видит. */
 function sameOffset(timezone: string | undefined): boolean {
   if (!timezone) return true;
@@ -128,6 +145,7 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
     ему то, что он и так видит в статус-баре.
   */
   const clockWorthShowing = Boolean(clock) && !sameOffset(timezone);
+  const label = clockLabel(city, timezone);
   if (!weather && !clockWorthShowing) return null;
 
   const condition = weather ? conditionOf(weather.code) : null;
@@ -161,13 +179,17 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
       })}
     >
       {/*
-        ГОРОД ВПЕРЕДИ, и это не украшение: гость, приехавший издалека, читает
-        «21°» и «01:58» как «здесь», а «здесь» у него своё. Подпись отвечает на
-        вопрос, который иначе задаёт себе он сам.
+        ГОРОД СТОИТ У ЧАСОВ, а не отдельной подписью впереди.
 
-        Нет города — нет подписи: выдумывать его по координатам мы не станем.
+        Гость, приехавший издалека, читает «21°» и «01:58» как «здесь», а
+        «здесь» у него своё. Отвечать на этот вопрос должна та цифра, из-за
+        которой он и возникает, — время. Температура в подписи не нуждается:
+        никто не думает, что ему показывают погоду его родного города.
+
+        Отдельная подпись впереди ряда этот вопрос не снимала: она стояла
+        далеко от времени и читалась как заголовок блока.
       */}
-      {city ? (
+      {city && !clock ? (
         <Typography
           variant="subtitle2"
           data-testid="guest-home-city"
@@ -198,9 +220,15 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
 
       {clock ? (
         <Stack direction="row" alignItems="baseline" spacing={0.75} data-testid="guest-home-clock">
-          <Typography variant="caption" color="text.secondary">
-            {t('guest.weather.localTime')}
-          </Typography>
+          {label ? (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              data-testid={city ? 'guest-home-city' : 'guest-home-clock-zone'}
+            >
+              {label}
+            </Typography>
+          ) : null}
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
             {clock}
           </Typography>

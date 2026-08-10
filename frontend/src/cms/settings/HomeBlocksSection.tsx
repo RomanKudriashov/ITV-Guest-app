@@ -9,6 +9,7 @@ import Link from '@mui/material/Link';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
+import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +50,12 @@ export function HomeBlocksSection() {
   // гостевой текст: «Москва» в арабском интерфейсе читается не лучше, чем
   // «Mainly clear».
   const [city, setCity] = useState<Record<string, string>>({});
+  /*
+    Часовой пояс отеля. Наследовать его от сервера нельзя: сервер стоит там, где
+    стоит, а отель — где угодно. От этого поля считаются и часы на главной, и
+    «открыто до 23:00» — источник у них один.
+  */
+  const [timezone, setTimezone] = useState('');
 
   useEffect(() => {
     if (!query.data) return;
@@ -57,6 +64,7 @@ export function HomeBlocksSection() {
     setLatitude(query.data.latitude === null ? '' : String(query.data.latitude));
     setLongitude(query.data.longitude === null ? '' : String(query.data.longitude));
     setCity(query.data.city ?? {});
+    setTimezone(query.data.timezone ?? '');
   }, [query.data]);
 
   const save = useMutation({
@@ -67,6 +75,7 @@ export function HomeBlocksSection() {
         latitude: latitude.trim() === '' ? null : Number(latitude),
         longitude: longitude.trim() === '' ? null : Number(longitude),
         city,
+        timezone,
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.homeSettings, data);
@@ -112,6 +121,26 @@ export function HomeBlocksSection() {
               size="small"
             />
           </Stack>
+
+          {/*
+            Часовой пояс — ИМЕНЕМ зоны, а не смещением: смещение врёт дважды в
+            год на переходе и не умеет получаса (Индия, Иран).
+          */}
+          <Autocomplete
+            options={query.data?.timezone_options ?? []}
+            value={timezone || null}
+            onChange={(_event, next) => setTimezone(next ?? '')}
+            disableClearable={false}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                size="small"
+                label={t('cms.homeBlocks.timezone')}
+                helperText={t('cms.homeBlocks.timezoneHint')}
+                inputProps={{ ...params.inputProps, 'data-testid': 'cms-home-timezone' }}
+              />
+            )}
+          />
 
           {/* Город — подпись к погоде и часам. Пусто — подписи у гостя нет. */}
           <Stack spacing={1}>

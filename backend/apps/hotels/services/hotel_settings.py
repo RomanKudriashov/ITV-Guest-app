@@ -12,6 +12,8 @@
 
 from __future__ import annotations
 
+import zoneinfo
+
 from typing import Any
 
 from apps.accounts.services.roles import require_hotel_admin
@@ -62,6 +64,12 @@ def home_settings_payload(hotel: Hotel) -> dict[str, Any]:
         "latitude": float(hotel.latitude) if hotel.latitude is not None else None,
         "longitude": float(hotel.longitude) if hotel.longitude is not None else None,
         "city": hotel.city or {},
+        # Часовой пояс — рядом с городом и часами, которые от него и считаются.
+        "timezone": hotel.timezone,
+        # Список зон отдаётся сервером, а не зашивается в витрину: набор зон
+        # меняется решениями правительств, и правится он обновлением tzdata, а
+        # не пересборкой фронта.
+        "timezone_options": sorted(zoneinfo.available_timezones()),
         # Отель без координат раздела погоды не видит: показывать переключатель,
         # который ничего не включает, — обманывать оператора.
         "weather_available": hotel.latitude is not None and hotel.longitude is not None,
@@ -83,6 +91,22 @@ def save_home_settings(hotel: Hotel, data: Any) -> dict[str, Any]:
         if not -180 <= data.longitude <= 180:
             raise ValidationError("Долгота вне диапазона −180…180", field="longitude")
 
+    # Пояс проверяется ПРИ ЗАПИСИ. Неизвестное имя молча превращается в UTC
+    # (так устроен `Hotel.tzinfo`), и отель во Владивостоке начинает показывать
+    # лондонское время, ничем не выдавая опечатки. Ловим здесь.
+    if data.timezone is not None:
+        name = data.timezone.strip()
+        if not name:
+            raise ValidationError("Часовой пояс не может быть пустым", field="timezone")
+        try:
+            zoneinfo.ZoneInfo(name)
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+            raise ValidationError(
+                f"Неизвестный часовой пояс: {name}. Ожидается имя зоны, например Asia/Vladivostok",
+                field="timezone",
+            ) from None
+        hotel.timezone = name
+
     hotel.latitude = data.latitude
     hotel.longitude = data.longitude
     # Пустые переводы не храним: город, которого нет ни на одном языке, — это
@@ -96,7 +120,9 @@ def save_home_settings(hotel: Hotel, data: Any) -> dict[str, Any]:
     home["room_status"] = bool(data.room_status)
     settings["home"] = home
     hotel.settings = settings
-    hotel.save(update_fields=["latitude", "longitude", "city", "settings", "updated_at"])
+    hotel.save(
+        update_fields=["latitude", "longitude", "city", "timezone", "settings", "updated_at"]
+    )
     return home_settings_payload(hotel)
 
 
