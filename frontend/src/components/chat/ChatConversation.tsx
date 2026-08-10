@@ -192,45 +192,44 @@ export function ChatConversation({
       </Box>
 
       {/*
-        Строка ввода — та же пластика, что у поля «Номер» на экране входа:
-        тонкая линия снизу вместо рамки. Рамка вокруг поля читалась заплатой
-        поверх спокойного экрана, а линия отделяет ровно столько, сколько нужно.
+        Строка ввода — ОДНА КАРТОЧКА, а не полоса во всю ширину.
 
-        Поверхность приходит снаружи (`inputSurface`): витрина кладёт полосу на
-        стекло из своего словаря, трекер оставляет её на бумаге панели.
+        Полоса на стекле с волоском сверху выглядела светлым прямоугольником,
+        приклеенным к низу экрана: она отделяла себя от переписки, но ничем не
+        была связана с остальной витриной. Скруглённый прямоугольник с контуром
+        — тот же язык, что у карточек главной («Ваш номер», погода), и низ
+        экрана перестаёт быть отдельной деталью.
+
+        Поверхность приходит снаружи (`inputSurface`): витрина кладёт карточку
+        на своё стекло из словаря, трекер оставляет её на бумаге панели.
       */}
-      <Stack
-        direction="row"
-        spacing={1}
-        alignItems="flex-end"
+      <Box
         data-testid={`${testIds.root}-composer`}
-        sx={[
-          (theme: Theme) => ({
-            px: 2,
-            py: 1.25,
-            // Полоса отделяется ЛИНИЕЙ, а не плашкой: на стекле поверх тёмной
-            // ленты сама прозрачность почти не читается, и без линии строка
-            // ввода сливается с перепиской.
-            borderTop: `1px solid ${theme.palette.divider}`,
-            // Безопасная зона учитывается ЗДЕСЬ: на телефоне с домашней полосой
-            // поле иначе прижимается к самому краю.
-            pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
-          }),
-          ...(Array.isArray(inputSurface) ? inputSurface : [inputSurface ?? {}]),
-        ]}
+        sx={{
+          px: 2,
+          pt: 1,
+          // Безопасная зона учитывается ЗДЕСЬ: на телефоне с домашней полосой
+          // поле иначе прижимается к самому краю.
+          pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+        }}
       >
-        <Box
-          sx={(theme) => ({
-            flexGrow: 1,
-            display: 'flex',
-            alignItems: 'flex-end',
-            position: 'relative',
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            pb: 0.5,
-            transition: 'border-color .25s',
-            '&:focus-within': { borderColor: theme.palette.primary.main },
-          })}
+        <Stack
+          direction="row"
+          spacing={0.5}
+          alignItems="flex-end"
+          sx={[
+            (theme: Theme) => ({
+              px: 1.5,
+              py: 0.75,
+              borderRadius: 2,
+              border: `1px solid ${theme.palette.divider}`,
+              transition: 'border-color .25s',
+              '&:focus-within': { borderColor: theme.palette.primary.main },
+            }),
+            ...(Array.isArray(inputSurface) ? inputSurface : [inputSurface ?? {}]),
+          ]}
         >
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-end', position: 'relative' }}>
           {/*
             ПОДСКАЗКА РИСУЕТСЯ САМА, а не отдаётся `placeholder`.
 
@@ -278,18 +277,21 @@ export function ChatConversation({
             }}
             sx={{ fontSize: 15 }}
           />
-        </Box>
-        <IconButton
-          color="primary"
-          disabled={!draft.trim() || sending}
-          onClick={send}
-          data-testid={testIds.send}
-          aria-label={t('guest.chat.send')}
-          sx={{ minWidth: 44, minHeight: 44 }}
-        >
-          <SendIcon />
-        </IconButton>
-      </Stack>
+          </Box>
+          {/* Кнопка ВНУТРИ прямоугольника: снаружи она превращала спокойную
+              карточку в панель с приборами. */}
+          <IconButton
+            color="primary"
+            disabled={!draft.trim() || sending}
+            onClick={send}
+            data-testid={testIds.send}
+            aria-label={t('guest.chat.send')}
+            sx={{ minWidth: 40, minHeight: 40, mr: -0.75 }}
+          >
+            <SendIcon />
+          </IconButton>
+        </Stack>
+      </Box>
     </Box>
   );
 }

@@ -14,6 +14,7 @@ import { errorMessage } from '../errors';
 import { useGuestChat, useGuestLanguage } from '../hooks/useGuestQueries';
 import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
+import { surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type { ChatSnapshot } from '../api/types';
 
@@ -120,13 +121,17 @@ export function ChatPage() {
             </Typography>
           </>
         }
-        // Стекло — существующее, из словаря: то же, на чём стоит нижнее меню.
+        // Карточка ввода — тот же рецепт, что у «Ваш номер» и погоды на
+        // главной: стекло `panel` из словаря и общий радиус поверхностей.
+        // Новой рецептуры не заводим — иначе низ чата снова станет чужой
+        // деталью, как светлая полоса до этого.
         hintColor={chatHint}
-        inputSurface={{
-          background: glass.sheet.background,
-          backdropFilter: glass.sheet.backdropFilter,
-          WebkitBackdropFilter: glass.sheet.backdropFilter,
-        }}
+        inputSurface={(theme) => ({
+          background: glass.panel.background,
+          backdropFilter: glass.panel.backdropFilter,
+          WebkitBackdropFilter: glass.panel.backdropFilter,
+          borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
+        })}
         onSend={(body) => sendMutation.mutate(body)}
         testIds={{
           root: 'guest-chat',
