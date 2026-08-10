@@ -241,6 +241,9 @@ for (const mode of ['dark', 'light'] as const) {
 
 for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
   test(`внизу страницы нижнее меню ничего не прячет: ${vp.name}`, async ({ page }) => {
+    // Шесть маршрутов, каждый с загрузкой страницы: минуты по умолчанию хватает
+    // только на незанятой машине, а прогон идёт не на ней.
+    test.setTimeout(180_000)
     /*
       Обратная сторона того же правила: содержимое может проходить ПОД
       плавающим меню при прокрутке, но в конце страницы под ним не должно
@@ -259,18 +262,23 @@ for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
         сделанная до этого, оказывается серединой, и кнопки под меню находятся
         там, где их через мгновение не будет. Под параллельной нагрузкой это
         уже дало ложное падение на кухне — измерять страницу на полпути нельзя.
+
+        Ожидание СТОИТ ВРЕМЕНИ, и первая редакция стоила слишком много:
+        двенадцать шагов по 400 мс на каждом из шести маршрутов — до полуминуты
+        сверху, и тест перестал укладываться в свою минуту. Хватает пяти шагов
+        по 200 мс: высота устаканивается на втором-третьем, и цикл выходит по
+        совпадению, а не по исчерпанию попыток.
       */
-      let settled = 0
-      for (let attempt = 0; attempt < 12; attempt += 1) {
+      let settled = -1
+      for (let attempt = 0; attempt < 5; attempt += 1) {
         const height = await page.evaluate(() => {
           window.scrollTo(0, document.documentElement.scrollHeight)
           return document.documentElement.scrollHeight
         })
         if (height === settled) break
         settled = height
-        await page.waitForTimeout(400)
+        await page.waitForTimeout(200)
       }
-      await page.waitForTimeout(400)
 
       const hidden = await page.evaluate(() => {
         const nav = document.querySelector<HTMLElement>('[data-testid="guest-nav-home"]')?.closest('.MuiPaper-root')
