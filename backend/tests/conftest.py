@@ -14,6 +14,51 @@ from apps.core.context import clear_request_context, tenant_context
 from apps.hotels.models import Hotel
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _own_media_bucket(worker_id):
+    """
+    ПРОГОН ПИШЕТ В СВОЙ БАКЕТ И УНОСИТ ЕГО С СОБОЙ.
+
+    База теста в конце уничтожается — а объектное хранилище живёт снаружи и
+    прогон переживает. Пока тесты писали в бакет стенда, каждый прогон оставлял
+    в нём файлы отелей, которых уже нет ни в одной базе: 410 048 объектов в
+    9 313 папках, семьдесят гигабайт за сутки. Заметили это по кончившемуся
+    диску, а не по проверке, — потому что удалять их было некому: отель жил в
+    тестовой базе, и вместе с ней исчез, не пройдя ни через какое удаление.
+
+    Свой бакет решает это целиком: что бы прогон ни записал и о чём бы ни забыл,
+    в конце бакет сносится вместе с содержимым. Ошибиться «забыл убрать за
+    собой» больше нельзя — убирается всё сразу.
+
+    У КАЖДОГО ВОРКЕРА СВОЙ: прогон идёт в четыре процесса, и общий бакет один
+    снёс бы у другого прямо посреди работы.
+    """
+    from django.conf import settings as dj
+
+    from apps.media.services import storage
+
+    original = dj.MINIO_BUCKET
+    dj.MINIO_BUCKET = f"{original}-test-{worker_id}"
+    # Бакет выбирается при каждом обращении, а вот его СОЗДАНИЕ закэшировано —
+    # без сброса новый бакет никто не заведёт, и первая же запись упадёт.
+    storage.ensure_bucket.cache_clear()
+    storage.ensure_bucket()
+
+    yield
+
+    client = storage.get_client()
+    try:
+        keys = [item.object_name for item in client.list_objects(dj.MINIO_BUCKET, recursive=True)]
+        for start in range(0, len(keys), 1000):
+            storage.delete_objects(keys[start : start + 1000])
+        client.remove_bucket(dj.MINIO_BUCKET)
+    except Exception as error:  # noqa: BLE001 — уборка не должна ронять прогон
+        print(f"[хранилище] бакет прогона не убран: {error}")
+    finally:
+        dj.MINIO_BUCKET = original
+        storage.ensure_bucket.cache_clear()
+
+
 @pytest.fixture(autouse=True)
 def _notifications_off(settings):
     """
