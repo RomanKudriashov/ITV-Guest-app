@@ -14,7 +14,7 @@ FROM nginx:1.27-alpine
 # Своя конфигурация вместо дефолтной.
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY infra/nginx/app.locations.conf /etc/nginx/conf.d/app.locations.conf
+COPY infra/nginx/app.locations.conf /etc/nginx/app.locations.conf
 # Шаблоны TLS едут в образ, но НЕ в conf.d: их кладёт на место скрипт выпуска
 # сертификата. Так образ одинаков и до, и после включения TLS.
 COPY infra/nginx/tls.enabled.conf.template /etc/nginx/templates-tls/

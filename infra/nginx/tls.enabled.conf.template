@@ -21,5 +21,5 @@ server {
                text/javascript application/xml image/svg+xml;
     gzip_min_length 1024;
 
-    include /etc/nginx/conf.d/app.locations.conf;
+    include /etc/nginx/app.locations.conf;
 }
