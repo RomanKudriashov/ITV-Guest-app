@@ -284,3 +284,95 @@ def test_revoked_key_stops_working(crystal):
         return connected
 
     assert async_to_sync(scenario)() is False
+
+
+# --- Проверка источника не для он-прем канала --------------------------------
+#
+# `AllowedHostsOriginValidator` стоял на ВСЕХ сокетах, и коннектор получал 403
+# ещё до проверки ключа. Локально это было не видно: при DEBUG=1 валидатор
+# пропускает всё. Поэтому здесь строгий список хостов задаётся ЯВНО — иначе
+# тест доказывал бы не то, что нужно.
+
+STRICT_HOSTS = ["stand.example.test"]
+
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_onprem_socket_connects_without_origin(crystal):
+    """
+    Коробка на объекте не браузер: `Origin` ей взять неоткуда.
+
+    Она представляется КЛЮЧОМ УЗЛА, и проверка происхождения страницы к ней
+    неприменима — страницы нет.
+    """
+    from django.test import override_settings
+
+    from config.asgi import application
+
+    _, key = register_node(crystal, name="grms-box", purpose="grms")
+
+    async def scenario():
+        communicator = WebsocketCommunicator(
+            application,
+            "/ws/v1/onprem/connector",
+            headers=[(b"authorization", f"Bearer {key}".encode())],
+        )
+        connected, _ = await communicator.connect(timeout=10)
+        if connected:
+            await communicator.receive_json_from(timeout=10)
+        await communicator.disconnect()
+        return connected
+
+    with override_settings(ALLOWED_HOSTS=STRICT_HOSTS, DEBUG=False):
+        assert async_to_sync(scenario)() is True, (
+            "узел без Origin обязан подключаться: он аутентифицируется ключом"
+        )
+
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_onprem_socket_without_origin_still_needs_a_valid_key():
+    """
+    Снята ПРОВЕРКА ИСТОЧНИКА, а не аутентификация.
+
+    Без Origin и с чужим ключом канал обязан закрыться — иначе исключение
+    превратилось бы в дыру.
+    """
+    from django.test import override_settings
+
+    from config.asgi import application
+
+    async def scenario():
+        communicator = WebsocketCommunicator(
+            application,
+            "/ws/v1/onprem/connector",
+            headers=[(b"authorization", b"Bearer definitely-not-a-key")],
+        )
+        connected, _ = await communicator.connect(timeout=10)
+        await communicator.disconnect()
+        return connected
+
+    with override_settings(ALLOWED_HOSTS=STRICT_HOSTS, DEBUG=False):
+        assert async_to_sync(scenario)() is False
+
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_browser_socket_without_origin_is_still_refused(crystal):
+    """
+    Остальные каналы под проверкой ОСТАЛИСЬ.
+
+    Гостевой сокет зовёт страница, и у неё Origin есть всегда. Его отсутствие —
+    признак того, что зовут не оттуда, и такой вызов по-прежнему отвергается.
+    """
+    from django.test import override_settings
+
+    from config.asgi import application
+
+    async def scenario():
+        communicator = WebsocketCommunicator(application, "/ws/v1/guest/room/")
+        connected, _ = await communicator.connect(timeout=10)
+        await communicator.disconnect()
+        return connected
+
+    with override_settings(ALLOWED_HOSTS=STRICT_HOSTS, DEBUG=False):
+        assert async_to_sync(scenario)() is False, (
+            "проверка источника снята только с он-прем канала"
+        )
