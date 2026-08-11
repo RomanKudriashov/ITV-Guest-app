@@ -191,3 +191,93 @@ def test_dry_run_leaves_services_alone(crystal):
     with tenant_context(crystal):
         alive = Service.objects.filter(pk=service.pk).first()
     assert alive is not None and alive.is_active is True
+
+
+# --- Режим стенда: удалять остатки вместе с их заказами ----------------------
+
+
+def test_residue_with_orders_is_purged_only_with_the_flag(crystal):
+    """
+    Без флага — выключить, с флагом — удалить целиком.
+
+    Флаг снимает ровно одно ограничение и только на стенде: там заказ не
+    история и не выручка, а след прогона. По умолчанию поведение прежнее,
+    иначе команда однажды съела бы выручку боевого отеля.
+    """
+    from apps.hotels.models import ExecutionPoint, Service
+
+    service = _residue_service(crystal, "rum-servis-mspurge1")
+    order = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        Order.objects.filter(pk=order.pk).update(execution_point=service.execution_point_id)
+
+    # Прежний режим: заведение живо и выключено, заказ на месте.
+    call_command("clean_test_residue", subdomain=crystal.subdomain, apply=True)
+    with tenant_context(crystal):
+        alive = Service.objects.filter(pk=service.pk).first()
+        assert alive is not None and alive.is_active is False
+        assert Order.all_objects.filter(pk=order.pk).exists(), "без флага заказ трогать нельзя"
+
+    # Режим стенда: уходит всё — заведение, его точка и заказ.
+    call_command(
+        "clean_test_residue", subdomain=crystal.subdomain, apply=True, purge_orders=True
+    )
+    with tenant_context(crystal):
+        assert not Service.all_objects.filter(pk=service.pk).exists()
+        assert not ExecutionPoint.all_objects.filter(pk=service.execution_point_id).exists()
+        assert not Order.all_objects.filter(pk=order.pk).exists()
+
+
+def test_purge_takes_the_fan_out_children_too(crystal):
+    """
+    Дочерний заказ исполняется НАСТОЯЩЕЙ точкой, но заведён тем же прогоном.
+
+    Оставить его нельзя технически: `Order.parent` стоит на CASCADE. Тест
+    закрепляет это как обещание, а не как побочный эффект.
+    """
+    from apps.hotels.models import Service
+
+    service = _residue_service(crystal, "rum-servis-msfanout")
+    parent = _make_order(crystal, age_hours=1, status_code="new")
+    child = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        Order.objects.filter(pk=parent.pk).update(execution_point=service.execution_point_id)
+        # Ребёнок остаётся на СВОЕЙ, настоящей точке — как на живом стенде.
+        Order.objects.filter(pk=child.pk).update(parent=parent.pk)
+
+    call_command(
+        "clean_test_residue", subdomain=crystal.subdomain, apply=True, purge_orders=True
+    )
+
+    with tenant_context(crystal):
+        assert not Order.all_objects.filter(pk=parent.pk).exists()
+        assert not Order.all_objects.filter(pk=child.pk).exists(), "фан-аут обязан уйти с родителем"
+
+
+def test_real_service_with_orders_survives_even_in_purge_mode(crystal):
+    """
+    Флаг не расширяет ПРИЗНАК, а только меняет судьбу найденного.
+
+    Настоящее заведение не подходит под суффикс прогона ни в одном режиме —
+    иначе флаг стал бы кнопкой «стереть отель».
+    """
+    from apps.hotels.models import Service
+
+    with tenant_context(crystal):
+        real = Service.objects.exclude(code__contains="-ms").first()
+        assert real is not None
+        orders_before = Order.all_objects.filter(
+            execution_point=real.execution_point_id
+        ).count()
+
+    call_command(
+        "clean_test_residue", subdomain=crystal.subdomain, apply=True, purge_orders=True
+    )
+
+    with tenant_context(crystal):
+        still = Service.objects.filter(pk=real.pk).first()
+        assert still is not None and still.is_active is True
+        assert (
+            Order.all_objects.filter(execution_point=real.execution_point_id).count()
+            == orders_before
+        )

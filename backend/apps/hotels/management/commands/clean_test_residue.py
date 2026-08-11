@@ -66,6 +66,17 @@ class Command(BaseCommand):
             help="Действительно убрать. Без флага — только показать, что нашлось",
         )
         parser.add_argument(
+            "--purge-orders",
+            action="store_true",
+            help=(
+                "ТОЛЬКО ДЛЯ СТЕНДА. Удалить заведения-остатки ВМЕСТЕ с их тестовыми "
+                "заказами, а не выключать. Уносит и фан-аут: заказ прогона разложен "
+                "по настоящим точкам, и дочерние заказы уйдут вместе с родителем "
+                "(Order.parent — CASCADE). На боевом отеле не запускать: заказ это "
+                "история и выручка"
+            ),
+        )
+        parser.add_argument(
             "--stale-hours",
             type=int,
             default=STALE_HOURS,
@@ -80,6 +91,7 @@ class Command(BaseCommand):
         from apps.catalog.models import Category, Item
         from apps.chat.models import ChatMessage
         from apps.grms.models import ControlElement, RoomType, Zone  # noqa: F401
+        from apps.analytics.models import AnalyticsEvent
         from apps.hotels.models import ExecutionPoint, Service
         from apps.orders.models import Order, OrderItem, StatusDefinition
 
@@ -142,12 +154,31 @@ class Command(BaseCommand):
             # отказывает CMS (`409 service_has_orders`): заказы ссылаются на
             # точку исполнения через PROTECT, и удаление осиротило бы историю
             # выручки. Такое заведение выключается, а не удаляется.
+            #
+            # `--purge-orders` снимает именно ЭТО ограничение, и только на
+            # стенде: там заказ не история и не выручка, а след прогона.
+            purge = options["purge_orders"]
             keep_services, drop_services = [], []
             for service in services:
                 busy_service = Order.all_objects.filter(
                     execution_point=service.execution_point_id
                 ).exists()
-                (keep_services if busy_service else drop_services).append(service)
+                (drop_services if purge or not busy_service else keep_services).append(service)
+
+            # Заказы остатков и их фан-аут. Дочерний заказ исполняется НАСТОЯЩЕЙ
+            # точкой (кухня, бар), но заведён тем же прогоном и уйдёт с
+            # родителем в любом случае: Order.parent стоит на CASCADE.
+            purge_orders: list = []
+            if purge and drop_services:
+                parent_ids = list(
+                    Order.all_objects.filter(
+                        execution_point__in=[s.execution_point_id for s in drop_services]
+                    ).values_list("id", flat=True)
+                )
+                child_ids = list(
+                    Order.all_objects.filter(parent__in=parent_ids).values_list("id", flat=True)
+                )
+                purge_orders = parent_ids + child_ids
 
             self.stdout.write(
                 f"Найдено: позиций {len(items)} (удалить {len(drop)}, выключить {len(keep)} — "
@@ -157,6 +188,13 @@ class Command(BaseCommand):
                 f"заведений {len(services)} (удалить {len(drop_services)}, "
                 f"выключить {len(keep_services)} — на них есть заказы)"
             )
+            if purge:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"  РЕЖИМ СТЕНДА: заказов будет удалено {len(purge_orders)} "
+                        f"(вместе с фан-аутом по настоящим точкам)"
+                    )
+                )
             for service in keep_services:
                 self.stdout.write(f"  выключить заведение: {service.code}")
             for room_type in grms_types:
@@ -182,14 +220,34 @@ class Command(BaseCommand):
             deleted_cats = Category.objects.filter(pk__in=[c.pk for c in empty]).delete()
             hidden_cats = Category.objects.filter(pk__in=[c.pk for c in busy]).update(is_active=False)
 
+            # Заказы — ДО заведений: точка защищена от них PROTECT. Жёстко, а не
+            # мягко: мягкое оставило бы строки, ради которых всё и затевалось.
+            # Событие аналитики ссылается на заказ полем без FK, каскад его не
+            # унесёт — убираем явно, иначе журнал будет считать удалённое.
+            purged_orders = 0
+            if purge_orders:
+                AnalyticsEvent.objects.filter(order_id__in=purge_orders).hard_delete()
+                purged_orders = Order.all_objects.filter(
+                    pk__in=purge_orders
+                ).hard_delete()[1].get("orders.Order", 0)
+
             # Заведение уносит с собой свою точку исполнения: связь 1:1, и
             # точка без сервиса — это осиротевший исполнитель, которого не
             # видно ни в одном списке. Так же делает и удаление из CMS.
             point_ids = [s.execution_point_id for s in drop_services if s.execution_point_id]
-            deleted_services = Service.objects.filter(
-                pk__in=[s.pk for s in drop_services]
-            ).delete()
-            ExecutionPoint.objects.filter(pk__in=point_ids).delete()
+            # В обычном режиме удаление МЯГКОЕ, как и всё в проекте: это уборка
+            # стенда, а не офбординг, и след строки терять незачем. В режиме
+            # `--purge-orders` — жёстко: заказы этого заведения уже удалены
+            # физически, и оставлять от него мягкую строку значит держать на
+            # стенде заведение без своей истории, которое всё равно попадётся
+            # следующей выборке.
+            service_ids = [s.pk for s in drop_services]
+            if purge:
+                deleted_services = Service.all_objects.filter(pk__in=service_ids).hard_delete()
+                ExecutionPoint.all_objects.filter(pk__in=point_ids).hard_delete()
+            else:
+                deleted_services = Service.objects.filter(pk__in=service_ids).delete()
+                ExecutionPoint.objects.filter(pk__in=point_ids).delete()
             hidden_services = Service.objects.filter(
                 pk__in=[s.pk for s in keep_services]
             ).update(is_active=False)
@@ -230,6 +288,8 @@ class Command(BaseCommand):
                 f"Убрано: позиций удалено {deleted_items}, выключено {hidden}; "
                 f"разделов удалено {deleted_cats}, выключено {hidden_cats}; "
                 f"заведений удалено {deleted_services}, выключено {hidden_services}; "
+                + (f"заказов удалено {purged_orders}; " if purge else "")
+                + 
                 f"сообщений удалено {deleted_msgs}; "
                 f"типов номеров удалено {deleted_types}; "
                 f"брошенных заказов закрыто {closed}"
