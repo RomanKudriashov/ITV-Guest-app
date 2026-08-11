@@ -282,8 +282,17 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
         if lit is None:
             return {"status": "no_asset"}
 
+        room_type = RoomType.objects.filter(code=room_type_code).first()
+        if room_type is None:
+            return {"status": "no_type"}
+
+        # Настройка администратора, а не константа в коде: на светлых кадрах
+        # проход по источникам либо не срабатывает вовсе, либо съедает светлые
+        # поверхности, и решать это может только тот, кто видит свой рендер.
+        extinguish = bool((room_type.plan or {}).get("extinguish_sources", True))
+
         raw = storage.get_bytes(lit.object_key)
-        baked, _size = nightframe.bake_bytes(raw)
+        baked, _size = nightframe.bake_bytes(raw, extinguish_sources=extinguish)
         night = upload_asset(
             content=baked,
             filename=f"night-{lit.original_filename or 'plan.png'}",
@@ -291,10 +300,6 @@ def bake_room_plan_night(self, hotel_id: str, room_type_code: str, lit_asset_id:
             content_type="image/png",
             alt={"ru": "План номера, свет выключен (посчитан из светлого кадра)"},
         )
-
-        room_type = RoomType.objects.filter(code=room_type_code).first()
-        if room_type is None:
-            return {"status": "no_type"}
 
         def apply(plan: dict) -> None:
             plan["asset_off_id"] = str(night.pk)

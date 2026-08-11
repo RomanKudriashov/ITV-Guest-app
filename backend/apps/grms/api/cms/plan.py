@@ -79,6 +79,9 @@ def get_plan(request: HttpRequest, code: str):
             "windows": draft.get("windows") or [],
             "points": draft.get("points") or [],
             "mirrored": bool(draft.get("mirrored")),
+            # По умолчанию гасим: на нормальном рендере это то, ради чего
+            # расчёт и делается. Отсутствие ключа — старый план, а не отказ.
+            "extinguish_sources": bool(draft.get("extinguish_sources", True)),
         },
         "frames": {
             "lit": frame(draft.get("asset_id")),
@@ -116,6 +119,7 @@ def put_plan(request: HttpRequest, code: str, payload: PlanGeometryIn):
                     "windows": payload.windows,
                     "points": payload.points,
                     "mirrored": payload.mirrored,
+                    "extinguish_sources": payload.extinguish_sources,
                 }
             )
 

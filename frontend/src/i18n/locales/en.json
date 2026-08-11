@@ -543,18 +543,6 @@
       "controlUnknown": "There is no such control in your room",
       "commandInFlight": "The previous action is still running"
     },
-    "flags": {
-      "popular": "Popular",
-      "new": "New",
-      "chef_choice": "Chef's choice",
-      "vegan": "Vegan",
-      "vegetarian": "Vegetarian",
-      "spicy": "Spicy",
-      "halal": "Halal",
-      "gluten_free": "Gluten free",
-      "lactose_free": "Lactose free",
-      "alcohol_18plus": "18+ / alcohol"
-    },
     "allergens": {
       "gluten": "Gluten",
       "crustaceans": "Crustaceans",
@@ -728,6 +716,12 @@
         "items": "Menu items",
         "info": "Information"
       }
+    },
+    "notifications": {
+      "orderTitle": "Order #{{number}}",
+      "offer": "Let you know when the order is on its way?",
+      "offerHint": "A notification when the status changes. The status stays visible on this screen either way.",
+      "enable": "Enable"
     }
   },
   "tracker": {
@@ -2181,7 +2175,9 @@
       "copied": "Markup copied",
       "loadError": "Could not load the plan",
       "noFrame": "There is no plan frame yet — upload a lit frame above.",
-      "previewNeedsNight": "The light preview will show the difference once the night frame is ready."
+      "previewNeedsNight": "The light preview will show the difference once the night frame is ready.",
+      "extinguish": "Turn lamps off",
+      "extinguishHint": "The night frame is computed from the lit one: lighting is removed, and the lamps themselves are dimmed separately — by the «brighter than surroundings» test. On a light render that test does not trigger and the lamps stay lit. Switch this off and shoot the night frame separately instead."
     },
     "diagnostics": {
       "filtersTitle": "Filters",

@@ -89,6 +89,7 @@ const EMPTY: PlanGeometry = {
   windows: [],
   points: [],
   mirrored: false,
+  extinguish_sources: true,
 };
 
 /** Пропорция по умолчанию, пока кадра нет: сцена не должна схлопываться в полоску. */
@@ -525,7 +526,29 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                 }
                 label={t('roomControl.plan.mirrored')}
               />
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={draft.extinguish_sources}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, extinguish_sources: e.target.checked }))
+                    }
+                    data-testid="grms-plan-extinguish"
+                  />
+                }
+                label={t('roomControl.plan.extinguish')}
+              />
             </Stack>
+
+            {/*
+              Пояснение стоит РЯДОМ С ПЕРЕКЛЮЧАТЕЛЕМ, а не в справке: узнать,
+              что кадр «слишком светлый», администратор может только увидев
+              результат, и подсказка нужна ему в этот момент.
+            */}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              {t('roomControl.plan.extinguishHint')}
+            </Typography>
 
             {litUrl ? (
               <Box

@@ -541,18 +541,6 @@
       "controlUnknown": "您的房间没有该控制项",
       "commandInFlight": "上一个操作仍在执行"
     },
-    "flags": {
-      "popular": "热门",
-      "new": "新品",
-      "chef_choice": "主厨推荐",
-      "vegan": "纯素",
-      "vegetarian": "素食",
-      "spicy": "辣",
-      "halal": "清真",
-      "gluten_free": "无麸质",
-      "lactose_free": "无乳糖",
-      "alcohol_18plus": "18+ / 含酒精"
-    },
     "allergens": {
       "gluten": "麸质",
       "crustaceans": "甲壳类",
@@ -724,6 +712,12 @@
         "items": "菜单项目",
         "info": "信息"
       }
+    },
+    "notifications": {
+      "orderTitle": "订单 #{{number}}",
+      "offer": "订单出发时通知您？",
+      "offerHint": "状态变更时推送通知。无论如何，状态都会显示在此页面。",
+      "enable": "开启"
     }
   },
   "tracker": {
@@ -2176,7 +2170,9 @@
       "copied": "标注已复制",
       "loadError": "无法加载平面",
       "noFrame": "还没有平面图像——请在上方上传亮场图。",
-      "previewNeedsNight": "夜景图就绪后，灯光预览才能显示差别。"
+      "previewNeedsNight": "夜景图就绪后，灯光预览才能显示差别。",
+      "extinguish": "熄灭灯具",
+      "extinguishHint": "夜间画面由明亮画面计算得出：先移除照明，再按「亮于周围」的判据单独熄灭灯具本身。在偏亮的渲染图上该判据不会触发，灯具仍会亮着。此时请关闭熄灭功能，另行拍摄夜间画面。"
     },
     "diagnostics": {
       "filtersTitle": "筛选",

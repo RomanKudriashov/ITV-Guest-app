@@ -331,3 +331,16 @@ def test_module_off_closes_diagnostics(cms, crystal):
         response = cms.get(path)
         assert response.status_code == 403, path
         assert response.json()["code"] == "module_disabled"
+
+
+def test_line_staff_cannot_reach_diagnostics(cms_line_staff, crystal):
+    """
+    Журнал обмена и настройки — не для линейного персонала (R3).
+
+    Повар видит доску трекера, но не настройки отеля и не диагностику: там
+    имена устройств, каналы iRidi и сырые ответы железа. Рубеж стоит на входе
+    в CMS (`CmsAuth`), а не на экране, поэтому закрыт и сам маршрут.
+    """
+    _enable_module(crystal)
+    for path in (DIAG, f"{DIAG}/link", f"{DIAG}/filters"):
+        assert cms_line_staff.get(path).status_code == 403, path

@@ -17,6 +17,8 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { NotificationsOptIn } from '../notifications/NotificationsOptIn';
+import { useOrderStatusNotifications } from '../notifications/useOrderStatusNotifications';
 import { ItemThumb } from '../components/ItemMeta';
 import { OrderFieldValues } from '../components/OrderFieldValues';
 import { OrderSlot } from '../components/OrderSlot';
@@ -48,6 +50,9 @@ export function OrderStatusPage() {
   const { data: order, isLoading, error, refetch } = useGuestOrder(id, pollMs);
   // Live status: snapshots land straight in the query cache (see useOrderLive).
   const live = useOrderLive(id, Boolean(order) && !order?.status.is_terminal);
+  // Уведомление на смену статуса. Источник — тот же снимок из сокета, своего
+  // канала не заводим.
+  useOrderStatusNotifications(order);
 
   useEffect(() => {
     const stale = live !== 'online' && Boolean(order) && !order?.status.is_terminal;
@@ -213,6 +218,14 @@ export function OrderStatusPage() {
                 {t('guest.confirmation.subtitle')}
               </Typography>
               {serveByChip}
+              {/*
+                Разрешение спрашиваем ЗДЕСЬ, а не при первом открытии: до
+                заказа вопрос «можно ли вам писать» беспредметен, а отказ
+                браузер запоминает навсегда — второго раза не будет.
+              */}
+              <Box sx={{ width: '100%' }}>
+                <NotificationsOptIn />
+              </Box>
               <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
                 <Button
                   variant="contained"

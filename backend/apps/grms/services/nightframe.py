@@ -227,11 +227,11 @@ def bake(source: Image.Image, *, extinguish_sources: bool = True) -> Image.Image
     return extinguish(night, emitter_mask(image))
 
 
-def bake_bytes(raw: bytes) -> tuple[bytes, tuple[int, int]]:
+def bake_bytes(raw: bytes, *, extinguish_sources: bool = True) -> tuple[bytes, tuple[int, int]]:
     """Байты светлого кадра → байты ночного (PNG) и размер кадра."""
     with Image.open(io.BytesIO(raw)) as source:
         size = source.size
-        result = bake(source)
+        result = bake(source, extinguish_sources=extinguish_sources)
     if result.size != size:
         raise ValueError("размер кадра изменился — кадры перестанут совмещаться")
 

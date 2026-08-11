@@ -336,6 +336,14 @@ export interface PlanGeometry {
   windows: PlanWindow[];
   points: PlanPoint[];
   mirrored: boolean;
+  /**
+   * Гасить ли сами светильники при расчёте ночного кадра.
+   *
+   * Живёт с конфигурацией плана, а не в коде: порог «ярче окружения» на
+   * светлых кадрах не срабатывает, и решить это может только тот, кто видит
+   * свой рендер.
+   */
+  extinguish_sources: boolean;
 }
 
 export interface PlanFrame {

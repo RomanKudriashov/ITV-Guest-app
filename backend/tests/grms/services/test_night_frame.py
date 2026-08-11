@@ -99,3 +99,28 @@ def test_demo_render_passes_the_guards():
         ).mean[0]
 
     assert with_pass < without_pass
+
+
+def test_extinguish_flag_travels_from_the_plan_to_the_bake():
+    """
+    Переключатель администратора доходит до расчёта.
+
+    Флаг живёт в конфигурации плана, а не в коде: порог «ярче окружения» на
+    светлом рендере не срабатывает, и решить, гасить ли лампы, может только
+    тот, кто видит свой кадр. Здесь проверяется сама передача — что настройка
+    не теряется по дороге от формы до пикселей.
+    """
+    import io
+
+    source = _frame(30, [(180, 130, 220, 170)])
+    buffer = io.BytesIO()
+    source.save(buffer, format="PNG")
+    raw = buffer.getvalue()
+
+    with_pass, size_on = nightframe.bake_bytes(raw, extinguish_sources=True)
+    without_pass, size_off = nightframe.bake_bytes(raw, extinguish_sources=False)
+
+    assert with_pass != without_pass, "флаг не доехал до расчёта"
+    # Геометрия не зависит от флага ни в одном из положений: кадры обязаны
+    # совмещаться со светлым, иначе план поедет.
+    assert size_on == size_off == source.size
