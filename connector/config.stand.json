@@ -1,5 +1,5 @@
 {
-  "backend_url": "ws://backend:8000/ws/v1/onprem/connector",
+  "backend_url": "wss://app.147.45.245.172.sslip.io/ws/v1/onprem/connector",
   "node_key_file": "/etc/itv-connector/key",
   "heartbeat_interval_s": 60,
   "max_concurrent_requests": 8,
