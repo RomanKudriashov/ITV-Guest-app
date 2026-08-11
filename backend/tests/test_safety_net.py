@@ -23,6 +23,7 @@ from __future__ import annotations
 import importlib
 import json
 import pkgutil
+import re
 from pathlib import Path
 
 import pytest
@@ -272,4 +273,68 @@ def test_each_path_is_declared_in_one_module():
         "Один адрес объявлен в разных модулях — Django ответит 405 на «чужой» "
         "метод. Соберите операции пути в одном файле:\n  "
         + "\n  ".join(f"{path}: {', '.join(modules)}" for path, modules in split.items())
+    )
+
+
+# --- 8. Контракты не переживают свои эндпоинты ------------------------------
+
+DOCS = Path(__file__).resolve().parents[2] / "docs"
+
+# Путь СЧИТАЕТСЯ заявкой на эндпоинт только рядом с HTTP-методом: «GET /api/…»
+# или строкой таблицы «| POST | `/api/…` |».
+#
+# Это не придирка к регулярке, а главный урок аудита контрактов. Жадный поиск
+# «всех строк, похожих на путь» дал ШЕСТЬ «устаревших контрактов», из которых
+# устаревшими оказались два: остальные четыре были объявлением префикса
+# («Префиксы: /api/v1/cms»), фронтовым маршрутом внутри JSON навигации
+# (`"to": "/cms/dashboard"`) и адресами вебсокетов. Сторож, который кричит на
+# такое, отключают в первый же день — и вместе с ложными пропадают настоящие.
+_CLAIM = re.compile(
+    r"\b(?:GET|POST|PUT|PATCH|DELETE)\b[^\n]{0,40}?(/api/v1/[A-Za-z0-9_\-/{}.*]+)"
+)
+
+
+def _normalize(path: str) -> str:
+    """`{room_id}` и `{id}` — один и тот же адрес: имя параметра не часть пути."""
+    return re.sub(r"\{[^}]*\}", "{}", path.rstrip("/"))
+
+
+def _contract_files() -> list[Path]:
+    return sorted(DOCS.glob("*-contract*.md")) + sorted(DOCS.glob("grms/contracts/*.md"))
+
+
+def test_contract_endpoints_exist_in_the_api():
+    """
+    КАЖДЫЙ АДРЕС, ЗАЯВЛЕННЫЙ КОНТРАКТОМ, СУЩЕСТВУЕТ.
+
+    Документ, описывающий несуществующий эндпоинт, хуже отсутствия документа:
+    по нему кто-нибудь построит интеграцию и узнает правду от 404. Именно так
+    прожили годы `/cms/departments` (понятие переименовано в заведения) и
+    `/api/v1/guest/menu` (псевдоним снят) — код ушёл вперёд, документы остались.
+
+    Сторож ловит ровно этот класс и ничего больше: поля, типы и коды ответов
+    сверяются машинной схемой, а не прозой (docs/api-contracts.md).
+    """
+    known = {_normalize(path) for path in _current_routes()}
+    assert known, "карта адресов пуста — сторож смотрит не туда"
+
+    missing: list[str] = []
+    claims = 0
+    for file in _contract_files():
+        for number, line in enumerate(file.read_text().splitlines(), 1):
+            for match in _CLAIM.finditer(line):
+                claim = match.group(1).split("?")[0]
+                # `GET /api/v1/guest/*` — это «весь гостевой контур», а не адрес.
+                if "*" in claim:
+                    continue
+                claim = claim.rstrip(".,;:`)")
+                claims += 1
+                if _normalize(claim) not in known:
+                    missing.append(f"  {file.relative_to(DOCS.parent)}:{number} — {claim}")
+
+    assert claims > 100, f"заявок нашлось всего {claims} — сторож перестал их видеть"
+    assert not missing, (
+        "Контракт описывает адрес, которого в API нет. Либо эндпоинт переехал и "
+        "документ надо поправить, либо строку удалить — но не оставлять:\n"
+        + "\n".join(missing)
     )

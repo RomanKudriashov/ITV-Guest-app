@@ -362,7 +362,9 @@ def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
 
 # --- Реестр модулей --------------------------------------------------------
 # Данные + API (R1). Управляющий UI — R6, гейтинг CMS-навигации — R4.
-# Контракт — docs/module-registry-api-contract.md.
+# Контракта у механизма нет: ссылка отсюда годами вела в несуществующий файл.
+# Механизм описания заслуживает — выключенный модуль закрывает целый раздел CMS
+# ответом `403 module_disabled`. Очередь: docs/api-contracts.md.
 
 
 @router.get("/hotels/{hotel_id}/modules", summary="Реестр модулей отеля")

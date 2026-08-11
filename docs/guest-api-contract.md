@@ -98,7 +98,9 @@ crystal` — заголовок принимается только при `DJAN
 
 `type`: `product` (еда — по умолчанию) · `service_request` (заявки-услуги).
 
-`GET /api/v1/guest/menu` — исторический псевдоним для `type=product`.
+Исторического псевдонима `/api/v1/guest/menu` больше нет: он снят, и на него
+отвечает 404 (`tests/catalog/api/test_service_requests.py`). Тип запрашивается
+параметром, отдельного адреса под еду не существует.
 
 ```jsonc
 {
