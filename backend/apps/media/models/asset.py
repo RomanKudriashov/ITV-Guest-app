@@ -80,5 +80,11 @@ class MediaAsset(TenantModel):
         )
         if not key:
             return ""
-        scheme = "https" if settings.MINIO_SECURE else "http"
+        # Схема — та, по которой гость открывает приложение, а НЕ MINIO_SECURE.
+        # Это разные вещи, и смешивать их нельзя: MINIO_SECURE описывает канал
+        # backend → MinIO внутри сети compose (там TLS нет и не нужен), а здесь
+        # адрес уезжает В БРАУЗЕР ГОСТЯ. На HTTPS-странице http-картинка не
+        # «грузится чуть хуже» — она блокируется, и это выглядит как «пропали
+        # все фотографии», причём ровно на боевом стенде и никогда локально.
+        scheme = settings.GUEST_APP_PUBLIC_SCHEME
         return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{key}"
