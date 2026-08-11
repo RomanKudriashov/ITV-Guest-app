@@ -1,0 +1,25 @@
+# Server на 443. Кладётся на место сертификатом (см. docs/ops/stand.md) и
+# подхватывается include'ом из default.conf. Пока файла нет, стенд работает
+# по HTTP — это состояние первого подъёма, а не поломка.
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/letsencrypt/live/STAND_CERT/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/STAND_CERT/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size 12m;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript
+               text/javascript application/xml image/svg+xml;
+    gzip_min_length 1024;
+
+    include /etc/nginx/conf.d/app.locations.conf;
+}

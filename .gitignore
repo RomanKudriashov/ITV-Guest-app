@@ -35,3 +35,5 @@ backend/.seed_photos/
 # каждый прогон их перезаписывает. В репозиторий им нечего добавить.
 backend/.pytest-main.log
 e2e/.e2e-main.log
+infra/nginx/live/*
+!infra/nginx/live/.gitkeep

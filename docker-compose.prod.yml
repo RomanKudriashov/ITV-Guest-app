@@ -119,8 +119,51 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # Сертификаты и проверка владения доменом живут НА ХОСТЕ: они переживают
+      # пересборку образа, а certbot ходит в тот же каталог.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - ./infra/nginx/live:/etc/nginx/conf.d/live:ro
     depends_on:
       backend: {condition: service_healthy}
+    networks: [internal]
+
+  # --- Управление номером ---------------------------------------------------
+  #
+  # На СТЕНДЕ, а не на объекте: здесь и коннектор, и «железо» живут в тех же
+  # контейнерах. На живом объекте коннектор ставится на сервер отеля отдельно
+  # (`connector/itv-connector.service`), а эмулятора нет вовсе — там настоящий
+  # iRidi. Профиля у них нет намеренно: на стенде GRMS нужен всегда, а профиль
+  # уже однажды стоил нам вечера — сервисы молча не поднимались обычным `up`.
+
+  iridi-emulator:
+    build: ./backend
+    # Чистый stdlib: запускается тем же образом, что backend, но Django не
+    # импортирует.
+    command: ["python", "-m", "apps.grms.transport.emulator"]
+    restart: unless-stopped
+    environment:
+      IRIDI_EMULATOR_PORT: "1085"
+    networks: [internal]
+
+  connector:
+    build: ./connector
+    restart: unless-stopped
+    environment:
+      ITV_CONNECTOR_CONFIG: /etc/itv-connector/config.json
+      # Ключ узла выдаётся в платформенной консоли и в конфиг НЕ пишется:
+      # конфиг попадает в бэкапы и в логи развёртывания, ключ — не должен.
+      # ПЕРЕЖИВАЕТ ТОЛЬКО ПЕРЕЗАПУСК: пересоздание базы стирает узел, и ключ
+      # надо перевыпустить, иначе коннектор уходит в рестарт-петлю, а гость
+      # видит «управление номером недоступно» без внятной причины.
+      ITV_CONNECTOR_KEY: "${ITV_CONNECTOR_KEY:-}"
+    volumes:
+      - ./connector/config.stand.json:/etc/itv-connector/config.json:ro
+    depends_on:
+      backend: {condition: service_healthy}
+      iridi-emulator: {condition: service_started}
     networks: [internal]
 
 volumes:
