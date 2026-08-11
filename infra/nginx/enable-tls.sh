@@ -29,5 +29,7 @@ certbot certonly --webroot -w /var/www/certbot \
 
 sed 's/STAND_CERT/stand/g' "$HERE/tls.enabled.conf.template" > "$HERE/live/tls.enabled.conf"
 cp "$HERE/redirect-to-https.conf.template" "$HERE/live/redirect-to-https.conf"
+# Гасим приложение на 80-м: два `location /` в одном server-блоке — отказ старта.
+rm -f "$HERE/live/http-app.off.conf"
 
 echo "Сертификат выпущен. Перезапустите nginx: docker compose -f docker-compose.prod.yml restart nginx"
