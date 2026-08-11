@@ -89,6 +89,13 @@ services:
       timeout: 5s
       retries: 12
       start_period: 90s
+    volumes:
+      # Кадры и замеры демо-плана номера. Лежат в docs/, то есть ВНЕ backend/,
+      # а в образ едет только backend/ — без этого сид тихо оставляет тип без
+      # плана: он намеренно не падает из-за отсутствия демо-картинки, и стенд
+      # поднимается с рабочим экраном номера, но без плана.
+      # Только чтение и только на стенде: на объекте демо-рендеров нет.
+      - ./docs/design/grms-concept:/docs/design/grms-concept:ro
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -102,6 +109,13 @@ services:
     env_file: .env.prod
     environment:
       <<: *backend-env
+    volumes:
+      # Кадры и замеры демо-плана номера. Лежат в docs/, то есть ВНЕ backend/,
+      # а в образ едет только backend/ — без этого сид тихо оставляет тип без
+      # плана: он намеренно не падает из-за отсутствия демо-картинки, и стенд
+      # поднимается с рабочим экраном номера, но без плана.
+      # Только чтение и только на стенде: на объекте демо-рендеров нет.
+      - ./docs/design/grms-concept:/docs/design/grms-concept:ro
     depends_on:
       backend: {condition: service_healthy}
     networks: [internal]
