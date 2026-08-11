@@ -30,6 +30,30 @@ from __future__ import annotations
 # и позиции `title`/`description`. Один код — одна запись: коды у заведений,
 # разделов и позиций не пересекаются (кроме намеренных совпадений вроде `spa`,
 # где заведение и раздел названы одинаково и переводятся одинаково же).
+# Названия отелей — по ПОДДОМЕНУ: у отеля нет `code`, он один на тенанта.
+# Правило то же, что у заведений: имя собственное на всех языках одно и
+# латиницей, переводится слово вокруг него («отель», «резорт», «бутик»).
+HOTEL_NAMES: dict[str, dict[str, str]] = {
+    "crystal": {
+        "ru": "Отель «Кристалл»",
+        "en": "Crystal Hotel",
+        "ar": "فندق Crystal",
+        "zh": "Crystal 酒店",
+    },
+    "azure": {
+        "ru": "Азур Резорт",
+        "en": "Azure Resort",
+        "ar": "منتجع Azure",
+        "zh": "Azure 度假村",
+    },
+    "lumen": {
+        "ru": "Люмен Бутик",
+        "en": "Lumen Boutique",
+        "ar": "بوتيك Lumen",
+        "zh": "Lumen 精品酒店",
+    },
+}
+
 TRANSLATIONS: dict[str, dict[str, dict[str, str]]] = {
     # --- Заведения --------------------------------------------------------
     "kitchen": {
@@ -610,11 +634,42 @@ def fill_translations() -> dict[str, int]:
             if touched:
                 row.save(update_fields=[*dict.fromkeys(touched), "updated_at"])
 
+    _fill_hotel_name(filled)
     _fill_compositions(Item, filled)
     _fill_characteristics(ItemCharacteristic, filled)
     _fill_by_text(ModifierGroup, ("title",), MODIFIER_TEXTS, filled)
     _fill_by_text(ModifierOption, ("title",), MODIFIER_TEXTS, filled)
     return filled
+
+
+def _fill_hotel_name(filled: dict[str, int]) -> None:
+    """
+    Название отеля на четырёх языках.
+
+    Отель ровно один на тенанта, и берётся он из контекста — реестр ключуется
+    поддоменом. Как и везде здесь: дописываем только ПУСТОЕ, правка оператора
+    в CMS сильнее сида.
+    """
+    from apps.core.context import require_hotel_id
+    from apps.hotels.models import Hotel
+
+    hotel = Hotel.objects.filter(pk=require_hotel_id()).first()
+    if hotel is None:
+        return
+    spec = HOTEL_NAMES.get(hotel.subdomain or "")
+    if not spec:
+        return
+    value = dict(hotel.name or {})
+    touched = False
+    for code, text in spec.items():
+        if (value.get(code) or "").strip():
+            continue
+        value[code] = text
+        filled[code] = filled.get(code, 0) + 1
+        touched = True
+    if touched:
+        hotel.name = value
+        hotel.save(update_fields=["name", "updated_at"])
 
 
 def _fill_by_text(model, fields, registry: dict[str, dict[str, str]], filled: dict[str, int]) -> None:

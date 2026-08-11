@@ -64,6 +64,7 @@ def home_settings_payload(hotel: Hotel) -> dict[str, Any]:
         "latitude": float(hotel.latitude) if hotel.latitude is not None else None,
         "longitude": float(hotel.longitude) if hotel.longitude is not None else None,
         "city": hotel.city or {},
+        "name": hotel.name or {},
         # Часовой пояс — рядом с городом и часами, которые от него и считаются.
         "timezone": hotel.timezone,
         # Список зон отдаётся сервером, а не зашивается в витрину: набор зон
@@ -107,6 +108,18 @@ def save_home_settings(hotel: Hotel, data: Any) -> dict[str, Any]:
             ) from None
         hotel.timezone = name
 
+    if data.name is not None:
+        # Хотя бы один язык обязателен: отель без названия на витрине
+        # превращается в пустую шапку, и заметит это гость, а не оператор.
+        cleaned = {
+            code: str(text).strip()
+            for code, text in (data.name or {}).items()
+            if text is not None and str(text).strip()
+        }
+        if not cleaned:
+            raise ValidationError("Название нужно хотя бы на одном языке", field="name")
+        hotel.name = cleaned
+
     hotel.latitude = data.latitude
     hotel.longitude = data.longitude
     # Пустые переводы не храним: город, которого нет ни на одном языке, — это
@@ -121,7 +134,9 @@ def save_home_settings(hotel: Hotel, data: Any) -> dict[str, Any]:
     settings["home"] = home
     hotel.settings = settings
     hotel.save(
-        update_fields=["latitude", "longitude", "city", "timezone", "settings", "updated_at"]
+        update_fields=[
+            "name", "latitude", "longitude", "city", "timezone", "settings", "updated_at"
+        ]
     )
     return home_settings_payload(hotel)
 

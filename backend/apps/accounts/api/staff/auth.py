@@ -66,7 +66,7 @@ def me(request: HttpRequest):
         "user": serialize_user(request.user),
         "hotel": {
             "id": str(hotel.pk),
-            "name": hotel.name,
+            "name": hotel.name_i18n,
             "subdomain": hotel.subdomain,
             "currency": hotel.currency,
             "default_language": hotel.default_language,

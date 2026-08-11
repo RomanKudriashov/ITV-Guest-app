@@ -103,7 +103,7 @@ def _row(hotel: Hotel, counts: dict) -> dict:
     entry = counts.get(hotel.pk, {})
     return {
         "id": str(hotel.pk),
-        "name": hotel.name,
+        "name": hotel.name_i18n,
         "subdomain": hotel.subdomain,
         "is_active": hotel.is_active,
         "origin": hotel.origin,

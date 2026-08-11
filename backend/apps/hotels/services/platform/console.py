@@ -45,7 +45,7 @@ def counts(hotel: Hotel) -> dict[str, int]:
 def brief(hotel: Hotel) -> dict[str, Any]:
     return {
         "id": str(hotel.pk),
-        "name": hotel.name,
+        "name": hotel.name_i18n,
         "subdomain": hotel.subdomain,
         "is_active": hotel.is_active,
         "created_at": hotel.created_at.isoformat(),

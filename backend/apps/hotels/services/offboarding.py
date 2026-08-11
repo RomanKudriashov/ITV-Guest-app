@@ -76,7 +76,7 @@ def export_hotel(hotel: Hotel) -> dict:
     return {
         "exported_at": timezone.now().isoformat(),
         "hotel": {
-            "name": hotel.name,
+            "name": hotel.name_i18n,
             "subdomain": hotel.subdomain,
             "timezone": hotel.timezone,
             "currency": hotel.currency,

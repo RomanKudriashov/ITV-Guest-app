@@ -2246,7 +2246,9 @@
       "source": "Data source:",
       "city": "City (label for weather and clock)",
       "timezone": "Time zone",
-      "timezoneHint": "The home screen clock and venue schedules are computed from it"
+      "timezoneHint": "The home screen clock and venue schedules are computed from it",
+      "hotelName": "Hotel name",
+      "hotelNameHint": "Shown to the guest on every screen. Keep the proper name as it is in all languages — translate the word around it («hotel», «resort»)."
     },
     "search": {
       "title": "Guest search",

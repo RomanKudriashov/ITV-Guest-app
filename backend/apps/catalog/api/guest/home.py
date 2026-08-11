@@ -36,7 +36,7 @@ def guest_home(request: HttpRequest):
 
     return {
         "hotel": {
-            "name": hotel.name,
+            "name": hotel.name_i18n,
             "subdomain": hotel.subdomain,
             # Часовой пояс отеля — чтобы витрина показывала МЕСТНОЕ время и
             # тикала сама, а не спрашивала сервер каждую минуту.

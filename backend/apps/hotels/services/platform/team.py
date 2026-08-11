@@ -136,7 +136,7 @@ def audit_feed(*, limit: int = 100) -> list[dict]:
             "at": row.created_at.isoformat(),
             "actor": actors.get(row.actor_id, "—"),
             "action": row.action,
-            "hotel": hotels[row.hotel_id].name if row.hotel_id in hotels else None,
+            "hotel": hotels[row.hotel_id].name_i18n if row.hotel_id in hotels else None,
             "subdomain": hotels[row.hotel_id].subdomain if row.hotel_id in hotels else None,
             "payload": row.payload,
         }

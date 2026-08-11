@@ -51,7 +51,7 @@ class Command(BaseCommand):
             raise CommandError(str(exc)) from exc
 
         hotel = result.hotel
-        self.stdout.write(self.style.SUCCESS(f"Отель «{hotel.name}» создан."))
+        self.stdout.write(self.style.SUCCESS(f"Отель «{hotel.name_i18n}» создан."))
         self.stdout.write(f"  Поддомен:      {hotel.subdomain}")
         self.stdout.write(f"  Витрина:       https://{hotel.subdomain}.<домен>/")
         self.stdout.write(f"  CMS-логин:     {result.admin.email}")

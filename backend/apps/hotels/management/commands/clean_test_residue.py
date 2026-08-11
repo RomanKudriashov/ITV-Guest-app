@@ -80,6 +80,7 @@ class Command(BaseCommand):
         from apps.catalog.models import Category, Item
         from apps.chat.models import ChatMessage
         from apps.grms.models import ControlElement, RoomType, Zone  # noqa: F401
+        from apps.hotels.models import ExecutionPoint, Service
         from apps.orders.models import Order, OrderItem, StatusDefinition
 
         hotel = Hotel.objects.filter(subdomain=options["subdomain"]).first()
@@ -92,6 +93,12 @@ class Command(BaseCommand):
             items = [item for item in Item.objects.all() if TEST_SUFFIX.search(item.code)]
             categories = [c for c in Category.objects.all() if TEST_SUFFIX.search(c.code)]
             messages = [m for m in ChatMessage.objects.all() if CHAT_BODY.match((m.body or "").strip())]
+
+            # Заведения прогонов. Тем же признаком, что позиции и разделы, —
+            # суффиксом, который генерирует спека, а не «похожестью имени».
+            # Без этого они копились каждым прогоном: за время работы стенда
+            # их набралось 58 при семи настоящих.
+            services = [s for s in Service.objects.all() if TEST_SUFFIX.search(s.code or "")]
 
             # Заказы, брошенные прогонами: открыты дольше порога. Опознаём по
             # возрасту и незавершённости, а не по имени — у заказа нет кода, за
@@ -131,12 +138,27 @@ class Command(BaseCommand):
             for item in items:
                 (keep if OrderItem.objects.filter(item=item).exists() else drop).append(item)
 
+            # Заведения — по тому же признаку и той же причиной, по которой
+            # отказывает CMS (`409 service_has_orders`): заказы ссылаются на
+            # точку исполнения через PROTECT, и удаление осиротило бы историю
+            # выручки. Такое заведение выключается, а не удаляется.
+            keep_services, drop_services = [], []
+            for service in services:
+                busy_service = Order.all_objects.filter(
+                    execution_point=service.execution_point_id
+                ).exists()
+                (keep_services if busy_service else drop_services).append(service)
+
             self.stdout.write(
                 f"Найдено: позиций {len(items)} (удалить {len(drop)}, выключить {len(keep)} — "
                 f"на них есть заказы), разделов {len(categories)}, сообщений чата {len(messages)}, "
                 f"брошенных заказов {len(stale)} (открыты дольше {options['stale_hours']} ч), "
-                f"типов номеров из прогона GRMS {len(grms_types)}"
+                f"типов номеров из прогона GRMS {len(grms_types)}, "
+                f"заведений {len(services)} (удалить {len(drop_services)}, "
+                f"выключить {len(keep_services)} — на них есть заказы)"
             )
+            for service in keep_services:
+                self.stdout.write(f"  выключить заведение: {service.code}")
             for room_type in grms_types:
                 self.stdout.write(f"  удалить тип: {room_type.code}")
             for item in keep:
@@ -159,6 +181,18 @@ class Command(BaseCommand):
             busy = [c for c in categories if c not in empty]
             deleted_cats = Category.objects.filter(pk__in=[c.pk for c in empty]).delete()
             hidden_cats = Category.objects.filter(pk__in=[c.pk for c in busy]).update(is_active=False)
+
+            # Заведение уносит с собой свою точку исполнения: связь 1:1, и
+            # точка без сервиса — это осиротевший исполнитель, которого не
+            # видно ни в одном списке. Так же делает и удаление из CMS.
+            point_ids = [s.execution_point_id for s in drop_services if s.execution_point_id]
+            deleted_services = Service.objects.filter(
+                pk__in=[s.pk for s in drop_services]
+            ).delete()
+            ExecutionPoint.objects.filter(pk__in=point_ids).delete()
+            hidden_services = Service.objects.filter(
+                pk__in=[s.pk for s in keep_services]
+            ).update(is_active=False)
 
             deleted_msgs = ChatMessage.objects.filter(pk__in=[m.pk for m in messages]).delete()
             # ЖЁСТКО, а не мягко. Мягкое удаление оставляет строку с тем же
@@ -195,6 +229,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"Убрано: позиций удалено {deleted_items}, выключено {hidden}; "
                 f"разделов удалено {deleted_cats}, выключено {hidden_cats}; "
+                f"заведений удалено {deleted_services}, выключено {hidden_services}; "
                 f"сообщений удалено {deleted_msgs}; "
                 f"типов номеров удалено {deleted_types}; "
                 f"брошенных заказов закрыто {closed}"

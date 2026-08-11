@@ -85,7 +85,7 @@ def seed_item_data_dictionaries() -> None:
 def provision_hotel(
     *,
     subdomain: str,
-    name: str,
+    name: str | dict,
     admin_email: str,
     timezone: str = "Europe/Moscow",
     currency: str = "RUB",
@@ -119,6 +119,20 @@ def provision_hotel(
     langs = _clean_languages(languages)
     default_language = langs[0]
 
+    # Название переводимое. Строку принимаем ради вызывающих, которым язык один
+    # (`manage.py create_hotel`, старые сиды): она кладётся в язык отеля по
+    # умолчанию, а не в жёстко зашитый русский.
+    if isinstance(name, dict):
+        name_translations = {
+            code: str(text).strip()
+            for code, text in name.items()
+            if text is not None and str(text).strip()
+        }
+    else:
+        name_translations = {default_language: str(name).strip()} if name else {}
+    if not name_translations:
+        raise ValidationError("Название нужно хотя бы на одном языке", field="name")
+
     existing = Hotel.objects.filter(subdomain=subdomain).first()
     if existing is not None and not exist_ok:
         raise ConflictError(
@@ -128,7 +142,7 @@ def provision_hotel(
 
     hotel = existing or Hotel.objects.create(
         subdomain=subdomain,
-        name=name,
+        name=name_translations,
         timezone=timezone,
         currency=currency,
         default_language=default_language,

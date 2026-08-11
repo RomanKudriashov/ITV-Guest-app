@@ -49,6 +49,7 @@ export function HomeBlocksSection() {
   // Город — подпись к погоде и часам у гостя, поэтому переводами, как весь
   // гостевой текст: «Москва» в арабском интерфейсе читается не лучше, чем
   // «Mainly clear».
+  const [name, setName] = useState<Record<string, string>>({});
   const [city, setCity] = useState<Record<string, string>>({});
   /*
     Часовой пояс отеля. Наследовать его от сервера нельзя: сервер стоит там, где
@@ -63,6 +64,7 @@ export function HomeBlocksSection() {
     setRoomStatus(query.data.room_status);
     setLatitude(query.data.latitude === null ? '' : String(query.data.latitude));
     setLongitude(query.data.longitude === null ? '' : String(query.data.longitude));
+    setName(query.data.name ?? {});
     setCity(query.data.city ?? {});
     setTimezone(query.data.timezone ?? '');
   }, [query.data]);
@@ -74,6 +76,7 @@ export function HomeBlocksSection() {
         room_status: roomStatus,
         latitude: latitude.trim() === '' ? null : Number(latitude),
         longitude: longitude.trim() === '' ? null : Number(longitude),
+        name,
         city,
         timezone,
       }),
@@ -141,6 +144,33 @@ export function HomeBlocksSection() {
               />
             )}
           />
+
+          {/*
+            Название отеля. Стоит первым: это единственная строка, которую
+            гость видит на КАЖДОМ экране, и незаполненный язык здесь заметнее
+            любого другого.
+          */}
+          <Stack spacing={1}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {t('cms.homeBlocks.hotelName')}
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              {languages.codes.map((code) => (
+                <TextField
+                  key={code}
+                  size="small"
+                  label={code.toUpperCase()}
+                  value={name[code] ?? ''}
+                  onChange={(event) => setName({ ...name, [code]: event.target.value })}
+                  inputProps={{ 'data-testid': `cms-home-name-${code}` }}
+                  fullWidth
+                />
+              ))}
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              {t('cms.homeBlocks.hotelNameHint')}
+            </Typography>
+          </Stack>
 
           {/* Город — подпись к погоде и часам. Пусто — подписи у гостя нет. */}
           <Stack spacing={1}>

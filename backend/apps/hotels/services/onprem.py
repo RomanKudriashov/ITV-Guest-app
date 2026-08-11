@@ -121,7 +121,7 @@ def touch(key: str, *, version: str = "") -> OnPremNode | None:
 def serialize_node(node: OnPremNode, hotel: Hotel) -> dict:
     return {
         "id": str(node.pk),
-        "hotel": hotel.name,
+        "hotel": hotel.name_i18n,
         "hotel_id": str(hotel.pk),
         "subdomain": hotel.subdomain,
         "name": node.name,

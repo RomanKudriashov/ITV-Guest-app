@@ -895,7 +895,7 @@ class Command(BaseCommand):
         if cover_is_alive(theme.tokens or {}):
             return
 
-        asset = self._image(code, hotel.name)
+        asset = self._image(code, hotel.name_i18n)
         if asset is None:
             return
         tokens = dict(theme.tokens or {})
@@ -907,12 +907,12 @@ class Command(BaseCommand):
         try:
             process_media_asset.apply(args=(str(asset.pk), str(hotel.pk))).get()
         except Exception as exc:  # noqa: BLE001 — MinIO необязателен для старта
-            self.stdout.write(self.style.WARNING(f"Обложка «{hotel.name}» не нарезана ({exc})"))
+            self.stdout.write(self.style.WARNING(f"Обложка «{hotel.name_i18n}» не нарезана ({exc})"))
             return
         asset.refresh_from_db()
         url = asset.url("card")
         if not url:
-            self.stdout.write(f"Обложка «{hotel.name}» ещё не готова — пропускаю")
+            self.stdout.write(f"Обложка «{hotel.name_i18n}» ещё не готова — пропускаю")
             return
         # Ссылка на ассет — источник истины, адрес рядом — производное.
         background.update(

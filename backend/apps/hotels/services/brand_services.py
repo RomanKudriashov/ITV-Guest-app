@@ -47,7 +47,7 @@ def get_or_create_brand(hotel: Hotel | None = None) -> BrandTheme:
             return theme
 
     theme = BrandTheme.objects.create(
-        name=f"{hotel.name} — основная", tokens=preset_tokens(DEFAULT_PRESET)
+        name=f"{hotel.name_i18n} — основная", tokens=preset_tokens(DEFAULT_PRESET)
     )
     Hotel.objects.filter(pk=hotel.pk).update(default_theme=theme)
     hotel.default_theme = theme

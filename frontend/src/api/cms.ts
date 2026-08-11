@@ -377,6 +377,13 @@ export interface HomeSettings {
   room_status: boolean;
   latitude: number | null;
   longitude: number | null;
+  /**
+   * Название отеля переводами.
+   *
+   * Имя собственное на всех языках одно и латиницей — так его пишут на
+   * вывеске и в картах; переводится слово вокруг него.
+   */
+  name: Record<string, string>;
   /** Город — подпись к погоде и часам, переводами. */
   city: Record<string, string>;
   /** Часовой пояс отеля — ИМЯ зоны IANA, от него считаются и часы, и расписания. */
@@ -398,7 +405,7 @@ export function fetchHomeSettings(): Promise<HomeSettings> {
 export function putHomeSettings(
   payload: Pick<
     HomeSettings,
-    'weather' | 'room_status' | 'latitude' | 'longitude' | 'city' | 'timezone'
+    'weather' | 'room_status' | 'latitude' | 'longitude' | 'city' | 'timezone' | 'name'
   >,
 ): Promise<HomeSettings> {
   return api.put<HomeSettings>('/cms/home-settings', payload);

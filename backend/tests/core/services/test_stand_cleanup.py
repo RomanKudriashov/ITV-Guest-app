@@ -102,3 +102,92 @@ def test_dry_run_changes_nothing(crystal):
 
     with tenant_context(crystal):
         assert not Order.objects.get(pk=order.pk).status.is_terminal
+
+
+# --- Заведения прогонов ------------------------------------------------------
+
+
+def _residue_service(hotel, code: str):
+    """Заведение с суффиксом, который генерирует спека, — как на живом стенде."""
+    from apps.hotels.models import ExecutionPoint, Service
+
+    with tenant_context(hotel):
+        point = ExecutionPoint.objects.create(
+            code=code, title={"ru": "Прогон"}, kind=ExecutionPoint.Kind.OTHER
+        )
+        return Service.objects.create(
+            code=code, execution_point=point, public_name={"ru": "Прогон"}
+        )
+
+
+def test_residue_service_without_orders_is_deleted_with_its_point(crystal):
+    """
+    Заведение прогона уходит вместе со своей точкой исполнения.
+
+    Точка без сервиса — осиротевший исполнитель, которого не видно ни в одном
+    списке; так же её уносит и удаление из CMS.
+    """
+    from apps.hotels.models import ExecutionPoint, Service
+
+    service = _residue_service(crystal, "rum-servis-msabcdef")
+    point_id = service.execution_point_id
+
+    call_command("clean_test_residue", subdomain=crystal.subdomain, apply=True)
+
+    with tenant_context(crystal):
+        assert not Service.objects.filter(pk=service.pk).exists()
+        assert not ExecutionPoint.objects.filter(pk=point_id).exists()
+
+
+def test_residue_service_with_orders_is_switched_off_not_deleted(crystal):
+    """
+    С заказами — только выключить.
+
+    Ровно та же причина, по которой отказывает CMS (`409 service_has_orders`):
+    заказы держат точку через PROTECT, и удаление осиротило бы историю выручки.
+    """
+    from apps.hotels.models import Service
+
+    service = _residue_service(crystal, "rum-servis-msfedcba")
+    order = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        Order.objects.filter(pk=order.pk).update(execution_point=service.execution_point_id)
+
+    call_command("clean_test_residue", subdomain=crystal.subdomain, apply=True)
+
+    with tenant_context(crystal):
+        alive = Service.objects.filter(pk=service.pk).first()
+        assert alive is not None, "заведение с заказами удалять нельзя"
+        assert alive.is_active is False, "но выключить обязано"
+
+
+def test_real_services_are_never_touched(crystal):
+    """
+    Признак — суффикс прогона, а не «похожесть имени».
+
+    Настоящие заведения демо-стенда называются `kitchen`, `spa`, `concierge`;
+    ни одно из них под правило попасть не должно, иначе уборка съест стенд.
+    """
+    from apps.hotels.models import Service
+
+    with tenant_context(crystal):
+        before = {s.code: s.is_active for s in Service.objects.all() if "-ms" not in (s.code or "")}
+    assert before, "на стенде нет ни одного настоящего заведения — проверять нечего"
+
+    call_command("clean_test_residue", subdomain=crystal.subdomain, apply=True)
+
+    with tenant_context(crystal):
+        after = {s.code: s.is_active for s in Service.objects.all() if "-ms" not in (s.code or "")}
+    assert after == before
+
+
+def test_dry_run_leaves_services_alone(crystal):
+    from apps.hotels.models import Service
+
+    service = _residue_service(crystal, "rum-servis-msdryrun")
+
+    call_command("clean_test_residue", subdomain=crystal.subdomain)
+
+    with tenant_context(crystal):
+        alive = Service.objects.filter(pk=service.pk).first()
+    assert alive is not None and alive.is_active is True

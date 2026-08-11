@@ -32,7 +32,7 @@ def bulk_rooms(request: HttpRequest, payload: BulkRoomsIn):
 def rooms_qr_sheet(request: HttpRequest):
     hotel, rooms = svc.room_qr_targets()
     pairs = [(room.number, hotel.room_deeplink(room.number)) for room in rooms]
-    return HttpResponse(qr.qr_sheet_html(hotel.name, pairs), content_type="text/html")
+    return HttpResponse(qr.qr_sheet_html(hotel.name_i18n, pairs), content_type="text/html")
 
 
 @router.patch("/rooms/{room_id}", response=RoomOut, summary="Изменить номер")

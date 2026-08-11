@@ -14,7 +14,12 @@ from apps.core.models import BaseModel, TenantModel
 
 
 class Hotel(BaseModel):
-    name = models.CharField(max_length=255)
+    # Переводимое: гость с китайским интерфейсом не должен читать в шапке
+    # «Отель „Кристалл“». Имя собственное остаётся как есть на всех языках —
+    # так его пишут на вывеске и в картах, — переводится слово вокруг него.
+    # Читать через `name_i18n`: он отдаёт язык запроса с фолбэком на язык
+    # отеля, а само поле — словарь.
+    name = TranslatableField()
     subdomain = models.SlugField(max_length=63, unique=True, db_index=True)
     # Отель может привести свой домен (menu.crystal-hotel.ru) — резолвим и по нему.
     custom_domain = models.CharField(max_length=255, blank=True, db_index=True)
@@ -116,7 +121,7 @@ class Hotel(BaseModel):
         ordering = ["name"]
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.subdomain})"
+        return f"{self.name_i18n} ({self.subdomain})"
 
     @property
     def tzinfo(self) -> zoneinfo.ZoneInfo:

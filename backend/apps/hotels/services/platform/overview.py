@@ -152,7 +152,7 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
         signals.append({"level": "ok", "code": "media_ok", "count": 0})
 
     expiring = [
-        {"hotel": hotel.name, "subdomain": hotel.subdomain, "days": tariffs.trial_days_left(hotel, today)}
+        {"hotel": hotel.name_i18n, "subdomain": hotel.subdomain, "days": tariffs.trial_days_left(hotel, today)}
         for hotel in hotels
         if (tariffs.trial_days_left(hotel, today) or 99) <= TRIAL_WARNING_DAYS
     ]
@@ -181,7 +181,7 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
                 {
                     "level": "warn",
                     "code": "node_offline",
-                    "hotel": node.hotel.name,
+                    "hotel": node.hotel.name_i18n,
                     "subdomain": node.hotel.subdomain,
                     "purpose": node.purpose,
                     "seconds": node.seconds_since_seen,

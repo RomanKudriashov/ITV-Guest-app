@@ -33,7 +33,7 @@ def bootstrap_payload() -> dict[str, Any]:
     return {
         "hotel": {
             "id": str(hotel.pk),
-            "name": hotel.name,
+            "name": hotel.name_i18n,
             "subdomain": hotel.subdomain,
             "currency": hotel.currency,
             "currency_minor_units": hotel.currency_minor_units,

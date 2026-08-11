@@ -1612,7 +1612,7 @@ class Command(BaseCommand):
         if cover_is_alive(theme.tokens or {}):
             return
 
-        asset = self._image_for("hotel-cover", hotel.name)
+        asset = self._image_for("hotel-cover", hotel.name_i18n)
         if asset is None:
             return
 
