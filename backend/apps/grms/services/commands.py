@@ -54,12 +54,20 @@ RESULT_FAILED = "failed"
 RESULT_ACCEPTED = "accepted"  # сцены: подтверждать нечем
 
 
-def _journal(action: str, *, hotel, payload: dict, room: str = "") -> None:
+def _journal(action: str, *, hotel, payload: dict, room: str = "", element: str = "") -> None:
     """
     Журнал команд — на AuditLog, без своей таблицы.
 
     Он уже тенантный, уже под RLS и уже проиндексирован под «последние по
-    отелю». Диагностика инженера (G6) собирается выборкой по `grms.%`.
+    отелю». Диагностика инженера (§14.3) собирается выборкой по `grms.%`.
+
+    `element` — слуг элемента интерфейса. Он не нужен ни для отправки, ни для
+    подтверждения: адресация идёт устройством и каналом. Он нужен ИНЖЕНЕРУ,
+    которому ТЗ §14.3 обещает «элемент интерфейса» в диагностике, и вывести
+    его задним числом из имени канала нельзя — маппинг живёт в конфигурации и
+    меняется публикацией, так что строка недельной давности разрешилась бы в
+    сегодняшний элемент. Пусто там, где элемента нет по существу: сверка
+    переменных идёт до всякого интерфейса.
 
     Сырой ответ кладём СТРОКОЙ как есть: iRidi собирает его конкатенацией и
     умеет отдать невалидный JSON — в журнале должно лежать то, что реально
@@ -72,12 +80,14 @@ def _journal(action: str, *, hotel, payload: dict, room: str = "") -> None:
             action,
             actor_type=AuditLog.ActorType.SYSTEM,
             object_type="grms.channel",
-            payload={"room": room, **payload},
+            payload={"room": room, "element": element, **payload},
             hotel_id=hotel.pk,
         )
 
 
-def read(hotel, *, device: str, feedback: str, subdevice: str = "", room: str = "") -> adapter.IridiResult:
+def read(
+    hotel, *, device: str, feedback: str, subdevice: str = "", room: str = "", element: str = ""
+) -> adapter.IridiResult:
     """Однократное чтение feedback."""
     request_id = adapter.new_request_id()
     body = adapter.build_read(
@@ -94,6 +104,7 @@ def read(hotel, *, device: str, feedback: str, subdevice: str = "", room: str = 
         "grms.read",
         hotel=hotel,
         room=room,
+        element=element,
         payload={
             "requestID": request_id,
             "device": device,
@@ -291,6 +302,7 @@ def send_command(
     feedback: str = "",
     subdevice: str = "",
     room: str = "",
+    element: str = "",
     confirm_delays=CONFIRM_DELAYS_S,
 ) -> dict:
     """
@@ -329,7 +341,7 @@ def send_command(
 
     if set_result.failed:
         _journal(
-            "grms.command", hotel=hotel, room=room,
+            "grms.command", hotel=hotel, room=room, element=element,
             payload={**base_payload, "result": RESULT_FAILED, "error": set_result.error},
         )
         return {"result": RESULT_FAILED, "error": set_result.error, "value": None}
@@ -338,18 +350,18 @@ def send_command(
     # и есть успех (ТЗ §12) — это не поблажка, а свойство протокола.
     if not feedback:
         _journal(
-            "grms.command", hotel=hotel, room=room,
+            "grms.command", hotel=hotel, room=room, element=element,
             payload={**base_payload, "result": RESULT_ACCEPTED},
         )
         return {"result": RESULT_ACCEPTED, "error": None, "value": None}
 
     confirmed, observed, attempts = _confirm(
         hotel, device=device, feedback=feedback, expected=value,
-        subdevice=subdevice, room=room, delays=confirm_delays,
+        subdevice=subdevice, room=room, element=element, delays=confirm_delays,
     )
 
     _journal(
-        "grms.command", hotel=hotel, room=room,
+        "grms.command", hotel=hotel, room=room, element=element,
         payload={
             **base_payload,
             "result": RESULT_CONFIRMED if confirmed else RESULT_UNCONFIRMED,
@@ -364,12 +376,14 @@ def send_command(
     return {"result": RESULT_UNCONFIRMED, "error": None, "value": observed}
 
 
-def _confirm(hotel, *, device, feedback, expected, subdevice, room, delays):
+def _confirm(hotel, *, device, feedback, expected, subdevice, room, element, delays):
     """Перечитывание с растущей паузой. Досрочный выход при совпадении."""
     observed = None
     for attempt, delay in enumerate(delays, start=1):
         time.sleep(delay)
-        result = read(hotel, device=device, feedback=feedback, subdevice=subdevice, room=room)
+        result = read(
+            hotel, device=device, feedback=feedback, subdevice=subdevice, room=room, element=element
+        )
         if result.failed:
             # Канал пропал или связь отвалилась посреди подтверждения —
             # продолжать перечитывание бессмысленно.

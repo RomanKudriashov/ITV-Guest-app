@@ -401,3 +401,89 @@ export function uploadPlanFrames(
 export function copyPlan(code: string, source: string): Promise<PlanState> {
   return api.post<PlanState>(`/cms/grms/types/${encodeURIComponent(code)}/plan/copy`, { source });
 }
+
+/* ── Диагностика инженера (ТЗ §14.3, §6.8) ─────────────────────────────── */
+
+/**
+ * Строка журнала обмена. Каждое поле здесь ЗАПИСАНО сервером в момент обмена
+ * — кроме `element_kind`, который добывается по слугу из текущей конфигурации
+ * и потому может быть пустым у старых строк.
+ */
+export interface DiagnosticsRow {
+  id: string;
+  at: string;
+  action: string;
+  room: string;
+  element: string;
+  element_kind: string;
+  device: string;
+  command: string;
+  feedback: string;
+  request_id: string;
+  sent: number | string | null;
+  observed: number | string | null;
+  raw_response: string;
+  duration_ms: number | null;
+  result: string;
+  /** Код причины отказа; пусто, если обмен состоялся. */
+  reason: string;
+  /** Та же причина словами ТЗ §6.8. Пусто, если код нам незнаком. */
+  reason_label: string;
+}
+
+export interface DiagnosticsJournal {
+  rows: DiagnosticsRow[];
+  /** Выдача обрезана потолком — инженер смотрит не весь журнал. */
+  truncated: boolean;
+  limit: number;
+}
+
+export interface DiagnosticsFilters {
+  room?: string;
+  element_kind?: string;
+  outcome?: string;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+}
+
+export function fetchDiagnostics(filters: DiagnosticsFilters): Promise<DiagnosticsJournal> {
+  const query: Record<string, string> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== '' && value !== null) query[key] = String(value);
+  }
+  return api.get<DiagnosticsJournal>('/cms/grms/diagnostics', { query });
+}
+
+/** Звено связи. `unknown` — «не знаем», и это не то же самое, что «сломано». */
+export interface LinkPart {
+  state: string;
+}
+
+export interface DiagnosticsLink {
+  connector: LinkPart & {
+    name: string;
+    last_seen_at: string | null;
+    version: string;
+  };
+  iridi_endpoint: LinkPart;
+  state_readable: LinkPart & {
+    reason: string;
+    reason_label: string;
+    at: string | null;
+  };
+  checked_at: string;
+}
+
+export function fetchDiagnosticsLink(): Promise<DiagnosticsLink> {
+  return api.get<DiagnosticsLink>('/cms/grms/diagnostics/link');
+}
+
+export interface DiagnosticsFilterValues {
+  element_kinds: { code: string; title: string }[];
+  outcomes: string[];
+}
+
+export function fetchDiagnosticsFilterValues(): Promise<DiagnosticsFilterValues> {
+  return api.get<DiagnosticsFilterValues>('/cms/grms/diagnostics/filters');
+}

@@ -48,6 +48,9 @@ export const queryKeys = {
   grmsVersions: (code: string) => ['cms', 'grms', 'types', code, 'versions'] as const,
   grmsPlan: (code: string) => ['cms', 'grms', 'types', code, 'plan'] as const,
   grmsAccess: ['cms', 'grms', 'access'] as const,
+  grmsDiagnostics: (slice: string) => ['cms', 'grms', 'diagnostics', slice] as const,
+  grmsDiagnosticsLink: ['cms', 'grms', 'diagnostics', 'link'] as const,
+  grmsDiagnosticsFilters: ['cms', 'grms', 'diagnostics', 'filters'] as const,
   allergens: ['cms', 'allergens'] as const,
   markers: ['cms', 'markers'] as const,
 };

@@ -111,6 +111,15 @@
   "/api/v1/cms/grms/catalog": [
     "GET"
   ],
+  "/api/v1/cms/grms/diagnostics": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/diagnostics/filters": [
+    "GET"
+  ],
+  "/api/v1/cms/grms/diagnostics/link": [
+    "GET"
+  ],
   "/api/v1/cms/grms/import/confirm": [
     "POST"
   ],

@@ -2105,7 +2105,8 @@
       "plan": "Plan",
       "check": "Check",
       "versions": "Versions",
-      "access": "Access"
+      "access": "Access",
+      "diagnostics": "Diagnostics"
     },
     "access": {
       "demoTitle": "Demo entry without a PIN",
@@ -2181,6 +2182,55 @@
       "loadError": "Could not load the plan",
       "noFrame": "There is no plan frame yet — upload a lit frame above.",
       "previewNeedsNight": "The light preview will show the difference once the night frame is ready."
+    },
+    "diagnostics": {
+      "filtersTitle": "Filters",
+      "room": "Room",
+      "elementKind": "Element type",
+      "anyKind": "Any type",
+      "outcome": "Outcome",
+      "anyOutcome": "Any outcome",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "reset": "Reset",
+      "at": "Time",
+      "element": "Element",
+      "device": "iRidi device",
+      "channel": "Command → feedback",
+      "sent": "Sent",
+      "duration": "Duration",
+      "result": "Outcome",
+      "details": "Details",
+      "requestId": "requestID",
+      "observed": "Read back",
+      "reasonCode": "Reason code",
+      "rawResponse": "Response as received",
+      "recheck": "Read again",
+      "recheckImpossible": "Nothing to re-read: the entry has no element or room",
+      "truncated": "Showing the latest {{limit}} entries. Narrow the range or filters to see the rest.",
+      "emptyTitle": "No exchange yet",
+      "emptyHint": "Commands and reads for this hotel will appear here — with the hardware response and the reason for failure.",
+      "link": {
+        "connector": "Connector",
+        "endpoint": "iRidi endpoint",
+        "readable": "State readback"
+      },
+      "states": {
+        "online": "Connected",
+        "offline": "Not connected",
+        "reachable": "Reachable",
+        "unreachable": "Unreachable",
+        "ok": "Readable",
+        "unreadable": "Not readable",
+        "unknown": "No data"
+      },
+      "results": {
+        "confirmed": "Confirmed",
+        "unconfirmed": "Not confirmed",
+        "accepted": "Accepted",
+        "failed": "Failed",
+        "ok": "Read"
+      }
     }
   },
   "cms": {

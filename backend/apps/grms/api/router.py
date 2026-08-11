@@ -13,6 +13,7 @@ from ninja import Router
 
 from .cms import access as cms_access
 from .cms import catalog as cms_catalog
+from .cms import diagnostics as cms_diagnostics
 from .cms import imports as cms_imports
 from .cms import plan as cms_plan
 from .cms import types as cms_types
@@ -27,6 +28,7 @@ cms_router.add_router("", cms_imports.router)
 cms_router.add_router("", cms_types.router)
 cms_router.add_router("", cms_access.router)
 cms_router.add_router("", cms_plan.router)
+cms_router.add_router("", cms_diagnostics.router)
 
 onprem_router = onprem_node.router
 

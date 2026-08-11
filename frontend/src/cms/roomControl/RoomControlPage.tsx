@@ -20,6 +20,7 @@ import { pickTranslated } from '@/utils/translated';
 import { AccessTab } from './AccessTab';
 import { BuilderTab } from './BuilderTab';
 import { CheckTab } from './CheckTab';
+import { DiagnosticsTab } from './DiagnosticsTab';
 import { ImportTab } from './ImportTab';
 import { PlanEditor } from './PlanEditor';
 import { VersionsTab } from './VersionsTab';
@@ -39,9 +40,11 @@ import { VersionsTab } from './VersionsTab';
  * Раздел закрыт модулем `room_control` на каждом эндпоинте: без модуля здесь
  * честная заглушка, а не пустые формы, которые всё равно ответят 403.
  */
-type TabKey = 'import' | 'builder' | 'plan' | 'check' | 'versions' | 'access';
+type TabKey = 'import' | 'builder' | 'plan' | 'check' | 'diagnostics' | 'versions' | 'access';
 
-const TABS: TabKey[] = ['import', 'builder', 'plan', 'check', 'versions', 'access'];
+// Диагностика стоит ПОСЛЕ проверки: сначала прогоняют элемент, потом идут
+// смотреть, что из этого записалось и почему не получилось.
+const TABS: TabKey[] = ['import', 'builder', 'plan', 'check', 'diagnostics', 'versions', 'access'];
 
 export function RoomControlPage() {
   const { t } = useTranslation();
@@ -150,6 +153,7 @@ export function RoomControlPage() {
       {current && tab === 'builder' && <BuilderTab type={current} />}
       {current && tab === 'plan' && <PlanEditor code={current.code} types={list} />}
       {current && tab === 'check' && <CheckTab type={current} />}
+      {current && tab === 'diagnostics' && <DiagnosticsTab type={current} />}
       {current && tab === 'versions' && <VersionsTab type={current} />}
     </Box>
   );

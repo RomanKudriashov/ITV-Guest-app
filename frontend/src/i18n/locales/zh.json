@@ -2100,7 +2100,8 @@
       "plan": "平面",
       "check": "验证",
       "versions": "版本",
-      "access": "访问"
+      "access": "访问",
+      "diagnostics": "诊断"
     },
     "access": {
       "demoTitle": "免 PIN 演示入口",
@@ -2176,6 +2177,55 @@
       "loadError": "无法加载平面",
       "noFrame": "还没有平面图像——请在上方上传亮场图。",
       "previewNeedsNight": "夜景图就绪后，灯光预览才能显示差别。"
+    },
+    "diagnostics": {
+      "filtersTitle": "筛选",
+      "room": "房间",
+      "elementKind": "元素类型",
+      "anyKind": "任意类型",
+      "outcome": "结果",
+      "anyOutcome": "任意结果",
+      "dateFrom": "起始日期",
+      "dateTo": "结束日期",
+      "reset": "重置",
+      "at": "时间",
+      "element": "元素",
+      "device": "iRidi 设备",
+      "channel": "命令 → 反馈",
+      "sent": "已发送",
+      "duration": "耗时",
+      "result": "结果",
+      "details": "详情",
+      "requestId": "requestID",
+      "observed": "读回值",
+      "reasonCode": "原因代码",
+      "rawResponse": "原始响应",
+      "recheck": "重新读取",
+      "recheckImpossible": "无法重读：记录中没有元素或房间",
+      "truncated": "仅显示最近 {{limit}} 条记录。请缩小时间范围或筛选条件以查看其余记录。",
+      "emptyTitle": "尚无交互记录",
+      "emptyHint": "此处将显示本酒店的命令与读取记录 — 包含设备响应和失败原因。",
+      "link": {
+        "connector": "连接器",
+        "endpoint": "iRidi 端点",
+        "readable": "状态读取"
+      },
+      "states": {
+        "online": "已连接",
+        "offline": "未连接",
+        "reachable": "可达",
+        "unreachable": "不可达",
+        "ok": "可读取",
+        "unreadable": "无法读取",
+        "unknown": "无数据"
+      },
+      "results": {
+        "confirmed": "已确认",
+        "unconfirmed": "未确认",
+        "accepted": "已接受",
+        "failed": "失败",
+        "ok": "已读取"
+      }
     }
   },
   "cms": {

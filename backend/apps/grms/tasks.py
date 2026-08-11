@@ -161,6 +161,7 @@ def _execute(hotel, room_id: str, control_id: str, capability: str, value) -> di
         feedback=feedback,
         subdevice=context.payload.get("subdevice") or "",
         room=context.room.number,
+        element=control_id,
     )
 
     # Схлопывание одновременных чтений сбрасывается СРАЗУ после команды: после

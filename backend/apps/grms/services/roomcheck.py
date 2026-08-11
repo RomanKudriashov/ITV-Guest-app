@@ -81,7 +81,11 @@ def check_element(
     before = None
     if variable.feedback:
         before = commands.read(
-            hotel, device=device, feedback=variable.feedback, room=room_number
+            hotel,
+            device=device,
+            feedback=variable.feedback,
+            room=room_number,
+            element=element_slug,
         )
         steps.append(_step("read_before", variable.feedback, before))
 
@@ -103,6 +107,7 @@ def check_element(
         # и «Custom» из примеров ТЗ ломал бы адресацию (прозвон §8.1).
         subdevice=room_type.subdevice or "",
         room=room_number,
+        element=element_slug,
     )
     steps.append(
         {

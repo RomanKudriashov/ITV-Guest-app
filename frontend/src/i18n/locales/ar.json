@@ -2121,7 +2121,8 @@
       "plan": "المخطط",
       "check": "الفحص",
       "versions": "الإصدارات",
-      "access": "الوصول"
+      "access": "الوصول",
+      "diagnostics": "التشخيص"
     },
     "access": {
       "demoTitle": "دخول تجريبي بلا رمز",
@@ -2197,6 +2198,55 @@
       "loadError": "تعذّر تحميل المخطط",
       "noFrame": "لا توجد لقطة للمخطط بعد — ارفع لقطة مضاءة أعلاه.",
       "previewNeedsNight": "ستُظهر معاينة الضوء الفرق حين تجهز لقطة الليل."
+    },
+    "diagnostics": {
+      "filtersTitle": "عوامل التصفية",
+      "room": "الغرفة",
+      "elementKind": "نوع العنصر",
+      "anyKind": "أي نوع",
+      "outcome": "النتيجة",
+      "anyOutcome": "أي نتيجة",
+      "dateFrom": "من",
+      "dateTo": "إلى",
+      "reset": "إعادة تعيين",
+      "at": "الوقت",
+      "element": "العنصر",
+      "device": "جهاز iRidi",
+      "channel": "الأمر ← التغذية الراجعة",
+      "sent": "المُرسَل",
+      "duration": "المدة",
+      "result": "النتيجة",
+      "details": "التفاصيل",
+      "requestId": "requestID",
+      "observed": "المقروء",
+      "reasonCode": "رمز السبب",
+      "rawResponse": "الرد كما ورد",
+      "recheck": "إعادة القراءة",
+      "recheckImpossible": "لا شيء لإعادة قراءته: السجل لا يحتوي على عنصر أو غرفة",
+      "truncated": "يتم عرض آخر {{limit}} سجل. ضيّق النطاق أو عوامل التصفية لرؤية الباقي.",
+      "emptyTitle": "لا يوجد تبادل بعد",
+      "emptyHint": "ستظهر هنا الأوامر والقراءات الخاصة بهذا الفندق — مع رد الجهاز وسبب الفشل.",
+      "link": {
+        "connector": "الموصّل",
+        "endpoint": "نقطة iRidi",
+        "readable": "قراءة الحالات"
+      },
+      "states": {
+        "online": "متصل",
+        "offline": "غير متصل",
+        "reachable": "متاح",
+        "unreachable": "غير متاح",
+        "ok": "تُقرأ",
+        "unreadable": "لا تُقرأ",
+        "unknown": "لا توجد بيانات"
+      },
+      "results": {
+        "confirmed": "مؤكَّد",
+        "unconfirmed": "غير مؤكَّد",
+        "accepted": "مقبول",
+        "failed": "فشل",
+        "ok": "تمت القراءة"
+      }
     }
   },
   "cms": {
