@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any, Iterable
 
@@ -43,6 +44,8 @@ from apps.catalog.models import (
 )
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import BOUNDED_TYPES, FieldType
+
+logger = logging.getLogger(__name__)
 
 # Транслитерация для кодов: slugify выбрасывает кириллицу целиком, и «Горячее»
 # превратилось бы в пустую строку. Коды попадают в URL и в интеграции, поэтому
@@ -223,13 +226,33 @@ def category_tree(
         for category in categories
     }
     roots: list[dict] = []
+    detached: list[str] = []
     for category in categories:
         node = nodes[category.pk]
-        parent = nodes.get(category.parent_id) if category.parent_id else None
-        if parent is None:
+        if not category.parent_id:
             roots.append(node)
-        else:
+            continue
+        parent = nodes.get(category.parent_id)
+        if parent is not None:
             parent["children"].append(node)
+            continue
+        # Родитель ЕСТЬ, но в выборку не попал: он другого типа, другого
+        # сервиса или вне прав управляющего. Втянуть его сюда нельзя — `_scoped`
+        # это граница прав, а не удобства, и подтянутый родитель показал бы
+        # управляющему чужой сервис. Поэтому узел остаётся на верхнем уровне,
+        # но ПОМЕЧЕННЫМ: неполное дерево должно быть видно, а не выглядеть
+        # обычным корнем. Молча повышать до корня — врать о структуре меню.
+        node["detached"] = True
+        detached.append(category.code)
+        roots.append(node)
+
+    if detached:
+        logger.warning(
+            "дерево категорий неполно: родитель вне выборки у %s из %s (%s)",
+            len(detached),
+            len(categories),
+            ", ".join(sorted(detached)[:10]),
+        )
     return roots
 
 

@@ -1,7 +1,9 @@
 """
-Запросы дашборда: читают ТОЛЬКО дневные роллапы (и справочники имён), живые
-заказы не сканируют — кроме drill-down, который по определению показывает
-конкретные заявки.
+Запросы дашборда: читают дневные роллапы (и справочники имён), живые заказы не
+сканируют — кроме drill-down, который по определению показывает конкретные
+заявки. Исключение одно: часовой разрез динамики читает журнал `AnalyticsEvent`,
+потому что суточная строка роллапа часов не содержит; журнал при этом — не
+второй источник правды, а тот же, из которого роллапы и пересчитываются.
 
 Фильтры комбинируются (AND), период сравнивается с предыдущим той же длины,
 сортировка — по любому столбцу таблицы. Группировки по времени — в сутках отеля.
@@ -9,14 +11,17 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date, timedelta
 
 from django.db.models import Sum
 
+from apps.core.errors import ValidationError
 from apps.hotels.models import Hotel
 
 from apps.analytics.models import (
+    AnalyticsEvent,
     ItemDaily,
     ModifierDaily,
     OrderDaily,
@@ -24,6 +29,8 @@ from apps.analytics.models import (
     SessionDaily,
 )
 from apps.analytics.services.scope import Scope, scope_for
+
+logger = logging.getLogger(__name__)
 
 
 # --- Период ----------------------------------------------------------------
@@ -39,20 +46,34 @@ class Period:
         return (self.to - self.frm).days + 1
 
 
+# Пресет → сколько суток назад от сегодняшнего дня отеля.
+_PRESETS = {"today": 0, "week": 6, "month": 29}
+
+
 def resolve_period(params: dict, hotel: Hotel) -> Period:
     preset = params.get("preset")
     today = hotel.local_now().date()
-    if preset == "today":
-        return Period(today, today)
-    if preset == "week":
-        return Period(today - timedelta(days=6), today)
-    if preset == "month":
-        return Period(today - timedelta(days=29), today)
+    if preset:
+        if preset not in _PRESETS:
+            raise ValidationError(
+                f"Неизвестный период «{preset}». Ожидается один из: "
+                + ", ".join(_PRESETS),
+                field="preset",
+                code="bad_preset",
+            )
+        return Period(today - timedelta(days=_PRESETS[preset]), today)
 
-    frm = _parse_date(params.get("date_from")) or (today - timedelta(days=6))
-    to = _parse_date(params.get("date_to")) or today
+    frm = _parse_date(params.get("date_from"), field="date_from") or (today - timedelta(days=6))
+    to = _parse_date(params.get("date_to"), field="date_to") or today
     if to < frm:
-        frm, to = to, frm
+        # Молча менять границы местами нельзя: перепутанный диапазон — опечатка
+        # клиента, а не намерение. Контракт для этой же ситуации уже требует
+        # отказа (hotel-admin-api-contract.md: `from > to` — 422 bad_range).
+        raise ValidationError(
+            f"Начало периода ({frm.isoformat()}) позже конца ({to.isoformat()})",
+            field="date_from",
+            code="bad_range",
+        )
     return Period(frm, to)
 
 
@@ -62,13 +83,24 @@ def previous_period(period: Period) -> Period:
     return Period(prev_to - timedelta(days=length - 1), prev_to)
 
 
-def _parse_date(value):
+def _parse_date(value, *, field: str) -> date | None:
+    """
+    Пусто — параметр не прислали, подставится значение по умолчанию.
+
+    Мусор — ошибка запроса, а не повод взять другой период. Молчаливая подмена
+    отдавала 200 с цифрами за НЕ ТЕ сутки, и заметить это можно было только
+    сверив эхо периода в ответе — то есть почти никогда.
+    """
     if not value:
         return None
     try:
         return date.fromisoformat(str(value)[:10])
     except ValueError:
-        return None
+        raise ValidationError(
+            f"Некорректная дата: «{value}». Ожидается ГГГГ-ММ-ДД",
+            field=field,
+            code="bad_date",
+        ) from None
 
 
 # --- Применение скоупа и фильтров ------------------------------------------
@@ -223,15 +255,47 @@ def summary(hotel: Hotel, user, params: dict) -> dict:
 # --- Динамика --------------------------------------------------------------
 
 
+# Разрезы времени. `hour` считается не из дневных роллапов, а из журнала
+# событий — см. _hourly_points.
+_GRANULARITIES = ("hour", "day", "week")
+
+# Потолок для часового разреза. Часы читаются построчно из журнала, и год в
+# часах — это 8760 столбиков, то есть не график. Месячный пресет (30 суток)
+# помещается целиком.
+HOURLY_MAX_DAYS = 31
+
+
+def _resolve_granularity(params: dict, period: Period) -> str:
+    granularity = params.get("granularity") or "day"
+    if granularity not in _GRANULARITIES:
+        raise ValidationError(
+            f"Неизвестная гранулярность «{granularity}». Ожидается одна из: "
+            + ", ".join(_GRANULARITIES),
+            field="granularity",
+            code="bad_granularity",
+        )
+    if granularity == "hour" and period.days > HOURLY_MAX_DAYS:
+        raise ValidationError(
+            f"Почасовой разрез — не больше {HOURLY_MAX_DAYS} суток за раз, "
+            f"запрошено {period.days}. Возьмите период короче или разрез day/week",
+            field="granularity",
+            code="range_too_large",
+        )
+    return granularity
+
+
 def timeseries(hotel: Hotel, user, params: dict) -> dict:
     scope = scope_for(user)
     period = resolve_period(params, hotel)
+    granularity = _resolve_granularity(params, period)
+    if granularity == "hour":
+        return {"granularity": "hour", "points": _hourly_points(scope, params, period, hotel)}
+
     qs = _order_qs(scope, params, period).values("business_date").annotate(
         orders=Sum("orders_count"), revenue=Sum("revenue_minor"),
         cancelled=Sum("cancelled_count"), completed=Sum("completed_count"),
     )
     by_day = {row["business_date"]: row for row in qs}
-    granularity = params.get("granularity", "day")
 
     points = []
     for bucket, days in _buckets(period, granularity):
@@ -255,9 +319,94 @@ def _buckets(period: Period, granularity: str):
             key = (d - timedelta(days=d.weekday())).isoformat()
             groups.setdefault(key, []).append(d)
         return [(k, v) for k, v in sorted(groups.items())]
-    # hour отдаётся как day для дневных роллапов (почасовой разрез — из drill-down);
-    # день — базовая гранулярность агрегатов.
+    # День — базовая гранулярность агрегатов.
     return [(d.isoformat(), [d]) for d in days]
+
+
+# --- Часовой разрез --------------------------------------------------------
+#
+# Дневные роллапы часов не содержат и содержать не могут: строка `OrderDaily` —
+# это сутки. Поэтому часы считаются из `AnalyticsEvent` — того же журнала, из
+# которого идёт пересчёт роллапов. Второго источника правды не появляется.
+
+
+def _event_qs(scope: Scope, params: dict, period: Period, kinds: tuple[str, ...]):
+    """Журнал за период с теми же скоупом и фильтрами, что и дневные запросы."""
+    qs = AnalyticsEvent.objects.filter(
+        business_date__gte=period.frm, business_date__lte=period.to, kind__in=kinds
+    )
+    if not scope.all_points:
+        qs = qs.filter(dimensions__point_key__in=scope.point_ids or ["__none__"])
+    for key, column in _ORDER_FILTERS.items():
+        value = params.get(key)
+        if value:
+            qs = qs.filter(**{f"dimensions__{column}": value})
+    return qs
+
+
+def _local_hour(hotel: Hotel, moment) -> str:
+    """Час в поясе отеля, без пояса в строке: «2026-07-20T14:00»."""
+    return hotel.to_local(moment).strftime("%Y-%m-%dT%H:00")
+
+
+def _hour_keys(period: Period) -> list[str]:
+    return [
+        f"{(period.frm + timedelta(days=day)).isoformat()}T{hour:02d}:00"
+        for day in range(period.days)
+        for hour in range(24)
+    ]
+
+
+def _hourly_points(scope: Scope, params: dict, period: Period, hotel: Hotel) -> list[dict]:
+    """
+    Динамика по часам суток отеля.
+
+    Час заказа — час его СОЗДАНИЯ, а не час события. Так же устроены сутки:
+    `OrderDaily` относит все меры к дате создания, поэтому заказ, сделанный в
+    23:50 и завершённый в 00:10, целиком лежит в одном дне. Считай мы завершение
+    по времени завершения, часы перестали бы складываться в сутки — а два
+    разреза одного дашборда, дающие разные итоги, хуже отсутствия одного из них.
+    """
+    events = list(
+        _event_qs(scope, params, period, ("order_created", "order_completed", "order_cancelled"))
+        .values("kind", "occurred_at", "order_id", "measures")
+    )
+    created_hour = {
+        event["order_id"]: _local_hour(hotel, event["occurred_at"])
+        for event in events
+        if event["kind"] == "order_created"
+    }
+
+    buckets = {
+        key: {"orders": 0, "revenue_minor": 0, "cancelled": 0, "completed": 0}
+        for key in _hour_keys(period)
+    }
+    orphans = 0
+    for event in events:
+        hour = created_hour.get(event["order_id"])
+        if hour is None:
+            # Завершение без создания в журнале — тот всегда пишется первым,
+            # так что это порча журнала, а не штатный случай. Час такому факту
+            # взять неоткуда; относим к началу его суток, чтобы часы всё равно
+            # сходились с днём, и жалуемся в журнал.
+            hour = f"{event['occurred_at'].date().isoformat()}T00:00"
+            orphans += 1
+        bucket = buckets.get(hour)
+        if bucket is None:
+            continue
+        if event["kind"] == "order_created":
+            bucket["orders"] += 1
+            bucket["revenue_minor"] += int((event["measures"] or {}).get("revenue_minor", 0))
+        elif event["kind"] == "order_completed":
+            bucket["completed"] += 1
+        else:
+            bucket["cancelled"] += 1
+
+    if orphans:
+        logger.warning(
+            "часовой разрез: %s фактов без события создания — журнал неполон", orphans
+        )
+    return [{"bucket": key, **values} for key, values in sorted(buckets.items())]
 
 
 # --- Разбивка --------------------------------------------------------------

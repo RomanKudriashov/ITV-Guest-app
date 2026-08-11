@@ -369,3 +369,157 @@ def test_summary_endpoint_scopes_to_service_manager(cms_manager, cms_line_staff)
     assert [p["code"] for p in scope["points"]] == ["kitchen"]
 
     assert cms_line_staff.get("/api/cms/analytics/summary?preset=month").status_code == 403
+
+
+def test_unparseable_period_is_refused_not_silently_replaced(cms):
+    """
+    Мусор в дате — отказ, а не другой период.
+
+    Раньше неразбираемая дата молча превращалась в «последние 7 дней»: ответ
+    приходил 200, с цифрами за НЕ ТЕ сутки, и единственным следом было эхо
+    периода в теле. Опечатка в отчёте руководству так не ловится.
+    """
+    for params in ("date_from=2026-13-45&date_to=2026-07-20", "date_from=2026-07-20&date_to=вчера"):
+        response = cms.get(f"/api/cms/analytics/summary?{params}")
+        assert response.status_code == 422, (params, response.content)
+        body = response.json()
+        assert body["code"] == "bad_date"
+        assert body["field"] in ("date_from", "date_to")
+
+    # Пустой параметр — это «не прислали», у него по-прежнему есть умолчание.
+    assert cms.get("/api/cms/analytics/summary?date_from=&date_to=").status_code == 200
+
+
+def test_unknown_preset_is_refused(cms):
+    """Неизвестный пресет — тоже отказ: молча отдать неделю значит соврать."""
+    response = cms.get("/api/cms/analytics/summary?preset=quarter")
+    assert response.status_code == 422, response.content
+    assert response.json()["code"] == "bad_preset"
+
+    for preset in ("today", "week", "month"):
+        assert cms.get(f"/api/cms/analytics/summary?preset={preset}").status_code == 200
+
+
+# --- Часовой разрез --------------------------------------------------------
+
+
+def _feed_at(hotel, kind, occurred_at, *, order_id, key, measures=None):
+    """Факт с заданным моментом и заказом — часовому разрезу нужно и то, и другое."""
+    collector.record(
+        hotel.pk,
+        {
+            "dedupe_key": key,
+            "kind": kind,
+            "name": kind,
+            "occurred_at": occurred_at,
+            # Сутки заказа — сутки СОЗДАНИЯ, так их проставляет сборщик и для
+            # завершения тоже (collector.build_completed).
+            "business_date": date(2026, 7, 20),
+            "order_id": order_id,
+            "dimensions": {"offering_type": "product", "point_key": ""},
+            "measures": measures or {},
+        },
+    )
+
+
+def test_hourly_granularity_buckets_by_hotel_hour(crystal, cms):
+    """
+    Часы считаются по-настоящему, в поясе отеля, а не выдаются за сутки.
+
+    Отель в Europe/Moscow (UTC+3): 09:00 UTC — это 12:00 у отеля.
+    """
+    import uuid
+
+    first, second = uuid.uuid4(), uuid.uuid4()
+    _feed_at(crystal, "order_created", datetime(2026, 7, 20, 9, 0, tzinfo=dt_timezone.utc),
+             order_id=first, key="h-1", measures={"revenue_minor": 700})
+    _feed_at(crystal, "order_created", datetime(2026, 7, 20, 20, 0, tzinfo=dt_timezone.utc),
+             order_id=second, key="h-2", measures={"revenue_minor": 300})
+
+    response = cms.get(
+        "/api/cms/analytics/timeseries?date_from=2026-07-20&date_to=2026-07-20&granularity=hour"
+    )
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert body["granularity"] == "hour"
+    assert len(body["points"]) == 24
+
+    by_bucket = {point["bucket"]: point for point in body["points"]}
+    assert by_bucket["2026-07-20T12:00"]["orders"] == 1
+    assert by_bucket["2026-07-20T12:00"]["revenue_minor"] == 700
+    assert by_bucket["2026-07-20T23:00"]["orders"] == 1
+    assert by_bucket["2026-07-20T23:00"]["revenue_minor"] == 300
+    # Остальные часы существуют и пусты — график не должен рваться.
+    assert by_bucket["2026-07-20T13:00"]["orders"] == 0
+
+
+def test_hourly_sums_match_the_day(crystal, cms):
+    """
+    Часы обязаны складываться в сутки.
+
+    Завершение относится к часу СОЗДАНИЯ заказа, как сутки относят его к дате
+    создания. Иначе заказ, сделанный в 12:00 и завершённый в 21:00, попал бы в
+    разные столбики двух разрезов одного дашборда.
+    """
+    import uuid
+
+    order = uuid.uuid4()
+    _feed_at(crystal, "order_created", datetime(2026, 7, 20, 9, 0, tzinfo=dt_timezone.utc),
+             order_id=order, key="s-1", measures={"revenue_minor": 500})
+    _feed_at(crystal, "order_completed", datetime(2026, 7, 20, 18, 0, tzinfo=dt_timezone.utc),
+             order_id=order, key="s-2")
+
+    window = "date_from=2026-07-20&date_to=2026-07-20"
+    hourly = cms.get(f"/api/cms/analytics/timeseries?{window}&granularity=hour").json()["points"]
+    daily = cms.get(f"/api/cms/analytics/timeseries?{window}&granularity=day").json()["points"]
+
+    for measure in ("orders", "revenue_minor", "completed", "cancelled"):
+        assert sum(point[measure] for point in hourly) == sum(point[measure] for point in daily), measure
+
+    by_bucket = {point["bucket"]: point for point in hourly}
+    # Завершение — в 12:00 (час создания), а не в 21:00 (час завершения).
+    assert by_bucket["2026-07-20T12:00"]["completed"] == 1
+    assert by_bucket["2026-07-20T21:00"]["completed"] == 0
+
+
+def test_unknown_granularity_is_refused(cms):
+    """Мусор в разрезе — отказ. Раньше считалось посуточно, а в эхо уходило «quarter»."""
+    response = cms.get("/api/cms/analytics/timeseries?preset=week&granularity=quarter")
+    assert response.status_code == 422, response.content
+    assert response.json()["code"] == "bad_granularity"
+
+    for granularity in ("hour", "day", "week"):
+        assert cms.get(
+            f"/api/cms/analytics/timeseries?preset=today&granularity={granularity}"
+        ).status_code == 200, granularity
+
+
+def test_hourly_range_is_bounded(cms):
+    """Год в часах — 8760 столбиков, это не график. Отказ с внятной причиной."""
+    response = cms.get(
+        "/api/cms/analytics/timeseries?date_from=2025-07-20&date_to=2026-07-20&granularity=hour"
+    )
+    assert response.status_code == 422, response.content
+    assert response.json()["code"] == "range_too_large"
+    # День/неделя за тот же период по-прежнему считаются.
+    assert cms.get(
+        "/api/cms/analytics/timeseries?date_from=2025-07-20&date_to=2026-07-20&granularity=week"
+    ).status_code == 200
+
+
+def test_reversed_range_is_refused(cms):
+    """
+    Перепутанные границы — опечатка, а не намерение.
+
+    Раньше они молча менялись местами, хотя контракт для этой же ситуации уже
+    требовал отказа (hotel-admin-api-contract.md: `from > to` — 422 bad_range).
+    """
+    response = cms.get("/api/cms/analytics/summary?date_from=2026-07-25&date_to=2026-07-20")
+    assert response.status_code == 422, response.content
+    body = response.json()
+    assert body["code"] == "bad_range"
+    assert body["field"] == "date_from"
+
+    # Границы в правильном порядке и совпадающие границы — по-прежнему норма.
+    assert cms.get("/api/cms/analytics/summary?date_from=2026-07-20&date_to=2026-07-25").status_code == 200
+    assert cms.get("/api/cms/analytics/summary?date_from=2026-07-20&date_to=2026-07-20").status_code == 200

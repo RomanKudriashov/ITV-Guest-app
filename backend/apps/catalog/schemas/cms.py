@@ -68,6 +68,10 @@ class CategoryOut(Schema):
 
 class CategoryTreeOut(CategoryOut):
     children: list[dict[str, Any]] = []
+    # Узел лежит на верхнем уровне не потому, что он корень, а потому, что его
+    # родитель в выборку не попал (другой тип, другой сервис, вне прав).
+    # Дерево неполно, и клиент обязан иметь возможность это показать.
+    detached: bool = False
 
 class ItemIn(Schema):
     category_id: str

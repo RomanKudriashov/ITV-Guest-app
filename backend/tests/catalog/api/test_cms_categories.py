@@ -121,3 +121,33 @@ def test_delete_empty_category_without_cascade(cms):
     created = cms.post("/api/cms/categories", {"title": {"en": "Empty"}}).json()
     assert cms.delete(f"/api/cms/categories/{created['id']}").status_code == 200
     assert created["id"] not in [n["id"] for n in cms.get("/api/cms/categories").json()]
+
+
+def test_category_with_invisible_parent_is_marked_not_silently_promoted(cms):
+    """
+    Родитель вне выборки — узел помечен, а не выдан за обычный корень.
+
+    Состояние достижимо через публичный API: `reorder` переносит категорию к
+    любому существующему родителю, тип при этом не сверяется. После переноса
+    товарной категории под заявочную дерево `?type=product` родителя уже не
+    видит. Раньше ребёнок молча всплывал корнем: дерево выглядело целым, а CMS
+    показывала структуру меню, которой на самом деле нет.
+    """
+    products = cms.get("/api/cms/categories?type=product").json()
+    services = cms.get("/api/cms/categories?type=service_request").json()
+    salads = next(node for node in products if node["code"] == "salads")
+    transfer = next(node for node in services if node["code"] == "transfer")
+
+    moved = cms.post(
+        "/api/cms/categories/reorder",
+        {"items": [{"id": salads["id"], "parent_id": transfer["id"], "sort_order": 0}]},
+    )
+    assert moved.status_code == 200, moved.content
+
+    tree = cms.get("/api/cms/categories?type=product").json()
+    orphan = next(node for node in tree if node["id"] == salads["id"])
+    assert orphan["detached"] is True
+    assert orphan["parent_id"] == transfer["id"]
+
+    # Метка не размазывается: настоящие корни остаются обычными.
+    assert all(not node["detached"] for node in tree if node["id"] != salads["id"])

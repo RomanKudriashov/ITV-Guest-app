@@ -143,17 +143,3 @@ def all_nodes() -> list[dict]:
             OnPremNode.all_objects.using("platform").select_related("hotel").order_by("hotel__name", "name")
         )
     return [serialize_node(node, node.hotel) for node in nodes]
-
-
-def nodes_required_for(hotel: Hotel) -> bool:
-    """
-    Нужен ли отелю узел вообще. Нужен ровно тогда, когда включён GRMS или PMS:
-    обе системы живут внутри объекта, и без коробки на его сервере они не
-    работают. Показывать реестр узлов отелю без этих модулей — предлагать
-    решение задачи, которой у него нет.
-    """
-    from apps.hotels.models import HotelModule
-    from apps.hotels.module_registry import enabled_module_codes
-
-    enabled = enabled_module_codes(hotel)
-    return bool(enabled & {HotelModule.Code.ROOM_CONTROL.value, HotelModule.Code.PMS.value})
