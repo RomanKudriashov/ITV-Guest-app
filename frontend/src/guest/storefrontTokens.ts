@@ -934,9 +934,3 @@ export const roomCard = {
 
 /** Размеры плиток bento. Крупная занимает две строки, широкая — две колонки. */
 export type TileSize = 'S' | 'M' | 'L';
-
-export const tileSpan: Record<TileSize, { gridRow?: string; gridColumn?: string }> = {
-  S: {},
-  M: { gridColumn: 'span 2' },
-  L: { gridRow: 'span 2' },
-};

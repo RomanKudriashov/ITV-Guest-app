@@ -43,10 +43,6 @@ const CODE_KEYS: Record<string, string> = {
   PIN_THROTTLED: 'guest.roomControl.pinThrottled',
 };
 
-export function isNetworkError(error: unknown): boolean {
-  return error instanceof NetworkError || (error instanceof ApiError && error.status >= 500);
-}
-
 export function errorMessage(error: unknown, t: TFunction): string {
   if (error instanceof NetworkError) return t('guest.errors.offline');
   if (error instanceof ApiError) {

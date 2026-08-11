@@ -26,13 +26,6 @@ export function findCategory(tree: Category[], id: string): Category | null {
   return null;
 }
 
-/** Siblings of a node (the children array it belongs to). */
-export function siblingsOf(tree: Category[], parentId: string | null): Category[] {
-  if (parentId === null) return tree;
-  const parent = findCategory(tree, parentId);
-  return parent?.children ?? [];
-}
-
 /** Ids of a node and everything below it — used to forbid cyclic re-parenting. */
 export function subtreeIds(category: Category): string[] {
   const ids = [category.id];

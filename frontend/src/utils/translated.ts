@@ -39,10 +39,3 @@ export function compactTranslated(value: Translated): Translated {
   return result;
 }
 
-export function setTranslated(
-  value: Translated,
-  language: string,
-  text: string,
-): Translated {
-  return { ...value, [language]: text };
-}

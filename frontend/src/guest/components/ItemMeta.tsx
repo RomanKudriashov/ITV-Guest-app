@@ -17,25 +17,6 @@ import {
 import type { ItemCharacteristic, ItemDetail, ItemFacet } from '../api/types';
 import { itemCard, surfaceRadius } from '../storefrontTokens';
 
-/** Dietary / kitchen flags. Unknown codes fall back to the raw code. */
-export function FlagChips({ flags, size = 'small' }: { flags: string[]; size?: 'small' | 'medium' }) {
-  const { t } = useTranslation();
-  if (!flags?.length) return null;
-  return (
-    <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
-      {flags.map((flag) => (
-        <Chip
-          key={flag}
-          size={size}
-          variant="outlined"
-          label={t(`guest.flags.${flag}`, { defaultValue: flag })}
-          sx={{ height: 22, fontSize: '0.7rem' }}
-        />
-      ))}
-    </Stack>
-  );
-}
-
 /**
  * Allergens («contains» — amber pills) and dietary markers («suitable» — green
  * pills), reference desktop §3. Localized titles come from the payload. Renders

@@ -391,11 +391,6 @@ DEFAULT_SLA = {
 }
 
 
-def _service_for(point: ExecutionPoint) -> Service | None:
-    """Сервис-контейнер точки (1:1)."""
-    return Service.objects.filter(execution_point=point).first()
-
-
 def _resolve_asset(asset_id) -> MediaAsset | None:
     if not asset_id:
         return None

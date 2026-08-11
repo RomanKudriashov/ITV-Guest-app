@@ -2,7 +2,7 @@
 
 import type { OfferingType } from '@/offerings/behaviour';
 import { ApiError } from '@/api/client';
-import { guestApi, guestTokenStorage } from './client';
+import { guestApi } from './client';
 import type {
   CartQuote,
   ChatSnapshot,
@@ -194,6 +194,3 @@ export function submitReview(
   );
 }
 
-export function hasGuestToken(): boolean {
-  return Boolean(guestTokenStorage.get());
-}
