@@ -37,12 +37,27 @@
 а в журнале они ложатся строками AuditLog, которые пометить нечем, не
 трогая продуктовый код ради демо-данных. Управление номером проверяется
 руками на экране номера, а не генератором.
+
+ОГРАНИЧЕНИЕ, о котором надо знать заранее: `create_order` проверяет
+доступность позиции по ТЕКУЩЕМУ времени, а не по дате, которой мы датируем
+заказ задним числом. Это правильно для живого заказа и неудобно для
+истории: барная карта в девять утра закрыта, и заказ по ней будет отвергнут
+законно. Поэтому генератор отсеивает недоступное сразу и говорит, сколько
+позиций выпало. Практический вывод: чтобы в историю попала и барная карта,
+прогоняйте генератор вечером — либо прогоните дважды, утром и вечером,
+подняв `--orders` вторым прогоном.
 """
 
 from __future__ import annotations
 
 import random
+import uuid as _uuid_mod
 from datetime import timedelta
+
+
+def _uuid(value):
+    """Строковый идентификатор строки заказа → UUID, каким его знает словарь."""
+    return value if isinstance(value, _uuid_mod.UUID) else _uuid_mod.UUID(str(value))
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -292,6 +307,7 @@ class Command(BaseCommand):
         from apps.accounts.models import StaffAssignment
         from apps.catalog.models import Item
         from apps.catalog.offerings import OfferingType
+        from apps.catalog.services.availability import item_availability
         from apps.hotels.models import Room, Service
 
         rooms = list(Room.objects.all())
@@ -301,12 +317,28 @@ class Command(BaseCommand):
         items = list(
             Item.objects.filter(is_active=True)
             .exclude(type=OfferingType.INFO)
-            .select_related("category", "category__service")
+            .select_related("category", "category__service", "schedule", "category__schedule")
             .prefetch_related("modifier_groups__options", "request_fields")
         )
-        products = [i for i in items if i.type == OfferingType.PRODUCT]
-        requests = [i for i in items if i.type == OfferingType.SERVICE_REQUEST]
-        slots = [i for i in items if i.type == OfferingType.SLOT]
+
+        # Доступность `create_order` проверяет по ТЕКУЩЕМУ времени, а не по
+        # дате, которой мы датируем заказ задним числом. Барная карта в девять
+        # утра закрыта, и заказ по ней будет отвергнут законно — сколько бы
+        # раз мы его ни пробовали. Поэтому отсеиваем недоступное СРАЗУ, а не
+        # жжём на нём попытки: иначе цель по числу заказов не достигается, а
+        # в выводе копится «заказ пропущен».
+        available, closed = [], []
+        for item in items:
+            (available if item_availability(item).is_available else closed).append(item)
+        if closed:
+            self.stdout.write(
+                f"  {hotel.subdomain}: сейчас недоступно {len(closed)} позиций "
+                f"(вне расписания или стоп-лист) — в историю они не попадут"
+            )
+
+        products = [i for i in available if i.type == OfferingType.PRODUCT]
+        requests = [i for i in available if i.type == OfferingType.SERVICE_REQUEST]
+        slots = [i for i in available if i.type == OfferingType.SLOT]
         if not (products or requests):
             return None
 
@@ -337,7 +369,31 @@ class Command(BaseCommand):
             "aggregator": aggregator,
             "aggregated": aggregated_products,
             "staff": staff_by_point,
+            "hours": self._open_hours(hotel, available),
         }
+
+    def _open_hours(self, hotel, items) -> dict:
+        """
+        Часы, в которые позицию РЕАЛЬНО можно заказать, по её расписанию.
+
+        Нужно, чтобы история была правдоподобной: «Завтрак в номер» в 23:00 и
+        коктейль в 8 утра выдают генератор с первого взгляда. Расписание
+        опрашивается по одному разу на позицию и час — сотня позиций это
+        одна выборка и немного арифметики, зато дальше час заказа выбирается
+        из тех, что позиция допускает.
+        """
+        from apps.catalog.services.availability import item_availability
+
+        day = hotel.local_now().replace(minute=30, second=0, microsecond=0)
+        mask: dict = {}
+        for item in items:
+            hours = [
+                hour for hour in HOUR_WEIGHTS
+                if item_availability(item, day.replace(hour=hour)).is_available
+            ]
+            # Расписания нет или оно круглосуточное — берём весь профиль суток.
+            mask[item.pk] = hours or list(HOUR_WEIGHTS)
+        return mask
 
     def _make_orders(self, hotel, plan, rng, *, start_index, count, days) -> dict:
         from apps.orders.models import Order, OrderStatusChange
@@ -347,16 +403,28 @@ class Command(BaseCommand):
 
         stats = {"orders": 0, "fanned": 0, "cancelled": 0, "stale": 0, "reviews": 0, "skipped": 0}
         now = hotel.local_now()
-        hours = list(HOUR_WEIGHTS)
-        hour_weights = list(HOUR_WEIGHTS.values())
 
         for offset in range(count):
             index = start_index + offset
+
+            kind, lines, service_code = self._pick_lines(plan, rng)
+            if not lines:
+                stats["skipped"] += 1
+                continue
+
+            # Час выбираем ПОСЛЕ позиций и только из тех, что они допускают:
+            # иначе в истории заводится коктейль в восемь утра, и первое, что
+            # видно на дашборде, — что данные ненастоящие.
+            allowed = set(HOUR_WEIGHTS)
+            for line in lines:
+                allowed &= set(plan["hours"].get(_uuid(line.item_id), HOUR_WEIGHTS))
+            allowed = sorted(allowed) or list(HOUR_WEIGHTS)
+            hour = rng.choices(allowed, weights=[HOUR_WEIGHTS[h] for h in allowed])[0]
+
             # Дни ближе к сегодня нагружены сильнее: у живого отеля история
             # не ровная, а с наклоном — и медленные места аналитики видно
             # именно на плотном хвосте.
             days_ago = min(days - 1, int(abs(rng.gauss(0, days / 2.2))))
-            hour = rng.choices(hours, weights=hour_weights)[0]
             created = (now - timedelta(days=days_ago)).replace(
                 hour=hour, minute=rng.randrange(60), second=rng.randrange(60), microsecond=0
             )
@@ -365,11 +433,6 @@ class Command(BaseCommand):
 
             room = rng.choice(plan["rooms"])
             session = self._session(hotel, room, created, index, rng)
-
-            kind, lines, service_code = self._pick_lines(plan, rng)
-            if not lines:
-                stats["skipped"] += 1
-                continue
 
             try:
                 with transaction.atomic():
