@@ -19,11 +19,13 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.core.context import tenant_context
+from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
 from apps.grms.consumers import group_name
 from apps.grms.transport.emulator import serve_in_thread
 from apps.hotels.models import OnPremNode
 from apps.hotels.services.onprem import register_node
 from itv_connector.executor import Endpoint, execute
+from tests.conftest import host_for
 
 
 class FakeConnectorRuntime:
@@ -94,3 +96,43 @@ def wire(hotel, *, latency_range=(0.35, 0.55)):
         httpd.shutdown()
 
     return {"hotel": hotel, "emulator": emulator, "connector": runtime, "port": port}, finish
+
+
+# --- Гостевой клиент --------------------------------------------------------
+# Живёт здесь, а не в conftest: conftest умеет отдавать ФИКСТУРЫ, а обычные
+# функции из него по имени не импортируются. Перенос их туда стоил падения
+# `NameError: _session` в четырёх тестах — ровно потому, что вызов остался,
+# а определение уехало.
+
+class GuestClient:
+    """Тонкая обёртка: хост отеля и гостевой токен подставляются сами."""
+
+    def __init__(self, client, hotel, token: str):
+        self.client = client
+        self.hotel = hotel
+        self.token = token
+
+    def _kwargs(self) -> dict:
+        return {
+            "HTTP_HOST": host_for(self.hotel),
+            "HTTP_AUTHORIZATION": f"Bearer {self.token}",
+        }
+
+    def get(self, path: str):
+        return self.client.get(path, **self._kwargs())
+
+    def post(self, path: str, data=None):
+        return self.client.post(
+            path, data=data or {}, content_type="application/json", **self._kwargs()
+        )
+
+
+def _session(client, hotel, room: str = DEMO_ROOM) -> str:
+    response = client.post(
+        "/api/v1/guest/session",
+        data={"room_number": room, "language": "ru"},
+        content_type="application/json",
+        HTTP_HOST=host_for(hotel),
+    )
+    assert response.status_code == 200, response.content
+    return response.json()["token"]

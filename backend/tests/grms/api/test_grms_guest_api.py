@@ -27,98 +27,12 @@ from apps.grms.services import catalog, commands, inflight
 from apps.grms.management.commands.seed_grms_demo import DEMO_PIN, DEMO_ROOM
 from apps.hotels.models import HotelModule, OnPremNode
 from tests.conftest import host_for
-from tests.grms.grms_harness import wire
+from tests.grms.grms_harness import GuestClient, _session
 
 pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 
 
 # --- Оснастка ---------------------------------------------------------------
-
-
-class GuestClient:
-    """Тонкая обёртка: хост отеля и гостевой токен подставляются сами."""
-
-    def __init__(self, client, hotel, token: str):
-        self.client = client
-        self.hotel = hotel
-        self.token = token
-
-    def _kwargs(self) -> dict:
-        return {
-            "HTTP_HOST": host_for(self.hotel),
-            "HTTP_AUTHORIZATION": f"Bearer {self.token}",
-        }
-
-    def get(self, path: str):
-        return self.client.get(path, **self._kwargs())
-
-    def post(self, path: str, data=None):
-        return self.client.post(
-            path, data=data or {}, content_type="application/json", **self._kwargs()
-        )
-
-
-def _session(client, hotel, room: str = DEMO_ROOM) -> str:
-    response = client.post(
-        "/api/v1/guest/session",
-        data={"room_number": room, "language": "ru"},
-        content_type="application/json",
-        HTTP_HOST=host_for(hotel),
-    )
-    assert response.status_code == 200, response.content
-    return response.json()["token"]
-
-
-@pytest.fixture
-def stand(crystal, settings):
-    """
-    Живой стенд: демо-конфигурация + эмулятор с отложенным feedback + коннектор.
-
-    Демо-конфигурация сеется ЗДЕСЬ, а не приезжает из общего сида отеля.
-    Первая версия добавляла её всем — и чужие тесты начали падать на «сколько
-    всего типов у отеля», то есть на вопросе про импорт, а не про GRMS. База,
-    от которой отсчитывают все остальные, не должна двигаться ради одного
-    прогона.
-    """
-    from django.core.management import call_command
-
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    call_command("seed_grms_demo", subdomain=crystal.subdomain, demo_entry=True, verbosity=0)
-    context, finish = wire(crystal)
-    yield context
-    finish()
-
-
-@pytest.fixture
-def guest(client, crystal, stand):
-    return GuestClient(client, crystal, _session(client, crystal))
-
-
-@pytest.fixture
-def queued(monkeypatch, settings):
-    """
-    Задача НЕ исполняется в запросе — она копится, как в проде.
-
-    Без этой фикстуры доказать асинхронность нечем: в eager-режиме Celery
-    выполняет задачу внутри вызова `.delay()`, то есть ровно внутри HTTP-запроса
-    гостя, и тест «ответ пришёл быстро» мерил бы не то, что нужно. Здесь вызов
-    ЗАПОМИНАЕТСЯ, и тест сам решает, когда его исполнить.
-    """
-    from apps.grms import tasks
-
-    settings.CELERY_TASK_ALWAYS_EAGER = False
-    calls: list[dict] = []
-    monkeypatch.setattr(tasks.execute_room_command, "delay", lambda **kw: calls.append(kw))
-
-    class Queue:
-        def __init__(self, recorded):
-            self.calls = recorded
-
-        def run_all(self):
-            while self.calls:
-                tasks.execute_room_command(**self.calls.pop(0))
-
-    return Queue(calls)
 
 
 def _demo_entry(hotel, enabled: bool) -> None:

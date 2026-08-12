@@ -240,13 +240,14 @@ def build_state(hotel, session, *, language: str = "") -> dict:
     if reason:
         return _unavailable(session, reason, language=language, allowed=allowed, context=context)
 
-    readings, dead = _read_state(context)
-    if dead:
-        # Все каналы ответили булевым `false`: на стенде без поднятого обмена с
-        # GRMS так выглядят ВСЕ теги. «Всё выключено» и «нам никто не отвечает»
-        # в этой картине неразличимы, и показать первое значит соврать.
+    readings, read_reason = _read_state(context)
+    if read_reason:
+        # Либо все каналы ответили булевым `false` (на стенде без поднятого
+        # обмена с GRMS так выглядят ВСЕ теги: «всё выключено» и «нам никто не
+        # отвечает» в этой картине неразличимы, и показать первое значит
+        # соврать), либо не ответил ни один.
         return _unavailable(
-            session, REASON_FEEDBACK_DEAD, language=language, allowed=allowed, context=context
+            session, read_reason, language=language, allowed=allowed, context=context
         )
 
     return {
@@ -291,9 +292,26 @@ def _link_reason(hotel) -> str:
     return ""
 
 
-def _read_state(context: RoomContext) -> tuple[dict, bool]:
+def _read_state(context: RoomContext) -> tuple[dict, str]:
     """
-    Прочитать все feedback'и типа. Возвращает ({feedback: результат}, «мёртв ли стенд»).
+    Прочитать все feedback'и типа.
+
+    Возвращает ({feedback: результат}, причина недоступности) — пустая строка
+    означает «состояние прочитано».
+
+    Различаются ТРИ исхода, а не два. Раньше их было два, и третий — самый
+    частый в аварии — молча попадал в «всё хорошо»:
+
+    * прочитали → пусто;
+    * ответили, но все ответы — булев `false` → FEEDBACK_DEAD;
+    * НЕ ОТВЕТИЛ НИ ОДИН → STATE_UNREADABLE.
+
+    Прежний код считал `dead = bool(successful) and all(...)`. Когда связи
+    нет, `successful` пуст, `dead` выходил False — и функция возвращала
+    «состояние прочитано» на пачке сплошных таймаутов. Экран номера показывал
+    гостю рабочую комнату с шестью зонами и нулём значений, а до порога
+    heartbeat (три минуты) поймать это было больше нечем: узел всё ещё
+    числится живым, потому что три минуты назад он и был живым.
     """
     feedbacks = sorted(
         {
@@ -304,7 +322,7 @@ def _read_state(context: RoomContext) -> tuple[dict, bool]:
         }
     )
     if not feedbacks:
-        return {}, False
+        return {}, ""
 
     results = commands.read_many(
         context.hotel,
@@ -314,8 +332,18 @@ def _read_state(context: RoomContext) -> tuple[dict, bool]:
         room=context.room.number,
     )
     successful = [result for result in results.values() if result.ok]
-    dead = bool(successful) and all(result.is_dead_sentinel for result in successful)
-    return results, dead
+
+    # То, что мы сейчас выяснили опытом, кладём в общий признак живости:
+    # heartbeat приходит раз в минуту, а мы только что попробовали НА САМОМ
+    # ДЕЛЕ. Следующий опрос благодаря этому ответит сразу, а не отстоит
+    # заново все таймауты.
+    liveness.observe(context.hotel.pk, bool(successful))
+
+    if not successful:
+        return results, REASON_UNREADABLE
+    if all(result.is_dead_sentinel for result in successful):
+        return results, REASON_FEEDBACK_DEAD
+    return results, ""
 
 
 def _unavailable(session, reason: str, *, language: str, allowed: bool, context=None) -> dict:
@@ -325,6 +353,13 @@ def _unavailable(session, reason: str, *, language: str, allowed: bool, context=
     Зоны отдаются ПУСТЫМИ, а не с последними известными значениями: элемент без
     связи не имеет состояния, и «показать что было» здесь означает показать
     неправду.
+
+    `can_command` здесь ВСЕГДА False, хотя `allowed` говорит о другом. Это
+    разные вопросы: `allowed` — «доверяем ли мы этому гостю» (он в номере,
+    подтвердил PIN), а `can_command` — «можно ли сейчас отдать команду».
+    Недоступному оборудованию нельзя отдать команду никому, сколь угодно
+    доверенному. Раньше сюда протекал `allowed`, и снимок сам себе противоречил:
+    «управление недоступно, зон нет — и да, командовать можно».
     """
     logger.info("управление номером недоступно: причина=%s", reason)
     return {
@@ -332,7 +367,7 @@ def _unavailable(session, reason: str, *, language: str, allowed: bool, context=
         "message": translate(_UNAVAILABLE_TEXT, language),
         "checked_at": _now_iso(),
         "trust": session.trust if session else "anonymous",
-        "can_command": allowed,
+        "can_command": False,
         "zones": [],
         **_plan(context),
     }

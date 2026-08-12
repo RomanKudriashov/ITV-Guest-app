@@ -54,6 +54,27 @@ def remember_endpoints(hotel_id, endpoints: dict | None) -> None:
         cache.set(_key(hotel_id), payload, ENDPOINTS_TTL_S)
 
 
+def observe(hotel_id, reachable: bool, name: str = adapter.ENDPOINT_IRIDI) -> None:
+    """
+    Записать то, что выяснила НАСТОЯЩАЯ попытка чтения.
+
+    Heartbeat приходит раз в минуту, а «узел жив» держится три минуты — между
+    падением коннектора и истечением этого порога есть окно до трёх минут,
+    в котором опрос уже не проходит, а признака недоступности ещё нет
+    ниоткуда. Единственный, кто в этот момент знает правду, — тот, кто только
+    что попытался прочитать и не смог.
+
+    Пишем в тот же ключ и с тем же TTL, что и heartbeat: он остаётся
+    источником истины, а это лишь заполняет паузу между его сообщениями.
+    Заодно снимается плата за таймаут — следующий опрос отвечает сразу, не
+    дожидаясь молчания по каждому каналу.
+    """
+    known = cache.get(_key(hotel_id))
+    payload = dict(known) if isinstance(known, dict) else {}
+    payload[name] = bool(reachable)
+    cache.set(_key(hotel_id), payload, ENDPOINTS_TTL_S)
+
+
 def endpoint_reachable(hotel_id, name: str = adapter.ENDPOINT_IRIDI) -> bool | None:
     """
     True / False / None, где None — «узел про этот endpoint ещё не сообщал».
