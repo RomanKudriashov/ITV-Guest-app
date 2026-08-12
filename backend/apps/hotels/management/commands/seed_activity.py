@@ -395,11 +395,11 @@ class Command(BaseCommand):
                     self.stdout.write(f"  {hotel.subdomain}: заказ пропущен ({exc})")
                 continue
 
-            family = [order, *order.children.all()]
-            if len(family) > 1:
+            children = list(order.children.all())
+            if children:
                 stats["fanned"] += 1
 
-            for member in family:
+            for member in [order, *children]:
                 Order.objects.filter(pk=member.pk).update(created_at=created)
                 OrderStatusChange.objects.filter(
                     order_id=member.pk, from_status__isnull=True
@@ -413,7 +413,10 @@ class Command(BaseCommand):
             else:
                 outcome = "done"
 
-            for member in family:
+            # У разъехавшегося заказа статус родителя — СВОД по детям, его
+            # пересчитывает сам сервис при каждом сдвиге ребёнка. Двигать
+            # родителя руками значит спорить с этим расчётом.
+            for member in (children or [order]):
                 self._run_lifecycle(
                     hotel, member, plan, rng, created=created, outcome=outcome,
                     change_status=change_status, status_flows=status_flows,
