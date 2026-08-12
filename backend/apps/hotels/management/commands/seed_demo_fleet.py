@@ -209,11 +209,22 @@ AZURE = {
             ("azure-beach", ("Пляж", "Beach"), ("Полотенца у бассейна с 8:00 до 20:00.", "Towels at the pool from 8:00 to 20:00.")),
         ],
     },
+    # Управляющий и линейный на каждое заведение — как у «Кристалла». До этого
+    # у флота были ТОЛЬКО управляющие, и роль линейного сотрудника (трекер без
+    # доступа в CMS) на azure и lumen проверить было не на ком.
     "staff": [
-        ("chef@azure.local", "Шеф «Марины»", "marina"),
-        ("barman@azure.local", "Бармен «Лагуны»", "laguna-bar"),
-        ("spa@azure.local", "Мастер СПА", "thalasso"),
-        ("concierge@azure.local", "Консьерж", "azure-concierge"),
+        ("manager.restaurant@azure.local", "Управляющий «Мариной»", "marina", "manager"),
+        ("manager.bar@azure.local", "Управляющая «Лагуной»", "laguna-bar", "manager"),
+        ("manager.spa@azure.local", "Управляющая «Талассо»", "thalasso", "manager"),
+        ("manager.concierge@azure.local", "Старший консьерж", "azure-concierge", "manager"),
+        ("manager.housekeeping@azure.local", "Управляющая хозслужбой", "azure-housekeeping", "manager"),
+        ("manager.reception@azure.local", "Старший ресепшен", "reception", "manager"),
+        ("chef@azure.local", "Шеф «Марины»", "marina", "lead"),
+        ("barman@azure.local", "Бармен «Лагуны»", "laguna-bar", "member"),
+        ("spa@azure.local", "Мастер СПА", "thalasso", "lead"),
+        ("concierge@azure.local", "Консьерж", "azure-concierge", "member"),
+        ("maid@azure.local", "Горничная", "azure-housekeeping", "member"),
+        ("reception@azure.local", "Ресепшен", "reception", "member"),
     ],
     "showcase_threshold": 8,
 }
@@ -308,9 +319,19 @@ LUMEN = {
             ("lumen-wifi", ("Wi-Fi", "Wi-Fi"), ("Сеть LUMEN, пароль на стойке.", "Network LUMEN, password at the desk.")),
         ],
     },
+    # Горничной и СПА-мастера тут нет намеренно: у бутика нет ни хозслужбы, ни
+    # СПА как точки исполнения (см. venues выше), а заводить сотрудника без
+    # точки нельзя — привязка и ЕСТЬ роль. Полный набор ролей смотреть на
+    # «Кристалле» и «Азуре».
     "staff": [
-        ("chef@lumen.local", "Шеф бистро", "bistro"),
-        ("barman@lumen.local", "Сомелье", "wine-bar"),
+        ("manager.restaurant@lumen.local", "Управляющий бистро", "bistro", "manager"),
+        ("manager.bar@lumen.local", "Управляющая винным баром", "wine-bar", "manager"),
+        ("manager.concierge@lumen.local", "Старший консьерж", "lumen-concierge", "manager"),
+        ("manager.reception@lumen.local", "Старший ресепшен", "reception", "manager"),
+        ("chef@lumen.local", "Шеф бистро", "bistro", "lead"),
+        ("barman@lumen.local", "Сомелье", "wine-bar", "member"),
+        ("concierge@lumen.local", "Консьерж", "lumen-concierge", "member"),
+        ("reception@lumen.local", "Ресепшен", "reception", "member"),
     ],
     # Бутик маленький: порог ниже, и на главной рестораны сворачиваются в
     # группу. Это тоже часть демонстрации — витрина подстраивается под масштаб.
@@ -375,7 +396,16 @@ class Command(BaseCommand):
             # Демо-стенду кадр нужен, иначе в CMS остаётся серый прямоугольник.
             self._reception_cover()
 
-            self._staff(hotel, profile["staff"], services)
+            # Ресепшен заводит provision_hotel, в профиле его нет — но
+            # сотрудника на него посадить надо, а `_staff` молча пропускает
+            # заведение, которого нет в словаре. Отдельной копией, а не в
+            # `services`: тот идёт ещё и в витрину, где ресепшену не место.
+            staff_services = dict(services)
+            reception = Service.objects.filter(code="reception").first()
+            if reception is not None:
+                staff_services["reception"] = reception
+
+            self._staff(hotel, profile["staff"], staff_services)
             self._showcase(profile, services)
             self._cover(hotel, profile["cover"])
             self._fill_translations()
@@ -831,12 +861,18 @@ class Command(BaseCommand):
 
     def _staff(self, hotel: Hotel, spec, services: dict[str, Service]) -> None:
         """
-        По управляющему на каждое заведение отеля.
+        Управляющий и линейные на каждое заведение отеля.
 
         `hotel` пользователю проставляется явно: без него строка не проходит
         политику RLS — база не даёт завести сотрудника «ничей».
+
+        Уровень привязки ДОВОДИТСЯ до указанного в наборе, а не ставится только
+        при создании. Прошлый набор заводил всех управляющими, и после его
+        правки на поднятом стенде `chef@azure.local` так и остался бы
+        управляющим: get_or_create с defaults существующую строку не трогает,
+        и расширение набора ролей ничего бы не изменило.
         """
-        for email, name, service_code in spec:
+        for email, name, service_code, level in spec:
             service = services.get(service_code)
             if service is None:
                 continue
@@ -850,11 +886,14 @@ class Command(BaseCommand):
                     language="ru",
                     is_staff_member=True,
                 )
-            StaffAssignment.objects.get_or_create(
+            assignment, created = StaffAssignment.objects.get_or_create(
                 user=user,
                 execution_point=service.execution_point,
-                defaults={"level": StaffAssignment.Level.MANAGER},
+                defaults={"level": level},
             )
+            if not created and assignment.level != level:
+                assignment.level = level
+                assignment.save(update_fields=["level", "updated_at"])
 
     def _showcase(self, profile: dict, services: dict[str, Service]) -> None:
         hotel = Hotel.objects.get(subdomain=profile["subdomain"])

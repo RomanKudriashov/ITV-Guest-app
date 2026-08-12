@@ -351,12 +351,18 @@ class Command(BaseCommand):
              StaffAssignment.Level.MANAGER),
             ("manager.housekeeping", "Галина, управляющая хозслужбой", "housekeeping",
              StaffAssignment.Level.MANAGER),
+            ("manager.reception", "Дарья, старший ресепшен", "reception",
+             StaffAssignment.Level.MANAGER),
             # Линейный персонал — по нему проверяется, что в CMS его не пускают.
             ("chef", "Пётр, повар", "kitchen", StaffAssignment.Level.LEAD),
             ("barman", "Никита, бармен", "bar", StaffAssignment.Level.MEMBER),
             ("concierge", "Анна, консьерж", "concierge", StaffAssignment.Level.MEMBER),
             ("maid", "Мария, горничная", "housekeeping", StaffAssignment.Level.MEMBER),
             ("spa", "Ирина, СПА-мастер", "spa", StaffAssignment.Level.LEAD),
+            # Ресепшен принимает заявки, которые не привязаны к заведению
+            # (разбудить, вызвать такси, поздний выезд), и без него в наборе
+            # ролей зияла дыра: точка исполнения есть, сотрудника на ней нет.
+            ("reception", "Игорь, ресепшен", "reception", StaffAssignment.Level.MEMBER),
         ]
         created_users: dict[str, User] = {}
         for prefix, full_name, point_code, level in specs:
