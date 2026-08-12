@@ -327,6 +327,13 @@ class Command(BaseCommand):
                 },
             )
             points[code] = point
+
+        # Ресепшен заводит `provision_hotel` — это каркас отеля, и в наборе
+        # выше его нет. Сотрудника на него посадить надо, а без этой строки
+        # набор ролей падал бы по KeyError.
+        reception = ExecutionPoint.objects.filter(code="reception").first()
+        if reception is not None:
+            points["reception"] = reception
         return points
 
     def _seed_staff(self, hotel: Hotel, points: dict[str, ExecutionPoint]) -> dict[str, User]:
@@ -366,6 +373,12 @@ class Command(BaseCommand):
         ]
         created_users: dict[str, User] = {}
         for prefix, full_name, point_code, level in specs:
+            point = points.get(point_code)
+            if point is None:
+                # Точки нет — сотрудника завести не на что: привязка и ЕСТЬ
+                # роль. Пропускаем, а не падаем: набор ролей не должен быть
+                # причиной, по которой не поднимается отель.
+                continue
             email = f"{prefix}@{hotel.subdomain}.local"
             user = User.objects.filter(email=email).first()
             if user is None:
@@ -377,11 +390,16 @@ class Command(BaseCommand):
                     language="ru",
                     is_staff_member=True,
                 )
-            StaffAssignment.objects.get_or_create(
+            assignment, created = StaffAssignment.objects.get_or_create(
                 user=user,
-                execution_point=points[point_code],
+                execution_point=point,
                 defaults={"level": level},
             )
+            # Уровень ДОВОДИМ до набора, а не ставим только при создании:
+            # иначе правка набора на поднятом стенде ничего бы не меняла.
+            if not created and assignment.level != level:
+                assignment.level = level
+                assignment.save(update_fields=["level", "updated_at"])
             created_users[prefix] = user
         return created_users
 
