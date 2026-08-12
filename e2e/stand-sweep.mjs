@@ -159,8 +159,10 @@ for (const theme of ['dark', 'light']) {
     await page.goto(`${PLATFORM}/admin`, { waitUntil: 'domcontentloaded' })
     await setTheme(page, theme)
     await page.goto(`${PLATFORM}/admin`, { waitUntil: 'domcontentloaded' })
-    await page.locator('input[type="email"], input[name="email"]').first().fill(OWNER.email)
-    await page.locator('input[type="password"]').first().fill(OWNER.password)
+    // У консоли поле почты — обычный TextField без type="email": ищем по
+    // testid, как это делают остальные спеки.
+    await page.getByTestId('admin-login-email').fill(OWNER.email)
+    await page.getByTestId('admin-login-password').fill(OWNER.password)
     await page.locator('button[type="submit"]').first().click()
     await page.waitForTimeout(3500)
     await notBlank(page, `${tag} консоль`)
