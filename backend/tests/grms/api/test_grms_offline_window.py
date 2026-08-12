@@ -21,11 +21,13 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from django.utils import timezone
 
 from apps.core.context import tenant_context
-from apps.grms.services import liveness
+from apps.grms.services import commands, liveness
 from apps.hotels.models import OnPremNode
 
 pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
@@ -38,18 +40,23 @@ def _connector_dies(stand, hotel):
     Останавливаем ТРАНСПОРТ, а `last_seen_at` намеренно оставляем сегодняшним:
     в этом и весь смысл проверки.
 
-    Кэш чистим целиком. В нём две вещи, и обе мешают: признак живости (его
-    наполнил heartbeat, которого больше не будет) и схлопывание одинаковых
-    чтений на 1,5 секунды — без сброса второй опрос в тесте вернул бы пачку,
-    прочитанную ДО падения, и проверка доказывала бы обратное тому, что
-    написано в её имени.
-    """
-    from django.core.cache import cache
+    Мешают две вещи, и обе снимаются ТОЧЕЧНО, без `cache.clear()`.
 
+    Чистить кэш целиком здесь нельзя, хотя соблазн есть: у Redis это FLUSHDB,
+    а базу `/5` делят все четыре процесса прогона (см. `_clean_cache` в
+    tests/conftest.py — она отделяет тесты от dev-стенда, но не воркеры друг
+    от друга). Один такой вызов посреди теста роняет соседа в другом
+    процессе: так у меня развалился `test_wrong_pin_counts_down_and_then_blocks`,
+    которому вымыло счётчики попыток на середине.
+
+    Поэтому: признак живости убираем по ключу, а схлопывание одинаковых
+    чтений (1,5 с) пережидаем — оно живёт по TTL и чужих ключей не трогает.
+    """
     stand["connector"].stop()
     with tenant_context(hotel):
         OnPremNode.objects.all().update(last_seen_at=timezone.now())
-    cache.clear()
+    liveness.forget(hotel.pk)
+    time.sleep(commands.READ_COALESCE_S + 0.1)
 
 
 def test_dead_transport_with_a_fresh_heartbeat_is_unavailable(guest, crystal, stand):
@@ -135,21 +142,20 @@ def test_recovery_returns_the_room(guest, crystal, monkeypatch):
     нечего. Подмена снимается — и это ровно то восстановление, которое надо
     проверить.
     """
-    from django.core.cache import cache
-
-    from apps.grms.services import commands
     from apps.grms.transport import adapter
 
     def all_reads_fail(hotel, *, device, feedbacks, **kwargs):
         return {fb: adapter.IridiResult(ok=False, error="timeout") for fb in feedbacks}
 
+    # Подмена идёт МИМО схлопывания (оно внутри `read_many`), поэтому здесь
+    # достаточно снять признак живости — пережидать нечего.
     monkeypatch.setattr(commands, "read_many", all_reads_fail)
-    cache.clear()
+    liveness.forget(crystal.pk)
     assert guest.get("/api/v1/guest/room/state").json()["availability"] == "unavailable"
     assert liveness.endpoint_reachable(crystal.pk) is False
 
     monkeypatch.undo()
-    cache.clear()
+    liveness.forget(crystal.pk)
 
     payload = guest.get("/api/v1/guest/room/state").json()
     assert payload["availability"] == "online"

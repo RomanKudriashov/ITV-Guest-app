@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -1072,13 +1073,23 @@ def _eta_minutes(order: Order) -> int | None:
 
     Ноль означает «срок вышел», а не «ещё двадцать минут»: обратный отсчёт
     обязан дойти до нуля и там остаться, иначе это не отсчёт.
+
+    Округление ВВЕРХ, и это не косметика. Вниз оно давало «через 24 минуты»
+    при обещанных двадцати пяти: на сериализацию ответа уходит доля секунды,
+    остаётся 24 минуты 59 секунд, а целочисленное деление режет их до 24.
+    Число оказывалось на минуту меньше обещания с первой же секунды.
+
+    Вверх — первое показанное совпадает с обещанием, дальше уменьшается раз
+    в минуту, и «1» держится до самого срока, а не пропадает за минуту до
+    него. Ноль наступает ровно тогда, когда срок вышел.
     """
     if order.status.is_terminal:
         return None
     serve_by_at = _serve_by_at(order)
     if serve_by_at is None:
         return None
-    return max(int((serve_by_at - timezone.now()).total_seconds() // 60), 0)
+    remaining = (serve_by_at - timezone.now()).total_seconds()
+    return max(math.ceil(remaining / 60), 0)
 
 
 def _serve_by(order: Order, hotel) -> str | None:

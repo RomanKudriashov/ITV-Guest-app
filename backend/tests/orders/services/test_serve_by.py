@@ -79,14 +79,23 @@ def test_old_order_is_overdue_not_promised_twenty_more_minutes(crystal):
 
 
 def test_eta_counts_down_as_the_order_ages(crystal):
-    """Осталось ждать тем меньше, чем дольше заказ висит."""
+    """
+    Осталось ждать тем меньше, чем дольше заказ висит.
+
+    Значения ТОЧНЫЕ, а не диапазоны. Округление вверх делает их
+    детерминированными: пока с момента отсчёта не прошло полной минуты,
+    `ceil` возвращает одно и то же число, сколько бы долей секунды ни съел
+    прогон. Диапазон здесь прятал бы ровно ту ошибку, ради которой файл и
+    написан, — с округлением вниз «63 <= eta <= 65» проглатывало 64 вместо
+    обещанных 65.
+    """
     with tenant_context(crystal):
         # prep=60 → обещано 65 минут от создания.
         fresh, _, _promise = _aged_order(minutes_ago=0, prep=60)
-        assert 63 <= fresh_eta(fresh) <= 65
+        assert fresh_eta(fresh) == 65
 
         half, _, _promise = _aged_order(minutes_ago=30, prep=60)
-        assert 33 <= fresh_eta(half) <= 35
+        assert fresh_eta(half) == 35
 
 
 def fresh_eta(order) -> int:
@@ -159,7 +168,10 @@ def test_board_and_promise_count_from_the_same_zero(crystal):
         order, created, promise = _aged_order(minutes_ago=120, prep=20)
         card = serialize_tracker_order(get_order(order.pk))
 
-        assert 119 <= card["waiting_minutes"] <= 121
+        # `waiting_minutes` — ПРОШЕДШЕЕ время, и оно округляется ВНИЗ: на
+        # 59-й секунде ждали ноль полных минут, а не одну. Для прошедшего это
+        # верно, в отличие от остатка. Отсюда ровно 120, а не диапазон.
+        assert card["waiting_minutes"] == 120
         assert card["is_overdue"] is True
         serve_by = timezone.datetime.fromisoformat(card["serve_by"])
         assert serve_by == created + promise
