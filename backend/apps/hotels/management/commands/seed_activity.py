@@ -308,6 +308,7 @@ class Command(BaseCommand):
         from apps.catalog.models import Item
         from apps.catalog.offerings import OfferingType
         from apps.catalog.services.availability import item_availability
+        from apps.catalog.services.inclusions import borrowed_blocks, resolve_item_executor
         from apps.hotels.models import Room, Service
 
         rooms = list(Room.objects.all())
@@ -342,18 +343,35 @@ class Command(BaseCommand):
         if not (products or requests):
             return None
 
-        # Сервис-агрегатор (рум-сервис): его позиции заимствованы у разных
-        # заведений, и заказ из них РАЗЪЕЗЖАЕТСЯ фан-аутом. Ради этого пути
-        # генератор и нужен — под нагрузкой он иначе не проверен.
+        # Сервис-агрегатор (рум-сервис): часть его позиций ЗАИМСТВОВАНА у
+        # других заведений, и заказ из них РАЗЪЕЗЖАЕТСЯ фан-аутом. Ради этого
+        # пути генератор и нужен — под нагрузкой он иначе не проверен.
         aggregator = (
-            Service.objects.filter(inclusions__is_active=True).distinct().first()
+            Service.objects.filter(inclusions__is_active=True)
+            .select_related("execution_point")
+            .distinct()
+            .first()
         )
-        aggregated_products: list = []
+        # Позиции агрегатора, разложенные по ЭФФЕКТИВНОМУ исполнителю. Своих
+        # позиций для фан-аута мало — он и случается только тогда, когда в
+        # корзине сошлись исполнители из РАЗНЫХ групп, поэтому группировать
+        # надо по тому же расчёту, каким это делает создание заказа.
+        by_executor: dict = {}
         if aggregator is not None:
-            aggregated_products = [
-                i for i in products
+            own = {
+                i.pk for i in products
                 if i.category and i.category.service_id == aggregator.pk
-            ]
+            }
+            borrowed_ids = set()
+            for category, inclusion, hidden in borrowed_blocks(aggregator):
+                for item in products:
+                    if item.category_id == category.pk and str(item.pk) not in hidden:
+                        borrowed_ids.add(item.pk)
+            for item in products:
+                if item.pk not in own and item.pk not in borrowed_ids:
+                    continue
+                ep_id, _ = resolve_item_executor(aggregator, item)
+                by_executor.setdefault(ep_id, []).append(item)
 
         staff_by_point: dict = {}
         for assignment in StaffAssignment.objects.filter(
@@ -367,7 +385,9 @@ class Command(BaseCommand):
             "requests": requests,
             "slots": slots,
             "aggregator": aggregator,
-            "aggregated": aggregated_products,
+            # Фан-аут возможен, только если исполнителей у агрегатора больше
+            # одного: иначе корзина резолвится в одну точку и не разъезжается.
+            "aggregated": by_executor if len(by_executor) > 1 else {},
             "staff": staff_by_point,
             "hours": self._open_hours(hotel, available),
         }
@@ -542,10 +562,17 @@ class Command(BaseCommand):
 
         roll = rng.random()
 
-        # Агрегат рум-сервиса: несколько позиций от РАЗНЫХ исполнителей, чтобы
-        # заказ разъехался. Меньше двух позиций — фан-аута не будет.
-        if plan["aggregator"] is not None and len(plan["aggregated"]) >= 2 and roll < 0.22:
-            picked = rng.sample(plan["aggregated"], min(len(plan["aggregated"]), rng.randrange(2, 5)))
+        # Агрегат рум-сервиса: берём по позиции минимум из ДВУХ групп
+        # исполнителей — иначе корзина резолвится в одну точку, и разъезда,
+        # ради которого всё затевалось, не происходит.
+        if plan["aggregator"] is not None and plan["aggregated"] and roll < 0.22:
+            groups = rng.sample(
+                list(plan["aggregated"].values()),
+                min(len(plan["aggregated"]), rng.choices([2, 3], weights=[70, 30])[0]),
+            )
+            picked = []
+            for group in groups:
+                picked += rng.sample(group, min(len(group), rng.choices([1, 2], weights=[75, 25])[0]))
             return "aggregate", [
                 OrderLineInput(
                     item_id=str(item.pk),
