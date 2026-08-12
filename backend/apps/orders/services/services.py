@@ -1021,36 +1021,72 @@ def _event_payload(order: Order) -> dict[str, Any]:
     }
 
 
-def _eta_minutes(order: Order) -> int | None:
+def _prep_minutes(order: Order) -> int:
     """
+    Сколько заказ готовится ПО СОСТАВУ. Длительность, а не момент.
+
     Грубая оценка: настоящая приедет вместе с трекером и статистикой SLA.
-    Для заказа ко времени показываем, сколько осталось до него, — это честнее,
-    чем средняя длительность приготовления.
     """
-    if order.status.is_terminal:
-        return None
-    if order.requested_time:
-        minutes = int((order.requested_time - timezone.now()).total_seconds() // 60)
-        return max(minutes, 0)
-    # Время подачи из позиций: дольше всех готовящаяся + буфер доставки.
     prep = [
         line.item.prep_minutes
         for line in _order_lines(order)
         if line.item and line.item.prep_minutes
     ]
     if prep:
+        # Дольше всех готовящаяся позиция + буфер доставки.
         return max(prep) + DEFAULT_ETA_MINUTES.get(order.delivery_mode, 25) - 25 + 5
     return DEFAULT_ETA_MINUTES.get(order.delivery_mode, 25)
 
 
+def _serve_by_at(order: Order):
+    """
+    Момент, к которому обещана подача. ОТСЧЁТ ОТ ЗАКАЗА, а не от «сейчас».
+
+    Раньше здесь было `timezone.now() + eta`, и это был не срок, а бегущая
+    полоска: обещание уезжало вперёд при каждом опросе доски. Заказ, принятый
+    16 июня, показывал «подадут сегодня в 12:15», и через десять минут — «в
+    12:25». Просроченным он не становился никогда, а гость, прождавший час,
+    всё это время читал «осталось двадцать минут».
+
+    Не воспроизводилось нигде, кроме стенда с настоящей историей: локально и в
+    E2E все заказы моложе минуты, и `now + eta` неотличимо от
+    `created_at + eta`.
+
+    Точка отсчёта — СОЗДАНИЕ, а не приёмка. Это то обещание, которое гость
+    получил на оформлении, и оно не должно тихо съезжать оттого, что кухня
+    приняла заказ позже. Тем же моментом считаются `waiting_minutes` и
+    `is_overdue` на доске (services/tracker.py) — иначе на одной карточке
+    тикали бы двое часов с разным нулём.
+    """
+    # Заказ ко времени: момент назван гостем, считать нечего.
+    if order.requested_time:
+        return order.requested_time
+    if order.status.is_terminal:
+        return None
+    return order.created_at + timedelta(minutes=_prep_minutes(order))
+
+
+def _eta_minutes(order: Order) -> int | None:
+    """
+    Сколько ОСТАЛОСЬ ждать, от «сейчас» до обещанного момента.
+
+    Ноль означает «срок вышел», а не «ещё двадцать минут»: обратный отсчёт
+    обязан дойти до нуля и там остаться, иначе это не отсчёт.
+    """
+    if order.status.is_terminal:
+        return None
+    serve_by_at = _serve_by_at(order)
+    if serve_by_at is None:
+        return None
+    return max(int((serve_by_at - timezone.now()).total_seconds() // 60), 0)
+
+
 def _serve_by(order: Order, hotel) -> str | None:
     """Ожидаемое время подачи как момент («подадут к 20:40»), в TZ отеля."""
-    if order.requested_time:
-        return hotel.to_local(order.requested_time).isoformat()
-    eta = _eta_minutes(order)
-    if eta is None:
+    serve_by_at = _serve_by_at(order)
+    if serve_by_at is None:
         return None
-    return hotel.to_local(timezone.now() + timedelta(minutes=eta)).isoformat()
+    return hotel.to_local(serve_by_at).isoformat()
 
 
 def _status_payload(status: StatusDefinition, language: str | None) -> dict[str, Any]:
@@ -1153,7 +1189,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
             "tip_minor": order.tip_minor,
             "total_minor": order.total,
         },
-        # Ожидаемое время подачи: now + ETA, в TZ отеля. null — если ETA нет.
+        # Ожидаемое время подачи: created_at + ETA, в TZ отеля. null — если срока нет.
         "serve_by": _serve_by(order, hotel),
         # Непусто только у заявки-услуги. Трекер и витрина рисуют этим блоком
         # тело карточки вместо списка позиций — но объект заказа один.
