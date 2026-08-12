@@ -96,6 +96,11 @@ services:
       # поднимается с рабочим экраном номера, но без плана.
       # Только чтение и только на стенде: на объекте демо-рендеров нет.
       - ./docs/design/grms-concept:/docs/design/grms-concept:ro
+      # Кэш демо-снимков. В образе он живёт внутри /app и умирает с каждой
+      # пересборкой, а из контейнера этот CDN недоступен (IPv6 у хоста есть,
+      # у docker-сети нет), поэтому заново кэш не наберётся — витрина молча
+      # остаётся без фотографий. Каталог наполняется НА ХОСТЕ.
+      - ./backend/apps/.seed_photos:/app/apps/.seed_photos
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -116,6 +121,8 @@ services:
       # поднимается с рабочим экраном номера, но без плана.
       # Только чтение и только на стенде: на объекте демо-рендеров нет.
       - ./docs/design/grms-concept:/docs/design/grms-concept:ro
+      # См. backend: кэш снимков живёт на хосте, иначе пропадает при пересборке.
+      - ./backend/apps/.seed_photos:/app/apps/.seed_photos
     depends_on:
       backend: {condition: service_healthy}
     networks: [internal]
