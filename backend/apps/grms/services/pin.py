@@ -21,6 +21,7 @@ PIN не попадает ни в журнал, ни в payload аудита, н
 from __future__ import annotations
 
 import logging
+import math
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.cache import cache
@@ -84,6 +85,23 @@ def _blocked_for(bucket: dict) -> int:
     return int(remaining) if remaining > 0 else 0
 
 
+def minutes_to_wait(seconds: int) -> int:
+    """
+    Секунды блокировки → минуты в сообщении гостю, ВВЕРХ.
+
+    Вниз оно отправляло гостя пробовать слишком рано: при остатке 90 секунд
+    сообщение говорило «через 1 мин», гость ждал минуту, пробовал и снова
+    получал отказ — то есть текст обещал то, чего не выполнял. Вверх — сказали
+    «2 мин», через две действительно пустит.
+
+    Прежний `max(1, ...)` был заплаткой ровно на этот случай: он прикрывал
+    остаток меньше минуты, который вниз давал ноль («попробуйте через 0 мин»).
+    С потолком он не нужен — у любого положительного остатка результат не
+    меньше единицы.
+    """
+    return math.ceil(seconds / 60)
+
+
 def _register_failure(kind: str, ident, limit: int) -> None:
     bucket = _read(kind, ident)
     bucket["fails"] = int(bucket.get("fails") or 0) + 1
@@ -129,7 +147,7 @@ def verify(hotel, session, *, pin: str) -> dict:
     if retry_after:
         _journal(hotel, session, ok=False, note="throttled")
         raise PinThrottled(
-            f"Слишком много попыток. Попробуйте через {max(1, retry_after // 60)} мин",
+            f"Слишком много попыток. Попробуйте через {minutes_to_wait(retry_after)} мин",
             retry_after_s=retry_after,
         )
 
@@ -150,7 +168,7 @@ def verify(hotel, session, *, pin: str) -> dict:
         )
         if retry_after:
             raise PinThrottled(
-                f"Слишком много попыток. Попробуйте через {max(1, retry_after // 60)} мин",
+                f"Слишком много попыток. Попробуйте через {minutes_to_wait(retry_after)} мин",
                 retry_after_s=retry_after,
             )
         raise PinInvalid("Код не подошёл", attempts_left=attempts_left(session, session.room_id))
