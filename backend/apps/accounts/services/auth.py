@@ -96,9 +96,32 @@ def authenticate_staff(token: str) -> User | None:
     if user is None or str(user.hotel_id) != str(hotel_id):
         return None
 
+    # ОТОЗВАННЫЙ ГРАНТ ЛОМАЕТ УЖЕ ВЫДАННЫЙ ТОКЕН. Проверка стоит здесь,
+    # потому что здесь проходит КАЖДЫЙ запрос персонала и CMS. Проверять
+    # только при выдаче значило бы, что «оборвать сессию» — это обещание на
+    # будущее: подписанный JWT живёт своей жизнью до истечения срока, и
+    # оборвать его нечем.
+    if claims.get("imp") and not _impersonation_is_live(claims.get("gid")):
+        logger.warning("Отклонён токен отозванной или истёкшей сессии поддержки")
+        return None
+
     user.impersonated_by = claims.get("imp")
     user.token_claims = claims
     return user
+
+
+def _impersonation_is_live(grant_id) -> bool:
+    """
+    Грант ещё действует. Отсутствие идентификатора — тоже отказ: токен с
+    клеймом `imp`, но без гранта выдан до этой проверки, и подтвердить его
+    нечем.
+    """
+    if not grant_id:
+        return False
+    from apps.accounts.models import ImpersonationGrant
+
+    grant = ImpersonationGrant.all_objects.filter(pk=grant_id).first()
+    return grant is not None and grant.is_valid
 
 
 class StaffAuth(HttpBearer):

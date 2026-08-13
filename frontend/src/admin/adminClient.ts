@@ -400,13 +400,35 @@ export interface AuditRow {
 }
 
 export interface EnterResult {
-  access: string;
+  // Токена здесь НЕТ: наружу уходит одноразовый код, который CMS меняет на
+  // токен со своей стороны. Токен в адресной строке пережил бы сессию —
+  // он остаётся в истории браузера, в `Referer` и в логах прокси.
+  code: string;
+  code_expires_at: string;
+  grant_id: string;
   expires_at: string;
   ttl_minutes: number;
   as_user: string;
   cms_url: string;
   subdomain: string;
 }
+
+export interface ImpersonationRow {
+  id: string;
+  hotel_id: string;
+  hotel: string;
+  subdomain: string;
+  actor: string;
+  as_user: string;
+  reason: string;
+  started_at: string;
+  expires_at: string;
+  entered: boolean;
+}
+
+export const getImpersonations = () => request<ImpersonationRow[]>('/impersonations');
+export const revokeImpersonation = (id: string) =>
+  request<{ grant_id: string; revoked_at: string }>(`/impersonations/${id}/revoke`, 'POST');
 
 export const getTariffs = () => request<TariffRow[]>('/tariffs');
 export const getNodes = () => request<NodeRow[]>('/nodes');

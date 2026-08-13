@@ -103,8 +103,18 @@ export interface SchedulePayload {
   intervals: ScheduleInterval[];
 }
 
+/** Чужая сессия поддержки, идущая в этом отеле прямо сейчас. */
+export interface SupportSession {
+  actor: string;
+  reason: string;
+  started_at: string;
+  expires_at: string;
+}
+
 export interface Bootstrap {
   hotel: HotelInfo;
+  /** null — никого нет. Показывается ВСЕМ пользователям CMS отеля. */
+  support_session: SupportSession | null;
   languages: LanguageOption[];
   flags: TaxonomyOption[];
   allergens: TaxonomyOption[];

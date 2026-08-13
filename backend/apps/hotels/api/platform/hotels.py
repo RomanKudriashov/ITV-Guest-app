@@ -350,13 +350,48 @@ def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
         payload={"reason": reason, "ttl_minutes": ttl},
     )
     return {
-        "access": result["access"],
+        # ОДНОРАЗОВЫЙ КОД, а не токен. Консоль передаёт его в хэш-фрагменте
+        # адреса, который браузер вообще не отправляет на сервер: ни в логах
+        # прокси, ни в `Referer` его не будет. CMS меняет код на токен
+        # запросом с телом и тут же вычищает фрагмент из истории.
+        "code": result["code"],
+        "code_expires_at": result["code_expires_at"].isoformat(),
+        "grant_id": result["grant_id"],
         "expires_at": result["expires_at"].isoformat(),
         "ttl_minutes": ttl,
         "as_user": target.email,
         "cms_url": hotel.public_guest_url("/cms"),
         "subdomain": hotel.subdomain,
     }
+
+
+@router.get("/impersonations", summary="Активные сессии поддержки")
+@requires(READ)
+def list_impersonations(request: HttpRequest):
+    """Кто сейчас внутри отелей: без списка отзывать нечего выбирать."""
+    from apps.hotels.services.platform.console import active_impersonations
+
+    return active_impersonations()
+
+
+@router.post("/impersonations/{grant_id}/revoke", summary="Оборвать сессию поддержки")
+@requires(WRITE)
+def revoke_impersonation_session(request: HttpRequest, grant_id: str):
+    """
+    Оборвать может вошедший или владелец платформы (проверка в сервисе:
+    «свой грант» знает он, а не право ручки).
+
+    Администратор отеля — не может: он сессию видит баннером, но не рвёт.
+    Иначе разбор инцидента блокируется изнутри разбираемого отеля.
+    """
+    from apps.accounts.services.services import revoke_impersonation
+    from apps.core.errors import PermissionDenied as Denied
+
+    try:
+        grant = revoke_impersonation(grant_id, actor=request.user)
+    except Exception as exc:  # AuthenticationFailed из сервиса
+        raise Denied(str(exc), code="revoke_denied") from exc
+    return {"grant_id": str(grant.pk), "revoked_at": grant.revoked_at.isoformat()}
 
 
 # --- Использование против лимитов, активность, тариф -----------------------

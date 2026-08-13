@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from django.http import HttpRequest
 from ninja import Router
-from apps.accounts.schemas.cms import LoginIn, LoginOut, MeOut
+from apps.accounts.schemas.cms import LoginIn, LoginOut, MeOut, SupportExchangeIn
 
 from apps.accounts.services.auth import StaffAuth
 from apps.accounts.models import User
@@ -35,6 +35,29 @@ def serialize_user(user: User) -> dict:
         # трекер и не рисовал ему разделы, которые всё равно ответят 403.
         **access_for(user).payload(),
     }
+
+
+@router.post(
+    "/auth/support-exchange",
+    response={200: dict, 401: dict},
+    auth=None,
+    summary="Обменять одноразовый код входа поддержки на токен",
+)
+def support_exchange(request: HttpRequest, payload: SupportExchangeIn):
+    """
+    Обмен идёт СО СТОРОНЫ ОТЕЛЯ и по его поддомену: тенант уже выбран адресом,
+    и код чужого отеля здесь не сработает.
+
+    `auth=None` — у вошедшего ещё нет токена, он его как раз и получает.
+    Секретом служит сам код: одноразовый, живёт минуту, гасится обменом.
+    """
+    from apps.accounts.services.services import exchange_impersonation_code
+    from apps.hotels.services.hotel import current_hotel
+
+    try:
+        return 200, exchange_impersonation_code(payload.code, hotel=current_hotel())
+    except AuthenticationFailed as exc:
+        return 401, {"detail": str(exc), "code": "support_code_invalid"}
 
 
 @router.post("/auth/login", response={200: LoginOut, 401: dict}, auth=None, summary="Вход")

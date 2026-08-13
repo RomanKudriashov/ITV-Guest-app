@@ -58,6 +58,10 @@ class MeOut(Schema):
 class BootstrapOut(Schema):
     hotel: dict[str, Any]
     languages: list[dict[str, Any]]
+    # Чужая сессия поддержки в этом отеле. None — никого нет; поле объявлено
+    # ЗДЕСЬ, потому что схема ответа отбрасывает всё, чего в ней нет, и
+    # добавить ключ только в сервис — значит не добавить его вовсе.
+    support_session: dict[str, Any] | None = None
     flags: list[dict[str, Any]]
     allergens: list[dict[str, Any]]
     schedules: list[dict[str, Any]]
@@ -87,3 +91,9 @@ class StaffPatch(Schema):
 
 class AssignmentsIn(Schema):
     assignments: list[AssignmentIn]
+
+
+class SupportExchangeIn(Schema):
+    """Одноразовый код входа поддержки. Приходит ТЕЛОМ, а не в адресе."""
+
+    code: str

@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "ITV 客人应用",
-    "subtitle": "多酒店客人服务平台"
+    "subtitle": "多酒店客人服务平台",
+    "supportPresence": "平台支持人员正在此面板中操作：{{actor}}，{{from}} 至 {{until}}"
   },
   "common": {
     "language": "语言",
@@ -1635,7 +1636,8 @@
       "team": "团队",
       "audit": "审计",
       "templates": "模板与字典",
-      "open": "打开菜单"
+      "open": "打开菜单",
+      "support": "支持会话"
     },
     "role": {
       "owner": "平台所有者",
@@ -1735,7 +1737,8 @@
         "modules": "模块",
         "activity": "动态",
         "tariff": "套餐",
-        "data": "数据"
+        "data": "数据",
+        "support": "支持"
       },
       "field": {
         "name": "名称",
@@ -1966,6 +1969,16 @@
       "purgeFailed": "删除失败",
       "purged": "已删除数据：{{count}} 条",
       "cancel": "取消标记"
+    },
+    "support": {
+      "title": "支持会话",
+      "subtitle": "平台人员当前在酒店内的会话。被撤销的会话在下一次请求时即失效。",
+      "empty": "目前没有任何酒店里有人。",
+      "line": "以 {{user}} 身份，{{from}} 至 {{until}}",
+      "inside": "在内",
+      "notYet": "已发码",
+      "revoke": "撤销",
+      "revokeFailed": "无法撤销会话"
     }
   },
   "roomControl": {

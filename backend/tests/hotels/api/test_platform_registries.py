@@ -560,19 +560,36 @@ def test_enter_hotel_requires_reason_and_is_audited(api):
 
 
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
-def test_enter_token_is_marked_as_impersonation(api):
+def test_enter_token_is_marked_as_impersonation(api, client):
     """
     Инвариант механизма: действие поддержки обязано быть отличимо от действия
     самого отеля. Отличие живёт в токене — клеймом `imp`.
+
+    Токен теперь не выдаётся вместе с ответом на вход: наружу уходит
+    одноразовый код, и CMS меняет его на токен у себя. Проверяем клеймо на
+    том токене, который получается ПОСЛЕ обмена, — другого больше нет.
     """
+    import json as _json
+
     from apps.accounts.services.tokens import decode_staff_token
+    from tests.conftest import host_for
 
     hotel = _hotel("markme", "Метка")
     body = api("post", f"/hotels/{hotel.pk}/enter", {"reason": "проверка"}).json()
-    claims = decode_staff_token(body["access"])
+    assert "access" not in body, "токен снова уезжает в ответе на вход"
+
+    exchanged = client.post(
+        "/api/v1/staff/auth/support-exchange",
+        data=_json.dumps({"code": body["code"]}),
+        content_type="application/json",
+        HTTP_HOST=host_for(hotel),
+    )
+    claims = decode_staff_token(exchanged.json()["access"])
     assert claims["imp"]
     assert claims["hotel"] == str(hotel.pk)
     assert claims["scope"] == "staff"
+    # Токен привязан к гранту: без этого отзыв ничего бы не оборвал.
+    assert claims["gid"] == body["grant_id"]
 
 
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])

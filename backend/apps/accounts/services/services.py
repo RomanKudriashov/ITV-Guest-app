@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import secrets
 from datetime import timedelta
 
 from django.contrib.auth.hashers import check_password
@@ -126,6 +127,7 @@ def start_impersonation(
     grant = ImpersonationGrant.objects.create(
         hotel_id=target_user.hotel_id,
         actor=actor,
+        actor_email=actor.email,
         target_user=target_user,
         reason=reason.strip(),
         expires_at=timezone.now() + timedelta(minutes=ttl_minutes),
@@ -140,7 +142,103 @@ def start_impersonation(
         payload={"reason": grant.reason, "grant_id": str(grant.pk)},
         hotel_id=target_user.hotel_id,
     )
-    token = encode_staff_token(
-        target_user, impersonated_by=actor.pk, ttl_minutes=ttl_minutes
+    # Наружу уходит ОДНОРАЗОВЫЙ КОД, а не токен. Токен выдаётся в обмен на
+    # него отдельным запросом уже со стороны отеля — так секрет не проходит
+    # через адресную строку, историю браузера и логи прокси.
+    code = secrets.token_urlsafe(24)
+    ImpersonationGrant.objects.filter(pk=grant.pk).update(
+        exchange_code_hash=hash_exchange_code(code),
+        # Минута: код живёт ровно столько, сколько нужно, чтобы открылась
+        # вкладка. Срок самой сессии здесь ни при чём.
+        exchange_expires_at=timezone.now() + timedelta(minutes=1),
     )
-    return {"access": token, "grant_id": str(grant.pk), "expires_at": grant.expires_at}
+    return {
+        "code": code,
+        "grant_id": str(grant.pk),
+        "expires_at": grant.expires_at,
+        "code_expires_at": timezone.now() + timedelta(minutes=1),
+    }
+
+
+def hash_exchange_code(code: str) -> str:
+    """Хэш кода обмена. В базе лежит он, сам код показывается один раз."""
+    import hashlib
+
+    return hashlib.sha256(code.encode()).hexdigest()
+
+
+def exchange_impersonation_code(code: str, *, hotel) -> dict:
+    """
+    Обменять одноразовый код на токен. Со стороны ОТЕЛЯ, по его поддомену.
+
+    Код гасится в той же транзакции, что и выдача токена: повторное открытие
+    той же ссылки не даёт второй сессии, даже если код успел куда-то попасть.
+    """
+    from django.db import transaction
+
+    digest = hash_exchange_code((code or "").strip())
+    if not code:
+        raise AuthenticationFailed("Код обмена не передан")
+
+    with transaction.atomic():
+        grant = (
+            ImpersonationGrant.all_objects.select_for_update()
+            .filter(exchange_code_hash=digest, hotel_id=hotel.pk)
+            .first()
+        )
+        if grant is None or not grant.code_is_valid:
+            raise AuthenticationFailed("Код обмена недействителен")
+        grant.exchanged_at = timezone.now()
+        grant.save(update_fields=["exchanged_at", "updated_at"])
+        target = grant.target_user
+
+    ttl = max(1, int((grant.expires_at - timezone.now()).total_seconds() // 60))
+    token = encode_staff_token(
+        target, impersonated_by=grant.actor_id, grant_id=grant.pk, ttl_minutes=ttl
+    )
+    return {"access": token, "expires_at": grant.expires_at, "as_user": target.email}
+
+
+def revoke_impersonation(grant_id, *, actor) -> ImpersonationGrant:
+    """
+    Оборвать сессию. Может тот, кто вошёл, и любой владелец платформы.
+
+    Администратор отеля — НЕ может: он сессию видит (баннер в CMS), но не
+    рвёт. Решение осознанное: иначе разбор инцидента можно заблокировать
+    изнутри того самого отеля, который разбирают.
+    """
+    from apps.accounts.services.platform_access import is_owner
+
+    # Платформенным подключением: грант лежит в тенантной таблице под RLS, а
+    # отзывают его из платформенного запроса, где тенанта нет.
+    from apps.core.context import platform_scope
+
+    with platform_scope():
+        grant = ImpersonationGrant.all_objects.using("platform").filter(pk=grant_id).first()
+    if grant is None:
+        raise AuthenticationFailed("Сессия не найдена")
+    if not (grant.actor_id == actor.pk or is_owner(actor)):
+        raise AuthenticationFailed("Оборвать сессию может вошедший или владелец платформы")
+    if grant.revoked_at is None:
+        with platform_scope():
+            ImpersonationGrant.all_objects.using("platform").filter(pk=grant.pk).update(
+                revoked_at=timezone.now(), revoked_by=actor, updated_at=timezone.now()
+            )
+        grant.revoked_at = timezone.now()
+        grant.revoked_by = actor
+        # Журнал отеля пишется В ЕГО КОНТЕКСТЕ: платформенный запрос идёт без
+        # тенанта, и RLS справедливо отвергает строку с чужим hotel_id.
+        from apps.core.context import tenant_context
+
+        if grant.hotel_id:
+            with tenant_context(grant.hotel_id):
+                AuditLog.record(
+                    "impersonation.revoked",
+                    actor_type=AuditLog.ActorType.PLATFORM,
+                    actor_id=actor.pk,
+                    object_type="user",
+                    object_id=grant.target_user_id,
+                    payload={"grant_id": str(grant.pk), "by_owner": grant.actor_id != actor.pk},
+                    hotel_id=grant.hotel_id,
+                )
+    return grant

@@ -507,6 +507,12 @@
   "/api/v1/platform/hotels/{hotel_id}/usage": [
     "GET"
   ],
+  "/api/v1/platform/impersonations": [
+    "GET"
+  ],
+  "/api/v1/platform/impersonations/{grant_id}/revoke": [
+    "POST"
+  ],
   "/api/v1/platform/nodes": [
     "GET"
   ],
@@ -541,6 +547,9 @@
   ],
   "/api/v1/staff/auth/me": [
     "GET"
+  ],
+  "/api/v1/staff/auth/support-exchange": [
+    "POST"
   ],
   "/api/v1/tracker/chat/threads": [
     "GET"

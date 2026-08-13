@@ -13,6 +13,7 @@ import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
 import { TeamPage } from './pages/TeamPage';
 import { AuditPage } from './pages/AuditPage';
+import { SupportSessionsPage } from './pages/SupportSessionsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { accent, ink } from './adminTokens';
 import { getMe, platformToken } from './adminClient';
@@ -34,6 +35,7 @@ const SECTIONS: AdminSection[] = [
   { key: 'nodes', labelKey: 'admin.nav.nodes', group: 'admin.nav.platformGroup' },
   { key: 'templates', labelKey: 'admin.nav.templates', group: 'admin.nav.platformGroup' },
   { key: 'team', labelKey: 'admin.nav.team', group: 'admin.nav.platformGroup' },
+  { key: 'support', labelKey: 'admin.nav.support', group: 'admin.nav.platformGroup' },
   { key: 'audit', labelKey: 'admin.nav.audit', group: 'admin.nav.platformGroup' },
 ];
 
@@ -100,6 +102,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'templates' ? <TemplatesPage /> : null}
       {section === 'team' ? <TeamPage /> : null}
       {section === 'audit' ? <AuditPage /> : null}
+      {section === 'support' ? <SupportSessionsPage /> : null}
     </AdminShell>
   );
 }

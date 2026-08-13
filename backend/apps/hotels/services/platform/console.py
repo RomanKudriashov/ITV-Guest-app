@@ -17,6 +17,8 @@ from apps.accounts.models import User
 from apps.catalog.models import Item
 from apps.core.context import platform_scope, tenant_context
 from apps.core.errors import NotFoundError
+from django.utils import timezone
+
 from apps.core.models import AuditLog
 
 from apps.hotels.models import Hotel, HotelLanguage, Room
@@ -215,6 +217,43 @@ def delete_hotel_row(hotel: Hotel) -> None:
     with platform_scope():
         AuditLog.all_objects.using("platform").filter(hotel_id=hotel.pk).delete()
     Hotel.objects.filter(pk=hotel.pk).delete()
+
+
+def active_impersonations() -> list[dict[str, Any]]:
+    """
+    Живые сессии поддержки по всем отелям.
+
+    Читаем платформенным подключением: грант тенантный, а вопрос «кто сейчас
+    внутри отелей» задаётся поверх них.
+    """
+    from apps.accounts.models import ImpersonationGrant
+
+    with platform_scope():
+        grants = list(
+            ImpersonationGrant.all_objects.using("platform")
+            .filter(revoked_at__isnull=True, expires_at__gt=timezone.now())
+            .select_related("actor", "target_user", "hotel")
+            .order_by("expires_at")
+        )
+        return [
+            {
+                "id": str(grant.pk),
+                # И имя, и идентификатор: имя читают глазами, по
+                # идентификатору карточка отеля отбирает свои сессии.
+                "hotel_id": str(grant.hotel_id) if grant.hotel_id else "",
+                "hotel": grant.hotel.name_i18n if grant.hotel_id else "",
+                "subdomain": grant.hotel.subdomain if grant.hotel_id else "",
+                "actor": grant.actor_email or (grant.actor.email if grant.actor_id else ""),
+                "as_user": grant.target_user.email if grant.target_user_id else "",
+                "reason": grant.reason,
+                "started_at": grant.created_at.isoformat(),
+                "expires_at": grant.expires_at.isoformat(),
+                # Забрал ли вошедший токен. Код мог остаться непотраченным —
+                # вкладку закрыли, ссылку не открыли.
+                "entered": grant.exchanged_at is not None,
+            }
+            for grant in grants
+        ]
 
 
 def tariff_grid() -> list[dict[str, Any]]:

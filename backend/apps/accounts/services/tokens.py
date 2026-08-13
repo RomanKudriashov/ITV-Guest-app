@@ -30,6 +30,7 @@ def encode_staff_token(
     *,
     execution_point_ids: list[uuid.UUID] | None = None,
     impersonated_by: uuid.UUID | None = None,
+    grant_id: uuid.UUID | None = None,
     ttl_minutes: int | None = None,
     mfa: bool = False,
 ) -> str:
@@ -59,6 +60,11 @@ def encode_staff_token(
     }
     if impersonated_by:
         payload["imp"] = str(impersonated_by)
+    # Идентификатор гранта. Без него отзыв не имел бы силы: подписанный JWT
+    # проверить не у кого, и «оборвали сессию» означало бы только «больше не
+    # выдадим новый токен», а выданный работал бы до конца срока.
+    if grant_id:
+        payload["gid"] = str(grant_id)
     if mfa:
         payload["mfa"] = True
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)

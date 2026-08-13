@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "ITV Guest App",
-    "subtitle": "Multi-tenant hotel guest experience"
+    "subtitle": "Multi-tenant hotel guest experience",
+    "supportPresence": "Platform support is working in this panel: {{actor}}, from {{from}} until {{until}}"
   },
   "common": {
     "language": "Language",
@@ -1640,7 +1641,8 @@
       "team": "Team",
       "audit": "Audit",
       "templates": "Templates & dictionaries",
-      "open": "Open menu"
+      "open": "Open menu",
+      "support": "Support sessions"
     },
     "role": {
       "owner": "Platform owner",
@@ -1740,7 +1742,8 @@
         "modules": "Modules",
         "activity": "Activity",
         "tariff": "Plan",
-        "data": "Data"
+        "data": "Data",
+        "support": "Support"
       },
       "field": {
         "name": "Name",
@@ -1971,6 +1974,16 @@
       "purgeFailed": "Could not erase",
       "purged": "Data erased: {{count}} records",
       "cancel": "Cancel marking"
+    },
+    "support": {
+      "title": "Support sessions",
+      "subtitle": "Active platform staff sessions inside hotels. A revoked session dies on the very next request.",
+      "empty": "No one is inside any hotel right now.",
+      "line": "as {{user}}, from {{from}} until {{until}}",
+      "inside": "inside",
+      "notYet": "code issued",
+      "revoke": "Revoke",
+      "revokeFailed": "Could not revoke the session"
     }
   },
   "roomControl": {

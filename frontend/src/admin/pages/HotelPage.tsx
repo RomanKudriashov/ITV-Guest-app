@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
 import { EnterHotelDialog } from '../EnterHotelDialog';
+import { SupportSessionsPage } from './SupportSessionsPage';
 import {
   cancelOffboarding,
   downloadHotelExport,
@@ -31,7 +32,7 @@ import {
   type ModuleEntry,
 } from '../adminClient';
 
-const TABS = ['profile', 'usage', 'modules', 'activity', 'tariff', 'data'] as const;
+const TABS = ['profile', 'usage', 'modules', 'activity', 'support', 'tariff', 'data'] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -104,6 +105,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         {tab === 'usage' ? <UsageTab id={id} /> : null}
         {tab === 'modules' ? <ModulesTab id={id} /> : null}
         {tab === 'activity' ? <ActivityTab id={id} /> : null}
+        {tab === 'support' ? <SupportSessionsPage hotelId={id} /> : null}
         {tab === 'tariff' ? <TariffTab id={id} /> : null}
         {tab === 'data' ? <DataTab hotel={hotel} /> : null}
       </Box>

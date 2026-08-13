@@ -40,6 +40,7 @@ import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAuth } from '@/auth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useBootstrap } from '@/hooks/useBootstrap';
+import type { SupportSession } from '@/api/types';
 
 const DRAWER_WIDTH = 248;
 
@@ -79,8 +80,18 @@ export function AppShell() {
 
   const hotelName = bootstrap?.hotel?.name ?? hotel?.name ?? t('app.title');
 
+  const support = bootstrap?.support_session ?? null;
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/*
+        ЧУЖОЕ ПРИСУТСТВИЕ. Пока поддержка внутри отеля, отель обязан это
+        видеть — и видеть постоянно, а не в разделе, куда надо зайти.
+        Полоса закреплена над всем интерфейсом, закрыть её нечем: механизм
+        входа под аудитом строился ради разделимости действий, а сторона,
+        которую защищают, о вторжении не знала вовсе.
+      */}
+      {support ? <SupportPresenceBar session={support} /> : null}
       <AppBar
         position="fixed"
         color="inherit"
@@ -193,6 +204,49 @@ export function AppShell() {
         <Toolbar />
         <Outlet />
       </Box>
+    </Box>
+  );
+}
+
+/**
+ * Полоса присутствия поддержки. Без кнопки закрытия и без кнопки обрыва:
+ * отель ВИДИТ сессию, но не рвёт её — иначе разбор инцидента блокируется
+ * изнутри того самого отеля, который разбирают.
+ */
+function SupportPresenceBar({ session }: { session: SupportSession }) {
+  const { t, i18n } = useTranslation();
+  const time = (iso: string) =>
+    new Intl.DateTimeFormat(i18n.resolvedLanguage ?? 'ru', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(iso));
+
+  return (
+    <Box
+      data-testid="cms-support-presence"
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: (theme) => theme.zIndex.drawer + 2,
+        px: 2,
+        py: 0.75,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 1,
+        fontSize: 13,
+        fontWeight: 600,
+        color: 'warning.contrastText',
+        bgcolor: 'warning.main',
+      }}
+    >
+      {t('app.supportPresence', {
+        actor: session.actor,
+        from: time(session.started_at),
+        until: time(session.expires_at),
+      })}
     </Box>
   );
 }

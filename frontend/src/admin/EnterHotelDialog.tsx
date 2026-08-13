@@ -146,9 +146,14 @@ function GrantedView({
         <Button
           disabled={expired}
           onClick={() => {
-            // Токен кладём в адрес, а не в общее хранилище: сессия поддержки
-            // живёт во вкладке отеля и не подменяет собой вход платформы.
-            const url = `${granted.cms_url}?support=${encodeURIComponent(granted.access)}`;
+            // Код уходит в ХЭШ-ФРАГМЕНТЕ, а не в строке запроса. Фрагмент
+            // браузер вообще не отправляет на сервер: его нет ни в логах
+            // прокси, ни в `Referer`. CMS обменяет его на токен запросом с
+            // телом и сразу вычистит из истории.
+            //
+            // Сам код одноразовый и живёт минуту: даже утёкший, повторно он
+            // сессии не откроет.
+            const url = `${granted.cms_url}#support=${encodeURIComponent(granted.code)}`;
             window.open(url, '_blank', 'noreferrer');
           }}
           data-testid="admin-enter-open"

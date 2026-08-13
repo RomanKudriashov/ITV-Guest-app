@@ -46,6 +46,21 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   });
 }
 
+/**
+ * Обменять одноразовый код входа поддержки на токен.
+ *
+ * Код приходит хэш-фрагментом и уходит ТЕЛОМ запроса: в адресе его нет ни на
+ * одном шаге, поэтому нет и в логах прокси. Повторно тот же код не сработает —
+ * обмен гасит его на сервере.
+ */
+export function exchangeSupportCode(code: string): Promise<{ access: string; expires_at: string }> {
+  return request<{ access: string; expires_at: string }>('/staff/auth/support-exchange', {
+    method: 'POST',
+    body: { code },
+    skipAuthRedirect: true,
+  });
+}
+
 export function fetchMe(): Promise<MeResponse> {
   return api.get<MeResponse>('/staff/auth/me');
 }
