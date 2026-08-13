@@ -3,6 +3,32 @@ import { expect, test } from '@playwright/test'
 import { API } from './helpers'
 
 /**
+ * Ящик стенда. Пароль администратора отеля уходит ему письмом и на экране
+ * оператора не появляется — значит и прогон обязан брать его оттуда же,
+ * откуда возьмёт живой человек, а не из интерфейса.
+ */
+const MAILPIT = process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025'
+
+async function passwordFromLetter(request: import('@playwright/test').APIRequestContext, to: string) {
+  // Письмо приходит синхронно с ответом на создание (отправка идёт внутри
+  // транзакции), но SMTP-доставка асинхронна на доли секунды — коротко ждём.
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const list = await request.get(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}`)
+    if (list.ok()) {
+      const found = (await list.json()).messages ?? []
+      if (found.length) {
+        const full = await request.get(`${MAILPIT}/api/v1/message/${found[0].ID}`)
+        const text: string = (await full.json()).Text ?? ''
+        const match = text.match(/Пароль:\s*(\S+)/)
+        if (match) return match[1]
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  throw new Error(`письмо для ${to} не пришло в ${MAILPIT} за 10 секунд`)
+}
+
+/**
  * Корневая админка: вход платформенным аккаунтом → создать отель → витрина
  * нового отеля открывается на его поддомене → hotel-admin логинится в CMS →
  * отключение → витрина показывает «недоступен».
@@ -38,12 +64,29 @@ test('админка: создание отеля, вход admin, отключ�
   await page.getByTestId('admin-create-admin-email').fill(adminEmail)
   await page.getByTestId('admin-create-submit').click()
 
-  // Пароль администратору УХОДИТ ПИСЬМОМ и оператору не показывается — консоль
-  // сообщает только адрес доставки. Раньше он был виден здесь, и отсюда же его
-  // забирал этот прогон.
-  await expect(page.getByTestId('admin-created-sent')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByTestId('admin-created-sent')).toContainText(adminEmail)
+  // Сначала смотрим, не отказал ли сервер: без этого падение по отсутствию
+  // уведомления выглядело бы таймаутом, а причина ((«почта не приняла письмо»))
+  // осталась бы на экране непрочитанной. Гонки тут нет: обе ветки взаимно
+  // исключающие, и Promise.race берёт ту, что появилась.
+  const created = page.getByTestId('admin-created-sent')
+  const failed = page.getByTestId('admin-create-error')
+  await Promise.race([
+    created.waitFor({ state: 'visible', timeout: 15_000 }),
+    failed.waitFor({ state: 'visible', timeout: 15_000 }),
+  ]).catch(() => undefined)
+  if (await failed.isVisible()) {
+    throw new Error(`отель не создан: ${await failed.innerText()}`)
+  }
+
+  // Оператору показан только адрес доставки — пароля на экране нет.
+  await expect(created).toBeVisible({ timeout: 15_000 })
+  await expect(created).toContainText(adminEmail)
+  await expect(created).not.toContainText(/[A-Za-z0-9_-]{16,}/)
   await page.getByTestId('admin-created-done').click()
+
+  // Пароль берём из письма — единственного места, где он теперь есть.
+  const adminPw = await passwordFromLetter(request, adminEmail)
+  expect(adminPw.length).toBeGreaterThan(8)
 
   // Поиск во флоте находит новый отель.
   await page.getByTestId('admin-fleet-search').fill(sub)
@@ -59,10 +102,11 @@ test('админка: создание отеля, вход admin, отключ�
   const sessionBody = await session.json()
   expect(sessionBody.hotel?.subdomain).toBe(sub)
 
-  // Проверки «hotel-admin логинится в CMS» здесь БОЛЬШЕ НЕТ: пароль знает
-  // только сам администратор, и взять его прогону неоткуда. Вернуть покрытие
-  // можно почтовой службой в компоузе (mailpit и т.п.), из которой прогон
-  // читал бы письмо; пока её нет, это осознанная потеря, а не недосмотр.
+  // --- hotel-admin логинится в CMS паролем ИЗ ПИСЬМА ------------------------
+  const login = await request.post(`${API}/api/staff/auth/login`, {
+    data: { email: adminEmail, password: adminPw }, headers: tenant,
+  })
+  expect(login.status(), await login.text()).toBe(200)
 
   // --- Отключение в карточке отеля ------------------------------------------
   await page.getByTestId(`admin-fleet-open-${sub}`).click()

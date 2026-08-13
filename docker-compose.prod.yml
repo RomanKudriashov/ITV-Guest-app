@@ -21,8 +21,41 @@ x-backend-env: &backend-env
   # ошибки старта. Локальный компоуз его задавал, прод-компоуз забыл.
   CACHE_URL: redis://redis:6379/4
   MINIO_ENDPOINT: minio:9000
+  # Почта. Без неё платформенная консоль не заводит отели и не сбрасывает
+  # пароли: пароль администратора уходит ЕМУ письмом, и «отправить нечем» —
+  # это отказ операции, а не тихий пропуск.
+  EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+  EMAIL_HOST: mailpit
+  EMAIL_PORT: "1025"
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@itv.local}
 
 services:
+  # Почтовый ящик стенда.
+  #
+  # ПОРТОВ НЕ ПУБЛИКУЕТ — и это главное. Стенд смотрит в интернет, а в письмах
+  # лежат пароли администраторов отелей: открытая веб-морда означала бы, что
+  # чужой пароль читает любой, кто знает адрес. Смотреть письма — через
+  # SSH-туннель (см. /home/deploy/stand.md).
+  #
+  # Второй рубеж на случай, если порт однажды всё-таки опубликуют: своя
+  # авторизация Mailpit. Один рубеж, который легко снять одной строкой в
+  # компоузе, — это не рубеж.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: "2000"
+      MP_DATABASE: /data/mailpit.db
+      MP_UI_AUTH: ${MAILPIT_UI_AUTH:?нужен логин:пароль для веб-морды почты}
+    volumes:
+      - mailpit_data:/data
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -105,6 +138,7 @@ services:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
       minio: {condition: service_healthy}
+      mailpit: {condition: service_healthy}
     networks: [internal]
 
   worker:
@@ -193,6 +227,7 @@ services:
     networks: [internal]
 
 volumes:
+  mailpit_data:
   postgres_data:
   redis_data:
   minio_data:

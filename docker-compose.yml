@@ -51,6 +51,29 @@ services:
       timeout: 3s
       retries: 20
 
+  # Почта. Mailpit, а не настоящий SMTP-релей: нужен ящик, который ЛОВИТ
+  # письма и даёт их прочитать — и человеку, и прогону E2E. Настоящий релей
+  # для этого потребовал бы домена, SPF и живого почтового ящика на каждого
+  # разработчика, а ловить письма всё равно пришлось бы чем-то отдельным.
+  #
+  # Порты — ТОЛЬКО на 127.0.0.1: письма несут пароли администраторов отелей,
+  # и веб-морда без пароля не должна быть видна даже в локальной сети.
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_MAX_MESSAGES: "500"
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit_data:/data
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"   # SMTP для backend
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"     # веб-морда и API
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   backend:
     build: ./backend
     command: ["api"]
@@ -63,6 +86,12 @@ services:
       CHANNELS_REDIS_URL: redis://redis:6379/3
       CACHE_URL: redis://redis:6379/4
       MINIO_ENDPOINT: minio:9000
+      # Почта: без неё консоль не заводит отели и не сбрасывает пароли —
+      # пароль уходит администратору письмом, и «отправить нечем» это отказ.
+      EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+      EMAIL_HOST: mailpit
+      EMAIL_PORT: "1025"
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@guest.localhost}
       # Публичный адрес медиа — тот, что уедет КЛИЕНТУ в ссылке на картинку,
       # и потому он не может быть `localhost`: телефон в локальной сети ищет
       # по нему сам себя. Собирается из DEV_HOST (адрес этой машины) и
@@ -168,4 +197,5 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  mailpit_data:
   frontend_node_modules:
