@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router
 
-from apps.core.errors import PermissionDenied
+from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, WRITE, PlatformRouter, requires
 from apps.hotels.schemas.platform import TeamInviteIn, TeamPatchIn
 from apps.hotels.services.platform import console
 
-router = Router(tags=["platform"])
+router = PlatformRouter(tags=["platform"])
 
 
 @router.get("/team", summary="Команда платформы")
+@requires(READ)
 def list_team(request: HttpRequest):
     from apps.hotels.services.platform.team import list_members
 
@@ -20,12 +20,10 @@ def list_team(request: HttpRequest):
 
 
 @router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")
+@requires(OWNER)
 def invite_member(request: HttpRequest, payload: TeamInviteIn):
-    from apps.accounts.services.platform_access import can_manage_team
     from apps.hotels.services.platform.team import invite
 
-    if not can_manage_team(request.user):
-        raise PermissionDenied("Команду платформы ведёт только владелец")
     member, password = invite(email=payload.email, role=payload.role, full_name=payload.full_name)
     console.audit_platform(
         "platform.team.invited",
@@ -37,12 +35,10 @@ def invite_member(request: HttpRequest, payload: TeamInviteIn):
 
 
 @router.patch("/team/{user_id}", summary="Сменить роль или отключить участника")
+@requires(OWNER)
 def patch_member(request: HttpRequest, user_id: str, payload: TeamPatchIn):
-    from apps.accounts.services.platform_access import can_manage_team
     from apps.hotels.services.platform.team import update_member
 
-    if not can_manage_team(request.user):
-        raise PermissionDenied("Команду платформы ведёт только владелец")
     member = update_member(
         user_id,
         role=payload.role,

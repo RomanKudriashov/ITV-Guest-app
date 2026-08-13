@@ -338,3 +338,83 @@ def test_contract_endpoints_exist_in_the_api():
         "документ надо поправить, либо строку удалить — но не оставлять:\n"
         + "\n".join(missing)
     )
+
+
+# --- 8. Права платформенных ручек -------------------------------------------
+
+
+def test_every_platform_route_declares_a_right():
+    """
+    У КАЖДОЙ ПЛАТФОРМЕННОЙ РУЧКИ ОБЪЯВЛЕНО ПРАВО.
+
+    Проверка появилась после того, как право проверялось поручно и оказалось
+    забытым у шести ручек из одиннадцати изменяющих. Роль «только чтение»
+    переименовывала отель, меняла тариф, гасила отель гостям, заводила новые,
+    выгружала персональные данные и сбрасывала пароль администратора отеля —
+    получая его в ответе.
+
+    Прежний тест на роли перечислял ЧЕТЫРЕ адреса и был зелёным: он проверял
+    те, где проверка стояла. Поэтому здесь ПЕРЕБОР, а не список: новая ручка
+    попадает под проверку сама, и забыть её нельзя — можно только осознанно
+    объявить право.
+
+    Смотрим на зарегистрированные операции, а не на исходники: декоратор мог
+    быть написан и не примениться (порядок с `@router.…` значим), и тогда
+    в файле он есть, а в рубеже его нет.
+    """
+    from api import api
+    from apps.hotels.api.platform.rights import (
+        MUTATING_RIGHTS,
+        _PREDICATES,
+        declared_right,
+    )
+
+    def walk(router, prefix: str):
+        """
+        Обход ДЕРЕВА роутеров, а не верхнего уровня.
+
+        Платформенные ручки живут в дочерних роутерах, подключённых к
+        `/platform` с пустым префиксом; ninja их не разворачивает, и обход
+        только по `api._routers` находил ноль операций, честно рапортуя об
+        успехе.
+        """
+        for path, view in router.path_operations.items():
+            for operation in view.operations:
+                yield f"{'/'.join(operation.methods)} {prefix}{path}", operation
+        for child in getattr(router, "_routers", []):
+            child_prefix, child_router = child[0], child[1]
+            yield from walk(child_router, prefix + child_prefix)
+
+    undeclared: list[str] = []
+    unknown: list[str] = []
+    too_weak: list[str] = []
+    mutating = {"POST", "PUT", "PATCH", "DELETE"}
+    seen = 0
+    for root_prefix, router in api._routers:
+        if not root_prefix.startswith("/platform"):
+            continue
+        for where, operation in walk(router, root_prefix):
+            seen += 1
+            right = declared_right(operation.view_func)
+            if not right:
+                undeclared.append(f"  {where}")
+            elif right not in _PREDICATES:
+                unknown.append(f"  {where} — право «{right}»")
+            elif set(operation.methods) & mutating and right not in MUTATING_RIGHTS:
+                too_weak.append(f"  {where} — право «{right}»")
+
+    assert seen > 30, f"платформенных операций нашлось всего {seen} — сторож смотрит не туда"
+    assert not undeclared, (
+        "Платформенная ручка без объявленного права. Рубеж такую запирает "
+        "(отвечает 403), но молча запертая ручка — это не защита, а поломка:\n"
+        + "\n".join(undeclared)
+    )
+    assert not unknown, (
+        "Объявлено право, которого нет в реестре. Опечатка в имени запирает "
+        "ручку наглухо:\n" + "\n".join(unknown)
+    )
+    assert not too_weak, (
+        "Изменяющая ручка объявлена правом для чтения — это тихо открывает её "
+        "роли «только чтение». Меняет своё же (второй фактор) — объявляйте "
+        "SELF, чужое — WRITE или OWNER:\n" + "\n".join(too_weak)
+    )

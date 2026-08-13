@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router
 
-from apps.core.errors import PermissionDenied
+from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, WRITE, PlatformRouter, requires
 from apps.hotels.schemas.platform import BulkActiveIn
 from apps.hotels.services.platform import console
 
-router = Router(tags=["platform"])
+router = PlatformRouter(tags=["platform"])
 
 
 @router.get("/fleet", summary="Реестр отелей: поиск, фильтры, сортировка, страницы")
+@requires(READ)
 def fleet(request: HttpRequest):
     from apps.hotels.services.platform.fleet import fleet as build_fleet
 
@@ -20,6 +20,7 @@ def fleet(request: HttpRequest):
 
 
 @router.get("/fleet/export", summary="Выгрузка флота в CSV")
+@requires(READ)
 def fleet_export(request: HttpRequest):
     from django.http import HttpResponse
 
@@ -38,12 +39,9 @@ def fleet_export(request: HttpRequest):
 
 
 @router.post("/fleet/bulk", summary="Массово включить/выключить отели")
+@requires(WRITE)
 def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.platform.fleet import bulk_set_active
-
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не меняет отели")
 
     ip = request.META.get("REMOTE_ADDR")
     changed = bulk_set_active(payload.hotel_ids, payload.is_active)

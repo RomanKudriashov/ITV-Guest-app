@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router
 
-from apps.core.errors import PermissionDenied
+from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, WRITE, PlatformRouter, requires
 from apps.hotels.schemas.platform import DictionaryEntryIn, TemplateIn
 from apps.hotels.services.platform import console
 
-router = Router(tags=["platform"])
+router = PlatformRouter(tags=["platform"])
 
 
 @router.get("/templates", summary="Шаблоны онбординга")
+@requires(READ)
 def list_onboarding_templates(request: HttpRequest):
     from apps.hotels.services.onboarding import ensure_seed, list_templates
 
@@ -22,12 +22,10 @@ def list_onboarding_templates(request: HttpRequest):
 
 
 @router.post("/templates", response={201: dict}, summary="Создать шаблон")
+@requires(WRITE)
 def create_template(request: HttpRequest, payload: TemplateIn):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services import onboarding
 
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не правит шаблоны")
     template = onboarding.create_template(payload.dict(exclude_unset=True))
     console.audit_platform(
         "platform.template.created",
@@ -39,12 +37,10 @@ def create_template(request: HttpRequest, payload: TemplateIn):
 
 
 @router.patch("/templates/{template_id}", summary="Изменить шаблон")
+@requires(WRITE)
 def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services import onboarding
 
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не правит шаблоны")
     template = onboarding.update_template(template_id, payload.dict(exclude_unset=True))
     console.audit_platform(
         "platform.template.updated",
@@ -56,6 +52,7 @@ def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
 
 
 @router.get("/dictionaries", summary="Системный справочник платформы")
+@requires(READ)
 def get_system_dictionary(request: HttpRequest, kind: str | None = None):
     from apps.hotels.services.onboarding import ensure_seed, list_dictionary
 
@@ -64,12 +61,10 @@ def get_system_dictionary(request: HttpRequest, kind: str | None = None):
 
 
 @router.put("/dictionaries", summary="Добавить/изменить запись справочника")
+@requires(WRITE)
 def put_system_dictionary(request: HttpRequest, payload: DictionaryEntryIn):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onboarding import upsert_dictionary_entry
 
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не правит справочники")
     entry = upsert_dictionary_entry(
         kind=payload.kind, code=payload.code, title=payload.title, is_active=payload.is_active
     )

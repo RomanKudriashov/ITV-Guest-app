@@ -5,16 +5,16 @@ from __future__ import annotations
 from typing import Any
 
 from django.http import HttpRequest
-from ninja import Router
 
-from apps.core.errors import PermissionDenied
+from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, WRITE, PlatformRouter, requires
 from apps.hotels.schemas.platform import NodeIn
 from apps.hotels.services.platform import console
 
-router = Router(tags=["platform"])
+router = PlatformRouter(tags=["platform"])
 
 
 @router.get("/nodes", summary="Реестр он-прем узлов по всем отелям")
+@requires(READ)
 def list_nodes(request: HttpRequest):
     from apps.hotels.services.onprem import all_nodes
 
@@ -22,12 +22,10 @@ def list_nodes(request: HttpRequest):
 
 
 @router.post("/hotels/{hotel_id}/nodes", response={201: dict}, summary="Завести узел и выдать ключ")
+@requires(WRITE)
 def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onprem import register_node
 
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не заводит узлы")
     hotel = console.get_hotel(hotel_id)
     node, key = register_node(hotel, name=payload.name, purpose=payload.purpose)
     console.audit_hotel(
@@ -42,12 +40,10 @@ def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
 
 
 @router.post("/nodes/{node_id}/revoke", summary="Отозвать ключ узла")
+@requires(WRITE)
 def revoke_node(request: HttpRequest, node_id: str):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onprem import revoke_key
 
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не отзывает ключи")
     node, hotel = revoke_key(node_id)
     console.audit_hotel(
         hotel, "platform.node.revoked", actor_id=request.user.pk,
@@ -57,12 +53,10 @@ def revoke_node(request: HttpRequest, node_id: str):
 
 
 @router.post("/nodes/{node_id}/reissue", summary="Перевыпустить ключ узла")
+@requires(WRITE)
 def reissue_node(request: HttpRequest, node_id: str):
-    from apps.accounts.services.platform_access import can_write
     from apps.hotels.services.onprem import reissue_key
 
-    if not can_write(request.user):
-        raise PermissionDenied("Роль «только чтение» не выдаёт ключи")
     node, hotel, key = reissue_key(node_id)
     console.audit_hotel(
         hotel, "platform.node.reissued", actor_id=request.user.pk,

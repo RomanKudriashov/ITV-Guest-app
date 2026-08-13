@@ -8,16 +8,17 @@ staff-логин (привязанный к тенанту) его не пуск
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router
 
+from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, SELF, WRITE, PlatformRouter, requires
 from apps.core.errors import ValidationError
 from apps.hotels.schemas.platform import PlatformLoginIn, TotpEnableIn
 from apps.hotels.services.platform import console
 
-router = Router(tags=["platform"])
+router = PlatformRouter(tags=["platform"])
 
 
 @router.post("/auth/login", auth=None, response={200: dict, 401: dict, 403: dict}, summary="Вход платформенного админа")
+@requires(PUBLIC)
 def platform_login(request: HttpRequest, payload: PlatformLoginIn):
     from django.contrib.auth.hashers import check_password
 
@@ -59,6 +60,7 @@ def platform_login(request: HttpRequest, payload: PlatformLoginIn):
 
 
 @router.get("/auth/me", summary="Текущий платформенный админ")
+@requires(READ)
 def platform_me(request: HttpRequest):
     return console.me(request.user)
 
@@ -67,6 +69,7 @@ def platform_me(request: HttpRequest):
 
 
 @router.post("/auth/2fa/setup", summary="Завести секрет 2FA (показать QR)")
+@requires(SELF)
 def totp_setup(request: HttpRequest):
     from apps.accounts.services.totp import generate_secret, provisioning_uri
 
@@ -81,6 +84,7 @@ def totp_setup(request: HttpRequest):
 
 
 @router.post("/auth/2fa/enable", summary="Включить 2FA, подтвердив кодом")
+@requires(SELF)
 def totp_enable(request: HttpRequest, payload: TotpEnableIn):
     from apps.accounts.services.tokens import encode_staff_token
     from apps.accounts.services.totp import verify as verify_totp
@@ -98,6 +102,7 @@ def totp_enable(request: HttpRequest, payload: TotpEnableIn):
 
 
 @router.post("/auth/2fa/disable", summary="Выключить 2FA")
+@requires(SELF)
 def totp_disable(request: HttpRequest):
     user = request.user
     console.save_platform_user(user, totp_enabled=False, totp_secret="")

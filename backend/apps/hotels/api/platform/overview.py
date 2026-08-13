@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import Router
 
-router = Router(tags=["platform"])
+from apps.hotels.api.platform.rights import READ, PlatformRouter, requires
+
+router = PlatformRouter(tags=["platform"])
 
 
 @router.get("/overview", summary="Сводка по платформе")
+@requires(READ)
 def overview(request: HttpRequest):
     from apps.hotels.services.platform.overview import build_overview
 
@@ -19,6 +21,7 @@ def overview(request: HttpRequest):
 
 
 @router.get("/audit", summary="Журнал действий платформы")
+@requires(READ)
 def platform_audit(request: HttpRequest, limit: int = 100):
     from apps.hotels.services.platform.team import audit_feed
 

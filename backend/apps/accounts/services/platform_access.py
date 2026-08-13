@@ -78,14 +78,25 @@ def ip_allowed(request: HttpRequest) -> bool:
 _WRITE_ROLES = {"owner", "support"}
 
 
+def is_owner(user) -> bool:
+    """
+    Владелец платформы.
+
+    Одно определение на всех, кто его спрашивает. Раньше их было два —
+    `can_manage_team` и `can_manage_tariff`, слово в слово одинаковые, — и
+    третий вопрос про владельца завёл бы третью копию.
+    """
+    return getattr(user, "platform_role", "owner") == "owner"
+
+
 def can_write(user) -> bool:
     return getattr(user, "platform_role", "owner") in _WRITE_ROLES
 
 
 def can_manage_team(user) -> bool:
-    return getattr(user, "platform_role", "owner") == "owner"
+    return is_owner(user)
 
 
 def can_manage_tariff(user) -> bool:
     """Тариф — денежный шов, и правит его только владелец."""
-    return getattr(user, "platform_role", "owner") == "owner"
+    return is_owner(user)
