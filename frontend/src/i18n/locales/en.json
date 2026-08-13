@@ -1757,7 +1757,7 @@
       "activeOff": "Disabled — storefront and CMS are closed",
       "adminTitle": "Hotel administrator",
       "adminEmail": "Administrator email",
-      "adminHint": "Creates or resets access. The password is shown once.",
+      "adminHint": "Creates or resets access. The password is emailed to the hotel admin — the operator never sees it.",
       "adminReset": "Create / reset",
       "trialLeft": "Trial: {{days}} days left",
       "trialEnds": "Trial until {{date}}",

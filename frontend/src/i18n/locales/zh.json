@@ -1752,7 +1752,7 @@
       "activeOff": "已停用 — 门店页与后台均不可访问",
       "adminTitle": "酒店管理员",
       "adminEmail": "管理员邮箱",
-      "adminHint": "创建或重置访问权限。密码只显示一次。",
+      "adminHint": "创建或重置访问权限。密码通过邮件发送给酒店管理员，操作员看不到密码。",
       "adminReset": "创建 / 重置",
       "trialLeft": "试用：剩余 {{days}} 天",
       "trialEnds": "试用至 {{date}}",

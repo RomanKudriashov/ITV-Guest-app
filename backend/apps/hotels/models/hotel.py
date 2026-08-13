@@ -10,7 +10,34 @@ from datetime import datetime
 from django.db import models
 
 from apps.core.fields import TranslatableField
+from apps.core.managers import AllObjectsManager, BaseManager, SoftDeleteQuerySet
 from apps.core.models import BaseModel, TenantModel
+
+
+class HotelQuerySet(SoftDeleteQuerySet):
+    """
+    Массовое удаление отелей идёт ПО ОДНОМУ.
+
+    `SoftDeleteQuerySet.delete()` — это один UPDATE, и он бы проставил
+    `deleted_at`, не тронув поддомены: имя сгорало бы ровно так же, только
+    мимо модели. Отели удаляют поштучно и редко, цикл здесь ничего не стоит,
+    а гарантия становится свойством модели, а не места вызова.
+    """
+
+    def delete(self):
+        removed = 0
+        for hotel in self:
+            hotel.delete()
+            removed += 1
+        return (0, {"hotels.Hotel": removed} if removed else {})
+
+
+class HotelManager(BaseManager.from_queryset(HotelQuerySet)):
+    pass
+
+
+class HotelAllObjectsManager(AllObjectsManager.from_queryset(HotelQuerySet)):
+    pass
 
 
 class Hotel(BaseModel):
@@ -21,6 +48,13 @@ class Hotel(BaseModel):
     # отеля, а само поле — словарь.
     name = TranslatableField()
     subdomain = models.SlugField(max_length=63, unique=True, db_index=True)
+    # Имя, под которым отель жил до удаления.
+    #
+    # При мягком удалении поддомен переименовывается в припаркованный вид, и
+    # настоящее имя иначе было бы потеряно: журнал, разбор инцидента и ответ
+    # на вопрос «а что было на crystal?» опираются именно на него. Живой отель
+    # это поле не заполняет.
+    former_subdomain = models.SlugField(max_length=63, blank=True, db_index=True)
     # Отель может привести свой домен (menu.crystal-hotel.ru) — резолвим и по нему.
     custom_domain = models.CharField(max_length=255, blank=True, db_index=True)
 
@@ -116,12 +150,61 @@ class Hotel(BaseModel):
     tariff_started_on = models.DateField(null=True, blank=True)
     trial_ends_at = models.DateField(null=True, blank=True)
 
+    objects = HotelManager()
+    all_objects = HotelAllObjectsManager()
+
     class Meta:
         db_table = "hotels_hotel"
         ordering = ["name"]
 
     def __str__(self) -> str:
         return f"{self.name_i18n} ({self.subdomain})"
+
+    def parked_subdomain(self, when: datetime | None = None) -> str:
+        """
+        Имя, под которым удалённая строка занимает индекс, никому не мешая.
+
+        Детерминированно: тот же отель, удалённый в тот же день, получает то
+        же имя — иначе повтор миграции или ручной прогон плодили бы разные
+        призраки одной строки. Хвост из pk разводит два удаления одного имени
+        в один день: без него второе падало бы тем же IntegrityError, от
+        которого всё это и лечится.
+        """
+        from django.utils import timezone as dj_timezone
+
+        moment = when or self.deleted_at or dj_timezone.now()
+        tail = f"-deleted-{moment.strftime('%Y%m%d')}-{self.pk.hex[:6]}"
+        base = (self.former_subdomain or self.subdomain)[: 63 - len(tail)]
+        return f"{base}{tail}"
+
+    def delete(self, using=None, keep_parents=False, *, hard: bool = False):
+        """
+        Мягкое удаление ОСВОБОЖДАЕТ поддомен.
+
+        Уникальный индекс не знает про `deleted_at` и видит удалённую строку
+        наравне с живыми. Поэтому удалённый отель сжигал своё имя навсегда:
+        завести `crystal` заново было нельзя — оператор получал не «имя
+        занято», а необъяснённое 500 из IntegrityError.
+
+        Настоящее имя не теряется, оно переезжает в `former_subdomain`.
+        Маршрутизация на старое имя умирает в тот же момент и без всякого
+        кэша: резолвер ищет отель по `subdomain` среди живых, а тут не стало
+        ни того, ни другого.
+        """
+        from django.utils import timezone as dj_timezone
+
+        if hard:
+            return super().delete(using=using, keep_parents=keep_parents, hard=True)
+
+        self.deleted_at = self.deleted_at or dj_timezone.now()
+        if not self.former_subdomain:
+            self.former_subdomain = self.subdomain
+        self.subdomain = self.parked_subdomain()
+        self.save(
+            using=using,
+            update_fields=["deleted_at", "subdomain", "former_subdomain", "updated_at"],
+        )
+        return (0, {})
 
     @property
     def tzinfo(self) -> zoneinfo.ZoneInfo:
