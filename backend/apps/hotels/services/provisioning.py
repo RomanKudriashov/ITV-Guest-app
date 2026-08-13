@@ -268,11 +268,54 @@ def ensure_platform_admin(*, email: str, password: str) -> User:
 
 
 @transaction.atomic
-def set_hotel_admin(hotel: Hotel, *, email: str, password: str | None = None) -> tuple[User, str]:
+def change_hotel_admin_email(hotel: Hotel, *, current_email: str, new_email: str) -> User:
     """
-    Завести нового hotel-admin или сбросить пароль существующему. Всегда
-    возвращает пароль (заданный или сгенерированный) — показать один раз.
+    Сменить адрес администратора отеля, НИЧЕГО на него не отправляя.
+
+    Это выход из положения «отель потерял и почту тоже»: пароль уходит только
+    администратору, и недоступный адрес иначе запирал бы отель насмерть.
+    Отправлять сюда письмо бессмысленно — старый ящик и есть то, что потеряно.
     """
+    current = (current_email or "").strip().lower()
+    new_email = (new_email or "").strip().lower()
+    if not new_email or "@" not in new_email:
+        raise ValidationError("Нужен корректный новый адрес", field="new_email")
+    if new_email == current:
+        raise ValidationError("Новый адрес совпадает с текущим", field="new_email")
+
+    with tenant_context(hotel):
+        user = User.objects.filter(email=current, is_hotel_admin=True).first()
+        if user is None:
+            raise ValidationError(
+                "У отеля нет администратора с таким адресом", field="current_email"
+            )
+        # Адрес уникален глобально: занят — значит увели бы чужого пользователя.
+        if User.all_objects.filter(email=new_email).exists():
+            raise ConflictError(
+                f"Пользователь с email «{new_email}» уже существует",
+                code="admin_email_taken",
+            )
+        user.email = new_email
+        user.save(update_fields=["email", "updated_at"])
+    return user
+
+
+@transaction.atomic
+def set_hotel_admin(hotel: Hotel, *, email: str, password: str | None = None) -> tuple[User, dict]:
+    """
+    Завести нового hotel-admin или сбросить пароль существующему.
+
+    Пароль УХОДИТ АДМИНИСТРАТОРУ ПИСЬМОМ и наружу не возвращается: вернуть его
+    вызывающему значит показать оператору платформы ключ от чужой CMS. Второй
+    элемент кортежа — то, что можно показать: адрес и момент отправки.
+
+    Отправка идёт ВНУТРИ этой транзакции намеренно. Отказ почты бросает
+    исключение, транзакция откатывается, и пароль остаётся прежним. Обратный
+    порядок (сначала сохранить, потом отправить) оставлял бы админа с
+    работающим сбросом и без пароля — то есть запирал бы отель.
+    """
+    from apps.hotels.services.admin_credentials import send_admin_password
+
     email = email.strip().lower()
     if not email:
         raise ValidationError("Нужен email", field="email")
@@ -280,6 +323,7 @@ def set_hotel_admin(hotel: Hotel, *, email: str, password: str | None = None) ->
 
     with tenant_context(hotel):
         user = User.objects.filter(email=email).first()
+        is_new = user is None
         if user is None:
             try:
                 user = User.objects.create_user(
@@ -301,4 +345,5 @@ def set_hotel_admin(hotel: Hotel, *, email: str, password: str | None = None) ->
             user.is_active = True
             user.save()
 
-    return user, new_password
+    delivery = send_admin_password(hotel, email=email, password=new_password, is_new=is_new)
+    return user, delivery

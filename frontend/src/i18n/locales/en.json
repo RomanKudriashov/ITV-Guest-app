@@ -1756,7 +1756,6 @@
       "adminEmail": "Administrator email",
       "adminHint": "Creates or resets access. The password is shown once.",
       "adminReset": "Create / reset",
-      "adminPassword": "New password",
       "trialLeft": "Trial: {{days}} days left",
       "trialEnds": "Trial until {{date}}",
       "limit": {
@@ -1779,7 +1778,8 @@
       "tariffNoMoney": "This is a record, not a payment: no money moves here.",
       "downgradeTitle": "Downgrade below current usage",
       "downgradeLimit": "{{what}}: {{used}} in use, limit {{limit}}",
-      "downgradeModules": "The plan does not include: {{modules}}"
+      "downgradeModules": "The plan does not include: {{modules}}",
+      "adminPasswordSent": "Password sent to {{email}}"
     },
     "create": {
       "title": "New hotel",
@@ -1796,10 +1796,10 @@
       "failed": "Could not create",
       "doneTitle": "Hotel created",
       "doneAdmin": "Administrator",
-      "donePassword": "Password (shown once)",
       "doneHint": "The hotel sets itself up from here in its CMS.",
       "template": "Starting template",
-      "doneServices": "Services created: {{count}}"
+      "doneServices": "Services created: {{count}}",
+      "donePasswordSent": "Password sent to the administrator at {{email}}"
     },
     "module": {
       "room_control": "Room control",

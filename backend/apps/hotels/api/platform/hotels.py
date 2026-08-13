@@ -19,6 +19,7 @@ from apps.core.errors import PermissionDenied, ValidationError
 from apps.hotels.models import Hotel
 from apps.hotels.module_registry import list_modules, set_modules
 from apps.hotels.schemas.platform import (
+    AdminEmailIn,
     AdminIn,
     EnterHotelIn,
     HotelCreateIn,
@@ -29,7 +30,11 @@ from apps.hotels.schemas.platform import (
     TariffIn,
 )
 from apps.hotels.services.platform import console
-from apps.hotels.services.provisioning import provision_hotel, set_hotel_admin
+from apps.hotels.services.provisioning import (
+    change_hotel_admin_email,
+    provision_hotel,
+    set_hotel_admin,
+)
 
 router = PlatformRouter(tags=["platform"])
 
@@ -46,25 +51,43 @@ def list_hotels(request: HttpRequest):
 @router.post("/hotels", response={201: dict}, summary="Создать отель")
 @requires(WRITE)
 def create_hotel(request: HttpRequest, payload: HotelCreateIn):
-    result = provision_hotel(
-        subdomain=payload.subdomain,
-        name=payload.name,
-        admin_email=payload.admin_email,
-        timezone=payload.timezone,
-        currency=payload.currency,
-        languages=payload.languages,
-        preset=payload.preset,
-        admin_password=payload.admin_password,
-        exist_ok=False,
-        origin=payload.origin,
-    )
-    applied: list[str] = []
-    if payload.template:
-        from apps.hotels.services.onboarding import apply_template, ensure_seed, get_template
+    """
+    Пароль заведённого администратора уходит ему письмом, а не в ответ.
 
-        ensure_seed()
-        template = get_template(payload.template)
-        applied = [service.code for service in apply_template(result.hotel, template)]
+    Вся операция — одна транзакция вместе с отправкой: не ушло письмо —
+    отеля не появилось. Иначе оператор получал бы отель с администратором,
+    пароля которого не знает никто.
+    """
+    from django.db import transaction
+
+    from apps.hotels.services.admin_credentials import send_admin_password
+
+    with transaction.atomic():
+        result = provision_hotel(
+            subdomain=payload.subdomain,
+            name=payload.name,
+            admin_email=payload.admin_email,
+            timezone=payload.timezone,
+            currency=payload.currency,
+            languages=payload.languages,
+            preset=payload.preset,
+            exist_ok=False,
+            origin=payload.origin,
+        )
+        applied: list[str] = []
+        if payload.template:
+            from apps.hotels.services.onboarding import apply_template, ensure_seed, get_template
+
+            ensure_seed()
+            template = get_template(payload.template)
+            applied = [service.code for service in apply_template(result.hotel, template)]
+
+        delivery = send_admin_password(
+            result.hotel,
+            email=result.admin.email,
+            password=result.admin_password,
+            is_new=True,
+        )
 
     console.audit_hotel(
         result.hotel,
@@ -77,7 +100,7 @@ def create_hotel(request: HttpRequest, payload: HotelCreateIn):
         "template": payload.template,
         "services": applied,
         "hotel": console.profile(result.hotel),
-        "admin": {"email": result.admin.email, "password": result.admin_password},
+        "admin": {"email": result.admin.email, **delivery},
     }
 
 
@@ -122,16 +145,58 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
 @router.post("/hotels/{hotel_id}/admins", summary="Завести/сбросить hotel-admin")
 @requires(WRITE)
 def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
+    """
+    Пароль уходит АДМИНИСТРАТОРУ письмом, оператору — только факт отправки.
+
+    Возврат пароля в теле был готовым захватом тенанта: вошедший в консоль
+    получал полный доступ в CMS любого отеля, а сам отель об этом не узнавал.
+    Теперь оператор видит адрес, на который ушло письмо, и больше ничего.
+
+    Почта не работает — операция ОТКАЗЫВАЕТ, и пароль остаётся прежним
+    (см. services/admin_credentials): «отправлено» при неушедшем письме
+    заперло бы отель.
+    """
     hotel = console.get_hotel(hotel_id)
-    user, password = set_hotel_admin(hotel, email=payload.email, password=payload.password)
+    user, delivery = set_hotel_admin(hotel, email=payload.email, password=payload.password)
     console.audit_hotel(
         hotel,
         "platform.hotel.admin_set",
         actor_id=request.user.pk,
         ip=request.META.get("REMOTE_ADDR"),
-        payload={"email": user.email},
+        # В журнале — адрес и факт отправки. Пароля здесь нет и не будет:
+        # журнал читают шире, чем ответ на запрос.
+        payload={"email": user.email, "delivered_to": delivery["delivered_to"]},
     )
-    return {"email": user.email, "password": password}
+    return {"email": user.email, **delivery}
+
+
+@router.put("/hotels/{hotel_id}/admins/email", summary="Сменить адрес администратора отеля")
+@requires(OWNER)
+def change_admin_email(request: HttpRequest, hotel_id: str, payload: AdminEmailIn):
+    """
+    Выход из положения «отель потерял и почту тоже».
+
+    Пароль теперь уходит только на адрес администратора — значит недоступный
+    адрес запирает отель насмерть. Эта ручка меняет адрес, НИЧЕГО на него не
+    отправляя: отправлять было бы некуда, в том и беда. После смены оператор
+    делает обычный сброс, и пароль уезжает уже на новый адрес.
+
+    Право владельца, а не поддержки: подмена адреса — это и есть способ
+    увести отель, и он не должен быть рутинной операцией.
+    """
+    hotel = console.get_hotel(hotel_id)
+    user = change_hotel_admin_email(
+        hotel, current_email=payload.current_email, new_email=payload.new_email
+    )
+
+    console.audit_hotel(
+        hotel,
+        "platform.hotel.admin_email_changed",
+        actor_id=request.user.pk,
+        ip=request.META.get("REMOTE_ADDR"),
+        payload={"from": (payload.current_email or "").strip().lower(), "to": user.email},
+    )
+    return {"email": user.email, "previous_email": (payload.current_email or "").strip().lower()}
 
 
 # --- Экспорт и офбординг (152-ФЗ) ------------------------------------------

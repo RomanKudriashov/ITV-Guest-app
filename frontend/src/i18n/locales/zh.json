@@ -1751,7 +1751,6 @@
       "adminEmail": "管理员邮箱",
       "adminHint": "创建或重置访问权限。密码只显示一次。",
       "adminReset": "创建 / 重置",
-      "adminPassword": "新密码",
       "trialLeft": "试用：剩余 {{days}} 天",
       "trialEnds": "试用至 {{date}}",
       "limit": {
@@ -1774,7 +1773,8 @@
       "tariffNoMoney": "这是记录而非支付：此处没有资金流动。",
       "downgradeTitle": "降级低于当前用量",
       "downgradeLimit": "{{what}}：已用 {{used}}，上限 {{limit}}",
-      "downgradeModules": "套餐不包含：{{modules}}"
+      "downgradeModules": "套餐不包含：{{modules}}",
+      "adminPasswordSent": "密码已发送至 {{email}}"
     },
     "create": {
       "title": "新建酒店",
@@ -1791,10 +1791,10 @@
       "failed": "创建失败",
       "doneTitle": "酒店已创建",
       "doneAdmin": "管理员",
-      "donePassword": "密码（仅显示一次）",
       "doneHint": "酒店接下来在自己的后台完成配置。",
       "template": "起始模板",
-      "doneServices": "已创建服务：{{count}}"
+      "doneServices": "已创建服务：{{count}}",
+      "donePasswordSent": "密码已发送给管理员：{{email}}"
     },
     "module": {
       "room_control": "客房控制",

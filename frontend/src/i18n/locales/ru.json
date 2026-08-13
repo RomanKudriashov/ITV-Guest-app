@@ -1764,7 +1764,6 @@
       "adminEmail": "Email администратора",
       "adminHint": "Заведёт или сбросит доступ. Пароль показывается один раз.",
       "adminReset": "Завести / сбросить",
-      "adminPassword": "Новый пароль",
       "trialLeft": "Триал: осталось {{days}} дн.",
       "trialEnds": "Триал до {{date}}",
       "limit": {
@@ -1787,7 +1786,8 @@
       "tariffNoMoney": "Это запись, а не платёж: движения денег здесь нет.",
       "downgradeTitle": "Понижение ниже использования",
       "downgradeLimit": "{{what}}: используется {{used}}, лимит {{limit}}",
-      "downgradeModules": "Тариф не даёт модули: {{modules}}"
+      "downgradeModules": "Тариф не даёт модули: {{modules}}",
+      "adminPasswordSent": "Пароль отправлен на {{email}}"
     },
     "create": {
       "title": "Новый отель",
@@ -1804,10 +1804,10 @@
       "failed": "Не удалось создать",
       "doneTitle": "Отель создан",
       "doneAdmin": "Администратор",
-      "donePassword": "Пароль (показывается один раз)",
       "doneHint": "Дальше отель настраивает себя сам в CMS.",
       "template": "Стартовый шаблон",
-      "doneServices": "Создано сервисов: {{count}}"
+      "doneServices": "Создано сервисов: {{count}}",
+      "donePasswordSent": "Пароль отправлен администратору на {{email}}"
     },
     "module": {
       "room_control": "Управление номером",

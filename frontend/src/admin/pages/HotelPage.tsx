@@ -133,7 +133,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   });
   const resetAdmin = useMutation({
     mutationFn: () => setHotelAdmin(hotel.id, { email: adminEmail.trim() }),
-    onSuccess: (result) => setIssued(result.password),
+    onSuccess: (result) => setIssued(result.delivered_to),
   });
 
   return (
@@ -191,8 +191,8 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           {t('admin.hotel.adminReset')}
         </Button>
         {issued ? (
-          <Alert severity="info" sx={{ mt: 1.5 }} data-testid="admin-hotel-admin-password">
-            {t('admin.hotel.adminPassword')}: <b>{issued}</b>
+          <Alert severity="success" sx={{ mt: 1.5 }} data-testid="admin-hotel-admin-sent">
+            {t('admin.hotel.adminPasswordSent', { email: issued })}
           </Alert>
         ) : null}
       </Box>

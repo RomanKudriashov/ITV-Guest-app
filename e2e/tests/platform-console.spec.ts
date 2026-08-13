@@ -38,11 +38,11 @@ test('админка: создание отеля, вход admin, отключ�
   await page.getByTestId('admin-create-admin-email').fill(adminEmail)
   await page.getByTestId('admin-create-submit').click()
 
-  // Пароль администратора показан один раз — забираем для проверки логина.
-  await expect(page.getByTestId('admin-created-password')).toBeVisible({ timeout: 15_000 })
-  const pwText = await page.getByTestId('admin-created-password').innerText()
-  const adminPw = pwText.match(/([A-Za-z0-9_-]{12,})/)?.[1] ?? ''
-  expect(adminPw.length).toBeGreaterThan(8)
+  // Пароль администратору УХОДИТ ПИСЬМОМ и оператору не показывается — консоль
+  // сообщает только адрес доставки. Раньше он был виден здесь, и отсюда же его
+  // забирал этот прогон.
+  await expect(page.getByTestId('admin-created-sent')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByTestId('admin-created-sent')).toContainText(adminEmail)
   await page.getByTestId('admin-created-done').click()
 
   // Поиск во флоте находит новый отель.
@@ -59,11 +59,10 @@ test('админка: создание отеля, вход admin, отключ�
   const sessionBody = await session.json()
   expect(sessionBody.hotel?.subdomain).toBe(sub)
 
-  // --- hotel-admin логинится в CMS ------------------------------------------
-  const login = await request.post(`${API}/api/staff/auth/login`, {
-    data: { email: adminEmail, password: adminPw }, headers: tenant,
-  })
-  expect(login.status(), await login.text()).toBe(200)
+  // Проверки «hotel-admin логинится в CMS» здесь БОЛЬШЕ НЕТ: пароль знает
+  // только сам администратор, и взять его прогону неоткуда. Вернуть покрытие
+  // можно почтовой службой в компоузе (mailpit и т.п.), из которой прогон
+  // читал бы письмо; пока её нет, это осознанная потеря, а не недосмотр.
 
   // --- Отключение в карточке отеля ------------------------------------------
   await page.getByTestId(`admin-fleet-open-${sub}`).click()

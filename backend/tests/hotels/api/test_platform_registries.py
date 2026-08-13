@@ -111,6 +111,8 @@ _BODIES = {
     "POST /fleet/bulk": {"hotel_ids": [], "is_active": False},
     "POST /hotels": {"subdomain": "probe-x", "name": "Проба", "admin_email": "a@probe.test"},
     "POST /hotels/{hotel_id}/admins": {"email": "a@probe.test"},
+    "PUT /hotels/{hotel_id}/admins/email": {
+        "current_email": "a@probe.test", "new_email": "b@probe.test"},
     "POST /hotels/{hotel_id}/purge": {"confirm_subdomain": "нарочно-неверный"},
     "POST /hotels/{hotel_id}/enter": {"reason": "проба границы"},
     "POST /hotels/{hotel_id}/nodes": {"name": "probe-node"},

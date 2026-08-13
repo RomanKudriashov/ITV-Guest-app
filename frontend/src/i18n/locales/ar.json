@@ -1772,7 +1772,6 @@
       "adminEmail": "بريد المدير",
       "adminHint": "ينشئ الوصول أو يعيد ضبطه. تظهر كلمة المرور مرة واحدة.",
       "adminReset": "إنشاء / إعادة ضبط",
-      "adminPassword": "كلمة مرور جديدة",
       "trialLeft": "التجربة: بقي {{days}} يومًا",
       "trialEnds": "التجربة حتى {{date}}",
       "limit": {
@@ -1795,7 +1794,8 @@
       "tariffNoMoney": "هذا سجل وليس دفعة: لا حركة أموال هنا.",
       "downgradeTitle": "خفض أدنى من الاستخدام الحالي",
       "downgradeLimit": "{{what}}: مستخدم {{used}} والحد {{limit}}",
-      "downgradeModules": "الباقة لا تشمل: {{modules}}"
+      "downgradeModules": "الباقة لا تشمل: {{modules}}",
+      "adminPasswordSent": "تم إرسال كلمة المرور إلى {{email}}"
     },
     "create": {
       "title": "فندق جديد",
@@ -1812,10 +1812,10 @@
       "failed": "تعذّر الإنشاء",
       "doneTitle": "تم إنشاء الفندق",
       "doneAdmin": "المدير",
-      "donePassword": "كلمة المرور (تظهر مرة واحدة)",
       "doneHint": "يكمل الفندق إعداد نفسه من لوحته.",
       "template": "قالب البداية",
-      "doneServices": "الخدمات المنشأة: {{count}}"
+      "doneServices": "الخدمات المنشأة: {{count}}",
+      "donePasswordSent": "تم إرسال كلمة المرور إلى المسؤول على {{email}}"
     },
     "module": {
       "room_control": "التحكم بالغرفة",

@@ -70,7 +70,9 @@ def test_create_list_get_hotel(client, platform_token):
     })
     assert created.status_code == 201, created.content
     body = created.json()
-    assert body["admin"]["password"]  # сгенерирован, показан один раз
+    # Пароля в ответе НЕТ: он уходит письмом администратору отеля.
+    assert "password" not in body["admin"]
+    assert body["admin"]["delivered_to"] == "a@grand.test"
     assert body["hotel"]["default_language"] == "en"
 
     listing = call("get", "/hotels").json()
@@ -103,7 +105,9 @@ def test_patch_profile_and_set_admin(client, platform_token):
 
     reset = call("post", f"/hotels/{hid}/admins", {"email": "a@grand.test"})
     assert reset.status_code == 200
-    assert reset.json()["password"]  # новый пароль показан один раз
+    # Оператору — только адрес доставки, пароль ушёл администратору.
+    assert "password" not in reset.json()
+    assert reset.json()["delivered_to"]
 
 
 # --- Деактивация -----------------------------------------------------------

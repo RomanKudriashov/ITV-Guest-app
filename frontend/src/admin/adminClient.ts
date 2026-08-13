@@ -102,12 +102,12 @@ export interface CreateHotelInput {
   currency?: string;
   languages?: string[];
   preset?: string;
-  admin_password?: string | null;
 }
 
 export interface CreateHotelResult {
   hotel: HotelProfile;
-  admin: { email: string; password: string | null };
+  // Пароля здесь нет: он уходит письмом администратору отеля.
+  admin: { email: string; delivered_to: string; sent_at: string };
   template: string | null;
   services: string[];
 }
@@ -155,8 +155,17 @@ export const createHotel = (body: CreateHotelInput) =>
   request<CreateHotelResult>('/hotels', 'POST', body);
 export const patchHotel = (id: string, body: Partial<HotelProfile>) =>
   request<HotelProfile>(`/hotels/${id}`, 'PATCH', body);
-export const setHotelAdmin = (id: string, body: { email: string; password?: string }) =>
-  request<{ email: string; password: string }>(`/hotels/${id}/admins`, 'POST', body);
+export const setHotelAdmin = (id: string, body: { email: string }) =>
+  request<{ email: string; delivered_to: string; sent_at: string }>(
+    `/hotels/${id}/admins`, 'POST', body);
+
+// Смена адреса администратора: выход из «отель потерял и почту тоже».
+// Право владельца, письма не шлёт — старый ящик и есть то, что потеряно.
+export const changeHotelAdminEmail = (
+  id: string,
+  body: { current_email: string; new_email: string },
+) => request<{ email: string; previous_email: string }>(
+  `/hotels/${id}/admins/email`, 'PUT', body);
 
 export const BRAND_PRESETS = [
   'midnight_navy',

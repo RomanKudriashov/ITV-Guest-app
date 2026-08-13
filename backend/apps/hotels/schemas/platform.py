@@ -27,7 +27,9 @@ class HotelCreateIn(Schema):
     currency: str = "RUB"
     languages: list[str] = ["ru", "en"]
     preset: str = "midnight_navy"
-    admin_password: str | None = None
+    # `admin_password` здесь НЕТ: пароль генерируется и уходит письмом
+    # администратору. Дать оператору задать его значило бы вернуть тот же
+    # захват тенанта другим путём.
     # Происхождение. Автотесты обязаны присылать "test" — только так их отели
     # отличимы от настоящих не угадыванием по имени, а признаком.
     origin: str = "live"
@@ -48,6 +50,16 @@ class HotelPatchIn(Schema):
 class AdminIn(Schema):
     email: str
     password: str | None = None
+
+
+class AdminEmailIn(Schema):
+    """
+    Смена адреса администратора. Письма НЕ шлёт: она и нужна тогда, когда
+    старый адрес недоступен.
+    """
+
+    current_email: str
+    new_email: str
 
 class ModuleEntryIn(Schema):
     code: str

@@ -204,11 +204,9 @@ export function CreatedAdminDialog({
           <Typography variant="body2">
             {t('admin.create.doneAdmin')}: <b>{admin.email}</b>
           </Typography>
-          {admin.password ? (
-            <Alert severity="info" data-testid="admin-created-password">
-              {t('admin.create.donePassword')}: <b>{admin.password}</b>
-            </Alert>
-          ) : null}
+          <Alert severity="success" data-testid="admin-created-sent">
+            {t('admin.create.donePasswordSent', { email: admin.delivered_to })}
+          </Alert>
           {services.length ? (
             <Box sx={{ fontSize: 12, color: ink.mid }} data-testid="admin-created-services">
               {t('admin.create.doneServices', { count: services.length })}: {services.join(', ')}
