@@ -69,32 +69,48 @@ def _notifications_off(settings):
     settings.NOTIFICATIONS_ENABLED = False
 
 
-@pytest.fixture(autouse=True)
-def _clean_cache(settings):
+def _wipe_cache() -> None:
     """
-    Кэш между тестами не протекает — и не трогает кэш живого стенда.
+    Стереть кэш ЭТОГО процесса и ничей больше.
+
+    Базу выбирает `config/settings_test.py` — по одной на процесс прогона.
+    Пока баз хватает, «своё» и «вся база» совпадают, и FLUSHDB безопасен.
+    Когда процессов больше, чем свободных баз, база общая, а расходимся
+    префиксом ключей — тогда FLUSHDB стёр бы соседей, и удалять надо по
+    своему префиксу.
+    """
+    from django.conf import settings as dj_settings
+    from django.core.cache import cache
+
+    if getattr(dj_settings, "CACHE_ISOLATED_BY_DB", True):
+        cache.clear()
+        return
+
+    prefix = getattr(dj_settings, "CACHE_KEY_PREFIX", "")
+    client = cache._cache.get_client(write=True)
+    for key in client.scan_iter(match=f"{prefix}:*"):
+        client.delete(key)
+
+
+@pytest.fixture(autouse=True)
+def _clean_cache():
+    """
+    Кэш между тестами не протекает — ни к соседу, ни на живой стенд.
 
     С G5 в кэше живут счётчики попыток PIN, признак «команда в полёте» и
     доступность endpoint'ов узла. Чистить его обязательно: тест, начинающийся
     с заблокированного номера, иначе падал бы через раз в зависимости от
     соседа.
 
-    Но чистка — это FLUSHDB, и БАЗУ ПРИХОДИТСЯ МЕНЯТЬ. Тестовая база данных у
-    прогона своя, а Redis был бы общий с dev-стендом: прогон тестов посреди
-    ручной проверки сбрасывал бы стенду состояние команд в полёте. Тестовая БД
-    Postgres отделена — кэш обязан быть отделён так же.
+    Чистка — это FLUSHDB, поэтому база обязана быть СВОЯ. Раньше её подменяла
+    эта фикстура (на одну и ту же для всех), и при `-n 4` четыре процесса
+    флашили общую базу друг у друга посреди тестов. Теперь базу выдаёт
+    `config/settings_test.py` — по одной на процесс, — а фикстуре остаётся
+    только чистка.
     """
-    from django.core.cache import cache
-
-    settings.CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": settings.CACHES["default"]["LOCATION"].rsplit("/", 1)[0] + "/5",
-        }
-    }
-    cache.clear()
+    _wipe_cache()
     yield
-    cache.clear()
+    _wipe_cache()
 
 
 @pytest.fixture(autouse=True)
