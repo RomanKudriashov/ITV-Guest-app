@@ -58,11 +58,13 @@ def test_registry_lists_all_codes_disabled_by_default(client, platform_token, cr
 
 def test_put_enables_modules_tariff_and_override(client, platform_token, crystal):
     call = _p(client, platform_token)
+    # Тариф ставится СВОЕЙ дверью. Раньше его принимал и этот PUT, и через
+    # него же он менялся ролью «только чтение» в обход владельческой проверки.
+    assert call("put", f"/hotels/{crystal.pk}/tariff", {"tariff": "resort"}).status_code == 200
     resp = call(
         "put",
         f"/hotels/{crystal.pk}/modules",
         {
-            "tariff": "resort",
             "modules": [
                 {"code": "multi_restaurant", "is_enabled": True},
                 {"code": "pms", "is_enabled": True, "source": "override", "config": {"node": "local-1"}},

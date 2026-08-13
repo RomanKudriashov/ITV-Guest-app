@@ -66,6 +66,91 @@ def _add_service(hotel: Hotel, code: str) -> Service:
         return Service.objects.create(code=code, type="bar", execution_point=point)
 
 
+def _platform_operations():
+    """
+    Все платформенные операции из карты маршрутов: (методы, путь, операция).
+
+    Дерево, а не верхний уровень: ручки живут в дочерних роутерах,
+    подключённых к `/platform` с пустым префиксом.
+    """
+    from api import api
+
+    def walk(router, prefix):
+        for path, view in router.path_operations.items():
+            for operation in view.operations:
+                yield operation.methods, f"{prefix}{path}", operation
+        for child in getattr(router, "_routers", []):
+            yield from walk(child[1], prefix + child[0])
+
+    for root_prefix, router in api._routers:
+        if root_prefix.startswith("/platform"):
+            yield from walk(router, "")
+
+
+def _fill(path: str, *, hotel, node, user_id):
+    """Подставить идентификаторы в шаблон пути. None — подставить нечего."""
+    filled = (
+        path.replace("{hotel_id}", str(hotel.pk))
+        .replace("{node_id}", str(node.pk))
+        .replace("{user_id}", str(user_id or ""))
+        .replace("{template_id}", "")
+    )
+    return None if "{" in filled or filled.endswith("/") else filled
+
+
+# Минимальное ВАЛИДНОЕ тело на каждый изменяющий путь.
+#
+# Пустое `{}` не годится: ninja проверяет тело ДО вызова вьюхи, и на неполном
+# теле возвращает 422, не дойдя до права. Действие при этом не выполняется —
+# граница держится, — но тест, принявший 422 за отказ, ничего бы не доказал:
+# с валидным телом ручка могла бы и пропустить.
+#
+# Новый путь без записи здесь даст 422 и уронит тест ВСЛУХ. Это и нужно:
+# добавивший ручку обязан сказать, чем её дёргать.
+_BODIES = {
+    "POST /fleet/bulk": {"hotel_ids": [], "is_active": False},
+    "POST /hotels": {"subdomain": "probe-x", "name": "Проба", "admin_email": "a@probe.test"},
+    "POST /hotels/{hotel_id}/admins": {"email": "a@probe.test"},
+    "POST /hotels/{hotel_id}/purge": {"confirm_subdomain": "нарочно-неверный"},
+    "POST /hotels/{hotel_id}/enter": {"reason": "проба границы"},
+    "POST /hotels/{hotel_id}/nodes": {"name": "probe-node"},
+    "PUT /hotels/{hotel_id}/tariff": {"tariff": "standard"},
+    "PUT /dictionaries": {"kind": "probe", "code": "probe", "title": {"ru": "Проба"}},
+    "POST /team": {"email": "probe@platform.test"},
+    "POST /auth/2fa/enable": {"code": "000000"},
+}
+
+
+def _body_for(method: str, path: str) -> dict:
+    return _BODIES.get(f"{method} {path}", {})
+
+
+def _call(client, token, method: str, url: str, body: dict | None = None):
+    kw = {"HTTP_HOST": BASE_HOST, "HTTP_AUTHORIZATION": f"Bearer {token}"}
+    fn = getattr(client, method.lower())
+    if method in ("POST", "PUT", "PATCH"):
+        return fn(f"/api/v1/platform{url}", data=json.dumps(body or {}),
+                  content_type="application/json", **kw)
+    return fn(f"/api/v1/platform{url}", **kw)
+
+
+def _login(client, email: str, password: str) -> str:
+    resp = client.post(
+        "/api/v1/platform/auth/login",
+        data=json.dumps({"email": email, "password": password}),
+        content_type="application/json",
+        HTTP_HOST=BASE_HOST,
+    )
+    assert resp.status_code == 200, resp.content
+    return resp.json()["access"]
+
+
+def _node_for(hotel):
+    from apps.hotels.services.onprem import register_node
+
+    return register_node(hotel, name="probe-box", purpose="grms")
+
+
 def _hotel(subdomain: str, name: str, *, origin: str = Hotel.Origin.LIVE) -> Hotel:
     return provision_hotel(
         subdomain=subdomain,
@@ -304,34 +389,108 @@ def test_unknown_key_answers_the_same_as_revoked(client):
 
 
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
-def test_read_only_role_cannot_change_anything(client, api):
+def test_every_platform_route_refuses_read_only(client, api):
+    """
+    ПЕРЕБОР ВСЕХ ручек, а не список из четырёх.
+
+    Прежняя версия перечисляла четыре адреса и была зелёной — потому что
+    проверяла ровно те, где проверка стояла. Шесть изменяющих ручек она не
+    трогала, и все шесть были открыты роли «только чтение»: переименование
+    отеля, тариф, гашение отеля гостям, создание отелей, выгрузка
+    персональных данных и сброс пароля администратора отеля (с выдачей
+    пароля в ответе).
+
+    Ручки берутся из карты маршрутов, поэтому новая приезжает в тест сама.
+    Проверяем ровно границу: read_only получает 403 на всём, что объявлено
+    правом `write` или `owner`, и НЕ получает 403 на том, что объявлено
+    `read` — иначе «закрыли всё» тоже прошло бы за успех.
+    """
+    from apps.hotels.api.platform.rights import OWNER, READ, WRITE, declared_right
+
     hotel = _hotel("readonly", "Только чтение")
+    node, _key = _node_for(hotel)
     invited = api("post", "/team", {"email": "viewer@platform.test", "role": "read_only"}).json()
+    viewer = _login(client, "viewer@platform.test", invited["password"])
 
-    login = client.post(
-        "/api/v1/platform/auth/login",
-        data=json.dumps({"email": "viewer@platform.test", "password": invited["password"]}),
-        content_type="application/json",
-        HTTP_HOST=BASE_HOST,
-    )
-    viewer = login.json()["access"]
+    checked = {WRITE: 0, OWNER: 0, READ: 0}
+    wrong: list[str] = []
+    for methods, path, operation in _platform_operations():
+        right = declared_right(operation.view_func)
+        if right not in (READ, WRITE, OWNER):
+            continue  # публичный вход проверяется отдельно
+        for method in methods:
+            url = _fill(path, hotel=hotel, node=node, user_id=invited["member"]["id"])
+            if url is None:
+                continue
+            resp = _call(client, viewer, method, url, _body_for(method, path))
+            checked[right] += 1
+            forbidden = resp.status_code == 403
+            if right in (WRITE, OWNER) and not forbidden:
+                wrong.append(f"  {method} {path} — право {right}, а ответ {resp.status_code}")
+            if right == READ and forbidden:
+                wrong.append(f"  {method} {path} — право read, а наблюдателя не пустили")
 
-    def as_viewer(method, path, body=None):
-        kw = {"HTTP_HOST": BASE_HOST, "HTTP_AUTHORIZATION": f"Bearer {viewer}"}
-        if body is not None:
-            return getattr(client, method)(
-                f"/api/v1/platform{path}", data=json.dumps(body),
-                content_type="application/json", **kw,
-            )
-        return getattr(client, method)(f"/api/v1/platform{path}", **kw)
+    assert checked[WRITE] >= 8, f"изменяющих ручек проверено всего {checked[WRITE]}"
+    assert checked[OWNER] >= 4, f"владельческих ручек проверено всего {checked[OWNER]}"
+    assert checked[READ] >= 8, f"читающих ручек проверено всего {checked[READ]}"
+    assert not wrong, "Граница прав не там, где объявлена:\n" + "\n".join(wrong)
 
-    # Смотреть — можно.
-    assert as_viewer("get", "/fleet").status_code == 200
-    # Менять — нет, и это проверяется на каждом чувствительном действии.
-    assert as_viewer("post", "/fleet/bulk", {"hotel_ids": [str(hotel.pk)], "is_active": False}).status_code == 403
-    assert as_viewer("post", f"/hotels/{hotel.pk}/nodes", {"name": "x"}).status_code == 403
-    assert as_viewer("post", f"/hotels/{hotel.pk}/enter", {"reason": "любопытство"}).status_code == 403
-    assert as_viewer("post", "/team", {"email": "another@platform.test"}).status_code == 403
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_owner_passes_where_read_only_is_refused(client, api):
+    """
+    Обратная сторона: рубеж не должен запереть и владельца.
+
+    Без этой проверки «закрыть всё наглухо» выглядело бы как успех предыдущего
+    теста.
+    """
+    from apps.hotels.api.platform.rights import OWNER, WRITE, declared_right
+
+    hotel = _hotel("ownerpass", "Владелец проходит")
+    node, _key = _node_for(hotel)
+    owner = _login(client, EMAIL, PASSWORD)
+
+    denied: list[str] = []
+    for methods, path, operation in _platform_operations():
+        if declared_right(operation.view_func) not in (WRITE, OWNER):
+            continue
+        for method in methods:
+            # Разрушающее и необратимое владельцем НЕ дёргаем: тест про
+            # границу прав, а не про офбординг.
+            if any(word in path for word in ("purge", "offboard", "export")) or method == "DELETE":
+                continue
+            url = _fill(path, hotel=hotel, node=node, user_id=None)
+            if url is None:
+                continue
+            resp = _call(client, owner, method, url, _body_for(method, path))
+            if resp.status_code == 403:
+                denied.append(f"  {method} {path} — владельцу отказали")
+
+    assert not denied, "Рубеж запер владельца:\n" + "\n".join(denied)
+
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_tariff_has_one_door(client, api):
+    """
+    Тариф меняется ТОЛЬКО через PUT /hotels/{id}/tariff.
+
+    Две другие двери — профиль и реестр модулей — принимали то же поле без
+    всякой проверки: охрана стояла на одной двери, рядом было две дыры.
+    """
+    hotel = _hotel("onedoor", "Одна дверь")
+    assert hotel.tariff != "resort", "проба бессмысленна, если тариф уже целевой"
+
+    api("patch", f"/hotels/{hotel.pk}", {"tariff": "resort", "name": "Через профиль"})
+    api("put", f"/hotels/{hotel.pk}/modules", {"tariff": "resort", "modules": []})
+
+    hotel.refresh_from_db()
+    assert hotel.tariff != "resort", "тариф проехал мимо своей двери"
+    # Имя при этом поменялось: PATCH не сломан, из него убрано одно поле.
+    assert hotel.name == "Через профиль"
+
+    api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "resort"})
+    hotel.refresh_from_db()
+    assert hotel.tariff == "resort", "своя дверь обязана работать"
 
 
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])

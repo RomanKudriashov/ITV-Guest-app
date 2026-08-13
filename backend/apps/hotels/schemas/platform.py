@@ -35,12 +35,15 @@ class HotelCreateIn(Schema):
     template: str | None = None
 
 class HotelPatchIn(Schema):
+    # Тарифа здесь НЕТ намеренно. У него одна дверь — PUT /hotels/{id}/tariff,
+    # и она заперта на владельца. Пока поле лежало ещё и тут (и в ModulesIn),
+    # охрана стояла на двери, а рядом было две дыры в стене: тариф менялся
+    # ролью «только чтение» через профиль и через реестр модулей.
     name: str | None = None
     timezone: str | None = None
     currency: str | None = None
     languages: list[str] | None = None
     is_active: bool | None = None
-    tariff: str | None = None
 
 class AdminIn(Schema):
     email: str
@@ -53,8 +56,9 @@ class ModuleEntryIn(Schema):
     config: dict = {}
 
 class ModulesIn(Schema):
+    # Без тарифа: см. HotelPatchIn. Реестр модулей — операционная настройка,
+    # тариф — денежная, и одна ручка на двоих делала вторую необязательной.
     modules: list[ModuleEntryIn] = []
-    tariff: str | None = None
 
 class OffboardIn(Schema):
     reason: str = ""

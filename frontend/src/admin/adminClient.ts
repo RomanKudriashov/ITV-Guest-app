@@ -325,7 +325,10 @@ export const getUsage = (id: string) => request<HotelUsage>(`/hotels/${id}/usage
 export const getActivity = (id: string) => request<ActivityRow[]>(`/hotels/${id}/activity`);
 export const getModules = (id: string) =>
   request<{ tariff: string; modules: ModuleEntry[] }>(`/hotels/${id}/modules`);
-export const putModules = (id: string, modules: ModuleEntry[], tariff?: string) =>
+// Тариф этой ручкой НЕ передаётся: у него одна дверь — `setTariff` ниже,
+// запертая на владельца. Параметр здесь был, вызывающих не имел, но держал
+// лазейку открытой на сервере.
+export const putModules = (id: string, modules: ModuleEntry[]) =>
   request<{ tariff: string; modules: ModuleEntry[] }>(`/hotels/${id}/modules`, 'PUT', {
     modules: modules.map((m) => ({
       code: m.code,
@@ -333,7 +336,6 @@ export const putModules = (id: string, modules: ModuleEntry[], tariff?: string) 
       source: m.source,
       config: m.config,
     })),
-    tariff: tariff ?? null,
   });
 export const setTariff = (
   id: string,
