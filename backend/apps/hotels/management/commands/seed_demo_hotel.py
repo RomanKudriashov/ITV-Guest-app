@@ -160,6 +160,17 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--without-media",
+            action="store_true",
+            help=(
+                "Не создавать медиа-объекты. Под тестами это ОСНОВНОЙ режим: "
+                "полный сид двух отелей грузит 82 картинки в MinIO и режет их "
+                "варианты Pillow'ом в eager-режиме — десять секунд на КАЖДЫЙ "
+                "тест и вся нагрузка на процессор, из-за которой в четыре "
+                "процесса начинали падать соседи, чувствительные ко времени."
+            ),
+        )
+        parser.add_argument(
             "--with-marketing-badges",
             action="store_true",
             help="Завести пресеты бейджей (Хит/Новинка/Выбор шефа) и повесить на позиции.",
@@ -177,6 +188,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        # Медиа выключается ОДНИМ флагом в одной точке (`_image_for`), а не
+        # проверками у каждого вызывающего: воронка создания снимков одна, и
+        # закрыть её надо там же, где она открывается.
+        self._skip_media = options["without_media"]
         history = options["with_guest_history"]
         analytics = options["with_analytics_history"]
         badges = options["with_marketing_badges"]
@@ -1538,7 +1553,18 @@ class Command(BaseCommand):
 
         Ни снимка, ни MinIO — обходимся без картинки: демо-данные не должны
         быть причиной, по которой не поднимается окружение.
+
+        `--without-media` перехватывается ЗДЕСЬ, в единственной воронке, а не у
+        каждого вызывающего: точек вызова полтора десятка, и «не забыть
+        проверку в новой» — то самое правило, которое уже не сработало с
+        правами платформы.
+
+        Возврат None — штатный путь, а не заглушка: весь сид уже умеет жить
+        без картинки, потому что так он ведёт себя и при пустом кэше.
         """
+        if getattr(self, "_skip_media", False):
+            return None
+
         from apps.media.services import seed_photos
 
         content = seed_photos.fetch(code)

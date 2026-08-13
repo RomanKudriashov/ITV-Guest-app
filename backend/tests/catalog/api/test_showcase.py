@@ -350,6 +350,7 @@ def _catalog(client, hotel, token, offering_type: str, point: str | None = None)
     ).json()
 
 
+@pytest.mark.seed_media
 def test_flat_catalog_wears_its_own_cover_not_the_first_venue(crystal, monkeypatch):
     """
     РАЗДЕЛ ОТЕЛЯ НЕ НОСИТ ФОТО ЧУЖОГО ЗАВЕДЕНИЯ.
@@ -387,6 +388,7 @@ def test_flat_catalog_wears_its_own_cover_not_the_first_venue(crystal, monkeypat
     assert hero not in venue_covers, "в шапке раздела снимок заведения"
 
 
+@pytest.mark.seed_media
 def test_venue_catalog_still_wears_the_venue_photo(crystal, monkeypatch):
     """Скоуп по заведению не сломан: там кадр как раз обязан быть его."""
     from apps.catalog.services.menu import _catalog_hero_image

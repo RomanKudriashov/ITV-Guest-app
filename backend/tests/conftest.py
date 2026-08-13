@@ -122,9 +122,31 @@ def _clean_context():
 
 
 @pytest.fixture
-def seeded(db):
-    """Два отеля из сида: рабочий демо-отель и второй — для проверки изоляции."""
-    call_command("seed_demo_hotel", "--with-second-hotel", verbosity=0)
+def seeded(db, request):
+    """
+    Два отеля из сида: рабочий демо-отель и второй — для проверки изоляции.
+
+    БЕЗ МЕДИА по умолчанию. Полный сид грузит 82 картинки в MinIO и режет их
+    варианты Pillow'ом в eager-режиме — это 10,5 секунды на каждый тест при
+    работе самого теста в доли секунды. Платили за это 434 теста напрямую и
+    ещё 388 через производные фикстуры, а четыре процесса, одновременно
+    жмущие картинки, душили машину: соседи, чувствительные ко времени,
+    начинали падать — каждый прогон другие.
+
+    Кому картинки нужны по существу — маркер:
+
+        @pytest.mark.seed_media
+        def test_...(crystal): ...
+
+    Маркер, а не отдельная фикстура `seeded_media`: от `seeded` зависят
+    `crystal`, `aurora`, `guest`, `cms`, `tracker` и прочие, и вторая ветка
+    потребовала бы дублировать всю цепочку. Решение принимается здесь, в
+    одном месте, а тест только объявляет потребность.
+    """
+    args = ["seed_demo_hotel", "--with-second-hotel"]
+    if request.node.get_closest_marker("seed_media") is None:
+        args.append("--without-media")
+    call_command(*args, verbosity=0)
     return {
         "crystal": Hotel.objects.get(subdomain="crystal"),
         "aurora": Hotel.objects.get(subdomain="aurora"),

@@ -20,6 +20,7 @@ from apps.media.services import seed_photos
 pytestmark = pytest.mark.django_db
 
 
+@pytest.mark.seed_media
 def test_every_venue_has_a_real_photo(crystal):
     with tenant_context(crystal):
         without = [
@@ -30,6 +31,7 @@ def test_every_venue_has_a_real_photo(crystal):
     assert without == [], f"заведения без настоящей обложки: {without}"
 
 
+@pytest.mark.seed_media
 def test_every_item_has_a_real_photo(crystal):
     with tenant_context(crystal):
         real = set(
@@ -41,6 +43,7 @@ def test_every_item_has_a_real_photo(crystal):
     assert without == [], f"позиции без настоящего фото: {without}"
 
 
+@pytest.mark.seed_media
 def test_every_menu_section_has_a_real_photo(crystal):
     """
     Раздел меню виден гостю не меньше блюда. В R4 аудит их не покрывал, и часть
@@ -122,6 +125,7 @@ def test_cache_file_name_carries_the_photo_id(crystal):
         assert entry[0] in seed_photos.cached_path(code).name, code
 
 
+@pytest.mark.seed_media
 def test_bar_has_its_own_menu(crystal):
     """
     «Лобби-бар» стоит на парадной с подписью «Коктейли и вино», и его меню не
