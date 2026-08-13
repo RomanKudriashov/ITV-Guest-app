@@ -107,7 +107,9 @@ def send_admin_password(hotel, *, email: str, password: str, is_new: bool) -> di
         )
 
     body = _BODY.format(
-        hotel=hotel.name,
+        # `name` переводимое: подставить его как есть значит написать
+        # администратору «Для вашего отеля «{'ru': 'Кристалл'}»».
+        hotel=hotel.name_i18n,
         action="заведён администратор" if is_new else "сброшен пароль администратора",
         url=hotel.public_guest_url("/login"),
         email=email,

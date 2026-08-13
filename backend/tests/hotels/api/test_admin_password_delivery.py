@@ -108,6 +108,9 @@ def test_letter_goes_to_the_admin_not_to_the_operator(api, hotel):
     assert letter.to == ["admin@mailed.test"]
     assert OWNER_EMAIL not in letter.to, "оператор не получатель"
     assert "Почтовый" in letter.body, "письмо называет отель"
+    # Название ПЕРЕВЕДЁННОЕ, а не словарь переводов: администратор не должен
+    # читать «Для вашего отеля «{'ru': 'Почтовый'}»».
+    assert "{'ru'" not in letter.body and '{"ru"' not in letter.body
 
 
 def test_password_does_not_change_when_mail_fails(api, hotel, settings):
