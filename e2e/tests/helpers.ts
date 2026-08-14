@@ -222,6 +222,27 @@ export async function guestTheme(request: APIRequestContext): Promise<Record<str
 }
 
 /**
+ * Принять заказ на доске — с проверкой, что сервер согласился.
+ *
+ * Клик по «Принять» тоже ничем не сверялся: промах уводил падение на
+ * следующий шаг, где виноватым выглядел гостевой экран.
+ */
+export async function acceptOrderOnBoard(page: Page, number: string): Promise<void> {
+  const accepted = page.waitForResponse(
+    (response) =>
+      /\/tracker\/order\/[^/]+\/accept/.test(response.url()) &&
+      response.request().method() === 'POST',
+    { timeout: 20_000 },
+  )
+  await page.getByTestId(`tracker-accept-${number}`).click()
+  const response = await accepted
+  expect(
+    response.ok(),
+    `приём заказа №${number} отклонён сервером: ${response.status()}`,
+  ).toBeTruthy()
+}
+
+/**
  * Перевести заказ в статус на доске трекера.
  *
  * Главное действие карточки видно сразу, остальные переходы живут в меню
@@ -236,6 +257,30 @@ export async function moveOrderTo(page: Page, number: string, code: string): Pro
   await page.keyboard.press('Escape')
   await expect(page.locator('.MuiMenu-root')).toHaveCount(0)
 
+  /*
+    ЖДЁМ ОТВЕТ СЕРВЕРА, А НЕ ЗАКРЫТИЕ МЕНЮ.
+
+    Хелпер кликал и проверял только то, что меню схлопнулось. Промах клика —
+    а он тут возможен, о прозрачном слое написано строкой выше — оставался
+    незамеченным, и падал следующий шаг: «гость не увидел статус». Дальше
+    виноватым выглядел realtime, хотя перехода не было вовсе, и на поиск
+    несуществующей потери сообщений ушёл целый разбор.
+
+    Подписка ставится ДО клика: быстрый ответ иначе можно пропустить.
+  */
+  const moved = page.waitForResponse(
+    (response) =>
+      // ТОЛЬКО переход. Доска ходит своим адресом (`/tracker/order/…/status`),
+      // а не тем, которым двигают статус по API в тестах, — первая версия
+      // ждала чужой URL и падала по таймауту. Вторая ловила заодно `/accept`
+      // и `/cancel`: ответ соседнего шага, ещё летевший в момент подписки,
+      // засчитывался за наш, и укус с 409 проходил мимо. Проверка, которая
+      // радуется чужому ответу, не проверяет ничего.
+      /\/tracker\/order\/[^/]+\/status/.test(response.url()) &&
+      response.request().method() === 'POST',
+    { timeout: 20_000 },
+  )
+
   const direct = page.getByTestId(`tracker-status-${number}-${code}`)
   if (await direct.isVisible().catch(() => false)) {
     await direct.click()
@@ -243,6 +288,13 @@ export async function moveOrderTo(page: Page, number: string, code: string): Pro
     await page.getByTestId(`tracker-more-${number}`).click()
     await direct.click()
   }
+
+  const response = await moved
+  expect(
+    response.ok(),
+    `перевод заказа №${number} в «${code}» отклонён сервером: ${response.status()}`,
+  ).toBeTruthy()
+
   // Ждём, пока меню действительно закроется, иначе следующий шаг попадёт в него.
   await expect(page.locator('.MuiMenu-root')).toHaveCount(0)
 }

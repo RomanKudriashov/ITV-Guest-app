@@ -45,7 +45,26 @@ export function OrderStatusPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const justPlaced = searchParams.get('placed') === '1';
 
-  // While the socket is down we fall back to polling, so the status still moves.
+  /*
+    ДВА РАЗНЫХ ОПРОСА, И ЭТО НЕ ИЗБЫТОЧНОСТЬ.
+
+    Частый (15 с) — когда сокет заведомо лежит: гость видит «Нет связи», и
+    статус всё равно должен двигаться.
+
+    Редкий (45 с) — когда сокет ЖИВ. Он закрывает случай, для которого раньше
+    не было ничего: соединение здорово, а одно сообщение до клиента не дошло.
+    Экран оставался неверным до перезагрузки — гость не узнавал, что заказ уже
+    привезли, и никакой признак на это не намекал. Опрос по состоянию
+    соединения такое не ловит по определению: соединение-то в порядке.
+
+    Мигания при этом нет: сокет и опрос кладут в кэш ОДИН И ТОТ ЖЕ снимок
+    заказа, а react-query не перерисовывает подписчиков, если данные совпали
+    по значению. Постоянным опросом это тоже не становится — раз в 45 секунд
+    против одного кадра на каждое изменение.
+  */
+  const SOCKET_DOWN_POLL_MS = 15_000;
+  const SAFETY_NET_POLL_MS = 45_000;
+
   const [pollMs, setPollMs] = useState<number | undefined>(undefined);
   const { data: order, isLoading, error, refetch } = useGuestOrder(id, pollMs);
   // Live status: snapshots land straight in the query cache (see useOrderLive).
@@ -55,8 +74,13 @@ export function OrderStatusPage() {
   useOrderStatusNotifications(order);
 
   useEffect(() => {
-    const stale = live !== 'online' && Boolean(order) && !order?.status.is_terminal;
-    setPollMs(stale ? 15_000 : undefined);
+    // Терминальный статус опрос прекращает: дальше меняться нечему.
+    const running = Boolean(order) && !order?.status.is_terminal;
+    if (!running) {
+      setPollMs(undefined);
+      return;
+    }
+    setPollMs(live === 'online' ? SAFETY_NET_POLL_MS : SOCKET_DOWN_POLL_MS);
   }, [live, order]);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -255,7 +279,19 @@ export function OrderStatusPage() {
           <Typography variant="h6" component="h1" data-testid="guest-order-number">
             {t('guest.order.number', { number: order.number })}
           </Typography>
-          <Chip size="small" label={order.status.title} color="primary" />
+          {/*
+            Тест-идентификатор на ТЕКУЩЕМ статусе. Без него проверкам
+            доставалась только карточка целиком, а в ней ниже лежит лента всех
+            шагов — «Готовится», «В пути», «Доставлено» присутствуют там всегда,
+            даже не наступив. Проверка `toContainText('Готовится')` проходила и
+            тогда, когда переход вовсе не случился: доказано укусом с 409.
+          */}
+          <Chip
+            size="small"
+            label={order.status.title}
+            color="primary"
+            data-testid="guest-order-current-status"
+          />
           {live === 'offline' && !order.status.is_terminal ? (
             <Chip
               size="small"

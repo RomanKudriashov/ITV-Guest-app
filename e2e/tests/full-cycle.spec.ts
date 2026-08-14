@@ -5,6 +5,7 @@ import {
   CREDENTIALS,
   DEMO_ROOM,
   moveOrderStatus,
+  acceptOrderOnBoard,
   moveOrderTo,
   openCart,
 } from './helpers'
@@ -84,27 +85,27 @@ test.describe('Замкнутый цикл: гость → кухня → гос
       await expect(card).toContainText(DEMO_ROOM)
 
       // 2. Повар принимает — у гостя статус меняется вживую.
-      await staff.getByTestId(`tracker-accept-${order.number}`).click()
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Принят/i, {
+      await acceptOrderOnBoard(staff, order.number)
+      await expect(guest.getByTestId('guest-order-current-status')).toHaveText(/Принят/i, {
         timeout: 20_000,
       })
 
       // 3. И дальше по статусам.
       await moveOrderTo(staff, order.number, 'preparing')
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Готовится/i, {
+      await expect(guest.getByTestId('guest-order-current-status')).toHaveText(/Готовится/i, {
         timeout: 20_000,
       })
       // Отмена гостем на «Готовится» уже закрыта — кнопка обязана исчезнуть.
       await expect(guest.getByTestId('guest-cancel-order')).toBeHidden({ timeout: 15_000 })
 
       await moveOrderTo(staff, order.number, 'on_the_way')
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/В пути/i, {
+      await expect(guest.getByTestId('guest-order-current-status')).toHaveText(/В пути/i, {
         timeout: 20_000,
       })
 
       // 4. Завершение — заказ уходит с активной доски в историю.
       await moveOrderTo(staff, order.number, 'done')
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Доставлено/i, {
+      await expect(guest.getByTestId('guest-order-current-status')).toHaveText(/Доставлено/i, {
         timeout: 20_000,
       })
       await expect(card).toBeHidden({ timeout: 20_000 })

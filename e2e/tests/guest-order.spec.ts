@@ -86,15 +86,18 @@ test.describe('Гостевая витрина', () => {
     await page.getByTestId('guest-track-order').click()
     const timeline = page.getByTestId('guest-order-timeline')
     await expect(timeline).toBeVisible()
-    await expect(page.getByTestId('guest-order-status')).toContainText(/Новый/i)
+    // ТЕКУЩИЙ статус, а не карточка целиком: ниже лежит лента всех шагов, и
+    // «Принят», «Готовится», «Доставлено» есть в ней всегда — проверка по
+    // контейнеру проходит, даже когда статус не менялся.
+    await expect(page.getByTestId('guest-order-current-status')).toHaveText(/Новый/i)
 
     await moveOrderStatus(request, staffToken, orderId as string, 'accepted')
-    await expect(page.getByTestId('guest-order-status')).toContainText(/Принят/i, {
+    await expect(page.getByTestId('guest-order-current-status')).toHaveText(/Принят/i, {
       timeout: 15_000,
     })
 
     await moveOrderStatus(request, staffToken, orderId as string, 'preparing')
-    await expect(page.getByTestId('guest-order-status')).toContainText(/Готовится/i, {
+    await expect(page.getByTestId('guest-order-current-status')).toHaveText(/Готовится/i, {
       timeout: 15_000,
     })
     // С «Готовится» отмена уже закрыта — кнопка обязана исчезнуть сама.

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CONCIERGE, DEMO_ROOM, moveOrderTo } from './helpers'
+import { acceptOrderOnBoard, CONCIERGE, DEMO_ROOM, moveOrderTo } from './helpers'
 
 /**
  * Второй тип предложения проходит тот же путь, что и еда.
@@ -80,13 +80,13 @@ test.describe('Заявка-услуга', () => {
 
       // Консьерж живёт в потоке ЗАЯВОК (R3): подтвердить → выполнено. Ни
       // «готовится», ни «в пути» у подачи машины нет.
-      await staff.getByTestId(`tracker-accept-${number}`).click()
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Подтверждена/i, {
+      await acceptOrderOnBoard(staff, number)
+      await expect(guest.getByTestId('guest-order-current-status')).toHaveText(/Подтверждена/i, {
         timeout: 20_000,
       })
 
       await moveOrderTo(staff, number, 'fulfilled')
-      await expect(guest.getByTestId('guest-order-status')).toContainText(/Выполнена/i, {
+      await expect(guest.getByTestId('guest-order-current-status')).toHaveText(/Выполнена/i, {
         timeout: 20_000,
       })
     } finally {
