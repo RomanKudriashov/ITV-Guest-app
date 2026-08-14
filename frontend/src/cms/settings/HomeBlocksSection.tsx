@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -13,6 +12,8 @@ import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 
 import { ApiError } from '@/api/client';
 import { fetchHomeSettings, putHomeSettings } from '@/api/cms';
@@ -89,7 +90,12 @@ export function HomeBlocksSection() {
   });
 
   if (query.isPending) return <Skeleton variant="rounded" height={220} />;
-  if (query.isError) return <Alert severity="error">{t('cms.homeBlocks.loadFailed')}</Alert>;
+  if (query.isError)
+    return (
+      <QueryState query={query} what={t('state.what.homeBlocks')}>
+        {() => null}
+      </QueryState>
+    );
 
   const point = latitude.trim() !== '' && longitude.trim() !== '';
   const languages = contentLanguages;

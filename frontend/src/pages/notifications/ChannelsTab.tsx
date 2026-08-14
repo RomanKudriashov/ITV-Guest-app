@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -199,7 +200,9 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
             ))}
           </Stack>
         ) : channelsQuery.isError ? (
-          <Alert severity="error">{t('notifications.channels.loadError')}</Alert>
+          <QueryState query={channelsQuery} what={t('state.what.channels')}>
+            {() => null}
+          </QueryState>
         ) : channels.length === 0 ? (
           <EmptyState
             testId="cms-channels-empty"

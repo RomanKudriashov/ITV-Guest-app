@@ -3,7 +3,7 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 
 /**
- * Падение одного экрана не гасит консоль целиком.
+ * Падение одного экрана не гасит приложение целиком.
  *
  * Найдено исполнением: ответ неожиданной формы (`{}` вместо сводки) роняет
  * рендер, React снимает всё дерево — и оператор видит БЕЛЫЙ ЭКРАН. Не
@@ -43,7 +43,7 @@ export class ScreenBoundary extends Component<
     return (
       <Alert
         severity="error"
-        data-testid="admin-screen-crashed"
+        data-testid="screen-crashed"
         action={
           <Button
             color="inherit"
@@ -52,7 +52,7 @@ export class ScreenBoundary extends Component<
               this.setState({ failed: false });
               this.props.onReset?.();
             }}
-            data-testid="admin-screen-crashed-retry"
+            data-testid="screen-crashed-retry"
           >
             {this.props.actionLabel}
           </Button>

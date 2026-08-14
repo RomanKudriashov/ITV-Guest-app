@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useQuery } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -103,7 +104,9 @@ export function TimeseriesPanel({
           {timeseries.isLoading ? (
             <Skeleton variant="rounded" height={180} />
           ) : timeseries.isError ? (
-            <Alert severity="error">{t('analytics.errors.timeseries')}</Alert>
+            <QueryState query={timeseries} what={t('state.what.timeseries')}>
+              {() => null}
+            </QueryState>
           ) : linePoints.length === 0 ? (
             <EmptyState testId="analytics-timeseries-empty" title={t('analytics.empty.timeseries')} />
           ) : (

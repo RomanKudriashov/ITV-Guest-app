@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -126,7 +128,9 @@ export function BadgesPage() {
               ))}
             </Stack>
           ) : badgesQuery.isError ? (
-            <Alert severity="error">{t('badges.loadError')}</Alert>
+            <QueryState query={badgesQuery} what={t('state.what.badges')}>
+              {() => null}
+            </QueryState>
           ) : badges.length === 0 ? (
             <EmptyState
               testId="cms-badge-empty"

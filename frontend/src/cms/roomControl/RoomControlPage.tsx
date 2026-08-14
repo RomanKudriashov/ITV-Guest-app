@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -83,7 +85,9 @@ export function RoomControlPage() {
   if (types.isError || !types.data) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t('roomControl.loadError')}</Alert>
+        <QueryState query={types} what={t('state.what.roomTypes')}>
+          {() => null}
+        </QueryState>
       </Box>
     );
   }

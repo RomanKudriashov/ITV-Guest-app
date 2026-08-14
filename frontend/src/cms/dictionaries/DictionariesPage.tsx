@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -98,8 +100,6 @@ function DictSection({ kind }: { kind: Kind }) {
     onError: () => toast.show(t('dictionaries.systemProtected'), 'error'),
   });
 
-  const entries = query.data ?? [];
-
   return (
     <Card variant="outlined" data-testid={`cms-dict-${kind}`}>
       <CardContent>
@@ -107,6 +107,18 @@ function DictSection({ kind }: { kind: Kind }) {
           {t(`dictionaries.${kind}`)}
         </Typography>
 
+        {/*
+          `query.data ?? []` показывал ПУСТОЙ справочник, когда запрос упал:
+          ни аллергенов, ни маркеров, ни слова о том, что их не принесли.
+          Оператор видел «у отеля ничего нет» вместо «не загрузилось».
+        */}
+        <QueryState
+          query={query}
+          what={t('state.what.dictionaries')}
+          isEmpty={(rows) => rows.length === 0}
+          emptyText={t('dictionaries.empty')}
+        >
+          {(entries) => (
         <Stack spacing={1}>
           {entries.map((entry) => (
             <Stack
@@ -141,6 +153,8 @@ function DictSection({ kind }: { kind: Kind }) {
             </Stack>
           ))}
         </Stack>
+          )}
+        </QueryState>
 
         <Stack direction="row" spacing={1} sx={{ mt: 2 }} alignItems="center">
           <TextField

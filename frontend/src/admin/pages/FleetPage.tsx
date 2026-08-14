@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, pillSx, primaryButtonSx, state, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
   bulkSetActive,
@@ -183,7 +183,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         </Box>
       ) : null}
 
-      <QueryState query={fleet} what={t('admin.state.what.fleet')}>
+      <QueryState query={fleet} what={t('state.what.fleet')}>
         {() => (
         <Box sx={{ mt: 1.5, overflowX: 'auto' }}>
           <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -213,7 +213,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           </Box>
           {rows.length === 0 ? (
             <Typography sx={{ color: ink.low, fontSize: 13, py: 4, textAlign: 'center' }}
-              data-testid="admin-state-empty">
+              data-testid="state-empty">
               {t('admin.fleet.empty')}
             </Typography>
           ) : null}

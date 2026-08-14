@@ -22,6 +22,9 @@ import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
 import { AdminApp } from '@/admin/AdminApp';
 import App from '@/App';
 
+import { useTranslation } from 'react-i18next';
+
+import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
 
 import { GuestRoot } from '@/guest/GuestRoot';
@@ -47,6 +50,20 @@ import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
  *  - `/tracker`  staff order board — same JWT as the CMS, its own shell
  *                (a cook holds a phone, not a desktop sidebar).
  */
+/**
+ * Трекер живёт вне оболочки CMS, и граница ему нужна своя: у экрана нет
+ * навигации, из которой можно было бы уйти, и падение рендера оставляло бы
+ * официанта с белым окном посреди смены.
+ */
+function TrackerScreen() {
+  const { t } = useTranslation();
+  return (
+    <ScreenBoundary message={t('state.crashed')} actionLabel={t('state.reload')}>
+      <TrackerPage />
+    </ScreenBoundary>
+  );
+}
+
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/dev/theme', element: <App /> },
@@ -112,7 +129,7 @@ export const router = createBrowserRouter([
     path: '/tracker',
     element: (
       <RequireAuth>
-        <TrackerPage />
+        <TrackerScreen />
       </RequireAuth>
     ),
   },

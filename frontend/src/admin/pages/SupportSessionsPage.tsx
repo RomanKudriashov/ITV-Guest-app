@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, pillSx, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { getImpersonations, revokeImpersonation, type ImpersonationRow } from '../adminClient';
 
 /**
@@ -62,7 +62,7 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
 
       <QueryState
         query={sessions}
-        what={t('admin.state.what.support')}
+        what={t('state.what.support')}
         isEmpty={(all) => mine(all).length === 0}
         emptyText={t('admin.support.empty')}
       >

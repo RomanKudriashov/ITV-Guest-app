@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -198,7 +200,9 @@ export function RoomsPage() {
               ))}
             </Stack>
           ) : roomsQuery.isError ? (
-            <Alert severity="error">{t('hotel.rooms.loadError')}</Alert>
+            <QueryState query={roomsQuery} what={t('state.what.rooms')}>
+              {() => null}
+            </QueryState>
           ) : rooms.length === 0 ? (
             <EmptyState
               testId="rooms-empty"

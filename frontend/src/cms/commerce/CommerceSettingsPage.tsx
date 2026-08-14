@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -177,7 +178,9 @@ export function CommerceSettingsPage({ embedded = false }: CommerceSettingsPageP
   if (settingsQuery.isError || !settings) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t('commerce.loadError')}</Alert>
+        <QueryState query={settingsQuery} what={t('state.what.commerce')}>
+          {() => null}
+        </QueryState>
       </Box>
     );
   }

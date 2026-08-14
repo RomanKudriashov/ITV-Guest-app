@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { api } from '@/api/client';
+import { QueryState } from '@/components/QueryState';
 import { fetchServices } from '@/cms/services/api';
 
 /**
@@ -34,16 +34,6 @@ export function DashboardPage() {
     refetchInterval: 60_000,
   });
 
-  if (services.isLoading) {
-    return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
-  }
-
-  const guestFacing = (services.data ?? []).filter((service) => service.is_guest_facing);
-
   return (
     <Box sx={{ p: 3 }} data-testid="cms-dashboard">
       <Typography variant="h5" sx={{ mb: 0.5 }}>
@@ -53,9 +43,27 @@ export function DashboardPage() {
         {t('dashboard.subtitle')}
       </Typography>
 
+      {/*
+        Плитки — ВНУТРИ ветки с данными, и это главное в этой правке.
+        Раньше на отказе рисовалось «Заведений на витрине 0» и «Всего сервисов
+        0»: `services.data ?? []` превращал несостоявшийся ответ в пустой
+        список, а пустой список — в честный на вид ноль. Спиннер хотя бы
+        говорит «жду»; ноль утверждает факт, которого никто не проверял, и
+        управляющий видит отель, у которого ничего нет.
+
+        Правило простое: ноль печатается только тогда, когда сервер ответил и
+        ответил нулём.
+      */}
+      <QueryState query={services} what={t('state.what.dashboard')}>
+        {(list) => {
+          const guestFacing = list.filter((service) => service.is_guest_facing);
+          return (
+            <>
       <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap" useFlexGap>
         <StatCard
           label={t('dashboard.ordersToday')}
+          // Своя загрузка у сводки: заказы приходят отдельным запросом, и
+          // прочерк здесь означает «этой цифры пока нет», а не ноль заказов.
           value={summary.data ? String(summary.data.current.orders) : '—'}
           testId="dashboard-orders-today"
         />
@@ -66,7 +74,7 @@ export function DashboardPage() {
         />
         <StatCard
           label={t('dashboard.services')}
-          value={String((services.data ?? []).length)}
+          value={String(list.length)}
           testId="dashboard-services"
         />
       </Stack>
@@ -75,7 +83,7 @@ export function DashboardPage() {
         {t('dashboard.byService')}
       </Typography>
       <Stack spacing={1}>
-        {(services.data ?? []).map((service) => (
+        {list.map((service) => (
           <Card
             key={service.id}
             variant="outlined"
@@ -101,6 +109,10 @@ export function DashboardPage() {
           </Card>
         ))}
       </Stack>
+            </>
+          );
+        }}
+      </QueryState>
     </Box>
   );
 }

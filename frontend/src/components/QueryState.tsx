@@ -7,7 +7,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink } from './adminTokens';
 
 /**
  * Три исхода запроса — и они РАЗНЫЕ на экране.
@@ -16,6 +15,11 @@ import { ink } from './adminTokens';
  * Упавший запрос оставляет `data` неопределённой ровно так же, как ещё не
  * пришедший, — и экран крутил спиннер бесконечно. Оператор ждал того, чего не
  * будет: ни ошибки, ни повтора, ни причины.
+ *
+ * Живёт в `components/`, а не в `admin/`: тот же класс дефекта нашёлся и в
+ * CMS отеля, и в трекере. Вторая такая же механика рядом означала бы, что
+ * через полгода их будет три, и «нет ответа» опять где-нибудь совпадёт с
+ * «ответ пустой».
  *
  * Здесь три ветки различимы по построению, и «нет ответа» не может выглядеть
  * как «ответ пустой»: это разные ветки с разным текстом, а не одно и то же
@@ -49,7 +53,7 @@ export function QueryState<T>({
 
   if (query.isPending) {
     return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }} data-testid="admin-state-loading">
+      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }} data-testid="state-loading">
         <CircularProgress />
       </Box>
     );
@@ -62,7 +66,7 @@ export function QueryState<T>({
     return (
       <Alert
         severity="error"
-        data-testid="admin-state-error"
+        data-testid="state-error"
         sx={{ mt: 2 }}
         action={
           <Button
@@ -70,13 +74,13 @@ export function QueryState<T>({
             size="small"
             onClick={() => void query.refetch()}
             disabled={query.isFetching}
-            data-testid="admin-state-retry"
+            data-testid="state-retry"
           >
-            {t('admin.state.retry')}
+            {t('state.retry')}
           </Button>
         }
       >
-        {t('admin.state.loadFailed', { what })}
+        {t('state.loadFailed', { what })}
       </Alert>
     );
   }
@@ -84,10 +88,11 @@ export function QueryState<T>({
   if (isEmpty?.(query.data)) {
     return (
       <Typography
-        sx={{ color: ink.low, fontSize: 13, py: 4 }}
-        data-testid="admin-state-empty"
+        color="text.secondary"
+        sx={{ fontSize: 13, py: 4 }}
+        data-testid="state-empty"
       >
-        {emptyText ?? t('admin.state.empty')}
+        {emptyText ?? t('state.empty')}
       </Typography>
     );
   }

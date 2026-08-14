@@ -3,8 +3,14 @@ import type { TFunction } from 'i18next';
 import { ApiError } from '@/api/client';
 
 /**
- * Contract error codes get an honest sentence each; anything else falls back to
- * the server's own `detail`, so a new backend code still says something useful.
+ * Каждому кодовому отказу — своя честная фраза.
+ *
+ * Раньше неизвестный код отдавал пользователю `detail` сервера как есть, и на
+ * пятисотке в трекер выезжало сырое сообщение бэкенда. Оператору оно не
+ * говорит ничего, что он мог бы сделать, зато рассказывает про устройство
+ * сервера. Теперь неизвестное — это «сервер не смог», а `detail` уходит в
+ * консоль браузера: разбирать по нему всё равно придётся, но не с экрана
+ * официанта.
  */
 const CODE_KEYS: Record<string, string> = {
   point_not_assigned: 'tracker.errors.pointNotAssigned',
@@ -43,7 +49,9 @@ export function trackerErrorMessage(error: unknown, t: TFunction): string {
     if (error.status === 404) return t('tracker.errors.orderNotFound');
     // 403 без кода — только про привязку к точке: у отказов по роли код есть.
     if (error.status === 403) return t('tracker.errors.pointNotAssigned');
-    if (error.detail && !/^HTTP \d+$/.test(error.detail)) return error.detail;
+    if (error.detail && !/^HTTP \d+$/.test(error.detail)) {
+      console.error('трекер: неразобранный отказ сервера', error.code, error.detail);
+    }
     if (error.status >= 500) return t('tracker.errors.server');
     return t('tracker.errors.generic');
   }

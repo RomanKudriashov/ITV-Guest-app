@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AdminLogin } from './AdminLogin';
 import { AdminShell, type AdminSection } from './AdminShell';
-import { ScreenBoundary } from './ScreenBoundary';
+import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
@@ -95,8 +95,8 @@ function Console({ onLogout }: { onLogout: () => void }) {
     >
       <ScreenBoundary
         key={section}
-        message={t('admin.state.crashed')}
-        actionLabel={t('admin.state.reload')}
+        message={t('state.crashed')}
+        actionLabel={t('state.reload')}
       >
       {section === 'overview' ? <OverviewPage /> : null}
       {section === 'fleet' && !hotelId ? <FleetPage onOpenHotel={openHotel} /> : null}

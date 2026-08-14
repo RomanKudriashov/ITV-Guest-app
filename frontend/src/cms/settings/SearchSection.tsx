@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -14,6 +13,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 
 import { ApiError } from '@/api/client';
 import { fetchSearchSettings, putSearchSettings, type SearchSettings } from '@/api/cms';
@@ -59,7 +60,12 @@ export function SearchSection() {
   });
 
   if (query.isPending || !draft) return <Skeleton variant="rounded" height={260} />;
-  if (query.isError) return <Alert severity="error">{t('cms.search.loadFailed')}</Alert>;
+  if (query.isError)
+    return (
+      <QueryState query={query} what={t('state.what.search')}>
+        {() => null}
+      </QueryState>
+    );
 
   const toggle = (key: 'services' | 'items' | 'info') => setDraft({ ...draft, [key]: !draft[key] });
 

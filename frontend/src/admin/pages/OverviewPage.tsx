@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, state, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { getOverview, type OverviewHealth } from '../adminClient';
 
 /**
@@ -24,7 +24,7 @@ export function OverviewPage() {
     // Загрузка и отказ — обе ветки общей механики: сводка целиком зависит от
     // одного запроса, показывать её каркас без чисел незачем.
     return (
-      <QueryState query={overview} what={t('admin.state.what.overview')}>
+      <QueryState query={overview} what={t('state.what.overview')}>
         {() => null}
       </QueryState>
     );

@@ -163,6 +163,9 @@ export function useBrandDraft() {
     abstractions: abstractionsQuery.data?.abstractions ?? [],
     isLoading: brandQuery.isLoading,
     loadError: brandQuery.error,
+    // Повтор нужен экрану: отказ без кнопки — это тупик, из которого
+    // выходят перезагрузкой всей вкладки.
+    reload: () => void brandQuery.refetch(),
     isSaving: saveMutation.isPending,
     save: () => saveMutation.mutateAsync(),
     reset: resetDraft,

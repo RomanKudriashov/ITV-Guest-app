@@ -58,12 +58,12 @@ test.describe('Консоль: отказ виден', () => {
 
       await page.getByTestId(screen.nav).click()
 
-      const error = page.getByTestId('admin-state-error')
+      const error = page.getByTestId('state-error')
       await expect(error).toBeVisible({ timeout: 20_000 })
       // Ошибка НАЗЫВАЕТ, что не загрузилось: «не удалось» без предмета —
       // это та же беспомощность, только словами.
       await expect(error).toContainText(/загрузить \S+/)
-      await expect(page.getByTestId('admin-state-retry')).toBeVisible()
+      await expect(page.getByTestId('state-retry')).toBeVisible()
       // И спиннера рядом нет: две ветки не показываются одновременно.
       await expect(page.locator('main .MuiCircularProgress-root')).toHaveCount(0)
 
@@ -80,11 +80,11 @@ test.describe('Консоль: отказ виден', () => {
 
       await page.getByTestId(screen.nav).click()
 
-      const empty = page.getByTestId('admin-state-empty')
+      const empty = page.getByTestId('state-empty')
       await expect(empty).toBeVisible({ timeout: 20_000 })
       await expect(empty).not.toHaveText('')
       // Главное различие: пустота — это НЕ отказ. Их нельзя перепутать.
-      await expect(page.getByTestId('admin-state-error')).toHaveCount(0)
+      await expect(page.getByTestId('state-error')).toHaveCount(0)
 
       await ctx.close()
     })
@@ -110,13 +110,13 @@ test.describe('Консоль: отказ виден', () => {
     await loginToAdmin(page)
 
     await page.getByTestId('admin-nav-nodes').click()
-    await expect(page.getByTestId('admin-state-error')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('state-error')).toBeVisible({ timeout: 20_000 })
 
     const before = attempts
     failing = false
-    await page.getByTestId('admin-state-retry').click()
+    await page.getByTestId('state-retry').click()
 
-    await expect(page.getByTestId('admin-state-empty')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('state-empty')).toBeVisible({ timeout: 20_000 })
     expect(attempts, 'повтор не сходил на сервер').toBeGreaterThan(before)
 
     await ctx.close()
@@ -131,7 +131,7 @@ test.describe('Консоль: отказ виден', () => {
     const page = await ctx.newPage()
     await loginToAdmin(page)
 
-    await expect(page.getByTestId('admin-screen-crashed')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('screen-crashed')).toBeVisible({ timeout: 20_000 })
     // Навигация пережила падение — это и есть смысл границы.
     await expect(page.getByTestId('admin-nav-team')).toBeVisible()
     await page.getByTestId('admin-nav-team').click()

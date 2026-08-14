@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -202,6 +204,19 @@ export function CategoryEditorPage() {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">{t('errors.loadBootstrap')}</Alert>
+      </Box>
+    );
+  }
+
+  // Дерево разделов нужно и для выбора родителя, и для проверки имён.
+  // Пустое вместо неотвеченного — это форма, которая соглашается на всё, а
+  // потом отказывает при сохранении.
+  if (categoriesQuery.isError || categoriesQuery.data === undefined) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <QueryState query={categoriesQuery} what={t('state.what.category')}>
+          {() => null}
+        </QueryState>
       </Box>
     );
   }

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -126,7 +127,9 @@ export function QuickActionsPage() {
   if (query.isError || !query.data) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t('quickActions.loadError')}</Alert>
+        <QueryState query={query} what={t('state.what.quickActions')}>
+          {() => null}
+        </QueryState>
       </Box>
     );
   }

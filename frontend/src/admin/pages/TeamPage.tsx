@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { getTeam, inviteMember, patchMember, type TeamMember } from '../adminClient';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
@@ -102,7 +102,7 @@ export function TeamPage() {
 
       <QueryState
         query={team}
-        what={t('admin.state.what.team')}
+        what={t('state.what.team')}
         isEmpty={(rows) => rows.length === 0}
         emptyText={t('admin.team.empty')}
       >

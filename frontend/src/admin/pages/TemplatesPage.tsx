@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import {
   getDictionary,
   getTemplates,
@@ -86,7 +86,7 @@ function TemplatesTab() {
   return (
     <QueryState
       query={templates}
-      what={t('admin.state.what.templates')}
+      what={t('state.what.templates')}
       isEmpty={(rows) => rows.length === 0}
       emptyText={t('admin.templates.empty')}
     >
@@ -233,7 +233,7 @@ function DictionaryTab() {
 
       <QueryState
         query={dictionary}
-        what={t('admin.state.what.dictionary')}
+        what={t('state.what.dictionary')}
         isEmpty={(rows) => rows.length === 0}
         emptyText={t('admin.templates.dictEmpty')}
       >

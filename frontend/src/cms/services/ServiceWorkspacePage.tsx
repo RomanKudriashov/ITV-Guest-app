@@ -17,6 +17,8 @@ import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslation } from 'react-i18next';
 
+import { QueryState } from '@/components/QueryState';
+
 import { useBootstrap } from '@/hooks/useBootstrap';
 import { MenuPage } from '@/pages/menu/MenuPage';
 import { InclusionsTab } from './InclusionsTab';
@@ -56,7 +58,14 @@ export function ServiceWorkspacePage() {
   if (service.error || !service.data) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{String(service.error ?? t('services.notFound'))}</Alert>
+        {/*
+          Здесь стояло `String(service.error)` — на экран выезжало «ApiError:
+          боль». Имя класса и текст исключения оператору бесполезны, а про
+          устройство сервера рассказывают. Разбор — в консоли браузера.
+        */}
+        <QueryState query={service} what={t('state.what.service')}>
+          {() => null}
+        </QueryState>
       </Box>
     );
   }

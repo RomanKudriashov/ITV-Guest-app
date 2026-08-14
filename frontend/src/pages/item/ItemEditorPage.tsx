@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { QueryState } from '@/components/QueryState';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -467,7 +469,22 @@ export function ItemEditorPage() {
   if (itemId && itemQuery.isError) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{t('errors.loadItem')}</Alert>
+        <QueryState query={itemQuery} what={t('state.what.item')}>
+          {() => null}
+        </QueryState>
+      </Box>
+    );
+  }
+
+  // Без разделов позицию некуда положить: `categoriesQuery.data ?? []`
+  // превращал несостоявшийся ответ в пустой выпадающий список, и редактор
+  // молча предлагал заполнить форму, которую всё равно не сохранить.
+  if (categoriesQuery.isError || categoriesQuery.data === undefined) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <QueryState query={categoriesQuery} what={t('state.what.category')}>
+          {() => null}
+        </QueryState>
       </Box>
     );
   }

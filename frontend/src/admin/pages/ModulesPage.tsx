@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, state, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { getTariffs } from '../adminClient';
 
 /**
@@ -31,7 +31,7 @@ export function ModulesPage() {
 
       <QueryState
         query={tariffs}
-        what={t('admin.state.what.tariffs')}
+        what={t('state.what.tariffs')}
         isEmpty={(rows) => rows.length === 0}
         emptyText={t('admin.modules.empty')}
       >

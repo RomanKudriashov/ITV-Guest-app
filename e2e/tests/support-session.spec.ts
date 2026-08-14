@@ -151,6 +151,6 @@ test.describe('Вход под аудитом', () => {
     await loginToAdmin(page)
     await page.getByTestId('admin-nav-support').click()
     await expect(page.getByTestId('admin-support-sessions')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('admin-state-empty')).toBeVisible()
+    await expect(page.getByTestId('state-empty')).toBeVisible()
   })
 })

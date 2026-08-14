@@ -77,7 +77,8 @@
     "markers": "膳食标记",
     "system": "系统",
     "addPlaceholder": "新条目名称",
-    "systemProtected": "系统条目不可删除——请停用"
+    "systemProtected": "系统条目不可删除——请停用",
+    "empty": "字典为空——既无过敏原也无标记。"
   },
   "showcaseCms": {
     "title": "首页橱窗",
@@ -1983,28 +1984,6 @@
       "notYet": "已发码",
       "revoke": "撤销",
       "revokeFailed": "无法撤销会话"
-    },
-    "state": {
-      "loadFailed": "无法加载{{what}}",
-      "retry": "重试",
-      "empty": "暂时没有内容。",
-      "crashed": "此页面因数据错误未能打开。控制台其余部分仍可使用。",
-      "reload": "刷新",
-      "what": {
-        "overview": "概览",
-        "fleet": "酒店列表",
-        "tariffs": "套餐",
-        "nodes": "节点列表",
-        "templates": "模板",
-        "dictionary": "字典",
-        "team": "团队",
-        "audit": "审计日志",
-        "support": "支持会话",
-        "hotel": "酒店卡片",
-        "usage": "用量",
-        "hotelModules": "酒店模块",
-        "activity": "活动"
-      }
     }
   },
   "roomControl": {
@@ -2296,6 +2275,47 @@
       "saved": "搜索设置已保存",
       "saveFailed": "保存失败",
       "loadFailed": "无法加载搜索设置"
+    }
+  },
+  "state": {
+    "loadFailed": "无法加载{{what}}",
+    "retry": "重试",
+    "empty": "暂时没有内容。",
+    "crashed": "此页面因数据错误未能打开。控制台其余部分仍可使用。",
+    "reload": "刷新",
+    "what": {
+      "overview": "概览",
+      "fleet": "酒店列表",
+      "tariffs": "套餐",
+      "nodes": "节点列表",
+      "templates": "模板",
+      "dictionary": "字典",
+      "team": "团队",
+      "audit": "审计日志",
+      "support": "支持会话",
+      "hotel": "酒店卡片",
+      "usage": "用量",
+      "hotelModules": "酒店模块",
+      "activity": "活动",
+      "dashboard": "酒店概览",
+      "services": "场所",
+      "service": "场所",
+      "brand": "门店",
+      "dictionaries": "字典",
+      "item": "条目",
+      "category": "分区",
+      "board": "订单看板",
+      "commerce": "下单设置",
+      "quickActions": "快捷操作",
+      "badges": "标签",
+      "roomTypes": "房型",
+      "homeBlocks": "首页模块",
+      "search": "搜索设置",
+      "rooms": "房间",
+      "staff": "员工",
+      "channels": "通知渠道",
+      "notificationLog": "发送日志",
+      "timeseries": "走势"
     }
   }
 }

@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { NavLink, Outlet } from 'react-router-dom';
+
+import { ScreenBoundary } from '@/components/ScreenBoundary';
+
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
@@ -71,6 +74,7 @@ const NAV_ICONS: Record<string, JSX.Element> = {
 const FALLBACK_ICON = <GroupWorkIcon fontSize="small" />;
 
 export function AppShell() {
+  const location = useLocation();
   const { t } = useTranslation();
   const { user, hotel, logout } = useAuth();
   const { data: bootstrap } = useBootstrap();
@@ -202,7 +206,19 @@ export function AppShell() {
 
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
         <Toolbar />
-        <Outlet />
+        {/*
+          Граница вокруг СОДЕРЖИМОГО, а не вокруг всего приложения: рельс
+          разделов обязан пережить падение экрана, иначе уйти с него можно
+          только через адресную строку. Ключ по адресу — переход в другой
+          раздел считается новой попыткой.
+        */}
+        <ScreenBoundary
+          key={location.pathname}
+          message={t('state.crashed')}
+          actionLabel={t('state.reload')}
+        >
+          <Outlet />
+        </ScreenBoundary>
       </Box>
     </Box>
   );

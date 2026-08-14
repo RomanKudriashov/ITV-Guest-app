@@ -77,7 +77,8 @@
     "markers": "Dietary markers",
     "system": "System",
     "addPlaceholder": "New entry name",
-    "systemProtected": "A system entry cannot be deleted — deactivate it"
+    "systemProtected": "A system entry cannot be deleted — deactivate it",
+    "empty": "The dictionaries are empty — no allergens, no markers."
   },
   "showcaseCms": {
     "title": "Home showcase",
@@ -1988,28 +1989,6 @@
       "notYet": "code issued",
       "revoke": "Revoke",
       "revokeFailed": "Could not revoke the session"
-    },
-    "state": {
-      "loadFailed": "Could not load {{what}}",
-      "retry": "Retry",
-      "empty": "Nothing here yet.",
-      "crashed": "This screen failed to open because of a data error. The rest of the console works.",
-      "reload": "Reload",
-      "what": {
-        "overview": "the overview",
-        "fleet": "the hotel list",
-        "tariffs": "the plans",
-        "nodes": "the node list",
-        "templates": "the templates",
-        "dictionary": "the dictionary",
-        "team": "the team",
-        "audit": "the audit log",
-        "support": "support sessions",
-        "hotel": "the hotel card",
-        "usage": "usage",
-        "hotelModules": "hotel modules",
-        "activity": "activity"
-      }
     }
   },
   "roomControl": {
@@ -2301,6 +2280,47 @@
       "saved": "Search settings saved",
       "saveFailed": "Could not save",
       "loadFailed": "Could not load search settings"
+    }
+  },
+  "state": {
+    "loadFailed": "Could not load {{what}}",
+    "retry": "Retry",
+    "empty": "Nothing here yet.",
+    "crashed": "This screen failed to open because of a data error. The rest of the console works.",
+    "reload": "Reload",
+    "what": {
+      "overview": "the overview",
+      "fleet": "the hotel list",
+      "tariffs": "the plans",
+      "nodes": "the node list",
+      "templates": "the templates",
+      "dictionary": "the dictionary",
+      "team": "the team",
+      "audit": "the audit log",
+      "support": "support sessions",
+      "hotel": "the hotel card",
+      "usage": "usage",
+      "hotelModules": "hotel modules",
+      "activity": "activity",
+      "dashboard": "the hotel summary",
+      "services": "the venues",
+      "service": "the venue",
+      "brand": "the storefront",
+      "dictionaries": "the dictionaries",
+      "item": "the item",
+      "category": "the section",
+      "board": "the order board",
+      "commerce": "the checkout settings",
+      "quickActions": "the quick actions",
+      "badges": "the badges",
+      "roomTypes": "the room types",
+      "homeBlocks": "the home blocks",
+      "search": "the search settings",
+      "rooms": "the rooms",
+      "staff": "the staff",
+      "channels": "the notification channels",
+      "notificationLog": "the delivery log",
+      "timeseries": "the chart"
     }
   }
 }

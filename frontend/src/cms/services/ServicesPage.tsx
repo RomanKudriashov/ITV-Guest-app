@@ -7,7 +7,6 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -22,6 +21,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { useTranslation } from 'react-i18next';
 
+import { QueryState } from '@/components/QueryState';
 import { createService, fetchServiceTemplates, fetchServices } from './api';
 import type { CmsService } from './api';
 
@@ -41,20 +41,9 @@ export function ServicesPage() {
 
   const services = useQuery({ queryKey: ['cms', 'services'], queryFn: fetchServices });
 
-  const all = services.data ?? [];
-  const active = all.filter((service) => service.is_active);
-  const archived = all.filter((service) => !service.is_active);
 
   const label = (value: Record<string, string> | undefined, fallback: string) =>
     value?.[i18n.resolvedLanguage ?? 'ru'] ?? value?.ru ?? value?.en ?? fallback;
-
-  if (services.isLoading) {
-    return (
-      <Stack alignItems="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
-  }
 
   return (
     <Box sx={{ p: 3 }} data-testid="cms-services">
@@ -76,8 +65,6 @@ export function ServicesPage() {
         </Button>
       </Stack>
 
-      {services.error ? <Alert severity="error">{String(services.error)}</Alert> : null}
-
       {/*
         Рабочее и архивное — врозь.
 
@@ -87,6 +74,19 @@ export function ServicesPage() {
         не деваются (их нельзя удалить — на них висят заказы), но лежат
         свёрнутыми и не мешают работе.
       */}
+      {/*
+        Сообщение сервера пользователю не показывается. Здесь стояло
+        `String(services.error)` — и на экран выезжало «ApiError: боль»:
+        имя класса и текст исключения. Оператору это не говорит ничего, что
+        он мог бы сделать, зато рассказывает про устройство сервера. Разбор
+        живёт в консоли браузера, экран говорит по-человечески.
+      */}
+      <QueryState query={services} what={t('state.what.services')}>
+        {(all) => {
+          const active = all.filter((service) => service.is_active);
+          const archived = all.filter((service) => !service.is_active);
+          return (
+            <>
       <ServiceGrid
         services={active}
         label={label}
@@ -121,6 +121,10 @@ export function ServicesPage() {
           </Collapse>
         </Box>
       ) : null}
+            </>
+          );
+        }}
+      </QueryState>
 
       <CreateServiceDialog
         open={creating}

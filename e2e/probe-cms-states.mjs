@@ -12,6 +12,8 @@ const ADMIN = { email: 'owner@crystal.local', password: 'chef12345' }
 
 const ROUTES = [
   ['CMS: дашборд', '/cms/dashboard'],
+  ['CMS: сервис (карточка)', '/cms/services/first'],
+  ['CMS: витрина/бренд', '/cms/brand'],
   ['CMS: сервисы', '/cms/services'],
   ['CMS: номера', '/cms/rooms'],
   ['CMS: персонал', '/cms/staff'],
@@ -55,6 +57,15 @@ for (const [name, path] of ROUTES) {
     await page.waitForTimeout(3500)
 
     const spinner = await page.locator('.MuiCircularProgress-root').count()
+    // Кнопку повтора ищем ПО ТЕКСТУ, а не по testid: у экранов со своей
+    // разметкой она может быть чужой, и «нет моего testid» — это не
+    // «нет повтора». На этом первая версия пробы и соврала про трекер.
+    const retry = await page
+      .getByRole('button', { name: /Повторить|Обновить|Retry|Reload/ })
+      .count()
+    // Ноль как утверждение: цифра на плитке, когда сервер не ответил.
+    const zeros = (((await page.locator('body').innerText().catch(() => '')) || '')
+      .match(/(^|[^\d])0([^\d]|$)/g) || []).length
     const alerts = (await page.locator('[role="alert"], .MuiAlert-root').allInnerTexts())
       .map((a) => a.replace(/\s+/g, ' ').trim())
       .filter(Boolean)
@@ -63,10 +74,11 @@ for (const [name, path] of ROUTES) {
       .trim()
 
     let verdict
+    const tail = retry ? ' [повтор есть]' : ' [БЕЗ ПОВТОРА]'
     if (spinner > 0 && !alerts.length) verdict = 'СПИННЕР НАВСЕГДА'
-    else if (alerts.length) verdict = `отказ виден: «${alerts[0].slice(0, 70)}»`
+    else if (alerts.length) verdict = `отказ: «${alerts[0].slice(0, 55)}»${tail}`
     else if (text.length < 120) verdict = `ПУСТОЙ ЭКРАН: «${text.slice(0, 60)}»`
-    else verdict = `каркас без данных (молча): «${text.slice(0, 220)}»`
+    else verdict = `МОЛЧА: каркас${zeros ? `, нулей на экране: ${zeros}` : ''}`
     report.push([name, verdict])
   } catch (e) {
     report.push([name, `не открылся: ${String(e).slice(0, 60)}`])

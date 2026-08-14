@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
 import {
@@ -51,7 +51,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
 
   if (profile.isPending || profile.isError || profile.data === undefined) {
     return (
-      <QueryState query={profile} what={t('admin.state.what.hotel')}>
+      <QueryState query={profile} what={t('state.what.hotel')}>
         {() => null}
       </QueryState>
     );
@@ -206,7 +206,7 @@ function UsageTab({ id }: { id: string }) {
   const usage = useQuery({ queryKey: ['admin', 'usage', id], queryFn: () => getUsage(id) });
   if (usage.isPending || usage.isError || usage.data === undefined) {
     return (
-      <QueryState query={usage} what={t('admin.state.what.usage')}>
+      <QueryState query={usage} what={t('state.what.usage')}>
         {() => null}
       </QueryState>
     );
@@ -277,7 +277,7 @@ function ModulesTab({ id }: { id: string }) {
 
   if (modules.isPending || modules.isError || modules.data === undefined) {
     return (
-      <QueryState query={modules} what={t('admin.state.what.hotelModules')}>
+      <QueryState query={modules} what={t('state.what.hotelModules')}>
         {() => null}
       </QueryState>
     );
@@ -337,7 +337,7 @@ function ActivityTab({ id }: { id: string }) {
   const activity = useQuery({ queryKey: ['admin', 'activity', id], queryFn: () => getActivity(id) });
   if (activity.isPending || activity.isError || activity.data === undefined) {
     return (
-      <QueryState query={activity} what={t('admin.state.what.activity')}>
+      <QueryState query={activity} what={t('state.what.activity')}>
         {() => null}
       </QueryState>
     );
@@ -346,7 +346,7 @@ function ActivityTab({ id }: { id: string }) {
   return (
     <Box sx={{ ...panelSx, maxWidth: 760 }} data-testid="admin-hotel-activity">
       {activity.data.length === 0 ? (
-        <Typography sx={{ fontSize: 12.5, color: ink.low }} data-testid="admin-state-empty">
+        <Typography sx={{ fontSize: 12.5, color: ink.low }} data-testid="state-empty">
           {t('admin.hotel.activityEmpty')}
         </Typography>
       ) : null}
@@ -402,7 +402,7 @@ function TariffTab({ id }: { id: string }) {
 
   if (usage.isPending || usage.isError || usage.data === undefined) {
     return (
-      <QueryState query={usage} what={t('admin.state.what.usage')}>
+      <QueryState query={usage} what={t('state.what.usage')}>
         {() => null}
       </QueryState>
     );

@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, pillSx, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { getNodes, reissueNode, revokeNode, type NodeRow } from '../adminClient';
 
 /**
@@ -55,7 +55,7 @@ export function NodesPage() {
 
       <QueryState
         query={nodes}
-        what={t('admin.state.what.nodes')}
+        what={t('state.what.nodes')}
         isEmpty={(rows) => rows.length === 0}
         emptyText={t('admin.nodes.empty')}
       >

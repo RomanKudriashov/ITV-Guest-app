@@ -31,7 +31,7 @@ export function BrandPage() {
   const { setBrandTokens } = useAppTheme();
 
   const brand = useBrandDraft();
-  const { dirty, isLoading, loadError, isSaving, merged, draft } = brand;
+  const { dirty, isLoading, loadError, isSaving, merged, draft, reload } = brand;
 
   const [previewMode, setPreviewMode] = useState<ThemeMode>('light');
   const [section, setSection] = useState<'brand' | 'showcase'>('brand');
@@ -72,10 +72,27 @@ export function BrandPage() {
   }
 
   if (loadError) {
+    // `loadError.detail` показывать нельзя: это текст сервера, и на пятисотке
+    // им на экран выезжало сырое сообщение бэкенда. В консоль — да, там его
+    // читает тот, кто чинит; на экран — человеческая фраза и повтор.
+    console.error('витрина: не загрузился бренд', loadError);
     return (
       <Container maxWidth="sm" sx={{ py: 4 }}>
-        <Alert severity="error">
-          {loadError instanceof ApiError ? loadError.detail : t('brand.loadFailed')}
+        <Alert
+          severity="error"
+          data-testid="state-error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => reload()}
+              data-testid="state-retry"
+            >
+              {t('state.retry')}
+            </Button>
+          }
+        >
+          {t('state.loadFailed', { what: t('state.what.brand') })}
         </Alert>
       </Container>
     );

@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, surface } from '../adminTokens';
-import { QueryState } from '../QueryState';
+import { QueryState } from '@/components/QueryState';
 import { getAudit } from '../adminClient';
 
 /**
@@ -33,7 +33,7 @@ export function AuditPage() {
 
       <QueryState
         query={audit}
-        what={t('admin.state.what.audit')}
+        what={t('state.what.audit')}
         isEmpty={(rows) => rows.length === 0}
         emptyText={t('admin.audit.empty')}
       >
