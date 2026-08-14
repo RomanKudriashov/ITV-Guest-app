@@ -25,8 +25,17 @@ test.describe('CMS Аналитика', () => {
     await openAnalytics(page)
 
     // --- Период: месяц → карточки-итоги наполнены -------------------------
+    //
+    // Ждём ОТВЕТ по новому периоду, а не появление карточек: `analytics-summary`
+    // нарисован всегда, ещё до клика по пресету, и ожидание его видимости
+    // проходило мгновенно. Тест читал карточку, в которой могло стоять число
+    // прошлого периода, и не мог отличить «месяц применился» от «клик никуда
+    // не дошёл». Подписка ставится ДО клика — быстрый ответ иначе пропустим.
+    const monthly = page.waitForResponse(
+      (r) => r.url().includes('/analytics/summary') && r.url().includes('preset=month'),
+    )
     await page.getByTestId('analytics-filter-preset-month').click()
-    await expect(page.getByTestId('analytics-summary')).toBeVisible({ timeout: 15_000 })
+    expect((await monthly).ok(), 'сводка за месяц не пришла').toBeTruthy()
     const orders = page.getByTestId('analytics-summary-card-orders')
     await expect(orders).toBeVisible()
     // В карточке заказов — число (у демо-истории их десятки).

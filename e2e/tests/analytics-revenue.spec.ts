@@ -30,8 +30,14 @@ test('дашборд: заглавная «Выручка» — это gross, а
   await login(page)
   await page.getByTestId('cms-nav-analytics').click()
   await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 20_000 })
+  // Тот же случай: карточки видны и до клика, поэтому ожидание их видимости
+  // ничего не проверяло — с удалённым кликом тест проходил бы так же. Ждём
+  // ответ по выбранному периоду.
+  const today = page.waitForResponse(
+    (r) => r.url().includes('/analytics/summary') && r.url().includes('preset=today'),
+  )
   await page.getByTestId('analytics-filter-preset-today').click()
-  await expect(page.getByTestId('analytics-summary')).toBeVisible({ timeout: 15_000 })
+  expect((await today).ok(), 'сводка за сегодня не пришла').toBeTruthy()
 
   // Значение gross для того же периода — из API тем же токеном.
   const staff = await apiToken(request)

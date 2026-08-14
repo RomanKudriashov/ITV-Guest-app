@@ -136,10 +136,34 @@ test('импорт ПНР: разбор, сверка и сохранение', 
   await page.getByTestId('grms-import-reconcile').click()
   await expect(page.getByTestId('grms-reconcile')).toBeVisible({ timeout: 60_000 })
 
-  await page.getByTestId('grms-import-confirm').click()
-  await expect(page.getByTestId('grms-type-select')).toBeVisible({ timeout: 30_000 })
+  /*
+    ТРИ РАЗНЫЕ ПРОВЕРКИ, А НЕ ОДНА.
 
-  // Проверяем РЕЗУЛЬТАТ на бэкенде, а не только то, что нарисовал фронт.
+    Здесь стояло ожидание `grms-type-select` — селектора, который рисуется при
+    `list.length > 0` и потому виден ДО импорта: `demo-suite` есть всегда.
+    Ожидание проходило мгновенно, ничего не дожидаясь, и следом тест шёл в API
+    ОТДЕЛЬНЫМ подключением. Между кликом и вопросом не было ни одной точки
+    синхронизации: обычно подтверждение успевало первым, на загруженной машине —
+    нет. Отсюда флак, три красных прогона из шести.
+
+    Подписка ставится ДО клика: быстрый ответ иначе можно пропустить.
+  */
+  const saved = page.waitForResponse((response) =>
+    response.url().includes('/grms/import/confirm'),
+  )
+  await page.getByTestId('grms-import-confirm').click()
+  const confirmed = await saved
+  // Отказ подтверждения тест раньше не замечал вовсе и падал позже, на
+  // следствии — «нет типа» вместо «сервер не принял импорт».
+  expect(confirmed.ok(), `подтверждение импорта отклонено: ${confirmed.status()}`).toBeTruthy()
+
+  // Второе: тип виден АДМИНИСТРАТОРУ в списке. Ради этого экран и делали.
+  await openSelect('grms-type-select')
+  await expect(page.locator(`li[data-value="${TYPE_CODE}"]`)).toBeVisible({ timeout: 20_000 })
+  await page.keyboard.press('Escape')
+
+  // Третье: результат на бэкенде — «видно на экране» и «записалось» разные
+  // утверждения, и подменять одно другим нельзя.
   const token = await adminToken(request)
   const { types } = await apiGet<{ types: GrmsType[] }>(request, token, '/api/cms/grms/types')
   const imported = types.find((type) => type.code === TYPE_CODE)
