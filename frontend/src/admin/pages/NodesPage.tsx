@@ -3,11 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, panelSx, pillSx, surface } from '../adminTokens';
+import { ink, pillSx, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { getNodes, reissueNode, revokeNode, type NodeRow } from '../adminClient';
 
 /**
@@ -38,14 +38,6 @@ export function NodesPage() {
     },
   });
 
-  if (!nodes.data) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box data-testid="admin-nodes">
       <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
@@ -61,11 +53,13 @@ export function NodesPage() {
         </Alert>
       ) : null}
 
-      {nodes.data.length === 0 ? (
-        <Box sx={{ ...panelSx, mt: 2 }} data-testid="admin-nodes-empty">
-          <Typography sx={{ fontSize: 12.5, color: ink.mid }}>{t('admin.nodes.empty')}</Typography>
-        </Box>
-      ) : (
+      <QueryState
+        query={nodes}
+        what={t('admin.state.what.nodes')}
+        isEmpty={(rows) => rows.length === 0}
+        emptyText={t('admin.nodes.empty')}
+      >
+        {(rows) => (
         <Box sx={{ mt: 2, overflowX: 'auto' }}>
           <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <Box component="thead">
@@ -91,7 +85,7 @@ export function NodesPage() {
               </Box>
             </Box>
             <Box component="tbody">
-              {nodes.data.map((node) => (
+              {rows.map((node) => (
                 <NodeLine
                   key={node.id}
                   node={node}
@@ -103,7 +97,8 @@ export function NodesPage() {
             </Box>
           </Box>
         </Box>
-      )}
+        )}
+      </QueryState>
     </Box>
   );
 }

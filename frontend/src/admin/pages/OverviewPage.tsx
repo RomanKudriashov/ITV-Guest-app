@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, state, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { getOverview, type OverviewHealth } from '../adminClient';
 
 /**
@@ -21,15 +20,14 @@ export function OverviewPage() {
   const { t, i18n } = useTranslation();
   const overview = useQuery({ queryKey: ['admin', 'overview'], queryFn: getOverview });
 
-  if (overview.isLoading) {
+  if (overview.isPending || overview.isError || overview.data === undefined) {
+    // Загрузка и отказ — обе ветки общей механики: сводка целиком зависит от
+    // одного запроса, показывать её каркас без чисел незачем.
     return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
+      <QueryState query={overview} what={t('admin.state.what.overview')}>
+        {() => null}
+      </QueryState>
     );
-  }
-  if (overview.isError || !overview.data) {
-    return <Alert severity="error">{t('admin.overview.loadFailed')}</Alert>;
   }
 
   const data = overview.data;

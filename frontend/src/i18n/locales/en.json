@@ -1826,7 +1826,8 @@
         "modules": "Modules",
         "limits": "Limits"
       },
-      "note": "A plan opens a set of modules; a single hotel can be given a feature off-plan — a pilot, for instance. An enabled module appears in the hotel CMS, a disabled one is hidden. Downgrading below current usage is flagged and needs a decision."
+      "note": "A plan opens a set of modules; a single hotel can be given a feature off-plan — a pilot, for instance. An enabled module appears in the hotel CMS, a disabled one is hidden. Downgrading below current usage is flagged and needs a decision.",
+      "empty": "No plans yet."
     },
     "nodes": {
       "title": "On-prem nodes",
@@ -1869,7 +1870,8 @@
         "role": "Role",
         "access": "Access",
         "twofa": "2FA"
-      }
+      },
+      "empty": "You are the only one on the platform team so far."
     },
     "audit": {
       "title": "Audit",
@@ -1957,7 +1959,9 @@
         "allergen": "Allergens",
         "marker": "Dietary markers"
       },
-      "dictNote": "A hotel gets its own copy on creation and may deactivate entries. Edits here reach new hotels."
+      "dictNote": "A hotel gets its own copy on creation and may deactivate entries. Edits here reach new hotels.",
+      "empty": "No onboarding templates yet.",
+      "dictEmpty": "The dictionary is empty so far."
     },
     "data": {
       "exportTitle": "Data export",
@@ -1984,6 +1988,28 @@
       "notYet": "code issued",
       "revoke": "Revoke",
       "revokeFailed": "Could not revoke the session"
+    },
+    "state": {
+      "loadFailed": "Could not load {{what}}",
+      "retry": "Retry",
+      "empty": "Nothing here yet.",
+      "crashed": "This screen failed to open because of a data error. The rest of the console works.",
+      "reload": "Reload",
+      "what": {
+        "overview": "the overview",
+        "fleet": "the hotel list",
+        "tariffs": "the plans",
+        "nodes": "the node list",
+        "templates": "the templates",
+        "dictionary": "the dictionary",
+        "team": "the team",
+        "audit": "the audit log",
+        "support": "support sessions",
+        "hotel": "the hotel card",
+        "usage": "usage",
+        "hotelModules": "hotel modules",
+        "activity": "activity"
+      }
     }
   },
   "roomControl": {

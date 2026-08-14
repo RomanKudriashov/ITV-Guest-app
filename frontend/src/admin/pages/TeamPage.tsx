@@ -3,13 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { getTeam, inviteMember, patchMember, type TeamMember } from '../adminClient';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
@@ -47,14 +47,6 @@ export function TeamPage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'team'] }),
     onError: (e) => setError(e instanceof Error ? e.message : t('admin.team.changeFailed')),
   });
-
-  if (!team.data) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   return (
     <Box data-testid="admin-team">
@@ -108,6 +100,13 @@ export function TeamPage() {
         </Alert>
       ) : null}
 
+      <QueryState
+        query={team}
+        what={t('admin.state.what.team')}
+        isEmpty={(rows) => rows.length === 0}
+        emptyText={t('admin.team.empty')}
+      >
+        {(rows) => (
       <Box sx={{ mt: 2, overflowX: 'auto' }}>
         <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <Box component="thead">
@@ -133,7 +132,7 @@ export function TeamPage() {
             </Box>
           </Box>
           <Box component="tbody">
-            {team.data.map((member) => (
+            {rows.map((member) => (
               <MemberLine
                 key={member.id}
                 member={member}
@@ -144,6 +143,8 @@ export function TeamPage() {
           </Box>
         </Box>
       </Box>
+        )}
+      </QueryState>
     </Box>
   );
 }

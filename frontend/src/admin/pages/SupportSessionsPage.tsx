@@ -3,11 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, pillSx, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { getImpersonations, revokeImpersonation, type ImpersonationRow } from '../adminClient';
 
 /**
@@ -36,17 +36,10 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
     onError: (e) => setError(e instanceof Error ? e.message : t('admin.support.revokeFailed')),
   });
 
-  if (!sessions.data) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   // В карточке отеля показываем только его сессии: там вопрос «кто сейчас у
   // МЕНЯ», а не «кто сейчас вообще».
-  const rows = hotelId ? sessions.data.filter((row) => row.hotel_id === hotelId) : sessions.data;
+  const mine = (all: ImpersonationRow[]) =>
+    hotelId ? all.filter((row) => row.hotel_id === hotelId) : all;
 
   return (
     <Box data-testid="admin-support-sessions">
@@ -67,23 +60,26 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
         </Alert>
       ) : null}
 
-      <Box sx={{ ...panelSx, mt: hotelId ? 0 : 2.25 }}>
-        {rows.length === 0 ? (
-          <Typography sx={{ color: ink.low, fontSize: 13 }} data-testid="admin-support-empty">
-            {t('admin.support.empty')}
-          </Typography>
-        ) : (
-          rows.map((row) => (
-            <SessionRow
-              key={row.id}
-              row={row}
-              showHotel={!hotelId}
-              busy={revoke.isPending}
-              onRevoke={() => revoke.mutate(row.id)}
-            />
-          ))
+      <QueryState
+        query={sessions}
+        what={t('admin.state.what.support')}
+        isEmpty={(all) => mine(all).length === 0}
+        emptyText={t('admin.support.empty')}
+      >
+        {(all) => (
+          <Box sx={{ ...panelSx, mt: hotelId ? 0 : 2.25 }}>
+            {mine(all).map((row) => (
+              <SessionRow
+                key={row.id}
+                row={row}
+                showHotel={!hotelId}
+                busy={revoke.isPending}
+                onRevoke={() => revoke.mutate(row.id)}
+              />
+            ))}
+          </Box>
         )}
-      </Box>
+      </QueryState>
     </Box>
   );
 }

@@ -4,7 +4,6 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import CircularProgress from '@mui/material/CircularProgress';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -12,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import {
   getDictionary,
   getTemplates,
@@ -83,11 +83,16 @@ function TemplatesTab() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'templates'] }),
   });
 
-  if (!templates.data) return <CircularProgress />;
-
   return (
+    <QueryState
+      query={templates}
+      what={t('admin.state.what.templates')}
+      isEmpty={(rows) => rows.length === 0}
+      emptyText={t('admin.templates.empty')}
+    >
+      {(rows) => (
     <Box sx={{ display: 'grid', gap: 1.75 }}>
-      {templates.data.map((template) => (
+      {rows.map((template) => (
         <Box key={template.id} sx={panelSx} data-testid={`admin-template-${template.code}`}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ flexGrow: 1 }}>
@@ -149,6 +154,8 @@ function TemplatesTab() {
       ))}
       <Typography sx={{ fontSize: 11.5, color: ink.low }}>{t('admin.templates.note')}</Typography>
     </Box>
+      )}
+    </QueryState>
   );
 }
 
@@ -173,12 +180,13 @@ function DictionaryTab() {
     onError: (e) => setError(e instanceof Error ? e.message : t('admin.templates.dictFailed')),
   });
 
-  if (!dictionary.data) return <CircularProgress />;
-
-  const grouped: Record<string, DictionaryEntry[]> = {};
-  dictionary.data.forEach((entry) => {
-    (grouped[entry.kind] ??= []).push(entry);
-  });
+  const group = (rows: DictionaryEntry[]) => {
+    const grouped: Record<string, DictionaryEntry[]> = {};
+    rows.forEach((entry) => {
+      (grouped[entry.kind] ??= []).push(entry);
+    });
+    return grouped;
+  };
 
   return (
     <Box>
@@ -223,7 +231,15 @@ function DictionaryTab() {
       </Box>
       {error ? <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert> : null}
 
-      {Object.entries(grouped).map(([entryKind, entries]) => (
+      <QueryState
+        query={dictionary}
+        what={t('admin.state.what.dictionary')}
+        isEmpty={(rows) => rows.length === 0}
+        emptyText={t('admin.templates.dictEmpty')}
+      >
+        {(rows) => (
+        <>
+      {Object.entries(group(rows)).map(([entryKind, entries]) => (
         <Box key={entryKind} sx={{ mt: 2 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 700, color: ink.low, textTransform: 'uppercase', letterSpacing: '.12em' }}>
             {t(`admin.templates.kind.${entryKind}`)}
@@ -253,6 +269,9 @@ function DictionaryTab() {
       <Typography sx={{ fontSize: 11.5, color: ink.low, mt: 2 }}>
         {t('admin.templates.dictNote')}
       </Typography>
+        </>
+        )}
+      </QueryState>
     </Box>
   );
 }

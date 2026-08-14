@@ -4,7 +4,6 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import CircularProgress from '@mui/material/CircularProgress';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -12,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
 import {
@@ -49,15 +49,12 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
   const [entering, setEntering] = useState(false);
   const profile = useQuery({ queryKey: ['admin', 'hotel', id], queryFn: () => getHotel(id) });
 
-  if (profile.isLoading) {
+  if (profile.isPending || profile.isError || profile.data === undefined) {
     return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
+      <QueryState query={profile} what={t('admin.state.what.hotel')}>
+        {() => null}
+      </QueryState>
     );
-  }
-  if (profile.isError || !profile.data) {
-    return <Alert severity="error">{t('admin.hotel.loadFailed')}</Alert>;
   }
   const hotel = profile.data;
 
@@ -207,7 +204,13 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
 function UsageTab({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
   const usage = useQuery({ queryKey: ['admin', 'usage', id], queryFn: () => getUsage(id) });
-  if (!usage.data) return <CircularProgress />;
+  if (usage.isPending || usage.isError || usage.data === undefined) {
+    return (
+      <QueryState query={usage} what={t('admin.state.what.usage')}>
+        {() => null}
+      </QueryState>
+    );
+  }
   const data = usage.data;
 
   return (
@@ -272,7 +275,13 @@ function ModulesTab({ id }: { id: string }) {
     onSuccess: (result) => qc.setQueryData(['admin', 'modules', id], result),
   });
 
-  if (!modules.data) return <CircularProgress />;
+  if (modules.isPending || modules.isError || modules.data === undefined) {
+    return (
+      <QueryState query={modules} what={t('admin.state.what.hotelModules')}>
+        {() => null}
+      </QueryState>
+    );
+  }
   const list = modules.data.modules;
 
   // Клиент шлёт ТОЛЬКО «включено/выключено». Признак «выдано вне тарифа»
@@ -326,12 +335,20 @@ function ModulesTab({ id }: { id: string }) {
 function ActivityTab({ id }: { id: string }) {
   const { t } = useTranslation();
   const activity = useQuery({ queryKey: ['admin', 'activity', id], queryFn: () => getActivity(id) });
-  if (!activity.data) return <CircularProgress />;
+  if (activity.isPending || activity.isError || activity.data === undefined) {
+    return (
+      <QueryState query={activity} what={t('admin.state.what.activity')}>
+        {() => null}
+      </QueryState>
+    );
+  }
 
   return (
     <Box sx={{ ...panelSx, maxWidth: 760 }} data-testid="admin-hotel-activity">
       {activity.data.length === 0 ? (
-        <Typography sx={{ fontSize: 12.5, color: ink.low }}>{t('admin.hotel.activityEmpty')}</Typography>
+        <Typography sx={{ fontSize: 12.5, color: ink.low }} data-testid="admin-state-empty">
+          {t('admin.hotel.activityEmpty')}
+        </Typography>
       ) : null}
       {activity.data.map((row) => (
         <Box
@@ -383,7 +400,13 @@ function TariffTab({ id }: { id: string }) {
     },
   });
 
-  if (!usage.data) return <CircularProgress />;
+  if (usage.isPending || usage.isError || usage.data === undefined) {
+    return (
+      <QueryState query={usage} what={t('admin.state.what.usage')}>
+        {() => null}
+      </QueryState>
+    );
+  }
 
   return (
     <Box sx={{ ...panelSx, maxWidth: 560 }} data-testid="admin-hotel-tariff">

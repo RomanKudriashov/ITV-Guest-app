@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, state, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { getTariffs } from '../adminClient';
 
 /**
@@ -20,14 +20,6 @@ export function ModulesPage() {
   const { t, i18n } = useTranslation();
   const tariffs = useQuery({ queryKey: ['admin', 'tariffs'], queryFn: getTariffs });
 
-  if (!tariffs.data) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box data-testid="admin-modules">
       <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
@@ -37,6 +29,14 @@ export function ModulesPage() {
         {t('admin.modules.subtitle')}
       </Typography>
 
+      <QueryState
+        query={tariffs}
+        what={t('admin.state.what.tariffs')}
+        isEmpty={(rows) => rows.length === 0}
+        emptyText={t('admin.modules.empty')}
+      >
+        {(rows) => (
+        <>
       <Box sx={{ mt: 2.5, overflowX: 'auto' }}>
         <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <Box component="thead">
@@ -62,7 +62,7 @@ export function ModulesPage() {
             </Box>
           </Box>
           <Box component="tbody">
-            {tariffs.data.map((tariff) => (
+            {rows.map((tariff) => (
               <Box component="tr" key={tariff.code} data-testid={`admin-tariff-row-${tariff.code}`}>
                 <Cell>
                   <Typography sx={{ color: ink.hi, fontWeight: 700, fontSize: 13 }}>
@@ -94,6 +94,9 @@ export function ModulesPage() {
           {t('admin.modules.note')}
         </Typography>
       </Box>
+        </>
+        )}
+      </QueryState>
     </Box>
   );
 }

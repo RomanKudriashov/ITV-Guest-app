@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AdminLogin } from './AdminLogin';
 import { AdminShell, type AdminSection } from './AdminShell';
+import { ScreenBoundary } from './ScreenBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
@@ -92,6 +93,11 @@ function Console({ onLogout }: { onLogout: () => void }) {
       onLogout={onLogout}
       crumb={crumb}
     >
+      <ScreenBoundary
+        key={section}
+        message={t('admin.state.crashed')}
+        actionLabel={t('admin.state.reload')}
+      >
       {section === 'overview' ? <OverviewPage /> : null}
       {section === 'fleet' && !hotelId ? <FleetPage onOpenHotel={openHotel} /> : null}
       {section === 'fleet' && hotelId ? (
@@ -103,6 +109,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'team' ? <TeamPage /> : null}
       {section === 'audit' ? <AuditPage /> : null}
       {section === 'support' ? <SupportSessionsPage /> : null}
+      </ScreenBoundary>
     </AdminShell>
   );
 }

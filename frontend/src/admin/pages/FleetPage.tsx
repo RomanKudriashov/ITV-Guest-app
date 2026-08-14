@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
-import CircularProgress from '@mui/material/CircularProgress';
 import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, pillSx, primaryButtonSx, state, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
   bulkSetActive,
@@ -184,15 +183,8 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         </Box>
       ) : null}
 
-      {fleet.isLoading ? (
-        <Box sx={{ display: 'grid', placeItems: 'center', py: 6 }}>
-          <CircularProgress />
-        </Box>
-      ) : fleet.isError ? (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {t('admin.fleet.loadFailed')}
-        </Alert>
-      ) : (
+      <QueryState query={fleet} what={t('admin.state.what.fleet')}>
+        {() => (
         <Box sx={{ mt: 1.5, overflowX: 'auto' }}>
           <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <Box component="thead">
@@ -221,12 +213,13 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           </Box>
           {rows.length === 0 ? (
             <Typography sx={{ color: ink.low, fontSize: 13, py: 4, textAlign: 'center' }}
-              data-testid="admin-fleet-empty">
+              data-testid="admin-state-empty">
               {t('admin.fleet.empty')}
             </Typography>
           ) : null}
         </Box>
-      )}
+        )}
+      </QueryState>
 
       {creating ? (
         <CreateHotelDialog

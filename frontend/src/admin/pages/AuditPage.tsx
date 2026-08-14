@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
-import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, surface } from '../adminTokens';
+import { QueryState } from '../QueryState';
 import { getAudit } from '../adminClient';
 
 /**
@@ -22,14 +22,6 @@ export function AuditPage() {
   const { t } = useTranslation();
   const audit = useQuery({ queryKey: ['admin', 'audit'], queryFn: () => getAudit(150) });
 
-  if (!audit.data) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box data-testid="admin-audit">
       <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
@@ -39,8 +31,15 @@ export function AuditPage() {
         {t('admin.audit.subtitle')}
       </Typography>
 
+      <QueryState
+        query={audit}
+        what={t('admin.state.what.audit')}
+        isEmpty={(rows) => rows.length === 0}
+        emptyText={t('admin.audit.empty')}
+      >
+        {(rows) => (
       <Box sx={{ mt: 2.25 }}>
-        {audit.data.map((row) => (
+        {rows.map((row) => (
           <Box
             key={row.id}
             data-testid={`admin-audit-${row.action}`}
@@ -67,12 +66,9 @@ export function AuditPage() {
             ) : null}
           </Box>
         ))}
-        {audit.data.length === 0 ? (
-          <Typography sx={{ color: ink.low, fontSize: 13, py: 4 }} data-testid="admin-audit-empty">
-            {t('admin.audit.empty')}
-          </Typography>
-        ) : null}
       </Box>
+        )}
+      </QueryState>
     </Box>
   );
 }
