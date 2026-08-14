@@ -447,7 +447,10 @@ def test_wrong_pin_counts_down_and_then_blocks(guest, crystal):
     _demo_entry(crystal, False)
 
     first = guest.post("/api/v1/guest/room/verify", {"pin": "0000"})
-    assert first.status_code == 401
+    # 403, а не 401: отказ step-up — не истечение сессии. На 401 гостевой
+    # клиент чистит токен и уводит на ввод номера комнаты, то есть опечатка в
+    # PIN стоила бы гостю сессии и корзины.
+    assert first.status_code == 403, first.content
     assert first.json()["code"] == "PIN_INVALID"
     assert first.json()["attempts_left"] >= 1
 

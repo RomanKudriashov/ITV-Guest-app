@@ -1408,7 +1408,12 @@ function PinPanel() {
       {
         // Сколько попыток осталось — говорим честно. Молчаливый счётчик
         // приводит к тому, что гость упирается в блокировку внезапно.
-        onError: (err) => setError([errorMessage(err, t), attemptsHint(err, t)].filter(Boolean).join(' ')),
+        onError: (err) => {
+          setError([errorMessage(err, t), attemptsHint(err, t)].filter(Boolean).join(' '));
+          // Поле чистим и на отказе: иначе гость правит четыре цифры вслепую,
+          // не понимая, где ошибся, и вторая попытка уходит на ту же опечатку.
+          setPin('');
+        },
         onSuccess: () => setPin(''),
       },
     );

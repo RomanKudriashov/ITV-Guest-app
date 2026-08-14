@@ -70,9 +70,12 @@ def room_command(request: HttpRequest, payload: CommandIn):
 )
 def room_verify(request: HttpRequest, payload: VerifyIn):
     """
-    Ошибки отдаёт сервисный слой: 401 `PIN_INVALID` с `attempts_left`, 429
+    Ошибки отдаёт сервисный слой: 403 `PIN_INVALID` с `attempts_left`, 429
     `PIN_THROTTLED` с `retry_after_s`. Ответ константного времени — без
     подсказок, чем именно не подошёл код.
+
+    Именно 403: 401 клиент читает как «сессия истекла» и уводит гостя на ввод
+    номера комнаты, теряя сессию из-за опечатки в коде.
     """
     from apps.grms.services import guest as room_guest
     from apps.grms.services.pin import verify

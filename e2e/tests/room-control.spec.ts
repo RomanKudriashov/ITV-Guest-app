@@ -1126,24 +1126,64 @@ test.describe('Управление номером', () => {
       await expect(light).toBeDisabled()
 
       /*
-        Неверный код не пускает.
+        Неверный код не пускает — и НЕ ВЫКИДЫВАЕТ ИЗ СЕССИИ.
 
-        ЗДЕСЬ ПУСТОЕ ОЖИДАНИЕ, И ОНО ОСТАВЛЕНО СОЗНАТЕЛЬНО. Панель была на
-        экране и до отправки, поэтому её видимость не отличает «сервер
-        отказал» от «кнопка не сработала». Честная проверка — дождаться ответа
-        `/guest/room/verify` — вскрывает дефект ПРОДУКТА: на неверный PIN
-        сервер отвечает 401, общий обработчик считает это протухшей сессией и
-        выбрасывает гостя на экран ввода номера. Гость теряет сессию и корзину
-        из-за опечатки в четырёх цифрах.
+        Раньше сервер отвечал на это 401, общий обработчик читал его как
+        «сессия истекла», чистил токен и уводил гостя на экран ввода номера:
+        опечатка в четырёх цифрах стоила сессии и корзины. Теперь отказ
+        step-up — 403, и гость остаётся там, где был.
 
-        Чинить надо вместе: сначала продукт (отказ по PIN — не разлогин), потом
-        эту проверку. Замена ожидания в одиночку сделала бы набор красным и
-        ничего не починила. Дефект описан в отчёте от 14 августа.
+        Ждём именно ОТВЕТ: панель была на экране и до отправки, её видимость
+        сама по себе не отличает «сервер отказал» от «кнопка не сработала».
       */
+      const sessionBefore = await page.evaluate(() =>
+        window.localStorage.getItem('itv.guest.session_id'),
+      )
+      const cartBefore = await page.evaluate(() =>
+        JSON.stringify(
+          Object.fromEntries(
+            Object.entries(window.localStorage).filter(([key]) =>
+              key.startsWith('itv.guest.cart.'),
+            ),
+          ),
+        ),
+      )
+
       await page.getByTestId('room-pin-input').fill('0000')
+      const verified = page.waitForResponse((r) => r.url().includes('/guest/room/verify'))
       await page.getByTestId('room-pin-submit').click()
-      await expect(page.getByTestId('room-pin-panel')).toBeVisible()
+      const refusal = await verified
+      expect(refusal.status(), 'отказ по PIN обязан быть 403, а не 401').toBe(403)
+
+      // Гость на месте: панель, состояние, запертая кнопка.
+      await expect(
+        page.getByTestId('room-pin-panel'),
+        'панели нет — гостя выкинуло с экрана номера, то есть отказ по PIN снова разлогинивает',
+      ).toBeVisible()
       await expect(light).toBeDisabled()
+      // И отказ ВИДЕН, а не просто «ничего не произошло».
+      await expect(page.getByTestId('room-pin-panel')).toContainText(/не подошёл/i)
+
+      // Сессия жива, корзина цела — то, ради чего всё это.
+      expect(
+        await page.evaluate(() => window.localStorage.getItem('itv.guest.token')),
+        'токен гостя стёрт — гостя разлогинили из-за неверного PIN',
+      ).toBeTruthy()
+      expect(
+        await page.evaluate(() => window.localStorage.getItem('itv.guest.session_id')),
+      ).toBe(sessionBefore)
+      expect(
+        await page.evaluate(() =>
+          JSON.stringify(
+            Object.fromEntries(
+              Object.entries(window.localStorage).filter(([key]) =>
+                key.startsWith('itv.guest.cart.'),
+              ),
+            ),
+          ),
+        ),
+        'корзина не пережила отказ по PIN',
+      ).toBe(cartBefore)
     } finally {
       await request.post(`${API}/api/v1/cms/grms/access/demo-entry`, {
         data: { enabled: true },
