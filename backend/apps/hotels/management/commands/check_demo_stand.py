@@ -14,6 +14,13 @@
 Ненулевой код возврата означает «стенд деградировал», и его можно вешать в CI
 следующим шагом после прогона.
 
+НА РАЗРАБОТЧЕСКОЙ МАШИНЕ команда будет краснеть на заказах и сессиях «Азура»
+и «Люмена»: генератор активности локально обычно не гоняли. Это не ложная
+тревога — контракт стенда включает живую активность, — но локально её проще
+не заводить. Хотите только каталог демо-отеля: `--fleet-only` даёт обратное,
+а обычный прогон без флота получают, гоняя команду с `--subdomain crystal` и
+читая расхождения по флоту как ожидаемые.
+
 ЧТО ЭТО НЕ ДЕЛАЕТ. Не чинит. Восстановление — идемпотентный сид:
 
     python manage.py seed_demo_hotel --subdomain crystal --force --with-rich-catalog
@@ -29,7 +36,7 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.catalog.models import Category, Item
 from apps.catalog.services.showcase import build_showcase
 from apps.core.context import tenant_context
-from apps.hotels.models import Hotel, Service
+from apps.hotels.models import Hotel, Room, Service
 
 # Договор демо-стенда: что обязано быть видно гостю на главной и с каким
 # минимальным наполнением. Минимумы, а не точные числа: добавить в меню позицию
@@ -53,12 +60,34 @@ EXPECTED_VENUES = {
 # без хозслужбы не работает уборка номера.
 EXPECTED_INTERNAL = {"housekeeping"}
 
+# Контракт СТЕНДА ЦЕЛИКОМ, а не одного демо-отеля.
+#
+# Проверка знала только каталог «Кристалла» и потому отвечала «стенд цел» в тот
+# самый день, когда я не смог найти на нём ни одного номера. Ошибка тогда была
+# в моём запросе, но узкий контракт сделал её неотличимой от настоящей пропажи:
+# зелёная проверка не противоречила «номеров нет», потому что про номера она
+# ничего не знала.
+#
+# Минимумы, а не точные числа: генератор активности досыпает заказы от прогона
+# к прогону, и «ровно 431» ломалось бы каждый день. Пропажу ловят нижние
+# границы — их пересекают только при настоящей потере данных.
+FLEET = {
+    "crystal": {"rooms": 5, "orders": 50, "sessions": 50, "room_control": True},
+    "azure": {"rooms": 5, "orders": 50, "sessions": 50, "room_control": False},
+    "lumen": {"rooms": 5, "orders": 50, "sessions": 50, "room_control": False},
+}
+
 
 class Command(BaseCommand):
     help = "Проверить, что демо-стенд не обеднел: заведения, наполнение, витрина"
 
     def add_arguments(self, parser):
         parser.add_argument("--subdomain", default="crystal")
+        parser.add_argument(
+            "--fleet-only",
+            action="store_true",
+            help="Только наполнение трёх отелей, без разбора каталога демо-отеля",
+        )
 
     def handle(self, *args, **options):
         subdomain = options["subdomain"]
@@ -68,6 +97,11 @@ class Command(BaseCommand):
 
         problems: list[str] = []
         notes: list[str] = []
+
+        problems.extend(self._check_fleet())
+
+        if options["fleet_only"]:
+            return self._finish(problems, notes, subdomain)
 
         with tenant_context(hotel):
             services = {service.code: service for service in Service.objects.all()}
@@ -129,6 +163,85 @@ class Command(BaseCommand):
                     f"({', '.join(sorted(residue)[:5])}{'…' if len(residue) > 5 else ''})"
                 )
 
+        self._finish(problems, notes, subdomain)
+
+    # --- Наполнение трёх отелей ---------------------------------------------
+
+    def _check_fleet(self) -> list[str]:
+        """
+        Номера, заказы, сессии по каждому отелю стенда — и управление номером
+        там, где оно обещано.
+
+        Считаем ЧЕРЕЗ `tenant_context`, а не запросом в базу. Это не
+        стилистика: таблицы под RLS, и запрос без выставленного тенанта
+        возвращает пустоту, неотличимую от настоящей пропажи. Проверка,
+        которая ходит мимо тенанта, однажды сама объявит полный стенд пустым.
+        """
+        from apps.accounts.models import GuestSession
+        from apps.grms.models import (
+            ControlElement,
+            PublishedConfig,
+            RoomPin,
+            RoomType,
+            RoomTypeRoom,
+            Zone,
+        )
+        from apps.orders.models import Order
+
+        problems: list[str] = []
+        for code, expected in FLEET.items():
+            hotel = Hotel.all_objects.filter(subdomain=code, deleted_at__isnull=True).first()
+            if hotel is None:
+                problems.append(f"{code}: отеля НЕТ на стенде")
+                continue
+
+            with tenant_context(hotel):
+                rooms = Room.objects.count()
+                orders = Order.objects.count()
+                sessions = GuestSession.objects.count()
+
+                for label, actual, minimum in (
+                    ("номеров", rooms, expected["rooms"]),
+                    ("заказов", orders, expected["orders"]),
+                    ("сессий", sessions, expected["sessions"]),
+                ):
+                    if actual < minimum:
+                        problems.append(
+                            f"{code}: {label} {actual}, ожидалось не меньше {minimum}"
+                        )
+
+                line = f"  {code:14} номеров {rooms:<4} заказов {orders:<5} сессий {sessions:<5}"
+
+                if expected["room_control"]:
+                    types = RoomType.objects.count()
+                    published = PublishedConfig.objects.count()
+                    bindings = RoomTypeRoom.objects.count()
+                    pins = RoomPin.objects.count()
+                    zones = Zone.objects.count()
+                    elements = ControlElement.objects.count()
+                    # Каждое из шести — отдельная строка отказа: «управление
+                    # номером сломано» не говорит, что чинить, а «нет
+                    # публикации» говорит.
+                    for label, actual in (
+                        ("тип GRMS", types),
+                        ("публикация конфигурации", published),
+                        ("привязка комнаты к типу", bindings),
+                        ("PIN комнаты", pins),
+                        ("зона", zones),
+                        ("элемент управления", elements),
+                    ):
+                        if actual < 1:
+                            problems.append(f"{code}: НЕТ ни одной записи «{label}»")
+                    line += (
+                        f" | GRMS: типов {types} публикаций {published} "
+                        f"привязок {bindings} PIN {pins} зон {zones} элементов {elements}"
+                    )
+
+                self.stdout.write(line)
+
+        return problems
+
+    def _finish(self, problems: list[str], notes: list[str], subdomain: str) -> None:
         for note in notes:
             self.stdout.write(self.style.WARNING(f"  примечание: {note}"))
 
@@ -137,13 +250,15 @@ class Command(BaseCommand):
             for problem in problems:
                 self.stderr.write(self.style.ERROR(f"  ✗ {problem}"))
             raise CommandError(
-                f"Демо-стенд обеднел: {len(problems)} расхождений. "
+                f"Стенд обеднел: {len(problems)} расхождений. "
                 "Починка: manage.py seed_demo_hotel --subdomain "
-                f"{subdomain} --force --with-rich-catalog"
+                f"{subdomain} --force --with-rich-catalog --with-room-control"
+                " и manage.py seed_demo_fleet"
             )
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Демо-стенд цел: {len(EXPECTED_VENUES)} заведений на витрине, наполнение на месте"
+                f"Стенд цел: {len(FLEET)} отеля наполнены, "
+                f"{len(EXPECTED_VENUES)} заведений на витрине, управление номером на месте"
             )
         )
