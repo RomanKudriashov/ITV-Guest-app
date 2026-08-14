@@ -55,7 +55,13 @@ class Hotel(BaseModel):
     # на вопрос «а что было на crystal?» опираются именно на него. Живой отель
     # это поле не заполняет.
     former_subdomain = models.SlugField(max_length=63, blank=True, db_index=True)
-    # Отель может привести свой домен (menu.crystal-hotel.ru) — резолвим и по нему.
+    # Отель может привести свой домен (menu.crystal-hotel.ru): из него
+    # строятся публичные адреса витрины, QR в номерах и ссылки в письмах.
+    #
+    # Уникален среди ЖИВЫХ и НЕПУСТЫХ — частичным индексом. Пустых значений
+    # большинство, и общий unique запретил бы второй отель без своего домена;
+    # удалённые исключены по той же причине, по которой паркуется поддомен:
+    # мёртвая строка не должна держать чужой адрес.
     custom_domain = models.CharField(max_length=255, blank=True, db_index=True)
 
     timezone = models.CharField(max_length=64, default="Europe/Moscow")
@@ -156,6 +162,13 @@ class Hotel(BaseModel):
     class Meta:
         db_table = "hotels_hotel"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["custom_domain"],
+                condition=models.Q(deleted_at__isnull=True) & ~models.Q(custom_domain=""),
+                name="uniq_custom_domain_alive",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.name_i18n} ({self.subdomain})"

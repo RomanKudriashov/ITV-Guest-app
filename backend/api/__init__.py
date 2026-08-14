@@ -1,6 +1,8 @@
+from django.db import IntegrityError
 from ninja import NinjaAPI
 
 from apps.accounts.services.auth import CmsAuth, PlatformAuth, StaffAuth
+from apps.core.db_errors import unique_conflict
 from apps.core.errors import DomainError
 
 from apps.catalog.api.router import guest_router as catalog_guest_router
@@ -73,6 +75,25 @@ def handle_domain_error(request, exc: DomainError):
     Сервисный слой при этом ничего не знает про HTTP.
     """
     return api.create_response(request, exc.to_response(), status=exc.status)
+
+
+@api.exception_handler(IntegrityError)
+def handle_integrity_error(request, exc: IntegrityError):
+    """
+    Нарушение уникальности — отказ, а не поломка.
+
+    Одна точка на все ручки, включая те, которых ещё нет: уникальные индексы
+    не знают про `deleted_at`, и «удалить и завести заново» иначе отвечает
+    пятисоткой, то есть «сломалась платформа» вместо «занято».
+
+    Всё остальное — внешние ключи, NOT NULL, проверочные ограничения —
+    пробрасывается дальше и остаётся ошибкой сервера. Это дефекты кода, и
+    вежливый 409 их бы просто спрятал.
+    """
+    conflict = unique_conflict(exc, request)
+    if conflict is None:
+        raise exc
+    return api.create_response(request, conflict, status=409)
 
 
 __all__ = ["api"]
