@@ -32,10 +32,11 @@ from __future__ import annotations
 
 import re
 
+from django.core.cache import cache
 from django.core.management.base import BaseCommand
 
 from apps.core.context import tenant_context
-from apps.hotels.models import Hotel
+from apps.hotels.models import Hotel, Room
 
 # `<что-то>-ms<base36>` — ровно то, что генерируют спеки. Якорь на конец строки
 # обязателен: без него шаблон поймал бы обычное имя, где такие буквы случайны.
@@ -263,6 +264,24 @@ class Command(BaseCommand):
                 _drop_room_type(room_type)
                 deleted_types += 1
 
+            # СЧЁТЧИКИ НЕУДАЧНЫХ PIN — тоже след прогона, и вредный.
+            #
+            # Тест на неверный код бьёт по комнате 305 каждым прогоном, а
+            # счётчик комнаты живёт сутки и общий для всех устройств: пятнадцать
+            # прогонов подряд — и комната заблокирована на пятнадцать минут.
+            # Дальше падает не тот тест, который «испортил», а следующий, и
+            # выглядит это как дефект продукта.
+            #
+            # Чистим здесь, а не уводим тест в отдельную комнату: у 305 есть и
+            # PIN, и план, и привязка к типу — ровно то, что показывают людям и
+            # что должен проверять прогон. Отдельная комната потребовала бы
+            # своей мебели на стенде, которую тоже пришлось бы за собой убирать.
+            cleared_pins = 0
+            for room in Room.objects.all():
+                if cache.get(f"grms:pin:room:{room.pk}") is not None:
+                    cache.delete(f"grms:pin:room:{room.pk}")
+                    cleared_pins += 1
+
             # Заказ НЕ удаляем: это история и выручка. Переводим в терминальный
             # «отменён» СВОЕГО потока — статусы у потоков разные, и один общий
             # код здесь поставил бы заказу чужой статус.
@@ -292,6 +311,7 @@ class Command(BaseCommand):
                 + 
                 f"сообщений удалено {deleted_msgs}; "
                 f"типов номеров удалено {deleted_types}; "
+                f"счётчиков PIN сброшено {cleared_pins}; "
                 f"брошенных заказов закрыто {closed}"
             )
         )

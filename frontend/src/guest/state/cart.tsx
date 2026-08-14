@@ -89,6 +89,40 @@ function storageKey(sessionId: string | null): string {
   return `${CART_STORAGE_PREFIX}${sessionId ?? 'anonymous'}`;
 }
 
+/**
+ * Выбросить корзины ЧУЖИХ сессий.
+ *
+ * Корзина лежит под ключом `itv.guest.cart.<session_id>`. При истечении сессии
+ * клиент чистит токен и сам идентификатор, гость входит заново и получает
+ * новый — а старая запись остаётся в хранилище навсегда: её никто больше не
+ * прочитает и никто не удалит. Проверено исполнением: после протухшего токена
+ * ключ прежней сессии продолжал лежать, а гость видел пустую корзину.
+ *
+ * Переносить содержимое на новую сессию сознательно НЕ стали: в номере
+ * меняются гости, и «вернуть» предыдущему постояльцу его набор — худшее из
+ * возможного. Пустая корзина честнее чужой.
+ */
+function dropOrphanCarts(currentSessionId: string | null): void {
+  // ПОКА СЕССИЯ НЕИЗВЕСТНА — НЕ ТРОГАЕМ НИЧЕГО.
+  //
+  // `null` здесь значит два разных состояния: «сессия ещё грузится» и «гость
+  // просто смотрит». В первом из них корзина текущей сессии выглядит чужой, и
+  // первая же версия этой уборки стирала её на монтировании — тест «корзина
+  // переживает перезагрузку страницы» покраснел сразу и поделом.
+  if (!currentSessionId) return;
+
+  const keep = storageKey(currentSessionId);
+  try {
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith(CART_STORAGE_PREFIX) && key !== keep) {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    /* storage unavailable — чистить нечего */
+  }
+}
+
 function readStored(sessionId: string | null): CartsByService {
   try {
     const raw = window.localStorage.getItem(storageKey(sessionId));
@@ -153,13 +187,15 @@ export function CartProvider({
 
   // Корзина привязана к сессии: новая сессия начинается с пустой, перезагрузка
   // той же — восстанавливается из localStorage.
-  const [state, setState] = useState<{ sid: string | null; carts: CartsByService }>(() => ({
-    sid: sessionId,
-    carts: readStored(sessionId),
-  }));
+  const [state, setState] = useState<{ sid: string | null; carts: CartsByService }>(() => {
+    dropOrphanCarts(sessionId);
+    return { sid: sessionId, carts: readStored(sessionId) };
+  });
 
   let carts = state.carts;
   if (state.sid !== sessionId) {
+    // Сессия сменилась — старая корзина осиротела ровно в этот момент.
+    dropOrphanCarts(sessionId);
     carts = readStored(sessionId);
     setState({ sid: sessionId, carts });
   }
