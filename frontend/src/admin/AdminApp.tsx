@@ -14,6 +14,7 @@ import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
 import { TeamPage } from './pages/TeamPage';
 import { AuditPage } from './pages/AuditPage';
+import { SecurityPage } from './pages/SecurityPage';
 import { SupportSessionsPage } from './pages/SupportSessionsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { accent, ink } from './adminTokens';
@@ -37,6 +38,7 @@ const SECTIONS: AdminSection[] = [
   { key: 'templates', labelKey: 'admin.nav.templates', group: 'admin.nav.platformGroup' },
   { key: 'team', labelKey: 'admin.nav.team', group: 'admin.nav.platformGroup' },
   { key: 'support', labelKey: 'admin.nav.support', group: 'admin.nav.platformGroup' },
+  { key: 'security', labelKey: 'admin.nav.security', group: 'admin.nav.platformGroup' },
   { key: 'audit', labelKey: 'admin.nav.audit', group: 'admin.nav.platformGroup' },
 ];
 
@@ -109,6 +111,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'team' ? <TeamPage /> : null}
       {section === 'audit' ? <AuditPage /> : null}
       {section === 'support' ? <SupportSessionsPage /> : null}
+      {section === 'security' ? <SecurityPage /> : null}
       </ScreenBoundary>
     </AdminShell>
   );

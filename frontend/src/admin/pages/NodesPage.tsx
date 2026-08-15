@@ -3,12 +3,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, pillSx, surface } from '../adminTokens';
+import { ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
-import { getNodes, reissueNode, revokeNode, type NodeRow } from '../adminClient';
+import {
+  createNode,
+  getFleet,
+  getMe,
+  getNodes,
+  reissueNode,
+  revokeNode,
+  type NodeRow,
+} from '../adminClient';
 
 /**
  * Реестр он-прем узлов.
@@ -25,6 +35,35 @@ export function NodesPage() {
   const qc = useQueryClient();
   const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: () => getNodes() });
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Заведение узла и перевыпуск ключа — право `write`. Роль «только чтение»
+  // получает от сервера 403; экран не должен предлагать ей нажать.
+  const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe });
+  const canWrite = me.data?.role !== 'read_only';
+
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ hotelId: '', name: '', purpose: 'grms' });
+  const fleet = useQuery({
+    queryKey: ['admin', 'fleet', 'for-nodes'],
+    queryFn: () => getFleet({ origin: 'all', page_size: 200 }),
+    enabled: creating,
+  });
+
+  const create = useMutation({
+    mutationFn: () => createNode(form.hotelId, { name: form.name.trim(), purpose: form.purpose }),
+    onSuccess: (result) => {
+      // Ключ виден ОДИН раз: на сервере лежит только его хэш, показать
+      // повторно нечего — можно лишь перевыпустить.
+      setIssuedKey(result.key);
+      setError(null);
+      setCreating(false);
+      setForm({ hotelId: '', name: '', purpose: 'grms' });
+      void qc.invalidateQueries({ queryKey: ['admin', 'nodes'] });
+    },
+    onError: (cause) =>
+      setError(cause instanceof Error ? cause.message : t('admin.nodes.createFailed')),
+  });
 
   const revoke = useMutation({
     mutationFn: (id: string) => revokeNode(id),
@@ -34,8 +73,11 @@ export function NodesPage() {
     mutationFn: (id: string) => reissueNode(id),
     onSuccess: (result) => {
       setIssuedKey(result.key);
+      setError(null);
       void qc.invalidateQueries({ queryKey: ['admin', 'nodes'] });
     },
+    onError: (cause) =>
+      setError(cause instanceof Error ? cause.message : t('admin.nodes.reissueFailed')),
   });
 
   return (
@@ -47,8 +89,83 @@ export function NodesPage() {
         {t('admin.nodes.subtitle')}
       </Typography>
 
+      {canWrite ? (
+        <Box sx={{ ...panelSx, mt: 2 }}>
+          {creating ? (
+            <Box sx={{ display: 'flex', gap: 1.25, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                select
+                size="small"
+                label={t('admin.nodes.hotel')}
+                value={form.hotelId}
+                onChange={(event) => setForm((prev) => ({ ...prev, hotelId: event.target.value }))}
+                SelectProps={{ inputProps: { 'data-testid': 'admin-node-hotel' } }}
+                sx={{ minWidth: 240 }}
+              >
+                {(fleet.data?.items ?? []).map((row) => (
+                  <MenuItem key={row.id} value={row.id}>
+                    {row.subdomain}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                size="small"
+                label={t('admin.nodes.nodeName')}
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                inputProps={{ 'data-testid': 'admin-node-name' }}
+                sx={{ minWidth: 200 }}
+              />
+              <TextField
+                select
+                size="small"
+                label={t('admin.nodes.col.purpose')}
+                value={form.purpose}
+                onChange={(event) => setForm((prev) => ({ ...prev, purpose: event.target.value }))}
+                SelectProps={{ inputProps: { 'data-testid': 'admin-node-purpose' } }}
+                sx={{ minWidth: 160 }}
+              >
+                {['grms', 'pms'].map((code) => (
+                  <MenuItem key={code} value={code}>
+                    {t(`admin.nodes.purpose.${code}`, { defaultValue: code })}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Button
+                sx={primaryButtonSx}
+                disabled={!form.hotelId || !form.name.trim() || create.isPending}
+                onClick={() => create.mutate()}
+                data-testid="admin-node-create-submit"
+              >
+                {t('admin.nodes.create')}
+              </Button>
+              <Button onClick={() => setCreating(false)} sx={{ color: ink.mid }}>
+                {t('admin.hotel.cancel')}
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              sx={primaryButtonSx}
+              onClick={() => setCreating(true)}
+              data-testid="admin-node-create"
+            >
+              {t('admin.nodes.create')}
+            </Button>
+          )}
+        </Box>
+      ) : null}
+
+      {error ? (
+        <Alert severity="error" sx={{ mt: 2 }} data-testid="admin-node-error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      ) : null}
+
       {issuedKey ? (
-        <Alert severity="info" sx={{ mt: 2 }} data-testid="admin-node-key">
+        <Alert severity="warning" sx={{ mt: 2 }} data-testid="admin-node-key">
+          {/* Ключ показывается ОДИН раз: на сервере лежит только хэш. Подпись
+              об этом стоит рядом с самим ключом, а не в справке — прочитать её
+              потом будет негде. */}
           {t('admin.nodes.keyOnce')}: <b>{issuedKey}</b>
         </Alert>
       ) : null}
@@ -101,6 +218,7 @@ export function NodesPage() {
                   onRevoke={() => revoke.mutate(node.id)}
                   onReissue={() => reissue.mutate(node.id)}
                   busy={revoke.isPending || reissue.isPending}
+                  canWrite={canWrite}
                 />
               ))}
             </Box>
@@ -118,11 +236,13 @@ function NodeLine({
   onRevoke,
   onReissue,
   busy,
+  canWrite,
 }: {
   node: NodeRow;
   onRevoke: () => void;
   onReissue: () => void;
   busy: boolean;
+  canWrite: boolean;
 }) {
   const { t } = useTranslation();
   const cell = { p: '13px 12px', borderBottom: `1px solid ${surface.hair}`, color: ink.mid } as const;
@@ -160,17 +280,43 @@ function NodeLine({
           : t('admin.nodes.never')}
       </Box>
       <Box component="td" sx={cell}>
-        {node.is_revoked ? (
-          <Button size="small" onClick={onReissue} disabled={busy}
-            data-testid={`admin-node-reissue-${node.name}`} sx={{ fontSize: 12 }}>
-            {t('admin.nodes.reissue')}
-          </Button>
-        ) : (
-          <Button size="small" onClick={onRevoke} disabled={busy}
-            data-testid={`admin-node-revoke-${node.name}`} sx={{ fontSize: 12, color: ink.mid }}>
-            {t('admin.nodes.revoke')}
-          </Button>
-        )}
+        {/*
+          ПЕРЕВЫПУСК ДОСТУПЕН И ЖИВОМУ УЗЛУ.
+
+          Кнопка стояла только у отозванного, то есть чтобы сменить ключ,
+          администратор был обязан сначала уронить связь с оборудованием.
+          Смена ключа на живом — штатная операция (утёк, меняем регламентно), и
+          цена её честно названа в подтверждении: старый ключ умрёт сразу,
+          коннектор переподключится новым.
+        */}
+        {canWrite ? (
+          node.is_revoked ? (
+            <Button size="small" onClick={onReissue} disabled={busy}
+              data-testid={`admin-node-reissue-${node.name}`} sx={{ fontSize: 12 }}>
+              {t('admin.nodes.reissue')}
+            </Button>
+          ) : (
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  if (window.confirm(t('admin.nodes.reissueWarning', { name: node.name }))) {
+                    onReissue();
+                  }
+                }}
+                disabled={busy}
+                data-testid={`admin-node-reissue-${node.name}`}
+                sx={{ fontSize: 12 }}
+              >
+                {t('admin.nodes.reissue')}
+              </Button>
+              <Button size="small" onClick={onRevoke} disabled={busy}
+                data-testid={`admin-node-revoke-${node.name}`} sx={{ fontSize: 12, color: ink.mid }}>
+                {t('admin.nodes.revoke')}
+              </Button>
+            </Box>
+          )
+        ) : null}
       </Box>
     </Box>
   );

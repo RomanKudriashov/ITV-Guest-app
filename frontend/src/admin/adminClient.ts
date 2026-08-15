@@ -457,6 +457,28 @@ export const revokeImpersonation = (id: string) =>
 
 export const getTariffs = () => request<TariffRow[]>('/tariffs');
 export const getNodes = (limit = 100) => request<Page<NodeRow>>(`/nodes?limit=${limit}`);
+/**
+ * Убрать отель из реестра целиком.
+ *
+ * Не то же, что `purgeHotel`: тот стирает ДАННЫЕ, а этот убирает саму строку и
+ * освобождает поддомен. Поддомен передаётся отдельно и сверяется сервером —
+ * подтверждение галочкой здесь не годится.
+ */
+export const deleteHotel = (id: string, confirmSubdomain: string) =>
+  request<{ deleted: boolean; subdomain: string; removed: Record<string, number> }>(
+    `/hotels/${id}?confirm_subdomain=${encodeURIComponent(confirmSubdomain)}`,
+    'DELETE',
+  );
+
+/**
+ * Сменить адрес администратора отеля НИЧЕГО НЕ ОТПРАВЛЯЯ.
+ *
+ * Ручка нужна ровно тогда, когда старый ящик потерян: пароль уходит только на
+ * адрес администратора, и недоступный адрес запирает отель насмерть.
+ */
+export const changeAdminEmail = (id: string, body: { current_email: string; new_email: string }) =>
+  request<{ email: string; previous_email: string }>(`/hotels/${id}/admins/email`, 'PUT', body);
+
 export const createNode = (hotelId: string, body: { name: string; purpose: string }) =>
   request<{ node: NodeRow; key: string }>(`/hotels/${hotelId}/nodes`, 'POST', body);
 export const revokeNode = (id: string) => request<NodeRow>(`/nodes/${id}/revoke`, 'POST');

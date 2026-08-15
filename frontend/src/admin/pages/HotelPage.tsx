@@ -16,6 +16,8 @@ import { EnterHotelDialog } from '../EnterHotelDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
 import {
   cancelOffboarding,
+  changeAdminEmail,
+  deleteHotel,
   getMe,
   downloadHotelExport,
   getActivity,
@@ -105,7 +107,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         {tab === 'activity' ? <ActivityTab id={id} /> : null}
         {tab === 'support' ? <SupportSessionsPage hotelId={id} /> : null}
         {tab === 'tariff' ? <TariffTab id={id} /> : null}
-        {tab === 'data' ? <DataTab hotel={hotel} /> : null}
+        {tab === 'data' ? <DataTab hotel={hotel} onRemoved={onBack} /> : null}
       </Box>
 
       {entering ? (
@@ -202,6 +204,38 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   const resetAdmin = useMutation({
     mutationFn: () => setHotelAdmin(hotel.id, { email: adminEmail.trim() }),
     onSuccess: (result) => setIssued(result.delivered_to),
+    onError: (cause) =>
+      setAdminError(cause instanceof Error ? cause.message : t('admin.hotel.adminFailed')),
+  });
+
+  /*
+    СМЕНА АДРЕСА — ВЫХОД ИЗ ПОЛОЖЕНИЯ «ОТЕЛЬ ПОТЕРЯЛ И ЯЩИК».
+
+    Пароль администратора уходит только ему на почту, поэтому недоступный
+    адрес запирает отель насмерть: сбросить пароль можно, а прочитать письмо
+    некому. Ручка меняет адрес НИЧЕГО НЕ ОТПРАВЛЯЯ — отправлять было бы
+    некуда, в том и беда, — а дальше идёт обычный сброс уже на новый адрес.
+
+    Право владельца, а не поддержки: подмена адреса — это и есть способ увести
+    отель, и рутинной операцией она быть не должна.
+  */
+  const [newEmail, setNewEmail] = useState('');
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const moveAdmin = useMutation({
+    mutationFn: () =>
+      changeAdminEmail(hotel.id, {
+        current_email: adminEmail.trim(),
+        new_email: newEmail.trim(),
+      }),
+    onSuccess: (result) => {
+      setAdminError(null);
+      setAdminEmail(result.email);
+      setNewEmail('');
+      setIssued(null);
+      refresh();
+    },
+    onError: (cause) =>
+      setAdminError(cause instanceof Error ? cause.message : t('admin.hotel.adminMoveFailed')),
   });
 
   return (
@@ -359,6 +393,11 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           onChange={(e) => setAdminEmail(e.target.value)}
           inputProps={{ 'data-testid': 'admin-hotel-admin-email' }}
         />
+        {adminError ? (
+          <Alert severity="error" sx={{ mt: 1.5 }} data-testid="admin-hotel-admin-error">
+            {adminError}
+          </Alert>
+        ) : null}
         <Button
           sx={{ ...primaryButtonSx, mt: 1.5 }}
           disabled={!adminEmail.includes('@') || resetAdmin.isPending}
@@ -371,6 +410,37 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           <Alert severity="success" sx={{ mt: 1.5 }} data-testid="admin-hotel-admin-sent">
             {t('admin.hotel.adminPasswordSent', { email: issued })}
           </Alert>
+        ) : null}
+
+        {/* Смена адреса — только владельцу: подмена адреса и есть способ
+            увести отель, рутинной операцией она быть не должна. */}
+        {me.data?.role === 'owner' ? (
+          <Box sx={{ mt: 2.5, pt: 2, borderTop: `1px solid ${surface.hair}` }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 700, mb: 0.5 }}>
+              {t('admin.hotel.adminMoveTitle')}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.25 }}>
+              {t('admin.hotel.adminMoveHint')}
+            </Typography>
+            <TextField
+              size="small"
+              fullWidth
+              label={t('admin.hotel.adminNewEmail')}
+              value={newEmail}
+              onChange={(event) => setNewEmail(event.target.value)}
+              inputProps={{ 'data-testid': 'admin-hotel-admin-new-email' }}
+            />
+            <Button
+              sx={{ mt: 1.25, color: ink.mid, border: `1px solid ${surface.line}` }}
+              disabled={
+                !newEmail.includes('@') || !adminEmail.includes('@') || moveAdmin.isPending
+              }
+              onClick={() => moveAdmin.mutate()}
+              data-testid="admin-hotel-admin-move"
+            >
+              {t('admin.hotel.adminMove')}
+            </Button>
+          </Box>
         ) : null}
       </Box>
     </Box>
@@ -692,7 +762,7 @@ function Kv({ label, value }: { label: string; value: string }) {
  * кнопками — экспорт обратим и делается сколько угодно раз, удаление требует
  * пометки, ввода поддомена и роли владельца.
  */
-function DataTab({ hotel }: { hotel: HotelProfile }) {
+function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => void }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [reason, setReason] = useState('');
@@ -715,6 +785,29 @@ function DataTab({ hotel }: { hotel: HotelProfile }) {
     mutationFn: () => cancelOffboarding(hotel.id),
     onSuccess: refresh,
   });
+  /*
+    РАЗРУШАЮЩЕЕ — ТОЛЬКО ВЛАДЕЛЬЦУ, И НА ДВУХ РУБЕЖАХ.
+
+    Сервер требует OWNER и на очистку, и на удаление строки. Экран до сих пор
+    показывал эти кнопки всем, включая роль «только чтение»: человек вводил
+    поддомен, жал «Стереть данные» и получал 403. Рубеж на сервере — защита,
+    рубеж на экране — честность.
+  */
+  const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe });
+  const isOwner = me.data?.role === 'owner';
+
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const remove = useMutation({
+    mutationFn: () => deleteHotel(hotel.id, deleteConfirm.trim()),
+    onSuccess: (data) => {
+      setResult(t('admin.data.deleted', { subdomain: data.subdomain }));
+      setError(null);
+      refresh();
+      onRemoved?.();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : t('admin.data.deleteFailed')),
+  });
+
   const purge = useMutation({
     mutationFn: () => purgeHotel(hotel.id, confirm.trim()),
     onSuccess: (data) => {
@@ -771,14 +864,16 @@ function DataTab({ hotel }: { hotel: HotelProfile }) {
               inputProps={{ 'data-testid': 'admin-data-confirm' }}
             />
             <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-              <Button
-                disabled={confirm.trim() !== hotel.subdomain || purge.isPending}
-                onClick={() => purge.mutate()}
-                data-testid="admin-data-purge"
-                sx={{ color: state.bad, border: `1px solid ${state.bad}55` }}
-              >
-                {t('admin.data.purge')}
-              </Button>
+              {isOwner ? (
+                <Button
+                  disabled={confirm.trim() !== hotel.subdomain || purge.isPending}
+                  onClick={() => purge.mutate()}
+                  data-testid="admin-data-purge"
+                  sx={{ color: state.bad, border: `1px solid ${state.bad}55` }}
+                >
+                  {t('admin.data.purge')}
+                </Button>
+              ) : null}
               <Button onClick={() => cancel.mutate()} data-testid="admin-data-cancel" sx={{ color: ink.mid }}>
                 {t('admin.data.cancel')}
               </Button>
@@ -805,6 +900,41 @@ function DataTab({ hotel }: { hotel: HotelProfile }) {
           </>
         )}
       </Box>
+
+      {/*
+        УДАЛЕНИЕ СТРОКИ — отдельная панель, а не кнопка рядом с очисткой.
+
+        Это разные операции, и путать их дорого: очистка стирает ДАННЫЕ отеля
+        (необратимо, по 152-ФЗ), а удаление убирает отель из реестра и
+        освобождает поддомен — строка при этом остаётся мягко удалённой, чтобы
+        платформа могла ответить, что отель был.
+      */}
+      {isOwner ? (
+        <Box sx={{ ...panelSx, borderColor: `${state.bad}55` }} data-testid="admin-data-delete-panel">
+          <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: state.bad }}>
+            {t('admin.data.deleteTitle')}
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.75 }}>
+            {t('admin.data.deleteHint')}
+          </Typography>
+          <TextField
+            size="small"
+            fullWidth
+            label={t('admin.data.confirmLabel', { subdomain: hotel.subdomain })}
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            inputProps={{ 'data-testid': 'admin-data-delete-confirm' }}
+          />
+          <Button
+            sx={{ mt: 1.5, color: state.bad, border: `1px solid ${state.bad}55` }}
+            disabled={deleteConfirm.trim() !== hotel.subdomain || remove.isPending}
+            onClick={() => remove.mutate()}
+            data-testid="admin-data-delete"
+          >
+            {t('admin.data.delete')}
+          </Button>
+        </Box>
+      ) : null}
     </Box>
   );
 }

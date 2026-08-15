@@ -1647,7 +1647,8 @@
       "audit": "审计",
       "templates": "模板与字典",
       "open": "打开菜单",
-      "support": "支持会话"
+      "support": "支持会话",
+      "security": "安全"
     },
     "role": {
       "owner": "平台所有者",
@@ -1661,8 +1662,20 @@
       "system": "系统"
     },
     "security": {
-      "on": "2FA",
-      "off": "未启用 2FA"
+      "title": "安全",
+      "subtitle": "你自己平台账号的双重验证。此处不修改他人账号。",
+      "on": "双重验证已开启",
+      "off": "双重验证未开启",
+      "enable": "开启双重验证",
+      "disable": "关闭双重验证",
+      "confirm": "用验证码确认",
+      "code": "应用中的验证码",
+      "secretHint": "将密钥导入验证器应用并输入验证码。仅显示一次。",
+      "enabled": "双重验证已开启",
+      "disabled": "双重验证已关闭",
+      "setupFailed": "无法开始设置",
+      "codeRejected": "验证码不正确",
+      "disableFailed": "无法关闭双重验证"
     },
     "actions": {
       "logout": "退出",
@@ -1796,7 +1809,13 @@
       "cancel": "取消",
       "dirty_other": "已修改 {{count}} 项",
       "saveFailed": "无法保存资料",
-      "readOnly": "仅所有者和支持角色可编辑资料。"
+      "readOnly": "仅所有者和支持角色可编辑资料。",
+      "adminMoveTitle": "更改管理员邮箱",
+      "adminMove": "更改邮箱",
+      "adminNewEmail": "新邮箱",
+      "adminMoveHint": "用于旧邮箱丢失的情况：更改邮箱不会发送任何邮件，之后重置密码将发往新邮箱。",
+      "adminFailed": "无法重置访问",
+      "adminMoveFailed": "无法更改邮箱"
     },
     "create": {
       "title": "新建酒店",
@@ -1866,7 +1885,13 @@
         "status": "状态",
         "seen": "最后心跳",
         "key": "密钥"
-      }
+      },
+      "create": "添加节点",
+      "hotel": "酒店",
+      "nodeName": "节点名称",
+      "createFailed": "无法添加节点",
+      "reissueFailed": "无法重新签发密钥",
+      "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效，连接器会使用新密钥重连。"
     },
     "team": {
       "title": "平台团队",
@@ -1999,7 +2024,12 @@
       "purge": "删除数据",
       "purgeFailed": "删除失败",
       "purged": "已删除数据：{{count}} 条",
-      "cancel": "取消标记"
+      "cancel": "取消标记",
+      "deleteTitle": "从注册表移除酒店",
+      "delete": "从注册表移除",
+      "deleteHint": "数据由退出流程清除；此处针对酒店本身：它将从列表中消失，子域被释放以供新酒店使用。记录仍为软删除——平台必须能回答该酒店曾经存在。",
+      "deleted": "酒店“{{subdomain}}”已移除，名称已释放",
+      "deleteFailed": "无法移除酒店"
     },
     "support": {
       "title": "支持会话",
@@ -2342,7 +2372,8 @@
       "channels": "通知渠道",
       "notificationLog": "发送日志",
       "timeseries": "走势",
-      "reviewSettings": "评价设置"
+      "reviewSettings": "评价设置",
+      "me": "你的账号"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   }
