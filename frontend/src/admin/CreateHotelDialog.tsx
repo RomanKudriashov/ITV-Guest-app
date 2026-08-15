@@ -52,7 +52,7 @@ export function CreateHotelDialog({
 
   // Шаблоны редактируются платформой, поэтому список приходит с сервера, а не
   // зашит в диалог: иначе он отстал бы от реестра в первый же день.
-  const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: getTemplates });
+  const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: () => getTemplates() });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -117,7 +117,7 @@ export function CreateHotelDialog({
               {t('admin.create.template')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {(templates.data ?? [])
+              {(templates.data?.items ?? [])
                 .filter((entry) => entry.is_active)
                 .map((entry) => (
                   <Box

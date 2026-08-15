@@ -1877,7 +1877,15 @@
     "audit": {
       "title": "Audit",
       "subtitle": "Every platform action — who, what, when",
-      "empty": "No entries"
+      "empty": "No entries",
+      "filterAction": "Action",
+      "filterAny": "Any",
+      "filterSince": "From",
+      "filterUntil": "To",
+      "filterHotel": "Hotel (subdomain)",
+      "counter": "Showing {{shown}} of {{total}}",
+      "prev": "Back",
+      "next": "More"
     },
     "action": {
       "platform": {
@@ -2321,6 +2329,7 @@
       "channels": "the notification channels",
       "notificationLog": "the delivery log",
       "timeseries": "the chart"
-    }
+    },
+    "truncated": "Showing the first {{shown}} of {{total}}"
   }
 }

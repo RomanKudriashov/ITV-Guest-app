@@ -149,7 +149,21 @@ export async function totpEnable(code: string): Promise<void> {
 }
 export const totpDisable = () => request<{ ok: boolean }>('/auth/2fa/disable', 'POST');
 
-export const listHotels = () => request<HotelBrief[]>('/hotels');
+/**
+ * Выдачи консоли приходят ОБОЛОЧКОЙ, а не голым списком.
+ *
+ * `total` рядом с `items` — не украшение: список с пределом, отданный как
+ * массив, выглядит полным, и оператор уверен, что узлов ровно двадцать пять.
+ * `truncated` говорит интерфейсу, когда сказать «показаны первые N из M».
+ */
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  truncated: boolean;
+}
+
+export const listHotels = (limit = 100) => request<Page<HotelBrief>>(`/hotels?limit=${limit}`);
 export const getHotel = (id: string) => request<HotelProfile>(`/hotels/${id}`);
 export const createHotel = (body: CreateHotelInput) =>
   request<CreateHotelResult>('/hotels', 'POST', body);
@@ -431,20 +445,51 @@ export const revokeImpersonation = (id: string) =>
   request<{ grant_id: string; revoked_at: string }>(`/impersonations/${id}/revoke`, 'POST');
 
 export const getTariffs = () => request<TariffRow[]>('/tariffs');
-export const getNodes = () => request<NodeRow[]>('/nodes');
+export const getNodes = (limit = 100) => request<Page<NodeRow>>(`/nodes?limit=${limit}`);
 export const createNode = (hotelId: string, body: { name: string; purpose: string }) =>
   request<{ node: NodeRow; key: string }>(`/hotels/${hotelId}/nodes`, 'POST', body);
 export const revokeNode = (id: string) => request<NodeRow>(`/nodes/${id}/revoke`, 'POST');
 export const reissueNode = (id: string) =>
   request<{ node: NodeRow; key: string }>(`/nodes/${id}/reissue`, 'POST');
 
-export const getTeam = () => request<TeamMember[]>('/team');
+export const getTeam = (limit = 100) => request<Page<TeamMember>>(`/team?limit=${limit}`);
 export const inviteMember = (body: { email: string; role: string; full_name?: string }) =>
   request<{ member: TeamMember; password: string }>('/team', 'POST', body);
 export const patchMember = (id: string, body: { role?: string; is_active?: boolean }) =>
   request<TeamMember>(`/team/${id}`, 'PATCH', body);
 
-export const getAudit = (limit = 100) => request<AuditRow[]>(`/audit?limit=${limit}`);
+export interface AuditQuery {
+  limit?: number;
+  cursor?: string | null;
+  hotel_id?: string | null;
+  action?: string | null;
+  since?: string | null;
+  until?: string | null;
+}
+
+export interface AuditPage {
+  items: AuditRow[];
+  total: number;
+  limit: number;
+  /** Ключ следующей страницы. `null` — дальше ничего нет. */
+  next_cursor: string | null;
+}
+
+/**
+ * Журнал листается КУРСОРОМ. Смещение здесь не годится: записи добавляются
+ * во время просмотра, и вторая страница показала бы часть первой, пропустив
+ * столько же — как раз там и оказался бы разыскиваемый инцидент.
+ */
+export const getAudit = (query: AuditQuery = {}) => {
+  const params = new URLSearchParams({ limit: String(query.limit ?? 100) });
+  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until'] as const) {
+    const value = query[key];
+    if (value) params.set(key, value);
+  }
+  return request<AuditPage>(`/audit?${params.toString()}`);
+};
+
+export const getAuditActions = () => request<string[]>('/audit/actions');
 
 export const enterHotel = (id: string, body: { reason: string; ttl_minutes: number }) =>
   request<EnterResult>(`/hotels/${id}/enter`, 'POST', body);
@@ -474,10 +519,12 @@ export interface DictionaryEntry {
   sort_order: number;
 }
 
-export const getTemplates = () => request<OnboardingTemplate[]>('/templates');
+export const getTemplates = (limit = 100) =>
+  request<Page<OnboardingTemplate>>(`/templates?limit=${limit}`);
 export const patchTemplate = (id: string, body: Partial<OnboardingTemplate>) =>
   request<OnboardingTemplate>(`/templates/${id}`, 'PATCH', body);
-export const getDictionary = () => request<DictionaryEntry[]>('/dictionaries');
+export const getDictionary = (limit = 100) =>
+  request<Page<DictionaryEntry>>(`/dictionaries?limit=${limit}`);
 export const putDictionaryEntry = (body: {
   kind: string;
   code: string;

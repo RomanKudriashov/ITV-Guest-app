@@ -44,8 +44,8 @@ router = PlatformRouter(tags=["platform"])
 # Django возьмёт первый и ответит 405 на метод, которого в нём нет.
 @router.get("/hotels", summary="Список отелей")
 @requires(READ)
-def list_hotels(request: HttpRequest):
-    return console.list_briefs()
+def list_hotels(request: HttpRequest, limit: int = 100):
+    return console.list_briefs(limit=limit)
 
 
 @router.post("/hotels", response={201: dict}, summary="Создать отель")

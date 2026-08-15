@@ -25,7 +25,7 @@ const ROLES = ['owner', 'support', 'read_only'] as const;
 export function TeamPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const team = useQuery({ queryKey: ['admin', 'team'], queryFn: getTeam });
+  const team = useQuery({ queryKey: ['admin', 'team'], queryFn: () => getTeam() });
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>('support');
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
@@ -103,10 +103,19 @@ export function TeamPage() {
       <QueryState
         query={team}
         what={t('state.what.team')}
-        isEmpty={(rows) => rows.length === 0}
+        isEmpty={(page) => page.items.length === 0}
         emptyText={t('admin.team.empty')}
       >
-        {(rows) => (
+        {(page) => (
+          <>
+            {page.truncated ? (
+              <Typography
+                sx={{ color: ink.low, fontSize: 12.5, mt: 1 }}
+                data-testid="admin-team-truncated"
+              >
+                {t('state.truncated', { shown: page.items.length, total: page.total })}
+              </Typography>
+            ) : null}
       <Box sx={{ mt: 2, overflowX: 'auto' }}>
         <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <Box component="thead">
@@ -132,7 +141,7 @@ export function TeamPage() {
             </Box>
           </Box>
           <Box component="tbody">
-            {rows.map((member) => (
+            {page.items.map((member) => (
               <MemberLine
                 key={member.id}
                 member={member}
@@ -143,6 +152,7 @@ export function TeamPage() {
           </Box>
         </Box>
       </Box>
+          </>
         )}
       </QueryState>
     </Box>

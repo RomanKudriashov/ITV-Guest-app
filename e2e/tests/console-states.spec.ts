@@ -15,14 +15,20 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 
 const PLATFORM = { email: 'platform@itv.local', password: 'platform12345' }
 
+const EMPTY_PAGE = { items: [], total: 0, limit: 100, truncated: false }
+const EMPTY_AUDIT = { items: [], total: 0, limit: 100, next_cursor: null }
+
 const SCREENS = [
   { key: 'overview', nav: 'admin-nav-overview', api: ['/overview'] },
   { key: 'fleet', nav: 'admin-nav-fleet', api: ['/fleet'], empty: { items: [], total: 0 } },
   { key: 'modules', nav: 'admin-nav-modules', api: ['/tariffs'], empty: [] },
-  { key: 'nodes', nav: 'admin-nav-nodes', api: ['/nodes'], empty: [] },
-  { key: 'templates', nav: 'admin-nav-templates', api: ['/templates'], empty: [] },
-  { key: 'team', nav: 'admin-nav-team', api: ['/team'], empty: [] },
-  { key: 'audit', nav: 'admin-nav-audit', api: ['/audit'], empty: [] },
+  // Выдачи консоли приходят оболочкой `{items, total}` — пустой ответ должен
+  // быть пустым В ЭТОЙ ФОРМЕ, иначе экран честно покажет отказ разбора, а тест
+  // будет думать, что проверяет пустоту.
+  { key: 'nodes', nav: 'admin-nav-nodes', api: ['/nodes'], empty: EMPTY_PAGE },
+  { key: 'templates', nav: 'admin-nav-templates', api: ['/templates'], empty: EMPTY_PAGE },
+  { key: 'team', nav: 'admin-nav-team', api: ['/team'], empty: EMPTY_PAGE },
+  { key: 'audit', nav: 'admin-nav-audit', api: ['/audit'], empty: EMPTY_AUDIT },
   { key: 'support', nav: 'admin-nav-support', api: ['/impersonations'], empty: [] },
 ]
 
@@ -34,6 +40,12 @@ async function serve(ctx: BrowserContext, paths: string[], reply: { status: numb
   await ctx.route('**/api/v1/platform/**', async (route) => {
     const url = route.request().url()
     if (!paths.some((p) => url.includes(`/platform${p}`))) return route.continue()
+    // `/audit/actions` — список видов действий для фильтра, а не страница
+    // журнала: подменить его оболочкой значит уронить рендер на `.map`,
+    // и тест проверял бы уже границу экрана, а не пустое состояние.
+    if (url.includes('/audit/actions')) {
+      return route.fulfill({ status: reply.status, contentType: 'application/json', body: '[]' })
+    }
     return route.fulfill({ status: reply.status, contentType: 'application/json', body: reply.body })
   })
 }
@@ -104,7 +116,11 @@ test.describe('Консоль: отказ виден', () => {
       if (failing) {
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
       }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(EMPTY_PAGE),
+      })
     })
     const page = await ctx.newPage()
     await loginToAdmin(page)

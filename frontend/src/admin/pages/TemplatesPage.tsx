@@ -76,7 +76,7 @@ export function TemplatesPage() {
 function TemplatesTab() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
-  const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: getTemplates });
+  const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: () => getTemplates() });
   const save = useMutation({
     mutationFn: (body: { id: string; patch: Partial<OnboardingTemplate> }) =>
       patchTemplate(body.id, body.patch),
@@ -87,12 +87,12 @@ function TemplatesTab() {
     <QueryState
       query={templates}
       what={t('state.what.templates')}
-      isEmpty={(rows) => rows.length === 0}
+      isEmpty={(page) => page.items.length === 0}
       emptyText={t('admin.templates.empty')}
     >
-      {(rows) => (
+      {(page) => (
     <Box sx={{ display: 'grid', gap: 1.75 }}>
-      {rows.map((template) => (
+      {page.items.map((template) => (
         <Box key={template.id} sx={panelSx} data-testid={`admin-template-${template.code}`}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ flexGrow: 1 }}>
@@ -162,7 +162,7 @@ function TemplatesTab() {
 function DictionaryTab() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
-  const dictionary = useQuery({ queryKey: ['admin', 'dictionary'], queryFn: getDictionary });
+  const dictionary = useQuery({ queryKey: ['admin', 'dictionary'], queryFn: () => getDictionary() });
   const [kind, setKind] = useState('allergen');
   const [code, setCode] = useState('');
   const [title, setTitle] = useState('');
@@ -234,12 +234,21 @@ function DictionaryTab() {
       <QueryState
         query={dictionary}
         what={t('state.what.dictionary')}
-        isEmpty={(rows) => rows.length === 0}
+        isEmpty={(page) => page.items.length === 0}
         emptyText={t('admin.templates.dictEmpty')}
       >
-        {(rows) => (
+        {(page) => (
+          <>
+            {page.truncated ? (
+              <Typography
+                sx={{ color: ink.low, fontSize: 12.5, mt: 1 }}
+                data-testid="admin-templates-truncated"
+              >
+                {t('state.truncated', { shown: page.items.length, total: page.total })}
+              </Typography>
+            ) : null}
         <>
-      {Object.entries(group(rows)).map(([entryKind, entries]) => (
+      {Object.entries(group(page.items)).map(([entryKind, entries]) => (
         <Box key={entryKind} sx={{ mt: 2 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 700, color: ink.low, textTransform: 'uppercase', letterSpacing: '.12em' }}>
             {t(`admin.templates.kind.${entryKind}`)}
@@ -270,6 +279,7 @@ function DictionaryTab() {
         {t('admin.templates.dictNote')}
       </Typography>
         </>
+          </>
         )}
       </QueryState>
     </Box>

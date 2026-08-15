@@ -124,11 +124,17 @@ def serialize_template(template: OnboardingTemplate) -> dict:
     }
 
 
-def list_templates(*, active_only: bool = False) -> list[dict]:
+def list_templates(*, active_only: bool = False, limit: int | None = None) -> dict:
+    """Шаблоны онбординга — с осознанным пределом и честным `total`."""
+    from apps.hotels.services.platform.paging import clamp, envelope
+
+    limit = clamp(limit)
     queryset = OnboardingTemplate.objects.all()
     if active_only:
         queryset = queryset.filter(is_active=True)
-    return [serialize_template(template) for template in queryset]
+    total = queryset.count()
+    rows = [serialize_template(template) for template in queryset[:limit]]
+    return envelope(rows, total, limit)
 
 
 def get_template(code: str) -> OnboardingTemplate:
@@ -187,11 +193,16 @@ def _slug(source: str, index: int) -> str:
 # --- Системный справочник --------------------------------------------------
 
 
-def list_dictionary(kind: str | None = None) -> list[dict]:
+def list_dictionary(kind: str | None = None, *, limit: int | None = None) -> dict:
+    """Системный справочник — тот же предел, та же честность про хвост."""
+    from apps.hotels.services.platform.paging import clamp, envelope
+
+    limit = clamp(limit)
     queryset = SystemDictionaryEntry.objects.all()
     if kind:
         queryset = queryset.filter(kind=kind)
-    return [
+    total = queryset.count()
+    rows = [
         {
             "id": str(entry.pk),
             "kind": entry.kind,
@@ -200,8 +211,9 @@ def list_dictionary(kind: str | None = None) -> list[dict]:
             "is_active": entry.is_active,
             "sort_order": entry.sort_order,
         }
-        for entry in queryset
+        for entry in queryset[:limit]
     ]
+    return envelope(rows, total, limit)
 
 
 def upsert_dictionary_entry(*, kind: str, code: str, title: dict, is_active: bool = True) -> SystemDictionaryEntry:

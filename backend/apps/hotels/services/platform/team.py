@@ -18,6 +18,8 @@ import secrets
 
 from django.contrib.auth.hashers import make_password
 
+from django.db.models import Q
+
 from apps.accounts.models import User
 from apps.core.context import platform_scope
 from apps.core.errors import NotFoundError, ValidationError
@@ -27,14 +29,22 @@ from apps.hotels.models import Hotel
 VALID_ROLES = set(User.PlatformRole.values)
 
 
-def list_members() -> list[dict]:
+def list_members(*, limit: int | None = None) -> dict:
+    """
+    Команда платформы. Растёт медленно, но предел здесь всё равно осознанный:
+    выдача без предела — это обещание «столько и есть», которое однажды
+    перестанет быть правдой молча.
+    """
+    from apps.hotels.services.platform.paging import clamp, envelope
+
+    limit = clamp(limit)
     with platform_scope():
-        members = list(
-            User.all_objects.using("platform")
-            .filter(is_platform_admin=True, hotel__isnull=True)
-            .order_by("email")
+        queryset = User.all_objects.using("platform").filter(
+            is_platform_admin=True, hotel__isnull=True
         )
-    return [
+        total = queryset.count()
+        members = list(queryset.order_by("email")[:limit])
+    rows = [
         {
             "id": str(member.pk),
             "email": member.email,
@@ -45,6 +55,7 @@ def list_members() -> list[dict]:
         }
         for member in members
     ]
+    return envelope(rows, total, limit)
 
 
 def invite(*, email: str, role: str, full_name: str = "") -> tuple[User, str]:
@@ -106,23 +117,88 @@ def update_member(user_id: str, *, role: str | None, is_active: bool | None, act
     return member
 
 
-def audit_feed(*, limit: int = 100) -> list[dict]:
+def audit_feed(
+    *,
+    limit: int = 100,
+    cursor: str | None = None,
+    hotel_id: str | None = None,
+    action: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
+) -> dict:
     """
-    Полный журнал платформы: и действия без отеля (вход, команда, 2FA), и
-    действия НАД отелями. Одним списком — потому что вопрос, который задают
-    этому экрану, звучит «кто что делал», а не «в каком отеле».
+    Журнал платформы: и действия без отеля (вход, команда, 2FA), и действия
+    НАД отелями. Одним списком — вопрос к этому экрану звучит «кто что делал»,
+    а не «в каком отеле».
+
+    ЛИСТАНИЕ КУРСОРОМ, А НЕ СМЕЩЕНИЕМ. Журнал пополняется прямо во время
+    просмотра: при `OFFSET` вторая страница показала бы часть первой, а часть
+    записей не показала бы вовсе — и вчерашний инцидент оказался бы ровно в
+    пропущенном. Курсор — это «строго раньше вот этой записи», и вставка новых
+    сверху на него не влияет.
+
+    Курсор составной (`время|id`): по одному времени записи не различить —
+    массовая операция пишет десятки строк в одну миллисекунду, и листание
+    зациклилось бы на них.
+
+    ФИЛЬТРЫ. Без них глубина бессмысленна: пятьдесят тысяч записей нельзя
+    пролистать до вчерашнего инцидента, его можно только найти.
     """
+    from datetime import datetime
+
+    from django.utils import timezone as dj_timezone
+    from django.utils.dateparse import parse_datetime
+
     limit = max(1, min(limit, 500))
+
+    def _moment(value: str | None) -> datetime | None:
+        if not value:
+            return None
+        parsed = parse_datetime(value)
+        if parsed is None:
+            try:
+                parsed = datetime.fromisoformat(value)
+            except ValueError:
+                return None
+        return dj_timezone.make_aware(parsed) if dj_timezone.is_naive(parsed) else parsed
+
     with platform_scope():
-        rows = list(
-            AuditLog.all_objects.using("platform")
-            .filter(actor_type=AuditLog.ActorType.PLATFORM)
-            .order_by("-created_at")[:limit]
+        queryset = AuditLog.all_objects.using("platform").filter(
+            actor_type=AuditLog.ActorType.PLATFORM
         )
+        if action:
+            queryset = queryset.filter(action=action)
+        if hotel_id:
+            queryset = queryset.filter(hotel_id=hotel_id)
+        start_at, end_at = _moment(since), _moment(until)
+        if start_at:
+            queryset = queryset.filter(created_at__gte=start_at)
+        if end_at:
+            queryset = queryset.filter(created_at__lte=end_at)
+
+        total = queryset.count()
+
+        if cursor:
+            at, _, cursor_id = cursor.partition("|")
+            # `+00:00` в незакодированном URL приезжает как ` 00:00`: плюс в
+            # строке запроса значит пробел. Без этого курсор молча
+            # игнорировался бы, и листание возвращало бы одну и ту же страницу.
+            moment = _moment(at.replace(" ", "+"))
+            if moment and cursor_id:
+                queryset = queryset.filter(
+                    Q(created_at__lt=moment) | Q(created_at=moment, pk__lt=cursor_id)
+                )
+
+        # Берём на одну больше запрошенного: так видно, есть ли следующая
+        # страница, без второго запроса «а сколько там дальше».
+        rows = list(queryset.order_by("-created_at", "-pk")[: limit + 1])
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+
         hotel_ids = {row.hotel_id for row in rows if row.hotel_id}
         hotels = {
-            hotel.pk: hotel
-            for hotel in Hotel.objects.using("platform").filter(pk__in=hotel_ids)
+            item.pk: item
+            for item in Hotel.objects.using("platform").filter(pk__in=hotel_ids)
         }
         actor_ids = {row.actor_id for row in rows if row.actor_id}
         actors = {
@@ -130,7 +206,7 @@ def audit_feed(*, limit: int = 100) -> list[dict]:
             for user in User.all_objects.using("platform").filter(pk__in=actor_ids)
         }
 
-    return [
+    items = [
         {
             "id": str(row.pk),
             "at": row.created_at.isoformat(),
@@ -142,3 +218,27 @@ def audit_feed(*, limit: int = 100) -> list[dict]:
         }
         for row in rows
     ]
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "next_cursor": (
+            f"{rows[-1].created_at.isoformat()}|{rows[-1].pk}" if has_more and rows else None
+        ),
+    }
+
+
+def audit_actions() -> list[str]:
+    """
+    Список действий для фильтра — берётся из самого журнала.
+
+    Захардкоженный перечень разошёлся бы с жизнью в первый же новый вид
+    события, и фильтр молча перестал бы находить его записи.
+    """
+    with platform_scope():
+        return sorted(
+            AuditLog.all_objects.using("platform")
+            .filter(actor_type=AuditLog.ActorType.PLATFORM)
+            .values_list("action", flat=True)
+            .distinct()
+        )

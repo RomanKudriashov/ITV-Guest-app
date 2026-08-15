@@ -194,9 +194,12 @@ test.describe('Управление номером: гейт пункта нав
     expect(auth.ok(), 'вход в платформу').toBeTruthy()
     const headers = { Authorization: `Bearer ${(await auth.json()).access}` }
 
-    const fleet = await request.get(`${API}/api/v1/platform/fleet?origin=all&page_size=200`, {
-      headers,
-    })
+    // Ищем по имени, а не листаем страницу в 200 строк: на большом стенде
+    // демо-отель в неё не попадает, и тест обвинял бы реестр в его пропаже.
+    const fleet = await request.get(
+      `${API}/api/v1/platform/fleet?origin=all&search=${HOTEL}`,
+      { headers },
+    )
     expect(fleet.ok()).toBeTruthy()
     const hotel = ((await fleet.json()).items as { id: string; subdomain: string }[]).find(
       (row) => row.subdomain === HOTEL,

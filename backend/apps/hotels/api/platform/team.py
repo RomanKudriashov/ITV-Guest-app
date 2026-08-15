@@ -13,10 +13,10 @@ router = PlatformRouter(tags=["platform"])
 
 @router.get("/team", summary="Команда платформы")
 @requires(READ)
-def list_team(request: HttpRequest):
+def list_team(request: HttpRequest, limit: int = 100):
     from apps.hotels.services.platform.team import list_members
 
-    return list_members()
+    return list_members(limit=limit)
 
 
 @router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")

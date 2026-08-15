@@ -14,7 +14,11 @@ from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
-pytestmark = pytest.mark.django_db(databases=["default", "platform"])
+# transaction=True обязателен: список отелей считает счётчики ПЛАТФОРМЕННЫМ
+# подключением (батчем, а не по отелю), а второе подключение не видит данных,
+# не вышедших из транзакции теста. Раньше счёт шёл по одному отелю в его же
+# тенантном контексте и обходился одним соединением.
+pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 
@@ -75,7 +79,7 @@ def test_create_list_get_hotel(client, platform_token):
     assert body["admin"]["delivered_to"] == "a@grand.test"
     assert body["hotel"]["default_language"] == "en"
 
-    listing = call("get", "/hotels").json()
+    listing = call("get", "/hotels").json()["items"]  # выдача теперь оболочкой: items + total
     grand = next(h for h in listing if h["subdomain"] == "grand")
     assert grand["is_active"] is True
     assert set(grand["counts"]) == {"rooms", "staff", "items"}
@@ -125,7 +129,9 @@ def test_deactivation_blocks_storefront_but_platform_still_sees(client, platform
     assert session.status_code != 200
 
     # Платформа отель по-прежнему видит — деактивированным.
-    grand = next(h for h in call("get", "/hotels").json() if h["subdomain"] == "grand")
+    grand = next(
+        h for h in call("get", "/hotels").json()["items"] if h["subdomain"] == "grand"
+    )
     assert grand["is_active"] is False
 
 

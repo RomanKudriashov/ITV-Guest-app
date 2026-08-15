@@ -611,7 +611,7 @@ def test_audit_feed_shows_platform_actions_with_hotel_names(api):
     hotel = _hotel("audited", "Журнал")
     api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "pms", "is_enabled": True}]})
 
-    feed = api("get", "/audit").json()
+    feed = api("get", "/audit").json()["items"]  # выдача теперь оболочкой: items + total
     actions = {row["action"] for row in feed}
     assert "platform.hotel.modules_set" in actions
     entry = next(row for row in feed if row["action"] == "platform.hotel.modules_set")

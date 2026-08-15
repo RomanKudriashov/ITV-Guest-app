@@ -23,7 +23,7 @@ import { getNodes, reissueNode, revokeNode, type NodeRow } from '../adminClient'
 export function NodesPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: getNodes });
+  const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: () => getNodes() });
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
 
   const revoke = useMutation({
@@ -56,10 +56,19 @@ export function NodesPage() {
       <QueryState
         query={nodes}
         what={t('state.what.nodes')}
-        isEmpty={(rows) => rows.length === 0}
+        isEmpty={(page) => page.items.length === 0}
         emptyText={t('admin.nodes.empty')}
       >
-        {(rows) => (
+        {(page) => (
+          <>
+            {page.truncated ? (
+              <Typography
+                sx={{ color: ink.low, fontSize: 12.5, mt: 1 }}
+                data-testid="admin-nodes-truncated"
+              >
+                {t('state.truncated', { shown: page.items.length, total: page.total })}
+              </Typography>
+            ) : null}
         <Box sx={{ mt: 2, overflowX: 'auto' }}>
           <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <Box component="thead">
@@ -85,7 +94,7 @@ export function NodesPage() {
               </Box>
             </Box>
             <Box component="tbody">
-              {rows.map((node) => (
+              {page.items.map((node) => (
                 <NodeLine
                   key={node.id}
                   node={node}
@@ -97,6 +106,7 @@ export function NodesPage() {
             </Box>
           </Box>
         </Box>
+          </>
         )}
       </QueryState>
     </Box>

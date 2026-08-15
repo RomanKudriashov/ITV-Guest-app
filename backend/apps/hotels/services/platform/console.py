@@ -35,7 +35,13 @@ def get_hotel(hotel_id: str) -> Hotel:
 
 
 def counts(hotel: Hotel) -> dict[str, int]:
-    # Считаем в контексте тенанта: RLS сам ограничивает выборку этим отелем.
+    """
+    Счётчики ОДНОГО отеля — для карточки, где отель ровно один.
+
+    В списках так считать нельзя: три запроса на отель превращаются в тысячу
+    на двухстах. Списки берут `_batch_counts` из fleet — там один запрос на
+    сущность независимо от числа отелей.
+    """
     with tenant_context(hotel):
         return {
             "rooms": Room.objects.count(),
@@ -44,19 +50,48 @@ def counts(hotel: Hotel) -> dict[str, int]:
         }
 
 
-def brief(hotel: Hotel) -> dict[str, Any]:
+def brief(hotel: Hotel, counts_override: dict[str, int] | None = None) -> dict[str, Any]:
     return {
         "id": str(hotel.pk),
         "name": hotel.name_i18n,
         "subdomain": hotel.subdomain,
         "is_active": hotel.is_active,
         "created_at": hotel.created_at.isoformat(),
-        "counts": counts(hotel),
+        "counts": counts_override if counts_override is not None else counts(hotel),
     }
 
 
-def list_briefs() -> list[dict[str, Any]]:
-    return [brief(hotel) for hotel in Hotel.objects.order_by("-created_at")]
+def list_briefs(*, limit: int | None = None) -> dict[str, Any]:
+    """
+    Список отелей: счёт БАТЧЕМ и с пределом.
+
+    Было `[brief(hotel) for hotel in ...]` — по три запроса на отель плюс
+    переключение тенанта. Замерено на двухстах отелях: 1064 запроса, 1.3 с,
+    и это на пустых отелях; с наполнением было бы хуже.
+
+    Число запросов теперь не зависит от числа отелей — ровно как во «флоте»,
+    откуда и взят батч. Предел — потому что двести отелей это не потолок, а
+    сегодняшнее состояние стенда.
+    """
+    from apps.hotels.services.platform.fleet import _batch_counts
+    from apps.hotels.services.platform.paging import clamp, envelope
+
+    limit = clamp(limit)
+    with platform_scope():
+        total = Hotel.objects.using("platform").count()
+        hotels = list(Hotel.objects.using("platform").order_by("-created_at")[:limit])
+    counts_by_hotel = _batch_counts([hotel.pk for hotel in hotels])
+    rows = [
+        brief(
+            hotel,
+            {
+                key: counts_by_hotel.get(hotel.pk, {}).get(key, 0)
+                for key in ("rooms", "staff", "items")
+            },
+        )
+        for hotel in hotels
+    ]
+    return envelope(rows, total, limit)
 
 
 def profile(hotel: Hotel) -> dict[str, Any]:

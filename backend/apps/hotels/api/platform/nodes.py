@@ -15,10 +15,10 @@ router = PlatformRouter(tags=["platform"])
 
 @router.get("/nodes", summary="Реестр он-прем узлов по всем отелям")
 @requires(READ)
-def list_nodes(request: HttpRequest):
+def list_nodes(request: HttpRequest, limit: int = 100):
     from apps.hotels.services.onprem import all_nodes
 
-    return all_nodes()
+    return all_nodes(limit=limit)
 
 
 @router.post("/hotels/{hotel_id}/nodes", response={201: dict}, summary="Завести узел и выдать ключ")

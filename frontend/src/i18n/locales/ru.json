@@ -1885,7 +1885,15 @@
     "audit": {
       "title": "Аудит",
       "subtitle": "Все действия платформы — кто, что, когда",
-      "empty": "Записей нет"
+      "empty": "Записей нет",
+      "filterAction": "Действие",
+      "filterAny": "Любое",
+      "filterSince": "С даты",
+      "filterUntil": "По дату",
+      "filterHotel": "Отель (поддомен)",
+      "counter": "Показано {{shown}} из {{total}}",
+      "prev": "Назад",
+      "next": "Ещё"
     },
     "action": {
       "platform": {
@@ -2329,6 +2337,7 @@
       "channels": "каналы уведомлений",
       "notificationLog": "журнал отправок",
       "timeseries": "динамику"
-    }
+    },
+    "truncated": "Показаны первые {{shown}} из {{total}}"
   }
 }

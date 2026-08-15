@@ -1893,7 +1893,15 @@
     "audit": {
       "title": "السجل",
       "subtitle": "كل إجراءات المنصة — من وماذا ومتى",
-      "empty": "لا سجلات"
+      "empty": "لا سجلات",
+      "filterAction": "الإجراء",
+      "filterAny": "أي",
+      "filterSince": "من",
+      "filterUntil": "إلى",
+      "filterHotel": "الفندق (النطاق الفرعي)",
+      "counter": "معروض {{shown}} من {{total}}",
+      "prev": "رجوع",
+      "next": "المزيد"
     },
     "action": {
       "platform": {
@@ -2337,6 +2345,7 @@
       "channels": "قنوات الإشعارات",
       "notificationLog": "سجل الإرسال",
       "timeseries": "الرسم البياني"
-    }
+    },
+    "truncated": "عرض أول {{shown}} من {{total}}"
   }
 }

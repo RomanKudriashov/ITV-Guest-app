@@ -136,10 +136,19 @@ def serialize_node(node: OnPremNode, hotel: Hotel) -> dict:
     }
 
 
-def all_nodes() -> list[dict]:
-    """Все узлы платформы одним запросом — реестр смотрят поверх отелей."""
+def all_nodes(*, limit: int | None = None) -> dict:
+    """
+    Реестр узлов поверх отелей — с пределом и честным хвостом.
+
+    Узлов не бывает меньше, чем отелей с GRMS или PMS: на двухстах отелях это
+    уже сотни строк, и выдача «всё, что нашлось» однажды упрётся в память
+    браузера раньше, чем в базу.
+    """
+    from apps.hotels.services.platform.paging import clamp, envelope
+
+    limit = clamp(limit)
     with platform_scope():
-        nodes = list(
-            OnPremNode.all_objects.using("platform").select_related("hotel").order_by("hotel__name", "name")
-        )
-    return [serialize_node(node, node.hotel) for node in nodes]
+        queryset = OnPremNode.all_objects.using("platform").select_related("hotel")
+        total = queryset.count()
+        nodes = list(queryset.order_by("hotel__name", "name")[:limit])
+    return envelope([serialize_node(node, node.hotel) for node in nodes], total, limit)

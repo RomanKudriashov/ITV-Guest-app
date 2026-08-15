@@ -1872,7 +1872,15 @@
     "audit": {
       "title": "审计",
       "subtitle": "平台的全部操作 — 谁、做了什么、何时",
-      "empty": "暂无记录"
+      "empty": "暂无记录",
+      "filterAction": "操作",
+      "filterAny": "任意",
+      "filterSince": "起始日期",
+      "filterUntil": "结束日期",
+      "filterHotel": "酒店（子域）",
+      "counter": "显示 {{shown}} / {{total}}",
+      "prev": "上一页",
+      "next": "更多"
     },
     "action": {
       "platform": {
@@ -2316,6 +2324,7 @@
       "channels": "通知渠道",
       "notificationLog": "发送日志",
       "timeseries": "走势"
-    }
+    },
+    "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   }
 }

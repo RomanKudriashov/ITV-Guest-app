@@ -196,10 +196,14 @@ async function enableModule(
   expect(platform.ok(), await platform.text()).toBeTruthy()
   const token = (await platform.json()).access
 
+  // ИЩЕМ, а не перебираем список: у выдачи отелей теперь есть предел, и на
+  // большом стенде демо-отель просто не попадает на первую страницу.
   const hotels = await request
-    .get(`${API}/api/platform/hotels`, { headers: { Authorization: `Bearer ${token}` } })
+    .get(`${API}/api/v1/platform/fleet?search=crystal&origin=all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
     .then((r) => r.json())
-  const crystal = (hotels.items ?? hotels).find(
+  const crystal = hotels.items.find(
     (hotel: { subdomain: string }) => hotel.subdomain === 'crystal',
   )
 
@@ -236,10 +240,14 @@ async function moduleEnabled(
   expect(platform.ok(), await platform.text()).toBeTruthy()
   const token = (await platform.json()).access
 
+  // ИЩЕМ, а не перебираем список: у выдачи отелей теперь есть предел, и на
+  // большом стенде демо-отель просто не попадает на первую страницу.
   const hotels = await request
-    .get(`${API}/api/platform/hotels`, { headers: { Authorization: `Bearer ${token}` } })
+    .get(`${API}/api/v1/platform/fleet?search=crystal&origin=all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
     .then((r) => r.json())
-  const crystal = (hotels.items ?? hotels).find(
+  const crystal = hotels.items.find(
     (hotel: { subdomain: string }) => hotel.subdomain === 'crystal',
   )
 

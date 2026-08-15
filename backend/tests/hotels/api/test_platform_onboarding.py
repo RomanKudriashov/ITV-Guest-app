@@ -18,7 +18,11 @@ from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, OnboardingTemplate, Service, SystemDictionaryEntry
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
-pytestmark = pytest.mark.django_db(databases=["default", "platform"])
+# transaction=True обязателен: список отелей считает счётчики ПЛАТФОРМЕННЫМ
+# подключением (батчем, а не по отелю), а второе подключение не видит данных,
+# не вышедших из транзакции теста. Раньше счёт шёл по одному отелю в его же
+# тенантном контексте и обходился одним соединением.
+pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 EMAIL = "root@platform.test"
@@ -53,12 +57,12 @@ def api(client):
 
 def test_seed_fills_empty_registries_once(api):
     assert OnboardingTemplate.objects.count() == 0
-    first = api("get", "/templates").json()
+    first = api("get", "/templates").json()["items"]  # выдача теперь оболочкой: items + total
     assert {entry["code"] for entry in first} >= {"restaurant_hotel", "resort", "blank"}
 
     # Повторный заход ничего не дублирует и не перезаписывает.
     api("patch", f"/templates/{first[0]['id']}", {"is_active": False})
-    again = api("get", "/templates").json()
+    again = api("get", "/templates").json()["items"]
     assert len(again) == len(first)
     assert next(e for e in again if e["id"] == first[0]["id"])["is_active"] is False
 
@@ -91,7 +95,9 @@ def test_editing_a_template_does_not_touch_hotels_already_created(api):
     with tenant_context(hotel):
         before = set(Service.objects.values_list("code", flat=True))
 
-    template = next(e for e in api("get", "/templates").json() if e["code"] == "restaurant_hotel")
+    template = next(
+        e for e in api("get", "/templates").json()["items"] if e["code"] == "restaurant_hotel"
+    )
     api("patch", f"/templates/{template['id']}", {
         "services": [{"type": "spa", "name": {"ru": "СПА"}}], "tariff": "resort",
     })
@@ -126,7 +132,7 @@ def test_unknown_template_is_rejected(api):
 
 
 def test_system_dictionary_seeds_and_accepts_new_entries(api):
-    entries = api("get", "/dictionaries").json()
+    entries = api("get", "/dictionaries").json()["items"]
     allergens = [e for e in entries if e["kind"] == "allergen"]
     # Четырнадцать обязательных аллергенов — требование закона, а не наш выбор.
     assert len(allergens) == 14

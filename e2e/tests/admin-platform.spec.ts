@@ -172,6 +172,8 @@ test.describe('Вход в отель', () => {
         headers: { Authorization: `Bearer ${platform}` },
       })
       .then((r) => r.json())
+      // Журнал приходит оболочкой: страница записей плюс курсор и общее число.
+      .then((page) => page.items)
     const entered = (audit as { action: string; payload: Record<string, unknown> }[]).find(
       (row) => row.action === 'platform.hotel.entered' && row.payload.reason === reason,
     )
