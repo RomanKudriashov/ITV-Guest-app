@@ -5,6 +5,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { HomeBlocksSection } from './HomeBlocksSection';
+import { ReviewsSection } from './ReviewsSection';
 import { SearchSection } from './SearchSection';
 
 import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
@@ -50,6 +51,10 @@ export function SettingsPage() {
         <Box data-testid="settings-search">
           <SearchSection />
         </Box>
+
+        <Divider />
+
+        <ReviewsSection />
 
         <Divider />
 

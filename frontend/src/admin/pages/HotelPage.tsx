@@ -16,6 +16,7 @@ import { EnterHotelDialog } from '../EnterHotelDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
 import {
   cancelOffboarding,
+  getMe,
   downloadHotelExport,
   getActivity,
   getHotel,
@@ -122,6 +123,74 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   const [adminEmail, setAdminEmail] = useState('');
   const [issued, setIssued] = useState<string | null>(null);
 
+  /*
+    ПРОФИЛЬ ПРАВИТСЯ С ЭКРАНА.
+
+    API умел это с самого начала, а вкладка показывала всё на чтение: чтобы
+    сменить валюту отелю, оператор шёл в curl. Форма правит ровно то, что
+    принимает `PATCH`, и ничего сверх.
+
+    Черновик живёт отдельно от загруженного профиля: пока правка не сохранена,
+    фоновое обновление списка не должно стирать введённое, а отказ сервера —
+    тем более. `dirty` считается сравнением с исходным, а не флагом «трогали
+    поле»: вернул значение обратно — и кнопка снова погасла.
+  */
+  const [draft, setDraft] = useState({
+    name: hotel.name,
+    timezone: hotel.timezone,
+    currency: hotel.currency,
+    currency_minor_units: hotel.currency_minor_units,
+    languages: hotel.languages.map((lang) => lang.code).join(', '),
+  });
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  /*
+    ФОРМУ ВИДИТ ТОТ, КОМУ СЕРВЕР РАЗРЕШИТ.
+
+    Роль «только чтение» получала на экране полноценную форму с активной
+    кнопкой, а на сохранении — 403. Это не дыра в правах (сервер отказывает
+    честно), но интерфейс обещал то, чего не может: человек набирает валюту,
+    жмёт «Сохранить» и получает отказ вместо результата.
+
+    Право берём из `me`, который уже загружен оболочкой консоли: своего запроса
+    здесь не заводим.
+  */
+  const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe });
+  const canEdit = me.data?.role !== 'read_only';
+
+  const initial = {
+    name: hotel.name,
+    timezone: hotel.timezone,
+    currency: hotel.currency,
+    currency_minor_units: hotel.currency_minor_units,
+    languages: hotel.languages.map((lang) => lang.code).join(', '),
+  };
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).filter(
+    (key) => String(draft[key]).trim() !== String(initial[key]).trim(),
+  );
+
+  const save = useMutation({
+    mutationFn: () =>
+      patchHotel(hotel.id, {
+        name: draft.name.trim(),
+        timezone: draft.timezone.trim(),
+        currency: draft.currency.trim().toUpperCase(),
+        currency_minor_units: Number(draft.currency_minor_units),
+        languages: draft.languages
+          .split(/[,\s]+/)
+          .map((code) => code.trim().toLowerCase())
+          .filter(Boolean),
+      }),
+    onSuccess: () => {
+      setSaveError(null);
+      refresh();
+    },
+    // Введённое НЕ трогаем: человек только что это набрал, и отобрать текст
+    // вместе с отказом — самый быстрый способ заставить набирать заново.
+    onError: (error) =>
+      setSaveError(error instanceof Error ? error.message : t('admin.hotel.saveFailed')),
+  });
+
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
@@ -141,19 +210,128 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
         <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.25 }}>
           {t('admin.hotel.tab.profile')}
         </Typography>
-        <Kv label={t('admin.hotel.field.name')} value={hotel.name} />
+        {canEdit ? (
+          <>
+        <TextField
+          size="small"
+          fullWidth
+          label={t('admin.hotel.field.name')}
+          value={draft.name}
+          onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+          inputProps={{ 'data-testid': 'admin-hotel-name-input' }}
+          sx={{ mb: 1.25 }}
+        />
         {/* Поддомен не редактируется: это ключ тенанта, и он напечатан на QR в
             номерах. Смена поддомена превратила бы напечатанные коды в мусор. */}
         <Kv
           label={t('admin.hotel.field.subdomain')}
           value={`${hotel.subdomain} · ${t('admin.hotel.field.subdomainLocked')}`}
         />
-        <Kv label={t('admin.hotel.field.timezone')} value={hotel.timezone} />
-        <Kv label={t('admin.hotel.field.currency')} value={hotel.currency} />
-        <Kv
-          label={t('admin.hotel.field.languages')}
-          value={hotel.languages.map((lang) => lang.code.toUpperCase()).join(' · ')}
+        <Typography sx={{ fontSize: 11.5, color: ink.low, mb: 1.25 }}>
+          {t('admin.hotel.field.subdomainWhy')}
+        </Typography>
+        <TextField
+          size="small"
+          fullWidth
+          label={t('admin.hotel.field.timezone')}
+          value={draft.timezone}
+          onChange={(event) => setDraft((prev) => ({ ...prev, timezone: event.target.value }))}
+          inputProps={{ 'data-testid': 'admin-hotel-timezone-input' }}
+          sx={{ mb: 1.25 }}
         />
+        <Box sx={{ display: 'flex', gap: 1.25, mb: 1.25 }}>
+          <TextField
+            size="small"
+            label={t('admin.hotel.field.currency')}
+            value={draft.currency}
+            onChange={(event) => setDraft((prev) => ({ ...prev, currency: event.target.value }))}
+            inputProps={{ 'data-testid': 'admin-hotel-currency-input', maxLength: 3 }}
+            sx={{ width: 120 }}
+          />
+          {/* Размерность валюты — рядом с самой валютой: менять их порознь
+              бессмысленно, цены хранятся в минимальных единицах. */}
+          <TextField
+            select
+            size="small"
+            label={t('admin.hotel.field.minorUnits')}
+            value={String(draft.currency_minor_units)}
+            onChange={(event) =>
+              setDraft((prev) => ({ ...prev, currency_minor_units: Number(event.target.value) }))
+            }
+            SelectProps={{ inputProps: { 'data-testid': 'admin-hotel-minor-units' } }}
+            helperText={t('admin.hotel.field.minorUnitsHint')}
+            sx={{ width: 200 }}
+          >
+            {[0, 2, 3].map((value) => (
+              <MenuItem key={value} value={String(value)}>
+                {value}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
+        <TextField
+          size="small"
+          fullWidth
+          label={t('admin.hotel.field.languages')}
+          value={draft.languages}
+          onChange={(event) => setDraft((prev) => ({ ...prev, languages: event.target.value }))}
+          inputProps={{ 'data-testid': 'admin-hotel-languages-input' }}
+          helperText={t('admin.hotel.field.languagesHint')}
+        />
+
+        {saveError ? (
+          <Alert severity="error" sx={{ mt: 1.5 }} data-testid="admin-hotel-save-error">
+            {saveError}
+          </Alert>
+        ) : null}
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
+          <Button
+            sx={primaryButtonSx}
+            disabled={dirty.length === 0 || save.isPending}
+            onClick={() => save.mutate()}
+            data-testid="admin-hotel-save"
+          >
+            {t('admin.hotel.save')}
+          </Button>
+          <Button
+            disabled={dirty.length === 0 || save.isPending}
+            onClick={() => {
+              setDraft(initial);
+              setSaveError(null);
+            }}
+            data-testid="admin-hotel-cancel"
+            sx={{ color: ink.mid }}
+          >
+            {t('admin.hotel.cancel')}
+          </Button>
+          {dirty.length ? (
+            <Typography
+              sx={{ fontSize: 12, color: state.warn }}
+              data-testid="admin-hotel-dirty"
+            >
+              {t('admin.hotel.dirty', { count: dirty.length })}
+            </Typography>
+          ) : null}
+        </Box>
+        </>
+        ) : (
+          <>
+            <Kv label={t('admin.hotel.field.name')} value={hotel.name} />
+            <Kv label={t('admin.hotel.field.timezone')} value={hotel.timezone} />
+            <Kv
+              label={t('admin.hotel.field.currency')}
+              value={`${hotel.currency} · ${hotel.currency_minor_units}`}
+            />
+            <Kv
+              label={t('admin.hotel.field.languages')}
+              value={hotel.languages.map((lang) => lang.code.toUpperCase()).join(' · ')}
+            />
+            <Typography sx={{ fontSize: 12, color: ink.low, mt: 1 }} data-testid="admin-hotel-readonly">
+              {t('admin.hotel.readOnly')}
+            </Typography>
+          </>
+        )}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
           <Switch
             checked={hotel.is_active}

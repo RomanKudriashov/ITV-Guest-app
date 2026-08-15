@@ -116,8 +116,13 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
     hotel = console.get_hotel(hotel_id)
     data = payload.dict(exclude_unset=True)
     fields: list[str] = []
-    for attr in ("name", "timezone", "currency"):
-        if attr in data and data[attr] is not None:
+    # СТАРЫЕ ЗНАЧЕНИЯ СНИМАЕМ ДО ЗАПИСИ. Журнал, в котором сказано только
+    # «изменено поле currency», через месяц не отвечает на вопрос, ради
+    # которого его читают: с чего на что поменяли и было ли это ошибкой.
+    changes: dict[str, dict] = {}
+    for attr in ("name", "timezone", "currency", "currency_minor_units"):
+        if attr in data and data[attr] is not None and getattr(hotel, attr) != data[attr]:
+            changes[attr] = {"from": getattr(hotel, attr), "to": data[attr]}
             setattr(hotel, attr, data[attr])
             fields.append(attr)
 
@@ -131,11 +136,21 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
         hotel.save(update_fields=[*fields, "updated_at"])
 
     if "languages" in data and data["languages"] is not None:
-        console.replace_languages(hotel, data["languages"])
+        language_change = console.replace_languages(hotel, data["languages"])
+        if language_change:
+            changes["languages"] = language_change
 
     ip = request.META.get("REMOTE_ADDR")
-    if fields or "languages" in data:
-        console.audit_hotel(hotel, "platform.hotel.updated", actor_id=request.user.pk, ip=ip, payload={"fields": fields})
+    if changes:
+        console.audit_hotel(
+            hotel,
+            "platform.hotel.updated",
+            actor_id=request.user.pk,
+            ip=ip,
+            # `fields` оставлен ради читателей, которые уже на него смотрят;
+            # `changes` — то, ради чего журнал вообще ведут.
+            payload={"fields": sorted(changes), "changes": changes},
+        )
     if activation_change:
         console.audit_hotel(hotel, f"platform.hotel.{activation_change}", actor_id=request.user.pk, ip=ip)
 

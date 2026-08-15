@@ -106,6 +106,10 @@ def profile(hotel: Hotel) -> dict[str, Any]:
         **brief(hotel),
         "timezone": hotel.timezone,
         "currency": hotel.currency,
+        # Размерность валюты — часть ответа: без неё интерфейс не может ни
+        # показать цену, ни дать её отредактировать, и «100» одинаково значит
+        # рубль и сто иен.
+        "currency_minor_units": hotel.currency_minor_units,
         "default_language": hotel.default_language,
         "languages": languages,
         "tariff": hotel.tariff,
@@ -221,12 +225,21 @@ def find_hotel_admin(hotel: Hotel) -> User | None:
         return User.objects.filter(is_hotel_admin=True, is_active=True).order_by("created_at").first()
 
 
-def replace_languages(hotel: Hotel, codes: list[str]) -> None:
+def replace_languages(hotel: Hotel, codes: list[str]) -> dict | None:
+    """
+    Заменить набор языков отеля и сказать, что изменилось.
+
+    Возвращает `{"from": [...], "to": [...]}` или None, если набор совпал.
+    Снимок «до» берётся ЗДЕСЬ, а не во вьюхе: обращение к ORM из обработчика
+    запроса ловит сеть безопасности, и ловит правильно — иначе половина логики
+    расползается по вьюхам, где её не найти.
+    """
     from apps.hotels.services.provisioning import _LANGUAGE_TITLES, _clean_languages
 
     codes = _clean_languages(codes)
     default_language = codes[0]
     with tenant_context(hotel):
+        was = list(HotelLanguage.objects.order_by("sort_order").values_list("code", flat=True))
         for order, code in enumerate(codes):
             HotelLanguage.objects.update_or_create(
                 code=code,
@@ -237,9 +250,11 @@ def replace_languages(hotel: Hotel, codes: list[str]) -> None:
                 },
             )
         HotelLanguage.objects.exclude(code__in=codes).delete()
+        became = list(HotelLanguage.objects.order_by("sort_order").values_list("code", flat=True))
     if hotel.default_language != default_language:
         hotel.default_language = default_language
         hotel.save(update_fields=["default_language", "updated_at"])
+    return {"from": was, "to": became} if was != became else None
 
 
 def delete_hotel_row(hotel: Hotel) -> None:

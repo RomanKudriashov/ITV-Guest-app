@@ -1616,7 +1616,16 @@
     "commerce": "Currency, tax and fee",
     "commerceHint": "The only hotel-level commerce: the rest belongs to each venue.",
     "locations": "Serving locations",
-    "locationsHint": "A shared list: a venue picks its own and sets its own delivery price."
+    "locationsHint": "A shared list: a venue picks its own and sets its own delivery price.",
+    "reviews": {
+      "title": "Reviews",
+      "subtitle": "Whether to ask the guest for a rating after completion and when to alert the manager.",
+      "on": "Collecting ratings",
+      "off": "Not collecting ratings",
+      "threshold": "A rating is low at",
+      "thresholdHint": "And below — the manager is notified",
+      "saveFailed": "Could not save the review setting"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1752,7 +1761,11 @@
         "subdomainLocked": "cannot change",
         "timezone": "Timezone",
         "currency": "Currency",
-        "languages": "Languages"
+        "languages": "Languages",
+        "minorUnits": "Decimal places",
+        "minorUnitsHint": "2 for RUB, 0 for JPY",
+        "languagesHint": "Codes separated by commas. The first one is the default.",
+        "subdomainWhy": "The subdomain is the hotel key and is printed on room QR codes: changing it would turn them into junk."
       },
       "activeOn": "Active",
       "activeOff": "Disabled — storefront and CMS are closed",
@@ -1783,7 +1796,13 @@
       "downgradeTitle": "Downgrade below current usage",
       "downgradeLimit": "{{what}}: {{used}} in use, limit {{limit}}",
       "downgradeModules": "The plan does not include: {{modules}}",
-      "adminPasswordSent": "Password sent to {{email}}"
+      "adminPasswordSent": "Password sent to {{email}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "dirty_one": "{{count}} field changed",
+      "dirty_other": "{{count}} fields changed",
+      "saveFailed": "Could not save the profile",
+      "readOnly": "Editing the profile is available to the owner and support roles."
     },
     "create": {
       "title": "New hotel",
@@ -2328,7 +2347,8 @@
       "staff": "the staff",
       "channels": "the notification channels",
       "notificationLog": "the delivery log",
-      "timeseries": "the chart"
+      "timeseries": "the chart",
+      "reviewSettings": "the review settings"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
   }

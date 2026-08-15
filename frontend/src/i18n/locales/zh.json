@@ -1611,7 +1611,16 @@
     "commerce": "货币、税与服务费",
     "commerceHint": "唯一的酒店级商务设置，其余归各场所。",
     "locations": "送达地点",
-    "locationsHint": "共享清单：场所从中选择并设定自己的配送价。"
+    "locationsHint": "共享清单：场所从中选择并设定自己的配送价。",
+    "reviews": {
+      "title": "评价",
+      "subtitle": "完成后是否向客人征询评分，以及从几星起提醒经理。",
+      "on": "收集评分",
+      "off": "不收集评分",
+      "threshold": "低分阈值",
+      "thresholdHint": "及以下将通知经理",
+      "saveFailed": "无法保存评价设置"
+    }
   },
   "dashboard": {
     "title": "仪表板",
@@ -1747,7 +1756,11 @@
         "subdomainLocked": "不可更改",
         "timezone": "时区",
         "currency": "货币",
-        "languages": "语言"
+        "languages": "语言",
+        "minorUnits": "小数位",
+        "minorUnitsHint": "卢布为 2，日元为 0",
+        "languagesHint": "用逗号分隔的代码，第一个为默认语言。",
+        "subdomainWhy": "子域是酒店的标识，并印在客房二维码上：更改会使其失效。"
       },
       "activeOn": "启用",
       "activeOff": "已停用 — 门店页与后台均不可访问",
@@ -1778,7 +1791,12 @@
       "downgradeTitle": "降级低于当前用量",
       "downgradeLimit": "{{what}}：已用 {{used}}，上限 {{limit}}",
       "downgradeModules": "套餐不包含：{{modules}}",
-      "adminPasswordSent": "密码已发送至 {{email}}"
+      "adminPasswordSent": "密码已发送至 {{email}}",
+      "save": "保存",
+      "cancel": "取消",
+      "dirty_other": "已修改 {{count}} 项",
+      "saveFailed": "无法保存资料",
+      "readOnly": "仅所有者和支持角色可编辑资料。"
     },
     "create": {
       "title": "新建酒店",
@@ -2323,7 +2341,8 @@
       "staff": "员工",
       "channels": "通知渠道",
       "notificationLog": "发送日志",
-      "timeseries": "走势"
+      "timeseries": "走势",
+      "reviewSettings": "评价设置"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   }

@@ -87,6 +87,8 @@ export interface HotelLanguageBrief {
 export interface HotelProfile extends HotelBrief {
   timezone: string;
   currency: string;
+  /** Знаков после запятой у валюты: 2 — рубль, 0 — иена. */
+  currency_minor_units: number;
   default_language: string;
   languages: HotelLanguageBrief[];
   tariff?: string;
@@ -167,7 +169,16 @@ export const listHotels = (limit = 100) => request<Page<HotelBrief>>(`/hotels?li
 export const getHotel = (id: string) => request<HotelProfile>(`/hotels/${id}`);
 export const createHotel = (body: CreateHotelInput) =>
   request<CreateHotelResult>('/hotels', 'POST', body);
-export const patchHotel = (id: string, body: Partial<HotelProfile>) =>
+export interface HotelPatch {
+  name?: string;
+  timezone?: string;
+  currency?: string;
+  currency_minor_units?: number;
+  languages?: string[];
+  is_active?: boolean;
+}
+
+export const patchHotel = (id: string, body: HotelPatch | Partial<HotelProfile>) =>
   request<HotelProfile>(`/hotels/${id}`, 'PATCH', body);
 export const setHotelAdmin = (id: string, body: { email: string }) =>
   request<{ email: string; delivered_to: string; sent_at: string }>(

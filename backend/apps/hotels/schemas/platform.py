@@ -44,6 +44,11 @@ class HotelPatchIn(Schema):
     name: str | None = None
     timezone: str | None = None
     currency: str | None = None
+    # Число знаков после запятой — ПОКАЗАТЕЛЬ СТЕПЕНИ, а не множитель: 2 → в
+    # рубле 100 копеек, 0 → в иене дробной части нет. Правится рядом с валютой,
+    # потому что менять их порознь бессмысленно: валюта без своей размерности
+    # превращает цены в мусор ровно в момент сохранения.
+    currency_minor_units: int | None = None
     languages: list[str] | None = None
     is_active: bool | None = None
 
