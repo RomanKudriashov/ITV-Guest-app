@@ -8,31 +8,32 @@
  * симметрии названий — платить совместимостью за косметику.
  */
 
-const BASE = '/api/v1/platform';
+import { createSession } from "@/auth/session";
+
+const BASE = "/api/v1/platform";
 const TOKEN_KEY = 'itv.platform.access';
+const REFRESH_KEY = 'itv.platform.refresh';
+
+/**
+ * Сессия консоли — на ОБЩЕМ механизме с CMS отеля (`auth/session`).
+ *
+ * Раньше здесь была своя половинка: `set(value)` брала один аргумент, поэтому
+ * refresh, который сервер честно выдавал на логине, выбрасывался прямо в
+ * точке получения. А на 401 клиент просто бросал ошибку — ни чистки, ни
+ * ухода на вход: экран оставался жить и копить отказы. Это и был мёртвый
+ * интерфейс.
+ */
+export const platformSession = createSession({
+  accessKey: TOKEN_KEY,
+  refreshKey: REFRESH_KEY,
+  refreshUrl: `${BASE}/auth/refresh`,
+  loginPath: '/admin',
+});
 
 export const platformToken = {
-  get(): string | null {
-    try {
-      return window.localStorage.getItem(TOKEN_KEY);
-    } catch {
-      return null;
-    }
-  },
-  set(value: string): void {
-    try {
-      window.localStorage.setItem(TOKEN_KEY, value);
-    } catch {
-      /* private mode */
-    }
-  },
-  clear(): void {
-    try {
-      window.localStorage.removeItem(TOKEN_KEY);
-    } catch {
-      /* ignore */
-    }
-  },
+  get: (): string | null => platformSession.access(),
+  set: (access: string, refresh?: string): void => platformSession.set(access, refresh),
+  clear: (): void => platformSession.clear(),
 };
 
 export class PlatformError extends Error {
@@ -47,16 +48,31 @@ export class PlatformError extends Error {
 }
 
 async function request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = platformToken.get();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const send = (token: string | null) =>
+    fetch(`${BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+  // Логин и обмен ходят без сессии: обновлять им нечего, а упреждающий обмен
+  // на странице входа отправил бы в никуда.
+  const anonymous = path === '/auth/login' || path === '/auth/refresh';
+
+  let res = await send(anonymous ? null : await platformSession.accessForRequest());
+  if (res.status === 401 && !anonymous) {
+    const renewed = await platformSession.refresh();
+    if (renewed) res = await send(renewed);
+  }
+
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
+    // 401 после обновления — сессии больше нет. Уводим на вход с поводом,
+    // а не оставляем экран собирать отказы.
+    if (res.status === 401 && !anonymous) platformSession.expire();
     const detail = (data && (data.detail as string)) || `Ошибка ${res.status}`;
     throw new PlatformError(res.status, detail, data?.code);
   }
@@ -132,12 +148,14 @@ export async function platformLogin(
   password: string,
   totpCode?: string,
 ): Promise<void> {
-  const data = await request<{ access: string }>('/auth/login', 'POST', {
+  const data = await request<{ access: string; refresh?: string }>('/auth/login', 'POST', {
     email,
     password,
     totp_code: totpCode || null,
   });
-  platformToken.set(data.access);
+  // Refresh СОХРАНЯЕМ. Раньше он тут терялся: `set` брала один аргумент, и
+  // недельная сессия жила ровно час — до первого истечения access.
+  platformToken.set(data.access, data.refresh);
 }
 
 export const getMe = () => request<PlatformMe>('/auth/me');
@@ -150,6 +168,24 @@ export async function totpEnable(code: string): Promise<void> {
   platformToken.set(data.access);
 }
 export const totpDisable = () => request<{ ok: boolean }>('/auth/2fa/disable', 'POST');
+
+/* ── Сессии консоли ─────────────────────────────────────────────────────── */
+
+export interface PlatformSessionRow {
+  id: string;
+  created_at: string;
+  last_seen_at: string;
+  expires_at: string;
+  user_agent: string;
+  ip: string | null;
+  is_current: boolean;
+}
+
+export const listSessions = () => request<PlatformSessionRow[]>('/auth/sessions');
+export const closeSession = (id: string) => request<{ ok: boolean }>(`/auth/sessions/${id}`, 'DELETE');
+export const platformLogoutHere = () => request<{ ok: boolean }>('/auth/logout', 'POST');
+export const platformLogoutEverywhere = () =>
+  request<{ ok: boolean; closed: number }>('/auth/logout-all', 'POST');
 
 /**
  * Выдачи консоли приходят ОБОЛОЧКОЙ, а не голым списком.
@@ -498,6 +534,8 @@ export interface AuditQuery {
   action?: string | null;
   since?: string | null;
   until?: string | null;
+  /** Поиск по поддомену отеля — фильтрует СЕРВЕР. */
+  search?: string | null;
 }
 
 export interface AuditPage {
@@ -515,7 +553,9 @@ export interface AuditPage {
  */
 export const getAudit = (query: AuditQuery = {}) => {
   const params = new URLSearchParams({ limit: String(query.limit ?? 100) });
-  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until'] as const) {
+  // `search` В СПИСКЕ. Забыть его здесь — это фильтр, который применился на
+  // экране и не уехал на сервер: выдача та же, а оператор уверен, что отфильтровал.
+  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until', 'search'] as const) {
     const value = query[key];
     if (value) params.set(key, value);
   }

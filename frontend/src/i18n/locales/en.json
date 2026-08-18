@@ -40,7 +40,8 @@
       "evening": "Good evening",
       "night": "Good night"
     },
-    "accessHint": "Your hotel administrator grants access"
+    "accessHint": "Your hotel administrator grants access",
+    "sessionExpired": "Your session has expired — please sign in again"
   },
   "nav": {
     "services": "Services",
@@ -1425,6 +1426,7 @@
       "ready": "Export ready",
       "readyShort": "Ready · {{count}} rows",
       "failed": "Export failed",
+      "downloadFailed": "Could not download the file",
       "formats": {
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
@@ -1520,6 +1522,8 @@
     "inclusionCount": "inclusions: {{count}}",
     "backToList": "Back to services",
     "notFound": "Service not found",
+    "saved": "Saved",
+    "saveFailed": "Could not save",
     "schedule": "Opening hours",
     "scheduleAlways": "Around the clock",
     "scheduleHint": "Hours of the venue itself. Item availability also honours its own schedule.",
@@ -2382,5 +2386,40 @@
       "me": "your account"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
+  },
+  "access": {
+    "cmsTitle": "Section closed",
+    "cmsBody": "Your role has no access to management sections. Your work lives on the order board.",
+    "toTracker": "Go to the tracker"
+  },
+  "modulePending": {
+    "body": "The module is connected, but its settings screen is still being built. It will open right here once it ships.",
+    "toDashboard": "Back to dashboard"
+  },
+  "sessions": {
+    "title": "My sign-ins",
+    "hint": "Devices this account is open on.",
+    "what": "the sign-in list",
+    "empty": "No active sign-ins",
+    "current": "this device",
+    "close": "Close",
+    "logoutAll": "Sign out everywhere",
+    "logoutAllHint": "Closes every session, including this one. Use it if access may have leaked.",
+    "entered": "signed in {{when}}",
+    "seen": "last active {{when}}",
+    "unknownIp": "address unknown",
+    "unknownAgent": "browser unknown"
+  },
+  "profile": {
+    "title": "Profile"
+  },
+  "list": {
+    "nothingFound": "Nothing found",
+    "nothingFoundHint": "No records match the current search and filters.",
+    "resetFilters": "Clear filters",
+    "empty": "Nothing here yet",
+    "found": "Found: {{count}}",
+    "ofTotal": "Showing {{shown}} of {{total}}",
+    "searchPlaceholder": "Search"
   }
 }

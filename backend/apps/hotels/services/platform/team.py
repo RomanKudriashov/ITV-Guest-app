@@ -125,6 +125,7 @@ def audit_feed(
     action: str | None = None,
     since: str | None = None,
     until: str | None = None,
+    search: str | None = None,
 ) -> dict:
     """
     Журнал платформы: и действия без отеля (вход, команда, 2FA), и действия
@@ -143,6 +144,11 @@ def audit_feed(
 
     ФИЛЬТРЫ. Без них глубина бессмысленна: пятьдесят тысяч записей нельзя
     пролистать до вчерашнего инцидента, его можно только найти.
+
+    ПОИСК ПО ПОДДОМЕНУ ИДЁТ ЗДЕСЬ, а не на клиенте. Экран отсеивал уже
+    скачанную сотню — и врал счётчиком: показывал «3 записи» там, где их в
+    базе триста, просто остальные в эту сотню не попали. Отсев после предела
+    выборки — это не фильтр, а видимость фильтра.
     """
     from datetime import datetime
 
@@ -170,6 +176,16 @@ def audit_feed(
             queryset = queryset.filter(action=action)
         if hotel_id:
             queryset = queryset.filter(hotel_id=hotel_id)
+        term = (search or "").strip()
+        if term:
+            # Поддомен живёт в таблице отелей, а не в записи журнала: сначала
+            # находим отели, потом фильтруем журнал по ним.
+            matched = list(
+                Hotel.all_objects.using("platform")
+                .filter(subdomain__icontains=term)
+                .values_list("pk", flat=True)
+            )
+            queryset = queryset.filter(hotel_id__in=matched)
         start_at, end_at = _moment(since), _moment(until)
         if start_at:
             queryset = queryset.filter(created_at__gte=start_at)

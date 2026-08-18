@@ -40,7 +40,8 @@
       "evening": "晚上好",
       "night": "晚安"
     },
-    "accessHint": "访问权限由酒店管理员授予"
+    "accessHint": "访问权限由酒店管理员授予",
+    "sessionExpired": "会话已过期，请重新登录"
   },
   "nav": {
     "services": "服务",
@@ -1421,6 +1422,7 @@
       "ready": "导出完成",
       "readyShort": "完成 · {{count}} 行",
       "failed": "导出失败",
+      "downloadFailed": "文件下载失败",
       "formats": {
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
@@ -1516,6 +1518,8 @@
     "inclusionCount": "引入：{{count}}",
     "backToList": "返回服务列表",
     "notFound": "未找到服务",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
     "schedule": "营业时间",
     "scheduleAlways": "全天",
     "scheduleHint": "场所自身的营业时间。单品是否可点还取决于它自己的时段。",
@@ -2376,5 +2380,40 @@
       "me": "你的账号"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
+  },
+  "access": {
+    "cmsTitle": "该板块已关闭",
+    "cmsBody": "您的角色无权访问管理板块。您的工作在订单看板上。",
+    "toTracker": "前往工作台"
+  },
+  "modulePending": {
+    "body": "模块已接入，但设置界面仍在开发中。上线后将在此处打开。",
+    "toDashboard": "返回仪表盘"
+  },
+  "sessions": {
+    "title": "我的登录",
+    "hint": "当前账号已登录的设备。",
+    "what": "登录列表",
+    "empty": "没有活动登录",
+    "current": "当前设备",
+    "close": "关闭",
+    "logoutAll": "退出所有设备",
+    "logoutAllHint": "关闭包括本次在内的所有会话。若访问权限可能外泄请使用。",
+    "entered": "登录于 {{when}}",
+    "seen": "最近活动 {{when}}",
+    "unknownIp": "地址未知",
+    "unknownAgent": "浏览器未知"
+  },
+  "profile": {
+    "title": "个人资料"
+  },
+  "list": {
+    "nothingFound": "未找到结果",
+    "nothingFoundHint": "没有记录符合当前搜索和筛选条件。",
+    "resetFilters": "清除筛选",
+    "empty": "这里还是空的",
+    "found": "找到 {{count}} 条",
+    "ofTotal": "显示 {{shown}} / {{total}}",
+    "searchPlaceholder": "搜索"
   }
 }

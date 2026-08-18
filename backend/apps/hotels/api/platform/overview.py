@@ -30,6 +30,7 @@ def platform_audit(
     action: str | None = None,
     since: str | None = None,
     until: str | None = None,
+    search: str | None = None,
 ):
     """
     Журнал листается КУРСОРОМ и фильтруется по дате, отелю и действию.
@@ -45,7 +46,8 @@ def platform_audit(
     from apps.hotels.services.platform.team import audit_feed
 
     return audit_feed(
-        limit=limit, cursor=cursor, hotel_id=hotel_id, action=action, since=since, until=until
+        limit=limit, cursor=cursor, hotel_id=hotel_id, action=action,
+        since=since, until=until, search=search,
     )
 
 

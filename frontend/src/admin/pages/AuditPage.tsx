@@ -1,4 +1,7 @@
 import { useState } from 'react';
+
+import { useListQuery } from '@/kit/list/useListQuery';
+import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -9,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, surface } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
-import { getAudit, getAuditActions, type AuditRow } from '../adminClient';
+import { getAudit, getAuditActions } from '../adminClient';
 
 /**
  * Аудит платформы — один список, а не разрез по отелям.
@@ -30,10 +33,19 @@ import { getAudit, getAuditActions, type AuditRow } from '../adminClient';
  */
 export function AuditPage() {
   const { t } = useTranslation();
-  const [action, setAction] = useState('');
-  const [since, setSince] = useState('');
-  const [until, setUntil] = useState('');
-  const [subdomain, setSubdomain] = useState('');
+  /*
+    Фильтры живут В АДРЕСЕ: ссылку на выборку можно послать коллеге, а F5 не
+    сбрасывает работу. Курсор — НЕ в адресе: он про место в ленте, а не про
+    выборку, и вклеивать его в ссылку значило бы делиться своим положением в
+    журнале, которое у получателя всё равно уже другое.
+  */
+  const { params, patch, reset, isFiltered } = useListQuery({
+    action: '',
+    since: '',
+    until: '',
+    search: '',
+  });
+  const { action, since, until, search: subdomain } = params;
   // Стек курсоров: вперёд кладём, назад снимаем. Хранить «номер страницы»
   // здесь нечего — страниц с номерами у курсорного листания не бывает.
   const [cursors, setCursors] = useState<string[]>([]);
@@ -42,6 +54,9 @@ export function AuditPage() {
     action: action || null,
     since: since ? `${since}T00:00:00` : null,
     until: until ? `${until}T23:59:59` : null,
+    // Поиск по поддомену уходит НА СЕРВЕР. Здесь он отсеивал уже скачанную
+    // сотню и врал счётчиком: «3 записи» там, где их в базе триста.
+    search: subdomain || null,
     cursor: cursors[cursors.length - 1] ?? null,
   };
 
@@ -52,8 +67,12 @@ export function AuditPage() {
   const actions = useQuery({ queryKey: ['admin', 'audit', 'actions'], queryFn: getAuditActions });
 
   const resetPaging = () => setCursors([]);
-  const visible = (rows: AuditRow[]) =>
-    subdomain ? rows.filter((row) => row.subdomain?.includes(subdomain)) : rows;
+  // Смена любого фильтра возвращает в начало ленты: курсор от прежней выборки
+  // указывает в середину другой.
+  const setFilter = (next: Partial<typeof params>) => {
+    patch(next);
+    resetPaging();
+  };
 
   return (
     <Box data-testid="admin-audit">
@@ -71,8 +90,7 @@ export function AuditPage() {
           label={t('admin.audit.filterAction')}
           value={action}
           onChange={(event) => {
-            setAction(event.target.value);
-            resetPaging();
+            setFilter({ action: event.target.value });
           }}
           SelectProps={{ inputProps: { 'data-testid': 'admin-audit-filter-action' } }}
           sx={{ minWidth: 220 }}
@@ -90,8 +108,7 @@ export function AuditPage() {
           label={t('admin.audit.filterSince')}
           value={since}
           onChange={(event) => {
-            setSince(event.target.value);
-            resetPaging();
+            setFilter({ since: event.target.value });
           }}
           InputLabelProps={{ shrink: true }}
           inputProps={{ 'data-testid': 'admin-audit-filter-since' }}
@@ -101,10 +118,7 @@ export function AuditPage() {
           type="date"
           label={t('admin.audit.filterUntil')}
           value={until}
-          onChange={(event) => {
-            setUntil(event.target.value);
-            resetPaging();
-          }}
+          onChange={(event) => setFilter({ until: event.target.value })}
           InputLabelProps={{ shrink: true }}
           inputProps={{ 'data-testid': 'admin-audit-filter-until' }}
         />
@@ -112,7 +126,7 @@ export function AuditPage() {
           size="small"
           label={t('admin.audit.filterHotel')}
           value={subdomain}
-          onChange={(event) => setSubdomain(event.target.value)}
+          onChange={(event) => setFilter({ search: event.target.value })}
           inputProps={{ 'data-testid': 'admin-audit-filter-hotel' }}
           sx={{ minWidth: 180 }}
         />
@@ -120,23 +134,27 @@ export function AuditPage() {
         {audit.data ? (
           <Typography sx={{ color: ink.low, fontSize: 12.5 }} data-testid="admin-audit-total">
             {t('admin.audit.counter', {
-              shown: visible(audit.data.items).length,
+              shown: audit.data.items.length,
               total: audit.data.total,
             })}
           </Typography>
         ) : null}
       </Box>
 
-      <QueryState
-        query={audit}
-        what={t('state.what.audit')}
-        isEmpty={(page) => visible(page.items).length === 0}
-        emptyText={t('admin.audit.empty')}
-      >
-        {(page) => (
+      {/*
+        Пустое состояние — ОБЩЕЕ на все списки. «Ничего не найдено» и «здесь
+        пока пусто» это разные ответы: первый просит снять фильтр, второй —
+        завести первую запись. Свалить их в одно «нет данных» значит на
+        регулярной основе заводить дубль того, что просто отсеяно поиском.
+      */}
+      <QueryState query={audit} what={t('state.what.audit')}>
+        {(page) =>
+          page.items.length === 0 ? (
+            <ListEmpty isFiltered={isFiltered} onReset={reset} what={t('state.what.audit')} />
+          ) : (
           <>
             <Box sx={{ mt: 2.25 }}>
-              {visible(page.items).map((row) => (
+              {page.items.map((row) => (
                 <Box
                   key={row.id}
                   data-testid={`admin-audit-${row.action}`}
@@ -188,7 +206,8 @@ export function AuditPage() {
               </Button>
             </Box>
           </>
-        )}
+          )
+        }
       </QueryState>
     </Box>
   );

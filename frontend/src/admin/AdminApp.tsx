@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -18,7 +19,7 @@ import { SecurityPage } from './pages/SecurityPage';
 import { SupportSessionsPage } from './pages/SupportSessionsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { accent, ink } from './adminTokens';
-import { getMe, platformToken } from './adminClient';
+import { getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
 
 /**
  * Корневая админка `/admin` — уровень владельца платформы.
@@ -44,10 +45,29 @@ const SECTIONS: AdminSection[] = [
 
 export function AdminApp() {
   const [authed, setAuthed] = useState<boolean>(() => Boolean(platformToken.get()));
+
+  /*
+    СМЕРТЬ СЕССИИ ПОКАЗЫВАЕТ ВХОД.
+
+    Общий механизм умеет уводить жёстким переходом, но консоли этого мало:
+    у неё приложение и форма входа живут по ОДНОМУ адресу `/admin`, и защита
+    «не редиректить, если уже на входе» глушила переход целиком — токены
+    вычищались, а на экране оставалась оболочка, продолжавшая получать 401.
+    Поэтому здесь, как и в CMS, свой обработчик: он просто показывает вход.
+  */
+  useEffect(() => {
+    platformSession.onExpired(() => setAuthed(false));
+    return () => platformSession.onExpired(null);
+  }, []);
+
   if (!authed) return <AdminLogin onLoggedIn={() => setAuthed(true)} />;
   return (
     <Console
       onLogout={() => {
+        // Сессию рвём НА СЕРВЕРЕ, иначе «выйти» — это только забыть токены в
+        // этом браузере, а снятая заранее копия refresh живёт ещё неделю.
+        // Ответа не ждём: выйти человек должен и без сети.
+        void platformLogoutHere().catch(() => undefined);
         platformToken.clear();
         setAuthed(false);
       }}
@@ -57,7 +77,26 @@ export function AdminApp() {
 
 function Console({ onLogout }: { onLogout: () => void }) {
   const { t } = useTranslation();
-  const [section, setSection] = useState('overview');
+  /*
+    РАЗДЕЛ КОНСОЛИ ЖИВЁТ В АДРЕСЕ.
+
+    Он лежал в `useState`, и ссылка на выборку — «журнал, отель crystal» —
+    открывалась у коллеги на «Сводке»: фильтры в адресе были, а раздела, к
+    которому они относятся, не было. Половина состояния в адресе бесполезна:
+    поделиться можно только целым.
+  */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = searchParams.get('section') || 'overview';
+  const setSection = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('section', next);
+    // Смена раздела сбрасывает чужие фильтры: они относились к прежнему списку
+    // и в новом означали бы совсем другое.
+    for (const key of ['search', 'action', 'since', 'until', 'status', 'sort']) {
+      params.delete(key);
+    }
+    setSearchParams(params, { replace: true });
+  };
   const [hotelId, setHotelId] = useState<string | null>(null);
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe, retry: false });
 
