@@ -83,7 +83,13 @@ test.describe('CMS: отказ не врёт', () => {
   test('дашборд печатает ноль, когда сервер ответил нулём', async ({ browser }) => {
     const ctx = await browser.newContext({ locale: 'ru-RU' })
     await ctx.route('**/api/v1/cms/services**', async (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+      // Пустая ОБОЛОЧКА: списки CMS отдают items/total/limit, и голый массив
+      // здесь проверял бы форму, которой больше нет.
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: '{"items":[],"total":0,"limit":100,"truncated":false}',
+      }),
     )
     const page = await ctx.newPage()
     await login(page)
@@ -144,7 +150,9 @@ test.describe('CMS: отказ не врёт', () => {
         status: 200,
         contentType: 'application/json',
         // Сервис без `public_name`: страница читает `.ru` и падает на рендере.
-        body: '[{"id":"1","code":"x","type":"custom","is_active":true,"is_guest_facing":true}]',
+        body:
+          '{"items":[{"id":"1","code":"x","type":"custom","is_active":true,' +
+          '"is_guest_facing":true}],"total":1,"limit":100,"truncated":false}',
       }),
     )
     const page = await ctx.newPage()

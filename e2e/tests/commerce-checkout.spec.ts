@@ -56,7 +56,8 @@ test.afterEach(async ({ request }) => {
   const tree = await cmsGet(request, staff, '/categories')
   const salads = tree.find((n: { code: string }) => n.code === 'salads')
   if (salads) await cmsPatch(request, staff, `/categories/${salads.id}`, { min_order_minor: null })
-  const items = await cmsGet(request, staff, `/items?category_id=${salads.id}`)
+  // Списки CMS приходят в оболочке `items/total/limit`.
+  const items = (await cmsGet(request, staff, `/items?category_id=${salads.id}`)).items
   const caesar = items.find((i: { code: string }) => i.code === 'caesar')
   if (caesar) await cmsPatch(request, staff, `/items/${caesar.id}`, { prep_minutes: null })
 })
@@ -70,7 +71,8 @@ test('витрина: минимум блокирует, чаевые и сум�
   const tree = await cmsGet(request, staff, '/categories')
   const salads = tree.find((n: { code: string }) => n.code === 'salads')
   expect(salads, 'категория salads').toBeTruthy()
-  const items = await cmsGet(request, staff, `/items?category_id=${salads.id}`)
+  // Списки CMS приходят в оболочке `items/total/limit`.
+  const items = (await cmsGet(request, staff, `/items?category_id=${salads.id}`)).items
   const caesar = items.find((i: { code: string }) => i.code === 'caesar')
   expect(caesar, 'позиция caesar').toBeTruthy()
   void CAESAR
