@@ -104,10 +104,14 @@ async function readStand(request: APIRequestContext): Promise<StandSnapshot> {
   if (!staff) throw new Error('[стенд] админ демо-отеля не пустил — состав отеля не прочитать')
   const tenant = { Authorization: `Bearer ${staff}`, 'X-Hotel-Subdomain': HOTEL }
 
-  const services = await requireJson<{ id: string }[]>(
-    await request.get(`${API}/api/cms/services`, { headers: tenant }),
-    'сервисы отеля',
-  )
+  // Сервисы тоже в оболочке — как и все списки CMS. Предел снимаем: снимок
+  // стенда обязан быть полным, иначе уборка не заметит то, что за границей.
+  const services = (
+    await requireJson<{ items: { id: string }[] }>(
+      await request.get(`${API}/api/cms/services?limit=500`, { headers: tenant }),
+      'сервисы отеля',
+    )
+  ).items
   const categories = await requireJson<{ id: string }[]>(
     await request.get(`${API}/api/cms/categories`, { headers: tenant }),
     'разделы отеля',

@@ -50,7 +50,7 @@ export function InclusionsTab({ service }: { service: CmsService }) {
     queryKey: ['cms', 'inclusions', service.id],
     queryFn: () => fetchInclusions(service.id),
   });
-  const services = useQuery({ queryKey: ['cms', 'services'], queryFn: fetchServices });
+  const services = useQuery({ queryKey: ['cms', 'services'], queryFn: () => fetchServices() });
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['cms', 'inclusions', service.id] });

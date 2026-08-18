@@ -78,14 +78,18 @@ def serialize_channel(channel: NotificationChannel) -> dict:
     }
 
 
-def list_channels() -> list[dict]:
+def list_channels(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     queryset = NotificationChannel.objects.select_related("execution_point", "user")
     managed = managed_point_ids_or_none()
     if managed is not None:
         # Канал управляющего — канал его отдела либо его собственный. Личные
         # каналы чужих людей и общеотельные ему не показываем.
         queryset = queryset.filter(execution_point_id__in=managed)
-    return [serialize_channel(channel) for channel in queryset.order_by("title")]
+    # Канал ищут по названию — оно и есть то, что о нём помнят.
+    from apps.core.listing import page as list_page, search as apply_search
+
+    queryset = apply_search(queryset.order_by("title"), search, ("title",))
+    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_channel)
 
 
 def get_channel(channel_id) -> NotificationChannel:
@@ -210,12 +214,16 @@ def serialize_rule(rule: EscalationRule) -> dict:
     }
 
 
-def list_rules() -> list[dict]:
+def list_rules(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     queryset = EscalationRule.objects.prefetch_related("steps")
     managed = managed_point_ids_or_none()
     if managed is not None:
         queryset = queryset.filter(execution_point_id__in=managed)
-    return [serialize_rule(rule) for rule in queryset.order_by("name")]
+    # Правило ищут по названию — больше у него ничего запоминающегося нет.
+    from apps.core.listing import page as list_page, search as apply_search
+
+    queryset = apply_search(queryset.order_by("name"), search, ("name",))
+    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_rule)
 
 
 def get_rule(rule_id) -> EscalationRule:
@@ -382,10 +390,16 @@ def serialize_log(entry: NotificationLog) -> dict:
     }
 
 
-def list_logs(*, order_id=None, status: str = "", limit: int = 100) -> list[dict]:
+def list_logs(
+    *, order_id=None, status: str = "", search: str = "", limit: int | None = None, offset: int = 0
+) -> dict:
+    """Журнал отправок: фильтр по заказу и статусу был, поиск по адресату — нет."""
+    from apps.core.listing import page as list_page, search as apply_search
+
     queryset = NotificationLog.objects.select_related("order", "channel").order_by("-created_at")
     if order_id:
         queryset = queryset.filter(order_id=order_id)
     if status:
         queryset = queryset.filter(status=status)
-    return [serialize_log(entry) for entry in queryset[: min(int(limit or 100), 500)]]
+    queryset = apply_search(queryset, search, ("channel__title", "target_kind"))
+    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_log)

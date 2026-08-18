@@ -1,3 +1,4 @@
+import type { ListPage } from '@/api/types';
 /**
  * Сервисы — верхний уровень CMS.
  *
@@ -66,8 +67,11 @@ export interface ServicePayload {
   sort_order?: number | null;
 }
 
-export function fetchServices(): Promise<CmsService[]> {
-  return api.get<CmsService[]>('/cms/services');
+export function fetchServices(search = ''): Promise<CmsService[]> {
+  // Разворот здесь, а не на экранах: выдача в оболочке, а экрану нужен список.
+  return api
+    .get<ListPage<CmsService>>('/cms/services', { query: search ? { search } : undefined })
+    .then((page) => page.items);
 }
 
 export function fetchServiceTemplates(): Promise<ServiceTemplate[]> {

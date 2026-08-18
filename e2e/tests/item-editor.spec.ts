@@ -217,7 +217,8 @@ async function openKitchenMenu(
     .get(`${API}/api/cms/services`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
-    .then((r) => r.json())) as Array<{ id: string; code: string }>
+    .then((r) => r.json())
+      .then((page) => page.items)) as Array<{ id: string; code: string }>
   const kitchen = services.find((service) => service.code === 'kitchen')!
   await page.goto(`/cms/services/${kitchen.id}`)
   await expect(page.getByTestId('service-menu')).toBeVisible({ timeout: 20_000 })

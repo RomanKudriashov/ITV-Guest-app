@@ -189,6 +189,7 @@ test.describe('Меню отеля', () => {
         headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
       })
       .then((r) => r.json())
+      .then((page) => page.items)
     const kitchen = services.find((s: { code: string }) => s.code === 'kitchen')
 
     await page.goto('/login')

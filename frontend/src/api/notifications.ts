@@ -1,3 +1,4 @@
+import type { ListPage } from './types';
 /** One function per endpoint of `docs/notifications-api-contract.md` §3. */
 import { api, request } from './client';
 import type {
@@ -14,7 +15,9 @@ import type {
 /* ── Channels ──────────────────────────────────────────────────────────── */
 
 export function fetchNotificationChannels(): Promise<NotificationChannel[]> {
-  return api.get<NotificationChannel[]>('/cms/notification-channels');
+  return api
+    .get<ListPage<NotificationChannel>>('/cms/notification-channels')
+    .then((page) => page.items);
 }
 
 export function createNotificationChannel(
@@ -45,7 +48,7 @@ export function testNotificationChannel(id: string): Promise<ChannelTestResult> 
 /* ── Escalation rules ──────────────────────────────────────────────────── */
 
 export function fetchEscalationRules(): Promise<EscalationRule[]> {
-  return api.get<EscalationRule[]>('/cms/escalation-rules');
+  return api.get<ListPage<EscalationRule>>('/cms/escalation-rules').then((page) => page.items);
 }
 
 export function createEscalationRule(payload: EscalationRulePayload): Promise<EscalationRule> {

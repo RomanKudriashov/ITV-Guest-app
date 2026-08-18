@@ -25,7 +25,7 @@ interface SummaryResponse {
 export function DashboardPage() {
   const { t } = useTranslation();
 
-  const services = useQuery({ queryKey: ['cms', 'services'], queryFn: fetchServices });
+  const services = useQuery({ queryKey: ['cms', 'services'], queryFn: () => fetchServices() });
   const summary = useQuery({
     queryKey: ['cms', 'dashboard', 'today'],
     queryFn: () => api.get<SummaryResponse>('/cms/analytics/summary?preset=today'),

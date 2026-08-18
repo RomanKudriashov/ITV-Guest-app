@@ -427,7 +427,7 @@ def test_guest_history_mixes_both_types(guest, taxi):
 def test_cms_creates_a_service_with_fields(cms, crystal):
     # Раздел заводится В ЗАВЕДЕНИИ: оно даёт исполнителя, без которого заявка
     # не попадёт ни на витрину, ни на доску. Прачечная — это хозслужба.
-    services = cms.get("/api/cms/services").json()
+    services = cms.get("/api/cms/services").json()["items"]
     housekeeping = next(entry["id"] for entry in services if entry["code"] == "housekeeping")
 
     category = cms.post(

@@ -103,7 +103,8 @@ test.describe('Пространство сервиса', () => {
     const token = await apiToken(request, ADMIN)
     const services = (await request
       .get(`${API}/api/cms/services`, { headers: apiHeaders(token) })
-      .then((r) => r.json())) as Array<{ id: string; code: string }>
+      .then((r) => r.json())
+      .then((page) => page.items)) as Array<{ id: string; code: string }>
 
     const kitchen = services.find((s) => s.code === 'kitchen')!
     const concierge = services.find((s) => s.code === 'concierge')!
@@ -140,7 +141,8 @@ test.describe('Включённый контент', () => {
 
     const services = (await request
       .get(`${API}/api/cms/services`, { headers: h })
-      .then((r) => r.json())) as Array<{ id: string; code: string }>
+      .then((r) => r.json())
+      .then((page) => page.items)) as Array<{ id: string; code: string }>
     const kitchen = services.find((s) => s.code === 'kitchen')!
 
     // Новый агрегатор без собственного меню.

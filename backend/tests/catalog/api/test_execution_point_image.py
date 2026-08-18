@@ -28,7 +28,7 @@ def _upload_ready(cms, crystal) -> str:
 
 
 def _kitchen(cms):
-    return next(s for s in cms.get("/api/cms/services").json() if s["code"] == "kitchen")
+    return next(s for s in cms.get("/api/cms/services").json()["items"] if s["code"] == "kitchen")
 
 
 def test_department_image_upload_serializes_ready(cms, crystal):

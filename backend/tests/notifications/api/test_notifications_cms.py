@@ -14,7 +14,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_seeded_channels_are_listed(cms):
-    titles = {channel["title"] for channel in cms.get("/api/cms/notification-channels").json()}
+    titles = {channel["title"] for channel in cms.get("/api/cms/notification-channels").json()["items"]}
     assert {"Чат кухни", "Пётр — личный канал"} <= titles
 
 
@@ -112,7 +112,7 @@ def test_delete_channel(cms):
         "/api/cms/notification-channels", {"type": "log", "title": "Временный"}
     ).json()
     assert cms.delete(f"/api/cms/notification-channels/{channel['id']}").status_code == 200
-    titles = {c["title"] for c in cms.get("/api/cms/notification-channels").json()}
+    titles = {c["title"] for c in cms.get("/api/cms/notification-channels").json()["items"]}
     assert "Временный" not in titles
 
 
@@ -125,7 +125,7 @@ def _point_id(cms, code: str) -> str:
 
 
 def test_seeded_rule_has_three_steps(cms):
-    rules = cms.get("/api/cms/escalation-rules").json()
+    rules = cms.get("/api/cms/escalation-rules").json()["items"]
     kitchen = next(rule for rule in rules if rule["name"] == "Кухня: подъём по смене")
 
     assert [step["delay_minutes"] for step in kitchen["steps"]] == [0, 5, 15]
@@ -137,7 +137,7 @@ def test_create_rule_for_another_point(cms):
     # «завести правило другому отделу» теперь означает заменить дефолтное:
     # второе активное правило на точку система не даёт по построению.
     concierge_id = _point_id(cms, "concierge")
-    for rule in cms.get("/api/cms/escalation-rules").json():
+    for rule in cms.get("/api/cms/escalation-rules").json()["items"]:
         if rule["execution_point_id"] == concierge_id:
             assert cms.delete(f"/api/cms/escalation-rules/{rule['id']}").status_code == 200
 
@@ -195,7 +195,7 @@ def test_one_active_rule_per_point(cms):
 
 
 def test_update_replaces_steps_wholesale(cms, crystal):
-    rules = cms.get("/api/cms/escalation-rules").json()
+    rules = cms.get("/api/cms/escalation-rules").json()["items"]
     rule_id = next(rule["id"] for rule in rules if rule["name"] == "Кухня: подъём по смене")
 
     updated = cms.patch(
@@ -208,10 +208,10 @@ def test_update_replaces_steps_wholesale(cms, crystal):
 
 
 def test_delete_rule(cms):
-    rules = cms.get("/api/cms/escalation-rules").json()
+    rules = cms.get("/api/cms/escalation-rules").json()["items"]
     rule_id = rules[0]["id"]
     assert cms.delete(f"/api/cms/escalation-rules/{rule_id}").status_code == 200
-    assert rule_id not in {rule["id"] for rule in cms.get("/api/cms/escalation-rules").json()}
+    assert rule_id not in {rule["id"] for rule in cms.get("/api/cms/escalation-rules").json()["items"]}
 
 
 # --- Журнал ----------------------------------------------------------------
@@ -259,7 +259,7 @@ def test_log_shows_step_and_its_deliveries(client, crystal, cms, settings):
         planned = plan_escalation(order)
         execute_step(planned[0].pk)
 
-    entries = cms.get(f"/api/cms/notification-log?order_id={order_id}").json()
+    entries = cms.get(f"/api/cms/notification-log?order_id={order_id}").json()["items"]
     parents = [entry for entry in entries if entry["parent_id"] is None]
     children = [entry for entry in entries if entry["parent_id"]]
 
@@ -268,13 +268,13 @@ def test_log_shows_step_and_its_deliveries(client, crystal, cms, settings):
     assert children[0]["channel_title"] == "Чат кухни"
     assert children[0]["step_index"] == 0
 
-    scheduled = cms.get("/api/cms/notification-log?status=scheduled").json()
+    scheduled = cms.get("/api/cms/notification-log?status=scheduled").json()["items"]
     assert all(entry["status"] == "scheduled" for entry in scheduled)
 
 
 def test_channels_are_isolated_between_hotels(cms, cms_aurora):
-    crystal_ids = {c["id"] for c in cms.get("/api/cms/notification-channels").json()}
-    aurora_ids = {c["id"] for c in cms_aurora.get("/api/cms/notification-channels").json()}
+    crystal_ids = {c["id"] for c in cms.get("/api/cms/notification-channels").json()["items"]}
+    aurora_ids = {c["id"] for c in cms_aurora.get("/api/cms/notification-channels").json()["items"]}
 
     assert crystal_ids and aurora_ids
     assert crystal_ids.isdisjoint(aurora_ids)

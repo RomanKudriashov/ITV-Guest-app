@@ -463,7 +463,7 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
     }
 
 
-def list_services() -> list[dict]:
+def list_services(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     from django.db.models import Count, Q
 
     from apps.accounts.models import StaffAssignment
@@ -477,7 +477,14 @@ def list_services() -> list[dict]:
     managed = managed_point_ids_or_none()
     if managed is not None:
         services = services.filter(execution_point_id__in=managed)
-    services = list(services)
+    # Заведение ищут по коду и по гостевому названию (оно переводимое —
+    # ищется сразу на всех языках).
+    from apps.core.listing import clamp, envelope, search as apply_search
+
+    services = apply_search(services, search, ("code",), json_fields=("public_name",))
+    total = services.count()
+    limit = clamp(limit)
+    services = list(services[max(0, offset) : max(0, offset) + limit])
 
     # Счётчики одним проходом на таблицу — карточка списка не должна стоить
     # запроса на сервис.
@@ -502,7 +509,7 @@ def list_services() -> list[dict]:
         ).values_list("execution_point_id", flat=True)
     )
 
-    return [
+    rows = [
         serialize_service(
             service,
             counts={
@@ -516,6 +523,7 @@ def list_services() -> list[dict]:
         )
         for service in services
     ]
+    return envelope(rows, total, limit, offset=max(0, offset))
 
 
 def get_service(service_id) -> Service:

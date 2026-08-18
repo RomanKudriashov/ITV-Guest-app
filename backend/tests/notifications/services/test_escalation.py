@@ -480,7 +480,7 @@ def test_log_is_scoped_to_the_hotel(crystal, aurora, order, cms_aurora, notifica
     with tenant_context(crystal):
         plan_escalation(order)
 
-    assert cms_aurora.get("/api/cms/notification-log").json() == []
+    assert cms_aurora.get("/api/cms/notification-log").json()["items"] == []
 
 
 # --- Эскалация на уровне сервиса (R3) --------------------------------------

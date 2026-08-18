@@ -310,7 +310,7 @@ def test_toggling_guest_facing_shows_and_hides(client, crystal, guest_token):
 
 
 def test_cms_service_exposes_guest_fields(cms):
-    services = cms.get("/api/v1/cms/services").json()
+    services = cms.get("/api/v1/cms/services").json()["items"]
     kitchen = next(d for d in services if d["code"] == "kitchen")
     assert kitchen["public_name"]["ru"] == "Панорама"
     assert kitchen["is_guest_facing"] is True

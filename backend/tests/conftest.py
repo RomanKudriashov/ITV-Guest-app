@@ -303,5 +303,5 @@ def service_id(cms):
     Раздел без заведения не создаётся: заведение даёт исполнителя, а без
     исполнителя раздел не доезжает ни до витрины гостя, ни до доски.
     """
-    services = cms.get("/api/cms/services").json()
+    services = cms.get("/api/cms/services").json()["items"]
     return next(entry["id"] for entry in services if entry["code"] == "kitchen")

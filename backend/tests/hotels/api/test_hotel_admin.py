@@ -191,7 +191,7 @@ def test_matrix_update_toggles_a_link(cms, crystal):
 
 
 def test_services_show_links_to_staff_and_escalation(cms):
-    services = cms.get("/api/cms/services").json()
+    services = cms.get("/api/cms/services").json()["items"]
     kitchen = next(entry for entry in services if entry["code"] == "kitchen")
     # Из списка сервисов видно связь с персоналом, каналами и эскалацией.
     assert kitchen["staff_count"] >= 1
@@ -253,7 +253,7 @@ def test_service_with_orders_cannot_be_deleted(cms, crystal, client):
         HTTP_IDEMPOTENCY_KEY="svc-order",
     )
 
-    kitchen = next(s for s in cms.get("/api/cms/services").json() if s["code"] == "kitchen")
+    kitchen = next(s for s in cms.get("/api/cms/services").json()["items"] if s["code"] == "kitchen")
     response = cms.delete(f"/api/cms/services/{kitchen['id']}")
     assert response.status_code == 409
     assert response.json()["code"] == "service_has_orders"

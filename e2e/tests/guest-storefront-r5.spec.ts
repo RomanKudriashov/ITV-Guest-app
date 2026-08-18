@@ -90,7 +90,8 @@ test.describe('Посервисная корзина и разъезд', () => {
     // --- Заведение-агрегатор, включающее кухню и бар (модель R2, UI R4) ----
     const services = (await request
       .get(`${API}/api/cms/services`, { headers: h })
-      .then((r) => r.json())) as Array<{ id: string; code: string }>
+      .then((r) => r.json())
+      .then((page) => page.items)) as Array<{ id: string; code: string }>
     const kitchen = services.find((s) => s.code === 'kitchen')!
     const bar = services.find((s) => s.code === 'bar')!
     const barPoint = (

@@ -21,9 +21,11 @@ router = Router(tags=["cms:notifications"])
 # --- Схемы -----------------------------------------------------------------
 
 
-@router.get("/notification-channels", response=list[ChannelOut], summary="Каналы уведомлений")
-def list_channels(request: HttpRequest):
-    return svc.list_channels()
+@router.get("/notification-channels", summary="Каналы уведомлений")
+def list_channels(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_channels(search=search, limit=limit, offset=offset)
 
 
 @router.post(
@@ -61,9 +63,11 @@ def test_channel(request: HttpRequest, channel_id: str):
 # --- Правила ---------------------------------------------------------------
 
 
-@router.get("/escalation-rules", response=list[RuleOut], summary="Правила эскалации")
-def list_rules(request: HttpRequest):
-    return svc.list_rules()
+@router.get("/escalation-rules", summary="Правила эскалации")
+def list_rules(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_rules(search=search, limit=limit, offset=offset)
 
 
 @router.post("/escalation-rules", response={201: RuleOut}, summary="Создать правило")
@@ -87,11 +91,15 @@ def delete_rule(request: HttpRequest, rule_id: str):
 # --- Журнал ----------------------------------------------------------------
 
 
-@router.get("/notification-log", response=list[LogOut], summary="Журнал уведомлений")
+@router.get("/notification-log", summary="Журнал уведомлений")
 def notification_log(
     request: HttpRequest,
     order_id: str | None = None,
     status: str = "",
-    limit: int = 100,
+    search: str = "",
+    limit: int | None = None,
+    offset: int = 0,
 ):
-    return svc.list_logs(order_id=order_id, status=status, limit=limit)
+    return svc.list_logs(
+        order_id=order_id, status=status, search=search, limit=limit, offset=offset
+    )

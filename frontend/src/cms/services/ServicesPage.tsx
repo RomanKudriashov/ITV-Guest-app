@@ -39,7 +39,7 @@ export function ServicesPage() {
   const [creating, setCreating] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const services = useQuery({ queryKey: ['cms', 'services'], queryFn: fetchServices });
+  const services = useQuery({ queryKey: ['cms', 'services'], queryFn: () => fetchServices() });
 
 
   const label = (value: Record<string, string> | undefined, fallback: string) =>

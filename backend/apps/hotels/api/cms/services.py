@@ -20,8 +20,10 @@ def cms_service_templates(request: HttpRequest):
 
 
 @router.get("/services", summary="Сервисы отеля (верхний уровень CMS)")
-def cms_list_services(request: HttpRequest):
-    return svc.list_services()
+def cms_list_services(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_services(search=search, limit=limit, offset=offset)
 
 
 @router.post("/services", response={201: dict}, summary="Создать сервис из шаблона")
