@@ -291,8 +291,13 @@ def test_category_without_route_falls_back_to_matching_point(
     Категория, только что созданная в CMS, маршрута ещё не имеет — а заказать
     её гость уже может. Молча ронять заказ из-за ненастроенной админки нельзя.
     """
+    # Раздел заводится В ЗАВЕДЕНИИ: без него сервер отказывает — заведение даёт
+    # исполнителя. Здесь проверяется ДРУГОЕ (запасной маршрут по совпадению
+    # рода точки), поэтому просто берём любое существующее заведение.
+    service_id = cms.get("/api/cms/services").json()["items"][0]["id"]
     created = cms.post(
-        "/api/cms/categories", {"title": {"ru": "Барная карта", "en": "Bar"}, "code": "bar"}
+        "/api/cms/categories",
+        {"title": {"ru": "Барная карта", "en": "Bar"}, "code": "bar", "service_id": service_id},
     ).json()
     cms.post(
         "/api/cms/items",
@@ -300,6 +305,12 @@ def test_category_without_route_falls_back_to_matching_point(
     )
 
     with tenant_context(crystal):
+        # Маршрут теперь ставится САМ при создании раздела — снимаем его руками.
+        #
+        # Проверяется-то другое: запасной путь резолвера, когда маршрута нет
+        # вовсе. Такие разделы в базе есть (заведены до автоисполнителя), и
+        # именно для них эта ветка и живёт; создать их через API больше нельзя.
+        Route.objects.filter(category_id=created["id"]).hard_delete()
         assert not Route.objects.filter(category_id=created["id"]).exists()
 
     with django_capture_on_commit_callbacks(execute=True):

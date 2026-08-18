@@ -451,8 +451,23 @@
   "/api/v1/platform/auth/login": [
     "POST"
   ],
+  "/api/v1/platform/auth/logout": [
+    "POST"
+  ],
+  "/api/v1/platform/auth/logout-all": [
+    "POST"
+  ],
   "/api/v1/platform/auth/me": [
     "GET"
+  ],
+  "/api/v1/platform/auth/refresh": [
+    "POST"
+  ],
+  "/api/v1/platform/auth/sessions": [
+    "GET"
+  ],
+  "/api/v1/platform/auth/sessions/{session_id}": [
+    "DELETE"
   ],
   "/api/v1/platform/dictionaries": [
     "GET",
@@ -548,8 +563,23 @@
   "/api/v1/staff/auth/login": [
     "POST"
   ],
+  "/api/v1/staff/auth/logout": [
+    "POST"
+  ],
+  "/api/v1/staff/auth/logout-all": [
+    "POST"
+  ],
   "/api/v1/staff/auth/me": [
     "GET"
+  ],
+  "/api/v1/staff/auth/refresh": [
+    "POST"
+  ],
+  "/api/v1/staff/auth/sessions": [
+    "GET"
+  ],
+  "/api/v1/staff/auth/sessions/{session_id}": [
+    "DELETE"
   ],
   "/api/v1/staff/auth/support-exchange": [
     "POST"

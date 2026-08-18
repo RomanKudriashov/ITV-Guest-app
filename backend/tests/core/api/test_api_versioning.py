@@ -142,6 +142,6 @@ def test_qr_matrix_uses_deeplink(cms, crystal):
     # Матрица номеров строит ссылки через ту же функцию: guest_url = .../r/<номер>.
     resp = cms.get("/api/v1/cms/rooms")
     assert resp.status_code == 200, resp.content
-    rooms = resp.json()
+    rooms = resp.json()["items"]
     row = next(r for r in rooms if r.get("guest_url"))
     assert f"/r/{row['number']}" in row["guest_url"]
