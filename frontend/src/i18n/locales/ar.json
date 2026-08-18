@@ -2399,7 +2399,8 @@
       "notificationLog": "سجل الإرسال",
       "timeseries": "الرسم البياني",
       "reviewSettings": "إعدادات التقييمات",
-      "me": "حسابك"
+      "me": "حسابك",
+      "items": "الأصناف"
     },
     "truncated": "عرض أول {{shown}} من {{total}}"
   },

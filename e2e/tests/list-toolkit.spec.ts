@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { API } from './helpers'
+import { ADMIN, API, HOTEL } from './helpers'
 
 /**
  * Общий инструментарий списков: поиск, фильтры, состояние в адресе.
@@ -142,5 +142,72 @@ test.describe('Журнал платформы', () => {
     // поэтому между страницами дыры быть не может.
     const joined = [...firstIds, ...secondIds]
     expect(new Set(joined).size, 'в склейке страниц есть дубли').toBe(joined.length)
+  })
+})
+
+test.describe('Меню отеля', () => {
+  test('поиск возвращает ВСЁ подходящее, а не часть страницы', async ({ request }) => {
+    const token = await request
+      .post(`${API}/api/staff/auth/login`, { data: ADMIN, headers: { 'X-Hotel-Subdomain': HOTEL } })
+      .then((r) => r.json())
+      .then((b) => b.access)
+    const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+
+    const all = await request.get(`${API}/api/cms/items`, { headers }).then((r) => r.json())
+    const found = await request
+      .get(`${API}/api/cms/items?search=салат`, { headers })
+      .then((r) => r.json())
+
+    // Ищем по названию НА ВСЕХ ЯЗЫКАХ и по коду — значит найдено должно быть
+    // ровно столько, сколько подходит во всём меню, а не в первой странице.
+    const expected = all.filter(
+      (item: { title: Record<string, string>; code: string }) =>
+        Object.values(item.title).some((value) => value.toLowerCase().includes('салат')) ||
+        item.code.includes('салат'),
+    )
+    expect(found.length, 'поиск нашёл не всё подходящее').toBe(expected.length)
+    expect(found.length).toBeGreaterThan(0)
+  })
+
+  test('раздел и поиск живут в адресе — ссылка открывает ту же выборку', async ({
+    page,
+    request,
+  }) => {
+    const token = await request
+      .post(`${API}/api/staff/auth/login`, { data: ADMIN, headers: { 'X-Hotel-Subdomain': HOTEL } })
+      .then((r) => r.json())
+      .then((b) => b.access)
+    const services = await request
+      .get(`${API}/api/cms/services`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+      })
+      .then((r) => r.json())
+    const kitchen = services.find((s: { code: string }) => s.code === 'kitchen')
+
+    await page.goto('/login')
+    await page.getByTestId('login-email').fill(ADMIN.email)
+    await page.getByTestId('login-password').fill(ADMIN.password)
+    await page.getByTestId('login-submit').click()
+    await expect(page).toHaveURL(/\/cms\//, { timeout: 20_000 })
+
+    await page.goto(`/cms/services/${kitchen.id}`)
+    await expect(page.getByTestId('menu-category-list')).toBeVisible({ timeout: 20_000 })
+
+    // Запрос обязан уехать С ПОИСКОМ: фильтр, оставшийся на экране, — это
+    // выдача без изменений при уверенности, что отфильтровали.
+    const asked = page.waitForRequest(
+      (r) => r.url().includes('/cms/items') && r.url().includes('search='),
+      { timeout: 20_000 },
+    )
+    await page.getByTestId('item-search').fill('салат')
+    await asked
+    await expect.poll(() => page.url()).toContain('search=')
+
+    // F5 не сбрасывает набранное — раньше поиск жил в useState и терялся.
+    await page.reload()
+    await expect(
+      page.getByTestId('item-search'),
+      'поиск не пережил обновление страницы',
+    ).toHaveValue('салат', { timeout: 20_000 })
   })
 })

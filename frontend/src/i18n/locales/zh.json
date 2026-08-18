@@ -2377,7 +2377,8 @@
       "notificationLog": "发送日志",
       "timeseries": "走势",
       "reviewSettings": "评价设置",
-      "me": "你的账号"
+      "me": "你的账号",
+      "items": "菜品"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   },

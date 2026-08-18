@@ -2383,7 +2383,8 @@
       "notificationLog": "the delivery log",
       "timeseries": "the chart",
       "reviewSettings": "the review settings",
-      "me": "your account"
+      "me": "your account",
+      "items": "items"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
   },

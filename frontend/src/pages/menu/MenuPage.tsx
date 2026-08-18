@@ -39,6 +39,8 @@ import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { findCategory, flattenCategories, replaceSiblings } from '@/utils/categories';
 import { pickTranslated } from '@/utils/translated';
+import { ListEmpty } from '@/kit/list/ListEmpty';
+import { useListQuery } from '@/kit/list/useListQuery';
 import { CategoryTree } from './CategoryTree';
 import { ItemList } from './ItemList';
 
@@ -63,8 +65,23 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
   // Ключ несёт заведение: иначе кэш меню «Панорамы» показался бы в баре.
   const categoriesKey = [...queryKeys.categories, serviceId ?? 'all'];
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  // Редактор раздела — общий экран отеля, и заведение он знает только отсюда.
+  // Без этого раздел, заведённый внутри сервиса, создавался без привязки и
+  // в тот же список не возвращался: сохранение проходило, показать было нечего.
+  const newCategoryPath = serviceId
+    ? `/cms/menu/categories/new?service_id=${serviceId}`
+    : '/cms/menu/categories/new';
+
+  /*
+    Выбранный раздел и поиск живут В АДРЕСЕ: ссылку на «горячее, фильтр
+    сырники» можно послать повару, а F5 не сбрасывает набранное. До этого и
+    то и другое лежало в `useState` — и терялось на каждом обновлении.
+  */
+  const { params, patch } = useListQuery({ category: '', search: '' });
+  const search = params.search;
+  const setSearch = (value: string) => patch({ search: value });
+  const selectedId = params.category || null;
+  const setSelectedId = (value: string | null) => patch({ category: value ?? '' });
   const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
   const [cascade, setCascade] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
@@ -76,11 +93,14 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
 
   const tree = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
-  // Select the first category once the tree arrives.
+  // Первый раздел выбирается сам, когда дерево приехало — но только если в
+  // адресе не задан свой: иначе ссылка на конкретный раздел перебивалась бы
+  // первым в списке.
   useEffect(() => {
     if (selectedId && findCategory(tree, selectedId)) return;
     const flat = flattenCategories(tree);
-    setSelectedId(flat.length ? flat[0].category.id : null);
+    if (flat.length) setSelectedId(flat[0].category.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, selectedId]);
 
   const selectedCategory = selectedId ? findCategory(tree, selectedId) : null;
@@ -285,7 +305,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
             <Button
               size="small"
               startIcon={<CreateNewFolderOutlinedIcon />}
-              onClick={() => navigate('/cms/menu/categories/new')}
+              onClick={() => navigate(newCategoryPath)}
               data-testid="add-category-button"
             >
               {t('menu.addCategory')}
@@ -310,7 +330,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => navigate('/cms/menu/categories/new')}
+                  onClick={() => navigate(newCategoryPath)}
                 >
                   {t('menu.addCategory')}
                 </Button>
@@ -394,19 +414,17 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
           ) : itemsQuery.isError ? (
             <Alert severity="error">{t('errors.loadItems')}</Alert>
           ) : items.length === 0 ? (
-            <EmptyState
+            /*
+              ОДНО пустое состояние на все списки. «Ничего не найдено» под
+              поиском и «здесь пока пусто» в разделе без блюд — разные ответы:
+              первый просит снять фильтр, второй — завести первое блюдо.
+            */
+            <ListEmpty
               testId="items-empty"
-              title={t('menu.noItems')}
-              description={t('menu.noItemsHint')}
-              action={
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => navigate(`/cms/menu/items/new?category_id=${selectedId}`)}
-                >
-                  {t('menu.addItem')}
-                </Button>
-              }
+              isFiltered={Boolean(search)}
+              onReset={() => patch({ search: '' })}
+              what={t('state.what.items')}
+              emptyHint={t('menu.noItemsHint')}
             />
           ) : bootstrap ? (
             <ItemList

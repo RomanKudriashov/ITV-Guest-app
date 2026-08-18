@@ -2392,7 +2392,8 @@
       "notificationLog": "журнал отправок",
       "timeseries": "динамику",
       "reviewSettings": "настройку отзывов",
-      "me": "вашу учётку"
+      "me": "вашу учётку",
+      "items": "блюда"
     },
     "truncated": "Показаны первые {{shown}} из {{total}}"
   },
