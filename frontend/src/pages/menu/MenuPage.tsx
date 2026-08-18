@@ -420,7 +420,6 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
               первый просит снять фильтр, второй — завести первое блюдо.
             */
             <ListEmpty
-              testId="items-empty"
               isFiltered={Boolean(search)}
               onReset={() => patch({ search: '' })}
               what={t('state.what.items')}

@@ -3,11 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, panelSx, pillSx, surface } from '../adminTokens';
+import { accent, ink, panelSx, pillSx, surface } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { ListEmpty } from '@/kit/list/ListEmpty';
+import { useListQuery } from '@/kit/list/useListQuery';
 import { getImpersonations, revokeImpersonation, type ImpersonationRow } from '../adminClient';
 
 /**
@@ -25,7 +29,20 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const sessions = useQuery({ queryKey: ['admin', 'impersonations'], queryFn: getImpersonations });
+  /*
+    Активные И ЗАВЕРШЁННЫЕ. Раньше выдача была только «кто внутри сейчас», и
+    разбор инцидента упирался в стену: кто заходил вчера, узнать было негде,
+    хотя записи никуда не делись.
+  */
+  const { params, patch, reset, isFiltered } = useListQuery({ state: 'active', search: '' });
+  const sessions = useQuery({
+    queryKey: ['admin', 'impersonations', params.state, params.search],
+    queryFn: () =>
+      getImpersonations({
+        state: params.state as 'active' | 'history' | 'all',
+        search: params.search,
+      }),
+  });
 
   const revoke = useMutation({
     mutationFn: (id: string) => revokeImpersonation(id),
@@ -38,8 +55,8 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
 
   // В карточке отеля показываем только его сессии: там вопрос «кто сейчас у
   // МЕНЯ», а не «кто сейчас вообще».
-  const mine = (all: ImpersonationRow[]) =>
-    hotelId ? all.filter((row) => row.hotel_id === hotelId) : all;
+  const mine = (page: { items: ImpersonationRow[] }) =>
+    hotelId ? page.items.filter((row) => row.hotel_id === hotelId) : page.items;
 
   return (
     <Box data-testid="admin-support-sessions">
@@ -60,15 +77,60 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
         </Alert>
       ) : null}
 
-      <QueryState
-        query={sessions}
-        what={t('state.what.support')}
-        isEmpty={(all) => mine(all).length === 0}
-        emptyText={t('admin.support.empty')}
-      >
-        {(all) => (
+      {/* Активные / история / все — и поиск. Всё в адресе: ссылкой на разбор
+          можно поделиться, и она откроется той же выборкой. */}
+      {hotelId ? null : (
+        <Box sx={{ ...panelSx, mt: 2, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          {(['active', 'history', 'all'] as const).map((state) => (
+            <ButtonBase
+              key={state}
+              onClick={() => patch({ state })}
+              data-testid={`admin-support-state-${state}`}
+              data-active={params.state === state ? 'true' : undefined}
+              sx={{
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 1,
+                fontSize: 12.5,
+                fontWeight: 600,
+                border: `1px solid ${params.state === state ? accent.main : surface.line}`,
+                color: params.state === state ? accent.soft : ink.mid,
+              }}
+            >
+              {t(`admin.support.state.${state}`)}
+            </ButtonBase>
+          ))}
+          <TextField
+            size="small"
+            value={params.search}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => patch({ search: event.target.value })}
+            placeholder={t('list.searchPlaceholder')}
+            inputProps={{ 'data-testid': 'admin-support-search' }}
+            sx={{ minWidth: 200 }}
+          />
+          <Box sx={{ flexGrow: 1 }} />
+          {sessions.data ? (
+            <Typography sx={{ color: ink.low, fontSize: 12.5 }} data-testid="admin-support-total">
+              {t('list.ofTotal', {
+                shown: sessions.data.items.length,
+                total: sessions.data.total,
+              })}
+            </Typography>
+          ) : null}
+        </Box>
+      )}
+
+      <QueryState query={sessions} what={t('state.what.support')}>
+        {(page) =>
+          mine(page).length === 0 ? (
+            <ListEmpty
+              isFiltered={isFiltered}
+              onReset={reset}
+              what={t('state.what.support')}
+            />
+          ) : (
           <Box sx={{ ...panelSx, mt: hotelId ? 0 : 2.25 }}>
-            {mine(all).map((row) => (
+            {mine(page).map((row) => (
               <SessionRow
                 key={row.id}
                 row={row}
@@ -78,7 +140,8 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
               />
             ))}
           </Box>
-        )}
+          )
+        }
       </QueryState>
     </Box>
   );

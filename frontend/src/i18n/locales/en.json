@@ -2049,7 +2049,12 @@
       "inside": "inside",
       "notYet": "code issued",
       "revoke": "Revoke",
-      "revokeFailed": "Could not revoke the session"
+      "revokeFailed": "Could not revoke the session",
+      "state": {
+        "active": "Inside now",
+        "history": "Finished",
+        "all": "All"
+      }
     }
   },
   "roomControl": {

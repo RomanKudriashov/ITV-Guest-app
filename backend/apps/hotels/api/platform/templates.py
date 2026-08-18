@@ -13,12 +13,12 @@ router = PlatformRouter(tags=["platform"])
 
 @router.get("/templates", summary="Шаблоны онбординга")
 @requires(READ)
-def list_onboarding_templates(request: HttpRequest, limit: int = 100):
+def list_onboarding_templates(request: HttpRequest, limit: int = 100, search: str = ""):
     from apps.hotels.services.onboarding import ensure_seed, list_templates
 
     # Пустая база даёт владельцу платформы пустой экран и вопрос «а что бывает».
     ensure_seed()
-    return list_templates(limit=limit)
+    return list_templates(limit=limit, search=search)
 
 
 @router.post("/templates", response={201: dict}, summary="Создать шаблон")
@@ -53,11 +53,11 @@ def patch_template(request: HttpRequest, template_id: str, payload: TemplateIn):
 
 @router.get("/dictionaries", summary="Системный справочник платформы")
 @requires(READ)
-def get_system_dictionary(request: HttpRequest, kind: str | None = None, limit: int = 100):
+def get_system_dictionary(request: HttpRequest, kind: str | None = None, limit: int = 100, search: str = ""):
     from apps.hotels.services.onboarding import ensure_seed, list_dictionary
 
     ensure_seed()
-    return list_dictionary(kind, limit=limit)
+    return list_dictionary(kind, limit=limit, search=search)
 
 
 @router.put("/dictionaries", summary="Добавить/изменить запись справочника")

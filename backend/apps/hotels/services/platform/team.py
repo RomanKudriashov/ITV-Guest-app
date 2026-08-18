@@ -29,7 +29,7 @@ from apps.hotels.models import Hotel
 VALID_ROLES = set(User.PlatformRole.values)
 
 
-def list_members(*, limit: int | None = None) -> dict:
+def list_members(*, limit: int | None = None, search: str = "") -> dict:
     """
     Команда платформы. Растёт медленно, но предел здесь всё равно осознанный:
     выдача без предела — это обещание «столько и есть», которое однажды
@@ -37,11 +37,15 @@ def list_members(*, limit: int | None = None) -> dict:
     """
     from apps.hotels.services.platform.paging import clamp, envelope
 
+    from apps.core.listing import search as apply_search
+
     limit = clamp(limit)
     with platform_scope():
         queryset = User.all_objects.using("platform").filter(
             is_platform_admin=True, hotel__isnull=True
         )
+        # По почте и имени — по ним человека в команде и ищут.
+        queryset = apply_search(queryset, search, ("email", "full_name"))
         total = queryset.count()
         members = list(queryset.order_by("email")[:limit])
     rows = [

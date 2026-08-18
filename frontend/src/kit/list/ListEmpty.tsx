@@ -24,7 +24,15 @@ export function ListEmpty({
   what,
   /** Подсказка для по-настоящему пустого списка: как завести первую запись. */
   emptyHint,
-  testId = 'list-empty',
+  /*
+    ОДИН testid на пустоту во всём приложении — тот же, что у `QueryState`.
+
+    Свои `list-empty-none` и `list-empty-nothing-found` я тут уже успел
+    завести, и это было ровно то размножение, которого мы избегаем: два
+    названия одного состояния, и половина проверок ищет не то. Различаются
+    состояния ТЕКСТОМ — тем же, что читает человек.
+  */
+  testId = 'state-empty',
 }: {
   isFiltered: boolean;
   onReset?: () => void;
@@ -37,12 +45,12 @@ export function ListEmpty({
   if (isFiltered) {
     return (
       <EmptyState
-        testId={`${testId}-nothing-found`}
+        testId={testId}
         title={t('list.nothingFound')}
         description={t('list.nothingFoundHint')}
         action={
           onReset ? (
-            <Button size="small" onClick={onReset} data-testid={`${testId}-reset`}>
+            <Button size="small" onClick={onReset} data-testid="list-reset-filters">
               {t('list.resetFilters')}
             </Button>
           ) : undefined
@@ -53,7 +61,7 @@ export function ListEmpty({
 
   return (
     <EmptyState
-      testId={`${testId}-none`}
+      testId={testId}
       title={t('list.empty', { what })}
       description={emptyHint}
     />

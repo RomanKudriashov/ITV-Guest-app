@@ -487,7 +487,21 @@ export interface ImpersonationRow {
   entered: boolean;
 }
 
-export const getImpersonations = () => request<ImpersonationRow[]>('/impersonations');
+export interface ImpersonationQuery {
+  /** `active` — кто внутри сейчас, `history` — завершённые, `all` — и те и те. */
+  state?: 'active' | 'history' | 'all';
+  search?: string;
+  limit?: number;
+}
+
+export const getImpersonations = (query: ImpersonationQuery = {}) => {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) params.set(key, String(value));
+  }
+  const qs = params.toString();
+  return request<Page<ImpersonationRow>>(`/impersonations${qs ? `?${qs}` : ''}`);
+};
 export const revokeImpersonation = (id: string) =>
   request<{ grant_id: string; revoked_at: string }>(`/impersonations/${id}/revoke`, 'POST');
 

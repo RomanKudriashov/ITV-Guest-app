@@ -391,11 +391,17 @@ def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
 
 @router.get("/impersonations", summary="Активные сессии поддержки")
 @requires(READ)
-def list_impersonations(request: HttpRequest):
+def list_impersonations(
+    request: HttpRequest,
+    search: str = "",
+    state: str = "active",
+    limit: int | None = None,
+    offset: int = 0,
+):
     """Кто сейчас внутри отелей: без списка отзывать нечего выбирать."""
     from apps.hotels.services.platform.console import active_impersonations
 
-    return active_impersonations()
+    return active_impersonations(search=search, state=state, limit=limit, offset=offset)
 
 
 @router.post("/impersonations/{grant_id}/revoke", summary="Оборвать сессию поддержки")

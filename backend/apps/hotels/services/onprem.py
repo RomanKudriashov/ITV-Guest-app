@@ -136,7 +136,7 @@ def serialize_node(node: OnPremNode, hotel: Hotel) -> dict:
     }
 
 
-def all_nodes(*, limit: int | None = None) -> dict:
+def all_nodes(*, limit: int | None = None, search: str = "") -> dict:
     """
     Реестр узлов поверх отелей — с пределом и честным хвостом.
 
@@ -146,9 +146,13 @@ def all_nodes(*, limit: int | None = None) -> dict:
     """
     from apps.hotels.services.platform.paging import clamp, envelope
 
+    from apps.core.listing import search as apply_search
+
     limit = clamp(limit)
     with platform_scope():
         queryset = OnPremNode.all_objects.using("platform").select_related("hotel")
+        # Узел ищут по его коду и по поддомену отеля, которому он принадлежит.
+        queryset = apply_search(queryset, search, ("name", "hotel__subdomain"))
         total = queryset.count()
         nodes = list(queryset.order_by("hotel__name", "name")[:limit])
     return envelope([serialize_node(node, node.hotel) for node in nodes], total, limit)

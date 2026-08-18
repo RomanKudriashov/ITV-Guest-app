@@ -25,7 +25,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, TextField
+from django.db.models.functions import Cast
 
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 500
@@ -38,20 +39,42 @@ def clamp(limit: int | None, *, default: int = DEFAULT_LIMIT, maximum: int = MAX
     return min(limit, maximum)
 
 
-def search(queryset: QuerySet, term: str | None, fields: Iterable[str]) -> QuerySet:
+def search(
+    queryset: QuerySet,
+    term: str | None,
+    fields: Iterable[str],
+    *,
+    json_fields: Iterable[str] = (),
+) -> QuerySet:
     """
     Поиск по перечисленным полям — ИЛИ по всем сразу.
 
     Поля выбираются ОСМЫСЛЕННЫЕ: те, по которым человек реально помнит запись
     (номер комнаты, имя сотрудника, код блюда). Искать по всем колонкам подряд
     — значит находить по внутреннему идентификатору и не находить по названию.
+
+    `json_fields` — ПЕРЕВОДИМЫЕ поля (`{"ru": …, "en": …}`). Они лежат в JSONB,
+    и обычный `icontains` по ним молча не находит ничего: сравнение идёт с
+    объектом, а не с текстом. Поэтому такие поля приводятся к тексту — заодно
+    и поиск получается сразу по всем языкам, что здесь и нужно: администратор
+    ищет «Завтрак», не думая, на каком языке запись заводили.
     """
     term = (term or "").strip()
     if not term:
         return queryset
+
     condition = Q()
     for field in fields:
         condition |= Q(**{f"{field}__icontains": term})
+
+    json_fields = list(json_fields)
+    if json_fields:
+        annotations = {f"_txt_{name.replace('__', '_')}": Cast(name, TextField())
+                       for name in json_fields}
+        queryset = queryset.annotate(**annotations)
+        for alias in annotations:
+            condition |= Q(**{f"{alias}__icontains": term})
+
     return queryset.filter(condition)
 
 

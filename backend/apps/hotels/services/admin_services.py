@@ -179,7 +179,7 @@ def list_locations(*, search: str = "", limit: int | None = None, offset: int = 
     from apps.core.listing import page as list_page, search as apply_search
 
     queryset = apply_search(
-        Location.objects.order_by("sort_order", "code"), search, ("code", "title")
+        Location.objects.order_by("sort_order", "code"), search, ("code",), json_fields=("title",)
     )
     return list_page(queryset, limit=limit, offset=offset, serialize=serialize_location)
 

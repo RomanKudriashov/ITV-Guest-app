@@ -2043,7 +2043,12 @@
       "inside": "在内",
       "notYet": "已发码",
       "revoke": "撤销",
-      "revokeFailed": "无法撤销会话"
+      "revokeFailed": "无法撤销会话",
+      "state": {
+        "active": "当前在内",
+        "history": "已结束",
+        "all": "全部"
+      }
     }
   },
   "roomControl": {

@@ -244,7 +244,8 @@ def test_active_sessions_are_listed(api, hotel, client):
     granted = _enter(api, hotel, reason="смотрим заказы")
     _exchange(client, hotel, granted["code"])
 
-    rows = api("get", "/impersonations").json()
+    # Выдача в оболочке: сессии поддержки теперь с пределом, поиском и историей.
+    rows = api("get", "/impersonations").json()["items"]
     row = next(r for r in rows if r["id"] == granted["grant_id"])
     assert row["subdomain"] == "entered"
     assert row["actor"] == OWNER[0]
@@ -252,7 +253,9 @@ def test_active_sessions_are_listed(api, hotel, client):
     assert row["entered"] is True
 
     api("post", f"/impersonations/{granted['grant_id']}/revoke")
-    assert all(r["id"] != granted["grant_id"] for r in api("get", "/impersonations").json())
+    assert all(
+        r["id"] != granted["grant_id"] for r in api("get", "/impersonations").json()["items"]
+    )
 
 
 # --- 5. Рефреш не продлевает вход под аудитом -------------------------------

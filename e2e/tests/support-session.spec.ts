@@ -142,6 +142,7 @@ test.describe('Вход под аудитом', () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((r) => r.json())
+      .then((page) => page.items)
     for (const row of rows as { id: string }[]) {
       await request.post(`${API}/api/v1/platform/impersonations/${row.id}/revoke`, {
         headers: { Authorization: `Bearer ${token}` },

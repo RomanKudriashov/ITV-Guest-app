@@ -29,7 +29,7 @@ const SCREENS = [
   { key: 'templates', nav: 'admin-nav-templates', api: ['/templates'], empty: EMPTY_PAGE },
   { key: 'team', nav: 'admin-nav-team', api: ['/team'], empty: EMPTY_PAGE },
   { key: 'audit', nav: 'admin-nav-audit', api: ['/audit'], empty: EMPTY_AUDIT },
-  { key: 'support', nav: 'admin-nav-support', api: ['/impersonations'], empty: [] },
+  { key: 'support', nav: 'admin-nav-support', api: ['/impersonations'], empty: { items: [], total: 0, limit: 100, truncated: false } },
 ]
 
 /**

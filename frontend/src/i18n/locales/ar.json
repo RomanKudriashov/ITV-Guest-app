@@ -2065,7 +2065,12 @@
       "inside": "بالداخل",
       "notYet": "تم إصدار الرمز",
       "revoke": "إلغاء",
-      "revokeFailed": "تعذّر إلغاء الجلسة"
+      "revokeFailed": "تعذّر إلغاء الجلسة",
+      "state": {
+        "active": "داخل الآن",
+        "history": "منتهية",
+        "all": "الكل"
+      }
     }
   },
   "roomControl": {

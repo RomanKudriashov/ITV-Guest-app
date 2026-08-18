@@ -124,14 +124,19 @@ def serialize_template(template: OnboardingTemplate) -> dict:
     }
 
 
-def list_templates(*, active_only: bool = False, limit: int | None = None) -> dict:
+def list_templates(
+    *, active_only: bool = False, limit: int | None = None, search: str = ""
+) -> dict:
     """Шаблоны онбординга — с осознанным пределом и честным `total`."""
+    from apps.core.listing import search as apply_search
     from apps.hotels.services.platform.paging import clamp, envelope
 
     limit = clamp(limit)
     queryset = OnboardingTemplate.objects.all()
     if active_only:
         queryset = queryset.filter(is_active=True)
+    # Шаблон ищут по коду и названию — больше у него ничего запоминающегося нет.
+    queryset = apply_search(queryset, search, ("code",), json_fields=("title",))
     total = queryset.count()
     rows = [serialize_template(template) for template in queryset[:limit]]
     return envelope(rows, total, limit)
@@ -193,14 +198,17 @@ def _slug(source: str, index: int) -> str:
 # --- Системный справочник --------------------------------------------------
 
 
-def list_dictionary(kind: str | None = None, *, limit: int | None = None) -> dict:
+def list_dictionary(kind: str | None = None, *, limit: int | None = None, search: str = "") -> dict:
     """Системный справочник — тот же предел, та же честность про хвост."""
     from apps.hotels.services.platform.paging import clamp, envelope
+
+    from apps.core.listing import search as apply_search
 
     limit = clamp(limit)
     queryset = SystemDictionaryEntry.objects.all()
     if kind:
         queryset = queryset.filter(kind=kind)
+    queryset = apply_search(queryset, search, ("code", "title"))
     total = queryset.count()
     rows = [
         {

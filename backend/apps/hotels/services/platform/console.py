@@ -17,6 +17,7 @@ from apps.accounts.models import User
 from apps.catalog.models import Item
 from apps.core.context import platform_scope, tenant_context
 from apps.core.errors import NotFoundError
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.models import AuditLog
@@ -277,41 +278,73 @@ def delete_hotel_row(hotel: Hotel) -> None:
     Hotel.objects.filter(pk=hotel.pk).delete()
 
 
-def active_impersonations() -> list[dict[str, Any]]:
+def active_impersonations(
+    *,
+    search: str = "",
+    state: str = "active",
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict[str, Any]:
     """
-    Живые сессии поддержки по всем отелям.
+    Сессии поддержки по всем отелям.
 
     Читаем платформенным подключением: грант тенантный, а вопрос «кто сейчас
     внутри отелей» задаётся поверх них.
+
+    `state` — что показывать. Раньше выдача была только «активные», и разбор
+    инцидента упирался в стену: кто заходил вчера, узнать было негде, хотя
+    записи никуда не делись. `history` — завершённые (отозванные и истёкшие),
+    `all` — и те и другие.
+
+    Поиск по ПОДДОМЕНУ отеля и ПОЧТЕ вошедшего: по ним сессию и разыскивают.
     """
     from apps.accounts.models import ImpersonationGrant
+    from apps.core.listing import page as list_page, search as apply_search
 
+    now = timezone.now()
     with platform_scope():
-        grants = list(
-            ImpersonationGrant.all_objects.using("platform")
-            .filter(revoked_at__isnull=True, expires_at__gt=timezone.now())
-            .select_related("actor", "target_user", "hotel")
-            .order_by("expires_at")
+        queryset = ImpersonationGrant.all_objects.using("platform").select_related(
+            "actor", "target_user", "hotel"
         )
-        return [
-            {
-                "id": str(grant.pk),
-                # И имя, и идентификатор: имя читают глазами, по
-                # идентификатору карточка отеля отбирает свои сессии.
-                "hotel_id": str(grant.hotel_id) if grant.hotel_id else "",
-                "hotel": grant.hotel.name_i18n if grant.hotel_id else "",
-                "subdomain": grant.hotel.subdomain if grant.hotel_id else "",
-                "actor": grant.actor_email or (grant.actor.email if grant.actor_id else ""),
-                "as_user": grant.target_user.email if grant.target_user_id else "",
-                "reason": grant.reason,
-                "started_at": grant.created_at.isoformat(),
-                "expires_at": grant.expires_at.isoformat(),
-                # Забрал ли вошедший токен. Код мог остаться непотраченным —
-                # вкладку закрыли, ссылку не открыли.
-                "entered": grant.exchanged_at is not None,
-            }
-            for grant in grants
-        ]
+        if state == "history":
+            # Завершённая — отозванная ЛИБО истёкшая по сроку.
+            queryset = queryset.filter(
+                Q(revoked_at__isnull=False) | Q(expires_at__lte=now)
+            ).order_by("-created_at")
+        elif state == "all":
+            queryset = queryset.order_by("-created_at")
+        else:
+            queryset = queryset.filter(
+                revoked_at__isnull=True, expires_at__gt=now
+            ).order_by("expires_at")
+
+        queryset = apply_search(
+            queryset, search, ("hotel__subdomain", "actor_email", "target_user__email")
+        )
+        return list_page(
+            queryset, limit=limit, offset=offset, serialize=_impersonation_row
+        )
+
+
+def _impersonation_row(grant) -> dict[str, Any]:
+    return {
+        "id": str(grant.pk),
+        # И имя, и идентификатор: имя читают глазами, по идентификатору
+        # карточка отеля отбирает свои сессии.
+        "hotel_id": str(grant.hotel_id) if grant.hotel_id else "",
+        "hotel": grant.hotel.name_i18n if grant.hotel_id else "",
+        "subdomain": grant.hotel.subdomain if grant.hotel_id else "",
+        "actor": grant.actor_email or (grant.actor.email if grant.actor_id else ""),
+        "as_user": grant.target_user.email if grant.target_user_id else "",
+        "reason": grant.reason,
+        "started_at": grant.created_at.isoformat(),
+        "expires_at": grant.expires_at.isoformat(),
+        # Забрал ли вошедший токен. Код мог остаться непотраченным — вкладку
+        # закрыли, ссылку не открыли.
+        "entered": grant.exchanged_at is not None,
+        # Чем кончилась: для истории это и есть главный столбец.
+        "revoked_at": grant.revoked_at.isoformat() if grant.revoked_at else None,
+    }
 
 
 def tariff_grid() -> list[dict[str, Any]]:

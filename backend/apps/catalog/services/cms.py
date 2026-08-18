@@ -1320,7 +1320,7 @@ def list_badges(*, search: str = "", limit: int | None = None, offset: int = 0) 
     from apps.core.listing import page as list_page, search as apply_search
 
     queryset = apply_search(
-        Badge.objects.all().order_by("sort_order", "id"), search, ("code", "title")
+        Badge.objects.all().order_by("sort_order", "id"), search, ("code",), json_fields=("title",)
     )
     return list_page(queryset, limit=limit, offset=offset, serialize=serialize_badge)
 
@@ -1420,7 +1420,7 @@ def _dict_page(model, *, search: str, limit: int | None, offset: int) -> dict:
     """Справочники ищутся по КОДУ и НАЗВАНИЮ — больше у записи ничего и нет."""
     from apps.core.listing import page as list_page, search as apply_search
 
-    queryset = apply_search(model.objects.all(), search, ("code", "title"))
+    queryset = apply_search(model.objects.all(), search, ("code",), json_fields=("title",))
     return list_page(queryset, limit=limit, offset=offset, serialize=_serialize_dict_entry)
 
 
