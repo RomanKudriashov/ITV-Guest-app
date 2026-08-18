@@ -34,9 +34,16 @@ export function fetchTrackerBoard(
   language?: string,
   /** Timeline layout only (spa): which day of appointments to show. */
   date?: string,
+  /** Поиск по номеру заказа и номеру комнаты. Фильтрует сервер. */
+  search?: string,
 ): Promise<TrackerBoard> {
   return api.get<TrackerBoard>('/tracker/orders', {
-    query: date ? { point, scope, date } : { point, scope },
+    query: {
+      point,
+      scope,
+      ...(date ? { date } : {}),
+      ...(search ? { search } : {}),
+    },
     headers: langHeaders(language),
   });
 }

@@ -813,7 +813,8 @@
       "emptyBody": "还没有客人留言",
       "emptyThread": "开始对话",
       "back": "返回"
-    }
+    },
+    "searchPlaceholder": "订单号或房间号"
   },
   "requestFields": {
     "title": "申请字段",

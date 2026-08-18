@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import TextField from '@mui/material/TextField';
+
+import { useListQuery } from '@/kit/list/useListQuery';
 import { useMatch, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -66,7 +70,22 @@ export function TrackerPage() {
   // сегодняшнюю дату на клиенте нельзя — у отеля своя таймзона, и в полночь
   // клиент и сервер разошлись бы на сутки.
   const [day, setDay] = useState('');
-  const boardQuery = useTrackerBoard(pointCode, scope, pollMs, day || undefined);
+  /*
+    Поиск на доске — в адресе и НА СЕРВЕРЕ.
+
+    719 заказов, и человек ищет конкретный: по номеру заказа или по номеру
+    комнаты. Отсев уже полученной доски врал бы так же, как врал журнал
+    платформы, а живой контур при этом не ломается: нефильтрованный снимок из
+    сокета в отфильтрованную доску не подменяется, она перечитывает своё.
+  */
+  const { params: listParams, patch: patchList } = useListQuery({ search: '' });
+  const boardQuery = useTrackerBoard(
+    pointCode,
+    scope,
+    pollMs,
+    day || undefined,
+    listParams.search,
+  );
   const sound = useTrackerSound();
   const actions = useOrderActions();
 
@@ -309,6 +328,18 @@ export function TrackerPage() {
         </Tabs>
       ) : null}
 
+      {/* Поиск по доске. Рядом с ней, а не в шапке: он про эту доску. */}
+      <Box sx={{ px: { xs: 1.5, md: 2 }, pt: { xs: 1.5, md: 2 } }}>
+        <TextField
+          size="small"
+          fullWidth
+          value={listParams.search}
+          onChange={(event) => patchList({ search: event.target.value })}
+          placeholder={t('tracker.searchPlaceholder')}
+          inputProps={{ 'data-testid': 'tracker-search', inputMode: 'numeric' }}
+        />
+      </Box>
+
       <Box sx={{ p: { xs: 1.5, md: 2 } }} data-testid="tracker-board">
         {boardQuery.isLoading ? (
           <Stack alignItems="center" sx={{ py: 6 }}>
@@ -329,16 +360,23 @@ export function TrackerPage() {
           // У ленты пустой день — не пустая доска: переключатель дня обязан
           // остаться, иначе из пустого сегодня некуда шагнуть.
           <Box data-testid="tracker-empty">
+            {/* Под поиском — «ничего не найдено», а не «доска пуста»: это
+                разные ответы, и второй заставил бы искать несуществующую
+                причину, почему заказов «нет». */}
             <EmptyState
               title={
-                scope === 'history'
-                  ? t('tracker.board.emptyHistoryTitle')
-                  : t('tracker.board.emptyTitle')
+                listParams.search
+                  ? t('list.nothingFound')
+                  : scope === 'history'
+                    ? t('tracker.board.emptyHistoryTitle')
+                    : t('tracker.board.emptyTitle')
               }
               description={
-                scope === 'history'
-                  ? t('tracker.board.emptyHistoryBody')
-                  : t('tracker.board.emptyBody')
+                listParams.search
+                  ? t('list.nothingFoundHint')
+                  : scope === 'history'
+                    ? t('tracker.board.emptyHistoryBody')
+                    : t('tracker.board.emptyBody')
               }
             />
           </Box>

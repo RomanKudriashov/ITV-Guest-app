@@ -14,7 +14,9 @@ from datetime import datetime, timedelta, timezone as datetime_timezone
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from apps.accounts.models import StaffAssignment, User
 from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, ValidationError
@@ -146,6 +148,9 @@ def build_board(
     scope: str = "active",
     language: str | None = None,
     date: str | None = None,
+    search: str = "",
+    cursor: str | None = None,
+    limit: int | None = None,
 ) -> dict:
     """
     Колонки строятся из ПОТОКА СТАТУСОВ ЭТОЙ ТОЧКИ, а не из захардкоженного
@@ -169,16 +174,44 @@ def build_board(
         .exclude(children__isnull=False)
         .select_related("assignee")
     )
+    # ПОИСК на доске: 719 заказов, и человек ищет конкретный. По НОМЕРУ заказа
+    # и НОМЕРУ КОМНАТЫ — по ним заказ и называют вслух («триста пятый, второй»).
+    # Больше ни по чему: гостя на доске по фамилии не ищут, её там нет.
+    term = (search or "").strip()
+    if term:
+        condition = Q(room__number__icontains=term)
+        if term.isdigit():
+            condition |= Q(number=int(term))
+        queryset = queryset.filter(condition)
+
+    next_cursor = None
     if scope == "history":
         since = timezone.now() - timedelta(hours=HISTORY_WINDOW_HOURS)
         queryset = queryset.filter(status__is_terminal=True, created_at__gte=since).order_by(
-            "-created_at"
+            "-created_at", "-pk"
         )
+        # ИСТОРИЯ ЛИСТАЕТСЯ КУРСОРОМ. Заказы закрываются прямо во время
+        # просмотра и падают в историю сверху: при смещении вторая страница
+        # показала бы часть первой, а часть — не показала бы вовсе.
+        page_size = max(1, min(int(limit or 50), 200))
+        if cursor:
+            at, _, cursor_id = cursor.partition("|")
+            moment = parse_datetime(at.replace(" ", "+")) if at else None
+            if moment and cursor_id:
+                queryset = queryset.filter(
+                    Q(created_at__lt=moment) | Q(created_at=moment, pk__lt=cursor_id)
+                )
+        rows = list(queryset[: page_size + 1])
+        has_more = len(rows) > page_size
+        rows = rows[:page_size]
+        if has_more and rows:
+            last = rows[-1]
+            next_cursor = f"{last.created_at.isoformat()}|{last.pk}"
         columns = [
             {
                 "code": "history",
                 "title": "",
-                "orders": [serialize_tracker_order(o, language, statuses) for o in queryset],
+                "orders": [serialize_tracker_order(o, language, statuses) for o in rows],
             }
         ]
     elif behaviour.layout == "timeline":
@@ -208,6 +241,7 @@ def build_board(
         "tracker_type": tracker_type,
         "layout": behaviour.layout,
         "columns": columns,
+        "next_cursor": next_cursor,
     }
 
 

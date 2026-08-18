@@ -45,11 +45,13 @@ export function useTrackerBoard(
   pollMs?: number,
   /** Timeline layout only: the day of appointments being viewed. */
   date?: string,
+  /** Поиск по номеру заказа и номеру комнаты — фильтрует СЕРВЕР. */
+  search?: string,
 ) {
   const language = useTrackerLanguage();
   return useQuery<TrackerBoard>({
-    queryKey: trackerKeys.board(point ?? 'none', scope, language, date ?? ''),
-    queryFn: () => fetchTrackerBoard(point as string, scope, language, date),
+    queryKey: trackerKeys.board(point ?? 'none', scope, language, date ?? '', search ?? ''),
+    queryFn: () => fetchTrackerBoard(point as string, scope, language, date, search),
     enabled: Boolean(point),
     staleTime: 10_000,
     refetchInterval: pollMs && pollMs > 0 ? pollMs : false,

@@ -823,7 +823,8 @@
       "emptyBody": "Гости пока не писали",
       "emptyThread": "Начните переписку",
       "back": "Назад"
-    }
+    },
+    "searchPlaceholder": "Номер заказа или комнаты"
   },
   "requestFields": {
     "title": "Поля заявки",

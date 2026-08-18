@@ -23,14 +23,28 @@ def list_points(request: HttpRequest):
 
 
 @router.get("/orders", summary="Задачи точки (доска / очередь / записи / заявки)")
-def board(request: HttpRequest, point: str, scope: str = "active", date: str = None):
+def board(
+    request: HttpRequest,
+    point: str,
+    scope: str = "active",
+    date: str = None,
+    search: str = "",
+    cursor: str | None = None,
+    limit: int | None = None,
+):
     """
     `date` осмыслен только для ленты записей (спа): какой день показать.
     Остальные типы трекера его игнорируют — у них лента не по времени слота.
     """
     execution_point = svc.require_point(request.user, point)
     return svc.build_board(
-        execution_point, scope=scope, language=current_language(), date=date
+        execution_point,
+        scope=scope,
+        language=current_language(),
+        date=date,
+        search=search,
+        cursor=cursor,
+        limit=limit,
     )
 
 

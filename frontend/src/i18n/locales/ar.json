@@ -829,7 +829,8 @@
       "emptyBody": "لا رسائل من الضيوف بعد",
       "emptyThread": "ابدأ المحادثة",
       "back": "رجوع"
-    }
+    },
+    "searchPlaceholder": "رقم الطلب أو الغرفة"
   },
   "requestFields": {
     "title": "حقول الطلب",

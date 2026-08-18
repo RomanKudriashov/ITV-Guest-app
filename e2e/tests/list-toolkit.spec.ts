@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, API, HOTEL } from './helpers'
+import { ADMIN, API, CREDENTIALS, HOTEL, loginToTracker } from './helpers'
 
 /**
  * Общий инструментарий списков: поиск, фильтры, состояние в адресе.
@@ -326,5 +326,112 @@ test.describe('Оболочка выдачи в CMS', () => {
         await request.delete(`${API}/api/cms/rooms/${room.id}`, { headers })
       }
     }
+  })
+})
+
+test.describe('Доска трекера', () => {
+  test('поиск сужает доску на сервере и не ломает живой контур', async ({ page, request }) => {
+    const token = await request
+      .post(`${API}/api/staff/auth/login`, {
+        data: CREDENTIALS,
+        headers: { 'X-Hotel-Subdomain': HOTEL },
+      })
+      .then((r) => r.json())
+      .then((b) => b.access)
+    const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+
+    const points = await request
+      .get(`${API}/api/tracker/points`, { headers })
+      .then((r) => r.json())
+    const code = (points.points ?? points)[0].code
+    const count = (board: { columns: { orders: unknown[] }[] }) =>
+      board.columns.reduce((n, column) => n + column.orders.length, 0)
+
+    const all = await request
+      .get(`${API}/api/tracker/orders?point=${code}`, { headers })
+      .then((r) => r.json())
+    expect(count(all), 'на доске нет заказов — проверять нечего').toBeGreaterThan(0)
+
+    // Поиск по НОМЕРУ ЗАКАЗА находит ровно его.
+    const one = all.columns.flatMap((c: { orders: { number: number }[] }) => c.orders)[0]
+    const found = await request
+      .get(`${API}/api/tracker/orders?point=${code}&search=${one.number}`, { headers })
+      .then((r) => r.json())
+    expect(count(found), 'поиск по номеру заказа вернул не один заказ').toBe(1)
+
+    // Заведомо отсутствующий номер — честный ноль, а не вся доска.
+    const none = await request
+      .get(`${API}/api/tracker/orders?point=${code}&search=99999999`, { headers })
+      .then((r) => r.json())
+    expect(count(none), 'поиск не сузил доску — фильтрует не сервер').toBe(0)
+
+    /*
+      ЖИВОЙ КОНТУР. Доска обновляется сама, и снимок из сокета приходит
+      НЕФИЛЬТРОВАННЫМ. Проверяем поведением: с активным поиском доска остаётся
+      отфильтрованной, а не подменяется полным снимком.
+    */
+    // Вход трекером — своим хелпером: у линейного повара CMS закрыта, и общий
+    // вход увёл бы его на экран отказа.
+    await loginToTracker(page, CREDENTIALS)
+
+    const asked = page.waitForRequest(
+      (r) => r.url().includes('/tracker/orders') && r.url().includes('search=99999999'),
+      { timeout: 20_000 },
+    )
+    await page.getByTestId('tracker-search').fill('99999999')
+    await asked
+    await expect.poll(() => page.url()).toContain('search=99999999')
+
+    // Под поиском доска пуста И ГОВОРИТ ПОЧЕМУ — «ничего не найдено», а не
+    // «заказов нет»: это разные ответы.
+    await expect(page.getByTestId('tracker-empty')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('tracker-empty')).toContainText(/не найдено/i)
+
+    // И доска ЖИВА: полный снимок из сокета её не подменил.
+    await page.waitForTimeout(6000)
+    await expect(
+      page.getByTestId('tracker-empty'),
+      'живой снимок подменил отфильтрованную доску',
+    ).toBeVisible()
+  })
+
+  test('история листается курсором и не повторяет записи', async ({ request }) => {
+    const token = await request
+      .post(`${API}/api/staff/auth/login`, {
+        data: CREDENTIALS,
+        headers: { 'X-Hotel-Subdomain': HOTEL },
+      })
+      .then((r) => r.json())
+      .then((b) => b.access)
+    const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+    const points = await request
+      .get(`${API}/api/tracker/points`, { headers })
+      .then((r) => r.json())
+    const code = (points.points ?? points)[0].code
+
+    const first = await request
+      .get(`${API}/api/tracker/orders?point=${code}&scope=history&limit=1`, { headers })
+      .then((r) => r.json())
+    const firstIds = first.columns[0].orders.map((o: { id: string }) => o.id)
+
+    if (!first.next_cursor) {
+      // История короче страницы — курсора нет, и это правда, а не поломка.
+      expect(firstIds.length).toBeLessThanOrEqual(1)
+      return
+    }
+
+    const second = await request
+      .get(
+        `${API}/api/tracker/orders?point=${code}&scope=history&limit=1` +
+          `&cursor=${encodeURIComponent(first.next_cursor)}`,
+        { headers },
+      )
+      .then((r) => r.json())
+    const secondIds = second.columns[0].orders.map((o: { id: string }) => o.id)
+
+    expect(
+      secondIds.filter((id: string) => firstIds.includes(id)),
+      'вторая страница истории повторила первую',
+    ).toHaveLength(0)
   })
 })

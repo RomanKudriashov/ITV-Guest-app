@@ -817,7 +817,8 @@
       "emptyBody": "No guests have written yet",
       "emptyThread": "Start the conversation",
       "back": "Back"
-    }
+    },
+    "searchPlaceholder": "Order or room number"
   },
   "requestFields": {
     "title": "Request fields",

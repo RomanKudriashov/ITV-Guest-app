@@ -119,7 +119,17 @@ export function useBoardLive(
         const scope = board.scope ?? 'active';
         const code = board.point?.code ?? pointCode;
         // Replace, never merge.
+        //
+        // Снимок из сокета НЕФИЛЬТРОВАННЫЙ, поэтому кладём его только по ключу
+        // с пустым поиском. Открытую отфильтрованную доску им подменять
+        // нельзя — она показала бы чужие заказы; её просто будим, и она
+        // перечитает своё с сервера, уже с фильтром.
         queryClient.setQueryData(trackerKeys.board(code as string, scope, language), board);
+        void queryClient.invalidateQueries({
+          queryKey: trackerKeys.boards,
+          refetchType: 'active',
+          predicate: (query) => Boolean(query.queryKey[6]),
+        });
         // Point badges (active/new counts) move with the board.
         void queryClient.invalidateQueries({
           queryKey: ['tracker', 'points'],
