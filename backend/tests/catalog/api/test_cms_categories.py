@@ -120,7 +120,7 @@ def test_delete_non_empty_category_requires_cascade(cms, category_id):
     codes = [node["code"] for node in cms.get("/api/cms/categories").json()]
     assert "hot" not in codes
     # Блюда удалённой категории тоже ушли из списка.
-    assert cms.get(f"/api/cms/items?category_id={category_id}").json() == []
+    assert cms.get(f"/api/cms/items?category_id={category_id}").json()["items"] == []
 
 
 def test_delete_empty_category_without_cascade(cms, service_id):

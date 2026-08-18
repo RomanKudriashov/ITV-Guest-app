@@ -454,7 +454,7 @@ def test_slot_config_rejected_for_non_slot_item(cms, crystal):
 def test_slots_are_isolated_between_hotels(guest, cms_aurora):
     """Позицию брони одного отеля нельзя запросить из другого."""
     aurora_massage = None
-    catalog = cms_aurora.get("/api/cms/items?type=slot").json()
+    catalog = cms_aurora.get("/api/cms/items?type=slot").json()["items"]
     if catalog:
         aurora_massage = catalog[0]["id"]
 

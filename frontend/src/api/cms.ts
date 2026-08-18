@@ -2,6 +2,7 @@
 import type { OfferingType } from '@/offerings/behaviour';
 import { api, request } from './client';
 import type {
+  ListPage,
   RequestField,
   RequestFieldPayload,
   Badge,
@@ -159,15 +160,27 @@ export function toggleCategory(id: string, isActive: boolean): Promise<Category>
 
 /* ── 4. Items ──────────────────────────────────────────────────────────── */
 
-export function fetchItems(params: {
+export function fetchItemsPage(params: {
   category_id?: string;
   search?: string;
   /** Filters the list by offering type; omitted means "every type". */
   type?: OfferingType;
   /** Scopes the list to one venue — the service workspace (R4). */
   service_id?: string;
-}): Promise<Item[]> {
-  return api.get<Item[]>('/cms/items', { query: params });
+  limit?: number;
+  offset?: number;
+}): Promise<ListPage<Item>> {
+  return api.get<ListPage<Item>>('/cms/items', { query: params });
+}
+
+/**
+ * Только строки — для экранов, которым счётчик не нужен.
+ *
+ * Разворот живёт ЗДЕСЬ, а не в каждом экране: иначе `.items` расползётся по
+ * два десятка мест, и половина из них однажды забудет про `total`.
+ */
+export function fetchItems(params: Parameters<typeof fetchItemsPage>[0]): Promise<Item[]> {
+  return fetchItemsPage(params).then((page) => page.items);
 }
 
 export function fetchItem(id: string): Promise<Item> {
@@ -318,7 +331,7 @@ export function fetchMedia(id: string): Promise<MediaAsset> {
 /* ── 7. Schedules ──────────────────────────────────────────────────────── */
 
 export function fetchSchedules(): Promise<Schedule[]> {
-  return api.get<Schedule[]>('/cms/schedules');
+  return api.get<ListPage<Schedule>>('/cms/schedules').then((page) => page.items);
 }
 
 export function createSchedule(payload: SchedulePayload): Promise<Schedule> {
@@ -352,7 +365,7 @@ export function updateCommerceSettings(
 /* ── 9b. Allergen / dietary-marker dictionaries ────────────────────────── */
 
 export function fetchAllergens(): Promise<DictEntry[]> {
-  return api.get<DictEntry[]>('/cms/allergens');
+  return api.get<ListPage<DictEntry>>('/cms/allergens').then((page) => page.items);
 }
 export function createAllergen(payload: DictEntryPayload): Promise<DictEntry> {
   return api.post<DictEntry>('/cms/allergens', payload);
@@ -364,7 +377,7 @@ export function deleteAllergen(id: string): Promise<void> {
   return api.delete<void>(`/cms/allergens/${id}`);
 }
 export function fetchMarkers(): Promise<DictEntry[]> {
-  return api.get<DictEntry[]>('/cms/markers');
+  return api.get<ListPage<DictEntry>>('/cms/markers').then((page) => page.items);
 }
 export function createMarker(payload: DictEntryPayload): Promise<DictEntry> {
   return api.post<DictEntry>('/cms/markers', payload);
@@ -379,7 +392,7 @@ export function deleteMarker(id: string): Promise<void> {
 /* ── 9. Marketing badges ───────────────────────────────────────────────── */
 
 export function fetchBadges(): Promise<Badge[]> {
-  return api.get<Badge[]>('/cms/badges');
+  return api.get<ListPage<Badge>>('/cms/badges').then((page) => page.items);
 }
 
 export function createBadge(payload: BadgePayload): Promise<Badge> {

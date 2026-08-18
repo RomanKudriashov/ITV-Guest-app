@@ -165,7 +165,7 @@ def test_item_detail_returns_modifier_groups(guest):
 
 
 def test_item_detail_is_scoped_to_the_hotel(guest, cms_aurora):
-    foreign_id = cms_aurora.get("/api/cms/items").json()[0]["id"]
+    foreign_id = cms_aurora.get("/api/cms/items").json()["items"][0]["id"]
     assert guest.get(f"/api/guest/item/{foreign_id}").status_code == 404
 
 

@@ -142,7 +142,7 @@ def test_manager_edits_his_service_commerce_and_schedule(cms_manager, crystal):
 
 
 def test_manager_manages_his_own_staff(cms_manager, crystal):
-    listing = cms_manager.get("/api/cms/staff").json()
+    listing = cms_manager.get("/api/cms/staff").json()["items"]
     emails = {row["email"] for row in listing}
 
     assert "chef@crystal.local" in emails, "свой повар — его персонал"

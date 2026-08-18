@@ -36,13 +36,13 @@ def test_create_and_read_item(cms, category_id):
 
 def test_list_items_by_category_and_search(cms, category_id):
     _new_item(cms, category_id)
-    listed = cms.get(f"/api/cms/items?category_id={category_id}").json()
+    listed = cms.get(f"/api/cms/items?category_id={category_id}").json()["items"]
     codes = {item["code"] for item in listed}
     assert {"ribeye", "tom-yum"} <= codes
 
     # Ищем ПОЛНОЕ название: «Том» подстрокой входит и в «аренду авТОМобиля»,
     # и поиск честно её находил — тест ловил не поиск, а бедность демо-данных.
-    found = cms.get("/api/cms/items?search=Том ям").json()
+    found = cms.get("/api/cms/items?search=Том ям").json()["items"]
     assert [item["code"] for item in found] == ["tom-yum"]
 
 
@@ -76,7 +76,7 @@ def test_stock_and_toggle(cms, category_id):
 
 def test_reorder_items(cms, category_id):
     _new_item(cms, category_id)
-    items = cms.get(f"/api/cms/items?category_id={category_id}").json()
+    items = cms.get(f"/api/cms/items?category_id={category_id}").json()["items"]
     reversed_ids = list(reversed([item["id"] for item in items]))
 
     response = cms.post(
@@ -96,7 +96,7 @@ def test_reorder_items(cms, category_id):
 def test_reorder_rejects_items_from_another_category(cms, category_id):
     tree = cms.get("/api/cms/categories").json()
     drinks_id = next(n["id"] for n in tree if n["code"] == "drinks")
-    foreign = cms.get(f"/api/cms/items?category_id={drinks_id}").json()[0]
+    foreign = cms.get(f"/api/cms/items?category_id={drinks_id}").json()["items"][0]
 
     response = cms.post(
         "/api/cms/items/reorder",
@@ -274,9 +274,9 @@ def test_seeded_catalog_facets_resolve_to_dictionaries(cms):
     Сторож целостности: назначенные позиции аллергены/маркеры существуют в
     тенант-словарях — назначение идёт по id, а не по свободному коду.
     """
-    allergen_ids = {a["id"] for a in cms.get("/api/v1/cms/allergens").json()}
-    marker_ids = {m["id"] for m in cms.get("/api/v1/cms/markers").json()}
+    allergen_ids = {a["id"] for a in cms.get("/api/v1/cms/allergens").json()["items"]}
+    marker_ids = {m["id"] for m in cms.get("/api/v1/cms/markers").json()["items"]}
 
-    for item in cms.get("/api/cms/items").json():
+    for item in cms.get("/api/cms/items").json()["items"]:
         assert set(item["allergen_ids"]) <= allergen_ids, item["code"]
         assert set(item["marker_ids"]) <= marker_ids, item["code"]

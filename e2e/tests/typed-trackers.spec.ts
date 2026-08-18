@@ -200,7 +200,8 @@ test.describe('Типизированные трекеры', () => {
     // 4. Гость заказывает у агрегатора блюдо кухни и коктейль бара.
     const menuItems = (await request
       .get(`${API}/api/cms/items?service_id=${kitchen.id}`, { headers: h })
-      .then((r) => r.json())) as Array<{ id: string; code: string }>
+      .then((r) => r.json())
+      .then((page) => page.items)) as Array<{ id: string; code: string }>
     const dish = menuItems.find((item) => item.code === 'caesar')!
 
     const session = await request.post(`${API}/api/guest/session`, {
@@ -270,7 +271,7 @@ test.describe('Роль управляющего сервисом', () => {
     // Своё меню — видит и правит.
     const mine = await request.get(`${API}/api/cms/items`, { headers })
     expect(mine.ok()).toBeTruthy()
-    const items = (await mine.json()) as Array<{ id: string; code: string; price: number }>
+    const items = ((await mine.json()).items) as Array<{ id: string; code: string; price: number }>
     const caesar = items.find((item) => item.code === 'caesar')
     expect(caesar, 'управляющий рестораном должен видеть своё меню').toBeTruthy()
 

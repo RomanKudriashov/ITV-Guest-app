@@ -114,10 +114,14 @@ async function readStand(request: APIRequestContext): Promise<StandSnapshot> {
   )
   // Позиции тоже переживали прогон: раздел уборка сносила, а блюдо внутри
   // него — нет, и оно всплывало в меню заведения.
-  const items = await requireJson<{ id: string }[]>(
-    await request.get(`${API}/api/cms/items`, { headers: tenant }),
+  // Позиции приходят В ОБОЛОЧКЕ (`items/total/limit`) — как и остальные списки
+  // CMS. Предел здесь снимаем намеренно: снимок стенда обязан быть полным,
+  // иначе уборка не заметит того, что осталось за границей страницы.
+  const itemsPage = await requireJson<{ items: { id: string }[]; total: number }>(
+    await request.get(`${API}/api/cms/items?limit=500`, { headers: tenant }),
     'позиции отеля',
   )
+  const items = itemsPage.items
 
   return {
     hotelIds,

@@ -549,8 +549,8 @@ def test_cms_reorders_and_deletes_fields(cms, crystal):
 
 
 def test_services_are_isolated_between_hotels(cms, cms_aurora):
-    crystal_services = cms.get("/api/cms/items?type=service_request").json()
-    aurora_services = cms_aurora.get("/api/cms/items?type=service_request").json()
+    crystal_services = cms.get("/api/cms/items?type=service_request").json()["items"]
+    aurora_services = cms_aurora.get("/api/cms/items?type=service_request").json()["items"]
 
     assert crystal_services and aurora_services
     assert {i["id"] for i in crystal_services}.isdisjoint({i["id"] for i in aurora_services})

@@ -1,5 +1,6 @@
 /** One function per endpoint of `docs/hotel-admin-api-contract.md`. */
 import { API_BASE, HOTEL_SUBDOMAIN, api, tokenStorage } from './client';
+import type { ListPage } from './types';
 import type {
   HotelLocation,
   LocationMatrix,
@@ -20,7 +21,9 @@ import type {
 export function fetchRooms(search = ''): Promise<Room[]> {
   // Поиск уходит НА СЕРВЕР: отсев уже скачанного списка врал бы счётчиком
   // ровно так же, как это делал журнал платформы.
-  return api.get<Room[]>('/cms/rooms', { query: search ? { search } : undefined });
+  return api
+    .get<ListPage<Room>>('/cms/rooms', { query: search ? { search } : undefined })
+    .then((page) => page.items);
 }
 
 export function createRoom(payload: RoomPayload): Promise<Room> {
@@ -103,7 +106,7 @@ export async function fetchRoomQrSheetHtml(): Promise<string> {
 /* ── 2. Locations ──────────────────────────────────────────────────────── */
 
 export function fetchLocations(): Promise<HotelLocation[]> {
-  return api.get<HotelLocation[]>('/cms/locations');
+  return api.get<ListPage<HotelLocation>>('/cms/locations').then((page) => page.items);
 }
 
 export function createLocation(payload: LocationPayload): Promise<HotelLocation> {
@@ -133,7 +136,9 @@ export function updateLocationMatrix(payload: MatrixUpdatePayload): Promise<Loca
 /* ── 4. Staff ──────────────────────────────────────────────────────────── */
 
 export function fetchStaff(search = ''): Promise<StaffMember[]> {
-  return api.get<StaffMember[]>('/cms/staff', { query: search ? { search } : undefined });
+  return api
+    .get<ListPage<StaffMember>>('/cms/staff', { query: search ? { search } : undefined })
+    .then((page) => page.items);
 }
 
 export function createStaff(payload: StaffCreatePayload): Promise<StaffMember> {

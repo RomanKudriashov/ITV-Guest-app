@@ -132,11 +132,13 @@ export async function findItemByTitle(
   token: string,
   title: string,
 ): Promise<CmsItem | undefined> {
-  const items = await apiGet<CmsItem[]>(
+  // Списки CMS приходят в оболочке `items/total/limit`.
+  const page = await apiGet<{ items: CmsItem[] }>(
     request,
     token,
     `/api/cms/items?search=${encodeURIComponent(title)}`,
   )
+  const items = page.items
   // Подстрока, а не точное совпадение: у сидовых блюд название длиннее
   // искомого («Салат «Цезарь»» при поиске «Цезарь»).
   return items.find((item) => Object.values(item.title).some((value) => value.includes(title)))

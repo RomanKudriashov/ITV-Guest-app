@@ -19,7 +19,7 @@ def _new_item(cms, category_id):
 
 
 def _first_location(cms):
-    return cms.get("/api/cms/locations").json()[0]
+    return cms.get("/api/cms/locations").json()["items"][0]
 
 
 # --- Настройки коммерции отеля --------------------------------------------

@@ -23,7 +23,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_rooms_list_carries_guest_deeplink(cms):
-    rooms = cms.get("/api/cms/rooms").json()
+    rooms = cms.get("/api/cms/rooms").json()["items"]
     room = next(entry for entry in rooms if entry["number"] == "305")
     # QR кодирует именно этот URL — рабочий deep-link на витрину отеля.
     assert room["guest_url"] == "http://crystal.guest.localhost/r/305"
@@ -264,7 +264,7 @@ def test_service_with_orders_cannot_be_deleted(cms, crystal, client):
 
 def test_staff_list_is_available(cms):
     """Эндпоинт для выбора сотрудника в персональном канале."""
-    staff = cms.get("/api/cms/staff").json()
+    staff = cms.get("/api/cms/staff").json()["items"]
     emails = {member["email"] for member in staff}
     assert "chef@crystal.local" in emails
 
@@ -362,7 +362,7 @@ def test_replace_assignments(cms, crystal):
 
 
 def test_personal_channel_can_target_a_listed_staffer(cms, crystal):
-    staff = cms.get("/api/cms/staff").json()
+    staff = cms.get("/api/cms/staff").json()["items"]
     chef = next(member for member in staff if member["email"] == "chef@crystal.local")
 
     channel = cms.post(
@@ -377,13 +377,13 @@ def test_personal_channel_can_target_a_listed_staffer(cms, crystal):
 
 
 def test_admin_sections_are_isolated_between_hotels(cms, cms_aurora):
-    crystal_rooms = {r["id"] for r in cms.get("/api/cms/rooms").json()}
-    aurora_rooms = {r["id"] for r in cms_aurora.get("/api/cms/rooms").json()}
+    crystal_rooms = {r["id"] for r in cms.get("/api/cms/rooms").json()["items"]}
+    aurora_rooms = {r["id"] for r in cms_aurora.get("/api/cms/rooms").json()["items"]}
     assert crystal_rooms and aurora_rooms
     assert crystal_rooms.isdisjoint(aurora_rooms)
 
-    crystal_staff = {s["email"] for s in cms.get("/api/cms/staff").json()}
-    aurora_staff = {s["email"] for s in cms_aurora.get("/api/cms/staff").json()}
+    crystal_staff = {s["email"] for s in cms.get("/api/cms/staff").json()["items"]}
+    aurora_staff = {s["email"] for s in cms_aurora.get("/api/cms/staff").json()["items"]}
     assert "chef@crystal.local" in crystal_staff
     assert "chef@crystal.local" not in aurora_staff
 

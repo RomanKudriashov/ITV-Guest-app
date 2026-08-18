@@ -14,8 +14,10 @@ router = Router(tags=["cms:hotel-admin"])
 
 
 @router.get("/locations", summary="Список локаций")
-def list_locations(request: HttpRequest):
-    return svc.list_locations()
+def list_locations(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_locations(search=search, limit=limit, offset=offset)
 
 
 @router.post("/locations", response={201: dict}, summary="Создать локацию")

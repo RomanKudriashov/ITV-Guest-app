@@ -52,7 +52,7 @@ def serialize_staff(user: User) -> dict:
     }
 
 
-def list_staff(*, search: str = "") -> list[dict]:
+def list_staff(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     """
     Поиск по ИМЕНИ и ПОЧТЕ — по ним сотрудника и вспоминают. По должности или
     отделу не ищем: их выбирают фильтром, а не набирают руками.
@@ -70,7 +70,9 @@ def list_staff(*, search: str = "") -> list[dict]:
         # Управляющий распоряжается СВОИМ персоналом — теми, кто работает в его
         # заведениях. Прочие сотрудники отеля для него не существуют.
         users = users.filter(assignments__execution_point_id__in=managed).distinct()
-    return [serialize_staff(user) for user in users]
+    from apps.core.listing import page as list_page
+
+    return list_page(users, limit=limit, offset=offset, serialize=serialize_staff)
 
 
 def get_staff(user_id) -> User:

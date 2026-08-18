@@ -46,13 +46,15 @@ def serialize_room(room: Room, *, hotel: Hotel | None = None) -> dict:
     }
 
 
-def list_rooms(*, search: str = "") -> list[dict]:
+def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     """Поиск по НОМЕРУ и ЭТАЖУ — единственное, что о номере помнят наизусть."""
-    from apps.core.listing import search as apply_search
+    from apps.core.listing import page as list_page, search as apply_search
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
     rooms = apply_search(Room.objects.order_by("number"), search, ("number", "floor"))
-    return [serialize_room(room, hotel=hotel) for room in rooms]
+    return list_page(
+        rooms, limit=limit, offset=offset, serialize=lambda room: serialize_room(room, hotel=hotel)
+    )
 
 
 def get_room(room_id) -> Room:
@@ -172,8 +174,14 @@ def serialize_location(location: Location) -> dict:
     }
 
 
-def list_locations() -> list[dict]:
-    return [serialize_location(loc) for loc in Location.objects.order_by("sort_order", "code")]
+def list_locations(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
+    """Локации ищутся по КОДУ и НАЗВАНИЮ."""
+    from apps.core.listing import page as list_page, search as apply_search
+
+    queryset = apply_search(
+        Location.objects.order_by("sort_order", "code"), search, ("code", "title")
+    )
+    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_location)
 
 
 def get_location(location_id) -> Location:

@@ -153,10 +153,15 @@ test.describe('Меню отеля', () => {
       .then((b) => b.access)
     const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
 
-    const all = await request.get(`${API}/api/cms/items`, { headers }).then((r) => r.json())
-    const found = await request
+    // Списки CMS приходят в оболочке — берём `items`, а заодно и честный `total`.
+    const all = await request
+      .get(`${API}/api/cms/items?limit=500`, { headers })
+      .then((r) => r.json())
+      .then((page) => page.items)
+    const foundPage = await request
       .get(`${API}/api/cms/items?search=салат`, { headers })
       .then((r) => r.json())
+    const found = foundPage.items
 
     // Ищем по названию НА ВСЕХ ЯЗЫКАХ и по коду — значит найдено должно быть
     // ровно столько, сколько подходит во всём меню, а не в первой странице.
@@ -167,6 +172,8 @@ test.describe('Меню отеля', () => {
     )
     expect(found.length, 'поиск нашёл не всё подходящее').toBe(expected.length)
     expect(found.length).toBeGreaterThan(0)
+    // Счётчик честный: `total` про всю выборку, а не про показанную страницу.
+    expect(foundPage.total).toBe(expected.length)
   })
 
   test('раздел и поиск живут в адресе — ссылка открывает ту же выборку', async ({
@@ -221,10 +228,14 @@ test.describe('Списки отеля: персонал и номера', () =>
     const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
 
     // Сервер действительно сужает выдачу, а не отдаёт всё подряд.
-    const allRooms = await request.get(`${API}/api/cms/rooms`, { headers }).then((r) => r.json())
+    const allRooms = await request
+      .get(`${API}/api/cms/rooms`, { headers })
+      .then((r) => r.json())
+      .then((page) => page.items)
     const someRooms = await request
       .get(`${API}/api/cms/rooms?search=30`, { headers })
       .then((r) => r.json())
+      .then((page) => page.items)
     expect(someRooms.length).toBeLessThan(allRooms.length)
     expect(someRooms.length).toBeGreaterThan(0)
     for (const room of someRooms) {
@@ -254,5 +265,65 @@ test.describe('Списки отеля: персонал и номера', () =>
       page.getByTestId('rooms-search'),
       'поиск не пережил обновление страницы',
     ).toHaveValue('30', { timeout: 20_000 })
+  })
+})
+
+test.describe('Оболочка выдачи в CMS', () => {
+  test('пятьсот записей — приходит предел, а не всё разом', async ({ request }) => {
+    const token = await request
+      .post(`${API}/api/staff/auth/login`, { data: ADMIN, headers: { 'X-Hotel-Subdomain': HOTEL } })
+      .then((r) => r.json())
+      .then((b) => b.access)
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'X-Hotel-Subdomain': HOTEL,
+      'Content-Type': 'application/json',
+    }
+
+    /*
+      Заводим номера диапазоном — быстрее и честнее, чем четыреста запросов.
+
+      Префикс УНИКАЛЬНЫЙ на прогон: удаление номера мягкое, и номер остаётся
+      занятым — повторный прогон с тем же префиксом не создал бы ничего, а
+      проверка молча измеряла бы девять сидовых номеров вместо четырёхсот.
+    */
+    const prefix = `L${Date.now().toString(36).slice(-5)}`
+    const made = await request.post(`${API}/api/cms/rooms/bulk`, {
+      headers,
+      data: { from: 1, to: 400, prefix },
+    })
+    expect((await made.json()).created.length, 'номера не завелись').toBe(400)
+
+    try {
+      const page = await request
+        .get(`${API}/api/cms/rooms`, { headers })
+        .then((r) => r.json())
+
+      /*
+        ГЛАВНОЕ: выдача ОБРЕЗАНА и об этом СКАЗАНО.
+
+        Голый массив без предела выглядел полным: оператор видел всё, что
+        приехало, и был уверен, что это и есть весь список. Теперь приезжает
+        `limit` строк, `total` говорит сколько их на самом деле, а `truncated`
+        — что показано не всё.
+      */
+      expect(page.items.length, 'предел не применён').toBeLessThanOrEqual(page.limit)
+      expect(page.total, 'total меньше числа заведённых номеров').toBeGreaterThan(400)
+      expect(page.items.length, 'приехало больше предела').toBeLessThan(page.total)
+      expect(page.truncated, 'выдача обрезана, но об этом не сказано').toBe(true)
+
+      // Предел можно поднять осознанно — но не бесконечно.
+      const big = await request
+        .get(`${API}/api/cms/rooms?limit=5000`, { headers })
+        .then((r) => r.json())
+      expect(big.limit, 'предел не ограничен сверху').toBeLessThanOrEqual(500)
+    } finally {
+      const all = await request
+        .get(`${API}/api/cms/rooms?search=${prefix}&limit=500`, { headers })
+        .then((r) => r.json())
+      for (const room of all.items) {
+        await request.delete(`${API}/api/cms/rooms/${room.id}`, { headers })
+      }
+    }
   })
 })

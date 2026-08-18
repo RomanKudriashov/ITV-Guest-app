@@ -43,8 +43,8 @@ def test_guest_token_cannot_access_cms(client, crystal, guest_token):
 
 
 def test_each_hotel_sees_only_its_own_catalog(cms, cms_aurora):
-    crystal_items = cms.get("/api/cms/items").json()
-    aurora_items = cms_aurora.get("/api/cms/items").json()
+    crystal_items = cms.get("/api/cms/items").json()["items"]
+    aurora_items = cms_aurora.get("/api/cms/items").json()["items"]
 
     assert crystal_items and aurora_items
     assert {i["id"] for i in crystal_items}.isdisjoint({i["id"] for i in aurora_items})
@@ -53,7 +53,7 @@ def test_each_hotel_sees_only_its_own_catalog(cms, cms_aurora):
 
 
 def test_cannot_touch_another_hotels_item_by_id(cms, cms_aurora):
-    foreign_id = cms_aurora.get("/api/cms/items").json()[0]["id"]
+    foreign_id = cms_aurora.get("/api/cms/items").json()["items"][0]["id"]
 
     assert cms.get(f"/api/cms/items/{foreign_id}").status_code == 404
     assert cms.patch(f"/api/cms/items/{foreign_id}", {"price": 1}).status_code == 404
@@ -62,7 +62,7 @@ def test_cannot_touch_another_hotels_item_by_id(cms, cms_aurora):
 
 def test_cannot_move_item_into_another_hotels_category(cms, cms_aurora, category_id):
     foreign_category = cms_aurora.get("/api/cms/categories").json()[0]["id"]
-    item = cms.get(f"/api/cms/items?category_id={category_id}").json()[0]
+    item = cms.get(f"/api/cms/items?category_id={category_id}").json()["items"][0]
 
     response = cms.patch(f"/api/cms/items/{item['id']}", {"category_id": foreign_category})
     assert response.status_code == 422
@@ -90,7 +90,7 @@ def _find_item(menu, code):
 
 
 def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, category_id):
-    milk_id = next(a["id"] for a in cms.get("/api/v1/cms/allergens").json() if a["code"] == "milk")
+    milk_id = next(a["id"] for a in cms.get("/api/v1/cms/allergens").json()["items"] if a["code"] == "milk")
     created = cms.post(
         "/api/cms/items",
         {
@@ -135,7 +135,7 @@ def test_new_item_appears_in_guest_menu(client, crystal, cms, guest_token, categ
 
 
 def test_stop_list_and_deactivation_reach_guest_menu(client, crystal, cms, guest_token):
-    item = cms.get("/api/cms/items?search=ribeye").json()[0]
+    item = cms.get("/api/cms/items?search=ribeye").json()["items"][0]
 
     cms.post(f"/api/cms/items/{item['id']}/stock", {"in_stock": False})
     guest_item = _find_item(_guest_menu(client, crystal, guest_token), "ribeye")
@@ -149,7 +149,7 @@ def test_stop_list_and_deactivation_reach_guest_menu(client, crystal, cms, guest
 
 
 def test_price_edit_reaches_guest_menu(client, crystal, cms, guest_token):
-    item = cms.get("/api/cms/items?search=caesar").json()[0]
+    item = cms.get("/api/cms/items?search=caesar").json()["items"][0]
     cms.patch(f"/api/cms/items/{item['id']}", {"price": 61000})
 
     assert _find_item(_guest_menu(client, crystal, guest_token), "caesar")["price"] == 61000

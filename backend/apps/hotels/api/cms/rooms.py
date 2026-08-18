@@ -13,9 +13,13 @@ from apps.hotels.services import qr
 router = Router(tags=["cms:hotel-admin"])
 
 
-@router.get("/rooms", response=list[RoomOut], summary="Список номеров")
-def list_rooms(request: HttpRequest, search: str = ""):
-    return svc.list_rooms(search=search)
+@router.get("/rooms", summary="Список номеров")
+def list_rooms(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    """Выдача в ОБОЛОЧКЕ (`items/total/limit`): голый массив без предела
+    выглядит полным, сколько бы записей ни осталось за его границей."""
+    return svc.list_rooms(search=search, limit=limit, offset=offset)
 
 
 @router.post("/rooms", response={201: RoomOut}, summary="Добавить номер")

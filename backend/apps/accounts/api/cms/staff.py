@@ -19,8 +19,10 @@ router = Router(tags=["cms:hotel-admin"])
 
 
 @router.get("/staff", summary="Список сотрудников")
-def list_staff(request: HttpRequest, search: str = ""):
-    return staff_svc.list_staff(search=search)
+def list_staff(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return staff_svc.list_staff(search=search, limit=limit, offset=offset)
 
 
 @router.post("/staff", response={201: dict}, summary="Создать сотрудника")

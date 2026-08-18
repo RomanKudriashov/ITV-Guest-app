@@ -42,7 +42,7 @@ test.describe('Админка отеля', () => {
     const rooms = await request.get('http://localhost:8010/api/cms/rooms', {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
-    const created = (await rooms.json()).find((r: { number: string }) => r.number === number)
+    const created = (await rooms.json()).items.find((r: { number: string }) => r.number === number)
     expect(created.guest_url).toBe(`http://crystal.guest.localhost/r/${number}`)
 
     // QR-эндпоинт отдаёт настоящую картинку.
@@ -75,7 +75,7 @@ test.describe('Админка отеля', () => {
       const rooms = await request.get('http://localhost:8010/api/cms/rooms', {
         headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
       })
-      const room = (await rooms.json()).find((r: { number: string }) => r.number === String(n))
+      const room = (await rooms.json()).items.find((r: { number: string }) => r.number === String(n))
       if (room) {
         await request.delete(`http://localhost:8010/api/cms/rooms/${room.id}`, {
           headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
@@ -107,7 +107,7 @@ test.describe('Админка отеля', () => {
     const staff = await request.get('http://localhost:8010/api/cms/staff', {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
-    const member = (await staff.json()).find((m: { email: string }) => m.email === email)
+    const member = (await staff.json()).items.find((m: { email: string }) => m.email === email)
     expect(member.assignments.length).toBeGreaterThan(0)
     expect(member.assignments[0].level).toBe('lead')
 

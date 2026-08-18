@@ -550,8 +550,14 @@ def _item_queryset(offering_type: str | None = None):
 
 
 def list_items(
-    *, category_id=None, search: str = "", offering_type: str | None = None, service_id=None
-) -> list[dict]:
+    *,
+    category_id=None,
+    search: str = "",
+    offering_type: str | None = None,
+    service_id=None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict:
     queryset = _scoped_items(_item_queryset(offering_type))
     if service_id:
         queryset = queryset.filter(category__service_id=service_id)
@@ -564,7 +570,14 @@ def list_items(
         queryset = queryset.annotate(title_text=Cast("title", TextField())).filter(
             Q(title_text__icontains=search) | Q(code__icontains=search)
         )
-    return [serialize_item(item) for item in queryset.order_by("sort_order", "code")]
+    from apps.core.listing import page as list_page
+
+    return list_page(
+        queryset.order_by("sort_order", "code"),
+        limit=limit,
+        offset=offset,
+        serialize=serialize_item,
+    )
 
 
 def get_item(item_id, *, with_modifiers: bool = False) -> Item:
@@ -731,7 +744,10 @@ def reorder_items(*, category_id, entries: Iterable[dict]) -> list[dict]:
         item.sort_order = entry["sort_order"]
         item.save(update_fields=["sort_order", "updated_at"])
 
-    return list_items(category_id=category_id)
+    # Голым массивом: это НЕ выдача-список, а новый порядок затронутого
+    # набора. Оболочка с `total` здесь означала бы, что перестановка бывает
+    # частичной, — а она не бывает.
+    return list_items(category_id=category_id)["items"]
 
 
 def set_item_stock(item_id, *, in_stock: bool) -> Item:
@@ -1299,8 +1315,14 @@ def serialize_badge(badge: Badge) -> dict:
     }
 
 
-def list_badges() -> list[dict]:
-    return [serialize_badge(b) for b in Badge.objects.all().order_by("sort_order", "id")]
+def list_badges(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
+    """Поиск по КОДУ и НАЗВАНИЮ — по ним бейдж и ищут в списке."""
+    from apps.core.listing import page as list_page, search as apply_search
+
+    queryset = apply_search(
+        Badge.objects.all().order_by("sort_order", "id"), search, ("code", "title")
+    )
+    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_badge)
 
 
 def _validate_role(role: str) -> str:
@@ -1386,12 +1408,20 @@ def _serialize_dict_entry(row) -> dict:
     }
 
 
-def list_allergens() -> list[dict]:
-    return [_serialize_dict_entry(a) for a in Allergen.objects.all()]
+def list_allergens(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
+    return _dict_page(Allergen, search=search, limit=limit, offset=offset)
 
 
-def list_markers() -> list[dict]:
-    return [_serialize_dict_entry(m) for m in DietaryMarker.objects.all()]
+def list_markers(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
+    return _dict_page(DietaryMarker, search=search, limit=limit, offset=offset)
+
+
+def _dict_page(model, *, search: str, limit: int | None, offset: int) -> dict:
+    """Справочники ищутся по КОДУ и НАЗВАНИЮ — больше у записи ничего и нет."""
+    from apps.core.listing import page as list_page, search as apply_search
+
+    queryset = apply_search(model.objects.all(), search, ("code", "title"))
+    return list_page(queryset, limit=limit, offset=offset, serialize=_serialize_dict_entry)
 
 
 def _create_dict_entry(model, data: dict, *, prefix: str):

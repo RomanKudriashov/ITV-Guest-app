@@ -37,7 +37,7 @@ def test_badge_crud(cms):
     assert created.status_code == 201, created.content
     badge_id = created.json()["id"]
 
-    listed = cms.get("/api/v1/cms/badges").json()
+    listed = cms.get("/api/v1/cms/badges").json()["items"]
     assert any(b["id"] == badge_id for b in listed)
 
     patched = cms.patch(f"/api/v1/cms/badges/{badge_id}", {"color_role": "gold"}).json()
@@ -109,7 +109,7 @@ def test_badge_on_any_type_no_fork(client, crystal, cms, guest_token):
 
 def test_badges_isolated_between_hotels(cms, cms_aurora):
     cms.post("/api/v1/cms/badges", {"label": {"ru": "Только-Кристалл"}, "color_role": "accent"})
-    aurora_badges = cms_aurora.get("/api/v1/cms/badges").json()
+    aurora_badges = cms_aurora.get("/api/v1/cms/badges").json()["items"]
     assert all(b["label"].get("ru") != "Только-Кристалл" for b in aurora_badges)
 
 

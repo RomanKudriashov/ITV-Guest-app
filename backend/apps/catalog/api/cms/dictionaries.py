@@ -22,8 +22,10 @@ router = Router(tags=["cms:catalog"])
 
 
 @router.get("/badges", summary="Маркетинговые бейджи отеля")
-def cms_list_badges(request: HttpRequest):
-    return svc.list_badges()
+def cms_list_badges(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_badges(search=search, limit=limit, offset=offset)
 
 
 @router.post("/badges", response={201: dict}, summary="Создать бейдж")
@@ -46,8 +48,10 @@ def cms_delete_badge(request: HttpRequest, badge_id: str):
 
 
 @router.get("/allergens", summary="Справочник аллергенов отеля")
-def cms_list_allergens(request: HttpRequest):
-    return svc.list_allergens()
+def cms_list_allergens(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_allergens(search=search, limit=limit, offset=offset)
 
 
 @router.post("/allergens", response={201: dict}, summary="Добавить свой аллерген")
@@ -67,8 +71,10 @@ def cms_delete_allergen(request: HttpRequest, entry_id: str):
 
 
 @router.get("/markers", summary="Справочник диетических маркеров отеля")
-def cms_list_markers(request: HttpRequest):
-    return svc.list_markers()
+def cms_list_markers(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_markers(search=search, limit=limit, offset=offset)
 
 
 @router.post("/markers", response={201: dict}, summary="Добавить свой маркер")

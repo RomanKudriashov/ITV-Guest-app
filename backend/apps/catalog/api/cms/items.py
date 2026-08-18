@@ -30,16 +30,20 @@ from apps.core.schemas import ItemsReorderIn, OkOut, ReorderIn, ToggleIn
 router = Router(tags=["cms:catalog"])
 
 
-@router.get("/items", response=list[ItemOut], summary="Список блюд")
+@router.get("/items", summary="Список блюд")
 def list_items(
     request: HttpRequest,
     category_id: str | None = None,
     search: str = "",
     type: str | None = None,
     service_id: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
 ):
+    """Выдача в ОБОЛОЧКЕ: `items` + честный `total`, а не голый массив."""
     return svc.list_items(
-        category_id=category_id, search=search, offering_type=type, service_id=service_id
+        category_id=category_id, search=search, offering_type=type,
+        service_id=service_id, limit=limit, offset=offset,
     )
 
 

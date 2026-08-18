@@ -1,4 +1,17 @@
 /**
+ * Выдача списка. Та же оболочка, что у консоли платформы: `total` рядом с
+ * `items` — не украшение. Голый массив с пределом выглядит полным, сколько бы
+ * записей ни осталось за его границей.
+ */
+export interface ListPage<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  truncated: boolean;
+  offset?: number;
+}
+
+/**
  * Types mirroring `docs/cms-api-contract.md`.
  * Money is always an integer in the currency's minor units (копейки).
  */
