@@ -41,8 +41,9 @@ import { IconBrand } from '@/icons';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAuth } from '@/auth';
-import { useNavigation } from '@/hooks/useNavigation';
+import { isForbidden, useNavigation } from '@/hooks/useNavigation';
 import { useBootstrap } from '@/hooks/useBootstrap';
+import { NoCmsAccess } from './NoCmsAccess';
 import type { SupportSession } from '@/api/types';
 
 const DRAWER_WIDTH = 248;
@@ -86,6 +87,23 @@ export function AppShell() {
 
   const support = bootstrap?.support_session ?? null;
 
+  /*
+    РАЗДЕЛ ЗАКРЫТ РОЛЬЮ — ОТКАЗ, А НЕ ПУСТАЯ ОБОЛОЧКА.
+
+    `/cms/navigation` отвечает линейному сотруднику 403: у повара, горничной и
+    консьержа разделов CMS нет ни одного. Дальше оболочка рисовалась как ни в
+    чём не бывало — с шапкой, с кнопкой «Добавить сервис», — а панель навигации
+    получала `?? []` и молча схлопывалась в ничто. Отказ по правам выглядел как
+    сбой загрузки, и уйти отсюда было некуда: ни пункта меню, ни ссылки.
+
+    Пустой список разделов — это тоже «сюда нельзя»: рисовать оболочку вокруг
+    несуществующего меню незачем.
+  */
+  const navGroups = navigation.data?.groups ?? [];
+  if (isForbidden(navigation.error) || (navigation.isSuccess && navGroups.length === 0)) {
+    return <NoCmsAccess />;
+  }
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/*
@@ -127,7 +145,18 @@ export function AppShell() {
           <LanguageSwitcher compact />
           <ThemeModeToggle />
           <Divider orientation="vertical" flexItem sx={{ my: 1.5 }} />
-          <Stack sx={{ textAlign: 'end', display: { xs: 'none', md: 'block' } }}>
+          {/* Блок пользователя — вход в его профиль: там его сессии. */}
+          <Stack
+            component={NavLink}
+            to="/cms/profile"
+            data-testid="cms-profile-link"
+            sx={{
+              textAlign: 'end',
+              display: { xs: 'none', md: 'block' },
+              textDecoration: 'none',
+              color: 'inherit',
+            }}
+          >
             <Typography variant="body2">{user?.full_name || user?.email}</Typography>
             <Typography variant="caption" color="text.secondary">
               {user?.is_hotel_admin ? t('nav.roleAdmin') : t('nav.roleStaff')}
@@ -160,7 +189,7 @@ export function AppShell() {
       >
         <Toolbar />
         <List sx={{ px: 1.5, py: 2 }} data-testid="main-nav" onClick={() => setNavOpen(false)}>
-          {(navigation.data?.groups ?? []).map((group) => (
+          {navGroups.map((group) => (
             <Box key={group.key} sx={{ mb: 1.5 }} data-testid={`nav-group-${group.key}`}>
               {/*
                 Заголовок группы — не украшение: он и есть починка «плоской

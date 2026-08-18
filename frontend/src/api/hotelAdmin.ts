@@ -17,8 +17,10 @@ import type {
 
 /* ── 1. Rooms ──────────────────────────────────────────────────────────── */
 
-export function fetchRooms(): Promise<Room[]> {
-  return api.get<Room[]>('/cms/rooms');
+export function fetchRooms(search = ''): Promise<Room[]> {
+  // Поиск уходит НА СЕРВЕР: отсев уже скачанного списка врал бы счётчиком
+  // ровно так же, как это делал журнал платформы.
+  return api.get<Room[]>('/cms/rooms', { query: search ? { search } : undefined });
 }
 
 export function createRoom(payload: RoomPayload): Promise<Room> {
@@ -130,8 +132,8 @@ export function updateLocationMatrix(payload: MatrixUpdatePayload): Promise<Loca
 
 /* ── 4. Staff ──────────────────────────────────────────────────────────── */
 
-export function fetchStaff(): Promise<StaffMember[]> {
-  return api.get<StaffMember[]>('/cms/staff');
+export function fetchStaff(search = ''): Promise<StaffMember[]> {
+  return api.get<StaffMember[]>('/cms/staff', { query: search ? { search } : undefined });
 }
 
 export function createStaff(payload: StaffCreatePayload): Promise<StaffMember> {

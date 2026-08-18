@@ -37,6 +37,11 @@ class CategoryIn(Schema):
     schedule_id: str | None = None
     sort_order: int | None = None
     is_active: bool = True
+    # Коммерция — те же поля, что у CategoryPatch. Экран показывает их и при
+    # создании; без них сервер молча возвращал значения по умолчанию, и
+    # выставленный порог заказа пропадал между «Сохранить» и 201.
+    service_fee_applies: bool | None = None
+    min_order_minor: int | None = None
 
 class CategoryPatch(Schema):
     title: Translations | None = None

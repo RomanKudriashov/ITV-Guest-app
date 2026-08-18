@@ -46,9 +46,12 @@ def serialize_room(room: Room, *, hotel: Hotel | None = None) -> dict:
     }
 
 
-def list_rooms() -> list[dict]:
+def list_rooms(*, search: str = "") -> list[dict]:
+    """Поиск по НОМЕРУ и ЭТАЖУ — единственное, что о номере помнят наизусть."""
+    from apps.core.listing import search as apply_search
+
     hotel = Hotel.objects.get(pk=require_hotel_id())
-    rooms = Room.objects.order_by("number")
+    rooms = apply_search(Room.objects.order_by("number"), search, ("number", "floor"))
     return [serialize_room(room, hotel=hotel) for room in rooms]
 
 

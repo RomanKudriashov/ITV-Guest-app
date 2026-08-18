@@ -9,7 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 
-import { fetchExportJob, requestExport } from '@/api/analytics';
+import { fetchExportFile, fetchExportJob, requestExport } from '@/api/analytics';
 import type { AnalyticsQuery, ExportFormat, ExportJob } from '@/api/analyticsTypes';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
@@ -26,12 +26,14 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
   const toast = useToast();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [downloadFailed, setDownloadFailed] = useState(false);
   const downloadedRef = useRef<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: (format: ExportFormat) => requestExport(format, params),
     onSuccess: (job) => {
       downloadedRef.current = null;
+      setDownloadFailed(false);
       setJobId(job.id);
     },
     onError: () => toast.show(t('analytics.export.failed'), 'error'),
@@ -55,8 +57,18 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
   useEffect(() => {
     if (job?.status === 'ready' && job.file && downloadedRef.current !== job.id) {
       downloadedRef.current = job.id;
-      triggerDownload(job.file);
-      toast.show(t('analytics.export.ready'), 'success');
+      // Скачивание — запросом с токеном. Отказ виден отдельно от «готово»:
+      // раньше тост «готово» показывался ДО скачивания, и сорванная загрузка
+      // выглядела успехом.
+      fetchExportFile(job.id, job.filename ?? 'analytics-export')
+        .then(({ blob, filename }) => {
+          saveBlob(blob, filename);
+          toast.show(t('analytics.export.ready'), 'success');
+        })
+        .catch(() => {
+          setDownloadFailed(true);
+          toast.show(t('analytics.export.downloadFailed'), 'error');
+        });
     }
     if (job?.status === 'failed' && downloadedRef.current !== job.id) {
       downloadedRef.current = job.id;
@@ -72,6 +84,8 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
   const statusLabel = (): string | null => {
     if (createMutation.isPending) return t('analytics.export.queuing');
     if (!job) return null;
+    // Срыв скачивания важнее «готово»: срез посчитан, но файла у оператора нет.
+    if (downloadFailed) return t('analytics.export.downloadFailed');
     switch (job.status) {
       case 'pending':
       case 'running':
@@ -125,12 +139,18 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
   );
 }
 
-function triggerDownload(url: string) {
+/** Отдать полученные байты браузеру под явным именем. */
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.rel = 'noopener';
-  anchor.download = '';
+  // Имя ЯВНОЕ. Пустой `download` отдавал имя на откуп ответу, а у отказа
+  // заголовка нет — так и рождался «download.json».
+  anchor.download = filename;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
+  // Освобождаем ссылку, но не раньше, чем браузер начнёт качать.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

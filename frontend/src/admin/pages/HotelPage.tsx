@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
 import {
@@ -160,6 +161,26 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe });
   const canEdit = me.data?.role !== 'read_only';
 
+  /*
+    ЧЕРНОВИК. Сессия консоли может кончиться прямо посреди правки профиля —
+    и введённое исчезало вместе с экраном. Ключ включает пользователя: за
+    одним компьютером сидят разные люди платформы.
+  */
+  const kept = useFormDraft<typeof draft>({
+    scope: 'platform',
+    userId: me.data?.id,
+    screen: `hotel:${hotel.id}`,
+  });
+  const keptAppliedRef = useRef(false);
+  useEffect(() => {
+    // Поднимаем один раз и только когда известен пользователь: до этого ключа
+    // нет, и читать нечего.
+    if (keptAppliedRef.current || !me.data?.id) return;
+    keptAppliedRef.current = true;
+    const saved = kept.restore();
+    if (saved) setDraft(saved);
+  }, [me.data?.id, kept]);
+
   const initial = {
     name: hotel.name,
     timezone: hotel.timezone,
@@ -170,6 +191,15 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   const dirty = (Object.keys(initial) as (keyof typeof initial)[]).filter(
     (key) => String(draft[key]).trim() !== String(initial[key]).trim(),
   );
+
+  // Пишем черновик, пока есть расхождение с сохранённым.
+  useEffect(() => {
+    if (!keptAppliedRef.current) return;
+    // Тот же инвариант, что и в редакторе блюда: есть расхождение — есть
+    // черновик, нет расхождения — нет черновика.
+    if (dirty.length) kept.save(draft);
+    else kept.discard();
+  }, [dirty.length, draft, kept]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -185,6 +215,8 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
       }),
     onSuccess: () => {
       setSaveError(null);
+      // Сохранили — черновик отслужил.
+      kept.discard();
       refresh();
     },
     // Введённое НЕ трогаем: человек только что это набрал, и отобрать текст

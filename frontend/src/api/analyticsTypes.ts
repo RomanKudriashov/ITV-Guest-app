@@ -237,6 +237,8 @@ export interface ExportJob {
   format?: ExportFormat;
   /** Present when `status === 'ready'`. */
   file?: string;
+  /** Имя готового файла — отель, тип выгрузки, период. Приходит с `ready`. */
+  filename?: string;
   row_count?: number;
   error?: string;
 }

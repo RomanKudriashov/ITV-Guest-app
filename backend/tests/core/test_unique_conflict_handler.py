@@ -54,6 +54,18 @@ def cms(client, hotel):
 
 
 @pytest.fixture
+def service_id(cms):
+    """
+    Заведение свежего отеля — ресепшен, его заводит provision_hotel.
+
+    Раздел без заведения не создаётся: заведение даёт исполнителя. Тестам
+    уникальности всё равно, в каком заведении лежит раздел, — важно лишь, что
+    он вообще может быть создан.
+    """
+    return cms("get", "/services").json()[0]["id"]
+
+
+@pytest.fixture
 def platform_api(client):
     ensure_platform_admin(email=OWNER[0], password=OWNER[1])
     token = client.post(
@@ -76,18 +88,26 @@ def platform_api(client):
 # --- Главное: 409 вместо 500 ------------------------------------------------
 
 
-def test_deleted_category_code_answers_409_not_500(cms):
+def test_deleted_category_code_answers_409_not_500(cms, service_id):
     """
     ГЛАВНОЕ. Удалить раздел меню и завести с тем же кодом — внятный отказ.
 
     Пятисотка здесь была бы не «строгостью», а дезинформацией: раздела в
     списке нет, код на вид свободен, а система молча ломается.
     """
-    created = cms("post", "/categories", {"title": {"ru": "Завтрак"}, "code": "breakfast"})
+    created = cms(
+        "post",
+        "/categories",
+        {"title": {"ru": "Завтрак"}, "code": "breakfast", "service_id": service_id},
+    )
     assert created.status_code == 201, created.content
     assert cms("delete", f"/categories/{created.json()['id']}").status_code == 200
 
-    again = cms("post", "/categories", {"title": {"ru": "Завтрак снова"}, "code": "breakfast"})
+    again = cms(
+        "post",
+        "/categories",
+        {"title": {"ru": "Завтрак снова"}, "code": "breakfast", "service_id": service_id},
+    )
 
     assert again.status_code == 409, f"ожидался отказ, получено {again.status_code}"
     body = again.json()
@@ -99,11 +119,19 @@ def test_deleted_category_code_answers_409_not_500(cms):
     assert body["blocked_by"] == "deleted"
 
 
-def test_live_row_conflict_says_simply_occupied(cms):
+def test_live_row_conflict_says_simply_occupied(cms, service_id):
     """Занято живой записью — про удаление ни слова: его тут нет."""
-    cms("post", "/categories", {"title": {"ru": "Обед"}, "code": "lunch"})
+    cms(
+        "post",
+        "/categories",
+        {"title": {"ru": "Обед"}, "code": "lunch", "service_id": service_id},
+    )
 
-    again = cms("post", "/categories", {"title": {"ru": "Обед 2"}, "code": "lunch"})
+    again = cms(
+        "post",
+        "/categories",
+        {"title": {"ru": "Обед 2"}, "code": "lunch", "service_id": service_id},
+    )
 
     assert again.status_code == 409, again.content
     body = again.json()

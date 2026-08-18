@@ -14,6 +14,9 @@ import io
 import zipfile
 from xml.sax.saxutils import escape
 
+from django.utils.text import slugify
+
+from apps.catalog.services.cms import transliterate
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel
 
@@ -143,6 +146,26 @@ def _col_letter(index: int) -> str:
     return letters
 
 
+# --- Имя файла -------------------------------------------------------------
+
+
+def export_filename(hotel: Hotel, kind: str, params: dict, ext: str) -> str:
+    """
+    Имя, по которому файл узнают в папке «Загрузки»: отель, тип выгрузки, период.
+
+    Раньше здесь стояло `analytics-{kind}-{preset}`: без отеля (а управляющий
+    сетью выгружает несколько) и с буквальным словом «period» вместо дат, как
+    только период выбран календарём, а не пресетом. Три файла подряд получали
+    одно и то же имя и затирали друг друга.
+    """
+    period = params.get("preset")
+    if not period:
+        since, until = params.get("date_from"), params.get("date_to")
+        period = f"{since}_{until}" if since and until else since or until or "period"
+    parts = [slugify(transliterate(hotel.subdomain)), slugify(str(kind)), slugify(str(period))]
+    return "-".join(part for part in parts if part) + f".{ext}"
+
+
 # --- Жизненный цикл --------------------------------------------------------
 
 
@@ -189,7 +212,7 @@ def execute_export(export_id, hotel_id, *, user=None) -> AnalyticsExport:
                 ext = "csv"
             export.content = data
             export.content_type = ctype
-            export.filename = f"analytics-{export.kind}-{export.params.get('preset', 'period')}.{ext}"
+            export.filename = export_filename(hotel, export.kind, export.params or {}, ext)
             export.row_count = len(rows)
             export.status = AnalyticsExport.Status.READY
             export.save(update_fields=["content", "content_type", "filename", "row_count", "status", "updated_at"])

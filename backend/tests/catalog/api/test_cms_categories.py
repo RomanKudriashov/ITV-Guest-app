@@ -15,10 +15,14 @@ def test_tree_lists_seeded_categories(cms):
     assert next(n for n in tree if n["code"] == "hot")["items_count"] >= 1
 
 
-def test_create_category_generates_latin_code_from_cyrillic_title(cms):
+def test_create_category_generates_latin_code_from_cyrillic_title(cms, service_id):
     response = cms.post(
         "/api/cms/categories",
-        {"title": {"ru": "Десерты", "en": "Desserts"}, "is_active": True},
+        {
+            "title": {"ru": "Десерты", "en": "Desserts"},
+            "is_active": True,
+            "service_id": service_id,
+        },
     )
     assert response.status_code == 201, response.content
     body = response.json()
@@ -26,7 +30,9 @@ def test_create_category_generates_latin_code_from_cyrillic_title(cms):
     assert body["title"]["ru"] == "Десерты"
 
     # Без английского названия код транслитерируется, а не схлопывается в пустоту.
-    only_russian = cms.post("/api/cms/categories", {"title": {"ru": "Выпечка"}})
+    only_russian = cms.post(
+        "/api/cms/categories", {"title": {"ru": "Выпечка"}, "service_id": service_id}
+    )
     assert only_russian.status_code == 201
     assert only_russian.json()["code"] == "vypechka"
 
@@ -117,8 +123,10 @@ def test_delete_non_empty_category_requires_cascade(cms, category_id):
     assert cms.get(f"/api/cms/items?category_id={category_id}").json() == []
 
 
-def test_delete_empty_category_without_cascade(cms):
-    created = cms.post("/api/cms/categories", {"title": {"en": "Empty"}}).json()
+def test_delete_empty_category_without_cascade(cms, service_id):
+    created = cms.post(
+        "/api/cms/categories", {"title": {"en": "Empty"}, "service_id": service_id}
+    ).json()
     assert cms.delete(f"/api/cms/categories/{created['id']}").status_code == 200
     assert created["id"] not in [n["id"] for n in cms.get("/api/cms/categories").json()]
 

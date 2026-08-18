@@ -137,5 +137,10 @@ class PlatformLoginIn(Schema):
     # Второй фактор. Приходит вторым шагом — первый отвечает `mfa_required`.
     totp_code: str | None = None
 
+class PlatformRefreshIn(Schema):
+    """Токен обновления консоли. Телом, а не заголовком: это обмен, не доступ."""
+
+    refresh: str
+
 class TotpEnableIn(Schema):
     code: str

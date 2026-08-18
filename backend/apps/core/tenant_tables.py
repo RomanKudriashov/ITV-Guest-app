@@ -96,6 +96,9 @@ TENANT_TABLES = [
 NULLABLE_TENANT_TABLES = [
     "core_audit_log",
     "accounts_impersonation_grant",
+    # Сессии персонала: у платформенного администратора отеля нет, и его
+    # строки видны только платформенной роли — как и его строка в accounts_user.
+    "accounts_staff_session",
 ]
 
 PLATFORM_TABLES = [

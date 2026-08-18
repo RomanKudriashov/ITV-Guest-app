@@ -9,7 +9,18 @@ import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
-import { getMe, totpDisable, totpEnable, totpSetup } from '../adminClient';
+import {
+  closeSession,
+  getMe,
+  listSessions,
+  platformLogoutEverywhere,
+  platformSession,
+  totpDisable,
+  totpEnable,
+  totpSetup,
+} from '../adminClient';
+import { SessionsPanel } from '@/components/SessionsPanel';
+import { dropAllDrafts } from '@/hooks/useFormDraft';
 
 /**
  * Второй фактор СВОЕЙ учётки платформы.
@@ -182,6 +193,22 @@ export function SecurityPage() {
           </Box>
         )}
       </QueryState>
+
+      {/* Мои входы — здесь же, в «Безопасности»: 2FA и список сессий отвечают
+          на один вопрос «кто и чем заходит под этой учёткой». */}
+      <Box sx={{ ...panelSx, mt: 2.25, maxWidth: 560 }}>
+        <SessionsPanel
+          queryKey={['platform', 'sessions']}
+          fetchSessions={listSessions}
+          closeSession={closeSession}
+          logoutEverywhere={platformLogoutEverywhere}
+          onLoggedOutEverywhere={() => {
+            dropAllDrafts('platform');
+                platformSession.clear();
+            window.location.assign('/admin');
+          }}
+        />
+      </Box>
     </Box>
   );
 }

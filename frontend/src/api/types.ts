@@ -145,6 +145,11 @@ export interface CategoryPayload {
   title: Translated;
   description?: Translated;
   code?: string;
+  /**
+   * Заведение, которому принадлежит раздел. Только при создании: список меню
+   * фильтруется по нему, и раздел без привязки не виден там, где его завели.
+   */
+  service_id?: string | null;
   parent_id?: string | null;
   image_id?: string | null;
   schedule_id?: string | null;

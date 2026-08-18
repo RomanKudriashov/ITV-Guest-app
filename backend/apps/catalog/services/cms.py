@@ -305,6 +305,12 @@ def _resolve_category_service(data: dict, parent: Category | None):
     живёт в том же заведении); иначе, для управляющего с одним сервисом, — его
     сервис. Управляющему с несколькими нужен явный выбор: угадывать, в какое из
     его заведений он добавляет раздел, нельзя.
+
+    Заведение обязательно. Раньше админу отеля разрешалось завести раздел «вне
+    заведения» — и это была не свобода, а дыра: такой раздел не показывался в
+    том меню, где его завели, и не доезжал до гостя, потому что исполнителя
+    брать было неоткуда. Раздел без заведения — раздел без исполнителя, а
+    значит без витрины и без доски.
     """
     from apps.accounts.services.roles import current_access
     from apps.hotels.models import Service
@@ -321,21 +327,21 @@ def _resolve_category_service(data: dict, parent: Category | None):
         return parent.service
 
     access = current_access()
-    if access.unrestricted:
-        # Админ отеля вправе завести категорию вне заведения (инфо-раздел);
-        # привязку он проставит явно.
-        return None
-    managed = list(
-        Service.objects.filter(execution_point_id__in=access.managed_point_ids)
-    )
-    if len(managed) == 1:
-        return managed[0]
+    if not access.unrestricted:
+        managed = list(
+            Service.objects.filter(execution_point_id__in=access.managed_point_ids)
+        )
+        if len(managed) == 1:
+            return managed[0]
     raise ValidationError(
         "Укажите сервис, в котором создаётся раздел", field="service_id"
     )
 
 
+@transaction.atomic
 def create_category(data: dict) -> Category:
+    from apps.catalog.models import Route
+
     title = require_translation(clean_translations(data.get("title"), field="title"), field="title")
     parent = _validate_parent(None, data.get("parent_id"))
     service = _resolve_category_service(data, parent)
@@ -353,6 +359,33 @@ def create_category(data: dict) -> Category:
         if data.get("sort_order") is not None
         else _next_sort_order(Category.objects.filter(parent=parent)),
         is_active=data.get("is_active", True),
+        # Коммерция задаётся сразу: экран спрашивает порог и сбор в той же
+        # форме. `None` здесь — «не прислали», а не «сбросить в null», поэтому
+        # умолчание модели берём явно.
+        service_fee_applies=(
+            True if data.get("service_fee_applies") is None
+            else bool(data["service_fee_applies"])
+        ),
+        min_order_minor=_validate_min_order(data.get("min_order_minor")),
+    )
+
+    # Исполнитель — сразу и молча: своё заведение.
+    #
+    # Оператор не должен знать слово «маршрут». До этого маршрут заводился
+    # только через API, экран его не звал, и раздел, созданный в интерфейсе,
+    # у гостя не появлялся вовсе: витрина набирается по routes, а не по
+    # Category.service. Заведение своего исполнителя знает — брать его больше
+    # неоткуда и незачем.
+    #
+    # Один маршрут, а не набор: разъезд заказа по нескольким исполнителям —
+    # это заимствование чужого контента (ServiceInclusion), а не второй
+    # маршрут у своей категории. Кому нужно иначе — правит через
+    # `PUT /categories/{id}/routes`, эта запись ему не мешает.
+    Route.objects.create(
+        category=category,
+        execution_point=service.execution_point,
+        priority=0,
+        is_active=True,
     )
     return category
 

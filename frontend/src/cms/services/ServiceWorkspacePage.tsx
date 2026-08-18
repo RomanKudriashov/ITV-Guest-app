@@ -17,7 +17,9 @@ import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslation } from 'react-i18next';
 
+import { ApiError } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
+import { useToast } from '@/components/ToastProvider';
 
 import { useBootstrap } from '@/hooks/useBootstrap';
 import { MenuPage } from '@/pages/menu/MenuPage';
@@ -128,13 +130,31 @@ export function ServiceWorkspacePage() {
 }
 
 function useSaveService(service: CmsService) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: (patch: Parameters<typeof updateService>[1]) =>
       updateService(service.id, patch),
     onSuccess: () => {
+      // Вкладки сервиса сохраняют по месту, без кнопки «Сохранить» — значит
+      // результат обязан быть виден. Молчание после выбора неотличимо от
+      // «не нажалось», и на этом уже теряли правку расписания.
+      toast.show(t('services.saved'), 'success');
       void queryClient.invalidateQueries({ queryKey: ['cms', 'service', service.id] });
       void queryClient.invalidateQueries({ queryKey: ['cms', 'services'] });
+    },
+    onError: (error) => {
+      // `String(error)` печатал «ApiError: …» — имя класса и текст исключения.
+      //
+      // `detail` берём ТОЛЬКО у 4xx: там это наш доменный текст, написанный
+      // для оператора («Заполните название заведения»). У 5xx в `detail`
+      // лежит нутро сервера — «relation does not exist» и прочее, что говорит
+      // о нашем устройстве и не говорит, что делать. Разбор живёт в консоли
+      // браузера, экран говорит по-человечески.
+      const human =
+        error instanceof ApiError && error.status < 500 ? error.detail : null;
+      toast.show(human ?? t('services.saveFailed'), 'error');
     },
   });
 }
@@ -185,7 +205,6 @@ function ScheduleTab({ service }: { service: CmsService }) {
         }
         label={t('services.guestFacing')}
       />
-      {save.error ? <Alert severity="error">{String(save.error)}</Alert> : null}
     </Stack>
   );
 }
@@ -248,7 +267,6 @@ function CommerceTab({ service }: { service: CmsService }) {
         'services.commerce.freeDelivery',
         'services.commerce.freeDeliveryHint',
       )}
-      {save.error ? <Alert severity="error">{String(save.error)}</Alert> : null}
     </Stack>
   );
 }

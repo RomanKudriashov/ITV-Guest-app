@@ -209,5 +209,8 @@ class PlatformAuth(HttpBearer):
             logger.warning("Платформа: токен без подтверждения 2FA, user=%s", user.pk)
             return None
 
+        # Клеймы нужны и здесь: из них берётся `sid` — какая именно сессия
+        # действует. Без этого «выйти» не знало бы, что рвать.
+        user.token_claims = claims
         request.user = user
         return user

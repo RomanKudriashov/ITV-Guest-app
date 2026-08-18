@@ -211,3 +211,48 @@ test.describe('Меню отеля', () => {
     ).toHaveValue('салат', { timeout: 20_000 })
   })
 })
+
+test.describe('Списки отеля: персонал и номера', () => {
+  test('поиск фильтрует на сервере и переживает F5', async ({ page, request }) => {
+    const token = await request
+      .post(`${API}/api/staff/auth/login`, { data: ADMIN, headers: { 'X-Hotel-Subdomain': HOTEL } })
+      .then((r) => r.json())
+      .then((b) => b.access)
+    const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+
+    // Сервер действительно сужает выдачу, а не отдаёт всё подряд.
+    const allRooms = await request.get(`${API}/api/cms/rooms`, { headers }).then((r) => r.json())
+    const someRooms = await request
+      .get(`${API}/api/cms/rooms?search=30`, { headers })
+      .then((r) => r.json())
+    expect(someRooms.length).toBeLessThan(allRooms.length)
+    expect(someRooms.length).toBeGreaterThan(0)
+    for (const room of someRooms) {
+      expect(`${room.number}${room.floor}`).toContain('30')
+    }
+
+    await page.goto('/login')
+    await page.getByTestId('login-email').fill(ADMIN.email)
+    await page.getByTestId('login-password').fill(ADMIN.password)
+    await page.getByTestId('login-submit').click()
+    await expect(page).toHaveURL(/\/cms\//, { timeout: 20_000 })
+
+    await page.goto('/cms/rooms')
+    await expect(page.getByTestId('rooms-list')).toBeVisible({ timeout: 20_000 })
+
+    // Запрос уходит С ПОИСКОМ — иначе это фильтр только на вид.
+    const asked = page.waitForRequest(
+      (r) => r.url().includes('/cms/rooms') && r.url().includes('search=30'),
+      { timeout: 20_000 },
+    )
+    await page.getByTestId('rooms-search').fill('30')
+    await asked
+
+    await expect.poll(() => page.url()).toContain('search=30')
+    await page.reload()
+    await expect(
+      page.getByTestId('rooms-search'),
+      'поиск не пережил обновление страницы',
+    ).toHaveValue('30', { timeout: 20_000 })
+  })
+})

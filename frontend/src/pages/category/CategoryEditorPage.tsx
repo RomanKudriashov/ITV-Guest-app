@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -70,7 +70,18 @@ const ROOT = '__root__';
 export function CategoryEditorPage() {
   const { t } = useTranslation();
   const { id: routeId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  /**
+   * Заведение, внутри которого нажали «Добавить раздел».
+   *
+   * Экран редактора один на весь отель, а меню с R4 живёт внутри сервиса —
+   * значит принадлежность приходит адресом и никак иначе. Пусто — раздел
+   * уровня отеля (прежнее поведение).
+   */
+  const serviceId = searchParams.get('service_id');
+  const backPath = serviceId ? `/cms/services/${serviceId}` : '/cms/menu';
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -168,7 +179,11 @@ export function CategoryEditorPage() {
           ? inputToMinor(form.minOrderInput, minorUnits)
           : null,
       };
-      return categoryId ? updateCategory(categoryId, payload) : createCategory(payload);
+      // `service_id` — только при создании: сменить владельца раздела
+      // редактированием нельзя, и PATCH это поле не принимает.
+      return categoryId
+        ? updateCategory(categoryId, payload)
+        : createCategory(serviceId ? { ...payload, service_id: serviceId } : payload);
     },
     onSuccess: async (saved: Category) => {
       setServerErrors({});
@@ -176,7 +191,14 @@ export function CategoryEditorPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.categories });
       if (!categoryId) {
         setCategoryId(saved.id);
-        navigate(`/cms/menu/categories/${saved.id}`, { replace: true });
+        // Заведение остаётся в адресе: иначе «Назад» после сохранения уводит
+        // из сервиса в общее меню отеля — не туда, откуда пришли.
+        navigate(
+          serviceId
+            ? `/cms/menu/categories/${saved.id}?service_id=${serviceId}`
+            : `/cms/menu/categories/${saved.id}`,
+          { replace: true },
+        );
       }
     },
     onError: (error) => {
@@ -226,7 +248,7 @@ export function CategoryEditorPage() {
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/cms/menu')}
+          onClick={() => navigate(backPath)}
           data-testid="category-back-button"
         >
           {t('common.back')}

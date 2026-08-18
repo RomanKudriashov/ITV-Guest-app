@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { alpha, type Theme } from '@mui/material/styles';
 
-import { ApiError } from '@/api/client';
+import { ApiError, session } from '@/api/client';
 import { useAuth } from '@/auth';
 import {
   LANGUAGE_LABELS,
@@ -194,7 +194,14 @@ export function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  /*
+    Повод возврата на вход. Сессия, кончившаяся посреди работы, обязана
+    объясниться: без этого человек видит форму входа вместо своего экрана и
+    считает, что его «выкинуло» без причины.
+  */
+  const [error, setError] = useState<string | null>(
+    session.hasExpired() ? t('auth.sessionExpired') : null,
+  );
   const [busy, setBusy] = useState(false);
   const [langAnchor, setLangAnchor] = useState<HTMLElement | null>(null);
 

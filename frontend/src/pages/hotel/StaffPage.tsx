@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useListQuery } from '@/kit/list/useListQuery';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
@@ -84,7 +85,12 @@ export function StaffPage() {
   const [editing, setEditing] = useState<StaffMember | 'new' | null>(null);
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
 
-  const staffQuery = useQuery({ queryKey: queryKeys.staff, queryFn: fetchStaff });
+  // Поиск по имени и почте — в адресе, фильтрует сервер.
+  const { params, patch } = useListQuery({ search: '' });
+  const staffQuery = useQuery({
+    queryKey: [...queryKeys.staff, params.search],
+    queryFn: () => fetchStaff(params.search),
+  });
   // Отделы читаем из СЕРВИСОВ: с R4 ресурс CMS — заведение, исполнитель
   // живёт внутри него. Привязка сотрудника по-прежнему к точке исполнения.
   const departmentsQuery = useQuery({
@@ -137,6 +143,14 @@ export function StaffPage() {
                 {t('hotel.staff.subtitle')}
               </Typography>
             </Stack>
+            <TextField
+              size="small"
+              value={params.search}
+              onChange={(event) => patch({ search: event.target.value })}
+              placeholder={t('list.searchPlaceholder')}
+              inputProps={{ 'data-testid': 'staff-search' }}
+              sx={{ minWidth: 200, mr: 1 }}
+            />
             <Button
               variant="contained"
               startIcon={<AddIcon />}

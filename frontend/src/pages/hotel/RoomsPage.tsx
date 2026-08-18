@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useListQuery } from '@/kit/list/useListQuery';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
@@ -70,7 +71,16 @@ export function RoomsPage() {
   const [qrRoom, setQrRoom] = useState<Room | null>(null);
   const [printing, setPrinting] = useState(false);
 
-  const roomsQuery = useQuery({ queryKey: queryKeys.rooms, queryFn: fetchRooms });
+  /*
+    Поиск живёт В АДРЕСЕ и фильтрует НА СЕРВЕРЕ: ссылку на выборку можно
+    послать, F5 её не сбрасывает, а счётчик не врёт — отсев уже скачанного
+    списка показывал бы «найдено 2» независимо от того, сколько их в базе.
+  */
+  const { params, patch } = useListQuery({ search: '' });
+  const roomsQuery = useQuery({
+    queryKey: [...queryKeys.rooms, params.search],
+    queryFn: () => fetchRooms(params.search),
+  });
   const rooms = roomsQuery.data ?? [];
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.rooms });
@@ -165,7 +175,15 @@ export function RoomsPage() {
                 {t('hotel.rooms.subtitle')}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+              <TextField
+                size="small"
+                value={params.search}
+                onChange={(event) => patch({ search: event.target.value })}
+                placeholder={t('list.searchPlaceholder')}
+                inputProps={{ 'data-testid': 'rooms-search' }}
+                sx={{ minWidth: 200 }}
+              />
               <Button
                 startIcon={<PrintOutlinedIcon />}
                 disabled={printing}

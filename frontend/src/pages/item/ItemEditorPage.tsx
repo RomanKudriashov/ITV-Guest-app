@@ -53,6 +53,8 @@ import { SchedulePicker } from '@/components/SchedulePicker';
 import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import { useAuth } from '@/auth';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { flattenCategories } from '@/utils/categories';
 import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
@@ -225,6 +227,33 @@ export function ItemEditorPage() {
   const dirtyRef = useRef(false);
   const hydratedIdRef = useRef<string | null>(null);
 
+  /*
+    ЧЕРНОВИК. Сессия может умереть посреди правки — и до этого форма
+    размонтировалась вместе с набранным текстом. Ключ включает пользователя:
+    на общем компьютере чужое не всплывёт.
+  */
+  const { user } = useAuth();
+  const draft = useFormDraft<{
+    form: ItemForm;
+    groups: DraftGroup[];
+    fields: DraftField[];
+    badgeIds: string[];
+  }>({
+    scope: 'cms',
+    userId: user?.id,
+    screen: `item:${routeId ?? 'new'}`,
+  });
+  const draftAppliedRef = useRef(false);
+  /*
+    Сохранение прошло, а свежие данные ещё не приехали.
+
+    В этом окне форма ВСЁ ЕЩЁ считается грязной — baseline остался от прежних
+    значений, — и эффект записи успевал вернуть черновик сразу после того, как
+    его стёрли. Флаг держит запись выключенной, пока baseline не догонит; его
+    снимает та же гидратация, что и обновляет baseline.
+  */
+  const justSavedRef = useRef(false);
+
   /** Snapshot used for the "unsaved changes" indicator. */
   const snapshot = useMemo(
     () => JSON.stringify({ form, images: persistableImageIds(images), groups, fields, badgeIds }),
@@ -245,6 +274,9 @@ export function ItemEditorPage() {
     if (!item) return;
     if (hydratedIdRef.current === item.id && dirtyRef.current) return;
     hydratedIdRef.current = item.id;
+    // Свежие данные пришли — baseline сейчас догонит, запись черновика снова
+    // имеет смысл.
+    justSavedRef.current = false;
     const nextForm = formFromItem(item, minorUnits);
     const nextImages = (item.images ?? []).map(mediaToEditable);
     const nextGroups = groupsToDrafts(item.modifier_groups, minorUnits);
@@ -264,7 +296,21 @@ export function ItemEditorPage() {
         badgeIds: nextBadgeIds,
       }),
     );
-  }, [itemQuery.data, minorUnits]);
+
+    // Отложенное возвращается ПОВЕРХ пришедшего с сервера — иначе оно
+    // потерялось бы ровно в тот момент, когда его и восстанавливают. Один
+    // раз на открытие экрана: дальше правит человек.
+    if (!draftAppliedRef.current) {
+      draftAppliedRef.current = true;
+      const kept = draft.restore();
+      if (kept) {
+        setForm(kept.form);
+        setGroups(kept.groups);
+        setFields(kept.fields);
+        setBadgeIds(kept.badgeIds);
+      }
+    }
+  }, [itemQuery.data, minorUnits, draft]);
 
   // Preselect the category for a brand-new item.
   useEffect(() => {
@@ -285,6 +331,38 @@ export function ItemEditorPage() {
 
   const isDirty = baseline !== '' && snapshot !== baseline;
   dirtyRef.current = isDirty;
+
+  /*
+    ЧЕРНОВИК: поднять отложенное и писать новое.
+
+    Для НОВОЙ позиции подъём идёт здесь — у неё нет ответа сервера, после
+    которого можно было бы встроиться, зато есть момент, когда выставлен
+    baseline. Для существующей подъём уже случился при гидратации.
+  */
+  useEffect(() => {
+    if (draftAppliedRef.current || !isNew || !baseline) return;
+    draftAppliedRef.current = true;
+    const kept = draft.restore();
+    if (kept) {
+      setForm(kept.form);
+      setGroups(kept.groups);
+      setFields(kept.fields);
+      setBadgeIds(kept.badgeIds);
+    }
+  }, [isNew, baseline, draft]);
+
+  // Пишем, пока есть несохранённое. Картинки не кладём: они уже на сервере и
+  // живут своими идентификаторами, копировать их в черновик незачем.
+  useEffect(() => {
+    if (!draftAppliedRef.current || justSavedRef.current) return;
+    // ИНВАРИАНТ: черновик существует ровно тогда, когда есть несохранённое.
+    // Держать его «до следующего сохранения» не выйдет — форма считается
+    // чистой не мгновенно, а когда доедут свежие данные, и в это окно запись
+    // успевала вернуть только что стёртое. Симметричная пара save/discard в
+    // одном эффекте закрывает окно с обеих сторон.
+    if (isDirty) draft.save({ form, groups, fields, badgeIds });
+    else draft.discard();
+  }, [isDirty, form, groups, fields, badgeIds, draft]);
 
   /* ── Validation ─────────────────────────────────────────────────────── */
 
@@ -424,6 +502,10 @@ export function ItemEditorPage() {
       // коды, single ⇒ max_choices=1, required ⇒ min_choices≥1.
       dirtyRef.current = false;
       hydratedIdRef.current = null;
+      // Сохранили — черновик отслужил. Оставить его значило бы однажды
+      // «вернуть» правки поверх уже сохранённого.
+      justSavedRef.current = true;
+      draft.discard();
       void queryClient.invalidateQueries({ queryKey: queryKeys.categories });
       void queryClient.invalidateQueries({ queryKey: ['cms', 'items'] });
 

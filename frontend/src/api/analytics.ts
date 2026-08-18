@@ -1,5 +1,5 @@
 /** One function per endpoint of `docs/analytics-api-contract.md`. */
-import { api } from './client';
+import { api, requestFile } from './client';
 import type {
   AnalyticsQuery,
   AnalyticsScope,
@@ -67,4 +67,15 @@ export function requestExport(
 /** Poll a queued export until it reports `ready` (or `failed`). */
 export function fetchExportJob(id: string): Promise<ExportJob> {
   return api.get<ExportJob>(`${BASE}/export/${id}`);
+}
+
+/**
+ * Забрать готовый файл — запросом с токеном, а не переходом по ссылке.
+ * Имя приходит из Content-Disposition; `fallbackName` — если его нет.
+ */
+export function fetchExportFile(
+  id: string,
+  fallbackName: string,
+): Promise<{ blob: Blob; filename: string }> {
+  return requestFile(`${BASE}/export/${id}/download`, { fallbackName });
 }

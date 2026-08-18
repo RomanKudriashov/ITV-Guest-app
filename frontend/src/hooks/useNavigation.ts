@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { api } from '@/api/client';
+import { ApiError, api } from '@/api/client';
 
 /**
  * Разделы CMS приходят С СЕРВЕРА.
@@ -33,5 +33,17 @@ export function useNavigation() {
     // Модули и роль за сессию не меняются; лишний запрос на каждый переход
     // между экранами тут ничего не уточнит.
     staleTime: 5 * 60 * 1000,
+    // Отказ по правам повтором не лечится: у линейного сотрудника раздела нет
+    // и через три попытки. Три лишних круга с паузами — это только задержка
+    // перед тем, как показать ему отказ.
+    retry: (count, error) =>
+      error instanceof ApiError && error.status >= 400 && error.status < 500
+        ? false
+        : count < 3,
   });
+}
+
+/** Раздел закрыт ролью — не «не загрузилось», а «сюда нельзя». */
+export function isForbidden(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 403;
 }

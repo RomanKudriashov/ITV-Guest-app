@@ -19,8 +19,8 @@ router = Router(tags=["cms:hotel-admin"])
 
 
 @router.get("/staff", summary="Список сотрудников")
-def list_staff(request: HttpRequest):
-    return staff_svc.list_staff()
+def list_staff(request: HttpRequest, search: str = ""):
+    return staff_svc.list_staff(search=search)
 
 
 @router.post("/staff", response={201: dict}, summary="Создать сотрудника")
@@ -31,7 +31,12 @@ def create_staff(request: HttpRequest, payload: StaffIn):
 @router.patch("/staff/{user_id}", summary="Изменить сотрудника")
 def update_staff(request: HttpRequest, user_id: str, payload: StaffPatch):
     user = staff_svc.update_staff(
-        user_id, payload.dict(exclude_unset=True), acting_user_id=request.user.pk
+        user_id,
+        payload.dict(exclude_unset=True),
+        acting_user_id=request.user.pk,
+        # Какая сессия действует — чтобы смена СВОЕГО пароля не выкинула того,
+        # кто её делает, вместе со всеми остальными.
+        current_session_id=(getattr(request.user, "token_claims", None) or {}).get("sid"),
     )
     return staff_svc.serialize_staff(user)
 

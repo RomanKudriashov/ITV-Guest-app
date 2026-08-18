@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAppTheme } from '@/theme';
 import { adminCssVars, accent, ink, pageBackground, panelSx, primaryButtonSx } from './adminTokens';
-import { platformLogin, PlatformError } from './adminClient';
+import { platformLogin, platformSession, PlatformError } from './adminClient';
 
 /**
  * Вход в корневую админку.
@@ -25,7 +25,11 @@ export function AdminLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [needsCode, setNeedsCode] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Тот же повод, что и в CMS: сессия, кончившаяся посреди работы, называет
+  // себя, а не возвращает молча к форме.
+  const [error, setError] = useState<string | null>(
+    platformSession.hasExpired() ? t('auth.sessionExpired') : null,
+  );
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {

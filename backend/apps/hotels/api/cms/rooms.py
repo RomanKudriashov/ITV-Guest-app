@@ -14,8 +14,8 @@ router = Router(tags=["cms:hotel-admin"])
 
 
 @router.get("/rooms", response=list[RoomOut], summary="Список номеров")
-def list_rooms(request: HttpRequest):
-    return svc.list_rooms()
+def list_rooms(request: HttpRequest, search: str = ""):
+    return svc.list_rooms(search=search)
 
 
 @router.post("/rooms", response={201: RoomOut}, summary="Добавить номер")

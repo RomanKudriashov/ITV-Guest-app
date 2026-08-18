@@ -17,6 +17,8 @@ import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
+import { ModulePendingPage } from '@/pages/ModulePendingPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 import { RoomControlPage } from '@/cms/roomControl/RoomControlPage';
 import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
 import { AdminApp } from '@/admin/AdminApp';
@@ -86,6 +88,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/cms/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
+      // Профиль сотрудника: его собственные входы. Не в настройках отеля —
+      // те открыты только администратору, а сессии есть у каждого.
+      { path: 'profile', element: <ProfilePage /> },
 
       // Структура отеля: сервисы верхним уровнем, меню — внутри сервиса.
       { path: 'services', element: <ServicesPage /> },
@@ -113,6 +118,12 @@ export const router = createBrowserRouter([
       // но маршрут существует всегда — иначе прямая ссылка ломалась бы молча.
       { path: 'marketing', element: <BadgesPage /> },
       { path: 'room-control', element: <RoomControlPage /> },
+      // Эти три навигация показывает, а экранов под них ещё нет. Без маршрута
+      // адрес проваливался в корневую ветку и уезжал на гостевую главную —
+      // админ из своей панели попадал к гостю.
+      { path: 'pms', element: <ModulePendingPage moduleKey="pms" /> },
+      { path: 'payments', element: <ModulePendingPage moduleKey="payments" /> },
+      { path: 'mobile-key', element: <ModulePendingPage moduleKey="mobileKey" /> },
 
       // Служебное: витрина отдельным адресом больше не нужна (слита с брендом),
       // старые ссылки уводим туда же, а не в 404.
@@ -123,6 +134,14 @@ export const router = createBrowserRouter([
       { path: 'badges', element: <Navigate to="/cms/marketing" replace /> },
       { path: 'quick-actions', element: <QuickActionsPage /> },
       { path: 'styleguide', element: <StyleguidePage /> },
+
+      // СТОРОЖ: из /cms не выпадают к гостю.
+      //
+      // У ветки не было своего `*`, и любой неизвестный адрес под /cms
+      // доезжал до корневой ветки, где `*` уводит на `/` — то есть на вход
+      // гостя, а с живой сессией сразу на /home. Так «PMS» из меню админа
+      // открывал гостевую главную. Возврат в дашборд — на своей территории.
+      { path: '*', element: <Navigate to="/cms/dashboard" replace /> },
     ],
   },
   {

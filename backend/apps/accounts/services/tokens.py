@@ -33,6 +33,7 @@ def encode_staff_token(
     grant_id: uuid.UUID | None = None,
     ttl_minutes: int | None = None,
     mfa: bool = False,
+    session_id: uuid.UUID | str | None = None,
 ) -> str:
     """
     `imp` — клейм impersonation. Он попадает и в аудит: действие поддержки от
@@ -67,6 +68,11 @@ def encode_staff_token(
         payload["gid"] = str(grant_id)
     if mfa:
         payload["mfa"] = True
+    # Какой сессии принадлежит токен. Нужен, чтобы «выйти» знало, что рвать, а
+    # смена пароля — что оставить. У входа под аудитом сессии нет: он живёт
+    # своим грантом (`gid`) и рефрешу не подлежит.
+    if session_id:
+        payload["sid"] = str(session_id)
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -81,14 +87,47 @@ def decode_staff_token(token: str) -> dict[str, Any]:
         raise TokenError("Некорректный токен") from exc
 
 
-def encode_refresh_token(user) -> str:
+def encode_refresh_token(
+    user, *, scope: str | None = None, session_id: uuid.UUID | str | None = None
+) -> str:
+    """
+    Долгоживущий токен ОБНОВЛЕНИЯ. Обменивается на access и на себя же —
+    скользящее окно: активность продлевает, неделя молчания заканчивает.
+
+    `scope` вшит намеренно: refresh сотрудника не должен обмениваться на
+    платформенный access, и наоборот. Раньше поля не было — и не было
+    эндпоинта обмена, так что вопрос не вставал.
+
+    `sid` — строка реестра сессий: по ней обмен проверяет, что сессию не
+    оборвали выходом.
+    """
     issued = _now()
     payload = {
         "sub": str(user.pk),
         "typ": "refresh",
+        "scope": scope
+        or ("platform" if user.is_platform_admin and not user.hotel_id else "staff"),
+        # Отель — чтобы refresh нельзя было предъявить чужому тенанту.
+        "hotel": str(user.hotel_id) if user.hotel_id else None,
+        # Ссылка на строку реестра. Отзыв решается ЕЮ, а не отпечатком пароля:
+        # отпечаток рвал все сессии разом, включая ту, из которой пароль
+        # меняли, и «выйти на этом устройстве» им было не выразить.
+        "sid": str(session_id) if session_id else None,
         "iat": int(issued.timestamp()),
         "exp": int(
             (issued + timedelta(days=settings.JWT_REFRESH_TTL_DAYS)).timestamp()
         ),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_refresh_token(token: str) -> dict[str, Any]:
+    """
+    Разбор refresh. Отдельно от access: подпись общая, а смысл разный, и
+    принять access там, где ждут refresh, значило бы дать часовому токену
+    недельную силу.
+    """
+    claims = decode_staff_token(token)
+    if claims.get("typ") != "refresh":
+        raise TokenError("Это не токен обновления")
+    return claims

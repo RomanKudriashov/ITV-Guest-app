@@ -253,3 +253,77 @@ def test_active_sessions_are_listed(api, hotel, client):
 
     api("post", f"/impersonations/{granted['grant_id']}/revoke")
     assert all(r["id"] != granted["grant_id"] for r in api("get", "/impersonations").json())
+
+
+# --- 5. Рефреш не продлевает вход под аудитом -------------------------------
+
+
+def test_support_session_gets_no_refresh_token(api, hotel, client):
+    """
+    Обмен кода отдаёт ОДИН access и ничего больше.
+
+    У входа под аудитом свой срок — срок гранта, и продлевать его нечем: это
+    условие механизма, а не деталь. Появись здесь refresh — сессия поддержки
+    жила бы неделю наравне с обычной, и «вошли на полчаса» превратилось бы в
+    обещание, которого никто не проверяет.
+    """
+    granted = _enter(api, hotel)
+    body = _exchange(client, hotel, granted["code"]).json()
+
+    assert body["access"]
+    assert "refresh" not in body, f"входу под аудитом выдан refresh: {body}"
+
+
+def test_support_session_cannot_be_extended_through_refresh(api, hotel, client):
+    """
+    Даже предъявив свой access ручке обновления, поддержка не получает пару.
+
+    Проверяется поведением: сначала токен работает, потом им же стучимся в
+    /auth/refresh — и получаем отказ, а не новую неделю.
+    """
+    granted = _enter(api, hotel)
+    token = _exchange(client, hotel, granted["code"]).json()["access"]
+
+    assert _cms(client, hotel, token).status_code == 200
+
+    refreshed = client.post(
+        "/api/v1/staff/auth/refresh",
+        data=json.dumps({"refresh": token}),
+        content_type="application/json",
+        HTTP_HOST=host_for(hotel),
+    )
+    assert refreshed.status_code == 401, refreshed.content
+    assert refreshed.json()["code"] == "session_expired"
+
+
+def test_support_session_dies_when_its_grant_expires(api, hotel, client):
+    """
+    Грант вышел по сроку — токен мёртв, и никакое обновление его не воскрешает.
+
+    Срок двигаем в базе, а не ждём полчаса: проверяется правило, а не часы.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+
+    granted = _enter(api, hotel)
+    token = _exchange(client, hotel, granted["code"]).json()["access"]
+    assert _cms(client, hotel, token).status_code == 200
+
+    # Через тенант-контекст: грант лежит в тенантной таблице под RLS, и
+    # `all_objects` из платформенного скоупа до него не дотягивается — на этом
+    # же месте оступается и рабочий код отзыва (он ходит `.using("platform")`).
+    with tenant_context(hotel):
+        ImpersonationGrant.all_objects.filter(pk=granted["grant_id"]).update(
+            expires_at=timezone.now() - timedelta(minutes=1)
+        )
+
+    # Сам токен больше не пускает.
+    assert _cms(client, hotel, token).status_code == 401
+    # И обменять его на новую пару тоже нельзя.
+    refreshed = client.post(
+        "/api/v1/staff/auth/refresh",
+        data=json.dumps({"refresh": token}),
+        content_type="application/json",
+        HTTP_HOST=host_for(hotel),
+    )
+    assert refreshed.status_code == 401

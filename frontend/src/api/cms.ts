@@ -61,6 +61,36 @@ export function exchangeSupportCode(code: string): Promise<{ access: string; exp
   });
 }
 
+/* ── Сессии персонала ──────────────────────────────────────────────────── */
+
+export interface StaffSessionRow {
+  id: string;
+  created_at: string;
+  last_seen_at: string;
+  expires_at: string;
+  user_agent: string;
+  ip: string | null;
+  is_current: boolean;
+}
+
+export function fetchSessions(): Promise<StaffSessionRow[]> {
+  return api.get<StaffSessionRow[]>('/staff/auth/sessions');
+}
+
+export function closeSession(id: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/staff/auth/sessions/${id}`, { method: 'DELETE' });
+}
+
+/** Выйти на этом устройстве — рвёт только текущую сессию. */
+export function logoutHere(): Promise<{ ok: boolean }> {
+  return api.post<{ ok: boolean }>('/staff/auth/logout');
+}
+
+/** Выйти везде — все сессии учётки, включая текущую. */
+export function logoutEverywhere(): Promise<{ ok: boolean; closed: number }> {
+  return api.post<{ ok: boolean; closed: number }>('/staff/auth/logout-all');
+}
+
 export function fetchMe(): Promise<MeResponse> {
   return api.get<MeResponse>('/staff/auth/me');
 }

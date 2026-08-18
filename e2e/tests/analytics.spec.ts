@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { expect, test, type Page } from '@playwright/test'
 
 import { ADMIN } from './helpers'
@@ -51,15 +53,62 @@ test.describe('CMS Аналитика', () => {
       timeout: 15_000,
     })
 
-    // --- Экспорт: считается фоном и доходит до готового --------------------
-    // Кнопка открывает меню форматов; выбираем CSV.
+    // --- Экспорт: считается фоном И ДОХОДИТ ДО ФАЙЛА -----------------------
+    //
+    // Раньше здесь кончалась проверка на строке статуса «Готово · N строк» —
+    // и она была честной ровно наполовину: срез действительно считался, а файл
+    // не скачивался вовсе. Скачивание шло голой ссылкой, без токена, сервер
+    // отвечал 401, и браузер сохранял тело отказа как «download.json».
+    // Статус при этом рапортовал успех. Теперь ждём САМ ФАЙЛ.
+    const downloadPromise = page.waitForEvent('download', { timeout: 60_000 })
     await page.getByTestId('analytics-export-button').click()
     await page.getByTestId('analytics-export-format-csv').click()
     const status = page.getByTestId('analytics-export-status')
     await expect(status).toBeVisible({ timeout: 15_000 })
-    // Готово: строка статуса показывает число строк (readyShort), а кнопка
-    // снова активна — экспорт не блокировал страницу.
+
+    const download = await downloadPromise
+    // Имя говорит, что это: отель, тип выгрузки, период.
+    expect(
+      download.suggestedFilename(),
+      'имя файла должно называть отель, тип выгрузки и период',
+    ).toMatch(/^crystal-\w+-.+\.csv$/)
+    // И это НЕ тело отказа: файл непустой и начинается заголовками CSV.
+    const path = await download.path()
+    expect(path, 'файл не сохранился').toBeTruthy()
+    const body = readFileSync(path!, 'utf8')
+    expect(body.length, 'скачался пустой файл').toBeGreaterThan(0)
+    expect(body, 'вместо CSV скачалось тело ошибки').not.toContain('detail')
+
     await expect(status).toContainText(/\d/, { timeout: 30_000 })
     await expect(page.getByTestId('analytics-export-button')).toBeEnabled({ timeout: 30_000 })
+  })
+
+  test('сервер отказал на скачивании — это видно, а не выдано за успех', async ({ page }) => {
+    await openAnalytics(page)
+
+    // Срез считается как обычно, ломается ровно отдача файла.
+    await page.route('**/analytics/export/*/download', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: '{"detail":"relation does not exist"}',
+      }),
+    )
+
+    let downloaded = false
+    page.on('download', () => {
+      downloaded = true
+    })
+
+    await page.getByTestId('analytics-export-button').click()
+    await page.getByTestId('analytics-export-format-csv').click()
+
+    // Отказ назван — и назван на СКАЧИВАНИИ, а не «ошибкой экспорта»: срез
+    // посчитан, не доехал именно файл.
+    await expect(page.getByTestId('analytics-export-status')).toHaveText(/скачал/i, {
+      timeout: 45_000,
+    })
+    // И браузеру не подсунули тело ошибки под видом файла.
+    expect(downloaded, 'сохранён файл, которого нет: это и был «download.json»').toBe(false)
   })
 })

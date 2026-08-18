@@ -52,12 +52,19 @@ def serialize_staff(user: User) -> dict:
     }
 
 
-def list_staff() -> list[dict]:
+def list_staff(*, search: str = "") -> list[dict]:
+    """
+    Поиск по ИМЕНИ и ПОЧТЕ — по ним сотрудника и вспоминают. По должности или
+    отделу не ищем: их выбирают фильтром, а не набирают руками.
+    """
+    from apps.core.listing import search as apply_search
+
     users = (
         User.objects.filter(is_staff_member=True)
         .prefetch_related("assignments__execution_point")
         .order_by("full_name", "email")
     )
+    users = apply_search(users, search, ("full_name", "email"))
     managed = managed_point_ids_or_none()
     if managed is not None:
         # Управляющий распоряжается СВОИМ персоналом — теми, кто работает в его
@@ -171,7 +178,7 @@ def create_staff(data: dict) -> User:
 
 
 @transaction.atomic
-def update_staff(user_id, data: dict, *, acting_user_id=None) -> User:
+def update_staff(user_id, data: dict, *, acting_user_id=None, current_session_id=None) -> User:
     user = get_staff(user_id)
 
     if "email" in data:
@@ -195,11 +202,27 @@ def update_staff(user_id, data: dict, *, acting_user_id=None) -> User:
             _guard_self(user, acting_user_id, "деактивировать")
         user.is_active = data["is_active"]
     # Пустой пароль в PATCH — «не менять», как маска секрета у каналов.
-    if data.get("password"):
+    password_changed = bool(data.get("password"))
+    if password_changed:
         _validate_password(data["password"])
         user.password = make_password(data["password"])
 
     user.save()
+
+    if password_changed:
+        # Смена пароля закрывает сессии — все, кроме той, из которой её и
+        # сделали. Раньше это решал отпечаток пароля в токене: он рвал ВСЁ
+        # разом, и человек, сменивший себе пароль, выкидывал сам себя с
+        # экрана, где только что подтвердил, что это он.
+        #
+        # `keep` действует, только когда пароль меняют СЕБЕ. Если админ отеля
+        # правит чужую учётку, оставлять нечего: его собственная сессия и так
+        # не в этом наборе, а все сессии сотрудника обязаны закрыться —
+        # смена пароля админом это, как правило, ответ на инцидент.
+        from apps.accounts.services import sessions as session_svc
+
+        keep = current_session_id if str(acting_user_id) == str(user.pk) else None
+        session_svc.revoke_all(user.pk, keep=keep)
     if "assignments" in data:
         _replace_assignments(user, data["assignments"])
     return get_staff(user.pk)

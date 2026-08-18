@@ -86,8 +86,8 @@ def create_guest_session(
     return IssuedGuestSession(session=session, token=raw_token)
 
 
-def authenticate_staff_credentials(email: str, password: str) -> dict:
-    """Логин сотрудника в рамках текущего отеля."""
+def authenticate_staff_credentials(email: str, password: str, *, request=None) -> dict:
+    """Логин сотрудника в рамках текущего отеля. `request` — чем и откуда вошли."""
     hotel_id = require_hotel_id()
     user = User.objects.filter(email=email.strip().lower(), is_active=True).first()
     if user is None or user.hotel_id != hotel_id:
@@ -98,10 +98,91 @@ def authenticate_staff_credentials(email: str, password: str) -> dict:
     execution_point_ids = list(
         user.assignments.filter(is_active=True).values_list("execution_point_id", flat=True)
     )
+    from apps.accounts.services import sessions as session_svc
+
+    session = session_svc.open_session(user, scope="staff", request=request)
     return {
-        "access": encode_staff_token(user, execution_point_ids=execution_point_ids),
-        "refresh": encode_refresh_token(user),
+        "access": encode_staff_token(
+            user, execution_point_ids=execution_point_ids, session_id=session.pk
+        ),
+        "refresh": encode_refresh_token(user, session_id=session.pk),
         "user_id": str(user.pk),
+    }
+
+
+def refresh_session(refresh_token: str, *, scope: str, hotel_id=None) -> dict:
+    """
+    Обменять refresh на новую пару. ОДНА реализация на консоль и на CMS.
+
+    Скользящее окно: вместе с access выдаётся новый refresh, поэтому активность
+    продлевает сессию, а неделя молчания её заканчивает — отдельного «времени
+    последней активности» на сервере для этого не нужно.
+
+    Отказы намеренно неразличимы снаружи («Сессия истекла, войдите заново»):
+    подсказывать, ЧЕМ именно не подошёл предъявленный токен, — значит помогать
+    тому, кто его подбирает.
+    """
+    from apps.accounts.services import sessions as session_svc
+    from apps.accounts.services.tokens import (
+        TokenError,
+        decode_refresh_token,
+        encode_refresh_token,
+        encode_staff_token,
+    )
+
+    expired = AuthenticationFailed("Сессия истекла, войдите заново")
+
+    try:
+        claims = decode_refresh_token(refresh_token or "")
+    except TokenError as exc:
+        raise expired from exc
+
+    if claims.get("scope") != scope:
+        # Refresh сотрудника не обменивается на платформенный доступ и наоборот.
+        raise expired
+
+    if scope == "staff":
+        if hotel_id is None or str(claims.get("hotel")) != str(hotel_id):
+            # Чужой поддомен — не наша сессия.
+            raise expired
+        user = User.objects.filter(pk=claims["sub"], is_active=True).first()
+        if user is None or str(user.hotel_id) != str(hotel_id):
+            raise expired
+        execution_point_ids = list(
+            user.assignments.filter(is_active=True).values_list("execution_point_id", flat=True)
+        )
+        session = session_svc.get_active(claims.get("sid"), user_id=user.pk, scope=scope)
+        if session is None:
+            # Сессию оборвали выходом, «выйти везде» или сменой пароля — либо
+            # токен выписан до появления реестра. Обменивать нечего.
+            raise expired
+        access = encode_staff_token(
+            user, execution_point_ids=execution_point_ids, session_id=session.pk
+        )
+    else:
+        from apps.core.context import platform_scope
+
+        with platform_scope():
+            user = (
+                User.all_objects.using("platform")
+                .filter(pk=claims["sub"], is_active=True, is_platform_admin=True)
+                .first()
+            )
+        if user is None:
+            raise expired
+        session = session_svc.get_active(claims.get("sid"), user_id=user.pk, scope=scope)
+        if session is None:
+            raise expired
+        # Второй фактор переносится в новый access: обновление НЕ обходит 2FA,
+        # но и не требует вводить код каждый час.
+        access = encode_staff_token(user, mfa=user.totp_enabled, session_id=session.pk)
+
+    # Активность продлевает и строку реестра: скользящее окно считается в
+    # одном месте с тем, что записано в токене.
+    session_svc.touch(session)
+    return {
+        "access": access,
+        "refresh": encode_refresh_token(user, scope=scope, session_id=session.pk),
     }
 
 

@@ -293,3 +293,15 @@ def category_id(cms):
     """id категории «Горячее» демо-отеля."""
     tree = cms.get("/api/cms/categories").json()
     return next(node["id"] for node in tree if node["code"] == "hot")
+
+
+@pytest.fixture
+def service_id(cms):
+    """
+    id кухни «Панорама» — заведение по умолчанию для создаваемых разделов.
+
+    Раздел без заведения не создаётся: заведение даёт исполнителя, а без
+    исполнителя раздел не доезжает ни до витрины гостя, ни до доски.
+    """
+    services = cms.get("/api/cms/services").json()
+    return next(entry["id"] for entry in services if entry["code"] == "kitchen")

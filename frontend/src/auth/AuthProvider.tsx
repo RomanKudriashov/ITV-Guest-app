@@ -10,7 +10,13 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 
 import { setUnauthorizedHandler, tokenStorage } from '@/api/client';
-import { exchangeSupportCode, fetchMe, login as loginRequest, normalizeMe } from '@/api/cms';
+import {
+  exchangeSupportCode,
+  fetchMe,
+  login as loginRequest,
+  logoutHere,
+  normalizeMe,
+} from '@/api/cms';
 import type { HotelInfo, StaffUser } from '@/api/types';
 import { useAppTheme } from '@/theme';
 
@@ -52,6 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    // Сначала рвём сессию НА СЕРВЕРЕ, потом чистим браузер. Без первого
+    // «выйти» означало только «забыть токены здесь»: копия refresh, снятая
+    // заранее, работала бы ещё неделю.
+    //
+    // Ответа не ждём и отказ проглатываем: выйти человек должен и без сети.
+    // Серверная строка в этом случае доживёт свой срок сама.
+    void logoutHere().catch(() => undefined);
     tokenStorage.clear();
     setToken(null);
     setUser(null);

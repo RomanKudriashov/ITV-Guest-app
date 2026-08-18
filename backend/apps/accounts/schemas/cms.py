@@ -97,3 +97,9 @@ class SupportExchangeIn(Schema):
     """Одноразовый код входа поддержки. Приходит ТЕЛОМ, а не в адресе."""
 
     code: str
+
+
+class RefreshIn(Schema):
+    """Токен обновления. Телом, а не заголовком: это не доступ, а обмен."""
+
+    refresh: str
