@@ -3,17 +3,13 @@ import { useMutation } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, primaryButtonSx, state } from './adminTokens';
+import { ink, primaryButtonSx, quietButtonSx, state, typo } from './adminTokens';
+import { AdminDialog, Field, FormCell, FormGrid } from './form';
 import { enterHotel, PlatformError, type EnterResult } from './adminClient';
 
 const TTL_CHOICES = [15, 30, 60];
@@ -52,49 +48,60 @@ export function EnterHotelDialog({
   }
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth data-testid="admin-enter-dialog">
-      <DialogTitle>{t('admin.enter.title', { hotel: hotelName })}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography sx={{ fontSize: 12.5, color: ink.mid }}>{t('admin.enter.hint')}</Typography>
-          {error ? <Alert severity="error" data-testid="admin-enter-error">{error}</Alert> : null}
-          <TextField
-            label={t('admin.enter.reason')}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            multiline
-            minRows={2}
-            inputProps={{ 'data-testid': 'admin-enter-reason' }}
-          />
-          <TextField
-            select
-            label={t('admin.enter.ttl')}
-            value={ttl}
-            onChange={(e) => setTtl(Number(e.target.value))}
-            SelectProps={{ inputProps: { 'data-testid': 'admin-enter-ttl' } }}
+    <AdminDialog
+      testId="admin-enter-dialog"
+      title={t('admin.enter.title', { hotel: hotelName })}
+      subtitle={t('admin.enter.hint')}
+      onClose={onClose}
+      actions={
+        <>
+          <Button onClick={onClose} sx={quietButtonSx}>
+            {t('admin.actions.cancel')}
+          </Button>
+          <Button
+            disabled={reason.trim().length < 3 || enter.isPending}
+            onClick={() => enter.mutate()}
+            data-testid="admin-enter-submit"
+            sx={primaryButtonSx}
           >
-            {TTL_CHOICES.map((minutes) => (
-              <MenuItem key={minutes} value={minutes}>
-                {t('admin.enter.minutes', { minutes })}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={{ color: ink.mid }}>
-          {t('admin.actions.cancel')}
-        </Button>
-        <Button
-          disabled={reason.trim().length < 3 || enter.isPending}
-          onClick={() => enter.mutate()}
-          data-testid="admin-enter-submit"
-          sx={primaryButtonSx}
+            {t('admin.enter.submit')}
+          </Button>
+        </>
+      }
+    >
+      <FormGrid>
+        {error ? (
+          <FormCell>
+            <Alert severity="error" data-testid="admin-enter-error">
+              {error}
+            </Alert>
+          </FormCell>
+        ) : null}
+        <Field
+          span={12}
+          label={t('admin.enter.reason')}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          multiline
+          minRows={2}
+          inputProps={{ 'data-testid': 'admin-enter-reason' }}
+        />
+        <Field
+          span={6}
+          select
+          label={t('admin.enter.ttl')}
+          value={ttl}
+          onChange={(e) => setTtl(Number(e.target.value))}
+          SelectProps={{ inputProps: { 'data-testid': 'admin-enter-ttl' } }}
         >
-          {t('admin.enter.submit')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          {TTL_CHOICES.map((minutes) => (
+            <MenuItem key={minutes} value={minutes}>
+              {t('admin.enter.minutes', { minutes })}
+            </MenuItem>
+          ))}
+        </Field>
+      </FormGrid>
+    </AdminDialog>
   );
 }
 
@@ -120,49 +127,56 @@ function GrantedView({
   const expired = left <= 0;
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth data-testid="admin-enter-granted">
-      <DialogTitle>{t('admin.enter.grantedTitle', { hotel: hotelName })}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <Typography sx={{ fontSize: 12.5, color: ink.mid }}>
-            {t('admin.enter.asUser', { email: granted.as_user })}
-          </Typography>
-          <Typography
-            data-testid="admin-enter-timer"
-            sx={{ fontSize: 18, fontWeight: 800, color: expired ? state.bad : state.warn }}
+    <AdminDialog
+      testId="admin-enter-granted"
+      title={t('admin.enter.grantedTitle', { hotel: hotelName })}
+      subtitle={t('admin.enter.asUser', { email: granted.as_user })}
+      onClose={onClose}
+      actions={
+        <>
+          <Button onClick={onClose} sx={quietButtonSx}>
+            {t('admin.actions.done')}
+          </Button>
+          <Button
+            disabled={expired}
+            onClick={() => {
+              // Код уходит в ХЭШ-ФРАГМЕНТЕ, а не в строке запроса. Фрагмент
+              // браузер вообще не отправляет на сервер: его нет ни в логах
+              // прокси, ни в `Referer`. CMS обменяет его на токен запросом с
+              // телом и сразу вычистит из истории.
+              //
+              // Сам код одноразовый и живёт минуту: даже утёкший, повторно он
+              // сессии не откроет.
+              const url = `${granted.cms_url}#support=${encodeURIComponent(granted.code)}`;
+              window.open(url, '_blank', 'noreferrer');
+            }}
+            data-testid="admin-enter-open"
+            sx={primaryButtonSx}
           >
-            {expired ? t('admin.enter.expired') : t('admin.enter.left', { time: format(left) })}
-          </Typography>
-          <Alert severity="info" data-testid="admin-enter-audited">
-            {t('admin.enter.audited')}
-          </Alert>
-          <Box sx={{ fontSize: 12, color: ink.low }}>{granted.cms_url}</Box>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={{ color: ink.mid }}>
-          {t('admin.actions.done')}
-        </Button>
-        <Button
-          disabled={expired}
-          onClick={() => {
-            // Код уходит в ХЭШ-ФРАГМЕНТЕ, а не в строке запроса. Фрагмент
-            // браузер вообще не отправляет на сервер: его нет ни в логах
-            // прокси, ни в `Referer`. CMS обменяет его на токен запросом с
-            // телом и сразу вычистит из истории.
-            //
-            // Сам код одноразовый и живёт минуту: даже утёкший, повторно он
-            // сессии не откроет.
-            const url = `${granted.cms_url}#support=${encodeURIComponent(granted.code)}`;
-            window.open(url, '_blank', 'noreferrer');
-          }}
-          data-testid="admin-enter-open"
-          sx={primaryButtonSx}
+            {t('admin.enter.open')}
+          </Button>
+        </>
+      }
+    >
+      <Stack spacing={1.75}>
+        {/*
+          Таймер — крупным числом и в дисплейной гарнитуре: это единственное,
+          ради чего экран открыт после выдачи доступа.
+        */}
+        <Typography
+          data-testid="admin-enter-timer"
+          sx={{ ...typo.metric, fontSize: 24, color: expired ? state.bad : state.warn }}
         >
-          {t('admin.enter.open')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          {expired ? t('admin.enter.expired') : t('admin.enter.left', { time: format(left) })}
+        </Typography>
+        <Alert severity="info" data-testid="admin-enter-audited">
+          {t('admin.enter.audited')}
+        </Alert>
+        <Box sx={{ ...typo.caption, color: ink.low, wordBreak: 'break-all' }}>
+          {granted.cms_url}
+        </Box>
+      </Stack>
+    </AdminDialog>
   );
 }
 

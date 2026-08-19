@@ -7,7 +7,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
+import { ink, panelSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import {
   closeSession,
@@ -88,20 +88,20 @@ export function SecurityPage() {
 
   return (
     <Box data-testid="admin-security">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.security.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
         {t('admin.security.subtitle')}
       </Typography>
 
       <QueryState query={me} what={t('state.what.me')}>
         {(user) => (
           <Box sx={{ ...panelSx, mt: 2.25, maxWidth: 560 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{user.email}</Typography>
+            <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{user.email}</Typography>
             <Typography
               sx={{
-                fontSize: 12.5,
+                ...typo.caption,
                 color: user.totp_enabled ? state.ok : state.warn,
                 mt: 0.5,
                 mb: 1.75,
@@ -139,7 +139,7 @@ export function SecurityPage() {
                   библиотеку в бандл консоли — плата не по размеру задачи.
                   Строка `otpauth://` вставляется в приложение целиком.
                 */}
-                <Typography sx={{ fontSize: 12, color: ink.low, mb: 0.75 }}>
+                <Typography sx={{ ...typo.caption, color: ink.low, mb: 0.75 }}>
                   {t('admin.security.secretHint')}
                 </Typography>
                 <Box
@@ -148,7 +148,7 @@ export function SecurityPage() {
                     border: `1px solid ${surface.line}`,
                     borderRadius: 1,
                     fontFamily: 'monospace',
-                    fontSize: 13,
+                    ...typo.body,
                     wordBreak: 'break-all',
                     mb: 1.5,
                   }}
@@ -156,7 +156,7 @@ export function SecurityPage() {
                 >
                   {secret}
                   {otpauth ? (
-                    <Typography sx={{ fontSize: 11, color: ink.low, mt: 0.75 }}>
+                    <Typography sx={{ ...typo.caption, color: ink.low, mt: 0.75 }}>
                       {otpauth}
                     </Typography>
                   ) : null}

@@ -10,7 +10,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, surface } from '../adminTokens';
+import { accent, ink, panelSx, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { getAudit, getAuditActions } from '../adminClient';
 
@@ -76,10 +76,10 @@ export function AuditPage() {
 
   return (
     <Box data-testid="admin-audit">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.audit.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
         {t('admin.audit.subtitle')}
       </Typography>
 
@@ -132,7 +132,7 @@ export function AuditPage() {
         />
         <Box sx={{ flexGrow: 1 }} />
         {audit.data ? (
-          <Typography sx={{ color: ink.low, fontSize: 12.5 }} data-testid="admin-audit-total">
+          <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-audit-total">
             {t('admin.audit.counter', {
               shown: audit.data.items.length,
               total: audit.data.total,
@@ -164,20 +164,20 @@ export function AuditPage() {
                     alignItems: 'baseline',
                     py: 1.1,
                     borderBottom: `1px solid ${surface.hair}`,
-                    fontSize: 12.5,
+                    ...typo.caption,
                   }}
                 >
-                  <Typography sx={{ color: ink.low, fontSize: 12, minWidth: 140, flex: 'none' }}>
+                  <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 140, flex: 'none' }}>
                     {new Date(row.at).toLocaleString()}
                   </Typography>
-                  <Typography sx={{ color: accent.soft, fontSize: 12, minWidth: 180, flex: 'none' }}>
+                  <Typography sx={{ color: accent.soft, ...typo.caption, minWidth: 180, flex: 'none' }}>
                     {row.actor}
                   </Typography>
                   <Typography sx={{ color: ink.mid, flexGrow: 1 }}>
                     {t(`admin.action.${row.action}`, { defaultValue: row.action })}
                   </Typography>
                   {row.hotel ? (
-                    <Typography sx={{ color: ink.hi, fontSize: 12, fontWeight: 600 }}>
+                    <Typography sx={{ color: ink.hi, ...typo.caption, fontWeight: 600 }}>
                       {row.hotel}
                     </Typography>
                   ) : null}

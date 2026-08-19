@@ -4,13 +4,15 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
+import { ProfileMenu } from '@/components/ProfileMenu';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
-import { useAppTheme } from '@/theme';
-import { adminCssVars, accent, ink, layout, pageBackground, state, surface } from './adminTokens';
+import { accent, ink, layout, pageBackground, shape, surface, typo } from './adminTokens';
 import type { PlatformMe } from './adminClient';
 
 export interface AdminSection {
@@ -21,7 +23,7 @@ export interface AdminSection {
 }
 
 /**
- * Каркас корневой админки: левая навигация, верхняя строка, содержимое.
+ * Каркас консоли: левая навигация, верхняя строка, содержимое.
  *
  * Навигация СЛЕВА и постоянная — в отличие от гостевой витрины, где рельс убран
  * (R5). Причины разные и обе продуктовые: у гостя ценность в кадрах заведений
@@ -30,6 +32,12 @@ export interface AdminSection {
  *
  * Разделы сгруппированы, как в CMS (R4): плоская простыня одинаковых пунктов
  * не даёт понять, что здесь про отели, а что про саму платформу.
+ *
+ * БЛОК ПРОФИЛЯ — В ШАПКЕ, а не внизу панели. Внизу он стоял в колонке 248px,
+ * из которых на текст оставалось 73: адрес обрезался на середине, роль и
+ * признак второго фактора ломались на две строки каждый, и всё вместе читалось
+ * лесенкой. В шапке места ровно столько, сколько нужно монограмме, а адрес
+ * целиком показывает меню — см. `ProfileMenu`.
  */
 export function AdminShell({
   sections,
@@ -49,7 +57,6 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const { mode } = useAppTheme();
   const isNarrow = useMediaQuery('(max-width:899px)');
   const [navOpen, setNavOpen] = useState(false);
   const groups = sections.reduce<{ group: string | undefined; items: AdminSection[] }[]>(
@@ -66,136 +73,124 @@ export function AdminShell({
   // две копии списка разделов однажды разъехались бы.
   const navigation = (
     <>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: '20px 18px 16px' }}>
-          <Box
-            sx={{
-              width: 28,
-              height: 28,
-              borderRadius: '8px',
-              background: `linear-gradient(135deg,${accent.main},${accent.deep})`,
-              display: 'grid',
-              placeItems: 'center',
-              fontWeight: 800,
-              fontSize: 14,
-              color: accent.onBrand,
-            }}
-          >
-            IT
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: accent.onBrand, lineHeight: 1.2 }}>
-              {t('admin.brand.name')}
-            </Typography>
-            <Typography
-              sx={{ fontSize: 10, color: ink.low, letterSpacing: '.14em', textTransform: 'uppercase' }}
-            >
-              {t('admin.brand.tagline')}
-            </Typography>
-          </Box>
-        </Box>
-
-        {groups.map((group, index) => (
-          <Box key={group.group ?? `top-${index}`}>
-            {group.group ? (
-              <Typography
-                sx={{
-                  fontSize: 10,
-                  letterSpacing: '.18em',
-                  textTransform: 'uppercase',
-                  color: ink.low,
-                  fontWeight: 700,
-                  p: '14px 18px 6px',
-                }}
-              >
-                {t(group.group)}
-              </Typography>
-            ) : null}
-            {group.items.map((section) => (
-              <ButtonBase
-                key={section.key}
-                onClick={() => onNavigate(section.key)}
-                data-testid={`admin-nav-${section.key}`}
-                data-active={active === section.key ? 'true' : undefined}
-                sx={{
-                  display: 'flex',
-                  width: 'calc(100% - 20px)',
-                  justifyContent: 'flex-start',
-                  gap: 1.4,
-                  m: '1px 10px',
-                  p: '9px 11px',
-                  borderRadius: '10px',
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  color: active === section.key ? accent.soft : ink.mid,
-                  bgcolor: active === section.key ? accent.wash : 'transparent',
-                  '&:hover': { bgcolor: active === section.key ? accent.wash : surface.s2 },
-                }}
-              >
-                {t(section.labelKey)}
-                {section.badge ? (
-                  <Box
-                    sx={{
-                      ml: 'auto',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      bgcolor: surface.s3,
-                      color: ink.mid,
-                      borderRadius: 999,
-                      px: 0.9,
-                    }}
-                  >
-                    {section.badge}
-                  </Box>
-                ) : null}
-              </ButtonBase>
-            ))}
-          </Box>
-        ))}
-
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: '18px 18px 14px' }}>
         <Box
           sx={{
-            mt: 'auto',
-            p: '14px 18px',
-            borderTop: `1px solid ${surface.hair}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.25,
+            width: 30,
+            height: 30,
+            flex: 'none',
+            borderRadius: `${shape.radiusSmall}px`,
+            background: `linear-gradient(135deg,${accent.main},${accent.deep})`,
+            display: 'grid',
+            placeItems: 'center',
+            fontWeight: 800,
+            fontSize: 13,
+            color: accent.onBrand,
           }}
         >
-          <Box
-            sx={{
-              width: 30,
-              height: 30,
-              borderRadius: '50%',
-              background: `linear-gradient(135deg,${accent.main},${accent.deep2})`,
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: 11,
-              fontWeight: 700,
-              color: accent.onBrand,
-            }}
-          >
-            {(me?.email ?? '?').slice(0, 2).toUpperCase()}
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography noWrap sx={{ fontSize: 12.5, fontWeight: 600 }} data-testid="admin-me-email">
-              {me?.email ?? '—'}
-            </Typography>
-            <Typography sx={{ fontSize: 10.5, color: ink.low }} data-testid="admin-me-role">
-              {me ? t(`admin.role.${me.role}`) : ''}
-            </Typography>
-          </Box>
-          {/* Признак 2FA виден постоянно: это мастер-ключ ко всем отелям, и
-              «второй фактор не включён» должно мозолить глаза, а не прятаться
-              в настройках. */}
-          <Box
-            sx={{ ml: 'auto', fontSize: 10, fontWeight: 700, color: me?.totp_enabled ? accent.soft : state.warn }}
-            data-testid="admin-me-2fa"
-          >
-            {me?.totp_enabled ? t('admin.security.on') : t('admin.security.off')}
-          </Box>
+          IT
         </Box>
+        <Box sx={{ minWidth: 0 }}>
+          {/*
+            Название платформы — обычный текст на поверхности, а не надпись на
+            заливке. Оно и раньше красилось `on-brand`, но заливки под ним нет:
+            на светлой теме это давало белым по белому, контраст 1.00, и
+            название просто отсутствовало на экране.
+          */}
+          <Typography noWrap sx={{ ...typo.panelTitle, color: ink.hi }}>
+            {t('admin.brand.name')}
+          </Typography>
+          <Typography noWrap sx={{ ...typo.label, fontSize: 10, color: ink.low }}>
+            {t('admin.brand.tagline')}
+          </Typography>
+        </Box>
+      </Box>
+
+      {groups.map((group, index) => (
+        <Box key={group.group ?? `top-${index}`} sx={{ mb: 0.5 }}>
+          {group.group ? (
+            <Typography sx={{ ...typo.label, color: ink.low, p: '14px 18px 6px' }}>
+              {t(group.group)}
+            </Typography>
+          ) : null}
+          {group.items.map((section) => (
+            <ButtonBase
+              key={section.key}
+              onClick={() => onNavigate(section.key)}
+              data-testid={`admin-nav-${section.key}`}
+              data-active={active === section.key ? 'true' : undefined}
+              sx={{
+                display: 'flex',
+                width: 'calc(100% - 20px)',
+                justifyContent: 'flex-start',
+                gap: 1.4,
+                m: '1px 10px',
+                p: '9px 12px',
+                borderRadius: `${shape.radius}px`,
+                ...typo.body,
+                fontWeight: 600,
+                textAlign: 'start',
+                color: active === section.key ? accent.soft : ink.mid,
+                bgcolor: active === section.key ? accent.wash : 'transparent',
+                '&:hover': { bgcolor: active === section.key ? accent.wash : surface.s2 },
+              }}
+            >
+              {t(section.labelKey)}
+              {section.badge ? (
+                <Box
+                  sx={{
+                    ml: 'auto',
+                    ...typo.label,
+                    letterSpacing: 0,
+                    bgcolor: surface.s3,
+                    color: ink.mid,
+                    borderRadius: `${shape.pill}px`,
+                    px: 0.9,
+                  }}
+                >
+                  {section.badge}
+                </Box>
+              ) : null}
+            </ButtonBase>
+          ))}
+        </Box>
+      ))}
     </>
+  );
+
+  const profile = (
+    <ProfileMenu
+      testIdPrefix="admin"
+      email={me?.email ?? '—'}
+      role={me ? t(`admin.role.${me.role}`) : ''}
+      /*
+        Признак второго фактора остаётся ПОСТОЯННО ВИДИМЫМ — меткой на
+        монограмме. Он заводился ровно ради того, чтобы мозолить глаза: это
+        мастер-ключ ко всем отелям, и «второй фактор не включён» нельзя убирать
+        под клик вместе с остальным блоком профиля.
+      */
+      warning={
+        me && !me.totp_enabled
+          ? { label: t('admin.security.off'), testId: 'admin-me-2fa-warning' }
+          : null
+      }
+      items={[
+        {
+          key: 'sessions',
+          label: t('sessions.title'),
+          icon: <DevicesOutlinedIcon fontSize="small" />,
+          onSelect: () => onNavigate('security'),
+        },
+        {
+          key: 'security',
+          label: t('admin.nav.security'),
+          icon: <ShieldOutlinedIcon fontSize="small" />,
+          onSelect: () => onNavigate('security'),
+        },
+      ]}
+      onLogout={onLogout}
+      logoutLabel={t('admin.actions.logout')}
+    />
   );
 
   return (
@@ -203,9 +198,6 @@ export function AdminShell({
       data-testid="admin-shell"
       sx={{
         minHeight: '100dvh',
-        // Переменные админки — здесь, на корне: всё дерево ниже читает их
-        // имена и переключается вместе с темой.
-        ...adminCssVars(mode),
         background: pageBackground,
         color: ink.hi,
         display: 'grid',
@@ -215,7 +207,7 @@ export function AdminShell({
       {/*
         На узком экране навигация уезжает в шторку. До этого её попросту не
         было: панель скрывалась через `display: none`, а замены не появилось —
-        разделы админки на телефоне были недостижимы вовсе.
+        разделы консоли на телефоне были недостижимы вовсе.
       */}
       {isNarrow ? (
         <Drawer
@@ -253,7 +245,7 @@ export function AdminShell({
             flex: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: 1.75,
+            gap: 1.5,
             px: 3,
             bgcolor: surface.bar,
             backdropFilter: 'blur(24px) saturate(1.5)',
@@ -268,18 +260,12 @@ export function AdminShell({
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ fontSize: 13, color: ink.low }} data-testid="admin-crumb">
+          <Box sx={{ minWidth: 0, color: ink.low }} data-testid="admin-crumb">
             {crumb}
           </Box>
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
             <ThemeModeToggle />
-            <ButtonBase
-              onClick={onLogout}
-              data-testid="admin-logout"
-              sx={{ fontSize: 12.5, fontWeight: 600, color: ink.mid, px: 1.25, py: 0.75, borderRadius: 1 }}
-            >
-              {t('admin.actions.logout')}
-            </ButtonBase>
+            {profile}
           </Box>
         </Box>
 

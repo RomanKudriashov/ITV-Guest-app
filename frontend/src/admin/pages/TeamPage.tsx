@@ -8,7 +8,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
+import { ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
+import { Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
 import { getTeam, inviteMember, patchMember, type TeamMember } from '../adminClient';
 
@@ -50,43 +51,50 @@ export function TeamPage() {
 
   return (
     <Box data-testid="admin-team">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.team.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>{t('admin.team.subtitle')}</Typography>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{t('admin.team.subtitle')}</Typography>
 
-      <Box sx={{ ...panelSx, mt: 2.25, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-        <TextField
-          size="small"
-          label={t('admin.team.email')}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          inputProps={{ 'data-testid': 'admin-team-email' }}
-          sx={{ minWidth: 260 }}
-        />
-        <TextField
-          select
-          size="small"
-          label={t('admin.team.role')}
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          SelectProps={{ inputProps: { 'data-testid': 'admin-team-role' } }}
-          sx={{ minWidth: 180 }}
-        >
-          {ROLES.map((code) => (
-            <MenuItem key={code} value={code}>
-              {t(`admin.role.${code}`)}
-            </MenuItem>
-          ))}
-        </TextField>
-        <Button
-          disabled={!email.includes('@') || invite.isPending}
-          onClick={() => invite.mutate()}
-          data-testid="admin-team-invite"
-          sx={primaryButtonSx}
-        >
-          {t('admin.team.invite')}
-        </Button>
+      <Box sx={{ ...panelSx, mt: 2.25 }}>
+        <FormGrid>
+          <Field
+            span={6}
+            label={t('admin.team.email')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            inputProps={{ 'data-testid': 'admin-team-email' }}
+          />
+          <Field
+            span={4}
+            select
+            label={t('admin.team.role')}
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            SelectProps={{ inputProps: { 'data-testid': 'admin-team-role' } }}
+          >
+            {ROLES.map((code) => (
+              <MenuItem key={code} value={code}>
+                {t(`admin.role.${code}`)}
+              </MenuItem>
+            ))}
+          </Field>
+          {/*
+            Кнопка стоит в своей ячейке и по нижнему краю ряда полей — иначе
+            при появлении подписи под полем она уезжает вверх относительно них.
+          */}
+          <FormCell span={2}>
+            <Button
+              fullWidth
+              disabled={!email.includes('@') || invite.isPending}
+              onClick={() => invite.mutate()}
+              data-testid="admin-team-invite"
+              sx={{ ...primaryButtonSx, height: 56 }}
+            >
+              {t('admin.team.invite')}
+            </Button>
+          </FormCell>
+        </FormGrid>
       </Box>
 
       {error ? (
@@ -110,14 +118,14 @@ export function TeamPage() {
           <>
             {page.truncated ? (
               <Typography
-                sx={{ color: ink.low, fontSize: 12.5, mt: 1 }}
+                sx={{ ...typo.caption, color: ink.mid, mt: 1 }}
                 data-testid="admin-team-truncated"
               >
                 {t('state.truncated', { shown: page.items.length, total: page.total })}
               </Typography>
             ) : null}
       <Box sx={{ mt: 2, overflowX: 'auto' }}>
-        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
           <Box component="thead">
             <Box component="tr">
               {['member', 'role', 'access', 'twofa'].map((key) => (
@@ -126,11 +134,8 @@ export function TeamPage() {
                   key={key}
                   sx={{
                     textAlign: 'left',
-                    fontSize: 10.5,
-                    letterSpacing: '.1em',
-                    textTransform: 'uppercase',
-                    color: ink.low,
-                    fontWeight: 700,
+                    ...typo.label,
+                    color: ink.mid,
                     p: '11px 12px',
                     borderBottom: `1px solid ${surface.line}`,
                   }}
@@ -174,9 +179,9 @@ function MemberLine({
   return (
     <Box component="tr" data-testid={`admin-team-row-${member.email}`}>
       <Box component="td" sx={cell}>
-        <Typography sx={{ color: ink.hi, fontWeight: 700, fontSize: 13 }}>{member.email}</Typography>
+        <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{member.email}</Typography>
         {member.full_name ? (
-          <Typography sx={{ fontSize: 11, color: ink.low }}>{member.full_name}</Typography>
+          <Typography sx={{ ...typo.caption, color: ink.mid }}>{member.full_name}</Typography>
         ) : null}
       </Box>
       <Box component="td" sx={cell}>
@@ -201,7 +206,7 @@ function MemberLine({
           size="small"
           onClick={() => onActive(!member.is_active)}
           data-testid={`admin-team-active-${member.email}`}
-          sx={{ fontSize: 12, color: ink.mid }}
+          sx={{ ...typo.caption, color: ink.mid }}
         >
           {member.is_active ? t('admin.team.disable') : t('admin.team.enable')}
         </Button>
@@ -210,12 +215,6 @@ function MemberLine({
         <Box
           data-testid={`admin-team-2fa-${member.email}`}
           sx={{
-            display: 'inline-block',
-            fontSize: 10.5,
-            fontWeight: 700,
-            px: 1.1,
-            py: 0.4,
-            borderRadius: 999,
             ...pillSx(member.totp_enabled ? 'ok' : 'warn'),
           }}
         >

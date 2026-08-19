@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, state, surface } from '../adminTokens';
+import { accent, ink, panelSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { getOverview, type OverviewHealth } from '../adminClient';
 
@@ -50,10 +50,10 @@ export function OverviewPage() {
 
   return (
     <Box data-testid="admin-overview">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.overview.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
         {t('admin.overview.subtitle', { count: data.hotels.total })}
       </Typography>
 
@@ -104,7 +104,7 @@ export function OverviewPage() {
         }}
       >
         <Box sx={panelSx} data-testid="admin-growth">
-          <Typography sx={{ fontSize: 14, fontWeight: 700, mb: 1.5 }}>
+          <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.5 }}>
             {t('admin.overview.growth')}
           </Typography>
           <Box sx={{ display: 'flex', gap: '3px', height: 90, alignItems: 'flex-end' }}>
@@ -125,7 +125,7 @@ export function OverviewPage() {
         </Box>
 
         <Box sx={panelSx} data-testid="admin-health">
-          <Typography sx={{ fontSize: 14, fontWeight: 700, mb: 1 }}>
+          <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1 }}>
             {t('admin.overview.health')}
           </Typography>
           {data.health.map((signal, index) => (
@@ -150,11 +150,11 @@ function Kpi({
 }) {
   return (
     <Box sx={panelSx} data-testid={testId}>
-      <Typography sx={{ fontSize: 11, color: ink.low, fontWeight: 600 }}>{label}</Typography>
-      <Typography sx={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', mt: 0.75 }}>
+      <Typography sx={{ ...typo.caption, color: ink.low, fontWeight: 600 }}>{label}</Typography>
+      <Typography sx={{ ...typo.metric, mt: 0.75 }}>
         {value}
       </Typography>
-      <Typography sx={{ fontSize: 11, mt: 0.6, color: ink.mid }}>{hint}</Typography>
+      <Typography sx={{ ...typo.caption, mt: 0.6, color: ink.mid }}>{hint}</Typography>
     </Box>
   );
 }
@@ -175,7 +175,7 @@ function HealthRow({ signal }: { signal: OverviewHealth }) {
         alignItems: 'center',
         gap: 1.1,
         py: 1.1,
-        fontSize: 12.5,
+        ...typo.caption,
         color: ink.mid,
         borderBottom: `1px solid ${surface.hair}`,
       }}

@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
+import GlobalStyles from '@mui/material/GlobalStyles';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
+import { useAppTheme } from '@/theme';
+import { createAppTheme } from '@/theme/createAppTheme';
+import { DEFAULT_BRAND_TOKENS } from '@/theme/tokens';
+import { adminCssVars } from './adminTokens';
 import { AdminLogin } from './AdminLogin';
 import { AdminShell, type AdminSection } from './AdminShell';
 import { ScreenBoundary } from '@/components/ScreenBoundary';
@@ -18,7 +24,7 @@ import { AuditPage } from './pages/AuditPage';
 import { SecurityPage } from './pages/SecurityPage';
 import { SupportSessionsPage } from './pages/SupportSessionsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
-import { accent, ink } from './adminTokens';
+import { accent, ink, typo } from './adminTokens';
 import { getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
 
 /**
@@ -43,6 +49,36 @@ const SECTIONS: AdminSection[] = [
   { key: 'audit', labelKey: 'admin.nav.audit', group: 'admin.nav.platformGroup' },
 ];
 
+/**
+ * Область консоли: платформенная тема + переменные словаря на `:root`.
+ *
+ * ТЕМА СВОЯ, И ЭТО ГЛАВНОЕ. Общий `AppThemeProvider` держит токены ОТЕЛЯ —
+ * `AuthProvider` подставляет их, как только в браузере находится живая сессия
+ * CMS. Пока консоль красилась общей темой, достаточно было открыть CMS отеля в
+ * соседней вкладке, чтобы уровень владельца платформы оделся в бренд одного из
+ * своих клиентов. Здесь тема строится из `DEFAULT_BRAND_TOKENS` — того же
+ * платформенного набора, из которого выведен словарь консоли, — и потому
+ * MUI-контролы и собственные поверхности консоли согласованы по построению.
+ *
+ * Переменные ставятся на `:root`, а не на корень оболочки: диалоги и меню MUI
+ * живут в портале у `document.body`, вне поддерева консоли.
+ */
+function AdminScope({ children }: { children: ReactNode }) {
+  const { mode, direction } = useAppTheme();
+  const theme = useMemo(
+    () => createAppTheme(DEFAULT_BRAND_TOKENS, mode, direction),
+    [mode, direction],
+  );
+  const vars = useMemo(() => adminCssVars(mode), [mode]);
+
+  return (
+    <MuiThemeProvider theme={theme}>
+      <GlobalStyles styles={{ ':root': vars }} />
+      {children}
+    </MuiThemeProvider>
+  );
+}
+
 export function AdminApp() {
   const [authed, setAuthed] = useState<boolean>(() => Boolean(platformToken.get()));
 
@@ -60,18 +96,26 @@ export function AdminApp() {
     return () => platformSession.onExpired(null);
   }, []);
 
-  if (!authed) return <AdminLogin onLoggedIn={() => setAuthed(true)} />;
+  if (!authed) {
+    return (
+      <AdminScope>
+        <AdminLogin onLoggedIn={() => setAuthed(true)} />
+      </AdminScope>
+    );
+  }
   return (
-    <Console
-      onLogout={() => {
-        // Сессию рвём НА СЕРВЕРЕ, иначе «выйти» — это только забыть токены в
-        // этом браузере, а снятая заранее копия refresh живёт ещё неделю.
-        // Ответа не ждём: выйти человек должен и без сети.
-        void platformLogoutHere().catch(() => undefined);
-        platformToken.clear();
-        setAuthed(false);
-      }}
-    />
+    <AdminScope>
+      <Console
+        onLogout={() => {
+          // Сессию рвём НА СЕРВЕРЕ, иначе «выйти» — это только забыть токены в
+          // этом браузере, а снятая заранее копия refresh живёт ещё неделю.
+          // Ответа не ждём: выйти человек должен и без сети.
+          void platformLogoutHere().catch(() => undefined);
+          platformToken.clear();
+          setAuthed(false);
+        }}
+      />
+    </AdminScope>
   );
 }
 
@@ -111,15 +155,15 @@ function Console({ onLogout }: { onLogout: () => void }) {
         <ButtonBase
           onClick={() => setHotelId(null)}
           data-testid="admin-crumb-fleet"
-          sx={{ color: accent.soft, fontSize: 13, fontWeight: 600 }}
+          sx={{ ...typo.body, color: accent.soft, fontWeight: 600, borderRadius: 1, px: 0.5 }}
         >
           {t('admin.nav.fleet')}
         </ButtonBase>
         <Box sx={{ color: ink.low }}>›</Box>
-        <Box sx={{ color: ink.hi, fontWeight: 700 }}>{t('admin.hotel.crumb')}</Box>
+        <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }}>{t('admin.hotel.crumb')}</Box>
       </Box>
     ) : (
-      <Box sx={{ color: ink.hi, fontWeight: 700 }}>{t(`admin.nav.${section}`)}</Box>
+      <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }}>{t(`admin.nav.${section}`)}</Box>
     );
 
   return (

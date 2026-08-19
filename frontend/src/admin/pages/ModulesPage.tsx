@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, panelSx, state, surface } from '../adminTokens';
+import { ink, panelSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { getTariffs } from '../adminClient';
 
@@ -22,10 +22,10 @@ export function ModulesPage() {
 
   return (
     <Box data-testid="admin-modules">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.modules.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
         {t('admin.modules.subtitle')}
       </Typography>
 
@@ -38,7 +38,7 @@ export function ModulesPage() {
         {(rows) => (
         <>
       <Box sx={{ mt: 2.5, overflowX: 'auto' }}>
-        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
           <Box component="thead">
             <Box component="tr">
               {['tariff', 'hotels', 'modules', 'limits'].map((key) => (
@@ -47,11 +47,8 @@ export function ModulesPage() {
                   key={key}
                   sx={{
                     textAlign: 'left',
-                    fontSize: 10.5,
-                    letterSpacing: '.1em',
-                    textTransform: 'uppercase',
-                    color: ink.low,
-                    fontWeight: 700,
+                    ...typo.label,
+                    color: ink.mid,
                     p: '11px 12px',
                     borderBottom: `1px solid ${surface.line}`,
                   }}
@@ -65,11 +62,11 @@ export function ModulesPage() {
             {rows.map((tariff) => (
               <Box component="tr" key={tariff.code} data-testid={`admin-tariff-row-${tariff.code}`}>
                 <Cell>
-                  <Typography sx={{ color: ink.hi, fontWeight: 700, fontSize: 13 }}>
+                  <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
                     {tariff.title[i18n.language] ?? tariff.title.en ?? tariff.code}
                   </Typography>
                   {tariff.is_trial ? (
-                    <Typography sx={{ fontSize: 11, color: state.info }}>
+                    <Typography sx={{ ...typo.caption, color: state.info }}>
                       {t('admin.modules.trialDays', { days: tariff.trial_days })}
                     </Typography>
                   ) : null}
@@ -90,7 +87,7 @@ export function ModulesPage() {
       </Box>
 
       <Box sx={{ ...panelSx, mt: 2, borderStyle: 'dashed' }}>
-        <Typography sx={{ fontSize: 12.5, color: ink.mid, lineHeight: 1.6 }}>
+        <Typography sx={{ ...typo.caption, color: ink.mid, lineHeight: 1.6 }}>
           {t('admin.modules.note')}
         </Typography>
       </Box>

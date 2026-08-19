@@ -10,7 +10,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, primaryButtonSx, state, surface } from '../adminTokens';
+import { accent, ink, panelSx, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { EnterHotelDialog } from '../EnterHotelDialog';
@@ -66,11 +66,11 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
     <Box data-testid="admin-hotel">
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}
+          <Typography sx={{ ...typo.pageTitle, color: ink.hi }}
             data-testid="admin-hotel-name">
             {hotel.name}
           </Typography>
-          <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>{hotel.subdomain}</Typography>
+          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{hotel.subdomain}</Typography>
         </Box>
         <Button onClick={onBack} data-testid="admin-hotel-back" sx={{ color: ink.mid }}>
           {t('admin.hotel.back')}
@@ -90,7 +90,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
             sx={{
               px: 1.75,
               py: 1.25,
-              fontSize: 13,
+              ...typo.body,
               fontWeight: 700,
               color: tab === key ? accent.soft : ink.mid,
               borderBottom: `2px solid ${tab === key ? accent.main : 'transparent'}`,
@@ -273,7 +273,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 1.75 }}>
       <Box sx={panelSx}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.25 }}>
+        <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
           {t('admin.hotel.tab.profile')}
         </Typography>
         {canEdit ? (
@@ -293,7 +293,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           label={t('admin.hotel.field.subdomain')}
           value={`${hotel.subdomain} · ${t('admin.hotel.field.subdomainLocked')}`}
         />
-        <Typography sx={{ fontSize: 11.5, color: ink.low, mb: 1.25 }}>
+        <Typography sx={{ ...typo.caption, color: ink.low, mb: 1.25 }}>
           {t('admin.hotel.field.subdomainWhy')}
         </Typography>
         <TextField
@@ -373,7 +373,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           </Button>
           {dirty.length ? (
             <Typography
-              sx={{ fontSize: 12, color: state.warn }}
+              sx={{ ...typo.caption, color: state.warn }}
               data-testid="admin-hotel-dirty"
             >
               {t('admin.hotel.dirty', { count: dirty.length })}
@@ -393,7 +393,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
               label={t('admin.hotel.field.languages')}
               value={hotel.languages.map((lang) => lang.code.toUpperCase()).join(' · ')}
             />
-            <Typography sx={{ fontSize: 12, color: ink.low, mt: 1 }} data-testid="admin-hotel-readonly">
+            <Typography sx={{ ...typo.caption, color: ink.low, mt: 1 }} data-testid="admin-hotel-readonly">
               {t('admin.hotel.readOnly')}
             </Typography>
           </>
@@ -404,17 +404,17 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             onChange={(e) => toggleActive.mutate(e.target.checked)}
             inputProps={{ 'data-testid': 'admin-hotel-active' } as Record<string, string>}
           />
-          <Typography sx={{ fontSize: 12.5, color: ink.mid }}>
+          <Typography sx={{ ...typo.caption, color: ink.mid }}>
             {hotel.is_active ? t('admin.hotel.activeOn') : t('admin.hotel.activeOff')}
           </Typography>
         </Box>
       </Box>
 
       <Box sx={panelSx}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.25 }}>
+        <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
           {t('admin.hotel.adminTitle')}
         </Typography>
-        <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.5 }}>
+        <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
           {t('admin.hotel.adminHint')}
         </Typography>
         <TextField
@@ -448,10 +448,10 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             увести отель, рутинной операцией она быть не должна. */}
         {me.data?.role === 'owner' ? (
           <Box sx={{ mt: 2.5, pt: 2, borderTop: `1px solid ${surface.hair}` }}>
-            <Typography sx={{ fontSize: 12.5, fontWeight: 700, mb: 0.5 }}>
+            <Typography sx={{ ...typo.caption, fontWeight: 700, mb: 0.5 }}>
               {t('admin.hotel.adminMoveTitle')}
             </Typography>
-            <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.25 }}>
+            <Typography sx={{ ...typo.caption, color: ink.low, mb: 1.25 }}>
               {t('admin.hotel.adminMoveHint')}
             </Typography>
             <TextField
@@ -495,11 +495,11 @@ function UsageTab({ id }: { id: string }) {
 
   return (
     <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-usage">
-      <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+      <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
         {data.tariff_title[i18n.language] ?? data.tariff_title.en ?? data.tariff}
       </Typography>
       {data.is_trial && data.trial_days_left !== null ? (
-        <Typography sx={{ fontSize: 12, color: state.warn, mt: 0.5 }} data-testid="admin-hotel-trial">
+        <Typography sx={{ ...typo.caption, color: state.warn, mt: 0.5 }} data-testid="admin-hotel-trial">
           {t('admin.hotel.trialLeft', { days: data.trial_days_left })}
         </Typography>
       ) : null}
@@ -509,10 +509,10 @@ function UsageTab({ id }: { id: string }) {
           <Box key={row.key} sx={{ py: 1.25, borderBottom: `1px solid ${surface.hair}` }}
             data-testid={`admin-usage-${row.key}`}>
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-              <Typography sx={{ fontSize: 12.5, color: ink.mid, flexGrow: 1 }}>
+              <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
                 {t(`admin.hotel.limit.${row.key}`)}
               </Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 700, color: row.over ? state.bad : ink.hi }}>
+              <Typography sx={{ ...typo.body, fontWeight: 700, color: row.over ? state.bad : ink.hi }}>
                 {row.used}
                 {row.limit === null ? ` / ${t('admin.hotel.limit.none')}` : ` / ${row.limit}`}
               </Typography>
@@ -529,7 +529,7 @@ function UsageTab({ id }: { id: string }) {
               </Box>
             ) : null}
             {row.over ? (
-              <Typography sx={{ fontSize: 11.5, color: state.bad, mt: 0.6 }}
+              <Typography sx={{ ...typo.caption, color: state.bad, mt: 0.6 }}
                 data-testid={`admin-usage-over-${row.key}`}>
                 {t('admin.hotel.limitOver', { used: row.used, limit: row.limit })}
               </Typography>
@@ -537,7 +537,7 @@ function UsageTab({ id }: { id: string }) {
           </Box>
         ))}
       </Box>
-      <Typography sx={{ fontSize: 11.5, color: ink.low, mt: 1.75 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.75 }}>
         {t('admin.hotel.limitHint')}
       </Typography>
     </Box>
@@ -575,7 +575,7 @@ function ModulesTab({ id }: { id: string }) {
 
   return (
     <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-modules">
-      <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.25 }}>
+      <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
         {t('admin.hotel.modulesTitle', { tariff: modules.data.tariff })}
       </Typography>
       {list.map((entry) => (
@@ -584,13 +584,13 @@ function ModulesTab({ id }: { id: string }) {
           data-testid={`admin-module-${entry.code}`}
           sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, borderBottom: `1px solid ${surface.hair}` }}
         >
-          <Typography sx={{ fontSize: 12.5, color: ink.mid, flexGrow: 1 }}>
+          <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
             {entry.title[i18n.language] ?? entry.title.en ?? entry.code}
           </Typography>
           {entry.is_enabled && entry.source === 'override' ? (
             <Box
               data-testid={`admin-module-override-${entry.code}`}
-              sx={{ fontSize: 10, fontWeight: 700, color: state.gold, px: 0.9, py: 0.3, borderRadius: 999, border: `1px solid ${state.gold}55` }}
+              sx={pillSx('gold')}
             >
               {t('admin.hotel.moduleOverride')}
             </Box>
@@ -603,7 +603,7 @@ function ModulesTab({ id }: { id: string }) {
           />
         </Box>
       ))}
-      <Typography sx={{ fontSize: 11.5, color: ink.low, mt: 1.75 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.75 }}>
         {t('admin.hotel.modulesHint')}
       </Typography>
     </Box>
@@ -626,7 +626,7 @@ function ActivityTab({ id }: { id: string }) {
   return (
     <Box sx={{ ...panelSx, maxWidth: 760 }} data-testid="admin-hotel-activity">
       {activity.data.length === 0 ? (
-        <Typography sx={{ fontSize: 12.5, color: ink.low }} data-testid="state-empty">
+        <Typography sx={{ ...typo.caption, color: ink.low }} data-testid="state-empty">
           {t('admin.hotel.activityEmpty')}
         </Typography>
       ) : null}
@@ -634,21 +634,19 @@ function ActivityTab({ id }: { id: string }) {
         <Box
           key={row.id}
           data-testid={`admin-activity-${row.action}`}
-          sx={{ display: 'flex', gap: 1.5, py: 1, borderBottom: `1px solid ${surface.hair}`, fontSize: 12.5 }}
+          sx={{ display: 'flex', gap: 1.5, py: 1, borderBottom: `1px solid ${surface.hair}`, ...typo.caption }}
         >
-          <Typography sx={{ color: ink.low, fontSize: 12, minWidth: 132 }}>
+          <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 132 }}>
             {new Date(row.at).toLocaleString()}
           </Typography>
-          <Typography sx={{ color: ink.low, fontSize: 12, minWidth: 74 }}>
+          <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 74 }}>
             {t(`admin.actor.${row.actor_type}`, { defaultValue: row.actor_type })}
           </Typography>
           <Typography sx={{ color: ink.mid, flexGrow: 1 }}>{row.action}</Typography>
           {/* Действие поддержки под чужой личиной обязано быть отличимо — это
               инвариант импersonation, а не украшение журнала. */}
           {row.impersonated_by ? (
-            <Box sx={{ fontSize: 10, fontWeight: 700, color: state.warn }}>
-              {t('admin.hotel.viaSupport')}
-            </Box>
+            <Box sx={pillSx('warn')}>{t('admin.hotel.viaSupport')}</Box>
           ) : null}
         </Box>
       ))}
@@ -690,7 +688,7 @@ function TariffTab({ id }: { id: string }) {
 
   return (
     <Box sx={{ ...panelSx, maxWidth: 560 }} data-testid="admin-hotel-tariff">
-      <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
         {t('admin.hotel.tariffHint')}
       </Typography>
       <TextField
@@ -713,18 +711,18 @@ function TariffTab({ id }: { id: string }) {
       </TextField>
 
       {usage.data.trial_ends_at ? (
-        <Typography sx={{ fontSize: 12, color: ink.mid, mt: 1.25 }}>
+        <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.25 }}>
           {t('admin.hotel.trialEnds', { date: usage.data.trial_ends_at })}
         </Typography>
       ) : null}
 
       {warnings.length ? (
         <Alert severity="warning" sx={{ mt: 1.75 }} data-testid="admin-tariff-warning">
-          <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>
+          <Typography sx={{ ...typo.caption, fontWeight: 700 }}>
             {t('admin.hotel.downgradeTitle')}
           </Typography>
           {warnings.map((warning) => (
-            <Typography key={warning.key} sx={{ fontSize: 12 }}>
+            <Typography key={warning.key} sx={{ ...typo.caption }}>
               {warning.modules
                 ? t('admin.hotel.downgradeModules', { modules: warning.modules.join(', ') })
                 : t('admin.hotel.downgradeLimit', {
@@ -757,7 +755,7 @@ function TariffTab({ id }: { id: string }) {
           </Button>
         ) : null}
       </Box>
-      <Typography sx={{ fontSize: 11.5, color: ink.low, mt: 1.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.low, mt: 1.5 }}>
         {t('admin.hotel.tariffNoMoney')}
       </Typography>
     </Box>
@@ -772,7 +770,7 @@ function Kv({ label, value }: { label: string; value: string }) {
         justifyContent: 'space-between',
         gap: 2,
         py: 0.9,
-        fontSize: 12.5,
+        ...typo.caption,
         color: ink.mid,
         borderBottom: `1px solid ${surface.hair}`,
       }}
@@ -854,10 +852,10 @@ function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => 
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 1.75 }}
       data-testid="admin-hotel-data">
       <Box sx={panelSx}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1 }}>
+        <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1 }}>
           {t('admin.data.exportTitle')}
         </Typography>
-        <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.75 }}>
+        <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.75 }}>
           {t('admin.data.exportHint')}
         </Typography>
         <Button
@@ -870,10 +868,10 @@ function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => 
       </Box>
 
       <Box sx={{ ...panelSx, borderColor: `${state.bad}55` }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: state.bad }}>
+        <Typography sx={{ ...typo.panelTitle, color: state.bad, mb: 1 }}>
           {t('admin.data.offboardTitle')}
         </Typography>
-        <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.75 }}>
+        <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.75 }}>
           {t('admin.data.offboardHint')}
         </Typography>
 
@@ -943,10 +941,10 @@ function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => 
       */}
       {isOwner ? (
         <Box sx={{ ...panelSx, borderColor: `${state.bad}55` }} data-testid="admin-data-delete-panel">
-          <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: state.bad }}>
+          <Typography sx={{ ...typo.panelTitle, color: state.bad, mb: 1 }}>
             {t('admin.data.deleteTitle')}
           </Typography>
-          <Typography sx={{ fontSize: 12, color: ink.low, mb: 1.75 }}>
+          <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.75 }}>
             {t('admin.data.deleteHint')}
           </Typography>
           <TextField

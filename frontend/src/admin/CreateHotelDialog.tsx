@@ -3,17 +3,13 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, primaryButtonSx, surface } from './adminTokens';
+import { ink, primaryButtonSx, quietButtonSx, typo } from './adminTokens';
+import { AdminDialog, ChoicePill, Field, FormCell, FormGrid, FormLabel } from './form';
 import {
   BRAND_PRESETS,
   createHotel,
@@ -73,115 +69,108 @@ export function CreateHotelDialog({
   const valid = form.subdomain && form.name && form.admin_email.includes('@');
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth data-testid="admin-create-dialog">
-      <DialogTitle>{t('admin.create.title')}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          {error ? <Alert severity="error" data-testid="admin-create-error">{error}</Alert> : null}
-          <TextField
-            label={t('admin.create.name')}
-            value={form.name}
-            onChange={set('name')}
-            inputProps={{ 'data-testid': 'admin-create-name' }}
-          />
-          <TextField
-            label={t('admin.create.subdomain')}
-            value={form.subdomain}
-            onChange={set('subdomain')}
-            helperText={t('admin.create.subdomainHint')}
-            inputProps={{ 'data-testid': 'admin-create-subdomain' }}
-          />
-          <TextField
-            label={t('admin.create.adminEmail')}
-            value={form.admin_email}
-            onChange={set('admin_email')}
-            inputProps={{ 'data-testid': 'admin-create-admin-email' }}
-          />
-          <Stack direction="row" spacing={2}>
-            <TextField
-              label={t('admin.create.currency')}
-              value={form.currency}
-              onChange={set('currency')}
-              sx={{ width: 120 }}
-            />
-            <TextField
-              label={t('admin.create.languages')}
-              value={form.languages}
-              onChange={set('languages')}
-              helperText={t('admin.create.languagesHint')}
-              sx={{ flexGrow: 1 }}
-            />
-          </Stack>
-          <Box>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: ink.mid, mb: 1 }}>
-              {t('admin.create.template')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {(templates.data?.items ?? [])
-                .filter((entry) => entry.is_active)
-                .map((entry) => (
-                  <Box
-                    key={entry.code}
-                    component="button"
-                    type="button"
-                    onClick={() => setTemplate(entry.code)}
-                    data-testid={`admin-create-template-${entry.code}`}
-                    data-active={template === entry.code ? 'true' : undefined}
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      px: 1.5,
-                      py: 1,
-                      borderRadius: 999,
-                      cursor: 'pointer',
-                      color: template === entry.code ? accent.soft : ink.mid,
-                      bgcolor: template === entry.code ? accent.washSoft : 'transparent',
-                      border: `1px solid ${template === entry.code ? accent.main : surface.line}`,
-                    }}
-                  >
-                    {entry.title.ru ?? entry.title.en ?? entry.code}
-                  </Box>
-                ))}
-            </Box>
-          </Box>
-          <Stack direction="row" spacing={2}>
-            <TextField
-              label={t('admin.create.timezone')}
-              value={form.timezone}
-              onChange={set('timezone')}
-              sx={{ flexGrow: 1 }}
-            />
-            <TextField
-              select
-              label={t('admin.create.preset')}
-              value={form.preset}
-              onChange={set('preset')}
-              sx={{ width: 210 }}
-              SelectProps={{ inputProps: { 'data-testid': 'admin-create-preset' } }}
-            >
-              {BRAND_PRESETS.map((preset) => (
-                <MenuItem key={preset} value={preset}>
-                  {preset}
-                </MenuItem>
+    <AdminDialog
+      testId="admin-create-dialog"
+      title={t('admin.create.title')}
+      onClose={onClose}
+      actions={
+        <>
+          <Button onClick={onClose} sx={quietButtonSx}>
+            {t('admin.actions.cancel')}
+          </Button>
+          <Button
+            disabled={!valid || mutation.isPending}
+            onClick={() => mutation.mutate()}
+            data-testid="admin-create-submit"
+            sx={primaryButtonSx}
+          >
+            {t('admin.create.submit')}
+          </Button>
+        </>
+      }
+    >
+      <FormGrid>
+        {error ? (
+          <FormCell>
+            <Alert severity="error" data-testid="admin-create-error">
+              {error}
+            </Alert>
+          </FormCell>
+        ) : null}
+        <Field
+          span={12}
+          label={t('admin.create.name')}
+          value={form.name}
+          onChange={set('name')}
+          inputProps={{ 'data-testid': 'admin-create-name' }}
+        />
+        <Field
+          span={6}
+          label={t('admin.create.subdomain')}
+          value={form.subdomain}
+          onChange={set('subdomain')}
+          helperText={t('admin.create.subdomainHint')}
+          inputProps={{ 'data-testid': 'admin-create-subdomain' }}
+        />
+        <Field
+          span={6}
+          label={t('admin.create.adminEmail')}
+          value={form.admin_email}
+          onChange={set('admin_email')}
+          inputProps={{ 'data-testid': 'admin-create-admin-email' }}
+        />
+        <Field
+          span={3}
+          label={t('admin.create.currency')}
+          value={form.currency}
+          onChange={set('currency')}
+        />
+        <Field
+          span={9}
+          label={t('admin.create.languages')}
+          value={form.languages}
+          onChange={set('languages')}
+          helperText={t('admin.create.languagesHint')}
+        />
+        <FormCell>
+          <FormLabel>{t('admin.create.template')}</FormLabel>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {(templates.data?.items ?? [])
+              .filter((entry) => entry.is_active)
+              .map((entry) => (
+                <ChoicePill
+                  key={entry.code}
+                  active={template === entry.code}
+                  onClick={() => setTemplate(entry.code)}
+                  testId={`admin-create-template-${entry.code}`}
+                >
+                  {entry.title.ru ?? entry.title.en ?? entry.code}
+                </ChoicePill>
               ))}
-            </TextField>
-          </Stack>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={{ color: ink.mid }}>
-          {t('admin.actions.cancel')}
-        </Button>
-        <Button
-          disabled={!valid || mutation.isPending}
-          onClick={() => mutation.mutate()}
-          data-testid="admin-create-submit"
-          sx={primaryButtonSx}
+          </Box>
+        </FormCell>
+        <Field
+          span={6}
+          label={t('admin.create.timezone')}
+          value={form.timezone}
+          onChange={set('timezone')}
+        />
+        <Field
+          span={6}
+          select
+          label={t('admin.create.preset')}
+          value={form.preset}
+          onChange={set('preset')}
+          SelectProps={{ inputProps: { 'data-testid': 'admin-create-preset' } }}
         >
-          {t('admin.create.submit')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+          {BRAND_PRESETS.map((preset) => (
+            <MenuItem key={preset} value={preset}>
+              {preset}
+            </MenuItem>
+          ))}
+        </Field>
+      </FormGrid>
+    </AdminDialog>
   );
 }
 
@@ -197,29 +186,31 @@ export function CreatedAdminDialog({
 }) {
   const { t } = useTranslation();
   return (
-    <Dialog open onClose={onClose} data-testid="admin-created-dialog">
-      <DialogTitle>{t('admin.create.doneTitle')}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1} sx={{ pt: 1 }}>
-          <Typography variant="body2">
-            {t('admin.create.doneAdmin')}: <b>{admin.email}</b>
-          </Typography>
-          <Alert severity="success" data-testid="admin-created-sent">
-            {t('admin.create.donePasswordSent', { email: admin.delivered_to })}
-          </Alert>
-          {services.length ? (
-            <Box sx={{ fontSize: 12, color: ink.mid }} data-testid="admin-created-services">
-              {t('admin.create.doneServices', { count: services.length })}: {services.join(', ')}
-            </Box>
-          ) : null}
-          <Box sx={{ fontSize: 12, color: ink.low }}>{t('admin.create.doneHint')}</Box>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} data-testid="admin-created-done">
+    <AdminDialog
+      testId="admin-created-dialog"
+      title={t('admin.create.doneTitle')}
+      onClose={onClose}
+      maxWidth="xs"
+      actions={
+        <Button onClick={onClose} data-testid="admin-created-done" sx={primaryButtonSx}>
           {t('admin.actions.done')}
         </Button>
-      </DialogActions>
-    </Dialog>
+      }
+    >
+      <Stack spacing={1.5}>
+        <Typography sx={{ ...typo.body, color: ink.hi }}>
+          {t('admin.create.doneAdmin')}: <b>{admin.email}</b>
+        </Typography>
+        <Alert severity="success" data-testid="admin-created-sent">
+          {t('admin.create.donePasswordSent', { email: admin.delivered_to })}
+        </Alert>
+        {services.length ? (
+          <Box sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-created-services">
+            {t('admin.create.doneServices', { count: services.length })}: {services.join(', ')}
+          </Box>
+        ) : null}
+        <Box sx={{ ...typo.caption, color: ink.low }}>{t('admin.create.doneHint')}</Box>
+      </Stack>
+    </AdminDialog>
   );
 }

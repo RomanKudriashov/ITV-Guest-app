@@ -10,7 +10,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
+import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import {
   getDictionary,
@@ -39,10 +39,10 @@ export function TemplatesPage() {
 
   return (
     <Box data-testid="admin-templates">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.templates.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
         {t('admin.templates.subtitle')}
       </Typography>
 
@@ -55,7 +55,7 @@ export function TemplatesPage() {
             sx={{
               px: 1.75,
               py: 1.25,
-              fontSize: 13,
+              ...typo.body,
               fontWeight: 700,
               color: tab === key ? accent.soft : ink.mid,
               borderBottom: `2px solid ${tab === key ? accent.main : 'transparent'}`,
@@ -96,20 +96,15 @@ function TemplatesTab() {
         <Box key={template.id} sx={panelSx} data-testid={`admin-template-${template.code}`}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ flexGrow: 1 }}>
-              <Typography sx={{ fontSize: 14, fontWeight: 700, color: ink.hi }}>
+              <Typography sx={{ ...typo.panelTitle, color: ink.hi }}>
                 {template.title[i18n.language] ?? template.title.en ?? template.code}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: ink.low, mt: 0.4 }}>
+              <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.4 }}>
                 {template.description[i18n.language] ?? template.description.en ?? ''}
               </Typography>
             </Box>
             <Box
               sx={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                px: 1.1,
-                py: 0.4,
-                borderRadius: 999,
                 ...pillSx(template.is_active ? 'ok' : 'muted'),
               }}
             >
@@ -124,13 +119,13 @@ function TemplatesTab() {
 
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mt: 1.25 }}>
             {template.services.length === 0 ? (
-              <Typography sx={{ fontSize: 12, color: ink.low }}>{t('admin.templates.noServices')}</Typography>
+              <Typography sx={{ ...typo.caption, color: ink.low }}>{t('admin.templates.noServices')}</Typography>
             ) : (
               template.services.map((service, index) => (
                 <Box
                   key={`${service.type}-${index}`}
                   sx={{
-                    fontSize: 11.5,
+                    ...typo.caption,
                     color: ink.mid,
                     px: 1.1,
                     py: 0.5,
@@ -145,14 +140,14 @@ function TemplatesTab() {
           </Box>
 
           {template.modules.length ? (
-            <Typography sx={{ fontSize: 11.5, color: ink.low, mt: 1 }}>
+            <Typography sx={{ ...typo.caption, color: ink.low, mt: 1 }}>
               {t('admin.templates.modules')}:{' '}
               {template.modules.map((code) => t(`admin.module.${code}`, { defaultValue: code })).join(' · ')}
             </Typography>
           ) : null}
         </Box>
       ))}
-      <Typography sx={{ fontSize: 11.5, color: ink.low }}>{t('admin.templates.note')}</Typography>
+      <Typography sx={{ ...typo.caption, color: ink.low }}>{t('admin.templates.note')}</Typography>
     </Box>
       )}
     </QueryState>
@@ -241,7 +236,7 @@ function DictionaryTab() {
           <>
             {page.truncated ? (
               <Typography
-                sx={{ color: ink.low, fontSize: 12.5, mt: 1 }}
+                sx={{ ...typo.caption, color: ink.mid, mt: 1 }}
                 data-testid="admin-templates-truncated"
               >
                 {t('state.truncated', { shown: page.items.length, total: page.total })}
@@ -250,7 +245,7 @@ function DictionaryTab() {
         <>
       {Object.entries(group(page.items)).map(([entryKind, entries]) => (
         <Box key={entryKind} sx={{ mt: 2 }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: ink.low, textTransform: 'uppercase', letterSpacing: '.12em' }}>
+          <Typography sx={{ ...typo.caption, fontWeight: 700, color: ink.low, textTransform: 'uppercase', letterSpacing: '.12em' }}>
             {t(`admin.templates.kind.${entryKind}`)}
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mt: 1 }}>
@@ -259,7 +254,7 @@ function DictionaryTab() {
                 key={entry.id}
                 data-testid={`admin-dict-${entry.kind}-${entry.code}`}
                 sx={{
-                  fontSize: 11.5,
+                  ...typo.caption,
                   px: 1.2,
                   py: 0.6,
                   borderRadius: 999,
@@ -275,7 +270,7 @@ function DictionaryTab() {
         </Box>
       ))}
 
-      <Typography sx={{ fontSize: 11.5, color: ink.low, mt: 2 }}>
+      <Typography sx={{ ...typo.caption, color: ink.low, mt: 2 }}>
         {t('admin.templates.dictNote')}
       </Typography>
         </>

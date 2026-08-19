@@ -8,7 +8,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, pillSx, surface } from '../adminTokens';
+import { accent, ink, panelSx, pillSx, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
@@ -62,10 +62,10 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
     <Box data-testid="admin-support-sessions">
       {hotelId ? null : (
         <>
-          <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+          <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
             {t('admin.support.title')}
           </Typography>
-          <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
             {t('admin.support.subtitle')}
           </Typography>
         </>
@@ -91,7 +91,7 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
                 px: 1.5,
                 py: 0.75,
                 borderRadius: 1,
-                fontSize: 12.5,
+                ...typo.caption,
                 fontWeight: 600,
                 border: `1px solid ${params.state === state ? accent.main : surface.line}`,
                 color: params.state === state ? accent.soft : ink.mid,
@@ -110,7 +110,7 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
           />
           <Box sx={{ flexGrow: 1 }} />
           {sessions.data ? (
-            <Typography sx={{ color: ink.low, fontSize: 12.5 }} data-testid="admin-support-total">
+            <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-support-total">
               {t('list.ofTotal', {
                 shown: sessions.data.items.length,
                 total: sessions.data.total,
@@ -176,11 +176,11 @@ function SessionRow({
       }}
     >
       <Box sx={{ flexGrow: 1, minWidth: 220 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700 }}>
+        <Typography sx={{ ...typo.panelTitle, color: ink.hi }}>
           {showHotel ? `${row.subdomain} · ` : ''}
           {row.actor}
         </Typography>
-        <Typography sx={{ color: ink.low, fontSize: 12.5, mt: 0.25 }}>
+        <Typography sx={{ color: ink.low, ...typo.caption, mt: 0.25 }}>
           {t('admin.support.line', {
             user: row.as_user,
             from: time(row.started_at),
@@ -188,7 +188,7 @@ function SessionRow({
           })}
         </Typography>
         {row.reason ? (
-          <Typography sx={{ color: ink.low, fontSize: 12.5 }}>{row.reason}</Typography>
+          <Typography sx={{ color: ink.low, ...typo.caption }}>{row.reason}</Typography>
         ) : null}
       </Box>
 

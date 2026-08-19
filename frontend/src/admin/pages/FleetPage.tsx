@@ -8,7 +8,7 @@ import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, pillSx, primaryButtonSx, state, surface } from '../adminTokens';
+import { accent, ink, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
@@ -67,10 +67,10 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
     <Box data-testid="admin-fleet">
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+          <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
             {t('admin.fleet.title')}
           </Typography>
-          <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
             {t('admin.fleet.subtitle')}
           </Typography>
         </Box>
@@ -104,7 +104,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
             onChange={(e) => patch({ search: e.target.value })}
             placeholder={t('admin.fleet.searchPlaceholder')}
             inputProps={{ 'data-testid': 'admin-fleet-search' }}
-            sx={{ fontSize: 12.5, color: ink.hi, width: '100%' }}
+            sx={{ ...typo.caption, color: ink.hi, width: '100%' }}
           />
         </Box>
 
@@ -118,7 +118,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
               height: 32,
               px: 1.5,
               borderRadius: '9px',
-              fontSize: 12,
+              ...typo.caption,
               fontWeight: 600,
               border: `1px solid ${query.status === status ? accent.main : surface.line}`,
               bgcolor: query.status === status ? accent.washSoft : surface.s2,
@@ -133,7 +133,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         <ButtonBase
           onClick={() => patch({ sort: query.sort === 'name' ? '-name' : 'name' })}
           data-testid="admin-fleet-sort-name"
-          sx={{ ml: 'auto', fontSize: 12, fontWeight: 600, color: ink.mid, px: 1.25, py: 1 }}
+          sx={{ ml: 'auto', ...typo.caption, fontWeight: 600, color: ink.mid, px: 1.25, py: 1 }}
         >
           {t('admin.fleet.sortByName')}
           {query.sort === '-name' ? ' ↓' : query.sort === 'name' ? ' ↑' : ''}
@@ -154,7 +154,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
             border: `1px solid ${accent.main}`,
           }}
         >
-          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: accent.soft }}>
+          <Typography sx={{ ...typo.caption, fontWeight: 700, color: accent.soft }}>
             {t('admin.fleet.selected', { count: selected.length })}
           </Typography>
           <Button
@@ -176,7 +176,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
             {t('admin.fleet.bulkDisable')}
           </Button>
           {bulk.data ? (
-            <Typography sx={{ fontSize: 12, color: ink.mid }} data-testid="admin-fleet-bulk-result">
+            <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-fleet-bulk-result">
               {t('admin.fleet.bulkResult', { changed: bulk.data.changed, requested: bulk.data.requested })}
             </Typography>
           ) : null}
@@ -186,7 +186,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
       <QueryState query={fleet} what={t('state.what.fleet')}>
         {() => (
         <Box sx={{ mt: 1.5, overflowX: 'auto' }}>
-          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
             <Box component="thead">
               <Box component="tr">
                 <Th />
@@ -212,7 +212,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
             </Box>
           </Box>
           {rows.length === 0 ? (
-            <Typography sx={{ color: ink.low, fontSize: 13, py: 4, textAlign: 'center' }}
+            <Typography sx={{ ...typo.caption, color: ink.mid, py: 4, textAlign: 'center' }}
               data-testid="state-empty">
               {t('admin.fleet.empty')}
             </Typography>
@@ -251,7 +251,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           >
             {t('admin.fleet.prev')}
           </Button>
-          <Typography sx={{ fontSize: 12.5, color: ink.mid }}>
+          <Typography sx={{ ...typo.caption, color: ink.mid }}>
             {t('admin.fleet.pageOf', { page: fleet.data.page, pages: fleet.data.pages })}
           </Typography>
           <Button
@@ -275,7 +275,7 @@ function Th({ children, align }: { children?: React.ReactNode; align?: 'right' }
       component="th"
       sx={{
         textAlign: align ?? 'left',
-        fontSize: 10.5,
+        ...typo.caption,
         letterSpacing: '.1em',
         textTransform: 'uppercase',
         color: ink.low,
@@ -327,12 +327,12 @@ function Row({
           data-testid={`admin-fleet-open-${row.subdomain}`}
           sx={{ display: 'block', textAlign: 'left' }}
         >
-          <Typography sx={{ color: ink.hi, fontWeight: 700, fontSize: 13 }}>{row.name}</Typography>
-          <Typography sx={{ fontSize: 11, color: ink.low }}>{row.subdomain}</Typography>
+          <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{row.name}</Typography>
+          <Typography sx={{ ...typo.caption, color: ink.mid }}>{row.subdomain}</Typography>
         </ButtonBase>
       </Box>
       <Box component="td" sx={cell}>
-        <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: state.gold }}>
+        <Typography sx={{ ...typo.caption, fontWeight: 700, color: state.gold }}>
           {row.tariff_title[language] ?? row.tariff_title.en ?? row.tariff}
         </Typography>
       </Box>
@@ -343,12 +343,6 @@ function Row({
         <Box
           data-testid={`admin-fleet-status-${row.subdomain}`}
           sx={{
-            display: 'inline-block',
-            fontSize: 10.5,
-            fontWeight: 700,
-            px: 1.1,
-            py: 0.4,
-            borderRadius: 999,
             ...pillSx(STATUS_TONE[row.status]),
           }}
         >
@@ -362,13 +356,7 @@ function Row({
           <Box
             data-testid={`admin-fleet-node-offline-${row.subdomain}`}
             sx={{
-              display: 'inline-block',
               ml: 0.75,
-              fontSize: 10.5,
-              fontWeight: 700,
-              px: 1.1,
-              py: 0.4,
-              borderRadius: 999,
               ...pillSx('warn'),
             }}
           >

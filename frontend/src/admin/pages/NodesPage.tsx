@@ -4,11 +4,11 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { ink, panelSx, pillSx, primaryButtonSx, surface } from '../adminTokens';
+import { ink, panelSx, pillSx, primaryButtonSx, quietButtonSx, surface, typo } from '../adminTokens';
+import { Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
 import {
   createNode,
@@ -82,67 +82,74 @@ export function NodesPage() {
 
   return (
     <Box data-testid="admin-nodes">
-      <Typography sx={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em' }}>
+      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
         {t('admin.nodes.title')}
       </Typography>
-      <Typography sx={{ color: ink.low, fontSize: 13, mt: 0.5 }}>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
         {t('admin.nodes.subtitle')}
       </Typography>
 
       {canWrite ? (
         <Box sx={{ ...panelSx, mt: 2 }}>
           {creating ? (
-            <Box sx={{ display: 'flex', gap: 1.25, flexWrap: 'wrap', alignItems: 'center' }}>
-              <TextField
+            /*
+              Заведение узла — та же сетка формы, что в диалогах. Раньше это
+              был ряд `flex-wrap` из полей с `minWidth` 240/200/160: на широком
+              экране они выстраивались в строку разной длины, на среднем
+              перескакивали по одному и ряд читался лестницей.
+            */
+            <FormGrid>
+              <Field
+                span={4}
                 select
-                size="small"
                 label={t('admin.nodes.hotel')}
                 value={form.hotelId}
                 onChange={(event) => setForm((prev) => ({ ...prev, hotelId: event.target.value }))}
                 SelectProps={{ inputProps: { 'data-testid': 'admin-node-hotel' } }}
-                sx={{ minWidth: 240 }}
               >
                 {(fleet.data?.items ?? []).map((row) => (
                   <MenuItem key={row.id} value={row.id}>
                     {row.subdomain}
                   </MenuItem>
                 ))}
-              </TextField>
-              <TextField
-                size="small"
+              </Field>
+              <Field
+                span={4}
                 label={t('admin.nodes.nodeName')}
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                 inputProps={{ 'data-testid': 'admin-node-name' }}
-                sx={{ minWidth: 200 }}
               />
-              <TextField
+              <Field
+                span={4}
                 select
-                size="small"
                 label={t('admin.nodes.col.purpose')}
                 value={form.purpose}
                 onChange={(event) => setForm((prev) => ({ ...prev, purpose: event.target.value }))}
                 SelectProps={{ inputProps: { 'data-testid': 'admin-node-purpose' } }}
-                sx={{ minWidth: 160 }}
               >
                 {['grms', 'pms'].map((code) => (
                   <MenuItem key={code} value={code}>
                     {t(`admin.nodes.purpose.${code}`, { defaultValue: code })}
                   </MenuItem>
                 ))}
-              </TextField>
-              <Button
-                sx={primaryButtonSx}
-                disabled={!form.hotelId || !form.name.trim() || create.isPending}
-                onClick={() => create.mutate()}
-                data-testid="admin-node-create-submit"
-              >
-                {t('admin.nodes.create')}
-              </Button>
-              <Button onClick={() => setCreating(false)} sx={{ color: ink.mid }}>
-                {t('admin.hotel.cancel')}
-              </Button>
-            </Box>
+              </Field>
+              <FormCell>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    sx={primaryButtonSx}
+                    disabled={!form.hotelId || !form.name.trim() || create.isPending}
+                    onClick={() => create.mutate()}
+                    data-testid="admin-node-create-submit"
+                  >
+                    {t('admin.nodes.create')}
+                  </Button>
+                  <Button onClick={() => setCreating(false)} sx={quietButtonSx}>
+                    {t('admin.hotel.cancel')}
+                  </Button>
+                </Box>
+              </FormCell>
+            </FormGrid>
           ) : (
             <Button
               sx={primaryButtonSx}
@@ -180,14 +187,14 @@ export function NodesPage() {
           <>
             {page.truncated ? (
               <Typography
-                sx={{ color: ink.low, fontSize: 12.5, mt: 1 }}
+                sx={{ ...typo.caption, color: ink.mid, mt: 1 }}
                 data-testid="admin-nodes-truncated"
               >
                 {t('state.truncated', { shown: page.items.length, total: page.total })}
               </Typography>
             ) : null}
         <Box sx={{ mt: 2, overflowX: 'auto' }}>
-          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
             <Box component="thead">
               <Box component="tr">
                 {['hotel', 'purpose', 'status', 'seen', 'key'].map((key) => (
@@ -196,11 +203,8 @@ export function NodesPage() {
                     key={key}
                     sx={{
                       textAlign: 'left',
-                      fontSize: 10.5,
-                      letterSpacing: '.1em',
-                      textTransform: 'uppercase',
-                      color: ink.low,
-                      fontWeight: 700,
+                    ...typo.label,
+                    color: ink.mid,
                       p: '11px 12px',
                       borderBottom: `1px solid ${surface.line}`,
                     }}
@@ -250,20 +254,14 @@ function NodeLine({
   return (
     <Box component="tr" data-testid={`admin-node-${node.name}`}>
       <Box component="td" sx={cell}>
-        <Typography sx={{ color: ink.hi, fontWeight: 700, fontSize: 13 }}>{node.hotel}</Typography>
-        <Typography sx={{ fontSize: 11, color: ink.low }}>{node.name}</Typography>
+        <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{node.hotel}</Typography>
+        <Typography sx={{ ...typo.caption, color: ink.mid }}>{node.name}</Typography>
       </Box>
       <Box component="td" sx={cell}>{t(`admin.nodes.purpose.${node.purpose}`)}</Box>
       <Box component="td" sx={cell}>
         <Box
           data-testid={`admin-node-status-${node.name}`}
           sx={{
-            display: 'inline-block',
-            fontSize: 10.5,
-            fontWeight: 700,
-            px: 1.1,
-            py: 0.4,
-            borderRadius: 999,
             ...pillSx(node.is_revoked ? 'muted' : node.is_online ? 'ok' : 'warn'),
           }}
         >
@@ -292,7 +290,7 @@ function NodeLine({
         {canWrite ? (
           node.is_revoked ? (
             <Button size="small" onClick={onReissue} disabled={busy}
-              data-testid={`admin-node-reissue-${node.name}`} sx={{ fontSize: 12 }}>
+              data-testid={`admin-node-reissue-${node.name}`} sx={{ ...typo.caption }}>
               {t('admin.nodes.reissue')}
             </Button>
           ) : (
@@ -306,12 +304,12 @@ function NodeLine({
                 }}
                 disabled={busy}
                 data-testid={`admin-node-reissue-${node.name}`}
-                sx={{ fontSize: 12 }}
+                sx={{ ...typo.caption }}
               >
                 {t('admin.nodes.reissue')}
               </Button>
               <Button size="small" onClick={onRevoke} disabled={busy}
-                data-testid={`admin-node-revoke-${node.name}`} sx={{ fontSize: 12, color: ink.mid }}>
+                data-testid={`admin-node-revoke-${node.name}`} sx={{ ...typo.caption, color: ink.mid }}>
                 {t('admin.nodes.revoke')}
               </Button>
             </Box>
