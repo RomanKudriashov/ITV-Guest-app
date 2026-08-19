@@ -185,6 +185,18 @@ function DictionaryTab() {
 
   return (
     <Box>
+      {/*
+        Объяснение стоит НАД списком, а не сноской под ним. Под списком его
+        читали уже после того, как не поняли, чей это справочник и почему
+        правка не видна у заведённого отеля.
+      */}
+      <Typography
+        sx={{ ...typo.caption, color: ink.mid, mb: 2, maxWidth: 760 }}
+        data-testid="admin-dict-intro"
+      >
+        {t('admin.templates.dictIntro')}
+      </Typography>
+
       <Box sx={{ ...panelSx, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField
           select
@@ -270,9 +282,6 @@ function DictionaryTab() {
         </Box>
       ))}
 
-      <Typography sx={{ ...typo.caption, color: ink.low, mt: 2 }}>
-        {t('admin.templates.dictNote')}
-      </Typography>
         </>
           </>
         )}

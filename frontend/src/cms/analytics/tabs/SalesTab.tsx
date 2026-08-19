@@ -79,7 +79,18 @@ export function SalesTab({ controller }: { controller: UseAnalyticsFilters }) {
             justifyContent="space-between"
             sx={{ mb: 1.5 }}
           >
-            <Typography variant="subtitle1">{t('analytics.breakdown.title')}</Typography>
+            <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle1">{t('analytics.breakdown.title')}</Typography>
+              {/* Зачем сюда смотрят — рядом с заголовком, до таблицы. */}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ maxWidth: 620 }}
+                data-testid="analytics-breakdown-intro"
+              >
+                {t('analytics.breakdown.intro')}
+              </Typography>
+            </Stack>
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
               <TextField
                 select

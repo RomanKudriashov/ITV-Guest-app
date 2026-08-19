@@ -65,13 +65,13 @@
     "marketing": "营销",
     "roomControl": "客房控制",
     "payments": "支付",
-    "pms": "PMS",
+    "pms": "酒店管理系统",
     "mobileKey": "手机钥匙",
     "open": "打开菜单"
   },
   "dictionaries": {
     "title": "卡片字典",
-    "subtitle": "过敏原（“含有”）与膳食标记（“适合”）。系统条目不可删除，只能停用。",
+    "subtitle": "用于菜单卡片的过敏原（「含有」）与膳食标记（「适合」）。清单在酒店创建时以副本形式来自平台：自有记录可自由添加，平台记录不可删除，只能关闭。",
     "allergens": "过敏原",
     "markers": "膳食标记",
     "system": "系统",
@@ -536,7 +536,7 @@
       "slotRequired": "请选择时段",
       "slotNotOffered": "该时间不可用",
       "slotInPast": "该时间已过",
-      "slotTaken": "该时段刚被预订，请另选",
+      "slotTaken": "该时间刚被预订，请另选",
       "notOrderable": "此页面无法下单",
       "roomUnavailable": "客房控制暂时不可用。请联系前台。",
       "controlUnknown": "您的房间没有该控制项",
@@ -587,10 +587,10 @@
       "emptyHint": "酒店尚未开放预约服务",
       "categories": "预约分类",
       "date": "日期",
-      "none": "当天没有空闲时段",
+      "none": "当天没有可预约时间",
       "taken": "已占用",
       "left": "剩 {{count}}",
-      "raceLost": "该时段刚被预订，请另选。",
+      "raceLost": "该时间刚被预订，请另选。",
       "book": "预约",
       "bookAt": "预约 {{time}}",
       "booking": "预约中…",
@@ -844,11 +844,11 @@
     }
   },
   "notifications": {
-    "title": "通知与升级",
-    "subtitle": "请求发往哪里、何时上报、实际发生了什么",
+    "title": "通知与上报",
+    "subtitle": "客人的请求去往哪里、由谁接手、若无人及时接手会发生什么。当请求丢失或送错人时来这里。",
     "tabs": {
       "channels": "渠道",
-      "escalation": "升级",
+      "escalation": "上报",
       "log": "日志"
     },
     "channels": {
@@ -920,8 +920,8 @@
       "testFailed": "测试消息发送失败"
     },
     "escalation": {
-      "title": "升级规则",
-      "hint": "无人接单的请求会逐级上报",
+      "title": "上报规则",
+      "hint": "若在设定时间内无人接手，请求将转交管理者。",
       "loadError": "无法加载规则",
       "saved": "规则已保存",
       "deleted": "规则已删除",
@@ -1176,8 +1176,8 @@
       "links": "关联",
       "staffCount": "员工：{{count}}",
       "channelCount": "渠道：{{count}}",
-      "hasEscalation": "升级",
-      "noEscalation": "无升级",
+      "hasEscalation": "会上报",
+      "noEscalation": "不上报",
       "toNotifications": "前往通知",
       "toStaff": "前往人员",
       "active": "启用",
@@ -1232,10 +1232,10 @@
   },
   "slotConfig": {
     "section": "预约设置",
-    "duration": "时段长度",
+    "duration": "预约时长",
     "durationHint": "至少5分钟",
     "capacity": "容量",
-    "capacityHint": "每时段人数",
+    "capacityHint": "每次预约人数",
     "schedule": "营业时间",
     "department": "部门",
     "departmentHint": "由谁执行",
@@ -1248,7 +1248,7 @@
     "days": "天",
     "save": "保存设置",
     "saved": "已保存设置",
-    "saveItemFirst": "请先保存条目，再设置时段。",
+    "saveItemFirst": "请先保存条目，再设置预约时段。",
     "errors": {
       "duration": "至少5分钟",
       "capacity": "至少1",
@@ -1299,12 +1299,12 @@
         "product": "商品",
         "service_request": "服务请求",
         "info": "信息",
-        "slot": "时段"
+        "slot": "预约时段"
       },
       "entry_method": {
         "anonymous": "匿名",
         "room_scanned": "房间二维码",
-        "pms_verified": "PMS 验证",
+        "pms_verified": "经 PMS 核验",
         "staff_verified": "员工验证"
       },
       "device": {
@@ -1353,7 +1353,8 @@
     },
     "breakdown": {
       "title": "细分",
-      "dimension": "按此细分"
+      "dimension": "按此细分",
+      "intro": "收入由什么构成：按类型、分类、场所、进入方式。当上面的数字出乎意料、需要弄清是什么推动了它时看这里。"
     },
     "columns": {
       "label": "名称",
@@ -1397,7 +1398,7 @@
       "avgFulfil": "平均完成时间",
       "cancelRate": "取消率",
       "offHours": "非营业时段占比",
-      "escalations": "升级",
+      "escalations": "已上报",
       "byPoint": "按点位",
       "columns": {
         "point": "点位",
@@ -1405,7 +1406,7 @@
         "reaction": "响应",
         "fulfil": "完成",
         "cancelRate": "取消率",
-        "escalations": "升级"
+        "escalations": "已上报"
       }
     },
     "reviews": {
@@ -1469,7 +1470,7 @@
   },
   "badges": {
     "title": "营销徽章",
-    "subtitle": "为商品设置如“热门”“新品”等标签",
+    "subtitle": "客人在卡片上看到的标记：「热销」「新品」「辣」。当你想在菜单中突出某道菜、又不改价格和描述时来这里。",
     "add": "添加徽章",
     "deleted": "徽章已删除",
     "loadError": "无法加载徽章",
@@ -1566,7 +1567,7 @@
     "bricks": {
       "product": "目录",
       "service_request": "申请表单",
-      "slot": "时段",
+      "slot": "预约时段",
       "info": "信息页"
     },
     "create": {
@@ -1638,7 +1639,7 @@
     "services": "服务总数",
     "byService": "按服务",
     "staffAndItems": "{{staff}} 名员工 · {{items}} 个条目",
-    "noEscalation": "无升级规则"
+    "noEscalation": "无上报"
   },
   "admin": {
     "brand": {
@@ -1650,7 +1651,7 @@
       "fleet": "酒店",
       "platformGroup": "平台",
       "modules": "模块与套餐",
-      "nodes": "本地节点",
+      "nodes": "On-premise",
       "team": "团队",
       "audit": "审计",
       "templates": "模板与字典",
@@ -1671,7 +1672,7 @@
     },
     "security": {
       "title": "安全",
-      "subtitle": "你自己平台账号的双重验证。此处不修改他人账号。",
+      "subtitle": "你本人账户的第二因素，以及登录过它的设备清单。当访问权限可能落入他人之手时来这里，关掉多余的登录。",
       "on": "双重验证已开启",
       "off": "双重验证未开启",
       "enable": "开启双重验证",
@@ -1702,7 +1703,7 @@
     },
     "overview": {
       "title": "平台概览",
-      "subtitle": "平台上有 {{count}} 家酒店",
+      "subtitle": "一眼看全平台：多少家酒店、此刻有多少订单在跑、一切是否有响应。每天先看这里，确认夜里没有卡住的地方。",
       "loadFailed": "无法加载概览",
       "growth": "每月新增酒店",
       "health": "系统健康",
@@ -1823,13 +1824,21 @@
       "adminNewEmail": "新邮箱",
       "adminMoveHint": "用于旧邮箱丢失的情况：更改邮箱不会发送任何邮件，之后重置密码将发往新邮箱。",
       "adminFailed": "无法重置访问",
-      "adminMoveFailed": "无法更改邮箱"
+      "adminMoveFailed": "无法更改邮箱",
+      "intro": {
+        "usage": "酒店已用掉套餐允许的多少：客房、场所、菜单条目。当酒店触及上限并要求更多时来这里。",
+        "modules": "这家酒店开启了哪些能力，各自来自套餐还是手动开通。当你要在套餐之外为酒店开启或收回某项功能时来这里。",
+        "activity": "酒店里发生了什么：客人下单、进入应用、访问客房设备。当酒店投诉、你需要看清实际情况时来这里。",
+        "support": "平台员工何时以他人账户进入本酒店、为何进入。当你要切断该访问或向酒店说明谁进来过时来这里。",
+        "tariff": "酒店当前使用哪个套餐，改换后会有什么变化。续费和切换时来这里，看清酒店将失去什么。",
+        "data": "导出酒店积累的全部数据，以及停用并清除数据。当酒店离开平台或依法索取其数据时来这里。"
+      }
     },
     "create": {
       "title": "新建酒店",
       "name": "名称",
       "subdomain": "子域名",
-      "subdomainHint": "租户键，之后不可更改",
+      "subdomainHint": "酒店地址，之后不可更改",
       "adminEmail": "首位管理员邮箱",
       "currency": "货币",
       "languages": "语言",
@@ -1848,7 +1857,7 @@
     "module": {
       "room_control": "客房控制",
       "payment": "支付",
-      "pms": "PMS",
+      "pms": "酒店管理系统（PMS）",
       "mobile_key": "手机钥匙",
       "multi_restaurant": "多餐厅",
       "marketing": "营销",
@@ -1858,7 +1867,7 @@
     },
     "modules": {
       "title": "模块与套餐",
-      "subtitle": "每个套餐开放的内容 · 计费为人工",
+      "subtitle": "每个套餐开放哪些能力，以及在套餐之外额外开启了什么。当酒店要求某项它没有的功能时，来这里看套餐是否包含。",
       "trialDays": "{{days}} 天",
       "base": "基础能力",
       "col": {
@@ -1871,9 +1880,9 @@
       "empty": "暂无套餐。"
     },
     "nodes": {
-      "title": "本地节点",
-      "subtitle": "Local Connector — 启用 GRMS 或 PMS 后必需",
-      "empty": "暂无节点。启用 GRMS 或 PMS 的酒店才会出现。",
+      "title": "On-premise",
+      "subtitle": "安放在酒店内部的服务器。当启用客房控制或酒店管理系统（PMS）时需要：云端无法直接连到楼内设备。",
+      "empty": "暂无服务器。启用客房控制或酒店管理系统（PMS）的酒店会出现。",
       "keyOnce": "密钥（仅显示一次）",
       "online": "在线",
       "offline": "离线",
@@ -1884,8 +1893,8 @@
       "reissue": "签发密钥",
       "purpose": {
         "grms": "客房控制",
-        "pms": "PMS",
-        "both": "GRMS + PMS"
+        "pms": "酒店管理系统（PMS）",
+        "both": "客房控制与 PMS"
       },
       "col": {
         "hotel": "酒店",
@@ -1950,8 +1959,8 @@
           "tariff_set": "记录套餐",
           "entered": "进入酒店",
           "exported": "导出酒店数据",
-          "offboard_marked": "标记酒店退出",
-          "offboard_cancelled": "取消退出标记",
+          "offboard_marked": "酒店已标记为停用",
+          "offboard_cancelled": "停用标记已取消",
           "purged": "删除酒店数据",
           "deleted": "酒店已删除",
           "admin_email_changed": "管理员邮箱已更改",
@@ -2023,7 +2032,7 @@
     },
     "templates": {
       "title": "模板与字典",
-      "subtitle": "平台用来填充新酒店的内容",
+      "subtitle": "新酒店由此组装的模板：场所集合，以及所有酒店共用的过敏原与标记清单。开设酒店前来这里，确认它将以什么内容启用。",
       "tab": {
         "templates": "开通模板",
         "dictionary": "系统字典"
@@ -2042,18 +2051,19 @@
       },
       "dictNote": "酒店在创建时获得自己的副本，可自行停用条目。此处的修改对新酒店生效。",
       "empty": "暂无入驻模板。",
-      "dictEmpty": "字典目前为空。"
+      "dictEmpty": "字典目前为空。",
+      "dictIntro": "过敏原与标记的基准清单，全平台共用。每家新酒店获得一份副本并自行修改：此处的改动只影响之后创建的酒店。"
     },
     "data": {
       "exportTitle": "数据导出",
       "export": "下载 JSON",
       "exportHint": "把数据交还酒店。可逆，可重复执行。",
-      "offboardTitle": "退出与数据删除",
+      "offboardTitle": "酒店停用（152-FZ）",
       "offboardHint": "停止处理。分两步：标记会停用酒店，删除不可逆。",
-      "reason": "退出原因",
-      "mark": "标记为退出",
+      "reason": "停用原因",
+      "mark": "标记为停用",
       "markFailed": "标记失败",
-      "marked": "该酒店已标记退出并被停用。",
+      "marked": "酒店已标记为停用并关闭。",
       "confirmLabel": "输入「{{subdomain}}」以确认",
       "purge": "删除数据",
       "purgeFailed": "删除失败",
@@ -2061,7 +2071,7 @@
       "cancel": "取消标记",
       "deleteTitle": "从注册表移除酒店",
       "delete": "从注册表移除",
-      "deleteHint": "数据由退出流程清除；此处针对酒店本身：它将从列表中消失，子域被释放以供新酒店使用。记录仍为软删除——平台必须能回答该酒店曾经存在。",
+      "deleteHint": "数据由停用清除，而这一项针对酒店本身：它从列表中消失，地址被释放并可再次使用。记录保留为软删除：平台仍须能够回答该酒店曾经存在。",
       "deleted": "酒店“{{subdomain}}”已移除，名称已释放",
       "deleteFailed": "无法移除酒店"
     },
@@ -2206,7 +2216,7 @@
       "publishedAt": "发布时间",
       "controls": "元素数"
     },
-    "subtitle": "导入变量、搭建界面、绘制房间平面并发布",
+    "subtitle": "客人在客房里能操作什么：灯光、窗帘、空调、场景。酒店上线时来一次，之后设备更换时再来。",
     "type": "房型",
     "loadError": "无法加载房型",
     "noTypes": "尚无房型",
@@ -2236,7 +2246,8 @@
       "state": "状态",
       "active": "有效",
       "inactive": "无效",
-      "loadError": "无法加载访问设置"
+      "loadError": "无法加载访问设置",
+      "intro": "哪些客人可以控制客房：凭住宿 PIN，还是仅凭房间号。上线时以及收到「邻居能控制我房间」的投诉时来这里。"
     },
     "plan": {
       "frames": "平面图像",

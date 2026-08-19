@@ -101,6 +101,26 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         ))}
       </Box>
 
+      {/*
+        Объяснение вкладки — НАД содержимым и в одном месте на все вкладки.
+        Над, потому что читают сверху вниз: подпись под таблицей встречает
+        человека уже после того, как он не понял таблицу. В одном месте,
+        потому что иначе шесть вкладок обзаведутся шестью разными способами
+        сказать одно и то же.
+
+        У «Профиля» объяснения нет намеренно: имя, адрес и валюта отеля
+        говорят сами за себя, и подпись там была бы шумом. Пустой ключ
+        поэтому не ошибка — он просто ничего не рисует.
+      */}
+      {t(`admin.hotel.intro.${tab}`, { defaultValue: '' }) ? (
+        <Typography
+          sx={{ ...typo.caption, color: ink.mid, mt: 2.25, maxWidth: 760 }}
+          data-testid={`admin-hotel-intro-${tab}`}
+        >
+          {t(`admin.hotel.intro.${tab}`)}
+        </Typography>
+      ) : null}
+
       <Box sx={{ mt: 2.25 }}>
         {tab === 'profile' ? <ProfileTab hotel={hotel} /> : null}
         {tab === 'usage' ? <UsageTab id={id} /> : null}

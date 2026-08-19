@@ -79,6 +79,10 @@ export function AccessTab() {
 
   return (
     <Stack spacing={2} data-testid="grms-access">
+      {/* Объяснение вкладки — первым, до карточек с переключателями. */}
+      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760 }} data-testid="grms-access-intro">
+        {t('roomControl.access.intro')}
+      </Typography>
       <Card variant="outlined" sx={{ borderColor: 'divider' }}>
         <CardContent>
           <Typography variant="subtitle1">{t('roomControl.access.demoTitle')}</Typography>

@@ -65,13 +65,13 @@
     "marketing": "Marketing",
     "roomControl": "Room control",
     "payments": "Payments",
-    "pms": "PMS",
+    "pms": "Hotel management system",
     "mobileKey": "Mobile key",
     "open": "Open menu"
   },
   "dictionaries": {
     "title": "Card dictionaries",
-    "subtitle": "Allergens («contains») and dietary markers («suitable»). System entries cannot be deleted — only deactivated.",
+    "subtitle": "Allergens (“contains”) and dietary markers (“suitable for”) used on menu cards. The lists arrived as a COPY from the platform when the hotel was created: add your own freely, platform entries cannot be deleted — only switched off.",
     "allergens": "Allergens",
     "markers": "Dietary markers",
     "system": "System",
@@ -171,7 +171,7 @@
       "product": "Product",
       "service_request": "Service request",
       "info": "Info page",
-      "slot": "Bookable slot"
+      "slot": "Timed booking"
     },
     "priceOptionalHint": "May stay empty — \"price not set\"",
     "locationMode": "Location",
@@ -538,7 +538,7 @@
       "slotRequired": "Please choose a time slot",
       "slotNotOffered": "That time is not available",
       "slotInPast": "That time has already passed",
-      "slotTaken": "That slot was just taken — please pick another",
+      "slotTaken": "That time was just taken — pick another",
       "notOrderable": "This page cannot be ordered",
       "roomUnavailable": "Room control is temporarily unavailable. Please contact the reception desk.",
       "controlUnknown": "There is no such control in your room",
@@ -589,10 +589,10 @@
       "emptyHint": "The hotel has not opened any bookable services yet",
       "categories": "Booking categories",
       "date": "Date",
-      "none": "No free slots on this day",
+      "none": "No free times on this day",
       "taken": "Taken",
       "left": "{{count}} left",
-      "raceLost": "That slot was just taken — please pick another.",
+      "raceLost": "That time was just taken — pick another.",
       "book": "Book",
       "bookAt": "Book {{time}}",
       "booking": "Booking…",
@@ -848,11 +848,11 @@
     }
   },
   "notifications": {
-    "title": "Notifications and escalation",
-    "subtitle": "Where a request goes, when it is raised higher, and what actually happened",
+    "title": "Notifications and hand-up",
+    "subtitle": "Where a guest request goes, who receives it, and what happens if nobody takes it in time. You come here when requests get lost or reach the wrong people.",
     "tabs": {
       "channels": "Channels",
-      "escalation": "Escalation",
+      "escalation": "Hand-up",
       "log": "Journal"
     },
     "channels": {
@@ -924,8 +924,8 @@
       "testFailed": "Test message did not go through"
     },
     "escalation": {
-      "title": "Escalation rule",
-      "hint": "A request nobody took is raised step by step",
+      "title": "Hand-up rule",
+      "hint": "If nobody takes the request within the set time, it goes to the manager.",
       "loadError": "Could not load the rules",
       "saved": "Rule saved",
       "deleted": "Rule deleted",
@@ -1180,8 +1180,8 @@
       "links": "Links",
       "staffCount": "Staff: {{count}}",
       "channelCount": "Channels: {{count}}",
-      "hasEscalation": "Escalation",
-      "noEscalation": "No escalation",
+      "hasEscalation": "Hands up",
+      "noEscalation": "No hand-up",
       "toNotifications": "To notifications",
       "toStaff": "To staff",
       "active": "Active",
@@ -1236,10 +1236,10 @@
   },
   "slotConfig": {
     "section": "Booking setup",
-    "duration": "Slot length",
+    "duration": "Booking length",
     "durationHint": "At least 5 minutes",
     "capacity": "Capacity",
-    "capacityHint": "Guests per slot",
+    "capacityHint": "Guests per booking",
     "schedule": "Working hours",
     "department": "Department",
     "departmentHint": "Who fulfils the booking",
@@ -1252,7 +1252,7 @@
     "days": "days",
     "save": "Save booking setup",
     "saved": "Booking setup saved",
-    "saveItemFirst": "Save the item first, then configure its slots.",
+    "saveItemFirst": "Save the item first, then set up timed booking.",
     "errors": {
       "duration": "At least 5 minutes",
       "capacity": "At least 1",
@@ -1303,12 +1303,12 @@
         "product": "Products",
         "service_request": "Service requests",
         "info": "Info",
-        "slot": "Slots"
+        "slot": "Timed bookings"
       },
       "entry_method": {
         "anonymous": "Anonymous",
         "room_scanned": "Room QR",
-        "pms_verified": "PMS verified",
+        "pms_verified": "Verified via PMS",
         "staff_verified": "Staff verified"
       },
       "device": {
@@ -1357,7 +1357,8 @@
     },
     "breakdown": {
       "title": "Breakdown",
-      "dimension": "Break down by"
+      "dimension": "Break down by",
+      "intro": "What the revenue is made of: by type, category, venue, entry method. You look here when the number above surprised you and you need to see what moved it."
     },
     "columns": {
       "label": "Name",
@@ -1401,7 +1402,7 @@
       "avgFulfil": "Avg fulfilment time",
       "cancelRate": "Cancel rate",
       "offHours": "Off-hours share",
-      "escalations": "Escalations",
+      "escalations": "Handed up",
       "byPoint": "By point",
       "columns": {
         "point": "Point",
@@ -1409,7 +1410,7 @@
         "reaction": "Reaction",
         "fulfil": "Fulfilment",
         "cancelRate": "Cancel rate",
-        "escalations": "Escalations"
+        "escalations": "Handed up"
       }
     },
     "reviews": {
@@ -1473,7 +1474,7 @@
   },
   "badges": {
     "title": "Marketing badges",
-    "subtitle": "Tags like Hit or New for items",
+    "subtitle": "The marks a guest sees on a card: “Hit”, “New”, “Spicy”. You come here to make a dish stand out in the menu without touching its price or description.",
     "add": "Add badge",
     "deleted": "Badge deleted",
     "loadError": "Failed to load badges",
@@ -1570,7 +1571,7 @@
     "bricks": {
       "product": "catalog",
       "service_request": "request form",
-      "slot": "slots",
+      "slot": "timed bookings",
       "info": "info page"
     },
     "create": {
@@ -1643,7 +1644,7 @@
     "services": "Services in total",
     "byService": "By service",
     "staffAndItems": "{{staff}} staff · {{items}} items",
-    "noEscalation": "No escalation"
+    "noEscalation": "Nothing handed up"
   },
   "admin": {
     "brand": {
@@ -1655,7 +1656,7 @@
       "fleet": "Hotels",
       "platformGroup": "Platform",
       "modules": "Modules & plans",
-      "nodes": "On-prem nodes",
+      "nodes": "On-premise",
       "team": "Team",
       "audit": "Audit",
       "templates": "Templates & dictionaries",
@@ -1676,7 +1677,7 @@
     },
     "security": {
       "title": "Security",
-      "subtitle": "Two-factor for your own platform account. Other accounts are not changed here.",
+      "subtitle": "The second factor of your own account and the list of devices it was opened from. You come here when access may have reached the wrong hands — to close the extra sessions.",
       "on": "Two-factor is on",
       "off": "Two-factor is off",
       "enable": "Enable two-factor",
@@ -1707,7 +1708,7 @@
     },
     "overview": {
       "title": "Platform overview",
-      "subtitle": "{{count}} hotels on the platform",
+      "subtitle": "The whole platform at a glance: how many hotels, how many orders are running right now, whether everything responds. This is the first stop — to be sure nothing stalled overnight.",
       "loadFailed": "Could not load the overview",
       "growth": "New hotels by month",
       "health": "System health",
@@ -1829,13 +1830,21 @@
       "adminNewEmail": "New address",
       "adminMoveHint": "For when the old mailbox is lost: the address changes without sending anything, and the password reset then goes to the new one.",
       "adminFailed": "Could not reset access",
-      "adminMoveFailed": "Could not change the address"
+      "adminMoveFailed": "Could not change the address",
+      "intro": {
+        "usage": "How much the hotel has used of what its tariff allows: rooms, venues, menu items. You come here when a hotel hits a limit and asks for more.",
+        "modules": "Which features this hotel has on and where each came from — the tariff or a manual override. You come here to switch a feature on beyond the tariff, or to take it away.",
+        "activity": "What happened at the hotel: guest orders, app entries, calls to room equipment. You come here when a hotel complains and you need to see what actually took place.",
+        "support": "When platform staff entered this hotel under someone else’s account, and why. You come here to cut off that access or to tell the hotel who was inside.",
+        "tariff": "Which tariff the hotel is on now and what changes if you move it. You come here on renewal and on a switch — to see what the hotel would lose.",
+        "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law."
+      }
     },
     "create": {
       "title": "New hotel",
       "name": "Name",
       "subdomain": "Subdomain",
-      "subdomainHint": "Tenant key, cannot be changed later",
+      "subdomainHint": "The hotel address, fixed afterwards",
       "adminEmail": "First admin email",
       "currency": "Currency",
       "languages": "Languages",
@@ -1854,7 +1863,7 @@
     "module": {
       "room_control": "Room control",
       "payment": "Payments",
-      "pms": "PMS",
+      "pms": "Hotel management system (PMS)",
       "mobile_key": "Mobile key",
       "multi_restaurant": "Multi-restaurant",
       "marketing": "Marketing",
@@ -1864,7 +1873,7 @@
     },
     "modules": {
       "title": "Modules & plans",
-      "subtitle": "What each plan opens · billing is manual",
+      "subtitle": "What each tariff opens and what is switched on beyond it. You come here when a hotel asks for a feature it does not have — to see whether the tariff covers it.",
       "trialDays": "{{days}} days",
       "base": "base features",
       "col": {
@@ -1877,9 +1886,9 @@
       "empty": "No plans yet."
     },
     "nodes": {
-      "title": "On-prem nodes",
-      "subtitle": "Local Connector — required once GRMS or PMS is on",
-      "empty": "No nodes yet. They appear for hotels with GRMS or PMS.",
+      "title": "On-premise",
+      "subtitle": "Servers standing inside the hotels themselves. Needed where room control or the hotel management system (PMS) is on: the cloud cannot reach equipment inside the building.",
+      "empty": "No servers yet. They appear at hotels with room control or a hotel management system (PMS).",
       "keyOnce": "Key (shown once)",
       "online": "online",
       "offline": "offline",
@@ -1890,8 +1899,8 @@
       "reissue": "Issue key",
       "purpose": {
         "grms": "Room control",
-        "pms": "PMS",
-        "both": "GRMS + PMS"
+        "pms": "Hotel management system (PMS)",
+        "both": "Room control and PMS"
       },
       "col": {
         "hotel": "Hotel",
@@ -1956,8 +1965,8 @@
           "tariff_set": "Plan recorded",
           "entered": "Entered the hotel",
           "exported": "Hotel data exported",
-          "offboard_marked": "Hotel marked for offboarding",
-          "offboard_cancelled": "Offboarding mark removed",
+          "offboard_marked": "Hotel marked for shutdown",
+          "offboard_cancelled": "Shutdown mark removed",
           "purged": "Hotel data erased",
           "deleted": "Hotel deleted",
           "admin_email_changed": "Admin address changed",
@@ -2029,7 +2038,7 @@
     },
     "templates": {
       "title": "Templates & dictionaries",
-      "subtitle": "What the platform fills new hotels with",
+      "subtitle": "The blanks a new hotel is assembled from: a set of venues and the lists of allergens and markers shared by everyone. You come here before creating a hotel — to check what it will open with.",
       "tab": {
         "templates": "Onboarding templates",
         "dictionary": "System dictionary"
@@ -2048,18 +2057,19 @@
       },
       "dictNote": "A hotel gets its own copy on creation and may deactivate entries. Edits here reach new hotels.",
       "empty": "No onboarding templates yet.",
-      "dictEmpty": "The dictionary is empty so far."
+      "dictEmpty": "The dictionary is empty so far.",
+      "dictIntro": "The reference lists of allergens and markers, shared across the platform. Every new hotel receives a COPY and edits it on its own side: a change here reaches only hotels created after it."
     },
     "data": {
       "exportTitle": "Data export",
       "export": "Download JSON",
       "exportHint": "Hand the hotel its data. Reversible, can be done any number of times.",
-      "offboardTitle": "Offboarding (data protection)",
+      "offboardTitle": "Hotel shutdown (152-FZ)",
       "offboardHint": "Stopping processing. Two steps: marking disables the hotel, erasure is irreversible.",
-      "reason": "Reason for offboarding",
-      "mark": "Mark for offboarding",
+      "reason": "Reason for shutdown",
+      "mark": "Mark for shutdown",
       "markFailed": "Could not mark",
-      "marked": "The hotel is marked for offboarding and disabled.",
+      "marked": "Hotel marked for shutdown and switched off.",
       "confirmLabel": "Type “{{subdomain}}” to confirm",
       "purge": "Erase data",
       "purgeFailed": "Could not erase",
@@ -2067,7 +2077,7 @@
       "cancel": "Cancel marking",
       "deleteTitle": "Remove the hotel from the registry",
       "delete": "Remove from registry",
-      "deleteHint": "Data is erased by offboarding; this is about the hotel itself: it leaves the lists and the subdomain becomes free for a new hotel. The row stays soft-deleted — the platform must be able to answer that the hotel existed.",
+      "deleteHint": "Data is erased by the shutdown; this is about the hotel itself: it leaves the lists, the address is freed and becomes available again. The row stays soft-deleted: the platform must still be able to answer that the hotel existed.",
       "deleted": "Hotel “{{subdomain}}” removed, the name is free",
       "deleteFailed": "Could not remove the hotel"
     },
@@ -2212,7 +2222,7 @@
       "publishedAt": "Published",
       "controls": "Elements"
     },
-    "subtitle": "Import variables, build the screen, mark up the plan, publish",
+    "subtitle": "What a guest will be able to switch in their room: lights, curtains, climate, scenes. You come here once when the hotel launches, and later when equipment on site changes.",
     "type": "Room type",
     "loadError": "Could not load room types",
     "noTypes": "No room types yet",
@@ -2242,7 +2252,8 @@
       "state": "State",
       "active": "Active",
       "inactive": "Inactive",
-      "loadError": "Could not load access settings"
+      "loadError": "Could not load access settings",
+      "intro": "Which guests may control the room: by the stay PIN or by the room number alone. You come here at launch and on a complaint that a neighbour controls someone’s room."
     },
     "plan": {
       "frames": "Plan frames",
