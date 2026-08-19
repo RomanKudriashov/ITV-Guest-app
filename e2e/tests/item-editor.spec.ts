@@ -112,37 +112,13 @@ test.describe('CMS: редактор блюда', () => {
     /*
       --- Редактируем: меняем цену и снимаем маркер ----------------------
 
-      ЖДЁМ СОСТОЯНИЯ ФОРМЫ, А НЕ МЕТКИ «не сохранено».
-
-      Здесь тест флейковал, и причина не в скорости, а в том, что ждали не то.
-
-      Сохранение внутри себя сбрасывает `dirtyRef`, обнуляет `hydratedIdRef` и
-      дожидается перечитывания позиции. Но РЕГИДРАТАЦИЯ формы — это эффект, он
-      выполняется в следующем рендере, уже ПОСЛЕ того, как мутация разрешилась
-      и метка погасла. Окно между «метка погасла» и «эффект отработал» и есть
-      дыра: тест успевает напечатать 2600, эффект приезжает следом и возвращает
-      в поле серверные 2450 (пропустить регидратацию он умеет только у грязной
-      формы, а грязной она станет лишь в следующем рендере). Сохранялась
-      старая цена, а тест читал её как «правка не доехала».
-
-      Ждать здесь ответа сервера бесполезно: `GET` уходит ВНУТРИ мутации, то
-      есть раньше, чем мы успеваем на него подписаться.
-
-      Поэтому ждём того, что действительно требуется следующему шагу: поле
-      держит новое значение И форма знает, что она грязная. С этого момента
-      регидратация её не тронет — блокировка стоит в самом эффекте. Если
-      поздняя регидратация всё же затёрла ввод, блок просто повторится.
+      Печатаем сразу после сохранения, ничего не выжидая, — и это ПРОВЕРКА, а
+      не небрежность. Ровно в это окно приезжали два перечитывания позиции и
+      затирали набранное; теперь ответ сервера применяется по полям и тронутое
+      не трогает. Отдельные укусы на оба направления — в блоке
+      «Редактор позиции: сохранение и одновременная правка».
     */
-    const priceInput = page.getByTestId('item-price-input')
-    await expect(async () => {
-      await priceInput.fill('2600')
-      // Проверки КОРОТКИЕ намеренно: смысл блока — переиграть регидратацию
-      // новым вводом, а не пересидеть её. С длинным ожиданием первая же
-      // попытка выбирала весь бюджет, стоя перед откатившимся полем.
-      await expect(priceInput).toHaveValue('2600', { timeout: 1_500 })
-      await expect(page.getByTestId('item-dirty-badge')).toBeVisible({ timeout: 1_500 })
-    }).toPass({ timeout: 20_000 })
-
+    await page.getByTestId('item-price-input').fill('2600')
     await page.getByTestId('item-marker-vegan').click() // снять маркер
 
     // Вторая гонка: `GET` через API мог обогнать `PATCH` формы, и мы читали
@@ -265,3 +241,131 @@ async function openKitchenMenu(
   await page.goto(`/cms/services/${kitchen.id}`)
   await expect(page.getByTestId('service-menu')).toBeVisible({ timeout: 20_000 })
 }
+
+/**
+ * ОТВЕТ СЕРВЕРА НЕ ЗАТИРАЕТ НАБРАННОЕ ПОСЛЕ ОТПРАВКИ.
+ *
+ * Дефект, ради которого написан блок. После сохранения позиция перечитывается
+ * ДВАЖДЫ: один раз от инвалидации по префиксу `['cms','items']` (ключ позиции
+ * `['cms','items','detail',id]` попадает под него), второй — явным запросом
+ * ключа. Оба ответа приезжают уже после того, как человек мог начать править,
+ * и прежний код клал их поверх формы: набранное жило около полусекунды и
+ * заменялось серверным. Сохранялось потом старое — правка не доезжала.
+ *
+ * Чинилось это дважды решением «грязную форму не трогаем целиком», и оба раза
+ * упиралось в яму: либо форма оставалась грязной навсегда, либо правка уходила
+ * на сервер, а на экране висела старая цифра. Поэтому здесь проверяются ОБА
+ * направления, а не только то, ради которого правку затевали.
+ */
+test.describe('Редактор позиции: сохранение и одновременная правка', () => {
+  const created: string[] = []
+
+  test.afterAll(async ({ request }) => {
+    const token = await apiToken(request)
+    for (const id of created) await apiDelete(request, token, `/api/cms/items/${id}`)
+  })
+
+  /** Завести позицию через API и открыть её редактор. */
+  async function openFreshItem(
+    page: import('@playwright/test').Page,
+    request: import('@playwright/test').APIRequestContext,
+  ): Promise<{ id: string; title: string }> {
+    const token = await apiToken(request)
+    const title = unique('Слияние')
+    await login(page)
+    await openKitchenMenu(page, request)
+    await page.getByTestId('category-item-hot').click()
+    await page.getByTestId('add-item-button').click()
+    await page.getByTestId('item-title-input').fill(title)
+    await page.getByTestId('item-price-input').fill('2450')
+    await page.getByTestId('item-save-button').click()
+    await expect(page).toHaveURL(/\/cms\/menu\/items\/[0-9a-f-]{36}/, { timeout: 15_000 })
+    const item = await findItemByTitle(request, token, title)
+    expect(item, 'позиция должна появиться в каталоге').toBeTruthy()
+    created.push(item!.id)
+    return { id: item!.id, title }
+  }
+
+  test('набранное сразу после сохранения переживает ответ сервера', async ({
+    page,
+    request,
+  }) => {
+    const token = await apiToken(request)
+    const { id } = await openFreshItem(page, request)
+
+    /*
+      Печатаем, ПОКА ЗАПИСЬ В ПОЛЁТЕ. Синхронизируемся по факту ухода `PATCH`,
+      а не по паузе: пауза проверяла бы скорость машины, а нужен сценарий —
+      человек правит, не дождавшись конца сохранения. Именно в это окно и
+      приезжали оба перечитывания, затирая набранное.
+    */
+    const writeStarted = page.waitForRequest(
+      (r) => r.url().includes(`/cms/items/${id}`) && r.method() === 'PATCH',
+      { timeout: 15_000 },
+    )
+    await page.getByTestId('item-title-input').fill(unique('Слияние правка'))
+    await page.getByTestId('item-save-button').click()
+    await writeStarted
+    await page.getByTestId('item-price-input').fill('2600')
+
+    // Держим дольше, чем живут оба ответа: раньше значение откатывалось
+    // примерно через полсекунды и больше не возвращалось.
+    await page.waitForTimeout(4_000)
+    await expect(
+      page.getByTestId('item-price-input'),
+      'ответ сервера затёр набранное — правка снова теряется',
+    ).toHaveValue('2600')
+
+    // И правка доезжает до базы, а не остаётся только на экране.
+    await page.getByTestId('item-save-button').click()
+    await expect
+      .poll(async () => (await apiGet<CmsItem>(request, token, `/api/cms/items/${id}`)).price, {
+        timeout: 15_000,
+      })
+      .toBe(260000)
+  })
+
+  test('нетронутое поле обновляется ответом сервера, а метка гаснет', async ({
+    page,
+    request,
+  }) => {
+    /*
+      ОБРАТНАЯ ЯМА. Защитить набранное легко ценой того, что форма перестаёт
+      обновляться вовсе: тогда нормализация сервера не доезжает, форма остаётся
+      «не сохранена» навсегда, а на экране висит не то, что в базе.
+
+      Цена — удобный свидетель: человек набирает «2600», сервер хранит в
+      копейках и возвращает «2600.00». Если поле после ответа показывает
+      серверную запись — гидратация нетронутых полей жива.
+    */
+    const token = await apiToken(request)
+    const { id } = await openFreshItem(page, request)
+
+    await page.getByTestId('item-price-input').fill('2600')
+    await page.getByTestId('item-save-button').click()
+
+    // Ничего не трогаем — ждём, что скажет сервер.
+    await expect(page.getByTestId('item-price-input')).toHaveValue('2600.00', {
+      timeout: 15_000,
+    })
+    await expect(
+      page.getByTestId('item-dirty-badge'),
+      'метка «не сохранено» не гаснет — форма осталась грязной навсегда',
+    ).toBeHidden({ timeout: 15_000 })
+
+    expect((await apiGet<CmsItem>(request, token, `/api/cms/items/${id}`)).price).toBe(260000)
+  })
+
+  test('после перезагрузки в базе и на экране то, что сохраняли', async ({ page, request }) => {
+    const token = await apiToken(request)
+    const { id } = await openFreshItem(page, request)
+
+    await page.getByTestId('item-price-input').fill('3100')
+    await page.getByTestId('item-save-button').click()
+    await expect(page.getByTestId('item-dirty-badge')).toBeHidden({ timeout: 15_000 })
+
+    await page.reload()
+    await expect(page.getByTestId('item-price-input')).toHaveValue('3100.00', { timeout: 20_000 })
+    expect((await apiGet<CmsItem>(request, token, `/api/cms/items/${id}`)).price).toBe(310000)
+  })
+})

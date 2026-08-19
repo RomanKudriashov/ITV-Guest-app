@@ -106,6 +106,43 @@ interface ItemForm {
   prepInput: string;
 }
 
+/** Снимок редактируемого состояния — база для трёхстороннего слияния. */
+interface MergeBase {
+  form: ItemForm;
+  images: string[];
+  groups: DraftGroup[];
+  fields: DraftField[];
+  badgeIds: string[];
+}
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * СЛИЯНИЕ ПО ПОЛЯМ, А НЕ ПО ФОРМЕ ЦЕЛИКОМ.
+ *
+ * Три точки: `base` — то, что мы в последний раз отдали серверу или получили
+ * от него; `current` — что на экране сейчас; `incoming` — что пришло в ответе.
+ *
+ * Правило одно и на каждое поле своё: поле, которое человек ТРОГАЛ после
+ * отправки (`current` разошлось с `base`), остаётся его — ответ его не
+ * касается. Поле, которого не трогали, обновляется из ответа: так доезжает
+ * нормализация сервера (сгенерированные коды, `single ⇒ max_choices=1`).
+ *
+ * Почему не «грязная форма — не трогаем целиком»: так решали дважды, и оба
+ * раза упирались в ямы. Либо форма оставалась грязной навсегда (baseline
+ * не обновлялся, метка «не сохранено» не гасла), либо правка уходила на
+ * сервер, а на экране оставалась старая цифра. Обе ямы от того, что решение
+ * принималось одно на всю форму, а вопрос стоит по каждому полю отдельно.
+ */
+function mergeFromServer<T extends object>(base: T, current: T, incoming: T): T {
+  const merged = { ...incoming };
+  for (const key of Object.keys(incoming) as (keyof T)[]) {
+    // Человек изменил это поле после отправки — оно его, ответ не спорит.
+    if (!same(current[key], base[key])) merged[key] = current[key];
+  }
+  return merged;
+}
+
 function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm {
   const behaviour = behaviourFor(type);
   return {
@@ -228,6 +265,75 @@ export function ItemEditorPage() {
   const hydratedIdRef = useRef<string | null>(null);
 
   /*
+    ЧТО МЫ В ПОСЛЕДНИЙ РАЗ ОТДАЛИ/ПОЛУЧИЛИ ОТ СЕРВЕРА — база для слияния.
+
+    Ответ сервера НИКОГДА не затирает поле, которого человек касался после
+    отправки. Чтобы это решить, нужна третья точка отсчёта помимо «что на
+    экране» и «что пришло»: то, от чего экран отсчитывает изменения. Ей и
+    служит эта ссылка.
+
+    Обновляется в двух местах: при гидратации (пришли новые данные) и в начале
+    сохранения (мы отдали серверу текущее состояние). Второе и делает правило
+    правилом «после ОТПРАВКИ», а не «после последнего ответа».
+  */
+  const lastServerRef = useRef<MergeBase | null>(null);
+
+  /*
+    Идёт ли наша собственная запись прямо сейчас.
+
+    Пока сохранение в полёте, ЛЮБЫЕ данные позиции, лежащие в кэше, заведомо
+    старее того, что мы уже отправили: часть записи (группы модификаторов,
+    поля запроса, картинки) уходит отдельными запросами ПОСЛЕ основного
+    `PATCH`. Гидратировать из них — значит откатывать форму к состоянию «до
+    сохранения» ровно в середине сохранения. На этом терялась только что
+    добавленная группа модификаторов: форма очищалась, метка «не сохранено»
+    гасла раньше времени, а тест успевал прочитать позицию до записи групп.
+  */
+  const savingRef = useRef(false);
+
+  /**
+   * Запомнить, что именно уходит на сервер. Всё, набранное ПОСЛЕ этого
+   * момента, разойдётся с базой и переживёт ответ.
+   */
+  /*
+    БАЗА СЛИЯНИЯ СДВИГАЕТСЯ В МОМЕНТ ОТПРАВКИ — и снимок берётся при НАЖАТИИ,
+    а не внутри мутации.
+
+    Отсюда «после отправки» в правиле: всё, что человек наберёт начиная с этой
+    секунды, разойдётся с базой и переживёт оба ответа сервера. То, что он
+    правил ДО нажатия, с базой совпадёт — и ответ законно положит поверх
+    нормализованную серверную версию.
+
+    Именно при нажатии, потому что `mutate()` ставит работу в очередь: тело
+    мутации выполняется асинхронно, и за это время успевает пройти следующее
+    нажатие клавиши. Снимок, сделанный там, захватывал бы уже набранное как
+    «то, что мы отправили».
+  */
+  const markSubmitted = useCallback(() => {
+    savingRef.current = true;
+    lastServerRef.current = {
+      form: formRef.current,
+      images: imagesRef.current.map((image) => image.id),
+      groups: groupsRef.current,
+      fields: fieldsRef.current,
+      badgeIds: badgeIdsRef.current,
+    };
+  }, []);
+
+  /*
+    Текущее состояние формы, доступное эффекту гидратации без подписки на него.
+
+    Через зависимости эффекта это не сделать: он бы перезапускался на каждое
+    нажатие клавиши. Ссылки обновляются в рендере — тот же приём, что у
+    `dirtyRef` строкой ниже.
+  */
+  const formRef = useRef(form);
+  const imagesRef = useRef(images);
+  const groupsRef = useRef(groups);
+  const fieldsRef = useRef(fields);
+  const badgeIdsRef = useRef(badgeIds);
+
+  /*
     ЧЕРНОВИК. Сессия может умереть посреди правки — и до этого форма
     размонтировалась вместе с набранным текстом. Ключ включает пользователя:
     на общем компьютере чужое не всплывёт.
@@ -267,33 +373,84 @@ export function ItemEditorPage() {
    */
   const behaviour = behaviourFor(form.type);
 
-  // Hydrate from the loaded item. A background refetch must not wipe edits, so
-  // an already-hydrated dirty form is left alone.
+  /*
+    Гидратация из загруженной позиции — СЛИЯНИЕМ, а не заменой.
+
+    После сохранения позиция перечитывается ДВАЖДЫ: один раз от инвалидации по
+    префиксу `['cms','items']` (ключ позиции `['cms','items','detail',id]`
+    попадает под него), второй — явным запросом самого ключа. Оба ответа
+    приезжают уже после того, как человек мог начать править, и прежний код
+    честно клал их поверх формы: набранное жило около полусекунды и заменялось
+    серверным.
+
+    Теперь ответ применяется ПО ПОЛЯМ. Что человек тронул после отправки —
+    остаётся его; чего не трогал — обновляется, и нормализация сервера доезжает
+    как раньше. `baseline` при этом всегда считается от СЕРВЕРНОЙ версии: он
+    отвечает на вопрос «что сохранено», а не «что на экране», и потому метка
+    «не сохранено» гаснет ровно тогда, когда сохранять действительно нечего.
+  */
   useEffect(() => {
     const item = itemQuery.data;
     if (!item) return;
-    if (hydratedIdRef.current === item.id && dirtyRef.current) return;
+    // Наша запись в полёте — то, что в кэше, старее её. Дождёмся ответа.
+    if (savingRef.current) return;
+    // Другая позиция — базы для слияния нет, кладём ответ целиком.
+    if (hydratedIdRef.current !== item.id) lastServerRef.current = null;
     hydratedIdRef.current = item.id;
     // Свежие данные пришли — baseline сейчас догонит, запись черновика снова
     // имеет смысл.
     justSavedRef.current = false;
-    const nextForm = formFromItem(item, minorUnits);
+    const serverForm = formFromItem(item, minorUnits);
     const nextImages = (item.images ?? []).map(mediaToEditable);
-    const nextGroups = groupsToDrafts(item.modifier_groups, minorUnits);
-    const nextFields = fieldsToDrafts(item.request_fields);
-    const nextBadgeIds = badgeIdsFromItem(item);
+    const serverGroups = groupsToDrafts(item.modifier_groups, minorUnits);
+    const serverFields = fieldsToDrafts(item.request_fields);
+    const serverBadgeIds = badgeIdsFromItem(item);
+
+    const base = lastServerRef.current;
+    const nextForm = base
+      ? mergeFromServer(base.form, formRef.current, serverForm)
+      : serverForm;
+    /*
+      Коллекции сравниваются целиком, а не по элементам, и это осознанно.
+      Список модификаторов правят как одно целое — добавили вариант, сменили
+      порядок; «слить по элементам» здесь означало бы угадывать, какой вариант
+      чьей правкой является, а угадывать в редакторе меню нельзя.
+    */
+    const keep = <T,>(baseValue: T, currentValue: T, incoming: T): T =>
+      base && !same(currentValue, baseValue) ? currentValue : incoming;
+    const nextGroups = keep(base?.groups ?? serverGroups, groupsRef.current, serverGroups);
+    const nextFields = keep(base?.fields ?? serverFields, fieldsRef.current, serverFields);
+    const nextBadgeIds = keep(base?.badgeIds ?? serverBadgeIds, badgeIdsRef.current, serverBadgeIds);
+    const nextImagesMerged = keep(
+      base?.images ?? nextImages.map((image) => image.id),
+      imagesRef.current.map((image) => image.id),
+      nextImages.map((image) => image.id),
+    );
+    const imagesUnchanged = same(nextImagesMerged, nextImages.map((image) => image.id));
+
     setForm(nextForm);
-    setImages(nextImages);
+    if (imagesUnchanged) setImages(nextImages);
     setGroups(nextGroups);
     setFields(nextFields);
     setBadgeIds(nextBadgeIds);
+
+    // База слияния — то, что пришло с сервера: следующий ответ отсчитывается
+    // от него, а не от того, что человек уже успел набрать.
+    lastServerRef.current = {
+      form: serverForm,
+      images: nextImages.map((image) => image.id),
+      groups: serverGroups,
+      fields: serverFields,
+      badgeIds: serverBadgeIds,
+    };
+
     setBaseline(
       JSON.stringify({
-        form: nextForm,
+        form: serverForm,
         images: nextImages.map((image) => image.id),
-        groups: nextGroups,
-        fields: nextFields,
-        badgeIds: nextBadgeIds,
+        groups: serverGroups,
+        fields: serverFields,
+        badgeIds: serverBadgeIds,
       }),
     );
 
@@ -331,6 +488,12 @@ export function ItemEditorPage() {
 
   const isDirty = baseline !== '' && snapshot !== baseline;
   dirtyRef.current = isDirty;
+  // Зеркала состояния для эффекта гидратации: он читает их, а не подписывается.
+  formRef.current = form;
+  imagesRef.current = images;
+  groupsRef.current = groups;
+  fieldsRef.current = fields;
+  badgeIdsRef.current = badgeIds;
 
   /*
     ЧЕРНОВИК: поднять отложенное и писать новое.
@@ -493,15 +656,21 @@ export function ItemEditorPage() {
       setServerErrors({});
       toast.show(t('item.saved'), 'success');
 
-      // Разблокируем регидратацию. Эффект выше намеренно НЕ перечитывает
-      // форму, пока в ней есть несохранённые правки (иначе фоновый refetch
-      // затёр бы их) — но после успешного сохранения правок больше нет.
-      // Без сброса форма навсегда осталась бы «не сохранена»: свежие данные
-      // не могли бы приехать, потому что мешал флаг, который они и снимают.
-      // Заодно это подтягивает то, что нормализовал сервер: сгенерированные
-      // коды, single ⇒ max_choices=1, required ⇒ min_choices≥1.
+      /*
+        Сброса `hydratedIdRef` здесь БОЛЬШЕ НЕТ, и это существенно.
+
+        Он появился при прежней схеме, где регидратация пропускалась у любой
+        грязной формы: обнуление ссылки было единственным способом впустить
+        ответ сервера с нормализацией. Со слиянием по полям такой пропуск не
+        нужен — нетронутые поля и так берутся из ответа.
+
+        А вред от него был прямой: эффект видел обнулённую ссылку как переход
+        на ДРУГУЮ позицию, сбрасывал базу слияния и клал ответ поверх формы
+        целиком. Ровно на этом терялось набранное сразу после сохранения:
+        база исчезала, и «человек это трогал» становилось неотличимо от
+        «пришло с сервера».
+      */
       dirtyRef.current = false;
-      hydratedIdRef.current = null;
       // Сохранили — черновик отслужил. Оставить его значило бы однажды
       // «вернуть» правки поверх уже сохранённого.
       justSavedRef.current = true;
@@ -510,11 +679,26 @@ export function ItemEditorPage() {
       void queryClient.invalidateQueries({ queryKey: ['cms', 'items'] });
 
       if (!itemId) {
-        // A new item becomes an existing one — the URL follows.
+        /*
+          Новая позиция стала существующей — адрес следует за ней.
+
+          Заодно СРАЗУ отмечаем её как уже гидратированную. Иначе смена
+          `itemId` выглядит для эффекта как переход на другую позицию, а на
+          переходе база слияния обнуляется — и первый же ответ ложится
+          поверх формы целиком. Терялось на этом не что-нибудь, а работа,
+          сделанная сразу после создания: добавленная группа модификаторов
+          исчезала, потому что сервер её ещё не знал, а локальную версию
+          обнулённая база защитить не могла.
+        */
+        hydratedIdRef.current = saved.id;
         setItemId(saved.id);
         navigate(`/cms/menu/items/${saved.id}`, { replace: true });
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.item(saved.id) });
+    },
+    onSettled: () => {
+      // Запись кончилась — ответам снова можно верить.
+      savingRef.current = false;
     },
     onError: (error) => {
       if (error instanceof ApiError && error.isValidation && error.field) {
@@ -601,7 +785,20 @@ export function ItemEditorPage() {
           variant="contained"
           size="large"
           disabled={!isValid || !isDirty || saveMutation.isPending}
-          onClick={() => saveMutation.mutate()}
+          onClick={() => {
+            /*
+              Снимок базы слияния берётся ЗДЕСЬ, а не внутри мутации.
+
+              `mutate()` ставит работу в очередь, и её тело выполняется уже
+              асинхронно — за это время человек успевает набрать следующий
+              символ. Снимок, сделанный там, захватывал бы это набранное как
+              «то, что мы отправили», и ответ сервера законно клал бы поверх
+              него свою версию. Нажатие — единственный момент, про который
+              точно известно: вот это состояние и уходит на сервер.
+            */
+            markSubmitted();
+            saveMutation.mutate();
+          }}
           data-testid="item-save-button"
           startIcon={
             saveMutation.isPending ? <CircularProgress size={16} color="inherit" /> : undefined
