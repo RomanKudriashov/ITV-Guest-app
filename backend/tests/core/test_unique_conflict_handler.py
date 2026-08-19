@@ -62,7 +62,8 @@ def service_id(cms):
     уникальности всё равно, в каком заведении лежит раздел, — важно лишь, что
     он вообще может быть создан.
     """
-    return cms("get", "/services").json()[0]["id"]
+    # Списки CMS отдают оболочку `items/total/limit`.
+    return cms("get", "/services").json()["items"][0]["id"]
 
 
 @pytest.fixture
