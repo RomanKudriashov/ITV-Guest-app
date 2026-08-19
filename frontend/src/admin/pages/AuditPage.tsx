@@ -173,9 +173,20 @@ export function AuditPage() {
                   <Typography sx={{ color: accent.soft, ...typo.caption, minWidth: 180, flex: 'none' }}>
                     {row.actor}
                   </Typography>
-                  <Typography sx={{ color: ink.mid, flexGrow: 1 }}>
-                    {t(`admin.action.${row.action}`, { defaultValue: row.action })}
-                  </Typography>
+                  {/*
+                    Слово человеку, код — рядом мелким. Журнал платформы читают
+                    двое: оператор, которому нужно «что произошло», и инженер,
+                    которому нужен ключ для поиска в логах. Отдать одному за
+                    счёт другого нельзя, поэтому здесь оба.
+                  */}
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Typography sx={{ color: ink.mid, ...typo.caption }}>
+                      {t(`admin.action.${row.action}`, { defaultValue: row.action })}
+                    </Typography>
+                    <Typography sx={{ color: ink.low, ...typo.caption, fontSize: 11 }}>
+                      {row.action}
+                    </Typography>
+                  </Box>
                   {row.hotel ? (
                     <Typography sx={{ color: ink.hi, ...typo.caption, fontWeight: 600 }}>
                       {row.hotel}

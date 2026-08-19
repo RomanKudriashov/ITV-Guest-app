@@ -187,7 +187,18 @@ export function BuilderTab({ type }: { type: GrmsType }) {
                       <TableCell>{variable.key}</TableCell>
                       <TableCell>{variable.command || '—'}</TableCell>
                       <TableCell>{variable.feedback || '—'}</TableCell>
-                      <TableCell>{variable.value_kind}</TableCell>
+                      <TableCell>
+                        {/*
+                          «Дискретный набор», а не `enum`. Вид значения читает
+                          инженер отеля, а не программист: `binary` и `range`
+                          ничего ему не говорят, а «включено / выключено» и
+                          «диапазон чисел» говорят ровно то, что нужно знать
+                          при сверке с проектом автоматизации.
+                        */}
+                        {t(`roomControl.builder.kinds.${variable.value_kind}`, {
+                          defaultValue: variable.value_kind,
+                        })}
+                      </TableCell>
                       <TableCell>
                         {variable.min_value}–{variable.max_value}
                       </TableCell>

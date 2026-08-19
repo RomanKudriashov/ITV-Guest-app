@@ -1063,7 +1063,12 @@
       "rtl": "RTL (Arabic)",
       "roomChip": "Room 214",
       "menuHeading": "Menu",
-      "addToCart": "Add to cart"
+      "addToCart": "Add to cart",
+      "device": "Device",
+      "phone": "Phone",
+      "tablet": "Tablet",
+      "desktop": "Desktop",
+      "tv": "TV — soon"
     },
     "tabs": {
       "brand": "Brand",
@@ -1953,7 +1958,11 @@
           "exported": "Hotel data exported",
           "offboard_marked": "Hotel marked for offboarding",
           "offboard_cancelled": "Offboarding mark removed",
-          "purged": "Hotel data erased"
+          "purged": "Hotel data erased",
+          "deleted": "Hotel deleted",
+          "admin_email_changed": "Admin address changed",
+          "modules_changed": "Modules changed",
+          "tariff_changed": "Tariff changed"
         },
         "node": {
           "registered": "Node registered",
@@ -1974,10 +1983,32 @@
         },
         "dictionary": {
           "updated": "Dictionary changed"
-        }
+        },
+        "logout": "Signed out of the platform",
+        "logout_all": "Signed out everywhere"
       },
       "impersonation": {
-        "started": "Started acting as hotel admin"
+        "started": "Started acting as hotel admin",
+        "revoked": "Hotel-admin session revoked"
+      },
+      "grms": {
+        "publish": "Room configuration published",
+        "rollback": "Room configuration rolled back",
+        "plan_saved": "Room plan saved",
+        "pin_attempt": "Stay PIN attempt",
+        "demo_entry": "Room opened without a PIN",
+        "demo_entry_toggled": "PIN-free entry toggled",
+        "read": "Room state read",
+        "command": "Command sent to room equipment"
+      },
+      "guest_session": {
+        "created": "Guest opened the app"
+      },
+      "order": {
+        "created": "Order created",
+        "accepted": "Order accepted",
+        "cancelled": "Order cancelled",
+        "status_changed": "Order status changed"
       }
     },
     "enter": {
@@ -2054,6 +2085,11 @@
         "history": "Finished",
         "all": "All"
       }
+    },
+    "errors": {
+      "http": "Something went wrong. Please try again.",
+      "network": "No connection to the server.",
+      "forbidden": "You do not have rights for this action."
     }
   },
   "roomControl": {
@@ -2135,7 +2171,12 @@
       "capability": "Capability",
       "room": "Room",
       "overrideHint": "If one room is named differently on the hardware, set the device name for that room alone — without touching the type template.",
-      "overrideSaved": "Device name saved"
+      "overrideSaved": "Device name saved",
+      "kinds": {
+        "binary": "On / off",
+        "enum": "Set of values",
+        "range": "Number range"
+      }
     },
     "check": {
       "title": "Test on a room",

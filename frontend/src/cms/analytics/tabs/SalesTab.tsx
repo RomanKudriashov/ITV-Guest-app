@@ -116,6 +116,7 @@ export function SalesTab({ controller }: { controller: UseAnalyticsFilters }) {
           </Stack>
 
           <BreakdownTable
+            dimension={dimension}
             rows={breakdown.data?.rows ?? []}
             isLoading={breakdown.isLoading}
             isError={breakdown.isError}

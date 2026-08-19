@@ -642,7 +642,26 @@ function ActivityTab({ id }: { id: string }) {
           <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 74 }}>
             {t(`admin.actor.${row.actor_type}`, { defaultValue: row.actor_type })}
           </Typography>
-          <Typography sx={{ color: ink.mid, flexGrow: 1 }}>{row.action}</Typography>
+          {/*
+            Человеку — человеческое. Здесь стоял голый код (`grms.read`,
+            `guest_session.created`, `order.status_changed`), и оператор,
+            открыв карточку отеля, читал полсотни строк машинного текста.
+
+            Код при этом НЕ выброшен: он рядом, мелким и приглушённым. Инженеру
+            он нужен — по нему ищут в логах и в исходниках, — а оператору нужно
+            слово. Незнакомый код показывается как есть: подменять его общим
+            «событием» значит лишить журнал смысла, а не сделать его понятнее.
+            Чтобы «как есть» не превращалось в «так и осталось», за полнотой
+            словаря следит `scripts/check-event-codes.mjs`.
+          */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography sx={{ color: ink.mid, ...typo.caption }}>
+              {t(`admin.action.${row.action}`, { defaultValue: row.action })}
+            </Typography>
+            <Typography sx={{ color: ink.low, ...typo.caption, fontSize: 11 }}>
+              {row.action}
+            </Typography>
+          </Box>
           {/* Действие поддержки под чужой личиной обязано быть отличимо — это
               инвариант импersonation, а не украшение журнала. */}
           {row.impersonated_by ? (

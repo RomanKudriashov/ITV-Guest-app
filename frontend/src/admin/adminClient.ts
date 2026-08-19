@@ -9,6 +9,28 @@
  */
 
 import { createSession } from "@/auth/session";
+import { i18n } from "@/i18n";
+
+/**
+ * Человеческий текст отказа.
+ *
+ * Здесь стояло `Ошибка ${res.status}`, и оператор консоли читал «Ошибка 502» —
+ * строку, которая не говорит ни что случилось, ни что делать, и вдобавок
+ * существует только по-русски, хотя консоль переключает язык вместе с CMS.
+ *
+ * Текст сервера, если он есть, ВСЕГДА в приоритете: бэкенд объясняет отказ
+ * по делу («поддомен занят», «нет прав на это действие»), и заменять его общей
+ * фразой значит терять единственное осмысленное объяснение. Свой текст —
+ * только когда сервер промолчал.
+ *
+ * Сам код НЕ выброшен: он уезжает в `PlatformError.status`, по нему работают
+ * ветвления (401 гасит сессию) и он виден в консоли разработчика.
+ */
+function humanError(status: number): string {
+  if (status === 403) return i18n.t("admin.errors.forbidden");
+  if (status === 0) return i18n.t("admin.errors.network");
+  return i18n.t("admin.errors.http");
+}
 
 const BASE = "/api/v1/platform";
 const TOKEN_KEY = 'itv.platform.access';
@@ -73,7 +95,7 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
     // 401 после обновления — сессии больше нет. Уводим на вход с поводом,
     // а не оставляем экран собирать отказы.
     if (res.status === 401 && !anonymous) platformSession.expire();
-    const detail = (data && (data.detail as string)) || `Ошибка ${res.status}`;
+    const detail = (data && (data.detail as string)) || humanError(res.status);
     throw new PlatformError(res.status, detail, data?.code);
   }
   return data as T;
@@ -335,7 +357,7 @@ export async function downloadFleetCsv(query: FleetQuery): Promise<void> {
   const res = await fetch(`${BASE}/fleet/export${fleetQuery(query)}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new PlatformError(res.status, `Ошибка ${res.status}`);
+  if (!res.ok) throw new PlatformError(res.status, humanError(res.status));
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -644,7 +666,7 @@ export async function downloadHotelExport(id: string, subdomain: string): Promis
   const res = await fetch(`${BASE}/hotels/${id}/export`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new PlatformError(res.status, `Ошибка ${res.status}`);
+  if (!res.ok) throw new PlatformError(res.status, humanError(res.status));
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

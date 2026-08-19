@@ -5,6 +5,9 @@
  * `offering_type` string to fork behaviour — the values below are just the
  * registry entries the backend aggregates by, surfaced as filter options.
  */
+import type { TFunction } from 'i18next';
+
+import { LANGUAGE_LABELS, type SupportedLanguage } from '@/i18n';
 import type { AnalyticsQuery, Dimension } from '@/api/analyticsTypes';
 
 /** Contract query-param name a dimension filter maps onto. */
@@ -73,4 +76,32 @@ export function nextDrillDimension(dimension: Dimension): Dimension | null {
   const index = DRILL_CHAIN.indexOf(dimension);
   if (index === -1 || index + 1 >= DRILL_CHAIN.length) return null;
   return DRILL_CHAIN[index + 1];
+}
+
+/**
+ * ЧЕЛОВЕЧЕСКАЯ ПОДПИСЬ ЗНАЧЕНИЯ ИЗМЕРЕНИЯ.
+ *
+ * Живёт здесь, а не в панели фильтров, потому что нужна ДВУМ экранам, и
+ * ровно из-за одной копии они и разъехались: в фильтре «Товары», а в таблице
+ * разбивки рядом — `product`, `service_request`, `slot`. Сервер тут ни при
+ * чём и чинить его незачем: `label` он подставляет только там, где имя
+ * хранится в базе (точки, локации, позиции, категории). Для реестровых
+ * значений имя знает интерфейс — он же их и показывает.
+ *
+ * Незнакомое значение возвращается КАК ЕСТЬ: выдумывать за него слово хуже,
+ * чем показать ключ, по которому его найдут.
+ */
+export function dimensionValueLabel(
+  t: TFunction,
+  dimension: Dimension,
+  value: string,
+  fallback?: string,
+): string {
+  if (!value) return fallback ?? value;
+  if (dimension === 'language') {
+    return LANGUAGE_LABELS[value as SupportedLanguage] ?? fallback ?? value;
+  }
+  const key = `analytics.values.${dimension}.${value}`;
+  const translated = t(key);
+  return translated === key ? (fallback ?? value) : translated;
 }

@@ -13,8 +13,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 
 import type { AnalyticsScope, Dimension, PeriodPreset } from '@/api/analyticsTypes';
-import { LANGUAGE_LABELS, type SupportedLanguage } from '@/i18n';
-import { FILTER_DIMENSIONS, STATIC_DIMENSION_VALUES } from './dimensions';
+import { FILTER_DIMENSIONS, STATIC_DIMENSION_VALUES, dimensionValueLabel } from './dimensions';
 import type { UseAnalyticsFilters } from './useAnalyticsFilters';
 
 const PRESETS: Exclude<PeriodPreset, 'custom'>[] = ['today', 'week', 'month'];
@@ -38,12 +37,7 @@ export function FilterPanel({
   const isAdmin = Boolean(scope?.is_hotel_admin || scope?.is_platform_admin);
 
   const valueLabel = (dimension: Dimension, value: string): string => {
-    if (dimension === 'language') {
-      return LANGUAGE_LABELS[value as SupportedLanguage] ?? value;
-    }
-    const key = `analytics.values.${dimension}.${value}`;
-    const translated = t(key);
-    return translated === key ? value : translated;
+    return dimensionValueLabel(t, dimension, value);
   };
 
   const optionsFor = (dimension: Dimension): { options: Option[]; locked: boolean } => {

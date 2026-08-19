@@ -1,4 +1,7 @@
 import { useTranslation } from 'react-i18next';
+
+import type { Dimension } from '@/api/analyticsTypes';
+import { dimensionValueLabel } from './dimensions';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -33,6 +36,7 @@ const COLUMNS: Column[] = [
 ];
 
 export function BreakdownTable({
+  dimension,
   rows,
   isLoading,
   isError,
@@ -42,6 +46,8 @@ export function BreakdownTable({
   onDrill,
   canDrill,
 }: {
+  /** По какому измерению разбивка — от него зависит подпись значения. */
+  dimension: Dimension;
   rows: BreakdownRow[];
   isLoading: boolean;
   isError: boolean;
@@ -104,8 +110,15 @@ export function BreakdownTable({
               data-testid={`analytics-breakdown-row-${row.key}`}
             >
               <TableCell>
+                {/*
+                  Подпись, а не ключ. Сервер подставляет `label` только там, где
+                  имя лежит в базе — точки, локации, позиции, категории. Для
+                  реестровых измерений (тип, способ входа, устройство, язык)
+                  `label` равен коду, и в таблице читалось `product`,
+                  `service_request`, `slot`. Имя для них знает интерфейс.
+                */}
                 <Typography variant="body2" fontWeight={500}>
-                  {row.label}
+                  {dimensionValueLabel(t, dimension, row.key, row.label)}
                 </Typography>
               </TableCell>
               <TableCell align="right">{fmt.count(row.orders)}</TableCell>

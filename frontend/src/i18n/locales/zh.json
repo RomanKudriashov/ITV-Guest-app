@@ -1059,7 +1059,12 @@
       "rtl": "RTL（阿拉伯语）",
       "roomChip": "房间 214",
       "menuHeading": "菜单",
-      "addToCart": "加入购物车"
+      "addToCart": "加入购物车",
+      "device": "设备",
+      "phone": "手机",
+      "tablet": "平板",
+      "desktop": "电脑",
+      "tv": "电视 — 即将推出"
     },
     "tabs": {
       "brand": "品牌",
@@ -1947,7 +1952,11 @@
           "exported": "导出酒店数据",
           "offboard_marked": "标记酒店退出",
           "offboard_cancelled": "取消退出标记",
-          "purged": "删除酒店数据"
+          "purged": "删除酒店数据",
+          "deleted": "酒店已删除",
+          "admin_email_changed": "管理员邮箱已更改",
+          "modules_changed": "模块已更改",
+          "tariff_changed": "套餐已更改"
         },
         "node": {
           "registered": "注册节点",
@@ -1968,10 +1977,32 @@
         },
         "dictionary": {
           "updated": "修改字典"
-        }
+        },
+        "logout": "退出平台",
+        "logout_all": "在所有设备退出"
       },
       "impersonation": {
-        "started": "以酒店管理员身份开始操作"
+        "started": "以酒店管理员身份开始操作",
+        "revoked": "以酒店管理员身份的登录已终止"
+      },
+      "grms": {
+        "publish": "客房配置已发布",
+        "rollback": "客房配置已回滚",
+        "plan_saved": "客房平面图已保存",
+        "pin_attempt": "住宿 PIN 尝试",
+        "demo_entry": "未使用 PIN 进入客房",
+        "demo_entry_toggled": "切换免 PIN 进入",
+        "read": "读取客房状态",
+        "command": "向客房设备发送指令"
+      },
+      "guest_session": {
+        "created": "客人打开了应用"
+      },
+      "order": {
+        "created": "订单已创建",
+        "accepted": "订单已接受",
+        "cancelled": "订单已取消",
+        "status_changed": "订单状态已更改"
       }
     },
     "enter": {
@@ -2048,6 +2079,11 @@
         "history": "已结束",
         "all": "全部"
       }
+    },
+    "errors": {
+      "http": "操作失败，请重试。",
+      "network": "无法连接服务器。",
+      "forbidden": "您无权执行此操作。"
     }
   },
   "roomControl": {
@@ -2129,7 +2165,12 @@
       "capability": "能力",
       "room": "房间",
       "overrideHint": "若某个房间在设备上的名称不同，只为该房间指定设备名，不必改动房型模板。",
-      "overrideSaved": "设备名已保存"
+      "overrideSaved": "设备名已保存",
+      "kinds": {
+        "binary": "开 / 关",
+        "enum": "取值集合",
+        "range": "数值范围"
+      }
     },
     "check": {
       "title": "在房间测试",
