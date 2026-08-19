@@ -58,10 +58,8 @@
     "groups": {
       "operations": "التشغيل",
       "structure": "هيكل الفندق",
-      "appearance": "المظهر",
-      "analytics": "التحليلات",
-      "settings": "الإعدادات",
-      "modules": "الوحدات"
+      "storefront": "واجهة الضيف",
+      "settings": "الإعدادات"
     },
     "dashboard": "لوحة المتابعة",
     "marketing": "التسويق",

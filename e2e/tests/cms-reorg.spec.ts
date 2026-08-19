@@ -22,8 +22,14 @@ test.describe('Навигация CMS', () => {
     // Группы карты продукта — с заголовками, а не 18 равнозначных пунктов.
     await expect(page.getByTestId('nav-group-operations')).toBeVisible()
     await expect(page.getByTestId('nav-group-structure')).toBeVisible()
-    await expect(page.getByTestId('nav-group-appearance')).toBeVisible()
+    await expect(page.getByTestId('nav-group-storefront')).toBeVisible()
     await expect(page.getByTestId('nav-group-settings')).toBeVisible()
+
+    // Группировки по ПРАЙСУ больше нет: модульные экраны лежат там, где их
+    // предмет, а не в резервации «за что мы доплачиваем».
+    await expect(page.getByTestId('nav-group-modules')).toHaveCount(0)
+    await expect(page.getByTestId('nav-group-appearance')).toHaveCount(0)
+    await expect(page.getByTestId('nav-group-analytics')).toHaveCount(0)
 
     // Сервисы — верхним уровнем.
     await expect(page.getByTestId('cms-nav-services')).toBeVisible()
@@ -47,21 +53,19 @@ test.describe('Навигация CMS', () => {
 
     await login(page)
     try {
-      // Проверяем отсутствие ПУНКТА маркетинга, а не всей группы «Модули»:
-      // на наглядном стенде группу держит другой включённый модуль (PMS).
+      // Проверяем отсутствие ПУНКТА маркетинга. Группа «Витрина» при этом
+      // остаётся: в ней есть базовые пункты (бренд, аналитика), и исчезать ей
+      // не с чего — пустой заголовок и должен пропадать, а непустой нет.
       await expect(page.getByTestId('cms-nav-marketing')).toHaveCount(0)
+      await expect(page.getByTestId('nav-group-storefront')).toBeVisible()
+      expect(await navItems(request, token, 'storefront')).not.toContain('marketing')
 
-      // Спрашиваем про САМ маркетинг, а не про существование группы «Модули»:
-      // на наглядном стенде группа остаётся из-за других включённых модулей
-      // (PMS), и «группы нет» проверяло бы не то, ради чего написан тест.
-      expect(await navItems(request, token, 'modules')).not.toContain('marketing')
-
-      // Включаем маркетинг платформенным реестром модулей (R1).
+      // Включаем маркетинг платформенным реестром модулей (R1). Пункт обязан
+      // приехать В СВОЮ группу по предмету, а не в отдельные «Модули».
       await enableModule(request, 'marketing', true)
       await page.reload()
-      await expect(page.getByTestId('nav-group-modules')).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByTestId('cms-nav-marketing')).toBeVisible()
-      expect(await navItems(request, token, 'modules')).toContain('marketing')
+      await expect(page.getByTestId('cms-nav-marketing')).toBeVisible({ timeout: 15_000 })
+      expect(await navItems(request, token, 'storefront')).toContain('marketing')
 
       await enableModule(request, 'marketing', false)
       await page.reload()

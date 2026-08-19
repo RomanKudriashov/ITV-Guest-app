@@ -58,10 +58,8 @@
     "groups": {
       "operations": "Оперативно",
       "structure": "Структура отеля",
-      "appearance": "Оформление",
-      "analytics": "Аналитика",
-      "settings": "Настройки",
-      "modules": "Модули"
+      "storefront": "Витрина",
+      "settings": "Настройки"
     },
     "dashboard": "Дашборд",
     "marketing": "Маркетинг",

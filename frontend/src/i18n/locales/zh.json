@@ -58,10 +58,8 @@
     "groups": {
       "operations": "运营",
       "structure": "酒店结构",
-      "appearance": "外观",
-      "analytics": "分析",
-      "settings": "设置",
-      "modules": "模块"
+      "storefront": "客用门户",
+      "settings": "设置"
     },
     "dashboard": "仪表板",
     "marketing": "营销",

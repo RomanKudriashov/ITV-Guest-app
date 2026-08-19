@@ -63,15 +63,36 @@ def test_navigation_is_grouped_not_flat(cms):
     assert list(groups) == [
         "operations",
         "structure",
-        "appearance",
-        "analytics",
+        "storefront",
         "settings",
-    ], "модули отелю не включены — группы «Модули» быть не должно"
+    ], "четыре группы карты продукта, в этом порядке"
 
+    # Оперативное — вместе, включая уведомления: на них смотрят в смену, а не
+    # настраивают раз и забывают.
+    assert groups["operations"] == ["dashboard", "tracker", "notifications"]
     # Структура карты продукта: сервисы верхним уровнем, номерной фонд, персонал.
+    # Управления номером здесь нет — модуль отелю не включён.
     assert groups["structure"] == ["services", "rooms", "staff"]
-    # «Бренд и витрина» — один пункт, а не два.
-    assert groups["appearance"] == ["brand"]
+    # «Бренд и витрина» — один пункт, а не два. Маркетинг гейтится модулем.
+    assert groups["storefront"] == ["brand", "analytics"]
+    assert groups["settings"] == ["settings", "dictionaries"]
+
+
+def test_no_group_is_named_after_the_price_list(cms):
+    """
+    УКУС. Группа «Модули» собирала пункты по СПОСОБУ ПРОДАЖИ: оплата,
+    управление номером и маркетинг лежали вместе только потому, что за них
+    доплачивают. Админ, которому нужна оплата, идёт в «Настройки», а не в «за
+    что мы платим», — и не находил.
+
+    Заодно сторож против возврата групп из одного пункта: заголовок обязан
+    сокращать перебор, а над единственной строкой он его удваивает.
+    """
+    groups = groups_of(cms.get("/api/cms/navigation").json())
+
+    assert "modules" not in groups, "группировка по прайсу вернулась"
+    for key, items in groups.items():
+        assert len(items) >= 2, f"группа «{key}» из одного пункта — заголовок впустую"
 
 
 def test_no_standalone_commerce_section(cms):
@@ -100,8 +121,9 @@ def test_module_on_reveals_its_section(cms, crystal):
         )
 
     groups = groups_of(cms.get("/api/cms/navigation").json())
-    assert "modules" in groups
-    assert "marketing" in groups["modules"]
+    # Модульный пункт приходит В СВОЮ группу по предмету, а не в резервацию
+    # «Модули»: маркетинг — это про то, что видит гость.
+    assert groups["storefront"] == ["brand", "marketing", "analytics"]
 
 
 def test_disabling_the_module_hides_it_again(cms, crystal):
@@ -109,12 +131,41 @@ def test_disabling_the_module_hides_it_again(cms, crystal):
         HotelModule.objects.update_or_create(
             code=HotelModule.Code.MARKETING, defaults={"is_enabled": True}
         )
-    assert "modules" in groups_of(cms.get("/api/cms/navigation").json())
+    assert "marketing" in groups_of(cms.get("/api/cms/navigation").json())["storefront"]
 
     with tenant_context(crystal):
         HotelModule.objects.filter(code=HotelModule.Code.MARKETING).update(is_enabled=False)
 
-    assert "modules" not in groups_of(cms.get("/api/cms/navigation").json())
+    groups = groups_of(cms.get("/api/cms/navigation").json())
+    assert "marketing" not in groups["storefront"]
+    # А сама группа осталась: в ней есть и небазовые пункты.
+    assert groups["storefront"] == ["brand", "analytics"]
+
+
+def test_a_group_left_without_items_disappears_entirely(cms_manager, crystal):
+    """
+    УКУС ПУНКТА 1: выключенный модуль не должен оставлять пустой заголовок.
+
+    Проверяется на управляющем сервисом, и это не случайный выбор — именно у
+    него группа может опустеть ЦЕЛИКОМ. В «Настройках» все пять пунктов либо
+    только для админа отеля, либо ещё и за модулем: управляющему не положен ни
+    один. Раньше группу спасали «Уведомления», которые в ней лежали; после
+    переноса их в «Оперативно» спасать нечем — и группа обязана исчезнуть, а не
+    остаться заголовком над пустотой.
+
+    Модули при этом включены: доказываем, что группа пуста по ПРАВАМ, а не
+    потому, что нам просто нечего было показать.
+    """
+    with tenant_context(crystal):
+        for code in (HotelModule.Code.PAYMENT, HotelModule.Code.PMS):
+            HotelModule.objects.update_or_create(code=code, defaults={"is_enabled": True})
+
+    groups = groups_of(cms_manager.get("/api/cms/navigation").json())
+
+    assert "settings" not in groups, "пустая группа осталась заголовком над пустотой"
+    assert groups, "у управляющего должны остаться его группы"
+    for key, items in groups.items():
+        assert items, f"группа «{key}» пришла пустой"
 
 
 # --- Роль ------------------------------------------------------------------
@@ -133,7 +184,9 @@ def test_manager_sees_only_what_he_can_change(cms_manager):
     assert "rooms" not in keys
     assert "brand" not in keys
     assert "settings" not in keys
-    assert "appearance" not in groups, "пустая группа — это шум"
+    assert "storefront" in groups and groups["storefront"] == ["analytics"], (
+        "управляющему из витрины положена только аналитика: бренд — админский"
+    )
 
 
 def test_line_staff_has_no_navigation_at_all(cms_line_staff):

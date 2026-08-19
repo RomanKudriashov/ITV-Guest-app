@@ -44,7 +44,24 @@ class NavGroup:
     items: tuple[NavItem, ...]
 
 
-# Группы карты продукта (Часть 2). Порядок здесь — порядок на экране.
+# Группы карты продукта. Порядок здесь — порядок на экране.
+#
+# ГРУППА «МОДУЛИ» РАСТВОРЕНА, и это главное изменение раскладки.
+#
+# Она группировала пункты по СПОСОБУ ПРОДАЖИ, а не по предмету: «Оплата»,
+# «Управление номером» и «Маркетинг» лежали вместе только потому, что за них
+# доплачивают. Админ, которому нужна оплата, думает «настройки», а не «за что
+# мы платим», и шёл искать её не туда. Заодно было две группы из ОДНОГО пункта
+# («Оформление», «Аналитика»): заголовок обязан сокращать перебор, а над
+# единственной строкой он его удваивает.
+#
+# Теперь каждый модульный экран лежит там, где его предмет: управление номером —
+# к структуре отеля (это про номер), маркетинг — к витрине (это про то, что
+# видит гость), оплата, PMS и мобильный ключ — к настройкам.
+#
+# ГЕЙТИНГ ОТ ЭТОГО НЕ ИЗМЕНИЛСЯ НИ НА ШАГ: `module` остался у тех же пунктов,
+# и без включённого модуля пункт по-прежнему не приходит с сервера. Изменилось
+# только МЕСТО пункта, а место не обязано зависеть от прайса.
 NAVIGATION: tuple[NavGroup, ...] = (
     NavGroup(
         key="operations",
@@ -53,6 +70,9 @@ NAVIGATION: tuple[NavGroup, ...] = (
             # Трекер живёт вне /cms (свой мобильный шелл), но найти его надо
             # отсюда: после одного входа сотрудник обязан найти обе половины.
             NavItem(key="tracker", to="/tracker"),
+            # Уведомления переехали из «Настроек»: это оперативный экран, на
+            # него смотрят в смену, а не настраивают раз и забывают.
+            NavItem(key="notifications", to="/cms/notifications"),
         ),
     ),
     NavGroup(
@@ -61,43 +81,38 @@ NAVIGATION: tuple[NavGroup, ...] = (
             NavItem(key="services", to="/cms/services"),
             NavItem(key="rooms", to="/cms/rooms", hotel_admin_only=True),
             NavItem(key="staff", to="/cms/staff"),
-        ),
-    ),
-    NavGroup(
-        key="appearance",
-        # Бренд и витрина — один раздел: и то и другое отвечает на вопрос
-        # «как отель выглядит гостю», и разводить их по пунктам значило бы
-        # заставлять админа держать соответствие в голове.
-        items=(NavItem(key="brand", to="/cms/brand", hotel_admin_only=True),),
-    ),
-    NavGroup(
-        key="analytics",
-        items=(NavItem(key="analytics", to="/cms/analytics"),),
-    ),
-    NavGroup(
-        key="settings",
-        items=(
-            NavItem(key="settings", to="/cms/settings", hotel_admin_only=True),
-            NavItem(key="notifications", to="/cms/notifications"),
-            NavItem(key="dictionaries", to="/cms/dictionaries", hotel_admin_only=True),
-        ),
-    ),
-    NavGroup(
-        key="modules",
-        items=(
-            # Ровно те экраны, которые без своего модуля не имеют смысла.
-            NavItem(
-                key="marketing",
-                to="/cms/marketing",
-                module=HotelModule.Code.MARKETING,
-                hotel_admin_only=True,
-            ),
             NavItem(
                 key="roomControl",
                 to="/cms/room-control",
                 module=HotelModule.Code.ROOM_CONTROL,
                 hotel_admin_only=True,
             ),
+        ),
+    ),
+    NavGroup(
+        key="storefront",
+        # Всё, что отвечает на вопрос «что видит гость и что из этого вышло»:
+        # оформление, акции и цифры по ним. Бренд и витрина при этом остаются
+        # ОДНИМ пунктом — разводить их значило бы заставлять админа держать
+        # соответствие в голове.
+        items=(
+            NavItem(key="brand", to="/cms/brand", hotel_admin_only=True),
+            NavItem(
+                key="marketing",
+                to="/cms/marketing",
+                module=HotelModule.Code.MARKETING,
+                hotel_admin_only=True,
+            ),
+            NavItem(key="analytics", to="/cms/analytics"),
+        ),
+    ),
+    NavGroup(
+        key="settings",
+        # То, что настраивают редко: параметры отеля, справочники и внешние
+        # системы. Интеграции здесь не «модули», а именно настройка стыка.
+        items=(
+            NavItem(key="settings", to="/cms/settings", hotel_admin_only=True),
+            NavItem(key="dictionaries", to="/cms/dictionaries", hotel_admin_only=True),
             NavItem(
                 key="payments",
                 to="/cms/payments",

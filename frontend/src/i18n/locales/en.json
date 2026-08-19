@@ -58,10 +58,8 @@
     "groups": {
       "operations": "Operations",
       "structure": "Hotel structure",
-      "appearance": "Appearance",
-      "analytics": "Analytics",
-      "settings": "Settings",
-      "modules": "Modules"
+      "storefront": "Storefront",
+      "settings": "Settings"
     },
     "dashboard": "Dashboard",
     "marketing": "Marketing",
