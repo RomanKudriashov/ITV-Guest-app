@@ -489,9 +489,13 @@ test.describe('Управление номером', () => {
         body: JSON.stringify({
           availability: 'unavailable',
           message: 'Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.',
+          unavailable_kind: 'offline',
           checked_at: new Date().toISOString(),
           trust: 'room_scanned',
-          can_command: true,
+          // Гость подтверждён — замок ему показывать не за что. Недоступно
+          // ОБОРУДОВАНИЕ, и это отдельное поле.
+          room_verified: true,
+          can_command: false,
           zones: [],
         }),
       })
@@ -526,9 +530,13 @@ test.describe('Управление номером', () => {
         body: JSON.stringify({
           availability: 'unavailable',
           message: 'Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.',
+          unavailable_kind: 'offline',
           checked_at: new Date().toISOString(),
           trust: 'room_scanned',
-          can_command: true,
+          // Гость подтверждён — замок ему показывать не за что. Недоступно
+          // ОБОРУДОВАНИЕ, и это отдельное поле.
+          room_verified: true,
+          can_command: false,
           zones: [],
         }),
       })
@@ -539,6 +547,150 @@ test.describe('Управление номером', () => {
     await expect(page.getByText(/ресепшен/i)).toBeVisible()
     await expect(page.locator('[data-testid^="room-control-"]')).toHaveCount(0)
     await expect(page.getByText(/CONNECTOR|TIMEOUT|iRidi|Modbus/i)).toHaveCount(0)
+  })
+
+  /* ── Два разных «нельзя» ────────────────────────────────────────────────── */
+
+  test('УКУС: верный PIN при молчащем оборудовании — замок не возвращается', async ({
+    page,
+  }) => {
+    /*
+      Тот самый укус, ради которого поля разведены.
+
+      Гость вводит ВЕРНЫЙ код, и ровно в этот момент оборудование молчит.
+      Пока флаг был один, снимок приезжал с `can_command: false`, экран читал
+      по нему доверие — и показывал форму PIN заново. Гость вводил тот же код
+      второй раз, получал тот же замок и уходил на ресепшен жаловаться на код,
+      который подошёл.
+
+      Теперь `room_verified` остаётся истиной, и про оборудование сказано
+      отдельно: «читаем состояние», а не отказ и не замок.
+    */
+    await freezeState(page, {
+      availability: 'unavailable',
+      message: 'Читаем состояние номера…',
+      unavailable_kind: 'reading',
+      checked_at: new Date().toISOString(),
+      trust: 'room_scanned',
+      room_verified: true,
+      can_command: false,
+      zones: [],
+    })
+    await enterRoom(page)
+
+    await expect(page.getByTestId('room-reading')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/читаем состояние/i)).toBeVisible()
+    await expect(
+      page.getByTestId('room-pin-panel'),
+      'замок вернулся подтверждённому гостю — флаги снова слиты',
+    ).toHaveCount(0)
+    // Отказа тут нет: мы ещё не выяснили, поломка это или задержка.
+    await expect(page.getByText(/обратитесь на ресепшен/i)).toHaveCount(0)
+    await expect(page.getByTestId('room-unavailable')).toHaveCount(0)
+  })
+
+  test('УКУС: неподтверждённый гость видит замок и ни слова о недоступности', async ({
+    page,
+  }) => {
+    /*
+      Обратная сторона того же разведения. Гость не подтвердился — про
+      оборудование ему сказать нечего: оно, возможно, в полном порядке, мы
+      просто не знаем, тот ли это гость. Замок и просьба ввести код — всё.
+
+      Сервер при этом честно прислал `unavailable_kind: offline` со своим
+      текстом: экран обязан его НЕ показать, потому что вопрос сейчас не в
+      оборудовании.
+    */
+    await freezeState(page, {
+      availability: 'unavailable',
+      message: 'Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.',
+      unavailable_kind: 'offline',
+      checked_at: new Date().toISOString(),
+      trust: 'room_scanned',
+      room_verified: false,
+      can_command: false,
+      zones: [],
+    })
+    await enterRoom(page)
+
+    await expect(page.getByTestId('room-pin-panel')).toBeVisible({ timeout: 20_000 })
+    await expect(
+      page.getByTestId('room-unavailable'),
+      'неподтверждённому гостю показали плашку недоступности — два «нельзя» снова смешаны',
+    ).toHaveCount(0)
+    /*
+      Ищем ФРАЗУ ОТКАЗА, а не слово «ресепшен». Панель PIN сама говорит, где
+      взять код («подскажут на ресепшене»), и это правильный текст: он
+      отвечает на вопрос гостя, а не объявляет поломку.
+    */
+    await expect(page.getByText(/обратитесь на ресепшен/i)).toHaveCount(0)
+  })
+
+  test('холодное чтение: экран переспрашивает сам, без F5', async ({ page }) => {
+    /*
+      Повтор — это обещание, и оно проверяется счётчиком запросов, а не
+      надписью. Гость ничего не нажимает: экран, получив «читаем состояние»,
+      обязан сходить за снимком ещё раз сам.
+
+      Считаем ЗАПРОСЫ, а не время: сколько именно миллисекунд ждать между
+      попытками — внутреннее дело экрана (1.8 с и 3.0 с, обе паузы длиннее
+      окна схлопывания на сервере), а внешнее обещание одно — попыток больше
+      одной, и они происходят без участия гостя.
+    */
+    let calls = 0
+    await page.routeWebSocket('**/ws/**', (ws) => ws.close())
+    await page.route('**/api/v1/guest/room/state', async (route) => {
+      calls += 1
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          availability: 'unavailable',
+          message: 'Читаем состояние номера…',
+          unavailable_kind: 'reading',
+          checked_at: new Date().toISOString(),
+          trust: 'room_scanned',
+          room_verified: true,
+          can_command: false,
+          zones: [],
+        }),
+      })
+    })
+    await enterRoom(page)
+    await expect(page.getByTestId('room-reading')).toBeVisible({ timeout: 20_000 })
+
+    const first = calls
+    // Ждём дольше суммы обеих пауз (1.8 + 3.0), с запасом на дорогу.
+    await expect
+      .poll(() => calls, { timeout: 15_000, message: 'экран не переспросил сам' })
+      .toBeGreaterThan(first)
+
+    // Гость за это время не нажал ничего.
+    await expect(page.getByTestId('room-reading')).toBeVisible()
+  })
+
+  test('сессия без номера просит номер комнаты, а не ресепшен', async ({ page }) => {
+    /*
+      Ничего не сломано: гость просто не сказал, в каком он номере. Отправлять
+      его вниз по лестнице за этим — значит заставить человека решать задачу,
+      которую он решает сам за две секунды.
+    */
+    await freezeState(page, {
+      availability: 'unavailable',
+      message: 'Введите номер комнаты, чтобы управлять ею.',
+      unavailable_kind: 'no_room',
+      checked_at: new Date().toISOString(),
+      trust: 'anonymous',
+      room_verified: false,
+      can_command: false,
+      zones: [],
+    })
+    await enterRoom(page)
+
+    // Замок — потому что гость не подтверждён; фразы отказа нет.
+    await expect(page.getByTestId('room-pin-panel')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/обратитесь на ресепшен/i)).toHaveCount(0)
+    await expect(page.getByTestId('room-unavailable')).toHaveCount(0)
   })
 
   /* ── План-двойник ───────────────────────────────────────────────────────── */

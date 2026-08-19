@@ -804,12 +804,37 @@ export interface RoomPlan {
   points: RoomPlanPoint[];
 }
 
+/**
+ * Что показывать в недоступности. Не техническая причина (она остаётся на
+ * сервере), а ответ на вопрос «что мне сейчас делать»:
+ *
+ * `reading` — подождать, экран перечитает сам;
+ * `offline` — идти на ресепшен, само не починится;
+ * `no_room` — назвать номер комнаты.
+ */
+export type RoomUnavailableKind = 'reading' | 'offline' | 'no_room';
+
 export interface RoomStateSnapshot {
   availability: 'online' | 'unavailable';
   /** Готовый текст для гостя. Техническая причина остаётся на сервере. */
   message: string | null;
+  /** `null`, когда управление доступно. */
+  unavailable_kind: RoomUnavailableKind | null;
   checked_at: string;
   trust: GuestTrust;
+  /**
+   * ДВА РАЗНЫХ «НЕЛЬЗЯ», И ПУТАТЬ ИХ НА ЭКРАНЕ НЕЛЬЗЯ.
+   *
+   * `room_verified` — гость подтвердил, что он в номере. По нему и только по
+   * нему рисуется замок с формой PIN.
+   * `can_command` — оборудование готово принять команду. По нему рисуется
+   * плашка недоступности и блокируются контролы.
+   *
+   * Раньше поле было одно, и экран читал по нему обе вещи. Гость вводил
+   * верный PIN в момент, когда железо молчало, — и получал замок обратно,
+   * как будто код не подошёл.
+   */
+  room_verified: boolean;
   can_command: boolean;
   zones: RoomZone[];
   plan?: RoomPlan;

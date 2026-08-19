@@ -231,11 +231,41 @@ export function RoomPage() {
   }
 
   /*
+    ДВА РАЗНЫХ «НЕЛЬЗЯ» — ДВА РАЗНЫХ ЭКРАНА, И ОНИ НЕ ПЕРЕСЕКАЮТСЯ.
+
+    `room_verified` — про гостя: подтвердил ли он, что он в номере. Отвечает
+    за замок и форму PIN.
+    `can_command` — про оборудование: примет ли оно команду сейчас. Отвечает
+    за плашку недоступности и блокировку контролов.
+
+    Пока поле было одно, экран читал по нему обе вещи, и на молчащем железе
+    подтверждённому гостю возвращался замок: он вводил верный PIN, снимок
+    приезжал с `can_command: false`, и форма появлялась снова — как будто код
+    не подошёл. Второй ввод давал ровно то же, и гость шёл на ресепшен
+    жаловаться на исправный код.
+
+    Правило показа: НЕ ПОДТВЕРДИЛСЯ — только замок, без единого слова про
+    недоступность. Подтвердился — замка нет, а про оборудование говорим ровно
+    то, что известно.
+  */
+  const verified = Boolean(snapshot?.room_verified);
+  const needsPin = Boolean(snapshot) && !verified;
+  /*
+    Холодное чтение — НЕ недоступность, а «ещё не знаем». Экран уже
+    переспрашивает сам (`useRoomState`), и говорить в этот момент про ресепшен
+    значит объявить поломку, которой, возможно, нет.
+  */
+  const reading = snapshot?.unavailable_kind === 'reading';
+
+  /*
     «Недоступно» без единого элемента — показывать нечего, остаётся заглушка.
     Если же структура известна из памяти, экран остаётся экраном номера: все
     состояния погашены, контролы заблокированы, сверху спокойная строка.
+
+    Неподтверждённый гость сюда не попадает: у него свой экран — замок.
   */
   const unavailable =
+    !needsPin &&
     snapshot?.availability === 'unavailable' &&
     !snapshot.zones.some((zone) => zone.controls.length > 0);
   const plate = snapshot?.plan ? (
@@ -296,19 +326,31 @@ export function RoomPage() {
     readableControls.length > 0 &&
     readableControls.every((control) => control.state === 'offline');
 
+  const nothingToShow = !snapshot || snapshot.zones.every((zone) => zone.controls.length === 0);
+
   const body = unavailable ? (
     <KitEmptyState
-      icon={<IconOffline size={28} />}
+      // «Читаем состояние» — не поломка: значок отказа тут обещал бы то,
+      // чего мы ещё не выяснили.
+      icon={reading ? <IconRoom size={28} /> : <IconOffline size={28} />}
       title={snapshot?.message ?? t('guest.roomControl.unavailable')}
-      testId="room-unavailable"
+      testId={reading ? 'room-reading' : 'room-unavailable'}
     />
-  ) : !snapshot || snapshot.zones.every((zone) => zone.controls.length === 0) ? (
-    <KitEmptyState
-      icon={<IconRoom size={28} />}
-      title={t('guest.roomControl.empty')}
-      description={t('guest.roomControl.emptyHint')}
-      testId="room-empty"
-    />
+  ) : nothingToShow ? (
+    /*
+      Показывать нечего. У неподтверждённого гостя это НЕ «в номере нет
+      оборудования» и не «связи нет»: мы просто ещё не знаем, что у него в
+      номере, потому что он не подтвердился. Единственное, что уместно на
+      экране, — замок, и он уже стоит в плашках выше.
+    */
+    needsPin ? null : (
+      <KitEmptyState
+        icon={<IconRoom size={28} />}
+        title={t('guest.roomControl.empty')}
+        description={t('guest.roomControl.emptyHint')}
+        testId="room-empty"
+      />
+    )
   ) : (
     panels
   );
@@ -332,16 +374,25 @@ export function RoomPage() {
     зазор. На десктопе из-за этого правая колонка начиналась на 16px ниже
     плиты — верхние края двух соседних блоков не совпадали.
   */
+  /*
+    Строка «связь восстанавливается» — про КАНАЛ, а не про доверие. Гостю,
+    который ещё не подтвердился, она не нужна и вредна: он видел бы замок и
+    рядом жалобу на связь, хотя связь может быть в полном порядке. Молчание
+    номера ему тоже не адресовано — читать состояние нам пока незачем.
+  */
+  const showLinkTrouble = !needsPin && (live.status !== 'online' || roomUnreachable);
+
   const hasNotices =
-    Boolean(snapshot && !snapshot.can_command) ||
-    live.status !== 'online' ||
-    roomUnreachable ||
+    needsPin ||
+    showLinkTrouble ||
     Boolean(notice) ||
     Boolean(!snapshot && state.isError);
 
   const notices = !hasNotices ? null : (
     <Stack spacing={1.5}>
-      {snapshot && !snapshot.can_command ? <PinPanel /> : null}
+      {/* Замок — ТОЛЬКО по доверию. Готовность оборудования на него не влияет:
+          верный PIN при молчащем железе больше не возвращает форму назад. */}
+      {needsPin ? <PinPanel /> : null}
       {/* Обрыв канала: гость должен понимать, ПОЧЕМУ тумблеры не отвечают, и
           видеть, что связь восстанавливается сама. Молчание здесь читается как
           «приложение сломалось». */}
@@ -355,7 +406,7 @@ export function RoomPage() {
         остаётся целой: плита, вкладки, строки и названия на месте, гаснут
         только состояния и блокируются контролы.
       */}
-      {live.status !== 'online' || roomUnreachable ? (
+      {showLinkTrouble ? (
         <KitToast
           severity="warning"
           message={t(

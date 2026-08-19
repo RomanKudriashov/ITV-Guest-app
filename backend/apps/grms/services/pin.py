@@ -192,7 +192,12 @@ def verify(hotel, session, *, pin: str) -> dict:
     session.room_verified_at = timezone.now()
     session.save(update_fields=["room_verified_at", "updated_at"])
     _journal(hotel, session, ok=True, note="verified")
-    return {"trust": session.trust, "can_command": True, "room_verified": True}
+    # `can_command` отсюда УБРАН намеренно. Подтверждение PIN отвечает ровно на
+    # один вопрос — «гость в номере», — и про оборудование не знает ничего: мы
+    # его в этот момент не спрашивали. Отдавать здесь `can_command: True`
+    # значило бы обещать готовность железа по факту ввода четырёх цифр.
+    # Готовность приезжает снимком, и там же оба флага рядом.
+    return {"trust": session.trust, "room_verified": True}
 
 
 def _journal(hotel, session, *, ok: bool, note: str) -> None:

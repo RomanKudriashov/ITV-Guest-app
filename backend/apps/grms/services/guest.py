@@ -56,6 +56,54 @@ _UNAVAILABLE_TEXT = {
     "zh": "客房控制暂时不可用。请联系前台。",
 }
 
+# ВИД НЕДОСТУПНОСТИ — то, что гостю ПОКАЗЫВАТЬ, а не то, что технически
+# случилось. Технические причины (`REASON_*`) по-прежнему не выходят наружу
+# (контракт §3): наружу выходит ответ на вопрос «что мне сейчас делать».
+#
+# Три вида, потому что действий ровно три и они разные:
+#   `reading`  — подождать, экран сам перечитает;
+#   `offline`  — идти на ресепшен, само не починится;
+#   `no_room`  — назвать номер комнаты, дальше всё заработает.
+# До этого все три отвечали «обратитесь на ресепшен», включая случай, когда
+# гость просто не сказал, в каком он номере.
+UNAVAILABLE_READING = "reading"
+UNAVAILABLE_OFFLINE = "offline"
+UNAVAILABLE_NO_ROOM = "no_room"
+
+_READING_TEXT = {
+    "ru": "Читаем состояние номера…",
+    "en": "Reading the room state…",
+    "ar": "جارٍ قراءة حالة الغرفة…",
+    "zh": "正在读取客房状态…",
+}
+
+_NO_ROOM_TEXT = {
+    "ru": "Введите номер комнаты, чтобы управлять ею.",
+    "en": "Enter your room number to control the room.",
+    "ar": "أدخل رقم غرفتك للتحكم بها.",
+    "zh": "请输入房间号以控制客房。",
+}
+
+# Причина → что показать. Не перечисленное считается отказом: новый REASON_*
+# обязан попасть сюда осознанно, а не унаследовать «подождите» по умолчанию.
+_UNAVAILABLE_KIND = {
+    REASON_NO_ROOM: UNAVAILABLE_NO_ROOM,
+    REASON_UNREADABLE: UNAVAILABLE_READING,
+}
+
+_KIND_TEXT = {
+    UNAVAILABLE_READING: _READING_TEXT,
+    UNAVAILABLE_NO_ROOM: _NO_ROOM_TEXT,
+    UNAVAILABLE_OFFLINE: _UNAVAILABLE_TEXT,
+}
+
+# Сколько подряд молчащих чтений считать «ещё читаем», прежде чем назвать это
+# отказом. Два: первое молчание неотличимо от холодного старта коннектора,
+# второе — уже свидетельство. Больше двух держать гостя на «читаем состояние»
+# нечестно: каждая попытка стоит до `commands.READ_BUDGET_S` реального
+# ожидания, и на третьей подпись перестаёт быть правдой.
+COLD_READ_ATTEMPTS = 2
+
 # Ключ значения внутри составного элемента. Совпадает с именем capability
 # везде, кроме toggle: в контракте у кондиционера это `on`.
 _VALUE_KEY = {"toggle": "on"}
@@ -174,9 +222,15 @@ def demo_entry_enabled(hotel) -> bool:
     return bool(module and (module.config or {}).get("guest_entry_demo") is True)
 
 
-def can_command(hotel, session) -> bool:
+def room_verified(hotel, session) -> bool:
     """
-    Право отправлять команды.
+    ГОСТЬ ПОДТВЕРДИЛСЯ, ЧТО ОН В НОМЕРЕ. Про оборудование здесь не сказано ничего.
+
+    Функция звалась `can_command`, и это имя склеивало два разных «нельзя».
+    Ответ на вопрос «доверяем ли мы этому гостю» не зависит от того, отвечает
+    ли сейчас железо, и наоборот: подтверждённому гостю нельзя скомандовать
+    молчащему фанкойлу, а неподтверждённому нельзя скомандовать исправному.
+    Снимок теперь несёт оба ответа порознь (`room_verified` и `can_command`).
 
     Уровень `pms_verified` под это НЕ занимается: PMS-интеграции нет, и когда
     она появится, этот уровень обязан означать реальную сверку с PMS. Признак
@@ -229,16 +283,16 @@ def build_state(hotel, session, *, language: str = "") -> dict:
     """
     require_module(hotel)
     context, reason = resolve_context(hotel, session)
-    allowed = can_command(hotel, session)
-    if allowed and session is not None and session.room_verified_at is None:
+    verified = room_verified(hotel, session)
+    if verified and session is not None and session.room_verified_at is None:
         _note_demo_entry(hotel, session)
 
     if context is None:
-        return _unavailable(session, reason, language=language, allowed=allowed)
+        return _unavailable(session, reason, language=language, verified=verified)
 
     reason = _link_reason(hotel)
     if reason:
-        return _unavailable(session, reason, language=language, allowed=allowed, context=context)
+        return _unavailable(session, reason, language=language, verified=verified, context=context)
 
     readings, read_reason = _read_state(context)
     if read_reason:
@@ -247,15 +301,20 @@ def build_state(hotel, session, *, language: str = "") -> dict:
         # отвечает» в этой картине неразличимы, и показать первое значит
         # соврать), либо не ответил ни один.
         return _unavailable(
-            session, read_reason, language=language, allowed=allowed, context=context
+            session, read_reason, language=language, verified=verified, context=context
         )
 
     return {
         "availability": AVAILABILITY_ONLINE,
         "message": None,
+        "unavailable_kind": None,
         "checked_at": _now_iso(),
         "trust": session.trust if session else "anonymous",
-        "can_command": allowed,
+        # ДВА РАЗНЫХ ОТВЕТА, а не один на два вопроса.
+        "room_verified": verified,
+        # Оборудование ответило — значит командовать можно ровно тому, кому
+        # мы доверяем.
+        "can_command": verified,
         "zones": _serialize_zones(context, readings, language=language),
         **_plan(context),
     }
@@ -299,12 +358,13 @@ def _read_state(context: RoomContext) -> tuple[dict, str]:
     Возвращает ({feedback: результат}, причина недоступности) — пустая строка
     означает «состояние прочитано».
 
-    Различаются ТРИ исхода, а не два. Раньше их было два, и третий — самый
+    Различаются ЧЕТЫРЕ исхода, а не два. Раньше их было два, и третий — самый
     частый в аварии — молча попадал в «всё хорошо»:
 
     * прочитали → пусто;
     * ответили, но все ответы — булев `false` → FEEDBACK_DEAD;
-    * НЕ ОТВЕТИЛ НИ ОДИН → STATE_UNREADABLE.
+    * не ответил ни один ВПЕРВЫЕ → STATE_UNREADABLE («ещё читаем»);
+    * не ответил ни один СНОВА → ENDPOINT_UNREACHABLE («связи нет»).
 
     Прежний код считал `dead = bool(successful) and all(...)`. Когда связи
     нет, `successful` пуст, `dead` выходил False — и функция возвращала
@@ -312,6 +372,13 @@ def _read_state(context: RoomContext) -> tuple[dict, str]:
     гостю рабочую комнату с шестью зонами и нулём значений, а до порога
     heartbeat (три минуты) поймать это было больше нечем: узел всё ещё
     числится живым, потому что три минуты назад он и был живым.
+
+    ПОЧЕМУ ПЕРВОЕ МОЛЧАНИЕ — ОТДЕЛЬНЫЙ ИСХОД. Оно неотличимо от «коннектор
+    поднялся секунду назад и ещё не успел отдать значения»: узел числится
+    живым, endpoint про себя ничего не сообщал, а канал молчит. Объявлять по
+    одному такому чтению отказ с отправкой на ресепшен — это отправлять гостя
+    вниз из-за задержки, которая пройдёт сама через секунду. Второе подряд
+    молчание уже не совпадение, и вот оно и есть отказ.
     """
     feedbacks = sorted(
         {
@@ -333,40 +400,63 @@ def _read_state(context: RoomContext) -> tuple[dict, str]:
     )
     successful = [result for result in results.values() if result.ok]
 
-    # То, что мы сейчас выяснили опытом, кладём в общий признак живости:
-    # heartbeat приходит раз в минуту, а мы только что попробовали НА САМОМ
-    # ДЕЛЕ. Следующий опрос благодаря этому ответит сразу, а не отстоит
-    # заново все таймауты.
-    liveness.observe(context.hotel.pk, bool(successful))
-
     if not successful:
-        return results, REASON_UNREADABLE
+        # Молчание. Первое — ещё не приговор, повторное — уже факт.
+        silent, silent_for = liveness.note_silent_read(context.hotel.pk)
+        proven = silent >= COLD_READ_ATTEMPTS and silent_for >= commands.READ_COALESCE_S
+        if not proven:
+            # ХОЛОДНОЕ ЧТЕНИЕ. Признак живости НЕ портим: запиши мы сюда
+            # `observe(False)`, следующий заход упёрся бы в `_link_reason` и
+            # вернул отказ, ни разу больше не попробовав прочитать. Повтор
+            # стал бы бутафорией — экран перезапрашивает, а сервер отвечает
+            # заученным «недоступно».
+            return results, REASON_UNREADABLE
+
+        # Молчит не первый раз и достаточно долго, чтобы повтор дошёл до
+        # железа, — это уже не «не успели». Здесь и только здесь платим за
+        # знание: кладём недоступность в общий признак живости, чтобы
+        # следующие опросы отвечали сразу, не отстаивая таймауты заново.
+        liveness.observe(context.hotel.pk, False)
+        return results, REASON_ENDPOINT_UNREACHABLE
+
+    # Прочитали — прежние молчания больше ничего не значат.
+    liveness.forget_silent_reads(context.hotel.pk)
+    liveness.observe(context.hotel.pk, True)
+
     if all(result.is_dead_sentinel for result in successful):
         return results, REASON_FEEDBACK_DEAD
     return results, ""
 
 
-def _unavailable(session, reason: str, *, language: str, allowed: bool, context=None) -> dict:
+def _unavailable(session, reason: str, *, language: str, verified: bool, context=None) -> dict:
     """
-    Недоступность. Гость получает нейтральный текст, техническая причина — в лог.
+    Недоступность. Техническая причина остаётся в логе, наружу идёт ВИД.
 
     Зоны отдаются ПУСТЫМИ, а не с последними известными значениями: элемент без
     связи не имеет состояния, и «показать что было» здесь означает показать
     неправду.
 
-    `can_command` здесь ВСЕГДА False, хотя `allowed` говорит о другом. Это
-    разные вопросы: `allowed` — «доверяем ли мы этому гостю» (он в номере,
-    подтвердил PIN), а `can_command` — «можно ли сейчас отдать команду».
-    Недоступному оборудованию нельзя отдать команду никому, сколь угодно
-    доверенному. Раньше сюда протекал `allowed`, и снимок сам себе противоречил:
-    «управление недоступно, зон нет — и да, командовать можно».
+    ДВА ФЛАГА, ДВА РАЗНЫХ «НЕЛЬЗЯ».
+
+    `can_command` здесь ВСЕГДА False: недоступному оборудованию нельзя отдать
+    команду никому, сколь угодно доверенному. А `room_verified` — ответ на
+    совсем другой вопрос, «доверяем ли мы этому гостю», и он от молчания
+    железа не меняется.
+
+    Раньше поле было одно, и экран читал по нему обе вещи сразу. Отсюда и
+    брался укус: гость вводил верный PIN, оборудование в этот момент молчало,
+    снимок приезжал с `can_command: false` — и экран показывал ему замок
+    заново, как будто PIN не подошёл. Подтверждение при этом на сервере было.
     """
-    logger.info("управление номером недоступно: причина=%s", reason)
+    kind = _UNAVAILABLE_KIND.get(reason, UNAVAILABLE_OFFLINE)
+    logger.info("управление номером недоступно: причина=%s вид=%s", reason, kind)
     return {
         "availability": AVAILABILITY_UNAVAILABLE,
-        "message": translate(_UNAVAILABLE_TEXT, language),
+        "message": translate(_KIND_TEXT[kind], language),
+        "unavailable_kind": kind,
         "checked_at": _now_iso(),
         "trust": session.trust if session else "anonymous",
+        "room_verified": verified,
         "can_command": False,
         "zones": [],
         **_plan(context),
@@ -524,7 +614,10 @@ def submit_command(hotel, session, *, control_id: str, capability: str = "", val
     комнаты полным снимком.
     """
     require_module(hotel)
-    if not can_command(hotel, session):
+    # Проверка ДОВЕРИЯ, а не готовности железа: молчащее оборудование отобьёт
+    # команду ниже, ответом `room_unavailable`, и путать эти два отказа нельзя —
+    # первый лечится PIN, второй ресепшеном.
+    if not room_verified(hotel, session):
         raise PermissionDenied(
             "Подтвердите, что вы в номере", code="trust_required"
         )

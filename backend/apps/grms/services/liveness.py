@@ -91,3 +91,55 @@ def endpoint_reachable(hotel_id, name: str = adapter.ENDPOINT_IRIDI) -> bool | N
 def forget(hotel_id) -> None:
     """Узел отключился — прежние замеры больше ничего не значат."""
     cache.delete(_key(hotel_id))
+    forget_silent_reads(hotel_id)
+
+
+# --- Молчащие чтения подряд --------------------------------------------------
+#
+# Одно молчание и два молчания подряд — разные новости, и различать их больше
+# нечем. Узел числится живым (heartbeat трёхминутный), endpoint про себя ещё
+# ничего не сообщал, а канал не ответил: это одинаково выглядит и когда
+# коннектор поднялся секунду назад, и когда оборудование действительно умерло.
+#
+# Счётчик живёт столько же, сколько признак живости: он про ту же связь, и
+# пережить её не должен. Держать его дольше значит помнить молчание, которого
+# уже никто не подтверждает.
+
+_SILENT_TTL_S = ENDPOINTS_TTL_S
+
+
+def _silent_key(hotel_id) -> str:
+    return f"grms:silent_reads:{hotel_id}"
+
+
+def note_silent_read(hotel_id) -> tuple[int, float]:
+    """
+    Записать молчащее чтение. Возвращает (какое оно подряд, сколько секунд
+    молчит).
+
+    ВОЗРАСТ ТУТ НЕ УКРАШЕНИЕ. Одного счётчика мало: чтения одного устройства
+    схлопываются на `commands.READ_COALESCE_S`, и два запроса подряд внутри
+    этого окна дают ДВА молчания на ОДНУ настоящую попытку. Считать это
+    подтверждением значит объявить отказ, ни разу больше не сходив к
+    оборудованию, — а клиент, опрашивающий часто, получил бы отказ быстрее
+    того, кто ждёт.
+
+    Поэтому решение принимается по двум признакам сразу: и попыток было
+    больше одной, и прошло достаточно, чтобы хоть одна из них дошла до железа.
+    """
+    import time
+
+    key = _silent_key(hotel_id)
+    now = time.monotonic()
+    known = cache.get(key)
+    if isinstance(known, dict) and "count" in known:
+        entry = {"count": int(known["count"]) + 1, "since": float(known.get("since", now))}
+    else:
+        entry = {"count": 1, "since": now}
+    cache.set(key, entry, _SILENT_TTL_S)
+    return entry["count"], max(0.0, now - entry["since"])
+
+
+def forget_silent_reads(hotel_id) -> None:
+    """Прочитали — счётчик молчаний обнуляется."""
+    cache.delete(_silent_key(hotel_id))

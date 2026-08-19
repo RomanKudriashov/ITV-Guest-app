@@ -60,17 +60,37 @@ def _connector_dies(stand, hotel):
 
 
 def test_dead_transport_with_a_fresh_heartbeat_is_unavailable(guest, crystal, stand):
-    """Связи нет — значит недоступно, даже пока узел числится живым."""
+    """
+    Связи нет — значит недоступно, даже пока узел числится живым.
+
+    НО НЕ С ПЕРВОГО ЧТЕНИЯ. Одно молчание неотличимо от коннектора, который
+    поднялся секунду назад и ещё не отдал значения: узел живой, endpoint про
+    себя не сообщал, канал молчит. Поэтому первый ответ — «читаем состояние»
+    и повтор, и только подтверждённое молчание становится отказом с
+    ресепшеном. Раньше отказ выдавался сразу, и гость шёл вниз из-за задержки,
+    которая прошла бы сама.
+    """
     _connector_dies(stand, crystal)
 
-    payload = guest.get("/api/v1/guest/room/state").json()
+    first = guest.get("/api/v1/guest/room/state").json()
+    assert first["availability"] == "unavailable"
+    assert first["zones"] == [], "элементы без связи не имеют состояния"
+    assert first["can_command"] is False, "недоступному оборудованию не скомандуешь"
+    assert first["unavailable_kind"] == "reading", "первое молчание — ещё не приговор"
+    assert "ресепшен" not in first["message"], "рано отправлять гостя вниз"
 
-    assert payload["availability"] == "unavailable"
-    assert payload["zones"] == [], "элементы без связи не имеют состояния"
-    assert payload["can_command"] is False, "недоступному оборудованию не скомандуешь"
+    # Ждём дольше окна схлопывания: иначе повтор получил бы прежний ответ, не
+    # сходив к оборудованию, и «подтверждением» это считать было бы нельзя.
+    time.sleep(commands.READ_COALESCE_S + 0.1)
+    second = guest.get("/api/v1/guest/room/state").json()
+
+    assert second["availability"] == "unavailable"
+    assert second["zones"] == []
+    assert second["can_command"] is False
+    assert second["unavailable_kind"] == "offline"
     # Гостю — нейтральный текст, техническая причина остаётся в логе.
-    assert "ресепшен" in payload["message"]
-    assert "UNREADABLE" not in payload["message"]
+    assert "ресепшен" in second["message"]
+    assert "UNREADABLE" not in second["message"]
 
 
 def test_no_values_leak_through_the_window(guest, crystal, stand):
@@ -99,10 +119,14 @@ def test_command_in_the_window_is_refused_not_accepted(guest, crystal, stand):
     """
     Команда отклоняется, а не принимается в никуда.
 
-    Первый опрос состояния записывает выясненное в признак живости, и команда
-    после него получает честный отказ вместо `202 pending`.
+    Выясненное записывается в признак живости не с первого молчания, а с
+    ПОДТВЕРЖДЁННОГО: два опроса, между ними — окно схлопывания, чтобы второй
+    действительно сходил к оборудованию. После этого команда получает честный
+    отказ вместо `202 pending`.
     """
     _connector_dies(stand, crystal)
+    guest.get("/api/v1/guest/room/state")
+    time.sleep(commands.READ_COALESCE_S + 0.1)
     guest.get("/api/v1/guest/room/state")
 
     response = guest.post(
@@ -125,6 +149,12 @@ def test_a_failed_read_is_remembered_so_the_next_poll_is_not_paid_for_twice(
     _connector_dies(stand, crystal)
     assert liveness.endpoint_reachable(crystal.pk) is None, "до опроса знать неоткуда"
 
+    guest.get("/api/v1/guest/room/state")
+    assert (
+        liveness.endpoint_reachable(crystal.pk) is None
+    ), "по ОДНОМУ молчанию признак живости портить нельзя: следующий заход тогда не стал бы читать вовсе, и повтор превратился бы в бутафорию"
+
+    time.sleep(commands.READ_COALESCE_S + 0.1)
     guest.get("/api/v1/guest/room/state")
 
     assert liveness.endpoint_reachable(crystal.pk) is False
@@ -151,6 +181,10 @@ def test_recovery_returns_the_room(guest, crystal, monkeypatch):
     # достаточно снять признак живости — пережидать нечего.
     monkeypatch.setattr(commands, "read_many", all_reads_fail)
     liveness.forget(crystal.pk)
+    # Два молчания и пауза между ними: отказ объявляется по подтверждённому
+    # молчанию, а не по первому.
+    assert guest.get("/api/v1/guest/room/state").json()["availability"] == "unavailable"
+    time.sleep(commands.READ_COALESCE_S + 0.1)
     assert guest.get("/api/v1/guest/room/state").json()["availability"] == "unavailable"
     assert liveness.endpoint_reachable(crystal.pk) is False
 
