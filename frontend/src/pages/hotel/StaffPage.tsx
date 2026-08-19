@@ -50,6 +50,7 @@ import {
 import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/auth';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { FormCell, FormGrid } from '@/kit/formLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
@@ -419,84 +420,98 @@ function StaffDialog({
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           {serverError ? <Alert severity="error">{serverError}</Alert> : null}
 
-          <Stack direction="row" spacing={2}>
-            <TextField
-              size="small"
-              type="email"
-              label={t('hotel.staff.email')}
-              value={form.email}
-              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              inputProps={{ 'data-testid': 'staff-email' }}
-              required
-              fullWidth
-            />
-            <TextField
-              size="small"
-              label={t('hotel.staff.fullName')}
-              value={form.full_name}
-              onChange={(event) => setForm((prev) => ({ ...prev, full_name: event.target.value }))}
-              inputProps={{ 'data-testid': 'staff-full-name' }}
-              fullWidth
-            />
-          </Stack>
-
-          <Stack direction="row" spacing={2}>
-            <TextField
-              size="small"
-              type="password"
-              label={t('hotel.staff.password')}
-              value={form.password}
-              onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-              inputProps={{ 'data-testid': 'staff-password' }}
-              helperText={isNew ? t('hotel.staff.passwordHint') : t('hotel.staff.passwordKeepHint')}
-              error={passwordInvalid && form.password.length > 0}
-              required={isNew}
-              fullWidth
-            />
-            <TextField
-              select
-              size="small"
-              label={t('hotel.staff.language')}
-              value={form.language}
-              onChange={(event) => setForm((prev) => ({ ...prev, language: event.target.value }))}
-              inputProps={{ 'data-testid': 'staff-language' }}
-              sx={{ minWidth: 160 }}
-            >
-              {languageCodes.map((code) => (
-                <MenuItem key={code} value={code}>
-                  {languageLabels[code] ?? code}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-
-          <Stack direction="row" spacing={2}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={form.is_hotel_admin}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, is_hotel_admin: event.target.checked }))
-                  }
-                  inputProps={{ 'data-testid': 'staff-admin' } as Record<string, string>}
-                />
-              }
-              label={t('hotel.staff.admin')}
-            />
-            {!isNew ? (
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={form.is_active}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, is_active: event.target.checked }))
-                    }
-                  />
-                }
-                label={t('hotel.staff.active')}
+          {/*
+            Та же сетка в двенадцать колонок, что в формах консоли
+            (`kit/formLayout`). Раньше здесь стояли два ряда `Stack` с
+            `fullWidth` и `minWidth: 160`: «Пароль» получался вдвое шире
+            «Языка» не по смыслу, а по остатку места.
+          */}
+          <FormGrid>
+            <FormCell span={6}>
+              <TextField
+                size="small"
+                type="email"
+                label={t('hotel.staff.email')}
+                value={form.email}
+                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                inputProps={{ 'data-testid': 'staff-email' }}
+                required
+                fullWidth
               />
-            ) : null}
-          </Stack>
+            </FormCell>
+            <FormCell span={6}>
+              <TextField
+                size="small"
+                label={t('hotel.staff.fullName')}
+                value={form.full_name}
+                onChange={(event) => setForm((prev) => ({ ...prev, full_name: event.target.value }))}
+                inputProps={{ 'data-testid': 'staff-full-name' }}
+                fullWidth
+              />
+            </FormCell>
+            <FormCell span={6}>
+              <TextField
+                size="small"
+                type="password"
+                label={t('hotel.staff.password')}
+                value={form.password}
+                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                inputProps={{ 'data-testid': 'staff-password' }}
+                helperText={
+                  isNew ? t('hotel.staff.passwordHint') : t('hotel.staff.passwordKeepHint')
+                }
+                error={passwordInvalid && form.password.length > 0}
+                required={isNew}
+                fullWidth
+              />
+            </FormCell>
+            <FormCell span={6}>
+              <TextField
+                select
+                size="small"
+                label={t('hotel.staff.language')}
+                value={form.language}
+                onChange={(event) => setForm((prev) => ({ ...prev, language: event.target.value }))}
+                inputProps={{ 'data-testid': 'staff-language' }}
+                fullWidth
+              >
+                {languageCodes.map((code) => (
+                  <MenuItem key={code} value={code}>
+                    {languageLabels[code] ?? code}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </FormCell>
+            <FormCell>
+              <Stack direction="row" spacing={2} flexWrap="wrap">
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.is_hotel_admin}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, is_hotel_admin: event.target.checked }))
+                      }
+                      inputProps={{ 'data-testid': 'staff-admin' } as Record<string, string>}
+                    />
+                  }
+                  label={t('hotel.staff.admin')}
+                />
+                {!isNew ? (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.is_active}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, is_active: event.target.checked }))
+                        }
+                      />
+                    }
+                    label={t('hotel.staff.active')}
+                  />
+                ) : null}
+              </Stack>
+            </FormCell>
+          </FormGrid>
 
           <Divider />
 
@@ -533,6 +548,11 @@ function StaffDialog({
                     data-testid={`staff-assignment-${index}`}
                     sx={{ p: 1.5, borderRadius: 2, bgcolor: 'brand.surfaceMuted' }}
                   >
+                    {/*
+                      Привязка — ряд из двух полей в постоянной пропорции 2:1 и
+                      кнопки: «Отдел» шире «Уровня», потому что в нём длинные
+                      названия, а не потому, что ему достался остаток строки.
+                    */}
                     <TextField
                       select
                       size="small"
@@ -544,7 +564,7 @@ function StaffDialog({
                       SelectProps={{ native: true }}
                       InputLabelProps={{ shrink: true }}
                       inputProps={{ 'data-testid': `staff-assignment-point-${index}` }}
-                      sx={{ flexGrow: 1 }}
+                      sx={{ flex: 2, minWidth: 0 }}
                     >
                       {departments.map((department) => (
                         <option key={department.id} value={department.id}>
@@ -563,7 +583,7 @@ function StaffDialog({
                       SelectProps={{ native: true }}
                       InputLabelProps={{ shrink: true }}
                       inputProps={{ 'data-testid': `staff-assignment-level-${index}` }}
-                      sx={{ minWidth: 160 }}
+                      sx={{ flex: 1, minWidth: 0 }}
                     >
                       {STAFF_LEVELS.map((level) => (
                         <option key={level} value={level}>

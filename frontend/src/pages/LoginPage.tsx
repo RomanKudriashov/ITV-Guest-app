@@ -1,14 +1,10 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
-import ButtonBase from '@mui/material/ButtonBase';
-import CircularProgress from '@mui/material/CircularProgress';
 import InputBase from '@mui/material/InputBase';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Typography from '@mui/material/Typography';
-import { alpha, type Theme } from '@mui/material/styles';
 
 import { ApiError, session } from '@/api/client';
 import { useAuth } from '@/auth';
@@ -18,163 +14,25 @@ import {
   type SupportedLanguage,
 } from '@/i18n';
 import { AuthAtmosphere } from '@/kit/AuthAtmosphere';
+import {
+  AuthBrand,
+  AuthError,
+  AuthHint,
+  AuthPanel,
+  AuthSubmitButton,
+  AuthSubtitle,
+  AuthTitle,
+  AuthTopControls,
+  GlassPill,
+  GlobeGlyph,
+  MoonGlyph,
+  SunGlyph,
+  inputSx,
+  lineRowSx,
+} from '@/kit/auth';
 import { revealSx } from '@/kit/motion';
 import { useAppTheme } from '@/theme';
 import { pickLogo } from '@/theme';
-
-/* ── vector glyphs (line style, currentColor — no emoji, no raster) ───────── */
-
-function Glyph({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      component="svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      focusable="false"
-      sx={{ width: 18, height: 18, display: 'block' }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-const ArrowGlyph = (
-  <Glyph>
-    <path d="M5 12h14" />
-    <path d="M13 6l6 6-6 6" />
-  </Glyph>
-);
-
-const GlobeGlyph = (
-  <Glyph>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3 12h18" />
-    <path d="M12 3c2.5 2.4 3.8 5.6 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.6-3.8-9S9.5 5.4 12 3z" />
-  </Glyph>
-);
-
-const MoonGlyph = (
-  <Glyph>
-    <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-  </Glyph>
-);
-
-const SunGlyph = (
-  <Glyph>
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-  </Glyph>
-);
-
-/* ── glass pill (reference `.gh`) with a ≥44px hit target ───────────────────── */
-
-function GlassPill({
-  onClick,
-  children,
-  ...rest
-}: {
-  onClick: (event: React.MouseEvent<HTMLElement>) => void;
-  children: ReactNode;
-  'data-testid'?: string;
-  'aria-label'?: string;
-  'aria-haspopup'?: boolean;
-}) {
-  return (
-    <ButtonBase
-      onClick={onClick}
-      {...rest}
-      sx={(theme: Theme) => ({
-        // Interactive target ≥44px; the visible pill stays 34px (reference).
-        minHeight: 44,
-        borderRadius: `${theme.palette.brand.radius.pill}px`,
-        '&.Mui-focusVisible': {
-          outline: `2px solid ${theme.palette.common.white}`,
-          outlineOffset: 2,
-        },
-      })}
-    >
-      <Box
-        sx={(theme: Theme) => ({
-          height: 34,
-          px: '13px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '7px',
-          borderRadius: `${theme.palette.brand.radius.pill}px`,
-          border: `1px solid ${alpha(theme.palette.common.white, 0.22)}`,
-          backgroundColor: alpha(theme.palette.common.black, 0.28),
-          color: theme.palette.common.white,
-          fontSize: 12,
-          fontWeight: theme.typography.fontWeightBold,
-          transition: 'background-color .2s',
-          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-        })}
-      >
-        {children}
-      </Box>
-    </ButtonBase>
-  );
-}
-
-/* ── line input (reference `.lineinp`) ──────────────────────────────────────── */
-
-function lineRowSx(theme: Theme) {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    px: '2px',
-    py: '13px',
-    borderBottom: `1px solid ${alpha(theme.palette.common.white, 0.28)}`,
-    transition: 'border-color .25s',
-    '&:hover': { borderColor: alpha(theme.palette.common.white, 0.6) },
-    '&:focus-within': { borderColor: alpha(theme.palette.common.white, 0.6) },
-    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-  } as const;
-}
-
-// ВАЖНО (причина прошлого белого экрана): стандартный `::placeholder` в sx роняет
-// stylis-prefixer — разворачивая вендор-префиксы псевдоэлемента, он обращается к
-// коллекции детей узла, которой там нет → `.push` of undefined, весь экран падает.
-// Поэтому `::placeholder` в рантайм-sx НЕ пишем, а задаём плейсхолдер уже-
-// префиксными селекторами (`::-webkit-input-placeholder`, `::-moz-placeholder`) —
-// их prefixer не трогает. Storefront не стилизовал плейсхолдер, поэтому там не
-// всплывало; правило теперь общее.
-const inputSx = (theme: Theme) => {
-  const placeholder = { color: alpha(theme.palette.common.white, 0.42), opacity: 1 };
-  return {
-    flex: 1,
-    color: theme.palette.common.white,
-    fontWeight: theme.typography.fontWeightMedium,
-    fontSize: { xs: 17, md: 19 },
-    '& input': {
-      padding: 0,
-      color: theme.palette.common.white,
-    },
-    '& input::-webkit-input-placeholder': placeholder,
-    '& input::-moz-placeholder': placeholder,
-    // Автозаполнение — вот откуда брались «белые прямоугольники» на входе в
-    // CMS: WebKit кладёт СВОЙ фон поверх любого background и по спецификации
-    // не даёт его перекрасить. Обходится единственным способом — тенью в
-    // 1000px внутрь, которая закрашивает поле изнутри; заодно возвращаем цвет
-    // текста, который автозаполнение тоже переопределяет.
-    '& input:-webkit-autofill': {
-      WebkitBoxShadow: `0 0 0 1000px ${alpha(theme.palette.common.black, 0.28)} inset`,
-      WebkitTextFillColor: theme.palette.common.white,
-      caretColor: theme.palette.common.white,
-      borderRadius: 0,
-      transition: 'background-color 9999s ease-in-out 0s',
-    },
-    '& input:-webkit-autofill:focus': {
-      WebkitBoxShadow: `0 0 0 1000px ${alpha(theme.palette.common.black, 0.28)} inset`,
-    },
-  };
-};
 
 const TIME_SLOTS = ['night', 'morning', 'afternoon', 'evening'] as const;
 
@@ -185,6 +43,13 @@ function greetingSlot(hour: number): (typeof TIME_SLOTS)[number] {
   return 'evening';
 }
 
+/**
+ * Вход в CMS отеля — полотно по эталону `docs/design/login-ac.html`.
+ *
+ * Разметка экрана живёт в `kit/auth`: тем же кодом набран вход в консоль
+ * платформы. Пока каждый экран держал свою копию, они разъехались до
+ * неузнаваемости — карточка против полотна.
+ */
 export function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -248,77 +113,9 @@ export function LoginPage() {
     >
       <AuthAtmosphere />
 
-      {/* logo — top-inline-start (reference `.a .mark` left:56 top:34) */}
-      <Box
-        sx={(theme: Theme) => ({
-          position: 'absolute',
-          insetInlineStart: { xs: 24, md: 56 },
-          insetBlockStart: { xs: 26, md: 34 },
-          zIndex: 7,
-          color: theme.palette.common.white,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          ...revealSx({ index: 0 }),
-        })}
-      >
-        {logoSrc ? (
-          <Box
-            component="img"
-            src={logoSrc}
-            alt={brandName}
-            data-testid="login-brand-logo"
-            sx={{ height: { xs: 26, md: 32 }, width: 'auto', display: 'block' }}
-          />
-        ) : (
-          <>
-            <Box
-              component="svg"
-              viewBox="0 0 40 40"
-              aria-hidden
-              sx={{ width: { xs: 26, md: 32 }, height: { xs: 26, md: 32 }, opacity: 0.92 }}
-            >
-              <path
-                d="M20 3.5 L34.5 16 L20 36.5 L5.5 16 Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.3"
-              />
-              <path
-                d="M5.5 16 H34.5 M20 3.5 V36.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="0.7"
-                opacity="0.5"
-              />
-            </Box>
-            <Typography
-              component="span"
-              sx={(theme: Theme) => ({
-                fontFamily: theme.typography.h1.fontFamily,
-                fontSize: { xs: 15, md: 17 },
-                fontWeight: theme.typography.fontWeightMedium,
-                lineHeight: 1.1,
-              })}
-            >
-              {brandName}
-            </Typography>
-          </>
-        )}
-      </Box>
+      <AuthBrand logoSrc={logoSrc} name={brandName} logoTestId="login-brand-logo" />
 
-      {/* language + theme pills — top-inline-end (reference `.topr`) */}
-      <Box
-        sx={{
-          position: 'absolute',
-          insetBlockStart: { xs: 24, md: 22 },
-          insetInlineEnd: { xs: 20, md: 24 },
-          zIndex: 8,
-          display: 'flex',
-          gap: '8px',
-          ...revealSx({ index: 0 }),
-        }}
-      >
+      <AuthTopControls>
         <GlassPill
           onClick={(event) => setLangAnchor(event.currentTarget)}
           aria-haspopup
@@ -337,7 +134,7 @@ export function LoginPage() {
         >
           {mode === 'light' ? MoonGlyph : SunGlyph}
         </GlassPill>
-      </Box>
+      </AuthTopControls>
 
       <Menu
         anchorEl={langAnchor}
@@ -360,44 +157,9 @@ export function LoginPage() {
         ))}
       </Menu>
 
-      {/* greeting + sign-in — bottom-inline-start (reference `.a .body`) */}
-      <Box
-        sx={{
-          position: 'absolute',
-          insetInlineStart: { xs: 24, md: 56 },
-          insetInlineEnd: { xs: 24, md: 'auto' },
-          insetBlockEnd: { xs: 44, md: 62 },
-          zIndex: 6,
-          width: { xs: 'auto', md: 'min(470px, 60%)' },
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={(theme: Theme) => ({
-            fontFamily: theme.typography.h1.fontFamily,
-            fontWeight: theme.typography.fontWeightBold,
-            color: theme.palette.common.white,
-            fontSize: { xs: 38, md: 58 },
-            lineHeight: 0.98,
-            letterSpacing: '-0.035em',
-            maxWidth: { xs: '7ch', md: 'none' },
-            ...revealSx({ index: 1 }),
-          })}
-        >
-          {greeting}
-        </Typography>
-
-        <Typography
-          sx={(theme: Theme) => ({
-            color: alpha(theme.palette.common.white, 0.6),
-            fontSize: 14.5,
-            mt: '13px',
-            maxWidth: 400,
-            ...revealSx({ index: 2 }),
-          })}
-        >
-          {t('auth.subtitle')}
-        </Typography>
+      <AuthPanel>
+        <AuthTitle tight>{greeting}</AuthTitle>
+        <AuthSubtitle>{t('auth.subtitle')}</AuthSubtitle>
 
         <Box component="form" onSubmit={submit} sx={{ mt: { xs: '26px', md: '34px' } }}>
           <Box sx={[lineRowSx, revealSx({ index: 3 })]}>
@@ -429,90 +191,28 @@ export function LoginPage() {
               }}
               sx={inputSx}
             />
-            <ButtonBase
-              type="submit"
+            <AuthSubmitButton
               disabled={!canSubmit}
-              data-testid="login-submit"
-              aria-label={t('auth.submit')}
-              sx={(theme: Theme) => ({
-                flex: 'none',
-                width: { xs: 42, md: 46 },
-                height: { xs: 42, md: 46 },
-                borderRadius: '50%',
-                color: theme.palette.common.white,
-                border: `1px solid ${alpha(theme.palette.common.white, 0.35)}`,
-                backgroundColor: alpha(theme.palette.common.white, 0.06),
-                transition: 'background-color .22s, transform .18s, color .22s',
-                '&:hover': {
-                  backgroundColor: theme.palette.common.white,
-                  color: theme.palette.common.black,
-                  transform: rtl ? 'translateX(-3px)' : 'translateX(3px)',
-                },
-                '&.Mui-disabled': { opacity: 0.5 },
-                '&.Mui-focusVisible': {
-                  outline: `2px solid ${theme.palette.common.white}`,
-                  outlineOffset: 2,
-                },
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
-              })}
-            >
-              {busy ? <CircularProgress size={18} color="inherit" /> : ArrowGlyph}
-            </ButtonBase>
+              busy={busy}
+              rtl={rtl}
+              label={t('auth.submit')}
+              testId="login-submit"
+            />
           </Box>
 
-          {error ? (
-            <Box
-              role="alert"
-              data-testid="login-error"
-              sx={(theme: Theme) => ({
-                mt: '16px',
-                px: '12px',
-                py: '8px',
-                borderRadius: `${theme.palette.brand.radius.sm}px`,
-                border: `1px solid ${alpha(theme.palette.error.main, 0.5)}`,
-                backgroundColor: alpha(theme.palette.error.main, 0.16),
-                color: theme.palette.common.white,
-                fontSize: 13,
-              })}
-            >
-              {error}
-            </Box>
-          ) : null}
+          {error ? <AuthError testId="login-error">{error}</AuthError> : null}
 
           {/*
-            Подсказка (reference `.hint` — тире + текст).
+            Подсказка (эталон `.hint` — тире + текст).
 
             Здесь были демо-креды. Экран входа в панель отеля — не витрина
             демо-стенда: логин и пароль, напечатанные под формой, работают
             ровно как приглашение войти чужому, и первый же реальный отель
             увидел бы их на своём поддомене.
           */}
-          <Box
-            sx={(theme: Theme) => ({
-              mt: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '9px',
-              color: alpha(theme.palette.common.white, 0.4),
-              fontSize: 12.5,
-              ...revealSx({ index: 5 }),
-            })}
-          >
-            <Box
-              aria-hidden
-              sx={(theme: Theme) => ({
-                width: 26,
-                height: 1,
-                flex: 'none',
-                backgroundColor: alpha(theme.palette.common.white, 0.28),
-              })}
-            />
-            {t('auth.accessHint')}
-          </Box>
+          <AuthHint>{t('auth.accessHint')}</AuthHint>
         </Box>
-      </Box>
+      </AuthPanel>
     </Box>
   );
 }

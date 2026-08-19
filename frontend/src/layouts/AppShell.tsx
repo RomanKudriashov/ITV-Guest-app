@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ScreenBoundary } from '@/components/ScreenBoundary';
 
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
@@ -15,9 +15,7 @@ import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
@@ -35,10 +33,11 @@ import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import SettingsIcon from '@mui/icons-material/Settings';
-import LogoutIcon from '@mui/icons-material/Logout';
+import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 
 import { IconBrand } from '@/icons';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ProfileMenu } from '@/components/ProfileMenu';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { useAuth } from '@/auth';
 import { isForbidden, useNavigation } from '@/hooks/useNavigation';
@@ -76,6 +75,7 @@ const FALLBACK_ICON = <GroupWorkIcon fontSize="small" />;
 
 export function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, hotel, logout } = useAuth();
   const { data: bootstrap } = useBootstrap();
@@ -145,28 +145,28 @@ export function AppShell() {
           <LanguageSwitcher compact />
           <ThemeModeToggle />
           <Divider orientation="vertical" flexItem sx={{ my: 1.5 }} />
-          {/* Блок пользователя — вход в его профиль: там его сессии. */}
-          <Stack
-            component={NavLink}
-            to="/cms/profile"
-            data-testid="cms-profile-link"
-            sx={{
-              textAlign: 'end',
-              display: { xs: 'none', md: 'block' },
-              textDecoration: 'none',
-              color: 'inherit',
-            }}
-          >
-            <Typography variant="body2">{user?.full_name || user?.email}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {user?.is_hotel_admin ? t('nav.roleAdmin') : t('nav.roleStaff')}
-            </Typography>
-          </Stack>
-          <Tooltip title={t('auth.logout')}>
-            <IconButton onClick={logout} data-testid="logout-button" aria-label={t('auth.logout')}>
-              <LogoutIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {/*
+            Блок пользователя — монограмма с выпадающим меню, тем же, что в
+            консоли платформы (`ProfileMenu`). Раньше здесь стояла текстовая
+            ссылка на профиль, а выход — отдельной иконкой рядом: самый
+            разрушительный пункт лежал снаружи, ближе всех к краю, и на узком
+            экране первым попадал под палец.
+          */}
+          <ProfileMenu
+            testIdPrefix="cms"
+            email={user?.full_name || user?.email || ''}
+            role={user?.is_hotel_admin ? t('nav.roleAdmin') : t('nav.roleStaff')}
+            items={[
+              {
+                key: 'sessions',
+                label: t('sessions.title'),
+                icon: <DevicesOutlinedIcon fontSize="small" />,
+                onSelect: () => navigate('/cms/profile'),
+              },
+            ]}
+            onLogout={logout}
+            logoutLabel={t('auth.logout')}
+          />
         </Toolbar>
       </AppBar>
 
