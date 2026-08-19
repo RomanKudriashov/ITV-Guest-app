@@ -91,19 +91,30 @@ def endpoint_reachable(hotel_id, name: str = adapter.ENDPOINT_IRIDI) -> bool | N
 def forget(hotel_id) -> None:
     """Узел отключился — прежние замеры больше ничего не значат."""
     cache.delete(_key(hotel_id))
-    forget_silent_reads(hotel_id)
+    cache.delete(_silent_key(hotel_id))
 
 
-# --- Молчащие чтения подряд --------------------------------------------------
+# --- Молчащие чтения подряд, ПО КОМНАТАМ -------------------------------------
 #
 # Одно молчание и два молчания подряд — разные новости, и различать их больше
 # нечем. Узел числится живым (heartbeat трёхминутный), endpoint про себя ещё
 # ничего не сообщал, а канал не ответил: это одинаково выглядит и когда
 # коннектор поднялся секунду назад, и когда оборудование действительно умерло.
 #
-# Счётчик живёт столько же, сколько признак живости: он про ту же связь, и
-# пережить её не должен. Держать его дольше значит помнить молчание, которого
-# уже никто не подтверждает.
+# СЧЁТ ВЕДЁТСЯ ПО КОМНАТЕ, А НЕ ПО ОТЕЛЮ, и это не деталь учёта.
+#
+# Молчание — факт КОМНАТЫ: у неё своё устройство, свои теги, своя проводка.
+# Пока счёт вёлся на отель, одного гостя в номере без оборудования хватало,
+# чтобы весь отель провалился в «недоступно»: его молчание записывалось в общий
+# признак, и следующий опрос ЛЮБОЙ другой комнаты отсекался до чтения. На
+# стенде это ловилось руками за минуту — опрос комнаты 412 гасил рабочую 305.
+#
+# Утверждение про весь объект («до iRidi не достучаться») вправе делать только
+# коннектор своим heartbeat: он один видит канал целиком. Чтение одной комнаты
+# такого права не имеет и больше его не получает.
+#
+# Все комнаты отеля лежат в ОДНОЙ записи кэша: так `forget()` снимает их разом,
+# не заводя реестра комнат, за которыми пришлось бы следить отдельно.
 
 _SILENT_TTL_S = ENDPOINTS_TTL_S
 
@@ -112,10 +123,10 @@ def _silent_key(hotel_id) -> str:
     return f"grms:silent_reads:{hotel_id}"
 
 
-def note_silent_read(hotel_id) -> tuple[int, float]:
+def note_silent_read(hotel_id, room_id) -> tuple[int, float]:
     """
-    Записать молчащее чтение. Возвращает (какое оно подряд, сколько секунд
-    молчит).
+    Записать молчащее чтение КОМНАТЫ. Возвращает (какое оно подряд для этой
+    комнаты, сколько секунд она молчит).
 
     ВОЗРАСТ ТУТ НЕ УКРАШЕНИЕ. Одного счётчика мало: чтения одного устройства
     схлопываются на `commands.READ_COALESCE_S`, и два запроса подряд внутри
@@ -130,16 +141,62 @@ def note_silent_read(hotel_id) -> tuple[int, float]:
     import time
 
     key = _silent_key(hotel_id)
+    room = str(room_id)
     now = time.monotonic()
-    known = cache.get(key)
+    rooms = cache.get(key)
+    rooms = dict(rooms) if isinstance(rooms, dict) else {}
+    known = rooms.get(room)
     if isinstance(known, dict) and "count" in known:
         entry = {"count": int(known["count"]) + 1, "since": float(known.get("since", now))}
     else:
         entry = {"count": 1, "since": now}
-    cache.set(key, entry, _SILENT_TTL_S)
+    # Момент последней НАСТОЯЩЕЙ попытки — по нему решается, пора ли комнату
+    # перепроверить (см. `room_is_silent`).
+    entry["last"] = now
+    rooms[room] = entry
+    cache.set(key, rooms, _SILENT_TTL_S)
     return entry["count"], max(0.0, now - entry["since"])
 
 
-def forget_silent_reads(hotel_id) -> None:
-    """Прочитали — счётчик молчаний обнуляется."""
-    cache.delete(_silent_key(hotel_id))
+# Как часто перепроверять комнату, уже признанную молчащей. Не «никогда»: она
+# обязана вернуться сама, без перезахода гостя. Но и не каждый опрос — каждая
+# попытка стоит до `commands.READ_BUDGET_S` реального ожидания, а экран в
+# холодном чтении переспрашивает через 1.8 и 3.0 секунды. Полминуты — это и
+# дешёвые повторы, и возврат комнаты в пределах одного взгляда на экран.
+SILENT_RECHECK_S = 30.0
+
+
+def room_is_silent(hotel_id, room_id, *, attempts: int, coalesce_s: float) -> bool:
+    """
+    Признана ли комната молчащей ПРЯМО СЕЙЧАС — то есть можно ли не ходить к
+    её устройству ещё раз.
+
+    Три условия, и все три обязательны: молчаний набралось достаточно, они
+    растянуты дольше окна схлопывания (иначе это одна попытка, посчитанная
+    дважды), и с последней попытки прошло меньше `SILENT_RECHECK_S`.
+    """
+    import time
+
+    rooms = cache.get(_silent_key(hotel_id))
+    entry = rooms.get(str(room_id)) if isinstance(rooms, dict) else None
+    if not isinstance(entry, dict) or "count" not in entry:
+        return False
+    now = time.monotonic()
+    proven = (
+        int(entry["count"]) >= attempts
+        and now - float(entry.get("since", now)) >= coalesce_s
+    )
+    fresh = now - float(entry.get("last", entry.get("since", now))) < SILENT_RECHECK_S
+    return proven and fresh
+
+
+def forget_silent_reads(hotel_id, room_id) -> None:
+    """Комнату прочитали — её счётчик молчаний обнуляется. Соседей не трогаем."""
+    key = _silent_key(hotel_id)
+    rooms = cache.get(key)
+    if not isinstance(rooms, dict):
+        return
+    rooms = dict(rooms)
+    if rooms.pop(str(room_id), None) is None:
+        return
+    cache.set(key, rooms, _SILENT_TTL_S)

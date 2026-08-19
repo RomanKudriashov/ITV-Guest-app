@@ -28,7 +28,8 @@ from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.grms.services import commands, liveness
-from apps.hotels.models import OnPremNode
+from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
+from apps.hotels.models import OnPremNode, Room
 
 pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 
@@ -129,6 +130,9 @@ def test_command_in_the_window_is_refused_not_accepted(guest, crystal, stand):
     time.sleep(commands.READ_COALESCE_S + 0.1)
     guest.get("/api/v1/guest/room/state")
 
+    # Отказ приходит по признаку МОЛЧАЩЕЙ КОМНАТЫ: канал до объекта формально
+    # ещё числится живым (heartbeat свежий), и без этой проверки команда ушла
+    # бы в воркер, чтобы через несколько секунд вернуться исходом `failed`.
     response = guest.post(
         "/api/v1/guest/room/command", {"controlId": "light.living", "value": 1}
     )
@@ -140,11 +144,15 @@ def test_a_failed_read_is_remembered_so_the_next_poll_is_not_paid_for_twice(
     guest, crystal, stand
 ):
     """
-    Выясненное опытом попадает в признак живости.
+    Выясненное опытом запоминается — но ПРО КОМНАТУ, а не про отель.
 
-    Иначе каждый опрос в окне заново отстаивает таймауты по всем каналам — на
-    стенде это ровно три секунды на запрос, и платятся они за ответ, который
-    уже известен.
+    Иначе каждый опрос заново отстаивает таймауты по всем каналам: на стенде
+    это ровно три секунды на запрос, и платятся они за ответ, который уже
+    известен. Раньше экономия достигалась порчей общего признака живости, и
+    ценой ей был весь отель, погашенный одной мёртвой комнатой.
+
+    Теперь проверяется то же свойство и там, где ему место: комната признана
+    молчащей, повторное чтение к железу НЕ идёт, а признак отеля чист.
     """
     _connector_dies(stand, crystal)
     assert liveness.endpoint_reachable(crystal.pk) is None, "до опроса знать неоткуда"
@@ -152,12 +160,19 @@ def test_a_failed_read_is_remembered_so_the_next_poll_is_not_paid_for_twice(
     guest.get("/api/v1/guest/room/state")
     assert (
         liveness.endpoint_reachable(crystal.pk) is None
-    ), "по ОДНОМУ молчанию признак живости портить нельзя: следующий заход тогда не стал бы читать вовсе, и повтор превратился бы в бутафорию"
+    ), "по ОДНОМУ молчанию ничего решать нельзя — повтор превратился бы в бутафорию"
 
     time.sleep(commands.READ_COALESCE_S + 0.1)
     guest.get("/api/v1/guest/room/state")
 
-    assert liveness.endpoint_reachable(crystal.pk) is False
+    with tenant_context(crystal):
+        room = Room.objects.get(number=DEMO_ROOM)
+    assert liveness.room_is_silent(
+        crystal.pk, room.pk, attempts=2, coalesce_s=commands.READ_COALESCE_S
+    ), "молчание комнаты не запомнилось — следующий опрос снова отстоит все таймауты"
+    assert liveness.endpoint_reachable(crystal.pk) is not False, (
+        "молчание комнаты записалось в признак ОТЕЛЯ — соседние номера погаснут вместе с ней"
+    )
 
 
 def test_recovery_returns_the_room(guest, crystal, monkeypatch):
@@ -186,7 +201,11 @@ def test_recovery_returns_the_room(guest, crystal, monkeypatch):
     assert guest.get("/api/v1/guest/room/state").json()["availability"] == "unavailable"
     time.sleep(commands.READ_COALESCE_S + 0.1)
     assert guest.get("/api/v1/guest/room/state").json()["availability"] == "unavailable"
-    assert liveness.endpoint_reachable(crystal.pk) is False
+    with tenant_context(crystal):
+        room = Room.objects.get(number=DEMO_ROOM)
+    assert liveness.room_is_silent(
+        crystal.pk, room.pk, attempts=2, coalesce_s=commands.READ_COALESCE_S
+    )
 
     monkeypatch.undo()
     liveness.forget(crystal.pk)
@@ -196,6 +215,11 @@ def test_recovery_returns_the_room(guest, crystal, monkeypatch):
     assert payload["zones"]
     assert payload["can_command"] is True
     assert liveness.endpoint_reachable(crystal.pk) is True
+    with tenant_context(crystal):
+        room = Room.objects.get(number=DEMO_ROOM)
+    assert not liveness.room_is_silent(
+        crystal.pk, room.pk, attempts=2, coalesce_s=commands.READ_COALESCE_S
+    ), "комната прочиталась — признак молчания обязан сняться"
 
 
 # --- Укус: что этот фикс НЕ должен был поменять ----------------------------

@@ -46,6 +46,11 @@ REASON_NODE_OFFLINE = "CONNECTOR_OFFLINE"
 REASON_ENDPOINT_UNREACHABLE = "ENDPOINT_UNREACHABLE"
 REASON_UNREADABLE = "STATE_UNREADABLE"
 REASON_FEEDBACK_DEAD = "FEEDBACK_DEAD"
+# Устройство КОМНАТЫ молчит подтверждённо. Отдельная причина от
+# `ENDPOINT_UNREACHABLE`: та про весь объект и приходит от коннектора, эта —
+# про одну комнату и выясняется чтением. Слив их в одну, мы и получали отель,
+# погашенный одной мёртвой комнатой.
+REASON_DEVICE_SILENT = "DEVICE_SILENT"
 
 # Ровно текст ТЗ §6. Локализуем здесь, а не на фронте: гостевой API отдаёт
 # строки уже локализованными (заголовки элементов — так же).
@@ -89,6 +94,9 @@ _NO_ROOM_TEXT = {
 _UNAVAILABLE_KIND = {
     REASON_NO_ROOM: UNAVAILABLE_NO_ROOM,
     REASON_UNREADABLE: UNAVAILABLE_READING,
+    # DEVICE_SILENT сюда не вписан намеренно: подтверждённое молчание — это
+    # честный отказ (`offline`), как и молчание всего канала. Разница между
+    # ними в ОБЛАСТИ (комната против отеля), а не в том, что видит гость.
 }
 
 _KIND_TEXT = {
@@ -351,6 +359,16 @@ def _link_reason(hotel) -> str:
     return ""
 
 
+def _room_is_silent(context: RoomContext) -> bool:
+    """Комната признана молчащей и ещё не пора перепроверять."""
+    return liveness.room_is_silent(
+        context.hotel.pk,
+        context.room.pk,
+        attempts=COLD_READ_ATTEMPTS,
+        coalesce_s=commands.READ_COALESCE_S,
+    )
+
+
 def _read_state(context: RoomContext) -> tuple[dict, str]:
     """
     Прочитать все feedback'и типа.
@@ -391,6 +409,13 @@ def _read_state(context: RoomContext) -> tuple[dict, str]:
     if not feedbacks:
         return {}, ""
 
+    # Комната уже признана молчащей и перепроверять её ещё рано — не платим
+    # за таймауты по каждому каналу ради ответа, который только что получили.
+    # Это ровно та экономия, ради которой раньше портили ОБЩИЙ признак живости;
+    # теперь она действует на одну комнату и соседей не задевает.
+    if _room_is_silent(context):
+        return {}, REASON_DEVICE_SILENT
+
     results = commands.read_many(
         context.hotel,
         device=context.device,
@@ -401,26 +426,29 @@ def _read_state(context: RoomContext) -> tuple[dict, str]:
     successful = [result for result in results.values() if result.ok]
 
     if not successful:
-        # Молчание. Первое — ещё не приговор, повторное — уже факт.
-        silent, silent_for = liveness.note_silent_read(context.hotel.pk)
+        # Молчание ЭТОЙ комнаты. Первое — ещё не приговор, повторное — факт.
+        silent, silent_for = liveness.note_silent_read(context.hotel.pk, context.room.pk)
         proven = silent >= COLD_READ_ATTEMPTS and silent_for >= commands.READ_COALESCE_S
         if not proven:
-            # ХОЛОДНОЕ ЧТЕНИЕ. Признак живости НЕ портим: запиши мы сюда
-            # `observe(False)`, следующий заход упёрся бы в `_link_reason` и
-            # вернул отказ, ни разу больше не попробовав прочитать. Повтор
-            # стал бы бутафорией — экран перезапрашивает, а сервер отвечает
-            # заученным «недоступно».
+            # ХОЛОДНОЕ ЧТЕНИЕ: экран переспросит сам, отказа пока нет.
             return results, REASON_UNREADABLE
 
         # Молчит не первый раз и достаточно долго, чтобы повтор дошёл до
-        # железа, — это уже не «не успели». Здесь и только здесь платим за
-        # знание: кладём недоступность в общий признак живости, чтобы
-        # следующие опросы отвечали сразу, не отстаивая таймауты заново.
-        liveness.observe(context.hotel.pk, False)
-        return results, REASON_ENDPOINT_UNREACHABLE
+        # железа. Это отказ — но отказ КОМНАТЫ.
+        #
+        # Здесь стоял `liveness.observe(hotel, False)`, и это была самая
+        # дорогая строка файла: она записывала молчание одной комнаты в
+        # признак живости ОТЕЛЯ, а `_link_reason` читает его на всех. Один
+        # гость, открывший номер без оборудования, гасил соседям исправные
+        # номера — те даже не доходили до чтения. Утверждение «до объекта не
+        # достучаться» вправе делать только коннектор своим heartbeat: он
+        # один видит канал целиком.
+        return results, REASON_DEVICE_SILENT
 
-    # Прочитали — прежние молчания больше ничего не значат.
-    liveness.forget_silent_reads(context.hotel.pk)
+    # Прочитали — молчания ЭТОЙ комнаты больше ничего не значат. Заодно
+    # подтверждаем живость канала: раз ответило одно устройство, endpoint жив,
+    # и это уже законное утверждение про весь отель.
+    liveness.forget_silent_reads(context.hotel.pk, context.room.pk)
     liveness.observe(context.hotel.pk, True)
 
     if all(result.is_dead_sentinel for result in successful):
@@ -638,6 +666,14 @@ def submit_command(hotel, session, *, control_id: str, capability: str = "", val
 
     link_reason = _link_reason(hotel)
     if link_reason:
+        raise RoomControlUnavailable(_neutral_unavailable(session), code="room_unavailable")
+
+    # Устройство ЭТОЙ комнаты подтверждённо молчит — команду принимать некуда.
+    # Проверка отдельная от `_link_reason`, потому что и факты разные: там
+    # «до объекта не достучаться», здесь «объект жив, а эта комната глухая».
+    # Без неё команда уходила бы в воркер и возвращалась исходом `failed`
+    # через несколько секунд — принято в никуда вместо честного отказа сразу.
+    if _room_is_silent(context):
         raise RoomControlUnavailable(_neutral_unavailable(session), code="room_unavailable")
 
     entry = inflight.begin(
