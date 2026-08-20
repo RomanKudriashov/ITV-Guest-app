@@ -48,6 +48,12 @@
     "DELETE",
     "PATCH"
   ],
+  "/api/v1/cms/badges/{badge_id}/items": [
+    "GET"
+  ],
+  "/api/v1/cms/badges/{badge_id}/items/{item_id}": [
+    "PUT"
+  ],
   "/api/v1/cms/bootstrap": [
     "GET"
   ],
