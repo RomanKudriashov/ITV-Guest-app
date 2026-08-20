@@ -654,9 +654,17 @@ def _delta(current, previous):
 
 
 def _sort_rows(rows: list[dict], params: dict, *, default: str | None = None) -> list[dict]:
+    # ПУСТО — ЭТО ОТВЕТ, А НЕ ОШИБКА. Условие ниже стояло как
+    # `if not sort or not rows`, и пустой список заходил ВНУТРЬ ветки, которая
+    # первым же действием читает `rows[0]`: у отеля без единого заказа разрез
+    # отвечал IndexError вместо пустого списка. «Нечего сортировать» и «не
+    # сказали, по чему сортировать» — разные случаи, и склеивать их нельзя.
+    if not rows:
+        return rows
     sort = params.get("sort") or default
-    if not sort or not rows:
-        # По умолчанию — по убыванию выручки/количества.
+    if not sort:
+        # По умолчанию — по убыванию выручки/количества. Ключ выводим по форме
+        # строки, поэтому строка обязана быть.
         default_key = "revenue_minor" if "revenue_minor" in rows[0] else ("quantity" if "quantity" in rows[0] else "orders")
         return sorted(rows, key=lambda r: r.get(default_key, 0) or 0, reverse=True)
     reverse = params.get("order", "desc") != "asc"
