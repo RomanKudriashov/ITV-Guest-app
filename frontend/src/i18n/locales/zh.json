@@ -506,7 +506,8 @@
         "inactive": "不可用：已下架",
         "schedule": "当前不可用 — {{from}} 起供应",
         "category_unavailable": "不可用：该分区当前已关闭",
-        "not_found": "不可用：该条目已不存在"
+        "not_found": "不可用：该条目已不存在",
+        "venue_closed": "不可用：场所已关闭 — {{from}} 开门"
       },
       "hasUnavailable": "请移除不可用的条目 — 保留它们无法下单。"
     },

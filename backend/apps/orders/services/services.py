@@ -107,7 +107,10 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     if not data.lines:
         raise OrderValidationError("Заказ пустой", code="empty_order")
 
-    items = [_resolve_item(line) for line in data.lines]
+    # Агрегатор резолвим ДО проверки позиций: от него зависит, чьи часы решают
+    # доступность заимствованного блюда — источника или включающего заведения.
+    aggregator = _resolve_cart_service(data)
+    items = [_resolve_item(line, aggregator=aggregator) for line in data.lines]
     behaviour = _resolve_behaviour(items)
 
     if not behaviour.creates_order:
@@ -137,7 +140,6 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     field_values = _resolve_field_values(behaviour, items, data)
 
     # Резолв исполнителя: агрегатор (по service_code — с разъездом) или маршрут.
-    aggregator = _resolve_cart_service(data)
     if aggregator is not None:
         from apps.catalog.services.inclusions import resolve_item_executor
 
@@ -321,7 +323,7 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         unit_price = None if base_price is None else base_price + sum(o.price_delta for o in options)
         line_total = None if unit_price is None else unit_price * line.quantity
 
-        state = item_availability(item)
+        state = item_availability(item, service=_executing_service(aggregator, item))
         quoted_lines.append({
             "item_id": str(item.pk),
             "title": item.title_i18n,
@@ -365,6 +367,31 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         # оформления, и решение об этом принимает сервер, а не подсчёт на клиенте.
         "has_unavailable": any(not entry["is_available"] for entry in quoted_lines),
     }
+
+
+def _executing_service(aggregator, item):
+    """
+    ЧЬИ ЧАСЫ РЕШАЮТ — того, кто готовит.
+
+    Своя позиция — своё заведение. Заимствованная: по умолчанию готовит
+    источник (`executor = SOURCE`), и тогда закрытие источника её гасит, где бы
+    её ни показывали; если включающее заведение готовит само (`OWN`) — решают
+    его часы. Ответ на этот вопрос уже записан в самом включении, гадать не о чем.
+
+    `None` — обычная корзина заведения: доступность возьмёт заведение раздела.
+    """
+    if aggregator is None:
+        return None
+
+    from apps.catalog.models import ServiceInclusion
+    from apps.catalog.services.inclusions import resolve_item_executor
+
+    _point_id, inclusion = resolve_item_executor(aggregator, item)
+    if inclusion is None:
+        return aggregator
+    if inclusion.executor == ServiceInclusion.Executor.OWN:
+        return inclusion.including_service
+    return inclusion.source_service
 
 
 def _resolve_quotable_item(line: OrderLineInput):
@@ -523,7 +550,7 @@ def _create_fanned_order(
     return parent
 
 
-def _resolve_item(line: OrderLineInput) -> Item:
+def _resolve_item(line: OrderLineInput, *, aggregator=None) -> Item:
     """Позиция существует, доступна и запрошена в разумном количестве."""
     item = (
         Item.objects.select_related("category", "schedule", "category__schedule")
@@ -534,7 +561,7 @@ def _resolve_item(line: OrderLineInput) -> Item:
     if item is None:
         raise OrderValidationError(f"Позиция {line.item_id} не найдена", code="item_not_found")
 
-    state = item_availability(item)
+    state = item_availability(item, service=_executing_service(aggregator, item))
     if not state.is_available:
         message = f"«{item.title_i18n}» сейчас недоступна"
         if state.available_from:

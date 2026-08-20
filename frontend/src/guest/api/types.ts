@@ -348,6 +348,8 @@ export type QuoteUnavailableReason =
   | 'inactive'
   | 'schedule'
   | 'category_unavailable'
+  /** Часы самого заведения: закрыто целиком, а не только этот раздел. */
+  | 'venue_closed'
   | 'not_found';
 
 export interface QuoteLine {

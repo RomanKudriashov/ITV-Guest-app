@@ -508,7 +508,8 @@
         "inactive": "Unavailable: taken off the menu",
         "schedule": "Unavailable now — served from {{from}}",
         "category_unavailable": "Unavailable: the section is closed right now",
-        "not_found": "Unavailable: the item is gone"
+        "not_found": "Unavailable: the item is gone",
+        "venue_closed": "Unavailable: the venue is closed — opens at {{from}}"
       },
       "hasUnavailable": "Remove the unavailable items — the order cannot be placed with them."
     },
