@@ -2243,16 +2243,24 @@ class Command(BaseCommand):
     def _seed_modules(self):
         from apps.hotels.models import HotelModule
 
+        # Намерение, а не пометка «откуда взялось»: `source` вычислялся сервером
+        # и хранить его перестали. Здесь важно, что демо-отелю модули выданы
+        # ОСОЗНАННО и должны пережить возню с тарифом на стенде.
         enabled = [
-            (HotelModule.Code.MULTI_RESTAURANT, "tariff", {}),
-            (HotelModule.Code.MARKETING, "tariff", {}),
-            (HotelModule.Code.EXTRA_LANGUAGES, "tariff", {}),
-            (HotelModule.Code.ANALYTICS_LEVEL, "tariff", {"level": "advanced"}),
-            (HotelModule.Code.PMS, "override", {}),
+            (HotelModule.Code.MULTI_RESTAURANT, {}),
+            (HotelModule.Code.MARKETING, {}),
+            (HotelModule.Code.EXTRA_LANGUAGES, {}),
+            (HotelModule.Code.ANALYTICS_LEVEL, {"level": "advanced"}),
+            (HotelModule.Code.PMS, {}),
         ]
-        for code, source, config in enabled:
+        for code, config in enabled:
             HotelModule.objects.update_or_create(
-                code=code, defaults={"is_enabled": True, "source": source, "config": config}
+                code=code,
+                defaults={
+                    "is_enabled": True,
+                    "intent": HotelModule.Intent.ON,
+                    "config": config,
+                },
             )
 
     def _seed_inclusions(self):

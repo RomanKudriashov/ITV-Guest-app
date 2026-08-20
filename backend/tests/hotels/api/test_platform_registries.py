@@ -342,6 +342,36 @@ def test_downgrade_actually_turns_off_what_it_promised(api):
     assert set(done["modules_turned_off"]) == set(promised)
 
 
+def test_writing_the_same_tariff_does_not_burn_overrides(api):
+    """
+    ПРОДЛИТЬ — НЕ ЗНАЧИТ ПОНИЗИТЬ.
+
+    Пересчёт вешается на СМЕНУ тарифа, а не на всякую запись. Записать отелю
+    тот же тариф (продление, правка даты начала) — обычное действие с
+    безобидным названием, и гасить им модули, выданные сверх тарифа, значит
+    сделать «Сохранить» разрушительным. На этом первым подорвался общий стенд:
+    у демо-отеля ВСЕ модули выданы сверх тарифа.
+
+    Пустое поле и «standard» — один и тот же тариф, и разницы между ними тоже
+    быть не должно.
+    """
+    hotel = _hotel("sametariff", "Продление")
+    Hotel.objects.filter(pk=hotel.pk).update(tariff="")  # как у отеля из сида
+    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "pms", "is_enabled": True}]})
+    assert "pms" in enabled_codes(hotel)
+
+    # standard ≡ пустой тариф: это не смена.
+    done = api("put", f"/hotels/{hotel.pk}/tariff",
+               {"tariff": "standard", "acknowledge_downgrade": True}).json()
+    assert done["ok"] is True
+    assert done["modules_turned_off"] == []
+    assert "pms" in enabled_codes(hotel), "продление тарифа сожгло переопределение"
+
+    # А вот настоящая смена — гасит, и это по-прежнему так.
+    api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "business", "acknowledge_downgrade": True})
+    assert "pms" not in enabled_codes(hotel)
+
+
 def test_manual_off_survives_a_tariff_that_would_grant_it(api):
     """
     Обратная сторона: тариф не зажигает то, что человек погасил.

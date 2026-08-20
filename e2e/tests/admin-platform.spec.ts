@@ -61,10 +61,31 @@ test.describe('Сводка и флот', () => {
       })
       .then((r) => r.json())
     const hotelId = fleet.items[0].id
-    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/tariff`, {
-      data: { tariff: 'standard', acknowledge_downgrade: true },
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // Тариф берём из КАРТОЧКИ: строка реестра его не несёт, и `items[0].tariff`
+    // молча дал бы undefined — то есть «восстановили» бы отель на чужой тариф.
+    const wasTariff: string =
+      (await request
+        .get(`${API}/api/v1/platform/hotels/${hotelId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((r) => r.json())).tariff || 'standard'
+    const downgrade = await request
+      .put(`${API}/api/v1/platform/hotels/${hotelId}/tariff`, {
+        data: { tariff: 'standard', acknowledge_downgrade: true },
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((r) => r.json())
+    /*
+      ПОНИЖЕНИЕ ТЕПЕРЬ С ЗУБАМИ. Раньше смена тарифа не трогала реестр модулей,
+      и этот тест мог понизить общий демо-отель и уйти. Теперь модули, которых
+      новый тариф не даёт, действительно гаснут — а у демо-отеля они ВСЕ выданы
+      сверх тарифа, и `standard` не даёт ни одного. Не вернув их, тест уносил с
+      собой «Управление номером» у гостя, и падал следующий по очереди файл.
+
+      Возвращаем по списку, который вернул сам сервер: гадать, что погасло, тест
+      не должен — тогда он разъедется с продуктом при первой правке сетки.
+    */
+    const turnedOff: string[] = downgrade.modules_turned_off ?? []
 
     await loginToAdmin(page)
     await page.getByTestId('admin-nav-fleet').click()
@@ -93,6 +114,21 @@ test.describe('Сводка и флот', () => {
     // Поддомен не редактируется — это ключ тенанта, напечатанный на QR.
     await page.getByTestId('admin-hotel-tab-profile').click()
     await expect(page.getByTestId('admin-hotel')).toContainText(DEMO)
+
+    // Возвращаем стенд в то состояние, в каком взяли: сперва тариф, затем
+    // погашенные модули. Порядок важен — включать модуль под тарифом, который
+    // его не даёт, значит заводить новое переопределение вместо прежнего.
+    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/tariff`, {
+      data: { tariff: wasTariff, acknowledge_downgrade: true },
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (turnedOff.length) {
+      const restored = await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {
+        data: { modules: turnedOff.map((code) => ({ code, is_enabled: true })) },
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      expect(restored.ok(), `возврат модулей -> ${restored.status()}`).toBeTruthy()
+    }
   })
 })
 

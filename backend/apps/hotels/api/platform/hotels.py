@@ -464,6 +464,13 @@ def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
     if warnings and not payload.acknowledge_downgrade:
         return {"ok": False, "warnings": warnings, "code": "downgrade_blocked"}
 
+    # СМЕНА — ЭТО СМЕНА, а не любая запись. Сравниваем разрешённые коды: пустое
+    # поле и «standard» — один и тот же тариф, и продлить отелю то, на чём он и
+    # так сидит, не должно гасить ему модули, выданные сверх тарифа. Иначе
+    # «записать тариф» превращается в разрушительное действие с безобидным
+    # названием, и первым на нём подорвался общий стенд.
+    changed = tariff_registry.get(hotel.tariff).code != tariff_registry.get(payload.tariff).code
+
     hotel.tariff = payload.tariff
     hotel.tariff_started_on = payload.started_on or timezone.localdate()
     tariff = tariff_registry.get(payload.tariff)
@@ -481,7 +488,7 @@ def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
     # без последствий. Намерения при этом не трогаем — пересчитываем следствие.
     from apps.hotels.module_registry import apply_tariff
 
-    turned_off = apply_tariff(hotel)
+    turned_off = apply_tariff(hotel) if changed else []
 
     console.audit_hotel(
         hotel,
