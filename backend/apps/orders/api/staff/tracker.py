@@ -17,12 +17,12 @@ from apps.orders.services import tracker as svc
 router = Router(tags=["tracker"])
 
 
-@router.get("/points", summary="Точки исполнения сотрудника")
+@router.get("/points", summary="Заведения сотрудника")
 def list_points(request: HttpRequest):
     return svc.points_payload(request.user, current_language())
 
 
-@router.get("/orders", summary="Задачи точки (доска / очередь / записи / заявки)")
+@router.get("/orders", summary="Задачи заведения (доска / очередь / записи / заявки)")
 def board(
     request: HttpRequest,
     point: str,

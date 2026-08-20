@@ -723,7 +723,7 @@
   },
   "tracker": {
     "title": "订单看板",
-    "point": "执行点",
+    "point": "场所",
     "loading": "加载中…",
     "retry": "重试",
     "offline": "已离线",
@@ -739,8 +739,8 @@
       "history": "历史"
     },
     "noPoints": {
-      "title": "尚未分配执行点",
-      "body": "请管理员将你关联到厨房或其他执行点。"
+      "title": "尚未把你分配到任何场所",
+      "body": "请酒店管理员把你关联到厨房、酒吧或其他场所 — 之后这里就会出现订单看板。"
     },
     "board": {
       "emptyColumn": "空",
@@ -790,15 +790,15 @@
       "confirm": "取消订单"
     },
     "errors": {
-      "pointNotAssigned": "你未被分配到该执行点",
+      "pointNotAssigned": "你未被分配到该场所",
       "invalidTransition": "该状态流转已失效",
       "cancelNotAllowed": "该订单已无法取消",
-      "noRoute": "该分类未配置执行点",
+      "noRoute": "该分类未选择场所",
       "alreadyAccepted": "订单已被接单",
       "alreadyAcceptedBy": "已由 {{name}} 接单",
       "server": "服务器无响应",
       "generic": "操作失败",
-      "orderNotFound": "未找到该订单，或它属于其他执行点",
+      "orderNotFound": "未找到该订单，或它属于其他场所",
       "noCmsAccess": "管理区仅向服务经理和酒店管理员开放",
       "notMyService": "该内容属于您不负责的服务",
       "hotelAdminOnly": "这是酒店级设置，由酒店管理员修改"
@@ -882,10 +882,10 @@
       "binding": "绑定",
       "bindings": {
         "hotel": "全酒店",
-        "point": "执行点",
+        "point": "场所",
         "user": "员工"
       },
-      "point": "执行点",
+      "point": "场所",
       "user": "员工",
       "noStaff": "员工列表暂不可用",
       "config": "渠道配置",
@@ -908,7 +908,7 @@
       "placeholderHint": {
         "number": "请求编号",
         "room": "客人房间",
-        "point": "执行点",
+        "point": "场所",
         "summary": "请求摘要",
         "comment": "客人备注"
       },
@@ -930,7 +930,7 @@
       "rule": "规则",
       "newRule": "新规则",
       "name": "名称",
-      "point": "执行点",
+      "point": "场所",
       "pointHint": "留空则为全酒店默认规则",
       "hotelWide": "全酒店",
       "active": "启用",
@@ -947,13 +947,13 @@
       "afterMinutes": "{{minutes}} 分钟后",
       "target": "发给谁",
       "targets": {
-        "point": "执行点",
+        "point": "场所",
         "lead": "值班主管",
         "manager": "经理",
         "channel": "指定渠道"
       },
       "targetHint": {
-        "point": "该执行点的所有启用渠道",
+        "point": "该场所的所有启用渠道",
         "lead": "值班主管的个人渠道",
         "manager": "经理的个人渠道",
         "channel": "仅所选渠道"
@@ -987,7 +987,7 @@
     },
     "validation": {
       "titleRequired": "请填写渠道名称",
-      "pointRequired": "请选择执行点",
+      "pointRequired": "请选择场所",
       "userRequired": "请选择员工",
       "configRequired": "必填项",
       "emailInvalid": "邮箱地址无效",
@@ -1150,52 +1150,9 @@
         "pickup": "自取"
       }
     },
-    "departments": {
-      "title": "部门",
-      "subtitle": "订单履行点",
-      "add": "添加部门",
-      "name": "名称",
-      "nameHint": "内部名称——用于工单板、员工和通知，客人看不到。",
-      "publicName": "对客名称",
-      "publicNameHint": "场所在门店的显示名。留空则使用内部名称。",
-      "tagline": "副标题",
-      "taglineHint": "名称下的简短说明：“欧洲料理”“炭烤与美酒”。",
-      "guestFacing": "对客显示",
-      "guestFacingHint": "关闭后为内部点位：客人在首页和场所列表中看不到。",
-      "kind": "类型",
-      "kinds": {
-        "kitchen": "厨房",
-        "bar": "酒吧",
-        "housekeeping": "客房部",
-        "spa": "水疗",
-        "reception": "前台",
-        "other": "其他"
-      },
-      "sla": "SLA（分钟）",
-      "slaValue": "{{minutes}} 分钟",
-      "links": "关联",
-      "staffCount": "员工：{{count}}",
-      "channelCount": "渠道：{{count}}",
-      "hasEscalation": "会上报",
-      "noEscalation": "不上报",
-      "toNotifications": "前往通知",
-      "toStaff": "前往人员",
-      "active": "启用",
-      "empty": "暂无部门",
-      "emptyHint": "添加履行点",
-      "loadError": "加载失败",
-      "deleted": "已删除",
-      "saved": "已保存",
-      "inUse": "部门正在被使用",
-      "newTitle": "新建部门",
-      "editTitle": "编辑部门",
-      "deleteTitle": "删除部门？",
-      "deleteBody": "将删除“{{name}}”。",
-      "photo": "场所照片"
-    },
     "staff": {
       "title": "人员",
-      "subtitle": "酒店员工及其部门归属",
+      "subtitle": "酒店员工及其所属场所",
       "add": "添加员工",
       "fullName": "姓名",
       "email": "邮箱",
@@ -1207,7 +1164,7 @@
       "active": "启用",
       "assignments": "归属",
       "addAssignment": "添加归属",
-      "department": "部门",
+      "department": "场所",
       "level": "级别",
       "levels": {
         "member": "成员",
@@ -1215,7 +1172,7 @@
         "manager": "经理"
       },
       "noAssignments": "无归属",
-      "noDepartments": "请先创建部门",
+      "noDepartments": "请先创建场所",
       "empty": "暂无员工",
       "emptyHint": "添加员工",
       "loadError": "加载失败",
@@ -1237,9 +1194,9 @@
     "capacity": "容量",
     "capacityHint": "每次预约人数",
     "schedule": "营业时间",
-    "department": "部门",
+    "department": "场所",
     "departmentHint": "由谁执行",
-    "departmentPlaceholder": "选择部门",
+    "departmentPlaceholder": "选择场所",
     "lead": "最短提前",
     "leadHint": "开始前多久截止",
     "horizon": "可预约天数",
@@ -1285,7 +1242,7 @@
       "type": "类型",
       "category": "类别",
       "item": "项目",
-      "point": "点位",
+      "point": "场所",
       "location": "位置",
       "entry_method": "进入方式",
       "device": "设备",
@@ -1370,7 +1327,7 @@
       "columns": {
         "number": "编号",
         "type": "类型",
-        "point": "点位",
+        "point": "场所",
         "status": "状态",
         "total_minor": "总额",
         "created_at": "创建时间",
@@ -1399,9 +1356,9 @@
       "cancelRate": "取消率",
       "offHours": "非营业时段占比",
       "escalations": "已上报",
-      "byPoint": "按点位",
+      "byPoint": "按场所",
       "columns": {
-        "point": "点位",
+        "point": "场所",
         "orders": "订单",
         "reaction": "响应",
         "fulfil": "完成",
@@ -1413,9 +1370,9 @@
       "lowRate": "低评分占比",
       "count": "评价",
       "trend": "评分趋势",
-      "byPoint": "按点位",
+      "byPoint": "按场所",
       "columns": {
-        "point": "点位",
+        "point": "场所",
         "reviews": "评价",
         "share": "占比"
       }

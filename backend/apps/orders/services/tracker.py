@@ -64,7 +64,7 @@ def require_point(user, point_code: str) -> ExecutionPoint:
     """
     point = ExecutionPoint.objects.filter(code=point_code, is_active=True).first()
     if point is None:
-        raise NotFoundError(f"Точка исполнения «{point_code}» не найдена")
+        raise NotFoundError(f"Заведение «{point_code}» не найдено")
     if not StaffAssignment.objects.filter(
         user=user, execution_point=point, is_active=True
     ).exists():

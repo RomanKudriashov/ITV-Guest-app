@@ -727,7 +727,7 @@
   },
   "tracker": {
     "title": "Tracker",
-    "point": "Execution point",
+    "point": "Venue",
     "loading": "Loading…",
     "retry": "Retry",
     "offline": "Offline",
@@ -743,8 +743,8 @@
       "history": "History"
     },
     "noPoints": {
-      "title": "You are not assigned to a point yet",
-      "body": "Ask the hotel admin to assign you to the kitchen, the bar or another execution point — the board will show up here right after that."
+      "title": "You are not assigned to any venue yet",
+      "body": "Ask the hotel admin to assign you to the kitchen, the bar or another venue — the board will show up here right after that."
     },
     "board": {
       "emptyColumn": "Empty",
@@ -794,15 +794,15 @@
       "confirm": "Cancel order"
     },
     "errors": {
-      "pointNotAssigned": "You are not assigned to this execution point",
+      "pointNotAssigned": "You are not assigned to this venue",
       "invalidTransition": "That transition is no longer available — the board has moved on",
       "cancelNotAllowed": "This order can no longer be cancelled",
-      "noRoute": "No execution point is configured for this category",
+      "noRoute": "No venue is chosen for this category",
       "alreadyAccepted": "The order has already been accepted",
       "alreadyAcceptedBy": "Already accepted by {{name}}",
       "server": "The server is not responding",
       "generic": "The action failed",
-      "orderNotFound": "Order not found — it may be gone or belong to another point",
+      "orderNotFound": "Order not found — it may be gone or belong to another venue",
       "noCmsAccess": "The management section is for service managers and the hotel administrator",
       "notMyService": "This belongs to a service you do not manage",
       "hotelAdminOnly": "This is a hotel-level setting — the hotel administrator changes it"
@@ -886,10 +886,10 @@
       "binding": "Bound to",
       "bindings": {
         "hotel": "Hotel-wide",
-        "point": "Execution point",
+        "point": "Venue",
         "user": "Member of staff"
       },
-      "point": "Execution point",
+      "point": "Venue",
       "user": "Member of staff",
       "noStaff": "The staff list is not available yet",
       "config": "Channel configuration",
@@ -912,7 +912,7 @@
       "placeholderHint": {
         "number": "Request number",
         "room": "Guest room",
-        "point": "Execution point",
+        "point": "Venue",
         "summary": "Short summary of the request",
         "comment": "Guest comment"
       },
@@ -934,7 +934,7 @@
       "rule": "Rule",
       "newRule": "New rule",
       "name": "Name",
-      "point": "Execution point",
+      "point": "Venue",
       "pointHint": "Empty — the hotel-wide default rule",
       "hotelWide": "Hotel-wide",
       "active": "Active",
@@ -951,13 +951,13 @@
       "afterMinutes": "after {{minutes}} min",
       "target": "To whom",
       "targets": {
-        "point": "Execution point",
+        "point": "Venue",
         "lead": "Shift lead",
         "manager": "Manager",
         "channel": "A specific channel"
       },
       "targetHint": {
-        "point": "Every active channel of the point",
+        "point": "Every active channel of the venue",
         "lead": "Personal channels of the shift leads",
         "manager": "Personal channels of the managers",
         "channel": "Exactly the chosen channel"
@@ -991,7 +991,7 @@
     },
     "validation": {
       "titleRequired": "Give the channel a name",
-      "pointRequired": "Choose an execution point",
+      "pointRequired": "Choose a venue",
       "userRequired": "Choose a member of staff",
       "configRequired": "Required field",
       "emailInvalid": "Invalid e-mail address",
@@ -1154,52 +1154,9 @@
         "pickup": "Pickup"
       }
     },
-    "departments": {
-      "title": "Departments",
-      "subtitle": "Order fulfilment points",
-      "add": "Add department",
-      "name": "Name",
-      "nameHint": "Internal — for the tracker, staff and notifications. Guests never see it.",
-      "publicName": "Guest-facing name",
-      "publicNameHint": "How the venue appears on the storefront. Empty — the internal name is used.",
-      "tagline": "Tagline",
-      "taglineHint": "A short line under the name: “European cuisine”, “grill & wine”.",
-      "guestFacing": "Show to guests",
-      "guestFacingHint": "Off — the point is internal: guests won't see it on the home or venue list.",
-      "kind": "Kind",
-      "kinds": {
-        "kitchen": "Kitchen",
-        "bar": "Bar",
-        "housekeeping": "Housekeeping",
-        "spa": "Spa",
-        "reception": "Reception",
-        "other": "Other"
-      },
-      "sla": "SLA (min)",
-      "slaValue": "{{minutes}} min",
-      "links": "Links",
-      "staffCount": "Staff: {{count}}",
-      "channelCount": "Channels: {{count}}",
-      "hasEscalation": "Hands up",
-      "noEscalation": "No hand-up",
-      "toNotifications": "To notifications",
-      "toStaff": "To staff",
-      "active": "Active",
-      "empty": "No departments yet",
-      "emptyHint": "Add order fulfilment points",
-      "loadError": "Failed to load departments",
-      "deleted": "Department deleted",
-      "saved": "Department saved",
-      "inUse": "Department is used by orders or channels",
-      "newTitle": "New department",
-      "editTitle": "Edit department",
-      "deleteTitle": "Delete department?",
-      "deleteBody": "Department “{{name}}” will be deleted.",
-      "photo": "Venue photo"
-    },
     "staff": {
       "title": "Staff",
-      "subtitle": "Hotel employees and their department assignments",
+      "subtitle": "Hotel staff and the venues they are assigned to",
       "add": "Add employee",
       "fullName": "Full name",
       "email": "Email",
@@ -1211,7 +1168,7 @@
       "active": "Active",
       "assignments": "Assignments",
       "addAssignment": "Add assignment",
-      "department": "Department",
+      "department": "Venue",
       "level": "Level",
       "levels": {
         "member": "Member",
@@ -1219,7 +1176,7 @@
         "manager": "Manager"
       },
       "noAssignments": "No assignments",
-      "noDepartments": "Create departments first",
+      "noDepartments": "Create a venue first",
       "empty": "No employees yet",
       "emptyHint": "Add hotel employees",
       "loadError": "Failed to load staff",
@@ -1241,9 +1198,9 @@
     "capacity": "Capacity",
     "capacityHint": "Guests per booking",
     "schedule": "Working hours",
-    "department": "Department",
+    "department": "Venue",
     "departmentHint": "Who fulfils the booking",
-    "departmentPlaceholder": "Select a department",
+    "departmentPlaceholder": "Select a venue",
     "lead": "Min. lead time",
     "leadHint": "How long before start booking closes",
     "horizon": "Booking horizon",
@@ -1289,7 +1246,7 @@
       "type": "Type",
       "category": "Category",
       "item": "Item",
-      "point": "Point",
+      "point": "Venue",
       "location": "Location",
       "entry_method": "Entry method",
       "device": "Device",
@@ -1374,7 +1331,7 @@
       "columns": {
         "number": "No.",
         "type": "Type",
-        "point": "Point",
+        "point": "Venue",
         "status": "Status",
         "total_minor": "Total",
         "created_at": "Created",
@@ -1403,9 +1360,9 @@
       "cancelRate": "Cancel rate",
       "offHours": "Off-hours share",
       "escalations": "Handed up",
-      "byPoint": "By point",
+      "byPoint": "By venue",
       "columns": {
-        "point": "Point",
+        "point": "Venue",
         "orders": "Orders",
         "reaction": "Reaction",
         "fulfil": "Fulfilment",
@@ -1417,9 +1374,9 @@
       "lowRate": "Low-rating share",
       "count": "Reviews",
       "trend": "Rating dynamics",
-      "byPoint": "By point",
+      "byPoint": "By venue",
       "columns": {
-        "point": "Point",
+        "point": "Venue",
         "reviews": "Reviews",
         "share": "Share"
       }

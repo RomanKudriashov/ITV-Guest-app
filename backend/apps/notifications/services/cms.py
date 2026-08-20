@@ -103,7 +103,7 @@ def get_channel(channel_id) -> NotificationChannel:
 def _validate_binding(data: dict) -> None:
     point_id = data.get("execution_point_id")
     if point_id and not ExecutionPoint.objects.filter(pk=point_id).exists():
-        raise ValidationError("Точка исполнения не найдена", field="execution_point_id")
+        raise ValidationError("Заведение не найдено", field="execution_point_id")
     _require_point(point_id, "Канал")
 
 
@@ -309,7 +309,7 @@ def create_rule(data: dict) -> EscalationRule:
     steps = _validate_steps(data.get("steps"))
     point_id = data.get("execution_point_id") or None
     if point_id and not ExecutionPoint.objects.filter(pk=point_id).exists():
-        raise ValidationError("Точка исполнения не найдена", field="execution_point_id")
+        raise ValidationError("Заведение не найдено", field="execution_point_id")
     _require_point(point_id, "Правило эскалации")
 
     is_active = data.get("is_active", True)
