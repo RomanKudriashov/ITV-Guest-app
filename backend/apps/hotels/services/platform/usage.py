@@ -82,12 +82,18 @@ def downgrade_warnings(hotel: Hotel, next_tariff_code: str) -> list[dict]:
         if limit is not None and used > limit:
             warnings.append({"key": key, "used": used, "limit": limit})
 
-    # Модули, которые новый тариф не открывает, а отель ими пользуется. Они не
-    # выключаются сами: точечное переопределение (R1) — законный способ оставить
-    # фичу вне тарифа, и тариф не вправе стереть решение платформы.
-    from apps.hotels.module_registry import enabled_module_codes
+    # Модули, которые погаснут на новом тарифе. Список считается ТОЙ ЖЕ
+    # формулой, которой потом идёт пересчёт (`resolve_enabled`), — иначе
+    # предупреждение и действие разъедутся.
+    #
+    # Так было до R6: комментарий здесь обещал, что модуль «не выключается сам»,
+    # потому что переопределение — законный способ оставить фичу вне тарифа. На
+    # деле смена тарифа не трогала реестр ВООБЩЕ, и предупреждение оставалось
+    # словами: перечисленные модули продолжали работать. Теперь они гаснут, а
+    # решение оставить фичу вне тарифа принимается заново — тумблером, после.
+    from apps.hotels.module_registry import modules_lost_on
 
-    lost = sorted(enabled_module_codes(hotel) - tariffs.modules_for(next_tariff_code))
+    lost = modules_lost_on(hotel, next_tariff_code)
     if lost:
         warnings.append({"key": "modules", "modules": lost})
     return warnings

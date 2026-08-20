@@ -1800,8 +1800,7 @@
       "limitOver": "超出：已用 {{used}}，上限 {{limit}}",
       "limitHint": "超出不会停用酒店 — 由平台决定。",
       "modulesTitle": "模块（套餐 {{tariff}}）",
-      "moduleOverride": "套餐外",
-      "modulesHint": "启用的模块会出现在酒店后台，停用的则隐藏。",
+      "modulesHint": "开启的模块会出现在酒店 CMS 中，关闭的则隐藏。手动决定在换套餐后依然有效：手动关掉的仍然关着；超出套餐开启的，若新套餐不含则会熄灭。",
       "activityEmpty": "暂无记录",
       "viaSupport": "支持",
       "tariffLabel": "套餐",
@@ -1831,7 +1830,13 @@
         "tariff": "酒店在用哪个套餐、已经用掉多少、换套餐后会有什么变化。酒店触及上限要求扩容时，以及续费时来这里。",
         "data": "导出酒店积累的全部数据，以及停用并清除数据。当酒店离开平台或依法索取其数据时来这里。"
       },
-      "limitWontFit": "超出所选套餐"
+      "limitWontFit": "超出所选套餐",
+      "moduleState": {
+        "inTariff": "套餐内包含",
+        "override": "超出套餐开启",
+        "manualOff": "已手动关闭",
+        "notInTariff": "套餐不含"
+      }
     },
     "create": {
       "title": "新建酒店",

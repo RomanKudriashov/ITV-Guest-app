@@ -30,7 +30,7 @@ def _enable_module(hotel, enabled: bool = True):
     with tenant_context(hotel):
         HotelModule.objects.update_or_create(
             code=HotelModule.Code.ROOM_CONTROL,
-            defaults={"is_enabled": enabled, "source": HotelModule.Source.TARIFF},
+            defaults={"is_enabled": enabled},
         )
 
 

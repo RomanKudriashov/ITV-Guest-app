@@ -131,13 +131,23 @@ test.describe('Модули управляют CMS', () => {
     await page.getByTestId('admin-hotel-tab-modules').click()
     await expect(page.getByTestId('admin-hotel-modules')).toBeVisible({ timeout: 15_000 })
     await page.getByTestId('admin-module-toggle-marketing').click()
-    await expect(page.getByTestId('admin-module-override-marketing')).toBeVisible({ timeout: 15_000 })
+    // Состояние подписано у КАЖДОГО модуля, а не только у выданных сверх
+    // тарифа: «выключили руками» и «тариф не даёт» — разные факты.
+    const marketing = page.getByTestId('admin-module-state-marketing')
+    await expect(marketing).toHaveAttribute('data-state', /override|inTariff/, { timeout: 15_000 })
 
     // И раздел появился в навигации отеля. Это и есть механизм: без модуля
     // отель не видит ни одного его экрана.
     await expect(async () => {
       expect(await navKeys()).toContain('marketing')
     }).toPass({ timeout: 15_000 })
+
+    // Выключаем обратно — и это отдельное, ВИДИМОЕ состояние: погашенный
+    // тумблер больше не выглядит как «тариф этого не даёт».
+    await page.getByTestId('admin-module-toggle-marketing').click()
+    await expect(marketing).toHaveAttribute('data-state', /manualOff|notInTariff/, {
+      timeout: 15_000,
+    })
 
     // Возвращаем как было — стенд общий.
     await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {

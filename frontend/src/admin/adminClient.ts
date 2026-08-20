@@ -402,6 +402,11 @@ export interface ModuleEntry {
   code: string;
   title: Record<string, string>;
   is_enabled: boolean;
+  /** Решение человека: '' — не трогали, модуль следует за тарифом. */
+  intent: '' | 'on' | 'off';
+  /** Даёт ли нынешний тариф этот модуль. */
+  in_tariff: boolean;
+  /** Вычисляемая пометка «включено сверх тарифа». Следствие двух полей выше. */
   source: 'tariff' | 'override';
   config: Record<string, unknown>;
 }

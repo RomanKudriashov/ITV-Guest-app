@@ -275,6 +275,105 @@ def test_module_source_is_decided_by_server_not_client(api):
     assert entry["source"] == "tariff"
 
 
+def test_modules_show_four_states_not_two(api):
+    """
+    «Выключили руками» и «тариф не даёт» — РАЗНЫЕ факты.
+
+    Раньше оба показывались одинаково: `source` вычислялся формулой «override,
+    если включено и тариф не даёт», и у выключенного модуля он всегда выходил
+    «по тарифу». Оператор смотрел на погашенный тумблер и не мог понять,
+    включать ли его обратно.
+    """
+    hotel = _hotel("fourstates", "Четыре")
+    Hotel.objects.filter(pk=hotel.pk).update(tariff="business")
+
+    # Business даёт marketing и room_control, не даёт pms.
+    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [
+        {"code": "marketing", "is_enabled": True},    # тариф даёт, включено
+        {"code": "pms", "is_enabled": True},          # тариф не даёт, включено руками
+        {"code": "room_control", "is_enabled": False},  # тариф даёт, погашено руками
+    ]})
+    modules = {m["code"]: m for m in api("get", f"/hotels/{hotel.pk}/modules").json()["modules"]}
+
+    assert (modules["marketing"]["is_enabled"], modules["marketing"]["in_tariff"]) == (True, True)
+    assert (modules["pms"]["is_enabled"], modules["pms"]["in_tariff"]) == (True, False)
+    assert (modules["room_control"]["is_enabled"], modules["room_control"]["in_tariff"]) == (False, True)
+    # Четвёртое: тариф не даёт и не включали.
+    assert (modules["native_app"]["is_enabled"], modules["native_app"]["in_tariff"]) == (False, False)
+
+    # Намерение записано, а не выведено обратно из включённости.
+    assert modules["room_control"]["intent"] == "off"
+    assert modules["pms"]["intent"] == "on"
+    assert modules["native_app"]["intent"] == ""
+
+
+def test_downgrade_actually_turns_off_what_it_promised(api):
+    """
+    УКУС. Предупреждение о даунгрейде обязано стать правдой.
+
+    До R6 `set_tariff` не трогал реестр вообще: он писал `hotel.tariff` и уходил.
+    Модули старого тарифа оставались включёнными и продолжали подписываться «по
+    тарифу», а список «тариф не даёт модули X» был словами — X работал дальше.
+    """
+    hotel = _hotel("downgrade", "Понижаем")
+    Hotel.objects.filter(pk=hotel.pk).update(tariff="resort")
+    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [
+        {"code": "pms", "is_enabled": True},
+        {"code": "mobile_key", "is_enabled": True},
+        {"code": "room_control", "is_enabled": True},
+    ]})
+
+    # Сначала отказ с поимённым списком — ДО того, как что-либо изменится.
+    blocked = api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "standard"}).json()
+    assert blocked["ok"] is False
+    promised = next(w for w in blocked["warnings"] if w["key"] == "modules")["modules"]
+    assert {"pms", "mobile_key", "room_control"} <= set(promised)
+    # Ничего ещё не погасло: отказ — это отказ.
+    assert enabled_codes(hotel) >= {"pms", "mobile_key", "room_control"}
+
+    done = api("put", f"/hotels/{hotel.pk}/tariff",
+               {"tariff": "standard", "acknowledge_downgrade": True}).json()
+    assert done["ok"] is True
+
+    # Обещанное действительно погасло — ровно то, что было перечислено.
+    still_on = enabled_codes(hotel)
+    assert not (set(promised) & still_on), f"обещали погасить {promised}, осталось {still_on}"
+    # И это записано в журнал поимённо: «почему пропал раздел» спрашивают позже.
+    assert set(done["modules_turned_off"]) == set(promised)
+
+
+def test_manual_off_survives_a_tariff_that_would_grant_it(api):
+    """
+    Обратная сторона: тариф не зажигает то, что человек погасил.
+
+    Иначе «выключить модуль отелю» означало бы «до ближайшей смены тарифа», и
+    решение платформы отменялось бы движением, к нему не относящимся.
+    """
+    hotel = _hotel("intentoff", "Намерение")
+    Hotel.objects.filter(pk=hotel.pk).update(tariff="standard")
+    api("put", f"/hotels/{hotel.pk}/modules",
+        {"modules": [{"code": "room_control", "is_enabled": False}]})
+
+    # Переезд на тариф, который room_control ДАЁТ.
+    api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "business", "acknowledge_downgrade": True})
+
+    assert "room_control" not in enabled_codes(hotel)
+    modules = {m["code"]: m for m in api("get", f"/hotels/{hotel.pk}/modules").json()["modules"]}
+    # На экране это отдельное состояние, а не «тариф не даёт».
+    assert modules["room_control"]["in_tariff"] is True
+    assert modules["room_control"]["intent"] == "off"
+
+    # Модули нового тарифа, которых никто не гасил, зажигаются сами.
+    assert "marketing" in enabled_codes(hotel)
+
+
+def enabled_codes(hotel) -> set[str]:
+    from apps.hotels.module_registry import enabled_module_codes
+
+    hotel.refresh_from_db()
+    return enabled_module_codes(hotel)
+
+
 # --- Тариф и лимиты --------------------------------------------------------
 
 

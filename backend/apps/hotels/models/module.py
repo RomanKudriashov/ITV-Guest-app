@@ -32,9 +32,28 @@ class HotelModule(TenantModel):
         TARIFF = "tariff", "По тарифу"
         OVERRIDE = "override", "Переопределение (вне тарифа)"
 
+    class Intent(models.TextChoices):
+        """
+        РЕШЕНИЕ ЧЕЛОВЕКА о модуле — отдельно от того, что даёт тариф.
+
+        Пустая строка — не трогали: модуль просто следует за тарифом. `on` и
+        `off` — трогали руками, и это решение переживает смену тарифа.
+
+        Раньше здесь стояло вычисляемое `source` («по тарифу» / «вне тарифа»),
+        которое пересчитывалось при каждой записи по формуле «override, если
+        включено и тариф не даёт». Из-за неё ВЫКЛЮЧЕННЫЙ модуль всегда получал
+        «по тарифу», и два разных факта — «мы это выключили» и «тариф этого не
+        даёт» — выглядели на экране одинаково. Третьего состояния не
+        существовало: его нечем было записать.
+        """
+
+        NONE = "", "Не трогали"
+        ON = "on", "Включено вручную"
+        OFF = "off", "Выключено вручную"
+
     code = models.SlugField(max_length=32)
     is_enabled = models.BooleanField(default=False)
-    source = models.CharField(max_length=16, choices=Source.choices, default=Source.TARIFF)
+    intent = models.CharField(max_length=8, choices=Intent.choices, blank=True, default=Intent.NONE)
     # Доп. конфигурация модуля (напр. уровень аналитики: {"level": "advanced"}).
     config = models.JSONField(default=dict, blank=True)
 

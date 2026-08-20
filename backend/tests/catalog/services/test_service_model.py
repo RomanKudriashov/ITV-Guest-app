@@ -79,16 +79,16 @@ def test_hotel_module_registry(crystal):
         enabled = HotelModule.objects.create(
             code=HotelModule.Code.MULTI_RESTAURANT,
             is_enabled=True,
-            source=HotelModule.Source.TARIFF,
         )
-        assert enabled.is_enabled and enabled.source == "tariff"
+        # Намерения нет — модуль просто следует за тарифом.
+        assert enabled.is_enabled and enabled.intent == ""
         override = HotelModule.objects.create(
             code=HotelModule.Code.PMS,
             is_enabled=True,
-            source=HotelModule.Source.OVERRIDE,
+            intent=HotelModule.Intent.ON,
             config={"node": "local-1"},
         )
-        assert override.source == "override" and override.config["node"] == "local-1"
+        assert override.intent == "on" and override.config["node"] == "local-1"
         with pytest.raises(IntegrityError):
             with transaction.atomic():
                 HotelModule.objects.create(code=HotelModule.Code.MULTI_RESTAURANT)

@@ -474,14 +474,34 @@ def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
     else:
         hotel.trial_ends_at = None
     hotel.save(update_fields=["tariff", "tariff_started_on", "trial_ends_at", "updated_at"])
+
+    # ПЕРЕСЧЁТ РЕЕСТРА — здесь, а не «как-нибудь потом». До R6 смена тарифа не
+    # трогала модули вообще: старые оставались включёнными и подписывались «по
+    # тарифу», новые не включались, а предупреждение о даунгрейде было словами
+    # без последствий. Намерения при этом не трогаем — пересчитываем следствие.
+    from apps.hotels.module_registry import apply_tariff
+
+    turned_off = apply_tariff(hotel)
+
     console.audit_hotel(
         hotel,
         "platform.hotel.tariff_set",
         actor_id=request.user.pk,
         ip=request.META.get("REMOTE_ADDR"),
-        payload={"tariff": hotel.tariff, "trial_ends_at": str(hotel.trial_ends_at or "")},
+        payload={
+            "tariff": hotel.tariff,
+            "trial_ends_at": str(hotel.trial_ends_at or ""),
+            # Погашенные модули — в журнал поимённо: «почему у отеля пропал
+            # раздел» спрашивают через неделю, и ответ должен быть найден.
+            "modules_turned_off": turned_off,
+        },
     )
-    return {"ok": True, "warnings": warnings, "profile": console.profile(hotel)}
+    return {
+        "ok": True,
+        "warnings": warnings,
+        "modules_turned_off": turned_off,
+        "profile": console.profile(hotel),
+    }
 
 
 # --- Реестр модулей --------------------------------------------------------

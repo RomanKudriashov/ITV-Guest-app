@@ -12,16 +12,33 @@
 
 Идемпотентно: второй прогон не найдёт расхождений. Обратный ход — noop:
 восстанавливать разъехавшиеся имена не из чего, да и незачем.
+
+RLS. `Service` и `ExecutionPoint` — тенант-таблицы, и под обычной ролью без
+выставленного тенанта запрос к ним возвращает НОЛЬ СТРОК, а не ошибку: миграция
+отчиталась бы «OK», не тронув ничего. Поэтому обходим по отелям, выставляя
+тенанта в сессии Postgres, — так работает и под платформенной ролью, и под
+обычной. Ровно на этом первая редакция и попалась.
 """
 
 from django.db import migrations
 
+from apps.core.context import tenant_context
+
 
 def sync_titles(apps, schema_editor):
     db = schema_editor.connection.alias
+    Hotel = apps.get_model("hotels", "Hotel")
     Service = apps.get_model("hotels", "Service")
 
-    for service in Service.objects.using(db).select_related("execution_point"):
+    for hotel in Hotel.objects.using(db).all():
+        with tenant_context(hotel.pk):
+            _sync_one_hotel(Service, db, hotel.pk)
+
+
+def _sync_one_hotel(Service, db, hotel_id):
+    for service in Service.objects.using(db).filter(hotel_id=hotel_id).select_related(
+        "execution_point"
+    ):
         point = service.execution_point
         wanted = dict(service.public_name or {})
         # Пустое гостевое имя не должно обнулять служебное: пусть лучше

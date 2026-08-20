@@ -295,15 +295,16 @@ class Command(BaseCommand):
         with tenant_context(hotel):
             module, _ = HotelModule.objects.get_or_create(
                 code=HotelModule.Code.ROOM_CONTROL,
-                defaults={"is_enabled": True, "source": HotelModule.Source.OVERRIDE},
+                defaults={"is_enabled": True, "intent": HotelModule.Intent.ON},
             )
             config = dict(module.config or {})
             if demo_entry:
                 config["guest_entry_demo"] = True
             module.is_enabled = True
-            module.source = HotelModule.Source.OVERRIDE
+            # Намерение, а не пометка: модуль выдан сверх тарифа осознанно.
+            module.intent = HotelModule.Intent.ON
             module.config = config
-            module.save(update_fields=["is_enabled", "source", "config", "updated_at"])
+            module.save(update_fields=["is_enabled", "intent", "config", "updated_at"])
 
     def _room_type(self) -> RoomType:
         room_type, _ = RoomType.objects.get_or_create(

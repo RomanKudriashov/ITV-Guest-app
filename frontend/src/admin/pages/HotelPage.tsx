@@ -553,14 +553,35 @@ function ModulesTab({ id }: { id: string }) {
   }
   const list = modules.data.modules;
 
-  // Клиент шлёт ТОЛЬКО «включено/выключено». Признак «выдано вне тарифа»
-  // проставляет сервер: он один знает тарифную сетку, и второй источник правды
-  // здесь означал бы расхождение UI с моделью реестра.
+  // Клиент шлёт ТОЛЬКО «включено/выключено» — то есть решение человека.
+  // Тарифную сетку знает сервер, он же и решает, чем это решение обернётся.
   const toggle = (code: string, enabled: boolean) => {
     save.mutate(
       list.map((entry) => (entry.code === code ? { ...entry, is_enabled: enabled } : entry)),
     );
   };
+
+  /*
+    ЧЕТЫРЕ СОСТОЯНИЯ, А НЕ ДВА.
+
+    Экран показывал одну пометку — «вне тарифа» — и то только у включённых.
+    Всё остальное выглядело одинаково: «тариф даёт и включено» ничем не
+    отличалось от «включили руками», а «выключили руками» — от «тариф этого не
+    даёт». Второе особенно дорого: оператор видел погашенный тумблер и не мог
+    понять, включать ли его обратно.
+  */
+  const stateOf = (entry: ModuleEntry): 'inTariff' | 'override' | 'manualOff' | 'notInTariff' => {
+    if (entry.is_enabled) return entry.in_tariff ? 'inTariff' : 'override';
+    return entry.in_tariff ? 'manualOff' : 'notInTariff';
+  };
+  // «Тариф не даёт» — не событие: это фон, на котором живут остальные три.
+  // Приглушённая пилюля, а не цветная.
+  const TONE = {
+    inTariff: 'ok',
+    override: 'gold',
+    manualOff: 'warn',
+    notInTariff: 'muted',
+  } as const;
 
   return (
     <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-modules">
@@ -576,14 +597,13 @@ function ModulesTab({ id }: { id: string }) {
           <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
             {entry.title[i18n.language] ?? entry.title.en ?? entry.code}
           </Typography>
-          {entry.is_enabled && entry.source === 'override' ? (
-            <Box
-              data-testid={`admin-module-override-${entry.code}`}
-              sx={pillSx('gold')}
-            >
-              {t('admin.hotel.moduleOverride')}
-            </Box>
-          ) : null}
+          <Box
+            data-testid={`admin-module-state-${entry.code}`}
+            data-state={stateOf(entry)}
+            sx={pillSx(TONE[stateOf(entry)])}
+          >
+            {t(`admin.hotel.moduleState.${stateOf(entry)}`)}
+          </Box>
           <Switch
             checked={entry.is_enabled}
             onChange={(e) => toggle(entry.code, e.target.checked)}

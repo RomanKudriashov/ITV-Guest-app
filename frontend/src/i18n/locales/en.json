@@ -1805,8 +1805,7 @@
       "limitOver": "over the limit: {{used}} of {{limit}}",
       "limitHint": "Going over does not switch the hotel off — the platform decides.",
       "modulesTitle": "Modules (plan {{tariff}})",
-      "moduleOverride": "off-plan",
-      "modulesHint": "An enabled module appears in the hotel CMS; a disabled one is hidden.",
+      "modulesHint": "An enabled module appears in the hotel CMS; a disabled one is hidden. A manual decision survives a tariff change: what you switched off stays off, and what was enabled beyond the tariff goes dark if the new tariff does not include it.",
       "activityEmpty": "No entries yet",
       "viaSupport": "support",
       "tariffLabel": "Plan",
@@ -1837,7 +1836,13 @@
         "tariff": "Which tariff the hotel is on, how much it has already used, and what changes if it moves. You come here when a hotel hits a limit and asks for more, and at renewal.",
         "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law."
       },
-      "limitWontFit": "does not fit the selected tariff"
+      "limitWontFit": "does not fit the selected tariff",
+      "moduleState": {
+        "inTariff": "included in the tariff",
+        "override": "enabled beyond the tariff",
+        "manualOff": "switched off by hand",
+        "notInTariff": "not in the tariff"
+      }
     },
     "create": {
       "title": "New hotel",
