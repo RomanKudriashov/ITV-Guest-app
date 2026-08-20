@@ -249,6 +249,9 @@
   "/api/v1/cms/media/{asset_id}": [
     "GET"
   ],
+  "/api/v1/cms/media/{asset_id}/crop": [
+    "PUT"
+  ],
   "/api/v1/cms/modifier-groups/{group_id}": [
     "DELETE",
     "PATCH"
