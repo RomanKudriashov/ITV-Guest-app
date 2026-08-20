@@ -11,7 +11,7 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.catalog.schemas.cms import BadgeIn, BadgePatch, DictEntryIn, DictEntryPatch
+from apps.catalog.schemas.cms import BadgeIn, BadgeItemIn, BadgePatch, DictEntryIn, DictEntryPatch
 from apps.catalog.services import cms as svc
 from apps.core.schemas import OkOut
 
@@ -42,6 +42,24 @@ def cms_update_badge(request: HttpRequest, badge_id: str, payload: BadgePatch):
 def cms_delete_badge(request: HttpRequest, badge_id: str):
     svc.delete_badge(badge_id)
     return {"ok": True}
+
+
+@router.get("/badges/{badge_id}/items", summary="Позиции с этим бейджем")
+def cms_badge_items(
+    request: HttpRequest, badge_id: str, limit: int | None = None, offset: int = 0
+):
+    return svc.badge_items(badge_id, limit=limit, offset=offset)
+
+
+@router.put("/badges/{badge_id}/items/{item_id}", summary="Повесить или снять бейдж с позиции")
+def cms_set_badge_on_item(request: HttpRequest, badge_id: str, item_id: str, payload: BadgeItemIn):
+    """
+    ОДНА метка, ОДНА позиция. Не то же, что `PUT /items/{id}/badges`: тот
+    заменяет весь набор позиции и живёт в её редакторе, где человек видит все
+    её метки. Здесь разрез обратный — со стороны метки, — и стирать чужие метки
+    при снятии своей было бы дико.
+    """
+    return svc.set_badge_on_item(badge_id, item_id, attached=payload.attached)
 
 
 # --- Справочники аллергенов и диетических маркеров ---------------------------

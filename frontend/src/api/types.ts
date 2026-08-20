@@ -413,6 +413,16 @@ export interface Badge {
   is_active: boolean;
   /** Non-null for seeded presets (Хит/Новинка/…); read-only marker. */
   preset?: string | null;
+  /** How many items wear this badge — the answer to «что у меня помечено». */
+  items_count: number;
+}
+
+/** One item as seen FROM a badge: enough to recognise it and to unpin it. */
+export interface BadgeItem {
+  id: string;
+  title: Translated;
+  category: Translated;
+  is_active: boolean;
 }
 
 export interface BadgePayload {

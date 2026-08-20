@@ -257,6 +257,12 @@ class BadgePatch(Schema):
     sort_order: int | None = None
     is_active: bool | None = None
 
+class BadgeItemIn(Schema):
+    """Повесить (`true`) или снять (`false`) метку с одной позиции."""
+
+    attached: bool
+
+
 class ItemBadgesIn(Schema):
     badge_ids: list[str] = []
 

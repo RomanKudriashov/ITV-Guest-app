@@ -104,6 +104,68 @@ def test_badge_on_any_type_no_fork(client, crystal, cms, guest_token):
     assert info["badges"][0]["label"] == "Важное"
 
 
+# --- Метка со своей стороны -------------------------------------------------
+
+
+def test_badge_knows_where_it_hangs(crystal, cms):
+    """
+    УКУС. «Что у меня помечено как „Хит“» — вопрос со стороны МЕТКИ.
+
+    Связь читалась только со стороны позиции: чтобы ответить, надо было пройти
+    весь каталог по одной позиции, а список меток отвечал лишь на «какие метки
+    есть». Счётчик и список — здесь.
+    """
+    badge = cms.post("/api/v1/cms/badges", {"label": {"ru": "Хит"}, "color_role": "gold"}).json()
+    assert badge_row(cms, badge["id"])["items_count"] == 0
+
+    with tenant_context(crystal):
+        caesar_id = str(Item.objects.get(code="caesar").pk)
+
+    cms.put(f"/api/v1/cms/items/{caesar_id}/badges", {"badge_ids": [badge["id"]]})
+    assert badge_row(cms, badge["id"])["items_count"] == 1
+
+    items = cms.get(f"/api/v1/cms/badges/{badge['id']}/items").json()["items"]
+    assert [i["id"] for i in items] == [caesar_id]
+    # Раздел рядом с именем: одноимённые позиции в разных разделах — обычное
+    # дело, и без него список читается как загадка.
+    assert items[0]["category"]
+
+
+def test_badge_pin_and_unpin_do_not_touch_other_badges(crystal, cms):
+    """
+    Снять СВОЮ метку — не значит стереть чужие.
+
+    `PUT /items/{id}/badges` заменяет весь набор: он про редактор позиции, где
+    человек видит все её метки сразу. Со стороны метки разрез обратный, и
+    заменять им набор было бы тихой потерей чужой работы.
+    """
+    hit = cms.post("/api/v1/cms/badges", {"label": {"ru": "Хит"}, "color_role": "gold"}).json()
+    spicy = cms.post("/api/v1/cms/badges", {"label": {"ru": "Острое"}, "color_role": "info"}).json()
+    with tenant_context(crystal):
+        caesar_id = str(Item.objects.get(code="caesar").pk)
+
+    cms.put(f"/api/v1/cms/items/{caesar_id}/badges", {"badge_ids": [hit["id"], spicy["id"]]})
+
+    # Снимаем «Хит» со стороны метки — «Острое» обязано остаться.
+    cms.put(f"/api/v1/cms/badges/{hit['id']}/items/{caesar_id}", {"attached": False})
+    assert badge_row(cms, hit["id"])["items_count"] == 0
+    assert badge_row(cms, spicy["id"])["items_count"] == 1
+
+    # И вешаем обратно — тоже не трогая соседа.
+    cms.put(f"/api/v1/cms/badges/{hit['id']}/items/{caesar_id}", {"attached": True})
+    assert badge_row(cms, hit["id"])["items_count"] == 1
+    assert badge_row(cms, spicy["id"])["items_count"] == 1
+
+    # Повторное «повесить» не плодит дублей.
+    cms.put(f"/api/v1/cms/badges/{hit['id']}/items/{caesar_id}", {"attached": True})
+    assert badge_row(cms, hit["id"])["items_count"] == 1
+
+
+def badge_row(cms, badge_id: str) -> dict:
+    listed = cms.get("/api/v1/cms/badges").json()["items"]
+    return next(b for b in listed if b["id"] == badge_id)
+
+
 # --- Изоляция --------------------------------------------------------------
 
 

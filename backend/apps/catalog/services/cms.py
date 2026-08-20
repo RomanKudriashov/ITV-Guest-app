@@ -1304,7 +1304,7 @@ def upsert_slot_config(item_id, data: dict) -> dict:
 _BADGE_ROLES = {choice.value for choice in Badge.ColorRole}
 
 
-def serialize_badge(badge: Badge) -> dict:
+def serialize_badge(badge: Badge, *, items_count: int | None = None) -> dict:
     return {
         "id": str(badge.pk),
         "label": badge.label or {},
@@ -1312,17 +1312,94 @@ def serialize_badge(badge: Badge) -> dict:
         "sort_order": badge.sort_order,
         "is_active": badge.is_active,
         "preset": badge.preset,
+        # Сколько позиций носит метку. Без этого числа список меток отвечал
+        # только на «какие метки есть», а вопрос у человека другой: «что у меня
+        # помечено как „Хит“» — и ответить на него можно было, лишь пройдя весь
+        # каталог по одной позиции.
+        "items_count": items_count if items_count is not None else badge.item_badges.count(),
     }
 
 
 def list_badges(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     """Поиск по КОДУ и НАЗВАНИЮ — по ним бейдж и ищут в списке."""
+    from django.db.models import Count
+
     from apps.core.listing import page as list_page, search as apply_search
 
     queryset = apply_search(
-        Badge.objects.all().order_by("sort_order", "id"), search, ("code",), json_fields=("title",)
+        # Счётчик одним запросом, а не по строке на метку: список открывают
+        # целиком, и N+1 здесь превратился бы в десятки запросов на экран.
+        Badge.objects.all().annotate(_items=Count("item_badges")).order_by("sort_order", "id"),
+        search,
+        ("code",),
+        json_fields=("title",),
     )
-    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_badge)
+    return list_page(
+        queryset,
+        limit=limit,
+        offset=offset,
+        serialize=lambda badge: serialize_badge(badge, items_count=badge._items),
+    )
+
+
+def badge_items(badge_id, *, limit: int | None = None, offset: int = 0) -> dict:
+    """
+    Какие позиции носят эту метку — обратная сторона связи.
+
+    Читалась она до сих пор только со стороны позиции, и «раздать метку» жило в
+    редакторе позиций: чтобы пометить десять блюд, человек открывал десять
+    экранов. Здесь тот же вопрос задаётся один раз.
+    """
+    from apps.core.listing import page as list_page
+
+    badge = Badge.objects.filter(pk=badge_id).first()
+    if badge is None:
+        raise NotFoundError("Бейдж не найден")
+
+    queryset = (
+        Item.objects.filter(item_badges__badge_id=badge.pk)
+        .select_related("category")
+        .order_by("title", "id")
+    )
+    return list_page(
+        queryset,
+        limit=limit,
+        offset=offset,
+        serialize=lambda item: {
+            "id": str(item.pk),
+            "title": item.title or {},
+            # Название раздела рядом: одноимённые позиции в разных разделах —
+            # обычное дело, и без него список меток читается как загадка.
+            "category": (item.category.title or {}) if item.category_id else {},
+            "is_active": item.is_active,
+        },
+    )
+
+
+def set_badge_on_item(badge_id, item_id, *, attached: bool) -> dict:
+    """
+    Повесить или снять ОДНУ метку с ОДНОЙ позиции, не трогая остальные.
+
+    `assign_item_badges` заменяет весь набор — он про редактор позиции, где
+    человек видит все её метки сразу. Здесь противоположный разрез: одна метка,
+    много позиций, и стирать чужие метки при снятии своей было бы дико.
+    """
+    badge = Badge.objects.filter(pk=badge_id).first()
+    if badge is None:
+        raise NotFoundError("Бейдж не найден")
+    item = Item.objects.filter(pk=item_id).first()
+    if item is None:
+        raise NotFoundError("Позиция не найдена")
+
+    if attached:
+        ItemBadge.objects.get_or_create(
+            item=item,
+            badge=badge,
+            defaults={"hotel_id": item.hotel_id, "sort_order": item.item_badges.count()},
+        )
+    else:
+        ItemBadge.objects.filter(item=item, badge=badge).hard_delete()
+    return {"item_id": str(item.pk), "attached": bool(attached)}
 
 
 def _validate_role(role: str) -> str:

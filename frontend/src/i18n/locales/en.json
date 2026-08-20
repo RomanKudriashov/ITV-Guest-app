@@ -1474,7 +1474,7 @@
   },
   "badges": {
     "title": "Marketing badges",
-    "subtitle": "The marks a guest sees on a card: “Hit”, “New”, “Spicy”. You come here to make a dish stand out in the menu without touching its price or description.",
+    "subtitle": "Badges the guest sees on a card: «Hit», «New», «Spicy». You create them here and hand them out here too — the “where it hangs” counter opens the list.",
     "add": "Add badge",
     "deleted": "Badge deleted",
     "loadError": "Failed to load badges",
@@ -1499,7 +1499,14 @@
     "labelEn": "Label (EN)",
     "saved": "Badge saved",
     "livePreview": "Preview",
-    "previewPlaceholder": "Badge"
+    "previewPlaceholder": "Badge",
+    "usage": "Where it hangs",
+    "usageCount": "on {{count}} items",
+    "usageNone": "nowhere",
+    "itemsHint": "Items carrying «{{name}}». The cross removes the badge; the search below pins it to another item.",
+    "itemsEmpty": "Nothing carries this badge yet.",
+    "itemsAdd": "Find an item",
+    "itemsAddHint": "From two letters."
   },
   "quickActions": {
     "title": "Quick actions",

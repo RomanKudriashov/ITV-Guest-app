@@ -6,6 +6,7 @@ import type {
   RequestField,
   RequestFieldPayload,
   Badge,
+  BadgeItem,
   BadgePayload,
   Bootstrap,
   Category,
@@ -393,6 +394,28 @@ export function deleteMarker(id: string): Promise<void> {
 
 export function fetchBadges(): Promise<Badge[]> {
   return api.get<ListPage<Badge>>('/cms/badges').then((page) => page.items);
+}
+
+/** Позиции, которые носят эту метку. Обратная сторона связи. */
+export function fetchBadgeItems(badgeId: string): Promise<BadgeItem[]> {
+  return api
+    .get<ListPage<BadgeItem>>(`/cms/badges/${badgeId}/items`)
+    .then((page) => page.items);
+}
+
+/**
+ * Повесить или снять ОДНУ метку с ОДНОЙ позиции.
+ *
+ * Не `assignItemBadges`: тот заменяет весь набор метки позиции и живёт в её
+ * редакторе. Здесь разрез со стороны метки, и чужие метки позиции трогать
+ * нельзя.
+ */
+export function setBadgeOnItem(
+  badgeId: string,
+  itemId: string,
+  attached: boolean,
+): Promise<{ item_id: string; attached: boolean }> {
+  return api.put(`/cms/badges/${badgeId}/items/${itemId}`, { attached });
 }
 
 export function createBadge(payload: BadgePayload): Promise<Badge> {

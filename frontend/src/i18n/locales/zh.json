@@ -1470,7 +1470,7 @@
   },
   "badges": {
     "title": "营销徽章",
-    "subtitle": "客人在卡片上看到的标记：「热销」「新品」「辣」。当你想在菜单中突出某道菜、又不改价格和描述时来这里。",
+    "subtitle": "客人在卡片上看到的标记：「热卖」「新品」「辣」。在这里创建，也在这里分配 —「挂在哪里」计数可展开列表。",
     "add": "添加徽章",
     "deleted": "徽章已删除",
     "loadError": "无法加载徽章",
@@ -1495,7 +1495,14 @@
     "labelEn": "名称 (EN)",
     "saved": "徽章已保存",
     "livePreview": "预览",
-    "previewPlaceholder": "徽章"
+    "previewPlaceholder": "徽章",
+    "usage": "挂在哪里",
+    "usageCount": "{{count}} 个条目",
+    "usageNone": "未使用",
+    "itemsHint": "带有「{{name}}」的条目。叉号取消标记，下方搜索可为其他条目加上。",
+    "itemsEmpty": "还没有条目带这个标记。",
+    "itemsAdd": "查找条目",
+    "itemsAddHint": "至少两个字符。"
   },
   "quickActions": {
     "title": "快捷操作",

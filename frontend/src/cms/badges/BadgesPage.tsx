@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
@@ -33,7 +33,15 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 
 import { ApiError } from '@/api/client';
-import { createBadge, deleteBadge, fetchBadges, updateBadge } from '@/api/cms';
+import {
+  createBadge,
+  deleteBadge,
+  fetchBadgeItems,
+  fetchBadges,
+  fetchItems,
+  setBadgeOnItem,
+  updateBadge,
+} from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { Badge, BadgeColorRole, Translated } from '@/api/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -68,6 +76,120 @@ function BadgePreview({ label, role }: { label: string; role: BadgeColorRole }) 
   );
 }
 
+/**
+ * Позиции одной метки: снять здесь же, добавить здесь же.
+ *
+ * «Раздать метку» жило в редакторе позиции: чтобы пометить десять блюд, человек
+ * открывал десять экранов, и ни на одном из них не было видно, что уже
+ * помечено. Здесь тот же вопрос задаётся один раз и с той стороны, с которой
+ * его задают на самом деле — со стороны метки.
+ *
+ * В редакторе позиции выбор остаётся: там человек занят позицией, и её метки —
+ * часть её карточки. Но заводить и раздавать метки — это здесь.
+ */
+function BadgeItems({ badgeId, label }: { badgeId: string; label: string }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { data: bootstrap } = useBootstrap();
+  const languages = useContentLanguages(bootstrap);
+  const [adding, setAdding] = useState('');
+
+  const itemsQuery = useQuery({
+    queryKey: [...queryKeys.badges, badgeId, 'items'],
+    queryFn: () => fetchBadgeItems(badgeId),
+  });
+  // Кандидаты ищем на сервере: каталог отеля — это тысячи позиций, и фильтровать
+  // скачанную сотню значило бы врать пустым результатом.
+  const candidates = useQuery({
+    queryKey: [...queryKeys.badges, badgeId, 'candidates', adding],
+    queryFn: () => fetchItems({ search: adding }),
+    enabled: adding.trim().length >= 2,
+  });
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.badges });
+  };
+
+  const pin = useMutation({
+    mutationFn: (payload: { itemId: string; attached: boolean }) =>
+      setBadgeOnItem(badgeId, payload.itemId, payload.attached),
+    onSuccess: () => refresh(),
+    onError: (error) =>
+      toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),
+  });
+
+  const name = (value: Translated) =>
+    pickTranslated(value, languages.displayLanguage, languages.defaultCode);
+  const attachedIds = new Set((itemsQuery.data ?? []).map((item) => item.id));
+
+  return (
+    <Stack spacing={1.25}>
+      <Typography variant="caption" color="text.secondary">
+        {t('badges.itemsHint', { name: label })}
+      </Typography>
+
+      {itemsQuery.isLoading ? (
+        <Skeleton variant="rounded" height={64} />
+      ) : itemsQuery.isError ? (
+        <QueryState query={itemsQuery} what={t('state.what.items')}>
+          {() => null}
+        </QueryState>
+      ) : (itemsQuery.data ?? []).length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          {t('badges.itemsEmpty')}
+        </Typography>
+      ) : (
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {(itemsQuery.data ?? []).map((item) => (
+            <Chip
+              key={item.id}
+              size="small"
+              variant="outlined"
+              label={
+                item.category && Object.keys(item.category).length
+                  ? `${name(item.title)} · ${name(item.category)}`
+                  : name(item.title)
+              }
+              onDelete={() => pin.mutate({ itemId: item.id, attached: false })}
+              disabled={pin.isPending}
+              data-testid={`cms-badge-item-${item.id}`}
+            />
+          ))}
+        </Stack>
+      )}
+
+      <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+        <TextField
+          size="small"
+          label={t('badges.itemsAdd')}
+          value={adding}
+          onChange={(event) => setAdding(event.target.value)}
+          helperText={t('badges.itemsAddHint')}
+          inputProps={{ 'data-testid': 'cms-badge-item-search' }}
+          sx={{ minWidth: 260 }}
+        />
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pt: 0.75 }}>
+          {(candidates.data ?? [])
+            .filter((item) => !attachedIds.has(item.id))
+            .slice(0, 12)
+            .map((item) => (
+              <Chip
+                key={item.id}
+                size="small"
+                icon={<AddIcon fontSize="small" />}
+                label={name(item.title)}
+                onClick={() => pin.mutate({ itemId: item.id, attached: true })}
+                disabled={pin.isPending}
+                data-testid={`cms-badge-candidate-${item.id}`}
+              />
+            ))}
+        </Stack>
+      </Stack>
+    </Stack>
+  );
+}
+
 export function BadgesPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -78,6 +200,9 @@ export function BadgesPage() {
 
   const [editing, setEditing] = useState<Badge | 'new' | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Badge | null>(null);
+  // Разворот один за раз: две открытые простыни позиций в одной таблице
+  // читаются хуже, чем одна, и никто не сравнивает их построчно.
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const badgesQuery = useQuery({ queryKey: queryKeys.badges, queryFn: fetchBadges });
   const badges = badgesQuery.data ?? [];
@@ -149,6 +274,7 @@ export function BadgesPage() {
                   <TableRow>
                     <TableCell>{t('badges.preview')}</TableCell>
                     <TableCell>{t('badges.role')}</TableCell>
+                    <TableCell>{t('badges.usage')}</TableCell>
                     <TableCell>{t('badges.sortOrder')}</TableCell>
                     <TableCell>{t('badges.active')}</TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
@@ -156,7 +282,8 @@ export function BadgesPage() {
                 </TableHead>
                 <TableBody>
                   {badges.map((badge) => (
-                    <TableRow key={badge.id} hover data-testid={`cms-badge-row-${badge.id}`}>
+                    <Fragment key={badge.id}>
+                    <TableRow hover data-testid={`cms-badge-row-${badge.id}`}>
                       <TableCell>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <BadgePreview label={badgeLabel(badge)} role={badge.color_role} />
@@ -166,6 +293,31 @@ export function BadgesPage() {
                         </Stack>
                       </TableCell>
                       <TableCell>{t(`badges.roles.${badge.color_role}`)}</TableCell>
+                      {/*
+                        СЧЁТЧИК — И ОН ЖЕ ДВЕРЬ. Список меток отвечал только на
+                        «какие метки есть»; вопрос у человека другой — «что у
+                        меня помечено как „Хит“», — и ответить на него можно
+                        было, лишь пройдя весь каталог по одной позиции. Клик
+                        раскрывает список прямо здесь.
+                      */}
+                      <TableCell>
+                        <ButtonBase
+                          onClick={() => setExpanded(expanded === badge.id ? null : badge.id)}
+                          data-testid={`cms-badge-usage-${badge.id}`}
+                          sx={{
+                            borderRadius: 1,
+                            px: 0.75,
+                            py: 0.25,
+                            color: badge.items_count ? 'primary.main' : 'text.secondary',
+                            fontWeight: 600,
+                            fontSize: '0.82rem',
+                          }}
+                        >
+                          {badge.items_count
+                            ? t('badges.usageCount', { count: badge.items_count })
+                            : t('badges.usageNone')}
+                        </ButtonBase>
+                      </TableCell>
                       <TableCell>{badge.sort_order}</TableCell>
                       <TableCell>
                         <Chip
@@ -194,6 +346,14 @@ export function BadgesPage() {
                         </IconButton>
                       </TableCell>
                     </TableRow>
+                    {expanded === badge.id ? (
+                      <TableRow data-testid={`cms-badge-items-${badge.id}`}>
+                        <TableCell colSpan={6} sx={{ bgcolor: 'action.hover', py: 1.5 }}>
+                          <BadgeItems badgeId={badge.id} label={badgeLabel(badge)} />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>

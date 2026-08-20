@@ -131,7 +131,6 @@ export const router = createBrowserRouter([
       { path: 'commerce', element: <Navigate to="/cms/settings" replace /> },
       { path: 'locations', element: <Navigate to="/cms/settings" replace /> },
       { path: 'departments', element: <Navigate to="/cms/services" replace /> },
-      { path: 'badges', element: <Navigate to="/cms/marketing" replace /> },
       { path: 'quick-actions', element: <QuickActionsPage /> },
       { path: 'styleguide', element: <StyleguidePage /> },
 
