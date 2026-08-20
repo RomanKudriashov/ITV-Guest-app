@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
-    "build": "node scripts/check-colors.mjs && node scripts/check-locales.mjs && node scripts/check-event-codes.mjs && tsc && vite build",
+    "build": "node scripts/check-colors.mjs && node scripts/check-locales.mjs && node scripts/check-event-codes.mjs && node scripts/check-image-build.mjs && tsc && vite build",
+    "build:image": "node scripts/check-colors.mjs && node scripts/check-locales.mjs && tsc && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5173",
     "typecheck": "tsc --noEmit",
     "lint:colors": "node scripts/check-colors.mjs",
     "lint:locales": "node scripts/check-locales.mjs",
-    "lint:events": "node scripts/check-event-codes.mjs"
+    "lint:events": "node scripts/check-event-codes.mjs",
+    "lint:image": "node scripts/check-image-build.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
