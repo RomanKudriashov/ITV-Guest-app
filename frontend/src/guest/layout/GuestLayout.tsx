@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
@@ -28,6 +28,7 @@ import { useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { CartPage } from '../pages/CartPage';
+import { CartButton } from './CartButton';
 import { GuestTopBar } from './GuestTopBar';
 import { STICKY, useStickyLayer } from './stickyStack';
 import { layout as storefrontLayout, surfaceRadius } from '../storefrontTokens';
@@ -94,6 +95,24 @@ export function GuestLayout() {
   // совпадал; с посервисной корзиной (R5) он поехал, и React справедливо
   // ругался на смену порядка хуков.
   const cart = useCart();
+
+  /*
+    ВХОД В КОРЗИНУ ЗНАЕТ, ЧЬЯ ОНА.
+
+    Объявлен ЗДЕСЬ, до ранних возвратов оболочки (загрузка сессии, редирект на
+    вход). Ниже он давал «Rendered more hooks than during the previous render»:
+    первый рендер уходил в ранний возврат и вызывал хуков меньше следующего.
+
+    Корзина лежит вне `/venue` и разложена по заведениям, поэтому `/cart` без
+    параметра показывает пустой экран — даже когда в хранилище что-то есть.
+    Пока единственным входом была нижняя полоса каталога, она подставляла
+    заведение сама; у постоянной кнопки такого контекста нет, и без этого
+    иконка вела бы в «корзина пуста».
+  */
+  const openCart = useCallback(() => {
+    navigate(cart.serviceCode ? `/cart?service=${cart.serviceCode}` : '/cart');
+  }, [navigate, cart.serviceCode]);
+
   /*
     Плавающая группа — ПЕРВЫЙ СЛОЙ общего стека (см. `stickyStack`). Раньше её
     нижний край публиковался отдельной переменной CSS, а каждый экран
@@ -138,6 +157,8 @@ export function GuestLayout() {
   const badgeFor = (value: string) => (value === '/chat' ? unreadChat : 0);
   // Корзина — колонка справа на десктопе, видна только с непустым заказом.
   const cartOpen = isDesktop && !cart.isEmpty;
+
+
   const content = (
     <Box key={location.pathname} sx={fadeInSx()}>
       <Outlet />
@@ -157,7 +178,7 @@ export function GuestLayout() {
           cartCount={cart.count}
           unreadChat={unreadChat}
           onNavigate={navigate}
-          onOpenCart={() => navigate('/cart')}
+          onOpenCart={openCart}
         />
         <Box
           sx={{
@@ -204,6 +225,16 @@ export function GuestLayout() {
         {/* Без номера чип не исчезает, а становится входом по номеру:
             иначе из режима просмотра некуда вернуться. */}
         <RoomMenu room={room} variant="floating" />
+        {/*
+          КОРЗИНА — ПОСТОЯННЫЙ ВХОД, и на телефоне он здесь.
+          Нижняя полоса «в корзине N позиций» висела мебелью на каждом экране
+          каталога; теперь она всплывает на секунды после добавления, а вход в
+          корзину не пропал — он тут, рядом с номером и настройками.
+
+          Не в нижнее меню: там уже шесть пунктов, седьмой их сожмёт. Корзина —
+          состояние, а не раздел.
+        */}
+        <CartButton count={cart.count} onOpen={openCart} />
         {/* Язык и тема — под одной кнопкой. Полоса `fixed` висит над контентом
             любого экрана, и тремя кнопками она накрывала то заголовок, то
             первую строку списка. Чип номера остался снаружи: он статус, а не

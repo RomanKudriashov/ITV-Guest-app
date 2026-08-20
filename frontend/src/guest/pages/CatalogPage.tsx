@@ -34,6 +34,7 @@ import {
 } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
+import { useCartToast } from '../state/useCartToast';
 import type { MenuItem } from '../api/types';
 
 const TABS_HEIGHT = 48;
@@ -77,6 +78,21 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
   const { session, hotel } = useGuestSession();
   const hotelName = hotel?.name ?? session?.hotel.name ?? '';
   const cart = useCart();
+
+  /*
+    ПОЛОСА — ПОДТВЕРЖДЕНИЕ, А НЕ МЕБЕЛЬ.
+
+    Она висела постоянно, пока в корзине что-то есть, и на телефоне съедала
+    52 пикселя высоты плюс отступ под ними — на каждом экране каталога, всё
+    время. Сказать ей при этом было нечего: сумма не меняется, пока гость не
+    тронет корзину. Теперь она отвечает на одно событие — «положили» — и уезжает
+    сама, а постоянный вход в корзину живёт иконкой в плавающей группе.
+
+    Хук стоит ЗДЕСЬ, до ранних возвратов экрана (ошибка, пустой каталог). Ниже
+    он давал «Rendered more hooks than during the previous render»: первый
+    рендер уходил в ранний возврат и хуков вызывал меньше, чем следующий.
+  */
+  const justAdded = useCartToast(cart.addedTicks);
   const behaviour = behaviourFor(type);
   const ns = behaviour.guestCatalogNamespace;
   const { data, isLoading, error, refetch } = useGuestCatalog(type, true, point);
@@ -189,7 +205,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
 
   // On desktop the cart is a persistent column (spec §4), so the floating
   // "view cart" bar is a phone/tablet affordance only.
-  const showCartBar = behaviour.usesCart && !cart.isEmpty && !isDesktopShell;
+  const showCartBar = behaviour.usesCart && !cart.isEmpty && !isDesktopShell && justAdded;
 
   return (
     <Box data-testid={behaviour.guestCatalogTestId}>
@@ -335,7 +351,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
             sx={{ minHeight: 52, justifyContent: 'space-between', px: 2 }}
           >
             <Box component="span">
-              {t('guest.cart.barItems', { count: cart.count })} · {format(cart.total)}
+              {t('guest.cart.barAdded')} · {format(cart.total)}
             </Box>
             <Box component="span">{t('guest.cart.barGo')}</Box>
           </Button>

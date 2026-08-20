@@ -505,7 +505,10 @@
       "placing": "جارٍ الإرسال…",
       "emptyTitle": "السلة فارغة",
       "emptyHint": "اختر شيئاً من القائمة",
-      "toMenu": "إلى القائمة"
+      "toMenu": "إلى القائمة",
+      "barAdded": "تمت الإضافة",
+      "openWithCount": "السلة، {{count}} عنصرًا",
+      "open": "السلة"
     },
     "confirmation": {
       "title": "تم استلام الطلب",

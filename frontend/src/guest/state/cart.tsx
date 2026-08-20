@@ -73,6 +73,15 @@ interface CartContextValue {
   isEmpty: boolean;
   /** Quantity of an item added with no modifiers and no comment (inline stepper). */
   simpleQuantity: (itemId: string) => number;
+  /**
+   * СИГНАЛ «ТОЛЬКО ЧТО ПОЛОЖИЛИ». Растёт на каждое добавление, включая
+   * повторное добавление того же блюда — на нём держится всплывающая полоса.
+   *
+   * Счётчик, а не отметка времени: два добавления подряд обязаны показать
+   * полосу дважды, а одинаковая отметка времени во второй раз не изменилась бы
+   * и полоса бы не мигнула.
+   */
+  addedTicks: number;
   addLine: (line: Omit<CartLine, 'uid'>) => void;
   addSimple: (item: MenuItem | ItemDetail) => void;
   decrementSimple: (itemId: string) => void;
@@ -192,6 +201,11 @@ export function CartProvider({
     return { sid: sessionId, carts: readStored(sessionId) };
   });
 
+  // Считаем добавления, а не храним: сигнал живёт ровно столько, сколько
+  // открыт экран, и восстанавливать его из localStorage незачем — полоса
+  // после перезагрузки всплывать не должна.
+  const [addedTicks, setAddedTicks] = useState(0);
+
   let carts = state.carts;
   if (state.sid !== sessionId) {
     // Сессия сменилась — старая корзина осиротела ровно в этот момент.
@@ -236,6 +250,7 @@ export function CartProvider({
       }
       return [...prev, { ...line, uid: newUid() }];
     });
+    setAddedTicks((n) => n + 1);
   }, [setLines]);
 
   const addSimple = useCallback(
@@ -292,6 +307,7 @@ export function CartProvider({
     const total = lines.reduce((sum, line) => sum + line.unit_price * line.quantity, 0);
     return {
       lines,
+      addedTicks,
       serviceCode: active,
       serviceCodesWithLines: Object.keys(carts).filter((code) => carts[code].length > 0),
       count,
@@ -317,7 +333,7 @@ export function CartProvider({
           comment: line.comment,
         })),
     };
-  }, [lines, carts, active, addLine, addSimple, decrementSimple, setQuantity, removeLine, clear]);
+  }, [lines, carts, active, addedTicks, addLine, addSimple, decrementSimple, setQuantity, removeLine, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

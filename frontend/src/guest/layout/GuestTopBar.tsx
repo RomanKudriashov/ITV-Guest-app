@@ -1,5 +1,6 @@
 import { alpha } from '@mui/material/styles';
 import Badge from '@mui/material/Badge';
+import { IconBag } from '@/icons';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -39,6 +40,7 @@ export function GuestTopBar({
   unreadChat,
   onNavigate,
   onOpenCart,
+  showCart = true,
 }: {
   hotelName: string;
   logo: string | null;
@@ -49,9 +51,14 @@ export function GuestTopBar({
   unreadChat: number;
   onNavigate: (to: string) => void;
   onOpenCart: () => void;
+  /**
+   * Есть ли на этом экране смысл у корзины. Инфо-раздел и экран номера её не
+   * показывают: корзина там не при чём, а иконка обещала бы действие.
+   */
+  showCart?: boolean;
 }) {
   const { t } = useTranslation();
-  const { glass, goldCta } = useStorefront();
+  const { glass } = useStorefront();
   // Тот же нулевой слой стека, что и плавающая группа телефона: на одной
   // ширине существует ровно один из них.
   const layer = useStickyLayer<HTMLDivElement>(STICKY.shell);
@@ -164,35 +171,36 @@ export function GuestTopBar({
           Кнопка заказа золотая, а не акцентная: золото на витрине означает
           «ведёт к заказу», акцент — «переводит». Гость различает их, не читая.
         */}
-        {cartCount > 0 ? (
-          <ButtonBase
+        {/*
+          ИКОНКА КОРЗИНЫ ВИДНА ВСЕГДА — это единственный ПОСТОЯННЫЙ вход.
+          Раньше она появлялась только при непустой корзине, а нижняя полоса
+          висела мебелью; теперь наоборот: полоса всплывает на секунды, а вход
+          на месте. Пустую корзину показываем без числа — «ноль» в кружке это
+          не сообщение, а шум.
+
+          Не в нижнее меню: там уже шесть пунктов, седьмой их сожмёт. Корзина —
+          состояние, а не раздел, и живёт там же, где язык и тема.
+        */}
+        {showCart ? (
+          <IconButton
             onClick={onOpenCart}
             data-testid="guest-topbar-cart"
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.9,
-              height: 34,
-              px: 1.75,
-              borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
-              fontSize: 12,
-              ...goldCta,
-            }}
+            aria-label={
+              cartCount > 0
+                ? t('guest.cart.openWithCount', { count: cartCount })
+                : t('guest.cart.open')
+            }
+            sx={{ color: 'inherit' }}
           >
-            {t('guest.nav.cart')}
-            {/* Счётчик — затемнение поверх золота, поэтому берётся от цвета
-                надписи на кнопке, а не отдельным чёрным литералом. */}
-            <Box
-              sx={{
-                bgcolor: alpha(goldCta.color, 0.18),
-                borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
-                px: 0.75,
-                fontSize: 11,
-              }}
+            <Badge
+              badgeContent={cartCount}
+              color="primary"
+              data-testid="guest-topbar-cart-count"
+              sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}
             >
-              {cartCount}
-            </Box>
-          </ButtonBase>
+              <IconBag />
+            </Badge>
+          </IconButton>
         ) : null}
       </Box>
     </Box>

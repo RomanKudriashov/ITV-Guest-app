@@ -18,6 +18,8 @@ import Typography from '@mui/material/Typography';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
+import { useQuery } from '@tanstack/react-query';
+
 import { ApiError } from '@/api/client';
 import { ctaGradientSx } from '@/kit';
 import { EmptyState } from '@/components/EmptyState';
@@ -35,6 +37,7 @@ import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
+import { fetchCatalog } from '../api/guest';
 import type { CreateOrderPayload, OrderTiming } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
 
@@ -86,6 +89,39 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
     () => locationsQuery.data?.locations ?? [],
     [locationsQuery.data],
   );
+
+  /*
+    СНИМОК НЕ ОБНОВЛЯЕТСЯ САМ — И В ЭТОМ БЫЛ ДЕФЕКТ.
+
+    Строка корзины хранит копию позиции на момент добавления: название, цену,
+    выбранные модификаторы и адрес картинки. Цену и модификаторы заморозить —
+    правильно: гость согласился на них, и менять их у него под руками нельзя.
+    А вот КАРТИНКА и НАЗВАНИЕ к сделке не относятся, и замороженными они
+    начинают врать: блюдо, добавленное до того, как отель загрузил фото,
+    остаётся в корзине серым квадратом, хотя в меню у него давно есть снимок.
+    Ровно это и видели на стенде.
+
+    Поэтому для показа берём живой каталог, когда он есть, и снимок — когда
+    нет (нет сети, позиция снята с витрины). Порядок именно такой: живое
+    вернее, но его отсутствие не должно оставлять строку без картинки вовсе.
+  */
+  const catalogQuery = useQuery({
+    queryKey: ['guest', 'catalog', 'cart-media', cart.serviceCode],
+    queryFn: () => fetchCatalog('product', undefined, cart.serviceCode ?? undefined),
+    enabled: !cart.isEmpty,
+    staleTime: 60_000,
+  });
+
+  const liveById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const category of catalogQuery.data?.categories ?? []) {
+      for (const item of category.items) map.set(item.id, item.images?.[0] ?? null);
+    }
+    return map;
+  }, [catalogQuery.data]);
+
+  const liveImage = (line: { item_id: string; image_url: string | null }): string | null =>
+    liveById.get(line.item_id) ?? line.image_url;
 
   // Checkout form — local draft state, never overwritten by a background refetch
   // of the locations list. Re-seeded only when the locations set itself changes.
@@ -241,7 +277,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                   alignItems="flex-start"
                   data-testid={`guest-cart-line-${line.item_code}`}
                 >
-                  <ItemThumb src={line.image_url} alt={line.title} size={56} />
+                  <ItemThumb src={liveImage(line)} alt={line.title} size={56} />
                   <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2">{line.title}</Typography>
                     {line.modifiers.length ? (

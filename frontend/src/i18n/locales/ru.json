@@ -501,7 +501,10 @@
       "placing": "Отправляем…",
       "emptyTitle": "Корзина пуста",
       "emptyHint": "Выберите что-нибудь в меню",
-      "toMenu": "В меню"
+      "toMenu": "В меню",
+      "barAdded": "Добавлено",
+      "openWithCount": "Корзина, {{count}} позиций",
+      "open": "Корзина"
     },
     "confirmation": {
       "title": "Заявка принята",

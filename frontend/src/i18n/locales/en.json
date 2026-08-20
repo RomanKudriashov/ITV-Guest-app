@@ -497,7 +497,10 @@
       "placing": "Sending…",
       "emptyTitle": "Your cart is empty",
       "emptyHint": "Pick something from the menu",
-      "toMenu": "To the menu"
+      "toMenu": "To the menu",
+      "barAdded": "Added",
+      "openWithCount": "Cart, {{count}} items",
+      "open": "Cart"
     },
     "confirmation": {
       "title": "Order received",

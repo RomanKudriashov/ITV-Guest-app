@@ -495,7 +495,10 @@
       "placing": "提交中…",
       "emptyTitle": "购物车是空的",
       "emptyHint": "从菜单中挑选一些吧",
-      "toMenu": "去菜单"
+      "toMenu": "去菜单",
+      "barAdded": "已添加",
+      "openWithCount": "购物车，{{count}} 件",
+      "open": "购物车"
     },
     "confirmation": {
       "title": "订单已收到",
