@@ -1770,10 +1770,9 @@
       "loadFailed": "Could not load the hotel",
       "tab": {
         "profile": "Profile",
-        "usage": "Usage",
         "modules": "Modules",
         "activity": "Activity",
-        "tariff": "Plan",
+        "tariff": "Tariff and limits",
         "data": "Data",
         "support": "Support"
       },
@@ -1832,13 +1831,13 @@
       "adminFailed": "Could not reset access",
       "adminMoveFailed": "Could not change the address",
       "intro": {
-        "usage": "How much the hotel has used of what its tariff allows: rooms, venues, menu items. You come here when a hotel hits a limit and asks for more.",
         "modules": "Which features this hotel has on and where each came from — the tariff or a manual override. You come here to switch a feature on beyond the tariff, or to take it away.",
         "activity": "What happened at the hotel: guest orders, app entries, calls to room equipment. You come here when a hotel complains and you need to see what actually took place.",
         "support": "When platform staff entered this hotel under someone else’s account, and why. You come here to cut off that access or to tell the hotel who was inside.",
-        "tariff": "Which tariff the hotel is on now and what changes if you move it. You come here on renewal and on a switch — to see what the hotel would lose.",
+        "tariff": "Which tariff the hotel is on, how much it has already used, and what changes if it moves. You come here when a hotel hits a limit and asks for more, and at renewal.",
         "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law."
-      }
+      },
+      "limitWontFit": "does not fit the selected tariff"
     },
     "create": {
       "title": "New hotel",
@@ -2237,7 +2236,7 @@
       "diagnostics": "Diagnostics"
     },
     "access": {
-      "demoTitle": "Demo entry without a PIN",
+      "demoTitle": "Demo entry without a PIN — for the whole hotel",
       "demoLabel": "Allow entry by room number",
       "demoWarningTitle": "Temporary relaxation",
       "pinTitle": "Stay PIN",
@@ -2253,7 +2252,12 @@
       "active": "Active",
       "inactive": "Inactive",
       "loadError": "Could not load access settings",
-      "intro": "Which guests may control the room: by the stay PIN or by the room number alone. You come here at launch and on a complaint that a neighbour controls someone’s room."
+      "intro": "Which guests may control the room: by the stay PIN or by the room number alone. You come here at launch and on a complaint that a neighbour controls someone’s room.",
+      "demoHint": "Not a room setting: the relaxation applies to every room at once and stays on until someone turns it off.",
+      "demoToggledOn": "Turned on by {{who}}, {{when}}.",
+      "demoToggledOff": "Turned off by {{who}}, {{when}}.",
+      "demoSomeone": "a staff member",
+      "pinMuted": "PINs are not being asked for right now: demo entry is on. You can still issue a code — it starts working once the relaxation is switched off."
     },
     "plan": {
       "frames": "Plan frames",

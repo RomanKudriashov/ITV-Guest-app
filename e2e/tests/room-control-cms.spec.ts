@@ -433,6 +433,43 @@ test('доступ: демо-вход показан вместе с преду�
   await page.screenshot({ path: path.join(SHOTS, 'access.png'), fullPage: true })
 })
 
+test('доступ: включённый демо-вход гасит таблицу PIN и говорит почему', async () => {
+  await openSection()
+  await openTab('access')
+  await expect(page.getByTestId('grms-access')).toBeVisible({ timeout: 20_000 })
+
+  // Порядок секций: PIN — штатное поведение, поэтому сверху. Демо-вход —
+  // послабление на время показа, поэтому ниже и отдельной карточкой.
+  const order = await page.locator('[data-testid="grms-access"] .MuiCard-root').count()
+  expect(order).toBeGreaterThanOrEqual(2)
+  const demoBox = await page.getByTestId('grms-demo-section').boundingBox()
+  const pinSave = await page.getByTestId('grms-pin-save').boundingBox()
+  expect(demoBox!.y).toBeGreaterThan(pinSave!.y)
+
+  // Флаг отельный, а не комнатный — слово «отель» стоит в заголовке секции.
+  await expect(page.getByTestId('grms-demo-section')).toContainText('отел')
+
+  const toggle = page.getByTestId('grms-demo-entry').locator('input')
+  const wasOn = await toggle.isChecked()
+  if (!wasOn) await toggle.click()
+
+  // УКУС. При включённом послаблении PIN не спрашивают ни у кого: таблица
+  // обязана погаснуть и сказать причину, а не молча показывать «активен».
+  await expect(page.getByTestId('grms-pin-muted')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByTestId('grms-pin-muted')).toContainText('демо-вход')
+  // Заводить код при этом по-прежнему можно — к показу готовятся заранее.
+  await expect(page.getByTestId('grms-pin-save')).toBeVisible()
+  // Кто и когда включил — из журнала, прямо здесь.
+  await expect(page.getByTestId('grms-demo-toggled')).toContainText('Включил')
+
+  await page.screenshot({ path: path.join(SHOTS, 'access-demo-on.png'), fullPage: true })
+
+  if (!wasOn) {
+    await toggle.click()
+    await expect(page.getByTestId('grms-pin-muted')).toHaveCount(0)
+  }
+})
+
 /** Фигуры зон на сцене. У форм инспектора префикс свой (`grms-plan-form-`). */
 async function zoneCount(): Promise<number> {
   return page.locator('[data-testid^="grms-plan-zone-"]').count()

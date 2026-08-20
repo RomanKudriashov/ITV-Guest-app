@@ -85,37 +85,25 @@ export function AccessTab() {
       </Typography>
       <Card variant="outlined" sx={{ borderColor: 'divider' }}>
         <CardContent>
-          <Typography variant="subtitle1">{t('roomControl.access.demoTitle')}</Typography>
-          <Divider sx={{ my: 1.5 }} />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={state.demo_entry.enabled}
-                onChange={(e) => demoMutation.mutate(e.target.checked)}
-                data-testid="grms-demo-entry"
-              />
-            }
-            label={t('roomControl.access.demoLabel')}
-          />
-          {/* Текст предупреждения — с сервера, дословно. */}
-          <Alert
-            severity={state.demo_entry.enabled ? 'warning' : 'info'}
-            sx={{ mt: 1 }}
-            data-testid="grms-demo-warning"
-          >
-            <AlertTitle>{t('roomControl.access.demoWarningTitle')}</AlertTitle>
-            {state.demo_entry.warning}
-          </Alert>
-        </CardContent>
-      </Card>
-
-      <Card variant="outlined" sx={{ borderColor: 'divider' }}>
-        <CardContent>
           <Typography variant="subtitle1">{t('roomControl.access.pinTitle')}</Typography>
           <Typography variant="caption" color="text.secondary">
             {t('roomControl.access.pinHint')}
           </Typography>
           <Divider sx={{ my: 1.5 }} />
+
+          {/*
+            ПОЧЕМУ ТАБЛИЦА ГАСНЕТ. При включённом демо-входе `room_verified`
+            возвращает true сразу — PIN не спрашивают ни у кого. Заведённый в
+            этот момент код выглядел «активным» и не работал, а признака этого
+            на экране не было ни одного. Гасим ВИД, а не возможность: к показу
+            готовятся заранее, и завести код при включённом послаблении —
+            нормальная работа ресепшена.
+          */}
+          {state.demo_entry.enabled ? (
+            <Alert severity="warning" sx={{ mb: 2 }} data-testid="grms-pin-muted">
+              {t('roomControl.access.pinMuted')}
+            </Alert>
+          ) : null}
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
             <TextField
               size="small"
@@ -146,7 +134,7 @@ export function AccessTab() {
               {t('roomControl.access.noPins')}
             </Typography>
           ) : (
-            <Table size="small">
+            <Table size="small" sx={state.demo_entry.enabled ? { opacity: 0.5 } : undefined}>
               <TableHead>
                 <TableRow>
                   <TableCell>{t('roomControl.builder.room')}</TableCell>
@@ -187,6 +175,66 @@ export function AccessTab() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/*
+        Демо-вход — ОТДЕЛЬНОЙ секцией и ниже PIN’ов, а не первой карточкой.
+        Стоя вплотную над таблицей номеров, переключатель читался как настройка
+        этих номеров; на деле это флаг ВСЕГО отеля — он живёт в
+        `HotelModule.config`, а не у комнаты. Слово «отель» стоит в заголовке, а
+        не только в тексте предупреждения, потому что заголовок читают всегда.
+      */}
+      <Card variant="outlined" sx={{ borderColor: 'divider' }} data-testid="grms-demo-section">
+        <CardContent>
+          <Typography variant="subtitle1">{t('roomControl.access.demoTitle')}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('roomControl.access.demoHint')}
+          </Typography>
+          <Divider sx={{ my: 1.5 }} />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={state.demo_entry.enabled}
+                onChange={(e) => demoMutation.mutate(e.target.checked)}
+                data-testid="grms-demo-entry"
+              />
+            }
+            label={t('roomControl.access.demoLabel')}
+          />
+          {/*
+            Кто и когда трогал. Послабление держится, пока его не выключат, —
+            значит вопрос задают не в день включения, а неделю спустя, и ответ
+            «спросите в журнале платформы» здесь не работает.
+          */}
+          {state.demo_entry.toggled ? (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+              sx={{ mt: 0.5 }}
+              data-testid="grms-demo-toggled"
+            >
+              {t(
+                state.demo_entry.toggled.enabled
+                  ? 'roomControl.access.demoToggledOn'
+                  : 'roomControl.access.demoToggledOff',
+                {
+                  who: state.demo_entry.toggled.by || t('roomControl.access.demoSomeone'),
+                  when: new Date(state.demo_entry.toggled.at).toLocaleString(),
+                },
+              )}
+            </Typography>
+          ) : null}
+          {/* Текст предупреждения — с сервера, дословно. */}
+          <Alert
+            severity={state.demo_entry.enabled ? 'warning' : 'info'}
+            sx={{ mt: 1 }}
+            data-testid="grms-demo-warning"
+          >
+            <AlertTitle>{t('roomControl.access.demoWarningTitle')}</AlertTitle>
+            {state.demo_entry.warning}
+          </Alert>
         </CardContent>
       </Card>
     </Stack>

@@ -57,6 +57,10 @@ def access_state(request: HttpRequest):
         "demo_entry": {
             "enabled": demo_entry_enabled(hotel),
             "warning": DEMO_ENTRY_WARNING,
+            # Послабление живёт, пока его не выключат, — значит вопрос «кто это
+            # включил и когда» задают неделю спустя, и ответ должен быть на
+            # экране, а не в журнале платформы.
+            "toggled": access_svc.last_demo_entry_toggle(hotel),
         },
         "pins": rooms,
     }

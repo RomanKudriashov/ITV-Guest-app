@@ -48,6 +48,38 @@ def set_demo_entry(hotel: Hotel, enabled: bool) -> bool:
     return bool(enabled)
 
 
+def last_demo_entry_toggle(hotel: Hotel) -> dict | None:
+    """
+    Кто и когда последним трогал демо-вход. `None` — не трогали ни разу.
+
+    Читаем из журнала, а не заводим поля на модуле: событие
+    `grms.demo_entry_toggled` пишется с самого начала, и второй источник правды
+    о том же факте разошёлся бы с первым при первой же правке мимо API.
+
+    Имя актора резолвим здесь: экран показывает человека, а `actor_id` — это
+    UUID, который человеку не говорит ничего.
+    """
+    from apps.accounts.models import User
+    from apps.core.models import AuditLog
+
+    entry = (
+        AuditLog.all_objects.filter(hotel_id=hotel.pk, action="grms.demo_entry_toggled")
+        .order_by("-created_at")
+        .first()
+    )
+    if entry is None:
+        return None
+
+    actor = User.all_objects.filter(pk=entry.actor_id).first() if entry.actor_id else None
+    return {
+        "enabled": bool((entry.payload or {}).get("enabled")),
+        "at": entry.created_at.isoformat(),
+        # Удалённый сотрудник не должен превращать запись в пустую строку:
+        # «кто-то из персонала» честнее, чем ничего.
+        "by": (actor.full_name or actor.email) if actor else "",
+    }
+
+
 def list_room_pins(hotel: Hotel) -> list[dict]:
     """У каких номеров заведён PIN. Сам PIN не возвращается никогда — в базе хэш."""
     from apps.core.context import tenant_context

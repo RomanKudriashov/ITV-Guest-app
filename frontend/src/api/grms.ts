@@ -279,7 +279,12 @@ export interface RoomPinRecord {
 }
 
 export interface AccessState {
-  demo_entry: { enabled: boolean; warning: string };
+  demo_entry: {
+    enabled: boolean;
+    warning: string;
+    /** Последнее переключение из журнала. null — не трогали ни разу. */
+    toggled: { enabled: boolean; at: string; by: string } | null;
+  };
   pins: RoomPinRecord[];
 }
 
