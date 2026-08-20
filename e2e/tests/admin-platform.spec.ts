@@ -72,9 +72,23 @@ test.describe('Сводка и флот', () => {
     await page.getByTestId(`admin-fleet-open-${DEMO}`).click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
 
-    await page.getByTestId('admin-hotel-tab-usage').click()
+    // «Использование» и «Тариф» слиты в одну вкладку: вопрос был один.
+    await page.getByTestId('admin-hotel-tab-tariff').click()
     await expect(page.getByTestId('admin-hotel-usage')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('admin-usage-over-services')).toBeVisible()
+
+    // Цифры и выбор тарифа теперь на одном экране — за этим слияние и делалось.
+    await expect(page.getByTestId('admin-tariff-select')).toBeVisible()
+
+    // Старый ключ не ломается: `?tab=usage` приводит на слитую вкладку, а не
+    // на пустой экран. Заодно проверяем, что адрес вообще несёт открытый отель
+    // — до этой правки F5 на карточке возвращал в список.
+    const withUsage = new URL(page.url())
+    withUsage.searchParams.set('tab', 'usage')
+    await page.goto(withUsage.toString())
+    await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('admin-hotel-usage')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('admin-tariff-select')).toBeVisible()
 
     // Поддомен не редактируется — это ключ тенанта, напечатанный на QR.
     await page.getByTestId('admin-hotel-tab-profile').click()

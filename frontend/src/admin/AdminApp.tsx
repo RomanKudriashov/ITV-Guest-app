@@ -131,9 +131,19 @@ function Console({ onLogout }: { onLogout: () => void }) {
   */
   const [searchParams, setSearchParams] = useSearchParams();
   const section = searchParams.get('section') || 'overview';
-  const setSection = (next: string) => {
+  /*
+    ОТКРЫТЫЙ ОТЕЛЬ — ТОЖЕ В АДРЕСЕ, и по той же причине, что раздел.
+
+    Он оставался в `useState`, и «половина состояния» из комментария выше была
+    ровно про него: раздел ссылка несла, а какой отель открыт — нет. F5 на
+    карточке отеля возвращал в список, а послать коллеге «смотри лимиты вот
+    этого» было нечем. Вкладка карточки живёт в том же адресе (см. HotelPage).
+  */
+  const hotelId = searchParams.get('hotel');
+  const setSection = (next: string, keepHotel = false) => {
     const params = new URLSearchParams(searchParams);
     params.set('section', next);
+    if (!keepHotel) params.delete('hotel');
     // Смена раздела сбрасывает чужие фильтры: они относились к прежнему списку
     // и в новом означали бы совсем другое.
     for (const key of ['search', 'action', 'since', 'until', 'status', 'sort']) {
@@ -141,19 +151,27 @@ function Console({ onLogout }: { onLogout: () => void }) {
     }
     setSearchParams(params, { replace: true });
   };
-  const [hotelId, setHotelId] = useState<string | null>(null);
+  const closeHotel = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('hotel');
+    // Вкладка карточки в списке отелей ничего не значит — уносим вместе с ней.
+    params.delete('tab');
+    setSearchParams(params, { replace: true });
+  };
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe, retry: false });
 
   const openHotel = (id: string) => {
-    setHotelId(id);
-    setSection('fleet');
+    const params = new URLSearchParams(searchParams);
+    params.set('section', 'fleet');
+    params.set('hotel', id);
+    setSearchParams(params, { replace: true });
   };
 
   const crumb =
     hotelId && section === 'fleet' ? (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
         <ButtonBase
-          onClick={() => setHotelId(null)}
+          onClick={closeHotel}
           data-testid="admin-crumb-fleet"
           sx={{ ...typo.body, color: accent.soft, fontWeight: 600, borderRadius: 1, px: 0.5 }}
         >
@@ -170,10 +188,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
     <AdminShell
       sections={SECTIONS}
       active={section}
-      onNavigate={(key) => {
-        setSection(key);
-        setHotelId(null);
-      }}
+      onNavigate={(key) => setSection(key)}
       me={me.data ?? null}
       onLogout={onLogout}
       crumb={crumb}
@@ -186,7 +201,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'overview' ? <OverviewPage /> : null}
       {section === 'fleet' && !hotelId ? <FleetPage onOpenHotel={openHotel} /> : null}
       {section === 'fleet' && hotelId ? (
-        <HotelPage id={hotelId} onBack={() => setHotelId(null)} />
+        <HotelPage id={hotelId} onBack={closeHotel} />
       ) : null}
       {section === 'modules' ? <ModulesPage /> : null}
       {section === 'nodes' ? <NodesPage /> : null}

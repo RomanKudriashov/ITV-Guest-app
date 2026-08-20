@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -24,6 +25,7 @@ import {
   getActivity,
   getHotel,
   getModules,
+  getTariffs,
   getUsage,
   patchHotel,
   putModules,
@@ -36,8 +38,26 @@ import {
   type ModuleEntry,
 } from '../adminClient';
 
-const TABS = ['profile', 'usage', 'modules', 'activity', 'support', 'tariff', 'data'] as const;
+const TABS = ['profile', 'tariff', 'modules', 'activity', 'support', 'data'] as const;
 type Tab = (typeof TABS)[number];
+
+/**
+ * Прежние ключи вкладок, которые больше не рисуются сами по себе.
+ *
+ * «Использование» и «Тариф» отвечали на ОДИН вопрос — «что у отеля сейчас и
+ * хватает ли ему» — и были разрезаны ровно посередине: предупреждение о
+ * даунгрейде жило на одной вкладке, а цифры, по которым его можно проверить, —
+ * на другой. Слиты в «Тариф и лимиты».
+ *
+ * Ключ `usage` остаётся живым АДРЕСОМ: тот, кто просит его (закладка, тест,
+ * чужая ссылка), попадает на слитую вкладку, а не на пустой экран.
+ */
+const TAB_ALIASES: Record<string, Tab> = { usage: 'tariff' };
+
+function resolveTab(key: string): Tab {
+  if ((TABS as readonly string[]).includes(key)) return key as Tab;
+  return TAB_ALIASES[key] ?? 'profile';
+}
 
 /**
  * Карточка отеля — на вкладках, а не одним свитком.
@@ -49,7 +69,22 @@ type Tab = (typeof TABS)[number];
  */
 export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>('profile');
+  /*
+    ВКЛАДКА ЖИВЁТ В АДРЕСЕ — там же, где раздел консоли и открытый отель.
+
+    Раньше она была чистым локальным состоянием: ссылка вида `?tab=…` не
+    работала вовсе, а F5 возвращал на «Профиль». Раз уж ключи вкладок стали
+    публичными (у `usage` теперь есть псевдоним), адрес обязан их нести —
+    иначе обещание «старая ссылка не сломается» не о чем.
+  */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = resolveTab(searchParams.get('tab') ?? '');
+  const setTab = (key: Tab) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', key);
+    // replace, а не push: вкладка — это место на экране, а не шаг назад.
+    setSearchParams(params, { replace: true });
+  };
   const [entering, setEntering] = useState(false);
   const profile = useQuery({ queryKey: ['admin', 'hotel', id], queryFn: () => getHotel(id) });
 
@@ -123,7 +158,6 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
 
       <Box sx={{ mt: 2.25 }}>
         {tab === 'profile' ? <ProfileTab hotel={hotel} /> : null}
-        {tab === 'usage' ? <UsageTab id={id} /> : null}
         {tab === 'modules' ? <ModulesTab id={id} /> : null}
         {tab === 'activity' ? <ActivityTab id={id} /> : null}
         {tab === 'support' ? <SupportSessionsPage hotelId={id} /> : null}
@@ -499,71 +533,6 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   );
 }
 
-/* ── Использование и лимиты ─────────────────────────────────────────────── */
-
-function UsageTab({ id }: { id: string }) {
-  const { t, i18n } = useTranslation();
-  const usage = useQuery({ queryKey: ['admin', 'usage', id], queryFn: () => getUsage(id) });
-  if (usage.isPending || usage.isError || usage.data === undefined) {
-    return (
-      <QueryState query={usage} what={t('state.what.usage')}>
-        {() => null}
-      </QueryState>
-    );
-  }
-  const data = usage.data;
-
-  return (
-    <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-usage">
-      <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
-        {data.tariff_title[i18n.language] ?? data.tariff_title.en ?? data.tariff}
-      </Typography>
-      {data.is_trial && data.trial_days_left !== null ? (
-        <Typography sx={{ ...typo.caption, color: state.warn, mt: 0.5 }} data-testid="admin-hotel-trial">
-          {t('admin.hotel.trialLeft', { days: data.trial_days_left })}
-        </Typography>
-      ) : null}
-
-      <Box sx={{ mt: 2 }}>
-        {data.rows.map((row) => (
-          <Box key={row.key} sx={{ py: 1.25, borderBottom: `1px solid ${surface.hair}` }}
-            data-testid={`admin-usage-${row.key}`}>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-              <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
-                {t(`admin.hotel.limit.${row.key}`)}
-              </Typography>
-              <Typography sx={{ ...typo.body, fontWeight: 700, color: row.over ? state.bad : ink.hi }}>
-                {row.used}
-                {row.limit === null ? ` / ${t('admin.hotel.limit.none')}` : ` / ${row.limit}`}
-              </Typography>
-            </Box>
-            {row.limit !== null ? (
-              <Box sx={{ mt: 0.75, height: 5, borderRadius: 999, bgcolor: surface.s3, overflow: 'hidden' }}>
-                <Box
-                  sx={{
-                    width: `${Math.min(100, Math.round((row.ratio ?? 0) * 100))}%`,
-                    height: '100%',
-                    bgcolor: row.over ? state.bad : accent.main,
-                  }}
-                />
-              </Box>
-            ) : null}
-            {row.over ? (
-              <Typography sx={{ ...typo.caption, color: state.bad, mt: 0.6 }}
-                data-testid={`admin-usage-over-${row.key}`}>
-                {t('admin.hotel.limitOver', { used: row.used, limit: row.limit })}
-              </Typography>
-            ) : null}
-          </Box>
-        ))}
-      </Box>
-      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.75 }}>
-        {t('admin.hotel.limitHint')}
-      </Typography>
-    </Box>
-  );
-}
-
 /* ── Модули ─────────────────────────────────────────────────────────────── */
 
 function ModulesTab({ id }: { id: string }) {
@@ -693,14 +662,30 @@ function ActivityTab({ id }: { id: string }) {
   );
 }
 
-/* ── Тариф ──────────────────────────────────────────────────────────────── */
+/* ── Тариф и лимиты ─────────────────────────────────────────────────────── */
 
-const TARIFF_CODES = ['standard', 'business', 'resort', 'trial'];
-
+/**
+ * Тариф и лимиты — ОДНА вкладка, потому что вопрос один.
+ *
+ * Было две: «Использование» показывало, сколько отель израсходовал, «Тариф» —
+ * на чём он сидит и как это сменить. Обе кормились ОДНИМ запросом `getUsage`, и
+ * название тарифа было выведено дважды из одного поля. Разрез проходил ровно по
+ * живому: предупреждение «не влезет в лимит комнат» жило на одной вкладке, а
+ * число 42, по которому его можно проверить, — на другой.
+ *
+ * Предупреждение теперь не отдельная жёлтая плашка, а ВТОРОЕ ЧИСЛО на той же
+ * строке: «комнаты 42 / 30 — не влезает». Считается на клиенте по сетке
+ * тарифов, поэтому видно ДО нажатия, а не после ответа сервера. Ответ сервера
+ * при этом остаётся истиной: если он вернул предупреждения, показываем их —
+ * сетка на клиенте могла отстать от той, что на сервере.
+ */
 function TariffTab({ id }: { id: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const usage = useQuery({ queryKey: ['admin', 'usage', id], queryFn: () => getUsage(id) });
+  // Сетка тарифов — ради лимитов ВЫБРАННОГО тарифа. Без неё «не влезает» можно
+  // было узнать только у сервера и только после нажатия.
+  const grid = useQuery({ queryKey: ['admin', 'tariffs'], queryFn: getTariffs });
   const [next, setNext] = useState<string>('');
   const [warnings, setWarnings] = useState<DowngradeWarning[]>([]);
 
@@ -710,6 +695,7 @@ function TariffTab({ id }: { id: string }) {
     onSuccess: (result) => {
       setWarnings(result.warnings ?? []);
       if (result.ok) {
+        setNext('');
         void qc.invalidateQueries({ queryKey: ['admin', 'usage', id] });
         void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
         void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
@@ -725,79 +711,197 @@ function TariffTab({ id }: { id: string }) {
     );
   }
 
-  return (
-    <Box sx={{ ...panelSx, maxWidth: 560 }} data-testid="admin-hotel-tariff">
-      <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
-        {t('admin.hotel.tariffHint')}
-      </Typography>
-      <TextField
-        select
-        size="small"
-        fullWidth
-        label={t('admin.hotel.tariffLabel')}
-        value={next || usage.data.tariff}
-        onChange={(e) => {
-          setNext(e.target.value);
-          setWarnings([]);
-        }}
-        SelectProps={{ inputProps: { 'data-testid': 'admin-tariff-select' } }}
-      >
-        {TARIFF_CODES.map((code) => (
-          <MenuItem key={code} value={code} data-testid={`admin-tariff-option-${code}`}>
-            {code}
-          </MenuItem>
-        ))}
-      </TextField>
+  const data = usage.data;
+  const codes = (grid.data ?? []).map((row) => row.code);
+  const selected = next || data.tariff;
+  // Пока сетка не приехала — предпросмотра нет, но выбор и цифры уже работают.
+  const preview =
+    next && next !== data.tariff
+      ? (grid.data ?? []).find((row) => row.code === next) ?? null
+      : null;
 
-      {usage.data.trial_ends_at ? (
-        <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.25 }}>
-          {t('admin.hotel.trialEnds', { date: usage.data.trial_ends_at })}
+  return (
+    <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-tariff">
+      <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
+        {data.tariff_title[i18n.language] ?? data.tariff_title.en ?? data.tariff}
+      </Typography>
+      {data.is_trial && data.trial_days_left !== null ? (
+        <Typography sx={{ ...typo.caption, color: state.warn, mt: 0.5 }} data-testid="admin-hotel-trial">
+          {t('admin.hotel.trialLeft', { days: data.trial_days_left })}
         </Typography>
       ) : null}
 
-      {warnings.length ? (
-        <Alert severity="warning" sx={{ mt: 1.75 }} data-testid="admin-tariff-warning">
-          <Typography sx={{ ...typo.caption, fontWeight: 700 }}>
-            {t('admin.hotel.downgradeTitle')}
-          </Typography>
-          {warnings.map((warning) => (
-            <Typography key={warning.key} sx={{ ...typo.caption }}>
-              {warning.modules
-                ? t('admin.hotel.downgradeModules', { modules: warning.modules.join(', ') })
-                : t('admin.hotel.downgradeLimit', {
-                    what: t(`admin.hotel.limit.${warning.key}`),
-                    used: warning.used,
-                    limit: warning.limit,
-                  })}
-            </Typography>
-          ))}
-        </Alert>
-      ) : null}
-
-      <Box sx={{ display: 'flex', gap: 1, mt: 1.75 }}>
-        <Button
-          onClick={() => apply.mutate(false)}
-          disabled={apply.isPending}
-          data-testid="admin-tariff-apply"
-          sx={primaryButtonSx}
-        >
-          {t('admin.hotel.tariffApply')}
-        </Button>
-        {warnings.length ? (
-          <Button
-            onClick={() => apply.mutate(true)}
-            disabled={apply.isPending}
-            data-testid="admin-tariff-force"
-            sx={{ color: state.warn, border: `1px solid ${state.warn}55` }}
-          >
-            {t('admin.hotel.tariffForce')}
-          </Button>
-        ) : null}
+      {/* Цифры — сразу под именем тарифа: это и есть ответ на «хватает ли». */}
+      <Box sx={{ mt: 2 }} data-testid="admin-hotel-usage">
+        {data.rows.map((row) => {
+          const nextLimit = preview ? preview.limits[row.key] ?? null : undefined;
+          const willNotFit = nextLimit !== undefined && nextLimit !== null && row.used > nextLimit;
+          return (
+            <Box key={row.key} sx={{ py: 1.25, borderBottom: `1px solid ${surface.hair}` }}
+              data-testid={`admin-usage-${row.key}`}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+                <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
+                  {t(`admin.hotel.limit.${row.key}`)}
+                </Typography>
+                <Typography
+                  sx={{
+                    ...typo.body,
+                    fontWeight: 700,
+                    color: row.over || willNotFit ? state.bad : ink.hi,
+                  }}
+                >
+                  {row.used}
+                  {/*
+                    При выбранном другом тарифе делитель — ЕГО лимит, а не
+                    сегодняшний: человек смотрит на «что будет», и показывать
+                    ему при этом старое число значит заставлять считать в уме.
+                  */}
+                  {nextLimit !== undefined
+                    ? nextLimit === null
+                      ? ` / ${t('admin.hotel.limit.none')}`
+                      : ` / ${nextLimit}`
+                    : row.limit === null
+                      ? ` / ${t('admin.hotel.limit.none')}`
+                      : ` / ${row.limit}`}
+                </Typography>
+              </Box>
+              {row.limit !== null ? (
+                <Box sx={{ mt: 0.75, height: 5, borderRadius: 999, bgcolor: surface.s3, overflow: 'hidden' }}>
+                  <Box
+                    sx={{
+                      width: `${Math.min(100, Math.round((row.ratio ?? 0) * 100))}%`,
+                      height: '100%',
+                      bgcolor: row.over || willNotFit ? state.bad : accent.main,
+                    }}
+                  />
+                </Box>
+              ) : null}
+              {willNotFit ? (
+                <Typography sx={{ ...typo.caption, color: state.bad, mt: 0.6 }}
+                  data-testid={`admin-usage-wont-fit-${row.key}`}>
+                  {t('admin.hotel.limitWontFit')}
+                </Typography>
+              ) : row.over ? (
+                <Typography sx={{ ...typo.caption, color: state.bad, mt: 0.6 }}
+                  data-testid={`admin-usage-over-${row.key}`}>
+                  {t('admin.hotel.limitOver', { used: row.used, limit: row.limit })}
+                </Typography>
+              ) : null}
+            </Box>
+          );
+        })}
       </Box>
-      <Typography sx={{ ...typo.caption, color: ink.low, mt: 1.5 }}>
-        {t('admin.hotel.tariffNoMoney')}
+      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.75 }}>
+        {t('admin.hotel.limitHint')}
       </Typography>
+
+      <Box sx={{ mt: 2.75, pt: 2.25, borderTop: `1px solid ${surface.line}` }}>
+        <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
+          {t('admin.hotel.tariffHint')}
+        </Typography>
+        <TextField
+          select
+          size="small"
+          fullWidth
+          label={t('admin.hotel.tariffLabel')}
+          value={codes.includes(selected) ? selected : ''}
+          onChange={(e) => {
+            setNext(e.target.value);
+            setWarnings([]);
+          }}
+          SelectProps={{ inputProps: { 'data-testid': 'admin-tariff-select' } }}
+          sx={{ maxWidth: 320 }}
+        >
+          {(grid.data ?? []).map((row) => (
+            <MenuItem key={row.code} value={row.code} data-testid={`admin-tariff-option-${row.code}`}>
+              {row.title[i18n.language] ?? row.title.en ?? row.code}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        {data.trial_ends_at ? (
+          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.25 }}>
+            {t('admin.hotel.trialEnds', { date: data.trial_ends_at })}
+          </Typography>
+        ) : null}
+
+        {/*
+          Модули из плашки не выгнать: они не имеют строки с числом, к которой
+          можно было бы прицепить подсветку. Зато список поимённый и приходит
+          ДО нажатия — из сетки тарифов, а не из ответа сервера.
+        */}
+        {preview ? (
+          <ModuleLoss hotelId={id} nextModules={preview.modules} />
+        ) : null}
+
+        {warnings.filter((warning) => warning.modules).map((warning) => (
+          <Typography
+            key={warning.key}
+            sx={{ ...typo.caption, color: state.warn, mt: 1 }}
+            data-testid="admin-tariff-warning"
+          >
+            {t('admin.hotel.downgradeModules', { modules: warning.modules!.join(', ') })}
+          </Typography>
+        ))}
+
+        <Box sx={{ display: 'flex', gap: 1, mt: 1.75 }}>
+          <Button
+            onClick={() => apply.mutate(false)}
+            disabled={apply.isPending}
+            data-testid="admin-tariff-apply"
+            sx={primaryButtonSx}
+          >
+            {t('admin.hotel.tariffApply')}
+          </Button>
+          {warnings.length ? (
+            <Button
+              onClick={() => apply.mutate(true)}
+              disabled={apply.isPending}
+              data-testid="admin-tariff-force"
+              sx={{ color: state.warn, border: `1px solid ${state.warn}55` }}
+            >
+              {t('admin.hotel.tariffForce')}
+            </Button>
+          ) : null}
+        </Box>
+        <Typography sx={{ ...typo.caption, color: ink.low, mt: 1.5 }}>
+          {t('admin.hotel.tariffNoMoney')}
+        </Typography>
+      </Box>
     </Box>
+  );
+}
+
+/**
+ * Какие модули отель ПОТЕРЯЕТ на выбранном тарифе — поимённо и до нажатия.
+ *
+ * Сравниваем включённое сейчас с тем, что даёт новый тариф. Ручное «включено
+ * сверх тарифа» здесь тоже учитывается: именно оно гаснет громче всего, потому
+ * что его включали осознанно.
+ */
+function ModuleLoss({ hotelId, nextModules }: { hotelId: string; nextModules: string[] }) {
+  const { t, i18n } = useTranslation();
+  const modules = useQuery({
+    queryKey: ['admin', 'modules', hotelId],
+    queryFn: () => getModules(hotelId),
+  });
+  if (!modules.data) return null;
+
+  const granted = new Set(nextModules);
+  // Название модуля приезжает с сервера переведённым — второго словаря на
+  // клиенте заводить нечего, он разошёлся бы с первым.
+  const lost = modules.data.modules
+    .filter((entry) => entry.is_enabled && !granted.has(entry.code))
+    .map((entry) => entry.title[i18n.language] ?? entry.title.en ?? entry.code);
+  if (!lost.length) return null;
+
+  return (
+    <Typography
+      sx={{ ...typo.caption, color: state.warn, mt: 1.25 }}
+      data-testid="admin-tariff-module-loss"
+    >
+      {t('admin.hotel.downgradeModules', { modules: lost.join(', ') })}
+    </Typography>
   );
 }
 
