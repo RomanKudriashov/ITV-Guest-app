@@ -331,6 +331,35 @@ export interface CartQuote {
   shortfall_minor: number;
   /** Percentage tip presets, e.g. `[5, 10, 15]`. */
   tip_presets: number[];
+  /**
+   * Построчная правда СЕРВЕРА: живая цена и доступность каждой строки.
+   *
+   * Витрина показывала цену из снимка, сделанного при добавлении, и о
+   * недоступности не знала вовсе. Считает и решает сервер — тот же расчёт, что
+   * запирает оформление, поэтому экран и оформление не могут разойтись.
+   */
+  lines: QuoteLine[];
+  /** Хоть одна строка недоступна — оформление заперто. */
+  has_unavailable: boolean;
+}
+
+export type QuoteUnavailableReason =
+  | 'out_of_stock'
+  | 'inactive'
+  | 'schedule'
+  | 'category_unavailable'
+  | 'not_found';
+
+export interface QuoteLine {
+  item_id: string;
+  title: string;
+  /** `null` — у позиции нет цены (заявка заполняется формой). */
+  unit_price_minor: number | null;
+  line_total_minor: number | null;
+  is_available: boolean;
+  unavailable_reason: QuoteUnavailableReason | null;
+  /** Для причины `schedule` — с какого времени снова можно. */
+  available_from: string | null;
 }
 
 /** Server-computed charge breakdown carried by a serialized order. */

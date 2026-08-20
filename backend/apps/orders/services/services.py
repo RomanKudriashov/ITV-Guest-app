@@ -268,17 +268,48 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
     """
     Предпросчёт корзины БЕЗ создания заказа: суммы, минимум, блокировка. Витрина
     показывает строки и «добавьте ещё N» до оформления, ничего не создавая.
+
+    КОТИРОВКА ТЕРПИМА, ОФОРМЛЕНИЕ СТРОГО — и это не поблажка, а разделение
+    вопросов. Котировку спрашивают, чтобы УЗНАТЬ положение дел; отказ на весь
+    запрос был бы ответом «не скажу»: раньше одна позиция, ушедшая в стоп-лист,
+    роняла расчёт целиком, и гость видел ошибку вместо корзины — без единого
+    намёка, какая из строк виновата. Теперь недоступные строки помечаются и
+    выпадают из сумм, а `create_order` по-прежнему отказывает: узнать — можно,
+    заказать — нет.
+
+    Построчные суммы возвращаются оттуда же, откуда берётся итог. Витрина
+    показывала цену из СНИМКА, сделанного при добавлении: подорожавшее блюдо
+    стояло со старой ценой, а в итоге считалось по новой. Заодно это чинит и
+    модификаторы — их надбавки были заморожены так же.
     """
     from apps.orders.services.charges import compute_charges, minimum_order_minor, resolve_tip_minor
 
     hotel_id = require_hotel_id()
     hotel = Hotel.objects.get(pk=hotel_id)
 
+    from apps.catalog.services.availability import item_availability
+
     aggregator = _resolve_cart_service(data)
     priced_lines: list[tuple[int, bool]] = []
     categories = set()
+    quoted_lines: list[dict[str, Any]] = []
     for line in data.lines:
-        item = _resolve_item(line)
+        item = _resolve_quotable_item(line)
+        if item is None:
+            # Позиции больше нет вовсе — удалили из каталога, пока она лежала в
+            # корзине. Для гостя это тот же случай «нельзя заказать», и молчать
+            # о нём нельзя: строка на экране есть.
+            quoted_lines.append({
+                "item_id": str(line.item_id),
+                "title": "",
+                "unit_price_minor": None,
+                "line_total_minor": None,
+                "is_available": False,
+                "unavailable_reason": "not_found",
+                "available_from": None,
+            })
+            continue
+
         behaviour = behaviour_for(item.type)
         options = _validate_modifiers(item, line.modifier_option_ids) if behaviour.uses_modifiers else []
         inclusion = None
@@ -289,7 +320,21 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         base_price = item.price if inclusion is None else inclusion.apply_markup(item.price)
         unit_price = None if base_price is None else base_price + sum(o.price_delta for o in options)
         line_total = None if unit_price is None else unit_price * line.quantity
-        if line_total is not None:
+
+        state = item_availability(item)
+        quoted_lines.append({
+            "item_id": str(item.pk),
+            "title": item.title_i18n,
+            "unit_price_minor": unit_price,
+            "line_total_minor": line_total,
+            "is_available": bool(state.is_available),
+            "unavailable_reason": None if state.is_available else state.reason,
+            "available_from": state.available_from,
+        })
+
+        # НЕДОСТУПНОЕ НЕ СЧИТАЕТСЯ. Иначе итог обещал бы сумму, которую нельзя
+        # оплатить, и «до минимума не хватает N» считалось бы от неё же.
+        if line_total is not None and state.is_available:
             priced_lines.append((line_total, bool(getattr(item.category, "service_fee_applies", True))))
             categories.add(item.category)
 
@@ -315,7 +360,27 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         "below_minimum": bool(minimum and subtotal < minimum),
         "shortfall_minor": max(minimum - subtotal, 0) if minimum else 0,
         "tip_presets": list(hotel.tip_presets or []),
+        "lines": quoted_lines,
+        # Отдельным флагом, а не поиском по строкам: витрина запирает кнопку
+        # оформления, и решение об этом принимает сервер, а не подсчёт на клиенте.
+        "has_unavailable": any(not entry["is_available"] for entry in quoted_lines),
     }
+
+
+def _resolve_quotable_item(line: OrderLineInput):
+    """
+    Позиция для КОТИРОВКИ: без отказа, если её нельзя заказать.
+
+    `_resolve_item` бросает — он для оформления. Здесь нужен ответ «вот она и
+    вот её состояние», поэтому доступность не проверяется: её считает и
+    возвращает вызывающий.
+    """
+    return (
+        Item.objects.select_related("category", "schedule", "category__schedule")
+        .prefetch_related("modifier_groups__options", "request_fields")
+        .filter(pk=line.item_id)
+        .first()
+    )
 
 
 def _finalize_created_order(order, hotel_id, guest_session, status):

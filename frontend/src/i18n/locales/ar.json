@@ -508,7 +508,17 @@
       "toMenu": "إلى القائمة",
       "barAdded": "تمت الإضافة",
       "openWithCount": "السلة، {{count}} عنصرًا",
-      "open": "السلة"
+      "open": "السلة",
+      "priceChanged": "تغيّر السعر: كان {{was}} — أصبح {{now}}",
+      "removeUnavailable": "إزالة من السلة",
+      "unavailable": {
+        "out_of_stock": "غير متاح: نفد",
+        "inactive": "غير متاح: أُزيل من القائمة",
+        "schedule": "غير متاح الآن — يُقدَّم من {{from}}",
+        "category_unavailable": "غير متاح: القسم مغلق الآن",
+        "not_found": "غير متاح: لم يعد هذا العنصر موجودًا"
+      },
+      "hasUnavailable": "أزل العناصر غير المتاحة — لا يمكن إتمام الطلب معها."
     },
     "confirmation": {
       "title": "تم استلام الطلب",

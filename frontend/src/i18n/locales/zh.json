@@ -498,7 +498,17 @@
       "toMenu": "去菜单",
       "barAdded": "已添加",
       "openWithCount": "购物车，{{count}} 件",
-      "open": "购物车"
+      "open": "购物车",
+      "priceChanged": "价格已变：原 {{was}} — 现 {{now}}",
+      "removeUnavailable": "从购物车移除",
+      "unavailable": {
+        "out_of_stock": "不可用：已售完",
+        "inactive": "不可用：已下架",
+        "schedule": "当前不可用 — {{from}} 起供应",
+        "category_unavailable": "不可用：该分区当前已关闭",
+        "not_found": "不可用：该条目已不存在"
+      },
+      "hasUnavailable": "请移除不可用的条目 — 保留它们无法下单。"
     },
     "confirmation": {
       "title": "订单已收到",

@@ -38,7 +38,7 @@ import { useGuestSession } from '../session/GuestSessionProvider';
 import { useCart } from '../state/cart';
 import { useDraftState } from '@/state/useDraftState';
 import { fetchCatalog } from '../api/guest';
-import type { CreateOrderPayload, OrderTiming } from '../api/types';
+import type { CreateOrderPayload, OrderTiming, QuoteLine } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
 
 /** How the guest set the tip: none, a percentage preset, or a custom amount. */
@@ -123,6 +123,8 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   const liveImage = (line: { item_id: string; image_url: string | null }): string | null =>
     liveById.get(line.item_id) ?? line.image_url;
 
+
+
   // Checkout form — local draft state, never overwritten by a background refetch
   // of the locations list. Re-seeded only when the locations set itself changes.
   const [draft, setDraft] = useDraftState<CheckoutDraft>(
@@ -191,6 +193,20 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   });
   const quoteQuery = useCartQuote(payload, quoteSignature, !cart.isEmpty && canOrder);
   const quote = quoteQuery.data;
+
+  /*
+    ПРАВДА ПРО СТРОКУ — С СЕРВЕРА, из той же котировки, что считает итог.
+
+    Не из каталога и не из снимка: котировка запирает оформление тем же
+    расчётом, и брать состояние откуда-то ещё значило бы завести второе мнение,
+    которое рано или поздно разойдётся с первым. Пока котировка не приехала,
+    строка показывается по снимку — так же, как и раньше.
+  */
+  const quoteByItem = useMemo(() => {
+    const map = new Map<string, QuoteLine>();
+    for (const entry of quote?.lines ?? []) map.set(entry.item_id, entry);
+    return map;
+  }, [quote]);
   const belowMinimum = Boolean(quote?.below_minimum);
 
   // The same checkout the request form uses — one endpoint, one idempotency
@@ -241,7 +257,19 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
       fullWidth
       size="large"
       variant="contained"
-      disabled={!canOrder || isPending || !locations.length || belowMinimum || quoteQuery.isLoading}
+      /*
+        Недоступная позиция ЗАПИРАЕТ оформление. Решение принимает сервер тем
+        же расчётом, который потом откажет при создании заказа, — поэтому
+        кнопка и ручка не могут разойтись во мнениях.
+      */
+      disabled={
+        !canOrder ||
+        isPending ||
+        !locations.length ||
+        belowMinimum ||
+        quoteQuery.isLoading ||
+        Boolean(quote?.has_unavailable)
+      }
       onClick={submit}
       data-testid="guest-place-order"
       sx={[ctaGradientSx, { minHeight: 52 }]}
@@ -290,9 +318,59 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                         {t('guest.item.comment')}: {line.comment}
                       </Typography>
                     ) : null}
-                    <Typography variant="body2">
-                      {format(line.unit_price * line.quantity)}
-                    </Typography>
+                    {(() => {
+                      const live = quoteByItem.get(line.item_id);
+                      const livePrice = live?.unit_price_minor ?? null;
+                      // Цена в снимке заморожена при добавлении. Показываем
+                      // живую, а разницу — словами: молча подменить число
+                      // значит поменять сумму у гостя за спиной.
+                      const changed = livePrice !== null && livePrice !== line.unit_price;
+                      const shown = livePrice ?? line.unit_price;
+                      return (
+                        <>
+                          <Typography variant="body2">
+                            {format(shown * line.quantity)}
+                          </Typography>
+                          {changed ? (
+                            <Typography
+                              variant="caption"
+                              color="warning.main"
+                              data-testid={`guest-cart-price-changed-${line.item_code}`}
+                            >
+                              {t('guest.cart.priceChanged', {
+                                was: format(line.unit_price),
+                                now: format(shown),
+                              })}
+                            </Typography>
+                          ) : null}
+                          {live && !live.is_available ? (
+                            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                              <Typography
+                                variant="caption"
+                                color="error.main"
+                                data-testid={`guest-cart-unavailable-${line.item_code}`}
+                              >
+                                {t(`guest.cart.unavailable.${live.unavailable_reason ?? 'inactive'}`, {
+                                  defaultValue: t('guest.cart.unavailable.inactive'),
+                                  from: live.available_from ?? '',
+                                })}
+                              </Typography>
+                              {/* Гость должен понимать, ЧТО ДЕЛАТЬ: кнопка рядом. */}
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                onClick={() => cart.removeLine(line.uid)}
+                                data-testid={`guest-cart-drop-${line.item_code}`}
+                                sx={{ alignSelf: 'flex-start' }}
+                              >
+                                {t('guest.cart.removeUnavailable')}
+                              </Button>
+                            </Stack>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <QuantityStepper
                         size="small"

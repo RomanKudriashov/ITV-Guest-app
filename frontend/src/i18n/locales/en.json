@@ -500,7 +500,17 @@
       "toMenu": "To the menu",
       "barAdded": "Added",
       "openWithCount": "Cart, {{count}} items",
-      "open": "Cart"
+      "open": "Cart",
+      "priceChanged": "Price changed: was {{was}} — now {{now}}",
+      "removeUnavailable": "Remove from the cart",
+      "unavailable": {
+        "out_of_stock": "Unavailable: ran out",
+        "inactive": "Unavailable: taken off the menu",
+        "schedule": "Unavailable now — served from {{from}}",
+        "category_unavailable": "Unavailable: the section is closed right now",
+        "not_found": "Unavailable: the item is gone"
+      },
+      "hasUnavailable": "Remove the unavailable items — the order cannot be placed with them."
     },
     "confirmation": {
       "title": "Order received",
