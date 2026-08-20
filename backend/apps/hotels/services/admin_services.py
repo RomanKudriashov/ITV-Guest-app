@@ -662,6 +662,13 @@ def update_service(service_id, data: dict) -> Service:
         if not public_name:
             raise ValidationError("Заполните название заведения", field="public_name")
         service.public_name = public_name
+        # Служебное имя бригады едет за гостевым. Пока связь 1:1, отдельного
+        # имени у исполнителя нет и быть не может: заводится оно копией с
+        # гостевого (см. create_service), а редактора у него нет ни одного.
+        # Без этой строки переименование разводило витрину и всё остальное:
+        # гость видел новое имя, а трекер, эскалации, привязки каналов, слоты
+        # и аналитика — старое, и разъезд не лечился ничем, кроме SQL.
+        point.title = dict(public_name)
     if "tagline" in data:
         service.tagline = _clean_translations(data["tagline"], field="tagline")
     if "is_guest_facing" in data and data["is_guest_facing"] is not None:
