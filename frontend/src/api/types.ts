@@ -26,6 +26,14 @@ export type Translated = Record<string, string>;
 export type MediaKind = 'item' | 'category' | 'brand';
 export type MediaStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
+/** Рамка кадра в ДОЛЯХ оригинала (0..1) — не в пикселях. */
+export interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface MediaAsset {
   id: string;
   url: string;
@@ -33,6 +41,11 @@ export interface MediaAsset {
   status: MediaStatus;
   original_filename?: string;
   sort_order?: number;
+  /** Исходник без кадрирования — только для редактора кадра. */
+  original_url?: string;
+  /** Выбранная рамка. null — кадр не выбирали, картинка идёт целиком. */
+  crop?: CropRect | null;
+  crop_ratio?: number | null;
 }
 
 export interface StaffUser {

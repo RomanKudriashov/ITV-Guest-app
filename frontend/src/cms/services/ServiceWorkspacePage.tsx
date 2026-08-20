@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import {
+  ImageUploader,
+  mediaToEditable,
+  type EditableImage,
+} from '@/components/ImageUploader';
+import type { MediaAsset } from '@/api/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -205,7 +211,62 @@ function ScheduleTab({ service }: { service: CmsService }) {
         }
         label={t('services.guestFacing')}
       />
+
+      {/*
+        ФОТО ЗАВЕДЕНИЯ. Поле было в модели, бэкенд его принимал, гость показывал
+        — а загрузить было негде: интерфейса не существовало вовсе, и картинка
+        ставилась только запросом мимо CMS.
+      */}
+      <Box>
+        <Typography variant="subtitle2">{t('services.photo')}</Typography>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+          {t('media.where.venue')}
+        </Typography>
+        <ServicePhotoField
+          image={service.image}
+          onChange={(id) => save.mutate({ image_id: id })}
+        />
+      </Box>
     </Stack>
+  );
+}
+
+/**
+ * Мост между массивным `ImageUploader` и одиночным `image_id` заведения.
+ *
+ * Тот же путь загрузки и тот же кроппер, что у позиции и категории: пятый
+ * способ грузить картинку завёл бы пятый набор краевых случаев.
+ */
+function ServicePhotoField({
+  image,
+  onChange,
+}: {
+  image: MediaAsset | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [images, setImages] = useState<EditableImage[]>(() =>
+    image ? [mediaToEditable(image)] : [],
+  );
+  const lastEmitted = useRef<string | null>(image?.id ?? null);
+
+  useEffect(() => {
+    const ready = images.find((entry) => !entry.error && !entry.id.startsWith('tmp:'));
+    const next = ready?.id ?? null;
+    if (next !== lastEmitted.current) {
+      lastEmitted.current = next;
+      onChange(next);
+    }
+  }, [images, onChange]);
+
+  return (
+    <ImageUploader
+      value={images}
+      onChange={setImages}
+      kind="item"
+      multiple={false}
+      surface="venue"
+      testId="service-photo"
+    />
   );
 }
 

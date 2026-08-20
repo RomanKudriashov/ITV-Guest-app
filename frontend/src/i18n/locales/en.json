@@ -212,7 +212,23 @@
     "tooLarge": "The file is larger than 10 MB",
     "uploadFailed": "Upload failed",
     "processingFailed": "Image processing failed",
-    "processingTimeout": "Image processing is taking too long"
+    "processingTimeout": "Image processing is taking too long",
+    "where": {
+      "hotelCover": "Storefront header: hotel name, clock and weather sit on top. On a wide screen only the central strip is visible.",
+      "homeTile": "Tile on the main storefront.",
+      "categoryCover": "The frame in a section header. On a wide screen only the central strip is visible.",
+      "venue": "Venue tile in the list and the header inside it.",
+      "item": "The dish card and the card in the list.",
+      "logo": "The logo in the guest header. Cropping trims the padding around the mark, it does not fit it into a format.",
+      "background": "Background behind the whole storefront. On a wide screen only the central strip is visible."
+    },
+    "crop": {
+      "title": "Frame",
+      "apply": "Apply frame",
+      "open": "Choose the frame",
+      "zoom": "Zoom",
+      "safeHint": "The dashed box is what stays visible on a wide screen. Everything outside it is cut off there."
+    }
   },
   "modifiers": {
     "title": "Modifier groups",
@@ -1557,7 +1573,8 @@
       "freeDeliveryHint": "Empty — as hotel"
     },
     "archive_one": "Disabled · {{count}}",
-    "archive_other": "Disabled · {{count}}"
+    "archive_other": "Disabled · {{count}}",
+    "photo": "Venue photo"
   },
   "inclusions": {
     "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",

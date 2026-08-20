@@ -211,7 +211,23 @@
     "tooLarge": "文件超过 10 MB",
     "uploadFailed": "上传失败",
     "processingFailed": "图片处理失败",
-    "processingTimeout": "图片处理时间过长"
+    "processingTimeout": "图片处理时间过长",
+    "where": {
+      "hotelCover": "门店页头图：酒店名称、时钟和天气叠加其上。宽屏上只能看到中间一条。",
+      "homeTile": "首页展示卡片。",
+      "categoryCover": "分区页头的图片。宽屏上只能看到中间一条。",
+      "venue": "列表中的场所卡片以及场所内的页头。",
+      "item": "菜品卡片，以及列表中的卡片。",
+      "logo": "客人页头中的标志。裁剪用于去掉标志周围的留白，而不是把它塞进某个比例。",
+      "background": "整个门店页面的背景。宽屏上只能看到中间一条。"
+    },
+    "crop": {
+      "title": "取景",
+      "apply": "应用取景",
+      "open": "选择取景",
+      "zoom": "缩放",
+      "safeHint": "虚线框内是宽屏上仍可见的部分，框外在宽屏上会被裁掉。"
+    }
   },
   "modifiers": {
     "title": "加料分组",
@@ -1552,7 +1568,8 @@
       "freeDelivery": "免配送门槛",
       "freeDeliveryHint": "留空即同酒店"
     },
-    "archive_other": "已停用 · {{count}}"
+    "archive_other": "已停用 · {{count}}",
+    "photo": "场所照片"
   },
   "inclusions": {
     "explainer": "引入是链接而非复制：源头的修改会立即体现，隐藏某项也不会从其归属方删除。",

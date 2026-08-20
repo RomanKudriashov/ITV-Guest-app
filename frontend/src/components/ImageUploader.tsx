@@ -19,6 +19,7 @@ import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CropIcon from '@mui/icons-material/Crop';
 import {
   DndContext,
   KeyboardSensor,
@@ -38,8 +39,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { ApiError } from '@/api/client';
-import { fetchMedia, uploadMedia } from '@/api/cms';
-import type { MediaKind, MediaStatus } from '@/api/types';
+import { fetchMedia, setMediaCrop, uploadMedia } from '@/api/cms';
+import type { CropRect, MediaKind, MediaStatus } from '@/api/types';
+import { CropDialog } from '@/media/CropDialog';
+import { SurfacePreview } from '@/media/SurfacePreview';
+import { SURFACES, type SurfaceKey } from '@/media/surfaces';
 
 /** Media as held by an editor: a server asset plus an optional local preview. */
 export interface EditableImage {
@@ -52,6 +56,10 @@ export interface EditableImage {
   localPreview?: string;
   /** Upload/processing failure message. */
   error?: string;
+  /** Исходник без кадрирования — то, что открывает редактор кадра. */
+  original_url?: string;
+  /** Выбранная рамка в долях оригинала. null/undefined — кадр целиком. */
+  crop?: CropRect | null;
 }
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
@@ -73,12 +81,16 @@ export function mediaToEditable(asset: {
   url: string;
   thumb_url?: string;
   status: MediaStatus;
+  original_url?: string;
+  crop?: CropRect | null;
 }): EditableImage {
   return {
     id: asset.id,
     url: asset.url,
     thumb_url: asset.thumb_url,
     status: asset.status,
+    original_url: asset.original_url,
+    crop: asset.crop ?? null,
   };
 }
 
@@ -90,6 +102,15 @@ export interface ImageUploaderProps {
   multiple?: boolean;
   disabled?: boolean;
   testId?: string;
+  /**
+   * ГДЕ ЭТО УВИДИТ ГОСТЬ. Задаёт и соотношение кадра, и вид превью.
+   *
+   * Не необязательная украшательство: без неё загрузчик снова показывает
+   * квадратную миниатюру файла — форму, в которой картинка не появляется у
+   * гостя нигде, — и человек одобряет не тот кадр. Оставлено необязательным
+   * только ради плана номера, где кадры парные и обрезка их рассовместит.
+   */
+  surface?: SurfaceKey;
 }
 
 export function ImageUploader({
@@ -99,10 +120,14 @@ export function ImageUploader({
   multiple = true,
   disabled = false,
   testId = 'image-uploader',
+  surface,
 }: ImageUploaderProps) {
   const { t } = useTranslation();
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Картинка, у которой сейчас правят кадр. */
+  const [cropping, setCropping] = useState<EditableImage | null>(null);
+  const [cropBusy, setCropBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const objectUrls = useRef<string[]>([]);
   const mounted = useRef(true);
@@ -145,6 +170,8 @@ export function ImageUploader({
             url: asset.url,
             thumb_url: asset.thumb_url,
             status: asset.status,
+            original_url: asset.original_url,
+            crop: asset.crop ?? null,
           });
           if (asset.status === 'ready') return;
           if (asset.status === 'failed') {
@@ -196,6 +223,8 @@ export function ImageUploader({
                   url: asset.url,
                   thumb_url: asset.thumb_url,
                   status: asset.status,
+                  original_url: asset.original_url,
+                  crop: asset.crop ?? null,
                   localPreview,
                 }
               : image,
@@ -220,6 +249,30 @@ export function ImageUploader({
       for (const file of list) void uploadFile(file);
     },
     [disabled, multiple, uploadFile],
+  );
+
+  /*
+    ПРИМЕНИТЬ КАДР. Сервер режет варианты заново ИЗ ОРИГИНАЛА и возвращает
+    ассет в `pending` — дальше обычный опрос, тот же, что после загрузки.
+    Пока идёт нарезка, на экране честно прежний кадр, а не пустое место.
+  */
+  const applyCrop = useCallback(
+    async (image: EditableImage, crop: CropRect, ratio: number) => {
+      setCropBusy(true);
+      try {
+        const asset = await setMediaCrop(image.id, crop, ratio);
+        if (!mounted.current) return;
+        patchImage(image.id, { status: asset.status, crop: asset.crop ?? crop });
+        setCropping(null);
+        await pollUntilReady(image.id);
+      } catch (cropError) {
+        if (!mounted.current) return;
+        setError(cropError instanceof ApiError ? cropError.detail : t('errors.generic'));
+      } finally {
+        if (mounted.current) setCropBusy(false);
+      }
+    },
+    [patchImage, pollUntilReady, t],
   );
 
   const sensors = useSensors(
@@ -306,7 +359,11 @@ export function ImageUploader({
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                // Под поверхность, а не под квадрат: превью показывает кадр
+                // гостя, и 120×120 в него не помещается по смыслу.
+                gridTemplateColumns: surface
+                  ? 'repeat(auto-fill, minmax(240px, 1fr))'
+                  : 'repeat(auto-fill, minmax(120px, 1fr))',
                 gap: 1.5,
               }}
             >
@@ -315,12 +372,31 @@ export function ImageUploader({
                   key={image.id}
                   image={image}
                   sortable={multiple}
+                  surface={surface}
                   onRemove={() => dropImage(image.id)}
+                  onCrop={() => setCropping(image)}
                 />
               ))}
             </Box>
           </SortableContext>
         </DndContext>
+      ) : null}
+
+      {/*
+        Диалог монтируется ТОЛЬКО открытым: библиотека принимает стартовую
+        рамку один раз, при монтировании. Иначе «переоткрыть обрезку» показывало
+        бы кадр целиком вместо прежней рамки.
+      */}
+      {cropping && surface && cropping.original_url ? (
+        <CropDialog
+          open
+          src={cropping.original_url}
+          surface={surface}
+          value={cropping.crop}
+          busy={cropBusy}
+          onCancel={() => setCropping(null)}
+          onApply={(crop, ratio) => void applyCrop(cropping, crop, ratio)}
+        />
       ) : null}
     </Stack>
   );
@@ -329,11 +405,15 @@ export function ImageUploader({
 function SortableThumb({
   image,
   sortable,
+  surface,
   onRemove,
+  onCrop,
 }: {
   image: EditableImage;
   sortable: boolean;
+  surface?: SurfaceKey;
   onRemove: () => void;
+  onCrop: () => void;
 }) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -351,7 +431,8 @@ function SortableThumb({
       data-testid={`media-thumb-${image.id}`}
       sx={{
         position: 'relative',
-        aspectRatio: '1 / 1',
+        // Кадр гостя, а не квадрат файла: человек одобряет то, что увидят.
+        aspectRatio: surface ? String(SURFACES[surface].ratio) : '1 / 1',
         borderRadius: 2,
         overflow: 'hidden',
         border: 1,
@@ -360,7 +441,14 @@ function SortableThumb({
         opacity: isDragging ? 0.6 : 1,
       }}
     >
-      {src ? (
+      {/*
+        Картинку рисует НАСТОЯЩИЙ примитив витрины, а не свой `<img>`: похожая
+        вёрстка расходится с гостевой на первой же правке дизайна, и превью
+        начинает врать — правдоподобно и потому незаметно.
+      */}
+      {surface ? (
+        <SurfacePreview src={src} surface={surface} caption={false} fill />
+      ) : src ? (
         <Box
           component="img"
           src={src}
@@ -427,15 +515,33 @@ function SortableThumb({
         ) : (
           <span />
         )}
-        <IconButton
-          size="small"
-          onClick={onRemove}
-          aria-label={t('common.delete')}
-          data-testid={`media-remove-${image.id}`}
-          sx={{ color: 'primary.contrastText' }}
-        >
-          <DeleteOutlineIcon fontSize="small" />
-        </IconButton>
+        <Box sx={{ display: 'flex' }}>
+          {/*
+            Кадр правится, пока есть исходник. У картинок, загруженных ДО
+            появления кроппера, исходник тоже есть — он никуда не девался, —
+            поэтому кнопка работает и у них.
+          */}
+          {surface && image.original_url ? (
+            <IconButton
+              size="small"
+              onClick={onCrop}
+              aria-label={t('media.crop.open')}
+              data-testid={`media-crop-${image.id}`}
+              sx={{ color: 'primary.contrastText' }}
+            >
+              <CropIcon fontSize="small" />
+            </IconButton>
+          ) : null}
+          <IconButton
+            size="small"
+            onClick={onRemove}
+            aria-label={t('common.delete')}
+            data-testid={`media-remove-${image.id}`}
+            sx={{ color: 'primary.contrastText' }}
+          >
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        </Box>
       </Stack>
     </Box>
   );

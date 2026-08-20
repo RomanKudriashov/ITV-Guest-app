@@ -1093,7 +1093,7 @@ export function ItemEditorPage() {
               <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
                 {t('item.photos')}
               </Typography>
-              <ImageUploader value={images} onChange={setImages} kind="item" />
+              <ImageUploader value={images} onChange={setImages} kind="item" surface="item" />
             </CardContent>
           </Card>
 

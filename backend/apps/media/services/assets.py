@@ -78,7 +78,37 @@ def serialize_asset(asset: MediaAsset | None) -> dict | None:
         "url": asset.url("card"),
         "thumb_url": asset.url("thumb"),
         "original_filename": asset.original_filename,
+        # Исходник и рамка — только для редактора кадра. Гостевые ручки этот
+        # сериализатор не зовут: он живёт в CMS.
+        "original_url": asset.original_url(),
+        "crop": asset.crop,
+        "crop_ratio": asset.crop_ratio,
     }
+
+
+def set_crop(asset_id, *, crop: dict | None, ratio: float | None) -> MediaAsset:
+    """
+    Переобрезать: записать рамку и пересчитать варианты из ОРИГИНАЛА.
+
+    Именно из оригинала, а не из прошлого результата: иначе вторая обрезка
+    резала бы уже обрезанное, и «передумал» стоило бы человеку потерянных
+    пикселей. Оригинал в MinIO не трогается ни при первой обрезке, ни при
+    десятой.
+
+    Статус возвращается в PENDING: до конца нарезки на экране старые варианты,
+    и делать вид, что новые уже готовы, значило бы показывать не то.
+    """
+    from apps.media.tasks import process_media_asset
+
+    asset = get_asset(asset_id)
+    asset.crop = crop or None
+    asset.crop_ratio = ratio
+    asset.status = MediaAsset.Status.PENDING
+    asset.save(update_fields=["crop", "crop_ratio", "status", "updated_at"])
+
+    hotel_id = require_hotel_id()
+    transaction.on_commit(lambda: process_media_asset.delay(str(asset.pk), str(hotel_id)))
+    return asset
 
 
 def image_url(asset: MediaAsset | None, *, variant: str = "card", fallback_code: str = "") -> str:

@@ -1,4 +1,3 @@
-import type { ListPage } from '@/api/types';
 /**
  * Сервисы — верхний уровень CMS.
  *
@@ -7,6 +6,7 @@ import type { ListPage } from '@/api/types';
  * зависят включения (R2): они адресуются сервисом.
  */
 import { api } from '@/api/client';
+import type { ListPage, MediaAsset } from '@/api/types';
 
 export interface ServiceExecutionPoint {
   id: string;
@@ -34,7 +34,8 @@ export interface CmsService {
   is_active: boolean;
   sort_order: number;
   schedule_id: string | null;
-  image: { id: string; url: string } | null;
+  /** Полный медиа-ассет: редактору кадра нужны исходник и рамка. */
+  image: MediaAsset | null;
   /** Вид рабочего экрана персонала — выводится из типа сервиса (R3). */
   tracker_type: string;
   execution_point: ServiceExecutionPoint;

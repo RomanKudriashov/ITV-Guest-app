@@ -13,8 +13,8 @@ from ninja import File, Router
 from ninja.files import UploadedFile
 
 from apps.core.errors import ValidationError
-from apps.media.schemas import MediaOut
-from apps.media.services import get_asset, serialize_asset, upload_asset
+from apps.media.schemas import CropIn, MediaOut
+from apps.media.services import get_asset, serialize_asset, set_crop, upload_asset
 
 router = Router(tags=["cms"])
 
@@ -59,3 +59,26 @@ def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str
 @router.get("/media/{asset_id}", response=MediaOut, summary="Статус изображения")
 def get_media(request: HttpRequest, asset_id: str):
     return serialize_asset(get_asset(asset_id))
+
+
+@router.put("/media/{asset_id}/crop", response=MediaOut, summary="Выбрать кадр")
+def set_media_crop(request: HttpRequest, asset_id: str, payload: CropIn):
+    """
+    Кадр хранится КООРДИНАТАМИ, оригинал не переписывается никогда.
+
+    Поэтому обрезку можно переоткрыть через неделю и увидеть всю картинку:
+    варианты каждый раз режутся заново из исходника, а не из прошлого
+    результата. `crop: null` снимает рамку и возвращает кадр целиком.
+
+    Ответ приходит со статусом `pending` — как и при загрузке: нарезка идёт в
+    воркере, и до её конца на экране честно старые варианты.
+    """
+    if payload.crop is not None:
+        missing = {"x", "y", "w", "h"} - set(payload.crop)
+        if missing:
+            raise ValidationError(
+                "В рамке не хватает полей: " + ", ".join(sorted(missing)),
+                field="crop",
+                code="bad_crop",
+            )
+    return serialize_asset(set_crop(asset_id, crop=payload.crop, ratio=payload.ratio))

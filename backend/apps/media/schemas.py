@@ -23,3 +23,14 @@ class MediaOut(Schema):
     url: str
     thumb_url: str
     original_filename: str
+    # Исходник и рамка — для редактора кадра в CMS. Гостю не отдаются.
+    original_url: str = ""
+    crop: dict | None = None
+    crop_ratio: float | None = None
+
+
+class CropIn(Schema):
+    """Рамка в долях ОРИГИНАЛА. `crop=None` — снять обрезку, вернуть целиком."""
+
+    crop: dict | None = None
+    ratio: float | None = None

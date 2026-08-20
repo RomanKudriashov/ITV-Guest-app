@@ -44,6 +44,10 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
         asset.status = MediaAsset.Status.PROCESSING
         asset.save(update_fields=["status", "updated_at"])
 
+        # ПОД КАКОЙ КАДР РЕЖЕМ. Запоминаем до работы: пока идёт нарезка,
+        # человек может выбрать другой кадр и поставить вторую задачу.
+        rendered_for = asset.crop
+
         try:
             raw = storage.get_bytes(asset.object_key)
             variants = _render_variants(raw, asset)
@@ -52,6 +56,24 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
             asset.error = str(exc)[:2000]
             asset.save(update_fields=["status", "error", "updated_at"])
             raise
+
+        # УСТАРЕВШАЯ НАРЕЗКА НЕ ПУБЛИКУЕТСЯ.
+        #
+        # Загрузка ставит первую задачу, обрезка — вторую, и порядок их
+        # завершения ничем не задан: первая (по целому кадру) успевает
+        # финишировать позже и затирает результат второй. На экране после этого
+        # кадр, который человек не выбирал, — и повторить это нельзя, потому что
+        # зависит от того, кто из воркеров был быстрее.
+        #
+        # Сверяем кадр, под который резали, с тем, что в базе СЕЙЧАС. Разошлись
+        # — наш результат устарел: молча уходим и не трогаем ни варианты, ни
+        # статус. Свежая задача доведёт дело сама.
+        current_crop = (
+            MediaAsset.objects.filter(pk=asset_id).values_list("crop", flat=True).first()
+        )
+        if current_crop != rendered_for:
+            logger.info("Ассет %s: кадр сменился во время нарезки, результат отброшен", asset_id)
+            return {"status": "superseded"}
 
         asset.variants = variants
         asset.status = MediaAsset.Status.READY
@@ -96,13 +118,49 @@ def _mean_luminance(image) -> float:
     return round(total / len(pixels), 4)
 
 
+def _apply_crop(image, crop: dict | None):
+    """
+    Вырезать выбранную рамку. Пусто — берём кадр целиком.
+
+    Координаты — ДОЛИ оригинала (0..1), а не пиксели: оригинал может быть
+    перезалит другого размера, а рамка «правая треть сверху» от этого не
+    меняется. Значения подрезаем по границам: кадр, уехавший за край, — это
+    ошибка клиента, но ронять из-за неё обработку всей картинки незачем.
+    """
+    if not crop:
+        return image
+
+    width, height = image.size
+    try:
+        x = min(max(float(crop.get("x", 0.0)), 0.0), 1.0)
+        y = min(max(float(crop.get("y", 0.0)), 0.0), 1.0)
+        w = min(max(float(crop.get("w", 1.0)), 0.0), 1.0 - x)
+        h = min(max(float(crop.get("h", 1.0)), 0.0), 1.0 - y)
+    except (TypeError, ValueError):
+        return image
+
+    left, top = round(x * width), round(y * height)
+    right, bottom = round((x + w) * width), round((y + h) * height)
+    # Вырожденная рамка (нулевой ширины или высоты) — не кадр, а промах мышью.
+    if right - left < 1 or bottom - top < 1:
+        return image
+    return image.crop((left, top, right, bottom))
+
+
 def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
     with Image.open(io.BytesIO(raw)) as image:
         # EXIF-поворот: фотографии с телефона иначе лягут боком.
         image = ImageOps.exif_transpose(image)
         image = image.convert("RGB")
+        # Размеры и яркость считаем по ОРИГИНАЛУ, до кадрирования: `width`/
+        # `height` описывают загруженный файл, и подменять их размерами кадра
+        # значило бы потерять то, по чему кадр вообще считается.
         asset.width, asset.height = image.size
         asset.luminance = _mean_luminance(image)
+
+        # КАДР. Режем один раз здесь, а не в каждом варианте: варианты — это
+        # размеры одного и того же кадра, а не разные кадры.
+        image = _apply_crop(image, asset.crop)
 
         variants: dict[str, str] = {}
         for name, width in settings.MEDIA_VARIANTS.items():

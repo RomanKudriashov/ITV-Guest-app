@@ -8,6 +8,7 @@ import type {
   Badge,
   BadgeItem,
   BadgePayload,
+  CropRect,
   Bootstrap,
   Category,
   CategoryPayload,
@@ -416,6 +417,18 @@ export function setBadgeOnItem(
   attached: boolean,
 ): Promise<{ item_id: string; attached: boolean }> {
   return api.put(`/cms/badges/${badgeId}/items/${itemId}`, { attached });
+}
+
+/**
+ * Записать рамку кадра. Сервер режет варианты ИЗ ОРИГИНАЛА и возвращает ассет
+ * в статусе `pending`: нарезка идёт в воркере.
+ */
+export function setMediaCrop(
+  id: string,
+  crop: CropRect | null,
+  ratio?: number,
+): Promise<MediaAsset> {
+  return api.put<MediaAsset>(`/cms/media/${id}/crop`, { crop, ratio: ratio ?? null });
 }
 
 export function createBadge(payload: BadgePayload): Promise<Badge> {

@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
+import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
 import type { BrandDraft } from './useBrandDraft';
 
@@ -110,6 +111,7 @@ function LogoField({
   url,
   onChangeUrl,
   testId,
+  surface,
 }: {
   url: string | undefined;
   /**
@@ -119,6 +121,8 @@ function LogoField({
    */
   onChangeUrl: (url: string | undefined, assetId?: string) => void;
   testId: string;
+  /** Где это увидит гость: задаёт и рамку кадра, и вид превью. */
+  surface: SurfaceKey;
 }) {
   // An empty string from the server means "no logo" — treat it and `undefined`
   // as the same value so seeding never looks like a real edit.
@@ -151,6 +155,7 @@ function LogoField({
       kind="brand"
       multiple={false}
       testId={testId}
+      surface={surface}
     />
   );
 }
@@ -449,6 +454,7 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
                 media-upload path used for logos, reused via LogoField. The
                 auto-dim slider below keeps one image readable in light + dark. */}
             <LogoField
+              surface="background"
               url={bg?.imageUrl}
               onChangeUrl={(u, assetId) =>
                 // Пустая строка, а не undefined: id надо УБРАТЬ, когда картинку
@@ -525,12 +531,14 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
       <Section title={t('brand.sections.logos')}>
         <Typography variant="body2">{t('brand.logoLight')}</Typography>
         <LogoField
+          surface="logo"
           url={merged.brand?.logoLight}
           onChangeUrl={(u) => setBrandExtras({ logoLight: u })}
           testId="brand-logo-light-upload"
         />
         <Typography variant="body2">{t('brand.logoDark')}</Typography>
         <LogoField
+          surface="logo"
           url={merged.brand?.logoDark}
           onChangeUrl={(u) => setBrandExtras({ logoDark: u })}
           testId="brand-logo-dark-upload"
