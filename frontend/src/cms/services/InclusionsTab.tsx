@@ -16,6 +16,8 @@ import Typography from '@mui/material/Typography';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
+import { useActionFailed } from '@/hooks/useActionFailed';
+
 import {
   createInclusion,
   deleteInclusion,
@@ -127,6 +129,7 @@ function InclusionCard({
   sourceName: string;
   onChanged: () => void;
 }) {
+  const actionFailed = useActionFailed();
   const { t } = useTranslation();
   const [markup, setMarkup] = useState(String(inclusion.markup_value ?? 0));
 
@@ -138,6 +141,9 @@ function InclusionCard({
   const remove = useMutation({
     mutationFn: () => deleteInclusion(inclusion.id),
     onSuccess: onChanged,
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
 
   return (

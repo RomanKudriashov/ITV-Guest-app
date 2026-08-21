@@ -8,6 +8,9 @@ import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { useActionFailed } from '@/hooks/useActionFailed';
+import { useRights } from '../useRights';
+
 import { accent, ink, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
@@ -38,6 +41,8 @@ const STATUS_TONE = {
  * необратимое (удаление, офбординг) делается по одному отелю и с подтверждением.
  */
 export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }) {
+  const actionFailed = useActionFailed();
+  const { canWrite } = useRights();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [query, setQuery] = useState<FleetQuery>({ status: '', page: 1, page_size: 25 });
@@ -53,6 +58,9 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
       void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
       void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
 
   const patch = (next: Partial<FleetQuery>) =>
@@ -81,9 +89,12 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         >
           {t('admin.fleet.export')}
         </Button>
-        <Button onClick={() => setCreating(true)} data-testid="admin-create-open" sx={primaryButtonSx}>
-          {t('admin.fleet.create')}
-        </Button>
+        {/* Завести отель — право WRITE. Наблюдателю кнопка ответила бы 403. */}
+        {canWrite ? (
+          <Button onClick={() => setCreating(true)} data-testid="admin-create-open" sx={primaryButtonSx}>
+            {t('admin.fleet.create')}
+          </Button>
+        ) : null}
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, mt: 2.25, flexWrap: 'wrap', alignItems: 'center' }}>

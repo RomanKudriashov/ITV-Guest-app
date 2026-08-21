@@ -504,10 +504,14 @@
     "GET"
   ],
   "/api/v1/platform/hotels/{hotel_id}/admins": [
+    "GET",
     "POST"
   ],
   "/api/v1/platform/hotels/{hotel_id}/admins/email": [
     "PUT"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/admins/{user_id}": [
+    "DELETE"
   ],
   "/api/v1/platform/hotels/{hotel_id}/enter": [
     "POST"

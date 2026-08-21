@@ -24,7 +24,7 @@ from django.db import IntegrityError, transaction
 
 from apps.accounts.models import User
 from apps.core.context import tenant_context
-from apps.core.errors import ConflictError, ValidationError
+from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.brand_library import preset_tokens
 from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Service
 from apps.orders.services.status_flows import ensure_status_flows
@@ -298,6 +298,58 @@ def change_hotel_admin_email(hotel: Hotel, *, current_email: str, new_email: str
         user.email = new_email
         user.save(update_fields=["email", "updated_at"])
     return user
+
+
+def list_hotel_admins(hotel: Hotel) -> list[dict]:
+    """
+    Кто сегодня админ отеля. Списка не существовало НИГДЕ — ни в консоли, ни в
+    API, — и это была не мелочь: опечатка в адресе при заведении молча
+    добавляла ВТОРОГО полноправного админа, а увидеть это было негде.
+    """
+    with tenant_context(hotel):
+        return [
+            {
+                "id": str(user.pk),
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "last_login": user.last_login.isoformat() if user.last_login else None,
+                "created_at": user.created_at.isoformat(),
+            }
+            for user in User.objects.filter(is_hotel_admin=True).order_by("created_at")
+        ]
+
+
+@transaction.atomic
+def remove_hotel_admin(hotel: Hotel, user_id) -> dict:
+    """
+    Убрать лишнего администратора.
+
+    ПОСЛЕДНЕГО УБРАТЬ НЕЛЬЗЯ — отказ, а не предупреждение. Отель без админа
+    теряет доступ к собственной CMS, и вернуть его можно только через
+    платформу; молча допустить это значит запереть клиента снаружи. Хотите
+    сменить администратора — сначала заведите нового, потом уберите старого.
+    Порядок неудобен ровно один раз и защищает всегда.
+
+    СНИМАЕМ ПРАВО, А НЕ УДАЛЯЕМ ЧЕЛОВЕКА: у него могут быть заказы, сообщения
+    и записи в журнале, и стирание учётки сделало бы их безымянными. Он
+    остаётся сотрудником отеля и перестаёт быть админом.
+    """
+    with tenant_context(hotel):
+        admins = list(User.objects.filter(is_hotel_admin=True, is_active=True))
+        target = next((u for u in admins if str(u.pk) == str(user_id)), None)
+        if target is None:
+            raise NotFoundError("Администратор не найден")
+        if len(admins) <= 1:
+            raise ConflictError(
+                "Это последний администратор отеля. Убрать его нельзя: отель "
+                "останется без доступа к своей CMS. Заведите нового "
+                "администратора и повторите.",
+                code="last_admin",
+            )
+        target.is_hotel_admin = False
+        target.save(update_fields=["is_hotel_admin", "updated_at"])
+        return {"id": str(target.pk), "email": target.email}
 
 
 @transaction.atomic

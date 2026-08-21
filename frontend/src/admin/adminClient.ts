@@ -239,8 +239,13 @@ export interface HotelPatch {
 export const patchHotel = (id: string, body: HotelPatch | Partial<HotelProfile>) =>
   request<HotelProfile>(`/hotels/${id}`, 'PATCH', body);
 export const setHotelAdmin = (id: string, body: { email: string }) =>
-  request<{ email: string; delivered_to: string; sent_at: string }>(
-    `/hotels/${id}/admins`, 'POST', body);
+  request<{
+    email: string;
+    delivered_to: string;
+    sent_at: string;
+    /** Кто уже был админом до этого. Непусто — заводится ВТОРОЙ. */
+    existing_admins?: string[];
+  }>(`/hotels/${id}/admins`, 'POST', body);
 
 // Смена адреса администратора: выход из «отель потерял и почту тоже».
 // Право владельца, письма не шлёт — старый ящик и есть то, что потеряно.
@@ -531,6 +536,23 @@ export const getImpersonations = (query: ImpersonationQuery = {}) => {
 };
 export const revokeImpersonation = (id: string) =>
   request<{ grant_id: string; revoked_at: string }>(`/impersonations/${id}/revoke`, 'POST');
+
+export interface HotelAdmin {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  last_login: string | null;
+  created_at: string;
+}
+
+/** Кто сегодня админ отеля. До R6 списка не существовало нигде. */
+export const getHotelAdmins = (id: string) =>
+  request<{ admins: HotelAdmin[] }>(`/hotels/${id}/admins`);
+
+/** Снять право админа. Последнего сервер не отдаёт — вернёт 409 `last_admin`. */
+export const removeHotelAdmin = (hotelId: string, userId: string) =>
+  request<{ ok: boolean }>(`/hotels/${hotelId}/admins/${userId}`, 'DELETE');
 
 export const getTariffs = () => request<TariffRow[]>('/tariffs');
 export const getNodes = (limit = 100) => request<Page<NodeRow>>(`/nodes?limit=${limit}`);

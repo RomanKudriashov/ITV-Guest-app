@@ -10,6 +10,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { useActionFailed } from '@/hooks/useActionFailed';
+
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import {
@@ -74,6 +76,7 @@ export function TemplatesPage() {
 }
 
 function TemplatesTab() {
+  const actionFailed = useActionFailed();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: () => getTemplates() });
@@ -81,6 +84,9 @@ function TemplatesTab() {
     mutationFn: (body: { id: string; patch: Partial<OnboardingTemplate> }) =>
       patchTemplate(body.id, body.patch),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'templates'] }),
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
 
   return (

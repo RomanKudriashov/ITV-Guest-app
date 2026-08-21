@@ -11,6 +11,9 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { useActionFailed } from '@/hooks/useActionFailed';
+import { useRights } from '../useRights';
+
 import { accent, ink, panelSx, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -24,8 +27,10 @@ import {
   downloadHotelExport,
   getActivity,
   getHotel,
+  getHotelAdmins,
   getModules,
   getTariffs,
+  removeHotelAdmin,
   getUsage,
   patchHotel,
   putModules,
@@ -69,6 +74,7 @@ function resolveTab(key: string): Tab {
  */
 export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
   const { t } = useTranslation();
+  const { canWrite } = useRights();
   /*
     ВКЛАДКА ЖИВЁТ В АДРЕСЕ — там же, где раздел консоли и открытый отель.
 
@@ -110,9 +116,12 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         <Button onClick={onBack} data-testid="admin-hotel-back" sx={{ color: ink.mid }}>
           {t('admin.hotel.back')}
         </Button>
-        <Button onClick={() => setEntering(true)} data-testid="admin-hotel-enter" sx={primaryButtonSx}>
-          {t('admin.enter.button')}
-        </Button>
+        {/* Вход в отель — право WRITE (`POST /hotels/{id}/enter`). */}
+        {canWrite ? (
+          <Button onClick={() => setEntering(true)} data-testid="admin-hotel-enter" sx={primaryButtonSx}>
+            {t('admin.enter.button')}
+          </Button>
+        ) : null}
       </Box>
 
       <Box sx={{ display: 'flex', gap: 0.5, mt: 2, borderBottom: `1px solid ${surface.line}` }}>
@@ -175,10 +184,12 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
 /* ── Профиль ────────────────────────────────────────────────────────────── */
 
 function ProfileTab({ hotel }: { hotel: HotelProfile }) {
+  const actionFailed = useActionFailed();
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [adminEmail, setAdminEmail] = useState('');
   const [issued, setIssued] = useState<string | null>(null);
+  const [existingAdmins, setExistingAdmins] = useState<string[]>([]);
 
   /*
     ПРОФИЛЬ ПРАВИТСЯ С ЭКРАНА.
@@ -286,10 +297,18 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   const toggleActive = useMutation({
     mutationFn: (next: boolean) => patchHotel(hotel.id, { is_active: next } as Partial<HotelProfile>),
     onSuccess: refresh,
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
   const resetAdmin = useMutation({
     mutationFn: () => setHotelAdmin(hotel.id, { email: adminEmail.trim() }),
-    onSuccess: (result) => setIssued(result.delivered_to),
+    onSuccess: (result) => {
+      setIssued(result.delivered_to);
+      // Сервер называет тех, кто уже был админом. Пусто — заводили первого.
+      setExistingAdmins(result.existing_admins ?? []);
+      void qc.invalidateQueries({ queryKey: ['admin', 'hotel-admins', hotel.id] });
+    },
     onError: (cause) =>
       setAdminError(cause instanceof Error ? cause.message : t('admin.hotel.adminFailed')),
   });
@@ -464,6 +483,8 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
         </Box>
       </Box>
 
+      <AdminsPanel hotelId={hotel.id} />
+
       <Box sx={panelSx}>
         <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
           {t('admin.hotel.adminTitle')}
@@ -495,6 +516,16 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
         {issued ? (
           <Alert severity="success" sx={{ mt: 1.5 }} data-testid="admin-hotel-admin-sent">
             {t('admin.hotel.adminPasswordSent', { email: issued })}
+          </Alert>
+        ) : null}
+        {/*
+          ВТОРОЙ АДМИН — ПРЕДУПРЕЖДЕНИЕ, А НЕ ЗАПРЕТ. Он бывает нужен (передача
+          дел), но чаще это опечатка в адресе, и раньше она проходила молча:
+          отель тихо получал второго полноправного администратора.
+        */}
+        {existingAdmins.length ? (
+          <Alert severity="warning" sx={{ mt: 1.5 }} data-testid="admin-hotel-admin-second">
+            {t('admin.hotel.admins.existing', { list: existingAdmins.join(', ') })}
           </Alert>
         ) : null}
 
@@ -537,6 +568,8 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
 
 function ModulesTab({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
+  // Тумблеры модулей — право WRITE (`PUT /hotels/{id}/modules`).
+  const { canWrite } = useRights();
   const qc = useQueryClient();
   const modules = useQuery({ queryKey: ['admin', 'modules', id], queryFn: () => getModules(id) });
   const save = useMutation({
@@ -607,7 +640,7 @@ function ModulesTab({ id }: { id: string }) {
           <Switch
             checked={entry.is_enabled}
             onChange={(e) => toggle(entry.code, e.target.checked)}
-            disabled={save.isPending}
+            disabled={save.isPending || !canWrite}
             inputProps={{ 'data-testid': `admin-module-toggle-${entry.code}` } as Record<string, string>}
           />
         </Box>
@@ -700,6 +733,11 @@ function ActivityTab({ id }: { id: string }) {
  * сетка на клиенте могла отстать от той, что на сервере.
  */
 function TariffTab({ id }: { id: string }) {
+  const actionFailed = useActionFailed();
+  // Тариф пишет только владелец (`OWNER` на `/hotels/{id}/tariff`). Ровно здесь
+  // и жил самый дорогой молчаливый отказ: панель получала 403 и не менялась
+  // никак, а оператор уходил уверенный, что тариф записан.
+  const { isOwner } = useRights();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const usage = useQuery({ queryKey: ['admin', 'usage', id], queryFn: () => getUsage(id) });
@@ -721,6 +759,9 @@ function TariffTab({ id }: { id: string }) {
         void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
       }
     },
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
 
   if (usage.isPending || usage.isError || usage.data === undefined) {
@@ -865,24 +906,32 @@ function TariffTab({ id }: { id: string }) {
         ))}
 
         <Box sx={{ display: 'flex', gap: 1, mt: 1.75 }}>
-          <Button
-            onClick={() => apply.mutate(false)}
-            disabled={apply.isPending}
-            data-testid="admin-tariff-apply"
-            sx={primaryButtonSx}
-          >
-            {t('admin.hotel.tariffApply')}
-          </Button>
-          {warnings.length ? (
-            <Button
-              onClick={() => apply.mutate(true)}
-              disabled={apply.isPending}
-              data-testid="admin-tariff-force"
-              sx={{ color: state.warn, border: `1px solid ${state.warn}55` }}
-            >
-              {t('admin.hotel.tariffForce')}
-            </Button>
-          ) : null}
+          {isOwner ? (
+            <>
+              <Button
+                onClick={() => apply.mutate(false)}
+                disabled={apply.isPending}
+                data-testid="admin-tariff-apply"
+                sx={primaryButtonSx}
+              >
+                {t('admin.hotel.tariffApply')}
+              </Button>
+              {warnings.length ? (
+                <Button
+                  onClick={() => apply.mutate(true)}
+                  disabled={apply.isPending}
+                  data-testid="admin-tariff-force"
+                  sx={{ color: state.warn, border: `1px solid ${state.warn}55` }}
+                >
+                  {t('admin.hotel.tariffForce')}
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-tariff-readonly">
+              {t('admin.hotel.tariffOwnerOnly')}
+            </Typography>
+          )}
         </Box>
         <Typography sx={{ ...typo.caption, color: ink.low, mt: 1.5 }}>
           {t('admin.hotel.tariffNoMoney')}
@@ -956,6 +1005,7 @@ function Kv({ label, value }: { label: string; value: string }) {
  * пометки, ввода поддомена и роли владельца.
  */
 function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => void }) {
+  const actionFailed = useActionFailed();
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [reason, setReason] = useState('');
@@ -977,6 +1027,9 @@ function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => 
   const cancel = useMutation({
     mutationFn: () => cancelOffboarding(hotel.id),
     onSuccess: refresh,
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
   /*
     РАЗРУШАЮЩЕЕ — ТОЛЬКО ВЛАДЕЛЬЦУ, И НА ДВУХ РУБЕЖАХ.
@@ -1128,6 +1181,103 @@ function DataTab({ hotel, onRemoved }: { hotel: HotelProfile; onRemoved?: () => 
           </Button>
         </Box>
       ) : null}
+    </Box>
+  );
+}
+
+/* ── Администраторы отеля ───────────────────────────────────────────────── */
+
+/**
+ * КТО ВХОДИТ В CMS ЭТОГО ОТЕЛЯ.
+ *
+ * Списка не существовало нигде — ни в консоли, ни в API. Опечатка в адресе при
+ * заведении молча добавляла ВТОРОГО полноправного администратора: увидеть это
+ * было негде, а убрать — нечем.
+ *
+ * Снятие — право владельца, и последнего сервер не отдаёт: отель остался бы без
+ * доступа к своей CMS. Кнопку у последнего не показываем вовсе и говорим почему
+ * — предлагать действие, которое всегда откажет, значит врать интерфейсом.
+ */
+function AdminsPanel({ hotelId }: { hotelId: string }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const actionFailed = useActionFailed();
+  const { isOwner } = useRights();
+
+  const admins = useQuery({
+    queryKey: ['admin', 'hotel-admins', hotelId],
+    queryFn: () => getHotelAdmins(hotelId),
+  });
+
+  const remove = useMutation({
+    mutationFn: (userId: string) => removeHotelAdmin(hotelId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'hotel-admins', hotelId] }),
+    onError: actionFailed,
+  });
+
+  const rows = admins.data?.admins ?? [];
+  const active = rows.filter((row) => row.is_active);
+
+  return (
+    <Box sx={{ ...panelSx, mb: 2.25 }} data-testid="admin-hotel-admins">
+      <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
+        {t('admin.hotel.admins.title')}
+      </Typography>
+      <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
+        {t('admin.hotel.admins.hint')}
+      </Typography>
+
+      <QueryState query={admins} what={t('admin.hotel.admins.title')}>
+        {(data) =>
+          data.admins.length === 0 ? (
+            <Typography sx={{ ...typo.caption, color: ink.mid }}>—</Typography>
+          ) : (
+            <Box>
+              {data.admins.map((row) => (
+                <Box
+                  key={row.id}
+                  data-testid={`admin-hotel-admin-${row.id}`}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    py: 1,
+                    borderBottom: `1px solid ${surface.hair}`,
+                  }}
+                >
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Typography sx={{ ...typo.body, color: ink.hi, wordBreak: 'break-all' }}>
+                      {row.email}
+                    </Typography>
+                    <Typography sx={{ ...typo.caption, color: ink.low }}>
+                      {row.last_login
+                        ? new Date(row.last_login).toLocaleString()
+                        : t('admin.hotel.admins.never')}
+                    </Typography>
+                  </Box>
+                  {isOwner && active.length > 1 ? (
+                    <Button
+                      size="small"
+                      onClick={() => remove.mutate(row.id)}
+                      disabled={remove.isPending}
+                      data-testid={`admin-hotel-admin-remove-${row.id}`}
+                      sx={{ color: state.bad, border: `1px solid ${state.bad}55` }}
+                    >
+                      {t('admin.hotel.admins.remove')}
+                    </Button>
+                  ) : null}
+                </Box>
+              ))}
+              {active.length <= 1 ? (
+                <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.25 }}
+                  data-testid="admin-hotel-admins-last">
+                  {t('admin.hotel.admins.lastHint')}
+                </Typography>
+              ) : null}
+            </Box>
+          )
+        }
+      </QueryState>
     </Box>
   );
 }

@@ -8,6 +8,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { useRights } from '../useRights';
+
 import { ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
@@ -25,6 +27,9 @@ const ROLES = ['owner', 'support', 'read_only'] as const;
  */
 export function TeamPage() {
   const { t } = useTranslation();
+  // Состав команды правит только владелец (`OWNER` на `/team`). Остальным
+  // форма приглашения отвечала 403 — предлагать её незачем.
+  const { isOwner } = useRights();
   const qc = useQueryClient();
   const team = useQuery({ queryKey: ['admin', 'team'], queryFn: () => getTeam() });
   const [email, setEmail] = useState('');
@@ -56,6 +61,7 @@ export function TeamPage() {
       </Typography>
       <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{t('admin.team.subtitle')}</Typography>
 
+      {isOwner ? (
       <Box sx={{ ...panelSx, mt: 2.25 }}>
         <FormGrid>
           <Field
@@ -96,6 +102,7 @@ export function TeamPage() {
           </FormCell>
         </FormGrid>
       </Box>
+      ) : null}
 
       {error ? (
         <Alert severity="error" sx={{ mt: 1.5 }} data-testid="admin-team-error">

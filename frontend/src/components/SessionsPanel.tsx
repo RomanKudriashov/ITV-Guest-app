@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+
+import { useActionFailed } from '@/hooks/useActionFailed';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -43,6 +45,7 @@ export function SessionsPanel({
   logoutEverywhere: () => Promise<unknown>;
   onLoggedOutEverywhere: () => void;
 }) {
+  const actionFailed = useActionFailed();
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -51,11 +54,17 @@ export function SessionsPanel({
   const close = useMutation({
     mutationFn: closeSession,
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
   const everywhere = useMutation({
     mutationFn: logoutEverywhere,
     // Закрыли и текущую тоже — оставаться на экране незачем.
     onSuccess: onLoggedOutEverywhere,
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
 
   const when = (iso: string) =>

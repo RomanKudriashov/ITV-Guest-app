@@ -1831,6 +1831,14 @@
         "override": "超出套餐开启",
         "manualOff": "已手动关闭",
         "notInTariff": "套餐不含"
+      },
+      "admins": {
+        "title": "酒店管理员",
+        "hint": "谁可以登录该酒店的 CMS。多出来的管理员通常是地址打错了。",
+        "remove": "撤销权限",
+        "lastHint": "最后一位无法撤销：酒店将失去对自己 CMS 的访问。",
+        "existing": "酒店已有管理员：{{list}}。请核对地址 — 第二位全权管理员通常是打错造成的。",
+        "never": "从未登录"
       }
     },
     "create": {
@@ -1964,7 +1972,8 @@
           "deleted": "酒店已删除",
           "admin_email_changed": "管理员邮箱已更改",
           "modules_changed": "模块已更改",
-          "tariff_changed": "套餐已更改"
+          "tariff_changed": "套餐已更改",
+          "admin_removed": "已移除酒店管理员"
         },
         "node": {
           "registered": "注册节点",

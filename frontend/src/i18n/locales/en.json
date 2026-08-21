@@ -1837,6 +1837,14 @@
         "override": "enabled beyond the tariff",
         "manualOff": "switched off by hand",
         "notInTariff": "not in the tariff"
+      },
+      "admins": {
+        "title": "Hotel administrators",
+        "hint": "Who signs in to this hotel’s CMS. An extra administrator is usually a typo in the address.",
+        "remove": "Revoke rights",
+        "lastHint": "The last one cannot be revoked: the hotel would lose access to its CMS.",
+        "existing": "The hotel already has an administrator: {{list}}. Check the address — a second full admin is usually a typo.",
+        "never": "never signed in"
       }
     },
     "create": {
@@ -1970,7 +1978,8 @@
           "deleted": "Hotel deleted",
           "admin_email_changed": "Admin address changed",
           "modules_changed": "Modules changed",
-          "tariff_changed": "Tariff changed"
+          "tariff_changed": "Tariff changed",
+          "admin_removed": "Hotel admin removed"
         },
         "node": {
           "registered": "Node registered",

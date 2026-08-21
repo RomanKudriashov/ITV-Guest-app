@@ -157,6 +157,18 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
     return console.profile(hotel)
 
 
+@router.get("/hotels/{hotel_id}/admins", summary="Администраторы отеля")
+@requires(READ)
+def list_admins(request: HttpRequest, hotel_id: str):
+    """
+    Кто сегодня админ отеля. Списка не существовало нигде — и опечатка в адресе
+    при заведении молча добавляла ВТОРОГО полноправного администратора.
+    """
+    from apps.hotels.services.provisioning import list_hotel_admins
+
+    return {"admins": list_hotel_admins(console.get_hotel(hotel_id))}
+
+
 @router.post("/hotels/{hotel_id}/admins", summary="Завести/сбросить hotel-admin")
 @requires(WRITE)
 def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
@@ -172,6 +184,14 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
     заперло бы отель.
     """
     hotel = console.get_hotel(hotel_id)
+    # ПРЕДУПРЕЖДЕНИЕ, А НЕ ЗАПРЕТ: второй админ бывает нужен (передача дел,
+    # два управляющих). Но чаще это опечатка в адресе — и раньше она молча
+    # заводила второго полноправного администратора, а увидеть это было негде.
+    from apps.hotels.services.provisioning import list_hotel_admins
+
+    existing = [a for a in list_hotel_admins(hotel) if a["is_active"]]
+    already = [a["email"] for a in existing if a["email"] != payload.email.strip().lower()]
+
     user, delivery = set_hotel_admin(hotel, email=payload.email, password=payload.password)
     console.audit_hotel(
         hotel,
@@ -182,7 +202,7 @@ def set_admin(request: HttpRequest, hotel_id: str, payload: AdminIn):
         # журнал читают шире, чем ответ на запрос.
         payload={"email": user.email, "delivered_to": delivery["delivered_to"]},
     )
-    return {"email": user.email, **delivery}
+    return {"email": user.email, "existing_admins": already, **delivery}
 
 
 @router.put("/hotels/{hotel_id}/admins/email", summary="Сменить адрес администратора отеля")
@@ -215,6 +235,34 @@ def change_admin_email(request: HttpRequest, hotel_id: str, payload: AdminEmailI
 
 
 # --- Экспорт и офбординг (152-ФЗ) ------------------------------------------
+
+
+# ВНИМАНИЕ: объявляется ПОСЛЕ `admins/email`. Шаблон `{user_id}` совпадает и с
+# литералом `email`, и роутер берёт ПЕРВЫЙ подошедший: объявленный выше, он
+# перехватывал бы смену адреса и отвечал 405 на её метод. Тот же капкан, что
+# описан выше про список и создание отелей.
+@router.delete("/hotels/{hotel_id}/admins/{user_id}", summary="Убрать администратора отеля")
+@requires(OWNER)
+def remove_admin(request: HttpRequest, hotel_id: str, user_id: str):
+    """
+    Снимает право админа. Последнего убрать нельзя — отель остался бы без
+    доступа к своей CMS.
+
+    Право OWNER, а не WRITE: это отъём доступа у клиента, и цена ошибки здесь
+    выше, чем у заведения нового администратора.
+    """
+    from apps.hotels.services.provisioning import remove_hotel_admin
+
+    hotel = console.get_hotel(hotel_id)
+    removed = remove_hotel_admin(hotel, user_id)
+    console.audit_hotel(
+        hotel,
+        "platform.hotel.admin_removed",
+        actor_id=request.user.pk,
+        ip=request.META.get("REMOTE_ADDR"),
+        payload=removed,
+    )
+    return {"ok": True, **removed}
 
 
 @router.get("/hotels/{hotel_id}/export", summary="Выгрузить данные отеля")

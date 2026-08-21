@@ -7,6 +7,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { useActionFailed } from '@/hooks/useActionFailed';
+
 import { ink, panelSx, pillSx, primaryButtonSx, quietButtonSx, surface, typo } from '../adminTokens';
 import { Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
@@ -31,6 +33,7 @@ import {
  * идёт изнутри наружу, за NAT постучаться снаружи некуда.
  */
 export function NodesPage() {
+  const actionFailed = useActionFailed();
   const { t } = useTranslation();
   const qc = useQueryClient();
   const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: () => getNodes() });
@@ -68,6 +71,9 @@ export function NodesPage() {
   const revoke = useMutation({
     mutationFn: (id: string) => revokeNode(id),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'nodes'] }),
+  
+    // Отказ виден: молча съеденный 403 читается как успех.
+    onError: actionFailed,
   });
   const reissue = useMutation({
     mutationFn: (id: string) => reissueNode(id),
