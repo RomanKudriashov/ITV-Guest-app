@@ -1422,7 +1422,8 @@
       "formats": {
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
-      }
+      },
+      "timedOut": "The export did not come back in time. Try again — if it repeats, tell us."
     },
     "revenue": {
       "positions": "Items",

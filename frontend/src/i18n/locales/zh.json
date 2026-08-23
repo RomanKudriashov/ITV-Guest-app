@@ -1418,7 +1418,8 @@
       "formats": {
         "csv": "CSV",
         "xlsx": "Excel (XLSX)"
-      }
+      },
+      "timedOut": "导出未能及时返回。请重试 — 若反复出现，请告知我们。"
     },
     "revenue": {
       "positions": "商品",

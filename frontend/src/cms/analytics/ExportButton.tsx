@@ -21,6 +21,9 @@ const FORMATS: ExportFormat[] = ['csv', 'xlsx'];
  * `ready` and triggers the download. Deliberately non-blocking: the rest of the
  * page stays usable while a spinner and status line report progress.
  */
+/** Восемьдесят опросов по 1.5 с — две минуты. Дальше честнее сказать «не дождались». */
+const EXPORT_MAX_POLLS = 80;
+
 export function ExportButton({ params }: { params: AnalyticsQuery }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -39,6 +42,19 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
     onError: () => toast.show(t('analytics.export.failed'), 'error'),
   });
 
+  /*
+    У «Готовим экспорт…» ЕСТЬ ПРЕДЕЛ.
+
+    Опрос возвращал 1500 мс до состояния `ready`/`failed` — и только до них.
+    Умер воркер, застрял джоб, потерялась задача в очереди — и надпись крутится
+    вечно: обещание без срока перестаёт быть обещанием. Тот же дефект, что был
+    на экране номера с «читаем состояние…».
+
+    Две минуты: экспорт за период считается секундами, самый тяжёлый разрез на
+    большом отеле — десятками. Восемьдесят опросов по 1.5 с покрывают это с
+    запасом, а дальше честнее сказать «не дождались», чем крутить дальше.
+  */
+  const [polls, setPolls] = useState(0);
   const poll = useQuery({
     queryKey: queryKeys.analyticsExport(jobId ?? 'none'),
     queryFn: () => fetchExportJob(jobId as string),
@@ -46,9 +62,27 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
     retry: 1,
     refetchInterval: (query) => {
       const status = (query.state.data as ExportJob | undefined)?.status;
-      return status === 'ready' || status === 'failed' ? false : 1500;
+      if (status === 'ready' || status === 'failed') return false;
+      if (query.state.dataUpdateCount + query.state.errorUpdateCount >= EXPORT_MAX_POLLS)
+        return false;
+      return 1500;
     },
   });
+
+  // Считаем попытки эффектом, а не внутри `refetchInterval`: тот вызывается
+  // и на перерисовках, и менять состояние из него — гонка. Сорванный запрос
+  // тоже попытка: иначе лежащий бэкенд не приближал бы срок вовсе.
+  useEffect(() => {
+    if (poll.dataUpdatedAt || poll.errorUpdatedAt) setPolls((n) => n + 1);
+  }, [poll.dataUpdatedAt, poll.errorUpdatedAt]);
+  // Новый экспорт — новый ключ запроса и новый отсчёт.
+  useEffect(() => {
+    setPolls(0);
+  }, [jobId]);
+
+  const status = poll.data?.status;
+  const timedOut =
+    polls >= EXPORT_MAX_POLLS && status !== 'ready' && status !== 'failed';
 
   const job = poll.data;
   const pending = createMutation.isPending || job?.status === 'pending' || job?.status === 'running';
@@ -83,6 +117,8 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
 
   const statusLabel = (): string | null => {
     if (createMutation.isPending) return t('analytics.export.queuing');
+    // Срок вышел — говорим прямо, а не крутим «готовим» дальше.
+    if (timedOut) return t('analytics.export.timedOut');
     if (!job) return null;
     // Срыв скачивания важнее «готово»: срез посчитан, но файла у оператора нет.
     if (downloadFailed) return t('analytics.export.downloadFailed');
