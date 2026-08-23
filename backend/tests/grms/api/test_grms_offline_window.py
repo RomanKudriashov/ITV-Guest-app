@@ -60,6 +60,16 @@ def _connector_dies(stand, hotel):
     time.sleep(commands.READ_COALESCE_S + 0.1)
 
 
+def _values(payload: dict) -> list:
+    """Значения, доехавшие до гостя. Пустые элементы значениями не считаются."""
+    return [
+        control["value"]
+        for zone in payload["zones"]
+        for control in zone["controls"]
+        if control.get("value") is not None
+    ]
+
+
 def test_dead_transport_with_a_fresh_heartbeat_is_unavailable(guest, crystal, stand):
     """
     Связи нет — значит недоступно, даже пока узел числится живым.
@@ -75,7 +85,8 @@ def test_dead_transport_with_a_fresh_heartbeat_is_unavailable(guest, crystal, st
 
     first = guest.get("/api/v1/guest/room/state").json()
     assert first["availability"] == "unavailable"
-    assert first["zones"] == [], "элементы без связи не имеют состояния"
+    assert first["zones"], "состав номера известен и без связи"
+    assert not _values(first), "элементы без связи не имеют состояния"
     assert first["can_command"] is False, "недоступному оборудованию не скомандуешь"
     assert first["unavailable_kind"] == "reading", "первое молчание — ещё не приговор"
     assert "ресепшен" not in first["message"], "рано отправлять гостя вниз"
@@ -86,7 +97,7 @@ def test_dead_transport_with_a_fresh_heartbeat_is_unavailable(guest, crystal, st
     second = guest.get("/api/v1/guest/room/state").json()
 
     assert second["availability"] == "unavailable"
-    assert second["zones"] == []
+    assert second["zones"] and not _values(second)
     assert second["can_command"] is False
     assert second["unavailable_kind"] == "offline"
     # Гостю — нейтральный текст, техническая причина остаётся в логе.
@@ -98,9 +109,10 @@ def test_no_values_leak_through_the_window(guest, crystal, stand):
     """
     Ни одного значения: ни старого, ни нулевого.
 
-    Пустые зоны — это не «мелочь оформления»: элемент со значением `0` гость
-    читает как «выключено», а не как «неизвестно», и идёт включать свет,
-    который на самом деле горит.
+    Элементы при этом ОСТАЮТСЯ на экране — гость должен видеть, чем номер
+    вообще управляется, — но пустыми. Значение `0` гость читает как
+    «выключено», а не как «неизвестно», и идёт включать свет, который на самом
+    деле горит; поэтому «нет значения» и «значение ноль» обязаны различаться.
     """
     live = guest.get("/api/v1/guest/room/state").json()
     assert any(
@@ -112,8 +124,8 @@ def test_no_values_leak_through_the_window(guest, crystal, stand):
     _connector_dies(stand, crystal)
 
     payload = guest.get("/api/v1/guest/room/state").json()
-    values = [c.get("value") for z in payload["zones"] for c in z["controls"]]
-    assert values == []
+    assert payload["zones"], "элементы никуда не делись — исчезли их значения"
+    assert _values(payload) == [], "ни одного значения не протекло"
 
 
 def test_command_in_the_window_is_refused_not_accepted(guest, crystal, stand):

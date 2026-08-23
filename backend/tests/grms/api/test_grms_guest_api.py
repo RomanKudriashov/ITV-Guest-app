@@ -333,15 +333,24 @@ def test_offline_node_hides_every_value_instead_of_showing_stale_ones(guest, cry
 
     payload = guest.get("/api/v1/guest/room/state").json()
     assert payload["availability"] == "unavailable"
-    assert payload["zones"] == []
+    # Зоны и элементы ОСТАЮТСЯ — это конфигурация, она известна и без связи.
+    # Исчезают ЗНАЧЕНИЯ: ни одного не должно быть ни у одного элемента.
+    assert payload["zones"], "состав номера известен из опубликованного снимка"
+    stale = {
+        control["controlId"]: control["value"]
+        for zone in payload["zones"]
+        for control in zone["controls"]
+        if control["value"] is not None
+    }
+    assert stale == {}, f"протекли значения без связи: {stale}"
     # Нейтральный текст без технической причины.
     assert "ресепшен" in payload["message"]
     assert "CONNECTOR" not in payload["message"]
 
     # Геометрия плана при этом остаётся: разметка комнаты не перестаёт быть
     # верной оттого, что каналы молчат. Врать может только СВЕТ на плане, а
-    # света в этом снимке нет вовсе — зоны пустые, значений нет ни у одного
-    # элемента, и подставить их плану неоткуда.
+    # света в этом снимке нет: значений нет ни у одного элемента, и подставить
+    # их плану неоткуда.
     assert payload["plan"]["zones"], "план — конфигурация, а не состояние"
 
 
@@ -563,7 +572,15 @@ def test_a_stand_where_every_channel_answers_false_is_unavailable(guest, monkeyp
 
     payload = guest.get("/api/v1/guest/room/state").json()
     assert payload["availability"] == "unavailable"
-    assert payload["zones"] == []
+    # Состав номера виден, значения — нет: поголовные `false` не должны
+    # доехать до экрана ни как «выключено», ни как что-либо ещё.
+    assert payload["zones"]
+    assert not [
+        control
+        for zone in payload["zones"]
+        for control in zone["controls"]
+        if control["value"] is not None
+    ]
 
 
 # --- Отзывчивость -----------------------------------------------------------

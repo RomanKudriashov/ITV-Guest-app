@@ -246,3 +246,91 @@ def _links(hotel):
 
     with tenant_context(hotel):
         return list(RoomTypeRoom.objects.all())
+
+
+def test_reading_has_a_deadline_and_becomes_an_honest_refusal(
+    client, crystal, stand, monkeypatch
+):
+    """
+    «ЧИТАЕМ СОСТОЯНИЕ…» — ВРЕМЕННОЕ СОСТОЯНИЕ, А НЕ ПОКОЙ.
+
+    Выход из него зависел ТОЛЬКО от того, спросит ли клиент ещё раз: повтор
+    поднимал счётчик молчаний до двух, и лишь тогда отказ становился честным.
+    Не спросил — вкладка ушла в фон (мобильные браузеры усыпляют таймеры),
+    пропала сеть, клиент без повторов — и «читаем» оставалось на экране
+    навсегда. Гость час смотрел на обещание вместо ответа.
+
+    Теперь у обещания есть срок: молчание дольше `READING_DEADLINE_S`
+    объявляется отказом само, без второго запроса.
+    """
+    guest = GuestClient(client, crystal, _session(client, crystal))
+    _silence_equipment(monkeypatch)
+    liveness.forget(crystal.pk)
+    liveness.forget_silent_reads(crystal.pk, _room_id(crystal))
+
+    first = _state(guest)
+    assert first["unavailable_kind"] == room_guest.UNAVAILABLE_READING
+
+    # ИЗОЛИРУЕМ ИМЕННО СРОК. Повтор сам по себе поднимает счётчик до двух и
+    # объявляет отказ — тогда тест проходил бы и без срока, за чужой счёт.
+    # Поднимаем порог попыток недосягаемо высоко: сработать может только
+    # предел времени.
+    monkeypatch.setattr(room_guest, "COLD_READ_ATTEMPTS", 99)
+    _age_silence(crystal, room_guest.READING_DEADLINE_S + 1)
+    after = _state(guest)
+    assert after["unavailable_kind"] == room_guest.UNAVAILABLE_OFFLINE, (
+        "«читаем» пережило свой срок — гость снова смотрит на обещание"
+    )
+    assert "ресепшен" in after["message"]
+
+
+def test_unavailable_room_still_shows_its_plan_and_zones(
+    client, crystal, stand, monkeypatch
+):
+    """
+    НЕТ СВЯЗИ — НЕ ЗНАЧИТ «НОМЕР НЕ ОБОРУДОВАН».
+
+    Раньше при недоступности зоны отдавались пустым списком, и гость видел
+    пустой экран: ни плана, ни зон, ни намёка, что в номере вообще есть
+    управление. Разметка известна — она в опубликованном снимке и от связи не
+    зависит.
+
+    Значений при этом не подставляем никаких: элемент без связи не имеет
+    состояния, и показать «что было» — показать неправду.
+    """
+    guest = GuestClient(client, crystal, _session(client, crystal))
+    _silence_equipment(monkeypatch)
+    liveness.forget(crystal.pk)
+    liveness.forget_silent_reads(crystal.pk, _room_id(crystal))
+
+    payload = _state(guest)
+    assert payload["availability"] == "unavailable"
+
+    zones = payload["zones"]
+    assert zones, "разметка пропала вместе со связью"
+    controls = [c for z in zones for c in z["controls"]]
+    assert controls, "зоны есть, а элементов в них нет"
+    # Ни одного значения — ни настоящего, ни выдуманного.
+    assert all(c.get("value") is None for c in controls), (
+        "показали состояние, которого не знаем"
+    )
+    # И командовать нельзя.
+    assert payload["can_command"] is False
+
+
+def _room_id(hotel):
+    from apps.hotels.models import Room
+
+    with tenant_context(hotel):
+        return Room.objects.get(number="305").pk
+
+
+def _age_silence(hotel, seconds: float) -> None:
+    """Состарить запись молчания: как будто оно длится дольше, чем длится."""
+    from django.core.cache import cache
+
+    key = f"grms:silent_reads:{hotel.pk}"
+    rooms = dict(cache.get(key) or {})
+    for room, entry in rooms.items():
+        rooms[room] = {**entry, "since": float(entry["since"]) - seconds}
+    cache.set(key, rooms, 180)

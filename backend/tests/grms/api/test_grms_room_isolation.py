@@ -148,5 +148,8 @@ def test_a_dead_connector_still_takes_the_whole_hotel_down(guest, crystal, stand
 
     payload = _state(guest)
     assert payload["availability"] == "unavailable"
-    assert payload["zones"] == []
     assert payload["unavailable_kind"] == "offline"
+    # Состав номера показываем, состояние — нет.
+    assert not [
+        c for z in payload["zones"] for c in z["controls"] if c["value"] is not None
+    ]
