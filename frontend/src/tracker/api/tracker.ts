@@ -36,6 +36,8 @@ export function fetchTrackerBoard(
   date?: string,
   /** Поиск по номеру заказа и номеру комнаты. Фильтрует сервер. */
   search?: string,
+  /** Срез по плитке сводки. Сужает сервер — отсев на клиенте соврал бы. */
+  focus?: string,
 ): Promise<TrackerBoard> {
   return api.get<TrackerBoard>('/tracker/orders', {
     query: {
@@ -43,6 +45,7 @@ export function fetchTrackerBoard(
       scope,
       ...(date ? { date } : {}),
       ...(search ? { search } : {}),
+      ...(focus ? { focus } : {}),
     },
     headers: langHeaders(language),
   });

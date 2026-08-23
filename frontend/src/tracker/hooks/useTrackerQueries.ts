@@ -47,11 +47,22 @@ export function useTrackerBoard(
   date?: string,
   /** Поиск по номеру заказа и номеру комнаты — фильтрует СЕРВЕР. */
   search?: string,
+  /** Срез по плитке сводки: `new` / `in_work` / `overdue`. Сужает СЕРВЕР. */
+  focus?: string,
 ) {
   const language = useTrackerLanguage();
   return useQuery<TrackerBoard>({
-    queryKey: trackerKeys.board(point ?? 'none', scope, language, date ?? '', search ?? ''),
-    queryFn: () => fetchTrackerBoard(point as string, scope, language, date, search),
+    queryKey: trackerKeys.board(
+      point ?? 'none',
+      scope,
+      language,
+      date ?? '',
+      // Поиск и срез — ОДИН сегмент ключа: оба сужают доску, и живой снимок,
+      // который приходит нефильтрованным, обязан отличать «доска как есть» от
+      // любого сужения одной проверкой, а не списком.
+      [search ?? '', focus ?? ''].filter(Boolean).join('|'),
+    ),
+    queryFn: () => fetchTrackerBoard(point as string, scope, language, date, search, focus),
     enabled: Boolean(point),
     staleTime: 10_000,
     refetchInterval: pollMs && pollMs > 0 ? pollMs : false,

@@ -786,7 +786,15 @@
       "emptyTimelineTitle": "No appointments for this day",
       "emptyTimelineBody": "New bookings will appear here on their own",
       "today": "Today",
-      "slaHint": "Overdue means later than {{minutes}} min after intake"
+      "slaHint": "Overdue means later than {{minutes}} min after intake",
+      "offlineTitle": "Lost connection to the board",
+      "offlineBody": "This is not \"no requests\": new ones may be arriving but not reaching this screen. Reconnecting on our own — stay on the page.",
+      "shiftFresh": "Shift started at {{time}}. No requests yet",
+      "shiftDone_one": "{{count}} request done this shift",
+      "shiftDone_other": "{{count}} requests done this shift",
+      "shiftSpeed": "Usually takes {{duration}}",
+      "shiftPickup": "Picked up within {{duration}}",
+      "lastOrder": "Last request — {{age}}"
     },
     "card": {
       "number": "#{{number}}",
@@ -860,6 +868,13 @@
       "days_one": "{{count}} day",
       "days_other": "{{count}} days",
       "yesterday": "yesterday, {{time}}"
+    },
+    "shift": {
+      "new": "New",
+      "inWork": "In progress",
+      "overdue": "Overdue",
+      "done": "Done this shift",
+      "speed": "Typical time"
     }
   },
   "requestFields": {

@@ -29,12 +29,17 @@ def board(
     scope: str = "active",
     date: str = None,
     search: str = "",
+    focus: str = "",
     cursor: str | None = None,
     limit: int | None = None,
 ):
     """
     `date` осмыслен только для ленты записей (спа): какой день показать.
     Остальные типы трекера его игнорируют — у них лента не по времени слота.
+
+    `focus` — срез по клику на плитку сводки: `new` / `in_work` / `overdue`.
+    Неизвестное значение игнорируется: ссылка с опечаткой показывает доску
+    целиком, а не отказ.
     """
     execution_point = svc.require_point(request.user, point)
     return svc.build_board(
@@ -43,6 +48,7 @@ def board(
         language=current_language(),
         date=date,
         search=search,
+        focus=focus,
         cursor=cursor,
         limit=limit,
     )

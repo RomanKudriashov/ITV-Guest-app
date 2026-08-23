@@ -25,7 +25,7 @@ from apps.hotels.models import ExecutionPoint, Hotel, Service
 
 from apps.events.bus import ORDER_ACCEPTED, emit
 
-from apps.orders.services import status_flows
+from apps.orders.services import status_flows, tracker_shift
 from apps.orders.models import Order, StatusDefinition
 from apps.orders.services.services import change_status, order_queryset, serialize_order
 from apps.orders.services.tracker_types import behaviour_for_type, tracker_type_for_point
@@ -149,6 +149,7 @@ def build_board(
     language: str | None = None,
     date: str | None = None,
     search: str = "",
+    focus: str = "",
     cursor: str | None = None,
     limit: int | None = None,
 ) -> dict:
@@ -183,6 +184,8 @@ def build_board(
         if term.isdigit():
             condition |= Q(number=int(term))
         queryset = queryset.filter(condition)
+
+    queryset = _narrow(queryset, point, focus=focus)
 
     next_cursor = None
     if scope == "history":
@@ -242,7 +245,45 @@ def build_board(
         "layout": behaviour.layout,
         "columns": columns,
         "next_cursor": next_cursor,
+        # СВОДКА ЕДЕТ С ДОСКОЙ, А НЕ ОТДЕЛЬНОЙ РУЧКОЙ.
+        #
+        # Числа обязаны совпадать с тем, что человек видит в колонках. Второй
+        # запрос разошёлся бы с первым на любом заказе, пришедшем между ними, —
+        # и доска показывала бы «новых 4» над тремя карточками. Живой контур
+        # это чинит сам: сокет присылает полный снимок, и сводка приезжает в
+        # нём же, без отдельной подписки.
+        #
+        # Сводка про ТЕКУЩЕЕ состояние точки, поэтому она одна и та же для
+        # активной доски и для истории: в истории «новых 4» — это тоже правда
+        # про точку, просто на экране их не видно.
+        "shift": tracker_shift.shift_summary(point, hotel=hotel),
     }
+
+
+def _narrow(queryset, point, *, focus: str = ""):
+    """
+    Сужение доски по клику на плитку.
+
+    Плитка — это и число, и фильтр: «просрочено 3» без возможности нажать
+    заставляет искать эти три карточки глазами по четырём колонкам. Поэтому
+    сужение делает СЕРВЕР, а не отсев уже полученной доски: отсев соврал бы на
+    первом же заказе, который не приехал.
+
+    Неизвестное значение молча игнорируется, а не отдаёт ошибку: срез — это
+    удобство, и ссылка с опечаткой должна показать доску целиком, а не пустой
+    экран с отказом.
+    """
+    if focus == "new":
+        return queryset.filter(status__is_initial=True)
+    if focus == "in_work":
+        return queryset.filter(status__is_initial=False, status__is_terminal=False)
+    if focus == "overdue":
+        # Порог — настройка ТОЧКИ, и граница считается от него же, что и
+        # `is_overdue` на карточке. Два разных правила «что такое просрочка»
+        # разошлись бы на первой же правке настройки.
+        edge = timezone.now() - timedelta(minutes=point.sla_minutes)
+        return queryset.filter(created_at__lte=edge)
+    return queryset
 
 
 def _timeline_column(queryset, hotel, language, statuses, date: str | None = None) -> dict:

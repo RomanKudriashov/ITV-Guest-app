@@ -99,6 +99,29 @@ export interface TrackerOrder extends GuestOrder {
   review?: GuestReview | null;
 }
 
+/**
+ * Сводка смены точки. Едет ВМЕСТЕ с доской, а не отдельной ручкой: числа
+ * обязаны совпадать с тем, что видно в колонках, а второй запрос разошёлся бы
+ * с первым на любом заказе, пришедшем между ними.
+ */
+export interface TrackerShift {
+  /** Сейчас: невзятые, в работе, просроченные. Первые три — ещё и фильтры. */
+  new: number;
+  in_work: number;
+  overdue: number;
+  /** За смену: закрытых без отмен. */
+  done: number;
+  /** Медиана «создан → закрыт», минуты. `null` — за смену нечего мерить. */
+  median_minutes: number | null;
+  /** Медиана «создан → взят», минуты. Скорость РЕАКЦИИ, отдельно от исполнения. */
+  median_pickup_minutes: number | null;
+  /** Начало суток отеля — настоящих смен в модели нет. */
+  shift_started_at: string;
+  sla_minutes: number;
+  /** Последняя заявка вообще — отличает затишье от неработающего экрана. */
+  last_order_at: string | null;
+}
+
 /** One row of the staff thread list (`GET /api/tracker/chat/threads`). */
 export interface TrackerChatThread {
   thread_id: string;
@@ -128,6 +151,9 @@ export interface TrackerBoard {
   layout?: TrackerLayout;
   /** Built from the point's status FLOW — never hard-coded on the client. */
   columns: TrackerColumn[];
+  /** Сводка смены — приезжает в том же ответе и в том же снимке из сокета. */
+  shift?: TrackerShift;
+  next_cursor?: string | null;
 }
 
 /** WebSocket envelope — full snapshots only, never deltas (contract §5). */

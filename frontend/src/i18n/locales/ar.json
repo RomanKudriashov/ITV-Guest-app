@@ -798,7 +798,19 @@
       "emptyTimelineTitle": "لا حجوزات في هذا اليوم",
       "emptyTimelineBody": "ستظهر الحجوزات الجديدة هنا تلقائياً",
       "today": "اليوم",
-      "slaHint": "التأخير يعني بعد {{minutes}} دقيقة من الاستلام"
+      "slaHint": "التأخير يعني بعد {{minutes}} دقيقة من الاستلام",
+      "offlineTitle": "انقطع الاتصال باللوحة",
+      "offlineBody": "هذا ليس «لا توجد طلبات»: قد تصل طلبات جديدة دون أن تظهر هنا. نعيد الاتصال تلقائيًا — ابقَ على الشاشة.",
+      "shiftFresh": "بدأت الوردية في {{time}}. لا توجد طلبات بعد",
+      "shiftDone_zero": "{{count}} طلب في هذه الوردية",
+      "shiftDone_one": "طلب واحد في هذه الوردية",
+      "shiftDone_two": "طلبان في هذه الوردية",
+      "shiftDone_few": "{{count}} طلبات في هذه الوردية",
+      "shiftDone_many": "{{count}} طلبًا في هذه الوردية",
+      "shiftDone_other": "{{count}} طلب في هذه الوردية",
+      "shiftSpeed": "يستغرق عادة {{duration}}",
+      "shiftPickup": "يُستلم خلال {{duration}}",
+      "lastOrder": "آخر طلب — {{age}}"
     },
     "card": {
       "number": "رقم {{number}}",
@@ -884,6 +896,13 @@
       "days_many": "{{count}} يومًا",
       "days_other": "{{count}} يوم",
       "yesterday": "أمس، {{time}}"
+    },
+    "shift": {
+      "new": "جديدة",
+      "inWork": "قيد التنفيذ",
+      "overdue": "متأخرة",
+      "done": "أُنجزت في الوردية",
+      "speed": "الزمن المعتاد"
     }
   },
   "requestFields": {

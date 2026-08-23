@@ -55,10 +55,33 @@ function order(overrides: Record<string, unknown>): Record<string, unknown> {
   }
 }
 
-async function showBoard(page: Page, orders: Record<string, unknown>[]): Promise<void> {
+/** Сводка по умолчанию: смена идёт, работа была. */
+const SHIFT = {
+  new: 1,
+  in_work: 0,
+  overdue: 0,
+  done: 0,
+  median_minutes: null as number | null,
+  median_pickup_minutes: null as number | null,
+  shift_started_at: new Date().toISOString(),
+  sla_minutes: 20,
+  last_order_at: null as string | null,
+}
+
+async function showBoard(
+  page: Page,
+  orders: Record<string, unknown>[],
+  shift: Record<string, unknown> = SHIFT,
+  options: { killSocket?: boolean } = {},
+): Promise<void> {
   // Сокет глушим: иначе живой снимок заменит подменённую доску через секунду.
   await page.routeWebSocket('**/ws/**', (ws) => ws.close())
   await page.route('**/api/v1/tracker/orders**', async (route) => {
+    if (options.killSocket) {
+      // Оба канала молчат — доска НЕ МОЖЕТ утверждать, что заявок нет.
+      await route.abort()
+      return
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -70,6 +93,7 @@ async function showBoard(page: Page, orders: Record<string, unknown>[]): Promise
         layout: 'columns',
         columns: [{ code: 'new', title: 'Новый', color_token: 'info', orders }],
         next_cursor: null,
+        shift,
       }),
     })
   })

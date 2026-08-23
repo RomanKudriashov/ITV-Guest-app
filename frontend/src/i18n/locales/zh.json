@@ -782,7 +782,14 @@
       "emptyTimelineTitle": "当天没有预约",
       "emptyTimelineBody": "新预约会自动显示在这里",
       "today": "今天",
-      "slaHint": "超过下单后 {{minutes}} 分钟即为超时"
+      "slaHint": "超过下单后 {{minutes}} 分钟即为超时",
+      "offlineTitle": "与看板的连接已断开",
+      "offlineBody": "这不是「没有订单」：新订单可能正在产生，只是没有到达本屏。系统正在自动重连，请留在此页面。",
+      "shiftFresh": "本班 {{time}} 开始，暂无订单",
+      "shiftDone_other": "本班已完成 {{count}} 单",
+      "shiftSpeed": "通常耗时 {{duration}}",
+      "shiftPickup": "{{duration}} 内接单",
+      "lastOrder": "最近一单 — {{age}}"
     },
     "card": {
       "number": "第 {{number}} 号",
@@ -853,6 +860,13 @@
       "hoursMinutes": "{{hours}} 小时 {{minutes}} 分",
       "days_other": "{{count}} 天",
       "yesterday": "昨天 {{time}}"
+    },
+    "shift": {
+      "new": "新单",
+      "inWork": "处理中",
+      "overdue": "超时",
+      "done": "本班完成",
+      "speed": "典型用时"
     }
   },
   "requestFields": {

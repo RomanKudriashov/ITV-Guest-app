@@ -792,7 +792,16 @@
       "emptyTimelineTitle": "На этот день записей нет",
       "emptyTimelineBody": "Новые записи появятся здесь сами",
       "today": "Сегодня",
-      "slaHint": "Просрочка — позже {{minutes}} мин от приёма"
+      "slaHint": "Просрочка — позже {{minutes}} мин от приёма",
+      "offlineTitle": "Связь с доской потеряна",
+      "offlineBody": "Это не «заявок нет»: новые могут приходить, но до экрана не доезжают. Восстанавливаем связь сами — не уходите с экрана.",
+      "shiftFresh": "Смена началась в {{time}}. Заявок пока не было",
+      "shiftDone_one": "За смену сделана {{count}} заявка",
+      "shiftDone_few": "За смену сделано {{count}} заявки",
+      "shiftDone_many": "За смену сделано {{count}} заявок",
+      "shiftSpeed": "Обычно занимает {{duration}}",
+      "shiftPickup": "Берут в работу за {{duration}}",
+      "lastOrder": "Последняя заявка — {{age}}"
     },
     "card": {
       "number": "№{{number}}",
@@ -869,6 +878,13 @@
       "days_few": "{{count}} суток",
       "days_many": "{{count}} суток",
       "yesterday": "вчера, {{time}}"
+    },
+    "shift": {
+      "new": "Новых",
+      "inWork": "В работе",
+      "overdue": "Просрочено",
+      "done": "Сделано за смену",
+      "speed": "Средняя скорость"
     }
   },
   "requestFields": {

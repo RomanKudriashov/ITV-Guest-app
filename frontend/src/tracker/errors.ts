@@ -58,3 +58,19 @@ export function trackerErrorMessage(error: unknown, t: TFunction): string {
   if (error instanceof Error && error.message) return error.message;
   return t('tracker.errors.generic');
 }
+
+/**
+ * ДО СЕРВЕРА НЕ ДОСТУЧАЛИСЬ — это не отказ сервера.
+ *
+ * `fetch` при обрыве бросает `TypeError: Failed to fetch`, и эта строка
+ * выезжала на экран смены как есть. Отказ сервера («вы не привязаны к точке»)
+ * и молчание канала лечатся совершенно по-разному: первое — обращением к
+ * администратору, второе — ожиданием или проверкой сети. Одна фраза на двоих
+ * посылает половину людей не туда.
+ *
+ * Признак — ОТСУТСТВИЕ ответа: у `ApiError` есть статус, значит сервер ответил,
+ * что бы он ни ответил.
+ */
+export function isTransportFailure(error: unknown): boolean {
+  return Boolean(error) && !(error instanceof ApiError);
+}

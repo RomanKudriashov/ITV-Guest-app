@@ -18,6 +18,8 @@ import GroupWorkOutlinedIcon from '@mui/icons-material/GroupWorkOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
+import { EmptyBoard } from '../components/EmptyBoard';
+import { ShiftTiles, type ShiftFocus } from '../components/ShiftTiles';
 import { BoardColumn } from '../components/BoardColumn';
 import { CancelDialog } from '../components/CancelDialog';
 import { OrderCard } from '../components/OrderCard';
@@ -31,10 +33,11 @@ import { useTrackerSound } from '../hooks/useTrackerSound';
 import {
   useTrackerBoard,
   useTrackerChatThreads,
+  useTrackerLanguage,
   useTrackerOrder,
   useTrackerPoints,
 } from '../hooks/useTrackerQueries';
-import { trackerErrorMessage } from '../errors';
+import { isTransportFailure, trackerErrorMessage } from '../errors';
 import type { TrackerOrder, TrackerScope } from '../api/types';
 
 /** How long a freshly changed order keeps its ring. */
@@ -47,6 +50,7 @@ export function TrackerPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const wide = useMediaQuery(theme.breakpoints.up('md'));
+  const language = useTrackerLanguage();
   const detailMatch = useMatch('/tracker/order/:id');
   const openOrderId = detailMatch?.params.id ?? null;
 
@@ -78,13 +82,15 @@ export function TrackerPage() {
     платформы, а живой контур при этом не ломается: нефильтрованный снимок из
     сокета в отфильтрованную доску не подменяется, она перечитывает своё.
   */
-  const { params: listParams, patch: patchList } = useListQuery({ search: '' });
+  const { params: listParams, patch: patchList } = useListQuery({ search: '', focus: '' });
+  const focus = listParams.focus as ShiftFocus;
   const boardQuery = useTrackerBoard(
     pointCode,
     scope,
     pollMs,
     day || undefined,
     listParams.search,
+    focus,
   );
   const sound = useTrackerSound();
   const actions = useOrderActions();
@@ -126,6 +132,18 @@ export function TrackerPage() {
 
   const columns = useMemo(() => boardQuery.data?.columns ?? [], [boardQuery.data]);
   const boardPoint = boardQuery.data?.point;
+  const shift = boardQuery.data?.shift;
+  /*
+    Можем ли мы утверждать, что заявок НЕТ.
+
+    Сокет упал — это ещё не «мы ничего не знаем»: доска переходит на опрос раз
+    в 15 секунд, и пока опрос отвечает, пустота настоящая. Не знаем мы её
+    только когда молчат оба канала: тогда и говорим об этом, а не показываем
+    спокойный итог смены поверх копящихся на сервере заявок.
+  */
+  const boardUnconfirmed =
+    live === 'offline' &&
+    (!boardQuery.dataUpdatedAt || Date.now() - boardQuery.dataUpdatedAt > OFFLINE_POLL_MS * 2);
 
   // Which shape the server asked for. Records (spa) come as one ordered day —
   // grouping an appointment by status would hide the only thing that matters
@@ -330,6 +348,13 @@ export function TrackerPage() {
       ) : null}
 
       {/*
+        Сводка смены. Приезжает В ТОМ ЖЕ ответе, что и колонки, и в том же
+        снимке из сокета — поэтому числа над доской и карточки под ней не могут
+        разойтись.
+      */}
+      {shift ? <ShiftTiles shift={shift} focus={focus} onFocus={(next) => patchList({ focus: next })} /> : null}
+
+      {/*
         ПОРОГ ПРОСРОЧКИ НАЗВАН СЛОВАМИ.
 
         Красная метка на карточке молчала о том, откуда она берётся, и человек
@@ -366,7 +391,8 @@ export function TrackerPage() {
           <Stack alignItems="center" sx={{ py: 6 }}>
             <CircularProgress aria-label={t('tracker.loading')} />
           </Stack>
-        ) : boardQuery.error ? (
+        ) : boardQuery.error && !isTransportFailure(boardQuery.error) ? (
+          // Сервер ОТВЕТИЛ отказом — называем причину и даём повторить.
           <Alert
             severity="error"
             action={
@@ -377,29 +403,38 @@ export function TrackerPage() {
           >
             {trackerErrorMessage(boardQuery.error, t)}
           </Alert>
+        ) : boardQuery.error ? (
+          /*
+            До сервера не достучались, и доски у нас нет. Это НЕ «заявок нет» и
+            не «сервер отказал»: молчащая доска читается как «работы нет», и
+            смена спокойно ждёт, пока заявки копятся на сервере. Говорим то же,
+            что при неподтверждённой пустоте, — потому что случай тот же.
+          */
+          <Box data-testid="tracker-empty">
+            <EmptyBoard shift={undefined} unconfirmed language={language} />
+          </Box>
         ) : !allOrders.length && !timeline ? (
           // У ленты пустой день — не пустая доска: переключатель дня обязан
           // остаться, иначе из пустого сегодня некуда шагнуть.
           <Box data-testid="tracker-empty">
-            {/* Под поиском — «ничего не найдено», а не «доска пуста»: это
-                разные ответы, и второй заставил бы искать несуществующую
-                причину, почему заказов «нет». */}
-            <EmptyState
-              title={
-                listParams.search
-                  ? t('list.nothingFound')
-                  : scope === 'history'
-                    ? t('tracker.board.emptyHistoryTitle')
-                    : t('tracker.board.emptyTitle')
-              }
-              description={
-                listParams.search
-                  ? t('list.nothingFoundHint')
-                  : scope === 'history'
-                    ? t('tracker.board.emptyHistoryBody')
-                    : t('tracker.board.emptyBody')
-              }
-            />
+            {/* Под поиском или срезом — «ничего не найдено», а не «доска
+                пуста»: это разные ответы, и второй заставил бы искать
+                несуществующую причину, почему заказов «нет». */}
+            {listParams.search || focus ? (
+              <EmptyState
+                title={t('list.nothingFound')}
+                description={t('list.nothingFoundHint')}
+              />
+            ) : scope === 'history' ? (
+              <EmptyState
+                title={t('tracker.board.emptyHistoryTitle')}
+                description={t('tracker.board.emptyHistoryBody')}
+              />
+            ) : (
+              // Три разных «пусто» разведены внутри: затишье со сводкой,
+              // начало смены, обрыв связи. Последнее — вообще не пустота.
+              <EmptyBoard shift={shift} unconfirmed={boardUnconfirmed} language={language} />
+            )}
           </Box>
         ) : timeline ? (
           // Лента записей: один день по времени слота, во всю ширину. Колонок
