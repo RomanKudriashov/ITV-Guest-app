@@ -781,7 +781,8 @@
       "day": "{{date}} 的预约",
       "emptyTimelineTitle": "当天没有预约",
       "emptyTimelineBody": "新预约会自动显示在这里",
-      "today": "今天"
+      "today": "今天",
+      "slaHint": "超过下单后 {{minutes}} 分钟即为超时"
     },
     "card": {
       "number": "第 {{number}} 号",
@@ -789,7 +790,9 @@
       "waiting": "{{minutes}} 分钟",
       "asap": "尽快",
       "byTime": "{{time}} 前",
-      "fromOrder": "来自订单 #{{number}} · {{service}}"
+      "fromOrder": "来自订单 #{{number}} · {{service}}",
+      "overdueBy": "超时 {{duration}}",
+      "placed": "{{time}} 下单"
     },
     "actions": {
       "accept": "接单",
@@ -809,7 +812,8 @@
       "close": "关闭",
       "loading": "加载中…",
       "notFound": "看板上没有该订单",
-      "review": "客人评价"
+      "review": "客人评价",
+      "waitingOverdue": "{{age}} · {{overdue}}"
     },
     "cancel": {
       "title": "取消第 {{number}} 号订单？",
@@ -842,7 +846,14 @@
       "emptyThread": "开始对话",
       "back": "返回"
     },
-    "searchPlaceholder": "订单号或房间号"
+    "searchPlaceholder": "订单号或房间号",
+    "age": {
+      "minutes_other": "{{count}} 分钟",
+      "hours_other": "{{count}} 小时",
+      "hoursMinutes": "{{hours}} 小时 {{minutes}} 分",
+      "days_other": "{{count}} 天",
+      "yesterday": "昨天 {{time}}"
+    }
   },
   "requestFields": {
     "title": "申请字段",

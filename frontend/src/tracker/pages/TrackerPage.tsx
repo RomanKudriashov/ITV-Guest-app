@@ -125,6 +125,7 @@ export function TrackerPage() {
   }, [highlighted]);
 
   const columns = useMemo(() => boardQuery.data?.columns ?? [], [boardQuery.data]);
+  const boardPoint = boardQuery.data?.point;
 
   // Which shape the server asked for. Records (spa) come as one ordered day —
   // grouping an appointment by status would hide the only thing that matters
@@ -326,6 +327,26 @@ export function TrackerPage() {
             />
           ))}
         </Tabs>
+      ) : null}
+
+      {/*
+        ПОРОГ ПРОСРОЧКИ НАЗВАН СЛОВАМИ.
+
+        Красная метка на карточке молчала о том, откуда она берётся, и человек
+        не мог понять, много двадцать минут или мало для этой точки. Порог —
+        настройка ТОЧКИ (`sla_minutes`), у кухни и у консьержа он разный;
+        поэтому строка стоит на доске, а не в общих настройках, и берёт число
+        из того же ответа, из которого приехали карточки.
+      */}
+      {boardPoint?.sla_minutes ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: 'block', px: { xs: 1.5, md: 2 }, pt: { xs: 1.5, md: 2 } }}
+          data-testid="tracker-sla-hint"
+        >
+          {t('tracker.board.slaHint', { minutes: boardPoint.sla_minutes })}
+        </Typography>
       ) : null}
 
       {/* Поиск по доске. Рядом с ней, а не в шапке: он про эту доску. */}

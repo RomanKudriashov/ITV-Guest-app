@@ -791,7 +791,8 @@
       "day": "Записи на {{date}}",
       "emptyTimelineTitle": "На этот день записей нет",
       "emptyTimelineBody": "Новые записи появятся здесь сами",
-      "today": "Сегодня"
+      "today": "Сегодня",
+      "slaHint": "Просрочка — позже {{minutes}} мин от приёма"
     },
     "card": {
       "number": "№{{number}}",
@@ -799,7 +800,9 @@
       "waiting": "{{minutes}} мин",
       "asap": "Как можно скорее",
       "byTime": "Ко времени {{time}}",
-      "fromOrder": "Из заказа №{{number}} · {{service}}"
+      "fromOrder": "Из заказа №{{number}} · {{service}}",
+      "overdueBy": "просрочен на {{duration}}",
+      "placed": "принят в {{time}}"
     },
     "actions": {
       "accept": "Принять",
@@ -819,7 +822,8 @@
       "close": "Закрыть",
       "loading": "Загружаем заказ…",
       "notFound": "Заказ не найден на этой доске",
-      "review": "Отзыв гостя"
+      "review": "Отзыв гостя",
+      "waitingOverdue": "{{age}} · {{overdue}}"
     },
     "cancel": {
       "title": "Отменить заявку №{{number}}?",
@@ -852,7 +856,20 @@
       "emptyThread": "Начните переписку",
       "back": "Назад"
     },
-    "searchPlaceholder": "Номер заказа или комнаты"
+    "searchPlaceholder": "Номер заказа или комнаты",
+    "age": {
+      "minutes_one": "{{count}} минута",
+      "minutes_few": "{{count}} минуты",
+      "minutes_many": "{{count}} минут",
+      "hours_one": "{{count}} час",
+      "hours_few": "{{count}} часа",
+      "hours_many": "{{count}} часов",
+      "hoursMinutes": "{{hours}} ч {{minutes}} мин",
+      "days_one": "{{count}} сутки",
+      "days_few": "{{count}} суток",
+      "days_many": "{{count}} суток",
+      "yesterday": "вчера, {{time}}"
+    }
   },
   "requestFields": {
     "title": "Поля заявки",

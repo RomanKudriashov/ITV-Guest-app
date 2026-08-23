@@ -785,7 +785,8 @@
       "day": "Appointments for {{date}}",
       "emptyTimelineTitle": "No appointments for this day",
       "emptyTimelineBody": "New bookings will appear here on their own",
-      "today": "Today"
+      "today": "Today",
+      "slaHint": "Overdue means later than {{minutes}} min after intake"
     },
     "card": {
       "number": "#{{number}}",
@@ -793,7 +794,9 @@
       "waiting": "{{minutes}} min",
       "asap": "As soon as possible",
       "byTime": "By {{time}}",
-      "fromOrder": "From order #{{number}} · {{service}}"
+      "fromOrder": "From order #{{number}} · {{service}}",
+      "overdueBy": "overdue by {{duration}}",
+      "placed": "placed at {{time}}"
     },
     "actions": {
       "accept": "Accept",
@@ -813,7 +816,8 @@
       "close": "Close",
       "loading": "Loading the order…",
       "notFound": "This order is not on the board",
-      "review": "Guest review"
+      "review": "Guest review",
+      "waitingOverdue": "{{age}} · {{overdue}}"
     },
     "cancel": {
       "title": "Cancel order #{{number}}?",
@@ -846,7 +850,17 @@
       "emptyThread": "Start the conversation",
       "back": "Back"
     },
-    "searchPlaceholder": "Order or room number"
+    "searchPlaceholder": "Order or room number",
+    "age": {
+      "minutes_one": "{{count}} minute",
+      "minutes_other": "{{count}} minutes",
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "yesterday": "yesterday, {{time}}"
+    }
   },
   "requestFields": {
     "title": "Request fields",

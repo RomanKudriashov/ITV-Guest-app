@@ -2,16 +2,10 @@ import type { TFunction } from 'i18next';
 
 import type { TrackerOrder } from './api/types';
 
-export function formatClock(iso: string | null | undefined, language: string): string {
-  if (!iso) return '';
-  try {
-    return new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }).format(
-      new Date(iso),
-    );
-  } catch {
-    return '';
-  }
-}
+// Часы живут в `orderAge` вместе с остальным временем доски: две реализации
+// одного форматирования однажды разошлись бы в том, какой это часовой пояс.
+export { formatClock } from './orderAge';
+import { formatClock } from './orderAge';
 
 /** «Комната 305 · Бассейн · шезлонг 12» — everything the runner needs in one line. */
 export function whereText(order: TrackerOrder, t: TFunction): string {

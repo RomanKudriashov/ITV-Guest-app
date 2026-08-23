@@ -18,6 +18,7 @@ import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
 import { itemsSummary, totalText, whenText, whereText } from '../orderText';
+import { formatAge, formatClock, formatOverdue } from '../orderAge';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
@@ -71,15 +72,49 @@ export function OrderCard({
             </Typography>
             <Chip size="small" label={order.status.title} color={colorSlot} variant="outlined" />
             <Box sx={{ flexGrow: 1 }} />
+            {/*
+              ЧАС КРУПНО, ВОЗРАСТ СЕРЫМ.
+
+              Раньше здесь стоял один чип с сырыми минутами: «429 мин», а на
+              стенде доходило до «89700 мин». Это два разных вопроса, и оба
+              нужны. Заказ называют по времени приёма («тот, что в двадцать
+              минут третьего»), а решение принимают по возрасту («висит два
+              часа»). Одно число не отвечало ни на один из них.
+            */}
+            <Box sx={{ textAlign: 'end', minWidth: 0 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}
+                data-testid={`tracker-clock-${order.number}`}
+              >
+                {formatClock(order.created_at, language)}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', lineHeight: 1.2 }}
+                data-testid={`tracker-waiting-${order.number}`}
+              >
+                {formatAge(order.waiting_minutes, order.created_at, t, language)}
+              </Typography>
+            </Box>
+          </Stack>
+
+          {/*
+            Просрочка называет ВЕЛИЧИНУ. Красный чип без числа одинаково
+            выглядел у опоздавшего на минуту и у забытого на двое суток.
+          */}
+          {order.is_overdue ? (
             <Chip
               size="small"
+              color="error"
+              variant="filled"
               icon={<AccessTimeIcon sx={{ fontSize: 16 }} />}
-              color={order.is_overdue ? 'error' : 'default'}
-              variant={order.is_overdue ? 'filled' : 'outlined'}
-              label={t('tracker.card.waiting', { minutes: order.waiting_minutes })}
-              data-testid={`tracker-waiting-${order.number}`}
+              label={formatOverdue(order.overdue_minutes ?? 0, t)}
+              data-testid={`tracker-overdue-${order.number}`}
+              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
             />
-          </Stack>
+          ) : null}
 
           {/*
             A borrowed task says where it came from. The bartender is holding a

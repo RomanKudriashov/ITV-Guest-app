@@ -324,6 +324,11 @@ def serialize_tracker_order(
     payload = serialize_order(order, language)
     waiting = int((timezone.now() - order.created_at).total_seconds() // 60)
     point = order.execution_point
+    overdue = (
+        waiting - point.sla_minutes
+        if not order.status.is_terminal and waiting >= point.sla_minutes
+        else None
+    )
 
     payload.update(
         {
@@ -343,9 +348,15 @@ def serialize_tracker_order(
             ),
             "source_order": _source_order(order, language),
             "waiting_minutes": max(waiting, 0),
-            "is_overdue": (
-                not order.status.is_terminal and waiting >= point.sla_minutes
-            ),
+            "is_overdue": overdue is not None,
+            # НАСКОЛЬКО просрочен, а не только «да».
+            #
+            # Красный чип без величины одинаково выглядел у заказа, опоздавшего
+            # на минуту, и у забытого на двое суток — а это разные новости.
+            # Считаем здесь, а не на клиенте: порог живёт в настройке точки, и
+            # вычитание `waiting - sla` на фронте завело бы второе место, где
+            # записано, что такое просрочка.
+            "overdue_minutes": overdue,
             "next_statuses": [
                 {"code": status.code, "title": translate(status.title, language)}
                 for status in next_statuses(order, statuses)

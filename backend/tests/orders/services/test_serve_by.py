@@ -175,3 +175,39 @@ def test_board_and_promise_count_from_the_same_zero(crystal):
         assert card["is_overdue"] is True
         serve_by = timezone.datetime.fromisoformat(card["serve_by"])
         assert serve_by == created + promise
+
+
+def test_overdue_says_by_how_much_and_from_the_point_threshold(crystal):
+    """
+    УКУС. Просрочка называет ВЕЛИЧИНУ, и считает её сервер.
+
+    Красный чип без числа одинаково выглядел у опоздавшего на минуту и у
+    забытого на двое суток. Вычитать порог на клиенте нельзя: `sla_minutes` —
+    настройка ТОЧКИ, и второе место, где записано, что такое просрочка,
+    однажды разошлось бы с первым.
+    """
+    from apps.orders.services.tracker import serialize_tracker_order
+
+    with tenant_context(crystal):
+        order, _, _ = _aged_order(minutes_ago=120, prep=20)
+        point = order.execution_point
+        card = serialize_tracker_order(get_order(order.pk))
+
+        assert card["is_overdue"] is True
+        assert card["overdue_minutes"] == 120 - point.sla_minutes
+
+
+def test_an_order_in_time_has_no_overdue_amount(crystal):
+    """
+    Не просрочен — величины НЕТ, а не ноль. Ноль минут просрочки экран показал
+    бы как «просрочен на 0 минут», то есть объявил бы поломку там, где всё в
+    срок.
+    """
+    from apps.orders.services.tracker import serialize_tracker_order
+
+    with tenant_context(crystal):
+        order, _, _ = _aged_order(minutes_ago=1, prep=20)
+        card = serialize_tracker_order(get_order(order.pk))
+
+        assert card["is_overdue"] is False
+        assert card["overdue_minutes"] is None

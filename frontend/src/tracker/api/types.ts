@@ -25,6 +25,8 @@ export interface TrackerPoint {
   code: string;
   title: string;
   kind?: string;
+  /** Порог просрочки этой точки, минуты. У кухни и у консьержа он разный. */
+  sla_minutes?: number;
   tracker_type?: TrackerType;
   layout?: TrackerLayout;
   /** Staff level on this point ("lead", "member", …) — informational. */
@@ -41,6 +43,8 @@ export interface TrackerPointRef {
   id: string;
   code: string;
   title: string;
+  /** Порог просрочки этой точки, минуты — тот же `serialize_point` на сервере. */
+  sla_minutes?: number;
   tracker_type?: TrackerType;
   layout?: TrackerLayout;
 }
@@ -80,6 +84,13 @@ export interface TrackerOrder extends GuestOrder {
   waiting_minutes: number;
   /** Waiting longer than the point's threshold. */
   is_overdue: boolean;
+  /**
+   * НА СКОЛЬКО просрочен, минуты; `null`, когда не просрочен.
+   *
+   * Считает сервер: порог живёт в настройке точки (`sla_minutes`), и вычитание
+   * на клиенте завело бы второе место, где записано, что такое просрочка.
+   */
+  overdue_minutes: number | null;
   next_statuses: TrackerNextStatus[];
   can_cancel: boolean;
   /** Set only on a sub-order of a fanned-out guest order; null on a plain one. */

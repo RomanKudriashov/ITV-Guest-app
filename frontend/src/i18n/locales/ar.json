@@ -797,7 +797,8 @@
       "day": "حجوزات يوم {{date}}",
       "emptyTimelineTitle": "لا حجوزات في هذا اليوم",
       "emptyTimelineBody": "ستظهر الحجوزات الجديدة هنا تلقائياً",
-      "today": "اليوم"
+      "today": "اليوم",
+      "slaHint": "التأخير يعني بعد {{minutes}} دقيقة من الاستلام"
     },
     "card": {
       "number": "رقم {{number}}",
@@ -805,7 +806,9 @@
       "waiting": "{{minutes}} د",
       "asap": "بأسرع وقت",
       "byTime": "بحلول {{time}}",
-      "fromOrder": "من الطلب رقم {{number}} · {{service}}"
+      "fromOrder": "من الطلب رقم {{number}} · {{service}}",
+      "overdueBy": "متأخر بمقدار {{duration}}",
+      "placed": "تم الاستلام في {{time}}"
     },
     "actions": {
       "accept": "قبول",
@@ -825,7 +828,8 @@
       "close": "إغلاق",
       "loading": "جارٍ التحميل…",
       "notFound": "الطلب غير موجود",
-      "review": "تقييم الضيف"
+      "review": "تقييم الضيف",
+      "waitingOverdue": "{{age}} · {{overdue}}"
     },
     "cancel": {
       "title": "إلغاء الطلب رقم {{number}}؟",
@@ -858,7 +862,29 @@
       "emptyThread": "ابدأ المحادثة",
       "back": "رجوع"
     },
-    "searchPlaceholder": "رقم الطلب أو الغرفة"
+    "searchPlaceholder": "رقم الطلب أو الغرفة",
+    "age": {
+      "minutes_zero": "{{count}} دقيقة",
+      "minutes_one": "دقيقة واحدة",
+      "minutes_two": "دقيقتان",
+      "minutes_few": "{{count}} دقائق",
+      "minutes_many": "{{count}} دقيقة",
+      "minutes_other": "{{count}} دقيقة",
+      "hours_zero": "{{count}} ساعة",
+      "hours_one": "ساعة واحدة",
+      "hours_two": "ساعتان",
+      "hours_few": "{{count}} ساعات",
+      "hours_many": "{{count}} ساعة",
+      "hours_other": "{{count}} ساعة",
+      "hoursMinutes": "{{hours}} س {{minutes}} د",
+      "days_zero": "{{count}} يوم",
+      "days_one": "يوم واحد",
+      "days_two": "يومان",
+      "days_few": "{{count}} أيام",
+      "days_many": "{{count}} يومًا",
+      "days_other": "{{count}} يوم",
+      "yesterday": "أمس، {{time}}"
+    }
   },
   "requestFields": {
     "title": "حقول الطلب",

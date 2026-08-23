@@ -20,6 +20,7 @@ import { OrderTimeline } from '@/guest/components/OrderTimeline';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
 import { formatClock, totalText, whenText, whereText } from '../orderText';
+import { formatAge, formatOverdue } from '../orderAge';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
@@ -121,9 +122,19 @@ export function OrderDetailSheet({
               <Stack spacing={0.75}>
                 <Row label={t('tracker.detail.where')} value={whereText(order, t)} />
                 <Row label={t('tracker.detail.when')} value={whenText(order, t, language)} />
+                {/* Та же лестница, что на карточке: минуты → часы → вчера →
+                    дата. Две разные формулировки одного возраста на карточке и
+                    в подробностях читались бы как два разных факта. */}
                 <Row
                   label={t('tracker.detail.waiting')}
-                  value={t('tracker.card.waiting', { minutes: order.waiting_minutes })}
+                  value={
+                    order.is_overdue
+                      ? t('tracker.detail.waitingOverdue', {
+                          age: formatAge(order.waiting_minutes, order.created_at, t, language),
+                          overdue: formatOverdue(order.overdue_minutes ?? 0, t),
+                        })
+                      : formatAge(order.waiting_minutes, order.created_at, t, language)
+                  }
                   emphasize={order.is_overdue}
                 />
                 <Row
