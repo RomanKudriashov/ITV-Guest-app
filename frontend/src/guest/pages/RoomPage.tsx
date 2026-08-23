@@ -268,13 +268,42 @@ export function RoomPage() {
     !needsPin &&
     snapshot?.availability === 'unavailable' &&
     !snapshot.zones.some((zone) => zone.controls.length > 0);
+  /*
+    Оборудование не отвечает: снимок пришёл, но НИ ОДИН элемент не читается.
+    Это не «недоступность» (её объявляет сервер) и не обрыв сокета — это
+    молчание номера, и сказать о нём должен экран, а не догадаться гость.
+  */
+  const readableControls = (snapshot?.zones ?? [])
+    .flatMap((zone) => zone.controls)
+    // Сцену читать нечем ВСЕГДА — не потому, что связи нет. Считать её
+    // «отвечающей» значит никогда не заметить молчание номера.
+    .filter((control) => !control.capabilities.every((capability) => capability === 'trigger'));
+  const roomUnreachable =
+    readableControls.length > 0 &&
+    readableControls.every((control) => control.state === 'offline');
+  // Сервер САМ объявил недоступность — значит, у него есть и причина, и текст.
+  const declared = snapshot?.availability === 'unavailable';
+
+  /*
+    ПЛИТА НЕЙТРАЛЬНА ВЕЗДЕ, ГДЕ СОСТОЯНИЯ НЕТ, а не только там, где нет и
+    элементов.
+
+    Прежнее условие смотрело на `unavailable` — «показывать нечего». Пока
+    сервер в недоступности отдавал пустые зоны, это совпадало с «состояния не
+    знаем». Как только он стал отдавать состав без значений, совпадение
+    кончилось: элементы есть, значений нет, а плита считала горящие зоны и
+    получала ноль — то есть утверждала «весь свет выключен». Ровно то враньё,
+    от которого гость идёт щёлкать выключателем горящей лампы.
+  */
+  const stateUnknown = unavailable || declared || roomUnreachable;
+
   const plate = snapshot?.plan ? (
     <RoomPlanPlate
       plan={snapshot.plan}
       readings={planReadings(readings)}
       // Состояния не читаются — плита нейтральна: она не показывает свет ни
       // включённым, ни выключенным, потому что и то и другое было бы враньём.
-      neutral={unavailable}
+      neutral={stateUnknown}
       scale={isDesktop ? 1 : planScale}
       /*
         Потолок высоты — ТОЛЬКО на телефоне и планшете.
@@ -312,19 +341,7 @@ export function RoomPage() {
   // заглушку, а не разложенные по сетке пустые панели.
   const hasControls = Boolean(snapshot && snapshot.zones.some((zone) => zone.controls.length > 0));
 
-  /*
-    Оборудование не отвечает: снимок пришёл, но НИ ОДИН элемент не читается.
-    Это не «недоступность» (её объявляет сервер) и не обрыв сокета — это
-    молчание номера, и сказать о нём должен экран, а не догадаться гость.
-  */
-  const readableControls = (snapshot?.zones ?? [])
-    .flatMap((zone) => zone.controls)
-    // Сцену читать нечем ВСЕГДА — не потому, что связи нет. Считать её
-    // «отвечающей» значит никогда не заметить молчание номера.
-    .filter((control) => !control.capabilities.every((capability) => capability === 'trigger'));
-  const roomUnreachable =
-    readableControls.length > 0 &&
-    readableControls.every((control) => control.state === 'offline');
+
 
   const nothingToShow = !snapshot || snapshot.zones.every((zone) => zone.controls.length === 0);
 
@@ -380,7 +397,13 @@ export function RoomPage() {
     рядом жалобу на связь, хотя связь может быть в полном порядке. Молчание
     номера ему тоже не адресовано — читать состояние нам пока незачем.
   */
-  const showLinkTrouble = !needsPin && (live.status !== 'online' || roomUnreachable);
+  /*
+    Заглушка УЖЕ несёт фразу сервера своим заголовком. Строка сверху в этом
+    случае повторила бы её слово в слово — гость прочитал бы про ресепшен
+    дважды и решил бы, что сломалось что-то ещё.
+  */
+  const showLinkTrouble =
+    !needsPin && !unavailable && (live.status !== 'online' || roomUnreachable);
 
   const hasNotices =
     needsPin ||
@@ -408,13 +431,30 @@ export function RoomPage() {
       */}
       {showLinkTrouble ? (
         <KitToast
-          severity="warning"
-          message={t(
-            live.status === 'connecting'
-              ? 'guest.roomControl.liveConnecting'
-              : 'guest.roomControl.liveOffline',
-          )}
-          testId="room-live-offline"
+          /*
+            СЛОВО — СЕРВЕРУ, КОГДА ОН ЕГО СКАЗАЛ.
+
+            Пока экран сам объяснял молчание, он мог сказать только одно:
+            «связь восстанавливается». Для холодного чтения это слишком
+            тревожно, а для мёртвого коннектора — слишком мягко: сама она не
+            восстановится, и гость ждал бы вместо того, чтобы позвонить вниз.
+            Сервер знает, что именно случилось (`unavailable_kind`), и уже
+            составил фразу на языке гостя — берём её.
+
+            Своя фраза остаётся для случая, когда сервер молчать не собирался:
+            оборвался НАШ канал, снимок старый и спросить некого.
+          */
+          severity={reading ? 'info' : 'warning'}
+          message={
+            declared
+              ? (snapshot?.message ?? t('guest.roomControl.unavailable'))
+              : t(
+                  live.status === 'connecting'
+                    ? 'guest.roomControl.liveConnecting'
+                    : 'guest.roomControl.liveOffline',
+                )
+          }
+          testId={reading ? 'room-reading' : 'room-live-offline'}
         />
       ) : null}
       {notice ? (

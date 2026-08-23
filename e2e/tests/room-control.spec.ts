@@ -1099,6 +1099,70 @@ test.describe('Управление номером', () => {
     }
   })
 
+  test('УКУС: связи нет — план и элементы на месте, значений нет, нажать нельзя', async ({
+    page,
+    request,
+  }) => {
+    /*
+      Раньше сервер в недоступности отдавал ПУСТЫЕ зоны, и экран честно
+      показывал заглушку: «обратитесь на ресепшен» и больше ничего. Гость
+      терял из виду сам номер — чем он вообще управляется, сколько там света,
+      есть ли штора, — хотя состав комнаты мы знаем из опубликованного снимка
+      и связь для этого не нужна.
+
+      Теперь состав остаётся, состояние — нет. Ровно три вещи проверяются
+      здесь: элементы видны, значений у них нет ни одного, нажать нельзя.
+      И четвёртая — экран сказал, почему.
+    */
+    await enterRoom(page)
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+
+    const live = await roomStateFromApi(request)
+    const zones = live.zones as Array<{ controls: Array<Record<string, unknown>> }>
+    const ids = zones.flatMap((zone) => zone.controls.map((c) => c.controlId as string))
+    expect(ids.length, 'живой ответ без элементов — проверять нечего').toBeGreaterThan(0)
+
+    // Такой ответ отдаёт сервер после подтверждённого молчания: состав тот же,
+    // значения сняты, команды запрещены.
+    await freezeState(page, {
+      ...live,
+      availability: 'unavailable',
+      unavailable_kind: 'offline',
+      message: 'Управление номером временно недоступно. Пожалуйста, обратитесь на ресепшен.',
+      can_command: false,
+      zones: zones.map((zone) => ({
+        ...zone,
+        controls: zone.controls.map((control) => ({
+          ...control,
+          value: null,
+          state: 'offline',
+        })),
+      })),
+    })
+    await page.reload()
+
+    // 1. План на месте и нейтрален.
+    await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('room-plan')).toHaveAttribute('data-lit', 'unknown')
+
+    // 2. Элементы на месте — заглушки вместо экрана номера больше нет.
+    await expect(page.getByTestId('room-unavailable')).toHaveCount(0)
+    const rows = page.locator('[data-testid^="room-control-"]')
+    await expect(rows).not.toHaveCount(0)
+
+    // 3. Ни одного значения и ни одной нажимаемой строки.
+    for (const row of await rows.all()) {
+      await expect(row).toBeDisabled()
+      // `aria-pressed` — это и есть утверждение «включено/выключено».
+      // Его отсутствие и означает «не знаем».
+      await expect(row).not.toHaveAttribute('aria-pressed', /.*/)
+    }
+
+    // 4. Причина сказана словами, без технического сора.
+    await expect(page.getByText(/ресепшен/i).first()).toBeVisible()
+    await expect(page.getByText(/CONNECTOR|TIMEOUT|iRidi|Modbus/i)).toHaveCount(0)
+  })
+
   test('обе темы: плита светлеет вместе с темой, но выключенное темнее включённого', async ({ page }) => {
     await enterRoom(page)
     const plate = page.getByTestId('room-plan')
