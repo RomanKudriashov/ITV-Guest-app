@@ -47,8 +47,10 @@ export function useTrackerBoard(
   date?: string,
   /** Поиск по номеру заказа и номеру комнаты — фильтрует СЕРВЕР. */
   search?: string,
-  /** Срез по плитке сводки: `new` / `in_work` / `overdue`. Сужает СЕРВЕР. */
+  /** Срез по плитке сводки: `new` / `in_work`. Сужает СЕРВЕР. */
   focus?: string,
+  /** Фильтры панели — тот же контракт: сужает сервер, состояние в адресе. */
+  filters?: Record<string, string>,
 ) {
   const language = useTrackerLanguage();
   return useQuery<TrackerBoard>({
@@ -57,12 +59,14 @@ export function useTrackerBoard(
       scope,
       language,
       date ?? '',
-      // Поиск и срез — ОДИН сегмент ключа: оба сужают доску, и живой снимок,
-      // который приходит нефильтрованным, обязан отличать «доска как есть» от
-      // любого сужения одной проверкой, а не списком.
-      [search ?? '', focus ?? ''].filter(Boolean).join('|'),
+      // Поиск, срез и фильтры — ОДИН сегмент ключа: все они сужают доску, а
+      // живой снимок приходит нефильтрованным и обязан отличать «доска как
+      // есть» от любого сужения ОДНОЙ проверкой, а не списком, который забудут
+      // дополнить при следующем фильтре.
+      narrowing(search, focus, filters),
     ),
-    queryFn: () => fetchTrackerBoard(point as string, scope, language, date, search, focus),
+    queryFn: () =>
+      fetchTrackerBoard(point as string, scope, language, date, search, focus, filters),
     enabled: Boolean(point),
     staleTime: 10_000,
     refetchInterval: pollMs && pollMs > 0 ? pollMs : false,
@@ -120,4 +124,23 @@ export function useTrackerChatThread(threadId: string | null) {
     enabled: Boolean(threadId),
     staleTime: 10_000,
   });
+}
+
+/**
+ * Подпись сужения — устойчивая строка из всего, что делает доску не полной.
+ *
+ * Пустая означает «доска как есть»: ровно по такому ключу лежит нефильтрованный
+ * снимок из сокета. Ключи сортируются — иначе один и тот же набор фильтров,
+ * выставленный в другом порядке, дал бы другой ключ и лишний запрос.
+ */
+function narrowing(
+  search?: string,
+  focus?: string,
+  filters?: Record<string, string>,
+): string {
+  const parts = [search ? `q:${search}` : '', focus ? `f:${focus}` : ''];
+  for (const [key, value] of Object.entries(filters ?? {}).sort()) {
+    if (value) parts.push(`${key}:${value}`);
+  }
+  return parts.filter(Boolean).join('|');
 }

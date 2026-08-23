@@ -38,6 +38,8 @@ export function fetchTrackerBoard(
   search?: string,
   /** Срез по плитке сводки. Сужает сервер — отсев на клиенте соврал бы. */
   focus?: string,
+  /** Фильтры панели. Пустые не отправляются: `?mine=` — мусор в адресе. */
+  filters?: Record<string, string>,
 ): Promise<TrackerBoard> {
   return api.get<TrackerBoard>('/tracker/orders', {
     query: {
@@ -46,6 +48,9 @@ export function fetchTrackerBoard(
       ...(date ? { date } : {}),
       ...(search ? { search } : {}),
       ...(focus ? { focus } : {}),
+      ...Object.fromEntries(
+        Object.entries(filters ?? {}).filter(([, value]) => Boolean(value)),
+      ),
     },
     headers: langHeaders(language),
   });

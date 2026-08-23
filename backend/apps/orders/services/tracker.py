@@ -10,6 +10,7 @@ middleware аутентификации, ни резолвера тенанта,
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone as datetime_timezone
 from typing import Any
 
@@ -150,6 +151,10 @@ def build_board(
     date: str | None = None,
     search: str = "",
     focus: str = "",
+    overdue: bool = False,
+    assignee: str = "",
+    unassigned: bool = False,
+    order_type: str = "",
     cursor: str | None = None,
     limit: int | None = None,
 ) -> dict:
@@ -185,7 +190,15 @@ def build_board(
             condition |= Q(number=int(term))
         queryset = queryset.filter(condition)
 
-    queryset = _narrow(queryset, point, focus=focus)
+    queryset = _narrow(
+        queryset,
+        point,
+        focus=focus,
+        overdue=overdue,
+        assignee=assignee,
+        unassigned=unassigned,
+        order_type=order_type,
+    )
 
     next_cursor = None
     if scope == "history":
@@ -257,33 +270,88 @@ def build_board(
         # активной доски и для истории: в истории «новых 4» — это тоже правда
         # про точку, просто на экране их не видно.
         "shift": tracker_shift.shift_summary(point, hotel=hotel),
+        # Кого предлагать в фильтре «исполнитель». Едет с доской по той же
+        # причине, что и сводка: отдельная ручка — отдельный повод разойтись.
+        "assignees": board_assignees(point, language),
     }
 
 
-def _narrow(queryset, point, *, focus: str = ""):
+def _narrow(
+    queryset,
+    point,
+    *,
+    focus: str = "",
+    overdue: bool = False,
+    assignee: str = "",
+    unassigned: bool = False,
+    order_type: str = "",
+):
     """
-    Сужение доски по клику на плитку.
+    СУЖЕНИЕ ДОСКИ — ОДНО МЕСТО.
 
-    Плитка — это и число, и фильтр: «просрочено 3» без возможности нажать
-    заставляет искать эти три карточки глазами по четырём колонкам. Поэтому
-    сужение делает СЕРВЕР, а не отсев уже полученной доски: отсев соврал бы на
-    первом же заказе, который не приехал.
+    Сюда приходят и клик по плитке, и панель фильтров: «только просроченные» на
+    панели и плитка «просрочено» обязаны означать РОВНО одно, иначе два ответа
+    на один вопрос однажды разойдутся. Поэтому у них и параметр один.
 
-    Неизвестное значение молча игнорируется, а не отдаёт ошибку: срез — это
+    Сужает СЕРВЕР, а не отсев уже полученной доски: отсев соврал бы на первом
+    же заказе, который не приехал.
+
+    Неизвестные значения молча игнорируются, а не отдают ошибку: фильтр — это
     удобство, и ссылка с опечаткой должна показать доску целиком, а не пустой
     экран с отказом.
     """
     if focus == "new":
-        return queryset.filter(status__is_initial=True)
-    if focus == "in_work":
-        return queryset.filter(status__is_initial=False, status__is_terminal=False)
-    if focus == "overdue":
+        queryset = queryset.filter(status__is_initial=True)
+    elif focus == "in_work":
+        queryset = queryset.filter(status__is_initial=False, status__is_terminal=False)
+
+    if overdue:
         # Порог — настройка ТОЧКИ, и граница считается от него же, что и
         # `is_overdue` на карточке. Два разных правила «что такое просрочка»
         # разошлись бы на первой же правке настройки.
         edge = timezone.now() - timedelta(minutes=point.sla_minutes)
-        return queryset.filter(created_at__lte=edge)
+        queryset = queryset.filter(created_at__lte=edge)
+
+    # «Ничьи» и «конкретный исполнитель» — взаимоисключающие по смыслу.
+    # Побеждает «ничьи»: его выбирают в час пик, когда важно, что НЕ ВЗЯТО, и
+    # молча подмешать туда чей-то список значило бы спрятать невзятое.
+    if unassigned:
+        queryset = queryset.filter(assignee__isnull=True)
+    elif assignee:
+        try:
+            queryset = queryset.filter(assignee_id=uuid.UUID(str(assignee)))
+        except (ValueError, AttributeError, TypeError):
+            # Мусор в адресе — доска целиком, а не отказ.
+            pass
+
+    if order_type in {Order.Type.CART, Order.Type.REQUEST}:
+        queryset = queryset.filter(type=order_type)
+
     return queryset
+
+
+def board_assignees(point, language: str | None = None) -> list[dict]:
+    """
+    Кого можно выбрать в фильтре «исполнитель».
+
+    Берём ПРИВЯЗАННЫХ к точке, а не тех, кто попался на доске: смена, у которой
+    сейчас ноль заказов, обязана быть в списке — иначе управляющий не сможет
+    проверить, почему у человека пусто.
+    """
+    from apps.accounts.models import StaffAssignment
+
+    rows = (
+        StaffAssignment.objects.filter(execution_point=point, is_active=True)
+        .select_related("user")
+        .order_by("user__full_name", "user__email")
+    )
+    return [
+        {
+            "id": str(row.user_id),
+            "name": row.user.full_name or row.user.email,
+        }
+        for row in rows
+    ]
 
 
 def _timeline_column(queryset, hotel, language, statuses, date: str | None = None) -> dict:

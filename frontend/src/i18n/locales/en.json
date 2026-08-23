@@ -875,6 +875,19 @@
       "overdue": "Overdue",
       "done": "Done this shift",
       "speed": "Typical time"
+    },
+    "filters": {
+      "button": "Filters",
+      "mine": "Only mine",
+      "unassigned": "Only unclaimed",
+      "overdue": "Only overdue",
+      "assignee": "Assignee",
+      "anyone": "Anyone",
+      "type": "Kind",
+      "anyType": "Any",
+      "typeCart": "Order with items",
+      "typeRequest": "Request",
+      "reset": "Reset"
     }
   },
   "requestFields": {

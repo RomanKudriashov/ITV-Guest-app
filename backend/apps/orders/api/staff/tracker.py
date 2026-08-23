@@ -30,6 +30,11 @@ def board(
     date: str = None,
     search: str = "",
     focus: str = "",
+    overdue: bool = False,
+    mine: bool = False,
+    unassigned: bool = False,
+    assignee: str = "",
+    order_type: str = "",
     cursor: str | None = None,
     limit: int | None = None,
 ):
@@ -37,8 +42,15 @@ def board(
     `date` осмыслен только для ленты записей (спа): какой день показать.
     Остальные типы трекера его игнорируют — у них лента не по времени слота.
 
-    `focus` — срез по клику на плитку сводки: `new` / `in_work` / `overdue`.
-    Неизвестное значение игнорируется: ссылка с опечаткой показывает доску
+    `focus` — ступень: `new` / `in_work`. `overdue` — просроченные; тот же
+    параметр стоит и за плиткой «просрочено», и за галкой в панели фильтров:
+    два ответа на один вопрос однажды разошлись бы.
+
+    `mine` — свои задачи. Разворачивается здесь в `assignee` текущего
+    пользователя: сервис не должен знать, кто именно смотрит доску, иначе
+    «мои» пришлось бы объяснять и сокету, у которого запроса нет.
+
+    Неизвестные значения игнорируются: ссылка с опечаткой показывает доску
     целиком, а не отказ.
     """
     execution_point = svc.require_point(request.user, point)
@@ -49,6 +61,10 @@ def board(
         date=date,
         search=search,
         focus=focus,
+        overdue=overdue,
+        assignee=str(request.user.pk) if mine else assignee,
+        unassigned=unassigned,
+        order_type=order_type,
         cursor=cursor,
         limit=limit,
     )

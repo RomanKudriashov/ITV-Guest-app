@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/EmptyState';
 import { EmptyBoard } from '../components/EmptyBoard';
 import { ShiftTiles, type ShiftFocus } from '../components/ShiftTiles';
+import { BoardFilters } from '../components/BoardFilters';
 import { BoardColumn } from '../components/BoardColumn';
 import { CancelDialog } from '../components/CancelDialog';
 import { OrderCard } from '../components/OrderCard';
@@ -60,6 +61,7 @@ export function TrackerPage() {
   const [pollMs, setPollMs] = useState<number | undefined>(undefined);
   const [cancelTarget, setCancelTarget] = useState<TrackerOrder | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Threads drive the top-bar badge; the socket of an open thread invalidates
   // this query so the count moves on its own.
@@ -82,8 +84,39 @@ export function TrackerPage() {
     платформы, а живой контур при этом не ломается: нефильтрованный снимок из
     сокета в отфильтрованную доску не подменяется, она перечитывает своё.
   */
-  const { params: listParams, patch: patchList } = useListQuery({ search: '', focus: '' });
+  const {
+    params: listParams,
+    patch: patchList,
+    reset: resetList,
+  } = useListQuery({
+    search: '',
+    focus: '',
+    // Фильтры панели. Флаги строками, а не булевыми: адрес — это строки, и
+    // «1» переживает обновление страницы одинаково во всех браузерах.
+    mine: '',
+    unassigned: '',
+    overdue: '',
+    assignee: '',
+    order_type: '',
+  });
   const focus = listParams.focus as ShiftFocus;
+  const filters = useMemo(
+    () => ({
+      mine: listParams.mine,
+      unassigned: listParams.unassigned,
+      overdue: listParams.overdue,
+      assignee: listParams.assignee,
+      order_type: listParams.order_type,
+    }),
+    [
+      listParams.mine,
+      listParams.unassigned,
+      listParams.overdue,
+      listParams.assignee,
+      listParams.order_type,
+    ],
+  );
+  const activeFilters = Object.values(filters).filter(Boolean).length;
   const boardQuery = useTrackerBoard(
     pointCode,
     scope,
@@ -91,6 +124,7 @@ export function TrackerPage() {
     day || undefined,
     listParams.search,
     focus,
+    filters,
   );
   const sound = useTrackerSound();
   const actions = useOrderActions();
@@ -352,7 +386,28 @@ export function TrackerPage() {
         снимке из сокета — поэтому числа над доской и карточки под ней не могут
         разойтись.
       */}
-      {shift ? <ShiftTiles shift={shift} focus={focus} onFocus={(next) => patchList({ focus: next })} /> : null}
+      {shift ? (
+        <ShiftTiles
+          shift={shift}
+          focus={focus}
+          // «Просрочено» у плитки и «только просроченные» в панели — ОДИН
+          // параметр. Иначе на экране было бы два ответа на один вопрос, и
+          // однажды они разошлись бы.
+          overdueOn={listParams.overdue === '1'}
+          onFocus={(next) => patchList({ focus: next })}
+          onOverdue={(on) => patchList({ overdue: on ? '1' : '' })}
+        />
+      ) : null}
+
+      <BoardFilters
+        open={filtersOpen}
+        onToggle={() => setFiltersOpen((value) => !value)}
+        values={filters}
+        onChange={(next) => patchList(next)}
+        onReset={resetList}
+        assignees={boardQuery.data?.assignees ?? []}
+        activeCount={activeFilters}
+      />
 
       {/*
         ПОРОГ ПРОСРОЧКИ НАЗВАН СЛОВАМИ.
@@ -420,7 +475,7 @@ export function TrackerPage() {
             {/* Под поиском или срезом — «ничего не найдено», а не «доска
                 пуста»: это разные ответы, и второй заставил бы искать
                 несуществующую причину, почему заказов «нет». */}
-            {listParams.search || focus ? (
+            {listParams.search || focus || activeFilters ? (
               <EmptyState
                 title={t('list.nothingFound')}
                 description={t('list.nothingFoundHint')}

@@ -18,30 +18,32 @@ import type { TrackerShift } from '../api/types';
  * показывает ровно их. Сужает СЕРВЕР — отсев уже полученной доски соврал бы
  * на первом же заказе, который не приехал.
  *
- * Сужаются первые три. «Сделано» и «скорость» — про закрытую работу, их нельзя
- * показать на активной доске, и кнопка, которая ничего не покажет, хуже её
- * отсутствия.
+ * Сужают три: «новых», «в работе» и «просрочено». «Сделано» и «скорость» —
+ * про закрытую работу, показать её на активной доске нельзя, а кнопка, которая
+ * ничего не покажет, хуже её отсутствия.
+ *
+ * «Просрочено» ведёт ТОТ ЖЕ параметр, что галка «только просроченные» в панели
+ * фильтров: два ответа на один вопрос однажды разойдутся. Ответ один, входа
+ * два, и они видимо согласованы.
  */
 
-export type ShiftFocus = '' | 'new' | 'in_work' | 'overdue';
+export type ShiftFocus = '' | 'new' | 'in_work';
 
 export interface ShiftTilesProps {
   shift: TrackerShift;
   focus: ShiftFocus;
+  /** Включён ли фильтр просрочки — им же управляет галка в панели фильтров. */
+  overdueOn: boolean;
   onFocus: (next: ShiftFocus) => void;
+  onOverdue: (on: boolean) => void;
 }
 
-export function ShiftTiles({ shift, focus, onFocus }: ShiftTilesProps) {
+export function ShiftTiles({ shift, focus, overdueOn, onFocus, onOverdue }: ShiftTilesProps) {
   const { t, i18n } = useTranslation();
   const language = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
 
-  /*
-    «Просрочено» ПОЯВЛЯЕТСЯ ТОЛЬКО ПРИ ЗНАЧЕНИИ БОЛЬШЕ НУЛЯ.
-
-    Постоянный красный ноль — это тревога, которая всегда включена, а значит,
-    её перестают замечать. Плитка должна означать «смотри сюда»; если она висит
-    всю смену, она не означает ничего.
-  */
+  // Ступени: невзятое и взятое. Взаимоисключающие — заказ либо ждёт, либо уже
+  // у кого-то в руках.
   const tiles = [
     { key: 'new' as const, label: t('tracker.shift.new'), value: shift.new, tone: 'info' as const },
     {
@@ -50,16 +52,6 @@ export function ShiftTiles({ shift, focus, onFocus }: ShiftTilesProps) {
       value: shift.in_work,
       tone: 'primary' as const,
     },
-    ...(shift.overdue > 0
-      ? [
-          {
-            key: 'overdue' as const,
-            label: t('tracker.shift.overdue'),
-            value: shift.overdue,
-            tone: 'error' as const,
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -72,7 +64,7 @@ export function ShiftTiles({ shift, focus, onFocus }: ShiftTilesProps) {
         pt: { xs: 1.5, md: 2 },
         gridTemplateColumns: {
           xs: 'repeat(2, 1fr)',
-          sm: `repeat(${tiles.length + 2}, 1fr)`,
+          sm: `repeat(${tiles.length + (shift.overdue > 0 ? 3 : 2)}, 1fr)`,
         },
       }}
     >
@@ -89,6 +81,24 @@ export function ShiftTiles({ shift, focus, onFocus }: ShiftTilesProps) {
           onClick={() => onFocus(focus === tile.key ? '' : tile.key)}
         />
       ))}
+      {/*
+        Просрочка — отдельный параметр, а не третья ступень: она бывает и у
+        новых, и у взятых в работу, и один переключатель на двоих заставлял бы
+        выбирать между двумя разными вопросами.
+
+        ПОЯВЛЯЕТСЯ ТОЛЬКО ПРИ ЗНАЧЕНИИ БОЛЬШЕ НУЛЯ: постоянный красный ноль —
+        это тревога, включённая всегда, а значит, её перестают замечать.
+      */}
+      {shift.overdue > 0 ? (
+        <Tile
+          label={t('tracker.shift.overdue')}
+          value={String(shift.overdue)}
+          tone="error"
+          testId="tracker-tile-overdue"
+          active={overdueOn}
+          onClick={() => onOverdue(!overdueOn)}
+        />
+      ) : null}
       <Tile
         label={t('tracker.shift.done')}
         value={String(shift.done)}

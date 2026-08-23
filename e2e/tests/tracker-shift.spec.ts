@@ -175,15 +175,16 @@ test.describe('Доска: сводка смены', () => {
     await page.getByTestId('tracker-tile-overdue').click()
 
     // Сужает СЕРВЕР: срез обязан уехать в запрос, а не отсеять полученное.
+    // Параметр тот же, что у галки «только просроченные» в панели фильтров.
     await expect
-      .poll(() => asked.some((url) => url.includes('focus=overdue')), { timeout: 15_000 })
+      .poll(() => asked.some((url) => url.includes('overdue=1')), { timeout: 15_000 })
       .toBe(true)
     // И остаться в ссылке: её посылают коллеге, и он видит ТО ЖЕ САМОЕ.
-    await expect(page).toHaveURL(/focus=overdue/)
+    await expect(page).toHaveURL(/overdue=1/)
     await expect(page.getByTestId('tracker-tile-overdue')).toHaveAttribute('aria-pressed', 'true')
 
     // Повторный клик снимает срез — иначе выйти можно было бы только адресом.
     await page.getByTestId('tracker-tile-overdue').click()
-    await expect(page).not.toHaveURL(/focus=/)
+    await expect(page).not.toHaveURL(/overdue=1/)
   })
 })

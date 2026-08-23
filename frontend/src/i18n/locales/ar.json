@@ -903,6 +903,19 @@
       "overdue": "متأخرة",
       "done": "أُنجزت في الوردية",
       "speed": "الزمن المعتاد"
+    },
+    "filters": {
+      "button": "عوامل التصفية",
+      "mine": "مهامي فقط",
+      "unassigned": "غير المُسندة فقط",
+      "overdue": "المتأخرة فقط",
+      "assignee": "المنفّذ",
+      "anyone": "الجميع",
+      "type": "النوع",
+      "anyType": "الكل",
+      "typeCart": "طلب بعناصر",
+      "typeRequest": "طلب خدمة",
+      "reset": "إعادة تعيين"
     }
   },
   "requestFields": {

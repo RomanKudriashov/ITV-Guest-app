@@ -24,6 +24,7 @@ import pytest
 from apps.catalog.models import Item
 from apps.core.context import tenant_context
 from apps.hotels.models import ExecutionPoint
+from apps.accounts.models import User
 from apps.orders.models import Order, OrderStatusChange
 from apps.orders.services import OrderInput, OrderLineInput, create_order
 from apps.orders.services import status_flows
@@ -227,3 +228,92 @@ def test_an_unknown_focus_shows_the_whole_board_not_an_error(crystal):
         assert sum(len(c["orders"]) for c in junk["columns"]) == sum(
             len(c["orders"]) for c in whole["columns"]
         )
+
+
+def test_filters_narrow_on_the_server_and_agree_with_the_tile(crystal):
+    """
+    УКУС партии 3. Панель и плитка «просрочено» — ОДИН параметр.
+
+    Два ответа на один вопрос однажды разойдутся: галка отфильтровала бы по
+    одному правилу, плитка по другому, и человек увидел бы «просрочено 3» над
+    пятью карточками.
+    """
+    from apps.orders.services.tracker import build_board
+
+    with tenant_context(crystal):
+        point = _kitchen()
+        # Нужны И старый, И свежий: иначе просрочка отсекает пустоту и
+        # проверка проходит при любом фильтре. Старый — в начале смены,
+        # свежий — прямо сейчас (`create_order` ставит текущий момент).
+        _order(crystal, minutes_into_shift=1)
+        item = Item.objects.get(code="caesar")
+        create_order(OrderInput(lines=[OrderLineInput(item_id=str(item.pk))]))
+
+        whole = build_board(point, scope="active", language="ru")
+        late = build_board(point, scope="active", language="ru", overdue=True)
+
+        shown = sum(len(column["orders"]) for column in late["columns"])
+        assert shown == late["shift"]["overdue"]
+        assert shown < sum(len(column["orders"]) for column in whole["columns"])
+
+
+def test_unassigned_beats_a_named_assignee(crystal):
+    """
+    «Ничьи» и «конкретный исполнитель» взаимоисключающи по смыслу, и побеждает
+    «ничьи»: его выбирают в час пик, когда важно, что НЕ ВЗЯТО. Молча
+    подмешать туда чей-то список значило бы спрятать невзятое.
+    """
+    from apps.orders.services.tracker import build_board
+
+    with tenant_context(crystal):
+        point = _kitchen()
+        order = _order(crystal, minutes_into_shift=1)
+        user = User.objects.filter(is_active=True).first()
+        Order.objects.filter(pk=order.pk).update(assignee=user)
+
+        board = build_board(
+            point,
+            scope="active",
+            language="ru",
+            unassigned=True,
+            assignee=str(user.pk),
+        )
+        ids = {o["id"] for column in board["columns"] for o in column["orders"]}
+        assert str(order.pk) not in ids, "взятый заказ попал в «ничьи»"
+
+
+def test_a_broken_assignee_in_the_link_shows_the_whole_board(crystal):
+    """Мусор в адресе — доска целиком, а не пятисотка и не пустой экран."""
+    from apps.orders.services.tracker import build_board
+
+    with tenant_context(crystal):
+        point = _kitchen()
+        _order(crystal, minutes_into_shift=1)
+        whole = build_board(point, scope="active", language="ru")
+        junk = build_board(point, scope="active", language="ru", assignee="не-uuid")
+
+        assert sum(len(c["orders"]) for c in junk["columns"]) == sum(
+            len(c["orders"]) for c in whole["columns"]
+        )
+
+
+def test_assignee_options_include_staff_with_nothing_on_the_board(crystal):
+    """
+    В фильтр «исполнитель» идут ПРИВЯЗАННЫЕ к точке, а не те, кто попался на
+    доске: смена с нулём заказов обязана быть в списке, иначе управляющий не
+    проверит, почему у человека пусто.
+    """
+    from apps.accounts.models import StaffAssignment
+    from apps.orders.services.tracker import board_assignees
+
+    with tenant_context(crystal):
+        point = _kitchen()
+        assigned = set(
+            StaffAssignment.objects.filter(
+                execution_point=point, is_active=True
+            ).values_list("user_id", flat=True)
+        )
+        offered = {row["id"] for row in board_assignees(point)}
+
+        assert offered == {str(pk) for pk in assigned}
+        assert offered, "у кухни нет ни одного привязанного сотрудника — проверять нечего"
