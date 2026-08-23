@@ -12,6 +12,7 @@ round-trip-тесты поверх него доказывают не то, чт
 
 from __future__ import annotations
 
+import asyncio
 import json
 import urllib.request
 
@@ -376,3 +377,68 @@ def test_browser_socket_without_origin_is_still_refused(crystal):
         assert async_to_sync(scenario)() is False, (
             "проверка источника снята только с он-прем канала"
         )
+
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_heartbeat_renews_the_group_membership(crystal):
+    """
+    ЗАЛИПАНИЕ СВЯЗИ: соединение живо, а задания вниз не доходят.
+
+    Членство в группе Channels живёт в Redis с TTL (`group_expiry`, по
+    умолчанию сутки) и продлевается ТОЛЬКО новым `group_add`. Сокет при этом не
+    рвётся: коннектор держит его неделями, heartbeat'ы идут ВВЕРХ и доходят — а
+    `group_send` вниз через сутки уходит в никуда. Снаружи: узел «онлайн»,
+    оборудование отвечает, бэкенд отдаёт STATE_UNREADABLE. Пересоздание
+    контейнеров «лечило» ровно потому, что переподключение заново добавляло
+    канал в группу.
+
+    Проверяем ровно тот механизм, который это чинит: КАЖДЫЙ heartbeat заново
+    подписывает канал на группу. Считаем вызовы `group_add`, а не заглядываем
+    во внутренности слоя — их форма у разных слоёв разная, и тест сломался бы о
+    неё, а не о поведение.
+    """
+    from channels.layers import get_channel_layer
+
+    from apps.grms.consumers import group_name
+    from config.asgi import application
+
+    _, key = register_node(crystal, name="grms-box", purpose="grms")
+    group = group_name(str(crystal.pk))
+    layer = get_channel_layer()
+    original = layer.group_add
+    calls: list[str] = []
+
+    async def counting_group_add(name, channel):
+        calls.append(name)
+        return await original(name, channel)
+
+    layer.group_add = counting_group_add
+    try:
+        async def scenario():
+            communicator = WebsocketCommunicator(
+                application,
+                "/ws/v1/onprem/connector",
+                headers=[(b"authorization", f"Bearer {key}".encode())],
+            )
+            connected, _ = await communicator.connect(timeout=10)
+            assert connected
+            await communicator.receive_json_from(timeout=10)
+            at_connect = calls.count(group)
+
+            for _ in range(2):
+                await communicator.send_json_to(
+                    {"type": "connector.heartbeat", "version": "1.0.0"}
+                )
+                await asyncio.sleep(0.2)
+            await communicator.disconnect()
+            return at_connect, calls.count(group)
+
+        at_connect, after_beats = async_to_sync(scenario)()
+    finally:
+        layer.group_add = original
+
+    assert at_connect == 1, "подключение обязано подписывать на группу"
+    assert after_beats == at_connect + 2, (
+        "heartbeat не продлевает членство: через сутки задания перестанут доходить, "
+        f"подписок всего {after_beats}"
+    )
