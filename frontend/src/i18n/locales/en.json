@@ -804,7 +804,8 @@
       "byTime": "By {{time}}",
       "fromOrder": "From order #{{number}} · {{service}}",
       "overdueBy": "overdue by {{duration}}",
-      "placed": "placed at {{time}}"
+      "placed": "placed at {{time}}",
+      "grip": "Drag the order"
     },
     "actions": {
       "accept": "Accept",
@@ -888,6 +889,12 @@
       "typeCart": "Order with items",
       "typeRequest": "Request",
       "reset": "Reset"
+    },
+    "handover": {
+      "takenBy": "Order #{{number}} was taken by {{name}}",
+      "taken": "Order #{{number}} has been taken",
+      "closedBy": "Order #{{number}} was closed by {{name}}",
+      "closed": "Order #{{number}} was closed"
     }
   },
   "requestFields": {

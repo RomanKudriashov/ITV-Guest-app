@@ -811,7 +811,8 @@
       "byTime": "Ко времени {{time}}",
       "fromOrder": "Из заказа №{{number}} · {{service}}",
       "overdueBy": "просрочен на {{duration}}",
-      "placed": "принят в {{time}}"
+      "placed": "принят в {{time}}",
+      "grip": "Перетащить заказ"
     },
     "actions": {
       "accept": "Принять",
@@ -898,6 +899,12 @@
       "typeCart": "Заказ с позициями",
       "typeRequest": "Заявка",
       "reset": "Сбросить"
+    },
+    "handover": {
+      "takenBy": "Заказ №{{number}} взял {{name}}",
+      "taken": "Заказ №{{number}} уже взяли",
+      "closedBy": "Заказ №{{number}} закрыл {{name}}",
+      "closed": "Заказ №{{number}} закрыли"
     }
   },
   "requestFields": {

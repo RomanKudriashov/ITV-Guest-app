@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+
 import TextField from '@mui/material/TextField';
 
 import { useListQuery } from '@/kit/list/useListQuery';
@@ -8,6 +17,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
@@ -28,6 +38,8 @@ import { OrderDetailSheet } from '../components/OrderDetailSheet';
 import { TrackerChatPanel } from '../components/TrackerChatPanel';
 import { TrackerTopBar } from '../components/TrackerTopBar';
 import { useBoardLive, type BoardLiveEvent } from '../hooks/useBoardLive';
+import { applyOverlay, useBoardDrag } from '../hooks/useBoardDrag';
+import { handoverText, useHandover } from '../hooks/useHandover';
 import { useOrderActions } from '../hooks/useOrderActions';
 import { usePointSelection } from '../hooks/usePointSelection';
 import { useTrackerSound } from '../hooks/useTrackerSound';
@@ -52,6 +64,15 @@ export function TrackerPage() {
   const navigate = useNavigate();
   const wide = useMediaQuery(theme.breakpoints.up('md'));
   const language = useTrackerLanguage();
+  /*
+    Порог захвата — 8 пикселей. Стандартные четыре мало для кухни: палец
+    съезжает на пять-шесть при обычном нажатии, и часть тапов по ручке
+    превращалась бы в микро-перетаскивания без цели.
+  */
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
   const detailMatch = useMatch('/tracker/order/:id');
   const openOrderId = detailMatch?.params.id ?? null;
 
@@ -142,7 +163,7 @@ export function TrackerPage() {
     }
   }, []);
 
-  const live = useBoardLive(pointCode, Boolean(pointCode), onLiveEvent);
+  const { status: live, hold } = useBoardLive(pointCode, Boolean(pointCode), onLiveEvent);
 
   // The socket owns the board; polling is the honest fallback when it is down.
   useEffect(() => {
@@ -164,7 +185,7 @@ export function TrackerPage() {
     return () => window.clearTimeout(timer);
   }, [highlighted]);
 
-  const columns = useMemo(() => boardQuery.data?.columns ?? [], [boardQuery.data]);
+  const rawColumns = useMemo(() => boardQuery.data?.columns ?? [], [boardQuery.data]);
   const boardPoint = boardQuery.data?.point;
   const shift = boardQuery.data?.shift;
   /*
@@ -185,7 +206,9 @@ export function TrackerPage() {
   const timeline = boardQuery.data?.layout === 'timeline' && scope === 'active';
 
   // Сервер отвечает, какой день показал (в таймзоне отеля) — от него и шагаем.
-  const shownDay = columns[0]?.date ?? '';
+  // Здесь и в проверке вкладки берём ИСХОДНЫЕ колонки: наложение переносит
+  // карточки между колонками, но самих колонок не создаёт и не удаляет.
+  const shownDay = rawColumns[0]?.date ?? '';
   const shiftDay = useCallback(
     (days: number) => {
       if (!shownDay) return;
@@ -198,14 +221,47 @@ export function TrackerPage() {
 
   // Keep the phone tab valid when the preset changes under our feet.
   useEffect(() => {
-    if (!columns.length) return;
-    if (columns.some((column) => column.code === activeColumn)) return;
-    setActiveColumn(columns[0].code);
-  }, [columns, activeColumn]);
+    if (!rawColumns.length) return;
+    if (rawColumns.some((column) => column.code === activeColumn)) return;
+    setActiveColumn(rawColumns[0].code);
+  }, [rawColumns, activeColumn]);
 
   const allOrders = useMemo(
-    () => columns.flatMap((column) => column.orders),
-    [columns],
+    () => rawColumns.flatMap((column) => column.orders),
+    [rawColumns],
+  );
+
+  const drag = useBoardDrag(allOrders, hold);
+  /*
+    Колонки, которые видит человек: снимок сервера плюс наложение того, что мы
+    уже переложили и чей ответ ещё не пришёл. Правится НАД снимком, а не в нём:
+    снимок — единственная правда, с которой мы сверяемся.
+  */
+  const columns = useMemo(
+    () => applyOverlay(rawColumns, drag.overlay),
+    [rawColumns, drag.overlay],
+  );
+
+  // Кто увёл заказ, пока мы на него смотрели. Считается по НЕФИЛЬТРОВАННОМУ
+  // составу: под включённым фильтром заказ исчезает и просто потому, что
+  // перестал подходить, и объявлять это чужим действием было бы враньём.
+  const handover = useHandover(activeFilters || listParams.search || focus ? undefined : allOrders);
+
+  /*
+    Бросок. Разрешённость проверена дважды — колонкой, которая не приняла бы
+    недопустимый бросок, и хуком, — а сервер проверяет в третий раз и остаётся
+    последним словом.
+  */
+  const handleDrop = useCallback(
+    (orderId: string, target: string | null) => {
+      const status = drag.onDragEnd(orderId, target);
+      if (!status) return;
+      // В реестр — ДО запроса: ответ может прийти позже снимка, и заказ,
+      // отмеченный после ответа, успел бы объявиться «уведённым чужим».
+      handover.mark(orderId);
+      void actions.changeStatus(orderId, status).finally(() => drag.settle(orderId));
+    },
+    [actions, drag, handover],
   );
   const boardOrder = allOrders.find((order) => order.id === openOrderId) ?? null;
 
@@ -225,16 +281,23 @@ export function TrackerPage() {
       ? trackerErrorMessage(actions.actionError.error, t)
       : null;
 
-  const renderCard = (order: TrackerOrder) => (
+  const renderCard = (order: TrackerOrder, draggable = false) => (
     <OrderCard
       key={order.id}
       order={order}
+      draggable={draggable}
       busy={actions.pendingOrderId === order.id}
       highlighted={Boolean(highlighted[order.id])}
       errorText={errorFor(order)}
       onOpen={() => navigate(`/tracker/order/${order.id}`)}
-      onAccept={() => void actions.accept(order.id)}
-      onStatus={(code) => void actions.changeStatus(order.id, code)}
+      onAccept={() => {
+        handover.mark(order.id);
+        void actions.accept(order.id);
+      }}
+      onStatus={(code) => {
+        handover.mark(order.id);
+        void actions.changeStatus(order.id, code);
+      }}
       onCancel={() => setCancelTarget(order)}
     />
   );
@@ -530,7 +593,7 @@ export function TrackerPage() {
                   </Button>
                 </Stack>
                 {column.orders.length ? (
-                  column.orders.map(renderCard)
+                  column.orders.map((order) => renderCard(order))
                 ) : (
                   <EmptyState
                     title={t('tracker.board.emptyTimelineTitle')}
@@ -541,16 +604,41 @@ export function TrackerPage() {
             ))}
           </Box>
         ) : wide ? (
-          <Stack direction="row" spacing={2} alignItems="flex-start">
-            {columns.map((column) => (
-              <BoardColumn key={column.code} column={column}>
-                {column.orders.map(renderCard)}
-              </BoardColumn>
-            ))}
-          </Stack>
+          /*
+            Перетаскивание — ТОЛЬКО на широком экране. На телефоне колонки
+            показаны по одной вкладкой, и бросать физически некуда: цель не
+            видна. Там статус двигают кнопкой на карточке, как и раньше.
+          */
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragStart={(event) => drag.onDragStart(String(event.active.id))}
+            onDragCancel={drag.onDragCancel}
+            onDragEnd={(event) => {
+              const over = event.over ? String(event.over.id) : null;
+              handleDrop(
+                String(event.active.id),
+                over?.startsWith('column:') ? over.slice('column:'.length) : null,
+              );
+            }}
+          >
+            <Stack direction="row" spacing={2} alignItems="flex-start">
+              {columns.map((column) => (
+                <BoardColumn
+                  key={column.code}
+                  column={column}
+                  dropAllowed={
+                    drag.draggingId === null ? null : drag.allowedTargets.has(column.code)
+                  }
+                >
+                  {column.orders.map((order) => renderCard(order, true))}
+                </BoardColumn>
+              ))}
+            </Stack>
+          </DndContext>
         ) : currentColumn ? (
           <BoardColumn column={currentColumn} showHeader={false}>
-            {currentColumn.orders.map(renderCard)}
+            {currentColumn.orders.map((order) => renderCard(order))}
           </BoardColumn>
         ) : null}
 
@@ -579,6 +667,21 @@ export function TrackerPage() {
         onStatus={(code) => openOrder && void actions.changeStatus(openOrder.id, code)}
         onCancel={() => openOrder && setCancelTarget(openOrder)}
       />
+
+      {/*
+        Заказ увели, пока мы на него смотрели. Молчание здесь заставляет искать
+        карточку глазами по колонкам, а потом обновлять страницу.
+      */}
+      <Snackbar
+        open={Boolean(handover.notice)}
+        autoHideDuration={6000}
+        onClose={handover.dismiss}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="info" onClose={handover.dismiss} data-testid="tracker-handover">
+          {handover.notice ? handoverText(handover.notice, t) : ''}
+        </Alert>
+      </Snackbar>
 
       <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
 

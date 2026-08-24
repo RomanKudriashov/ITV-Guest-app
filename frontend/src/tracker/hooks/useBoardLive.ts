@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { trackerSocketUrl } from '../api/tracker';
@@ -11,6 +11,22 @@ import type {
 } from '../api/types';
 
 export type LiveStatus = 'connecting' | 'online' | 'offline';
+
+export interface BoardLive {
+  status: LiveStatus;
+  /**
+   * ПРИДЕРЖАТЬ СНИМКИ, ПОКА ПАЛЕЦ НА КАРТОЧКЕ.
+   *
+   * Снимок ЗАМЕНЯЕТ доску целиком — в этом вся его надёжность, но во время
+   * перетаскивания это значит, что колонки перестраиваются под рукой: карточка
+   * уезжает из-под пальца, а цель броска оказывается не там, где была.
+   * Перетаскивание длится секунду-две, задержка незаметна.
+   *
+   * Снимки при этом НЕ ТЕРЯЮТСЯ: копится последний, и он полный — именно
+   * поэтому его достаточно. На отпускании он применяется.
+   */
+  hold: (on: boolean) => void;
+}
 
 const BASE_DELAY_MS = 1_000;
 const MAX_DELAY_MS = 30_000;
@@ -37,10 +53,14 @@ export function useBoardLive(
   pointCode: string | undefined,
   enabled: boolean,
   onEvent?: (event: BoardLiveEvent) => void,
-): LiveStatus {
+): BoardLive {
   const queryClient = useQueryClient();
   const language = useTrackerLanguage();
   const [status, setStatus] = useState<LiveStatus>('connecting');
+  // Придержка снимков на время перетаскивания. Ref, а не состояние: смена
+  // флага не должна пересобирать сокет.
+  const heldRef = useRef(false);
+  const pendingRef = useRef<(() => void) | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const timerRef = useRef<number | null>(null);
   const attemptRef = useRef(0);
@@ -118,28 +138,40 @@ export function useBoardLive(
         if (!board) return;
         const scope = board.scope ?? 'active';
         const code = board.point?.code ?? pointCode;
-        // Replace, never merge.
-        //
-        // Снимок из сокета НЕФИЛЬТРОВАННЫЙ, поэтому кладём его только по ключу
-        // с пустым поиском. Открытую отфильтрованную доску им подменять
-        // нельзя — она показала бы чужие заказы; её просто будим, и она
-        // перечитает своё с сервера, уже с фильтром.
-        queryClient.setQueryData(trackerKeys.board(code as string, scope, language), board);
-        void queryClient.invalidateQueries({
-          queryKey: trackerKeys.boards,
-          refetchType: 'active',
-          predicate: (query) => Boolean(query.queryKey[6]),
-        });
-        // Point badges (active/new counts) move with the board.
-        void queryClient.invalidateQueries({
-          queryKey: ['tracker', 'points'],
-          refetchType: 'active',
-        });
-        onEventRef.current?.({
-          event: snapshot.event ?? 'snapshot',
-          orderId: snapshot.order_id,
-          board,
-        });
+
+        const apply = () => {
+          // Replace, never merge.
+          //
+          // Снимок из сокета НЕФИЛЬТРОВАННЫЙ, поэтому кладём его только по
+          // ключу без сужения. Открытую суженную доску им подменять нельзя —
+          // она показала бы чужие заказы; её просто будим, и она перечитает
+          // своё с сервера, уже с фильтром.
+          queryClient.setQueryData(trackerKeys.board(code as string, scope, language), board);
+          void queryClient.invalidateQueries({
+            queryKey: trackerKeys.boards,
+            refetchType: 'active',
+            predicate: (query) => Boolean(query.queryKey[6]),
+          });
+          // Point badges (active/new counts) move with the board.
+          void queryClient.invalidateQueries({
+            queryKey: ['tracker', 'points'],
+            refetchType: 'active',
+          });
+          onEventRef.current?.({
+            event: snapshot.event ?? 'snapshot',
+            orderId: snapshot.order_id,
+            board,
+          });
+        };
+
+        if (heldRef.current) {
+          // Копим ПОСЛЕДНИЙ, а не очередь: снимок полный, и предыдущие в нём
+          // уже учтены. Хранить их все значило бы применить на отпускании
+          // стопку устаревших досок подряд.
+          pendingRef.current = apply;
+          return;
+        }
+        apply();
       };
 
       socket.onerror = () => {
@@ -179,5 +211,17 @@ export function useBoardLive(
     };
   }, [pointCode, enabled, language, queryClient]);
 
-  return status;
+  // Стабильная ссылка: `hold` уезжает в обработчики перетаскивания, и новая
+  // функция на каждый рендер пересоздавала бы их вместе с DndContext.
+  const hold = useCallback((on: boolean) => {
+    heldRef.current = on;
+    if (on) return;
+    const pending = pendingRef.current;
+    pendingRef.current = null;
+    // Применяем накопленное СРАЗУ на отпускании: доска догоняет жизнь одним
+    // шагом, а не остаётся на снимке минутной давности до следующего события.
+    pending?.();
+  }, []);
+
+  return { status, hold };
 }

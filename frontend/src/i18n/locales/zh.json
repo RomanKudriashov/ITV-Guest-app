@@ -799,7 +799,8 @@
       "byTime": "{{time}} 前",
       "fromOrder": "来自订单 #{{number}} · {{service}}",
       "overdueBy": "超时 {{duration}}",
-      "placed": "{{time}} 下单"
+      "placed": "{{time}} 下单",
+      "grip": "拖动订单"
     },
     "actions": {
       "accept": "接单",
@@ -880,6 +881,12 @@
       "typeCart": "含菜品订单",
       "typeRequest": "服务请求",
       "reset": "重置"
+    },
+    "handover": {
+      "takenBy": "{{name}} 已接单 №{{number}}",
+      "taken": "订单 №{{number}} 已被接走",
+      "closedBy": "{{name}} 已关闭订单 №{{number}}",
+      "closed": "订单 №{{number}} 已关闭"
     }
   },
   "requestFields": {

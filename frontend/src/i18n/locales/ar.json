@@ -820,7 +820,8 @@
       "byTime": "بحلول {{time}}",
       "fromOrder": "من الطلب رقم {{number}} · {{service}}",
       "overdueBy": "متأخر بمقدار {{duration}}",
-      "placed": "تم الاستلام في {{time}}"
+      "placed": "تم الاستلام في {{time}}",
+      "grip": "اسحب الطلب"
     },
     "actions": {
       "accept": "قبول",
@@ -916,6 +917,12 @@
       "typeCart": "طلب بعناصر",
       "typeRequest": "طلب خدمة",
       "reset": "إعادة تعيين"
+    },
+    "handover": {
+      "takenBy": "الطلب رقم {{number}} استلمه {{name}}",
+      "taken": "الطلب رقم {{number}} تم استلامه",
+      "closedBy": "الطلب رقم {{number}} أغلقه {{name}}",
+      "closed": "الطلب رقم {{number}} تم إغلاقه"
     }
   },
   "requestFields": {

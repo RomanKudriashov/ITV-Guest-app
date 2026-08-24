@@ -8,9 +8,11 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import CallSplitIcon from '@mui/icons-material/CallSplit';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import { useDraggable } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
@@ -26,6 +28,8 @@ import type { TrackerOrder } from '../api/types';
 export interface OrderCardProps {
   order: TrackerOrder;
   busy: boolean;
+  /** Перетаскивание доступно только на доске колонками — не в ленте записей. */
+  draggable?: boolean;
   /** Just arrived / just changed — a calm ring, no animation circus. */
   highlighted?: boolean;
   errorText?: string | null;
@@ -38,6 +42,7 @@ export interface OrderCardProps {
 export function OrderCard({
   order,
   busy,
+  draggable = false,
   highlighted,
   errorText,
   onOpen,
@@ -46,6 +51,22 @@ export function OrderCard({
   onCancel,
 }: OrderCardProps) {
   const { t } = useTranslation();
+  /*
+    РУЧКА ЗАХВАТА ОТДЕЛЬНО ОТ ТАПА ПО КАРТОЧКЕ.
+
+    Вся карточка — кнопка «открыть подробности», и повесить перетаскивание на
+    неё же значит поссорить два жеста: палец на кухне попадает неточно и
+    двигается, пока нажимает. Порог в пикселях эту разницу не ловит — жирный
+    палец сдвигается на пять-шесть пикселей при обычном тапе, и половина
+    открытий превращалась бы в микро-перетаскивания.
+
+    Поэтому взяться можно только за ручку. Она широкая (44 px), стоит слева от
+    номера и не перекрывает ничего читаемого.
+  */
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: order.id,
+    disabled: !draggable,
+  });
   const language = useTrackerLanguage();
   const { format } = useTrackerMoney();
   const colorSlot = statusSlot(order.status.color_token);
@@ -54,12 +75,16 @@ export function OrderCard({
 
   return (
     <Card
+      ref={setNodeRef}
       variant="outlined"
       data-testid={`tracker-order-${order.number}`}
       sx={{
         borderColor: highlighted ? `${colorSlot}.main` : 'divider',
         borderWidth: highlighted ? 2 : 1,
         overflow: 'hidden',
+        // Несомая карточка бледнеет НА МЕСТЕ, а не исчезает: пустое место под
+        // пальцем читается как «уже переложил», и человек отпускает раньше.
+        opacity: isDragging ? 0.4 : 1,
       }}
     >
       {busy ? <LinearProgress /> : null}
@@ -67,6 +92,34 @@ export function OrderCard({
       <CardActionArea onClick={onOpen} sx={{ p: 1.5, pb: 1 }}>
         <Stack spacing={1}>
           <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+            {draggable ? (
+              <Box
+                component="span"
+                ref={undefined}
+                {...attributes}
+                {...listeners}
+                data-testid={`tracker-grip-${order.number}`}
+                aria-label={t('tracker.card.grip')}
+                // Тап по ручке НЕ должен открывать карточку: она лежит внутри
+                // общей кнопки, и всплывший клик показал бы подробности сразу
+                // после того, как заказ переложили.
+                onClick={(event) => event.stopPropagation()}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 32,
+                  minHeight: 44,
+                  ml: -0.75,
+                  color: 'text.disabled',
+                  cursor: 'grab',
+                  touchAction: 'none',
+                  '&:active': { cursor: 'grabbing' },
+                }}
+              >
+                <DragIndicatorIcon sx={{ fontSize: 20 }} />
+              </Box>
+            ) : null}
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
               {t('tracker.card.number', { number: order.number })}
             </Typography>
