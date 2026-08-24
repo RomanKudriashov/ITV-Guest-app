@@ -29,7 +29,13 @@ from apps.events.bus import ORDER_ACCEPTED, emit
 from apps.orders.services import status_flows, tracker_shift
 from apps.orders.models import Order, StatusDefinition
 from apps.orders.services.services import change_status, order_queryset, serialize_order
-from apps.orders.services.tracker_types import behaviour_for_type, tracker_type_for_point
+from apps.orders.services.tracker_types import (
+    ColumnStyle,
+    GroupBy,
+    behaviour_for_type,
+    effective_sla_minutes,
+    tracker_type_for_point,
+)
 
 
 class PointNotAssigned(PermissionDenied):
@@ -96,7 +102,7 @@ def serialize_point(point: ExecutionPoint, language: str | None = None, **extra)
         "code": point.code,
         "title": translate(point.title, language) or point.code,
         "kind": point.kind,
-        "sla_minutes": point.sla_minutes,
+        "sla_minutes": effective_sla_minutes(point),
         # Клиент рисует то, что прислал сервер: тип решает раскладку (колонки
         # или лента) и подписи действий. Выводится из типа сервиса — отдельным
         # полем не хранится.
@@ -234,21 +240,7 @@ def build_board(
         columns = [_timeline_column(queryset, hotel, language, statuses, date)]
     else:
         queryset = queryset.filter(status__is_terminal=False).order_by("created_at")
-        grouped: dict[str, list] = {}
-        for order in queryset:
-            grouped.setdefault(order.status.code, []).append(
-                serialize_tracker_order(order, language, statuses)
-            )
-        columns = [
-            {
-                "code": status.code,
-                "title": translate(status.title, language),
-                "color_token": status.color_token,
-                "orders": grouped.get(status.code, []),
-            }
-            for status in statuses
-            if not status.is_terminal
-        ]
+        columns = _active_columns(queryset, behaviour, statuses, language)
 
     return {
         "point": serialize_point(point, language),
@@ -274,6 +266,76 @@ def build_board(
         # причине, что и сводка: отдельная ручка — отдельный повод разойтись.
         "assignees": board_assignees(point, language),
     }
+
+
+def _active_columns(queryset, behaviour, statuses, language) -> list[dict]:
+    """
+    Колонки активной доски — ПО РЕЕСТРУ, а не по типу сервиса.
+
+    Ни одного `if service.type == ...` здесь нет и быть не должно: вид работы
+    приносит два признака (`column_style`, `group_by`), и весь разбор — по ним.
+    Новый вид сервиса, работающий иначе, — это строка в реестре, а не ветка тут.
+    """
+    rows = list(queryset)
+
+    if behaviour.column_style == ColumnStyle.SINGLE:
+        # ОДНА ЛЕНТА. Два статуса ресепшена делили экран пополам и стояли
+        # полупустыми: «Новая 6 / Подтверждена 0» — это не две колонки работы,
+        # это одна колонка и одна пустая половина. Порядок — по этапу, потом по
+        # времени: невзятое сверху, потому что именно оно требует действия.
+        rows.sort(key=lambda order: (order.status.sort_order, order.created_at))
+        return [
+            {
+                "code": "all",
+                "title": "",
+                "orders": [serialize_tracker_order(o, language, statuses) for o in rows],
+            }
+        ]
+
+    grouped: dict[str, list] = {}
+    for order in rows:
+        grouped.setdefault(order.status.code, []).append(
+            serialize_tracker_order(order, language, statuses)
+        )
+
+    columns = [
+        {
+            "code": status.code,
+            "title": translate(status.title, language),
+            "color_token": status.color_token,
+            "orders": grouped.get(status.code, []),
+        }
+        for status in statuses
+        if not status.is_terminal
+    ]
+
+    if behaviour.group_by == GroupBy.ROOM:
+        # ПО НОМЕРАМ. Горничная идёт по этажу: две заявки в одну комнату — это
+        # ОДИН поход, а не два. Раньше они приезжали двумя карточками, и вторую
+        # находили, уже выйдя из номера.
+        #
+        # `orders` остаётся плоским списком НАМЕРЕННО: по нему считаются
+        # счётчики колонки, поиск и всё, что не знает про группы. Группы —
+        # дополнение к нему, а не замена: иначе каждый читатель доски пришлось
+        # бы учить второй форме.
+        for column in columns:
+            column["groups"] = _by_room(column["orders"])
+
+    return columns
+
+
+def _by_room(orders: list[dict]) -> list[dict]:
+    """Заявки по комнатам, порядок — по первой заявке в комнате."""
+    buckets: dict[str, list[dict]] = {}
+    for order in orders:
+        # Заявка без комнаты — своя группа: свалить их в общую кучу «—» значило
+        # бы склеить не связанные между собой задачи в один поход.
+        key = str(order.get("room") or "")
+        buckets.setdefault(key, []).append(order)
+    return [
+        {"key": key or "none", "room": key, "orders": items}
+        for key, items in buckets.items()
+    ]
 
 
 def _narrow(
@@ -309,7 +371,7 @@ def _narrow(
         # Порог — настройка ТОЧКИ, и граница считается от него же, что и
         # `is_overdue` на карточке. Два разных правила «что такое просрочка»
         # разошлись бы на первой же правке настройки.
-        edge = timezone.now() - timedelta(minutes=point.sla_minutes)
+        edge = timezone.now() - timedelta(minutes=effective_sla_minutes(point))
         queryset = queryset.filter(created_at__lte=edge)
 
     # «Ничьи» и «конкретный исполнитель» — взаимоисключающие по смыслу.
@@ -433,11 +495,8 @@ def serialize_tracker_order(
     payload = serialize_order(order, language)
     waiting = int((timezone.now() - order.created_at).total_seconds() // 60)
     point = order.execution_point
-    overdue = (
-        waiting - point.sla_minutes
-        if not order.status.is_terminal and waiting >= point.sla_minutes
-        else None
-    )
+    sla = effective_sla_minutes(point)
+    overdue = waiting - sla if not order.status.is_terminal and waiting >= sla else None
 
     payload.update(
         {

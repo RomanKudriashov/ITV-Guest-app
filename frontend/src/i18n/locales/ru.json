@@ -905,6 +905,9 @@
       "taken": "Заказ №{{number}} уже взяли",
       "closedBy": "Заказ №{{number}} закрыл {{name}}",
       "closed": "Заказ №{{number}} закрыли"
+    },
+    "group": {
+      "noRoom": "Без комнаты"
     }
   },
   "requestFields": {

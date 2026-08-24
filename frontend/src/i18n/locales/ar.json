@@ -923,6 +923,9 @@
       "taken": "الطلب رقم {{number}} تم استلامه",
       "closedBy": "الطلب رقم {{number}} أغلقه {{name}}",
       "closed": "الطلب رقم {{number}} تم إغلاقه"
+    },
+    "group": {
+      "noRoom": "بدون غرفة"
     }
   },
   "requestFields": {

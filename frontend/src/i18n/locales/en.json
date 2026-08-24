@@ -895,6 +895,9 @@
       "taken": "Order #{{number}} has been taken",
       "closedBy": "Order #{{number}} was closed by {{name}}",
       "closed": "Order #{{number}} was closed"
+    },
+    "group": {
+      "noRoom": "No room"
     }
   },
   "requestFields": {

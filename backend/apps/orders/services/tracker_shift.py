@@ -29,6 +29,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from apps.orders.models import Order, OrderStatusChange
+from apps.orders.services.tracker_types import effective_sla_minutes
 
 
 def _median(values: list[int]) -> int | None:
@@ -64,7 +65,8 @@ def shift_summary(point, *, hotel, now=None) -> dict:
     new_count = 0
     in_work = 0
     overdue = 0
-    threshold = timedelta(minutes=point.sla_minutes)
+    sla = effective_sla_minutes(point)
+    threshold = timedelta(minutes=sla)
     for order in active:
         if order.status.is_initial:
             new_count += 1
@@ -128,7 +130,7 @@ def shift_summary(point, *, hotel, now=None) -> dict:
         "median_pickup_minutes": _median(pickups),
         "shift_started_at": started_at.isoformat(),
         # Порог, от которого считается `overdue`. Тот же, что на карточках.
-        "sla_minutes": point.sla_minutes,
+        "sla_minutes": sla,
         # Когда была последняя заявка — на пустой доске это единственное, что
         # отличает «затишье» от «экран не работает».
         "last_order_at": _last_order_at(point, hotel),

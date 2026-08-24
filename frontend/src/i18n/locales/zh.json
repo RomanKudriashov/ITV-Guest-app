@@ -887,6 +887,9 @@
       "taken": "订单 №{{number}} 已被接走",
       "closedBy": "{{name}} 已关闭订单 №{{number}}",
       "closed": "订单 №{{number}} 已关闭"
+    },
+    "group": {
+      "noRoom": "无房间"
     }
   },
   "requestFields": {

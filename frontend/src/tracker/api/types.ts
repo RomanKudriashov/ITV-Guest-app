@@ -135,10 +135,27 @@ export interface TrackerChatThread {
 /** The staff chat snapshot is the same shape as the guest one (contract §3). */
 export type TrackerChatSnapshot = ChatSnapshot;
 
+/**
+ * Заявки одной комнаты. Приходит только у трекеров, которые работают ПО
+ * НОМЕРАМ (хозслужба): горничная идёт по этажу, и две заявки в один номер —
+ * это один поход, а не два.
+ */
+export interface TrackerRoomGroup {
+  key: string;
+  room: string;
+  orders: TrackerOrder[];
+}
+
 export interface TrackerColumn {
   code: string;
   title: string;
+  /**
+   * Плоский список — ВСЕГДА. По нему считаются счётчики, поиск и всё, что не
+   * знает про группы; `groups` — дополнение к нему, а не замена.
+   */
   orders: TrackerOrder[];
+  /** Группировка по комнатам, если её задал реестр поведения трекера. */
+  groups?: TrackerRoomGroup[];
   /** Timeline layout only: which day this column shows (YYYY-MM-DD). */
   date?: string;
 }

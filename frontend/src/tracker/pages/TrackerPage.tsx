@@ -31,6 +31,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { EmptyBoard } from '../components/EmptyBoard';
 import { ShiftTiles, type ShiftFocus } from '../components/ShiftTiles';
 import { BoardFilters } from '../components/BoardFilters';
+import { RoomGroup } from '../components/RoomGroup';
 import { BoardColumn } from '../components/BoardColumn';
 import { CancelDialog } from '../components/CancelDialog';
 import { OrderCard } from '../components/OrderCard';
@@ -630,6 +631,11 @@ export function TrackerPage() {
                   dropAllowed={
                     drag.draggingId === null ? null : drag.allowedTargets.has(column.code)
                   }
+                  renderGroup={(group) => (
+                    <RoomGroup key={group.key} group={group}>
+                      {group.orders.map((order) => renderCard(order, true))}
+                    </RoomGroup>
+                  )}
                 >
                   {column.orders.map((order) => renderCard(order, true))}
                 </BoardColumn>
@@ -637,7 +643,15 @@ export function TrackerPage() {
             </Stack>
           </DndContext>
         ) : currentColumn ? (
-          <BoardColumn column={currentColumn} showHeader={false}>
+          <BoardColumn
+            column={currentColumn}
+            showHeader={false}
+            renderGroup={(group) => (
+              <RoomGroup key={group.key} group={group}>
+                {group.orders.map((order) => renderCard(order))}
+              </RoomGroup>
+            )}
+          >
             {currentColumn.orders.map((order) => renderCard(order))}
           </BoardColumn>
         ) : null}

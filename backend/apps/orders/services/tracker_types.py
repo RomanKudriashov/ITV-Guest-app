@@ -43,6 +43,33 @@ class Layout(models.TextChoices):
     TIMELINE = "timeline", "Лента по времени"
 
 
+class GroupBy(models.TextChoices):
+    """
+    ПО ЧЕМУ СОБИРАЮТСЯ ЗАДАЧИ.
+
+    По статусу — как было: заказ едет по этапам, и колонка отвечает на вопрос
+    «что с ним сейчас». По комнате — для хозслужбы: горничная идёт по этажу, и
+    две заявки в один номер это ОДИН поход, а не два. Раньше они приезжали
+    двумя карточками, и вторую находили, уже выйдя из номера.
+    """
+
+    STATUS = "status", "По статусу"
+    ROOM = "room", "По номеру"
+
+
+class ColumnStyle(models.TextChoices):
+    """
+    Сколько колонок рисовать.
+
+    MANY — набор по статусам потока. SINGLE — одна лента: у заявок ресепшена
+    статусов всего два, и «Новая» с «Подтверждена» делили экран пополам,
+    оставаясь при этом полупустыми. Одна лента честнее занимает место.
+    """
+
+    MANY = "many", "Колонки по статусам"
+    SINGLE = "single", "Одна лента"
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class TrackerBehaviour:
     code: str
@@ -54,6 +81,14 @@ class TrackerBehaviour:
     # Показывать ли колонку-корзину терминальных статусов. У ленты записей
     # завершённые остаются на месте (день видно целиком), у досок — уходят.
     keeps_terminal_in_view: bool
+    # По чему собираются задачи и сколько колонок рисовать. Оба поля живут
+    # ЗДЕСЬ, а не в прикладном коде: `if service.type == "housekeeping"` в
+    # сборке доски — это и есть трещина, ради устранения которой реестр писался.
+    group_by: str = GroupBy.STATUS
+    column_style: str = ColumnStyle.MANY
+    # Порог просрочки, если у вида работы он свой. `None` — берём настройку
+    # точки. Ноль в этом поле означал бы «просрочено всё», поэтому именно None.
+    sla_minutes: int | None = None
 
 
 BEHAVIOURS: dict[str, TrackerBehaviour] = {
@@ -68,6 +103,9 @@ BEHAVIOURS: dict[str, TrackerBehaviour] = {
         layout=Layout.COLUMNS,
         order_by="created_at",
         keeps_terminal_in_view=False,
+        # Хозслужба работает ПО НОМЕРАМ, а не по заказам: маршрут горничной —
+        # это этаж, а не очередь поступления.
+        group_by=GroupBy.ROOM,
     ),
     TrackerType.SCHEDULE: TrackerBehaviour(
         code=TrackerType.SCHEDULE,
@@ -80,6 +118,12 @@ BEHAVIOURS: dict[str, TrackerBehaviour] = {
         layout=Layout.COLUMNS,
         order_by="created_at",
         keeps_terminal_in_view=False,
+        # Две колонки на два статуса делили экран пополам и стояли полупустыми.
+        column_style=ColumnStyle.SINGLE,
+        # Заказать билеты не делается за двадцать минут. Порог кухни здесь
+        # красил бы просрочкой всё подряд, а тревога, включённая всегда, не
+        # значит ничего. У консьержа и ресепшена свой — четыре часа.
+        sla_minutes=240,
     ),
 }
 
@@ -138,6 +182,34 @@ def _service_of(point):
     if "services" in cache:
         return next(iter(cache["services"]), None)
     return point.services.first()
+
+
+def effective_sla_minutes(point) -> int:
+    """
+    ПОРОГ ПРОСРОЧКИ ТОЧКИ — ОДНО МЕСТО НА ВСЕХ ЧИТАТЕЛЕЙ.
+
+    Его спрашивают карточка (`is_overdue`, `overdue_minutes`), фильтр
+    «только просроченные», плитка сводки и подпись под доской. Четыре ответа
+    на один вопрос обязаны совпадать, поэтому ответ здесь один.
+
+    Правило: явная настройка точки бьёт умолчание вида работы. Заказать билеты
+    не делается за двадцать минут, и порог кухни красил бы у консьержа
+    просрочкой вообще всё — тревога, включённая всегда, не значит ничего.
+    Поэтому вид работы приносит СВОЁ умолчание.
+
+    КОМПРОМИСС, И ЕГО ВИДНО. Отличить «оператор выбрал двадцать» от «поле
+    никто не трогал» сейчас нечем: у `sla_minutes` есть значение по умолчанию,
+    а не `null`. Считаем нетронутым ровно модельное умолчание — при любом
+    другом числе побеждает настройка точки. Чисто это решается nullable-полем;
+    менять схему ради этого в текущей задаче не стали.
+    """
+    from apps.hotels.models import ExecutionPoint
+
+    default = ExecutionPoint._meta.get_field("sla_minutes").default
+    behaviour = tracker_behaviour(point)
+    if behaviour.sla_minutes is not None and point.sla_minutes == default:
+        return behaviour.sla_minutes
+    return point.sla_minutes
 
 
 def tracker_behaviour(point) -> TrackerBehaviour:

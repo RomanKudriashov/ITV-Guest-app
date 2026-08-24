@@ -187,7 +187,14 @@ def test_concierge_requests_confirm_and_fulfil(
 
     board = concierge("/api/tracker/orders?point=concierge").json()
     assert board["tracker_type"] == "requests"
-    assert codes(board) == ["new", "confirmed"]
+    # ЗАЯВКИ — ОДНОЙ ЛЕНТОЙ. Раньше здесь было две колонки на два статуса, и
+    # они делили экран пополам, стоя полупустыми. Поток статусов при этом не
+    # изменился — по нему заявка и едет ниже в этом же тесте.
+    assert codes(board) == ["all"]
+    assert [status["code"] for status in board["columns"][0]["orders"][0]["next_statuses"]] == [
+        "confirmed",
+        "fulfilled",
+    ]
 
     with django_capture_on_commit_callbacks(execute=True):
         confirmed = concierge(

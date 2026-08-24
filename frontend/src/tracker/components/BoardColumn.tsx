@@ -7,7 +7,7 @@ import { alpha } from '@mui/material/styles';
 import { useDroppable } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 
-import type { TrackerColumn } from '../api/types';
+import type { TrackerColumn, TrackerRoomGroup } from '../api/types';
 
 export interface BoardColumnProps {
   column: TrackerColumn;
@@ -22,6 +22,11 @@ export interface BoardColumnProps {
    * ошибкой, а не ошибкой повара.
    */
   dropAllowed?: boolean | null;
+  /**
+   * Заявки по комнатам. Когда группы есть, карточки рисуются внутри них —
+   * заголовок группы называет комнату, и горничная видит поход целиком.
+   */
+  renderGroup?: (group: TrackerRoomGroup) => ReactNode;
   children: ReactNode;
 }
 
@@ -29,6 +34,7 @@ export function BoardColumn({
   column,
   showHeader = true,
   dropAllowed = null,
+  renderGroup,
   children,
 }: BoardColumnProps) {
   const { t } = useTranslation();
@@ -73,7 +79,11 @@ export function BoardColumn({
       ) : null}
 
       {column.orders.length ? (
-        <Stack spacing={1.25}>{children}</Stack>
+        column.groups && renderGroup ? (
+          <Stack spacing={1.75}>{column.groups.map(renderGroup)}</Stack>
+        ) : (
+          <Stack spacing={1.25}>{children}</Stack>
+        )
       ) : (
         <Box
           sx={{
