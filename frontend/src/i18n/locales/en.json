@@ -401,7 +401,9 @@
       "openUntil": "Open until {{time}}",
       "notFound": "Venue not found",
       "viewOnly": "You are browsing without a room — ordering is available from a room or via its QR.",
-      "back": "All services"
+      "back": "All services",
+      "closedTitle": "Closed now — you can browse, but not order",
+      "closedOpensAt": "Opens at {{time}}"
     },
     "quickActions": {
       "menu": "Menu",
@@ -432,7 +434,9 @@
       "increase": "Add one",
       "decrease": "Remove one",
       "emptyTitle": "The menu is empty",
-      "emptyHint": "Please check back later — the hotel is still preparing the menu"
+      "emptyHint": "Please check back later — the hotel is still preparing the menu",
+      "venueOpensAt": "Opens at {{time}}",
+      "venueClosed": "Closed right now"
     },
     "item": {
       "title": "Dish",

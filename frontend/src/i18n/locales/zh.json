@@ -399,7 +399,9 @@
       "openUntil": "营业至 {{time}}",
       "notFound": "未找到该场所",
       "viewOnly": "您正在无房间模式下浏览——下单需在房间内或通过房间二维码。",
-      "back": "全部服务"
+      "back": "全部服务",
+      "closedTitle": "目前休息 — 可以浏览，暂不能下单",
+      "closedOpensAt": "{{time}} 开放"
     },
     "quickActions": {
       "menu": "菜单",
@@ -430,7 +432,9 @@
       "increase": "增加一份",
       "decrease": "减少一份",
       "emptyTitle": "菜单暂时为空",
-      "emptyHint": "请稍后再看，酒店正在准备菜单"
+      "emptyHint": "请稍后再看，酒店正在准备菜单",
+      "venueOpensAt": "{{time}} 开放",
+      "venueClosed": "目前休息"
     },
     "item": {
       "title": "菜品",

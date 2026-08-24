@@ -73,7 +73,12 @@ export function CatalogRowView({
         borderColor: 'divider',
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         overflow: 'hidden',
-        opacity: available ? 1 : 0.5,
+        /*
+          Приглушение, а не погашение. 0.5 читалось как «строка выключена, тут
+          ничего нет»; 0.72 говорит «сейчас не заказать», оставляя фото и текст
+          читаемыми — ради них карточку и открывают.
+        */
+        opacity: available ? 1 : 0.72,
         transition: 'transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s',
         '&:hover': available
           ? { transform: 'translateY(-4px)', boxShadow: theme.palette.brand.elevation.lg }
@@ -84,7 +89,13 @@ export function CatalogRowView({
       {/* Photo — the whole media + headline opens the sheet. */}
       <ButtonBase
         onClick={onOpen}
-        disabled={!available}
+        /*
+          НЕДОСТУПНАЯ КАРТОЧКА ОТКРЫВАЕТСЯ. Раньше здесь стояло
+          `disabled={!available}`, и закрытый ресторан превращался в витрину под
+          стеклом: гость видел строчку с названием и не мог посмотреть ни
+          состав, ни фото, ни описание. Смотреть можно всё — нельзя ЗАКАЗАТЬ, а
+          это совсем другой запрет, и живёт он на кнопке заказа.
+        */
         aria-label={title}
         sx={{ display: 'block', textAlign: 'start', width: '100%' }}
       >

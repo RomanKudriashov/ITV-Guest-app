@@ -257,17 +257,51 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
       </SheetScroll>
 
       <SheetFooter>
-        <Button
-          fullWidth
-          size="large"
-          variant="contained"
-          disabled={unavailable}
-          onClick={handleAdd}
-          data-testid="guest-add-to-cart"
-          sx={[ctaGradientSx, { minHeight: 52 }]}
-        >
-          {t('guest.item.addToCart', { price: format(totalPrice) })}
-        </Button>
+        {/*
+          ЗАКАЗАТЬ НЕЛЬЗЯ — ГОВОРИМ ЭТО СЛОВАМИ, А НЕ ПОГАШЕННОЙ КНОПКОЙ.
+
+          Кнопка «Добавить · 1 900 ₽», которая не нажимается, — это загадка:
+          гость жмёт её несколько раз, потом трясёт телефон, потом уходит.
+          Причина у сервера уже есть, и она разная: закрыто заведение, кончилось
+          на кухне, расписание самой позиции. Каждая говорит своё.
+        */}
+        {unavailable ? (
+          <Box
+            data-testid="guest-item-unavailable"
+            sx={{
+              minHeight: 52,
+              display: 'grid',
+              placeItems: 'center',
+              px: 2,
+              borderRadius: 2,
+              bgcolor: 'action.hover',
+              color: 'text.secondary',
+              fontWeight: 600,
+              textAlign: 'center',
+            }}
+          >
+            {item.unavailable_reason === 'venue_closed'
+              ? item.available_from
+                ? t('guest.menu.venueOpensAt', { time: item.available_from })
+                : t('guest.menu.venueClosed')
+              : item.available_from
+                ? t('guest.menu.availableFrom', { time: item.available_from })
+                : item.unavailable_reason === 'out_of_stock'
+                  ? t('guest.menu.outOfStock')
+                  : t('guest.menu.unavailable')}
+          </Box>
+        ) : (
+          <Button
+            fullWidth
+            size="large"
+            variant="contained"
+            onClick={handleAdd}
+            data-testid="guest-add-to-cart"
+            sx={[ctaGradientSx, { minHeight: 52 }]}
+          >
+            {t('guest.item.addToCart', { price: format(totalPrice) })}
+          </Button>
+        )}
       </SheetFooter>
     </>
   );

@@ -478,12 +478,24 @@ function CatalogRow({
   // An `info` page has no price; a booking may or may not, like a service.
   const price = behaviour.usesContent ? null : formatPrice(item.price);
 
+  /*
+    ПРИЧИНА НАЗЫВАЕТСЯ СВОИМИ СЛОВАМИ.
+
+    «Доступно с 03:00» у блюда в закрытом ресторане — верно по факту и неверно
+    по смыслу: закрыто ЗАВЕДЕНИЕ, а не блюдо, и гость шёл искать, что не так
+    именно с этим салатом. Причину сервер и так присылает
+    (`unavailable_reason`), оставалось перестать её игнорировать.
+  */
   const unavailableNote = !available
-    ? item.available_from
-      ? t('guest.menu.availableFrom', { time: item.available_from })
-      : item.unavailable_reason === 'out_of_stock'
-        ? t('guest.menu.outOfStock')
-        : t('guest.menu.unavailable')
+    ? item.unavailable_reason === 'venue_closed'
+      ? item.available_from
+        ? t('guest.menu.venueOpensAt', { time: item.available_from })
+        : t('guest.menu.venueClosed')
+      : item.available_from
+        ? t('guest.menu.availableFrom', { time: item.available_from })
+        : item.unavailable_reason === 'out_of_stock'
+          ? t('guest.menu.outOfStock')
+          : t('guest.menu.unavailable')
     : null;
 
   // An `info` row is a pure read link — the whole row opens the page, there is
