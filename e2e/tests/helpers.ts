@@ -283,11 +283,32 @@ export async function moveOrderTo(page: Page, number: string, code: string): Pro
     { timeout: 20_000 },
   )
 
+  /*
+    СНАЧАЛА ЖДЁМ, ПОКА ДОСКА ДОЕДЕТ ДО НУЖНОГО СОСТОЯНИЯ.
+
+    Одноразовая проверка `isVisible()` спрашивала живую доску в один момент
+    времени и решала за все последующие. Сразу после предыдущего шага карточка
+    ещё показывает прежнее действие: проверка отвечала «нет», хелпер уходил в
+    ветку с меню, а к моменту клика доска перерисовывалась снимком из сокета,
+    пункт меню отцеплялся, и клик уходил в никуда. Ни запроса, ни ошибки —
+    падал `waitForResponse`, и виноватым выглядел сервер.
+
+    Гонка была всегда; заметной она стала, когда снимок подрос (сводка смены и
+    список исполнителей едут в нём же) и перерисовки участились. Лечится не
+    паузой, а ожиданием ФАКТА: ждём саму кнопку столько же, сколько ответ.
+  */
   const direct = page.getByTestId(`tracker-status-${number}-${code}`)
-  if (await direct.isVisible().catch(() => false)) {
+  const appeared = await direct
+    .waitFor({ state: 'visible', timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false)
+
+  if (appeared) {
     await direct.click()
   } else {
+    // Действия не поместились на карточку — они в меню «ещё».
     await page.getByTestId(`tracker-more-${number}`).click()
+    await direct.waitFor({ state: 'visible', timeout: 10_000 })
     await direct.click()
   }
 
