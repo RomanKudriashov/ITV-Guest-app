@@ -1923,7 +1923,8 @@
         "activity": "النشاط",
         "tariff": "الباقة والحدود",
         "data": "البيانات",
-        "support": "الدعم"
+        "support": "الدعم",
+        "roomControl": "التحكم بالغرفة"
       },
       "field": {
         "name": "الاسم",
@@ -2171,7 +2172,15 @@
         "demo_entry_toggled": "تبديل الدخول بدون رمز",
         "read": "قراءة حالة الغرفة",
         "command": "أمر إلى أجهزة الغرفة",
-        "plan_level_changed": "تم تغيير مستوى خطة الغرفة"
+        "plan_level_changed": "تم تغيير مستوى خطة الغرفة",
+        "import_confirmed": "تم تأكيد استيراد PNR",
+        "zone_added": "أُضيفت منطقة",
+        "element_added": "أُضيف عنصر",
+        "device_override": "اسم الجهاز للغرفة",
+        "plan_frames": "تم رفع لقطة الخطة",
+        "plan_copied": "نُسخت خطة المناطق",
+        "published": "تم نشر الإعداد",
+        "rolled_back": "تم التراجع عن الإعداد"
       },
       "guest_session": {
         "created": "فتح الضيف التطبيق"
@@ -2539,7 +2548,9 @@
     "roomsOnType_two": "غرفتان",
     "roomsOnType_few": "{{count}} غرف",
     "roomsOnType_many": "{{count}} غرفة",
-    "roomsOnType_other": "{{count}} غرفة"
+    "roomsOnType_other": "{{count}} غرفة",
+    "moved": "تتولى المنصة إعداد التحكم بالغرفة: الاستيراد وبناء الشاشة والخطة والنشر لدينا. يبقى هنا وصول الضيف وفحص العنصر وحالة الاتصال.",
+    "movedFromTab": "انتقل هذا القسم: تتولى المنصة إعداد التحكم بالغرفة. يبقى هنا وصول الضيف وفحص العنصر وحالة الاتصال — راسلنا إن لزم تعديل الإعداد."
   },
   "cms": {
     "homeBlocks": {

@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
 import { fetchVersions, publishType, rollbackType, type GrmsType } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
@@ -35,24 +36,27 @@ import { useToast } from '@/components/ToastProvider';
  */
 export function VersionsTab({ type }: { type: GrmsType }) {
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
   const toast = useToast();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: queryKeys.grmsVersions(type.code),
-    queryFn: () => fetchVersions(type.code),
+    queryKey: queryKeys.grmsVersions(base, type.code),
+    queryFn: () => fetchVersions(transport, type.code),
   });
 
   const failure = (error: unknown) =>
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsVersions(type.code) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(type.code) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsVersions(base, type.code) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(base, type.code) });
   };
 
   const publishMutation = useMutation({
-    mutationFn: () => publishType(type.code),
+    mutationFn: () => publishType(transport, type.code),
     onSuccess: (result) => {
       refresh();
       toast.show(t('roomControl.publish.published', { version: result.version }), 'success');
@@ -61,7 +65,7 @@ export function VersionsTab({ type }: { type: GrmsType }) {
   });
 
   const rollbackMutation = useMutation({
-    mutationFn: (version: number) => rollbackType(type.code, version),
+    mutationFn: (version: number) => rollbackType(transport, type.code, version),
     onSuccess: () => {
       refresh();
       toast.show(t('roomControl.publish.rolledBack'), 'success');

@@ -38,24 +38,32 @@ from ninja.files import UploadedFile
 from apps.core.context import tenant_context
 from apps.grms.schemas.cms import (
     BindingIn,
+    ConfirmIn,
     CheckIn,
     ElementIn,
     OverrideIn,
     PlanCopyIn,
     PlanGeometryIn,
     PlanLevelIn,
+    ReconcileIn,
     RollbackIn,
     ZoneIn,
 )
 from apps.grms.services import builder, plan_editor, publishing, roomcheck
-from apps.hotels.api.platform.rights import READ, WRITE, PlatformRouter, requires
 from apps.hotels.services.platform import console
+
+# ПОЗДНИЙ ИМПОРТ ПРАВ. `hotels.api.platform` подключает этот роутер, а он тянет
+# оттуда калитку — на верхнем уровне это кольцо. Права нужны в момент описания
+# ручек, то есть при первом обращении к модулю, а не при его загрузке.
+from apps.hotels.api.platform.rights import READ, WRITE, PlatformRouter, requires
 
 router = PlatformRouter(tags=["platform-grms"])
 
 # Кадр плана — фотография или рендер комнаты: 12 МБ хватает даже для снимка с
 # телефона без сжатия, а больше означает, что грузят не то.
 MAX_PLAN_BYTES = 12 * 1024 * 1024
+# Файл ПНР: пять мегабайт с запасом на любой реальный объект.
+MAX_IMPORT_BYTES = 5 * 1024 * 1024
 
 BASE = "/hotels/{hotel_id}/grms"
 
@@ -94,10 +102,41 @@ def _audit(hotel, request: HttpRequest, action: str, **payload) -> None:
 @router.get(f"{BASE}/catalog", summary="Каталог видов элементов")
 @requires(READ)
 def catalog(request: HttpRequest, hotel_id: str):
-    from apps.grms.api.cms.catalog import get_catalog as cms_catalog
+    """
+    Каталог видов элементов.
 
-    # Каталог одинаков для всех отелей и никого не меняет — зовём тот же код.
-    return cms_catalog(request)
+    Он ОДИНАКОВ для всех отелей: список зашит в адаптер, и отель не может
+    добавить свой вид. Но проверка модуля всё равно нужна — без него у отеля
+    нет оборудования, и предлагать конструктор незачем.
+
+    Тело собирается ЗДЕСЬ, а не зовётся из вьюхи CMS: та берёт отель из
+    контекста запроса, которого у платформенной ручки нет вовсе. Ровно на этом
+    экран конструктора и падал — каталог не приезжал, и вкладка оставалась
+    пустой.
+    """
+    from apps.grms.services import catalog as catalog_svc
+
+    _hotel(hotel_id)
+    return {
+        "elements": [
+            {
+                "kind": kind.code,
+                "title": kind.title_ru,
+                "required": list(kind.required),
+                "optional": list(kind.optional),
+            }
+            for kind in catalog_svc.ELEMENTS.values()
+        ],
+        "capabilities": {
+            code: {
+                "value_kind": spec.value_kind,
+                "requires_command": spec.requires_command,
+                "requires_feedback": spec.requires_feedback,
+                "readonly": spec.readonly,
+            }
+            for code, spec in catalog_svc.CAPABILITIES.items()
+        },
+    }
 
 
 @router.get(f"{BASE}/types", summary="Типы номеров с переменными")
@@ -118,30 +157,48 @@ def type_status(request: HttpRequest, hotel_id: str, code: str):
 @router.post(f"{BASE}/import/preview", summary="Разобрать Excel ПНР (без сохранения)")
 @requires(WRITE)
 def import_preview(request: HttpRequest, hotel_id: str, file: UploadedFile = File(...)):
-    from apps.grms.services import imports
+    """Разбор БЕЗ записи: оператор смотрит и правит, потом подтверждает."""
+    from apps.core.errors import ValidationError
+    from apps.grms.services import importer
 
     _hotel(hotel_id)
-    return imports.preview(file.read(), filename=file.name or "pnr.xlsx")
+    if file.size and file.size > MAX_IMPORT_BYTES:
+        raise ValidationError("Файл больше 5 МБ", field="file")
+    try:
+        preview = importer.parse(file.read())
+    except importer.ImportError_ as exc:
+        # Структура не та — показываем, а не додумываем.
+        raise ValidationError(str(exc), field="file") from exc
+    return preview.as_dict()
 
 
 @router.post(f"{BASE}/import/reconcile", summary="Сверить разобранное с живым iRidi")
 @requires(WRITE)
-def import_reconcile(request: HttpRequest, hotel_id: str, payload: dict):
-    from apps.grms.services import imports
+def import_reconcile(request: HttpRequest, hotel_id: str, payload: ReconcileIn):
+    """Коннектор офлайн — НЕ ошибка: вернётся `checked: false`, но не отказ."""
+    from apps.grms.services import importer, reconcile
 
     hotel = _hotel(hotel_id)
-    with tenant_context(hotel):
-        return imports.reconcile(hotel, payload)
+    preview = importer.ImportPreview.from_dict(payload.preview)
+    reports = reconcile.reconcile_preview(hotel, preview)
+    return {
+        "reports": [report.as_dict() for report in reports],
+        "checked": all(report.checked for report in reports),
+    }
 
 
 @router.post(f"{BASE}/import/confirm", summary="Сохранить подтверждённый импорт")
 @requires(WRITE)
-def import_confirm(request: HttpRequest, hotel_id: str, payload: dict):
-    from apps.grms.services import imports
+def import_confirm(request: HttpRequest, hotel_id: str, payload: ConfirmIn):
+    from apps.core.errors import ValidationError
+    from apps.grms.services import importer
 
     hotel = _hotel(hotel_id)
-    result = imports.confirm(hotel, payload)
-    _audit(hotel, request, "grms.import_confirmed", types=result.get("types"))
+    preview = importer.ImportPreview.from_dict(payload.preview)
+    if not preview.types:
+        raise ValidationError("Нечего сохранять: в предпросмотре нет типов", field="preview")
+    result = builder.save_import(hotel, preview, replace=payload.replace)
+    _audit(hotel, request, "grms.import_confirmed", types=len(preview.types))
     return result
 
 

@@ -1871,7 +1871,8 @@
         "activity": "Activity",
         "tariff": "Tariff and limits",
         "data": "Data",
-        "support": "Support"
+        "support": "Support",
+        "roomControl": "Room control"
       },
       "field": {
         "name": "Name",
@@ -2119,7 +2120,15 @@
         "demo_entry_toggled": "PIN-free entry toggled",
         "read": "Room state read",
         "command": "Command sent to room equipment",
-        "plan_level_changed": "Room plan level changed"
+        "plan_level_changed": "Room plan level changed",
+        "import_confirmed": "PNR import confirmed",
+        "zone_added": "Zone added",
+        "element_added": "Element added",
+        "device_override": "Device name for a room",
+        "plan_frames": "Plan frame uploaded",
+        "plan_copied": "Plan geometry copied",
+        "published": "Configuration published",
+        "rolled_back": "Configuration rolled back"
       },
       "guest_session": {
         "created": "Guest opened the app"
@@ -2483,7 +2492,9 @@
       }
     },
     "roomsOnType_one": "{{count}} room",
-    "roomsOnType_other": "{{count}} rooms"
+    "roomsOnType_other": "{{count}} rooms",
+    "moved": "Room control is configured by the platform: PNR import, the screen builder, the plan and publishing are on our side. Guest access, element checks and link health stay here.",
+    "movedFromTab": "This section has moved: room control is configured by the platform. Guest access, element checks and link health stay here — write to us if the configuration needs a change."
   },
   "cms": {
     "homeBlocks": {

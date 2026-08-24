@@ -17,17 +17,14 @@ import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
 import { fetchGrmsTypes } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
 import { AccessTab } from './AccessTab';
-import { BuilderTab } from './BuilderTab';
 import { CheckTab } from './CheckTab';
 import { DiagnosticsTab } from './DiagnosticsTab';
-import { ImportTab } from './ImportTab';
-import { PlanEditor } from './PlanEditor';
-import { VersionsTab } from './VersionsTab';
 
 /**
  * Раздел «Управление номером» в CMS.
@@ -44,18 +41,38 @@ import { VersionsTab } from './VersionsTab';
  * Раздел закрыт модулем `room_control` на каждом эндпоинте: без модуля здесь
  * честная заглушка, а не пустые формы, которые всё равно ответят 403.
  */
-type TabKey = 'import' | 'builder' | 'plan' | 'check' | 'diagnostics' | 'versions' | 'access';
+type TabKey = 'access' | 'check' | 'diagnostics';
+
+/**
+ * КОНФИГУРАЦИЯ ЖИВЁТ В КОНСОЛИ ПЛАТФОРМЫ, А НЕ ЗДЕСЬ.
+ *
+ * Импорт ПНР, конструктор, план и версии уехали: это наша пусконаладка, а не
+ * работа отеля — администратор не открывает Excel с картой каналов и не
+ * размечает зоны. Отелю осталось то, чем он занимается каждый день: доступ
+ * гостя (PIN и демо-вход), прогон элемента и связь.
+ *
+ * Старые адреса вкладок сюда приходят и не ведут в никуда: неизвестная вкладка
+ * открывает «Доступ» и объясняет, куда делось остальное.
+ */
+const MOVED_TABS = new Set(['import', 'builder', 'plan', 'versions']);
 
 // Диагностика стоит ПОСЛЕ проверки: сначала прогоняют элемент, потом идут
 // смотреть, что из этого записалось и почему не получилось.
-const TABS: TabKey[] = ['import', 'builder', 'plan', 'check', 'diagnostics', 'versions', 'access'];
+const TABS: TabKey[] = ['access', 'check', 'diagnostics'];
 
 export function RoomControlPage() {
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
   const navigate = useNavigate();
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
-  const [tab, setTab] = useState<TabKey>('import');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<TabKey>('access');
+  // Пришли по старой ссылке на переехавшую вкладку — говорим об этом, а не
+  // молча показываем другую: человек искал конкретный экран.
+  const askedMoved = MOVED_TABS.has(params.get('tab') ?? '');
   /*
     ТИП МОЖНО ПРИНЕСТИ АДРЕСОМ.
 
@@ -63,10 +80,9 @@ export function RoomControlPage() {
     конфигурацию ИМЕННО этого типа, а не первого попавшегося. Иначе переход
     отвечает не на тот вопрос, ради которого по нему пошли.
   */
-  const [params] = useSearchParams();
   const [typeCode, setTypeCode] = useState(params.get('type') ?? '');
 
-  const types = useQuery({ queryKey: queryKeys.grmsTypes, queryFn: fetchGrmsTypes });
+  const types = useQuery({ queryKey: queryKeys.grmsTypes(base), queryFn: () => fetchGrmsTypes(transport) });
 
   useEffect(() => {
     const list = types.data?.types ?? [];
@@ -168,10 +184,22 @@ export function RoomControlPage() {
         ))}
       </Tabs>
 
-      {tab === 'import' && <ImportTab onImported={() => void types.refetch()} />}
+      {/*
+        Строка о переезде — ВСЕГДА, а не только по старой ссылке: у
+        администратора пропали четыре вкладки, и пустое место на их месте
+        читается как поломка. Здесь сказано, что произошло и к кому идти.
+      */}
+      <Alert
+        severity="info"
+        sx={{ mb: 2 }}
+        data-testid="grms-config-moved"
+      >
+        {t(askedMoved ? 'roomControl.movedFromTab' : 'roomControl.moved')}
+      </Alert>
+
       {tab === 'access' && <AccessTab />}
 
-      {tab !== 'import' && tab !== 'access' && !current && (
+      {tab !== 'access' && !current && (
         <EmptyState
           testId="grms-no-types"
           title={t('roomControl.noTypes')}
@@ -179,11 +207,8 @@ export function RoomControlPage() {
         />
       )}
 
-      {current && tab === 'builder' && <BuilderTab type={current} />}
-      {current && tab === 'plan' && <PlanEditor code={current.code} types={list} />}
       {current && tab === 'check' && <CheckTab type={current} />}
       {current && tab === 'diagnostics' && <DiagnosticsTab type={current} />}
-      {current && tab === 'versions' && <VersionsTab type={current} />}
     </Box>
   );
 }

@@ -11,6 +11,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { RoomControlTab } from './hotel/RoomControlTab';
+
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../useRights';
 
@@ -43,7 +45,7 @@ import {
   type ModuleEntry,
 } from '../adminClient';
 
-const TABS = ['profile', 'tariff', 'modules', 'activity', 'support', 'data'] as const;
+const TABS = ['profile', 'tariff', 'modules', 'roomControl', 'activity', 'support', 'data'] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -168,6 +170,8 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
       <Box sx={{ mt: 2.25 }}>
         {tab === 'profile' ? <ProfileTab hotel={hotel} /> : null}
         {tab === 'modules' ? <ModulesTab id={id} /> : null}
+        {/* Конфигурация управления номером: наша работа, наша консоль. */}
+        {tab === 'roomControl' ? <RoomControlTab hotelId={id} /> : null}
         {tab === 'activity' ? <ActivityTab id={id} /> : null}
         {tab === 'support' ? <SupportSessionsPage hotelId={id} /> : null}
         {tab === 'tariff' ? <TariffTab id={id} /> : null}

@@ -27,6 +27,7 @@ import {
   type ImportPreview,
   type ReconcileResult,
 } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 
@@ -43,6 +44,9 @@ import { useToast } from '@/components/ToastProvider';
  */
 export function ImportTab({ onImported }: { onImported: () => void }) {
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
   const toast = useToast();
   const queryClient = useQueryClient();
 
@@ -55,7 +59,7 @@ export function ImportTab({ onImported }: { onImported: () => void }) {
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
 
   const previewMutation = useMutation({
-    mutationFn: () => previewImport(file as File),
+    mutationFn: () => previewImport(transport, file as File),
     onSuccess: (data) => {
       setPreview(data);
       setReports(null);
@@ -64,16 +68,16 @@ export function ImportTab({ onImported }: { onImported: () => void }) {
   });
 
   const reconcileMutation = useMutation({
-    mutationFn: () => reconcileImport(preview as ImportPreview),
+    mutationFn: () => reconcileImport(transport, preview as ImportPreview),
     onSuccess: setReports,
     onError: failure,
   });
 
   const confirmMutation = useMutation({
-    mutationFn: () => confirmImport(preview as ImportPreview, replace),
+    mutationFn: () => confirmImport(transport, preview as ImportPreview, replace),
     onSuccess: (saved) => {
       toast.show(t('roomControl.import.saved', { count: saved.types.length }), 'success');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.grmsTypes });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.grmsTypes(base) });
       onImported();
     },
     onError: failure,

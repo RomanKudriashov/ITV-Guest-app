@@ -20,6 +20,7 @@ import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
 import { checkElement, fetchTypeStatus, type CheckResult, type GrmsType } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 
@@ -44,11 +45,14 @@ const OUTCOME_COLOR: Record<string, 'success' | 'warning' | 'error' | 'default'>
 
 export function CheckTab({ type }: { type: GrmsType }) {
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
   const toast = useToast();
 
   const status = useQuery({
-    queryKey: queryKeys.grmsStatus(type.code),
-    queryFn: () => fetchTypeStatus(type.code),
+    queryKey: queryKeys.grmsStatus(base, type.code),
+    queryFn: () => fetchTypeStatus(transport, type.code),
   });
 
   const [element, setElement] = useState('');
@@ -59,7 +63,7 @@ export function CheckTab({ type }: { type: GrmsType }) {
 
   const runMutation = useMutation({
     mutationFn: (withValue: boolean) =>
-      checkElement(type.code, {
+      checkElement(transport, type.code, {
         element_slug: element,
         room_number: room,
         capability: capability || undefined,

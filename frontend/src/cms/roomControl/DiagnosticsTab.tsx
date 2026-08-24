@@ -32,6 +32,7 @@ import {
   type DiagnosticsRow,
   type GrmsType,
 } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
@@ -83,22 +84,25 @@ const EMPTY_FILTERS = {
 export function DiagnosticsTab({ type }: { type: GrmsType }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [recheck, setRecheck] = useState<{ id: string; result: CheckResult } | null>(null);
 
   const link = useQuery({
-    queryKey: queryKeys.grmsDiagnosticsLink,
-    queryFn: fetchDiagnosticsLink,
+    queryKey: queryKeys.grmsDiagnosticsLink(base),
+    queryFn: () => fetchDiagnosticsLink(transport),
   });
   const values = useQuery({
-    queryKey: queryKeys.grmsDiagnosticsFilters,
-    queryFn: fetchDiagnosticsFilterValues,
+    queryKey: queryKeys.grmsDiagnosticsFilters(base),
+    queryFn: () => fetchDiagnosticsFilterValues(transport),
   });
   const journal = useQuery({
-    queryKey: queryKeys.grmsDiagnostics(JSON.stringify(filters)),
-    queryFn: () => fetchDiagnostics(filters),
+    queryKey: queryKeys.grmsDiagnostics(base, JSON.stringify(filters)),
+    queryFn: () => fetchDiagnostics(transport, filters),
   });
 
   /*
@@ -108,7 +112,7 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
   */
   const recheckMutation = useMutation({
     mutationFn: (row: DiagnosticsRow) =>
-      checkElement(type.code, {
+      checkElement(transport, type.code, {
         element_slug: row.element,
         room_number: row.room,
         value: null,

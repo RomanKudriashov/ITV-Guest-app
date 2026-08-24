@@ -1857,7 +1857,8 @@
         "activity": "动态",
         "tariff": "套餐与配额",
         "data": "数据",
-        "support": "支持"
+        "support": "支持",
+        "roomControl": "客房控制"
       },
       "field": {
         "name": "名称",
@@ -2104,7 +2105,15 @@
         "demo_entry_toggled": "切换免 PIN 进入",
         "read": "读取客房状态",
         "command": "向客房设备发送指令",
-        "plan_level_changed": "客房平面图级别已修改"
+        "plan_level_changed": "客房平面图级别已修改",
+        "import_confirmed": "PNR 导入已确认",
+        "zone_added": "已添加分区",
+        "element_added": "已添加元件",
+        "device_override": "房间设备名称",
+        "plan_frames": "已上传平面图",
+        "plan_copied": "已复制平面分区",
+        "published": "配置已发布",
+        "rolled_back": "配置已回滚"
       },
       "guest_session": {
         "created": "客人打开了应用"
@@ -2467,7 +2476,9 @@
         "ok": "已读取"
       }
     },
-    "roomsOnType_other": "{{count}} 间客房"
+    "roomsOnType_other": "{{count}} 间客房",
+    "moved": "客房控制的配置由平台完成：PNR 导入、界面搭建、平面图与发布都在我们这边。此处保留客人访问、元件检查与连接状态。",
+    "movedFromTab": "该板块已迁移：客房控制的配置由平台完成。此处保留客人访问、元件检查与连接状态 — 如需修改配置请联系我们。"
   },
   "cms": {
     "homeBlocks": {

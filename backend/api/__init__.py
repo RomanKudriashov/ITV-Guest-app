@@ -19,6 +19,11 @@ from apps.orders.api.router import tracker_router
 from apps.grms.api.router import onprem_router
 from apps.hotels.api.platform import router as platform_router
 
+# Конфигурация управления номером живёт в консоли платформы. Подключается
+# ЗДЕСЬ, а не внутри пакета `hotels.api.platform`: модуль GRMS берёт оттуда
+# калитку прав, и встречный импорт на верхнем уровне даёт кольцо.
+from apps.grms.api.platform import config_router as grms_config_router
+
 from .cms import router as cms_router
 from apps.core.api.health import router as health_router
 
@@ -62,6 +67,7 @@ api.add_router("/tracker", chat_staff_router, auth=StaffAuth())
 api.add_router("/cms", cms_router, auth=CmsAuth())
 # Платформенная консоль на базовом домене: закрыта scope=platform токеном.
 # Тенантный staff-токен сюда не пускается (и наоборот) — проверка PlatformAuth.
+platform_router.add_router("", grms_config_router)
 api.add_router("/platform", platform_router, auth=PlatformAuth())
 # Он-прем узел отмечается сам и представляется своим ключом — не токеном
 # платформы: доступ железки в отеле не должен быть частью мастер-ключа.

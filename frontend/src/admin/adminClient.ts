@@ -69,6 +69,36 @@ export class PlatformError extends Error {
   }
 }
 
+/**
+ * Запрос платформенным подключением — наружу, для экранов, которые живут в
+ * обеих консолях.
+ *
+ * Конфигурация управления номером переехала в `/admin`, но экраны у неё те же,
+ * что были в CMS. Различаются они не только путём: у консоли своё хранилище
+ * токенов, свой обмен и свой вход. Подмешивать платформенный токен в клиент
+ * CMS значило бы сцепить две авторизации в одну — и однажды увести оператора
+ * на вход отеля.
+ */
+export function platformRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  return request<T>(path, method, body);
+}
+
+/** Загрузка файла платформенным подключением: multipart, а не JSON. */
+export async function platformUpload<T>(path: string, form: FormData): Promise<T> {
+  const token = platformToken.get();
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const data = res.status === 204 ? null : await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = (data && (data.detail as string)) || humanError(res.status);
+    throw new PlatformError(res.status, detail, data?.code);
+  }
+  return data as T;
+}
+
 async function request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const send = (token: string | null) =>
     fetch(`${BASE}${path}`, {

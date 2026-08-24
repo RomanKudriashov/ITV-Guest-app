@@ -29,6 +29,7 @@ import {
   setDeviceOverride,
   type GrmsType,
 } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
@@ -50,15 +51,18 @@ import { pickTranslated } from '@/utils/translated';
  */
 export function BuilderTab({ type }: { type: GrmsType }) {
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
   const toast = useToast();
   const queryClient = useQueryClient();
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
 
-  const catalog = useQuery({ queryKey: queryKeys.grmsCatalog, queryFn: fetchGrmsCatalog });
+  const catalog = useQuery({ queryKey: queryKeys.grmsCatalog(base), queryFn: () => fetchGrmsCatalog(transport) });
   const status = useQuery({
-    queryKey: queryKeys.grmsStatus(type.code),
-    queryFn: () => fetchTypeStatus(type.code),
+    queryKey: queryKeys.grmsStatus(base, type.code),
+    queryFn: () => fetchTypeStatus(transport, type.code),
   });
 
   const [zoneCode, setZoneCode] = useState('');
@@ -77,13 +81,13 @@ export function BuilderTab({ type }: { type: GrmsType }) {
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsStatus(type.code) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(type.code) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsStatus(base, type.code) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(base, type.code) });
   };
 
   const zoneMutation = useMutation({
     mutationFn: () =>
-      addZone(type.code, {
+      addZone(transport, type.code, {
         code: zoneCode.trim(),
         title: { [languages.defaultCode]: zoneTitle.trim() || zoneCode.trim() },
       }),
@@ -97,7 +101,7 @@ export function BuilderTab({ type }: { type: GrmsType }) {
 
   const elementMutation = useMutation({
     mutationFn: () =>
-      addElement(type.code, {
+      addElement(transport, type.code, {
         kind: elementKind,
         slug: elementSlug.trim(),
         zone_code: elementZone,
@@ -113,7 +117,7 @@ export function BuilderTab({ type }: { type: GrmsType }) {
 
   const bindMutation = useMutation({
     mutationFn: () =>
-      addBinding(type.code, {
+      addBinding(transport, type.code, {
         element_slug: bindElement,
         capability: bindCapability,
         variable_key: bindVariable,
@@ -128,7 +132,7 @@ export function BuilderTab({ type }: { type: GrmsType }) {
 
   const overrideMutation = useMutation({
     mutationFn: () =>
-      setDeviceOverride(type.code, {
+      setDeviceOverride(transport, type.code, {
         room_number: overrideRoom,
         device_name: overrideDevice.trim(),
       }),

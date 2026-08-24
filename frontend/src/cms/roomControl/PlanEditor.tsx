@@ -36,6 +36,7 @@ import {
   type PlanWindow,
   type PlanZone,
 } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
@@ -120,6 +121,9 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   const isSimple = level === 'simple';
   const isTiles = level === 'tiles';
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
+  const base = transport.base;
   const toast = useToast();
   const queryClient = useQueryClient();
   const { data: bootstrap } = useBootstrap();
@@ -132,8 +136,8 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   const dirtyRef = useRef(false);
 
   const query = useQuery({
-    queryKey: queryKeys.grmsPlan(code),
-    queryFn: () => fetchPlan(code),
+    queryKey: queryKeys.grmsPlan(base, code),
+    queryFn: () => fetchPlan(transport, code),
     // Ночной кадр считается фоном. Пока его нет, а светлый уже есть — сами
     // перезапрашиваем: заставлять администратора жать F5 ради фоновой задачи
     // значит переложить на него нашу асинхронность.
@@ -229,7 +233,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   }, [query.data]);
 
   const applyPlan = (plan: PlanState) => {
-    queryClient.setQueryData(queryKeys.grmsPlan(code), plan);
+    queryClient.setQueryData(queryKeys.grmsPlan(base, code), plan);
     setDraft(plan.geometry);
     setBaseline(JSON.stringify(plan.geometry));
   };
@@ -238,7 +242,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
 
   const saveMutation = useMutation({
-    mutationFn: () => savePlan(code, draft),
+    mutationFn: () => savePlan(transport, code, draft),
     onSuccess: (plan) => {
       applyPlan(plan);
       toast.show(t('roomControl.plan.saved'), 'success');
@@ -247,7 +251,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   });
 
   const uploadMutation = useMutation({
-    mutationFn: () => uploadPlanFrames(code, litFile as File, offFile),
+    mutationFn: () => uploadPlanFrames(transport, code, litFile as File, offFile),
     onSuccess: (result) => {
       if (!result.ok) {
         // Не совпало — НИЧЕГО не сохранено. Половина пары в конфигурации хуже,
@@ -258,7 +262,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
       setLitFile(null);
       setOffFile(null);
       if (result.plan) applyPlan(result.plan);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(code) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(base, code) });
       toast.show(
         result.night === 'baking' ? t('roomControl.plan.baking') : t('roomControl.plan.framesSaved'),
         'success',
@@ -268,7 +272,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   });
 
   const copyMutation = useMutation({
-    mutationFn: () => copyPlan(code, copySource),
+    mutationFn: () => copyPlan(transport, code, copySource),
     onSuccess: (plan) => {
       applyPlan(plan);
       toast.show(t('roomControl.plan.copied'), 'success');

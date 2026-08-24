@@ -22,6 +22,7 @@ import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
 import { fetchAccess, setDemoEntry, setRoomPin } from '@/api/grms';
+import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 
@@ -38,10 +39,12 @@ import { useToast } from '@/components/ToastProvider';
  */
 export function AccessTab() {
   const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport } = useGrmsScope();
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  const query = useQuery({ queryKey: queryKeys.grmsAccess, queryFn: fetchAccess });
+  const query = useQuery({ queryKey: queryKeys.grmsAccess, queryFn: () => fetchAccess(transport) });
 
   const [room, setRoom] = useState('');
   const [pin, setPin] = useState('');
@@ -52,13 +55,13 @@ export function AccessTab() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.grmsAccess });
 
   const demoMutation = useMutation({
-    mutationFn: (enabled: boolean) => setDemoEntry(enabled),
+    mutationFn: (enabled: boolean) => setDemoEntry(transport, enabled),
     onSuccess: () => void refresh(),
     onError: failure,
   });
 
   const pinMutation = useMutation({
-    mutationFn: (payload: { room: string; pin: string }) => setRoomPin(payload.room, payload.pin),
+    mutationFn: (payload: { room: string; pin: string }) => setRoomPin(transport, payload.room, payload.pin),
     onSuccess: (result) => {
       setPin('');
       void refresh();

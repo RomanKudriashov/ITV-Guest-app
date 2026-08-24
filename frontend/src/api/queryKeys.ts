@@ -42,15 +42,24 @@ export const queryKeys = {
   searchSettings: ['cms', 'search-settings'] as const,
   showcase: ['cms', 'showcase'] as const,
   /* ── Управление номером (модуль room_control) ───────────────────────── */
-  grmsCatalog: ['cms', 'grms', 'catalog'] as const,
-  grmsTypes: ['cms', 'grms', 'types'] as const,
-  grmsStatus: (code: string) => ['cms', 'grms', 'types', code, 'status'] as const,
-  grmsVersions: (code: string) => ['cms', 'grms', 'types', code, 'versions'] as const,
-  grmsPlan: (code: string) => ['cms', 'grms', 'types', code, 'plan'] as const,
+  /*
+    КЛЮЧИ УПРАВЛЕНИЯ НОМЕРОМ ВКЛЮЧАЮТ БАЗУ API.
+
+    Одни и те же экраны обслуживают CMS отеля и консоль платформы, а в консоли
+    база зависит от ОТКРЫТОГО отеля. Без базы в ключе кэш отдал бы типы одного
+    отеля под именем другого — переключился на соседний, а на экране прежние
+    зоны, и правка ушла бы не туда.
+  */
+  grmsCatalog: (base: string) => [base, 'grms', 'catalog'] as const,
+  grmsTypes: (base: string) => [base, 'grms', 'types'] as const,
+  grmsStatus: (base: string, code: string) => [base, 'grms', 'types', code, 'status'] as const,
+  grmsVersions: (base: string, code: string) => [base, 'grms', 'types', code, 'versions'] as const,
+  grmsPlan: (base: string, code: string) => [base, 'grms', 'types', code, 'plan'] as const,
   grmsAccess: ['cms', 'grms', 'access'] as const,
-  grmsDiagnostics: (slice: string) => ['cms', 'grms', 'diagnostics', slice] as const,
-  grmsDiagnosticsLink: ['cms', 'grms', 'diagnostics', 'link'] as const,
-  grmsDiagnosticsFilters: ['cms', 'grms', 'diagnostics', 'filters'] as const,
+  grmsDiagnostics: (base: string, slice: string) =>
+    [base, 'grms', 'diagnostics', slice] as const,
+  grmsDiagnosticsLink: (base: string) => [base, 'grms', 'diagnostics', 'link'] as const,
+  grmsDiagnosticsFilters: (base: string) => [base, 'grms', 'diagnostics', 'filters'] as const,
   allergens: ['cms', 'allergens'] as const,
   markers: ['cms', 'markers'] as const,
 };
