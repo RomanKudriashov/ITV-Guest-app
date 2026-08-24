@@ -12,7 +12,6 @@ from datetime import timedelta
 
 from django.http import HttpRequest
 
-from apps.grms.schemas.cms import PlanLevelIn
 from django.utils import timezone
 
 from apps.core.context import tenant_context
@@ -473,36 +472,6 @@ def revoke_impersonation_session(request: HttpRequest, grant_id: str):
     except Exception as exc:  # AuthenticationFailed из сервиса
         raise Denied(str(exc), code="revoke_denied") from exc
     return {"grant_id": str(grant.pk), "revoked_at": grant.revoked_at.isoformat()}
-
-
-# --- Управление номером: уровень плана -------------------------------------
-
-
-@router.post(
-    "/hotels/{hotel_id}/grms/types/{code}/plan-level",
-    summary="Уровень плана типа номера: плашки / простой / полный",
-)
-@requires(WRITE)
-def set_plan_level(request: HttpRequest, hotel_id: str, code: str, payload: PlanLevelIn):
-    """
-    УРОВЕНЬ ЗАДАЁМ МЫ, И РУЧКА ЖИВЁТ В НАШЕЙ КОНСОЛИ.
-
-    Сначала она стояла в CMS отеля с проверкой «ты платформенный админ» — и
-    оказалась недостижимой: под `/api/v1/cms` платформенный токен не пускают в
-    принципе, там своя авторизация. Проверка роли внутри чужой калитки — это
-    не защита, а мёртвый код: сюда просто нельзя было попасть.
-
-    Место определяется тем, ЧЬЯ это работа. Уровень плана — часть платной
-    услуги, которую оказываем мы; отель её не выбирает и не меняет, и в его
-    CMS ей нечего делать даже под запретом.
-    """
-    from apps.grms.services import builder as grms_builder
-
-    hotel = console.get_hotel(hotel_id)
-    # Журнал пишет сервис, внутри тенант-контекста: `core_audit_log` под RLS, и
-    # вставка снаружи контекста отбивается политикой.
-    grms_builder.set_plan_level(hotel, room_type_code=code, level=payload.level)
-    return {"code": code, "plan_level": payload.level}
 
 
 # --- Использование против лимитов, активность, тариф -----------------------

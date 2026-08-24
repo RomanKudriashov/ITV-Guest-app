@@ -20,10 +20,14 @@ from .tariffs import router as tariffs_router
 from .team import router as team_router
 from .templates import router as templates_router
 
+# Конфигурация управления номером: наша работа, наша консоль.
+from apps.grms.api.platform import config_router as grms_config_router
+
 # Тег НЕ дублируем: его несут файлы-ресурсы. Тег и на родителе, и на
 # ребёнке ninja складывает — в схеме получается ["platform", "platform"].
 router = Router()
 router.add_router("", auth_router)
+router.add_router("", grms_config_router)
 router.add_router("", overview_router)
 router.add_router("", fleet_router)
 router.add_router("", hotels_router)

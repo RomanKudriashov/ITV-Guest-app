@@ -522,7 +522,59 @@
   "/api/v1/platform/hotels/{hotel_id}/export": [
     "GET"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/catalog": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/import/confirm": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/import/preview": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/import/reconcile": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/bindings": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/check": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/device-override": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/elements": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/plan": [
+    "GET",
+    "PUT"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/plan-level": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/plan/copy": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/plan/frames": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/publish": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/rollback": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/status": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/versions": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/zones": [
     "POST"
   ],
   "/api/v1/platform/hotels/{hotel_id}/modules": [
