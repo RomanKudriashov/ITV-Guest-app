@@ -1681,14 +1681,52 @@
     }
   },
   "dashboard": {
-    "title": "仪表板",
-    "subtitle": "当前状况。周期汇总请见分析。",
+    "title": "控制台",
+    "subtitle": "此刻的情况",
     "ordersToday": "今日订单",
     "venues": "门店场所",
     "services": "服务总数",
     "byService": "按服务",
     "staffAndItems": "{{staff}} 名员工 · {{items}} 个条目",
-    "noEscalation": "无上报"
+    "noEscalation": "无上报",
+    "allClear": "目前一切正常",
+    "allClearHint": "没有超时订单、上报或停售项",
+    "attention": "需要处理",
+    "todayTitle": "今天",
+    "venuesTitle": "按场所",
+    "go": "打开",
+    "noData": "—",
+    "vsYesterday": "较昨日",
+    "noDelta": "昨日无可比数据",
+    "orders": "订单",
+    "revenue": "营收",
+    "rating": "评分",
+    "liveGuests": "在线客人",
+    "speed": "通常耗时",
+    "pickup": "接单用时",
+    "doneToday": "已完成",
+    "inWork": "处理中",
+    "card": {
+      "overdue_other": "{{count}} 单超时",
+      "overdueHint": "客人等待已超过该场所的阈值",
+      "delivery_failed_other": "{{count}} 条提醒未送达",
+      "deliveryFailedHint": "渠道失败：酒店以为会收到提醒，实际没有",
+      "escalated_other": "今日 {{count}} 次上报",
+      "escalatedHint": "请求未及时接单而被上报",
+      "no_escalation_other": "{{count}} 个场所没有上报规则",
+      "noEscalationHint": "无人接的请求不会浮现 — 只能等客人来说",
+      "stop_list_other": "{{count}} 项在停售名单",
+      "stopListHint": "客人无法下单",
+      "node_offline": "节点已 {{minutes}} 分钟无响应",
+      "nodeOfflineHint": "客人无法使用客房控制",
+      "tariff_over": "套餐超限：{{resource}} {{used}} / {{limit}}",
+      "tariffOverHint": "套餐变更需通过平台",
+      "resource": {
+        "services": "场所",
+        "rooms": "房间",
+        "staff": "员工"
+      }
+    }
   },
   "admin": {
     "brand": {

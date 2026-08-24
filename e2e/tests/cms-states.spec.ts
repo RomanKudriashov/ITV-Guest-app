@@ -69,10 +69,12 @@ test.describe('CMS: отказ не врёт', () => {
     expect(body, `на экране цифра, которой сервер не присылал: «${body}»`).not.toMatch(
       /(^|\D)0(\D|$)/,
     )
-    // И самих плиток нет — каждой, а не только заведений.
-    for (const tile of ['dashboard-venues', 'dashboard-services', 'dashboard-orders-today']) {
-      await expect(page.getByTestId(tile), `плитка ${tile} осталась на экране`).toHaveCount(0)
+    // И самих блоков нет — каждого, а не только одного.
+    for (const block of ['dashboard-attention', 'dashboard-today', 'dashboard-venues']) {
+      await expect(page.getByTestId(block), `блок ${block} остался на экране`).toHaveCount(0)
     }
+    // «Сейчас всё в порядке» тоже не должно появиться: отказ — это не порядок.
+    await expect(page.getByTestId('dashboard-all-clear')).toHaveCount(0)
 
     await expect(page.getByTestId('state-error')).toBeVisible()
     await expect(page.getByTestId('state-retry')).toBeVisible()
@@ -82,21 +84,40 @@ test.describe('CMS: отказ не врёт', () => {
 
   test('дашборд печатает ноль, когда сервер ответил нулём', async ({ browser }) => {
     const ctx = await browser.newContext({ locale: 'ru-RU' })
-    await ctx.route('**/api/v1/cms/services**', async (route) =>
-      // Пустая ОБОЛОЧКА: списки CMS отдают items/total/limit, и голый массив
-      // здесь проверял бы форму, которой больше нет.
+    await ctx.route('**/api/v1/cms/dashboard**', async (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: '{"items":[],"total":0,"limit":100,"truncated":false}',
+        body: JSON.stringify({
+          scope: { all_points: true, points_count: 0 },
+          attention: [],
+          today: {
+            orders: 0,
+            orders_delta: 0,
+            revenue_minor: 0,
+            revenue_delta: null,
+            avg_rating: null,
+            rating_delta: null,
+            live_guests: 0,
+            median_minutes: null,
+            median_pickup_minutes: null,
+            done: 0,
+            in_work: 0,
+          },
+          venues: [],
+        }),
       }),
     )
     const page = await ctx.newPage()
     await login(page)
     await page.goto('/cms/dashboard')
 
-    // Обратная сторона правила: пустой ответ — это ноль, и его показывают.
-    await expect(page.getByTestId('dashboard-services')).toContainText('0', { timeout: 20_000 })
+    // Обратная сторона правила: сервер ответил нулём — ноль показывают.
+    await expect(page.getByTestId('dashboard-orders')).toContainText('0', { timeout: 20_000 })
+    // А чего он НЕ посчитал — прочерк, а не ноль: «обычно занимает 0 минут»
+    // читалось бы как «делаем мгновенно».
+    await expect(page.getByTestId('dashboard-speed')).toContainText('—')
+    await expect(page.getByTestId('dashboard-rating')).toContainText('—')
     await expect(page.getByTestId('state-error')).toHaveCount(0)
 
     await ctx.close()
@@ -145,14 +166,31 @@ test.describe('CMS: отказ не врёт', () => {
   test('неожиданная форма ответа не гасит CMS целиком', async ({ browser }) => {
     const ctx = await browser.newContext({ locale: 'ru-RU' })
     // Не 500, а мусор нужной размерности: рендер падает уже внутри страницы.
-    await ctx.route('**/api/v1/cms/services**', async (route) =>
+    await ctx.route('**/api/v1/cms/dashboard**', async (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        // Сервис без `public_name`: страница читает `.ru` и падает на рендере.
-        body:
-          '{"items":[{"id":"1","code":"x","type":"custom","is_active":true,' +
-          '"is_guest_facing":true}],"total":1,"limit":100,"truncated":false}',
+        // Оценка строкой вместо числа: экран зовёт `.toFixed` и падает на
+        // рендере. Форма ответа при этом правильная — 200 и все ключи на
+        // месте, — то есть ни клиент, ни сторож её не отбракуют.
+        body: JSON.stringify({
+          scope: { all_points: true, points_count: 1 },
+          attention: [],
+          today: {
+            orders: 1,
+            orders_delta: null,
+            revenue_minor: 0,
+            revenue_delta: null,
+            avg_rating: 'хорошо',
+            rating_delta: null,
+            live_guests: 0,
+            median_minutes: null,
+            median_pickup_minutes: null,
+            done: 0,
+            in_work: 0,
+          },
+          venues: [],
+        }),
       }),
     )
     const page = await ctx.newPage()

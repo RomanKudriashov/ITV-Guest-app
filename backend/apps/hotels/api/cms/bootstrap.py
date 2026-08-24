@@ -43,3 +43,23 @@ def cms_navigation(request: HttpRequest):
     from apps.hotels.services.cms_navigation import build_navigation
 
     return {"groups": build_navigation(current_hotel(), access=current_access())}
+
+
+# --- Дашборд ---------------------------------------------------------------
+
+
+@router.get("/dashboard", summary="Пульт отеля: что горит, как идёт день, где именно")
+def dashboard(request: HttpRequest):
+    """
+    Одна ручка на весь экран.
+
+    Три запроса вместо одного разошлись бы между собой: «требует внимания»
+    посчиталось бы до прихода заказа, а «день» — после, и экран показал бы
+    просрочку, которой в числах дня уже нет.
+
+    Скоуп решает СЕРВЕР: управляющий заведением не должен получать числа
+    чужих точек даже в ответе, из которого фронт их «не покажет».
+    """
+    from apps.hotels.services.dashboard import build
+
+    return build(current_hotel(), request.user)
