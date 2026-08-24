@@ -495,38 +495,21 @@ def set_plan_level(request: HttpRequest, hotel_id: str, code: str, payload: Plan
     Место определяется тем, ЧЬЯ это работа. Уровень плана — часть платной
     услуги, которую оказываем мы; отель её не выбирает и не меняет, и в его
     CMS ей нечего делать даже под запретом.
-
-    КАДРЫ НЕ ТРОГАЕМ. Понижение уровня не стирает загруженное: тип,
-    вернувшийся к полному плану, обязан снова показать свою пару, а не
-    собирать её заново. Лишний кадр в конфигурации простого плана невидим —
-    вид решает уровень, а не наличие файла.
     """
-    from apps.core.errors import NotFoundError
-    from apps.grms.models import RoomType
-
-    if payload.level not in RoomType.PlanLevel.values:
-        raise ValidationError(
-            f"Неизвестный уровень плана «{payload.level}»",
-            field="level",
-            code="unknown_plan_level",
-        )
+    from apps.grms.services import builder as grms_builder
 
     hotel = console.get_hotel(hotel_id)
-    with tenant_context(hotel):
-        room_type = RoomType.objects.filter(code=code).first()
-        if room_type is None:
-            raise NotFoundError(f"Тип номера «{code}» не найден")
-        was = room_type.plan_level
-        room_type.plan_level = payload.level
-        room_type.save(update_fields=["plan_level"])
-        AuditLog.record(
-            "grms.plan_level_changed",
-            actor_type=AuditLog.ActorType.STAFF,
-            object_type="grms.room_type",
-            object_id=room_type.pk,
-            payload={"type": code, "from": was, "to": payload.level},
-            hotel_id=hotel.pk,
-        )
+    room_type, was = grms_builder.set_plan_level(
+        hotel, room_type_code=code, level=payload.level
+    )
+    AuditLog.record(
+        "grms.plan_level_changed",
+        actor_type=AuditLog.ActorType.STAFF,
+        object_type="grms.room_type",
+        object_id=room_type.pk,
+        payload={"type": code, "from": was, "to": payload.level},
+        hotel_id=hotel.pk,
+    )
     return {"code": code, "plan_level": payload.level}
 
 

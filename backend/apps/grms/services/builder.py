@@ -418,3 +418,38 @@ def list_types_with_variables(hotel) -> list[dict]:
                 }
             )
     return result
+
+
+def set_plan_level(hotel, *, room_type_code: str, level: str):
+    """
+    Уровень плана типа — записанное НАМИ решение.
+
+    Живёт в сервисе, а не во вьюхе: выборка типа, проверка значения и запись —
+    это работа домена, и вьюхе остаётся её позвать. Правило общее (сторож
+    `check_views`), и обходить его ради одной строки незачем.
+
+    КАДРЫ НЕ ТРОГАЕМ. Понижение уровня не стирает загруженное: тип,
+    вернувшийся к полному плану, обязан снова показать свою пару, а не
+    собирать её заново. Лишний кадр в конфигурации простого плана невидим —
+    вид решает уровень, а не наличие файла.
+
+    Возвращает (тип, прежний уровень): прежний нужен журналу, а перечитывать
+    его вторым запросом значило бы гонку с самим собой.
+    """
+    from apps.core.context import tenant_context
+    from apps.core.errors import NotFoundError, ValidationError
+    from apps.grms.models import RoomType
+
+    if level not in RoomType.PlanLevel.values:
+        raise ValidationError(
+            f"Неизвестный уровень плана «{level}»", field="level", code="unknown_plan_level"
+        )
+
+    with tenant_context(hotel):
+        room_type = RoomType.objects.filter(code=room_type_code).first()
+        if room_type is None:
+            raise NotFoundError(f"Тип номера «{room_type_code}» не найден")
+        was = room_type.plan_level
+        room_type.plan_level = level
+        room_type.save(update_fields=["plan_level"])
+        return room_type, was

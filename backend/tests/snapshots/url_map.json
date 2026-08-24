@@ -157,9 +157,6 @@
     "GET",
     "PUT"
   ],
-  "/api/v1/cms/grms/types/{code}/plan-level": [
-    "POST"
-  ],
   "/api/v1/cms/grms/types/{code}/plan/copy": [
     "POST"
   ],
@@ -524,6 +521,9 @@
   ],
   "/api/v1/platform/hotels/{hotel_id}/export": [
     "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/types/{code}/plan-level": [
+    "POST"
   ],
   "/api/v1/platform/hotels/{hotel_id}/modules": [
     "GET",
