@@ -1190,7 +1190,8 @@
       "bulkTooLarge": "范围过大（最多 500）",
       "bulkBadRange": "“起”不能大于“止”",
       "bulkCreatedList": "已创建：{{list}}",
-      "bulkSkippedList": "已跳过：{{list}}"
+      "bulkSkippedList": "已跳过：{{list}}",
+      "controlType": "控制类型"
     },
     "locations": {
       "title": "位置",
@@ -2464,7 +2465,8 @@
         "failed": "失败",
         "ok": "已读取"
       }
-    }
+    },
+    "roomsOnType_other": "{{count}} 间客房"
   },
   "cms": {
     "homeBlocks": {

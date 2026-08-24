@@ -11,11 +11,14 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.http import HttpRequest
+
+from apps.grms.schemas.cms import PlanLevelIn
 from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, WRITE, PlatformRouter, requires
 from apps.core.errors import PermissionDenied, ValidationError
+from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.module_registry import list_modules, set_modules
 from apps.hotels.schemas.platform import (
@@ -470,6 +473,61 @@ def revoke_impersonation_session(request: HttpRequest, grant_id: str):
     except Exception as exc:  # AuthenticationFailed из сервиса
         raise Denied(str(exc), code="revoke_denied") from exc
     return {"grant_id": str(grant.pk), "revoked_at": grant.revoked_at.isoformat()}
+
+
+# --- Управление номером: уровень плана -------------------------------------
+
+
+@router.post(
+    "/hotels/{hotel_id}/grms/types/{code}/plan-level",
+    summary="Уровень плана типа номера: плашки / простой / полный",
+)
+@requires(WRITE)
+def set_plan_level(request: HttpRequest, hotel_id: str, code: str, payload: PlanLevelIn):
+    """
+    УРОВЕНЬ ЗАДАЁМ МЫ, И РУЧКА ЖИВЁТ В НАШЕЙ КОНСОЛИ.
+
+    Сначала она стояла в CMS отеля с проверкой «ты платформенный админ» — и
+    оказалась недостижимой: под `/api/v1/cms` платформенный токен не пускают в
+    принципе, там своя авторизация. Проверка роли внутри чужой калитки — это
+    не защита, а мёртвый код: сюда просто нельзя было попасть.
+
+    Место определяется тем, ЧЬЯ это работа. Уровень плана — часть платной
+    услуги, которую оказываем мы; отель её не выбирает и не меняет, и в его
+    CMS ей нечего делать даже под запретом.
+
+    КАДРЫ НЕ ТРОГАЕМ. Понижение уровня не стирает загруженное: тип,
+    вернувшийся к полному плану, обязан снова показать свою пару, а не
+    собирать её заново. Лишний кадр в конфигурации простого плана невидим —
+    вид решает уровень, а не наличие файла.
+    """
+    from apps.core.errors import NotFoundError
+    from apps.grms.models import RoomType
+
+    if payload.level not in RoomType.PlanLevel.values:
+        raise ValidationError(
+            f"Неизвестный уровень плана «{payload.level}»",
+            field="level",
+            code="unknown_plan_level",
+        )
+
+    hotel = console.get_hotel(hotel_id)
+    with tenant_context(hotel):
+        room_type = RoomType.objects.filter(code=code).first()
+        if room_type is None:
+            raise NotFoundError(f"Тип номера «{code}» не найден")
+        was = room_type.plan_level
+        room_type.plan_level = payload.level
+        room_type.save(update_fields=["plan_level"])
+        AuditLog.record(
+            "grms.plan_level_changed",
+            actor_type=AuditLog.ActorType.STAFF,
+            object_type="grms.room_type",
+            object_id=room_type.pk,
+            payload={"type": code, "from": was, "to": payload.level},
+            hotel_id=hotel.pk,
+        )
+    return {"code": code, "plan_level": payload.level}
 
 
 # --- Использование против лимитов, активность, тариф -----------------------

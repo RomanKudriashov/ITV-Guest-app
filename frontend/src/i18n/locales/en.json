@@ -1198,7 +1198,8 @@
       "bulkTooLarge": "Range too large (max 500)",
       "bulkBadRange": "“From” cannot be greater than “To”",
       "bulkCreatedList": "Created: {{list}}",
-      "bulkSkippedList": "Skipped: {{list}}"
+      "bulkSkippedList": "Skipped: {{list}}",
+      "controlType": "Control type"
     },
     "locations": {
       "title": "Locations",
@@ -2479,7 +2480,9 @@
         "failed": "Failed",
         "ok": "Read"
       }
-    }
+    },
+    "roomsOnType_one": "{{count}} room",
+    "roomsOnType_other": "{{count}} rooms"
   },
   "cms": {
     "homeBlocks": {

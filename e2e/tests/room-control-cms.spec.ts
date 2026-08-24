@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { ADMIN, API, apiGet, apiHeaders, login } from './helpers'
+import { ADMIN, API, apiGet, apiHeaders, login, setPlanLevel } from './helpers'
 
 /**
  * Раздел GRMS в CMS: путь администратора целиком.
@@ -249,6 +249,17 @@ test('план: кадр, разметка мышью, привязка к оп�
   // Кадр реально уезжает в медиапайплайн, а ночной считается фоном — это
   // секунды, а не миллисекунды.
   test.setTimeout(180_000)
+
+  /*
+    СНАЧАЛА УРОВЕНЬ, ПОТОМ ПЛАН — это и есть настоящий порядок работы.
+
+    Свежеимпортированный тип начинается с плашек: у него нет ни кадра, ни
+    купленного уровня, и редактор плана до этого шага закрыт намеренно.
+    Поднимаем уровень учёткой ПЛАТФОРМЫ: отелю это действие не подчинено, и
+    его токен получит здесь 403.
+  */
+  await setPlanLevel(request, TYPE_CODE, 'full')
+
   await pickType()
   await openTab('plan')
   await expect(page.getByTestId('grms-plan-editor')).toBeVisible({ timeout: 20_000 })
@@ -545,3 +556,61 @@ async function adminToken(request: APIRequestContext): Promise<string> {
   expect(response.ok(), await response.text()).toBeTruthy()
   return (await response.json()).access
 }
+
+/**
+ * СВЯЗЬ ДВУХ ЭКРАНОВ (пункт 3).
+ *
+ * Пользователь спрашивал, почему управление номером живёт отдельно от
+ * номерного фонда. Раздел остаётся своим — переносить конфигурацию ТИПА внутрь
+ * списка НОМЕРОВ значило бы дублировать её в каждой строке, — но перестаёт
+ * быть островом: из номера видно, чем он управляется, и наоборот.
+ */
+test.describe('Связь номерного фонда и управления номером', () => {
+  test('УКУС: в списке номеров есть тип управления и он ведёт в конфигурацию', async () => {
+    await page.goto('/cms/rooms')
+    await expect(page.getByTestId('room-row-305')).toBeVisible({ timeout: 20_000 })
+
+    const cell = page.getByTestId('room-control-type-305')
+    await expect(cell).toBeVisible()
+    /*
+      Код берём СО СТРАНИЦЫ, а не подставляем свой: демо-номер привязан к
+      сидовому типу, а импортированный тестом — к своим комнатам. Тест не
+      должен знать, какой именно, — он проверяет, что колонка называет тип и
+      что ссылка ведёт в ЭТОТ ЖЕ тип.
+    */
+    const shown = (await cell.innerText()).trim()
+    expect(shown, 'номер 305 показан без типа управления').not.toBe('—')
+
+    await cell.click()
+    // Открылась конфигурация ИМЕННО того типа, что назван в строке, а не
+    // первого попавшегося: иначе переход отвечает не на тот вопрос, ради
+    // которого по нему пошли.
+    await expect(page.getByTestId('cms-room-control')).toBeVisible({ timeout: 20_000 })
+    await expect(page).toHaveURL(new RegExp(`type=${encodeURIComponent(shown)}`))
+    await expect(page.getByTestId('grms-type-select')).toContainText(/./)
+  })
+
+  test('обратно: шапка управления говорит, сколько номеров на типе', async () => {
+    /*
+      Тип берём ТОТ, У КОТОРОГО КОМНАТЫ ТОЧНО ЕСТЬ — прочитанный из списка
+      номеров. Импортированный тестом тип бывает без привязок (их создаёт
+      только подтверждение ПНР), и тест, завязанный на него, падал бы не о
+      дефект, а о порядок соседних прогонов.
+    */
+    await page.goto('/cms/rooms')
+    await expect(page.getByTestId('room-row-305')).toBeVisible({ timeout: 20_000 })
+    const bound = (await page.getByTestId('room-control-type-305').innerText()).trim()
+    expect(bound, 'номер 305 без типа — проверять нечего').not.toBe('—')
+
+    await page.goto(`/cms/room-control?type=${encodeURIComponent(bound)}`)
+    await expect(page.getByTestId('cms-room-control')).toBeVisible({ timeout: 20_000 })
+
+    const chip = page.getByTestId('grms-type-rooms')
+    await expect(chip).toBeVisible()
+    // Цена ошибки в конфигурации — ровно это число номеров.
+    await expect(chip).toContainText(/\d+/)
+
+    await chip.click()
+    await expect(page).toHaveURL(/\/cms\/rooms/)
+  })
+})

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
@@ -50,10 +52,19 @@ const TABS: TabKey[] = ['import', 'builder', 'plan', 'check', 'diagnostics', 've
 
 export function RoomControlPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
   const [tab, setTab] = useState<TabKey>('import');
-  const [typeCode, setTypeCode] = useState('');
+  /*
+    ТИП МОЖНО ПРИНЕСТИ АДРЕСОМ.
+
+    Из списка номеров ведёт ссылка «тип управления» — она обязана открыть
+    конфигурацию ИМЕННО этого типа, а не первого попавшегося. Иначе переход
+    отвечает не на тот вопрос, ради которого по нему пошли.
+  */
+  const [params] = useSearchParams();
+  const [typeCode, setTypeCode] = useState(params.get('type') ?? '');
 
   const types = useQuery({ queryKey: queryKeys.grmsTypes, queryFn: fetchGrmsTypes });
 
@@ -111,6 +122,20 @@ export function RoomControlPage() {
             {t('roomControl.subtitle')}
           </Typography>
         </Stack>
+        {/*
+          Сколько номеров на этом типе — обратная сторона колонки в списке
+          номеров. Настраивается тип один раз, а не двести раз по числу комнат,
+          и цена ошибки здесь ровно в этом числе.
+        */}
+        {current && current.rooms.length > 0 && (
+          <Chip
+            size="small"
+            variant="outlined"
+            data-testid="grms-type-rooms"
+            label={t('roomControl.roomsOnType', { count: current.rooms.length })}
+            onClick={() => navigate('/cms/rooms')}
+          />
+        )}
         {list.length > 0 && (
           <TextField
             select

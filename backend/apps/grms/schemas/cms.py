@@ -82,3 +82,9 @@ class PlanGeometryIn(Schema):
 
 class PlanCopyIn(Schema):
     source: str
+
+
+class PlanLevelIn(Schema):
+    """Уровень плана типа. Значения — из `RoomType.PlanLevel`."""
+
+    level: str

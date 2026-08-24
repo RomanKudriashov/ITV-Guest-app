@@ -20,6 +20,14 @@ export interface Room {
   is_active: boolean;
   /** What the QR encodes: the guest deep-link `/r/{number}`. */
   guest_url: string;
+  /**
+   * Код типа управления номером или `null`.
+   *
+   * Тот единственный вопрос про GRMS, который админ задаёт, глядя на список:
+   * «а этот номер вообще управляется?». `null` — не управляется, и это
+   * штатный ответ, а не пробел в данных.
+   */
+  control_type: string | null;
 }
 
 export interface RoomPayload {

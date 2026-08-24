@@ -157,6 +157,9 @@
     "GET",
     "PUT"
   ],
+  "/api/v1/cms/grms/types/{code}/plan-level": [
+    "POST"
+  ],
   "/api/v1/cms/grms/types/{code}/plan/copy": [
     "POST"
   ],

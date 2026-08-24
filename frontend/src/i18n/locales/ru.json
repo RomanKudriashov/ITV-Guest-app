@@ -1208,7 +1208,8 @@
       "bulkTooLarge": "Диапазон слишком большой (максимум 500)",
       "bulkBadRange": "«С» не может быть больше «По»",
       "bulkCreatedList": "Созданы: {{list}}",
-      "bulkSkippedList": "Пропущены: {{list}}"
+      "bulkSkippedList": "Пропущены: {{list}}",
+      "controlType": "Тип управления"
     },
     "locations": {
       "title": "Локации",
@@ -2497,7 +2498,10 @@
         "failed": "Отказ",
         "ok": "Прочитано"
       }
-    }
+    },
+    "roomsOnType_one": "{{count}} номер",
+    "roomsOnType_few": "{{count}} номера",
+    "roomsOnType_many": "{{count}} номеров"
   },
   "cms": {
     "homeBlocks": {

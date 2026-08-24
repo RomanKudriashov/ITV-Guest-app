@@ -1226,7 +1226,8 @@
       "bulkTooLarge": "النطاق كبير جدًا (بحد أقصى 500)",
       "bulkBadRange": "«من» أكبر من «إلى»",
       "bulkCreatedList": "أُنشئت: {{list}}",
-      "bulkSkippedList": "تُخطّيت: {{list}}"
+      "bulkSkippedList": "تُخطّيت: {{list}}",
+      "controlType": "نوع التحكم"
     },
     "locations": {
       "title": "المواقع",
@@ -2531,7 +2532,13 @@
         "failed": "فشل",
         "ok": "تمت القراءة"
       }
-    }
+    },
+    "roomsOnType_zero": "{{count}} غرفة",
+    "roomsOnType_one": "غرفة واحدة",
+    "roomsOnType_two": "غرفتان",
+    "roomsOnType_few": "{{count}} غرف",
+    "roomsOnType_many": "{{count}} غرفة",
+    "roomsOnType_other": "{{count}} غرفة"
   },
   "cms": {
     "homeBlocks": {

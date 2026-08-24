@@ -321,3 +321,40 @@ export async function moveOrderTo(page: Page, number: string, code: string): Pro
   // Ждём, пока меню действительно закроется, иначе следующий шаг попадёт в него.
   await expect(page.locator('.MuiMenu-root')).toHaveCount(0)
 }
+
+/** Учётка платформы: ею мы делаем то, что отелю не подчинено. */
+export const PLATFORM = { email: 'platform@itv.local', password: 'platform12345' }
+
+/**
+ * Поднять уровень плана типа — действие НАШЕЙ пусконаладки.
+ *
+ * Отелю оно не подчинено, и токен администратора отеля здесь получит 403.
+ * Свежеимпортированный тип начинается с плашек: у него нет ни кадра, ни
+ * купленного уровня, — и редактор плана до этого шага закрыт намеренно.
+ */
+export async function setPlanLevel(
+  request: APIRequestContext,
+  typeCode: string,
+  level: 'tiles' | 'simple' | 'full',
+): Promise<void> {
+  const login = await request.post(`${API}/api/v1/platform/auth/login`, { data: PLATFORM })
+  expect(login.ok(), await login.text()).toBeTruthy()
+  const token = (await login.json()).access
+
+  // Отель находим по поддомену: платформенная ручка адресует его id, а не
+  // заголовком — она про ЛЮБОЙ отель, а не про «текущий».
+  const hotels = await request.get(`${API}/api/v1/platform/hotels?limit=200`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  expect(hotels.ok(), await hotels.text()).toBeTruthy()
+  const hotel = (await hotels.json()).items.find(
+    (row: { subdomain: string }) => row.subdomain === HOTEL,
+  )
+  expect(hotel, `отель ${HOTEL} не найден в консоли платформы`).toBeTruthy()
+
+  const response = await request.post(
+    `${API}/api/v1/platform/hotels/${hotel.id}/grms/types/${typeCode}/plan-level`,
+    { data: { level }, headers: { Authorization: `Bearer ${token}` } },
+  )
+  expect(response.ok(), await response.text()).toBeTruthy()
+}

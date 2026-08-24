@@ -33,7 +33,9 @@ MAX_BULK_RANGE = 500
 # --- Номера ----------------------------------------------------------------
 
 
-def serialize_room(room: Room, *, hotel: Hotel | None = None) -> dict:
+def serialize_room(
+    room: Room, *, hotel: Hotel | None = None, control_types: dict | None = None
+) -> dict:
     hotel = hotel or room.hotel
     return {
         "id": str(room.pk),
@@ -43,6 +45,13 @@ def serialize_room(room: Room, *, hotel: Hotel | None = None) -> dict:
         "source": room.source,
         "is_active": room.is_active,
         "guest_url": hotel.room_deeplink(room.number),
+        # ТИП УПРАВЛЕНИЯ — тот единственный вопрос про GRMS, который админ
+        # отеля задаёт, глядя на список номеров: «а этот номер вообще
+        # управляется?». `None` — не управляется, и это штатный ответ.
+        #
+        # Одиночная выдача карту не получает и отвечает `None`: гонять запрос
+        # ради одной строки дороже, чем не показывать колонку там, где её и нет.
+        "control_type": (control_types or {}).get(room.pk),
     }
 
 
@@ -52,8 +61,32 @@ def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
     rooms = apply_search(Room.objects.order_by("number"), search, ("number", "floor"))
+    control_types = _control_types()
     return list_page(
-        rooms, limit=limit, offset=offset, serialize=lambda room: serialize_room(room, hotel=hotel)
+        rooms,
+        limit=limit,
+        offset=offset,
+        serialize=lambda room: serialize_room(room, hotel=hotel, control_types=control_types),
+    )
+
+
+def _control_types() -> dict:
+    """
+    Номер → код типа управления, ОДНИМ запросом на страницу.
+
+    Спрашивать тип у каждой строки значило бы получить сотню запросов на список
+    из сотни номеров. Модуль может быть выключен или таблиц может не быть вовсе
+    — тогда карта пустая, и колонка просто везде показывает прочерк.
+    """
+    try:
+        from apps.grms.models import RoomTypeRoom
+    except ImportError:  # pragma: no cover — модуль GRMS не собран
+        return {}
+
+    return dict(
+        RoomTypeRoom.objects.select_related("room_type").values_list(
+            "room_id", "room_type__code"
+        )
     )
 
 

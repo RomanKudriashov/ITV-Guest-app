@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useListQuery } from '@/kit/list/useListQuery';
+import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
@@ -22,6 +23,7 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
+import Link from '@mui/material/Link';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
@@ -240,6 +242,9 @@ export function RoomsPage() {
                     <TableCell>{t('hotel.rooms.number')}</TableCell>
                     <TableCell>{t('hotel.rooms.floor')}</TableCell>
                     <TableCell>{t('hotel.rooms.zone')}</TableCell>
+                    {/* Тот единственный вопрос про управление номером, который
+                        задают, глядя на список: «а этот номер управляется?» */}
+                    <TableCell>{t('hotel.rooms.controlType')}</TableCell>
                     <TableCell>{t('hotel.rooms.active')}</TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
@@ -253,7 +258,32 @@ export function RoomsPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>{room.floor || '—'}</TableCell>
-                      <TableCell>{room.zone || '—'}</TableCell>
+                      <TableCell>
+                        {/*
+                          Ссылка ведёт в конфигурацию ТИПА, а не номера:
+                          настраивается тип один раз, а не двести раз по числу
+                          комнат. Не управляется — прочерк, а не пустая ячейка:
+                          пустая читается как «данные не доехали».
+                        */}
+                        {room.control_type ? (
+                          <Link
+                            component={RouterLink}
+                            to={`/cms/room-control?type=${encodeURIComponent(room.control_type)}`}
+                            variant="body2"
+                            data-testid={`room-control-type-${room.number}`}
+                          >
+                            {room.control_type}
+                          </Link>
+                        ) : (
+                          <Typography
+                            variant="body2"
+                            color="text.disabled"
+                            data-testid={`room-control-type-${room.number}`}
+                          >
+                            —
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Switch
                           size="small"

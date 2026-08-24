@@ -105,3 +105,29 @@ def find_room(hotel: Hotel, number: str):
 
     with tenant_context(hotel):
         return Room.objects.filter(number=number).first()
+
+
+class NotOurs(DomainError):
+    """Действие нашей пусконаладки, а не отеля."""
+
+    status = 403
+    code = "platform_only"
+
+
+def ours_only(user) -> Hotel:
+    """
+    Калитка для действий, которые выполняем МЫ, а не отель.
+
+    Уровень плана — платная услуга: отель её не выбирает и не меняет. Проверка
+    стоит на СЕРВЕРЕ, а не на экране: спрятанный, но живой контрол — это то, что
+    мы уже ловили, когда экран не показывал, а запрос проходил.
+
+    Модуль проверяется тем же порядком: без него оборудования у отеля нет вовсе,
+    и говорить об уровнях не о чем.
+    """
+    hotel = hotel_with_module()
+    if not getattr(user, "is_platform_admin", False):
+        raise NotOurs(
+            "Уровень плана задаёт платформа: это часть услуги, а не настройка отеля"
+        )
+    return hotel
