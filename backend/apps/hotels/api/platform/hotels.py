@@ -499,17 +499,9 @@ def set_plan_level(request: HttpRequest, hotel_id: str, code: str, payload: Plan
     from apps.grms.services import builder as grms_builder
 
     hotel = console.get_hotel(hotel_id)
-    room_type, was = grms_builder.set_plan_level(
-        hotel, room_type_code=code, level=payload.level
-    )
-    AuditLog.record(
-        "grms.plan_level_changed",
-        actor_type=AuditLog.ActorType.STAFF,
-        object_type="grms.room_type",
-        object_id=room_type.pk,
-        payload={"type": code, "from": was, "to": payload.level},
-        hotel_id=hotel.pk,
-    )
+    # Журнал пишет сервис, внутри тенант-контекста: `core_audit_log` под RLS, и
+    # вставка снаружи контекста отбивается политикой.
+    grms_builder.set_plan_level(hotel, room_type_code=code, level=payload.level)
     return {"code": code, "plan_level": payload.level}
 
 

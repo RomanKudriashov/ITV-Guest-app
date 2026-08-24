@@ -99,3 +99,39 @@ def test_the_backfill_rule_matches_what_the_type_used_to_show(crystal):
     # любую строку, которая уже лежит в базе.
     assert level_for(None) == "tiles"
     assert level_for("сломано") == "tiles"
+
+
+def test_setting_the_level_writes_the_journal_inside_the_tenant(crystal, room_type):
+    """
+    УКУС НА RLS. Смена уровня пишет журнал — и пишет его ИЗНУТРИ контекста.
+
+    `core_audit_log` — тенантная таблица под политикой: вставка снаружи
+    контекста не «проходит как-нибудь», а отбивается InsufficientPrivilege.
+    Первая редакция писала журнал во вьюхе, уже после выхода из контекста, и
+    падала только на пути платформенной консоли, где тенант не выставлен по
+    умолчанию, — то есть ровно там, где эта ручка и живёт.
+    """
+    from apps.core.models import AuditLog
+    from apps.grms.services import builder
+
+    # Контекст НЕ выставлен снаружи — как в платформенной консоли.
+    builder.set_plan_level(crystal, room_type_code=room_type.code, level="simple")
+
+    with tenant_context(crystal):
+        entry = AuditLog.objects.filter(action="grms.plan_level_changed").first()
+        assert entry is not None, "смена уровня не попала в журнал"
+        assert entry.payload["from"] == "full"
+        assert entry.payload["to"] == "simple"
+        assert RoomType.objects.get(pk=room_type.pk).plan_level == "simple"
+
+
+def test_an_unknown_level_is_refused_before_anything_is_written(crystal, room_type):
+    """Мусор в уровне — отказ, а не запись «чего-то» в базу и журнал."""
+    from apps.core.errors import ValidationError
+    from apps.grms.services import builder
+
+    with pytest.raises(ValidationError):
+        builder.set_plan_level(crystal, room_type_code=room_type.code, level="сломано")
+
+    with tenant_context(crystal):
+        assert RoomType.objects.get(pk=room_type.pk).plan_level == "full"

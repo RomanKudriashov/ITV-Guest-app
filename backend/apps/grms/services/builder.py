@@ -433,11 +433,17 @@ def set_plan_level(hotel, *, room_type_code: str, level: str):
     собирать её заново. Лишний кадр в конфигурации простого плана невидим —
     вид решает уровень, а не наличие файла.
 
-    Возвращает (тип, прежний уровень): прежний нужен журналу, а перечитывать
-    его вторым запросом значило бы гонку с самим собой.
+    ЗАПИСЬ В ЖУРНАЛ — ЗДЕСЬ ЖЕ, ВНУТРИ ТЕНАНТ-КОНТЕКСТА.
+
+    `core_audit_log` — тенантная таблица под RLS: вставка снаружи контекста
+    отбивается политикой, а не проходит «как-нибудь». Первая редакция писала
+    журнал во вьюхе, уже после выхода из контекста, и падала на
+    InsufficientPrivilege — причём только на пути платформенной консоли, где
+    тенант не выставлен по умолчанию.
     """
     from apps.core.context import tenant_context
     from apps.core.errors import NotFoundError, ValidationError
+    from apps.core.models import AuditLog
     from apps.grms.models import RoomType
 
     if level not in RoomType.PlanLevel.values:
@@ -452,4 +458,12 @@ def set_plan_level(hotel, *, room_type_code: str, level: str):
         was = room_type.plan_level
         room_type.plan_level = level
         room_type.save(update_fields=["plan_level"])
+        AuditLog.record(
+            "grms.plan_level_changed",
+            actor_type=AuditLog.ActorType.STAFF,
+            object_type="grms.room_type",
+            object_id=room_type.pk,
+            payload={"type": room_type_code, "from": was, "to": level},
+            hotel_id=hotel.pk,
+        )
         return room_type, was
