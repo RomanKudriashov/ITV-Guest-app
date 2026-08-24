@@ -97,6 +97,9 @@
     "GET",
     "PATCH"
   ],
+  "/api/v1/cms/dashboard": [
+    "GET"
+  ],
   "/api/v1/cms/escalation-rules": [
     "GET",
     "POST"
