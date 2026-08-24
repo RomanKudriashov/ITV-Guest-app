@@ -103,6 +103,10 @@ def serialize_point(point: ExecutionPoint, language: str | None = None, **extra)
         "title": translate(point.title, language) or point.code,
         "kind": point.kind,
         "sla_minutes": effective_sla_minutes(point),
+        # ОТКУДА ВЗЯЛСЯ ПОРОГ. «Просрочка — позже 240 минут» без этого читается
+        # как чья-то настройка, и управляющий идёт искать, кто её поставил.
+        # `point` — задан руками, `type` — умолчание вида работы.
+        "sla_source": "point" if point.sla_minutes is not None else "type",
         # Клиент рисует то, что прислал сервер: тип решает раскладку (колонки
         # или лента) и подписи действий. Выводится из типа сервиса — отдельным
         # полем не хранится.

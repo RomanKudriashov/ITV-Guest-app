@@ -814,7 +814,8 @@
       "shiftDone_other": "{{count}} طلب في هذه الوردية",
       "shiftSpeed": "يستغرق عادة {{duration}}",
       "shiftPickup": "يُستلم خلال {{duration}}",
-      "lastOrder": "آخر طلب — {{age}}"
+      "lastOrder": "آخر طلب — {{age}}",
+      "slaHintDefault": "التأخير يعني بعد {{minutes}} دقيقة من الاستلام (الافتراضي لهذا النوع)"
     },
     "card": {
       "number": "رقم {{number}}",

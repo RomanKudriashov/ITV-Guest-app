@@ -798,7 +798,8 @@
       "shiftDone_other": "{{count}} requests done this shift",
       "shiftSpeed": "Usually takes {{duration}}",
       "shiftPickup": "Picked up within {{duration}}",
-      "lastOrder": "Last request — {{age}}"
+      "lastOrder": "Last request — {{age}}",
+      "slaHintDefault": "Overdue means later than {{minutes}} min after intake (default for this kind)"
     },
     "card": {
       "number": "#{{number}}",

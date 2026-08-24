@@ -34,8 +34,17 @@ class ExecutionPoint(TenantModel):
     kind = models.CharField(max_length=32, choices=Kind.choices, default=Kind.OTHER)
     is_active = models.BooleanField(default=True)
     # Через сколько минут ожидания заказ на доске считается просроченным.
-    # Настройка точки, а не константа: кухне и хозслужбе нужны разные пороги.
-    sla_minutes = models.PositiveSmallIntegerField(default=20)
+    #
+    # NULL — «не задавали, берите умолчание вида работы». Это ЗАПИСАННОЕ
+    # НАМЕРЕНИЕ, а не догадка: раньше у поля было значение по умолчанию, и
+    # «оператор выбрал двадцать минут» ничем не отличалось от «поле никто не
+    # трогал». Код вынужден был принимать модельное умолчание за «не трогали» —
+    # и ошибался ровно у тех, кто осознанно выбрал двадцать.
+    #
+    # Читать напрямую НЕЛЬЗЯ: единственный правильный ответ даёт
+    # `tracker_types.effective_sla_minutes(point)` — его же спрашивают карточка,
+    # фильтр, плитка сводки и подпись под доской.
+    sla_minutes = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
 
     class Meta:
         db_table = "hotels_execution_point"

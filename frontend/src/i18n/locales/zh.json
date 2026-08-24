@@ -793,7 +793,8 @@
       "shiftDone_other": "本班已完成 {{count}} 单",
       "shiftSpeed": "通常耗时 {{duration}}",
       "shiftPickup": "{{duration}} 内接单",
-      "lastOrder": "最近一单 — {{age}}"
+      "lastOrder": "最近一单 — {{age}}",
+      "slaHintDefault": "超过下单后 {{minutes}} 分钟即为超时（此类型的默认值）"
     },
     "card": {
       "number": "第 {{number}} 号",

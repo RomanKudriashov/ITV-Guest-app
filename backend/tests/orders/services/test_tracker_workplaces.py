@@ -21,6 +21,7 @@ from apps.orders.models import Order
 from apps.orders.services import status_flows
 from apps.orders.services.tracker import build_board
 from apps.orders.services.tracker_types import (
+    DEFAULT_SLA_MINUTES,
     ColumnStyle,
     GroupBy,
     effective_sla_minutes,
@@ -116,17 +117,65 @@ def test_concierge_threshold_is_not_the_kitchen_threshold(crystal):
     assert BEHAVIOURS[TrackerType.REQUESTS].sla_minutes is not None
     assert BEHAVIOURS[TrackerType.BOARD].sla_minutes is None
 
+
+def test_empty_threshold_takes_the_default_of_the_work_kind(crystal):
+    """
+    УКУС. Поле пустое — порог берётся из ТИПА.
+
+    Раньше отличить «оператор выбрал двадцать» от «поле никто не трогал» было
+    нечем: у поля стояло значение по умолчанию, и код принимал его за
+    «не трогали», ошибаясь ровно у тех, кто выбрал двадцать осознанно.
+    """
+    from apps.orders.services.tracker_types import BEHAVIOURS, TrackerType
+
     with tenant_context(crystal):
         point = _point("reception")
-        default = ExecutionPoint._meta.get_field("sla_minutes").default
-
-        # Точка с явной настройкой — настройка и побеждает.
-        point.sla_minutes = 30
-        assert effective_sla_minutes(point) == 30
-
-        # Точка, которую не трогали, берёт умолчание СВОЕГО вида работы.
-        point.sla_minutes = default
+        point.sla_minutes = None
         assert effective_sla_minutes(point) == BEHAVIOURS[TrackerType.REQUESTS].sla_minutes
+
+        # У доски своего умолчания нет — падаем на общее, а не на порог заявок.
+        kitchen = _point("kitchen")
+        kitchen.sla_minutes = None
+        assert effective_sla_minutes(kitchen) == DEFAULT_SLA_MINUTES
+
+
+def test_a_hand_set_threshold_survives_a_change_of_kind(crystal):
+    """
+    УКУС. Заданный руками порог переживает смену вида работы.
+
+    Это и есть разница между хранимым намерением и догадкой: раньше значение,
+    совпавшее с умолчанием, тихо переставало быть выбором, стоило точке
+    сменить тип. Двадцать минут, выбранные оператором, обязаны остаться
+    двадцатью и у заявок, где умолчание — четыре часа.
+    """
+    with tenant_context(crystal):
+        point = _point("reception")
+        point.sla_minutes = 20
+        # Ровно то число, которое РАНЬШЕ считалось «не трогали».
+        assert effective_sla_minutes(point) == 20
+
+        kitchen = _point("kitchen")
+        kitchen.sla_minutes = 20
+        assert effective_sla_minutes(kitchen) == 20
+
+
+def test_the_board_says_where_the_threshold_came_from(crystal):
+    """
+    «Просрочка — позже 240 минут» без пояснения читается как чья-то настройка,
+    и управляющий идёт искать, кто её поставил, — хотя никто не ставил.
+    """
+    from apps.orders.services.tracker import build_board
+
+    with tenant_context(crystal):
+        point = _point("reception")
+
+        point.sla_minutes = None
+        point.save(update_fields=["sla_minutes"])
+        assert build_board(point, scope="active", language="ru")["point"]["sla_source"] == "type"
+
+        point.sla_minutes = 30
+        point.save(update_fields=["sla_minutes"])
+        assert build_board(point, scope="active", language="ru")["point"]["sla_source"] == "point"
 
 
 def test_every_reader_of_the_threshold_gets_the_same_number(crystal):
@@ -136,7 +185,7 @@ def test_every_reader_of_the_threshold_gets_the_same_number(crystal):
     """
     with tenant_context(crystal):
         point = _point("reception")
-        point.sla_minutes = ExecutionPoint._meta.get_field("sla_minutes").default
+        point.sla_minutes = None
         point.save(update_fields=["sla_minutes"])
 
         board = build_board(point, scope="active", language="ru")

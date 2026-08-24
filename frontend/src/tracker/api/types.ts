@@ -45,6 +45,8 @@ export interface TrackerPointRef {
   title: string;
   /** Порог просрочки этой точки, минуты — тот же `serialize_point` на сервере. */
   sla_minutes?: number;
+  /** `point` — задан руками, `type` — умолчание вида работы. */
+  sla_source?: 'point' | 'type';
   tracker_type?: TrackerType;
   layout?: TrackerLayout;
 }

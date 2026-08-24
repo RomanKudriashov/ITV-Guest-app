@@ -481,6 +481,10 @@ export function TrackerPage() {
         настройка ТОЧКИ (`sla_minutes`), у кухни и у консьержа он разный;
         поэтому строка стоит на доске, а не в общих настройках, и берёт число
         из того же ответа, из которого приехали карточки.
+
+        И говорит, ОТКУДА он взялся. «Позже 240 минут» без этого читается как
+        чья-то настройка, и управляющий идёт искать, кто её поставил, — хотя
+        никто не ставил, это умолчание вида работы.
       */}
       {boardPoint?.sla_minutes ? (
         <Typography
@@ -489,7 +493,12 @@ export function TrackerPage() {
           sx={{ display: 'block', px: { xs: 1.5, md: 2 }, pt: { xs: 1.5, md: 2 } }}
           data-testid="tracker-sla-hint"
         >
-          {t('tracker.board.slaHint', { minutes: boardPoint.sla_minutes })}
+          {t(
+            boardPoint.sla_source === 'type'
+              ? 'tracker.board.slaHintDefault'
+              : 'tracker.board.slaHint',
+            { minutes: boardPoint.sla_minutes },
+          )}
         </Typography>
       ) : null}
 

@@ -805,7 +805,8 @@
       "shiftDone_many": "За смену сделано {{count}} заявок",
       "shiftSpeed": "Обычно занимает {{duration}}",
       "shiftPickup": "Берут в работу за {{duration}}",
-      "lastOrder": "Последняя заявка — {{age}}"
+      "lastOrder": "Последняя заявка — {{age}}",
+      "slaHintDefault": "Просрочка — позже {{minutes}} мин от приёма (по умолчанию для этого вида)"
     },
     "card": {
       "number": "№{{number}}",
