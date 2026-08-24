@@ -1740,7 +1740,7 @@
       "platformGroup": "平台",
       "modules": "模块与套餐",
       "nodes": "On-premise",
-      "team": "团队",
+      "team": "用户",
       "audit": "审计",
       "templates": "模板与字典",
       "open": "打开菜单",
@@ -2011,7 +2011,7 @@
       "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效，连接器会使用新密钥重连。"
     },
     "team": {
-      "title": "平台团队",
+      "title": "平台用户",
       "subtitle": "谁可以访问 /admin",
       "email": "邮箱",
       "role": "角色",
@@ -2022,12 +2022,12 @@
       "disable": "停用",
       "enable": "启用",
       "col": {
-        "member": "成员",
+        "member": "用户",
         "role": "角色",
         "access": "访问",
         "twofa": "2FA"
       },
-      "empty": "平台团队目前只有你一人。"
+      "empty": "目前平台上只有你一个用户。"
     },
     "audit": {
       "title": "审计",
@@ -2074,8 +2074,8 @@
           "reissued": "重新签发节点密钥"
         },
         "team": {
-          "invited": "邀请加入团队",
-          "updated": "修改团队成员"
+          "invited": "已邀请用户",
+          "updated": "已修改用户"
         },
         "fleet": {
           "bulk": "批量操作酒店",
@@ -2103,7 +2103,8 @@
         "demo_entry": "未使用 PIN 进入客房",
         "demo_entry_toggled": "切换免 PIN 进入",
         "read": "读取客房状态",
-        "command": "向客房设备发送指令"
+        "command": "向客房设备发送指令",
+        "plan_level_changed": "客房平面图级别已修改"
       },
       "guest_session": {
         "created": "客人打开了应用"
@@ -2516,7 +2517,7 @@
       "nodes": "节点列表",
       "templates": "模板",
       "dictionary": "字典",
-      "team": "团队",
+      "team": "用户",
       "audit": "审计日志",
       "support": "支持会话",
       "hotel": "酒店卡片",

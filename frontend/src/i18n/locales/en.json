@@ -1754,7 +1754,7 @@
       "platformGroup": "Platform",
       "modules": "Modules & plans",
       "nodes": "On-premise",
-      "team": "Team",
+      "team": "Users",
       "audit": "Audit",
       "templates": "Templates & dictionaries",
       "open": "Open menu",
@@ -2026,7 +2026,7 @@
       "reissueWarning": "Reissue the key for node “{{name}}”? The old key stops working immediately; the connector will reconnect with the new one."
     },
     "team": {
-      "title": "Platform team",
+      "title": "Platform users",
       "subtitle": "Who can reach /admin",
       "email": "Email",
       "role": "Role",
@@ -2037,12 +2037,12 @@
       "disable": "Disable",
       "enable": "Enable",
       "col": {
-        "member": "Member",
+        "member": "User",
         "role": "Role",
         "access": "Access",
         "twofa": "2FA"
       },
-      "empty": "You are the only one on the platform team so far."
+      "empty": "You are the only platform user so far."
     },
     "audit": {
       "title": "Audit",
@@ -2089,8 +2089,8 @@
           "reissued": "Node key reissued"
         },
         "team": {
-          "invited": "Invited to the team",
-          "updated": "Team member changed"
+          "invited": "User invited",
+          "updated": "User changed"
         },
         "fleet": {
           "bulk": "Bulk action on hotels",
@@ -2118,7 +2118,8 @@
         "demo_entry": "Room opened without a PIN",
         "demo_entry_toggled": "PIN-free entry toggled",
         "read": "Room state read",
-        "command": "Command sent to room equipment"
+        "command": "Command sent to room equipment",
+        "plan_level_changed": "Room plan level changed"
       },
       "guest_session": {
         "created": "Guest opened the app"
@@ -2532,7 +2533,7 @@
       "nodes": "the node list",
       "templates": "the templates",
       "dictionary": "the dictionary",
-      "team": "the team",
+      "team": "the users",
       "audit": "the audit log",
       "support": "support sessions",
       "hotel": "the hotel card",
