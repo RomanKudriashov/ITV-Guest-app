@@ -148,7 +148,16 @@ def _plan(room_type, zones: list[dict]) -> dict:
         for control in zone.get("controls", [])
         if control.get("controlId")
     }
-    return plan_geometry.normalize(room_type.plan, control_ids=control_ids)
+    geometry = plan_geometry.normalize(room_type.plan, control_ids=control_ids)
+    # УРОВЕНЬ ЕДЕТ В СНИМКЕ, а не читается из типа при выдаче.
+    #
+    # Причина та же, по которой в снимке лежит и геометрия: откат к прошлой
+    # версии обязан вернуть ТОТ вид экрана, что был у той версии. Читай мы
+    # уровень из черновика типа — откат конфигурации оставил бы новый вид
+    # поверх старой разметки.
+    if geometry:
+        geometry["level"] = room_type.plan_level
+    return geometry
 
 
 def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:

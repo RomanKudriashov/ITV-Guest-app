@@ -155,6 +155,7 @@ def upload_plan_frames(
     предлагаем посчитать ночной кадр из светлого; тогда совмещение гарантировано
     построением, а не удачей.
     """
+    from apps.grms.models import RoomType
     from apps.grms.services import pair
     from apps.grms.services import plan as plan_geometry
     from apps.grms.tasks import bake_room_plan_night
@@ -166,8 +167,36 @@ def upload_plan_frames(
     if len(lit_raw) > MAX_PLAN_BYTES:
         raise ValidationError("Кадр больше 12 МБ", field="lit")
 
+    with tenant_context(hotel):
+        level = builder._type(code).plan_level
+
+    # ПЛАШКИ: у типа плана нет вовсе, и кадр ему не к чему приложить.
+    if level == RoomType.PlanLevel.TILES:
+        raise ValidationError(
+            "У этого типа номера плана нет: экран работает списком зон. "
+            "Чтобы загрузить кадр, поднимите уровень плана.",
+            field="lit",
+            code="plan_level_tiles",
+        )
+
     verdict = None
     off_raw = off.read() if off is not None else None
+
+    # ПРОСТОЙ ПЛАН: ВТОРОЙ КАДР НЕ ПРИНИМАЕТСЯ, И ЭТО ОТКАЗ СЕРВЕРА.
+    #
+    # Спрятать поле на экране мало: скрытый, но живой контрол — это то, что мы
+    # уже ловили, когда экран не показывал, а запрос проходил. У простого плана
+    # ночного кадра нет по устройству вида, и принятый «на всякий случай»
+    # второй кадр означал бы тип, который выглядит простым, а в снимке несёт
+    # пару, — то есть расхождение между проданным и опубликованным.
+    if off_raw is not None and level != RoomType.PlanLevel.FULL:
+        raise ValidationError(
+            "У простого плана ночного кадра нет: комната показывается как есть, "
+            "включённые зоны заливаются. Второй кадр нужен только полному плану.",
+            field="off",
+            code="night_frame_not_allowed",
+        )
+
     if off_raw is not None:
         if len(off_raw) > MAX_PLAN_BYTES:
             raise ValidationError("Кадр больше 12 МБ", field="off")
@@ -226,9 +255,14 @@ def upload_plan_frames(
         # а координаты в процентах переживают смену рендера. См. `plan.edit`.
         plan_geometry.edit(room_type, apply)
 
-    if off_raw is None:
-        # Считаем ночной кадр фоном: расчёт идёт секунды, а размечать план
-        # можно уже сейчас.
+    # СЧЁТ НОЧНОГО КАДРА — ТОЛЬКО У ПОЛНОГО ПЛАНА.
+    #
+    # У простого он не нужен и вреден: задача положила бы в конфигурацию второй
+    # кадр, которого этот вид не показывает, а редактор ждал бы его до
+    # истечения срока. Считаем фоном — расчёт идёт секунды, а размечать план
+    # можно уже сейчас.
+    baking = off_raw is None and level == RoomType.PlanLevel.FULL
+    if baking:
         bake_room_plan_night.delay(
             hotel_id=str(hotel.pk), room_type_code=code, lit_asset_id=str(lit_asset.pk)
         )
@@ -236,7 +270,10 @@ def upload_plan_frames(
     return {
         "ok": True,
         "pair": verdict.as_dict if verdict else None,
-        "night": "baking" if off_raw is None else "uploaded",
+        # `none` — ночного кадра не будет и ждать его не надо. Экран простого
+        # плана по этому полю и понимает, что строку про ночной кадр показывать
+        # нечего.
+        "night": "baking" if baking else ("uploaded" if off_raw is not None else "none"),
         "plan": get_plan(request, code),
     }
 

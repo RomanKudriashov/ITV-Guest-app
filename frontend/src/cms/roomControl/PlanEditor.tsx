@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { EmptyState } from '@/components/EmptyState';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 import Box from '@mui/material/Box';
@@ -103,6 +104,21 @@ const FALLBACK_ASPECT = 1.6;
 const BAKE_WAIT_MS = 120_000;
 
 export function PlanEditor({ code, types }: { code: string; types: GrmsType[] }) {
+  /*
+    ВИД РЕДАКТОРА РЕШАЕТ УРОВЕНЬ ТИПА.
+
+    Простому плану не нужны ни второй кадр, ни счёт ночного, ни проверка
+    совмещения — у него нет пары по устройству вида. Плашкам не нужен и сам
+    редактор: у типа плана нет вовсе.
+
+    Контролы именно ОТКЛЮЧАЮТСЯ, а не прячутся: спрятанный, но живой контрол —
+    это то, что мы уже ловили, когда экран не показывал, а запрос проходил.
+    Сервер отказывает независимо (`night_frame_not_allowed`, `plan_level_tiles`),
+    здесь — чтобы не предлагать человеку то, что ему откажут.
+  */
+  const level = types.find((type) => type.code === code)?.plan_level ?? 'tiles';
+  const isSimple = level === 'simple';
+  const isTiles = level === 'tiles';
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -391,6 +407,23 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   }
 
   const plan = query.data;
+
+  /*
+    ПЛАШКИ: РЕДАКТОРА НЕТ ВОВСЕ. У типа плана не существует — экран номера
+    работает списком зон кнопками, и загружать кадр не к чему приложить.
+    Показывать пустой холст значило бы предлагать работу, которая никуда не
+    поедет.
+  */
+  if (isTiles) {
+    return (
+      <EmptyState
+        testId="grms-plan-tiles"
+        title={t('roomControl.plan.tilesTitle')}
+        description={t('roomControl.plan.tilesBody')}
+      />
+    );
+  }
+
   const aspect = draft.aspect || plan.geometry.aspect || FALLBACK_ASPECT;
   // Инструмент рисования выбран — уже расставленные фигуры перестают ловить
   // указатель: иначе обвести комнату поверх соседней зоны нельзя, а зоны в
@@ -409,7 +442,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
         <CardContent>
           <Typography variant="subtitle1">{t('roomControl.plan.frames')}</Typography>
           <Typography variant="caption" color="text.secondary">
-            {t('roomControl.plan.framesHint')}
+            {t(isSimple ? 'roomControl.plan.framesHintSimple' : 'roomControl.plan.framesHint')}
           </Typography>
           <Divider sx={{ my: 1.5 }} />
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
@@ -423,6 +456,13 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                 onChange={(e) => setLitFile(e.target.files?.[0] ?? null)}
               />
             </Button>
+            {/*
+              ВТОРОЙ КАДР — ТОЛЬКО У ПОЛНОГО ПЛАНА. У простого ночного кадра
+              нет по устройству вида, и сервер такой запрос отклоняет
+              (`night_frame_not_allowed`). Здесь контрол убран, чтобы не
+              предлагать работу, которая закончится отказом.
+            */}
+            {isSimple ? null : (
             <Button component="label" variant="text" data-testid="grms-plan-pick-off">
               {offFile ? offFile.name : t('roomControl.plan.pickOff')}
               <input
@@ -433,6 +473,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                 onChange={(e) => setOffFile(e.target.files?.[0] ?? null)}
               />
             </Button>
+            )}
             <Button
               variant="contained"
               disabled={!litFile || uploadMutation.isPending}
@@ -442,6 +483,9 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
               {t('roomControl.plan.upload')}
             </Button>
             <Box sx={{ flexGrow: 1 }} />
+            {/* Строка про ночной кадр у простого плана обещала бы то, чего
+                этот вид не показывает и что сервер не станет считать. */}
+            {isSimple ? null : (
             <Chip
               size="small"
               data-testid="grms-plan-night-state"
@@ -454,8 +498,11 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                     : t('roomControl.plan.night.none')
               }
             />
+            )}
           </Stack>
-          {uploadMutation.data && !uploadMutation.data.ok && (
+          {/* Ошибка совмещения — свойство ПАРЫ кадров. У простого плана пары
+              нет, сравнивать не с чем, и сторож молчал бы вечно. */}
+          {!isSimple && uploadMutation.data && !uploadMutation.data.ok && (
             <Alert severity="error" sx={{ mt: 2 }} data-testid="grms-plan-pair-error">
               <AlertTitle>
                 {t(`roomControl.plan.pair.${uploadMutation.data.pair?.reason || 'not_aligned'}`)}

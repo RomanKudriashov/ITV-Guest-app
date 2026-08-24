@@ -400,6 +400,10 @@ def list_types_with_variables(hotel) -> list[dict]:
                     "code": room_type.code,
                     "title": room_type.title,
                     "device_name_template": room_type.device_name_template,
+                    # Уровень плана — редактору, чтобы он знал, какие контролы
+                    # у этого типа осмысленны. Сервер всё равно откажет, но
+                    # предлагать человеку то, что ему откажут, незачем.
+                    "plan_level": room_type.plan_level,
                     "rooms": list(
                         room_type.rooms.select_related("room").values_list(
                             "room__number", flat=True

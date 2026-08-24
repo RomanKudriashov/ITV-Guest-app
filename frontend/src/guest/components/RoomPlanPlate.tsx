@@ -197,12 +197,30 @@ export function RoomPlanPlate({
   const allUnknown = plan.zones.length > 0 && lit === 0 && off === 0;
   const motion = calm ? 'none' : undefined;
 
-  // Два кадра или один с маской — решает НАЛИЧИЕ ночного кадра, а не тип
-  // номера и не тема: без него плита обязана работать по-прежнему.
-  const twoFrames = Boolean(plan.image_off);
-  // Глобальное затемнение живёт только в запасном режиме. С двумя кадрами оно
-  // не нужно и вредно: тёмное — это сам ночной кадр, а не плёнка поверх.
-  const dim = twoFrames || !plan.zones.length ? 0 : (0.5 * off) / plan.zones.length;
+  /*
+    ВИД РЕШАЕТ УРОВЕНЬ, А НЕ НАЛИЧИЕ КАДРА.
+
+    Раньше плита смотрела на `image_off` и молча деградировала: нет ночного —
+    значит рисуем светлый и притемняем выключенные зоны. Простой план из-за
+    этого выглядел недоделанным полным, хотя это отдельный вид, который мы
+    продаём отдельно.
+
+    ПРОСТОЙ ПЛАН: комната как есть, ВСЕ зоны обведены, включённые залиты. Ни
+    затемнения, ни ночного кадра, ни гашения светильников — гость видит свою
+    комнату и то, что в ней сейчас включено.
+
+    ПОЛНЫЙ: два совмещённых кадра, свет показан настоящим светом.
+
+    Уровень приезжает в снимке; старый снимок его не несёт, и тогда сервер
+    подставляет прежнее правило — откат к v2 продолжает работать.
+  */
+  const simple = plan.level === 'simple';
+  const twoFrames = !simple && Boolean(plan.image_off);
+  // Глобальное затемнение — только у запасного режима полного плана. У
+  // простого его нет по устройству вида: притемнять комнату, которую гость
+  // попросил показать как есть, значит показывать не её.
+  const dim =
+    simple || twoFrames || !plan.zones.length ? 0 : (0.5 * off) / plan.zones.length;
 
   return (
     <Box
@@ -330,6 +348,41 @@ export function RoomPlanPlate({
                 objectFit: 'cover',
                 pointerEvents: 'none',
                 transition: motion ?? `opacity ${ZONE_FADE_MS}ms ease`,
+              }}
+            />
+          ) : simple ? (
+            /*
+              ПРОСТОЙ ПЛАН: обводка у ВСЕХ зон, заливка у включённых.
+
+              Обводка постоянная — по ней гость видит СОСТАВ комнаты: где
+              спальня, где ванная, что вообще управляется. Показывать только
+              включённые значило бы прятать половину комнаты, пока свет не
+              горит, и гость не понимал бы, что там есть чем управлять.
+
+              Заливка — полупрозрачная, поверх настоящей фотографии: комната
+              остаётся видна сквозь неё. Ни затемнения выключенных, ни гашения
+              светильников здесь нет по устройству вида.
+            */
+            <Box
+              key={`fill-${zone.code || zone.controlId}`}
+              aria-hidden
+              data-testid={`room-plan-outline-${zone.code || zone.controlId}`}
+              data-on={neutral ? 'unknown' : on ? 'true' : 'false'}
+              style={pct(zone.hit)}
+              sx={{
+                position: 'absolute',
+                pointerEvents: 'none',
+                borderRadius: 1,
+                border: '2px solid',
+                // Состояния не знаем — обводка нейтральная, и заливки нет:
+                // залить «на всякий случай» значило бы объявить свет включённым.
+                borderColor: neutral
+                  ? tokens.zoneOutlineUnknown
+                  : on
+                    ? tokens.zoneOutlineOn
+                    : tokens.zoneOutlineOff,
+                background: !neutral && on ? tokens.zoneFillOn : 'transparent',
+                transition: motion ?? `background ${ZONE_FADE_MS}ms ease, border-color ${ZONE_FADE_MS}ms ease`,
               }}
             />
           ) : (

@@ -2426,7 +2426,10 @@
       "noFrame": "There is no plan frame yet — upload a lit frame above.",
       "previewNeedsNight": "The light preview will show the difference once the night frame is ready.",
       "extinguish": "Turn lamps off",
-      "extinguishHint": "The night frame is computed from the lit one: lighting is removed, and the lamps themselves are dimmed separately — by the «brighter than surroundings» test. On a light render that test does not trigger and the lamps stay lit. Switch this off and shoot the night frame separately instead."
+      "extinguishHint": "The night frame is computed from the lit one: lighting is removed, and the lamps themselves are dimmed separately — by the «brighter than surroundings» test. On a light render that test does not trigger and the lamps stay lit. Switch this off and shoot the night frame separately instead.",
+      "tilesTitle": "This type has no plan",
+      "tilesBody": "The room screen works as a list of zone buttons. The plan level is set by us — get in touch if you need a picture of the room.",
+      "framesHintSimple": "One frame of the room. Zones are outlined, the ones that are on are filled. A simple plan needs no night frame."
     },
     "diagnostics": {
       "filtersTitle": "Filters",

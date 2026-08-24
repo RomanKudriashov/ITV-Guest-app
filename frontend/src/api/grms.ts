@@ -128,6 +128,12 @@ export interface GrmsType {
   /** Название типа многоязычное: показывать через `pickTranslated`. */
   title: Record<string, string>;
   device_name_template: string;
+  /**
+   * УРОВЕНЬ ПЛАНА — записанное нами решение, а не догадка по кадрам.
+   * Отель его не меняет; редактор по нему понимает, какие контролы у этого
+   * типа осмысленны. Сервер всё равно откажет — это вежливость, а не защита.
+   */
+  plan_level: 'tiles' | 'simple' | 'full';
   rooms: string[];
   variables: GrmsVariable[];
 }
