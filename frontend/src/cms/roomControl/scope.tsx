@@ -4,6 +4,7 @@ import { api, request } from '@/api/client';
 import { platformRequest, platformUpload } from '@/admin/adminClient';
 import * as grms from '@/api/grms';
 import type { GrmsTransport } from '@/api/grms';
+import type { ContentLanguages } from '@/hooks/useBootstrap';
 
 /**
  * ОБЛАСТЬ УПРАВЛЕНИЯ НОМЕРОМ: чей это запрос и куда он идёт.
@@ -22,6 +23,17 @@ import type { GrmsTransport } from '@/api/grms';
  */
 export interface GrmsScope {
   transport: GrmsTransport;
+  /**
+   * ЯЗЫКИ КОНТЕНТА ПРИХОДЯТ СЮДА, А НЕ БЕРУТСЯ ИЗ CMS-КОНТЕКСТА.
+   *
+   * Экраны звали `useBootstrap()` — ручку CMS. В консоли её нет, запрос
+   * отвечал 401, и оператора уводило на вход ОТЕЛЯ: экран конфигурации
+   * платформы отправлял человека логиниться к клиенту.
+   *
+   * Список знают обе стороны, просто из разных мест: CMS — из бутстрапа,
+   * консоль — из карточки отеля. Кто именно принёс, экрану знать незачем.
+   */
+  languages: ContentLanguages;
   /** Наша ли это сторона. По нему экраны решают, что показывать. */
   isPlatform: boolean;
   /** Отель, если мы в консоли. В CMS он один и подразумевается. */
@@ -37,16 +49,29 @@ const CMS_TRANSPORT: GrmsTransport = {
   upload: (path, form) => request(path, { method: 'POST', formData: form }),
 };
 
-const CMS_SCOPE: GrmsScope = { transport: CMS_TRANSPORT, isPlatform: false };
+/** Пока языки не приехали — русский: заголовок надо чем-то подписать. */
+const FALLBACK_LANGUAGES: ContentLanguages = {
+  codes: ['ru'],
+  defaultCode: 'ru',
+  labels: { ru: 'Русский' },
+  displayLanguage: 'ru',
+};
 
-const ScopeContext = createContext<GrmsScope>(CMS_SCOPE);
+const ScopeContext = createContext<GrmsScope>({
+  transport: CMS_TRANSPORT,
+  isPlatform: false,
+  languages: FALLBACK_LANGUAGES,
+});
 
 export function GrmsScopeProvider({
   hotelId,
+  languages,
   children,
 }: {
   /** Задан — консоль платформы; не задан — CMS отеля. */
   hotelId?: string;
+  /** Языки контента ОТЕЛЯ. Хозяин экрана приносит их сам — см. `GrmsScope`. */
+  languages?: ContentLanguages;
   children: ReactNode;
 }) {
   const value = useMemo<GrmsScope>(
@@ -58,9 +83,14 @@ export function GrmsScopeProvider({
             transport: platformTransport(`/hotels/${encodeURIComponent(hotelId)}/grms`),
             isPlatform: true,
             hotelId,
+            languages: languages ?? FALLBACK_LANGUAGES,
           }
-        : CMS_SCOPE,
-    [hotelId],
+        : {
+            transport: CMS_TRANSPORT,
+            isPlatform: false,
+            languages: languages ?? FALLBACK_LANGUAGES,
+          },
+    [hotelId, languages],
   );
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>;
 }

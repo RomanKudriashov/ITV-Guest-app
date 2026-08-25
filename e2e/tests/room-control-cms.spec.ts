@@ -232,28 +232,6 @@ async function drawZone(stage: Locator): Promise<void> {
   await page.mouse.up()
 }
 
-interface VersionRow {
-  version: number
-  is_current: boolean
-  rolled_back_from: number | null
-}
-
-async function versionList(
-  request: APIRequestContext,
-  token: string,
-): Promise<VersionRow[]> {
-  const { versions } = await apiGet<{ versions: VersionRow[] }>(
-    request,
-    token,
-    `/api/cms/grms/types/${TYPE_CODE}/versions`,
-  )
-  return versions
-}
-
-async function versionNumbers(request: APIRequestContext, token: string): Promise<number[]> {
-  return (await versionList(request, token)).map((v) => v.version)
-}
-
 async function adminToken(request: APIRequestContext): Promise<string> {
   const response = await request.post(`${API}/api/staff/auth/login`, {
     data: ADMIN,

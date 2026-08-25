@@ -83,16 +83,31 @@ export function platformRequest<T>(path: string, method = 'GET', body?: unknown)
   return request<T>(path, method, body);
 }
 
-/** Загрузка файла платформенным подключением: multipart, а не JSON. */
+/**
+ * Загрузка файла платформенным подключением: multipart, а не JSON.
+ *
+ * Токен берётся ТЕМ ЖЕ путём, что у обычных запросов, — через сессию с
+ * упреждающим обменом. Первая редакция читала хранилище напрямую и на
+ * протухшем токене молча получала 401: экран оставался без кадра, ошибки
+ * никакой, и выглядело это как «загрузка не сработала».
+ */
 export async function platformUpload<T>(path: string, form: FormData): Promise<T> {
-  const token = platformToken.get();
-  const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: form,
-  });
+  const send = (token: string | null) =>
+    fetch(`${BASE}${path}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+
+  let res = await send(await platformSession.accessForRequest());
+  if (res.status === 401) {
+    const renewed = await platformSession.refresh();
+    if (renewed) res = await send(renewed);
+  }
+
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
+    if (res.status === 401) platformSession.expire();
     const detail = (data && (data.detail as string)) || humanError(res.status);
     throw new PlatformError(res.status, detail, data?.code);
   }

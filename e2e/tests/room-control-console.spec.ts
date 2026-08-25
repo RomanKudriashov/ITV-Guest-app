@@ -116,6 +116,28 @@ async function pickType(): Promise<void> {
  * значило бы проверять не тот путь: под ним эти ручки отвечают 401, и именно
  * это отдельный укус и утверждает.
  */
+interface VersionRow {
+  version: number
+  is_current: boolean
+  rolled_back_from: number | null
+}
+
+async function versionList(
+  request: APIRequestContext,
+  token: string,
+): Promise<VersionRow[]> {
+  const { versions } = await apiGet<{ versions: VersionRow[] }>(
+    request,
+    token,
+    grmsPath(`/types/${TYPE_CODE}/versions`),
+  )
+  return versions
+}
+
+async function versionNumbers(request: APIRequestContext, token: string): Promise<number[]> {
+  return (await versionList(request, token)).map((v) => v.version)
+}
+
 async function consoleToken(request: APIRequestContext): Promise<string> {
   const login = await request.post(`${API}/api/v1/platform/auth/login`, { data: PLATFORM })
   expect(login.ok(), await login.text()).toBeTruthy()

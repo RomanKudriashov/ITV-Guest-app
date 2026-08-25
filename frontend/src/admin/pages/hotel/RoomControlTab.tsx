@@ -18,6 +18,8 @@ import { ImportTab } from '@/cms/roomControl/ImportTab';
 import { PlanEditor } from '@/cms/roomControl/PlanEditor';
 import { VersionsTab } from '@/cms/roomControl/VersionsTab';
 import { GrmsScopeProvider, useGrms } from '@/cms/roomControl/scope';
+import { contentLanguagesFrom } from '@/hooks/useBootstrap';
+import { getHotel } from '@/admin/adminClient';
 
 /**
  * КОНФИГУРАЦИЯ УПРАВЛЕНИЯ НОМЕРОМ — В НАШЕЙ КОНСОЛИ.
@@ -34,8 +36,24 @@ import { GrmsScopeProvider, useGrms } from '@/cms/roomControl/scope';
  * оператором, и все запросы адресуют его id.
  */
 export function RoomControlTab({ hotelId }: { hotelId: string }) {
+  const { i18n } = useTranslation();
+  /*
+    Языки контента отеля — из его карточки, а не из бутстрапа CMS: под
+    платформенным токеном той ручки нет вовсе, и запрос к ней уводил оператора
+    на вход отеля. Карточка отеля их и так знает.
+  */
+  const hotel = useQuery({
+    queryKey: ['admin', 'hotel', hotelId],
+    queryFn: () => getHotel(hotelId),
+  });
+  const languages = contentLanguagesFrom(
+    hotel.data?.languages,
+    hotel.data?.default_language,
+    (i18n.resolvedLanguage ?? i18n.language ?? 'ru').split('-')[0],
+  );
+
   return (
-    <GrmsScopeProvider hotelId={hotelId}>
+    <GrmsScopeProvider hotelId={hotelId} languages={languages}>
       <Inner />
     </GrmsScopeProvider>
   );

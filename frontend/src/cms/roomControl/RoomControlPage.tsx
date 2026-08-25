@@ -17,10 +17,10 @@ import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
 import { fetchGrmsTypes } from '@/api/grms';
-import { useGrmsScope } from './scope';
+import { GrmsScopeProvider, useGrmsScope } from './scope';
+import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
-import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
 import { AccessTab } from './AccessTab';
 import { CheckTab } from './CheckTab';
@@ -61,13 +61,29 @@ const MOVED_TABS = new Set(['import', 'builder', 'plan', 'versions']);
 const TABS: TabKey[] = ['access', 'check', 'diagnostics'];
 
 export function RoomControlPage() {
-  const { t } = useTranslation();
-  // База API — из области: CMS отеля или консоль платформы.
-  const { transport } = useGrmsScope();
-  const base = transport.base;
-  const navigate = useNavigate();
+  /*
+    Языки контента приносит ХОЗЯИН ЭКРАНА, а не сам экран.
+
+    В CMS это бутстрап отеля, в консоли — карточка отеля. Внутри компоненты
+    берут их из области и не знают, кто именно принёс: раньше они звали
+    `useBootstrap()` напрямую, и в консоли это давало 401 и увод оператора на
+    вход отеля.
+  */
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);
+  return (
+    <GrmsScopeProvider languages={languages}>
+      <RoomControlSection />
+    </GrmsScopeProvider>
+  );
+}
+
+function RoomControlSection() {
+  const { t } = useTranslation();
+  // База API — из области: CMS отеля или консоль платформы.
+  const { transport, languages } = useGrmsScope();
+  const base = transport.base;
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const [tab, setTab] = useState<TabKey>('access');
   // Пришли по старой ссылке на переехавшую вкладку — говорим об этом, а не

@@ -33,7 +33,6 @@ import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
-import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
 
 /**
@@ -52,12 +51,10 @@ import { pickTranslated } from '@/utils/translated';
 export function BuilderTab({ type }: { type: GrmsType }) {
   const { t } = useTranslation();
   // База API — из области: CMS отеля или консоль платформы.
-  const { transport } = useGrmsScope();
+  const { transport, languages } = useGrmsScope();
   const base = transport.base;
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useBootstrap();
-  const languages = useContentLanguages(bootstrap);
 
   const catalog = useQuery({ queryKey: queryKeys.grmsCatalog(base), queryFn: () => fetchGrmsCatalog(transport) });
   const status = useQuery({

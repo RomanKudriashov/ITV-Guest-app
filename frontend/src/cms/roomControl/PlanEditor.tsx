@@ -39,7 +39,6 @@ import {
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
-import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
 import { storefrontTokens } from '@/guest/storefrontTokens';
 import {
@@ -122,12 +121,10 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   const isTiles = level === 'tiles';
   const { t } = useTranslation();
   // База API — из области: CMS отеля или консоль платформы.
-  const { transport } = useGrmsScope();
+  const { transport, languages } = useGrmsScope();
   const base = transport.base;
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { data: bootstrap } = useBootstrap();
-  const languages = useContentLanguages(bootstrap);
 
   // Объявлены ДО запроса: `refetchInterval` спрашивают уже на первом ответе, а
   // объявленные ниже константы к тому моменту ещё не инициализированы.
