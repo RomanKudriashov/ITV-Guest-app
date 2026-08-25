@@ -2611,5 +2611,180 @@
     "found": "Found: {{count}}",
     "ofTotal": "Showing {{shown}} of {{total}}",
     "searchPlaceholder": "Search"
+  },
+  "wrongHost": {
+    "title": "This is the platform address, not a hotel one",
+    "body": "The guest app and the hotel panel live at a specific hotel's address. Check the link — the hotel name comes before the platform address.",
+    "hint": "The address is in the administrator's email and on the QR code in the room.",
+    "toLanding": "About the platform"
+  },
+  "landing": {
+    "hero": {
+      "badge": "Hotel guest service",
+      "title": "Room orders, services and room control — in the guest's phone",
+      "subtitle": "The guest scans a QR code in the room and orders food, services and housekeeping with no calls and no app to install. Staff see orders on a board; the hotel sees what is happening right now.",
+      "cta": "Get in touch",
+      "secondary": "How it works"
+    },
+    "shots": {
+      "title": "What it looks like",
+      "missing": "Screenshot not taken yet",
+      "guest": {
+        "title": "Guest storefront",
+        "caption": "Hotel venues, menus and services in the guest's language."
+      },
+      "room": {
+        "title": "Room screen",
+        "caption": "Light, curtains and climate on a room plan, not a list of switches."
+      },
+      "tracker": {
+        "title": "Staff board",
+        "caption": "Orders in columns, moved by drag; overdue ones stand out at once."
+      },
+      "cms": {
+        "title": "Hotel panel",
+        "caption": "What needs attention now, how the day is going, and where the problem is."
+      }
+    },
+    "flows": {
+      "title": "How the data moves",
+      "subtitle": "Two chains that everything else runs through. Click a link in the chain or step through it.",
+      "step": "Step {{current}} of {{total}}",
+      "prev": "Back",
+      "next": "Next",
+      "play": "Play",
+      "pause": "Pause",
+      "replay": "Replay",
+      "sides": {
+        "guest": "Guest",
+        "platform": "Our server",
+        "hotel": "Hotel",
+        "device": "Equipment"
+      },
+      "order": {
+        "title": "An order: from guest to the person doing it",
+        "lead": "The guest taps “Order” — here is what happens next and who sees it.",
+        "steps": {
+          "guest": {
+            "title": "The guest places an order",
+            "body": "On their phone, from the QR code in the room. The room number is already known — no typing it in, no call to reception."
+          },
+          "platform": {
+            "title": "The order reaches us",
+            "body": "We record the order and immediately work out who fulfils it: kitchen, bar, housekeeping or concierge — based on which venue the item belongs to."
+          },
+          "board": {
+            "title": "It appears on the board",
+            "body": "On the right venue's board and nowhere else. A cook does not see housekeeping requests, and housekeeping does not see the kitchen."
+          },
+          "work": {
+            "title": "Staff move it along",
+            "body": "Accepted, preparing, on its way — the status changes by dragging the card. Overdue ones highlight themselves; the threshold is the hotel's setting."
+          },
+          "back": {
+            "title": "The guest sees the status",
+            "body": "The same screen shows where the order is, without reloading. Nobody has to ask where breakfast got to."
+          }
+        }
+      },
+      "room": {
+        "title": "Room control: from a tap to the equipment",
+        "lead": "A longer chain: the hotel's own equipment sits between the guest and the hardware.",
+        "steps": {
+          "phone": {
+            "title": "The guest taps the plan",
+            "body": "The room screen shows the room as a plan: light zones, curtains, climate. The guest taps a zone instead of hunting for a switch in a list."
+          },
+          "platform": {
+            "title": "The command reaches us",
+            "body": "We check that the guest really is staying in that room and record the command: who switched what, and when."
+          },
+          "node": {
+            "title": "The on-site node",
+            "body": "A small node of ours sits in the hotel: it keeps a link to our server and talks to the equipment inside the hotel network. The hotel exposes nothing to the outside."
+          },
+          "device": {
+            "title": "The equipment acts",
+            "body": "The node translates the command into the hotel equipment's own language and gets its answer — switched or not."
+          },
+          "confirm": {
+            "title": "The confirmation comes back",
+            "body": "The guest sees the actual state, not “button pressed”. If the equipment did not answer, the screen says the link is down instead of inventing a state."
+          }
+        }
+      }
+    },
+    "modules": {
+      "title": "Capabilities",
+      "subtitle": "Enabled one by one: a hotel pays for what it uses.",
+      "items": {
+        "roomControl": {
+          "title": "Room control",
+          "body": "Light, curtains and climate from the guest's phone. Works with the hotel's equipment through an on-site node."
+        },
+        "payment": {
+          "title": "Payments",
+          "body": "Paying by card or charging the order to the room account."
+        },
+        "pms": {
+          "title": "PMS",
+          "body": "A link to the property management system: stays, folio, checkout."
+        },
+        "mobileKey": {
+          "title": "Mobile key",
+          "body": "Opening the door with a phone instead of a card."
+        },
+        "multiRestaurant": {
+          "title": "Multiple venues",
+          "body": "Several venues with their own menus, hours and staff."
+        },
+        "marketing": {
+          "title": "Marketing",
+          "body": "Collections, badges and recommendations on the guest storefront."
+        },
+        "extraLanguages": {
+          "title": "Extra languages",
+          "body": "Russian, English, Arabic and Chinese — right-to-left included."
+        },
+        "nativeApp": {
+          "title": "Mobile app",
+          "body": "The same product as an app from the store, if a chain needs one."
+        },
+        "analytics": {
+          "title": "Analytics",
+          "body": "Revenue, fulfilment speed and load by venue and by time of day."
+        }
+      }
+    },
+    "audience": {
+      "title": "Who it is for",
+      "items": {
+        "cityHotel": {
+          "title": "City hotel",
+          "body": "One restaurant and room service: in-room orders, housekeeping, late breakfast."
+        },
+        "resort": {
+          "title": "Resort",
+          "body": "Several venues, spa and beach: requests with different staff and different hours."
+        },
+        "apartments": {
+          "title": "Apart-hotel",
+          "body": "Few staff: the guest handles most things without a reception desk."
+        }
+      }
+    },
+    "contact": {
+      "title": "Getting started",
+      "body": "We will show it on a live stand and price it for your property: number of rooms, venues and the modules you need.",
+      "email": "hello@itv.example",
+      "phone": "+7 900 000-00-00",
+      "phoneHref": "+79000000000",
+      "pricing": "Pricing on request: it depends on the number of rooms, venues and enabled modules.",
+      "hint": "Drop us an email — we answer the same day."
+    },
+    "footer": {
+      "copy": "ITV Guest — hotel guest service",
+      "console": "Platform staff sign-in"
+    }
   }
 }
