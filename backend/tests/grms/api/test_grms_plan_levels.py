@@ -59,7 +59,7 @@ def _upload(cms, code: str, *, lit, off=None):
     data = {"lit": lit}
     if off is not None:
         data["off"] = off
-    return _platform_client(cms).post(
+    return cms.client.post(
         f"/api/v1/platform/hotels/{cms.hotel.pk}/grms/types/{code}/plan/frames",
         data=data,
         HTTP_HOST="guest.localhost",
@@ -67,28 +67,26 @@ def _upload(cms, code: str, *, lit, off=None):
     )
 
 
-_TOKEN_CACHE: dict = {}
-
-
-def _platform_client(cms):
-    return cms.client
-
-
 def _platform_token(cms) -> str:
-    """Учётка платформы: конфигурацию выполняем мы, а не отель."""
+    """
+    Учётка платформы: конфигурацию выполняем мы, а не отель.
+
+    Заводим и логинимся В КАЖДОМ ТЕСТЕ. Кэш на уровне модуля здесь уже стоял и
+    развалился в полном прогоне: учётка живёт в транзакции теста и после
+    отката исчезает, а токен в кэше остаётся — следующий тест получал 401 от
+    имени пользователя, которого больше нет.
+    """
     import json as _json
 
     from apps.hotels.services.provisioning import ensure_platform_admin
 
-    if "token" not in _TOKEN_CACHE:
-        ensure_platform_admin(email="root@platform.test", password="platform12345")
-        _TOKEN_CACHE["token"] = cms.client.post(
-            "/api/v1/platform/auth/login",
-            data=_json.dumps({"email": "root@platform.test", "password": "platform12345"}),
-            content_type="application/json",
-            HTTP_HOST="guest.localhost",
-        ).json()["access"]
-    return _TOKEN_CACHE["token"]
+    ensure_platform_admin(email="root@platform.test", password="platform12345")
+    return cms.client.post(
+        "/api/v1/platform/auth/login",
+        data=_json.dumps({"email": "root@platform.test", "password": "platform12345"}),
+        content_type="application/json",
+        HTTP_HOST="guest.localhost",
+    ).json()["access"]
 
 
 def test_a_simple_plan_refuses_the_night_frame(cms, crystal):

@@ -152,6 +152,13 @@ def test_the_engineer_sees_the_raw_answer_and_the_hotel_does_not(platform, cms, 
     Поля ВЫРЕЗАЮТСЯ на сервере, а не прячутся на экране: приезжающий, но
     спрятанный ответ видно в консоли браузера.
     """
+    # Строку журнала заводим САМИ. Проверка «в выдаче нет инженерных полей» на
+    # пустом журнале сходится сама с собой и не проверяет ничего — а именно так
+    # этот укус и выглядел бы на чистой базе.
+    from tests.grms.api.test_grms_diagnostics import _entry
+
+    _entry(crystal)
+
     engineer = platform("get", "/diagnostics?limit=5").json()
     assert engineer["depth"] == "engineer"
 
@@ -164,13 +171,14 @@ def test_the_engineer_sees_the_raw_answer_and_the_hotel_does_not(platform, cms, 
 
     from apps.grms.services.diagnostics import ENGINEER_ONLY
 
-    for row in hotel.get("rows", []):
+    assert hotel["rows"], "журнал отеля пуст — резать было нечего"
+    for row in hotel["rows"]:
         leaked = [field for field in ENGINEER_ONLY if field in row]
         assert not leaked, f"инженерные поля уехали отелю: {leaked}"
 
     # И обратная сторона: инженеру они ЕСТЬ — иначе мы бы просто всё срезали.
-    if engineer.get("rows"):
-        assert "raw_response" in engineer["rows"][0]
+    assert engineer["rows"], "журнал инженера пуст — сравнивать не с чем"
+    assert engineer["rows"][0]["raw_response"] == '{"status":"true","value":"1"}'
 
 
 # --- Импорт: те же свойства, но на НАШЕЙ стороне -----------------------------
@@ -208,6 +216,5 @@ def test_reconcile_without_a_connector_does_not_block(platform, crystal):
 def test_broken_file_is_refused_with_an_explanation(platform, crystal):
     import io
 
-    response = _upload_pnr(platform,
-                       io.BytesIO(b"not a workbook at all"))
+    response = _upload_pnr(platform, io.BytesIO(b"not a workbook at all"))
     assert response.status_code == 422

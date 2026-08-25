@@ -38,6 +38,7 @@ from __future__ import annotations
 from functools import wraps
 
 from ninja import Router
+from ninja.operation import AsyncOperation, Operation
 
 from apps.accounts.services.platform_access import can_write, is_owner
 from apps.core.errors import PermissionDenied
@@ -125,7 +126,98 @@ class PlatformRouter(Router):
         result = super().add_api_operation(path, methods, view_func, **kwargs)
         operation = self.path_operations[path].operations[-1]
         operation.view_func = _guarded(view_func, path, methods)
+        _check_before_parsing(operation, path, methods)
         return result
+
+
+def _denial(right: str, user, path: str, methods) -> PermissionDenied | None:
+    """Отказ, если он положен, — иначе None. Одна формулировка на два рубежа."""
+    if not right:
+        return PermissionDenied(
+            f"У ручки {'/'.join(methods)} {path} не объявлено право доступа",
+            code="right_undeclared",
+        )
+    predicate = _PREDICATES.get(right)
+    if predicate is None:
+        # Незнакомое право — отказ. Иначе опечатка в имени открывала бы ручку
+        # всем: «нет правила» слишком легко прочитать как «нет ограничений».
+        return PermissionDenied(
+            f"Право «{right}» не объявлено в реестре прав платформы",
+            code="right_unknown",
+        )
+    if not predicate(user):
+        return PermissionDenied(_DENIED_TEXT.get(right, "Недостаточно прав"), code="forbidden")
+    return None
+
+
+class _RightsChecked(Operation):
+    """
+    ОТКАЗ РАНЬШЕ РАЗБОРА ТЕЛА.
+
+    Право проверялось в исполняемой части ручки, то есть ПОСЛЕ того, как ninja
+    разобрал и провалидировал тело. Наблюдатель, дёрнувший изменяющую ручку,
+    получал 422 «тело не то» вместо 403: сначала мы читали его файл, и только
+    потом отказывали. На загрузке ПНР это означало разбор чужого Excel в пользу
+    того, кому ручка не положена вовсе.
+
+    `_run_checks` — правильный шов: аутентификация к этому моменту уже прошла
+    (`PlatformAuth` выставляет `request.user`), а тела никто не касался.
+
+    ПОЧЕМУ ПОДМЕНА КЛАССА, А НЕ ОБЁРТКА МЕТОДА. При монтировании роутера ninja
+    клонирует операции через `object.__new__(self.__class__)` и переносит
+    фиксированный список полей — обёртка, положенная в атрибут экземпляра, до
+    боевого объекта не доезжает и молча пропадает. Класс переживает клон, а
+    право берётся из `view_func`, который в этот список входит.
+    """
+
+    def _run_checks(self, request):
+        error = super()._run_checks(request)
+        if error is not None:
+            return error
+        denial = _denial(
+            declared_right(self.view_func),
+            getattr(request, "user", None),
+            self.path,
+            self.methods,
+        )
+        if denial is not None:
+            # Отказ отдаём тем же обработчиком, что и прочие доменные ошибки:
+            # формат отказа один на всю платформу.
+            return self.api.on_exception(request, denial)
+        return None
+
+
+class _AsyncRightsChecked(AsyncOperation):
+    """То же для асинхронных ручек: их у платформы пока нет, но появятся."""
+
+    async def _run_checks(self, request):
+        error = await super()._run_checks(request)
+        if error is not None:
+            return error
+        denial = _denial(
+            declared_right(self.view_func),
+            getattr(request, "user", None),
+            self.path,
+            self.methods,
+        )
+        if denial is not None:
+            return self.api.on_exception(request, denial)
+        return None
+
+
+def _check_before_parsing(operation, path: str, methods) -> None:
+    """
+    Поставить ранний рубеж на уже зарегистрированную операцию.
+
+    Проверка в `_guarded` при этом ОСТАЁТСЯ вторым рубежом: если ninja
+    переименует внутренний метод, ранний шов отвалится молча, и дверь удержит
+    он. Охранная проверка `test_every_platform_route_refuses_read_only` такую
+    поломку показывает — она требует 403 и на запросе без валидного тела.
+    """
+    if isinstance(operation, AsyncOperation):
+        operation.__class__ = _AsyncRightsChecked
+    else:
+        operation.__class__ = _RightsChecked
 
 
 def _guarded(view, path: str, methods):
@@ -134,24 +226,9 @@ def _guarded(view, path: str, methods):
 
     @wraps(view)
     def guarded(request, *args, **kwargs):
-        if not right:
-            raise PermissionDenied(
-                f"У ручки {'/'.join(methods)} {path} не объявлено право доступа",
-                code="right_undeclared",
-            )
-        predicate = _PREDICATES.get(right)
-        if predicate is None:
-            # Незнакомое право — отказ. Иначе опечатка в имени открывала бы
-            # ручку всем: «нет правила» слишком легко прочитать как «нет
-            # ограничений».
-            raise PermissionDenied(
-                f"Право «{right}» не объявлено в реестре прав платформы",
-                code="right_unknown",
-            )
-        if not predicate(getattr(request, "user", None)):
-            raise PermissionDenied(
-                _DENIED_TEXT.get(right, "Недостаточно прав"), code="forbidden"
-            )
+        denial = _denial(right, getattr(request, "user", None), path, methods)
+        if denial is not None:
+            raise denial
         return view(request, *args, **kwargs)
 
     # Пометку переносим: охранная проверка смотрит на то, что реально

@@ -136,6 +136,37 @@ def _call(client, token, method: str, url: str, body: dict | None = None):
     return fn(f"/api/v1/platform{url}", **kw)
 
 
+# Коды отказа САМОГО РУБЕЖА ПРАВ. Отличать их от прочих 403 обязательно:
+# ручка, закрытая по деловой причине («модуль не подключён»), отвечает тем же
+# статусом — и изменяющая ручка, до проверки прав вообще не дошедшая, зачлась
+# бы как «правильно отказала». Проверка сошлась бы сама с собой.
+_RIGHTS_CODES = {"forbidden", "right_undeclared", "right_unknown"}
+
+
+def _is_rights_refusal(resp) -> bool:
+    if resp.status_code != 403:
+        return False
+    try:
+        return resp.json().get("code") in _RIGHTS_CODES
+    except ValueError:
+        return False
+
+
+def _enable_every_module(hotel) -> None:
+    """
+    Все модули отелю-подопытному.
+
+    Иначе модульные калитки отвечают 403 раньше рубежа прав, и читающие ручки
+    выглядят запертыми для наблюдателя, хотя права тут ни при чём.
+    """
+    from apps.hotels.models import HotelModule
+    from apps.hotels.module_registry import ALL_CODES
+
+    with tenant_context(hotel):
+        for code in ALL_CODES:
+            HotelModule.objects.update_or_create(code=code, defaults={"is_enabled": True})
+
+
 def _login(client, email: str, password: str) -> str:
     resp = client.post(
         "/api/v1/platform/auth/login",
@@ -539,6 +570,7 @@ def test_every_platform_route_refuses_read_only(client, api):
     from apps.hotels.api.platform.rights import OWNER, READ, WRITE, declared_right
 
     hotel = _hotel("readonly", "Только чтение")
+    _enable_every_module(hotel)
     node, _key = _node_for(hotel)
     invited = api("post", "/team", {"email": "viewer@platform.test", "role": "read_only"}).json()
     viewer = _login(client, "viewer@platform.test", invited["password"])
@@ -555,7 +587,7 @@ def test_every_platform_route_refuses_read_only(client, api):
                 continue
             resp = _call(client, viewer, method, url, _body_for(method, path))
             checked[right] += 1
-            forbidden = resp.status_code == 403
+            forbidden = _is_rights_refusal(resp)
             if right in (WRITE, OWNER) and not forbidden:
                 wrong.append(f"  {method} {path} — право {right}, а ответ {resp.status_code}")
             if right == READ and forbidden:
@@ -578,6 +610,7 @@ def test_owner_passes_where_read_only_is_refused(client, api):
     from apps.hotels.api.platform.rights import OWNER, WRITE, declared_right
 
     hotel = _hotel("ownerpass", "Владелец проходит")
+    _enable_every_module(hotel)
     node, _key = _node_for(hotel)
     owner = _login(client, EMAIL, PASSWORD)
 
@@ -594,7 +627,7 @@ def test_owner_passes_where_read_only_is_refused(client, api):
             if url is None:
                 continue
             resp = _call(client, owner, method, url, _body_for(method, path))
-            if resp.status_code == 403:
+            if _is_rights_refusal(resp):
                 denied.append(f"  {method} {path} — владельцу отказали")
 
     assert not denied, "Рубеж запер владельца:\n" + "\n".join(denied)
