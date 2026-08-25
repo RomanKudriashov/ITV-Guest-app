@@ -187,50 +187,7 @@ test('доступ: включённый демо-вход гасит табли
   }
 })
 
-/** Фигуры зон на сцене. У форм инспектора префикс свой (`grms-plan-form-`). */
-async function zoneCount(): Promise<number> {
-  return page.locator('[data-testid^="grms-plan-zone-"]').count()
-}
 
-/**
- * Жест разметки — обеими точками ВНУТРИ ОКНА.
- *
- * `page.mouse` бьёт по координате окна и страницу не прокручивает. Сцена
- * высокая: при окне 900 её низ уходит за край, и точка «55% высоты» оказалась
- * на 1131-м пикселе — `pointerdown` не попадал на сцену вовсе, зона не
- * создавалась, а тест винил редактор. Проверено: тем же жестом внутри окна
- * зона создаётся.
- *
- * Порядок здесь не косметический. Сначала клик по инструменту: Playwright сам
- * прокручивает кнопку в видимую часть и этим двигает сцену — координаты,
- * снятые до клика, протухают. `boundingBox` берётся ПОСЛЕ.
- */
-async function drawZone(stage: Locator): Promise<void> {
-  await page.getByTestId('grms-plan-tool-zone').click()
-  await stage.scrollIntoViewIfNeeded()
-  const box = (await stage.boundingBox())!
-  const view = page.viewportSize()!
-
-  // Полоса сцены, видимая прямо сейчас. Отступ в 60 пикселей — чтобы жест не
-  // цеплял край и не начинался на границе с соседним элементом.
-  const top = Math.max(box.y, 0) + 60
-  const bottom = Math.min(box.y + box.height, view.height) - 60
-  if (bottom - top < 120) {
-    throw new Error(
-      `Видимая часть сцены ${Math.round(bottom - top)}px — рисовать негде. ` +
-        `Сцена y=${Math.round(box.y)} h=${Math.round(box.height)}, окно ${view.height}.`,
-    )
-  }
-
-  const x1 = box.x + box.width * 0.3
-  const x2 = box.x + box.width * 0.5
-  const y2 = Math.min(top + 200, bottom)
-
-  await page.mouse.move(x1, top)
-  await page.mouse.down()
-  await page.mouse.move(x2, y2, { steps: 8 })
-  await page.mouse.up()
-}
 
 async function adminToken(request: APIRequestContext): Promise<string> {
   const response = await request.post(`${API}/api/staff/auth/login`, {

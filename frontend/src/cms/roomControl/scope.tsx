@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { api, request } from '@/api/client';
-import { platformRequest, platformUpload } from '@/admin/adminClient';
+import { ApiError, api, request } from '@/api/client';
+import { PlatformError, platformRequest, platformUpload } from '@/admin/adminClient';
 import * as grms from '@/api/grms';
 import type { GrmsTransport } from '@/api/grms';
 import type { ContentLanguages } from '@/hooks/useBootstrap';
@@ -95,13 +95,33 @@ export function GrmsScopeProvider({
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>;
 }
 
+/**
+ * ОШИБКА ОДНОЙ ФОРМЫ НА ОБЕ СТОРОНЫ.
+ *
+ * Экраны разбирают отказ как `ApiError` и берут из него `detail` — фразу
+ * сервера. Платформенный клиент бросает свой `PlatformError`, и проверка
+ * `instanceof ApiError` его не узнавала: вместо «План ссылается на элемент,
+ * которого не будет в этой версии» оператор получал «Не удалось» — то есть
+ * ровно то, что мы много раз чинили в других местах.
+ *
+ * Переводим отказ у границы транспорта, а не учим каждый экран знать про два
+ * класса ошибок: экранов много, граница одна.
+ */
+function asApiError(error: unknown): never {
+  if (error instanceof PlatformError) {
+    throw new ApiError(error.status, error.message, error.code ?? 'error');
+  }
+  throw error;
+}
+
 function platformTransport(base: string): GrmsTransport {
+  const call = <T,>(run: () => Promise<T>): Promise<T> => run().catch(asApiError);
   return {
     base,
-    get: (path) => platformRequest(path),
-    post: (path, body) => platformRequest(path, 'POST', body),
-    put: (path, body) => platformRequest(path, 'PUT', body),
-    upload: (path, form) => platformUpload(path, form),
+    get: (path) => call(() => platformRequest(path)),
+    post: (path, body) => call(() => platformRequest(path, 'POST', body)),
+    put: (path, body) => call(() => platformRequest(path, 'PUT', body)),
+    upload: (path, form) => call(() => platformUpload(path, form)),
   };
 }
 

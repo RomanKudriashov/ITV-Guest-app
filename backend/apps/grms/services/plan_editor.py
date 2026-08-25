@@ -40,7 +40,24 @@ def payload(hotel, code: str) -> dict:
         room_type = builder._type(code)
         draft = dict(room_type.plan or {})
 
-        frame = plan_geometry.frame_payload
+        # КАДРЫ СОБИРАЮТСЯ ЗДЕСЬ, ВНУТРИ КОНТЕКСТА.
+        #
+        # Раньше здесь связывалась только ССЫЛКА на `frame_payload`, а вызовы
+        # стояли ниже, в собираемом ответе, — то есть уже после выхода из
+        # блока. `MediaAsset` тенантная и под RLS: без выставленного тенанта
+        # запрос к ней возвращает НОЛЬ СТРОК, а не ошибку.
+        #
+        # В CMS это не проявлялось: middleware держит тенанта на весь запрос по
+        # заголовку поддомена, и вызов снаружи блока всё равно накрыт
+        # окружением. У платформенного пути «текущего отеля» нет вовсе —
+        # тенанта ставит только этот блок. Ответ приходил `200`, кадры `null`,
+        # экран честно писал «кадра ещё нет», и выглядело это как несработавшая
+        # загрузка.
+        frames = {
+            "lit": plan_geometry.frame_payload(draft.get("asset_id")),
+            "off": plan_geometry.frame_payload(draft.get("asset_off_id")),
+            "off_source": draft.get("asset_off_source") or "",
+        }
 
         status = publishing.current(hotel, code)
         controls = [
@@ -65,11 +82,7 @@ def payload(hotel, code: str) -> dict:
             # расчёт и делается. Отсутствие ключа — старый план, а не отказ.
             "extinguish_sources": bool(draft.get("extinguish_sources", True)),
         },
-        "frames": {
-            "lit": frame(draft.get("asset_id")),
-            "off": frame(draft.get("asset_off_id")),
-            "off_source": draft.get("asset_off_source") or "",
-        },
+        "frames": frames,
         # Привязывать можно только к ОПУБЛИКОВАННЫМ элементам: план едет гостю
         # вместе с опубликованной версией, и ссылка на черновой элемент
         # означала бы точку управления, которой у гостя нет.
