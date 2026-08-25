@@ -7,7 +7,11 @@
 
     <!-- PWA. `theme-color` is filled at runtime from the hotel's brand tokens
          (see AppThemeProvider) so that no color literal lives outside tokens.ts. -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      МАНИФЕСТ ВЕШАЕТСЯ КОДОМ, а не здесь: он один на все адреса, а предлагать
+      «установить гостевое приложение» на корне платформы нельзя — там лендинг,
+      и устанавливать нечего. См. src/app/manifestLink.ts.
+    -->
     <meta name="theme-color" content="" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

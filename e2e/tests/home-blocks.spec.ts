@@ -25,6 +25,20 @@ async function enterRoom(page: Page): Promise<void> {
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
 }
 
+/**
+ * Снять перехваты ДО конца теста.
+ *
+ * Подмена главной ходит на настоящий сервер (`route.fetch`), и витрина зовёт
+ * `/guest/home` не один раз: обновление на фокусе, повторные заходы. Если
+ * запрос застал конец теста, Playwright валит его «route.fetch: Test ended» —
+ * и падает не тот тест, который сломан, а тот, которому не повезло со
+ * временем. На загруженной машине это выглядело как случайная краснота в
+ * разных проверках набора.
+ */
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
+})
+
 /** Подменяет поля главной, не трогая остальной ответ сервера. */
 async function homeAnswers(page: Page, patch: Record<string, unknown>): Promise<void> {
   // Со ЗВЁЗДОЧКОЙ НА ХВОСТЕ: витрина зовёт `/guest/home?lang=…`, и точный

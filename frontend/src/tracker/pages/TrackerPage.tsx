@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cmsPath } from '@/app/hostRole';
 
 import {
   DndContext,
@@ -350,7 +351,7 @@ export function TrackerPage() {
             title={t('tracker.noPoints.title')}
             description={t('tracker.noPoints.body')}
             action={
-              <Button variant="outlined" onClick={() => navigate('/cms/menu')} sx={{ minHeight: 44 }}>
+              <Button variant="outlined" onClick={() => navigate(cmsPath('/menu'))} sx={{ minHeight: 44 }}>
                 {t('tracker.toCms')}
               </Button>
             }

@@ -22,6 +22,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslation } from 'react-i18next';
+import { cmsPath } from '@/app/hostRole';
 
 import { ApiError } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
@@ -87,7 +88,7 @@ export function ServiceWorkspacePage() {
       <Button
         size="small"
         startIcon={<ArrowBackIcon />}
-        onClick={() => navigate('/cms/services')}
+        onClick={() => navigate(cmsPath('/services'))}
         sx={{ mb: 1 }}
       >
         {t('services.backToList')}

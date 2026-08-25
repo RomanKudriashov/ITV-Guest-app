@@ -20,6 +20,7 @@ import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { useTranslation } from 'react-i18next';
+import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
 import { createService, fetchServiceTemplates, fetchServices } from './api';
@@ -90,7 +91,7 @@ export function ServicesPage() {
       <ServiceGrid
         services={active}
         label={label}
-        onOpen={(id) => navigate(`/cms/services/${id}`)}
+        onOpen={(id) => navigate(cmsPath(`/services/${id}`))}
       />
 
       {archived.length ? (
@@ -115,7 +116,7 @@ export function ServicesPage() {
               <ServiceGrid
                 services={archived}
                 label={label}
-                onOpen={(id) => navigate(`/cms/services/${id}`)}
+                onOpen={(id) => navigate(cmsPath(`/services/${id}`))}
               />
             </Box>
           </Collapse>
@@ -132,7 +133,7 @@ export function ServicesPage() {
         onCreated={(service) => {
           void queryClient.invalidateQueries({ queryKey: ['cms', 'services'] });
           setCreating(false);
-          navigate(`/cms/services/${service.id}`);
+          navigate(cmsPath(`/services/${service.id}`));
         }}
       />
     </Box>

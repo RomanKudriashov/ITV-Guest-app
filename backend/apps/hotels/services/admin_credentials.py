@@ -111,7 +111,9 @@ def send_admin_password(hotel, *, email: str, password: str, is_new: bool) -> di
         # администратору «Для вашего отеля «{'ru': 'Кристалл'}»».
         hotel=hotel.name_i18n,
         action="заведён администратор" if is_new else "сброшен пароль администратора",
-        url=hotel.public_guest_url("/login"),
+        # Адрес панели отеля. `/login` остаётся постоянным редиректом сюда
+        # же — письма трёхлетней давности обязаны открываться.
+        url=hotel.public_guest_url("/admin"),
         email=email,
         password=password,
     )

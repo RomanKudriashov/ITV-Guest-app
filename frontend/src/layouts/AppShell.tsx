@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { cmsPath, toCmsRoot } from '@/app/hostRole';
 
 import { ScreenBoundary } from '@/components/ScreenBoundary';
 
@@ -161,7 +162,7 @@ export function AppShell() {
                 key: 'sessions',
                 label: t('sessions.title'),
                 icon: <DevicesOutlinedIcon fontSize="small" />,
-                onSelect: () => navigate('/cms/profile'),
+                onSelect: () => navigate(cmsPath('/profile')),
               },
             ]}
             onLogout={logout}
@@ -207,7 +208,11 @@ export function AppShell() {
                 <ListItemButton
                   key={item.key}
                   component={NavLink}
-                  to={item.to}
+                  // Сервер отдаёт КАНОНИЧЕСКИЙ путь раздела (`/cms/...`) — он
+                  // про хост клиента не знает и знать не должен. Куда этот
+                  // путь положить, решает клиент: на адресе отеля панель живёт
+                  // в `/admin`.
+                  to={toCmsRoot(item.to)}
                   data-testid={`cms-nav-${item.key}`}
                   sx={{
                     borderRadius: 2,

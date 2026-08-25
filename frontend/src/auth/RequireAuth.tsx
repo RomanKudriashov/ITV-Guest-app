@@ -5,7 +5,21 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { useAuth } from './AuthProvider';
 
-export function RequireAuth({ children }: { children: ReactNode }) {
+/**
+ * Калитка CMS.
+ *
+ * `fallback` — экран входа НА МЕСТЕ, без перехода. Нужен там, где адрес входа и
+ * адрес панели совпали: на хосте отеля CMS живёт в `/admin`, отдельного
+ * `/login` там нет (он постоянный редирект сюда же), и увод на него дал бы
+ * петлю. Без `fallback` поведение прежнее — уводим на `/login`.
+ */
+export function RequireAuth({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
   const { isAuthenticated, isBootstrapping } = useAuth();
   const location = useLocation();
 
@@ -25,6 +39,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    if (fallback) return <>{fallback}</>;
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

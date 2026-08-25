@@ -18,6 +18,7 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import { cmsPath } from '@/app/hostRole';
 
 import { ApiError } from '@/api/client';
 import {
@@ -346,7 +347,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
               onToggle={(category, isActive) =>
                 toggleCategoryMutation.mutate({ id: category.id, isActive })
               }
-              onEdit={(category) => navigate(`/cms/menu/categories/${category.id}`)}
+              onEdit={(category) => navigate(cmsPath(`/menu/categories/${category.id}`))}
               onDelete={(category) => {
                 setPendingDelete(category);
                 setCascade(false);
@@ -395,7 +396,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
                 startIcon={<AddIcon />}
                 disabled={!selectedId}
                 data-testid="add-item-button"
-                onClick={() => navigate(`/cms/menu/items/new?category_id=${selectedId ?? ''}`)}
+                onClick={() => navigate(cmsPath(`/menu/items/new?category_id=${selectedId ?? ''}`))}
               >
                 {t('menu.addItem')}
               </Button>
@@ -431,7 +432,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
               bootstrap={bootstrap}
               displayLanguage={languages.displayLanguage}
               fallbackLanguage={languages.defaultCode}
-              onOpen={(item) => navigate(`/cms/menu/items/${item.id}`)}
+              onOpen={(item) => navigate(cmsPath(`/menu/items/${item.id}`))}
               onDelete={(item) => setItemToDelete(item)}
               onToggleActive={(item, isActive) =>
                 toggleItemMutation.mutate({ id: item.id, isActive })

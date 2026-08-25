@@ -7,6 +7,11 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
+# Базовый домен — В СБОРКУ. Фронт по нему делит адреса на корень платформы и
+# адрес отеля (`src/app/hostRole.ts`), и переменная та же самая `APP_DOMAIN`,
+# что задаёт домен бэкенду: две переменные разъехались бы молча.
+ARG APP_DOMAIN=""
+ENV VITE_APP_DOMAIN=$APP_DOMAIN
 # Прод-сборка Vite: типы + бандл в /app/dist.
 #
 # `build:image`, а не `build`: полная цель гоняет ещё и сторожа кодов событий,

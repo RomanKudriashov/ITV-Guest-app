@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -692,7 +693,7 @@ export function ItemEditorPage() {
         */
         hydratedIdRef.current = saved.id;
         setItemId(saved.id);
-        navigate(`/cms/menu/items/${saved.id}`, { replace: true });
+        navigate(cmsPath(`/menu/items/${saved.id}`), { replace: true });
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.item(saved.id) });
     },
@@ -762,7 +763,7 @@ export function ItemEditorPage() {
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/cms/menu')}
+          onClick={() => navigate(cmsPath('/menu'))}
           data-testid="item-back-button"
         >
           {t('common.back')}

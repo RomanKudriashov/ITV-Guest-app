@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
 import { useQuery } from '@tanstack/react-query';
@@ -165,7 +166,7 @@ function RoomControlSection() {
             variant="outlined"
             data-testid="grms-type-rooms"
             label={t('roomControl.roomsOnType', { count: current.rooms.length })}
-            onClick={() => navigate('/cms/rooms')}
+            onClick={() => navigate(cmsPath('/rooms'))}
           />
         )}
         {list.length > 0 && (

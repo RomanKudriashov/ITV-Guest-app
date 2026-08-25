@@ -8,6 +8,7 @@ import { AppThemeProvider } from '@/theme';
 import { AuthProvider } from '@/auth';
 import { ToastProvider } from '@/components/ToastProvider';
 import { router } from '@/app/router';
+import { attachWebManifest } from '@/app/manifestLink';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +19,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+attachWebManifest();
 
 const container = document.getElementById('root');
 if (!container) {

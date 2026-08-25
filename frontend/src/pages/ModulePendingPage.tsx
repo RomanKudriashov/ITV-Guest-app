@@ -6,6 +6,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ConstructionOutlinedIcon from '@mui/icons-material/ConstructionOutlined';
+import { cmsPath } from '@/app/hostRole';
 
 /**
  * Модуль подключён, экрана ещё нет.
@@ -32,7 +33,7 @@ export function ModulePendingPage({ moduleKey }: { moduleKey: string }) {
           <Typography variant="body2" color="text.secondary">
             {t('modulePending.body')}
           </Typography>
-          <Button variant="outlined" size="small" onClick={() => navigate('/cms/dashboard')}>
+          <Button variant="outlined" size="small" onClick={() => navigate(cmsPath('/dashboard'))}>
             {t('modulePending.toDashboard')}
           </Button>
         </Stack>

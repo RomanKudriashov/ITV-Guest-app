@@ -151,6 +151,16 @@ services:
     command: npm run dev
     environment:
       VITE_API_PROXY: http://backend:8000
+      # СХЕМА АДРЕСОВ В ДЕВЕ. `guest.localhost` — тот же базовый домен, что у
+      # бэкенда по умолчанию (`GUEST_APP_BASE_DOMAIN`), поэтому:
+      #   localhost:5183                  — режим одного хоста, как было всегда;
+      #   guest.localhost:5183            — корень платформы (лендинг + консоль);
+      #   crystal.guest.localhost:5183    — адрес отеля (гость + CMS в /admin).
+      # Имена вида *.localhost разрешаются в петлю и браузером, и контейнером,
+      # поэтому схему можно проверять без wildcard-DNS.
+      VITE_APP_DOMAIN: guest.localhost
+      # Vite с 5.4.12 блокирует незнакомый Host: разрешаем эти имена явно.
+      VITE_ALLOWED_HOSTS: .local,guest.localhost,.guest.localhost
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -268,7 +269,7 @@ export function RoomsPage() {
                         {room.control_type ? (
                           <Link
                             component={RouterLink}
-                            to={`/cms/room-control?type=${encodeURIComponent(room.control_type)}`}
+                            to={cmsPath(`/room-control?type=${encodeURIComponent(room.control_type)}`)}
                             variant="body2"
                             data-testid={`room-control-type-${room.number}`}
                           >

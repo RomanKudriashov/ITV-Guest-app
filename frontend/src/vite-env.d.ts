@@ -5,6 +5,12 @@ interface ImportMetaEnv {
   readonly VITE_API_PROXY?: string;
   /** Tenant sent as `X-Hotel-Subdomain` on every API call. */
   readonly VITE_HOTEL_SUBDOMAIN?: string;
+  /**
+   * Базовый домен платформы — та же `APP_DOMAIN`, что и у бэкенда.
+   * По нему адрес делится на корень (лендинг + консоль) и отель (гость + CMS).
+   * Пусто — режим одного хоста, см. `src/app/hostRole.ts`.
+   */
+  readonly VITE_APP_DOMAIN?: string;
 }
 
 interface ImportMeta {

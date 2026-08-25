@@ -183,6 +183,10 @@ services:
     build:
       context: .
       dockerfile: infra/nginx/Dockerfile
+      args:
+        # Один и тот же домен для бэкенда и для сборки фронта: по нему фронт
+        # отличает корень платформы от адреса отеля.
+        APP_DOMAIN: ${APP_DOMAIN}
     restart: unless-stopped
     ports:
       - "80:80"

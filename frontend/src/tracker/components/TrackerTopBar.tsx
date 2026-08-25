@@ -17,6 +17,7 @@ import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { cmsPath } from '@/app/hostRole';
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
@@ -127,7 +128,7 @@ export function TrackerTopBar({
 
         <Tooltip title={t('tracker.toCms')}>
           <IconButton
-            onClick={() => navigate('/cms/menu')}
+            onClick={() => navigate(cmsPath('/menu'))}
             aria-label={t('tracker.toCms')}
             data-testid="tracker-to-cms"
             sx={{ minWidth: 44, minHeight: 44 }}

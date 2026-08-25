@@ -8,6 +8,7 @@ import MenuItem from '@mui/material/MenuItem';
 
 import { ApiError, session } from '@/api/client';
 import { useAuth } from '@/auth';
+import { cmsPath } from '@/app/hostRole';
 import {
   LANGUAGE_LABELS,
   SUPPORTED_LANGUAGES,
@@ -70,7 +71,10 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [langAnchor, setLangAnchor] = useState<HTMLElement | null>(null);
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/cms/menu';
+  // Куда возвращаемся после входа. Умолчание — корень CMS НА ЭТОМ адресе:
+  // на хосте отеля панель живёт в `/admin`, и зашитый `/cms/...` увёл бы
+  // администратора на редирект вместо экрана.
+  const from = (location.state as { from?: string } | null)?.from ?? cmsPath('/dashboard');
 
   if (isAuthenticated) return <Navigate to={from} replace />;
 

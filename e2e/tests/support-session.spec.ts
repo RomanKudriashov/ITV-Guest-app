@@ -53,7 +53,13 @@ async function enterHotel(page: Page, reason: string): Promise<{ cms: Page; gran
 
   // Заодно: наружу уехал код, а не токен. Ищем ПО ФОРМЕ, а не по имени поля.
   expect(JSON.stringify(body), 'в ответе на вход лежит JWT').not.toContain('eyJ')
-  expect(body.cms_url, 'ссылка должна вести в CMS').toContain('/cms')
+  // Панель отеля живёт в `/admin` НА ЕГО СОБСТВЕННОМ адресе: и хост, и путь
+  // здесь одинаково важны — ссылка на `/admin` базового хоста открыла бы нашу
+  // консоль, а не панель отеля.
+  expect(body.cms_url, 'ссылка должна вести в панель отеля').toMatch(
+    /^https?:\/\/[^/]+\/admin$/,
+  )
+  expect(body.cms_url, 'ссылка должна вести на адрес отеля').toContain('crystal.')
 
   const cms = await page.context().newPage()
   await cms.goto(`/cms#support=${encodeURIComponent(body.code)}`)

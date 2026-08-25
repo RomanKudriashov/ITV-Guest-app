@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter, useLocation, type RouteObject } from 'react-router-dom';
 
 import { RequireAuth } from '@/auth';
 import { AppShell } from '@/layouts/AppShell';
@@ -28,6 +28,10 @@ import { useTranslation } from 'react-i18next';
 
 import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
+
+import { CMS_ROOT, HOST_ROLE, cmsPath } from '@/app/hostRole';
+import { LandingPage } from '@/landing/LandingPage';
+import { WrongHostNotice } from '@/pages/WrongHostNotice';
 
 import { GuestRoot } from '@/guest/GuestRoot';
 import { GuestLayout } from '@/guest/layout/GuestLayout';
@@ -66,27 +70,27 @@ function TrackerScreen() {
   );
 }
 
-export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  { path: '/dev/theme', element: <App /> },
-  // Корневая админка на базовом домене. Своя область auth (scope: platform),
-  // не пересекается с тенантной CMS.
-  //
-  // Адрес /admin, а не /platform: это уровень ВЛАДЕЛЬЦА, и короткое «admin»
-  // отличает его от CMS одного отеля. Старый адрес уводим редиректом — он
-  // остался в закладках и в переписке, а 404 на мастер-ключе выглядит как
-  // «платформа упала».
-  { path: '/admin', element: <AdminApp /> },
-  { path: '/platform', element: <Navigate to="/admin" replace /> },
+/**
+ * ВЕТКИ СОБИРАЮТСЯ ПО РОЛИ АДРЕСА (`app/hostRole.ts`).
+ *
+ * Корень платформы, адрес отеля и машина разработчика видят РАЗНЫЕ наборы
+ * маршрутов — не спрятанные, а отсутствующие. Спрятанный маршрут открывается
+ * прямой ссылкой; на этом мы уже обжигались, когда конфигурацию управления
+ * номером «убрали с экрана», а ручка осталась.
+ */
+
+const cmsBranch: RouteObject =
   {
-    path: '/cms',
+    path: CMS_ROOT,
     element: (
-      <RequireAuth>
+      // `fallback` — вход на месте: на хосте отеля адрес панели и адрес входа
+      // совпали (`/admin`), и увод на `/login` дал бы петлю.
+      <RequireAuth fallback={HOST_ROLE === 'hotel' ? <LoginPage /> : undefined}>
         <AppShell />
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <Navigate to="/cms/dashboard" replace /> },
+      { index: true, element: <Navigate to={cmsPath('/dashboard')} replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
       // Профиль сотрудника: его собственные входы. Не в настройках отеля —
       // те открыты только администратору, а сессии есть у каждого.
@@ -99,7 +103,7 @@ export const router = createBrowserRouter([
       { path: 'staff', element: <StaffPage /> },
 
       // Редакторы позиции и категории — общие, вызываются из меню сервиса.
-      { path: 'menu', element: <Navigate to="/cms/services" replace /> },
+      { path: 'menu', element: <Navigate to={cmsPath('/services')} replace /> },
       { path: 'menu/categories/new', element: <CategoryEditorPage /> },
       { path: 'menu/categories/:id', element: <CategoryEditorPage /> },
       { path: 'menu/items/new', element: <ItemEditorPage /> },
@@ -127,10 +131,10 @@ export const router = createBrowserRouter([
 
       // Служебное: витрина отдельным адресом больше не нужна (слита с брендом),
       // старые ссылки уводим туда же, а не в 404.
-      { path: 'showcase', element: <Navigate to="/cms/brand" replace /> },
-      { path: 'commerce', element: <Navigate to="/cms/settings" replace /> },
-      { path: 'locations', element: <Navigate to="/cms/settings" replace /> },
-      { path: 'departments', element: <Navigate to="/cms/services" replace /> },
+      { path: 'showcase', element: <Navigate to={cmsPath('/brand')} replace /> },
+      { path: 'commerce', element: <Navigate to={cmsPath('/settings')} replace /> },
+      { path: 'locations', element: <Navigate to={cmsPath('/settings')} replace /> },
+      { path: 'departments', element: <Navigate to={cmsPath('/services')} replace /> },
       { path: 'quick-actions', element: <QuickActionsPage /> },
       { path: 'styleguide', element: <StyleguidePage /> },
 
@@ -140,9 +144,11 @@ export const router = createBrowserRouter([
       // доезжал до корневой ветки, где `*` уводит на `/` — то есть на вход
       // гостя, а с живой сессией сразу на /home. Так «PMS» из меню админа
       // открывал гостевую главную. Возврат в дашборд — на своей территории.
-      { path: '*', element: <Navigate to="/cms/dashboard" replace /> },
+      { path: '*', element: <Navigate to={cmsPath('/dashboard')} replace /> },
     ],
-  },
+  };
+
+const trackerRoutes: RouteObject[] = [
   {
     path: '/tracker',
     element: (
@@ -161,6 +167,9 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
   },
+];
+
+const guestBranch: RouteObject =
   {
     path: '/',
     element: <GuestRoot />,
@@ -202,5 +211,67 @@ export const router = createBrowserRouter([
       },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
-  },
-]);
+  };
+
+/**
+ * Старый адрес раздела CMS — на новый, С СОХРАНЕНИЕМ хвоста.
+ *
+ * `/cms/services/7?tab=menu` обязан приводить ровно туда же в `/admin`:
+ * ссылка из письма или закладка ведёт в конкретный раздел, и высадка в
+ * дашборд означала бы «адрес жив, но не тот».
+ */
+function LegacyCmsRedirect() {
+  const location = useLocation();
+  const tail = location.pathname.slice('/cms'.length);
+  return <Navigate to={`${cmsPath(tail)}${location.search}${location.hash}`} replace />;
+}
+
+/** Корень платформы: лендинг и наша консоль. Гостя и CMS здесь нет. */
+const platformRoutes: RouteObject[] = [
+  { path: '/', element: <LandingPage /> },
+  { path: '/admin', element: <AdminApp /> },
+  { path: '/platform', element: <Navigate to="/admin" replace /> },
+  { path: '/dev/theme', element: <App /> },
+  // Пришли по старой ссылке — объясняем адрес, а не показываем мёртвую форму
+  // ввода номера, которая раньше отвечала ошибкой сервера на нажатие.
+  { path: '/login', element: <WrongHostNotice /> },
+  { path: '/cms/*', element: <WrongHostNotice /> },
+  { path: '/r/:roomNumber', element: <WrongHostNotice /> },
+  { path: '/home', element: <WrongHostNotice /> },
+  { path: '/tracker', element: <WrongHostNotice /> },
+  { path: '*', element: <Navigate to="/" replace /> },
+];
+
+/** Адрес отеля: гость, его CMS в `/admin`, доска. Нашей консоли здесь нет. */
+const hotelRoutes: RouteObject[] = [
+  // Старые адреса панели — ПОСТОЯННЫЕ редиректы: они в письмах, в закладках и
+  // в переписке, и 404 на них читался бы как «панель отеля пропала».
+  { path: '/login', element: <Navigate to={CMS_ROOT} replace /> },
+  { path: '/cms/*', element: <LegacyCmsRedirect /> },
+  { path: '/dev/theme', element: <App /> },
+  cmsBranch,
+  ...trackerRoutes,
+  guestBranch,
+];
+
+/**
+ * Домена нет — старое поведение одного хоста: гость в корне, CMS на `/cms`,
+ * консоль на `/admin`. Это режим машины разработчика.
+ */
+const singleHostRoutes: RouteObject[] = [
+  { path: '/login', element: <LoginPage /> },
+  { path: '/dev/theme', element: <App /> },
+  { path: '/admin', element: <AdminApp /> },
+  { path: '/platform', element: <Navigate to="/admin" replace /> },
+  cmsBranch,
+  ...trackerRoutes,
+  guestBranch,
+];
+
+export const router = createBrowserRouter(
+  HOST_ROLE === 'platform'
+    ? platformRoutes
+    : HOST_ROLE === 'hotel'
+      ? hotelRoutes
+      : singleHostRoutes,
+);

@@ -96,6 +96,34 @@ class TenantMiddleware:
                     status=404,
                 )
 
+        # НАША КОНСОЛЬ ЖИВЁТ ТОЛЬКО НА КОРНЕ.
+        #
+        # Платформенные пути освобождены от требования тенанта — и до сих пор
+        # это означало, что консоль отвечала на ЛЮБОМ хосте, включая адрес
+        # отеля: `crystal.<домен>/api/v1/platform/...` выдавал токен платформы
+        # и открывал флот со всеми отелями. Экран мы там не рисуем, но экран —
+        # не рубеж: адрес открывается прямой ссылкой.
+        #
+        # Смотрим на ХОСТ, а не на разрешённый в деве заголовок: вопрос здесь
+        # «по какому адресу пришли», и подмена тенанта заголовком к нему
+        # отношения не имеет.
+        if request.path.startswith("/api/v1/platform/") or request.path.startswith(
+            "/api/platform/"
+        ):
+            if resolve_subdomain(request.get_host()):
+                # 404, а не 403: на этом адресе консоли НЕ СУЩЕСТВУЕТ. Отказ
+                # означал бы «есть, но нельзя» — и подсказывал бы, что она тут.
+                return JsonResponse(
+                    {
+                        "detail": (
+                            "Консоль платформы живёт на "
+                            f"{settings.GUEST_APP_BASE_DOMAIN}, а не на адресе отеля."
+                        ),
+                        "code": "platform_wrong_host",
+                    },
+                    status=404,
+                )
+
         is_platform_path = request.path.startswith(PLATFORM_PATH_PREFIXES)
         if hotel is None and not is_platform_path:
             return JsonResponse(

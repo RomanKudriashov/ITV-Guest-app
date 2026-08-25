@@ -434,7 +434,9 @@ def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
         "expires_at": result["expires_at"].isoformat(),
         "ttl_minutes": ttl,
         "as_user": target.email,
-        "cms_url": hotel.public_guest_url("/cms"),
+        # Панель отеля переехала в `/admin` на его же адресе: у отеля
+        # своя админка, наша консоль на этот хост не пускается вовсе.
+        "cms_url": hotel.public_guest_url("/admin"),
         "subdomain": hotel.subdomain,
     }
 
