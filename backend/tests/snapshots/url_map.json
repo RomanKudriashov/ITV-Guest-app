@@ -132,9 +132,6 @@
   "/api/v1/cms/grms/types/{code}/check": [
     "POST"
   ],
-  "/api/v1/cms/grms/types/{code}/device-override": [
-    "POST"
-  ],
   "/api/v1/cms/grms/types/{code}/status": [
     "GET"
   ],

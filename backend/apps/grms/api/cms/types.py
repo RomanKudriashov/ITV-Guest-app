@@ -25,8 +25,8 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.grms.schemas.cms import BindingIn, CheckIn, ElementIn, OverrideIn, RollbackIn, ZoneIn
-from apps.grms.services import builder, publishing, roomcheck
+from apps.grms.schemas.cms import CheckIn
+from apps.grms.services import builder, roomcheck
 from apps.grms.services.access import hotel_with_module
 
 router = Router(tags=["cms-grms"])
@@ -47,12 +47,13 @@ def type_status(request: HttpRequest, code: str):
 
 
 
-@router.post("/grms/types/{code}/device-override", summary="Имя устройства для комнаты")
-def device_override(request: HttpRequest, code: str, payload: OverrideIn):
-    builder.set_device_override(
-        hotel_with_module(), room_number=payload.room_number, device_name=payload.device_name
-    )
-    return {"room": payload.room_number, "device": payload.device_name}
+# ПОДМЕНЫ УСТРОЙСТВА ЗДЕСЬ БОЛЬШЕ НЕТ.
+#
+# Она переехала в консоль вместе с конструктором — единственным экраном,
+# который её и звал. Оставлять ручку без экрана было хуже всего: дверь открыта,
+# ручки на ней нет, и «никто туда не ходит» держалось ровно до первого, кто
+# посмотрел список адресов. Перенацелить комнату на другое устройство — это
+# пусконаладка, то есть наша работа, а не любопытство администратора отеля.
 
 
 # --- Проверка на живом номере -----------------------------------------------

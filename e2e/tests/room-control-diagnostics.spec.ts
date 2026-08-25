@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 
-import { API, apiGet, apiHeaders, apiToken, DEMO_ROOM, login } from './helpers'
+import { API, apiHeaders, DEMO_ROOM, HOTEL, PLATFORM } from './helpers'
 
 /**
  * Диагностика инженера (ТЗ §14.3) и различение причин отказа (§6.8).
@@ -8,10 +8,17 @@ import { API, apiGet, apiHeaders, apiToken, DEMO_ROOM, login } from './helpers'
  * Проверяется то, чего не видно в юнит-тесте: что инженер РЕАЛЬНО ВИДИТ на
  * экране — отказ, названный причиной, а не «не получилось» одной строкой.
  *
- * ОТКАЗ ДЕЛАЕТСЯ НАСТОЯЩИЙ, а не подрисованный: комнате на время
- * подменяется имя устройства на несуществующее, после чего проверка элемента
- * честно отбивается железом. Подмена снимается в том же тесте — стенд обязан
- * остаться таким же, каким был, иначе соседние прогоны начнут падать следом.
+ * ЭКРАН ТЕПЕРЬ КОНСОЛЬНЫЙ. Журнал во всю глубину — сырой ответ железа, имя
+ * устройства, канал, длительность — отдаёт платформенная ручка; отельская те
+ * же строки отдаёт урезанными, и разбор обмена в CMS искать больше негде.
+ * Проверка переехала за экраном: тест обязан ходить тем же путём, что и человек.
+ * Отельскую сторону — что журнал урезан и об этом сказано — кусает
+ * `room-control-cms.spec.ts`.
+ *
+ * ОТКАЗ ДЕЛАЕТСЯ НАСТОЯЩИЙ, а не подрисованный: комнате на время подменяется
+ * имя устройства на несуществующее, после чего проверка элемента честно
+ * отбивается железом. Подмена снимается в том же тесте — стенд обязан остаться
+ * таким же, каким был, иначе соседние прогоны начнут падать следом.
  */
 
 const BOGUS_DEVICE = 'Modbus TCP Server (Slave mode) НЕТ ТАКОГО'
@@ -19,11 +26,35 @@ const BOGUS_DEVICE = 'Modbus TCP Server (Slave mode) НЕТ ТАКОГО'
 interface GrmsType {
   code: string
   rooms: string[]
-  elements?: { slug: string }[]
 }
 
-async function demoType(request: APIRequestContext, token: string): Promise<GrmsType> {
-  const body = await apiGet<{ types: GrmsType[] }>(request, token, '/api/v1/cms/grms/types')
+/** Токен консоли и id отеля: в платформе «текущего отеля» нет, он адресуется id. */
+async function platform(request: APIRequestContext): Promise<{ token: string; hotelId: string }> {
+  const login = await request.post(`${API}/api/v1/platform/auth/login`, { data: PLATFORM })
+  expect(login.ok(), `вход в консоль -> ${login.status()}`).toBeTruthy()
+  const token = (await login.json()).access
+
+  const hotels = await request.get(`${API}/api/v1/platform/hotels?limit=200`, {
+    headers: apiHeaders(token),
+  })
+  const hotelId = (await hotels.json()).items.find(
+    (row: { subdomain: string }) => row.subdomain === HOTEL,
+  ).id
+  return { token, hotelId }
+}
+
+function grmsPath(hotelId: string, tail: string): string {
+  return `${API}/api/v1/platform/hotels/${hotelId}/grms${tail}`
+}
+
+async function demoType(
+  request: APIRequestContext,
+  token: string,
+  hotelId: string,
+): Promise<GrmsType> {
+  const response = await request.get(grmsPath(hotelId, '/types'), { headers: apiHeaders(token) })
+  expect(response.ok(), `типы -> ${response.status()}`).toBeTruthy()
+  const body: { types: GrmsType[] } = await response.json()
   const type = body.types.find((entry) => entry.rooms.includes(DEMO_ROOM))
   expect(type, `тип с комнатой ${DEMO_ROOM}`).toBeTruthy()
   return type as GrmsType
@@ -32,11 +63,12 @@ async function demoType(request: APIRequestContext, token: string): Promise<Grms
 async function setOverride(
   request: APIRequestContext,
   token: string,
+  hotelId: string,
   code: string,
   device: string,
 ): Promise<void> {
   const response = await request.post(
-    `${API}/api/v1/cms/grms/types/${encodeURIComponent(code)}/device-override`,
+    grmsPath(hotelId, `/types/${encodeURIComponent(code)}/device-override`),
     { data: { room_number: DEMO_ROOM, device_name: device }, headers: apiHeaders(token) },
   )
   expect(response.ok(), `подмена устройства -> ${response.status()}`).toBeTruthy()
@@ -46,23 +78,23 @@ test('инженер видит отказ с причиной, фильтруе
   page,
   request,
 }) => {
-  const token = await apiToken(request)
-  const type = await demoType(request, token)
+  const { token, hotelId } = await platform(request)
+  const type = await demoType(request, token, hotelId)
 
-  const status = await apiGet<{ elements: { slug: string; publishable: boolean }[] }>(
-    request,
-    token,
-    `/api/v1/cms/grms/types/${encodeURIComponent(type.code)}/status`,
+  const statusResponse = await request.get(
+    grmsPath(hotelId, `/types/${encodeURIComponent(type.code)}/status`),
+    { headers: apiHeaders(token) },
   )
+  const status: { elements: { slug: string; publishable: boolean }[] } = await statusResponse.json()
   const element = status.elements.find((entry) => entry.publishable)
   expect(element, 'опубликованный элемент демо-типа').toBeTruthy()
   const slug = (element as { slug: string }).slug
 
   // 1. Настоящий отказ: комната смотрит на устройство, которого нет.
-  await setOverride(request, token, type.code, BOGUS_DEVICE)
+  await setOverride(request, token, hotelId, type.code, BOGUS_DEVICE)
   try {
     const check = await request.post(
-      `${API}/api/v1/cms/grms/types/${encodeURIComponent(type.code)}/check`,
+      grmsPath(hotelId, `/types/${encodeURIComponent(type.code)}/check`),
       {
         data: { element_slug: slug, room_number: DEMO_ROOM, value: null },
         headers: apiHeaders(token),
@@ -73,13 +105,27 @@ test('инженер видит отказ с причиной, фильтруе
   } finally {
     // Стенд возвращается в исходное в любом случае: пустая строка снимает
     // подмену и возвращает шаблон типа.
-    await setOverride(request, token, type.code, '')
+    await setOverride(request, token, hotelId, type.code, '')
   }
 
-  // 2. Экран инженера.
-  await login(page)
-  await page.goto('/cms/room-control')
-  await page.getByTestId('grms-tab-diagnostics').click()
+  // 2. Экран инженера — вкладка карточки отеля в консоли.
+  await page.goto('/admin')
+  // Чистим хранилище: сессия CMS из соседнего набора иначе доживает до входа в
+  // консоль и путает, чьим токеном идёт запрос.
+  await page.evaluate(() => window.localStorage.clear())
+  await page.goto('/admin')
+  await page.getByTestId('admin-login-email').fill(PLATFORM.email)
+  await page.getByTestId('admin-login-password').fill(PLATFORM.password)
+  await page.getByTestId('admin-login-submit').click()
+  await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 30_000 })
+
+  await page.goto(`/admin?section=fleet&hotel=${hotelId}&tab=roomControl`)
+  await expect(page.getByTestId('admin-hotel-room-control')).toBeVisible({ timeout: 20_000 })
+  // Тип выбираем ТОТ, у которого есть демо-комната: перечитывание строки идёт
+  // через выбранный тип, и на чужом проверять было бы нечего.
+  await page.getByTestId('admin-grms-type-select').click()
+  await page.locator(`li[data-value="${type.code}"]`).click()
+  await page.getByTestId('admin-grms-tab-diagnostics').click()
   await expect(page.getByTestId('grms-diagnostics')).toBeVisible({ timeout: 20_000 })
 
   // 3. Три звена связи — ПОРОЗНЬ, а не одной строкой «недоступно».
@@ -104,7 +150,9 @@ test('инженер видит отказ с причиной, фильтруе
 
   // 6. Сырой ответ железа лежит под строкой — как пришёл. Подробности до
   //    раскрытия не смонтированы (Collapse с unmountOnExit), поэтому сначала
-  //    клик по раскрытию, и только потом проверка.
+  //    клик по раскрытию, и только потом проверка. Это же и есть инженерная
+  //    глубина: в CMS отеля этого блока нет вовсе, и плашка объясняет почему.
+  await expect(page.getByTestId('diagnostics-depth-hotel')).toHaveCount(0)
   const firstRow = page.getByTestId('diagnostics-table').locator('tbody tr').first()
   await firstRow.getByRole('button').first().click()
   await expect(page.getByTestId('diagnostics-details').first()).toBeVisible()
