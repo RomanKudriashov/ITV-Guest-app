@@ -32,6 +32,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
@@ -40,6 +41,7 @@ import QrCode2Icon from '@mui/icons-material/QrCode2';
 import { ApiError } from '@/api/client';
 import {
   bulkCreateRooms,
+  checkOutRoom,
   createRoom,
   deleteRoom,
   downloadRoomQrPng,
@@ -71,6 +73,7 @@ export function RoomsPage() {
   const [editing, setEditing] = useState<Room | 'new' | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Room | null>(null);
+  const [pendingCheckout, setPendingCheckout] = useState<Room | null>(null);
   const [qrRoom, setQrRoom] = useState<Room | null>(null);
   const [printing, setPrinting] = useState(false);
 
@@ -147,6 +150,31 @@ export function RoomsPage() {
       showError(error);
     },
     onSettled: invalidate,
+  });
+
+  /**
+   * ВЫЕЗД ГОСТЯ — здесь, а не в разделе управления номером.
+   *
+   * Отзыв гасит гостевые сессии целиком: вместе с ними уезжает и право
+   * заказывать, а не только управление номером. Отелю без оборудования выезд
+   * нужен ровно так же, и прятать его за модулем значило бы не дать половине
+   * отелей единственный способ отобрать доступ у съехавшего.
+   */
+  const checkoutMutation = useMutation({
+    mutationFn: (id: string) => checkOutRoom(id),
+    onSuccess: (result) => {
+      // Говорим ЧИСЛОМ, а не «готово»: администратор нажал на всякий случай и
+      // должен видеть, было ли что отзывать.
+      toast.show(
+        result.revoked
+          ? t('hotel.rooms.checkoutDone', { count: result.revoked, number: result.room })
+          : t('hotel.rooms.checkoutNothing', { number: result.room }),
+        'success',
+      );
+      setPendingCheckout(null);
+      void invalidate();
+    },
+    onError: showError,
   });
 
   const deleteMutation = useMutation({
@@ -305,6 +333,15 @@ export function RoomsPage() {
                         </IconButton>
                         <IconButton
                           size="small"
+                          onClick={() => setPendingCheckout(room)}
+                          aria-label={t('hotel.rooms.checkout')}
+                          title={t('hotel.rooms.checkout')}
+                          data-testid={`room-checkout-${room.number}`}
+                        >
+                          <LogoutOutlinedIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
                           onClick={() => setEditing(room)}
                           aria-label={t('common.edit')}
                           data-testid={`room-edit-${room.number}`}
@@ -348,6 +385,17 @@ export function RoomsPage() {
       ) : null}
 
       {qrRoom ? <QrDialog room={qrRoom} onClose={() => setQrRoom(null)} /> : null}
+
+      <ConfirmDialog
+        open={Boolean(pendingCheckout)}
+        testId="room-checkout-dialog"
+        busy={checkoutMutation.isPending}
+        title={t('hotel.rooms.checkoutTitle')}
+        description={t('hotel.rooms.checkoutBody', { number: pendingCheckout?.number ?? '' })}
+        confirmLabel={t('hotel.rooms.checkoutConfirm')}
+        onClose={() => setPendingCheckout(null)}
+        onConfirm={() => pendingCheckout && checkoutMutation.mutate(pendingCheckout.id)}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

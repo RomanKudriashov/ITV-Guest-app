@@ -48,6 +48,9 @@ export function AccessTab() {
 
   const [room, setRoom] = useState('');
   const [pin, setPin] = useState('');
+  // Дата выезда. Пусто — код живёт, пока его не сменят: отель, который выезды
+  // в панель не заносит, работает как раньше.
+  const [validUntil, setValidUntil] = useState('');
 
   const failure = (error: unknown) =>
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
@@ -61,9 +64,11 @@ export function AccessTab() {
   });
 
   const pinMutation = useMutation({
-    mutationFn: (payload: { room: string; pin: string }) => setRoomPin(transport, payload.room, payload.pin),
+    mutationFn: (payload: { room: string; pin: string; validUntil: string }) =>
+      setRoomPin(transport, payload.room, payload.pin, payload.validUntil),
     onSuccess: (result) => {
       setPin('');
+      setValidUntil('');
       void refresh();
       toast.show(
         result.has_pin ? t('roomControl.access.pinSet') : t('roomControl.access.pinCleared'),
@@ -122,10 +127,22 @@ export function AccessTab() {
               onChange={(e) => setPin(e.target.value)}
               data-testid="grms-pin-value"
             />
+            <TextField
+              size="small"
+              type="date"
+              label={t('roomControl.access.validUntil')}
+              value={validUntil}
+              onChange={(e) => setValidUntil(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ 'data-testid': 'grms-pin-until' }}
+              helperText={t('roomControl.access.validUntilHint')}
+            />
             <Button
               variant="contained"
               disabled={!room.trim() || !pin.trim() || pinMutation.isPending}
-              onClick={() => pinMutation.mutate({ room: room.trim(), pin: pin.trim() })}
+              onClick={() =>
+                pinMutation.mutate({ room: room.trim(), pin: pin.trim(), validUntil })
+              }
               data-testid="grms-pin-save"
             >
               {t('roomControl.access.pinSave')}
@@ -142,6 +159,7 @@ export function AccessTab() {
                 <TableRow>
                   <TableCell>{t('roomControl.builder.room')}</TableCell>
                   <TableCell>{t('roomControl.access.issuedAt')}</TableCell>
+                  <TableCell>{t('roomControl.access.validUntil')}</TableCell>
                   <TableCell>{t('roomControl.access.state')}</TableCell>
                   <TableCell />
                 </TableRow>
@@ -151,6 +169,16 @@ export function AccessTab() {
                   <TableRow key={record.room} data-testid={`grms-pin-${record.room}`}>
                     <TableCell>{record.room}</TableCell>
                     <TableCell>{new Date(record.issued_at).toLocaleString()}</TableCell>
+                    {/*
+                      Бессрочный код — не пустая ячейка, а слово: пустое место
+                      читается как «данные не доехали», и администратор идёт
+                      проверять, а не работать.
+                    */}
+                    <TableCell data-testid={`grms-pin-until-${record.room}`}>
+                      {record.valid_until
+                        ? new Date(record.valid_until).toLocaleDateString()
+                        : t('roomControl.access.noValidUntil')}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         size="small"
@@ -158,7 +186,9 @@ export function AccessTab() {
                         label={
                           record.is_active
                             ? t('roomControl.access.active')
-                            : t('roomControl.access.inactive')
+                            : record.valid_until
+                              ? t('roomControl.access.expired')
+                              : t('roomControl.access.inactive')
                         }
                       />
                     </TableCell>
@@ -167,7 +197,10 @@ export function AccessTab() {
                         size="small"
                         color="error"
                         disabled={pinMutation.isPending}
-                        onClick={() => pinMutation.mutate({ room: record.room, pin: '' })}
+                        // Снятие кода: срок здесь ни при чём — код убирают целиком.
+                        onClick={() =>
+                          pinMutation.mutate({ room: record.room, pin: '', validUntil: '' })
+                        }
                         data-testid={`grms-pin-clear-${record.room}`}
                       >
                         {t('roomControl.access.pinClear')}

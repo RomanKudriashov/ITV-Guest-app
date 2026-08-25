@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from ninja import Schema
 
 
@@ -61,6 +63,10 @@ class PinIn(Schema):
     room_number: str
     # Пусто — снять PIN с номера.
     pin: str = ""
+    # Дата выезда: после неё код не действует, а выданное подтверждение гаснет.
+    # Пусто — код живёт, пока его не сменят (законный вариант для отеля,
+    # который выезд в панель не заносит).
+    valid_until: date | None = None
 
 class DemoEntryIn(Schema):
     enabled: bool

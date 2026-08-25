@@ -1227,7 +1227,18 @@
       "bulkBadRange": "«من» أكبر من «إلى»",
       "bulkCreatedList": "أُنشئت: {{list}}",
       "bulkSkippedList": "تُخطّيت: {{list}}",
-      "controlType": "نوع التحكم"
+      "controlType": "نوع التحكم",
+      "checkout": "تسجيل المغادرة",
+      "checkoutTitle": "هل غادر الضيف؟",
+      "checkoutBody": "كل جهاز دخل إلى الغرفة {{number}} سيفقد الوصول: الطلبات والمحادثة والتحكّم بالغرفة. أما الضيف الذي ما زال مقيماً فيكفيه مسح رمز QR مرّة واحدة للدخول من جديد.",
+      "checkoutConfirm": "تسجيل المغادرة",
+      "checkoutDone_zero": "الغرفة {{number}}: لم تُلغَ أي جلسة",
+      "checkoutDone_one": "الغرفة {{number}}: أُلغيت جلسة واحدة",
+      "checkoutDone_two": "الغرفة {{number}}: أُلغيت جلستان",
+      "checkoutDone_few": "الغرفة {{number}}: أُلغيت {{count}} جلسات",
+      "checkoutDone_many": "الغرفة {{number}}: أُلغيت {{count}} جلسة",
+      "checkoutDone_other": "الغرفة {{number}}: أُلغيت {{count}} جلسة",
+      "checkoutNothing": "الغرفة {{number}}: لم تكن هناك جلسات نشطة"
     },
     "locations": {
       "title": "المواقع",
@@ -2183,7 +2194,8 @@
         "rolled_back": "تم التراجع عن الإعداد"
       },
       "guest_session": {
-        "created": "فتح الضيف التطبيق"
+        "created": "فتح الضيف التطبيق",
+        "checked_out": "تسجيل مغادرة الضيف"
       },
       "order": {
         "created": "تم إنشاء الطلب",
@@ -2430,7 +2442,11 @@
       "demoToggledOn": "فعّله {{who}}، {{when}}.",
       "demoToggledOff": "أوقفه {{who}}، {{when}}.",
       "demoSomeone": "أحد الموظفين",
-      "pinMuted": "لا يُطلب الرمز الآن: الدخول التجريبي مفعّل. يمكنك إصدار رمز — وسيبدأ عمله فور إيقاف التخفيف."
+      "pinMuted": "لا يُطلب الرمز الآن: الدخول التجريبي مفعّل. يمكنك إصدار رمز — وسيبدأ عمله فور إيقاف التخفيف.",
+      "validUntil": "ساري حتى",
+      "validUntilHint": "تاريخ المغادرة. فارغ — حتى تغيير الرمز",
+      "noValidUntil": "بلا تاريخ انتهاء",
+      "expired": "انتهت صلاحيته"
     },
     "plan": {
       "frames": "لقطات المخطط",

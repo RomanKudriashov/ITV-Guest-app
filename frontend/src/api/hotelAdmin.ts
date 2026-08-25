@@ -34,6 +34,23 @@ export function updateRoom(id: string, payload: Partial<RoomPayload>): Promise<R
   return api.patch<Room>(`/cms/rooms/${id}`, payload);
 }
 
+/** Итог отметки выезда: сколько сессий погашено и сколько из них управляли номером. */
+export interface CheckoutResult {
+  room: string;
+  revoked: number;
+  verified_revoked: number;
+}
+
+/**
+ * Отметить выезд гостя: отозвать все живые сессии номера.
+ *
+ * Не «сменить PIN»: смена кода была побочным способом добиться того же и
+ * работала только у отелей с управлением номером. Выезд нужен всем.
+ */
+export function checkOutRoom(id: string): Promise<CheckoutResult> {
+  return api.post<CheckoutResult>(`/cms/rooms/${id}/checkout`);
+}
+
 export function deleteRoom(id: string): Promise<void> {
   return api.delete<void>(`/cms/rooms/${id}`);
 }

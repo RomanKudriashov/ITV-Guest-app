@@ -85,8 +85,33 @@ def set_room_pin(request: HttpRequest, payload: PinIn):
         room_pin.clear_pin(hotel, room)
         return {"room": room.number, "has_pin": False}
 
-    record = room_pin.set_pin(hotel, room, pin=payload.pin)
-    return {"room": room.number, "has_pin": True, "issued_at": record.issued_at}
+    record = room_pin.set_pin(
+        hotel, room, pin=payload.pin, valid_until=_end_of_day(hotel, payload.valid_until)
+    )
+    return {
+        "room": room.number,
+        "has_pin": True,
+        "issued_at": record.issued_at,
+        "valid_until": record.valid_until,
+    }
+
+
+def _end_of_day(hotel, day):
+    """
+    Дата выезда → момент, до которого код действует.
+
+    Ресепшен указывает ДЕНЬ, а не минуту: «выезд 26 августа». Значит код обязан
+    работать весь этот день и погаснуть в его конце — по часам ОТЕЛЯ, а не по
+    часам браузера администратора и не по UTC. Иначе гость в Дубае теряет
+    управление номером в четыре утра, а московский администратор не понимает,
+    почему код «сгорел на день раньше».
+    """
+    if day is None:
+        return None
+
+    from datetime import datetime, time
+
+    return datetime.combine(day, time.max, tzinfo=hotel.tzinfo)
 
 
 @router.post("/grms/access/demo-entry", summary="Демо-вход без PIN (временное послабление)")

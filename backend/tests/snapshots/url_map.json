@@ -275,6 +275,9 @@
     "DELETE",
     "PATCH"
   ],
+  "/api/v1/cms/rooms/{room_id}/checkout": [
+    "POST"
+  ],
   "/api/v1/cms/rooms/{room_id}/qr.png": [
     "GET"
   ],

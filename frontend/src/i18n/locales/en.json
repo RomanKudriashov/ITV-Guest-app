@@ -1199,7 +1199,14 @@
       "bulkBadRange": "“From” cannot be greater than “To”",
       "bulkCreatedList": "Created: {{list}}",
       "bulkSkippedList": "Skipped: {{list}}",
-      "controlType": "Control type"
+      "controlType": "Control type",
+      "checkout": "Mark checkout",
+      "checkoutTitle": "Has the guest checked out?",
+      "checkoutBody": "Every device signed in to room {{number}} loses access: orders, chat and room control. A guest who is still staying only needs one QR scan to get back in.",
+      "checkoutConfirm": "Mark checkout",
+      "checkoutDone_one": "Room {{number}}: {{count}} session revoked",
+      "checkoutDone_other": "Room {{number}}: {{count}} sessions revoked",
+      "checkoutNothing": "Room {{number}}: there were no live sessions"
     },
     "locations": {
       "title": "Locations",
@@ -2131,7 +2138,8 @@
         "rolled_back": "Configuration rolled back"
       },
       "guest_session": {
-        "created": "Guest opened the app"
+        "created": "Guest opened the app",
+        "checked_out": "Guest checkout recorded"
       },
       "order": {
         "created": "Order created",
@@ -2378,7 +2386,11 @@
       "demoToggledOn": "Turned on by {{who}}, {{when}}.",
       "demoToggledOff": "Turned off by {{who}}, {{when}}.",
       "demoSomeone": "a staff member",
-      "pinMuted": "PINs are not being asked for right now: demo entry is on. You can still issue a code — it starts working once the relaxation is switched off."
+      "pinMuted": "PINs are not being asked for right now: demo entry is on. You can still issue a code — it starts working once the relaxation is switched off.",
+      "validUntil": "Valid until",
+      "validUntilHint": "Check-out date. Empty — until the code is changed",
+      "noValidUntil": "No end date",
+      "expired": "Expired"
     },
     "plan": {
       "frames": "Plan frames",

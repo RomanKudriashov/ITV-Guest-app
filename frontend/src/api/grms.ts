@@ -339,8 +339,18 @@ export function fetchAccess(
 export function setRoomPin(
   t: GrmsTransport,
   roomNumber: string,
-  pin: string,): Promise<{ room: string; has_pin: boolean }> {
-  return t.post(`${t.base}/access/pin`, { room_number: roomNumber, pin });
+  pin: string,
+  /**
+   * Дата выезда (`YYYY-MM-DD`). После неё код не действует, а выданное
+   * подтверждение гаснет. Пусто — код живёт, пока его не сменят.
+   */
+  validUntil: string = '',
+): Promise<{ room: string; has_pin: boolean; valid_until: string | null }> {
+  return t.post(`${t.base}/access/pin`, {
+    room_number: roomNumber,
+    pin,
+    valid_until: validUntil || null,
+  });
 }
 
 export function setDemoEntry(

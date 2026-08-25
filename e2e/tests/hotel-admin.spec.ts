@@ -58,6 +58,58 @@ test.describe('Админка отеля', () => {
     })
   })
 
+  test('УКУС: выезд отмечается кнопкой — гостевой токен перестаёт отвечать', async ({
+    page,
+    request,
+  }) => {
+    /*
+      До этой кнопки выезд отмечался СМЕНОЙ PIN — побочным эффектом другого
+      действия, да ещё и доступным только отелям с управлением номером. Здесь
+      проверяется главное свойство: после нажатия токен гостя мёртв, а не
+      «доживает до конца двенадцатичасовой сессии».
+    */
+    const token = await apiToken(request)
+    const api = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+    const number = `9${uniq()}`
+
+    const created = await request.post('http://localhost:8010/api/cms/rooms', {
+      data: { number },
+      headers: api,
+    })
+    const room = await created.json()
+
+    // Гость входит в этот номер — ровно как с телефона.
+    const session = await request.post('http://localhost:8010/api/v1/guest/session', {
+      data: { room_number: number },
+      headers: { 'X-Hotel-Subdomain': HOTEL },
+    })
+    const guest = (await session.json()).token
+    const guestHeaders = { Authorization: `Bearer ${guest}`, 'X-Hotel-Subdomain': HOTEL }
+
+    const before = await request.get('http://localhost:8010/api/v1/guest/session', {
+      headers: guestHeaders,
+    })
+    expect(before.status(), 'сессия гостя должна быть живой до выезда').toBe(200)
+
+    await openAdmin(page, '/cms/rooms')
+    await page.getByTestId('rooms-search').fill(number)
+    await expect(page.getByTestId(`room-row-${number}`)).toBeVisible({ timeout: 15_000 })
+    await page.getByTestId(`room-checkout-${number}`).click()
+    await expect(page.getByTestId('room-checkout-dialog')).toBeVisible()
+    await page.getByTestId('room-checkout-dialog-confirm').click()
+
+    await expect
+      .poll(
+        async () =>
+          (await request.get('http://localhost:8010/api/v1/guest/session', { headers: guestHeaders }))
+            .status(),
+        { timeout: 15_000, message: 'токен гостя обязан умереть после выезда' },
+      )
+      .toBe(401)
+
+    await request.delete(`http://localhost:8010/api/cms/rooms/${room.id}`, { headers: api })
+  })
+
   test('добавление диапазоном показывает созданные и пропущенные', async ({ page, request }) => {
     await openAdmin(page, '/cms/rooms')
     await expect(page.getByTestId('rooms-list')).toBeVisible({ timeout: 20_000 })

@@ -5,10 +5,12 @@ from __future__ import annotations
 from django.http import HttpRequest, HttpResponse
 from ninja import Router
 
+from apps.accounts.services.roles import require_hotel_admin
 from apps.core.schemas import OkOut
 from apps.hotels.schemas.cms import BulkRoomsIn, RoomIn, RoomOut, RoomPatch
 from apps.hotels.services import admin_services as svc
 from apps.hotels.services import qr
+from apps.hotels.services.hotel import current_hotel
 
 router = Router(tags=["cms:hotel-admin"])
 
@@ -48,6 +50,33 @@ def update_room(request: HttpRequest, room_id: str, payload: RoomPatch):
 def delete_room(request: HttpRequest, room_id: str):
     svc.delete_room(room_id)
     return {"ok": True}
+
+
+@router.post("/rooms/{room_id}/checkout", summary="Отметить выезд гостя из номера")
+def check_out_room(request: HttpRequest, room_id: str):
+    """
+    ВЫЕЗД ОТМЕЧАЕТСЯ ЯВНО, а не смены PIN ради.
+
+    Раньше единственным способом отобрать доступ была смена кода номера:
+    ресепшен решал задачу «гость съехал», а нажимал «сменить код». Если код
+    менять не собирались — выехавший продолжал заказывать и управлять номером
+    до конца двенадцатичасовой сессии, из любой точки мира.
+
+    Отзыв гасит гостевые сессии ЦЕЛИКОМ, не только управление номером: право
+    заказывать уезжает вместе с ними. Поэтому действие живёт в номерном фонде,
+    а не в разделе управления номером, — отелю без оборудования выезд нужен
+    ровно так же.
+    """
+    from apps.accounts.services.guest_checkout import check_out_room as revoke
+
+    require_hotel_admin()
+    room = svc.get_room(room_id)
+    result = revoke(current_hotel(), room, actor_id=getattr(request.user, "pk", None))
+    return {
+        "room": room.number,
+        "revoked": result.revoked,
+        "verified_revoked": result.verified_revoked,
+    }
 
 
 @router.get("/rooms/{room_id}/qr.svg", summary="QR номера (SVG)")

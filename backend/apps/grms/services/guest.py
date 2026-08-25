@@ -263,9 +263,35 @@ def room_verified(hotel, session) -> bool:
     """
     if session is None or session.room_id is None:
         return False
-    if session.room_verified_at is not None:
+    if session.room_verified_at is not None and _pin_still_valid(hotel, session.room_id):
         return True
     return demo_entry_enabled(hotel)
+
+
+def _pin_still_valid(hotel, room_id) -> bool:
+    """
+    ДЕЙСТВУЕТ ЛИ ЕЩЁ КОД, которым подтвердилось это устройство.
+
+    Подтверждение выдаётся один раз и лежит полем на сессии — то есть само по
+    себе оно бессрочно. Срок выезда (`RoomPin.valid_until`) ставит ресепшен при
+    заселении, и после него код перестаёт приниматься; но уже подтверждённое
+    устройство про это ничего не знало бы, и гость, съехавший в полдень,
+    управлял бы номером до вечера — ровно тот случай, ради которого срок и
+    заводят.
+
+    Поэтому подтверждение ПРОВЕРЯЕТСЯ, а не только выдаётся: срок вышел —
+    признак больше не действует. Уходит гость с ним же, чем пришёл: вводом
+    кода, которого больше нет.
+
+    Кода нет вовсе — подтверждение недействительно: снятие кода
+    (`pin.clear_pin`) гасит признаки само, и строка без кода означает, что его
+    убрали мимо этого пути.
+    """
+    from apps.grms.models import RoomPin
+
+    with tenant_context(hotel):
+        record = RoomPin.objects.filter(room_id=room_id).first()
+    return bool(record and record.is_active)
 
 
 def _note_demo_entry(hotel, session) -> None:

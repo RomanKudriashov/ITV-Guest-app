@@ -1191,7 +1191,13 @@
       "bulkBadRange": "“起”不能大于“止”",
       "bulkCreatedList": "已创建：{{list}}",
       "bulkSkippedList": "已跳过：{{list}}",
-      "controlType": "控制类型"
+      "controlType": "控制类型",
+      "checkout": "标记退房",
+      "checkoutTitle": "客人已退房？",
+      "checkoutBody": "已登入 {{number}} 房间的所有设备都将失去访问权限：点单、聊天与客房控制。仍在住的客人只需扫一次二维码即可重新进入。",
+      "checkoutConfirm": "标记退房",
+      "checkoutDone_other": "{{number}} 房间：已注销 {{count}} 个会话",
+      "checkoutNothing": "{{number}} 房间：没有活动会话"
     },
     "locations": {
       "title": "位置",
@@ -2116,7 +2122,8 @@
         "rolled_back": "配置已回滚"
       },
       "guest_session": {
-        "created": "客人打开了应用"
+        "created": "客人打开了应用",
+        "checked_out": "已记录客人退房"
       },
       "order": {
         "created": "订单已创建",
@@ -2363,7 +2370,11 @@
       "demoToggledOn": "由 {{who}} 于 {{when}} 开启。",
       "demoToggledOff": "由 {{who}} 于 {{when}} 关闭。",
       "demoSomeone": "某位员工",
-      "pinMuted": "当前不会询问 PIN：演示入口已开启。仍可生成密码 — 关闭放宽后即会生效。"
+      "pinMuted": "当前不会询问 PIN：演示入口已开启。仍可生成密码 — 关闭放宽后即会生效。",
+      "validUntil": "有效期至",
+      "validUntilHint": "退房日期。留空则在更换密码前一直有效",
+      "noValidUntil": "长期有效",
+      "expired": "已过期"
     },
     "plan": {
       "frames": "平面图像",
