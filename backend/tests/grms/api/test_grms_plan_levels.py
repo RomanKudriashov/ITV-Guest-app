@@ -22,7 +22,7 @@ from apps.grms.models import RoomType
 from apps.hotels.models import HotelModule
 from tests.conftest import host_for
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 
 def _enable_module(hotel):
@@ -51,15 +51,44 @@ def _make_type(hotel, level: str, code: str) -> RoomType:
 
 
 def _upload(cms, code: str, *, lit, off=None):
+    """
+    Кадр грузится ПЛАТФОРМЕННОЙ ручкой: конфигурация переехала в нашу консоль,
+    и у отеля этого маршрута больше нет вовсе. Проверять уровни через CMS
+    значило бы проверять путь, которым никто не ходит.
+    """
     data = {"lit": lit}
     if off is not None:
         data["off"] = off
-    return cms.client.post(
-        f"/api/v1/cms/grms/types/{code}/plan/frames",
+    return _platform_client(cms).post(
+        f"/api/v1/platform/hotels/{cms.hotel.pk}/grms/types/{code}/plan/frames",
         data=data,
-        HTTP_HOST=host_for(cms.hotel),
-        HTTP_AUTHORIZATION=f"Bearer {cms.token}",
+        HTTP_HOST="guest.localhost",
+        HTTP_AUTHORIZATION=f"Bearer {_platform_token(cms)}",
     )
+
+
+_TOKEN_CACHE: dict = {}
+
+
+def _platform_client(cms):
+    return cms.client
+
+
+def _platform_token(cms) -> str:
+    """Учётка платформы: конфигурацию выполняем мы, а не отель."""
+    import json as _json
+
+    from apps.hotels.services.provisioning import ensure_platform_admin
+
+    if "token" not in _TOKEN_CACHE:
+        ensure_platform_admin(email="root@platform.test", password="platform12345")
+        _TOKEN_CACHE["token"] = cms.client.post(
+            "/api/v1/platform/auth/login",
+            data=_json.dumps({"email": "root@platform.test", "password": "platform12345"}),
+            content_type="application/json",
+            HTTP_HOST="guest.localhost",
+        ).json()["access"]
+    return _TOKEN_CACHE["token"]
 
 
 def test_a_simple_plan_refuses_the_night_frame(cms, crystal):

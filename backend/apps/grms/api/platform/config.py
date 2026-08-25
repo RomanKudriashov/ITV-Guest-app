@@ -345,3 +345,67 @@ def check(request: HttpRequest, hotel_id: str, code: str, payload: CheckIn):
         hotel, room_type_code=code, element_slug=payload.element_slug,
         room_number=payload.room_number, capability=payload.capability, value=payload.value,
     )
+
+
+# --- Диагностика инженера ---------------------------------------------------
+
+
+@router.get(f"{BASE}/diagnostics", summary="Журнал обмена с оборудованием: полностью")
+@requires(READ)
+def diagnostics_journal(
+    request: HttpRequest,
+    hotel_id: str,
+    room: str = "",
+    element_kind: str = "",
+    outcome: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    limit: int = 100,
+):
+    """
+    ЖУРНАЛ ЦЕЛИКОМ — включая сырой ответ оборудования.
+
+    Это и есть вторая глубина. Инженеру на объекте нужен ответ на вопрос «что
+    реально сказало железо»: тег обмена, отправленное значение, сырой ответ,
+    длительность. По ним видно, на каком звене оборвалось, и он не поедет
+    проверять коннектор, у которого недоступен один канал.
+
+    Отельская ручка (`/cms/grms/diagnostics`) те же строки отдаёт урезанными:
+    администратору «iRidi вернул status:false» читается как поломка приложения.
+    """
+    from apps.grms.services import diagnostics
+
+    result = diagnostics.journal(
+        _hotel(hotel_id),
+        room=room,
+        element_kind=element_kind,
+        outcome=outcome,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+    )
+    return {**result, "depth": "engineer"}
+
+
+@router.get(f"{BASE}/diagnostics/link", summary="Связь по звеньям")
+@requires(READ)
+def diagnostics_link(request: HttpRequest, hotel_id: str):
+    from apps.grms.services import diagnostics
+
+    return diagnostics.link_state(_hotel(hotel_id))
+
+
+@router.get(f"{BASE}/diagnostics/filters", summary="Значения фильтров журнала")
+@requires(READ)
+def diagnostics_filters(request: HttpRequest, hotel_id: str):
+    from apps.grms.services import diagnostics
+
+    from apps.grms.services import catalog as catalog_svc
+
+    _hotel(hotel_id)
+    return {
+        "element_kinds": [
+            {"code": code, "title": title} for code, title in catalog_svc.ELEMENT_CHOICES
+        ],
+        "outcomes": diagnostics.outcomes(),
+    }

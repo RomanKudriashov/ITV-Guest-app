@@ -117,9 +117,6 @@
   "/api/v1/cms/grms/access/pin": [
     "POST"
   ],
-  "/api/v1/cms/grms/catalog": [
-    "GET"
-  ],
   "/api/v1/cms/grms/diagnostics": [
     "GET"
   ],
@@ -129,20 +126,8 @@
   "/api/v1/cms/grms/diagnostics/link": [
     "GET"
   ],
-  "/api/v1/cms/grms/import/confirm": [
-    "POST"
-  ],
-  "/api/v1/cms/grms/import/preview": [
-    "POST"
-  ],
-  "/api/v1/cms/grms/import/reconcile": [
-    "POST"
-  ],
   "/api/v1/cms/grms/types": [
     "GET"
-  ],
-  "/api/v1/cms/grms/types/{code}/bindings": [
-    "POST"
   ],
   "/api/v1/cms/grms/types/{code}/check": [
     "POST"
@@ -150,33 +135,8 @@
   "/api/v1/cms/grms/types/{code}/device-override": [
     "POST"
   ],
-  "/api/v1/cms/grms/types/{code}/elements": [
-    "POST"
-  ],
-  "/api/v1/cms/grms/types/{code}/plan": [
-    "GET",
-    "PUT"
-  ],
-  "/api/v1/cms/grms/types/{code}/plan/copy": [
-    "POST"
-  ],
-  "/api/v1/cms/grms/types/{code}/plan/frames": [
-    "POST"
-  ],
-  "/api/v1/cms/grms/types/{code}/publish": [
-    "POST"
-  ],
-  "/api/v1/cms/grms/types/{code}/rollback": [
-    "POST"
-  ],
   "/api/v1/cms/grms/types/{code}/status": [
     "GET"
-  ],
-  "/api/v1/cms/grms/types/{code}/versions": [
-    "GET"
-  ],
-  "/api/v1/cms/grms/types/{code}/zones": [
-    "POST"
   ],
   "/api/v1/cms/home-settings": [
     "GET",
@@ -523,6 +483,15 @@
     "GET"
   ],
   "/api/v1/platform/hotels/{hotel_id}/grms/catalog": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/diagnostics": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/diagnostics/filters": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/grms/diagnostics/link": [
     "GET"
   ],
   "/api/v1/platform/hotels/{hotel_id}/grms/import/confirm": [

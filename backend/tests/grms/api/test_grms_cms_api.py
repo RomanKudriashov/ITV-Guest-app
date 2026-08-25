@@ -48,8 +48,13 @@ def _upload(cms, path: str, handle):
 
 
 def test_module_off_closes_every_endpoint(cms, crystal):
+    """
+    Гейтинг проверяется по тем ручкам, что у отеля ОСТАЛИСЬ: конфигурация
+    переехала в консоль платформы, и её маршрутов под `/cms` больше нет вовсе.
+    Гейтинг платформенной стороны — в `test_grms_ownership`.
+    """
     _enable_module(crystal, False)
-    for path in ("/grms/catalog", "/grms/types"):
+    for path in ("/grms/types", "/grms/access", "/grms/diagnostics/link"):
         response = cms.get(f"/api/v1/cms{path}")
         assert response.status_code == 403, path
         assert response.json()["code"] == "module_disabled"
@@ -57,118 +62,24 @@ def test_module_off_closes_every_endpoint(cms, crystal):
 
 def test_module_on_opens_the_section(cms, crystal):
     _enable_module(crystal)
-    response = cms.get("/api/v1/cms/grms/catalog")
+    response = cms.get("/api/v1/cms/grms/types")
     assert response.status_code == 200
-    body = response.json()
-    assert {e["kind"] for e in body["elements"]} >= {"dnd", "light_group", "air_conditioner"}
-    # Каталог отдаётся С СЕРВЕРА: фронт не имеет права знать свой список видов.
-    assert body["capabilities"]["current_temp"]["readonly"] is True
+    assert "types" in response.json()
 
 
 def test_guest_token_cannot_reach_the_section(client, crystal, guest_token):
     _enable_module(crystal)
     response = client.get(
-        "/api/v1/cms/grms/catalog",
+        "/api/v1/cms/grms/types",
         HTTP_HOST=host_for(crystal),
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
     assert response.status_code in (401, 403)
 
 
-# --- Сквозной сценарий ------------------------------------------------------
-
-
-def test_import_preview_confirm_build_publish(cms, crystal):
-    _enable_module(crystal)
-
-    # 1. Разбор без сохранения.
-    with PNR.open("rb") as handle:
-        preview = _upload(cms, "/api/v1/cms/grms/import/preview", handle)
-    assert preview.status_code == 200, preview.content
-    parsed = preview.json()
-    assert len(parsed["types"]) == 3
-    assert any(w["code"] == "room_in_two_types" for w in parsed["warnings"])
-
-    # 2. Подтверждение — и только теперь запись.
-    confirm = cms.post("/api/v1/cms/grms/import/confirm", {"preview": parsed})
-    assert confirm.status_code == 200, confirm.content
-
-    types = cms.get("/api/v1/cms/grms/types").json()["types"]
-    assert len(types) == 3
-    code = types[0]["code"]
-    assert types[0]["variables"], "переменные обязаны появиться"
-
-    # 3. Конструктор: зона, элемент, привязка.
-    assert cms.post(f"/api/v1/cms/grms/types/{code}/zones",
-                    {"code": "bedroom", "title": {"ru": "Спальня"}}).status_code == 200
-
-    light = next(v for v in types[0]["variables"] if v["command"].startswith("C_Light"))
-    assert cms.post(f"/api/v1/cms/grms/types/{code}/elements",
-                    {"kind": "light_group", "slug": "light.main",
-                     "zone_code": "bedroom"}).status_code == 200
-    bound = cms.post(f"/api/v1/cms/grms/types/{code}/bindings",
-                     {"element_slug": "light.main", "capability": "toggle",
-                      "variable_key": light["key"]})
-    assert bound.status_code == 200, bound.content
-
-    # 4. Непривязанный элемент остаётся скрытым.
-    cms.post(f"/api/v1/cms/grms/types/{code}/elements",
-             {"kind": "master_switch", "slug": "master"})
-    status = cms.get(f"/api/v1/cms/grms/types/{code}/status").json()
-    assert status["publishable"] == ["light.main"]
-    assert [h["slug"] for h in status["hidden"]] == ["master"]
-
-    # 5. Публикация и история.
-    published = cms.post(f"/api/v1/cms/grms/types/{code}/publish")
-    assert published.status_code == 200, published.content
-    assert published.json()["version"] == 1
-
-    versions = cms.get(f"/api/v1/cms/grms/types/{code}/versions").json()["versions"]
-    assert [v["version"] for v in versions] == [1]
-    assert versions[0]["controls"] == 1
-
-
-def test_binding_validation_surfaces_as_422(cms, crystal):
-    """Несовместимость обязана быть видна администратору, а не уехать в железо."""
-    _enable_module(crystal)
-    with PNR.open("rb") as handle:
-        parsed = _upload(cms, "/api/v1/cms/grms/import/preview", handle).json()
-    cms.post("/api/v1/cms/grms/import/confirm", {"preview": parsed})
-
-    code = cms.get("/api/v1/cms/grms/types").json()["types"][0]["code"]
-    cms.post(f"/api/v1/cms/grms/types/{code}/elements",
-             {"kind": "air_conditioner", "slug": "ac.1"})
-
-    response = cms.post(f"/api/v1/cms/grms/types/{code}/bindings",
-                        {"element_slug": "ac.1", "capability": "setpoint",
-                         "variable_key": "dnd"})
-    assert response.status_code == 422
-    assert response.json()["code"] == "validation_error"
-
-
-def test_reconcile_without_a_connector_does_not_block(cms, crystal):
-    """
-    Стоп-guard: коннектор офлайн — сверка не запускается, но сохранение
-    остаётся разрешённым. Объект настраивают и до подключения коробки.
-    """
-    _enable_module(crystal)
-    with PNR.open("rb") as handle:
-        parsed = _upload(cms, "/api/v1/cms/grms/import/preview", handle).json()
-
-    response = cms.post("/api/v1/cms/grms/import/reconcile", {"preview": parsed})
-    assert response.status_code == 200
-    body = response.json()
-    assert body["checked"] is False
-    assert all(r["reason"] == "not_checked" for r in body["reports"])
-
-    confirm = cms.post("/api/v1/cms/grms/import/confirm", {"preview": parsed})
-    assert confirm.status_code == 200, "несверенный импорт обязан сохраняться"
-
-
-def test_broken_file_is_refused_with_an_explanation(cms, crystal):
-    _enable_module(crystal)
-    import io
-
-    response = _upload(cms, "/api/v1/cms/grms/import/preview",
-                       io.BytesIO(b"not a workbook at all"))
-    assert response.status_code == 422
+# --- Сквозной сценарий конфигурации ------------------------------------------
+#
+# Он ПЕРЕЕХАЛ вместе с ручками: путь «импорт → конструктор → публикация»
+# проверяется набором консоли (`e2e/tests/room-control-console.spec.ts`) и
+# укусами владения (`test_grms_ownership`). Держать здесь его копию, бьющую в
+# несуществующие адреса, значило бы проверять путь, которым никто не ходит.

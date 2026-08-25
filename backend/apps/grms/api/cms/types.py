@@ -1,4 +1,14 @@
 """
+ЧТО ОСТАЛОСЬ У ОТЕЛЯ.
+
+Конструктор, импорт, план и публикация уехали в консоль платформы: это наша
+пусконаладка, а не работа отеля. Здесь — только то, чем отель пользуется сам:
+список типов (по нему выбирают, что проверять), состояние типа и прогон
+элемента на живой комнате.
+
+Ручки НЕ спрятаны, а сняты: спрятанный, но живой маршрут — это то, что мы уже
+ловили, когда экран не показывал, а запрос проходил.
+
 CMS: типы номеров, конструктор, проверка на живом номере, публикация.
 
 Раздел закрыт МОДУЛЕМ `room_control`, а не только ролью: калитка
@@ -30,43 +40,6 @@ def list_types(request: HttpRequest):
     return {"types": builder.list_types_with_variables(hotel_with_module())}
 
 
-# --- Конструктор ------------------------------------------------------------
-
-
-
-
-@router.post("/grms/types/{code}/zones", summary="Добавить зону")
-def add_zone(request: HttpRequest, code: str, payload: ZoneIn):
-    zone = builder.add_zone(
-        hotel_with_module(), room_type_code=code, code=payload.code,
-        title=payload.title, sort_order=payload.sort_order,
-    )
-    return {"code": zone.code}
-
-
-
-
-@router.post("/grms/types/{code}/elements", summary="Поставить элемент каталога")
-def add_element(request: HttpRequest, code: str, payload: ElementIn):
-    element = builder.add_element(
-        hotel_with_module(), room_type_code=code, kind=payload.kind, slug=payload.slug,
-        zone_code=payload.zone_code, title=payload.title, sort_order=payload.sort_order,
-    )
-    return {"slug": element.slug, "kind": element.kind}
-
-
-
-
-@router.post("/grms/types/{code}/bindings", summary="Связать возможность с переменной")
-def bind(request: HttpRequest, code: str, payload: BindingIn):
-    binding = builder.bind(
-        hotel_with_module(), room_type_code=code, element_slug=payload.element_slug,
-        capability=payload.capability, variable_key=payload.variable_key,
-        trigger_value=payload.trigger_value,
-    )
-    return {"element": payload.element_slug, "capability": binding.capability}
-
-
 @router.get("/grms/types/{code}/status", summary="Что опубликуется, а что скрыто")
 def type_status(request: HttpRequest, code: str):
     return builder.type_status(hotel_with_module(), code)
@@ -93,30 +66,3 @@ def check(request: HttpRequest, code: str, payload: CheckIn):
         hotel_with_module(), room_type_code=code, element_slug=payload.element_slug,
         room_number=payload.room_number, capability=payload.capability, value=payload.value,
     )
-
-
-# --- Публикация -------------------------------------------------------------
-
-
-@router.post("/grms/types/{code}/publish", summary="Опубликовать конфигурацию")
-def publish(request: HttpRequest, code: str):
-    hotel = hotel_with_module()
-    config = publishing.publish(hotel, code, actor_id=getattr(request.auth, "pk", None))
-    return {"version": config.version, "published_at": config.published_at}
-
-
-
-
-@router.post("/grms/types/{code}/rollback", summary="Откатиться на версию")
-def rollback(request: HttpRequest, code: str, payload: RollbackIn):
-    hotel = hotel_with_module()
-    config = publishing.rollback(
-        hotel, code, to_version=payload.to_version,
-        actor_id=getattr(request.auth, "pk", None),
-    )
-    return {"version": config.version, "rolled_back_from": config.rolled_back_from}
-
-
-@router.get("/grms/types/{code}/versions", summary="История версий")
-def versions(request: HttpRequest, code: str):
-    return {"versions": publishing.history(hotel_with_module(), code)}
