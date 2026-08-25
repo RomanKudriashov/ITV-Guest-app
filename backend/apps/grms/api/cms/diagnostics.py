@@ -41,7 +41,11 @@ def diagnostics_journal(
     """
     from apps.grms.services import diagnostics
 
-    return diagnostics.journal(
+    # ГЛУБИНА РЕШАЕТСЯ ЗДЕСЬ, а не экраном.
+    #
+    # Эта ручка — отельская: сырой ответ оборудования по ней не уходит. Тот же
+    # журнал во всей полноте отдаёт платформенная ручка, и читает её инженер.
+    result = diagnostics.journal(
         hotel_with_module(),
         room=room,
         element_kind=element_kind,
@@ -50,6 +54,13 @@ def diagnostics_journal(
         date_to=date_to,
         limit=limit,
     )
+    return {
+        **result,
+        "rows": [diagnostics.for_hotel(row) for row in result.get("rows", [])],
+        # Экран отеля по этому признаку знает, что журнал урезан, и не молчит
+        # об этом: «где остальное» — законный вопрос, и ответ на него есть.
+        "depth": "hotel",
+    }
 
 
 @router.get("/grms/diagnostics/link", summary="Связь по звеньям: коннектор, endpoint, чтение")

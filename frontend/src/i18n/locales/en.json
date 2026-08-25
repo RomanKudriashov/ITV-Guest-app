@@ -2489,7 +2489,8 @@
         "accepted": "Accepted",
         "failed": "Failed",
         "ok": "Read"
-      }
+      },
+      "depthHotel": "This shows when, in which room and with which element an exchange happened, and how it ended. The exchange itself — device, channel and the equipment's reply — is examined by our engineer: the hotel does not receive those fields."
     },
     "roomsOnType_one": "{{count}} room",
     "roomsOnType_other": "{{count}} rooms",

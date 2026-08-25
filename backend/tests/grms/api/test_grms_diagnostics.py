@@ -23,7 +23,7 @@ from apps.hotels.models import HotelModule
 
 from tests.conftest import host_for
 
-pytestmark = pytest.mark.django_db
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 DIAG = "/api/v1/cms/grms/diagnostics"
 
@@ -64,15 +64,19 @@ def _entry(hotel, *, action="grms.command", room="305", element="ac.1", result="
 # --- Что видит инженер ------------------------------------------------------
 
 
-def test_journal_shows_every_field_the_spec_promises(cms, crystal):
+def test_journal_shows_every_field_the_spec_promises(cms, crystal, engineer):
     """
     Восемь полей ТЗ §14.3 — комната, элемент, устройство, command и feedback,
     отправленное значение, ответ, длительность, итоговый статус.
+
+    Спрашиваем ИНЖЕНЕРНОЙ ручкой: половина этих полей — разбор на объекте, и
+    отелю они больше не уходят (см. `test_grms_ownership`). ТЗ обещало их
+    инженеру, и проверять их надо там, где он их и читает.
     """
     _enable_module(crystal)
     _entry(crystal)
 
-    response = cms.get(DIAG)
+    response = engineer(DIAG)
     assert response.status_code == 200, response.content
     row = response.json()["rows"][0]
 
@@ -294,7 +298,7 @@ def test_filters_endpoint_lists_kinds_from_the_catalog(cms, crystal):
 # --- Границы: чужой отель и гость -------------------------------------------
 
 
-def test_another_hotel_journal_is_unreachable(cms, crystal, aurora):
+def test_another_hotel_journal_is_unreachable(cms, crystal, aurora, engineer):
     """
     Номера у отелей одинаковые сплошь и рядом: «305» есть у каждого второго.
     Фильтр по номеру не должен становиться дырой между тенантами.
@@ -307,7 +311,14 @@ def test_another_hotel_journal_is_unreachable(cms, crystal, aurora):
     rows = cms.get(f"{DIAG}?room=305").json()["rows"]
     assert len(rows) == 1
     assert rows[0]["element"] == "ac.1"
-    assert all("ЧУЖОЕ" not in row["device"] for row in rows)
+
+    # Метку чужого отеля ищем ИНЖЕНЕРНОЙ глубиной: отелю поле `device` больше
+    # не уходит, и проверка «в нём нет чужого» на урезанной строке сошлась бы
+    # сама с собой — поле просто отсутствует. Граница тенантов одна на обе
+    # глубины, а увидеть протечку можно только там, где поле показывают.
+    deep = engineer(f"{DIAG}?room=305").json()["rows"]
+    assert len(deep) == 1
+    assert all("ЧУЖОЕ" not in row["device"] for row in deep)
 
 
 def test_guest_token_cannot_reach_diagnostics(client, crystal, guest_token):
@@ -344,3 +355,29 @@ def test_line_staff_cannot_reach_diagnostics(cms_line_staff, crystal):
     _enable_module(crystal)
     for path in (DIAG, f"{DIAG}/link", f"{DIAG}/filters"):
         assert cms_line_staff.get(path).status_code == 403, path
+
+
+@pytest.fixture
+def engineer(client, crystal):
+    """Чтение журнала НАШЕЙ учёткой: полная глубина живёт в консоли платформы."""
+    import json as _json
+
+    from apps.hotels.services.provisioning import ensure_platform_admin
+
+    ensure_platform_admin(email="root@platform.test", password="platform12345")
+    token = client.post(
+        "/api/v1/platform/auth/login",
+        data=_json.dumps({"email": "root@platform.test", "password": "platform12345"}),
+        content_type="application/json",
+        HTTP_HOST="guest.localhost",
+    ).json()["access"]
+
+    def call(path: str):
+        tail = path.replace("/api/v1/cms/grms", "")
+        return client.get(
+            f"/api/v1/platform/hotels/{crystal.pk}/grms{tail}",
+            HTTP_HOST="guest.localhost",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+    return call

@@ -471,6 +471,11 @@ export function copyPlan(
  * Строка журнала обмена. Каждое поле здесь ЗАПИСАНО сервером в момент обмена
  * — кроме `element_kind`, который добывается по слугу из текущей конфигурации
  * и потому может быть пустым у старых строк.
+ *
+ * ЧАСТЬ ПОЛЕЙ НЕОБЯЗАТЕЛЬНА, и это не небрежность: отельской глубине сервер их
+ * не отдаёт вовсе (`depth: "hotel"`, см. `services/diagnostics.for_hotel`).
+ * Объявить их обязательными значило бы соврать типом и получить `undefined`
+ * там, где код уверен в строке.
  */
 export interface DiagnosticsRow {
   id: string;
@@ -479,14 +484,20 @@ export interface DiagnosticsRow {
   room: string;
   element: string;
   element_kind: string;
-  device: string;
-  command: string;
-  feedback: string;
-  request_id: string;
+  /** Инженерное поле: у отельской глубины отсутствует. */
+  device?: string;
+  /** Инженерное поле: у отельской глубины отсутствует. */
+  command?: string;
+  /** Инженерное поле: у отельской глубины отсутствует. */
+  feedback?: string;
+  /** Инженерное поле: у отельской глубины отсутствует. */
+  request_id?: string;
   sent: number | string | null;
   observed: number | string | null;
-  raw_response: string;
-  duration_ms: number | null;
+  /** Инженерное поле: у отельской глубины отсутствует. */
+  raw_response?: string;
+  /** Инженерное поле: у отельской глубины отсутствует. */
+  duration_ms?: number | null;
   result: string;
   /** Код причины отказа; пусто, если обмен состоялся. */
   reason: string;
@@ -499,6 +510,13 @@ export interface DiagnosticsJournal {
   /** Выдача обрезана потолком — инженер смотрит не весь журнал. */
   truncated: boolean;
   limit: number;
+  /**
+   * Глубина выдачи — РЕШЕНИЕ СЕРВЕРА, а не экрана: `hotel` у ручки отеля,
+   * `engineer` у платформенной. Экран по ней знает, что журнал урезан, и
+   * говорит об этом вслух, вместо того чтобы рисовать прочерки в столбцах,
+   * которых ему не дали.
+   */
+  depth: 'hotel' | 'engineer';
 }
 
 export interface DiagnosticsFilters {

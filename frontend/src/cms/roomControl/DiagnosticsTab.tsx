@@ -136,9 +136,27 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
     );
   }
 
+  /*
+    ГЛУБИНА ПРИХОДИТ С СЕРВЕРА, экран её не выбирает и тем более не выводит из
+    того, в каком приложении он открыт. Ручка отеля инженерные поля вырезает
+    (`services/diagnostics.for_hotel`), платформенная отдаёт всё; если бы экран
+    решал сам, расхождение между «спрятали» и «не отдали» рано или поздно
+    случилось бы, и в отельской вкладке появился бы сырой ответ оборудования.
+  */
+  const deep = journal.data?.depth !== 'hotel';
+
   return (
     <Stack spacing={2} data-testid="grms-diagnostics">
       <LinkStatus link={link.data} loading={link.isLoading} formatAt={formatAt} />
+
+      {journal.data && !deep ? (
+        // Урезанный журнал НАЗЫВАЕТ СЕБЯ урезанным. «Где столбец с устройством»
+        // — законный вопрос администратора отеля, и пустое место на него не
+        // отвечает: он полез бы искать поломку экрана.
+        <Alert severity="info" data-testid="diagnostics-depth-hotel">
+          {t('roomControl.diagnostics.depthHotel')}
+        </Alert>
+      ) : null}
 
       <Card variant="outlined">
         <CardContent>
@@ -240,10 +258,10 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
                   <TableCell>{t('roomControl.diagnostics.at')}</TableCell>
                   <TableCell>{t('roomControl.diagnostics.room')}</TableCell>
                   <TableCell>{t('roomControl.diagnostics.element')}</TableCell>
-                  <TableCell>{t('roomControl.diagnostics.device')}</TableCell>
-                  <TableCell>{t('roomControl.diagnostics.channel')}</TableCell>
+                  {deep ? <TableCell>{t('roomControl.diagnostics.device')}</TableCell> : null}
+                  {deep ? <TableCell>{t('roomControl.diagnostics.channel')}</TableCell> : null}
                   <TableCell>{t('roomControl.diagnostics.sent')}</TableCell>
-                  <TableCell>{t('roomControl.diagnostics.duration')}</TableCell>
+                  {deep ? <TableCell>{t('roomControl.diagnostics.duration')}</TableCell> : null}
                   <TableCell>{t('roomControl.diagnostics.result')}</TableCell>
                   <TableCell />
                 </TableRow>
@@ -259,6 +277,7 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
                     rechecking={recheckMutation.isPending}
                     recheck={recheck?.id === row.id ? recheck.result : null}
                     formatAt={formatAt}
+                    deep={deep}
                   />
                 ))}
               </TableBody>
@@ -353,6 +372,7 @@ function JournalRow({
   rechecking,
   recheck,
   formatAt,
+  deep,
 }: {
   row: DiagnosticsRow;
   expanded: boolean;
@@ -361,6 +381,8 @@ function JournalRow({
   rechecking: boolean;
   recheck: CheckResult | null;
   formatAt: (value: string) => string;
+  /** Инженерная глубина: устройство, канал, длительность и сырой ответ. */
+  deep: boolean;
 }) {
   const { t } = useTranslation();
   const channel = [row.command, row.feedback].filter(Boolean).join(' → ');
@@ -386,10 +408,12 @@ function JournalRow({
             </Typography>
           ) : null}
         </TableCell>
-        <TableCell>{row.device || '—'}</TableCell>
-        <TableCell>{channel || '—'}</TableCell>
+        {deep ? <TableCell>{row.device || '—'}</TableCell> : null}
+        {deep ? <TableCell>{channel || '—'}</TableCell> : null}
         <TableCell>{row.sent ?? '—'}</TableCell>
-        <TableCell>{row.duration_ms == null ? '—' : `${row.duration_ms} ms`}</TableCell>
+        {deep ? (
+          <TableCell>{row.duration_ms == null ? '—' : `${row.duration_ms} ms`}</TableCell>
+        ) : null}
         <TableCell>
           <Chip
             size="small"
@@ -427,15 +451,18 @@ function JournalRow({
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell colSpan={10} sx={{ py: 0, border: 0 }}>
+        <TableCell colSpan={deep ? 10 : 7} sx={{ py: 0, border: 0 }}>
           <Collapse in={expanded} unmountOnExit>
             <Box sx={{ py: 1.5 }} data-testid="diagnostics-details">
               <Stack spacing={0.75}>
-                <Detail label={t('roomControl.diagnostics.requestId')} value={row.request_id} />
+                {deep ? (
+                  <Detail label={t('roomControl.diagnostics.requestId')} value={row.request_id} />
+                ) : null}
                 <Detail label={t('roomControl.diagnostics.observed')} value={row.observed} />
                 {row.reason ? (
                   <Detail label={t('roomControl.diagnostics.reasonCode')} value={row.reason} />
                 ) : null}
+                {deep ? (
                 <Box>
                   <Typography variant="caption" color="text.secondary">
                     {t('roomControl.diagnostics.rawResponse')}
@@ -460,6 +487,7 @@ function JournalRow({
                     {row.raw_response || '—'}
                   </Box>
                 </Box>
+                ) : null}
                 {recheck ? (
                   <Alert
                     severity={recheck.outcome === 'failed' ? 'error' : 'success'}

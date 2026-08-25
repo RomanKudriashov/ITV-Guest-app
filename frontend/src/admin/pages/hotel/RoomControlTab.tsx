@@ -14,6 +14,7 @@ import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { BuilderTab } from '@/cms/roomControl/BuilderTab';
+import { DiagnosticsTab } from '@/cms/roomControl/DiagnosticsTab';
 import { ImportTab } from '@/cms/roomControl/ImportTab';
 import { PlanEditor } from '@/cms/roomControl/PlanEditor';
 import { VersionsTab } from '@/cms/roomControl/VersionsTab';
@@ -59,8 +60,14 @@ export function RoomControlTab({ hotelId }: { hotelId: string }) {
   );
 }
 
-type Section = 'import' | 'builder' | 'plan' | 'versions';
-const SECTIONS: Section[] = ['import', 'builder', 'plan', 'versions'];
+type Section = 'import' | 'builder' | 'plan' | 'versions' | 'diagnostics';
+/*
+  Диагностика стоит в консоли ПОСЛЕДНЕЙ и остаётся у отеля тоже — но глубина у
+  двух вкладок разная, и решает её сервер. Здесь инженер видит сырой ответ
+  оборудования, устройство и канал; в CMS отеля тот же экран показывает «когда,
+  что и чем закончилось». Экран один, ветвление одно — по `depth` из ответа.
+*/
+const SECTIONS: Section[] = ['import', 'builder', 'plan', 'versions', 'diagnostics'];
 
 function Inner() {
   const { t } = useTranslation();
@@ -146,6 +153,7 @@ function Inner() {
       {current && section === 'builder' && <BuilderTab type={current} />}
       {current && section === 'plan' && <PlanEditor code={current.code} types={list} />}
       {current && section === 'versions' && <VersionsTab type={current} />}
+      {current && section === 'diagnostics' && <DiagnosticsTab type={current} />}
     </Box>
   );
 }

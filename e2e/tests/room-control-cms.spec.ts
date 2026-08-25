@@ -141,6 +141,23 @@ test('проверка на живой комнате: только чтение
   await expect(page.getByTestId('grms-check-result')).toBeVisible({ timeout: 60_000 })
 })
 
+test('УКУС: диагностика отеля названа урезанной и разбора обмена не показывает', async () => {
+  await openSection()
+  await openTab('diagnostics')
+  await expect(page.getByTestId('grms-diagnostics')).toBeVisible({ timeout: 20_000 })
+
+  // Отельская глубина ГОВОРИТ О СЕБЕ вслух, а не оставляет пустое место там,
+  // где инженерные столбцы: администратор должен понимать, что журнал урезан
+  // по замыслу, а не сломан.
+  await expect(page.getByTestId('diagnostics-depth-hotel')).toBeVisible()
+
+  // Сами поля тут не проверяем, и намеренно: столбцы появляются только при
+  // непустом журнале, а он на стенде зависит от того, что успели проверить
+  // раньше. Проверка «в строке нет сырого ответа» на пустой таблице сошлась бы
+  // сама с собой — она живёт в `tests/grms/api/test_grms_ownership.py`, где
+  // запись в журнале заводится тестом.
+})
+
 test('доступ: демо-вход показан вместе с предупреждением сервера', async () => {
   await openSection()
   await openTab('access')

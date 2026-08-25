@@ -509,3 +509,13 @@ test('откат возвращает предыдущую версию', async 
   expect(current.rolled_back_from).toBe(target)
 })
 
+test('УКУС: инженерная диагностика показывает разбор обмена, которого нет у отеля', async () => {
+  await pickType()
+  await openTab('diagnostics')
+  await expect(page.getByTestId('grms-diagnostics')).toBeVisible({ timeout: 20_000 })
+
+  // Обратная сторона отельского укуса в `room-control-cms.spec`: та же вкладка,
+  // тот же код, но глубина инженерная — и плашки «журнал урезан» здесь быть не
+  // должно, иначе экран врёт про собственную выдачу.
+  await expect(page.getByTestId('diagnostics-depth-hotel')).toHaveCount(0)
+})
