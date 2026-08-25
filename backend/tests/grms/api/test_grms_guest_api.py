@@ -17,6 +17,12 @@ WS-клиент коннектора — как и в round-trip (tests/grms_har
 
 from __future__ import annotations
 
+from apps.core.models import AuditLog
+
+# Кто нажал — в этих проверках неважно: они про механику публикации,
+# а не про владельца действия. Называем систему, а не выдумываем человека.
+SYSTEM_ACTOR = AuditLog.ActorType.SYSTEM
+
 import time
 
 import pytest
@@ -367,7 +373,7 @@ def test_a_type_without_a_plan_gets_a_snapshot_without_one(guest, crystal):
 
     with tenant_context(crystal):
         RoomType.objects.filter(code=TYPE_CODE).update(plan={})
-    publishing.publish(crystal, TYPE_CODE)
+    publishing.publish(crystal, TYPE_CODE, actor_type=SYSTEM_ACTOR)
 
     payload = guest.get("/api/v1/guest/room/state").json()
 

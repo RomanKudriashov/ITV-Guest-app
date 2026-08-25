@@ -160,7 +160,7 @@ def _plan(room_type, zones: list[dict]) -> dict:
     return geometry
 
 
-def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:
+def publish(hotel, room_type_code: str, *, actor_type, actor_id=None) -> PublishedConfig:
     """
     Опубликовать текущее состояние как новую версию.
 
@@ -226,7 +226,9 @@ def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:
 
         AuditLog.record(
             "grms.publish",
-            actor_type=AuditLog.ActorType.STAFF,
+            # Актор — от вызывающего: публикует наш оператор из консоли,
+            # а не администратор отеля (см. `builder.set_plan_level`).
+            actor_type=actor_type,
             actor_id=actor_id,
             object_type="grms.room_type",
             object_id=room_type.pk,
@@ -240,7 +242,9 @@ def publish(hotel, room_type_code: str, *, actor_id=None) -> PublishedConfig:
     return config
 
 
-def rollback(hotel, room_type_code: str, *, to_version: int, actor_id=None) -> PublishedConfig:
+def rollback(
+    hotel, room_type_code: str, *, to_version: int, actor_type, actor_id=None
+) -> PublishedConfig:
     """
     Откат — публикация КОПИИ старой версии новым номером, а не удаление новых.
 
@@ -278,7 +282,9 @@ def rollback(hotel, room_type_code: str, *, to_version: int, actor_id=None) -> P
 
         AuditLog.record(
             "grms.rollback",
-            actor_type=AuditLog.ActorType.STAFF,
+            # Актор — от вызывающего: публикует наш оператор из консоли,
+            # а не администратор отеля (см. `builder.set_plan_level`).
+            actor_type=actor_type,
             actor_id=actor_id,
             object_type="grms.room_type",
             object_id=room_type.pk,

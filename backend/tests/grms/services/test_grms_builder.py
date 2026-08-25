@@ -9,6 +9,12 @@
 
 from __future__ import annotations
 
+from apps.core.models import AuditLog
+
+# Кто нажал — в этих проверках неважно: они про механику публикации,
+# а не про владельца действия. Называем систему, а не выдумываем человека.
+SYSTEM_ACTOR = AuditLog.ActorType.SYSTEM
+
 import time
 
 import pytest
@@ -198,7 +204,7 @@ def test_unbound_element_stays_hidden_and_is_not_published(furnished):
     assert status["publishable"] == ["light.main"]
     assert [h["slug"] for h in status["hidden"]] == ["master"]
 
-    config = publishing.publish(furnished, TYPE)
+    config = publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
     controls = [c["controlId"] for z in config.payload["zones"] for c in z["controls"]]
     assert controls == ["light.main"]
 
@@ -206,14 +212,14 @@ def test_unbound_element_stays_hidden_and_is_not_published(furnished):
 def test_publishing_nothing_is_refused(furnished):
     builder.add_element(furnished, room_type_code=TYPE, kind="master_switch", slug="master")
     with pytest.raises(ValidationError):
-        publishing.publish(furnished, TYPE)
+        publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
 
 
 def test_publish_increments_versions_and_keeps_one_current(furnished):
     _light(furnished, "light.main", "light_1")
-    first = publishing.publish(furnished, TYPE)
+    first = publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
     _light(furnished, "light.bed", "light_2")
-    second = publishing.publish(furnished, TYPE)
+    second = publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
 
     assert (first.version, second.version) == (1, 2)
     with tenant_context(furnished):
@@ -227,7 +233,7 @@ def test_snapshot_is_self_contained(furnished):
     конфигурацию — иначе откат к v2 означал бы «v2 плюс сегодняшние правки».
     """
     _light(furnished, "light.main", "light_1")
-    config = publishing.publish(furnished, TYPE)
+    config = publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
 
     with tenant_context(furnished):
         Variable.objects.filter(key="light_1").delete()
@@ -240,11 +246,11 @@ def test_snapshot_is_self_contained(furnished):
 def test_rollback_creates_a_new_version_and_keeps_history(furnished):
     """История не переписывается: «почему свет перестал работать» должно иметь ответ."""
     _light(furnished, "light.main", "light_1")
-    publishing.publish(furnished, TYPE)
+    publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
     _light(furnished, "light.bed", "light_2")
-    publishing.publish(furnished, TYPE)
+    publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
 
-    restored = publishing.rollback(furnished, TYPE, to_version=1)
+    restored = publishing.rollback(furnished, TYPE, to_version=1, actor_type=SYSTEM_ACTOR)
 
     assert restored.version == 3 and restored.rolled_back_from == 1
     controls = [c["controlId"] for z in restored.payload["zones"] for c in z["controls"]]
@@ -256,18 +262,18 @@ def test_rollback_creates_a_new_version_and_keeps_history(furnished):
 
 def test_rollback_to_missing_version_is_refused(furnished):
     _light(furnished, "light.main", "light_1")
-    publishing.publish(furnished, TYPE)
+    publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
     with pytest.raises(NotFoundError):
-        publishing.rollback(furnished, TYPE, to_version=99)
+        publishing.rollback(furnished, TYPE, to_version=99, actor_type=SYSTEM_ACTOR)
 
 
 def test_publish_and_rollback_are_audited(furnished):
     _light(furnished, "light.main", "light_1")
-    publishing.publish(furnished, TYPE)
+    publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
     # Нужна вторая версия: откат на текущую же законно отбивается.
     _light(furnished, "light.bed", "light_2")
-    publishing.publish(furnished, TYPE)
-    publishing.rollback(furnished, TYPE, to_version=1)
+    publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
+    publishing.rollback(furnished, TYPE, to_version=1, actor_type=SYSTEM_ACTOR)
 
     with tenant_context(furnished):
         assert AuditLog.objects.filter(action="grms.publish").exists()
@@ -276,7 +282,7 @@ def test_publish_and_rollback_are_audited(furnished):
 
 def test_published_config_is_isolated_between_hotels(furnished, aurora):
     _light(furnished, "light.main", "light_1")
-    publishing.publish(furnished, TYPE)
+    publishing.publish(furnished, TYPE, actor_type=SYSTEM_ACTOR)
     with tenant_context(aurora):
         assert PublishedConfig.objects.count() == 0
 

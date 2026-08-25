@@ -12,6 +12,12 @@
 
 from __future__ import annotations
 
+from apps.core.models import AuditLog
+
+# Кто нажал — в этих проверках неважно: они про механику публикации,
+# а не про владельца действия. Называем систему, а не выдумываем человека.
+SYSTEM_ACTOR = AuditLog.ActorType.SYSTEM
+
 import pytest
 
 from apps.core.context import tenant_context
@@ -115,7 +121,7 @@ def test_setting_the_level_writes_the_journal_inside_the_tenant(crystal, room_ty
     from apps.grms.services import builder
 
     # Контекст НЕ выставлен снаружи — как в платформенной консоли.
-    builder.set_plan_level(crystal, room_type_code=room_type.code, level="simple")
+    builder.set_plan_level(crystal, room_type_code=room_type.code, level="simple", actor_type=SYSTEM_ACTOR)
 
     with tenant_context(crystal):
         entry = AuditLog.objects.filter(action="grms.plan_level_changed").first()
@@ -131,7 +137,7 @@ def test_an_unknown_level_is_refused_before_anything_is_written(crystal, room_ty
     from apps.grms.services import builder
 
     with pytest.raises(ValidationError):
-        builder.set_plan_level(crystal, room_type_code=room_type.code, level="сломано")
+        builder.set_plan_level(crystal, room_type_code=room_type.code, level="сломано", actor_type=SYSTEM_ACTOR)
 
     with tenant_context(crystal):
         assert RoomType.objects.get(pk=room_type.pk).plan_level == "full"

@@ -22,6 +22,12 @@
 
 from __future__ import annotations
 
+from apps.core.models import AuditLog
+
+# Кто нажал — в этих проверках неважно: они про механику публикации,
+# а не про владельца действия. Называем систему, а не выдумываем человека.
+SYSTEM_ACTOR = AuditLog.ActorType.SYSTEM
+
 import json
 
 import pytest
@@ -152,10 +158,10 @@ def test_rollback_returns_the_geometry_of_its_own_version(seeded):
     with tenant_context(hotel):
         RoomType.objects.filter(pk=room_type.pk).update(plan=moved)
 
-    second = publishing.publish(hotel, TYPE_CODE)
+    second = publishing.publish(hotel, TYPE_CODE, actor_type=SYSTEM_ACTOR)
     assert second.payload["plan"]["zones"][0]["hit"]["x"] == first["zones"][0]["hit"]["x"] + 12.5
 
-    third = publishing.rollback(hotel, TYPE_CODE, to_version=second.version - 1)
+    third = publishing.rollback(hotel, TYPE_CODE, to_version=second.version - 1, actor_type=SYSTEM_ACTOR)
     assert third.payload["plan"] == first
     # Черновик при этом НЕ переписан: откат публикует копию старой версии, а не
     # правит справочники задним числом.
@@ -181,7 +187,7 @@ def test_publish_is_blocked_when_the_plan_points_at_a_missing_element(seeded):
         RoomType.objects.filter(pk=room_type.pk).update(plan=broken)
 
     with pytest.raises(ValidationError) as failure:
-        publishing.publish(hotel, TYPE_CODE)
+        publishing.publish(hotel, TYPE_CODE, actor_type=SYSTEM_ACTOR)
     assert "light.nowhere" in str(failure.value)
 
     # Опубликованная версия при этом осталась прежней: неудачная публикация
@@ -201,7 +207,7 @@ def test_publish_is_blocked_when_a_zone_has_no_element_at_all(seeded):
         RoomType.objects.filter(pk=room_type.pk).update(plan=empty)
 
     with pytest.raises(ValidationError) as failure:
-        publishing.publish(hotel, TYPE_CODE)
+        publishing.publish(hotel, TYPE_CODE, actor_type=SYSTEM_ACTOR)
     assert "зоны без рабочего элемента" in str(failure.value)
 
 
@@ -216,7 +222,7 @@ def test_a_type_without_a_plan_publishes_without_one(seeded):
     with tenant_context(hotel):
         RoomType.objects.filter(code=TYPE_CODE).update(plan={})
 
-    config = publishing.publish(hotel, TYPE_CODE)
+    config = publishing.publish(hotel, TYPE_CODE, actor_type=SYSTEM_ACTOR)
 
     assert config.payload["plan"] == {}
     assert config.payload["zones"], "без плана снимок обязан остаться прежним"
@@ -353,7 +359,7 @@ def test_mirrored_layout_travels_to_the_guest(seeded):
         room_type.plan = draft
         room_type.save(update_fields=["plan", "updated_at"])
 
-    publishing.publish(seeded, TYPE_CODE)
+    publishing.publish(seeded, TYPE_CODE, actor_type=SYSTEM_ACTOR)
     payload = _current(seeded)
     assert payload["plan"]["mirrored"] is True
 

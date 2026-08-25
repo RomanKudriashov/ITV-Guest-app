@@ -33,6 +33,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from apps.core.context import tenant_context
+from apps.core.models import AuditLog
 from apps.grms.services import builder, publishing
 from apps.grms.models import (
     Binding,
@@ -550,4 +551,8 @@ class Command(BaseCommand):
             ).first()
             if current is not None and current.payload == snapshot:
                 return current.version
-        return publishing.publish(hotel, TYPE_CODE).version
+        # Сев — действие СИСТЕМЫ: ни оператор платформы, ни сотрудник отеля
+        # тут ни при чём, и называть кого-то из них было бы выдумкой.
+        return publishing.publish(
+            hotel, TYPE_CODE, actor_type=AuditLog.ActorType.SYSTEM
+        ).version

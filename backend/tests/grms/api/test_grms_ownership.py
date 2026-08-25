@@ -181,6 +181,37 @@ def test_the_engineer_sees_the_raw_answer_and_the_hotel_does_not(platform, cms, 
     assert engineer["rows"][0]["raw_response"] == '{"status":"true","value":"1"}'
 
 
+def test_every_console_action_is_written_as_the_platform(platform, crystal):
+    """
+    УКУС. НИ ОДНА запись консольного действия не называет чужого.
+
+    Проверяется не список из трёх действий, а ВСЁ, что попало в журнал за время
+    работы оператора: следующая ручка приедет так же, как приехали эти, и
+    именно так это и вскрылось — уровень плана писался «сотрудником отеля»,
+    потому что сервис ставил актора сам, а вьюха его не передавала. Ручка при
+    этом живёт только в консоли: администратор отеля физически не мог её
+    позвать, и запись врала в каждой строке.
+    """
+    from apps.core.models import AuditLog
+    from apps.grms.models import RoomType
+
+    with tenant_context(crystal):
+        RoomType.objects.update_or_create(
+            code="console-suite", defaults={"title": {"ru": "Консольный"}}
+        )
+        AuditLog.objects.filter(action__startswith="grms.").delete()
+
+    assert platform("post", "/types/console-suite/zones", {"code": "hall", "title": {"ru": "Холл"}}).status_code == 200
+    assert platform("post", "/types/console-suite/plan-level", {"level": "tiles"}).status_code == 200
+
+    with tenant_context(crystal):
+        rows = list(AuditLog.objects.filter(action__startswith="grms.").values("action", "actor_type"))
+
+    assert rows, "консольные действия не попали в журнал вовсе"
+    lying = [r for r in rows if r["actor_type"] != AuditLog.ActorType.PLATFORM]
+    assert not lying, f"журнал называет чужого: {lying}"
+
+
 # --- Импорт: те же свойства, но на НАШЕЙ стороне -----------------------------
 #
 # Оба теста переехали из набора CMS вместе с ручкой. Проверяемое не изменилось:

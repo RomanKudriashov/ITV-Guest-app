@@ -420,7 +420,7 @@ def list_types_with_variables(hotel) -> list[dict]:
     return result
 
 
-def set_plan_level(hotel, *, room_type_code: str, level: str):
+def set_plan_level(hotel, *, room_type_code: str, level: str, actor_type, actor_id=None):
     """
     Уровень плана типа — записанное НАМИ решение.
 
@@ -460,7 +460,14 @@ def set_plan_level(hotel, *, room_type_code: str, level: str):
         room_type.save(update_fields=["plan_level"])
         AuditLog.record(
             "grms.plan_level_changed",
-            actor_type=AuditLog.ActorType.STAFF,
+            # КТО ДЕЙСТВУЕТ — РЕШАЕТ ВЫЗЫВАЮЩИЙ, а не сервис.
+            #
+            # Здесь стояло `STAFF` намертво, и запись врала: ручка живёт только
+            # в консоли платформы, менял уровень НАШ оператор, а журнал отеля
+            # называл его администратора отеля. Неверный ответ хуже молчания —
+            # на вопрос «кто это сделал» по нему пошли бы разбираться не к тому.
+            actor_type=actor_type,
+            actor_id=actor_id,
             object_type="grms.room_type",
             object_id=room_type.pk,
             payload={"type": room_type_code, "from": was, "to": level},

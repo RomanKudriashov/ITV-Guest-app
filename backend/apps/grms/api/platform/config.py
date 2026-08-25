@@ -36,6 +36,7 @@ from ninja import File
 from ninja.files import UploadedFile
 
 from apps.core.context import tenant_context
+from apps.core.models import AuditLog
 from apps.grms.schemas.cms import (
     BindingIn,
     ConfirmIn,
@@ -255,9 +256,21 @@ def device_override(request: HttpRequest, hotel_id: str, code: str, payload: Ove
 @router.post(f"{BASE}/types/{{code}}/plan-level", summary="Уровень плана типа")
 @requires(WRITE)
 def set_plan_level(request: HttpRequest, hotel_id: str, code: str, payload: PlanLevelIn):
-    """Уровень — часть платной услуги; журнал пишет сервис внутри контекста."""
+    """
+    Уровень — часть платной услуги; журнал пишет сервис внутри контекста.
+
+    Актор передаётся ОТСЮДА: сервис не гадает, кто его позвал. Раньше он ставил
+    «сотрудник отеля» намертво, и журнал отеля называл чужого — ручка-то живёт
+    только здесь, в консоли.
+    """
     hotel = _hotel(hotel_id)
-    builder.set_plan_level(hotel, room_type_code=code, level=payload.level)
+    builder.set_plan_level(
+        hotel,
+        room_type_code=code,
+        level=payload.level,
+        actor_type=AuditLog.ActorType.PLATFORM,
+        actor_id=getattr(request.auth, "pk", None),
+    )
     return {"code": code, "plan_level": payload.level}
 
 
@@ -311,7 +324,12 @@ def copy_plan(request: HttpRequest, hotel_id: str, code: str, payload: PlanCopyI
 @requires(WRITE)
 def publish(request: HttpRequest, hotel_id: str, code: str):
     hotel = _hotel(hotel_id)
-    config = publishing.publish(hotel, code, actor_id=getattr(request.auth, "pk", None))
+    config = publishing.publish(
+        hotel,
+        code,
+        actor_type=AuditLog.ActorType.PLATFORM,
+        actor_id=getattr(request.auth, "pk", None),
+    )
     _audit(hotel, request, "grms.published", type=code, version=config.version)
     return {"version": config.version, "published_at": config.published_at}
 
@@ -322,6 +340,7 @@ def rollback(request: HttpRequest, hotel_id: str, code: str, payload: RollbackIn
     hotel = _hotel(hotel_id)
     config = publishing.rollback(
         hotel, code, to_version=payload.to_version,
+        actor_type=AuditLog.ActorType.PLATFORM,
         actor_id=getattr(request.auth, "pk", None),
     )
     _audit(hotel, request, "grms.rolled_back", type=code, to=payload.to_version)
