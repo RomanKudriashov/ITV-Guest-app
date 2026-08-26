@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useActionFailed } from '@/hooks/useActionFailed';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
+import { DictionaryDivergence } from './DictionaryDivergence';
 import { QueryState } from '@/components/QueryState';
 import {
   getDictionary,
@@ -202,6 +203,13 @@ function DictionaryTab() {
       >
         {t('admin.templates.dictIntro')}
       </Typography>
+
+      {/*
+        Расхождения — ПОД эталоном: сначала человек видит сам список, потом
+        узнаёт, кто с ним разошёлся. Обратный порядок заставлял бы читать числа
+        про список, которого ещё не видел.
+      */}
+      <DictionaryDivergence />
 
       <Box sx={{ ...panelSx, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField

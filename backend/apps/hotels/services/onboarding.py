@@ -233,12 +233,26 @@ def upsert_dictionary_entry(*, kind: str, code: str, title: dict, is_active: boo
     if not title:
         raise ValidationError("Нужно название", field="title")
 
+    # ЗНАЧЕНИЯ ДО ПРАВКИ — снимаем ДО записи: по ним отличается копия, которую
+    # отель не трогал, от той, которую трогал. Другого признака «тронуто» в
+    # данных нет, и заводить его пришлось бы миграцией.
+    existing = SystemDictionaryEntry.objects.filter(kind=kind, code=code).first()
+    before = (
+        {"title": existing.title, "is_active": existing.is_active} if existing else None
+    )
+
     entry, _ = SystemDictionaryEntry.objects.update_or_create(
         kind=kind,
         code=code,
         defaults={"title": title, "is_active": is_active},
     )
-    return entry
+
+    from apps.hotels.services.platform import dictionary_sync
+
+    # Разослать тем, кто не трогал. Тронутые копии остаются как есть и попадают
+    # в расхождения — экран покажет их числом.
+    spread = dictionary_sync.propagate(entry, before)
+    return entry, spread
 
 
 def create_template(data: dict) -> OnboardingTemplate:

@@ -775,7 +775,50 @@ export const putDictionaryEntry = (body: {
   code: string;
   title: Record<string, string>;
   is_active?: boolean;
-}) => request<DictionaryEntry>('/dictionaries', 'PUT', body);
+}) => request<DictionaryEntry & { spread: DictionarySpread }>('/dictionaries', 'PUT', body);
+
+/** Что стало с копиями отелей после правки эталона. */
+export interface DictionarySpread {
+  /** Копии, которые следовали за эталоном и обновились. */
+  updated: number;
+  /** Копии со своей правкой: их эталон не трогает никогда. */
+  kept: number;
+  /** Отели, у которых записи не было — она появилась. */
+  created: number;
+}
+
+export interface DivergenceEntry {
+  kind: string;
+  code: string;
+  state: 'missing' | 'changed' | 'disabled' | 'extra';
+  source: { title: Record<string, string>; is_active: boolean } | null;
+  local: { title: Record<string, string>; is_active: boolean } | null;
+}
+
+export interface DivergenceHotel {
+  hotel_id: string;
+  name: string;
+  subdomain: string;
+  counts: Record<string, number>;
+  entries: DivergenceEntry[];
+}
+
+export interface DivergenceReport {
+  hotels: DivergenceHotel[];
+  source_size: number;
+  diverged_hotels: number;
+  total_hotels: number;
+}
+
+export const getDictionaryDivergence = () =>
+  request<DivergenceReport>('/dictionaries/divergence');
+
+/** Вернуть копии названных отелей к эталону. Явное действие, не следствие правки. */
+export const resetDictionary = (hotelIds: string[], codes: string[] = []) =>
+  request<{ restored: number; created: number }>('/dictionaries/reset', 'POST', {
+    hotel_ids: hotelIds,
+    codes,
+  });
 
 /* ── Экспорт и офбординг ────────────────────────────────────────────────── */
 

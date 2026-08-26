@@ -2115,7 +2115,8 @@
           "updated": "Template changed"
         },
         "dictionary": {
-          "updated": "Dictionary changed"
+          "updated": "Dictionary changed",
+          "reset": "Copies reset to the source"
         },
         "logout": "Signed out of the platform",
         "logout_all": "Signed out everywhere",
@@ -2199,7 +2200,24 @@
       "dictNote": "A hotel gets its own copy on creation and may deactivate entries. Edits here reach new hotels.",
       "empty": "No onboarding templates yet.",
       "dictEmpty": "The dictionary is empty so far.",
-      "dictIntro": "The reference lists of allergens and markers, shared across the platform. Every new hotel receives a COPY and edits it on its own side: a change here reaches only hotels created after it."
+      "dictIntro": "The reference lists of allergens and markers, shared across the platform. Every new hotel receives a COPY and edits it on its own side: a change here reaches only hotels created after it.",
+      "divergence": {
+        "title": "Divergence from the source",
+        "count": "{{diverged}} of {{total}} diverged",
+        "clean": "Every hotel follows the source: no local edits.",
+        "hint": "A hotel's edit is never overwritten automatically. Copies return to the source only from here — one hotel or the selected ones.",
+        "details": "What exactly",
+        "reset": "Reset to source",
+        "resetPicked": "Reset selected to source",
+        "picked_one": "{{count}} hotel selected",
+        "picked_other": "{{count}} hotels selected",
+        "states": {
+          "changed": "hotel's edit",
+          "missing": "entry absent",
+          "disabled": "switched off by hotel",
+          "extra": "hotel's own"
+        }
+      }
     },
     "data": {
       "exportTitle": "Data export",

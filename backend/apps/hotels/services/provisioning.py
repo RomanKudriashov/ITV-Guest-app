@@ -62,23 +62,42 @@ def _clean_languages(languages) -> list[str]:
 
 def seed_item_data_dictionaries() -> None:
     """
-    Засеять системные аллергены (14 обязательных) и диетические маркеры с нашими
-    переводами. Идемпотентно (get_or_create по коду), под текущим тенантом.
-    Системные пометки не даём удалить в CMS; отель может деактивировать.
+    Засеять системные аллергены (14 обязательных) и диетические маркеры.
+
+    ИСТОЧНИК — ТАБЛИЦА ЭТАЛОНА, а не константы кода. Раньше здесь читались
+    `catalog.vocabularies`, и это тихо разводило две правды: запись, добавленная
+    платформой в консоли, не доезжала НИ ДО КОГО — ни до существующих отелей,
+    ни до новых. Докстрока модели при этом обещала, что новые её получают.
+
+    Константы остались первичным СЕВОМ самого эталона (`onboarding.ensure_seed`):
+    на пустой базе таблице неоткуда взяться, и падать первому же отелю из-за
+    этого незачем.
+
+    Идемпотентно (get_or_create по коду), под текущим тенантом. Системные
+    пометки не даём удалить в CMS; отель может деактивировать.
     """
     from apps.catalog.models import Allergen, DietaryMarker
-    from apps.catalog.vocabularies import ALLERGENS, DIETARY_MARKERS
+    from apps.hotels.models import SystemDictionaryEntry
+    from apps.hotels.services.onboarding import ensure_seed
+    from apps.hotels.services.platform.dictionary_sync import entries_from_source
 
-    for order, entry in enumerate(ALLERGENS):
-        Allergen.objects.get_or_create(
-            code=entry["code"],
-            defaults={"title": entry["title"], "is_system": True, "sort_order": order},
-        )
-    for order, entry in enumerate(DIETARY_MARKERS):
-        DietaryMarker.objects.get_or_create(
-            code=entry["code"],
-            defaults={"title": entry["title"], "is_system": True, "sort_order": order},
-        )
+    ensure_seed()
+    source = entries_from_source()
+
+    for kind, model in (
+        (SystemDictionaryEntry.Kind.ALLERGEN, Allergen),
+        (SystemDictionaryEntry.Kind.MARKER, DietaryMarker),
+    ):
+        for entry in source.get(kind, []):
+            model.objects.get_or_create(
+                code=entry["code"],
+                defaults={
+                    "title": entry["title"],
+                    "is_active": entry["is_active"],
+                    "is_system": True,
+                    "sort_order": entry["sort_order"],
+                },
+            )
 
 
 @transaction.atomic

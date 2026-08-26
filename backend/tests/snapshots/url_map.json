@@ -445,6 +445,12 @@
     "GET",
     "PUT"
   ],
+  "/api/v1/platform/dictionaries/divergence": [
+    "GET"
+  ],
+  "/api/v1/platform/dictionaries/reset": [
+    "POST"
+  ],
   "/api/v1/platform/fleet": [
     "GET"
   ],

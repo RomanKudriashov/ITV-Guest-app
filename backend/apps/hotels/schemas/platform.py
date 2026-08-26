@@ -144,6 +144,13 @@ class BulkActiveIn(Schema):
     is_active: bool
 
 
+class DictionaryResetIn(Schema):
+    hotel_ids: list[str]
+    # Какие записи возвращать. Пусто — все: «вернуть отель к эталону целиком»
+    # это отдельная задача от «вернуть одну запись».
+    codes: list[str] = []
+
+
 class GroupIn(Schema):
     code: str | None = None
     title: str | None = None
