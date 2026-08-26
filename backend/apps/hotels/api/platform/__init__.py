@@ -14,6 +14,7 @@ from ninja import Router
 from .auth import router as auth_router
 from .fleet import router as fleet_router
 from .groups import router as groups_router
+from .publications import router as publications_router
 from .hotels import router as hotels_router
 from .nodes import router as nodes_router
 from .overview import router as overview_router
@@ -31,6 +32,7 @@ router.add_router("", auth_router)
 router.add_router("", overview_router)
 router.add_router("", fleet_router)
 router.add_router("", groups_router)
+router.add_router("", publications_router)
 router.add_router("", hotels_router)
 router.add_router("", templates_router)
 router.add_router("", tariffs_router)

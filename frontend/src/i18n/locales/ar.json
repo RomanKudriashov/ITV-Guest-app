@@ -2186,6 +2186,9 @@
           "deleted": "حُذفت مجموعة فنادق",
           "members_added": "أُضيفت فنادق إلى مجموعة",
           "member_removed": "أُزيل فندق من مجموعة"
+        },
+        "publication": {
+          "started": "بدأ النشر"
         }
       },
       "impersonation": {

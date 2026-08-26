@@ -2109,6 +2109,9 @@
           "deleted": "已删除酒店分组",
           "members_added": "已将酒店加入分组",
           "member_removed": "已将酒店移出分组"
+        },
+        "publication": {
+          "started": "已启动发布"
         }
       },
       "impersonation": {

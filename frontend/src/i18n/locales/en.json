@@ -2126,6 +2126,9 @@
           "deleted": "Hotel group deleted",
           "members_added": "Hotels added to a group",
           "member_removed": "Hotel removed from a group"
+        },
+        "publication": {
+          "started": "Publication started"
         }
       },
       "impersonation": {

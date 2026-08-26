@@ -151,6 +151,16 @@ class DictionaryResetIn(Schema):
     codes: list[str] = []
 
 
+class PublicationIn(Schema):
+    kind: str
+    payload: dict = {}
+    # Кому: перечень отелей, группа или весь флот. Вес действия разный, и право
+    # проверяется по нему, а не по факту вызова ручки.
+    scope: str = "hotels"
+    group_id: str | None = None
+    hotel_ids: list[str] = []
+
+
 class GroupIn(Schema):
     code: str | None = None
     title: str | None = None

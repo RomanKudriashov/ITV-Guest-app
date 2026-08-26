@@ -2146,6 +2146,9 @@
           "deleted": "Удалена группа отелей",
           "members_added": "Отели добавлены в группу",
           "member_removed": "Отель убран из группы"
+        },
+        "publication": {
+          "started": "Запущена публикация"
         }
       },
       "impersonation": {

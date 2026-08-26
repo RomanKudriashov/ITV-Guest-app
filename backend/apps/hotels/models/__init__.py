@@ -23,6 +23,7 @@ from .location import Location
 from .module import HotelModule
 from .onprem import OnPremNode
 from .platform import OnboardingTemplate, SystemDictionaryEntry
+from .publication import PublicationJob, PublicationResult
 from .room import Room
 from .schedule import Schedule, ScheduleAvailability, ScheduleInterval
 from .service import Service
@@ -39,6 +40,8 @@ __all__ = [
     "Location",
     "OnPremNode",
     "OnboardingTemplate",
+    "PublicationJob",
+    "PublicationResult",
     "Room",
     "Schedule",
     "ScheduleAvailability",
