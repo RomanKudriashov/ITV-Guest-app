@@ -145,6 +145,22 @@ def _base_queryset(params: dict):
     elif status == "disabled":
         queryset = queryset.filter(is_active=False)
 
+    # ФИЛЬТР ПО ГРУППЕ — ТЕМ ЖЕ КОДОМ, что и адресация массового действия.
+    # Если бы экран резал состав по-своему, «выключить всё, что вижу» однажды
+    # выключило бы не то, что видно: у правила состав вычисляемый.
+    group_id = (params.get("group") or "").strip()
+    if group_id:
+        from apps.hotels.services.platform import groups as groups_svc
+
+        group = groups_svc.find(group_id)
+        # Группы нет — пустая выдача, а не «все отели». Молча показать весь
+        # флот на удалённой группе значит предложить массовое действие не тем.
+        queryset = (
+            queryset.filter(pk__in=groups_svc.hotel_ids(group))
+            if group
+            else queryset.none()
+        )
+
     tariff = (params.get("tariff") or "").strip()
     if tariff:
         queryset = queryset.filter(tariff=tariff)

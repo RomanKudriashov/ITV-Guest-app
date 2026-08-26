@@ -454,6 +454,21 @@
   "/api/v1/platform/fleet/export": [
     "GET"
   ],
+  "/api/v1/platform/groups": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/groups/{group_id}": [
+    "DELETE",
+    "PATCH"
+  ],
+  "/api/v1/platform/groups/{group_id}/members": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/groups/{group_id}/members/{hotel_id}": [
+    "DELETE"
+  ],
   "/api/v1/platform/hotels": [
     "GET",
     "POST"

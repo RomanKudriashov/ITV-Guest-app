@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from .brand import BrandTheme
 from .execution_point import ExecutionPoint
+from .group import HotelGroup, HotelGroupMember
 from .hotel import Hotel, HotelLanguage
 from .location import Location
 from .module import HotelModule
@@ -30,6 +31,8 @@ from .showcase import ShowcaseTile
 __all__ = [
     "BrandTheme",
     "ExecutionPoint",
+    "HotelGroup",
+    "HotelGroupMember",
     "Hotel",
     "HotelLanguage",
     "HotelModule",

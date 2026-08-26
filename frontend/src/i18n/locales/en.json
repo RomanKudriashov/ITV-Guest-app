@@ -1766,7 +1766,8 @@
       "templates": "Templates & dictionaries",
       "open": "Open menu",
       "support": "Support sessions",
-      "security": "Security"
+      "security": "Security",
+      "groups": "Groups"
     },
     "role": {
       "owner": "Platform owner",
@@ -1866,7 +1867,10 @@
         "services": "Services",
         "orders": "Orders (7d)",
         "status": "Status"
-      }
+      },
+      "allGroups": "All groups",
+      "selectedGroup_one": "{{count}} hotel in the group",
+      "selectedGroup_other": "{{count}} hotels in the group"
     },
     "hotel": {
       "crumb": "Hotel",
@@ -1891,7 +1895,9 @@
         "minorUnits": "Decimal places",
         "minorUnitsHint": "2 for RUB, 0 for JPY",
         "languagesHint": "Codes separated by commas. The first one is the default.",
-        "subdomainWhy": "The subdomain is the hotel key and is printed on room QR codes: changing it would turn them into junk."
+        "subdomainWhy": "The subdomain is the hotel key and is printed on room QR codes: changing it would turn them into junk.",
+        "city": "City",
+        "cityHint": "Rule-based groups slice the fleet by it"
       },
       "activeOn": "Active",
       "activeOff": "Disabled — storefront and CMS are closed",
@@ -2112,7 +2118,14 @@
           "updated": "Dictionary changed"
         },
         "logout": "Signed out of the platform",
-        "logout_all": "Signed out everywhere"
+        "logout_all": "Signed out everywhere",
+        "group": {
+          "created": "Hotel group created",
+          "updated": "Hotel group updated",
+          "deleted": "Hotel group deleted",
+          "members_added": "Hotels added to a group",
+          "member_removed": "Hotel removed from a group"
+        }
       },
       "impersonation": {
         "started": "Started acting as hotel admin",
@@ -2228,6 +2241,49 @@
       "http": "Something went wrong. Please try again.",
       "network": "No connection to the server.",
       "forbidden": "You do not have rights for this action."
+    },
+    "groups": {
+      "title": "Hotel groups",
+      "subtitle": "Slices of the fleet for bulk actions: network, city, test, campaign",
+      "add": "New group",
+      "empty": "No groups yet. The first one gives bulk actions an address.",
+      "name": "Name",
+      "code": "Code",
+      "kind": "Kind",
+      "mode": "Mode",
+      "size": "Hotels",
+      "hotel": "Hotel",
+      "addedBy": "Added by",
+      "addedAt": "When",
+      "addHotel": "Find a hotel by name",
+      "byRule": "by rule",
+      "any": "Any",
+      "originLive": "Live",
+      "originDemo": "Demo",
+      "listComposition": "Composed by hand",
+      "ruleComposition": "Composition computed by the rule right now",
+      "modes": {
+        "list": "List",
+        "rule": "Rule"
+      },
+      "modeHint": {
+        "list": "You add hotels; the composition is stored",
+        "rule": "The composition is computed every time — new hotels join on their own"
+      },
+      "kinds": {
+        "network": "Network",
+        "brand": "Brand",
+        "city": "City",
+        "test": "Test",
+        "campaign": "Campaign",
+        "custom": "Custom"
+      },
+      "ruleFields": {
+        "city": "City",
+        "origin": "Origin",
+        "tariff": "Plan",
+        "language": "Language"
+      }
     }
   },
   "roomControl": {

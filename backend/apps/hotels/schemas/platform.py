@@ -51,6 +51,11 @@ class HotelPatchIn(Schema):
     currency_minor_units: int | None = None
     languages: list[str] | None = None
     is_active: bool | None = None
+    # Город — переводимое поле, поэтому словарь: {"ru": "Москва"}. Появился
+    # здесь вместе с группами-правилами: правило умеет резать флот по городу, а
+    # задать его оператору было негде — признак существовал в базе и не
+    # заполнялся ниоткуда, то есть правило по нему всегда возвращало пустоту.
+    city: dict | None = None
 
 class AdminIn(Schema):
     email: str
@@ -128,8 +133,30 @@ class TariffIn(Schema):
     acknowledge_downgrade: bool = False
 
 class BulkActiveIn(Schema):
-    hotel_ids: list[str]
+    """
+    Кого включаем/выключаем. ДВА СПОСОБА АДРЕСАЦИИ, а не два действия:
+    перечислить отели или назвать группу. У группы-правила состав считается в
+    момент нажатия — тем же кодом, что показал число на предпросмотре.
+    """
+
+    hotel_ids: list[str] = []
+    group_id: str | None = None
     is_active: bool
+
+
+class GroupIn(Schema):
+    code: str | None = None
+    title: str | None = None
+    kind: str | None = None
+    mode: str | None = None
+    # Условие для `mode=rule`: {"city": "Москва"}. Неизвестные ключи сервис
+    # отбрасывает — правило по несуществующему признаку не выдаёт пустоту молча.
+    rule: dict | None = None
+    note: str | None = None
+
+
+class GroupMembersIn(Schema):
+    hotel_ids: list[str]
 
 class PlatformLoginIn(Schema):
     email: str

@@ -112,6 +112,10 @@ def profile(hotel: Hotel) -> dict[str, Any]:
         # рубль и сто иен.
         "currency_minor_units": hotel.currency_minor_units,
         "default_language": hotel.default_language,
+        # Город. Нужен консоли не для красоты: по нему режет флот группа-правило
+        # («город Москва»), и поле, которое нельзя заполнить, делало бы такое
+        # правило всегда пустым.
+        "city": hotel.city_i18n,
         "languages": languages,
         "tariff": hotel.tariff,
         # Состояние офбординга отдаём ОТДЕЛЬНЫМ полем, а не сырыми settings:

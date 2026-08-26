@@ -122,7 +122,7 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
     # «изменено поле currency», через месяц не отвечает на вопрос, ради
     # которого его читают: с чего на что поменяли и было ли это ошибкой.
     changes: dict[str, dict] = {}
-    for attr in ("name", "timezone", "currency", "currency_minor_units"):
+    for attr in ("name", "timezone", "currency", "currency_minor_units", "city"):
         if attr in data and data[attr] is not None and getattr(hotel, attr) != data[attr]:
             changes[attr] = {"from": getattr(hotel, attr), "to": data[attr]}
             setattr(hotel, attr, data[attr])

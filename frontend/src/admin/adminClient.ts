@@ -168,6 +168,8 @@ export interface HotelLanguageBrief {
 }
 
 export interface HotelProfile extends HotelBrief {
+  /** Город строкой на языке отеля: по нему режет флот группа-правило. */
+  city?: string;
   timezone: string;
   currency: string;
   /** Знаков после запятой у валюты: 2 — рубль, 0 — иена. */
@@ -274,6 +276,8 @@ export const createHotel = (body: CreateHotelInput) =>
   request<CreateHotelResult>('/hotels', 'POST', body);
 export interface HotelPatch {
   name?: string;
+  /** Город — переводимое поле, поэтому словарь: `{ru: "Москва"}`. */
+  city?: Record<string, string>;
   timezone?: string;
   currency?: string;
   currency_minor_units?: number;
@@ -370,6 +374,8 @@ export interface FleetQuery {
   sort?: string;
   page?: number;
   page_size?: number;
+  /** Группа отелей: у правила состав считает сервер в момент запроса. */
+  group?: string;
 }
 
 export interface FleetPage {
@@ -392,11 +398,69 @@ function fleetQuery(query: FleetQuery): string {
 
 export const getFleet = (query: FleetQuery) => request<FleetPage>(`/fleet${fleetQuery(query)}`);
 
-export const bulkSetActive = (hotelIds: string[], isActive: boolean) =>
+/**
+ * Массовое включение/выключение. Адресация ДВУМЯ способами: перечнем отелей и
+ * группой. Состав группы клиент не считает — у правила он вычисляемый, и
+ * посчитанный здесь разошёлся бы с тем, к чему применилось на сервере.
+ */
+export const bulkSetActive = (hotelIds: string[], isActive: boolean, groupId?: string) =>
   request<{ changed: number; requested: number }>('/fleet/bulk', 'POST', {
     hotel_ids: hotelIds,
     is_active: isActive,
+    group_id: groupId ?? null,
   });
+
+/* ── Группы отелей ─────────────────────────────────────────────────────── */
+
+export interface HotelGroup {
+  id: string;
+  code: string;
+  title: string;
+  kind: string;
+  mode: 'list' | 'rule';
+  rule: Record<string, string>;
+  note: string;
+  created_at: string;
+  /** Размер считает сервер: у правила он вычисляемый. */
+  size?: number;
+}
+
+export interface GroupMember {
+  hotel_id: string;
+  name: string;
+  subdomain: string;
+  is_active: boolean;
+  /** У группы-правила пусто: отель попал в неё условием, а не человеком. */
+  added_by: string | null;
+  added_at: string | null;
+}
+
+export interface GroupsPage {
+  items: HotelGroup[];
+  kinds: { code: string; title: string }[];
+  rule_fields: string[];
+}
+
+export const getGroups = () => request<GroupsPage>('/groups');
+
+export const createGroup = (payload: Partial<HotelGroup>) =>
+  request<HotelGroup>('/groups', 'POST', payload);
+
+export const patchGroup = (id: string, payload: Partial<HotelGroup>) =>
+  request<HotelGroup>(`/groups/${id}`, 'PATCH', payload);
+
+export const deleteGroup = (id: string) => request<{ ok: boolean }>(`/groups/${id}`, 'DELETE');
+
+export const getGroupMembers = (id: string) =>
+  request<{ group: HotelGroup; members: GroupMember[] }>(`/groups/${id}/members`);
+
+export const addGroupMembers = (id: string, hotelIds: string[]) =>
+  request<{ added: number; size: number }>(`/groups/${id}/members`, 'POST', {
+    hotel_ids: hotelIds,
+  });
+
+export const removeGroupMember = (id: string, hotelId: string) =>
+  request<{ removed: number; size: number }>(`/groups/${id}/members/${hotelId}`, 'DELETE');
 
 /**
  * Выгрузка. Идёт мимо `request`: ответ — CSV, а не JSON, и его нужно отдать

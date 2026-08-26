@@ -5,6 +5,8 @@ import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
 import InputBase from '@mui/material/InputBase';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +18,7 @@ import { QueryState } from '@/components/QueryState';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
   bulkSetActive,
+  getGroups,
   downloadFleetCsv,
   getFleet,
   type CreateHotelResult,
@@ -51,8 +54,16 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
   const [created, setCreated] = useState<CreateHotelResult | null>(null);
 
   const fleet = useQuery({ queryKey: ['admin', 'fleet', query], queryFn: () => getFleet(query) });
+  const groups = useQuery({ queryKey: ['admin', 'groups'], queryFn: getGroups });
   const bulk = useMutation({
-    mutationFn: (isActive: boolean) => bulkSetActive(selected, isActive),
+    /*
+      Две адресации, одно действие. Отметили отели галочками — идут они;
+      выбрали группу и не отметили никого — идёт вся группа, и её состав
+      считает сервер в момент нажатия. Для группы-правила это существенно:
+      заведённый час назад отель обязан попасть под действие.
+    */
+    mutationFn: (isActive: boolean) =>
+      bulkSetActive(selected, isActive, selected.length ? undefined : query.group),
     onSuccess: () => {
       setSelected([]);
       void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
@@ -119,6 +130,32 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           />
         </Box>
 
+        {/*
+          ФИЛЬТР ПО ГРУППЕ. Состав считает сервер: у группы-правила он
+          вычисляемый, и посчитанный здесь разошёлся бы с тем, к чему применится
+          массовое действие. Отсюда же оно и адресуется — «выключить всё, что
+          вижу» обязано означать ровно то, что видно.
+        */}
+        <TextField
+          select
+          size="small"
+          value={query.group ?? ''}
+          onChange={(event) => {
+            setSelected([]);
+            patch({ group: event.target.value });
+          }}
+          SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-fleet-group' } as never }}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="">{t('admin.fleet.allGroups')}</MenuItem>
+          {(groups.data?.items ?? []).map((group) => (
+            <MenuItem key={group.id} value={group.id}>
+              {group.title}
+              {group.size !== undefined ? ` · ${group.size}` : ''}
+            </MenuItem>
+          ))}
+        </TextField>
+
         {(['', 'active', 'trial', 'disabled'] as const).map((status) => (
           <ButtonBase
             key={status || 'all'}
@@ -151,7 +188,13 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         </ButtonBase>
       </Box>
 
-      {selected.length ? (
+      {/*
+        Панель массового действия появляется и на выбранной ГРУППЕ без единой
+        галочки: адресация группой — это тот же выбор, только сделанный
+        фильтром. Число берём с сервера (`size`), а не считаем строки на
+        странице: страница показывает двадцать пять, а в группе может быть сто.
+      */}
+      {selected.length || query.group ? (
         <Box
           data-testid="admin-fleet-bulkbar"
           sx={{
@@ -166,7 +209,12 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           }}
         >
           <Typography sx={{ ...typo.caption, fontWeight: 700, color: accent.soft }}>
-            {t('admin.fleet.selected', { count: selected.length })}
+            {selected.length
+              ? t('admin.fleet.selected', { count: selected.length })
+              : t('admin.fleet.selectedGroup', {
+                  count:
+                    (groups.data?.items ?? []).find((group) => group.id === query.group)?.size ?? 0,
+                })}
           </Typography>
           <Button
             size="small"

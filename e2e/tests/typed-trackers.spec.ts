@@ -64,7 +64,15 @@ test.describe('Типизированные трекеры', () => {
 
       // Колонки доски — из потока ресторана, а не из захардкоженного списка.
       const board = staff.getByTestId('tracker-board')
-      await expect(staff.getByTestId(`tracker-order-${number}`)).toBeVisible({ timeout: 20_000 })
+      /*
+        ЖДЁМ ДОЛЬШЕ ПЕРЕПОДКЛЮЧЕНИЯ. Доска живёт вебсокетом, и оборванное
+        соединение восстанавливается с нарастающей паузой до 30 секунд
+        (`useBoardLive`); на переподключении сервер присылает ПОЛНЫЙ снимок, то
+        есть заказ доедет — но позже двадцати секунд. На загруженной машине это
+        давало красноту не там, где сломано: продукт вёл себя правильно, а тест
+        не дожидался.
+      */
+      await expect(staff.getByTestId(`tracker-order-${number}`)).toBeVisible({ timeout: 45_000 })
 
       await staff.getByTestId(`tracker-accept-${number}`).click()
       await expect(staff.getByTestId(`tracker-order-${number}`)).toContainText(/Принят/i, {

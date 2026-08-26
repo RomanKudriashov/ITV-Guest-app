@@ -1751,7 +1751,8 @@
       "templates": "模板与字典",
       "open": "打开菜单",
       "support": "支持会话",
-      "security": "安全"
+      "security": "安全",
+      "groups": "分组"
     },
     "role": {
       "owner": "平台所有者",
@@ -1851,7 +1852,9 @@
         "services": "服务",
         "orders": "订单（7天）",
         "status": "状态"
-      }
+      },
+      "allGroups": "全部分组",
+      "selectedGroup_other": "该分组内有 {{count}} 家酒店"
     },
     "hotel": {
       "crumb": "酒店详情",
@@ -1876,7 +1879,9 @@
         "minorUnits": "小数位",
         "minorUnitsHint": "卢布为 2，日元为 0",
         "languagesHint": "用逗号分隔的代码，第一个为默认语言。",
-        "subdomainWhy": "子域是酒店的标识，并印在客房二维码上：更改会使其失效。"
+        "subdomainWhy": "子域是酒店的标识，并印在客房二维码上：更改会使其失效。",
+        "city": "城市",
+        "cityHint": "规则分组按此切分酒店"
       },
       "activeOn": "启用",
       "activeOff": "已停用 — 门店页与后台均不可访问",
@@ -2096,7 +2101,14 @@
           "updated": "修改字典"
         },
         "logout": "退出平台",
-        "logout_all": "在所有设备退出"
+        "logout_all": "在所有设备退出",
+        "group": {
+          "created": "已创建酒店分组",
+          "updated": "已修改酒店分组",
+          "deleted": "已删除酒店分组",
+          "members_added": "已将酒店加入分组",
+          "member_removed": "已将酒店移出分组"
+        }
       },
       "impersonation": {
         "started": "以酒店管理员身份开始操作",
@@ -2212,6 +2224,49 @@
       "http": "操作失败，请重试。",
       "network": "无法连接服务器。",
       "forbidden": "您无权执行此操作。"
+    },
+    "groups": {
+      "title": "酒店分组",
+      "subtitle": "用于批量操作的酒店切分：集团、城市、测试、活动",
+      "add": "新建分组",
+      "empty": "暂无分组。建立第一个分组即可为批量操作指定对象。",
+      "name": "名称",
+      "code": "代码",
+      "kind": "类型",
+      "mode": "方式",
+      "size": "酒店数",
+      "hotel": "酒店",
+      "addedBy": "添加人",
+      "addedAt": "时间",
+      "addHotel": "按名称查找酒店",
+      "byRule": "按规则",
+      "any": "任意",
+      "originLive": "正式",
+      "originDemo": "演示",
+      "listComposition": "人工组成",
+      "ruleComposition": "组成由规则即时计算",
+      "modes": {
+        "list": "名单",
+        "rule": "规则"
+      },
+      "modeHint": {
+        "list": "由您添加酒店，组成会被保存",
+        "rule": "每次都重新计算组成——新酒店会自动加入"
+      },
+      "kinds": {
+        "network": "集团",
+        "brand": "品牌",
+        "city": "城市",
+        "test": "测试",
+        "campaign": "活动",
+        "custom": "自定义"
+      },
+      "ruleFields": {
+        "city": "城市",
+        "origin": "来源",
+        "tariff": "套餐",
+        "language": "语言"
+      }
     }
   },
   "roomControl": {

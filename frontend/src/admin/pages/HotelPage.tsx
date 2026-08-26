@@ -209,6 +209,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   */
   const [draft, setDraft] = useState({
     name: hotel.name,
+    city: hotel.city ?? '',
     timezone: hotel.timezone,
     currency: hotel.currency,
     currency_minor_units: hotel.currency_minor_units,
@@ -252,6 +253,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
 
   const initial = {
     name: hotel.name,
+    city: hotel.city ?? '',
     timezone: hotel.timezone,
     currency: hotel.currency,
     currency_minor_units: hotel.currency_minor_units,
@@ -274,6 +276,10 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     mutationFn: () =>
       patchHotel(hotel.id, {
         name: draft.name.trim(),
+        // Переводимое поле: кладём под язык отеля. Оператор вводит одну строку
+        // — вторая форма ввода ради города, который он пишет по-русски,
+        // означала бы четыре поля вместо одного.
+        city: draft.city.trim() ? { [hotel.default_language]: draft.city.trim() } : {},
         timezone: draft.timezone.trim(),
         currency: draft.currency.trim().toUpperCase(),
         currency_minor_units: Number(draft.currency_minor_units),
@@ -362,6 +368,21 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           value={draft.name}
           onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
           inputProps={{ 'data-testid': 'admin-hotel-name-input' }}
+          sx={{ mb: 1.25 }}
+        />
+        {/*
+          ГОРОД. Появился вместе с группами-правилами: по нему режет флот
+          правило «город Москва», и признак, который негде заполнить, делал бы
+          такое правило всегда пустым.
+        */}
+        <TextField
+          size="small"
+          fullWidth
+          label={t('admin.hotel.field.city')}
+          value={draft.city}
+          onChange={(event) => setDraft((prev) => ({ ...prev, city: event.target.value }))}
+          inputProps={{ 'data-testid': 'admin-hotel-city-input' }}
+          helperText={t('admin.hotel.field.cityHint')}
           sx={{ mb: 1.25 }}
         />
         {/* Поддомен не редактируется: это ключ тенанта, и он напечатан на QR в

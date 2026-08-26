@@ -17,6 +17,7 @@ import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
+import { GroupsPage } from './pages/GroupsPage';
 import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
 import { TeamPage } from './pages/TeamPage';
@@ -40,6 +41,9 @@ const SECTIONS: AdminSection[] = [
   // Ниже — то, что относится к самой платформе, а не к отелям. Группировка та
   // же, что в CMS (R4): плоская простыня одинаковых пунктов не даёт понять,
   // где кончаются отели и начинается платформа.
+  // Группы — рядом с флотом, а не в блоке платформы: это разрез ОТЕЛЕЙ, и
+  // человек идёт сюда из той же задачи, из которой открывает флот.
+  { key: 'groups', labelKey: 'admin.nav.groups' },
   { key: 'modules', labelKey: 'admin.nav.modules', group: 'admin.nav.platformGroup' },
   { key: 'nodes', labelKey: 'admin.nav.nodes', group: 'admin.nav.platformGroup' },
   { key: 'templates', labelKey: 'admin.nav.templates', group: 'admin.nav.platformGroup' },
@@ -203,6 +207,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'fleet' && hotelId ? (
         <HotelPage id={hotelId} onBack={closeHotel} />
       ) : null}
+      {section === 'groups' ? <GroupsPage /> : null}
       {section === 'modules' ? <ModulesPage /> : null}
       {section === 'nodes' ? <NodesPage /> : null}
       {section === 'templates' ? <TemplatesPage /> : null}
