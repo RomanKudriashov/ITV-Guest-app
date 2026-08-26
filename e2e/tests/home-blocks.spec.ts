@@ -193,12 +193,27 @@ test.describe('Главная: погода и время', () => {
     // Часы отеля, а не устройства: Токио от прогона (ru-RU, UTC+3) отличается,
     // и совпадение здесь означало бы, что показывается время браузера.
     const shown = (await clock.textContent()) ?? ''
-    const tokyo = new Intl.DateTimeFormat('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Tokyo',
-    }).format(new Date())
-    expect(shown, 'на главной не местное время отеля').toContain(tokyo)
+    const inTokyo = (moment: Date) =>
+      new Intl.DateTimeFormat('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Tokyo',
+      }).format(moment)
+
+    /*
+      ГРАНИЦА МИНУТЫ. Экран нарисовал время, пока грузилась страница, а
+      ожидаемое считается сейчас: если между этим тикнула минута, «04:12»
+      против «04:13» — это правильно работающие часы, а не поломка. Принимаем
+      текущую минуту и предыдущую; шире брать нельзя — тогда проверка
+      перестанет ловить время устройства вместо времени отеля (Токио от
+      прогона отличается на шесть часов, а не на минуту).
+    */
+    const now = new Date()
+    const previous = new Date(now.getTime() - 60_000)
+    expect(
+      [inTokyo(now), inTokyo(previous)].some((value) => shown.includes(value)),
+      `на главной не местное время отеля: показано «${shown}», ожидалось ${inTokyo(now)}`,
+    ).toBeTruthy()
   })
 })
 
