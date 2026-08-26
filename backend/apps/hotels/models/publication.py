@@ -96,6 +96,12 @@ class PublicationResult(BaseModel):
     # получить причину, а не догадываться по коду.
     detail = models.TextField(blank=True)
 
+    # ПРИЧИНА КОДОМ, а не только словами. Экран обязан отличать «у отеля уже то
+    # же самое» от «у отеля своя правка»: первое — ничего не случилось, второе —
+    # расхождение, с которым платформа что-то делает. Разбирать текст детали
+    # ради этого значило бы сцепить экран с формулировкой.
+    reason = models.SlugField(max_length=32, blank=True)
+
     class Meta:
         db_table = "hotels_publication_result"
         ordering = ["hotel_id"]

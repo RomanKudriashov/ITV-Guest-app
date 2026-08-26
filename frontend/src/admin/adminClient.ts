@@ -810,6 +810,61 @@ export interface DivergenceReport {
   total_hotels: number;
 }
 
+/* ── Публикация ────────────────────────────────────────────────────────── */
+
+export interface PublicationResultRow {
+  hotel_id: string;
+  subdomain: string;
+  name: string;
+  outcome: 'applied' | 'skipped' | 'refused' | 'failed';
+  detail: string;
+  /** Причина кодом: `same`, `local_edit`, `unknown_origin`, `exception`. */
+  reason: string;
+}
+
+export interface PublicationJob {
+  id: string;
+  kind: string;
+  description: string;
+  scope: 'hotels' | 'group' | 'all';
+  group: string;
+  actor: string;
+  status: 'pending' | 'running' | 'done' | 'failed';
+  planned: number;
+  error: string;
+  created_at: string;
+  finished_at: string | null;
+  counts: Record<string, number>;
+  /** Сколько ещё не отчиталось: запланировано минус записанное. */
+  pending: number;
+  results?: PublicationResultRow[];
+}
+
+export interface PublicationTarget {
+  kind: string;
+  payload: Record<string, unknown>;
+  scope: 'hotels' | 'group' | 'all';
+  group_id?: string | null;
+  hotel_ids?: string[];
+}
+
+export interface PublicationPreview {
+  kind: string;
+  description: string;
+  count: number;
+  sample: string[];
+}
+
+export const previewPublication = (body: PublicationTarget) =>
+  request<PublicationPreview>('/publications/preview', 'POST', body);
+
+export const startPublication = (body: PublicationTarget) =>
+  request<PublicationJob>('/publications', 'POST', body);
+
+export const getPublications = () => request<{ items: PublicationJob[] }>('/publications');
+
+export const getPublication = (id: string) => request<PublicationJob>(`/publications/${id}`);
+
 export const getDictionaryDivergence = () =>
   request<DivergenceReport>('/dictionaries/divergence');
 

@@ -1823,7 +1823,8 @@
       "open": "فتح القائمة",
       "support": "جلسات الدعم",
       "security": "الأمان",
-      "groups": "المجموعات"
+      "groups": "المجموعات",
+      "publications": "النشر"
     },
     "role": {
       "owner": "مالك المنصة",
@@ -2368,6 +2369,58 @@
         "origin": "المصدر",
         "tariff": "الباقة",
         "language": "اللغة"
+      }
+    },
+    "publications": {
+      "title": "النشر",
+      "subtitle": "تطبيق الشيء نفسه على فنادق كثيرة — مع تقرير عن كل فندق",
+      "what": "ما الذي ننشره",
+      "whom": "إلى من",
+      "when": "متى",
+      "who": "من",
+      "result": "النتيجة",
+      "preset": "رمز القالب",
+      "presetHint": "المفتاح الذي نجد به سجلّنا لدى الفندق",
+      "label": "اسم الشارة",
+      "scope": "الهدف",
+      "group": "المجموعة",
+      "preview": "معاينة",
+      "start": "نشر",
+      "willApply_zero": "لن يُطبَّق على أي فندق",
+      "willApply_one": "يُطبَّق على فندق واحد",
+      "willApply_two": "يُطبَّق على فندقين",
+      "willApply_few": "يُطبَّق على {{count}} فنادق",
+      "willApply_many": "يُطبَّق على {{count}} فندقاً",
+      "willApply_other": "يُطبَّق على {{count}} فندق",
+      "ownerOnly": "للمالك فقط",
+      "progress": "أُبلغ عن {{done}} من {{total}}",
+      "history": "سجل النشر",
+      "historyEmpty": "لا عمليات نشر بعد.",
+      "readOnly": "دور «القراءة فقط» لا ينشر. السجل أدناه متاح للقراءة.",
+      "localEdits_zero": "لم يُتخطَّ أي فندق",
+      "localEdits_one": "تُخطّي فندق واحد لديه تعديله الخاص",
+      "localEdits_two": "تُخطّي فندقان لديهما تعديلهما الخاص",
+      "localEdits_few": "تُخطّيت {{count}} فنادق لديها تعديلاتها",
+      "localEdits_many": "تُخطّي {{count}} فندقاً لديها تعديلاتها",
+      "localEdits_other": "تُخطّي {{count}} فندق لديه تعديله",
+      "localEditsHint": "لا يُستبدل تعديل الفندق أبداً. أعِده كما تفعل مع اختلاف المرجع.",
+      "toDivergence": "عرض الاختلافات",
+      "scopes": {
+        "group": "مجموعة",
+        "all": "كل الأسطول",
+        "hotels": "الفنادق المحدَّدة"
+      },
+      "status": {
+        "pending": "في الانتظار",
+        "running": "جارٍ",
+        "done": "انتهى",
+        "failed": "لم يُنفَّذ"
+      },
+      "outcomes": {
+        "applied": "طُبِّق",
+        "skipped": "تُخطّي",
+        "refused": "رُفض",
+        "failed": "خطأ"
       }
     }
   },

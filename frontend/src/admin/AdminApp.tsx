@@ -18,6 +18,7 @@ import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
 import { GroupsPage } from './pages/GroupsPage';
+import { PublicationsPage } from './pages/PublicationsPage';
 import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
 import { TeamPage } from './pages/TeamPage';
@@ -44,6 +45,8 @@ const SECTIONS: AdminSection[] = [
   // Группы — рядом с флотом, а не в блоке платформы: это разрез ОТЕЛЕЙ, и
   // человек идёт сюда из той же задачи, из которой открывает флот.
   { key: 'groups', labelKey: 'admin.nav.groups' },
+  // Публикация — тоже про отели, а не про платформу: адресуется группами.
+  { key: 'publications', labelKey: 'admin.nav.publications' },
   { key: 'modules', labelKey: 'admin.nav.modules', group: 'admin.nav.platformGroup' },
   { key: 'nodes', labelKey: 'admin.nav.nodes', group: 'admin.nav.platformGroup' },
   { key: 'templates', labelKey: 'admin.nav.templates', group: 'admin.nav.platformGroup' },
@@ -208,6 +211,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
         <HotelPage id={hotelId} onBack={closeHotel} />
       ) : null}
       {section === 'groups' ? <GroupsPage /> : null}
+      {section === 'publications' ? <PublicationsPage /> : null}
       {section === 'modules' ? <ModulesPage /> : null}
       {section === 'nodes' ? <NodesPage /> : null}
       {section === 'templates' ? <TemplatesPage /> : null}

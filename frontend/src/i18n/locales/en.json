@@ -1767,7 +1767,8 @@
       "open": "Open menu",
       "support": "Support sessions",
       "security": "Security",
-      "groups": "Groups"
+      "groups": "Groups",
+      "publications": "Publishing"
     },
     "role": {
       "owner": "Platform owner",
@@ -2304,6 +2305,50 @@
         "origin": "Origin",
         "tariff": "Plan",
         "language": "Language"
+      }
+    },
+    "publications": {
+      "title": "Publishing",
+      "subtitle": "Apply one thing to many hotels — with a report on each",
+      "what": "What we publish",
+      "whom": "To whom",
+      "when": "When",
+      "who": "Who",
+      "result": "Result",
+      "preset": "Preset code",
+      "presetHint": "The key we find our own row by in a hotel",
+      "label": "Badge label",
+      "scope": "Target",
+      "group": "Group",
+      "preview": "Preview",
+      "start": "Publish",
+      "willApply_one": "applies to {{count}} hotel",
+      "willApply_other": "applies to {{count}} hotels",
+      "ownerOnly": "owner only",
+      "progress": "{{done}} of {{total}} reported",
+      "history": "Publication history",
+      "historyEmpty": "No publications yet.",
+      "readOnly": "The read-only role does not publish. The history below is readable.",
+      "localEdits_one": "{{count}} hotel skipped: it has its own edit",
+      "localEdits_other": "{{count}} hotels skipped: they have their own edits",
+      "localEditsHint": "A hotel's edit is never overwritten. Reset it the same way as dictionary divergence.",
+      "toDivergence": "See divergence",
+      "scopes": {
+        "group": "Group",
+        "all": "Whole fleet",
+        "hotels": "Selected hotels"
+      },
+      "status": {
+        "pending": "Queued",
+        "running": "Running",
+        "done": "Finished",
+        "failed": "Failed"
+      },
+      "outcomes": {
+        "applied": "applied",
+        "skipped": "skipped",
+        "refused": "refused",
+        "failed": "error"
       }
     }
   },

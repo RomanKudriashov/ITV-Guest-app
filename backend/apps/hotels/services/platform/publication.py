@@ -41,6 +41,8 @@ Outcome = PublicationResult.Outcome
 class Applied:
     outcome: str
     detail: str = ""
+    #: Машиночитаемая причина: `same`, `local_edit`, `unknown_origin`.
+    reason: str = ""
 
 
 # --- Публикаторы ------------------------------------------------------------
@@ -95,7 +97,7 @@ class BadgePublisher:
         if current == wanted:
             # Повтор: у отеля уже ровно то же. Не работа, и считать её работой
             # значило бы отчитываться «применено 200» на пустом месте.
-            return Applied(Outcome.SKIPPED, "уже совпадает")
+            return Applied(Outcome.SKIPPED, "уже совпадает", reason="same")
 
         # ТРОНУЛ ЛИ ОТЕЛЬ ЭТУ ЗАПИСЬ — то же правило, что у эталона справочника
         # (`inheritance.is_untouched`), а не новое: копия, совпадающая с тем,
@@ -108,12 +110,14 @@ class BadgePublisher:
             return Applied(
                 Outcome.SKIPPED,
                 "запись есть, но прежней публикации нет — не знаем, наше ли это значение",
+                reason="unknown_origin",
             )
 
         if not inheritance.is_untouched(current, previous):
             return Applied(
                 Outcome.SKIPPED,
                 "у отеля своя правка этого бейджа — публикация её не трогает",
+                reason="local_edit",
             )
 
         for field, value in wanted.items():
@@ -301,9 +305,9 @@ def run(job_id: str) -> dict[str, int]:
     ):
         if hotel.pk in done:
             continue
-        outcome, detail = _apply_one(publisher, hotel, job.payload, previous)
+        outcome, detail, reason = _apply_one(publisher, hotel, job.payload, previous)
         PublicationResult.objects.create(
-            job=job, hotel=hotel, outcome=outcome, detail=detail
+            job=job, hotel=hotel, outcome=outcome, detail=detail, reason=reason
         )
         counts[outcome] = counts.get(outcome, 0) + 1
 
@@ -313,7 +317,7 @@ def run(job_id: str) -> dict[str, int]:
     return counts
 
 
-def _apply_one(publisher, hotel: Hotel, payload: dict, previous: dict | None) -> tuple[str, str]:
+def _apply_one(publisher, hotel: Hotel, payload: dict, previous: dict | None) -> tuple[str, str, str]:
     """
     Один отель — в своём контексте и под своей защитой.
 
@@ -323,13 +327,25 @@ def _apply_one(publisher, hotel: Hotel, payload: dict, previous: dict | None) ->
     try:
         with tenant_context(hotel):
             result = publisher.apply(hotel, payload, previous=previous)
-        return result.outcome, result.detail
+        return result.outcome, result.detail, result.reason
     except Exception as exc:  # noqa: BLE001 — причина уезжает в отчёт целиком
         logger.exception("публикация в отель %s не удалась", hotel.subdomain)
-        return Outcome.FAILED, f"{type(exc).__name__}: {exc}"
+        return Outcome.FAILED, f"{type(exc).__name__}: {exc}", "exception"
 
 
 # --- Выдача -----------------------------------------------------------------
+
+
+def _actor_name(actor_id) -> str:
+    """Кто запустил. UUID человеку не говорит ничего."""
+    from apps.accounts.models import User
+    from apps.core.context import platform_scope
+
+    if not actor_id:
+        return ""
+    with platform_scope():
+        user = User.all_objects.using("platform").filter(pk=actor_id).first()
+    return (user.full_name or user.email) if user else ""
 
 
 def get(job_id: str) -> PublicationJob:
@@ -354,9 +370,15 @@ def serialize(job: PublicationJob, *, with_results: bool = False) -> dict:
     for row in results:
         counts[row.outcome] = counts.get(row.outcome, 0) + 1
 
+    publisher = PUBLISHERS.get(job.kind)
     data = {
         "id": str(job.pk),
         "kind": job.kind,
+        # Что публиковали — словами. Код вида и payload человеку не говорят
+        # ничего через неделю после запуска.
+        "description": publisher.describe(job.payload) if publisher else job.kind,
+        "group": job.group.title if job.group_id and job.group else "",
+        "actor": _actor_name(job.actor_id),
         "scope": job.scope,
         "status": job.status,
         "planned": job.planned,
@@ -377,6 +399,7 @@ def serialize(job: PublicationJob, *, with_results: bool = False) -> dict:
                 "name": row.hotel.name_i18n,
                 "outcome": row.outcome,
                 "detail": row.detail,
+                "reason": row.reason,
             }
             for row in results
         ]

@@ -1752,7 +1752,8 @@
       "open": "打开菜单",
       "support": "支持会话",
       "security": "安全",
-      "groups": "分组"
+      "groups": "分组",
+      "publications": "发布"
     },
     "role": {
       "owner": "平台所有者",
@@ -2286,6 +2287,48 @@
         "origin": "来源",
         "tariff": "套餐",
         "language": "语言"
+      }
+    },
+    "publications": {
+      "title": "发布",
+      "subtitle": "把同一项内容应用到多家酒店——并逐家给出结果",
+      "what": "发布什么",
+      "whom": "发给谁",
+      "when": "时间",
+      "who": "操作人",
+      "result": "结果",
+      "preset": "预设代码",
+      "presetHint": "在酒店中查找我们自己那条记录所用的键",
+      "label": "标签名称",
+      "scope": "目标",
+      "group": "分组",
+      "preview": "预览",
+      "start": "发布",
+      "willApply_other": "将应用于 {{count}} 家酒店",
+      "ownerOnly": "仅限所有者",
+      "progress": "已完成 {{done}} / {{total}}",
+      "history": "发布历史",
+      "historyEmpty": "尚无发布记录。",
+      "readOnly": "“只读”角色不能发布。下方历史可以查看。",
+      "localEdits_other": "{{count}} 家酒店因自有修改而被跳过",
+      "localEditsHint": "酒店的修改绝不会被覆盖。恢复方式与字典差异相同。",
+      "toDivergence": "查看差异",
+      "scopes": {
+        "group": "分组",
+        "all": "全部酒店",
+        "hotels": "所选酒店"
+      },
+      "status": {
+        "pending": "排队中",
+        "running": "进行中",
+        "done": "已完成",
+        "failed": "未执行"
+      },
+      "outcomes": {
+        "applied": "已应用",
+        "skipped": "已跳过",
+        "refused": "被拒绝",
+        "failed": "错误"
       }
     }
   },
