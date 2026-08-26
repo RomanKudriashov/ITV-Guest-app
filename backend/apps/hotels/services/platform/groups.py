@@ -87,12 +87,23 @@ def clean_rule(rule: dict | None) -> dict:
 # --- Заведение и правка -----------------------------------------------------
 
 
-def get(group_id: str) -> HotelGroup:
-    """Группа по id. Выборка живёт в сервисе — вьюха её зовёт (сторож `check_views`)."""
+def get(group_id: str, user=None) -> HotelGroup:
+    """
+    Группа по id. Выборка живёт в сервисе — вьюха её зовёт (сторож `check_views`).
+
+    Вне области — 404, а не отказ: подтверждать существование чужой сети мы не
+    обязаны (см. `scope.assert_allows`).
+    """
     from apps.core.errors import NotFoundError
 
     group = HotelGroup.objects.filter(pk=group_id).first()
     if group is None:
+        raise NotFoundError("Группа не найдена")
+
+    from apps.hotels.services.platform import scope
+
+    ids = {str(gid) for gid in scope.group_ids(user)}
+    if ids and str(group.pk) not in ids:
         raise NotFoundError("Группа не найдена")
     return group
 
@@ -102,8 +113,19 @@ def find(group_id: str) -> HotelGroup | None:
     return HotelGroup.objects.filter(pk=group_id).first()
 
 
-def all_groups():
-    return HotelGroup.objects.all()
+def all_groups(user=None):
+    """
+    Группы, которые человеку положено видеть.
+
+    Ограниченный областью видит ТОЛЬКО свои: список чужих сетей и кампаний —
+    это карта наших клиентов, и показывать её администратору одной сети
+    незачем.
+    """
+    from apps.hotels.services.platform import scope
+
+    ids = scope.group_ids(user)
+    queryset = HotelGroup.objects.all()
+    return queryset.filter(pk__in=ids) if ids else queryset
 
 
 def create(data: dict) -> HotelGroup:

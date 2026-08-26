@@ -26,7 +26,7 @@ def list_groups(request: HttpRequest):
     from apps.hotels.models import HotelGroup
 
     return {
-        "items": [groups_svc.serialize(group) for group in groups_svc.all_groups()],
+        "items": [groups_svc.serialize(group) for group in groups_svc.all_groups(request.user)],
         "kinds": [
             {"code": code, "title": title} for code, title in HotelGroup.Kind.choices
         ],
@@ -50,7 +50,7 @@ def create_group(request: HttpRequest, payload: GroupIn):
 @router.patch("/groups/{group_id}", summary="Изменить группу")
 @requires(WRITE)
 def patch_group(request: HttpRequest, group_id: str, payload: GroupIn):
-    group = groups_svc.update(groups_svc.get(group_id), payload.dict(exclude_unset=True))
+    group = groups_svc.update(groups_svc.get(group_id, request.user), payload.dict(exclude_unset=True))
 
     console.audit_platform(
         "platform.group.updated",
@@ -64,7 +64,7 @@ def patch_group(request: HttpRequest, group_id: str, payload: GroupIn):
 @router.delete("/groups/{group_id}", summary="Удалить группу")
 @requires(WRITE)
 def delete_group(request: HttpRequest, group_id: str):
-    code = groups_svc.delete(groups_svc.get(group_id))
+    code = groups_svc.delete(groups_svc.get(group_id, request.user))
     console.audit_platform(
         "platform.group.deleted",
         actor_id=request.user.pk,
@@ -77,7 +77,7 @@ def delete_group(request: HttpRequest, group_id: str):
 @router.get("/groups/{group_id}/members", summary="Состав группы")
 @requires(READ)
 def group_members(request: HttpRequest, group_id: str):
-    group = groups_svc.get(group_id)
+    group = groups_svc.get(group_id, request.user)
     return {
         "group": groups_svc.serialize(group),
         # У правила состав ВЫЧИСЛЕН сейчас, у списка — сложен руками, и в нём
@@ -89,7 +89,7 @@ def group_members(request: HttpRequest, group_id: str):
 @router.post("/groups/{group_id}/members", summary="Добавить отели в группу")
 @requires(WRITE)
 def add_group_members(request: HttpRequest, group_id: str, payload: GroupMembersIn):
-    group = groups_svc.get(group_id)
+    group = groups_svc.get(group_id, request.user)
     added = groups_svc.add_members(group, payload.hotel_ids, actor_id=request.user.pk)
     console.audit_platform(
         "platform.group.members_added",
@@ -103,7 +103,7 @@ def add_group_members(request: HttpRequest, group_id: str, payload: GroupMembers
 @router.delete("/groups/{group_id}/members/{hotel_id}", summary="Убрать отель из группы")
 @requires(WRITE)
 def remove_group_member(request: HttpRequest, group_id: str, hotel_id: str):
-    group = groups_svc.get(group_id)
+    group = groups_svc.get(group_id, request.user)
     removed = groups_svc.remove_member(group, hotel_id)
     console.audit_platform(
         "platform.group.member_removed",

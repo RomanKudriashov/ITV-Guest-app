@@ -233,7 +233,14 @@ def test_fleet_bulk_counts_only_real_changes(api):
     resp = api("post", "/fleet/bulk", {"hotel_ids": [str(first.pk), str(second.pk)], "is_active": False})
     assert resp.status_code == 200
     # Второй уже был выключен — «выключено 2» было бы неправдой.
-    assert resp.json() == {"changed": 1, "requested": 2}
+    # `outside_scope` — сколько цели осталось за областью человека. У владельца
+    # области нет, поэтому ноль; проверяем поимённо, а не сравнением всего
+    # словаря: новое поле ответа не должно ронять проверку, которая про числа
+    # «изменено / запрошено».
+    body = resp.json()
+    assert body["changed"] == 1
+    assert body["requested"] == 2
+    assert body["outside_scope"] == 0
     assert not Hotel.objects.get(pk=first.pk).is_active
 
 

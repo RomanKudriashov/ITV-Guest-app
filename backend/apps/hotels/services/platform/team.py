@@ -135,6 +135,7 @@ def audit_feed(
     since: str | None = None,
     until: str | None = None,
     search: str | None = None,
+    user=None,
 ) -> dict:
     """
     Журнал платформы: и действия без отеля (вход, команда, 2FA), и действия
@@ -181,6 +182,15 @@ def audit_feed(
         queryset = AuditLog.all_objects.using("platform").filter(
             actor_type=AuditLog.ActorType.PLATFORM
         )
+        # ОБЛАСТЬ РЕЖЕТ ЖУРНАЛ. Администратор группы видит действия по СВОИМ
+        # отелям — и записи без отеля (наш вход, 2FA, работа с командой) он не
+        # видит вовсе: это внутренняя жизнь платформы, а не его сети.
+        from apps.hotels.services.platform import scope as scope_svc
+
+        allowed = scope_svc.allowed_hotel_ids(user)
+        if allowed is not None:
+            queryset = queryset.filter(hotel_id__in=allowed)
+
         if action:
             queryset = queryset.filter(action=action)
         if hotel_id:

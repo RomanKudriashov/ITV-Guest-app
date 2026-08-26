@@ -35,6 +35,7 @@ def preview_publication(request: HttpRequest, payload: PublicationIn):
         scope=payload.scope,
         group_id=payload.group_id,
         hotel_ids=payload.hotel_ids,
+        user=request.user,
     )
 
 
@@ -49,6 +50,7 @@ def create_publication(request: HttpRequest, payload: PublicationIn):
         group_id=payload.group_id,
         hotel_ids=payload.hotel_ids,
         actor_id=request.user.pk,
+        user=request.user,
     )
     console.audit_platform(
         "platform.publication.started",

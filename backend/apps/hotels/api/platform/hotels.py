@@ -453,7 +453,9 @@ def list_impersonations(
     """Кто сейчас внутри отелей: без списка отзывать нечего выбирать."""
     from apps.hotels.services.platform.console import active_impersonations
 
-    return active_impersonations(search=search, state=state, limit=limit, offset=offset)
+    return active_impersonations(
+        search=search, state=state, limit=limit, offset=offset, user=request.user
+    )
 
 
 @router.post("/impersonations/{grant_id}/revoke", summary="Оборвать сессию поддержки")

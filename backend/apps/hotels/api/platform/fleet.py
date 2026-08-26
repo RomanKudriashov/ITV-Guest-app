@@ -16,7 +16,7 @@ router = PlatformRouter(tags=["platform"])
 def fleet(request: HttpRequest):
     from apps.hotels.services.platform.fleet import fleet as build_fleet
 
-    return build_fleet(request.GET.dict())
+    return build_fleet(request.GET.dict(), request.user)
 
 
 @router.get("/fleet/export", summary="Выгрузка флота в CSV")
@@ -26,7 +26,7 @@ def fleet_export(request: HttpRequest):
 
     from apps.hotels.services.platform.fleet import export_csv
 
-    body = export_csv(request.GET.dict())
+    body = export_csv(request.GET.dict(), request.user)
     console.audit_platform(
         "platform.fleet.exported",
         actor_id=request.user.pk,
@@ -61,6 +61,12 @@ def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
         # руками пару отелей — обычная работа, и запрещать её незачем.
         target_ids = list({*target_ids, *groups_svc.hotel_ids(group)})
 
+    # ЦЕЛЬ ПЕРЕСЕКАЕТСЯ С ОБЛАСТЬЮ. Группа может быть шире, чем область
+    # человека, и тогда действие применяется к пересечению — а не отвергается
+    # целиком и не выполняется целиком.
+    from apps.hotels.services.platform import scope
+
+    target_ids, outside = scope.intersect(request.user, target_ids)
     changed = bulk_set_active(target_ids, payload.is_active)
     action = "activated" if payload.is_active else "deactivated"
     for hotel in changed:
@@ -76,8 +82,11 @@ def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
             # Чем адресовали — в журнал: «выключено 12» без ответа «кого именно»
             # через неделю не восстановить, особенно если это было правило.
             "group": group.code if group else "",
+            # Сколько цели осталось за областью: «выключено 12» без этого числа
+            # у администратора группы читалось бы как «выключено всё».
+            "outside_scope": outside,
         },
     )
     # Возвращаем СМЕНИВШИЕСЯ, а не запрошенные: «выключено 3 из 5» — честный
     # ответ, «выключено 5» при двух уже выключенных — нет.
-    return {"changed": len(changed), "requested": len(target_ids)}
+    return {"changed": len(changed), "requested": len(target_ids), "outside_scope": outside}

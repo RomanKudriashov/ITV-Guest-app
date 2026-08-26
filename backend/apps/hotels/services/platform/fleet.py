@@ -123,8 +123,15 @@ def _row(hotel: Hotel, counts: dict) -> dict:
     }
 
 
-def _base_queryset(params: dict):
-    queryset = Hotel.objects.all()
+def _base_queryset(params: dict, user=None):
+    """
+    `user` нужен ради ОБЛАСТИ: администратор группы обязан не видеть чужие
+    отели, а не видеть и не мочь их тронуть. Сам список чужих клиентов — уже
+    утечка (см. `platform/scope.py`).
+    """
+    from apps.hotels.services.platform import scope
+
+    queryset = scope.limit_queryset(user, Hotel.objects.all())
 
     # По умолчанию флот показывает ТОЛЬКО живые отели. Тестовые никуда не
     # деваются — их видно по явному запросу, иначе «чистый список» превращался
@@ -172,8 +179,8 @@ def _trial_codes() -> list[str]:
     return [code for code, tariff in tariffs.TARIFFS.items() if tariff.is_trial]
 
 
-def fleet(params: dict) -> dict:
-    queryset = _base_queryset(params)
+def fleet(params: dict, user=None) -> dict:
+    queryset = _base_queryset(params, user)
     total = queryset.count()
 
     size = max(1, min(int(params.get("page_size") or DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE))
@@ -189,14 +196,14 @@ def fleet(params: dict) -> dict:
         "pages": max(1, (total + size - 1) // size),
         # Счётчики вкладок-фильтров считаем поверх ТЕКУЩЕГО поиска, а не всего
         # флота — иначе «Активные · 15» противоречило бы найденным трём.
-        "facets": _facets(params),
+        "facets": _facets(params, user),
     }
 
 
-def _facets(params: dict) -> dict:
+def _facets(params: dict, user=None) -> dict:
     scoped = dict(params)
     scoped.pop("status", None)
-    queryset = _base_queryset(scoped)
+    queryset = _base_queryset(scoped, user)
     trial = _trial_codes()
     return {
         "all": queryset.count(),
@@ -206,13 +213,13 @@ def _facets(params: dict) -> dict:
     }
 
 
-def export_csv(params: dict) -> str:
+def export_csv(params: dict, user=None) -> str:
     """
     Выгрузка флота. Отдаём тот же срез, что видит человек на экране (с учётом
     поиска и фильтров), но БЕЗ пагинации: экспорт нужен как раз для того, чтобы
     вынести всё найденное целиком.
     """
-    queryset = _base_queryset(params)
+    queryset = _base_queryset(params, user)
     hotels = list(queryset)
     counts = _batch_counts([hotel.pk for hotel in hotels])
 

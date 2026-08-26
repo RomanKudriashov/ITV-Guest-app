@@ -106,3 +106,34 @@ class HotelGroupMember(BaseModel):
 
     def __str__(self) -> str:
         return f"group:{self.group_id}+hotel:{self.hotel_id}"
+
+
+class PlatformScopeGroup(BaseModel):
+    """
+    Область члена команды платформы: к каким группам отелей он имеет отношение.
+
+    ВТОРАЯ ОСЬ рядом с правом, а не новая роль (`services/platform/scope.py`).
+    Строк нет — ограничения нет, то есть весь флот: ни одна существующая учётка
+    не меняет смысла от появления этой таблицы.
+
+    Не тенантная, как и сами группы: это устройство нашей команды, и отель о
+    нём не знает.
+    """
+
+    # UUID, А НЕ ВНЕШНИЙ КЛЮЧ — по устройству базы, а не для гибкости.
+    # `accounts_user` тенантная и под RLS, а наша учётка живёт с `hotel_id =
+    # NULL` и видна только платформенной роли. Внешний ключ на неё роль
+    # приложения проверить не может: вставка падает «ключа нет в таблице», хотя
+    # строка есть. Целостность здесь держит удаление члена команды, а не СУБД.
+    user_id = models.UUIDField(db_index=True)
+    group = models.ForeignKey(HotelGroup, on_delete=models.CASCADE, related_name="scoped_users")
+
+    class Meta:
+        db_table = "hotels_platform_scope_group"
+        ordering = ["user_id"]
+        constraints = [
+            models.UniqueConstraint(fields=["user_id", "group"], name="uniq_platform_scope")
+        ]
+
+    def __str__(self) -> str:
+        return f"scope:{self.user_id}+{self.group_id}"

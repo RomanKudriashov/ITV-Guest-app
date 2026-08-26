@@ -184,7 +184,34 @@ class _RightsChecked(Operation):
             # Отказ отдаём тем же обработчиком, что и прочие доменные ошибки:
             # формат отказа один на всю платформу.
             return self.api.on_exception(request, denial)
+
+        # ОБЛАСТЬ — здесь же, на всех ручках с `{hotel_id}` разом. Проверок
+        # могло быть тридцать, по числу таких адресов, и одна забытая означала
+        # бы дыру ровно там, где её никто не ищет.
+        #
+        # ПОРЯДОК ВАЖЕН, и на нём я уже обжёгся: сначала я поставил проверку в
+        # `run()` ДО этого места — то есть до аутентификации. `request.user` там
+        # ещё анонимный, а `is_owner()` для незнакомца отвечает «владелец» по
+        # умолчанию, и область не срабатывала вовсе. Здесь аутентификация уже
+        # прошла, а тело запроса ещё не разбиралось.
+        hotel_id = getattr(request, "_platform_path_kwargs", {}).get("hotel_id")
+        if hotel_id:
+            from apps.core.errors import DomainError
+            from apps.hotels.services.platform import scope
+
+            try:
+                scope.assert_allows(getattr(request, "user", None), hotel_id)
+            except DomainError as exc:
+                return self.api.on_exception(request, exc)
         return None
+
+    def run(self, request, **kw):
+        """
+        Параметры адреса — на запрос: `_run_checks` их не получает, а решение
+        про область принимается именно там, после аутентификации.
+        """
+        request._platform_path_kwargs = kw
+        return super().run(request, **kw)
 
 
 class _AsyncRightsChecked(AsyncOperation):

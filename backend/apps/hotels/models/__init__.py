@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from .brand import BrandTheme
 from .execution_point import ExecutionPoint
-from .group import HotelGroup, HotelGroupMember
+from .group import HotelGroup, HotelGroupMember, PlatformScopeGroup
 from .hotel import Hotel, HotelLanguage
 from .location import Location
 from .module import HotelModule
@@ -34,6 +34,7 @@ __all__ = [
     "ExecutionPoint",
     "HotelGroup",
     "HotelGroupMember",
+    "PlatformScopeGroup",
     "Hotel",
     "HotelLanguage",
     "HotelModule",

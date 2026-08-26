@@ -190,9 +190,13 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
     return signals
 
 
-def build_overview() -> dict:
+def build_overview(user=None) -> dict:
     """Всё, что показывает главный экран /admin."""
-    hotels = list(Hotel.objects.all())
+    # ОБЛАСТЬ: сводка администратора группы считается по ЕГО отелям. Общие
+    # числа платформы для него — чужая информация, а не «просто фон».
+    from apps.hotels.services.platform import scope
+
+    hotels = list(scope.limit_queryset(user, Hotel.objects.all()))
     today = timezone.localdate()
     return {
         "hotels": _hotel_states(hotels, today),

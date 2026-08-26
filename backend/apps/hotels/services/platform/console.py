@@ -288,6 +288,7 @@ def active_impersonations(
     state: str = "active",
     limit: int | None = None,
     offset: int = 0,
+    user=None,
 ) -> dict[str, Any]:
     """
     Сессии поддержки по всем отелям.
@@ -310,6 +311,11 @@ def active_impersonations(
         queryset = ImpersonationGrant.all_objects.using("platform").select_related(
             "actor", "target_user", "hotel"
         )
+        # ОБЛАСТЬ: кто сейчас внутри ЕГО отелей. Чужая сессия поддержки — это
+        # и чужой отель, и чужой сотрудник разом.
+        from apps.hotels.services.platform import scope
+
+        queryset = scope.limit_queryset(user, queryset, field="hotel_id")
         if state == "history":
             # Завершённая — отозванная ЛИБО истёкшая по сроку.
             queryset = queryset.filter(

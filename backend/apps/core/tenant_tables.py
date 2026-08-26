@@ -118,6 +118,8 @@ PLATFORM_TABLES = [
     # `hotel_id`, но читает его консоль без тенанта — под RLS отчёт молча
     # вернулся бы пустым, и «ничего не применилось» стало бы неотличимо от
     # «нет доступа к отчёту».
+    # Область члена команды платформы: наше устройство, отель о нём не знает.
+    "hotels_platform_scope_group",
     "hotels_publication_job",
     "hotels_publication_result",
     "media_category_placeholder",

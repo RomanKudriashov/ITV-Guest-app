@@ -136,7 +136,7 @@ def serialize_node(node: OnPremNode, hotel: Hotel) -> dict:
     }
 
 
-def all_nodes(*, limit: int | None = None, search: str = "") -> dict:
+def all_nodes(*, limit: int | None = None, search: str = "", user=None) -> dict:
     """
     Реестр узлов поверх отелей — с пределом и честным хвостом.
 
@@ -151,6 +151,11 @@ def all_nodes(*, limit: int | None = None, search: str = "") -> dict:
     limit = clamp(limit)
     with platform_scope():
         queryset = OnPremNode.all_objects.using("platform").select_related("hotel")
+        # ОБЛАСТЬ: узел принадлежит отелю, и чужой узел в реестре — это чужой
+        # отель в списке, только другими словами.
+        from apps.hotels.services.platform import scope
+
+        queryset = scope.limit_queryset(user, queryset, field="hotel_id")
         # Узел ищут по его коду и по поддомену отеля, которому он принадлежит.
         queryset = apply_search(queryset, search, ("name", "hotel__subdomain"))
         total = queryset.count()

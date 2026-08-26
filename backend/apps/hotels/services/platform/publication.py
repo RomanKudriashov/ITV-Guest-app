@@ -167,7 +167,7 @@ def publisher_for(kind: str):
 # --- Цель -------------------------------------------------------------------
 
 
-def targets(*, scope: str, group_id=None, hotel_ids=None):
+def targets(*, scope: str, group_id=None, hotel_ids=None, user=None):
     """
     Отели цели. ОДИН код на предпросмотр и на применение.
 
@@ -177,13 +177,20 @@ def targets(*, scope: str, group_id=None, hotel_ids=None):
     расхождению двух разных подсчётов.
     """
     from apps.hotels.services.platform import groups as groups_svc
+    from apps.hotels.services.platform import scope as scope_svc
 
     if scope == PublicationJob.Scope.ALL:
-        return Hotel.objects.filter(is_active=True)
-    if scope == PublicationJob.Scope.GROUP:
-        group = groups_svc.get(str(group_id))
-        return Hotel.objects.filter(pk__in=groups_svc.hotel_ids(group))
-    return Hotel.objects.filter(pk__in=list(hotel_ids or []))
+        queryset = Hotel.objects.filter(is_active=True)
+    elif scope == PublicationJob.Scope.GROUP:
+        group = groups_svc.get(str(group_id), user)
+        queryset = Hotel.objects.filter(pk__in=groups_svc.hotel_ids(group))
+    else:
+        queryset = Hotel.objects.filter(pk__in=list(hotel_ids or []))
+
+    # ЦЕЛЬ ВСЕГДА ВНУТРИ ОБЛАСТИ. Группа может быть шире области человека —
+    # тогда применяется пересечение. Резать здесь, а не в момент применения,
+    # обязательно: предпросмотр обязан показать то же число, что и отчёт.
+    return scope_svc.limit_queryset(user, queryset)
 
 
 def check_rights(user, scope: str) -> None:
@@ -208,16 +215,24 @@ def check_rights(user, scope: str) -> None:
         raise PermissionDenied("Роль «только чтение» ничего не публикует", code="forbidden")
 
 
-def preview(*, kind: str, payload: dict, scope: str, group_id=None, hotel_ids=None) -> dict:
+def preview(*, kind: str, payload: dict, scope: str, group_id=None, hotel_ids=None, user=None) -> dict:
     """Что и к скольким применится — ДО нажатия."""
+    from apps.hotels.services.platform import scope as scope_svc
+
     publisher = publisher_for(kind)
     publisher.validate(payload)
-    queryset = targets(scope=scope, group_id=group_id, hotel_ids=hotel_ids)
+    queryset = targets(scope=scope, group_id=group_id, hotel_ids=hotel_ids, user=user)
+
+    # Сколько цели осталось ЗА областью — числом и до нажатия. Узнать это по
+    # отчёту, в котором половины отелей просто нет, значит не узнать вовсе.
+    wide = targets(scope=scope, group_id=group_id, hotel_ids=hotel_ids)
+    outside = max(wide.count() - queryset.count(), 0) if scope_svc.is_limited(user) else 0
 
     return {
         "kind": kind,
         "description": publisher.describe(payload),
         "count": queryset.count(),
+        "outside_scope": outside,
         # Несколько имён для проверки глазами: число без единого названия
         # одинаково выглядит и для правильной цели, и для ошибочной.
         "sample": [hotel.subdomain for hotel in queryset.order_by("subdomain")[:5]],
@@ -227,7 +242,7 @@ def preview(*, kind: str, payload: dict, scope: str, group_id=None, hotel_ids=No
 # --- Запуск и исполнение ----------------------------------------------------
 
 
-def start(*, kind: str, payload: dict, scope: str, group_id=None, hotel_ids=None, actor_id=None):
+def start(*, kind: str, payload: dict, scope: str, group_id=None, hotel_ids=None, actor_id=None, user=None):
     """
     Завести публикацию и отдать её воркеру.
 
@@ -238,7 +253,7 @@ def start(*, kind: str, payload: dict, scope: str, group_id=None, hotel_ids=None
     from apps.hotels.tasks import run_publication
 
     publisher_for(kind).validate(payload)
-    planned = targets(scope=scope, group_id=group_id, hotel_ids=hotel_ids).count()
+    planned = targets(scope=scope, group_id=group_id, hotel_ids=hotel_ids, user=user).count()
     if not planned:
         raise ValidationError(
             "В цели публикации нет ни одного отеля", field="scope", code="empty_target"
@@ -300,8 +315,15 @@ def run(job_id: str) -> dict[str, int]:
     )
     counts: dict[str, int] = {}
 
+    # ЦЕЛЬ ПЕРЕСЧИТЫВАЕТСЯ И ЗДЕСЬ, вместе с областью запустившего.
+    #
+    # Правило группы обязано считаться в момент применения — это его смысл. А
+    # область берётся у ТОГО ЖЕ человека и на ТОТ ЖЕ момент: если его область
+    # сузили, пока задача ждала в очереди, публиковать по прежней было бы
+    # применением права, которого у него уже нет.
+    actor = _actor(job.actor_id)
     for hotel in targets(
-        scope=job.scope, group_id=job.group_id, hotel_ids=job.hotel_ids
+        scope=job.scope, group_id=job.group_id, hotel_ids=job.hotel_ids, user=actor
     ):
         if hotel.pk in done:
             continue
@@ -334,6 +356,17 @@ def _apply_one(publisher, hotel: Hotel, payload: dict, previous: dict | None) ->
 
 
 # --- Выдача -----------------------------------------------------------------
+
+
+def _actor(actor_id):
+    """Учётка запустившего — нужна исполнителю, чтобы знать его область."""
+    from apps.accounts.models import User
+    from apps.core.context import platform_scope
+
+    if not actor_id:
+        return None
+    with platform_scope():
+        return User.all_objects.using("platform").filter(pk=actor_id).first()
 
 
 def _actor_name(actor_id) -> str:

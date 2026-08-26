@@ -14,7 +14,7 @@ router = PlatformRouter(tags=["platform"])
 def overview(request: HttpRequest):
     from apps.hotels.services.platform.overview import build_overview
 
-    return build_overview()
+    return build_overview(request.user)
 
 
 # --- Аудит платформы -------------------------------------------------------
@@ -47,7 +47,7 @@ def platform_audit(
 
     return audit_feed(
         limit=limit, cursor=cursor, hotel_id=hotel_id, action=action,
-        since=since, until=until, search=search,
+        since=since, until=until, search=search, user=request.user,
     )
 
 
