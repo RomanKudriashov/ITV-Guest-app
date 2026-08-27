@@ -42,6 +42,7 @@
  */
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -197,6 +198,36 @@ for (const file of walk(DOCS)) {
   }
 }
 
+/*
+  СНИМКИ: существуют и не повторяются.
+
+  Обе проверки куплены опытом одного дня. Первая — на случай, когда снимок
+  переименовали или прогон его не сделал: книга показывает битую картинку, а
+  сама остаётся зелёной. Вторая ловит то, что руками нашлось только сверкой
+  контрольных сумм: съёмка карточки отеля кликала «первую кнопку списка», ею
+  оказался фильтр, и в книгу лёг ВТОРОЙ ЭКЗЕМПЛЯР ЭКРАНА ФЛОТА под именем
+  карточки. Снимок был, ссылка работала, подпись врала.
+*/
+const shots = new Map();
+for (const file of walk(DOCS)) {
+  const dir = file.slice(0, file.lastIndexOf('/'));
+  for (const [, rel] of readFileSync(file, 'utf8').matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)) {
+    if (/^https?:/.test(rel)) continue;
+    const full = join(dir, rel);
+    if (!existsSync(full)) {
+      problems.push(`  ${file.slice(ROOT.length)} — снимка нет: ${rel}`);
+      continue;
+    }
+    const sum = createHash('sha256').update(readFileSync(full)).digest('hex');
+    const twin = shots.get(sum);
+    if (twin && twin !== full) {
+      problems.push(
+        `  два имени у одного снимка: ${twin.slice(ROOT.length)} и ${full.slice(ROOT.length)}`,
+      );
+    } else shots.set(sum, full);
+  }
+}
+
 if (problems.length) {
   console.error('Книга разошлась с кодом:');
   console.error(problems.join('\n'));
@@ -205,5 +236,5 @@ if (problems.length) {
 }
 
 console.log(
-  `Книга сверена: экранов названо ${screenClaims}, переменных заявлено ${envClaims}`,
+  `Книга сверена: экранов названо ${screenClaims}, переменных заявлено ${envClaims}, снимков ${shots.size}`,
 );
