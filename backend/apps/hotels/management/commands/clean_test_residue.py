@@ -51,6 +51,18 @@ CHAT_BODY = re.compile(r"^(вопрос|ответ|ещё)-ms[0-9a-z]{6,}$")
 GRMS_IMPORTED_CODES = {"tip1", "tip2", "tip3"}
 GRMS_TEST_MARKS = {"e2e-zone", "e2e.light"}
 
+# ОСТАТКИ В КОМАНДЕ ПЛАТФОРМЫ. Прогоны консоли заводят наблюдателей и поддержку
+# и не убирают их за собой: `eyes-<Date.now()>@platform.test`,
+# `support-<Date.now()>@platform.test` (см. e2e/tests/console-actions.spec.ts).
+#
+# Копится это молча и однажды ЛОМАЕТ САМИ ПРОГОНЫ: выдача команды ограничена
+# сотней, и настоящие учётки вытесняются с неё мусором. Проверка «в списке есть
+# platform@itv.local» падает так, будто сломалась консоль, — а сломались данные.
+#
+# Шаблон узкий и с якорями: только эти два префикса, только цифры времени,
+# только домен `.test` (он зарезервирован под тесты и настоящим быть не может).
+PLATFORM_TEST_EMAIL = re.compile(r"^(?:eyes|support)-\d{10,}@platform\.test$")
+
 # Через сколько часов открытый заказ считается брошенным. Сутки с запасом:
 # смена длится меньше, и ни один живой заказ столько в работе не висит.
 STALE_HOURS = 24
@@ -202,6 +214,39 @@ class Command(BaseCommand):
                 self.stdout.write(f"  удалить тип: {room_type.code}")
             for item in keep:
                 self.stdout.write(f"  выключить: {item.code}")
+        # --- Остатки в команде платформы -----------------------------------
+        #
+        # ВНЕ тенанта: у платформенного пользователя `hotel = NULL`, и роль
+        # приложения таких строк НЕ ВИДИТ — запрос вернул бы ноль строк и не
+        # упал. Поэтому идём платформенным подключением, как и всё остальное
+        # платформенного уровня.
+        from apps.accounts.models import User
+        from apps.core.context import platform_scope
+
+        # ЖИВЫЕ, а не «все как есть». Удаление в проекте мягкое, и без этого
+        # фильтра команда находила уже удалённых и бодро сообщала, что убрала
+        # их снова: отчёт о работе, которой не было. Такой отчёт хуже
+        # отсутствующего — по нему делают вывод, что стенд чист.
+        stale_platform = [
+            user
+            for user in User.all_objects.using("platform").filter(
+                hotel__isnull=True,
+                email__endswith="@platform.test",
+                deleted_at__isnull=True,
+            )
+            if PLATFORM_TEST_EMAIL.match(user.email or "")
+        ]
+        for user in stale_platform:
+            self.stdout.write(f"  учётка платформы: {user.email}")
+        dropped_platform = 0
+        if apply and stale_platform:
+            # В platform_scope: вне его платформенное подключение работает под
+            # политиками изоляции, и запись без отеля для него не существует.
+            with platform_scope():
+                for user in stale_platform:
+                    user.delete(using="platform")
+                    dropped_platform += 1
+
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
                 return
@@ -304,7 +349,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Убрано: позиций удалено {deleted_items}, выключено {hidden}; "
+                f"Учёток платформы убрано {dropped_platform}; "
+                f"позиций удалено {deleted_items}, выключено {hidden}; "
                 f"разделов удалено {deleted_cats}, выключено {hidden_cats}; "
                 f"заведений удалено {deleted_services}, выключено {hidden_services}; "
                 + (f"заказов удалено {purged_orders}; " if purge else "")

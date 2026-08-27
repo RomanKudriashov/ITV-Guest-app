@@ -262,3 +262,36 @@ def test_the_override_core_tells_pinned_from_changed():
     other = inheritance.classify_overrides({("fee",): 1000}, {("fee",): 0})
     assert same[0].state is inheritance.State.PINNED
     assert other[0].state is inheritance.State.CHANGED
+
+
+# --- Найдено по дороге ------------------------------------------------------
+
+
+@pytest.mark.django_db(databases=["default", "platform"])
+def test_the_platform_team_does_not_list_deleted_members(crystal):
+    """
+    УКУС. Удалённый участник уходит из списка команды.
+
+    Выдача читает `all_objects` — иначе платформенных не видно вовсе (`hotel =
+    NULL`, тенантный менеджер их не отдаёт). Но этот менеджер отдаёт и
+    удалённых, а удаление в проекте мягкое, и фильтра не было.
+
+    На стенде так накопилось 155 удалённых при двух живых: предел выдачи в сто
+    записей выбирался мусором, настоящие учётки с него вытеснялись, и проверка
+    консоли падала так, будто сломалась консоль. Сломались данные.
+    """
+    from apps.accounts.models import User
+    from apps.core.context import platform_scope
+    from apps.hotels.services.platform.team import list_members
+
+    with platform_scope():
+        gone = User.all_objects.using("platform").create(
+            email="deleted-one@platform.test", is_platform_admin=True, hotel=None
+        )
+        gone.delete(using="platform")
+
+        emails = {row["email"] for row in list_members()["items"]}
+
+    assert "deleted-one@platform.test" not in emails, (
+        "удалённый участник остался в команде — он будет копиться там вечно"
+    )

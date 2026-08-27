@@ -46,8 +46,17 @@ def list_members(*, limit: int | None = None, search: str = "") -> dict:
 
     limit = clamp(limit)
     with platform_scope():
+        # `all_objects` — единственный способ увидеть платформенных: у них
+        # `hotel = NULL`, и тенантный менеджер их не отдаёт. Но этот менеджер
+        # отдаёт «всё как есть, и удалённых тоже» (см. его докстроку), поэтому
+        # удалённых отсекаем ЯВНО.
+        #
+        # Без этого фильтра выдача копила удалённых вечно. На стенде их
+        # набралось 155 при двух живых: предел в сто записей выбирался мусором,
+        # настоящие учётки с него вытеснялись, и проверка «в команде есть
+        # platform@itv.local» падала так, будто сломалась консоль.
         queryset = User.all_objects.using("platform").filter(
-            is_platform_admin=True, hotel__isnull=True
+            is_platform_admin=True, hotel__isnull=True, deleted_at__isnull=True
         )
         # По почте и имени — по ним человека в команде и ищут.
         queryset = apply_search(queryset, search, ("email", "full_name"))
