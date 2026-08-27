@@ -27,6 +27,32 @@
 
 ## 1. Снятие
 
+> **В репозитории средств снятия копий НЕТ.** Ни скрипта, ни задания cron:
+> всё это заведено руками на нашем стенде и в поставку не входит. Новая
+> установка резервных копий не имеет вообще, и узнать об этом лучше сейчас,
+> чем в день, когда они понадобятся. Раздел 1.1 — что делать на новом сервере;
+> раздел 1.2 — как это устроено у нас.
+
+### 1.1. На новой установке — двумя командами
+
+```bash
+D=/var/backups/itv && mkdir -p $D && T=$(date +%F)
+docker compose -f docker-compose.prod.yml --env-file .env.prod \
+  exec -T postgres pg_dump -U "$POSTGRES_SUPERUSER" -Fc "$POSTGRES_DB" > $D/db-$T.dump
+docker run --rm -v <проект>_minio_data:/data -v $D:/backup alpine \
+  tar czf /backup/minio-$T.tgz -C /data .
+```
+
+`<проект>` — имя проекта compose, то есть имя каталога: `docker volume ls`
+покажет точное имя тома. Формат `-Fc` (custom) обязателен — из него умеет
+`pg_restore` с `--clean`, а из простого SQL-дампа нет.
+
+Обе команды повесить в cron и **проверить, что копия рабочая** (§3). Задание,
+которое пишет нулевой файл, выглядит точно так же, как задание, которое
+работает.
+
+### 1.2. Как это устроено на нашем стенде
+
 Копии снимаются каждую ночь в 4:00 в `/var/backups/itv`, хранятся последние
 семь. Задание — `/etc/cron.d/itv-backup`, скрипт
 `/opt/itv-backup/bin/backup.sh`, лог `/var/log/itv-backup.log`.
@@ -108,7 +134,7 @@ docker compose … exec -T postgres psql -U "$POSTGRES_SUPERUSER" -d "$POSTGRES_
 
 ```bash
 docker compose … stop minio
-docker run --rm -v itv-guest_minio_data:/data -v /var/backups/itv:/backup alpine \
+docker run --rm -v <проект>_minio_data:/data -v /var/backups/itv:/backup alpine \
   sh -c 'rm -rf /data/* && tar xzf /backup/minio-<дата>.tgz -C /data'
 docker compose … start minio
 ```
@@ -122,7 +148,7 @@ docker compose … start minio
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod start backend worker beat
 docker compose … exec -T backend python manage.py migrate --database=platform
-docker compose … exec -T backend python manage.py showmigrations | grep -v '\[X\]'
+docker compose … exec -T backend python manage.py showmigrations | grep '\[ \]'
 ```
 
 Миграция после восстановления обязательна, если код новее копии: дамп несёт
@@ -196,7 +222,8 @@ docker compose … exec -T postgres dropdb -U "$POSTGRES_SUPERUSER" restore_chec
 
 ## 4. Что записать после учения
 
-Восстановление проверялось **11.08.2026**. Дату надо обновлять здесь же —
+Восстановление проверялось **27.08.2026** — учением по этой самой главе, на
+чистой установке. Дату надо обновлять здесь же —
 запись «когда в последний раз поднимались из копии» и есть то, что отличает
 резервную копию от надежды.
 
@@ -207,6 +234,7 @@ docker compose … exec -T postgres dropdb -U "$POSTGRES_SUPERUSER" restore_chec
 | Дата | Объём дампа | Время | Что делали руками |
 |---|---|---|---|
 | 11.08.2026 | — | — | — |
+| 27.08.2026 | 506 КБ | ~2 мин | снимали `pg_dump` руками: скрипта на новой установке нет (§1.1) |
 
 ---
 
