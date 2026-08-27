@@ -13,7 +13,10 @@ import fs from 'node:fs'
  */
 const PLATFORM = process.env.PLATFORM ?? 'https://app.147.45.245.172.sslip.io'
 const OUT = process.env.OUT ?? './console-shots'
-const OWNER = { email: 'owner@itv.local', password: 'oedykG4u0wNYKlwzTY' }
+// Пароль владельца стенда — из окружения. Зашитый в файл, он уезжает в
+// репозиторий вместе со скриптом: `PLATFORM_PASSWORD=… node e2e/console-audit.mjs`.
+const OWNER = { email: process.env.PLATFORM_EMAIL ?? 'owner@itv.local', password: process.env.PLATFORM_PASSWORD }
+if (!OWNER.password) throw new Error('нужен PLATFORM_PASSWORD — пароль владельца стенда (см. .env.prod на сервере)')
 
 const VIEWPORTS = { phone: { width: 390, height: 844 }, desktop: { width: 1440, height: 900 } }
 const SECTIONS = ['Сводка', 'Отели', 'Модули и тарифы', 'Он-прем узлы', 'Шаблоны и справочники', 'Команда', 'Аудит']

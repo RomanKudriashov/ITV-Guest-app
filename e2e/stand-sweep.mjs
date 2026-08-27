@@ -19,7 +19,10 @@ const PLATFORM = process.env.PLATFORM ?? 'https://app.147.45.245.172.sslip.io'
 const OUT = process.env.OUT ?? './stand-shots'
 const ROOM = process.env.ROOM ?? '401'
 const STAFF = { email: 'owner@crystal.local', password: 'chef12345' }
-const OWNER = { email: 'owner@itv.local', password: 'oedykG4u0wNYKlwzTY' }
+// Пароль владельца стенда — из окружения. Зашитый в файл, он уезжает в
+// репозиторий вместе со скриптом: `PLATFORM_PASSWORD=… node e2e/stand-sweep.mjs`.
+const OWNER = { email: process.env.PLATFORM_EMAIL ?? 'owner@itv.local', password: process.env.PLATFORM_PASSWORD }
+if (!OWNER.password) throw new Error('нужен PLATFORM_PASSWORD — пароль владельца стенда (см. .env.prod на сервере)')
 
 const VIEWPORTS = {
   phone: { width: 390, height: 844 },
