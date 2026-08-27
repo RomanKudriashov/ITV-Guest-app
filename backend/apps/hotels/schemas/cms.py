@@ -153,6 +153,25 @@ class HomeSettingsIn(Schema):
     # собственное на всех языках одно, переводится слово вокруг него.
     name: dict | None = None
 
+class SlaResetIn(Schema):
+    """Точки, которые вернуть к умолчанию вида работы."""
+
+    point_ids: list[str]
+
+
+class CommerceInheritanceResetIn(Schema):
+    """
+    Какие заведения вернуть к настройкам отеля и по каким полям.
+
+    `fields` пусто — все поля пары. Заведения перечисляются ВСЕГДА: «вернуть
+    всё» одной кнопкой без списка — это способ снести чужие решения, не
+    прочитав их.
+    """
+
+    service_ids: list[str]
+    fields: list[str] | None = None
+
+
 class CommerceSettingsIn(Schema):
     """Все поля необязательны — PATCH меняет только присланное."""
 

@@ -112,3 +112,28 @@ def dictionary_reset(request: HttpRequest, payload: DictionaryResetIn):
         payload={"hotels": len(payload.hotel_ids), "codes": payload.codes or "all", **result},
     )
     return result
+
+
+@router.get("/brand/looks", summary="Кто на каком оформлении")
+@requires(READ)
+def brand_looks(request: HttpRequest, limit: int = 200):
+    """
+    НЕ «расхождения». Отель, перекрасивший витрину под свой бренд, сделал ровно
+    то, чего от него ждут: у него СВОЁ ОФОРМЛЕНИЕ, а не поломка.
+
+    Ручка отвечает на единственный вопрос платформы: если мы поправим пресет
+    библиотеки, кого это коснётся. Кнопки «вернуть к эталону» здесь нет и не
+    будет — ею однажды снесут работу дизайнера отеля.
+    """
+    from apps.hotels.services import brand_inheritance
+
+    return brand_inheritance.report(limit=limit)
+
+
+@router.get("/brand/presets/{code}/affected", summary="Кого коснётся правка пресета")
+@requires(READ)
+def brand_preset_affected(request: HttpRequest, code: str):
+    """Предупреждение ПЕРЕД правкой, а не статистика после неё."""
+    from apps.hotels.services import brand_inheritance
+
+    return {"preset": code, "hotel_ids": brand_inheritance.affected_by(code)}

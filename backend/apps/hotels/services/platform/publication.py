@@ -79,7 +79,7 @@ class BadgePublisher:
 
     def apply(self, hotel: Hotel, payload: dict, *, previous: dict | None = None) -> Applied:
         from apps.catalog.models import Badge
-        from apps.hotels.services.platform import inheritance
+        from apps.hotels.services import inheritance
 
         preset = payload["preset"].strip()
         wanted = {

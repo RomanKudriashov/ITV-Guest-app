@@ -364,6 +364,89 @@ export function updateCommerceSettings(
   return api.patch<CommerceSettings>('/cms/commerce-settings', payload);
 }
 
+/* ── 8b. Где заведения отступают от коммерции отеля ────────────────────── */
+
+export type OverrideState = 'changed' | 'pinned';
+
+export interface CommerceOverrideField {
+  field: string;
+  label: string;
+  state: OverrideState;
+  hotel: number | number[] | null;
+  own: number | number[] | null;
+}
+
+export interface CommerceOverrideRow {
+  service_id: string;
+  code: string;
+  name: Record<string, string>;
+  counts: Record<string, number>;
+  fields: CommerceOverrideField[];
+}
+
+export interface CommerceOverrides {
+  hotel: Record<string, number | number[] | null>;
+  services: CommerceOverrideRow[];
+  with_own: number;
+  total_services: number;
+}
+
+export function fetchCommerceOverrides(): Promise<CommerceOverrides> {
+  return api.get<CommerceOverrides>('/cms/commerce-settings/overrides');
+}
+
+export function resetCommerceOverrides(
+  serviceIds: string[],
+  fields?: string[],
+): Promise<{ changed: number }> {
+  return api.post<{ changed: number }>('/cms/commerce-settings/overrides/reset', {
+    service_ids: serviceIds,
+    fields,
+  });
+}
+
+/* ── 8c. Где порог просрочки переопределён ─────────────────────────────── */
+
+export interface SlaOverrideRow {
+  point_id: string;
+  code: string;
+  title: Record<string, string>;
+  kind: string;
+  state: 'inherited' | OverrideState;
+  default_minutes: number;
+  own_minutes: number | null;
+  effective_minutes: number;
+}
+
+export interface SlaOverrides {
+  points: SlaOverrideRow[];
+  overridden: number;
+  total_points: number;
+}
+
+export function fetchSlaOverrides(): Promise<SlaOverrides> {
+  return api.get<SlaOverrides>('/cms/services/sla-overrides');
+}
+
+export function resetSlaOverrides(pointIds: string[]): Promise<{ changed: number }> {
+  return api.post<{ changed: number }>('/cms/services/sla-overrides/reset', {
+    point_ids: pointIds,
+  });
+}
+
+/* ── 8d. Оформление: своё или пресет платформы ─────────────────────────── */
+
+export interface BrandLook {
+  state: 'follows' | 'changed' | 'extra';
+  label: string;
+  preset: string;
+  theme: string | null;
+}
+
+export function fetchBrandLook(): Promise<BrandLook> {
+  return api.get<BrandLook>('/cms/brand/look');
+}
+
 /* ── 9b. Allergen / dietary-marker dictionaries ────────────────────────── */
 
 export function fetchAllergens(): Promise<DictEntry[]> {

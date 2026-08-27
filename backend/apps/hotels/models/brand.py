@@ -22,6 +22,15 @@ class BrandTheme(TenantModel):
         default=False, help_text="Пресет-заготовка, а не рабочая тема отеля"
     )
     tokens = models.JSONField(default=dict, blank=True)
+    # Из какого пресета библиотеки собрана тема. ПУСТО = тема отеля своя, и
+    # источника у неё нет.
+    #
+    # Поле пришлось завести: заведение отеля копировало токены пресета и теряло
+    # его код, поэтому сравнить оформление отеля было НЕ С ЧЕМ. Это не «признак
+    # тронутости» (его механизм не требует — см. `services/inheritance.py`), а
+    # происхождение: без него вопрос «отель поменял наш пресет или взял свой?»
+    # не имеет ответа в данных.
+    source_preset = models.SlugField(max_length=64, blank=True, default="")
 
     class Meta:
         db_table = "hotels_brand_theme"

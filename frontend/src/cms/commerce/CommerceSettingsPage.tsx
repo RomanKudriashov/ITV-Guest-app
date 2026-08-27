@@ -25,6 +25,7 @@ import { queryKeys } from '@/api/queryKeys';
 import type { CommerceSettings, CommerceSettingsPayload } from '@/api/types';
 import { useToast } from '@/components/ToastProvider';
 import { useAnalyticsLanguage } from '@/cms/analytics/format';
+import { OwnCommerceList } from './OwnCommerceList';
 import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 
 /** Basis points → percent string for display (1000 → "10"). */
@@ -358,6 +359,10 @@ export function CommerceSettingsPage({ embedded = false }: CommerceSettingsPageP
           </Stack>
         </CardContent>
       </Card>
+
+      {/* Где заведения отступают от этих настроек — списком, а не обходом. */}
+      <OwnCommerceList />
+
     </Box>
   );
 }

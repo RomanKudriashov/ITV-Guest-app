@@ -1152,6 +1152,12 @@
     "tabs": {
       "brand": "品牌",
       "showcase": "首页门店"
+    },
+    "look": {
+      "follows": "外观跟随平台预设",
+      "changed": "自有外观",
+      "extra": "自有主题",
+      "hint": "平台的修改不会应用到您的外观。"
     }
   },
   "hotel": {
@@ -1514,6 +1520,16 @@
       "percentRange": "请输入 0 到 100% 的值",
       "moneyInvalid": "金额无效",
       "nonNegativeInt": "需为非负整数"
+    },
+    "own": {
+      "title": "拥有独立商务设置的场所",
+      "subtitle": "{{total}} 个场所中有 {{count}} 个设置了自己的数值",
+      "empty": "所有场所均遵循酒店设置。",
+      "changed": "独立",
+      "pinned": "已固定",
+      "atHotel": "酒店为 {{value}}",
+      "reset": "恢复为酒店设置",
+      "resetDone": "该场所已重新跟随酒店"
     }
   },
   "badges": {
@@ -1583,7 +1599,19 @@
     "schedule": "营业时间",
     "scheduleAlways": "全天",
     "scheduleHint": "场所自身的营业时间。单品是否可点还取决于它自己的时段。",
-    "sla": "响应时限（分钟）",
+    "sla": {
+      "title": "各执行点的超时阈值",
+      "subtitle": "{{total}} 个中有 {{count}} 个被覆盖",
+      "inherited": "{{minutes}} 分钟 — 工作类型默认值",
+      "own": "{{minutes}} 分钟 — 自定义值（默认 {{fallback}}）",
+      "state": {
+        "inherited": "继承",
+        "changed": "自定义",
+        "pinned": "已固定"
+      },
+      "reset": "恢复默认",
+      "resetDone": "该执行点已恢复继承"
+    },
     "slaHint": "超过后任务视为超时，并上报给管理者。",
     "guestFacing": "在门店展示给客人",
     "staffCount": "员工：{{count}}",

@@ -56,3 +56,19 @@ def fonts(request: HttpRequest):
 @router.get("/brand/abstractions", summary="Библиотека фонов-абстракций")
 def abstractions(request: HttpRequest):
     return {"abstractions": ABSTRACTIONS}
+
+
+@router.get("/brand/look", summary="Своё оформление или пресет платформы")
+def cms_brand_look(request: HttpRequest):
+    """
+    Отелю — тем же словом, что и платформе: «своё оформление», а не
+    «расхождение». Экран, предлагающий починить неполоманное, приучает
+    нажимать «ок» не глядя.
+    """
+    from apps.hotels.services import brand_inheritance, hotel_settings as svc
+
+    # Результат не нужен — нужна ПРОВЕРКА ПРАВ внутри: `hotel_for_settings()`
+    # зовёт `require_hotel_admin()`. Вызов без присваивания читается как
+    # забытая строка, поэтому сказано прямо.
+    svc.hotel_for_settings()
+    return brand_inheritance.look_of_current_hotel()

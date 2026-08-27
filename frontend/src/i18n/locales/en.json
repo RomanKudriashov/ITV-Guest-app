@@ -1160,6 +1160,12 @@
     "tabs": {
       "brand": "Brand",
       "showcase": "Home storefront"
+    },
+    "look": {
+      "follows": "The look follows the platform preset",
+      "changed": "Your own look",
+      "extra": "Your own theme",
+      "hint": "Platform changes do not apply to your look."
     }
   },
   "hotel": {
@@ -1523,6 +1529,16 @@
       "percentRange": "Enter a value from 0 to 100%",
       "moneyInvalid": "Invalid amount",
       "nonNegativeInt": "Expected a non-negative integer"
+    },
+    "own": {
+      "title": "Venues with their own commerce",
+      "subtitle": "{{count}} of {{total}} venues have their own values",
+      "empty": "All venues follow the hotel settings.",
+      "changed": "own",
+      "pinned": "pinned",
+      "atHotel": "hotel: {{value}}",
+      "reset": "Return to hotel settings",
+      "resetDone": "The venue follows the hotel again"
     }
   },
   "badges": {
@@ -1592,7 +1608,19 @@
     "schedule": "Opening hours",
     "scheduleAlways": "Around the clock",
     "scheduleHint": "Hours of the venue itself. Item availability also honours its own schedule.",
-    "sla": "Response target, min",
+    "sla": {
+      "title": "Overdue threshold by point",
+      "subtitle": "Overridden at {{count}} of {{total}}",
+      "inherited": "{{minutes}} min — kind default",
+      "own": "{{minutes}} min — own value (default {{fallback}})",
+      "state": {
+        "inherited": "inherits",
+        "changed": "own",
+        "pinned": "pinned"
+      },
+      "reset": "Return to default",
+      "resetDone": "The point inherits the default again"
+    },
     "slaHint": "Past this a task counts as overdue and is raised to the manager.",
     "guestFacing": "Show to guests on the storefront",
     "staffCount": "Staff: {{count}}",

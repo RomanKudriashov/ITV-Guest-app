@@ -187,7 +187,10 @@ def provision_hotel(
 
         theme, _ = BrandTheme.objects.get_or_create(
             name=f"{name} — основная",
-            defaults={"tokens": tokens, "is_preset": False},
+            # `source_preset` — происхождение темы. Без него токены копировались,
+            # а код пресета терялся, и вопрос «отель поменял наш пресет или
+            # собрал своё?» не имел ответа в данных.
+            defaults={"tokens": tokens, "is_preset": False, "source_preset": preset},
         )
         if hotel.default_theme_id != theme.pk:
             hotel.default_theme = theme

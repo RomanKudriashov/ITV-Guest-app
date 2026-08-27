@@ -22,6 +22,7 @@ import Tabs from '@mui/material/Tabs';
 import { ShowcaseEditorPage } from '@/cms/showcase/ShowcaseEditorPage';
 import { BrandPreview } from './BrandPreview';
 import { useBrandDraft } from './useBrandDraft';
+import { BrandLookChip } from './BrandLookChip';
 
 export function BrandPage() {
   const { t, i18n } = useTranslation();
@@ -108,6 +109,7 @@ export function BrandPage() {
         useFlexGap
         sx={{ mb: 2 }}
       >
+        <BrandLookChip />
         <Typography variant="h5" component="h1" sx={{ mr: 'auto' }}>
           {t('brand.title')}
         </Typography>

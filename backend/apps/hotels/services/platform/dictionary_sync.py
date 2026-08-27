@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, SystemDictionaryEntry
-from apps.hotels.services.platform import inheritance
+from apps.hotels.services import inheritance
 
 # Что сравниваем у записи. Порядок сортировки НЕ входит: он про вид списка, а
 # не про содержание, и отличие в нём не означает, что отель правил запись.

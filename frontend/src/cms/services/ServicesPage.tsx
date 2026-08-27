@@ -25,6 +25,7 @@ import { cmsPath } from '@/app/hostRole';
 import { QueryState } from '@/components/QueryState';
 import { createService, fetchServiceTemplates, fetchServices } from './api';
 import type { CmsService } from './api';
+import { SlaOverridesList } from './SlaOverridesList';
 
 /**
  * «Сервисы» — верхний уровень CMS.
@@ -126,6 +127,9 @@ export function ServicesPage() {
           );
         }}
       </QueryState>
+
+      {/* Где порог просрочки переопределён — списком, а не обходом точек. */}
+      <SlaOverridesList />
 
       <CreateServiceDialog
         open={creating}

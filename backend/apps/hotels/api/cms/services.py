@@ -6,7 +6,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.core.schemas import OkOut
-from apps.hotels.schemas.cms import ServiceIn, ServicePatch
+from apps.hotels.schemas.cms import ServiceIn, ServicePatch, SlaResetIn
 from apps.hotels.services import admin_services as svc
 
 router = Router(tags=["cms:hotel-admin"])
@@ -46,3 +46,24 @@ def cms_update_service(request: HttpRequest, service_id: str, payload: ServicePa
 def cms_delete_service(request: HttpRequest, service_id: str):
     svc.delete_service(service_id)
     return {"ok": True}
+
+
+@router.get("/services/sla-overrides", summary="Где порог просрочки переопределён")
+def cms_sla_overrides(request: HttpRequest):
+    """
+    Наследование порога работало и без этой ручки — не работал вид сверху.
+
+    Порог красит заказы просрочкой, просрочка поднимает эскалацию, эскалация
+    будит старшего. Точка с порогом в пять минут, поставленным когда-то на
+    время, разбудит его сегодня ночью, и никто не вспомнит, что он там стоит.
+    """
+    from apps.hotels.services import sla_inheritance
+
+    return sla_inheritance.report()
+
+
+@router.post("/services/sla-overrides/reset", summary="Вернуть точки к умолчанию вида работы")
+def cms_sla_overrides_reset(request: HttpRequest, payload: SlaResetIn):
+    from apps.hotels.services import sla_inheritance
+
+    return {"changed": sla_inheritance.reset(payload.point_ids)}
