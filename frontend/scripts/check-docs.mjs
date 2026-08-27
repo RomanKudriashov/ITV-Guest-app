@@ -55,6 +55,17 @@ const NOT_A_SCREEN = ['/api/', '/ws/', '/static/', '/landing/', '/.well-known/',
 /** Каталоги-архивы: датированные документы, которые обязаны остаться как есть. */
 const ARCHIVE = new Set(['design', 'audit', 'refactor', 'grms']);
 
+/**
+ * Контракты API проверкой ЭКРАНОВ не судятся.
+ *
+ * Они перечисляют куски путей относительно базы (`/analytics/summary` — это
+ * `/api/v1/cms/analytics/summary`), и часть таких кусков случайно совпадает с
+ * именами экранов. Это не дыра: пути API сторожит снимок маршрутов бэкенда
+ * (`test_safety_net.py::test_url_map_matches_snapshot`), и там они проверяются
+ * строже, чем здесь. Проверка переменных окружения на эти файлы действует.
+ */
+const NOT_SCREEN_DOCS = /-api-contract\.md$|\/api-contracts\.md$|\/api-versioning\.md$/;
+
 function* walk(dir, depth = 0) {
   for (const name of readdirSync(dir)) {
     if (name === 'node_modules') continue;
@@ -82,13 +93,20 @@ function knownScreens() {
   return new Set([...result].map(normalize));
 }
 
-/** `/admin/services/7` → `/admin/services/:id`: сравниваем формы, а не данные. */
+/**
+ * `/admin/services/7` → `/admin/services/:id`: сравниваем формы, а не данные.
+ *
+ * Параметр маршрута приводится к тому же виду, что и подставленное значение.
+ * Иначе книга, показавшая живой пример (`/r/401`), не сходится с маршрутом
+ * `/r/:roomNumber` — и сторож требует убрать из книги ровно то, что делает её
+ * понятной. Имя параметра здесь не значит ничего: сравнивается форма пути.
+ */
 function normalize(path) {
   return (
     path
       .replace(/\/+$/, '')
       .split('/')
-      .map((part) => (/^([0-9a-f-]{6,}|\d+)$/i.test(part) ? ':id' : part))
+      .map((part) => (/^(:.+|[0-9a-f-]{6,}|\d+)$/i.test(part) ? ':id' : part))
       .join('/') || '/'
   );
 }
@@ -125,7 +143,9 @@ let envClaims = 0;
 for (const file of walk(DOCS)) {
   const lines = readFileSync(file, 'utf8').split('\n');
   const short = file.slice(ROOT.length);
+  const judgeScreens = !NOT_SCREEN_DOCS.test(short);
   lines.forEach((line, index) => {
+    if (!judgeScreens) return;
     for (const match of line.matchAll(/`(\/[a-z0-9/:_-]*)`/gi)) {
       const claim = match[1];
       if (claim === '/' || NOT_A_SCREEN.some((prefix) => claim.startsWith(prefix))) continue;
@@ -144,21 +164,28 @@ for (const file of walk(DOCS)) {
       const first = `/${candidate.split('/')[1] ?? ''}`;
       if (!roots.has(first)) continue;
 
+      /*
+        ТОЧНОЕ СОВПАДЕНИЕ ИЛИ КОРЕНЬ РАЗДЕЛА — И ВСЁ.
+
+        Здесь стояло ещё и `candidate.startsWith(path + '/')`: «книга назвала
+        вложенный экран под известным корнем». Правило выглядело безобидным, а
+        делало сторожа пустым: `/admin` есть в маршрутизаторе, значит любой
+        `/admin/что-угодно` объявлялся известным. Проверено подстановкой —
+        выдуманный `/admin/nonexistent-screen` проходил молча, то есть сторож
+        не ловил ровно то, ради чего написан.
+      */
       const known = [...screens].some(
-        (path) =>
-          candidate === path ||
-          // Книга назвала вложенный экран под известным корнем…
-          candidate.startsWith(`${path}/`) ||
-          // …или, наоборот, корень раздела, у которого есть экраны.
-          path.startsWith(`${candidate}/`),
+        (path) => candidate === path || path.startsWith(`${candidate}/`),
       );
       if (!known) problems.push(`  ${short}:${index + 1} — экрана нет: ${claim}`);
     }
 
   });
 
-  // Переменные окружения — только из помеченных блоков.
-  const text = readFileSync(file, 'utf8');
+  // Переменные окружения — только из помеченных блоков. Огороженные куски
+  // кода выкидываем: книга объясняет саму разметку примером, и пример — не
+  // утверждение о коде.
+  const text = readFileSync(file, 'utf8').replace(/^```[\s\S]*?^```/gm, '');
   for (const [, kind, body] of text.matchAll(/<!--\s*check:([a-z-]+)\s*-->([\s\S]*?)<!--\s*\/check\s*-->/g)) {
     if (kind !== 'env') continue;
     for (const [, name] of body.matchAll(/`([A-Z][A-Z0-9_]+)`/g)) {

@@ -50,6 +50,20 @@ DOCS = ROOT / "docs"
 _BLOCK = re.compile(r"<!--\s*check:([a-z-]+)\s*-->(.*?)<!--\s*/check\s*-->", re.S)
 #: Что-нибудь в обратных кавычках.
 _TICKED = re.compile(r"`([^`]+)`")
+#: Огороженный кусок кода — ```…```.
+_FENCED = re.compile(r"^```.*?^```", re.S | re.M)
+
+
+def _without_code(text: str) -> str:
+    """
+    Убрать огороженные куски кода перед поиском блоков.
+
+    Книга ОБЪЯСНЯЕТ сторожа и показывает его разметку примером. Пример —
+    не утверждение о коде: в нём один модуль из девяти, и требовать от него
+    полноты значит запретить документировать механизм. Без этого сторож
+    краснел ровно на главе, которая его описывает.
+    """
+    return _FENCED.sub("", text)
 
 
 def _docs() -> list[Path]:
@@ -60,7 +74,7 @@ def _blocks(name: str) -> list[tuple[Path, set[str]]]:
     """Все блоки заданного вида по всем документам."""
     found: list[tuple[Path, set[str]]] = []
     for path in _docs():
-        for kind, body in _BLOCK.findall(path.read_text(encoding="utf-8")):
+        for kind, body in _BLOCK.findall(_without_code(path.read_text(encoding="utf-8"))):
             if kind == name:
                 found.append((path, set(_TICKED.findall(body))))
     return found
