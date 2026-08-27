@@ -21,7 +21,10 @@ from django.utils import timezone
 from apps.core.context import tenant_context
 from apps.orders.models import Order, StatusDefinition
 
-pytestmark = pytest.mark.django_db
+# Платформенная база — потому что команда убирает не только остатки отеля, но и
+# учётки, которые прогоны консоли заводят на уровне платформы. Без объявления
+# pytest-django запрещает запрос и все одиннадцать тестов падают одинаково.
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 
 def _make_order(hotel, *, age_hours: float, status_code: str, requested_time=None) -> Order:
