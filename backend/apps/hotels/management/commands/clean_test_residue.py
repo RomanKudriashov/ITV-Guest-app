@@ -214,38 +214,38 @@ class Command(BaseCommand):
                 self.stdout.write(f"  удалить тип: {room_type.code}")
             for item in keep:
                 self.stdout.write(f"  выключить: {item.code}")
-        # --- Остатки в команде платформы -----------------------------------
-        #
-        # ВНЕ тенанта: у платформенного пользователя `hotel = NULL`, и роль
-        # приложения таких строк НЕ ВИДИТ — запрос вернул бы ноль строк и не
-        # упал. Поэтому идём платформенным подключением, как и всё остальное
-        # платформенного уровня.
-        from apps.accounts.models import User
-        from apps.core.context import platform_scope
+            # --- Остатки в команде платформы -----------------------------------
+            #
+            # ВНЕ тенанта: у платформенного пользователя `hotel = NULL`, и роль
+            # приложения таких строк НЕ ВИДИТ — запрос вернул бы ноль строк и не
+            # упал. Поэтому идём платформенным подключением, как и всё остальное
+            # платформенного уровня.
+            from apps.accounts.models import User
+            from apps.core.context import platform_scope
 
-        # ЖИВЫЕ, а не «все как есть». Удаление в проекте мягкое, и без этого
-        # фильтра команда находила уже удалённых и бодро сообщала, что убрала
-        # их снова: отчёт о работе, которой не было. Такой отчёт хуже
-        # отсутствующего — по нему делают вывод, что стенд чист.
-        stale_platform = [
-            user
-            for user in User.all_objects.using("platform").filter(
-                hotel__isnull=True,
-                email__endswith="@platform.test",
-                deleted_at__isnull=True,
-            )
-            if PLATFORM_TEST_EMAIL.match(user.email or "")
-        ]
-        for user in stale_platform:
-            self.stdout.write(f"  учётка платформы: {user.email}")
-        dropped_platform = 0
-        if apply and stale_platform:
-            # В platform_scope: вне его платформенное подключение работает под
-            # политиками изоляции, и запись без отеля для него не существует.
-            with platform_scope():
-                for user in stale_platform:
-                    user.delete(using="platform")
-                    dropped_platform += 1
+            # ЖИВЫЕ, а не «все как есть». Удаление в проекте мягкое, и без этого
+            # фильтра команда находила уже удалённых и бодро сообщала, что убрала
+            # их снова: отчёт о работе, которой не было. Такой отчёт хуже
+            # отсутствующего — по нему делают вывод, что стенд чист.
+            stale_platform = [
+                user
+                for user in User.all_objects.using("platform").filter(
+                    hotel__isnull=True,
+                    email__endswith="@platform.test",
+                    deleted_at__isnull=True,
+                )
+                if PLATFORM_TEST_EMAIL.match(user.email or "")
+            ]
+            for user in stale_platform:
+                self.stdout.write(f"  учётка платформы: {user.email}")
+            dropped_platform = 0
+            if apply and stale_platform:
+                # В platform_scope: вне его платформенное подключение работает под
+                # политиками изоляции, и запись без отеля для него не существует.
+                with platform_scope():
+                    for user in stale_platform:
+                        user.delete(using="platform")
+                        dropped_platform += 1
 
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
