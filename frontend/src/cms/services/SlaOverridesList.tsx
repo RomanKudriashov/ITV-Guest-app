@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { fetchSlaOverrides, resetSlaOverrides } from '@/api/cms';
+import { ApiError } from '@/api/client';
 import { useToast } from '@/components/ToastProvider';
 
 /**
@@ -35,8 +36,12 @@ export function SlaOverridesList() {
   const data = useQuery({ queryKey: ['cms', 'sla', 'overrides'], queryFn: fetchSlaOverrides });
   const reset = useMutation({
     mutationFn: (pointId: string) => resetSlaOverrides([pointId]),
+    // Отказ обязан быть виден: молчаливая неудача здесь выглядит как «нажал и
+    // ничего не произошло», и человек нажимает ещё раз.
+    onError: (error) =>
+      toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),
     onSuccess: () => {
-      toast.show(t('services.sla.resetDone'));
+      toast.show(t('services.sla.resetDone'), 'success');
       void client.invalidateQueries({ queryKey: ['cms', 'sla'] });
     },
   });

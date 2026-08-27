@@ -13,6 +13,7 @@ import {
   resetCommerceOverrides,
   type CommerceOverrideField,
 } from '@/api/cms';
+import { ApiError } from '@/api/client';
 import { useToast } from '@/components/ToastProvider';
 
 /**
@@ -48,8 +49,12 @@ export function OwnCommerceList() {
 
   const reset = useMutation({
     mutationFn: (serviceId: string) => resetCommerceOverrides([serviceId]),
+    // Отказ обязан быть виден: молчаливая неудача здесь выглядит как «нажал и
+    // ничего не произошло», и человек нажимает ещё раз.
+    onError: (error) =>
+      toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),
     onSuccess: () => {
-      toast.show(t('commerce.own.resetDone'));
+      toast.show(t('commerce.own.resetDone'), 'success');
       void client.invalidateQueries({ queryKey: ['cms', 'commerce'] });
     },
   });
