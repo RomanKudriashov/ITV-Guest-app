@@ -8,7 +8,7 @@ import MenuItem from '@mui/material/MenuItem';
 
 import { ApiError, session } from '@/api/client';
 import { useAuth } from '@/auth';
-import { cmsPath } from '@/app/hostRole';
+import { landingPath } from '@/auth/home';
 import {
   LANGUAGE_LABELS,
   SUPPORTED_LANGUAGES,
@@ -55,7 +55,7 @@ export function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const { tokens, mode, direction, toggleMode } = useAppTheme();
 
   const [email, setEmail] = useState('');
@@ -71,20 +71,22 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [langAnchor, setLangAnchor] = useState<HTMLElement | null>(null);
 
-  // Куда возвращаемся после входа. Умолчание — корень CMS НА ЭТОМ адресе:
-  // на хосте отеля панель живёт в `/admin`, и зашитый `/cms/...` увёл бы
-  // администратора на редирект вместо экрана.
-  const from = (location.state as { from?: string } | null)?.from ?? cmsPath('/dashboard');
+  // Куда вести — решает ПРАВО, а не название роли, и считается это в одном
+  // месте (`auth/home.ts`). `from` уважается, но не когда ведёт в закрытый
+  // раздел: иначе собственная закладка повара снова приводила бы его к отказу.
+  const requested = (location.state as { from?: string } | null)?.from ?? null;
 
-  if (isAuthenticated) return <Navigate to={from} replace />;
+  if (isAuthenticated) return <Navigate to={landingPath(user, requested)} replace />;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      await login(email.trim(), password);
-      navigate(from, { replace: true });
+      // Считаем по ВОЗВРАЩЁННОМУ пользователю, а не по `user` из замыкания:
+      // тот ещё от прошлого рендера и на первом входе всегда пуст.
+      const me = await login(email.trim(), password);
+      navigate(landingPath(me, requested), { replace: true });
     } catch (loginError) {
       const message =
         loginError instanceof ApiError ? loginError.detail : t('auth.networkError');

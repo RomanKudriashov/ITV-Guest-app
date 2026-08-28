@@ -108,6 +108,12 @@ export function normalizeMe(me: MeResponse): StaffUser | null {
       full_name: me.full_name ?? '',
       is_hotel_admin: me.is_hotel_admin ?? false,
       language: me.language ?? 'ru',
+      // Права переносим и здесь: иначе плоский ответ давал пользователя без
+      // прав, и посадка после входа считалась бы по пустому месту.
+      role: me.role,
+      has_cms_access: me.has_cms_access,
+      managed_point_ids: me.managed_point_ids,
+      member_point_ids: me.member_point_ids,
     };
   }
   return null;

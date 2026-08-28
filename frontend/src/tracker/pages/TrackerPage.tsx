@@ -54,6 +54,7 @@ import {
 } from '../hooks/useTrackerQueries';
 import { isTransportFailure, trackerErrorMessage } from '../errors';
 import type { TrackerOrder, TrackerScope } from '../api/types';
+import { useAuth } from '@/auth';
 
 /** How long a freshly changed order keeps its ring. */
 const HIGHLIGHT_MS = 30_000;
@@ -91,6 +92,7 @@ export function TrackerPage() {
   const threadsQuery = useTrackerChatThreads();
   const chatUnread = (threadsQuery.data ?? []).reduce((sum, thread) => sum + thread.unread, 0);
 
+  const { user } = useAuth();
   const pointsQuery = useTrackerPoints();
   const points = pointsQuery.data?.points;
   const { selected: pointCode, select } = usePointSelection(points);
@@ -350,10 +352,22 @@ export function TrackerPage() {
             icon={<GroupWorkOutlinedIcon fontSize="large" />}
             title={t('tracker.noPoints.title')}
             description={t('tracker.noPoints.body')}
+            /*
+              КНОПКА В CMS — ТОЛЬКО ТЕМ, КОГО ТУДА ПУСКАЮТ.
+
+              Она стояла здесь всегда и вела линейного сотрудника ровно в тот
+              отказ, из которого он сюда и пришёл: трекер → CMS → «сюда
+              нельзя» → кнопка «на трекер». Петля между двумя отказами.
+
+              У человека без привязки дела в CMS нет и быть не может: его
+              вопрос решает администратор отеля, и об этом сказано текстом.
+            */
             action={
-              <Button variant="outlined" onClick={() => navigate(cmsPath('/menu'))} sx={{ minHeight: 44 }}>
-                {t('tracker.toCms')}
-              </Button>
+              user?.has_cms_access ? (
+                <Button variant="outlined" onClick={() => navigate(cmsPath('/menu'))} sx={{ minHeight: 44 }}>
+                  {t('tracker.toCms')}
+                </Button>
+              ) : null
             }
           />
         </Box>

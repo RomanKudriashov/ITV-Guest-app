@@ -54,6 +54,18 @@ export interface StaffUser {
   full_name: string;
   is_hotel_admin: boolean;
   language: string;
+  /**
+   * Права внутри отеля. Бэкенд отдавал их с самого начала
+   * (`Access.payload()`), а клиент не объявлял — и потому решал по
+   * `is_hotel_admin`, то есть по названию роли вместо прав.
+   */
+  role?: 'line_staff' | 'service_manager' | 'hotel_admin';
+  /** Пускают ли в CMS вообще: админ отеля и управляющий сервисом. */
+  has_cms_access?: boolean;
+  /** Точки, которыми человек управляет. */
+  managed_point_ids?: string[];
+  /** Все точки, к которым он привязан, — это и есть его доска. */
+  member_point_ids?: string[];
 }
 
 export interface HotelInfo {
@@ -85,6 +97,10 @@ export interface MeResponse {
   full_name?: string;
   is_hotel_admin?: boolean;
   language?: string;
+  role?: StaffUser['role'];
+  has_cms_access?: boolean;
+  managed_point_ids?: string[];
+  member_point_ids?: string[];
 }
 
 export interface LanguageOption {

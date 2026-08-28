@@ -27,7 +27,14 @@ interface AuthContextValue {
   /** True while the stored token is being validated on boot. */
   isBootstrapping: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  /**
+   * Возвращает вошедшего — с его правами.
+   *
+   * Раньше возвращала `void`, и экран входа считал посадку по `user` из
+   * замыкания, то есть по состоянию ДО входа: там ещё `null`, и правило «есть
+   * ли доступ в CMS» отвечало «нет» вообще всем.
+   */
+  login: (email: string, password: string) => Promise<StaffUser>;
   logout: () => void;
 }
 
@@ -139,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(response.access);
       setUser(response.user);
       if (response.theme) setBrandTokens(response.theme);
+      return response.user;
     },
     [setBrandTokens],
   );

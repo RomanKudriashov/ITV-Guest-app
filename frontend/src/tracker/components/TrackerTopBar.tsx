@@ -50,6 +50,7 @@ export function TrackerTopBar({
   const { t } = useTranslation();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <AppBar
@@ -126,16 +127,24 @@ export function TrackerTopBar({
           </IconButton>
         </Tooltip>
 
-        <Tooltip title={t('tracker.toCms')}>
-          <IconButton
-            onClick={() => navigate(cmsPath('/menu'))}
-            aria-label={t('tracker.toCms')}
-            data-testid="tracker-to-cms"
-            sx={{ minWidth: 44, minHeight: 44 }}
-          >
-            <RestaurantMenuIcon />
-          </IconButton>
-        </Tooltip>
+        {/*
+          Переход в CMS — только тем, кого туда пускают.
+
+          Кнопка висела у всех, в том числе у линейного сотрудника: его
+          собственное рабочее место предлагало ему дверь, за которой отказ.
+        */}
+        {user?.has_cms_access ? (
+          <Tooltip title={t('tracker.toCms')}>
+            <IconButton
+              onClick={() => navigate(cmsPath('/menu'))}
+              aria-label={t('tracker.toCms')}
+              data-testid="tracker-to-cms"
+              sx={{ minWidth: 44, minHeight: 44 }}
+            >
+              <RestaurantMenuIcon />
+            </IconButton>
+          </Tooltip>
+        ) : null}
 
         <Stack direction="row" sx={{ display: { xs: 'none', md: 'flex' } }}>
           <LanguageSwitcher compact />
