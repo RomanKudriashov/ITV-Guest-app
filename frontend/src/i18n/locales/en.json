@@ -2960,6 +2960,37 @@
     "footer": {
       "copy": "ITV Guest — hotel guest service",
       "console": "Platform staff sign-in"
+    },
+    "figures": {
+      "languages": {
+        "title": "languages",
+        "body": "The guest reads the storefront in their own — nothing to switch."
+      },
+      "modules": {
+        "title": "modules",
+        "body": "Enabled one by one: from room control to the mobile key."
+      },
+      "installs": {
+        "title": "installs",
+        "body": "The guest scans the code in the room and orders. No app to install."
+      }
+    },
+    "blocks": {
+      "guest": {
+        "eyebrow": "Guest",
+        "title": "Everything they need is on their phone",
+        "body": "Scanning the code in the room opens the hotel storefront: menu, services, time slots, chat. No app to install and no sign-up — the guest simply orders."
+      },
+      "staff": {
+        "eyebrow": "Staff",
+        "title": "A board where the work is visible",
+        "body": "A request lands on an execution point and lives on the board: accepted, in progress, delivered. Overdue colours the card; an untaken request rises to the supervisor."
+      },
+      "room": {
+        "eyebrow": "Room control",
+        "title": "Light, curtains and climate from the same storefront",
+        "body": "The equipment is already on site: we reach it through a connector inside the hotel network. The hotel opens nothing outwards."
+      }
     }
   }
 }

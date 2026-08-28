@@ -76,3 +76,63 @@ test('манифест PWA: на корне установку не предла
   await expect(page.getByTestId('guest-room-input')).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('link[rel="manifest"]')).toHaveCount(1)
 })
+
+/* ── Лендинг: устройство новой витрины ──────────────────────────────────── */
+
+test('первый экран — фотография с текстом поверх, без карточек', async ({ page }) => {
+  await page.goto(`${ROOT}/`)
+  const hero = page.getByTestId('landing-hero')
+  await expect(hero).toBeVisible({ timeout: 30_000 })
+
+  // Карточек в первом экране нет намеренно: он продаёт кадром, а не списком.
+  await expect(hero.locator('.MuiCard-root')).toHaveCount(0)
+  // Одна кнопка, а не две: второе действие уводило внимание от единственного.
+  await expect(hero.getByRole('link')).toHaveCount(1)
+})
+
+test('лендинг не делает ни одного запроса к API', async ({ page }) => {
+  // Правило страницы, а не договорённость: она статична по устройству. Форма
+  // заявки означала бы ручку на бэкенде и приём персональных данных.
+  const calls: string[] = []
+  page.on('request', (r) => {
+    // Именно `/api/v1/`, а не `/api/`: в режиме разработки Vite отдаёт модули
+    // по путям вида `/src/api/client.ts`, и широкий фильтр краснел на них —
+    // то есть на загрузке собственного кода, а не на запросе к серверу.
+    if (r.url().includes('/api/v1/')) calls.push(r.url())
+  })
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing-hero')).toBeVisible({ timeout: 30_000 })
+  await page.getByTestId('landing-contact').scrollIntoViewIfNeeded()
+  await page.waitForLoadState('networkidle')
+  expect(calls, calls.join('\n')).toEqual([])
+})
+
+test('цифры — только те, что у нас есть', async ({ page }) => {
+  await page.goto(`${ROOT}/`)
+  // Языки и модули считаются из перечислений системы, а не вписаны словами.
+  await expect(page.getByTestId('landing-figure-languages')).toHaveText('4')
+  await expect(page.getByTestId('landing-figure-modules')).toHaveText('9')
+  await expect(page.getByTestId('landing-figure-installs')).toHaveText('0')
+})
+
+test('схемы движения данных сохранены', async ({ page }) => {
+  // Их переносили в новую оправу — проверяем, что они доехали живыми.
+  await page.goto(`${ROOT}/`)
+  await page.getByTestId('landing-flows').scrollIntoViewIfNeeded()
+  await expect(page.getByTestId('flow-order')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('flow-room')).toBeVisible()
+})
+
+test('при просьбе не двигать движения нет', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing-hero')).toBeVisible({ timeout: 30_000 })
+
+  // Параллакс снят: фон прокручивается вместе со страницей, а не «прибит».
+  const attachment = await page
+    .getByTestId('landing-hero')
+    .locator('div[aria-hidden]')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundAttachment)
+  expect(attachment).toBe('scroll')
+})
