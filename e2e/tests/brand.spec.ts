@@ -27,9 +27,8 @@ test.describe('Бренд-настройки', () => {
    * что была, а не «какую-нибудь».
    *
    * Раньше здесь применялся пресет `evening_concierge`. Это не восстановление,
-   * а подмена: каждый прогон уносил обложку отеля (пресет несёт свой фон) и
-   * менял заголовочную гарнитуру на другую. Дрейф был необратимым — сид
-   * досевает обложку только с `--force`.
+   * а подмена: каждый прогон оставлял отель на чужом виде — другая палитра,
+   * другая заголовочная гарнитура.
    *
    * Теперь снимаем СНИМОК настоящих токенов до теста и кладём его обратно
    * целиком через PUT: PATCH тут не годится, он deep-merge и не умеет убрать
@@ -158,10 +157,12 @@ test.describe('Бренд-настройки', () => {
 
     const warning = page.getByTestId('brand-preset-warning')
     await expect(warning).toBeVisible()
-    // Не «изменит оформление», а именно про две вещи, которые пропадают
-    // молча, и про то, чем это отменить.
-    await expect(warning).toContainText('логотип')
+    // Подпись перечисляет, ЧТО меняется, и обещает, что логотипы и картинка
+    // фона сохранятся. Раньше она предупреждала о пропаже логотипа — теперь
+    // это было бы неправдой.
+    await expect(warning).toContainText('логотипы и картинка фона сохраняются')
     await expect(warning).toContainText('Сбросить')
+    await expect(warning).not.toContainText('включая загруженный логотип')
   })
 
   test('показ рисует первый экран гостя, а не абстрактные плитки', async ({ page }) => {
@@ -171,5 +172,77 @@ test.describe('Бренд-настройки', () => {
     // изображение». Раньше показ начинался с меню, и обложку было не увидеть.
     const preview = page.getByTestId('brand-preview')
     await expect(preview.getByTestId('guest-home-hero')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('пресет не стирает логотипы и картинку фона отеля', async ({ page, request }) => {
+    /*
+      УКУС. Пресет — это готовый ВИД; логотип и фотография отеля видом не
+      являются, их загрузил отель.
+
+      Раньше `applyPreset` заменял черновик целиком, а логотипы в пресетах
+      пустые — один клик убирал и логотип, и картинку. Молча.
+
+      Проверяем КОНЕЧНОЕ состояние (после сохранения), а не черновик: черновик
+      мог бы выглядеть верно и не доехать до сервера.
+    */
+    const token = await apiToken(request)
+    const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+    const api = 'http://localhost:8010/api/cms/brand'
+
+    const before = (await (await request.get(api, { headers })).json()).tokens
+    const cover = before?.brand?.background?.imageUrl
+    expect(cover, 'у демо-отеля нет картинки фона — укусу не на чем работать').toBeTruthy()
+
+    // Логотипы отелю дописываем: в сиде они пустые, а терять нам надо именно их.
+    const seeded = await request.patch(api, {
+      headers,
+      data: { tokens: { brand: { logoLight: cover, logoDark: cover } } },
+    })
+    expect(seeded.ok(), await seeded.text()).toBeTruthy()
+
+    // Пресет берём ОТЛИЧНЫЙ от текущего: демо-отель уже сидит на
+    // `midnight_navy`, и на нём «цвета сменились» проверить нечем — первая
+    // версия укуса поймала ровно это.
+    const target = before.preset === 'marble_linen' ? 'sapphire_dark' : 'marble_linen'
+
+    await openBrand(page)
+    await page.getByTestId(`brand-preset-${target}`).click()
+    await page.getByTestId('brand-save').click()
+    await expect(page.getByTestId('brand-dirty')).toBeHidden({ timeout: 15_000 })
+
+    const after = (await (await request.get(api, { headers })).json()).tokens
+
+    // 1. Своё — на месте.
+    expect(after.brand.logoLight, 'пресет стёр светлый логотип').toBeTruthy()
+    expect(after.brand.logoDark, 'пресет стёр тёмный логотип').toBeTruthy()
+    expect(
+      after.brand.background.imageAssetId ?? after.brand.background.imageUrl,
+      'пресет потерял картинку фона — вернуть её без повторной загрузки нельзя',
+    ).toBeTruthy()
+
+    // 2. Вид фона — от пресета: иначе пресет читался бы как несработавший.
+    //
+    // Сверяем с САМИМ пресетом, а не с зашитым «градиентом»: у разных пресетов
+    // вид разный (`marble_linen` несёт абстракцию), и зашитое значение делало
+    // укус проверкой моей памяти, а не поведения.
+    const presets = (await (await request.get('http://localhost:8010/api/cms/brand/presets', { headers })).json()).presets
+    const chosen = presets.find((item: { code: string }) => item.code === target)
+    expect(chosen, `пресет ${target} пропал из библиотеки`).toBeTruthy()
+    expect(after.brand.background.kind).toBe(chosen.tokens.brand.background.kind)
+    expect(after.brand.background.kind).not.toBe('image')
+
+    // 3. Вид при этом действительно сменился, а не «сохранили всё подряд».
+    expect(after.preset).toBe(target)
+    expect(JSON.stringify(after.palette)).not.toBe(JSON.stringify(before.palette))
+    expect(JSON.stringify(after.typography)).not.toBe(JSON.stringify(before.typography))
+  })
+
+  test('спрятанная картинка фона объявлена, а не потеряна', async ({ page }) => {
+    await openBrand(page)
+    await page.getByTestId('brand-preset-midnight_navy').click()
+
+    // Вид стал градиентом, картинка лежит невидимая — экран обязан сказать,
+    // что она цела, иначе оператор грузит файл заново.
+    await expect(page.getByTestId('brand-bg-image-kept')).toBeVisible()
   })
 })

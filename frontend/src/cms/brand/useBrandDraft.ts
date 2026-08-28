@@ -138,10 +138,65 @@ export function useBrandDraft() {
     [setField],
   );
 
-  /** Replace the whole draft with a preset's tokens — client-side only, unsaved. */
+  /**
+   * Взять вид пресета, СОХРАНИВ то, что принадлежит отелю.
+   *
+   * Пресет — это готовый ВИД: палитра, шрифты, скругления, трактовка фона.
+   * Логотип и фотография отеля видом не являются: их загрузил отель, и в
+   * библиотечном пресете их нет и быть не может.
+   *
+   * ЛОГОТИПЫ. В пресетах они пустые строки, и это «мнения нет», а не «убрать».
+   * Раньше замена черновика целиком стирала их одним кликом — молча и до
+   * первого сохранения незаметно.
+   *
+   * ФОН — РАЗВИЛКА, И РЕШЕНА ОНА ИНАЧЕ, ЧЕМ ЛОГОТИП.
+   *
+   * Здесь у пресета мнение ЕСТЬ: он задаёт `kind` — градиент, цвет,
+   * абстракцию. Оставить картинку отеля поверх выбора пресета значило бы, что
+   * пресет с виду не сработал: оператор нажал «Полуночный синий», а фон не
+   * изменился. Такой пресет читается как сломанный.
+   *
+   * Поэтому ВИД ФОНА берётся из пресета, а САМА КАРТИНКА никуда не девается:
+   * `imageAssetId` и `imageUrl` переезжают в новый токен. Вернуть её — это
+   * выбрать вид «изображение», без повторной загрузки; экран об этом говорит
+   * отдельной строкой, пока картинка лежит невидимая.
+   *
+   * Если пресет однажды принесёт СВОЮ картинку, победит она: тогда мнение у
+   * него есть и по ней.
+   *
+   * Всё это — правка черновика; на сервер ничего не уходит до «Сохранить».
+   */
   const applyPreset = useCallback(
     (preset: BrandPreset) => {
-      setDraft({ ...preset.tokens, preset: preset.code });
+      setDraft((prev) => {
+        const ownExtras = prev.brand ?? {};
+        const presetExtras = preset.tokens.brand ?? {};
+        const ownBg = ownExtras.background;
+        const presetBg = presetExtras.background;
+
+        // Черновик хранит фон частично (`Partial`), поэтому и здесь тип
+        // частичный: `kind` мог быть не задан ни у пресета, ни у отеля.
+        const background: Partial<BrandBackground> | undefined = presetBg
+          ? {
+              ...presetBg,
+              // Картинка отеля переживает смену вида. Пустое поле у пресета —
+              // не команда «забыть», а отсутствие своей картинки.
+              imageAssetId: presetBg.imageAssetId ?? ownBg?.imageAssetId,
+              imageUrl: presetBg.imageUrl ?? ownBg?.imageUrl,
+            }
+          : ownBg;
+
+        return {
+          ...preset.tokens,
+          preset: preset.code,
+          brand: {
+            ...presetExtras,
+            logoLight: presetExtras.logoLight || ownExtras.logoLight,
+            logoDark: presetExtras.logoDark || ownExtras.logoDark,
+            ...(background ? { background } : {}),
+          },
+        };
+      });
     },
     [setDraft],
   );

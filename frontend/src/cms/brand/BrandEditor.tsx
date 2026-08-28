@@ -334,6 +334,24 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
           </Select>
         </FormControl>
 
+        {/*
+          КАРТИНКА ЛЕЖИТ, НО НЕ ВИДНА — и об этом надо сказать.
+
+          Пресет задаёт вид фона, и при градиенте картинка отеля перестаёт
+          показываться. Она не удалена: возвращается выбором вида
+          «изображение», без повторной загрузки. Без этой строки оператор
+          считает, что потерял файл, и грузит его заново.
+        */}
+        {bgKind !== 'image' && (bg?.imageUrl || bg?.imageAssetId) ? (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            data-testid="brand-bg-image-kept"
+          >
+            {t('brand.bgImageKept')}
+          </Typography>
+        ) : null}
+
         {bgKind === 'solid' ? (
           <ColorField
             label={t('brand.bgColor')}

@@ -1178,7 +1178,8 @@
       "surface": "How catalogue cards and panels look above the backdrop.",
       "defaultMode": "Which theme the guest opens the app in the first time. They can switch it afterwards."
     },
-    "presetWarning": "Choosing a preset replaces ALL brand settings at once — including the uploaded logo and background image. Until you press «Save», «Reset» undoes it."
+    "presetWarning": "A preset changes colours, fonts, corner rounding and the background kind. Your logos and background image are kept. Until you press «Save», «Reset» undoes the choice.",
+    "bgImageKept": "Your background image is kept — pick the «image» kind to bring it back. No need to upload it again."
   },
   "hotel": {
     "rooms": {
