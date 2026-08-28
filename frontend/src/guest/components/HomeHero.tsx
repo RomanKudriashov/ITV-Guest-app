@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { layout, surfaceRadius } from '../storefrontTokens';
+import { layout, surfaceRadius, type StorefrontTokens } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -23,7 +23,32 @@ export function HomeHero({
   greeting: string;
   cover: string | null;
 }) {
-  const { scrim, onMedia, mediaFallback } = useStorefront();
+  return <HomeHeroView hotelName={hotelName} greeting={greeting} cover={cover} tokens={useStorefront()} />;
+}
+
+/**
+ * Та же парадная, но БЕЗ контекста темы — токены приходят параметром.
+ *
+ * Нужна показу бренда в CMS: там своя тема превью, и `useStorefront()` вернул
+ * бы режим окружающей админки, а не тот, что выбран в показе. Приём в проекте
+ * уже принят — `CatalogRowView`, `ItemHeadlineView`.
+ *
+ * Ради этого и разделено: показ обязан рисовать первый экран ТЕМ ЖЕ кодом, что
+ * и витрина. Вторая реализация «как у гостя» разошлась бы с гостем молча — и
+ * тогда показ обещал бы одно, а гость видел другое.
+ */
+export function HomeHeroView({
+  hotelName,
+  greeting,
+  cover,
+  tokens,
+}: {
+  hotelName: string;
+  greeting: string;
+  cover: string | null;
+  tokens: StorefrontTokens;
+}) {
+  const { scrim, onMedia, mediaFallback } = tokens;
 
   return (
     <Box

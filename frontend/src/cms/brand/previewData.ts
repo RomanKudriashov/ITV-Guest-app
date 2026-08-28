@@ -1,4 +1,5 @@
 import type { ItemDetail, MenuItem } from '@/guest/api/types';
+import type { Item as CmsItem, Translated } from '@/api/types';
 
 /**
  * Self-contained sample dishes for the brand preview. Photos are inline SVG data
@@ -27,6 +28,38 @@ function dishSvg(monogram: string, hue: number): string {
 const RIBEYE_IMG = dishSvg('R', 8);
 const SALAD_IMG = dishSvg('C', 96);
 const DESSERT_IMG = dishSvg('P', 330);
+
+/**
+ * НАСТОЯЩИЕ БЛЮДА ОТЕЛЯ вместо образцов — если они уже заведены.
+ *
+ * Монограмма на цветном прямоугольнике не даёт судить о бренде: оператор
+ * настраивает вид карточек, а видит буквы «R» и «C», которых у гостя не будет
+ * никогда. Хуже того, у заглушки свой оттенок, и он спорит с палитрой, которую
+ * в этот момент и подбирают.
+ *
+ * Образцы остаются для отеля, у которого каталога ещё нет: показ обязан
+ * работать и на первой минуте, до единой загруженной фотографии.
+ */
+export function rowsFromItems(items: CmsItem[], language: string): MenuItem[] {
+  const withPhoto = items.filter((item) => item.images?.length);
+  if (withPhoto.length < 2) return PREVIEW_ROWS;
+  const pick = (value: Translated | undefined): string =>
+    (value?.[language] ?? Object.values(value ?? {})[0] ?? '') as string;
+  return withPhoto.slice(0, 2).map((item) => ({
+    id: item.id,
+    code: item.code,
+    category_id: item.category_id,
+    title: pick(item.title),
+    description: pick(item.description),
+    price: item.price,
+    images: item.images.map((image) => image.url).filter(Boolean),
+    allergens: [],
+    // Показ всегда рисует доступную позицию: он про ВИД карточки, а не про
+    // остатки. Иначе настройка бренда зависела бы от того, что сейчас в стопе.
+    is_available: true,
+    unavailable_reason: null,
+  }));
+}
 
 /** Rows for the menu-list part of the preview. */
 export const PREVIEW_ROWS: MenuItem[] = [

@@ -1155,7 +1155,8 @@
       "phone": "Phone",
       "tablet": "Tablet",
       "desktop": "Desktop",
-      "tv": "TV — soon"
+      "tv": "TV — soon",
+      "greeting": "Good afternoon"
     },
     "tabs": {
       "brand": "Brand",
@@ -1166,7 +1167,18 @@
       "changed": "Your own look",
       "extra": "Your own theme",
       "hint": "Platform changes do not apply to your look."
-    }
+    },
+    "where": {
+      "presets": "A ready set of colours, fonts and background. The guest sees the result everywhere.",
+      "logos": "App header — on every screen. The light logo shows in the light theme, the dark one in the dark theme; with no logo the header shows the hotel name.",
+      "background": "Backdrop under the content: the entry screen and the venue catalogue. The «image» kind is also the COVER of the first screen; with any other kind the hotel has no cover and the hero falls back to the brand gradient.",
+      "palette": "Buttons, links and accents — on every guest screen.",
+      "fonts": "Headings and body text — everywhere, including the hero and dish cards.",
+      "radius": "Corner rounding of cards, buttons and images.",
+      "surface": "How catalogue cards and panels look above the backdrop.",
+      "defaultMode": "Which theme the guest opens the app in the first time. They can switch it afterwards."
+    },
+    "presetWarning": "Choosing a preset replaces ALL brand settings at once — including the uploaded logo and background image. Until you press «Save», «Reset» undoes it."
   },
   "hotel": {
     "rooms": {

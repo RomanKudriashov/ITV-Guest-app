@@ -20,9 +20,14 @@ import { formatMoney } from '@/utils/money';
 import { GuestBrandHeader } from '@/guest/components/GuestBrandHeader';
 import { CatalogRowView } from '@/guest/components/CatalogRow';
 import { ItemHeadlineView } from '@/guest/components/ItemHeadline';
+import { HomeHeroView } from '@/guest/components/HomeHero';
+import { storefrontTokens } from '@/guest/storefrontTokens';
 import type { BrandAbstraction } from '@/api/brand';
 import { previewI18n } from './previewI18n';
-import { PREVIEW_DETAIL, PREVIEW_ROWS } from './previewData';
+import { PREVIEW_DETAIL } from './previewData';
+import { useQuery } from '@tanstack/react-query';
+import { fetchItems } from '@/api/cms';
+import { rowsFromItems } from './previewData';
 
 // Preview-only emotion caches. Distinct keys keep preview class names from
 // colliding with the CMS (`mui` / `mui-rtl`); the RTL cache runs stylis-plugin-rtl
@@ -75,6 +80,20 @@ export function BrandPreview({
   const { t } = useTranslation();
   // Device is preview-only local state; it never touches the CMS around it.
   const [device, setDevice] = useState<PreviewDevice>('phone');
+
+  // Настоящие блюда отеля для карточек показа. Отказ не важен — упасть показ
+  // из-за каталога не должен, поэтому без повторов и с молчаливым откатом на
+  // образцы (`rowsFromItems` сам решает, хватает ли снимков).
+  const items = useQuery({
+    queryKey: ['cms', 'brand', 'preview-items'],
+    queryFn: () => fetchItems({ limit: 8 }),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const rows = useMemo(
+    () => rowsFromItems(items.data ?? [], appLanguage),
+    [items.data, appLanguage],
+  );
   const frame = DEVICE_FRAME[device];
   const direction = rtl ? 'rtl' : 'ltr';
   const language = rtl ? 'ar' : appLanguage;
@@ -195,6 +214,29 @@ export function BrandPreview({
                   }
                 />
 
+                {/*
+                  ПЕРВЫЙ ЭКРАН — И ОН ЖЕ ЕДИНСТВЕННОЕ МЕСТО, ГДЕ ВИДНА ОБЛОЖКА.
+
+                  До этого показ начинался с меню, и результат выбора «фон →
+                  изображение» не был виден нигде: картинка становится парадной
+                  главной, а парадной в показе не было. Оператор узнавал, что
+                  получилось, открыв витрину.
+
+                  Рисуется ТЕМ ЖЕ компонентом, что и у гостя (`HomeHeroView`),
+                  токены витрины берутся по режиму показа, а не по режиму
+                  админки вокруг.
+                */}
+                <Box sx={{ p: 2, pb: 0 }}>
+                  <HomeHeroView
+                    hotelName={hotelName}
+                    greeting={t('brand.preview.greeting')}
+                    cover={tokens.brand?.background?.kind === 'image'
+                      ? tokens.brand?.background?.imageUrl ?? null
+                      : null}
+                    tokens={storefrontTokens(mode)}
+                  />
+                </Box>
+
                 <Stack spacing={2} sx={{ p: 2 }}>
                   {/* 1. Menu list on a brand surface (surfaceStyle + radius visible). */}
                   <Paper elevation={1} sx={{ p: 2, borderRadius: 3 }}>
@@ -202,7 +244,7 @@ export function BrandPreview({
                       {t('brand.preview.menuHeading')}
                     </Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                      {PREVIEW_ROWS.map((row) => (
+                      {rows.map((row) => (
                         <CatalogRowView
                           key={row.id}
                           testId={`brand-preview-row-${row.code}`}

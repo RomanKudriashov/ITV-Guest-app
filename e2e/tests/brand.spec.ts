@@ -121,4 +121,55 @@ test.describe('Бренд-настройки', () => {
     await page.getByTestId('brand-reset').click()
     await expect(page.getByTestId('brand-dirty')).toBeHidden()
   })
+
+  /* ── Пункт 70: что за что отвечает ──────────────────────────────────── */
+
+  test('каждый раздел подписан тем, где это увидит гость', async ({ page }) => {
+    await openBrand(page)
+
+    // Самая дорогая подпись из всех: отдельного поля «обложка» НЕТ, ею
+    // становится фон вида «изображение». Без этой строки оператор ищет
+    // обложку и не находит.
+    const editor = page.getByTestId('brand-editor')
+    await expect(editor).toContainText('Шапка приложения')
+    await expect(editor).toContainText('ОБЛОЖКА первого экрана')
+    await expect(editor).toContainText('Кнопки, ссылки и акценты')
+  })
+
+  test('порядок разделов — от того, что гость видит первым', async ({ page }) => {
+    await openBrand(page)
+
+    // Пресеты выше всех не как гостевая поверхность, а как точка входа: они
+    // заменяют ручные правки, значит выбирать их надо ДО них.
+    const order = ['brand-preset-warning', 'brand-logo-light-upload', 'brand-bg-kind', 'brand-font-body']
+    const tops: number[] = []
+    for (const id of order) {
+      const box = await page.getByTestId(id).first().boundingBox()
+      expect(box, `${id} не найден на экране`).toBeTruthy()
+      tops.push(box!.y)
+    }
+    for (let i = 1; i < tops.length; i += 1) {
+      expect(tops[i], `${order[i]} оказался выше ${order[i - 1]}`).toBeGreaterThan(tops[i - 1])
+    }
+  })
+
+  test('пресет предупреждает, что заменит логотип и фон', async ({ page }) => {
+    await openBrand(page)
+
+    const warning = page.getByTestId('brand-preset-warning')
+    await expect(warning).toBeVisible()
+    // Не «изменит оформление», а именно про две вещи, которые пропадают
+    // молча, и про то, чем это отменить.
+    await expect(warning).toContainText('логотип')
+    await expect(warning).toContainText('Сбросить')
+  })
+
+  test('показ рисует первый экран гостя, а не абстрактные плитки', async ({ page }) => {
+    await openBrand(page)
+
+    // Парадная — единственное место, где виден результат выбора «фон →
+    // изображение». Раньше показ начинался с меню, и обложку было не увидеть.
+    const preview = page.getByTestId('brand-preview')
+    await expect(preview.getByTestId('guest-home-hero')).toBeVisible({ timeout: 15_000 })
+  })
 })

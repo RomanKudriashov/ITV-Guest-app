@@ -20,13 +20,41 @@ import type { BrandDraft } from './useBrandDraft';
 
 /* ── Small building blocks ─────────────────────────────────────────────── */
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * Раздел настройки с подписью «ГДЕ ЭТО ВИДНО ГОСТЮ».
+ *
+ * Подпись обязательная, а не украшение. Названия полей описывают ВЕЩЬ («фон»,
+ * «логотип светлый»), и по ним нельзя понять, куда она попадёт. Хуже того:
+ * отдельного поля «обложка» не существует вовсе — ею СТАНОВИТСЯ фон, если
+ * выбрать вид «изображение», а при любом другом виде обложки у отеля нет.
+ * Узнавалось это перебором: правка — открыть витрину — посмотреть.
+ *
+ * Порядок разделов — от того, что гость видит первым: шапка с логотипом,
+ * первый кадр, потом цвет и текст. Пресеты стоят выше всех не как гостевая
+ * поверхность, а как точка входа: они ЗАМЕНЯЮТ ручные правки, значит выбирать
+ * их надо до, а не после.
+ */
+function Section({
+  title,
+  where,
+  children,
+}: {
+  title: string;
+  /** Одна строка: где именно результат окажется у гостя. */
+  where?: string;
+  children: ReactNode;
+}) {
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        {title}
-      </Typography>
-      <Stack spacing={2}>{children}</Stack>
+      <Typography variant="subtitle2">{title}</Typography>
+      {where ? (
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+          {where}
+        </Typography>
+      ) : null}
+      <Stack spacing={2} sx={{ mt: 1.5 }}>
+        {children}
+      </Stack>
     </Paper>
   );
 }
@@ -195,7 +223,7 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
   return (
     <Stack spacing={2} data-testid="brand-editor">
       {/* Presets */}
-      <Section title={t('brand.sections.presets')}>
+      <Section title={t('brand.sections.presets')} where={t('brand.where.presets')}>
         <Box
           sx={{
             display: 'grid',
@@ -252,121 +280,43 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
             </Typography>
           ) : null}
         </Box>
-      </Section>
+        {/*
+          ЧТО ПРОИЗОЙДЁТ ПРИ ВЫБОРЕ — сказано до нажатия, а не после.
 
-      {/* Palette */}
-      <Section title={t('brand.sections.palette')}>
-        <ColorField
-          label={t('brand.primaryLight')}
-          value={merged.palette.light.primary}
-          onChange={(v) => setColor('light', 'primary', v)}
-          testId="brand-primary-light"
-        />
-        <ColorField
-          label={t('brand.primaryDark')}
-          value={merged.palette.dark.primary}
-          onChange={(v) => setColor('dark', 'primary', v)}
-          testId="brand-primary-dark"
-        />
-        <ColorField
-          label={t('brand.accent', { mode: t(`brand.preview.${mode}`) })}
-          value={merged.palette[mode].secondary}
-          onChange={setAccent}
-          testId="brand-accent"
-        />
-      </Section>
-
-      {/* Fonts */}
-      <Section title={t('brand.sections.fonts')}>
-        <FormControl size="small" fullWidth>
-          <InputLabel id="brand-font-body-label">{t('brand.fontBody')}</InputLabel>
-          <Select
-            labelId="brand-font-body-label"
-            label={t('brand.fontBody')}
-            value={fonts.some((f) => f.family === merged.typography.fontFamily)
-              ? merged.typography.fontFamily
-              : ''}
-            onChange={(e) => setTypography({ fontFamily: e.target.value })}
-            data-testid="brand-font-body"
-          >
-            {fonts.map((font) => (
-              <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
-                {font.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl size="small" fullWidth>
-          <InputLabel id="brand-font-heading-label">{t('brand.fontHeading')}</InputLabel>
-          <Select
-            labelId="brand-font-heading-label"
-            label={t('brand.fontHeading')}
-            value={fonts.some((f) => f.family === merged.typography.headingFontFamily)
-              ? merged.typography.headingFontFamily
-              : ''}
-            onChange={(e) => setTypography({ headingFontFamily: e.target.value })}
-            data-testid="brand-font-heading"
-          >
-            {fonts.map((font) => (
-              <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
-                {font.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Section>
-
-      {/* Radii */}
-      <Section title={t('brand.sections.radius')}>
-        <Box>
-          <Typography variant="body2" gutterBottom>
-            {t('brand.radius')}: {merged.shape.borderRadius}px
-          </Typography>
-          <Slider
-            value={merged.shape.borderRadius}
-            min={0}
-            max={28}
-            step={1}
-            valueLabelDisplay="auto"
-            onChange={(_e, v) => setShape({ borderRadius: v as number })}
-            data-testid="brand-radius"
-          />
-        </Box>
-        <Box>
-          <Typography variant="body2" gutterBottom>
-            {t('brand.radiusLarge')}: {merged.shape.borderRadiusLarge}px
-          </Typography>
-          <Slider
-            value={merged.shape.borderRadiusLarge}
-            min={0}
-            max={40}
-            step={1}
-            valueLabelDisplay="auto"
-            onChange={(_e, v) => setShape({ borderRadiusLarge: v as number })}
-            data-testid="brand-radius-large"
-          />
-        </Box>
-      </Section>
-
-      {/* Surface style */}
-      <Section title={t('brand.sections.surface')}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={merged.brand?.surfaceStyle ?? 'flat'}
-          onChange={(_e, v: SurfaceStyle | null) => v && setBrandExtras({ surfaceStyle: v })}
-          data-testid="brand-surface-style"
+          `applyPreset` заменяет черновик ЦЕЛИКОМ, а в самих пресетах логотипы
+          пустые. То есть один клик убирает загруженный логотип и картинку
+          фона — молча, без вопроса. Отменяется это «Сбросить», пока не нажато
+          «Сохранить», и вот ровно про эти две вещи и написано ниже.
+        */}
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          data-testid="brand-preset-warning"
         >
-          {SURFACE_STYLES.map((style) => (
-            <ToggleButton key={style} value={style}>
-              {t(`brand.surface.${style}`)}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+          {t('brand.presetWarning')}
+        </Typography>
+      </Section>
+
+      {/* Logos */}
+      <Section title={t('brand.sections.logos')} where={t('brand.where.logos')}>
+        <Typography variant="body2">{t('brand.logoLight')}</Typography>
+        <LogoField
+          surface="logo"
+          url={merged.brand?.logoLight}
+          onChangeUrl={(u) => setBrandExtras({ logoLight: u })}
+          testId="brand-logo-light-upload"
+        />
+        <Typography variant="body2">{t('brand.logoDark')}</Typography>
+        <LogoField
+          surface="logo"
+          url={merged.brand?.logoDark}
+          onChangeUrl={(u) => setBrandExtras({ logoDark: u })}
+          testId="brand-logo-dark-upload"
+        />
       </Section>
 
       {/* Background */}
-      <Section title={t('brand.sections.background')}>
+      <Section title={t('brand.sections.background')} where={t('brand.where.background')}>
         <FormControl size="small" fullWidth>
           <InputLabel id="brand-bg-kind-label">{t('brand.bgKind')}</InputLabel>
           <Select
@@ -527,26 +477,119 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
         ) : null}
       </Section>
 
-      {/* Logos */}
-      <Section title={t('brand.sections.logos')}>
-        <Typography variant="body2">{t('brand.logoLight')}</Typography>
-        <LogoField
-          surface="logo"
-          url={merged.brand?.logoLight}
-          onChangeUrl={(u) => setBrandExtras({ logoLight: u })}
-          testId="brand-logo-light-upload"
+      {/* Palette */}
+      <Section title={t('brand.sections.palette')} where={t('brand.where.palette')}>
+        <ColorField
+          label={t('brand.primaryLight')}
+          value={merged.palette.light.primary}
+          onChange={(v) => setColor('light', 'primary', v)}
+          testId="brand-primary-light"
         />
-        <Typography variant="body2">{t('brand.logoDark')}</Typography>
-        <LogoField
-          surface="logo"
-          url={merged.brand?.logoDark}
-          onChangeUrl={(u) => setBrandExtras({ logoDark: u })}
-          testId="brand-logo-dark-upload"
+        <ColorField
+          label={t('brand.primaryDark')}
+          value={merged.palette.dark.primary}
+          onChange={(v) => setColor('dark', 'primary', v)}
+          testId="brand-primary-dark"
+        />
+        <ColorField
+          label={t('brand.accent', { mode: t(`brand.preview.${mode}`) })}
+          value={merged.palette[mode].secondary}
+          onChange={setAccent}
+          testId="brand-accent"
         />
       </Section>
 
+      {/* Fonts */}
+      <Section title={t('brand.sections.fonts')} where={t('brand.where.fonts')}>
+        <FormControl size="small" fullWidth>
+          <InputLabel id="brand-font-body-label">{t('brand.fontBody')}</InputLabel>
+          <Select
+            labelId="brand-font-body-label"
+            label={t('brand.fontBody')}
+            value={fonts.some((f) => f.family === merged.typography.fontFamily)
+              ? merged.typography.fontFamily
+              : ''}
+            onChange={(e) => setTypography({ fontFamily: e.target.value })}
+            data-testid="brand-font-body"
+          >
+            {fonts.map((font) => (
+              <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
+                {font.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl size="small" fullWidth>
+          <InputLabel id="brand-font-heading-label">{t('brand.fontHeading')}</InputLabel>
+          <Select
+            labelId="brand-font-heading-label"
+            label={t('brand.fontHeading')}
+            value={fonts.some((f) => f.family === merged.typography.headingFontFamily)
+              ? merged.typography.headingFontFamily
+              : ''}
+            onChange={(e) => setTypography({ headingFontFamily: e.target.value })}
+            data-testid="brand-font-heading"
+          >
+            {fonts.map((font) => (
+              <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
+                {font.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Section>
+
+      {/* Radii */}
+      <Section title={t('brand.sections.radius')} where={t('brand.where.radius')}>
+        <Box>
+          <Typography variant="body2" gutterBottom>
+            {t('brand.radius')}: {merged.shape.borderRadius}px
+          </Typography>
+          <Slider
+            value={merged.shape.borderRadius}
+            min={0}
+            max={28}
+            step={1}
+            valueLabelDisplay="auto"
+            onChange={(_e, v) => setShape({ borderRadius: v as number })}
+            data-testid="brand-radius"
+          />
+        </Box>
+        <Box>
+          <Typography variant="body2" gutterBottom>
+            {t('brand.radiusLarge')}: {merged.shape.borderRadiusLarge}px
+          </Typography>
+          <Slider
+            value={merged.shape.borderRadiusLarge}
+            min={0}
+            max={40}
+            step={1}
+            valueLabelDisplay="auto"
+            onChange={(_e, v) => setShape({ borderRadiusLarge: v as number })}
+            data-testid="brand-radius-large"
+          />
+        </Box>
+      </Section>
+
+      {/* Surface style */}
+      <Section title={t('brand.sections.surface')} where={t('brand.where.surface')}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={merged.brand?.surfaceStyle ?? 'flat'}
+          onChange={(_e, v: SurfaceStyle | null) => v && setBrandExtras({ surfaceStyle: v })}
+          data-testid="brand-surface-style"
+        >
+          {SURFACE_STYLES.map((style) => (
+            <ToggleButton key={style} value={style}>
+              {t(`brand.surface.${style}`)}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Section>
+
       {/* Default mode */}
-      <Section title={t('brand.sections.defaultMode')}>
+      <Section title={t('brand.sections.defaultMode')} where={t('brand.where.defaultMode')}>
         <FormControl size="small" fullWidth>
           <InputLabel id="brand-default-mode-label">{t('brand.defaultMode')}</InputLabel>
           <Select
