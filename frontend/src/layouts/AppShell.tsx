@@ -45,6 +45,7 @@ import { isForbidden, useNavigation } from '@/hooks/useNavigation';
 import { useBootstrap } from '@/hooks/useBootstrap';
 import { NoCmsAccess } from './NoCmsAccess';
 import type { SupportSession } from '@/api/types';
+import { StaffScale } from '@/theme/StaffScale';
 
 const DRAWER_WIDTH = 248;
 
@@ -106,6 +107,7 @@ export function AppShell() {
   }
 
   return (
+    <StaffScale>
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       {/*
         ЧУЖОЕ ПРИСУТСТВИЕ. Пока поддержка внутри отеля, отель обязан это
@@ -255,6 +257,7 @@ export function AppShell() {
         </ScreenBoundary>
       </Box>
     </Box>
+    </StaffScale>
   );
 }
 

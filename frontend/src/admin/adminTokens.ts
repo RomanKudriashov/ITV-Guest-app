@@ -33,6 +33,7 @@
 import { alpha, darken, lighten } from '@mui/material/styles';
 
 import { DEFAULT_BRAND_TOKENS, type ThemeMode } from '@/theme/tokens';
+import { density } from '@/theme/density';
 
 type Pair = { dark: string; light: string };
 
@@ -227,7 +228,10 @@ export const typo = {
   /** Крупное число в плитке сводки. */
   metric: {
     fontFamily: display,
-    fontSize: 30,
+    // По шкале персонала (`theme/density`): число-счётчик — верхняя ступень,
+    // 22px. Тридцать читались как заголовок страницы, хотя это подпись под
+    // словом «Отелей».
+    fontSize: density.font.figure,
     fontWeight: TYPO.fontWeightBold,
     letterSpacing: '-.02em',
     lineHeight: 1.1,
@@ -269,7 +273,9 @@ export const panelSx = {
   bgcolor: surface.s1,
   border: `1px solid ${surface.line}`,
   borderRadius: `${shape.radiusLarge}px`,
-  p: 2.25,
+  // Отступ панели — по шкале, а не 2.25 «на глаз»: плитка в 118px высотой
+  // ради двух строк текста съедала первый экран сводки.
+  p: `${density.pad.section}px`,
 } as const;
 
 /** Кнопка главного действия. */

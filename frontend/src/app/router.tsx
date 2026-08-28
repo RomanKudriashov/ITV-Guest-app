@@ -46,6 +46,7 @@ import { OrdersPage } from '@/guest/pages/OrdersPage';
 import { RoomPage } from '@/guest/pages/RoomPage';
 import { SearchPage } from '@/guest/pages/SearchPage';
 import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
+import { StaffScale } from '@/theme/StaffScale';
 
 /**
  * Data router — required for `useBlocker` (the unsaved-changes guard in the CMS).
@@ -153,7 +154,14 @@ const trackerRoutes: RouteObject[] = [
     path: '/tracker',
     element: (
       <RequireAuth>
-        <TrackerScreen />
+        {/*
+          Шкала персонала — здесь, на маршруте, а не внутри страницы: у доски
+          несколько веток вывода (загрузка, отказ, «нет привязки», сама доска),
+          и оборачивать каждую значило бы однажды забыть одну.
+        */}
+        <StaffScale>
+          <TrackerScreen />
+        </StaffScale>
       </RequireAuth>
     ),
   },
@@ -163,7 +171,9 @@ const trackerRoutes: RouteObject[] = [
     path: '/tracker/order/:id',
     element: (
       <RequireAuth>
-        <TrackerPage />
+        <StaffScale>
+          <TrackerPage />
+        </StaffScale>
       </RequireAuth>
     ),
   },

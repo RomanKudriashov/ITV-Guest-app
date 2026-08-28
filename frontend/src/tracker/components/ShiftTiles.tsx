@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { formatAge } from '../orderAge';
 import type { TrackerShift } from '../api/types';
+import { density, touchTarget } from '@/theme/density';
 
 /**
  * СВОДКА СМЕНЫ ПЛИТКАМИ.
@@ -57,15 +58,18 @@ export function ShiftTiles({ shift, focus, overdueOn, onFocus, onOverdue }: Shif
   return (
     <Box
       data-testid="tracker-shift"
+      /*
+        СТРОКА, А НЕ БЛОКИ. Сводка занимала сеткой полосу в половину экрана, а
+        отвечает она на два коротких вопроса: сколько ждёт и сколько в работе.
+        Плитки встают в ряд и растягиваются только по содержимому — место
+        остаётся карточкам, ради которых доска и открыта.
+      */
       sx={{
-        display: 'grid',
-        gap: 1,
-        px: { xs: 1.5, md: 2 },
-        pt: { xs: 1.5, md: 2 },
-        gridTemplateColumns: {
-          xs: 'repeat(2, 1fr)',
-          sm: `repeat(${tiles.length + (shift.overdue > 0 ? 3 : 2)}, 1fr)`,
-        },
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 0.75,
+        px: { xs: 1, md: 1.5 },
+        pt: { xs: 1, md: 1.5 },
       }}
     >
       {tiles.map((tile) => (
@@ -149,11 +153,21 @@ function Tile({
       aria-pressed={clickable ? Boolean(active) : undefined}
       data-testid={testId}
       sx={(theme) => ({
+        display: 'inline-flex',
+        alignItems: 'baseline',
+        gap: 0.75,
         textAlign: 'start',
         font: 'inherit',
-        p: 1.25,
-        borderRadius: 2,
-        minHeight: 44,
+        px: 1,
+        py: 0.5,
+        borderRadius: 1.5,
+        /*
+          ВИД СЖАТ, ЦЕЛЬ НАЖАТИЯ — НЕТ. Высота плитки больше не 44px: столько
+          места ради двух цифр на доске не нужно. Площадь под пальцем добирает
+          прозрачный слой (`touchTarget`) — он выходит за границы плитки и
+          ничего не сдвигает в раскладке.
+        */
+        ...touchTarget(),
         cursor: clickable ? 'pointer' : 'default',
         bgcolor: active ? alpha(theme.palette[tone].main, 0.14) : 'background.paper',
         border: 1,
@@ -161,17 +175,17 @@ function Tile({
         transition: 'border-color .15s, background-color .15s',
       })}
     >
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: 'block', lineHeight: 1.2 }}
-      >
+      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
         {label}
       </Typography>
       <Typography
-        variant="h6"
         color={`${tone}.main`}
-        sx={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}
+        sx={{
+          fontSize: density.font.strong,
+          fontWeight: 700,
+          fontVariantNumeric: 'tabular-nums',
+          lineHeight: 1.2,
+        }}
       >
         {value}
       </Typography>

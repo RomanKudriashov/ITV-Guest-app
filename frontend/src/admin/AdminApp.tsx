@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAppTheme } from '@/theme';
 import { createAppTheme } from '@/theme/createAppTheme';
+import { compactTheme } from '@/theme/density';
 import { DEFAULT_BRAND_TOKENS } from '@/theme/tokens';
 import { adminCssVars } from './adminTokens';
 import { AdminLogin } from './AdminLogin';
@@ -73,7 +74,8 @@ const SECTIONS: AdminSection[] = [
 function AdminScope({ children }: { children: ReactNode }) {
   const { mode, direction } = useAppTheme();
   const theme = useMemo(
-    () => createAppTheme(DEFAULT_BRAND_TOKENS, mode, direction),
+    // Шкала персонала поверх бренда: та же палитра, другой масштаб.
+    () => compactTheme(createAppTheme(DEFAULT_BRAND_TOKENS, mode, direction)),
     [mode, direction],
   );
   const vars = useMemo(() => adminCssVars(mode), [mode]);

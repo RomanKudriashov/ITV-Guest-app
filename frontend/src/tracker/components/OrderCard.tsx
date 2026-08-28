@@ -24,6 +24,7 @@ import { formatAge, formatClock, formatOverdue } from '../orderAge';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
+import { touchTarget } from '@/theme/density';
 
 export interface OrderCardProps {
   order: TrackerOrder;
@@ -89,9 +90,9 @@ export function OrderCard({
     >
       {busy ? <LinearProgress /> : null}
 
-      <CardActionArea onClick={onOpen} sx={{ p: 1.5, pb: 1 }}>
-        <Stack spacing={1}>
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+      <CardActionArea onClick={onOpen} sx={{ p: 1, pb: 0.75 }}>
+        <Stack spacing={0.5}>
+          <Stack direction="row" alignItems="center" spacing={0.75} flexWrap="wrap" useFlexGap>
             {draggable ? (
               <Box
                 component="span"
@@ -108,16 +109,19 @@ export function OrderCard({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 32,
-                  minHeight: 44,
-                  ml: -0.75,
+                  // Вид сжат, цель нажатия прежняя: 44px добирает прозрачный
+                  // слой, а не сама ручка (см. `touchTarget`).
+                  width: 24,
+                  minHeight: 24,
+                  ...touchTarget(),
+                  ml: -0.5,
                   color: 'text.disabled',
                   cursor: 'grab',
                   touchAction: 'none',
                   '&:active': { cursor: 'grabbing' },
                 }}
               >
-                <DragIndicatorIcon sx={{ fontSize: 20 }} />
+                <DragIndicatorIcon sx={{ fontSize: 18 }} />
               </Box>
             ) : null}
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -190,7 +194,7 @@ export function OrderCard({
             />
           ) : null}
 
-          <Stack direction="row" spacing={0.75} alignItems="flex-start">
+          <Stack direction="row" spacing={0.5} alignItems="flex-start">
             <PlaceOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: '2px' }} />
             <Typography variant="body2" sx={{ minWidth: 0 }}>
               {whereText(order, t)}
@@ -224,7 +228,7 @@ export function OrderCard({
               color="text.secondary"
               sx={{
                 display: '-webkit-box',
-                WebkitLineClamp: 2,
+                WebkitLineClamp: 1,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
               }}
@@ -249,7 +253,7 @@ export function OrderCard({
       </CardActionArea>
 
       {errorText ? (
-        <Box sx={{ px: 1.5, pb: 1 }}>
+        <Box sx={{ px: 1, pb: 0.75 }}>
           <Alert severity="error" data-testid={`tracker-error-${order.number}`}>
             {errorText}
           </Alert>
@@ -257,7 +261,7 @@ export function OrderCard({
       ) : null}
 
       <Divider />
-      <Box sx={{ p: 1.5 }}>
+      <Box sx={{ p: 1 }}>
         <OrderActions
           order={order}
           busy={busy}
