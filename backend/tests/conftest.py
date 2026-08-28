@@ -14,8 +14,22 @@ from apps.core.context import clear_request_context, tenant_context
 from apps.hotels.models import Hotel
 
 
+def pytest_configure_node(node):
+    """
+    Передать признак прогона воркеру. Хук зовётся ТОЛЬКО в контроллере.
+
+    Через окружение это не работает: контроллер не импортирует `_bucket` до
+    подъёма воркеров, и наследовать им нечего — проверено, вышло четыре разных
+    признака на четыре воркера. `workerinput` — штатный канал xdist из
+    контроллера в воркер, и он единственный здесь надёжен.
+    """
+    from tests._bucket import RUN_ID
+
+    node.workerinput["itv_run_id"] = RUN_ID
+
+
 @pytest.fixture(scope="session", autouse=True)
-def _own_media_bucket(worker_id):
+def _own_media_bucket(request, worker_id):
     """
     ПРОГОН ПИШЕТ В СВОЙ БАКЕТ И УНОСИТ ЕГО С СОБОЙ.
 
@@ -32,13 +46,23 @@ def _own_media_bucket(worker_id):
 
     У КАЖДОГО ВОРКЕРА СВОЙ: прогон идёт в четыре процесса, и общий бакет один
     снёс бы у другого прямо посреди работы.
+
+    И У КАЖДОГО ПРОГОНА СВОЙ. Одного воркера в имени мало: два одновременных
+    прогона получали одинаковые имена, и завершение второго выдёргивало
+    хранилище из-под первого. Признак прогона живёт в `_bucket.RUN_ID` — там же
+    объяснено, откуда он берётся и почему наследуется воркерами.
     """
     from django.conf import settings as dj
 
     from apps.media.services import storage
 
+    from tests._bucket import RUN_ID, bucket_for
+
+    # Признак прогона — от контроллера; без xdist его нет, берём свой.
+    run_id = getattr(request.config, "workerinput", {}).get("itv_run_id", RUN_ID)
+
     original = dj.MINIO_BUCKET
-    dj.MINIO_BUCKET = f"{original}-test-{worker_id}"
+    dj.MINIO_BUCKET = bucket_for(original, worker_id, run_id=run_id)
     # Бакет выбирается при каждом обращении, а вот его СОЗДАНИЕ закэшировано —
     # без сброса новый бакет никто не заведёт, и первая же запись упадёт.
     storage.ensure_bucket.cache_clear()
@@ -46,12 +70,14 @@ def _own_media_bucket(worker_id):
 
     yield
 
+    from tests._bucket import drop_bucket
+
     client = storage.get_client()
     try:
-        keys = [item.object_name for item in client.list_objects(dj.MINIO_BUCKET, recursive=True)]
-        for start in range(0, len(keys), 1000):
-            storage.delete_objects(keys[start : start + 1000])
-        client.remove_bucket(dj.MINIO_BUCKET)
+        # Сносим ИМЕННО свой бакет: помощник принимает имя и работает по нему,
+        # а не по текущей настройке. Иначе сессия, у которой настройка уже
+        # восстановлена, снесла бы общий бакет стенда.
+        drop_bucket(client, dj.MINIO_BUCKET)
     except Exception as error:  # noqa: BLE001 — уборка не должна ронять прогон
         print(f"[хранилище] бакет прогона не убран: {error}")
     finally:
