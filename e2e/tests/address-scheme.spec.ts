@@ -463,3 +463,54 @@ test('корпус телефона: содержимое не заезжает 
   )
 })
 
+test.describe('лендинг пальцем, без мыши', () => {
+  /*
+    НА СЕНСОРНОМ ЭКРАНЕ НАВЕДЕНИЯ НЕТ. Раскрытие по `:hover` там либо не
+    открывается вовсе, либо залипает на последнем нажатом элементе до следующего
+    касания — и то и другое читается поломкой. В полосе такое раскрытие стояло
+    (четыре сводных пункта с выпадающими списками) и ушло вместе с переходом на
+    плоский список; укус держит это свойство, а не надеется на память.
+
+    `hasTouch` без `isMobile`: нужна именно среда без наведения, а не эмуляция
+    конкретного аппарата — от неё зависит только вёрстка, а проверяется здесь
+    поведение.
+  */
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
+
+  test('меню открывается и работает касанием', async ({ page }) => {
+    await page.goto(`${ROOT}/`)
+    await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+    await page.evaluate(() => window.scrollTo(0, Math.round(window.innerHeight * 1.4)))
+    await expect(page.getByTestId('landing-nav')).toHaveAttribute('data-shown', 'true', {
+      timeout: 20_000,
+    })
+
+    // Среда действительно без наведения — иначе укус проверял бы мышь.
+    expect(await page.evaluate(() => matchMedia('(hover: hover)').matches)).toBe(false)
+    // Ни одного списка, который открывается только наведением.
+    await expect(page.locator('[data-testid$="-sub"]')).toHaveCount(0)
+
+    // Дальний пункт: ряд едет вбок, и до него можно доехать пальцем.
+    const row = page.getByTestId('landing-nav-links')
+    expect(await row.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true)
+    await row.evaluate((node) => node.scrollTo({ left: 9999 }))
+    await page.getByTestId('landing-nav-contact').tap()
+    await expect(page.getByTestId('landing-nav')).toHaveAttribute('data-active', 'contact')
+
+    // Переключатель языка — тоже касанием, а не наведением.
+    await page.getByTestId('guest-language').tap()
+    await page.getByTestId('guest-language-en').tap()
+    await expect(page.getByTestId('landing-nav-contact')).toHaveText('Getting started')
+  })
+
+  test('план номера отдаётся касанию', async ({ page }) => {
+    await page.goto(`${ROOT}/`)
+    const plan = page.getByTestId('landing-room-plan')
+    await plan.scrollIntoViewIfNeeded()
+    await expect(plan).toBeVisible({ timeout: 20_000 })
+
+    await page.getByTestId('room-plan-curtains').tap()
+    await expect(plan).toHaveAttribute('data-taken', 'true')
+    await expect(plan.locator('[data-curtains]')).toHaveAttribute('data-curtains', 'open')
+  })
+})

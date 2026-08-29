@@ -64,15 +64,27 @@ export function scrollToSection(id: string, calm: boolean): void {
   const target = document.getElementById(id);
   if (!target) return;
 
-  const top = Math.max(0, target.getBoundingClientRect().top + window.scrollY - NAV_HEIGHT - ANCHOR_GAP);
+  /*
+    ЦЕЛЬ ПЕРЕСЧИТЫВАЕТСЯ КАЖДЫЙ КАДР, а не берётся один раз на старте.
+
+    Картинки на странице ленивые: пока лента едет вниз, они догружаются и
+    РАСТЯГИВАЮТ документ под нами — раздел, к которому мы едем, уезжает дальше
+    ровно на эту разницу. Посчитанная заранее цель оказывалась короткой, и на
+    узком экране переход к последнему разделу не доезжал полутора тысяч
+    пикселей: подсвечивалось «Возможности», хотя нажали «Как подключиться».
+    На широком экране это не проявлялось — там нижние картинки успевали
+    получить размер раньше.
+  */
+  const targetTop = () =>
+    Math.max(0, target.getBoundingClientRect().top + window.scrollY - NAV_HEIGHT - ANCHOR_GAP);
+
   if (calm) {
-    window.scrollTo({ top });
+    window.scrollTo({ top: targetTop() });
     return;
   }
 
   const from = window.scrollY;
-  const distance = top - from;
-  if (Math.abs(distance) < 2) return;
+  if (Math.abs(targetTop() - from) < 2) return;
 
   // Постоянная длительность, а не «пиксели в секунду»: через всю страницу
   // должно ехать столько же, сколько к соседнему разделу.
@@ -90,9 +102,14 @@ export function scrollToSection(id: string, calm: boolean): void {
   const step = (now: number) => {
     if (cancelled) return;
     const progress = Math.min(1, (now - started) / DURATION);
-    window.scrollTo({ top: from + distance * ease(progress) });
+    // Доля пути считается от ЖИВОГО положения цели: сдвинулась — доедем до
+    // сдвинувшейся, а не до той, где она была в момент нажатия.
+    window.scrollTo({ top: from + (targetTop() - from) * ease(progress) });
     if (progress < 1) requestAnimationFrame(step);
     else {
+      // Последний кадр — точно на место: за время пути цель могла сдвинуться
+      // ещё раз, и остановка «почти там» видна глазом.
+      window.scrollTo({ top: targetTop() });
       window.removeEventListener('wheel', cancel);
       window.removeEventListener('touchstart', cancel);
     }
