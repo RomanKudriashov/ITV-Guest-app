@@ -291,10 +291,21 @@ test('план номера: кадр номера, а не схема', async (
   await plan.scrollIntoViewIfNeeded()
   await expect(plan.getByTestId('room-plan-base')).toBeVisible({ timeout: 20_000 })
 
-  const loaded = await plan.getByTestId('room-plan-base').evaluate(
-    (img) => (img as HTMLImageElement).naturalWidth,
-  )
-  expect(loaded, 'ночной кадр не загрузился').toBeGreaterThan(0)
+  /*
+    Ждём именно ЗАГРУЗКУ, а не появление узла: `toBeVisible` проходит, пока
+    картинка ещё едет по сети, и в полном наборе — где перед этим отработали
+    десятки тестов и сеть занята — замер приходился на нулевую ширину. Экран при
+    этом был исправен; падал замер.
+  */
+  await expect
+    .poll(
+      () =>
+        plan
+          .getByTestId('room-plan-base')
+          .evaluate((img) => (img as HTMLImageElement).naturalWidth),
+      { timeout: 20_000, message: 'ночной кадр не загрузился' },
+    )
+    .toBeGreaterThan(0)
   await expect(plan.getByTestId('room-plan-lit-bedroom')).toHaveCount(1)
 })
 
