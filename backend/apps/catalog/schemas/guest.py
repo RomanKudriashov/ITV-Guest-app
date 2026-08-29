@@ -66,6 +66,9 @@ class GuestItemDetailOut(Schema):
     unavailable_reason: str | None
     available_from: str | None
     available_until: str | None
+    # Момент следующего открытия целиком: витрине нужен ДЕНЬ, а не только час.
+    # «с 07:00» в полдень читается как «сегодня в семь» — см. `availability.py`.
+    available_at: str | None = None
     modifier_groups: list[dict[str, Any]]
     request_fields: list[dict[str, Any]]
 

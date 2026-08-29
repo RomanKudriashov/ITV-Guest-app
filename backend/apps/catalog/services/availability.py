@@ -35,6 +35,15 @@ class Availability:
     reason: str | None = None
     available_from: str | None = None
     available_until: str | None = None
+    #: Момент следующего открытия целиком, в таймзоне отеля.
+    #:
+    #: Одного времени «07:00» витрине НЕ ХВАТАЕТ. В полдень, когда окно уже
+    #: закрылось, «с 07:00» читается как «откроются в семь», хотя ближайшие
+    #: семь утра — завтра. Гость ждёт, а сегодня их уже не будет.
+    #:
+    #: День знает только сервер: у гостя в телефоне может быть другая
+    #: таймзона, и считать «сегодня» по его часам нельзя.
+    available_at: datetime | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -42,6 +51,7 @@ class Availability:
             "unavailable_reason": self.reason,
             "available_from": self.available_from,
             "available_until": self.available_until,
+            "available_at": self.available_at.isoformat() if self.available_at else None,
         }
 
 
@@ -65,7 +75,12 @@ def category_availability(category, moment: datetime | None = None) -> Availabil
 
     state = _schedule_state(category, moment)
     if state is not None and not state.is_open:
-        return Availability(False, REASON_SCHEDULE, available_from=state.available_from)
+        return Availability(
+            False,
+            REASON_SCHEDULE,
+            available_from=state.available_from,
+            available_at=state.available_at,
+        )
 
     parent = category.parent
     if parent is not None:
@@ -75,6 +90,7 @@ def category_availability(category, moment: datetime | None = None) -> Availabil
                 False,
                 parent_state.reason or REASON_CATEGORY,
                 available_from=parent_state.available_from,
+                available_at=parent_state.available_at,
             )
 
     return Availability(
@@ -95,7 +111,12 @@ def service_availability(service, moment: datetime | None = None) -> Availabilit
         return AVAILABLE
     state = _schedule_state(service, moment)
     if state is not None and not state.is_open:
-        return Availability(False, REASON_VENUE_CLOSED, available_from=state.available_from)
+        return Availability(
+            False,
+            REASON_VENUE_CLOSED,
+            available_from=state.available_from,
+            available_at=state.available_at,
+        )
     return Availability(True, available_until=state.available_until if state else None)
 
 
@@ -134,7 +155,12 @@ def item_availability(
 
     state = _schedule_state(item, moment)
     if state is not None and not state.is_open:
-        return Availability(False, REASON_SCHEDULE, available_from=state.available_from)
+        return Availability(
+            False,
+            REASON_SCHEDULE,
+            available_from=state.available_from,
+            available_at=state.available_at,
+        )
 
     category_state = category_availability(category, moment)
     if not category_state.is_available:
@@ -142,6 +168,10 @@ def item_availability(
             False,
             REASON_SCHEDULE if category_state.reason == REASON_SCHEDULE else REASON_CATEGORY,
             available_from=category_state.available_from,
+            # Момент проводим ВМЕСТЕ со временем. Забыть его здесь — значит
+            # вернуть витрине «с 07:00» без дня: ровно та потеря, из-за которой
+            # закрывшееся окно читалось как «откроются утром».
+            available_at=category_state.available_at,
         )
 
     return Availability(

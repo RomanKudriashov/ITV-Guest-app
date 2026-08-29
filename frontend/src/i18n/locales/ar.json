@@ -444,7 +444,13 @@
       "emptyTitle": "القائمة فارغة",
       "emptyHint": "تفقّد لاحقاً — الفندق ما زال يجهز القائمة",
       "venueOpensAt": "يفتح الساعة {{time}}",
-      "venueClosed": "مغلق حاليًا"
+      "venueClosed": "مغلق حاليًا",
+      "opensToday": "اليوم من {{time}}",
+      "opensTomorrow": "ليس اليوم · غدًا من {{time}}",
+      "opensOn": "ليس اليوم · {{day}} من {{time}}",
+      "opensVenueToday": "يفتح اليوم في {{time}}",
+      "opensVenueTomorrow": "مغلق اليوم · يفتح غدًا في {{time}}",
+      "opensVenueOn": "مغلق اليوم · يفتح {{day}} في {{time}}"
     },
     "item": {
       "title": "طبق",

@@ -47,6 +47,8 @@ import { RoomPage } from '@/guest/pages/RoomPage';
 import { SearchPage } from '@/guest/pages/SearchPage';
 import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
 import { StaffScale } from '@/theme/StaffScale';
+import { useAuth } from '@/auth';
+import { homePathFor } from '@/auth/home';
 
 /**
  * Data router — required for `useBlocker` (the unsaved-changes guard in the CMS).
@@ -91,7 +93,7 @@ const cmsBranch: RouteObject =
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <Navigate to={cmsPath('/dashboard')} replace /> },
+      { index: true, element: <CmsHome /> },
       { path: 'dashboard', element: <DashboardPage /> },
       // Профиль сотрудника: его собственные входы. Не в настройках отеля —
       // те открыты только администратору, а сессии есть у каждого.
@@ -230,6 +232,29 @@ const guestBranch: RouteObject =
  * ссылка из письма или закладка ведёт в конкретный раздел, и высадка в
  * дашборд означала бы «адрес жив, но не тот».
  */
+/**
+ * Корень панели решает по ПРАВАМ, а не уводит всех в дашборд.
+ *
+ * Здесь стоял безусловный `<Navigate to='/dashboard'>`, и на хосте отеля он
+ * побеждал посадку после входа: вход там рисуется НА МЕСТЕ, внутри маршрута
+ * `/admin`, и как только `RequireAuth` пускает дальше, индексный редирект
+ * срабатывает при рендере — раньше, чем успевает отработать императивный
+ * `navigate()` со страницы входа. Линейный сотрудник уезжал в раздел, куда ему
+ * нельзя, и видел отказ.
+ *
+ * Локально это не воспроизводилось: дев-сервер работает в режиме одного хоста,
+ * где вход живёт отдельной страницей `/login` и гонки нет вовсе.
+ *
+ * Тот же путь — это ещё и закладка на `/admin`: она обязана приводить человека
+ * туда, где он работает, а не туда, где ему откажут.
+ */
+function CmsHome() {
+  const { user, isAuthenticated } = useAuth();
+  // Пока права неизвестны, не решаем: пустой кадр дешевле неверного адреса.
+  if (isAuthenticated && !user) return null;
+  return <Navigate to={homePathFor(user)} replace />;
+}
+
 function LegacyCmsRedirect() {
   const location = useLocation();
   const tail = location.pathname.slice('/cms'.length);

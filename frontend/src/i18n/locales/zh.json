@@ -434,7 +434,13 @@
       "emptyTitle": "菜单暂时为空",
       "emptyHint": "请稍后再看，酒店正在准备菜单",
       "venueOpensAt": "{{time}} 开放",
-      "venueClosed": "目前休息"
+      "venueClosed": "目前休息",
+      "opensToday": "今天 {{time}} 起",
+      "opensTomorrow": "今天已结束 · 明天 {{time}} 起",
+      "opensOn": "今天已结束 · {{day}} {{time}} 起",
+      "opensVenueToday": "今天 {{time}} 开门",
+      "opensVenueTomorrow": "今天已关闭 · 明天 {{time}} 开门",
+      "opensVenueOn": "今天已关闭 · {{day}} {{time}} 开门"
     },
     "item": {
       "title": "菜品",

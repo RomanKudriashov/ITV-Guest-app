@@ -141,3 +141,50 @@ test('при просьбе не двигать движения нет', async 
     .evaluate((el) => getComputedStyle(el).backgroundAttachment)
   expect(attachment).toBe('scroll')
 })
+
+/* ── Посадка НА ХОСТЕ ОТЕЛЯ ─────────────────────────────────────────────── */
+
+test('повар на адресе отеля: вход на месте ведёт на доску, а не в панель', async ({ page }) => {
+  /*
+    УКУС РЕЖИМА, А НЕ ПРАВИЛА. Правило «решаем по правам» уже покрыто в режиме
+    одного хоста, и там оно работало. На адресе отеля путь другой: панель и
+    вход живут по одному адресу `/admin`, вход рисуется НА МЕСТЕ, и у маршрута
+    есть индексный редирект. Он срабатывает при рендере — раньше, чем
+    императивный `navigate()` со страницы входа, — и увозил повара в раздел,
+    куда ему нельзя.
+
+    Дважды это прошло мимо проверок и уехало на стенд. Поэтому укус написан
+    именно здесь, на хосте отеля.
+  */
+  await page.goto(`${HOTEL}/admin`)
+  await page.getByTestId('login-email').fill('chef@crystal.local')
+  await page.getByTestId('login-password').fill('chef12345')
+  await page.getByTestId('login-submit').click()
+
+  await expect(page).toHaveURL(/\/tracker/, { timeout: 30_000 })
+  await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 30_000 })
+  // По дороге не мелькнул отказ: «дошёл через отказ» — это то же состояние.
+  await expect(page.getByTestId('cms-no-access')).toBeHidden()
+})
+
+test('закладка на /admin отеля ведёт повара на доску', async ({ page }) => {
+  // Тот же индексный редирект — второй его вход: прямая закладка на корень
+  // панели у уже вошедшего человека.
+  await page.goto(`${HOTEL}/admin`)
+  await page.getByTestId('login-email').fill('chef@crystal.local')
+  await page.getByTestId('login-password').fill('chef12345')
+  await page.getByTestId('login-submit').click()
+  await expect(page).toHaveURL(/\/tracker/, { timeout: 30_000 })
+
+  await page.goto(`${HOTEL}/admin`)
+  await expect(page).toHaveURL(/\/tracker/, { timeout: 20_000 })
+})
+
+test('администратор на адресе отеля по-прежнему попадает в панель', async ({ page }) => {
+  // Правило решает по праву: у кого доступ есть — посадка не меняется.
+  await page.goto(`${HOTEL}/admin`)
+  await page.getByTestId('login-email').fill('owner@crystal.local')
+  await page.getByTestId('login-password').fill('chef12345')
+  await page.getByTestId('login-submit').click()
+  await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 30_000 })
+})

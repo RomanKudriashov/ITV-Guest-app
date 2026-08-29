@@ -7,6 +7,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { nextOpening } from '../nextOpening';
+
 import { ChipOption, ctaGradientSx } from '@/kit';
 import { useDraftState } from '@/state/useDraftState';
 import { AddonGroup, isAddonGroup } from './ItemAddons';
@@ -280,15 +282,7 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
               textAlign: 'center',
             }}
           >
-            {item.unavailable_reason === 'venue_closed'
-              ? item.available_from
-                ? t('guest.menu.venueOpensAt', { time: item.available_from })
-                : t('guest.menu.venueClosed')
-              : item.available_from
-                ? t('guest.menu.availableFrom', { time: item.available_from })
-                : item.unavailable_reason === 'out_of_stock'
-                  ? t('guest.menu.outOfStock')
-                  : t('guest.menu.unavailable')}
+            {unavailableLabel(item, t)}
           </Box>
         ) : (
           <Button
@@ -305,4 +299,47 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
       </SheetFooter>
     </>
   );
+}
+
+/**
+ * Почему позиция недоступна — И КОГДА БУДЕТ.
+ *
+ * Раньше здесь стояло «с {{time}}»: только час, без дня. У сырников окно
+ * закрылось в полдень, а экран писал «с 07:00» — гость читал это как
+ * «откроются в семь» и ждал того, чего сегодня уже не будет.
+ *
+ * Заведение закрыто — отдельная ветка и отдельные слова: «подождать до утра» и
+ * «идти в другое место» это разные новости.
+ */
+function unavailableLabel(
+  item: { unavailable_reason?: string | null; available_from?: string | null; available_at?: string | null },
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const next = nextOpening(item.available_from, item.available_at);
+  const venue = item.unavailable_reason === 'venue_closed';
+
+  if (next) {
+    const suffix = venue ? 'Venue' : '';
+    switch (next.kind) {
+      case 'today':
+        return t(`guest.menu.opens${suffix}Today`, { time: next.time });
+      case 'tomorrow':
+        return t(`guest.menu.opens${suffix}Tomorrow`, { time: next.time });
+      case 'later':
+        return t(`guest.menu.opens${suffix}On`, {
+          time: next.time,
+          day: next.at.toLocaleDateString(undefined, { weekday: 'long' }),
+        });
+      case 'unknown':
+        // Дня не знаем — не обещаем его. Час показать всё же полезнее, чем
+        // молчать, но «сегодня» тут сказано быть не может.
+        return t(venue ? 'guest.menu.venueOpensAt' : 'guest.menu.availableFrom', { time: next.time });
+      default:
+        break;
+    }
+  }
+
+  if (venue) return t('guest.menu.venueClosed');
+  if (item.unavailable_reason === 'out_of_stock') return t('guest.menu.outOfStock');
+  return t('guest.menu.unavailable');
 }

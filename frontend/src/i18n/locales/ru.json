@@ -440,7 +440,13 @@
       "emptyTitle": "Меню пока пустое",
       "emptyHint": "Загляните позже — отель ещё готовит меню",
       "venueOpensAt": "Откроется в {{time}}",
-      "venueClosed": "Сейчас закрыто"
+      "venueClosed": "Сейчас закрыто",
+      "opensToday": "Сегодня с {{time}}",
+      "opensTomorrow": "Сегодня уже нет · завтра с {{time}}",
+      "opensOn": "Сегодня уже нет · в {{day}} с {{time}}",
+      "opensVenueToday": "Откроется сегодня в {{time}}",
+      "opensVenueTomorrow": "Сегодня закрыто · откроется завтра в {{time}}",
+      "opensVenueOn": "Сегодня закрыто · откроется в {{day}} в {{time}}"
     },
     "item": {
       "title": "Блюдо",

@@ -436,7 +436,13 @@
       "emptyTitle": "The menu is empty",
       "emptyHint": "Please check back later — the hotel is still preparing the menu",
       "venueOpensAt": "Opens at {{time}}",
-      "venueClosed": "Closed right now"
+      "venueClosed": "Closed right now",
+      "opensToday": "Today from {{time}}",
+      "opensTomorrow": "Not today · tomorrow from {{time}}",
+      "opensOn": "Not today · {{day}} from {{time}}",
+      "opensVenueToday": "Opens today at {{time}}",
+      "opensVenueTomorrow": "Closed today · opens tomorrow at {{time}}",
+      "opensVenueOn": "Closed today · opens {{day}} at {{time}}"
     },
     "item": {
       "title": "Dish",
