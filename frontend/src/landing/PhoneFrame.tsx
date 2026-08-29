@@ -34,6 +34,17 @@ export function PhoneFrame({
   const radius = Math.round(width * 0.16);
   const notchWidth = Math.round(width * 0.3);
   const notchHeight = Math.round(width * 0.085);
+  const notchTop = Math.round(notchHeight * 0.45);
+  /*
+    БЕЗОПАСНАЯ ЗОНА СВЕРХУ — то, чего не хватало.
+
+    Снимок клался во весь экран, и вырез накрывал его верхнюю строку: у витрины
+    там номер комнаты и значки, и от «Номер 305» оставалось «305». На аппарате
+    так не бывает — приложение начинается НИЖЕ выреза, а полоса над ним отдана
+    системе. Здесь то же самое: полоса высотой в вырез с запасом снизу, и
+    содержимое под неё не заезжает.
+  */
+  const safeTop = notchTop + notchHeight + Math.round(notchHeight * 0.35);
 
   return (
     <Box
@@ -62,7 +73,13 @@ export function PhoneFrame({
           bgcolor: 'background.default',
         }}
       >
-        {children}
+        {/*
+          Полоса безопасной зоны — цветом корпуса. На аппарате с тёмным
+          приложением вырез в неё сливается и читается краем корпуса; форма
+          острова остаётся видна по тонкому ободку.
+        */}
+        <Box aria-hidden sx={{ height: safeTop, bgcolor: 'text.primary' }} />
+        <Box sx={{ height: `calc(100% - ${safeTop}px)`, overflow: 'hidden' }}>{children}</Box>
         {/*
           Вырез — ПОВЕРХ экрана и того же цвета, что корпус: на аппарате это
           вырезанная область матрицы, а не наклейка. Полное скругление по
@@ -72,13 +89,14 @@ export function PhoneFrame({
           aria-hidden
           sx={{
             position: 'absolute',
-            top: Math.round(notchHeight * 0.45),
+            top: notchTop,
             left: '50%',
             transform: 'translateX(-50%)',
             width: notchWidth,
             height: notchHeight,
             borderRadius: `${notchHeight}px`,
             bgcolor: 'text.primary',
+            boxShadow: (theme) => `inset 0 0 0 1px ${alpha(theme.palette.common.white, 0.14)}`,
           }}
         />
       </Box>

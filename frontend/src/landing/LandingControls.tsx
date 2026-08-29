@@ -1,6 +1,8 @@
 import Box from '@mui/material/Box';
 import { alpha } from '@mui/material/styles';
 
+import { NAV_HEIGHT } from './nav';
+
 import { GuestLanguageMenu } from '@/guest/components/GuestLanguageMenu';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 
@@ -28,9 +30,17 @@ export function LandingControls({ heroGone, calm }: { heroGone: boolean; calm: b
       data-place={heroGone ? 'nav' : 'hero'}
       sx={{
         position: 'fixed',
-        // Полоса стоит на `py: 1`, то есть её строка начинается на 8 пикселях.
-        // На обложке значки опущены ниже — оттуда и виден переезд.
-        top: heroGone ? 8 : 22,
+        /*
+          ВЫСОТА, А НЕ ОТСТУП СВЕРХУ.
+
+          Значки стояли на подобранном `top` и сидели выше середины полосы:
+          коробка со значками выше строки полосы, и совместить их отступом можно
+          только случайно. Здесь у коробки ТА ЖЕ высота, что у полосы, и
+          содержимое центрируется по ней — значки оказываются на её средней
+          линии по построению, а не по подгонке.
+        */
+        top: heroGone ? 0 : 14,
+        height: NAV_HEIGHT,
         right: { xs: heroGone ? 16 : 20, md: heroGone ? 32 : 40 },
         // Выше полосы: во время переезда значки идут ПОВЕРХ неё, а не под ней.
         zIndex: 11,

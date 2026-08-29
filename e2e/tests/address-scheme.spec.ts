@@ -314,22 +314,152 @@ test('план при просьбе не двигать: статичен и с
   await expect(plate).toHaveAttribute('data-light', 'true')
 })
 
-test('меню ведёт в каждый раздел страницы, а не в три из девяти', async ({ page }) => {
+test('меню равно составу страницы: ни лишних пунктов, ни забытых разделов', async ({ page }) => {
   /*
-    В полосе было три ссылки на девять разделов. Укус сверяет меню СО СТРАНИЦЕЙ:
-    каждая ссылка обязана попадать в существующий якорь. Добавили раздел, забыли
-    пункт — это здесь не поймается; а вот пункт, ведущий в никуда, поймается
-    сразу, и именно так меню и расходилось с делом.
+    УКУС В ОБЕ СТОРОНЫ, и это важнее, чем кажется. Меню расходилось со страницей
+    дважды: сперва три ссылки на девять разделов, потом четыре сводных пункта.
+    Проверка «каждая ссылка куда-то ведёт» ловит только вторую половину беды —
+    пункт в никуда. Забытый раздел она пропускает, а именно он и был.
+
+    Поэтому состав меню сверяется с составом страницы ПО ФАКТУ: разделом
+    считается секция с заголовком. Секция без заголовка (три утверждения под
+    обложкой) в меню не нужна — надписи для неё на странице не существует.
   */
   await page.goto(`${ROOT}/`)
   await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
 
-  const hrefs = await page.locator('[data-testid^="landing-nav-"][href^="#"]').evaluateAll(
-    (nodes) => nodes.map((node) => node.getAttribute('href') ?? ''),
+  const sections = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('section[id]'))
+      .filter((node) => node.querySelector('h2'))
+      .map((node) => node.id),
   )
-  expect(hrefs.length, 'в меню меньше пунктов, чем разделов').toBeGreaterThanOrEqual(11)
+  const links = await page.locator('[data-testid^="landing-nav-"][href^="#"]').evaluateAll((nodes) =>
+    nodes.map((node) => (node.getAttribute('href') ?? '').slice(1)),
+  )
 
-  for (const href of hrefs) {
-    await expect(page.locator(href), `пункт меню ${href} ведёт в никуда`).toHaveCount(1)
+  for (const id of sections) {
+    expect(links, `раздел #${id} есть на странице, но его нет в меню`).toContain(id)
+  }
+  for (const id of links) {
+    await expect(page.locator(`#${id}`), `пункт меню #${id} ведёт в никуда`).toHaveCount(1)
   }
 })
+
+test('переход по пункту: раздел встаёт ниже полосы, пункт подсвечивается', async ({ page }) => {
+  /*
+    Липкая полоса перекрывает верх страницы, и переход по якорю без поправки
+    ставит заголовок раздела ровно под неё — человек приезжает к тексту без
+    начала. Поправка и подсветка считают от одной и той же величины: разойдись
+    они, нажатие вело бы в один раздел, а подсвечивало соседний (так и было).
+  */
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+  // Полоса появляется только после обложки — до этого она не принимает нажатий.
+  await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
+  await expect(page.getByTestId('landing-nav')).toHaveAttribute('data-shown', 'true', {
+    timeout: 20_000,
+  })
+
+  for (const key of ['devices', 'how', 'modules']) {
+    await page.getByTestId(`landing-nav-${key}`).click()
+    await page.waitForTimeout(900)
+
+    const gap = await page.evaluate(
+      (id) => document.getElementById(id)!.getBoundingClientRect().top,
+      key,
+    )
+    const navBottom = await page
+      .getByTestId('landing-nav')
+      .evaluate((node) => node.getBoundingClientRect().bottom)
+    expect(gap, `раздел ${key} уехал под полосу`).toBeGreaterThanOrEqual(navBottom - 1)
+    // …и не «где-то ниже»: приехали к началу раздела, а не к его середине.
+    expect(gap, `раздел ${key} встал слишком низко`).toBeLessThan(navBottom + 40)
+
+    await expect(page.getByTestId(`landing-nav-${key}`)).toHaveAttribute('data-current', 'true')
+    await expect(page.getByTestId('landing-nav')).toHaveAttribute('data-active', key)
+  }
+})
+
+test('переход едет, а при просьбе не двигать — мгновенный', async ({ page }) => {
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+  await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
+  await expect(page.getByTestId('landing-nav')).toHaveAttribute('data-shown', 'true', {
+    timeout: 20_000,
+  })
+
+  // Едет: через треть анимации страница уже не там, где была, но ещё не на месте.
+  const before = await page.evaluate(() => window.scrollY)
+  await page.getByTestId('landing-nav-contact').click()
+  await page.waitForTimeout(160)
+  const middle = await page.evaluate(() => window.scrollY)
+  await page.waitForTimeout(1200)
+  const after = await page.evaluate(() => window.scrollY)
+  expect(middle, 'переход не сдвинулся с места').toBeGreaterThan(before)
+  expect(middle, 'переход оказался прыжком, а не скольжением').toBeLessThan(after - 50)
+
+  // При просьбе не двигать анимации нет вовсе — ни одного промежуточного кадра.
+  const calm = await page.context().newPage()
+  await calm.emulateMedia({ reducedMotion: 'reduce' })
+  await calm.goto(`${ROOT}/`)
+  await expect(calm.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+  await calm.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
+  await expect(calm.getByTestId('landing-nav')).toHaveAttribute('data-shown', 'true', {
+    timeout: 20_000,
+  })
+  // Раздел из середины страницы, а не последний: у последнего цель ниже дна
+  // прокрутки, страница упирается в него, и замер мерил бы упор, а не переход.
+  const target = await calm.evaluate(
+    () => document.getElementById('how')!.getBoundingClientRect().top + window.scrollY,
+  )
+  await calm.getByTestId('landing-nav-how').click()
+  await calm.waitForTimeout(40)
+  const landed = await calm.evaluate(() => window.scrollY)
+  expect(Math.abs(landed - (target - 64)), 'при просьбе не двигать переход всё-таки анимируется')
+    .toBeLessThan(24)
+  await calm.close()
+})
+
+test('значки языка и темы стоят по средней линии полосы', async ({ page }) => {
+  /*
+    Коробка со значками выше строки полосы, и совместить их отступом сверху
+    можно только случайно — так они и сидели выше середины. Укус меряет центры,
+    а не пиксели отступа: подгонка отступа при смене высоты полосы разъедется
+    снова, совпадение центров — нет.
+  */
+  await page.goto(`${ROOT}/`)
+  await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
+  const nav = page.getByTestId('landing-nav')
+  await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 })
+  // Полоса выезжает сдвигом: замер на полпути сравнивал бы значки с ещё не
+  // приехавшей полосой и врал бы на её высоту.
+  await page.waitForTimeout(600)
+
+  const navBox = (await nav.boundingBox())!
+  for (const testId of ['guest-language', 'theme-toggle']) {
+    const box = (await page.getByTestId('landing-controls').getByTestId(testId).boundingBox())!
+    const drift = Math.abs(box.y + box.height / 2 - (navBox.y + navBox.height / 2))
+    expect(drift, `${testId} стоит не по средней линии полосы`).toBeLessThanOrEqual(2)
+  }
+})
+
+test('корпус телефона: содержимое не заезжает под вырез', async ({ page }) => {
+  /*
+    Снимок лежал во весь экран, и вырез накрывал его верхнюю строку: от «Номер
+    305» оставалось «305». На аппарате приложение начинается НИЖЕ выреза, и
+    здесь так же — безопасная зона сверху.
+  */
+  await page.goto(`${ROOT}/`)
+  const phone = page.getByTestId('landing-phone-guest')
+  await phone.scrollIntoViewIfNeeded()
+  await expect(phone).toBeVisible({ timeout: 20_000 })
+
+  const shot = phone.locator('img')
+  const notch = phone.locator('[aria-hidden]').last()
+  const shotBox = (await shot.boundingBox())!
+  const notchBox = (await notch.boundingBox())!
+  expect(shotBox.y, 'снимок начинается выше нижнего края выреза').toBeGreaterThanOrEqual(
+    notchBox.y + notchBox.height,
+  )
+})
+

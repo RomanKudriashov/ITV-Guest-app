@@ -15,6 +15,7 @@ import { RoomPlan } from './RoomPlan';
 import { StickyNav } from './StickyNav';
 import { LandingControls } from './LandingControls';
 import { useHeroGone } from './heroGone';
+import { scrollToSection } from './nav';
 import { alpha } from '@mui/material/styles';
 
 /**
@@ -127,7 +128,18 @@ export function LandingPage() {
             {t('landing.hero.subtitle')}
           </Typography>
           <Box>
-            <Button variant="contained" size="large" href="#contact" data-testid="landing-cta">
+            <Button
+              variant="contained"
+              size="large"
+              href="#contact"
+              data-testid="landing-cta"
+              onClick={(event) => {
+                // Кнопка обложки ведёт в раздел так же, как пункт меню: одно
+                // поведение на все переходы внутри страницы.
+                event.preventDefault();
+                scrollToSection('contact', calm);
+              }}
+            >
               {t('landing.hero.cta')}
             </Button>
           </Box>

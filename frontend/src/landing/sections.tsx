@@ -5,6 +5,8 @@ import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
+import { NAV_HEIGHT } from './nav';
+
 /**
  * Строительные блоки лендинга: экран во весь рост, фотофон, цветной блок.
  *
@@ -65,7 +67,7 @@ export function Screen({
         position: 'relative',
         overflow: 'hidden',
         // Переход по якорю не должен прятать заголовок под липкой полосой.
-        scrollMarginTop: 56,
+        scrollMarginTop: `${NAV_HEIGHT + 12}px`,
       }}
     >
       <Container maxWidth="lg" sx={{ position: 'relative' }}>
