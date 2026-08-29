@@ -3019,12 +3019,21 @@
       "brand": "ITV Guest",
       "devices": "Devices",
       "how": "How it works",
-      "contact": "Contact"
+      "contact": "Contact",
+      "product": "Product",
+      "modules": "Modules",
+      "claims": "In brief",
+      "guest": "For guests",
+      "staff": "For staff",
+      "room": "Room control",
+      "flowOrder": "Order path",
+      "flowRoom": "Room command path",
+      "modulesList": "Module list",
+      "audience": "Who it fits"
     },
     "scrollHint": "Scroll for more",
     "plan": {
       "alt": "Room plan: light, curtains, climate",
-      "bed": "bed",
       "curtains": "window · curtains",
       "curtainsOpen": "curtains open",
       "light": "light",

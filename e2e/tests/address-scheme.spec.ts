@@ -121,31 +121,53 @@ test('утверждения вместо цифр', async ({ page }) => {
   }
 })
 
-test('липкое меню: скрыто на обложке, появляется после неё', async ({ page }) => {
+test('переключатели: на обложке читаемы, при прокрутке — в полосе', async ({ page }) => {
   /*
-    Переключатели языка и темы уехали С ФОТОГРАФИИ в липкое меню: на кадре они
-    терялись — белая иконка попадала то на светлую штору, то на тёмное дерево.
-    Обложка осталась чистой фотографией.
+    ПЕРЕКЛЮЧАТЕЛИ ЖИВУТ НА ОБЛОЖКЕ И ПЕРЕЕЗЖАЮТ В ПОЛОСУ. Их уже убирали с кадра
+    целиком — потому что значок темы там пропадал: он рисуется цветом
+    `action.active`, то есть тёмным на светлой теме, и на тёмном кадре его не
+    было видно вовсе. Лечится это не удалением, а собственным фоном под ними и
+    принудительно белым цветом, пока обложка видна.
+
+    Элемент ОДИН на оба места: два комплекта означали бы два состояния одного и
+    того же. Поэтому укус проверяет не «есть на обложке» и «есть в полосе», а
+    что это одна и та же коробка, сменившая место.
   */
   await page.goto(`${ROOT}/`)
   const nav = page.getByTestId('landing-nav')
+  const controls = page.getByTestId('landing-controls')
   await expect(nav).toHaveAttribute('data-shown', 'false', { timeout: 20_000 })
 
-  // Частиц на обложке нет: кадр здесь главный, и спорить с ним нечему.
-  await expect(page.getByTestId('landing-hero').locator('canvas')).toHaveCount(0)
-  // Зато есть подсказка, что ниже что-то есть.
-  await expect(page.getByTestId('landing-scroll-hint')).toBeVisible()
+  await expect(controls).toHaveCount(1)
+  await expect(controls).toHaveAttribute('data-place', 'hero')
+  await expect(controls.getByTestId('theme-toggle')).toBeVisible()
+  await expect(controls.getByTestId('guest-language')).toBeVisible()
+
+  // Значок темы на кадре — белый, а не цветом темы: иначе он пропадёт.
+  const ink = await controls
+    .getByTestId('theme-toggle')
+    .evaluate((node) => getComputedStyle(node).color)
+  expect(ink, 'значок темы на фотографии взял цвет темы и пропадёт на тёмном кадре').toBe(
+    'rgb(255, 255, 255)',
+  )
 
   await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 0.9)))
   await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 })
-  // Оба переключателя — внутри меню, а не поверх кадра.
-  await expect(nav.locator('svg')).toHaveCount(2)
+  await expect(controls).toHaveAttribute('data-place', 'nav')
+  await expect(controls).toHaveCount(1)
 })
 
-test('частицы живут на секциях под обложкой', async ({ page }) => {
+test('частиц на лендинге нет ни на одной секции', async ({ page }) => {
+  /*
+    Частицы сняты вместе с холстом: на светлой секции они читались как плесень.
+    Укус на отсутствие, потому что вернуть их проще всего случайно — слот под
+    них жил прямо в `Screen` и напрашивался к повторному использованию.
+  */
   await page.goto(`${ROOT}/`)
-  await page.getByTestId('landing-flows').scrollIntoViewIfNeeded()
-  await expect(page.getByTestId('landing-flows').locator('canvas')).toHaveCount(1)
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(500)
+  await expect(page.getByTestId('landing').locator('canvas')).toHaveCount(0)
 })
 
 test('один продукт на трёх устройствах', async ({ page }) => {
@@ -232,23 +254,48 @@ test('план номера: играет сам, а после касания �
     перехватывает управление обратно после касания, воспринимается как
     сломанный — поэтому остановка НАВСЕГДА, и это проверяется, а не
     подразумевается.
+
+    Состояние читается с плиты (`data-light`, `data-curtains`), а не с подписей:
+    подпись — это оформление, и она менялась дважды, пока укус стоял.
   */
   await page.goto(`${ROOT}/`)
   const plan = page.getByTestId('landing-room-plan')
   await plan.scrollIntoViewIfNeeded()
   await expect(plan).toHaveAttribute('data-taken', 'false', { timeout: 20_000 })
 
-  const before = await plan.locator('text').allTextContents()
-  await page.waitForTimeout(2100)
-  const played = await plan.locator('text').allTextContents()
-  expect(played, 'план не сыграл сам — пролиставший мимо не увидит, что он живой').not.toEqual(before)
+  const plate = plan.locator('[data-light]')
+  const state = async () =>
+    `${await plate.getAttribute('data-light')}/${await plate.getAttribute('data-curtains')}`
+
+  const before = await state()
+  await expect
+    .poll(state, { timeout: 8_000, message: 'план не сыграл сам — пролиставший мимо не увидит, что он живой' })
+    .not.toBe(before)
 
   await page.getByTestId('room-plan-light').click()
   await expect(plan).toHaveAttribute('data-taken', 'true')
 
-  const taken = await plan.locator('text').allTextContents()
-  await page.waitForTimeout(2600)
-  expect(await plan.locator('text').allTextContents(), 'план продолжил играть сам после касания').toEqual(taken)
+  const taken = await state()
+  await page.waitForTimeout(3000)
+  expect(await state(), 'план продолжил играть сам после касания').toBe(taken)
+})
+
+test('план номера: кадр номера, а не схема', async ({ page }) => {
+  /*
+    Два совмещённых кадра — суть приёма: свет показан настоящим светом с
+    рендера. Подмени их рисованной схемой — витрина снова будет рассказывать про
+    продукт вместо того, чтобы его показывать.
+  */
+  await page.goto(`${ROOT}/`)
+  const plan = page.getByTestId('landing-room-plan')
+  await plan.scrollIntoViewIfNeeded()
+  await expect(plan.getByTestId('room-plan-base')).toBeVisible({ timeout: 20_000 })
+
+  const loaded = await plan.getByTestId('room-plan-base').evaluate(
+    (img) => (img as HTMLImageElement).naturalWidth,
+  )
+  expect(loaded, 'ночной кадр не загрузился').toBeGreaterThan(0)
+  await expect(plan.getByTestId('room-plan-lit-bedroom')).toHaveCount(1)
 })
 
 test('план при просьбе не двигать: статичен и со включённым светом', async ({ page }) => {
@@ -259,8 +306,30 @@ test('план при просьбе не двигать: статичен и с
 
   // Управление сразу у посетителя: автопоказа нет вовсе, а не «остановлен».
   await expect(plan).toHaveAttribute('data-taken', 'true', { timeout: 20_000 })
-  const first = await plan.locator('text').allTextContents()
-  expect(first.some((line) => /включ/.test(line)), 'свет должен быть включён').toBeTruthy()
-  await page.waitForTimeout(2200)
-  expect(await plan.locator('text').allTextContents()).toEqual(first)
+  const plate = plan.locator('[data-light]')
+  await expect(plate).toHaveAttribute('data-light', 'true')
+  const first = await plate.getAttribute('data-curtains')
+  await page.waitForTimeout(2600)
+  expect(await plate.getAttribute('data-curtains')).toBe(first)
+  await expect(plate).toHaveAttribute('data-light', 'true')
+})
+
+test('меню ведёт в каждый раздел страницы, а не в три из девяти', async ({ page }) => {
+  /*
+    В полосе было три ссылки на девять разделов. Укус сверяет меню СО СТРАНИЦЕЙ:
+    каждая ссылка обязана попадать в существующий якорь. Добавили раздел, забыли
+    пункт — это здесь не поймается; а вот пункт, ведущий в никуда, поймается
+    сразу, и именно так меню и расходилось с делом.
+  */
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+
+  const hrefs = await page.locator('[data-testid^="landing-nav-"][href^="#"]').evaluateAll(
+    (nodes) => nodes.map((node) => node.getAttribute('href') ?? ''),
+  )
+  expect(hrefs.length, 'в меню меньше пунктов, чем разделов').toBeGreaterThanOrEqual(11)
+
+  for (const href of hrefs) {
+    await expect(page.locator(href), `пункт меню ${href} ведёт в никуда`).toHaveCount(1)
+  }
 })

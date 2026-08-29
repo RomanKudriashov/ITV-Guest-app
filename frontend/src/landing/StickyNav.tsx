@@ -1,49 +1,65 @@
-import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
-import { GuestLanguageMenu } from '@/guest/components/GuestLanguageMenu';
-import { ThemeModeToggle } from '@/components/ThemeModeToggle';
-
 /**
  * Липкая полоса, которая появляется, когда обложка ушла вверх.
- *
- * ПОЧЕМУ НЕ ПОВЕРХ ФОТОГРАФИИ. Переключатели языка и темы стояли прямо на
- * кадре и терялись на нём: белая иконка попадает то на светлую штору, то на
- * тёмное дерево, и читается по-разному в каждой точке прокрутки. Полоса даёт
- * им собственный фон, а обложка остаётся чистой фотографией.
  *
  * МАТОВОЕ СТЕКЛО — `backdrop-filter: blur`. Размывается то, что проезжает ПОД
  * полосой, поэтому текст на ней читается над любым содержимым. Где
  * `backdrop-filter` не поддержан, остаётся просто полупрозрачный фон — темнее,
  * но читаемо; проверка идёт через `@supports`, а не через определение браузера.
  *
- * ПОЯВЛЕНИЕ ПО ВИДИМОСТИ ОБЛОЖКИ, А НЕ ПО ЧИСЛУ ПИКСЕЛЕЙ. `IntersectionObserver`
- * не стоит ни одного кадра на прокрутке, в отличие от обработчика `scroll`,
- * который считает на каждый тик. И порог здесь смысловой: «обложка ушла» — это
- * про обложку, а не про 300 пикселей, которые завтра станут другими.
+ * СОСТАВ СОБРАН ПО СТРАНИЦЕ, А НЕ ПО ПАМЯТИ. В полосе было три ссылки на девять
+ * разделов: половина страницы из меню не открывалась вовсе. Список ниже —
+ * обход страницы сверху вниз, вместе с подразделами: две схемы движения данных
+ * и «кому подходит» — это отдельные части, до которых иначе только скроллом.
+ *
+ * ПОЧЕМУ ГРУППАМИ. Девять ссылок в строку не помещаются рядом с названием и
+ * переключателями, а прятать лишние — вернуться к тому же неполному меню.
+ * Четыре пункта с раскрытием держат полный состав и оставляют полосу полосой.
+ *
+ * РАСКРЫТИЕ — БЕЗ СОСТОЯНИЯ И БЕЗ JS. `:hover` и `:focus-within` на самом
+ * пункте: список из четырёх якорей не стоит ни портала, ни обработчиков. По
+ * клавиатуре подпункты доступны тем же `focus-within` — они настоящие ссылки, а
+ * не пункты выдуманного меню.
+ *
+ * Переключатели языка и темы в полосе НЕ живут: они приезжают сюда с обложки —
+ * см. `LandingControls`. Место под них полоса оставляет отступом справа.
  */
-export function StickyNav({ heroId, calm }: { heroId: string; calm: boolean }) {
+
+/**
+ * Разделы страницы. Порядок — порядок на странице; вложенность — настоящая
+ * вложенность, а не рубрикация ради красоты.
+ */
+const SECTIONS = [
+  {
+    key: 'product',
+    href: '#claims',
+    children: ['claims', 'guest', 'staff', 'room', 'devices'],
+  },
+  { key: 'how', href: '#how', children: ['flowOrder', 'flowRoom'] },
+  { key: 'modules', href: '#modules', children: ['modulesList', 'audience'] },
+  { key: 'contact', href: '#contact', children: [] },
+] as const;
+
+/** Куда ведёт подпункт. Держится рядом со списком, чтобы не разъехалось. */
+const CHILD_HREF: Record<string, string> = {
+  claims: '#claims',
+  guest: '#guest',
+  staff: '#staff',
+  room: '#room',
+  devices: '#devices',
+  flowOrder: '#flow-order',
+  flowRoom: '#flow-room',
+  modulesList: '#modules',
+  audience: '#audience',
+};
+
+export function StickyNav({ shown, calm }: { shown: boolean; calm: boolean }) {
   const { t } = useTranslation();
-  const [shown, setShown] = useState(false);
-
-  useEffect(() => {
-    const hero = document.querySelector(`[data-testid="${heroId}"]`);
-    if (!hero) return undefined;
-    const observer = new IntersectionObserver(
-      ([entry]) => setShown(!entry.isIntersecting),
-      // Полоса появляется, когда от обложки осталась четверть: не в тот
-      // момент, когда исчез последний её пиксель.
-      { threshold: 0.25 },
-    );
-    observer.observe(hero);
-    return () => observer.disconnect();
-  }, [heroId]);
-
-  const links = ['devices', 'how', 'contact'] as const;
 
   return (
     <Box
@@ -55,7 +71,12 @@ export function StickyNav({ heroId, calm }: { heroId: string; calm: boolean }) {
         top: 0,
         insetInline: 0,
         zIndex: 10,
-        px: { xs: 2, md: 4 },
+        pl: { xs: 2, md: 4 },
+        // Справа — место под переключатели, которые лежат отдельным слоем.
+        // Ширина замерена по ним, а не подобрана: два значка (44 и 34) с
+        // зазором между ними плюс собственный отступ полосы. Меньше — и
+        // последняя ссылка уезжает под флаг.
+        pr: { xs: 13, md: 17 },
         py: 1,
         display: 'flex',
         alignItems: 'center',
@@ -78,20 +99,74 @@ export function StickyNav({ heroId, calm }: { heroId: string; calm: boolean }) {
         {t('landing.nav.brand')}
       </Typography>
       <Stack direction="row" spacing={2.5} sx={{ display: { xs: 'none', md: 'flex' } }}>
-        {links.map((link) => (
-          <Box
-            key={link}
-            component="a"
-            href={`#${link}`}
-            data-testid={`landing-nav-${link}`}
-            sx={{ color: 'text.secondary', textDecoration: 'none', '&:hover': { color: 'text.primary' } }}
-          >
-            <Typography variant="body2">{t(`landing.nav.${link}`)}</Typography>
+        {SECTIONS.map((section) => (
+          <Box key={section.key} sx={{ position: 'relative', py: 0.5 }}>
+            <Box
+              component="a"
+              href={section.href}
+              data-testid={`landing-nav-${section.key}`}
+              sx={{
+                color: 'text.secondary',
+                textDecoration: 'none',
+                '&:hover': { color: 'text.primary' },
+              }}
+            >
+              <Typography variant="body2">{t(`landing.nav.${section.key}`)}</Typography>
+            </Box>
+
+            {section.children.length ? (
+              <Box
+                data-testid={`landing-nav-${section.key}-sub`}
+                sx={{
+                  position: 'absolute',
+                  top: '100%',
+                  insetInlineStart: -12,
+                  pt: 1,
+                  opacity: 0,
+                  visibility: 'hidden',
+                  transition: calm ? 'none' : 'opacity .18s ease',
+                  // Раскрытие держится и при наведении на сам список: иначе он
+                  // закрывался бы в тот момент, когда курсор уходит с заголовка
+                  // вниз, к подпунктам.
+                  'div:hover > &, div:focus-within > &': { opacity: 1, visibility: 'visible' },
+                }}
+              >
+                <Stack
+                  spacing={0.5}
+                  sx={{
+                    minWidth: 200,
+                    p: 1.25,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    boxShadow: (theme) => `0 18px 40px -24px ${alpha(theme.palette.common.black, 0.6)}`,
+                  }}
+                >
+                  {section.children.map((child) => (
+                    <Box
+                      key={child}
+                      component="a"
+                      href={CHILD_HREF[child]}
+                      data-testid={`landing-nav-${child}`}
+                      sx={{
+                        color: 'text.secondary',
+                        textDecoration: 'none',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 1,
+                        '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Typography variant="body2">{t(`landing.nav.${child}`)}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            ) : null}
           </Box>
         ))}
       </Stack>
-      <GuestLanguageMenu />
-      <ThemeModeToggle />
     </Box>
   );
 }

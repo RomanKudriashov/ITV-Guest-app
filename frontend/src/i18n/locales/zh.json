@@ -2998,12 +2998,21 @@
       "brand": "ITV Guest",
       "devices": "设备",
       "how": "如何运作",
-      "contact": "联系"
+      "contact": "联系",
+      "product": "产品",
+      "modules": "模块",
+      "claims": "概览",
+      "guest": "面向客人",
+      "staff": "面向员工",
+      "room": "客房控制",
+      "flowOrder": "订单路径",
+      "flowRoom": "客房指令路径",
+      "modulesList": "模块清单",
+      "audience": "适用对象"
     },
     "scrollHint": "向下滚动",
     "plan": {
       "alt": "客房平面：灯光、窗帘、空调",
-      "bed": "床",
       "curtains": "窗户 · 窗帘",
       "curtainsOpen": "窗帘已打开",
       "light": "灯光",

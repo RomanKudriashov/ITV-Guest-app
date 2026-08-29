@@ -10,10 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { FlowDiagram, type FlowStep } from './FlowDiagram';
 import { ProductShot } from './ProductShot';
 import { PhotoHero, Reveal, Screen, SplitBlock, useCalm } from './sections';
-import { Particles } from './Particles';
 import { ScrollHint } from './ScrollHint';
 import { RoomPlan } from './RoomPlan';
 import { StickyNav } from './StickyNav';
+import { LandingControls } from './LandingControls';
+import { useHeroGone } from './heroGone';
 import { alpha } from '@mui/material/styles';
 
 /**
@@ -105,11 +106,13 @@ const PHOTO = {
 export function LandingPage() {
   const { t } = useTranslation();
   const calm = useCalm();
+  const heroGone = useHeroGone('landing-hero');
 
   return (
     <Box sx={{ bgcolor: 'background.default', position: 'relative' }} data-testid="landing">
       {/* --- 1. Первый экран: фотография во всю ширину -------------------- */}
-      <StickyNav heroId="landing-hero" calm={calm} />
+      <StickyNav shown={heroGone} calm={calm} />
+      <LandingControls heroGone={heroGone} calm={calm} />
 
       <PhotoHero src={PHOTO.hero} calm={calm} testId="landing-hero" overlay={<ScrollHint calm={calm} />}>
         <Stack spacing={2.5} sx={{ maxWidth: 820 }}>
@@ -132,7 +135,7 @@ export function LandingPage() {
       </PhotoHero>
 
       {/* --- 2. Цифры ---------------------------------------------------- */}
-      <Screen tone="muted" testId="landing-claims" full={false} particles={<Particles calm={calm} />}>
+      <Screen tone="muted" id="claims" testId="landing-claims" full={false}>
         <Box
           sx={{
             display: 'grid',
@@ -159,7 +162,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 3. Гость ----------------------------------------------------- */}
-      <Screen testId="landing-guest">
+      <Screen id="guest" testId="landing-guest">
         <SplitBlock
           photo={PHOTO.guest}
           eyebrow={t('landing.blocks.guest.eyebrow')}
@@ -177,7 +180,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 4. Персонал -------------------------------------------------- */}
-      <Screen tone="accent" testId="landing-staff" particles={<Particles calm={calm} />}>
+      <Screen tone="accent" id="staff" testId="landing-staff">
         <SplitBlock
           photo={PHOTO.staff}
           eyebrow={t('landing.blocks.staff.eyebrow')}
@@ -195,7 +198,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 5. Управление номером ---------------------------------------- */}
-      <Screen testId="landing-room">
+      <Screen id="room" testId="landing-room">
         <SplitBlock
           photo={PHOTO.room}
           eyebrow={t('landing.blocks.room.eyebrow')}
@@ -256,7 +259,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 6. Схемы движения данных — сохранены целиком ------------------ */}
-      <Screen tone="muted" id="how" testId="landing-flows" particles={<Particles calm={calm} />}>
+      <Screen tone="muted" id="how" testId="landing-flows">
         <Reveal calm={calm}>
           <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
             {t('landing.flows.title')}
@@ -266,7 +269,7 @@ export function LandingPage() {
           </Typography>
         </Reveal>
         <Stack spacing={4}>
-          <Card variant="outlined">
+          <Card variant="outlined" id="flow-order">
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {t('landing.flows.order.title')}
@@ -277,7 +280,7 @@ export function LandingPage() {
               <FlowDiagram flow="order" steps={ORDER_FLOW} testId="flow-order" />
             </CardContent>
           </Card>
-          <Card variant="outlined">
+          <Card variant="outlined" id="flow-room">
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {t('landing.flows.room.title')}
@@ -292,7 +295,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 7. Модули, для кого, контакты -------------------------------- */}
-      <Screen testId="landing-modules-screen" full={false}>
+      <Screen id="modules" testId="landing-modules-screen" full={false}>
         <Reveal calm={calm}>
           <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 1 }}>
             {t('landing.modules.title')}
@@ -339,7 +342,7 @@ export function LandingPage() {
           ))}
         </Box>
 
-        <Box sx={{ mt: { xs: 7, md: 10 } }}>
+        <Box id="audience" sx={{ mt: { xs: 7, md: 10 }, scrollMarginTop: 72 }}>
           <Typography variant="h3" component="h2" sx={{ fontWeight: 700, mb: 3 }}>
             {t('landing.audience.title')}
           </Typography>

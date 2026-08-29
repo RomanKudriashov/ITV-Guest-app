@@ -35,7 +35,6 @@ export function Screen({
   id,
   testId,
   full = true,
-  particles,
 }: {
   children: ReactNode;
   /** Заливка: обычный фон, приглушённый или акцентный блок. */
@@ -43,8 +42,6 @@ export function Screen({
   id?: string;
   testId?: string;
   full?: boolean;
-  /** Слой частиц под содержимым секции. */
-  particles?: ReactNode;
 }) {
   const theme = useTheme();
   const bg =
@@ -67,9 +64,10 @@ export function Screen({
         py: { xs: 7, md: 12 },
         position: 'relative',
         overflow: 'hidden',
+        // Переход по якорю не должен прятать заголовок под липкой полосой.
+        scrollMarginTop: 56,
       }}
     >
-      {particles}
       <Container maxWidth="lg" sx={{ position: 'relative' }}>
         {children}
       </Container>
