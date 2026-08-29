@@ -21,10 +21,19 @@ export function ProductShot({
   name,
   title,
   caption,
+  device = 'desktop',
 }: {
   name: string;
   title: string;
   caption: string;
+  /**
+   * Чем это снято у гостя, тем и показываем.
+   *
+   * Витрину гость держит в руке — снимок в рамке телефона читается как
+   * телефон, а не как окно браузера. Доска исполнителя и панель отеля живут
+   * на большом экране: рамка телефона врала бы о том, как ими пользуются.
+   */
+  device?: 'phone' | 'desktop';
 }) {
   const { t } = useTranslation();
   const [missing, setMissing] = useState(false);
@@ -33,7 +42,18 @@ export function ProductShot({
     <Card variant="outlined" sx={{ overflow: 'hidden', height: '100%' }} data-testid={`landing-shot-${name}`}>
       <Box
         sx={{
-          aspectRatio: '16 / 10',
+          aspectRatio: device === 'phone' ? '9 / 16' : '16 / 10',
+          ...(device === 'phone'
+            ? {
+                maxWidth: 300,
+                mx: 'auto',
+                mt: 2,
+                borderRadius: 5,
+                border: '8px solid',
+                borderColor: 'text.primary',
+                overflow: 'hidden',
+              }
+            : {}),
           bgcolor: 'action.hover',
           display: 'grid',
           placeItems: 'center',

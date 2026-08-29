@@ -109,10 +109,15 @@ test('лендинг не делает ни одного запроса к API',
 
 test('цифры — только те, что у нас есть', async ({ page }) => {
   await page.goto(`${ROOT}/`)
-  // Языки и модули считаются из перечислений системы, а не вписаны словами.
-  await expect(page.getByTestId('landing-figure-languages')).toHaveText('4')
+  // Считаются из перечислений системы, а не вписаны словами.
   await expect(page.getByTestId('landing-figure-modules')).toHaveText('9')
-  await expect(page.getByTestId('landing-figure-installs')).toHaveText('0')
+  await expect(page.getByTestId('landing-figure-offerings')).toHaveText('4')
+  await expect(page.getByTestId('landing-figure-workplaces')).toHaveText('3')
+
+  // Языков как ЦИФРЫ здесь больше нет: их число не ограничено планом, и
+  // обещать «четыре» значило бы обещать потолок. Языки живут возможностью.
+  await expect(page.getByTestId('landing-figure-languages')).toHaveCount(0)
+  await expect(page.getByTestId('landing-figure-installs')).toHaveCount(0)
 })
 
 test('схемы движения данных сохранены', async ({ page }) => {

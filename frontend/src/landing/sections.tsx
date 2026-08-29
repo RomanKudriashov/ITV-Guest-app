@@ -109,11 +109,14 @@ export function PhotoHero({
   children,
   calm,
   testId,
+  overlay,
 }: {
   src: string;
   children: ReactNode;
   calm: boolean;
   testId?: string;
+  /** Слой между скримом и текстом: частицы. */
+  overlay?: ReactNode;
 }) {
   const theme = useTheme();
   const dark = theme.palette.mode === 'dark';
@@ -160,6 +163,7 @@ export function PhotoHero({
           )} 78%)`,
         }}
       />
+      {overlay}
       <Container maxWidth="lg" sx={{ position: 'relative', pb: { xs: 7, md: 12 } }}>
         {children}
       </Container>

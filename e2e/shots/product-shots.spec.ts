@@ -49,6 +49,14 @@ async function loginCms(page: Page): Promise<void> {
   await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 })
 }
 
+/*
+  ГОСТЕВЫЕ СНИМКИ — ТЕЛЕФОНОМ. Гость держит витрину в руке, и десктопный кадр,
+  вставленный в рамку телефона, обрезается по краям: на лендинге это видно как
+  срезанное слово в заголовке. Размер кадра должен совпадать с устройством, о
+  котором он рассказывает.
+*/
+test.use({ viewport: { width: 390, height: 844 } })
+
 test('витрина гостя', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('guest-room-input').fill(DEMO_ROOM)

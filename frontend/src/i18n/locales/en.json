@@ -2962,17 +2962,17 @@
       "console": "Platform staff sign-in"
     },
     "figures": {
-      "languages": {
-        "title": "languages",
-        "body": "The guest reads the storefront in their own — nothing to switch."
-      },
       "modules": {
         "title": "modules",
-        "body": "Enabled one by one: from room control to the mobile key."
+        "body": "Enabled one by one: the hotel pays for what it uses."
       },
-      "installs": {
-        "title": "installs",
-        "body": "The guest scans the code in the room and orders. No app to install."
+      "offerings": {
+        "title": "offering types",
+        "body": "Product, request, slot, page. Any hotel service fits one of these four forms."
+      },
+      "workplaces": {
+        "title": "workplaces",
+        "body": "Guest storefront, staff board, hotel panel — the whole chain, not just the phone."
       }
     },
     "blocks": {
@@ -2990,6 +2990,16 @@
         "eyebrow": "Room control",
         "title": "Light, curtains and climate from the same storefront",
         "body": "The equipment is already on site: we reach it through a connector inside the hotel network. The hotel opens nothing outwards."
+      }
+    },
+    "extras": {
+      "devices": {
+        "title": "Tablet and door panel in the room",
+        "body": "The service installs as an app on the bedside tablet and on the door call panel. The device in the room is part of the product, not just the guest's phone."
+      },
+      "languages": {
+        "title": "Languages",
+        "body": "Today Russian, English, Arabic and Chinese — right-to-left included. The list is not limited by our code: a language model comes next."
       }
     }
   }

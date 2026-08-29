@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { FlowDiagram, type FlowStep } from './FlowDiagram';
 import { ProductShot } from './ProductShot';
 import { PhotoHero, Reveal, Screen, SplitBlock, useCalm } from './sections';
+import { Particles } from './Particles';
 
 /**
  * ЛЕНДИНГ ПЛАТФОРМЫ — корень адреса.
@@ -62,10 +63,14 @@ const MODULES = [
   'analytics',
 ] as const;
 
-const AUDIENCES = ['cityHotel', 'resort', 'apartments'] as const;
+/*
+  Возможности сверх реестра модулей: они не переключатели тарифа, а свойства
+  продукта, и держать их в списке модулей значило бы обещать, что их можно
+  «включить».
+*/
+const EXTRAS = ['devices', 'languages'] as const;
 
-/** Языки витрины — ровно те, на которых говорит гостевое приложение. */
-const LANDING_LANGUAGES = ['ru', 'en', 'ar', 'zh'] as const;
+const AUDIENCES = ['cityHotel', 'resort', 'apartments'] as const;
 
 /**
  * Цифры первого разговора — ТОЛЬКО ТЕ, ЧТО У НАС ЕСТЬ.
@@ -76,13 +81,18 @@ const LANDING_LANGUAGES = ['ru', 'en', 'ar', 'zh'] as const;
  * Значения не вписаны словами: языки и модули считаются из тех же перечислений,
  * которыми живёт система, поэтому разойтись с ней не могут.
  */
+/** Типы предложения — ровно те, что знает каталог (`OfferingType`). */
+const OFFERING_TYPES = ['product', 'service_request', 'slot', 'info'] as const;
+
 const FIGURES = [
-  { key: 'languages', value: String(LANDING_LANGUAGES.length) },
   { key: 'modules', value: String(MODULES.length) },
-  // «Ноль установок» — свойство продукта, а не оборот речи: гость открывает
-  // ссылку из QR в браузере, ставить ему нечего.
-  { key: 'installs', value: '0' },
+  // Четыре формы, в которые укладывается любая услуга отеля, — ответ на
+  // «а наш спа туда влезет?».
+  { key: 'offerings', value: String(OFFERING_TYPES.length) },
+  // Три рабочих места: продукт закрывает цепочку целиком, а не только телефон.
+  { key: 'workplaces', value: '3' },
 ] as const;
+
 
 const PHOTO = {
   hero: '/landing/photo-hero.jpg',
@@ -98,7 +108,7 @@ export function LandingPage() {
   return (
     <Box sx={{ bgcolor: 'background.default' }} data-testid="landing">
       {/* --- 1. Первый экран: фотография во всю ширину -------------------- */}
-      <PhotoHero src={PHOTO.hero} calm={calm} testId="landing-hero">
+      <PhotoHero src={PHOTO.hero} calm={calm} testId="landing-hero" overlay={<Particles calm={calm} />}>
         <Stack spacing={2.5} sx={{ maxWidth: 820 }}>
           <Typography
             variant="h2"
@@ -159,6 +169,7 @@ export function LandingPage() {
         >
           <ProductShot
             name="guest"
+            device="phone"
             title={t('landing.shots.guest.title')}
             caption={t('landing.shots.guest.caption')}
           />
@@ -194,6 +205,7 @@ export function LandingPage() {
         >
           <ProductShot
             name="room"
+            device="phone"
             title={t('landing.shots.room.title')}
             caption={t('landing.shots.room.caption')}
           />
@@ -254,6 +266,20 @@ export function LandingPage() {
           }}
           data-testid="landing-modules"
         >
+          {EXTRAS.map((code) => (
+            <Reveal key={code} calm={calm}>
+              <Card variant="outlined" sx={{ height: '100%', borderColor: 'primary.main' }}>
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {t(`landing.extras.${code}.title`)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {t(`landing.extras.${code}.body`)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Reveal>
+          ))}
           {MODULES.map((code) => (
             <Reveal key={code} calm={calm}>
               <Card variant="outlined" sx={{ height: '100%' }}>
@@ -337,9 +363,24 @@ export function LandingPage() {
 
         <Divider sx={{ mt: 6, mb: 2 }} />
         <Stack direction="row" justifyContent="space-between" flexWrap="wrap" useFlexGap>
-          <Typography variant="caption" color="text.secondary">
-            {t('landing.footer.copy')}
-          </Typography>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            {/*
+              Знак компании — вектором и в обеих темах. Надпись из растрового
+              логотипа сюда не идёт намеренно: она светло-серая и на светлой
+              теме пропадает, а варианта под светлый фон у компании нет.
+            */}
+            <Box
+              component="img"
+              src="/landing/pwv-mark.svg"
+              alt=""
+              width={20}
+              height={20}
+              data-testid="landing-company-mark"
+            />
+            <Typography variant="caption" color="text.secondary">
+              {t('landing.footer.copy')}
+            </Typography>
+          </Stack>
           <Typography variant="caption">
             {/* Вход в консоль — маленькой ссылкой в подвале: наш служебный
                 адрес, а не призыв к посетителю. */}
