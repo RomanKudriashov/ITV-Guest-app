@@ -8,6 +8,7 @@ import { IconBack } from '@/icons';
 import { layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
+import { openingLabel } from '../nextOpening';
 
 /**
  * Шапка заведения — то, ради чего затевалось проваливание.
@@ -151,9 +152,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
                 ? venue.available_until
                   ? t('guest.venue.openUntil', { time: venue.available_until })
                   : t('guest.venue.open')
-                : venue.available_from
-                  ? t('guest.venue.opensAt', { time: venue.available_from })
-                  : t('guest.venue.closed')
+                : (openingLabel(venue, t) ?? t('guest.venue.closed'))
             }
           />
         </Box>

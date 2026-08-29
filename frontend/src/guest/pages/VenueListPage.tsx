@@ -16,6 +16,7 @@ import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
+import { openingLabel } from '../nextOpening';
 
 /**
  * Level 2 of the showcase: the venues of one group (restaurants / spa / services).
@@ -80,9 +81,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
       ? status.until
         ? t('guest.venue.until', { time: status.until })
         : t('guest.venue.open')
-      : status.opens_at
-        ? t('guest.venue.opensAt', { time: status.opens_at })
-        : t('guest.venue.closed')
+      : (openingLabel(status, t) ?? t('guest.venue.closed'))
     : null;
 
   return (

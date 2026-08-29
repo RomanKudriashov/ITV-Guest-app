@@ -395,15 +395,13 @@
       "open": "Open",
       "until": "until {{time}}",
       "closed": "Closed",
-      "opensAt": "Opens at {{time}}",
       "emptyTitle": "No venues yet",
       "emptyHint": "Nothing has been added to this category yet",
       "openUntil": "Open until {{time}}",
       "notFound": "Venue not found",
       "viewOnly": "You are browsing without a room — ordering is available from a room or via its QR.",
       "back": "All services",
-      "closedTitle": "Closed now — you can browse, but not order",
-      "closedOpensAt": "Opens at {{time}}"
+      "closedTitle": "Closed now — you can browse, but not order"
     },
     "quickActions": {
       "menu": "Menu",
@@ -426,7 +424,6 @@
     },
     "menu": {
       "categories": "Menu categories",
-      "availableFrom": "from {{time}}",
       "unavailable": "Not available now",
       "outOfStock": "Out of stock",
       "choose": "Choose",
@@ -435,14 +432,7 @@
       "decrease": "Remove one",
       "emptyTitle": "The menu is empty",
       "emptyHint": "Please check back later — the hotel is still preparing the menu",
-      "venueOpensAt": "Opens at {{time}}",
-      "venueClosed": "Closed right now",
-      "opensToday": "Today from {{time}}",
-      "opensTomorrow": "Not today · tomorrow from {{time}}",
-      "opensOn": "Not today · {{day}} from {{time}}",
-      "opensVenueToday": "Opens today at {{time}}",
-      "opensVenueTomorrow": "Closed today · opens tomorrow at {{time}}",
-      "opensVenueOn": "Closed today · opens {{day}} at {{time}}"
+      "venueClosed": "Closed right now"
     },
     "item": {
       "title": "Dish",
@@ -763,6 +753,12 @@
       "offer": "Let you know when the order is on its way?",
       "offerHint": "A notification when the status changes. The status stays visible on this screen either way.",
       "enable": "Enable"
+    },
+    "opening": {
+      "today": "Opens today at {{time}}",
+      "tomorrow": "Opens tomorrow at {{time}}",
+      "later": "Opens on {{day}} at {{time}}",
+      "unknown": "Opens at {{time}}"
     }
   },
   "tracker": {

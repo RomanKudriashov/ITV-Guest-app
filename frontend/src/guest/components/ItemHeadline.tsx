@@ -22,6 +22,7 @@ import {
   storefrontTokens,
   surfaceRadius,
 } from '../storefrontTokens';
+import { openingLabel } from '../nextOpening';
 
 /**
  * Item media — a capped-height cover photo (or the DESIGNED fallback) whose
@@ -305,9 +306,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
 
         {!item.is_available ? (
           <Alert severity="warning">
-            {item.available_from
-              ? t('guest.menu.availableFrom', { time: item.available_from })
-              : t('guest.menu.unavailable')}
+            {openingLabel(item, t) ?? t('guest.menu.unavailable')}
           </Alert>
         ) : null}
       </Stack>

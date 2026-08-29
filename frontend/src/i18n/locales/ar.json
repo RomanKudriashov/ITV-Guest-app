@@ -403,15 +403,13 @@
       "open": "مفتوح",
       "until": "حتى {{time}}",
       "closed": "مغلق",
-      "opensAt": "يفتح في {{time}}",
       "emptyTitle": "لا توجد أماكن بعد",
       "emptyHint": "لم تتم إضافة أي شيء إلى هذه الفئة بعد",
       "openUntil": "مفتوح حتى {{time}}",
       "notFound": "المكان غير موجود",
       "viewOnly": "أنت تتصفح دون غرفة — الطلب متاح من الغرفة أو عبر رمز QR الخاص بها.",
       "back": "كل الخدمات",
-      "closedTitle": "مغلق الآن — يمكنك التصفح دون الطلب",
-      "closedOpensAt": "يفتح الساعة {{time}}"
+      "closedTitle": "مغلق الآن — يمكنك التصفح دون الطلب"
     },
     "quickActions": {
       "menu": "القائمة",
@@ -434,7 +432,6 @@
     },
     "menu": {
       "categories": "فئات القائمة",
-      "availableFrom": "من {{time}}",
       "unavailable": "غير متاح الآن",
       "outOfStock": "غير متوفر",
       "choose": "اختيار",
@@ -443,14 +440,7 @@
       "decrease": "إزالة واحدة",
       "emptyTitle": "القائمة فارغة",
       "emptyHint": "تفقّد لاحقاً — الفندق ما زال يجهز القائمة",
-      "venueOpensAt": "يفتح الساعة {{time}}",
-      "venueClosed": "مغلق حاليًا",
-      "opensToday": "اليوم من {{time}}",
-      "opensTomorrow": "ليس اليوم · غدًا من {{time}}",
-      "opensOn": "ليس اليوم · {{day}} من {{time}}",
-      "opensVenueToday": "يفتح اليوم في {{time}}",
-      "opensVenueTomorrow": "مغلق اليوم · يفتح غدًا في {{time}}",
-      "opensVenueOn": "مغلق اليوم · يفتح {{day}} في {{time}}"
+      "venueClosed": "مغلق حاليًا"
     },
     "item": {
       "title": "طبق",
@@ -775,6 +765,12 @@
       "offer": "هل نُعلمك عندما يكون الطلب في الطريق؟",
       "offerHint": "إشعار عند تغيّر الحالة. تبقى الحالة ظاهرة على هذه الشاشة في كل الأحوال.",
       "enable": "تفعيل"
+    },
+    "opening": {
+      "today": "يفتح اليوم في {{time}}",
+      "tomorrow": "يفتح غدًا في {{time}}",
+      "later": "يفتح يوم {{day}} في {{time}}",
+      "unknown": "يفتح في {{time}}"
     }
   },
   "tracker": {

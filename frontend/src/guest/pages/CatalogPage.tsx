@@ -36,6 +36,7 @@ import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import { useCartToast } from '../state/useCartToast';
 import type { MenuItem } from '../api/types';
+import { openingLabel } from '../nextOpening';
 
 const TABS_HEIGHT = 48;
 
@@ -305,9 +306,9 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
                   {category.title}
                 </Typography>
                 <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                {!category.is_available && category.available_from ? (
+                {!category.is_available && openingLabel(category, t) ? (
                   <Typography variant="caption" color="text.secondary">
-                    {t('guest.menu.availableFrom', { time: category.available_from })}
+                    {openingLabel(category, t)}
                   </Typography>
                 ) : null}
               </Stack>
@@ -487,15 +488,12 @@ function CatalogRow({
     (`unavailable_reason`), оставалось перестать её игнорировать.
   */
   const unavailableNote = !available
-    ? item.unavailable_reason === 'venue_closed'
-      ? item.available_from
-        ? t('guest.menu.venueOpensAt', { time: item.available_from })
-        : t('guest.menu.venueClosed')
-      : item.available_from
-        ? t('guest.menu.availableFrom', { time: item.available_from })
+    ? (openingLabel(item, t) ??
+      (item.unavailable_reason === 'venue_closed'
+        ? t('guest.menu.venueClosed')
         : item.unavailable_reason === 'out_of_stock'
           ? t('guest.menu.outOfStock')
-          : t('guest.menu.unavailable')
+          : t('guest.menu.unavailable')))
     : null;
 
   // An `info` row is a pure read link — the whole row opens the page, there is

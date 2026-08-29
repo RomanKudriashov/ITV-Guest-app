@@ -183,6 +183,13 @@ def _venue_identity(point_code: str | None, language: str | None, moment) -> dic
         "is_open": (availability.is_open if availability else True),
         "available_until": (availability.available_until if availability else None),
         "available_from": (availability.available_from if availability else None),
+        # Момент открытия едет вместе с часом везде, где едет час: иначе места
+        # расходятся в формулировке, а не в данных.
+        "available_at": (
+            availability.available_at.isoformat()
+            if availability and availability.available_at
+            else None
+        ),
     }
 
 

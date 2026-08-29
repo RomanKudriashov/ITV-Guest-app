@@ -106,8 +106,9 @@ test.describe('Закрытое заведение: смотреть можно'
       // 4. Кнопки заказа НЕТ ни у одной позиции.
       await expect(page.getByTestId('guest-qty-plus-caesar')).toHaveCount(0)
 
-      // 5. Строка называет причину заведением, а не блюдом.
-      await expect(dish).toContainText(/Откроется в \d{1,2}:\d{2}/)
+      // 5. Строка называет причину заведением, а не блюдом, — и называет ДЕНЬ.
+      // Формулировка одна на все места витрины: см. отдельный укус ниже.
+      await expect(dish).toContainText(/Откроется (сегодня|завтра|в \S+) в \d{1,2}:\d{2}/)
       const when = (await dish.innerText()).match(/(\d{1,2}:\d{2})/)![1]
 
       // 6. КАРТОЧКА ОТКРЫВАЕТСЯ — ради этого всё и делалось.
@@ -163,6 +164,64 @@ test.describe('Закрытое заведение: смотреть можно'
       })
       expect(refused.status(), await refused.text()).toBe(422)
       expect((await refused.json()).code).toBe('item_unavailable')
+    } finally {
+      await closed.restore()
+    }
+  })
+
+  test('УКУС: «когда откроется» звучит одинаково во всех местах', async ({ page, request }) => {
+    /*
+      Мест было пять, и четыре из них говорили коротко — «Откроется в 07:00».
+      В восемь вечера это читается как «сегодня утром»: гость ждёт того, чего
+      сегодня уже не будет. Полно называла день только карточка позиции, и на
+      её фоне остальные выглядели не короче, а НЕПРАВИЛЬНЕЕ.
+
+      Укус сверяет места ДРУГ С ДРУГОМ, а не с эталонной строкой: эталон в тесте
+      — это шестое место, которое разъедется вместе с остальными. Совпадение же
+      проверяется по факту, и добавить пятую формулировку молча уже нельзя.
+    */
+    const token = await apiToken(request, ADMIN)
+    const closed = await closeKitchen(request, token)
+
+    try {
+      await page.goto('/')
+      await page.evaluate(() => window.localStorage.clear())
+      await page.goto('/')
+      await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
+      await page.getByTestId('guest-room-submit').click()
+      await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
+
+      // Фраза обязана называть день, а не только час: ровно этим коротая
+      // формулировка и врала.
+      const named = /(сегодня|завтра|понедельник|вторник|сред|четверг|пятниц|суббот|воскресень)/i
+
+      const tile = await page.getByTestId('guest-home-tile-kitchen').innerText()
+      const fromTile = tile.split('\n').find((line) => /Откроется/i.test(line))
+      expect(fromTile, 'плитка на главной не сказала, когда откроется').toBeTruthy()
+      expect(fromTile!, 'плитка назвала только час').toMatch(named)
+
+      await page.getByTestId('guest-home-tile-kitchen').click()
+      await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 20_000 })
+
+      const banner = await page.getByTestId('guest-venue-closed').innerText()
+      const fromBanner = banner.split('·').map((s) => s.trim()).find((s) => /Откроется/i.test(s))
+      expect(fromBanner, 'шапка заведения не сказала, когда откроется').toBeTruthy()
+
+      const dish = page.getByTestId('guest-item-caesar')
+      const row = await dish.innerText()
+      const fromRow = row.split('\n').find((line) => /Откроется/i.test(line))
+      expect(fromRow, 'строка меню не сказала, когда откроется').toBeTruthy()
+
+      await dish.click()
+      const sheet = page.getByTestId('guest-item-unavailable')
+      await expect(sheet).toBeVisible({ timeout: 15_000 })
+      const fromSheet = (await sheet.innerText())
+        .split('\n')
+        .find((line) => /Откроется/i.test(line))
+      expect(fromSheet, 'карточка не сказала, когда откроется').toBeTruthy()
+
+      const said = [fromTile!, fromBanner!, fromRow!, fromSheet!].map((s) => s.trim())
+      expect(new Set(said).size, `места разошлись: ${JSON.stringify(said)}`).toBe(1)
     } finally {
       await closed.restore()
     }

@@ -11,6 +11,7 @@ import { layout as storefrontLayout } from '../storefrontTokens';
 import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { errorMessage } from '../errors';
+import { openingLabel } from '../nextOpening';
 
 /**
  * Пространство одного заведения — главная починка R5.
@@ -108,11 +109,7 @@ export function VenuePage() {
           }}
         >
           <Alert severity="info" data-testid="guest-venue-closed">
-            {venue.available_from
-              ? `${t('guest.venue.closedTitle')} · ${t('guest.venue.closedOpensAt', {
-                  time: venue.available_from,
-                })}`
-              : t('guest.venue.closedTitle')}
+            {[t('guest.venue.closedTitle'), openingLabel(venue, t)].filter(Boolean).join(' · ')}
           </Alert>
         </Box>
       ) : null}

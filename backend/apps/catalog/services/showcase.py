@@ -89,8 +89,21 @@ def _service_status(service: Service, moment: datetime | None) -> dict[str, Any]
         return None
     avail = service.schedule.availability_at(moment)
     if avail.is_open:
-        return {"state": "open", "until": avail.available_until, "opens_at": None}
-    return {"state": "closed", "until": None, "opens_at": avail.available_from}
+        return {
+            "state": "open",
+            "until": avail.available_until,
+            "opens_at": None,
+            "available_at": None,
+        }
+    return {
+        "state": "closed",
+        "until": None,
+        "opens_at": avail.available_from,
+        # МОМЕНТ ЦЕЛИКОМ, а не только час. Один час — это «в 07:00», и в восемь
+        # вечера гость читает его как «сегодня утром». День считает сервер: у
+        # гостя в телефоне может быть другая таймзона.
+        "available_at": avail.available_at.isoformat() if avail.available_at else None,
+    }
 
 
 def _venues(hotel: Hotel) -> list[Service]:

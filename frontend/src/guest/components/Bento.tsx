@@ -12,6 +12,7 @@ import { packBento, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
 import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
+import { openingLabel } from '../nextOpening';
 
 /**
  * Cover fallback for a tile without a photo. ALWAYS dark (with a brand-tinted
@@ -43,7 +44,9 @@ function useStatusLabel() {
     }
     return {
       open: false,
-      text: status.opens_at ? t('guest.venue.opensAt', { time: status.opens_at }) : t('guest.venue.closed'),
+      // Формулировку собирает общий сборщик: плитка, шапка, строка меню и
+      // карточка обязаны говорить одно и то же одними словами.
+      text: openingLabel(status, t) ?? t('guest.venue.closed'),
     };
   };
 }

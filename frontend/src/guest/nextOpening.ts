@@ -54,3 +54,52 @@ export function nextOpening(
   if (days === 1) return { kind: 'tomorrow', time };
   return { kind: 'later', time, at };
 }
+
+/**
+ * ОДНА ФОРМУЛИРОВКА «КОГДА ОТКРОЕТСЯ» НА ВСЕ МЕСТА ВИТРИНЫ.
+ *
+ * ПОЧЕМУ ФУНКЦИЯ, А НЕ ПЯТЬ ВЫЗОВОВ `t` ПО МЕСТАМ. Их и было пять: плитка на
+ * главной, шапка заведения, строка в меню, заголовок закрытого заведения и
+ * карточка позиции. Четыре говорили коротко — «Откроется в 07:00», — и только
+ * карточка называла день. В восемь вечера короткая фраза читается как «сегодня
+ * утром»: гость ждёт того, чего сегодня уже не будет. Разъехались они не по
+ * недосмотру, а потому что каждое место само выбирало ключ; пока выбор делается
+ * на месте, он разъедется снова.
+ *
+ * ДЕНЬ НАЗЫВАЕТСЯ ВСЕГДА, даже когда он сегодняшний: «Откроется сегодня в 07:00»
+ * длиннее, чем «Откроется в 07:00», ровно на то слово, из-за которого фраза
+ * перестаёт быть двусмысленной. Исключение одно — когда дня мы не знаем
+ * (старый ответ сервера без момента): тогда говорим только час, потому что
+ * назвать день было бы враньём.
+ */
+export function openingLabel(
+  source: {
+    available_from?: string | null;
+    /** Тот же час под другим именем: так его зовёт статус заведения. */
+    opens_at?: string | null;
+    available_at?: string | null;
+  },
+  t: (key: string, options?: Record<string, unknown>) => string,
+  now: Date = new Date(),
+): string | null {
+  const next = nextOpening(source.available_from ?? source.opens_at, source.available_at, now);
+  if (!next) return null;
+
+  switch (next.kind) {
+    case 'today':
+      return t('guest.opening.today', { time: next.time });
+    case 'tomorrow':
+      return t('guest.opening.tomorrow', { time: next.time });
+    case 'later':
+      return t('guest.opening.later', {
+        time: next.time,
+        day: next.at.toLocaleDateString(undefined, { weekday: 'long' }),
+      });
+    case 'unknown':
+      return t('guest.opening.unknown', { time: next.time });
+    default:
+      // Ближайшего открытия нет вовсе — сказать «когда» нечего, и выдумывать
+      // это «когда» нельзя. Место само решит, что показать вместо.
+      return null;
+  }
+}

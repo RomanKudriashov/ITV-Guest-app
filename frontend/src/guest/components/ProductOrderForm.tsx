@@ -7,7 +7,6 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { nextOpening } from '../nextOpening';
 
 import { ChipOption, ctaGradientSx } from '@/kit';
 import { useDraftState } from '@/state/useDraftState';
@@ -19,6 +18,7 @@ import { useMoney } from '../hooks/useMoney';
 import { toCartModifier, unitPriceOf, useCart } from '../state/cart';
 import type { ItemDetail, ModifierGroup } from '../api/types';
 import { itemCard } from '../storefrontTokens';
+import { openingLabel } from '../nextOpening';
 
 interface ProductDraft {
   /** group id → selected option ids. */
@@ -315,30 +315,16 @@ function unavailableLabel(
   item: { unavailable_reason?: string | null; available_from?: string | null; available_at?: string | null },
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
-  const next = nextOpening(item.available_from, item.available_at);
+  /*
+    Слова здесь БОЛЬШЕ НЕ СВОИ. Карточка была единственным местом, называвшим
+    день, — и одна против четырёх коротких она читалась как разнобой, а не как
+    точность. Теперь фразу собирает общий сборщик, а карточке остаётся только
+    решить, что сказать, когда открытия нет вовсе.
+  */
+  const label = openingLabel(item, t);
+  if (label) return label;
+
   const venue = item.unavailable_reason === 'venue_closed';
-
-  if (next) {
-    const suffix = venue ? 'Venue' : '';
-    switch (next.kind) {
-      case 'today':
-        return t(`guest.menu.opens${suffix}Today`, { time: next.time });
-      case 'tomorrow':
-        return t(`guest.menu.opens${suffix}Tomorrow`, { time: next.time });
-      case 'later':
-        return t(`guest.menu.opens${suffix}On`, {
-          time: next.time,
-          day: next.at.toLocaleDateString(undefined, { weekday: 'long' }),
-        });
-      case 'unknown':
-        // Дня не знаем — не обещаем его. Час показать всё же полезнее, чем
-        // молчать, но «сегодня» тут сказано быть не может.
-        return t(venue ? 'guest.menu.venueOpensAt' : 'guest.menu.availableFrom', { time: next.time });
-      default:
-        break;
-    }
-  }
-
   if (venue) return t('guest.menu.venueClosed');
   if (item.unavailable_reason === 'out_of_stock') return t('guest.menu.outOfStock');
   return t('guest.menu.unavailable');

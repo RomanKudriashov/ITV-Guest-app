@@ -393,15 +393,13 @@
       "open": "营业中",
       "until": "至 {{time}}",
       "closed": "已打烊",
-      "opensAt": "{{time}} 开始营业",
       "emptyTitle": "暂无场所",
       "emptyHint": "此分类还没有添加内容",
       "openUntil": "营业至 {{time}}",
       "notFound": "未找到该场所",
       "viewOnly": "您正在无房间模式下浏览——下单需在房间内或通过房间二维码。",
       "back": "全部服务",
-      "closedTitle": "目前休息 — 可以浏览，暂不能下单",
-      "closedOpensAt": "{{time}} 开放"
+      "closedTitle": "目前休息 — 可以浏览，暂不能下单"
     },
     "quickActions": {
       "menu": "菜单",
@@ -424,7 +422,6 @@
     },
     "menu": {
       "categories": "菜单分类",
-      "availableFrom": "{{time}} 起",
       "unavailable": "当前不可用",
       "outOfStock": "已售罄",
       "choose": "选择",
@@ -433,14 +430,7 @@
       "decrease": "减少一份",
       "emptyTitle": "菜单暂时为空",
       "emptyHint": "请稍后再看，酒店正在准备菜单",
-      "venueOpensAt": "{{time}} 开放",
-      "venueClosed": "目前休息",
-      "opensToday": "今天 {{time}} 起",
-      "opensTomorrow": "今天已结束 · 明天 {{time}} 起",
-      "opensOn": "今天已结束 · {{day}} {{time}} 起",
-      "opensVenueToday": "今天 {{time}} 开门",
-      "opensVenueTomorrow": "今天已关闭 · 明天 {{time}} 开门",
-      "opensVenueOn": "今天已关闭 · {{day}} {{time}} 开门"
+      "venueClosed": "目前休息"
     },
     "item": {
       "title": "菜品",
@@ -759,6 +749,12 @@
       "offer": "订单出发时通知您？",
       "offerHint": "状态变更时推送通知。无论如何，状态都会显示在此页面。",
       "enable": "开启"
+    },
+    "opening": {
+      "today": "今天 {{time}} 开放",
+      "tomorrow": "明天 {{time}} 开放",
+      "later": "{{day}} {{time}} 开放",
+      "unknown": "{{time}} 开放"
     }
   },
   "tracker": {
