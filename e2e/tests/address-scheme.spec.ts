@@ -525,3 +525,75 @@ test.describe('лендинг пальцем, без мыши', () => {
     await expect(plan.locator('[data-curtains]')).toHaveAttribute('data-curtains', 'open')
   })
 })
+
+test('картинки блока стоят на одной линии', async ({ page }) => {
+  /*
+    Блок был одним рядом из двух колонок, центрованных по отдельности, и верхние
+    края картинок расходились на половину разницы их высот: 29, 90 и 48 пикселей
+    в трёх блоках. Отступом это не лечится — разница зависит от длины заголовка,
+    а он переводится на четыре языка, — поэтому линию держит сетка, и укус
+    проверяет именно её результат.
+
+    Замер по КОРНЮ снимка, а не по картинке внутри него: у телефона содержимое
+    начинается ниже выреза, и сравнение с ним показывало бы безопасную зону, а
+    не выравнивание.
+  */
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+
+  for (const id of ['landing-guest', 'landing-staff', 'landing-room']) {
+    const section = page.getByTestId(id)
+    await section.scrollIntoViewIfNeeded()
+    const shot = (await section.getByTestId(`${id}-block-shot`).boundingBox())!
+    const photo = (await section.getByTestId(`${id}-block-photo`).boundingBox())!
+    expect(Math.abs(shot.y - photo.y), `${id}: верхние края картинок разошлись`).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(shot.y + shot.height - (photo.y + photo.height)),
+      `${id}: нижние края картинок разошлись`,
+    ).toBeLessThanOrEqual(1)
+  }
+
+  const devices = page.getByTestId('landing-devices')
+  await devices.scrollIntoViewIfNeeded()
+  const tops: number[] = []
+  for (const kind of ['phone', 'tablet', 'desktop']) {
+    tops.push((await devices.getByTestId(`landing-device-${kind}`).boundingBox())!.y)
+  }
+  expect(Math.max(...tops) - Math.min(...tops), 'устройства висят на разной высоте').toBeLessThanOrEqual(1)
+
+  // Подписи — на своей общей линии: у кадров разная высота, и без прижатия к
+  // низу ячейки они разъезжались бы вслед за ней.
+  const captions = await devices.evaluate((root) =>
+    Array.from(root.querySelectorAll('.MuiTypography-subtitle2')).map(
+      (node) => node.getBoundingClientRect().top,
+    ),
+  )
+  expect(Math.max(...captions) - Math.min(...captions), 'подписи устройств разъехались').toBeLessThanOrEqual(1)
+})
+
+test('на узком экране выравнивание не оставляет дыр', async ({ page }) => {
+  /*
+    Сетка с явными рядами — обычный способ получить дыру там, где колонок больше
+    нет: пустая ячейка второй колонки превращается в пустой ряд. На узком экране
+    рядов не назначается вовсе, и картинки идут потоком с одинаковым зазором.
+    Укус меряет ЗАЗОРЫ, а не расположение: дыра — это именно неровный зазор.
+  */
+  await page.setViewportSize({ width: 420, height: 820 })
+  await page.goto(`${ROOT}/`)
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
+
+  const gaps: number[] = []
+  for (const id of ['landing-guest', 'landing-staff', 'landing-room']) {
+    const section = page.getByTestId(id)
+    await section.scrollIntoViewIfNeeded()
+    const shot = (await section.getByTestId(`${id}-block-shot`).boundingBox())!
+    const photo = (await section.getByTestId(`${id}-block-photo`).boundingBox())!
+    const gap = photo.y - (shot.y + shot.height)
+    expect(gap, `${id}: фотография наехала на снимок`).toBeGreaterThan(0)
+    gaps.push(gap)
+  }
+  // Один и тот же зазор во всех блоках: разъехались бы — значит где-то ряд
+  // остался пустым.
+  expect(Math.max(...gaps) - Math.min(...gaps), 'зазоры между картинками разные').toBeLessThanOrEqual(4)
+})

@@ -84,11 +84,28 @@ export function Screen({
  * стоит ни одного кадра JS. Там, где браузер этого не умеет, элемент просто
  * стоит на месте — не «сломано», а «без движения», что здесь допустимо.
  */
-export function Reveal({ children, calm }: { children: ReactNode; calm: boolean }) {
+export function Reveal({
+  children,
+  calm,
+  fill = false,
+}: {
+  children: ReactNode;
+  calm: boolean;
+  /**
+   * Занять всю высоту родителя.
+   *
+   * Появление добавляет СВОЙ слой между ячейкой сетки и картинкой, и растяжка
+   * на нём обрывается: ячейка высоту ряда знает, а картинка внутри — уже нет.
+   * Признак нужен только там, где картинка тянется по ряду, поэтому он не
+   * умолчание: обычному тексту лишний `display: flex` ни к чему.
+   */
+  fill?: boolean;
+}) {
   if (calm) return <>{children}</>;
   return (
     <Box
       sx={{
+        ...(fill ? { display: 'flex', flex: 1, minWidth: 0 } : null),
         '@supports (animation-timeline: view())': {
           animation: 'landing-rise linear both',
           animationTimeline: 'view()',
@@ -184,6 +201,28 @@ export function PhotoHero({
  *
  * Пришёл на смену ряду одинаковых карточек на светлом. Карточка описывает —
  * блок показывает; на витрине это разные вещи.
+ *
+ * КАРТИНКИ БЛОКА СТОЯТ НА ОДНОЙ ЛИНИИ, и держит её сетка, а не подбор отступов.
+ *
+ * Раньше блок был одним рядом из двух колонок с `alignItems: center`: колонка с
+ * текстом и снимком центровалась отдельно от колонки с фотографией, и верхние
+ * края расходились ровно на половину разницы их высот — от 21 до 91 пикселя,
+ * причём в каждом блоке по-своему, потому что снимки разной высоты. Это не
+ * лечится отступом: разница зависит от длины заголовка, а он переводится на
+ * четыре языка.
+ *
+ * Теперь рядов ДВА: текст занимает верхний, обе картинки — нижний. Верхняя линия
+ * у них общая по построению, и её не сдвинет ни длинный перевод, ни другой
+ * снимок. Фотография тянется на всю высоту ряда, поэтому у картинок совпадает и
+ * нижний край.
+ *
+ * Снимка может не быть — тогда рядов снова один, и фотография занимает его
+ * целиком: пустой ряд высотой в ноль оставил бы от неё полоску.
+ *
+ * НА УЗКОМ ЭКРАНЕ РЯДОВ НЕТ ВОВСЕ. Колонка одна, и всё идёт потоком: текст,
+ * снимок, фотография. Выравнивать там нечего — картинки и так одна под другой, —
+ * а привязка к номерам рядов дала бы дыры на месте несуществующей второй
+ * колонки.
  */
 export function SplitBlock({
   photo,
@@ -205,18 +244,23 @@ export function SplitBlock({
   calm: boolean;
   testId?: string;
 }) {
+  // Сторона текста и сторона фотографии. Задаём КОЛОНКОЙ, а не порядком:
+  // порядок в сетке с явными рядами уже ничего не решает.
+  const textColumn = flip ? 2 : 1;
+  const photoColumn = flip ? 1 : 2;
+
   return (
     <Box
       data-testid={testId}
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-        gap: { xs: 4, md: 7 },
-        alignItems: 'center',
+        columnGap: { md: 7 },
+        rowGap: { xs: 4, md: 3 },
         direction: 'ltr',
       }}
     >
-      <Box sx={{ order: { md: flip ? 2 : 1 } }}>
+      <Box sx={{ gridColumn: { md: textColumn }, gridRow: { md: 1 } }}>
         <Reveal calm={calm}>
           <Typography variant="overline" color="primary" sx={{ letterSpacing: '.12em' }}>
             {eyebrow}
@@ -227,11 +271,31 @@ export function SplitBlock({
           <Typography color="text.secondary" sx={{ fontSize: 18, lineHeight: 1.5 }}>
             {body}
           </Typography>
-          {children ? <Box sx={{ mt: 3 }}>{children}</Box> : null}
         </Reveal>
       </Box>
-      <Box sx={{ order: { md: flip ? 1 : 2 } }}>
-        <Reveal calm={calm}>
+
+      {children ? (
+        <Box
+          data-testid={testId ? `${testId}-shot` : undefined}
+          sx={{ gridColumn: { md: textColumn }, gridRow: { md: 2 }, alignSelf: 'start' }}
+        >
+          <Reveal calm={calm}>{children}</Reveal>
+        </Box>
+      ) : null}
+
+      <Box
+        data-testid={testId ? `${testId}-photo` : undefined}
+        sx={{
+          gridColumn: { md: photoColumn },
+          // Снимка нет — фотографии нечего догонять, и она занимает оба ряда.
+          gridRow: { md: children ? 2 : '1 / span 2' },
+          alignSelf: 'stretch',
+          // Растяжка работает, только если ей есть во что растягиваться: ячейка
+          // сетки высоту ряда наследует, а вот `<img>` внутри неё — нет.
+          display: 'flex',
+        }}
+      >
+        <Reveal calm={calm} fill>
           <Box
             component="img"
             src={photo}
@@ -239,7 +303,11 @@ export function SplitBlock({
             loading="lazy"
             sx={{
               width: '100%',
-              aspectRatio: '4 / 3',
+              // На узком экране высоту задаёт пропорция: ряда, к которому можно
+              // подстроиться, там нет. На широком — высота ряда, то есть высота
+              // снимка вместе с его подписью.
+              aspectRatio: { xs: '4 / 3', md: 'auto' },
+              height: { xs: 'auto', md: '100%' },
               objectFit: 'cover',
               borderRadius: 3,
               display: 'block',

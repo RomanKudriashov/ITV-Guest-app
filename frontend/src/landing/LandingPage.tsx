@@ -180,6 +180,7 @@ export function LandingPage() {
           eyebrow={t('landing.blocks.guest.eyebrow')}
           title={t('landing.blocks.guest.title')}
           body={t('landing.blocks.guest.body')}
+          testId="landing-guest-block"
           calm={calm}
         >
           <ProductShot
@@ -198,6 +199,7 @@ export function LandingPage() {
           eyebrow={t('landing.blocks.staff.eyebrow')}
           title={t('landing.blocks.staff.title')}
           body={t('landing.blocks.staff.body')}
+          testId="landing-staff-block"
           flip
           calm={calm}
         >
@@ -216,6 +218,7 @@ export function LandingPage() {
           eyebrow={t('landing.blocks.room.eyebrow')}
           title={t('landing.blocks.room.title')}
           body={t('landing.blocks.room.body')}
+          testId="landing-room-block"
           calm={calm}
         >
           {/*
@@ -237,35 +240,54 @@ export function LandingPage() {
             {t('landing.devices.body')}
           </Typography>
         </Reveal>
+        {/*
+          ТРИ УСТРОЙСТВА ВИСЯТ НА ОДНОЙ ВЕРХНЕЙ ЛИНИИ, А ПОДПИСИ — НА ОДНОЙ НИЖНЕЙ.
+
+          Раньше ряд равнялся по низу (`alignItems: end`) — устройства стояли на
+          общей полке, а верхние края расходились на 319 пикселей, потому что
+          высоты у кадров разные: 599, 482 и 280. Полка читалась опрятно, но
+          обещала одинаковый масштаб, которого нет, и подписи оказывались на трёх
+          разных высотах.
+
+          Сцепка сверху даёт общую линию картинкам; подписи прижаты к низу ячейки
+          (`mt: auto`), поэтому у них своя общая линия. Пропорции кадров при этом
+          не тронуты: телефон остаётся телефоном, а не сжимается до высоты
+          монитора ради ровного низа.
+        */}
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: '1fr 1.3fr 1.6fr' },
             gap: { xs: 3, md: 4 },
-            alignItems: 'end',
+            alignItems: 'start',
           }}
         >
           {(['phone', 'tablet', 'desktop'] as const).map((kind) => (
-            <Reveal key={kind} calm={calm}>
-              <Box
-                component="img"
-                src={`/landing/device-${kind}.jpg`}
-                alt=""
-                loading="lazy"
-                data-testid={`landing-device-${kind}`}
-                sx={{
-                  width: '100%',
-                  display: 'block',
-                  borderRadius: kind === 'phone' ? '26px' : '12px',
-                  border: '2px solid',
-                  borderColor: 'text.primary',
-                  boxShadow: (theme) => `0 16px 40px -24px ${alpha(theme.palette.common.black, 0.5)}`,
-                }}
-              />
-              <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
+            <Box key={kind} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Reveal calm={calm}>
+                <Box
+                  component="img"
+                  src={`/landing/device-${kind}.jpg`}
+                  alt=""
+                  loading="lazy"
+                  data-testid={`landing-device-${kind}`}
+                  sx={{
+                    width: '100%',
+                    display: 'block',
+                    borderRadius: kind === 'phone' ? '26px' : '12px',
+                    border: '2px solid',
+                    borderColor: 'text.primary',
+                    boxShadow: (theme) =>
+                      `0 16px 40px -24px ${alpha(theme.palette.common.black, 0.5)}`,
+                  }}
+                />
+              </Reveal>
+              {/* Подпись — к низу ячейки, а не под своей картинкой: иначе три
+                  подписи разъезжаются вслед за высотой кадров. */}
+              <Typography variant="subtitle2" sx={{ mt: 'auto', pt: 1.5 }}>
                 {t(`landing.devices.${kind}`)}
               </Typography>
-            </Reveal>
+            </Box>
           ))}
         </Box>
       </Screen>
