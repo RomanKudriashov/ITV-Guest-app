@@ -3021,6 +3021,17 @@
       "how": "How it works",
       "contact": "Contact"
     },
-    "scrollHint": "Scroll for more"
+    "scrollHint": "Scroll for more",
+    "plan": {
+      "alt": "Room plan: light, curtains, climate",
+      "bed": "bed",
+      "curtains": "window · curtains",
+      "curtainsOpen": "curtains open",
+      "light": "light",
+      "lightOn": "light on",
+      "climate": "climate {{value}}°",
+      "hint": "The plan plays by itself — tap a zone to take over",
+      "hintTaken": "Tap the zones: light, curtains, climate"
+    }
   }
 }

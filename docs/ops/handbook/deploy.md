@@ -35,7 +35,7 @@ cd e2e && npx playwright test                               # и только п
 
 ```bash
 ssh deploy@<сервер>
-cd ~/itv-guest
+cd ~/ITV-Guest-app
 git fetch --all && git log --oneline HEAD..origin/main   # что именно едет
 git pull --ff-only
 ```
@@ -66,9 +66,11 @@ git pull --ff-only
 | `itv-guest-prod-connector` | коннектор (только стенд) |
 | `itv-guest-prod-iridi-emulator` | эмулятор оборудования (только стенд) |
 
-Приставка — это **имя проекта compose**, а оно берётся из имени каталога (или
-из `-p`). На нашем стенде каталог `itv-guest-prod`, отсюда и имена; в другом
-каталоге они будут другими. Сверяйте не строку, а `docker compose images`.
+Приставка — это **имя проекта compose**. У нас оно задано строкой `name:` в
+самом `docker-compose.prod.yml`, поэтому не зависит от каталога: на стенде код
+лежит в `~/ITV-Guest-app`, а контейнеры всё равно зовутся `itv-guest-prod-*`.
+Переименование каталога имён не изменит — менять пришлось бы `name:`. Сверяйте
+не строку из книги, а `docker compose images`.
 
 Собирать явно и всё сразу:
 

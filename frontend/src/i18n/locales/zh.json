@@ -3000,6 +3000,17 @@
       "how": "如何运作",
       "contact": "联系"
     },
-    "scrollHint": "向下滚动"
+    "scrollHint": "向下滚动",
+    "plan": {
+      "alt": "客房平面：灯光、窗帘、空调",
+      "bed": "床",
+      "curtains": "窗户 · 窗帘",
+      "curtainsOpen": "窗帘已打开",
+      "light": "灯光",
+      "lightOn": "灯已开",
+      "climate": "空调 {{value}}°",
+      "hint": "平面图会自动演示 — 点击区域即可接管",
+      "hintTaken": "点击各区域：灯光、窗帘、空调"
+    }
   }
 }

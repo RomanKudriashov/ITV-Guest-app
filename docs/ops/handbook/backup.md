@@ -79,7 +79,7 @@ ls -lh /var/backups/itv | tail -5
 ### 2.1. Остановить тех, кто пишет
 
 ```bash
-cd ~/itv-guest
+cd ~/ITV-Guest-app
 docker compose -f docker-compose.prod.yml --env-file .env.prod stop backend worker beat
 ```
 

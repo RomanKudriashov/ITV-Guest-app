@@ -224,3 +224,43 @@ test('администратор на адресе отеля по-прежне�
   await page.getByTestId('login-submit').click()
   await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 30_000 })
 })
+
+test('план номера: играет сам, а после касания — в руках посетителя', async ({ page }) => {
+  /*
+    УКУС ПРО ПЕРЕДАЧУ УПРАВЛЕНИЯ. Автопоказ нужен затем, что пролиставший мимо
+    ничего не нажмёт и не узнает, что план живой. Но экран, который
+    перехватывает управление обратно после касания, воспринимается как
+    сломанный — поэтому остановка НАВСЕГДА, и это проверяется, а не
+    подразумевается.
+  */
+  await page.goto(`${ROOT}/`)
+  const plan = page.getByTestId('landing-room-plan')
+  await plan.scrollIntoViewIfNeeded()
+  await expect(plan).toHaveAttribute('data-taken', 'false', { timeout: 20_000 })
+
+  const before = await plan.locator('text').allTextContents()
+  await page.waitForTimeout(2100)
+  const played = await plan.locator('text').allTextContents()
+  expect(played, 'план не сыграл сам — пролиставший мимо не увидит, что он живой').not.toEqual(before)
+
+  await page.getByTestId('room-plan-light').click()
+  await expect(plan).toHaveAttribute('data-taken', 'true')
+
+  const taken = await plan.locator('text').allTextContents()
+  await page.waitForTimeout(2600)
+  expect(await plan.locator('text').allTextContents(), 'план продолжил играть сам после касания').toEqual(taken)
+})
+
+test('план при просьбе не двигать: статичен и со включённым светом', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(`${ROOT}/`)
+  const plan = page.getByTestId('landing-room-plan')
+  await plan.scrollIntoViewIfNeeded()
+
+  // Управление сразу у посетителя: автопоказа нет вовсе, а не «остановлен».
+  await expect(plan).toHaveAttribute('data-taken', 'true', { timeout: 20_000 })
+  const first = await plan.locator('text').allTextContents()
+  expect(first.some((line) => /включ/.test(line)), 'свет должен быть включён').toBeTruthy()
+  await page.waitForTimeout(2200)
+  expect(await plan.locator('text').allTextContents()).toEqual(first)
+})

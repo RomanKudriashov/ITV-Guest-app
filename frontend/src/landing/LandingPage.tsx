@@ -12,6 +12,7 @@ import { ProductShot } from './ProductShot';
 import { PhotoHero, Reveal, Screen, SplitBlock, useCalm } from './sections';
 import { Particles } from './Particles';
 import { ScrollHint } from './ScrollHint';
+import { RoomPlan } from './RoomPlan';
 import { StickyNav } from './StickyNav';
 import { alpha } from '@mui/material/styles';
 
@@ -202,12 +203,12 @@ export function LandingPage() {
           body={t('landing.blocks.room.body')}
           calm={calm}
         >
-          <ProductShot
-            name="room"
-            device="phone"
-            title={t('landing.shots.room.title')}
-            caption={t('landing.shots.room.caption')}
-          />
+          {/*
+            План вместо снимка: экран номера — единственное место продукта,
+            которое интересно ПОТРОГАТЬ, а не рассмотреть. Статичный кадр здесь
+            рассказывает меньше, чем зона, которая отзывается на нажатие.
+          */}
+          <RoomPlan calm={calm} />
         </SplitBlock>
       </Screen>
 

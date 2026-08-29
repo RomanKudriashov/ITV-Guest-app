@@ -34,8 +34,8 @@
 ## 1. Код и окружение
 
 ```bash
-git clone <репозиторий> itv-guest
-cd itv-guest
+git clone <репозиторий> ITV-Guest-app
+cd ITV-Guest-app
 cp .env.prod.example .env.prod
 ```
 
