@@ -3090,6 +3090,13 @@
       "phone": "هاتف الضيف",
       "tablet": "لوح الغرفة",
       "desktop": "شاشة كبيرة"
-    }
+    },
+    "nav": {
+      "brand": "ITV Guest",
+      "devices": "الأجهزة",
+      "how": "كيف يعمل",
+      "contact": "تواصل"
+    },
+    "scrollHint": "مرِّر للأسفل"
   }
 }

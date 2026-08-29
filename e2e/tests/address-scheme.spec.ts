@@ -121,13 +121,31 @@ test('утверждения вместо цифр', async ({ page }) => {
   }
 })
 
-test('переключатели языка и темы на месте', async ({ page }) => {
-  // Лендинг переведён на четыре языка и умеет обе темы — доступа к этому не
-  // было вовсе: возможность есть, дотянуться нечем.
+test('липкое меню: скрыто на обложке, появляется после неё', async ({ page }) => {
+  /*
+    Переключатели языка и темы уехали С ФОТОГРАФИИ в липкое меню: на кадре они
+    терялись — белая иконка попадала то на светлую штору, то на тёмное дерево.
+    Обложка осталась чистой фотографией.
+  */
   await page.goto(`${ROOT}/`)
-  const controls = page.getByTestId('landing-controls')
-  await expect(controls).toBeVisible({ timeout: 20_000 })
-  await expect(controls.locator('svg')).toHaveCount(2)
+  const nav = page.getByTestId('landing-nav')
+  await expect(nav).toHaveAttribute('data-shown', 'false', { timeout: 20_000 })
+
+  // Частиц на обложке нет: кадр здесь главный, и спорить с ним нечему.
+  await expect(page.getByTestId('landing-hero').locator('canvas')).toHaveCount(0)
+  // Зато есть подсказка, что ниже что-то есть.
+  await expect(page.getByTestId('landing-scroll-hint')).toBeVisible()
+
+  await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 0.9)))
+  await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 })
+  // Оба переключателя — внутри меню, а не поверх кадра.
+  await expect(nav.locator('svg')).toHaveCount(2)
+})
+
+test('частицы живут на секциях под обложкой', async ({ page }) => {
+  await page.goto(`${ROOT}/`)
+  await page.getByTestId('landing-flows').scrollIntoViewIfNeeded()
+  await expect(page.getByTestId('landing-flows').locator('canvas')).toHaveCount(1)
 })
 
 test('один продукт на трёх устройствах', async ({ page }) => {

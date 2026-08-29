@@ -4,7 +4,8 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
-import { alpha } from '@mui/material/styles';
+
+import { PhoneFrame } from './PhoneFrame';
 
 /**
  * Снимок экрана продукта.
@@ -39,43 +40,46 @@ export function ProductShot({
   const { t } = useTranslation();
   const [missing, setMissing] = useState(false);
 
+  const shot = missing ? (
+    <Typography variant="caption" color="text.secondary" data-testid={`landing-shot-${name}-missing`}>
+      {t('landing.shots.missing')}
+    </Typography>
+  ) : (
+    <Box
+      component="img"
+      src={`/landing/${name}.jpg`}
+      alt={title}
+      loading="lazy"
+      onError={() => setMissing(true)}
+      sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+    />
+  );
+
+  /*
+    Телефон показываем В КОРПУСЕ, без карточки вокруг: аппарат сам себе рамка,
+    и обводка поверх него читалась бы как рамка внутри рамки.
+  */
+  if (device === 'phone') {
+    return (
+      <Box data-testid={`landing-shot-${name}`}>
+        <PhoneFrame testId={`landing-phone-${name}`}>{shot}</PhoneFrame>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {caption}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Card variant="outlined" sx={{ overflow: 'hidden', height: '100%' }} data-testid={`landing-shot-${name}`}>
       <Box
         sx={{
-          aspectRatio: device === 'phone' ? '9 / 16' : '16 / 10',
-          /*
-            КОРПУС, А НЕ РАМКА. Было: сплошная восьмипиксельная обводка с
-            умеренным скруглением — читается как рамка для фотографии, а не как
-            аппарат. У настоящего телефона тонкие боковые грани, крупный радиус
-            и вырез под камеру, и именно они делают силуэт узнаваемым.
-          */
-          ...(device === 'phone'
-            ? {
-                position: 'relative',
-                maxWidth: 288,
-                mx: 'auto',
-                mt: 2,
-                borderRadius: '38px',
-                border: '3px solid',
-                borderColor: 'text.primary',
-                boxShadow: (theme) => `0 18px 44px -22px ${alpha(theme.palette.common.black, 0.55)}`,
-                overflow: 'hidden',
-                // Вырез под камеру: тёмная пилюля по верхнему краю экрана.
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 6,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 74,
-                  height: 18,
-                  borderRadius: 9,
-                  bgcolor: 'text.primary',
-                  zIndex: 1,
-                },
-              }
-            : {}),
+          aspectRatio: '16 / 10',
           bgcolor: 'action.hover',
           display: 'grid',
           placeItems: 'center',
@@ -83,20 +87,7 @@ export function ProductShot({
           borderColor: 'divider',
         }}
       >
-        {missing ? (
-          <Typography variant="caption" color="text.secondary" data-testid={`landing-shot-${name}-missing`}>
-            {t('landing.shots.missing')}
-          </Typography>
-        ) : (
-          <Box
-            component="img"
-            src={`/landing/${name}.jpg`}
-            alt={title}
-            loading="lazy"
-            onError={() => setMissing(true)}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
-        )}
+        {shot}
       </Box>
       <CardContent>
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>

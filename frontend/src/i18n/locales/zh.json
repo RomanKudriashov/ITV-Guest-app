@@ -2993,6 +2993,13 @@
       "phone": "客人手机",
       "tablet": "客房平板",
       "desktop": "大屏"
-    }
+    },
+    "nav": {
+      "brand": "ITV Guest",
+      "devices": "设备",
+      "how": "如何运作",
+      "contact": "联系"
+    },
+    "scrollHint": "向下滚动"
   }
 }

@@ -22,10 +22,18 @@ import { useTheme } from '@mui/material/styles';
  * точек радиусом до 2.2 px при 22% непрозрачности закрашивали 0.037% холста —
  * поверх яркой фотографии это ноль. Считал не глазами, а чтением пикселей.
  */
-export function Particles({ calm }: { calm: boolean }) {
+export function Particles({ calm, tint }: { calm: boolean; tint?: string }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
   const theme = useTheme();
-  const tint = theme.palette.common.white;
+  /*
+    Цвет точек — от темы, а не всегда белый.
+
+    Частицы уехали с обложки на секции под ней: над фотографией они спорили с
+    кадром, а кадр здесь главный. На секции же фон бывает и светлым, и белые
+    точки на нём не видно вовсе.
+  */
+  const colour =
+    tint ?? (theme.palette.mode === 'dark' ? theme.palette.common.white : theme.palette.primary.main);
 
   useEffect(() => {
     if (calm) return undefined;
@@ -75,7 +83,7 @@ export function Particles({ calm }: { calm: boolean }) {
         const cx = dot.x * width;
         const cy = dot.y * height;
         const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, dot.r * 3);
-        halo.addColorStop(0, tint);
+        halo.addColorStop(0, colour);
         halo.addColorStop(1, 'transparent');
         ctx.globalAlpha = dot.a;
         ctx.fillStyle = halo;
@@ -121,7 +129,7 @@ export function Particles({ calm }: { calm: boolean }) {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', resize);
     };
-  }, [calm, tint]);
+  }, [calm, colour]);
 
   if (calm) return null;
   return (

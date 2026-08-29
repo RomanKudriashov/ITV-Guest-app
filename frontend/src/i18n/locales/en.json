@@ -3014,6 +3014,13 @@
       "phone": "Guest phone",
       "tablet": "In-room tablet",
       "desktop": "Large screen"
-    }
+    },
+    "nav": {
+      "brand": "ITV Guest",
+      "devices": "Devices",
+      "how": "How it works",
+      "contact": "Contact"
+    },
+    "scrollHint": "Scroll for more"
   }
 }

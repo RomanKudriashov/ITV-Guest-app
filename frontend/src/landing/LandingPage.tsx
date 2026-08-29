@@ -11,8 +11,8 @@ import { FlowDiagram, type FlowStep } from './FlowDiagram';
 import { ProductShot } from './ProductShot';
 import { PhotoHero, Reveal, Screen, SplitBlock, useCalm } from './sections';
 import { Particles } from './Particles';
-import { GuestLanguageMenu } from '@/guest/components/GuestLanguageMenu';
-import { ThemeModeToggle } from '@/components/ThemeModeToggle';
+import { ScrollHint } from './ScrollHint';
+import { StickyNav } from './StickyNav';
 import { alpha } from '@mui/material/styles';
 
 /**
@@ -108,39 +108,9 @@ export function LandingPage() {
   return (
     <Box sx={{ bgcolor: 'background.default', position: 'relative' }} data-testid="landing">
       {/* --- 1. Первый экран: фотография во всю ширину -------------------- */}
-      {/*
-        Язык и тема — те же переключатели, что у гостя и в панели. Лендинг
-        переведён на четыре языка и умеет обе темы, но доступа к этому не было
-        вовсе: возможность есть, а дотянуться нечем.
+      <StickyNav heroId="landing-hero" calm={calm} />
 
-        Поверх первого экрана, а не в шапке: шапки у страницы нет, и заводить
-        её ради двух кнопок значит менять устройство страницы.
-      */}
-      <Box
-        data-testid="landing-controls"
-        sx={{
-          position: 'absolute',
-          top: { xs: 12, md: 20 },
-          insetInlineEnd: { xs: 12, md: 24 },
-          zIndex: 2,
-          display: 'flex',
-          gap: 0.5,
-          /*
-            Белым — И САМИМ КНОПКАМ ТОЖЕ. Цвет на контейнере наследуется не
-            всегда: кнопка берёт свой из палитры, и в СВЕТЛОЙ теме иконка
-            выходила тёмной — на тёмной фотографии её не было видно вовсе.
-            Поймано на снимке: в тёмной теме два значка, в светлой один.
-          */
-          color: 'common.white',
-          '& .MuiIconButton-root': { color: 'common.white' },
-          '& .MuiSvgIcon-root': { color: 'inherit' },
-        }}
-      >
-        <GuestLanguageMenu />
-        <ThemeModeToggle />
-      </Box>
-
-      <PhotoHero src={PHOTO.hero} calm={calm} testId="landing-hero" overlay={<Particles calm={calm} />}>
+      <PhotoHero src={PHOTO.hero} calm={calm} testId="landing-hero" overlay={<ScrollHint calm={calm} />}>
         <Stack spacing={2.5} sx={{ maxWidth: 820 }}>
           <Typography
             variant="h2"
@@ -161,7 +131,7 @@ export function LandingPage() {
       </PhotoHero>
 
       {/* --- 2. Цифры ---------------------------------------------------- */}
-      <Screen tone="muted" testId="landing-claims" full={false}>
+      <Screen tone="muted" testId="landing-claims" full={false} particles={<Particles calm={calm} />}>
         <Box
           sx={{
             display: 'grid',
@@ -206,7 +176,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 4. Персонал -------------------------------------------------- */}
-      <Screen tone="accent" testId="landing-staff">
+      <Screen tone="accent" testId="landing-staff" particles={<Particles calm={calm} />}>
         <SplitBlock
           photo={PHOTO.staff}
           eyebrow={t('landing.blocks.staff.eyebrow')}
@@ -242,7 +212,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- Один продукт на трёх устройствах ----------------------------- */}
-      <Screen tone="muted" testId="landing-devices">
+      <Screen tone="muted" id="devices" testId="landing-devices">
         <Reveal calm={calm}>
           <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
             {t('landing.devices.title')}
@@ -285,7 +255,7 @@ export function LandingPage() {
       </Screen>
 
       {/* --- 6. Схемы движения данных — сохранены целиком ------------------ */}
-      <Screen tone="muted" id="how" testId="landing-flows">
+      <Screen tone="muted" id="how" testId="landing-flows" particles={<Particles calm={calm} />}>
         <Reveal calm={calm}>
           <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
             {t('landing.flows.title')}
