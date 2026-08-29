@@ -104,3 +104,86 @@ test.describe('Гость: карточка заявки по виду', () => {
     await page.unroute('**/guest/order/*')
   })
 })
+
+/**
+ * ОПИСАНИЕ В КАРТОЧКЕ БЛЮДА — ПО ВЫСОТЕ ТЕКСТА.
+ *
+ * Здесь стояла резервация под две строки (`minHeight: 32`). На демо-меню
+ * однострочны ВСЕ описания, и под каждым висела пустая строка: стеклянная
+ * подложка была вдвое выше текста и читалась незакрытой.
+ *
+ * Запас держали ради ровного ряда — и напрасно: ряд равняет сетка, а не запас
+ * внутри карточки. Укус проверяет ОБА свойства сразу, потому что порознь они
+ * ничего не стоят: высота по тексту без ровного ряда — рваная витрина, ровный
+ * ряд с запасом — то, что чинили.
+ */
+test('описание в карточке блюда занимает столько строк, сколько в нём есть', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await enterAsGuest(page)
+  await page.getByTestId('guest-home-tile-kitchen').click()
+  await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 20_000 })
+  await page.waitForTimeout(800)
+
+  const cards = await page.evaluate(() => {
+    /** Сколько строк текст занимает НА САМОМ ДЕЛЕ: по прямоугольникам диапазона. */
+    const lineCount = (node: HTMLElement): number => {
+      const range = document.createRange()
+      range.selectNodeContents(node)
+      return new Set(
+        Array.from(range.getClientRects())
+          .filter((rect) => rect.height > 1)
+          .map((rect) => Math.round(rect.top)),
+      ).size
+    }
+    return Array.from(document.querySelectorAll('[data-testid^="guest-item-"]'))
+      .filter((node) => (node as HTMLElement).offsetHeight > 100)
+      .map((node) => {
+        const card = node as HTMLElement
+        const desc = Array.from(card.querySelectorAll('p, div')).find((child) => {
+          const style = getComputedStyle(child)
+          return style.webkitLineClamp !== 'none' || style.display === '-webkit-box'
+        }) as HTMLElement | undefined
+        return {
+          id: card.dataset.testid ?? '?',
+          top: Math.round(card.getBoundingClientRect().top),
+          height: Math.round(card.getBoundingClientRect().height),
+          desc: desc
+            ? {
+                height: Math.round(desc.getBoundingClientRect().height),
+                line: parseFloat(getComputedStyle(desc).lineHeight),
+                // Обрезка по второй строке остаётся: она про длинное описание,
+                // а не про выравнивание.
+                lines: Math.min(lineCount(desc), 2),
+              }
+            : null,
+        }
+      })
+  })
+  expect(cards.length, 'в меню не нашлось карточек').toBeGreaterThan(3)
+
+  for (const card of cards) {
+    if (!card.desc) continue
+    const expected = card.desc.lines * card.desc.line
+    expect(
+      Math.abs(card.desc.height - expected),
+      `${card.id}: под описание в ${card.desc.lines} стр. отведено ${card.desc.height}px вместо ${Math.round(expected)}px`,
+    ).toBeLessThanOrEqual(2)
+  }
+
+  // …и при этом ряд остаётся ровным: его равняет сетка.
+  const rows = new Map<number, number[]>()
+  for (const card of cards) {
+    const key = Math.round(card.top / 20)
+    rows.set(key, [...(rows.get(key) ?? []), card.height])
+  }
+  let checked = 0
+  for (const [, heights] of rows) {
+    if (heights.length < 2) continue
+    checked += 1
+    expect(
+      Math.max(...heights) - Math.min(...heights),
+      `карточки в ряду разной высоты: ${heights.join(', ')}`,
+    ).toBeLessThanOrEqual(1)
+  }
+  expect(checked, 'ни одного ряда из нескольких карточек — проверять было нечего').toBeGreaterThan(0)
+})
