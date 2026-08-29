@@ -11,6 +11,9 @@ import { FlowDiagram, type FlowStep } from './FlowDiagram';
 import { ProductShot } from './ProductShot';
 import { PhotoHero, Reveal, Screen, SplitBlock, useCalm } from './sections';
 import { Particles } from './Particles';
+import { GuestLanguageMenu } from '@/guest/components/GuestLanguageMenu';
+import { ThemeModeToggle } from '@/components/ThemeModeToggle';
+import { alpha } from '@mui/material/styles';
 
 /**
  * ЛЕНДИНГ ПЛАТФОРМЫ — корень адреса.
@@ -81,17 +84,14 @@ const AUDIENCES = ['cityHotel', 'resort', 'apartments'] as const;
  * Значения не вписаны словами: языки и модули считаются из тех же перечислений,
  * которыми живёт система, поэтому разойтись с ней не могут.
  */
-/** Типы предложения — ровно те, что знает каталог (`OfferingType`). */
-const OFFERING_TYPES = ['product', 'service_request', 'slot', 'info'] as const;
-
-const FIGURES = [
-  { key: 'modules', value: String(MODULES.length) },
-  // Четыре формы, в которые укладывается любая услуга отеля, — ответ на
-  // «а наш спа туда влезет?».
-  { key: 'offerings', value: String(OFFERING_TYPES.length) },
-  // Три рабочих места: продукт закрывает цепочку целиком, а не только телефон.
-  { key: 'workplaces', value: '3' },
-] as const;
+/**
+ * Три утверждения вместо трёх чисел.
+ *
+ * Числа сюда не годятся: счётчик модулей привязывает витрину к нашему реестру
+ * и стареет от первой же правки, а «4 языка» и «0 установок» обещали потолок,
+ * которого план не предполагает. Утверждение живёт дольше числа.
+ */
+const CLAIMS = ['forms', 'chain', 'pay'] as const;
 
 
 const PHOTO = {
@@ -106,8 +106,40 @@ export function LandingPage() {
   const calm = useCalm();
 
   return (
-    <Box sx={{ bgcolor: 'background.default' }} data-testid="landing">
+    <Box sx={{ bgcolor: 'background.default', position: 'relative' }} data-testid="landing">
       {/* --- 1. Первый экран: фотография во всю ширину -------------------- */}
+      {/*
+        Язык и тема — те же переключатели, что у гостя и в панели. Лендинг
+        переведён на четыре языка и умеет обе темы, но доступа к этому не было
+        вовсе: возможность есть, а дотянуться нечем.
+
+        Поверх первого экрана, а не в шапке: шапки у страницы нет, и заводить
+        её ради двух кнопок значит менять устройство страницы.
+      */}
+      <Box
+        data-testid="landing-controls"
+        sx={{
+          position: 'absolute',
+          top: { xs: 12, md: 20 },
+          insetInlineEnd: { xs: 12, md: 24 },
+          zIndex: 2,
+          display: 'flex',
+          gap: 0.5,
+          /*
+            Белым — И САМИМ КНОПКАМ ТОЖЕ. Цвет на контейнере наследуется не
+            всегда: кнопка берёт свой из палитры, и в СВЕТЛОЙ теме иконка
+            выходила тёмной — на тёмной фотографии её не было видно вовсе.
+            Поймано на снимке: в тёмной теме два значка, в светлой один.
+          */
+          color: 'common.white',
+          '& .MuiIconButton-root': { color: 'common.white' },
+          '& .MuiSvgIcon-root': { color: 'inherit' },
+        }}
+      >
+        <GuestLanguageMenu />
+        <ThemeModeToggle />
+      </Box>
+
       <PhotoHero src={PHOTO.hero} calm={calm} testId="landing-hero" overlay={<Particles calm={calm} />}>
         <Stack spacing={2.5} sx={{ maxWidth: 820 }}>
           <Typography
@@ -129,29 +161,26 @@ export function LandingPage() {
       </PhotoHero>
 
       {/* --- 2. Цифры ---------------------------------------------------- */}
-      <Screen tone="muted" testId="landing-figures" full={false}>
+      <Screen tone="muted" testId="landing-claims" full={false}>
         <Box
           sx={{
             display: 'grid',
             gap: { xs: 4, md: 6 },
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-            textAlign: { xs: 'start', sm: 'center' },
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
           }}
         >
-          {FIGURES.map((figure) => (
-            <Reveal key={figure.key} calm={calm}>
+          {CLAIMS.map((claim) => (
+            <Reveal key={claim} calm={calm}>
               <Typography
-                sx={{ fontSize: { xs: 56, md: 76 }, fontWeight: 700, lineHeight: 1 }}
-                color="primary"
-                data-testid={`landing-figure-${figure.key}`}
+                variant="h4"
+                component="p"
+                sx={{ fontWeight: 700, lineHeight: 1.15 }}
+                data-testid={`landing-claim-${claim}`}
               >
-                {figure.value}
+                {t(`landing.claims.${claim}.title`)}
               </Typography>
-              <Typography variant="h6" sx={{ mt: 1 }}>
-                {t(`landing.figures.${figure.key}.title`)}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                {t(`landing.figures.${figure.key}.body`)}
+              <Typography color="text.secondary" sx={{ mt: 1.5, fontSize: 17 }}>
+                {t(`landing.claims.${claim}.body`)}
               </Typography>
             </Reveal>
           ))}
@@ -210,6 +239,49 @@ export function LandingPage() {
             caption={t('landing.shots.room.caption')}
           />
         </SplitBlock>
+      </Screen>
+
+      {/* --- Один продукт на трёх устройствах ----------------------------- */}
+      <Screen tone="muted" testId="landing-devices">
+        <Reveal calm={calm}>
+          <Typography variant="h3" component="h2" sx={{ fontWeight: 700 }}>
+            {t('landing.devices.title')}
+          </Typography>
+          <Typography color="text.secondary" sx={{ mt: 1, mb: 4, maxWidth: 760, fontSize: 18 }}>
+            {t('landing.devices.body')}
+          </Typography>
+        </Reveal>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1.3fr 1.6fr' },
+            gap: { xs: 3, md: 4 },
+            alignItems: 'end',
+          }}
+        >
+          {(['phone', 'tablet', 'desktop'] as const).map((kind) => (
+            <Reveal key={kind} calm={calm}>
+              <Box
+                component="img"
+                src={`/landing/device-${kind}.jpg`}
+                alt=""
+                loading="lazy"
+                data-testid={`landing-device-${kind}`}
+                sx={{
+                  width: '100%',
+                  display: 'block',
+                  borderRadius: kind === 'phone' ? '26px' : '12px',
+                  border: '2px solid',
+                  borderColor: 'text.primary',
+                  boxShadow: (theme) => `0 16px 40px -24px ${alpha(theme.palette.common.black, 0.5)}`,
+                }}
+              />
+              <Typography variant="subtitle2" sx={{ mt: 1.5 }}>
+                {t(`landing.devices.${kind}`)}
+              </Typography>
+            </Reveal>
+          ))}
+        </Box>
       </Screen>
 
       {/* --- 6. Схемы движения данных — сохранены целиком ------------------ */}

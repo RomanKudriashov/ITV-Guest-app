@@ -4,6 +4,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+import { alpha } from '@mui/material/styles';
 
 /**
  * Снимок экрана продукта.
@@ -43,15 +44,36 @@ export function ProductShot({
       <Box
         sx={{
           aspectRatio: device === 'phone' ? '9 / 16' : '16 / 10',
+          /*
+            КОРПУС, А НЕ РАМКА. Было: сплошная восьмипиксельная обводка с
+            умеренным скруглением — читается как рамка для фотографии, а не как
+            аппарат. У настоящего телефона тонкие боковые грани, крупный радиус
+            и вырез под камеру, и именно они делают силуэт узнаваемым.
+          */
           ...(device === 'phone'
             ? {
-                maxWidth: 300,
+                position: 'relative',
+                maxWidth: 288,
                 mx: 'auto',
                 mt: 2,
-                borderRadius: 5,
-                border: '8px solid',
+                borderRadius: '38px',
+                border: '3px solid',
                 borderColor: 'text.primary',
+                boxShadow: (theme) => `0 18px 44px -22px ${alpha(theme.palette.common.black, 0.55)}`,
                 overflow: 'hidden',
+                // Вырез под камеру: тёмная пилюля по верхнему краю экрана.
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 6,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 74,
+                  height: 18,
+                  borderRadius: 9,
+                  bgcolor: 'text.primary',
+                  zIndex: 1,
+                },
               }
             : {}),
           bgcolor: 'action.hover',

@@ -2967,20 +2967,6 @@
       "copy": "ITV Guest — hotel guest service",
       "console": "Platform staff sign-in"
     },
-    "figures": {
-      "modules": {
-        "title": "modules",
-        "body": "Enabled one by one: the hotel pays for what it uses."
-      },
-      "offerings": {
-        "title": "offering types",
-        "body": "Product, request, slot, page. Any hotel service fits one of these four forms."
-      },
-      "workplaces": {
-        "title": "workplaces",
-        "body": "Guest storefront, staff board, hotel panel — the whole chain, not just the phone."
-      }
-    },
     "blocks": {
       "guest": {
         "eyebrow": "Guest",
@@ -3007,6 +2993,27 @@
         "title": "Languages",
         "body": "Today Russian, English, Arabic and Chinese — right-to-left included. The list is not limited by our code: a language model comes next."
       }
+    },
+    "claims": {
+      "forms": {
+        "title": "Any hotel service fits one of four forms",
+        "body": "Product, request, time slot, page. Restaurant, spa, concierge and housekeeping run on one engine, not four."
+      },
+      "chain": {
+        "title": "Guest, doer and manager in one system",
+        "body": "The guest's order lands straight on the doer's board, and the manager sees what is happening. Nothing is passed by voice."
+      },
+      "pay": {
+        "title": "The hotel pays for what it uses",
+        "body": "Capabilities are enabled one by one. What is not needed is neither enabled nor billed."
+      }
+    },
+    "devices": {
+      "title": "One product on three devices",
+      "body": "The guest's phone, the bedside tablet, the big screen for staff. The storefront reflows by width — one service, not three.",
+      "phone": "Guest phone",
+      "tablet": "In-room tablet",
+      "desktop": "Large screen"
     }
   }
 }

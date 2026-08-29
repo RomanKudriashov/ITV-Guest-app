@@ -107,17 +107,35 @@ test('лендинг не делает ни одного запроса к API',
   expect(calls, calls.join('\n')).toEqual([])
 })
 
-test('цифры — только те, что у нас есть', async ({ page }) => {
+test('утверждения вместо цифр', async ({ page }) => {
   await page.goto(`${ROOT}/`)
-  // Считаются из перечислений системы, а не вписаны словами.
-  await expect(page.getByTestId('landing-figure-modules')).toHaveText('9')
-  await expect(page.getByTestId('landing-figure-offerings')).toHaveText('4')
-  await expect(page.getByTestId('landing-figure-workplaces')).toHaveText('3')
 
-  // Языков как ЦИФРЫ здесь больше нет: их число не ограничено планом, и
-  // обещать «четыре» значило бы обещать потолок. Языки живут возможностью.
-  await expect(page.getByTestId('landing-figure-languages')).toHaveCount(0)
-  await expect(page.getByTestId('landing-figure-installs')).toHaveCount(0)
+  // Числа сняты целиком: счётчик модулей привязывал витрину к нашему реестру и
+  // старел от первой же правки, а «4 языка» и «0 установок» обещали потолок,
+  // которого план не предполагает.
+  for (const claim of ['forms', 'chain', 'pay']) {
+    await expect(page.getByTestId(`landing-claim-${claim}`)).toBeVisible({ timeout: 20_000 })
+  }
+  for (const gone of ['modules', 'offerings', 'workplaces', 'languages', 'installs']) {
+    await expect(page.getByTestId(`landing-figure-${gone}`)).toHaveCount(0)
+  }
+})
+
+test('переключатели языка и темы на месте', async ({ page }) => {
+  // Лендинг переведён на четыре языка и умеет обе темы — доступа к этому не
+  // было вовсе: возможность есть, дотянуться нечем.
+  await page.goto(`${ROOT}/`)
+  const controls = page.getByTestId('landing-controls')
+  await expect(controls).toBeVisible({ timeout: 20_000 })
+  await expect(controls.locator('svg')).toHaveCount(2)
+})
+
+test('один продукт на трёх устройствах', async ({ page }) => {
+  await page.goto(`${ROOT}/`)
+  await page.getByTestId('landing-devices').scrollIntoViewIfNeeded()
+  for (const kind of ['phone', 'tablet', 'desktop']) {
+    await expect(page.getByTestId(`landing-device-${kind}`)).toBeVisible({ timeout: 20_000 })
+  }
 })
 
 test('схемы движения данных сохранены', async ({ page }) => {

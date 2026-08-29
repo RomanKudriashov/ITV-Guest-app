@@ -18,8 +18,9 @@ import { useTheme } from '@mui/material/styles';
  * ПРИ `prefers-reduced-motion` ХОЛСТ НЕ СОЗДАЁТСЯ ВОВСЕ — не «останавливается»,
  * а не появляется: остановленная анимация всё равно стоит разметки и памяти.
  *
- * Ощущение медленного и дорогого даёт не количество точек, а их скорость и
- * низкий контраст; это же и самое дешёвое по кадрам.
+ * ЧИСЛА ПОДОБРАНЫ ЗАМЕРОМ, А НЕ НА ГЛАЗ. Первая версия была невидимой: 48
+ * точек радиусом до 2.2 px при 22% непрозрачности закрашивали 0.037% холста —
+ * поверх яркой фотографии это ноль. Считал не глазами, а чтением пикселей.
  */
 export function Particles({ calm }: { calm: boolean }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
@@ -34,7 +35,7 @@ export function Particles({ calm }: { calm: boolean }) {
     if (!ctx) return undefined;
 
     const weak = (navigator.hardwareConcurrency ?? 8) <= 4;
-    const count = weak ? 24 : 48;
+    const count = weak ? 70 : 140;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let width = 0;
     let height = 0;
@@ -45,11 +46,11 @@ export function Particles({ calm }: { calm: boolean }) {
     const dots = Array.from({ length: count }, () => ({
       x: Math.random(),
       y: Math.random(),
-      r: 0.6 + Math.random() * 1.6,
+      r: 1.4 + Math.random() * 2.6,
       // Медленно: полный проход по экрану занимает минуты, а не секунды.
       vx: (Math.random() - 0.5) * 0.00016,
       vy: -0.00006 - Math.random() * 0.00012,
-      a: 0.06 + Math.random() * 0.16,
+      a: 0.3 + Math.random() * 0.45,
     }));
 
     const resize = () => {
@@ -69,10 +70,17 @@ export function Particles({ calm }: { calm: boolean }) {
         if (dot.y < -0.05) dot.y = 1.05;
         if (dot.x < -0.05) dot.x = 1.05;
         if (dot.x > 1.05) dot.x = -0.05;
+        // Лёгкое свечение: радиальный градиент вместо плоского круга. Он и
+        // даёт «дорого» — плоские точки читаются как пыль на объективе.
+        const cx = dot.x * width;
+        const cy = dot.y * height;
+        const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, dot.r * 3);
+        halo.addColorStop(0, tint);
+        halo.addColorStop(1, 'transparent');
         ctx.globalAlpha = dot.a;
-        ctx.fillStyle = tint;
+        ctx.fillStyle = halo;
         ctx.beginPath();
-        ctx.arc(dot.x * width, dot.y * height, dot.r, 0, Math.PI * 2);
+        ctx.arc(cx, cy, dot.r * 3, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;

@@ -94,3 +94,29 @@ test('панель отеля', async ({ page }) => {
   await expect(page.getByTestId('cms-dashboard')).toBeVisible({ timeout: 30_000 })
   await shoot(page, 'cms')
 })
+
+/*
+  ОДИН ПРОДУКТ НА ТРЁХ УСТРОЙСТВАХ — каждый кадр в СВОЁМ вьюпорте.
+
+  Растянуть телефонный снимок до планшета значило бы показать не то, что видит
+  человек: витрина перестраивается по ширине, и на планшете у неё другая сетка.
+  Кадр обязан быть снят тем размером, о котором рассказывает.
+*/
+test.describe('витрина на трёх устройствах', () => {
+  for (const [name, viewport] of [
+    ['device-phone', { width: 390, height: 844 }],
+    ['device-tablet', { width: 834, height: 1112 }],
+    ['device-desktop', { width: 1440, height: 900 }],
+  ] as const) {
+    test(name, async ({ browser }) => {
+      const context = await browser.newContext({ viewport })
+      const page = await context.newPage()
+      await page.goto('/')
+      await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
+      await page.getByTestId('guest-room-submit').click()
+      await expect(page.getByTestId('guest-nav-home')).toBeVisible({ timeout: 30_000 })
+      await shoot(page, name)
+      await context.close()
+    })
+  }
+})
