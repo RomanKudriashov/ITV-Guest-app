@@ -32,11 +32,11 @@ import { ApiError } from '@/api/client';
 import {
   assignItemBadges,
   createItem,
-  fetchAllergens,
+  fetchAllergenPage,
   fetchBadges,
   fetchCategories,
   fetchItem,
-  fetchMarkers,
+  fetchMarkerPage,
   putItemImages,
   updateItem,
 } from '@/api/cms';
@@ -239,16 +239,7 @@ export function ItemEditorPage() {
     [badgesQuery.data],
   );
 
-  const allergensQuery = useQuery({ queryKey: queryKeys.allergens, queryFn: fetchAllergens });
-  const markersQuery = useQuery({ queryKey: queryKeys.markers, queryFn: fetchMarkers });
-  const activeAllergens = useMemo(
-    () => (allergensQuery.data ?? []).filter((a) => a.is_active),
-    [allergensQuery.data],
-  );
-  const activeMarkers = useMemo(
-    () => (markersQuery.data ?? []).filter((m) => m.is_active),
-    [markersQuery.data],
-  );
+
 
   const [form, setForm] = useState<ItemForm>(() =>
     emptyForm(
@@ -271,6 +262,38 @@ export function ItemEditorPage() {
     return (chosen?.category.noun as OfferingNoun | undefined) ?? null;
   }, [flatCategories, form.category_id]);
   const w = useCatalogWords(noun);
+
+  /*
+    СПРАВОЧНИКИ СПРАШИВАЮТСЯ ПОД СЛОВО ЭТОЙ ПОЗИЦИИ.
+
+    Массаж не содержит глютена, трансфер не бывает халяльным. Раньше карточка
+    показывала оба справочника всем подряд — пустыми полями, которые сотрудник
+    спа честно пытался заполнить, а потом переставал верить экрану вообще.
+
+    Отбор считает СЕРВЕР (`apps/catalog/facet_scope.py`), а не этот экран:
+    то же правило режет и гостевую витрину, и два его экземпляра разошлись бы
+    на первой правке одного из них.
+  */
+  const allergensQuery = useQuery({
+    queryKey: [...queryKeys.allergens, noun ?? 'any'],
+    queryFn: () => fetchAllergenPage(noun ?? undefined),
+  });
+  const markersQuery = useQuery({
+    queryKey: [...queryKeys.markers, noun ?? 'any'],
+    queryFn: () => fetchMarkerPage(noun ?? undefined),
+  });
+  // «Справочник здесь неприменим» — это НЕ «записей пока нет». Первое убирает
+  // раздел с экрана совсем, второе оставляет его с подсказкой завести запись.
+  const allergensApply = allergensQuery.data?.kind_applies ?? true;
+  const markersApply = markersQuery.data?.kind_applies ?? true;
+  const activeAllergens = useMemo(
+    () => (allergensQuery.data?.items ?? []).filter((a) => a.is_active),
+    [allergensQuery.data],
+  );
+  const activeMarkers = useMemo(
+    () => (markersQuery.data?.items ?? []).filter((m) => m.is_active),
+    [markersQuery.data],
+  );
 
   const [images, setImages] = useState<EditableImage[]>([]);
   const [groups, setGroups] = useState<DraftGroup[]>([]);
@@ -1118,6 +1141,13 @@ export function ItemEditorPage() {
           <Card variant="outlined" sx={{ borderColor: 'divider' }} data-testid="cms-item-facets">
             <CardContent>
               <Stack spacing={2}>
+                {/*
+                  НЕПРИМЕНИМОГО НЕТ ВОВСЕ — не серое поле, а отсутствие. Серое
+                  поле говорит «сюда можно, но не сейчас»; правда другая: сюда
+                  нельзя никогда, и место занимать незачем.
+                */}
+                {allergensApply ? (
+                <>
                 <Typography variant="subtitle1">{t('item.allergens')}</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   {activeAllergens.map((allergen) => {
@@ -1144,9 +1174,13 @@ export function ItemEditorPage() {
                     </Typography>
                   ) : null}
                 </Stack>
+                </>
+                ) : null}
 
-                <Divider />
+                {allergensApply && markersApply ? <Divider /> : null}
 
+                {markersApply ? (
+                <>
                 <Typography variant="subtitle1">{t('item.markers')}</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   {activeMarkers.map((marker) => {
@@ -1173,8 +1207,10 @@ export function ItemEditorPage() {
                     </Typography>
                   ) : null}
                 </Stack>
+                </>
+                ) : null}
 
-                <Divider />
+                {allergensApply || markersApply ? <Divider /> : null}
 
                 <Typography variant="subtitle1">{t('item.characteristics')}</Typography>
                 <Stack spacing={1.5} data-testid="cms-item-characteristics">

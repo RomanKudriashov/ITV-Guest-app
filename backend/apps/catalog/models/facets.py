@@ -24,6 +24,12 @@ class Allergen(TenantModel):
     is_system = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    # ГДЕ ЭТА ЗАПИСЬ ОСМЫСЛЕНА — сужение отеля поверх области справочника.
+    # Пусто — «везде, где применим справочник» (см. apps/catalog/facet_scope.py).
+    # Список слов каталога: dish, goods и т.д. Сужение НЕ стирает проставленных
+    # связей: значение остаётся в базе и возвращается, как только применимость
+    # вернули.
+    applies_to = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "catalog_allergen"
@@ -66,6 +72,12 @@ class DietaryMarker(TenantModel):
     is_system = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    # ГДЕ ЭТА ЗАПИСЬ ОСМЫСЛЕНА — сужение отеля поверх области справочника.
+    # Пусто — «везде, где применим справочник» (см. apps/catalog/facet_scope.py).
+    # Список слов каталога: dish, goods и т.д. Сужение НЕ стирает проставленных
+    # связей: значение остаётся в базе и возвращается, как только применимость
+    # вернули.
+    applies_to = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "catalog_dietary_marker"

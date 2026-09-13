@@ -414,20 +414,51 @@ def _dict_facets(rows, language) -> list[dict[str, Any]]:
     return out
 
 
+def _item_noun(item) -> str:
+    """Слово каталога позиции — через раздел к заведению."""
+    from apps.catalog.nouns import noun_for_service
+
+    category = getattr(item, "category", None)
+    return noun_for_service(getattr(category, "service", None) if category else None)
+
+
+def _applicable(kind: str, rows, noun: str):
+    """
+    Отсеять то, что этой позиции неприменимо.
+
+    ТО ЖЕ ПРАВИЛО, ЧТО У ПАНЕЛИ, и позвано оно из одного места
+    (`apps/catalog/facet_scope.py`). Второй экземпляр правила здесь означал бы,
+    что отель настроил применимость у себя, а гость увидел другое — и спорить
+    было бы не о чем: оба экрана «правы» по своей копии.
+    """
+    from apps.catalog.facet_scope import applies
+
+    return [row for row in rows if applies(kind, getattr(row, "applies_to", None), noun)]
+
+
 def _allergens(item, language: str | None = None) -> list[dict[str, Any]]:
     """Аллергены позиции из словаря (join), локализованные, в порядке справочника.
 
     Пустое → [] (карточка не рисует блок). Легаси-массив item.allergens и
     транзитный фолбэк удалены вместе с колонкой — источник только join.
+
+    Неприменимое СКРЫВАЕТСЯ, А НЕ УДАЛЯЕТСЯ: связь остаётся в базе, и вернув
+    применимость, отель увидит проставленное руками на месте.
     """
+    from apps.catalog.facet_scope import FacetKind
+
     links = item.item_allergens.select_related("allergen").all()
-    return _dict_facets([link.allergen for link in links if link.allergen], language)
+    rows = [link.allergen for link in links if link.allergen]
+    return _dict_facets(_applicable(FacetKind.ALLERGENS, rows, _item_noun(item)), language)
 
 
 def _markers(item, language: str | None = None) -> list[dict[str, Any]]:
-    """Диетические маркеры позиции из словаря (join)."""
+    """Диетические маркеры позиции из словаря (join). Отбор — как у аллергенов."""
+    from apps.catalog.facet_scope import FacetKind
+
     links = item.item_markers.select_related("marker").all()
-    return _dict_facets([link.marker for link in links if link.marker], language)
+    rows = [link.marker for link in links if link.marker]
+    return _dict_facets(_applicable(FacetKind.MARKERS, rows, _item_noun(item)), language)
 
 
 def _characteristics(item, language: str | None = None) -> list[dict[str, Any]]:

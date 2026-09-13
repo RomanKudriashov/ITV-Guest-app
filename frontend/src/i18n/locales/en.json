@@ -78,7 +78,17 @@
     "system": "System",
     "addPlaceholder": "New entry name",
     "systemProtected": "A system entry cannot be deleted — deactivate it",
-    "empty": "The dictionaries are empty — no allergens, no markers."
+    "empty": "The dictionaries are empty — no allergens, no markers.",
+    "scopeLabel": "Show for",
+    "scopeAll": "All types",
+    "notApplicable": "“{{what}}” never has this dictionary — that is how the dictionary works, not a hotel setting",
+    "emptyForType": "No entries for “{{what}}” yet",
+    "emptyForTypeAction": "Add one",
+    "appliesTo": "Where it applies",
+    "appliesEverywhere": "Everywhere the dictionary applies",
+    "systemGroup": "Ours — we keep them updated",
+    "hotelGroup": "The hotel’s — added and edited by the hotel",
+    "narrowHint": "Narrowing hides the entry on cards but erases nothing: restore it and everything is back"
   },
   "showcaseCms": {
     "title": "Home showcase",

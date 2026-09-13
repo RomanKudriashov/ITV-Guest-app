@@ -28,6 +28,7 @@ import type {
   ModifierOptionPayload,
   DictEntry,
   DictEntryPayload,
+  DictPage,
   QuickActions,
   ReorderEntry,
   Schedule,
@@ -460,8 +461,20 @@ export function fetchBrandLook(): Promise<BrandLook> {
 
 /* ── 9b. Allergen / dietary-marker dictionaries ────────────────────────── */
 
+/**
+ * Справочник аллергенов.
+ *
+ * `noun` — слово каталога, для которого спрашивают. Задано: ответ уже отобран
+ * по применимости, и `kind_applies` говорит, осмыслен ли справочник вообще.
+ * Экран НЕ повторяет правило отбора у себя — иначе панель и витрина разошлись
+ * бы на первой же правке одной из копий.
+ */
+export function fetchAllergenPage(noun?: string): Promise<DictPage> {
+  return api.get<DictPage>('/cms/allergens', noun ? { query: { noun } } : undefined);
+}
+
 export function fetchAllergens(): Promise<DictEntry[]> {
-  return api.get<ListPage<DictEntry>>('/cms/allergens').then((page) => page.items);
+  return fetchAllergenPage().then((page) => page.items);
 }
 export function createAllergen(payload: DictEntryPayload): Promise<DictEntry> {
   return api.post<DictEntry>('/cms/allergens', payload);
@@ -472,8 +485,13 @@ export function updateAllergen(id: string, payload: Partial<DictEntryPayload>): 
 export function deleteAllergen(id: string): Promise<void> {
   return api.delete<void>(`/cms/allergens/${id}`);
 }
+/** Справочник маркеров; `noun` — как у аллергенов выше. */
+export function fetchMarkerPage(noun?: string): Promise<DictPage> {
+  return api.get<DictPage>('/cms/markers', noun ? { query: { noun } } : undefined);
+}
+
 export function fetchMarkers(): Promise<DictEntry[]> {
-  return api.get<ListPage<DictEntry>>('/cms/markers').then((page) => page.items);
+  return fetchMarkerPage().then((page) => page.items);
 }
 export function createMarker(payload: DictEntryPayload): Promise<DictEntry> {
   return api.post<DictEntry>('/cms/markers', payload);

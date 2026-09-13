@@ -78,7 +78,17 @@
     "system": "系统",
     "addPlaceholder": "新条目名称",
     "systemProtected": "系统条目不可删除——请停用",
-    "empty": "字典为空——既无过敏原也无标记。"
+    "empty": "字典为空——既无过敏原也无标记。",
+    "scopeLabel": "显示范围",
+    "scopeAll": "全部类型",
+    "notApplicable": "「{{what}}」不存在该字典——这是字典本身的性质，而非酒店设置",
+    "emptyForType": "「{{what}}」暂无条目",
+    "emptyForTypeAction": "新建",
+    "appliesTo": "适用范围",
+    "appliesEverywhere": "字典适用的全部范围",
+    "systemGroup": "我方维护",
+    "hotelGroup": "酒店自建与维护",
+    "narrowHint": "收窄只是在卡片中隐藏条目，不会删除任何数据：恢复后一切照旧"
   },
   "showcaseCms": {
     "title": "首页橱窗",

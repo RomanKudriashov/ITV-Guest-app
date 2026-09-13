@@ -70,6 +70,12 @@ class CategoryOut(Schema):
     items_count: int
     service_fee_applies: bool = True
     min_order_minor: int | None = None
+    # Как называть содержимое раздела: «блюдо», «услуга», «товар», «страница»,
+    # «позиция». Поле ОБЪЯВЛЕНО ЗДЕСЬ, а не только положено в словарь: схема
+    # ninja режет всё, чего в ней нет, и слово, посчитанное сервисным слоем,
+    # молча не доезжало до экрана. Умолчание нейтральное — раздел без
+    # заведения теоретически возможен, и «блюдом» его звать не за что.
+    noun: str = "item"
 
 class CategoryTreeOut(CategoryOut):
     children: list[dict[str, Any]] = []
@@ -280,11 +286,15 @@ class DictEntryIn(Schema):
     code: str | None = None
     is_active: bool = True
     sort_order: int = 100
+    # Сужение области записи словами каталога («dish», «goods»…). Пусто —
+    # «как у справочника»: см. apps/catalog/facet_scope.py.
+    applies_to: list[str] = []
 
 class DictEntryPatch(Schema):
     title: dict | None = None
     is_active: bool | None = None
     sort_order: int | None = None
+    applies_to: list[str] | None = None
 
 class QuickActionsIn(Schema):
     selected: list[str] = []

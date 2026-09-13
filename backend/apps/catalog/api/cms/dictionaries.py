@@ -67,9 +67,20 @@ def cms_set_badge_on_item(request: HttpRequest, badge_id: str, item_id: str, pay
 
 @router.get("/allergens", summary="Справочник аллергенов отеля")
 def cms_list_allergens(
-    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+    request: HttpRequest,
+    search: str = "",
+    noun: str = "",
+    limit: int | None = None,
+    offset: int = 0,
 ):
-    return svc.list_allergens(search=search, limit=limit, offset=offset)
+    """
+    `noun` — слово каталога, для которого спрашивают («dish», «service»…).
+
+    Задано: в ответе только применимые записи, а `kind_applies` говорит,
+    осмыслен ли справочник для этого слова вообще. Без него ответ прежний —
+    весь справочник целиком, как его видит экран настройки.
+    """
+    return svc.list_allergens(search=search, noun=noun, limit=limit, offset=offset)
 
 
 @router.post("/allergens", response={201: dict}, summary="Добавить свой аллерген")
@@ -90,9 +101,14 @@ def cms_delete_allergen(request: HttpRequest, entry_id: str):
 
 @router.get("/markers", summary="Справочник диетических маркеров отеля")
 def cms_list_markers(
-    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+    request: HttpRequest,
+    search: str = "",
+    noun: str = "",
+    limit: int | None = None,
+    offset: int = 0,
 ):
-    return svc.list_markers(search=search, limit=limit, offset=offset)
+    """`noun` — как у аллергенов выше: отбор по применимости и флаг справочника."""
+    return svc.list_markers(search=search, noun=noun, limit=limit, offset=offset)
 
 
 @router.post("/markers", response={201: dict}, summary="Добавить свой маркер")

@@ -200,6 +200,47 @@ if (Object.keys(py).length === 0 || Object.keys(ts).length === 0) {
   problems.push('реестры поведений не прочитались — сторож ослеп');
 }
 
+/* ── 4. Область справочников ────────────────────────────────────────────── */
+
+// Третья пара близнецов: какие слова каталога допускает справочник. Экран
+// рисует по ней переключатели применимости, сервер по ней же отбирает записи —
+// разойдясь, они пообещают отелю настройку, которой сервер не исполнит.
+const pyScope = read(`${BACKEND}/apps/catalog/facet_scope.py`);
+const tsScope = read(`${ROOT}/src/cms/dictionaries/DictionariesPage.tsx`);
+
+function pyKindScope(source) {
+  const out = {};
+  const block = blockAfter(source, 'KIND_SCOPE: dict[str, frozenset[str]]') ?? '';
+  for (const match of block.matchAll(/FacetKind\.([A-Z_]+):\s*frozenset\(\{([^}]*)\}\)/g)) {
+    const words = [...match[2].matchAll(/OfferingNoun\.([A-Z_]+)/g)].map((m) => m[1].toLowerCase());
+    out[match[1].toLowerCase()] = words.sort();
+  }
+  return out;
+}
+
+function tsKindScope(source) {
+  const out = {};
+  const block = blockAfter(source, 'const KIND_WORDS: Record<Kind, OfferingNoun[]>') ?? '';
+  for (const match of block.matchAll(/([a-z]+):\s*\[([^\]]*)\]/g)) {
+    out[match[1]] = [...match[2].matchAll(/'([a-z]+)'/g)].map((m) => m[1]).sort();
+  }
+  return out;
+}
+
+const pyKinds = pyKindScope(pyScope);
+const tsKinds = tsKindScope(tsScope);
+
+if (Object.keys(pyKinds).length === 0 || Object.keys(tsKinds).length === 0) {
+  problems.push('области справочников не прочитались — сторож ослеп');
+}
+for (const kind of new Set([...Object.keys(pyKinds), ...Object.keys(tsKinds)])) {
+  const left = (pyKinds[kind] ?? []).join(',');
+  const right = (tsKinds[kind] ?? []).join(',');
+  if (left !== right) {
+    problems.push(`область справочника «${kind}»: сервер [${left}], фронт [${right}]`);
+  }
+}
+
 /* ── Ответ ──────────────────────────────────────────────────────────────── */
 
 if (problems.length) {
@@ -209,5 +250,5 @@ if (problems.length) {
 
 console.log(
   `Реестры сходятся: слов ${Object.keys(pyNouns).length} на ${serviceTypes.length} типов заведений, ` +
-    `поведений ${Object.keys(py).length}`,
+    `поведений ${Object.keys(py).length}, областей справочников ${Object.keys(pyKinds).length}`,
 );

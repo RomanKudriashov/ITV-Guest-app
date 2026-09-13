@@ -336,6 +336,27 @@ export interface DictEntry {
   is_system: boolean;
   is_active: boolean;
   sort_order: number;
+  /**
+   * Сужение отеля: слова каталога, при которых запись осмыслена. Пусто —
+   * «как у справочника целиком». Правится переключателями; сервер отдаёт его
+   * СЫРЫМ, чтобы экран менял намерение, а не посчитанный результат.
+   */
+  applies_to?: OfferingNoun[];
+  /** Посчитанная область — сужение, пересечённое с областью справочника. */
+  scope?: OfferingNoun[];
+}
+
+/**
+ * Страница справочника.
+ *
+ * `kind_applies` отвечает на вопрос, которого не было у голого списка:
+ * «пусто, потому что не завели» или «пусто, потому что здесь этого не бывает».
+ * Первое просит завести запись, второе — убрать раздел с экрана совсем.
+ */
+export interface DictPage {
+  items: DictEntry[];
+  total: number;
+  kind_applies: boolean;
 }
 
 export interface DictEntryPayload {
@@ -343,6 +364,7 @@ export interface DictEntryPayload {
   code?: string;
   is_active?: boolean;
   sort_order?: number;
+  applies_to?: OfferingNoun[];
 }
 
 export interface CmsCharacteristic {

@@ -26,6 +26,7 @@ from apps.hotels.models import Hotel, Schedule
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
+from apps.catalog.facet_scope import FacetKind
 from apps.catalog.models import (
     Allergen,
     Badge,
@@ -1484,7 +1485,10 @@ def assign_item_badges(item_id, badge_ids: list) -> list[dict]:
 # --- Справочники аллергенов и маркеров ---------------------------------------
 
 
-def _serialize_dict_entry(row) -> dict:
+def _serialize_dict_entry(row, *, kind: str = "") -> dict:
+    from apps.catalog.facet_scope import entry_scope
+
+    applies_to = list(row.applies_to or [])
     return {
         "id": str(row.pk),
         "code": row.code,
@@ -1492,23 +1496,86 @@ def _serialize_dict_entry(row) -> dict:
         "is_system": row.is_system,
         "is_active": row.is_active,
         "sort_order": row.sort_order,
+        # СУЖЕНИЕ ОТЕЛЯ — как он его задал: пусто значит «как у справочника».
+        # Отдаём именно сырое значение, а не посчитанную область: экран
+        # переключателями правит ЕГО, и подменить его вычисленным множеством
+        # значило бы записать обратно то, чего отель не выбирал.
+        "applies_to": applies_to,
+        # ПОСЧИТАННАЯ ОБЛАСТЬ — чтобы экран не повторял правило пересечения.
+        # Пустое сужение и сужение, целиком выпавшее из области справочника,
+        # выглядят на экране одинаково только здесь, и это правильно: видно
+        # результат, а правит человек намерение.
+        "scope": sorted(entry_scope(kind, applies_to)) if kind else [],
     }
 
 
-def list_allergens(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
-    return _dict_page(Allergen, search=search, limit=limit, offset=offset)
+def list_allergens(
+    *, search: str = "", noun: str = "", limit: int | None = None, offset: int = 0
+) -> dict:
+    return _dict_page(
+        Allergen, kind=FacetKind.ALLERGENS, search=search, noun=noun, limit=limit, offset=offset
+    )
 
 
-def list_markers(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
-    return _dict_page(DietaryMarker, search=search, limit=limit, offset=offset)
+def list_markers(
+    *, search: str = "", noun: str = "", limit: int | None = None, offset: int = 0
+) -> dict:
+    return _dict_page(
+        DietaryMarker, kind=FacetKind.MARKERS, search=search, noun=noun, limit=limit, offset=offset
+    )
 
 
-def _dict_page(model, *, search: str, limit: int | None, offset: int) -> dict:
-    """Справочники ищутся по КОДУ и НАЗВАНИЮ — больше у записи ничего и нет."""
-    from apps.core.listing import page as list_page, search as apply_search
+def _dict_page(
+    model, *, kind: str, search: str, noun: str, limit: int | None, offset: int
+) -> dict:
+    """
+    Справочники ищутся по КОДУ и НАЗВАНИЮ — больше у записи ничего и нет.
+
+    `noun` — слово каталога, для которого спрашивают. Задано: отдаём только то,
+    что этому слову применимо, и говорим в `kind_applies`, осмыслен ли вообще
+    весь справочник. Разница существенная: «применимых записей нет» просит
+    завести их, «справочник неприменим» просит убрать раздел с экрана совсем.
+
+    ФИЛЬТР СЧИТАЕТСЯ В ПИТОНЕ, А НЕ ЗАПРОСОМ. Область — это пересечение
+    сужения записи с областью справочника, и выразить его условием к JSON-полю
+    можно только повторив правило второй раз, уже на языке базы. Справочники
+    отеля — это десятки строк, а не миллионы; цена перебора здесь ничтожна,
+    цена второго экземпляра правила — нет.
+    """
+    from apps.catalog.facet_scope import applies, kind_applies
+    from apps.core.listing import search as apply_search
 
     queryset = apply_search(model.objects.all(), search, ("code",), json_fields=("title",))
-    return list_page(queryset, limit=limit, offset=offset, serialize=_serialize_dict_entry)
+    rows = [_serialize_dict_entry(row, kind=kind) for row in queryset]
+    if noun:
+        rows = [row for row in rows if applies(kind, row["applies_to"], noun)]
+
+    # Форма ответа та же, что у `core.listing.page`, но страница нарезается
+    # здесь: отбор по применимости уже увёл нас из запроса в память, и
+    # `total`, посчитанный базой, разошёлся бы с тем, что видно в списке.
+    total = len(rows)
+    start = max(0, int(offset or 0))
+    page = rows[start : start + int(limit)] if limit else rows[start:]
+    return {
+        "items": page,
+        "total": total,
+        "kind_applies": kind_applies(kind, noun) if noun else True,
+    }
+
+
+def _clean_applies_to(value) -> list[str]:
+    """
+    Сужение области — только известными словами каталога.
+
+    Мусор в этом поле опаснее обычного: оно решает, показывать ли строку, и
+    опечатка «dishes» вместо «dish» тихо убрала бы аллерген со всех блюд.
+    Неизвестные слова отбрасываются молча — падать тут нечем, а показывать
+    лишнее хуже, чем не сохранить то, чего не существует.
+    """
+    from apps.catalog.nouns import OfferingNoun
+
+    known = set(OfferingNoun.values)
+    return [str(item) for item in (value or []) if str(item) in known]
 
 
 def _create_dict_entry(model, data: dict, *, prefix: str):
@@ -1528,6 +1595,7 @@ def _create_dict_entry(model, data: dict, *, prefix: str):
         is_system=False,  # созданное отелем — не системное, его можно удалить
         is_active=bool(data.get("is_active", True)),
         sort_order=int(data.get("sort_order", 100)),
+        applies_to=_clean_applies_to(data.get("applies_to")),
     )
 
 
@@ -1542,6 +1610,12 @@ def _update_dict_entry(model, entry_id, data: dict):
         row.is_active = bool(data["is_active"])
     if "sort_order" in data:
         row.sort_order = int(data["sort_order"])
+    if "applies_to" in data:
+        # СУЖЕНИЕ МЕНЯЕТ ТОЛЬКО ПОКАЗ. Связи позиций с этим значением не
+        # трогаются ни одной строкой: отель, попробовавший настройку и
+        # вернувший её обратно, обязан увидеть всё на месте — а «попробовать»
+        # делают в первый же день.
+        row.applies_to = _clean_applies_to(data["applies_to"])
     row.save()
     return row
 
