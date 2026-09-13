@@ -89,3 +89,21 @@ class OrderStatusChange(TenantModel):
 
     def __str__(self) -> str:
         return f"{self.order_id}: {self.from_status_id} → {self.to_status_id}"
+
+    @property
+    def is_rollback(self) -> bool:
+        """
+        Это движение НАЗАД по потоку, а не вперёд.
+
+        Считается, а не хранится отдельным полем: откат полностью определён
+        тем, что в записи уже есть — откуда и куда. Поле рядом с этими двумя
+        было бы третьей копией одного факта, и разошлось бы с ними при первой
+        же правке в обход модели.
+
+        Отмена откатом не считается ни в одном потоке: код отмены стоит
+        ПОСЛЕДНИМ в пресете (board 5, остальные 3), то есть по порядку это
+        движение вперёд. Так и правильно — отменить не значит вернуть назад.
+        """
+        if self.from_status_id is None:
+            return False
+        return self.to_status.sort_order < self.from_status.sort_order
