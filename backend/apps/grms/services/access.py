@@ -23,6 +23,20 @@ class ModuleDisabled(DomainError):
 
 
 def hotel_with_module() -> Hotel:
+    """
+    Калитка раздела «Управление номером»: модуль включён И спрашивает админ.
+
+    Роль проверяется ЗДЕСЬ, потому что через эту функцию проходят все девять
+    CMS-ручек раздела (типы, доступ, диагностика) и ни одна не минует её.
+    Гостевой и он-прем роутеры сюда не ходят — у них свой вход.
+
+    Раньше здесь стоял только модуль, и управляющий рестораном читал журнал
+    обмена с оборудованием и состав типов номеров, хотя экран «Управление
+    номером» ему не показан: пункт меню помечен `hotel_admin_only`.
+    """
+    from apps.accounts.services.roles import require_hotel_admin
+
+    require_hotel_admin()
     hotel = Hotel.objects.get(pk=require_hotel_id())
     if HotelModule.Code.ROOM_CONTROL not in enabled_module_codes(hotel):
         raise ModuleDisabled("Модуль «Управление номером» не подключён")

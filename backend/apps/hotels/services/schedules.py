@@ -14,6 +14,7 @@ from typing import Any, Iterable
 
 from django.db import transaction
 
+from apps.accounts.services.roles import require_hotel_admin
 from apps.core.errors import NotFoundError, ValidationError
 
 from apps.hotels.models import Schedule, ScheduleInterval
@@ -90,6 +91,20 @@ def _validate_intervals(intervals: Iterable[dict]) -> list[dict]:
 
 @transaction.atomic
 def create_schedule(data: dict) -> Schedule:
+    """
+    ЗАПИСЬ АДМИНСКАЯ, ЧТЕНИЕ ОБЩЕЕ — и это решение, а не недоделка.
+
+    Резать расписания по заведениям НЕЧЕМ: у модели нет ни точки, ни сервиса —
+    только имя и правила времени. Ссылаются на расписание СВЕРХУ категория,
+    позиция, локация, сервис, включение и слот, причём одно расписание законно
+    делится между заведениями («будни 9–18» — общее). Выдумать связь ради
+    симметрии значило бы завести вторую правду о владельце расписания.
+
+    Поэтому читать их может каждый, кто вообще допущен в CMS: выбрать готовое
+    расписание для своей позиции — обычная работа управляющего. А заводить и
+    менять общий на весь отель справочник — уровень отеля.
+    """
+    require_hotel_admin()
     name = (data.get("name") or "").strip()
     if not name:
         raise ValidationError("Укажите название расписания", field="name")
@@ -109,6 +124,9 @@ def create_schedule(data: dict) -> Schedule:
 
 @transaction.atomic
 def update_schedule(schedule_id, data: dict) -> Schedule:
+    # Расписание общее на отель — правка задевает все заведения, которые на
+    # него сослались.
+    require_hotel_admin()
     schedule = get_schedule(schedule_id)
 
     if "name" in data:
@@ -142,6 +160,8 @@ def _replace_intervals(schedule: Schedule, intervals: list[dict]) -> None:
 @transaction.atomic
 def delete_schedule(schedule_id) -> None:
     from apps.catalog.models import Category, Item
+
+    require_hotel_admin()
 
     schedule = get_schedule(schedule_id)
     # Мягкое удаление не тронуло бы внешние ключи, и позиции продолжили бы

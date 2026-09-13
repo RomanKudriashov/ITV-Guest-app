@@ -56,8 +56,19 @@ def serialize_room(
 
 
 def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
-    """Поиск по НОМЕРУ и ЭТАЖУ — единственное, что о номере помнят наизусть."""
+    """
+    Поиск по НОМЕРУ и ЭТАЖУ — единственное, что о номере помнят наизусть.
+
+    ЧТЕНИЕ ЗАКРЫТО АДМИНОМ, как и запись рядом. Правка номеров давно требовала
+    `require_hotel_admin`, а список отдавался любому управляющему — то есть
+    фонд номеров отеля читал руководитель одного ресторана. Экран «Номера»
+    ему и так не показан (пункт меню `hotel_admin_only`), так что закрытие
+    ручки ничего у него не отнимает: оно лишь перестаёт отдавать то, за чем он
+    не может прийти по интерфейсу.
+    """
     from apps.core.listing import page as list_page, search as apply_search
+
+    require_hotel_admin()
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
     rooms = apply_search(Room.objects.order_by("number"), search, ("number", "floor"))
@@ -91,6 +102,12 @@ def _control_types() -> dict:
 
 
 def get_room(room_id) -> Room:
+    """
+    Единственная дверь к одному номеру: правка, удаление, выезд гостя и оба
+    QR ходят через неё. Поэтому проверка стоит здесь, а не в четырёх вьюхах —
+    пятая однажды забудет её позвать.
+    """
+    require_hotel_admin()
     room = Room.objects.filter(pk=room_id).first()
     if room is None:
         raise NotFoundError("Номер не найден")
@@ -185,6 +202,8 @@ def bulk_create_rooms(data: dict) -> dict:
 
 
 def room_qr_targets() -> tuple[Hotel, list[Room]]:
+    # Печатный лист — это весь фонд номеров отеля разом; он админский тем более.
+    require_hotel_admin()
     hotel = Hotel.objects.get(pk=require_hotel_id())
     return hotel, list(Room.objects.filter(is_active=True).order_by("number"))
 
@@ -208,8 +227,16 @@ def serialize_location(location: Location) -> dict:
 
 
 def list_locations(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
-    """Локации ищутся по КОДУ и НАЗВАНИЮ."""
+    """
+    Локации ищутся по КОДУ и НАЗВАНИЮ.
+
+    Чтение закрыто админом по той же причине, что и у номеров: локации —
+    география отеля, а не заведения, их правка уже админская, и живут они на
+    экране настроек, которого управляющий не видит.
+    """
     from apps.core.listing import page as list_page, search as apply_search
+
+    require_hotel_admin()
 
     queryset = apply_search(
         Location.objects.order_by("sort_order", "code"), search, ("code",), json_fields=("title",)
@@ -323,7 +350,11 @@ def delete_location(location_id) -> None:
 
 
 def location_matrix(language: str | None = None) -> dict:
+    # Матрица «категория → локации» — география отеля; живёт на экране
+    # настроек, которого управляющий не видит.
     from apps.catalog.models import OfferingType
+
+    require_hotel_admin()
 
     locations = list(Location.objects.filter(is_active=True).order_by("sort_order", "code"))
     categories = list(Category.objects.order_by("sort_order", "code"))
@@ -451,6 +482,71 @@ def _count_by_point(queryset) -> dict:
     return counts
 
 
+def counts_for(services: "list[Service]") -> dict:
+    """
+    Шесть счётчиков карточки сервиса — ОДНОЙ функцией на список и на одиночку.
+
+    Держать их только в списке значило держать два ответа на один вопрос:
+    детальная ручка сериализовала сервис без `counts`, и карточка честно
+    показывала шесть нулей — «ни категорий, ни персонала, ни канала», — хотя
+    рядом в списке у той же строки стояли настоящие числа.
+
+    Мост «сервис → заведение» здесь обязателен: персонал и каналы висят на
+    ExecutionPoint, а не на Service, и без него счётчики персонала и каналов
+    всегда нули.
+    """
+    from django.db.models import Count, Q
+
+    from apps.accounts.models import StaffAssignment
+    from apps.catalog.models import ServiceInclusion
+    from apps.notifications.models import EscalationRule, NotificationChannel
+
+    if not services:
+        return {}
+
+    service_ids = [service.pk for service in services]
+    point_ids = [service.execution_point_id for service in services]
+
+    categories = dict(
+        Category.objects.filter(service_id__in=service_ids)
+        .values_list("service_id")
+        .annotate(n=Count("id"))
+    )
+    items = dict(
+        Category.objects.filter(service_id__in=service_ids)
+        .annotate(n=Count("items", filter=Q(items__deleted_at__isnull=True)))
+        .values_list("service_id", "n")
+    )
+    staff = _count_by_point(
+        StaffAssignment.objects.filter(is_active=True, execution_point_id__in=point_ids)
+    )
+    channels = _count_by_point(
+        NotificationChannel.objects.filter(is_active=True, execution_point_id__in=point_ids)
+    )
+    inclusions = dict(
+        ServiceInclusion.objects.filter(including_service_id__in=service_ids)
+        .values_list("including_service_id")
+        .annotate(n=Count("id"))
+    )
+    with_rules = set(
+        EscalationRule.objects.filter(
+            is_active=True, execution_point_id__in=point_ids
+        ).values_list("execution_point_id", flat=True)
+    )
+
+    return {
+        service.pk: {
+            "categories": categories.get(service.pk, 0),
+            "items": items.get(service.pk, 0),
+            "staff": staff.get(service.execution_point_id, 0),
+            "channels": channels.get(service.execution_point_id, 0),
+            "inclusions": inclusions.get(service.pk, 0),
+            "escalation": service.execution_point_id in with_rules,
+        }
+        for service in services
+    }
+
+
 def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
     """
     Сервис глазами CMS: гостевая идентичность + исполнение + коммерция вместе.
@@ -497,12 +593,7 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
 
 
 def list_services(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
-    from django.db.models import Count, Q
-
-    from apps.accounts.models import StaffAssignment
     from apps.accounts.services.roles import managed_point_ids_or_none
-    from apps.catalog.models import ServiceInclusion
-    from apps.notifications.models import EscalationRule, NotificationChannel
 
     services = Service.objects.select_related("execution_point", "image").order_by(
         "sort_order", "code"
@@ -519,43 +610,8 @@ def list_services(*, search: str = "", limit: int | None = None, offset: int = 0
     limit = clamp(limit)
     services = list(services[max(0, offset) : max(0, offset) + limit])
 
-    # Счётчики одним проходом на таблицу — карточка списка не должна стоить
-    # запроса на сервис.
-    by_service = dict(
-        Category.objects.filter(service__isnull=False)
-        .values_list("service_id")
-        .annotate(n=Count("id"))
-    )
-    items_by_service = dict(
-        Category.objects.filter(service__isnull=False)
-        .annotate(n=Count("items", filter=Q(items__deleted_at__isnull=True)))
-        .values_list("service_id", "n")
-    )
-    staff = _count_by_point(StaffAssignment.objects.filter(is_active=True))
-    channels = _count_by_point(NotificationChannel.objects.filter(is_active=True))
-    inclusions = dict(
-        ServiceInclusion.objects.values_list("including_service_id").annotate(n=Count("id"))
-    )
-    with_rules = set(
-        EscalationRule.objects.filter(
-            is_active=True, execution_point__isnull=False
-        ).values_list("execution_point_id", flat=True)
-    )
-
-    rows = [
-        serialize_service(
-            service,
-            counts={
-                "categories": by_service.get(service.pk, 0),
-                "items": items_by_service.get(service.pk, 0),
-                "staff": staff.get(service.execution_point_id, 0),
-                "channels": channels.get(service.execution_point_id, 0),
-                "inclusions": inclusions.get(service.pk, 0),
-                "escalation": service.execution_point_id in with_rules,
-            },
-        )
-        for service in services
-    ]
+    counts = counts_for(services)
+    rows = [serialize_service(service, counts=counts[service.pk]) for service in services]
     return envelope(rows, total, limit, offset=max(0, offset))
 
 

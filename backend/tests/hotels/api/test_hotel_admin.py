@@ -203,6 +203,45 @@ def test_services_show_links_to_staff_and_escalation(cms):
     assert kitchen["tracker_type"] == "board"
 
 
+COUNT_FIELDS = (
+    "category_count",
+    "item_count",
+    "staff_count",
+    "channel_count",
+    "inclusion_count",
+    "has_escalation",
+)
+
+
+def test_service_card_counts_match_the_list(cms):
+    """
+    КАРТОЧКА СЕРВИСА СЧИТАЕТ ТО ЖЕ, ЧТО СТРОКА СПИСКА.
+
+    Детальная ручка сериализовала сервис без счётчиков, и все шесть приезжали
+    нулями: карточка, открытая по клику из списка, сообщала «ни категорий, ни
+    персонала, ни канала, эскалации нет» — про то же самое заведение, у
+    которого строкой выше стояли настоящие числа.
+
+    Персонал и каналы висят на заведении (ExecutionPoint), а не на сервисе:
+    без моста «сервис → заведение» эти два счётчика нули даже там, где сама
+    ручка счётчики считает.
+    """
+    rows = cms.get("/api/cms/services").json()["items"]
+    kitchen = next(row for row in rows if row["code"] == "kitchen")
+
+    card = cms.get(f"/api/cms/services/{kitchen['id']}").json()
+
+    assert {field: card[field] for field in COUNT_FIELDS} == {
+        field: kitchen[field] for field in COUNT_FIELDS
+    }
+    # Кухня демо-отеля — заведение с людьми, каналом и меню: нули здесь были бы
+    # «совпадением по нулям», а не совпадением.
+    assert card["staff_count"] >= 1
+    assert card["channel_count"] >= 1
+    assert card["category_count"] >= 1
+    assert card["has_escalation"] is True
+
+
 def test_create_service_from_template(cms):
     """Отель выбирает ЗАВЕДЕНИЕ — бригаду под него сервер заводит сам."""
     response = cms.post(

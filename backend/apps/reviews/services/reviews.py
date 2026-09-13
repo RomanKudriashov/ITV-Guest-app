@@ -93,6 +93,18 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
 
 def list_reviews(*, rating: int | None = None, limit: int = 100) -> list[dict]:
     queryset = Review.objects.select_related("order").order_by("-created_at")
+
+    # ОТЗЫВ РЕЖЕТСЯ ПО ТОЧКЕ ЗАКАЗА — как журнал уведомлений и по той же
+    # причине: отзыв всегда о конкретной заявке (`Review.order` — связь один к
+    # одному, обязательная), а заявка принадлежит заведению. Управляющий
+    # кухней читал отзывы всего отеля, включая спа и ресепшен: раздел не имел
+    # ни одной проверки прав и держался только на грубом гейте CMS.
+    from apps.accounts.services.roles import managed_point_ids_or_none
+
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        queryset = queryset.filter(order__execution_point_id__in=managed)
+
     if rating:
         queryset = queryset.filter(rating=rating)
     return [

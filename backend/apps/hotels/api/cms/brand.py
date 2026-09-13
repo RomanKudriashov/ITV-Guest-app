@@ -9,6 +9,8 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
+from apps.accounts.services.roles import require_hotel_admin
+
 from apps.hotels.brand_library import ABSTRACTIONS, FONTS, list_presets
 from apps.hotels.schemas.cms import ApplyPresetIn, BrandOut, BrandPatch
 from apps.hotels.services import brand_services as svc
@@ -18,6 +20,11 @@ router = Router(tags=["cms:brand"])
 
 @router.get("/brand", response=BrandOut, summary="Текущая тема отеля")
 def get_brand(request: HttpRequest):
+    # ОФОРМЛЕНИЕ ОТЕЛЯ ЧИТАЕТ ТОЛЬКО АДМИН. Правка темы давно требовала прав
+    # администратора, а чтение отдавалось любому управляющему — при том, что
+    # экран «Бренд» ему не показан вовсе. Тема отеля не нужна для работы
+    # заведения ни в одном сценарии.
+    require_hotel_admin()
     return svc.serialize_brand(svc.get_or_create_brand())
 
 
@@ -39,6 +46,8 @@ def put_brand(request: HttpRequest, payload: BrandPatch):
 
 @router.get("/brand/presets", summary="Библиотека пресетов")
 def presets(request: HttpRequest):
+    # Библиотека оформления — часть админского экрана бренда.
+    require_hotel_admin()
     return {"presets": list_presets()}
 
 
@@ -50,11 +59,15 @@ def apply_preset(request: HttpRequest, payload: ApplyPresetIn):
 
 @router.get("/brand/fonts", summary="Курируемый список шрифтов")
 def fonts(request: HttpRequest):
+    # Библиотека оформления — часть админского экрана бренда.
+    require_hotel_admin()
     return {"fonts": FONTS}
 
 
 @router.get("/brand/abstractions", summary="Библиотека фонов-абстракций")
 def abstractions(request: HttpRequest):
+    # Библиотека оформления — часть админского экрана бренда.
+    require_hotel_admin()
     return {"abstractions": ABSTRACTIONS}
 
 
