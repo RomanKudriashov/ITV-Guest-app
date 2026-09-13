@@ -146,29 +146,13 @@ test.describe('Метки: панель и витрина одним кодом'
   test('значок в справочнике залит тем же цветом, что у гостя', async ({ page, request, browser }) => {
     const token = await apiToken(request, ADMIN)
 
-    // Метка, которая реально висит на позиции: иначе у гостя её не увидеть.
-    const badges = await request.get(`${API}/api/cms/badges`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
-    const rows = (await badges.json()).items as { id: string; items_count: number }[]
-    const used = rows.find((row) => row.items_count > 0)
-    expect(used, 'на стенде нет ни одной присвоенной метки — сид не довёз данные').toBeTruthy()
-
-    await login(page, ADMIN)
-    await page.goto('/cms/marketing')
-    const pill = page.getByTestId(`cms-badge-pill-${used!.id}`)
-    await expect(pill).toBeVisible({ timeout: 25_000 })
-    const cmsFill = await pill.evaluate((node) => getComputedStyle(node).backgroundColor)
-    // Держим НАЗВАНИЕ метки: у гостя на витрине висят разные метки, и брать
-    // «первую попавшуюся» значит сравнивать «Хит» с «Выбором шефа» — цвета у
-    // них разные по замыслу, и проверка падала бы на исправном коде.
-    const label = (await pill.textContent())?.trim() ?? ''
-    expect(label, 'у метки нет названия — сравнивать нечем').toBeTruthy()
-
     /*
-      СРАВНИВАЕМ ЦВЕТ, А НЕ РАЗМЕТКУ. «Показан так, как увидит гость» — это про
-      результат на экране: два разных куска разметки могут давать одну заливку,
-      и наоборот. Проверка держится ровно за то, что обещано человеку.
+      МЕТКУ ВЫБИРАЕМ СО СТОРОНЫ ГОСТЯ, А НЕ ПАНЕЛИ.
+
+      Панель знает все метки отеля, гость — только те, что висят на позициях
+      ОТКРЫТОЙ ЕМУ витрины. Беря «первую присвоенную» из панели, укус приносил
+      метку, которой на кухне может не быть вовсе, и падал не на том, что
+      проверяет. Идём от того, что реально видно гостю.
     */
     const guest = await browser.newPage()
     await guest.goto('/')
@@ -178,19 +162,35 @@ test.describe('Метки: панель и витрина одним кодом'
     await guest.getByTestId('guest-room-submit').click()
     await expect(guest.getByTestId('guest-home')).toBeVisible({ timeout: 25_000 })
 
-    // МЕТКИ ЖИВУТ НА КАРТОЧКАХ ЗАВЕДЕНИЯ, а не на парадной: на главной их нет,
-    // и ждать их там значит ждать вечно. Идём в витрину кухни — там висят
-    // демо-назначения.
+    // Метки живут на карточках заведения, а не на парадной.
     await guest.goto('/venue/kitchen')
-    const guestBadge = guest
-      .locator('[data-testid^="guest-badge-"]')
-      .filter({ hasText: label })
-      .first()
-    await expect(guestBadge, `метки «${label}» нет на витрине кухни`).toBeVisible({ timeout: 25_000 })
+    const guestBadge = guest.locator('[data-testid^="guest-badge-"]').first()
+    await expect(guestBadge, 'на витрине кухни нет ни одной метки').toBeVisible({ timeout: 25_000 })
+    const label = (await guestBadge.textContent())?.trim() ?? ''
     const guestFill = await guestBadge.evaluate((node) => getComputedStyle(node).backgroundColor)
     await guest.close()
+    expect(label, 'у метки нет названия — сравнивать нечем').toBeTruthy()
 
-    expect(guestFill, 'значок в панели и у гостя залит по-разному').toBe(cmsFill)
+    // Та же метка в панели — ищем по названию.
+    const badges = await request.get(`${API}/api/cms/badges`, {
+      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+    const rows = (await badges.json()).items as { id: string; label: Record<string, string> }[]
+    const same = rows.find((row) => Object.values(row.label ?? {}).includes(label))
+    expect(same, `метки «${label}» нет в панели`).toBeTruthy()
+
+    await login(page, ADMIN)
+    await page.goto('/cms/marketing')
+    const pill = page.getByTestId(`cms-badge-pill-${same!.id}`)
+    await expect(pill).toBeVisible({ timeout: 25_000 })
+    const cmsFill = await pill.evaluate((node) => getComputedStyle(node).backgroundColor)
+
+    /*
+      СРАВНИВАЕМ ЦВЕТ, А НЕ РАЗМЕТКУ. «Показан так, как увидит гость» — это про
+      результат на экране: два разных куска разметки могут давать одну заливку,
+      и наоборот. Проверка держится ровно за то, что обещано человеку.
+    */
+    expect(cmsFill, 'значок в панели и у гостя залит по-разному').toBe(guestFill)
   })
 
   test('удаление метки называет число и показывает, где она висит', async ({ page, request }) => {
