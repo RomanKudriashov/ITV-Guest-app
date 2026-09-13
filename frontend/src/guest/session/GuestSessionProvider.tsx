@@ -157,3 +157,13 @@ export function useGuestSession(): GuestSessionContextValue {
   if (!ctx) throw new Error('useGuestSession must be used inside <GuestSessionProvider>');
   return ctx;
 }
+
+/**
+ * То же самое, но БЕЗ отеля это не ошибка.
+ *
+ * Часть шапки живёт и на посадочной странице платформы, где отеля нет вовсе, —
+ * там `null` штатное состояние, а не поломка провайдера.
+ */
+export function useOptionalGuestSession(): GuestSessionContextValue | null {
+  return useContext(GuestSessionContext);
+}

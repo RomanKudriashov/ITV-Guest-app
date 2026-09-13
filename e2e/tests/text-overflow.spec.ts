@@ -196,12 +196,24 @@ for (const mode of ['dark', 'light'] as const) {
 }
 
 /**
- * Плавающая группа не накрывает план — НА РАЗНЫХ ПОЗИЦИЯХ СКРОЛЛА.
+ * Плавающая группа не накрывает то, что под ней стоит.
  *
- * Прошлая проверка смотрела только начало страницы и потому пропустила дефект:
- * группа стоит с учётом безопасной зоны устройства, а липкие полосы пинились
- * числом, и на телефоне с вырезом группа съезжала вниз и ложилась на плиту.
- * Статическая проверка этого не видит — перекрытие появляется в движении.
+ * Дефект, ради которого проверка написана: группа стоит с учётом безопасной
+ * зоны устройства, а липкие полосы пинились числом — на телефоне с вырезом
+ * группа съезжала вниз и ложилась на слой под собой.
+ *
+ * ЧТО ИЗМЕНИЛОСЬ. Раньше под группой стояла ЛИПКАЯ плита плана, и перекрытие
+ * искали на всех позициях скролла. План больше не липкий — он листается вместе
+ * со страницей и под фиксированной группой проезжает по определению; требовать
+ * от него «никогда не под группой» значило бы требовать, чтобы страница не
+ * прокручивалась.
+ *
+ * Поэтому правило разложено на две половины, и обе могут упасть:
+ *   * ПЛАН — в покое: открыв номер, гость обязан видеть кадр целиком, а не
+ *     из-под группы. Промах безопасной зоны виден здесь сразу, потому что
+ *     верхний отступ страницы считается по той же измеренной полосе;
+ *   * ВКЛАДКИ — на всех позициях скролла: это единственный липкий слой узкого
+ *     экрана, и уехать под группу он не имеет права никогда.
  */
 for (const mode of ['dark', 'light'] as const) {
   for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
@@ -212,25 +224,39 @@ for (const mode of ['dark', 'light'] as const) {
       await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
       await page.waitForTimeout(1500)
 
-      for (const y of [0, 40, 90, 140, 200, 320, 500]) {
-        await page.evaluate((to) => window.scrollTo(0, to), y)
-        await page.waitForTimeout(180)
-        const probe = await page.evaluate(() => {
+      const overlapWith = (testId: string) =>
+        page.evaluate((id) => {
           const chip = document.querySelector('[data-testid="guest-room-chip"]')
-          const plate = document.querySelector('[data-testid="room-plan"]')
-          if (!chip || !plate) return null
+          const target = document.querySelector(`[data-testid="${id}"]`)
+          if (!chip || !target) return null
           // Плавающая группа — стеклянная полоса, в которой лежит чип номера.
           const group = chip.closest('.MuiStack-root') ?? chip
           const a = group.getBoundingClientRect()
-          const b = plate.getBoundingClientRect()
+          const b = target.getBoundingClientRect()
           const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left)
           const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
           return { overlap: Math.round(Math.min(dx, dy)), scroll: Math.round(window.scrollY) }
-        })
-        expect(probe, 'плита или чип не найдены').not.toBeNull()
+        }, testId)
+
+      // 1. План — в покое.
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await page.waitForTimeout(180)
+      const plate = await overlapWith('room-plan')
+      expect(plate, 'плита или чип не найдены').not.toBeNull()
+      expect(
+        plate!.overlap,
+        `${mode}/${vp.name}: в покое группа накрывает план на ${plate!.overlap}px`,
+      ).toBeLessThanOrEqual(0)
+
+      // 2. Вкладки — на всех позициях скролла.
+      for (const y of [0, 40, 90, 140, 200, 320, 500]) {
+        await page.evaluate((to) => window.scrollTo(0, to), y)
+        await page.waitForTimeout(180)
+        const probe = await overlapWith('room-tabs')
+        expect(probe, 'полоса вкладок или чип не найдены').not.toBeNull()
         expect(
           probe!.overlap,
-          `${mode}/${vp.name}: на скролле ${probe!.scroll} группа накрывает план на ${probe!.overlap}px`,
+          `${mode}/${vp.name}: на скролле ${probe!.scroll} группа накрывает вкладки на ${probe!.overlap}px`,
         ).toBeLessThanOrEqual(0)
       }
     })
@@ -309,8 +335,14 @@ for (const mode of ['dark', 'light'] as const) {
       // Флот — только там, где до него есть навигация. Консоль платформы
       // десктопная, и на узком экране боковое меню свёрнуто: гоняться за ним
       // здесь значило бы проверять не переполнение текста, а вёрстку меню.
-      const fleetNav = page.getByTestId('admin-nav-fleet')
-      if (await fleetNav.isVisible().catch(() => false)) {
+      // Условие ШИРИНЫ, а не «видно ли кнопку». Проба видимости молчала бы и
+      // на свёрнутом меню, и на пропавшем разделе; ширина названа правилом, и
+      // на широком экране раздел обязан открыться.
+      if (vp.width >= 1280) {
+        const fleetNav = page.getByTestId('admin-nav-fleet')
+        await expect(fleetNav, `на ширине ${vp.width} нет входа во флот`).toBeVisible({
+          timeout: 20_000,
+        })
         await fleetNav.click()
         await expect(page.getByTestId('admin-fleet')).toBeVisible({ timeout: 20_000 })
         await page.waitForTimeout(1200)

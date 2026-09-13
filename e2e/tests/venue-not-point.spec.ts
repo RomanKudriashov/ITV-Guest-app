@@ -74,9 +74,10 @@ test.describe('Заведение вместо точки исполнения',
     expect(await bodyText(page)).not.toMatch(BANNED)
 
     // Имя на переключателе — гостевое имя заведения, а не служебное второе.
+    // Без `if`: переключатель есть у любого, кто дошёл до доски, и условие
+    // вокруг проверки делало её необязательной ровно там, где она нужна.
     const select = page.getByTestId('tracker-point-select')
-    if (await select.count()) {
-      await expect(select).not.toContainText(BANNED)
-    }
+    await expect(select).toBeVisible({ timeout: 20_000 })
+    await expect(select).not.toContainText(BANNED)
   })
 })

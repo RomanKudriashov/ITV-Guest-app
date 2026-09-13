@@ -86,11 +86,15 @@ test.describe('Тема: переключение на всех поверхно
 
     // Чип номера — тот самый элемент, который до R7 оставался тёмным островом
     // на светлой строке: у него был жёстко белый текст на белесой подложке.
+    // Без `if`: гость вошёл по номеру, чип номера на месте. Условие делало
+    // проверку необязательной ровно тогда, когда чип пропадал, — то есть
+    // прятало обе поломки сразу.
     const chip = page.getByTestId('guest-room-chip').first()
-    if (await chip.isVisible()) {
-      const chipInk = await chip.evaluate((node) => getComputedStyle(node).color)
-      expect(luminance(chipInk), 'на светлой теме текст чипа тёмный').toBeLessThan(140)
-    }
+    await expect(chip, 'чипа номера нет — проверять цвет не на чем').toBeVisible({
+      timeout: 15_000,
+    })
+    const chipInk = await chip.evaluate((node) => getComputedStyle(node).color)
+    expect(luminance(chipInk), 'на светлой теме текст чипа тёмный').toBeLessThan(140)
 
     // Выбор переживает перезагрузку — иначе тумблер не выбор, а мигание.
     await page.reload()

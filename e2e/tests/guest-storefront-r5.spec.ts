@@ -271,10 +271,13 @@ test.describe('Вход', () => {
     await page.goto('/')
 
     // Вход «осмотреться» — сессия без номера.
+    // Режим «осмотреться» — часть экрана входа, а не случайность. Прежний
+    // `test.skip` превращал его исчезновение в зелёный прогон: пропала кнопка
+    // — пропала и проверка того, что за ней стоит.
     const lobby = page.getByTestId('guest-browse-only')
-    if (!(await lobby.isVisible().catch(() => false))) {
-      test.skip(true, 'на экране входа нет режима «только просмотр»')
-    }
+    await expect(lobby, 'на экране входа нет режима «только просмотр»').toBeVisible({
+      timeout: 20_000,
+    })
     await lobby.click()
 
     await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
