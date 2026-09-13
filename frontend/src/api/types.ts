@@ -19,6 +19,7 @@ export interface ListPage<T> {
 import type { LocationMode, OfferingType } from '@/offerings/behaviour';
 import type { RequestFieldType } from '@/offerings/requestFields';
 import type { PartialBrandTokens } from '@/theme/tokens';
+import type { OfferingNoun } from '@/offerings/nouns';
 
 /** Translatable field: `{"ru": "Горячее", "en": "Hot"}`. Empty languages absent. */
 export type Translated = Record<string, string>;
@@ -180,6 +181,12 @@ export interface Category {
   service_fee_applies?: boolean;
   /** Commerce: minimum order amount, minor units; `null` — no minimum. */
   min_order_minor?: number | null;
+  /**
+   * Как называть то, что лежит в этом разделе: «блюдо», «услуга», «товар»,
+   * «страница», «позиция». Выводится сервером из типа заведения — экран не
+   * повторяет этот вывод, он его читает. См. `@/offerings/nouns`.
+   */
+  noun?: OfferingNoun;
   children?: Category[];
 }
 

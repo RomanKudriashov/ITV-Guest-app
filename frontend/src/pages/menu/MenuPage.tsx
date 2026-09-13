@@ -42,6 +42,7 @@ import { findCategory, flattenCategories, replaceSiblings } from '@/utils/catego
 import { pickTranslated } from '@/utils/translated';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
+import { useCatalogWords, type OfferingNoun } from '@/offerings/nouns';
 import { CategoryTree } from './CategoryTree';
 import { ItemList } from './ItemList';
 
@@ -52,9 +53,19 @@ export interface MenuPageProps {
    * поведение, всё меню отеля.
    */
   serviceId?: string;
+  /**
+   * Слово, которым это заведение называет содержимое каталога: «блюдо» у
+   * ресторана, «услуга» у спа. Приходит от рабочего пространства сервиса —
+   * оно уже знает заведение целиком.
+   *
+   * Не задано — берём слово у раздела (он несёт его в ответе), и только если
+   * разделов ещё нет — нейтральную «позицию». Порядок именно такой: пустое
+   * заведение не должно звать содержимое блюдами, пока не доказано обратное.
+   */
+  noun?: OfferingNoun | null;
 }
 
-export function MenuPage({ serviceId }: MenuPageProps = {}) {
+export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -105,6 +116,21 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
   }, [tree, selectedId]);
 
   const selectedCategory = selectedId ? findCategory(tree, selectedId) : null;
+
+  /*
+    СЛОВО ЭКРАНА — ОДНО НА ВСЕ ЕГО НАДПИСИ.
+
+    Кнопка, заголовок списка, счётчик, поиск, пустое состояние, оба
+    подтверждения удаления и сообщение об ошибке берут фразу отсюда. Раньше
+    каждое место несло свою строку со словом «блюдо» внутри, и переучить их
+    разом было нельзя — пришлось бы помнить про все восемь.
+
+    Источник: заведение, если экран открыт в его рабочем пространстве; иначе
+    раздел, который несёт слово с собой; иначе нейтральное.
+  */
+  const effectiveNoun =
+    noun ?? (selectedCategory?.noun as OfferingNoun | undefined) ?? flattenCategories(tree)[0]?.category.noun ?? null;
+  const w = useCatalogWords(effectiveNoun);
 
   const itemsQuery = useQuery({
     queryKey: [...queryKeys.items(selectedId ?? undefined, search), serviceId ?? 'all'],
@@ -201,7 +227,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
       if (error instanceof ApiError && error.code === 'category_not_empty') {
         // Ask again, this time offering the cascade checkbox.
         setCascade(false);
-        toast.show(t('category.notEmpty'), 'warning');
+        toast.show(w('categoryNotEmpty'), 'warning');
         return;
       }
       showError(error);
@@ -280,7 +306,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
   const deleteItemMutation = useMutation({
     mutationFn: (id: string) => deleteItem(id),
     onSuccess: () => {
-      toast.show(t('item.deleted'), 'success');
+      toast.show(w('deleted'), 'success');
       setItemToDelete(null);
       void queryClient.invalidateQueries({ queryKey: itemsKey });
       void queryClient.invalidateQueries({ queryKey: categoriesKey });
@@ -370,17 +396,17 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
           >
             <Stack sx={{ minWidth: 0 }}>
               <Typography variant="h6" noWrap>
-                {selectedTitle || t('menu.items')}
+                {selectedTitle || w('plural')}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {t('menu.itemsCount', { count: items.length })}
+                {w('count', { count: items.length })}
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               <TextField
                 size="small"
                 value={search}
-                placeholder={t('menu.searchPlaceholder')}
+                placeholder={w('search')}
                 onChange={(event) => setSearch(event.target.value)}
                 inputProps={{ 'data-testid': 'item-search' }}
                 InputProps={{
@@ -398,7 +424,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
                 data-testid="add-item-button"
                 onClick={() => navigate(cmsPath(`/menu/items/new?category_id=${selectedId ?? ''}`))}
               >
-                {t('menu.addItem')}
+                {w('add')}
               </Button>
             </Stack>
           </Stack>
@@ -413,7 +439,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
               ))}
             </Stack>
           ) : itemsQuery.isError ? (
-            <Alert severity="error">{t('errors.loadItems')}</Alert>
+            <Alert severity="error">{w('loadFailed')}</Alert>
           ) : items.length === 0 ? (
             /*
               ОДНО пустое состояние на все списки. «Ничего не найдено» под
@@ -423,8 +449,8 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
             <ListEmpty
               isFiltered={Boolean(search)}
               onReset={() => patch({ search: '' })}
-              what={t('state.what.items')}
-              emptyHint={t('menu.noItemsHint')}
+              what={w('what')}
+              emptyHint={w('emptyHint')}
             />
           ) : bootstrap ? (
             <ItemList
@@ -452,7 +478,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
         destructive
         busy={deleteCategoryMutation.isPending}
         title={t('category.deleteTitle')}
-        description={t('category.deleteBody', {
+        description={w('categoryDeleteBody', {
           name: pendingDelete
             ? pickTranslated(pendingDelete.title, languages.displayLanguage, languages.defaultCode)
             : '',
@@ -473,7 +499,7 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
               inputProps={{ 'data-testid': 'category-delete-cascade' } as Record<string, string>}
             />
           }
-          label={t('category.deleteCascade')}
+          label={w('categoryCascade')}
         />
       </ConfirmDialog>
 
@@ -482,8 +508,8 @@ export function MenuPage({ serviceId }: MenuPageProps = {}) {
         testId="item-delete-dialog"
         destructive
         busy={deleteItemMutation.isPending}
-        title={t('item.deleteTitle')}
-        description={t('item.deleteBody', {
+        title={w('deleteTitle')}
+        description={w('deleteBody', {
           name: itemToDelete
             ? pickTranslated(itemToDelete.title, languages.displayLanguage, languages.defaultCode)
             : '',

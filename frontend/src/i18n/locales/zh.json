@@ -104,15 +104,9 @@
   "menu": {
     "categories": "分类",
     "addCategory": "分类",
-    "items": "菜品",
-    "addItem": "添加菜品",
-    "itemsCount": "{{count}} 道菜品",
-    "searchPlaceholder": "搜索菜品",
     "selectCategory": "请在左侧选择分类",
     "noCategories": "暂无分类",
-    "noCategoriesHint": "创建第一个分类，开始搭建菜单",
-    "noItems": "该分类下暂无菜品",
-    "noItemsHint": "添加第一道菜品，客人即可在应用中看到"
+    "noCategoriesHint": "创建第一个分类，开始搭建菜单"
   },
   "category": {
     "newTitle": "新建分类",
@@ -126,10 +120,7 @@
     "image": "图片",
     "saved": "分类已保存",
     "deleted": "分类已删除",
-    "notEmpty": "分类不为空，请勾选「连同内容一起删除」",
     "deleteTitle": "删除分类？",
-    "deleteBody": "分类「{{name}}」将被删除，其中菜品：{{count}} 道。",
-    "deleteCascade": "连同菜品和子分类一起删除",
     "commerceSection": "商务",
     "serviceFeeApplies": "适用服务费",
     "minOrder": "最低起订金额",
@@ -137,7 +128,6 @@
     "minOrderInvalid": "金额无效"
   },
   "item": {
-    "newTitle": "新建菜品",
     "untitled": "未命名",
     "basics": "基本信息",
     "title": "名称",
@@ -160,10 +150,6 @@
     "addCharacteristic": "添加特性",
     "allergensCount": "{{count}} 项过敏原",
     "markersCount": "{{count}} 个标记",
-    "saved": "菜品已保存",
-    "deleted": "菜品已删除",
-    "deleteTitle": "删除菜品？",
-    "deleteBody": "菜品「{{name}}」将从菜单中移除。",
     "type": "条目类型",
     "typeHint": "创建时选择，之后不可更改",
     "typeLocked": "类型不可更改",
@@ -306,8 +292,6 @@
     "generic": "出现错误",
     "reorderFailed": "排序保存失败",
     "loadCategories": "分类加载失败",
-    "loadItems": "菜品加载失败",
-    "loadItem": "菜品加载失败",
     "loadBootstrap": "酒店配置加载失败"
   },
   "demo": {
@@ -2760,7 +2744,6 @@
       "timeseries": "走势",
       "reviewSettings": "评价设置",
       "me": "你的账号",
-      "items": "菜品",
       "slaOverrides": "超时阈值",
       "commerceOverrides": "各场所的自有商务设置"
     },
@@ -3075,6 +3058,93 @@
       "assignee": "负责人",
       "nobody": "无人接单",
       "cancelled": "已取消：{{reason}}"
+    }
+  },
+  "catalog": {
+    "dish": {
+      "plural": "菜品",
+      "add": "添加菜品",
+      "count": "{{count}} 道菜品",
+      "search": "搜索菜品",
+      "emptyHint": "添加第一个菜品，客人即可在应用中看到",
+      "newTitle": "新建菜品",
+      "saved": "菜品已保存",
+      "deleted": "菜品已删除",
+      "deleteTitle": "删除菜品？",
+      "deleteBody": "菜品「{{name}}」将从菜单中移除。",
+      "categoryNotEmpty": "分类中含有菜品或子分类，请勾选「连同内容一起删除」",
+      "categoryDeleteBody": "分类「{{name}}」将被删除，其中菜品：{{count}}",
+      "categoryCascade": "连同菜品和子分类一起删除",
+      "loadFailed": "菜品加载失败",
+      "what": "菜品"
+    },
+    "service": {
+      "plural": "服务",
+      "add": "添加服务",
+      "count": "{{count}} 项服务",
+      "search": "搜索服务",
+      "emptyHint": "添加第一个服务，客人即可在应用中看到",
+      "newTitle": "新建服务",
+      "saved": "服务已保存",
+      "deleted": "服务已删除",
+      "deleteTitle": "删除服务？",
+      "deleteBody": "服务「{{name}}」将从目录中移除。",
+      "categoryNotEmpty": "分类中含有服务或子分类，请勾选「连同内容一起删除」",
+      "categoryDeleteBody": "分类「{{name}}」将被删除，其中服务：{{count}}",
+      "categoryCascade": "连同服务和子分类一起删除",
+      "loadFailed": "服务加载失败",
+      "what": "服务"
+    },
+    "goods": {
+      "plural": "商品",
+      "add": "添加商品",
+      "count": "{{count}} 件商品",
+      "search": "搜索商品",
+      "emptyHint": "添加第一个商品，客人即可在应用中看到",
+      "newTitle": "新建商品",
+      "saved": "商品已保存",
+      "deleted": "商品已删除",
+      "deleteTitle": "删除商品？",
+      "deleteBody": "商品「{{name}}」将从目录中移除。",
+      "categoryNotEmpty": "分类中含有商品或子分类，请勾选「连同内容一起删除」",
+      "categoryDeleteBody": "分类「{{name}}」将被删除，其中商品：{{count}}",
+      "categoryCascade": "连同商品和子分类一起删除",
+      "loadFailed": "商品加载失败",
+      "what": "商品"
+    },
+    "page": {
+      "plural": "页面",
+      "add": "添加页面",
+      "count": "{{count}} 个页面",
+      "search": "搜索页面",
+      "emptyHint": "添加第一个页面，客人即可在应用中看到",
+      "newTitle": "新建页面",
+      "saved": "页面已保存",
+      "deleted": "页面已删除",
+      "deleteTitle": "删除页面？",
+      "deleteBody": "页面「{{name}}」将从目录中移除。",
+      "categoryNotEmpty": "分类中含有页面或子分类，请勾选「连同内容一起删除」",
+      "categoryDeleteBody": "分类「{{name}}」将被删除，其中页面：{{count}}",
+      "categoryCascade": "连同页面和子分类一起删除",
+      "loadFailed": "页面加载失败",
+      "what": "页面"
+    },
+    "item": {
+      "plural": "项目",
+      "add": "添加项目",
+      "count": "{{count}} 个项目",
+      "search": "搜索项目",
+      "emptyHint": "添加第一个项目，客人即可在应用中看到",
+      "newTitle": "新建项目",
+      "saved": "项目已保存",
+      "deleted": "项目已删除",
+      "deleteTitle": "删除项目？",
+      "deleteBody": "项目「{{name}}」将从目录中移除。",
+      "categoryNotEmpty": "分类中含有项目或子分类，请勾选「连同内容一起删除」",
+      "categoryDeleteBody": "分类「{{name}}」将被删除，其中项目：{{count}}",
+      "categoryCascade": "连同项目和子分类一起删除",
+      "loadFailed": "项目加载失败",
+      "what": "项目"
     }
   }
 }

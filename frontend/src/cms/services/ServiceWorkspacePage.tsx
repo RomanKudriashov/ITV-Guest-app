@@ -125,7 +125,7 @@ export function ServiceWorkspacePage() {
       {tab === 'menu' ? (
         // Меню ЭТОГО заведения: тот же экран каталога, но в области сервиса.
         <Box data-testid="service-menu">
-          <MenuPage serviceId={data.id} />
+          <MenuPage serviceId={data.id} noun={data.noun} />
         </Box>
       ) : null}
       {tab === 'inclusions' ? <InclusionsTab service={data} /> : null}

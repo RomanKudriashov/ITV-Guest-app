@@ -109,15 +109,9 @@
   "menu": {
     "categories": "الفئات",
     "addCategory": "فئة",
-    "items": "الأطباق",
-    "addItem": "إضافة طبق",
-    "itemsCount": "{{count}} طبق",
-    "searchPlaceholder": "بحث عن طبق",
     "selectCategory": "اختر فئة من اليمين",
     "noCategories": "لا توجد فئات بعد",
-    "noCategoriesHint": "أنشئ أول فئة لبدء بناء القائمة",
-    "noItems": "لا توجد أطباق في هذه الفئة",
-    "noItemsHint": "أضف أول طبق ليراه النزلاء"
+    "noCategoriesHint": "أنشئ أول فئة لبدء بناء القائمة"
   },
   "category": {
     "newTitle": "فئة جديدة",
@@ -131,10 +125,7 @@
     "image": "صورة",
     "saved": "تم حفظ الفئة",
     "deleted": "تم حذف الفئة",
-    "notEmpty": "الفئة غير فارغة — فعّل «الحذف مع المحتوى»",
     "deleteTitle": "حذف الفئة؟",
-    "deleteBody": "سيتم حذف الفئة «{{name}}». عدد الأطباق: {{count}}.",
-    "deleteCascade": "الحذف مع الأطباق والفئات الفرعية",
     "commerceSection": "التجارة",
     "serviceFeeApplies": "تُطبَّق رسوم الخدمة",
     "minOrder": "الحد الأدنى لقيمة الطلب",
@@ -142,7 +133,6 @@
     "minOrderInvalid": "مبلغ غير صالح"
   },
   "item": {
-    "newTitle": "طبق جديد",
     "untitled": "بدون اسم",
     "basics": "الأساسيات",
     "title": "الاسم",
@@ -165,10 +155,6 @@
     "addCharacteristic": "إضافة خاصية",
     "allergensCount": "{{count}} مسببات",
     "markersCount": "{{count}} وسوم",
-    "saved": "تم حفظ الطبق",
-    "deleted": "تم حذف الطبق",
-    "deleteTitle": "حذف الطبق؟",
-    "deleteBody": "سيتم حذف الطبق «{{name}}» من القائمة.",
     "type": "نوع العنصر",
     "typeHint": "يُحدَّد عند الإنشاء ولا يتغيّر",
     "typeLocked": "لا يمكن تغيير النوع",
@@ -311,8 +297,6 @@
     "generic": "حدث خطأ ما",
     "reorderFailed": "تعذر حفظ الترتيب",
     "loadCategories": "تعذر تحميل الفئات",
-    "loadItems": "تعذر تحميل الأطباق",
-    "loadItem": "تعذر تحميل الطبق",
     "loadBootstrap": "تعذر تحميل إعدادات الفندق"
   },
   "demo": {
@@ -2857,7 +2841,6 @@
       "timeseries": "الرسم البياني",
       "reviewSettings": "إعدادات التقييمات",
       "me": "حسابك",
-      "items": "الأصناف",
       "slaOverrides": "عتبات التأخير",
       "commerceOverrides": "الإعدادات التجارية الخاصة بالمنشآت"
     },
@@ -3172,6 +3155,93 @@
       "assignee": "نفّذها",
       "nobody": "لم يستلمها أحد",
       "cancelled": "ملغاة: {{reason}}"
+    }
+  },
+  "catalog": {
+    "dish": {
+      "plural": "الأطباق",
+      "add": "إضافة طبق",
+      "count": "{{count}} طبق",
+      "search": "بحث عن طبق",
+      "emptyHint": "أضف أول طبق ليراه النزلاء",
+      "newTitle": "طبق جديد",
+      "saved": "تم حفظ طبق",
+      "deleted": "تم حذف طبق",
+      "deleteTitle": "حذف طبق؟",
+      "deleteBody": "سيتم حذف الطبق «{{name}}» من القائمة.",
+      "categoryNotEmpty": "الفئة تحتوي على الأطباق أو فئات فرعية — فعّل «الحذف مع المحتوى»",
+      "categoryDeleteBody": "سيتم حذف الفئة «{{name}}». عدد الأطباق: {{count}}.",
+      "categoryCascade": "الحذف مع الأطباق والفئات الفرعية",
+      "loadFailed": "تعذر تحميل الأطباق",
+      "what": "الأطباق"
+    },
+    "service": {
+      "plural": "الخدمات",
+      "add": "إضافة خدمة",
+      "count": "{{count}} خدمة",
+      "search": "بحث عن خدمة",
+      "emptyHint": "أضف أول خدمة ليراه النزلاء",
+      "newTitle": "خدمة جديد",
+      "saved": "تم حفظ خدمة",
+      "deleted": "تم حذف خدمة",
+      "deleteTitle": "حذف خدمة؟",
+      "deleteBody": "سيتم حذف خدمة «{{name}}» من الكتالوج.",
+      "categoryNotEmpty": "الفئة تحتوي على الخدمات أو فئات فرعية — فعّل «الحذف مع المحتوى»",
+      "categoryDeleteBody": "سيتم حذف الفئة «{{name}}». عدد الخدمات: {{count}}.",
+      "categoryCascade": "الحذف مع الخدمات والفئات الفرعية",
+      "loadFailed": "تعذر تحميل الخدمات",
+      "what": "الخدمات"
+    },
+    "goods": {
+      "plural": "المنتجات",
+      "add": "إضافة منتج",
+      "count": "{{count}} منتج",
+      "search": "بحث عن منتج",
+      "emptyHint": "أضف أول منتج ليراه النزلاء",
+      "newTitle": "منتج جديد",
+      "saved": "تم حفظ منتج",
+      "deleted": "تم حذف منتج",
+      "deleteTitle": "حذف منتج؟",
+      "deleteBody": "سيتم حذف منتج «{{name}}» من الكتالوج.",
+      "categoryNotEmpty": "الفئة تحتوي على المنتجات أو فئات فرعية — فعّل «الحذف مع المحتوى»",
+      "categoryDeleteBody": "سيتم حذف الفئة «{{name}}». عدد المنتجات: {{count}}.",
+      "categoryCascade": "الحذف مع المنتجات والفئات الفرعية",
+      "loadFailed": "تعذر تحميل المنتجات",
+      "what": "المنتجات"
+    },
+    "page": {
+      "plural": "الصفحات",
+      "add": "إضافة صفحة",
+      "count": "{{count}} صفحة",
+      "search": "بحث عن صفحة",
+      "emptyHint": "أضف أول صفحة ليراه النزلاء",
+      "newTitle": "صفحة جديد",
+      "saved": "تم حفظ صفحة",
+      "deleted": "تم حذف صفحة",
+      "deleteTitle": "حذف صفحة؟",
+      "deleteBody": "سيتم حذف صفحة «{{name}}» من الكتالوج.",
+      "categoryNotEmpty": "الفئة تحتوي على الصفحات أو فئات فرعية — فعّل «الحذف مع المحتوى»",
+      "categoryDeleteBody": "سيتم حذف الفئة «{{name}}». عدد الصفحات: {{count}}.",
+      "categoryCascade": "الحذف مع الصفحات والفئات الفرعية",
+      "loadFailed": "تعذر تحميل الصفحات",
+      "what": "الصفحات"
+    },
+    "item": {
+      "plural": "العناصر",
+      "add": "إضافة عنصر",
+      "count": "{{count}} عنصر",
+      "search": "بحث عن عنصر",
+      "emptyHint": "أضف أول عنصر ليراه النزلاء",
+      "newTitle": "عنصر جديد",
+      "saved": "تم حفظ عنصر",
+      "deleted": "تم حذف عنصر",
+      "deleteTitle": "حذف عنصر؟",
+      "deleteBody": "سيتم حذف عنصر «{{name}}» من الكتالوج.",
+      "categoryNotEmpty": "الفئة تحتوي على العناصر أو فئات فرعية — فعّل «الحذف مع المحتوى»",
+      "categoryDeleteBody": "سيتم حذف الفئة «{{name}}». عدد العناصر: {{count}}.",
+      "categoryCascade": "الحذف مع العناصر والفئات الفرعية",
+      "loadFailed": "تعذر تحميل العناصر",
+      "what": "العناصر"
     }
   }
 }

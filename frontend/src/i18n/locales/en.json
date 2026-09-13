@@ -105,15 +105,9 @@
   "menu": {
     "categories": "Categories",
     "addCategory": "Category",
-    "items": "Items",
-    "addItem": "Add item",
-    "itemsCount": "{{count}} items",
-    "searchPlaceholder": "Search items",
     "selectCategory": "Pick a category on the left",
     "noCategories": "No categories yet",
-    "noCategoriesHint": "Create the first category to start building the menu",
-    "noItems": "This category has no items yet",
-    "noItemsHint": "Add the first item — guests will see it in the app"
+    "noCategoriesHint": "Create the first category to start building the menu"
   },
   "category": {
     "newTitle": "New category",
@@ -127,10 +121,7 @@
     "image": "Image",
     "saved": "Category saved",
     "deleted": "Category deleted",
-    "notEmpty": "The category is not empty — tick “delete with contents”",
     "deleteTitle": "Delete category?",
-    "deleteBody": "Category “{{name}}” will be deleted. Items inside: {{count}}.",
-    "deleteCascade": "Delete together with items and subcategories",
     "commerceSection": "Commerce",
     "serviceFeeApplies": "Service fee applies",
     "minOrder": "Minimum order amount",
@@ -138,7 +129,6 @@
     "minOrderInvalid": "Invalid amount"
   },
   "item": {
-    "newTitle": "New item",
     "untitled": "Untitled",
     "basics": "Basics",
     "title": "Name",
@@ -161,10 +151,6 @@
     "addCharacteristic": "Add characteristic",
     "allergensCount": "{{count}} allergens",
     "markersCount": "{{count}} markers",
-    "saved": "Item saved",
-    "deleted": "Item deleted",
-    "deleteTitle": "Delete item?",
-    "deleteBody": "Item “{{name}}” will be removed from the menu.",
     "type": "Item type",
     "typeHint": "Chosen at creation and fixed afterwards",
     "typeLocked": "The item type cannot be changed",
@@ -307,8 +293,6 @@
     "generic": "Something went wrong",
     "reorderFailed": "Could not save the new order",
     "loadCategories": "Could not load categories",
-    "loadItems": "Could not load items",
-    "loadItem": "Could not load the item",
     "loadBootstrap": "Could not load hotel settings"
   },
   "demo": {
@@ -2781,7 +2765,6 @@
       "timeseries": "the chart",
       "reviewSettings": "the review settings",
       "me": "your account",
-      "items": "items",
       "slaOverrides": "the overdue thresholds",
       "commerceOverrides": "the venues' own commerce"
     },
@@ -3096,6 +3079,93 @@
       "assignee": "Handled by",
       "nobody": "nobody took it",
       "cancelled": "Cancelled: {{reason}}"
+    }
+  },
+  "catalog": {
+    "dish": {
+      "plural": "Dishes",
+      "add": "Add dish",
+      "count": "{{count}} dishes",
+      "search": "Search dishes",
+      "emptyHint": "Add the first dish — guests will see it in the app",
+      "newTitle": "New dish",
+      "saved": "Dish saved",
+      "deleted": "Dish deleted",
+      "deleteTitle": "Delete dish?",
+      "deleteBody": "Dish “{{name}}” will be removed from the menu.",
+      "categoryNotEmpty": "The category contains dishes or subcategories — tick “delete with contents”",
+      "categoryDeleteBody": "Category “{{name}}” will be deleted. Dishes inside: {{count}}.",
+      "categoryCascade": "Delete together with dishes and subcategories",
+      "loadFailed": "Could not load dishes",
+      "what": "dishes"
+    },
+    "service": {
+      "plural": "Services",
+      "add": "Add service",
+      "count": "{{count}} services",
+      "search": "Search services",
+      "emptyHint": "Add the first service — guests will see it in the app",
+      "newTitle": "New service",
+      "saved": "Service saved",
+      "deleted": "Service deleted",
+      "deleteTitle": "Delete service?",
+      "deleteBody": "Service “{{name}}” will be removed from the catalogue.",
+      "categoryNotEmpty": "The category contains services or subcategories — tick “delete with contents”",
+      "categoryDeleteBody": "Category “{{name}}” will be deleted. Services inside: {{count}}.",
+      "categoryCascade": "Delete together with services and subcategories",
+      "loadFailed": "Could not load services",
+      "what": "services"
+    },
+    "goods": {
+      "plural": "Products",
+      "add": "Add product",
+      "count": "{{count}} products",
+      "search": "Search products",
+      "emptyHint": "Add the first product — guests will see it in the app",
+      "newTitle": "New product",
+      "saved": "Product saved",
+      "deleted": "Product deleted",
+      "deleteTitle": "Delete product?",
+      "deleteBody": "Product “{{name}}” will be removed from the catalogue.",
+      "categoryNotEmpty": "The category contains products or subcategories — tick “delete with contents”",
+      "categoryDeleteBody": "Category “{{name}}” will be deleted. Products inside: {{count}}.",
+      "categoryCascade": "Delete together with products and subcategories",
+      "loadFailed": "Could not load products",
+      "what": "products"
+    },
+    "page": {
+      "plural": "Pages",
+      "add": "Add page",
+      "count": "{{count}} pages",
+      "search": "Search pages",
+      "emptyHint": "Add the first page — guests will see it in the app",
+      "newTitle": "New page",
+      "saved": "Page saved",
+      "deleted": "Page deleted",
+      "deleteTitle": "Delete page?",
+      "deleteBody": "Page “{{name}}” will be removed from the catalogue.",
+      "categoryNotEmpty": "The category contains pages or subcategories — tick “delete with contents”",
+      "categoryDeleteBody": "Category “{{name}}” will be deleted. Pages inside: {{count}}.",
+      "categoryCascade": "Delete together with pages and subcategories",
+      "loadFailed": "Could not load pages",
+      "what": "pages"
+    },
+    "item": {
+      "plural": "Items",
+      "add": "Add item",
+      "count": "{{count}} items",
+      "search": "Search items",
+      "emptyHint": "Add the first item — guests will see it in the app",
+      "newTitle": "New item",
+      "saved": "Item saved",
+      "deleted": "Item deleted",
+      "deleteTitle": "Delete item?",
+      "deleteBody": "Item “{{name}}” will be removed from the catalogue.",
+      "categoryNotEmpty": "The category contains items or subcategories — tick “delete with contents”",
+      "categoryDeleteBody": "Category “{{name}}” will be deleted. Items inside: {{count}}.",
+      "categoryCascade": "Delete together with items and subcategories",
+      "loadFailed": "Could not load items",
+      "what": "items"
     }
   }
 }

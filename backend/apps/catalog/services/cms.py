@@ -145,12 +145,19 @@ def _next_sort_order(queryset) -> int:
 def serialize_category(
     category: Category, *, counts: dict | None = None, with_children: bool = False
 ) -> dict:
+    from apps.catalog.nouns import noun_for_service
+
     counts = counts or {}
     payload = {
         "id": str(category.pk),
         "parent_id": str(category.parent_id) if category.parent_id else None,
         "code": category.code,
         "type": category.type,
+        # КАК НАЗЫВАТЬ ТО, ЧТО ЛЕЖИТ В ЭТОМ РАЗДЕЛЕ. Едет с разделом, а не
+        # спрашивается отдельным запросом: редактор позиции знает раздел и
+        # обязан знать слово, не сходив за заведением. Выводится из типа
+        # заведения — см. `apps/catalog/nouns.py`.
+        "noun": noun_for_service(category.service),
         "title": category.title or {},
         "description": category.description or {},
         "image": serialize_asset(category.image),
@@ -212,7 +219,10 @@ def category_tree(
         queryset = queryset.filter(service_id=service_id)
     categories = list(
         _scoped(queryset)
-        .select_related("image")
+        # `service` — ради слова в ответе (`noun`): без него сериализация
+        # сходила бы за заведением на КАЖДЫЙ раздел, а обещание «один запрос на
+        # уровень, без N+1» стоит прямо над этой строкой.
+        .select_related("image", "service")
         .order_by("sort_order", "code")
     )
     counts = dict(

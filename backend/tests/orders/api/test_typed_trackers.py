@@ -258,12 +258,18 @@ def test_guest_card_covers_every_service_type():
     увидит заявку там, где на самом деле запись, и заметит это не он, а мы —
     через неделю после запуска.
     """
+    from apps.catalog.nouns import SERVICE_TYPE_TO_NOUN
     from apps.hotels.models import Service
     from apps.orders.services.tracker_types import SERVICE_TYPE_TO_GUEST_CARD, SERVICE_TYPE_TO_TRACKER
 
     declared = {value for value, _ in Service.Type.choices}
     assert declared == set(SERVICE_TYPE_TO_TRACKER), "тип сервиса без трекера"
     assert declared == set(SERVICE_TYPE_TO_GUEST_CARD), "тип сервиса без гостевой карточки"
+    # Третья карта того же входа: как заведение называет содержимое каталога.
+    # Пропуск здесь тише прочих — новый тип молча назовёт свои позиции
+    # «позициями», и заметит это не отель, а мы, когда он спросит, почему у
+    # него на кнопке не то слово.
+    assert declared == set(SERVICE_TYPE_TO_NOUN), "тип сервиса без слова каталога"
 
 
 def test_guest_card_of_a_booking_is_a_booking_whatever_the_service():

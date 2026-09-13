@@ -553,8 +553,10 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
 
     `tracker_type` отдаём здесь же (R3 выводит его из типа сервиса): админ,
     меняя тип заведения, должен видеть, какой рабочий экран получит персонал,
-    а не узнавать это по факту.
+    а не узнавать это по факту. Там же и `noun` — слово, которым это заведение
+    называет содержимое каталога.
     """
+    from apps.catalog.nouns import noun_for_service_type
     from apps.orders.services.tracker_types import tracker_type_for_service_type
 
     counts = counts or {}
@@ -571,6 +573,10 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
         "schedule_id": str(service.schedule_id) if service.schedule_id else None,
         "image": serialize_asset(service.image),
         "tracker_type": tracker_type_for_service_type(service.type),
+        # Слово, которым заведение называет содержимое своего каталога:
+        # «блюдо» у ресторана, «услуга» у спа. Выводится из типа, как и трекер
+        # выше, и по той же причине — см. `apps/catalog/nouns.py`.
+        "noun": noun_for_service_type(service.type),
         # Исполнение — внутри: снаружи отель настраивает заведение, а бригада
         # за ним детали реализации.
         "execution_point": {
@@ -633,6 +639,7 @@ def service_templates() -> list[dict]:
     рабочий экран получит персонал. Список строится из самих справочников —
     новый тип сервиса появляется здесь сам, без правки шаблонов.
     """
+    from apps.catalog.nouns import noun_for_service_type
     from apps.catalog.offerings import OfferingType
     from apps.hotels.vocabularies import SERVICE_TYPE_LABELS
     from apps.orders.services.tracker_types import tracker_type_for_service_type
@@ -658,6 +665,9 @@ def service_templates() -> list[dict]:
             "title": SERVICE_TYPE_LABELS.get(value, {}),
             "bricks": [str(b) for b in BRICKS.get(value, [])],
             "tracker_type": tracker_type_for_service_type(value),
+            # Слово видно ещё ПРИ ВЫБОРЕ типа: заводя «спа», человек сразу
+            # читает, что наполнять его он будет услугами, а не блюдами.
+            "noun": noun_for_service_type(value),
             "default_guest_facing": value != Service.Type.HOUSEKEEPING,
         }
         for value, _label in Service.Type.choices

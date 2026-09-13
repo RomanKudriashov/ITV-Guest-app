@@ -7,6 +7,7 @@
  */
 import { api } from '@/api/client';
 import type { ListPage, MediaAsset } from '@/api/types';
+import type { OfferingNoun } from '@/offerings/nouns';
 
 export interface ServiceExecutionPoint {
   id: string;
@@ -38,6 +39,12 @@ export interface CmsService {
   image: MediaAsset | null;
   /** Вид рабочего экрана персонала — выводится из типа сервиса (R3). */
   tracker_type: string;
+  /**
+   * Слово, которым заведение называет содержимое каталога: «блюдо», «услуга»,
+   * «товар», «страница», «позиция». Тоже выводится из типа — см.
+   * `@/offerings/nouns`.
+   */
+  noun: OfferingNoun;
   execution_point: ServiceExecutionPoint;
   commerce: ServiceCommerce;
   category_count: number;
@@ -54,6 +61,8 @@ export interface ServiceTemplate {
   /** Из каких кирпичей собран тип: product | service_request | slot | info. */
   bricks: string[];
   tracker_type: string;
+  /** Слово типа: видно ещё при выборе, чем заведение будет наполняться. */
+  noun: OfferingNoun;
   default_guest_facing: boolean;
 }
 

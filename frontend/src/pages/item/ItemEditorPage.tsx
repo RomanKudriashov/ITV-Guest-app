@@ -58,6 +58,7 @@ import { useFormDraft } from '@/hooks/useFormDraft';
 import { useAuth } from '@/auth';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { flattenCategories } from '@/utils/categories';
+import { useCatalogWords, type OfferingNoun } from '@/offerings/nouns';
 import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
 import {
@@ -255,6 +256,22 @@ export function ItemEditorPage() {
       isOfferingType(searchParams.get('type')) ? (searchParams.get('type') as OfferingType) : 'product',
     ),
   );
+  /*
+    СЛОВО БЕРЁТСЯ У РАЗДЕЛА, В КОТОРОМ ЛЕЖИТ ПОЗИЦИЯ.
+
+    Не у заведения: редактор открывается и по прямой ссылке, когда заведение
+    экрану неизвестно, а раздел известен всегда — он в форме. Раздел несёт
+    слово с собой (`Category.noun`), выведенное сервером из типа заведения.
+
+    Раздел ещё не выбран (новая позиция, список разделов не доехал) — слово
+    нейтральное: «Новая позиция» верна везде, «Новое блюдо» в спа — нет.
+  */
+  const noun = useMemo<OfferingNoun | null>(() => {
+    const chosen = flatCategories.find((row) => row.category.id === form.category_id);
+    return (chosen?.category.noun as OfferingNoun | undefined) ?? null;
+  }, [flatCategories, form.category_id]);
+  const w = useCatalogWords(noun);
+
   const [images, setImages] = useState<EditableImage[]>([]);
   const [groups, setGroups] = useState<DraftGroup[]>([]);
   const [fields, setFields] = useState<DraftField[]>([]);
@@ -655,7 +672,7 @@ export function ItemEditorPage() {
     },
     onSuccess: async (saved) => {
       setServerErrors({});
-      toast.show(t('item.saved'), 'success');
+      toast.show(w('saved'), 'success');
 
       /*
         Сброса `hydratedIdRef` здесь БОЛЬШЕ НЕТ, и это существенно.
@@ -771,7 +788,7 @@ export function ItemEditorPage() {
         <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h5" noWrap>
             {isNew
-              ? t('item.newTitle')
+              ? w('newTitle')
               : pickTranslated(form.title, languages.displayLanguage, languages.defaultCode) ||
                 t('item.untitled')}
           </Typography>

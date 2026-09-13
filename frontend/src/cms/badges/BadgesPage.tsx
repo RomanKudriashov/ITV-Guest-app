@@ -132,7 +132,7 @@ function BadgeItems({ badgeId, label }: { badgeId: string; label: string }) {
       {itemsQuery.isLoading ? (
         <Skeleton variant="rounded" height={64} />
       ) : itemsQuery.isError ? (
-        <QueryState query={itemsQuery} what={t('state.what.items')}>
+        <QueryState query={itemsQuery} what={t('catalog.item.what')}>
           {() => null}
         </QueryState>
       ) : (itemsQuery.data ?? []).length === 0 ? (
