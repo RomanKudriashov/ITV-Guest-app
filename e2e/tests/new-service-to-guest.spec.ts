@@ -42,9 +42,17 @@ async function enterAsGuest(page: Page): Promise<void> {
   await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 20_000 })
 }
 
-for (const { label, typeLabel } of [
-  { label: 'Свой', typeLabel: /^Свой/ },
-  { label: 'Ресторан', typeLabel: /^Ресторан/ },
+/*
+  СЛОВО ЗАВИСИТ ОТ ТИПА ЗАВЕДЕНИЯ, и укус обязан ждать своё.
+
+  Тост после сохранения говорит «Блюдо сохранено» в ресторане и «Позиция
+  сохранена» у «Своего»: слово следует за типом. Прежняя редакция ждала
+  ресторанного тоста в обоих прогонах и падала у «Своего» — не на поломке, а
+  на собственном устаревшем ожидании.
+*/
+for (const { label, typeLabel, savedToast } of [
+  { label: 'Свой', typeLabel: /^Свой/, savedToast: 'Позиция сохранена' },
+  { label: 'Ресторан', typeLabel: /^Ресторан/, savedToast: 'Блюдо сохранено' },
 ]) {
   test(`«${label}»: новое заведение → раздел → позиция → гость видит всё три`, async ({
     page,
@@ -86,7 +94,7 @@ for (const { label, typeLabel } of [
     await page.getByTestId('item-title-input').fill(itemName)
     await page.getByTestId('item-price-input').fill('1500')
     await page.getByTestId('item-save-button').click()
-    await expect(page.getByText('Блюдо сохранено')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(savedToast)).toBeVisible({ timeout: 15_000 })
 
     /* ── ГОСТЬ. Это и есть приёмка ──────────────────────────────────────── */
     const guest = await context.newPage()
