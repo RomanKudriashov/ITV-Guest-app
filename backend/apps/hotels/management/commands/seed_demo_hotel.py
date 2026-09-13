@@ -1409,13 +1409,35 @@ class Command(BaseCommand):
         from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order
         from apps.reviews.models import Review
 
-        # По одному живому предложению на тип, что реально создаёт заказ.
-        offerings = [
-            it for it in (
-                Item.objects.filter(type="product", is_active=True).first(),
-                Item.objects.filter(type="service_request", is_active=True).first(),
-            ) if it is not None
-        ]
+        # ПО ОДНОМУ ЖИВОМУ ПРЕДЛОЖЕНИЮ НА ЗАВЕДЕНИЕ, а не по одному на тип.
+        #
+        # Было две позиции на весь стенд — первый попавшийся товар и первая
+        # заявка. Обе принадлежат одному-двум заведениям, и вся история
+        # копилась там: на пульте горело одно заведение из девяти, у остальных
+        # стояли нули, а доска истории у них была пуста. Стенд при этом
+        # выглядел как отель, где работает одна хозслужба.
+        offerings = []
+        for service in Service.objects.filter(is_active=True).order_by("sort_order", "code"):
+            item = (
+                Item.objects.filter(
+                    category__service=service,
+                    is_active=True,
+                    type__in=("product", "service_request"),
+                )
+                .order_by("sort_order", "code")
+                .first()
+            )
+            if item is not None:
+                offerings.append(item)
+        if not offerings:
+            # Ни у одного заведения нет живой позиции — берём хоть что-нибудь,
+            # чтобы история была, а не молча не появилась.
+            offerings = [
+                it for it in (
+                    Item.objects.filter(type="product", is_active=True).first(),
+                    Item.objects.filter(type="service_request", is_active=True).first(),
+                ) if it is not None
+            ]
         if not offerings or not rooms:
             return
 
@@ -1427,17 +1449,42 @@ class Command(BaseCommand):
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Desktop",
         ]
         languages = ["ru", "en", "ar", "zh"]
-        base = hotel.local_now().replace(hour=12, minute=0, second=0, microsecond=0)
+        now = hotel.local_now()
+        base = now.replace(hour=12, minute=0, second=0, microsecond=0)
 
         n = 0
-        # 21 день истории; в день — переменное число заказов с разбросом по часам.
-        for days_ago in range(21, 0, -1):
+        # 21 день истории ВКЛЮЧАЯ СЕГОДНЯШНИЙ.
+        #
+        # Раньше цикл кончался на `days_ago == 1`, то есть последний заказ стенда
+        # был вчерашним полднем. Всё, что меряет «сегодня» и «смену», на таком
+        # стенде показывало нули и было неотличимо от поломки: пульт — пустой
+        # день, аналитика — «нет данных за период», история трекера — пустая
+        # доска, а сторож пагинации истории зеленел на ней вхолостую.
+        for days_ago in range(21, -1, -1):
             day_anchor = base - timedelta(days=days_ago)
-            per_day = 2 + (days_ago % 3)  # 2..4 заказа/день
+            # 2..4 заказа/день в прошлом; СЕГОДНЯ — шесть.
+            #
+            # Не для красоты: история трекера живёт окном в 24 часа
+            # (`HISTORY_WINDOW_HOURS`), и вчерашний полдень в него не попадает
+            # вовсе. При двух заказах за сегодня доска истории у половины
+            # заведений оставалась пустой, а страница — единственной: листать
+            # нечего, и сторож пагинации проверял бы пустоту.
+            per_day = 6 if days_ago == 0 else 2 + (days_ago % 3)
             for k in range(per_day):
                 item = offerings[(days_ago + k) % len(offerings)]
                 room = rooms[(days_ago * 2 + k) % len(rooms)]
-                created = day_anchor + timedelta(hours=(k * 4) - 6, minutes=(days_ago * 7) % 60)
+                if days_ago == 0:
+                    # Сегодняшние — ОТ ТЕКУЩЕГО ЧАСА НАЗАД, а не от полудня: в
+                    # шесть вечера «история за сегодня» из утренних заказов
+                    # выглядит как остановившийся отель. Последний — минуты
+                    # назад, дальше с шагом в два с половиной часа.
+                    created = now - timedelta(
+                        hours=(5 - k) * 5 // 2, minutes=(k * 17) % 60 + 4
+                    )
+                else:
+                    created = day_anchor + timedelta(
+                        hours=(k * 4) - 6, minutes=(days_ago * 7) % 60
+                    )
 
                 # Хэш токена детерминирован НАМЕРЕННО (демо воспроизводимо),
                 # поэтому создаём через get_or_create: до R4 повторный
