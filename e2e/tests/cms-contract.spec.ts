@@ -51,9 +51,31 @@ function sources(dir: string): string[] {
 /** `api.get<Type>('/path')` и `.get<Type>('/path')`, включая многострочные. */
 const CALL = /\.get<([^>]*(?:<[^>]*>)?[^>]*)>\(\s*'([^'`$]+)'/g
 
+/**
+ * Имена типов, объявленных как страница: `interface X extends ListPage<…>`.
+ *
+ * Без этого сторож считал страницей только буквальное `api.get<ListPage<T>>`.
+ * Выдача с дополнительным полем (например `kind_applies` у справочников)
+ * объявляется своим именем — и честная страница читалась как простой объект,
+ * то есть сторож ругался на совпадающие стороны.
+ */
+function pageAliases(): Set<string> {
+  const names = new Set<string>()
+  for (const file of sources(ROOT)) {
+    const text = readFileSync(file, 'utf8')
+    for (const match of text.matchAll(/interface\s+([A-Za-z0-9_]+)\s+extends\s+(?:ListPage|Page)</g)) {
+      names.add(match[1])
+    }
+  }
+  return names
+}
+
+const PAGE_ALIASES = pageAliases()
+
 function familyOf(type: string): Family {
   const clean = type.trim()
   if (/^ListPage</.test(clean) || /^Page</.test(clean)) return 'page'
+  if (PAGE_ALIASES.has(clean)) return 'page'
   if (/\[\]$/.test(clean)) return 'array'
   return 'object'
 }
