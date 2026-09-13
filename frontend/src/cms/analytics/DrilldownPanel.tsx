@@ -128,10 +128,24 @@ export function DrilldownPanel({
             </Typography>
           </Stack>
           <Stack direction="row" spacing={1} alignItems="center">
+            {/*
+              КНОПКА ЖДЁТ ПЕРИОД, А НЕ УВОДИТ БЕЗ НЕГО.
+
+              Границы приходят со сводкой, а разбор заявок открывается раньше,
+              чем она доедет. Кнопка, доступная в этот момент, уносила бы
+              ПУСТОЙ период — то есть открывала раздел по всей истории, пока
+              человек уверен, что смотрит свои сутки. Молча и только на
+              медленном ответе: поймано прогоном под нагрузкой.
+
+              Поэтому пока периода нет — кнопка неактивна. Это ровно тот
+              случай, когда серая кнопка честна: она сработает через секунду,
+              и ждать тут есть чего.
+            */}
             <Button
               size="small"
               variant="outlined"
-              href={ordersLink(params, period)}
+              href={period ? ordersLink(params, period) : undefined}
+              disabled={!period}
               data-testid="analytics-to-orders"
             >
               {t('analytics.drilldown.toOrders')}

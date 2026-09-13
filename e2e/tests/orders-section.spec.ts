@@ -145,6 +145,11 @@ test.describe('Из аналитики — в заказы', () => {
 
     const toOrders = page.getByTestId('analytics-to-orders')
     await expect(toOrders, 'из разбора заявок нет хода в раздел «Заказы»').toBeVisible()
+    // Ждём, пока кнопка оживёт: до прихода сводки период неизвестен, и ход
+    // намеренно неактивен — нажать его раньше значит уйти без периода.
+    await expect(toOrders, 'кнопка так и не ожила — период не приехал').toBeEnabled({
+      timeout: 20_000,
+    })
     await toOrders.click()
 
     await expect(page).toHaveURL(/\/cms\/orders/, { timeout: 20_000 })
