@@ -7,6 +7,7 @@ from apps.reviews.api.router import cms_router as reviews_router
 from apps.grms.api.router import cms_router as grms_router
 from apps.accounts.api.router import cms_router as staff_router
 from apps.hotels.api.cms import router as hotel_router
+from apps.orders.api.cms import router as orders_router
 from apps.media.api.cms.media import router as media_router
 
 
@@ -14,6 +15,7 @@ router = Router()
 router.add_router("", hotel_router)
 router.add_router("", media_router)
 router.add_router("", staff_router)
+router.add_router("", orders_router)
 router.add_router("", catalog_router)
 # Управление номером: раздел закрыт МОДУЛЕМ room_control на каждом эндпоинте.
 router.add_router("", grms_router)

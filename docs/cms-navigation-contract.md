@@ -21,15 +21,17 @@
 {
   "groups": [
     {"key": "operations", "items": [
-      {"key": "dashboard", "to": "/cms/dashboard", "module": null},
-      {"key": "tracker",   "to": "/tracker",       "module": null}
+      {"key": "dashboard",     "to": "/cms/dashboard",     "module": null},
+      {"key": "tracker",       "to": "/tracker",           "module": null},
+      {"key": "notifications", "to": "/cms/notifications", "module": null},
+      {"key": "orders",        "to": "/cms/orders",        "module": null}
     ]},
     {"key": "structure", "items": [
       {"key": "services", "to": "/cms/services", "module": null},
       {"key": "rooms",    "to": "/cms/rooms",    "module": null},
       {"key": "staff",    "to": "/cms/staff",    "module": null}
     ]}
-    // …appearance, analytics, settings, modules
+    // …storefront, settings
   ]
 }
 ```
@@ -50,12 +52,20 @@
 
 | Ключ | Что внутри |
 |---|---|
-| `operations` | Дашборд, Трекер |
-| `structure` | Сервисы, Номерной фонд, Персонал |
-| `appearance` | Бренд и витрина |
-| `analytics` | Аналитика |
-| `settings` | Настройки отеля, Уведомления, Справочники |
-| `modules` | только включённые модульные разделы |
+| `operations` | Дашборд, Трекер, Уведомления, **Заказы** |
+| `structure` | Сервисы, Номерной фонд, Персонал, Управление номером |
+| `storefront` | Бренд и витрина, Маркетинг, Аналитика |
+| `settings` | Настройки отеля, Справочники, Оплата, PMS, Мобильный ключ |
+
+Групп `appearance`, `analytics` и `modules` больше нет: первые две были из
+одного пункта каждая (заголовок над единственной строкой удваивает перебор), а
+`modules` группировала пункты по СПОСОБУ ПРОДАЖИ, а не по предмету. Теперь
+каждый модульный экран лежит там, где его предмет.
+
+**«Заказы» — в `operations`, а не в аналитике.** Это оперативный экран: на него
+смотрят, когда разбирают жалобу или ищут конкретную заявку, а не когда изучают
+динамику. Глубокие срезы остались в «Аналитике», и второго их экземпляра здесь
+нет.
 
 ---
 

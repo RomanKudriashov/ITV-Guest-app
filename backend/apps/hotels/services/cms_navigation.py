@@ -73,6 +73,15 @@ NAVIGATION: tuple[NavGroup, ...] = (
             # Уведомления переехали из «Настроек»: это оперативный экран, на
             # него смотрят в смену, а не настраивают раз и забывают.
             NavItem(key="notifications", to="/cms/notifications"),
+            # ЗАКАЗЫ — оперативный экран, а не отчёт: на него смотрят, когда
+            # разбирают жалобу или ищут конкретную заявку, поэтому он рядом с
+            # доской, а не в «Аналитике». Глубокие срезы остались там.
+            #
+            # Без `hotel_admin_only`: управляющему он нужен по своим
+            # заведениям — раздел сам режется по подведомственным точкам.
+            # Линейный сюда не попадёт вовсе: вся CMS закрыта для него гейтом
+            # `CmsAuth`, и навигация ему не отдаётся.
+            NavItem(key="orders", to="/cms/orders"),
         ),
     ),
     NavGroup(
@@ -138,7 +147,7 @@ NAVIGATION: tuple[NavGroup, ...] = (
 # Пункты, которые НИКОГДА не гейтятся модулем, — сторож против случайной
 # привязки базового экрана к платной фиче. Проверяется тестом.
 ALWAYS_AVAILABLE = frozenset(
-    {"dashboard", "tracker", "services", "rooms", "staff", "brand",
+    {"dashboard", "tracker", "orders", "services", "rooms", "staff", "brand",
      "analytics", "settings", "notifications", "dictionaries"}
 )
 

@@ -47,10 +47,13 @@ def test_base_sections_are_never_gated_by_a_module():
 
 def test_every_gated_item_names_a_real_module():
     valid = {code.value for code in HotelModule.Code}
-    for group in NAVIGATION:
-        for item in group.items:
-            if item.module is not None:
-                assert item.module in valid, item.key
+    gated = [item for group in NAVIGATION for item in group.items if item.module is not None]
+    # Пункты с модулем ЕСТЬ. Без этой строки проверка становится циклом по
+    # пустому списку: исчезни гейтинг целиком — и она зазеленеет, сообщив, что
+    # «все привязки верны», при том что привязок не осталось ни одной.
+    assert gated, "ни один пункт меню не привязан к модулю — гейтинг исчез"
+    for item in gated:
+        assert item.module in valid, item.key
 
 
 # --- Группы вместо простыни ------------------------------------------------
@@ -69,7 +72,10 @@ def test_navigation_is_grouped_not_flat(cms):
 
     # Оперативное — вместе, включая уведомления: на них смотрят в смену, а не
     # настраивают раз и забывают.
-    assert groups["operations"] == ["dashboard", "tracker", "notifications"]
+    # «Заказы» — четвёртый пункт оперативной группы: разбор заявок по всем
+    # заведениям. Он рядом с доской, а не в «Аналитике», потому что на него
+    # смотрят, когда ищут конкретную заявку, а не когда изучают динамику.
+    assert groups["operations"] == ["dashboard", "tracker", "notifications", "orders"]
     # Структура карты продукта: сервисы верхним уровнем, номерной фонд, персонал.
     # Управления номером здесь нет — модуль отелю не включён.
     assert groups["structure"] == ["services", "rooms", "staff"]
