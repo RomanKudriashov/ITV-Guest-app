@@ -280,7 +280,14 @@ def test_any_progress_stops_escalation(crystal, order, status_code, notification
     with tenant_context(crystal):
         from apps.orders.services import change_status, get_order
 
-        change_status(get_order(order.pk), to_code=status_code, actor_type="staff")
+        change_status(
+            get_order(order.pk),
+            to_code=status_code,
+            actor_type="staff",
+            # Отмена теперь требует причину; для остальных статусов параметр
+            # безвреден и игнорируется.
+            cancel_reason="mistake",
+        )
         assert escalation_should_stop(get_order(order.pk)) is True
 
 

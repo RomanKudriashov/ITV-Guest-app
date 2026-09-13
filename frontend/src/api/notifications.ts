@@ -1,6 +1,6 @@
 import type { ListPage } from './types';
 /** One function per endpoint of `docs/notifications-api-contract.md` §3. */
-import { api, request } from './client';
+import { api } from './client';
 import type {
   ChannelTestResult,
   EscalationRule,
@@ -73,34 +73,39 @@ export function deleteEscalationRule(id: string): Promise<void> {
 export function fetchNotificationLog(
   query: NotificationLogQuery = {},
 ): Promise<NotificationLogEntry[]> {
-  return api.get<NotificationLogEntry[]>('/cms/notification-log', {
-    query: {
-      order_id: query.order_id,
-      status: query.status || undefined,
-      limit: query.limit,
-    },
-  });
+  return api
+    .get<ListPage<NotificationLogEntry>>('/cms/notification-log', {
+      query: {
+        order_id: query.order_id,
+        status: query.status || undefined,
+        limit: query.limit,
+      },
+    })
+    .then((page) => page.items);
 }
 
 /* ── Staff ─────────────────────────────────────────────────────────────── */
 
 /**
- * A personal channel needs a `user_id`. The staff list has a real
- * endpoint (`GET /api/cms/staff`, `docs/hotel-admin-api-contract.md` §4), so the
- * personal-channel picker is populated from it. The call stays best-effort — a
- * failure means "the picker has nothing to offer", never a broken screen.
+ * A personal channel needs a `user_id`, and the picker is filled from
+ * `GET /api/cms/staff` (`docs/hotel-admin-api-contract.md` §4).
+ *
+ * Выдача приходит КОНВЕРТОМ `{items, total, …}`, как у всех листингов CMS, —
+ * разворачиваем её здесь, а не гадаем на `Array.isArray` снаружи.
+ *
+ * Отказ НЕ проглатывается. Пустой список от упавшего запроса неотличим от
+ * отеля без сотрудников, и поле «Сотрудник» молча блокировалось бы с подписью
+ * «сотрудников нет» — экран врал бы про состояние отеля вместо того, чтобы
+ * сказать «список не загрузился».
  */
-export async function fetchStaffUsers(): Promise<NotificationStaffUser[]> {
-  try {
-    const users = await request<NotificationStaffUser[]>('/cms/staff');
-    return Array.isArray(users)
-      ? users.map((user) => ({
-          id: user.id,
-          email: user.email,
-          full_name: user.full_name,
-        }))
-      : [];
-  } catch {
-    return [];
-  }
+export function fetchStaffUsers(): Promise<NotificationStaffUser[]> {
+  return api
+    .get<ListPage<NotificationStaffUser>>('/cms/staff')
+    .then((page) =>
+      page.items.map((user) => ({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+      })),
+    );
 }

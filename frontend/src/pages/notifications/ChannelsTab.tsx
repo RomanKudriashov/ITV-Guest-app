@@ -287,6 +287,7 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
           configPublic={editing?.config_public}
           executionPoints={bootstrap?.execution_points ?? []}
           staffUsers={staffQuery.data ?? []}
+          staffFailed={staffQuery.isError}
           languages={languages.codes}
           languageLabels={languages.labels}
           defaultLanguage={languages.defaultCode}

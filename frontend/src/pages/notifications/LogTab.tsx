@@ -60,6 +60,8 @@ export function LogTab({ channels }: LogTabProps) {
   });
 
   const rows = useMemo(() => flattenLog(groupLog(logQuery.data ?? [])), [logQuery.data]);
+  /** Пусто под фильтром — это «не нашли», а не «не было». */
+  const filtered = Boolean(status) || orderId.trim().length > 0;
 
   const channelTitle = (entry: NotificationLogEntry) => {
     if (!entry.channel_id) return '—';
@@ -133,10 +135,20 @@ export function LogTab({ channels }: LogTabProps) {
             {() => null}
           </QueryState>
         ) : rows.length === 0 ? (
+          /*
+            «ПУСТО» И «НЕ НАЙДЕНО» — РАЗНЫЕ ОТВЕТЫ.
+
+            Под фильтром экран говорил «Записей пока нет» — то есть утверждал,
+            что уведомлений в отеле не было вовсе, хотя на самом деле не нашёл
+            их по набранному номеру. Человек в этот момент решает, сломались ли
+            уведомления, и получал на этот вопрос неверный ответ.
+          */
           <EmptyState
-            testId="cms-log-empty"
-            title={t('notifications.log.empty')}
-            description={t('notifications.log.emptyHint')}
+            testId={filtered ? 'cms-log-nothing-found' : 'cms-log-empty'}
+            title={t(filtered ? 'notifications.log.nothingFound' : 'notifications.log.empty')}
+            description={t(
+              filtered ? 'notifications.log.nothingFoundHint' : 'notifications.log.emptyHint',
+            )}
           />
         ) : (
           <Box data-testid="cms-notification-log" sx={{ overflowX: 'auto' }}>

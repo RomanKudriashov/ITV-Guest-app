@@ -116,6 +116,43 @@ def test_delete_channel(cms):
     assert "Временный" not in titles
 
 
+@pytest.mark.parametrize(
+    "user_id",
+    [
+        pytest.param("00000000-0000-0000-0000-000000000009", id="несуществующий"),
+        pytest.param("не-uuid", id="не-uuid"),
+    ],
+)
+def test_personal_channel_rejects_unknown_user(cms, user_id):
+    """
+    Личный канал на чужого сотрудника — ошибка формы, а не пятисотка.
+
+    Без проверки несуществующий id доезжал до INSERT (IntegrityError), а
+    непригодный ломался ещё на разборе UUID: отель в обоих случаях видел 500 и
+    не понимал, какое поле чинить.
+    """
+    response = cms.post(
+        "/api/cms/notification-channels",
+        {"type": "log", "title": "Личный", "user_id": user_id},
+    )
+    assert response.status_code == 422, response.content
+    body = response.json()
+    assert body["field"] == "user_id"
+    assert body["detail"] == "Сотрудник не найден"
+
+
+def test_personal_channel_accepts_a_real_user(cms):
+    """Обратная сторона той же проверки: настоящий сотрудник проходит."""
+    staff = cms.get("/api/cms/staff").json()["items"]
+    assert staff, "демо-отель обязан иметь сотрудников"
+    response = cms.post(
+        "/api/cms/notification-channels",
+        {"type": "log", "title": "Личный настоящий", "user_id": staff[0]["id"]},
+    )
+    assert response.status_code == 201, response.content
+    assert response.json()["user_id"] == staff[0]["id"]
+
+
 # --- Правила эскалации -----------------------------------------------------
 
 
@@ -270,6 +307,32 @@ def test_log_shows_step_and_its_deliveries(client, crystal, cms, settings):
 
     scheduled = cms.get("/api/cms/notification-log?status=scheduled").json()["items"]
     assert all(entry["status"] == "scheduled" for entry in scheduled)
+
+    # --- Фильтр принимает ТО, ЧТО ВИДНО В ТАБЛИЦЕ ---------------------------
+    #
+    # Заказ показан номером («№90768»), поле подписано «Заказ». Номер, набранный
+    # оттуда, уходил в UUID-поле и возвращался пятисоткой.
+    number = entries[0]["order_number"]
+    by_number = cms.get(f"/api/cms/notification-log?order_id={number}")
+    assert by_number.status_code == 200, by_number.content
+    assert {entry["id"] for entry in by_number.json()["items"]} == {
+        entry["id"] for entry in entries
+    }
+
+    # «№» перед цифрами отель наберёт вместе с ними — это тот же заказ.
+    with_sign = cms.get(f"/api/cms/notification-log?order_id=№{number}")
+    assert with_sign.status_code == 200, with_sign.content
+    assert with_sign.json()["total"] == by_number.json()["total"] == len(entries)
+
+    # UUID продолжает работать — старые ссылки не ломаются.
+    assert cms.get(f"/api/cms/notification-log?order_id={order_id}").json()["total"] == len(
+        entries
+    )
+
+    # Непригодная строка — пусто, а не «показали весь журнал».
+    junk = cms.get("/api/cms/notification-log?order_id=такого-нет")
+    assert junk.status_code == 200, junk.content
+    assert junk.json()["total"] == 0
 
 
 def test_channels_are_isolated_between_hotels(cms, cms_aurora):

@@ -12,6 +12,7 @@ from typing import Any, Iterable
 
 from django.db import transaction
 
+from apps.accounts.models import User
 from apps.accounts.services.roles import (
     managed_point_ids_or_none,
     require_hotel_admin,
@@ -102,9 +103,32 @@ def get_channel(channel_id) -> NotificationChannel:
 
 def _validate_binding(data: dict) -> None:
     point_id = data.get("execution_point_id")
-    if point_id and not ExecutionPoint.objects.filter(pk=point_id).exists():
+    if point_id and not _exists(ExecutionPoint, point_id):
         raise ValidationError("Заведение не найдено", field="execution_point_id")
     _require_point(point_id, "Канал")
+
+    # Сотрудника проверяем ровно так же, как заведение. Без этого несуществующий
+    # `user_id` доезжал до INSERT и падал IntegrityError'ом, а кривой — ломался
+    # ещё раньше, на разборе UUID: и то и другое отель видел пятисоткой вместо
+    # внятного «сотрудник не найден».
+    user_id = data.get("user_id")
+    if user_id and not _exists(User, user_id, is_staff_member=True):
+        raise ValidationError("Сотрудник не найден", field="user_id")
+
+
+def _exists(model, pk, **extra) -> bool:
+    """
+    `exists()` с непригодным pk — не 500.
+
+    Значение приходит из формы, и «не-UUID» — такая же пользовательская ошибка,
+    как «не тот UUID»: обе обязаны стать 422, а не трейсбеком.
+    """
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    try:
+        return model.objects.filter(pk=pk, **extra).exists()
+    except (DjangoValidationError, ValueError, TypeError):
+        return False
 
 
 def _merge_secrets(existing: dict, incoming: dict, adapter) -> dict:
@@ -390,6 +414,39 @@ def serialize_log(entry: NotificationLog) -> dict:
     }
 
 
+def _order_filter(value):
+    """
+    Заказ ищут ТЕМ, ЧТО ВИДЯТ, — номером.
+
+    В таблице журнала заказ показан номером («№90768»), поле подписано «Заказ»,
+    а сервер ждал UUID: набранный из таблицы номер уходил в UUID-поле и
+    возвращался пятисоткой. Поэтому здесь принимается и то и другое:
+
+      * UUID — как было, ссылки и внутренние переходы им и пользуются;
+      * номер (с «№», «#» и пробелами вокруг — их отель наберёт вместе с
+        цифрами) — то, что человек копирует глазами из строки.
+
+    Заведомо непригодная строка не ошибка запроса, а пустой результат: журнал
+    отвечает «по такому заказу отправок нет», а не показывает всё подряд.
+    """
+    import uuid
+
+    from django.db.models import Q
+
+    raw = str(value).strip().lstrip("№#").strip()
+    if not raw:
+        return Q()
+    try:
+        return Q(order_id=uuid.UUID(raw))
+    except (ValueError, AttributeError, TypeError):
+        pass
+    if raw.isdigit():
+        return Q(order__number=int(raw))
+    # Ни UUID, ни номер: совпасть не с чем, и молчаливое «показали всё» здесь
+    # было бы худшим ответом — фильтр обязан отфильтровывать.
+    return Q(pk=None)
+
+
 def list_logs(
     *, order_id=None, status: str = "", search: str = "", limit: int | None = None, offset: int = 0
 ) -> dict:
@@ -397,8 +454,26 @@ def list_logs(
     from apps.core.listing import page as list_page, search as apply_search
 
     queryset = NotificationLog.objects.select_related("order", "channel").order_by("-created_at")
+
+    # РЕЖЕМ ПО ТОЧКЕ ЗАКАЗА, А НЕ ПО ПРАВИЛУ И НЕ ПО КАНАЛУ.
+    #
+    # Журнал не резался вовсе: управляющий кухней видел отправки всего отеля —
+    # 100 записей, посимвольно те же, что у владельца. Каналы и правила рядом
+    # режутся `managed_point_ids_or_none()`, а журнал эту строку потерял.
+    #
+    # Признак выбран так, чтобы он был у КАЖДОЙ записи и отвечал на вопрос
+    # «чья это заявка». Замер на стенде: заказ есть у всех 7993 записей (связь
+    # обязательна в модели), правило — тоже у всех, но правило бывает
+    # общеотельным (`execution_point=NULL` модель допускает), и по нему чужая
+    # заявка уехала бы всем. Канала нет у 5050 записей (родительская запись
+    # «ступень сработала» канала не несёт), а у 1203 канал личный, без точки, —
+    # по нему половина журнала просто исчезла бы из виду.
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        queryset = queryset.filter(order__execution_point_id__in=managed)
+
     if order_id:
-        queryset = queryset.filter(order_id=order_id)
+        queryset = queryset.filter(_order_filter(order_id))
     if status:
         queryset = queryset.filter(status=status)
     queryset = apply_search(queryset, search, ("channel__title", "target_kind"))

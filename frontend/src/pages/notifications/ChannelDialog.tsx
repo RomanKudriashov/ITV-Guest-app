@@ -51,6 +51,11 @@ export interface ChannelDialogProps {
   configPublic: Record<string, unknown> | null | undefined;
   executionPoints: ExecutionPoint[];
   staffUsers: NotificationStaffUser[];
+  /**
+   * Список сотрудников не загрузился. Отдельно от «список пуст»: молча
+   * заблокированное поле с подписью «сотрудников нет» — это ложь про отель.
+   */
+  staffFailed: boolean;
   languages: string[];
   languageLabels: Record<string, string>;
   defaultLanguage: string;
@@ -76,6 +81,7 @@ export function ChannelDialog({
   configPublic,
   executionPoints,
   staffUsers,
+  staffFailed,
   languages,
   languageLabels,
   defaultLanguage,
@@ -232,12 +238,16 @@ export function ChannelDialog({
                 label={t('notifications.channels.user')}
                 value={draft.user_id ?? ''}
                 onChange={(event) => patch({ user_id: event.target.value || null })}
-                error={Boolean(errors.user_id)}
+                error={Boolean(errors.user_id) || staffFailed}
                 helperText={
                   errors.user_id ??
-                  (staffUsers.length === 0 ? t('notifications.channels.noStaff') : undefined)
+                  (staffFailed
+                    ? t('notifications.channels.staffFailed')
+                    : staffUsers.length === 0
+                      ? t('notifications.channels.noStaff')
+                      : undefined)
                 }
-                disabled={staffUsers.length === 0}
+                disabled={staffFailed || staffUsers.length === 0}
                 sx={{ minWidth: 240 }}
                 SelectProps={{ native: true }}
                 InputLabelProps={{ shrink: true }}

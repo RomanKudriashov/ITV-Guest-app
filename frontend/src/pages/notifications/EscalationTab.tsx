@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -61,13 +61,24 @@ export function EscalationTab({ bootstrap, languages }: EscalationTabProps) {
 
   const rules = useMemo(() => rulesQuery.data ?? [], [rulesQuery.data]);
 
-  // Land on the first existing rule once the list arrives; a hotel that has
-  // none starts on a blank one.
+  /*
+    ПРИЗЕМЛЕНИЕ НА ПЕРВОЕ ПРАВИЛО — РОВНО ОДИН РАЗ, когда список приехал.
+
+    Прежний эффект пересчитывался на каждое изменение выбора и возвращал его на
+    `rules[0]` всякий раз, когда выбран `NEW_RULE`, а правил хотя бы одно. То
+    есть создать правило через интерфейс было НЕЛЬЗЯ ВОВСЕ: и пункт списка
+    «Новое правило», и кнопка «+» ставили выбор, который тут же откатывался
+    обратно. Второе правило заводилось только запросом мимо экрана.
+
+    Ссылка, а не состояние: приземление — это разовое событие первой загрузки,
+    и в зависимости эффекта ему делать нечего.
+  */
+  const landed = useRef(false);
   useEffect(() => {
-    if (selectedId !== NEW_RULE && rules.some((rule) => rule.id === selectedId)) return;
-    if (selectedId === NEW_RULE && rules.length === 0) return;
-    setSelectedId(rules.length ? rules[0].id : NEW_RULE);
-  }, [rules, selectedId]);
+    if (landed.current || rulesQuery.isLoading) return;
+    landed.current = true;
+    if (rules.length) setSelectedId(rules[0].id);
+  }, [rules, rulesQuery.isLoading]);
 
   if (rulesQuery.isLoading) {
     return (
