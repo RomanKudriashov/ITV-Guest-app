@@ -171,7 +171,13 @@ test.describe('Метки: панель и витрина одним кодом'
     await guest.goto('/')
     await guest.getByTestId('guest-room-input').fill(DEMO_ROOM)
     await guest.getByTestId('guest-room-submit').click()
-    const guestBadge = guest.getByTestId('guest-badge-0').first()
+    await expect(guest.getByTestId('guest-home')).toBeVisible({ timeout: 25_000 })
+
+    // МЕТКИ ЖИВУТ НА КАРТОЧКАХ ЗАВЕДЕНИЯ, а не на парадной: на главной их нет,
+    // и ждать их там значит ждать вечно. Идём в витрину кухни — там висят
+    // демо-назначения.
+    await guest.goto('/venue/kitchen')
+    const guestBadge = guest.locator('[data-testid^="guest-badge-"]').first()
     await expect(guestBadge).toBeVisible({ timeout: 25_000 })
     const guestFill = await guestBadge.evaluate((node) => getComputedStyle(node).backgroundColor)
     await guest.close()
