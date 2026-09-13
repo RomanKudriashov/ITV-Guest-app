@@ -128,7 +128,10 @@ export function fetchBootstrap(): Promise<Bootstrap> {
 
 /* ── 3. Categories ─────────────────────────────────────────────────────── */
 
-export function fetchCategories(serviceId?: string): Promise<Category[]> {
+export function fetchCategories(
+  serviceId?: string,
+  options?: { allTypes?: boolean },
+): Promise<Category[]> {
   // `service_id` — наполнение одного заведения: рабочее пространство сервиса
   // показывает меню именно его, а не всю кучу отеля.
   //
@@ -137,7 +140,10 @@ export function fetchCategories(serviceId?: string): Promise<Category[]> {
   // непустом наполнении. Для общего меню отеля умолчание остаётся прежним —
   // там деление по типу и есть смысл экрана.
   return api.get<Category[]>('/cms/categories', {
-    query: serviceId ? { service_id: serviceId, type: 'all' } : undefined,
+    query: serviceId
+      ? { service_id: serviceId, type: 'all' }
+      : options?.allTypes
+        ? { type: 'all' } : undefined,
   });
 }
 

@@ -218,9 +218,18 @@ export function ItemEditorPage() {
   const languages = useContentLanguages(bootstrap);
   const minorUnits = bootstrap?.hotel.currency_minor_units ?? 100;
 
+  /*
+    РАЗДЕЛЫ — ВСЕХ ТИПОВ, а не только товарных.
+
+    Редактор открывается для позиции ЛЮБОГО типа: у спа она слотовая, у
+    консьержа заявочная. Спрашивая умолчание (`product`), экран не находил
+    раздел собственной позиции — и потому не знал ни слова каталога, ни того,
+    применимы ли ей справочники. Массаж показывал аллергены ровно по этой
+    причине: слово не определилось, и правило отбора получило «неизвестно».
+  */
   const categoriesQuery = useQuery({
-    queryKey: queryKeys.categories,
-    queryFn: () => fetchCategories(),
+    queryKey: [...queryKeys.categories, 'all-types'],
+    queryFn: () => fetchCategories(undefined, { allTypes: true }),
   });
   const flatCategories = useMemo(
     () => flattenCategories(categoriesQuery.data ?? []),
