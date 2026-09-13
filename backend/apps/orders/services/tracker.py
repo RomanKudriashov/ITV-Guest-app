@@ -24,11 +24,17 @@ from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, Val
 from apps.core.fields import translate
 from apps.hotels.models import ExecutionPoint, Hotel, Service
 
-from apps.events.bus import ORDER_ACCEPTED, emit
+from apps.events.bus import ORDER_ACCEPTED, ORDER_STATUS_CHANGED, emit
 
 from apps.orders.services import status_flows, tracker_shift
+from apps.orders.services.selection import selection_summary
 from apps.orders.models import Order, StatusDefinition
-from apps.orders.services.services import change_status, order_queryset, serialize_order
+from apps.orders.services.services import (
+    _event_payload,
+    change_status,
+    order_queryset,
+    serialize_order,
+)
 from apps.orders.services.tracker_types import (
     ColumnStyle,
     GroupBy,
@@ -45,7 +51,28 @@ class PointNotAssigned(PermissionDenied):
 # --- Точки сотрудника ------------------------------------------------------
 
 
+def sees_every_point(user) -> bool:
+    """
+    Администратор отеля работает СО ВСЕМИ досками без единого назначения.
+
+    До этой правки владелец отеля не открывал ни одной: `/tracker/points`
+    отдавал ноль точек, доска — `403 point_not_assigned`. Назначения у него
+    нет и быть не должно — он не стоит на смене ни в одном заведении, — а
+    привязывать его к каждой точке значило бы завести второй список
+    «кто работает в отеле», который разъедется с первым в день открытия
+    нового заведения.
+
+    Признак берётся оттуда же, откуда права в CMS (`Access.unrestricted`), —
+    второго источника правды о том, кто в отеле главный, не появляется.
+    """
+    from apps.accounts.services.roles import access_for
+
+    return access_for(user).unrestricted
+
+
 def assigned_points(user) -> list[ExecutionPoint]:
+    if sees_every_point(user):
+        return list(ExecutionPoint.objects.filter(is_active=True).order_by("code"))
     point_ids = StaffAssignment.objects.filter(user=user, is_active=True).values_list(
         "execution_point_id", flat=True
     )
@@ -72,6 +99,8 @@ def require_point(user, point_code: str) -> ExecutionPoint:
     point = ExecutionPoint.objects.filter(code=point_code, is_active=True).first()
     if point is None:
         raise NotFoundError(f"Заведение «{point_code}» не найдено")
+    if sees_every_point(user):
+        return point
     if not StaffAssignment.objects.filter(
         user=user, execution_point=point, is_active=True
     ).exists():
@@ -84,6 +113,8 @@ def require_point(user, point_code: str) -> ExecutionPoint:
 def require_point_for_order(user, order: Order) -> ExecutionPoint:
     """Действия над заказом разрешены только исполнителям его точки."""
     point = order.execution_point
+    if sees_every_point(user):
+        return point
     if not StaffAssignment.objects.filter(
         user=user, execution_point=point, is_active=True
     ).exists():
@@ -150,9 +181,6 @@ def _counts_by_point(point_ids: list) -> dict:
 
 # --- Доска -----------------------------------------------------------------
 
-HISTORY_WINDOW_HOURS = 24
-
-
 def build_board(
     point: ExecutionPoint,
     *,
@@ -165,6 +193,10 @@ def build_board(
     assignee: str = "",
     unassigned: bool = False,
     order_type: str = "",
+    room: str = "",
+    status: str = "",
+    since: str = "",
+    until: str = "",
     cursor: str | None = None,
     limit: int | None = None,
 ) -> dict:
@@ -208,13 +240,17 @@ def build_board(
         assignee=assignee,
         unassigned=unassigned,
         order_type=order_type,
+        room=room,
+        status=status,
     )
 
     next_cursor = None
+    selection = None
     if scope == "history":
-        since = timezone.now() - timedelta(hours=HISTORY_WINDOW_HOURS)
-        queryset = queryset.filter(status__is_terminal=True, created_at__gte=since).order_by(
-            "-created_at", "-pk"
+        queryset = _history_queryset(
+            queryset,
+            since=_day_edge(since, hotel, end=False),
+            until=_day_edge(until, hotel, end=True),
         )
         # ИСТОРИЯ ЛИСТАЕТСЯ КУРСОРОМ. Заказы закрываются прямо во время
         # просмотра и падают в историю сверху: при смещении вторая страница
@@ -225,25 +261,43 @@ def build_board(
             moment = parse_datetime(at.replace(" ", "+")) if at else None
             if moment and cursor_id:
                 queryset = queryset.filter(
-                    Q(created_at__lt=moment) | Q(created_at=moment, pk__lt=cursor_id)
+                    Q(closed_key__lt=moment) | Q(closed_key=moment, pk__lt=cursor_id)
                 )
         rows = list(queryset[: page_size + 1])
         has_more = len(rows) > page_size
         rows = rows[:page_size]
         if has_more and rows:
             last = rows[-1]
-            next_cursor = f"{last.created_at.isoformat()}|{last.pk}"
+            next_cursor = f"{last.closed_key.isoformat()}|{last.pk}"
+        # Цифры — ПО ВЫБОРКЕ, а не за смену: список без окна и сводка за
+        # сегодня — разные множества (986 записей против 28 «сделано»).
+        selection = selection_summary(queryset.order_by())
+        actors = actor_names(rows)
         columns = [
             {
                 "code": "history",
                 "title": "",
-                "orders": [serialize_tracker_order(o, language, statuses) for o in rows],
+                "orders": [
+                    serialize_tracker_order(o, language, statuses, actors) for o in rows
+                ],
             }
         ]
     elif behaviour.layout == "timeline":
         columns = [_timeline_column(queryset, hotel, language, statuses, date)]
     else:
-        queryset = queryset.filter(status__is_terminal=False).order_by("created_at")
+        # ПОРЯДОК НА ДОСКЕ — РУЧНОЙ, И ЭТО ОДИН ПОРЯДОК НА ВСЮ СМЕНУ.
+        #
+        # По времени создания колонка сортироваться не может: смена сама решает,
+        # что делать раньше — заказ на восемь порций из конференц-зала или кофе,
+        # который придёт через минуту. Раньше этот выбор жил только в голове у
+        # того, кто стоит у доски, и терялся при первом же обновлении экрана.
+        #
+        # `created_at` остаётся ВТОРЫМ ключом: у заказов, которых никто не
+        # трогал руками, позиция совпадает с моментом создания, и порядок тот
+        # же, что был до этой партии.
+        queryset = queryset.filter(status__is_terminal=False).order_by(
+            "board_position", "created_at"
+        )
         columns = _active_columns(queryset, behaviour, statuses, language)
 
     return {
@@ -266,6 +320,9 @@ def build_board(
         # активной доски и для истории: в истории «новых 4» — это тоже правда
         # про точку, просто на экране их не видно.
         "shift": tracker_shift.shift_summary(point, hotel=hotel),
+        # Сводка ПО ВЫБОРКЕ есть только там, где выборку сужают, — в истории.
+        # На активной доске её нет: там «сколько сейчас на доске» и есть ответ.
+        "selection": selection,
         # Кого предлагать в фильтре «исполнитель». Едет с доской по той же
         # причине, что и сводка: отдельная ручка — отдельный повод разойтись.
         "assignees": board_assignees(point, language),
@@ -281,25 +338,33 @@ def _active_columns(queryset, behaviour, statuses, language) -> list[dict]:
     Новый вид сервиса, работающий иначе, — это строка в реестре, а не ветка тут.
     """
     rows = list(queryset)
+    # Имена — один раз на всю доску: внутри карточки это был бы запрос на
+    # каждый переход каждого заказа.
+    actors = actor_names(rows)
 
     if behaviour.column_style == ColumnStyle.SINGLE:
         # ОДНА ЛЕНТА. Два статуса ресепшена делили экран пополам и стояли
         # полупустыми: «Новая 6 / Подтверждена 0» — это не две колонки работы,
         # это одна колонка и одна пустая половина. Порядок — по этапу, потом по
         # времени: невзятое сверху, потому что именно оно требует действия.
-        rows.sort(key=lambda order: (order.status.sort_order, order.created_at))
+        # Сначала этап (невзятое сверху — оно требует действия), внутри этапа —
+        # тот же ручной порядок, что и в колонках: одна лента не повод терять
+        # решение смены о том, что делать раньше.
+        rows.sort(key=lambda order: (order.status.sort_order, order.board_position, order.created_at))
         return [
             {
                 "code": "all",
                 "title": "",
-                "orders": [serialize_tracker_order(o, language, statuses) for o in rows],
+                "orders": [
+                    serialize_tracker_order(o, language, statuses, actors) for o in rows
+                ],
             }
         ]
 
     grouped: dict[str, list] = {}
     for order in rows:
         grouped.setdefault(order.status.code, []).append(
-            serialize_tracker_order(order, language, statuses)
+            serialize_tracker_order(order, language, statuses, actors)
         )
 
     columns = [
@@ -342,6 +407,67 @@ def _by_room(orders: list[dict]) -> list[dict]:
     ]
 
 
+def _day_edge(value: str, hotel, *, end: bool):
+    """
+    Граница периода из «2026-09-12» — в момент СУТОК ОТЕЛЯ.
+
+    Сутки берутся отельные, а не серверные: смена работает по своему часовому
+    поясу, и «за 12 сентября» для Владивостока и для Москвы — разные отрезки.
+    Мусор в адресе молча игнорируется, как и остальные фильтры.
+    """
+    from datetime import datetime, time
+
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    try:
+        day = datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    # Тем же способом, что и аналитика (`analytics/queries._aware`): один ответ
+    # на вопрос «где граница суток отеля», а не второй свой.
+    moment = datetime.combine(day, time.max if end else time.min)
+    return moment.replace(tzinfo=hotel.tzinfo)
+
+
+def _history_queryset(queryset, *, since=None, until=None):
+    """
+    ИСТОРИЯ — ЭТО «КОГДА ЗАКРЫЛИ», А НЕ «КОГДА СОЗДАЛИ», И ОНА БЕЗ ОКНА.
+
+    Раньше история показывала терминальные заказы, СОЗДАННЫЕ за последние
+    24 часа. Два следствия, и оба плохие:
+
+      * заказ, сделанный позавчера и закрытый минуту назад, не попадал в неё
+        НИКОГДА — ни в день создания (он ещё не закрыт), ни в день закрытия
+        (он создан слишком давно). Ровно те заказы, которые разбирают дольше
+        всего, и выпадали из разбора;
+      * вчерашняя смена не могла посмотреть свою работу: окно сдвигалось.
+
+    СОРТИРОВКА ПО `COALESCE(closed_at, created_at)`, И ЭТО НЕ КОСМЕТИКА.
+    На стенде 821 закрытый заказ не имеет `closed_at`: их закрыла команда
+    обслуживания мимо журнала (см. миграцию 0009), и выдумывать им момент
+    закрытия мы отказались. В чистой сортировке по `-closed_at` Postgres
+    ставит NULL ПЕРВЫМИ — самые старые заказы встали бы в начало истории, — а
+    курсор на такой записи просто падает: `Cannot use None as a query value`.
+    Замерено обоими способами.
+
+    Запасной ключ ставит их на хронологическое место и делает курсор
+    непрерывным. Цена: у этих заказов «закрыт» показывается как момент
+    создания. Это честнее, чем прятать их или выкидывать в конец: человек ищет
+    заказ, а не изучает историю наших миграций.
+    """
+    from django.db.models.functions import Coalesce
+
+    queryset = queryset.filter(status__is_terminal=True).annotate(
+        closed_key=Coalesce("closed_at", "created_at")
+    )
+    if since is not None:
+        queryset = queryset.filter(closed_key__gte=since)
+    if until is not None:
+        queryset = queryset.filter(closed_key__lte=until)
+    return queryset.order_by("-closed_key", "-pk")
+
+
 def _narrow(
     queryset,
     point,
@@ -351,6 +477,8 @@ def _narrow(
     assignee: str = "",
     unassigned: bool = False,
     order_type: str = "",
+    room: str = "",
+    status: str = "",
 ):
     """
     СУЖЕНИЕ ДОСКИ — ОДНО МЕСТО.
@@ -371,7 +499,7 @@ def _narrow(
     elif focus == "in_work":
         queryset = queryset.filter(status__is_initial=False, status__is_terminal=False)
 
-    if overdue:
+    if overdue and point is not None:
         # Порог — настройка ТОЧКИ, и граница считается от него же, что и
         # `is_overdue` на карточке. Два разных правила «что такое просрочка»
         # разошлись бы на первой же правке настройки.
@@ -392,6 +520,17 @@ def _narrow(
 
     if order_type in {Order.Type.CART, Order.Type.REQUEST}:
         queryset = queryset.filter(type=order_type)
+
+    # КОМНАТА — точным совпадением, а не подстрокой: «305» не должен находить
+    # «1305». Поиск подстрокой уже есть отдельно, и он про другое — там человек
+    # не помнит номер целиком.
+    if room:
+        queryset = queryset.filter(room__number=str(room).strip())
+
+    # СТАТУС: конкретный код потока этой точки. Неизвестный код игнорируем, как
+    # и остальные фильтры, — ссылка с опечаткой показывает список целиком.
+    if status:
+        queryset = queryset.filter(status__code=status)
 
     return queryset
 
@@ -471,36 +610,109 @@ def _timeline_column(queryset, hotel, language, statuses, date: str | None = Non
         "code": "day",
         "title": start_of_day.date().isoformat(),
         "date": start_of_day.date().isoformat(),
-        "orders": [serialize_tracker_order(order, language, statuses) for order in orders],
+        "orders": [
+            serialize_tracker_order(order, language, statuses, actor_names(orders))
+            for order in orders
+        ],
     }
 
 
 def next_statuses(order: Order, statuses: list[StatusDefinition] | None = None) -> list[StatusDefinition]:
     """
-    Куда можно двинуть из текущего статуса — только вперёд по пресету.
+    Куда можно двинуть из текущего статуса — вперёд И НАЗАД по пресету.
 
     Перепрыгивать через шаг разрешено намеренно: при самовывозе кухня уходит
     из «Принят» сразу в «Доставлено», и запрещать это значило бы заставлять
     персонал кликать ради галочки. Отмена — отдельное действие, поэтому
     статусы отмены сюда не попадают.
+
+    НАЗАД — ПОТОМУ ЧТО ЛЮДИ ПРОМАХИВАЮТСЯ. Список «только вперёд» описывал не
+    работу, а мечту о ней: нажали «Готовится» не на той карточке — и вернуть
+    нечем, заказ едет дальше с неверным статусом, а потом расходятся и сводка
+    смены, и время готовки. Возврат назад — обычное движение, а не авария.
+
+    ОТМЕНЁННЫЙ ЗАКАЗ НЕ ВОЗВРАЩАЮТ: пустой список, и на доске у такой карточки
+    не будет ни одной цели. Тот же запрет стоит на сервере в `change_status` —
+    здесь он повторён, чтобы UI не предлагал заведомо красное действие.
     """
+    if order.status.is_cancelled:
+        return []
     statuses = statuses or status_flows.statuses_for_flow(order.status.flow)
-    return [
-        status
-        for status in statuses
-        if status.sort_order > order.status.sort_order and not status.is_cancelled
-    ]
+    here = order.status.sort_order
+    forward = [s for s in statuses if s.sort_order > here and not s.is_cancelled]
+    # Назад — БЛИЖАЙШИМ ПЕРВЫМ, и весь возврат идёт ПОСЛЕ движения вперёд.
+    #
+    # Порядок здесь не косметика: карточка делает главной кнопкой ПЕРВЫЙ статус
+    # списка, а остальное прячет в меню. Отдай мы список просто по пресету —
+    # главной кнопкой у заказа в «Готовится» стал бы «Новый», то есть откат,
+    # и обычный ход смены пришлось бы искать в меню. Возврат — исправление
+    # ошибки, а не обычный ход, и его место ниже.
+    backward = sorted(
+        (s for s in statuses if s.sort_order < here and not s.is_cancelled),
+        key=lambda s: s.sort_order,
+        reverse=True,
+    )
+    return forward + backward
+
+
+def actor_names(orders) -> dict:
+    """
+    Имена тех, кто двигал статусы, — ОДНИМ запросом на всю доску.
+
+    Собирается по уже загруженному журналу (он приезжает `prefetch_related`),
+    поэтому лишнего обращения к заказам нет: только один `IN` по учёткам.
+    Системные записи `actor_id` не несут и в выборку не попадают.
+    """
+    ids = {
+        change.actor_id
+        for order in orders
+        for change in order.status_changes.all()
+        if change.actor_id
+    }
+    if not ids:
+        return {}
+    return {
+        user.pk: (user.full_name or user.email)
+        for user in User.objects.filter(pk__in=ids)
+    }
 
 
 def serialize_tracker_order(
-    order: Order, language: str | None = None, statuses: list[StatusDefinition] | None = None
+    order: Order,
+    language: str | None = None,
+    statuses: list[StatusDefinition] | None = None,
+    actors: dict | None = None,
 ) -> dict:
-    """Гостевой объект заказа плюс то, что нужно исполнителю."""
+    """
+    Гостевой объект заказа плюс то, что нужно исполнителю.
+
+    `actors` — имена по `actor_id`, собранные ОДНИМ запросом на всю доску.
+    Резолвить имя внутри сериализации значило бы запрос на каждый переход
+    каждого заказа: пятьдесят карточек по пять переходов — двести пятьдесят
+    запросов на один экран.
+    """
+    # Никто не передал имена — собираем для одного заказа. На доске их
+    # передают заранее: там этот путь означал бы запрос на каждую карточку.
+    if actors is None:
+        actors = actor_names([order])
+
     payload = serialize_order(order, language)
-    waiting = int((timezone.now() - order.created_at).total_seconds() // 60)
+    now = timezone.now()
+    waiting = int((now - order.created_at).total_seconds() // 60)
     point = order.execution_point
     sla = effective_sla_minutes(point)
-    overdue = waiting - sla if not order.status.is_terminal and waiting >= sla else None
+    # ПРОСРОЧКА СЧИТАЕТСЯ ОТ ПОСЛЕДНЕГО ВОЗВРАТА В РАБОТУ, А ВОЗРАСТ — ОТ
+    # СОЗДАНИЯ. Это два разных числа, и путать их нельзя.
+    #
+    # «Ждёт 3 часа» — правда для гостя: он ждёт с момента заказа, что бы с
+    # карточкой ни делали на кухне. А вот норма времени меряет РАБОТУ: заказ,
+    # закрытый вчера и возвращённый минуту назад, не опоздал на сутки — он
+    # только что лёг на доску. Считать его просрочку от создания значило бы
+    # красить всю возвращённую карточку в красное и обесценить красный цвет
+    # для тех, кто действительно опаздывает.
+    since = order.reopened_at or order.created_at
+    in_work = int((now - since).total_seconds() // 60)
+    overdue = in_work - sla if not order.status.is_terminal and in_work >= sla else None
 
     payload.update(
         {
@@ -534,6 +746,41 @@ def serialize_tracker_order(
                 for status in next_statuses(order, statuses)
             ],
             "can_cancel": not order.status.is_terminal,
+            # ПРИЧИНА ОТМЕНЫ — КОДОМ И СЛОВАМИ. Код нужен, чтобы считать
+            # («сколько отмен из-за стоп-листа»), название — чтобы человек
+            # прочитал его без словаря. Пусто у всего, что не отменено.
+            "cancel_reason": order.cancel_reason or None,
+            "cancel_reason_title": (
+                str(Order.CancelReason(order.cancel_reason).label)
+                if order.cancel_reason in Order.CancelReason.values
+                else None
+            ),
+            # ЖУРНАЛ ПЕРЕХОДОВ — ПЕРСОНАЛУ, А НЕ ГОСТЮ.
+            #
+            # Гостевой таймлайн показывает ПУТЬ заказа по потоку: где он сейчас
+            # и что уже пройдено. Это правильный ответ гостю и неверный —
+            # смене: путь молчит о том, что заказ возвращали, кто это сделал и
+            # откуда он вернулся. Разбор смены начинается именно с этих трёх
+            # вопросов.
+            "journal": [
+                {
+                    "from": change.from_status.code if change.from_status_id else None,
+                    "to": change.to_status.code,
+                    "title": translate(change.to_status.title, language),
+                    "at": order.hotel.to_local(change.created_at).isoformat(),
+                    "actor_type": change.actor_type,
+                    "actor_name": (actors or {}).get(change.actor_id),
+                    # Откат считает сервер: правило «назад по потоку» живёт в
+                    # порядке статусов, и второй его экземпляр на клиенте
+                    # разошёлся бы с первым при любой перенастройке пресета.
+                    "is_rollback": change.is_rollback,
+                    # Уточнение к отмене словами — оно писалось в журнал и
+                    # раньше, но наружу не отдавалось, и прочитать его было
+                    # негде.
+                    "comment": change.comment or "",
+                }
+                for change in order.status_changes.all()
+            ],
         }
     )
     return payload
@@ -633,6 +880,18 @@ def _first_working_status(order: Order) -> StatusDefinition | None:
 def move_status(user, order_id, *, to_code: str, comment: str = "") -> Order:
     order = get_tracker_order(user, order_id)
 
+    # ОТМЕНА ОБЪЯСНЯЕТСЯ ОТДЕЛЬНО, А НЕ СУХИМ «НЕЛЬЗЯ ПЕРЕЙТИ».
+    #
+    # У отменённого заказа список целей пуст, и общая проверка ниже ответила бы
+    # «из «Отменён» нельзя перейти в «preparing»» — формально верно и
+    # бесполезно: человек не понимает, это правило или сбой. Отмена
+    # односторонняя навсегда, и сказать это надо словами.
+    if order.status.is_cancelled:
+        raise ConflictError(
+            "Отменённый заказ не возвращают в работу — оформите новый",
+            code="order_cancelled",
+        )
+
     allowed = {status.code for status in next_statuses(order)}
     if to_code not in allowed:
         raise ValidationError(
@@ -651,7 +910,78 @@ def move_status(user, order_id, *, to_code: str, comment: str = "") -> Order:
 
 
 @transaction.atomic
-def cancel_order_by_staff(user, order_id, *, reason: str = "") -> Order:
+def move_position(user, order_id, *, after_id: str | None, before_id: str | None) -> Order:
+    """
+    Переставить карточку внутри её колонки.
+
+    МЕСТО ВЫЧИСЛЯЕТСЯ СЕРЕДИНОЙ МЕЖДУ СОСЕДЯМИ, и поэтому перестановка не
+    трогает ни одной чужой строки: сосед по смене, тянущий другую карточку в
+    ту же секунду, пишет своё число, а не пересчитывает весь столбец.
+
+    СОСЕДИ ОБЯЗАНЫ БЫТЬ ИЗ ТОЙ ЖЕ КОЛОНКИ. Иначе «между» ничего не значит:
+    карточка получила бы число из чужой очереди и легла бы в своей неизвестно
+    куда. Это не придирка к формату — ровно так выглядит запоздавший запрос,
+    отправленный по экрану, который успел перестроиться.
+
+    Терминальный заказ переставлять нечего: на активной доске его нет.
+    """
+    order = get_tracker_order(user, order_id)
+    if order.status.is_terminal:
+        raise ConflictError("Завершённого заказа на доске нет", code="order_finished")
+
+    neighbours = {}
+    for key, neighbour_id in (("after", after_id), ("before", before_id)):
+        if not neighbour_id:
+            continue
+        neighbour = Order.objects.filter(
+            pk=neighbour_id,
+            execution_point_id=order.execution_point_id,
+            status_id=order.status_id,
+        ).first()
+        if neighbour is None:
+            raise ValidationError(
+                "Соседняя карточка не из этой колонки",
+                code="neighbour_not_in_column",
+                field=key,
+            )
+        neighbours[key] = neighbour.board_position
+
+    above = neighbours.get("after")
+    below = neighbours.get("before")
+    if above is not None and below is not None:
+        if above >= below:
+            raise ValidationError(
+                "Соседи перечислены не в том порядке", code="neighbours_swapped", field="after"
+            )
+        position = (above + below) / 2
+    elif above is not None:
+        position = above + 1.0
+    elif below is not None:
+        position = below - 1.0
+    else:
+        # Ни одного соседа — колонка пуста, кроме самой карточки. Оставляем как
+        # есть: придумывать ей новое число не за что.
+        position = order.board_position
+
+    Order.objects.filter(pk=order.pk).update(board_position=position)
+    order.refresh_from_db()
+    # Доска обновляется у всех, а не только у того, кто тянул: порядок общий,
+    # и вторая половина смены обязана увидеть то же, что первая.
+    payload = _event_payload(order)
+    payload["from_status"] = order.status.code
+    payload["to_status"] = order.status.code
+    emit(
+        ORDER_STATUS_CHANGED,
+        payload,
+        hotel_id=order.hotel_id,
+        actor_type="staff",
+        actor_id=user.pk,
+    )
+    return get_tracker_order(user, order_id)
+
+
+@transaction.atomic
+def cancel_order_by_staff(user, order_id, *, reason: str = "", cancel_reason: str = "") -> Order:
     order = get_tracker_order(user, order_id)
     if order.status.is_terminal:
         raise ConflictError("Заказ уже завершён", code="cancel_not_allowed")
@@ -663,6 +993,11 @@ def cancel_order_by_staff(user, order_id, *, reason: str = "") -> Order:
         )
 
     change_status(
-        order, to_code=cancelled.code, actor_type="staff", actor_id=user.pk, comment=reason
+        order,
+        to_code=cancelled.code,
+        actor_type="staff",
+        actor_id=user.pk,
+        comment=reason,
+        cancel_reason=cancel_reason,
     )
     return get_tracker_order(user, order_id)

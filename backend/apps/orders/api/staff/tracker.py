@@ -11,7 +11,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.core.context import current_language
-from apps.orders.schemas.tracker import AcceptIn, CancelIn, StatusIn
+from apps.orders.schemas.tracker import AcceptIn, CancelIn, PositionIn, StatusIn
 from apps.orders.services import tracker as svc
 
 router = Router(tags=["tracker"])
@@ -35,6 +35,10 @@ def board(
     unassigned: bool = False,
     assignee: str = "",
     order_type: str = "",
+    room: str = "",
+    status: str = "",
+    since: str = "",
+    until: str = "",
     cursor: str | None = None,
     limit: int | None = None,
 ):
@@ -49,6 +53,10 @@ def board(
     `mine` — свои задачи. Разворачивается здесь в `assignee` текущего
     пользователя: сервис не должен знать, кто именно смотрит доску, иначе
     «мои» пришлось бы объяснять и сокету, у которого запроса нет.
+
+    `since` / `until` — период В СУТКАХ ОТЕЛЯ (YYYY-MM-DD), осмыслен для
+    истории: она отбирается по моменту ЗАКРЫТИЯ. `room` — точный номер
+    комнаты, `status` — код статуса потока этой точки.
 
     Неизвестные значения игнорируются: ссылка с опечаткой показывает доску
     целиком, а не отказ.
@@ -65,6 +73,10 @@ def board(
         assignee=str(request.user.pk) if mine else assignee,
         unassigned=unassigned,
         order_type=order_type,
+        room=room,
+        status=status,
+        since=since,
+        until=until,
         cursor=cursor,
         limit=limit,
     )
@@ -90,7 +102,17 @@ def move(request: HttpRequest, order_id: str, payload: StatusIn):
     return svc.serialize_tracker_order(order, current_language())
 
 
+@router.post("/order/{order_id}/position", summary="Переставить карточку в колонке")
+def reorder(request: HttpRequest, order_id: str, payload: PositionIn):
+    order = svc.move_position(
+        request.user, order_id, after_id=payload.after, before_id=payload.before
+    )
+    return svc.serialize_tracker_order(order, current_language())
+
+
 @router.post("/order/{order_id}/cancel", summary="Отменить заказ")
 def cancel(request: HttpRequest, order_id: str, payload: CancelIn):
-    order = svc.cancel_order_by_staff(request.user, order_id, reason=payload.reason)
+    order = svc.cancel_order_by_staff(
+        request.user, order_id, reason=payload.reason, cancel_reason=payload.cancel_reason
+    )
     return svc.serialize_tracker_order(order, current_language())

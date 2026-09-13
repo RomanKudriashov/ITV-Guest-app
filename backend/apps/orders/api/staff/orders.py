@@ -33,6 +33,7 @@ def set_status(request: HttpRequest, order_id: str, payload: StatusChangeIn):
         actor_type="staff",
         actor_id=getattr(request.user, "pk", None),
         comment=payload.comment,
+        cancel_reason=payload.cancel_reason,
     )
     return serialize_order(updated, current_language())
 

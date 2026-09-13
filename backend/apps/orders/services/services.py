@@ -187,6 +187,8 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         requested_time=requested_time,
         comment=data.comment,
         status=status,
+        # Новая заявка — НАВЕРХ своей колонки: внизу её увидят последней.
+        board_position=board_edge(execution_point.pk, status.pk, top=True),
         total=None,
         currency=hotel.currency,
         field_values=field_values,
@@ -489,6 +491,7 @@ def _create_fanned_order(
         requested_time=requested_time,
         comment=data.comment,
         status=status,
+        board_position=board_edge(aggregator.execution_point.pk, status.pk, top=True),
         total=None,
         currency=hotel.currency,
         field_values=field_values,
@@ -512,6 +515,7 @@ def _create_fanned_order(
             requested_time=requested_time,
             comment=data.comment,
             status=child_status,
+            board_position=board_edge(ep.pk, child_status.pk, top=True),
             total=None,
             currency=hotel.currency,
             field_values=[],
@@ -843,6 +847,9 @@ def order_queryset():
     ).prefetch_related(
         "items__item__images__asset",
         "status_changes__to_status",
+        # `from_status` нужен журналу персонала: «откуда» — половина ответа на
+        # вопрос «что случилось», и без неё откат неотличим от обычного шага.
+        "status_changes__from_status",
         # Для parent-агрегата: позиции живут на children — подтягиваем их разом.
         "children__items__item__images__asset",
         "children__status",
@@ -930,6 +937,37 @@ def _order_summary(order: Order, language: str | None) -> dict:
     return {"summary": "", "extra_count": 0}
 
 
+# --- Место на доске --------------------------------------------------------
+
+
+def board_edge(execution_point_id, status_id, *, top: bool) -> float:
+    """
+    Позиция ЗА краем колонки: выше самой верхней карточки или ниже нижней.
+
+    ЗАЧЕМ РАЗНЫЕ КРАЯ У РАЗНЫХ КОЛОНОК. Новая заявка обязана попасть НАВЕРХ
+    «Нового»: она ещё никем не взята, и внизу списка её увидят последней — то
+    есть ровно наоборот тому, что нужно. А заказ, который двинули дальше по
+    потоку, встаёт ВНИЗ целевой колонки: там уже стоит работа, начатая раньше,
+    и пускать новичка ей на голову значит переставлять чужую очередь.
+
+    Шаг в единицу, а не в ноль: две карточки с одинаковой позицией доска
+    разложила бы по времени создания, и ручная перестановка молча перестала бы
+    держаться.
+    """
+    from django.db.models import Max, Min
+
+    edge = (
+        Order.objects.filter(
+            execution_point_id=execution_point_id,
+            status_id=status_id,
+            status__is_terminal=False,
+        ).aggregate(low=Min("board_position"), high=Max("board_position"))
+    )
+    if top:
+        return (edge["low"] if edge["low"] is not None else 0.0) - 1.0
+    return (edge["high"] if edge["high"] is not None else 0.0) + 1.0
+
+
 # --- Смена статуса ---------------------------------------------------------
 
 
@@ -941,6 +979,7 @@ def change_status(
     actor_type: str = "staff",
     actor_id=None,
     comment: str = "",
+    cancel_reason: str = "",
 ) -> Order:
     # Код ищем ТОЛЬКО в потоке самого заказа: `done` есть и у доски, и у очереди
     # хозслужбы, и это разные строки. Поиск по одному коду однажды увёл бы заказ
@@ -949,23 +988,81 @@ def change_status(
     if target is None:
         raise OrderValidationError(f"Статус '{to_code}' не настроен", code="unknown_status")
 
+    # ПРИЧИНА ОТМЕНЫ ОБЯЗАТЕЛЬНА, И ПРОВЕРКА СТОИТ ЗДЕСЬ.
+    #
+    # Здесь — потому что это единственная дверь в отменённый статус: через неё
+    # идут и отмена гостем, и отмена персоналом, и каскад на children
+    # веерного заказа. Проверка во вьюхе оставила бы две другие двери
+    # открытыми, а отмена без причины — это ровно то, что мы чиним: 912
+    # отменённых заказов на стенде и ни одной причины.
+    if target.is_cancelled:
+        if cancel_reason not in Order.CancelReason.values:
+            raise OrderValidationError(
+                "Укажите причину отмены",
+                code="cancel_reason_required",
+                field="cancel_reason",
+            )
+
     order = Order.objects.select_for_update().select_related("status").get(pk=order.pk)
     if order.status_id == target.pk:
         return get_order(order.pk)
-    if order.status.is_terminal:
+    # НАЗАД ХОДИТЬ МОЖНО, ИЗ ОТМЕНЫ — НЕТ.
+    #
+    # Раньше запрет стоял на любом терминальном статусе, и ошибка повара
+    # («доставлено» нажато не тому заказу) становилась несмываемой: заказ
+    # уезжал в историю выполненным, и починить это было нечем, кроме базы.
+    # Теперь закрытый заказ возвращают в работу — а отменённый не возвращают
+    # никогда: отмена освободила слот, отпустила гостя и разошлась
+    # уведомлениями. Ошиблись отменой — это новый заказ.
+    if order.status.is_cancelled:
         raise ConflictError(
-            f"Заказ уже в терминальном статусе «{order.status.code}»",
-            code="order_finished",
+            "Отменённый заказ не возвращают в работу — оформите новый",
+            code="order_cancelled",
         )
 
     previous = order.status
     order.status = target
-    order.save(update_fields=["status", "updated_at"])
+    changed = ["status", "updated_at"]
+    # ПЕРЕЕХАЛ В ДРУГУЮ КОЛОНКУ — ВСТАЁШЬ В ЕЁ ХВОСТ.
+    #
+    # Позиция ручная и общая на доску, поэтому карточка, попавшая в новую
+    # колонку со старым числом, легла бы посреди чужой очереди — там, где её
+    # никто не ставил. Хвост — единственное место, которое не переставляет
+    # чужую работу. Терминальные статусы места на доске не занимают, и считать
+    # им край незачем.
+    if not target.is_terminal:
+        order.board_position = board_edge(order.execution_point_id, target.pk, top=False)
+        changed.append("board_position")
+    # МОМЕНТ ЗАКРЫТИЯ И МОМЕНТ ВОЗВРАТА — ЗДЕСЬ, А НЕ У ВЫЗЫВАЮЩИХ.
+    #
+    # Смена статуса — единственная дверь, через которую заказ становится
+    # закрытым, и ставить поля где-то ещё значило бы завести вторую правду.
+    # Из закрытого в рабочий: момент закрытия стирается (заказ снова открыт), а
+    # момент возврата запоминается — от него считается просрочка, иначе заказ
+    # возвращается на доску сразу красным за всё время, что лежал закрытым.
+    # Из одного терминального в другой («доставлено» → «отменён») момент
+    # закрытия не трогаем: заказ не открывался, и переписать его значило бы
+    # сдвинуть закрытие в будущее у заказа, который давно закрыт.
+    if target.is_terminal and not previous.is_terminal:
+        order.closed_at = timezone.now()
+        changed.append("closed_at")
+    elif previous.is_terminal and not target.is_terminal:
+        order.closed_at = None
+        order.reopened_at = timezone.now()
+        changed += ["closed_at", "reopened_at"]
+    order.save(update_fields=changed)
 
     if target.is_cancelled:
         # Отмена брони освобождает слот — одинаково для отмены гостем и
         # персоналом, потому что живёт в общей смене статуса.
         slot_svc.release_bookings(order)
+        # Причина отмены живёт НА ЗАКАЗЕ, а не только в журнале: список
+        # истории показывает её рядом с заказом, и доставать её джойном по
+        # журналу на каждую строку значило бы платить за то, что известно
+        # заранее. Журнал при этом остаётся событием — кто, когда и с каким
+        # уточнением.
+        Order.objects.filter(pk=order.pk).update(cancel_reason=cancel_reason)
+        order.cancel_reason = cancel_reason
 
     OrderStatusChange.objects.create(
         hotel_id=order.hotel_id,
@@ -1037,7 +1134,20 @@ def _sync_parent_status(parent_id, *, actor_type, actor_id) -> None:
         return
     previous = parent.status
     parent.status = target
-    parent.save(update_fields=["status", "updated_at"])
+    changed = ["status", "updated_at"]
+    # Те же два поля, что и в `change_status`, и по той же причине: свод
+    # родителя — ВТОРАЯ дверь, через которую заказ закрывается и открывается.
+    # Родитель закрывается, когда закрылся последний child, и открывается
+    # обратно, когда child вернули в работу, — без этих строк у агрегата
+    # момент закрытия остался бы пустым, а сводка смены его потеряла бы.
+    if target.is_terminal and not previous.is_terminal:
+        parent.closed_at = timezone.now()
+        changed.append("closed_at")
+    elif previous.is_terminal and not target.is_terminal:
+        parent.closed_at = None
+        parent.reopened_at = timezone.now()
+        changed += ["closed_at", "reopened_at"]
+    parent.save(update_fields=changed)
     OrderStatusChange.objects.create(
         hotel_id=parent.hotel_id, order=parent, from_status=previous, to_status=target,
         actor_type="system",
@@ -1054,7 +1164,9 @@ def _sync_parent_status(parent_id, *, actor_type, actor_id) -> None:
     )
 
 
-def cancel_order_by_guest(order: Order, *, guest_session, reason: str = "") -> Order:
+def cancel_order_by_guest(
+    order: Order, *, guest_session, reason: str = "", cancel_reason: str = ""
+) -> Order:
     """
     Отмена гостем разрешена ровно в тех статусах, где отель её разрешил
     (`allows_guest_cancel`). Проверка на сервере, даже если кнопки в UI нет:
@@ -1079,12 +1191,21 @@ def cancel_order_by_guest(order: Order, *, guest_session, reason: str = "") -> O
             change_status(
                 child, to_code=child_cancelled.code, actor_type="guest",
                 actor_id=actor_id, comment=reason,
+                cancel_reason=cancel_reason or Order.CancelReason.GUEST_REFUSED,
             )
         return get_order(order.pk)
 
     cancelled = _require_cancelled_status(order.status.flow)
     return change_status(
-        order, to_code=cancelled.code, actor_type="guest", actor_id=actor_id, comment=reason
+        order,
+        to_code=cancelled.code,
+        actor_type="guest",
+        actor_id=actor_id,
+        comment=reason,
+        # ГОСТЬ ПРИЧИНУ НЕ ВЫБИРАЕТ. Он нажимает «отменить» — и это само по
+        # себе причина: заказ отменил гость. Спрашивать у него код из нашего
+        # справочника значило бы заставить человека объясняться перед отелем.
+        cancel_reason=cancel_reason or Order.CancelReason.GUEST_REFUSED,
     )
 
 

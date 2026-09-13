@@ -97,14 +97,27 @@ def test_points_counters(tracker, order):
     assert kitchen["new_count"] == 1
 
 
-def test_staff_without_assignments_sees_no_points(client, crystal, cms):
-    """Пустой список — не ошибка: сотрудника просто ещё не назначили."""
+def test_staff_without_assignments_sees_no_points(client, crystal, tracker, cms):
+    """
+    Пустой список — не ошибка: сотрудника просто ещё не назначили.
+
+    ПРОВЕРКА ПЕРЕЕХАЛА С АДМИНИСТРАТОРА НА ЛИНЕЙНОГО, и это не ослабление.
+    Раньше здесь стоял клиент `cms` — то есть администратор отеля, у которого
+    назначений нет и быть не должно: он не стоит на смене ни в одном
+    заведении. Правило «нет назначения — нет доски» стоило ему ВСЕХ досок
+    разом, и теперь администратор видит их все. А для того, кто действительно
+    работает на точке, правило осталось прежним — его и проверяем.
+    """
     with tenant_context(crystal):
         StaffAssignment.objects.all().delete()
 
-    assert cms.get("/api/tracker/points").json()["points"] == []
+    assert tracker.get("/api/tracker/points").json()["points"] == []
     # И доску такой сотрудник открыть не может.
-    assert cms.get("/api/tracker/orders?point=kitchen").status_code == 403
+    assert tracker.get("/api/tracker/orders?point=kitchen").status_code == 403
+
+    # А администратор — может, и без единого назначения: доски отеля его.
+    assert cms.get("/api/tracker/points").json()["points"] != []
+    assert cms.get("/api/tracker/orders?point=kitchen").status_code == 200
 
 
 # --- Доска -----------------------------------------------------------------
@@ -204,9 +217,20 @@ def test_second_accept_is_refused_with_the_current_assignee(
     assert body["assignee"]["name"] == "Пётр, повар"
 
 
-def test_status_moves_forward_and_backwards_is_refused(
+def test_status_moves_forward_and_back_again(
     tracker, order, django_capture_on_commit_callbacks
 ):
+    """
+    ПРАВИЛО ИЗМЕНИЛОСЬ, И ЭТО НЕ ПОТЕРЯННАЯ ПРОВЕРКА.
+
+    Раньше здесь стояло «назад — 422 invalid_transition». Запрет описывал не
+    работу, а мечту о ней: нажали не на той карточке — и вернуть нечем. Теперь
+    возврат назад разрешён, и тест проверяет ровно его: заказ уходит вперёд и
+    возвращается, а доска после возврата снова показывает исходный статус.
+
+    Что осталось запретом — проверяет
+    `test_a_cancelled_order_is_never_returned_to_work`: из отмены пути нет.
+    """
     with django_capture_on_commit_callbacks(execute=True):
         moved = tracker.post(
             f"/api/tracker/order/{order['id']}/status", {"status": "preparing"}
@@ -217,20 +241,35 @@ def test_status_moves_forward_and_backwards_is_refused(
     assert moved.json()["assignee"] is not None
 
     back = tracker.post(f"/api/tracker/order/{order['id']}/status", {"status": "new"})
-    assert back.status_code == 422
-    assert back.json()["code"] == "invalid_transition"
+    assert back.status_code == 200
+    assert back.json()["status"]["code"] == "new"
+
+    board = tracker.get("/api/tracker/orders?point=kitchen").json()
+    on_board = [
+        card
+        for column in board["columns"]
+        for card in column["orders"]
+        if card["id"] == order["id"]
+    ]
+    assert len(on_board) == 1, "возвращённый заказ обязан остаться на доске ровно один раз"
+    assert on_board[0]["status"]["code"] == "new"
 
 
 def test_staff_can_cancel_running_order(tracker, order, django_capture_on_commit_callbacks):
     with django_capture_on_commit_callbacks(execute=True):
         response = tracker.post(
-            f"/api/tracker/order/{order['id']}/cancel", {"reason": "нет продуктов"}
+            f"/api/tracker/order/{order['id']}/cancel",
+            # Причина теперь ОБЯЗАТЕЛЬНА: 912 отмен на стенде без единой
+            # причины — ровно то, ради чего её ввели.
+            {"cancel_reason": "out_of_stock", "reason": "нет продуктов"},
         )
 
     assert response.status_code == 200
     assert response.json()["status"]["is_cancelled"] is True
 
-    repeat = tracker.post(f"/api/tracker/order/{order['id']}/cancel", {})
+    repeat = tracker.post(
+        f"/api/tracker/order/{order['id']}/cancel", {"cancel_reason": "duplicate"}
+    )
     assert repeat.status_code == 409
     assert repeat.json()["code"] == "cancel_not_allowed"
 

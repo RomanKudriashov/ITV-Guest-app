@@ -24,6 +24,7 @@ from apps.orders.services import (
     list_guest_orders,
     quote_cart,
 )
+from apps.orders.models import OrderStatusChange
 from apps.orders.services.tracker import build_board
 
 pytestmark = pytest.mark.django_db
@@ -219,3 +220,47 @@ def test_nonborrowed_order_stays_flat(crystal):
         assert order.parent_id is None
         assert not order.children.exists()
         assert order.subtotal_minor == 100000  # без наценки (не заимствование)
+
+
+def test_a_child_returning_to_work_reopens_the_parent_and_the_journal_says_who(crystal):
+    """
+    РОДИТЕЛЬ ОТКАТЫВАЕТСЯ САМ, И ЖУРНАЛ ОБЯЗАН ЭТО РАЗЛИЧАТЬ.
+
+    Гость видит один заказ — агрегат. Когда повар вернул в работу свою часть,
+    агрегат обязан выйти из «готово»: иначе гостю показано «доставлено» у
+    заказа, который снова готовится.
+
+    Но вернул агрегат НЕ человек: никто не нажимал на него кнопку, он
+    пересчитался. Журнал пишет это откатом — и помечает «система». Без пометки
+    разбор смены назовёт виновным того, кто трогал соседнюю карточку.
+    """
+    with tenant_context(crystal):
+        ctx = _setup()
+        parent = _place(ctx)
+        children = {str(c.execution_point_id): c for c in parent.children.all()}
+        kitchen_child = children[str(ctx["kitchen_ep"].pk)]
+        bar_child = children[str(ctx["bar_ep"].pk)]
+
+        change_status(kitchen_child, to_code="done", actor_type="staff")
+        change_status(bar_child, to_code="done", actor_type="staff")
+        parent.refresh_from_db()
+        assert parent.status.is_terminal
+        assert parent.closed_at is not None, "агрегат закрыт — момент закрытия обязан стоять"
+
+        # Повар вернул свою часть в работу.
+        change_status(kitchen_child, to_code="preparing", actor_type="staff")
+        parent.refresh_from_db()
+
+        assert not parent.status.is_terminal, "агрегат не готов, пока готовится его часть"
+        assert parent.closed_at is None, "открытый заново агрегат не может числиться закрытым"
+        assert parent.reopened_at is not None
+
+        entry = OrderStatusChange.objects.filter(order=parent).order_by("created_at").last()
+        assert entry.is_rollback is True, "движение агрегата назад — откат"
+        assert entry.actor_type == "system", (
+            "агрегат пересчитался сам — назвать человека здесь значило бы соврать"
+        )
+
+        human = OrderStatusChange.objects.filter(order=kitchen_child).order_by("created_at").last()
+        assert human.is_rollback is True
+        assert human.actor_type == "staff", "а вот часть вернул человек, и это видно"
