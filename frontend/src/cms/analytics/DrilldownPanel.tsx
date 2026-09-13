@@ -5,6 +5,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Skeleton from '@mui/material/Skeleton';
@@ -37,6 +38,31 @@ const COLUMNS: { id: ColumnId; align: 'left' | 'right'; sortable: boolean }[] = 
   { id: 'room', align: 'left', sortable: false },
   { id: 'rating', align: 'right', sortable: true },
 ];
+
+/**
+ * «ПОКАЗАТЬ ЭТИ ЗАКАЗЫ» — ПЕРЕНОС СРЕЗА В РАЗДЕЛ «ЗАКАЗЫ».
+ *
+ * Аналитика отвечает «сколько и на сколько», а дальше человек хочет увидеть
+ * сами заявки: чем занималась кухня в тот день, какие из них отменили и
+ * почему. Раньше это означало вручную повторить фильтры в другом разделе — и
+ * получить другую выборку, потому что руками их повторяют неточно.
+ *
+ * Переносятся ровно те параметры, которые у обоих разделов значат одно:
+ * период и заведение. Остальные разрезы аналитики (устройство, язык, способ
+ * входа) в разделе заказов не живут, и подменять их на «примерно то же» хуже,
+ * чем не переносить.
+ */
+function ordersLink(params: AnalyticsQuery): string {
+  const query = new URLSearchParams();
+  const since = params.date_from;
+  const until = params.date_to;
+  if (typeof since === 'string' && since) query.set('since', since);
+  if (typeof until === 'string' && until) query.set('until', until);
+  const point = (params as Record<string, unknown>).point_id;
+  if (typeof point === 'string' && point) query.set('point', point);
+  const suffix = query.toString();
+  return `/cms/orders${suffix ? `?${suffix}` : ''}`;
+}
 
 export function DrilldownPanel({
   params,
@@ -85,14 +111,24 @@ export function DrilldownPanel({
               {t('analytics.drilldown.count', { count: drilldown.data?.total ?? orders.length })}
             </Typography>
           </Stack>
-          <IconButton
-            size="small"
-            onClick={onClose}
-            aria-label={t('common.close')}
-            data-testid="analytics-drilldown-close"
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button
+              size="small"
+              variant="outlined"
+              href={ordersLink(params)}
+              data-testid="analytics-to-orders"
+            >
+              {t('analytics.drilldown.toOrders')}
+            </Button>
+            <IconButton
+              size="small"
+              onClick={onClose}
+              aria-label={t('common.close')}
+              data-testid="analytics-drilldown-close"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
         </Stack>
 
         {drilldown.isLoading ? (
