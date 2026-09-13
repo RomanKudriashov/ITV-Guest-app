@@ -12,6 +12,7 @@ import pytest
 
 from apps.catalog.facet_scope import FacetKind, applies, entry_scope, kind_applies, kind_scope
 from apps.catalog.nouns import OfferingNoun
+from apps.core.context import tenant_context
 
 pytestmark = pytest.mark.django_db
 
@@ -66,40 +67,49 @@ def test_unknown_dictionary_shows_everywhere():
 # --- Сужение не стирает данных ---------------------------------------------
 
 
-def test_narrowing_hides_but_keeps_the_links(cms, in_crystal):
+def test_narrowing_hides_but_keeps_the_links(cms, crystal):
     """
     Сузили — пропало с экрана; вернули — всё на месте.
 
     Проверяется именно ПАРА действий: проверка «пропало» в одиночку зеленела бы
     и на коде, который честно удаляет связи.
+
+    КОНТЕКСТ ОТЕЛЯ БЕРЁТСЯ ЯВНО ВОКРУГ КАЖДОГО ЗАПРОСА К БАЗЕ. Ходка по HTTP
+    проходит через middleware, который контекст ставит и на выходе снимает, —
+    после неё менеджер модели фильтрует по «нет отеля» и отдаёт ноль строк.
+    Первая редакция этого укуса на том и попалась: связи были на месте, а
+    проверка читала пустоту и сообщала о потере данных.
     """
     from apps.catalog.models import Allergen
     from apps.catalog.models.facets import ItemAllergen
 
-    allergen = Allergen.objects.filter(item_allergens__isnull=False).first()
-    if allergen is None:
-        pytest.skip("в сиде нет проставленных аллергенов — проверять нечего")
-
-    before = ItemAllergen.objects.filter(allergen=allergen).count()
+    with tenant_context(crystal):
+        allergen = Allergen.objects.filter(item_allergens__isnull=False).first()
+        if allergen is None:
+            pytest.skip("в сиде нет проставленных аллергенов — проверять нечего")
+        allergen_id = allergen.pk
+        before = ItemAllergen.objects.filter(allergen_id=allergen_id).count()
     assert before, "выбран аллерген без связей — проверка бессмысленна"
 
     # Сузили до товара: у блюда запись показываться перестала.
-    response = cms.patch(f"/api/cms/allergens/{allergen.pk}", {"applies_to": ["goods"]})
+    response = cms.patch(f"/api/cms/allergens/{allergen_id}", {"applies_to": ["goods"]})
     assert response.status_code == 200
     assert response.json()["scope"] == ["goods"]
 
     listing = cms.get("/api/cms/allergens?noun=dish").json()
-    assert all(row["id"] != str(allergen.pk) for row in listing["items"])
+    assert all(row["id"] != str(allergen_id) for row in listing["items"])
 
     # СВЯЗИ НА МЕСТЕ. Ровно то, ради чего это правило и написано.
-    assert ItemAllergen.objects.filter(allergen=allergen).count() == before
+    with tenant_context(crystal):
+        assert ItemAllergen.objects.filter(allergen_id=allergen_id).count() == before
 
     # Вернули — снова видна.
-    back = cms.patch(f"/api/cms/allergens/{allergen.pk}", {"applies_to": []})
+    back = cms.patch(f"/api/cms/allergens/{allergen_id}", {"applies_to": []})
     assert back.status_code == 200
     listing = cms.get("/api/cms/allergens?noun=dish").json()
-    assert any(row["id"] == str(allergen.pk) for row in listing["items"])
-    assert ItemAllergen.objects.filter(allergen=allergen).count() == before
+    assert any(row["id"] == str(allergen_id) for row in listing["items"])
+    with tenant_context(crystal):
+        assert ItemAllergen.objects.filter(allergen_id=allergen_id).count() == before
 
 
 def test_service_gets_no_allergen_dictionary_at_all(cms):
