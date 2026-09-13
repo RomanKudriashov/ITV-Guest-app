@@ -246,12 +246,21 @@ def replace_languages(hotel: Hotel, codes: list[str]) -> dict | None:
     with tenant_context(hotel):
         was = list(HotelLanguage.objects.order_by("sort_order").values_list("code", flat=True))
         for order, code in enumerate(codes):
-            HotelLanguage.objects.update_or_create(
+            # ЧЕРЕЗ `all_objects` И СО СНЯТИЕМ ПОМЕТКИ УДАЛЕНИЯ.
+            #
+            # Языки убираются МЯГКО (строка остаётся), а уникальность стоит на
+            # паре (отель, код) без условия «не удалён». Через `objects`
+            # удалённой строки не видно, `update_or_create` шёл создавать
+            # вторую — и упирался в тот самый индекс: отель, убравший арабский,
+            # не мог вернуть его НИКОГДА. Консоль отвечала «Код уже занят»
+            # честно, но выхода из этого состояния не оставляла.
+            language, _ = HotelLanguage.all_objects.update_or_create(
                 code=code,
                 defaults={
                     "title": _LANGUAGE_TITLES.get(code, code.upper()),
                     "is_default": code == default_language,
                     "sort_order": order,
+                    "deleted_at": None,
                 },
             )
         HotelLanguage.objects.exclude(code__in=codes).delete()

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type MouseEvent, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Drawer from '@mui/material/Drawer';
@@ -116,7 +116,27 @@ export function AdminShell({
           {group.items.map((section) => (
             <ButtonBase
               key={section.key}
-              onClick={() => onNavigate(section.key)}
+              /*
+                НАСТОЯЩАЯ ССЫЛКА, А НЕ КНОПКА.
+
+                Пункты были `<button>` без `href`, и раздел нельзя было открыть
+                в новой вкладке ни средним кликом, ни с Cmd — браузеру нечего
+                было открывать. При этом адрес раздела существует и работает:
+                `/admin?section=team` в чистой вкладке открывает «Пользователей».
+                То есть ссылка была, а воспользоваться ею было нельзя.
+
+                Обычный клик по-прежнему идёт через `onNavigate` — переход
+                внутри приложения, без перезагрузки; `preventDefault` нужен
+                только для него. Клик с модификатором и средней кнопкой браузер
+                обрабатывает сам, и `href` ему для этого достаточно.
+              */
+              component="a"
+              href={`?section=${section.key}`}
+              onClick={(event: MouseEvent) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                event.preventDefault();
+                onNavigate(section.key);
+              }}
               data-testid={`admin-nav-${section.key}`}
               data-active={active === section.key ? 'true' : undefined}
               sx={{

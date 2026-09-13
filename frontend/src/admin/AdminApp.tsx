@@ -155,17 +155,42 @@ function Console({ onLogout }: { onLogout: () => void }) {
     if (!keepHotel) params.delete('hotel');
     // Смена раздела сбрасывает чужие фильтры: они относились к прежнему списку
     // и в новом означали бы совсем другое.
-    for (const key of ['search', 'action', 'since', 'until', 'status', 'sort']) {
+    for (const key of [
+      'search',
+      'action',
+      'since',
+      'until',
+      'status',
+      'sort',
+      // Фильтры флота теперь тоже живут в адресе: «группа» и «происхождение»
+      // в журнале аудита означали бы совсем другое, а страница — тем более.
+      'group',
+      'origin',
+      'tariff',
+      'page',
+    ]) {
       params.delete(key);
     }
-    setSearchParams(params, { replace: true });
+    /*
+      ШАГ НАЗАД, А НЕ ПОДМЕНА АДРЕСА.
+
+      Здесь стоял `replace: true`, и переключение раздела не оставляло в
+      истории НИЧЕГО: замер показывал `history.length` 2 → 2 после трёх
+      переключений. Кнопка «назад» браузера при этом не возвращала на прежний
+      раздел — она выбрасывала из консоли на пустую страницу, потому что
+      предыдущей записью был вход, а до него ничего.
+
+      Смена раздела — это переход, а не «место на экране» (вкладка карточки
+      отеля им и остаётся, `HotelPage.setTab` заменяет адрес осознанно).
+    */
+    setSearchParams(params);
   };
   const closeHotel = () => {
     const params = new URLSearchParams(searchParams);
     params.delete('hotel');
     // Вкладка карточки в списке отелей ничего не значит — уносим вместе с ней.
     params.delete('tab');
-    setSearchParams(params, { replace: true });
+    setSearchParams(params);
   };
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe, retry: false });
 
@@ -173,7 +198,8 @@ function Console({ onLogout }: { onLogout: () => void }) {
     const params = new URLSearchParams(searchParams);
     params.set('section', 'fleet');
     params.set('hotel', id);
-    setSearchParams(params, { replace: true });
+    // Тоже шаг: открыв карточку отеля, «назад» обязано вернуть к списку.
+    setSearchParams(params);
   };
 
   const crumb =

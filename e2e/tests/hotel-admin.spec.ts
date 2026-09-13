@@ -172,24 +172,74 @@ test.describe('Админка отеля', () => {
     page,
     request,
   }) => {
-    // Заводим сотрудника через API, затем открываем настройку канала.
+    /*
+      ПРОВЕРКА, КОТОРАЯ МОЖЕТ УПАСТЬ.
+
+      Была: тест открывал диалог, НЕ переключал привязку на «Сотрудник» — а
+      селект сотрудника отрисовывается только при ней — и спрашивал
+      `if (await userSelect.isVisible())`. Условие не выполнялось никогда, тело
+      не исполнялось ни разу, тест зеленел на любом состоянии экрана, включая
+      наглухо заблокированное поле. Ровно та поломка, которую он «сторожил»:
+      список сотрудников приезжал конвертом `{items}`, `Array.isArray` давал
+      `[]`, поле блокировалось — и тест этого не заметил.
+
+      Стало: привязка переключается, сотрудник выбирается, канал сохраняется, и
+      привязка проверяется НА СЕРВЕРЕ — то есть проверено то, ради чего экран
+      существует, а не то, что он отрисовался.
+    */
     const token = await apiToken(request)
     const email = `chan-${uniq()}@crystal.local`
     const created = await request.post('http://localhost:8010/api/cms/staff', {
       data: { email, full_name: 'Канальный', password: 'secret12345' },
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
+    expect(created.status(), await created.text()).toBe(201)
     const userId = (await created.json()).id
 
     await openAdmin(page, '/cms/notifications')
-    // Переходим на вкладку каналов и открываем создание канала.
     await page.getByTestId('cms-channel-add').click()
-    // Тип «персональный» → селект сотрудника активен (раньше был заблокирован).
-    const userSelect = page.getByTestId('channel-user-select')
-    if (await userSelect.isVisible().catch(() => false)) {
-      await expect(userSelect).toBeEnabled()
-    }
+    await expect(page.getByTestId('cms-channel-type')).toBeVisible({ timeout: 15_000 })
 
+    const title = `Личный ${uniq()}`
+    await page.getByTestId('cms-channel-title').fill(title)
+    await page.getByTestId('cms-channel-binding').selectOption('user')
+
+    // Поле «Сотрудник» появляется вместе с привязкой и обязано быть ЖИВЫМ.
+    const userSelect = page.getByTestId('channel-user-select')
+    await expect(userSelect).toBeVisible({ timeout: 15_000 })
+    await expect(userSelect, 'поле «Сотрудник» заблокировано').toBeEnabled()
+
+    // Свежесозданный сотрудник обязан быть В СПИСКЕ, а не «список непустой».
+    await expect(userSelect.locator(`option[value="${userId}"]`)).toHaveCount(1)
+    await userSelect.selectOption(userId)
+    await page.getByTestId('cms-channel-save').click()
+
+    // Правда — на сервере: канал создан и привязан к ТОМУ сотруднику.
+    await expect
+      .poll(
+        async () => {
+          const list = await request.get('http://localhost:8010/api/cms/notification-channels', {
+            headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+          })
+          const items = (await list.json()).items as Array<{
+            title: string
+            user_id: string | null
+          }>
+          return items.find((channel) => channel.title === title)?.user_id ?? null
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(userId)
+
+    const channels = await request.get('http://localhost:8010/api/cms/notification-channels', {
+      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+    const mine = (await channels.json()).items.find(
+      (channel: { title: string }) => channel.title === title,
+    )
+    await request.delete(`http://localhost:8010/api/cms/notification-channels/${mine.id}`, {
+      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+    })
     await request.delete(`http://localhost:8010/api/cms/staff/${userId}`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
@@ -246,9 +296,18 @@ test.describe('Админка отеля', () => {
       (r: { category_title: string }) => r.category_title === 'Напитки',
     )
     const cell = drinksAfter.cells.find(
-      (c: { location_id: string }) => c.location_id === locId,
+      (c: { location_id: string; delivery_modes: string[] }) => c.location_id === locId,
     )
+    /*
+      ПРОВЕРЯЕМ ЗНАЧЕНИЕ, А НЕ ФАКТ.
+
+      Было `expect(cell.enabled).toBe(true)` — то есть проверялось ровно то, что
+      и так следует из «мы включили ячейку». Отправленный `delivery_modes:
+      ['pickup']` при этом не проверялся вовсе: сервер мог сохранить любой набор
+      способов доставки — или не сохранить ничего, — и тест бы этого не увидел.
+    */
     expect(cell.enabled).toBe(true)
+    expect(cell.delivery_modes).toEqual(['pickup'])
 
     await request.delete(`http://localhost:8010/api/cms/locations/${locId}`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },

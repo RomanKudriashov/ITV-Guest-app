@@ -8,6 +8,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { pickTranslated } from '@/utils/translated';
+
 import { ink, primaryButtonSx, quietButtonSx, typo } from './adminTokens';
 import { AdminDialog, ChoicePill, Field, FormCell, FormGrid, FormLabel } from './form';
 import {
@@ -31,7 +33,7 @@ export function CreateHotelDialog({
   onClose: () => void;
   onCreated: (result: CreateHotelResult) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [form, setForm] = useState({
     subdomain: '',
     name: '',
@@ -45,6 +47,11 @@ export function CreateHotelDialog({
   const [error, setError] = useState<string | null>(null);
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const consoleLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
+  // Первый код в поле «Языки» — язык отеля по умолчанию: на нём и заводится
+  // контент, если консоль говорит на языке, которого у шаблона нет.
+  const hotelLanguage = form.languages.split(',')[0]?.trim() || 'en';
 
   // Шаблоны редактируются платформой, поэтому список приходит с сервера, а не
   // зашит в диалог: иначе он отстал бы от реестра в первый же день.
@@ -144,7 +151,13 @@ export function CreateHotelDialog({
                   onClick={() => setTemplate(entry.code)}
                   testId={`admin-create-template-${entry.code}`}
                 >
-                  {entry.title.ru ?? entry.title.en ?? entry.code}
+                  {/*
+                    Язык консоли, потом ПЕРВЫЙ язык заводимого отеля, потом
+                    код. Было `title.ru ?? title.en` — русский зашит первым, и
+                    оператор нерусской платформы читал русские названия
+                    шаблонов при том, что перевод на его язык лежал рядом.
+                  */}
+                  {pickTranslated(entry.title, consoleLanguage, hotelLanguage) || entry.code}
                 </ChoicePill>
               ))}
           </Box>

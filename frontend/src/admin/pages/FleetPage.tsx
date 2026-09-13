@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -48,7 +49,35 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
   const { canWrite } = useRights();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
-  const [query, setQuery] = useState<FleetQuery>({ status: '', page: 1, page_size: 25 });
+  /*
+    ФИЛЬТРЫ ЖИВУТ В АДРЕСЕ, А НЕ В СОСТОЯНИИ КОМПОНЕНТА.
+
+    Были в `useState`, и это терялось на каждом возврате: карточку отеля
+    рисует тот же раздел (`section === 'fleet' && !hotelId`), то есть при её
+    открытии список РАЗМОНТИРУЕТСЯ вместе со своим состоянием. Замер: фильтр
+    «crystal» давал одну строку, после закрытия карточки поле пустое —
+    и кнопкой, и «назад».
+
+    ОДИН ПАРАМЕТР НА ФИЛЬТР, а не сериализованный объект: адрес читают глазами
+    и правят руками, `?search=crystal&status=active` понятен, `?q=%7B...%7D` —
+    нет. Страница и размер страницы в адрес не идут: это место в списке, а не
+    его состав, и делить ссылкой нужно состав.
+
+    `replace: true` ОБЯЗАТЕЛЕН: каждый набранный символ в поле поиска иначе
+    становится шагом истории, и «назад» после «crystal» пришлось бы жать семь
+    раз, чтобы выйти из списка.
+  */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query: FleetQuery = {
+    search: searchParams.get('search') ?? undefined,
+    status: (searchParams.get('status') ?? '') as FleetQuery['status'],
+    group: searchParams.get('group') ?? undefined,
+    sort: searchParams.get('sort') ?? undefined,
+    origin: (searchParams.get('origin') as FleetQuery['origin']) ?? undefined,
+    tariff: searchParams.get('tariff') ?? undefined,
+    page: Number(searchParams.get('page')) || 1,
+    page_size: 25,
+  };
   const [selected, setSelected] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreateHotelResult | null>(null);
@@ -74,8 +103,18 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
     onError: actionFailed,
   });
 
-  const patch = (next: Partial<FleetQuery>) =>
-    setQuery((prev) => ({ ...prev, ...next, page: next.page ?? 1 }));
+  const patch = (next: Partial<FleetQuery>) => {
+    const params = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(next)) {
+      if (key === 'page_size') continue;
+      if (value === undefined || value === null || value === '') params.delete(key);
+      else params.set(key, String(value));
+    }
+    // Смена любого фильтра возвращает на первую страницу: вторая страница
+    // прежнего состава к новому отношения не имеет.
+    if (next.page === undefined) params.delete('page');
+    setSearchParams(params, { replace: true });
+  };
 
   const rows = fleet.data?.items ?? [];
   const facets = fleet.data?.facets;
