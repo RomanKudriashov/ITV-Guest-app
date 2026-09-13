@@ -27,6 +27,7 @@ import { cmsPath } from '@/app/hostRole';
 import { ApiError } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
 import { useToast } from '@/components/ToastProvider';
+import { useAuth } from '@/auth/AuthProvider';
 
 import { useBootstrap } from '@/hooks/useBootstrap';
 import { MenuPage } from '@/pages/menu/MenuPage';
@@ -273,20 +274,35 @@ function ServicePhotoField({
 
 function DeliveryTab() {
   const { t } = useTranslation();
+  // Право спрашиваем ПРАВОМ, а не названием роли: `unrestricted` на сервере и
+  // `is_hotel_admin` здесь — одно и то же утверждение об уровне отеля.
+  const isHotelAdmin = Boolean(useAuth().user?.is_hotel_admin);
+
   return (
     <Stack spacing={2} data-testid="service-delivery">
       <Alert severity="info">{t('services.deliveryHint')}</Alert>
       <Typography variant="body2" color="text.secondary">
         {t('services.deliveryMatrixHint')}
       </Typography>
-      <Button
-        variant="outlined"
-        href="/cms/settings#locations"
-        sx={{ alignSelf: 'flex-start' }}
-        data-testid="service-delivery-locations"
-      >
-        {t('services.toLocations')}
-      </Button>
+      {/*
+        КНОПКА ВЕДЁТ НА АДМИНСКИЙ ЭКРАН — значит показываем её только тому, кто
+        туда войдёт.
+
+        Локации живут в настройках отеля, и раздел закрыт администратором.
+        Управляющий, нажав здесь, попадал бы на пустой экран с отказом — при
+        том, что сам он ничего неправильного не сделал. Предложение, которое
+        нельзя принять, хуже отсутствия предложения: оно выглядит поломкой.
+      */}
+      {isHotelAdmin ? (
+        <Button
+          variant="outlined"
+          href="/cms/settings#locations"
+          sx={{ alignSelf: 'flex-start' }}
+          data-testid="service-delivery-locations"
+        >
+          {t('services.toLocations')}
+        </Button>
+      ) : null}
     </Stack>
   );
 }

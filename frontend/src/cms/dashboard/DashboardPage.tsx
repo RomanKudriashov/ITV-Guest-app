@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { api } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
-import { useBootstrap } from '@/hooks/useBootstrap';
+import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { formatMoney } from '@/utils/money';
 import { pickTranslated } from '@/utils/translated';
 import type { DashboardAttention, DashboardData } from './types';
@@ -52,7 +52,7 @@ export function DashboardPage() {
 
   return (
     <Box sx={{ p: 3 }} data-testid="cms-dashboard">
-      <Typography variant="h5" sx={{ mb: 0.5 }}>
+      <Typography variant="h5" data-testid="cms-page-title" sx={{ mb: 0.5 }}>
         {t('dashboard.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -161,8 +161,9 @@ function Attention({ cards }: { cards: DashboardAttention[] }) {
 /* ── Сегодня против вчера ────────────────────────────────────────────────── */
 
 function Today({ data }: { data: DashboardData }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { data: bootstrap } = useBootstrap();
+  const languages = useContentLanguages(bootstrap);
   const today = data.today;
 
   const money = (minor: number | null) =>
@@ -172,7 +173,7 @@ function Today({ data }: { data: DashboardData }) {
           minor,
           bootstrap.hotel.currency,
           bootstrap.hotel.currency_minor_units,
-          i18n.resolvedLanguage ?? 'ru',
+          languages.displayLanguage,
         );
 
   return (
@@ -300,9 +301,18 @@ function Delta({ value }: { value?: number | null }) {
 /* ── По заведениям ───────────────────────────────────────────────────────── */
 
 function Venues({ data }: { data: DashboardData }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const language = i18n.resolvedLanguage ?? 'ru';
+  /*
+    Язык берётся ИЗ ОТЕЛЯ, а не зашивается строкой.
+
+    Здесь стоял `i18n.resolvedLanguage ?? 'ru'` с фолбэком `'ru'` вторым
+    аргументом: отель, который не ведёт русский, получал на пульте пустое
+    название или первый попавшийся язык. Второй эшелон — язык отеля, и он
+    известен из бутстрапа.
+  */
+  const bootstrap = useBootstrap();
+  const languages = useContentLanguages(bootstrap.data);
 
   return (
     <Box data-testid="dashboard-venues">
@@ -327,7 +337,8 @@ function Venues({ data }: { data: DashboardData }) {
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
-              {pickTranslated(venue.title, language, 'ru') || venue.code}
+              {pickTranslated(venue.title, languages.displayLanguage, languages.defaultCode) ||
+                venue.code}
             </Typography>
             <Box sx={{ flexGrow: 1 }} />
             {/*

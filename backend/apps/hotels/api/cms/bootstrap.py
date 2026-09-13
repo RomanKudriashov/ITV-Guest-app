@@ -6,6 +6,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.accounts.schemas.cms import BootstrapOut
+from apps.hotels.schemas.cms import DashboardOut
 from apps.hotels.services.bootstrap import bootstrap_payload
 from apps.hotels.services.hotel import current_hotel
 
@@ -48,7 +49,11 @@ def cms_navigation(request: HttpRequest):
 # --- Дашборд ---------------------------------------------------------------
 
 
-@router.get("/dashboard", summary="Пульт отеля: что горит, как идёт день, где именно")
+@router.get(
+    "/dashboard",
+    response=DashboardOut,
+    summary="Пульт отеля: что горит, как идёт день, где именно",
+)
 def dashboard(request: HttpRequest):
     """
     Одна ручка на весь экран.

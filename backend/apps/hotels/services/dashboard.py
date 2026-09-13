@@ -303,13 +303,32 @@ def _venues(hotel, points) -> list[dict]:
     Сводка считается КАЖДОЙ точке отдельно — иначе не сказать, где именно
     просрочка, а «где» здесь и есть весь смысл.
     """
+    # Название — ГОСТЕВОЕ (`Service.public_name`), а не служебное имя бригады.
+    #
+    # Отель переименовывает заведение на витрине и ждёт увидеть на пульте то же
+    # слово, что видит гость. `ExecutionPoint.title` — внутреннее имя очереди
+    # («Кухня»), и пульт с ним расходился с витриной («Панорама»).
+    #
+    # Словарь отдаётся СЫРЫМ, как во всех остальных ручках CMS: язык выбирает
+    # клиент, у которого есть и язык интерфейса, и язык отеля. Раньше здесь
+    # стояла уже свёрнутая строка (`title_i18n`), а фронт объявлял её
+    # `Translated` и звал `pickTranslated` — по строке тот брал первый символ.
+    from apps.hotels.models import Service
+
+    titles = {
+        service.execution_point_id: service.public_title
+        for service in Service.objects.filter(execution_point__in=points).select_related(
+            "execution_point"
+        )
+    }
+
     rows = []
     for point in points:
         summary = shift_summary_for([point], hotel=hotel)
         rows.append(
             {
                 "code": point.code,
-                "title": point.title_i18n or point.code,
+                "title": titles.get(point.pk) or point.title or {"en": point.code},
                 "in_work": summary["in_work"],
                 "new": summary["new"],
                 "overdue": summary["overdue"],

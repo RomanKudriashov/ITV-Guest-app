@@ -12,40 +12,16 @@ from apps.hotels.services import admin_services as svc
 router = Router(tags=["cms:hotel-admin"])
 
 
-# ВНИМАНИЕ: статический `/services/templates` объявляется РАНЬШЕ
-# параметризованного `/services/{id}` — иначе слово "templates" уедет в id.
+# ВНИМАНИЕ: ВСЕ статические `/services/<слово>` объявляются РАНЬШЕ
+# параметризованного `/services/{service_id}` — иначе само слово уезжает в id.
+#
+# Django Ninja разбирает маршруты в порядке объявления, и первый подошедший
+# забирает запрос. `/services/sla-overrides`, стоявший ниже, доставался ручке
+# карточки: строка «sla-overrides» шла в UUID-поле и падала пятисоткой на
+# разборе — экран «где порог переопределён» не открывался вовсе.
 @router.get("/services/templates", summary="Шаблоны для «+ добавить сервис»")
 def cms_service_templates(request: HttpRequest):
     return svc.service_templates()
-
-
-@router.get("/services", summary="Сервисы отеля (верхний уровень CMS)")
-def cms_list_services(
-    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
-):
-    return svc.list_services(search=search, limit=limit, offset=offset)
-
-
-@router.post("/services", response={201: dict}, summary="Создать сервис из шаблона")
-def cms_create_service(request: HttpRequest, payload: ServiceIn):
-    service = svc.create_service(payload.dict(exclude_unset=True))
-    return 201, svc.serialize_service(service)
-
-
-@router.get("/services/{service_id}", summary="Сервис")
-def cms_get_service(request: HttpRequest, service_id: str):
-    return svc.serialize_service(svc.get_service(service_id))
-
-
-@router.patch("/services/{service_id}", summary="Изменить сервис")
-def cms_update_service(request: HttpRequest, service_id: str, payload: ServicePatch):
-    return svc.serialize_service(svc.update_service(service_id, payload.dict(exclude_unset=True)))
-
-
-@router.delete("/services/{service_id}", response=OkOut, summary="Удалить сервис")
-def cms_delete_service(request: HttpRequest, service_id: str):
-    svc.delete_service(service_id)
-    return {"ok": True}
 
 
 @router.get("/services/sla-overrides", summary="Где порог просрочки переопределён")
@@ -67,3 +43,36 @@ def cms_sla_overrides_reset(request: HttpRequest, payload: SlaResetIn):
     from apps.hotels.services import sla_inheritance
 
     return {"changed": sla_inheritance.reset(payload.point_ids)}
+
+
+@router.get("/services", summary="Сервисы отеля (верхний уровень CMS)")
+def cms_list_services(
+    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+):
+    return svc.list_services(search=search, limit=limit, offset=offset)
+
+
+@router.post("/services", response={201: dict}, summary="Создать сервис из шаблона")
+def cms_create_service(request: HttpRequest, payload: ServiceIn):
+    service = svc.create_service(payload.dict(exclude_unset=True))
+    return 201, svc.serialize_service(service)
+
+
+@router.get("/services/{service_id}", summary="Сервис")
+def cms_get_service(request: HttpRequest, service_id: str):
+    # Со счётчиками — теми же, что в списке. Карточка, открытая из списка, не
+    # имеет права показать шесть нулей там, где строкой выше стояли числа.
+    service = svc.get_service(service_id)
+    return svc.serialize_service(service, counts=svc.counts_for([service])[service.pk])
+
+
+@router.patch("/services/{service_id}", summary="Изменить сервис")
+def cms_update_service(request: HttpRequest, service_id: str, payload: ServicePatch):
+    return svc.serialize_service(svc.update_service(service_id, payload.dict(exclude_unset=True)))
+
+
+@router.delete("/services/{service_id}", response=OkOut, summary="Удалить сервис")
+def cms_delete_service(request: HttpRequest, service_id: str):
+    svc.delete_service(service_id)
+    return {"ok": True}
+

@@ -200,3 +200,36 @@ def test_speed_is_the_median_from_the_shift_summary(crystal):
 
         assert data["today"]["median_minutes"] == expected["median_minutes"]
         assert data["today"]["done"] == expected["done"]
+
+
+# --- Название заведения на пульте -------------------------------------------
+
+
+def test_venue_carries_the_guest_name_as_a_raw_dictionary(crystal, client):
+    """
+    ПУЛЬТ НАЗЫВАЕТ ЗАВЕДЕНИЕ ТАК ЖЕ, КАК ВИТРИНА.
+
+    Брали `ExecutionPoint.title` — внутреннее имя очереди. Отель переименовывал
+    заведение на витрине и ждал увидеть на пульте то же слово, что видит гость,
+    а видел старое служебное.
+
+    И словарь ОТДАЁТСЯ СЫРЫМ, как во всех остальных ручках CMS. Раньше здесь
+    стояла уже свёрнутая строка, а фронт объявлял поле `Translated` и звал
+    `pickTranslated` — тот брал у строки первый СИМВОЛ. Схема ручки (её тоже не
+    было) теперь ловит это на сервере.
+    """
+    from apps.hotels.models import Service
+
+    with tenant_context(crystal):
+        point = _point("bar")
+        service = Service.objects.get(execution_point=point)
+        service.public_name = {"ru": "Лобби-бар «Панорама»", "en": "Panorama bar"}
+        service.save(update_fields=["public_name"])
+        point.title = {"ru": "Бар (служебное)"}
+        point.save(update_fields=["title"])
+
+        data = build(crystal, _admin())
+
+    venue = next(row for row in data["venues"] if row["code"] == point.code)
+    assert venue["title"] == {"ru": "Лобби-бар «Панорама»", "en": "Panorama bar"}
+    assert isinstance(venue["title"], dict), "клиент выбирает язык сам — здесь словарь"

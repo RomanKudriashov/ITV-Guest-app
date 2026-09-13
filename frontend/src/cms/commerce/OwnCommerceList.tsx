@@ -14,7 +14,10 @@ import {
   type CommerceOverrideField,
 } from '@/api/cms';
 import { ApiError } from '@/api/client';
+import { QueryState } from '@/components/QueryState';
 import { useToast } from '@/components/ToastProvider';
+import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
+import { pickTranslated } from '@/utils/translated';
 
 /**
  * «У кого из заведений своя коммерция» — СПИСКОМ.
@@ -42,6 +45,9 @@ export function OwnCommerceList() {
   const toast = useToast();
   const client = useQueryClient();
 
+  const bootstrap = useBootstrap();
+  const languages = useContentLanguages(bootstrap.data);
+
   const overrides = useQuery({
     queryKey: ['cms', 'commerce', 'overrides'],
     queryFn: fetchCommerceOverrides,
@@ -59,10 +65,14 @@ export function OwnCommerceList() {
     },
   });
 
-  if (!overrides.data) return null;
-  const { services, with_own: withOwn, total_services: total } = overrides.data;
-
+  /*
+    ТРИ ИСХОДА, А НЕ ОДИН. `if (!overrides.data) return null` делал упавший
+    запрос неотличимым от «своей коммерции ни у кого нет» — а это деньги: во
+    втором случае все заведения считают как отель, в первом неизвестно ничего.
+  */
   return (
+    <QueryState query={overrides} what={t('state.what.commerceOverrides')}>
+      {({ services, with_own: withOwn, total_services: total }) => (
     <Card
       variant="outlined"
       data-testid="cms-commerce-overrides"
@@ -98,7 +108,9 @@ export function OwnCommerceList() {
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600}>
-                    {Object.values(row.name)[0] ?? row.code}
+                    {/* Язык интерфейса → язык отеля → код. См. SlaOverridesList. */}
+                    {pickTranslated(row.name, languages.displayLanguage, languages.defaultCode) ||
+                      row.code}
                   </Typography>
                   <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                     {row.fields.map((field) => (
@@ -121,6 +133,8 @@ export function OwnCommerceList() {
         )}
       </CardContent>
     </Card>
+      )}
+    </QueryState>
   );
 }
 

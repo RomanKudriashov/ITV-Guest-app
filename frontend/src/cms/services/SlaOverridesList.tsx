@@ -10,7 +10,10 @@ import Typography from '@mui/material/Typography';
 
 import { fetchSlaOverrides, resetSlaOverrides } from '@/api/cms';
 import { ApiError } from '@/api/client';
+import { QueryState } from '@/components/QueryState';
 import { useToast } from '@/components/ToastProvider';
+import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
+import { pickTranslated } from '@/utils/translated';
 
 /**
  * «Где порог просрочки переопределён».
@@ -33,6 +36,9 @@ export function SlaOverridesList() {
   const toast = useToast();
   const client = useQueryClient();
 
+  const bootstrap = useBootstrap();
+  const languages = useContentLanguages(bootstrap.data);
+
   const data = useQuery({ queryKey: ['cms', 'sla', 'overrides'], queryFn: fetchSlaOverrides });
   const reset = useMutation({
     mutationFn: (pointId: string) => resetSlaOverrides([pointId]),
@@ -46,10 +52,15 @@ export function SlaOverridesList() {
     },
   });
 
-  if (!data.data) return null;
-  const { points, overridden, total_points: total } = data.data;
-
+  /*
+    ТРИ ИСХОДА, А НЕ ОДИН. Здесь стояло `if (!data.data) return null` — и
+    упавший запрос выглядел точно так же, как «переопределений нет»: карточки
+    просто не было на экране. А это разные ответы: во втором случае пороги
+    наследуются как задумано, в первом — неизвестно, что с ними вообще.
+  */
   return (
+    <QueryState query={data} what={t('state.what.slaOverrides')}>
+      {({ points, overridden, total_points: total }) => (
     <Card
       variant="outlined"
       data-testid="cms-sla-overrides"
@@ -72,7 +83,14 @@ export function SlaOverridesList() {
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2">
-                    {Object.values(row.title)[0] ?? row.code}
+                    {/*
+                      Язык интерфейса, потом язык отеля, потом код. Было
+                      `Object.values(...)[0]` — первое значение по порядку
+                      ключей словаря, то есть по алфавиту: в русской CMS
+                      заведения назывались по-арабски, потому что «ar» < «en».
+                    */}
+                    {pickTranslated(row.title, languages.displayLanguage, languages.defaultCode) ||
+                      row.code}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {own
@@ -109,5 +127,7 @@ export function SlaOverridesList() {
         </Stack>
       </CardContent>
     </Card>
+      )}
+    </QueryState>
   );
 }

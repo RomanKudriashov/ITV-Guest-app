@@ -200,3 +200,74 @@ class BrandPatch(Schema):
 
 class ApplyPresetIn(Schema):
     preset: str
+
+
+# --- Пульт отеля ------------------------------------------------------------
+#
+# У ручки дашборда схемы не было вовсе, и это ровно то место, где фронт разошёлся
+# с сервером незамеченным: тип на клиенте объявлял `title: Translated`, сервер
+# слал строку, и `pickTranslated` брал у строки первый символ. Схема здесь —
+# не украшение выдачи, а единственный способ, чтобы такое расхождение падало на
+# сервере, а не проявлялось арабской буквой на экране.
+
+
+class DashboardScopeOut(Schema):
+    all_points: bool
+    points_count: int
+
+
+class DashboardAttentionOut(Schema):
+    """
+    Карточка «требует внимания». Форма зависит от кода: у `node_offline` есть
+    `minutes`, у `tariff_over` — `resource`/`used`/`limit`, у `no_escalation` —
+    `names`. Необязательные поля именно поэтому, а не «на всякий случай».
+    """
+
+    code: str
+    severity: str
+    route: str
+    count: int | None = None
+    minutes: int | None = None
+    resource: str | None = None
+    used: int | None = None
+    limit: int | None = None
+    names: list[str] | None = None
+
+
+class DashboardTodayOut(Schema):
+    orders: int
+    # ДЕЛЬТЫ — ДОЛИ, А НЕ ШТУКИ: `_delta()` возвращает относительное изменение
+    # (`-0.6429` = «минус 64%»), и экран печатает их процентом. Объявленные
+    # целыми, они роняли ручку на первом же дне, где заказов стало меньше.
+    orders_delta: float | None = None
+    revenue_minor: int | None = None
+    revenue_delta: float | None = None
+    avg_rating: float | None = None
+    rating_delta: float | None = None
+    # `None` у управляющего заведением: гостевая сессия к точке не привязана.
+    live_guests: int | None = None
+    # `None` значит «за смену нечего мерить» — экран обязан сказать это
+    # прочерком, а не нулём.
+    median_minutes: int | None = None
+    median_pickup_minutes: int | None = None
+    done: int
+    in_work: int
+
+
+class DashboardVenueOut(Schema):
+    code: str
+    # СЫРОЙ СЛОВАРЬ {lang: value}, как во всех остальных ручках CMS: язык
+    # выбирает клиент, у которого есть и язык интерфейса, и язык отеля.
+    title: dict[str, str]
+    in_work: int
+    new: int
+    overdue: int
+    median_minutes: int | None = None
+    route: str
+
+
+class DashboardOut(Schema):
+    scope: DashboardScopeOut
+    attention: list[DashboardAttentionOut]
+    today: DashboardTodayOut
+    venues: list[DashboardVenueOut]
