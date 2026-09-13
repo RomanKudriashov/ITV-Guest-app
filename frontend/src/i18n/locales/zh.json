@@ -67,10 +67,11 @@
     "payments": "支付",
     "pms": "酒店管理系统",
     "mobileKey": "手机钥匙",
-    "open": "打开菜单"
+    "open": "打开菜单",
+    "orders": "订单"
   },
   "dictionaries": {
-    "title": "卡片字典",
+    "title": "字典",
     "subtitle": "用于菜单卡片的过敏原（「含有」）与膳食标记（「适合」）。清单在酒店创建时以副本形式来自平台：自有记录可自由添加，平台记录不可删除，只能关闭。",
     "allergens": "过敏原",
     "markers": "膳食标记",
@@ -796,7 +797,9 @@
       "shiftSpeed": "通常耗时 {{duration}}",
       "shiftPickup": "{{duration}} 内接单",
       "lastOrder": "最近一单 — {{age}}",
-      "slaHintDefault": "超过下单后 {{minutes}} 分钟即为超时（此类型的默认值）"
+      "slaHintDefault": "超过下单后 {{minutes}} 分钟即为超时（此类型的默认值）",
+      "dropHere": "放到这里",
+      "overdueBelow": "下方有超时订单：{{count}}"
     },
     "card": {
       "number": "第 {{number}} 号",
@@ -812,7 +815,9 @@
     "actions": {
       "accept": "接单",
       "cancel": "取消",
-      "more": "更多操作"
+      "more": "更多操作",
+      "undo": "撤销",
+      "undoHint": "订单 #{{number}} 的状态已更改"
     },
     "detail": {
       "where": "送达",
@@ -887,17 +892,39 @@
       "anyType": "全部",
       "typeCart": "含菜品订单",
       "typeRequest": "服务请求",
-      "reset": "重置"
+      "reset": "重置",
+      "since": "关闭自",
+      "until": "关闭至",
+      "room": "房间"
     },
     "handover": {
       "takenBy": "{{name}} 已接单 №{{number}}",
       "taken": "订单 №{{number}} 已被接走",
       "closedBy": "{{name}} 已关闭订单 №{{number}}",
-      "closed": "订单 №{{number}} 已关闭"
+      "closed": "订单 №{{number}} 已关闭",
+      "moved": "订单 №{{number}} 已被他人移动 — 您的操作未生效",
+      "movedBy": "{{name}} 先移动了订单 №{{number}} — 您的操作未生效",
+      "vanished": "订单 №{{number}} 已不在看板上 — 您的操作未生效"
     },
     "group": {
       "noRoom": "无房间"
-    }
+    },
+    "reopen": {
+      "title": "将订单 #{{number}} 退回处理？",
+      "body": "该订单已关闭：客人已看到“已送达”，班次也已上报。退回“{{status}}”会记入订单历史——谁在何时退回。",
+      "keep": "保持关闭",
+      "confirm": "退回处理"
+    },
+    "journal": {
+      "title": "订单的处理记录",
+      "rollback": "退回",
+      "backFrom": "从“{{from}}”退回",
+      "bySystem": "系统自动重算",
+      "byPerson": "{{name}}",
+      "byGuest": "客人"
+    },
+    "loadMore": "显示更多",
+    "loadingMore": "加载中…"
   },
   "requestFields": {
     "title": "申请字段",
@@ -929,7 +956,7 @@
     }
   },
   "notifications": {
-    "title": "通知与上报",
+    "title": "通知",
     "subtitle": "客人的请求去往哪里、由谁接手、若无人及时接手会发生什么。当请求丢失或送错人时来这里。",
     "tabs": {
       "channels": "渠道",
@@ -972,7 +999,8 @@
       },
       "point": "场所",
       "user": "员工",
-      "noStaff": "员工列表暂不可用",
+      "noStaff": "酒店暂无员工",
+      "staffFailed": "无法加载员工列表",
       "config": "渠道配置",
       "fields": {
         "bot_token": "机器人令牌",
@@ -1052,6 +1080,8 @@
       "loadError": "无法加载日志",
       "empty": "暂无记录",
       "emptyHint": "触发的步骤和已发消息将显示在这里",
+      "nothingFound": "没有符合此筛选条件的记录",
+      "nothingFoundHint": "请检查订单号和状态，或清除筛选",
       "time": "时间",
       "order": "订单",
       "step": "步骤",
@@ -1084,7 +1114,7 @@
     }
   },
   "brand": {
-    "title": "品牌",
+    "title": "品牌与门店",
     "save": "保存",
     "reset": "重置",
     "dirty": "有未保存的更改",
@@ -1177,7 +1207,7 @@
   },
   "hotel": {
     "rooms": {
-      "title": "房间",
+      "title": "客房",
       "subtitle": "酒店房间与访客二维码",
       "add": "添加房间",
       "bulkAdd": "批量添加",
@@ -1444,7 +1474,8 @@
         "created_at": "创建时间",
         "room": "房间",
         "rating": "评分"
-      }
+      },
+      "toOrders": "查看这些订单"
     },
     "empty": {
       "breakdown": "该切片暂无数据",
@@ -1548,7 +1579,7 @@
     }
   },
   "badges": {
-    "title": "营销徽章",
+    "title": "营销",
     "subtitle": "客人在卡片上看到的标记：「热卖」「新品」「辣」。在这里创建，也在这里分配 —「挂在哪里」计数可展开列表。",
     "add": "添加徽章",
     "deleted": "徽章已删除",
@@ -1731,7 +1762,7 @@
     }
   },
   "dashboard": {
-    "title": "控制台",
+    "title": "仪表板",
     "subtitle": "此刻的情况",
     "ordersToday": "今日订单",
     "venues": "门店场所",
@@ -2729,14 +2760,17 @@
       "timeseries": "走势",
       "reviewSettings": "评价设置",
       "me": "你的账号",
-      "items": "菜品"
+      "items": "菜品",
+      "slaOverrides": "超时阈值",
+      "commerceOverrides": "各场所的自有商务设置"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   },
   "access": {
     "cmsTitle": "该板块已关闭",
     "cmsBody": "您的角色无权访问管理板块。您的工作在订单看板上。",
-    "toTracker": "前往工作台"
+    "toTracker": "前往工作台",
+    "noSections": "您没有管理板块 — 仅可使用工单看板"
   },
   "modulePending": {
     "body": "模块已接入，但设置界面仍在开发中。上线后将在此处打开。",
@@ -3011,6 +3045,36 @@
       "climate": "空调 {{value}}°",
       "hint": "平面图会自动演示 — 点击区域即可接管",
       "hintTaken": "点击各区域：灯光、窗帘、空调"
+    }
+  },
+  "orders": {
+    "title": "订单",
+    "what": "订单",
+    "emptyHint": "客人的订单会显示在这里——所有场所一起。",
+    "loadMore": "显示更多",
+    "row": {
+      "room": "房间 {{room}}"
+    },
+    "filters": {
+      "venue": "场所",
+      "allVenues": "全部场所",
+      "since": "从",
+      "until": "至",
+      "room": "房间",
+      "search": "编号或房间",
+      "reset": "重置"
+    },
+    "numbers": {
+      "count": "订单数",
+      "revenue": "金额",
+      "cancelled": "已取消",
+      "speed": "典型速度"
+    },
+    "detail": {
+      "total": "合计",
+      "assignee": "负责人",
+      "nobody": "无人接单",
+      "cancelled": "已取消：{{reason}}"
     }
   }
 }

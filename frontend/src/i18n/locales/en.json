@@ -67,10 +67,11 @@
     "payments": "Payments",
     "pms": "Hotel management system",
     "mobileKey": "Mobile key",
-    "open": "Open menu"
+    "open": "Open menu",
+    "orders": "Orders"
   },
   "dictionaries": {
-    "title": "Card dictionaries",
+    "title": "Dictionaries",
     "subtitle": "Allergens (“contains”) and dietary markers (“suitable for”) used on menu cards. The lists arrived as a COPY from the platform when the hotel was created: add your own freely, platform entries cannot be deleted — only switched off.",
     "allergens": "Allergens",
     "markers": "Dietary markers",
@@ -801,7 +802,9 @@
       "shiftSpeed": "Usually takes {{duration}}",
       "shiftPickup": "Picked up within {{duration}}",
       "lastOrder": "Last request — {{age}}",
-      "slaHintDefault": "Overdue means later than {{minutes}} min after intake (default for this kind)"
+      "slaHintDefault": "Overdue means later than {{minutes}} min after intake (default for this kind)",
+      "dropHere": "Drop here",
+      "overdueBelow": "Overdue below: {{count}}"
     },
     "card": {
       "number": "#{{number}}",
@@ -817,7 +820,9 @@
     "actions": {
       "accept": "Accept",
       "cancel": "Cancel",
-      "more": "More actions"
+      "more": "More actions",
+      "undo": "Undo",
+      "undoHint": "Status of order #{{number}} changed"
     },
     "detail": {
       "where": "Where",
@@ -895,17 +900,39 @@
       "anyType": "Any",
       "typeCart": "Order with items",
       "typeRequest": "Request",
-      "reset": "Reset"
+      "reset": "Reset",
+      "since": "Closed from",
+      "until": "Closed to",
+      "room": "Room"
     },
     "handover": {
       "takenBy": "Order #{{number}} was taken by {{name}}",
       "taken": "Order #{{number}} has been taken",
       "closedBy": "Order #{{number}} was closed by {{name}}",
-      "closed": "Order #{{number}} was closed"
+      "closed": "Order #{{number}} was closed",
+      "moved": "Order #{{number}} was moved by someone else — your move was not applied",
+      "movedBy": "{{name}} moved order #{{number}} first — your move was not applied",
+      "vanished": "Order #{{number}} is no longer on the board — your move was not applied"
     },
     "group": {
       "noRoom": "No room"
-    }
+    },
+    "reopen": {
+      "title": "Return order #{{number}} to work?",
+      "body": "The order is already closed: the guest saw it delivered and the shift has reported it. Returning it to “{{status}}” goes into the order history — who returned it and when.",
+      "keep": "Keep it closed",
+      "confirm": "Return to work"
+    },
+    "journal": {
+      "title": "What was done with the order",
+      "rollback": "returned",
+      "backFrom": "returned from “{{from}}”",
+      "bySystem": "recalculated automatically",
+      "byPerson": "{{name}}",
+      "byGuest": "guest"
+    },
+    "loadMore": "Show more",
+    "loadingMore": "Loading…"
   },
   "requestFields": {
     "title": "Request fields",
@@ -937,7 +964,7 @@
     }
   },
   "notifications": {
-    "title": "Notifications and hand-up",
+    "title": "Notifications",
     "subtitle": "Where a guest request goes, who receives it, and what happens if nobody takes it in time. You come here when requests get lost or reach the wrong people.",
     "tabs": {
       "channels": "Channels",
@@ -980,7 +1007,8 @@
       },
       "point": "Venue",
       "user": "Member of staff",
-      "noStaff": "The staff list is not available yet",
+      "noStaff": "The hotel has no staff yet",
+      "staffFailed": "Could not load the staff list",
       "config": "Channel configuration",
       "fields": {
         "bot_token": "Bot token",
@@ -1060,6 +1088,8 @@
       "loadError": "Could not load the journal",
       "empty": "No records yet",
       "emptyHint": "Fired steps and sent messages will appear here",
+      "nothingFound": "Nothing matches this filter",
+      "nothingFoundHint": "Check the order number and status, or clear the filter",
       "time": "Time",
       "order": "Order",
       "step": "Step",
@@ -1092,7 +1122,7 @@
     }
   },
   "brand": {
-    "title": "Brand",
+    "title": "Brand & storefront",
     "save": "Save",
     "reset": "Reset",
     "dirty": "Unsaved changes",
@@ -1453,7 +1483,8 @@
         "created_at": "Created",
         "room": "Room",
         "rating": "Rating"
-      }
+      },
+      "toOrders": "Show these orders"
     },
     "empty": {
       "breakdown": "No data for this slice",
@@ -1557,7 +1588,7 @@
     }
   },
   "badges": {
-    "title": "Marketing badges",
+    "title": "Marketing",
     "subtitle": "Badges the guest sees on a card: «Hit», «New», «Spicy». You create them here and hand them out here too — the “where it hangs” counter opens the list.",
     "add": "Add badge",
     "deleted": "Badge deleted",
@@ -1741,7 +1772,7 @@
     }
   },
   "dashboard": {
-    "title": "Control panel",
+    "title": "Dashboard",
     "subtitle": "What is happening right now",
     "ordersToday": "Orders today",
     "venues": "Venues on the storefront",
@@ -2750,14 +2781,17 @@
       "timeseries": "the chart",
       "reviewSettings": "the review settings",
       "me": "your account",
-      "items": "items"
+      "items": "items",
+      "slaOverrides": "the overdue thresholds",
+      "commerceOverrides": "the venues' own commerce"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
   },
   "access": {
     "cmsTitle": "Section closed",
     "cmsBody": "Your role has no access to management sections. Your work lives on the order board.",
-    "toTracker": "Go to the tracker"
+    "toTracker": "Go to the tracker",
+    "noSections": "You have no management sections — the tracker is yours"
   },
   "modulePending": {
     "body": "The module is connected, but its settings screen is still being built. It will open right here once it ships.",
@@ -3032,6 +3066,36 @@
       "climate": "climate {{value}}°",
       "hint": "The plan plays by itself — tap a zone to take over",
       "hintTaken": "Tap the zones: light, curtains, climate"
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "what": "orders",
+    "emptyHint": "Guest orders will appear here — all venues at once.",
+    "loadMore": "Show more",
+    "row": {
+      "room": "Room {{room}}"
+    },
+    "filters": {
+      "venue": "Venue",
+      "allVenues": "All venues",
+      "since": "From",
+      "until": "To",
+      "room": "Room",
+      "search": "Number or room",
+      "reset": "Reset"
+    },
+    "numbers": {
+      "count": "Orders",
+      "revenue": "Total",
+      "cancelled": "Cancelled",
+      "speed": "Typical speed"
+    },
+    "detail": {
+      "total": "Total",
+      "assignee": "Handled by",
+      "nobody": "nobody took it",
+      "cancelled": "Cancelled: {{reason}}"
     }
   }
 }
