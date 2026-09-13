@@ -1582,7 +1582,7 @@ def _dict_page(
     цена второго экземпляра правила — нет.
     """
     from apps.catalog.facet_scope import applies, kind_applies
-    from apps.core.listing import search as apply_search
+    from apps.core.listing import envelope, search as apply_search
 
     queryset = apply_search(model.objects.all(), search, ("code",), json_fields=("title",))
     rows = [_serialize_dict_entry(row, kind=kind) for row in queryset]
@@ -1595,11 +1595,19 @@ def _dict_page(
     total = len(rows)
     start = max(0, int(offset or 0))
     page = rows[start : start + int(limit)] if limit else rows[start:]
-    return {
-        "items": page,
-        "total": total,
-        "kind_applies": kind_applies(kind, noun) if noun else True,
-    }
+    # ФОРМА ОТВЕТА — ОБЩАЯ ДЛЯ ВСЕХ СПИСКОВ (`core.listing.envelope`): `total`,
+    # `limit` и честный `truncated` рядом с `items`. Своя урезанная форма
+    # выглядела бы такой же на глаз и ломала сторож контрактов, который сверяет
+    # ответы сервера с типами фронта.
+    return envelope(
+        page,
+        total,
+        int(limit) if limit else total,
+        offset=start,
+        # Отдельный ответ на отдельный вопрос: «пусто, потому что не завели» или
+        # «пусто, потому что здесь этого не бывает».
+        kind_applies=kind_applies(kind, noun) if noun else True,
+    )
 
 
 def _clean_applies_to(value) -> list[str]:

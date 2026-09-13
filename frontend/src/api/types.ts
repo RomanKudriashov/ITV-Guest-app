@@ -353,9 +353,7 @@ export interface DictEntry {
  * «пусто, потому что не завели» или «пусто, потому что здесь этого не бывает».
  * Первое просит завести запись, второе — убрать раздел с экрана совсем.
  */
-export interface DictPage {
-  items: DictEntry[];
-  total: number;
+export interface DictPage extends ListPage<DictEntry> {
   kind_applies: boolean;
 }
 
