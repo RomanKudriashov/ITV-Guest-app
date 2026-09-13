@@ -25,7 +25,7 @@ import type { TrackerOrder } from '../api/types';
  */
 
 export interface HandoverNotice {
-  kind: 'taken' | 'gone';
+  kind: 'taken' | 'gone' | 'moved' | 'vanished';
   number: number;
   who: string | null;
 }
@@ -34,6 +34,15 @@ export interface Handover {
   notice: HandoverNotice | null;
   /** Отметить заказ своим — до отправки запроса, а не после ответа. */
   mark: (orderId: string) => void;
+  /**
+   * Объявить чужое вмешательство НАПРЯМУЮ, не дожидаясь снимка.
+   *
+   * Нужно ровно для одной дыры. Снимки во время жеста придержаны, а свой заказ
+   * мы пометили `mark` ДО запроса — значит, если чужой снимок увёл карточку,
+   * пока её несли, сравнение снимков промолчит: заказ числится нашим. Человек
+   * получил бы только «нельзя перейти» и решил бы, что запретила система.
+   */
+  announce: (notice: HandoverNotice) => void;
   dismiss: () => void;
 }
 
@@ -80,11 +89,27 @@ export function useHandover(orders: TrackerOrder[] | undefined): Handover {
     mark: (orderId: string) => {
       mineRef.current.add(orderId);
     },
+    announce: (next: HandoverNotice) => setNotice(next),
     dismiss: () => setNotice(null),
   };
 }
 
 export function handoverText(notice: HandoverNotice, t: TFunction): string {
+  /*
+    «БОЛЬШЕ НЕ СУЩЕСТВУЕТ» — ОТДЕЛЬНАЯ НОВОСТЬ, А НЕ ЧУЖИЕ РУКИ.
+
+    Заказ исчезает не только потому, что его увёл сосед: смену закрыли, заказ
+    удалил администратор, уборка стенда съела его вместе с прогоном. Называть
+    всё это «кто-то другой» значит называть человека, которого не было.
+  */
+  if (notice.kind === 'vanished') {
+    return t('tracker.handover.vanished', { number: notice.number });
+  }
+  if (notice.kind === 'moved') {
+    return notice.who
+      ? t('tracker.handover.movedBy', { number: notice.number, name: notice.who })
+      : t('tracker.handover.moved', { number: notice.number });
+  }
   if (notice.kind === 'taken') {
     return notice.who
       ? t('tracker.handover.takenBy', { number: notice.number, name: notice.who })

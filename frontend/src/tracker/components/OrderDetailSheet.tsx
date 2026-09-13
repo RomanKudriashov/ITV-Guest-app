@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
 import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderTimeline } from '@/guest/components/OrderTimeline';
+import { OrderJournal } from './OrderJournal';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
 import { formatClock, totalText, whenText, whereText } from '../orderText';
@@ -230,6 +231,20 @@ export function OrderDetailSheet({
               </Typography>
               <OrderTimeline order={order} />
             </Paper>
+
+            {/*
+              Журнал стоит ПОСЛЕ таймлайна и отдельным блоком, а не вместо него.
+              Таймлайн отвечает «где заказ», журнал — «что с ним делали»: это
+              два разных вопроса, и слить их значило бы потерять один из двух.
+            */}
+            {order.journal.length ? (
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  {t('tracker.journal.title')}
+                </Typography>
+                <OrderJournal entries={order.journal} />
+              </Paper>
+            ) : null}
 
             <OrderActions
               order={order}

@@ -7,6 +7,7 @@ import { alpha } from '@mui/material/styles';
 import { useDroppable } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 
+import { OverdueBelow } from './OverdueBelow';
 import type { TrackerColumn, TrackerRoomGroup } from '../api/types';
 
 export interface BoardColumnProps {
@@ -23,6 +24,15 @@ export interface BoardColumnProps {
    */
   dropAllowed?: boolean | null;
   /**
+   * Куда ляжет несомая карточка — индекс среди карточек колонки.
+   *
+   * `null` — зазора нет: либо жеста нет, либо цель не эта колонка. Индекс
+   * считает страница по тому же правилу, по которому кладёт сервер (время
+   * создания), а не по месту курсора: ручного порядка у заказа нет, и выбор
+   * позиции обещать нечем.
+   */
+  placeholderAt?: number | null;
+  /**
    * Заявки по комнатам. Когда группы есть, карточки рисуются внутри них —
    * заголовок группы называет комнату, и горничная видит поход целиком.
    */
@@ -34,6 +44,7 @@ export function BoardColumn({
   column,
   showHeader = true,
   dropAllowed = null,
+  placeholderAt = null,
   renderGroup,
   children,
 }: BoardColumnProps) {
@@ -78,11 +89,11 @@ export function BoardColumn({
         </Stack>
       ) : null}
 
-      {column.orders.length ? (
+      {column.orders.length || placeholderAt !== null ? (
         column.groups && renderGroup ? (
           <Stack spacing={1.75}>{column.groups.map(renderGroup)}</Stack>
         ) : (
-          <Stack spacing={1.25}>{children}</Stack>
+          <Stack spacing={1.25}>{withPlaceholder(children, placeholderAt, t)}</Stack>
         )
       ) : (
         <Box
@@ -101,6 +112,49 @@ export function BoardColumn({
           </Typography>
         </Box>
       )}
+
+      {/*
+        Отодвинутое вниз просроченное не поднимается само — но и не молчит.
+        Подпись `sticky`, поэтому висит у нижнего края колонки, а не уезжает
+        вместе с содержимым, о котором говорит.
+      */}
+      <OverdueBelow
+        columnCode={column.code}
+        signature={column.orders.map((order) => `${order.id}:${order.is_overdue}`).join(',')}
+      />
     </Stack>
   );
+}
+
+/**
+ * Зазор между карточками — место, куда ляжет несомая.
+ *
+ * Раздвигается именно ТА щель, в которую карточка встанет: колонка
+ * сортируется по времени создания, и место известно заранее. Показывать щель
+ * под курсором значило бы обещать выбор позиции, которого у продукта нет.
+ */
+function withPlaceholder(
+  children: ReactNode,
+  at: number | null,
+  t: ReturnType<typeof useTranslation>['t'],
+): ReactNode {
+  if (at === null) return children;
+  const cards = Array.isArray(children) ? [...children] : [children];
+  const gap = (
+    <Box
+      key="tracker-drop-placeholder"
+      data-testid="tracker-drop-placeholder"
+      aria-label={t('tracker.board.dropHere')}
+      sx={{
+        height: 56,
+        borderRadius: 2,
+        border: 2,
+        borderStyle: 'dashed',
+        borderColor: 'primary.main',
+        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+      }}
+    />
+  );
+  const index = Math.max(0, Math.min(at, cards.length));
+  return [...cards.slice(0, index), gap, ...cards.slice(index)];
 }

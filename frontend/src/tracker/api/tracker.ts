@@ -89,6 +89,25 @@ export function changeTrackerOrderStatus(
   );
 }
 
+/**
+ * Переставить карточку внутри колонки.
+ *
+ * Место называется СОСЕДЯМИ, а не номером: пока карточку несли, сосед по смене
+ * мог убрать заказ сверху, и «третье место» оказалось бы не тем, куда смотрел
+ * человек. Соседи же остаются собой.
+ */
+export function moveTrackerOrderPosition(
+  orderId: string,
+  neighbours: { after: string | null; before: string | null },
+  language?: string,
+): Promise<TrackerOrder> {
+  return api.post<TrackerOrder>(
+    `/tracker/order/${orderId}/position`,
+    { after: neighbours.after, before: neighbours.before },
+    { headers: langHeaders(language) },
+  );
+}
+
 export function cancelTrackerOrder(
   orderId: string,
   reason: string,

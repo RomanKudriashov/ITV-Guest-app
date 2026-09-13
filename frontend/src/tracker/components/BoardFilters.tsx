@@ -38,11 +38,24 @@ export interface BoardFilterValues {
   overdue: string;
   assignee: string;
   order_type: string;
+  /** Только для истории: период по моменту ЗАКРЫТИЯ и точная комната. */
+  since: string;
+  until: string;
+  room: string;
 }
 
 export interface BoardFiltersProps {
   open: boolean;
   onToggle: () => void;
+  /**
+   * История это или активная доска.
+   *
+   * Период и комната осмысленны только в истории: на активной доске «с какого
+   * числа» означало бы отбор по закрытию у заказов, которые ещё не закрыты.
+   * Показывать фильтр, который ничего не делает, — обещание, которое экран не
+   * выполнит.
+   */
+  history?: boolean;
   values: BoardFilterValues;
   onChange: (next: Partial<BoardFilterValues>) => void;
   onReset: () => void;
@@ -53,6 +66,7 @@ export interface BoardFiltersProps {
 export function BoardFilters({
   open,
   onToggle,
+  history = false,
   values,
   onChange,
   onReset,
@@ -167,6 +181,44 @@ export function BoardFilters({
                 <MenuItem value="request">{t('tracker.filters.typeRequest')}</MenuItem>
               </TextField>
             </Stack>
+
+            {/*
+              ПЕРИОД И КОМНАТА — ТОЛЬКО В ИСТОРИИ, и период считается по
+              моменту ЗАКРЫТИЯ. На активной доске «с какого числа» означало бы
+              отбор по закрытию у заказов, которые ещё не закрыты.
+            */}
+            {history ? (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <TextField
+                  type="date"
+                  size="small"
+                  fullWidth
+                  label={t('tracker.filters.since')}
+                  value={values.since}
+                  onChange={(event) => onChange({ since: event.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ 'data-testid': 'tracker-filter-since' }}
+                />
+                <TextField
+                  type="date"
+                  size="small"
+                  fullWidth
+                  label={t('tracker.filters.until')}
+                  value={values.until}
+                  onChange={(event) => onChange({ until: event.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ 'data-testid': 'tracker-filter-until' }}
+                />
+                <TextField
+                  size="small"
+                  fullWidth
+                  label={t('tracker.filters.room')}
+                  value={values.room}
+                  onChange={(event) => onChange({ room: event.target.value })}
+                  inputProps={{ 'data-testid': 'tracker-filter-room' }}
+                />
+              </Stack>
+            ) : null}
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button

@@ -78,6 +78,26 @@ export interface TrackerNextStatus {
   color_token?: string;
 }
 
+/**
+ * Одна запись журнала переходов — для смены, а не для гостя.
+ *
+ * Гостевой таймлайн показывает ПУТЬ заказа по потоку. Журнал отвечает на
+ * другие вопросы: кто двигал, откуда и был ли это возврат. Разбор смены
+ * начинается именно с них.
+ */
+export interface TrackerJournalEntry {
+  /** Статус, ИЗ которого ушли; `null` у самой первой записи. */
+  from: string | null;
+  to: string;
+  title: string;
+  at: string;
+  /** `staff`, `guest` или `system` — пересчёт агрегата человеком не является. */
+  actor_type: string;
+  actor_name: string | null;
+  /** Движение назад по потоку. Считает сервер: правило живёт в пресете. */
+  is_rollback: boolean;
+}
+
 export interface TrackerOrder extends GuestOrder {
   execution_point: TrackerPointRef;
   assignee: TrackerAssignee | null;
@@ -95,6 +115,12 @@ export interface TrackerOrder extends GuestOrder {
   overdue_minutes: number | null;
   next_statuses: TrackerNextStatus[];
   can_cancel: boolean;
+  /** Что со статусом делали руками: кто, когда, откуда, куда. */
+  journal: TrackerJournalEntry[];
+  /** Код причины отмены из справочника; `null` у всего, что не отменено. */
+  cancel_reason?: string | null;
+  /** Та же причина словами — чтобы читать без словаря. */
+  cancel_reason_title?: string | null;
   /** Set only on a sub-order of a fanned-out guest order; null on a plain one. */
   source_order?: TrackerSourceOrder | null;
   /** The guest's private review, once left — shown on the card/detail if present. */
@@ -179,6 +205,20 @@ export interface TrackerBoard {
    */
   assignees?: TrackerAssignee[];
   next_cursor?: string | null;
+  /**
+   * Цифры ПО ТЕКУЩЕЙ ВЫБОРКЕ — приходят только для истории.
+   *
+   * Сводка смены (`shift`) отвечает на другой вопрос: «как идёт сегодняшняя
+   * смена», и считается с полуночи. Над историей без окна она показывала
+   * «Сделано 28» при 986 записях в списке — оба числа верные, и ни одно не про
+   * то, что видно на экране.
+   */
+  selection?: {
+    orders: number;
+    revenue_minor: number;
+    cancelled: number;
+    median_minutes: number | null;
+  } | null;
 }
 
 /** WebSocket envelope — full snapshots only, never deltas (contract §5). */

@@ -5,17 +5,21 @@ import {
   acceptTrackerOrder,
   cancelTrackerOrder,
   changeTrackerOrderStatus,
+  moveTrackerOrderPosition,
 } from '../api/tracker';
 import { useTrackerLanguage } from './useTrackerQueries';
 import type { TrackerOrder } from '../api/types';
 
-type ActionKind = 'accept' | 'status' | 'cancel';
+type ActionKind = 'accept' | 'status' | 'cancel' | 'position';
 
 interface ActionVariables {
   kind: ActionKind;
   orderId: string;
   status?: string;
   reason?: string;
+  /** Соседи по колонке для перестановки: между кем встала карточка. */
+  after?: string | null;
+  before?: string | null;
 }
 
 export interface ActionError {
@@ -51,6 +55,12 @@ export function useOrderActions() {
             { status: variables.status as string, comment: '' },
             language,
           );
+        case 'position':
+          return moveTrackerOrderPosition(
+            variables.orderId,
+            { after: variables.after ?? null, before: variables.before ?? null },
+            language,
+          );
         case 'cancel':
         default:
           return cancelTrackerOrder(variables.orderId, variables.reason ?? '', language);
@@ -73,9 +83,39 @@ export function useOrderActions() {
     [mutation],
   );
 
+  /**
+   * Смена статуса. Отказ по-прежнему не всплывает наружу — его показывает
+   * карточка, — но вызывающий может УЗНАТЬ причину: `onFailure` получает сам
+   * отказ, а не факт неудачи.
+   *
+   * Ref за состоянием тут не годится: `actionError` обновляется рендером, и
+   * обработчик, читающий его сразу после ответа, взял бы значение прошлого.
+   */
   const changeStatus = useCallback(
-    (orderId: string, status: string) =>
-      mutation.mutateAsync({ kind: 'status', orderId, status }).catch(() => undefined),
+    (orderId: string, status: string, onFailure?: (error: unknown) => void) =>
+      mutation.mutateAsync({ kind: 'status', orderId, status }).catch((error: unknown) => {
+        onFailure?.(error);
+        return undefined;
+      }),
+    [mutation],
+  );
+
+  /**
+   * Перестановка внутри колонки. Отказ ведёт себя как у смены статуса:
+   * карточка показывает его сама, а вызывающий может узнать причину.
+   */
+  const moveTo = useCallback(
+    (
+      orderId: string,
+      neighbours: { after: string | null; before: string | null },
+      onFailure?: (error: unknown) => void,
+    ) =>
+      mutation
+        .mutateAsync({ kind: 'position', orderId, ...neighbours })
+        .catch((error: unknown) => {
+          onFailure?.(error);
+          return undefined;
+        }),
     [mutation],
   );
 
@@ -87,5 +127,5 @@ export function useOrderActions() {
 
   const clearError = useCallback(() => setActionError(null), []);
 
-  return { pendingOrderId, actionError, clearError, accept, changeStatus, cancel };
+  return { pendingOrderId, actionError, clearError, accept, changeStatus, moveTo, cancel };
 }

@@ -57,7 +57,13 @@ export function useBoardDrag(
   const allowedTargets = useMemo(() => {
     if (!draggingId) return new Set<string>();
     const order = orders.find((candidate) => candidate.id === draggingId);
-    return new Set((order?.next_statuses ?? []).map((status) => status.code));
+    const codes = new Set((order?.next_statuses ?? []).map((status) => status.code));
+    // СВОЯ КОЛОНКА ТОЖЕ ЦЕЛЬ. Бросок в неё — не промах, а перестановка: с
+    // появлением ручного порядка карточку носят и внутри очереди, чтобы
+    // сказать «этим займёмся раньше». Гасить свою колонку значило бы запретить
+    // ровно то движение, ради которого порядок и заводили.
+    if (order) codes.add(order.status.code);
+    return codes;
   }, [draggingId, orders]);
 
   const onDragStart = useCallback(
@@ -81,7 +87,9 @@ export function useBoardDrag(
       if (!targetColumn) return null;
       const order = ordersRef.current.find((candidate) => candidate.id === orderId);
       if (!order) return null;
-      // Бросок в ту же колонку — не перемещение, а промах. Молча ничего.
+      // Бросок в ту же колонку — ПЕРЕСТАНОВКА, а не смена статуса. Статуса
+      // здесь нет, и наложение не нужно: карточка никуда не переезжает,
+      // меняется только её место, и его страница попросит отдельным запросом.
       if (order.status.code === targetColumn) return null;
       const allowed = (order.next_statuses ?? []).some(
         (status) => status.code === targetColumn,
@@ -139,7 +147,32 @@ export function applyOverlay(
   if (!moved.size) return result;
   return result.map((column) =>
     moved.has(column.code)
-      ? { ...column, orders: [...column.orders, ...(moved.get(column.code) as TrackerOrder[])] }
+      ? {
+          ...column,
+          orders: (moved.get(column.code) as TrackerOrder[]).reduce(
+            (orders, order) => appendToColumn(orders, order),
+            column.orders,
+          ),
+        }
       : column,
   );
+}
+
+/**
+ * КУДА ЛЯЖЕТ КАРТОЧКА ПОД НАЛОЖЕНИЕМ — В ХВОСТ ЦЕЛЕВОЙ КОЛОНКИ.
+ *
+ * УСЛОВИЕ ИЗМЕНИЛОСЬ. Раньше здесь считалось место по времени создания: колонка
+ * сортировалась временем, ручного порядка не было, и место в очереди не
+ * выбирали — его можно было только вычислить и честно показать. Показывать
+ * щель под курсором тогда значило бы обещать выбор, которого у продукта нет.
+ *
+ * С появлением `board_position` выбор появился, и щель под курсором рисует
+ * `insertionIndexAt` (`boardInsertion.ts`) — там есть прямоугольники карточек.
+ * А наложение, которое живёт до ответа сервера, кладёт карточку в ХВОСТ: ровно
+ * туда её кладёт сервер при смене статуса. Если человек указал место точнее,
+ * следом уходит второй запрос — перестановка, — и снимок после него поставит
+ * карточку окончательно.
+ */
+function appendToColumn(orders: TrackerOrder[], order: TrackerOrder): TrackerOrder[] {
+  return [...orders, order];
 }
