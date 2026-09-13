@@ -330,7 +330,10 @@ def test_staff_cancel_also_frees_the_slot(guest, crystal, cms, django_capture_on
 
     spa = _spa_tracker(cms.client, crystal)
     with django_capture_on_commit_callbacks(execute=True):
-        spa(f"/api/tracker/order/{order_id}/cancel", {"reason": "мастер заболел"})
+        spa(
+            f"/api/tracker/order/{order_id}/cancel",
+            {"cancel_reason": "no_capacity", "reason": "мастер заболел"},
+        )
 
     after = guest.get(f"/api/guest/slots?item_id={item['id']}&date={next_working_date()}").json()
     assert next(s for s in after["slots"] if s["starts_at"] == target)["capacity_left"] == 2

@@ -21,6 +21,12 @@ from typing import Any, Iterator
 _hotel_id: ContextVar[uuid.UUID | None] = ContextVar("hotel_id", default=None)
 _language: ContextVar[str | None] = ContextVar("language", default=None)
 _actor: ContextVar[Any] = ContextVar("actor", default=None)
+# Язык отеля по умолчанию, найденный лениво: (hotel_id, язык). Пара, а не
+# голая строка, — иначе значение пережило бы выход из tenant_context и
+# подсунуло чужой язык следующему отелю в том же процессе.
+_hotel_language: ContextVar[tuple[Any, str | None] | None] = ContextVar(
+    "hotel_language", default=None
+)
 # Явное разрешение работать поверх всех отелей (платформенный уровень).
 _platform_scope: ContextVar[bool] = ContextVar("platform_scope", default=False)
 
@@ -47,6 +53,33 @@ def require_hotel_id() -> uuid.UUID:
 
 def current_language() -> str | None:
     return _language.get()
+
+
+def current_hotel_language() -> str | None:
+    """
+    Язык отеля по умолчанию — ВТОРОЙ ЭШЕЛОН ФОЛБЭКА ПЕРЕВОДА.
+
+    Гость с китайским интерфейсом в отеле, который ведёт контент по-русски и
+    по-английски, должен видеть русское название, а не арабское: «любое
+    непустое» выбирает по алфавиту ключей словаря, а это не выбор.
+
+    Ищется лениво и один раз на контекст: `translate()` зовут сотнями раз на
+    сериализацию меню, и запрос на каждый вызов был бы недопустим.
+    """
+    hotel_id = _hotel_id.get()
+    if hotel_id is None:
+        return None
+    cached = _hotel_language.get()
+    if cached is not None and cached[0] == hotel_id:
+        return cached[1]
+
+    from apps.hotels.models import Hotel
+
+    language = (
+        Hotel.objects.filter(pk=hotel_id).values_list("default_language", flat=True).first()
+    )
+    _hotel_language.set((hotel_id, language))
+    return language
 
 
 def current_actor() -> Any:
@@ -161,6 +194,7 @@ def clear_request_context() -> None:
 
     _hotel_id.set(None)
     _language.set(None)
+    _hotel_language.set(None)
     _actor.set(None)
     _platform_scope.set(False)
     set_db_tenant(None)

@@ -407,12 +407,34 @@ def test_status_endpoint_is_closed_to_guests(guest):
     assert response.status_code == 401
 
 
-def test_terminal_order_cannot_be_moved(guest, cms, django_capture_on_commit_callbacks):
+def test_a_closed_order_returns_to_work_but_a_cancelled_one_never_does(
+    guest, cms, django_capture_on_commit_callbacks
+):
+    """
+    ПРАВИЛО ИЗМЕНИЛОСЬ: стена стояла вокруг любого терминального статуса,
+    теперь — только вокруг отмены.
+
+    Раньше проверка называлась «терминальный заказ не двигают» и ждала 409 на
+    «доставлено» → «готовится». Но закрытый по ошибке заказ обязан возвращаться
+    в работу — иначе промах повара чинится только правкой в базе. А вот отмена
+    остаётся односторонней: она уже освободила слот и отпустила гостя.
+    """
     order_id = place(guest, order_body(guest), key="staff-3").json()["id"]
 
     with django_capture_on_commit_callbacks(execute=True):
         cms.post(f"/api/orders/{order_id}/status", {"status": "done"})
 
-    response = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
-    assert response.status_code == 409
-    assert response.json()["code"] == "order_finished"
+    reopened = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
+    assert reopened.status_code == 200
+    assert reopened.json()["status"]["code"] == "preparing"
+
+    with django_capture_on_commit_callbacks(execute=True):
+        # Причина обязательна и здесь: смена статуса — третья дверь в отмену.
+        cms.post(
+            f"/api/orders/{order_id}/status",
+            {"status": "cancelled", "cancel_reason": "mistake"},
+        )
+
+    refused = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "order_cancelled"

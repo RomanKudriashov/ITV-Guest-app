@@ -88,9 +88,40 @@ def test_empty_facets_are_empty_not_missing(client, crystal, guest_token):
 def test_language_picks_translation_with_english_fallback(client, crystal, guest_token):
     en = _item(_menu(client, crystal, guest_token, lang="en"), "ribeye")
     assert any(m["title"] == "Gluten free" for m in en["markers"])
-    # Язык без перевода у системных всё равно даёт значение (фолбэк, не пусто).
+
+    # Системные словари переведены на все четыре языка, поэтому китайский
+    # интерфейс обязан дать КИТАЙСКИЕ названия. Проверка «строка непустая»
+    # молчала бы и о русских, и об арабских, и о кодах вместо названий.
     zh = _item(_menu(client, crystal, guest_token, lang="zh"), "caesar")
-    assert all(a["title"] for a in zh["allergens"])
+    assert {a["code"]: a["title"] for a in zh["allergens"]} == {
+        "eggs": "蛋类",
+        "milk": "牛奶",
+        "gluten": "麸质",
+        "fish": "鱼类",
+    }
+
+
+def test_untranslated_falls_back_to_the_hotel_language_not_to_any_letters(
+    client, crystal, guest_token
+):
+    """
+    НЕДОПЕРЕВЕДЁННОЕ ПАДАЕТ НА ЯЗЫК ОТЕЛЯ, А НЕ НА ПЕРВЫЙ КЛЮЧ СЛОВАРЯ.
+
+    Цепочка фолбэка — язык запроса → язык отеля → английский → любое непустое.
+    Последняя ступень выбирает по порядку ключей, то есть по алфавиту: у
+    словаря {"ar": …, "ru": …} первым идёт арабский. Русский отель, добавивший
+    арабский перевод, показывал бы арабское название китайскому гостю — и это
+    ровно то, что происходило: язык отеля в цепочку не попадал, потому что его
+    передавал ровно один вызов `translate()` из 68.
+    """
+    with tenant_context(crystal):
+        marker = DietaryMarker.objects.get(code="gluten_free")
+        marker.title = {"ar": "خال من الغلوتين", "ru": "Без глютена"}
+        marker.save(update_fields=["title"])
+
+    zh = _item(_menu(client, crystal, guest_token, lang="zh"), "ribeye")
+    titles = {m["code"]: m["title"] for m in zh["markers"]}
+    assert titles["gluten_free"] == "Без глютена"
 
 
 # --- CMS: словари и назначение позиции --------------------------------------

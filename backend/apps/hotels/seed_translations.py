@@ -24,6 +24,8 @@
 
 from __future__ import annotations
 
+from apps.core.fields import as_translations
+
 # code → поле модели → язык → текст.
 #
 # Поля именованы как в моделях: у заведения `public_name`/`tagline`, у раздела
@@ -623,7 +625,7 @@ def fill_translations() -> dict[str, int]:
                 languages = spec.get(field)
                 if not languages:
                     continue
-                value = dict(getattr(row, field) or {})
+                value = as_translations(getattr(row, field), "ru")
                 for code, text in languages.items():
                     if (value.get(code) or "").strip():
                         continue
@@ -659,7 +661,7 @@ def _fill_hotel_name(filled: dict[str, int]) -> None:
     spec = HOTEL_NAMES.get(hotel.subdomain or "")
     if not spec:
         return
-    value = dict(hotel.name or {})
+    value = as_translations(hotel.name, hotel.default_language or "ru")
     touched = False
     for code, text in spec.items():
         if (value.get(code) or "").strip():
@@ -677,7 +679,7 @@ def _fill_by_text(model, fields, registry: dict[str, dict[str, str]], filled: di
     for row in model.objects.all():
         touched = []
         for field in fields:
-            value = dict(getattr(row, field) or {})
+            value = as_translations(getattr(row, field), "ru")
             languages = registry.get((value.get("ru") or "").strip())
             if not languages:
                 continue

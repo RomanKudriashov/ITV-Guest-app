@@ -23,13 +23,29 @@ from typing import Any
 from django.conf import settings
 from django.db import models
 
-from .context import current_language
+from .context import current_hotel_language, current_language
 
 
 def translate(
     value: Any, language: str | None = None, *, fallback_language: str | None = None
 ) -> str:
-    """Разворачивает {lang: value} в строку. Терпимо к мусору на входе."""
+    """
+    Разворачивает {lang: value} в строку. Терпимо к мусору на входе.
+
+    ЯЗЫК ОТЕЛЯ ВСТРОЕН В ЦЕПОЧКУ, а не передаётся вызывающим.
+
+    Раньше второй эшелон фолбэка был необязательным параметром, и из 68 мест
+    вызова его передавало ровно одно — аксессор `<field>_i18n`. Остальные 67
+    (меню, витрина, трекер, поиск, письма) шли сразу к DEFAULT_LANGUAGE, а
+    оттуда — к «любому непустому», то есть к первому ключу словаря по порядку:
+    в отеле, который ведёт контент по-русски и по-английски, гость с китайским
+    интерфейсом получал арабское название, потому что «ar» стоит первым.
+
+    Чинить это в 67 местах — значит завести 68-е, где снова забудут. Поэтому
+    язык отеля берётся из контекста запроса здесь, а явный
+    `fallback_language` остаётся приоритетнее: он точнее контекста там, где
+    объект знает свой отель сам.
+    """
     if not value:
         return ""
     if isinstance(value, str):
@@ -39,7 +55,7 @@ def translate(
 
     candidates = [
         language or current_language(),
-        fallback_language,
+        fallback_language or current_hotel_language(),
         settings.DEFAULT_LANGUAGE,
     ]
     for lang in candidates:
@@ -49,6 +65,26 @@ def translate(
         if candidate:
             return str(candidate)
     return ""
+
+
+def as_translations(value: Any, language: str) -> dict[str, str]:
+    """
+    Переводимое поле СЛОВАРЁМ — что бы в нём ни лежало.
+
+    `translate()` терпим к мусору на чтении, а вот пишущие места делали
+    `dict(value or {})` и падали `ValueError` на голой строке. Строка там
+    берётся не из воздуха: поля становились переводимыми по одному, и на
+    стендах, переживших такой перевод, часть строк осталась плоской. Сид
+    названий отеля ронялся ровно на этом — то есть пересеять стенд было нельзя.
+
+    Плоское значение — это перевод на язык, который у объекта тогда был
+    единственным: его и кладём под `language`, ничего не теряя.
+    """
+    if isinstance(value, dict):
+        return {code: text for code, text in value.items()}
+    if isinstance(value, str) and value.strip():
+        return {language: value}
+    return {}
 
 
 class TranslatedAccessor:
