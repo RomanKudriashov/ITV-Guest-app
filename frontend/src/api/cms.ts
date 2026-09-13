@@ -338,8 +338,13 @@ export function fetchMedia(id: string): Promise<MediaAsset> {
 
 /* ── 7. Schedules ──────────────────────────────────────────────────────── */
 
+/**
+ * `GET /cms/schedules` отдаёт ГОЛЫЙ список (`response=list[ScheduleOut]`), а не
+ * конверт: разворот `.items` здесь давал `undefined` — экран получал «пусто»
+ * вместо расписаний. Единственная ручка листинга CMS без конверта.
+ */
 export function fetchSchedules(): Promise<Schedule[]> {
-  return api.get<ListPage<Schedule>>('/cms/schedules').then((page) => page.items);
+  return api.get<Schedule[]>('/cms/schedules');
 }
 
 export function createSchedule(payload: SchedulePayload): Promise<Schedule> {

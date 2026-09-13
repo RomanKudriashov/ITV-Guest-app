@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { CategoryEditorPage } from '@/pages/category/CategoryEditorPage';
 import { ItemEditorPage } from '@/pages/item/ItemEditorPage';
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
+import { OrdersPage as CmsOrdersPage } from '@/cms/orders/OrdersPage';
 import { RoomsPage } from '@/pages/hotel/RoomsPage';
 import { StaffPage } from '@/pages/hotel/StaffPage';
 import { BrandPage } from '@/cms/brand/BrandPage';
@@ -46,7 +47,6 @@ import { OrdersPage } from '@/guest/pages/OrdersPage';
 import { RoomPage } from '@/guest/pages/RoomPage';
 import { SearchPage } from '@/guest/pages/SearchPage';
 import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
-import { StaffScale } from '@/theme/StaffScale';
 import { useAuth } from '@/auth';
 import { homePathFor } from '@/auth/home';
 
@@ -82,16 +82,21 @@ function TrackerScreen() {
  * номером «убрали с экрана», а ручка осталась.
  */
 
-const cmsBranch: RouteObject =
+/*
+  ОДНА ОБОЛОЧКА НА ПАНЕЛЬ И ТРЕКЕР.
+
+  Трекер жил отдельной веткой со своим экраном и без левого меню: клик по
+  пункту «Трекер» уводил из оболочки, и пунктов меню на экране становилось
+  НОЛЬ — замер показывал 12 → 0. Дальше кликать было не по чему, и это читалось
+  как «переход не работает».
+
+  Ветка БЕЗ `path` — раскладочная: она даёт общий каркас, а дети несут
+  абсолютные адреса. Так `/tracker` остаётся `/tracker` — ни одна ссылка, ни
+  один QR и ни один из двух с лишним сотен прогонов не меняются.
+*/
+const shellChildren: RouteObject[] = [
   {
     path: CMS_ROOT,
-    element: (
-      // `fallback` — вход на месте: на хосте отеля адрес панели и адрес входа
-      // совпали (`/admin`), и увод на `/login` дал бы петлю.
-      <RequireAuth fallback={HOST_ROLE === 'hotel' ? <LoginPage /> : undefined}>
-        <AppShell />
-      </RequireAuth>
-    ),
     children: [
       { index: true, element: <CmsHome /> },
       { path: 'dashboard', element: <DashboardPage /> },
@@ -119,6 +124,14 @@ const cmsBranch: RouteObject =
       // Настройки: сюда растворилась «Коммерция» и переехал справочник локаций.
       { path: 'settings', element: <SettingsPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
+      // Заказы: разбор по всем заведениям. Раздел сам режется по
+      // подведомственным точкам, поэтому маршрут общий для админа и
+      // управляющего — линейного сюда не пускает гейт CMS.
+      //
+      // Имя импорта с приставкой: `OrdersPage` уже занят ГОСТЕВЫМ экраном
+      // «мои заказы», и это разные вещи — гость смотрит свои, отель смотрит
+      // все.
+      { path: 'orders', element: <CmsOrdersPage /> },
       { path: 'dictionaries', element: <DictionariesPage /> },
 
       // Модульные разделы: пункт в навигации появляется только с модулем,
@@ -149,37 +162,31 @@ const cmsBranch: RouteObject =
       // открывал гостевую главную. Возврат в дашборд — на своей территории.
       { path: '*', element: <Navigate to={cmsPath('/dashboard')} replace /> },
     ],
-  };
-
-const trackerRoutes: RouteObject[] = [
-  {
-    path: '/tracker',
-    element: (
-      <RequireAuth>
-        {/*
-          Шкала персонала — здесь, на маршруте, а не внутри страницы: у доски
-          несколько веток вывода (загрузка, отказ, «нет привязки», сама доска),
-          и оборачивать каждую значило бы однажды забыть одну.
-        */}
-        <StaffScale>
-          <TrackerScreen />
-        </StaffScale>
-      </RequireAuth>
-    ),
   },
+  /*
+    Шкала персонала теперь ОДНА — она внутри `AppShell`. Раньше трекер
+    навешивал `StaffScale` на маршрут, а панель — внутри оболочки; два места
+    для одной шкалы означали бы, что однажды они разъедутся.
+  */
+  { path: '/tracker', element: <TrackerScreen /> },
   {
     // Deep link to one order: the board stays mounted underneath and opens the
     // detail sheet, so the URL is shareable without a second data source.
     path: '/tracker/order/:id',
-    element: (
-      <RequireAuth>
-        <StaffScale>
-          <TrackerPage />
-        </StaffScale>
-      </RequireAuth>
-    ),
+    element: <TrackerScreen />,
   },
 ];
+
+const shellBranch: RouteObject = {
+  element: (
+    // `fallback` — вход на месте: на хосте отеля адрес панели и адрес входа
+    // совпали (`/admin`), и увод на `/login` дал бы петлю.
+    <RequireAuth fallback={HOST_ROLE === 'hotel' ? <LoginPage /> : undefined}>
+      <AppShell />
+    </RequireAuth>
+  ),
+  children: shellChildren,
+};
 
 const guestBranch: RouteObject =
   {
@@ -284,8 +291,7 @@ const hotelRoutes: RouteObject[] = [
   { path: '/login', element: <Navigate to={CMS_ROOT} replace /> },
   { path: '/cms/*', element: <LegacyCmsRedirect /> },
   { path: '/dev/theme', element: <App /> },
-  cmsBranch,
-  ...trackerRoutes,
+  shellBranch,
   guestBranch,
 ];
 
@@ -298,8 +304,7 @@ const singleHostRoutes: RouteObject[] = [
   { path: '/dev/theme', element: <App /> },
   { path: '/admin', element: <AdminApp /> },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
-  cmsBranch,
-  ...trackerRoutes,
+  shellBranch,
   guestBranch,
 ];
 
