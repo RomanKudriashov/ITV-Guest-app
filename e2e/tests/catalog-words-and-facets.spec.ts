@@ -88,9 +88,18 @@ test.describe('Применимость справочников', () => {
     await login(page, ADMIN)
     await openWorkspace(page, spa.id)
 
-    // Открываем первую позицию заведения.
+    /*
+      ЖДЁМ СПИСОК, А ПОТОМ РЕШАЕМ.
+
+      Первая редакция спрашивала `count()` сразу после появления оболочки — то
+      есть до того, как список успевал отрисоваться, — и ПРОПУСКАЛА себя на
+      исправном стенде. Пропуск выглядит как зелень, и проверка молчала ровно
+      там, где должна была говорить.
+    */
     const edit = page.locator('[data-testid^="item-edit-"]').first()
-    if ((await edit.count()) === 0) test.skip(true, 'у спа нет позиций — проверять нечего')
+    await expect(edit, 'у спа нет ни одной позиции — проверять нечего').toBeVisible({
+      timeout: 20_000,
+    })
     await edit.click()
 
     const facets = page.getByTestId('cms-item-facets')
