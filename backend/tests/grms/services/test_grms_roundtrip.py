@@ -48,6 +48,22 @@ DEVICE = "Modbus TCP Server (Slave mode) 701"
 EMULATOR_LATENCY = (0.35, 0.55)
 FAST_DELAYS = (0.2, 0.5, 1.0)
 
+# ЗАДЕРЖКА, КОТОРУЮ НЕ ПЕРЕЖДАТЬ. Нужна там, где проверяется ОБРАТНОЕ: окно
+# подтверждения короче железа.
+#
+# Паузы в окне — это не всё время, которое проходит до последнего чтения
+# feedback. Между ними идут настоящие ходки: очередь коннектора, asyncio и
+# HTTP до эмулятора. Под полным прогоном в четыре процесса эти ходки сами по
+# себе длятся дольше 0.35 с — и значение успевало проступить, хотя окно
+# просили в 0.1 с. Тест падал «assert 'confirmed' == 'unconfirmed'» ровно
+# так: 1 из 1212 в полном прогоне, 0 из 3 в одиночку.
+#
+# Ждать «достаточно долго» здесь нельзя в принципе: сколько бы ни поставили,
+# машина под нагрузкой однажды окажется медленнее. Поэтому железо в этом
+# тесте не отвечает НИКОГДА за время его жизни — проверяется поведение при
+# неуспевшем feedback, а не скорость стенда.
+UNREACHABLE_LATENCY = (300.0, 300.0)
+
 
 class FakeConnectorRuntime:
     """
@@ -109,9 +125,22 @@ class FakeConnectorRuntime:
 
 
 @pytest.fixture
-def wired(crystal):
+def emulator_latency(request):
+    """
+    Задержка эмулятора для теста: общая, если он не попросил свою.
+
+    Просится меткой `@pytest.mark.emulator_latency((low, high))` — прямо над
+    тестом, где её видно рядом с окном подтверждения. Иначе связь «почему это
+    число» и «почему такой ответ» пришлось бы держать в голове.
+    """
+    marker = request.node.get_closest_marker("emulator_latency")
+    return marker.args[0] if marker else EMULATOR_LATENCY
+
+
+@pytest.fixture
+def wired(crystal, emulator_latency):
     """Отель с зарегистрированным живым узлом, коннектором и эмулятором."""
-    httpd, emulator, port = serve_in_thread(latency_range=EMULATOR_LATENCY)
+    httpd, emulator, port = serve_in_thread(latency_range=emulator_latency)
 
     node, _key = register_node(crystal, name="grms-box", purpose="grms")
     with tenant_context(crystal):
@@ -216,6 +245,7 @@ def test_scene_needs_no_confirmation(wired):
     assert [e["body"]["request"] for e in wired["connector"].seen] == ["SET"]
 
 
+@pytest.mark.emulator_latency(UNREACHABLE_LATENCY)
 def test_unconfirmed_when_feedback_never_catches_up(wired):
     """
     Окно подтверждения короче задержки оборудования → `unconfirmed`.
