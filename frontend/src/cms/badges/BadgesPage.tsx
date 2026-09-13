@@ -1,8 +1,25 @@
-import { Fragment, useState } from 'react';
+import { Fragment, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -36,6 +53,7 @@ import { ApiError } from '@/api/client';
 import {
   createBadge,
   deleteBadge,
+  reorderBadges,
   fetchBadgeItems,
   fetchBadges,
   fetchItems,
@@ -48,31 +66,56 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
-import { BADGE_COLOR_ROLES, badgeRoleColor } from '@/kit/chips';
+import { BADGE_COLOR_ROLES, OfferingBadge, badgeRoleColor } from '@/kit/chips';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
 
-/** A solid pill in the badge's role color — the live preview of a badge. */
-function BadgePreview({ label, role }: { label: string; role: BadgeColorRole }) {
+
+/**
+ * Строка метки, которую можно тянуть.
+ *
+ * Ручка — ОТДЕЛЬНЫЙ элемент, а не вся строка: в строке живут кнопка счётчика,
+ * карандаш и корзина, и строка-целиком-ручка отнимала бы у них клик. Это тот
+ * же приём, что у дерева разделов.
+ */
+function SortableBadgeRow({ badge, children }: { badge: Badge; children: ReactNode }) {
+  const { t } = useTranslation();
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: badge.id });
+
   return (
-    <Box
-      sx={(theme) => {
-        const color = badgeRoleColor(role, theme);
-        return {
-          display: 'inline-flex',
-          alignItems: 'center',
-          px: 1,
-          py: 0.25,
-          borderRadius: `${theme.palette.brand.radius.pill}px`,
-          bgcolor: color,
-          color: theme.palette.getContrastText(color),
-          fontSize: '0.72rem',
-          fontWeight: theme.typography.fontWeightBold,
-          lineHeight: 1.4,
-        };
+    <TableRow
+      hover
+      ref={setNodeRef}
+      data-testid={`cms-badge-row-${badge.id}`}
+      sx={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        // Несомую строку видно: без этого при переносе кажется, что ничего не
+        // происходит, пока не отпустишь.
+        opacity: isDragging ? 0.5 : 1,
+        position: 'relative',
+        zIndex: isDragging ? 1 : undefined,
       }}
     >
-      {label}
-    </Box>
+      <TableCell sx={{ width: 48 }}>
+        <Box
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          data-testid={`cms-badge-drag-${badge.id}`}
+          aria-label={t('badges.reorderHint')}
+          sx={{
+            display: 'inline-flex',
+            cursor: 'grab',
+            color: 'text.disabled',
+            '&:active': { cursor: 'grabbing' },
+          }}
+        >
+          <DragIndicatorIcon fontSize="small" />
+        </Box>
+      </TableCell>
+      {children}
+    </TableRow>
   );
 }
 
@@ -212,6 +255,37 @@ export function BadgesPage() {
   const badgeLabel = (badge: Badge) =>
     pickTranslated(badge.label, languages.displayLanguage, languages.defaultCode) || badge.id;
 
+  /*
+    ПЕРЕНОС СОХРАНЯЕТСЯ СРАЗУ, БЕЗ КНОПКИ «СОХРАНИТЬ ПОРЯДОК».
+
+    Порядок — это не форма, а действие: человек отпустил строку и уже считает
+    дело сделанным. Кнопка рядом означала бы, что половина отпусканий пропадёт.
+  */
+  const dragSensors = useSensors(
+    // Порог в пять пикселей: без него клик по счётчику или карандашу внутри
+    // строки читался бы как микроперенос и не доходил до кнопки.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const reorderMutation = useMutation({
+    mutationFn: (ids: string[]) => reorderBadges(ids),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.badges }),
+    onError: () => toast.show(t('errors.reorderFailed'), 'error'),
+  });
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = (badgesQuery.data ?? []).map((badge) => badge.id);
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    const next = [...ids];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    reorderMutation.mutate(next);
+  };
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteBadge(id),
     onSuccess: () => {
@@ -269,13 +343,32 @@ export function BadgesPage() {
             />
           ) : (
             <Box data-testid="cms-badge-list">
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                {t('badges.reorderHint')}
+              </Typography>
+              <DndContext
+                sensors={dragSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+              <SortableContext
+                items={badges.map((badge) => badge.id)}
+                strategy={verticalListSortingStrategy}
+              >
               <Table size="small">
                 <TableHead>
                   <TableRow>
+                    {/*
+                      ПОРЯДОК ТЯНУТ, А НЕ ВВОДЯТ ЧИСЛОМ. Колонка `sort_order`
+                      отвечала на вопрос «какое у метки число», а человек решает
+                      другой — «что гость увидит первым». Расставить метки
+                      числами 10, 20, 30 и не промахнуться — работа, которой не
+                      должно быть.
+                    */}
+                    <TableCell sx={{ width: 48 }} aria-label={t('badges.sortOrder')} />
                     <TableCell>{t('badges.preview')}</TableCell>
                     <TableCell>{t('badges.role')}</TableCell>
                     <TableCell>{t('badges.usage')}</TableCell>
-                    <TableCell>{t('badges.sortOrder')}</TableCell>
                     <TableCell>{t('badges.active')}</TableCell>
                     <TableCell align="right">{t('common.actions')}</TableCell>
                   </TableRow>
@@ -283,10 +376,10 @@ export function BadgesPage() {
                 <TableBody>
                   {badges.map((badge) => (
                     <Fragment key={badge.id}>
-                    <TableRow hover data-testid={`cms-badge-row-${badge.id}`}>
+                    <SortableBadgeRow badge={badge}>
                       <TableCell>
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <BadgePreview label={badgeLabel(badge)} role={badge.color_role} />
+                          <OfferingBadge label={badgeLabel(badge)} role={badge.color_role} testId={`cms-badge-pill-${badge.id}`} />
                           {badge.preset ? (
                             <Chip size="small" variant="outlined" label={t('badges.preset')} />
                           ) : null}
@@ -318,7 +411,6 @@ export function BadgesPage() {
                             : t('badges.usageNone')}
                         </ButtonBase>
                       </TableCell>
-                      <TableCell>{badge.sort_order}</TableCell>
                       <TableCell>
                         <Chip
                           size="small"
@@ -328,6 +420,14 @@ export function BadgesPage() {
                         />
                       </TableCell>
                       <TableCell align="right">
+                        {/*
+                          ПРЕСЕТНЫЕ МЕТКИ НЕ ПРАВЯТСЯ, И КАРАНДАША У НИХ ПРОСТО
+                          НЕТ. Не серая кнопка: серая обещает, что когда-нибудь
+                          сработает, и человек ищет, чего ему не хватает. Метку
+                          из пресета обновляем мы, и это граница
+                          ответственности, а не временное ограничение.
+                        */}
+                        {badge.preset ? null : (
                         <IconButton
                           size="small"
                           onClick={() => setEditing(badge)}
@@ -336,6 +436,7 @@ export function BadgesPage() {
                         >
                           <EditOutlinedIcon fontSize="small" />
                         </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           onClick={() => setPendingDelete(badge)}
@@ -345,7 +446,7 @@ export function BadgesPage() {
                           <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
-                    </TableRow>
+                    </SortableBadgeRow>
                     {expanded === badge.id ? (
                       <TableRow data-testid={`cms-badge-items-${badge.id}`}>
                         <TableCell colSpan={6} sx={{ bgcolor: 'action.hover', py: 1.5 }}>
@@ -357,6 +458,8 @@ export function BadgesPage() {
                   ))}
                 </TableBody>
               </Table>
+              </SortableContext>
+              </DndContext>
             </Box>
           )}
         </CardContent>
@@ -381,14 +484,67 @@ export function BadgesPage() {
         destructive
         busy={deleteMutation.isPending}
         title={t('badges.deleteTitle')}
-        description={t('badges.deleteBody', {
-          name: pendingDelete ? badgeLabel(pendingDelete) : '',
-        })}
+        description={
+          /*
+            УДАЛЕНИЕ НАЗЫВАЕТ ЦЕНУ. «Будет снят со всех позиций» — правда, но
+            бесполезная: сколько их и какие, человек не знает и узнать из
+            диалога не мог. Метка на двенадцати позициях и метка, не
+            присвоенная никому, — это разные решения, и принимать их надо
+            по-разному.
+          */
+          pendingDelete && pendingDelete.items_count
+            ? (
+                <>
+                  {t('badges.deleteBodyUsed', {
+                    name: badgeLabel(pendingDelete),
+                    count: pendingDelete.items_count,
+                  })}
+                  <DeleteUsageList
+                    badgeId={pendingDelete.id}
+                    language={languages.displayLanguage}
+                    fallback={t('catalog.item.plural')}
+                  />
+                </>
+              )
+            : t('badges.deleteBodyFree', {
+                name: pendingDelete ? badgeLabel(pendingDelete) : '',
+              })
+        }
         confirmLabel={t('common.delete')}
         onClose={() => setPendingDelete(null)}
         onConfirm={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
       />
     </Box>
+  );
+}
+
+/**
+ * Где висит метка — СПИСКОМ, прямо в вопросе об удалении.
+ *
+ * Число отвечает «сколько», но решение принимают по «каким»: двенадцать
+ * случайных позиций и двенадцать хитов сезона — разные двенадцать. Запрос
+ * уходит только когда диалог открыт: список нужен ровно в этот момент.
+ */
+function DeleteUsageList({ badgeId, language, fallback }: { badgeId: string; language: string; fallback: string }) {
+  const query = useQuery({
+    queryKey: [...queryKeys.badges, badgeId, 'items'],
+    queryFn: () => fetchBadgeItems(badgeId),
+  });
+  const rows = query.data ?? [];
+  if (!rows.length) return null;
+  return (
+    <Stack component="ul" sx={{ pl: 2.5, m: 0, mt: 1 }} data-testid="cms-badge-delete-usage">
+      {rows.slice(0, 8).map((row) => (
+        <Typography component="li" key={row.id} variant="body2" color="text.secondary">
+          {pickTranslated(row.title, language, language) || fallback}
+        </Typography>
+      ))}
+      {rows.length > 8 ? (
+        <Typography component="li" variant="body2" color="text.secondary">
+          …
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -571,7 +727,7 @@ function BadgeDialog({
             <Typography variant="caption" color="text.secondary">
               {t('badges.livePreview')}
             </Typography>
-            <BadgePreview label={previewLabel} role={form.color_role} />
+            <OfferingBadge label={previewLabel} role={form.color_role} testId="cms-badge-preview" />
           </Stack>
         </Stack>
       </DialogContent>

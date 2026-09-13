@@ -1485,6 +1485,37 @@ def assign_item_badges(item_id, badge_ids: list) -> list[dict]:
 # --- Справочники аллергенов и маркеров ---------------------------------------
 
 
+def reorder_badges(ids: list[str]) -> list[dict]:
+    """
+    Новый порядок меток — списком идентификаторов сверху вниз.
+
+    ПОРЯДОК ЗДЕСЬ ВИДЕН ГОСТЮ: метки на карточке идут по `sort_order`, и
+    «Хит» выше «Новинки» — это решение отеля о том, что назвать первым.
+    Раньше он задавался числом в форме правки, то есть отель расставлял
+    приоритеты, вводя 10, 20, 30 и надеясь не промахнуться.
+
+    Клиент шлёт ТО, ЧТО ВИДИТ после перетаскивания, а не дельту: дельта
+    предполагает, что обе стороны одинаково поняли исходный порядок, а они
+    могли разойтись, пока список открыт.
+
+    Пресетные метки переставляются наравне с отельными: их НАЗВАНИЕ и ЦВЕТ —
+    наша ответственность, а порядок на витрине — отеля.
+    """
+    require_hotel_admin()
+    ids = [str(value) for value in ids]
+    rows = {str(row.pk): row for row in Badge.objects.filter(pk__in=ids)}
+    if len(rows) != len(set(ids)):
+        raise ValidationError("В списке есть неизвестные метки", field="ids")
+
+    for position, badge_id in enumerate(ids):
+        badge = rows[badge_id]
+        if badge.sort_order != position:
+            badge.sort_order = position
+            badge.save(update_fields=["sort_order", "updated_at"])
+
+    return list_badges()
+
+
 def _serialize_dict_entry(row, *, kind: str = "") -> dict:
     from apps.catalog.facet_scope import entry_scope
 

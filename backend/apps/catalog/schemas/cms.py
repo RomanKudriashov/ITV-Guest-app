@@ -263,6 +263,11 @@ class BadgePatch(Schema):
     sort_order: int | None = None
     is_active: bool | None = None
 
+class BadgeReorderIn(Schema):
+    """Идентификаторы меток сверху вниз — ровно то, что видно после переноса."""
+
+    ids: list[str]
+
 class BadgeItemIn(Schema):
     """Повесить (`true`) или снять (`false`) метку с одной позиции."""
 

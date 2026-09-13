@@ -269,6 +269,55 @@ export type BadgeColorRoleName = (typeof BADGE_COLOR_ROLES)[number];
  * `gold` reuses the warning token, the same "gold" signal the kit's Хит badge
  * already uses.
  */
+export interface OfferingBadgeProps {
+  label: string;
+  role?: string;
+  /** `sm` — плотный вариант для карточки в списке. */
+  size?: 'sm' | 'md';
+  testId?: string;
+}
+
+/**
+ * ЗНАЧОК МАРКЕТИНГОВОЙ МЕТКИ — ОДИН НА ПАНЕЛЬ И ВИТРИНУ.
+ *
+ * Раньше их было два: свой в `guest/ItemBadges` и свой в экране «Маркетинг».
+ * Считали они одинаково — та же роль цвета, тот же `getContrastText`, тот же
+ * радиус пилюли, — и потому выглядели одинаково. Совпадение двух копий, а не
+ * общий код: первая же правка одной из них развела бы экран настройки и то,
+ * что видит гость, а заметил бы это отель, а не мы.
+ *
+ * Смысл требования «в справочнике метка показана так, как её увидит гость»
+ * именно в этом: не «похоже», а ТЕМ ЖЕ КОДОМ.
+ */
+export function OfferingBadge({ label, role, size = 'md', testId }: OfferingBadgeProps) {
+  const small = size === 'sm';
+  return (
+    <Box
+      data-testid={testId}
+      sx={(theme) => {
+        const fill = badgeRoleColor(role, theme);
+        return {
+          display: 'inline-flex',
+          alignItems: 'center',
+          px: small ? 0.75 : 1,
+          py: 0.25,
+          borderRadius: `${theme.palette.brand.radius.pill}px`,
+          bgcolor: fill,
+          // Контраст считается ОТ ЗАЛИВКИ, а не задаётся отдельно: метку
+          // заводят под светлую тему, а смотрят в обеих.
+          color: theme.palette.getContrastText(fill),
+          fontSize: small ? '0.68rem' : '0.72rem',
+          fontWeight: theme.typography.fontWeightBold,
+          lineHeight: 1.4,
+          whiteSpace: 'nowrap',
+        };
+      }}
+    >
+      {label}
+    </Box>
+  );
+}
+
 export function badgeRoleColor(role: string | undefined, theme: Theme): string {
   switch (role) {
     case 'accent':

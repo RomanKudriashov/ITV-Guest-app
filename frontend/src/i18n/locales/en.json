@@ -1601,7 +1601,6 @@
       "info": "Info"
     },
     "deleteTitle": "Delete badge?",
-    "deleteBody": "Badge “{{name}}” will be deleted and removed from all items.",
     "newTitle": "New badge",
     "editTitle": "Edit badge",
     "labelRu": "Label (RU)",
@@ -1615,7 +1614,11 @@
     "itemsHint": "Items carrying «{{name}}». The cross removes the badge; the search below pins it to another item.",
     "itemsEmpty": "Nothing carries this badge yet.",
     "itemsAdd": "Find an item",
-    "itemsAddHint": "From two letters."
+    "itemsAddHint": "From two letters.",
+    "deleteBodyUsed": "“{{name}}” is on {{count}} items. Delete it and remove it from all of them?",
+    "deleteBodyFree": "“{{name}}” is not on any item. Delete it?",
+    "reorderHint": "Drag a row: whatever is higher, the guest sees first",
+    "presetLocked": "A preset badge — we keep it updated"
   },
   "quickActions": {
     "title": "Quick actions",

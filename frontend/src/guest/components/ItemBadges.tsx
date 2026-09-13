@@ -3,14 +3,16 @@ import Stack from '@mui/material/Stack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useTranslation } from 'react-i18next';
 
-import { badgeRoleColor } from '@/kit/chips';
+import { OfferingBadge } from '@/kit/chips';
 import type { MenuBadge } from '../api/types';
 
 /**
- * Marketing badges of a menu item, rendered as small filled chips sorted by
- * `sort_order`. The fill color is a theme token chosen by the badge's role via the
- * kit's `badgeRoleColor`; the text color is `getContrastText` of that fill, so the
- * label stays readable on any role, light or dark. `label` is already localized.
+ * Маркетинговые метки позиции, по `sort_order`.
+ *
+ * Рисует ОБЩИЙ значок кита (`OfferingBadge`) — тот же, которым экран
+ * «Маркетинг» показывает метку при настройке. До этого здесь лежала своя
+ * копия разметки: считала она то же самое и выглядела так же, но это было
+ * совпадение двух копий, а не общий код.
  */
 export function ItemBadges({
   badges,
@@ -21,31 +23,16 @@ export function ItemBadges({
 }) {
   if (!badges?.length) return null;
   const sorted = [...badges].sort((a, b) => a.sort_order - b.sort_order);
-  const small = size === 'sm';
   return (
     <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
       {sorted.map((badge, index) => (
-        <Box
+        <OfferingBadge
           key={`${badge.label}-${index}`}
-          data-testid={`guest-badge-${index}`}
-          sx={(theme) => {
-            const fill = badgeRoleColor(badge.color_role, theme);
-            return {
-              display: 'inline-flex',
-              alignItems: 'center',
-              px: small ? 0.75 : 1,
-              py: 0.25,
-              borderRadius: `${theme.palette.brand.radius.pill}px`,
-              bgcolor: fill,
-              color: theme.palette.getContrastText(fill),
-              fontSize: small ? '0.68rem' : '0.72rem',
-              fontWeight: theme.typography.fontWeightBold,
-              lineHeight: 1.4,
-            };
-          }}
-        >
-          {badge.label}
-        </Box>
+          label={badge.label}
+          role={badge.color_role}
+          size={size}
+          testId={`guest-badge-${index}`}
+        />
       ))}
     </Stack>
   );

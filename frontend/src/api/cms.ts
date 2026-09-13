@@ -510,6 +510,17 @@ export function fetchBadges(): Promise<Badge[]> {
 }
 
 /** Позиции, которые носят эту метку. Обратная сторона связи. */
+/**
+ * Новый порядок меток — списком сверху вниз.
+ *
+ * Шлём то, что видно после перетаскивания, а не дельту: дельта предполагает,
+ * что клиент и сервер одинаково поняли исходный порядок, а они могли
+ * разойтись, пока список открыт.
+ */
+export function reorderBadges(ids: string[]): Promise<ListPage<Badge>> {
+  return api.post<ListPage<Badge>>('/cms/badges/reorder', { ids });
+}
+
 export function fetchBadgeItems(badgeId: string): Promise<BadgeItem[]> {
   return api
     .get<ListPage<BadgeItem>>(`/cms/badges/${badgeId}/items`)

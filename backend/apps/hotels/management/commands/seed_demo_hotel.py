@@ -289,8 +289,10 @@ class Command(BaseCommand):
             self._fill_translations()
             self._seed_notifications(points, users)
             self._seed_chat_and_reviews(points, with_history)
-            if with_badges:
-                self._seed_marketing_badges()
+            # Метки — часть демо-набора, а не опция: без них экран «Маркетинг»
+            # стоит пустым и проверять на нём нечего. Флаг оставлен ради
+            # совместимости вызовов, но на решение больше не влияет.
+            self._seed_marketing_badges()
             if with_analytics:
                 self._seed_analytics_history(hotel, points, rooms, users)
 
@@ -1821,7 +1823,19 @@ class Command(BaseCommand):
                 service.save(update_fields=["image", "updated_at"])
 
     def _seed_marketing_badges(self):
-        """Пресеты бейджей и пара назначений — идемпотентно по коду пресета."""
+        """
+        Метки и назначения — идемпотентно по коду пресета.
+
+        ЗАВОДЯТСЯ ВСЕГДА, А НЕ ПО ФЛАГУ. Пока это жило под
+        `--with-marketing-badges`, стенд стоял с нулём меток: экран «Маркетинг»
+        показывал пустоту, проверять на нём было нечего, а укусы, написанные на
+        такой стенд, зеленели ни на чём.
+
+        ДВА СЛОЯ ВИДНЫ СРАЗУ. Четыре метки из пресета — их обновляем мы, они
+        не правятся отелем; одна отельная («Острое») заведена без кода пресета.
+        Без отельной метки экран показывал бы только запертые строки, и
+        граница ответственности читалась бы как поломка.
+        """
         from apps.catalog.models import Badge, Item, ItemBadge
 
         presets = [
@@ -1838,8 +1852,30 @@ class Command(BaseCommand):
             )
             badges[code] = badge
 
-        # Демо-назначения: рибай — «Выбор шефа», цезарь — «Хит».
-        for item_code, badge_code in (("ribeye", "chef_choice"), ("caesar", "hit")):
+        # Отельная метка: заведена отелем, правится и удаляется им же.
+        # Идемпотентность отельной метки — по названию: кода пресета у неё нет
+        # по определению, а второй «Острое» на повторном севе был бы мусором.
+        own = Badge.objects.filter(preset="", label__ru="Острое").first()
+        if own is None:
+            own = Badge.objects.create(
+                preset="",
+                label={"ru": "Острое", "en": "Spicy"},
+                color_role=Badge.ColorRole.GOLD,
+                sort_order=4,
+            )
+        badges["spicy"] = own
+
+        # Демо-назначения: счётчик «на N позициях» должен быть не единицей —
+        # иначе не видно ни списка, ни вопроса про удаление.
+        pairs = (
+            ("ribeye", "chef_choice"),
+            ("caesar", "hit"),
+            ("carbonara", "hit"),
+            ("tom-yum", "spicy"),
+            ("philadelphia", "new"),
+            ("greek-salad", "recommended"),
+        )
+        for item_code, badge_code in pairs:
             item = Item.objects.filter(code=item_code).first()
             if item and badges.get(badge_code):
                 ItemBadge.objects.get_or_create(

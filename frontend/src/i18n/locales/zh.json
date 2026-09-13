@@ -1592,7 +1592,6 @@
       "info": "信息色"
     },
     "deleteTitle": "删除徽章？",
-    "deleteBody": "徽章“{{name}}”将被删除并从所有商品移除。",
     "newTitle": "新建徽章",
     "editTitle": "编辑徽章",
     "labelRu": "名称 (RU)",
@@ -1606,7 +1605,11 @@
     "itemsHint": "带有「{{name}}」的条目。叉号取消标记，下方搜索可为其他条目加上。",
     "itemsEmpty": "还没有条目带这个标记。",
     "itemsAdd": "查找条目",
-    "itemsAddHint": "至少两个字符。"
+    "itemsAddHint": "至少两个字符。",
+    "deleteBodyUsed": "「{{name}}」已用于 {{count}} 个项目。删除并从所有项目上移除？",
+    "deleteBodyFree": "「{{name}}」尚未用于任何项目。确认删除？",
+    "reorderHint": "拖动行：越靠上，客人越先看到",
+    "presetLocked": "预设标签，由我方维护"
   },
   "quickActions": {
     "title": "快捷操作",

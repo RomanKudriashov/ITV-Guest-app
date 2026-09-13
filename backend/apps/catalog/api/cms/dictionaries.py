@@ -11,7 +11,14 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
-from apps.catalog.schemas.cms import BadgeIn, BadgeItemIn, BadgePatch, DictEntryIn, DictEntryPatch
+from apps.catalog.schemas.cms import (
+    BadgeIn,
+    BadgeItemIn,
+    BadgePatch,
+    BadgeReorderIn,
+    DictEntryIn,
+    DictEntryPatch,
+)
 from apps.catalog.services import cms as svc
 from apps.core.schemas import OkOut
 
@@ -42,6 +49,18 @@ def cms_update_badge(request: HttpRequest, badge_id: str, payload: BadgePatch):
 def cms_delete_badge(request: HttpRequest, badge_id: str):
     svc.delete_badge(badge_id)
     return {"ok": True}
+
+
+@router.post("/badges/reorder", summary="Новый порядок меток")
+def cms_reorder_badges(request: HttpRequest, payload: BadgeReorderIn):
+    """
+    Порядок виден ГОСТЮ: метки на карточке идут сверху вниз этим списком.
+
+    Объявлена ВЫШЕ `/badges/{badge_id}`: «reorder» иначе уехало бы в разбор
+    идентификатора, и ручка отвечала бы 422 на верный запрос. Эти грабли у
+    нас уже описаны в `apps/hotels/api/cms/services.py`.
+    """
+    return svc.reorder_badges(payload.ids)
 
 
 @router.get("/badges/{badge_id}/items", summary="Позиции с этим бейджем")
