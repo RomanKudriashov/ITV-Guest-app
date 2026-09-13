@@ -53,9 +53,17 @@ def _order(hotel, *, minutes_into_shift: int) -> Order:
 
 def _close(order: Order, *, took_minutes: int) -> None:
     """
-    Закрыть заказ и записать в журнал, что это случилось через `took_minutes`
-    после создания. Именно журнал сводка и читает — `updated_at` двигает любая
-    последующая правка заказа, и мерить им длительность нельзя.
+    Закрыть заказ и записать, что это случилось через `took_minutes` после
+    создания.
+
+    Двигаем И ПОЛЕ `closed_at`, И запись журнала. Поле — потому что с этой
+    партии момент закрытия читается из него; журнал — потому что он остаётся
+    историей и запасным ответом для заказов, закрытых до миграции. Разъехаться
+    они не имеют права: разъезд здесь означал бы, что тест меряет длительность
+    не тем источником, что стенд.
+
+    `updated_at` не годится ни тем ни другим: его двигает любая последующая
+    правка заказа.
     """
     terminal = next(
         status
@@ -63,8 +71,10 @@ def _close(order: Order, *, took_minutes: int) -> None:
         if status.is_terminal and not status.is_cancelled
     )
     change_status(order, to_code=terminal.code, actor_type="staff")
+    closed = order.created_at + timedelta(minutes=took_minutes)
+    Order.objects.filter(pk=order.pk).update(closed_at=closed)
     OrderStatusChange.objects.filter(order=order, to_status=terminal).update(
-        created_at=order.created_at + timedelta(minutes=took_minutes)
+        created_at=closed
     )
 
 
@@ -141,7 +151,12 @@ def test_cancelled_orders_are_not_work_done(crystal):
             for status in status_flows.statuses_for_flow(order.status.flow)
             if status.is_cancelled
         )
-        change_status(order, to_code=cancelled.code, actor_type="staff")
+        change_status(
+            order,
+            to_code=cancelled.code,
+            actor_type="staff",
+            cancel_reason="mistake",
+        )
 
         assert shift_summary(point, hotel=crystal, now=_noon(crystal))["done"] == 0
 

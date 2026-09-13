@@ -389,17 +389,25 @@ def build_accepted(order, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
 
 def _terminal_transition_time(order, *, cancelled: bool) -> datetime | None:
     """
-    Время перехода в терминальный статус — из истории переходов, а не now().
-    Так живой поток и восстановление из заказов дают одно и то же число.
-    """
-    from apps.orders.models import OrderStatusChange
+    Момент закрытия заказа — из общего источника, а не из своей формулы.
 
-    change = (
-        OrderStatusChange.objects.filter(order_id=order.pk, to_status__is_terminal=True, to_status__is_cancelled=cancelled)
-        .order_by("-created_at")
-        .first()
-    )
-    return change.created_at if change else None
+    Здесь стоял свой разбор журнала: ПОСЛЕДНЕЕ попадание в терминал. Сводка
+    смены в тот же момент разбирала тот же журнал и брала ПЕРВОЕ. Пока возврат
+    в работу был невозможен, оба давали одно число; с этой партии заказ,
+    закрытый дважды, развёл бы два экрана по разным суткам. Теперь обе стороны
+    спрашивают `closing_moments`, и разойтись им нечем.
+
+    Аргумент `cancelled` больше не нужен для выбора записи — закрытие у заказа
+    одно, каким бы терминальным статусом оно ни называлось, — но остался в
+    подписи: вызывающие им читаются как «строим событие о выполненном» и «об
+    отменённом», и это по-прежнему правда.
+
+    Ответ по-прежнему не now(): живой поток и восстановление из заказов обязаны
+    давать одно и то же число.
+    """
+    from apps.orders.services.closing import closing_moment
+
+    return closing_moment(order)
 
 
 def build_completed(order, hotel: Hotel, *, when: datetime | None = None, bus_event_id=None) -> list[dict]:

@@ -28,7 +28,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from apps.orders.models import Order, OrderStatusChange
+from apps.orders.models import Order
+from apps.orders.services.closing import closing_moments
 from apps.orders.services.tracker_types import effective_sla_minutes
 
 
@@ -110,26 +111,15 @@ def shift_summary_for(points, *, hotel, now=None) -> dict:
         .only("pk", "created_at", "accepted_at")
     )
 
-    # МОМЕНТ ЗАКРЫТИЯ БЕРЁМ ИЗ ЖУРНАЛА ПЕРЕХОДОВ, А НЕ ИЗ `updated_at`.
+    # МОМЕНТ ЗАКРЫТИЯ — ИЗ ОБЩЕГО ИСТОЧНИКА, А НЕ ИЗ СВОЕЙ ФОРМУЛЫ.
     #
-    # `updated_at` двигает любая правка заказа — комментарий, назначение
-    # исполнителя, что угодно после закрытия. Журнал же записывает ровно то, что
-    # спрашиваем: когда заказ стал терминальным.
-    closed_at: dict = {}
-    if done_orders:
-        changes = (
-            OrderStatusChange.objects.filter(
-                order__in=done_orders,
-                to_status__is_terminal=True,
-                to_status__is_cancelled=False,
-            )
-            .order_by("order_id", "created_at")
-            .values_list("order_id", "created_at")
-        )
-        # Первое попадание в терминал, а не последнее: заказ туда приходит один
-        # раз, но журнал переживает переоткрытия и правки.
-        for order_id, moment in changes:
-            closed_at.setdefault(order_id, moment)
+    # Здесь стоял собственный разбор журнала: «первое попадание в терминал».
+    # Аналитика в тот же момент разбирала тот же журнал по своей формуле —
+    # «последнее». Пока возврат в работу был запрещён, разницы не возникало; с
+    # этой партии возникла бы. Теперь оба экрана спрашивают `closing_moments`
+    # и потому не могут разойтись: там поле заказа, а журнал остался запасным
+    # ответом только для закрытых до миграции.
+    closed_at = closing_moments(done_orders)
 
     durations: list[int] = []
     pickups: list[int] = []

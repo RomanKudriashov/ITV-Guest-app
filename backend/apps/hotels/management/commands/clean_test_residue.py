@@ -44,10 +44,20 @@ from django.core.management.base import BaseCommand
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, Room
 
-# `<что-то>-ms<base36>` — ровно то, что генерируют спеки. Якорь на конец строки
-# обязателен: без него шаблон поймал бы обычное имя, где такие буквы случайны.
-TEST_SUFFIX = re.compile(r"-ms[0-9a-z]{6,}$")
-CHAT_BODY = re.compile(r"^(вопрос|ответ|ещё)-ms[0-9a-z]{6,}$")
+# `<что-то>-<Date.now().toString(36)>` — ровно то, что генерируют спеки.
+#
+# ШАБЛОН БЫЛ `-ms[0-9a-z]{6,}$` И ОСЛЕП. «ms» — это не часть формата, а первые
+# две цифры МИЛЛИСЕКУНДНОГО ВРЕМЕНИ в base36: пока эпоха лежала в диапазоне
+# `ms……`, шаблон работал; в августе счётчик перешёл на `mt……`, и уборка тихо
+# перестала видеть всё, что прогоны наделали с тех пор. На стенде осталось 140
+# заведений-остатков при 9 настоящих, а команда рапортовала о 19.
+#
+# Опознавать надо ФОРМАТ, а не конкретный момент времени. Восьмизначное base36
+# начинается с «m» c 2004 года и до 2059-го — этого хватает, и якорь на конец
+# строки по-прежнему обязателен: без него шаблон поймал бы обычное имя, где
+# такие буквы случайны.
+TEST_SUFFIX = re.compile(r"-m[0-9a-z]{7}$")
+CHAT_BODY = re.compile(r"^(вопрос|ответ|ещё)-m[0-9a-z]{7}$")
 
 # Типы номеров, которые заводит прогон раздела GRMS в CMS: он импортирует
 # настоящий файл ПНР, и на стенде остаются ТИП1/ТИП2/ТИП3. Опознаём ПАРОЙ
@@ -253,6 +263,31 @@ class Command(BaseCommand):
                         user.delete(using="platform")
                         dropped_platform += 1
 
+            # --- Привязки удалённых сотрудников --------------------------------
+            #
+            # `delete_staff` удаляет МЯГКО и сотрудника, и его привязки. Строка
+            # привязки при этом остаётся указывать на удалённого человека: в
+            # интерфейсе её не видно ни с одной стороны, а в таблице она лежит.
+            # Каждый прогон, заводящий и убирающий сотрудника, добавляет по
+            # такой; на стенде их накопилось девяносто на одном консьерже — при
+            # десяти живых привязках во всём отеле.
+            #
+            # Признак УЗКИЙ и не про имена: привязка удалена И её сотрудник
+            # удалён. Живой привязки такое правило не касается вовсе, а
+            # выключенная привязка живого сотрудника — это осознанное состояние,
+            # и её мы не трогаем.
+            from apps.accounts.models import StaffAssignment
+
+            dangling_assignments = list(
+                StaffAssignment.all_objects.filter(
+                    deleted_at__isnull=False, user__deleted_at__isnull=False
+                ).values_list("pk", flat=True)
+            )
+            if dangling_assignments:
+                self.stdout.write(
+                    f"  привязок удалённых сотрудников: {len(dangling_assignments)}"
+                )
+
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
                 return
@@ -304,6 +339,12 @@ class Command(BaseCommand):
                 pk__in=[s.pk for s in keep_services]
             ).update(is_active=False)
 
+            dropped_assignments = 0
+            if dangling_assignments:
+                dropped_assignments = StaffAssignment.all_objects.filter(
+                    pk__in=dangling_assignments
+                ).hard_delete()[1].get("accounts.StaffAssignment", 0)
+
             deleted_msgs = ChatMessage.objects.filter(pk__in=[m.pk for m in messages]).delete()
             # ЖЁСТКО, а не мягко. Мягкое удаление оставляет строку с тем же
             # кодом, и следующий импорт того же файла падает на уникальности
@@ -350,7 +391,12 @@ class Command(BaseCommand):
                         continue
                     cancelled_by_flow[flow] = terminal
                 order.status = terminal
-                order.save(update_fields=["status", "updated_at"])
+                # Момент закрытия ставим здесь же. Эта команда — ТРЕТЬЯ дверь в
+                # терминальный статус, мимо `change_status` и мимо журнала, и
+                # именно из-за неё на стенде 821 закрытый заказ не имел момента
+                # закрытия: сводка смены и аналитика их просто не видели.
+                order.closed_at = timezone.now()
+                order.save(update_fields=["status", "closed_at", "updated_at"])
                 closed += 1
 
         self.stdout.write(
@@ -362,6 +408,7 @@ class Command(BaseCommand):
                 + (f"заказов удалено {purged_orders}; " if purge else "")
                 + 
                 f"сообщений удалено {deleted_msgs}; "
+                f"привязок удалённых сотрудников убрано {dropped_assignments}; "
                 f"типов номеров удалено {deleted_types}; "
                 f"счётчиков PIN сброшено {cleared_pins}; "
                 f"брошенных заказов закрыто {closed}"
