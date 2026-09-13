@@ -18,6 +18,17 @@ import { fetchOrders, type OrdersPage as OrdersPageBody } from './api';
 import { OrderCardDetail } from './OrderCardDetail';
 import { OrdersNumbers } from './OrdersNumbers';
 
+/*
+  СТАТУС ЖИВЁТ ТОЛЬКО В АДРЕСЕ, И ЭТО РЕШЕНИЕ, А НЕ ЗАБЫТЫЙ ОРГАН.
+
+  Списка статусов у раздела нет: их состав задаётся потоком заведения, и
+  собрать общий список по всем заведениям отеля — значит показать управляющему
+  спа статусы кухни. Ради одного селекта заводить ручку «статусы отеля» дорого,
+  а собрать их по видимой странице нельзя: на второй странице список поедет.
+
+  Параметр при этом принимается и работает — по нему приходят ссылки снаружи
+  (например, «покажи отменённые за вчера»), и сервер сужает выборку честно.
+*/
 const DEFAULTS = {
   point: '',
   since: '',
@@ -137,6 +148,31 @@ export function OrdersPage() {
                     sx={{ width: 120 }}
                     inputProps={{ 'data-testid': 'orders-filter-room' }}
                   />
+                  {/*
+                    ТИП ЗАКАЗА — ДВА ЗНАЧЕНИЯ, И СПИСКА С СЕРВЕРА ЕМУ НЕ НАДО:
+                    корзина и заявка заданы потоком, а не содержимым отеля.
+                    Подписи взяты у трекера, а не заведены свои: одно и то же
+                    на двух экранах обязано называться одинаково, иначе через
+                    полгода это будут два разных списка.
+                  */}
+                  <TextField
+                    select
+                    size="small"
+                    label={t('tracker.filters.type')}
+                    value={params.order_type}
+                    onChange={(event) => patch({ order_type: event.target.value })}
+                    sx={{ minWidth: 150 }}
+                    SelectProps={{
+                      SelectDisplayProps: {
+                        'data-testid': 'orders-filter-type',
+                      } as never,
+                    }}
+                  >
+                    <MenuItem value="">{t('tracker.filters.anyType')}</MenuItem>
+                    <MenuItem value="cart">{t('tracker.filters.typeCart')}</MenuItem>
+                    <MenuItem value="request">{t('tracker.filters.typeRequest')}</MenuItem>
+                  </TextField>
+
                   <TextField
                     size="small"
                     label={t('orders.filters.search')}
