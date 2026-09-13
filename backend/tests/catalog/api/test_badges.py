@@ -175,16 +175,25 @@ def test_badges_isolated_between_hotels(cms, cms_aurora):
     assert all(b["label"].get("ru") != "Только-Кристалл" for b in aurora_badges)
 
 
-# --- Пресеты за флагом -----------------------------------------------------
+# --- Метки в демо-наборе ----------------------------------------------------
 
 
-def test_presets_seeded_behind_flag(crystal):
-    from django.core.management import call_command
+def test_presets_are_part_of_the_demo_set(crystal):
+    """
+    Метки заводятся ВСЕГДА, а не под флагом.
 
-    with tenant_context(crystal):
-        assert not Badge.objects.filter(preset="chef_choice").exists()
+    Прежняя редакция этого укуса требовала обратного: без
+    `--with-marketing-badges` меток быть не должно. Требование выполнялось — и
+    ровно поэтому стенд стоял с нулём меток: экран «Маркетинг» показывал
+    пустоту, а укусы, написанные на такой стенд, зеленели ни на чём.
 
-    call_command("seed_demo_hotel", "--force", "--with-marketing-badges", verbosity=0)
+    Проверяется и ВТОРОЙ слой: одна метка отельная (без кода пресета). Без неё
+    экран показывал бы только запертые строки, и граница ответственности
+    читалась бы как поломка экрана.
+    """
     with tenant_context(crystal):
         codes = set(Badge.objects.exclude(preset="").values_list("preset", flat=True))
+        own = Badge.objects.filter(preset="").count()
+
     assert {"hit", "new", "chef_choice", "recommended"} <= codes
+    assert own >= 1, "в демо-наборе нет ни одной отельной метки"

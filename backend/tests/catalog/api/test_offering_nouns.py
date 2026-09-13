@@ -107,9 +107,15 @@ def test_spa_categories_never_say_dish(cms, in_crystal):
     if spa is None:
         pytest.skip("в сиде нет спа — проверять нечего")
 
-    response = cms.get(f"/api/cms/categories?service_id={spa.pk}")
-    assert response.status_code == 200
-    nodes = response.json()
-    assert nodes, "у спа нет разделов — проверять нечего"
+    # ТИП РАЗДЕЛОВ ЗАДАЁТСЯ ЯВНО. Умолчание ручки — `product`, а спа собран из
+    # слотов: спрашивая умолчанием, мы получили бы пустой список и зелёную
+    # проверку, ничего не проверившую.
+    nodes = []
+    for offering_type in ("slot", "service_request", "product"):
+        response = cms.get(f"/api/cms/categories?type={offering_type}&service_id={spa.pk}")
+        assert response.status_code == 200
+        nodes.extend(response.json())
+
+    assert nodes, "у спа нет разделов ни одного типа — проверять нечего"
     for node in nodes:
         assert node["noun"] == OfferingNoun.SERVICE, node["code"]
