@@ -41,17 +41,6 @@ def cms_create_badge(request: HttpRequest, payload: BadgeIn):
     return 201, svc.serialize_badge(svc.create_badge(payload.dict()))
 
 
-@router.patch("/badges/{badge_id}", summary="Изменить бейдж")
-def cms_update_badge(request: HttpRequest, badge_id: str, payload: BadgePatch):
-    return svc.serialize_badge(svc.update_badge(badge_id, payload.dict(exclude_unset=True)))
-
-
-@router.delete("/badges/{badge_id}", response=OkOut, summary="Удалить бейдж")
-def cms_delete_badge(request: HttpRequest, badge_id: str):
-    svc.delete_badge(badge_id)
-    return {"ok": True}
-
-
 @router.post("/badges/reorder", summary="Новый порядок меток")
 def cms_reorder_badges(request: HttpRequest, payload: BadgeReorderIn):
     """
@@ -62,6 +51,17 @@ def cms_reorder_badges(request: HttpRequest, payload: BadgeReorderIn):
     нас уже описаны в `apps/hotels/api/cms/services.py`.
     """
     return svc.reorder_badges(payload.ids)
+
+
+@router.patch("/badges/{badge_id}", summary="Изменить бейдж")
+def cms_update_badge(request: HttpRequest, badge_id: str, payload: BadgePatch):
+    return svc.serialize_badge(svc.update_badge(badge_id, payload.dict(exclude_unset=True)))
+
+
+@router.delete("/badges/{badge_id}", response=OkOut, summary="Удалить бейдж")
+def cms_delete_badge(request: HttpRequest, badge_id: str):
+    svc.delete_badge(badge_id)
+    return {"ok": True}
 
 
 @router.get("/badges/{badge_id}/items", summary="Позиции с этим бейджем")

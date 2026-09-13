@@ -159,6 +159,11 @@ test.describe('Метки: панель и витрина одним кодом'
     const pill = page.getByTestId(`cms-badge-pill-${used!.id}`)
     await expect(pill).toBeVisible({ timeout: 25_000 })
     const cmsFill = await pill.evaluate((node) => getComputedStyle(node).backgroundColor)
+    // Держим НАЗВАНИЕ метки: у гостя на витрине висят разные метки, и брать
+    // «первую попавшуюся» значит сравнивать «Хит» с «Выбором шефа» — цвета у
+    // них разные по замыслу, и проверка падала бы на исправном коде.
+    const label = (await pill.textContent())?.trim() ?? ''
+    expect(label, 'у метки нет названия — сравнивать нечем').toBeTruthy()
 
     /*
       СРАВНИВАЕМ ЦВЕТ, А НЕ РАЗМЕТКУ. «Показан так, как увидит гость» — это про
@@ -177,8 +182,11 @@ test.describe('Метки: панель и витрина одним кодом'
     // и ждать их там значит ждать вечно. Идём в витрину кухни — там висят
     // демо-назначения.
     await guest.goto('/venue/kitchen')
-    const guestBadge = guest.locator('[data-testid^="guest-badge-"]').first()
-    await expect(guestBadge).toBeVisible({ timeout: 25_000 })
+    const guestBadge = guest
+      .locator('[data-testid^="guest-badge-"]')
+      .filter({ hasText: label })
+      .first()
+    await expect(guestBadge, `метки «${label}» нет на витрине кухни`).toBeVisible({ timeout: 25_000 })
     const guestFill = await guestBadge.evaluate((node) => getComputedStyle(node).backgroundColor)
     await guest.close()
 
