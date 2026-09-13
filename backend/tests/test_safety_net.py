@@ -105,6 +105,90 @@ def test_url_map_matches_snapshot():
     )
 
 
+# --- 1б. Порядок маршрутов: параметр не крадёт слово -------------------------
+
+
+def _declared_routes() -> list[tuple[str, set[str]]]:
+    """
+    Полные пути В ПОРЯДКЕ РАЗБОРА — именно в нём Ninja отдаёт их Django.
+
+    СНАЧАЛА `api.urls`, И ЭТО НЕ ПОДГОТОВКА, А СУТЬ. Обращение к `urls` —
+    то самое, что делает Django при первом запросе, — РАЗВОРАЧИВАЕТ дерево
+    роутеров в плоский список: верхних записей становится 58 вместо 16, и
+    порядок этого списка и есть порядок разбора.
+
+    Первая версия проверки обходила дерево РЕКУРСИВНО и делала это до
+    разворота. В процессе, который ещё не обслужил ни одного запроса, она
+    давала верные 215 путей и зеленела; в полном прогоне, где до неё прошли
+    сотни запросов, тот же обход проходил вложенные роутеры дважды — один раз
+    развёрнутыми на верхнем уровне (там префикс идёт БЕЗ ведущего слэша), второй
+    раз рекурсией — и получал 469 путей с 75 повторами. Дальше статический
+    маршрут из второго прохода неизбежно «затенялся» параметрическим из первого,
+    и проверка падала на себе, а не на продукте.
+
+    Поэтому: развернуть и пройти ПЛОСКО, без рекурсии. Так список совпадает с
+    тем, что реально смонтировано, и не зависит от того, сколько запросов
+    прошло до проверки.
+    """
+    from api import api
+
+    _ = api.urls
+
+    routes: list[tuple[str, set[str]]] = []
+    for prefix, router in api._routers:
+        for path, view in router.path_operations.items():
+            full = "/" + (prefix.strip("/") + "/" + path.strip("/")).strip("/")
+            methods: set[str] = set()
+            for operation in view.operations:
+                methods |= set(operation.methods)
+            routes.append((full, methods))
+    return routes
+
+
+def test_no_static_route_is_shadowed_by_a_parameter():
+    """
+    СЛОВО В АДРЕСЕ НЕ ДОЛЖНО УЕЗЖАТЬ В ПАРАМЕТР.
+
+    Ninja разбирает маршруты в порядке объявления, и первый подошедший забирает
+    запрос целиком. Объяви `/services/{service_id}` выше `/services/sla-overrides`
+    — и вторая ручка перестаёт существовать: строка «sla-overrides» уходит в
+    UUID-поле и падает пятисоткой на разборе. Ровно это и было: экран «где порог
+    просрочки переопределён» не открывался вовсе, а в логах лежал ValueError.
+
+    Такую поломку не ловит ни снимок карты адресов (оба пути в схеме есть), ни
+    тест ручки, которого ещё нет. Ловит только порядок.
+    """
+    parameter = re.compile(r"^\{[^}]+\}$")
+    routes = _declared_routes()
+    segments = lambda path: [s for s in path.strip("/").split("/") if s]  # noqa: E731
+
+    shadowed = []
+    for index, (later, later_methods) in enumerate(routes):
+        later_segments = segments(later)
+        for earlier, earlier_methods in routes[:index]:
+            earlier_segments = segments(earlier)
+            if len(earlier_segments) != len(later_segments):
+                continue
+            if not (later_methods & earlier_methods):
+                continue
+            steals, compatible = False, True
+            for earlier_segment, later_segment in zip(earlier_segments, later_segments):
+                if earlier_segment == later_segment:
+                    continue
+                if parameter.match(earlier_segment) and not parameter.match(later_segment):
+                    steals = True
+                    continue
+                compatible = False
+                break
+            if compatible and steals:
+                shadowed.append(f"{later} перехвачен объявленным выше {earlier}")
+
+    assert routes, "маршруты не собрались — проверка стала бесполезной"
+    assert not shadowed, "Статические маршруты, до которых запрос не доедет:\n" + "\n".join(
+        sorted(shadowed)
+    )
+
+
 # --- 2. Реестр задач Celery -------------------------------------------------
 
 

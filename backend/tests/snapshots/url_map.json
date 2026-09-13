@@ -255,6 +255,9 @@
   "/api/v1/cms/notification-log": [
     "GET"
   ],
+  "/api/v1/cms/orders": [
+    "GET"
+  ],
   "/api/v1/cms/quick-actions": [
     "GET",
     "PUT"
@@ -693,6 +696,9 @@
     "POST"
   ],
   "/api/v1/tracker/order/{order_id}/cancel": [
+    "POST"
+  ],
+  "/api/v1/tracker/order/{order_id}/position": [
     "POST"
   ],
   "/api/v1/tracker/order/{order_id}/status": [
