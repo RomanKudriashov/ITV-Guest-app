@@ -42,7 +42,7 @@ export function AnalyticsPage() {
           justifyContent="space-between"
         >
           <Stack>
-            <Typography variant="h5">{t('analytics.title')}</Typography>
+            <Typography variant="h5" data-testid="cms-page-title">{t('analytics.title')}</Typography>
             <Typography variant="body2" color="text.secondary">
               {t('analytics.subtitle')}
             </Typography>

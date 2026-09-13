@@ -150,7 +150,7 @@ function RoomControlSection() {
         sx={{ mb: 2 }}
       >
         <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h5">{t('roomControl.title')}</Typography>
+          <Typography variant="h5" data-testid="cms-page-title">{t('roomControl.title')}</Typography>
           <Typography variant="body2" color="text.secondary">
             {t('roomControl.subtitle')}
           </Typography>

@@ -40,7 +40,7 @@ export function NotificationsPage() {
     <Box sx={{ p: 3 }}>
       <Stack spacing={2}>
         <Stack>
-          <Typography variant="h5">{t('notifications.title')}</Typography>
+          <Typography variant="h5" data-testid="cms-page-title">{t('notifications.title')}</Typography>
           <Typography variant="body2" color="text.secondary">
             {t('notifications.subtitle')}
           </Typography>

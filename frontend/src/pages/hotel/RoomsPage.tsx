@@ -201,7 +201,7 @@ export function RoomsPage() {
             sx={{ mb: 1 }}
           >
             <Stack>
-              <Typography variant="h5">{t('hotel.rooms.title')}</Typography>
+              <Typography variant="h5" data-testid="cms-page-title">{t('hotel.rooms.title')}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('hotel.rooms.subtitle')}
               </Typography>

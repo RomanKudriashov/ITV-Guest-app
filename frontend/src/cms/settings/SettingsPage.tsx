@@ -32,7 +32,7 @@ export function SettingsPage() {
 
   return (
     <Box sx={{ p: 3 }} data-testid="cms-settings">
-      <Typography variant="h5" sx={{ mb: 0.5 }}>
+      <Typography variant="h5" data-testid="cms-page-title" sx={{ mb: 0.5 }}>
         {t('settings.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

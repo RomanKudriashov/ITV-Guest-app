@@ -139,7 +139,7 @@ export function StaffPage() {
         <CardContent sx={{ p: 2 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
             <Stack>
-              <Typography variant="h5">{t('hotel.staff.title')}</Typography>
+              <Typography variant="h5" data-testid="cms-page-title">{t('hotel.staff.title')}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('hotel.staff.subtitle')}
               </Typography>

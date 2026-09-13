@@ -230,7 +230,7 @@ export function BadgesPage() {
         <CardContent sx={{ p: 2 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
             <Stack>
-              <Typography variant="h5">{t('badges.title')}</Typography>
+              <Typography variant="h5" data-testid="cms-page-title">{t('badges.title')}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {t('badges.subtitle')}
               </Typography>

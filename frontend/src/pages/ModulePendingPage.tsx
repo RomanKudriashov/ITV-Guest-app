@@ -29,7 +29,7 @@ export function ModulePendingPage({ moduleKey }: { moduleKey: string }) {
       <Paper variant="outlined" sx={{ p: 4, maxWidth: 560 }}>
         <Stack spacing={2} alignItems="flex-start">
           <ConstructionOutlinedIcon color="action" sx={{ fontSize: 36 }} />
-          <Typography variant="h6">{t(`nav.${moduleKey}`)}</Typography>
+          <Typography variant="h6" data-testid="cms-page-title">{t(`nav.${moduleKey}`)}</Typography>
           <Typography variant="body2" color="text.secondary">
             {t('modulePending.body')}
           </Typography>

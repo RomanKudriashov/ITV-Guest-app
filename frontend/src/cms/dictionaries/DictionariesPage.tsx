@@ -51,7 +51,7 @@ export function DictionariesPage() {
   return (
     <Box sx={{ maxWidth: 820, mx: 'auto', p: { xs: 2, md: 3 } }} data-testid="cms-dictionaries">
       <Stack spacing={0.5} sx={{ mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>
+        <Typography variant="h5" data-testid="cms-page-title" sx={{ fontWeight: 700 }}>
           {t('dictionaries.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary">

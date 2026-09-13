@@ -102,9 +102,28 @@ export function AppShell() {
     несуществующего меню незачем.
   */
   const navGroups = navigation.data?.groups ?? [];
-  if (isForbidden(navigation.error) || (navigation.isSuccess && navGroups.length === 0)) {
+  /*
+    РАЗДЕЛОВ НЕТ — И ЭТО ДВА РАЗНЫХ ОТВЕТА, А НЕ ОДИН.
+
+    Линейному сотруднику `/cms/navigation` отвечает 403: у повара, горничной и
+    консьержа разделов панели нет ни одного.
+
+      * ОН ПРИШЁЛ В ПАНЕЛЬ — отказ, как и был: рисовать оболочку вокруг
+        несуществующего меню незачем, а «Повторить» на отказе по правам
+        обещает то, что не сработает никогда.
+      * ОН ПРИШЁЛ НА ТРЕКЕР — это его рабочее место, и закрывать его отказом
+        нельзя. Оболочка остаётся ради общей шапки, но ПУСТОЙ ПАНЕЛИ НЕТ:
+        ни ящика, ни кнопки-гамбургера, ни заголовков групп. Вместо них
+        одна строка о том, что разделов у него нет, — чтобы отсутствие меню
+        было сказано, а не выглядело недогрузом.
+  */
+  const noSections =
+    isForbidden(navigation.error) || (navigation.isSuccess && navGroups.length === 0);
+  const onTracker = location.pathname.startsWith('/tracker');
+  if (noSections && !onTracker) {
     return <NoCmsAccess />;
   }
+  const showNav = !noSections;
 
   return (
     <StaffScale>
@@ -134,17 +153,20 @@ export function AppShell() {
             Видно её только там, где она нужна, — на широком экране панель
             и так открыта.
           */}
-          <IconButton
-            onClick={() => setNavOpen(true)}
-            data-testid="nav-toggle"
-            aria-label={t('nav.open')}
-            sx={{ display: { xs: 'inline-flex', md: 'none' }, ml: -1 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1 }} data-testid="hotel-name">
+          {showNav ? (
+            <IconButton
+              onClick={() => setNavOpen(true)}
+              data-testid="nav-toggle"
+              aria-label={t('nav.open')}
+              sx={{ display: { xs: 'inline-flex', md: 'none' }, ml: -1 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          ) : null}
+          <Typography variant="h6" data-testid="hotel-name">
             {hotelName}
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
           <LanguageSwitcher compact />
           <ThemeModeToggle />
           <Divider orientation="vertical" flexItem sx={{ my: 1.5 }} />
@@ -173,6 +195,7 @@ export function AppShell() {
         </Toolbar>
       </AppBar>
 
+      {showNav ? (
       <Drawer
         variant={isNarrow ? 'temporary' : 'permanent'}
         open={isNarrow ? navOpen : true}
@@ -239,9 +262,29 @@ export function AppShell() {
           ))}
         </List>
       </Drawer>
+      ) : null}
 
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
         <Toolbar />
+        {/*
+          СТРОКА ВМЕСТО ПАНЕЛИ — И ВИДНА НА ЛЮБОЙ ШИРИНЕ.
+
+          Стояла в шапке и пряталась на узком (`display: xs none`), потому что
+          там тесно. Получалось худшее из двух: панели нет и объяснения тоже
+          нет — ровно та пустота без причины, от которой строка и заводилась.
+          В содержимом места хватает всем, и прячется она только вместе с самим
+          поводом — когда разделы есть.
+        */}
+        {showNav ? null : (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            data-testid="cms-no-sections"
+            sx={{ display: 'block', px: 3, pt: 1.5 }}
+          >
+            {t('access.noSections')}
+          </Typography>
+        )}
         {/*
           Граница вокруг СОДЕРЖИМОГО, а не вокруг всего приложения: рельс
           разделов обязан пережить падение экрана, иначе уйти с него можно

@@ -51,7 +51,7 @@ export function ServicesPage() {
     <Box sx={{ p: 3 }} data-testid="cms-services">
       <Stack direction="row" alignItems="center" sx={{ mb: 3 }}>
         <Box>
-          <Typography variant="h5">{t('services.title')}</Typography>
+          <Typography variant="h5" data-testid="cms-page-title">{t('services.title')}</Typography>
           <Typography variant="body2" color="text.secondary">
             {t('services.subtitle')}
           </Typography>

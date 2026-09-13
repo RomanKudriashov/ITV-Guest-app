@@ -110,7 +110,7 @@ export function BrandPage() {
         sx={{ mb: 2 }}
       >
         <BrandLookChip />
-        <Typography variant="h5" component="h1" sx={{ mr: 'auto' }}>
+        <Typography variant="h5" component="h1" data-testid="cms-page-title" sx={{ mr: 'auto' }}>
           {t('brand.title')}
         </Typography>
         {dirty ? (
