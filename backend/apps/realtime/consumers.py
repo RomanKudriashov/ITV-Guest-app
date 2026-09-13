@@ -63,30 +63,44 @@ def _resolve_hotel(scope):
 
 
 @database_sync_to_async
-def _load_tracker_board(hotel, token: str, point_code: str, language: str):
+def _authorize_tracker(hotel, token: str, point_code: str, language: str):
     """
-    Аутентификация + скоуп отеля + проверка привязки к точке + снимок доски —
-    одним походом в БД.
+    Аутентификация + скоуп отеля + проверка привязки к точке.
 
     Всё перечисленное делается ЯВНО, потому что у WebSocket нет ни middleware
     аутентификации, ни резолвера тенанта, ни языка. Проверки живут в
     apps/orders/tracker.py, то есть буквально те же, что у REST: разъехаться
     им негде.
+
+    СНИМОК ЗДЕСЬ БОЛЬШЕ НЕ СТРОИТСЯ, И ЭТО ЛЕЧЕНИЕ ПОТЕРИ ЗАЯВОК. Раньше
+    авторизация и снимок шли одним походом, а подписка на события точки
+    случалась ПОСЛЕ них. Пока снимок собирался, доска не была подписана — и
+    заявка, пришедшая ровно в эту секунду, не доезжала до экрана НИКОГДА: её
+    событие ушло в пустоту, а снимок был собран до неё. Замерено на стенде:
+    сборка доски из 153 карточек занимает 1,2 секунды, и e2e «замкнутый цикл»
+    падал стабильно — гость заказывал через три секунды после открытия доски.
+    На кухне это выглядит как «заявка не приехала», и обновление страницы
+    «чинит» её, что делает дефект неуловимым.
+
+    Теперь порядок: авторизация → ПОДПИСКА → приём соединения → снимок. Всё,
+    что случится во время сборки снимка, дождётся своей очереди в канале и
+    приедет следом, потому что Channels обрабатывает сообщения консьюмера
+    строго после `connect`.
     """
     from apps.accounts.services.auth import authenticate_staff
     from apps.core.errors import DomainError
-    from apps.orders.services.tracker import build_board, require_point
+    from apps.orders.services.tracker import require_point
 
     language = language or hotel.default_language
     with tenant_context(hotel, language=language):
         user = authenticate_staff(token)
         if user is None:
-            return None, None, None
+            return None, None
         try:
             point = require_point(user, point_code)
         except DomainError:
-            return user, None, None
-        return user, point, build_board(point, language=language)
+            return user, None
+        return user, point
 
 
 @database_sync_to_async
@@ -157,9 +171,7 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
         point_code = self.scope["url_route"]["kwargs"]["point_code"]
         token = _query_param(self.scope, "token")
 
-        user, point, board = await _load_tracker_board(
-            hotel, token, point_code, self.language
-        )
+        user, point = await _authorize_tracker(hotel, token, point_code, self.language)
         if user is None:
             await self.close(code=CLOSE_UNAUTHORIZED)
             return
@@ -171,9 +183,15 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
 
         self.point_id = str(point.pk)
         self.group_name = f"tracker.{hotel.pk}.{point.pk}"
+        # ПОДПИСКА ПЕРВОЙ, СНИМОК ВТОРЫМ — см. `_authorize_tracker`: заявка,
+        # пришедшая за время сборки снимка, иначе теряется навсегда.
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
+        board = await _board_snapshot(hotel, self.point_id, self.language)
+        if board is None:
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
         await self.send_json(
             {
                 "type": "tracker.snapshot",

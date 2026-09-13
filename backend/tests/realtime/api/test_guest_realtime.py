@@ -84,7 +84,13 @@ def _change_status(crystal, order_id: str, code: str):
     from apps.orders.services import change_status, get_order
 
     with tenant_context(crystal):
-        change_status(get_order(order_id), to_code=code, actor_type="staff")
+        change_status(
+            get_order(order_id),
+            to_code=code,
+            actor_type="staff",
+            # Отмена требует причину; для прочих статусов параметр игнорируется.
+            cancel_reason="mistake",
+        )
 
 
 def test_snapshot_arrives_on_connect_and_on_every_change(crystal, guest_order):
