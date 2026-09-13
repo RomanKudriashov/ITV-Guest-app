@@ -19,6 +19,7 @@ from apps.catalog.schemas.cms import (
     DictEntryIn,
     DictEntryPatch,
 )
+from apps.catalog.facet_scope import FacetKind
 from apps.catalog.services import cms as svc
 from apps.core.schemas import OkOut
 
@@ -104,12 +105,15 @@ def cms_list_allergens(
 
 @router.post("/allergens", response={201: dict}, summary="Добавить свой аллерген")
 def cms_create_allergen(request: HttpRequest, payload: DictEntryIn):
-    return 201, svc._serialize_dict_entry(svc.create_allergen(payload.dict()))
+    return 201, svc._serialize_dict_entry(svc.create_allergen(payload.dict()), kind=FacetKind.ALLERGENS)
 
 
 @router.patch("/allergens/{entry_id}", summary="Изменить аллерген (вкл/выкл, порядок)")
 def cms_update_allergen(request: HttpRequest, entry_id: str, payload: DictEntryPatch):
-    return svc._serialize_dict_entry(svc.update_allergen(entry_id, payload.dict(exclude_unset=True)))
+    return svc._serialize_dict_entry(
+        svc.update_allergen(entry_id, payload.dict(exclude_unset=True)),
+        kind=FacetKind.ALLERGENS,
+    )
 
 
 @router.delete("/allergens/{entry_id}", response=OkOut, summary="Удалить свой аллерген (системный нельзя)")
@@ -132,12 +136,15 @@ def cms_list_markers(
 
 @router.post("/markers", response={201: dict}, summary="Добавить свой маркер")
 def cms_create_marker(request: HttpRequest, payload: DictEntryIn):
-    return 201, svc._serialize_dict_entry(svc.create_marker(payload.dict()))
+    return 201, svc._serialize_dict_entry(svc.create_marker(payload.dict()), kind=FacetKind.MARKERS)
 
 
 @router.patch("/markers/{entry_id}", summary="Изменить маркер (вкл/выкл, порядок)")
 def cms_update_marker(request: HttpRequest, entry_id: str, payload: DictEntryPatch):
-    return svc._serialize_dict_entry(svc.update_marker(entry_id, payload.dict(exclude_unset=True)))
+    return svc._serialize_dict_entry(
+        svc.update_marker(entry_id, payload.dict(exclude_unset=True)),
+        kind=FacetKind.MARKERS,
+    )
 
 
 @router.delete("/markers/{entry_id}", response=OkOut, summary="Удалить свой маркер (системный нельзя)")
