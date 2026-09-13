@@ -51,11 +51,24 @@ const COLUMNS: { id: ColumnId; align: 'left' | 'right'; sortable: boolean }[] = 
  * период и заведение. Остальные разрезы аналитики (устройство, язык, способ
  * входа) в разделе заказов не живут, и подменять их на «примерно то же» хуже,
  * чем не переносить.
+ *
+ * ГРАНИЦЫ БЕРУТСЯ ИЗ ЭХА СЕРВЕРА, А НЕ ИЗ ПАРАМЕТРОВ ЭКРАНА.
+ *
+ * `date_from`/`date_to` заполнены только когда человек задал даты руками. На
+ * пресете — а «неделя» стоит по умолчанию — экран шлёт `preset=week` и дат не
+ * шлёт вовсе. Ссылка, собранная из параметров, теряла период МОЛЧА и в самом
+ * частом случае: раздел открывался по всей истории, а человек был уверен, что
+ * смотрит те же сутки, что и в аналитике.
+ *
+ * Разворачивать пресет в даты на клиенте нельзя: сутки считаются по часовому
+ * поясу отеля, и второй экземпляр этого правила разошёлся бы с первым на
+ * первом же отеле не в своём поясе. Сервер уже вернул разрешённые границы
+ * (`summary.period`) — их и берём, а параметры остаются запасным путём.
  */
-function ordersLink(params: AnalyticsQuery): string {
+function ordersLink(params: AnalyticsQuery, period?: { from: string; to: string }): string {
   const query = new URLSearchParams();
-  const since = params.date_from;
-  const until = params.date_to;
+  const since = period?.from || params.date_from;
+  const until = period?.to || params.date_to;
   if (typeof since === 'string' && since) query.set('since', since);
   if (typeof until === 'string' && until) query.set('until', until);
   const point = (params as Record<string, unknown>).point_id;
@@ -67,10 +80,13 @@ function ordersLink(params: AnalyticsQuery): string {
 export function DrilldownPanel({
   params,
   sliceKey,
+  period,
   onClose,
 }: {
   params: AnalyticsQuery;
   sliceKey: string;
+  /** Разрешённые границы периода из ответа сводки — см. `ordersLink`. */
+  period?: { from: string; to: string };
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -115,7 +131,7 @@ export function DrilldownPanel({
             <Button
               size="small"
               variant="outlined"
-              href={ordersLink(params)}
+              href={ordersLink(params, period)}
               data-testid="analytics-to-orders"
             >
               {t('analytics.drilldown.toOrders')}

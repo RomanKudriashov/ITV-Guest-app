@@ -144,6 +144,9 @@ export function SalesTab({ controller }: { controller: UseAnalyticsFilters }) {
         <DrilldownPanel
           params={baseParams}
           sliceKey={baseSlice}
+          // Период — тот, что вернул сервер на эти же параметры: на пресете
+          // дат в параметрах нет вовсе, и ход в «Заказы» терял бы период.
+          period={summary.data?.period}
           onClose={() => setDrilldownOpen(false)}
         />
       ) : null}

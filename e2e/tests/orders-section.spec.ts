@@ -121,3 +121,41 @@ test.describe('История доски', () => {
     expect(new Set(numbers).size, 'листание повторило карточки').toBe(numbers.length)
   })
 })
+
+test.describe('Из аналитики — в заказы', () => {
+  /*
+    ПЕРЕНОС СРЕЗА ПРОВЕРЯЕТСЯ ПО АДРЕСУ, А НЕ ПО ВИДУ КНОПКИ.
+
+    Кнопка, которая ведёт в раздел, но теряет период, хуже отсутствующей:
+    человек уверен, что смотрит те же сутки, а видит все. Проверка ловит ровно
+    это — и поймала: на пресете (а он стоит по умолчанию) экран не шлёт дат
+    вовсе, и ссылка собиралась без периода.
+
+    Переносятся только период и заведение: остальные разрезы аналитики
+    (устройство, язык, способ входа) в заказах не живут, и подменять их на
+    «примерно то же» хуже, чем не переносить.
+  */
+  test('«показать эти заказы» уносит период в раздел', async ({ page }) => {
+    await login(page, ADMIN)
+    await page.getByTestId('cms-nav-analytics').click()
+    await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 25_000 })
+
+    await page.getByTestId('analytics-view-orders').click()
+    await expect(page.getByTestId('analytics-drilldown')).toBeVisible({ timeout: 20_000 })
+
+    const toOrders = page.getByTestId('analytics-to-orders')
+    await expect(toOrders, 'из разбора заявок нет хода в раздел «Заказы»').toBeVisible()
+    await toOrders.click()
+
+    await expect(page).toHaveURL(/\/cms\/orders/, { timeout: 20_000 })
+    const address = new URL(page.url())
+    expect(
+      address.searchParams.get('since'),
+      'период не доехал: раздел откроется по всей истории, а человек ждёт свои сутки',
+    ).toBeTruthy()
+    expect(address.searchParams.get('until')).toBeTruthy()
+
+    await expect(page.getByTestId('cms-orders')).toBeVisible({ timeout: 25_000 })
+    await expect(page.getByTestId('orders-numbers')).toBeVisible()
+  })
+})
