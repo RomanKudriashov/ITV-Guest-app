@@ -215,7 +215,15 @@ def category_tree(
     `service_id` — наполнение ОДНОГО заведения: рабочее пространство сервиса
     (R4) показывает меню именно его, а не всю кучу отеля.
     """
-    queryset = Category.objects.filter(type=offering_type)
+    # `all` — НАПОЛНЕНИЕ ЗАВЕДЕНИЯ ЦЕЛИКОМ, без деления по типу позиции.
+    #
+    # Рабочее пространство сервиса спрашивало разделы типа `product`, потому
+    # что так было заведено для общего меню отеля. У спа разделы слотовые, у
+    # консьержа — заявочные: вкладка «Меню» показывала им ПУСТО, хотя
+    # наполнение есть. Человек видел пустой экран там, где у него работа.
+    queryset = Category.objects.all() if offering_type == "all" else Category.objects.filter(
+        type=offering_type
+    )
     if service_id:
         queryset = queryset.filter(service_id=service_id)
     categories = list(
@@ -227,7 +235,7 @@ def category_tree(
         .order_by("sort_order", "code")
     )
     counts = dict(
-        Category.objects.filter(type=offering_type)
+        (Category.objects.all() if offering_type == "all" else Category.objects.filter(type=offering_type))
         .annotate(n=Count("items", filter=Q(items__deleted_at__isnull=True)))
         .values_list("pk", "n")
     )
