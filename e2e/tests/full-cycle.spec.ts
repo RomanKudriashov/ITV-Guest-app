@@ -1,8 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import {
+  API,
   apiToken,
   CREDENTIALS,
+  HOTEL,
   DEMO_ROOM,
   moveOrderStatus,
   acceptOrderOnBoard,
@@ -155,14 +157,35 @@ test.describe('Замкнутый цикл: гость → кухня → гос
     }
   })
 
-  test('повар не видит доску чужой точки', async ({ page }) => {
+  test('повар не видит доску чужой точки', async ({ page, request }) => {
     await staffOpensBoard(page)
 
-    // Повар привязан только к кухне: в переключателе точек бара быть не должно.
+    /*
+      Повар привязан только к кухне: в переключателе точек бара быть не должно.
+
+      БЕЗ `if`. Переключатель рисуется всегда, когда точка есть хотя бы одна
+      (`TrackerTopBar`), а точка у повара есть — иначе он не попал бы на доску.
+      Условие вокруг проверки означало «если вдруг не отрисовался, ничего не
+      проверяем», то есть ровно на поломке доски тест и молчал бы.
+    */
     const selector = page.getByTestId('tracker-point-select')
-    if (await selector.isVisible().catch(() => false)) {
-      await expect(selector).not.toContainText(/бар/i)
-    }
+    await expect(selector).toBeVisible({ timeout: 20_000 })
+    await expect(selector).not.toContainText(/бар/i)
+    /*
+      И в нём стоит ГОСТЕВОЕ имя своего заведения — «Панорама», а не служебное
+      «Кухня»: доска зовёт заведение так же, как витрина. Имя не зашито, а
+      спрошено у сервера — иначе тест ломался бы от переименования, которое
+      отель вправе сделать в любой день.
+    */
+    const token = await apiToken(request, CREDENTIALS)
+    const points = await request
+      .get(`${API}/api/tracker/points`, {
+        headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+      })
+      .then((response) => response.json())
+    const titles = (points.points ?? points).map((point: { title: string }) => point.title)
+    expect(titles.length, 'у повара нет ни одной точки').toBe(1)
+    await expect(selector).toContainText(titles[0])
     await expect(page.getByTestId('tracker-board')).toBeVisible()
   })
 })

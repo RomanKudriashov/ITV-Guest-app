@@ -156,7 +156,10 @@ export async function moveOrderStatus(
   status: string,
 ): Promise<void> {
   const response = await request.post(`${API}/api/orders/${orderId}/status`, {
-    data: { status },
+    // Причина обязательна при отмене — это третья дверь в отменённый статус,
+    // кроме `/cancel` у трекера и гостевой. Для остальных статусов поле
+    // игнорируется, поэтому шлём его всегда.
+    data: { status, cancel_reason: 'mistake' },
     headers: apiHeaders(token),
   })
   expect(response.ok(), `смена статуса на ${status} -> ${response.status()}`).toBeTruthy()

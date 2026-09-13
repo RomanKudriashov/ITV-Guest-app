@@ -404,12 +404,16 @@ test.describe('Управление номером', () => {
     const quick = page.getByTestId('room-quick-actions')
     await expect(quick).toBeVisible({ timeout: 20_000 })
 
+    // Быстрое действие «чат» приходит с сервера вместе с главной, и на демо-
+    // стенде оно есть. Условие вокруг клика превращало проверку в
+    // необязательную: пропади действие — тест бы и не заметил.
     const chat = page.getByTestId('room-quick-chat')
-    if (await chat.count()) {
-      await chat.click()
-      await expect(page).toHaveURL(/\/chat/)
-      await expect(page.getByTestId('guest-chat')).toBeVisible({ timeout: 15_000 })
-    }
+    await expect(chat, 'быстрого действия «чат» нет на экране номера').toBeVisible({
+      timeout: 15_000,
+    })
+    await chat.click()
+    await expect(page).toHaveURL(/\/chat/)
+    await expect(page.getByTestId('guest-chat')).toBeVisible({ timeout: 15_000 })
   })
 
   test('термостат: уставка меняется стрелками с клавиатуры', async ({ page }) => {
@@ -876,43 +880,115 @@ test.describe('Управление номером', () => {
     expect(commands[0]).toContain(`"value":${before + (up ? 5 : -5)}`)
   })
 
-  test('телефон: сжатие плиты не меняет высоту документа', async ({ page }) => {
-    // Прогон идёт на десктопной ширине, где плита не сжимается вовсе.
+  test('телефон: план листается вместе со страницей, вкладки остаются под рукой', async ({
+    page,
+  }) => {
+    /*
+      ПЛАН БОЛЬШЕ НЕ ЛИПНЕТ НА УЗКОМ ЭКРАНЕ.
+
+      Он держал треть невысокого экрана всё время, пока человек ищет тумблер в
+      списке под ним, — а нужен он в момент выбора комнаты, то есть в самом
+      верху. Здесь и проверяется, что он уезжает вместе со страницей.
+
+      Вместе с липкостью ушло и сжатие плиты трансформом: оно освобождало
+      место под липким планом, и без него у него нет ни причины, ни смысла.
+
+      А вот полоса вкладок липкой ОСТАЁТСЯ: переключать группы приборов надо в
+      любой точке списка. Без этой половины проверка была бы «убрали липкость»
+      вместо «убрали правильную липкость».
+    */
     await page.setViewportSize({ width: 390, height: 844 })
     await enterRoom(page)
     await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
-    await page.waitForTimeout(1500)
+    await page.waitForTimeout(800)
 
-    const scaleAt = async (y: number) => {
+    const topOf = async (testId: string) => (await page.getByTestId(testId).boundingBox())?.y ?? null
+    const scrollTo = async (y: number) => {
       await page.evaluate((to) => window.scrollTo(0, to), y)
-      await page.waitForTimeout(150)
-      return page.evaluate(() => ({
-        height: document.body.scrollHeight,
-        scale: getComputedStyle(document.querySelector('[data-testid="room-plan"]')!).transform,
-      }))
+      await page.waitForTimeout(200)
     }
 
-    const probes = []
-    for (const y of [0, 60, 120, 200, 400, 200, 60, 0]) probes.push(await scaleAt(y))
+    const planAtRest = await topOf('room-plan')
+    const tabsAtRest = await topOf('room-tabs')
+    expect(planAtRest, 'плана нет на экране — проверять нечего').not.toBeNull()
+    expect(tabsAtRest, 'полосы вкладок нет — проверять нечего').not.toBeNull()
 
-    // Высота документа при скролле не меняется ВООБЩЕ. Именно её изменение
-    // заводило петлю: сжали плиту → изменилась высота → браузер поправил
-    // позицию скролла → пересчитали сжатие → экран затрясся.
-    const heights = [...new Set(probes.map((p) => p.height))]
-    expect(heights.length, `высота документа гуляет: ${heights.join(', ')}`).toBe(1)
+    const SCROLL = 300
+    await scrollTo(SCROLL)
+    const planScrolled = await topOf('room-plan')
+    const tabsScrolled = await topOf('room-tabs')
 
-    // При этом плита действительно сжимается и возвращается.
-    const scaleOf = (value: string) => Number((value.match(/matrix\(([\d.]+)/) ?? [, '1'])[1])
-    expect(scaleOf(probes[0].scale)).toBeCloseTo(1, 2)
+    // ПЛАН УЕХАЛ ВМЕСТЕ СО СТРАНИЦЕЙ: сдвиг равен прокрутке. Липкий сдвинулся
+    // бы только до своего края — то есть на десятки пикселей, не на триста.
+    expect(
+      planAtRest! - planScrolled!,
+      `план сдвинулся всего на ${planAtRest! - planScrolled!}px — он всё ещё липкий`,
+    ).toBeGreaterThan(SCROLL - 20)
+
+    // ВКЛАДКИ ОСТАЛИСЬ ПОД РУКОЙ. Не «не сдвинулись вовсе»: плавающая группа
+    // над ними при прокрутке меняет высоту, и полоса идёт за её измеренным
+    // краем. Правило — она остаётся В ВЕРХУ ЭКРАНА, а не уезжает со страницей.
+    expect(tabsScrolled!, 'полоса вкладок ушла за верх экрана').toBeGreaterThan(0)
+    expect(
+      tabsScrolled!,
+      `полоса вкладок уехала со страницей: ${tabsAtRest!} → ${tabsScrolled!}`,
+    ).toBeLessThan(200)
+
+    // И сжатия больше нет: масштаб плиты не меняется на всём пути прокрутки.
+    const scaleAt = async (y: number) => {
+      await scrollTo(y)
+      return page.evaluate(
+        () => getComputedStyle(document.querySelector('[data-testid="room-plan"]')!).transform,
+      )
+    }
+    const scales = new Set<string>()
+    for (const y of [0, 60, 200, 400, 0]) scales.add(await scaleAt(y))
+    expect([...scales], `плита всё ещё сжимается: ${[...scales].join(' | ')}`).toEqual([
+      [...scales][0],
+    ])
+  })
+
+  test('широкий экран: план остаётся слева, список справа прокручивается', async ({ page }) => {
     /*
-      Сжалась — и осталась читаемой. Прежний порог «меньше 0.64» описывал не
-      правило, а конкретную глубину: на ней план превращался в марку, и глубину
-      подняли. Правило же остаётся прежним: при скролле плита уменьшается, а
-      при возврате наверх — восстанавливается.
+      Обратная половина того же правила. На широком экране план стоит в СВОЕЙ
+      колонке, ничего собой не закрывает и места у списка не отнимает — там
+      липкость полезна, и её оставили.
     */
-    expect(scaleOf(probes[4].scale)).toBeLessThan(0.95)
-    expect(scaleOf(probes[4].scale)).toBeGreaterThanOrEqual(0.7)
-    expect(scaleOf(probes[probes.length - 1].scale)).toBeCloseTo(1, 2)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await enterRoom(page)
+    await expect(page.getByTestId('room-two-columns')).toBeVisible({ timeout: 20_000 })
+    await page.waitForTimeout(500)
+
+    const planTop = async () => (await page.getByTestId('room-plan').boundingBox())!.y
+    const panelTop = async () => (await page.getByTestId("room-panel-quick").boundingBox())!.y
+    const documentHeight = await page.evaluate(() => document.body.scrollHeight)
+    expect(
+      documentHeight,
+      'страница не прокручивается — липкость проверять не на чем',
+    ).toBeGreaterThan(900)
+
+    const planBefore = await planTop()
+    const panelBefore = await panelTop()
+    const SCROLL = 400
+    await page.evaluate((to) => window.scrollTo(0, to), SCROLL)
+    await page.waitForTimeout(250)
+    const planAfter = await planTop()
+    const panelAfter = await panelTop()
+
+    /*
+      ПЛАН СЛЕВА ЛИПНЕТ, СПИСОК СПРАВА ЕДЕТ.
+
+      Сравнение относительное, а не «план не сдвинулся»: до своего верхнего
+      края липкий план и должен доехать, и проверка на ноль провалилась бы на
+      верной раскладке. Правило — он отстаёт от страницы, а правая колонка идёт
+      с ней вровень.
+    */
+    expect(panelBefore - panelAfter, 'правая колонка не прокрутилась').toBeGreaterThan(SCROLL - 20)
+    expect(
+      planBefore - planAfter,
+      `план уехал вместе со страницей на ${planBefore - planAfter}px — липкости нет`,
+    ).toBeLessThan(SCROLL - 100)
+    expect(planAfter, 'план ушёл за верх экрана').toBeGreaterThan(0)
   })
 
   test('телефон: плита не съедает управление, а обрезка не двигает разметку', async ({

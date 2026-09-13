@@ -396,6 +396,19 @@ test.describe('Доска трекера', () => {
   })
 
   test('история листается курсором и не повторяет записи', async ({ request }) => {
+    /*
+      РАННЕГО ВЫХОДА ЗДЕСЬ БОЛЬШЕ НЕТ.
+
+      Было: тест брал ПЕРВУЮ попавшуюся точку, и если у неё не оказывалось
+      курсора — выходил с `expect(...).toBeLessThanOrEqual(1)` и зеленел. На
+      пустой истории он зеленел ВСЕГДА, то есть не проверял ничего: «истории
+      нет» и «пагинация работает» давали один и тот же результат.
+
+      Стало: «короче страницы» и «пусто» разведены. Точка ищется та, у которой
+      история ДЛИННЕЕ страницы, — только на такой пагинацию вообще есть чем
+      проверять. Если такой точки нет ни одной, это не «нечего проверять», а
+      сломанный стенд, и тест обязан сказать это вслух, а не промолчать.
+    */
     const token = await request
       .post(`${API}/api/staff/auth/login`, {
         data: CREDENTIALS,
@@ -407,28 +420,43 @@ test.describe('Доска трекера', () => {
     const points = await request
       .get(`${API}/api/tracker/points`, { headers })
       .then((r) => r.json())
-    const code = (points.points ?? points)[0].code
+    const codes = (points.points ?? points).map((p: { code: string }) => p.code)
+    expect(codes.length, 'сотруднику не видно ни одной точки').toBeGreaterThan(0)
 
-    const first = await request
-      .get(`${API}/api/tracker/orders?point=${code}&scope=history&limit=1`, { headers })
-      .then((r) => r.json())
-    const firstIds = first.columns[0].orders.map((o: { id: string }) => o.id)
+    const historyPage = (code: string, cursor?: string) =>
+      request
+        .get(
+          `${API}/api/tracker/orders?point=${code}&scope=history&limit=1` +
+            (cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''),
+          { headers },
+        )
+        .then((r) => r.json())
 
-    if (!first.next_cursor) {
-      // История короче страницы — курсора нет, и это правда, а не поломка.
-      expect(firstIds.length).toBeLessThanOrEqual(1)
-      return
+    // Точка с историей ДЛИННЕЕ страницы: короткая история курсора не даёт, и
+    // листать в ней нечего — это не поломка, но и не проверка.
+    const shortHistory: string[] = []
+    let chosen: { code: string; page: Record<string, any> } | null = null
+    for (const code of codes) {
+      const page = await historyPage(code)
+      if (page.next_cursor) {
+        chosen = { code, page }
+        break
+      }
+      shortHistory.push(`${code}: ${page.columns[0].orders.length}`)
     }
 
-    const second = await request
-      .get(
-        `${API}/api/tracker/orders?point=${code}&scope=history&limit=1` +
-          `&cursor=${encodeURIComponent(first.next_cursor)}`,
-        { headers },
-      )
-      .then((r) => r.json())
+    expect(
+      chosen,
+      `ни у одной точки история не длиннее страницы — листать нечего, стенд без истории: ${shortHistory.join(', ')}`,
+    ).not.toBeNull()
+
+    const firstIds = chosen!.page.columns[0].orders.map((o: { id: string }) => o.id)
+    expect(firstIds, 'страница истории пуста при живом курсоре').toHaveLength(1)
+
+    const second = await historyPage(chosen!.code, chosen!.page.next_cursor)
     const secondIds = second.columns[0].orders.map((o: { id: string }) => o.id)
 
+    expect(secondIds, 'вторая страница истории пуста, хотя курсор её обещал').toHaveLength(1)
     expect(
       secondIds.filter((id: string) => firstIds.includes(id)),
       'вторая страница истории повторила первую',
