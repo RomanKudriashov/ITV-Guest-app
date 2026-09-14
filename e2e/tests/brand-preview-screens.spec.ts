@@ -138,3 +138,36 @@ test.describe('Показ на обеих вкладках', () => {
     await expect(stage(page).getByTestId('guest-home')).toBeVisible({ timeout: 25_000 })
   })
 })
+
+test.describe('Показ оформлен, а не только размечен', () => {
+  test('стили витрины лежат В РАМКЕ, а не в документе панели', async ({ page }) => {
+    /*
+      САМЫЙ ДОРОГОЙ ДЕФЕКТ ЭТОГО ЗАХОДА — И САМЫЙ НЕЗАМЕТНЫЙ ДЛЯ ПРОВЕРОК.
+
+      Провайдер темы ставит свой кэш эмоции последним и перекрывал тот, что
+      подмостки ставили снаружи: правила уезжали в документ ПАНЕЛИ, а в рамке
+      оставалась разметка с классами, под которые нет ни одного правила. Все
+      проверки по `data-testid` при этом зелёные — элементы-то на месте.
+
+      Поэтому проверяется не наличие узла, а ВЫЧИСЛЕННЫЙ стиль: у карточки
+      витрины обязан быть непрозрачный фон и скругление. Оба значения заданы
+      оформлением, и оба были пусты, пока стили ехали не туда.
+    */
+    await openPreview(page)
+    await chooseScreen(page, 'catalog')
+    const frame = stage(page)
+
+    const card = frame.locator('[data-testid^="guest-item-"]').first()
+    await expect(card, 'в показе нет ни одной карточки').toBeVisible({ timeout: 25_000 })
+
+    const look = await card.evaluate((node) => {
+      const style = getComputedStyle(node)
+      return { background: style.backgroundColor, radius: style.borderRadius }
+    })
+
+    expect(look.background, 'карточка в рамке без фона — стили ушли в панель').not.toBe(
+      'rgba(0, 0, 0, 0)',
+    )
+    expect(look.radius, 'карточка в рамке без скругления — стили ушли в панель').not.toBe('0px')
+  })
+})

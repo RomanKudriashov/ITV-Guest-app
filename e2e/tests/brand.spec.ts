@@ -106,8 +106,23 @@ test.describe('Бренд-настройки', () => {
     await page.getByTestId('brand-preview-mode-toggle').click()
     await page.getByTestId('brand-preview-rtl-toggle').click()
 
-    // Превью получило rtl-направление, а страница CMS — нет.
-    await expect(preview.locator('[dir="rtl"]').first()).toBeVisible()
+    /*
+      НАПРАВЛЕНИЕ СПРАШИВАЕМ У ДОКУМЕНТА РАМКИ. Показ теперь живёт в `<iframe>`
+      со своим документом, и `dir` стоит на его `<html>` — в документе панели
+      такого узла нет вовсе. Проверка искала его снаружи и падала на исправном
+      коде: вопрос задавался не тому документу.
+    */
+    const frame = page.frameLocator('[data-testid="brand-preview-stage-frame"]')
+    await expect
+      .poll(
+        () =>
+          frame
+            .locator('html')
+            .first()
+            .getAttribute('dir'),
+        { timeout: 15_000, message: 'показ не переключился на RTL' },
+      )
+      .toBe('rtl')
     await expect(page.locator('html')).not.toHaveAttribute('dir', 'rtl')
   })
 
@@ -170,8 +185,10 @@ test.describe('Бренд-настройки', () => {
 
     // Парадная — единственное место, где виден результат выбора «фон →
     // изображение». Раньше показ начинался с меню, и обложку было не увидеть.
-    const preview = page.getByTestId('brand-preview')
-    await expect(preview.getByTestId('guest-home-hero')).toBeVisible({ timeout: 15_000 })
+    // Парадная рисуется ВНУТРИ рамки показа: у неё свой документ, и снаружи
+    // её узлов не видно.
+    const frame = page.frameLocator('[data-testid="brand-preview-stage-frame"]')
+    await expect(frame.getByTestId('guest-home-hero')).toBeVisible({ timeout: 25_000 })
   })
 
   test('пресет не стирает логотипы и картинку фона отеля', async ({ page, request }) => {

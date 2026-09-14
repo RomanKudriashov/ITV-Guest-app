@@ -123,36 +123,43 @@ test.describe('Стиль поверхности доезжает до витр�
       руками: он рисует настоящее меню заведения в своём окне, и карточка там —
       та же `guest-item-*`, что видит гость.
     */
+    /*
+      НАЧАЛЬНЫЙ СТИЛЬ ЗАДАЁМ САМИ, а не берём со стенда.
+
+      Прошлая редакция читала карточку «как есть» и переключала на плоский,
+      рассчитывая, что у «Кристалла» стоит стекло. Стоило соседнему прогону
+      оставить отель на плоском — и проверка падала на исправном коде: нажатие
+      на текущий стиль ничего не меняет. Условие должно стоять в тесте, а не
+      в состоянии стенда.
+    */
+    await page.getByTestId('brand-surface-glass').click()
+
     await page.getByTestId('brand-preview-screen').click()
     await page.getByTestId('brand-preview-screen-catalog').click()
     const frame = page.frameLocator('[data-testid="brand-preview-stage-frame"]')
     const card = frame.locator('[data-testid^="guest-item-"]').first()
     await expect(card, 'в показе нет ни одной карточки').toBeVisible({ timeout: 25_000 })
-    const flat = await card.evaluate((node) => {
-      const style = getComputedStyle(node)
-      return `${style.backgroundColor}|${style.boxShadow}`
-    })
 
-    /*
-      ПЕРЕКЛЮЧАЕМ НА ДРУГОЙ СТИЛЬ, А НЕ НА ТЕКУЩИЙ. У «Кристалла» в оформлении
-      стоит «стекло», и нажатие на «стекло» ничего не меняло — проверка падала
-      на исправном коде. Берём плоский: он заведомо отличается и от стекла, и
-      от мягкого.
-    */
+    const reading = () =>
+      card.evaluate((node) => {
+        const style = getComputedStyle(node)
+        return `${style.backgroundColor}|${style.boxShadow}`
+      })
+    const glass = await reading()
+
+    // Плоский заведомо отличается и от стекла, и от мягкого.
     await page.getByTestId('brand-surface-flat').click()
 
     await expect
-      .poll(
-        async () =>
-          card.evaluate((node) => {
-            const style = getComputedStyle(node)
-            return `${style.backgroundColor}|${style.boxShadow}`
-          }),
-        {
-          timeout: 10_000,
-          message: 'стиль поверхности сменили, а карточка осталась прежней',
-        },
-      )
-      .not.toBe(flat)
+      .poll(reading, {
+        timeout: 10_000,
+        message: 'стиль поверхности сменили, а карточка осталась прежней',
+      })
+      .not.toBe(glass)
+
+    // Возвращаем стекло: стиль хранится у отеля, и оставленный плоский стал бы
+    // тем самым состоянием стенда, на которое эта же проверка и напоролась.
+    await page.getByTestId('brand-surface-glass').click()
+    await expect.poll(reading, { timeout: 10_000 }).toBe(glass)
   })
 })

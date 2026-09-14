@@ -103,6 +103,25 @@ function withMatchMedia(theme: Theme, frameWindow?: Window | null): Theme {
   } as Theme;
 }
 
+/**
+ * Кэш эмоции для заданного документа.
+ *
+ * Свои два кэша (`ltrCache`/`rtlCache`) — модульные: приложение одно, документ
+ * один, пересоздавать их на каждый рендер нельзя. Для ЧУЖОГО документа кэш
+ * создаётся под него и живёт, пока жив узел: ключ другой, чтобы правила рамки
+ * и панели не смешивались в одном списке классов.
+ */
+function useStyleCache(container: HTMLElement | null | undefined, direction: 'ltr' | 'rtl'): EmotionCache {
+  return useMemo(() => {
+    if (!container) return direction === 'rtl' ? rtlCache : ltrCache;
+    return createCache({
+      key: direction === 'rtl' ? 'frame-rtl' : 'frame',
+      container,
+      stylisPlugins: direction === 'rtl' ? [prefixer, rtlPlugin] : [prefixer],
+    });
+  }, [container, direction]);
+}
+
 export interface AppThemeProviderProps {
   children: ReactNode;
   /** Hotel-specific token override (later fetched from the backend). */
@@ -118,6 +137,19 @@ export interface AppThemeProviderProps {
    * — а весь смысл рамки в том, чтобы ширина была настоящей.
    */
   matchMediaWindow?: Window | null;
+  /**
+   * КУДА КЛАСТЬ СТИЛИ. Обычно в свой `<head>` — и довод не нужен.
+   *
+   * Показ витрины живёт в `<iframe>`: узлы там, а код выполняется в окне
+   * панели. Эмоция пишет правила в тот документ, который ей назвали, и по
+   * умолчанию это документ панели — рамка получала разметку с классами, под
+   * которые в ней нет НИ ОДНОГО правила. Выглядело это как «показ ничего не
+   * показывает»: ни фона карточек, ни скруглений, ни стекла.
+   *
+   * Подменять кэш снаружи бесполезно: этот провайдер ставит свой и перекрывает
+   * чужой. Поэтому узел приходит сюда — в единственное место, где кэш решается.
+   */
+  styleContainer?: HTMLElement | null;
 }
 
 export function AppThemeProvider({
@@ -125,6 +157,7 @@ export function AppThemeProvider({
   brandTokens,
   initialMode,
   matchMediaWindow,
+  styleContainer,
 }: AppThemeProviderProps) {
   const { i18n } = useTranslation();
   const [mode, setModeState] = useState<ThemeMode>(
@@ -154,6 +187,7 @@ export function AppThemeProvider({
     setModeState(resolveDefaultMode(tokens, systemPrefersDark()));
   }, [tokens, initialMode]);
 
+  const cache = useStyleCache(styleContainer, direction);
   const theme = useMemo(
     () => withMatchMedia(createAppTheme(tokens, mode, direction), matchMediaWindow),
     [tokens, mode, direction, matchMediaWindow],
@@ -209,7 +243,7 @@ export function AppThemeProvider({
 
   return (
     <AppThemeContext.Provider value={value}>
-      <CacheProvider value={direction === 'rtl' ? rtlCache : ltrCache}>
+      <CacheProvider value={cache}>
         <MuiThemeProvider theme={theme}>
           <CssBaseline />
           {/*

@@ -26,7 +26,10 @@
  * Без этой строки рамка была бы красивой, а оболочка — всё той же телефонной.
  *
  * Стили эмоции тоже кладутся В ДОКУМЕНТ РАМКИ: иначе классы едут в панель, а
- * внутри рамки остаётся голая разметка.
+ * внутри рамки остаётся голая разметка. Узел передаётся ПРОВАЙДЕРУ ТЕМЫ
+ * (`styleContainer`), а не ставится кэшем снаружи: провайдер ставит свой кэш
+ * последним и перекрыл бы любой внешний — именно так показ и рисовался
+ * неоформленным, пока это не вскрыла проба по вычисленным стилям.
  *
  * ================= ПОЧЕМУ СВОЙ КОРЕНЬ, А НЕ ПОРТАЛ ====================
  *
@@ -43,10 +46,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import createCache, { type EmotionCache } from '@emotion/cache';
-import { CacheProvider } from '@emotion/react';
-import { prefixer } from 'stylis';
-import rtlPlugin from 'stylis-plugin-rtl';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import { I18nextProvider } from 'react-i18next';
@@ -136,15 +135,6 @@ export function PreviewStage({
     return () => frame.removeEventListener('load', ready);
   }, []);
 
-  const cache: EmotionCache | null = useMemo(() => {
-    if (!doc) return null;
-    return createCache({
-      key: rtl ? 'preview-rtl' : 'preview',
-      container: doc.head,
-      stylisPlugins: rtl ? [prefixer, rtlPlugin] : [prefixer],
-    });
-  }, [doc, rtl]);
-
   useEffect(() => {
     if (!doc) return;
     doc.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
@@ -160,7 +150,7 @@ export function PreviewStage({
   // витрины больше ни во что не вложен. Перерисовываем на каждое изменение
   // входов — токены меняются на каждый щелчок в редакторе.
   useEffect(() => {
-    if (!doc || !cache) return;
+    if (!doc) return;
     // Корень вешается на СВОЙ узел, а не на `body`: React просит так, и он
     // прав — в тело документа лезут расширения браузера и посторонние скрипты.
     let host = doc.getElementById('preview-root');
@@ -172,7 +162,7 @@ export function PreviewStage({
     const root: Root = rootRef.current ?? createRoot(host);
     rootRef.current = root;
     root.render(
-      <CacheProvider value={cache}>
+      <>
         {/*
           ТЕМА — НАСТОЯЩАЯ, ТА ЖЕ, ЧТО У ГОСТЯ. Витрина спрашивает не только
           тему MUI, но и `useAppTheme` (режим, токены, фон бренда), и голого
@@ -184,6 +174,7 @@ export function PreviewStage({
           brandTokens={tokens as never}
           initialMode={mode}
           matchMediaWindow={doc?.defaultView ?? null}
+          styleContainer={doc.head}
         >
           <CssBaseline />
           <I18nextProvider i18n={previewI18n}>
@@ -201,9 +192,9 @@ export function PreviewStage({
             </QueryClientProvider>
           </I18nextProvider>
         </AppThemeProvider>
-      </CacheProvider>,
+      </>,
     );
-  }, [doc, cache, tokens, mode, client, route, routes]);
+  }, [doc, tokens, mode, client, route, routes]);
 
   // Корень снимается вместе с рамкой: оставленный, он продолжит рисовать в
   // документ, которого уже нет.
