@@ -28,10 +28,8 @@ import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
-import {
-  layout as storefrontLayout,
-  surfaceRadius,
-} from '../storefrontTokens';
+import { fontPx, layout as storefrontLayout,
+  surfaceRadius, } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import { useCartToast } from '../state/useCartToast';
@@ -422,7 +420,7 @@ function CatalogHero({
       <Box sx={{ position: 'absolute', insetInline: { xs: 20, md: 26 }, bottom: { xs: 40, md: 48 }, zIndex: 2 }}>
         {showSub ? (
           <Typography
-            sx={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha(onMedia.primary, 0.72), fontWeight: 700 }}
+            sx={{ fontSize: fontPx(11), letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha(onMedia.primary, 0.72), fontWeight: 700 }}
           >
             {hotelName}
           </Typography>
@@ -433,7 +431,7 @@ function CatalogHero({
             fontFamily: th.typography.h1.fontFamily,
             fontWeight: 800,
             letterSpacing: '-0.025em',
-            fontSize: { xs: 30, md: 40 },
+            fontSize: { xs: fontPx(30, 'heading'), md: fontPx(40, 'heading') },
             color: onMedia.primary,
             lineHeight: 1.03,
             textShadow: tile.titleShadow,

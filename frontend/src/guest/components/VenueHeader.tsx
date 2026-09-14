@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { IconBack } from '@/icons';
-import { layout, surfaceRadius } from '../storefrontTokens';
+import { fontPx, layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
 import { openingLabel } from '../nextOpening';
@@ -85,7 +85,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
           height: 36,
           px: 1.5,
           borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
-          fontSize: 12.5,
+          fontSize: fontPx(12.5),
           fontWeight: 700,
           color: onMedia.primary,
           ...glass.chip,
@@ -125,7 +125,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
             letterSpacing: '-.03em',
             lineHeight: 1,
             color: onMedia.primary,
-            fontSize: { xs: 27, md: 42 },
+            fontSize: { xs: fontPx(27, 'heading'), md: fontPx(42, 'heading') },
           })}
           data-testid="guest-venue-name"
         >
@@ -134,7 +134,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
 
         {venue.tagline ? (
           <Typography
-            sx={{ color: onMedia.secondary, fontSize: { xs: 12, md: 14 }, mt: 0.75 }}
+            sx={{ color: onMedia.secondary, fontSize: { xs: fontPx(12), md: fontPx(14) }, mt: 0.75 }}
           >
             {venue.tagline}
           </Typography>
@@ -167,7 +167,7 @@ function Chip({ label, open }: { label: string; open: boolean }) {
     <Box
       data-testid="guest-venue-status"
       sx={{
-        fontSize: 10,
+        fontSize: fontPx(10),
         fontWeight: 600,
         px: 1.25,
         py: 0.6,

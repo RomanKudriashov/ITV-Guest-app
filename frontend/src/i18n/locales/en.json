@@ -1150,7 +1150,8 @@
       "surface": "Surfaces",
       "background": "Background",
       "logos": "Logos",
-      "defaultMode": "Default theme"
+      "defaultMode": "Default theme",
+      "text": "Text"
     },
     "surface": {
       "flat": "Flat",
@@ -1226,11 +1227,16 @@
       "fonts": "Headings and body text — everywhere, including the hero and dish cards.",
       "radius": "Corner rounding of cards, buttons and images.",
       "surface": "How catalogue cards and panels look above the backdrop.",
-      "defaultMode": "Which theme the guest opens the app in the first time. They can switch it afterwards."
+      "defaultMode": "Which theme the guest opens the app in the first time. They can switch it afterwards.",
+      "text": "Size and colour of the letters on every guest screen"
     },
     "presetWarning": "A preset changes colours, fonts, corner rounding and the background kind. Your logos and background image are kept. Until you press «Save», «Reset» undoes the choice.",
     "bgImageKept": "Your background image is kept — pick the «image» kind to bring it back. No need to upload it again.",
-    "accentSpare": "Room control falls back to the spare colour: the chosen accent is indistinguishable there"
+    "accentSpare": "Room control falls back to the spare colour: the chosen accent is indistinguishable there",
+    "fontSize": "Text size",
+    "headingScale": "Heading scale",
+    "textColor": "Text colour ({{mode}})",
+    "textContrastLow": "The text is hard to read on its background: {{ratio}}:1 against the 4.5:1 norm. You can still save it — but guests will decipher the letters rather than read them."
   },
   "hotel": {
     "rooms": {

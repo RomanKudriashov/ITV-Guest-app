@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { fontPx } from '../storefrontTokens';
 import IconButton from '@mui/material/IconButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
@@ -96,7 +97,7 @@ export function GuestLanguageMenu() {
                   <FlagIcon code={flag} width={23} />
                 </ListItemIcon>
               ) : null}
-              <ListItemText primaryTypographyProps={{ fontWeight: 600, fontSize: 14 }}>
+              <ListItemText primaryTypographyProps={{ fontWeight: 600, fontSize: fontPx(14) }}>
                 {LANGUAGE_LABELS[code]}
               </ListItemText>
             </MenuItem>

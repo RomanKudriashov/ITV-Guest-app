@@ -68,7 +68,7 @@ import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
 import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { layout, roomCard, surfaceRadius } from '../storefrontTokens';
+import { fontPx, layout, roomCard, surfaceRadius } from '../storefrontTokens';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useStorefront } from '../useStorefront';
 import type {
@@ -1004,7 +1004,7 @@ function CurtainPanel({ controls, readings, canCommand, onCommand }: PanelProps)
                   sx={(theme) => ({
                     fontFamily: theme.typography.h1.fontFamily,
                     fontWeight: 700,
-                    fontSize: 13,
+                    fontSize: fontPx(13),
                     letterSpacing: '.04em',
                     textTransform: 'uppercase',
                     color: on ? tokens.accent : 'text.secondary',
@@ -1501,7 +1501,7 @@ function PinPanel() {
           'aria-label': t('guest.roomControl.pinLabel'),
           style: {
             textAlign: 'center',
-            fontSize: 30,
+            fontSize: fontPx(30),
             letterSpacing: '.4em',
             fontWeight: 700,
             paddingInlineStart: '.4em',

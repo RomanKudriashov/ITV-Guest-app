@@ -11,7 +11,7 @@ import { useGuestActiveOrders } from '../hooks/useGuestQueries';
 import { useOrderLive } from '../hooks/useOrderLive';
 import { serveByTime } from '../utils/serveBy';
 import type { GuestActiveOrder } from '../api/types';
-import { surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius } from '../storefrontTokens';
 
 /**
  * Home active-order strip (reference `.ordstrip`). One row per live order,
@@ -86,7 +86,7 @@ function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: numb
         }}
       />
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }}>
+        <Typography sx={{ fontWeight: 700, fontSize: fontPx(14), color: 'text.primary' }}>
           {t('guest.home.activeOrder.title', {
             number: order.number,
             status: order.status.title,
@@ -95,7 +95,7 @@ function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: numb
         {detail ? (
           <Typography
             sx={{
-              fontSize: '0.78rem',
+              fontSize: fontPx(12.48),
               color: 'text.secondary',
               mt: 0.25,
               overflow: 'hidden',
@@ -111,7 +111,7 @@ function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: numb
         direction="row"
         alignItems="center"
         spacing={0.5}
-        sx={{ flex: 'none', color: 'primary.main', fontWeight: 700, fontSize: '0.8rem' }}
+        sx={{ flex: 'none', color: 'primary.main', fontWeight: 700, fontSize: fontPx(12.8) }}
       >
         <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
           {t('guest.home.activeOrder.view')}

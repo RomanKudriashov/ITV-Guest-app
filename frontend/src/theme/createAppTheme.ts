@@ -157,6 +157,26 @@ export function createAppTheme(
       button: { textTransform: 'none', fontWeight: typography.fontWeightMedium },
     },
     components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          /*
+            ШКАЛА КЕГЛЯ — В КОРНЕ ДОКУМЕНТА, ОДНОЙ ПЕРЕМЕННОЙ.
+
+            Витрина рисует размеры в пикселях (`fontSize: 33`), и настройка
+            размера текста до них не доходила: тема меняла только то, что
+            кегля не задаёт. Переменная решает это в одном месте — а `fontPx`
+            в витрине переводит авторский пиксель в масштабированный.
+
+            16 в знаменателе — не магия: это `fontSizeBase` по умолчанию, тот
+            размер, в котором нарисована вся витрина. Ползунок сдвигает всё
+            относительно него.
+          */
+          ':root': {
+            '--type-scale': (typography.fontSizeBase / 16).toFixed(4),
+            '--heading-scale': typography.headingScale.toFixed(4),
+          },
+        },
+      },
       MuiCard: {
         styleOverrides: {
           root: {

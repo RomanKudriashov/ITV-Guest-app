@@ -11,7 +11,7 @@ import { IconSearch } from '@/icons';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { RoomMenu } from '../components/RoomMenu';
-import { layout, surfaceRadius } from '../storefrontTokens';
+import { fontPx, layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { STICKY, useStickyLayer } from './stickyStack';
 
@@ -96,7 +96,7 @@ export function GuestTopBar({
         <Typography
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
-            fontSize: 12,
+            fontSize: fontPx(12),
             fontWeight: 600,
             letterSpacing: '.28em',
             textTransform: 'uppercase',
@@ -117,7 +117,7 @@ export function GuestTopBar({
             onClick={() => onNavigate(tab.value)}
             data-testid={`guest-nav-${tab.value.replace('/', '')}`}
             sx={(th) => ({
-              fontSize: 13,
+              fontSize: fontPx(13),
               fontWeight: 600,
               px: 1.6,
               py: 1,

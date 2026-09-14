@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box';
+import { fontPx } from '../storefrontTokens';
 import Stack from '@mui/material/Stack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useTranslation } from 'react-i18next';
@@ -56,7 +57,7 @@ export function PrepMinutesChip({ minutes }: { minutes?: number | null }) {
         borderColor: 'divider',
         color: 'text.secondary',
         bgcolor: theme.palette.brand.surfaceMuted,
-        fontSize: '0.72rem',
+        fontSize: fontPx(11.52),
         lineHeight: 1,
         whiteSpace: 'nowrap',
       })}

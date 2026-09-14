@@ -23,7 +23,7 @@ import { fetchPublicHotel } from '../api/guest';
 import { errorMessage } from '../errors';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type { GuestHotel } from '../api/types';
-import { surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius } from '../storefrontTokens';
 
 const ONEST = '"Onest", system-ui, sans-serif';
 
@@ -194,7 +194,7 @@ export function EntryPage() {
             {hotelName ? (
               <Typography
                 component="span"
-                sx={{ fontFamily: ONEST, fontSize: 14, fontWeight: 600, letterSpacing: '0.08em' }}
+                sx={{ fontFamily: ONEST, fontSize: fontPx(14), fontWeight: 600, letterSpacing: '0.08em' }}
               >
                 {hotelName}
               </Typography>
@@ -260,14 +260,14 @@ export function EntryPage() {
               color: 'common.white',
               fontWeight: 800,
               letterSpacing: '-0.035em',
-              fontSize: { xs: 40, md: 52 },
+              fontSize: { xs: fontPx(40, 'heading'), md: fontPx(52, 'heading') },
               lineHeight: 0.98,
               textShadow: tile.titleShadow,
             }}
           >
             {t(greetingKey())}
           </Typography>
-          <Typography sx={{ color: onMedia.secondary, mt: 1, fontSize: 15 }}>
+          <Typography sx={{ color: onMedia.secondary, mt: 1, fontSize: fontPx(15) }}>
             {t('guest.entry.subtitle')}
           </Typography>
 
@@ -313,7 +313,7 @@ export function EntryPage() {
                   // (input colour at reduced opacity) — never style ::placeholder
                   // in runtime sx: it crashes the stylis prefixer.
                   color: 'common.white',
-                  fontSize: 19,
+                  fontSize: fontPx(19),
                   fontWeight: 500,
                 }}
               />
@@ -340,7 +340,7 @@ export function EntryPage() {
             <Box
               data-testid="guest-scan-qr"
               title={t('guest.entry.qrHint')}
-              sx={{ mt: 2.5, display: 'flex', alignItems: 'center', gap: 1.25, color: alpha(onMedia.primary, 0.42), fontSize: 12.5 }}
+              sx={{ mt: 2.5, display: 'flex', alignItems: 'center', gap: 1.25, color: alpha(onMedia.primary, 0.42), fontSize: fontPx(12.5) }}
             >
               <Box aria-hidden sx={{ width: 26, height: '1px', bgcolor: alpha(onMedia.primary, 0.28), flex: 'none' }} />
               {t('guest.entry.qrShort')}

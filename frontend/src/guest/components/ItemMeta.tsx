@@ -15,7 +15,7 @@ import {
   type AppIconComponent,
 } from '@/icons';
 import type { ItemCharacteristic, ItemDetail, ItemFacet } from '../api/types';
-import { itemCard, surfaceRadius } from '../storefrontTokens';
+import { fontPx, itemCard, surfaceRadius } from '../storefrontTokens';
 
 /**
  * Allergens («contains» — amber pills) and dietary markers («suitable» — green
@@ -36,7 +36,7 @@ export function MarkerChips({ markers, size = 'small' }: { markers?: ItemFacet[]
           data-testid={`guest-marker-${marker.code}`}
           sx={(theme) => ({
             height: 22,
-            fontSize: '0.7rem',
+            fontSize: fontPx(11.2),
             color: theme.palette.success.main,
             borderColor: `color-mix(in srgb, ${theme.palette.success.main} 42%, transparent)`,
           })}
@@ -103,7 +103,7 @@ function MetaCaption({ children }: { children: ReactNode }) {
   return (
     <Typography
       sx={{
-        fontSize: '0.72rem',
+        fontSize: fontPx(11.52),
         fontWeight: 700,
         letterSpacing: '0.04em',
         color: 'text.secondary',
@@ -127,7 +127,7 @@ function FacetPill({ label, tone }: { label: string; tone: 'contains' | 'suitabl
           px: 1,
           py: 0.35,
           borderRadius: `${theme.palette.brand.radius.sm}px`,
-          fontSize: '0.72rem',
+          fontSize: fontPx(11.52),
           fontWeight: 600,
           lineHeight: 1.4,
           color: base,
@@ -158,7 +158,7 @@ export function CharacteristicsBlock({ characteristics }: { characteristics?: It
         display: 'grid',
         gridTemplateColumns: `minmax(0, ${itemCard.labelColumn}px) minmax(0, 1fr)`,
         columnGap: 1.5,
-        fontSize: '0.82rem',
+        fontSize: fontPx(13.12),
       }}
     >
       {/*
@@ -271,7 +271,7 @@ export function NutritionBlock({
                     color: 'text.primary',
                     fontFamily: theme.typography.h1.fontFamily,
                     fontWeight: theme.typography.fontWeightBold,
-                    fontSize: '1.0625rem',
+                    fontSize: fontPx(17),
                     lineHeight: 1.2,
                     fontVariantNumeric: 'tabular-nums',
                   })}

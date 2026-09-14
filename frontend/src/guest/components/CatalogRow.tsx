@@ -10,7 +10,7 @@ import { useStorefront } from '../useStorefront';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
-import { cardSubtitleColor, storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { fontPx, cardSubtitleColor, storefrontTokens, surfaceRadius } from '../storefrontTokens';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -124,7 +124,7 @@ export function CatalogRowView({
             sx={(theme) => ({
               fontFamily: theme.typography.h1.fontFamily,
               fontWeight: 800,
-              fontSize: '0.9375rem',
+              fontSize: fontPx(15),
               letterSpacing: '-0.01em',
               lineHeight: 1.25,
             })}
@@ -210,7 +210,7 @@ export function CatalogRowView({
                     theme.palette.background.paper,
                     theme.palette.mode,
                   ),
-                  fontSize: '0.75rem',
+                  fontSize: fontPx(12),
                   lineHeight: 1.4,
                   /*
                     ВЫСОТА ПО ТЕКСТУ, А НЕ ПОД ДВЕ СТРОКИ.
@@ -279,7 +279,7 @@ export function CatalogRowView({
                 sx={(theme) => ({
                   fontFamily: theme.typography.h1.fontFamily,
                   fontWeight: 800,
-                  fontSize: '1.1875rem',
+                  fontSize: fontPx(19),
                   letterSpacing: '-0.02em',
                 })}
               >

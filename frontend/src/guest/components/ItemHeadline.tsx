@@ -15,13 +15,11 @@ import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
-import {
-  cardSubtitleColor,
+import { fontPx, cardSubtitleColor,
   itemCard,
   panelScrim,
   storefrontTokens,
-  surfaceRadius,
-} from '../storefrontTokens';
+  surfaceRadius, } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
 
 /**
@@ -127,7 +125,7 @@ export function ItemMedia({
             px: 1,
             py: 0.5,
             borderRadius: `${theme.palette.brand.radius.pill}px`,
-            fontSize: '0.6875rem',
+            fontSize: fontPx(11),
             fontWeight: 700,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',

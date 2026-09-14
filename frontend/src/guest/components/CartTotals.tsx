@@ -1,4 +1,5 @@
 import Skeleton from '@mui/material/Skeleton';
+import { fontPx } from '../storefrontTokens';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
@@ -95,7 +96,7 @@ export function CartTotals({ quote, loading }: CartTotalsProps) {
             sx={(theme) => ({
               fontFamily: theme.typography.h1.fontFamily,
               fontWeight: 800,
-              fontSize: '1.0625rem',
+              fontSize: fontPx(17),
             })}
           >
             {format(quote.total_minor)}

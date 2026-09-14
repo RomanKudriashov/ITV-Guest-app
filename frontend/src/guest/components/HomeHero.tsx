@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { layout, surfaceRadius, type StorefrontTokens } from '../storefrontTokens';
+import { fontPx, layout, surfaceRadius, type StorefrontTokens } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -95,12 +95,12 @@ export function HomeHeroView({
             letterSpacing: '-.03em',
             lineHeight: 1.02,
             color: onMedia.primary,
-            fontSize: { xs: 33, md: 46 },
+            fontSize: { xs: fontPx(33, 'heading'), md: fontPx(46, 'heading') },
           })}
         >
           {greeting}
         </Typography>
-        <Typography sx={{ color: onMedia.secondary, fontSize: 13, mt: 0.9 }}>
+        <Typography sx={{ color: onMedia.secondary, fontSize: fontPx(13), mt: 0.9 }}>
           {hotelName}
         </Typography>
       </Box>

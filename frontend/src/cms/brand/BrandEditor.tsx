@@ -18,7 +18,7 @@ import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
 import type { BrandDraft } from './useBrandDraft';
 import Alert from '@mui/material/Alert';
-import { roomControlAccent } from '@/guest/storefrontTokens';
+import { contrastRatio, TEXT_CONTRAST, roomControlAccent } from '@/guest/storefrontTokens';
 
 /* ── Small building blocks ─────────────────────────────────────────────── */
 
@@ -219,6 +219,22 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
   } = brand;
 
   const activePreset = merged.preset ?? 'custom';
+
+  /*
+    ТЕКСТ ЧИТАЕТСЯ НА ДВУХ ПОДЛОЖКАХ, И ХУДШАЯ ИЗ НИХ РЕШАЕТ.
+
+    Одна и та же строка лежит и на фоне экрана, и на поверхности карточки.
+    Пройти на одной и провалиться на другой — обычное дело: фон у отелей
+    тёмный, карточка светлая. Поэтому берём меньшее из двух отношений.
+  */
+  const textColor = merged.palette[mode].text;
+  const onSurface = contrastRatio(textColor, merged.palette[mode].surface);
+  const onBackground = contrastRatio(textColor, merged.palette[mode].background);
+  const worstContrast = Math.min(onSurface, onBackground);
+  const textContrastWarning =
+    worstContrast < TEXT_CONTRAST
+      ? t('brand.textContrastLow', { ratio: worstContrast.toFixed(1) })
+      : '';
   const bg = merged.brand?.background;
   const bgKind = bg?.kind ?? 'solid';
 
@@ -573,6 +589,69 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
             ))}
           </Select>
         </FormControl>
+      </Section>
+
+      {/* Text */}
+      <Section title={t('brand.sections.text')} where={t('brand.where.text')}>
+        {/*
+          ЭТИ ТРИ НАСТРОЙКИ БЫЛИ В МОДЕЛИ С САМОГО НАЧАЛА И ДОЕЗЖАЛИ ДО ВИТРИНЫ.
+
+          `fontSizeBase` уходит в `typography.fontSize` темы, `headingScale` — в
+          кегли заголовков, `text` — в `text.primary`. Не было только органа:
+          отель мог получить другой кегль исключительно вместе с пресетом,
+          целиком, вместе с чужими цветами и шрифтами.
+        */}
+        <Box>
+          <Typography variant="body2" gutterBottom>
+            {t('brand.fontSize')}: {merged.typography.fontSizeBase}px
+          </Typography>
+          <Slider
+            value={merged.typography.fontSizeBase}
+            min={14}
+            max={20}
+            step={1}
+            marks
+            valueLabelDisplay="auto"
+            onChange={(_e, v) => setTypography({ fontSizeBase: v as number })}
+            data-testid="brand-font-size"
+          />
+        </Box>
+
+        <Box>
+          <Typography variant="body2" gutterBottom>
+            {t('brand.headingScale')}: {merged.typography.headingScale.toFixed(2)}
+          </Typography>
+          <Slider
+            value={merged.typography.headingScale}
+            min={0.85}
+            max={1.4}
+            step={0.05}
+            valueLabelDisplay="auto"
+            onChange={(_e, v) => setTypography({ headingScale: v as number })}
+            data-testid="brand-heading-scale"
+          />
+        </Box>
+
+        <ColorField
+          label={t('brand.textColor', { mode: t(`brand.preview.${mode}`) })}
+          value={merged.palette[mode].text}
+          onChange={(v) => setColor(mode, 'text', v)}
+          testId="brand-text-color"
+        />
+
+        {/*
+          КОНТРАСТ СЧИТАЕМ ТОЙ ЖЕ МЕРОЙ, ЧТО ВИТРИНА, и говорим словами.
+
+          Порог 4,5:1 — WCAG 1.4.3 для текста. Запрета здесь нет намеренно: это
+          выбор отеля, а не наша вкусовщина, — но выбор, сделанный ЗНАЯ. Молчать
+          нельзя: нечитаемый текст оператор на своём мониторе может и не
+          заметить, а гость читает его в номере при ночном свете.
+        */}
+        {textContrastWarning ? (
+          <Alert severity="warning" data-testid="brand-text-contrast">
+            {textContrastWarning}
+          </Alert>
+        ) : null}
       </Section>
 
       {/* Radii */}

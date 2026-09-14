@@ -10,7 +10,7 @@ import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { packBento, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
-import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { fontPx, storefrontTokens, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { openingLabel } from '../nextOpening';
 
@@ -59,7 +59,7 @@ function StatusPill({ status }: { status: { text: string; open: boolean } }) {
         px: 1,
         py: 0.35,
         borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
-        fontSize: 11,
+        fontSize: fontPx(11),
         fontWeight: 700,
         lineHeight: 1.4,
         color: 'common.white',
@@ -180,7 +180,7 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
         </Typography>
         {!compact && meta ? (
           <Typography
-            sx={{ fontSize: 12.5, fontWeight: 500, color: onMedia.secondary, textShadow: tileTokens.metaShadow }}
+            sx={{ fontSize: fontPx(12.5), fontWeight: 500, color: onMedia.secondary, textShadow: tileTokens.metaShadow }}
           >
             {meta}
           </Typography>

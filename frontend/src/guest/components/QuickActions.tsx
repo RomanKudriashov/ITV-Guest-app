@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { pressableSx, revealSx } from '@/kit';
 import { ICON_REGISTRY, IconServices, type AppIconComponent } from '@/icons';
 import type { GuestQuickAction } from '../api/types';
-import { surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius } from '../storefrontTokens';
 
 /**
  * The project ships its own line-icon set (`ICON_REGISTRY`), not a Material
@@ -103,7 +103,7 @@ export function QuickActions({ actions }: QuickActionsProps) {
             <Typography
               sx={{
                 fontWeight: 700,
-                fontSize: '0.8rem',
+                fontSize: fontPx(12.8),
                 lineHeight: 1.25,
                 color: 'text.primary',
               }}

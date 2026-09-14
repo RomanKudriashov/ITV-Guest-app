@@ -7,7 +7,7 @@ import { useTheme } from '@mui/material/styles';
 
 import { IconCurtainClose, IconCurtainOpen } from '@/icons';
 import { useStorefront } from '../useStorefront';
-import { roomCard, surfaceRadius } from '../storefrontTokens';
+import { fontPx, roomCard, surfaceRadius } from '../storefrontTokens';
 
 /**
  * Части экрана управления номером по утверждённому макету
@@ -70,7 +70,7 @@ export function StatusPill({
         border: `1px solid ${color || t.pillBorder}`,
         background: t.pillBackground,
         color: tone === 'neutral' ? 'text.secondary' : color,
-        fontSize: 11,
+        fontSize: fontPx(11),
         fontWeight: 700,
         whiteSpace: 'nowrap',
       })}
@@ -760,7 +760,7 @@ export function RoomDial({
               color: t.accentContrast,
               fontFamily: th.typography.h1.fontFamily,
               fontWeight: 800,
-              fontSize: 15,
+              fontSize: fontPx(15),
               whiteSpace: 'nowrap',
             })}
           >
@@ -784,7 +784,7 @@ export function RoomDial({
             component="b"
             sx={(th) => ({
               fontFamily: th.typography.h1.fontFamily,
-              fontSize: 50,
+              fontSize: fontPx(50, 'heading'),
               fontWeight: 800,
               letterSpacing: '-.03em',
               lineHeight: 1,
@@ -792,7 +792,7 @@ export function RoomDial({
             })}
           >
             {target}
-            <Box component="i" sx={{ fontSize: 22, fontStyle: 'normal', color: 'text.secondary' }}>
+            <Box component="i" sx={{ fontSize: fontPx(22, 'heading'), fontStyle: 'normal', color: 'text.secondary' }}>
               °
             </Box>
           </Typography>
@@ -801,7 +801,7 @@ export function RoomDial({
               <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                 {captionCurrent} {current}°
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 10 }}>
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: fontPx(10) }}>
                 {captionSensor}
               </Typography>
             </>
@@ -986,7 +986,7 @@ export function RoomTabs({ items, active, onChange, testId = 'room-tabs' }: Room
               pt: 1.5,
               pb: 1.4,
               fontFamily: theme.typography.h1.fontFamily,
-              fontSize: 14,
+              fontSize: fontPx(14),
               fontWeight: selected ? 500 : 400,
               letterSpacing: '.01em',
               color: selected ? 'text.primary' : 'text.disabled',

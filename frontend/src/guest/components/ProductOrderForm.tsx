@@ -17,7 +17,7 @@ import { SheetFooter, SheetScroll } from './sheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import { toCartModifier, unitPriceOf, useCart } from '../state/cart';
 import type { ItemDetail, ModifierGroup } from '../api/types';
-import { itemCard } from '../storefrontTokens';
+import { fontPx, itemCard } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
 
 interface ProductDraft {
@@ -174,7 +174,7 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
                     <Box
                       component="span"
                       sx={(theme) => ({
-                        fontSize: '0.68rem',
+                        fontSize: fontPx(10.88),
                         fontWeight: 700,
                         letterSpacing: '0.08em',
                         textTransform: 'uppercase',

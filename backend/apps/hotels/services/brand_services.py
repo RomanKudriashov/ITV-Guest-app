@@ -158,6 +158,19 @@ def _validate_colors(palette: dict, *, path: str) -> None:
                 )
 
 
+# ГРАНИЦЫ КЕГЛЯ — НЕ ВКУСОВЩИНА.
+#
+# Ниже 14 пунктов витрину не прочитает гость, которому она и нужна: телефон в
+# руке, свет приглушён, очки в номере. Выше 20 разваливается не «красота», а
+# смысл: цены и кнопки перестают помещаться в строку, и карточка меню начинает
+# врать про то, что в ней есть.
+#
+# Масштаб заголовков режем теми же доводами: 0,85 делает заголовок неотличимым
+# от текста, 1,4 выносит его за край на телефоне.
+FONT_SIZE_RANGE = (14, 20)
+HEADING_SCALE_RANGE = (0.85, 1.4)
+
+
 def _validate_typography(typography: dict) -> None:
     for key in ("fontFamily", "headingFontFamily"):
         family = typography.get(key)
@@ -166,6 +179,39 @@ def _validate_typography(typography: dict) -> None:
                 f"Шрифт не из списка: {family}",
                 field=f"typography.{key}",
                 code="font_not_allowed",
+            )
+
+    size = typography.get("fontSizeBase")
+    if size is not None:
+        if not isinstance(size, (int, float)) or isinstance(size, bool):
+            raise ValidationError(
+                f"Размер текста должен быть числом: {size}",
+                field="typography.fontSizeBase",
+                code="invalid_font_size",
+            )
+        low, high = FONT_SIZE_RANGE
+        if not low <= size <= high:
+            raise ValidationError(
+                f"Размер текста вне допустимого: {size}. Ожидается от {low} до {high}",
+                field="typography.fontSizeBase",
+                code="font_size_out_of_range",
+            )
+
+    scale = typography.get("headingScale")
+    if scale is not None:
+        if not isinstance(scale, (int, float)) or isinstance(scale, bool):
+            raise ValidationError(
+                f"Масштаб заголовков должен быть числом: {scale}",
+                field="typography.headingScale",
+                code="invalid_heading_scale",
+            )
+        low_s, high_s = HEADING_SCALE_RANGE
+        if not low_s <= scale <= high_s:
+            raise ValidationError(
+                f"Масштаб заголовков вне допустимого: {scale}. "
+                f"Ожидается от {low_s} до {high_s}",
+                field="typography.headingScale",
+                code="heading_scale_out_of_range",
             )
 
 

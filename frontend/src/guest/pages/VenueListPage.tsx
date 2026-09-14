@@ -15,7 +15,7 @@ import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
-import { surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
 
 /**
@@ -41,7 +41,7 @@ export function VenueListPage() {
             fontFamily: th.typography.h1.fontFamily,
             fontWeight: 800,
             letterSpacing: '-0.02em',
-            fontSize: { xs: 24, md: 30 },
+            fontSize: { xs: fontPx(24, 'heading'), md: fontPx(30, 'heading') },
             mb: { xs: 2, md: 3 },
           })}
         >
@@ -111,7 +111,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
               px: 1,
               py: 0.35,
               borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
-              fontSize: 11,
+              fontSize: fontPx(11),
               fontWeight: 700,
               bgcolor: alpha(th.palette.common.black, 0.42),
               backdropFilter: 'blur(8px)',
@@ -122,11 +122,11 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
           </Box>
         ) : null}
         <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.5 }}>
-          <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: 20, lineHeight: 1.1, textShadow: tile.titleShadow })}>
+          <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: fontPx(20, 'heading'), lineHeight: 1.1, textShadow: tile.titleShadow })}>
             {venue.title}
           </Typography>
           {venue.subtitle ?? statusText ? (
-            <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: onMedia.secondary }}>
+            <Typography sx={{ fontSize: fontPx(12.5), fontWeight: 500, color: onMedia.secondary }}>
               {venue.subtitle ?? statusText}
             </Typography>
           ) : null}

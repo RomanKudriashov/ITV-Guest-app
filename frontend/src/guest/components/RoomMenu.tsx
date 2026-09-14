@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useOptionalGuestSession } from '../session/GuestSessionProvider';
-import { surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius } from '../storefrontTokens';
 
 /**
  * Чип номера с выходом из отеля.
@@ -111,7 +111,7 @@ export function RoomMenu({
                 height: 34,
                 px: 1.6,
                 borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
-                fontSize: 12,
+                fontSize: fontPx(12),
                 fontWeight: 600,
                 color: th.palette.text.primary,
                 bgcolor: alpha(th.palette.text.primary, 0.06),
@@ -126,7 +126,7 @@ export function RoomMenu({
                 borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
                 border: `1px solid ${th.palette.divider}`,
                 color: 'text.primary',
-                fontSize: 12.5,
+                fontSize: fontPx(12.5),
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
               })
@@ -136,7 +136,7 @@ export function RoomMenu({
           aria-hidden
           sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'primary.main', flex: 'none' }}
         />
-        <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1 }}>
+        <Typography component="span" sx={{ fontSize: fontPx(12.5), fontWeight: 700, lineHeight: 1 }}>
           {variant === 'bar'
             ? t('guest.home.room', { room })
             : t('guest.common.roomShort', { room })}
@@ -150,7 +150,7 @@ export function RoomMenu({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem disabled sx={{ opacity: 1, fontSize: 12.5 }}>
+        <MenuItem disabled sx={{ opacity: 1, fontSize: fontPx(12.5) }}>
           {t('guest.session.current', { room })}
         </MenuItem>
         <MenuItem onClick={leave} data-testid="guest-leave-hotel">
