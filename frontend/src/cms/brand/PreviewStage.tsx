@@ -188,7 +188,14 @@ export function PreviewStage({
           <CssBaseline />
           <I18nextProvider i18n={previewI18n}>
             <QueryClientProvider client={client}>
-              <MemoryRouter initialEntries={[route]}>
+              {/*
+                КЛЮЧ ПО АДРЕСУ — ОБЯЗАТЕЛЕН. `initialEntries` читается ОДИН раз
+                при монтировании: без ключа переключение экрана меняло бы довод
+                и ничего больше, и показ навсегда оставался бы на первом.
+                Ключ пересобирает дерево — то есть экран открывается заново,
+                ровно как у гостя, зашедшего по ссылке.
+              */}
+              <MemoryRouter key={route} initialEntries={[route]}>
                 <PreviewRoutes routes={routes} />
               </MemoryRouter>
             </QueryClientProvider>
@@ -212,6 +219,7 @@ export function PreviewStage({
   return (
     <Box
       data-testid={testId}
+      data-route={route}
       sx={{
         width: width * scale,
         height: height * scale,
