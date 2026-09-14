@@ -12,15 +12,22 @@ from apps.hotels.models import Location
 
 def guest_locations(session, language: str) -> dict:
     """Локации для гостя: «в номер» показывается только тому, у кого номер есть."""
-    return locations_payload(language=language, has_room=session.room_id is not None)
+    room = session.room.number if session.room_id else None
+    return locations_payload(language=language, room_number=room)
 
 
-def locations_payload(*, language: str, has_room: bool) -> dict:
+def locations_payload(*, language: str, room_number: str | None) -> dict:
     """
-    ОТ СЕССИИ ЗДЕСЬ ЗАВИСИТ РОВНО ОДНО — есть ли у гостя номер. Вынесено
-    доводом, чтобы показ витрины в настройке бренда звал ТОТ ЖЕ сборщик:
-    оператор смотрит на экран оформления глазами гостя без номера.
+    ОТ СЕССИИ ЗДЕСЬ ЗАВИСИТ РОВНО ОДНО — НОМЕР ГОСТЯ. Вынесено доводом, чтобы
+    показ витрины в настройке бренда звал ТОТ ЖЕ сборщик: оператор смотрит на
+    экран оформления глазами гостя без номера.
+
+    Номером, а не признаком «номер есть»: признака хватало на отбор локаций, но
+    не на ответ — в нём номер называется. Первая редакция взяла признак и
+    оставила в теле `session`, которой здесь уже нет: гостевые локации отвечали
+    500, пока это не поймал полный прогон.
     """
+    has_room = room_number is not None
 
     locations = []
     for location in Location.objects.filter(is_active=True).order_by("sort_order", "code"):
@@ -41,7 +48,7 @@ def locations_payload(*, language: str, has_room: bool) -> dict:
         )
 
     return {
-        "room": session.room.number if has_room else None,
+        "room": room_number,
         "locations": locations,
         "delivery_modes": ["delivery", "pickup"],
     }

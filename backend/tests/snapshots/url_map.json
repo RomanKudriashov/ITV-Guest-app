@@ -80,6 +80,9 @@
   "/api/v1/cms/brand/presets": [
     "GET"
   ],
+  "/api/v1/cms/brand/preview": [
+    "GET"
+  ],
   "/api/v1/cms/categories": [
     "GET",
     "POST"

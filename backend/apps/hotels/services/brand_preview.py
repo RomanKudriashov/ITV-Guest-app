@@ -111,8 +111,8 @@ def preview_payload(
     if screen == "locations":
         from apps.hotels.services.locations import locations_payload
 
-        # `has_room=False` — тот же гость без номера, что и на главной.
-        return locations_payload(language=language, has_room=False)
+        # Номера нет — тот же гость без номера, что и на главной.
+        return locations_payload(language=language, room_number=None)
 
     # room
     from apps.grms.services import guest as room_guest
