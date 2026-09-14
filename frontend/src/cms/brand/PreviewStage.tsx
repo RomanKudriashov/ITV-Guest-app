@@ -27,10 +27,22 @@
  *
  * Стили эмоции тоже кладутся В ДОКУМЕНТ РАМКИ: иначе классы едут в панель, а
  * внутри рамки остаётся голая разметка.
+ *
+ * ================= ПОЧЕМУ СВОЙ КОРЕНЬ, А НЕ ПОРТАЛ ====================
+ *
+ * Первая редакция рисовала дерево показа порталом в тело рамки. Узлы при этом
+ * оказываются в рамке, а КОНТЕКСТ течёт из панели: витрина попадала внутрь
+ * роутера панели и падала на `You cannot render a <Router> inside another
+ * <Router>`. И это не единственная беда портала — точно так же протекли бы
+ * провайдеры темы, сессии и запросов.
+ *
+ * Поэтому показ монтируется ОТДЕЛЬНЫМ корнем React прямо в документе рамки.
+ * Общего контекста с панелью у него нет вовсе: внутри — только то, что он сам
+ * себе объявил, и перепутать витрину с панелью физически нечем.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createRoot, type Root } from 'react-dom/client';
 import createCache, { type EmotionCache } from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
 import { prefixer } from 'stylis';
@@ -111,6 +123,7 @@ export function PreviewStage({
 }: PreviewStageProps) {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const [doc, setDoc] = useState<Document | null>(null);
+  const rootRef = useRef<Root | null>(null);
   const routes = usePreviewRoutes(hotelName, currency, minorUnits);
 
   // Документ рамки готов не в момент монтирования: `about:blank` доезжает
@@ -161,6 +174,40 @@ export function PreviewStage({
     void previewI18n.changeLanguage(language);
   }, [language]);
 
+  // Дерево показа живёт в СВОЁМ корне: контекста панели у него нет, и роутер
+  // витрины больше ни во что не вложен. Перерисовываем на каждое изменение
+  // входов — токены меняются на каждый щелчок в редакторе.
+  useEffect(() => {
+    if (!doc || !cache) return;
+    const root: Root = rootRef.current ?? createRoot(doc.body);
+    rootRef.current = root;
+    root.render(
+      <CacheProvider value={cache}>
+        <MuiThemeProvider theme={theme}>
+          <CssBaseline />
+          <I18nextProvider i18n={previewI18n}>
+            <QueryClientProvider client={client}>
+              <MemoryRouter initialEntries={[route]}>
+                <PreviewRoutes routes={routes} />
+              </MemoryRouter>
+            </QueryClientProvider>
+          </I18nextProvider>
+        </MuiThemeProvider>
+      </CacheProvider>,
+    );
+  }, [doc, cache, theme, client, route, routes]);
+
+  // Корень снимается вместе с рамкой: оставленный, он продолжит рисовать в
+  // документ, которого уже нет.
+  useEffect(
+    () => () => {
+      const root = rootRef.current;
+      rootRef.current = null;
+      if (root) setTimeout(() => root.unmount(), 0);
+    },
+    [],
+  );
+
   return (
     <Box
       data-testid={testId}
@@ -183,23 +230,6 @@ export function PreviewStage({
       }}
     >
       <iframe ref={frameRef} title="preview" data-testid={`${testId}-frame`} />
-      {doc && cache
-        ? createPortal(
-            <CacheProvider value={cache}>
-              <MuiThemeProvider theme={theme}>
-                <CssBaseline />
-                <I18nextProvider i18n={previewI18n}>
-                  <QueryClientProvider client={client}>
-                    <MemoryRouter initialEntries={[route]}>
-                      <PreviewRoutes routes={routes} />
-                    </MemoryRouter>
-                  </QueryClientProvider>
-                </I18nextProvider>
-              </MuiThemeProvider>
-            </CacheProvider>,
-            doc.body,
-          )
-        : null}
     </Box>
   );
 }
