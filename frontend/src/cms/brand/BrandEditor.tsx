@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
 import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
+import { patternDataUri } from '@/theme/brandPatterns';
 import type { BrandDraft } from './useBrandDraft';
 import Alert from '@mui/material/Alert';
 import { contrastRatio, TEXT_CONTRAST, roomControlAccent } from '@/guest/storefrontTokens';
@@ -489,13 +490,21 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
                     overflow: 'hidden',
                   }}
                 >
+                  {/*
+                    ПЛИТКА ПОКАЗЫВАЕТ ТО, ЧТО ПОЛУЧИТСЯ.
+
+                    Сервер отдаёт паттерн нейтрально-серым — это заглушка. Пока
+                    плитка рисовалась ею, оператор выбирал фактуру вслепую: на
+                    витрине она другого цвета и другого масштаба. Рисуем тем же
+                    кодом, что и витрина, цветом текущей палитры.
+                  */}
                   <Box
                     sx={{
                       height: 56,
-                      backgroundImage: `url(${a.preview_url})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      bgcolor: 'brand.surfaceMuted',
+                      backgroundColor: merged.palette[mode].background,
+                      backgroundImage: `url("${patternDataUri(a.code, merged.palette[mode].text)}")`,
+                      backgroundSize: '120px 120px',
+                      backgroundRepeat: 'repeat',
                     }}
                   />
                   <Typography variant="caption" noWrap display="block" sx={{ px: 0.5, py: 0.25 }}>

@@ -241,6 +241,27 @@ for (const kind of new Set([...Object.keys(pyKinds), ...Object.keys(tsKinds)])) 
   }
 }
 
+/* ── Паттерны фона ──────────────────────────────────────────────────────────
+
+   Тела паттернов живут в двух экземплярах: сервер рисует серую заглушку для
+   плиток, витрина — цветную фактуру по теме. Разойтись им нельзя: выбранный
+   оператором код, которого нет на клиенте, означает фон без фактуры, и молча.
+*/
+
+const pyPatterns = [
+  ...read(`${BACKEND}/apps/hotels/brand_patterns.py`).matchAll(/^\s{4}'([a-z]+)':/gm),
+].map((m) => m[1]).sort();
+
+const tsPatterns = [
+  ...read(new URL('../src/theme/brandPatterns.ts', import.meta.url)).matchAll(/^\s{2}([a-z]+):/gm),
+].map((m) => m[1]).sort();
+
+if (pyPatterns.length === 0 || tsPatterns.length === 0) {
+  problems.push('паттерны фона не прочитались — сторож ослеп');
+} else if (pyPatterns.join(',') !== tsPatterns.join(',')) {
+  problems.push(`паттерны фона: сервер [${pyPatterns}], фронт [${tsPatterns}]`);
+}
+
 /* ── Ответ ──────────────────────────────────────────────────────────────── */
 
 if (problems.length) {
@@ -250,5 +271,6 @@ if (problems.length) {
 
 console.log(
   `Реестры сходятся: слов ${Object.keys(pyNouns).length} на ${serviceTypes.length} типов заведений, ` +
-    `поведений ${Object.keys(py).length}, областей справочников ${Object.keys(pyKinds).length}`,
+    `поведений ${Object.keys(py).length}, областей справочников ${Object.keys(pyKinds).length}, ` +
+    `паттернов ${pyPatterns.length}`,
 );
