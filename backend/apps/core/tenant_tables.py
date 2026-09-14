@@ -15,6 +15,7 @@ hotels_hotel и media_category_placeholder намеренно без RLS: это
 TENANT_TABLES = [
     # hotels
     "hotels_brand_theme",
+    "hotels_brand_version",
     "hotels_hotel_language",
     "hotels_room",
     "hotels_execution_point",
