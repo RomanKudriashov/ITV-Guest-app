@@ -6,16 +6,27 @@ CMS: бренд-настройки. Контракт — docs/brand-api-contract
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from django.http import HttpRequest
-from ninja import Router
+from ninja import File, Router
+from ninja.files import UploadedFile
 
 from apps.accounts.services.roles import require_hotel_admin
-
-from apps.hotels.brand_library import ABSTRACTIONS, FONTS, list_presets
+from apps.core.context import current_language
+from apps.core.errors import ValidationError
+from apps.hotels.brand_library import (
+    ABSTRACTIONS,
+    FONT_MAX_BYTES,
+    FONT_SIGNATURES,
+    FONTS,
+    font_family_of,
+    list_presets,
+)
+from apps.media.services import store_ready_asset
 from apps.hotels.schemas.cms import ApplyPresetIn, BrandOut, BrandPatch
 from apps.hotels.services import brand_services as svc
 from apps.hotels.services.hotel import current_hotel
-from apps.core.context import current_language
 
 router = Router(tags=["cms:brand"])
 
@@ -77,6 +88,74 @@ def brand_preview(
         item_id=item_id,
         room_number=room,
     )
+
+
+@router.post("/brand/font", summary="Загрузить свой шрифт отеля")
+def upload_brand_font(request: HttpRequest, file: UploadedFile = File(...), name: str = ""):
+    """
+    Файл шрифта отеля: кладём, проверяем ПО СИГНАТУРЕ и возвращаем семейство.
+
+    Токены здесь не трогаем намеренно. Загрузка и ВЫБОР — разные решения:
+    оператор может принести файл и передумать, а подменить ему шрифт в тот же
+    миг значило бы решить за него. Ответ несёт готовую строку семейства —
+    клиент кладёт её в `typography.fontFamily`, когда оператор этого захочет.
+
+    ЛИЦЕНЗИЮ НА ФАЙЛ МЫ ПРОВЕРИТЬ НЕ МОЖЕМ. Право на шрифт подтверждает отель;
+    в интерфейсе это сказано словами рядом с кнопкой, а не спрятано в согласии.
+    """
+    require_hotel_admin()
+
+    content = file.read()
+    if len(content) > FONT_MAX_BYTES:
+        raise ValidationError(
+            f"Файл шрифта больше {FONT_MAX_BYTES // (1024 * 1024)} МБ",
+            field="file",
+            code="font_too_large",
+        )
+
+    signature = next(
+        (value for prefix, value in FONT_SIGNATURES.items() if content.startswith(prefix)),
+        None,
+    )
+    if signature is None:
+        raise ValidationError(
+            "Это не файл шрифта. Подходят woff2, woff, otf и ttf",
+            field="file",
+            code="not_a_font",
+        )
+    suffix, content_type = signature
+
+    family_name = _font_name(name or Path(file.name or "").stem)
+    asset = store_ready_asset(
+        content=content,
+        filename=f"{family_name}.{suffix}",
+        kind="font",
+        content_type=content_type,
+    )
+
+    return {
+        "assetId": str(asset.pk),
+        "name": family_name,
+        "family": font_family_of(family_name),
+        "url": asset.url("original"),
+        "format": suffix,
+    }
+
+
+def _font_name(raw: str) -> str:
+    """
+    Имя семейства из имени файла — пригодное для CSS и узнаваемое человеком.
+
+    Оставляем буквы, цифры, пробел и дефис: имя уезжает в `font-family`, и
+    кавычка или точка с запятой там — это сломанная тема, а в худшем случае
+    чужое правило в нашем стиле. Пусто — значит «Свой шрифт»: безымянное
+    семейство оператор потом не опознает в списке.
+    """
+    import re
+
+    cleaned = re.sub(r"[^\w \-]", "", raw, flags=re.UNICODE).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)[:40]
+    return cleaned or "Свой шрифт"
 
 
 @router.get("/brand/presets", summary="Библиотека пресетов")

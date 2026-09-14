@@ -71,6 +71,26 @@ export type SurfaceStyle = 'flat' | 'soft' | 'glass';
 /** Which mode the storefront opens in for a fresh guest. */
 export type DefaultMode = 'light' | 'dark' | 'system';
 
+/**
+ * Свой шрифт отеля: файл, который он загрузил, и как его звать.
+ *
+ * Курируемый список остаётся списком — это ДОБАВКА к нему, а не замена: отель
+ * со своей типографикой существует, и ответить ему «возьмите похожий» было
+ * нечестно.
+ */
+export interface CustomFontToken {
+  /** Имя семейства, как его увидит оператор в списке. */
+  name: string;
+  /** Строка `font-family` целиком — с запасными шрифтами. */
+  family: string;
+  /** Адрес файла. Пусто — файл удалён, витрина берёт запасное семейство. */
+  url: string;
+  /** Ассет, из которого адрес пересобирается на выдаче. */
+  assetId?: string;
+  /** woff2 | woff | otf | ttf — формат для `@font-face`. */
+  format?: string;
+}
+
 export type BackgroundKind = 'solid' | 'gradient' | 'image' | 'abstraction';
 
 export interface BrandGradient {
@@ -111,6 +131,8 @@ export interface BrandExtras {
   surfaceStyle?: SurfaceStyle;
   defaultMode?: DefaultMode;
   background?: BrandBackground;
+  /** Загруженный отелем шрифт — см. `CustomFontToken`. */
+  customFont?: CustomFontToken;
 }
 
 export interface BrandTokens {
@@ -133,6 +155,7 @@ export interface PartialBrandExtras {
   logoDark?: string;
   surfaceStyle?: SurfaceStyle;
   defaultMode?: DefaultMode;
+  customFont?: CustomFontToken;
   background?: Partial<BrandBackground>;
 }
 
@@ -253,6 +276,7 @@ function mergeBrandExtras(
     logoDark: override?.logoDark ?? base?.logoDark,
     surfaceStyle: override?.surfaceStyle ?? base?.surfaceStyle,
     defaultMode: override?.defaultMode ?? base?.defaultMode,
+    customFont: override?.customFont ?? base?.customFont,
     background,
   };
 }

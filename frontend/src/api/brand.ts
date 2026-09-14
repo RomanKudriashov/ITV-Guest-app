@@ -1,6 +1,6 @@
 /** Brand settings endpoints — see docs/brand-api-contract.md. */
 import type { DefaultMode, PartialBrandTokens } from '@/theme/tokens';
-import { api } from './client';
+import { api, request } from './client';
 
 export interface BrandRecord {
   id: string;
@@ -73,4 +73,25 @@ export function fetchAbstractions(): Promise<{ abstractions: BrandAbstraction[] 
 
 export function fetchFonts(): Promise<{ fonts: BrandFont[] }> {
   return api.get<{ fonts: BrandFont[] }>('/cms/brand/fonts');
+}
+
+export interface UploadedFont {
+  assetId: string;
+  name: string;
+  family: string;
+  url: string;
+  format: string;
+}
+
+/**
+ * Загрузка файла шрифта отеля.
+ *
+ * Токены НЕ трогает: загрузить и выбрать — разные решения оператора. Ответ
+ * несёт готовую строку семейства, а положит её в тему редактор — когда
+ * оператор этого захочет.
+ */
+export function uploadBrandFont(file: File): Promise<UploadedFont> {
+  const form = new FormData();
+  form.append('file', file);
+  return request<UploadedFont>('/cms/brand/font', { method: 'POST', formData: form });
 }

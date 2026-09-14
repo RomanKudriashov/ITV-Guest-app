@@ -25,6 +25,7 @@ import {
   mergeBrandTokens,
   resolveDefaultMode,
   type BrandTokens,
+  type CustomFontToken,
   type Direction,
   type PartialBrandTokens,
   type ThemeMode,
@@ -122,6 +123,37 @@ function useStyleCache(container: HTMLElement | null | undefined, direction: 'lt
   }, [container, direction]);
 }
 
+/**
+ * ОБЪЯВЛЕНИЕ СВОЕГО ШРИФТА — В ТОТ ЖЕ ДОКУМЕНТ, ЧТО И СТИЛИ.
+ *
+ * Это ровно тот случай, на котором мы уже обожглись с кэшем эмоции: правило,
+ * положенное не в тот документ, не даёт ни ошибки, ни пустого места — буквы
+ * просто рисуются запасным шрифтом, и отличить это от «шрифт не тот» нельзя,
+ * не спросив у браузера `document.fonts`.
+ *
+ * Поэтому `@font-face` пишется в `styleContainer` — тот же узел, в который
+ * этот провайдер кладёт стили: в обычном приложении это `<head>` страницы, в
+ * показе бренда — `<head>` рамки.
+ */
+function useCustomFontFace(container: HTMLElement | null | undefined, font: CustomFontToken | undefined) {
+  useEffect(() => {
+    const doc = container?.ownerDocument ?? (typeof document === 'undefined' ? null : document);
+    if (!doc || !font?.url || !font?.name) return;
+
+    const style = doc.createElement('style');
+    style.dataset.brandFont = font.name;
+    // `font-display: swap` — текст обязан быть виден СРАЗУ. Пока файл едет,
+    // гость читает запасным шрифтом, а не смотрит на пустые строки: меню без
+    // букв три секунды хуже, чем меню не тем шрифтом три секунды.
+    style.textContent =
+      `@font-face { font-family: '${font.name}'; src: url('${font.url}')` +
+      (font.format ? ` format('${font.format}')` : '') +
+      `; font-display: swap; }`;
+    (container ?? doc.head).appendChild(style);
+    return () => style.remove();
+  }, [container, font?.name, font?.url, font?.format]);
+}
+
 export interface AppThemeProviderProps {
   children: ReactNode;
   /** Hotel-specific token override (later fetched from the backend). */
@@ -188,6 +220,7 @@ export function AppThemeProvider({
   }, [tokens, initialMode]);
 
   const cache = useStyleCache(styleContainer, direction);
+  useCustomFontFace(styleContainer, tokens.brand?.customFont);
   const theme = useMemo(
     () => withMatchMedia(createAppTheme(tokens, mode, direction), matchMediaWindow),
     [tokens, mode, direction, matchMediaWindow],

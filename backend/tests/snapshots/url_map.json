@@ -71,6 +71,9 @@
   "/api/v1/cms/brand/apply-preset": [
     "POST"
   ],
+  "/api/v1/cms/brand/font": [
+    "POST"
+  ],
   "/api/v1/cms/brand/fonts": [
     "GET"
   ],

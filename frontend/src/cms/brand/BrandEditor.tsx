@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import FormControl from '@mui/material/FormControl';
@@ -13,6 +13,9 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import Button from '@mui/material/Button';
+
+import { uploadBrandFont } from '@/api/brand';
 import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
 import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
@@ -220,6 +223,44 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
   } = brand;
 
   const activePreset = merged.preset ?? 'custom';
+
+  /*
+    СВОЙ ШРИФТ ОТЕЛЯ. Загрузка и выбор — два разных решения: файл кладётся
+    сразу, а семейство попадает в тему только вместе с обычным «Сохранить»,
+    как и любая другая правка оформления.
+  */
+  const custom = merged.brand?.customFont;
+  const [fontBusy, setFontBusy] = useState(false);
+  const [fontError, setFontError] = useState('');
+
+  const choices = useMemo(
+    () => (custom ? [...fonts, { family: custom.family, name: custom.name }] : fonts),
+    [fonts, custom],
+  );
+
+  const onFontFile = async (file: File) => {
+    setFontBusy(true);
+    setFontError('');
+    try {
+      const uploaded = await uploadBrandFont(file);
+      setBrandExtras({
+        customFont: {
+          name: uploaded.name,
+          family: uploaded.family,
+          url: uploaded.url,
+          assetId: uploaded.assetId,
+          format: uploaded.format,
+        },
+      });
+      // Загруженный шрифт сразу становится основным: иначе оператор видит
+      // «загружено» и ничего не меняется — а он пришёл сюда именно за этим.
+      setTypography({ fontFamily: uploaded.family });
+    } catch (error) {
+      setFontError(error instanceof Error ? error.message : t('brand.fontFailed'));
+    } finally {
+      setFontBusy(false);
+    }
+  };
 
   /*
     ТЕКСТ ЧИТАЕТСЯ НА ДВУХ ПОДЛОЖКАХ, И ХУДШАЯ ИЗ НИХ РЕШАЕТ.
@@ -567,13 +608,13 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
           <Select
             labelId="brand-font-body-label"
             label={t('brand.fontBody')}
-            value={fonts.some((f) => f.family === merged.typography.fontFamily)
+            value={choices.some((f) => f.family === merged.typography.fontFamily)
               ? merged.typography.fontFamily
               : ''}
             onChange={(e) => setTypography({ fontFamily: e.target.value })}
             data-testid="brand-font-body"
           >
-            {fonts.map((font) => (
+            {choices.map((font) => (
               <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
                 {font.name}
               </MenuItem>
@@ -585,19 +626,66 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
           <Select
             labelId="brand-font-heading-label"
             label={t('brand.fontHeading')}
-            value={fonts.some((f) => f.family === merged.typography.headingFontFamily)
+            value={choices.some((f) => f.family === merged.typography.headingFontFamily)
               ? merged.typography.headingFontFamily
               : ''}
             onChange={(e) => setTypography({ headingFontFamily: e.target.value })}
             data-testid="brand-font-heading"
           >
-            {fonts.map((font) => (
+            {choices.map((font) => (
               <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
                 {font.name}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
+
+        {/*
+          СВОЙ ШРИФТ — ДОБАВКА К СПИСКУ, А НЕ ОБХОД ЕГО.
+
+          Курируемый список остаётся списком: он лицензионно чист и проверен на
+          кириллице. Но отель со своей типографикой существует, и до сих пор
+          ему нечего было ответить, кроме «возьмите похожий».
+
+          ПРО ЛИЦЕНЗИЮ СКАЗАНО ВСЛУХ и рядом с кнопкой. Проверить право на файл
+          кодом нельзя, и прятать это в мелкий шрифт значило бы переложить
+          ответственность молча.
+        */}
+        <Stack spacing={0.75}>
+          <Button
+            component="label"
+            variant="outlined"
+            size="small"
+            disabled={fontBusy}
+            data-testid="brand-font-upload"
+          >
+            {fontBusy ? t('brand.fontUploading') : t('brand.fontUpload')}
+            <input
+              hidden
+              type="file"
+              accept=".woff2,.woff,.otf,.ttf,font/woff2,font/woff,font/otf,font/ttf"
+              data-testid="brand-font-file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) void onFontFile(file);
+              }}
+            />
+          </Button>
+          <Typography variant="caption" color="text.secondary" data-testid="brand-font-licence">
+            {t('brand.fontLicence')}
+          </Typography>
+          {fontError ? (
+            <Alert severity="warning" data-testid="brand-font-error">
+              {fontError}
+            </Alert>
+          ) : null}
+          {custom ? (
+            <Typography variant="caption" data-testid="brand-font-custom" sx={{ fontFamily: custom.family }}>
+              {t('brand.fontCustomReady', { name: custom.name })}
+            </Typography>
+          ) : null}
+        </Stack>
       </Section>
 
       {/* Text */}

@@ -55,6 +55,36 @@ def upload_asset(
     return asset
 
 
+def store_ready_asset(
+    *,
+    content: bytes,
+    filename: str,
+    kind: str,
+    content_type: str,
+) -> MediaAsset:
+    """
+    Файл, которому нечего обрабатывать: кладём и сразу считаем готовым.
+
+    Отдельно от `upload_asset`, потому что тот СТАВИТ ЗАДАЧУ НАРЕЗКИ. Для
+    шрифта это не «лишняя работа», а падение: Pillow открывает woff2 и не
+    понимает, что ему принесли, ассет уходит в FAILED — и файл, который лежит в
+    хранилище целым, числится сломанным.
+    """
+    hotel_id = require_hotel_id()
+    safe_name = f"{uuid.uuid4().hex}{Path(filename).suffix.lower()}"
+    key = storage.object_key(hotel_id, kind, safe_name)
+    storage.put_bytes(key, content, content_type=content_type)
+
+    return MediaAsset.objects.create(
+        kind=kind,
+        status=MediaAsset.Status.READY,
+        object_key=key,
+        original_filename=filename[:255],
+        content_type=content_type,
+        size_bytes=len(content),
+    )
+
+
 def get_asset(asset_id) -> MediaAsset:
     """Ассет по идентификатору. Выборка — работа сервиса, вьюха её зовёт."""
     from apps.core.errors import NotFoundError

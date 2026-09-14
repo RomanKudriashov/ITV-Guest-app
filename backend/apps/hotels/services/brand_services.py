@@ -114,13 +114,24 @@ def resolve_media(tokens: dict) -> dict:
     if not isinstance(brand, dict):
         return tokens
 
-    background = brand.get("background")
-    if not isinstance(background, dict) or not background.get("imageAssetId"):
-        return tokens
+    out_brand = dict(brand)
 
-    resolved = dict(background)
-    resolved["imageUrl"] = _asset_url(background["imageAssetId"])
-    return {**tokens, "brand": {**brand, "background": resolved}}
+    # Свой шрифт: адрес собирается из ассета ровно по тем же доводам, что и
+    # обложка. Файл удалили — адрес пуст, витрина берёт запасное семейство и
+    # остаётся читаемой; битой ссылки в теме не остаётся.
+    custom = brand.get("customFont")
+    if isinstance(custom, dict) and custom.get("assetId"):
+        out_brand["customFont"] = {**custom, "url": _asset_url(custom["assetId"], variant="original")}
+
+    background = brand.get("background")
+    if isinstance(background, dict) and background.get("imageAssetId"):
+        resolved = dict(background)
+        resolved["imageUrl"] = _asset_url(background["imageAssetId"])
+        out_brand["background"] = resolved
+
+    if out_brand == brand:
+        return tokens
+    return {**tokens, "brand": out_brand}
 
 
 def cover_is_alive(tokens: dict) -> bool:
@@ -171,10 +182,11 @@ FONT_SIZE_RANGE = (14, 20)
 HEADING_SCALE_RANGE = (0.85, 1.4)
 
 
-def _validate_typography(typography: dict) -> None:
+def _validate_typography(typography: dict, *, extra_families: set[str] | None = None) -> None:
+    allowed = FONT_FAMILIES | (extra_families or set())
     for key in ("fontFamily", "headingFontFamily"):
         family = typography.get(key)
-        if family and family not in FONT_FAMILIES:
+        if family and family not in allowed:
             raise ValidationError(
                 f"Шрифт не из списка: {family}",
                 field=f"typography.{key}",
@@ -267,13 +279,31 @@ def _validate_background(background: dict) -> None:
         raise ValidationError("Затемнение должно быть от 0 до 1", field="brand.background.dim")
 
 
-def validate_tokens_patch(patch: dict) -> None:
+def validate_tokens_patch(patch: dict, current: dict | None = None) -> None:
+    """
+    Проверка ПАТЧА, но семейства шрифтов — по итоговому набору.
+
+    Своё семейство разрешено ровно тогда, когда у отеля есть загруженный файл.
+    Смотреть на один патч здесь нельзя: шрифт загружают отдельным запросом, а
+    выбирают его следующим — и второй запрос про файл уже ничего не знает.
+    """
     if "palette" in patch:
         _validate_colors(patch["palette"], path="palette")
     if "typography" in patch:
-        _validate_typography(patch["typography"])
+        _validate_typography(patch["typography"], extra_families=_custom_families(patch, current))
     if "brand" in patch:
         _validate_brand_section(patch["brand"])
+
+
+def _custom_families(patch: dict, current: dict | None) -> set[str]:
+    """Семейство своего шрифта отеля — из патча или из уже сохранённого."""
+    families: set[str] = set()
+    for source in (current or {}, patch or {}):
+        custom = ((source.get("brand") or {}).get("customFont") or {})
+        family = custom.get("family")
+        if isinstance(family, str) and family:
+            families.add(family)
+    return families
 
 
 # --- Обновление ------------------------------------------------------------
@@ -315,7 +345,7 @@ def _forget_stale_cover_asset(merged: dict, patch: dict) -> dict:
 def update_brand(patch_tokens: dict) -> BrandTheme:
     require_hotel_admin()
     theme = get_or_create_brand()
-    validate_tokens_patch(patch_tokens)
+    validate_tokens_patch(patch_tokens, theme.tokens or {})
 
     merged = _forget_stale_cover_asset(_deep_merge(theme.tokens or {}, patch_tokens), patch_tokens)
 

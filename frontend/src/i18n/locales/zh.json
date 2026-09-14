@@ -1228,7 +1228,12 @@
     "fontSize": "文字大小",
     "headingScale": "标题比例",
     "textColor": "文字颜色（{{mode}}）",
-    "textContrastLow": "文字在背景上难以辨认：{{ratio}}:1，标准为 4.5:1。仍可保存——但客人将是在辨认字形，而不是在阅读。"
+    "textContrastLow": "文字在背景上难以辨认：{{ratio}}:1，标准为 4.5:1。仍可保存——但客人将是在辨认字形，而不是在阅读。",
+    "fontUpload": "上传自有字体",
+    "fontUploading": "正在上传…",
+    "fontLicence": "支持 woff2、woff、otf 或 ttf，最大 2 MB。字体的使用权由酒店确认——我们无法核验授权。",
+    "fontCustomReady": "自有字体「{{name}}」已上传并选用",
+    "fontFailed": "字体上传失败"
   },
   "hotel": {
     "rooms": {

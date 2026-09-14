@@ -1236,7 +1236,12 @@
     "fontSize": "Text size",
     "headingScale": "Heading scale",
     "textColor": "Text colour ({{mode}})",
-    "textContrastLow": "The text is hard to read on its background: {{ratio}}:1 against the 4.5:1 norm. You can still save it — but guests will decipher the letters rather than read them."
+    "textContrastLow": "The text is hard to read on its background: {{ratio}}:1 against the 4.5:1 norm. You can still save it — but guests will decipher the letters rather than read them.",
+    "fontUpload": "Upload your own font",
+    "fontUploading": "Uploading…",
+    "fontLicence": "woff2, woff, otf or ttf, up to 2 MB. The hotel confirms it has the right to use the font — we cannot verify the licence.",
+    "fontCustomReady": "Your font “{{name}}” is uploaded and selected",
+    "fontFailed": "The font could not be uploaded"
   },
   "hotel": {
     "rooms": {
