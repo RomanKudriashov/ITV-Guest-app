@@ -188,7 +188,14 @@ const shellBranch: RouteObject = {
   children: shellChildren,
 };
 
-const guestBranch: RouteObject =
+/**
+ * Дерево витрины — ЭКСПОРТИРУЕТСЯ ради показа бренда.
+ *
+ * Показ рисует настоящие экраны гостя и берёт их адреса ОТСЮДА: выписав
+ * список у себя, он перестал бы замечать новый экран ровно в тот день, когда
+ * его добавят. Именно этим и болел прежний показ — он был собран руками.
+ */
+export const guestBranch: RouteObject =
   {
     path: '/',
     element: <GuestRoot />,

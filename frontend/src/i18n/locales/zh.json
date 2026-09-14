@@ -1173,7 +1173,7 @@
       "phone": "手机",
       "tablet": "平板",
       "desktop": "电脑",
-      "tv": "电视 — 即将推出",
+      "tv": "电视",
       "greeting": "下午好",
       "sample": {
         "badge": "示例",
@@ -1184,6 +1184,19 @@
         "secondTitle": "饮品",
         "secondBody": "条目暂无照片时，卡片即为此样式",
         "noHeader": "手机端客人没有顶栏：标识显示在进入页面"
+      },
+      "expand": "展开",
+      "dataFailed": "预览数据未送达——页面以空白呈现",
+      "screen": {
+        "label": "页面",
+        "entry": "进入",
+        "home": "首页",
+        "venues": "场所",
+        "catalog": "场所菜单",
+        "item": "条目卡片",
+        "cart": "购物车与结算",
+        "request": "服务申请",
+        "room": "客房控制"
       }
     },
     "tabs": {

@@ -152,6 +152,50 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * СЕССИЯ ПОКАЗА — ЕЁ НЕТ, И ЭТО СКАЗАНО ЧЕСТНО.
+ *
+ * Показ витрины в настройке оформления рисует НАСТОЯЩИЕ экраны гостя, но
+ * гостя за ними нет: оператор смотрит со стороны панели. Провайдер отдаёт то
+ * же, что увидел бы зашедший «просто посмотреть» и ещё не представившийся:
+ * сессии нет, заказывать нельзя, номера нет.
+ *
+ * `isReady: false` — НЕ ЗАГЛУШКА РАДИ ТИШИНЫ, а точное описание: гостевые
+ * запросы гейтятся этим флагом, и раз сессии нет, ходить в гостевые ручки
+ * незачем. Данные показу приходят серверной ручкой панели и лежат в кэше — то
+ * есть экраны рисуют настоящее, не сделав ни одного гостевого запроса.
+ *
+ * Выдуманного номера и выдуманного гостя здесь нет и не будет: подменять
+ * личность ради красивого показа — ровно то, от чего уходили.
+ */
+export function PreviewSessionProvider({
+  hotel,
+  currency,
+  minorUnits,
+  children,
+}: {
+  hotel: GuestHotel | null;
+  currency: string;
+  minorUnits: number;
+  children: ReactNode;
+}) {
+  const value = useMemo<GuestSessionContextValue>(
+    () => ({
+      session: null,
+      hotel,
+      isBootstrapping: false,
+      isReady: false,
+      canOrder: false,
+      currency,
+      minorUnits,
+      start: () => Promise.reject(new Error('в показе сессия не заводится')),
+      end: () => undefined,
+    }),
+    [hotel, currency, minorUnits],
+  );
+  return <GuestSessionContext.Provider value={value}>{children}</GuestSessionContext.Provider>;
+}
+
 export function useGuestSession(): GuestSessionContextValue {
   const ctx = useContext(GuestSessionContext);
   if (!ctx) throw new Error('useGuestSession must be used inside <GuestSessionProvider>');

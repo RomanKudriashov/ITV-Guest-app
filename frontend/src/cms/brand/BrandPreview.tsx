@@ -1,80 +1,59 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CacheProvider, type EmotionCache } from '@emotion/react';
-import createCache from '@emotion/cache';
-import { prefixer } from 'stylis';
-import rtlPlugin from 'stylis-plugin-rtl';
+/**
+ * ПОКАЗ ВИТРИНЫ В НАСТРОЙКЕ ОФОРМЛЕНИЯ.
+ *
+ * Раньше здесь стояла СОБРАННАЯ РУКАМИ верхняя треть главной: четыре
+ * компонента витрины, три выдуманных блюда и шапка, которой у гостя нет. Любая
+ * новая полоса на настоящей главной в показ не попадала, а из одиннадцати
+ * экранов гость видел один.
+ *
+ * Теперь показ рисует НАСТОЯЩИЕ экраны: берёт их таблицу маршрутов у витрины
+ * (`guestBranch`), открывает нужный адрес и подкладывает данные, посчитанные
+ * теми же сборщиками, что отвечают гостю. Добавили экран витрине — он
+ * появился и здесь; забыть про него нельзя.
+ *
+ * Ширины настоящие: экран живёт в рамке со своим окном, и оболочка
+ * переключается по-честному — см. `PreviewStage`.
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
-import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
-import { I18nextProvider, useTranslation } from 'react-i18next';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import { useTranslation } from 'react-i18next';
 
-import { createAppTheme, resolveBackground, type BrandTokens, type ThemeMode } from '@/theme';
-import { formatMoney } from '@/utils/money';
-import { GuestTopBar } from '@/guest/layout/GuestTopBar';
-import { HOTEL_TABS, PRIMARY_TABS } from '@/guest/layout/GuestLayout';
-import { StickyStackProvider } from '@/guest/layout/stickyStack';
-import { pickLogo } from '@/theme/tokens';
-import { CatalogRowView } from '@/guest/components/CatalogRow';
-import { ItemHeadlineView } from '@/guest/components/ItemHeadline';
-import { HomeHeroView } from '@/guest/components/HomeHero';
-import { storefrontTokens } from '@/guest/storefrontTokens';
+import type { BrandTokens, ThemeMode } from '@/theme';
 import type { BrandAbstraction } from '@/api/brand';
-import { previewI18n } from './previewI18n';
-import { useQuery } from '@tanstack/react-query';
-import { fetchItems } from '@/api/cms';
-import { previewCatalog } from './previewData';
-
-// Preview-only emotion caches. Distinct keys keep preview class names from
-// colliding with the CMS (`mui` / `mui-rtl`); the RTL cache runs stylis-plugin-rtl
-// so the preview mirrors independently of the LTR CMS around it.
-const previewLtrCache: EmotionCache = createCache({
-  key: 'brand-preview',
-  stylisPlugins: [prefixer],
-});
-const previewRtlCache: EmotionCache = createCache({
-  key: 'brand-preview-rtl',
-  stylisPlugins: [prefixer, rtlPlugin],
-});
+import { PreviewStage } from './PreviewStage';
+import { PREVIEW_SCREENS, type PreviewScreenId } from './previewScreens';
+import { usePreviewData } from './usePreviewData';
 
 /**
- * Preview-frame form factors. Each resizes ONLY the isolated preview frame
- * (max width + aspect ratio), never the surrounding CMS. `tv` is a deliberately
- * marked placeholder for a future large-screen target — not selectable yet.
- */
-type PreviewDevice = 'phone' | 'tablet' | 'desktop';
-
-const DEVICE_FRAME: Record<PreviewDevice, { maxWidth: number; aspectRatio: string }> = {
-  phone: { maxWidth: 400, aspectRatio: '10 / 19' },
-  tablet: { maxWidth: 620, aspectRatio: '3 / 4' },
-  desktop: { maxWidth: 900, aspectRatio: '16 / 10' },
-};
-
-/**
- * Вкладки настоящей шапки — ТОТ ЖЕ СПИСОК, что у гостя.
+ * НАСТОЯЩИЕ РАЗМЕРЫ УСТРОЙСТВ, а не круглые числа.
  *
- * Переходы в показе никуда не ведут, но состав вкладок обязан совпадать: по
- * нему судят, влезает ли длинное название отеля рядом с ними. Выписав список
- * руками, мы получили бы показ, который не замечает новой вкладки, — ровно та
- * болезнь, от которой лечится весь этот экран.
- *
- * «Управление номером» сюда не входит: у гостя оно появляется только при
- * включённом модуле и заселённом номере, и показывать его всем значило бы
- * обещать вкладку, которой у отеля может не быть.
+ * Планшет — 820 на 1180 (портретный iPad): он НИЖЕ порога 1024 и показывает
+ * телефонную оболочку. Это не ошибка списка, а правда о витрине, которую
+ * оператор обязан увидеть: на портретном планшете гость видит именно её.
+ * Компьютер — 1280, телевизор — 1920: оба выше порога, оболочка десктопная.
  */
-const PREVIEW_TABS = [...PRIMARY_TABS, ...HOTEL_TABS].map((tab) => ({
-  value: tab.value,
-  labelKey: tab.labelKey,
-}));
+const DEVICES = {
+  phone: { width: 390, height: 844 },
+  tablet: { width: 820, height: 1180 },
+  desktop: { width: 1280, height: 800 },
+  tv: { width: 1920, height: 1080 },
+} as const;
+
+type DeviceId = keyof typeof DEVICES;
 
 export interface BrandPreviewProps {
-  /** Fully merged draft tokens — the preview repaints on every change. */
   tokens: BrandTokens;
   hotelName: string;
   abstractions: BrandAbstraction[];
@@ -82,82 +61,76 @@ export interface BrandPreviewProps {
   onModeChange: (mode: ThemeMode) => void;
   rtl: boolean;
   onRtlChange: (rtl: boolean) => void;
-  /** Language of the CMS session, mirrored by the preview when not in RTL mode. */
   appLanguage: string;
+  /** Валюта отеля — её показывает корзина и карточка позиции. */
+  currency?: string;
+  minorUnits?: number;
 }
 
 export function BrandPreview({
   tokens,
   hotelName,
-  abstractions,
   mode,
   onModeChange,
   rtl,
   onRtlChange,
   appLanguage,
+  currency = 'RUB',
+  minorUnits = 100,
 }: BrandPreviewProps) {
   const { t } = useTranslation();
-  // Device is preview-only local state; it never touches the CMS around it.
-  const [device, setDevice] = useState<PreviewDevice>('phone');
+  const [device, setDevice] = useState<DeviceId>('phone');
+  const [screenId, setScreenId] = useState<PreviewScreenId>('home');
+  const [full, setFull] = useState(false);
 
-  // Настоящие блюда отеля для карточек показа. Отказ не важен — упасть показ
-  // из-за каталога не должен, поэтому без повторов и с молчаливым откатом на
-  // образцы (`rowsFromItems` сам решает, хватает ли снимков).
-  const items = useQuery({
-    queryKey: ['cms', 'brand', 'preview-items'],
-    queryFn: () => fetchItems({ limit: 8 }),
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-  });
-  /*
-    СОСТАВ ПОКАЗА — И ЧЕСТНАЯ ПОМЕТКА, ЕСЛИ ЭТО ОБРАЗЕЦ.
-
-    Раньше подмена была молчаливой: не хватило блюд со снимками — показ
-    подсовывал «Ribeye Steak» и «Caesar Salad», а карточку «Vanilla Pavlova»
-    показывал ВСЕГДА, даже у отеля с семьюдесятью позициями. Отличить выдумку
-    от своего каталога на экране было нечем.
-  */
-  const catalog = useMemo(
-    () => previewCatalog(items.data ?? [], appLanguage, previewI18n.t.bind(previewI18n)),
-    [items.data, appLanguage],
+  const screen = useMemo(
+    () => PREVIEW_SCREENS.find((row) => row.id === screenId) ?? PREVIEW_SCREENS[0],
+    [screenId],
   );
-  const { rows, detail, sample } = catalog;
-  const frame = DEVICE_FRAME[device];
-  const direction = rtl ? 'rtl' : 'ltr';
   const language = rtl ? 'ar' : appLanguage;
+  const { client, isLoading, error } = usePreviewData(screen, language);
 
-  // Drive the isolated preview instance; never touches the CMS i18n.
+  // Во сколько ужать рамку, чтобы она влезла в колонку. Меряем колонку, а не
+  // гадаем: ширина панели зависит от окна оператора и от того, свёрнуто ли меню.
+  const holderRef = useRef<HTMLDivElement | null>(null);
+  const [available, setAvailable] = useState(440);
   useEffect(() => {
-    void previewI18n.changeLanguage(language);
-  }, [language]);
+    const node = holderRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setAvailable(entry.contentRect.width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
-  const theme = useMemo(
-    () => createAppTheme(tokens, mode, direction),
-    [tokens, mode, direction],
+  const frame = DEVICES[device];
+  const scale = Math.min(1, available / frame.width);
+
+  const stage = (fit: number) => (
+    <PreviewStage
+      tokens={tokens}
+      mode={mode}
+      rtl={rtl}
+      language={language}
+      route={screen.route}
+      width={frame.width}
+      height={frame.height}
+      scale={fit}
+      client={client}
+      hotelName={hotelName}
+      currency={currency}
+      minorUnits={minorUnits}
+    />
   );
-
-  const abstractionUrl = useMemo(() => {
-    const byCode = new Map(abstractions.map((a) => [a.code, a.preview_url]));
-    return (code: string) => byCode.get(code);
-  }, [abstractions]);
-
-  const background = useMemo(
-    () => resolveBackground(tokens, mode, { abstractionUrl }),
-    [tokens, mode, abstractionUrl],
-  );
-
-  const cache = rtl ? previewRtlCache : previewLtrCache;
-
-  const priceOf = (minor: number | null) =>
-    minor === null ? null : formatMoney(minor, 'RUB', 2, language, { trimZeroFraction: true });
 
   return (
     <Box data-testid="brand-preview" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      {/* Preview controls live in the CMS theme so they always read normally. */}
       <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
         <Typography variant="subtitle2" sx={{ mr: 'auto' }}>
           {t('brand.preview.title')}
         </Typography>
+
         <ToggleButtonGroup
           size="small"
           exclusive
@@ -169,6 +142,7 @@ export function BrandPreview({
           <ToggleButton value="light">{t('brand.preview.light')}</ToggleButton>
           <ToggleButton value="dark">{t('brand.preview.dark')}</ToggleButton>
         </ToggleButtonGroup>
+
         <ToggleButton
           size="small"
           value="rtl"
@@ -177,200 +151,86 @@ export function BrandPreview({
           aria-label={t('brand.preview.rtl')}
           data-testid="brand-preview-rtl-toggle"
         >
-          {t('brand.preview.rtl')}
+          RTL
         </ToggleButton>
       </Stack>
 
-      {/* Device switch — resizes ONLY the preview frame below. */}
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        value={device}
-        onChange={(_e, next: PreviewDevice | null) => next && setDevice(next)}
-        aria-label={t('brand.preview.device', { defaultValue: 'Device' })}
-      >
-        <ToggleButton value="phone" data-testid="brand-preview-device-phone">
-          {t('brand.preview.phone', { defaultValue: 'Phone' })}
-        </ToggleButton>
-        <ToggleButton value="tablet" data-testid="brand-preview-device-tablet">
-          {t('brand.preview.tablet', { defaultValue: 'Tablet' })}
-        </ToggleButton>
-        <ToggleButton value="desktop" data-testid="brand-preview-device-desktop">
-          {t('brand.preview.desktop', { defaultValue: 'Desktop' })}
-        </ToggleButton>
-        {/* TV target is planned — placeholder slot, intentionally disabled. */}
-        <ToggleButton value="tv" disabled data-testid="brand-preview-device-tv">
-          {t('brand.preview.tv', { defaultValue: 'TV — soon' })}
-        </ToggleButton>
-      </ToggleButtonGroup>
+      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+        {/* ЭКРАН — ПЕРВЫЙ ОРГАН УПРАВЛЕНИЯ: показ теперь про весь путь гостя,
+            а не про верхнюю треть одного экрана. */}
+        <TextField
+          select
+          size="small"
+          label={t('brand.preview.screen.label')}
+          value={screenId}
+          onChange={(event) => setScreenId(event.target.value as PreviewScreenId)}
+          sx={{ minWidth: 200 }}
+          SelectProps={{
+            SelectDisplayProps: { 'data-testid': 'brand-preview-screen' } as never,
+          }}
+        >
+          {PREVIEW_SCREENS.map((row) => (
+            <MenuItem key={row.id} value={row.id} data-testid={`brand-preview-screen-${row.id}`}>
+              {t(row.labelKey)}
+            </MenuItem>
+          ))}
+        </TextField>
 
-      {/* The isolated subtree: own emotion cache, own theme, own direction/lang. */}
-      <CacheProvider value={cache}>
-        <I18nextProvider i18n={previewI18n}>
-          <MuiThemeProvider theme={theme}>
-            <Box
-              dir={direction}
-              data-testid="brand-preview-frame"
-              sx={{
-                position: 'relative',
-                width: '100%',
-                maxWidth: frame.maxWidth,
-                aspectRatio: frame.aspectRatio,
-                mx: 'auto',
-                borderRadius: 4,
-                overflow: 'hidden',
-                border: 1,
-                borderColor: 'divider',
-                boxShadow: 3,
-              }}
-            >
-              {/* Backdrop + optional dim layer, both built from brand tokens. */}
-              <Box sx={{ position: 'absolute', inset: 0, ...background.css }} />
-              {background.dim > 0 ? (
-                <Box
-                  sx={{ position: 'absolute', inset: 0, bgcolor: 'brand.scrim', opacity: background.dim }}
-                />
-              ) : null}
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={device}
+          onChange={(_e, next: DeviceId | null) => next && setDevice(next)}
+          aria-label={t('brand.preview.device')}
+        >
+          {(Object.keys(DEVICES) as DeviceId[]).map((id) => (
+            <ToggleButton key={id} value={id} data-testid={`brand-preview-device-${id}`}>
+              {t(`brand.preview.${id}`)}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
 
-              <Box sx={{ position: 'relative', height: '100%', overflowY: 'auto' }}>
-                {/*
-                  ШАПКА — ТА ЖЕ, ЧТО У ГОСТЯ, И ТОЛЬКО ТАМ, ГДЕ ОНА У НЕГО ЕСТЬ.
+        {/* РАЗВЕРНУТЬ — чтобы десктоп можно было разглядеть, а не только
+            убедиться, что оболочка переключилась. */}
+        <Button
+          size="small"
+          startIcon={<OpenInFullIcon fontSize="small" />}
+          onClick={() => setFull(true)}
+          data-testid="brand-preview-full"
+        >
+          {t('brand.preview.expand')}
+        </Button>
+      </Stack>
 
-                  До этого показ рисовал `GuestBrandHeader` — компонент, которым
-                  витрина не пользовалась ВОВСЕ: единственное его употребление в
-                  проекте было здесь. Логотип подбирали, глядя на шапку, которой
-                  у гостя нет: сплошная заливка вместо стеклянной, 56 пикселей
-                  вместо 62, логотип 32 вместо 22 — в полтора раза крупнее.
-                  Компонент удалён вместе с этой правкой: держать мёртвый экран
-                  ради показа значит однажды снова начать по нему сверяться.
+      {error ? (
+        <Alert severity="warning" data-testid="brand-preview-error">
+          {t('brand.preview.dataFailed')}
+        </Alert>
+      ) : null}
 
-                  У гостя шапка есть только на планшете и компьютере
-                  (`GuestLayout` рисует `GuestTopBar` при `isDesktop`). На
-                  телефоне её нет вовсе, и логотип там виден на экране входа —
-                  об этом показ теперь говорит прямо, вместо того чтобы рисовать
-                  несуществующую полосу.
-                */}
-                {device === 'phone' ? (
-                  <Box sx={{ px: 2, pt: 2 }}>
-                    <Typography variant="caption" color="text.secondary" data-testid="brand-preview-no-header">
-                      {t('brand.preview.sample.noHeader')}
-                    </Typography>
-                  </Box>
-                ) : (
-                  <StickyStackProvider>
-                    <GuestTopBar
-                      hotelName={hotelName}
-                      logo={pickLogo(tokens, mode) ?? null}
-                      tabs={PREVIEW_TABS}
-                      active="/home"
-                      room={null}
-                      cartCount={0}
-                      unreadChat={0}
-                      onNavigate={() => undefined}
-                      onOpenCart={() => undefined}
-                    />
-                  </StickyStackProvider>
-                )}
+      <Box ref={holderRef} sx={{ width: '100%' }}>
+        {isLoading ? (
+          <Stack alignItems="center" sx={{ py: 6 }} data-testid="brand-preview-loading">
+            <CircularProgress size={28} />
+          </Stack>
+        ) : (
+          stage(scale)
+        )}
+      </Box>
 
-                {/*
-                  ПЕРВЫЙ ЭКРАН — И ОН ЖЕ ЕДИНСТВЕННОЕ МЕСТО, ГДЕ ВИДНА ОБЛОЖКА.
-
-                  До этого показ начинался с меню, и результат выбора «фон →
-                  изображение» не был виден нигде: картинка становится парадной
-                  главной, а парадной в показе не было. Оператор узнавал, что
-                  получилось, открыв витрину.
-
-                  Рисуется ТЕМ ЖЕ компонентом, что и у гостя (`HomeHeroView`),
-                  токены витрины берутся по режиму показа, а не по режиму
-                  админки вокруг.
-                */}
-                <Box sx={{ p: 2, pb: 0 }}>
-                  <HomeHeroView
-                    hotelName={hotelName}
-                    greeting={t('brand.preview.greeting')}
-                    cover={tokens.brand?.background?.kind === 'image'
-                      ? tokens.brand?.background?.imageUrl ?? null
-                      : null}
-                    tokens={storefrontTokens(mode)}
-                  />
-                </Box>
-
-                <Stack spacing={2} sx={{ p: 2 }}>
-                  {/* 1. Menu list on a brand surface (surfaceStyle + radius visible). */}
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 3 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                      <Typography variant="h6" component="h2" sx={{ flexGrow: 1 }}>
-                        {t('brand.preview.menuHeading')}
-                      </Typography>
-                      {/*
-                        ОБРАЗЕЦ НАЗВАН ОБРАЗЦОМ. Молча подставленное блюдо хуже
-                        отсутствующего: оператор принимает решение о виде
-                        карточек, считая, что смотрит на свой каталог.
-                      */}
-                      {sample.rows ? (
-                        <Chip
-                          size="small"
-                          color="warning"
-                          variant="outlined"
-                          label={t('brand.preview.sample.badge')}
-                          data-testid="brand-preview-sample-rows"
-                        />
-                      ) : null}
-                    </Stack>
-                    {sample.rows ? (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                        {t('brand.preview.sample.rowsHint')}
-                      </Typography>
-                    ) : null}
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                      {rows.map((row) => (
-                        <CatalogRowView
-                          key={row.id}
-                          testId={`brand-preview-row-${row.code}`}
-                          title={row.title}
-                          description={row.description}
-                          imageSrc={row.images[0]}
-                          markers={row.markers}
-                          priceLabel={priceOf(row.price)}
-                          available
-                          action={
-                            <Button variant="contained" size="small" sx={{ minHeight: 44, minWidth: 44 }}>
-                              +
-                            </Button>
-                          }
-                        />
-                      ))}
-                    </Box>
-                  </Paper>
-
-                  {/* 2. Item card body — the sheet content on a brand surface. */}
-                  <Paper elevation={1} sx={{ p: 2, borderRadius: 3 }}>
-                    {sample.detail ? (
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                        <Chip
-                          size="small"
-                          color="warning"
-                          variant="outlined"
-                          label={t('brand.preview.sample.badge')}
-                          data-testid="brand-preview-sample-detail"
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {t('brand.preview.sample.detailHint')}
-                        </Typography>
-                      </Stack>
-                    ) : null}
-                    <ItemHeadlineView item={detail} priceLabel={priceOf(detail.price)} />
-                    <Divider sx={{ my: 2 }} />
-                    <Button fullWidth variant="contained" size="large">
-                      {t('brand.preview.addToCart')}
-                    </Button>
-                  </Paper>
-                </Stack>
-              </Box>
-            </Box>
-          </MuiThemeProvider>
-        </I18nextProvider>
-      </CacheProvider>
+      <Dialog open={full} onClose={() => setFull(false)} fullScreen data-testid="brand-preview-dialog">
+        <Stack direction="row" spacing={1} sx={{ p: 1.5 }} alignItems="center">
+          <Typography variant="subtitle2" sx={{ mr: 'auto' }}>
+            {t(screen.labelKey)} · {frame.width}×{frame.height}
+          </Typography>
+          <Button size="small" onClick={() => setFull(false)} data-testid="brand-preview-full-close">
+            {t('common.close')}
+          </Button>
+        </Stack>
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, overflow: 'auto' }}>
+          {stage(Math.min(1, (typeof window !== 'undefined' ? window.innerWidth - 64 : frame.width) / frame.width))}
+        </Box>
+      </Dialog>
     </Box>
   );
 }

@@ -149,9 +149,38 @@ export function BrandPage() {
         <Tab value="showcase" label={t('brand.tabs.showcase')} data-testid="brand-tab-showcase" />
       </Tabs>
 
+      {/*
+        ПОКАЗ СТОИТ НА ОБЕИХ ВКЛАДКАХ, А НЕ ТОЛЬКО НА «БРЕНДЕ».
+
+        Вкладка «Витрина» настраивает ПЛИТКИ ГЛАВНОЙ — то есть ровно то, что
+        гость видит первым. Своего показа у неё не было вовсе: оператор менял
+        состав плиток и шёл смотреть результат в витрину, а вернувшись,
+        настраивал следующую наугад. Раскладка та же, что у «Бренда»: редактор
+        слева, показ справа и липкий.
+      */}
       {section === 'showcase' ? (
-        <Box data-testid="brand-showcase-section">
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 440px)' },
+            gap: 3,
+            alignItems: 'start',
+          }}
+          data-testid="brand-showcase-section"
+        >
           <ShowcaseEditorPage embedded />
+          <Box sx={{ position: { md: 'sticky' }, top: { md: 88 } }}>
+            <BrandPreview
+              tokens={merged}
+              hotelName={hotelName}
+              abstractions={brand.abstractions}
+              mode={previewMode}
+              onModeChange={setPreviewMode}
+              rtl={rtl}
+              onRtlChange={setRtl}
+              appLanguage={appLanguage}
+            />
+          </Box>
         </Box>
       ) : (
       <Box

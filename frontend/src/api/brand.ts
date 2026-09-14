@@ -45,6 +45,20 @@ export function patchBrand(tokens: PartialBrandTokens): Promise<BrandRecord> {
   return api.patch<BrandRecord>('/cms/brand', { tokens });
 }
 
+/**
+ * Данные одного экрана показа — в той же форме, в какой их получает гость.
+ *
+ * Ходит в ПАНЕЛЬНУЮ ручку, а не в гостевую: гостевая требует сессию, и заводить
+ * её на каждый заход в оформление значило бы плодить гостей, которых не было.
+ * Считают ответ те же сборщики, что отвечают витрине.
+ */
+export function fetchPreviewScreen(
+  screen: string,
+  params: Record<string, string> = {},
+): Promise<unknown> {
+  return api.get<unknown>('/cms/brand/preview', { query: { screen, ...params } });
+}
+
 export function fetchPresets(): Promise<{ presets: BrandPreset[] }> {
   return api.get<{ presets: BrandPreset[] }>('/cms/brand/presets');
 }

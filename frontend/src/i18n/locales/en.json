@@ -1181,7 +1181,7 @@
       "phone": "Phone",
       "tablet": "Tablet",
       "desktop": "Desktop",
-      "tv": "TV — soon",
+      "tv": "TV",
       "greeting": "Good afternoon",
       "sample": {
         "badge": "Sample",
@@ -1192,6 +1192,19 @@
         "secondTitle": "A drink",
         "secondBody": "This is how a card looks while the item has no photo",
         "noHeader": "On a phone the guest has no header: the logo appears on the entry screen"
+      },
+      "expand": "Expand",
+      "dataFailed": "Preview data did not arrive — the screen renders empty",
+      "screen": {
+        "label": "Screen",
+        "entry": "Entry",
+        "home": "Home",
+        "venues": "Venues",
+        "catalog": "Venue menu",
+        "item": "Item card",
+        "cart": "Cart and checkout",
+        "request": "Request",
+        "room": "Room control"
       }
     },
     "tabs": {
