@@ -8,7 +8,7 @@ import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { useGuestSession } from '../session/GuestSessionProvider';
+import { useOptionalGuestSession } from '../session/GuestSessionProvider';
 import { surfaceRadius } from '../storefrontTokens';
 
 /**
@@ -43,12 +43,24 @@ export function RoomMenu({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { end } = useGuestSession();
+  /*
+    СЕССИЯ — НЕОБЯЗАТЕЛЬНАЯ, как и у соседнего меню языка.
+
+    Компонент живёт не только в гостевой оболочке: показ бренда рисует ту же
+    верхнюю строку, что видит гость, а гостевой сессии в панели нет и быть не
+    должно. Обязательный хук бросал исключение, и показ на планшете падал в
+    «экран не открылся из-за ошибки в данных» — целиком, вместе с настройкой
+    бренда.
+
+    Без сессии выходить неоткуда: «Выйти из номера» просто не предлагается.
+    Это честнее, чем показать пункт, который бросит исключение при нажатии.
+  */
+  const session = useOptionalGuestSession();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   const leave = () => {
     setAnchor(null);
-    end();
+    session?.end();
     // На экран входа, а не на /login: у гостя нет учётной записи, он
     // представляется номером.
     navigate('/', { replace: true });

@@ -17,7 +17,14 @@ async function openBrand(page: Page): Promise<void> {
   await expect(page.getByTestId('brand-preview')).toBeVisible({ timeout: 25_000 })
 }
 
-/** Названия позиций отеля — то, что показ ОБЯЗАН показывать вместо выдумки. */
+/**
+ * Названия позиций отеля — то, что показ ОБЯЗАН показывать вместо выдумки.
+ *
+ * ВСЕ ЯЗЫКИ, А НЕ ПЕРВЫЙ ПОПАВШИЙСЯ. Названия переводимые, и «первое значение
+ * словаря» — это первый ключ по алфавиту, то есть арабский. Показ рисует на
+ * языке панели, и проверка, сравнивавшая с арабским, падала на исправном
+ * экране.
+ */
 async function realTitles(request: APIRequestContext): Promise<string[]> {
   const token = await apiToken(request, ADMIN)
   const response = await request.get(`${API}/api/cms/items?limit=8`, {
@@ -26,7 +33,7 @@ async function realTitles(request: APIRequestContext): Promise<string[]> {
   expect(response.ok()).toBeTruthy()
   const body = await response.json()
   const rows = (Array.isArray(body) ? body : body.items) as { title: Record<string, string> }[]
-  return rows.map((row) => Object.values(row.title ?? {})[0]).filter(Boolean)
+  return rows.flatMap((row) => Object.values(row.title ?? {})).filter(Boolean)
 }
 
 test.describe('Показ бренда: честность данных', () => {
