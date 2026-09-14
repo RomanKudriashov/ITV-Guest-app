@@ -34,7 +34,21 @@ export function BrandLookChip() {
         data-testid="cms-brand-look"
         // Нейтральный тон в обоих случаях: своё оформление — не тревога.
         color="default"
-        label={t(`brand.look.${look.data.state}`)}
+        /*
+          ВЕРСИЯ НАЗВАНА, И ЭТО НЕ УКРАШЕНИЕ.
+
+          Метка считается по ОПУБЛИКОВАННОМУ оформлению. Пока черновиков не
+          было, это совпадало с тем, что оператор видит в редакторе. С
+          черновиками совпадать перестало: он правит одно, метка говорит про
+          другое — и говорит правду, которую легко принять за ложь.
+        */
+        label={
+          look.data.version
+            ? `${t(`brand.look.${look.data.state}`)} · ${t('brand.look.version', {
+                number: look.data.version,
+              })}`
+            : t(`brand.look.${look.data.state}`)
+        }
       />
     </Tooltip>
   );

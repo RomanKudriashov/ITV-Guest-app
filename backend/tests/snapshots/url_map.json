@@ -71,6 +71,18 @@
   "/api/v1/cms/brand/apply-preset": [
     "POST"
   ],
+  "/api/v1/cms/brand/drafts": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/brand/drafts/{draft_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/brand/drafts/{draft_id}/publish": [
+    "POST"
+  ],
   "/api/v1/cms/brand/font": [
     "POST"
   ],
@@ -85,6 +97,12 @@
   ],
   "/api/v1/cms/brand/preview": [
     "GET"
+  ],
+  "/api/v1/cms/brand/versions": [
+    "GET"
+  ],
+  "/api/v1/cms/brand/versions/{version_id}/restore": [
+    "POST"
   ],
   "/api/v1/cms/categories": [
     "GET",

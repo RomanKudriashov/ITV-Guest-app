@@ -464,6 +464,9 @@ export interface BrandLook {
   label: string;
   preset: string;
   theme: string | null;
+  /** Номер ОПУБЛИКОВАННОЙ версии — метка считается по ней, а не по редактору. */
+  version: number | null;
+  version_published_at: string | null;
 }
 
 export function fetchBrandLook(): Promise<BrandLook> {

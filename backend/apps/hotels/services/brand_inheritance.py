@@ -119,6 +119,31 @@ def look_of_current_hotel() -> dict:
         "label": LABELS[state],
         "preset": theme.source_preset,
         "theme": theme.name,
+        # О КАКОЙ ВЕРСИИ РЕЧЬ — обязательная часть ответа, а не украшение.
+        #
+        # Метка считается по ОПУБЛИКОВАННОМУ оформлению. Пока черновиков не
+        # было, это совпадало с «тем, что видит оператор в редакторе», и
+        # уточнять было нечего. С черновиками совпадать перестало: оператор
+        # правит одно, метка говорит про другое — и говорит правду, которую
+        # легко принять за ложь. Поэтому версия названа.
+        **_published_version(),
+    }
+
+
+def _published_version() -> dict:
+    """Номер и время опубликованной версии — чтобы метке было на что сослаться."""
+    from apps.hotels.services import brand_versions
+
+    version = brand_versions.current_published()
+    if version is None:
+        # Публикаций ещё не было: оформление стоит с заведения отеля. Это не
+        # «нет данных», а честное «версии нет», и метка скажет именно так.
+        return {"version": None, "version_published_at": None}
+    return {
+        "version": version.number,
+        "version_published_at": (
+            version.published_at.isoformat() if version.published_at else None
+        ),
     }
 
 

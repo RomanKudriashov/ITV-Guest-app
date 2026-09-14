@@ -208,9 +208,24 @@ export function useBrandDraft() {
     },
   });
 
+  /**
+   * Положить в редактор готовый набор — черновик с сервера или версию.
+   *
+   * Не публикует: на витрину это попадёт обычным «Сохранить», как и любая
+   * правка. Открыть чужой черновик и немедленно показать его гостю — не то, о
+   * чём просят, нажимая «Открыть».
+   */
+  const openTokens = useCallback(
+    (tokens: PartialBrandTokens) => {
+      setDraft(() => tokens);
+    },
+    [setDraft],
+  );
+
   return {
     record,
     draft,
+    openTokens,
     merged,
     dirty,
     presets: presetsQuery.data?.presets ?? [],

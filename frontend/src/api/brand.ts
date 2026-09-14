@@ -95,3 +95,68 @@ export function uploadBrandFont(file: File): Promise<UploadedFont> {
   form.append('file', file);
   return request<UploadedFont>('/cms/brand/font', { method: 'POST', formData: form });
 }
+
+/* ── Черновики и версии ─────────────────────────────────────────────────── */
+
+export interface BrandVersionRecord {
+  id: string;
+  kind: 'draft' | 'published';
+  name: string;
+  number: number | null;
+  author: string;
+  created_at: string;
+  published_at: string | null;
+  /** Публикация является откатом к этой версии. */
+  restored_from: { id: string; number: number | null } | null;
+  /** От какой опубликованной версии начат черновик. */
+  base_version: { id: string; number: number | null } | null;
+  /** Пока черновик правили, витрину опубликовал кто-то другой. */
+  is_stale: boolean;
+  tokens?: PartialBrandTokens;
+}
+
+export function fetchBrandDrafts(): Promise<{ drafts: BrandVersionRecord[] }> {
+  return api.get<{ drafts: BrandVersionRecord[] }>('/cms/brand/drafts');
+}
+
+export function fetchBrandDraft(id: string): Promise<BrandVersionRecord> {
+  return api.get<BrandVersionRecord>(`/cms/brand/drafts/${id}`);
+}
+
+export function createBrandDraft(
+  name: string,
+  tokens: PartialBrandTokens,
+): Promise<BrandVersionRecord> {
+  return api.post<BrandVersionRecord>('/cms/brand/drafts', { name, tokens });
+}
+
+export function updateBrandDraft(
+  id: string,
+  patch: { name?: string; tokens?: PartialBrandTokens },
+): Promise<BrandVersionRecord> {
+  return api.patch<BrandVersionRecord>(`/cms/brand/drafts/${id}`, patch);
+}
+
+export function deleteBrandDraft(id: string): Promise<{ ok: boolean }> {
+  return api.delete<{ ok: boolean }>(`/cms/brand/drafts/${id}`);
+}
+
+/**
+ * Опубликовать черновик.
+ *
+ * `confirmStale` — ОТДЕЛЬНОЕ осознанное подтверждение, а не значение по
+ * умолчанию: устаревший черновик стирает чужую работу целиком.
+ */
+export function publishBrandDraft(id: string, confirmStale = false): Promise<BrandVersionRecord> {
+  return api.post<BrandVersionRecord>(
+    `/cms/brand/drafts/${id}/publish${confirmStale ? '?confirm_stale=true' : ''}`,
+  );
+}
+
+export function fetchBrandVersions(): Promise<{ versions: BrandVersionRecord[] }> {
+  return api.get<{ versions: BrandVersionRecord[] }>('/cms/brand/versions');
+}
+
+export function restoreBrandVersion(id: string): Promise<BrandVersionRecord> {
+  return api.post<BrandVersionRecord>(`/cms/brand/versions/${id}/restore`);
+}

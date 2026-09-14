@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from django.http import HttpRequest
-from ninja import File, Router
+from ninja import File, Router, Schema
 from ninja.files import UploadedFile
 
 from apps.accounts.services.roles import require_hotel_admin
@@ -26,6 +26,7 @@ from apps.hotels.brand_library import (
 from apps.media.services import store_ready_asset
 from apps.hotels.schemas.cms import ApplyPresetIn, BrandOut, BrandPatch
 from apps.hotels.services import brand_services as svc
+from apps.hotels.services import brand_versions as versions_svc
 from apps.hotels.services.hotel import current_hotel
 
 router = Router(tags=["cms:brand"])
@@ -156,6 +157,81 @@ def _font_name(raw: str) -> str:
     cleaned = re.sub(r"[^\w \-]", "", raw, flags=re.UNICODE).strip()
     cleaned = re.sub(r"\s+", " ", cleaned)[:40]
     return cleaned or "Свой шрифт"
+
+
+# --- Черновики, версии, откат ----------------------------------------------
+#
+# ПОРЯДОК ОБЪЯВЛЕНИЯ ЗДЕСЬ ЗНАЧИМ. Статические пути объявляются ВЫШЕ путей с
+# динамическим сегментом: иначе `/brand/drafts` попадёт в обработчик
+# `/brand/{something}` и вернёт 405 — на этом мы уже обжигались с бейджами.
+
+
+class DraftIn(Schema):
+    name: str = ""
+    tokens: dict = {}
+
+
+class DraftPatch(Schema):
+    name: str | None = None
+    tokens: dict | None = None
+
+
+@router.get("/brand/drafts", summary="Черновики оформления")
+def brand_drafts(request: HttpRequest):
+    """
+    ЧЕРНОВИКОВ НЕСКОЛЬКО. Оператор готовит новогоднее оформление, открытие
+    террасы и «просто попробовать» — это разные замыслы, и держать их по одному
+    значит заставлять выбирать, что потерять.
+    """
+    return {"drafts": versions_svc.list_drafts()}
+
+
+@router.post("/brand/drafts", summary="Создать черновик")
+def create_brand_draft(request: HttpRequest, payload: DraftIn):
+    return versions_svc.create_draft(name=payload.name, tokens=payload.tokens)
+
+
+@router.get("/brand/versions", summary="История публикаций")
+def brand_versions(request: HttpRequest, limit: int = 50):
+    return {"versions": versions_svc.list_versions(limit=limit)}
+
+
+@router.post("/brand/versions/{version_id}/restore", summary="Вернуть эту версию")
+def restore_brand_version(request: HttpRequest, version_id: str):
+    """
+    Откат ложится СВЕРХУ новой публикацией и подписан как откат.
+
+    Стирать версии между «сейчас» и «тогда» нельзя: они были, витрина их
+    показывала, и гость заказывал по тому меню.
+    """
+    return versions_svc.restore_version(version_id)
+
+
+@router.get("/brand/drafts/{draft_id}", summary="Черновик целиком")
+def brand_draft(request: HttpRequest, draft_id: str):
+    return versions_svc.get_draft(draft_id)
+
+
+@router.patch("/brand/drafts/{draft_id}", summary="Правка черновика")
+def patch_brand_draft(request: HttpRequest, draft_id: str, payload: DraftPatch):
+    return versions_svc.update_draft(draft_id, name=payload.name, tokens=payload.tokens)
+
+
+@router.delete("/brand/drafts/{draft_id}", summary="Удалить черновик")
+def delete_brand_draft(request: HttpRequest, draft_id: str):
+    versions_svc.delete_draft(draft_id)
+    return {"ok": True}
+
+
+@router.post("/brand/drafts/{draft_id}/publish", summary="Опубликовать черновик")
+def publish_brand_draft(request: HttpRequest, draft_id: str, confirm_stale: bool = False):
+    """
+    Устаревший черновик требует подтверждения ОТДЕЛЬНЫМ действием.
+
+    Не галочкой по умолчанию: подтверждение по умолчанию — это не подтверждение,
+    а способ стереть чужую работу, не заметив.
+    """
+    return versions_svc.publish_draft(draft_id, confirm_stale=confirm_stale)
 
 
 @router.get("/brand/presets", summary="Библиотека пресетов")

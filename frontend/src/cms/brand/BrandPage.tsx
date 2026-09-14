@@ -23,6 +23,7 @@ import { ShowcaseEditorPage } from '@/cms/showcase/ShowcaseEditorPage';
 import { BrandPreview } from './BrandPreview';
 import { useBrandDraft } from './useBrandDraft';
 import { BrandLookChip } from './BrandLookChip';
+import { BrandVersions } from './BrandVersions';
 
 export function BrandPage() {
   const { t, i18n } = useTranslation();
@@ -35,7 +36,7 @@ export function BrandPage() {
   const { dirty, isLoading, loadError, isSaving, merged, draft, reload } = brand;
 
   const [previewMode, setPreviewMode] = useState<ThemeMode>('light');
-  const [section, setSection] = useState<'brand' | 'showcase'>('brand');
+  const [section, setSection] = useState<'brand' | 'showcase' | 'versions'>('brand');
   const [rtl, setRtl] = useState(false);
 
   // Open the preview in the brand's own default mode once, when data first lands.
@@ -142,11 +143,19 @@ export function BrandPage() {
       */}
       <Tabs
         value={section}
-        onChange={(_event, next: 'brand' | 'showcase') => setSection(next)}
+        onChange={(_event, next: 'brand' | 'showcase' | 'versions') => setSection(next)}
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
       >
         <Tab value="brand" label={t('brand.tabs.brand')} data-testid="brand-tab-brand" />
         <Tab value="showcase" label={t('brand.tabs.showcase')} data-testid="brand-tab-showcase" />
+        {/*
+          ЧЕРНОВИКИ И ВЕРСИИ — ТРЕТЬЯ ВКЛАДКА, А НЕ ПОЛОСА НАД РЕДАКТОРОМ.
+
+          Это другой род работы: не «подобрать цвет», а «решить, что показать
+          гостю и когда». Полоса над редактором отнимала бы место у показа —
+          того самого, ради которого партия и затевалась.
+        */}
+        <Tab value="versions" label={t('brand.tabs.versions')} data-testid="brand-tab-versions" />
       </Tabs>
 
       {/*
@@ -158,7 +167,9 @@ export function BrandPage() {
         настраивал следующую наугад. Раскладка та же, что у «Бренда»: редактор
         слева, показ справа и липкий.
       */}
-      {section === 'showcase' ? (
+      {section === 'versions' ? (
+        <BrandVersions tokens={brand.draft} onOpen={brand.openTokens} />
+      ) : section === 'showcase' ? (
         <Box
           sx={{
             display: 'grid',

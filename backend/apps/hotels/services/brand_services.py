@@ -354,8 +354,13 @@ def update_brand(patch_tokens: dict) -> BrandTheme:
     if "preset" not in patch_tokens and patch_tokens:
         merged["preset"] = "custom"
 
-    theme.tokens = merged
-    theme.save(update_fields=["tokens", "updated_at"])
+    # ПРЯМОЕ СОХРАНЕНИЕ — ТОЖЕ ПУБЛИКАЦИЯ, и она обязана оставить версию.
+    # История с дырами хуже её отсутствия: она выглядит полной, и откат «к
+    # предыдущему» вернёт не то, что было на витрине вчера.
+    from apps.hotels.services import brand_versions
+
+    brand_versions.publish_tokens(merged)
+    theme.refresh_from_db()
     return theme
 
 
@@ -385,8 +390,12 @@ def replace_brand(tokens: dict) -> BrandTheme:
     brand_section.setdefault("logoDark", existing_brand.get("logoDark", ""))
     next_tokens["brand"] = brand_section
 
-    theme.tokens = next_tokens
-    theme.save(update_fields=["tokens", "updated_at"])
+    # Через ту же дверь, что и остальные публикации: замена набора целиком —
+    # изменение, которое увидит гость, и в истории оно обязано быть.
+    from apps.hotels.services import brand_versions
+
+    brand_versions.publish_tokens(next_tokens)
+    theme.refresh_from_db()
     return theme
 
 
@@ -408,6 +417,8 @@ def apply_preset(code: str) -> BrandTheme:
     tokens["brand"]["logoLight"] = existing_brand.get("logoLight", "")
     tokens["brand"]["logoDark"] = existing_brand.get("logoDark", "")
 
-    theme.tokens = tokens
-    theme.save(update_fields=["tokens", "updated_at"])
+    from apps.hotels.services import brand_versions
+
+    brand_versions.publish_tokens(tokens, name=f"Пресет «{code}»")
+    theme.refresh_from_db()
     return theme

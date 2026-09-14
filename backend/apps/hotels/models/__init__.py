@@ -16,6 +16,7 @@ Hotel сам по себе НЕ тенант-таблица: он платфор
 from __future__ import annotations
 
 from .brand import BrandTheme
+from .brand_version import BrandVersion
 from .execution_point import ExecutionPoint
 from .group import HotelGroup, HotelGroupMember, PlatformScopeGroup
 from .hotel import Hotel, HotelLanguage
@@ -31,6 +32,7 @@ from .showcase import ShowcaseTile
 
 __all__ = [
     "BrandTheme",
+    "BrandVersion",
     "ExecutionPoint",
     "HotelGroup",
     "HotelGroupMember",

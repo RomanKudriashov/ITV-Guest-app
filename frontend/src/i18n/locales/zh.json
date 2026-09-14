@@ -1203,13 +1203,15 @@
     },
     "tabs": {
       "brand": "品牌",
-      "showcase": "首页门店"
+      "showcase": "首页门店",
+      "versions": "草稿与版本"
     },
     "look": {
       "follows": "外观跟随平台预设",
       "changed": "自有外观",
       "extra": "自有主题",
-      "hint": "平台的修改不会应用到您的外观。"
+      "hint": "平台的修改不会应用到您的外观。",
+      "version": "版本 {{number}}"
     },
     "where": {
       "presets": "配色、字体与背景的现成组合。客人处处可见其效果。",
@@ -1233,7 +1235,28 @@
     "fontUploading": "正在上传…",
     "fontLicence": "支持 woff2、woff、otf 或 ttf，最大 2 MB。字体的使用权由酒店确认——我们无法核验授权。",
     "fontCustomReady": "自有字体「{{name}}」已上传并选用",
-    "fontFailed": "字体上传失败"
+    "fontFailed": "字体上传失败",
+    "versions": {
+      "draftName": "草稿名称",
+      "saveDraft": "保存为草稿",
+      "draftHint": "草稿仅在后台可见——发布后客人才会看到",
+      "drafts": "草稿",
+      "draftsEmpty": "暂无草稿",
+      "unnamed": "未命名",
+      "unknownAuthor": "作者未知",
+      "stale": "已过时",
+      "open": "打开",
+      "publish": "发布",
+      "history": "发布记录",
+      "historyEmpty": "尚未发布过",
+      "number": "版本 {{number}}",
+      "live": "已上线",
+      "restore": "恢复",
+      "restoredFrom": "恢复到版本 {{number}}",
+      "staleTitle": "草稿已过时",
+      "publishAnyway": "仍然发布",
+      "publishFailed": "发布失败"
+    }
   },
   "hotel": {
     "rooms": {

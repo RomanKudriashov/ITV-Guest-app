@@ -1211,13 +1211,15 @@
     },
     "tabs": {
       "brand": "Brand",
-      "showcase": "Home storefront"
+      "showcase": "Home storefront",
+      "versions": "Drafts and versions"
     },
     "look": {
       "follows": "The look follows the platform preset",
       "changed": "Your own look",
       "extra": "Your own theme",
-      "hint": "Platform changes do not apply to your look."
+      "hint": "Platform changes do not apply to your look.",
+      "version": "version {{number}}"
     },
     "where": {
       "presets": "A ready set of colours, fonts and background. The guest sees the result everywhere.",
@@ -1241,7 +1243,28 @@
     "fontUploading": "Uploading…",
     "fontLicence": "woff2, woff, otf or ttf, up to 2 MB. The hotel confirms it has the right to use the font — we cannot verify the licence.",
     "fontCustomReady": "Your font “{{name}}” is uploaded and selected",
-    "fontFailed": "The font could not be uploaded"
+    "fontFailed": "The font could not be uploaded",
+    "versions": {
+      "draftName": "Draft name",
+      "saveDraft": "Save as draft",
+      "draftHint": "A draft is visible in the CMS only — guests see it once published",
+      "drafts": "Drafts",
+      "draftsEmpty": "No drafts yet",
+      "unnamed": "Untitled",
+      "unknownAuthor": "author unknown",
+      "stale": "outdated",
+      "open": "Open",
+      "publish": "Publish",
+      "history": "Publication history",
+      "historyEmpty": "Nothing published yet",
+      "number": "Version {{number}}",
+      "live": "live",
+      "restore": "Restore",
+      "restoredFrom": "restored version {{number}}",
+      "staleTitle": "The draft is outdated",
+      "publishAnyway": "Publish anyway",
+      "publishFailed": "Publishing failed"
+    }
   },
   "hotel": {
     "rooms": {
