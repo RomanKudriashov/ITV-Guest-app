@@ -71,9 +71,9 @@ def test_preview_without_guest_venues_says_so(cms, crystal):
     with tenant_context(crystal.id):
         Service.objects.filter(is_guest_facing=True).update(is_active=False)
 
-    payload = _preview(cms, "catalog")
-    assert payload["venue"] is None
-    assert payload["categories"] == []
+    # Пусто целиком, а не «каталог отеля без заведения»: экрана, показывающего
+    # меню всего отеля, у гостя не существует, и рисовать его оператору незачем.
+    assert _preview(cms, "catalog") == {}
 
 
 def test_preview_venue_differs_between_hotels(cms, cms_aurora, crystal, aurora):

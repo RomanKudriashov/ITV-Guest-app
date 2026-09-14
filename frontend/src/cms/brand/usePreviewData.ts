@@ -91,7 +91,10 @@ export function usePreviewData(screen: PreviewScreen, language: string): Preview
             // откуда взялся сам каталог, — иначе экран ищет свой ответ по
             // другому ключу и не находит ничего.
             point = (data as { venue?: { code?: string } }).venue?.code ?? null;
-            const key = cacheKeyFor('catalog', language, point ?? undefined);
+            // Кода нет — гостевых заведений у отеля нет, и сервер честно
+            // ответил пусто. Класть это в кэш не подо что: экран не откроется.
+            if (!point) continue;
+            const key = cacheKeyFor('catalog', language, point);
             if (key) client.setQueryData(key, data);
             continue;
           }
