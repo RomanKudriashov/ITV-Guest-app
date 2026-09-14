@@ -13,7 +13,7 @@ import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
 import CssBaseline from '@mui/material/CssBaseline';
 import GlobalStyles from '@mui/material/GlobalStyles';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider, type Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
 import { directionForLanguage } from '@/i18n';
@@ -83,18 +83,48 @@ function preferredMode(tokens: BrandTokens): ThemeMode {
   return resolveDefaultMode(tokens, systemPrefersDark());
 }
 
+/**
+ * Тема, чьи медиазапросы меряют заданное окно.
+ *
+ * MUI разрешает подменить `matchMedia` через умолчания `MuiUseMediaQuery` — это
+ * штатная точка, а не хитрость. Без окна возвращаем тему как есть: обычному
+ * приложению мерить нечего, кроме себя.
+ */
+function withMatchMedia(theme: Theme, frameWindow?: Window | null): Theme {
+  if (!frameWindow) return theme;
+  return {
+    ...theme,
+    components: {
+      ...theme.components,
+      MuiUseMediaQuery: {
+        defaultProps: { matchMedia: frameWindow.matchMedia.bind(frameWindow) },
+      },
+    },
+  } as Theme;
+}
+
 export interface AppThemeProviderProps {
   children: ReactNode;
   /** Hotel-specific token override (later fetched from the backend). */
   brandTokens?: PartialBrandTokens;
   /** Force a mode instead of using the stored/system preference. */
   initialMode?: ThemeMode;
+  /**
+   * ОКНО, ПО КОТОРОМУ МЕРИТЬ МЕДИАЗАПРОСЫ. Обычно своё — и довод не нужен.
+   *
+   * Показ витрины в настройке оформления живёт в `<iframe>`: узлы там, а код
+   * выполняется в окне панели, и `useMediaQuery` мерил бы панель. Тогда
+   * оболочка витрины оставалась бы телефонной, какой бы ширины ни была рамка,
+   * — а весь смысл рамки в том, чтобы ширина была настоящей.
+   */
+  matchMediaWindow?: Window | null;
 }
 
 export function AppThemeProvider({
   children,
   brandTokens,
   initialMode,
+  matchMediaWindow,
 }: AppThemeProviderProps) {
   const { i18n } = useTranslation();
   const [mode, setModeState] = useState<ThemeMode>(
@@ -125,8 +155,8 @@ export function AppThemeProvider({
   }, [tokens, initialMode]);
 
   const theme = useMemo(
-    () => createAppTheme(tokens, mode, direction),
-    [tokens, mode, direction],
+    () => withMatchMedia(createAppTheme(tokens, mode, direction), matchMediaWindow),
+    [tokens, mode, direction, matchMediaWindow],
   );
 
   // Keep the document in sync with the active language / direction.

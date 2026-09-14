@@ -49,7 +49,6 @@ import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useRoutes, type RouteObject } from 'react-router-dom';
@@ -57,7 +56,7 @@ import { MemoryRouter, useRoutes, type RouteObject } from 'react-router-dom';
 import { guestBranch } from '@/app/router';
 import { GuestShellProviders } from '@/guest/GuestRoot';
 import { PreviewSessionProvider } from '@/guest/session/GuestSessionProvider';
-import { createAppTheme, type BrandTokens, type ThemeMode } from '@/theme';
+import { AppThemeProvider, type BrandTokens, type ThemeMode } from '@/theme';
 import { previewI18n } from './previewI18n';
 
 export interface PreviewStageProps {
@@ -146,23 +145,6 @@ export function PreviewStage({
     });
   }, [doc, rtl]);
 
-  const theme = useMemo(() => {
-    const base = createAppTheme(tokens, mode, rtl ? 'rtl' : 'ltr');
-    const frameWindow = doc?.defaultView;
-    if (!frameWindow) return base;
-    // ВОТ ЭТА СТРОКА и делает ширину настоящей: медиазапросы витрины меряют
-    // окно рамки, а не окно панели вокруг.
-    return {
-      ...base,
-      components: {
-        ...base.components,
-        MuiUseMediaQuery: {
-          defaultProps: { matchMedia: frameWindow.matchMedia.bind(frameWindow) },
-        },
-      },
-    };
-  }, [tokens, mode, rtl, doc]);
-
   useEffect(() => {
     if (!doc) return;
     doc.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
@@ -179,11 +161,30 @@ export function PreviewStage({
   // входов — токены меняются на каждый щелчок в редакторе.
   useEffect(() => {
     if (!doc || !cache) return;
-    const root: Root = rootRef.current ?? createRoot(doc.body);
+    // Корень вешается на СВОЙ узел, а не на `body`: React просит так, и он
+    // прав — в тело документа лезут расширения браузера и посторонние скрипты.
+    let host = doc.getElementById('preview-root');
+    if (!host) {
+      host = doc.createElement('div');
+      host.id = 'preview-root';
+      doc.body.appendChild(host);
+    }
+    const root: Root = rootRef.current ?? createRoot(host);
     rootRef.current = root;
     root.render(
       <CacheProvider value={cache}>
-        <MuiThemeProvider theme={theme}>
+        {/*
+          ТЕМА — НАСТОЯЩАЯ, ТА ЖЕ, ЧТО У ГОСТЯ. Витрина спрашивает не только
+          тему MUI, но и `useAppTheme` (режим, токены, фон бренда), и голого
+          `MuiThemeProvider` ей мало: без провайдера приложения экраны падают.
+          Ему же передаётся ОКНО РАМКИ — по нему меряются медиазапросы, иначе
+          оболочка осталась бы телефонной на любой ширине.
+        */}
+        <AppThemeProvider
+          brandTokens={tokens as never}
+          initialMode={mode}
+          matchMediaWindow={doc?.defaultView ?? null}
+        >
           <CssBaseline />
           <I18nextProvider i18n={previewI18n}>
             <QueryClientProvider client={client}>
@@ -192,10 +193,10 @@ export function PreviewStage({
               </MemoryRouter>
             </QueryClientProvider>
           </I18nextProvider>
-        </MuiThemeProvider>
+        </AppThemeProvider>
       </CacheProvider>,
     );
-  }, [doc, cache, theme, client, route, routes]);
+  }, [doc, cache, tokens, mode, client, route, routes]);
 
   // Корень снимается вместе с рамкой: оставленный, он продолжит рисовать в
   // документ, которого уже нет.
