@@ -321,7 +321,13 @@ export function OfferingBadge({ label, role, size = 'md', testId }: OfferingBadg
 export function badgeRoleColor(role: string | undefined, theme: Theme): string {
   switch (role) {
     case 'accent':
-      return theme.palette.primary.main;
+      /*
+        РОЛЬ НАЗЫВАЕТСЯ «АКЦЕНТ» — И ТЕПЕРЬ ЭТО АКЦЕНТ ОТЕЛЯ.
+        Роль возвращала `primary`, то есть основной цвет: акцент, который отель
+        выбирает в оформлении, к ней отношения не имел. Настройка сохранялась,
+        доезжала до гостя и не была видна нигде, кроме звёзд отзыва.
+      */
+      return theme.palette.secondary.main;
     case 'gold':
       return theme.palette.warning.main;
     case 'success':

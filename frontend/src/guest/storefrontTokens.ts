@@ -556,6 +556,113 @@ const LIGHT: StorefrontTokens = {
   },
 };
 
+/**
+ * ПОВЕРХНОСТЬ КАРТОЧКИ — ТРИ ХАРАКТЕРА ОДНОЙ НАСТРОЙКОЙ.
+ *
+ * `surfaceStyle` отель выбирает в оформлении, и до сих пор выбор менял только
+ * `Paper` и `Card` MUI — то есть панель и показ. Карточка витрины нарисована
+ * `Box`'ом с `background.paper`, и настройка её не касалась: в показе стиль
+ * было видно, у гостя нет. Обман наоборот.
+ *
+ * Стекло не изобретается: у витрины уже есть стеклянный язык (`glass`), им
+ * сделана верхняя строка. Настройка просто выбирает, каким из трёх рецептов
+ * красить карточку.
+ */
+export type SurfaceStyle = 'flat' | 'soft' | 'glass';
+
+export interface SurfaceTokens {
+  background: string;
+  border: string;
+  boxShadow: string;
+  backdropFilter?: string;
+}
+
+export function cardSurface(style: SurfaceStyle, mode: ThemeMode): SurfaceTokens {
+  const tokens = mode === 'dark' ? DARK : LIGHT;
+  if (style === 'glass') {
+    return {
+      background: tokens.glass.panel.background,
+      // У стеклянной поверхности словаря граница необязательна: панель бывает
+      // без неё. Пустая строка тут честнее выдуманной волосяной линии.
+      border: tokens.glass.panel.border ?? 'none',
+      // Тени у стекла нет — её работу делает размытие подложки.
+      boxShadow: 'none',
+      backdropFilter: tokens.glass.panel.backdropFilter,
+    };
+  }
+  if (style === 'soft') {
+    return {
+      background: 'background.paper',
+      border: 'none',
+      boxShadow:
+        mode === 'dark'
+          ? '0 10px 30px -18px rgba(0,0,0,.9)'
+          : '0 10px 28px -20px rgba(18,32,47,.55)',
+    };
+  }
+  // Плоский — то, что было до настройки: волосяная граница, без тени.
+  return { background: 'background.paper', border: '1px solid', boxShadow: 'none' };
+}
+
+/**
+ * АКЦЕНТ ОТЕЛЯ В УПРАВЛЕНИИ НОМЕРОМ — С ЗАПАСНЫМ ЦВЕТОМ.
+ *
+ * На этом экране акцентом покрашено состояние: включённый свет, активная сцена,
+ * шкала уставки. Бледный акцент делает включённое неотличимым от выключенного —
+ * а это платная услуга, и цена ошибки здесь выше, чем «некрасиво».
+ *
+ * Поэтому правило: не проходит контраст к панели — берём свой золотой и ГОВОРИМ
+ * об этом в редакторе бренда. Молча подменять нельзя: оператор выбрал цвет и
+ * обязан узнать, что выбор не принят, а не гадать, почему экран другой.
+ *
+ * Порог 3:1, а не 4.5:1, — это не поблажка. WCAG 1.4.11 требует 3:1 именно от
+ * НЕтекстовых элементов: состояние здесь читается заливкой и свечением, а не
+ * буквами.
+ */
+export const NON_TEXT_CONTRAST = 3;
+
+export interface RoomControlAccent {
+  accent: string;
+  accentContrast: string;
+  accentSoft: string;
+  accentGlow: string;
+  /** Выбранный акцент неразличим — взят запасной. */
+  fallback: boolean;
+}
+
+export function roomControlAccent(
+  hotelAccent: string | undefined,
+  mode: ThemeMode,
+): RoomControlAccent {
+  const tokens = mode === 'dark' ? DARK : LIGHT;
+  const spare: RoomControlAccent = { ...tokens.roomControl, fallback: false };
+  if (!hotelAccent) return spare;
+
+  let accentRgb: Rgb;
+  try {
+    accentRgb = rgbOf(hotelAccent);
+  } catch {
+    // Нечитаемое значение — это не повод падать посреди экрана номера.
+    return { ...spare, fallback: true };
+  }
+
+  const panel = decomposeColor(tokens.glass.panel.background);
+  const panelRgb = panel.values.slice(0, 3).map(Math.round) as Rgb;
+  if (contrast(accentRgb, panelRgb) < NON_TEXT_CONTRAST) {
+    return { ...spare, fallback: true };
+  }
+
+  const [r, g, b] = accentRgb;
+  return {
+    accent: hotelAccent,
+    // Текст поверх акцента — чёрный или белый, смотря что читается.
+    accentContrast: luminance(accentRgb) > 0.45 ? '#1A1305' : '#FFFFFF',
+    accentSoft: `rgba(${r},${g},${b},.2)`,
+    accentGlow: `0 0 16px -4px rgba(${r},${g},${b},.85)`,
+    fallback: false,
+  };
+}
+
 /** Набор витрины для активного режима. */
 export function storefrontTokens(mode: ThemeMode): StorefrontTokens {
   return mode === 'dark' ? DARK : LIGHT;

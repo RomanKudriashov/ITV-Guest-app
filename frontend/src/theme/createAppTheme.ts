@@ -3,6 +3,7 @@ import {
   colorsForMode,
   type BrandTokens,
   type Direction,
+  type SurfaceStyle,
   type ThemeMode,
 } from './tokens';
 
@@ -18,6 +19,14 @@ import {
  * hardcoded value leaks in and the stored token set stays 18.
  */
 export interface BrandPaletteExtension {
+  /**
+   * Характер поверхностей, выбранный отелем: плоский, мягкий или стекло.
+   *
+   * Лежит в палитре, потому что его спрашивает ВИТРИНА: карточки она рисует
+   * своими токенами, а не `Paper` MUI, и другого способа узнать выбор у неё
+   * нет. См. `cardSurface` в словаре витрины.
+   */
+  surfaceStyle: SurfaceStyle;
   surfaceMuted: string;
   surfaceHover: string;
   surfaceSelected: string;
@@ -111,6 +120,12 @@ export function createAppTheme(
       text: { primary: c.text, secondary: c.textSecondary },
       divider: c.divider,
       brand: {
+        // Стиль поверхности КЛАДЁТСЯ В ПАЛИТРУ, а не остаётся локальной
+        // переменной: витрина рисует карточки своими токенами и обязана уметь
+        // спросить, какой характер выбрал отель. Пока он жил только здесь,
+        // настройка меняла лишь `Paper` и `Card` MUI — то есть панель и показ,
+        // но не гостя.
+        surfaceStyle,
         surfaceMuted: c.surfaceMuted,
         surfaceHover: c.surfaceHover,
         surfaceSelected: c.surfaceSelected,

@@ -1215,7 +1215,8 @@
       "defaultMode": "Which theme the guest opens the app in the first time. They can switch it afterwards."
     },
     "presetWarning": "A preset changes colours, fonts, corner rounding and the background kind. Your logos and background image are kept. Until you press «Save», «Reset» undoes the choice.",
-    "bgImageKept": "Your background image is kept — pick the «image» kind to bring it back. No need to upload it again."
+    "bgImageKept": "Your background image is kept — pick the «image» kind to bring it back. No need to upload it again.",
+    "accentSpare": "Room control falls back to the spare colour: the chosen accent is indistinguishable there"
   },
   "hotel": {
     "rooms": {

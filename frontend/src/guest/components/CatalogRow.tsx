@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from '@/kit';
+import { useStorefront } from '../useStorefront';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
@@ -60,6 +61,7 @@ export function CatalogRowView({
   onOpen,
   action,
 }: CatalogRowViewProps) {
+  const { cardSurface: surface } = useStorefront();
   return (
     <Box
       data-testid={testId}
@@ -68,9 +70,18 @@ export function CatalogRowView({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        bgcolor: 'background.paper',
-        border: 1,
+        /*
+          ПОВЕРХНОСТЬ — ПО ВЫБОРУ ОТЕЛЯ, а не жёстко «бумага с волосяной
+          рамкой». Настройка «плоский / мягкий / стекло» существовала и меняла
+          только `Paper` MUI, то есть панель и показ; карточка витрины
+          нарисована `Box`'ом и о выборе не знала — в показе стиль было видно,
+          у гостя нет.
+        */
+        bgcolor: surface.background,
+        border: surface.border === '1px solid' ? 1 : 0,
         borderColor: 'divider',
+        boxShadow: surface.boxShadow,
+        backdropFilter: surface.backdropFilter,
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         overflow: 'hidden',
         /*

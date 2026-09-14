@@ -17,6 +17,8 @@ import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
 import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
 import type { BrandDraft } from './useBrandDraft';
+import Alert from '@mui/material/Alert';
+import { roomControlAccent } from '@/guest/storefrontTokens';
 
 /* ── Small building blocks ─────────────────────────────────────────────── */
 
@@ -515,6 +517,22 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
           onChange={setAccent}
           testId="brand-accent"
         />
+        {/*
+          ЗАПАСНОЙ ЦВЕТ НАЗВАН ВСЛУХ.
+
+          В управлении номером акцентом покрашено СОСТОЯНИЕ: включённый свет,
+          активная сцена, шкала. Бледный акцент делает включённое неотличимым
+          от выключенного, а это платная услуга — цена ошибки выше, чем
+          «некрасиво». Поэтому неразличимый акцент там заменяется нашим
+          золотым.
+          Молча подменять нельзя: оператор выбрал цвет и обязан узнать, что
+          выбор не принят, а не гадать, почему экран номера другой.
+        */}
+        {roomControlAccent(merged.palette[mode].secondary, mode).fallback ? (
+          <Alert severity="warning" data-testid="brand-accent-spare">
+            {t('brand.accentSpare')}
+          </Alert>
+        ) : null}
       </Section>
 
       {/* Fonts */}
@@ -599,7 +617,7 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
           data-testid="brand-surface-style"
         >
           {SURFACE_STYLES.map((style) => (
-            <ToggleButton key={style} value={style}>
+            <ToggleButton key={style} value={style} data-testid={`brand-surface-${style}`}>
               {t(`brand.surface.${style}`)}
             </ToggleButton>
           ))}
