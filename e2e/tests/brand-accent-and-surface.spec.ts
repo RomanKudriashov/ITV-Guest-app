@@ -118,8 +118,16 @@ test.describe('Стиль поверхности доезжает до витр�
   test('смена стиля меняет карточку в показе — тем же кодом, что у гостя', async ({ page }) => {
     await openBrand(page)
 
-    const card = page.locator('[data-testid^="brand-preview-row-"]').first()
-    await expect(card, 'в показе нет ни одной карточки').toBeVisible({ timeout: 20_000 })
+    /*
+      КАРТОЧКА БЕРЁТСЯ ВНУТРИ РАМКИ ПОКАЗА. Показ больше не собирает экран
+      руками: он рисует настоящее меню заведения в своём окне, и карточка там —
+      та же `guest-item-*`, что видит гость.
+    */
+    await page.getByTestId('brand-preview-screen').click()
+    await page.getByTestId('brand-preview-screen-catalog').click()
+    const frame = page.frameLocator('[data-testid="brand-preview-stage-frame"]')
+    const card = frame.locator('[data-testid^="guest-item-"]').first()
+    await expect(card, 'в показе нет ни одной карточки').toBeVisible({ timeout: 25_000 })
     const flat = await card.evaluate((node) => {
       const style = getComputedStyle(node)
       return `${style.backgroundColor}|${style.boxShadow}`
