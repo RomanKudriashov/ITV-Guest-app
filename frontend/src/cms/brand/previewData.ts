@@ -2,112 +2,149 @@ import type { ItemDetail, MenuItem } from '@/guest/api/types';
 import type { Item as CmsItem, Translated } from '@/api/types';
 
 /**
- * Self-contained sample dishes for the brand preview. Photos are inline SVG data
- * URIs so the preview never depends on the network or on real catalog content.
+ * ЧТО ПОКАЗЫВАЕТ ПРЕВЬЮ БРЕНДА — И ЧЕМ ЭТО ЧЕСТНО.
  *
- * The placeholder is a NON-EMOJI graphic: a gradient plate with a monogram
- * initial and a couple of geometric marks — a neutral stand-in for a real photo
- * (the storefront always shows the operator's own images). The `hue` only tints
- * this throwaway sample art; it is not part of the brand token system.
+ * Раньше здесь жили три выдуманных блюда: «Ribeye Steak», «Caesar Salad» и
+ * «Vanilla Pavlova» — с английскими описаниями, рублёвыми ценами и нарисованной
+ * «фотографией»: буквой в кружке на цветном градиенте. Два первых молча
+ * подменяли каталог, если у отеля меньше двух блюд со снимками; третье не
+ * заменялось НИКОГДА — даже когда у отеля семьдесят позиций.
+ *
+ * Отличить выдумку от своего каталога на экране было нечем. Оператор настраивал
+ * вид карточек, глядя на буквы «R» и «C», которых у гостя не будет никогда, а
+ * оттенок нарисованной подложки спорил с палитрой, которую в этот момент и
+ * подбирали.
+ *
+ * ТРИ ПРАВИЛА, ПО КОТОРЫМ ЭТО ТЕПЕРЬ УСТРОЕНО.
+ *
+ *   1. Сначала берётся НАСТОЯЩЕЕ. Есть позиции — показываются они, со своими
+ *      названиями, ценами и снимками.
+ *   2. Не хватает — показывается образец, И ОН НАЗВАН ОБРАЗЦОМ. Молчаливой
+ *      подмены не осталось нигде: вызывающий получает `sample` и обязан
+ *      сказать об этом на экране.
+ *   3. У образца НЕТ ВЫДУМАННОЙ ФОТОГРАФИИ. Карточка витрины умеет свой вид
+ *      без снимка (`KitImage` с запасной иконкой) — его и показываем. Рисовать
+ *      «фотографию», которой у отеля нет, значит обещать вид, которого он не
+ *      увидит.
+ *
+ * Названия образца берутся из переводов, а не зашиты по-английски: на русском
+ * экране английское блюдо с рублёвой ценой — само по себе неправдоподобно.
  */
-function dishSvg(monogram: string, hue: number): string {
-  const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'>` +
-    `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
-    `<stop offset='0' stop-color='hsl(${hue},58%,68%)'/>` +
-    `<stop offset='1' stop-color='hsl(${hue + 28},52%,42%)'/></linearGradient></defs>` +
-    `<rect width='320' height='240' fill='url(#g)'/>` +
-    `<circle cx='160' cy='120' r='78' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='2'/>` +
-    `<circle cx='160' cy='120' r='58' fill='rgba(255,255,255,0.14)'/>` +
-    `<text x='50%' y='53%' font-family='Onest, system-ui, sans-serif' font-size='96' ` +
-    `fill='rgba(255,255,255,0.92)' text-anchor='middle' dominant-baseline='middle'>${monogram}</text>` +
-    `</svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+
+/** Что именно в показе ненастоящее. */
+export interface PreviewSample {
+  /** Список карточек собран из образца. */
+  rows: boolean;
+  /** Карточка позиции собрана из образца. */
+  detail: boolean;
 }
 
-const RIBEYE_IMG = dishSvg('R', 8);
-const SALAD_IMG = dishSvg('C', 96);
-const DESSERT_IMG = dishSvg('P', 330);
+export interface PreviewCatalog {
+  rows: MenuItem[];
+  detail: ItemDetail;
+  sample: PreviewSample;
+}
 
-/**
- * НАСТОЯЩИЕ БЛЮДА ОТЕЛЯ вместо образцов — если они уже заведены.
- *
- * Монограмма на цветном прямоугольнике не даёт судить о бренде: оператор
- * настраивает вид карточек, а видит буквы «R» и «C», которых у гостя не будет
- * никогда. Хуже того, у заглушки свой оттенок, и он спорит с палитрой, которую
- * в этот момент и подбирают.
- *
- * Образцы остаются для отеля, у которого каталога ещё нет: показ обязан
- * работать и на первой минуте, до единой загруженной фотографии.
- */
-export function rowsFromItems(items: CmsItem[], language: string): MenuItem[] {
-  const withPhoto = items.filter((item) => item.images?.length);
-  if (withPhoto.length < 2) return PREVIEW_ROWS;
-  const pick = (value: Translated | undefined): string =>
-    (value?.[language] ?? Object.values(value ?? {})[0] ?? '') as string;
-  return withPhoto.slice(0, 2).map((item) => ({
+/** Перевод переводимого поля: язык показа, иначе первый непустой. */
+function pick(value: Translated | undefined, language: string): string {
+  return (value?.[language] ?? Object.values(value ?? {})[0] ?? '') as string;
+}
+
+function rowFromItem(item: CmsItem, language: string): MenuItem {
+  return {
     id: item.id,
     code: item.code,
     category_id: item.category_id,
-    title: pick(item.title),
-    description: pick(item.description),
+    title: pick(item.title, language),
+    description: pick(item.description, language),
     price: item.price,
-    images: item.images.map((image) => image.url).filter(Boolean),
+    images: (item.images ?? []).map((image) => image.url).filter(Boolean),
     allergens: [],
-    // Показ всегда рисует доступную позицию: он про ВИД карточки, а не про
+    // Показ всегда рисует ДОСТУПНУЮ позицию: он про вид карточки, а не про
     // остатки. Иначе настройка бренда зависела бы от того, что сейчас в стопе.
     is_available: true,
     unavailable_reason: null,
-  }));
+  };
 }
 
-/** Rows for the menu-list part of the preview. */
-export const PREVIEW_ROWS: MenuItem[] = [
-  {
-    id: 'preview-ribeye',
-    code: 'ribeye',
-    category_id: 'preview',
-    title: 'Ribeye Steak',
-    description: 'Dry-aged, grilled to your liking, with roasted vegetables.',
-    price: 249000,
-    images: [RIBEYE_IMG],
+function detailFromItem(item: CmsItem, language: string): ItemDetail {
+  return {
+    ...rowFromItem(item, language),
+    // Аллергены и маркеры у позиции есть только идентификаторами; тянуть ради
+    // показа ещё два справочника значило бы гонять запросы за тем, что на вид
+    // карточки почти не влияет. Пустой список честнее выдуманного.
     allergens: [],
-    type: 'product',
-    is_available: true,
-    unavailable_reason: null,
-  },
-  {
-    id: 'preview-caesar',
-    code: 'caesar',
-    category_id: 'preview',
-    title: 'Caesar Salad',
-    description: 'Romaine, parmesan, garlic croutons, house dressing.',
-    price: 89000,
-    images: [SALAD_IMG],
-    allergens: [],
-    type: 'product',
-    is_available: true,
-    unavailable_reason: null,
-  },
-];
+    markers: [],
+    modifier_groups: [],
+  } as ItemDetail;
+}
 
-/** Item used for the card / sheet body part of the preview. */
-export const PREVIEW_DETAIL: ItemDetail = {
-  id: 'preview-dessert',
-  code: 'pavlova',
-  category_id: 'preview',
-  title: 'Vanilla Pavlova',
-  description:
-    'Crisp meringue, whipped vanilla cream and fresh seasonal berries — the house signature.',
-  price: 64000,
-  images: [DESSERT_IMG],
-  allergens: [
-    { code: 'eggs', title: 'Eggs' },
-    { code: 'milk', title: 'Milk' },
-  ],
-  markers: [{ code: 'vegetarian', title: 'Vegetarian' }],
-  type: 'product',
-  is_available: true,
-  unavailable_reason: null,
-  modifier_groups: [],
-};
+/**
+ * Образцовые карточки — когда каталога ещё нет.
+ *
+ * Показ обязан работать на первой минуте отеля, до единой заведённой позиции:
+ * оформление настраивают ДО наполнения. Но теперь образец назван образцом, и
+ * цена у него в валюте отеля, а не выдуманная рублёвая.
+ */
+function sampleRows(t: (key: string) => string): MenuItem[] {
+  return [
+    {
+      id: 'sample-1',
+      code: 'sample-1',
+      category_id: 'sample',
+      title: t('brand.preview.sample.firstTitle'),
+      description: t('brand.preview.sample.firstBody'),
+      price: 120000,
+      images: [],
+      allergens: [],
+      is_available: true,
+      unavailable_reason: null,
+    } as MenuItem,
+    {
+      id: 'sample-2',
+      code: 'sample-2',
+      category_id: 'sample',
+      title: t('brand.preview.sample.secondTitle'),
+      description: t('brand.preview.sample.secondBody'),
+      price: 45000,
+      images: [],
+      allergens: [],
+      is_available: true,
+      unavailable_reason: null,
+    } as MenuItem,
+  ];
+}
+
+function sampleDetail(t: (key: string) => string): ItemDetail {
+  const [first] = sampleRows(t);
+  return { ...first, markers: [], modifier_groups: [] } as ItemDetail;
+}
+
+/**
+ * Состав показа: настоящее, где оно есть, образец — где нет.
+ *
+ * Списку нужны ДВЕ карточки (рядом видно сетку и то, как соседствуют разные
+ * названия), карточке позиции — одна. Поэтому состояния независимы: у отеля с
+ * одной заведённой позицией список будет образцом, а карточка — настоящей.
+ */
+export function previewCatalog(
+  items: CmsItem[],
+  language: string,
+  t: (key: string) => string,
+): PreviewCatalog {
+  // Со снимком — вперёд: показ про вид карточки, и карточка со снимком
+  // показывает больше. Но позиция без снимка лучше выдуманной, поэтому
+  // остальные идут следом, а не отбрасываются.
+  const withPhoto = items.filter((item) => item.images?.length);
+  const withoutPhoto = items.filter((item) => !item.images?.length);
+  const ordered = [...withPhoto, ...withoutPhoto];
+
+  const rowsAreReal = ordered.length >= 2;
+  const detailIsReal = ordered.length >= 1;
+
+  return {
+    rows: rowsAreReal ? ordered.slice(0, 2).map((item) => rowFromItem(item, language)) : sampleRows(t),
+    detail: detailIsReal ? detailFromItem(ordered[0], language) : sampleDetail(t),
+    sample: { rows: !rowsAreReal, detail: !detailIsReal },
+  };
+}

@@ -1182,7 +1182,17 @@
       "tablet": "Tablet",
       "desktop": "Desktop",
       "tv": "TV — soon",
-      "greeting": "Good afternoon"
+      "greeting": "Good afternoon",
+      "sample": {
+        "badge": "Sample",
+        "rowsHint": "The hotel has fewer than two items — the list is a sample",
+        "detailHint": "The hotel has no items yet — the card is a sample",
+        "firstTitle": "A hot dish",
+        "firstBody": "Title, description and price will come here from your catalogue",
+        "secondTitle": "A drink",
+        "secondBody": "This is how a card looks while the item has no photo",
+        "noHeader": "On a phone the guest has no header: the logo appears on the entry screen"
+      }
     },
     "tabs": {
       "brand": "Brand",

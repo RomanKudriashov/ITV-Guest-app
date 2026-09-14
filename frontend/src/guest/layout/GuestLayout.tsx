@@ -54,14 +54,14 @@ interface NavTab {
 // so E2E scenarios don't fork by width. Grouped for the rail («Отель»).
 // «Меню» больше не раздел: плоского каталога отеля не существует, меню живёт
 // внутри заведения и открывается его плиткой на главной.
-const PRIMARY_TABS: NavTab[] = [
+export const PRIMARY_TABS: NavTab[] = [
   { value: '/home', Icon: IconHome, labelKey: 'guest.nav.home' },
   // Поиск стоит вторым, а не последним: на телефоне это единственная точка
   // входа в него, и прятать её в хвост ряда — то же, что не делать вовсе.
   { value: '/search', Icon: IconSearch, labelKey: 'guest.nav.search' },
   { value: '/orders', Icon: IconOrders, labelKey: 'guest.nav.orders' },
 ];
-const HOTEL_TABS: NavTab[] = [
+export const HOTEL_TABS: NavTab[] = [
   { value: '/chat', Icon: IconChat, labelKey: 'guest.nav.chat' },
   { value: '/info', Icon: IconInfo, labelKey: 'guest.nav.info' },
 ];

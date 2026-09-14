@@ -17,17 +17,19 @@ import { I18nextProvider, useTranslation } from 'react-i18next';
 
 import { createAppTheme, resolveBackground, type BrandTokens, type ThemeMode } from '@/theme';
 import { formatMoney } from '@/utils/money';
-import { GuestBrandHeader } from '@/guest/components/GuestBrandHeader';
+import { GuestTopBar } from '@/guest/layout/GuestTopBar';
+import { HOTEL_TABS, PRIMARY_TABS } from '@/guest/layout/GuestLayout';
+import { StickyStackProvider } from '@/guest/layout/stickyStack';
+import { pickLogo } from '@/theme/tokens';
 import { CatalogRowView } from '@/guest/components/CatalogRow';
 import { ItemHeadlineView } from '@/guest/components/ItemHeadline';
 import { HomeHeroView } from '@/guest/components/HomeHero';
 import { storefrontTokens } from '@/guest/storefrontTokens';
 import type { BrandAbstraction } from '@/api/brand';
 import { previewI18n } from './previewI18n';
-import { PREVIEW_DETAIL } from './previewData';
 import { useQuery } from '@tanstack/react-query';
 import { fetchItems } from '@/api/cms';
-import { rowsFromItems } from './previewData';
+import { previewCatalog } from './previewData';
 
 // Preview-only emotion caches. Distinct keys keep preview class names from
 // colliding with the CMS (`mui` / `mui-rtl`); the RTL cache runs stylis-plugin-rtl
@@ -53,6 +55,23 @@ const DEVICE_FRAME: Record<PreviewDevice, { maxWidth: number; aspectRatio: strin
   tablet: { maxWidth: 620, aspectRatio: '3 / 4' },
   desktop: { maxWidth: 900, aspectRatio: '16 / 10' },
 };
+
+/**
+ * Вкладки настоящей шапки — ТОТ ЖЕ СПИСОК, что у гостя.
+ *
+ * Переходы в показе никуда не ведут, но состав вкладок обязан совпадать: по
+ * нему судят, влезает ли длинное название отеля рядом с ними. Выписав список
+ * руками, мы получили бы показ, который не замечает новой вкладки, — ровно та
+ * болезнь, от которой лечится весь этот экран.
+ *
+ * «Управление номером» сюда не входит: у гостя оно появляется только при
+ * включённом модуле и заселённом номере, и показывать его всем значило бы
+ * обещать вкладку, которой у отеля может не быть.
+ */
+const PREVIEW_TABS = [...PRIMARY_TABS, ...HOTEL_TABS].map((tab) => ({
+  value: tab.value,
+  labelKey: tab.labelKey,
+}));
 
 export interface BrandPreviewProps {
   /** Fully merged draft tokens — the preview repaints on every change. */
@@ -90,10 +109,19 @@ export function BrandPreview({
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
-  const rows = useMemo(
-    () => rowsFromItems(items.data ?? [], appLanguage),
+  /*
+    СОСТАВ ПОКАЗА — И ЧЕСТНАЯ ПОМЕТКА, ЕСЛИ ЭТО ОБРАЗЕЦ.
+
+    Раньше подмена была молчаливой: не хватило блюд со снимками — показ
+    подсовывал «Ribeye Steak» и «Caesar Salad», а карточку «Vanilla Pavlova»
+    показывал ВСЕГДА, даже у отеля с семьюдесятью позициями. Отличить выдумку
+    от своего каталога на экране было нечем.
+  */
+  const catalog = useMemo(
+    () => previewCatalog(items.data ?? [], appLanguage, previewI18n.t.bind(previewI18n)),
     [items.data, appLanguage],
   );
+  const { rows, detail, sample } = catalog;
   const frame = DEVICE_FRAME[device];
   const direction = rtl ? 'rtl' : 'ltr';
   const language = rtl ? 'ar' : appLanguage;
@@ -205,14 +233,44 @@ export function BrandPreview({
               ) : null}
 
               <Box sx={{ position: 'relative', height: '100%', overflowY: 'auto' }}>
-                <GuestBrandHeader
-                  position="sticky"
-                  hotelName={hotelName}
-                  logoSrc={mode === 'dark' ? tokens.brand?.logoDark ?? tokens.brand?.logoLight : tokens.brand?.logoLight ?? tokens.brand?.logoDark}
-                  rightSlot={
-                    <Chip size="small" label={t('brand.preview.roomChip')} />
-                  }
-                />
+                {/*
+                  ШАПКА — ТА ЖЕ, ЧТО У ГОСТЯ, И ТОЛЬКО ТАМ, ГДЕ ОНА У НЕГО ЕСТЬ.
+
+                  До этого показ рисовал `GuestBrandHeader` — компонент, которым
+                  витрина не пользовалась ВОВСЕ: единственное его употребление в
+                  проекте было здесь. Логотип подбирали, глядя на шапку, которой
+                  у гостя нет: сплошная заливка вместо стеклянной, 56 пикселей
+                  вместо 62, логотип 32 вместо 22 — в полтора раза крупнее.
+                  Компонент удалён вместе с этой правкой: держать мёртвый экран
+                  ради показа значит однажды снова начать по нему сверяться.
+
+                  У гостя шапка есть только на планшете и компьютере
+                  (`GuestLayout` рисует `GuestTopBar` при `isDesktop`). На
+                  телефоне её нет вовсе, и логотип там виден на экране входа —
+                  об этом показ теперь говорит прямо, вместо того чтобы рисовать
+                  несуществующую полосу.
+                */}
+                {device === 'phone' ? (
+                  <Box sx={{ px: 2, pt: 2 }}>
+                    <Typography variant="caption" color="text.secondary" data-testid="brand-preview-no-header">
+                      {t('brand.preview.sample.noHeader')}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <StickyStackProvider>
+                    <GuestTopBar
+                      hotelName={hotelName}
+                      logo={pickLogo(tokens, mode) ?? null}
+                      tabs={PREVIEW_TABS}
+                      active="/home"
+                      room={null}
+                      cartCount={0}
+                      unreadChat={0}
+                      onNavigate={() => undefined}
+                      onOpenCart={() => undefined}
+                    />
+                  </StickyStackProvider>
+                )}
 
                 {/*
                   ПЕРВЫЙ ЭКРАН — И ОН ЖЕ ЕДИНСТВЕННОЕ МЕСТО, ГДЕ ВИДНА ОБЛОЖКА.
@@ -240,9 +298,30 @@ export function BrandPreview({
                 <Stack spacing={2} sx={{ p: 2 }}>
                   {/* 1. Menu list on a brand surface (surfaceStyle + radius visible). */}
                   <Paper elevation={1} sx={{ p: 2, borderRadius: 3 }}>
-                    <Typography variant="h6" component="h2" gutterBottom>
-                      {t('brand.preview.menuHeading')}
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                      <Typography variant="h6" component="h2" sx={{ flexGrow: 1 }}>
+                        {t('brand.preview.menuHeading')}
+                      </Typography>
+                      {/*
+                        ОБРАЗЕЦ НАЗВАН ОБРАЗЦОМ. Молча подставленное блюдо хуже
+                        отсутствующего: оператор принимает решение о виде
+                        карточек, считая, что смотрит на свой каталог.
+                      */}
+                      {sample.rows ? (
+                        <Chip
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          label={t('brand.preview.sample.badge')}
+                          data-testid="brand-preview-sample-rows"
+                        />
+                      ) : null}
+                    </Stack>
+                    {sample.rows ? (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                        {t('brand.preview.sample.rowsHint')}
+                      </Typography>
+                    ) : null}
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                       {rows.map((row) => (
                         <CatalogRowView
@@ -266,7 +345,21 @@ export function BrandPreview({
 
                   {/* 2. Item card body — the sheet content on a brand surface. */}
                   <Paper elevation={1} sx={{ p: 2, borderRadius: 3 }}>
-                    <ItemHeadlineView item={PREVIEW_DETAIL} priceLabel={priceOf(PREVIEW_DETAIL.price)} />
+                    {sample.detail ? (
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                        <Chip
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          label={t('brand.preview.sample.badge')}
+                          data-testid="brand-preview-sample-detail"
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          {t('brand.preview.sample.detailHint')}
+                        </Typography>
+                      </Stack>
+                    ) : null}
+                    <ItemHeadlineView item={detail} priceLabel={priceOf(detail.price)} />
                     <Divider sx={{ my: 2 }} />
                     <Button fullWidth variant="contained" size="large">
                       {t('brand.preview.addToCart')}

@@ -1174,7 +1174,17 @@
       "tablet": "平板",
       "desktop": "电脑",
       "tv": "电视 — 即将推出",
-      "greeting": "下午好"
+      "greeting": "下午好",
+      "sample": {
+        "badge": "示例",
+        "rowsHint": "酒店的条目少于两个，列表以示例展示",
+        "detailHint": "酒店尚无条目，卡片以示例展示",
+        "firstTitle": "热菜",
+        "firstBody": "名称、描述和价格将从您的目录填入此处",
+        "secondTitle": "饮品",
+        "secondBody": "条目暂无照片时，卡片即为此样式",
+        "noHeader": "手机端客人没有顶栏：标识显示在进入页面"
+      }
     },
     "tabs": {
       "brand": "品牌",
