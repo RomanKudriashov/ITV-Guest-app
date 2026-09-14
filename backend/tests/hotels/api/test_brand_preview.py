@@ -107,3 +107,21 @@ def test_guest_cannot_open_the_preview(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
     assert response.status_code == 401
+
+
+def test_preview_locations_are_seen_by_a_guest_without_a_room(cms, crystal):
+    """
+    Локации показа — глазами гостя без номера.
+
+    Отдельный укус, потому что ровно этот путь не трогал ни один тест: гостевые
+    проверки ходят через сессию, а показ зовёт сборщик напрямую. Первая редакция
+    выноса падала здесь с 500, и заметил это только полный прогон — по гостевым
+    тестам, а не по этому месту.
+    """
+    payload = _preview(cms, "locations")
+
+    assert payload["room"] is None, "показ назвал номер гостю, которого нет"
+    kinds = {location["kind"] for location in payload["locations"]}
+    assert "in_room" not in kinds, "«в номер» предложено без номера"
+    assert payload["locations"], "локаций не осталось вовсе"
+    assert all(location["is_default"] is False for location in payload["locations"])
