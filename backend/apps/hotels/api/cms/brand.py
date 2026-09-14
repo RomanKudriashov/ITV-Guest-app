@@ -14,6 +14,8 @@ from apps.accounts.services.roles import require_hotel_admin
 from apps.hotels.brand_library import ABSTRACTIONS, FONTS, list_presets
 from apps.hotels.schemas.cms import ApplyPresetIn, BrandOut, BrandPatch
 from apps.hotels.services import brand_services as svc
+from apps.hotels.services.hotel import current_hotel
+from apps.core.context import current_language
 
 router = Router(tags=["cms:brand"])
 
@@ -42,6 +44,39 @@ def put_brand(request: HttpRequest, payload: BrandPatch):
     """
     theme = svc.replace_brand(payload.tokens or {})
     return svc.serialize_brand(theme)
+
+
+@router.get("/brand/preview", summary="Показ витрины: те же данные, что увидит гость")
+def brand_preview(
+    request: HttpRequest,
+    screen: str = "home",
+    group: str = "",
+    point: str = "",
+    type: str = "product",
+    item_id: str = "",
+    room: str = "",
+):
+    """
+    Данные ОДНОГО экрана показа, в той же форме, в какой их получает гость.
+
+    ОБЪЯВЛЕНА ВЫШЕ `/brand` с параметрами и ниже самого `/brand`: путь
+    статический, но соседи по файлу динамических сегментов не имеют, так что
+    порядок здесь про читаемость, а не про маршрутизацию.
+
+    Гостевой сессии не заводит — см. `apps/hotels/services/brand_preview.py`.
+    """
+    from apps.hotels.services.brand_preview import preview_payload
+
+    return preview_payload(
+        current_hotel(),
+        screen=screen,
+        language=current_language(),
+        group=group,
+        point=point,
+        offering_type=type,
+        item_id=item_id,
+        room_number=room,
+    )
 
 
 @router.get("/brand/presets", summary="Библиотека пресетов")

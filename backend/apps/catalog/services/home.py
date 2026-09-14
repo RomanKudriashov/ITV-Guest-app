@@ -90,3 +90,50 @@ def validate_codes(codes) -> list[str]:
         if code not in seen:
             seen.append(code)
     return seen
+
+
+def home_payload(hotel, *, language: str, room: str | None, unread_chat: int) -> dict:
+    """
+    ГЛАВНАЯ ГОСТЯ — ОДНИМ СБОРЩИКОМ НА ДВУХ ПОТРЕБИТЕЛЕЙ.
+
+    Зовут отсюда двое: гостевая ручка `/guest/home` и показ витрины в настройке
+    бренда. Раньше тело лежало во вьюхе, и показать оператору главную можно было
+    только одним способом — собрать её на клиенте руками. Так и было сделано:
+    показ рисовал свою верхнюю треть из четырёх компонентов, и любая новая
+    полоса на настоящей главной в него не попадала.
+
+    ОТ СЕССИИ ЗДЕСЬ ЗАВИСЯТ РОВНО ДВЕ ВЕЩИ, и обе приходят доводами: номер
+    комнаты и счётчик непрочитанных в чате. Всё остальное — свойства отеля, и
+    гостю с оператором показывается ОДНО И ТО ЖЕ, посчитанное одним кодом.
+    """
+    from apps.catalog.services.showcase import build_showcase
+    from apps.core.fields import translate
+    from apps.integrations.weather import service as weather
+
+    home_settings = (hotel.settings or {}).get("home") or {}
+
+    return {
+        "hotel": {
+            "name": hotel.name_i18n,
+            "subdomain": hotel.subdomain,
+            # Часовой пояс отеля — чтобы витрина показывала МЕСТНОЕ время и
+            # тикала сама, а не спрашивала сервер каждую минуту.
+            "timezone": hotel.timezone,
+            # Город — подпись к погоде и часам на языке гостя. Пусто — подписи
+            # не будет: выдумывать город по координатам мы не станем.
+            "city": translate(hotel.city, language),
+        },
+        "room": room,
+        # Погода приезжает ГОТОВОЙ и только с сервера: адреса провайдера
+        # витрина не знает и в него не ходит. `None` — показывать нечего.
+        "weather": weather.current_for(hotel),
+        # Показывать ли на главной строку состояния номера. Данные для неё
+        # витрина берёт из своего снимка номера — отсюда едет только разрешение.
+        "room_status": bool(home_settings.get("room_status", True)),
+        # Главная — витрина СЕРВИСОВ: bento-плитки заведений/услуг/инфо.
+        "tiles": build_showcase(hotel, language=language, moment=hotel.local_now()),
+        "unread_chat": unread_chat,
+        # Быстрые действия сохраняются для CMS и старых потребителей; новая
+        # главная навигирует плитками, отдельный ряд действий не рисует.
+        "quick_actions": quick_actions_for(hotel, language),
+    }

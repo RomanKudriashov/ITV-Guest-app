@@ -190,11 +190,25 @@ def resolve_context(hotel, session) -> tuple[RoomContext | None, str]:
     """
     if session is None or session.room_id is None:
         return None, REASON_NO_ROOM
+    return resolve_context_for_room(hotel, session.room_id)
+
+
+def resolve_context_for_room(hotel, room_id) -> tuple[RoomContext | None, str]:
+    """
+    То же самое, но по КОМНАТЕ, а не по сессии.
+
+    Нужно показу витрины: оператор смотрит на экран управления номером своего
+    отеля, гостевой сессии у него нет и быть не должно. Комната настоящая, тип
+    настоящий, опубликованная версия настоящая — подменяется только способ
+    адресации, а не данные.
+    """
+    if room_id is None:
+        return None, REASON_NO_ROOM
 
     with tenant_context(hotel):
         link = (
             RoomTypeRoom.objects.select_related("room_type", "room")
-            .filter(room_id=session.room_id)
+            .filter(room_id=room_id)
             .first()
         )
         if link is None:
@@ -323,7 +337,7 @@ def _note_demo_entry(hotel, session) -> None:
 # --- Снапшот ---------------------------------------------------------------
 
 
-def build_state(hotel, session, *, language: str = "") -> dict:
+def build_state(hotel, session, *, language: str = "", room_id=None) -> dict:
     """
     Полный снапшот состояния номера. Частичных апдейтов в контракте нет.
 
@@ -333,8 +347,16 @@ def build_state(hotel, session, *, language: str = "") -> dict:
     гостя на скелетоне ради заведомо известного ответа.
     """
     require_module(hotel)
-    context, reason = resolve_context(hotel, session)
-    verified = room_verified(hotel, session)
+    # `room_id` — вход ПОКАЗА ВИТРИНЫ: оператор смотрит на экран номера своего
+    # отеля, гостевой сессии у него нет. Комната, тип и опубликованная версия
+    # настоящие; показания читаются у настоящего оборудования. Подменяется
+    # только способ адресации — ни одно значение не выдумывается.
+    context, reason = (
+        resolve_context_for_room(hotel, room_id)
+        if room_id is not None
+        else resolve_context(hotel, session)
+    )
+    verified = room_verified(hotel, session) if session is not None else False
     if verified and session is not None and session.room_verified_at is None:
         _note_demo_entry(hotel, session)
 

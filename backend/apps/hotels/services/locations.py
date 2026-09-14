@@ -11,7 +11,16 @@ from apps.hotels.models import Location
 
 
 def guest_locations(session, language: str) -> dict:
-    has_room = session.room_id is not None
+    """Локации для гостя: «в номер» показывается только тому, у кого номер есть."""
+    return locations_payload(language=language, has_room=session.room_id is not None)
+
+
+def locations_payload(*, language: str, has_room: bool) -> dict:
+    """
+    ОТ СЕССИИ ЗДЕСЬ ЗАВИСИТ РОВНО ОДНО — есть ли у гостя номер. Вынесено
+    доводом, чтобы показ витрины в настройке бренда звал ТОТ ЖЕ сборщик:
+    оператор смотрит на экран оформления глазами гостя без номера.
+    """
 
     locations = []
     for location in Location.objects.filter(is_active=True).order_by("sort_order", "code"):
