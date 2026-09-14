@@ -42,10 +42,19 @@ test.describe('Акцент отеля виден', () => {
 
     const brand = await request.get(`${API}/api/cms/brand`, { headers })
     expect(brand.ok()).toBeTruthy()
-    const tokens = await brand.json()
-    const accent: string | undefined =
-      tokens?.palette?.light?.secondary ?? tokens?.tokens?.palette?.light?.secondary
-    expect(accent, 'в оформлении отеля не нашёлся акцент').toBeTruthy()
+    const palette = (await brand.json()).tokens.palette as Record<
+      'light' | 'dark',
+      { primary: string; secondary: string }
+    >
+
+    /*
+      РЕЖИМ ПАНЕЛИ ЗАРАНЕЕ НЕИЗВЕСТЕН — он личная настройка сотрудника. Поэтому
+      сравниваем с акцентом ОБОИХ режимов и отдельно требуем, чтобы это не был
+      основной цвет: именно его роль «Акцент» возвращала до правки, и именно
+      эту подмену проверка обязана ловить.
+    */
+    const accents = [palette.light.secondary, palette.dark.secondary].map((c) => c.toLowerCase())
+    const primaries = [palette.light.primary, palette.dark.primary].map((c) => c.toLowerCase())
 
     await login(page, ADMIN)
     await page.goto('/cms/marketing')
@@ -59,21 +68,33 @@ test.describe('Акцент отеля виден', () => {
       Проверка падала бы ровно в том случае, ради которого написана: акцент
       снова перестал быть акцентом.
     */
-    expect(toHex(fill), 'метка роли «Акцент» покрашена не акцентом отеля').toBe(
-      accent!.toLowerCase(),
+    const hex = toHex(fill)
+    expect(accents, `метка роли «Акцент» покрашена цветом ${hex}, которого нет в акцентах`).toContain(
+      hex,
     )
+    expect(primaries, 'метка роли «Акцент» снова покрашена ОСНОВНЫМ цветом').not.toContain(hex)
   })
 
   test('неразличимый акцент предупреждает, но не запрещает', async ({ page }) => {
     await openBrand(page)
 
+    /*
+      РЕЖИМ ЗАДАЁТСЯ ЯВНО, иначе проверка зависит от личной настройки
+      сотрудника: панель номера в тёмной теме стоит на почти чёрной подложке, и
+      «почти белый» акцент на ней как раз РАЗЛИЧИМ. Светлая тема — подложка
+      rgba(255,255,255,.70), и тот же цвет на ней неразличим.
+    */
+    await page
+      .getByTestId('brand-preview-mode-toggle')
+      .getByRole('button', { name: /светл/i })
+      .click()
+
     const field = page.getByTestId('brand-accent')
     await expect(field).toBeVisible()
 
     /*
-      Почти белый акцент на светлой теме заведомо не проходит порог 3:1 к
-      панели номера. Значение ставится нативно — `type="color"` не принимает
-      обычный ввод, а редактор слушает именно нативное событие.
+      Значение ставится нативно: `type="color"` не принимает обычный ввод, а
+      редактор слушает именно нативное событие.
     */
     await field.evaluate((node) => {
       const input = node as HTMLInputElement
@@ -104,8 +125,13 @@ test.describe('Стиль поверхности доезжает до витр�
       return `${style.backgroundColor}|${style.boxShadow}`
     })
 
-    // Переключаем характер поверхности в черновике.
-    await page.getByTestId('brand-surface-glass').click()
+    /*
+      ПЕРЕКЛЮЧАЕМ НА ДРУГОЙ СТИЛЬ, А НЕ НА ТЕКУЩИЙ. У «Кристалла» в оформлении
+      стоит «стекло», и нажатие на «стекло» ничего не меняло — проверка падала
+      на исправном коде. Берём плоский: он заведомо отличается и от стекла, и
+      от мягкого.
+    */
+    await page.getByTestId('brand-surface-flat').click()
 
     await expect
       .poll(
