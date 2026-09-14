@@ -84,7 +84,7 @@ export function GuestLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { session, hotel, isReady, isBootstrapping } = useGuestSession();
+  const { session, hotel, isReady, isBootstrapping, isPreview } = useGuestSession();
   const { tokens, mode } = useAppTheme();
   const { glass } = useStorefront();
   const home = useGuestHome();
@@ -138,7 +138,13 @@ export function GuestLayout() {
       </Box>
     );
   }
-  if (!isReady) {
+  // ПОКАЗ БРЕНДА РИСУЕТСЯ БЕЗ СЕССИИ, и это единственное исключение.
+  //
+  // Гостя без сессии уводить на вход обязательно: иначе он смотрит на меню,
+  // которое не сможет заказать. Оператор в настройке оформления — не гость: он
+  // разглядывает вид экрана, заказывать ему нечего, и увод на вход показывал бы
+  // ему один экран из восьми.
+  if (!isReady && !isPreview) {
     return <Navigate to="/" replace state={{ from: location.pathname }} />;
   }
 
