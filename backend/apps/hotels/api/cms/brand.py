@@ -234,6 +234,49 @@ def publish_brand_draft(request: HttpRequest, draft_id: str, confirm_stale: bool
     return versions_svc.publish_draft(draft_id, confirm_stale=confirm_stale)
 
 
+class ScheduleIn(Schema):
+    """
+    Момент называют В МЕСТНОМ ВРЕМЕНИ ОТЕЛЯ, без часового пояса.
+
+    Пояс сюда не принимается намеренно: прислать его мог бы браузер оператора,
+    а он в отпуске в другом часовом поясе — и «полночь» стала бы чужой.
+    """
+
+    run_at: str
+
+
+@router.get("/brand/schedule", summary="Назначенные публикации")
+def brand_schedule_list(request: HttpRequest):
+    """
+    Назначенное ВИДНО. Публикация, о которой знает только таблица, — это
+    сюрприз для утренней смены.
+    """
+    require_hotel_admin()
+    from apps.core.services import scheduler
+    from apps.hotels.services.brand_schedule import KIND, serialize_job
+
+    return {"scheduled": [serialize_job(job) for job in scheduler.pending_jobs(KIND)]}
+
+
+@router.post("/brand/drafts/{draft_id}/schedule", summary="Опубликовать по расписанию")
+def schedule_brand_draft(request: HttpRequest, draft_id: str, payload: ScheduleIn):
+    from apps.hotels.services.brand_schedule import schedule_publication, serialize_job
+
+    return serialize_job(
+        schedule_publication(draft_id, local_run_at=payload.run_at, hotel=current_hotel())
+    )
+
+
+@router.delete("/brand/schedule/{job_id}", summary="Отменить назначенную публикацию")
+def cancel_brand_schedule(request: HttpRequest, job_id: str):
+    """Отмена до срабатывания: после него витрина уже изменилась."""
+    require_hotel_admin()
+    from apps.core.services import scheduler
+
+    scheduler.cancel(job_id)
+    return {"ok": True}
+
+
 @router.get("/brand/presets", summary="Библиотека пресетов")
 def presets(request: HttpRequest):
     # Библиотека оформления — часть админского экрана бренда.

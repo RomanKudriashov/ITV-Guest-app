@@ -175,3 +175,49 @@ def test_actions_are_audited(client, platform_token):
         actions = set(AuditLog.objects.values_list("action", flat=True))
     assert "platform.hotel.created" in actions
     assert "platform.hotel.deactivated" in actions
+
+
+# --- Служба отложенного запуска --------------------------------------------
+
+
+def test_a_dead_scheduler_shows_up_in_platform_health(client, platform_token):
+    """
+    МОЛЧАЩАЯ СЛУЖБА ВИДНА ВЛАДЕЛЬЦУ, А НЕ ТОЛЬКО В ЛОГАХ.
+
+    Новая служба в compose — ещё один процесс, который можно забыть
+    перезапустить: воркер однажды прожил на старом коде 39 часов, и без него
+    молча пропадала погода. Молчащая и работающая службы выглядят одинаково,
+    если не спрашивать, — поэтому её состояние стоит в том же блоке «здоровье»,
+    куда владелец смотрит с вопросом «что сломалось».
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.core.models import SchedulerHeartbeat
+    from apps.core.services import scheduler
+
+    scheduler.tick()
+    heartbeat = SchedulerHeartbeat.objects.first()
+    heartbeat.last_tick_at = timezone.now() - timedelta(minutes=47)
+    heartbeat.save(update_fields=["last_tick_at"])
+
+    health = _p(client, platform_token)("get", "/overview").json()["health"]
+    down = [signal for signal in health if signal["code"] == "scheduler_down"]
+
+    assert down, "служба стоит 47 минут, а в сводке платформы тишина"
+    assert down[0]["level"] == "bad"
+    # Минуты, а не секунды: «47» читается сразу, «2820» требует счёта в уме.
+    assert down[0]["count"] == 47
+
+
+def test_a_live_scheduler_reports_itself_as_fine(client, platform_token):
+    from apps.core.services import scheduler
+
+    scheduler.tick()
+
+    health = _p(client, platform_token)("get", "/overview").json()["health"]
+    codes = {signal["code"] for signal in health}
+
+    assert "scheduler_ok" in codes
+    assert "scheduler_down" not in codes

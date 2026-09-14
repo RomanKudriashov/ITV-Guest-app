@@ -32,13 +32,16 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import {
+  cancelBrandSchedule,
   createBrandDraft,
   deleteBrandDraft,
   fetchBrandDraft,
   fetchBrandDrafts,
   fetchBrandVersions,
+  fetchBrandSchedule,
   publishBrandDraft,
   restoreBrandVersion,
+  scheduleBrandDraft,
   type BrandVersionRecord,
 } from '@/api/brand';
 import { queryKeys } from '@/api/queryKeys';
@@ -46,6 +49,7 @@ import type { PartialBrandTokens } from '@/theme/tokens';
 
 const DRAFTS_KEY = ['cms', 'brand', 'drafts'] as const;
 const VERSIONS_KEY = ['cms', 'brand', 'versions'] as const;
+const SCHEDULE_KEY = ['cms', 'brand', 'schedule'] as const;
 
 export interface BrandVersionsProps {
   /** Текущий черновик редактора — его и сохраняем как именованный. */
@@ -65,6 +69,7 @@ export function BrandVersions({ tokens, onOpen }: BrandVersionsProps) {
 
   const drafts = useQuery({ queryKey: DRAFTS_KEY, queryFn: fetchBrandDrafts });
   const versions = useQuery({ queryKey: VERSIONS_KEY, queryFn: fetchBrandVersions });
+  const scheduled = useQuery({ queryKey: SCHEDULE_KEY, queryFn: fetchBrandSchedule });
 
   const [name, setName] = useState('');
   const [stale, setStale] = useState<BrandVersionRecord | null>(null);
@@ -77,6 +82,7 @@ export function BrandVersions({ tokens, onOpen }: BrandVersionsProps) {
     // публикации она обязана перечитаться, иначе покажет прошлую.
     void queryClient.invalidateQueries({ queryKey: ['cms', 'brand', 'look'] });
     void queryClient.invalidateQueries({ queryKey: queryKeys.brand });
+    void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
   };
 
   const saveDraft = useMutation({
@@ -121,6 +127,25 @@ export function BrandVersions({ tokens, onOpen }: BrandVersionsProps) {
 
   const restore = useMutation({
     mutationFn: (id: string) => restoreBrandVersion(id),
+    onSuccess: refresh,
+  });
+
+  const [runAt, setRunAt] = useState('');
+  const [scheduleFor, setScheduleFor] = useState<string>('');
+
+  const schedulePublication = useMutation({
+    mutationFn: ({ id, at }: { id: string; at: string }) => scheduleBrandDraft(id, at),
+    onSuccess: () => {
+      setScheduleFor('');
+      setRunAt('');
+      refresh();
+    },
+    onError: (error) =>
+      setFailure(error instanceof Error ? error.message : t('brand.versions.scheduleFailed')),
+  });
+
+  const cancelSchedule = useMutation({
+    mutationFn: (id: string) => cancelBrandSchedule(id),
     onSuccess: refresh,
   });
 
@@ -211,11 +236,92 @@ export function BrandVersions({ tokens, onOpen }: BrandVersionsProps) {
                 </Button>
                 <Button
                   size="small"
+                  onClick={() => setScheduleFor(scheduleFor === draft.id ? '' : draft.id)}
+                  data-testid="brand-draft-schedule"
+                >
+                  {t('brand.versions.schedule')}
+                </Button>
+                <Button
+                  size="small"
                   color="inherit"
                   onClick={() => remove.mutate(draft.id)}
                   data-testid="brand-draft-delete"
                 >
                   {t('common.delete')}
+                </Button>
+                {scheduleFor === draft.id ? (
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+                    <TextField
+                      size="small"
+                      type="datetime-local"
+                      label={t('brand.versions.whenLabel')}
+                      value={runAt}
+                      onChange={(event) => setRunAt(event.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ 'data-testid': 'brand-schedule-when' }}
+                    />
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={!runAt || schedulePublication.isPending}
+                      onClick={() => schedulePublication.mutate({ id: draft.id, at: runAt })}
+                      data-testid="brand-schedule-confirm"
+                    >
+                      {t('brand.versions.scheduleConfirm')}
+                    </Button>
+                    <Typography variant="caption" color="text.secondary">
+                      {t('brand.versions.whenHint')}
+                    </Typography>
+                  </Stack>
+                ) : null}
+              </Stack>
+            ))}
+          </Stack>
+        )}
+      </Box>
+
+      <Divider />
+
+      {/* Назначенные публикации */}
+      <Box>
+        <Typography variant="subtitle2" gutterBottom>
+          {t('brand.versions.scheduled')}
+        </Typography>
+        {(scheduled.data?.scheduled.length ?? 0) === 0 ? (
+          <Typography variant="body2" color="text.secondary" data-testid="brand-schedule-empty">
+            {t('brand.versions.scheduledEmpty')}
+          </Typography>
+        ) : (
+          <Stack spacing={1}>
+            {scheduled.data?.scheduled.map((row) => (
+              <Stack
+                key={row.id}
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+                data-testid="brand-schedule-row"
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {row.draft_name || t('brand.versions.unnamed')}
+                </Typography>
+                {/*
+                  ВРЕМЯ ПОКАЗЫВАЕМ ОТЕЛЬНОЕ И НАЗЫВАЕМ ПОЯС. Оператор назначал по
+                  часам отеля; показать ему то же в часах его ноутбука значит
+                  однажды устроить публикацию «не тогда».
+                */}
+                <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto' }}>
+                  {new Date(row.run_at_local).toLocaleString()} · {row.timezone} ·{' '}
+                  {row.created_by || t('brand.versions.unknownAuthor')}
+                </Typography>
+                <Button
+                  size="small"
+                  color="inherit"
+                  onClick={() => cancelSchedule.mutate(row.id)}
+                  data-testid="brand-schedule-cancel"
+                >
+                  {t('brand.versions.cancelSchedule')}
                 </Button>
               </Stack>
             ))}

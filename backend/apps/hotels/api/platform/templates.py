@@ -137,3 +137,21 @@ def brand_preset_affected(request: HttpRequest, code: str):
     from apps.hotels.services import brand_inheritance
 
     return {"preset": code, "hotel_ids": brand_inheritance.affected_by(code)}
+
+@router.get("/scheduler", summary="Служба отложенного запуска: жива ли")
+@requires(READ)
+def scheduler_state(request: HttpRequest):
+    """
+    ПУЛЬС СЛУЖБЫ — В КОНСОЛИ, А НЕ В ЛОГАХ.
+
+    Новая служба в compose — ещё один процесс, который можно забыть
+    перезапустить. У нас уже есть эта грабля: воркер однажды прожил на старом
+    коде 39 часов, и без него молча пропадала погода. Молчащая служба выглядит
+    ровно как работающая — если не спрашивать.
+
+    Поэтому здесь: когда просыпалась, сколько заданий ждёт срока, сколько
+    просрочено. «Узнаем от клиента» — не способ эксплуатации.
+    """
+    from apps.core.services import scheduler
+
+    return scheduler.heartbeat_state()

@@ -185,3 +185,9 @@ class AuditLog(BaseModel):
             payload=payload or {},
             ip_address=ip_address,
         )
+
+
+# Планировщик живёт в своём модуле — модель, её доводы и пульс службы читаются
+# вместе. Импорт здесь, чтобы `apps.core.models` остался единственным адресом:
+# так пишут все сорок с лишним мест, и переезд файла их не касается.
+from apps.core.models_scheduler import ScheduledJob, SchedulerHeartbeat  # noqa: E402,F401

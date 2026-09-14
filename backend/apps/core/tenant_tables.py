@@ -64,6 +64,8 @@ TENANT_TABLES = [
     "media_asset",
     # core
     "core_idempotency_key",
+    # Назначенные задания: в них лежит РЕШЕНИЕ отеля о будущем виде витрины.
+    "core_scheduled_job",
     "chat_thread",
     "chat_message",
     "reviews_review",
@@ -124,4 +126,7 @@ PLATFORM_TABLES = [
     "hotels_publication_job",
     "hotels_publication_result",
     "media_category_placeholder",
+    # Пульс планировщика: служба одна на весь флот, отеля у неё нет и быть не
+    # может. Читает его консоль платформы, у которой тенант не выставлен.
+    "core_scheduler_heartbeat",
 ]

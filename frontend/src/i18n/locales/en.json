@@ -1263,7 +1263,15 @@
       "restoredFrom": "restored version {{number}}",
       "staleTitle": "The draft is outdated",
       "publishAnyway": "Publish anyway",
-      "publishFailed": "Publishing failed"
+      "publishFailed": "Publishing failed",
+      "schedule": "Schedule",
+      "scheduleConfirm": "Set",
+      "scheduleFailed": "Scheduling failed",
+      "scheduled": "Scheduled publications",
+      "scheduledEmpty": "Nothing scheduled",
+      "cancelSchedule": "Cancel",
+      "whenLabel": "When to publish",
+      "whenHint": "Hotel time. If the look changes before then, the publication will not happen — we will tell you"
     }
   },
   "hotel": {
@@ -1965,7 +1973,10 @@
       "media_stuck": "Media: stuck in processing — {{count}}",
       "trial_expiring": "Trial for “{{hotel}}” ends in {{days}} days",
       "trial_expired": "Trial for “{{hotel}}” has ended",
-      "node_offline": "Node at {{hotel}} is offline"
+      "node_offline": "Node at {{hotel}} is offline",
+      "scheduler_down": "The scheduled-publication service has been silent for {{count}} min — nothing is running",
+      "scheduler_overdue": "Scheduled publications overdue: {{count}}",
+      "scheduler_ok": "Scheduled-publication service is alive, waiting: {{count}}"
     },
     "fleet": {
       "title": "Hotels",

@@ -151,6 +151,33 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
     if not media["failed"] and not media["stuck"]:
         signals.append({"level": "ok", "code": "media_ok", "count": 0})
 
+    # СЛУЖБА ОТЛОЖЕННОГО ЗАПУСКА — В ЗДОРОВЬЕ, А НЕ В ЛОГАХ.
+    #
+    # Это ещё один процесс, который можно забыть перезапустить. У нас уже есть
+    # эта грабля: воркер однажды прожил на старом коде 39 часов, и без него
+    # молча пропадала погода. Молчащая служба выглядит ровно как работающая —
+    # если не спрашивать. Спрашиваем здесь, в том блоке, куда владелец и
+    # смотрит с вопросом «что сломалось».
+    from apps.core.services import scheduler
+
+    with platform_scope():
+        beat = scheduler.heartbeat_state()
+    if not beat["alive"]:
+        signals.append(
+            {
+                "level": "bad",
+                "code": "scheduler_down",
+                # Минуты, а не секунды: «стоит 47 минут» читается сразу, а
+                # «2820» требует счёта в уме.
+                "count": (beat["age_seconds"] or 0) // 60,
+            }
+        )
+    elif beat["overdue"]:
+        # Служба жива, но не успевает: задания ждут дольше, чем следует.
+        signals.append({"level": "warn", "code": "scheduler_overdue", "count": beat["overdue"]})
+    else:
+        signals.append({"level": "ok", "code": "scheduler_ok", "count": beat["due"]})
+
     expiring = [
         {"hotel": hotel.name_i18n, "subdomain": hotel.subdomain, "days": tariffs.trial_days_left(hotel, today)}
         for hotel in hotels

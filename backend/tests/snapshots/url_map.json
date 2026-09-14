@@ -83,6 +83,9 @@
   "/api/v1/cms/brand/drafts/{draft_id}/publish": [
     "POST"
   ],
+  "/api/v1/cms/brand/drafts/{draft_id}/schedule": [
+    "POST"
+  ],
   "/api/v1/cms/brand/font": [
     "POST"
   ],
@@ -97,6 +100,12 @@
   ],
   "/api/v1/cms/brand/preview": [
     "GET"
+  ],
+  "/api/v1/cms/brand/schedule": [
+    "GET"
+  ],
+  "/api/v1/cms/brand/schedule/{job_id}": [
+    "DELETE"
   ],
   "/api/v1/cms/brand/versions": [
     "GET"
@@ -663,6 +672,9 @@
     "POST"
   ],
   "/api/v1/platform/publications/{job_id}": [
+    "GET"
+  ],
+  "/api/v1/platform/scheduler": [
     "GET"
   ],
   "/api/v1/platform/tariffs": [

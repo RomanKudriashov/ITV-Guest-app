@@ -1255,7 +1255,15 @@
       "restoredFrom": "恢复到版本 {{number}}",
       "staleTitle": "草稿已过时",
       "publishAnyway": "仍然发布",
-      "publishFailed": "发布失败"
+      "publishFailed": "发布失败",
+      "schedule": "定时发布",
+      "scheduleConfirm": "设定",
+      "scheduleFailed": "定时设置失败",
+      "scheduled": "已排期的发布",
+      "scheduledEmpty": "暂无排期",
+      "cancelSchedule": "取消",
+      "whenLabel": "发布时间",
+      "whenHint": "酒店时间。若在此之前外观被他人更改，发布将不会执行——我们会通知您"
     }
   },
   "hotel": {
@@ -1950,7 +1958,10 @@
       "media_stuck": "媒体：处理卡住 {{count}} 个",
       "trial_expiring": "「{{hotel}}」试用将在 {{days}} 天后到期",
       "trial_expired": "「{{hotel}}」试用已到期",
-      "node_offline": "{{hotel}} 的节点离线"
+      "node_offline": "{{hotel}} 的节点离线",
+      "scheduler_down": "定时发布服务已 {{count}} 分钟无响应——排期任务未在执行",
+      "scheduler_overdue": "逾期的排期发布：{{count}}",
+      "scheduler_ok": "定时发布服务正常，等待中：{{count}}"
     },
     "fleet": {
       "title": "酒店",

@@ -160,3 +160,42 @@ export function fetchBrandVersions(): Promise<{ versions: BrandVersionRecord[] }
 export function restoreBrandVersion(id: string): Promise<BrandVersionRecord> {
   return api.post<BrandVersionRecord>(`/cms/brand/versions/${id}/restore`);
 }
+
+export interface ScheduledPublication {
+  id: string;
+  draft_id: string;
+  draft_name: string;
+  /** Момент в UTC — для машины. */
+  run_at: string;
+  /** Тот же момент по часам ОТЕЛЯ — для человека, который его и назначал. */
+  run_at_local: string;
+  timezone: string;
+  status: string;
+  created_by: string;
+  delay_seconds: number;
+  result: Record<string, unknown>;
+}
+
+export function fetchBrandSchedule(): Promise<{ scheduled: ScheduledPublication[] }> {
+  return api.get<{ scheduled: ScheduledPublication[] }>('/cms/brand/schedule');
+}
+
+/**
+ * Назначить публикацию черновика.
+ *
+ * `runAtLocal` — строка вида `2026-12-31T23:59` БЕЗ часового пояса: пояс
+ * подставит сервер, и именно отельный. Прислать свой значило бы назначить
+ * полночь того часового пояса, в котором сейчас оператор.
+ */
+export function scheduleBrandDraft(
+  draftId: string,
+  runAtLocal: string,
+): Promise<ScheduledPublication> {
+  return api.post<ScheduledPublication>(`/cms/brand/drafts/${draftId}/schedule`, {
+    run_at: runAtLocal,
+  });
+}
+
+export function cancelBrandSchedule(jobId: string): Promise<{ ok: boolean }> {
+  return api.delete<{ ok: boolean }>(`/cms/brand/schedule/${jobId}`);
+}

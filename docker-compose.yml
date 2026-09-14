@@ -146,6 +146,36 @@ services:
       redis:
         condition: service_healthy
 
+  # СЛУЖБА ОТЛОЖЕННОГО ЗАПУСКА. Просыпается раз в минуту и смотрит, каким
+  # назначенным заданиям пришёл срок: публикация оформления по расписанию —
+  # первый потребитель, дальше отложенные события уведомлений и перевод пачкой.
+  #
+  # Состояния у неё нет: всё в таблице. Значит, перезапускать можно когда угодно
+  # — пропущенное она подхватит и пометит опоздание. Забыть её поднять,
+  # наоборот, нельзя незаметно: каждый круг пишет пульс, и консоль платформы
+  # показывает, когда служба просыпалась в последний раз.
+  scheduler:
+    build: ./backend
+    command: ["scheduler"]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      CACHE_URL: redis://redis:6379/4
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${DEV_HOST:-localhost}:${MINIO_HOST_PORT:-59000}
+      # Сид и миграции делает backend — служба только читает и выполняет.
+      SEED_ON_START: "0"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
   frontend:
     build: ./frontend
     command: npm run dev

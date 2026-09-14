@@ -1291,7 +1291,15 @@
       "restoredFrom": "استعادة الإصدار {{number}}",
       "staleTitle": "المسودة قديمة",
       "publishAnyway": "انشر على أي حال",
-      "publishFailed": "تعذّر النشر"
+      "publishFailed": "تعذّر النشر",
+      "schedule": "جدولة",
+      "scheduleConfirm": "تعيين",
+      "scheduleFailed": "تعذّرت الجدولة",
+      "scheduled": "عمليات النشر المجدولة",
+      "scheduledEmpty": "لا يوجد نشر مجدول",
+      "cancelSchedule": "إلغاء",
+      "whenLabel": "موعد النشر",
+      "whenHint": "بتوقيت الفندق. إذا تغيّر التصميم قبل ذلك، فلن يتم النشر — وسنُعلمك"
     }
   },
   "hotel": {
@@ -2021,7 +2029,10 @@
       "media_stuck": "الوسائط: عالقة في المعالجة — {{count}}",
       "trial_expiring": "تجربة «{{hotel}}» تنتهي خلال {{days}} يومًا",
       "trial_expired": "انتهت تجربة «{{hotel}}»",
-      "node_offline": "عقدة {{hotel}} غير متصلة"
+      "node_offline": "عقدة {{hotel}} غير متصلة",
+      "scheduler_down": "خدمة النشر المجدول صامتة منذ {{count}} دقيقة — لا يتم تنفيذ أي مهمة",
+      "scheduler_overdue": "عمليات نشر مجدولة متأخرة: {{count}}",
+      "scheduler_ok": "خدمة النشر المجدول تعمل، في الانتظار: {{count}}"
     },
     "fleet": {
       "title": "الفنادق",
