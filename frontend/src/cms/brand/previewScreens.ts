@@ -27,7 +27,13 @@ export interface PreviewScreen {
   id: PreviewScreenId;
   /** Ключ перевода названия в переключателе. */
   labelKey: string;
-  /** Адрес внутри гостевой витрины — показ открывает ИМЕННО его. */
+  /**
+   * Адрес внутри гостевой витрины — показ открывает ИМЕННО его.
+   *
+   * `:venue` подставляется КОДОМ ЗАВЕДЕНИЯ ИЗ ОТВЕТА СЕРВЕРА. Зашить код
+   * нельзя: он свой у каждого отеля, и «кухня» работала бы ровно на нашем
+   * стенде, а чужому отелю показывала бы «заведение не найдено».
+   */
   route: string;
   /**
    * Какие экраны показа спрашивать у сервера. Пусто — экран данных не требует
@@ -36,6 +42,24 @@ export interface PreviewScreen {
   payloads: PreviewPayloadId[];
   /** Рисуется ли экран внутри гостевой оболочки (шапка/нижнее меню). */
   inShell: boolean;
+}
+
+/**
+ * Адрес экрана заведения. Код подставляет показ — из блока `venue` в ответе
+ * сервера, который сам выбрал первое гостевое заведение отеля.
+ */
+export const VENUE_ROUTE = '/venue/:venue';
+
+/**
+ * Адрес, по которому открывать экран: с подставленным кодом заведения.
+ *
+ * `null` — заведения нет вовсе. Открывать при этом `/venue/` нельзя: адрес не
+ * совпадёт ни с одним маршрутом, и показ вместо честного «у отеля нет
+ * заведений» показал бы пустой экран неизвестно чего.
+ */
+export function resolveRoute(screen: PreviewScreen, venue: string | null): string | null {
+  if (!screen.route.includes(':venue')) return screen.route;
+  return venue ? screen.route.replace(':venue', venue) : null;
 }
 
 export type PreviewPayloadId = 'home' | 'venues' | 'catalog' | 'item' | 'locations' | 'room';
@@ -74,14 +98,14 @@ export const PREVIEW_SCREENS: PreviewScreen[] = [
   {
     id: 'catalog',
     labelKey: 'brand.preview.screen.catalog',
-    route: '/venue/kitchen',
+    route: VENUE_ROUTE,
     payloads: ['home', 'catalog'],
     inShell: true,
   },
   {
     id: 'item',
     labelKey: 'brand.preview.screen.item',
-    route: '/venue/kitchen',
+    route: VENUE_ROUTE,
     payloads: ['home', 'catalog', 'item'],
     inShell: true,
   },
@@ -98,7 +122,7 @@ export const PREVIEW_SCREENS: PreviewScreen[] = [
   {
     id: 'request',
     labelKey: 'brand.preview.screen.request',
-    route: '/venue/kitchen',
+    route: VENUE_ROUTE,
     payloads: ['home', 'catalog'],
     inShell: true,
   },

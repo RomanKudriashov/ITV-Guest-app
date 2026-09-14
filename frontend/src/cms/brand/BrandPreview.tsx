@@ -33,7 +33,7 @@ import { useTranslation } from 'react-i18next';
 import type { BrandTokens, ThemeMode } from '@/theme';
 import type { BrandAbstraction } from '@/api/brand';
 import { PreviewStage } from './PreviewStage';
-import { PREVIEW_SCREENS, type PreviewScreenId } from './previewScreens';
+import { PREVIEW_SCREENS, resolveRoute, type PreviewScreenId } from './previewScreens';
 import { usePreviewData } from './usePreviewData';
 
 /**
@@ -88,7 +88,11 @@ export function BrandPreview({
     [screenId],
   );
   const language = rtl ? 'ar' : appLanguage;
-  const { client, isLoading, error } = usePreviewData(screen, language);
+  const { client, isLoading, error, venue } = usePreviewData(screen, language);
+
+  // Адрес собирается ПОСЛЕ ответа: код заведения называет сервер. `null` —
+  // гостевых заведений у отеля нет, и показывать этот экран нечем.
+  const route = resolveRoute(screen, venue);
 
   // Во сколько ужать рамку, чтобы она влезла в колонку. Меряем колонку, а не
   // гадаем: ширина панели зависит от окна оператора и от того, свёрнуто ли меню.
@@ -113,7 +117,7 @@ export function BrandPreview({
       mode={mode}
       rtl={rtl}
       language={language}
-      route={screen.route}
+      route={route ?? '/'}
       width={frame.width}
       height={frame.height}
       scale={fit}
@@ -213,6 +217,10 @@ export function BrandPreview({
           <Stack alignItems="center" sx={{ py: 6 }} data-testid="brand-preview-loading">
             <CircularProgress size={28} />
           </Stack>
+        ) : route === null ? (
+          <Alert severity="info" data-testid="brand-preview-no-venue">
+            {t('brand.preview.noVenue')}
+          </Alert>
         ) : (
           stage(scale)
         )}

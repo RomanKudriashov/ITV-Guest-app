@@ -78,12 +78,16 @@ def preview_payload(
     if screen == "catalog":
         from apps.catalog.services.menu import MenuOptions, build_menu
 
+        # ЗАВЕДЕНИЕ ВЫБИРАЕТ СЕРВЕР, а не показ на клиенте. Экран заведения
+        # открывается по КОДУ, и код этот у каждого отеля свой: зашитая
+        # «кухня» работала бы ровно на нашем стенде. Без явного довода берём
+        # первое гостевое заведение отеля — то же, что гость видит первым.
         return build_menu(
             MenuOptions(
                 language=language,
                 include_unavailable=True,
                 offering_type=offering_type,
-                point_code=point or None,
+                point_code=point or _first_venue_code(hotel),
             ),
             hotel=hotel,
         )
@@ -141,3 +145,22 @@ def _room_for_preview(hotel, room_number: str):
         query = query.filter(room__number=room_number)
     link = query.order_by("room__number").first()
     return link.room if link else None
+
+
+def _first_venue_code(hotel) -> str | None:
+    """
+    Код первого гостевого заведения отеля.
+
+    `None` — заведений нет вовсе: тогда каталог собирается по отелю целиком, и
+    экран покажет своё «заведение не найдено». Это честный ответ, а не поломка:
+    у отеля без заведений показывать нечего.
+    """
+    from apps.hotels.models import Service
+
+    service = (
+        Service.objects.filter(is_active=True, is_guest_facing=True)
+        .select_related("execution_point")
+        .order_by("sort_order", "code")
+        .first()
+    )
+    return service.execution_point.code if service else None

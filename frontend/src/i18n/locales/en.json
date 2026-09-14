@@ -1205,7 +1205,8 @@
         "cart": "Cart and checkout",
         "request": "Request",
         "room": "Room control"
-      }
+      },
+      "noVenue": "The hotel has no guest-facing venues — there is nothing to show on this screen."
     },
     "tabs": {
       "brand": "Brand",
