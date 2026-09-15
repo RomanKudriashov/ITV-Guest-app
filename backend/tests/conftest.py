@@ -147,6 +147,32 @@ def _clean_context():
     clear_request_context()
 
 
+SEED_ARGS = ["seed_demo_hotel", "--with-second-hotel", "--without-media"]
+
+
+@pytest.fixture(scope="session")
+def django_db_setup(django_db_setup, django_db_blocker):  # noqa: F811 — так и положено
+    """
+    ПОСЕВ ОДИН РАЗ НА ВОРКЕР, А НЕ НА КАЖДУЮ ПРОВЕРКУ.
+
+    Было: 93% времени бэкенда уходило на подготовку данных, а на тело проверок —
+    3%. Замер одиночной проверки: подготовка 14,75 с, тело 0,01 с. Каждая из
+    1299 проверок заново сеяла демо-отель.
+
+    Стало: сев выполняется один раз после миграций, ВНЕ тестовой транзакции —
+    поэтому он виден всем проверкам и переживает их откат. Изоляцию держит сам
+    откат: обычная проверка получает данные, портит их как хочет и оставляет
+    базу такой, какой взяла.
+
+    ПОЧЕМУ БЕЗ МЕДИА. Полный сев грузит 82 картинки в MinIO и режет варианты
+    Pillow'ом — 10,5 секунды. Кому картинки нужны по существу, просит их
+    маркером `seed_media`, и такой проверке сеется отдельно (см. `seeded`).
+    """
+    with django_db_blocker.unblock():
+        call_command(*SEED_ARGS, verbosity=0)
+    yield
+
+
 @pytest.fixture
 def seeded(db, request):
     """
@@ -169,10 +195,31 @@ def seeded(db, request):
     потребовала бы дублировать всю цепочку. Решение принимается здесь, в
     одном месте, а тест только объявляет потребность.
     """
-    args = ["seed_demo_hotel", "--with-second-hotel"]
-    if request.node.get_closest_marker("seed_media") is None:
-        args.append("--without-media")
-    call_command(*args, verbosity=0)
+    needs_media = request.node.get_closest_marker("seed_media") is not None
+
+    # ПЕРЕСЕВ — ПО ФАКТУ ПРОПАЖИ, А НЕ ПО ОБЪЯВЛЕНИЮ.
+    #
+    # Проверка с `transaction=True` вычищает таблицы в конце — то есть уносит
+    # общий посев. Таких в наборе 252 из 1299, и помечать их руками значило бы
+    # завести список, который разойдётся с правдой в первый же раз, когда его
+    # забудут дополнить. Спрашиваем у данных: отеля нет — сеем заново.
+    #
+    # Тот же довод, что у сторожа устаревшего черновика: состояние считается, а
+    # не хранится флагом.
+    missing = not Hotel.objects.filter(subdomain="crystal").exists()
+
+    if missing or needs_media:
+        args = ["seed_demo_hotel", "--with-second-hotel"]
+        if needs_media:
+            # `--force` ОБЯЗАТЕЛЕН, а не «на всякий случай»: без него команда
+            # видит уже посеянный отель и МОЛЧА пропускает его целиком —
+            # картинок не появляется, а проверка падает на «заведения без
+            # обложки». Именно так и случилось в первом же прогоне.
+            args.append("--force")
+        else:
+            args.append("--without-media")
+        call_command(*args, verbosity=0)
+
     return {
         "crystal": Hotel.objects.get(subdomain="crystal"),
         "aurora": Hotel.objects.get(subdomain="aurora"),

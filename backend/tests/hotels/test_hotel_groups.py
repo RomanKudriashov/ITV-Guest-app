@@ -100,13 +100,19 @@ def test_a_rule_group_is_recomputed_and_does_not_remember(api):
     переехавший в другой город — выпасть. Хранимый состав был бы списком,
     притворяющимся правилом: человек пересобирал бы его руками и однажды забыл.
     """
-    first = _hotel("msk-one", city="Москва")
+    # ГОРОД БЕРЁМ СВОЙ, которого в демо-посеве нет.
+    #
+    # Проверка утверждает ТОЧНЫЙ состав группы. Пока база сеялась заново, в
+    # ней не было других московских отелей; с общим посевом они появились, и
+    # равенство стало утверждением про окружение, а не про правило.
+    CITY = "Приморск-Тестовый"
+    first = _hotel("msk-one", city=CITY)
 
     created = api(
         "post",
         "/groups",
-        {"code": "msk-rule", "title": "Москва", "kind": "city", "mode": "rule",
-         "rule": {"city": "Москва"}},
+        {"code": "msk-rule", "title": CITY, "kind": "city", "mode": "rule",
+         "rule": {"city": CITY}},
     )
     assert created.status_code == 201, created.content
     group = HotelGroup.objects.get(code="msk-rule")
@@ -114,7 +120,7 @@ def test_a_rule_group_is_recomputed_and_does_not_remember(api):
     assert groups_svc.hotel_ids(group) == [first.pk]
 
     # Отель появился ПОСЛЕ группы — и оказался в ней без единого действия.
-    second = _hotel("msk-two", city="Москва")
+    second = _hotel("msk-two", city=CITY)
     assert set(groups_svc.hotel_ids(group)) == {first.pk, second.pk}
 
     # А этот переехал — и выпал.

@@ -217,12 +217,20 @@ def test_fleet_hides_test_hotels_by_default(api):
     _hotel("livehotel", "Живой")
     _hotel("testhotel", "Тестовый", origin=Hotel.Origin.TEST)
 
-    default = api("get", "/fleet").json()
-    assert {row["subdomain"] for row in default["items"]} == {"livehotel"}
+    # УТВЕРЖДАЕМ ПРО СВОИ ОТЕЛИ, А НЕ ПРО ВЕСЬ СПИСОК.
+    #
+    # Раньше во флоте не было ничего, кроме заведённого здесь: база сеялась
+    # заново на каждую проверку. Теперь посев общий, и «в списке ровно один
+    # отель» стало утверждением про ОКРУЖЕНИЕ, а не про поведение. Предмет
+    # проверки при этом не меняется: тестовый отель по умолчанию спрятан, а по
+    # явному запросу виден.
+    default = {row["subdomain"] for row in api("get", "/fleet").json()["items"]}
+    assert "livehotel" in default
+    assert "testhotel" not in default, "тестовый отель показан по умолчанию"
 
     # Спрятаны, но не потеряны: по явному запросу видны.
-    everything = api("get", "/fleet?origin=all").json()
-    assert {row["subdomain"] for row in everything["items"]} == {"livehotel", "testhotel"}
+    everything = {row["subdomain"] for row in api("get", "/fleet?origin=all").json()["items"]}
+    assert {"livehotel", "testhotel"} <= everything
 
 
 def test_fleet_bulk_counts_only_real_changes(api):
