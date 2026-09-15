@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { API, apiToken, HOTEL, guestSession, login } from './helpers'
+import { API, HOTEL, apiToken, guestSession, signInToCms } from './helpers'
 
 /**
  * После шага 7 revenue_minor — только позиции, полная сумма — gross_minor.
@@ -27,7 +27,7 @@ test('дашборд: заглавная «Выручка» — это gross, а
 
   // Дашборд смотрим админом отеля: с R3 аналитика — не работа линейного повара,
   // и скоуп у админа общеотельный, как и у токена ниже.
-  await login(page)
+  await signInToCms(page)
   await page.getByTestId('cms-nav-analytics').click()
   await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 20_000 })
   // Тот же случай: карточки видны и до клика, поэтому ожидание их видимости

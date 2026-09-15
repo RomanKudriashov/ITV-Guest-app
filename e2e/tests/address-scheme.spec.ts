@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { waitForLayout } from './helpers'
 
 /**
  * СХЕМА АДРЕСОВ — экранная половина.
@@ -166,7 +167,7 @@ test('частиц на лендинге нет ни на одной секци�
   await page.goto(`${ROOT}/`)
   await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-  await page.waitForTimeout(500)
+  await waitForLayout(page)
   await expect(page.getByTestId('landing').locator('canvas')).toHaveCount(0)
 })
 
@@ -276,6 +277,11 @@ test('план номера: играет сам, а после касания �
   await expect(plan).toHaveAttribute('data-taken', 'true')
 
   const taken = await state()
+  /*
+    ПАУЗА ЗАКОННА: проверяется ОТСУТСТВИЕ события за время — «план не продолжил
+    играть сам после касания». Ждать нечего: мы ждём как раз того, что ничего
+    не произошло, и условия у этого нет.
+  */
   await page.waitForTimeout(3000)
   expect(await state(), 'план продолжил играть сам после касания').toBe(taken)
 })
@@ -320,6 +326,7 @@ test('план при просьбе не двигать: статичен и с
   const plate = plan.locator('[data-light]')
   await expect(plate).toHaveAttribute('data-light', 'true')
   const first = await plate.getAttribute('data-curtains')
+  // ПАУЗА ЗАКОННА по той же причине: ждём, что автопоказ НЕ тронулся.
   await page.waitForTimeout(2600)
   expect(await plate.getAttribute('data-curtains')).toBe(first)
   await expect(plate).toHaveAttribute('data-light', 'true')
@@ -373,7 +380,7 @@ test('переход по пункту: раздел встаёт ниже по�
 
   for (const key of ['devices', 'how', 'modules']) {
     await page.getByTestId(`landing-nav-${key}`).click()
-    await page.waitForTimeout(900)
+    await waitForLayout(page)
 
     const gap = await page.evaluate(
       (id) => document.getElementById(id)!.getBoundingClientRect().top,
@@ -444,7 +451,7 @@ test('значки языка и темы стоят по средней лин�
   await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 })
   // Полоса выезжает сдвигом: замер на полпути сравнивал бы значки с ещё не
   // приехавшей полосой и врал бы на её высоту.
-  await page.waitForTimeout(600)
+  await waitForLayout(page)
 
   const navBox = (await nav.boundingBox())!
   for (const testId of ['guest-language', 'theme-toggle']) {

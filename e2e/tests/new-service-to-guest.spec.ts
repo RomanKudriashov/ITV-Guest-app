@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { DEMO_ROOM, login, unique } from './helpers'
+import { DEMO_ROOM, signInToCms, unique } from './helpers'
 
 /**
  * ПРИЁМКА: раздел, созданный в интерфейсе, доходит до гостя.
@@ -62,7 +62,7 @@ for (const { label, typeLabel, savedToast } of [
     const categoryName = unique('Раздел')
     const itemName = unique('Позиция')
 
-    await login(page)
+    await signInToCms(page)
     await createService(page, typeLabel, serviceName)
 
     /* ── Раздел: «Добавить раздел» → название → «Сохранить» ─────────────── */

@@ -125,7 +125,9 @@ test.describe('Главная: погода и время', () => {
     await page.context().clearCookies()
     await homeAnswers(page, { weather: null })
     await enterRoom(page)
-    await page.waitForTimeout(1200)
+    // Сначала убеждаемся, что главная нарисована, и только потом утверждаем,
+    // что блока на ней НЕТ: иначе «нет» означало бы «ещё не пришло».
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
 
     await expect(page.getByTestId('guest-home-weather-now')).toHaveCount(0)
     await expect(page.getByTestId('guest-home-weather-attribution')).toHaveCount(0)
@@ -139,7 +141,9 @@ test.describe('Главная: погода и время', () => {
       hotel: { name: 'Отель «Кристалл»', subdomain: 'crystal', timezone: 'Europe/Moscow' },
     })
     await enterRoom(page)
-    await page.waitForTimeout(1200)
+    // Сначала убеждаемся, что главная нарисована, и только потом утверждаем,
+    // что блока на ней НЕТ: иначе «нет» означало бы «ещё не пришло».
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
 
     // Пустой стеклянный прямоугольник — это заглушка, которой не должно быть.
     await expect(page.getByTestId('guest-home-weather')).toHaveCount(0)
@@ -175,7 +179,10 @@ test.describe('Главная: погода и время', () => {
       weather: { temperature_c: 5, code: 0, is_day: false, observed_at: new Date().toISOString() },
     })
     await enterRoom(page)
-    await page.waitForTimeout(2000)
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
+    // Ждём и саму погоду: без неё «витрина не ходила к провайдеру» значило бы
+    // лишь «витрина ещё ничего не успела».
+    await expect(page.getByTestId('guest-home-weather')).toBeVisible({ timeout: 20_000 })
 
     expect(outside, `витрина сходила к провайдеру: ${outside.join(', ')}`).toEqual([])
   })
@@ -241,7 +248,9 @@ test.describe('Главная: строка состояния номера', ()
   test('отель выключил строку — её нет, даже когда снимок есть', async ({ page }) => {
     await homeAnswers(page, { room_status: false })
     await enterRoom(page)
-    await page.waitForTimeout(1500)
+    // Главная нарисована — и только теперь утверждаем, что строки состояния на
+    // ней НЕТ: иначе «нет» означало бы «ещё не пришло».
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
 
     await expect(page.getByTestId('guest-home-room-status')).toHaveCount(0)
   })

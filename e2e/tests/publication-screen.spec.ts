@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { PLATFORM } from './helpers'
+import { PLATFORM, signInPlatform } from './helpers'
 
 /**
  * ЭКРАН ПУБЛИКАЦИИ.
@@ -55,14 +55,15 @@ const DONE = {
   ],
 }
 
-async function login(page: Page): Promise<void> {
-  await page.goto('/admin')
-  await page.evaluate(() => window.localStorage.clear())
-  await page.goto('/admin')
-  await page.getByTestId('admin-login-email').fill(PLATFORM.email)
-  await page.getByTestId('admin-login-password').fill(PLATFORM.password)
-  await page.getByTestId('admin-login-submit').click()
-  await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 30_000 })
+async function login(page: Page) {
+  /*
+    ЭТО КОНСОЛЬ ПЛАТФОРМЫ, А НЕ CMS ОТЕЛЯ — у неё своя область хранилища и
+    своя учётная запись. Подставленная сюда сессия отеля открывает пустой
+    экран: прав на публикации у админа отеля нет и быть не должно.
+
+    Форма входа платформы при этом остаётся покрытой — `platform-console`.
+  */
+  await signInPlatform(page)
 }
 
 test('УКУС: пока операция идёт — виден ход; отказ и ошибка показаны порознь', async ({ page }) => {

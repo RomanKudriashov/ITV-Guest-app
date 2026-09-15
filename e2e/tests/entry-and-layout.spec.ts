@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { STORAGE_KEYS } from '../fixtures/appState'
+import { waitForLayout } from './helpers'
 
 /**
  * Раскладки, которые уже один раз разъехались, — под сторожем.
@@ -94,7 +95,7 @@ test.describe('Узкий экран: строка категорий и пла�
       // они могут ровно в тот момент, когда она прилипает.
       for (const offset of [0, 300, 700, 1400]) {
         await page.evaluate((y) => window.scrollTo(0, y), offset)
-        await page.waitForTimeout(350)
+        await waitForLayout(page)
         const chipBox = (await chip.boundingBox())!
         const barBox = (await bar.boundingBox())!
         expect(
@@ -116,7 +117,7 @@ test.describe('Карточка позиции', () => {
 
       const sheet = page.getByTestId('guest-item-sheet')
       await expect(sheet).toBeVisible({ timeout: 15_000 })
-      await page.waitForTimeout(600)
+      await waitForLayout(page)
 
       const sheetBox = (await sheet.boundingBox())!
       const media = (await sheet.locator('img').first().boundingBox())!

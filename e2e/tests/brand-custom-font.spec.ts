@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, login } from './helpers'
+import { ADMIN, signInToCms } from './helpers'
 
 /*
   СВОЙ ШРИФТ: «ФАЙЛ ЗАГРУЗИЛСЯ» — НЕ ОТВЕТ.
@@ -24,7 +24,7 @@ import { ADMIN, login } from './helpers'
 const FONT_PATH = join(__dirname, '../../frontend/public/fonts/manrope-400-cyrillic.woff2')
 
 async function openBrand(page: Page): Promise<void> {
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-editor')).toBeVisible({ timeout: 20_000 })
 }

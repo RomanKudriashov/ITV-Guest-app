@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
-import { ADMIN, API, DEMO_ROOM, HOTEL } from './helpers'
+import { ADMIN, API, DEMO_ROOM, HOTEL, waitForLayout, scrollAndSettle } from './helpers'
 
 /**
  * Управление номером: подтверждение, оффлайн, отказ по доверию.
@@ -201,7 +201,14 @@ test.describe('Управление номером', () => {
 
     const notice = page.getByTestId('room-notice')
     await expect(notice).toBeVisible({ timeout: 20_000 })
-    // Отклик держится и ПОСЛЕ прихода исхода, а не гаснет вместе с ним.
+    /*
+      ПАУЗА ЗАКОННА: здесь проверяется ОТСУТСТВИЕ события за время.
+
+      Утверждение — «отклик не погас за три секунды после исхода». Ждать нечего:
+      события, которого мы не хотим, может не случиться вовсе, и условия у него
+      нет по определению. Заменить это ожиданием чего-либо — значит проверить
+      что-то другое.
+    */
     await page.waitForTimeout(3_000)
     await expect(notice).toBeVisible()
     // И при этом сцена по-прежнему не притворяется включённой.
@@ -299,7 +306,7 @@ test.describe('Управление номером', () => {
     for (let index = 0; index < Math.max(count, 1); index += 1) {
       if (count) {
         await tabs.nth(index).click()
-        await page.waitForTimeout(400)
+        await waitForLayout(page)
       }
       text += ' ' + ((await page.getByTestId('room-page').innerText()) ?? '')
       // Ползунков на экране номера быть не должно нигде, кроме шкалы уставки
@@ -900,12 +907,11 @@ test.describe('Управление номером', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await enterRoom(page)
     await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
-    await page.waitForTimeout(800)
+    await waitForLayout(page, ['room-plan'])
 
     const topOf = async (testId: string) => (await page.getByTestId(testId).boundingBox())?.y ?? null
     const scrollTo = async (y: number) => {
-      await page.evaluate((to) => window.scrollTo(0, to), y)
-      await page.waitForTimeout(200)
+      await scrollAndSettle(page, y)
     }
 
     const planAtRest = await topOf('room-plan')
@@ -957,7 +963,7 @@ test.describe('Управление номером', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await enterRoom(page)
     await expect(page.getByTestId('room-two-columns')).toBeVisible({ timeout: 20_000 })
-    await page.waitForTimeout(500)
+    await waitForLayout(page, ['room-plan', 'room-panel-quick'])
 
     const planTop = async () => (await page.getByTestId('room-plan').boundingBox())!.y
     const panelTop = async () => (await page.getByTestId("room-panel-quick").boundingBox())!.y
@@ -970,8 +976,7 @@ test.describe('Управление номером', () => {
     const planBefore = await planTop()
     const panelBefore = await panelTop()
     const SCROLL = 400
-    await page.evaluate((to) => window.scrollTo(0, to), SCROLL)
-    await page.waitForTimeout(250)
+    await scrollAndSettle(page, SCROLL)
     const planAfter = await planTop()
     const panelAfter = await panelTop()
 
@@ -1035,7 +1040,7 @@ test.describe('Управление номером', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await enterRoom(page)
     await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
-    await page.waitForTimeout(800)
+    await waitForLayout(page, ['room-plan'])
     const tall = await layout()
 
     /*
@@ -1045,7 +1050,7 @@ test.describe('Управление номером', () => {
       под нижнюю навигацию.
     */
     await page.setViewportSize({ width: 390, height: 664 })
-    await page.waitForTimeout(800)
+    await waitForLayout(page, ['room-plan'])
     const short = await layout()
 
     // Обрезка действительно случилась, и по ВЫСОТЕ, а не по ширине. Ширина
@@ -1087,7 +1092,7 @@ test.describe('Управление номером', () => {
       начинает сужать плиту — кадр снова помещается целиком, пусть и мельче.
     */
     await page.setViewportSize({ width: 844, height: 390 })
-    await page.waitForTimeout(800)
+    await waitForLayout(page, ['room-plan'])
     const wide = await layout()
     expect(wide.plate.width, 'плита в альбомной не сузилась').toBeLessThan(short.plate.width)
     expect(
@@ -1105,7 +1110,7 @@ test.describe('Управление номером', () => {
     }
 
     await page.setViewportSize({ width: 390, height: 664 })
-    await page.waitForTimeout(800)
+    await waitForLayout(page, ['room-plan'])
 
     /*
       И ГЛАВНОЕ: до первой строки контролов можно дотянуться пальцем, не

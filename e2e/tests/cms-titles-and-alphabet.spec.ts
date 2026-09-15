@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { API, HOTEL, login } from './helpers'
+import { API, HOTEL, signInToCms } from './helpers'
 
 /**
  * ДВА СПЛОШНЫХ ОБХОДА CMS — по одному правилу на обход.
@@ -71,7 +71,7 @@ async function openSection(page: Page, item: NavItem): Promise<void> {
 
 test.describe('CMS: заголовки и язык', () => {
   test('заголовок каждого раздела совпадает с его пунктом меню', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
     const items = await navItems(page)
     expect(items.length, 'меню не отдало ни одного раздела').toBeGreaterThan(5)
 
@@ -88,7 +88,7 @@ test.describe('CMS: заголовки и язык', () => {
   })
 
   test('в русском интерфейсе нет арабицы и иероглифов ни в одном разделе', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
     const items = await navItems(page)
 
     const dirty: string[] = []
@@ -120,7 +120,7 @@ test.describe('CMS: заголовки и язык', () => {
     })
     expect(health.status(), await health.text()).toBe(200)
 
-    await login(page)
+    await signInToCms(page)
     await page.goto('/cms/services')
     const card = page.getByTestId('cms-sla-overrides')
     await expect(card).toBeVisible({ timeout: 20_000 })

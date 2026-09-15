@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN } from './helpers'
+import { ADMIN, signIn } from './helpers'
 
 /**
  * ДАШБОРД — ПУЛЬТ, А НЕ СПРАВКА (пункт 29).
@@ -15,13 +15,12 @@ import { ADMIN } from './helpers'
  */
 
 async function login(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => window.localStorage.clear())
-  await page.goto('/login')
-  await page.getByTestId('login-email').fill(ADMIN.email)
-  await page.getByTestId('login-password').fill(ADMIN.password)
-  await page.getByTestId('login-submit').click()
-  await expect(page).toHaveURL(/\/cms\//, { timeout: 30_000 })
+  // Вход — готовой сессией: форма проверяется отдельными проверками
+  // (`cms-access`, `session-refresh`, `platform-console`), а здесь она
+  // была лишь дорогой к экрану.
+  await signIn(page, ADMIN)
+  await page.goto('/cms/dashboard')
+  await expect(page).toHaveURL(/\/cms\//, { timeout: 20_000 })
 }
 
 const TODAY = {

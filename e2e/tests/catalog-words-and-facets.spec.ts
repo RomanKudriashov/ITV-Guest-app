@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
-import { ADMIN, API, apiToken, DEMO_ROOM, HOTEL, login } from './helpers'
+import { ADMIN, API, DEMO_ROOM, HOTEL, apiToken, signInToCms } from './helpers'
 
 /**
  * ПАРТИЯ 6: СЛОВО КАТАЛОГА И ПРИМЕНИМОСТЬ СПРАВОЧНИКОВ.
@@ -43,7 +43,7 @@ test.describe('Слово каталога следует за типом зав
     expect(restaurant.noun).toBe('dish')
     expect(spa.noun).toBe('service')
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
 
     await openWorkspace(page, restaurant.id)
     await expect(page.getByTestId('add-item-button')).toHaveText(/блюдо/i)
@@ -59,7 +59,7 @@ test.describe('Слово каталога следует за типом зав
     const token = await apiToken(request, ADMIN)
     const spa = await serviceOfType(request, token, 'spa')
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await openWorkspace(page, spa.id)
 
     /*
@@ -85,7 +85,7 @@ test.describe('Применимость справочников', () => {
     })
     expect((await payload.json()).kind_applies).toBe(false)
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await openWorkspace(page, spa.id)
 
     /*
@@ -120,7 +120,7 @@ test.describe('Применимость справочников', () => {
     const token = await apiToken(request, ADMIN)
     const restaurant = await serviceOfType(request, token, 'restaurant')
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await openWorkspace(page, restaurant.id)
 
     const edit = page.locator('[data-testid^="item-edit-"]').first()
@@ -134,7 +134,7 @@ test.describe('Применимость справочников', () => {
   })
 
   test('справочник объясняет пустоту и разводит наши записи с отельными', async ({ page }) => {
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/dictionaries')
     await expect(page.getByTestId('cms-dict-allergens')).toBeVisible({ timeout: 25_000 })
 
@@ -188,7 +188,7 @@ test.describe('Метки: панель и витрина одним кодом'
     const same = rows.find((row) => Object.values(row.label ?? {}).includes(label))
     expect(same, `метки «${label}» нет в панели`).toBeTruthy()
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/marketing')
     const pill = page.getByTestId(`cms-badge-pill-${same!.id}`)
     await expect(pill).toBeVisible({ timeout: 25_000 })
@@ -211,7 +211,7 @@ test.describe('Метки: панель и витрина одним кодом'
     const used = rows.find((row) => row.items_count > 0)
     expect(used, 'нет присвоенных меток — проверять нечего').toBeTruthy()
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/marketing')
     await page.getByTestId(`cms-badge-delete-${used!.id}`).click()
 
@@ -234,7 +234,7 @@ test.describe('Метки: панель и витрина одним кодом'
     expect(preset, 'в наборе нет пресетных меток').toBeTruthy()
     expect(own, 'в наборе нет отельных меток — граница не видна').toBeTruthy()
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/marketing')
     await expect(page.getByTestId(`cms-badge-row-${preset!.id}`)).toBeVisible({ timeout: 25_000 })
 
@@ -260,7 +260,7 @@ test.describe('Метки: панель и витрина одним кодом'
     const before = await order()
     expect(before.length, 'меток меньше двух — переставлять нечего').toBeGreaterThan(1)
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/marketing')
     const handle = page.getByTestId(`cms-badge-drag-${before[0]}`)
     await expect(handle).toBeVisible({ timeout: 25_000 })

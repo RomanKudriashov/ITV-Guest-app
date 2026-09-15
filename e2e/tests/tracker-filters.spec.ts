@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, loginToTracker } from './helpers'
+import { CREDENTIALS, signInToTracker } from './helpers'
 
 /**
  * ФИЛЬТРЫ ДОСКИ (партия 3).
@@ -66,7 +66,7 @@ const asked = (urls: string[], part: string) => urls.some((url) => url.includes(
 test.describe('Доска: фильтры', () => {
   test('УКУС: фильтр применён — ушёл в запрос, а не отсеял полученное', async ({ page }) => {
     const urls = await watchBoard(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await page.getByTestId('tracker-filters-toggle').click()
     await expect(page.getByTestId('tracker-filters-panel')).toBeVisible()
@@ -106,7 +106,7 @@ test.describe('Доска: фильтры', () => {
 
   test('число на кнопке говорит, что доска показывает не всё', async ({ page }) => {
     await watchBoard(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     // Свёрнутая панель прячет фильтры, и без счётчика человек ищет заказ,
     // которого на суженной доске нет.
@@ -123,7 +123,7 @@ test.describe('Доска: фильтры', () => {
 
   test('«мои» и «ничьи» не включаются вместе — это всегда пустая доска', async ({ page }) => {
     await watchBoard(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await page.getByTestId('tracker-filters-toggle').click()
     await page.getByTestId('tracker-filter-mine').click()
@@ -137,7 +137,7 @@ test.describe('Доска: фильтры', () => {
 
   test('под фильтром пусто — «ничего не найдено», а не «заказов нет»', async ({ page }) => {
     await watchBoard(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await page.getByTestId('tracker-filters-toggle').click()
     await page.getByTestId('tracker-filter-overdue').click()
@@ -151,7 +151,7 @@ test.describe('Доска: фильтры', () => {
 
   test('исполнителей предлагает сервер — включая тех, у кого сейчас пусто', async ({ page }) => {
     await watchBoard(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await page.getByTestId('tracker-filters-toggle').click()
     await page.getByTestId('tracker-filter-assignee').click()

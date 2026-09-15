@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, loginToTracker } from './helpers'
+import { CREDENTIALS, signInToTracker } from './helpers'
 
 /**
  * ВРЕМЯ И ПОРОГИ НА ДОСКЕ (партия 1).
@@ -117,7 +117,7 @@ test.describe('Доска: время и пороги', () => {
     await showBoard(page, [
       order({ created_at: created, waiting_minutes: 2 * 24 * 60 + 15, is_overdue: true, overdue_minutes: 2 * 24 * 60 - 5 }),
     ])
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     const age = page.getByTestId('tracker-waiting-9001')
     await expect(age).toBeVisible({ timeout: 20_000 })
@@ -138,7 +138,7 @@ test.describe('Доска: время и пороги', () => {
 
   test('свежий заказ — минутами с правильной формой, час рядом', async ({ page }) => {
     await showBoard(page, [order({ created_at: minutesAgo(2), waiting_minutes: 2 })])
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     // Две минуты — форма «минуты», а не «минут»: у русского три формы, и
     // склейка «{{count}} мин» скрывала бы это навсегда.
@@ -148,7 +148,7 @@ test.describe('Доска: время и пороги', () => {
 
   test('несколько часов — часы и минуты, а не сотни минут', async ({ page }) => {
     await showBoard(page, [order({ created_at: minutesAgo(135), waiting_minutes: 135 })])
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await expect(page.getByTestId('tracker-waiting-9001')).toHaveText('2 ч 15 мин')
   })
@@ -162,7 +162,7 @@ test.describe('Доска: время и пороги', () => {
     await showBoard(page, [
       order({ created_at: minutesAgo(28), waiting_minutes: 28, is_overdue: true, overdue_minutes: 8 }),
     ])
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await expect(page.getByTestId('tracker-overdue-9001')).toHaveText('просрочен на 8 минут')
     // Порог — из настройки ТОЧКИ, а не из константы во фронте.
@@ -171,7 +171,7 @@ test.describe('Доска: время и пороги', () => {
 
   test('заказ в срок просрочку не показывает', async ({ page }) => {
     await showBoard(page, [order({ created_at: minutesAgo(5), waiting_minutes: 5 })])
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await expect(page.getByTestId('tracker-waiting-9001')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('tracker-overdue-9001')).toHaveCount(0)

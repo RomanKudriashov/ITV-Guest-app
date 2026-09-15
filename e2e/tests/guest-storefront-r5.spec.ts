@@ -2,16 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 import { STORAGE_KEYS } from '../fixtures/appState'
 
-import {
-  ADMIN,
-  API,
-  apiHeaders,
-  apiToken,
-  BARMAN,
-  DEMO_ROOM,
-  loginToTracker,
-  openCart,
-} from './helpers'
+import { ADMIN, API, BARMAN, DEMO_ROOM, apiHeaders, apiToken, openCart, signInToTracker, waitForLayout } from './helpers'
 
 /**
  * R5: витрина гостя.
@@ -140,7 +131,7 @@ test.describe('Посервисная корзина и разъезд', () => {
     const barman = await barContext.newPage()
 
     try {
-      await loginToTracker(barman, BARMAN)
+      await signInToTracker(barman, BARMAN)
 
       await enterAsGuest(guest)
       await guest.goto(`/venue/${aggregator.execution_point.code}`)
@@ -509,7 +500,7 @@ for (const mode of ['dark', 'light'] as const) {
 
     await page.getByTestId('guest-home-tile-kitchen').click()
     await expect(page.getByTestId('guest-item-ribeye')).toBeVisible({ timeout: 15_000 })
-    await page.waitForTimeout(1200)
+    await waitForLayout(page)
 
     const measure = new Function('return ' + PIXEL_CONTRAST)()
     /** Снимок самой подписи → пиксельный контраст того, что видит гость. */
@@ -549,7 +540,7 @@ for (const mode of ['dark', 'light'] as const) {
     */
     await page.getByTestId('guest-item-ribeye').click()
     await expect(page.getByTestId('guest-item-sheet')).toBeVisible()
-    await page.waitForTimeout(1200)
+    await waitForLayout(page)
 
     const sheet = await onScreen('[data-testid="guest-item-sheet"] p')
     expect(

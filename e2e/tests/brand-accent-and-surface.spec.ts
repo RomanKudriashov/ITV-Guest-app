@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, API, apiToken, HOTEL, login } from './helpers'
+import { ADMIN, API, HOTEL, apiToken, signInToCms } from './helpers'
 
 /**
  * ПАРТИЯ 7, ЗАХОД 1, ПУНКТ 3: НАСТРОЙКИ, КОТОРЫЕ НАКОНЕЦ ЧТО-ТО МЕНЯЮТ.
@@ -22,7 +22,7 @@ function toHex(rgb: string): string {
 }
 
 async function openBrand(page: Page): Promise<void> {
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-preview')).toBeVisible({ timeout: 25_000 })
 }
@@ -56,7 +56,7 @@ test.describe('Акцент отеля виден', () => {
     const accents = [palette.light.secondary, palette.dark.secondary].map((c) => c.toLowerCase())
     const primaries = [palette.light.primary, palette.dark.primary].map((c) => c.toLowerCase())
 
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/marketing')
     const pill = page.getByTestId(`cms-badge-pill-${accentBadge!.id}`)
     await expect(pill).toBeVisible({ timeout: 25_000 })

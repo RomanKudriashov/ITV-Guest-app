@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { API, HOTEL, apiToken, login, unique } from './helpers'
+import { API, HOTEL, apiToken, signInToCms, unique } from './helpers'
 
 /**
  * ДВЕ ДЫРЫ В НАБОРЕ, ЗАКРЫТЫЕ ЗДЕСЬ.
@@ -36,7 +36,7 @@ test.describe('Уведомления: журнал и второе правил
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(String(error)))
 
-    await login(page)
+    await signInToCms(page)
     await page.goto('/cms/notifications')
     await page.getByTestId('cms-notifications-tab-log').click()
 
@@ -85,7 +85,7 @@ test.describe('Уведомления: журнал и второе правил
     )
     expect(free, 'у всех заведений уже есть правило — свободной точки нет').toBeTruthy()
 
-    await login(page)
+    await signInToCms(page)
     await page.goto('/cms/notifications')
     await page.getByTestId('cms-notifications-tab-escalation').click()
     await expect(page.getByTestId('cms-escalation-new')).toBeVisible({ timeout: 20_000 })

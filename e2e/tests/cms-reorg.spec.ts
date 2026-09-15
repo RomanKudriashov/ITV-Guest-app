@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, login } from './helpers'
+import { ADMIN, API, DEMO_ROOM, apiHeaders, apiToken, signInToCms } from './helpers'
 
 /**
  * R4: реорганизованная CMS.
@@ -14,7 +14,7 @@ import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, login } from './helpers'
 
 test.describe('Навигация CMS', () => {
   test('разделы сгруппированы, плоской простыни больше нет', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
 
     const nav = page.getByTestId('main-nav')
     await expect(nav).toBeVisible()
@@ -51,7 +51,7 @@ test.describe('Навигация CMS', () => {
     const wasEnabled = await moduleEnabled(request, 'marketing')
     await enableModule(request, 'marketing', false)
 
-    await login(page)
+    await signInToCms(page)
     try {
       // Проверяем отсутствие ПУНКТА маркетинга. Группа «Витрина» при этом
       // остаётся: в ней есть базовые пункты (бренд, аналитика), и исчезать ей
@@ -78,7 +78,7 @@ test.describe('Навигация CMS', () => {
 
 test.describe('Пространство сервиса', () => {
   test('админ создаёт сервис из шаблона и попадает в его вкладки', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
     await page.getByTestId('cms-nav-services').click()
     await expect(page.getByTestId('cms-services')).toBeVisible()
 
@@ -131,7 +131,7 @@ test.describe('Пространство сервиса', () => {
     expect(conciergeCodes).toContain('transfer')
     expect(kitchenCodes).not.toContain('transfer')
 
-    await login(page)
+    await signInToCms(page)
     await page.goto(`/cms/services/${kitchen.id}`)
     await expect(page.getByTestId('service-menu')).toBeVisible({ timeout: 20_000 })
   })
@@ -164,7 +164,7 @@ test.describe('Включённый контент', () => {
     expect(before).toEqual([])
 
     // Включаем кухню целиком — через UI.
-    await login(page)
+    await signInToCms(page)
     await page.goto(`/cms/services/${aggregator.id}`)
     await page.getByTestId('service-tab-inclusions').click()
     await expect(page.getByTestId('service-inclusions')).toBeVisible()

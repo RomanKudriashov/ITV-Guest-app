@@ -361,3 +361,225 @@ export async function setPlanLevel(
   )
   expect(response.ok(), await response.text()).toBeTruthy()
 }
+
+/**
+ * ЖДЁМ, ПОКА РАСКЛАДКА ПЕРЕСТАНЕТ ДВИГАТЬСЯ.
+ *
+ * Замена фиксированной паузе перед замерами геометрии. Пауза мерит скорость
+ * машины: на быстрой тратит время впустую, на медленной не спасает — мы уже
+ * дважды на этом обжигались (1200 мс вместо ленты колонок, 250 мс в
+ * перетаскивании).
+ *
+ * Здесь условие настоящее: высота документа и положение названных узлов
+ * СОВПАЛИ в двух замерах подряд. Совпали — значит анимации доиграли, шрифты
+ * подгрузились и картинки заняли своё место; именно это и ждали паузой.
+ *
+ * `settleFrames` — сколько одинаковых замеров подряд считать покоем. Два
+ * достаточно: между ними проходит кадр отрисовки, и продолжающаяся анимация
+ * обязана его сдвинуть.
+ */
+export async function waitForLayout(
+  page: Page,
+  testIds: string[] = [],
+  options: { timeout?: number; settleFrames?: number } = {},
+): Promise<void> {
+  const timeout = options.timeout ?? 10_000
+  const needed = options.settleFrames ?? 2
+  const started = Date.now()
+
+  /*
+    СНАЧАЛА ДАЁМ АНИМАЦИИ НАЧАТЬСЯ — два кадра отрисовки.
+
+    Без этого условие выполнялось МГНОВЕННО: сразу после нажатия ничего ещё не
+    двигалось, две подряд одинаковые мерки означали «не началось», а не
+    «закончилось». На этом покраснели переход по пункту меню и карточка
+    позиции на телефоне — то есть проверка поймала дефект в самой помощи.
+  */
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(null))),
+      ),
+  )
+
+  let previous = ''
+  let stable = 0
+
+  while (Date.now() - started < timeout) {
+    const current = await page.evaluate((ids) => {
+      const parts = [
+        String(document.documentElement.scrollHeight),
+        // ПРОКРУТКА — ЧАСТЬ ПОДПИСИ. Плавный скролл не меняет ни высоту
+        // документа, ни рамку узла в координатах документа; без этой строки
+        // ожидание кончалось, пока страница ещё ехала.
+        String(Math.round(window.scrollY)),
+        // Идущие переходы и анимации: браузер сам говорит, доиграл ли он.
+        String(
+          typeof document.getAnimations === 'function'
+            ? document.getAnimations().filter((a) => a.playState === 'running').length
+            : 0,
+        ),
+      ]
+      for (const id of ids) {
+        const node = document.querySelector(`[data-testid="${id}"]`)
+        if (!node) {
+          parts.push(`${id}:нет`)
+          continue
+        }
+        const box = node.getBoundingClientRect()
+        parts.push(
+          `${id}:${Math.round(box.x)},${Math.round(box.y)},${Math.round(box.width)},${Math.round(box.height)}`,
+        )
+      }
+      return parts.join('|')
+    }, testIds)
+
+    if (current === previous) {
+      stable += 1
+      if (stable >= needed) return
+    } else {
+      stable = 0
+      previous = current
+    }
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))))
+  }
+}
+
+export async function scrollAndSettle(page: Page, to: number): Promise<void> {
+  await page.evaluate((y) => window.scrollTo(0, y), to)
+  await page.waitForFunction(
+    (y) => Math.abs(window.scrollY - y) <= 1 || window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1,
+    to,
+    { timeout: 5_000 },
+  )
+  await waitForLayout(page)
+}
+
+/* ── Готовая сессия вместо формы входа ──────────────────────────────────── */
+
+/**
+ * ПОЧЕМУ НЕ ЧЕРЕЗ ФОРМУ.
+ *
+ * Вход через форму стоит 1,6 секунды тёплым и 5,2 холодным — измерено. В наборе
+ * таких входов 110, и почти во всех проверка входа НЕ ЯВЛЯЕТСЯ предметом: она
+ * лишь дорога к экрану, который и проверяют. Токен, положенный в хранилище,
+ * открывает тот же экран за 0,17 секунды.
+ *
+ * ЧТО ПРИ ЭТОМ НЕ ТЕРЯЕТСЯ. Сам вход остаётся покрытым выделенными проверками
+ * формы (`cms-access`, `session-refresh`, `platform-console`) — они входят
+ * по-настоящему и обязаны краснеть, если форма сломана.
+ *
+ * ПРО СРОК ЖИЗНИ — ПРОВЕРЕНО, А НЕ ПРЕДПОЛОЖЕНО. Доступ живёт 60 минут (по
+ * самому токену), просроченный даёт 401. Обновление НЕ РОТИРУЕТСЯ: повторный
+ * обмен тем же значением снова отвечает 200 — проверено пробой. Поэтому кладём
+ * оба токена: приложение продлевает сессию само, ровно как у живого человека,
+ * и подборка длиннее часа не выбросит проверку на экран входа.
+ *
+ * Сам кэш держим 45 минут — перевыпуск дешёвый, протухший токен дорогой.
+ */
+const TOKEN_CACHE = new Map<string, { token: string; refresh: string; issued: number }>()
+
+/** Час у токена, берём с запасом: перевыпуск дешёвый, протухший — нет. */
+const TOKEN_REUSE_MS = 45 * 60 * 1000
+
+export const SESSION_KEYS = {
+  cms: { access: 'itv.cms.access', refresh: 'itv.cms.refresh' },
+  platform: { access: 'itv.platform.access', refresh: 'itv.platform.refresh' },
+}
+
+async function cachedToken(
+  request: APIRequestContext,
+  key: string,
+  issue: () => Promise<{ access: string; refresh: string }>,
+): Promise<{ access: string; refresh: string }> {
+  const known = TOKEN_CACHE.get(key)
+  if (known && Date.now() - known.issued < TOKEN_REUSE_MS) {
+    return { access: known.token, refresh: known.refresh }
+  }
+  const issued = await issue()
+  TOKEN_CACHE.set(key, { token: issued.access, refresh: issued.refresh, issued: Date.now() })
+  return issued
+}
+
+/**
+ * Войти в CMS, не трогая форму: токен кладётся в хранилище до первой отрисовки.
+ *
+ * `addInitScript` — не мелочь: положить токен ПОСЛЕ перехода значит показать
+ * приложению пустое хранилище, получить редирект на вход и потерять всё, что
+ * выиграли.
+ */
+export async function signIn(
+  page: Page,
+  credentials: { email: string; password: string } = ADMIN,
+): Promise<void> {
+  const request = page.context().request
+  const tokens = await cachedToken(request, `cms:${credentials.email}`, async () => {
+    const response = await request.post(`${API}/api/staff/auth/login`, {
+      data: { email: credentials.email, password: credentials.password },
+      headers: { 'X-Hotel-Subdomain': HOTEL },
+    })
+    expect(response.ok(), `вход ${credentials.email} не прошёл: ${response.status()}`).toBeTruthy()
+    const body = await response.json()
+    return { access: body.access as string, refresh: (body.refresh ?? '') as string }
+  })
+
+  await page.addInitScript(
+    ([accessKey, refreshKey, access, refresh]) => {
+      window.localStorage.setItem(accessKey, access)
+      if (refresh) window.localStorage.setItem(refreshKey, refresh)
+    },
+    [SESSION_KEYS.cms.access, SESSION_KEYS.cms.refresh, tokens.access, tokens.refresh] as const,
+  )
+}
+
+/** То же для консоли платформы: у неё своя область хранилища. */
+export async function signInPlatform(
+  page: Page,
+  credentials: { email: string; password: string } = PLATFORM,
+): Promise<void> {
+  const request = page.context().request
+  const tokens = await cachedToken(request, `platform:${credentials.email}`, async () => {
+    const response = await request.post(`${API}/api/v1/platform/auth/login`, {
+      data: credentials,
+    })
+    expect(response.ok(), `вход платформы не прошёл: ${response.status()}`).toBeTruthy()
+    const body = await response.json()
+    return { access: body.access as string, refresh: (body.refresh ?? '') as string }
+  })
+
+  await page.addInitScript(
+    ([accessKey, refreshKey, access, refresh]) => {
+      window.localStorage.setItem(accessKey, access)
+      if (refresh) window.localStorage.setItem(refreshKey, refresh)
+    },
+    [
+      SESSION_KEYS.platform.access,
+      SESSION_KEYS.platform.refresh,
+      tokens.access,
+      tokens.refresh,
+    ] as const,
+  )
+}
+
+/**
+ * Вход в CMS с готовой сессией и переходом на дашборд — замена `login` там, где
+ * форма не является предметом проверки.
+ */
+export async function signInToCms(
+  page: Page,
+  credentials: { email: string; password: string } = ADMIN,
+): Promise<void> {
+  await signIn(page, credentials)
+  await page.goto('/cms/dashboard')
+  await expect(page).toHaveURL(/\/cms\//, { timeout: 20_000 })
+}
+
+/** Вход в трекер с готовой сессией: доступ даёт привязка к точке, а не роль. */
+export async function signInToTracker(
+  page: Page,
+  credentials: { email: string; password: string },
+): Promise<void> {
+  await signIn(page, credentials)
+  await page.goto('/tracker')
+  await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
+}

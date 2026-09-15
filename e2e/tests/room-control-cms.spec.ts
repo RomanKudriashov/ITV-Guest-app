@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { ADMIN, API, apiGet, apiHeaders, login, setPlanLevel } from './helpers'
+import { ADMIN, API, apiGet, apiHeaders, setPlanLevel, signInToCms } from './helpers'
 
 /**
  * Раздел GRMS в CMS: путь администратора целиком.
@@ -69,7 +69,7 @@ let page: Page
 test.beforeAll(async ({ browser }) => {
   mkdirSync(SHOTS, { recursive: true })
   page = await browser.newPage()
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
 })
 
 test.afterAll(async () => {

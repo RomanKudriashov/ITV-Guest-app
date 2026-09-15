@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { DEMO_ROOM } from './helpers'
+import { DEMO_ROOM, waitForLayout } from './helpers'
 
 /**
  * Карточка заявки — по виду, а не одна на всех.
@@ -122,7 +122,7 @@ test('описание в карточке блюда занимает стол�
   await enterAsGuest(page)
   await page.getByTestId('guest-home-tile-kitchen').click()
   await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 20_000 })
-  await page.waitForTimeout(800)
+  await waitForLayout(page)
 
   const cards = await page.evaluate(() => {
     /** Сколько строк текст занимает НА САМОМ ДЕЛЕ: по прямоугольникам диапазона. */

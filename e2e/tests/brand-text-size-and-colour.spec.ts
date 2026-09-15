@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, login } from './helpers'
+import { ADMIN, signInToCms } from './helpers'
 
 /*
   РАЗМЕР И ЦВЕТ ТЕКСТА: ПРОВЕРЯЕМ БУКВЫ, А НЕ ОРГАНЫ УПРАВЛЕНИЯ.
@@ -17,7 +17,7 @@ import { ADMIN, login } from './helpers'
 */
 
 async function openBrand(page: Page): Promise<void> {
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-editor')).toBeVisible({ timeout: 20_000 })
 

@@ -1,14 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
-import {
-  API,
-  apiToken,
-  CREDENTIALS,
-  HOTEL,
-  DEMO_ROOM,
-  loginToTracker,
-  moveOrderStatus,
-} from './helpers'
+import { API, CREDENTIALS, DEMO_ROOM, HOTEL, apiToken, moveOrderStatus, signInToTracker } from './helpers'
 
 /**
  * ПАРТИЯ 5: СТАТУСЫ НАЗАД И РУЧНОЙ ПОРЯДОК НА ДОСКЕ.
@@ -90,7 +82,7 @@ async function boardColumn(
 }
 
 async function openBoard(page: Page): Promise<void> {
-  await loginToTracker(page, CREDENTIALS)
+  await signInToTracker(page, CREDENTIALS)
   await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
 }
 

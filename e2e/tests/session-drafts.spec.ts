@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, API, HOTEL } from './helpers'
+import { ADMIN, API, HOTEL, waitForLayout } from './helpers'
 
 /**
  * Несохранённое переживает смерть сессии.
@@ -82,6 +82,12 @@ test('редактор блюда: набранное возвращается �
       timeout: 20_000,
     })
     // Пауза на устаканивание: набранное между двумя гидратациями затирается ею.
+    /*
+      ПАУЗА ЗАКОННА И ОСТАЁТСЯ: автосохранение черновика идёт ПО ТАЙМЕРУ.
+
+      Ждём срабатывания таймера, а не отклика интерфейса: до него на экране не
+      меняется ничего. Уберёшь — проверка начнёт мерить скорость машины.
+    */
     await page.waitForTimeout(2500)
 
     const typed = `Набрано ${Date.now().toString(36)}`
@@ -148,7 +154,7 @@ test('профиль отеля в консоли: набранное возвр
   const original = await page.getByTestId('admin-hotel-name-input').inputValue()
   const typed = `${original} черновик`
   await page.getByTestId('admin-hotel-name-input').fill(typed)
-  await page.waitForTimeout(500)
+  await waitForLayout(page)
 
   await page.evaluate((dead) => {
     window.localStorage.setItem('itv.platform.access', dead)
@@ -166,7 +172,7 @@ test('профиль отеля в консоли: набранное возвр
 
   // Возвращаем как было и убираем черновик за собой.
   await page.getByTestId('admin-hotel-name-input').fill(original)
-  await page.waitForTimeout(500)
+  await waitForLayout(page)
 })
 
 test('мои входы: список показывает текущую сессию и закрывает чужую', async ({ page }) => {

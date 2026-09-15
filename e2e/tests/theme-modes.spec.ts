@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, CREDENTIALS, DEMO_ROOM, login, loginToTracker } from './helpers'
+import { ADMIN, CREDENTIALS, DEMO_ROOM, signInToCms, signInToTracker } from './helpers'
 import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
@@ -131,7 +131,7 @@ test.describe('Тема: переключение на всех поверхно
 
   test('CMS открывается в бренде отеля и переключается', async ({ page }) => {
     await clearTheme(page)
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
 
     // КОРЕНЬ-1: до R7 здесь была белая страница на платформенном дефолте.
     const dark = luminance(await pageBackground(page))
@@ -143,7 +143,7 @@ test.describe('Тема: переключение на всех поверхно
 
   test('трекер открывается в бренде отеля и переключается', async ({ page }) => {
     await clearTheme(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     const dark = luminance(await pageBackground(page))
     expect(dark, 'трекер открывается в тёмном бренде отеля').toBeLessThan(90)

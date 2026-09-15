@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, loginToTracker } from './helpers'
+import { CREDENTIALS, signInToTracker } from './helpers'
 
 /**
  * СВОДКА СМЕНЫ И НЕПУСТАЯ ПУСТАЯ ДОСКА (партия 2).
@@ -92,7 +92,7 @@ test.describe('Доска: сводка смены', () => {
         last_order_at: new Date(Date.now() - 40 * 60_000).toISOString(),
       }),
     })
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     const summary = page.getByTestId('tracker-empty-summary')
     await expect(summary).toBeVisible({ timeout: 20_000 })
@@ -108,7 +108,7 @@ test.describe('Доска: сводка смены', () => {
 
   test('смена только началась — итога нет, и его не придумывают', async ({ page }) => {
     await board(page, { summary: shift({ done: 0 }) })
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await expect(page.getByTestId('tracker-empty-fresh')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('tracker-empty-summary')).toHaveCount(0)
@@ -138,7 +138,7 @@ test.describe('Доска: сводка смены', () => {
 
   test('плитки показывают числа смены; «просрочено» без просрочки не висит', async ({ page }) => {
     await board(page, { summary: shift({ new: 6, in_work: 2, overdue: 0, done: 3 }) })
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await expect(page.getByTestId('tracker-tile-new')).toContainText('6')
     await expect(page.getByTestId('tracker-tile-in_work')).toContainText('2')
@@ -170,7 +170,7 @@ test.describe('Доска: сводка смены', () => {
         }),
       })
     })
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     await page.getByTestId('tracker-tile-overdue').click()
 

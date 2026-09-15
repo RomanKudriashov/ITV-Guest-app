@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, login } from './helpers'
+import { ADMIN, signInToCms } from './helpers'
 
 /*
   ПУБЛИКАЦИЯ ПО РАСПИСАНИЮ — ЧЕРЕЗ ИНТЕРФЕЙС.
@@ -17,7 +17,7 @@ import { ADMIN, login } from './helpers'
 */
 
 async function openVersions(page: Page): Promise<void> {
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-editor')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('brand-tab-versions').click()

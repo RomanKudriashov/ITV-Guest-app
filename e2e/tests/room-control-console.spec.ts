@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { ADMIN, API, apiGet, apiHeaders, apiToken, HOTEL, PLATFORM, setPlanLevel } from './helpers'
+import { ADMIN, API, apiGet, apiHeaders, apiToken, HOTEL, PLATFORM, setPlanLevel, waitForLayout } from './helpers'
 
 /**
  * КОНФИГУРАЦИЯ УПРАВЛЕНИЯ НОМЕРОМ — В КОНСОЛИ ПЛАТФОРМЫ.
@@ -428,7 +428,7 @@ test('план: кадр, разметка мышью, привязка к оп�
 
   await page.screenshot({ path: path.join(SHOTS, 'plan-editor-dark.png'), fullPage: true })
   await page.getByTestId('theme-toggle').click()
-  await page.waitForTimeout(400)
+  await waitForLayout(page)
   await page.screenshot({ path: path.join(SHOTS, 'plan-editor-light.png'), fullPage: true })
   await page.getByTestId('theme-toggle').click()
 })

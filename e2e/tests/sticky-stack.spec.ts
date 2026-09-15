@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { DEMO_ROOM } from './helpers'
+import { DEMO_ROOM, waitForLayout, scrollAndSettle } from './helpers'
 import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
@@ -216,7 +216,9 @@ for (const mode of ['dark', 'light'] as const) {
 
       for (const route of ROUTES) {
         await page.goto(route)
-        await page.waitForTimeout(1400)
+        // Ждём, пока раскладка встанет: высота документа и рамка экрана
+        // совпали дважды подряд. Пауза здесь мерила скорость машины.
+        await waitForLayout(page, ['guest-room-chip'])
 
         const height = await page.evaluate(() => document.documentElement.scrollHeight)
         // ДЕСЯТЬ позиций вдоль страницы, а не одна: слои складываются
@@ -229,8 +231,7 @@ for (const mode of ['dark', 'light'] as const) {
         expect(await coveredAtRest(page), `${mode}/${vp.name} ${route}: слой закрывает содержимое`).toEqual([])
 
         for (const y of stops) {
-          await page.evaluate((to) => window.scrollTo(0, to), y)
-          await page.waitForTimeout(140)
+          await scrollAndSettle(page, y)
           const hits = await overlaps(page)
           expect(hits, `${mode}/${vp.name} ${route} на скролле ${y}`).toEqual([])
         }
@@ -254,7 +255,7 @@ for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
 
     for (const route of ROUTES) {
       await page.goto(route)
-      await page.waitForTimeout(1200)
+      await waitForLayout(page)
       /*
         Прокрутка ДО УСТОЯВШЕЙСЯ высоты, а не один раз.
 
@@ -277,6 +278,8 @@ for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
         })
         if (height === settled) break
         settled = height
+        // Это ШАГ ОПРОСА внутри ожидания условия («высота перестала меняться»),
+        // а не сон вместо него: цикл кончается, как только высота совпала.
         await page.waitForTimeout(200)
       }
 
@@ -314,12 +317,11 @@ test('высота документа не меняется на прокрут�
   await enterRoom(page, 'dark')
   await page.goto('/room')
   await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
-  await page.waitForTimeout(1200)
+  await waitForLayout(page)
 
   const heights: number[] = []
   for (const y of [0, 60, 120, 200, 320, 480, 700]) {
-    await page.evaluate((to) => window.scrollTo(0, to), y)
-    await page.waitForTimeout(200)
+    await scrollAndSettle(page, y)
     heights.push(await page.evaluate(() => document.documentElement.scrollHeight))
   }
   expect(new Set(heights).size, `высота документа скакала: ${heights.join(' → ')}`).toBe(1)
@@ -340,7 +342,7 @@ test('вкладки номера прилипают, а план уезжает
   await enterRoom(page, 'dark')
   await page.goto('/room')
   await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
-  await page.waitForTimeout(1200)
+  await waitForLayout(page)
 
   const geometry = () =>
     page.evaluate(() => {
@@ -354,8 +356,7 @@ test('вкладки номера прилипают, а план уезжает
   const startTop = atRest!.tabsTop
 
   for (const y of [0, 40, 90, 140, 200, 320, 500, 800]) {
-    await page.evaluate((to) => window.scrollTo(0, to), y)
-    await page.waitForTimeout(200)
+    await scrollAndSettle(page, y)
     const now = await geometry()
     expect(now, `на скролле ${y} плита или вкладки не найдены`).not.toBeNull()
     // Вкладки НИЖЕ плана всегда — они и в потоке идут за ним.
@@ -420,7 +421,7 @@ test.describe('вкладки номера ловят нажатие сами', 
         await enterRoom(page, mode)
         await page.goto('/room')
         await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 20_000 })
-        await page.waitForTimeout(1200)
+        await waitForLayout(page)
 
         // Вкладки у демо-номера есть всегда: групп приборов в нём больше
         // одной. `test.skip` на их отсутствии зеленел бы ровно тогда, когда
@@ -436,7 +437,7 @@ test.describe('вкладки номера ловят нажатие сами', 
         // обёртка успевает наехать на вкладки.
         for (const y of [0, 120, 200, 320, 500]) {
           await page.evaluate((to) => window.scrollTo(0, to), y)
-          await page.waitForTimeout(250)
+          await waitForLayout(page)
 
           const thieves = await page.evaluate(() => {
             const out: { tab: string; hit: string }[] = []
@@ -467,7 +468,7 @@ test.describe('вкладки номера ловят нажатие сами', 
         // И нажатие действительно переключает: проверка выше говорит «дойдёт»,
         // эта — «сработало».
         await page.evaluate(() => window.scrollTo(0, 320))
-        await page.waitForTimeout(250)
+        await waitForLayout(page)
         const last = tabs.nth(count - 1)
         await last.click()
         await expect(last).toHaveAttribute('aria-selected', 'true')

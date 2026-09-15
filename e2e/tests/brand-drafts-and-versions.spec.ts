@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, guestTheme, login } from './helpers'
+import { ADMIN, guestTheme, signInToCms, waitForLayout } from './helpers'
 
 /*
   ЧЕРНОВИКИ, ВЕРСИИ, ОТКАТ — ПОЛНЫЙ КРУГ ЧЕРЕЗ ИНТЕРФЕЙС.
@@ -15,7 +15,7 @@ import { ADMIN, guestTheme, login } from './helpers'
 */
 
 async function openVersions(page: Page): Promise<void> {
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-editor')).toBeVisible({ timeout: 20_000 })
   await page.getByTestId('brand-tab-versions').click()
@@ -33,8 +33,13 @@ async function dropDrafts(page: Page): Promise<void> {
   for (;;) {
     const remove = page.getByTestId('brand-draft-delete').first()
     if ((await remove.count()) === 0) break
-    await remove.click()
-    await page.waitForTimeout(300)
+    /*
+      Список перечитывается после каждого удаления, и строка, которую мы только
+      что сосчитали, к моменту нажатия может исчезнуть — это нормальная гонка
+      уборки, а не поломка. Пропускаем такой случай и идём дальше.
+    */
+    await remove.click({ timeout: 5_000 }).catch(() => undefined)
+    await waitForLayout(page)
   }
 }
 

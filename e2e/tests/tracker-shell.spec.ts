@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, CREDENTIALS } from './helpers'
+import { ADMIN, CREDENTIALS, signIn as openSession } from './helpers'
 
 /**
  * ТРЕКЕР ЖИВЁТ В ОБЩЕЙ ОБОЛОЧКЕ.
@@ -16,12 +16,13 @@ import { ADMIN, CREDENTIALS } from './helpers'
  * СКАЗАНО строкой.
  */
 
-async function signIn(page: Page, who: { email: string; password: string }) {
-  await page.goto('/login')
-  await page.getByTestId('login-email').fill(who.email)
-  await page.getByTestId('login-password').fill(who.password)
-  await page.getByTestId('login-submit').click()
-  await expect(page).not.toHaveURL(/\/login/, { timeout: 25_000 })
+async function signIn(page: Page) {
+  // Вход — готовой сессией: форма проверяется отдельными проверками
+  // (`cms-access`, `session-refresh`, `platform-console`), а здесь она
+  // была лишь дорогой к экрану.
+  await openSession(page, ADMIN)
+  await page.goto('/tracker')
+  await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
 }
 
 test.describe('Каркас трекера', () => {

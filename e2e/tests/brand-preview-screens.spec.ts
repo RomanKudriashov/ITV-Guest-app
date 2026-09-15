@@ -1,6 +1,6 @@
 import { expect, test, type FrameLocator, type Page } from '@playwright/test'
 
-import { ADMIN, login } from './helpers'
+import { ADMIN, signInToCms } from './helpers'
 
 /**
  * ПАРТИЯ 7, ЗАХОД 2: ПОКАЗ РИСУЕТ НАСТОЯЩИЕ ЭКРАНЫ НА НАСТОЯЩИХ ШИРИНАХ.
@@ -13,7 +13,7 @@ import { ADMIN, login } from './helpers'
  */
 
 async function openPreview(page: Page): Promise<void> {
-  await login(page, ADMIN)
+  await signInToCms(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-preview')).toBeVisible({ timeout: 25_000 })
 }

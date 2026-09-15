@@ -1,16 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import {
-  API,
-  HOTEL,
-  apiDelete,
-  apiGet,
-  apiToken,
-  findItemByTitle,
-  login,
-  unique,
-  type CmsItem,
-} from './helpers'
+import { API, HOTEL, apiDelete, apiGet, apiToken, findItemByTitle, signInToCms, type CmsItem, unique } from './helpers'
 
 /**
  * Главный E2E-сценарий: блюдо создаётся и редактируется через UI.
@@ -36,7 +26,7 @@ test.describe('CMS: редактор блюда', () => {
     const title = unique('Утка по-пекински')
     const token = await apiToken(request)
 
-    await login(page)
+    await signInToCms(page)
     // С R4 меню живёт ВНУТРИ заведения: «меню какого ресторана» теперь имеет
     // ответ, и путь к блюду идёт через рабочее пространство сервиса.
     await openKitchenMenu(page, request)
@@ -148,7 +138,7 @@ test.describe('CMS: редактор блюда', () => {
     const title = unique('Плов')
     const token = await apiToken(request)
 
-    await login(page)
+    await signInToCms(page)
     await openKitchenMenu(page, request)
     await page.getByTestId('category-item-hot').click()
     await page.getByTestId('add-item-button').click()
@@ -200,7 +190,7 @@ test.describe('CMS: редактор блюда', () => {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
 
-    await login(page)
+    await signInToCms(page)
     await openKitchenMenu(page, request)
     await page.getByTestId('category-item-salads').click()
     await expect(page.getByTestId('item-row-caesar')).toBeVisible()
@@ -272,7 +262,7 @@ test.describe('Редактор позиции: сохранение и одно
   ): Promise<{ id: string; title: string }> {
     const token = await apiToken(request)
     const title = unique('Слияние')
-    await login(page)
+    await signInToCms(page)
     await openKitchenMenu(page, request)
     await page.getByTestId('category-item-hot').click()
     await page.getByTestId('add-item-button').click()
@@ -308,8 +298,13 @@ test.describe('Редактор позиции: сохранение и одно
     await writeStarted
     await page.getByTestId('item-price-input').fill('2600')
 
-    // Держим дольше, чем живут оба ответа: раньше значение откатывалось
-    // примерно через полсекунды и больше не возвращалось.
+    /*
+      ПАУЗА ЗАКОННА: проверяется ОТСУТСТВИЕ отката за время.
+
+      Утверждение — «поле не откатилось, пока идут оба ответа сервера».
+      Раньше значение уезжало примерно через полсекунды; держим заведомо
+      дольше. Ждать нечего: ждём того, что ничего не произошло.
+    */
     await page.waitForTimeout(4_000)
     await expect(
       page.getByTestId('item-price-input'),

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, loginToTracker } from './helpers'
+import { CREDENTIALS, signInToTracker, waitForLayout } from './helpers'
 
 /**
  * ПЕРЕТАСКИВАНИЕ КАРТОЧЕК (партия 4).
@@ -179,7 +179,7 @@ async function dragTo(page: Page, number: number, column: string): Promise<void>
 test.describe('Доска: перетаскивание', () => {
   test('УКУС: бросок вперёд проходит и уходит на сервер', async ({ page }) => {
     const bench = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
 
     await dragTo(page, 9100, 'preparing')
@@ -210,7 +210,7 @@ test.describe('Доска: перетаскивание', () => {
       здесь он замокан так, что «Новый» в него не входит.
     */
     const bench = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const grip = page.getByTestId('tracker-grip-9100')
     await expect(grip).toBeVisible({ timeout: 20_000 })
 
@@ -233,7 +233,7 @@ test.describe('Доска: перетаскивание', () => {
     await page.mouse.up()
 
     // Бросок назад не состоялся: ни запроса, ни переезда карточки.
-    await page.waitForTimeout(600)
+    await waitForLayout(page)
     expect(bench.moves).toHaveLength(0)
     await expect(
       page.getByTestId('tracker-column-accepted').getByTestId('tracker-order-9100'),
@@ -268,7 +268,7 @@ test.describe('Доска: перетаскивание', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(order()) })
     })
 
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const grip = page.getByTestId('tracker-grip-9100')
     await expect(grip).toBeVisible({ timeout: 20_000 })
     await expect
@@ -297,7 +297,7 @@ test.describe('Доска: перетаскивание', () => {
         board: JSON.parse(boardBodyFor(moved)),
       }),
     )
-    await page.waitForTimeout(500)
+    await waitForLayout(page)
 
     // ДОСКА СТОИТ: карточка там же, где её взяли.
     await expect(
@@ -316,7 +316,7 @@ test.describe('Доска: перетаскивание', () => {
 
   test('УКУС: отказ сервера разворачивает карточку и объясняет почему', async ({ page }) => {
     await stand(page, { moveStatus: 409 })
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
 
     await dragTo(page, 9100, 'preparing')
@@ -340,7 +340,7 @@ test.describe('Доска: перетаскивание', () => {
       тянуть можно за тело — за номер, за состав, за любое место без кнопки.
     */
     const { moves } = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
 
     // Беремся за НОМЕР заказа — это тело карточки, не ручка.
@@ -367,7 +367,7 @@ test.describe('Доска: перетаскивание', () => {
       обязан дойти до карточки кликом, а не превратиться в микроперенос.
     */
     const { moves } = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -387,7 +387,7 @@ test.describe('Доска: перетаскивание', () => {
 
   test('УКУС: несомая карточка едет под курсором, на месте — контур', async ({ page }) => {
     await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -413,7 +413,7 @@ test.describe('Доска: перетаскивание', () => {
 
   test('УКУС: глушится только запрещённое, а не вся доска', async ({ page }) => {
     await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -434,7 +434,7 @@ test.describe('Доска: перетаскивание', () => {
 
   test('УКУС: промах мимо колонок возвращает карточку, а не теряет её', async ({ page }) => {
     const { moves } = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -477,7 +477,7 @@ test.describe('Доска: перетаскивание', () => {
       })
     })
 
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
     await dragTo(page, 9100, 'preparing')
 
@@ -510,7 +510,7 @@ test.describe('Доска: перетаскивание', () => {
       })
     })
 
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
     await dragTo(page, 9100, 'preparing')
 
@@ -536,7 +536,7 @@ test.describe('Доска: перетаскивание', () => {
       правило».
     */
     const { moves, positions } = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -582,7 +582,7 @@ test.describe('Доска: перетаскивание', () => {
       DOM попросту нет — пока видимость клавиатурного жеста не сделана
       отдельной работой, ждать приходится временем.
     */
-    await page.waitForTimeout(600)
+    await waitForLayout(page)
 
     await page.keyboard.press('Space')
 
@@ -616,7 +616,7 @@ test.describe('Доска: перетаскивание', () => {
       рисуется. Уберут условие — перенос молча появится там, где бросать некуда.
     */
     await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     for (const [width, height, columns] of [
       [390, 844, 1],
@@ -625,7 +625,7 @@ test.describe('Доска: перетаскивание', () => {
       [1440, 900, 4],
     ] as const) {
       await page.setViewportSize({ width, height })
-      await page.waitForTimeout(400)
+      await waitForLayout(page)
       // На узком видна одна колонка за раз, и по умолчанию это первая («Новый»).
       // Заказ лежит в «Принят» — открываем его вкладку, иначе карточки нет в
       // разметке вовсе и мерить нечего.
@@ -652,7 +652,7 @@ test.describe('Доска: перетаскивание', () => {
 
   test('ручка отделена от тапа: нажатие на карточку открывает подробности', async ({ page }) => {
     await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -727,7 +727,7 @@ test.describe('Доска: перенос пальцем', () => {
     page,
   }) => {
     const { moves } = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
     // Ширина больше `md`: колонки стоят рядом, бросать есть куда.
     await expect(page.locator('[data-testid^="tracker-column-"]')).toHaveCount(4)
@@ -762,7 +762,7 @@ test.describe('Доска: перенос пальцем', () => {
       переноса: карточек в колонке больше, чем помещается.
     */
     await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     const card = page.getByTestId('tracker-order-9100')
     await expect(card).toBeVisible({ timeout: 20_000 })
 
@@ -782,7 +782,7 @@ test.describe('Доска: перенос пальцем', () => {
       свайп уводит палец раньше, чем истекут 200 мс, и захват не наступает.
     */
     const { moves } = await stand(page)
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await expect(page.getByTestId('tracker-order-9100')).toBeVisible({ timeout: 20_000 })
 
     const target = (await page.getByTestId('tracker-column-preparing').boundingBox())!
@@ -794,6 +794,10 @@ test.describe('Доска: перенос пальцем', () => {
       { hold: 0, steps: 4 },
     )
 
+    /*
+      ПАУЗА ЗАКОННА: проверяется ОТСУТСТВИЕ переноса после свайпа. Ждать
+      нечего — ждём как раз того, что ничего не произошло.
+    */
     await page.waitForTimeout(1200)
     expect(moves, 'свайп по карточке уехал в перенос').toEqual([])
     await expect(

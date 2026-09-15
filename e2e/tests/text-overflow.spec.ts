@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, CREDENTIALS, DEMO_ROOM, login, loginToTracker } from './helpers'
+import { ADMIN, CREDENTIALS, DEMO_ROOM, scrollAndSettle, signInToCms, signInToTracker, waitForLayout } from './helpers'
 import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
@@ -148,7 +148,9 @@ for (const mode of ['dark', 'light'] as const) {
 
       for (const route of GUEST_ROUTES) {
         await page.goto(route)
-        await page.waitForTimeout(1200)
+        // Раскладка должна встать до замера: обрезка текста меряется по
+        // геометрии, а на полпути она другая. Пауза здесь мерила машину.
+        await waitForLayout(page)
         const clipped = await clippedTexts(page)
         expect(clipped, `${route} (${mode}/${vp.name}): текст обрезан`).toEqual([])
       }
@@ -187,7 +189,9 @@ for (const mode of ['dark', 'light'] as const) {
 
       for (const route of GUEST_ROUTES) {
         await page.goto(route)
-        await page.waitForTimeout(1200)
+        // Раскладка должна встать до замера: обрезка текста меряется по
+        // геометрии, а на полпути она другая. Пауза здесь мерила машину.
+        await waitForLayout(page)
         const clipped = await clippedTexts(page)
         expect(clipped, `${route} (${mode}/${vp.name}): текст обрезан`).toEqual([])
       }
@@ -222,7 +226,9 @@ for (const mode of ['dark', 'light'] as const) {
       await enterWithRoom(page, mode)
       await page.goto('/room')
       await expect(page.getByTestId('room-plan')).toBeVisible({ timeout: 20_000 })
-      await page.waitForTimeout(1500)
+      // План номера доигрывает появление; ждём, пока он и плавающая группа
+      // перестанут двигаться, — иначе меряем геометрию на полпути.
+      await waitForLayout(page, ['room-plan', 'guest-room-chip'])
 
       const overlapWith = (testId: string) =>
         page.evaluate((id) => {
@@ -239,8 +245,7 @@ for (const mode of ['dark', 'light'] as const) {
         }, testId)
 
       // 1. План — в покое.
-      await page.evaluate(() => window.scrollTo(0, 0))
-      await page.waitForTimeout(180)
+      await scrollAndSettle(page, 0)
       const plate = await overlapWith('room-plan')
       expect(plate, 'плита или чип не найдены').not.toBeNull()
       expect(
@@ -250,8 +255,7 @@ for (const mode of ['dark', 'light'] as const) {
 
       // 2. Вкладки — на всех позициях скролла.
       for (const y of [0, 40, 90, 140, 200, 320, 500]) {
-        await page.evaluate((to) => window.scrollTo(0, to), y)
-        await page.waitForTimeout(180)
+        await scrollAndSettle(page, y)
         const probe = await overlapWith('room-tabs')
         expect(probe, 'полоса вкладок или чип не найдены').not.toBeNull()
         expect(
@@ -290,11 +294,13 @@ for (const mode of ['dark', 'light'] as const) {
         ([key, value]) => localStorage.setItem(key, value),
         [THEME_KEY, mode],
       )
-      await login(page, ADMIN)
+      await signInToCms(page, ADMIN)
 
       for (const route of CMS_ROUTES) {
         await page.goto(route)
-        await page.waitForTimeout(1200)
+        // Раскладка должна встать до замера: обрезка текста меряется по
+        // геометрии, а на полпути она другая. Пауза здесь мерила машину.
+        await waitForLayout(page)
         const clipped = await clippedTexts(page)
         expect(clipped, `${route} (${mode}/${vp.name}): текст обрезан`).toEqual([])
       }
@@ -319,7 +325,7 @@ for (const mode of ['dark', 'light'] as const) {
 
       // Экран входа персонала.
       await page.goto('/login')
-      await page.waitForTimeout(800)
+      await waitForLayout(page)
       expect(await clippedTexts(page), `/login (${mode}/${vp.name})`).toEqual([])
 
       // Платформенная консоль: сводка и флот — экраны с плотными счётчиками,
@@ -329,7 +335,7 @@ for (const mode of ['dark', 'light'] as const) {
       await page.getByTestId('admin-login-password').fill('platform12345')
       await page.getByTestId('admin-login-submit').click()
       await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 20_000 })
-      await page.waitForTimeout(1200)
+      await waitForLayout(page)
       expect(await clippedTexts(page), `/admin сводка (${mode}/${vp.name})`).toEqual([])
 
       // Флот — только там, где до него есть навигация. Консоль платформы
@@ -345,7 +351,7 @@ for (const mode of ['dark', 'light'] as const) {
         })
         await fleetNav.click()
         await expect(page.getByTestId('admin-fleet')).toBeVisible({ timeout: 20_000 })
-        await page.waitForTimeout(1200)
+        await waitForLayout(page)
         expect(await clippedTexts(page), `/admin флот (${mode}/${vp.name})`).toEqual([])
       }
     })
@@ -357,8 +363,8 @@ for (const mode of ['dark', 'light'] as const) {
         ([key, value]) => localStorage.setItem(key, value),
         [THEME_KEY, mode],
       )
-      await loginToTracker(page, CREDENTIALS)
-      await page.waitForTimeout(1200)
+      await signInToTracker(page, CREDENTIALS)
+      await waitForLayout(page)
 
       const clipped = await clippedTexts(page)
       expect(clipped, `/tracker (${mode}/${vp.name}): текст обрезан`).toEqual([])
@@ -403,7 +409,7 @@ async function enterRoomInLanguage(page: Page, lang: string) {
   await page.goto(`/room?lang=${lang}`)
   await expect(page.getByTestId('room-page')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByTestId('room-quick-actions')).toBeVisible({ timeout: 20_000 })
-  await page.waitForTimeout(900)
+  await waitForLayout(page)
 }
 
 for (const lang of LANGS) {

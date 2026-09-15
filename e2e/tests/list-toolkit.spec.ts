@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, API, CREDENTIALS, HOTEL, loginToTracker } from './helpers'
+import { ADMIN, API, CREDENTIALS, HOTEL, signInToTracker } from './helpers'
 
 /**
  * Общий инструментарий списков: поиск, фильтры, состояние в адресе.
@@ -372,7 +372,11 @@ test.describe('Доска трекера', () => {
     */
     // Вход трекером — своим хелпером: у линейного повара CMS закрыта, и общий
     // вход увёл бы его на экран отказа.
-    await loginToTracker(page, CREDENTIALS)
+    //
+    // Сокет ловим ДО входа: он открывается вместе с доской, и подписаться
+    // после — значит пропустить его создание.
+    const socket = page.waitForEvent('websocket', { timeout: 30_000 }).catch(() => null)
+    await signInToTracker(page, CREDENTIALS)
 
     const asked = page.waitForRequest(
       (r) => r.url().includes('/tracker/orders') && r.url().includes('search=99999999'),
@@ -387,8 +391,20 @@ test.describe('Доска трекера', () => {
     await expect(page.getByTestId('tracker-empty')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('tracker-empty')).toContainText(/не найдено/i)
 
-    // И доска ЖИВА: полный снимок из сокета её не подменил.
-    await page.waitForTimeout(6000)
+    /*
+      И ДОСКА ЖИВА: полный снимок из сокета её не подменил.
+
+      Здесь стояла пауза 6000 мс — «подождём, вдруг придёт». Ждём САМ СНИМОК:
+      как только по сокету пришёл кадр, проверка идёт дальше, а не досиживает
+      остаток. Если кадра не случилось вовсе, утверждение всё равно выполняется
+      — оно про то, что доска ОСТАЛАСЬ отфильтрованной.
+    */
+    const ws = await socket
+    if (ws) {
+      await ws
+        .waitForEvent('framereceived', { timeout: 8_000 })
+        .catch(() => null)
+    }
     await expect(
       page.getByTestId('tracker-empty'),
       'живой снимок подменил отфильтрованную доску',

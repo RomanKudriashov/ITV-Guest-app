@@ -1,19 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import {
-  ADMIN,
-  API,
-  apiHeaders,
-  apiToken,
-  BARMAN,
-  CREDENTIALS,
-  DEMO_ROOM,
-  loginToTracker,
-  MAID,
-  RESTAURANT_MANAGER,
-  moveOrderTo,
-  openCart,
-} from './helpers'
+import { ADMIN, API, BARMAN, CREDENTIALS, DEMO_ROOM, MAID, RESTAURANT_MANAGER, apiHeaders, apiToken, moveOrderTo, openCart, signInToTracker } from './helpers'
 
 /**
  * R3: типизированные трекеры и роль управляющего.
@@ -55,7 +42,7 @@ test.describe('Типизированные трекеры', () => {
     const staff = await staffContext.newPage()
 
     try {
-      await loginToTracker(staff, CREDENTIALS)
+      await signInToTracker(staff, CREDENTIALS)
 
       await enterAsGuest(guest)
       // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
@@ -113,7 +100,7 @@ test.describe('Типизированные трекеры', () => {
     const staff = await staffContext.newPage()
 
     try {
-      await loginToTracker(staff, MAID)
+      await signInToTracker(staff, MAID)
 
       // У очереди хозслужбы свои колонки: ни «готовится», ни «в пути».
       await expect(staff.getByTestId('tracker-board')).toBeVisible()
@@ -248,7 +235,7 @@ test.describe('Типизированные трекеры', () => {
     const guestOrderNumber = (await placed.json()).number as number
 
     // Бармен видит СВОЙ суб-заказ — со своим номером и с пометкой источника.
-    await loginToTracker(page, BARMAN)
+    await signInToTracker(page, BARMAN)
     const source = page.locator('[data-testid^="tracker-source-"]', {
       hasText: `№${guestOrderNumber}`,
     })
@@ -268,7 +255,7 @@ test.describe('Роль управляющего сервисом', () => {
     request,
   }) => {
     // Работа на месте: доска своей точки открывается.
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
 
     // Меню, цены и настройки — нет. Отказ по РОЛИ, а не по токену: код говорит
     // «не хватает роли», и перелогин тут ничего не изменит.

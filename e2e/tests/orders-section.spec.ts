@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, CREDENTIALS, RESTAURANT_MANAGER, loginToTracker, login } from './helpers'
+import { ADMIN, CREDENTIALS, RESTAURANT_MANAGER, signInToCms, signInToTracker } from './helpers'
 
 /**
  * РАЗДЕЛ «ЗАКАЗЫ» И ИСТОРИЯ БЕЗ ОКНА.
@@ -12,7 +12,7 @@ import { ADMIN, CREDENTIALS, RESTAURANT_MANAGER, loginToTracker, login } from '.
 
 test.describe('Раздел «Заказы»', () => {
   test('администратор видит раздел, цифры и список', async ({ page }) => {
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/orders')
 
     await expect(page.getByTestId('cms-orders')).toBeVisible({ timeout: 25_000 })
@@ -28,7 +28,7 @@ test.describe('Раздел «Заказы»', () => {
   })
 
   test('цифры меняются вместе с фильтром, а не остаются от всей выборки', async ({ page }) => {
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.goto('/cms/orders')
     await expect(page.getByTestId('orders-number-orders')).toBeVisible({ timeout: 25_000 })
 
@@ -52,7 +52,7 @@ test.describe('Раздел «Заказы»', () => {
   })
 
   test('управляющий видит раздел и только свои заведения', async ({ page }) => {
-    await login(page, RESTAURANT_MANAGER)
+    await signInToCms(page, RESTAURANT_MANAGER)
     await page.goto('/cms/orders')
     await expect(page.getByTestId('cms-orders')).toBeVisible({ timeout: 25_000 })
 
@@ -64,7 +64,7 @@ test.describe('Раздел «Заказы»', () => {
   })
 
   test('линейному пункта меню нет вовсе', async ({ page }) => {
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await page.goto('/tracker')
     await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 25_000 })
 
@@ -75,7 +75,7 @@ test.describe('Раздел «Заказы»', () => {
 
 test.describe('История доски', () => {
   test('над историей стоят цифры выборки, а не сводка смены', async ({ page }) => {
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await page.goto('/tracker')
     await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 25_000 })
     /*
@@ -98,7 +98,7 @@ test.describe('История доски', () => {
   })
 
   test('история листается кнопкой и не повторяет записи', async ({ page }) => {
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     await page.goto('/tracker')
     await page.getByTestId('tracker-history-tab').click()
     await expect(page.getByTestId('orders-numbers')).toBeVisible({ timeout: 25_000 })
@@ -136,7 +136,7 @@ test.describe('Из аналитики — в заказы', () => {
     «примерно то же» хуже, чем не переносить.
   */
   test('«показать эти заказы» уносит период в раздел', async ({ page }) => {
-    await login(page, ADMIN)
+    await signInToCms(page, ADMIN)
     await page.getByTestId('cms-nav-analytics').click()
     await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 25_000 })
 

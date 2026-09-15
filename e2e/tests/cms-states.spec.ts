@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 
-import { ADMIN } from './helpers'
+import { ADMIN, signIn } from './helpers'
 
 /**
  * CMS отеля и трекер: отказ не врёт и не светит внутренностями.
@@ -37,13 +37,12 @@ async function breakApi(ctx: BrowserContext, only?: RegExp) {
 }
 
 async function login(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => window.localStorage.clear())
-  await page.goto('/login')
-  await page.getByTestId('login-email').fill(ADMIN.email)
-  await page.getByTestId('login-password').fill(ADMIN.password)
-  await page.getByTestId('login-submit').click()
-  await expect(page).toHaveURL(/\/cms\//, { timeout: 30_000 })
+  // Вход — готовой сессией: форма проверяется отдельными проверками
+  // (`cms-access`, `session-refresh`, `platform-console`), а здесь она
+  // была лишь дорогой к экрану.
+  await signIn(page, ADMIN)
+  await page.goto('/cms/dashboard')
+  await expect(page).toHaveURL(/\/cms\//, { timeout: 20_000 })
 }
 
 test.describe('CMS: отказ не врёт', () => {
@@ -146,7 +145,17 @@ test.describe('CMS: отказ не врёт', () => {
       const page = await ctx.newPage()
       await login(page)
       await page.goto(path)
-      await page.waitForTimeout(1500)
+      /*
+        ЖДЁМ ПОЯВЛЕНИЯ ОТКАЗА, А НЕ ПРОСТО ВРЕМЕНИ.
+
+        Дальше проверяется ОТСУТСТВИЕ — что на экране нет текста сервера. Чтобы
+        отсутствие что-то значило, экран должен быть уже нарисован; иначе пустая
+        страница пройдёт проверку, ничего не показав. Якорем берём кнопку
+        повтора: она и есть признак человеческого отказа.
+      */
+      await expect(
+        page.getByRole('button', { name: /Повторить|Обновить/ }).first(),
+      ).toBeVisible({ timeout: 20_000 })
 
       const shown = (await page.locator('main, body').last().innerText()).replace(/\s+/g, ' ')
       for (const leak of RAW) {
@@ -196,10 +205,9 @@ test.describe('CMS: отказ не врёт', () => {
     const page = await ctx.newPage()
     await login(page)
     await page.goto('/cms/dashboard')
-    await page.waitForTimeout(2500)
 
-    // Граница поймала падение, и навигация цела: уйти с упавшего экрана
-    // можно кликом, а не только через адресную строку.
+    // Пауза здесь была лишней: следующая проверка сама ждёт появления границы
+    // до двадцати секунд. Сон только отодвигал её начало.
     await expect(page.getByTestId('screen-crashed')).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('nav, .MuiDrawer-root').first()).toBeVisible()
 

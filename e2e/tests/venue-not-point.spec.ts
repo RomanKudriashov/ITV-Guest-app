@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, login, loginToTracker } from './helpers'
+import { CREDENTIALS, signInToCms, signInToTracker } from './helpers'
 
 /**
  * УКУС ПАРТИИ 6: слова «точка исполнения» на экранах больше нет.
@@ -28,7 +28,7 @@ async function bodyText(page: Page): Promise<string> {
 
 test.describe('Заведение вместо точки исполнения', () => {
   test('уведомления: канал и правило эскалации выбирают ЗАВЕДЕНИЕ', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
     await page.goto('/cms/notifications')
     await expect(page.getByTestId('cms-notifications-tab-channels')).toBeVisible({
       timeout: 20_000,
@@ -53,7 +53,7 @@ test.describe('Заведение вместо точки исполнения',
   })
 
   test('аналитика: разрез называется «По заведениям»', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
     await page.goto('/cms/analytics')
     await expect(page.getByTestId('cms-analytics')).toBeVisible({ timeout: 20_000 })
 
@@ -63,14 +63,14 @@ test.describe('Заведение вместо точки исполнения',
   })
 
   test('персонал: сотрудника привязывают к заведению', async ({ page }) => {
-    await login(page)
+    await signInToCms(page)
     await page.goto('/cms/staff')
     await expect(page.getByTestId('staff-list')).toBeVisible({ timeout: 20_000 })
     expect(await bodyText(page)).not.toMatch(BANNED)
   })
 
   test('трекер: доска и её переключатель — про заведение', async ({ page }) => {
-    await loginToTracker(page, CREDENTIALS)
+    await signInToTracker(page, CREDENTIALS)
     expect(await bodyText(page)).not.toMatch(BANNED)
 
     // Имя на переключателе — гостевое имя заведения, а не служебное второе.

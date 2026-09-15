@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { apiToken, ADMIN, guestTheme, HOTEL } from './helpers'
+import { ADMIN, HOTEL, apiToken, guestTheme, signIn } from './helpers'
 
 /**
  * Бренд-настройки с живым превью.
@@ -10,13 +10,11 @@ import { apiToken, ADMIN, guestTheme, HOTEL } from './helpers'
  * перекраску превью: редактор бренда бесполезен, если витрина его не видит.
  */
 
-async function openBrand(page: Page): Promise<void> {
-  await page.goto('/login')
-  await page.getByTestId('login-email').fill(ADMIN.email)
-  await page.getByTestId('login-password').fill(ADMIN.password)
-  await page.getByTestId('login-submit').click()
-  await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
-
+async function openBrand(page: Page) {
+  // Вход — готовой сессией: форма проверяется отдельными проверками
+  // (`cms-access`, `session-refresh`, `platform-console`), а здесь она
+  // была лишь дорогой к экрану.
+  await signIn(page, ADMIN)
   await page.goto('/cms/brand')
   await expect(page.getByTestId('brand-editor')).toBeVisible({ timeout: 20_000 })
 }
