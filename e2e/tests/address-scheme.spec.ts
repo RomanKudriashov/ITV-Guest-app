@@ -449,9 +449,15 @@ test('значки языка и темы стоят по средней лин�
   await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
   const nav = page.getByTestId('landing-nav')
   await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 })
-  // Полоса выезжает сдвигом: замер на полпути сравнивал бы значки с ещё не
-  // приехавшей полосой и врал бы на её высоту.
-  await waitForLayout(page)
+  /*
+    Полоса ВЫЕЗЖАЕТ СДВИГОМ: замер на полпути сравнивал бы значки с ещё не
+    приехавшей полосой и врал бы на её высоту.
+
+    Узлы названы поимённо не для красоты: без них условие следило только за
+    высотой документа и прокруткой, а они при выезде полосы не меняются —
+    ожидание кончалось на полпути, и проверка краснела на исправной вёрстке.
+  */
+  await waitForLayout(page, ['landing-nav', 'landing-controls'])
 
   const navBox = (await nav.boundingBox())!
   for (const testId of ['guest-language', 'theme-toggle']) {

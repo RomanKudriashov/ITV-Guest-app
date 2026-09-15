@@ -16,11 +16,20 @@ import { ADMIN, CREDENTIALS, signIn as openSession } from './helpers'
  * СКАЗАНО строкой.
  */
 
-async function signIn(page: Page) {
-  // Вход — готовой сессией: форма проверяется отдельными проверками
-  // (`cms-access`, `session-refresh`, `platform-console`), а здесь она
-  // была лишь дорогой к экрану.
-  await openSession(page, ADMIN)
+async function signIn(
+  page: Page,
+  credentials: { email: string; password: string } = ADMIN,
+) {
+  /*
+    Вход — готовой сессией: форма проверяется отдельными проверками
+    (`cms-access`, `session-refresh`, `platform-console`), а здесь она была лишь
+    дорогой к экрану.
+
+    УЧЁТКА — ПАРАМЕТРОМ, и это не мелочь: половина проверок в этом файле про
+    ПОВАРА, у которого панели нет. Войдя админом, они смотрели бы на чужой
+    экран и зеленели бы на чём угодно.
+  */
+  await openSession(page, credentials)
   await page.goto('/tracker')
   await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
 }

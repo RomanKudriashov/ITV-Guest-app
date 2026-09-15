@@ -133,9 +133,23 @@ test.describe('Тема: переключение на всех поверхно
     await clearTheme(page)
     await signInToCms(page, ADMIN)
 
-    // КОРЕНЬ-1: до R7 здесь была белая страница на платформенном дефолте.
+    /*
+      КОРЕНЬ-1: до R7 здесь была белая страница на платформенном дефолте.
+
+      Утверждение ЖДЁТ: бренд отеля приезжает запросом, и на первом кадре
+      страница ещё платформенная. Мгновенный замер ловил именно этот кадр —
+      и краснел на исправном коде. Ждём появления брендового фона, а не
+      «подождём немного».
+    */
+    await expect
+      .poll(async () => luminance(await pageBackground(page)), {
+        timeout: 15_000,
+        message: 'CMS открывается в тёмном бренде отеля, а не в дефолте',
+      })
+      .toBeLessThan(90)
+
+    // Запоминаем замер уже устоявшейся тёмной темы — с ним сравнивается светлая.
     const dark = luminance(await pageBackground(page))
-    expect(dark, 'CMS открывается в тёмном бренде отеля, а не в дефолте').toBeLessThan(90)
 
     const { after } = await toggleAndMeasure(page)
     expect(after, 'светлая CMS светлее тёмной').toBeGreaterThan(dark)

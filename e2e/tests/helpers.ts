@@ -381,10 +381,14 @@ export async function setPlanLevel(
 export async function waitForLayout(
   page: Page,
   testIds: string[] = [],
-  options: { timeout?: number; settleFrames?: number } = {},
+  options: { timeout?: number; settleFrames?: number; warmupFrames?: number } = {},
 ): Promise<void> {
   const timeout = options.timeout ?? 10_000
   const needed = options.settleFrames ?? 2
+  // Разгон нужен там, где анимация только ЗАПУСКАЕТСЯ. После программной
+  // прокрутки ждать начала нечего — движение уже случилось, и два лишних кадра
+  // на каждой из восьми позиций складываются в секунды.
+  const warmup = options.warmupFrames ?? 2
   const started = Date.now()
 
   /*
@@ -395,12 +399,9 @@ export async function waitForLayout(
     «закончилось». На этом покраснели переход по пункту меню и карточка
     позиции на телефоне — то есть проверка поймала дефект в самой помощи.
   */
-  await page.evaluate(
-    () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve(null))),
-      ),
-  )
+  for (let frame = 0; frame < warmup; frame += 1) {
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))))
+  }
 
   let previous = ''
   let stable = 0
@@ -452,7 +453,10 @@ export async function scrollAndSettle(page: Page, to: number): Promise<void> {
     to,
     { timeout: 5_000 },
   )
-  await waitForLayout(page)
+  // Без разгона: прокрутка уже произошла, ждать её начала незачем. Одного
+  // совпадения подписи достаточно — липкие слои перерисовываются в том же
+  // кадре, что и прокрутка.
+  await waitForLayout(page, [], { settleFrames: 1, warmupFrames: 0 })
 }
 
 /* ── Готовая сессия вместо формы входа ──────────────────────────────────── */

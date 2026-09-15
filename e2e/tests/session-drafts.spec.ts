@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, API, HOTEL, waitForLayout } from './helpers'
+import { ADMIN, API, HOTEL } from './helpers'
 
 /**
  * Несохранённое переживает смерть сессии.
@@ -154,7 +154,12 @@ test('профиль отеля в консоли: набранное возвр
   const original = await page.getByTestId('admin-hotel-name-input').inputValue()
   const typed = `${original} черновик`
   await page.getByTestId('admin-hotel-name-input').fill(typed)
-  await waitForLayout(page)
+  /*
+    ПАУЗА ЗАКОННА: черновик сохраняется ПО ТАЙМЕРУ гашения, а не по событию на
+    экране. Раскладка после ввода не меняется — ждать её бесполезно, и проверка
+    «набранное вернулось после входа» это показала, покраснев.
+  */
+  await page.waitForTimeout(500)
 
   await page.evaluate((dead) => {
     window.localStorage.setItem('itv.platform.access', dead)
@@ -172,7 +177,9 @@ test('профиль отеля в консоли: набранное возвр
 
   // Возвращаем как было и убираем черновик за собой.
   await page.getByTestId('admin-hotel-name-input').fill(original)
-  await waitForLayout(page)
+  // ПАУЗА ЗАКОННА по той же причине: даём черновику сохраниться, прежде чем
+  // уйти со страницы, иначе уберём за собой не до конца.
+  await page.waitForTimeout(500)
 })
 
 test('мои входы: список показывает текущую сессию и закрывает чужую', async ({ page }) => {
