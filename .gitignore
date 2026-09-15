@@ -37,3 +37,4 @@ backend/.pytest-main.log
 e2e/.e2e-main.log
 infra/nginx/live/*
 !infra/nginx/live/.gitkeep
+e2e/node_modules
