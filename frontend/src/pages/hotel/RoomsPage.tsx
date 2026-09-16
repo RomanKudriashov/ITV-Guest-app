@@ -10,6 +10,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
+import Checkbox from '@mui/material/Checkbox';
 import CardContent from '@mui/material/CardContent';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
@@ -46,12 +47,17 @@ import {
   createRoom,
   deleteRoom,
   downloadRoomQrPng,
+  fetchRenameImpact,
   fetchRoomQrSheetHtml,
   fetchRoomQrSvg,
   fetchRooms,
   updateRoom,
 } from '@/api/hotelAdmin';
-import type { Room, RoomBulkResult } from '@/api/hotelAdminTypes';
+import type {
+  Room,
+  RoomBulkResult,
+  RoomRenameImpact,
+} from '@/api/hotelAdminTypes';
 import { queryKeys } from '@/api/queryKeys';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
@@ -488,21 +494,37 @@ function RoomDialog({
       : EMPTY_ROOM,
   );
 
+  /*
+    ПЕРЕИМЕНОВАНИЕ — ЧЕРЕЗ ПОКАЗ ПОСЛЕДСТВИЙ, а не через «сохранить».
+
+    Два из них с этого экрана не видны вовсе: наклейка QR в номере кодирует
+    НОМЕР (после правки она ведёт в никуда), а имя устройства iRidi собирается
+    из номера шаблоном типа — команды уедут на другое имя, и номер перестанет
+    управляться. Сервер поэтому не принимает смену номера без `confirm_rename`;
+    здесь мы спрашиваем у него, что именно изменится, и показываем это числами.
+  */
+  const [impact, setImpact] = useState<RoomRenameImpact | null>(null);
+  const [keepDevice, setKeepDevice] = useState(true);
+  const [checking, setChecking] = useState(false);
+
+  const trimmed = {
+    number: form.number.trim(),
+    floor: form.floor.trim(),
+    zone: form.zone.trim(),
+    is_active: form.is_active,
+  };
+  const isRename = Boolean(room) && trimmed.number !== room?.number;
+
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (confirmed: boolean) =>
       room
         ? updateRoom(room.id, {
-            number: form.number.trim(),
-            floor: form.floor.trim(),
-            zone: form.zone.trim(),
-            is_active: form.is_active,
+            ...trimmed,
+            ...(confirmed
+              ? { confirm_rename: true, keep_device_name: keepDevice }
+              : {}),
           })
-        : createRoom({
-            number: form.number.trim(),
-            floor: form.floor.trim(),
-            zone: form.zone.trim(),
-            is_active: form.is_active,
-          }),
+        : createRoom(trimmed),
     onSuccess: () => {
       toast.show(t('hotel.rooms.saved'), 'success');
       onSaved();
@@ -511,54 +533,186 @@ function RoomDialog({
       toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),
   });
 
+  const handleSave = async () => {
+    if (!isRename || !room) {
+      mutation.mutate(false);
+      return;
+    }
+    setChecking(true);
+    try {
+      const found = await fetchRenameImpact(room.id, trimmed.number);
+      if (found.taken) {
+        toast.show(t('hotel.rooms.renameTaken', { number: trimmed.number }), 'error');
+        return;
+      }
+      setKeepDevice(found.device_changes);
+      setImpact(found);
+    } catch (error) {
+      toast.show(
+        error instanceof ApiError ? error.detail : t('hotel.rooms.renameCheckError'),
+        'error',
+      );
+    } finally {
+      setChecking(false);
+    }
+  };
+
   return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth data-testid="room-dialog">
-      <DialogTitle>{room ? t('hotel.rooms.editTitle') : t('hotel.rooms.newTitle')}</DialogTitle>
+    <>
+      <Dialog open onClose={onClose} maxWidth="xs" fullWidth data-testid="room-dialog">
+        <DialogTitle>{room ? t('hotel.rooms.editTitle') : t('hotel.rooms.newTitle')}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              size="small"
+              label={t('hotel.rooms.number')}
+              value={form.number}
+              onChange={(event) => setForm((prev) => ({ ...prev, number: event.target.value }))}
+              inputProps={{ 'data-testid': 'room-number' }}
+              required
+              fullWidth
+            />
+            <TextField
+              size="small"
+              label={t('hotel.rooms.floor')}
+              value={form.floor}
+              onChange={(event) => setForm((prev) => ({ ...prev, floor: event.target.value }))}
+              fullWidth
+            />
+            <TextField
+              size="small"
+              label={t('hotel.rooms.zone')}
+              value={form.zone}
+              onChange={(event) => setForm((prev) => ({ ...prev, zone: event.target.value }))}
+              fullWidth
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={form.is_active}
+                  onChange={(event) => setForm((prev) => ({ ...prev, is_active: event.target.checked }))}
+                />
+              }
+              label={t('hotel.rooms.active')}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="contained"
+            disabled={!form.number.trim() || mutation.isPending || checking}
+            onClick={() => void handleSave()}
+            data-testid="room-save"
+          >
+            {t('common.save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {impact ? (
+        <RenameDialog
+          impact={impact}
+          keepDevice={keepDevice}
+          onKeepDeviceChange={setKeepDevice}
+          busy={mutation.isPending}
+          onClose={() => setImpact(null)}
+          onConfirm={() => {
+            setImpact(null);
+            mutation.mutate(true);
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/* ── Rename confirmation ───────────────────────────────────────────────── */
+
+/**
+ * Разбор последствий переименования. Не «вы уверены?», а перечень того, что
+ * сломается, и единственная кнопка, которая одно из этого чинит.
+ */
+function RenameDialog({
+  impact,
+  keepDevice,
+  onKeepDeviceChange,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  impact: RoomRenameImpact;
+  keepDevice: boolean;
+  onKeepDeviceChange: (value: boolean) => void;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth data-testid="room-rename-dialog">
+      <DialogTitle>{t('hotel.rooms.renameTitle', { number: impact.number })}</DialogTitle>
       <DialogContent dividers>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField
-            size="small"
-            label={t('hotel.rooms.number')}
-            value={form.number}
-            onChange={(event) => setForm((prev) => ({ ...prev, number: event.target.value }))}
-            inputProps={{ 'data-testid': 'room-number' }}
-            required
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label={t('hotel.rooms.floor')}
-            value={form.floor}
-            onChange={(event) => setForm((prev) => ({ ...prev, floor: event.target.value }))}
-            fullWidth
-          />
-          <TextField
-            size="small"
-            label={t('hotel.rooms.zone')}
-            value={form.zone}
-            onChange={(event) => setForm((prev) => ({ ...prev, zone: event.target.value }))}
-            fullWidth
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={form.is_active}
-                onChange={(event) => setForm((prev) => ({ ...prev, is_active: event.target.checked }))}
-              />
-            }
-            label={t('hotel.rooms.active')}
-          />
+        <Stack spacing={1.5} sx={{ pt: 1 }}>
+          <Typography variant="body2">
+            {t('hotel.rooms.renameLead', { number: impact.new_number })}
+          </Typography>
+
+          <Alert severity="warning" data-testid="room-rename-qr">
+            {t('hotel.rooms.renameQr', { url: impact.qr_url })}
+          </Alert>
+
+          {impact.device_changes ? (
+            <Alert severity="warning" data-testid="room-rename-device">
+              {t('hotel.rooms.renameDevice', {
+                from: impact.device,
+                to: impact.device_after,
+              })}
+            </Alert>
+          ) : (
+            <Alert severity="info" data-testid="room-rename-device">
+              {t('hotel.rooms.renameNoDevice')}
+            </Alert>
+          )}
+
+          {impact.live_sessions > 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t('hotel.rooms.renameSessions', { count: impact.live_sessions })}
+            </Typography>
+          ) : null}
+
+          {impact.device_changes ? (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={keepDevice}
+                  onChange={(event) => onKeepDeviceChange(event.target.checked)}
+                  data-testid="room-rename-keep-device"
+                />
+              }
+              label={
+                <Stack>
+                  <Typography variant="body2">{t('hotel.rooms.renameKeepDevice')}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {t('hotel.rooms.renameKeepDeviceHint', { device: impact.device })}
+                  </Typography>
+                </Stack>
+              }
+            />
+          ) : null}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button
           variant="contained"
-          disabled={!form.number.trim() || mutation.isPending}
-          onClick={() => mutation.mutate()}
-          data-testid="room-save"
+          color="warning"
+          disabled={busy}
+          onClick={onConfirm}
+          data-testid="room-rename-confirm"
         >
-          {t('common.save')}
+          {t('hotel.rooms.renameConfirm')}
         </Button>
       </DialogActions>
     </Dialog>

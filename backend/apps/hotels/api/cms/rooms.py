@@ -7,7 +7,13 @@ from ninja import Router
 
 from apps.accounts.services.roles import require_hotel_admin
 from apps.core.schemas import OkOut
-from apps.hotels.schemas.cms import BulkRoomsIn, RoomIn, RoomOut, RoomPatch
+from apps.hotels.schemas.cms import (
+    BulkRoomsIn,
+    RoomIn,
+    RoomOut,
+    RoomPatch,
+    RoomRenameImpactOut,
+)
 from apps.hotels.services import admin_services as svc
 from apps.hotels.services import qr
 from apps.hotels.services.hotel import current_hotel
@@ -41,8 +47,26 @@ def rooms_qr_sheet(request: HttpRequest):
     return HttpResponse(qr.qr_sheet_html(hotel.name_i18n, pairs), content_type="text/html")
 
 
+@router.get(
+    "/rooms/{room_id}/rename-check",
+    response=RoomRenameImpactOut,
+    summary="Что изменится при переименовании номера",
+)
+def rename_check(request: HttpRequest, room_id: str, number: str):
+    """
+    Только чтение: диалогу переименования нужно ЧИСЛАМИ показать последствия —
+    какая ссылка QR перестанет работать и на какое имя уедет устройство iRidi.
+    """
+    return svc.rename_impact(room_id, number)
+
+
 @router.patch("/rooms/{room_id}", response=RoomOut, summary="Изменить номер")
 def update_room(request: HttpRequest, room_id: str, payload: RoomPatch):
+    """
+    Смена номера требует `confirm_rename`: без него — 409
+    `rename_needs_confirmation` с тем же разбором последствий в `impact`.
+    Молча переименовывать нельзя, см. `services.admin_services.update_room`.
+    """
     return svc.serialize_room(svc.update_room(room_id, payload.dict(exclude_unset=True)))
 
 

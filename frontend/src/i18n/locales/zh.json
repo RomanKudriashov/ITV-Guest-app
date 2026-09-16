@@ -1312,7 +1312,18 @@
       "checkoutNothing": "{{number}} 房间：没有活动会话",
       "pagerRange": "{{from}}–{{to}} / 共 {{total}}",
       "pagerPrev": "上一页",
-      "pagerNext": "下一页"
+      "pagerNext": "下一页",
+      "renameTitle": "重命名房间 {{number}}？",
+      "renameLead": "房间将变为「{{number}}」。有两项后果在本页面看不到：",
+      "renameQr": "房间内的二维码贴纸指向 {{url}}，将不再可用。请重新打印。",
+      "renameDevice": "iRidi 设备名称将变更：「{{from}}」→「{{to}}」。指令将发往新名称。",
+      "renameNoDevice": "该房间没有设备控制——这一侧不会有任何变化。",
+      "renameSessions_other": "房间内有 {{count}} 个活跃的客人会话——重命名后仍然有效。",
+      "renameKeepDevice": "保留原设备名称",
+      "renameKeepDeviceHint": "设备不受影响：房间将保留名称「{{device}}」。",
+      "renameConfirm": "重命名",
+      "renameTaken": "房间「{{number}}」已被占用",
+      "renameCheckError": "无法确定重命名会带来什么变化"
     },
     "locations": {
       "title": "位置",

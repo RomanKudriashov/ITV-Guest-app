@@ -1353,7 +1353,19 @@
       "checkoutNothing": "الغرفة {{number}}: لم تكن هناك جلسات نشطة",
       "pagerRange": "{{from}}–{{to}} من {{total}}",
       "pagerPrev": "السابق",
-      "pagerNext": "التالي"
+      "pagerNext": "التالي",
+      "renameTitle": "إعادة تسمية الغرفة {{number}}؟",
+      "renameLead": "ستصبح الغرفة «{{number}}». نتيجتان لا تظهران في هذه الشاشة:",
+      "renameQr": "ملصق رمز QR في الغرفة يشير إلى {{url}} وسيتوقف عن العمل. اطبع ملصقًا جديدًا.",
+      "renameDevice": "سيتغيّر اسم جهاز iRidi: «{{from}}» ← «{{to}}». ستذهب الأوامر إلى الاسم الجديد.",
+      "renameNoDevice": "الغرفة غير مزوّدة بالتحكم بالأجهزة — لا شيء يتغيّر من هذه الناحية.",
+      "renameSessions_one": "جلسة ضيف نشطة واحدة في الغرفة — ستبقى بعد إعادة التسمية.",
+      "renameSessions_other": "{{count}} جلسات ضيوف نشطة في الغرفة — ستبقى بعد إعادة التسمية.",
+      "renameKeepDevice": "الإبقاء على اسم الجهاز السابق",
+      "renameKeepDeviceHint": "لن تُمسّ الأجهزة: يبقى للغرفة الاسم «{{device}}».",
+      "renameConfirm": "إعادة التسمية",
+      "renameTaken": "الغرفة «{{number}}» محجوزة بالفعل",
+      "renameCheckError": "تعذّر تحديد نتائج إعادة التسمية"
     },
     "locations": {
       "title": "المواقع",

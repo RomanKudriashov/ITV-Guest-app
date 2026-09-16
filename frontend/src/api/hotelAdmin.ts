@@ -10,6 +10,7 @@ import type {
   RoomBulkPayload,
   RoomBulkResult,
   RoomPayload,
+  RoomRenameImpact,
   StaffAssignmentsPayload,
   StaffCreatePayload,
   StaffMember,
@@ -40,6 +41,16 @@ export function fetchRooms(
       limit: String(page.limit),
       offset: String(page.offset),
     },
+  });
+}
+
+/**
+ * Что изменится при переименовании номера: какая ссылка QR умрёт и на какое
+ * имя уедет устройство iRidi. Только чтение — зовётся из диалога до правки.
+ */
+export function fetchRenameImpact(id: string, number: string): Promise<RoomRenameImpact> {
+  return api.get<RoomRenameImpact>(`/cms/rooms/${id}/rename-check`, {
+    query: { number },
   });
 }
 

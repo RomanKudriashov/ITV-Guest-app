@@ -21,6 +21,8 @@ from apps.accounts.services.roles import (
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.core.fields import translate
+from apps.accounts.models import GuestSession
+from apps.core.models import AuditLog
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
@@ -137,16 +139,154 @@ def create_room(data: dict) -> Room:
     )
 
 
+def _grms_link(room: Room):
+    """
+    Привязка комнаты к типу GRMS или `None` — БЕЗ жёсткой зависимости на модуль.
+
+    Тот же приём, что у `_control_types`: направление зависимости остаётся
+    grms → hotels, и на сборке без GRMS номерной фонд работает как ни в чём не
+    бывало.
+    """
+    try:
+        from apps.grms.models import RoomTypeRoom
+    except ImportError:  # pragma: no cover — модуль GRMS не собран
+        return None
+    return (
+        RoomTypeRoom.objects.select_related("room_type").filter(room=room).first()
+    )
+
+
+def _device_name(link, number: str) -> str:
+    """Имя устройства iRidi для комнаты: переопределение важнее шаблона."""
+    if link is None:
+        return ""
+    return link.device_name_override or (
+        (link.room_type.device_name_template or "").replace("{room}", number)
+    )
+
+
+def rename_impact(room_id, number: str) -> dict:
+    """
+    Что случится, если переименовать номер. ТОЛЬКО ЧТЕНИЕ.
+
+    Два последствия неочевидны настолько, что молча переименовывать нельзя:
+
+      * QR КОДИРУЕТ НОМЕР, а не идентификатор (`/r/<номер>`). Наклейка висит
+        на стене В НОМЕРЕ: после переименования она ведёт на несуществующий
+        номер и гость получает «номер не найден» вместо витрины. Лечится
+        только перепечаткой — из интерфейса это не видно никак;
+      * ИМЯ УСТРОЙСТВА iRidi СОБИРАЕТСЯ ИЗ НОМЕРА: шаблон типа подставляет
+        `{room}`. Переименовали комнату — команды уходят на устройство с
+        другим именем, то есть в никуда, и экран номера честно краснеет
+        «Нет связи». Лечится переопределением имени на связи (`keep_device`).
+
+    Остальные ссылки по идентификатору и переименование переживают: заказы,
+    сессии, чат, привязка к типу.
+    """
+    require_hotel_admin()
+    room = get_room(room_id)
+    hotel = room.hotel
+    number = str(number or "").strip()
+
+    link = _grms_link(room)
+    device_now = _device_name(link, room.number)
+    device_after = _device_name(link, number)
+
+    from django.utils import timezone
+
+    # ЖИВАЯ — это не «не погашенная». Сессия живёт 12 часов и протухает сама,
+    # а в номере за год их накапливаются тысячи: на стенде у комнаты 305 таких
+    # 20 363, и диалог сообщил бы администратору «20 363 живые сессии» там, где
+    # их одна. Считаем ровно то же, что считает `GuestSession.is_valid`.
+    live_sessions = GuestSession.objects.filter(
+        room=room, revoked_at__isnull=True, expires_at__gt=timezone.now()
+    ).count()
+    has_pin = False
+    try:
+        from apps.grms.models import RoomPin
+
+        has_pin = RoomPin.objects.filter(room=room).exists()
+    except ImportError:  # pragma: no cover — модуль GRMS не собран
+        pass
+
+    return {
+        "number": room.number,
+        "new_number": number,
+        "taken": bool(
+            number and Room.objects.filter(number=number).exclude(pk=room.pk).exists()
+        ),
+        # QR: старая ссылка перестаёт работать, новую надо напечатать.
+        "qr_url": hotel.room_deeplink(room.number),
+        "qr_url_after": hotel.room_deeplink(number) if number else "",
+        # Оборудование: пусто — комната не управляется, предупреждать не о чем.
+        "device": device_now,
+        "device_after": device_after,
+        "device_changes": bool(device_now) and device_now != device_after,
+        "live_sessions": live_sessions,
+        "has_pin": has_pin,
+    }
+
+
 @transaction.atomic
 def update_room(room_id, data: dict) -> Room:
+    """
+    Правка номера. Переименование — ТОЛЬКО с явным подтверждением.
+
+    ПОЧЕМУ ПРЕДУПРЕЖДАЕМ, А НЕ ЗАПРЕЩАЕМ. Переименование — законное действие:
+    после ремонта этаж перенумеровывают, корпуса сливают, «305» становится
+    «3005». Запрет не отменил бы задачу, а увёл бы её на обходной путь —
+    «удалить и завести заново», — который дороже и опаснее: удаление мягкое,
+    история заказов остаётся при СТАРОЙ строке, PIN и привязка к типу уезжают
+    вместе с ней, а новая комната приходит пустой. Запрет прогнал бы человека
+    мимо единственного места, где можно показать последствия.
+
+    А показать надо ровно два: наклейку QR придётся перепечатать, и имя
+    устройства iRidi изменится. Оба невидимы из интерфейса и оба ломают
+    продукт молча — поэтому `confirm_rename` обязателен, а не «галочка по
+    умолчанию».
+    """
     require_hotel_admin()
     room = get_room(room_id)
     if "number" in data:
         number = str(data["number"] or "").strip()
         if not number:
             raise ValidationError("Укажите номер", field="number")
-        if Room.all_objects.filter(number=number).exclude(pk=room.pk).exists():
-            raise ConflictError(f"Номер «{number}» уже существует", code="room_exists")
+        if number != room.number:
+            if Room.objects.filter(number=number).exclude(pk=room.pk).exists():
+                raise ConflictError(f"Номер «{number}» уже существует", code="room_exists")
+
+            impact = rename_impact(room.pk, number)
+            if not data.get("confirm_rename"):
+                raise ConflictError(
+                    f"Переименование «{room.number}» → «{number}» меняет ссылку QR"
+                    + (" и имя устройства" if impact["device_changes"] else "")
+                    + " — нужно подтверждение",
+                    code="rename_needs_confirmation",
+                    impact=impact,
+                )
+
+            # «Оборудование не трогаем»: закрепляем за связью ИМЕННО ТО имя,
+            # по которому команды уходят сейчас. Без этого номер переименован,
+            # а номер перестал управляться — и виноватым выглядит GRMS.
+            if data.get("keep_device_name") and impact["device_changes"]:
+                link = _grms_link(room)
+                link.device_name_override = impact["device"]
+                link.save(update_fields=["device_name_override", "updated_at"])
+
+            AuditLog.record(
+                "room.renamed",
+                object_type="room",
+                object_id=room.pk,
+                payload={
+                    "from": room.number,
+                    "to": number,
+                    "device": impact["device"],
+                    "device_kept": bool(
+                        data.get("keep_device_name") and impact["device_changes"]
+                    ),
+                    "qr_reprint": True,
+                },
+            )
         room.number = number
     if "floor" in data:
         room.floor = str(data["floor"] or "").strip()

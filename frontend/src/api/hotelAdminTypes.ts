@@ -35,6 +35,30 @@ export interface RoomPayload {
   floor?: string;
   zone?: string;
   is_active?: boolean;
+  /**
+   * Смена номера — только с подтверждением: наклейка QR в номере кодирует
+   * номер, а имя устройства iRidi собирается из него. Без флага сервер
+   * отвечает 409 `rename_needs_confirmation`.
+   */
+  confirm_rename?: boolean;
+  /** Закрепить за связью текущее имя устройства — «оборудование не трогать». */
+  keep_device_name?: boolean;
+}
+
+/** Что изменится при переименовании. Читается ДО правки, ничего не меняет. */
+export interface RoomRenameImpact {
+  number: string;
+  new_number: string;
+  taken: boolean;
+  /** Ссылка, которую кодирует наклейка сейчас, — она перестанет работать. */
+  qr_url: string;
+  qr_url_after: string;
+  /** Имя устройства iRidi сейчас и после. Пусто — номер не управляется. */
+  device: string;
+  device_after: string;
+  device_changes: boolean;
+  live_sessions: number;
+  has_pin: boolean;
 }
 
 export interface RoomBulkPayload {

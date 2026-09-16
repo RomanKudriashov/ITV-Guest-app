@@ -1321,7 +1321,19 @@
       "checkoutNothing": "Room {{number}}: there were no live sessions",
       "pagerRange": "{{from}}–{{to}} of {{total}}",
       "pagerPrev": "Back",
-      "pagerNext": "Next"
+      "pagerNext": "Next",
+      "renameTitle": "Rename room {{number}}?",
+      "renameLead": "The room becomes “{{number}}”. Two consequences are invisible from this screen:",
+      "renameQr": "The QR sticker in the room points to {{url}} and will stop working. Print a new one.",
+      "renameDevice": "The iRidi device name changes: “{{from}}” → “{{to}}”. Commands will go to the new name.",
+      "renameNoDevice": "The room has no equipment control — nothing changes on that side.",
+      "renameSessions_one": "{{count}} live guest session in the room — it survives the rename.",
+      "renameSessions_other": "{{count}} live guest sessions in the room — they survive the rename.",
+      "renameKeepDevice": "Keep the previous device name",
+      "renameKeepDeviceHint": "The equipment stays untouched: the room keeps the name “{{device}}”.",
+      "renameConfirm": "Rename",
+      "renameTaken": "Room “{{number}}” is already taken",
+      "renameCheckError": "Could not work out what the rename would change"
     },
     "locations": {
       "title": "Locations",

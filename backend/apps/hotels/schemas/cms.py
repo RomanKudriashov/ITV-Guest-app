@@ -53,6 +53,28 @@ class RoomPatch(Schema):
     floor: str | None = None
     zone: str | None = None
     is_active: bool | None = None
+    # ПЕРЕИМЕНОВАНИЕ ТОЛЬКО С ПОДТВЕРЖДЕНИЕМ: наклейка QR в номере кодирует
+    # номер, а имя устройства iRidi собирается из него шаблоном. Оба
+    # последствия невидимы из интерфейса, поэтому без явного флага смена
+    # номера отвечает 409 `rename_needs_confirmation` и возвращает, что
+    # именно изменится.
+    confirm_rename: bool = False
+    # «Оборудование не трогать»: закрепить за связью текущее имя устройства,
+    # чтобы переименование комнаты не увело команды в никуда.
+    keep_device_name: bool = False
+
+
+class RoomRenameImpactOut(Schema):
+    number: str
+    new_number: str
+    taken: bool
+    qr_url: str
+    qr_url_after: str
+    device: str
+    device_after: str
+    device_changes: bool
+    live_sessions: int
+    has_pin: bool
 
 class RoomOut(Schema):
     id: str

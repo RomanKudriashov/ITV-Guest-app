@@ -332,6 +332,9 @@
   "/api/v1/cms/rooms/{room_id}/qr.svg": [
     "GET"
   ],
+  "/api/v1/cms/rooms/{room_id}/rename-check": [
+    "GET"
+  ],
   "/api/v1/cms/schedules": [
     "GET",
     "POST"
