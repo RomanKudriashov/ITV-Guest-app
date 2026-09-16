@@ -116,8 +116,12 @@ test.describe('Админка отеля', () => {
 
     const base = Number(`8${uniq().slice(-4)}`)
     await page.getByTestId('room-bulk-add').click()
-    await page.getByTestId('room-bulk-from').fill(String(base))
-    await page.getByTestId('room-bulk-to').fill(String(base + 3))
+    // Пара «с/по» уступила место одной строке: она принимает и диапазон, и
+    // буквенные номера («3А», «Люкс-1»), которые прежде заводили поштучно.
+    await page.getByTestId('room-bulk-spec').fill(`${base}-${base + 3}`)
+    // Создание открывается только после предпросмотра — он и есть защита от
+    // опечатки вроде «1-99999».
+    await expect(page.getByTestId('room-bulk-preview')).toBeVisible({ timeout: 15_000 })
     await page.getByTestId('room-bulk-submit').click()
 
     await expect(page.getByTestId('room-bulk-result')).toContainText(String(base))

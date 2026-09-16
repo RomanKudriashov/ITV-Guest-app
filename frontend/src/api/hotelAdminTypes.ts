@@ -58,6 +58,17 @@ export interface RoomCategory {
   rooms_count: number;
 }
 
+export interface RoomBulkPreview {
+  numbers: string[];
+  will_create: string[];
+  exists: string[];
+  /** Эти вернутся с историей, а не заведутся заново. */
+  will_restore: string[];
+  total: number;
+  create_count: number;
+  exists_count: number;
+}
+
 export interface RoomPayload {
   number: string;
   floor?: string;
@@ -93,8 +104,10 @@ export interface RoomRenameImpact {
 }
 
 export interface RoomBulkPayload {
-  from: number;
-  to: number;
+  /** Свободный список: «101-105, 3А, Люкс-1». Либо он, либо пара from/to. */
+  spec?: string;
+  from?: number;
+  to?: number;
   floor?: string;
   zone?: string;
   prefix?: string;
@@ -105,6 +118,10 @@ export interface RoomBulkPayload {
 export interface RoomBulkResult {
   created: string[];
   skipped: string[];
+  /** Вернулись из удалённых вместе с историей. */
+  restored: string[];
+  created_count: number;
+  skipped_count: number;
 }
 
 /* ── 2. Locations ──────────────────────────────────────────────────────── */

@@ -105,13 +105,40 @@ class RoomOut(Schema):
     revoked_sessions: int = 0
 
 class BulkRoomsIn(Schema):
+    """
+    Заведение пачкой. Два вида ввода, и старый остался рабочим намеренно.
+
+    `spec` — свободный список: «101-105, 3А, Люкс-1». Диапазон только между
+    целыми, всё остальное — номер как написан.
+    `from`/`to` — прежняя пара; на неё завязаны интерфейс и проверки.
+    """
+
+    spec: str = ""
     # `from` — ключевое слово Python; принимаем его по alias, в коде — from_.
-    from_: int = Field(alias="from")
-    to: int
+    from_: int | None = Field(default=None, alias="from")
+    to: int | None = None
     floor: str = ""
     zone: str = ""
     prefix: str = ""
     suffix: str = ""
+    category_id: str | None = None
+    housekeeping: str | None = None
+    out_of_service: bool | None = None
+
+
+class BulkRoomsPreviewOut(Schema):
+    """Предпросмотр: полный список и числа. Ничего не создаёт."""
+
+    numbers: list[str]
+    will_create: list[str]
+    exists: list[str]
+    # Эти номера когда-то удалили: они ВЕРНУТСЯ с историей, а не заведутся
+    # заново. Сказать это до, а не тостом после.
+    will_restore: list[str]
+    total: int
+    create_count: int
+    exists_count: int
+
 
 class RoomCategoryIn(Schema):
     title: dict[str, str]

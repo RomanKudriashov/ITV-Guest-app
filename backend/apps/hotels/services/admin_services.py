@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from typing import Any, Iterable
@@ -449,57 +450,209 @@ def delete_room(room_id) -> None:
     get_room(room_id).delete()
 
 
+def parse_room_spec(spec: str) -> list[str]:
+    """
+    Строка заведения → список номеров. «101-105, 3А, Люкс-1».
+
+    ЗАЧЕМ НЕ ПРОСТО «С» И «ПО». Диапазон целых чисел покрывает регулярный
+    корпус и не покрывает ничего больше: реальный фонд — это ещё «3А» после
+    ремонта и «Люкс-1» с террасой. Такие номера заводили поштучно, а из-за
+    этого фонд заводили не целиком.
+
+    ПРАВИЛА, наружу их видно по ошибкам:
+      * диапазон — только между ЦЕЛЫМИ: «101-105». Ширина сохраняется по
+        левой границе, «008-012» даёт 008…012, а не 8…12;
+      * всё прочее — номер как написан, с буквами и пробелами внутри;
+      * повторы внутри самой строки схлопываются, порядок ввода сохраняется:
+        человек видит свой список, а не пересортированный.
+    """
+    numbers: list[str] = []
+    seen: set[str] = set()
+
+    for chunk in re.split(r"[,\n;]", spec or ""):
+        token = chunk.strip()
+        if not token:
+            continue
+
+        bounds = re.fullmatch(r"(\d+)\s*[-–—]\s*(\d+)", token)
+        if bounds:
+            left, right = bounds.group(1), bounds.group(2)
+            start_value, end_value = int(left), int(right)
+            if start_value > end_value:
+                raise ValidationError(
+                    f"В диапазоне «{token}» начало больше конца",
+                    field="spec",
+                    code="bad_range",
+                )
+            width = len(left)
+            for value in range(start_value, end_value + 1):
+                number = str(value).zfill(width)
+                if number not in seen:
+                    seen.add(number)
+                    numbers.append(number)
+            continue
+
+        if len(token) > 32:
+            raise ValidationError(
+                f"Номер «{token[:16]}…» длиннее 32 символов", field="spec"
+            )
+        if token not in seen:
+            seen.add(token)
+            numbers.append(token)
+
+    if not numbers:
+        raise ValidationError("Список номеров пуст", field="spec")
+    return numbers
+
+
+def preview_bulk_rooms(data: dict) -> dict:
+    """
+    ПРЕДПРОСМОТР. Ничего не создаёт и создать не может — отдельная функция, а
+    не флаг у создания: флаг однажды забудут передать.
+
+    Отвечает полным списком и числами: сколько заведётся, что уже есть. Ровно
+    это спасает от опечатки «1-99999» — она не создаёт ничего, а упирается в
+    предел и называет его.
+    """
+    require_hotel_admin()
+    numbers = _bulk_numbers(data)
+    existing = set(Room.objects.values_list("number", flat=True))
+
+    will_create = [number for number in numbers if number not in existing]
+    exists = [number for number in numbers if number in existing]
+    buried = set(
+        Room.all_objects.filter(
+            number__in=will_create, deleted_at__isnull=False
+        ).values_list("number", flat=True)
+    )
+
+    return {
+        "numbers": numbers,
+        "will_create": will_create,
+        "exists": exists,
+        # Эти вернутся с историей, а не заведутся заново, — и об этом честнее
+        # сказать ДО, а не тостом после.
+        "will_restore": sorted(buried, key=natural_number_key),
+        "total": len(numbers),
+        "create_count": len(will_create),
+        "exists_count": len(exists),
+    }
+
+
+def _bulk_numbers(data: dict) -> list[str]:
+    """
+    Номера из запроса: свободная строка `spec` или прежняя пара «с/по».
+
+    Старая форма осталась рабочей намеренно: на неё завязаны и интерфейс, и
+    проверки, а ломать контракт ради нового поля — это чинить одно и ломать
+    другое.
+    """
+    spec = str(data.get("spec") or "").strip()
+    prefix = str(data.get("prefix") or "")
+    suffix = str(data.get("suffix") or "")
+
+    if spec:
+        numbers = parse_room_spec(spec)
+    else:
+        try:
+            start = int(data["from"])
+            end = int(data["to"])
+        except (KeyError, TypeError, ValueError):
+            raise ValidationError(
+                "Границы диапазона должны быть числами", field="from"
+            ) from None
+        if start > end:
+            raise ValidationError(
+                "Начало диапазона больше конца", field="from", code="bad_range"
+            )
+        if end - start + 1 > MAX_BULK_RANGE:
+            raise ValidationError(
+                f"За один раз не больше {MAX_BULK_RANGE} номеров",
+                field="to",
+                code="range_too_large",
+            )
+        numbers = [str(value) for value in range(start, end + 1)]
+
+    numbers = [f"{prefix}{number}{suffix}" for number in numbers]
+
+    if len(numbers) > MAX_BULK_RANGE:
+        raise ValidationError(
+            f"За один раз не больше {MAX_BULK_RANGE} номеров, а в списке {len(numbers)}",
+            field="spec",
+            code="range_too_large",
+        )
+    return numbers
+
+
 @transaction.atomic
 def bulk_create_rooms(data: dict) -> dict:
     """
-    Диапазон номеров одним действием. Уже существующие пропускаются молча —
-    повторный вызов не падает и не двоит: заводить отель по частям это норма.
+    Заведение пачкой. Уже существующие пропускаются молча — повторный вызов не
+    падает и не двоит: заводить отель по частям это норма.
+
+    Предел проверяется ДО создания и на всём списке сразу: «1-99999» не должно
+    создать девяносто тысяч комнат и не должно создать первые пятьсот.
     """
     require_hotel_admin()
-    try:
-        start = int(data["from"])
-        end = int(data["to"])
-    except (KeyError, TypeError, ValueError):
-        raise ValidationError("Границы диапазона должны быть числами", field="from") from None
+    numbers = _bulk_numbers(data)
 
-    if start > end:
-        raise ValidationError("Начало диапазона больше конца", field="from", code="bad_range")
-    if end - start + 1 > MAX_BULK_RANGE:
-        raise ValidationError(
-            f"За один раз не больше {MAX_BULK_RANGE} номеров",
-            field="to",
-            code="range_too_large",
-        )
-
-    prefix = str(data.get("prefix") or "")
-    suffix = str(data.get("suffix") or "")
     floor = str(data.get("floor") or "").strip()
     zone = str(data.get("zone") or "").strip()
+    extra = _room_fields(data)
 
-    existing = set(Room.all_objects.values_list("number", flat=True))
-    created, skipped = [], []
+    existing = set(Room.objects.values_list("number", flat=True))
+    created, skipped, restored = [], [], []
     to_create = []
-    for value in range(start, end + 1):
-        number = f"{prefix}{value}{suffix}"
+    for number in numbers:
         if number in existing:
             skipped.append(number)
             continue
+
+        buried = Room.all_objects.filter(number=number, deleted_at__isnull=False).first()
+        if buried is not None:
+            # Тот же возврат, что и поштучно: вторая строка с этим номером
+            # развела бы отчёты. Доступ прежнего проживания гасится там же.
+            buried.floor = floor
+            buried.zone = zone
+            buried.is_active = True
+            for field, value in extra.items():
+                setattr(buried, field, value)
+            buried.deleted_at = None
+            buried.save()
+            _drop_stale_access(buried)
+            restored.append(number)
+            created.append(number)
+            continue
+
         to_create.append(
             Room(
                 hotel_id=require_hotel_id(),
                 number=number,
                 floor=floor,
                 zone=zone,
-                # `bulk_create` НЕ зовёт `save()`, поэтому ключ сортировки
+                # `bulk_create` НЕ зовёт `save()`, поэтому ключи сортировки
                 # приходится ставить руками. Забыть это — значит получить
                 # пачку номеров без ключа, которые уедут в начало списка.
                 sort_key=natural_number_key(number),
+                floor_key=natural_number_key(floor),
+                **extra,
             )
         )
         created.append(number)
 
     Room.objects.bulk_create(to_create)
-    return {"created": created, "skipped": skipped}
+    AuditLog.record(
+        "room.bulk_created",
+        object_type="room",
+        payload={"created": len(created), "skipped": len(skipped), "restored": restored},
+    )
+    return {
+        "created": created,
+        "skipped": skipped,
+        "restored": restored,
+        "created_count": len(created),
+        "skipped_count": len(skipped),
+    }
 
 
 # --- Категории номеров -----------------------------------------------------

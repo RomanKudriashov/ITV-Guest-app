@@ -8,6 +8,7 @@ import type {
   MatrixUpdatePayload,
   Room,
   RoomBulkPayload,
+  RoomBulkPreview,
   RoomBulkResult,
   RoomCategory,
   RoomPayload,
@@ -43,6 +44,14 @@ export function fetchRooms(
       offset: String(page.offset),
     },
   });
+}
+
+/**
+ * Предпросмотр заведения пачкой. Отдельная ручка, которая НИЧЕГО не создаёт —
+ * поэтому её можно звать на каждый ввод, пока человек правит строку.
+ */
+export function previewBulkRooms(payload: RoomBulkPayload): Promise<RoomBulkPreview> {
+  return api.post<RoomBulkPreview>('/cms/rooms/bulk/preview', payload);
 }
 
 /* ── 1b. Room categories ───────────────────────────────────────────────── */

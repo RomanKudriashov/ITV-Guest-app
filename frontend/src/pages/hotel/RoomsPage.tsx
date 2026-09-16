@@ -57,10 +57,12 @@ import {
   fetchRoomQrSheetHtml,
   fetchRoomQrSvg,
   fetchRooms,
+  previewBulkRooms,
   updateRoom,
 } from '@/api/hotelAdmin';
 import type {
   Room,
+  RoomBulkPreview,
   RoomBulkResult,
   RoomCategory,
   RoomRenameImpact,
@@ -907,8 +909,15 @@ function CategoriesDialog({
 
 function BulkDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { t } = useTranslation();
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  /*
+    ОДНО ПОЛЕ ВМЕСТО «С» И «ПО».
+
+    Пара чисел покрывала регулярный корпус и не покрывала ничего больше:
+    «3А» после ремонта и «Люкс-1» с террасой заводили поштучно — а из-за этого
+    фонд заводили не целиком. Строка принимает и то, и другое: «101-105, 3А,
+    Люкс-1». Диапазон по-прежнему пишется как диапазон.
+  */
+  const [spec, setSpec] = useState('');
   const [floor, setFloor] = useState('');
   const [zone, setZone] = useState('');
   const [prefix, setPrefix] = useState('');
@@ -916,36 +925,44 @@ function BulkDialog({ onClose, onDone }: { onClose: () => void; onDone: () => vo
   const [result, setResult] = useState<RoomBulkResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fromNum = Number(from);
-  const toNum = Number(to);
-  const invalid =
-    !from.trim() ||
-    !to.trim() ||
-    !Number.isFinite(fromNum) ||
-    !Number.isFinite(toNum) ||
-    fromNum > toNum;
+  const payload = {
+    spec: spec.trim(),
+    floor: floor.trim(),
+    zone: zone.trim(),
+    prefix: prefix.trim(),
+    suffix: suffix.trim(),
+  };
+
+  const asError = (thrown: unknown): string => {
+    const code = thrown instanceof ApiError ? thrown.code : '';
+    if (code === 'range_too_large') return t('hotel.rooms.bulkTooLarge');
+    if (code === 'bad_range') return t('hotel.rooms.bulkBadRange');
+    return thrown instanceof ApiError ? thrown.detail : t('errors.generic');
+  };
+
+  /*
+    ПРЕДПРОСМОТР ХОДИТ НА СЕРВЕР, а не разбирает строку в браузере. Иначе
+    появился бы второй разбор той же строки — и день, когда он начнёт
+    расходиться с настоящим: показали одно, создали другое.
+  */
+  const preview = useQuery({
+    queryKey: [...queryKeys.rooms, 'bulk-preview', payload],
+    queryFn: () => previewBulkRooms(payload),
+    enabled: Boolean(payload.spec),
+    retry: false,
+  });
+
+  const previewData: RoomBulkPreview | undefined = preview.data;
+  const previewError = preview.error ? asError(preview.error) : null;
 
   const mutation = useMutation({
-    mutationFn: () =>
-      bulkCreateRooms({
-        from: fromNum,
-        to: toNum,
-        floor: floor.trim(),
-        zone: zone.trim(),
-        prefix: prefix.trim(),
-        suffix: suffix.trim(),
-      }),
+    mutationFn: () => bulkCreateRooms(payload),
     onSuccess: (data) => {
       setError(null);
       setResult(data);
       onDone();
     },
-    onError: (mutationError) => {
-      const code = mutationError instanceof ApiError ? mutationError.code : '';
-      if (code === 'range_too_large') setError(t('hotel.rooms.bulkTooLarge'));
-      else if (code === 'bad_range') setError(t('hotel.rooms.bulkBadRange'));
-      else setError(mutationError instanceof ApiError ? mutationError.detail : t('errors.generic'));
-    },
+    onError: (mutationError) => setError(asError(mutationError)),
   });
 
   return (
@@ -954,7 +971,7 @@ function BulkDialog({ onClose, onDone }: { onClose: () => void; onDone: () => vo
       <DialogContent dividers>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            {t('hotel.rooms.bulkHint')}
+            {t('hotel.rooms.bulkSpecHint')}
           </Typography>
           {error ? <Alert severity="error">{error}</Alert> : null}
           {result ? (
@@ -982,23 +999,74 @@ function BulkDialog({ onClose, onDone }: { onClose: () => void; onDone: () => vo
               ) : null}
             </Alert>
           ) : null}
+
+          <TextField
+            size="small"
+            label={t('hotel.rooms.bulkSpec')}
+            placeholder="101-105, 3А, Люкс-1"
+            value={spec}
+            onChange={(event) => setSpec(event.target.value)}
+            inputProps={{ 'data-testid': 'room-bulk-spec' }}
+            multiline
+            minRows={2}
+            fullWidth
+          />
+
+          {previewError ? (
+            <Alert severity="error" data-testid="room-bulk-preview-error">
+              {previewError}
+            </Alert>
+          ) : null}
+
+          {previewData && !previewError ? (
+            <Alert severity="info" data-testid="room-bulk-preview">
+              <Typography variant="body2" data-testid="room-bulk-preview-counts">
+                {t('hotel.rooms.bulkPreviewCounts', {
+                  create: previewData.create_count,
+                  exists: previewData.exists_count,
+                })}
+              </Typography>
+              {/* СПИСОК ЦЕЛИКОМ: «будет создано 500» без перечня — это не
+                  предпросмотр, а обещание. */}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                component="div"
+                sx={{ wordBreak: 'break-all' }}
+                data-testid="room-bulk-preview-list"
+              >
+                {previewData.numbers.join(', ')}
+              </Typography>
+              {previewData.will_restore.length ? (
+                <Typography
+                  variant="caption"
+                  color="warning.main"
+                  component="div"
+                  data-testid="room-bulk-preview-restore"
+                >
+                  {t('hotel.rooms.bulkPreviewRestore', {
+                    list: previewData.will_restore.join(', '),
+                  })}
+                </Typography>
+              ) : null}
+            </Alert>
+          ) : null}
+
           <Stack direction="row" spacing={2}>
             <TextField
               size="small"
-              type="number"
-              label={t('hotel.rooms.bulkFrom')}
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-              inputProps={{ 'data-testid': 'room-bulk-from' }}
+              label={t('hotel.rooms.prefix')}
+              value={prefix}
+              onChange={(event) => setPrefix(event.target.value)}
+              inputProps={{ 'data-testid': 'room-bulk-prefix' }}
               fullWidth
             />
             <TextField
               size="small"
-              type="number"
-              label={t('hotel.rooms.bulkTo')}
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              inputProps={{ 'data-testid': 'room-bulk-to' }}
+              label={t('hotel.rooms.suffix')}
+              value={suffix}
+              onChange={(event) => setSuffix(event.target.value)}
+              inputProps={{ 'data-testid': 'room-bulk-suffix' }}
               fullWidth
             />
           </Stack>
@@ -1008,6 +1076,7 @@ function BulkDialog({ onClose, onDone }: { onClose: () => void; onDone: () => vo
               label={t('hotel.rooms.floor')}
               value={floor}
               onChange={(event) => setFloor(event.target.value)}
+              inputProps={{ 'data-testid': 'room-bulk-floor' }}
               fullWidth
             />
             <TextField
@@ -1015,36 +1084,25 @@ function BulkDialog({ onClose, onDone }: { onClose: () => void; onDone: () => vo
               label={t('hotel.rooms.zone')}
               value={zone}
               onChange={(event) => setZone(event.target.value)}
-              fullWidth
-            />
-          </Stack>
-          <Stack direction="row" spacing={2}>
-            <TextField
-              size="small"
-              label={t('hotel.rooms.prefix')}
-              value={prefix}
-              onChange={(event) => setPrefix(event.target.value)}
-              fullWidth
-            />
-            <TextField
-              size="small"
-              label={t('hotel.rooms.suffix')}
-              value={suffix}
-              onChange={(event) => setSuffix(event.target.value)}
+              inputProps={{ 'data-testid': 'room-bulk-zone-create' }}
               fullWidth
             />
           </Stack>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{result ? t('common.close') : t('common.cancel')}</Button>
+        <Button onClick={onClose}>{t('common.close')}</Button>
         <Button
           variant="contained"
-          disabled={invalid || mutation.isPending}
+          /* Создание доступно ровно тогда, когда предпросмотр СОСТОЯЛСЯ и
+             показал, что создавать: иначе кнопка обещает неизвестно что. */
+          disabled={
+            !previewData || Boolean(previewError) || previewData.create_count === 0 || mutation.isPending
+          }
           onClick={() => mutation.mutate()}
           data-testid="room-bulk-submit"
         >
-          {t('hotel.rooms.bulkSubmit')}
+          {t('hotel.rooms.bulkSubmitCount', { count: previewData?.create_count ?? 0 })}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1383,7 +1383,12 @@
       "housekeeping_clean": "نظيفة",
       "housekeeping_dirty": "غير نظيفة",
       "housekeeping_in_progress": "قيد التنظيف",
-      "outOfService": "خارج البيع"
+      "outOfService": "خارج البيع",
+      "bulkSpec": "الأرقام",
+      "bulkSpecHint": "نطاقات وأرقام مفردة مفصولة بفواصل: «101-105، 3А، Люкс-1». المتوفّر مسبقًا يُتخطّى.",
+      "bulkPreviewCounts": "سيتم الإنشاء: {{create}}. موجودة بالفعل: {{exists}}.",
+      "bulkPreviewRestore": "ستعود مع سجلّها: {{list}}",
+      "bulkSubmitCount": "إنشاء {{count}}"
     },
     "locations": {
       "title": "المواقع",

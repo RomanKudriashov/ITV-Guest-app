@@ -1338,7 +1338,12 @@
       "housekeeping_clean": "已清洁",
       "housekeeping_dirty": "待清洁",
       "housekeeping_in_progress": "清洁中",
-      "outOfService": "停售"
+      "outOfService": "停售",
+      "bulkSpec": "房号",
+      "bulkSpecHint": "用逗号分隔的区间与单个房号：「101-105、3А、Люкс-1」。已存在的会被跳过。",
+      "bulkPreviewCounts": "将创建：{{create}}。已存在：{{exists}}。",
+      "bulkPreviewRestore": "将连同历史记录一并恢复：{{list}}",
+      "bulkSubmitCount": "创建 {{count}} 间"
     },
     "locations": {
       "title": "位置",

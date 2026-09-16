@@ -1366,7 +1366,12 @@
       "housekeeping_clean": "Чисто",
       "housekeeping_dirty": "Грязно",
       "housekeeping_in_progress": "Убирается",
-      "outOfService": "Вне продажи"
+      "outOfService": "Вне продажи",
+      "bulkSpec": "Номера",
+      "bulkSpecHint": "Диапазоны и отдельные номера через запятую: «101-105, 3А, Люкс-1». Существующие пропускаются.",
+      "bulkPreviewCounts": "Будет создано: {{create}}. Уже существуют: {{exists}}.",
+      "bulkPreviewRestore": "Вернутся вместе со своей историей: {{list}}",
+      "bulkSubmitCount": "Создать {{count}}"
     },
     "locations": {
       "title": "Локации",

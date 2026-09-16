@@ -1351,7 +1351,12 @@
       "housekeeping_clean": "Clean",
       "housekeeping_dirty": "Dirty",
       "housekeeping_in_progress": "Being cleaned",
-      "outOfService": "Out of service"
+      "outOfService": "Out of service",
+      "bulkSpec": "Numbers",
+      "bulkSpecHint": "Ranges and single numbers, comma separated: “101-105, 3А, Suite-1”. Existing ones are skipped.",
+      "bulkPreviewCounts": "To be created: {{create}}. Already exist: {{exists}}.",
+      "bulkPreviewRestore": "Will come back with their history: {{list}}",
+      "bulkSubmitCount": "Create {{count}}"
     },
     "locations": {
       "title": "Locations",

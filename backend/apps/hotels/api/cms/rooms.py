@@ -9,6 +9,7 @@ from apps.accounts.services.roles import require_hotel_admin
 from apps.core.schemas import OkOut
 from apps.hotels.schemas.cms import (
     BulkRoomsIn,
+    BulkRoomsPreviewOut,
     RoomCategoryIn,
     RoomCategoryOut,
     RoomCategoryPatch,
@@ -31,6 +32,20 @@ def list_rooms(
     """Выдача в ОБОЛОЧКЕ (`items/total/limit`): голый массив без предела
     выглядит полным, сколько бы записей ни осталось за его границей."""
     return svc.list_rooms(search=search, limit=limit, offset=offset)
+
+
+@router.post(
+    "/rooms/bulk/preview",
+    response=BulkRoomsPreviewOut,
+    summary="Предпросмотр заведения пачкой (ничего не создаёт)",
+)
+def bulk_rooms_preview(request: HttpRequest, payload: BulkRoomsIn):
+    """
+    Показать список ДО создания. Отдельная ручка, а не флаг у создания: флаг
+    однажды забудут передать, и опечатка «1-99999» создаст фонд на девяносто
+    тысяч комнат.
+    """
+    return svc.preview_bulk_rooms(payload.dict(by_alias=True))
 
 
 # --- Категории номеров -----------------------------------------------------
