@@ -210,8 +210,11 @@ CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")
 CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
 CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_DEFAULT_RETRY_DELAY = 5
-CELERY_TASK_MAX_RETRIES = 5
+# Паузу и число повторов здесь НЕ задать: ключей `task_default_retry_delay` и
+# `task_max_retries` у Celery нет, и две такие строки годами ничего не делали
+# (пауза оставалась 180 с). Повторы объявляет сама задача — `max_retries` и
+# явный `countdown` либо `autoretry_for` с `retry_backoff`. Каждую настройку
+# `CELERY_*` сверяет со списком Celery `tests/core/test_celery_settings.py`.
 
 CHANNELS_REDIS_URL = os.getenv("CHANNELS_REDIS_URL", "redis://localhost:6379/3")
 CHANNEL_LAYERS = {
