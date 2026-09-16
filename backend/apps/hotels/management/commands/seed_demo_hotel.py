@@ -1119,6 +1119,15 @@ class Command(BaseCommand):
             },
         )
 
+        # ОБЩИЙ канал отеля: без отдела и без сотрудника. Туда уходят события
+        # уровня отеля — оформление, недоставленные уведомления. Без него на
+        # показе эти события копились бы в журнале с «некому отправить», и
+        # стенд выглядел бы сломанным, хотя механизм работает.
+        NotificationChannel.objects.get_or_create(
+            title="Общий канал отеля",
+            defaults={"type": ChannelType.LOG},
+        )
+
         chef = users.get("chef")
         if chef is not None:
             NotificationChannel.objects.get_or_create(
