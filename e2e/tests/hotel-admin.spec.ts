@@ -272,37 +272,41 @@ test.describe('Админка отеля', () => {
     expect(loc.status()).toBe(201)
     const { id: locId, code: locCode } = await loc.json()
 
-    await page.reload()
-    await expect(page.getByTestId('location-matrix')).toBeVisible({ timeout: 15_000 })
+    // Уборка — в `finally`: упавшая проверка оставляла живую локацию-хвост,
+    // и она потом попадала в матрицу и в список мест гостя.
+    try {
+      await page.reload()
+      await expect(page.getByTestId('location-matrix')).toBeVisible({ timeout: 15_000 })
 
-    /*
-      МАТРИЦА — ОДИН ВОПРОС: доступна ли категория в этом месте.
+      /*
+        МАТРИЦА — ОДИН ВОПРОС: доступна ли категория в этом месте.
 
-      Способов доставки в ячейке больше нет: их чипы давали «Горячее · В номер ·
-      Самовывоз», на что и жаловался заказчик. Как получают заказ, говорит вид
-      локации в заголовке столбца. Включаем ячейку ЭКРАНОМ и проверяем, что
-      сервер её сохранил.
-    */
-    await expect(page.getByTestId(`matrix-location-kind-${locCode}`)).toHaveText('Общая точка')
-    const cellBox = page.getByTestId(`matrix-cell-drinks-${locCode}`)
-    await expect(cellBox.locator('[data-testid$="-pickup"], [data-testid$="-delivery"]')).toHaveCount(0)
-    await page.getByTestId(`matrix-cell-drinks-${locCode}-enabled`).check()
-    await page.getByTestId('matrix-save-drinks').click()
-    await expect(page.getByText('Строка сохранена')).toBeVisible({ timeout: 15_000 })
+        Способов доставки в ячейке больше нет: их чипы давали «Горячее · В номер ·
+        Самовывоз», на что и жаловался заказчик. Как получают заказ, говорит вид
+        локации в заголовке столбца. Включаем ячейку ЭКРАНОМ и проверяем, что
+        сервер её сохранил.
+      */
+      await expect(page.getByTestId(`matrix-location-kind-${locCode}`)).toHaveText('Общая точка')
+      const cellBox = page.getByTestId(`matrix-cell-drinks-${locCode}`)
+      await expect(cellBox.locator('[data-testid$="-pickup"], [data-testid$="-delivery"]')).toHaveCount(0)
+      await page.getByTestId(`matrix-cell-drinks-${locCode}-enabled`).check()
+      await page.getByTestId('matrix-save-drinks').click()
+      await expect(page.getByText('Строка сохранена')).toBeVisible({ timeout: 15_000 })
 
-    const after = await (
-      await request.get('http://localhost:8010/api/cms/locations/matrix', {
+      const after = await (
+        await request.get('http://localhost:8010/api/cms/locations/matrix', {
+          headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
+        })
+      ).json()
+      const drinksAfter = after.rows.find(
+        (r: { category_title: string }) => r.category_title === 'Напитки',
+      )
+      const cell = drinksAfter.cells.find((c: { location_id: string }) => c.location_id === locId)
+      expect(cell).toEqual({ location_id: locId, enabled: true })
+    } finally {
+      await request.delete(`http://localhost:8010/api/cms/locations/${locId}`, {
         headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
       })
-    ).json()
-    const drinksAfter = after.rows.find(
-      (r: { category_title: string }) => r.category_title === 'Напитки',
-    )
-    const cell = drinksAfter.cells.find((c: { location_id: string }) => c.location_id === locId)
-    expect(cell).toEqual({ location_id: locId, enabled: true })
-
-    await request.delete(`http://localhost:8010/api/cms/locations/${locId}`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
+    }
   })
 })

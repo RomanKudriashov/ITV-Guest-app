@@ -804,6 +804,22 @@ class Command(BaseCommand):
                 ],
             )
 
+    def _seed_bar_counter(self) -> Location:
+        """
+        Точка выдачи демо-отеля: стойка лобби-бара. Гость забирает сам — ни
+        платы за доставку, ни уточнения места. Что здесь выдают, решает
+        матрица, а не принадлежность бару.
+        """
+        counter, _ = Location.objects.get_or_create(
+            code="bar-counter",
+            defaults={
+                "kind": Location.Kind.PICKUP_POINT,
+                "title": {"ru": "Стойка лобби-бара", "en": "Lobby bar counter"},
+                "sort_order": 2,
+            },
+        )
+        return counter
+
     def _seed_bar_menu(self, points: dict[str, ExecutionPoint]):
         """
         Своя карта бару.
@@ -829,6 +845,13 @@ class Command(BaseCommand):
         Route.objects.get_or_create(
             category=category, execution_point=bar_point, defaults={"priority": 0}
         )
+        # Коктейли несут в номер и к бассейну — и выдают у стойки бара.
+        # Связки в матрице явные: категория с ними доступна ровно там, где
+        # отмечено (без связок она была бы «не настроенной»).
+        counter = self._seed_bar_counter()
+        for location in Location.objects.filter(code__in=["in_room", "pool"]):
+            ServiceLocation.objects.get_or_create(category=category, location=location)
+        ServiceLocation.objects.get_or_create(category=category, location=counter)
 
         for order, (code, ru, en, price, desc) in enumerate(
             [
@@ -2180,7 +2203,7 @@ class Command(BaseCommand):
         Route.objects.get_or_create(
             category=category, execution_point=bar_point, defaults={"priority": 0}
         )
-        for location in locations:
+        for location in [*locations, self._seed_bar_counter()]:
             ServiceLocation.objects.get_or_create(
                 category=category, location=location,
             )
