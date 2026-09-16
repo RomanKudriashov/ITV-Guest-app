@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { setUnauthorizedHandler, tokenStorage } from '@/api/client';
+import { ApiError, setUnauthorizedHandler, tokenStorage } from '@/api/client';
 import {
   exchangeSupportCode,
   fetchMe,
@@ -19,6 +19,18 @@ import {
 } from '@/api/cms';
 import type { HotelInfo, StaffUser } from '@/api/types';
 import { useAppTheme } from '@/theme';
+
+/** Повторов проверки токена при сбое сети или сервера (паузы 1, 2, 4 с). */
+const ME_RETRIES = 3;
+
+/**
+ * Запрос оборван — страница уходит. Chrome отдаёт такой обрыв и как
+ * `AbortError`, и как обычный `TypeError` сети; второй случай ловит пауза перед
+ * повтором: страница закрывается раньше, чем повтор успевает что-то решить.
+ */
+function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
 
 interface AuthContextValue {
   token: string | null;
@@ -63,6 +75,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isBootstrapping, setBootstrapping] = useState<boolean>(
     () => Boolean(tokenStorage.get()) || Boolean(supportCode),
   );
+
+  // Выход только в этом браузере: сессия на сервере остаётся живой.
+  const forgetLocally = useCallback(() => {
+    tokenStorage.clear();
+    setToken(null);
+    setUser(null);
+    setHotel(null);
+    queryClient.clear();
+  }, [queryClient]);
 
   const logout = useCallback(() => {
     // Сначала рвём сессию НА СЕРВЕРЕ, потом чистим браузер. Без первого
@@ -120,24 +141,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     setBootstrapping(true);
-    fetchMe()
-      .then((me) => {
-        if (cancelled) return;
-        setUser(normalizeMe(me));
-        if (me.hotel) setHotel(me.hotel);
-        if (me.theme) setBrandTokens(me.theme);
-      })
-      .catch(() => {
-        if (!cancelled) logout();
-      })
-      .finally(() => {
-        if (!cancelled) setBootstrapping(false);
-      });
+    void (async () => {
+      /*
+        ЗАКРЫТЬ СЕССИЮ НА СЕРВЕРЕ МОЖНО ТОЛЬКО ЗА ОТКАЗ АВТОРИЗАЦИИ.
+
+        Раньше любая неудача проверки токена вела в `logout()`, а тот рвёт
+        сессию на сервере. Уход со страницы обрывает запрос — и человек,
+        просто перешедший по ссылке или обновивший вкладку, закрывал СВОЮ
+        живую сессию: токен в браузере ещё действовал, а в «Моих входах» не
+        было «это устройство» (пункт 32 бэклога). Так же выкидывал любой сбой
+        сети или пятисотка.
+
+        Теперь: 401 — сессии нет, выходим как прежде. Обрыв — страница
+        уходит, трогать нечего. Сеть или сервер — три повтора с паузой; не
+        помогли — чистим вход ЛОКАЛЬНО, сессию на сервере не трогаем: она
+        живая, и закроет её человек, а не сбой.
+      */
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          const me = await fetchMe();
+          if (cancelled) return;
+          setUser(normalizeMe(me));
+          if (me.hotel) setHotel(me.hotel);
+          if (me.theme) setBrandTokens(me.theme);
+          setBootstrapping(false);
+          return;
+        } catch (error) {
+          if (cancelled || isAbort(error)) return;
+          if (error instanceof ApiError && error.status === 401) {
+            logout();
+            setBootstrapping(false);
+            return;
+          }
+          if (attempt >= ME_RETRIES) {
+            forgetLocally();
+            setBootstrapping(false);
+            return;
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 1000 * 2 ** attempt));
+          if (cancelled) return;
+        }
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [token, user, logout]);
+  }, [token, user, logout, forgetLocally]);
 
   const login = useCallback(
     async (email: string, password: string) => {
