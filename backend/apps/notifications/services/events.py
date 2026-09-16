@@ -78,8 +78,25 @@ def channels_for_audience(audience: str, point_id=None) -> list[NotificationChan
 
 
 def recipient_language(channel: NotificationChannel, hotel) -> str:
-    """Язык, на котором собирается текст для этого канала."""
-    return hotel.default_language or registry.FALLBACK_LANGUAGE
+    """
+    Язык, на котором собирается текст для этого канала — ЯЗЫК ПОЛУЧАТЕЛЯ.
+
+    Личный канал принадлежит человеку, и его язык задан в профиле (у 22 из 24
+    сотрудников стенда). Общий канал отдела — чат, где читают многие; у него
+    одного получателя нет, и текст идёт на языке отеля. Язык, на котором
+    справочник не говорит, заменяется языком отеля, а не выдаёт пустое письмо.
+    """
+    if channel.user_id:
+        own = _base_language(getattr(channel.user, "language", ""))
+        if own in registry.LANGUAGES:
+            return own
+    hotel_language = _base_language(getattr(hotel, "default_language", ""))
+    return hotel_language if hotel_language in registry.LANGUAGES else registry.FALLBACK_LANGUAGE
+
+
+def _base_language(value: str) -> str:
+    """«en-US» → «en»: справочник говорит на языках, а не на их вариантах."""
+    return (value or "").strip().lower().replace("_", "-").split("-")[0]
 
 
 # --- Рассылка --------------------------------------------------------------

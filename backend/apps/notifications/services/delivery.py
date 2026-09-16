@@ -117,12 +117,25 @@ def resolve_channels(step: EscalationStep, order: Order) -> list[NotificationCha
 def render_message(
     channel: NotificationChannel | None, order: Order, step: EscalationStep | None, language: str
 ) -> RenderedMessage:
+    """
+    Текст ступени на языке ПОЛУЧАТЕЛЯ.
+
+    Порядок: шаблон отеля на языке получателя → текст справочника на том же
+    языке → шаблон отеля на языке отеля. Шаблон на ДРУГОМ языке язык
+    получателя не перебивает: англоязычный старший смены получает английский
+    текст справочника, а не русский шаблон, написанный для остальных.
+    """
     default_language = order.hotel.default_language
+    spec = notification_events.get(OVERDUE_EVENT)
     template = (channel.templates or {}).get(language) if channel else None
+    if not template and language in notification_events.LANGUAGES:
+        template = {
+            "subject": spec.text("subject", language, default_language),
+            "body": spec.text("body", language, default_language),
+        }
     if not template:
         template = (channel.templates or {}).get(default_language) if channel else None
     if not template:
-        spec = notification_events.get(OVERDUE_EVENT)
         template = {
             "subject": spec.text("subject", language, default_language),
             "body": spec.text("body", language, default_language),
@@ -278,10 +291,13 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
         log.save(update_fields=["status", "error", "updated_at"])
         return log
 
-    language = order.hotel.default_language
+    from apps.notifications.services.events import recipient_language
     from apps.notifications.tasks import deliver_notification
 
     for channel in channels:
+        # Язык — у каждого получателя свой: старший смены с английским в профиле
+        # получает английский текст, общий чат кухни — текст на языке отеля.
+        language = recipient_language(channel, order.hotel)
         message = render_message(channel, order, log.step, language)
         delivery = _get_or_create_log(
             order=order,
