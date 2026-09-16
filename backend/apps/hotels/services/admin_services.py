@@ -1132,6 +1132,51 @@ def _resolve_schedule(schedule_id) -> Schedule | None:
     return schedule
 
 
+def _clean_kind(value) -> str:
+    if value not in Location.Kind.values:
+        raise ValidationError(
+            "Неизвестный вид локации", field="kind", code="invalid_location_kind"
+        )
+    return value
+
+
+def _clean_fee(fee) -> int:
+    if not isinstance(fee, int) or isinstance(fee, bool) or fee < 0:
+        raise ValidationError(
+            "Стоимость доставки — неотрицательное целое копеек",
+            field="delivery_fee_minor",
+            code="out_of_range",
+        )
+    return fee
+
+
+def _apply_pickup_rules(location: Location, data: dict) -> None:
+    """
+    У точки выдачи нет доставки — нет и её платы, и уточнения места.
+
+    Явно присланная плата или уточнение — ошибка формы, а не повод молча
+    выбросить значение. Не присланные (смена вида у существующей локации) —
+    обнуляются: они принадлежали прежнему виду.
+    """
+    if not location.is_pickup:
+        return
+    if data.get("delivery_fee_minor"):
+        raise ValidationError(
+            "У точки выдачи нет платы за доставку: гость забирает заказ сам",
+            field="delivery_fee_minor",
+            code="pickup_point_fee",
+        )
+    if data.get("requires_refinement"):
+        raise ValidationError(
+            "У точки выдачи нет уточнения места: гость подходит сам",
+            field="requires_refinement",
+            code="pickup_point_refinement",
+        )
+    location.delivery_fee_minor = 0
+    location.requires_refinement = False
+    location.refinement_label = {}
+
+
 def _validate_refinement(requires: bool, label: dict) -> None:
     if requires and not label:
         raise ValidationError(
@@ -1151,16 +1196,22 @@ def create_location(data: dict) -> Location:
     label = _clean_translations(data.get("refinement_label"), field="refinement_label")
     _validate_refinement(requires, label)
 
-    return Location.objects.create(
+    location = Location(
         code=data.get("code") or _make_location_code(title),
-        kind=data.get("kind", Location.Kind.IN_ROOM),
+        kind=_clean_kind(data.get("kind", Location.Kind.IN_ROOM)),
         title=title,
         requires_refinement=requires,
         refinement_label=label,
         schedule=_resolve_schedule(data.get("schedule_id")),
         sort_order=data.get("sort_order", 0),
         is_active=data.get("is_active", True),
+        # Плата принималась формой и терялась по дороге: ни схема, ни сервис
+        # её при создании не брали, и локация заводилась бесплатной.
+        delivery_fee_minor=_clean_fee(data.get("delivery_fee_minor", 0)),
     )
+    _apply_pickup_rules(location, data)
+    location.save()
+    return location
 
 
 @transaction.atomic
@@ -1173,7 +1224,7 @@ def update_location(location_id, data: dict) -> Location:
             raise ValidationError("Заполните название локации", field="title")
         location.title = title
     if "kind" in data:
-        location.kind = data["kind"]
+        location.kind = _clean_kind(data["kind"])
     if "requires_refinement" in data:
         location.requires_refinement = data["requires_refinement"]
     if "refinement_label" in data:
@@ -1185,15 +1236,9 @@ def update_location(location_id, data: dict) -> Location:
     if "is_active" in data:
         location.is_active = data["is_active"]
     if "delivery_fee_minor" in data:
-        fee = data["delivery_fee_minor"]
-        if not isinstance(fee, int) or isinstance(fee, bool) or fee < 0:
-            raise ValidationError(
-                "Стоимость доставки — неотрицательное целое копеек",
-                field="delivery_fee_minor",
-                code="out_of_range",
-            )
-        location.delivery_fee_minor = fee
+        location.delivery_fee_minor = _clean_fee(data["delivery_fee_minor"])
 
+    _apply_pickup_rules(location, data)
     _validate_refinement(location.requires_refinement, location.refinement_label or {})
     location.save()
     return location

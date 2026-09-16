@@ -1488,7 +1488,8 @@
       "kind": "类型",
       "kinds": {
         "in_room": "房间内",
-        "common_point": "公共点"
+        "common_point": "公共点",
+        "pickup_point": "取餐点"
       },
       "refinement": "细化",
       "requiresRefinement": "需要细化",
@@ -1506,7 +1507,8 @@
       "newTitle": "新建位置",
       "editTitle": "编辑位置",
       "deleteTitle": "删除位置？",
-      "deleteBody": "将删除“{{name}}”。"
+      "deleteBody": "将删除“{{name}}”。",
+      "pickupHint": "取餐点：客人自行取餐——没有配送费，也无需填写具体位置。下方矩阵决定此处提供哪些类别。"
     },
     "matrix": {
       "title": "分类 → 位置矩阵",

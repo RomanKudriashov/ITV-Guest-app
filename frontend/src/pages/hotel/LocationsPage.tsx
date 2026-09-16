@@ -59,7 +59,7 @@ import { flattenCategories } from '@/utils/categories';
 import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
 
-const LOCATION_KINDS: LocationKind[] = ['in_room', 'common_point'];
+const LOCATION_KINDS: LocationKind[] = ['in_room', 'common_point', 'pickup_point'];
 
 interface LocationForm {
   kind: LocationKind;
@@ -306,8 +306,13 @@ function LocationDialog({
 
   const titleMissing = !form.title[languages.defaultCode]?.trim();
   const refinementMissing =
-    form.requires_refinement && !form.refinement_label[languages.defaultCode]?.trim();
-  const deliveryFeeMinor = inputToMinor(form.deliveryFeeInput, minorUnits);
+    form.kind !== 'pickup_point' &&
+    form.requires_refinement &&
+    !form.refinement_label[languages.defaultCode]?.trim();
+  // Точка выдачи: гость забирает сам — ни платы за доставку, ни уточнения
+  // места у неё нет, и поля для них не показываются.
+  const isPickup = form.kind === 'pickup_point';
+  const deliveryFeeMinor = isPickup ? 0 : inputToMinor(form.deliveryFeeInput, minorUnits);
   const deliveryFeeInvalid = deliveryFeeMinor === null || deliveryFeeMinor < 0;
 
   const mutation = useMutation({
@@ -315,10 +320,9 @@ function LocationDialog({
       const payload = {
         kind: form.kind,
         title: compactTranslated(form.title),
-        requires_refinement: form.requires_refinement,
-        refinement_label: form.requires_refinement
-          ? compactTranslated(form.refinement_label)
-          : {},
+        requires_refinement: isPickup ? false : form.requires_refinement,
+        refinement_label:
+          !isPickup && form.requires_refinement ? compactTranslated(form.refinement_label) : {},
         schedule_id: form.schedule_id,
         sort_order: form.sort_order,
         is_active: form.is_active,
@@ -333,6 +337,13 @@ function LocationDialog({
     onError: (error) => {
       if (error instanceof ApiError && error.code === 'refinement_label_required') {
         setServerError(t('hotel.locations.refinementRequired'));
+        return;
+      }
+      if (
+        error instanceof ApiError &&
+        (error.code === 'pickup_point_fee' || error.code === 'pickup_point_refinement')
+      ) {
+        setServerError(t('hotel.locations.pickupHint'));
         return;
       }
       setServerError(error instanceof ApiError ? error.detail : t('errors.generic'));
@@ -399,6 +410,7 @@ function LocationDialog({
 
             {/* Стоимость доставки в эту локацию; порог бесплатной — на
                 уровне отеля, в настройках коммерции. */}
+            {isPickup ? null : (
             <TextField
               size="small"
               label={t('hotel.locations.deliveryFee')}
@@ -412,6 +424,7 @@ function LocationDialog({
               sx={{ width: 180 }}
               inputProps={{ 'data-testid': 'cms-location-delivery-fee', inputMode: 'decimal' }}
             />
+            )}
 
             <FormControlLabel
               control={
@@ -424,6 +437,11 @@ function LocationDialog({
             />
           </Stack>
 
+          {isPickup ? (
+            <Alert severity="info" data-testid="location-pickup-hint">
+              {t('hotel.locations.pickupHint')}
+            </Alert>
+          ) : (
           <FormControlLabel
             control={
               <Switch
@@ -436,9 +454,10 @@ function LocationDialog({
             }
             label={t('hotel.locations.requiresRefinement')}
           />
+          )}
 
           {/* The refinement label only makes sense when refinement is on. */}
-          {form.requires_refinement ? (
+          {!isPickup && form.requires_refinement ? (
             <TranslatedField
               label={t('hotel.locations.refinementLabel')}
               value={form.refinement_label}

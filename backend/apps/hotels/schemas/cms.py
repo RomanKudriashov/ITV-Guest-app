@@ -208,6 +208,8 @@ class LocationIn(Schema):
     schedule_id: str | None = None
     sort_order: int = 0
     is_active: bool = True
+    # Стоимость доставки, копейки; 0 = бесплатно. У точки выдачи — только 0.
+    delivery_fee_minor: int = 0
 
 class LocationPatch(Schema):
     title: dict[str, str] | None = None

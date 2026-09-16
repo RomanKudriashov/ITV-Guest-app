@@ -194,7 +194,8 @@ export interface RoomBulkResult {
 
 /* ── 2. Locations ──────────────────────────────────────────────────────── */
 
-export type LocationKind = 'in_room' | 'common_point';
+/** `pickup_point` — the guest collects the order (bar counter, kitchen window). */
+export type LocationKind = 'in_room' | 'common_point' | 'pickup_point';
 
 export interface HotelLocation {
   id: string;

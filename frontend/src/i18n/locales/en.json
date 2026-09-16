@@ -1505,7 +1505,8 @@
       "kind": "Kind",
       "kinds": {
         "in_room": "In room",
-        "common_point": "Common point"
+        "common_point": "Common point",
+        "pickup_point": "Pickup point"
       },
       "refinement": "Refinement",
       "requiresRefinement": "Requires refinement",
@@ -1523,7 +1524,8 @@
       "newTitle": "New location",
       "editTitle": "Edit location",
       "deleteTitle": "Delete location?",
-      "deleteBody": "Location “{{name}}” will be deleted."
+      "deleteBody": "Location “{{name}}” will be deleted.",
+      "pickupHint": "Pickup point: the guest collects the order — no delivery fee and no place details. The matrix below decides what is handed out here."
     },
     "matrix": {
       "title": "Category → locations matrix",

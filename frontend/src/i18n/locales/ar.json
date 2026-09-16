@@ -1541,7 +1541,8 @@
       "kind": "النوع",
       "kinds": {
         "in_room": "في الغرفة",
-        "common_point": "نقطة عامة"
+        "common_point": "نقطة عامة",
+        "pickup_point": "نقطة استلام"
       },
       "refinement": "توضيح",
       "requiresRefinement": "يتطلب توضيحًا",
@@ -1559,7 +1560,8 @@
       "newTitle": "موقع جديد",
       "editTitle": "تعديل الموقع",
       "deleteTitle": "حذف الموقع؟",
-      "deleteBody": "سيُحذف «{{name}}»."
+      "deleteBody": "سيُحذف «{{name}}».",
+      "pickupHint": "نقطة استلام: يستلم الضيف طلبه بنفسه — بلا رسوم توصيل وبلا تحديد مكان. الجدول أدناه يحدد ما يُسلَّم هنا."
     },
     "matrix": {
       "title": "مصفوفة الفئة ← المواقع",
