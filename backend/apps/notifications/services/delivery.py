@@ -28,6 +28,7 @@ from apps.core.context import require_hotel_id
 from apps.core.fields import translate
 from apps.orders.models import Order
 
+from apps.notifications import events as notification_events
 from apps.notifications.channels.adapters import get_adapter
 from apps.notifications.channels.base import ChannelError, RenderedMessage
 from apps.notifications.models import (
@@ -42,10 +43,10 @@ from apps.notifications.models import (
 
 logger = logging.getLogger("apps.notifications")
 
-DEFAULT_TEMPLATE = {
-    "subject": "Заявка №{{number}} — {{point}}",
-    "body": "{{room}}\n{{summary}}\n{{comment}}",
-}
+# Текст по умолчанию живёт в справочнике событий (`apps/notifications/events.py`,
+# `order.overdue`) — на четырёх языках. Шаблон канала, если отель его задал,
+# по-прежнему важнее.
+OVERDUE_EVENT = "order.overdue"
 
 
 # --- Состояние заказа ------------------------------------------------------
@@ -116,10 +117,16 @@ def resolve_channels(step: EscalationStep, order: Order) -> list[NotificationCha
 def render_message(
     channel: NotificationChannel | None, order: Order, step: EscalationStep | None, language: str
 ) -> RenderedMessage:
+    default_language = order.hotel.default_language
     template = (channel.templates or {}).get(language) if channel else None
     if not template:
-        template = (channel.templates or {}).get(order.hotel.default_language) if channel else None
-    template = template or DEFAULT_TEMPLATE
+        template = (channel.templates or {}).get(default_language) if channel else None
+    if not template:
+        spec = notification_events.get(OVERDUE_EVENT)
+        template = {
+            "subject": spec.text("subject", language, default_language),
+            "body": spec.text("body", language, default_language),
+        }
 
     context = _message_context(order, step, language)
     return RenderedMessage(
@@ -149,7 +156,13 @@ def _message_context(order: Order, step: EscalationStep | None, language: str) -
 
     return {
         "number": str(order.number),
-        "room": f"Номер {order.room.number}" if order.room_id else "",
+        "room": (
+            notification_events.word(
+                "room", language, order.hotel.default_language, n=order.room.number
+            )
+            if order.room_id
+            else ""
+        ),
         "point": translate(order.execution_point.title, language) or order.execution_point.code,
         "summary": "\n".join(lines),
         "comment": order.comment or "",

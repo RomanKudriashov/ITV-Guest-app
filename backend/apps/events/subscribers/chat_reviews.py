@@ -42,8 +42,11 @@ def notify_staff_of_guest_message(event: Event) -> None:
         return
     _notify_point(
         event,
-        subject=f"Сообщение из номера {event.payload.get('room', '')}",
-        body=event.payload.get("preview", ""),
+        "chat.guest_message",
+        {
+            "room_number": event.payload.get("room") or None,
+            "preview": event.payload.get("preview", ""),
+        },
     )
 
 
@@ -52,8 +55,13 @@ def notify_manager_of_low_rating(event: Event) -> None:
     """Низкая оценка → уведомление менеджеру отдела (service recovery)."""
     _notify_point(
         event,
-        subject=f"Низкая оценка ({event.payload.get('rating')}/5) · заявка №{event.payload.get('number')}",
-        body=event.payload.get("comment", "") or "Без комментария",
+        "review.low",
+        {
+            "rating": event.payload.get("rating"),
+            "number": event.payload.get("number"),
+            "comment": event.payload.get("comment", ""),
+            "room_number": event.payload.get("room") or None,
+        },
         target_level="manager",
     )
 
@@ -80,12 +88,15 @@ def channels_for_point(point_id, *, target_level: str | None = None) -> list:
     return list(active.filter(user_id__in=list(user_ids)))
 
 
-def _notify_point(event: Event, *, subject: str, body: str, target_level: str | None = None) -> None:
+def _notify_point(
+    event: Event, code: str, values: dict, *, target_level: str | None = None
+) -> None:
     """
     Отправка через существующие каналы уведомлений: каналы отдела треда/заявки.
-    Переиспользуем существующие адаптеры и журнал, ничего нового не заводя.
+    Текст — из справочника событий (`apps/notifications/events.py`).
     """
-    from apps.notifications.channels.base import RenderedMessage
+    from apps.hotels.models import Hotel
+    from apps.notifications import events as notification_events
 
     point_id = event.payload.get("execution_point_id")
     if not point_id:
@@ -97,7 +108,10 @@ def _notify_point(event: Event, *, subject: str, body: str, target_level: str | 
             return
         from apps.notifications.channels.adapters import get_adapter
 
-        message = RenderedMessage(subject=subject, body=body)
+        language = Hotel.objects.get(pk=event.hotel_id).default_language
+        message = notification_events.render(
+            code, values, language=language, default_language=language
+        )
         for channel in channels:
             try:
                 get_adapter(channel.type).send(message, channel.config or {})
