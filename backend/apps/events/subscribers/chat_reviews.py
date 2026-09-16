@@ -58,23 +58,42 @@ def notify_manager_of_low_rating(event: Event) -> None:
     )
 
 
+def channels_for_point(point_id, *, target_level: str | None = None) -> list:
+    """
+    Куда уходит событие отдела.
+
+    Без уровня — во все каналы отдела. С уровнем — ТОЛЬКО в личные каналы
+    сотрудников этого уровня на этой точке. Раньше уровень принимался и
+    нигде не использовался: низкая оценка, адресованная руководителю, уходила
+    во все каналы отдела, то есть в общий чат кухни, где её читает вся смена.
+    """
+    from apps.accounts.models import StaffAssignment
+    from apps.notifications.models import NotificationChannel
+
+    active = NotificationChannel.objects.filter(is_active=True)
+    if not target_level:
+        return list(active.filter(execution_point_id=point_id))
+
+    user_ids = StaffAssignment.objects.filter(
+        execution_point_id=point_id, level=target_level, is_active=True
+    ).values_list("user_id", flat=True)
+    return list(active.filter(user_id__in=list(user_ids)))
+
+
 def _notify_point(event: Event, *, subject: str, body: str, target_level: str | None = None) -> None:
     """
     Отправка через существующие каналы уведомлений: каналы отдела треда/заявки.
     Переиспользуем существующие адаптеры и журнал, ничего нового не заводя.
     """
     from apps.notifications.channels.base import RenderedMessage
-    from apps.notifications.models import NotificationChannel
 
     point_id = event.payload.get("execution_point_id")
     if not point_id:
         return
 
     with tenant_context(event.hotel_id):
-        channels = NotificationChannel.objects.filter(
-            execution_point_id=point_id, is_active=True
-        )
-        if not channels.exists():
+        channels = channels_for_point(point_id, target_level=target_level)
+        if not channels:
             return
         from apps.notifications.channels.adapters import get_adapter
 
