@@ -38,6 +38,8 @@ def list_rooms(
     category: str = "",
     housekeeping: str = "",
     out_of_service: bool | None = None,
+    has_orders: bool = False,
+    has_control: bool = False,
 ):
     """Выдача в ОБОЛОЧКЕ (`items/total/limit`): голый массив без предела
     выглядит полным, сколько бы записей ни осталось за его границей.
@@ -54,8 +56,20 @@ def list_rooms(
             "category": category,
             "housekeeping": housekeeping,
             "out_of_service": out_of_service,
+            "has_orders": has_orders,
+            "has_control": has_control,
         },
     )
+
+
+@router.get("/rooms/grid", summary="Сетка фонда: корпуса, этажи, кубики")
+def rooms_grid(request: HttpRequest):
+    """
+    Весь фонд разом, без листания: сетка тем и полезна, что этажи читаются один
+    под другим. Фильтры не принимаются — на сетке отфильтрованное гасится, а не
+    исчезает, и гасит это клиент.
+    """
+    return svc.rooms_grid()
 
 
 @router.post(

@@ -12,6 +12,8 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import CardContent from '@mui/material/CardContent';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
@@ -39,6 +41,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
+import GridViewIcon from '@mui/icons-material/GridView';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
 import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 
@@ -62,6 +66,7 @@ import {
   updateRoom,
 } from '@/api/hotelAdmin';
 import type {
+  GridRoom,
   Room,
   RoomBulkPatch,
   RoomBulkPreview,
@@ -72,6 +77,8 @@ import type {
   RoomRenameImpact,
 } from '@/api/hotelAdminTypes';
 import { queryKeys } from '@/api/queryKeys';
+import { RoomGrid } from './RoomGrid';
+import { RoomPanel } from './RoomPanel';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/ToastProvider';
@@ -117,6 +124,9 @@ export function RoomsPage() {
     floor: '',
     category: '',
     housekeeping: '',
+    view: 'list',
+    orders: '',
+    control: '',
   });
   const pageNumber = Math.max(1, Number(params.page) || 1);
   const offset = (pageNumber - 1) * ROOMS_PAGE_SIZE;
@@ -128,11 +138,29 @@ export function RoomsPage() {
     floor: params.floor || undefined,
     category: params.category || undefined,
     housekeeping: params.housekeeping || undefined,
+    // Два фильтра показывает только сетка, но в выборку они входят наравне:
+    // выделение «все по выборке» обязано означать ровно то, что на экране.
+    has_orders: params.orders === 'yes' || undefined,
+    has_control: params.control === 'yes' || undefined,
   };
-  const isFiltered = Boolean(params.search || params.floor || params.category || params.housekeeping);
+  const isFiltered = Boolean(
+    params.search || params.floor || params.category || params.housekeeping || params.orders || params.control,
+  );
+  // На сетке те же фильтры — она гасит ими кубики, не запрашивая ничего
+  // нового: выборка на экране и выборка на сервере должны совпадать.
+  const gridFilters = filters;
 
   const roomsQuery = useQuery({
-    queryKey: [...queryKeys.rooms, params.search, pageNumber, params.floor, params.category, params.housekeeping],
+    queryKey: [
+      ...queryKeys.rooms,
+      params.search,
+      pageNumber,
+      params.floor,
+      params.category,
+      params.housekeeping,
+      params.orders,
+      params.control,
+    ],
     queryFn: () => fetchRooms(params.search, { limit: ROOMS_PAGE_SIZE, offset }, filters),
   });
   const categoriesQuery = useQuery({
@@ -158,6 +186,13 @@ export function RoomsPage() {
   const [allMatching, setAllMatching] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  /*
+    ВИД ЖИВЁТ В АДРЕСЕ, как поиск и фильтры: ссылкой на сетку можно поделиться,
+    и F5 не выкидывает обратно в таблицу.
+  */
+  const view = params.view === 'grid' ? 'grid' : 'list';
+  const [panelRoom, setPanelRoom] = useState<GridRoom | null>(null);
+
   const selectedCount = allMatching ? total : picked.size;
   const pageAllPicked = rooms.length > 0 && rooms.every((room) => picked.has(room.id));
 
@@ -172,6 +207,16 @@ export function RoomsPage() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  };
+
+  /** Выделение рамкой на сетке отдаёт пачку разом — одной перерисовкой. */
+  const pickMany = (ids: string[]) => {
+    setAllMatching(false);
+    setPicked((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
       return next;
     });
   };
@@ -333,6 +378,20 @@ export function RoomsPage() {
               >
                 {t('hotel.rooms.bulkAdd')}
               </Button>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={view}
+                onChange={(_, next) => next && patch({ view: next, page: 1 })}
+                aria-label={t('hotel.rooms.viewSwitch')}
+              >
+                <ToggleButton value="list" data-testid="rooms-view-list" aria-label={t('hotel.rooms.viewList')}>
+                  <TableRowsIcon fontSize="small" />
+                </ToggleButton>
+                <ToggleButton value="grid" data-testid="rooms-view-grid" aria-label={t('hotel.rooms.viewGrid')}>
+                  <GridViewIcon fontSize="small" />
+                </ToggleButton>
+              </ToggleButtonGroup>
               <Button onClick={() => setCategoriesOpen(true)} data-testid="room-categories-open">
                 {t('hotel.rooms.categories')}
               </Button>
@@ -412,12 +471,42 @@ export function RoomsPage() {
               sx={{ width: 120 }}
               inputProps={{ 'data-testid': 'rooms-filter-floor' }}
             />
+            {view === 'grid' ? (
+              <>
+                {/* Эти два фильтра про то, что видно на кубике, и на таблице
+                    их нет: там нет ни точки заказов, ни значка устройства. */}
+                <Button
+                  size="small"
+                  variant={params.orders === 'yes' ? 'contained' : 'outlined'}
+                  onClick={() => patch({ orders: params.orders === 'yes' ? '' : 'yes' })}
+                  data-testid="rooms-filter-orders"
+                >
+                  {t('hotel.rooms.filterHasOrders')}
+                </Button>
+                <Button
+                  size="small"
+                  variant={params.control === 'yes' ? 'contained' : 'outlined'}
+                  onClick={() => patch({ control: params.control === 'yes' ? '' : 'yes' })}
+                  data-testid="rooms-filter-control"
+                >
+                  {t('hotel.rooms.filterHasControl')}
+                </Button>
+              </>
+            ) : null}
             {isFiltered ? (
               <Button
                 size="small"
                 onClick={() => {
                   resetSelection();
-                  patch({ search: '', floor: '', category: '', housekeeping: '', page: 1 });
+                  patch({
+                    search: '',
+                    floor: '',
+                    category: '',
+                    housekeeping: '',
+                    orders: '',
+                    control: '',
+                    page: 1,
+                  });
                 }}
                 data-testid="rooms-filters-reset"
               >
@@ -477,7 +566,15 @@ export function RoomsPage() {
 
           <Divider sx={{ mb: 1 }} />
 
-          {roomsQuery.isLoading ? (
+          {view === 'grid' ? (
+            <RoomGrid
+              search={params.search}
+              filters={gridFilters}
+              categories={categories}
+              selection={{ picked, allMatching, toggle: togglePicked, pickMany }}
+              onOpenRoom={setPanelRoom}
+            />
+          ) : roomsQuery.isLoading ? (
             <Stack spacing={1}>
               {[0, 1, 2, 3].map((key) => (
                 <Skeleton key={key} variant="rounded" height={44} />
@@ -726,6 +823,16 @@ export function RoomsPage() {
       ) : null}
 
       {qrRoom ? <QrDialog room={qrRoom} onClose={() => setQrRoom(null)} /> : null}
+
+      {panelRoom ? (
+        <RoomPanel
+          room={panelRoom}
+          categories={categories}
+          onClose={() => setPanelRoom(null)}
+          onChanged={() => void invalidate()}
+          onShowQr={() => setQrRoom(panelRoom)}
+        />
+      ) : null}
 
       {bulkEditOpen ? (
         <BulkEditDialog

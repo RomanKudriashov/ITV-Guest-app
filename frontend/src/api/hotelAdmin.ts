@@ -17,6 +17,7 @@ import type {
   RoomPayload,
   RoomRenameImpact,
   RoomSelection,
+  RoomsGrid,
   StaffAssignmentsPayload,
   StaffCreatePayload,
   StaffMember,
@@ -52,6 +53,17 @@ export function fetchRooms(
   });
 }
 
+/**
+ * Сетка фонда: весь фонд разом, без листания и БЕЗ фильтров.
+ *
+ * Фильтры сюда не уходят намеренно: на сетке отфильтрованное гасится, а не
+ * исчезает — убрав кубики, мы порвём ряды, и соседние номера перестанут стоять
+ * рядом. Гасит клиент.
+ */
+export function fetchRoomsGrid(): Promise<RoomsGrid> {
+  return api.get<RoomsGrid>('/cms/rooms/grid');
+}
+
 /** Фильтры → строка запроса. Пустые не уходят: `?floor=` это не фильтр. */
 function roomFilterQuery(filters: RoomFilters): Record<string, string> {
   const query: Record<string, string> = {};
@@ -62,6 +74,8 @@ function roomFilterQuery(filters: RoomFilters): Record<string, string> {
   if (filters.out_of_service !== undefined) {
     query.out_of_service = String(filters.out_of_service);
   }
+  if (filters.has_orders) query.has_orders = 'true';
+  if (filters.has_control) query.has_control = 'true';
   return query;
 }
 

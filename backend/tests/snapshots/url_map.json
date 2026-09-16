@@ -330,6 +330,9 @@
   "/api/v1/cms/rooms/bulk/preview": [
     "POST"
   ],
+  "/api/v1/cms/rooms/grid": [
+    "GET"
+  ],
   "/api/v1/cms/rooms/qr-sheet": [
     "GET"
   ],

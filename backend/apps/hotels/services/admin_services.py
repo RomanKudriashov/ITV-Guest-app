@@ -99,6 +99,11 @@ ROOM_FILTERS = (
     "category",
     "housekeeping",
     "out_of_service",
+    # Эти два показывает только сетка — на кубике видно и заказы, и
+    # оборудование, — но считает их СЕРВЕР, наравне с остальными. Иначе
+    # «выбрать все N в выборке» посчитало бы одно множество, а погасило другое.
+    "has_orders",
+    "has_control",
 )
 
 
@@ -123,6 +128,29 @@ def rooms_queryset(*, search: str = "", filters: dict | None = None):
         rooms = rooms.filter(housekeeping=filters["housekeeping"])
     if filters.get("out_of_service") is not None:
         rooms = rooms.filter(out_of_service=filters["out_of_service"])
+
+    if filters.get("has_orders"):
+        from django.db.models import Exists, OuterRef
+
+        from apps.orders.models import Order
+
+        # Та же выборка, что на кубике и на доске: агрегат фан-аута
+        # исполнением не является, иначе «есть заказы» зажглось бы у комнаты,
+        # где на самом деле работают дочерние точки.
+        active = Order.objects.filter(
+            room_id=OuterRef("pk"), status__is_terminal=False, children__isnull=True
+        )
+        rooms = rooms.filter(Exists(active))
+
+    if filters.get("has_control"):
+        try:
+            from apps.grms.models import RoomTypeRoom
+        except ImportError:  # pragma: no cover — модуль GRMS не собран
+            rooms = rooms.none()
+        else:
+            rooms = rooms.filter(
+                pk__in=RoomTypeRoom.objects.values_list("room_id", flat=True)
+            )
 
     return apply_search(rooms.order_by("sort_key", "number"), search, ("number", "floor"))
 
@@ -690,6 +718,139 @@ def bulk_create_rooms(data: dict) -> dict:
         "created_count": len(created),
         "skipped_count": len(skipped),
     }
+
+
+# --- Сетка номерного фонда --------------------------------------------------
+
+
+def rooms_grid() -> dict:
+    """
+    ФОНД ЦЕЛИКОМ, разложенный по корпусам и этажам.
+
+    Без листания намеренно: сетка тем и полезна, что этажи читаются один под
+    другим, а страница по пятьдесят кубиков этого не даёт. Предел всё равно
+    есть — фонд ограничен тарифом, и молча показать часть мы не имеем права,
+    поэтому при упоре в предел выдача честно говорит `truncated`.
+
+    ФИЛЬТРЫ СЮДА НЕ ПЕРЕДАЮТСЯ. На сетке отфильтрованное ГАСИТСЯ, а не
+    исчезает: убрав кубики, мы порвём ряды, и соседние номера перестанут
+    стоять рядом. Гасит клиент, а сервер отдаёт весь фонд и признаки, по
+    которым гасить.
+    """
+    require_hotel_admin()
+
+    hotel = Hotel.objects.get(pk=require_hotel_id())
+    rooms = list(Room.objects.select_related("category").order_by("sort_key", "number")[:GRID_LIMIT])
+    truncated = Room.objects.count() > len(rooms)
+
+    control_types = _control_types()
+    orders = _active_orders_by_room([room.pk for room in rooms])
+    device_state = _device_state()
+
+    # Корпус → этаж → кубики. Ключи сортировки уже посчитаны в модели, поэтому
+    # «10» не встаёт перед «9» ни у номера, ни у этажа.
+    buildings: dict[str, dict] = {}
+    for room in rooms:
+        zone = room.zone or ""
+        building = buildings.setdefault(zone, {"zone": zone, "floors": {}})
+        floor = building["floors"].setdefault(
+            room.floor or "", {"floor": room.floor or "", "key": room.floor_key, "rooms": []}
+        )
+        stats = orders.get(room.pk, {"active": 0, "overdue": 0})
+        floor["rooms"].append(
+            {
+                **serialize_room(room, hotel=hotel, control_types=control_types),
+                "active_orders": stats["active"],
+                "overdue_orders": stats["overdue"],
+                # Состояние оборудования: `null` — номер не управляется вовсе,
+                # и это не поломка. Живость канала берётся у он-прем узла, а не
+                # опросом каждой комнаты: сто опросов на открытие экрана
+                # положили бы и коннектор, и экран.
+                "device": device_state if control_types.get(room.pk) else None,
+            }
+        )
+
+    ordered = []
+    for building in sorted(buildings.values(), key=lambda item: item["zone"]):
+        floors = sorted(building["floors"].values(), key=lambda item: (item["key"], item["floor"]))
+        ordered.append({"zone": building["zone"], "floors": floors})
+
+    return {
+        "buildings": ordered,
+        "total": len(rooms),
+        "truncated": truncated,
+        # Занятости НЕТ и не будет до PMS — выдача говорит это прямо, чтобы
+        # экран не выдумывал её сам и не красил кубики наугад.
+        "occupancy": "unknown",
+    }
+
+
+# Предел сетки. Фонд ограничен тарифом, но упереться в предел молча нельзя.
+GRID_LIMIT = 2000
+
+
+def _active_orders_by_room(room_ids: list) -> dict:
+    """
+    Активные заказы и просрочка по комнатам — ДВУМЯ запросами на весь фонд.
+
+    Выборка та же, что у доски: агрегат фан-аута исполнением не является, и
+    считать его вторым заказом значило бы удваивать каждый разъехавшийся.
+    Порог просрочки — общий `effective_sla_minutes`, чтобы число на кубике
+    совпадало с числом на доске.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.orders.models import Order
+    from apps.orders.services.tracker_types import effective_sla_minutes
+
+    if not room_ids:
+        return {}
+
+    active = (
+        Order.objects.filter(room_id__in=room_ids, status__is_terminal=False)
+        .exclude(children__isnull=False)
+        # Без `.only()`: отложенные поля вместе с `select_related` дают
+        # дозагрузку на каждое обращение к точке — ровно там, где мы просили
+        # один запрос вместо сотни.
+        .select_related("execution_point")
+    )
+
+    now = timezone.now()
+    thresholds: dict = {}
+    result: dict = {}
+    for order in active:
+        stats = result.setdefault(order.room_id, {"active": 0, "overdue": 0})
+        stats["active"] += 1
+        point = order.execution_point
+        if point is None:
+            continue
+        if point.pk not in thresholds:
+            thresholds[point.pk] = timedelta(minutes=effective_sla_minutes(point))
+        if now - order.created_at >= thresholds[point.pk]:
+            stats["overdue"] += 1
+    return result
+
+
+def _device_state() -> str:
+    """
+    Живость канала оборудования — ОДНА на отель, по он-прем узлу.
+
+    Спрашивать каждую комнату значило бы сто чтений по живому сокету на
+    открытие экрана: коннектор отвечает с бюджетом 2,5 с, и экран открывался бы
+    минуту. Узел отмечается раз в минуту, три пропуска — уже не икота.
+    """
+    from apps.hotels.models import OnPremNode
+
+    node = (
+        OnPremNode.objects.filter(purpose__in=["grms", "both"], is_revoked=False)
+        .order_by("-last_seen_at")
+        .first()
+    )
+    if node is None:
+        return "no_node"
+    return "online" if node.is_online else "offline"
 
 
 # --- Массовая правка -------------------------------------------------------

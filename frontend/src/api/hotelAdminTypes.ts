@@ -66,6 +66,37 @@ export interface RoomFilters {
   category?: string;
   housekeeping?: string;
   out_of_service?: boolean;
+  /*
+    Эти два фильтра показывает только сетка (на кубике видно и заказы, и
+    оборудование), но считает их СЕРВЕР — вместе с остальными. Иначе «выбрать
+    все N в выборке» посчитало бы одно множество, а погасило другое: полоса
+    выделения называла бы одно число, а правка меняла другое.
+  */
+  has_orders?: boolean;
+  has_control?: boolean;
+}
+
+/** Кубик сетки: номер плюс то, что на нём видно без открытия. */
+export interface GridRoom extends Room {
+  active_orders: number;
+  overdue_orders: number;
+  /** `null` — номер не управляется оборудованием, и это не поломка. */
+  device: 'online' | 'offline' | 'no_node' | null;
+}
+
+export interface GridFloor {
+  floor: string;
+  key: string;
+  rooms: GridRoom[];
+}
+
+export interface RoomsGrid {
+  buildings: { zone: string; floors: GridFloor[] }[];
+  total: number;
+  /** Упёрлись в предел выдачи — показана часть фонда, и об этом надо сказать. */
+  truncated: boolean;
+  /** Занятость: `unknown` до появления PMS. Сервер говорит это прямо. */
+  occupancy: 'unknown';
 }
 
 export interface RoomBulkPreview {
