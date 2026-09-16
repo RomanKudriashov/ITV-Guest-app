@@ -29,7 +29,18 @@ const LANGS = ['ru', 'en', 'ar', 'zh'];
 // с точкой в строке — событие журнала.
 // `brand` и `room` добавлены после того, как девять их кодов прожили без
 // перевода: домена не было в списке, и сторож их просто не видел.
-const DOMAINS = ['platform', 'grms', 'order', 'guest_session', 'impersonation', 'brand', 'room'];
+// `notification` — с настройками событий уведомлений: кто выключил отмены,
+// должно читаться словами.
+const DOMAINS = [
+  'platform',
+  'grms',
+  'order',
+  'guest_session',
+  'impersonation',
+  'brand',
+  'room',
+  'notification',
+];
 const CODE = new RegExp(`"((?:${DOMAINS.join('|')})\\.[a-z_.]+)"`, 'g');
 
 /**
@@ -51,6 +62,12 @@ const NOT_EVENTS = new Set([
   'brand.background.color',
   'brand.background.dim',
   'brand.background.abstraction',
+  // Коды справочника событий уведомлений (`apps/notifications/events.py`): это
+  // виды сообщений, а не действия журнала. Совпадающие с кодами журнала
+  // (`order.cancelled`) переведены там и так.
+  'order.overdue',
+  'notification.undelivered',
+  'notification.escalation_step', // вид отложенного задания
 ]);
 
 function* walk(dir) {
