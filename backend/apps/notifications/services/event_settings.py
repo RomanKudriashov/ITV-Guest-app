@@ -72,12 +72,19 @@ def is_enabled(code: str) -> bool:
 
 
 def list_settings(language: str) -> dict:
+    """
+    Весь справочник одной страницей — событий единицы, и срез по ним не нужен.
+    Конверт тот же, что у остальных списков CMS: сверка контрактов проверяет
+    форму ответа по семейству, и «список в `items`» — это страница.
+    """
+    from apps.core.listing import envelope
+
     stored = {setting.code: setting for setting in EventSetting.objects.all()}
     items = []
     for entry in registry.catalog(language):
         current = effective(entry["code"], stored.get(entry["code"]))
         items.append({**entry, "setting": serialize(current)})
-    return {"items": items}
+    return envelope(items, len(items), len(items), offset=0)
 
 
 def serialize(current: Effective) -> dict:

@@ -337,6 +337,10 @@ order.accepted / order.status_changed(терминальный) / order.cancelle
 | PUT | `/api/v1/cms/notification-events/settings/{code}` (не переданное поле не меняется) |
 | POST | `/api/v1/cms/notification-events/settings/{code}/preview` (+ `language`) |
 
+`GET` отдаёт весь справочник одним конвертом списка `{items, total, limit,
+truncated, offset}`, как остальные списки CMS; так же отдаётся и
+`/notification-events/catalog`.
+
 Меняет и смотрит превью **администратор отеля** (`403` управляющему).
 Изменение пишется в журнал действий: `notification.event_settings_changed`.
 

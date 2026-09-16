@@ -92,7 +92,7 @@ export function fetchNotificationLog(
 
 export function fetchEventSettings(): Promise<EventSettingItem[]> {
   return api
-    .get<{ items: EventSettingItem[] }>('/cms/notification-events/settings')
+    .get<ListPage<EventSettingItem>>('/cms/notification-events/settings')
     .then((page) => page.items);
 }
 

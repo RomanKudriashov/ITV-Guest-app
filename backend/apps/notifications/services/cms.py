@@ -538,4 +538,7 @@ def event_catalog(language: str) -> dict:
     """Справочник событий — для экрана настроек и для фильтра журнала."""
     from apps.notifications import events as registry
 
-    return {"items": registry.catalog(language)}
+    from apps.core.listing import envelope
+
+    items = registry.catalog(language)
+    return envelope(items, len(items), len(items), offset=0)
