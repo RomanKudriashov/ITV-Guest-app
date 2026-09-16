@@ -1329,7 +1329,10 @@
       "checkoutDone_one": "Номер {{number}}: отозвана {{count}} сессия",
       "checkoutDone_few": "Номер {{number}}: отозвано {{count}} сессии",
       "checkoutDone_many": "Номер {{number}}: отозвано {{count}} сессий",
-      "checkoutNothing": "Номер {{number}}: живых сессий не было"
+      "checkoutNothing": "Номер {{number}}: живых сессий не было",
+      "pagerRange": "{{from}}–{{to}} из {{total}}",
+      "pagerPrev": "Назад",
+      "pagerNext": "Вперёд"
     },
     "locations": {
       "title": "Локации",

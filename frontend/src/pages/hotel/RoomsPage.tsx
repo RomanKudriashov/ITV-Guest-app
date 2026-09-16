@@ -40,6 +40,7 @@ import QrCode2Icon from '@mui/icons-material/QrCode2';
 
 import { ApiError } from '@/api/client';
 import {
+  ROOMS_PAGE_SIZE,
   bulkCreateRooms,
   checkOutRoom,
   createRoom,
@@ -82,12 +83,28 @@ export function RoomsPage() {
     послать, F5 её не сбрасывает, а счётчик не врёт — отсев уже скачанного
     списка показывал бы «найдено 2» независимо от того, сколько их в базе.
   */
-  const { params, patch } = useListQuery({ search: '' });
-  const roomsQuery = useQuery({
-    queryKey: [...queryKeys.rooms, params.search],
-    queryFn: () => fetchRooms(params.search),
+  /*
+    СТРАНИЦА — ТОЖЕ В АДРЕСЕ, рядом с поиском. Экран брал первую сотню (предел
+    сервера по умолчанию) и молчал о том, что она первая: на фонде в триста
+    номеров двести не существовали для администратора, а «выделить все» в
+    массовых действиях выделило бы ровно видимую часть.
+  */
+  const { params, patch } = useListQuery({
+    search: '',
+    page: 1,
   });
-  const rooms = roomsQuery.data ?? [];
+  const pageNumber = Math.max(1, Number(params.page) || 1);
+  const offset = (pageNumber - 1) * ROOMS_PAGE_SIZE;
+
+  const roomsQuery = useQuery({
+    queryKey: [...queryKeys.rooms, params.search, pageNumber],
+    queryFn: () => fetchRooms(params.search, { limit: ROOMS_PAGE_SIZE, offset }),
+  });
+  const rooms = roomsQuery.data?.items ?? [];
+  const total = roomsQuery.data?.total ?? 0;
+  const shownFrom = total === 0 ? 0 : offset + 1;
+  const shownTo = offset + rooms.length;
+  const hasMore = shownTo < total;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.rooms });
   const showError = (error: unknown) =>
@@ -210,7 +227,10 @@ export function RoomsPage() {
               <TextField
                 size="small"
                 value={params.search}
-                onChange={(event) => patch({ search: event.target.value })}
+                /* Новый поиск — всегда с первой страницы: иначе набранное
+                   слово находит три номера, а экран стоит на седьмой
+                   странице и показывает пусто. */
+                onChange={(event) => patch({ search: event.target.value, page: 1 })}
                 placeholder={t('list.searchPlaceholder')}
                 inputProps={{ 'data-testid': 'rooms-search' }}
                 sx={{ minWidth: 200 }}
@@ -361,6 +381,43 @@ export function RoomsPage() {
                   ))}
                 </TableBody>
               </Table>
+
+              {/*
+                Счётчик — обязательная часть листания, а не украшение: он
+                единственный отвечает на вопрос «это весь фонд или кусок?».
+              */}
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ mt: 1.5 }}
+                data-testid="rooms-pager"
+              >
+                <Typography variant="body2" color="text.secondary" data-testid="rooms-range">
+                  {t('hotel.rooms.pagerRange', {
+                    from: shownFrom,
+                    to: shownTo,
+                    total,
+                  })}
+                </Typography>
+                <Box sx={{ flexGrow: 1 }} />
+                <Button
+                  size="small"
+                  disabled={pageNumber <= 1}
+                  onClick={() => patch({ page: pageNumber - 1 })}
+                  data-testid="rooms-prev"
+                >
+                  {t('hotel.rooms.pagerPrev')}
+                </Button>
+                <Button
+                  size="small"
+                  disabled={!hasMore}
+                  onClick={() => patch({ page: pageNumber + 1 })}
+                  data-testid="rooms-next"
+                >
+                  {t('hotel.rooms.pagerNext')}
+                </Button>
+              </Stack>
             </Box>
           )}
         </CardContent>

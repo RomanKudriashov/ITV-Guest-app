@@ -1309,7 +1309,10 @@
       "checkoutBody": "已登入 {{number}} 房间的所有设备都将失去访问权限：点单、聊天与客房控制。仍在住的客人只需扫一次二维码即可重新进入。",
       "checkoutConfirm": "标记退房",
       "checkoutDone_other": "{{number}} 房间：已注销 {{count}} 个会话",
-      "checkoutNothing": "{{number}} 房间：没有活动会话"
+      "checkoutNothing": "{{number}} 房间：没有活动会话",
+      "pagerRange": "{{from}}–{{to}} / 共 {{total}}",
+      "pagerPrev": "上一页",
+      "pagerNext": "下一页"
     },
     "locations": {
       "title": "位置",

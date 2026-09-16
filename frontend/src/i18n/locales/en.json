@@ -1318,7 +1318,10 @@
       "checkoutConfirm": "Mark checkout",
       "checkoutDone_one": "Room {{number}}: {{count}} session revoked",
       "checkoutDone_other": "Room {{number}}: {{count}} sessions revoked",
-      "checkoutNothing": "Room {{number}}: there were no live sessions"
+      "checkoutNothing": "Room {{number}}: there were no live sessions",
+      "pagerRange": "{{from}}–{{to}} of {{total}}",
+      "pagerPrev": "Back",
+      "pagerNext": "Next"
     },
     "locations": {
       "title": "Locations",

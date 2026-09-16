@@ -18,12 +18,29 @@ import type {
 
 /* ── 1. Rooms ──────────────────────────────────────────────────────────── */
 
-export function fetchRooms(search = ''): Promise<Room[]> {
-  // Поиск уходит НА СЕРВЕР: отсев уже скачанного списка врал бы счётчиком
-  // ровно так же, как это делал журнал платформы.
-  return api
-    .get<ListPage<Room>>('/cms/rooms', { query: search ? { search } : undefined })
-    .then((page) => page.items);
+/** Сколько номеров на странице. Столько же уходит в запрос. */
+export const ROOMS_PAGE_SIZE = 50;
+
+export function fetchRooms(
+  search = '',
+  page: { limit: number; offset: number } = { limit: ROOMS_PAGE_SIZE, offset: 0 },
+): Promise<ListPage<Room>> {
+  /*
+    Поиск уходит НА СЕРВЕР: отсев уже скачанного списка врал бы счётчиком
+    ровно так же, как это делал журнал платформы.
+
+    ОБОЛОЧКА ЦЕЛИКОМ, А НЕ ТОЛЬКО `items`. Раньше отсюда возвращался массив, а
+    `total` выбрасывался: сервер отдавал сотню (предел по умолчанию), экран
+    показывал сотню и молчал о том, что это часть. На фонде в триста номеров
+    двести из них не существовали для администратора.
+  */
+  return api.get<ListPage<Room>>('/cms/rooms', {
+    query: {
+      ...(search ? { search } : {}),
+      limit: String(page.limit),
+      offset: String(page.offset),
+    },
+  });
 }
 
 export function createRoom(payload: RoomPayload): Promise<Room> {

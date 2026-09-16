@@ -1350,7 +1350,10 @@
       "checkoutDone_few": "الغرفة {{number}}: أُلغيت {{count}} جلسات",
       "checkoutDone_many": "الغرفة {{number}}: أُلغيت {{count}} جلسة",
       "checkoutDone_other": "الغرفة {{number}}: أُلغيت {{count}} جلسة",
-      "checkoutNothing": "الغرفة {{number}}: لم تكن هناك جلسات نشطة"
+      "checkoutNothing": "الغرفة {{number}}: لم تكن هناك جلسات نشطة",
+      "pagerRange": "{{from}}–{{to}} من {{total}}",
+      "pagerPrev": "السابق",
+      "pagerNext": "التالي"
     },
     "locations": {
       "title": "المواقع",

@@ -25,6 +25,7 @@ from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
 from apps.hotels.models import ExecutionPoint, Hotel, Location, Room, Schedule, Service
+from apps.hotels.models.room import natural_number_key
 from apps.hotels.venue_defaults import service_type_for_kind
 
 MAX_BULK_RANGE = 500
@@ -71,7 +72,12 @@ def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -
     require_hotel_admin()
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
-    rooms = apply_search(Room.objects.order_by("number"), search, ("number", "floor"))
+    # Порядок — по ключу натуральной сортировки (`Room.sort_key`), а не по
+    # строке номера: иначе `12` встаёт после `101`. Ключ считается из номера
+    # в одном месте, `hotels/models/room.py`.
+    rooms = apply_search(
+        Room.objects.order_by("sort_key", "number"), search, ("number", "floor")
+    )
     control_types = _control_types()
     return list_page(
         rooms,
@@ -193,7 +199,16 @@ def bulk_create_rooms(data: dict) -> dict:
             skipped.append(number)
             continue
         to_create.append(
-            Room(hotel_id=require_hotel_id(), number=number, floor=floor, zone=zone)
+            Room(
+                hotel_id=require_hotel_id(),
+                number=number,
+                floor=floor,
+                zone=zone,
+                # `bulk_create` НЕ зовёт `save()`, поэтому ключ сортировки
+                # приходится ставить руками. Забыть это — значит получить
+                # пачку номеров без ключа, которые уедут в начало списка.
+                sort_key=natural_number_key(number),
+            )
         )
         created.append(number)
 
@@ -205,7 +220,7 @@ def room_qr_targets() -> tuple[Hotel, list[Room]]:
     # Печатный лист — это весь фонд номеров отеля разом; он админский тем более.
     require_hotel_admin()
     hotel = Hotel.objects.get(pk=require_hotel_id())
-    return hotel, list(Room.objects.filter(is_active=True).order_by("number"))
+    return hotel, list(Room.objects.filter(is_active=True).order_by("sort_key", "number"))
 
 
 # --- Локации ---------------------------------------------------------------
