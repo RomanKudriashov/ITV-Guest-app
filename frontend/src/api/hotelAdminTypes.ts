@@ -37,6 +37,25 @@ export interface Room {
   restored_orders?: number;
   restored_sessions?: number;
   revoked_sessions?: number;
+  /** Тарифная категория из справочника отеля. `null` — не назначена. */
+  category_id: string | null;
+  category: { id: string; code: string; title: string } | null;
+  /** Состояние уборки. Его ставит персонал; `unknown` — ещё не ставил. */
+  housekeeping: RoomHousekeeping;
+  /** «Вне продажи» — ОТДЕЛЬНО от `is_active`, который про вход гостя. */
+  out_of_service: boolean;
+}
+
+export type RoomHousekeeping = 'unknown' | 'clean' | 'dirty' | 'in_progress';
+
+export interface RoomCategory {
+  id: string;
+  code: string;
+  title: Record<string, string>;
+  title_i18n: string;
+  sort_order: number;
+  is_active: boolean;
+  rooms_count: number;
 }
 
 export interface RoomPayload {
@@ -44,6 +63,9 @@ export interface RoomPayload {
   floor?: string;
   zone?: string;
   is_active?: boolean;
+  category_id?: string | null;
+  housekeeping?: RoomHousekeeping;
+  out_of_service?: boolean;
   /**
    * Смена номера — только с подтверждением: наклейка QR в номере кодирует
    * номер, а имя устройства iRidi собирается из него. Без флага сервер

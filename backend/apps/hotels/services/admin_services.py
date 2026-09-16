@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from typing import Any, Iterable
 
 from django.db import transaction
@@ -26,7 +28,15 @@ from apps.core.models import AuditLog
 from apps.media.models import MediaAsset
 from apps.media.services import serialize_asset
 
-from apps.hotels.models import ExecutionPoint, Hotel, Location, Room, Schedule, Service
+from apps.hotels.models import (
+    ExecutionPoint,
+    Hotel,
+    Location,
+    Room,
+    RoomCategory,
+    Schedule,
+    Service,
+)
 from apps.hotels.models.room import natural_number_key
 from apps.hotels.venue_defaults import service_type_for_kind
 
@@ -48,6 +58,20 @@ def serialize_room(
         "source": room.source,
         "is_active": room.is_active,
         "guest_url": hotel.room_deeplink(room.number),
+        # Категория — тарифная, из справочника отеля. `None` — не назначена, и
+        # это штатное состояние, а не пробел в данных.
+        "category_id": str(room.category_id) if room.category_id else None,
+        "category": (
+            {
+                "id": str(room.category_id),
+                "code": room.category.code,
+                "title": room.category.title_i18n,
+            }
+            if room.category_id
+            else None
+        ),
+        "housekeeping": room.housekeeping,
+        "out_of_service": room.out_of_service,
         # ТИП УПРАВЛЕНИЯ — тот единственный вопрос про GRMS, который админ
         # отеля задаёт, глядя на список номеров: «а этот номер вообще
         # управляется?». `None` — не управляется, и это штатный ответ.
@@ -158,12 +182,15 @@ def create_room(data: dict) -> Room:
     floor = str(data.get("floor") or "").strip()
     zone = str(data.get("zone") or "").strip()
     is_active = data.get("is_active", True)
+    extra = _room_fields(data)
 
     buried = Room.all_objects.filter(number=number, deleted_at__isnull=False).first()
     if buried is not None:
         buried.floor = floor
         buried.zone = zone
         buried.is_active = is_active
+        for field, value in extra.items():
+            setattr(buried, field, value)
         buried.deleted_at = None
         buried.save()
 
@@ -198,7 +225,42 @@ def create_room(data: dict) -> Room:
         floor=floor,
         zone=zone,
         is_active=is_active,
+        **extra,
     )
+
+
+def _room_fields(data: dict) -> dict:
+    """
+    Поля фонда из запроса — в одном месте: их правят и поштучно, и пачкой, и
+    при возврате удалённого номера. Разъехавшиеся проверки здесь означали бы,
+    что массовая правка принимает то, что одиночная отвергает.
+    """
+    fields: dict = {}
+
+    if "category_id" in data:
+        value = data.get("category_id")
+        fields["category"] = _category_or_none(value)
+    if "housekeeping" in data and data.get("housekeeping") is not None:
+        value = str(data["housekeeping"])
+        if value not in Room.Housekeeping.values:
+            raise ValidationError(
+                f"Неизвестное состояние уборки «{value}»", field="housekeeping"
+            )
+        fields["housekeeping"] = value
+    if "out_of_service" in data and data.get("out_of_service") is not None:
+        fields["out_of_service"] = bool(data["out_of_service"])
+
+    return fields
+
+
+def _category_or_none(value):
+    """Категория по идентификатору — или `None`, если её снимают."""
+    if not value:
+        return None
+    category = RoomCategory.objects.filter(pk=value).first()
+    if category is None:
+        raise ValidationError("Категория не найдена", field="category_id")
+    return category
 
 
 def _drop_stale_access(room: Room) -> int:
@@ -376,6 +438,8 @@ def update_room(room_id, data: dict) -> Room:
         room.zone = str(data["zone"] or "").strip()
     if "is_active" in data:
         room.is_active = data["is_active"]
+    for field, value in _room_fields(data).items():
+        setattr(room, field, value)
     room.save()
     return room
 
@@ -436,6 +500,112 @@ def bulk_create_rooms(data: dict) -> dict:
 
     Room.objects.bulk_create(to_create)
     return {"created": created, "skipped": skipped}
+
+
+# --- Категории номеров -----------------------------------------------------
+
+
+def serialize_room_category(category: RoomCategory, *, counts: dict | None = None) -> dict:
+    return {
+        "id": str(category.pk),
+        "code": category.code,
+        "title": category.title,
+        "title_i18n": category.title_i18n,
+        "sort_order": category.sort_order,
+        "is_active": category.is_active,
+        # Сколько номеров на категории — вопрос, который задают перед тем, как
+        # её трогать. Одним запросом на весь список, а не по строке.
+        "rooms_count": (counts or {}).get(category.pk, 0),
+    }
+
+
+def list_room_categories() -> dict:
+    require_hotel_admin()
+    from django.db.models import Count
+
+    counts = dict(
+        Room.objects.exclude(category__isnull=True)
+        .values_list("category_id")
+        .annotate(total=Count("id"))
+    )
+    categories = list(RoomCategory.objects.all())
+    return {
+        "items": [serialize_room_category(c, counts=counts) for c in categories],
+        "total": len(categories),
+    }
+
+
+@transaction.atomic
+def create_room_category(data: dict) -> RoomCategory:
+    require_hotel_admin()
+    title = data.get("title") or {}
+    if not any((value or "").strip() for value in title.values()):
+        raise ValidationError("Укажите название", field="title")
+
+    code = str(data.get("code") or "").strip() or _category_code_from(title)
+    if RoomCategory.objects.filter(code=code).exists():
+        raise ConflictError(f"Категория «{code}» уже существует", code="category_exists")
+
+    return RoomCategory.objects.create(
+        code=code,
+        title=title,
+        sort_order=int(data.get("sort_order") or 0),
+        is_active=data.get("is_active", True),
+    )
+
+
+def _category_code_from(title: dict) -> str:
+    """Код из названия — чтобы оператор не придумывал его сам."""
+    from django.utils.text import slugify
+
+    source = title.get("ru") or title.get("en") or next(iter(title.values()), "")
+    return slugify(source, allow_unicode=False) or f"cat-{uuid.uuid4().hex[:6]}"
+
+
+def get_room_category(category_id) -> RoomCategory:
+    require_hotel_admin()
+    category = RoomCategory.objects.filter(pk=category_id).first()
+    if category is None:
+        raise NotFoundError("Категория не найдена")
+    return category
+
+
+@transaction.atomic
+def update_room_category(category_id, data: dict) -> RoomCategory:
+    category = get_room_category(category_id)
+    if "title" in data and data["title"] is not None:
+        category.title = data["title"]
+    if "code" in data and data["code"]:
+        code = str(data["code"]).strip()
+        if RoomCategory.objects.filter(code=code).exclude(pk=category.pk).exists():
+            raise ConflictError(f"Категория «{code}» уже существует", code="category_exists")
+        category.code = code
+    if "sort_order" in data and data["sort_order"] is not None:
+        category.sort_order = int(data["sort_order"])
+    if "is_active" in data and data["is_active"] is not None:
+        category.is_active = bool(data["is_active"])
+    category.save()
+    return category
+
+
+def delete_room_category(category_id) -> None:
+    """
+    Занятую категорию не удаляем, а называем число.
+
+    Мягкое удаление оставило бы номера со ссылкой на несуществующую строку, и
+    на экране они показали бы пустую ячейку вместо «Делюкс» — то есть данные
+    выглядели бы потерянными. Пусть сначала переназначат: для этого рядом есть
+    массовая правка.
+    """
+    category = get_room_category(category_id)
+    busy = Room.objects.filter(category=category).count()
+    if busy:
+        raise ConflictError(
+            f"На категории {busy} номеров — сначала переназначьте их",
+            code="category_in_use",
+            rooms_count=busy,
+        )
+    category.delete()
 
 
 def room_qr_targets() -> tuple[Hotel, list[Room]]:

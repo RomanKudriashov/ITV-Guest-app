@@ -47,12 +47,18 @@ class RoomIn(Schema):
     floor: str = ""
     zone: str = ""
     is_active: bool = True
+    category_id: str | None = None
+    housekeeping: str | None = None
+    out_of_service: bool | None = None
 
 class RoomPatch(Schema):
     number: str | None = None
     floor: str | None = None
     zone: str | None = None
     is_active: bool | None = None
+    category_id: str | None = None
+    housekeeping: str | None = None
+    out_of_service: bool | None = None
     # ПЕРЕИМЕНОВАНИЕ ТОЛЬКО С ПОДТВЕРЖДЕНИЕМ: наклейка QR в номере кодирует
     # номер, а имя устройства iRidi собирается из него шаблоном. Оба
     # последствия невидимы из интерфейса, поэтому без явного флага смена
@@ -84,6 +90,11 @@ class RoomOut(Schema):
     source: str
     is_active: bool
     guest_url: str
+    # Фонд: категория тарифная (из справочника отеля), уборка ставится
+    # персоналом, «вне продажи» — отдельно от `is_active`, который про вход.
+    category_id: str | None = None
+    housekeeping: str = "unknown"
+    out_of_service: bool = False
     # Правда: номер ВОЗВРАЩЁН из удалённых, а не создан с нуля — вместе с ним
     # вернулась его история заказов и сессий. Числа нужны сообщению: «создан» и
     # «вернулся с историей на 47 заказов» — разные новости для того, кто нажал
@@ -101,6 +112,29 @@ class BulkRoomsIn(Schema):
     zone: str = ""
     prefix: str = ""
     suffix: str = ""
+
+class RoomCategoryIn(Schema):
+    title: dict[str, str]
+    code: str | None = None
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class RoomCategoryPatch(Schema):
+    title: dict[str, str] | None = None
+    code: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
+class RoomCategoryOut(Schema):
+    id: str
+    code: str
+    title: dict[str, str]
+    title_i18n: str
+    sort_order: int
+    is_active: bool
+    rooms_count: int
 
 class LocationIn(Schema):
     title: dict[str, str]

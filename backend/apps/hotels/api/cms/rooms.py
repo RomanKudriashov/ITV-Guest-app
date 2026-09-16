@@ -9,6 +9,9 @@ from apps.accounts.services.roles import require_hotel_admin
 from apps.core.schemas import OkOut
 from apps.hotels.schemas.cms import (
     BulkRoomsIn,
+    RoomCategoryIn,
+    RoomCategoryOut,
+    RoomCategoryPatch,
     RoomIn,
     RoomOut,
     RoomPatch,
@@ -28,6 +31,36 @@ def list_rooms(
     """Выдача в ОБОЛОЧКЕ (`items/total/limit`): голый массив без предела
     выглядит полным, сколько бы записей ни осталось за его границей."""
     return svc.list_rooms(search=search, limit=limit, offset=offset)
+
+
+# --- Категории номеров -----------------------------------------------------
+
+
+@router.get("/room-categories", summary="Категории номеров")
+def list_room_categories(request: HttpRequest):
+    return svc.list_room_categories()
+
+
+@router.post(
+    "/room-categories", response={201: RoomCategoryOut}, summary="Завести категорию"
+)
+def create_room_category(request: HttpRequest, payload: RoomCategoryIn):
+    return 201, svc.serialize_room_category(svc.create_room_category(payload.dict()))
+
+
+@router.patch(
+    "/room-categories/{category_id}", response=RoomCategoryOut, summary="Изменить категорию"
+)
+def update_room_category(request: HttpRequest, category_id: str, payload: RoomCategoryPatch):
+    return svc.serialize_room_category(
+        svc.update_room_category(category_id, payload.dict(exclude_unset=True))
+    )
+
+
+@router.delete("/room-categories/{category_id}", response=OkOut, summary="Удалить категорию")
+def delete_room_category(request: HttpRequest, category_id: str):
+    svc.delete_room_category(category_id)
+    return {"ok": True}
 
 
 @router.post("/rooms", response={201: RoomOut}, summary="Добавить номер")

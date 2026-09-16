@@ -1352,7 +1352,21 @@
       "restoredOrders_many": "{{count}} заказов",
       "restoredSessions_one": "{{count}} сессия",
       "restoredSessions_few": "{{count}} сессии",
-      "restoredSessions_many": "{{count}} сессий"
+      "restoredSessions_many": "{{count}} сессий",
+      "category": "Категория",
+      "categoryNone": "Без категории",
+      "categories": "Категории",
+      "categoriesEmpty": "Категорий пока нет",
+      "categoryNew": "Новая категория",
+      "categoryRooms_one": "{{count}} номер",
+      "categoryRooms_few": "{{count}} номера",
+      "categoryRooms_many": "{{count}} номеров",
+      "housekeeping": "Уборка",
+      "housekeeping_unknown": "Неизвестно",
+      "housekeeping_clean": "Чисто",
+      "housekeeping_dirty": "Грязно",
+      "housekeeping_in_progress": "Убирается",
+      "outOfService": "Вне продажи"
     },
     "locations": {
       "title": "Локации",

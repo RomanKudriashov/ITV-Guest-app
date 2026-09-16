@@ -26,6 +26,7 @@ from .onprem import OnPremNode
 from .platform import OnboardingTemplate, SystemDictionaryEntry
 from .publication import PublicationJob, PublicationResult
 from .room import Room
+from .room_category import RoomCategory
 from .schedule import Schedule, ScheduleAvailability, ScheduleInterval
 from .service import Service
 from .showcase import ShowcaseTile
@@ -46,6 +47,7 @@ __all__ = [
     "PublicationJob",
     "PublicationResult",
     "Room",
+    "RoomCategory",
     "Schedule",
     "ScheduleAvailability",
     "ScheduleInterval",

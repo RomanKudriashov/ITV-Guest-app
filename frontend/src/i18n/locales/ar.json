@@ -1370,7 +1370,20 @@
       "restoredOrders_one": "طلب واحد",
       "restoredOrders_other": "{{count}} طلبات",
       "restoredSessions_one": "جلسة واحدة",
-      "restoredSessions_other": "{{count}} جلسات"
+      "restoredSessions_other": "{{count}} جلسات",
+      "category": "الفئة",
+      "categoryNone": "بلا فئة",
+      "categories": "الفئات",
+      "categoriesEmpty": "لا توجد فئات بعد",
+      "categoryNew": "فئة جديدة",
+      "categoryRooms_one": "غرفة واحدة",
+      "categoryRooms_other": "{{count}} غرف",
+      "housekeeping": "التنظيف",
+      "housekeeping_unknown": "غير معروف",
+      "housekeeping_clean": "نظيفة",
+      "housekeeping_dirty": "غير نظيفة",
+      "housekeeping_in_progress": "قيد التنظيف",
+      "outOfService": "خارج البيع"
     },
     "locations": {
       "title": "المواقع",

@@ -309,6 +309,14 @@
   "/api/v1/cms/reviews": [
     "GET"
   ],
+  "/api/v1/cms/room-categories": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/room-categories/{category_id}": [
+    "DELETE",
+    "PATCH"
+  ],
   "/api/v1/cms/rooms": [
     "GET",
     "POST"

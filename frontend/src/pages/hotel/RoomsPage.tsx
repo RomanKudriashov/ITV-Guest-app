@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import Checkbox from '@mui/material/Checkbox';
+import Chip from '@mui/material/Chip';
 import CardContent from '@mui/material/CardContent';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
@@ -38,6 +39,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
+import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
+import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 
 import { ApiError } from '@/api/client';
 import {
@@ -45,9 +48,12 @@ import {
   bulkCreateRooms,
   checkOutRoom,
   createRoom,
+  createRoomCategory,
   deleteRoom,
+  deleteRoomCategory,
   downloadRoomQrPng,
   fetchRenameImpact,
+  fetchRoomCategories,
   fetchRoomQrSheetHtml,
   fetchRoomQrSvg,
   fetchRooms,
@@ -56,6 +62,7 @@ import {
 import type {
   Room,
   RoomBulkResult,
+  RoomCategory,
   RoomRenameImpact,
 } from '@/api/hotelAdminTypes';
 import { queryKeys } from '@/api/queryKeys';
@@ -106,12 +113,18 @@ export function RoomsPage() {
     queryKey: [...queryKeys.rooms, params.search, pageNumber],
     queryFn: () => fetchRooms(params.search, { limit: ROOMS_PAGE_SIZE, offset }),
   });
+  const categoriesQuery = useQuery({
+    queryKey: [...queryKeys.rooms, 'categories'],
+    queryFn: fetchRoomCategories,
+  });
+  const categories = categoriesQuery.data ?? [];
   const rooms = roomsQuery.data?.items ?? [];
   const total = roomsQuery.data?.total ?? 0;
   const shownFrom = total === 0 ? 0 : offset + 1;
   const shownTo = offset + rooms.length;
   const hasMore = shownTo < total;
 
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.rooms });
   const showError = (error: unknown) =>
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
@@ -256,6 +269,9 @@ export function RoomsPage() {
               >
                 {t('hotel.rooms.bulkAdd')}
               </Button>
+              <Button onClick={() => setCategoriesOpen(true)} data-testid="room-categories-open">
+                {t('hotel.rooms.categories')}
+              </Button>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -297,6 +313,8 @@ export function RoomsPage() {
                     <TableCell>{t('hotel.rooms.number')}</TableCell>
                     <TableCell>{t('hotel.rooms.floor')}</TableCell>
                     <TableCell>{t('hotel.rooms.zone')}</TableCell>
+                    <TableCell>{t('hotel.rooms.category')}</TableCell>
+                    <TableCell>{t('hotel.rooms.housekeeping')}</TableCell>
                     {/* Тот единственный вопрос про управление номером, который
                         задают, глядя на список: «а этот номер управляется?» */}
                     <TableCell>{t('hotel.rooms.controlType')}</TableCell>
@@ -308,11 +326,52 @@ export function RoomsPage() {
                   {rooms.map((room) => (
                     <TableRow key={room.id} hover data-testid={`room-row-${room.number}`}>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={500}>
-                          {room.number}
-                        </Typography>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Typography variant="body2" fontWeight={500}>
+                            {room.number}
+                          </Typography>
+                          {/*
+                            «Вне продажи» и уборка — ЗНАЧКАМИ, не цветом
+                            строки: цвет в этом разделе означает занятость, а
+                            её у нас нет и не будет до PMS. Красить им что-то
+                            другое значит заранее занять смысл, который потом
+                            придётся отбирать.
+                          */}
+                          {room.out_of_service ? (
+                            <BuildOutlinedIcon
+                              fontSize="inherit"
+                              color="warning"
+                              titleAccess={t('hotel.rooms.outOfService')}
+                              data-testid={`room-out-of-service-${room.number}`}
+                            />
+                          ) : null}
+                          {room.housekeeping === 'dirty' || room.housekeeping === 'in_progress' ? (
+                            <CleaningServicesOutlinedIcon
+                              fontSize="inherit"
+                              color="action"
+                              titleAccess={t(`hotel.rooms.housekeeping_${room.housekeeping}`)}
+                            />
+                          ) : null}
+                        </Stack>
                       </TableCell>
                       <TableCell>{room.floor || '—'}</TableCell>
+                      <TableCell data-testid={`room-category-${room.number}`}>
+                        {room.category ? (
+                          <Chip size="small" label={room.category.title || room.category.code} />
+                        ) : (
+                          <Typography variant="body2" color="text.disabled">
+                            —
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell data-testid={`room-housekeeping-${room.number}`}>
+                        <Typography
+                          variant="body2"
+                          color={room.housekeeping === 'unknown' ? 'text.disabled' : 'text.primary'}
+                        >
+                          {t(`hotel.rooms.housekeeping_${room.housekeeping}`)}
+                        </Typography>
+                      </TableCell>
                       <TableCell>
                         {/*
                           Ссылка ведёт в конфигурацию ТИПА, а не номера:
@@ -448,6 +507,14 @@ export function RoomsPage() {
       ) : null}
 
       {qrRoom ? <QrDialog room={qrRoom} onClose={() => setQrRoom(null)} /> : null}
+
+      {categoriesOpen ? (
+        <CategoriesDialog
+          categories={categories}
+          onClose={() => setCategoriesOpen(false)}
+          onChanged={() => void invalidate()}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(pendingCheckout)}
@@ -731,6 +798,106 @@ function RenameDialog({
         >
           {t('hotel.rooms.renameConfirm')}
         </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+/* ── Categories ────────────────────────────────────────────────────────── */
+
+/** Справочник категорий: завести, переименовать, убрать пустую. */
+function CategoriesDialog({
+  categories,
+  onClose,
+  onChanged,
+}: {
+  categories: RoomCategory[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [title, setTitle] = useState('');
+
+  const fail = (error: unknown) =>
+    toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
+
+  const create = useMutation({
+    mutationFn: () => createRoomCategory({ title: { ru: title.trim() } }),
+    onSuccess: () => {
+      setTitle('');
+      onChanged();
+    },
+    onError: fail,
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteRoomCategory(id),
+    onSuccess: onChanged,
+    onError: fail,
+  });
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth data-testid="rooms-categories-dialog">
+      <DialogTitle>{t('hotel.rooms.categories')}</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={1} sx={{ pt: 1 }}>
+          {categories.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t('hotel.rooms.categoriesEmpty')}
+            </Typography>
+          ) : (
+            categories.map((category) => (
+              <Stack
+                key={category.id}
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                data-testid={`room-category-row-${category.code}`}
+              >
+                <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                  {category.title_i18n || category.code}
+                </Typography>
+                {/* Число номеров — ответ на вопрос, который задают перед тем,
+                    как категорию трогать. */}
+                <Typography variant="caption" color="text.secondary">
+                  {t('hotel.rooms.categoryRooms', { count: category.rooms_count })}
+                </Typography>
+                <IconButton
+                  size="small"
+                  disabled={remove.isPending}
+                  onClick={() => remove.mutate(category.id)}
+                  aria-label={t('common.delete')}
+                  data-testid={`room-category-delete-${category.code}`}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            ))
+          )}
+          <Divider sx={{ my: 1 }} />
+          <Stack direction="row" spacing={1}>
+            <TextField
+              size="small"
+              label={t('hotel.rooms.categoryNew')}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              inputProps={{ 'data-testid': 'room-category-title' }}
+              fullWidth
+            />
+            <Button
+              variant="contained"
+              disabled={!title.trim() || create.isPending}
+              onClick={() => create.mutate()}
+              data-testid="room-category-add"
+            >
+              {t('common.add')}
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
       </DialogActions>
     </Dialog>
   );

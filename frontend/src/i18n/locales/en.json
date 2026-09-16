@@ -1338,7 +1338,20 @@
       "restoredOrders_one": "{{count}} order",
       "restoredOrders_other": "{{count}} orders",
       "restoredSessions_one": "{{count}} session",
-      "restoredSessions_other": "{{count}} sessions"
+      "restoredSessions_other": "{{count}} sessions",
+      "category": "Category",
+      "categoryNone": "No category",
+      "categories": "Categories",
+      "categoriesEmpty": "No categories yet",
+      "categoryNew": "New category",
+      "categoryRooms_one": "{{count}} room",
+      "categoryRooms_other": "{{count}} rooms",
+      "housekeeping": "Housekeeping",
+      "housekeeping_unknown": "Unknown",
+      "housekeeping_clean": "Clean",
+      "housekeeping_dirty": "Dirty",
+      "housekeeping_in_progress": "Being cleaned",
+      "outOfService": "Out of service"
     },
     "locations": {
       "title": "Locations",

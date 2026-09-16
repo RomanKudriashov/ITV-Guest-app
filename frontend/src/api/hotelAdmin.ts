@@ -9,6 +9,7 @@ import type {
   Room,
   RoomBulkPayload,
   RoomBulkResult,
+  RoomCategory,
   RoomPayload,
   RoomRenameImpact,
   StaffAssignmentsPayload,
@@ -42,6 +43,31 @@ export function fetchRooms(
       offset: String(page.offset),
     },
   });
+}
+
+/* ── 1b. Room categories ───────────────────────────────────────────────── */
+
+export function fetchRoomCategories(): Promise<RoomCategory[]> {
+  return api.get<ListPage<RoomCategory>>('/cms/room-categories').then((page) => page.items);
+}
+
+export function createRoomCategory(payload: {
+  title: Record<string, string>;
+  code?: string;
+  sort_order?: number;
+}): Promise<RoomCategory> {
+  return api.post<RoomCategory>('/cms/room-categories', payload);
+}
+
+export function updateRoomCategory(
+  id: string,
+  payload: { title?: Record<string, string>; sort_order?: number; is_active?: boolean },
+): Promise<RoomCategory> {
+  return api.patch<RoomCategory>(`/cms/room-categories/${id}`, payload);
+}
+
+export function deleteRoomCategory(id: string): Promise<void> {
+  return api.delete(`/cms/room-categories/${id}`).then(() => undefined);
 }
 
 /**
