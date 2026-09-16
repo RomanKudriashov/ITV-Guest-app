@@ -1529,7 +1529,8 @@
       "language": "语言",
       "floor": "楼层",
       "room": "房间",
-      "status": "状态"
+      "status": "状态",
+      "room_category": "房间类别"
     },
     "values": {
       "type": {
@@ -1679,6 +1680,13 @@
       "tax": "税",
       "tip": "小费",
       "gross": "总计"
+    },
+    "roomCategory": {
+      "none": "无类别",
+      "rooms": "当前房间数",
+      "perRoom": "每间房订单数",
+      "compare": "按每间房计算，{{leader}} 的下单频率是 {{base}} 的 {{ratio}} 倍。",
+      "unknown": "「无类别」——{{count}} 笔订单：其中既有未设类别的房间，也有本维度出现之前创建的订单。它们的类别无法补齐：下单时该类别尚不存在。"
     }
   },
   "commerce": {

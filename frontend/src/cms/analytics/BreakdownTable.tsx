@@ -81,8 +81,46 @@ export function BreakdownTable({
   const maxShare = Math.max(...rows.map((r) => r.share), 0.0001);
   const hasQuantity = rows.some((r) => typeof r.quantity === 'number');
 
+  /*
+    РАЗРЕЗ ПО КАТЕГОРИИ НОМЕРА ЧИТАЕТСЯ ТОЛЬКО В СРАВНЕНИИ.
+
+    «Люкс принёс 400 тысяч, стандарт 900» — не ответ: люксов восемь, а
+    стандартов девяносто. Поэтому здесь добавляются две колонки — сколько
+    номеров в категории СЕЙЧАС и сколько заказов на номер, — и фраза, которая
+    прямо называет отношение к самой слабой категории.
+  */
+  const isRoomCategory = dimension === 'room_category';
+  const leader = isRoomCategory
+    ? rows.reduce<BreakdownRow | null>(
+        (best, row) =>
+          row.ratio_to_base && (!best || (best.ratio_to_base ?? 0) < row.ratio_to_base) ? row : best,
+        null,
+      )
+    : null;
+  const uncategorised = isRoomCategory ? rows.find((row) => !row.key) : undefined;
+
   return (
     <Box sx={{ overflowX: 'auto' }}>
+      {leader && leader.ratio_to_base && leader.ratio_to_base > 1 ? (
+        <Alert severity="info" sx={{ mb: 1 }} data-testid="analytics-category-compare">
+          {t('analytics.roomCategory.compare', {
+            leader: dimensionValueLabel(t, dimension, leader.key, leader.label),
+            base: leader.base_label,
+            ratio: leader.ratio_to_base.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+          })}
+        </Alert>
+      ) : null}
+
+      {/*
+        «Без категории» НЕ прячется: иначе сумма долей перестанет сходиться с
+        итогом. И она честно объясняется — под ней лежат две разные вещи.
+      */}
+      {uncategorised ? (
+        <Alert severity="warning" sx={{ mb: 1 }} data-testid="analytics-category-unknown">
+          {t('analytics.roomCategory.unknown', { count: uncategorised.orders })}
+        </Alert>
+      ) : null}
+
       <Table size="small" data-testid="analytics-breakdown-table">
         <TableHead>
           <TableRow>
@@ -98,6 +136,12 @@ export function BreakdownTable({
                 </TableSortLabel>
               </TableCell>
             ))}
+            {isRoomCategory ? (
+              <>
+                <TableCell align="right">{t('analytics.roomCategory.rooms')}</TableCell>
+                <TableCell align="right">{t('analytics.roomCategory.perRoom')}</TableCell>
+              </>
+            ) : null}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -138,6 +182,18 @@ export function BreakdownTable({
                   </Typography>
                 </Box>
               </TableCell>
+              {isRoomCategory ? (
+                <>
+                  <TableCell align="right" data-testid={`analytics-category-rooms-${row.key}`}>
+                    {row.rooms ? fmt.count(row.rooms) : '—'}
+                  </TableCell>
+                  <TableCell align="right" data-testid={`analytics-category-per-room-${row.key}`}>
+                    {/* Прочерк, а не ноль: «нет номеров под этой категорией»
+                        и «на номер ноль заказов» — разные утверждения. */}
+                    {row.orders_per_room ? row.orders_per_room.toFixed(2) : '—'}
+                  </TableCell>
+                </>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

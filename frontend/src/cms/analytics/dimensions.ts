@@ -23,6 +23,7 @@ export const DIMENSION_PARAM: Record<Dimension, keyof AnalyticsQuery> = {
   floor: 'floor',
   room: 'room',
   status: 'status',
+  room_category: 'room_category',
 };
 
 /** Order the filter controls appear in the panel. */
@@ -38,6 +39,7 @@ export const FILTER_DIMENSIONS: Dimension[] = [
   'floor',
   'room',
   'status',
+  'room_category',
 ];
 
 /**
@@ -62,6 +64,7 @@ export const BREAKDOWN_DIMENSIONS: Dimension[] = [
   'entry_method',
   'device',
   'language',
+  'room_category',
 ];
 
 /**
@@ -97,6 +100,13 @@ export function dimensionValueLabel(
   value: string,
   fallback?: string,
 ): string {
+  /*
+    ПУСТОЙ КЛЮЧ — ЭТО ЗНАЧЕНИЕ, А НЕ ПРОБЕЛ. У разреза по категории номера под
+    ним лежат и номера без категории, и заказы, созданные до появления
+    разреза. Строка остаётся в таблице (иначе сумма долей не сойдётся с
+    итогом), и у неё должно быть имя.
+  */
+  if (!value && dimension === 'room_category') return t('analytics.roomCategory.none');
   if (!value) return fallback ?? value;
   if (dimension === 'language') {
     return LANGUAGE_LABELS[value as SupportedLanguage] ?? fallback ?? value;

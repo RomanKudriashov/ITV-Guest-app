@@ -25,6 +25,10 @@ class OrderDaily(TenantModel):
     entry_method = models.CharField(max_length=32, blank=True)
     device = models.CharField(max_length=16, blank=True)
     language = models.CharField(max_length=8, blank=True)
+    # Категория номера СНИМКОМ на момент заказа. Пустая строка — равноправное
+    # значение «без категории»: под ним и номера без категории, и заказы,
+    # созданные до появления разреза. Прятать его нельзя — итог не сойдётся.
+    room_category_key = models.CharField(max_length=64, blank=True)
 
     orders_count = models.IntegerField(default=0)
     # revenue_minor — выручка ПО ПОЗИЦИЯМ (subtotal). Начисления разложены
@@ -51,6 +55,7 @@ class OrderDaily(TenantModel):
                 fields=[
                     "hotel", "business_date", "offering_type", "point_key",
                     "location_key", "entry_method", "device", "language",
+                    "room_category_key",
                 ],
                 name="uniq_order_daily",
             )

@@ -33,7 +33,9 @@ export type Dimension =
   | 'language'
   | 'floor'
   | 'room'
-  | 'status';
+  | 'status'
+  /** Тарифная категория номера — СНИМОК на момент заказа, не справка по комнате. */
+  | 'room_category';
 
 /** Filter values keyed by dimension. Empty/undefined means "no filter". */
 export type DimensionFilters = Partial<Record<Dimension, string>>;
@@ -53,6 +55,8 @@ export interface AnalyticsQuery {
   entry_method?: string;
   device?: string;
   language?: string;
+  /** `none` — заказы без категории; пустую строку от «фильтра нет» не отличить. */
+  room_category?: string;
   floor?: string;
   room?: string;
   status?: string;
@@ -124,6 +128,16 @@ export interface BreakdownRow {
   revenue_minor: number;
   /** Share of the total, 0..1. */
   share: number;
+  /*
+    Только для разреза по категории номера. Абсолютные числа категорий
+    несравнимы: люксов восемь, стандартов девяносто. `orders_per_room` и
+    отношение к самой слабой категории отвечают на вопрос «кто заказывает
+    чаще», а `rooms` — СЕГОДНЯШНЕЕ число номеров, и это подписано на экране.
+  */
+  rooms?: number;
+  orders_per_room?: number | null;
+  ratio_to_base?: number | null;
+  base_label?: string;
 }
 
 export interface BreakdownResponse {

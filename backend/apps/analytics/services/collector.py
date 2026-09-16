@@ -125,6 +125,7 @@ def apply_event(raw: AnalyticsEvent) -> None:
                 "entry_method": d.get("entry_method", ""),
                 "device": d.get("device", ""),
                 "language": d.get("language", ""),
+                "room_category_key": d.get("room_category_key", ""),
             },
             {
                 "orders_count": 1,
@@ -188,6 +189,7 @@ def _order_daily_keys(bd, d: dict) -> dict:
         "entry_method": d.get("entry_method", ""),
         "device": d.get("device", ""),
         "language": d.get("language", ""),
+        "room_category_key": d.get("room_category_key", ""),
     }
 
 
@@ -211,6 +213,9 @@ def _order_dims(order, session) -> dict:
         "entry_method": dim.entry_method_for(session),
         "device": dim.device_for(session),
         "language": dim.language_for(session),
+        # Снимок, а не ссылка: смена категории комнаты не должна переписывать
+        # прошлые отчёты (см. dimensions.room_category_for_order).
+        "room_category_key": dim.room_category_for_order(order),
     }
 
 

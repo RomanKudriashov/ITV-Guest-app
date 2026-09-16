@@ -15,7 +15,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from django.db.models import Sum
+from django.db.models import Count, Sum
 
 from apps.core.errors import ValidationError
 from apps.hotels.models import Hotel
@@ -113,6 +113,10 @@ _ORDER_FILTERS = {
     "entry_method": "entry_method",
     "device": "device",
     "language": "language",
+    # Фильтр по категории номера — тем же ключом, что и разрез. «Без
+    # категории» фильтруется значением `none`: пустую строку в query-параметре
+    # не отличить от «фильтр не задан».
+    "room_category": "room_category_key",
 }
 
 
@@ -128,7 +132,7 @@ def _order_qs(scope: Scope, params: dict, period: Period):
     for key, column in _ORDER_FILTERS.items():
         value = params.get(key)
         if value:
-            qs = qs.filter(**{column: value})
+            qs = qs.filter(**{column: "" if value == "none" else value})
     return qs
 
 
@@ -340,7 +344,7 @@ def _event_qs(scope: Scope, params: dict, period: Period, kinds: tuple[str, ...]
     for key, column in _ORDER_FILTERS.items():
         value = params.get(key)
         if value:
-            qs = qs.filter(**{f"dimensions__{column}": value})
+            qs = qs.filter(**{f"dimensions__{column}": "" if value == "none" else value})
     return qs
 
 
@@ -412,7 +416,10 @@ def _hourly_points(scope: Scope, params: dict, period: Period, hotel: Hotel) -> 
 # --- Разбивка --------------------------------------------------------------
 
 _ORDER_DIMENSIONS = {"type": "offering_type", "point": "point_key", "location": "location_key",
-                     "entry_method": "entry_method", "device": "device", "language": "language"}
+                     "entry_method": "entry_method", "device": "device", "language": "language",
+                     # Категория номера — снимок на момент заказа, см.
+                     # analytics/services/dimensions.room_category_for_order.
+                     "room_category": "room_category_key"}
 
 
 def breakdown(hotel: Hotel, user, params: dict) -> dict:
@@ -431,6 +438,8 @@ def breakdown(hotel: Hotel, user, params: dict) -> dict:
         dimension = "type"
 
     rows = _resolve_labels(dimension, rows)
+    if dimension == "room_category":
+        rows = _compare_room_categories(rows)
     total = sum(r.get("revenue_minor", r.get("orders", 0)) or 0 for r in rows) or 1
     for r in rows:
         base = r.get("revenue_minor", r.get("orders", 0)) or 0
@@ -448,6 +457,46 @@ def _breakdown_orders(scope, params, period, dimension) -> list[dict]:
         completed=Sum("completed_count"),
     )
     return [{"key": row[column] or "", **{k: (row[k] or 0) for k in ("orders", "revenue_minor", "items", "cancelled", "completed")}} for row in qs]
+
+
+def _compare_room_categories(rows: list[dict]) -> list[dict]:
+    """
+    СРАВНЕНИЕ КАТЕГОРИЙ МЕЖДУ СОБОЙ, а не столбик абсолютных чисел.
+
+    «Люкс принёс 400 тысяч, стандарт 900» ничего не говорит: люксов восемь, а
+    стандартов девяносто. Отвечает на вопрос заказов НА НОМЕР — и отношение
+    считается к самой слабой категории, чтобы фраза звучала как «люкс заказывает
+    в 2,3 раза чаще стандарта», а не «в 0,43 раза реже».
+
+    ЧИСЛО НОМЕРОВ — СЕГОДНЯШНЕЕ, а заказы исторические. Это честно назвать
+    можно, а скрыть нельзя: экран подписывает колонку «номеров сейчас».
+    Строка «без категории» в сравнении НЕ участвует (номеров под ней может не
+    быть вовсе), но из выдачи не исчезает — иначе сумма не сойдётся с итогом.
+    """
+    from apps.hotels.models import Room
+
+    counts = dict(
+        Room.objects.exclude(category__isnull=True)
+        .values_list("category_id")
+        .annotate(total=Count("id"))
+    )
+    counts = {str(key): value for key, value in counts.items()}
+
+    for row in rows:
+        rooms = counts.get(row.get("key") or "", 0)
+        row["rooms"] = rooms
+        row["orders_per_room"] = round(row.get("orders", 0) / rooms, 2) if rooms else None
+
+    comparable = [r for r in rows if r.get("orders_per_room")]
+    base = min(comparable, key=lambda r: r["orders_per_room"], default=None)
+    for row in rows:
+        if base and row.get("orders_per_room"):
+            row["ratio_to_base"] = round(row["orders_per_room"] / base["orders_per_room"], 2)
+            row["base_label"] = base.get("label", "")
+        else:
+            row["ratio_to_base"] = None
+            row["base_label"] = ""
+    return rows
 
 
 def _breakdown_items(scope, params, period, dimension) -> list[dict]:
@@ -698,6 +747,13 @@ def _resolve_labels(dimension: str, rows: list[dict]) -> list[dict]:
 
         for c in Category.all_objects.filter(pk__in=keys):
             labels[str(c.pk)] = c.title_i18n or c.code
+    elif dimension == "room_category":
+        from apps.hotels.models import RoomCategory
+
+        # all_objects: удалённая категория из истории не исчезает, иначе
+        # прошлые заказы превратились бы в «—» без объяснения.
+        for rc in RoomCategory.all_objects.filter(pk__in=keys):
+            labels[str(rc.pk)] = rc.title_i18n or rc.code
 
     for r in rows:
         r["label"] = labels.get(r.get("key", ""), r.get("key", "") or "—")

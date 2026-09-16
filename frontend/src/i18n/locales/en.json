@@ -1545,7 +1545,8 @@
       "language": "Language",
       "floor": "Floor",
       "room": "Room",
-      "status": "Status"
+      "status": "Status",
+      "room_category": "Room category"
     },
     "values": {
       "type": {
@@ -1695,6 +1696,13 @@
       "tax": "Tax",
       "tip": "Tip",
       "gross": "Total"
+    },
+    "roomCategory": {
+      "none": "No category",
+      "rooms": "Rooms now",
+      "perRoom": "Orders per room",
+      "compare": "{{leader}} orders {{ratio}}× more often than {{base}}, per room.",
+      "unknown": "“No category” — {{count}} orders: this covers both rooms without a category and orders created before this breakdown existed. Their category cannot be recovered: it did not exist at the time of the order."
     }
   },
   "commerce": {
