@@ -2458,6 +2458,19 @@
         "accepted": "تم قبول الطلب",
         "cancelled": "تم إلغاء الطلب",
         "status_changed": "تغيّرت حالة الطلب"
+      },
+      "brand": {
+        "publication_scheduled": "تمت جدولة نشر الهوية البصرية",
+        "published_on_schedule": "نُشرت الهوية البصرية في موعدها",
+        "published_late": "نُشرت الهوية البصرية متأخرة",
+        "schedule_failed": "لم يتم النشر المجدول للهوية البصرية",
+        "announce_failed": "لم يُرسل إشعار نشر الهوية البصرية"
+      },
+      "room": {
+        "renamed": "أُعيدت تسمية الغرفة",
+        "restored": "استُعيدت الغرفة المحذوفة",
+        "bulk_created": "أُنشئت غرف دفعة واحدة",
+        "bulk_updated": "عُدّلت غرف دفعة واحدة"
       }
     },
     "enter": {

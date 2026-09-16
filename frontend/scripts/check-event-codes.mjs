@@ -27,7 +27,9 @@ const LANGS = ['ru', 'en', 'ar', 'zh'];
 
 // Домены, чьи события видит человек. Ограничение намеренное: не всякая точка
 // с точкой в строке — событие журнала.
-const DOMAINS = ['platform', 'grms', 'order', 'guest_session', 'impersonation'];
+// `brand` и `room` добавлены после того, как девять их кодов прожили без
+// перевода: домена не было в списке, и сторож их просто не видел.
+const DOMAINS = ['platform', 'grms', 'order', 'guest_session', 'impersonation', 'brand', 'room'];
 const CODE = new RegExp(`"((?:${DOMAINS.join('|')})\\.[a-z_.]+)"`, 'g');
 
 /**
@@ -42,6 +44,13 @@ const NOT_EVENTS = new Set([
   'grms.session',
   'order.event', // имя WS-сообщения
   'order.snapshot',
+  'room.event', // имя WS-сообщения экрана номера
+  'room.snapshot',
+  'brand.publish', // вид отложенного задания (`ScheduledJob.kind`), не действие журнала
+  'brand.background.kind', // пути токенов оформления, а не события
+  'brand.background.color',
+  'brand.background.dim',
+  'brand.background.abstraction',
 ]);
 
 function* walk(dir) {

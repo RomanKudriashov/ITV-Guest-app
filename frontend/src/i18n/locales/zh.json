@@ -2374,6 +2374,19 @@
         "accepted": "订单已接受",
         "cancelled": "订单已取消",
         "status_changed": "订单状态已更改"
+      },
+      "brand": {
+        "publication_scheduled": "已安排品牌外观发布",
+        "published_on_schedule": "品牌外观已按计划发布",
+        "published_late": "品牌外观延迟发布",
+        "schedule_failed": "计划的品牌外观发布未完成",
+        "announce_failed": "品牌外观发布通知未发送"
+      },
+      "room": {
+        "renamed": "房间已重命名",
+        "restored": "已删除的房间已恢复",
+        "bulk_created": "已批量创建房间",
+        "bulk_updated": "已批量修改房间"
       }
     },
     "enter": {

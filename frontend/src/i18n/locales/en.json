@@ -2398,6 +2398,19 @@
         "accepted": "Order accepted",
         "cancelled": "Order cancelled",
         "status_changed": "Order status changed"
+      },
+      "brand": {
+        "publication_scheduled": "Branding publication scheduled",
+        "published_on_schedule": "Branding published on schedule",
+        "published_late": "Branding published late",
+        "schedule_failed": "Scheduled branding publication failed",
+        "announce_failed": "Branding publication notice not sent"
+      },
+      "room": {
+        "renamed": "Room renamed",
+        "restored": "Deleted room restored",
+        "bulk_created": "Rooms created in bulk",
+        "bulk_updated": "Rooms updated in bulk"
       }
     },
     "enter": {
