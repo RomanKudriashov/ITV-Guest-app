@@ -1345,7 +1345,14 @@
       "renameKeepDeviceHint": "Оборудование не тронется: за комнатой закрепится имя «{{device}}».",
       "renameConfirm": "Переименовать",
       "renameTaken": "Номер «{{number}}» уже занят",
-      "renameCheckError": "Не удалось выяснить последствия переименования"
+      "renameCheckError": "Не удалось выяснить последствия переименования",
+      "restored": "Номер {{number}} был удалён — восстановлен вместе с историей: {{orders}}, {{sessions}}. Доступ прежних гостей отозван.",
+      "restoredOrders_one": "{{count}} заказ",
+      "restoredOrders_few": "{{count}} заказа",
+      "restoredOrders_many": "{{count}} заказов",
+      "restoredSessions_one": "{{count}} сессия",
+      "restoredSessions_few": "{{count}} сессии",
+      "restoredSessions_many": "{{count}} сессий"
     },
     "locations": {
       "title": "Локации",

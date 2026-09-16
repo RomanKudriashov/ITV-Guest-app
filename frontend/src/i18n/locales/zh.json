@@ -1323,7 +1323,10 @@
       "renameKeepDeviceHint": "设备不受影响：房间将保留名称「{{device}}」。",
       "renameConfirm": "重命名",
       "renameTaken": "房间「{{number}}」已被占用",
-      "renameCheckError": "无法确定重命名会带来什么变化"
+      "renameCheckError": "无法确定重命名会带来什么变化",
+      "restored": "房间 {{number}} 曾被删除——已连同历史记录恢复：{{orders}}、{{sessions}}。此前客人的访问权限已撤销。",
+      "restoredOrders_other": "{{count}} 个订单",
+      "restoredSessions_other": "{{count}} 个会话"
     },
     "locations": {
       "title": "位置",

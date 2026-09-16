@@ -1333,7 +1333,12 @@
       "renameKeepDeviceHint": "The equipment stays untouched: the room keeps the name “{{device}}”.",
       "renameConfirm": "Rename",
       "renameTaken": "Room “{{number}}” is already taken",
-      "renameCheckError": "Could not work out what the rename would change"
+      "renameCheckError": "Could not work out what the rename would change",
+      "restored": "Room {{number}} had been deleted — restored with its history: {{orders}}, {{sessions}}. Previous guests' access revoked.",
+      "restoredOrders_one": "{{count}} order",
+      "restoredOrders_other": "{{count}} orders",
+      "restoredSessions_one": "{{count}} session",
+      "restoredSessions_other": "{{count}} sessions"
     },
     "locations": {
       "title": "Locations",

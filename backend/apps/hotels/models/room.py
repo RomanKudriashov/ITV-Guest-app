@@ -72,7 +72,16 @@ class Room(TenantModel):
         # выдача была устойчивой, а не менялась от запроса к запросу.
         ordering = ["sort_key", "number"]
         constraints = [
-            models.UniqueConstraint(fields=["hotel", "number"], name="uniq_room_per_hotel")
+            # УНИКАЛЕН СРЕДИ ЖИВЫХ. Безусловное ограничение означало, что
+            # мягко удалённый номер держит своё имя навсегда: комнату 305
+            # удалили — и завести 305 заново нельзя никогда, притом что на
+            # экране её нет. Условие приводит ограничение к тому, что видит
+            # пользователь.
+            models.UniqueConstraint(
+                fields=["hotel", "number"],
+                condition=models.Q(deleted_at__isnull=True),
+                name="uniq_room_per_hotel",
+            )
         ]
 
     def save(self, *args, **kwargs):

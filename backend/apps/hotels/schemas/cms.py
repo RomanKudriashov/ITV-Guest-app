@@ -84,6 +84,14 @@ class RoomOut(Schema):
     source: str
     is_active: bool
     guest_url: str
+    # Правда: номер ВОЗВРАЩЁН из удалённых, а не создан с нуля — вместе с ним
+    # вернулась его история заказов и сессий. Числа нужны сообщению: «создан» и
+    # «вернулся с историей на 47 заказов» — разные новости для того, кто нажал
+    # «добавить номер».
+    restored: bool = False
+    restored_orders: int = 0
+    restored_sessions: int = 0
+    revoked_sessions: int = 0
 
 class BulkRoomsIn(Schema):
     # `from` — ключевое слово Python; принимаем его по alias, в коде — from_.

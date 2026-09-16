@@ -1365,7 +1365,12 @@
       "renameKeepDeviceHint": "لن تُمسّ الأجهزة: يبقى للغرفة الاسم «{{device}}».",
       "renameConfirm": "إعادة التسمية",
       "renameTaken": "الغرفة «{{number}}» محجوزة بالفعل",
-      "renameCheckError": "تعذّر تحديد نتائج إعادة التسمية"
+      "renameCheckError": "تعذّر تحديد نتائج إعادة التسمية",
+      "restored": "كانت الغرفة {{number}} محذوفة — تمت استعادتها مع سجلّها: {{orders}}، {{sessions}}. أُلغي وصول النزلاء السابقين.",
+      "restoredOrders_one": "طلب واحد",
+      "restoredOrders_other": "{{count}} طلبات",
+      "restoredSessions_one": "جلسة واحدة",
+      "restoredSessions_other": "{{count}} جلسات"
     },
     "locations": {
       "title": "المواقع",

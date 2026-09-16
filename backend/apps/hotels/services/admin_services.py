@@ -55,6 +55,13 @@ def serialize_room(
         # Одиночная выдача карту не получает и отвечает `None`: гонять запрос
         # ради одной строки дороже, чем не показывать колонку там, где её и нет.
         "control_type": (control_types or {}).get(room.pk),
+        # Номер не заведён заново, а ВОЗВРАЩЁН из удалённых — вместе со своей
+        # историей. Экран обязан сказать это вслух: «создан» и «восстановлен»
+        # для администратора разные события.
+        "restored": bool(getattr(room, "_restored", False)),
+        "restored_orders": int(getattr(room, "_restored_orders", 0)),
+        "restored_sessions": int(getattr(room, "_restored_sessions", 0)),
+        "revoked_sessions": int(getattr(room, "_revoked_sessions", 0)),
     }
 
 
@@ -124,19 +131,94 @@ def get_room(room_id) -> Room:
 
 @transaction.atomic
 def create_room(data: dict) -> Room:
+    """
+    Завести номер — или ВЕРНУТЬ мягко удалённый с тем же именем.
+
+    Имя занимал удалённый номер. Проверка шла по `all_objects`, то есть по
+    живым И удалённым: комнату 305 удалили — и 305 больше не заводилась
+    никогда, хотя на экране её нет. Ограничение в базе говорило то же самое.
+
+    Возврат, а не вторая строка с тем же номером: 305 — это одна физическая
+    комната, и её история (заказы, сессии, чат) уже ссылается на ту строку.
+    Заведя дубль, мы получили бы два «305» в отчётах и разошедшуюся историю.
+
+    ЧТО ПРИ ВОЗВРАТЕ ГАСИТСЯ. PIN проживания и живые гостевые сессии — это
+    доступ прежнего гостя, и переживать удаление комнаты он не должен: иначе
+    «удалили и завели заново» тихо вернёт чужому телефону право заказывать и
+    управлять номером. Привязка к типу GRMS, наоборот, остаётся: оборудование
+    из комнаты никуда не уехало.
+    """
     require_hotel_admin()
     number = str(data.get("number") or "").strip()
     if not number:
         raise ValidationError("Укажите номер", field="number")
-    if Room.all_objects.filter(number=number).exists():
+    if Room.objects.filter(number=number).exists():
         raise ConflictError(f"Номер «{number}» уже существует", code="room_exists")
+
+    floor = str(data.get("floor") or "").strip()
+    zone = str(data.get("zone") or "").strip()
+    is_active = data.get("is_active", True)
+
+    buried = Room.all_objects.filter(number=number, deleted_at__isnull=False).first()
+    if buried is not None:
+        buried.floor = floor
+        buried.zone = zone
+        buried.is_active = is_active
+        buried.deleted_at = None
+        buried.save()
+
+        # ЧТО ИМЕННО ВЕРНУЛОСЬ — ЧИСЛАМИ. «Восстановлен вместе с историей» не
+        # отвечает на вопрос человека, который нажал «добавить номер»: он не
+        # просил ничего восстанавливать и не знает, что получил. История
+        # считается ДО отзыва доступа — отзыв её не трогает, но порядок здесь
+        # важен для читающего не меньше, чем для результата.
+        from apps.orders.models import Order
+
+        buried._restored = True
+        buried._restored_orders = Order.objects.filter(room=buried).count()
+        buried._restored_sessions = GuestSession.objects.filter(room=buried).count()
+        revoked = _drop_stale_access(buried)
+        buried._revoked_sessions = revoked
+
+        AuditLog.record(
+            "room.restored",
+            object_type="room",
+            object_id=buried.pk,
+            payload={
+                "number": number,
+                "orders": buried._restored_orders,
+                "sessions": buried._restored_sessions,
+                "revoked": revoked,
+            },
+        )
+        return buried
 
     return Room.objects.create(
         number=number,
-        floor=str(data.get("floor") or "").strip(),
-        zone=str(data.get("zone") or "").strip(),
-        is_active=data.get("is_active", True),
+        floor=floor,
+        zone=zone,
+        is_active=is_active,
     )
+
+
+def _drop_stale_access(room: Room) -> int:
+    """
+    Снять доступ, оставшийся от прежнего проживания: PIN и живые сессии.
+    Возвращает, сколько сессий погашено, — это часть ответа пользователю.
+
+    Живёт здесь, а не в GRMS, по той же причине, что и «выезд»: отелю без
+    оборудования это нужно ровно так же, а PIN — лишь одна из двух частей.
+    """
+    from apps.accounts.services.guest_checkout import check_out_room as revoke
+
+    result = revoke(room.hotel, room)
+
+    try:
+        from apps.grms.models import RoomPin
+    except ImportError:  # pragma: no cover — модуль GRMS не собран
+        return result.revoked
+    RoomPin.all_objects.filter(room=room).hard_delete()
+    return result.revoked
 
 
 def _grms_link(room: Room):

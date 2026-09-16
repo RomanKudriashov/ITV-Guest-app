@@ -525,8 +525,25 @@ function RoomDialog({
               : {}),
           })
         : createRoom(trimmed),
-    onSuccess: () => {
-      toast.show(t('hotel.rooms.saved'), 'success');
+    onSuccess: (saved) => {
+      /*
+        «Создан» и «восстановлен» — разные события, и второе надо сказать
+        ЧИСЛАМИ. Человек нажал «добавить номер»: он не просил ничего
+        восстанавливать и по фразе «вместе с историей» не поймёт, что именно
+        получил — историю на три заказа или на четыреста.
+      */
+      toast.show(
+        saved.restored
+          ? t('hotel.rooms.restored', {
+              number: saved.number,
+              orders: t('hotel.rooms.restoredOrders', { count: saved.restored_orders ?? 0 }),
+              sessions: t('hotel.rooms.restoredSessions', {
+                count: saved.restored_sessions ?? 0,
+              }),
+            })
+          : t('hotel.rooms.saved'),
+        'success',
+      );
       onSaved();
     },
     onError: (error) =>

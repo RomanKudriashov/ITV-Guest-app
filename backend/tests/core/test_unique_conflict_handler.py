@@ -169,15 +169,30 @@ def test_the_same_holds_for_handles_nobody_taught(cms, path, body, key):
 
 def test_three_handles_keep_their_own_words(cms, hotel, client):
     """
-    Room, Service и почта сотрудника спрашивают `all_objects` ДО вставки и
-    отвечают своим текстом. Общий обработчик не должен их подменять: их отказ
-    точнее — он знает, о чём речь.
+    Room, Service и почта сотрудника спрашивают базу ДО вставки и отвечают
+    своим текстом. Общий обработчик не должен их подменять: их отказ точнее —
+    он знает, о чём речь.
+
+    У НОМЕРА УСЛОВИЕ ДРУГОЕ, И ЭТО ВОЛНА 5. Раньше здесь проверялся удалённый
+    номер: он держал своё имя навсегда, и повторное заведение отвечало 409.
+    Теперь удалённый номер имя ОСВОБОЖДАЕТ — повторное заведение возвращает ту
+    же комнату вместе с историей (`restored`), и 409 там был бы дефектом, а не
+    защитой. Занятое имя по-прежнему отвечает отказом, и проверяется именно
+    оно — на ЖИВОМ номере.
     """
     room = cms("post", "/rooms", {"number": "701"})
-    cms("delete", f"/rooms/{room.json()['id']}")
+    assert room.status_code == 201, room.content
+
+    # Живой номер занят — отказ своим текстом.
     room_again = cms("post", "/rooms", {"number": "701"})
     assert room_again.status_code == 409
     assert room_again.json()["code"] == "room_exists", room_again.json()
+
+    # А удалённый — отдаёт имя обратно, и это не конфликт.
+    cms("delete", f"/rooms/{room.json()['id']}")
+    restored = cms("post", "/rooms", {"number": "701"})
+    assert restored.status_code == 201, restored.content
+    assert restored.json()["restored"] is True
 
     service = cms("post", "/services", {"public_name": {"ru": "Спа"}, "code": "spa_svc"})
     cms("delete", f"/services/{service.json()['id']}")

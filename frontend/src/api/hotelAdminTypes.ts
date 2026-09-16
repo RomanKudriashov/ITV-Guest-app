@@ -28,6 +28,15 @@ export interface Room {
    * штатный ответ, а не пробел в данных.
    */
   control_type: string | null;
+  /**
+   * Номер ВОЗВРАЩЁН из удалённых вместе со своей историей, а не заведён с
+   * нуля. Приходит только в ответе на создание — вместе с числами: сколько
+   * заказов и сессий вернулось и сколько чужих доступов отозвано.
+   */
+  restored?: boolean;
+  restored_orders?: number;
+  restored_sessions?: number;
+  revoked_sessions?: number;
 }
 
 export interface RoomPayload {
