@@ -303,8 +303,8 @@ PATCH/POST и `image` (сериализованный ассет с `url`/`statu
 |---|---|---|
 | GET | `/api/v1/staff/me/contacts` | телефон и состояние мессенджеров |
 | PATCH | `/api/v1/staff/me/contacts` | `{"phone": "..."}` |
-| POST | `/api/v1/staff/me/contacts/{telegram\|max}/binding-code` | одноразовый код привязки |
-| DELETE | `/api/v1/staff/me/contacts/{telegram\|max}` | отвязать |
+| POST | `/api/v1/staff/me/contacts/{messenger}/binding-code` | одноразовый код привязки (`messenger`: `telegram` \| `max`) |
+| DELETE | `/api/v1/staff/me/contacts/{messenger}` | отвязать |
 
 ```jsonc
 {"phone": "+79161234567",
