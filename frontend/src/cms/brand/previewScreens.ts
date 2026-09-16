@@ -77,7 +77,8 @@ export function cacheKeyFor(payload: PreviewPayloadId, language: string, point?:
       // Ключ карточки требует идентификатор — показ подставляет полученный.
       return null;
     case 'locations':
-      return guestKeys.locations(language);
+      // Корзина показа пуста — места без позиций, тем же ключом, что спросит экран.
+      return guestKeys.locations(language, '');
     case 'room':
       return guestKeys.room;
   }

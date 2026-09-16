@@ -7,7 +7,8 @@ export const guestKeys = {
   venues: (group: string, language: string) => ['guest', 'venues', group, language] as const,
   search: (query: string, language: string) => ['guest', 'search', query, language] as const,
   item: (id: string, language: string) => ['guest', 'item', id, language] as const,
-  locations: (language: string) => ['guest', 'locations', language] as const,
+  // Места зависят от корзины: матрица «категория × локация» отбирает их по позициям.
+  locations: (language: string, items: string) => ['guest', 'locations', language, items] as const,
   slots: (itemId: string, date: string, language: string) =>
     ['guest', 'slots', itemId, date, language] as const,
   orders: (language: string) => ['guest', 'orders', language] as const,

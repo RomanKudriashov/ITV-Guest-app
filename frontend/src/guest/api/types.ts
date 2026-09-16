@@ -241,7 +241,10 @@ export interface ItemDetail extends MenuItem {
 export interface GuestLocation {
   id: string;
   code: string;
+  /** `pickup_point` — the guest collects the order here. */
   kind: string;
+  /** How the order is received here: brought (`delivery`) or collected (`pickup`). */
+  delivery_mode: 'delivery' | 'pickup';
   title: string;
   requires_refinement: boolean;
   refinement_label: string | null;

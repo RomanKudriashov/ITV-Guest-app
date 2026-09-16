@@ -83,12 +83,18 @@ export function useGuestItem(itemId: string | null, initialData?: ItemDetail) {
  * `delivery` — hence the `enabled` switch: a taxi request must not even fetch
  * the list it will never show.
  */
-export function useGuestLocations(enabled = true) {
+/**
+ * Места получения заказа для этих позиций. Сервер отбирает их по матрице
+ * «категория × локация»: место, где что-то из корзины не выдают, гостю не
+ * показывается, а заказ туда не примут.
+ */
+export function useGuestLocations(enabled = true, itemIds: string[] = []) {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();
+  const items = [...new Set(itemIds)].sort();
   return useQuery<GuestLocations>({
-    queryKey: guestKeys.locations(language),
-    queryFn: () => fetchLocations(language),
+    queryKey: guestKeys.locations(language, items.join(',')),
+    queryFn: () => fetchLocations(language, items),
     enabled: isReady && enabled,
     staleTime: 5 * 60_000,
   });

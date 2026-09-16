@@ -32,5 +32,9 @@ def public_hotel(request: HttpRequest):
 @router.get(
     "/locations", response=LocationsOut, auth=guest_auth, summary="Куда доставить"
 )
-def get_locations(request: HttpRequest):
-    return guest_locations(request.guest_session, current_language())
+def get_locations(request: HttpRequest, items: str = ""):
+    """
+    Места получения заказа. `items` — позиции корзины через запятую: места
+    отбираются по матрице «категория × локация» для их категорий.
+    """
+    return guest_locations(request.guest_session, current_language(), items.split(","))

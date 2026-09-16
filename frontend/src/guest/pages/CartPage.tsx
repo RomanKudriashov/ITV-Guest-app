@@ -83,7 +83,10 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   const { format, minorUnits } = useMoney();
   const cart = useCart();
   const { canOrder } = useGuestSession();
-  const locationsQuery = useGuestLocations();
+  const locationsQuery = useGuestLocations(
+    true,
+    cart.lines.map((line) => line.item_id),
+  );
 
   const locations = useMemo(
     () => locationsQuery.data?.locations ?? [],

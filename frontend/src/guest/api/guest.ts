@@ -64,8 +64,11 @@ export function fetchItem(itemId: string, language?: string): Promise<ItemDetail
   return guestApi.get<ItemDetail>(`/guest/item/${itemId}`, { query: { lang: language } });
 }
 
-export function fetchLocations(language?: string): Promise<GuestLocations> {
-  return guestApi.get<GuestLocations>('/guest/locations', { query: { lang: language } });
+/** `itemIds` — позиции корзины: места отбираются по матрице для их категорий. */
+export function fetchLocations(language?: string, itemIds: string[] = []): Promise<GuestLocations> {
+  return guestApi.get<GuestLocations>('/guest/locations', {
+    query: { lang: language, items: itemIds.length ? itemIds.join(',') : undefined },
+  });
 }
 
 /**

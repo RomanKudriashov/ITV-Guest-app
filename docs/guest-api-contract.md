@@ -205,24 +205,43 @@ crystal` — заголовок принимается только при `DJAN
 
 ## 3. Локации
 
-### `GET /api/v1/guest/locations`
+### `GET /api/v1/guest/locations?items=<id>,<id>`
+
+`items` — позиции корзины (одного заведения). Места отбираются по матрице
+«категория × локация» для их категорий: место подходит, только если там
+доступна **каждая** категория корзины.
 
 ```jsonc
 {
   "room": "305",                       // null, если сессия без номера
   "locations": [
     {"id": "...", "code": "in_room", "kind": "in_room", "title": "В номер",
+     "delivery_mode": "delivery",
      "requires_refinement": false, "refinement_label": null, "is_default": true},
     {"id": "...", "code": "pool", "kind": "common_point", "title": "У бассейна",
+     "delivery_mode": "delivery",
      "requires_refinement": true, "refinement_label": "Номер шезлонга",
-     "is_default": false}
+     "is_default": false},
+    {"id": "...", "code": "bar-counter", "kind": "pickup_point",
+     "title": "Стойка лобби-бара", "delivery_mode": "pickup",
+     "requires_refinement": false, "refinement_label": null, "is_default": false}
   ],
-  "delivery_modes": ["delivery", "pickup"]
+  "delivery_modes": ["delivery", "pickup"]   // устарело, см. delivery_mode у места
 }
 ```
 
+Правило доступности (одно для списка и для заказа):
+
+* у категории есть связки в матрице — только отмеченные места;
+* связок нет («не настроена») — все места доставки (`in_room`,
+  `common_point`), но **не** точки выдачи: выдачу отель включает сам;
+* без `items` — все места доставки и точки выдачи, где выдают хоть что-то.
+
+`kind`: `in_room` | `common_point` | `pickup_point`. `delivery_mode` места —
+как гость получит заказ: `delivery` (несут) или `pickup` (забирает сам).
+
 `is_default` — `in_room`, когда у сессии есть номер. Гость без номера получает
-только общие точки.
+только общие точки и точки выдачи.
 
 ---
 
@@ -272,6 +291,7 @@ crystal` — заголовок принимается только при `DJAN
 | 422 | `item_unavailable` | позиция вне расписания или в стоп-листе |
 | 422 | `modifier_required` | не выбран обязательный модификатор |
 | 422 | `refinement_required` | локация требует уточнения |
+| 422 | `location_not_available` | в этом месте не выдают часть корзины (матрица «категория × локация»), `field: location_id` |
 | 422 | `requested_time_invalid` | время в прошлом или дальше 24 ч |
 | 422 | `mixed_categories` | позиции из разных категорий (один заказ — одна точка исполнения) |
 | 422 | `field_required` | не заполнено обязательное поле заявки (`field` — его код) |

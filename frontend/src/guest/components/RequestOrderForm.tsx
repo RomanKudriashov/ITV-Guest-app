@@ -67,7 +67,7 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
   // "Where to?" is asked only where it means something: for a taxi the pick-up
   // point is a field of the form, for housekeeping the room is already known.
   const needsLocation = asksForLocation(item.location_mode);
-  const locationsQuery = useGuestLocations(needsLocation);
+  const locationsQuery = useGuestLocations(needsLocation, [item.id]);
   const locations = useMemo(
     () => (needsLocation ? (locationsQuery.data?.locations ?? []) : []),
     [needsLocation, locationsQuery.data],

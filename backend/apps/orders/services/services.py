@@ -169,7 +169,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         execution_point = _resolve_execution_point(next(iter(categories)))
         commerce_service = None  # _apply_charges резолвит сервис из точки, как раньше
 
-    location = _resolve_location(data, items[0])
+    location = _resolve_location(data, items[0], items)
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
     status = _initial_status(execution_point)
@@ -471,7 +471,11 @@ def _create_fanned_order(
     своими позициями и эскалацией). Деньги — на parent, над ВСЕМИ позициями, с
     коммерцией агрегатора; children денег не несут.
     """
-    location = _resolve_location(data, next(iter(groups.values()))[0]["item"])
+    location = _resolve_location(
+        data,
+        next(iter(groups.values()))[0]["item"],
+        [line["item"] for lines in groups.values() for line in lines],
+    )
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
     # Поток агрегата — агрегатора; у каждого child свой (см. ниже): коктейль
@@ -745,10 +749,13 @@ def _resolve_execution_point(category_id) -> ExecutionPoint:
     )
 
 
-def _resolve_location(data: OrderInput, item: Item) -> Location | None:
+def _resolve_location(data: OrderInput, item: Item, items=()) -> Location | None:
     """
     Спрашивать локацию имеет смысл не всегда: у такси точка подачи — поле
     заявки, у уборки номер и так известен. Решает режим позиции, а не тип.
+
+    Место должно подходить ВСЕМ позициям по матрице «категория × локация» —
+    по тому же правилу, по которому гостю показан список мест.
     """
     if item.location_mode != LocationMode.DELIVERY:
         if data.location_id:
@@ -764,6 +771,21 @@ def _resolve_location(data: OrderInput, item: Item) -> Location | None:
     location = Location.objects.filter(pk=data.location_id, is_active=True).first()
     if location is None:
         raise OrderValidationError("Локация не найдена", code="location_not_found", field="location_id")
+    from apps.hotels.services.locations import location_allows
+
+    missing = location_allows(location, {line.category_id for line in (items or [item])})
+    if missing:
+        from apps.catalog.models import Category
+
+        titles = ", ".join(
+            str(category.title_i18n or category.code)
+            for category in Category.objects.filter(pk__in=missing)
+        )
+        raise OrderValidationError(
+            f"В «{location.title_i18n}» это не получить: {titles}",
+            code="location_not_available",
+            field="location_id",
+        )
     if location.requires_refinement and not data.location_refinement.strip():
         raise OrderValidationError(
             f"Для локации «{location.title_i18n}» нужно уточнение "
