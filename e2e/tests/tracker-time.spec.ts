@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, signInToTracker } from './helpers'
+import { CREDENTIALS, DEMO_ROOM, signInToTracker } from './helpers'
 
 /**
  * ВРЕМЯ И ПОРОГИ НА ДОСКЕ (партия 1).
@@ -34,7 +34,7 @@ function order(overrides: Record<string, unknown>): Record<string, unknown> {
     status: { code: 'new', title: 'Новый', color_token: 'info' },
     status_flow: [],
     history: [],
-    room: '305',
+    room: DEMO_ROOM,
     location: null,
     delivery_mode: 'asap',
     requested_time: null,

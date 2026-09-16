@@ -523,3 +523,137 @@ def test_reversed_range_is_refused(cms):
     # Границы в правильном порядке и совпадающие границы — по-прежнему норма.
     assert cms.get("/api/cms/analytics/summary?date_from=2026-07-20&date_to=2026-07-25").status_code == 200
     assert cms.get("/api/cms/analytics/summary?date_from=2026-07-20&date_to=2026-07-20").status_code == 200
+
+
+# --- Разрез по категории номера --------------------------------------------
+
+
+def test_room_category_is_a_snapshot_not_a_lookup_by_room(crystal, django_capture_on_commit_callbacks):
+    """
+    САМОЕ ВАЖНОЕ В ЭТОМ РАЗРЕЗЕ: категория снимается в момент заказа.
+
+    Резолв по комнате был бы проще и неверен: перевели комнату из «Стандарта» в
+    «Делюкс» — и мартовская выручка задним числом переехала бы в «Делюкс».
+    Проверяем именно это: после смены категории комнаты прошлый заказ остаётся
+    в прежней категории.
+    """
+    from apps.analytics.services import dimensions as dim
+    from apps.hotels.models import Room, RoomCategory
+    from apps.orders.models import Order
+
+    with tenant_context(crystal):
+        standard = RoomCategory.objects.create(code="standard", title={"ru": "Стандарт"})
+        deluxe = RoomCategory.objects.create(code="deluxe", title={"ru": "Делюкс"})
+        room = Room.objects.create(number="7001", category=standard)
+
+        order = Order(room=room)
+        assert dim.room_category_for_order(order) == str(standard.pk)
+
+        # Слепок уже снят — дальше он живёт сам.
+        snapshot = dim.room_category_for_order(order)
+
+        room.category = deluxe
+        room.save()
+        room.refresh_from_db()
+
+        assert snapshot == str(standard.pk), "снимок не меняется вслед за комнатой"
+        assert dim.room_category_for_order(Order(room=room)) == str(deluxe.pk), (
+            "новый заказ той же комнаты уже несёт новую категорию"
+        )
+
+
+def test_breakdown_by_room_category_compares_per_room(crystal):
+    """
+    Сравнение категорий, а не столбик абсолютных чисел.
+
+    Люксов мало, стандартов много — «люкс принёс меньше» ничего не значит.
+    Ответ даётся на номер, и отношение считается к самой слабой категории.
+    """
+    from apps.hotels.models import Room, RoomCategory
+
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        suite = RoomCategory.objects.create(code="suite", title={"ru": "Люкс"})
+        standard = RoomCategory.objects.create(code="std", title={"ru": "Стандарт"})
+        # Два люкса и десять стандартов — как в жизни.
+        for index in range(2):
+            Room.objects.create(number=f"S{index}", category=suite)
+        for index in range(10):
+            Room.objects.create(number=f"T{index}", category=standard)
+
+        bd = date(2026, 7, 20)
+        for index in range(6):
+            _feed(crystal, "order_created", bd,
+                  {"offering_type": "product", "point_key": "k", "room_category_key": str(suite.pk)},
+                  {"revenue_minor": 100, "items_count": 1}, f"suite-{index}")
+        for index in range(10):
+            _feed(crystal, "order_created", bd,
+                  {"offering_type": "product", "point_key": "k", "room_category_key": str(standard.pk)},
+                  {"revenue_minor": 100, "items_count": 1}, f"std-{index}")
+
+        params = {"date_from": "2026-07-20", "date_to": "2026-07-20", "dimension": "room_category"}
+        rows = {row["key"]: row for row in queries.breakdown(crystal, admin, params)["rows"]}
+
+        assert rows[str(suite.pk)]["orders"] == 6
+        assert rows[str(standard.pk)]["orders"] == 10
+        # На номер: 3 против 1 — люкс заказывает втрое чаще.
+        assert rows[str(suite.pk)]["orders_per_room"] == 3.0
+        assert rows[str(standard.pk)]["orders_per_room"] == 1.0
+        assert rows[str(suite.pk)]["ratio_to_base"] == 3.0
+        assert rows[str(suite.pk)]["base_label"] == "Стандарт"
+        assert rows[str(suite.pk)]["label"] == "Люкс"
+
+
+def test_orders_without_category_stay_in_the_breakdown(crystal):
+    """
+    «Без категории» НЕ прячется: иначе сумма долей перестанет сходиться с
+    итогом, а заказы, созданные до появления разреза, исчезнут без объяснения.
+    """
+    from apps.hotels.models import RoomCategory
+
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        suite = RoomCategory.objects.create(code="suite2", title={"ru": "Люкс"})
+        bd = date(2026, 7, 21)
+        _feed(crystal, "order_created", bd,
+              {"offering_type": "product", "point_key": "k", "room_category_key": str(suite.pk)},
+              {"revenue_minor": 300, "items_count": 1}, "with-cat")
+        # Строка без категории — ровно то, чем будут все прошлые записи.
+        _feed(crystal, "order_created", bd,
+              {"offering_type": "product", "point_key": "k"},
+              {"revenue_minor": 700, "items_count": 1}, "no-cat")
+
+        params = {"date_from": "2026-07-21", "date_to": "2026-07-21", "dimension": "room_category"}
+        result = queries.breakdown(crystal, admin, params)
+        rows = {row["key"]: row for row in result["rows"]}
+
+        assert "" in rows, "строка «без категории» обязана остаться"
+        assert rows[""]["orders"] == 1
+        # Сумма долей сходится с единицей — то самое, ради чего её не прячут.
+        assert abs(sum(row["share"] for row in result["rows"]) - 1) < 0.001
+        # В сравнении она не участвует: номеров под ней может не быть вовсе.
+        assert rows[""]["orders_per_room"] is None
+
+
+def test_room_category_filter_narrows_the_summary(crystal):
+    from apps.hotels.models import RoomCategory
+
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        suite = RoomCategory.objects.create(code="suite3", title={"ru": "Люкс"})
+        bd = date(2026, 7, 22)
+        _feed(crystal, "order_created", bd,
+              {"offering_type": "product", "point_key": "k", "room_category_key": str(suite.pk)},
+              {"revenue_minor": 100, "items_count": 1}, "c1")
+        _feed(crystal, "order_created", bd,
+              {"offering_type": "product", "point_key": "k"},
+              {"revenue_minor": 100, "items_count": 1}, "c2")
+
+        params = {"date_from": "2026-07-22", "date_to": "2026-07-22"}
+        assert queries.summary(crystal, admin, params)["current"]["orders"] == 2
+        narrow = {**params, "room_category": str(suite.pk)}
+        assert queries.summary(crystal, admin, narrow)["current"]["orders"] == 1
+        # «Без категории» фильтруется словом `none`: пустую строку в параметре
+        # не отличить от «фильтр не задан».
+        empty = {**params, "room_category": "none"}
+        assert queries.summary(crystal, admin, empty)["current"]["orders"] == 1

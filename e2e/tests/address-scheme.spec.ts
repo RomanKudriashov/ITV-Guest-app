@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { waitForLayout } from './helpers'
+import { DEMO_ROOM, waitForLayout } from './helpers'
 
 /**
  * СХЕМА АДРЕСОВ — экранная половина.
@@ -59,7 +59,7 @@ test('корень платформы: пришедшему по старой с
   await expect(page.getByTestId('wrong-host-example')).toContainText('guest.localhost')
 
   // Гостевой deep-link из QR на корне тоже объясняет, а не молчит.
-  await page.goto(`${ROOT}/r/305`)
+  await page.goto(`${ROOT}/r/${DEMO_ROOM}`)
   await expect(page.getByTestId('wrong-host-notice')).toBeVisible({ timeout: 30_000 })
 })
 

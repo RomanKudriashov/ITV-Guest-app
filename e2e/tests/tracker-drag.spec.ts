@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { CREDENTIALS, signInToTracker, waitForLayout } from './helpers'
+import { CREDENTIALS, DEMO_ROOM, signInToTracker, waitForLayout } from './helpers'
 
 /**
  * ПЕРЕТАСКИВАНИЕ КАРТОЧЕК (партия 4).
@@ -45,7 +45,7 @@ function order(overrides: Record<string, unknown> = {}): Record<string, unknown>
     status: { code: 'accepted', title: 'Принят', color_token: 'info' },
     status_flow: [],
     history: [],
-    room: '305',
+    room: DEMO_ROOM,
     location: null,
     delivery_mode: 'asap',
     requested_time: null,

@@ -25,7 +25,10 @@ from apps.grms.transport.emulator import (
     IridiEmulator,
 )
 
-DEMO_ROOM = "305"
+# Номер берётся ИЗ СИДА, а не повторяется здесь строкой: двух независимых
+# «305» в репозитории уже было две штуки, и разъехаться они могли молча —
+# тест продолжал бы проверять комнату, которой на стенде нет.
+from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM  # noqa: E402
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 
-import { ADMIN, API, apiGet, apiHeaders, setPlanLevel, signInToCms } from './helpers'
+import { ADMIN, API, apiGet, apiHeaders, DEMO_ROOM, setPlanLevel, signInToCms } from './helpers'
 
 /**
  * Раздел GRMS в CMS: путь администратора целиком.
@@ -226,9 +226,9 @@ async function adminToken(request: APIRequestContext): Promise<string> {
 test.describe('Связь номерного фонда и управления номером', () => {
   test('УКУС: в списке номеров есть тип управления и он ведёт в конфигурацию', async () => {
     await page.goto('/cms/rooms')
-    await expect(page.getByTestId('room-row-305')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId(`room-row-${DEMO_ROOM}`)).toBeVisible({ timeout: 20_000 })
 
-    const cell = page.getByTestId('room-control-type-305')
+    const cell = page.getByTestId(`room-control-type-${DEMO_ROOM}`)
     await expect(cell).toBeVisible()
     /*
       Код берём СО СТРАНИЦЫ, а не подставляем свой: демо-номер привязан к
@@ -237,7 +237,7 @@ test.describe('Связь номерного фонда и управления 
       что ссылка ведёт в ЭТОТ ЖЕ тип.
     */
     const shown = (await cell.innerText()).trim()
-    expect(shown, 'номер 305 показан без типа управления').not.toBe('—')
+    expect(shown, `номер ${DEMO_ROOM} показан без типа управления`).not.toBe('—')
 
     await cell.click()
     // Открылась конфигурация ИМЕННО того типа, что назван в строке, а не
@@ -256,9 +256,9 @@ test.describe('Связь номерного фонда и управления 
       дефект, а о порядок соседних прогонов.
     */
     await page.goto('/cms/rooms')
-    await expect(page.getByTestId('room-row-305')).toBeVisible({ timeout: 20_000 })
-    const bound = (await page.getByTestId('room-control-type-305').innerText()).trim()
-    expect(bound, 'номер 305 без типа — проверять нечего').not.toBe('—')
+    await expect(page.getByTestId(`room-row-${DEMO_ROOM}`)).toBeVisible({ timeout: 20_000 })
+    const bound = (await page.getByTestId(`room-control-type-${DEMO_ROOM}`).innerText()).trim()
+    expect(bound, `номер ${DEMO_ROOM} без типа — проверять нечего`).not.toBe('—')
 
     await page.goto(`/cms/room-control?type=${encodeURIComponent(bound)}`)
     await expect(page.getByTestId('cms-room-control')).toBeVisible({ timeout: 20_000 })

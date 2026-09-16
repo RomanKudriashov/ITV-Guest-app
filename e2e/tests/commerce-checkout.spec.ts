@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
 
-import { API, apiToken, guestSession, HOTEL, openCart } from './helpers'
+import { API, apiToken, DEMO_ROOM, guestSession, HOTEL, openCart } from './helpers'
 
 /**
  * Финальный сценарий коммерции: включаем сбор/минимум/чаевые в CMS →
@@ -93,7 +93,7 @@ test('витрина: минимум блокирует, чаевые и сум�
     window.sessionStorage.clear()
   })
   await page.goto('/')
-  await page.getByTestId('guest-room-input').fill('305')
+  await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
   await page.getByTestId('guest-room-submit').click()
     await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
   // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
