@@ -102,7 +102,7 @@ def test_brand_events_reach_shared_channels_not_personal_ones(crystal, monkeypat
             sent.append(config.get("marker"))
             return "recorded"
 
-    monkeypatch.setattr(announce, "get_adapter", lambda channel_type: Recorder())
+    monkeypatch.setattr(adapters, "get_adapter", lambda channel_type: Recorder())
 
     with tenant_context(crystal):
         announce.announce_to_hotel("brand.published_on_schedule", {"version": 3})

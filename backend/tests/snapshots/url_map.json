@@ -288,6 +288,12 @@
   "/api/v1/cms/notification-channels/{channel_id}/test": [
     "POST"
   ],
+  "/api/v1/cms/notification-events": [
+    "GET"
+  ],
+  "/api/v1/cms/notification-events/catalog": [
+    "GET"
+  ],
   "/api/v1/cms/notification-log": [
     "GET"
   ],

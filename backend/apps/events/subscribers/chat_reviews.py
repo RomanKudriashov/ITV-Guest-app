@@ -37,10 +37,10 @@ def broadcast_chat_message(event: Event) -> None:
 
 @subscribe(CHAT_MESSAGE)
 def notify_staff_of_guest_message(event: Event) -> None:
-    """Сообщение гостя → уведомление отделу треда через каналы уведомлений."""
+    """Сообщение гостя → каналы отдела треда (адресат — из справочника событий)."""
     if event.payload.get("author_type") != "guest":
         return
-    _notify_point(
+    _notify(
         event,
         "chat.guest_message",
         {
@@ -52,8 +52,8 @@ def notify_staff_of_guest_message(event: Event) -> None:
 
 @subscribe(REVIEW_LOW)
 def notify_manager_of_low_rating(event: Event) -> None:
-    """Низкая оценка → уведомление менеджеру отдела (service recovery)."""
-    _notify_point(
+    """Низкая оценка → руководителю отдела (service recovery), не всей смене."""
+    _notify(
         event,
         "review.low",
         {
@@ -62,58 +62,27 @@ def notify_manager_of_low_rating(event: Event) -> None:
             "comment": event.payload.get("comment", ""),
             "room_number": event.payload.get("room") or None,
         },
-        target_level="manager",
     )
 
 
-def channels_for_point(point_id, *, target_level: str | None = None) -> list:
+def _notify(event: Event, code: str, values: dict) -> None:
     """
-    Куда уходит событие отдела.
+    Через общую дверь уведомлений: факт в журнал, затем рассылка адресату из
+    справочника. Событие без отдела тоже пишется — с итогом «некому
+    отправить», а не молча пропадает.
 
-    Без уровня — во все каналы отдела. С уровнем — ТОЛЬКО в личные каналы
-    сотрудников этого уровня на этой точке. Раньше уровень принимался и
-    нигде не использовался: низкая оценка, адресованная руководителю, уходила
-    во все каналы отдела, то есть в общий чат кухни, где её читает вся смена.
+    Уведомление не вправе уронить чат или отзыв: сбой здесь остаётся в логе,
+    а сообщение гостя уже доставлено в тред.
     """
-    from apps.accounts.models import StaffAssignment
-    from apps.notifications.models import NotificationChannel
+    from apps.notifications.services.events import notify
 
-    active = NotificationChannel.objects.filter(is_active=True)
-    if not target_level:
-        return list(active.filter(execution_point_id=point_id))
-
-    user_ids = StaffAssignment.objects.filter(
-        execution_point_id=point_id, level=target_level, is_active=True
-    ).values_list("user_id", flat=True)
-    return list(active.filter(user_id__in=list(user_ids)))
-
-
-def _notify_point(
-    event: Event, code: str, values: dict, *, target_level: str | None = None
-) -> None:
-    """
-    Отправка через существующие каналы уведомлений: каналы отдела треда/заявки.
-    Текст — из справочника событий (`apps/notifications/events.py`).
-    """
-    from apps.hotels.models import Hotel
-    from apps.notifications import events as notification_events
-
-    point_id = event.payload.get("execution_point_id")
-    if not point_id:
-        return
-
-    with tenant_context(event.hotel_id):
-        channels = channels_for_point(point_id, target_level=target_level)
-        if not channels:
-            return
-        from apps.notifications.channels.adapters import get_adapter
-
-        language = Hotel.objects.get(pk=event.hotel_id).default_language
-        message = notification_events.render(
-            code, values, language=language, default_language=language
-        )
-        for channel in channels:
-            try:
-                get_adapter(channel.type).send(message, channel.config or {})
-            except Exception:  # noqa: BLE001 — канал не должен ронять чат/отзыв
-                logger.warning("Уведомление не доставлено в канал %s", channel.pk, exc_info=True)
+    try:
+        with tenant_context(event.hotel_id):
+            notify(
+                code,
+                values,
+                point_id=event.payload.get("execution_point_id") or None,
+                dedupe_key=f"{code}:{event.id}",
+            )
+    except Exception:  # noqa: BLE001
+        logger.warning("Уведомление %s не записано", code, exc_info=True)

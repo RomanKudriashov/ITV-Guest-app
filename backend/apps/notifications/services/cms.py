@@ -478,3 +478,64 @@ def list_logs(
         queryset = queryset.filter(status=status)
     queryset = apply_search(queryset, search, ("channel__title", "target_kind"))
     return list_page(queryset, limit=limit, offset=offset, serialize=serialize_log)
+
+
+# --- Журнал событий --------------------------------------------------------
+
+
+def serialize_event(record) -> dict:
+    return {
+        "id": str(record.pk),
+        "code": record.code,
+        "execution_point_id": str(record.execution_point_id) if record.execution_point_id else None,
+        "payload": record.payload or {},
+        "outcome": record.outcome,
+        "created_at": record.created_at.isoformat(),
+        "deliveries": [
+            {
+                "id": str(delivery.pk),
+                "channel_id": str(delivery.channel_id) if delivery.channel_id else None,
+                "channel_type": delivery.channel_type,
+                "channel_title": delivery.channel_title,
+                "recipient_id": str(delivery.recipient_id) if delivery.recipient_id else None,
+                "language": delivery.language,
+                "subject": delivery.subject,
+                "body": delivery.body,
+                "status": delivery.status,
+                "attempts": delivery.attempts,
+                "sent_at": delivery.sent_at.isoformat() if delivery.sent_at else None,
+                "error": delivery.error,
+            }
+            for delivery in record.deliveries.all()
+        ],
+    }
+
+
+def list_events(
+    *, code: str = "", outcome: str = "", limit: int | None = None, offset: int = 0
+) -> dict:
+    """
+    Журнал событий. Режется так же, как журнал эскалации: управляющий видит
+    события своих отделов. Событие уровня отеля (без отдела — оформление)
+    видит только администратор отеля: у управляющего кухней к нему отношения
+    нет, а его текст может нести то, что отдел знать не должен.
+    """
+    from apps.core.listing import page as list_page
+    from apps.notifications.models import EventRecord
+
+    queryset = EventRecord.objects.prefetch_related("deliveries").order_by("-created_at")
+    managed = managed_point_ids_or_none()
+    if managed is not None:
+        queryset = queryset.filter(execution_point_id__in=managed)
+    if code:
+        queryset = queryset.filter(code=code)
+    if outcome:
+        queryset = queryset.filter(outcome=outcome)
+    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_event)
+
+
+def event_catalog(language: str) -> dict:
+    """Справочник событий — для экрана настроек и для фильтра журнала."""
+    from apps.notifications import events as registry
+
+    return {"items": registry.catalog(language)}

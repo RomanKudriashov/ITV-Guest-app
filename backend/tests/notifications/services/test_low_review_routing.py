@@ -33,7 +33,7 @@ def _person(crystal, kitchen, email: str, level: str) -> NotificationChannel:
 
 
 def test_low_review_reaches_only_the_managers_personal_channel(crystal, kitchen):
-    from apps.events.subscribers.chat_reviews import channels_for_point
+    from apps.notifications.services.events import channels_for_audience
 
     manager = _person(crystal, kitchen, "boss@kitchen.test", StaffAssignment.Level.MANAGER)
     member = _person(crystal, kitchen, "cook@kitchen.test", StaffAssignment.Level.MEMBER)
@@ -44,7 +44,7 @@ def test_low_review_reaches_only_the_managers_personal_channel(crystal, kitchen)
         )
         assert point_channels, "у кухни в сиде есть общий канал — иначе проверять нечего"
 
-        chosen = {channel.pk for channel in channels_for_point(kitchen.pk, target_level="manager")}
+        chosen = {channel.pk for channel in channels_for_audience("manager", kitchen.pk)}
 
     assert manager.pk in chosen
     assert member.pk not in chosen, "исполнитель не руководитель"
@@ -53,14 +53,14 @@ def test_low_review_reaches_only_the_managers_personal_channel(crystal, kitchen)
 
 def test_without_a_level_the_whole_point_is_addressed(crystal, kitchen):
     """Сообщение гостя в чат по-прежнему уходит в каналы отдела."""
-    from apps.events.subscribers.chat_reviews import channels_for_point
+    from apps.notifications.services.events import channels_for_audience
 
     with tenant_context(crystal):
         point_channels = set(
             NotificationChannel.objects.filter(execution_point=kitchen, is_active=True)
             .values_list("pk", flat=True)
         )
-        chosen = {channel.pk for channel in channels_for_point(kitchen.pk)}
+        chosen = {channel.pk for channel in channels_for_audience("point", kitchen.pk)}
     assert chosen == point_channels
 
 

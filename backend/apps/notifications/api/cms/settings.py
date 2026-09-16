@@ -103,3 +103,28 @@ def notification_log(
     return svc.list_logs(
         order_id=order_id, status=status, search=search, limit=limit, offset=offset
     )
+
+
+# --- Журнал событий --------------------------------------------------------
+
+
+@router.get("/notification-events", summary="Журнал событий уведомлений")
+def notification_events(
+    request: HttpRequest,
+    code: str = "",
+    outcome: str = "",
+    limit: int | None = None,
+    offset: int = 0,
+):
+    """
+    Факты событий без заказа (сообщение гостя, низкая оценка, оформление) и их
+    доставки. Журнал эскалации заказа — по-прежнему `/notification-log`.
+    """
+    return svc.list_events(code=code, outcome=outcome, limit=limit, offset=offset)
+
+
+@router.get("/notification-events/catalog", summary="Справочник событий уведомлений")
+def notification_event_catalog(request: HttpRequest):
+    from apps.core.context import current_language
+
+    return svc.event_catalog(current_language() or "ru")
