@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 

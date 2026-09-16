@@ -1,4 +1,5 @@
-import { expect, test, type FrameLocator, type Page } from '@playwright/test'
+import { type FrameLocator, type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { ADMIN, signInToCms } from './helpers'
 

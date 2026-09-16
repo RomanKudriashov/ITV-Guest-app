@@ -79,6 +79,14 @@ GRMS_TEST_MARKS = {"e2e-zone", "e2e.light"}
 # только домен `.test` (он зарезервирован под тесты и настоящим быть не может).
 PLATFORM_TEST_EMAIL = re.compile(r"^(?:eyes|support)-\d{10,}@platform\.test$")
 
+# СЕССИИ ПРОГОНОВ — СТРАХОВКА, А НЕ СПОСОБ. Прогон сам выходит из каждого входа
+# (`e2e/tests/fixtures.ts`); это правило подбирает то, что выход пропустил.
+# Опознаём по строке браузера, и только по явным меткам: запросы Playwright,
+# безголовый браузер и метка `ITV-E2E`, которую прогон дописывает к строке
+# своего браузера (`e2e/playwright.config.ts`). Профиль «Desktop Chrome» без
+# метки неотличим от настоящего Chrome — такие строки правило не трогает.
+E2E_AGENT = re.compile(r"Playwright/|HeadlessChrome|ITV-E2E")
+
 # Через сколько часов открытый заказ считается брошенным. Сутки с запасом:
 # смена длится меньше, и ни один живой заказ столько в работе не висит.
 STALE_HOURS = 24
@@ -288,9 +296,36 @@ class Command(BaseCommand):
                     f"  привязок удалённых сотрудников: {len(dangling_assignments)}"
                 )
 
+            # --- Сессии прогонов (страховка к выходу) ---------------------------
+            from apps.accounts.models import StaffSession
+
+            with platform_scope():
+                live_sessions = StaffSession.all_objects.using("platform").filter(
+                    revoked_at__isnull=True,
+                    expires_at__gt=now,
+                    created_at__lt=cutoff,
+                )
+                # Сессии этого отеля и платформенные (у них отеля нет).
+                from django.db.models import Q
+
+                e2e_sessions = [
+                    pk
+                    for pk, agent in live_sessions.filter(
+                        Q(hotel_id=hotel.pk) | Q(hotel__isnull=True)
+                    ).values_list("pk", "user_agent")
+                    if E2E_AGENT.search(agent or "")
+                ]
+            if e2e_sessions:
+                self.stdout.write(f"  сессий прогонов, не закрытых выходом: {len(e2e_sessions)}")
+
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
                 return
+
+            with platform_scope():
+                closed_sessions = StaffSession.all_objects.using("platform").filter(
+                    pk__in=e2e_sessions, revoked_at__isnull=True
+                ).update(revoked_at=now, updated_at=now)
 
             hidden = Item.objects.filter(pk__in=[i.pk for i in keep]).update(
                 is_active=False, in_stock=False
@@ -402,6 +437,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Учёток платформы убрано {dropped_platform}; "
+                f"сессий прогонов закрыто {closed_sessions}; "
                 f"позиций удалено {deleted_items}, выключено {hidden}; "
                 f"разделов удалено {deleted_cats}, выключено {hidden_cats}; "
                 f"заведений удалено {deleted_services}, выключено {hidden_services}; "

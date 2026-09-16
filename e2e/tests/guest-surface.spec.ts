@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { API, apiToken, CONCIERGE, DEMO_ROOM, HOTEL, moveOrderStatus, openCart } from './helpers'
 

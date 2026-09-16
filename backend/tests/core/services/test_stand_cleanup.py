@@ -284,3 +284,54 @@ def test_real_service_with_orders_survives_even_in_purge_mode(crystal):
             Order.all_objects.filter(execution_point=real.execution_point_id).count()
             == orders_before
         )
+
+
+# --- Сессии прогонов: страховка к выходу -----------------------------------
+
+
+def _session(hotel, *, agent: str, age_hours: float):
+    from apps.accounts.models import StaffSession, User
+    from apps.core.context import platform_scope
+
+    with platform_scope():
+        user = User.all_objects.using("platform").get(email="owner@crystal.local")
+        session = StaffSession(
+            hotel_id=hotel.pk,
+            user=user,
+            scope="staff",
+            user_agent=agent,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        session.save(using="platform")
+        StaffSession.all_objects.using("platform").filter(pk=session.pk).update(
+            created_at=timezone.now() - timedelta(hours=age_hours)
+        )
+        return session.pk
+
+
+def _revoked(pk) -> bool:
+    from apps.accounts.models import StaffSession
+    from apps.core.context import platform_scope
+
+    with platform_scope():
+        return StaffSession.all_objects.using("platform").get(pk=pk).revoked_at is not None
+
+
+def test_stale_e2e_sessions_are_closed_as_a_safety_net(crystal):
+    """
+    Прогон выходит сам; уборка подбирает то, что выход пропустил, — только по
+    явной метке в строке браузера и только старше порога.
+    """
+    marked = _session(crystal, agent="Mozilla/5.0 … Chrome/149 Safari/537.36 ITV-E2E", age_hours=48)
+    api = _session(crystal, agent="Playwright/1.61.1 (arm64; macOS 15.6) node/23.11", age_hours=48)
+    fresh = _session(crystal, agent="Playwright/1.61.1", age_hours=0)
+    human = _session(crystal, agent="Mozilla/5.0 … Chrome/149 Safari/537.36", age_hours=48)
+
+    call_command("clean_test_residue", "--subdomain", "crystal", verbosity=0)
+    assert not _revoked(marked), "пробный проход ничего не закрывает"
+
+    call_command("clean_test_residue", "--subdomain", "crystal", "--apply", verbosity=0)
+    assert _revoked(marked)
+    assert _revoked(api)
+    assert not _revoked(fresh), "свежий вход может быть идущим прогоном"
+    assert not _revoked(human), "без метки строка неотличима от настоящего браузера"

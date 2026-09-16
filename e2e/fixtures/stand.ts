@@ -47,12 +47,31 @@ export interface StandSnapshot {
   itemIds: string[]
 }
 
+/**
+ * Входы снимка и уборки — и выход из них. Они идут вне воркера проверок, и
+ * общая основа (`tests/fixtures.ts`) их не видит: без своего выхода каждый
+ * прогон оставлял бы три живых сессии.
+ */
+const OPENED: { logout: string; access: string; headers: Record<string, string> }[] = []
+
+async function logoutOpened(request: APIRequestContext): Promise<void> {
+  for (const entry of OPENED.splice(0)) {
+    await request
+      .post(entry.logout, {
+        headers: { ...entry.headers, Authorization: `Bearer ${entry.access}` },
+      })
+      .catch(() => undefined)
+  }
+}
+
 async function platformToken(request: APIRequestContext): Promise<string> {
   const resp = await request.post(`${API}/api/v1/platform/auth/login`, {
     data: { email: PLATFORM.email, password: PLATFORM.password },
   })
   if (!resp.ok()) throw new Error(`Платформа не пустила: ${resp.status()} ${await resp.text()}`)
-  return (await resp.json()).access
+  const access = (await resp.json()).access
+  OPENED.push({ logout: `${API}/api/v1/platform/auth/logout`, access, headers: {} })
+  return access
 }
 
 async function staffToken(request: APIRequestContext): Promise<string | null> {
@@ -66,7 +85,14 @@ async function staffToken(request: APIRequestContext): Promise<string | null> {
     },
     headers: { 'X-Hotel-Subdomain': HOTEL },
   })
-  return resp.ok() ? (await resp.json()).access : null
+  if (!resp.ok()) return null
+  const access = (await resp.json()).access
+  OPENED.push({
+    logout: `${API}/api/staff/auth/logout`,
+    access,
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  return access
 }
 
 /**
@@ -149,6 +175,7 @@ export async function snapshotStand(): Promise<void> {
         `${snapshot.serviceIds.length} сервисов, ${snapshot.categoryIds.length} разделов`,
     )
   } finally {
+    await logoutOpened(request)
     await request.dispose()
   }
 }
@@ -277,6 +304,7 @@ export async function cleanupStand(): Promise<void> {
         `${newCategories.length} разделов, ${deletedItems} позиций${chat}`,
     )
   } finally {
+    await logoutOpened(request)
     await request.dispose()
   }
 }

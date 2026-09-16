@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { API, HOTEL, apiDelete, apiGet, apiToken, findItemByTitle, signInToCms, type CmsItem, unique } from './helpers'
 

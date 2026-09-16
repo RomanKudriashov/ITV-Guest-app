@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { type APIRequestContext } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM } from './helpers'
 

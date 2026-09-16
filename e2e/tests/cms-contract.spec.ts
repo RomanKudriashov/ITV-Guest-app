@@ -1,7 +1,8 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { type APIRequestContext } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { ADMIN, API, HOTEL } from './helpers'
 

@@ -33,7 +33,14 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 900 },
+        // Метка прогона в строке браузера. Прогон сам выходит из своих входов,
+        // а уборка стенда по этой метке подбирает то, что выход пропустил:
+        // без неё профиль «Desktop Chrome» неотличим от настоящего Chrome.
+        userAgent: `${devices['Desktop Chrome'].userAgent} ITV-E2E`,
+      },
     },
   ],
 })

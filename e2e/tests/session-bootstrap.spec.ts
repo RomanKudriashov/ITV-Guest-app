@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 import { ADMIN, API, HOTEL, SESSION_KEYS } from './helpers'
 
