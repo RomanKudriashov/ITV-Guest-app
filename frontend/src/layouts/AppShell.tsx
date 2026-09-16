@@ -120,7 +120,10 @@ export function AppShell() {
   const noSections =
     isForbidden(navigation.error) || (navigation.isSuccess && navGroups.length === 0);
   const onTracker = location.pathname.startsWith('/tracker');
-  if (noSections && !onTracker) {
+  // Профиль — тоже свой экран, а не раздел панели: контакты и входы есть у
+  // каждого, и повар подключает мессенджер отсюда же.
+  const onProfile = location.pathname === cmsPath('/profile');
+  if (noSections && !onTracker && !onProfile) {
     return <NoCmsAccess />;
   }
   const showNav = !noSections;
@@ -183,8 +186,10 @@ export function AppShell() {
             role={user?.is_hotel_admin ? t('nav.roleAdmin') : t('nav.roleStaff')}
             items={[
               {
-                key: 'sessions',
-                label: t('sessions.title'),
+                // Профиль — контакты и входы. Пункт назывался «Мои входы», пока
+                // контактов на экране не было.
+                key: 'profile',
+                label: t('profile.title'),
                 icon: <DevicesOutlinedIcon fontSize="small" />,
                 onSelect: () => navigate(cmsPath('/profile')),
               },

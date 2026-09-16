@@ -12,26 +12,34 @@ import {
 } from '@/api/cms';
 import { session } from '@/api/client';
 import { useAuth } from '@/auth';
+import { ContactsPanel } from '@/components/ContactsPanel';
 import { SessionsPanel } from '@/components/SessionsPanel';
 import { dropAllDrafts } from '@/hooks/useFormDraft';
 
 /**
- * Профиль сотрудника. Пока здесь одно: его собственные входы.
+ * Профиль сотрудника: его контакты и его входы.
  *
  * Отдельным экраном, а не разделом настроек отеля: настройки — про отель и
- * открыты администратору, а сессии принадлежат ЧЕЛОВЕКУ, и смотреть их вправе
- * каждый, кто вошёл, включая управляющего сервисом.
+ * открыты администратору, а контакты и сессии принадлежат ЧЕЛОВЕКУ, и
+ * смотреть их вправе каждый, кто вошёл, — включая повара и горничную, у
+ * которых разделов CMS нет вовсе.
  */
 export function ProfilePage() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
 
   return (
-    <Box sx={{ p: 3 }} data-testid="cms-profile">
+    <Box sx={{ p: { xs: 2, sm: 3 } }} data-testid="cms-profile">
       <Typography variant="h5">{t('profile.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         {user?.email}
       </Typography>
+
+      <Card variant="outlined" sx={{ maxWidth: 640, borderColor: 'divider', mb: 2 }}>
+        <CardContent>
+          <ContactsPanel />
+        </CardContent>
+      </Card>
 
       <Card variant="outlined" sx={{ maxWidth: 640, borderColor: 'divider' }}>
         <CardContent>

@@ -85,6 +85,47 @@ export function closeSession(id: string): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(`/staff/auth/sessions/${id}`, { method: 'DELETE' });
 }
 
+/* ── Свои контакты ──────────────────────────────────────────────────── */
+
+export type Messenger = 'telegram' | 'max';
+
+export interface OwnMessengerState {
+  linked: boolean;
+  confirmed_at: string | null;
+  username: string;
+  /** A bot is configured — only then can a binding code be issued. */
+  binding_available: boolean;
+}
+
+export interface OwnContacts {
+  phone: string;
+  messengers: Record<Messenger, OwnMessengerState>;
+}
+
+export interface BindingCode {
+  code: string;
+  /** `t.me/<bot>?start=<code>` — empty for messengers without deep links. */
+  link: string;
+  expires_at: string;
+}
+
+export function fetchOwnContacts(): Promise<OwnContacts> {
+  return api.get<OwnContacts>('/staff/me/contacts');
+}
+
+export function saveOwnPhone(phone: string): Promise<OwnContacts> {
+  return api.patch<OwnContacts>('/staff/me/contacts', { phone });
+}
+
+/** `409 binding_unavailable` while no bot exists. */
+export function requestBindingCode(messenger: Messenger): Promise<BindingCode> {
+  return api.post<BindingCode>(`/staff/me/contacts/${messenger}/binding-code`);
+}
+
+export function unlinkMessenger(messenger: Messenger): Promise<OwnContacts> {
+  return request<OwnContacts>(`/staff/me/contacts/${messenger}`, { method: 'DELETE' });
+}
+
 /** Выйти на этом устройстве — рвёт только текущую сессию. */
 export function logoutHere(): Promise<{ ok: boolean }> {
   return api.post<{ ok: boolean }>('/staff/auth/logout');

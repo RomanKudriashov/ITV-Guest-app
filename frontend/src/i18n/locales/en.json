@@ -3096,7 +3096,29 @@
     "unknownAgent": "browser unknown"
   },
   "profile": {
-    "title": "Profile"
+    "title": "Profile",
+    "contacts": {
+      "what": "contacts",
+      "title": "Contacts",
+      "hint": "Where you can be reached. Your phone is visible to you and the hotel admin.",
+      "phone": "Phone",
+      "phoneHint": "With the country code, e.g. +44 20 7946 0958",
+      "phoneAdminHint": "Visible only to the employee and the hotel admin",
+      "phoneSaved": "Phone saved",
+      "invalidPhone": "This does not look like a number: country code and 8 to 15 digits",
+      "messengers": {
+        "telegram": "Telegram",
+        "max": "Max"
+      },
+      "confirmed": "Connected {{date}}{{who}}",
+      "notLinked": "Not connected",
+      "connect": "Connect",
+      "unlink": "Disconnect",
+      "unlinked": "Messenger disconnected",
+      "unavailable": "Connecting is not available yet: the notification bot has not been set up. Once it exists, a link to it will appear here.",
+      "openBot": "Open the bot and press “Start”",
+      "codeExpires": "The link is valid until {{time}}"
+    }
   },
   "list": {
     "nothingFound": "Nothing found",

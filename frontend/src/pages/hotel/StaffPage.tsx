@@ -67,6 +67,7 @@ interface StaffForm {
   full_name: string;
   password: string;
   language: string;
+  phone: string;
   is_hotel_admin: boolean;
   is_active: boolean;
   assignments: AssignmentDraft[];
@@ -209,7 +210,34 @@ export function StaffPage() {
                           ) : null}
                         </Stack>
                       </TableCell>
-                      <TableCell>{member.email}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2">{member.email}</Typography>
+                        {member.phone ? (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            data-testid={`staff-phone-${member.email}`}
+                          >
+                            {member.phone}
+                          </Typography>
+                        ) : null}
+                        {member.messengers ? (
+                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
+                            {(['telegram', 'max'] as const).map((messenger) =>
+                              member.messengers?.[messenger]?.linked ? (
+                                <Chip
+                                  key={messenger}
+                                  size="small"
+                                  variant="outlined"
+                                  color="success"
+                                  label={t(`profile.contacts.messengers.${messenger}`)}
+                                  data-testid={`staff-messenger-${member.email}-${messenger}`}
+                                />
+                              ) : null,
+                            )}
+                          </Stack>
+                        ) : null}
+                      </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
                           {member.assignments.length === 0 ? (
@@ -268,6 +296,11 @@ export function StaffPage() {
       {editing ? (
         <StaffDialog
           member={editing === 'new' ? null : editing}
+          // Телефон нового сотрудника вносит только администратор отеля; у
+          // существующего — тот, кому сервер его показал.
+          canEditPhone={
+            editing === 'new' ? Boolean(user?.is_hotel_admin) : editing.phone !== undefined
+          }
           departments={departments}
           languageCodes={languages.codes}
           languageLabels={languages.labels}
@@ -303,6 +336,7 @@ export function StaffPage() {
 
 function StaffDialog({
   member,
+  canEditPhone,
   departments,
   languageCodes,
   languageLabels,
@@ -313,6 +347,7 @@ function StaffDialog({
   onSaved,
 }: {
   member: StaffMember | null;
+  canEditPhone: boolean;
   departments: StaffDepartment[];
   languageCodes: string[];
   languageLabels: Record<string, string>;
@@ -331,6 +366,7 @@ function StaffDialog({
     full_name: member?.full_name ?? '',
     password: '',
     language: member?.language ?? defaultLanguage,
+    phone: member?.phone ?? '',
     is_hotel_admin: member?.is_hotel_admin ?? false,
     is_active: member?.is_active ?? true,
     assignments: (member?.assignments ?? []).map((assignment) => ({
@@ -362,6 +398,7 @@ function StaffDialog({
           full_name: form.full_name.trim(),
           password: form.password,
           language: form.language,
+          ...(canEditPhone ? { phone: form.phone.trim() } : {}),
           is_hotel_admin: form.is_hotel_admin,
           assignments,
         });
@@ -377,6 +414,9 @@ function StaffDialog({
         is_active: form.is_active,
       };
       if (form.password.trim()) patch.password = form.password;
+      // Кому телефон не показан, тот его и не присылает: пустое поле значило
+      // бы «стереть номер», которого он не видел.
+      if (canEditPhone) patch.phone = form.phone.trim();
       await updateStaff(member.id, patch);
       return updateStaffAssignments(member.id, { assignments });
     },
@@ -388,6 +428,7 @@ function StaffDialog({
       if (error instanceof ApiError) {
         if (error.code === 'email_taken') return setServerError(t('hotel.staff.emailTaken'));
         if (error.code === 'weak_password') return setServerError(t('hotel.staff.weakPassword'));
+        if (error.code === 'invalid_phone') return setServerError(t('profile.contacts.invalidPhone'));
         if (error.code === 'cannot_remove_self')
           return setServerError(t('hotel.staff.cannotRemoveSelf'));
         return setServerError(error.detail);
@@ -449,6 +490,20 @@ function StaffDialog({
                 fullWidth
               />
             </FormCell>
+            {canEditPhone ? (
+              <FormCell span={6}>
+                <TextField
+                  size="small"
+                  type="tel"
+                  label={t('profile.contacts.phone')}
+                  value={form.phone}
+                  onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+                  inputProps={{ 'data-testid': 'staff-phone' }}
+                  helperText={t('profile.contacts.phoneAdminHint')}
+                  fullWidth
+                />
+              </FormCell>
+            ) : null}
             <FormCell span={6}>
               <TextField
                 size="small"

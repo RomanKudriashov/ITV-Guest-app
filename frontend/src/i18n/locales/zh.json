@@ -3067,7 +3067,29 @@
     "unknownAgent": "浏览器未知"
   },
   "profile": {
-    "title": "个人资料"
+    "title": "个人资料",
+    "contacts": {
+      "what": "联系方式",
+      "title": "联系方式",
+      "hint": "可以联系到您的方式。您的电话仅您本人和酒店管理员可见。",
+      "phone": "电话",
+      "phoneHint": "请带国家代码，例如 +86 138 0000 0000",
+      "phoneAdminHint": "仅员工本人和酒店管理员可见",
+      "phoneSaved": "电话已保存",
+      "invalidPhone": "号码格式不对：需要国家代码和 8 到 15 位数字",
+      "messengers": {
+        "telegram": "Telegram",
+        "max": "Max"
+      },
+      "confirmed": "已于 {{date}} 连接{{who}}",
+      "notLinked": "未连接",
+      "connect": "连接",
+      "unlink": "断开",
+      "unlinked": "已断开即时通讯",
+      "unavailable": "暂时无法连接：通知机器人尚未创建。创建后，这里会显示它的链接。",
+      "openBot": "打开机器人并点击「Start」",
+      "codeExpires": "链接有效期至 {{time}}"
+    }
   },
   "list": {
     "nothingFound": "未找到结果",

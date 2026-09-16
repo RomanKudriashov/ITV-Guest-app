@@ -286,6 +286,12 @@ export interface StaffAssignment {
   is_active?: boolean;
 }
 
+export interface MessengerStatus {
+  linked: boolean;
+  /** When the account was bound through the bot; `null` — not connected. */
+  confirmed_at: string | null;
+}
+
 export interface StaffMember {
   id: string;
   email: string;
@@ -294,6 +300,12 @@ export interface StaffMember {
   is_hotel_admin: boolean;
   is_active: boolean;
   assignments: StaffAssignment[];
+  /**
+   * The phone is the PERSON's contact: present only for the hotel admin and
+   * for the person themselves. Absent key — not shown to this viewer.
+   */
+  phone?: string;
+  messengers?: Record<'telegram' | 'max', MessengerStatus>;
 }
 
 /** One assignment as sent to the server — code and id are resolved by it. */
@@ -308,6 +320,7 @@ export interface StaffCreatePayload {
   /** Required on creation, minimum 8 characters. */
   password: string;
   language: string;
+  phone?: string;
   is_hotel_admin?: boolean;
   assignments?: StaffAssignmentInput[];
 }
@@ -318,6 +331,8 @@ export interface StaffPatchPayload {
   /** Absent — keep the current password; present — change it. */
   password?: string;
   language?: string;
+  /** Sent only by those who may see it — the admin or the person. */
+  phone?: string;
   is_hotel_admin?: boolean;
   is_active?: boolean;
 }
