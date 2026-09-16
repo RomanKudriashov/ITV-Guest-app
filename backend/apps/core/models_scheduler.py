@@ -105,6 +105,14 @@ class SchedulerHeartbeat(models.Model):
     due_count = models.PositiveIntegerField(default=0)
     overdue_count = models.PositiveIntegerField(default=0)
     done_last_tick = models.PositiveIntegerField(default=0)
+    # Ждут своего срока — всё ещё впереди. «Пришёл срок» (`due_count`) к концу
+    # круга почти всегда ноль: круг его и выполнил. Без этого числа консоль
+    # не отвечает на вопрос «сколько служба держит на себе».
+    pending_count = models.PositiveIntegerField(default=0)
+    # Разбивка по видам: {"brand.publish": {"pending": 2, "due": 0, "overdue": 0}}.
+    # С двумя потребителями одна общая цифра не говорит, чьё опаздывает: сотня
+    # ступеней эскалации заслонила бы одну просроченную публикацию.
+    by_kind = models.JSONField(default=dict, blank=True)
     last_error = models.TextField(blank=True, default="")
 
     class Meta:

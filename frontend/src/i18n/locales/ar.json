@@ -2123,9 +2123,18 @@
       "trial_expiring": "تجربة «{{hotel}}» تنتهي خلال {{days}} يومًا",
       "trial_expired": "انتهت تجربة «{{hotel}}»",
       "node_offline": "عقدة {{hotel}} غير متصلة",
-      "scheduler_down": "خدمة النشر المجدول صامتة منذ {{count}} دقيقة — لا يتم تنفيذ أي مهمة",
-      "scheduler_overdue": "عمليات نشر مجدولة متأخرة: {{count}}",
-      "scheduler_ok": "خدمة النشر المجدول تعمل، في الانتظار: {{count}}"
+      "scheduler_down": "خدمة المهام المجدولة لا تستجيب منذ {{count}} دقيقة — المهام المجدولة لا تُنفَّذ",
+      "scheduler_overdue": "مهام مجدولة متأخرة: {{count}}",
+      "scheduler_ok": "خدمة المهام المجدولة تعمل، في الانتظار: {{count}}",
+      "schedulerKind": "{{name}}: في الانتظار {{pending}}، متأخرة {{overdue}}",
+      "schedulerKinds": {
+        "brand": {
+          "publish": "عمليات نشر الهوية البصرية"
+        },
+        "notification": {
+          "escalation_step": "مراحل التصعيد"
+        }
+      }
     },
     "fleet": {
       "title": "الفنادق",

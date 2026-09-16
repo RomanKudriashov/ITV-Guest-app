@@ -162,6 +162,14 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
 
     with platform_scope():
         beat = scheduler.heartbeat_state()
+    # Разбивка по видам — в каждом сигнале службы. С двумя потребителями
+    # общее число не говорит, чьё опаздывает: сотня ступеней эскалации
+    # заслонила бы одну просроченную публикацию.
+    kinds = [
+        {"kind": kind, **counts}
+        for kind, counts in sorted((beat.get("by_kind") or {}).items())
+        if counts.get("pending") or counts.get("due") or counts.get("overdue")
+    ]
     if not beat["alive"]:
         signals.append(
             {
@@ -170,13 +178,20 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
                 # Минуты, а не секунды: «стоит 47 минут» читается сразу, а
                 # «2820» требует счёта в уме.
                 "count": (beat["age_seconds"] or 0) // 60,
+                "kinds": kinds,
             }
         )
     elif beat["overdue"]:
         # Служба жива, но не успевает: задания ждут дольше, чем следует.
-        signals.append({"level": "warn", "code": "scheduler_overdue", "count": beat["overdue"]})
+        signals.append(
+            {"level": "warn", "code": "scheduler_overdue", "count": beat["overdue"], "kinds": kinds}
+        )
     else:
-        signals.append({"level": "ok", "code": "scheduler_ok", "count": beat["due"]})
+        # «Ждут» — сколько заданий впереди, а не сколько пришло сроком к
+        # началу круга: то круг уже выполнил, и цифра была почти всегда нулём.
+        signals.append(
+            {"level": "ok", "code": "scheduler_ok", "count": beat.get("pending", 0), "kinds": kinds}
+        )
 
     expiring = [
         {"hotel": hotel.name_i18n, "subdomain": hotel.subdomain, "days": tariffs.trial_days_left(hotel, today)}

@@ -181,12 +181,33 @@ function HealthRow({ signal }: { signal: OverviewHealth }) {
       }}
     >
       <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: TONE[signal.level], flex: 'none' }} />
-      {t(`admin.health.${signal.code}`, {
-        count: signal.count ?? 0,
-        hotel: signal.hotel ?? '',
-        days: signal.days ?? 0,
-        defaultValue: signal.code,
-      })}
+      <Box sx={{ minWidth: 0 }}>
+        {t(`admin.health.${signal.code}`, {
+          count: signal.count ?? 0,
+          hotel: signal.hotel ?? '',
+          days: signal.days ?? 0,
+          defaultValue: signal.code,
+        })}
+        {signal.kinds?.length ? (
+          // У службы расписания несколько потребителей: одна общая цифра не
+          // говорит, чьё опаздывает, поэтому — разбивка по видам заданий.
+          <Box
+            component="span"
+            data-testid="admin-health-scheduler-kinds"
+            sx={{ display: 'block', color: ink.low }}
+          >
+            {signal.kinds
+              .map((entry) =>
+                t('admin.health.schedulerKind', {
+                  name: t(`admin.health.schedulerKinds.${entry.kind}`, { defaultValue: entry.kind }),
+                  pending: entry.pending,
+                  overdue: entry.overdue,
+                }),
+              )
+              .join(' · ')}
+          </Box>
+        ) : null}
+      </Box>
     </Box>
   );
 }

@@ -2045,9 +2045,18 @@
       "trial_expiring": "「{{hotel}}」试用将在 {{days}} 天后到期",
       "trial_expired": "「{{hotel}}」试用已到期",
       "node_offline": "{{hotel}} 的节点离线",
-      "scheduler_down": "定时发布服务已 {{count}} 分钟无响应——排期任务未在执行",
-      "scheduler_overdue": "逾期的排期发布：{{count}}",
-      "scheduler_ok": "定时发布服务正常，等待中：{{count}}"
+      "scheduler_down": "定时任务服务已 {{count}} 分钟无响应——计划的工作未执行",
+      "scheduler_overdue": "逾期的定时任务：{{count}}",
+      "scheduler_ok": "定时任务服务正常，等待中：{{count}}",
+      "schedulerKind": "{{name}}：等待 {{pending}}，逾期 {{overdue}}",
+      "schedulerKinds": {
+        "brand": {
+          "publish": "品牌外观发布"
+        },
+        "notification": {
+          "escalation_step": "升级步骤"
+        }
+      }
     },
     "fleet": {
       "title": "酒店",

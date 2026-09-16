@@ -326,6 +326,16 @@ export interface OverviewHealth {
   days?: number | null;
   purpose?: string;
   seconds?: number | null;
+  /** Scheduler signals only: the same numbers split by kind of job. */
+  kinds?: SchedulerKindCounts[];
+}
+
+export interface SchedulerKindCounts {
+  kind: string;
+  /** Still ahead of their time. */
+  pending: number;
+  due: number;
+  overdue: number;
 }
 
 export interface TariffBrief {

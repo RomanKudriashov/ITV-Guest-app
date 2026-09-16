@@ -39,6 +39,11 @@ from apps.core.models import AuditLog, ScheduledJob, SchedulerHeartbeat
 _HANDLERS: dict[str, Callable[[ScheduledJob], dict]] = {}
 
 
+# Задание, чей срок прошёл больше двух минут назад, а оно всё ждёт, —
+# просрочено: круг ходит раз в минуту, и два круга подряд его не взяли.
+OVERDUE_AFTER_MINUTES = 2
+
+
 def register(kind: str, handler: Callable[[ScheduledJob], dict]) -> None:
     _HANDLERS[kind] = handler
 
@@ -182,33 +187,65 @@ def tick(now: datetime | None = None) -> dict:
     """
     from apps.hotels.models import Hotel
 
+    from django.db.models import Count, Q
+
     started = time.monotonic()
     now = now or timezone.now()
-    due = overdue = done = 0
+    done = 0
     error = ""
+    # Разбивка по видам: со вторым потребителем (ступени эскалации) одна общая
+    # цифра перестала говорить, чьё опаздывает.
+    by_kind: dict[str, dict[str, int]] = {}
+    late_after = now - timedelta(minutes=OVERDUE_AFTER_MINUTES)
 
     for hotel in Hotel.objects.all().only("id"):
         try:
             with tenant_context(hotel.id):
-                pending = ScheduledJob.objects.filter(
-                    status=ScheduledJob.Status.PENDING, run_at__lte=now
+                rows = (
+                    ScheduledJob.objects.filter(status=ScheduledJob.Status.PENDING)
+                    .values("kind")
+                    .annotate(
+                        # Ждут срока — ещё впереди. Пришедшие сроком круг
+                        # выполнит сейчас же, и «ждут» они только до его конца.
+                        pending=Count("id", filter=Q(run_at__gt=now)),
+                        due=Count("id", filter=Q(run_at__lte=now)),
+                        overdue=Count("id", filter=Q(run_at__lt=late_after)),
+                    )
                 )
-                due += pending.count()
-                overdue += pending.filter(run_at__lt=now - timedelta(minutes=2)).count()
+                for row in rows:
+                    bucket = by_kind.setdefault(row["kind"], {"pending": 0, "due": 0, "overdue": 0})
+                    for field in ("pending", "due", "overdue"):
+                        bucket[field] += row[field]
                 done += run_due_for_hotel(now)
         except Exception as exc:  # noqa: BLE001 — один отель не должен ронять круг
             error = f"{hotel.id}: {exc}"[:500]
+
+    due = sum(bucket["due"] for bucket in by_kind.values())
+    overdue = sum(bucket["overdue"] for bucket in by_kind.values())
+    pending = sum(bucket["pending"] for bucket in by_kind.values())
 
     heartbeat = SchedulerHeartbeat.objects.first() or SchedulerHeartbeat(id=1)
     heartbeat.last_tick_at = timezone.now()
     heartbeat.took_ms = int((time.monotonic() - started) * 1000)
     heartbeat.due_count = due
     heartbeat.overdue_count = overdue
+    # «Ждут» — то, что осталось после круга: срок впереди плюс пришедшее
+    # сроком, но не взятое (его держит другая служба). Выполненное в этом
+    # круге ждать перестало.
+    heartbeat.pending_count = pending + max(0, due - done)
+    heartbeat.by_kind = by_kind
     heartbeat.done_last_tick = done
     heartbeat.last_error = error
     heartbeat.save()
 
-    return {"due": due, "overdue": overdue, "done": done, "error": error}
+    return {
+        "due": due,
+        "overdue": overdue,
+        "pending": heartbeat.pending_count,
+        "done": done,
+        "error": error,
+        "by_kind": by_kind,
+    }
 
 
 def heartbeat_state() -> dict:
@@ -227,6 +264,8 @@ def heartbeat_state() -> dict:
             "alive": False,
             "due": 0,
             "overdue": 0,
+            "pending": 0,
+            "by_kind": {},
             "took_ms": 0,
             "last_error": "",
         }
@@ -239,6 +278,8 @@ def heartbeat_state() -> dict:
         "alive": age <= 180,
         "due": heartbeat.due_count,
         "overdue": heartbeat.overdue_count,
+        "pending": heartbeat.pending_count,
+        "by_kind": heartbeat.by_kind or {},
         "took_ms": heartbeat.took_ms,
         "last_error": heartbeat.last_error,
     }

@@ -2067,9 +2067,18 @@
       "trial_expiring": "Trial for “{{hotel}}” ends in {{days}} days",
       "trial_expired": "Trial for “{{hotel}}” has ended",
       "node_offline": "Node at {{hotel}} is offline",
-      "scheduler_down": "The scheduled-publication service has been silent for {{count}} min — nothing is running",
-      "scheduler_overdue": "Scheduled publications overdue: {{count}}",
-      "scheduler_ok": "Scheduled-publication service is alive, waiting: {{count}}"
+      "scheduler_down": "Scheduled-job service has not responded for {{count}} min — scheduled work is not running",
+      "scheduler_overdue": "Scheduled jobs overdue: {{count}}",
+      "scheduler_ok": "Scheduled-job service is alive, waiting: {{count}}",
+      "schedulerKind": "{{name}}: waiting {{pending}}, overdue {{overdue}}",
+      "schedulerKinds": {
+        "brand": {
+          "publish": "branding publications"
+        },
+        "notification": {
+          "escalation_step": "escalation steps"
+        }
+      }
     },
     "fleet": {
       "title": "Hotels",

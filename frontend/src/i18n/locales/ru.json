@@ -2092,9 +2092,18 @@
       "trial_expiring": "Триал «{{hotel}}» истекает через {{days}} дн.",
       "trial_expired": "Триал «{{hotel}}» истёк",
       "node_offline": "Узел отеля {{hotel}} — офлайн",
-      "scheduler_down": "Служба отложенных публикаций не отвечает {{count}} мин — назначенное не выполняется",
-      "scheduler_overdue": "Отложенных публикаций просрочено: {{count}}",
-      "scheduler_ok": "Служба отложенных публикаций на связи, ждут: {{count}}"
+      "scheduler_down": "Служба отложенных заданий не отвечает {{count}} мин — назначенное не выполняется",
+      "scheduler_overdue": "Отложенных заданий просрочено: {{count}}",
+      "scheduler_ok": "Служба отложенных заданий на связи, ждут: {{count}}",
+      "schedulerKind": "{{name}}: ждут {{pending}}, просрочено {{overdue}}",
+      "schedulerKinds": {
+        "brand": {
+          "publish": "публикации оформления"
+        },
+        "notification": {
+          "escalation_step": "ступени эскалации"
+        }
+      }
     },
     "fleet": {
       "title": "Отели",
