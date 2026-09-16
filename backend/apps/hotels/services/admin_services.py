@@ -90,7 +90,46 @@ def serialize_room(
     }
 
 
-def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
+# Фильтры выборки — ОДИН СПИСОК НА ВЕСЬ ФОНД. Им пользуются и список, и
+# массовая правка: «выделить всё по выборке» обязано означать ровно то же
+# множество, которое человек видит на экране, иначе правка уедет не туда.
+ROOM_FILTERS = (
+    "floor",
+    "zone",
+    "category",
+    "housekeeping",
+    "out_of_service",
+)
+
+
+def rooms_queryset(*, search: str = "", filters: dict | None = None):
+    """Выборка номеров по поиску и фильтрам — общая для чтения и правки."""
+    from apps.core.listing import search as apply_search
+
+    filters = filters or {}
+    rooms = Room.objects.select_related("category")
+
+    if filters.get("floor"):
+        rooms = rooms.filter(floor=filters["floor"])
+    if filters.get("zone"):
+        rooms = rooms.filter(zone=filters["zone"])
+    if filters.get("category"):
+        # «none» — номера БЕЗ категории: их надо уметь найти, чтобы назначить.
+        value = filters["category"]
+        rooms = rooms.filter(category__isnull=True) if value == "none" else rooms.filter(
+            category_id=value
+        )
+    if filters.get("housekeeping"):
+        rooms = rooms.filter(housekeeping=filters["housekeeping"])
+    if filters.get("out_of_service") is not None:
+        rooms = rooms.filter(out_of_service=filters["out_of_service"])
+
+    return apply_search(rooms.order_by("sort_key", "number"), search, ("number", "floor"))
+
+
+def list_rooms(
+    *, search: str = "", limit: int | None = None, offset: int = 0, filters: dict | None = None
+) -> dict:
     """
     Поиск по НОМЕРУ и ЭТАЖУ — единственное, что о номере помнят наизусть.
 
@@ -101,7 +140,7 @@ def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -
     ручки ничего у него не отнимает: оно лишь перестаёт отдавать то, за чем он
     не может прийти по интерфейсу.
     """
-    from apps.core.listing import page as list_page, search as apply_search
+    from apps.core.listing import page as list_page
 
     require_hotel_admin()
 
@@ -109,9 +148,7 @@ def list_rooms(*, search: str = "", limit: int | None = None, offset: int = 0) -
     # Порядок — по ключу натуральной сортировки (`Room.sort_key`), а не по
     # строке номера: иначе `12` встаёт после `101`. Ключ считается из номера
     # в одном месте, `hotels/models/room.py`.
-    rooms = apply_search(
-        Room.objects.order_by("sort_key", "number"), search, ("number", "floor")
-    )
+    rooms = rooms_queryset(search=search, filters=filters)
     control_types = _control_types()
     return list_page(
         rooms,
@@ -653,6 +690,106 @@ def bulk_create_rooms(data: dict) -> dict:
         "created_count": len(created),
         "skipped_count": len(skipped),
     }
+
+
+# --- Массовая правка -------------------------------------------------------
+
+
+# Что можно править пачкой. НОМЕРА ЗДЕСЬ НЕТ, и это решение: переименование
+# требует подтверждения на КАЖДЫЙ номер (наклейка QR и имя устройства iRidi у
+# каждого свои), а «подтвердить всё разом» — это ровно то молчание, от
+# которого мы ушли в одиночной правке.
+BULK_PATCH_FIELDS = ("floor", "zone", "category_id", "housekeeping", "out_of_service", "is_active")
+
+
+def resolve_selection(selection: dict):
+    """
+    Выборка для массовой правки — ИЗ ФИЛЬТРОВ, а не из того, что видно.
+
+    «Выделить все» на экране, который показывает 50 строк из 314, выделило бы
+    пятьдесят. Поэтому у выделения два и только два вида:
+
+      * `ids` — человек отметил строки руками. Правим ровно их;
+      * `all_matching` — «все по текущей выборке». Тогда сервер САМ строит то
+        же множество из поиска и фильтров, а клиент не присылает список: он
+        его и не видел целиком.
+
+    Третьего вида («все на странице») нет намеренно — это и есть ложь.
+    """
+    ids = selection.get("ids") or []
+    if selection.get("all_matching"):
+        return rooms_queryset(
+            search=str(selection.get("search") or ""),
+            filters=selection.get("filters") or {},
+        )
+    if not ids:
+        raise ValidationError("Не выбрано ни одного номера", field="ids", code="empty_selection")
+    return rooms_queryset().filter(pk__in=ids)
+
+
+@transaction.atomic
+def bulk_update_rooms(payload: dict) -> dict:
+    """
+    Правка пачкой: этаж, корпус, категория, уборка, «вне продажи», активность.
+
+    Отвечает ЧИСЛАМИ по факту, а не по намерению: сколько номеров попало в
+    выборку и сколько изменено. Пустая правка — отказ, а не «изменено 0»:
+    молчаливый ноль читается как «сделано».
+    """
+    require_hotel_admin()
+
+    patch = {
+        key: value
+        for key, value in (payload.get("patch") or {}).items()
+        if key in BULK_PATCH_FIELDS and value is not None
+    }
+    # Именно ЗНАЧЕНИЕ, а не наличие ключа: схема присылает `number: null` в
+    # каждом запросе, и проверка по ключу отвергала бы вообще любую правку.
+    if (payload.get("patch") or {}).get("number") is not None:
+        raise ValidationError(
+            "Номер пачкой не меняется: у каждого своя наклейка QR и своё имя "
+            "устройства, подтверждать это надо поштучно",
+            field="number",
+            code="rename_not_bulk",
+        )
+    if not patch:
+        raise ValidationError("Нечего менять", field="patch", code="empty_patch")
+
+    rooms = list(resolve_selection(payload.get("selection") or {}))
+    fields = _room_fields(patch)
+
+    changed = 0
+    for room in rooms:
+        touched = False
+        for key in ("floor", "zone"):
+            if key in patch:
+                value = str(patch[key] or "").strip()
+                if getattr(room, key) != value:
+                    setattr(room, key, value)
+                    touched = True
+        if "is_active" in patch and room.is_active != bool(patch["is_active"]):
+            room.is_active = bool(patch["is_active"])
+            touched = True
+        if "category" in fields:
+            new_category = fields["category"]
+            new_id = new_category.pk if new_category is not None else None
+            if room.category_id != new_id:
+                room.category = new_category
+                touched = True
+        for key in ("housekeeping", "out_of_service"):
+            if key in fields and getattr(room, key) != fields[key]:
+                setattr(room, key, fields[key])
+                touched = True
+        if touched:
+            room.save()
+            changed += 1
+
+    AuditLog.record(
+        "room.bulk_updated",
+        object_type="room",
+        payload={"matched": len(rooms), "changed": changed, "patch": sorted(patch)},
+    )
+    return {"matched": len(rooms), "changed": changed}
 
 
 # --- Категории номеров -----------------------------------------------------

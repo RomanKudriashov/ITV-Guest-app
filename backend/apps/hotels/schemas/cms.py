@@ -140,6 +140,42 @@ class BulkRoomsPreviewOut(Schema):
     exists_count: int
 
 
+class RoomSelectionIn(Schema):
+    """
+    ВЫБОРКА ДЛЯ МАССОВОЙ ПРАВКИ: либо отмеченные строки, либо «всё по
+    фильтрам». Варианта «всё на странице» нет — он означал бы правку
+    пятидесяти строк там, где человек думает про триста.
+    """
+
+    ids: list[str] = []
+    all_matching: bool = False
+    search: str = ""
+    filters: dict = {}
+
+
+class RoomBulkPatchIn(Schema):
+    # `number` ПРИНИМАЕТСЯ, чтобы быть внятно отвергнутым: схема, которая
+    # молча его выбрасывает, превращает «номер пачкой не меняется» в «нечего
+    # менять» — и человек идёт искать, что он сделал не так.
+    number: str | None = None
+    floor: str | None = None
+    zone: str | None = None
+    category_id: str | None = None
+    housekeeping: str | None = None
+    out_of_service: bool | None = None
+    is_active: bool | None = None
+
+
+class BulkUpdateIn(Schema):
+    selection: RoomSelectionIn
+    patch: RoomBulkPatchIn
+
+
+class BulkUpdateOut(Schema):
+    matched: int
+    changed: int
+
+
 class RoomCategoryIn(Schema):
     title: dict[str, str]
     code: str | None = None

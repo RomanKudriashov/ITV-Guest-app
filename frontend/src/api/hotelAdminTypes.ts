@@ -58,6 +58,16 @@ export interface RoomCategory {
   rooms_count: number;
 }
 
+/** Фильтры выборки. Те же, по которым массовая правка берёт «все по выборке». */
+export interface RoomFilters {
+  floor?: string;
+  zone?: string;
+  /** Идентификатор категории или `none` — номера без категории. */
+  category?: string;
+  housekeeping?: string;
+  out_of_service?: boolean;
+}
+
 export interface RoomBulkPreview {
   numbers: string[];
   will_create: string[];
@@ -67,6 +77,33 @@ export interface RoomBulkPreview {
   total: number;
   create_count: number;
   exists_count: number;
+}
+
+/**
+ * Выделение для массовой правки.
+ *
+ * `all_matching` означает «все по ТЕКУЩЕЙ ВЫБОРКЕ», и список идентификаторов
+ * при этом не шлётся: клиент его целиком не видел — он видел страницу.
+ */
+export interface RoomSelection {
+  ids?: string[];
+  all_matching?: boolean;
+  search?: string;
+  filters?: RoomFilters;
+}
+
+export interface RoomBulkPatch {
+  floor?: string;
+  zone?: string;
+  category_id?: string | null;
+  housekeeping?: RoomHousekeeping;
+  out_of_service?: boolean;
+  is_active?: boolean;
+}
+
+export interface RoomBulkUpdateResult {
+  matched: number;
+  changed: number;
 }
 
 export interface RoomPayload {

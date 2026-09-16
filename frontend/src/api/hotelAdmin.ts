@@ -7,12 +7,16 @@ import type {
   LocationPayload,
   MatrixUpdatePayload,
   Room,
+  RoomBulkPatch,
   RoomBulkPayload,
   RoomBulkPreview,
   RoomBulkResult,
+  RoomBulkUpdateResult,
   RoomCategory,
+  RoomFilters,
   RoomPayload,
   RoomRenameImpact,
+  RoomSelection,
   StaffAssignmentsPayload,
   StaffCreatePayload,
   StaffMember,
@@ -27,6 +31,7 @@ export const ROOMS_PAGE_SIZE = 50;
 export function fetchRooms(
   search = '',
   page: { limit: number; offset: number } = { limit: ROOMS_PAGE_SIZE, offset: 0 },
+  filters: RoomFilters = {},
 ): Promise<ListPage<Room>> {
   /*
     Поиск уходит НА СЕРВЕР: отсев уже скачанного списка врал бы счётчиком
@@ -40,10 +45,24 @@ export function fetchRooms(
   return api.get<ListPage<Room>>('/cms/rooms', {
     query: {
       ...(search ? { search } : {}),
+      ...roomFilterQuery(filters),
       limit: String(page.limit),
       offset: String(page.offset),
     },
   });
+}
+
+/** Фильтры → строка запроса. Пустые не уходят: `?floor=` это не фильтр. */
+function roomFilterQuery(filters: RoomFilters): Record<string, string> {
+  const query: Record<string, string> = {};
+  if (filters.floor) query.floor = filters.floor;
+  if (filters.zone) query.zone = filters.zone;
+  if (filters.category) query.category = filters.category;
+  if (filters.housekeeping) query.housekeeping = filters.housekeeping;
+  if (filters.out_of_service !== undefined) {
+    query.out_of_service = String(filters.out_of_service);
+  }
+  return query;
 }
 
 /**
@@ -52,6 +71,17 @@ export function fetchRooms(
  */
 export function previewBulkRooms(payload: RoomBulkPayload): Promise<RoomBulkPreview> {
   return api.post<RoomBulkPreview>('/cms/rooms/bulk/preview', payload);
+}
+
+/**
+ * Массовая правка. Выборка — либо отмеченные строки, либо «все по фильтрам»;
+ * во втором случае множество строит сервер по тем же фильтрам, что и список.
+ */
+export function bulkUpdateRooms(
+  selection: RoomSelection,
+  patch: RoomBulkPatch,
+): Promise<RoomBulkUpdateResult> {
+  return api.post<RoomBulkUpdateResult>('/cms/rooms/bulk-update', { selection, patch });
 }
 
 /* ── 1b. Room categories ───────────────────────────────────────────────── */

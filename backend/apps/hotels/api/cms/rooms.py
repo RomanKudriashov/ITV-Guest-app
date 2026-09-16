@@ -10,6 +10,8 @@ from apps.core.schemas import OkOut
 from apps.hotels.schemas.cms import (
     BulkRoomsIn,
     BulkRoomsPreviewOut,
+    BulkUpdateIn,
+    BulkUpdateOut,
     RoomCategoryIn,
     RoomCategoryOut,
     RoomCategoryPatch,
@@ -27,11 +29,33 @@ router = Router(tags=["cms:hotel-admin"])
 
 @router.get("/rooms", summary="Список номеров")
 def list_rooms(
-    request: HttpRequest, search: str = "", limit: int | None = None, offset: int = 0
+    request: HttpRequest,
+    search: str = "",
+    limit: int | None = None,
+    offset: int = 0,
+    floor: str = "",
+    zone: str = "",
+    category: str = "",
+    housekeeping: str = "",
+    out_of_service: bool | None = None,
 ):
     """Выдача в ОБОЛОЧКЕ (`items/total/limit`): голый массив без предела
-    выглядит полным, сколько бы записей ни осталось за его границей."""
-    return svc.list_rooms(search=search, limit=limit, offset=offset)
+    выглядит полным, сколько бы записей ни осталось за его границей.
+
+    Фильтры — те же, по которым массовая правка строит «все по выборке»:
+    два разных множества под одним словом «выборка» это готовая ошибка."""
+    return svc.list_rooms(
+        search=search,
+        limit=limit,
+        offset=offset,
+        filters={
+            "floor": floor,
+            "zone": zone,
+            "category": category,
+            "housekeeping": housekeeping,
+            "out_of_service": out_of_service,
+        },
+    )
 
 
 @router.post(
@@ -46,6 +70,16 @@ def bulk_rooms_preview(request: HttpRequest, payload: BulkRoomsIn):
     тысяч комнат.
     """
     return svc.preview_bulk_rooms(payload.dict(by_alias=True))
+
+
+@router.post("/rooms/bulk-update", response=BulkUpdateOut, summary="Правка пачкой")
+def bulk_update_rooms(request: HttpRequest, payload: BulkUpdateIn):
+    """
+    Выборка задаётся ИДЕНТИФИКАТОРАМИ или признаком «все по фильтрам», и во
+    втором случае множество строит сервер — клиент его целиком не видел.
+    Номер пачкой не меняется (см. сервис).
+    """
+    return svc.bulk_update_rooms(payload.dict())
 
 
 # --- Категории номеров -----------------------------------------------------

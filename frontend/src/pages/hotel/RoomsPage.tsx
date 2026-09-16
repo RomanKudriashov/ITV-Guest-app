@@ -46,6 +46,7 @@ import { ApiError } from '@/api/client';
 import {
   ROOMS_PAGE_SIZE,
   bulkCreateRooms,
+  bulkUpdateRooms,
   checkOutRoom,
   createRoom,
   createRoomCategory,
@@ -62,9 +63,12 @@ import {
 } from '@/api/hotelAdmin';
 import type {
   Room,
+  RoomBulkPatch,
   RoomBulkPreview,
   RoomBulkResult,
   RoomCategory,
+  RoomFilters,
+  RoomHousekeeping,
   RoomRenameImpact,
 } from '@/api/hotelAdminTypes';
 import { queryKeys } from '@/api/queryKeys';
@@ -80,6 +84,9 @@ interface RoomForm {
 }
 
 const EMPTY_ROOM: RoomForm = { number: '', floor: '', zone: '', is_active: true };
+
+/** Состояния уборки в порядке показа. `unknown` первым — это значение по умолчанию. */
+const HOUSEKEEPING: RoomHousekeeping[] = ['unknown', 'clean', 'dirty', 'in_progress'];
 
 export function RoomsPage() {
   const { t } = useTranslation();
@@ -107,13 +114,26 @@ export function RoomsPage() {
   const { params, patch } = useListQuery({
     search: '',
     page: 1,
+    floor: '',
+    category: '',
+    housekeeping: '',
   });
   const pageNumber = Math.max(1, Number(params.page) || 1);
   const offset = (pageNumber - 1) * ROOMS_PAGE_SIZE;
 
+  // Фильтры выборки — ровно те, по которым сервер строит «все по выборке» для
+  // массовой правки. Разъехавшись, они дали бы экран, где человек видит одно,
+  // а правит другое.
+  const filters: RoomFilters = {
+    floor: params.floor || undefined,
+    category: params.category || undefined,
+    housekeeping: params.housekeeping || undefined,
+  };
+  const isFiltered = Boolean(params.search || params.floor || params.category || params.housekeeping);
+
   const roomsQuery = useQuery({
-    queryKey: [...queryKeys.rooms, params.search, pageNumber],
-    queryFn: () => fetchRooms(params.search, { limit: ROOMS_PAGE_SIZE, offset }),
+    queryKey: [...queryKeys.rooms, params.search, pageNumber, params.floor, params.category, params.housekeeping],
+    queryFn: () => fetchRooms(params.search, { limit: ROOMS_PAGE_SIZE, offset }, filters),
   });
   const categoriesQuery = useQuery({
     queryKey: [...queryKeys.rooms, 'categories'],
@@ -126,7 +146,46 @@ export function RoomsPage() {
   const shownTo = offset + rooms.length;
   const hasMore = shownTo < total;
 
+  /*
+    ВЫДЕЛЕНИЕ. Два состояния, и второе — не «галочка в шапке».
+
+    `picked` — отмеченные строки. `allMatching` — «все по выборке»: его нельзя
+    выразить списком идентификаторов, потому что клиент их не видел (страница
+    50 строк при 314 в фильтре). Поэтому при `allMatching` наружу уходят
+    фильтры, а множество строит сервер.
+  */
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [allMatching, setAllMatching] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const selectedCount = allMatching ? total : picked.size;
+  const pageAllPicked = rooms.length > 0 && rooms.every((room) => picked.has(room.id));
+
+  const resetSelection = () => {
+    setPicked(new Set());
+    setAllMatching(false);
+  };
+
+  const togglePicked = (id: string) => {
+    setAllMatching(false);
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const togglePage = () => {
+    setAllMatching(false);
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (pageAllPicked) rooms.forEach((room) => next.delete(room.id));
+      else rooms.forEach((room) => next.add(room.id));
+      return next;
+    });
+  };
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.rooms });
   const showError = (error: unknown) =>
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
@@ -251,7 +310,10 @@ export function RoomsPage() {
                 /* Новый поиск — всегда с первой страницы: иначе набранное
                    слово находит три номера, а экран стоит на седьмой
                    странице и показывает пусто. */
-                onChange={(event) => patch({ search: event.target.value, page: 1 })}
+                onChange={(event) => {
+                  resetSelection();
+                  patch({ search: event.target.value, page: 1 });
+                }}
                 placeholder={t('list.searchPlaceholder')}
                 inputProps={{ 'data-testid': 'rooms-search' }}
                 sx={{ minWidth: 200 }}
@@ -284,6 +346,135 @@ export function RoomsPage() {
               </Button>
             </Stack>
           </Stack>
+
+          {/* Фильтры выборки — те же, что уходят в массовую правку. */}
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            useFlexGap
+            alignItems="center"
+            sx={{ mb: 1 }}
+          >
+            <TextField
+              select
+              size="small"
+              label={t('hotel.rooms.filterCategory')}
+              value={params.category}
+              onChange={(event) => {
+                resetSelection();
+                patch({ category: event.target.value, page: 1 });
+              }}
+              sx={{ minWidth: 180 }}
+              /* Нативный select — как у остальных списков CMS: он доступен с
+                 клавиатуры и его умеет выбирать проверка. */
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ 'data-testid': 'rooms-filter-category' }}
+            >
+              <option value="">{t('common.all')}</option>
+              <option value="none">{t('hotel.rooms.categoryNone')}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.title_i18n || category.code}
+                </option>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label={t('hotel.rooms.filterHousekeeping')}
+              value={params.housekeeping}
+              onChange={(event) => {
+                resetSelection();
+                patch({ housekeeping: event.target.value, page: 1 });
+              }}
+              sx={{ minWidth: 180 }}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ 'data-testid': 'rooms-filter-housekeeping' }}
+            >
+              <option value="">{t('common.all')}</option>
+              {HOUSEKEEPING.map((value) => (
+                <option key={value} value={value}>
+                  {t(`hotel.rooms.housekeeping_${value}`)}
+                </option>
+              ))}
+            </TextField>
+            <TextField
+              size="small"
+              label={t('hotel.rooms.filterFloor')}
+              value={params.floor}
+              onChange={(event) => {
+                resetSelection();
+                patch({ floor: event.target.value, page: 1 });
+              }}
+              sx={{ width: 120 }}
+              inputProps={{ 'data-testid': 'rooms-filter-floor' }}
+            />
+            {isFiltered ? (
+              <Button
+                size="small"
+                onClick={() => {
+                  resetSelection();
+                  patch({ search: '', floor: '', category: '', housekeeping: '', page: 1 });
+                }}
+                data-testid="rooms-filters-reset"
+              >
+                {t('list.resetFilters')}
+              </Button>
+            ) : null}
+          </Stack>
+
+          {/*
+            ПОЛОСА ВЫДЕЛЕНИЯ. Она обязана говорить, СКОЛЬКО именно будет
+            изменено, и различать «отмечено на странице» и «все по выборке»:
+            «выделить все» на экране, показывающем 50 из 314, — это готовый
+            инцидент.
+          */}
+          {selectedCount > 0 ? (
+            <Alert
+              severity="info"
+              sx={{ mb: 1 }}
+              data-testid="rooms-selection-bar"
+              action={
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => setBulkEditOpen(true)}
+                    data-testid="rooms-bulk-edit"
+                  >
+                    {t('hotel.rooms.bulkEdit')}
+                  </Button>
+                  <Button size="small" onClick={resetSelection} data-testid="rooms-selection-clear">
+                    {t('hotel.rooms.selectionClear')}
+                  </Button>
+                </Stack>
+              }
+            >
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Typography variant="body2" data-testid="rooms-selection-count">
+                  {allMatching
+                    ? t('hotel.rooms.selectionAll', { count: selectedCount })
+                    : t('hotel.rooms.selectionPicked', { count: selectedCount })}
+                </Typography>
+                {!allMatching && total > picked.size ? (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setPicked(new Set());
+                      setAllMatching(true);
+                    }}
+                    data-testid="rooms-select-all-matching"
+                  >
+                    {t('hotel.rooms.selectAllMatching', { count: total })}
+                  </Button>
+                ) : null}
+              </Stack>
+            </Alert>
+          ) : null}
+
           <Divider sx={{ mb: 1 }} />
 
           {roomsQuery.isLoading ? (
@@ -312,6 +503,18 @@ export function RoomsPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      {/* Галочка в шапке отмечает ТОЛЬКО эту страницу, и так и
+                          подписана: «все по выборке» — отдельная кнопка. */}
+                      <Checkbox
+                        size="small"
+                        checked={pageAllPicked && !allMatching}
+                        indeterminate={!pageAllPicked && picked.size > 0 && !allMatching}
+                        onChange={togglePage}
+                        inputProps={{ 'aria-label': t('hotel.rooms.selectPage') }}
+                        data-testid="rooms-select-page"
+                      />
+                    </TableCell>
                     <TableCell>{t('hotel.rooms.number')}</TableCell>
                     <TableCell>{t('hotel.rooms.floor')}</TableCell>
                     <TableCell>{t('hotel.rooms.zone')}</TableCell>
@@ -326,7 +529,21 @@ export function RoomsPage() {
                 </TableHead>
                 <TableBody>
                   {rooms.map((room) => (
-                    <TableRow key={room.id} hover data-testid={`room-row-${room.number}`}>
+                    <TableRow
+                      key={room.id}
+                      hover
+                      selected={allMatching || picked.has(room.id)}
+                      data-testid={`room-row-${room.number}`}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={allMatching || picked.has(room.id)}
+                          onChange={() => togglePicked(room.id)}
+                          inputProps={{ 'aria-label': room.number }}
+                          data-testid={`room-pick-${room.number}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Typography variant="body2" fontWeight={500}>
@@ -509,6 +726,25 @@ export function RoomsPage() {
       ) : null}
 
       {qrRoom ? <QrDialog room={qrRoom} onClose={() => setQrRoom(null)} /> : null}
+
+      {bulkEditOpen ? (
+        <BulkEditDialog
+          categories={categories}
+          count={selectedCount}
+          allMatching={allMatching}
+          selection={
+            allMatching
+              ? { all_matching: true, search: params.search, filters }
+              : { ids: [...picked] }
+          }
+          onClose={() => setBulkEditOpen(false)}
+          onDone={() => {
+            setBulkEditOpen(false);
+            resetSelection();
+            void invalidate();
+          }}
+        />
+      ) : null}
 
       {categoriesOpen ? (
         <CategoriesDialog
@@ -799,6 +1035,164 @@ function RenameDialog({
           data-testid="room-rename-confirm"
         >
           {t('hotel.rooms.renameConfirm')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+/* ── Bulk edit ─────────────────────────────────────────────────────────── */
+
+/**
+ * Массовая правка. Номера здесь НЕТ: переименование требует подтверждения на
+ * каждый номер — у каждого своя наклейка QR и своё имя устройства.
+ *
+ * Заголовок называет число, которое будет изменено, и отдельно — что это «все
+ * по выборке», а не то, что видно на экране.
+ */
+function BulkEditDialog({
+  categories,
+  count,
+  allMatching,
+  selection,
+  onClose,
+  onDone,
+}: {
+  categories: RoomCategory[];
+  count: number;
+  allMatching: boolean;
+  selection: Parameters<typeof bulkUpdateRooms>[0];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [patch, setPatch] = useState<RoomBulkPatch>({});
+
+  const setField = <K extends keyof RoomBulkPatch>(key: K, value: RoomBulkPatch[K]) =>
+    setPatch((prev) => {
+      const next = { ...prev };
+      if (value === undefined || value === '') delete next[key];
+      else next[key] = value;
+      return next;
+    });
+
+  const mutation = useMutation({
+    mutationFn: () => bulkUpdateRooms(selection, patch),
+    onSuccess: (result) => {
+      // Числами и по факту: сколько попало в выборку и сколько реально
+      // изменилось. «Готово» без чисел здесь ничего не значит.
+      toast.show(
+        t('hotel.rooms.bulkEditDone', { changed: result.changed, matched: result.matched }),
+        'success',
+      );
+      onDone();
+    },
+    onError: (error) =>
+      toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),
+  });
+
+  const nothingToDo = Object.keys(patch).length === 0;
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth data-testid="rooms-bulk-edit-dialog">
+      <DialogTitle>{t('hotel.rooms.bulkEditTitle', { count })}</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <Alert severity={allMatching ? 'warning' : 'info'} data-testid="rooms-bulk-edit-scope">
+            {allMatching
+              ? t('hotel.rooms.bulkEditScopeAll', { count })
+              : t('hotel.rooms.bulkEditScopePicked', { count })}
+          </Alert>
+
+          <TextField
+            select
+            size="small"
+            label={t('hotel.rooms.category')}
+            value={patch.category_id ?? ''}
+            onChange={(event) =>
+              setField(
+                'category_id',
+                event.target.value === 'none' ? null : event.target.value || undefined,
+              )
+            }
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ 'data-testid': 'rooms-bulk-category' }}
+            fullWidth
+          >
+            <option value="">{t('hotel.rooms.bulkKeep')}</option>
+            <option value="none">{t('hotel.rooms.categoryNone')}</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.title_i18n || category.code}
+              </option>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            size="small"
+            label={t('hotel.rooms.housekeeping')}
+            value={patch.housekeeping ?? ''}
+            onChange={(event) =>
+              setField('housekeeping', (event.target.value || undefined) as RoomHousekeeping)
+            }
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ 'data-testid': 'rooms-bulk-housekeeping' }}
+            fullWidth
+          >
+            <option value="">{t('hotel.rooms.bulkKeep')}</option>
+            {HOUSEKEEPING.map((value) => (
+              <option key={value} value={value}>
+                {t(`hotel.rooms.housekeeping_${value}`)}
+              </option>
+            ))}
+          </TextField>
+
+          <TextField
+            size="small"
+            label={t('hotel.rooms.floor')}
+            value={patch.floor ?? ''}
+            onChange={(event) => setField('floor', event.target.value)}
+            inputProps={{ 'data-testid': 'rooms-bulk-floor' }}
+            fullWidth
+          />
+          <TextField
+            size="small"
+            label={t('hotel.rooms.zone')}
+            value={patch.zone ?? ''}
+            onChange={(event) => setField('zone', event.target.value)}
+            inputProps={{ 'data-testid': 'rooms-bulk-zone' }}
+            fullWidth
+          />
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={patch.out_of_service === true}
+                indeterminate={patch.out_of_service === undefined}
+                onChange={(event) => setField('out_of_service', event.target.checked)}
+                data-testid="rooms-bulk-out-of-service"
+              />
+            }
+            label={t('hotel.rooms.outOfService')}
+          />
+          <Typography variant="caption" color="text.secondary">
+            {t('hotel.rooms.bulkKeepHint')}
+          </Typography>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        <Button
+          variant="contained"
+          disabled={nothingToDo || mutation.isPending}
+          onClick={() => mutation.mutate()}
+          data-testid="rooms-bulk-apply"
+        >
+          {t('hotel.rooms.bulkApply', { count })}
         </Button>
       </DialogActions>
     </Dialog>
