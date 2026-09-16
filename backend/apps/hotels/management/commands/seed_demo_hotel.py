@@ -1128,6 +1128,16 @@ class Command(BaseCommand):
             defaults={"type": ChannelType.LOG},
         )
 
+        # Сообщения гостя в чат по справочнику выключены — это не требует
+        # действия, и по умолчанию так строже. Демо-отель включает их СВОЕЙ
+        # настройкой, как сделал бы любой отель: на показе чат должен звать
+        # отдел, иначе он выглядит неработающим.
+        from apps.notifications.models import EventSetting
+
+        EventSetting.objects.get_or_create(
+            code="chat.guest_message", defaults={"is_enabled": True}
+        )
+
         chef = users.get("chef")
         if chef is not None:
             NotificationChannel.objects.get_or_create(

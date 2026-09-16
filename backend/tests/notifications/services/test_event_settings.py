@@ -68,9 +68,25 @@ def _manager(crystal, kitchen, email, *, language="ru", channel_type=ChannelType
 # --- По умолчанию -----------------------------------------------------------
 
 
+def test_demo_hotel_turns_guest_messages_on_by_its_own_setting(crystal, cms):
+    """
+    Демо-отель включает чат СВОЕЙ настройкой, а справочник остаётся строгим:
+    на показе чат зовёт отдел, а новый отель начинает без этого потока.
+    """
+    from apps.notifications import events as registry
+
+    assert registry.get("chat.guest_message").enabled_by_default is False
+    items = {item["code"]: item for item in cms.get(SETTINGS).json()["items"]}
+    setting = items["chat.guest_message"]["setting"]
+    assert setting["enabled"] is True
+    assert setting["customized"] is True
+
+
 def test_optional_event_is_off_until_the_hotel_turns_it_on(crystal, kitchen, recorder):
     """Сообщение гостя в чат — не требует действия и по умолчанию не шлётся и не пишется."""
     with tenant_context(crystal):
+        # Решение демо-отеля снимаем: проверяется значение справочника.
+        EventSetting.objects.filter(code="chat.guest_message").hard_delete()
         assert notify("chat.guest_message", {"preview": "?"}, point_id=kitchen.pk) is None
         assert not EventRecord.objects.filter(code="chat.guest_message").exists()
     assert recorder.sent == []
@@ -237,7 +253,8 @@ def test_settings_list_every_event_with_its_default(cms):
     items = {item["code"]: item for item in cms.get(SETTINGS).json()["items"]}
     assert set(items) == set(registry.EVENTS)
     assert items["review.low"]["setting"]["enabled"] is True
-    assert items["chat.guest_message"]["setting"]["enabled"] is False
+    assert items["brand.published_late"]["setting"]["enabled"] is False
+    assert items["chat.guest_message"]["enabled_by_default"] is False
     assert items["order.overdue"]["audience_from_rules"] is True
     assert items["review.low"]["defaults"]["en"]["subject"].startswith("Low rating")
     assert items["review.low"]["setting"]["customized"] is False

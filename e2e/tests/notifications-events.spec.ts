@@ -31,7 +31,15 @@ interface SettingItem {
   code: string
   audience: string
   enabled_by_default: boolean
-  setting: { enabled: boolean; customized: boolean }
+  audience_from_rules: boolean
+  setting: {
+    enabled: boolean
+    customized: boolean
+    audience: string
+    channel_id: string | null
+    channel_types: string[]
+    templates: Record<string, { subject: string; body: string }>
+  }
 }
 
 function headers(token: string) {
@@ -46,18 +54,50 @@ async function settings(request: APIRequestContext, token: string): Promise<Sett
   return (await response.json()).items
 }
 
+async function put(
+  request: APIRequestContext,
+  token: string,
+  code: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  const response = await request.put(`${API}/api/cms/notification-events/settings/${code}`, {
+    data: body,
+    headers: headers(token),
+  })
+  expect(response.status(), await response.text()).toBe(200)
+}
+
 /** Как по умолчанию: строка настройки отеля удаляется, событие снова следует справочнику. */
 async function resetAll(request: APIRequestContext, token: string): Promise<void> {
   for (const item of await settings(request, token)) {
     const body: Record<string, unknown> = { enabled: item.enabled_by_default, templates: {} }
-    if (item.code !== 'order.overdue') {
+    if (!item.audience_from_rules) {
       Object.assign(body, { audience: item.audience, channel_types: [], channel_id: null })
     }
-    const response = await request.put(
-      `${API}/api/cms/notification-events/settings/${item.code}`,
-      { data: body, headers: headers(token) },
+    await put(request, token, item.code, body)
+  }
+}
+
+/**
+ * Вернуть стенд КАК БЫЛ, а не «как по умолчанию»: у демо-отеля свои решения
+ * (сообщения гостя в чат включены его настройкой), и тест не вправе их стирать.
+ */
+async function restore(
+  request: APIRequestContext,
+  token: string,
+  saved: SettingItem[],
+): Promise<void> {
+  await resetAll(request, token)
+  for (const item of saved.filter((entry) => entry.setting.customized)) {
+    const { enabled, audience, channel_id, channel_types, templates } = item.setting
+    await put(
+      request,
+      token,
+      item.code,
+      item.audience_from_rules
+        ? { enabled, templates }
+        : { enabled, audience, channel_id, channel_types, templates },
     )
-    expect(response.status(), await response.text()).toBe(200)
   }
 }
 
@@ -128,14 +168,16 @@ test.describe('Уведомления: события', () => {
   test.describe.configure({ mode: 'serial' })
 
   let token = ''
+  let saved: SettingItem[] = []
 
   test.beforeAll(async ({ request }) => {
     token = await apiToken(request)
+    saved = await settings(request, token)
     await resetAll(request, token)
   })
 
   test.afterAll(async ({ request }) => {
-    await resetAll(request, token || (await apiToken(request)))
+    await restore(request, token || (await apiToken(request)), saved)
   })
 
   test('по умолчанию включено только то, что требует действия', async ({ page }) => {
