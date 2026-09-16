@@ -270,28 +270,26 @@ test.describe('Админка отеля', () => {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
     expect(loc.status()).toBe(201)
-    const locId = (await loc.json()).id
+    const { id: locId, code: locCode } = await loc.json()
 
     await page.reload()
     await expect(page.getByTestId('location-matrix')).toBeVisible({ timeout: 15_000 })
 
-    // Привязываем «Напитки» к новой локации через API-матрицу и убеждаемся,
-    // что связка реально создалась.
-    const matrix = await (
-      await request.get('http://localhost:8010/api/cms/locations/matrix', {
-        headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-      })
-    ).json()
-    const drinks = matrix.rows.find(
-      (r: { category_title: string }) => r.category_title === 'Напитки',
-    )
-    await request.put('http://localhost:8010/api/cms/locations/matrix', {
-      data: {
-        category_id: drinks.category_id,
-        cells: [{ location_id: locId, enabled: true, delivery_modes: ['pickup'] }],
-      },
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
+    /*
+      МАТРИЦА — ОДИН ВОПРОС: доступна ли категория в этом месте.
+
+      Способов доставки в ячейке больше нет: их чипы давали «Горячее · В номер ·
+      Самовывоз», на что и жаловался заказчик. Как получают заказ, говорит вид
+      локации в заголовке столбца. Включаем ячейку ЭКРАНОМ и проверяем, что
+      сервер её сохранил.
+    */
+    await expect(page.getByTestId(`matrix-location-kind-${locCode}`)).toHaveText('Общая точка')
+    const cellBox = page.getByTestId(`matrix-cell-drinks-${locCode}`)
+    await expect(cellBox.locator('[data-testid$="-pickup"], [data-testid$="-delivery"]')).toHaveCount(0)
+    await page.getByTestId(`matrix-cell-drinks-${locCode}-enabled`).check()
+    await page.getByTestId('matrix-save-drinks').click()
+    await expect(page.getByText('Строка сохранена')).toBeVisible({ timeout: 15_000 })
+
     const after = await (
       await request.get('http://localhost:8010/api/cms/locations/matrix', {
         headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
@@ -300,19 +298,8 @@ test.describe('Админка отеля', () => {
     const drinksAfter = after.rows.find(
       (r: { category_title: string }) => r.category_title === 'Напитки',
     )
-    const cell = drinksAfter.cells.find(
-      (c: { location_id: string; delivery_modes: string[] }) => c.location_id === locId,
-    )
-    /*
-      ПРОВЕРЯЕМ ЗНАЧЕНИЕ, А НЕ ФАКТ.
-
-      Было `expect(cell.enabled).toBe(true)` — то есть проверялось ровно то, что
-      и так следует из «мы включили ячейку». Отправленный `delivery_modes:
-      ['pickup']` при этом не проверялся вовсе: сервер мог сохранить любой набор
-      способов доставки — или не сохранить ничего, — и тест бы этого не увидел.
-    */
-    expect(cell.enabled).toBe(true)
-    expect(cell.delivery_modes).toEqual(['pickup'])
+    const cell = drinksAfter.cells.find((c: { location_id: string }) => c.location_id === locId)
+    expect(cell).toEqual({ location_id: locId, enabled: true })
 
     await request.delete(`http://localhost:8010/api/cms/locations/${locId}`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },

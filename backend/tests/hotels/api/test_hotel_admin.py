@@ -174,8 +174,9 @@ def test_matrix_update_toggles_a_link(cms, crystal):
             category_id=category_id, location_id=pool_id
         ).exists()
 
-    # И включаем обратно с самовывозом.
-    cms.put(
+    # И включаем обратно. Способ получения ячейка больше не несёт — он следует
+    # из вида локации; присланный по старой памяти пропускается, а не пишется.
+    response = cms.put(
         "/api/cms/locations/matrix",
         {
             "category_id": category_id,
@@ -184,7 +185,12 @@ def test_matrix_update_toggles_a_link(cms, crystal):
     )
     with tenant_context(crystal):
         link = ServiceLocation.objects.get(category_id=category_id, location_id=pool_id)
-        assert link.delivery_modes == ["pickup"]
+        assert link.is_enabled
+    row = next(r for r in response.json()["rows"] if r["category_id"] == category_id)
+    cell = next(c for c in row["cells"] if c["location_id"] == pool_id)
+    assert cell == {"location_id": pool_id, "enabled": True}
+    pool = next(loc for loc in response.json()["locations"] if loc["id"] == pool_id)
+    assert pool["kind"] == "common_point", "вид места — в заголовке столбца"
 
 
 # --- Сервисы ----------------------------------------------------------------

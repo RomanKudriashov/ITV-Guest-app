@@ -1262,7 +1262,8 @@ def delete_location(location_id) -> None:
 
 def location_matrix(language: str | None = None) -> dict:
     # Матрица «категория → локации» — география отеля; живёт на экране
-    # настроек, которого управляющий не видит.
+    # настроек, которого управляющий не видит. Один вопрос: где категория
+    # доступна. Как её получают, говорит вид локации в заголовке столбца.
     from apps.catalog.models import OfferingType
 
     require_hotel_admin()
@@ -1284,7 +1285,6 @@ def location_matrix(language: str | None = None) -> dict:
                 {
                     "location_id": str(location.pk),
                     "enabled": bool(link and link.is_enabled),
-                    "delivery_modes": list(link.delivery_modes) if link else [],
                 }
             )
         rows.append(
@@ -1298,7 +1298,12 @@ def location_matrix(language: str | None = None) -> dict:
 
     return {
         "locations": [
-            {"id": str(loc.pk), "code": loc.code, "title": translate(loc.title, language)}
+            {
+                "id": str(loc.pk),
+                "code": loc.code,
+                "kind": loc.kind,
+                "title": translate(loc.title, language),
+            }
             for loc in locations
         ],
         "rows": rows,
@@ -1312,14 +1317,12 @@ def update_matrix_row(category_id, cells: Iterable[dict]) -> dict:
     if category is None:
         raise ValidationError("Категория не найдена", field="category_id")
 
-    valid_modes = set(dict(ServiceLocation.DeliveryMode.choices))
     for cell in cells:
         location_id = cell.get("location_id")
         location = Location.objects.filter(pk=location_id).first()
         if location is None:
             raise ValidationError("Локация не найдена", field="location_id")
 
-        modes = [mode for mode in (cell.get("delivery_modes") or []) if mode in valid_modes]
         if not cell.get("enabled"):
             # Join-строка матрицы истории не несёт — удаляем жёстко, иначе
             # мягко-удалённая строка блокирует повторное включение уникальным
@@ -1331,7 +1334,8 @@ def update_matrix_row(category_id, cells: Iterable[dict]) -> dict:
         ServiceLocation.all_objects.update_or_create(
             category=category,
             location=location,
-            defaults={"delivery_modes": modes or ["delivery"], "is_enabled": True, "deleted_at": None},
+            # Способ получения не пишем: он следует из вида локации.
+            defaults={"is_enabled": True, "deleted_at": None},
         )
 
     return location_matrix()

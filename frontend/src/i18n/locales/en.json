@@ -1529,16 +1529,12 @@
     },
     "matrix": {
       "title": "Category → locations matrix",
-      "hint": "Where a category is available and how it is fulfilled",
+      "hint": "Where the category is available. How it is received depends on the location kind: the guest comes to a pickup point; to other places the order is brought.",
       "category": "Category",
       "saved": "Row saved",
       "loadError": "Failed to load matrix",
       "empty": "No matrix data",
-      "emptyHint": "Add categories and locations",
-      "modes": {
-        "delivery": "Delivery",
-        "pickup": "Pickup"
-      }
+      "emptyHint": "Add categories and locations"
     },
     "staff": {
       "title": "Staff",

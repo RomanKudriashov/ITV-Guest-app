@@ -179,28 +179,36 @@
 | GET / POST | `/api/v1/cms/locations` |
 | PATCH / DELETE | `/api/v1/cms/locations/{id}` |
 
-`kind`: `in_room` | `common_point`. `requires_refinement=true` требует
-непустого `refinement_label` — иначе `422 refinement_label_required`.
+`kind`: `in_room` | `common_point` | `pickup_point` (иначе
+`422 invalid_location_kind`). **Точка выдачи** — гость забирает заказ сам
+(стойка бара, окно кухни): у неё нет платы за доставку и уточнения места.
+Присланные плата или уточнение — `422 pickup_point_fee` /
+`pickup_point_refinement`; при смене вида на точку выдачи они обнуляются.
+Точка выдачи не принадлежит отделу — что где выдают, решает матрица.
+`delivery_fee_minor` принимается и при создании. `requires_refinement=true`
+требует непустого `refinement_label` — иначе `422 refinement_label_required`.
 Расписание — как у категорий/блюд (`schedule_id`).
 
 ### Матрица «категория → локации»
 
-Где категория доставляется и как. Строится по существующей `ServiceLocation`.
+Один вопрос: **где категория доступна**. Способ получения ячейка не хранит —
+он следует из вида локации, который отдаётся в заголовке столбца.
 
 ```
 GET /api/v1/cms/locations/matrix
 {
-  "locations": [{"id","code","title"}, ...],
+  "locations": [{"id","code","kind","title"}, ...],
   "rows": [
     {"category_id": "...", "category_title": "Горячее",
-     "cells": [{"location_id": "...", "enabled": true,
-                "delivery_modes": ["delivery","pickup"]}]}
+     "cells": [{"location_id": "...", "enabled": true}]}
   ]
 }
 
 PUT /api/v1/cms/locations/matrix
-{"category_id": "...", "cells": [{"location_id","enabled","delivery_modes"}]}
+{"category_id": "...", "cells": [{"location_id","enabled"}]}
 ```
+Колонка `delivery_modes` в базе осталась мёртвой на одну волну (дешёвый
+откат): её не читают и не пишут, присланное значение пропускается.
 `enabled=false` убирает связку; матрица заменяет строку категории целиком.
 
 ---

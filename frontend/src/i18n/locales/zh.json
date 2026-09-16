@@ -1512,16 +1512,12 @@
     },
     "matrix": {
       "title": "分类 → 位置矩阵",
-      "hint": "分类在何处可用及如何履单",
+      "hint": "该类别在哪里可用。取得方式由位置类型决定：取餐点由客人自取，其他地点送达。",
       "category": "分类",
       "saved": "已保存该行",
       "loadError": "加载失败",
       "empty": "暂无矩阵数据",
-      "emptyHint": "添加分类和位置",
-      "modes": {
-        "delivery": "配送",
-        "pickup": "自取"
-      }
+      "emptyHint": "添加分类和位置"
     },
     "staff": {
       "title": "人员",

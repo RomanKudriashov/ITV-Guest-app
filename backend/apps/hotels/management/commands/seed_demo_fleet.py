@@ -577,12 +577,6 @@ class Command(BaseCommand):
                 ServiceLocation.objects.get_or_create(
                     category=category,
                     location=location,
-                    defaults={
-                        "delivery_modes": [
-                            ServiceLocation.DeliveryMode.DELIVERY,
-                            ServiceLocation.DeliveryMode.PICKUP,
-                        ]
-                    },
                 )
             for index, (code, title, desc, price) in enumerate(items):
                 self._product(category, code, title, desc, price, index)
@@ -825,12 +819,6 @@ class Command(BaseCommand):
             ServiceLocation.objects.get_or_create(
                 category=category,
                 location=location,
-                defaults={
-                    "delivery_modes": [
-                        ServiceLocation.DeliveryMode.DELIVERY,
-                        ServiceLocation.DeliveryMode.PICKUP,
-                    ]
-                },
             )
         for index, (code, title, desc, price) in enumerate(own_items):
             self._product(category, code, title, desc, price, index)

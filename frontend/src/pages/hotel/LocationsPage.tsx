@@ -41,8 +41,6 @@ import {
   updateLocationMatrix,
 } from '@/api/hotelAdmin';
 import {
-  DELIVERY_MODES,
-  type DeliveryMode,
   type HotelLocation,
   type LocationKind,
   type MatrixCell,
@@ -510,10 +508,7 @@ function LocationDialog({
 
 function normalizeCells(rowCells: MatrixCell[], locationIds: string[]): MatrixCell[] {
   const byId = new Map(rowCells.map((cell) => [cell.location_id, cell]));
-  return locationIds.map(
-    (id) =>
-      byId.get(id) ?? { location_id: id, enabled: false, delivery_modes: [] as DeliveryMode[] },
-  );
+  return locationIds.map((id) => byId.get(id) ?? { location_id: id, enabled: false });
 }
 
 function LocationMatrix({ languages }: { languages: ReturnType<typeof useContentLanguages> }) {
@@ -578,11 +573,6 @@ function LocationMatrix({ languages }: { languages: ReturnType<typeof useContent
     }));
   };
 
-  const toggleMode = (cell: MatrixCell, mode: DeliveryMode): DeliveryMode[] =>
-    cell.delivery_modes.includes(mode)
-      ? cell.delivery_modes.filter((entry) => entry !== mode)
-      : [...cell.delivery_modes, mode];
-
   const locationTitle = (title: Translated, code: string) =>
     pickTranslated(title, languages.displayLanguage, languages.defaultCode) || code;
 
@@ -614,6 +604,15 @@ function LocationMatrix({ languages }: { languages: ReturnType<typeof useContent
                   {matrix.locations.map((location) => (
                     <TableCell key={location.id} align="center">
                       {locationTitle(location.title, location.code)}
+                      {/* Как здесь получают заказ — свойство места, а не ячейки. */}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        data-testid={`matrix-location-kind-${location.code}`}
+                      >
+                        {t(`hotel.locations.kinds.${location.kind}`)}
+                      </Typography>
                     </TableCell>
                   ))}
                   <TableCell align="right">{t('common.actions')}</TableCell>
@@ -636,12 +635,10 @@ function LocationMatrix({ languages }: { languages: ReturnType<typeof useContent
                         </Typography>
                       </TableCell>
                       {matrix.locations.map((location) => {
-                        const cell =
-                          cells.find((entry) => entry.location_id === location.id) ?? {
-                            location_id: location.id,
-                            enabled: false,
-                            delivery_modes: [],
-                          };
+                        const cell = cells.find((entry) => entry.location_id === location.id) ?? {
+                          location_id: location.id,
+                          enabled: false,
+                        };
                         const locCode = location.code;
                         return (
                           <TableCell
@@ -649,41 +646,21 @@ function LocationMatrix({ languages }: { languages: ReturnType<typeof useContent
                             align="center"
                             data-testid={`matrix-cell-${catCode}-${locCode}`}
                           >
-                            <Stack spacing={0.5} alignItems="center">
-                              <Checkbox
-                                size="small"
-                                checked={cell.enabled}
-                                onChange={(event) =>
-                                  patchCell(row.category_id, row.cells, location.id, {
-                                    enabled: event.target.checked,
-                                  })
-                                }
-                                inputProps={
-                                  {
-                                    'data-testid': `matrix-cell-${catCode}-${locCode}-enabled`,
-                                  } as Record<string, string>
-                                }
-                              />
-                              {cell.enabled ? (
-                                <Stack direction="row" spacing={0.5}>
-                                  {DELIVERY_MODES.map((mode) => (
-                                    <Chip
-                                      key={mode}
-                                      size="small"
-                                      label={t(`hotel.matrix.modes.${mode}`)}
-                                      color={cell.delivery_modes.includes(mode) ? 'primary' : 'default'}
-                                      variant={cell.delivery_modes.includes(mode) ? 'filled' : 'outlined'}
-                                      onClick={() =>
-                                        patchCell(row.category_id, row.cells, location.id, {
-                                          delivery_modes: toggleMode(cell, mode),
-                                        })
-                                      }
-                                      data-testid={`matrix-cell-${catCode}-${locCode}-${mode}`}
-                                    />
-                                  ))}
-                                </Stack>
-                              ) : null}
-                            </Stack>
+                            <Checkbox
+                              size="small"
+                              checked={cell.enabled}
+                              onChange={(event) =>
+                                patchCell(row.category_id, row.cells, location.id, {
+                                  enabled: event.target.checked,
+                                })
+                              }
+                              inputProps={
+                                {
+                                  'data-testid': `matrix-cell-${catCode}-${locCode}-enabled`,
+                                  'aria-label': `${rowTitle || catCode} · ${locationTitle(location.title, locCode)}`,
+                                } as Record<string, string>
+                              }
+                            />
                           </TableCell>
                         );
                       })}

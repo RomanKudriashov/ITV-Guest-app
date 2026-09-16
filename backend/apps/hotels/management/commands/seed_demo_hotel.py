@@ -525,12 +525,6 @@ class Command(BaseCommand):
                 ServiceLocation.objects.get_or_create(
                     category=category,
                     location=location,
-                    defaults={
-                        "delivery_modes": [
-                            ServiceLocation.DeliveryMode.DELIVERY,
-                            ServiceLocation.DeliveryMode.PICKUP,
-                        ]
-                    },
                 )
 
         self._seed_items(categories, schedules)
@@ -2164,9 +2158,6 @@ class Command(BaseCommand):
             for location in locations:
                 ServiceLocation.objects.get_or_create(
                     category=category, location=location,
-                    defaults={"delivery_modes": [
-                        ServiceLocation.DeliveryMode.DELIVERY, ServiceLocation.DeliveryMode.PICKUP
-                    ]},
                 )
             for i, (icode, ititle, idesc, price) in enumerate(items):
                 self._rich_item(category, icode, ititle, idesc, price, i, cat_code)
@@ -2192,7 +2183,6 @@ class Command(BaseCommand):
         for location in locations:
             ServiceLocation.objects.get_or_create(
                 category=category, location=location,
-                defaults={"delivery_modes": [ServiceLocation.DeliveryMode.DELIVERY]},
             )
         drinks = [
             ("negroni", ("Негрони", "Negroni"), ("Джин, кампари, вермут", "Gin, campari, vermouth"), 52000),
@@ -2243,7 +2233,6 @@ class Command(BaseCommand):
         for location in locations:
             ServiceLocation.objects.get_or_create(
                 category=category, location=location,
-                defaults={"delivery_modes": [ServiceLocation.DeliveryMode.DELIVERY]},
             )
         items = [
             ("club-sandwich", ("Клубный сэндвич", "Club sandwich"), ("Курица, бекон, картофель фри", "Chicken, bacon, fries"), 62000),

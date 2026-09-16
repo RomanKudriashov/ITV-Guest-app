@@ -225,20 +225,18 @@ export interface LocationPayload {
 
 /* ── Category → location matrix ────────────────────────────────────────── */
 
-export type DeliveryMode = 'delivery' | 'pickup';
-
-export const DELIVERY_MODES: DeliveryMode[] = ['delivery', 'pickup'];
-
 export interface MatrixLocation {
   id: string;
   code: string;
+  /** How the guest gets the order here — shown in the column header. */
+  kind: LocationKind;
   title: Translated;
 }
 
+/** One question per cell: is the category available at this place. */
 export interface MatrixCell {
   location_id: string;
   enabled: boolean;
-  delivery_modes: DeliveryMode[];
 }
 
 export interface MatrixRow {

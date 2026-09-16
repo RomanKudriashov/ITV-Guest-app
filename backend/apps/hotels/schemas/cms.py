@@ -225,7 +225,6 @@ class LocationPatch(Schema):
 class MatrixCell(Schema):
     location_id: str
     enabled: bool = False
-    delivery_modes: list[str] = []
 
 class MatrixRowIn(Schema):
     category_id: str
