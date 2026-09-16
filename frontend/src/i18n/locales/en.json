@@ -3093,7 +3093,9 @@
     "entered": "signed in {{when}}",
     "seen": "last active {{when}}",
     "unknownIp": "address unknown",
-    "unknownAgent": "browser unknown"
+    "unknownAgent": "browser unknown",
+    "shown": "Showing {{shown}} of {{total}} other sign-ins",
+    "more": "Show more"
   },
   "profile": {
     "title": "Profile",

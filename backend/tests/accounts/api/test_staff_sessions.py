@@ -151,13 +151,13 @@ def test_sessions_are_listed_with_the_current_one_marked(api):
     first = login()
     second = login()
 
-    rows = call("get", "/staff/auth/sessions", second["access"]).json()
-    assert len(rows) >= 2
-    current = [row for row in rows if row["is_current"]]
-    assert len(current) == 1, "текущая сессия должна быть ровно одна"
+    page = call("get", "/staff/auth/sessions", second["access"]).json()
+    assert page["current"]["is_current"] is True, "текущая сессия отмечена"
+    assert page["total"] >= 1
+    assert not any(row["is_current"] for row in page["items"]), "текущая — только полем current"
 
     # Закрыть чужое устройство из списка — это и есть смысл экрана.
-    other = next(row for row in rows if not row["is_current"])
+    other = page["items"][0]
     assert call("delete", f"/staff/auth/sessions/{other['id']}", second["access"]).json()["ok"]
     assert refresh(first["refresh"]) == 401
 
@@ -178,3 +178,31 @@ def test_expired_rows_are_purged_on_login(api, hotel):
         rows = list(StaffSession.all_objects.all())
     assert len(rows) == 1, f"старые строки не убраны: осталось {len(rows)}"
     assert rows[0].is_active
+
+
+def test_a_long_history_comes_in_pages_and_the_current_one_is_always_there(api):
+    """
+    7 936 живых сессий у администратора стенда давали профиль на 620 000 px.
+    Список — страницами, а текущая сессия приходит всегда, даже если по
+    активности она не попала бы на первую страницу.
+    """
+    login, _refresh, call = api
+    mine = login()
+    for _ in range(25):
+        login()
+
+    first = call("get", "/staff/auth/sessions", mine["access"]).json()
+    assert first["current"] is not None
+    assert len(first["items"]) == 20
+    assert first["total"] >= 25
+    assert first["has_more"] is True
+
+    rest = call("get", "/staff/auth/sessions?offset=20&limit=100", mine["access"]).json()
+    assert rest["has_more"] is False
+    assert len(first["items"]) + len(rest["items"]) == first["total"]
+    ids = {row["id"] for row in first["items"]} | {row["id"] for row in rest["items"]}
+    assert first["current"]["id"] not in ids
+    assert len(ids) == first["total"], "страницы не повторяют и не теряют строк"
+
+    capped = call("get", "/staff/auth/sessions?limit=10000", mine["access"]).json()
+    assert capped["limit"] == 100, "страница не безразмерная, сколько ни попроси"

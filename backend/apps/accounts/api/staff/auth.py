@@ -138,11 +138,12 @@ def logout_all(request: HttpRequest):
 
 
 @router.get("/auth/sessions", auth=staff_auth, summary="Мои активные сессии")
-def my_sessions(request: HttpRequest):
+def my_sessions(request: HttpRequest, limit: int | None = None, offset: int = 0):
+    """Текущая — полем `current`, остальные — страницей по последней активности."""
     from apps.accounts.services import sessions as session_svc
 
     return session_svc.list_for(
-        request.user.pk, current_id=_current_session_id(request)
+        request.user.pk, current_id=_current_session_id(request), limit=limit, offset=offset
     )
 
 

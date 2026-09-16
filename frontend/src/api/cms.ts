@@ -1,5 +1,6 @@
 /** One function per endpoint of docs/cms-api-contract.md. */
 import type { OfferingType } from '@/offerings/behaviour';
+import type { SessionPage, SessionPageQuery } from '@/components/SessionsPanel';
 import { api, request } from './client';
 import type {
   ListPage,
@@ -77,8 +78,10 @@ export interface StaffSessionRow {
   is_current: boolean;
 }
 
-export function fetchSessions(): Promise<StaffSessionRow[]> {
-  return api.get<StaffSessionRow[]>('/staff/auth/sessions');
+export function fetchSessions(page: SessionPageQuery = {}): Promise<SessionPage> {
+  return api.get<SessionPage>('/staff/auth/sessions', {
+    query: { limit: page.limit, offset: page.offset },
+  });
 }
 
 export function closeSession(id: string): Promise<{ ok: boolean }> {

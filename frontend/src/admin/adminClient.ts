@@ -250,7 +250,23 @@ export interface PlatformSessionRow {
   is_current: boolean;
 }
 
-export const listSessions = () => request<PlatformSessionRow[]>('/auth/sessions');
+/** Страница входов: текущая — полем `current`, остальные — по активности. */
+export interface PlatformSessionPage {
+  current: PlatformSessionRow | null;
+  items: PlatformSessionRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
+export const listSessions = (page: { limit?: number; offset?: number } = {}) =>
+  request<PlatformSessionPage>(
+    `/auth/sessions?${new URLSearchParams({
+      ...(page.limit !== undefined ? { limit: String(page.limit) } : {}),
+      offset: String(page.offset ?? 0),
+    })}`,
+  );
 export const closeSession = (id: string) => request<{ ok: boolean }>(`/auth/sessions/${id}`, 'DELETE');
 export const platformLogoutHere = () => request<{ ok: boolean }>('/auth/logout', 'POST');
 export const platformLogoutEverywhere = () =>

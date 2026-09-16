@@ -120,4 +120,30 @@ test.describe('Контакты сотрудника', () => {
     expect(chef).not.toHaveProperty('phone')
     expect(chef.messengers.telegram).toEqual({ linked: false, confirmed_at: null })
   })
+
+  test('профиль с долгой историей входов открывается и листает', async ({ page }) => {
+    // Администратор стенда входит на каждом прогоне: живых входов у него
+    // тысячи. Раньше список рисовался целиком — 620 000 px и экран, который
+    // не открывается.
+    await page.setViewportSize({ width: 400, height: 900 })
+    await signIn(page, ADMIN)
+    await page.goto('/cms/profile')
+    await expect(page.getByTestId('session-row-current')).toHaveCount(1, { timeout: 20_000 })
+
+    const rows = page.locator('[data-testid^="session-row"]')
+    const first = await rows.count()
+    expect(first, 'первая страница — текущая и не больше двадцати других').toBeLessThanOrEqual(21)
+    const height = await page.evaluate(() => document.documentElement.scrollHeight)
+    expect(height, 'страница профиля не должна вытягиваться на весь реестр').toBeLessThan(6_000)
+
+    const shown = page.getByTestId('sessions-shown')
+    const more = page.getByTestId('sessions-more')
+    if (await more.isVisible()) {
+      await more.click()
+      await expect.poll(() => rows.count()).toBeGreaterThan(first)
+      await expect(page.getByTestId('session-row-current')).toHaveCount(1)
+    } else {
+      await expect(shown).toBeVisible()
+    }
+  })
 })

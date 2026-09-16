@@ -3064,7 +3064,9 @@
     "entered": "登录于 {{when}}",
     "seen": "最近活动 {{when}}",
     "unknownIp": "地址未知",
-    "unknownAgent": "浏览器未知"
+    "unknownAgent": "浏览器未知",
+    "shown": "已显示 {{shown}} / {{total}} 个其他登录",
+    "more": "显示更多"
   },
   "profile": {
     "title": "个人资料",

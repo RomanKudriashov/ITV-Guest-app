@@ -171,10 +171,49 @@ def serialize(session: StaffSession, *, current_id=None) -> dict:
     }
 
 
-def list_for(user_id, *, current_id=None, scope: str | None = None) -> list[dict]:
-    """Живые сессии учётки — то, что показывается человеку."""
+PAGE_DEFAULT = 20
+PAGE_MAX = 100
+
+
+def list_for(
+    user_id,
+    *,
+    current_id=None,
+    scope: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict:
+    """
+    Живые сессии учётки — то, что показывается человеку. СТРАНИЦАМИ.
+
+    Список отдавался целиком, и у администратора стенда с 7 936 живыми
+    сессиями страница профиля вытягивалась до 620 000 px и не открывалась.
+    Живой вход живёт неделю, и каждый вход без «выйти» — ещё строка: у
+    человека с долгой историей их сотни.
+
+    ТЕКУЩАЯ СЕССИЯ — ОТДЕЛЬНО И ВСЕГДА. Страница по «последней активности»
+    могла бы её не содержать, а экран без «это вы» не с чем сверить. Поэтому
+    `current` приходит отдельным полем, а в `items` её нет.
+    """
+    from apps.core.listing import clamp
+
     now = timezone.now()
     rows = _rows(scope).filter(
         user_id=user_id, revoked_at__isnull=True, expires_at__gt=now
-    ).order_by("-last_seen_at")
-    return [serialize(row, current_id=current_id) for row in rows]
+    ).order_by("-last_seen_at", "-created_at")
+    current = rows.filter(pk=current_id).first() if current_id else None
+    others = rows.exclude(pk=current.pk) if current is not None else rows
+
+    limit = clamp(limit, default=PAGE_DEFAULT, maximum=PAGE_MAX)
+    offset = max(0, offset or 0)
+    total = others.count()
+    page = [serialize(row, current_id=current_id) for row in others[offset : offset + limit]]
+    return {
+        "current": serialize(current, current_id=current_id) if current is not None else None,
+        "items": page,
+        # Все живые сессии, кроме текущей: «показано 20 из 312».
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + len(page) < total,
+    }

@@ -3173,7 +3173,9 @@
     "entered": "الدخول {{when}}",
     "seen": "آخر نشاط {{when}}",
     "unknownIp": "العنوان غير معروف",
-    "unknownAgent": "المتصفح غير معروف"
+    "unknownAgent": "المتصفح غير معروف",
+    "shown": "معروض {{shown}} من {{total}} من الجلسات الأخرى",
+    "more": "عرض المزيد"
   },
   "profile": {
     "title": "الملف الشخصي",
