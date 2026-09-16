@@ -294,6 +294,15 @@ NOTIFICATIONS_ENABLED = env_bool("NOTIFICATIONS_ENABLED", True)
 # локальную заглушку и не ходили наружу.
 TELEGRAM_API_URL = os.getenv("TELEGRAM_API_URL", "https://api.telegram.org")
 
+# Боты привязки контактов сотрудников. Пусто — бота нет, и «подключить»
+# честно отвечает «пока недоступно» (учётки ботов ждут заказчика).
+CONTACT_BOTS = {
+    "telegram": os.getenv("TELEGRAM_CONTACT_BOT", ""),
+    "max": os.getenv("MAX_CONTACT_BOT", ""),
+}
+# Сколько живёт одноразовый код привязки: открыть мессенджер и нажать «Старт».
+CONTACT_BINDING_CODE_MINUTES = int(os.getenv("CONTACT_BINDING_CODE_MINUTES", "10"))
+
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )

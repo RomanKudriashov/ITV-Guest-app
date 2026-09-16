@@ -2490,6 +2490,13 @@
       },
       "notification": {
         "event_settings_changed": "通知设置已更改"
+      },
+      "staff": {
+        "contact": {
+          "phone_changed": "员工电话已更改",
+          "linked": "员工已连接即时通讯",
+          "unlinked": "员工已断开即时通讯"
+        }
       }
     },
     "enter": {

@@ -2515,6 +2515,13 @@
       },
       "notification": {
         "event_settings_changed": "Notification settings changed"
+      },
+      "staff": {
+        "contact": {
+          "phone_changed": "Employee phone changed",
+          "linked": "Employee connected a messenger",
+          "unlinked": "Employee disconnected a messenger"
+        }
       }
     },
     "enter": {

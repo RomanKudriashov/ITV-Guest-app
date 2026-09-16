@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from .assignment import StaffAssignment
+from .contact_binding import ContactBindingCode
 from .guest import GuestSession, TrustLevel
 from .impersonation import ImpersonationGrant
 from .session import StaffSession
 from .user import User, UserManager
 
 __all__ = [
+    "ContactBindingCode",
     "GuestSession",
     "ImpersonationGrant",
     "StaffAssignment",

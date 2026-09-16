@@ -30,6 +30,7 @@ TENANT_TABLES = [
     "accounts_user",
     "accounts_staff_assignment",
     "accounts_guest_session",
+    "accounts_contact_binding_code",
     # catalog
     "catalog_category",
     "catalog_item",

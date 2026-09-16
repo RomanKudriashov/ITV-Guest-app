@@ -753,6 +753,16 @@
   "/api/v1/staff/auth/support-exchange": [
     "POST"
   ],
+  "/api/v1/staff/me/contacts": [
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/staff/me/contacts/{messenger}": [
+    "DELETE"
+  ],
+  "/api/v1/staff/me/contacts/{messenger}/binding-code": [
+    "POST"
+  ],
   "/api/v1/tracker/chat/threads": [
     "GET"
   ],

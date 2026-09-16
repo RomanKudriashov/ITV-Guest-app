@@ -2579,6 +2579,13 @@
       },
       "notification": {
         "event_settings_changed": "تم تغيير إعدادات الإشعار"
+      },
+      "staff": {
+        "contact": {
+          "phone_changed": "تم تغيير هاتف الموظف",
+          "linked": "ربط الموظف تطبيق مراسلة",
+          "unlinked": "فصل الموظف تطبيق مراسلة"
+        }
       }
     },
     "enter": {

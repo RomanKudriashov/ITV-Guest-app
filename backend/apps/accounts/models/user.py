@@ -66,8 +66,21 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     )
     email = models.EmailField(max_length=254, unique=True)
     full_name = models.CharField(max_length=255, blank=True)
+    # Телефон — контакт ЧЕЛОВЕКА, а не отеля: видят его он сам и администратор
+    # отеля (см. `accounts/services/contacts.py`). Хранится нормализованным:
+    # «+79161234567».
     phone = models.CharField(max_length=32, blank=True)
     language = models.CharField(max_length=8, blank=True)
+
+    # --- Мессенджеры -----------------------------------------------------
+    # Заполняются ТОЛЬКО привязкой через бота (одноразовый код), руками — нет:
+    # введённый вручную чужой ID отправлял бы сообщения постороннему. Отметка
+    # подтверждения — момент привязки; пустая — не подключён.
+    telegram_chat_id = models.CharField(max_length=64, blank=True)
+    telegram_username = models.CharField(max_length=64, blank=True)
+    telegram_confirmed_at = models.DateTimeField(null=True, blank=True)
+    max_user_id = models.CharField(max_length=64, blank=True)
+    max_confirmed_at = models.DateTimeField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
     is_staff_member = models.BooleanField(default=True, help_text="Сотрудник отеля")

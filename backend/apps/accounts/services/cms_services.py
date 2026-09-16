@@ -38,7 +38,10 @@ def serialize_assignment(assignment: StaffAssignment) -> dict:
 
 
 def serialize_staff(user: User) -> dict:
-    return {
+    from apps.accounts.services import contacts
+    from apps.core.context import current_actor
+
+    data = {
         "id": str(user.pk),
         "email": user.email,
         "full_name": user.full_name,
@@ -49,7 +52,16 @@ def serialize_staff(user: User) -> dict:
             serialize_assignment(assignment)
             for assignment in user.assignments.select_related("execution_point").all()
         ],
+        # Подключён ли мессенджер — видно всем, кто видит сотрудника: «Пётр не
+        # подключён» управляющему знать нужно. ID аккаунта не отдаётся никому.
+        "messengers": contacts.public_status(user),
     }
+    # Телефон — контакт человека: только ему самому и администратору отеля.
+    # Ключа нет вовсе, а не пустая строка: пустая строка сказала бы, что
+    # номера нет, а это тоже сведение о человеке.
+    if contacts.can_see_phone(current_actor(), user):
+        data["phone"] = user.phone
+    return data
 
 
 def list_staff(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
@@ -109,6 +121,27 @@ def _require_staff_scope(user: User) -> None:
         raise NotMyService("Этот сотрудник работает не в вашем заведении")
 
 
+def _phone_from(data: dict, user: User | None) -> str:
+    """
+    Телефон сотрудника меняет администратор отеля или сам сотрудник.
+    Управляющий — нет: номер ему и не показывается. Право проверяется, только
+    когда номер действительно меняется.
+    """
+    from apps.accounts.services import contacts
+    from apps.core.context import current_actor
+
+    phone = contacts.normalize_phone(str(data.get("phone") or ""))
+    current = user.phone if user is not None else ""
+    if phone == current:
+        return phone
+    allowed = current_access().unrestricted or (
+        user is not None and str(getattr(current_actor(), "pk", "")) == str(user.pk)
+    )
+    if not allowed:
+        raise NotMyService("Телефон сотрудника меняет администратор отеля или сам сотрудник")
+    return phone
+
+
 def _validate_password(password: str) -> None:
     if len(password or "") < MIN_PASSWORD_LENGTH:
         raise ValidationError(
@@ -166,9 +199,11 @@ def create_staff(data: dict) -> User:
     if data.get("is_hotel_admin") and not current_access().unrestricted:
         raise NotMyService("Права администратора отеля выдаёт администратор отеля")
 
+    phone = _phone_from(data, None)
     user = User.objects.create(
         hotel_id=require_hotel_id(),
         email=email,
+        phone=phone,
         full_name=str(data.get("full_name") or "").strip(),
         language=str(data.get("language") or "").strip(),
         is_hotel_admin=data.get("is_hotel_admin", False),
@@ -194,6 +229,21 @@ def update_staff(user_id, data: dict, *, acting_user_id=None, current_session_id
         user.full_name = str(data["full_name"] or "").strip()
     if "language" in data:
         user.language = str(data["language"] or "").strip()
+    if "phone" in data:
+        phone = _phone_from(data, user)
+        if phone != user.phone:
+            from apps.core.models import AuditLog
+
+            user.phone = phone
+            AuditLog.record(
+                "staff.contact.phone_changed",
+                object_type="user",
+                object_id=user.pk,
+                payload={
+                    "by": "self" if str(acting_user_id) == str(user.pk) else "admin",
+                    "set": bool(phone),
+                },
+            )
     if "is_hotel_admin" in data:
         if data["is_hotel_admin"] and not current_access().unrestricted:
             # Иначе управляющий за один PATCH выписал бы себе весь отель.

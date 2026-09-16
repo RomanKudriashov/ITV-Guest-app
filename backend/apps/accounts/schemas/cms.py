@@ -77,6 +77,7 @@ class StaffIn(Schema):
     full_name: str = ""
     password: str
     language: str = ""
+    phone: str = ""
     is_hotel_admin: bool = False
     assignments: list[AssignmentIn] = []
 
@@ -85,6 +86,7 @@ class StaffPatch(Schema):
     full_name: str | None = None
     password: str | None = None
     language: str | None = None
+    phone: str | None = None
     is_hotel_admin: bool | None = None
     is_active: bool | None = None
     assignments: list[AssignmentIn] | None = None
