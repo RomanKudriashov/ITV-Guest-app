@@ -80,6 +80,11 @@ function watchRequests(context: APIRequestContext): void {
   proto.__logoutWatched = true
 }
 
+// Запросы страницы, которые несут токен сотрудника или платформы. Гостевой
+// токен (`/api/guest/…`) — не сессия реестра, выходить из него не нужно.
+const STAFF_CALL = /\/api\/(?:v1\/)?(?:cms|staff|tracker)\//
+const PLATFORM_CALL = /\/api\/v1\/platform\//
+
 function watchContext(context: BrowserContext): void {
   const marked = context as BrowserContext & { __logoutWatched?: boolean }
   if (marked.__logoutWatched) return
@@ -88,6 +93,28 @@ function watchContext(context: BrowserContext): void {
     if (!LOGIN.test(response.url())) return
     const hotel = header(response.request().headers(), 'X-Hotel-Subdomain')
     void remember(response.url(), response, hotel)
+  })
+  /*
+    ВТОРОЙ ПУТЬ — СИНХРОННЫЙ. Тело ответа входа читается асинхронно, и если
+    проверка закрывает контекст сразу после входа, прочитать его не успевают:
+    полный прогон так оставил одну сессию из 278. А токен виден в заголовке
+    КАЖДОГО следующего запроса страницы — он запоминается сразу, без чтения
+    тела. Обновления (refresh) у такого входа нет, но выход по доступу за
+    время прогона почти всегда успевает.
+  */
+  context.on('request', (request) => {
+    const url = request.url()
+    const scope = PLATFORM_CALL.test(url) ? 'platform' : STAFF_CALL.test(url) ? 'staff' : null
+    if (!scope) return
+    const auth = request.headers()['authorization'] ?? ''
+    const access = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+    if (!access || ISSUED.has(access)) return
+    ISSUED.set(access, {
+      scope,
+      access,
+      refresh: '',
+      hotel: request.headers()['x-hotel-subdomain'] ?? null,
+    })
   })
 }
 
