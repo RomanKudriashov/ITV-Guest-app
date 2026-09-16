@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import pytest
 
-from apps.accounts.models import StaffAssignment, User
 from apps.core.context import tenant_context
 from apps.hotels.models import ExecutionPoint
 from apps.notifications.channels import adapters
@@ -22,8 +21,9 @@ from apps.notifications.models import (
     NotificationStatus,
 )
 from apps.notifications.services.events import notify
+from tests.notifications.conftest import enable
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("deliver_inline")]
 
 
 class Recorder:
@@ -48,6 +48,12 @@ def recorder(monkeypatch):
     return recording
 
 
+@pytest.fixture(autouse=True)
+def optional_events_on(crystal):
+    """Чат и оформление по умолчанию выключены — здесь проверяется журнал, не выбор."""
+    enable(crystal, "chat.guest_message", "brand.published_on_schedule")
+
+
 @pytest.fixture
 def kitchen(crystal):
     with tenant_context(crystal):
@@ -58,8 +64,8 @@ def kitchen(crystal):
 
 def test_fact_is_written_even_when_nobody_can_be_reached(crystal, recorder):
     """
-    «Никто не узнал» тоже должно быть видно. У «Кристалла» в сиде нет ни
-    одного общего канала — ровно так событие оформления и уходило в пустоту.
+    «Никто не узнал» тоже должно быть видно. Отель без общего канала — ровно
+    так событие оформления и уходило в пустоту.
     """
     with tenant_context(crystal):
         NotificationChannel.objects.filter(execution_point__isnull=True, user__isnull=True).delete()

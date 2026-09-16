@@ -2396,6 +2396,9 @@
         "restored": "已删除的房间已恢复",
         "bulk_created": "已批量创建房间",
         "bulk_updated": "已批量修改房间"
+      },
+      "notification": {
+        "event_settings_changed": "通知设置已更改"
       }
     },
     "enter": {

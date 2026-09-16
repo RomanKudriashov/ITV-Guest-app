@@ -64,7 +64,7 @@ def test_without_a_level_the_whole_point_is_addressed(crystal, kitchen):
     assert chosen == point_channels
 
 
-def test_the_subscriber_itself_sends_only_to_the_manager(crystal, kitchen, monkeypatch):
+def test_the_subscriber_itself_sends_only_to_the_manager(crystal, kitchen, monkeypatch, deliver_inline):
     """
     Проверка через сам обработчик события, а не через вспомогательную функцию:
     дефект жил именно в нём. Каналу руководителя дана метка в настройках, и

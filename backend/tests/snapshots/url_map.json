@@ -294,6 +294,15 @@
   "/api/v1/cms/notification-events/catalog": [
     "GET"
   ],
+  "/api/v1/cms/notification-events/settings": [
+    "GET"
+  ],
+  "/api/v1/cms/notification-events/settings/{code}": [
+    "PUT"
+  ],
+  "/api/v1/cms/notification-events/settings/{code}/preview": [
+    "POST"
+  ],
   "/api/v1/cms/notification-log": [
     "GET"
   ],

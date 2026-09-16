@@ -2480,6 +2480,9 @@
         "restored": "استُعيدت الغرفة المحذوفة",
         "bulk_created": "أُنشئت غرف دفعة واحدة",
         "bulk_updated": "عُدّلت غرف دفعة واحدة"
+      },
+      "notification": {
+        "event_settings_changed": "تم تغيير إعدادات الإشعار"
       }
     },
     "enter": {

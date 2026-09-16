@@ -101,3 +101,18 @@ class LogOut(Schema):
 
 
 # --- Каналы ----------------------------------------------------------------
+
+
+class EventSettingIn(Schema):
+    """Настройка события. Не переданное поле не меняется."""
+
+    enabled: bool | None = None
+    audience: str | None = None
+    channel_id: str | None = None
+    channel_types: list[str] | None = None
+    templates: dict[str, Any] | None = None
+
+
+class EventPreviewIn(EventSettingIn):
+    # На каком языке показать образец; получатели — каждый на своём.
+    language: str = ""

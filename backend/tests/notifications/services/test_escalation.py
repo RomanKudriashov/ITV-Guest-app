@@ -43,35 +43,35 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def notifications_on(settings):
-    settings.NOTIFICATIONS_ENABLED = True
-    return settings
-
-
-@pytest.fixture
 def no_dispatch(monkeypatch):
     """
-    Перехватываем постановку задач: планирование проверяем отдельно от
-    исполнения, а брокер в тестах дёргать незачем.
+    Перехватываем постановку отправок: планирование и ступени проверяем
+    отдельно от отправки, а брокер в тестах дёргать незачем. «После коммита»
+    наступает сразу — транзакция теста не коммитится никогда.
     """
-    calls = {"steps": [], "deliveries": []}
+    from apps.notifications import tasks
+    from apps.notifications.services import delivery
+    from tests.notifications.conftest import _CommitsAtOnce
+
+    calls = {"deliveries": []}
 
     class FakeResult:
         id = "fake-task-id"
 
-    from apps.notifications import tasks
-
-    monkeypatch.setattr(
-        tasks.run_escalation_step,
-        "apply_async",
-        lambda args=None, **kw: calls["steps"].append((args, kw)) or FakeResult(),
-    )
+    monkeypatch.setattr(delivery, "transaction", _CommitsAtOnce())
     monkeypatch.setattr(
         tasks.deliver_notification,
         "delay",
         lambda *args, **kw: calls["deliveries"].append(args) or FakeResult(),
     )
     return calls
+
+
+def step_jobs(order):
+    from apps.core.models import ScheduledJob
+    from apps.notifications.services.delivery import STEP_JOB_KIND
+
+    return ScheduledJob.objects.filter(kind=STEP_JOB_KIND, payload__order_id=str(order.pk))
 
 
 @pytest.fixture
@@ -131,7 +131,11 @@ def test_plan_creates_a_record_per_step(crystal, order, notifications_on, no_dis
         delays = [(log.scheduled_for - order.created_at).total_seconds() / 60 for log in planned]
         assert delays == [0, 5, 15]
 
-    assert len(no_dispatch["steps"]) == 3
+        # «Когда» — у службы расписания: задание на каждую БУДУЩУЮ ступень.
+        # Ступень «сразу» исполняет задача планирования, не дожидаясь круга.
+        jobs = list(step_jobs(order).order_by("run_at"))
+        assert [job.payload["log_id"] for job in jobs] == [str(planned[1].pk), str(planned[2].pk)]
+        assert [job.run_at for job in jobs] == [planned[1].scheduled_for, planned[2].scheduled_for]
 
 
 def test_planning_twice_does_not_duplicate(crystal, order, notifications_on, no_dispatch):
@@ -141,6 +145,7 @@ def test_planning_twice_does_not_duplicate(crystal, order, notifications_on, no_
         plan_escalation(order)
 
         assert NotificationLog.objects.filter(order=order, channel__isnull=True).count() == 3
+        assert step_jobs(order).count() == 2
 
 
 def test_no_rule_means_no_escalation(crystal, order, notifications_on, no_dispatch):
@@ -252,6 +257,14 @@ def test_cancel_pending_quenches_scheduled_steps(crystal, order, notifications_o
             NotificationLog.objects.filter(order=order).values_list("status", flat=True)
         )
         assert statuses == {NotificationStatus.CANCELLED}
+        # Задания службы гаснут вместе со ступенями — и без строки в журнале
+        # действий: принятая заявка не решение человека.
+        from apps.core.models import AuditLog, ScheduledJob
+
+        assert set(step_jobs(order).values_list("status", flat=True)) == {
+            ScheduledJob.Status.CANCELLED
+        }
+        assert not AuditLog.objects.filter(action="scheduler.cancelled").exists()
 
 
 def test_accepting_through_the_tracker_cancels_the_rest(

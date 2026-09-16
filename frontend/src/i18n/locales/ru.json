@@ -2447,6 +2447,9 @@
         "restored": "Удалённый номер восстановлен",
         "bulk_created": "Номера заведены пачкой",
         "bulk_updated": "Номера изменены пачкой"
+      },
+      "notification": {
+        "event_settings_changed": "Изменены настройки уведомления"
       }
     },
     "enter": {

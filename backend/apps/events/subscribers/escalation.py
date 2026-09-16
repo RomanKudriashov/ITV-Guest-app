@@ -71,3 +71,51 @@ def stop_escalation_when_handled(event: Event) -> None:
         cancelled = cancel_pending(order)
         if cancelled:
             logger.info("Эскалация заказа %s погашена (%s ступеней)", order_id, cancelled)
+
+
+@subscribe(ORDER_CANCELLED)
+def notify_point_of_cancellation(event: Event) -> None:
+    """
+    Отмена → отделу: готовить уже не для кого.
+
+    Не шлём, когда отменил сам отдел: сотрудник, отменивший заявку со своей
+    доски, знает об этом лучше всех, а сообщение ему же — первый шаг к каналу,
+    который перестают читать. Отмена гостем, другим отделом или системой —
+    уходит. Агрегат (заказ из нескольких отделов) не шлём: каждая его часть
+    сообщает о себе сама, своему отделу.
+    """
+    order_id = event.payload.get("order_id")
+    point_id = event.payload.get("execution_point_id")
+    if not order_id or not point_id:
+        return
+
+    from apps.accounts.models import StaffAssignment
+    from apps.notifications.services import event_values
+    from apps.notifications.services.events import notify
+    from apps.orders.models import Order
+
+    try:
+        with tenant_context(event.hotel_id):
+            order = (
+                Order.objects.filter(pk=order_id, children__isnull=True)
+                .select_related("hotel", "room", "execution_point")
+                .first()
+            )
+            if order is None:
+                return
+            if (
+                event.actor_type == "staff"
+                and event.actor_id
+                and StaffAssignment.objects.filter(
+                    user_id=event.actor_id, execution_point_id=point_id, is_active=True
+                ).exists()
+            ):
+                return
+            notify(
+                "order.cancelled",
+                event_values.order_cancelled(order, event_values.cancel_comment(order)),
+                point_id=point_id,
+                dedupe_key=f"order.cancelled:{event.id}",
+            )
+    except Exception:  # noqa: BLE001 — уведомление не вправе уронить отмену
+        logger.warning("Уведомление об отмене %s не записано", order_id, exc_info=True)

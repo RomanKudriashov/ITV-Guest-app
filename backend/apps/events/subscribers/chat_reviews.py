@@ -40,36 +40,24 @@ def notify_staff_of_guest_message(event: Event) -> None:
     """Сообщение гостя → каналы отдела треда (адресат — из справочника событий)."""
     if event.payload.get("author_type") != "guest":
         return
-    _notify(
-        event,
-        "chat.guest_message",
-        {
-            "room_number": event.payload.get("room") or None,
-            "preview": event.payload.get("preview", ""),
-        },
-    )
+    from apps.notifications.services import event_values
+
+    _notify(event, "chat.guest_message", event_values.chat_message(event.payload))
 
 
 @subscribe(REVIEW_LOW)
 def notify_manager_of_low_rating(event: Event) -> None:
     """Низкая оценка → руководителю отдела (service recovery), не всей смене."""
-    _notify(
-        event,
-        "review.low",
-        {
-            "rating": event.payload.get("rating"),
-            "number": event.payload.get("number"),
-            "comment": event.payload.get("comment", ""),
-            "room_number": event.payload.get("room") or None,
-        },
-    )
+    from apps.notifications.services import event_values
+
+    _notify(event, "review.low", event_values.review_low(event.payload))
 
 
 def _notify(event: Event, code: str, values: dict) -> None:
     """
     Через общую дверь уведомлений: факт в журнал, затем рассылка адресату из
-    справочника. Событие без отдела тоже пишется — с итогом «некому
-    отправить», а не молча пропадает.
+    настройки события. Событие без отдела тоже пишется — с итогом «некому
+    отправить», а не молча пропадает. Выключенное отелем — не пишется.
 
     Уведомление не вправе уронить чат или отзыв: сбой здесь остаётся в логе,
     а сообщение гостя уже доставлено в тред.

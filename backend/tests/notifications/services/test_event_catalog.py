@@ -65,6 +65,45 @@ def test_missing_value_becomes_a_dash_but_empty_stays_empty():
     assert events.fill("{{comment}}|", {"comment": ""}) == "|"
 
 
+def test_empty_lines_left_by_empty_values_are_dropped():
+    """«{{room}}\n{{summary}}» у заявки без номера — не пустая первая строка."""
+    assert events.fill("{{room}}\n{{summary}}", {"room": "", "summary": "Чай"}) == "Чай"
+
+
+def test_language_dependent_value_is_picked_per_recipient():
+    value = {"point": {"ru": "Кухня", "en": "Kitchen"}}
+    assert events.fill("{{point}}", value, "en", "ru") == "Kitchen"
+    assert events.fill("{{point}}", value, "zh", "ru") == "Кухня", "нет перевода — язык отеля"
+
+
+def test_only_actionable_events_are_on_by_default():
+    """
+    Прямой ответ на жалобу на поток сообщений: включено только то, после чего
+    человек должен что-то сделать.
+    """
+    enabled = {code for code, spec in events.EVENTS.items() if spec.enabled_by_default}
+    assert enabled == {
+        "order.overdue",
+        "order.cancelled",
+        "review.low",
+        "notification.undelivered",
+    }
+
+
+def test_hotel_text_in_the_recipients_language_wins_but_not_across_languages():
+    templates = {"ru": {"subject": "Своё: №{{number}}", "body": "{{comment}}"}}
+    ru = events.render(
+        "review.low", {"number": 3, "rating": 1}, language="ru", default_language="ru",
+        templates=templates,
+    )
+    en = events.render(
+        "review.low", {"number": 3, "rating": 1}, language="en", default_language="ru",
+        templates=templates,
+    )
+    assert ru.subject == "Своё: №3"
+    assert en.subject.startswith("Low rating"), "русский текст отеля не перебивает английский"
+
+
 def test_render_uses_the_requested_language():
     message = events.render(
         "brand.published_on_schedule", {"version": 7}, language="en", default_language="ru"
@@ -74,7 +113,7 @@ def test_render_uses_the_requested_language():
 
 
 @pytest.mark.django_db
-def test_brand_events_reach_shared_channels_not_personal_ones(crystal, monkeypatch):
+def test_brand_events_reach_shared_channels_not_personal_ones(crystal, monkeypatch, deliver_inline):
     """
     «Общие каналы отеля» — без отдела И без сотрудника. Прежний фильтр брал всё
     без отдела, и событие оформления получал каждый, у кого есть личный канал:
@@ -85,7 +124,9 @@ def test_brand_events_reach_shared_channels_not_personal_ones(crystal, monkeypat
     from apps.notifications.channels import adapters
     from apps.notifications.models import ChannelType, NotificationChannel
     from apps.notifications.services import announce
+    from tests.notifications.conftest import enable
 
+    enable(crystal, "brand.published_on_schedule")
     with tenant_context(crystal):
         person = User.objects.create(email="owner2@brand.test", hotel=crystal)
         NotificationChannel.objects.create(

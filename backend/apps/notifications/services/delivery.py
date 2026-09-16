@@ -11,6 +11,12 @@
    индексом: повтор Celery-задачи не даёт второго сообщения.
 3. **Недоступность канала не задевает заказ.** Отправка — отдельная задача с
    ретраями; упавший Telegram оставляет `failed` в журнале и ничего больше.
+
+КОГДА И КТО ОТПРАВЛЯЕТ. Ступень «сразу» исполняет задача планирования; более
+поздние ступени — служба расписания (`ScheduledJob`), одна на весь проект:
+её видно в консоли, её задания переживают перезапуск брокера. Отправку ступень
+отдаёт Celery ПОСЛЕ КОММИТА — служба держит блокировку строки задания, и
+ждать под ней чужой API нельзя. Точность ступени — круг службы, до минуты.
 """
 
 from __future__ import annotations
@@ -32,7 +38,6 @@ from apps.notifications import events as notification_events
 from apps.notifications.channels.adapters import get_adapter
 from apps.notifications.channels.base import ChannelError, RenderedMessage
 from apps.notifications.models import (
-    ChannelType,
     EscalationRule,
     EscalationStep,
     NotificationChannel,
@@ -47,6 +52,8 @@ logger = logging.getLogger("apps.notifications")
 # `order.overdue`) — на четырёх языках. Шаблон канала, если отель его задал,
 # по-прежнему важнее.
 OVERDUE_EVENT = "order.overdue"
+# Вид задания службы расписания для ступени эскалации.
+STEP_JOB_KIND = "notification.escalation_step"
 
 
 # --- Состояние заказа ------------------------------------------------------
@@ -115,37 +122,56 @@ def resolve_channels(step: EscalationStep, order: Order) -> list[NotificationCha
 
 
 def render_message(
-    channel: NotificationChannel | None, order: Order, step: EscalationStep | None, language: str
+    channel: NotificationChannel | None,
+    order: Order,
+    step: EscalationStep | None,
+    language: str,
+    event_templates: dict | None = None,
 ) -> RenderedMessage:
     """
     Текст ступени на языке ПОЛУЧАТЕЛЯ.
 
-    Порядок: шаблон отеля на языке получателя → текст справочника на том же
-    языке → шаблон отеля на языке отеля. Шаблон на ДРУГОМ языке язык
-    получателя не перебивает: англоязычный старший смены получает английский
-    текст справочника, а не русский шаблон, написанный для остальных.
+    Порядок: шаблон канала на языке получателя → текст события, заданный
+    отелем, на том же языке → текст справочника на том же языке → шаблон
+    канала на языке отеля → текст события на языке отеля. Текст на ДРУГОМ
+    языке язык получателя не перебивает: англоязычный старший смены получает
+    английский текст справочника, а не русский шаблон, написанный для
+    остальных. Шаблон канала — точнее события: он написан для этого чата.
     """
     default_language = order.hotel.default_language
     spec = notification_events.get(OVERDUE_EVENT)
-    template = (channel.templates or {}).get(language) if channel else None
+    if event_templates is None:
+        from apps.notifications.services.event_settings import effective
+
+        event_templates = effective(OVERDUE_EVENT).templates
+
+    channel_templates = (channel.templates or {}) if channel else {}
+    template = _complete(channel_templates.get(language))
+    if not template:
+        template = _complete((event_templates or {}).get(language))
     if not template and language in notification_events.LANGUAGES:
         template = {
             "subject": spec.text("subject", language, default_language),
             "body": spec.text("body", language, default_language),
         }
     if not template:
-        template = (channel.templates or {}).get(default_language) if channel else None
+        template = _complete(channel_templates.get(default_language))
     if not template:
-        template = {
-            "subject": spec.text("subject", language, default_language),
-            "body": spec.text("body", language, default_language),
-        }
+        template = notification_events.pick_template(
+            spec, event_templates or {}, default_language, default_language
+        )
 
     context = _message_context(order, step, language)
     return RenderedMessage(
         subject=_fill(template.get("subject", ""), context),
         body=_fill(template.get("body", ""), context),
     )
+
+
+def _complete(template) -> dict | None:
+    if template and (template.get("subject") or template.get("body")):
+        return template
+    return None
 
 
 def _fill(template: str, context: dict[str, str]) -> str:
@@ -200,6 +226,12 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
     if not settings.NOTIFICATIONS_ENABLED:
         return []
 
+    from apps.notifications.services.event_settings import is_enabled
+
+    if not is_enabled(OVERDUE_EVENT):
+        # Отель выключил уведомления о просрочке — планировать нечего.
+        return []
+
     rule = rule_for_order(order)
     if rule is None:
         return []
@@ -208,8 +240,9 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
     if not steps:
         return []
 
-    from apps.notifications.tasks import run_escalation_step
+    from apps.core.services import scheduler
 
+    now = timezone.now()
     planned: list[NotificationLog] = []
     for index, step in enumerate(steps):
         scheduled_for = order.created_at + timedelta(minutes=step.delay_minutes)
@@ -227,13 +260,40 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
             continue
         planned.append(log)
 
-        countdown = max(0, int((scheduled_for - timezone.now()).total_seconds()))
-        async_result = run_escalation_step.apply_async(
-            args=(str(log.pk), str(order.hotel_id)), countdown=countdown
-        )
-        NotificationLog.objects.filter(pk=log.pk).update(celery_task_id=async_result.id or "")
+        if scheduled_for > now:
+            # «Когда» — дело службы расписания. Ступень, срок которой уже
+            # пришёл, исполняет `run_due_steps` сразу, не дожидаясь круга.
+            scheduler.schedule(
+                kind=STEP_JOB_KIND,
+                run_at=scheduled_for,
+                payload={"log_id": str(log.pk), "order_id": str(order.pk)},
+            )
 
     return planned
+
+
+def run_due_steps(planned: Iterable[NotificationLog], *, now=None) -> int:
+    """Исполнить ступени, чей срок уже пришёл: «сразу» и опоздавшие к планированию."""
+    now = now or timezone.now()
+    done = 0
+    for log in planned:
+        if log.scheduled_for <= now:
+            execute_step(log.pk)
+            done += 1
+    return done
+
+
+def run_step_job(job) -> dict:
+    """
+    Обработчик службы расписания. Ничего не отправляет сам: ступень ставит
+    доставки в Celery после коммита, и блокировка задания не ждёт каналов.
+    """
+    log = execute_step(job.payload.get("log_id"))
+    if log is None:
+        return {"skipped": True, "reason": "log_gone"}
+    if log.status in (NotificationStatus.CANCELLED, NotificationStatus.SKIPPED):
+        return {"skipped": True, "reason": log.status, "detail": log.error[:200]}
+    return {"status": log.status, "deliveries": log.deliveries.count()}
 
 
 def _get_or_create_log(**kwargs) -> NotificationLog | None:
@@ -274,6 +334,16 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
         return log
 
     order = log.order
+    from apps.notifications.services.event_settings import effective
+
+    overdue = effective(OVERDUE_EVENT)
+    if not overdue.enabled:
+        # Выключили между планированием и сроком — решение отеля действует сразу.
+        log.status = NotificationStatus.CANCELLED
+        log.error = "Отель выключил уведомления о просрочке"
+        log.save(update_fields=["status", "error", "updated_at"])
+        return log
+
     if escalation_should_stop(order):
         # ГЛАВНАЯ проверка: задача могла сработать ровно в тот момент,
         # когда заказ приняли, и отмена задачи не успела бы.
@@ -292,13 +362,13 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
         return log
 
     from apps.notifications.services.events import recipient_language
-    from apps.notifications.tasks import deliver_notification
 
+    queued = []
     for channel in channels:
         # Язык — у каждого получателя свой: старший смены с английским в профиле
         # получает английский текст, общий чат кухни — текст на языке отеля.
         language = recipient_language(channel, order.hotel)
-        message = render_message(channel, order, log.step, language)
+        message = render_message(channel, order, log.step, language, overdue.templates)
         delivery = _get_or_create_log(
             order=order,
             rule_id=log.rule_id,
@@ -314,12 +384,30 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
         NotificationLog.objects.filter(pk=delivery.pk).update(
             subject=message.subject, body=message.body
         )
-        deliver_notification.delay(str(delivery.pk), str(order.hotel_id))
+        queued.append(str(delivery.pk))
 
+    _dispatch(queued, order.hotel_id)
     log.status = NotificationStatus.SENT
     log.sent_at = timezone.now()
     log.save(update_fields=["status", "sent_at", "updated_at"])
     return log
+
+
+def _dispatch(log_ids: list[str], hotel_id) -> None:
+    """
+    В Celery — после коммита: ступень исполняется и внутри транзакции службы
+    расписания, и воркер, получивший задачу раньше коммита, не нашёл бы
+    доставку и не отправил бы ничего.
+    """
+    if not log_ids:
+        return
+    from apps.notifications.tasks import deliver_notification
+
+    def send() -> None:
+        for log_id in log_ids:
+            deliver_notification.delay(log_id, str(hotel_id))
+
+    transaction.on_commit(send)
 
 
 # --- Отправка --------------------------------------------------------------
@@ -352,6 +440,7 @@ def send_delivery(log_id) -> NotificationLog:
             raise
         log.status = NotificationStatus.FAILED
         log.save(update_fields=["status", "error", "updated_at"])
+        _report_failed(log)
         return log
 
     log.status = NotificationStatus.SENT
@@ -363,8 +452,24 @@ def send_delivery(log_id) -> NotificationLog:
 
 def mark_delivery_failed(log_id, error: str) -> None:
     """Вызывается Celery, когда ретраи исчерпаны."""
-    NotificationLog.objects.filter(pk=log_id, status=NotificationStatus.SCHEDULED).update(
-        status=NotificationStatus.FAILED, error=str(error)[:2000]
+    updated = NotificationLog.objects.filter(
+        pk=log_id, status=NotificationStatus.SCHEDULED
+    ).update(status=NotificationStatus.FAILED, error=str(error)[:2000])
+    if updated:
+        _report_failed(NotificationLog.objects.select_related("channel").get(pk=log_id))
+
+
+def _report_failed(log: NotificationLog) -> None:
+    """Просрочка, которая не дошла, — тоже событие: иначе её не узнает никто."""
+    from apps.notifications.services.events import report_undelivered
+
+    report_undelivered(
+        event_code=OVERDUE_EVENT,
+        channel_id=log.channel_id,
+        channel_title=log.channel.title if log.channel_id else "",
+        subject=log.subject,
+        error=log.error,
+        source_key=f"escalation:{log.pk}",
     )
 
 
@@ -375,9 +480,15 @@ def cancel_pending(order: Order, reason: str = "Заказ взят в рабо�
     """
     Гасит запланированные ступени и отзывает задачи.
 
-    Отзыв — best-effort: Celery не гарантирует, что задача не успела уйти в
-    исполнение. Настоящая гарантия — проверка состояния в execute_step.
+    Задания службы расписания гасятся тихо, без записи в журнал действий:
+    принятая заявка — не решение человека отменить публикацию, и тысяча таких
+    строк в день заслонила бы настоящие отмены.
+
+    Отзыв задач Celery (поставленных до перехода на службу расписания) —
+    best-effort. Настоящая гарантия — проверка состояния в execute_step.
     """
+    from apps.core.models import ScheduledJob
+
     pending = list(
         NotificationLog.objects.filter(order=order, status=NotificationStatus.SCHEDULED)
     )
@@ -387,6 +498,11 @@ def cancel_pending(order: Order, reason: str = "Заказ взят в рабо�
     NotificationLog.objects.filter(pk__in=[log.pk for log in pending]).update(
         status=NotificationStatus.CANCELLED, error=reason
     )
+    ScheduledJob.objects.filter(
+        kind=STEP_JOB_KIND,
+        status=ScheduledJob.Status.PENDING,
+        payload__order_id=str(order.pk),
+    ).update(status=ScheduledJob.Status.CANCELLED, result={"reason": reason})
     _revoke([log.celery_task_id for log in pending if log.celery_task_id])
     return len(pending)
 

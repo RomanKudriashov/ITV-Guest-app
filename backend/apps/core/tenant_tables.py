@@ -61,6 +61,7 @@ TENANT_TABLES = [
     "notifications_escalation_rule",
     "notifications_event",
     "notifications_event_delivery",
+    "notifications_event_setting",
     "notifications_escalation_step",
     "notifications_log",
     # media

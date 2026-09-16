@@ -46,7 +46,7 @@ def _manager(crystal, kitchen, email, language) -> NotificationChannel:
         )
 
 
-def test_personal_channel_speaks_the_owners_language(crystal, kitchen):
+def test_personal_channel_speaks_the_owners_language(crystal, kitchen, notifications_on):
     english = _manager(crystal, kitchen, "en@kitchen.test", "en")
     russian = _manager(crystal, kitchen, "ru@kitchen.test", "ru")
 
@@ -82,24 +82,15 @@ def test_language_is_normalised_and_unknown_falls_back_to_the_hotel(crystal, kit
 # --- Эскалация ------------------------------------------------------------
 
 
-def test_escalation_step_speaks_the_leads_language(client, crystal, settings, monkeypatch):
+def test_escalation_step_speaks_the_leads_language(client, crystal, deliver_inline):
     """
     Вторая ступень эскалации уходит старшему смены в личный канал — и на его
     языке: и слова справочника, и слово «Номер», и название отдела.
     """
-    from apps.notifications import tasks
     from apps.notifications.models import NotificationLog
     from apps.notifications.services import execute_step, plan_escalation
     from apps.orders.models import Order
     from tests.conftest import host_for
-
-    settings.NOTIFICATIONS_ENABLED = True
-
-    class FakeResult:
-        id = "fake"
-
-    monkeypatch.setattr(tasks.run_escalation_step, "apply_async", lambda *a, **k: FakeResult())
-    monkeypatch.setattr(tasks.deliver_notification, "delay", lambda *a, **k: FakeResult())
 
     token = client.post(
         "/api/guest/session", data={"room_number": "305"},

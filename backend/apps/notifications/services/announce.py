@@ -20,13 +20,17 @@ def announce_to_hotel(event: str, payload: dict) -> int:
     """
     Разослать факт в общие каналы отеля — через журнал событий.
 
-    Возвращает, во сколько каналов событие доставлено.
+    Возвращает, во сколько каналов событие поставлено в отправку. Отправляет
+    Celery после коммита: здесь, под блокировкой задания службы расписания,
+    ждать чужой API нельзя.
     """
     from apps.notifications.services.events import notify
 
+    from apps.notifications.services import event_values
+
     if event not in notification_events.EVENTS:
         return 0
-    record = notify(event, payload)
+    record = notify(event, event_values.brand(payload))
     if record is None:
         return 0
-    return record.deliveries.filter(status="sent").count()
+    return record.deliveries.count()

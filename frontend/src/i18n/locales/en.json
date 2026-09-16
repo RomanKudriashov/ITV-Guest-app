@@ -2420,6 +2420,9 @@
         "restored": "Deleted room restored",
         "bulk_created": "Rooms created in bulk",
         "bulk_updated": "Rooms updated in bulk"
+      },
+      "notification": {
+        "event_settings_changed": "Notification settings changed"
       }
     },
     "enter": {

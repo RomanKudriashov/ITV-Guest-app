@@ -10,7 +10,18 @@ from django.http import HttpRequest
 from ninja import Router
 from apps.core.schemas import OkOut
 
-from apps.notifications.schemas import ChannelIn, ChannelOut, ChannelPatch, LogOut, RuleIn, RuleOut, RulePatch, TestOut
+from apps.notifications.schemas import (
+    ChannelIn,
+    ChannelOut,
+    ChannelPatch,
+    EventPreviewIn,
+    EventSettingIn,
+    LogOut,
+    RuleIn,
+    RuleOut,
+    RulePatch,
+    TestOut,
+)
 from apps.notifications.services import cms as svc
 from apps.notifications.services import send_test_message
 
@@ -128,3 +139,36 @@ def notification_event_catalog(request: HttpRequest):
     from apps.core.context import current_language
 
     return svc.event_catalog(current_language() or "ru")
+
+
+# --- Настройки событий -----------------------------------------------------
+
+
+@router.get("/notification-events/settings", summary="Настройки событий уведомлений")
+def notification_event_settings(request: HttpRequest):
+    """Справочник событий с решением отеля по каждому: вкл/выкл, кому, чем, текст."""
+    from apps.core.context import current_language
+    from apps.notifications.services import event_settings
+
+    return event_settings.list_settings(current_language() or "ru")
+
+
+@router.put("/notification-events/settings/{code}", summary="Изменить настройку события")
+def save_notification_event_setting(request: HttpRequest, code: str, payload: EventSettingIn):
+    from apps.notifications.services import event_settings
+
+    return event_settings.save(code, payload.dict(exclude_unset=True))
+
+
+@router.post(
+    "/notification-events/settings/{code}/preview",
+    summary="Превью события на последнем настоящем случае",
+)
+def preview_notification_event(request: HttpRequest, code: str, payload: EventPreviewIn):
+    """
+    «Вот так придёт» — черновик настройки на последнем настоящем случае из
+    данных отеля. Ничего не сохраняет и не отправляет.
+    """
+    from apps.notifications.services import event_preview
+
+    return event_preview.preview(code, payload.dict(exclude_unset=True))
