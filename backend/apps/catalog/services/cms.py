@@ -42,6 +42,7 @@ from apps.catalog.models import (
     ModifierOption,
     OfferingType,
     RequestField,
+    ServiceLocation,
 )
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import BOUNDED_TYPES, FieldType
@@ -460,6 +461,9 @@ def delete_category(category_id, *, cascade: bool = False) -> None:
         for item in Item.objects.filter(category=category):
             delete_item(item.pk)
 
+    # Связки матрицы «категория × локация» — жёстко: истории у них нет, а
+    # живая связка удалённой категории — мусор в любом подсчёте матрицы.
+    ServiceLocation.all_objects.filter(category=category).hard_delete()
     category.delete()
 
 

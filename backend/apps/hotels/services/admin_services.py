@@ -1199,9 +1199,17 @@ def update_location(location_id, data: dict) -> Location:
     return location
 
 
+@transaction.atomic
 def delete_location(location_id) -> None:
+    """
+    Локация удаляется мягко — а её связки в матрице ЖЁСТКО: у связки нет
+    истории, а живая связка удалённой локации — мусор, который врёт любому
+    подсчёту матрицы (на стенде их набралось 129, по одной на прогон).
+    """
     require_hotel_admin()
-    get_location(location_id).delete()
+    location = get_location(location_id)
+    ServiceLocation.all_objects.filter(location=location).hard_delete()
+    location.delete()
 
 
 # --- Матрица «категория → локации» -----------------------------------------
