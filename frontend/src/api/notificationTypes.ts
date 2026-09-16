@@ -122,3 +122,81 @@ export interface NotificationStaffUser {
   email: string;
   full_name: string;
 }
+
+/* ── Event settings (§3а) ─────────────────────────────────────────────── */
+
+/** `channel` — one channel chosen by the hotel; the rest come from the registry. */
+export type EventAudience = 'point' | 'lead' | 'manager' | 'hotel' | 'channel';
+
+export interface EventSetting {
+  enabled: boolean;
+  audience: EventAudience;
+  channel_id: string | null;
+  /** Empty — any kind of channel. */
+  channel_types: ChannelType[];
+  /** Only the languages the hotel wrote; a missing language uses the registry text. */
+  templates: Record<string, ChannelTemplate>;
+  /** The hotel has changed something — otherwise these are the registry defaults. */
+  customized: boolean;
+}
+
+export interface EventSettingItem {
+  code: string;
+  title: string;
+  audience: EventAudience;
+  placeholders: string[];
+  enabled_by_default: boolean;
+  /** Recipients come from the escalation rules, not from this setting. */
+  audience_from_rules: boolean;
+  defaults: Record<string, ChannelTemplate>;
+  setting: EventSetting;
+}
+
+export type EventSettingPayload = Partial<
+  Pick<EventSetting, 'enabled' | 'audience' | 'channel_id' | 'channel_types' | 'templates'>
+>;
+
+/** Where the preview example came from — always a real case of this hotel. */
+export interface EventPreviewSource {
+  kind:
+    | 'order'
+    | 'cancelled_order'
+    | 'chat_message'
+    | 'review'
+    | 'brand_event'
+    | 'brand_version'
+    | 'failed_delivery';
+  at: string | null;
+  point: string | null;
+  number?: number;
+  room?: string;
+  rating?: number;
+  version?: number | null;
+  channel?: string;
+}
+
+export interface EventPreviewMessage {
+  language: string;
+  subject: string;
+  body: string;
+}
+
+export interface EventPreviewRecipient extends EventPreviewMessage {
+  channel_id: string;
+  channel_title: string;
+  channel_type: ChannelType;
+  recipient: string | null;
+  step: { title: string; delay_minutes: number } | null;
+}
+
+/**
+ * `example: null` — the hotel has no such case yet. There is then no message
+ * and no recipient list: nothing is invented to fill the frame.
+ */
+export interface EventPreview {
+  enabled: boolean;
+  example: { source: EventPreviewSource } | null;
+  message: EventPreviewMessage | null;
+  recipients: EventPreviewRecipient[] | null;
+  rule?: { id: string; name: string } | null;
+}

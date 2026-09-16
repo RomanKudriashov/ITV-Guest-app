@@ -12,15 +12,17 @@ import { queryKeys } from '@/api/queryKeys';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { ChannelsTab } from './ChannelsTab';
 import { EscalationTab } from './EscalationTab';
+import { EventsTab } from './EventsTab';
 import { LogTab } from './LogTab';
 
-type Section = 'channels' | 'escalation' | 'log';
+type Section = 'channels' | 'events' | 'escalation' | 'log';
 
-const SECTIONS: Section[] = ['channels', 'escalation', 'log'];
+const SECTIONS: Section[] = ['channels', 'events', 'escalation', 'log'];
 
 /**
- * `/cms/notifications` — the three halves of one subject: where a request can
- * be sent, when it gets raised, and what actually happened.
+ * `/cms/notifications` — one subject in four parts: where a message can be
+ * sent, which events are sent and how they read, when a request gets raised,
+ * and what actually happened.
  */
 export function NotificationsPage() {
   const { t } = useTranslation();
@@ -63,6 +65,9 @@ export function NotificationsPage() {
 
         {section === 'channels' ? (
           <ChannelsTab bootstrap={bootstrap} languages={languages} />
+        ) : null}
+        {section === 'events' ? (
+          <EventsTab languages={languages} channels={channelsQuery.data ?? []} />
         ) : null}
         {section === 'escalation' ? (
           <EscalationTab bootstrap={bootstrap} languages={languages} />

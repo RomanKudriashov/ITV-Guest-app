@@ -955,6 +955,7 @@
     "subtitle": "客人的请求去往哪里、由谁接手、若无人及时接手会发生什么。当请求丢失或送错人时来这里。",
     "tabs": {
       "channels": "渠道",
+      "events": "事件",
       "escalation": "上报",
       "log": "日志"
     },
@@ -1106,6 +1107,96 @@
       "duplicateDelay": "两个步骤延时相同",
       "stepsOutOfOrder": "延时必须递增",
       "channelRequired": "请选择渠道"
+    },
+    "events": {
+      "title": "事件",
+      "hint": "系统向员工通报的内容。默认只开启需要处理的事件。",
+      "readOnly": "由酒店管理员设置。此处可以看到哪些已开启以及发给谁。",
+      "saved": "事件设置已保存",
+      "on": "已开启",
+      "off": "已关闭",
+      "actionable": "需要处理",
+      "audienceFromRules": "接收人——按升级规则",
+      "toChannel": "发送到渠道「{{name}}」",
+      "byDefault": "默认",
+      "enabled": "发送",
+      "configure": "设置",
+      "collapse": "收起",
+      "unsaved": "有未保存的更改",
+      "discard": "放弃",
+      "save": "保存",
+      "resetDefaults": "恢复默认设置",
+      "rulesHint": "逾期请求发给谁、何时发，由「升级」标签页中的规则决定。此处只设置是否开启以及文本。",
+      "audience": "接收人",
+      "registry": "默认",
+      "audienceHint": {
+        "point": "事件所在部门的所有渠道",
+        "lead": "该部门值班主管的个人渠道",
+        "manager": "该部门经理的个人渠道",
+        "hotel": "酒店公共渠道——不属于部门，也不属于员工",
+        "channel": "一个选定的渠道"
+      },
+      "audiences": {
+        "point": "部门",
+        "lead": "部门值班主管",
+        "manager": "部门经理",
+        "hotel": "酒店公共渠道",
+        "channel": "选定的渠道"
+      },
+      "channel": "渠道",
+      "channelTypes": "渠道类型",
+      "channelTypesSome": "仅限所选类型的渠道",
+      "channelTypesAny": "未选择——任意类型",
+      "text": "文本",
+      "subject": "主题",
+      "body": "消息",
+      "textHint": "留空——使用默认文本（灰色显示）。用下方按钮插入占位符。",
+      "placeholders": {
+        "number": "请求编号",
+        "room": "房间",
+        "room_number": "房间号",
+        "point": "部门",
+        "summary": "请求内容",
+        "comment": "备注",
+        "status": "状态",
+        "total": "金额",
+        "step": "步骤",
+        "delay": "几分钟后",
+        "reason": "取消原因",
+        "preview": "客人消息内容",
+        "rating": "评分",
+        "version": "品牌外观版本",
+        "draft_name": "草稿名称",
+        "delay_seconds": "延迟（秒）",
+        "event": "哪条通知",
+        "subject": "未送达消息的主题",
+        "error": "渠道错误"
+      },
+      "errors": {
+        "incomplete": "请同时填写主题和消息——或两者都留空",
+        "channelRequired": "请选择渠道",
+        "unknownPlaceholder": "此事件没有该占位符：{{names}}"
+      },
+      "preview": {
+        "title": "送达效果",
+        "blocked": "请先修正表单中的错误，再查看送达效果",
+        "failed": "无法生成预览",
+        "noExample": "本酒店还没有发生过此类情况，无法展示示例。我们不展示虚构的示例：它与真实示例无法区分。",
+        "disabled": "该事件已关闭——目前不会发给任何人",
+        "recipients_other": "当前接收人：{{count}}",
+        "nobody": "目前不会发给任何人：没有合适的渠道",
+        "step": "{{minutes}} 分钟后",
+        "basedOn": "示例——{{what}}",
+        "source": {
+          "order": "请求 #{{number}}",
+          "cancelled_order": "已取消的请求 #{{number}}",
+          "chat_message": "来自 {{room}} 号房的客人消息",
+          "review": "请求 #{{number}} 的评价，评分 {{rating}}",
+          "brand_event": "品牌外观事件，版本 {{version}}",
+          "brand_version": "品牌外观版本 {{version}}（尚未按计划发布过——无延迟）",
+          "failed_delivery": "发往渠道「{{channel}}」的未送达消息"
+        }
+      }
     }
   },
   "brand": {
@@ -2939,7 +3030,8 @@
       "reviewSettings": "评价设置",
       "me": "你的账号",
       "slaOverrides": "超时阈值",
-      "commerceOverrides": "各场所的自有商务设置"
+      "commerceOverrides": "各场所的自有商务设置",
+      "notificationEvents": "事件设置"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   },

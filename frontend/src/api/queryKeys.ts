@@ -13,6 +13,7 @@ export const queryKeys = {
   notificationLog: (status: string, orderId: string, limit: number) =>
     ['cms', 'notification-log', status || 'all', orderId || 'all', limit] as const,
   staffUsers: ['cms', 'staff-users'] as const,
+  notificationEventSettings: ['cms', 'notification-events', 'settings'] as const,
   /* ── Hotel admin ────────────────────────────────────────────────────── */
   rooms: ['cms', 'rooms'] as const,
   locations: ['cms', 'locations'] as const,

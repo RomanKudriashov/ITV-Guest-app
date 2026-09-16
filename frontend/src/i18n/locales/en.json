@@ -963,6 +963,7 @@
     "subtitle": "Where a guest request goes, who receives it, and what happens if nobody takes it in time. You come here when requests get lost or reach the wrong people.",
     "tabs": {
       "channels": "Channels",
+      "events": "Events",
       "escalation": "Hand-up",
       "log": "Journal"
     },
@@ -1114,6 +1115,97 @@
       "duplicateDelay": "Two steps with the same delay",
       "stepsOutOfOrder": "Delays must increase",
       "channelRequired": "Choose a channel"
+    },
+    "events": {
+      "title": "Events",
+      "hint": "What the system tells your staff. Only what needs action is on by default.",
+      "readOnly": "The hotel admin configures this. Here you can see what is on and who gets it.",
+      "saved": "Event setting saved",
+      "on": "On",
+      "off": "Off",
+      "actionable": "Needs action",
+      "audienceFromRules": "Recipients — by escalation rules",
+      "toChannel": "To channel “{{name}}”",
+      "byDefault": "Default",
+      "enabled": "Send",
+      "configure": "Configure",
+      "collapse": "Collapse",
+      "unsaved": "There are unsaved changes",
+      "discard": "Discard",
+      "save": "Save",
+      "resetDefaults": "Restore defaults",
+      "rulesHint": "Who gets an overdue request and when is set by the rules on the “Escalation” tab. Here you choose whether it is on and how it reads.",
+      "audience": "Recipients",
+      "registry": "default",
+      "audienceHint": {
+        "point": "All channels of the department where it happened",
+        "lead": "Personal channels of this department's shift leads",
+        "manager": "Personal channels of this department's managers",
+        "hotel": "Shared hotel channels — no department and no person",
+        "channel": "One chosen channel"
+      },
+      "audiences": {
+        "point": "Department",
+        "lead": "Department shift leads",
+        "manager": "Department managers",
+        "hotel": "Shared hotel channels",
+        "channel": "Chosen channel"
+      },
+      "channel": "Channel",
+      "channelTypes": "Channel kinds",
+      "channelTypesSome": "Only the selected kinds of channels",
+      "channelTypesAny": "Nothing selected — any kind",
+      "text": "Text",
+      "subject": "Subject",
+      "body": "Message",
+      "textHint": "Empty — the default text (shown in grey). Insert placeholders with the buttons below.",
+      "placeholders": {
+        "number": "request number",
+        "room": "room",
+        "room_number": "room number",
+        "point": "department",
+        "summary": "request contents",
+        "comment": "comment",
+        "status": "status",
+        "total": "total",
+        "step": "step",
+        "delay": "after how many minutes",
+        "reason": "cancellation reason",
+        "preview": "guest message text",
+        "rating": "rating",
+        "version": "branding version",
+        "draft_name": "draft name",
+        "delay_seconds": "delay, seconds",
+        "event": "which notification",
+        "subject": "subject of the undelivered message",
+        "error": "channel error"
+      },
+      "errors": {
+        "incomplete": "Fill in both subject and message — or leave both empty",
+        "channelRequired": "Choose a channel",
+        "unknownPlaceholder": "This event has no such placeholder: {{names}}"
+      },
+      "preview": {
+        "title": "This is how it arrives",
+        "blocked": "Fix the errors in the form to see how it arrives",
+        "failed": "Could not build the preview",
+        "noExample": "There has been no such case in this hotel yet, so there is nothing to show. We do not show a made-up example: it would be indistinguishable from a real one.",
+        "disabled": "The event is off — right now nobody would get this",
+        "recipients_one": "Would receive it now: {{count}}",
+        "recipients_other": "Would receive it now: {{count}}",
+        "nobody": "Right now nobody would get this: there are no matching channels",
+        "step": "after {{minutes}} min",
+        "basedOn": "Example — {{what}}",
+        "source": {
+          "order": "request #{{number}}",
+          "cancelled_order": "cancelled request #{{number}}",
+          "chat_message": "guest message from room {{room}}",
+          "review": "review of request #{{number}}, rating {{rating}}",
+          "brand_event": "branding event, version {{version}}",
+          "brand_version": "branding version {{version}} (nothing has been published on schedule yet — no delay)",
+          "failed_delivery": "undelivered message to channel “{{channel}}”"
+        }
+      }
     }
   },
   "brand": {
@@ -2967,7 +3059,8 @@
       "reviewSettings": "the review settings",
       "me": "your account",
       "slaOverrides": "the overdue thresholds",
-      "commerceOverrides": "the venues' own commerce"
+      "commerceOverrides": "the venues' own commerce",
+      "notificationEvents": "the event settings"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
   },

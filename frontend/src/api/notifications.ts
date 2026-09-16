@@ -5,6 +5,10 @@ import type {
   ChannelTestResult,
   EscalationRule,
   EscalationRulePayload,
+  EventPreview,
+  EventSetting,
+  EventSettingItem,
+  EventSettingPayload,
   NotificationChannel,
   NotificationChannelPayload,
   NotificationLogEntry,
@@ -82,6 +86,36 @@ export function fetchNotificationLog(
       },
     })
     .then((page) => page.items);
+}
+
+/* ── Event settings ────────────────────────────────────────────────────── */
+
+export function fetchEventSettings(): Promise<EventSettingItem[]> {
+  return api
+    .get<{ items: EventSettingItem[] }>('/cms/notification-events/settings')
+    .then((page) => page.items);
+}
+
+/** Fields left out are not changed. */
+export function saveEventSetting(code: string, payload: EventSettingPayload): Promise<EventSetting> {
+  return api.put<EventSetting>(
+    `/cms/notification-events/settings/${encodeURIComponent(code)}`,
+    payload,
+  );
+}
+
+/**
+ * «Вот так придёт» — the draft applied to the latest REAL case of the hotel.
+ * Saves nothing and sends nothing.
+ */
+export function previewEvent(
+  code: string,
+  payload: EventSettingPayload & { language?: string },
+): Promise<EventPreview> {
+  return api.post<EventPreview>(
+    `/cms/notification-events/settings/${encodeURIComponent(code)}/preview`,
+    payload,
+  );
 }
 
 /* ── Staff ─────────────────────────────────────────────────────────────── */
