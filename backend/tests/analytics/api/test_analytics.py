@@ -126,7 +126,7 @@ def test_review_event_populates_review_daily(crystal, django_capture_on_commit_c
         rd = list(ReviewDaily.objects.all())
         assert sum(r.reviews_count for r in rd) == 1
         assert sum(r.rating_sum for r in rd) == 2
-        assert sum(r.low_count for r in rd) == 1  # 2 ≤ порог 3
+        assert sum(r.low_count for r in rd) == 1  # 2 ≤ порог 2
 
 
 # --- Идемпотентность -------------------------------------------------------
@@ -657,3 +657,30 @@ def test_room_category_filter_narrows_the_summary(crystal):
         # не отличить от «фильтр не задан».
         empty = {**params, "room_category": "none"}
         assert queries.summary(crystal, admin, empty)["current"]["orders"] == 1
+
+
+def test_the_reviews_report_carries_totals_and_a_row_per_venue(crystal, django_capture_on_commit_callbacks):
+    """Плитки и таблица вкладки «Отзывы» читают ровно эти поля."""
+    from apps.accounts.models import User
+    from apps.analytics.services import queries
+    from apps.orders.services import OrderInput, OrderLineInput, change_status, create_order, get_order
+    from apps.reviews.services import create_review
+
+    with tenant_context(crystal):
+        chef = User.objects.get(email="chef@crystal.local")
+        with django_capture_on_commit_callbacks(execute=True):
+            session = _session()
+            order = create_order(
+                OrderInput(lines=[OrderLineInput(item_id=_item_id())], room_id=None),
+                guest_session=session,
+            )
+            change_status(get_order(order.pk), to_code="done", actor_type="staff", actor_id=chef.pk)
+            create_review(get_order(order.pk), guest_session=session, rating=4)
+        owner = User.objects.get(email="owner@crystal.local")
+        body = queries.reviews(crystal, owner, {"preset": "today"})
+
+    assert body["totals"]["reviews"] == 1
+    assert body["totals"]["avg_rating"] == 4
+    assert [row["reviews"] for row in body["by_point"]] == [1]
+    assert body["by_point"][0]["label"], "заведение названо, а не кодом"
+    assert body["by_point"][0]["share"] == 1

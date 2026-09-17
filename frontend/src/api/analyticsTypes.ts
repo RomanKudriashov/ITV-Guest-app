@@ -193,19 +193,37 @@ export interface TrafficResponse {
   by_language: BreakdownRow[];
 }
 
+/*
+  Форма — ровно та, что отдаёт `queries.reviews`. Прежний тип описывал плоские
+  `avg_rating` / `low_review_rate` / `reviews_count`, которых сервер никогда не
+  слал: плитки вкладки «Отзывы» стояли пустыми при живых данных.
+*/
 export interface ReviewsTrendPoint {
   bucket: string;
   avg_rating: number;
-  reviews_count: number;
-  low_count: number;
+  reviews: number;
+  low: number;
+}
+
+export interface ReviewsPointRow {
+  key: string;
+  label: string;
+  reviews: number;
+  avg_rating: number;
+  low: number;
+  /** Share of all reviews in the period, 0..1. */
+  share: number;
 }
 
 export interface ReviewsResponse {
-  avg_rating: number;
-  low_review_rate: number;
-  reviews_count: number;
+  totals: {
+    reviews: number;
+    avg_rating: number;
+    low: number;
+    low_rate: number;
+  };
   trend: ReviewsTrendPoint[];
-  by_point: BreakdownRow[];
+  by_point: ReviewsPointRow[];
 }
 
 export interface ScopePoint {

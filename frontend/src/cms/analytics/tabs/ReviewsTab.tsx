@@ -56,17 +56,20 @@ export function ReviewsTab({ controller }: { controller: UseAnalyticsFilters }) 
       >
         <StatTile
           label={t('analytics.metrics.avg_rating')}
-          value={data ? fmt.rating(data.avg_rating) : undefined}
+          testId="analytics-reviews-avg"
+          value={data ? fmt.rating(data.totals.avg_rating) : undefined}
           loading={query.isLoading}
         />
         <StatTile
           label={t('analytics.reviews.lowRate')}
-          value={data ? fmt.percent(data.low_review_rate) : undefined}
+          testId="analytics-reviews-low"
+          value={data ? fmt.percent(data.totals.low_rate) : undefined}
           loading={query.isLoading}
         />
         <StatTile
           label={t('analytics.reviews.count')}
-          value={data ? fmt.count(data.reviews_count) : undefined}
+          testId="analytics-reviews-count"
+          value={data ? fmt.count(data.totals.reviews) : undefined}
           loading={query.isLoading}
         />
       </Box>
@@ -113,7 +116,7 @@ export function ReviewsTab({ controller }: { controller: UseAnalyticsFilters }) 
                   {byPoint.map((row) => (
                     <TableRow key={row.key} hover data-testid={`analytics-reviews-row-${row.key}`}>
                       <TableCell>{row.label}</TableCell>
-                      <TableCell align="right">{fmt.count(row.orders)}</TableCell>
+                      <TableCell align="right">{fmt.count(row.reviews)}</TableCell>
                       <TableCell align="right">{fmt.percent(row.share)}</TableCell>
                     </TableRow>
                   ))}

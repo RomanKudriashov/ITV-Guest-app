@@ -611,12 +611,29 @@ def reviews(hotel: Hotel, user, params: dict) -> dict:
               "avg_rating": _ratio(row["rating"] or 0, row["reviews"] or 0),
               "low": row["low"] or 0} for row in by_day]
 
+    # Разрез по заведениям. Экран вкладки ждал его с самого начала, а сервер не
+    # строил: таблица «По заведениям» всегда была пустой.
+    rows = [
+        {
+            "key": row["point_key"] or "",
+            "reviews": row["reviews"] or 0,
+            "avg_rating": _ratio(row["rating"] or 0, row["reviews"] or 0),
+            "low": row["low"] or 0,
+            "share": _ratio(row["reviews"] or 0, reviews_n),
+        }
+        for row in qs.values("point_key").annotate(
+            reviews=Sum("reviews_count"), rating=Sum("rating_sum"), low=Sum("low_count")
+        )
+    ]
+    rows = _sort_rows(_resolve_labels("point", rows), params, default="reviews")
+
     return {
         "totals": {"reviews": reviews_n,
                    "avg_rating": _ratio(totals["rating"] or 0, reviews_n),
                    "low": totals["low"] or 0,
                    "low_rate": _ratio(totals["low"] or 0, reviews_n)},
         "trend": trend,
+        "by_point": rows,
     }
 
 

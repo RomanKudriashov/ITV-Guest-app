@@ -97,7 +97,7 @@
 | GET | `/analytics/breakdown` | разбивка по измерению (таблица) |
 | GET | `/analytics/operations` | реакция/выполнение/отмены/эскалации/загрузка |
 | GET | `/analytics/traffic` | сессии/источник/устройство/язык/конверсия |
-| GET | `/analytics/reviews` | средняя оценка, доля низких, динамика |
+| GET | `/analytics/reviews` | `totals{reviews, avg_rating, low, low_rate}`, `trend[]{bucket, reviews, avg_rating, low}`, `by_point[]{key, label, reviews, avg_rating, low, share}` |
 | GET | `/analytics/drilldown` | список конкретных заявок под срезом |
 | POST | `/analytics/export` | поставить экспорт среза (Celery) → `{id}` |
 | GET | `/analytics/export/{id}` | статус; когда `ready` — ссылка на файл |

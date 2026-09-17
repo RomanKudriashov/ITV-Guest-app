@@ -84,6 +84,19 @@ test.describe('CMS Аналитика', () => {
     await expect(page.getByTestId('analytics-export-button')).toBeEnabled({ timeout: 30_000 })
   })
 
+  test('вкладка «Отзывы»: плитки и таблица по заведениям наполнены', async ({ page }) => {
+    // Плитки читали поля, которых сервер не слал, а таблицу сервер не строил:
+    // при живых отзывах вкладка стояла пустой, и видимость плиток этого не ловила.
+    await openAnalytics(page)
+    await page.getByTestId('analytics-filter-preset-month').click()
+    const reviews = page.waitForResponse((r) => r.url().includes('/analytics/reviews'))
+    await page.getByTestId('analytics-tab-reviews').click()
+    await reviews
+    await expect(page.getByTestId('analytics-reviews-count')).toContainText(/[1-9]/, { timeout: 15_000 })
+    await expect(page.getByTestId('analytics-reviews-avg')).toContainText(/[1-5][.,]\d/)
+    await expect(page.locator('[data-testid^="analytics-reviews-row-"]').first()).toBeVisible()
+  })
+
   test('сервер отказал на скачивании — это видно, а не выдано за успех', async ({ page }) => {
     await openAnalytics(page)
 
