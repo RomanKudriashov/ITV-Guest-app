@@ -129,3 +129,25 @@ def test_a_live_order_is_never_offered_for_rating(client, crystal, guest):
     body = guest.get("/api/guest/orders/active").json()
     assert body["orders"], "заказ живой"
     assert body["to_review"] is None, "оценка живого заказа — оценка ожидания"
+
+
+# --- Демо: низкие оценки через сервис --------------------------------------------
+
+
+def test_demo_low_reviews_go_through_the_service(crystal, settings, django_capture_on_commit_callbacks):
+    from apps.hotels.management.commands.seed_demo_hotel import Command
+
+    settings.NOTIFICATIONS_ENABLED = True
+    comments = [row[4] for row in Command.SERVICE_REVIEWS]
+    with tenant_context(crystal):
+        with django_capture_on_commit_callbacks(execute=True):
+            Command()._seed_service_reviews()
+        with django_capture_on_commit_callbacks(execute=True):
+            Command()._seed_service_reviews()  # повтор ничего не плодит
+
+        reviews = {r.comment: r for r in Review.objects.filter(comment__in=comments).select_related("guest_session", "order")}
+        assert set(reviews) == set(comments)
+        assert EventRecord.objects.filter(code="review.low").count() == 2, "событие сработало, а не записано мимо"
+        left = [r for r in reviews.values() if r.guest_session.revoked_at is not None]
+        assert len(left) == 1, "у одного гость уже выехал — ответ ему не дойдёт"
+        assert left[0].order.delivery_mode == "pickup"

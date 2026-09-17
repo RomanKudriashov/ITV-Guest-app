@@ -1430,6 +1430,59 @@ class Command(BaseCommand):
                 hotel_id=order.hotel_id, order=order, guest_session=session,
                 rating=5, comment="Очень вкусно, спасибо!",
             )
+        if with_history:
+            self._seed_service_reviews()
+
+    # Низкие оценки ЧЕРЕЗ СЕРВИС отзывов, а не записью в таблицу: иначе раздел
+    # «Отзывы» и расследование показывают механизм, который ни разу не
+    # срабатывал, — ни события `review.low`, ни уведомления руководителю.
+    SERVICE_REVIEWS = (
+        # (номер, код позиции, код места, оценка, комментарий, гость уже выехал)
+        ("305", "caesar", "in_room", 2, "Салат принесли тёплым, пока ждали — остыл хлеб", False),
+        ("212", "negroni", "bar-counter", 1, "Ждал у стойки бара 20 минут, о заказе никто не знал", True),
+    )
+
+    def _seed_service_reviews(self):
+        from django.utils import timezone
+
+        from apps.accounts.models import GuestSession, TrustLevel
+        from apps.catalog.models import Item
+        from apps.orders.services import (
+            OrderInput,
+            OrderLineInput,
+            change_status,
+            create_order,
+            get_order,
+        )
+        from apps.reviews.models import Review
+        from apps.reviews.services import create_review
+
+        for number, item_code, place_code, rating, comment, left in self.SERVICE_REVIEWS:
+            if Review.all_objects.filter(comment=comment).exists():
+                continue
+            room = Room.objects.filter(number=number).first()
+            item = Item.objects.filter(code=item_code, is_active=True).first()
+            place = Location.objects.filter(code=place_code).first()
+            if not (room and item and place):
+                continue
+            _raw, token_hash = GuestSession.issue_token()
+            session = GuestSession.objects.create(
+                room=room, token_hash=token_hash, trust=TrustLevel.ROOM_SCANNED,
+                expires_at=GuestSession.default_expiry(),
+            )
+            order = create_order(
+                OrderInput(
+                    lines=[OrderLineInput(item_id=str(item.pk))],
+                    room_id=str(room.pk),
+                    location_id=str(place.pk),
+                ),
+                guest_session=session,
+            )
+            change_status(get_order(order.pk), to_code="done", actor_type="staff")
+            create_review(get_order(order.pk), guest_session=session, rating=rating, comment=comment)
+            if left:
+                # Гость выехал: ответ ему уже не дойдёт — раздел скажет это заранее.
+                GuestSession.objects.filter(pk=session.pk).update(revoked_at=timezone.now())
 
     def _seed_analytics_history(self, hotel, points, rooms, users):
         """
