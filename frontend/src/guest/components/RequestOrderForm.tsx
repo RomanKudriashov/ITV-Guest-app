@@ -127,7 +127,6 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
         ? {
             location_id: draft.locationId ?? '',
             location_refinement: needsRefinement ? draft.refinement.trim() : '',
-            delivery_mode: locationsQuery.data?.delivery_modes?.[0] ?? 'delivery',
           }
         : {}),
     };

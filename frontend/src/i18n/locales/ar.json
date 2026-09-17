@@ -515,7 +515,12 @@
         "not_found": "غير متاح: لم يعد هذا العنصر موجودًا",
         "venue_closed": "غير متاح: المنشأة مغلقة — تفتح في {{from}}"
       },
-      "hasUnavailable": "أزل العناصر غير المتاحة — لا يمكن إتمام الطلب معها."
+      "hasUnavailable": "أزل العناصر غير المتاحة — لا يمكن إتمام الطلب معها.",
+      "pickupHint": "ستستلمه بنفسك: {{place}}. لا توصيل — ولا رسوم توصيل.",
+      "noCommonPlace": "لا يوجد مكان واحد لكامل السلة — اختر مكانًا لكل جزء.",
+      "partPlace": "مكان الاستلام: {{part}}",
+      "onePlace": "مكان واحد للطلب كله",
+      "differentPlaces": "أماكن مختلفة للأجزاء: {{parts}}"
     },
     "confirmation": {
       "title": "تم استلام الطلب",
@@ -543,7 +548,8 @@
       "pickup": "وقت الوصول",
       "asked": "الطلب",
       "acceptedAt": "وقت الاستلام",
-      "durationMinutes": "{{minutes}} دقيقة"
+      "durationMinutes": "{{minutes}} دقيقة",
+      "pickupAt": "ستستلمه بنفسك: {{place}}"
     },
     "orders": {
       "active": "النشطة",

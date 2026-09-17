@@ -253,8 +253,8 @@ export interface GuestLocation {
 
 export interface GuestLocations {
   room: string | null;
+  /** Each place says how the order is received there (`delivery_mode`). */
   locations: GuestLocation[];
-  delivery_modes: string[];
 }
 
 /** One bookable interval of a `slot` offering (contract §slot availability). */
@@ -298,7 +298,12 @@ export interface CreateOrderPayload {
   lines: OrderLinePayload[];
   location_id?: string;
   location_refinement?: string;
-  delivery_mode?: string;
+  /**
+   * A two-venue cart may take its parts in different places: point code of the
+   * part → its place. Parts without one use `location_id`. The way of receiving
+   * is never sent — it follows from the place.
+   */
+  group_locations?: { point: string; location_id: string | null; location_refinement: string }[];
   timing: OrderTiming;
   requested_time: string | null;
   comment: string;
@@ -358,6 +363,8 @@ export type QuoteUnavailableReason =
 export interface QuoteLine {
   item_id: string;
   title: string;
+  /** Which venue prepares the line — the part of a two-venue cart it belongs to. */
+  executor?: { code: string; title: string } | null;
   /** `null` — у позиции нет цены (заявка заполняется формой). */
   unit_price_minor: number | null;
   line_total_minor: number | null;
@@ -455,7 +462,15 @@ export interface GuestOrder {
   history: OrderHistoryEntry[];
   room: string | null;
   location: { code: string; title: string; refinement: string } | null;
+  /** `pickup` — the guest collects the order; follows from the place. */
   delivery_mode: string;
+  /** Parts of a two-venue order: where and how each one is received. */
+  parts?: {
+    point: string;
+    title: string;
+    location: { code: string; title: string; refinement: string } | null;
+    delivery_mode: string;
+  }[];
   /**
    * ЧЕМ КАРТОЧКА ОТВЕЧАЕТ ГОСТЮ — из реестра сервера, а не из догадки клиента.
    *

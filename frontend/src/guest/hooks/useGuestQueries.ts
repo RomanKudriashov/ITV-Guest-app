@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import type { OfferingType } from '@/offerings/behaviour';
@@ -97,6 +97,26 @@ export function useGuestLocations(enabled = true, itemIds: string[] = []) {
     queryFn: () => fetchLocations(language, items),
     enabled: isReady && enabled,
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Места для каждой части корзины из нескольких заведений — по позициям части.
+ * Порядок результатов совпадает с порядком частей.
+ */
+export function usePartLocations(parts: { code: string; itemIds: string[] }[], enabled: boolean) {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQueries({
+    queries: parts.map((part) => {
+      const items = [...new Set(part.itemIds)].sort();
+      return {
+        queryKey: guestKeys.locations(language, items.join(',')),
+        queryFn: () => fetchLocations(language, items),
+        enabled: isReady && enabled,
+        staleTime: 5 * 60_000,
+      };
+    }),
   });
 }
 

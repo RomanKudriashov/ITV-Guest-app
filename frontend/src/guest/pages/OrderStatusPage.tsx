@@ -438,10 +438,33 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Где гость получает заказ. Выдача — «заберёте у стойки», без номера комнаты:
+ * нести некуда. Заказ из нескольких заведений с разными местами — по частям.
+ */
 function locationText(order: GuestOrder, t: TFunction): string {
+  const places = order.parts ?? [];
+  const distinct = new Set(places.map((part) => `${part.location?.code}:${part.location?.refinement}`));
+  if (!order.location && places.length > 1 && distinct.size > 1) {
+    return places
+      .map((part) => `${part.title}: ${placeText(part.location, part.delivery_mode, null, t)}`)
+      .join(' · ');
+  }
+  return placeText(order.location, order.delivery_mode, order.room, t);
+}
+
+function placeText(
+  location: GuestOrder['location'],
+  mode: string,
+  room: string | null,
+  t: TFunction,
+): string {
+  if (mode === 'pickup' && location) {
+    return t('guest.order.pickupAt', { place: location.title });
+  }
   const parts: string[] = [];
-  if (order.location?.title) parts.push(order.location.title);
-  if (order.location?.refinement) parts.push(order.location.refinement);
-  if (order.room) parts.push(t('guest.common.roomShort', { room: order.room }));
+  if (location?.title) parts.push(location.title);
+  if (location?.refinement) parts.push(location.refinement);
+  if (room) parts.push(t('guest.common.roomShort', { room }));
   return parts.join(' · ') || '—';
 }

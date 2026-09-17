@@ -507,7 +507,12 @@
         "not_found": "Unavailable: the item is gone",
         "venue_closed": "Unavailable: the venue is closed — opens at {{from}}"
       },
-      "hasUnavailable": "Remove the unavailable items — the order cannot be placed with them."
+      "hasUnavailable": "Remove the unavailable items — the order cannot be placed with them.",
+      "pickupHint": "You collect it yourself: {{place}}. No delivery — and no delivery fee.",
+      "noCommonPlace": "There is no single place for the whole cart — choose one for each part.",
+      "partPlace": "Where to receive: {{part}}",
+      "onePlace": "One place for the whole order",
+      "differentPlaces": "Different places for the parts: {{parts}}"
     },
     "confirmation": {
       "title": "Order received",
@@ -535,7 +540,8 @@
       "pickup": "Pick-up",
       "asked": "Request",
       "acceptedAt": "Accepted",
-      "durationMinutes": "{{minutes}} min"
+      "durationMinutes": "{{minutes}} min",
+      "pickupAt": "You collect it: {{place}}"
     },
     "orders": {
       "active": "Active",

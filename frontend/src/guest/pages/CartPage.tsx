@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -6,10 +6,8 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Divider from '@mui/material/Divider';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
-import Radio from '@mui/material/Radio';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -30,7 +28,13 @@ import { StickyFooter } from '../components/StickyFooter';
 import { TipSelector } from '../components/TipSelector';
 import { CartTotals } from '../components/CartTotals';
 import { errorMessage, isRetryableOrderError } from '../errors';
-import { useCartQuote, useGuestLocations } from '../hooks/useGuestQueries';
+import { useCartQuote, useGuestLocations, usePartLocations } from '../hooks/useGuestQueries';
+import {
+  PlacePicker,
+  defaultPlace,
+  placeIsComplete,
+  type PlaceChoice,
+} from '../components/PlacePicker';
 import { useMoney } from '../hooks/useMoney';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
@@ -47,6 +51,10 @@ type TipKind = 'none' | 'preset' | 'custom';
 interface CheckoutDraft {
   locationId: string | null;
   refinement: string;
+  /** Guest asked for different places for the parts of a two-venue cart. */
+  split: boolean;
+  /** Place per part (point code) — used only in the split mode. */
+  parts: Record<string, PlaceChoice>;
   timing: OrderTiming;
   /** "HH:MM" from the native time input. */
   time: string;
@@ -134,6 +142,8 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
     () => ({
       locationId: locations.find((location) => location.is_default)?.id ?? locations[0]?.id ?? null,
       refinement: '',
+      split: false,
+      parts: {},
       timing: 'asap',
       time: '',
       comment: '',
@@ -147,7 +157,30 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
 
   const selectedLocation = locations.find((location) => location.id === draft.locationId) ?? null;
   const needsRefinement = Boolean(selectedLocation?.requires_refinement);
-  const refinementMissing = needsRefinement && !draft.refinement.trim();
+
+  /*
+    МЕСТО ПО КАЖДОЙ ЧАСТИ КОРЗИНЫ — ТОЛЬКО КОГДА НУЖНО.
+
+    Части — это заведения, которые готовят позиции корзины; разбивку знает
+    сервер и отдаёт её в котировке. Если у всех частей есть общее место,
+    спрашиваем один раз — анкета из трёх одинаковых вопросов гостю ни к чему.
+    Если общего места нет или гость сам захотел разные (коктейли — у стойки,
+    еду — в номер), спрашиваем по каждой части.
+  */
+  const [parts, setParts] = useState<{ code: string; title: string; itemIds: string[] }[]>([]);
+  const multiPart = parts.length > 1;
+  const partQueries = usePartLocations(parts, multiPart && canOrder);
+  const partLocations = (index: number) => partQueries[index]?.data?.locations ?? [];
+  const noCommonPlace = multiPart && locationsQuery.isSuccess && locations.length === 0;
+  const splitMode = multiPart && (draft.split || noCommonPlace);
+  const choiceFor = (code: string, index: number): PlaceChoice =>
+    draft.parts[code] ?? defaultPlace(partLocations(index));
+  const setPartChoice = (code: string, next: PlaceChoice) =>
+    setDraft((prev) => ({ ...prev, parts: { ...prev.parts, [code]: next } }));
+
+  const placeMissing = splitMode
+    ? parts.some((part, index) => !placeIsComplete(partLocations(index), choiceFor(part.code, index)))
+    : !placeIsComplete(locations, { locationId: draft.locationId, refinement: draft.refinement });
   const timeMissing = draft.timing === 'scheduled' && !timeToIso(draft.time);
 
   // The guest's tip choice, resolved into the API's two mutually-exclusive fields:
@@ -169,20 +202,34 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
       // исполнителям (fan-out R2); без него заказ оставался плоским.
       service_code: cart.serviceCode ?? undefined,
       lines: cart.toPayloadLines(),
-      location_id: draft.locationId ?? '',
-      location_refinement: needsRefinement ? draft.refinement.trim() : '',
-      delivery_mode: locationsQuery.data?.delivery_modes?.[0] ?? 'delivery',
+      ...(splitMode
+        ? {
+            location_id: choiceFor(parts[0].code, 0).locationId ?? '',
+            location_refinement: '',
+            group_locations: parts.map((part, index) => {
+              const choice = choiceFor(part.code, index);
+              return {
+                point: part.code,
+                location_id: choice.locationId,
+                location_refinement: choice.refinement.trim(),
+              };
+            }),
+          }
+        : {
+            location_id: draft.locationId ?? '',
+            location_refinement: needsRefinement ? draft.refinement.trim() : '',
+          }),
       timing: draft.timing,
       requested_time: draft.timing === 'scheduled' ? timeToIso(draft.time) : null,
       comment: draft.comment.trim(),
       ...tipFields,
     }),
-    [cart, draft, needsRefinement, locationsQuery.data, tipFields.tip_minor, tipFields.tip_percent],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cart, draft, needsRefinement, splitMode, parts, partQueries, tipFields.tip_minor, tipFields.tip_percent],
   );
 
   // Server-priced cart — THE only source of every charge and of the grand total.
-  // Re-quoted whenever the quote-relevant body (lines, location, delivery mode,
-  // tip) changes; the client renders `quote.total_minor` verbatim and never sums
+  // Re-quoted whenever the quote-relevant body (lines, places, tip) changes; the client renders `quote.total_minor` verbatim and never sums
   // charges itself.
   const quoteSignature = JSON.stringify({
     // Заведение — часть подписи: у каждого своя коммерция, и без него ответ
@@ -190,7 +237,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
     service_code: payload.service_code,
     lines: payload.lines,
     location_id: payload.location_id,
-    delivery_mode: payload.delivery_mode,
+    group_locations: payload.group_locations,
     tip_minor: payload.tip_minor,
     tip_percent: payload.tip_percent,
   });
@@ -212,6 +259,29 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   }, [quote]);
   const belowMinimum = Boolean(quote?.below_minimum);
 
+  // Части корзины — из котировки. Меняются только вместе с составом корзины,
+  // поэтому сравниваем по сути, а не по новому объекту ответа.
+  const partsSignature = JSON.stringify(
+    (quote?.lines ?? [])
+      .filter((line) => line.executor)
+      .map((line) => [line.executor?.code, line.executor?.title, line.item_id]),
+  );
+  useEffect(() => {
+    const byCode = new Map<string, { code: string; title: string; itemIds: string[] }>();
+    for (const line of quote?.lines ?? []) {
+      if (!line.executor) continue;
+      const part = byCode.get(line.executor.code) ?? {
+        code: line.executor.code,
+        title: line.executor.title,
+        itemIds: [],
+      };
+      part.itemIds.push(line.item_id);
+      byCode.set(part.code, part);
+    }
+    setParts([...byCode.values()]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partsSignature]);
+
   // The same checkout the request form uses — one endpoint, one idempotency
   // discipline, one confirmation screen for both offering types.
   const { submit: place, isPending, failure } = useOrderSubmit(payload, {
@@ -220,7 +290,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
 
   const submit = () => {
     if (!canOrder || belowMinimum) return;
-    if (!draft.locationId || refinementMissing || timeMissing) {
+    if (placeMissing || timeMissing) {
       setDraft((prev) => ({ ...prev, showErrors: true }));
       return;
     }
@@ -268,7 +338,9 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
       disabled={
         !canOrder ||
         isPending ||
-        !locations.length ||
+        (splitMode
+          ? parts.some((_part, index) => partLocations(index).length === 0)
+          : !locations.length) ||
         belowMinimum ||
         quoteQuery.isLoading ||
         Boolean(quote?.has_unavailable)
@@ -413,40 +485,66 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                 {errorMessage(locationsQuery.error, t)}
               </Alert>
             ) : null}
-            <Paper variant="outlined">
-              <Stack divider={<Divider flexItem />}>
-                {locations.map((location) => (
-                  <FormControlLabel
-                    key={location.id}
-                    checked={draft.locationId === location.id}
-                    onChange={() =>
-                      setDraft((prev) => ({ ...prev, locationId: location.id, refinement: '' }))
-                    }
-                    data-testid={`guest-location-${location.code}`}
-                    control={<Radio />}
-                    label={location.title}
-                    sx={{ m: 0, px: 1, minHeight: 48 }}
-                  />
+            {splitMode ? (
+              <Stack spacing={2} data-testid="guest-places-by-part">
+                {noCommonPlace ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {t('guest.cart.noCommonPlace')}
+                  </Typography>
+                ) : null}
+                {parts.map((part, index) => (
+                  <Stack key={part.code} spacing={1} data-testid={`guest-place-part-${part.code}`}>
+                    <Typography variant="subtitle2">
+                      {t('guest.cart.partPlace', { part: part.title })}
+                    </Typography>
+                    <PlacePicker
+                      locations={partLocations(index)}
+                      choice={choiceFor(part.code, index)}
+                      onChange={(next) => setPartChoice(part.code, next)}
+                      showErrors={draft.showErrors}
+                      testPrefix={`guest-part-${part.code}-location`}
+                    />
+                  </Stack>
                 ))}
+                {noCommonPlace ? null : (
+                  <Button
+                    size="small"
+                    onClick={() => setDraft((prev) => ({ ...prev, split: false }))}
+                    sx={{ alignSelf: 'flex-start' }}
+                    data-testid="guest-places-together"
+                  >
+                    {t('guest.cart.onePlace')}
+                  </Button>
+                )}
               </Stack>
-            </Paper>
-            {needsRefinement ? (
-              <TextField
-                fullWidth
-                label={selectedLocation?.refinement_label ?? t('guest.cart.refinement')}
-                value={draft.refinement}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, refinement: event.target.value }))
-                }
-                error={draft.showErrors && refinementMissing}
-                helperText={
-                  draft.showErrors && refinementMissing
-                    ? t('guest.errors.refinementRequired')
-                    : undefined
-                }
-                inputProps={{ 'data-testid': 'guest-location-refinement', maxLength: 60 }}
-              />
-            ) : null}
+            ) : (
+              <>
+                <PlacePicker
+                  locations={locations}
+                  choice={{ locationId: draft.locationId, refinement: draft.refinement }}
+                  onChange={(next) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      locationId: next.locationId,
+                      refinement: next.refinement,
+                    }))
+                  }
+                  showErrors={draft.showErrors}
+                />
+                {multiPart ? (
+                  <Button
+                    size="small"
+                    onClick={() => setDraft((prev) => ({ ...prev, split: true }))}
+                    sx={{ alignSelf: 'flex-start' }}
+                    data-testid="guest-places-split"
+                  >
+                    {t('guest.cart.differentPlaces', {
+                      parts: parts.map((part) => part.title).join(', '),
+                    })}
+                  </Button>
+                ) : null}
+              </>
+            )}
           </Stack>
 
           <Stack spacing={1}>

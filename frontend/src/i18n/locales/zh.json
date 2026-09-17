@@ -505,7 +505,12 @@
         "not_found": "不可用：该条目已不存在",
         "venue_closed": "不可用：场所已关闭 — {{from}} 开门"
       },
-      "hasUnavailable": "请移除不可用的条目 — 保留它们无法下单。"
+      "hasUnavailable": "请移除不可用的条目 — 保留它们无法下单。",
+      "pickupHint": "您自行取餐：{{place}}。无需配送，也不收配送费。",
+      "noCommonPlace": "整个购物车没有共同的取得地点——请为每个部分选择地点。",
+      "partPlace": "取得地点：{{part}}",
+      "onePlace": "整个订单使用同一地点",
+      "differentPlaces": "各部分使用不同地点：{{parts}}"
     },
     "confirmation": {
       "title": "订单已收到",
@@ -533,7 +538,8 @@
       "pickup": "接送时间",
       "asked": "请求内容",
       "acceptedAt": "受理时间",
-      "durationMinutes": "{{minutes}} 分钟"
+      "durationMinutes": "{{minutes}} 分钟",
+      "pickupAt": "自取：{{place}}"
     },
     "orders": {
       "active": "进行中",
