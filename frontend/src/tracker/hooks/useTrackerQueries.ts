@@ -5,12 +5,14 @@ import { ApiError } from '@/api/client';
 import {
   fetchChatThread,
   fetchChatThreads,
+  fetchDeskGuestCard,
   fetchTrackerBoard,
   fetchTrackerOrder,
   fetchTrackerPoints,
 } from '../api/tracker';
 import { trackerKeys } from '../api/queryKeys';
 import type {
+  DeskGuestCard,
   TrackerBoard,
   TrackerChatSnapshot,
   TrackerOrder,
@@ -117,13 +119,27 @@ export function useTrackerChatThreads(enabled = true) {
  * One open thread. While the socket is up it is kept fresh by snapshots written
  * straight into this cache entry (see `useChatLive`).
  */
-export function useTrackerChatThread(threadId: string | null) {
+export function useTrackerChatThread(threadId: string | null, hold = false) {
   const language = useTrackerLanguage();
   return useQuery<TrackerChatSnapshot>({
     queryKey: trackerKeys.chatThread(threadId ?? 'none'),
-    queryFn: () => fetchChatThread(threadId as string, language),
+    queryFn: () => fetchChatThread(threadId as string, language, hold),
     enabled: Boolean(threadId),
     staleTime: 10_000,
+    // На рабочем месте открытый диалог отмечается раз в минуту: держатель
+    // освобождается после 15 минут без признаков жизни.
+    refetchInterval: hold && threadId ? 60_000 : false,
+  });
+}
+
+export function useDeskGuestCard(threadId: string | null) {
+  const language = useTrackerLanguage();
+  return useQuery<DeskGuestCard>({
+    queryKey: trackerKeys.deskGuest(threadId ?? 'none', language),
+    queryFn: () => fetchDeskGuestCard(threadId as string, language),
+    enabled: Boolean(threadId),
+    staleTime: 15_000,
+    refetchInterval: threadId ? 30_000 : false,
   });
 }
 

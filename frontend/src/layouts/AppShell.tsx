@@ -23,6 +23,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import RoomServiceIcon from '@mui/icons-material/RoomService';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import InsightsIcon from '@mui/icons-material/Insights';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
@@ -59,6 +60,7 @@ const DRAWER_WIDTH = 248;
 const NAV_ICONS: Record<string, JSX.Element> = {
   dashboard: <DashboardCustomizeIcon fontSize="small" />,
   tracker: <ReceiptLongIcon fontSize="small" />,
+  desk: <SupportAgentOutlinedIcon fontSize="small" />,
   services: <RoomServiceIcon fontSize="small" />,
   rooms: <MeetingRoomIcon fontSize="small" />,
   staff: <PeopleAltIcon fontSize="small" />,

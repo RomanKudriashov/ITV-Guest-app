@@ -70,7 +70,8 @@
     "mobileKey": "手机钥匙",
     "open": "打开菜单",
     "orders": "订单",
-    "reviews": "评价"
+    "reviews": "评价",
+    "desk": "前台"
   },
   "dictionaries": {
     "title": "字典",
@@ -634,7 +635,8 @@
       "send": "发送",
       "offline": "无连接",
       "emptyHint": "给我们留言——前台会在这里回复",
-      "emptyTitle": "给我们留言 — 我们在线"
+      "emptyTitle": "给我们留言 — 我们在线",
+      "counterpart": "为您回复：{{name}}"
     },
     "review": {
       "title": "评价订单",
@@ -935,7 +937,29 @@
       "byGuest": "客人"
     },
     "loadMore": "显示更多",
-    "loadingMore": "加载中…"
+    "loadingMore": "加载中…",
+    "desk": {
+      "title": "前台：客人对话",
+      "toBoard": "返回看板",
+      "reception": "前台",
+      "pickDialog": "请在左侧选择对话",
+      "cardFailed": "客人卡片加载失败",
+      "waiting_other": "已等待 {{count}} 分钟",
+      "answering": "{{name}} 正在回复",
+      "takeOver": "接手",
+      "language": "语言：{{lang}}",
+      "verified": "房间已验证",
+      "notVerified": "房间未验证",
+      "gone": "客人已离店",
+      "staySince": "入住自 {{at}}",
+      "lowReview_other": "客人留下过 {{count}} 条低分评价",
+      "activeOrders": "处理中：{{count}}",
+      "noActive": "没有进行中的订单",
+      "history": "本次入住：{{count}}",
+      "noHistory": "暂无已完成订单",
+      "chatTab": "对话",
+      "guestTab": "客人"
+    }
   },
   "requestFields": {
     "title": "申请字段",

@@ -45,7 +45,6 @@ import { CancelDialog } from '../components/CancelDialog';
 import { ReopenDialog } from '../components/ReopenDialog';
 import { OrderCard } from '../components/OrderCard';
 import { OrderDetailSheet } from '../components/OrderDetailSheet';
-import { TrackerChatPanel } from '../components/TrackerChatPanel';
 import { TrackerTopBar } from '../components/TrackerTopBar';
 import { useBoardLive, type BoardLiveEvent } from '../hooks/useBoardLive';
 import { columnCoordinateGetter } from '../boardKeyboard';
@@ -204,7 +203,6 @@ export function TrackerPage() {
   const [reopenTarget, setReopenTarget] = useState<{ order: TrackerOrder; code: string } | null>(
     null,
   );
-  const [chatOpen, setChatOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Threads drive the top-bar badge; the socket of an open thread invalidates
@@ -691,9 +689,8 @@ export function TrackerPage() {
           soundEnabled={sound.enabled}
           onToggleSound={sound.toggle}
           chatUnread={chatUnread}
-          onOpenChat={canChat ? () => setChatOpen(true) : undefined}
+          onOpenChat={canChat ? () => navigate('/tracker/desk') : undefined}
         />
-        {canChat ? <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
         <Box data-testid="tracker-no-points" sx={{ pt: 6 }}>
           <EmptyState
             icon={<GroupWorkOutlinedIcon fontSize="large" />}
@@ -735,7 +732,7 @@ export function TrackerPage() {
         soundEnabled={sound.enabled}
         onToggleSound={sound.toggle}
         chatUnread={chatUnread}
-        onOpenChat={canChat ? () => setChatOpen(true) : undefined}
+        onOpenChat={canChat ? () => navigate('/tracker/desk') : undefined}
       />
 
       {/*
@@ -1168,7 +1165,6 @@ export function TrackerPage() {
         </Alert>
       </Snackbar>
 
-      {canChat ? <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
 
       {/*
         ОТМЕНИТЬ ТОЛЬКО ЧТО СДЕЛАННЫЙ ШАГ.

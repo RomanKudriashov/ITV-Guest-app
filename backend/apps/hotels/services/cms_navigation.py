@@ -36,6 +36,8 @@ class NavItem:
     module: str | None = None
     # Пункт виден только администратору отеля (не управляющему сервисом).
     hotel_admin_only: bool = False
+    # Пункт виден тем, кто читает чат гостей: ресепшен и администратор.
+    chat_only: bool = False
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -70,6 +72,8 @@ NAVIGATION: tuple[NavGroup, ...] = (
             # Трекер живёт вне /cms (свой мобильный шелл), но найти его надо
             # отсюда: после одного входа сотрудник обязан найти обе половины.
             NavItem(key="tracker", to="/tracker"),
+            # Рабочее место ресепшена — диалоги с гостями (волна 9).
+            NavItem(key="desk", to="/tracker/desk", chat_only=True),
             # Уведомления переехали из «Настроек»: это оперативный экран, на
             # него смотрят в смену, а не настраивают раз и забывают.
             NavItem(key="notifications", to="/cms/notifications"),
@@ -150,7 +154,7 @@ NAVIGATION: tuple[NavGroup, ...] = (
 # Пункты, которые НИКОГДА не гейтятся модулем, — сторож против случайной
 # привязки базового экрана к платной фиче. Проверяется тестом.
 ALWAYS_AVAILABLE = frozenset(
-    {"dashboard", "tracker", "orders", "reviews", "services", "rooms", "staff", "brand",
+    {"dashboard", "tracker", "desk", "orders", "reviews", "services", "rooms", "staff", "brand",
      "analytics", "settings", "notifications", "dictionaries"}
 )
 
@@ -165,6 +169,9 @@ def build_navigation(hotel, *, access) -> list[dict]:
     from apps.hotels.module_registry import enabled_module_codes
 
     enabled = enabled_module_codes(hotel)
+    from apps.chat.services.threads import can_read_chat
+
+    chat = can_read_chat(access)
 
     groups = []
     for group in NAVIGATION:
@@ -173,6 +180,7 @@ def build_navigation(hotel, *, access) -> list[dict]:
             for item in group.items
             if (item.module is None or item.module in enabled)
             and (not item.hotel_admin_only or access.unrestricted)
+            and (not item.chat_only or chat)
         ]
         if items:
             groups.append({"key": group.key, "items": items})

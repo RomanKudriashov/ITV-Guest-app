@@ -70,7 +70,8 @@
     "mobileKey": "المفتاح الرقمي",
     "open": "فتح القائمة",
     "orders": "الطلبات",
-    "reviews": "التقييمات"
+    "reviews": "التقييمات",
+    "desk": "الاستقبال"
   },
   "dictionaries": {
     "title": "القوائم المرجعية",
@@ -644,7 +645,8 @@
       "send": "إرسال",
       "offline": "لا اتصال",
       "emptyHint": "اكتب لنا — سيرد مكتب الاستقبال هنا",
-      "emptyTitle": "اكتب لنا — نحن هنا"
+      "emptyTitle": "اكتب لنا — نحن هنا",
+      "counterpart": "يرد عليك: {{name}}"
     },
     "review": {
       "title": "قيّم طلبك",
@@ -971,7 +973,39 @@
       "byGuest": "الضيف"
     },
     "loadMore": "عرض المزيد",
-    "loadingMore": "جارٍ التحميل…"
+    "loadingMore": "جارٍ التحميل…",
+    "desk": {
+      "title": "الاستقبال: محادثات الضيوف",
+      "toBoard": "إلى اللوحة",
+      "reception": "الاستقبال",
+      "pickDialog": "اختر محادثة من اليسار",
+      "cardFailed": "لم تُحمَّل بطاقة الضيف",
+      "waiting_zero": "ينتظر {{count}} دقيقة",
+      "waiting_one": "ينتظر دقيقة",
+      "waiting_two": "ينتظر دقيقتين",
+      "waiting_few": "ينتظر {{count}} دقائق",
+      "waiting_many": "ينتظر {{count}} دقيقة",
+      "waiting_other": "ينتظر {{count}} دقيقة",
+      "answering": "يرد {{name}}",
+      "takeOver": "تولَّ المحادثة",
+      "language": "اللغة: {{lang}}",
+      "verified": "الغرفة مؤكدة",
+      "notVerified": "الغرفة غير مؤكدة",
+      "gone": "غادر الضيف",
+      "staySince": "في الفندق منذ {{at}}",
+      "lowReview_zero": "ترك الضيف {{count}} تقييمات منخفضة",
+      "lowReview_one": "ترك الضيف تقييمًا منخفضًا",
+      "lowReview_two": "ترك الضيف تقييمين منخفضين",
+      "lowReview_few": "ترك الضيف {{count}} تقييمات منخفضة",
+      "lowReview_many": "ترك الضيف {{count}} تقييمًا منخفضًا",
+      "lowReview_other": "ترك الضيف {{count}} تقييم منخفض",
+      "activeOrders": "قيد التنفيذ: {{count}}",
+      "noActive": "لا طلبات نشطة",
+      "history": "خلال الإقامة: {{count}}",
+      "noHistory": "لا طلبات مغلقة بعد",
+      "chatTab": "المحادثة",
+      "guestTab": "الضيف"
+    }
   },
   "requestFields": {
     "title": "حقول الطلب",

@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { TrackerPage } from '@/tracker/pages/TrackerPage';
+import { ReceptionDeskPage } from '@/tracker/pages/ReceptionDeskPage';
 
 import { CMS_ROOT, HOST_ROLE, cmsPath } from '@/app/hostRole';
 import { LandingPage } from '@/landing/LandingPage';
@@ -65,6 +66,15 @@ import { homePathFor } from '@/auth/home';
  * навигации, из которой можно было бы уйти, и падение рендера оставляло бы
  * официанта с белым окном посреди смены.
  */
+function DeskScreen() {
+  const { t } = useTranslation();
+  return (
+    <ScreenBoundary message={t('state.crashed')} actionLabel={t('state.reload')}>
+      <ReceptionDeskPage />
+    </ScreenBoundary>
+  );
+}
+
 function TrackerScreen() {
   const { t } = useTranslation();
   return (
@@ -171,6 +181,8 @@ const shellChildren: RouteObject[] = [
     для одной шкалы означали бы, что однажды они разъедутся.
   */
   { path: '/tracker', element: <TrackerScreen /> },
+  // Рабочее место ресепшена: диалоги с гостями, переписка, карточка гостя.
+  { path: '/tracker/desk', element: <DeskScreen /> },
   {
     // Deep link to one order: the board stays mounted underneath and opens the
     // detail sheet, so the URL is shareable without a second data source.

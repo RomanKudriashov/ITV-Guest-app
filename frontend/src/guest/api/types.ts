@@ -712,6 +712,8 @@ export interface ChatMessage {
 export interface ChatSnapshot {
   thread_id: string;
   room: string | null;
+  /** Кто отвечает гостю — отдел («Ресепшен»), не сотрудник. */
+  counterpart?: string;
   messages: ChatMessage[];
   /** Unread for the requesting side. */
   unread: number;

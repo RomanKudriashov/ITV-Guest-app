@@ -10,8 +10,9 @@
 from __future__ import annotations
 
 
-from django.db import transaction
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db import IntegrityError, transaction
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -39,14 +40,20 @@ def get_or_create_thread(guest_session) -> ChatThread:
     Номер в треде остаётся — персоналу видно, откуда пишут. Старые треды не
     удаляются: они нужны для разбора отзывов, персонал их по-прежнему видит.
     """
-    thread = ChatThread.objects.filter(guest_session_id=guest_session.pk).order_by("created_at").first()
+    thread = ChatThread.objects.filter(guest_session_id=guest_session.pk).first()
     if thread is not None:
         return thread
-    return ChatThread.objects.create(
-        room_id=guest_session.room_id,
-        guest_session=guest_session,
-        execution_point=_default_point(),
-    )
+    # ГОНКА: первое открытие чата и сокет приходят одновременно. Уникальность
+    # в базе не даёт завести второй тред; проигравший берёт тред победителя.
+    try:
+        with transaction.atomic():
+            return ChatThread.objects.create(
+                room_id=guest_session.room_id,
+                guest_session=guest_session,
+                execution_point=_default_point(),
+            )
+    except IntegrityError:
+        return ChatThread.objects.get(guest_session_id=guest_session.pk)
 
 
 def unread_for_guest(guest_session) -> int:
@@ -123,8 +130,24 @@ def get_thread(thread_id) -> ChatThread:
 # --- Снимок ----------------------------------------------------------------
 
 
+def _counterpart(thread: ChatThread) -> str:
+    """
+    Кто отвечает гостю — ОТДЕЛ, а не человек: «Ресепшен», не «Игорь».
+
+    Гость не должен привязываться к сотруднику (завтра его смена не его), а
+    смена не должна путаться, чьё это обещание. Имена видит только персонал.
+    """
+    from apps.core.context import current_language
+    from apps.core.fields import translate
+
+    point = thread.execution_point
+    if point is None:
+        return "Ресепшен"
+    return translate(point.title, current_language()) or point.code
+
+
 def thread_snapshot(thread: ChatThread, *, side: str) -> dict:
-    """side: 'guest' | 'staff' — от этого зависят `mine` и счётчик непрочитанных."""
+    """side: 'guest' | 'staff' — от этого зависят `mine`, подписи и счётчик непрочитанных."""
     messages = list(thread.messages.all())
     unread = sum(
         1
@@ -132,14 +155,26 @@ def thread_snapshot(thread: ChatThread, *, side: str) -> dict:
         if message.author_type != side
         and (message.read_by_staff_at if side == "staff" else message.read_by_guest_at) is None
     )
+    counterpart = _counterpart(thread)
+
+    def author(message) -> str:
+        if message.author_type == "guest":
+            return message.author_name or "Гость"
+        if side == "guest":
+            return counterpart
+        return message.author_name or "Персонал"
+
     return {
         "thread_id": str(thread.pk),
         "room": thread.room.number if thread.room_id else None,
+        # Шапка переписки: гостю — отдел, персоналу — отдел тоже (кто по ту
+        # сторону от гостя), номер — отдельным полем.
+        "counterpart": counterpart,
         "messages": [
             {
                 "id": str(message.pk),
                 "author_type": message.author_type,
-                "author_name": message.author_name or ("Гость" if message.author_type == "guest" else "Персонал"),
+                "author_name": author(message),
                 "body": message.body,
                 "created_at": message.created_at.isoformat(),
                 "mine": message.author_type == side,
@@ -147,7 +182,17 @@ def thread_snapshot(thread: ChatThread, *, side: str) -> dict:
             for message in messages
         ],
         "unread": unread,
+        # Персоналу — кто ведёт диалог (гостю — никогда: ему отвечает отдел).
+        # `is_me` здесь не посчитать — снимок уходит всем по сокету; фронт
+        # сравнивает `holder.id` со своим.
+        **({"holder": _holder(thread)} if side == "staff" else {}),
     }
+
+
+def _holder(thread):
+    from apps.chat.services.holding import holder_payload
+
+    return holder_payload(thread)
 
 
 # --- Отправка --------------------------------------------------------------
@@ -169,7 +214,9 @@ def _post_message(thread: ChatThread, *, author_type: str, author_id, author_nam
             author_name=author_name[:128],
             body=body,
         )
-        ChatThread.objects.filter(pk=thread.pk).update(last_message_at=message.created_at)
+        stamps = {"last_message_at": message.created_at}
+        stamps["last_guest_message_at" if author_type == "guest" else "last_staff_message_at"] = message.created_at
+        ChatThread.objects.filter(pk=thread.pk).update(**stamps)
 
     # Событие после коммита: разбудит WS обеих сторон и уведомление получателю.
     emit(
@@ -216,54 +263,102 @@ def mark_read(thread: ChatThread, *, side: str) -> None:
 
 THREADS_PAGE = 30
 THREADS_PAGE_MAX = 100
+# Сколько гость может ждать ответа, прежде чем диалог краснеет. Шаг 9 волны
+# делает порог настройкой отеля; до тех пор — одно число здесь.
+REPLY_WAIT_MINUTES = 10
+
+
+def _waiting_since(thread):
+    """Гость ждёт ответа: его последнее сообщение позже последнего ответа."""
+    guest_at = thread.last_guest_message_at
+    if guest_at is None:
+        return None
+    staff_at = thread.last_staff_message_at
+    return guest_at if staff_at is None or staff_at < guest_at else None
+
+
+def serialize_thread_row(thread, now=None, me=None) -> dict:
+    from apps.chat.services.holding import holder_payload
+
+    now = now or timezone.now()
+    waiting = _waiting_since(thread)
+    waiting_minutes = int((now - waiting).total_seconds() // 60) if waiting else None
+    session = thread.guest_session
+    return {
+        "thread_id": str(thread.pk),
+        "room": thread.room.number if thread.room_id else None,
+        "language": (session.language or "") if session is not None else "",
+        "last_body": (getattr(thread, "last_body", None) or "")[:120],
+        "last_at": thread.last_message_at.isoformat() if thread.last_message_at else None,
+        "last_guest_at": thread.last_guest_message_at.isoformat() if thread.last_guest_message_at else None,
+        "unread": getattr(thread, "unread", 0),
+        "waiting_minutes": waiting_minutes,
+        "is_late": waiting_minutes is not None and waiting_minutes >= REPLY_WAIT_MINUTES,
+        "holder": holder_payload(thread, me, now),
+    }
 
 
 def list_threads(*, cursor: str | None = None, limit: int | None = None) -> dict:
     """
-    Диалоги отеля — страницей, свежие сверху.
+    Диалоги отеля для ресепшена — страницей.
 
-    Пустые треды в список не попадают: их заводит сама витрина, а персоналу
-    читать нечего. Листание курсором: новые сообщения поднимают диалог наверх
-    прямо во время просмотра, и смещение показало бы часть страницы дважды.
-    `unread_total` — по всем диалогам, а не по странице: его показывает значок.
+    ПОРЯДОК: сначала те, где есть непрочитанное от гостя; внутри — по
+    последнему сообщению ГОСТЯ, свежие сверху. Не по последнему сообщению
+    вообще: ответ ресепшена не должен поднимать диалог над гостем, который
+    пишет прямо сейчас. Диалоги, где гость не писал ни разу (ответ на отзыв),
+    — в конце, по своему последнему сообщению.
+
+    Пустые треды в список не попадают. Листание курсором: новые сообщения
+    переставляют диалоги прямо во время просмотра. `unread_total` — по всем
+    диалогам, для значка.
     """
     require_chat_access()
+    from apps.core.context import current_actor
+
+    me = current_actor()
     page_size = max(1, min(int(limit or THREADS_PAGE), THREADS_PAGE_MAX))
     unread_filter = Q(messages__author_type="guest", messages__read_by_staff_at__isnull=True)
-    base = ChatThread.objects.filter(last_message_at__isnull=False)
+    last_body = ChatMessage.objects.filter(thread=OuterRef("pk")).order_by("-created_at").values("body")[:1]
+    has_unread = Exists(
+        ChatMessage.objects.filter(thread=OuterRef("pk"), author_type="guest", read_by_staff_at__isnull=True)
+    )
     queryset = (
-        base.select_related("room")
-        .annotate(unread=Count("messages", filter=unread_filter))
-        .order_by("-last_message_at", "-pk")
+        ChatThread.objects.filter(last_message_at__isnull=False)
+        .select_related("room", "guest_session", "holder")
+        .annotate(
+            unread=Count("messages", filter=unread_filter),
+            has_unread=has_unread,
+            guest_key=Coalesce("last_guest_message_at", "last_message_at"),
+        )
+        .order_by("-has_unread", "-guest_key", "-pk")
     )
     if cursor:
-        at, _, cursor_id = cursor.partition("|")
+        flag, _, rest = cursor.partition("|")
+        at, _, cursor_id = rest.partition("|")
         moment = parse_datetime(at.replace(" ", "+")) if at else None
-        if moment is None or not cursor_id:
+        if flag not in ("0", "1") or moment is None or not cursor_id:
             raise ValidationError("Неверный курсор", field="cursor", code="bad_cursor")
-        queryset = queryset.filter(
-            Q(last_message_at__lt=moment) | Q(last_message_at=moment, pk__lt=cursor_id)
+        unread_first = flag == "1"
+        after = Q(has_unread=unread_first) & (
+            Q(guest_key__lt=moment) | Q(guest_key=moment, pk__lt=cursor_id)
         )
-    last_body = ChatMessage.objects.filter(thread=OuterRef("pk")).order_by("-created_at").values("body")[:1]
+        if unread_first:
+            after |= Q(has_unread=False)
+        queryset = queryset.filter(after)
     rows = list(queryset.annotate(last_body=Subquery(last_body))[: page_size + 1])
     has_more = len(rows) > page_size
     rows = rows[:page_size]
     unread_total = ChatMessage.objects.filter(
         author_type="guest", read_by_staff_at__isnull=True
     ).count()
+    now = timezone.now()
+    next_cursor = None
+    if has_more and rows:
+        last = rows[-1]
+        next_cursor = f"{int(last.has_unread)}|{last.guest_key.isoformat()}|{last.pk}"
     return {
-        "items": [
-            {
-                "thread_id": str(thread.pk),
-                "room": thread.room.number if thread.room_id else None,
-                "last_body": (thread.last_body or "")[:120],
-                "last_at": thread.last_message_at.isoformat(),
-                "unread": thread.unread,
-            }
-            for thread in rows
-        ],
-        "next_cursor": (
-            f"{rows[-1].last_message_at.isoformat()}|{rows[-1].pk}" if has_more and rows else None
-        ),
+        "items": [serialize_thread_row(thread, now, me) for thread in rows],
+        "next_cursor": next_cursor,
         "unread_total": unread_total,
+        "reply_wait_minutes": REPLY_WAIT_MINUTES,
     }

@@ -75,7 +75,7 @@ def test_navigation_is_grouped_not_flat(cms):
     # «Заказы» — четвёртый пункт оперативной группы: разбор заявок по всем
     # заведениям. Он рядом с доской, а не в «Аналитике», потому что на него
     # смотрят, когда ищут конкретную заявку, а не когда изучают динамику.
-    assert groups["operations"] == ["dashboard", "tracker", "notifications", "orders", "reviews"]
+    assert groups["operations"] == ["dashboard", "tracker", "desk", "notifications", "orders", "reviews"]
     # Структура карты продукта: сервисы верхним уровнем, номерной фонд, персонал.
     # Управления номером здесь нет — модуль отелю не включён.
     assert groups["structure"] == ["services", "rooms", "staff"]

@@ -73,3 +73,40 @@ def test_the_home_counter_still_counts_staff_replies(client, crystal):
     assert guest.get("/api/guest/home").json()["unread_chat"] == 1
     guest.post("/api/guest/chat/read", {})
     assert guest.get("/api/guest/home").json()["unread_chat"] == 0
+
+
+def test_a_race_on_the_first_open_leaves_one_thread(client, crystal, monkeypatch):
+    """
+    Первое открытие чата и сокет спрашивали «найти или создать» одновременно и
+    заводили по треду: гость слушал один, писали в другой. Моделируем
+    проигравшего: поиск уже отстал, а победитель тред завёл.
+    """
+    from django.db import IntegrityError
+
+    from apps.accounts.models import GuestSession
+    from apps.chat.services import threads
+
+    guest = guest_for(client, crystal, room="212")
+    winner_id = guest.get("/api/guest/chat").json()["thread_id"]
+    with tenant_context(crystal):
+        session = ChatThread.objects.get(pk=winner_id).guest_session
+        with pytest.raises(IntegrityError):
+            from django.db import transaction
+
+            with transaction.atomic():
+                ChatThread.objects.create(hotel=crystal, guest_session=session)
+
+        real_filter = ChatThread.objects.filter
+        calls = {"n": 0}
+
+        def stale_filter(*args, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return ChatThread.objects.none()
+            return real_filter(*args, **kwargs)
+
+        monkeypatch.setattr(threads.ChatThread.objects, "filter", stale_filter)
+        loser = threads.get_or_create_thread(GuestSession.objects.get(pk=session.pk))
+        monkeypatch.undo()
+        assert str(loser.pk) == winner_id, "проигравший берёт тред победителя"
+        assert ChatThread.objects.filter(guest_session=session).count() == 1

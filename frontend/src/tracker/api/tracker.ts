@@ -8,6 +8,7 @@
 
 import { api, HOTEL_SUBDOMAIN, tokenStorage, WS_BASE } from '@/api/client';
 import type {
+  DeskGuestCard,
   StatusChangePayload,
   TrackerBoard,
   TrackerChatSnapshot,
@@ -156,8 +157,30 @@ export function fetchChatThreads(
 export function fetchChatThread(
   threadId: string,
   language?: string,
+  hold = false,
 ): Promise<TrackerChatSnapshot> {
   return api.get<TrackerChatSnapshot>(`/tracker/chat/threads/${threadId}`, {
+    headers: langHeaders(language),
+    // Открыт на рабочем месте — взять свободный диалог или продлить свой.
+    query: hold ? { hold: '1' } : undefined,
+  });
+}
+
+/** Take a dialog, including from a colleague («Взять себе»). */
+export function takeChatThread(threadId: string, language?: string): Promise<TrackerChatSnapshot> {
+  return api.post<TrackerChatSnapshot>(`/tracker/chat/threads/${threadId}/take`, {}, {
+    headers: langHeaders(language),
+  });
+}
+
+/** Let go of one's own dialog: closed it or moved to another. */
+export function releaseChatThread(threadId: string): Promise<TrackerChatSnapshot> {
+  return api.post<TrackerChatSnapshot>(`/tracker/chat/threads/${threadId}/release`, {});
+}
+
+/** The guest card of a dialog. */
+export function fetchDeskGuestCard(threadId: string, language?: string): Promise<DeskGuestCard> {
+  return api.get<DeskGuestCard>(`/tracker/chat/threads/${threadId}/guest`, {
     headers: langHeaders(language),
   });
 }

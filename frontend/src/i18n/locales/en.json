@@ -70,7 +70,8 @@
     "mobileKey": "Mobile key",
     "open": "Open menu",
     "orders": "Orders",
-    "reviews": "Reviews"
+    "reviews": "Reviews",
+    "desk": "Front desk"
   },
   "dictionaries": {
     "title": "Dictionaries",
@@ -636,7 +637,8 @@
       "send": "Send",
       "offline": "No connection",
       "emptyHint": "Write to us — the front desk will reply right here",
-      "emptyTitle": "Say hello — we're here"
+      "emptyTitle": "Say hello — we're here",
+      "counterpart": "Replying: {{name}}"
     },
     "review": {
       "title": "Rate your order",
@@ -943,7 +945,31 @@
       "byGuest": "guest"
     },
     "loadMore": "Show more",
-    "loadingMore": "Loading…"
+    "loadingMore": "Loading…",
+    "desk": {
+      "title": "Front desk: guest dialogs",
+      "toBoard": "To the board",
+      "reception": "Front desk",
+      "pickDialog": "Pick a dialog on the left",
+      "cardFailed": "The guest card did not load",
+      "waiting_one": "waiting {{count}} minute",
+      "waiting_other": "waiting {{count}} minutes",
+      "answering": "{{name}} is answering",
+      "takeOver": "Take over",
+      "language": "Language: {{lang}}",
+      "verified": "Room verified",
+      "notVerified": "Room not verified",
+      "gone": "Guest has left",
+      "staySince": "In the hotel since {{at}}",
+      "lowReview_one": "The guest left a low rating",
+      "lowReview_other": "The guest left {{count}} low ratings",
+      "activeOrders": "In progress: {{count}}",
+      "noActive": "No active orders",
+      "history": "This stay: {{count}}",
+      "noHistory": "No closed orders yet",
+      "chatTab": "Chat",
+      "guestTab": "Guest"
+    }
   },
   "requestFields": {
     "title": "Request fields",

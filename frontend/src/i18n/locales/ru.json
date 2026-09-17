@@ -70,7 +70,8 @@
     "mobileKey": "Мобильный ключ",
     "open": "Открыть меню",
     "orders": "Заказы",
-    "reviews": "Отзывы"
+    "reviews": "Отзывы",
+    "desk": "Ресепшен"
   },
   "dictionaries": {
     "title": "Справочники",
@@ -640,7 +641,8 @@
       "send": "Отправить",
       "offline": "Нет связи",
       "emptyHint": "Напишите нам — ресепшен ответит прямо здесь",
-      "emptyTitle": "Напишите — мы рядом"
+      "emptyTitle": "Напишите — мы рядом",
+      "counterpart": "Вам отвечает: {{name}}"
     },
     "review": {
       "title": "Оцените заказ",
@@ -953,7 +955,35 @@
       "byGuest": "гость"
     },
     "loadMore": "Показать ещё",
-    "loadingMore": "Загружаем…"
+    "loadingMore": "Загружаем…",
+    "desk": {
+      "title": "Ресепшен: диалоги с гостями",
+      "toBoard": "К доске",
+      "reception": "Ресепшен",
+      "pickDialog": "Выберите диалог слева",
+      "cardFailed": "Карточка гостя не загрузилась",
+      "waiting_one": "ждёт {{count}} минуту",
+      "waiting_few": "ждёт {{count}} минуты",
+      "waiting_many": "ждёт {{count}} минут",
+      "waiting_other": "ждёт {{count}} минуты",
+      "answering": "Отвечает {{name}}",
+      "takeOver": "Взять себе",
+      "language": "Язык: {{lang}}",
+      "verified": "Номер подтверждён",
+      "notVerified": "Номер не подтверждён",
+      "gone": "Гость уже не в отеле",
+      "staySince": "В отеле с {{at}}",
+      "lowReview_one": "Гость оставлял низкую оценку",
+      "lowReview_few": "Гость оставлял {{count}} низкие оценки",
+      "lowReview_many": "Гость оставлял {{count}} низких оценок",
+      "lowReview_other": "Гость оставлял {{count}} низкие оценки",
+      "activeOrders": "Сейчас в работе: {{count}}",
+      "noActive": "Активных заказов нет",
+      "history": "За проживание: {{count}}",
+      "noHistory": "Закрытых заказов пока нет",
+      "chatTab": "Переписка",
+      "guestTab": "Гость"
+    }
   },
   "requestFields": {
     "title": "Поля заявки",

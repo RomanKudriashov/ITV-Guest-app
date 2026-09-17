@@ -1,0 +1,83 @@
+"""
+Кто отвечает в диалоге — «отвечает Дарья» у остальных.
+
+НЕ БЛОКИРОВКА. Любой сотрудник ресепшена может открыть занятый диалог и
+написать: держатель от этого не меняется, но все видят, что диалог ведут.
+Перехватить можно явно («Взять себе»).
+
+КОГДА ДИАЛОГ ОСВОБОЖДАЕТСЯ. Смен в системе нет, и «ушёл со смены» напрямую
+не наблюдается. Наблюдается три вещи, и каждая освобождает:
+  * держатель сам закрыл диалог или перешёл к другому — явное «отпустить»;
+  * вход держателя закрыт — вышел, сессию погасили, учётку выключили;
+  * держатель давно не появлялся в диалоге — HOLD_MINUTES без открытия,
+    обновления и ответа. Это закрытый ноутбук и ушедший домой без выхода.
+Таймаут — последний рубеж, а не основной механизм: «занято» дольше
+четверти часа без признаков жизни хуже, чем свободный диалог — гость ждёт,
+а смена думает, что им занимаются.
+
+Проверка живая, в момент чтения: освобождение не требует фоновой задачи и
+не может «не сработать».
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+from django.utils import timezone
+
+from apps.chat.models import ChatThread
+
+HOLD_MINUTES = 15
+
+
+def active_holder(thread: ChatThread, now=None):
+    """Держатель, если он ещё держит; иначе None."""
+    from apps.accounts.models import StaffSession
+
+    if thread.holder_id is None or thread.holder_seen_at is None:
+        return None
+    now = now or timezone.now()
+    if thread.holder_seen_at < now - timedelta(minutes=HOLD_MINUTES):
+        return None
+    user = thread.holder
+    if user is None or not user.is_active:
+        return None
+    live = StaffSession.objects.filter(
+        user_id=user.pk, revoked_at__isnull=True, expires_at__gt=now
+    ).exists()
+    return user if live else None
+
+
+def holder_payload(thread: ChatThread, me=None, now=None) -> dict | None:
+    user = active_holder(thread, now)
+    if user is None:
+        return None
+    return {
+        "id": str(user.pk),
+        "name": user.full_name or user.email,
+        "is_me": bool(me is not None and user.pk == me.pk),
+    }
+
+
+def touch(thread: ChatThread, user, *, force: bool = False) -> None:
+    """
+    Отметиться в диалоге. Свободный — взять; свой — продлить; чужой —
+    только с `force` («Взять себе»), иначе держатель не меняется.
+    """
+    now = timezone.now()
+    holder = active_holder(thread, now)
+    if holder is not None and holder.pk != user.pk and not force:
+        return
+    ChatThread.objects.filter(pk=thread.pk).update(holder=user, holder_seen_at=now)
+    thread.holder = user
+    thread.holder_id = user.pk
+    thread.holder_seen_at = now
+
+
+def release(thread: ChatThread, user) -> None:
+    """Отпустить свой диалог. Чужой так не отпускается — только перехватом."""
+    if thread.holder_id == user.pk:
+        ChatThread.objects.filter(pk=thread.pk, holder=user).update(holder=None, holder_seen_at=None)
+        thread.holder = None
+        thread.holder_id = None
+        thread.holder_seen_at = None

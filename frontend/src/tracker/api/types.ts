@@ -150,14 +150,30 @@ export interface TrackerShift {
   last_order_at: string | null;
 }
 
+/** Who is answering a dialog — shown to the rest of the desk, never to the guest. */
+export interface ChatHolder {
+  id: string;
+  name: string;
+  /** Computed by REST only; live snapshots compare `id` with the current user. */
+  is_me?: boolean;
+}
+
 /** One row of the staff thread list (`GET /api/tracker/chat/threads`). */
 export interface TrackerChatThread {
   thread_id: string;
   room: string | null;
+  /** The guest's language, if known. */
+  language?: string;
   last_body?: string | null;
   last_at?: string | null;
+  last_guest_at?: string | null;
   /** Unread guest messages in this thread. */
   unread: number;
+  /** How long the guest has been waiting for a reply; null — not waiting. */
+  waiting_minutes?: number | null;
+  /** Waiting longer than the hotel allows — the row turns red. */
+  is_late?: boolean;
+  holder?: ChatHolder | null;
 }
 
 /** A page of dialogs, freshest first; `unread_total` counts all of them. */
@@ -167,8 +183,51 @@ export interface TrackerChatThreadsPage {
   unread_total: number;
 }
 
-/** The staff chat snapshot is the same shape as the guest one (contract §3). */
-export type TrackerChatSnapshot = ChatSnapshot;
+/** The staff chat snapshot: the guest shape plus who is answering. */
+export type TrackerChatSnapshot = ChatSnapshot & { holder?: ChatHolder | null };
+
+/** One order line of the guest card. */
+export interface DeskOrderRow {
+  id: string;
+  number: number;
+  status: {
+    code: string;
+    title: string;
+    color_token?: string;
+    is_terminal: boolean;
+    is_cancelled: boolean;
+  };
+  point: string;
+  delivery_mode: string;
+  created_at: string;
+  total: number | null;
+  currency: string;
+  summary: string;
+  extra_count: number;
+}
+
+/** The guest card on the reception desk (`GET …/threads/{id}/guest`). */
+export interface DeskGuestCard {
+  room: string | null;
+  language: string;
+  room_verified: boolean;
+  /** Is the guest's session alive — will a reply reach them. */
+  reachable: boolean;
+  stay_since: string | null;
+  active_orders: DeskOrderRow[];
+  history: DeskOrderRow[];
+  history_total: number;
+  had_low_review: boolean;
+  low_reviews: {
+    id: string;
+    rating: number;
+    comment: string;
+    order_number: number;
+    triage: string;
+    at: string;
+  }[];
+  reviews_count: number;
+}
 
 /**
  * Заявки одной комнаты. Приходит только у трекеров, которые работают ПО

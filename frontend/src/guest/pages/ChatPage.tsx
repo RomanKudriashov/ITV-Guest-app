@@ -104,6 +104,21 @@ export function ChatPage() {
           <Alert severity="error">{errorMessage(error, t)}</Alert>
         </Box>
       ) : null}
+      {/*
+        КТО ОТВЕЧАЕТ — ОТДЕЛ. Гостю пишет «Ресепшен», а не сотрудник по имени:
+        смена меняется, а гость не должен ждать ответа от конкретного человека.
+      */}
+      {snapshot?.counterpart ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          textAlign="center"
+          sx={{ py: 0.5 }}
+          data-testid="guest-chat-counterpart"
+        >
+          {t('guest.chat.counterpart', { name: snapshot.counterpart })}
+        </Typography>
+      ) : null}
       <ChatConversation
         snapshot={snapshot}
         live={live}

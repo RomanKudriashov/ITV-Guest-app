@@ -50,8 +50,10 @@ async function staffOpensChat(page: Page): Promise<void> {
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
   await page.goto('/tracker')
   await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
+  // Кнопка чата ведёт на рабочее место ресепшена.
   await page.getByTestId('tracker-chat-open').click()
-  await expect(page.getByTestId('tracker-chat')).toBeVisible({ timeout: 15_000 })
+  await expect(page).toHaveURL(/\/tracker\/desk/)
+  await expect(page.getByTestId('reception-desk')).toBeVisible({ timeout: 15_000 })
 }
 
 test.describe('Гостевой контур', () => {
@@ -102,14 +104,15 @@ test.describe('Гостевой контур', () => {
 
       // --- Персонал открывает чат и видит тред гостя. ---------------------
       await staffOpensChat(staff)
-      const thread = staff
-        .locator('[data-testid^="tracker-chat-thread-"]')
-        .filter({ hasText: question })
+      const thread = staff.locator('[data-testid^="desk-thread-"]').filter({ hasText: question })
       await expect(thread).toBeVisible({ timeout: 20_000 })
       await thread.click()
       await expect(staff.getByTestId('tracker-chat-conversation')).toContainText(question, {
         timeout: 15_000,
       })
+      // Шапка — отдел и номер; справа — карточка гостя этого номера.
+      await expect(staff.getByTestId('desk-conversation-title')).toContainText('Ресепшен')
+      await expect(staff.getByTestId('desk-guest-room')).toContainText('305')
 
       // --- Персонал отвечает — гость получает ответ БЕЗ перезагрузки. ------
       await staff.getByTestId('tracker-chat-input').fill(answer)
@@ -118,6 +121,9 @@ test.describe('Гостевой контур', () => {
         timeout: 15_000,
       })
       await expect(guest.getByTestId('guest-chat')).toContainText(answer, { timeout: 15_000 })
+      // Гость видит отдел, а не имя сотрудника.
+      await expect(guest.getByTestId('guest-chat-counterpart')).toContainText('Ресепшен')
+      await expect(guest.getByTestId('guest-chat')).not.toContainText('Игорь')
 
       // --- Обратная сторона: у персонала тред открыт, сокет жив — новое
       //     сообщение гостя прилетает вживую. ------------------------------

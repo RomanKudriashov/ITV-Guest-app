@@ -28,7 +28,7 @@ import { API, HOTEL, signInToCms } from './helpers'
 const FOREIGN = /[؀-ۿ一-鿿]/
 
 /** Разделы вне /cms живут своим шеллом — обход меню сюда не ведёт. */
-const OUTSIDE_CMS = new Set(['tracker'])
+const OUTSIDE_CMS = new Set(['tracker', 'desk'])
 
 interface NavItem {
   key: string

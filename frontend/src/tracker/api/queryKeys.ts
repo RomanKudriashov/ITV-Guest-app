@@ -18,4 +18,5 @@ export const trackerKeys = {
   order: (id: string, language: string) => ['tracker', 'order', id, language] as const,
   chatThreads: (language: string) => ['tracker', 'chat', 'threads', language] as const,
   chatThread: (id: string) => ['tracker', 'chat', 'thread', id] as const,
+  deskGuest: (id: string, language: string) => ['tracker', 'chat', 'guest', id, language] as const,
 };

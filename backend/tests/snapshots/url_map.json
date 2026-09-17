@@ -782,7 +782,16 @@
     "GET",
     "POST"
   ],
+  "/api/v1/tracker/chat/threads/{thread_id}/guest": [
+    "GET"
+  ],
   "/api/v1/tracker/chat/threads/{thread_id}/read": [
+    "POST"
+  ],
+  "/api/v1/tracker/chat/threads/{thread_id}/release": [
+    "POST"
+  ],
+  "/api/v1/tracker/chat/threads/{thread_id}/take": [
     "POST"
   ],
   "/api/v1/tracker/order/{order_id}": [
