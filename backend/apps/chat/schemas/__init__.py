@@ -14,3 +14,7 @@ class DeskTaskIn(Schema):
 
     point: str
     text: str
+
+
+class ChatSettingsIn(Schema):
+    reply_wait_minutes: int | None = None

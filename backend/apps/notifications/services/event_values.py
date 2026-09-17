@@ -49,6 +49,14 @@ def chat_message(payload: dict) -> dict:
     }
 
 
+def chat_unanswered(payload: dict) -> dict:
+    return {
+        "room_number": payload.get("room") or None,
+        "preview": payload.get("preview", ""),
+        "minutes": payload.get("minutes"),
+    }
+
+
 def review_low(payload: dict) -> dict:
     return {
         "rating": payload.get("rating"),
@@ -195,6 +203,29 @@ def _chat(code: str) -> Example | None:
     )
 
 
+def _unanswered(code: str) -> Example | None:
+    """Пример — последний диалог, где гость ждал дольше порога отеля."""
+    from apps.chat.models import ChatMessage
+    from apps.chat.services.threads import reply_wait_minutes
+
+    message = (
+        ChatMessage.objects.filter(author_type="guest")
+        .select_related("thread__room")
+        .order_by("-created_at")
+        .first()
+    )
+    if message is None:
+        return None
+    thread = message.thread
+    room = thread.room.number if thread.room_id else ""
+    minutes = reply_wait_minutes() * (2 if code.endswith("_long") else 1)
+    return Example(
+        values=chat_unanswered({"room": room, "preview": message.body[:120], "minutes": minutes}),
+        point_id=str(thread.execution_point_id) if thread.execution_point_id else None,
+        source={"kind": "chat_message", "room": room, "at": _at(message.created_at)},
+    )
+
+
 def _review(code: str) -> Example | None:
     from django.db.models import F
 
@@ -322,6 +353,8 @@ _FINDERS = {
     "order.overdue": _overdue,
     "order.cancelled": _cancelled,
     "chat.guest_message": _chat,
+    "chat.unanswered": _unanswered,
+    "chat.unanswered_long": _unanswered,
     "review.low": _review,
     "brand.published_on_schedule": _brand,
     "brand.published_late": _brand,

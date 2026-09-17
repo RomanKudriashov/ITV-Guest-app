@@ -484,7 +484,26 @@ class Command(BaseCommand):
                     day_part="breakfast",
                 )
 
-        return {"all_day": all_day, "kitchen": kitchen_hours, "breakfast": breakfast}
+        # Часы ресепшена: демо-отель отвечает с 07:00 до 23:00, ночью гость
+        # видит «ответим с 07:00», а не тишину. Отель без расписания работает
+        # круглосуточно, и обещаний мы не выдумываем.
+        desk_hours, created = Schedule.objects.get_or_create(name="Ресепшен 07:00–23:00")
+        if created:
+            for weekday in range(7):
+                ScheduleInterval.objects.create(
+                    schedule=desk_hours,
+                    weekday=weekday,
+                    start_time=time(7, 0),
+                    end_time=time(23, 0),
+                )
+        Service.objects.filter(code="reception", schedule__isnull=True).update(schedule=desk_hours)
+
+        return {
+            "all_day": all_day,
+            "kitchen": kitchen_hours,
+            "breakfast": breakfast,
+            "reception": desk_hours,
+        }
 
     # --- Каталог ----------------------------------------------------------
 

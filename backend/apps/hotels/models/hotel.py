@@ -127,6 +127,11 @@ class Hotel(BaseModel):
 
     # Отзывы: собирать ли оценку после завершения и порог «низкой» оценки,
     # при которой уведомляется менеджер (service recovery).
+    # Сколько гость ждёт ответа в чате, прежде чем диалог краснеет и уходит
+    # сигнал смене (волна 9). Отель решает сам: у курорта и у хостела разный
+    # темп. Ноль запрещён формой — «мгновенно» означало бы сигнал на каждое
+    # сообщение.
+    chat_reply_minutes = models.PositiveSmallIntegerField(default=10)
     review_enabled = models.BooleanField(default=True)
     # Оценка «≤ порога» — низкая. Две звезды и ниже — решение заказчика.
     review_low_threshold = models.PositiveSmallIntegerField(default=2)

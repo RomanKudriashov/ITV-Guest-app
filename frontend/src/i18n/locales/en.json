@@ -639,7 +639,8 @@
       "offline": "No connection",
       "emptyHint": "Write to us — the front desk will reply right here",
       "emptyTitle": "Say hello — we're here",
-      "counterpart": "Replying: {{name}}"
+      "counterpart": "Replying: {{name}}",
+      "answersFrom": "The front desk replies from {{time}}"
     },
     "review": {
       "title": "Rate your order",
@@ -2098,6 +2099,13 @@
       "threshold": "A rating is low at",
       "thresholdHint": "And below — the manager is notified",
       "saveFailed": "Could not save the review setting"
+    },
+    "chat": {
+      "title": "Guest chat",
+      "subtitle": "How long a guest waits for a reply before the dialog turns red at the front desk and the shift — then the manager — is signalled.",
+      "wait": "Reply target, minutes",
+      "waitHint": "From 1 to 240. At night it works the same: with front-desk hours the guest sees when they will be answered.",
+      "saveFailed": "The setting was not saved"
     }
   },
   "dashboard": {
@@ -3147,7 +3155,8 @@
       "me": "your account",
       "slaOverrides": "the overdue thresholds",
       "commerceOverrides": "the venues' own commerce",
-      "notificationEvents": "the event settings"
+      "notificationEvents": "the event settings",
+      "chatSettings": "chat settings"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
   },

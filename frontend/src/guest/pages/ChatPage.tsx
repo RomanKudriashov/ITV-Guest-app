@@ -108,6 +108,15 @@ export function ChatPage() {
         КТО ОТВЕЧАЕТ — ОТДЕЛ. Гостю пишет «Ресепшен», а не сотрудник по имени:
         смена меняется, а гость не должен ждать ответа от конкретного человека.
       */}
+      {/*
+        НОЧЬЮ — «ответим с 07:00», а не тишина. Часы берутся из расписания
+        ресепшена; расписания нет — отель отвечает всегда, и обещаний не даём.
+      */}
+      {snapshot?.reply_hours && !snapshot.reply_hours.is_open ? (
+        <Alert severity="info" sx={{ mx: 2, mb: 1 }} data-testid="guest-chat-hours">
+          {t('guest.chat.answersFrom', { time: snapshot.reply_hours.opens_time ?? '' })}
+        </Alert>
+      ) : null}
       {snapshot?.counterpart ? (
         <Typography
           variant="caption"

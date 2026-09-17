@@ -132,6 +132,10 @@
   "/api/v1/cms/categories/{category_id}/toggle": [
     "POST"
   ],
+  "/api/v1/cms/chat-settings": [
+    "GET",
+    "PATCH"
+  ],
   "/api/v1/cms/commerce-settings": [
     "GET",
     "PATCH"

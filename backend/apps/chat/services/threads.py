@@ -130,6 +130,27 @@ def get_thread(thread_id) -> ChatThread:
 # --- Снимок ----------------------------------------------------------------
 
 
+def _reply_hours() -> dict | None:
+    """
+    Когда ресепшен отвечает. Считается тем же механизмом, что часы заведения
+    на витрине: у отеля своё расписание, и второй способ считать «открыто»
+    однажды разошёлся бы с первым.
+    """
+    from apps.catalog.services.availability import service_availability
+
+    point = reception_point()
+    service = point.services.first() if point is not None else None
+    if service is None or service.schedule_id is None:
+        return None
+    state = service_availability(service)
+    return {
+        "is_open": state.is_available,
+        "opens_at": state.available_at.isoformat() if state.available_at else None,
+        "opens_time": state.available_from,
+        "until": state.available_until,
+    }
+
+
 def _counterpart(thread: ChatThread) -> str:
     """
     Кто отвечает гостю — ОТДЕЛ, а не человек: «Ресепшен», не «Игорь».
@@ -170,6 +191,9 @@ def thread_snapshot(thread: ChatThread, *, side: str) -> dict:
         # Шапка переписки: гостю — отдел, персоналу — отдел тоже (кто по ту
         # сторону от гостя), номер — отдельным полем.
         "counterpart": counterpart,
+        # Часы ресепшена: закрыт — гость видит «ответим с 07:00», а не тишину.
+        # Расписания нет — работает всегда, и обещаний не даём.
+        **({"reply_hours": _reply_hours()} if side == "guest" else {}),
         "messages": [
             {
                 "id": str(message.pk),
@@ -218,6 +242,14 @@ def _post_message(thread: ChatThread, *, author_type: str, author_id, author_nam
         stamps["last_guest_message_at" if author_type == "guest" else "last_staff_message_at"] = message.created_at
         ChatThread.objects.filter(pk=thread.pk).update(**stamps)
 
+    if author_type == "guest":
+        # Гость ждёт ответа — ставим срок. Ответил ресепшен — задание просто
+        # ничего не сделает (см. `unanswered.run`).
+        from apps.chat.services.unanswered import schedule_check
+
+        thread.last_guest_message_at = message.created_at
+        schedule_check(thread)
+
     # Событие после коммита: разбудит WS обеих сторон и уведомление получателю.
     emit(
         CHAT_MESSAGE,
@@ -263,9 +295,14 @@ def mark_read(thread: ChatThread, *, side: str) -> None:
 
 THREADS_PAGE = 30
 THREADS_PAGE_MAX = 100
-# Сколько гость может ждать ответа, прежде чем диалог краснеет. Шаг 9 волны
-# делает порог настройкой отеля; до тех пор — одно число здесь.
-REPLY_WAIT_MINUTES = 10
+# Заводское значение порога ожидания: отель меняет его в настройках чата.
+DEFAULT_REPLY_WAIT_MINUTES = 10
+
+
+def reply_wait_minutes() -> int:
+    from apps.hotels.services.hotel import current_hotel
+
+    return getattr(current_hotel(), "chat_reply_minutes", DEFAULT_REPLY_WAIT_MINUTES)
 
 
 def _waiting_since(thread):
@@ -277,8 +314,10 @@ def _waiting_since(thread):
     return guest_at if staff_at is None or staff_at < guest_at else None
 
 
-def serialize_thread_row(thread, now=None, me=None) -> dict:
+def serialize_thread_row(thread, now=None, me=None, wait_minutes=None) -> dict:
     from apps.chat.services.holding import holder_payload
+
+    wait_minutes = wait_minutes or reply_wait_minutes()
 
     now = now or timezone.now()
     waiting = _waiting_since(thread)
@@ -293,7 +332,7 @@ def serialize_thread_row(thread, now=None, me=None) -> dict:
         "last_guest_at": thread.last_guest_message_at.isoformat() if thread.last_guest_message_at else None,
         "unread": getattr(thread, "unread", 0),
         "waiting_minutes": waiting_minutes,
-        "is_late": waiting_minutes is not None and waiting_minutes >= REPLY_WAIT_MINUTES,
+        "is_late": waiting_minutes is not None and waiting_minutes >= wait_minutes,
         "holder": holder_payload(thread, me, now),
     }
 
@@ -352,13 +391,14 @@ def list_threads(*, cursor: str | None = None, limit: int | None = None) -> dict
         author_type="guest", read_by_staff_at__isnull=True
     ).count()
     now = timezone.now()
+    wait_minutes = reply_wait_minutes()
     next_cursor = None
     if has_more and rows:
         last = rows[-1]
         next_cursor = f"{int(last.has_unread)}|{last.guest_key.isoformat()}|{last.pk}"
     return {
-        "items": [serialize_thread_row(thread, now, me) for thread in rows],
+        "items": [serialize_thread_row(thread, now, me, wait_minutes) for thread in rows],
         "next_cursor": next_cursor,
         "unread_total": unread_total,
-        "reply_wait_minutes": REPLY_WAIT_MINUTES,
+        "reply_wait_minutes": wait_minutes,
     }

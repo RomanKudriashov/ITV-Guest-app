@@ -637,7 +637,8 @@
       "offline": "无连接",
       "emptyHint": "给我们留言——前台会在这里回复",
       "emptyTitle": "给我们留言 — 我们在线",
-      "counterpart": "为您回复：{{name}}"
+      "counterpart": "为您回复：{{name}}",
+      "answersFrom": "前台将从 {{time}} 起回复"
     },
     "review": {
       "title": "评价订单",
@@ -2078,6 +2079,13 @@
       "threshold": "低分阈值",
       "thresholdHint": "及以下将通知经理",
       "saveFailed": "无法保存评价设置"
+    },
+    "chat": {
+      "title": "客人聊天",
+      "subtitle": "客人等待回复多久后，前台的对话会变红并通知当班，随后通知经理。",
+      "wait": "回复时限（分钟）",
+      "waitHint": "1 到 240。夜间同理：设定前台工作时间后，客人会看到何时能得到回复。",
+      "saveFailed": "设置未保存"
     }
   },
   "dashboard": {
@@ -3116,7 +3124,8 @@
       "me": "你的账号",
       "slaOverrides": "超时阈值",
       "commerceOverrides": "各场所的自有商务设置",
-      "notificationEvents": "事件设置"
+      "notificationEvents": "事件设置",
+      "chatSettings": "聊天设置"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   },

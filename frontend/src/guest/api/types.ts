@@ -720,6 +720,15 @@ export interface ChatSnapshot {
   room: string | null;
   /** Кто отвечает гостю — отдел («Ресепшен»), не сотрудник. */
   counterpart?: string;
+  /** Часы ресепшена; `null`/нет — отвечает всегда, обещаний не даём. */
+  reply_hours?: {
+    is_open: boolean;
+    /** Момент следующего открытия целиком (день считает сервер). */
+    opens_at: string | null;
+    /** Время открытия, «07:00». */
+    opens_time: string | null;
+    until: string | null;
+  } | null;
   messages: ChatMessage[];
   /** Unread for the requesting side. */
   unread: number;

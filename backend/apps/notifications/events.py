@@ -223,6 +223,49 @@ EVENTS: dict[str, EventSpec] = {
             # которого канал перестают читать. Чат и так виден на экране.
         ),
         EventSpec(
+            code="chat.unanswered",
+            title={
+                "ru": "Гость ждёт ответа в чате",
+                "en": "Guest is waiting for a chat reply",
+                "ar": "الضيف ينتظر ردًا في المحادثة",
+                "zh": "客人在聊天中等待回复",
+            },
+            subject={
+                "ru": "Без ответа {{minutes}} мин · номер {{room_number}}",
+                "en": "No reply for {{minutes}} min · room {{room_number}}",
+                "ar": "بلا رد منذ {{minutes}} دقيقة · الغرفة {{room_number}}",
+                "zh": "{{minutes}} 分钟无回复 · {{room_number}} 号房",
+            },
+            body={"ru": "{{preview}}", "en": "{{preview}}", "ar": "{{preview}}", "zh": "{{preview}}"},
+            # Сначала — смене ресепшена: ответить может любой, кто на месте.
+            audience=AUDIENCE_POINT,
+            placeholders=("minutes", "room_number", "preview"),
+            defaults=(("room_number", "no_room"),),
+            enabled_by_default=True,
+        ),
+        EventSpec(
+            code="chat.unanswered_long",
+            title={
+                "ru": "Чат молчит вдвое дольше порога",
+                "en": "Chat unanswered for twice the target",
+                "ar": "المحادثة بلا رد ضعف المدة",
+                "zh": "聊天无回复时间超过目标两倍",
+            },
+            subject={
+                "ru": "Гость ждёт {{minutes}} мин · номер {{room_number}}",
+                "en": "Guest waiting {{minutes}} min · room {{room_number}}",
+                "ar": "الضيف ينتظر {{minutes}} دقيقة · الغرفة {{room_number}}",
+                "zh": "客人已等待 {{minutes}} 分钟 · {{room_number}} 号房",
+            },
+            body={"ru": "{{preview}}", "en": "{{preview}}", "ar": "{{preview}}", "zh": "{{preview}}"},
+            # Смена не ответила — поднимаем руководителю: это уже не загрузка,
+            # а забытый гость.
+            audience=AUDIENCE_MANAGER,
+            placeholders=("minutes", "room_number", "preview"),
+            defaults=(("room_number", "no_room"),),
+            enabled_by_default=True,
+        ),
+        EventSpec(
             code="review.low",
             title={
                 "ru": "Низкая оценка",
