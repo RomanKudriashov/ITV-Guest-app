@@ -801,7 +801,7 @@
       "shiftDone_one": "{{count}} request done this shift",
       "shiftDone_other": "{{count}} requests done this shift",
       "shiftSpeed": "Usually takes {{duration}}",
-      "shiftPickup": "Picked up within {{duration}}",
+      "shiftAccept": "Taken on within {{duration}}",
       "lastOrder": "Last request — {{age}}",
       "slaHintDefault": "Overdue means later than {{minutes}} min after intake (default for this kind)",
       "dropHere": "Drop here",
@@ -2050,7 +2050,7 @@
     "rating": "Rating",
     "liveGuests": "Guests in the app",
     "speed": "Usually takes",
-    "pickup": "Picked up within",
+    "accept": "Taken on within",
     "doneToday": "Done",
     "inWork": "In progress",
     "card": {

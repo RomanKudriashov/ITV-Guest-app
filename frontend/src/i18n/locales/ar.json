@@ -817,7 +817,7 @@
       "shiftDone_many": "{{count}} طلبًا في هذه الوردية",
       "shiftDone_other": "{{count}} طلب في هذه الوردية",
       "shiftSpeed": "يستغرق عادة {{duration}}",
-      "shiftPickup": "يُستلم خلال {{duration}}",
+      "shiftAccept": "يُقبل خلال {{duration}}",
       "lastOrder": "آخر طلب — {{age}}",
       "slaHintDefault": "التأخير يعني بعد {{minutes}} دقيقة من الاستلام (الافتراضي لهذا النوع)",
       "dropHere": "أفلِت هنا",
@@ -2090,7 +2090,7 @@
     "rating": "التقييم",
     "liveGuests": "ضيوف في التطبيق",
     "speed": "يستغرق عادة",
-    "pickup": "يُستلم خلال",
+    "accept": "يُقبل خلال",
     "doneToday": "أُنجزت",
     "inWork": "قيد التنفيذ",
     "card": {

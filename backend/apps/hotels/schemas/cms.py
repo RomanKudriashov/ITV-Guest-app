@@ -377,7 +377,7 @@ class DashboardTodayOut(Schema):
     # `None` значит «за смену нечего мерить» — экран обязан сказать это
     # прочерком, а не нулём.
     median_minutes: int | None = None
-    median_pickup_minutes: int | None = None
+    median_accept_minutes: int | None = None
     done: int
     in_work: int
 

@@ -808,7 +808,7 @@
       "shiftDone_few": "За смену сделано {{count}} заявки",
       "shiftDone_many": "За смену сделано {{count}} заявок",
       "shiftSpeed": "Обычно занимает {{duration}}",
-      "shiftPickup": "Берут в работу за {{duration}}",
+      "shiftAccept": "Берут в работу за {{duration}}",
       "lastOrder": "Последняя заявка — {{age}}",
       "slaHintDefault": "Просрочка — позже {{minutes}} мин от приёма (по умолчанию для этого вида)",
       "dropHere": "Положить сюда",
@@ -2072,7 +2072,7 @@
     "rating": "Оценка",
     "liveGuests": "Гостей в приложении",
     "speed": "Обычно занимает",
-    "pickup": "Берут в работу за",
+    "accept": "Берут в работу за",
     "doneToday": "Сделано",
     "inWork": "В работе",
     "card": {

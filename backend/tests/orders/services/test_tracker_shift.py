@@ -125,7 +125,7 @@ def test_pickup_speed_is_counted_apart_from_execution(crystal):
         summary = shift_summary(point, hotel=crystal, now=_noon(crystal))
 
         assert summary["median_minutes"] == 35
-        assert summary["median_pickup_minutes"] == 30
+        assert summary["median_accept_minutes"] == 30
 
 
 def test_nothing_measured_yet_is_none_not_zero(crystal):
@@ -138,7 +138,7 @@ def test_nothing_measured_yet_is_none_not_zero(crystal):
 
         assert summary["done"] == 0
         assert summary["median_minutes"] is None
-        assert summary["median_pickup_minutes"] is None
+        assert summary["median_accept_minutes"] is None
 
 
 def test_cancelled_orders_are_not_work_done(crystal):

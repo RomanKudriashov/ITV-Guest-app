@@ -48,7 +48,7 @@ export interface DashboardData {
     /** `null` у управляющего заведением: сессия к точке не привязана. */
     live_guests: number | null;
     median_minutes: number | null;
-    median_pickup_minutes: number | null;
+    median_accept_minutes: number | null;
     done: number;
     in_work: number;
   };

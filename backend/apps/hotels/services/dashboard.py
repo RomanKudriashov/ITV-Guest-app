@@ -267,7 +267,7 @@ def _today(hotel, user, shift) -> dict:
         # Скорость — МЕДИАНА из сводки смены. `None` значит «за смену нечего
         # мерить», и экран обязан сказать это прочерком, а не нулём.
         "median_minutes": shift["median_minutes"],
-        "median_pickup_minutes": shift["median_pickup_minutes"],
+        "median_accept_minutes": shift["median_accept_minutes"],
         "done": shift["done"],
         "in_work": shift["in_work"],
     }

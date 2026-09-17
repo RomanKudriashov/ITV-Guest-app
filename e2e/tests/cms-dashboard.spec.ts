@@ -33,7 +33,7 @@ const TODAY = {
   rating_delta: 0,
   live_guests: 3,
   median_minutes: 7,
-  median_pickup_minutes: 2,
+  median_accept_minutes: 2,
   done: 26,
   in_work: 4,
 }

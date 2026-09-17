@@ -399,7 +399,7 @@ class Command(BaseCommand):
             "hours": self._open_hours(hotel, available),
         }
 
-    def _pickup_for(self, lines, plan, rng) -> str | None:
+    def _pickup_point_for(self, lines, plan, rng) -> str | None:
         """
         Примерно каждый пятый заказ — к точке выдачи, если по матрице там
         выдают всё из корзины. Иначе места нет: заказ идёт в номер гостя.
@@ -490,7 +490,7 @@ class Command(BaseCommand):
                             room_id=str(room.pk),
                             comment=rng.choice(COMMENTS),
                             field_values=self._field_values(lines, plan, rng),
-                            location_id=self._pickup_for(lines, plan, rng),
+                            location_id=self._pickup_point_for(lines, plan, rng),
                         ),
                         guest_session=session,
                     )

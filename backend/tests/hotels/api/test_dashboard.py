@@ -164,7 +164,7 @@ def test_no_data_is_a_dash_not_a_zero(crystal):
         data = build(crystal, _admin())
 
         assert data["today"]["median_minutes"] is None
-        assert data["today"]["median_pickup_minutes"] is None
+        assert data["today"]["median_accept_minutes"] is None
         # А то, что посчитано, остаётся числом.
         assert isinstance(data["today"]["orders"], int)
 

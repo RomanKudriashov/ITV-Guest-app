@@ -50,7 +50,7 @@ async function watchBoard(page: Page): Promise<string[]> {
           overdue: 2,
           done: 5,
           median_minutes: 8,
-          median_pickup_minutes: 2,
+          median_accept_minutes: 2,
           shift_started_at: new Date().toISOString(),
           sla_minutes: 20,
           last_order_at: null,

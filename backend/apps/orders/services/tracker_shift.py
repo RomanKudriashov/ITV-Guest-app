@@ -122,13 +122,13 @@ def shift_summary_for(points, *, hotel, now=None) -> dict:
     closed_at = closing_moments(done_orders)
 
     durations: list[int] = []
-    pickups: list[int] = []
+    accepts: list[int] = []
     for order in done_orders:
         moment = closed_at.get(order.pk)
         if moment is not None:
             durations.append(int((moment - order.created_at).total_seconds() // 60))
         if order.accepted_at is not None:
-            pickups.append(int((order.accepted_at - order.created_at).total_seconds() // 60))
+            accepts.append(int((order.accepted_at - order.created_at).total_seconds() // 60))
 
     single = points[0] if len(points) == 1 else None
     return {
@@ -139,7 +139,7 @@ def shift_summary_for(points, *, hotel, now=None) -> dict:
         # Медиана исполнения и медиана реакции. None — «за смену ещё нечего
         # мерить», и экран обязан сказать это словом, а не показать ноль.
         "median_minutes": _median(durations),
-        "median_pickup_minutes": _median(pickups),
+        "median_accept_minutes": _median(accepts),
         "shift_started_at": started_at.isoformat(),
         # Порог осмыслен только у ОДНОЙ точки: у набора он разный, и одно число
         # на всех было бы выдумкой. Набор получает `None` — экран об этом знает
@@ -158,7 +158,7 @@ def _empty_summary(started_at) -> dict:
         "overdue": 0,
         "done": 0,
         "median_minutes": None,
-        "median_pickup_minutes": None,
+        "median_accept_minutes": None,
         "shift_started_at": started_at.isoformat(),
         "sla_minutes": None,
         "last_order_at": None,

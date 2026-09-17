@@ -796,7 +796,7 @@
       "shiftFresh": "本班 {{time}} 开始，暂无订单",
       "shiftDone_other": "本班已完成 {{count}} 单",
       "shiftSpeed": "通常耗时 {{duration}}",
-      "shiftPickup": "{{duration}} 内接单",
+      "shiftAccept": "{{duration}} 内接单",
       "lastOrder": "最近一单 — {{age}}",
       "slaHintDefault": "超过下单后 {{minutes}} 分钟即为超时（此类型的默认值）",
       "dropHere": "放到这里",
@@ -2032,7 +2032,7 @@
     "rating": "评分",
     "liveGuests": "在线客人",
     "speed": "通常耗时",
-    "pickup": "接单用时",
+    "accept": "接单用时",
     "doneToday": "已完成",
     "inWork": "处理中",
     "card": {

@@ -114,10 +114,10 @@ export function EmptyBoard({ shift, unconfirmed, language }: EmptyBoardProps) {
           заявка пролежала невзятой. Медленная кухня и невнимательная смена —
           разные болезни, и одно число на двоих лечило бы не то.
         */}
-        {shift.median_pickup_minutes !== null ? (
+        {shift.median_accept_minutes !== null ? (
           <Typography variant="body2" color="text.secondary">
-            {t('tracker.board.shiftPickup', {
-              duration: formatAge(shift.median_pickup_minutes, null, t, language),
+            {t('tracker.board.shiftAccept', {
+              duration: formatAge(shift.median_accept_minutes, null, t, language),
             })}
           </Typography>
         ) : null}

@@ -142,7 +142,7 @@ export interface TrackerShift {
   /** Медиана «создан → закрыт», минуты. `null` — за смену нечего мерить. */
   median_minutes: number | null;
   /** Медиана «создан → взят», минуты. Скорость РЕАКЦИИ, отдельно от исполнения. */
-  median_pickup_minutes: number | null;
+  median_accept_minutes: number | null;
   /** Начало суток отеля — настоящих смен в модели нет. */
   shift_started_at: string;
   sla_minutes: number;

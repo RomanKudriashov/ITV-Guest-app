@@ -63,7 +63,7 @@ const SHIFT = {
   overdue: 0,
   done: 0,
   median_minutes: null as number | null,
-  median_pickup_minutes: null as number | null,
+  median_accept_minutes: null as number | null,
   shift_started_at: new Date().toISOString(),
   sla_minutes: 20,
   last_order_at: null as string | null,

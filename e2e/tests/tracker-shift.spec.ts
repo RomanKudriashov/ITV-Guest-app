@@ -37,7 +37,7 @@ function shift(overrides: Record<string, unknown> = {}): Record<string, unknown>
     overdue: 0,
     done: 0,
     median_minutes: null,
-    median_pickup_minutes: null,
+    median_accept_minutes: null,
     shift_started_at: MIDNIGHT,
     sla_minutes: 10,
     last_order_at: null,
@@ -89,7 +89,7 @@ test.describe('Доска: сводка смены', () => {
       summary: shift({
         done: 14,
         median_minutes: 7,
-        median_pickup_minutes: 2,
+        median_accept_minutes: 2,
         last_order_at: new Date(Date.now() - 40 * 60_000).toISOString(),
       }),
     })
