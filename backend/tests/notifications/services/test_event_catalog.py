@@ -87,6 +87,11 @@ def test_only_actionable_events_are_on_by_default():
         "order.cancelled",
         "review.low",
         "notification.undelivered",
+        # Волна 9: гость ждёт ответа в чате — это ровно «надо что-то сделать»,
+        # и первым делом ответить. Вторая ступень поднимает то же молчание
+        # руководителю, поэтому включена по той же причине.
+        "chat.unanswered",
+        "chat.unanswered_long",
     }
 
 
