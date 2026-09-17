@@ -287,8 +287,8 @@ def test_reviews_are_cut_by_the_order_point(cms_manager, cms, crystal):
         mine = Review.objects.create(hotel=crystal, order=kitchen_order, rating=5)
         foreign = Review.objects.create(hotel=crystal, order=bar_order, rating=4)
 
-    everything = {row["id"] for row in cms.get("/api/cms/reviews?limit=500").json()}
-    visible = {row["id"] for row in cms_manager.get("/api/cms/reviews?limit=500").json()}
+    everything = {row["id"] for row in cms.get("/api/cms/reviews?limit=100").json()["items"]}
+    visible = {row["id"] for row in cms_manager.get("/api/cms/reviews?limit=100").json()["items"]}
 
     assert str(mine.pk) in everything and str(foreign.pk) in everything
     assert str(mine.pk) in visible, "управляющий потерял отзыв о своей заявке"
