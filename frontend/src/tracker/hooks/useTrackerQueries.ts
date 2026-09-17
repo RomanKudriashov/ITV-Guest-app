@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
@@ -13,7 +13,6 @@ import { trackerKeys } from '../api/queryKeys';
 import type {
   TrackerBoard,
   TrackerChatSnapshot,
-  TrackerChatThread,
   TrackerOrder,
   TrackerPointsResponse,
   TrackerScope,
@@ -103,9 +102,11 @@ export function useTrackerOrder(orderId: string | undefined, enabled: boolean) {
  */
 export function useTrackerChatThreads(enabled = true) {
   const language = useTrackerLanguage();
-  return useQuery<TrackerChatThread[]>({
+  return useInfiniteQuery({
     queryKey: trackerKeys.chatThreads(language),
-    queryFn: () => fetchChatThreads(language),
+    queryFn: ({ pageParam }) => fetchChatThreads(language, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) => page.next_cursor,
     enabled,
     staleTime: 15_000,
     refetchInterval: enabled ? 20_000 : false,

@@ -34,7 +34,17 @@ def serialize_user(user: User) -> dict:
         # Роль и её область — чтобы фронт вёл линейного сотрудника сразу в
         # трекер и не рисовал ему разделы, которые всё равно ответят 403.
         **access_for(user).payload(),
+        # Чат гостей — только ресепшену и администратору: фронт не рисует
+        # кнопку тем, кому ручка ответит 403.
+        "can_chat": _can_chat(user),
     }
+
+
+def _can_chat(user) -> bool:
+    from apps.accounts.services.roles import access_for
+    from apps.chat.services.threads import can_read_chat
+
+    return can_read_chat(access_for(user))
 
 
 @router.post(

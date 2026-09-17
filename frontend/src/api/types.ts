@@ -63,6 +63,8 @@ export interface StaffUser {
   role?: 'line_staff' | 'service_manager' | 'hotel_admin';
   /** Пускают ли в CMS вообще: админ отеля и управляющий сервисом. */
   has_cms_access?: boolean;
+  /** Читает ли чат гостей: ресепшен и администратор. */
+  can_chat?: boolean;
   /** Точки, которыми человек управляет. */
   managed_point_ids?: string[];
   /** Все точки, к которым он привязан, — это и есть его доска. */
@@ -100,6 +102,7 @@ export interface MeResponse {
   language?: string;
   role?: StaffUser['role'];
   has_cms_access?: boolean;
+  can_chat?: boolean;
   managed_point_ids?: string[];
   member_point_ids?: string[];
 }

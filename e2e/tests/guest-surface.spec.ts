@@ -1,7 +1,17 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, apiToken, CONCIERGE, DEMO_ROOM, HOTEL, moveOrderStatus, openCart } from './helpers'
+import {
+  API,
+  apiToken,
+  CREDENTIALS,
+  DEMO_ROOM,
+  HOTEL,
+  moveOrderStatus,
+  openCart,
+  RECEPTION,
+  signInToTracker,
+} from './helpers'
 
 /**
  * Гостевой контур: главная из данных, чат гость↔персонал и отзыв после
@@ -34,8 +44,8 @@ async function enterAsGuest(page: Page, room = DEMO_ROOM): Promise<void> {
 
 async function staffOpensChat(page: Page): Promise<void> {
   await page.goto('/login')
-  await page.getByTestId('login-email').fill(CONCIERGE.email)
-  await page.getByTestId('login-password').fill(CONCIERGE.password)
+  await page.getByTestId('login-email').fill(RECEPTION.email)
+  await page.getByTestId('login-password').fill(RECEPTION.password)
   await page.getByTestId('login-submit').click()
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
   await page.goto('/tracker')
@@ -120,6 +130,20 @@ test.describe('Гостевой контур', () => {
       await guestContext.close()
       await staffContext.close()
     }
+  })
+
+  test('повару чат гостей не показывается — ни кнопки, ни ответа сервера', async ({
+    page,
+    request,
+  }) => {
+    await signInToTracker(page, CREDENTIALS)
+    await expect(page.getByTestId('tracker-chat-open')).toHaveCount(0)
+    const cook = await apiToken(request, CREDENTIALS)
+    const response = await request.get(`${API}/api/tracker/chat/threads`, {
+      headers: { Authorization: `Bearer ${cook}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+    expect(response.status()).toBe(403)
+    expect((await response.json()).code).toBe('chat_forbidden')
   })
 
   test('отзыв доступен только после завершения и сохраняется', async ({ page, request }) => {

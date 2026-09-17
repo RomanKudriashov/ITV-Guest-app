@@ -48,7 +48,7 @@ def _staff_send(crystal, thread_id, body):
     from apps.chat.services import staff_send
 
     with tenant_context(crystal):
-        user = User.objects.get(email="concierge@crystal.local")
+        user = User.objects.get(email="reception@crystal.local")
         staff_send(ChatThread.objects.get(pk=thread_id), user, body)
 
 
@@ -119,7 +119,7 @@ def test_snapshot_on_connect_and_live_delivery_both_ways(client, crystal, guest_
     Ради этого чат и написан: гость и персонал на одном треде, сообщение
     персонала прилетает гостю вживую полным снимком.
     """
-    staff_jwt = staff_token_for(client, crystal, )
+    staff_jwt = staff_token_for(client, crystal, "reception")
 
     async def scenario():
         guest_comm = WebsocketCommunicator(application, guest_ws(guest_token))
@@ -147,7 +147,7 @@ def test_snapshot_on_connect_and_live_delivery_both_ways(client, crystal, guest_
 
 
 def test_staff_sees_guest_message_live(client, crystal, guest_token):
-    staff_jwt = staff_token_for(client, crystal)
+    staff_jwt = staff_token_for(client, crystal, "reception")
 
     async def scenario():
         # Гость создаёт тред первым сообщением через REST.
@@ -179,3 +179,20 @@ def _guest_send(crystal, token, body):
     with tenant_context(crystal):
         session = authenticate_guest(token)
         guest_send(session, body)
+
+
+def test_the_cooks_socket_is_refused(client, crystal, guest_token):
+    """Чат гостей — ресепшену: повару сокет треда не открывается."""
+    cook_jwt = staff_token_for(client, crystal, "chef")
+
+    async def scenario():
+        guest_comm = WebsocketCommunicator(application, guest_ws(guest_token))
+        assert (await guest_comm.connect(timeout=WS_TIMEOUT))[0]
+        await guest_comm.receive_json_from(timeout=WS_TIMEOUT)
+        thread_id = await _thread_id_for_room(crystal)
+        cook_comm = WebsocketCommunicator(application, staff_ws(thread_id, cook_jwt))
+        connected, _ = await cook_comm.connect(timeout=WS_TIMEOUT)
+        assert not connected
+        await guest_comm.disconnect()
+
+    async_to_sync(scenario)()

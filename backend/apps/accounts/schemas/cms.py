@@ -35,6 +35,8 @@ class StaffUserOut(Schema):
     has_cms_access: bool = False
     managed_point_ids: list[str] = []
     member_point_ids: list[str] = []
+    # Читает ли чат гостей: ресепшен и администратор.
+    can_chat: bool = False
 
 class LoginOut(Schema):
     access: str

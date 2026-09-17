@@ -51,7 +51,7 @@ def guest(client, crystal):
     return guest_for(client, crystal, room="212")
 
 
-def staff_call(client, hotel, login="concierge"):
+def staff_call(client, hotel, login="reception"):
     token = client.post(
         "/api/staff/auth/login",
         data={"email": f"{login}@{hotel.subdomain}.local", "password": "chef12345"},
@@ -118,7 +118,7 @@ def test_staff_sees_and_answers_thread(client, crystal, guest):
     guest.post("/api/guest/chat", {"body": "Нужны полотенца"})
 
     concierge = staff_call(client, crystal)
-    threads = concierge("/api/tracker/chat/threads").json()
+    threads = concierge("/api/tracker/chat/threads").json()["items"]
     mine = next(t for t in threads if t["room"] == "212")
     assert mine["unread"] == 1
 
@@ -139,13 +139,13 @@ def test_read_markers(client, crystal, guest):
     guest.post("/api/guest/chat", {"body": "первое"})
     concierge = staff_call(client, crystal)
     thread_id = next(
-        t["thread_id"] for t in concierge("/api/tracker/chat/threads").json() if t["room"] == "212"
+        t["thread_id"] for t in concierge("/api/tracker/chat/threads").json()["items"] if t["room"] == "212"
     )
 
     # Персонал прочитал — счётчик непрочитанных обнулился.
     concierge(f"/api/tracker/chat/threads/{thread_id}/read", "post", {})
     after = next(
-        t for t in concierge("/api/tracker/chat/threads").json() if t["room"] == "212"
+        t for t in concierge("/api/tracker/chat/threads").json()["items"] if t["room"] == "212"
     )
     assert after["unread"] == 0
 
@@ -172,7 +172,7 @@ def test_threads_are_isolated_between_hotels(client, crystal, aurora, guest):
     guest.post("/api/guest/chat", {"body": "тред-кристалла-секрет"})
     # Aurora имеет свои сид-треды, но треда Crystal среди них быть не может.
     aurora_staff = staff_call(client, aurora)
-    bodies = " ".join(t["last_body"] for t in aurora_staff("/api/tracker/chat/threads").json())
+    bodies = " ".join(t["last_body"] for t in aurora_staff("/api/tracker/chat/threads").json()["items"])
     assert "кристалла-секрет" not in bodies
 
 

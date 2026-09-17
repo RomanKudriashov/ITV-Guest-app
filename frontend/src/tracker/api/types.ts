@@ -160,6 +160,13 @@ export interface TrackerChatThread {
   unread: number;
 }
 
+/** A page of dialogs, freshest first; `unread_total` counts all of them. */
+export interface TrackerChatThreadsPage {
+  items: TrackerChatThread[];
+  next_cursor: string | null;
+  unread_total: number;
+}
+
 /** The staff chat snapshot is the same shape as the guest one (contract §3). */
 export type TrackerChatSnapshot = ChatSnapshot;
 

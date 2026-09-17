@@ -895,7 +895,8 @@
       "emptyTitle": "لا رسائل",
       "emptyBody": "لا رسائل من الضيوف بعد",
       "emptyThread": "ابدأ المحادثة",
-      "back": "رجوع"
+      "back": "رجوع",
+      "more": "عرض المزيد"
     },
     "searchPlaceholder": "رقم الطلب أو الغرفة",
     "age": {

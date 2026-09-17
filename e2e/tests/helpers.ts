@@ -202,6 +202,9 @@ export async function guestOrders(
 /** Консьерж обслуживает такси — отдел, отличный от кухни. */
 export const CONCIERGE = { email: 'concierge@crystal.local', password: 'chef12345' }
 
+/** Ресепшен — единственный, кроме администратора, кто читает чат гостей. */
+export const RECEPTION = { email: 'reception@crystal.local', password: 'chef12345' }
+
 export async function staffToken(
   request: APIRequestContext,
   credentials: { email: string; password: string },

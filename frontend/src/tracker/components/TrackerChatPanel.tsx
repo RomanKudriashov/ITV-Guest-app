@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
@@ -39,7 +40,7 @@ export function TrackerChatPanel({ open, onClose }: TrackerChatPanelProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const threadsQuery = useTrackerChatThreads(open);
-  const threads = threadsQuery.data ?? [];
+  const threads = threadsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <Drawer
@@ -68,6 +69,9 @@ export function TrackerChatPanel({ open, onClose }: TrackerChatPanelProps) {
           <ThreadList
             threads={threads}
             loading={threadsQuery.isLoading}
+            hasMore={Boolean(threadsQuery.hasNextPage)}
+            loadingMore={threadsQuery.isFetchingNextPage}
+            onMore={() => void threadsQuery.fetchNextPage()}
             onOpen={setActiveId}
             onClose={onClose}
           />
@@ -80,11 +84,17 @@ export function TrackerChatPanel({ open, onClose }: TrackerChatPanelProps) {
 function ThreadList({
   threads,
   loading,
+  hasMore,
+  loadingMore,
+  onMore,
   onOpen,
   onClose,
 }: {
   threads: TrackerChatThread[];
   loading: boolean;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onMore: () => void;
   onOpen: (id: string) => void;
   onClose: () => void;
 }) {
@@ -141,6 +151,19 @@ function ThreadList({
                 ) : null}
               </ButtonBase>
             ))}
+            {hasMore ? (
+              <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'center' }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={loadingMore}
+                  onClick={onMore}
+                  data-testid="tracker-chat-more"
+                >
+                  {t('tracker.chat.more')}
+                </Button>
+              </Box>
+            ) : null}
           </Stack>
         )}
       </Box>

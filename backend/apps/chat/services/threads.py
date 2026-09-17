@@ -1,5 +1,6 @@
 """
-Сервисный слой чата: тред на номер, снимок для реконсиляции, отправка.
+Сервисный слой чата: тред гостя, права персонала, снимок для реконсиляции,
+отправка.
 
 Снимок — единый формат для REST и WS, чтобы клиент не собирал состояние из
 двух источников. `mine` вычисляется по стороне запроса: одно и то же сообщение
@@ -11,10 +12,12 @@ from __future__ import annotations
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Count, OuterRef, Q, Subquery
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from apps.core.context import require_hotel_id
-from apps.core.errors import NotFoundError, ValidationError
+from apps.core.errors import NotFoundError, PermissionDenied, ValidationError
 from apps.events.bus import CHAT_MESSAGE, emit
 
 from apps.chat.models import ChatMessage, ChatThread
@@ -51,10 +54,49 @@ def _default_point():
     """Куда по умолчанию идёт чат: ресепшн/консьерж, иначе любой отдел."""
     from apps.hotels.models import ExecutionPoint
 
-    reception = ExecutionPoint.objects.filter(
-        kind=ExecutionPoint.Kind.RECEPTION, is_active=True
-    ).first()
-    return reception or ExecutionPoint.objects.filter(is_active=True).order_by("code").first()
+    return reception_point() or ExecutionPoint.objects.filter(is_active=True).order_by("code").first()
+
+
+# --- Кто читает чат --------------------------------------------------------
+
+
+def reception_point():
+    """
+    Ресепшен отеля — ЯВНАЯ точка с кодом `reception`; нет её — первая по коду
+    точка вида «ресепшен». Прежний выбор брал любую точку этого вида, и в
+    «Кристалле» чат уходил консьержу (у него тоже вид «ресепшен»).
+    """
+    from apps.hotels.models import ExecutionPoint
+
+    active = ExecutionPoint.objects.filter(is_active=True)
+    return (
+        active.filter(code="reception").first()
+        or active.filter(kind=ExecutionPoint.Kind.RECEPTION).order_by("code").first()
+    )
+
+
+def can_read_chat(access=None) -> bool:
+    """
+    ЧАТ ГОСТЕЙ ЧИТАЮТ РЕСЕПШЕН И АДМИНИСТРАТОР — больше никто.
+
+    До волны 9 ручка тредов пускала любого, кто вошёл в трекер: повар и
+    горничная читали все переписки отеля со всеми сообщениями. Утечка того же
+    класса, что тред «на номер» (волна 8), только шире.
+    """
+    from apps.accounts.services.roles import current_access
+
+    access = access or current_access()
+    if access.unrestricted:
+        return True
+    point = reception_point()
+    return point is not None and str(point.pk) in access.member_point_ids
+
+
+def require_chat_access() -> None:
+    if not can_read_chat():
+        raise PermissionDenied(
+            "Переписку с гостями ведёт ресепшен", code="chat_forbidden"
+        )
 
 
 def get_thread(thread_id) -> ChatThread:
@@ -158,24 +200,56 @@ def mark_read(thread: ChatThread, *, side: str) -> None:
 # --- Персонал: список тредов -----------------------------------------------
 
 
-def list_threads() -> list[dict]:
-    threads = ChatThread.objects.select_related("room").prefetch_related("messages").order_by(
-        "-last_message_at", "-created_at"
+THREADS_PAGE = 30
+THREADS_PAGE_MAX = 100
+
+
+def list_threads(*, cursor: str | None = None, limit: int | None = None) -> dict:
+    """
+    Диалоги отеля — страницей, свежие сверху.
+
+    Пустые треды в список не попадают: их заводит сама витрина, а персоналу
+    читать нечего. Листание курсором: новые сообщения поднимают диалог наверх
+    прямо во время просмотра, и смещение показало бы часть страницы дважды.
+    `unread_total` — по всем диалогам, а не по странице: его показывает значок.
+    """
+    require_chat_access()
+    page_size = max(1, min(int(limit or THREADS_PAGE), THREADS_PAGE_MAX))
+    unread_filter = Q(messages__author_type="guest", messages__read_by_staff_at__isnull=True)
+    base = ChatThread.objects.filter(last_message_at__isnull=False)
+    queryset = (
+        base.select_related("room")
+        .annotate(unread=Count("messages", filter=unread_filter))
+        .order_by("-last_message_at", "-pk")
     )
-    result = []
-    for thread in threads:
-        messages = list(thread.messages.all())
-        if not messages:
-            continue
-        last = messages[-1]
-        unread = sum(1 for m in messages if m.author_type == "guest" and m.read_by_staff_at is None)
-        result.append(
+    if cursor:
+        at, _, cursor_id = cursor.partition("|")
+        moment = parse_datetime(at.replace(" ", "+")) if at else None
+        if moment is None or not cursor_id:
+            raise ValidationError("Неверный курсор", field="cursor", code="bad_cursor")
+        queryset = queryset.filter(
+            Q(last_message_at__lt=moment) | Q(last_message_at=moment, pk__lt=cursor_id)
+        )
+    last_body = ChatMessage.objects.filter(thread=OuterRef("pk")).order_by("-created_at").values("body")[:1]
+    rows = list(queryset.annotate(last_body=Subquery(last_body))[: page_size + 1])
+    has_more = len(rows) > page_size
+    rows = rows[:page_size]
+    unread_total = ChatMessage.objects.filter(
+        author_type="guest", read_by_staff_at__isnull=True
+    ).count()
+    return {
+        "items": [
             {
                 "thread_id": str(thread.pk),
                 "room": thread.room.number if thread.room_id else None,
-                "last_body": last.body[:120],
-                "last_at": last.created_at.isoformat(),
-                "unread": unread,
+                "last_body": (thread.last_body or "")[:120],
+                "last_at": thread.last_message_at.isoformat(),
+                "unread": thread.unread,
             }
-        )
-    return result
+            for thread in rows
+        ],
+        "next_cursor": (
+            f"{rows[-1].last_message_at.isoformat()}|{rows[-1].pk}" if has_more and rows else None
+        ),
+        "unread_total": unread_total,
+    }

@@ -874,7 +874,8 @@
       "emptyTitle": "暂无消息",
       "emptyBody": "还没有客人留言",
       "emptyThread": "开始对话",
-      "back": "返回"
+      "back": "返回",
+      "more": "显示更多"
     },
     "searchPlaceholder": "订单号或房间号",
     "age": {

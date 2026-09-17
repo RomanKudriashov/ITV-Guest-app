@@ -879,7 +879,8 @@
       "emptyTitle": "No messages",
       "emptyBody": "No guests have written yet",
       "emptyThread": "Start the conversation",
-      "back": "Back"
+      "back": "Back",
+      "more": "Show more"
     },
     "searchPlaceholder": "Order or room number",
     "age": {

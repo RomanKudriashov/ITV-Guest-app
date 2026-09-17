@@ -209,10 +209,13 @@ export function TrackerPage() {
 
   // Threads drive the top-bar badge; the socket of an open thread invalidates
   // this query so the count moves on its own.
-  const threadsQuery = useTrackerChatThreads();
-  const chatUnread = (threadsQuery.data ?? []).reduce((sum, thread) => sum + thread.unread, 0);
-
   const { user } = useAuth();
+  // Чат гостей — ресепшену и администратору. Остальным ни кнопки, ни запроса:
+  // ручка ответила бы им 403.
+  const canChat = Boolean(user?.can_chat);
+  const threadsQuery = useTrackerChatThreads(canChat);
+  const chatUnread = threadsQuery.data?.pages[0]?.unread_total ?? 0;
+
   const pointsQuery = useTrackerPoints();
   const points = pointsQuery.data?.points;
   const { selected: pointCode, select } = usePointSelection(points);
@@ -688,9 +691,9 @@ export function TrackerPage() {
           soundEnabled={sound.enabled}
           onToggleSound={sound.toggle}
           chatUnread={chatUnread}
-          onOpenChat={() => setChatOpen(true)}
+          onOpenChat={canChat ? () => setChatOpen(true) : undefined}
         />
-        <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
+        {canChat ? <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
         <Box data-testid="tracker-no-points" sx={{ pt: 6 }}>
           <EmptyState
             icon={<GroupWorkOutlinedIcon fontSize="large" />}
@@ -732,7 +735,7 @@ export function TrackerPage() {
         soundEnabled={sound.enabled}
         onToggleSound={sound.toggle}
         chatUnread={chatUnread}
-        onOpenChat={() => setChatOpen(true)}
+        onOpenChat={canChat ? () => setChatOpen(true) : undefined}
       />
 
       {/*
@@ -1165,7 +1168,7 @@ export function TrackerPage() {
         </Alert>
       </Snackbar>
 
-      <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
+      {canChat ? <TrackerChatPanel open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
 
       {/*
         ОТМЕНИТЬ ТОЛЬКО ЧТО СДЕЛАННЫЙ ШАГ.

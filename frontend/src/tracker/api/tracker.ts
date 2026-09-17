@@ -11,7 +11,7 @@ import type {
   StatusChangePayload,
   TrackerBoard,
   TrackerChatSnapshot,
-  TrackerChatThread,
+  TrackerChatThreadsPage,
   TrackerOrder,
   TrackerPointsResponse,
   TrackerScope,
@@ -138,10 +138,17 @@ export function trackerSocketUrl(pointCode: string, language?: string): string |
 
 /* ── Chat (staff side) ─────────────────────────────────────────────────── */
 
-/** Threads of the hotel — last message + unread count (contract §3). */
-export function fetchChatThreads(language?: string): Promise<TrackerChatThread[]> {
-  return api.get<TrackerChatThread[]>('/tracker/chat/threads', {
+/**
+ * Dialogs of the hotel, a page at a time (contract §3). Only reception and the
+ * hotel administrator may read them — everyone else gets `403 chat_forbidden`.
+ */
+export function fetchChatThreads(
+  language?: string,
+  cursor?: string | null,
+): Promise<TrackerChatThreadsPage> {
+  return api.get<TrackerChatThreadsPage>('/tracker/chat/threads', {
     headers: langHeaders(language),
+    query: cursor ? { cursor } : undefined,
   });
 }
 

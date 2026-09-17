@@ -334,6 +334,13 @@ def _load_staff_thread(hotel, token: str, thread_id: str, language: str):
         user = authenticate_staff(token)
         if user is None:
             return None, None
+        # Чат гостей — ресепшену и администратору; повару сокет не открываем,
+        # как и ручка (`chat_forbidden`).
+        from apps.accounts.services.roles import access_for
+        from apps.chat.services.threads import can_read_chat
+
+        if not can_read_chat(access_for(user)):
+            return user, None
         # Скоуп отеля обеспечивает RLS: чужой тред не найдётся.
         thread = ChatThread.objects.filter(pk=thread_id).first()
         if thread is None:

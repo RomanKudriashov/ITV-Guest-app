@@ -46,7 +46,7 @@ def test_old_threads_stay_for_the_staff(client, crystal, cms):
     first.post("/api/guest/chat", {"body": "для разбора"})
     guest_for(client, crystal, room="212").post("/api/guest/chat", {"body": "другой гость"})
 
-    threads = staff_call(client, crystal, "concierge")("/api/tracker/chat/threads").json()
+    threads = staff_call(client, crystal, "reception")("/api/tracker/chat/threads").json()["items"]
     with tenant_context(crystal):
         assert ChatThread.objects.filter(room__number="212").count() == 2, "номер виден у обоих"
     assert len([t for t in threads if t.get("room") == "212"]) == 2
