@@ -3519,6 +3519,28 @@
       "guestLeft": "客人已离店",
       "delivered": "已发送到客人聊天 · {{by}}",
       "keptOnly": "未送达——客人已离店，回复仅保存 · {{by}}"
+    },
+    "investigation": {
+      "open": "调查",
+      "title": "评价调查",
+      "what": "评价调查",
+      "head": "{{rating}}/5 · 订单 #{{number}}",
+      "order": "订单",
+      "guestComment": "客人备注：{{comment}}",
+      "waited": "客人等待：{{time}}",
+      "chat": "订单期间的客人聊天",
+      "noChat": "订单期间客人未在聊天中留言",
+      "minutes_other": "{{count}} 分钟",
+      "overdue_other": "超时 {{count}} 分钟",
+      "inTime": "按时",
+      "led": "负责人：{{who}}",
+      "nobody": "无人接单",
+      "reaction": "接单用时",
+      "work": "处理",
+      "sla": "时限（下单时）",
+      "reopened": "订单曾被重新处理",
+      "noEscalation": "无升级",
+      "escalated_other": "升级 {{count}} 次，时间 {{times}}"
     }
   }
 }

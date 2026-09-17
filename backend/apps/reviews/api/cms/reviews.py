@@ -54,6 +54,13 @@ def reviews_summary(
     )
 
 
+@router.get("/reviews/{review_id}", summary="Расследование отзыва — всё на одном экране")
+def investigate(request: HttpRequest, review_id: str):
+    from apps.reviews.services.investigation import investigation
+
+    return investigation(review_id, language=current_language())
+
+
 @router.post("/reviews/{review_id}/reply", summary="Ответить гостю")
 def reply(request: HttpRequest, review_id: str, payload: ReviewReplyIn):
     return svc.reply_to_review(review_id, user=request.user, text=payload.text)

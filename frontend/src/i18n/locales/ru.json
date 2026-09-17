@@ -3584,6 +3584,37 @@
       "guestLeft": "Гость уже не в отеле",
       "delivered": "Отправлено гостю в чат · {{by}}",
       "keptOnly": "Не доставлено — гость уже уехал, ответ только сохранён · {{by}}"
+    },
+    "investigation": {
+      "open": "Разобрать",
+      "title": "Разбор отзыва",
+      "what": "разбор отзыва",
+      "head": "{{rating}} из 5 · заказ №{{number}}",
+      "order": "Заказ",
+      "guestComment": "Комментарий гостя: {{comment}}",
+      "waited": "Гость ждал: {{time}}",
+      "chat": "Чат гостя за время заказа",
+      "noChat": "Гость не писал в чат за время заказа",
+      "minutes_one": "{{count}} минута",
+      "minutes_few": "{{count}} минуты",
+      "minutes_many": "{{count}} минут",
+      "minutes_other": "{{count}} минуты",
+      "overdue_one": "Просрочка +{{count}} минута",
+      "overdue_few": "Просрочка +{{count}} минуты",
+      "overdue_many": "Просрочка +{{count}} минут",
+      "overdue_other": "Просрочка +{{count}} минуты",
+      "inTime": "В срок",
+      "led": "Вёл: {{who}}",
+      "nobody": "никто не брал",
+      "reaction": "Взяли через",
+      "work": "Работа",
+      "sla": "Порог (на момент заказа)",
+      "reopened": "Заказ возвращали в работу",
+      "noEscalation": "Эскалаций не было",
+      "escalated_one": "Эскалация: {{count}} раз, в {{times}}",
+      "escalated_few": "Эскалация: {{count}} раза, в {{times}}",
+      "escalated_many": "Эскалация: {{count}} раз, в {{times}}",
+      "escalated_other": "Эскалация: {{count}} раза, в {{times}}"
     }
   }
 }

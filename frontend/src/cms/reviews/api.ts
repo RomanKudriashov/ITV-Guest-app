@@ -59,7 +59,11 @@ function toQuery(filters: ReviewsFilters, extra: Record<string, string | number>
 }
 
 /** Фильтры уходят на сервер целиком: отсев страницы врал бы счётчиком. */
-export function fetchReviewsPage(filters: ReviewsFilters, offset = 0, limit = 25): Promise<ReviewsPage> {
+export function fetchReviewsPage(
+  filters: ReviewsFilters,
+  offset = 0,
+  limit = 25,
+): Promise<ReviewsPage> {
   return api.get<ReviewsPage>(`/cms/reviews?${toQuery(filters, { offset, limit })}`);
 }
 
@@ -69,4 +73,57 @@ export function fetchReviewsSummary(filters: ReviewsFilters): Promise<ReviewsSum
 
 export function replyToReview(reviewId: string, text: string): Promise<CmsReview> {
   return api.post<CmsReview>(`/cms/reviews/${reviewId}/reply`, { text });
+}
+
+export interface InvestigationPart {
+  order_id: string;
+  number: number;
+  point: { id: string; title: string };
+  status: string;
+  delivery_mode: string;
+  location: string;
+  /** Кто вёл: взявший заказ, иначе первый, кто двигал статус. */
+  assignee: string | null;
+  created_at: string;
+  accepted_at: string | null;
+  closed_at: string | null;
+  reopened: boolean;
+  reaction_minutes: number | null;
+  work_minutes: number | null;
+  total_minutes: number | null;
+  /** Порог просрочки снимком на момент заказа. */
+  sla_minutes: number | null;
+  overdue_minutes: number;
+  was_overdue: boolean;
+  escalations: { step: number; at: string; status: string; target: string }[];
+  history: {
+    title: string;
+    at: string;
+    by: string | null;
+    actor_type: string;
+    comment: string;
+  }[];
+}
+
+export interface ReviewInvestigation {
+  review: CmsReview;
+  order: {
+    id: string;
+    number: number;
+    room: string;
+    created_at: string;
+    closed_at: string | null;
+    total_minutes: number | null;
+    total: number | null;
+    currency: string;
+    lines: { title: string; quantity: number }[];
+    comment: string;
+  };
+  parts: InvestigationPart[];
+  chat: { author_type: 'guest' | 'staff'; author: string; body: string; at: string }[];
+  chat_window: { from: string; to: string };
+}
+
+export function fetchInvestigation(reviewId: string): Promise<ReviewInvestigation> {
+  return api.get<ReviewInvestigation>(`/cms/reviews/${reviewId}`);
 }

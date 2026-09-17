@@ -188,6 +188,7 @@
 | GET | `/api/v1/tracker/order/{id}` | объект заказа получает блок `review` |
 | GET | `/api/v1/cms/reviews?point_id=&rating=&date_from=&date_to=&limit=&offset=` | раздел «Отзывы»: конверт `{items, total, limit, offset, truncated}` |
 | GET | `/api/v1/cms/reviews/summary?…те же фильтры` | `{count, avg_rating, low, low_rate, low_threshold, trend[]{day, count, avg_rating, low}}` |
+| GET | `/api/v1/cms/reviews/{id}` | расследование — всё на одном экране (ниже) |
 | POST | `/api/v1/cms/reviews/{id}/reply` | `{text}` → отзыв; повтор — `409 reply_exists` |
 
 Кто видит: администратор отеля — все отзывы, руководитель — отзывы заказов
@@ -209,6 +210,30 @@
  "guest_reachable": true,     // сессия гостя жива — ответ дойдёт
  "reply": null | {"text": "…", "at": "…", "by": "Ольга", "delivered": true}}
 ```
+
+**Расследование** `GET /cms/reviews/{id}`:
+```jsonc
+{"review": { /* элемент списка */ },
+ "order": {"id", "number", "room", "created_at", "closed_at", "total_minutes",
+           "total", "currency", "lines": [{"title", "quantity"}], "comment"},
+ "parts": [{            // части заказа; у обычного — он сам
+   "order_id", "number", "point": {"id", "title"}, "status", "delivery_mode", "location",
+   "assignee": "Иван",   // взявший; иначе первый, кто двигал статус; null — только система
+   "created_at", "accepted_at", "closed_at", "reopened",
+   "reaction_minutes", "work_minutes", "total_minutes",
+   "sla_minutes": 20,    // ПОРОГ СНИМКОМ НА МОМЕНТ ЗАКАЗА (Order.sla_minutes)
+   "was_overdue": true, "overdue_minutes": 30,
+   "escalations": [{"step", "at", "status", "target"}],  // сработавшие ступени с задержкой > 0
+   "history": [{"title", "at", "by", "actor_type", "comment"}]}],
+ "chat": [{"author_type", "author", "body", "at"}],
+ "chat_window": {"from", "to"}}
+```
+Просрочка — работа (от возврата в работу или создания до закрытия) больше
+снимка порога. Смена настройки точки прошлое не переписывает; у заказов до
+волны 8 снимок — настройка на момент миграции. Эскалация — ступень, которая
+сработала (`sent`/`failed`) и стояла позже создания: нулевая ступень «сразу в
+отдел» и погашенные ступени эскалацией не считаются. Чат — сообщения тредов
+сессии гостя от 30 минут до заказа до момента отзыва.
 
 **Ответ гостю.** Сессия жива — ответ уходит сообщением персонала в чат гостя
 и хранится на отзыве (`delivered: true`). Сессия мертва (выезд, истечение) —

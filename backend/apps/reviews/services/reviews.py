@@ -12,7 +12,7 @@ from datetime import date, datetime, time, timedelta
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, F, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
@@ -86,6 +86,7 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
         guest_session=guest_session,
         rating=int(rating),
         comment=(comment or "").strip()[:2000],
+        low_threshold=hotel.review_low_threshold,
     )
 
     # Аналитике нужен КАЖДЫЙ отзыв, не только низкий — отдельным событием.
@@ -96,7 +97,7 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
         actor_type="guest",
     )
 
-    if review.rating <= hotel.review_low_threshold:
+    if review.is_low:
         # Service recovery: разбудить менеджера до отъезда гостя.
         emit(
             REVIEW_LOW,
@@ -154,7 +155,8 @@ def reviews_queryset(*, point_id=None, rating=None, date_from=None, date_to=None
     # «Низкие» — словом, а не списком чисел: порог — настройка отеля, и
     # экран не должен знать его, чтобы попросить именно низкие.
     if rating == "low":
-        queryset = queryset.filter(rating__lte=current_hotel().review_low_threshold)
+        # По снимку на отзыве: смена порога не переписывает прошлые отзывы.
+        queryset = queryset.filter(rating__lte=F("low_threshold"))
     elif rating:
         try:
             wanted = sorted({int(part) for part in str(rating).split(",") if part.strip()})
@@ -211,7 +213,7 @@ def serialize_cms_review(review: Review, language=None) -> dict:
         "order_number": order.number,
         "room": order.room.number if order.room_id else "",
         "points": _points_of(review, language),
-        "is_low": review.rating <= order.hotel.review_low_threshold,
+        "is_low": review.is_low,
         "guest_reachable": guest_reachable(review),
         "reply": _reply_payload(review, staff=True),
     }
@@ -242,14 +244,12 @@ def reviews_summary(*, point_id=None, rating=None, date_from=None, date_to=None)
     queryset = reviews_queryset(point_id=point_id, rating=rating, date_from=date_from, date_to=date_to)
     # distinct() и агрегаты не дружат: считаем по id, отобранным без размножения.
     base = Review.objects.filter(pk__in=queryset.values("pk"))
-    low_edge = hotel.review_low_threshold
-    totals = base.aggregate(
-        count=Count("pk"), avg=Avg("rating"), low=Count("pk", filter=Q(rating__lte=low_edge))
-    )
+    is_low = Q(rating__lte=F("low_threshold"))
+    totals = base.aggregate(count=Count("pk"), avg=Avg("rating"), low=Count("pk", filter=is_low))
     by_day = (
         base.annotate(day=TruncDate("created_at", tzinfo=hotel.tzinfo))
         .values("day")
-        .annotate(count=Count("pk"), avg=Avg("rating"), low=Count("pk", filter=Q(rating__lte=low_edge)))
+        .annotate(count=Count("pk"), avg=Avg("rating"), low=Count("pk", filter=is_low))
         .order_by("day")
     )
     count = totals["count"] or 0
@@ -258,7 +258,8 @@ def reviews_summary(*, point_id=None, rating=None, date_from=None, date_to=None)
         "avg_rating": round(totals["avg"], 2) if totals["avg"] is not None else None,
         "low": totals["low"] or 0,
         "low_rate": round((totals["low"] or 0) / count, 4) if count else None,
-        "low_threshold": low_edge,
+        # Текущий порог — для подписи; сами отзывы считаются по своему снимку.
+        "low_threshold": hotel.review_low_threshold,
         "trend": [
             {
                 "day": row["day"].isoformat(),

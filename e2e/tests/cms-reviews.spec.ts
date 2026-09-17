@@ -34,6 +34,7 @@ async function reviewedOrder(
   room: string,
   rating: number,
   comment: string,
+  chat?: string,
 ): Promise<{ guest: string; number: number; reviewId: string }> {
   const guest = await guestSession(request, room)
   const menu = await (
@@ -48,6 +49,13 @@ async function reviewedOrder(
   })
   expect(placed.ok(), await placed.text()).toBeTruthy()
   const order = await placed.json()
+  if (chat) {
+    const sent = await request.post(`${API}/api/guest/chat`, {
+      data: { body: chat },
+      headers: guestHeaders(guest),
+    })
+    expect(sent.ok(), await sent.text()).toBeTruthy()
+  }
   await moveOrderStatus(request, staff, order.id, 'done')
   const review = await request.post(`${API}/api/guest/order/${order.id}/review`, {
     data: { rating, comment },
@@ -126,6 +134,36 @@ test.describe('CMS: раздел «Отзывы»', () => {
     await expect(row.getByTestId(`reviews-reply-status-${number}`)).toContainText('Не доставлено', {
       timeout: 15_000,
     })
+  })
+
+  test('разбор: заказ, часть, кто вёл, в срок ли и что гость писал в чат', async ({
+    page,
+    request,
+  }) => {
+    const admin = await apiToken(request)
+    const chat = `где мой заказ ${Date.now().toString(36)}`
+    const { number } = await reviewedOrder(request, admin, '305', 1, 'так и не дождались', chat)
+
+    await signInToCms(page, ADMIN)
+    await page.goto('/cms/reviews?rating=low')
+    const row = page.getByTestId(`reviews-row-${number}`)
+    await expect(row).toBeVisible({ timeout: 20_000 })
+    await row.getByTestId(`reviews-investigate-${number}`).click()
+
+    const panel = page.getByTestId('review-investigation')
+    await expect(panel.getByTestId('review-investigation-head')).toContainText(`№${number}`, {
+      timeout: 15_000,
+    })
+    await expect(panel.getByTestId(`review-part-${number}`)).toContainText('Вёл:')
+    // Закрыли сразу — в срок; порог — снимок на момент заказа.
+    await expect(panel.getByTestId(`review-part-intime-${number}`)).toBeVisible()
+    await expect(panel.getByTestId(`review-part-escalations-${number}`)).toContainText(
+      'Эскалаций не было',
+    )
+    await expect(panel.getByTestId('review-investigation-chat')).toContainText(chat)
+
+    await panel.getByTestId('review-investigation-close').click()
+    await expect(panel).toBeHidden()
   })
 
   test('фильтр «только низкие» и чужое заведение', async ({ page, request }) => {

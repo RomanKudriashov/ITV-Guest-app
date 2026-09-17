@@ -3549,6 +3549,31 @@
       "guestLeft": "Guest has left",
       "delivered": "Sent to the guest chat · {{by}}",
       "keptOnly": "Not delivered — the guest has left, reply kept only · {{by}}"
+    },
+    "investigation": {
+      "open": "Investigate",
+      "title": "Review investigation",
+      "what": "review investigation",
+      "head": "{{rating}} of 5 · order #{{number}}",
+      "order": "Order",
+      "guestComment": "Guest comment: {{comment}}",
+      "waited": "Guest waited: {{time}}",
+      "chat": "Guest chat during the order",
+      "noChat": "The guest did not write in chat during the order",
+      "minutes_one": "{{count}} minute",
+      "minutes_other": "{{count}} minutes",
+      "overdue_one": "Late by {{count}} minute",
+      "overdue_other": "Late by {{count}} minutes",
+      "inTime": "On time",
+      "led": "Handled by: {{who}}",
+      "nobody": "nobody took it",
+      "reaction": "Taken after",
+      "work": "Work",
+      "sla": "Target (at order time)",
+      "reopened": "The order was reopened",
+      "noEscalation": "No escalations",
+      "escalated_one": "Escalated {{count}} time, at {{times}}",
+      "escalated_other": "Escalated {{count}} times, at {{times}}"
     }
   }
 }

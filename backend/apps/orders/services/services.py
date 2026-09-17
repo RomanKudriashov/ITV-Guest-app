@@ -30,7 +30,7 @@ from apps.catalog.models import Category, Item, ModifierOption, Route
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import build_field_snapshot
 from apps.catalog.services import slots as slot_svc
-from apps.orders.services.tracker_types import guest_card_for_order
+from apps.orders.services.tracker_types import effective_sla_minutes, guest_card_for_order
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -191,6 +191,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         # Способ — из вида места, снимком: смена вида локации потом не
         # перепишет, как получали уже сделанный заказ.
         delivery_mode=delivery_mode_of(location),
+        sla_minutes=effective_sla_minutes(execution_point),
         requested_time=requested_time,
         comment=data.comment,
         status=status,
@@ -574,6 +575,7 @@ def _create_fanned_order(
         location_refinement=common_refinement[:128],
         # Все части забирают сами — агрегат тоже «выдача»; иначе — доставка.
         delivery_mode=modes.pop() if len(modes) == 1 else Order.DeliveryMode.DELIVERY,
+        sla_minutes=effective_sla_minutes(aggregator.execution_point),
         requested_time=requested_time,
         comment=data.comment,
         status=status,
@@ -598,6 +600,7 @@ def _create_fanned_order(
             location=placed[ep_id][0],
             location_refinement=placed[ep_id][1][:128],
             delivery_mode=delivery_mode_of(placed[ep_id][0]),
+            sla_minutes=effective_sla_minutes(ep),
             requested_time=requested_time,
             comment=data.comment,
             status=child_status,

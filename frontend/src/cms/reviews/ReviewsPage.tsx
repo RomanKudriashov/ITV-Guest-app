@@ -25,6 +25,7 @@ import {
   type ReviewsPage as ReviewsPageBody,
 } from './api';
 import { ReviewCard } from './ReviewCard';
+import { ReviewInvestigationPanel } from './ReviewInvestigationPanel';
 
 const DEFAULTS = { point_id: '', rating: '', date_from: '', date_to: '' };
 
@@ -48,6 +49,8 @@ export function ReviewsPage() {
   // Листание — в состоянии, не в адресе: это место в списке, а не фильтр.
   const [extra, setExtra] = useState<CmsReview[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Открытое расследование — в адресе нет: это не фильтр, а взгляд на одну запись.
+  const [investigating, setInvestigating] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const scope = useQuery({ queryKey: ['cms', 'analytics', 'scope'], queryFn: fetchScope });
@@ -84,7 +87,9 @@ export function ReviewsPage() {
   // перечитывание сбросило бы догруженные страницы.
   const replace = (next: CmsReview) => {
     queryClient.setQueryData<ReviewsPageBody>(['cms', 'reviews', 'list', params], (page) =>
-      page ? { ...page, items: page.items.map((item) => (item.id === next.id ? next : item)) } : page,
+      page
+        ? { ...page, items: page.items.map((item) => (item.id === next.id ? next : item)) }
+        : page,
     );
     setExtra((previous) => previous.map((item) => (item.id === next.id ? next : item)));
   };
@@ -171,7 +176,11 @@ export function ReviewsPage() {
       </Card>
 
       <Box
-        sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}
+        sx={{
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+        }}
       >
         <StatTile
           testId="reviews-count"
@@ -233,7 +242,12 @@ export function ReviewsPage() {
                 {t('reviews.shown', { shown: rows.length, total: page.total })}
               </Typography>
               {rows.map((review) => (
-                <ReviewCard key={review.id} review={review} onChanged={replace} />
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  onChanged={replace}
+                  onInvestigate={setInvestigating}
+                />
               ))}
               {rows.length < page.total ? (
                 <Button
@@ -250,6 +264,8 @@ export function ReviewsPage() {
           );
         }}
       </QueryState>
+
+      <ReviewInvestigationPanel reviewId={investigating} onClose={() => setInvestigating(null)} />
     </Stack>
   );
 }

@@ -28,9 +28,11 @@ import { replyToReview, type CmsReview } from './api';
 export function ReviewCard({
   review,
   onChanged,
+  onInvestigate,
 }: {
   review: CmsReview;
   onChanged: (next: CmsReview) => void;
+  onInvestigate: (reviewId: string) => void;
 }) {
   const { t } = useTranslation();
   const language = useAnalyticsLanguage();
@@ -100,27 +102,41 @@ export function ReviewCard({
           </Typography>
 
           {review.reply ? (
-            <Box
-              data-testid={`reviews-reply-${review.order_number}`}
-              sx={{ borderLeft: 3, borderColor: 'divider', pl: 1.5 }}
-            >
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {review.reply.text}
-              </Typography>
-              <Typography
-                variant="caption"
-                color={review.reply.delivered ? 'text.secondary' : 'warning.main'}
-                data-testid={`reviews-reply-status-${review.order_number}`}
+            <Stack spacing={1}>
+              <Box
+                data-testid={`reviews-reply-${review.order_number}`}
+                sx={{ borderLeft: 3, borderColor: 'divider', pl: 1.5 }}
               >
-                {review.reply.delivered
-                  ? t('reviews.reply.delivered', { by: review.reply.by })
-                  : t('reviews.reply.keptOnly', { by: review.reply.by })}
-              </Typography>
-            </Box>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {review.reply.text}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color={review.reply.delivered ? 'text.secondary' : 'warning.main'}
+                  data-testid={`reviews-reply-status-${review.order_number}`}
+                >
+                  {review.reply.delivered
+                    ? t('reviews.reply.delivered', { by: review.reply.by })
+                    : t('reviews.reply.keptOnly', { by: review.reply.by })}
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => onInvestigate(review.id)}
+                data-testid={`reviews-investigate-${review.order_number}`}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {t('reviews.investigation.open')}
+              </Button>
+            </Stack>
           ) : open ? (
             <Stack spacing={1}>
               {review.guest_reachable ? null : (
-                <Alert severity="warning" data-testid={`reviews-unreachable-${review.order_number}`}>
+                <Alert
+                  severity="warning"
+                  data-testid={`reviews-unreachable-${review.order_number}`}
+                >
                   {t('reviews.reply.unreachable')}
                 </Alert>
               )}
@@ -132,11 +148,16 @@ export function ReviewCard({
                 placeholder={t('reviews.reply.placeholder')}
                 value={text}
                 onChange={(event) => setText(event.target.value)}
-                inputProps={{ 'data-testid': `reviews-reply-input-${review.order_number}`, maxLength: 2000 }}
+                inputProps={{
+                  'data-testid': `reviews-reply-input-${review.order_number}`,
+                  maxLength: 2000,
+                }}
               />
               {mutation.error ? (
                 <Alert severity="error">
-                  {mutation.error instanceof Error ? mutation.error.message : t('reviews.reply.failed')}
+                  {mutation.error instanceof Error
+                    ? mutation.error.message
+                    : t('reviews.reply.failed')}
                 </Alert>
               ) : null}
               <Stack direction="row" spacing={1}>
@@ -153,6 +174,14 @@ export function ReviewCard({
             </Stack>
           ) : (
             <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => onInvestigate(review.id)}
+                data-testid={`reviews-investigate-${review.order_number}`}
+              >
+                {t('reviews.investigation.open')}
+              </Button>
               <Button
                 size="small"
                 onClick={() => setOpen(true)}

@@ -327,6 +327,9 @@
   "/api/v1/cms/reviews/summary": [
     "GET"
   ],
+  "/api/v1/cms/reviews/{review_id}": [
+    "GET"
+  ],
   "/api/v1/cms/reviews/{review_id}/reply": [
     "POST"
   ],

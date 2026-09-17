@@ -196,14 +196,13 @@ def _chat(code: str) -> Example | None:
 
 
 def _review(code: str) -> Example | None:
-    from apps.hotels.models import Hotel
+    from django.db.models import F
+
     from apps.reviews.models import Review
     from apps.reviews.services import review_points
 
-    hotel = Hotel.objects.get(pk=require_hotel_id())
-    threshold = getattr(hotel, "review_low_threshold", 2)
     review = (
-        Review.objects.filter(rating__lte=threshold)
+        Review.objects.filter(rating__lte=F("low_threshold"))
         .select_related("order__room")
         .order_by("-created_at")
         .first()

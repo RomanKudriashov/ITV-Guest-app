@@ -474,7 +474,8 @@ def build_session(session, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
 
 def build_review(review, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
     order = review.order
-    low = 1 if review.rating <= hotel.review_low_threshold else 0
+    # Снимок порога на отзыве — тот же ответ, что в разделе «Отзывы».
+    low = 1 if review.is_low else 0
     return [
         {
             "dedupe_key": f"review:{review.pk}",
