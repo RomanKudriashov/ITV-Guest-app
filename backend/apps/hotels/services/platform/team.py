@@ -129,9 +129,16 @@ def update_member(user_id: str, *, role: str | None, is_active: bool | None, act
             raise ValidationError("Нельзя снять с себя роль владельца", field="role")
 
         if fields:
+            deactivated = fields.get("is_active") is False and member.is_active
             User.all_objects.using("platform").filter(pk=member.pk).update(**fields)
             for key, value in fields.items():
                 setattr(member, key, value)
+            if deactivated:
+                # Отключённый участник — без живых входов в консоль: иначе они
+                # висят в реестре, а выйти из-под отключённого нельзя.
+                from apps.accounts.services import sessions as session_svc
+
+                session_svc.revoke_all(member.pk, scope="platform")
     return member
 
 

@@ -800,3 +800,25 @@ def test_modules_registry_lists_every_known_code(api):
     hotel = _hotel("allmods", "Все модули")
     modules = api("get", f"/hotels/{hotel.pk}/modules").json()["modules"]
     assert {entry["code"] for entry in modules} == set(HotelModule.Code.values)
+
+
+def test_switching_a_team_member_off_closes_their_console_sessions(client, api):
+    """Отключённый участник — без живых входов в консоль: выйти из-под него нельзя."""
+    from django.utils import timezone
+
+    from apps.accounts.models import StaffSession
+    from apps.core.context import platform_scope
+
+    invited = api("post", "/team", {"email": "leaving@platform.test", "role": "support"}).json()
+    _login(client, "leaving@platform.test", invited["password"])
+    member_id = invited["member"]["id"]
+
+    def live() -> int:
+        with platform_scope():
+            return StaffSession.all_objects.using("platform").filter(
+                user_id=member_id, revoked_at__isnull=True, expires_at__gt=timezone.now()
+            ).count()
+
+    assert live() == 1
+    assert api("patch", f"/team/{member_id}", {"is_active": False}).status_code == 200
+    assert live() == 0

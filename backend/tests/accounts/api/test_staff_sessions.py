@@ -206,3 +206,62 @@ def test_a_long_history_comes_in_pages_and_the_current_one_is_always_there(api):
 
     capped = call("get", "/staff/auth/sessions?limit=10000", mine["access"]).json()
     assert capped["limit"] == 100, "страница не безразмерная, сколько ни попроси"
+
+
+def _staff_member(call, admin_access, email):
+    created = call(
+        "post", "/cms/staff", admin_access,
+        {"email": email, "full_name": "Уходящий", "password": "cook-12345"},
+    )
+    assert created.status_code == 201, created.content
+    return created.json()["id"]
+
+
+def _live_sessions(hotel, email) -> int:
+    with tenant_context(hotel):
+        return StaffSession.objects.filter(
+            user__email=email, revoked_at__isnull=True, expires_at__gt=timezone.now()
+        ).count()
+
+
+def _login_as(client, hotel, email, password="cook-12345"):
+    from django.test import Client
+
+    response = Client().post(
+        "/api/v1/staff/auth/login",
+        data=json.dumps({"email": email, "password": password}),
+        content_type="application/json", HTTP_HOST=host_for(hotel),
+    )
+    assert response.status_code == 200, response.content
+    return response.json()
+
+
+def test_switching_a_member_off_closes_their_sessions(api, hotel, client):
+    """Выйти из-под выключенного нельзя — его входы закрываются сразу."""
+    login, refresh, call = api
+    admin = login()
+    member_id = _staff_member(call, admin["access"], "off@sessions.test")
+    first = _login_as(client, hotel, "off@sessions.test")
+    _login_as(client, hotel, "off@sessions.test")
+    assert _live_sessions(hotel, "off@sessions.test") == 2
+
+    response = call("patch", f"/cms/staff/{member_id}", admin["access"], {"is_active": False})
+    assert response.status_code == 200, response.content
+    assert _live_sessions(hotel, "off@sessions.test") == 0
+    assert refresh(first["refresh"]) == 401
+    assert _live_sessions(hotel, STAFF[0]) >= 1, "сессии того, кто выключал, не тронуты"
+
+
+def test_deleting_a_member_closes_their_sessions(api, hotel, client):
+    login, _refresh, call = api
+    admin = login()
+    member_id = _staff_member(call, admin["access"], "gone@sessions.test")
+    _login_as(client, hotel, "gone@sessions.test")
+    assert _live_sessions(hotel, "gone@sessions.test") == 1
+
+    assert call("delete", f"/cms/staff/{member_id}", admin["access"]).status_code == 200
+    with tenant_context(hotel):
+        live = StaffSession.all_objects.filter(
+            user__email="gone@sessions.test", revoked_at__isnull=True
+        ).count()
+    assert live == 0

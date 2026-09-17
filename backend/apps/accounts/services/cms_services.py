@@ -249,9 +249,11 @@ def update_staff(user_id, data: dict, *, acting_user_id=None, current_session_id
             # Иначе управляющий за один PATCH выписал бы себе весь отель.
             raise NotMyService("Права администратора отеля выдаёт администратор отеля")
         user.is_hotel_admin = data["is_hotel_admin"]
+    deactivated = False
     if "is_active" in data:
         if data["is_active"] is False:
             _guard_self(user, acting_user_id, "деактивировать")
+            deactivated = user.is_active
         user.is_active = data["is_active"]
     # Пустой пароль в PATCH — «не менять», как маска секрета у каналов.
     password_changed = bool(data.get("password"))
@@ -261,6 +263,14 @@ def update_staff(user_id, data: dict, *, acting_user_id=None, current_session_id
 
     user.save()
 
+    if deactivated:
+        # ВЫКЛЮЧЕННЫЙ — БЕЗ ЖИВЫХ ВХОДОВ. Войти он и так не сможет (проверка
+        # доступа смотрит на `is_active`), но строки сессий остались бы живыми
+        # навсегда: выйти из-под выключенного нельзя. Администратор видел бы в
+        # реестре живые входы уволенного и не понял бы, откуда они.
+        from apps.accounts.services import sessions as session_svc
+
+        session_svc.revoke_all(user.pk)
     if password_changed:
         # Смена пароля закрывает сессии — все, кроме той, из которой её и
         # сделали. Раньше это решал отпечаток пароля в токене: он рвал ВСЁ
@@ -290,6 +300,10 @@ def replace_assignments(user_id, assignments: Iterable[dict]) -> User:
 def delete_staff(user_id, *, acting_user_id=None) -> None:
     user = get_staff(user_id)
     _guard_self(user, acting_user_id, "удалить")
+    from apps.accounts.services import sessions as session_svc
+
+    # Удалённый — без живых входов, по той же причине, что и выключенный.
+    session_svc.revoke_all(user.pk)
     StaffAssignment.objects.filter(user=user).delete()
     user.delete()
 
