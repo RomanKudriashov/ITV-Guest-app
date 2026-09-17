@@ -112,3 +112,25 @@ def test_a_new_member_of_the_reception_gets_in(client, crystal, thread_id):
         user = User.objects.get(email="maid@crystal.local")
         StaffAssignment.objects.create(user=user, execution_point=ExecutionPoint.objects.get(code="reception"))
     assert staff_call(client, crystal, "maid")("/api/tracker/chat/threads").status_code == 200
+
+
+# --- Ресепшен — точка входа ------------------------------------------------------
+
+
+def test_a_guest_writes_to_the_reception(client, crystal, settings, django_capture_on_commit_callbacks):
+    from apps.notifications.models import EventRecord
+
+    settings.NOTIFICATIONS_ENABLED = True
+    guest = guest_for(client, crystal, room="212")
+    with tenant_context(crystal):
+        from apps.notifications.services import event_settings
+
+        event_settings.save("chat.guest_message", {"enabled": True})
+    with django_capture_on_commit_callbacks(execute=True):
+        thread_id = guest.post("/api/guest/chat", {"body": "где полотенца"}).json()["thread_id"]
+    with tenant_context(crystal):
+        assert ChatThread.objects.get(pk=thread_id).execution_point.code == "reception", "не консьержу"
+        records = EventRecord.objects.filter(code="chat.guest_message")
+        assert set(records.values_list("execution_point__code", flat=True)) == {"reception"}, (
+            "уведомление о сообщении гостя — ресепшену"
+        )
