@@ -253,7 +253,7 @@ def test_review_is_private_visible_to_staff_only(client, crystal, guest):
     # роли, и линейный повар туда не входит.
     assert staff_call(client, crystal, "chef")("/api/cms/reviews").status_code == 403
 
-    reviews = staff_call(client, crystal, "owner")("/api/cms/reviews").json()
+    reviews = staff_call(client, crystal, "owner")("/api/cms/reviews").json()["items"]
     assert any(r["comment"] == "супер" for r in reviews)
 
     # Другой гость — нет: у отзыва нет публичного эндпоинта, а чужой заказ 404.

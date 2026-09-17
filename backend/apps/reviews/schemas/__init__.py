@@ -13,3 +13,7 @@ class ReviewIn(Schema):
 class ReviewSettingsIn(Schema):
     enabled: bool | None = None
     low_rating_threshold: int | None = None
+
+
+class ReviewReplyIn(Schema):
+    text: str

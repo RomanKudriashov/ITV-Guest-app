@@ -69,7 +69,8 @@
     "pms": "酒店管理系统",
     "mobileKey": "手机钥匙",
     "open": "打开菜单",
-    "orders": "订单"
+    "orders": "订单",
+    "reviews": "评价"
   },
   "dictionaries": {
     "title": "字典",
@@ -646,7 +647,8 @@
       "close": "关闭",
       "homeTitle": "为订单 #{{number}} 评分：{{what}}",
       "homeTitleShort": "为订单 #{{number}} 评分",
-      "homeWhatMore": "{{summary}} 等 {{count}} 项"
+      "homeWhatMore": "{{summary}} 等 {{count}} 项",
+      "hotelReply": "酒店回复"
     },
     "session": {
       "current": "您在 {{room}} 房",
@@ -3473,6 +3475,50 @@
       "categoryCascade": "连同项目和子分类一起删除",
       "loadFailed": "项目加载失败",
       "what": "项目"
+    }
+  },
+  "reviews": {
+    "title": "评价",
+    "subtitle": "客人对已完成订单的评分。仅酒店可见：管理员可见全部，经理仅可见其负责的场所。",
+    "what": "评价",
+    "emptyHint": "客人为已完成订单评分后，评价会显示在这里。",
+    "shown": "已显示 {{shown}} / {{total}}",
+    "loadMore": "显示更多",
+    "trend": "每日平均评分",
+    "filters": {
+      "venue": "场所",
+      "allVenues": "全部场所",
+      "rating": "评分",
+      "anyRating": "任意",
+      "low": "仅低分",
+      "stars_other": "{{count}} 星",
+      "since": "从",
+      "until": "至",
+      "reset": "重置"
+    },
+    "numbers": {
+      "count": "评价数",
+      "avg": "平均评分",
+      "low": "低分（≤ {{threshold}}）"
+    },
+    "row": {
+      "rating": "评分 {{rating}}/5",
+      "order": "订单 #{{number}}",
+      "room": "房间 {{room}}",
+      "low": "低分",
+      "noComment": "无评论"
+    },
+    "reply": {
+      "open": "回复客人",
+      "placeholder": "酒店对客人的回复",
+      "send": "发送到客人聊天",
+      "keep": "保存回复",
+      "cancel": "取消",
+      "failed": "回复未保存",
+      "unreachable": "客人已不在酒店，回复无法送达。回复将保存在评价中，以表明酒店已作出回应。",
+      "guestLeft": "客人已离店",
+      "delivered": "已发送到客人聊天 · {{by}}",
+      "keptOnly": "未送达——客人已离店，回复仅保存 · {{by}}"
     }
   }
 }

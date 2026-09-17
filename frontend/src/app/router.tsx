@@ -16,6 +16,7 @@ import { SettingsPage } from '@/cms/settings/SettingsPage';
 import { DashboardPage } from '@/cms/dashboard/DashboardPage';
 import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
+import { ReviewsPage } from '@/cms/reviews/ReviewsPage';
 import { BadgesPage } from '@/cms/badges/BadgesPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
 import { ModulePendingPage } from '@/pages/ModulePendingPage';
@@ -120,6 +121,7 @@ const shellChildren: RouteObject[] = [
       // Оформление: бренд и витрина — один раздел.
       { path: 'brand', element: <BrandPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'reviews', element: <ReviewsPage /> },
 
       // Настройки: сюда растворилась «Коммерция» и переехал справочник локаций.
       { path: 'settings', element: <SettingsPage /> },

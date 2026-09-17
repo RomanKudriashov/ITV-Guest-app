@@ -23,6 +23,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import RoomServiceIcon from '@mui/icons-material/RoomService';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import InsightsIcon from '@mui/icons-material/Insights';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
@@ -63,6 +64,7 @@ const NAV_ICONS: Record<string, JSX.Element> = {
   staff: <PeopleAltIcon fontSize="small" />,
   brand: <PaletteOutlinedIcon fontSize="small" />,
   analytics: <InsightsIcon fontSize="small" />,
+  reviews: <RateReviewOutlinedIcon fontSize="small" />,
   settings: <SettingsIcon fontSize="small" />,
   notifications: <NotificationsActiveIcon fontSize="small" />,
   dictionaries: <ScienceOutlinedIcon fontSize="small" />,

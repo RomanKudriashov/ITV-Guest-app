@@ -69,7 +69,8 @@
     "pms": "Hotel management system",
     "mobileKey": "Mobile key",
     "open": "Open menu",
-    "orders": "Orders"
+    "orders": "Orders",
+    "reviews": "Reviews"
   },
   "dictionaries": {
     "title": "Dictionaries",
@@ -648,7 +649,8 @@
       "close": "Close",
       "homeTitle": "Rate order #{{number}}: {{what}}",
       "homeTitleShort": "Rate order #{{number}}",
-      "homeWhatMore": "{{summary}} and {{count}} more"
+      "homeWhatMore": "{{summary}} and {{count}} more",
+      "hotelReply": "Hotel's reply"
     },
     "session": {
       "current": "You are in room {{room}}",
@@ -3502,6 +3504,51 @@
       "categoryCascade": "Delete together with items and subcategories",
       "loadFailed": "Could not load items",
       "what": "items"
+    }
+  },
+  "reviews": {
+    "title": "Reviews",
+    "subtitle": "Guest ratings of closed orders. Visible to the hotel only: the administrator sees all, a manager sees their own venues.",
+    "what": "reviews",
+    "emptyHint": "Reviews appear once guests rate their closed orders.",
+    "shown": "Showing {{shown}} of {{total}}",
+    "loadMore": "Show more",
+    "trend": "Average rating by day",
+    "filters": {
+      "venue": "Venue",
+      "allVenues": "All venues",
+      "rating": "Rating",
+      "anyRating": "Any",
+      "low": "Low only",
+      "stars_one": "{{count}} star",
+      "stars_other": "{{count}} stars",
+      "since": "From",
+      "until": "To",
+      "reset": "Reset"
+    },
+    "numbers": {
+      "count": "Reviews",
+      "avg": "Average rating",
+      "low": "Low (≤ {{threshold}})"
+    },
+    "row": {
+      "rating": "Rated {{rating}} of 5",
+      "order": "Order #{{number}}",
+      "room": "room {{room}}",
+      "low": "Low",
+      "noComment": "No comment"
+    },
+    "reply": {
+      "open": "Reply to the guest",
+      "placeholder": "What the hotel says to the guest",
+      "send": "Send to guest chat",
+      "keep": "Save reply",
+      "cancel": "Cancel",
+      "failed": "Reply not saved",
+      "unreachable": "The guest is no longer at the hotel — the reply will not reach them. It is kept with the review to show the hotel responded.",
+      "guestLeft": "Guest has left",
+      "delivered": "Sent to the guest chat · {{by}}",
+      "keptOnly": "Not delivered — the guest has left, reply kept only · {{by}}"
     }
   }
 }

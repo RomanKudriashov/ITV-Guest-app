@@ -82,6 +82,9 @@ NAVIGATION: tuple[NavGroup, ...] = (
             # Линейный сюда не попадёт вовсе: вся CMS закрыта для него гейтом
             # `CmsAuth`, и навигация ему не отдаётся.
             NavItem(key="orders", to="/cms/orders"),
+            # ОТЗЫВЫ — тоже разбор, а не отчёт: низкую оценку разбирают, пока
+            # гость в отеле. Управляющий видит отзывы своих заведений.
+            NavItem(key="reviews", to="/cms/reviews"),
         ),
     ),
     NavGroup(
@@ -147,7 +150,7 @@ NAVIGATION: tuple[NavGroup, ...] = (
 # Пункты, которые НИКОГДА не гейтятся модулем, — сторож против случайной
 # привязки базового экрана к платной фиче. Проверяется тестом.
 ALWAYS_AVAILABLE = frozenset(
-    {"dashboard", "tracker", "orders", "services", "rooms", "staff", "brand",
+    {"dashboard", "tracker", "orders", "reviews", "services", "rooms", "staff", "brand",
      "analytics", "settings", "notifications", "dictionaries"}
 )
 

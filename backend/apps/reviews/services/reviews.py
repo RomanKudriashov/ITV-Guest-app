@@ -8,8 +8,18 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, time, timedelta
+
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.db.models import Avg, Count, Q
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+
+from apps.core import listing
 from apps.core.context import require_hotel_id
-from apps.core.errors import ConflictError, ValidationError
+from apps.core.errors import ConflictError, NotFoundError, ValidationError
+from apps.core.fields import translate
 from apps.events.bus import REVIEW_CREATED, REVIEW_LOW, emit
 from apps.hotels.models import Hotel
 from apps.orders.models import Order
@@ -34,6 +44,8 @@ def serialize_review(review: Review) -> dict:
         "rating": review.rating,
         "comment": review.comment,
         "created_at": review.created_at.isoformat(),
+        # Гость видит ответ отеля у своего отзыва — без отметки, дошёл ли он.
+        "reply": _reply_payload(review, staff=False),
     }
 
 
@@ -103,32 +115,210 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
     return review
 
 
-# --- CMS -------------------------------------------------------------------
+# --- CMS ---------------------------------------------------------------------
+#
+# Раздел «Отзывы»: список, фильтры, динамика и ответ гостю. Одно правило
+# отбора на всё: отзыв о заказе из двух заведений принадлежит КАЖДОЙ части —
+# его видит руководитель кухни и руководитель бара, фильтр «Бар» его находит,
+# и в динамике бара он учтён. Аналитика кладёт такой отзыв на точку агрегата,
+# поэтому динамику раздела считаем здесь, по тем же отзывам, что в списке.
 
 
-def list_reviews(*, rating: int | None = None, limit: int = 100) -> list[dict]:
-    queryset = Review.objects.select_related("order").order_by("-created_at")
+def _touches_points(point_ids) -> Q:
+    return Q(order__execution_point_id__in=point_ids) | Q(
+        order__children__execution_point_id__in=point_ids
+    )
 
-    # ОТЗЫВ РЕЖЕТСЯ ПО ТОЧКЕ ЗАКАЗА — как журнал уведомлений и по той же
-    # причине: отзыв всегда о конкретной заявке (`Review.order` — связь один к
-    # одному, обязательная), а заявка принадлежит заведению. Управляющий
-    # кухней читал отзывы всего отеля, включая спа и ресепшен: раздел не имел
-    # ни одной проверки прав и держался только на грубом гейте CMS.
+
+def _parse_day(value, field: str):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as exc:
+        raise ValidationError("Дата — в виде ГГГГ-ММ-ДД", field=field, code="bad_date") from exc
+
+
+def reviews_queryset(*, point_id=None, rating=None, date_from=None, date_to=None):
     from apps.accounts.services.roles import managed_point_ids_or_none
+    from apps.hotels.services.hotel import current_hotel
 
+    queryset = Review.objects.all()
+    # ОТЗЫВ РЕЖЕТСЯ ПО ТОЧКАМ ЗАКАЗА: управляющий кухней не читает отзывы спа.
     managed = managed_point_ids_or_none()
     if managed is not None:
-        queryset = queryset.filter(order__execution_point_id__in=managed)
+        queryset = queryset.filter(_touches_points(managed))
+    if point_id:
+        queryset = queryset.filter(_touches_points([point_id]))
 
-    if rating:
-        queryset = queryset.filter(rating=rating)
-    return [
-        {
-            **serialize_review(review),
-            "order_number": review.order.number,
-        }
-        for review in queryset[: min(int(limit or 100), 500)]
-    ]
+    # «Низкие» — словом, а не списком чисел: порог — настройка отеля, и
+    # экран не должен знать его, чтобы попросить именно низкие.
+    if rating == "low":
+        queryset = queryset.filter(rating__lte=current_hotel().review_low_threshold)
+    elif rating:
+        try:
+            wanted = sorted({int(part) for part in str(rating).split(",") if part.strip()})
+        except ValueError as exc:
+            raise ValidationError("Оценка — числа от 1 до 5", field="rating") from exc
+        queryset = queryset.filter(rating__in=wanted)
+
+    # Границы — сутки ОТЕЛЯ, а не сервера: «отзывы за 17-е» у отеля во
+    # Владивостоке начинаются в его полночь.
+    tz = current_hotel().tzinfo
+    frm, to = _parse_day(date_from, "date_from"), _parse_day(date_to, "date_to")
+    if frm and to and to < frm:
+        raise ValidationError("Начало периода позже конца", field="date_from", code="bad_range")
+    if frm:
+        queryset = queryset.filter(created_at__gte=datetime.combine(frm, time.min, tzinfo=tz))
+    if to:
+        queryset = queryset.filter(
+            created_at__lt=datetime.combine(to + timedelta(days=1), time.min, tzinfo=tz)
+        )
+    # Соединение с частями размножает строки — отзыв должен быть один.
+    return queryset.distinct()
+
+
+def guest_reachable(review: Review) -> bool:
+    """
+    Дойдёт ли ответ: сессия гостя жива. Данных о выезде без PMS нет, и живая
+    сессия — единственный честный признак «гость ещё здесь».
+    """
+    session = review.guest_session
+    return bool(
+        session is not None
+        and session.revoked_at is None
+        and session.expires_at > timezone.now()
+    )
+
+
+def _points_of(review: Review, language) -> list[dict]:
+    order = review.order
+    parts = [child.execution_point for child in order.children.all()]
+    points = parts or [order.execution_point]
+    seen, result = set(), []
+    for point in points:
+        if point.pk in seen:
+            continue
+        seen.add(point.pk)
+        result.append({"id": str(point.pk), "title": translate(point.title, language) or point.code})
+    return result
+
+
+def serialize_cms_review(review: Review, language=None) -> dict:
+    order = review.order
+    return {
+        **serialize_review(review),
+        "order_number": order.number,
+        "room": order.room.number if order.room_id else "",
+        "points": _points_of(review, language),
+        "is_low": review.rating <= order.hotel.review_low_threshold,
+        "guest_reachable": guest_reachable(review),
+        "reply": _reply_payload(review, staff=True),
+    }
+
+
+def list_reviews(
+    *, point_id=None, rating=None, date_from=None, date_to=None, limit=None, offset=0, language=None
+) -> dict:
+    queryset = (
+        reviews_queryset(point_id=point_id, rating=rating, date_from=date_from, date_to=date_to)
+        .select_related("order__room", "order__execution_point", "order__hotel", "guest_session", "reply_by")
+        .prefetch_related("order__children__execution_point")
+        .order_by("-created_at", "-pk")
+    )
+    return listing.page(
+        queryset,
+        limit=listing.clamp(limit, default=25, maximum=100),
+        offset=offset,
+        serialize=lambda review: serialize_cms_review(review, language),
+    )
+
+
+def reviews_summary(*, point_id=None, rating=None, date_from=None, date_to=None) -> dict:
+    """Средняя в динамике — по дням отеля, тем же отбором, что и список."""
+    from apps.hotels.services.hotel import current_hotel
+
+    hotel = current_hotel()
+    queryset = reviews_queryset(point_id=point_id, rating=rating, date_from=date_from, date_to=date_to)
+    # distinct() и агрегаты не дружат: считаем по id, отобранным без размножения.
+    base = Review.objects.filter(pk__in=queryset.values("pk"))
+    low_edge = hotel.review_low_threshold
+    totals = base.aggregate(
+        count=Count("pk"), avg=Avg("rating"), low=Count("pk", filter=Q(rating__lte=low_edge))
+    )
+    by_day = (
+        base.annotate(day=TruncDate("created_at", tzinfo=hotel.tzinfo))
+        .values("day")
+        .annotate(count=Count("pk"), avg=Avg("rating"), low=Count("pk", filter=Q(rating__lte=low_edge)))
+        .order_by("day")
+    )
+    count = totals["count"] or 0
+    return {
+        "count": count,
+        "avg_rating": round(totals["avg"], 2) if totals["avg"] is not None else None,
+        "low": totals["low"] or 0,
+        "low_rate": round((totals["low"] or 0) / count, 4) if count else None,
+        "low_threshold": low_edge,
+        "trend": [
+            {
+                "day": row["day"].isoformat(),
+                "count": row["count"],
+                "avg_rating": round(row["avg"], 2),
+                "low": row["low"],
+            }
+            for row in by_day
+        ],
+    }
+
+
+def get_cms_review(review_id) -> Review:
+    try:
+        return (
+            reviews_queryset()
+            .select_related("order__room", "order__execution_point", "order__hotel", "guest_session", "reply_by")
+            .get(pk=review_id)
+        )
+    except (Review.DoesNotExist, ValueError, DjangoValidationError) as exc:
+        raise NotFoundError("Отзыв не найден") from exc
+
+
+def reply_to_review(review_id, *, user, text: str) -> dict:
+    """
+    Ответ гостю. Живая сессия — ответ уходит сообщением в чат гостя и
+    хранится на отзыве. Мёртвая — только хранится: экран предупредил заранее,
+    и `reply.delivered = false` не даст решить, что гость ответ получил.
+    """
+    text = (text or "").strip()
+    if not text:
+        raise ValidationError("Пустой ответ", field="text")
+    if len(text) > 2000:
+        raise ValidationError("Ответ длиннее 2000 символов", field="text")
+
+    review = get_cms_review(review_id)
+    with transaction.atomic():
+        locked = Review.objects.select_for_update().get(pk=review.pk)
+        if locked.reply_at is not None:
+            raise ConflictError("На этот отзыв уже ответили", code="reply_exists")
+        delivered = guest_reachable(review)
+        if delivered:
+            from apps.chat.services import threads
+
+            threads.staff_send(threads.get_or_create_thread(review.guest_session), user, text)
+        Review.objects.filter(pk=review.pk).update(
+            reply_text=text, reply_at=timezone.now(), reply_by=user, reply_delivered=delivered
+        )
+    return serialize_cms_review(get_cms_review(review.pk))
+
+
+def _reply_payload(review: Review, *, staff: bool) -> dict | None:
+    if review.reply_at is None:
+        return None
+    payload = {"text": review.reply_text, "at": review.reply_at.isoformat()}
+    if staff:
+        author = review.reply_by
+        payload["by"] = (author.full_name or author.email) if author else ""
+        payload["delivered"] = review.reply_delivered
+    return payload
 
 
 def settings_payload(hotel) -> dict:

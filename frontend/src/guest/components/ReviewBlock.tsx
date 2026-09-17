@@ -105,6 +105,17 @@ export function ReviewBlock({ order, heading, onClose, testId = 'guest-review' }
               {existing.comment}
             </Typography>
           ) : null}
+          {existing.reply ? (
+            <Box
+              data-testid="guest-review-reply"
+              sx={{ borderLeft: 3, borderColor: 'secondary.main', pl: 1.5 }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                {t('guest.review.hotelReply')}
+              </Typography>
+              <Typography variant="body2">{existing.reply.text}</Typography>
+            </Box>
+          ) : null}
           {privacyNote}
         </Stack>
       </Paper>

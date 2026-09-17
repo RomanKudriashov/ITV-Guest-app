@@ -324,6 +324,12 @@
   "/api/v1/cms/reviews": [
     "GET"
   ],
+  "/api/v1/cms/reviews/summary": [
+    "GET"
+  ],
+  "/api/v1/cms/reviews/{review_id}/reply": [
+    "POST"
+  ],
   "/api/v1/cms/room-categories": [
     "GET",
     "POST"

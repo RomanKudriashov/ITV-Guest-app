@@ -31,6 +31,15 @@ class Review(TenantModel):
     )
     comment = models.TextField(blank=True)
 
+    # Ответ отеля — один на отзыв. `reply_delivered` — ушёл ли он гостю в чат:
+    # сессия гостя могла уже умереть, и тогда ответ только хранится здесь.
+    reply_text = models.TextField(blank=True)
+    reply_at = models.DateTimeField(null=True, blank=True)
+    reply_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reply_delivered = models.BooleanField(default=False)
+
     class Meta:
         db_table = "reviews_review"
         ordering = ["-created_at"]

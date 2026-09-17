@@ -181,7 +181,35 @@
 | Метод | Путь |
 |---|---|
 | GET | `/api/v1/tracker/order/{id}` | объект заказа получает блок `review` |
-| GET | `/api/v1/cms/reviews?rating=&limit=` | список отзывов отеля |
+| GET | `/api/v1/cms/reviews?point_id=&rating=&date_from=&date_to=&limit=&offset=` | раздел «Отзывы»: конверт `{items, total, limit, offset, truncated}` |
+| GET | `/api/v1/cms/reviews/summary?…те же фильтры` | `{count, avg_rating, low, low_rate, low_threshold, trend[]{day, count, avg_rating, low}}` |
+| POST | `/api/v1/cms/reviews/{id}/reply` | `{text}` → отзыв; повтор — `409 reply_exists` |
+
+Кто видит: администратор отеля — все отзывы, руководитель — отзывы заказов
+своих заведений; линейный персонал в CMS не входит. **Отзыв о заказе из
+нескольких заведений принадлежит каждой части**: его видит руководитель
+каждой, фильтр `point_id` находит его по любой части, и в `summary` он учтён
+так же. Поэтому динамика раздела считается по отзывам, а не берётся из
+аналитики: там такой отзыв лежит на точке агрегата.
+
+`rating` — `low` (≤ порога отеля) или список `1,2`. Даты — сутки отеля;
+`date_from > date_to` — `422 bad_range`.
+
+Элемент списка:
+```jsonc
+{"id": "...", "order_id": "...", "order_number": 1041, "rating": 1, "comment": "…",
+ "created_at": "…", "room": "305",
+ "points": [{"id": "...", "title": "Кухня"}, {"id": "...", "title": "Бар"}],
+ "is_low": true,
+ "guest_reachable": true,     // сессия гостя жива — ответ дойдёт
+ "reply": null | {"text": "…", "at": "…", "by": "Ольга", "delivered": true}}
+```
+
+**Ответ гостю.** Сессия жива — ответ уходит сообщением персонала в чат гостя
+и хранится на отзыве (`delivered: true`). Сессия мертва (выезд, истечение) —
+ответ только хранится (`delivered: false`); экран говорит об этом ДО ответа по
+`guest_reachable`. «Гость в отеле» = живая сессия: данных о выезде без PMS нет.
+Гость видит ответ у своего отзыва (`review.reply{text, at}`).
 
 ### Настройка отеля (CMS)
 

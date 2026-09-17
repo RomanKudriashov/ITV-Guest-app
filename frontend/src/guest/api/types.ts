@@ -730,6 +730,8 @@ export interface GuestReview {
   rating: number;
   comment: string;
   created_at?: string;
+  /** The hotel's answer, if it replied. */
+  reply?: { text: string; at: string } | null;
 }
 
 /* ── Управление номером (GRMS) ──────────────────────────────────────────────
