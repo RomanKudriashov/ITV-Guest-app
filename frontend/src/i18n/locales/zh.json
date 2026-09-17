@@ -535,7 +535,7 @@
       "sessionAt": "预约时间",
       "duration": "时长",
       "place": "地点",
-      "pickup": "接送时间",
+      "rideAt": "接送时间",
       "asked": "请求内容",
       "acceptedAt": "受理时间",
       "durationMinutes": "{{minutes}} 分钟",

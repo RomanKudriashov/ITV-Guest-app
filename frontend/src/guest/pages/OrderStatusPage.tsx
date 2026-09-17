@@ -212,7 +212,7 @@ export function OrderStatusPage() {
   } else if (kind === 'ride') {
     // Откуда и куда лежат в ответах формы и показаны блоком ниже: повторять их
     // здесь значило бы напечатать маршрут дважды.
-    push(t('guest.order.pickup'), whenText);
+    push(t('guest.order.rideAt'), whenText);
   } else if (kind === 'request') {
     push(
       t('guest.order.asked'),

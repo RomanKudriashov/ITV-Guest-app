@@ -537,7 +537,7 @@
       "sessionAt": "Session",
       "duration": "Duration",
       "place": "Where",
-      "pickup": "Pick-up",
+      "rideAt": "Pick-up",
       "asked": "Request",
       "acceptedAt": "Accepted",
       "durationMinutes": "{{minutes}} min",

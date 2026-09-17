@@ -545,7 +545,7 @@
       "sessionAt": "موعد الجلسة",
       "duration": "المدة",
       "place": "المكان",
-      "pickup": "وقت الوصول",
+      "rideAt": "وقت الوصول",
       "asked": "الطلب",
       "acceptedAt": "وقت الاستلام",
       "durationMinutes": "{{minutes}} دقيقة",

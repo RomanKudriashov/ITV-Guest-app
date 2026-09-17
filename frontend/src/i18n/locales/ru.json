@@ -541,7 +541,7 @@
       "sessionAt": "Когда сеанс",
       "duration": "Сколько длится",
       "place": "Где",
-      "pickup": "Подача",
+      "rideAt": "Подача",
       "asked": "Что просили",
       "acceptedAt": "Когда приняли",
       "durationMinutes": "{{minutes}} мин",
