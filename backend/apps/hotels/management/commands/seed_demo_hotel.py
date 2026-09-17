@@ -1402,14 +1402,15 @@ class Command(BaseCommand):
                 expires_at=GuestSession.default_expiry(),
             )
 
+        # Тред — сессии, а не номера: демо-переписка принадлежит демо-гостю.
         thread, _ = ChatThread.objects.get_or_create(
-            room=room,
-            defaults={"guest_session": session, "execution_point": points.get("concierge")},
+            guest_session=session,
+            defaults={"room": room, "execution_point": points.get("concierge")},
         )
         if not thread.messages.exists():
             ChatMessage.objects.create(
                 hotel_id=thread.hotel_id, thread=thread, author_type="guest",
-                author_name="Гость", body="Добрый день! Во сколько завтрак?",
+                author_id=session.pk, author_name="Гость", body="Добрый день! Во сколько завтрак?",
             )
             msg = ChatMessage.objects.create(
                 hotel_id=thread.hotel_id, thread=thread, author_type="staff",

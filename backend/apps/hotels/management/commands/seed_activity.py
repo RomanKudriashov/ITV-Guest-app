@@ -760,10 +760,10 @@ class Command(BaseCommand):
         if point is None:
             return 0
 
-        # Ветку заводим САМИ, а не через `get_or_create_thread`: тот отдаёт
-        # одну ветку на НОМЕР и перепривязывает её к текущей сессии. На чужой
-        # ветке это означало бы, что она станет помеченной, и `--clean` убрал
-        # бы переписку, которую генератор не создавал.
+        # Ветку заводим САМИ, а не через `get_or_create_thread`: сев пишет
+        # историю задним числом, и сообщения ставит с нужными моментами. По
+        # ветке на номер — чтобы демо не выглядело как чат, где пишет весь
+        # отель; сами ветки, как и в сервисе, принадлежат сессии.
         taken_rooms = set(
             ChatThread.all_objects.filter(room__isnull=False).values_list("room_id", flat=True)
         )
@@ -795,7 +795,7 @@ class Command(BaseCommand):
                 answer = rng.choice(STAFF_LINES)
                 guest_msg = ChatMessage.objects.create(
                     hotel_id=hotel.pk, thread=thread, author_type=ChatThread.AuthorType.GUEST,
-                    author_id=None, author_name="Гость", body=question,
+                    author_id=session.pk, author_name="Гость", body=question,
                 )
                 ChatMessage.objects.filter(pk=guest_msg.pk).update(created_at=at)
                 at += timedelta(minutes=rng.randrange(1, 20))

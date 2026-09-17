@@ -27,27 +27,24 @@ MAX_BODY = 2000
 
 def get_or_create_thread(guest_session) -> ChatThread:
     """
-    Тред гостя: по номеру, если он есть, иначе по сессии. Один активный тред на
-    номер — переписка не дробится между заездами и переоформлениями.
-    """
-    if guest_session.room_id:
-        thread = ChatThread.objects.filter(room_id=guest_session.room_id).order_by("created_at").first()
-        if thread is not None:
-            # Привязываем текущую сессию, чтобы WS гостя нашёл свой тред.
-            if thread.guest_session_id != guest_session.pk:
-                ChatThread.objects.filter(pk=thread.pk).update(guest_session=guest_session)
-                thread.guest_session_id = guest_session.pk
-            return thread
-        return ChatThread.objects.create(
-            room_id=guest_session.room_id,
-            guest_session=guest_session,
-            execution_point=_default_point(),
-        )
+    Тред гостя — ТРЕД СЕССИИ, а не номера.
 
-    thread = ChatThread.objects.filter(guest_session_id=guest_session.pk).first()
+    Раньше тред жил «при номере» и перепривязывался к каждой новой сессии этого
+    номера: следующий гость номера 305 открывал чат и видел переписку
+    предыдущего — чужие заказы, чужие жалобы, ответ отеля на чужой отзыв
+    (проверено: после выезда новый гость читал сообщения прежнего).
+
+    Номер в треде остаётся — персоналу видно, откуда пишут. Старые треды не
+    удаляются: они нужны для разбора отзывов, персонал их по-прежнему видит.
+    """
+    thread = ChatThread.objects.filter(guest_session_id=guest_session.pk).order_by("created_at").first()
     if thread is not None:
         return thread
-    return ChatThread.objects.create(guest_session=guest_session, execution_point=_default_point())
+    return ChatThread.objects.create(
+        room_id=guest_session.room_id,
+        guest_session=guest_session,
+        execution_point=_default_point(),
+    )
 
 
 def _default_point():
