@@ -644,7 +644,11 @@
       "privacy": "Your review is visible only to the hotel",
       "yours": "Your review",
       "commentPlaceholder": "Comment (optional)",
-      "starAria": "{{n}} of 5"
+      "starAria": "{{n}} of 5",
+      "close": "Close",
+      "homeTitle": "Rate order #{{number}}: {{what}}",
+      "homeTitleShort": "Rate order #{{number}}",
+      "homeWhatMore": "{{summary}} and {{count}} more"
     },
     "session": {
       "current": "You are in room {{room}}",

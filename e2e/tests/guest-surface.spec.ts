@@ -166,6 +166,43 @@ test.describe('Гостевой контур', () => {
     expect(review.ok()).toBeTruthy()
     expect((await review.json()).rating).toBe(5)
   })
+
+  test('на главной — одна карточка «оцените» после закрытия, и она закрывается', async ({
+    page,
+    request,
+  }) => {
+    const staff = await apiToken(request)
+
+    await enterAsGuest(page)
+    await page.getByTestId('guest-qty-plus-caesar').click()
+    await openCart(page)
+    await page.getByTestId('guest-place-order').click()
+    await expect(page.getByTestId('guest-confirmation')).toBeVisible({ timeout: 20_000 })
+    const orderId = page.url().split('/orders/')[1]?.split('?')[0] as string
+    const number = (await page.getByTestId('guest-order-number').innerText()).match(/\d+/)?.[0]
+
+    // Пока заказ живой — на главной просить не о чем.
+    await page.goto('/')
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('guest-home-review')).toBeHidden()
+
+    await moveOrderStatus(request, staff, orderId, 'done')
+    const card = page.getByTestId('guest-home-review')
+    await expect(card).toBeVisible({ timeout: 15_000 })
+    await expect(card).toContainText(`№${number}`)
+    await expect(card.getByTestId('guest-review-star-5')).toBeVisible()
+
+    // Закрыл — значит ответил: после перезагрузки карточка не возвращается.
+    await card.getByTestId('guest-home-review-close').click()
+    await expect(card).toBeHidden()
+    await page.reload()
+    await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('guest-home-review')).toBeHidden()
+
+    // Но оценить по-прежнему можно — на экране заказа.
+    await page.goto(`/orders/${orderId}`)
+    await expect(page.getByTestId('guest-review-submit')).toBeVisible({ timeout: 15_000 })
+  })
 })
 
 /**

@@ -198,6 +198,7 @@ def _chat(code: str) -> Example | None:
 def _review(code: str) -> Example | None:
     from apps.hotels.models import Hotel
     from apps.reviews.models import Review
+    from apps.reviews.services import review_points
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
     threshold = getattr(hotel, "review_low_threshold", 2)
@@ -220,7 +221,8 @@ def _review(code: str) -> Example | None:
                 "room": order.room.number if order.room_id else "",
             }
         ),
-        point_id=str(order.execution_point_id),
+        # Отзыв о заказе из двух заведений разбирает часть, не агрегат.
+        point_id=review_points(order)[0],
         source={
             "kind": "review",
             "number": order.number,

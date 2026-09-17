@@ -13,6 +13,7 @@ import { errorMessage } from '../errors';
 import { ActiveOrderStrip } from '../components/ActiveOrderStrip';
 import { BentoGrid } from '../components/Bento';
 import { HomeHero } from '../components/HomeHero';
+import { HomeReviewCard } from '../components/HomeReviewCard';
 import { HomeRoomStatus } from '../components/HomeRoomStatus';
 import { HomeWeather } from '../components/HomeWeather';
 import { useGuestHome } from '../hooks/useGuestQueries';
@@ -70,6 +71,7 @@ export function HomePage() {
           />
           <HomeRoomStatus allowed={data?.room_status !== false} />
           <ActiveOrderStrip />
+          <HomeReviewCard />
         </Stack>
 
         {isLoading ? (

@@ -648,7 +648,11 @@
       "privacy": "Ваш отзыв виден только отелю",
       "yours": "Ваш отзыв",
       "commentPlaceholder": "Комментарий (необязательно)",
-      "starAria": "{{n}} из 5"
+      "starAria": "{{n}} из 5",
+      "close": "Закрыть",
+      "homeTitle": "Оцените заказ №{{number}}: {{what}}",
+      "homeTitleShort": "Оцените заказ №{{number}}",
+      "homeWhatMore": "{{summary}} и ещё {{count}}"
     },
     "session": {
       "current": "Вы в номере {{room}}",

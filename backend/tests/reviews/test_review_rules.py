@@ -97,3 +97,35 @@ def test_a_two_venue_order_alerts_the_manager_of_each_part(
         )
         assert points == {"kitchen", "bar"}, "по записи на каждую часть, агрегату — нет"
         assert ExecutionPoint.objects.filter(code="room_service").exists()
+
+
+# --- Одна карточка «оцените» на стартовой ------------------------------------
+
+
+def test_the_home_asks_to_rate_only_the_last_closed_order(client, crystal, guest):
+    assert guest.get("/api/guest/orders/active").json()["to_review"] is None
+
+    older = _finished_order(client, crystal, guest, key="home-older")
+    newer = _finished_order(client, crystal, guest, key="home-newer")
+    to_review = guest.get("/api/guest/orders/active").json()["to_review"]
+    assert to_review["id"] == newer, "одна карточка — о последнем закрытом"
+    assert to_review["summary"]
+
+    guest.post(f"/api/guest/order/{newer}/review", {"rating": 5})
+    assert guest.get("/api/guest/orders/active").json()["to_review"] is None, (
+        "оценённый уходит, а старый неоценённый следом не всплывает"
+    )
+    assert older != newer
+
+
+def test_a_live_order_is_never_offered_for_rating(client, crystal, guest):
+    menu = guest.get("/api/guest/catalog?type=product").json()
+    item_id = next(i["id"] for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")
+    guest.post(
+        "/api/guest/order",
+        {"lines": [{"item_id": item_id, "quantity": 1}], "timing": "asap"},
+        HTTP_IDEMPOTENCY_KEY="home-live",
+    )
+    body = guest.get("/api/guest/orders/active").json()
+    assert body["orders"], "заказ живой"
+    assert body["to_review"] is None, "оценка живого заказа — оценка ожидания"

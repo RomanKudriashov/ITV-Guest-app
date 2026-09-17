@@ -642,7 +642,11 @@
       "privacy": "您的评价仅酒店可见",
       "yours": "您的评价",
       "commentPlaceholder": "评论（可选）",
-      "starAria": "{{n}} / 5"
+      "starAria": "{{n}} / 5",
+      "close": "关闭",
+      "homeTitle": "为订单 #{{number}} 评分：{{what}}",
+      "homeTitleShort": "为订单 #{{number}} 评分",
+      "homeWhatMore": "{{summary}} 等 {{count}} 项"
     },
     "session": {
       "current": "您在 {{room}} 房",

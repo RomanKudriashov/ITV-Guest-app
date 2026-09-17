@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
@@ -24,6 +25,11 @@ import { surfaceRadius } from '../storefrontTokens';
 
 export interface ReviewBlockProps {
   order: GuestOrder;
+  /** Heading instead of the plain «Оцените заказ» — the home card names the order. */
+  heading?: string;
+  /** Shows a close button: the home card is dismissible, the order screen is not. */
+  onClose?: () => void;
+  testId?: string;
 }
 
 /**
@@ -32,7 +38,7 @@ export interface ReviewBlockProps {
  * exists. Reviews are PRIVATE — the note spells that out. One per order: a
  * `409 review_exists` is treated as success ("thanks, noted").
  */
-export function ReviewBlock({ order }: ReviewBlockProps) {
+export function ReviewBlock({ order, heading, onClose, testId = 'guest-review' }: ReviewBlockProps) {
   const { t } = useTranslation();
   const language = useGuestLanguage();
   const queryClient = useQueryClient();
@@ -65,6 +71,18 @@ export function ReviewBlock({ order }: ReviewBlockProps) {
 
   if (!reviewable || isLoading) return null;
 
+  const closeButton = onClose ? (
+    <IconButton
+      size="small"
+      onClick={onClose}
+      aria-label={t('guest.review.close')}
+      data-testid={`${testId}-close`}
+      sx={{ position: 'absolute', top: 4, right: 4 }}
+    >
+      <CloseIcon fontSize="small" />
+    </IconButton>
+  ) : null;
+
   const privacyNote = (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <LockOutlinedIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
@@ -77,7 +95,8 @@ export function ReviewBlock({ order }: ReviewBlockProps) {
   // Already left, or just left — show it read-only.
   if (existing) {
     return (
-      <Paper variant="outlined" sx={{ p: 2 }} data-testid="guest-review">
+      <Paper variant="outlined" sx={{ p: 2, position: 'relative' }} data-testid={testId}>
+        {closeButton}
         <Stack spacing={1}>
           <Typography variant="subtitle2">{t('guest.review.yours')}</Typography>
           <Stars value={existing.rating} readOnly />
@@ -94,7 +113,8 @@ export function ReviewBlock({ order }: ReviewBlockProps) {
 
   if (thanks) {
     return (
-      <Paper variant="outlined" sx={{ p: 2 }} data-testid="guest-review">
+      <Paper variant="outlined" sx={{ p: 2, position: 'relative' }} data-testid={testId}>
+        {closeButton}
         <Stack spacing={1}>
           <Alert severity="success" data-testid="guest-review-thanks" icon={false}>
             {t('guest.review.thanks')}
@@ -113,9 +133,12 @@ export function ReviewBlock({ order }: ReviewBlockProps) {
       : null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }} data-testid="guest-review">
+    <Paper variant="outlined" sx={{ p: 2, position: 'relative' }} data-testid={testId}>
+      {closeButton}
       <Stack spacing={1.5}>
-        <Typography variant="subtitle2">{t('guest.review.title')}</Typography>
+        <Typography variant="subtitle2" sx={{ pr: onClose ? 4 : 0 }}>
+          {heading ?? t('guest.review.title')}
+        </Typography>
         <Stars
           value={rating}
           hover={hover}

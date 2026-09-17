@@ -677,8 +677,19 @@ export interface GuestActiveOrder {
   extra_count: number;
 }
 
+/** The one closed order the home screen asks to rate. */
+export interface GuestOrderToReview {
+  id: string;
+  number: number;
+  closed_at: string;
+  summary: string;
+  extra_count: number;
+}
+
 export interface GuestActiveOrders {
   orders: GuestActiveOrder[];
+  /** Latest closed order the guest may still rate; `null` — nothing to ask. */
+  to_review?: GuestOrderToReview | null;
 }
 
 /* ── Chat ──────────────────────────────────────────────────────────────── */

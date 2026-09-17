@@ -1042,7 +1042,39 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
                 **_order_summary(order, language),
             }
         )
-    return {"orders": payload}
+    return {"orders": payload, "to_review": _order_to_review(guest_session, language)}
+
+
+def _order_to_review(guest_session, language: str | None) -> dict | None:
+    """
+    ОДНА карточка «оцените» на стартовой — последний закрытый заказ без отзыва.
+
+    Только после закрытия: оценка живого заказа — это оценка ожидания. Одна,
+    а не по карточке на заказ: несколько просьб подряд — уже анкета. Старые
+    неоценённые не всплывают следом: гость, закрывший карточку, ответил.
+    """
+    from apps.reviews.services import can_review
+
+    order = (
+        order_queryset()
+        .filter(
+            guest_session_id=guest_session.pk,
+            parent__isnull=True,
+            status__is_terminal=True,
+            status__is_cancelled=False,
+            closed_at__isnull=False,
+        )
+        .order_by("-closed_at")
+        .first()
+    )
+    if order is None or not can_review(order):
+        return None
+    return {
+        "id": str(order.pk),
+        "number": order.number,
+        "closed_at": order.closed_at.isoformat(),
+        **_order_summary(order, language),
+    }
 
 
 def _order_summary(order: Order, language: str | None) -> dict:

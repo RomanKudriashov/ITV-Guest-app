@@ -652,7 +652,11 @@
       "privacy": "تقييمك مرئي للفندق فقط",
       "yours": "تقييمك",
       "commentPlaceholder": "تعليق (اختياري)",
-      "starAria": "{{n}} من 5"
+      "starAria": "{{n}} من 5",
+      "close": "إغلاق",
+      "homeTitle": "قيّم الطلب رقم {{number}}: {{what}}",
+      "homeTitleShort": "قيّم الطلب رقم {{number}}",
+      "homeWhatMore": "{{summary}} و{{count}} أخرى"
     },
     "session": {
       "current": "أنت في الغرفة {{room}}",
