@@ -32,6 +32,8 @@ export interface CmsService {
   public_name: Record<string, string>;
   tagline: Record<string, string>;
   is_guest_facing: boolean;
+  /** Есть ли каталог. Ресепшен — отдел без меню и коммерции (пункт 10). */
+  has_catalog: boolean;
   is_active: boolean;
   sort_order: number;
   schedule_id: string | null;
@@ -71,6 +73,7 @@ export interface ServicePayload {
   public_name: Record<string, string>;
   tagline?: Record<string, string>;
   is_guest_facing?: boolean;
+  has_catalog?: boolean;
   schedule_id?: string | null;
   sla_minutes?: number | null;
   image_id?: string | null;

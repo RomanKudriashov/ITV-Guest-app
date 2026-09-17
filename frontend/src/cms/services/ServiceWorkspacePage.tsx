@@ -45,12 +45,17 @@ import type { CmsService } from './api';
  */
 const TABS = ['menu', 'schedule', 'delivery', 'commerce', 'staff', 'inclusions'] as const;
 type TabKey = (typeof TABS)[number];
+/*
+  У заведения без каталога (ресепшен) нет меню, доставки, коммерции и
+  включений: продавать ему нечего. Остаются часы, персонал и настройки.
+*/
+const CATALOG_TABS: ReadonlySet<TabKey> = new Set(['menu', 'delivery', 'commerce', 'inclusions']);
 
 export function ServiceWorkspacePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { id = '' } = useParams();
-  const [tab, setTab] = useState<TabKey>('menu');
+  const [chosenTab, setTab] = useState<TabKey | null>(null);
 
   const service = useQuery({
     queryKey: ['cms', 'service', id],
@@ -81,6 +86,8 @@ export function ServiceWorkspacePage() {
   }
 
   const data = service.data;
+  const tabs = TABS.filter((key) => data.has_catalog || !CATALOG_TABS.has(key));
+  const tab: TabKey = chosenTab && tabs.includes(chosenTab) ? chosenTab : tabs[0];
   const name =
     data.public_name[i18n.resolvedLanguage ?? 'ru'] ?? data.public_name.ru ?? data.code;
 
@@ -108,7 +115,15 @@ export function ServiceWorkspacePage() {
         {!data.is_guest_facing ? (
           <Chip size="small" label={t('services.hiddenFromGuest')} />
         ) : null}
+        {!data.has_catalog ? (
+          <Chip size="small" label={t('services.noCatalog')} data-testid="service-no-catalog" />
+        ) : null}
       </Stack>
+      {!data.has_catalog ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} data-testid="service-no-catalog-hint">
+          {t('services.noCatalogHint')}
+        </Typography>
+      ) : null}
 
       <Tabs
         value={tab}
@@ -117,7 +132,7 @@ export function ServiceWorkspacePage() {
         scrollButtons="auto"
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
       >
-        {TABS.map((key) => (
+        {tabs.map((key) => (
           <Tab key={key} value={key} label={t(`services.tabs.${key}`)} data-testid={`service-tab-${key}`} />
         ))}
       </Tabs>
@@ -171,6 +186,8 @@ function ScheduleTab({ service }: { service: CmsService }) {
   const { t } = useTranslation();
   const { data: bootstrap } = useBootstrap();
   const save = useSaveService(service);
+  // Есть ли каталог — решение уровня отеля: меняет его только администратор.
+  const isAdmin = Boolean(useAuth().user?.is_hotel_admin);
 
   return (
     <Stack spacing={2} sx={{ maxWidth: 520 }} data-testid="service-schedule">
@@ -202,6 +219,19 @@ function ScheduleTab({ service }: { service: CmsService }) {
         helperText={t('services.slaHint')}
         data-testid="service-sla"
       />
+
+      {isAdmin ? (
+        <FormControlLabel
+          control={
+            <Switch
+              checked={service.has_catalog}
+              onChange={(event) => save.mutate({ has_catalog: event.target.checked })}
+              data-testid="service-has-catalog"
+            />
+          }
+          label={t('services.hasCatalog')}
+        />
+      ) : null}
 
       <FormControlLabel
         control={

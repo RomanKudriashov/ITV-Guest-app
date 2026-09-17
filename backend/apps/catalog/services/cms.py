@@ -365,6 +365,12 @@ def create_category(data: dict) -> Category:
     title = require_translation(clean_translations(data.get("title"), field="title"), field="title")
     parent = _validate_parent(None, data.get("parent_id"))
     service = _resolve_category_service(data, parent)
+    if service is not None and not service.has_catalog:
+        raise ValidationError(
+            "У этого заведения нет каталога — разделы в нём не заводятся",
+            field="service_id",
+            code="service_without_catalog",
+        )
 
     category = Category.objects.create(
         service=service,

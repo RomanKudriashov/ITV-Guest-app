@@ -188,6 +188,14 @@ function ServiceCard({
               это решение отеля, а не недоработка, и админ должен видеть
               разницу между «скрыт» и «забыли включить».
             */}
+            {!service.has_catalog ? (
+              <Chip
+                size="small"
+                variant="outlined"
+                label={t('services.noCatalog')}
+                data-testid={`service-no-catalog-${service.code}`}
+              />
+            ) : null}
             {!service.is_guest_facing ? (
               <Chip
                 size="small"

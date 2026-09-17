@@ -117,6 +117,7 @@ def _venues(hotel: Hotel) -> list[Service]:
         Service.objects.filter(
             is_active=True,
             is_guest_facing=True,
+            has_catalog=True,
             execution_point__routes__is_active=True,
             execution_point__routes__category__is_active=True,
         )

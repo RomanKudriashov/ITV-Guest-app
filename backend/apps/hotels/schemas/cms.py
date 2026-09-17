@@ -237,6 +237,7 @@ class ServiceIn(Schema):
     public_name: dict[str, str]
     tagline: dict[str, str] = {}
     is_guest_facing: bool | None = None
+    has_catalog: bool | None = None
     code: str | None = None
     schedule_id: str | None = None
     sla_minutes: int | None = None
@@ -249,6 +250,7 @@ class ServicePatch(Schema):
     public_name: dict[str, str] | None = None
     tagline: dict[str, str] | None = None
     is_guest_facing: bool | None = None
+    has_catalog: bool | None = None
     schedule_id: str | None = None
     sla_minutes: int | None = None
     is_active: bool | None = None

@@ -1483,6 +1483,7 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
         "public_name": service.public_name or {},
         "tagline": service.tagline or {},
         "is_guest_facing": service.is_guest_facing,
+        "has_catalog": service.has_catalog,
         "is_active": service.is_active,
         "sort_order": service.sort_order,
         "schedule_id": str(service.schedule_id) if service.schedule_id else None,
@@ -1632,6 +1633,7 @@ def create_service(data: dict) -> Service:
         is_guest_facing=data.get(
             "is_guest_facing", service_type != Service.Type.HOUSEKEEPING
         ),
+        has_catalog=data.get("has_catalog") is not False,
         schedule=_resolve_schedule(data.get("schedule_id")),
         image=_resolve_asset(data.get("image_id")),
         is_active=data.get("is_active", True),
@@ -1641,7 +1643,7 @@ def create_service(data: dict) -> Service:
 
 # Поля заведения, которые меняет ТОЛЬКО администратор отеля: они двигают тип
 # трекера, место на витрине и само существование отдела.
-HOTEL_LEVEL_SERVICE_FIELDS = frozenset({"code", "type", "is_active"})
+HOTEL_LEVEL_SERVICE_FIELDS = frozenset({"code", "type", "is_active", "has_catalog"})
 
 SERVICE_COMMERCE_FIELDS = (
     "service_fee_bp",
@@ -1687,6 +1689,8 @@ def update_service(service_id, data: dict) -> Service:
         service.tagline = _clean_translations(data["tagline"], field="tagline")
     if "is_guest_facing" in data and data["is_guest_facing"] is not None:
         service.is_guest_facing = data["is_guest_facing"]
+    if "has_catalog" in data and data["has_catalog"] is not None:
+        _set_has_catalog(service, bool(data["has_catalog"]))
     if "schedule_id" in data:
         service.schedule = _resolve_schedule(data["schedule_id"])
     if "image_id" in data:
@@ -1705,13 +1709,38 @@ def update_service(service_id, data: dict) -> Service:
     if "sla_minutes" in data and data["sla_minutes"] is not None:
         point.sla_minutes = data["sla_minutes"]
 
-    for field in SERVICE_COMMERCE_FIELDS:
-        if field in data:
-            setattr(service, field, _validate_service_commerce(field, data[field]))
+    commerce = [field for field in SERVICE_COMMERCE_FIELDS if field in data]
+    if commerce and not service.has_catalog:
+        raise ValidationError(
+            "У заведения без каталога нет своей коммерции: продавать ему нечего",
+            field=commerce[0],
+            code="service_without_catalog",
+        )
+    for field in commerce:
+        setattr(service, field, _validate_service_commerce(field, data[field]))
 
     point.save()
     service.save()
     return get_service(service_id)
+
+
+def _set_has_catalog(service: Service, value: bool) -> None:
+    """
+    Снять каталог можно только с пустого заведения: разделы с позициями,
+    ставшие невидимыми молча, — это потерянное меню, а не настройка.
+    """
+    if value == service.has_catalog:
+        return
+    if not value:
+        from apps.catalog.models import Category
+
+        if Category.objects.filter(service=service, is_active=True).exists():
+            raise ValidationError(
+                "У заведения есть разделы — сначала уберите их или перенесите",
+                field="has_catalog",
+                code="service_has_catalog_content",
+            )
+    service.has_catalog = value
 
 
 def _validate_service_commerce(field: str, value):

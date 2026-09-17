@@ -219,7 +219,7 @@ def search(hotel, query: str, *, language: str | None = None, limit: int = GROUP
 
     if settings.services:
         services = (
-            Service.objects.filter(is_active=True, is_guest_facing=True)
+            Service.objects.filter(is_active=True, is_guest_facing=True, has_catalog=True)
             .exclude(code__in=settings.excluded_services)
             .select_related("execution_point", "image")
             .annotate(

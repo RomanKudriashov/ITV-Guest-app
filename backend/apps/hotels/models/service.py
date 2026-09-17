@@ -61,6 +61,11 @@ class Service(TenantModel):
     # Показывать ли сервис гостю как заведение на витрине. Служебные (хозслужба,
     # кухня рум-сервиса) — false.
     is_guest_facing = models.BooleanField(default=True)
+    # ЕСТЬ ЛИ У ЗАВЕДЕНИЯ КАТАЛОГ (пункт 10 заказчика). Ресепшен — отдел без
+    # меню и без коммерции: гость пишет ему в чат, он отвечает, оформляет заказ
+    # за гостя, передаёт задачи. Разделы, коммерция и витрина у такого
+    # заведения не заводятся; расписание, персонал и эскалация — остаются.
+    has_catalog = models.BooleanField(default=True)
     image = models.ForeignKey(
         "media.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )

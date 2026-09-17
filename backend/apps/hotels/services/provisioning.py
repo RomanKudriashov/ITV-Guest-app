@@ -223,6 +223,8 @@ def provision_hotel(
                 "code": reception.code,
                 "type": Service.Type.CONCIERGE,
                 "public_name": reception_name,
+                # Ресепшен — отдел без меню: гость пишет ему в чат (волна 9).
+                "has_catalog": False,
             },
         )
         # Починка уже заведённых отелей: на стендах, созданных до этой правки,
