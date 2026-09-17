@@ -43,9 +43,12 @@ export function DeskGuestCardPanel({ threadId }: { threadId: string | null }) {
   }
 
   const day = (iso: string) =>
-    new Intl.DateTimeFormat(language, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(
-      new Date(iso),
-    );
+    new Intl.DateTimeFormat(language, {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(iso));
 
   return (
     <Stack spacing={1.5} sx={{ p: 2 }} data-testid="desk-guest-card">
@@ -55,7 +58,11 @@ export function DeskGuestCardPanel({ threadId }: { threadId: string | null }) {
         </Typography>
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {data.language ? (
-            <Chip size="small" label={t('tracker.desk.language', { lang: data.language.toUpperCase() })} data-testid="desk-guest-language" />
+            <Chip
+              size="small"
+              label={t('tracker.desk.language', { lang: data.language.toUpperCase() })}
+              data-testid="desk-guest-language"
+            />
           ) : null}
           <Chip
             size="small"
@@ -64,7 +71,12 @@ export function DeskGuestCardPanel({ threadId }: { threadId: string | null }) {
             label={data.room_verified ? t('tracker.desk.verified') : t('tracker.desk.notVerified')}
           />
           {!data.reachable ? (
-            <Chip size="small" color="warning" label={t('tracker.desk.gone')} data-testid="desk-guest-gone" />
+            <Chip
+              size="small"
+              color="warning"
+              label={t('tracker.desk.gone')}
+              data-testid="desk-guest-gone"
+            />
           ) : null}
         </Stack>
         {data.stay_since ? (
@@ -125,14 +137,19 @@ function OrderRow({ order }: { order: DeskOrderRow }) {
     ? 'default'
     : order.status.is_terminal
       ? 'success'
-      : (order.status.color_token as 'info' | 'warning' | 'success' | 'error' | undefined) ?? 'info';
+      : ((order.status.color_token as 'info' | 'warning' | 'success' | 'error' | undefined) ??
+        'info');
   return (
     <Box data-testid={`desk-order-${order.number}`}>
       <Stack direction="row" spacing={0.75} alignItems="center">
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
           №{order.number}
         </Typography>
-        <Chip size="small" color={color === 'default' ? 'default' : color} label={order.status.title} />
+        <Chip
+          size="small"
+          color={color === 'default' ? 'default' : color}
+          label={order.status.title}
+        />
         {order.delivery_mode === 'pickup' ? (
           <Chip size="small" variant="outlined" label={t('tracker.card.pickup')} />
         ) : null}

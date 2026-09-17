@@ -105,7 +105,25 @@ class OrderInput:
 
 
 @transaction.atomic
-def create_order(data: OrderInput, *, guest_session=None) -> Order:
+def _actor_type(guest_session, placed_by) -> str:
+    """Кто создал: сотрудник за гостя, сам гость или система (сид, задача)."""
+    if placed_by is not None:
+        return "staff"
+    return "guest" if guest_session else "system"
+
+
+def _actor_id(guest_session, placed_by):
+    if placed_by is not None:
+        return placed_by.pk
+    return guest_session.pk if guest_session else None
+
+
+def create_order(data: OrderInput, *, guest_session=None, placed_by=None) -> Order:
+    """
+    `placed_by` — сотрудник, оформивший заказ ЗА гостя (ресепшен из чата).
+    Сессия гостя при этом может быть (заказ появится у него в списке с
+    пометкой) или не быть (заказ только на номер).
+    """
     hotel_id = require_hotel_id()
     hotel = _lock_hotel(hotel_id)
 
@@ -156,7 +174,8 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         if len(groups) > 1:
             # Заказ-агрегатор с позициями от разных исполнителей — разъезжается.
             return _create_fanned_order(
-                data, hotel, hotel_id, guest_session, behaviour, field_values, aggregator, groups
+                data, hotel, hotel_id, guest_session, behaviour, field_values, aggregator, groups,
+                placed_by=placed_by,
             )
         execution_point = ExecutionPoint.objects.get(pk=next(iter(groups)))
         commerce_service = aggregator  # коммерция корзины — включающего сервиса
@@ -184,6 +203,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         number=_next_number(hotel_id),
         type=behaviour.order_type,
         guest_session=guest_session,
+        placed_by=placed_by,
         room=room,
         execution_point=execution_point,
         location=location,
@@ -220,7 +240,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         order.save(update_fields=["total", "updated_at"])
     else:
         _apply_charges(order, order_items, hotel, location, data, service=commerce_service)
-    return _finalize_created_order(order, hotel_id, guest_session, status)
+    return _finalize_created_order(order, hotel_id, guest_session, status, placed_by)
 
 
 def _apply_charges(order, order_items, hotel, location, data, *, service=None, locations=None) -> None:
@@ -483,22 +503,22 @@ def _resolve_quotable_item(line: OrderLineInput):
     )
 
 
-def _finalize_created_order(order, hotel_id, guest_session, status):
+def _finalize_created_order(order, hotel_id, guest_session, status, placed_by=None):
     OrderStatusChange.objects.create(
         hotel_id=hotel_id,
         order=order,
         from_status=None,
         to_status=status,
-        actor_type="guest" if guest_session else "system",
-        actor_id=guest_session.pk if guest_session else None,
+        actor_type=_actor_type(guest_session, placed_by),
+        actor_id=_actor_id(guest_session, placed_by),
     )
 
     emit(
         ORDER_CREATED,
         _event_payload(order),
         hotel_id=hotel_id,
-        actor_type="guest" if guest_session else "system",
-        actor_id=guest_session.pk if guest_session else None,
+        actor_type=_actor_type(guest_session, placed_by),
+        actor_id=_actor_id(guest_session, placed_by),
     )
     return order
 
@@ -534,7 +554,7 @@ def _resolve_cart_service(data):
 
 
 def _create_fanned_order(
-    data, hotel, hotel_id, guest_session, behaviour, field_values, aggregator, groups
+    data, hotel, hotel_id, guest_session, behaviour, field_values, aggregator, groups, *, placed_by=None
 ) -> Order:
     """
     Заказ-агрегатор разъезжается: parent (гостевой агрегат — снимок сумм, канал,
@@ -569,6 +589,7 @@ def _create_fanned_order(
         number=_next_number(hotel_id),
         type=behaviour.order_type,
         guest_session=guest_session,
+        placed_by=placed_by,
         room=room,
         execution_point=aggregator.execution_point,
         location=common_location,
@@ -594,6 +615,7 @@ def _create_fanned_order(
             number=_next_number(hotel_id),
             type=behaviour.order_type,
             guest_session=guest_session,
+            placed_by=placed_by,
             room=room,
             execution_point=ep,
             parent=parent,
@@ -612,7 +634,7 @@ def _create_fanned_order(
         for resolved in resolved_lines:
             all_items.append(_create_order_item(child, resolved))
         # Каждый child — на свою доску + своя эскалация (эмитит ORDER_CREATED).
-        _finalize_created_order(child, hotel_id, guest_session, child_status)
+        _finalize_created_order(child, hotel_id, guest_session, child_status, placed_by)
 
     priced = [oi.line_total for oi in all_items if oi.line_total is not None]
     if not priced:
@@ -633,15 +655,15 @@ def _create_fanned_order(
         order=parent,
         from_status=None,
         to_status=status,
-        actor_type="guest" if guest_session else "system",
-        actor_id=guest_session.pk if guest_session else None,
+        actor_type=_actor_type(guest_session, placed_by),
+        actor_id=_actor_id(guest_session, placed_by),
     )
     emit(
         ORDER_CREATED,
         _event_payload(parent),
         hotel_id=hotel_id,
-        actor_type="guest" if guest_session else "system",
-        actor_id=guest_session.pk if guest_session else None,
+        actor_type=_actor_type(guest_session, placed_by),
+        actor_id=_actor_id(guest_session, placed_by),
     )
     return parent
 
@@ -965,7 +987,7 @@ def order_queryset():
     return Order.objects.select_related(
         # parent нужен доске исполнителя: у суб-заказа она показывает номер
         # гостевого заказа-агрегата («коктейль из заказа №41»).
-        "status", "room", "location", "execution_point", "parent"
+        "status", "room", "location", "execution_point", "parent", "placed_by"
     ).prefetch_related(
         "items__item__images__asset",
         "status_changes__to_status",
@@ -1043,6 +1065,7 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
                 "total": order.total,
                 "currency": order.currency,
                 **_order_summary(order, language),
+                **placed_by_payload(order, language),
             }
         )
     return {"orders": payload, "to_review": _order_to_review(guest_session, language)}
@@ -1078,6 +1101,16 @@ def _order_to_review(guest_session, language: str | None) -> dict | None:
         "closed_at": order.closed_at.isoformat(),
         **_order_summary(order, language),
     }
+
+
+def placed_by_payload(order: Order, language: str | None) -> dict:
+    if order.placed_by_id is None:
+        return {"placed_by_staff": False, "placed_by_label": None}
+    from apps.chat.services.threads import reception_point
+
+    point = reception_point()
+    label = (translate(point.title, language) or point.code) if point else "Ресепшен"
+    return {"placed_by_staff": True, "placed_by_label": label}
 
 
 def _order_summary(order: Order, language: str | None) -> dict:
@@ -1592,6 +1625,9 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         # карточки вместо позиций — та же развилка «по данным», что и выше.
         "slot": slot_svc.serialize_slot(order, language),
         "can_review": _can_review(order),
+        # Оформлен НЕ гостем: у гостя в списке пометка «оформил ресепшен».
+        # Имени сотрудника гость не видит — ему отвечает отдел.
+        **placed_by_payload(order, language),
         "review": _order_review(order),
         "items": [
             {

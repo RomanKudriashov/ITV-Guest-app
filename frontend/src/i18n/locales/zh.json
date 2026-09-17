@@ -541,7 +541,8 @@
       "asked": "请求内容",
       "acceptedAt": "受理时间",
       "durationMinutes": "{{minutes}} 分钟",
-      "pickupAt": "自取：{{place}}"
+      "pickupAt": "自取：{{place}}",
+      "placedBy": "由{{by}}代下单"
     },
     "orders": {
       "active": "进行中",
@@ -822,7 +823,8 @@
       "grip": "拖动订单",
       "pickup": "自取",
       "pickupAt": "取餐点：{{place}}",
-      "pickupBy": "由 {{room}} 号房客人自取"
+      "pickupBy": "由 {{room}} 号房客人自取",
+      "placedBy": "代客下单：{{name}}"
     },
     "actions": {
       "accept": "接单",
@@ -958,7 +960,30 @@
       "history": "本次入住：{{count}}",
       "noHistory": "暂无已完成订单",
       "chatTab": "对话",
-      "guestTab": "客人"
+      "guestTab": "客人",
+      "order": {
+        "open": "代客下单",
+        "title": "代客订单",
+        "venue": "场所",
+        "pickVenue": "请选择场所",
+        "search": "按名称搜索",
+        "add": "添加",
+        "unavailable": "当前不可用",
+        "cart": "购物车",
+        "empty": "暂时为空",
+        "where": "送达地点",
+        "noPlace": "此购物车没有可用地点",
+        "comment": "订单备注",
+        "total": "合计",
+        "delivery": "配送：{{amount}}",
+        "belowMinimum": "距起送金额还差 {{amount}}",
+        "noPayment": "不收取付款",
+        "cancel": "取消",
+        "submit": "下单",
+        "placed": "订单 #{{number}} 已创建",
+        "failed": "订单未创建",
+        "formsHint": "需填表的请求（出租车、清洁）由客人自行提交"
+      }
     }
   },
   "requestFields": {

@@ -79,7 +79,9 @@ export function DeskThreadList({
             <Stack sx={{ flexGrow: 1, minWidth: 0 }} spacing={0.25}>
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-                  {thread.room ? t('tracker.chat.room', { room: thread.room }) : t('tracker.chat.noRoom')}
+                  {thread.room
+                    ? t('tracker.chat.room', { room: thread.room })
+                    : t('tracker.chat.noRoom')}
                 </Typography>
                 {thread.language ? (
                   <Typography variant="caption" color="text.secondary">
@@ -88,7 +90,10 @@ export function DeskThreadList({
                 ) : null}
                 {thread.last_guest_at || thread.last_at ? (
                   <Typography variant="caption" color="text.secondary">
-                    {formatTime(thread.last_guest_at ?? thread.last_at ?? '', i18n.resolvedLanguage ?? 'en')}
+                    {formatTime(
+                      thread.last_guest_at ?? thread.last_at ?? '',
+                      i18n.resolvedLanguage ?? 'en',
+                    )}
                   </Typography>
                 ) : null}
               </Stack>
@@ -122,7 +127,13 @@ export function DeskThreadList({
       })}
       {hasMore ? (
         <Box sx={{ p: 1.5, display: 'flex', justifyContent: 'center' }}>
-          <Button variant="outlined" size="small" disabled={loadingMore} onClick={onMore} data-testid="desk-more">
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={loadingMore}
+            onClick={onMore}
+            data-testid="desk-more"
+          >
             {t('tracker.chat.more')}
           </Button>
         </Box>
@@ -136,5 +147,8 @@ function formatTime(iso: string, language: string): string {
   if (Number.isNaN(date.getTime())) return '';
   const today = new Date();
   const sameDay = date.toDateString() === today.toDateString();
-  return new Intl.DateTimeFormat(language, sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: 'short' }).format(date);
+  return new Intl.DateTimeFormat(
+    language,
+    sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: 'short' },
+  ).format(date);
 }

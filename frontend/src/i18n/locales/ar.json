@@ -551,7 +551,8 @@
       "asked": "الطلب",
       "acceptedAt": "وقت الاستلام",
       "durationMinutes": "{{minutes}} دقيقة",
-      "pickupAt": "ستستلمه بنفسك: {{place}}"
+      "pickupAt": "ستستلمه بنفسك: {{place}}",
+      "placedBy": "طلبه {{by}}"
     },
     "orders": {
       "active": "النشطة",
@@ -843,7 +844,8 @@
       "grip": "اسحب الطلب",
       "pickup": "استلام",
       "pickupAt": "الاستلام: {{place}}",
-      "pickupBy": "سيستلمه ضيف الغرفة {{room}}"
+      "pickupBy": "سيستلمه ضيف الغرفة {{room}}",
+      "placedBy": "طلبه نيابةً عن الضيف: {{name}}"
     },
     "actions": {
       "accept": "قبول",
@@ -1004,7 +1006,30 @@
       "history": "خلال الإقامة: {{count}}",
       "noHistory": "لا طلبات مغلقة بعد",
       "chatTab": "المحادثة",
-      "guestTab": "الضيف"
+      "guestTab": "الضيف",
+      "order": {
+        "open": "إنشاء طلب",
+        "title": "طلب نيابةً عن الضيف",
+        "venue": "المنشأة",
+        "pickVenue": "اختر منشأة",
+        "search": "بحث بالاسم",
+        "add": "إضافة",
+        "unavailable": "غير متاح الآن",
+        "cart": "السلة",
+        "empty": "فارغة حتى الآن",
+        "where": "مكان التسليم",
+        "noPlace": "لا يوجد مكان متاح لهذه السلة",
+        "comment": "ملاحظة على الطلب",
+        "total": "الإجمالي",
+        "delivery": "التوصيل: {{amount}}",
+        "belowMinimum": "ينقص {{amount}} للحد الأدنى للطلب",
+        "noPayment": "لا يتم تحصيل الدفع",
+        "cancel": "إلغاء",
+        "submit": "إنشاء",
+        "placed": "تم إنشاء الطلب رقم {{number}}",
+        "failed": "لم يُنشأ الطلب",
+        "formsHint": "الطلبات ذات النموذج (تاكسي، تنظيف) ينشئها الضيف بنفسه"
+      }
     }
   },
   "requestFields": {

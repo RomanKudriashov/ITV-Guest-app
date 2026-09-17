@@ -41,6 +41,12 @@ class Order(TenantModel):
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="children"
     )
 
+    # КТО ОФОРМИЛ ЗА ГОСТЯ. Пусто — гость сам (или сев). Заполнено — сотрудник
+    # ресепшена оформил из чата: гость видит пометку «оформил ресепшен», иначе
+    # чужой заказ в своём списке читается как взлом.
+    placed_by = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     guest_session = models.ForeignKey(
         "accounts.GuestSession",
         on_delete=models.SET_NULL,

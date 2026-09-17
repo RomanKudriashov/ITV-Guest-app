@@ -246,6 +246,15 @@ export function OrderCard({
             of the order they actually placed — without this line the two never
             meet.
           */}
+          {order.placed_by ? (
+            <Chip
+              size="small"
+              variant="outlined"
+              data-testid={`tracker-placed-by-${order.number}`}
+              label={t('tracker.card.placedBy', { name: order.placed_by.name })}
+              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+            />
+          ) : null}
           {order.source_order ? (
             <Chip
               size="small"

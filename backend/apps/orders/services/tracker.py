@@ -732,6 +732,12 @@ def serialize_tracker_order(
                 else None
             ),
             "source_order": _source_order(order, language),
+            # Кто оформил за гостя — персонал видит имя (гость — только отдел).
+            "placed_by": (
+                {"id": str(order.placed_by_id), "name": order.placed_by.full_name or order.placed_by.email}
+                if order.placed_by_id
+                else None
+            ),
             "waiting_minutes": max(waiting, 0),
             "is_overdue": overdue is not None,
             # НАСКОЛЬКО просрочен, а не только «да».

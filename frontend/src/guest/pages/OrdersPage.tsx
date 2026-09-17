@@ -136,6 +136,15 @@ function OrderRow({ order }: { order: GuestOrder }) {
               color={order.status.is_cancelled ? 'default' : 'primary'}
               variant={order.status.is_terminal ? 'outlined' : 'filled'}
             />
+            {/* Оформлен не гостем — иначе чужой заказ в списке читается как взлом. */}
+            {order.placed_by_staff ? (
+              <Chip
+                size="small"
+                variant="outlined"
+                label={t('guest.order.placedBy', { by: order.placed_by_label })}
+                data-testid={`guest-order-placed-by-${order.number}`}
+              />
+            ) : null}
           </Stack>
           <Typography variant="caption" color="text.secondary">
             {created} · {order.items.length ? order.items[0].title : ''}

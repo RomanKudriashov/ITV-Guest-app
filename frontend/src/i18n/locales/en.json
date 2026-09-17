@@ -543,7 +543,8 @@
       "asked": "Request",
       "acceptedAt": "Accepted",
       "durationMinutes": "{{minutes}} min",
-      "pickupAt": "You collect it: {{place}}"
+      "pickupAt": "You collect it: {{place}}",
+      "placedBy": "Placed by {{by}}"
     },
     "orders": {
       "active": "Active",
@@ -827,7 +828,8 @@
       "grip": "Drag the order",
       "pickup": "Pickup",
       "pickupAt": "Pickup at {{place}}",
-      "pickupBy": "collected by the guest from {{room}}"
+      "pickupBy": "collected by the guest from {{room}}",
+      "placedBy": "Placed for the guest by {{name}}"
     },
     "actions": {
       "accept": "Accept",
@@ -968,7 +970,30 @@
       "history": "This stay: {{count}}",
       "noHistory": "No closed orders yet",
       "chatTab": "Chat",
-      "guestTab": "Guest"
+      "guestTab": "Guest",
+      "order": {
+        "open": "Place an order",
+        "title": "Order for the guest",
+        "venue": "Venue",
+        "pickVenue": "Pick a venue",
+        "search": "Search by name",
+        "add": "Add",
+        "unavailable": "Unavailable now",
+        "cart": "Cart",
+        "empty": "Empty so far",
+        "where": "Where to deliver",
+        "noPlace": "No place is available for this cart",
+        "comment": "Order comment",
+        "total": "Total",
+        "delivery": "Delivery: {{amount}}",
+        "belowMinimum": "{{amount}} short of the order minimum",
+        "noPayment": "No payment is taken",
+        "cancel": "Cancel",
+        "submit": "Place",
+        "placed": "Order #{{number}} placed",
+        "failed": "The order was not placed",
+        "formsHint": "Form requests (taxi, housekeeping) are placed by the guest"
+      }
     }
   },
   "requestFields": {

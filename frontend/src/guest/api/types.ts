@@ -506,6 +506,10 @@ export interface GuestOrder {
    * hotel collects them. Purely a server verdict — the storefront never computes it.
    */
   can_review?: boolean;
+  /** Оформлен сотрудником за гостя — показываем «оформил ресепшен». */
+  placed_by_staff?: boolean;
+  /** Кем, для гостя: отдел («Ресепшен»), не имя сотрудника. */
+  placed_by_label?: string | null;
 }
 
 export interface GuestOrderList {
@@ -675,6 +679,8 @@ export interface GuestActiveOrder {
   summary: string;
   /** How many further lines beyond `summary` — drives the «ещё N» tail. */
   extra_count: number;
+  placed_by_staff?: boolean;
+  placed_by_label?: string | null;
 }
 
 /** The one closed order the home screen asks to rate. */

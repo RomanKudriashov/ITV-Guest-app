@@ -100,6 +100,8 @@ export interface TrackerJournalEntry {
 
 export interface TrackerOrder extends GuestOrder {
   execution_point: TrackerPointRef;
+  /** Оформил сотрудник за гостя (ресепшен из чата) — кто именно. */
+  placed_by?: { id: string; name: string } | null;
   assignee: TrackerAssignee | null;
   accepted_at: string | null;
   /** How long the order has been waiting, minutes. */

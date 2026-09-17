@@ -794,6 +794,24 @@
   "/api/v1/tracker/chat/threads/{thread_id}/take": [
     "POST"
   ],
+  "/api/v1/tracker/desk/catalog": [
+    "GET"
+  ],
+  "/api/v1/tracker/desk/item/{item_id}": [
+    "GET"
+  ],
+  "/api/v1/tracker/desk/threads/{thread_id}/locations": [
+    "GET"
+  ],
+  "/api/v1/tracker/desk/threads/{thread_id}/order": [
+    "POST"
+  ],
+  "/api/v1/tracker/desk/threads/{thread_id}/quote": [
+    "POST"
+  ],
+  "/api/v1/tracker/desk/venues": [
+    "GET"
+  ],
   "/api/v1/tracker/order/{order_id}": [
     "GET"
   ],

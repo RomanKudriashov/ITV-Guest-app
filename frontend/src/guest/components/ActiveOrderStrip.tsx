@@ -49,6 +49,8 @@ function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: numb
   if (order.summary) parts.push(order.summary);
   if (order.extra_count > 0) parts.push(t('guest.home.activeOrder.more', { count: order.extra_count }));
   if (time) parts.push(t('guest.home.activeOrder.serveBy', { time }));
+  // Оформлен не гостем — сказано сразу, до того как гость решит, что это чужое.
+  if (order.placed_by_staff) parts.unshift(t('guest.order.placedBy', { by: order.placed_by_label }));
   const detail = parts.join(' · ');
 
   return (

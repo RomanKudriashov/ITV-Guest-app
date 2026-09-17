@@ -48,7 +48,10 @@ export function DeskConversation({
   const key = trackerKeys.chatThread(threadId);
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['tracker', 'chat', 'threads'], refetchType: 'active' });
+    void queryClient.invalidateQueries({
+      queryKey: ['tracker', 'chat', 'threads'],
+      refetchType: 'active',
+    });
     void queryClient.invalidateQueries({ queryKey: ['tracker', 'chat', 'guest', threadId] });
   };
 
@@ -137,7 +140,12 @@ export function DeskConversation({
           sx={{ borderRadius: 0 }}
           data-testid="desk-holder-banner"
           action={
-            <Button color="inherit" size="small" onClick={() => take.mutate()} data-testid="desk-take">
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => take.mutate()}
+              data-testid="desk-take"
+            >
               {t('tracker.desk.takeOver')}
             </Button>
           }

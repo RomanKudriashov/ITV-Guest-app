@@ -85,6 +85,9 @@ class OrderOut(Schema):
     field_values: list[dict[str, Any]]
     slot: dict[str, Any] | None = None
     can_review: bool = False
+    # Оформлен сотрудником за гостя — у гостя пометка «оформил ресепшен».
+    placed_by_staff: bool = False
+    placed_by_label: str | None = None
     review: dict[str, Any] | None = None
     items: list[dict[str, Any]]
 

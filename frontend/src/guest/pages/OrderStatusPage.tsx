@@ -279,6 +279,14 @@ export function OrderStatusPage() {
           <Typography variant="h6" component="h1" data-testid="guest-order-number">
             {t('guest.order.number', { number: order.number })}
           </Typography>
+          {order.placed_by_staff ? (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={t('guest.order.placedBy', { by: order.placed_by_label })}
+              data-testid="guest-order-placed-by"
+            />
+          ) : null}
           {/*
             Тест-идентификатор на ТЕКУЩЕМ статусе. Без него проверкам
             доставалась только карточка целиком, а в ней ниже лежит лента всех
