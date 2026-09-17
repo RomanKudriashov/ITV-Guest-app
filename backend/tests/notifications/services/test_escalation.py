@@ -171,7 +171,7 @@ def test_step_sends_to_point_channels(crystal, order, notifications_on, no_dispa
         assert result.status == NotificationStatus.SENT
         deliveries = list(NotificationLog.objects.filter(parent=result))
         assert len(deliveries) == 1
-        assert deliveries[0].channel.title == "Чат кухни"
+        assert deliveries[0].channel.title == "Уведомления: Кухня"
         assert deliveries[0].status == NotificationStatus.SCHEDULED
         assert str(order.number) in deliveries[0].subject
 
@@ -416,7 +416,7 @@ def test_failed_channel_does_not_affect_the_order(
 
 def test_template_placeholders_are_filled(crystal, order, notifications_on):
     with tenant_context(crystal):
-        channel = NotificationChannel.objects.get(title="Чат кухни")
+        channel = NotificationChannel.objects.get(title="Уведомления: Кухня")
         step = steps_of(crystal)[0]
         message = render_message(channel, order, step, "ru")
 
@@ -429,7 +429,7 @@ def test_template_placeholders_are_filled(crystal, order, notifications_on):
 def test_unknown_placeholder_is_left_alone_not_crashing(crystal, order, notifications_on):
     """Шаблон правит отель — опечатка не должна ронять отправку."""
     with tenant_context(crystal):
-        channel = NotificationChannel.objects.get(title="Чат кухни")
+        channel = NotificationChannel.objects.get(title="Уведомления: Кухня")
         channel.templates = {"ru": {"subject": "{{number}} {{oops}}", "body": "{{summary}}"}}
         channel.save()
 
@@ -474,7 +474,7 @@ def test_service_request_fields_get_into_the_message(client, crystal, notificati
         taxi_order = Order.objects.select_related("status", "execution_point").get(
             pk=created.json()["id"]
         )
-        channel = NotificationChannel.objects.get(title="Чат кухни")
+        channel = NotificationChannel.objects.get(title="Уведомления: Кухня")
         message = render_message(channel, taxi_order, None, "ru")
         assert "Аэропорт Пулково" in message.body
 

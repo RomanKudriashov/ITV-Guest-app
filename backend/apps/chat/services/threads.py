@@ -9,7 +9,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 
 from django.db import transaction
 from django.db.models import Count, OuterRef, Q, Subquery
@@ -48,6 +47,21 @@ def get_or_create_thread(guest_session) -> ChatThread:
         guest_session=guest_session,
         execution_point=_default_point(),
     )
+
+
+def unread_for_guest(guest_session) -> int:
+    """
+    Непрочитанные гостем — БЕЗ создания треда.
+
+    Главная витрины спрашивает счётчик на каждом открытии, и раньше заводила
+    ради него тред: на стенде 4075 тредов, сообщения — в 16. Тред появляется,
+    когда гость открывает чат или пишет, а не когда смотрит главную.
+    """
+    return ChatMessage.objects.filter(
+        thread__guest_session_id=guest_session.pk,
+        author_type="staff",
+        read_by_guest_at__isnull=True,
+    ).count()
 
 
 def _default_point():

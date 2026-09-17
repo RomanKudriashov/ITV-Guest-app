@@ -36,7 +36,7 @@
 ```jsonc
 {
   "id": "...", "type": "telegram",          // telegram | email | log
-  "title": "Чат кухни",
+  "title": "Уведомления: Кухня",
   "is_active": true,
   "execution_point_id": "..." | null,       // канал отдела
   "user_id": "..." | null,                  // персональный канал сотрудника

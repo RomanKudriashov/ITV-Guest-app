@@ -32,12 +32,12 @@ def guest_home(request: HttpRequest):
     комната и его непрочитанные.
     """
     session = request.guest_session
-    thread = chat_svc.get_or_create_thread(session)
     return home_payload(
         request.hotel,
         language=current_language(),
         room=session.room.number if session.room_id else None,
-        unread_chat=chat_svc.thread_snapshot(thread, side="guest")["unread"],
+        # Счётчик — без треда: главная не заводит пустых переписок.
+        unread_chat=chat_svc.unread_for_guest(session),
     )
 
 

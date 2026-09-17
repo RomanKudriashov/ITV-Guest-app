@@ -50,3 +50,26 @@ def test_old_threads_stay_for_the_staff(client, crystal, cms):
     with tenant_context(crystal):
         assert ChatThread.objects.filter(room__number="212").count() == 2, "номер виден у обоих"
     assert len([t for t in threads if t.get("room") == "212"]) == 2
+
+
+def test_the_home_screen_does_not_create_a_thread(client, crystal):
+    guest = guest_for(client, crystal, room="212")
+    with tenant_context(crystal):
+        before = ChatThread.objects.count()
+    for _ in range(3):
+        assert guest.get("/api/guest/home").json()["unread_chat"] == 0
+    with tenant_context(crystal):
+        assert ChatThread.objects.count() == before, "главная не заводит пустых тредов"
+
+
+def test_the_home_counter_still_counts_staff_replies(client, crystal):
+    from apps.accounts.models import User
+    from apps.chat.services import staff_send
+
+    guest = guest_for(client, crystal, room="212")
+    thread_id = guest.post("/api/guest/chat", {"body": "вопрос"}).json()["thread_id"]
+    with tenant_context(crystal):
+        staff_send(ChatThread.objects.get(pk=thread_id), User.objects.get(email="reception@crystal.local"), "ответ")
+    assert guest.get("/api/guest/home").json()["unread_chat"] == 1
+    guest.post("/api/guest/chat/read", {})
+    assert guest.get("/api/guest/home").json()["unread_chat"] == 0

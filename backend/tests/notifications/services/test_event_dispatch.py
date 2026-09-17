@@ -129,7 +129,7 @@ def test_exhausted_retries_fail_and_tell_the_hotel(crystal, kitchen, notificatio
     with tenant_context(crystal):
         record = events.notify("order.cancelled", {"number": 5}, point_id=kitchen.pk)
         delivery = record.deliveries.get()
-        assert delivery.channel_title == "Чат кухни"
+        assert delivery.channel_title == "Уведомления: Кухня"
 
     monkeypatch.setattr(
         tasks.deliver_event,

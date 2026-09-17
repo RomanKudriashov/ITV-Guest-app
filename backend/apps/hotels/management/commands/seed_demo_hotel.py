@@ -1118,8 +1118,10 @@ class Command(BaseCommand):
         Тип канала — `log`: демо-стенд не должен требовать бота и SMTP, чтобы
         показать, как работает эскалация. Сообщения видно в логах backend.
         """
+        # «Уведомления», а не «Чат»: это канал, куда падают уведомления, а не
+        # переписка — на показе «Чат кухни» путали с чатом гостя.
         kitchen_chat, _ = NotificationChannel.objects.get_or_create(
-            title="Чат кухни",
+            title="Уведомления: Кухня",
             defaults={
                 "type": ChannelType.LOG,
                 "execution_point": points["kitchen"],
@@ -1212,7 +1214,7 @@ class Command(BaseCommand):
 
             title = translate(point.title, "ru") or point.code
             NotificationChannel.objects.get_or_create(
-                title=f"Чат: {title}",
+                title=f"Уведомления: {title}",
                 defaults={
                     "type": ChannelType.LOG,
                     "execution_point": point,

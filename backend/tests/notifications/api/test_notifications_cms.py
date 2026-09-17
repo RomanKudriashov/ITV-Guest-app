@@ -15,7 +15,7 @@ pytestmark = pytest.mark.django_db
 
 def test_seeded_channels_are_listed(cms):
     titles = {channel["title"] for channel in cms.get("/api/cms/notification-channels").json()["items"]}
-    assert {"Чат кухни", "Пётр — личный канал"} <= titles
+    assert {"Уведомления: Кухня", "Пётр — личный канал"} <= titles
 
 
 def test_secret_is_written_but_never_returned(cms, crystal):
@@ -100,7 +100,7 @@ def test_channel_type_cannot_be_changed(cms):
 def test_test_message_reports_result(cms, crystal):
     """Настраивать канал вслепую и ждать первой заявки, чтобы узнать про опечатку, нельзя."""
     with tenant_context(crystal):
-        channel_id = str(NotificationChannel.objects.get(title="Чат кухни").pk)
+        channel_id = str(NotificationChannel.objects.get(title="Уведомления: Кухня").pk)
 
     response = cms.post(f"/api/cms/notification-channels/{channel_id}/test", {})
     assert response.status_code == 200
@@ -302,7 +302,7 @@ def test_log_shows_step_and_its_deliveries(client, crystal, cms, settings):
 
     assert len(parents) == 3, "по записи на каждую ступень"
     assert len(children) == 1, "первая ступень ушла в один канал"
-    assert children[0]["channel_title"] == "Чат кухни"
+    assert children[0]["channel_title"] == "Уведомления: Кухня"
     assert children[0]["step_index"] == 0
 
     scheduled = cms.get("/api/cms/notification-log?status=scheduled").json()["items"]
