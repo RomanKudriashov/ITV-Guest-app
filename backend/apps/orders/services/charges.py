@@ -40,17 +40,41 @@ def _round_to(value: int, step: int) -> int:
     return int(round(value / step) * step)
 
 
+def delivery_fee_for(locations) -> int:
+    """
+    Плата за доставку — по местам, КУДА НЕСУТ.
+
+    Точка выдачи платы не несёт никогда, даже если в строке локации осталось
+    число (данные из прошлого, правка мимо формы): гость забирает сам, и брать
+    с него за доставку — ровно та ошибка, ради которой этот расчёт смотрит на
+    вид места, а не только на поле платы. Разные места доставки — разные
+    поездки, у каждой своя плата; одно место — одна плата.
+    """
+    fee = 0
+    seen = set()
+    for location in locations:
+        if location is None or getattr(location, "is_pickup", False):
+            continue
+        if location.pk in seen:
+            continue
+        seen.add(location.pk)
+        fee += int(getattr(location, "delivery_fee_minor", 0) or 0)
+    return fee
+
+
 def compute_charges(
     hotel,
     *,
     priced_lines: list[tuple[int, bool]],
     location=None,
+    locations=None,
     tip_minor: int = 0,
     service=None,
 ) -> ChargeBreakdown:
     """
     priced_lines — список (line_total_minor, облагается_ли_сбором) по позициям.
-    location — локация доставки (для стоимости доставки), может быть None.
+    location — место получения заказа (для платы за доставку), может быть None;
+    locations — места частей разъезжающегося заказа (вместо одного места).
     service — сервис заказа: его коммерч. оверрайды (сбор, порог доставки,
     округление) имеют приоритет над отелем; null-оверрайд наследует отель.
     Налог, валюта и налоговый режим — уровень отеля. service=None → всё берётся
@@ -68,7 +92,7 @@ def compute_charges(
     service_fee_bp = int(eff("service_fee_bp") or 0)
     service_fee = feeable * service_fee_bp // 10000
 
-    delivery_conf = int(getattr(location, "delivery_fee_minor", 0) or 0) if location else 0
+    delivery_conf = delivery_fee_for(locations if locations is not None else [location])
     delivery = delivery_conf
     threshold = eff("free_delivery_threshold_minor")
     if threshold is not None and subtotal >= threshold:

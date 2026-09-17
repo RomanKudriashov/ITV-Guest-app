@@ -137,10 +137,7 @@ def locations_payload(
             }
         )
 
-    return {
-        "room": room_number,
-        "locations": locations,
-        # Устаревшее: способ теперь у каждого места (`delivery_mode`). Поле
-        # живёт, пока витрина не перестанет его читать (шаг 6 волны 7).
-        "delivery_modes": ["delivery", "pickup"],
-    }
+    # Списка способов «на весь отель» больше нет: витрина брала из него первый
+    # элемент, и каждый заказ уходил «доставкой», куда бы его ни забирали.
+    # Способ — свойство места (`delivery_mode` у каждого).
+    return {"room": room_number, "locations": locations}

@@ -226,7 +226,6 @@ crystal` — заголовок принимается только при `DJAN
      "title": "Стойка лобби-бара", "delivery_mode": "pickup",
      "requires_refinement": false, "refinement_label": null, "is_default": false}
   ],
-  "delivery_modes": ["delivery", "pickup"]   // устарело, см. delivery_mode у места
 }
 ```
 
@@ -260,13 +259,26 @@ crystal` — заголовок принимается только при `DJAN
   ],
   "location_id": "...",                 // только при location_mode=delivery
   "location_refinement": "",            // обязателен, если requires_refinement
-  "delivery_mode": "delivery",
+  "group_locations": [                  // корзина из нескольких заведений:
+    {"point": "bar", "location_id": "...", "location_refinement": ""}
+  ],                                    // место части; без записи — общее
   "timing": "asap",                     // "asap" | "scheduled"
   "requested_time": null,               // ISO, обязательно при timing=scheduled
   "comment": "к 19:00",
   "field_values": {}                    // ответы на поля заявки-услуги
 }
 ```
+
+**Способ получения не передаётся.** Он следует из вида места
+(`delivery_mode` у места, §3) и записывается в заказ снимком: смена вида
+локации потом прошлый заказ не переписывает. Присланный старой витриной
+`delivery_mode` сервер пропускает.
+
+**Корзина из нескольких заведений** (`service_code` агрегатора): заказ
+разъезжается по частям, и у каждой части — своё место. `group_locations`
+называет место части по коду её точки исполнения; части без записи получают
+общее `location_id`. Место каждой части проверяется по матрице для позиций
+ЭТОЙ части. Разбивку на части сервер отдаёт в котировке (`executor` у строки).
 
 **Заявка-услуга** отправляется тем же эндпоинтом, с одной позицией и
 заполненным `field_values` (ключ — `code` поля):
@@ -349,7 +361,15 @@ crystal` — заголовок принимается только при `DJAN
   ],
   "room": "305",
   "location": {"code": "in_room", "title": "В номер", "refinement": ""},
-  "delivery_mode": "delivery",
+  "delivery_mode": "delivery",           // "pickup" — гость забирает сам
+  "parts": [                             // только у заказа из нескольких заведений
+    {"point": "kitchen", "title": "Кухня",
+     "location": {"code": "in_room", "title": "В номер", "refinement": ""},
+     "delivery_mode": "delivery"},
+    {"point": "bar", "title": "Бар",
+     "location": {"code": "bar-counter", "title": "Стойка лобби-бара", "refinement": ""},
+     "delivery_mode": "pickup"}
+  ],                                     // места разные — у агрегата location: null
   "requested_time": null,
   "eta_minutes": 25,                     // ожидаемое время, оценка сервера
   "comment": "к 19:00",

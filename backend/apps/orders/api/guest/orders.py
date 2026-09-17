@@ -50,7 +50,7 @@ def cart_quote(request: HttpRequest, payload: OrderIn):
         ],
         service_code=payload.service_code,
         location_id=payload.location_id,
-        delivery_mode=payload.delivery_mode,
+        group_locations=_group_locations(payload),
         tip_minor=payload.tip_minor,
         tip_percent=payload.tip_percent,
     )
@@ -100,7 +100,7 @@ def place_order(
         service_code=payload.service_code,
         location_id=payload.location_id,
         location_refinement=payload.location_refinement,
-        delivery_mode=payload.delivery_mode,
+        group_locations=_group_locations(payload),
         timing=payload.timing,
         requested_time=payload.requested_time,
         comment=payload.comment,
@@ -158,3 +158,10 @@ def cancel_order(request: HttpRequest, order_id: str, payload: CancelIn):
     order = get_order(order_id, guest_session=session)
     cancelled = cancel_order_by_guest(order, guest_session=session, reason=payload.reason)
     return 200, serialize_order(cancelled, current_language())
+
+
+def _group_locations(payload) -> dict[str, tuple[str | None, str]]:
+    return {
+        entry.point: (entry.location_id, entry.location_refinement)
+        for entry in (getattr(payload, "group_locations", None) or [])
+    }

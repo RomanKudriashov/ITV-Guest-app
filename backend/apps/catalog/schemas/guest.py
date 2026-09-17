@@ -74,5 +74,5 @@ class GuestItemDetailOut(Schema):
 
 class LocationsOut(Schema):
     room: str | None
+    # Каждое место несёт свой `delivery_mode`: способ следует из вида места.
     locations: list[dict[str, Any]]
-    delivery_modes: list[str]

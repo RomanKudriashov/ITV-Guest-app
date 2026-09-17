@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -40,6 +41,7 @@ from apps.events.bus import (
     emit,
 )
 from apps.hotels.models import ExecutionPoint, Hotel, Location, Room
+from apps.hotels.services.locations import delivery_mode_of
 from apps.media.services import image_url
 
 from apps.orders.services import status_flows
@@ -85,7 +87,10 @@ class OrderInput:
     room_id: str | None = None
     location_id: str | None = None
     location_refinement: str = ""
-    delivery_mode: str = Order.DeliveryMode.DELIVERY
+    # Место для отдельной части разъезжающегося заказа: код точки исполнения →
+    # (локация, уточнение). Части без своего места получают общее. Способ
+    # получения не передаётся вовсе — он следует из вида места.
+    group_locations: dict[str, tuple[str | None, str]] = field(default_factory=dict)
     timing: str = "asap"
     requested_time: datetime | None = None
     comment: str = ""
@@ -183,7 +188,9 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
         execution_point=execution_point,
         location=location,
         location_refinement=data.location_refinement[:128],
-        delivery_mode=data.delivery_mode,
+        # Способ — из вида места, снимком: смена вида локации потом не
+        # перепишет, как получали уже сделанный заказ.
+        delivery_mode=delivery_mode_of(location),
         requested_time=requested_time,
         comment=data.comment,
         status=status,
@@ -215,7 +222,7 @@ def create_order(data: OrderInput, *, guest_session=None) -> Order:
     return _finalize_created_order(order, hotel_id, guest_session, status)
 
 
-def _apply_charges(order, order_items, hotel, location, data, *, service=None) -> None:
+def _apply_charges(order, order_items, hotel, location, data, *, service=None, locations=None) -> None:
     """
     Считает начисления, проверяет минимум и фиксирует снимок в заказе. service
     задан → коммерция этого сервиса (агрегатор корзины); None → резолв из точки
@@ -245,7 +252,8 @@ def _apply_charges(order, order_items, hotel, location, data, *, service=None) -
 
     tip = resolve_tip_minor(subtotal_minor=subtotal, tip_minor=data.tip_minor, tip_percent=data.tip_percent)
     breakdown = compute_charges(
-        hotel, priced_lines=priced_lines, location=location, tip_minor=tip, service=service
+        hotel, priced_lines=priced_lines, location=location, locations=locations,
+        tip_minor=tip, service=service,
     )
 
     order.subtotal_minor = breakdown.subtotal_minor
@@ -317,10 +325,11 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         behaviour = behaviour_for(item.type)
         options = _validate_modifiers(item, line.modifier_option_ids) if behaviour.uses_modifiers else []
         inclusion = None
+        executor_id = None
         if aggregator is not None:
             from apps.catalog.services.inclusions import resolve_item_executor
 
-            _ep, inclusion = resolve_item_executor(aggregator, item)
+            executor_id, inclusion = resolve_item_executor(aggregator, item)
         base_price = item.price if inclusion is None else inclusion.apply_markup(item.price)
         unit_price = None if base_price is None else base_price + sum(o.price_delta for o in options)
         line_total = None if unit_price is None else unit_price * line.quantity
@@ -329,6 +338,9 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         quoted_lines.append({
             "item_id": str(item.pk),
             "title": item.title_i18n,
+            # Чья это часть заказа: корзина из двух заведений спрашивает место
+            # по частям, и разбивку знает только сервер.
+            "executor": _executor_ref(executor_id),
             "unit_price_minor": unit_price,
             "line_total_minor": line_total,
             "is_available": bool(state.is_available),
@@ -348,12 +360,24 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
     else:
         execution_point = _resolve_execution_point(next(iter(categories)).pk) if categories else None
         service = _service_for_point(execution_point)
-    location = Location.objects.filter(pk=data.location_id).first() if data.location_id else None
+    location = _quote_location(data.location_id)
+    # Места частей: котировка терпима — нечитаемое место просто не учитывается.
+    part_places = [location] + [
+        _quote_location(location_id) for location_id, _ in data.group_locations.values()
+    ]
+    points_in_cart = {
+        entry["executor"]["code"] for entry in quoted_lines if entry.get("executor")
+    }
+    if data.group_locations and points_in_cart:
+        part_places = [
+            _quote_location(data.group_locations.get(code, (data.location_id, ""))[0])
+            for code in sorted(points_in_cart)
+        ]
 
     minimum = minimum_order_minor(categories, service)
     tip = resolve_tip_minor(subtotal_minor=subtotal, tip_minor=data.tip_minor, tip_percent=data.tip_percent)
     breakdown = compute_charges(
-        hotel, priced_lines=priced_lines, location=location, tip_minor=tip, service=service
+        hotel, priced_lines=priced_lines, locations=part_places, tip_minor=tip, service=service
     )
 
     return {
@@ -369,6 +393,51 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         # оформления, и решение об этом принимает сервер, а не подсчёт на клиенте.
         "has_unavailable": any(not entry["is_available"] for entry in quoted_lines),
     }
+
+
+def _order_parts(order: Order, language: str | None) -> list[dict[str, Any]]:
+    if order.parent_id is not None:
+        return []
+    children = list(
+        order.children.select_related("execution_point", "location").order_by("created_at")
+    )
+    return [
+        {
+            "point": child.execution_point.code,
+            "title": translate(child.execution_point.title, language) or child.execution_point.code,
+            "location": (
+                {
+                    "code": child.location.code,
+                    "title": translate(child.location.title, language),
+                    "refinement": child.location_refinement,
+                }
+                if child.location_id
+                else None
+            ),
+            "delivery_mode": child.delivery_mode,
+        }
+        for child in children
+    ]
+
+
+def _quote_location(location_id):
+    if not location_id:
+        return None
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    try:
+        return Location.objects.filter(pk=location_id).first()
+    except (DjangoValidationError, ValueError):
+        return None
+
+
+def _executor_ref(executor_id) -> dict | None:
+    if not executor_id:
+        return None
+    point = ExecutionPoint.objects.filter(pk=executor_id).first()
+    if point is None:
+        return None
+    return {"code": point.code, "title": point.title_i18n or point.code}
 
 
 def _executing_service(aggregator, item):
@@ -471,11 +540,22 @@ def _create_fanned_order(
     своими позициями и эскалацией). Деньги — на parent, над ВСЕМИ позициями, с
     коммерцией агрегатора; children денег не несут.
     """
-    location = _resolve_location(
-        data,
-        next(iter(groups.values()))[0]["item"],
-        [line["item"] for lines in groups.values() for line in lines],
-    )
+    # МЕСТО — У КАЖДОЙ ЧАСТИ СВОЁ. Корзина из двух заведений может получать
+    # разное: блюда кухни — в номер, коктейли — у стойки бара. Часть без
+    # своего места получает общее; место проверяется по матрице для позиций
+    # ЭТОЙ части, а не всей корзины.
+    points = {str(ep.pk): ep for ep in ExecutionPoint.objects.filter(pk__in=list(groups))}
+    placed: dict[str, tuple] = {}
+    for ep_id, resolved_lines in groups.items():
+        placed[ep_id] = _resolve_group_location(data, points[str(ep_id)], resolved_lines)
+    distinct = {(loc.pk if loc else None, refinement) for loc, refinement in placed.values()}
+    if len(distinct) == 1:
+        common_location, common_refinement = next(iter(placed.values()))
+    else:
+        # Места разные — у агрегата общего места нет; где что получают, гость
+        # видит по частям заказа.
+        common_location, common_refinement = None, ""
+    modes = {delivery_mode_of(loc) for loc, _ in placed.values()}
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
     # Поток агрегата — агрегатора; у каждого child свой (см. ниже): коктейль
@@ -489,9 +569,10 @@ def _create_fanned_order(
         guest_session=guest_session,
         room=room,
         execution_point=aggregator.execution_point,
-        location=location,
-        location_refinement=data.location_refinement[:128],
-        delivery_mode=data.delivery_mode,
+        location=common_location,
+        location_refinement=common_refinement[:128],
+        # Все части забирают сами — агрегат тоже «выдача»; иначе — доставка.
+        delivery_mode=modes.pop() if len(modes) == 1 else Order.DeliveryMode.DELIVERY,
         requested_time=requested_time,
         comment=data.comment,
         status=status,
@@ -513,9 +594,9 @@ def _create_fanned_order(
             room=room,
             execution_point=ep,
             parent=parent,
-            location=location,
-            location_refinement=data.location_refinement[:128],
-            delivery_mode=data.delivery_mode,
+            location=placed[ep_id][0],
+            location_refinement=placed[ep_id][1][:128],
+            delivery_mode=delivery_mode_of(placed[ep_id][0]),
             requested_time=requested_time,
             comment=data.comment,
             status=child_status,
@@ -535,7 +616,10 @@ def _create_fanned_order(
         parent.save(update_fields=["total", "updated_at"])
     else:
         # Один снимок сумм — на parent, над всеми строками, коммерция агрегатора.
-        _apply_charges(parent, all_items, hotel, location, data, service=aggregator)
+        _apply_charges(
+        parent, all_items, hotel, None, data, service=aggregator,
+        locations=[loc for loc, _ in placed.values()],
+    )
 
     # У parent — своя запись создания и событие ORDER_CREATED: аналитику несёт
     # он (children пропускаются). На доску parent не попадает (исключён), а
@@ -747,6 +831,18 @@ def _resolve_execution_point(category_id) -> ExecutionPoint:
         f"Для категории «{category.code if category else category_id}» "
         "не настроен маршрут на точку исполнения"
     )
+
+
+def _resolve_group_location(data: OrderInput, point, resolved_lines) -> tuple:
+    """Место одной части заказа: своё, если гость его назвал, иначе общее."""
+    location_id, refinement = data.group_locations.get(
+        point.code, (data.location_id, data.location_refinement)
+    )
+    part = dataclasses.replace(
+        data, location_id=location_id, location_refinement=refinement or ""
+    )
+    items = [line["item"] for line in resolved_lines]
+    return _resolve_location(part, items[0], items), part.location_refinement
 
 
 def _resolve_location(data: OrderInput, item: Item, items=()) -> Location | None:
@@ -1413,6 +1509,10 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
             else None
         ),
         "delivery_mode": order.delivery_mode,
+        # ЧАСТИ ЗАКАЗА ИЗ НЕСКОЛЬКИХ ЗАВЕДЕНИЙ — где и как гость получает
+        # каждую. У агрегата с разными местами общего места нет, и без этого
+        # гость не увидел бы, что коктейль ждёт его у стойки.
+        "parts": _order_parts(order, language),
         # ЧЕМ КАРТОЧКА ОТВЕЧАЕТ ГОСТЮ: запись, доставка, поездка или заявка.
         # Из того же реестра, что и тип трекера персонала (apps/orders/
         # tracker_types.py) — второй источник разошёлся бы с первым.

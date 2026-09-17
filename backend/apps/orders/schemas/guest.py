@@ -26,6 +26,12 @@ class OrderLineIn(Schema):
     modifier_option_ids: list[str] = []
     comment: str = ""
 
+class GroupLocationIn(Schema):
+    point: str
+    location_id: str | None = None
+    location_refinement: str = ""
+
+
 class OrderIn(Schema):
     lines: list[OrderLineIn]
     # Код сервиса-корзины (заведения). Задан → позиции резолвятся по включениям
@@ -34,7 +40,10 @@ class OrderIn(Schema):
     service_code: str | None = None
     location_id: str | None = None
     location_refinement: str = ""
-    delivery_mode: str = "delivery"
+    # Место для части корзины из двух заведений: код точки исполнения части и
+    # её место. Части без своего места получают общее (`location_id`). Способ
+    # получения не передаётся: он следует из вида места.
+    group_locations: list[GroupLocationIn] = []
     timing: str = "asap"
     requested_time: datetime | None = None
     comment: str = ""
@@ -60,6 +69,8 @@ class OrderOut(Schema):
     room: str
     location: dict[str, Any] | None
     delivery_mode: str
+    # Части заказа из нескольких заведений: где и как получают каждую.
+    parts: list[dict[str, Any]] = []
     # Вид гостевой карточки: booking | delivery | ride | request. Считается из
     # того же реестра, что и тип трекера (apps/orders/tracker_types.py).
     card_kind: str = "request"

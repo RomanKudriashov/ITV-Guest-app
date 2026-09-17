@@ -379,8 +379,15 @@ class Command(BaseCommand):
         ).select_related("user"):
             staff_by_point.setdefault(assignment.execution_point_id, []).append(assignment.user)
 
+        from apps.hotels.models import Location
+
         return {
             "rooms": rooms,
+            # Точки выдачи: самовывоз в истории — это заказ, оформленный к
+            # стойке, а не флажок рядом с доставкой.
+            "pickup_points": list(
+                Location.objects.filter(is_active=True, kind=Location.Kind.PICKUP_POINT)
+            ),
             "products": products,
             "requests": requests,
             "slots": slots,
@@ -391,6 +398,26 @@ class Command(BaseCommand):
             "staff": staff_by_point,
             "hours": self._open_hours(hotel, available),
         }
+
+    def _pickup_for(self, lines, plan, rng) -> str | None:
+        """
+        Примерно каждый пятый заказ — к точке выдачи, если по матрице там
+        выдают всё из корзины. Иначе места нет: заказ идёт в номер гостя.
+        """
+        if not plan["pickup_points"] or rng.random() >= 0.18:
+            return None
+        from apps.catalog.models import Item
+        from apps.hotels.services.locations import location_allows
+
+        categories = set(
+            Item.objects.filter(pk__in=[line.item_id for line in lines]).values_list(
+                "category_id", flat=True
+            )
+        )
+        options = [
+            point for point in plan["pickup_points"] if not location_allows(point, categories)
+        ]
+        return str(rng.choice(options).pk) if options else None
 
     def _open_hours(self, hotel, items) -> dict:
         """
@@ -463,10 +490,7 @@ class Command(BaseCommand):
                             room_id=str(room.pk),
                             comment=rng.choice(COMMENTS),
                             field_values=self._field_values(lines, plan, rng),
-                            delivery_mode=(
-                                Order.DeliveryMode.PICKUP if rng.random() < 0.18
-                                else Order.DeliveryMode.DELIVERY
-                            ),
+                            location_id=self._pickup_for(lines, plan, rng),
                         ),
                         guest_session=session,
                     )
