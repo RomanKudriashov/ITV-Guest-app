@@ -128,7 +128,8 @@ class Hotel(BaseModel):
     # Отзывы: собирать ли оценку после завершения и порог «низкой» оценки,
     # при которой уведомляется менеджер (service recovery).
     review_enabled = models.BooleanField(default=True)
-    review_low_threshold = models.PositiveSmallIntegerField(default=3)
+    # Оценка «≤ порога» — низкая. Две звезды и ниже — решение заказчика.
+    review_low_threshold = models.PositiveSmallIntegerField(default=2)
 
     # --- Коммерция. По умолчанию всё выключено: суммы = сумме позиций,
     # поведение старых заказов не меняется, пока отель не включит в CMS. ---

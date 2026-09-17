@@ -30,8 +30,6 @@ class Review(TenantModel):
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     comment = models.TextField(blank=True)
-    # Уведомили ли менеджера о низкой оценке — чтобы не дёргать повторно.
-    low_rating_notified = models.BooleanField(default=False)
 
     class Meta:
         db_table = "reviews_review"

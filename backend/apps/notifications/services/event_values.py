@@ -200,7 +200,7 @@ def _review(code: str) -> Example | None:
     from apps.reviews.models import Review
 
     hotel = Hotel.objects.get(pk=require_hotel_id())
-    threshold = getattr(hotel, "review_low_threshold", 3)
+    threshold = getattr(hotel, "review_low_threshold", 2)
     review = (
         Review.objects.filter(rating__lte=threshold)
         .select_related("order__room")

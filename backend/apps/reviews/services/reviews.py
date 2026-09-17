@@ -20,7 +20,7 @@ from apps.reviews.models import Review
 def can_review(order: Order) -> bool:
     """Отзыв возможен на завершённую (не отменённую) заявку без отзыва, если отель их собирает."""
     hotel = order.hotel
-    if not getattr(hotel, "review_enabled", True):
+    if not hotel.review_enabled:
         return False
     if not order.status.is_terminal or order.status.is_cancelled:
         return False
@@ -42,7 +42,22 @@ def get_review(order: Order) -> dict | None:
     return serialize_review(review) if review else None
 
 
+def review_points(order: Order) -> list[str]:
+    """
+    Точки, о работе которых отзыв. У заказа из двух заведений отзыв один — на
+    весь заказ, — но разбирают его руководители КАЖДОЙ части: агрегат
+    (рум-сервис) сам ничего не готовил.
+    """
+    children = list(order.children.values_list("execution_point_id", flat=True).distinct())
+    return [str(pk) for pk in children] or [str(order.execution_point_id)]
+
+
 def create_review(order: Order, *, guest_session, rating: int, comment: str = "") -> Review:
+    hotel = Hotel.objects.get(pk=order.hotel_id)
+    if not hotel.review_enabled:
+        # Проверка жила только в `can_review` — прямой запрос мимо витрины
+        # оставлял отзыв и при выключенном сборе.
+        raise ValidationError("Отель не собирает отзывы", code="reviews_disabled")
     if not (order.status.is_terminal and not order.status.is_cancelled):
         raise ValidationError(
             "Оценить можно только завершённую заявку", code="review_not_allowed"
@@ -69,8 +84,7 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
         actor_type="guest",
     )
 
-    hotel = Hotel.objects.get(pk=order.hotel_id)
-    if review.rating <= getattr(hotel, "review_low_threshold", 3):
+    if review.rating <= hotel.review_low_threshold:
         # Service recovery: разбудить менеджера до отъезда гостя.
         emit(
             REVIEW_LOW,
@@ -81,6 +95,7 @@ def create_review(order: Order, *, guest_session, rating: int, comment: str = ""
                 "comment": review.comment[:200],
                 "room": order.room.number if order.room_id else "",
                 "execution_point_id": str(order.execution_point_id),
+                "execution_point_ids": review_points(order),
             },
             hotel_id=order.hotel_id,
             actor_type="guest",

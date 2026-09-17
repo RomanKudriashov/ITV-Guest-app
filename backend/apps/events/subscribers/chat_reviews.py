@@ -50,10 +50,15 @@ def notify_manager_of_low_rating(event: Event) -> None:
     """Низкая оценка → руководителю отдела (service recovery), не всей смене."""
     from apps.notifications.services import event_values
 
-    _notify(event, "review.low", event_values.review_low(event.payload))
+    # По уведомлению на каждую часть заказа: у заказа из двух заведений
+    # руководитель кухни и руководитель бара узнают каждый о своём.
+    values = event_values.review_low(event.payload)
+    points = event.payload.get("execution_point_ids") or [event.payload.get("execution_point_id")]
+    for point_id in points:
+        _notify(event, "review.low", values, point_id=point_id)
 
 
-def _notify(event: Event, code: str, values: dict) -> None:
+def _notify(event: Event, code: str, values: dict, *, point_id=None) -> None:
     """
     Через общую дверь уведомлений: факт в журнал, затем рассылка адресату из
     настройки события. Событие без отдела тоже пишется — с итогом «некому
@@ -64,13 +69,14 @@ def _notify(event: Event, code: str, values: dict) -> None:
     """
     from apps.notifications.services.events import notify
 
+    point = point_id or event.payload.get("execution_point_id") or None
     try:
         with tenant_context(event.hotel_id):
             notify(
                 code,
                 values,
-                point_id=event.payload.get("execution_point_id") or None,
-                dedupe_key=f"{code}:{event.id}",
+                point_id=point,
+                dedupe_key=f"{code}:{event.id}" + (f":{point}" if point_id else ""),
             )
     except Exception:  # noqa: BLE001
         logger.warning("Уведомление %s не записано", code, exc_info=True)
