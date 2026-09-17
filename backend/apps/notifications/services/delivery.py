@@ -205,11 +205,18 @@ def _message_context(order: Order, step: EscalationStep | None, language: str) -
         "point": translate(order.execution_point.title, language) or order.execution_point.code,
         "summary": "\n".join(lines),
         "comment": order.comment or "",
-        "status": translate(order.status.title, language),
+        "status": _status_title(order, language),
         "total": "" if order.total is None else f"{order.total / 100:.2f} {order.currency}",
         "step": step.title if step and step.title else "",
         "delay": str(step.delay_minutes) if step else "0",
     }
+
+
+def _status_title(order: Order, language: str) -> str:
+    """У выдачи — своё название статуса («Готово к выдаче»)."""
+    from apps.orders.services.status_flows import status_title
+
+    return status_title(order.status, getattr(order, "delivery_mode", None), language)
 
 
 # --- Планирование ----------------------------------------------------------

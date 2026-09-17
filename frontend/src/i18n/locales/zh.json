@@ -811,7 +811,10 @@
       "fromOrder": "来自订单 #{{number}} · {{service}}",
       "overdueBy": "超时 {{duration}}",
       "placed": "{{time}} 下单",
-      "grip": "拖动订单"
+      "grip": "拖动订单",
+      "pickup": "自取",
+      "pickupAt": "取餐点：{{place}}",
+      "pickupBy": "由 {{room}} 号房客人自取"
     },
     "actions": {
       "accept": "接单",

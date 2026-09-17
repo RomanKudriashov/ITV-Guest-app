@@ -832,7 +832,10 @@
       "fromOrder": "من الطلب رقم {{number}} · {{service}}",
       "overdueBy": "متأخر بمقدار {{duration}}",
       "placed": "تم الاستلام في {{time}}",
-      "grip": "اسحب الطلب"
+      "grip": "اسحب الطلب",
+      "pickup": "استلام",
+      "pickupAt": "الاستلام: {{place}}",
+      "pickupBy": "سيستلمه ضيف الغرفة {{room}}"
     },
     "actions": {
       "accept": "قبول",

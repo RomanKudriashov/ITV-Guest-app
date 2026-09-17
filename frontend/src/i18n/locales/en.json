@@ -816,7 +816,10 @@
       "fromOrder": "From order #{{number}} · {{service}}",
       "overdueBy": "overdue by {{duration}}",
       "placed": "placed at {{time}}",
-      "grip": "Drag the order"
+      "grip": "Drag the order",
+      "pickup": "Pickup",
+      "pickupAt": "Pickup at {{place}}",
+      "pickupBy": "collected by the guest from {{room}}"
     },
     "actions": {
       "accept": "Accept",

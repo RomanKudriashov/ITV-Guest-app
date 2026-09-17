@@ -370,7 +370,8 @@ def _active_columns(queryset, behaviour, statuses, language) -> list[dict]:
     columns = [
         {
             "code": status.code,
-            "title": translate(status.title, language),
+            # На доске и доставки, и выдачи: «В пути / Готово к выдаче».
+            "title": status_flows.column_title(status, language),
             "color_token": status.color_token,
             "orders": grouped.get(status.code, []),
         }
@@ -742,7 +743,10 @@ def serialize_tracker_order(
             # записано, что такое просрочка.
             "overdue_minutes": overdue,
             "next_statuses": [
-                {"code": status.code, "title": translate(status.title, language)}
+                {
+                    "code": status.code,
+                    "title": status_flows.status_title(status, order.delivery_mode, language),
+                }
                 for status in next_statuses(order, statuses)
             ],
             "can_cancel": not order.status.is_terminal,
@@ -766,7 +770,9 @@ def serialize_tracker_order(
                 {
                     "from": change.from_status.code if change.from_status_id else None,
                     "to": change.to_status.code,
-                    "title": translate(change.to_status.title, language),
+                    "title": status_flows.status_title(
+                        change.to_status, order.delivery_mode, language
+                    ),
                     "at": order.hotel.to_local(change.created_at).isoformat(),
                     "actor_type": change.actor_type,
                     "actor_name": (actors or {}).get(change.actor_id),

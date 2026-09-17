@@ -363,10 +363,11 @@ crystal` — заголовок принимается только при `DJAN
   "location": {"code": "in_room", "title": "В номер", "refinement": ""},
   "delivery_mode": "delivery",           // "pickup" — гость забирает сам
   "parts": [                             // только у заказа из нескольких заведений
-    {"point": "kitchen", "title": "Кухня",
+    // number — у каждой части свой: его называют у стойки и видят в трекере
+    {"number": 92362, "point": "kitchen", "title": "Кухня",
      "location": {"code": "in_room", "title": "В номер", "refinement": ""},
      "delivery_mode": "delivery"},
-    {"point": "bar", "title": "Бар",
+    {"number": 92363, "point": "bar", "title": "Бар",
      "location": {"code": "bar-counter", "title": "Стойка лобби-бара", "refinement": ""},
      "delivery_mode": "pickup"}
   ],                                     // места разные — у агрегата location: null
@@ -391,6 +392,8 @@ crystal` — заголовок принимается только при `DJAN
 
 `status_flow` и `history` едут вместе с заказом, чтобы таймлайн рисовался без
 второго запроса и без знания пресета отеля на клиенте.
+Названия в них — по способу получения этого заказа: у заказа на выдачу
+`on_the_way` — «Готово к выдаче», `done` — «Выдано».
 
 ---
 

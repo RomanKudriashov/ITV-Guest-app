@@ -447,7 +447,8 @@ function locationText(order: GuestOrder, t: TFunction): string {
   const distinct = new Set(places.map((part) => `${part.location?.code}:${part.location?.refinement}`));
   if (!order.location && places.length > 1 && distinct.size > 1) {
     return places
-      .map((part) => `${part.title}: ${placeText(part.location, part.delivery_mode, null, t)}`)
+      // Номер части — тот, что назовут у стойки: у неё свой, не общий.
+      .map((part) => `${part.title} №${part.number}: ${placeText(part.location, part.delivery_mode, null, t)}`)
       .join(' · ');
   }
   return placeText(order.location, order.delivery_mode, order.room, t);

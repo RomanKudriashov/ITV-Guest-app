@@ -172,6 +172,8 @@ def test_each_part_of_a_two_venue_cart_gets_its_own_place(client, crystal, bar_a
         assert children["bar"].delivery_mode == "pickup"
         assert parent.location_id is None, "у агрегата общего места нет"
         assert parent.delivery_fee_minor == 25000
+    by_point = {part["point"]: part for part in response.json()["parts"]}
+    assert by_point["bar"]["number"] == children["bar"].number, "у стойки называют номер части"
 
 
 def test_one_place_for_the_whole_cart_is_asked_once(client, crystal, bar_at_counter):
@@ -216,3 +218,62 @@ def test_a_part_is_checked_against_the_matrix_on_its_own(client, crystal, bar_at
     )
     assert response.status_code == 422
     assert response.json()["code"] == "location_not_available"
+
+
+# --- Статусы по способу получения --------------------------------------------
+
+
+def test_a_pickup_order_reads_ready_for_pickup_and_picked_up(client, crystal, bar_at_counter):
+    """Поток один на доску, коды общие, а названия — по способу получения."""
+    call = guest(client, crystal)
+    line = [{"item_id": bar_at_counter["cocktail"], "quantity": 1}]
+    picked = _order(
+        call, {"lines": line, "location_id": str(_place(crystal, "bar-counter").pk)}, key="titles-pickup"
+    ).json()
+    brought = _order(
+        call, {"lines": line, "location_id": str(_place(crystal, "in_room").pk)}, key="titles-room"
+    ).json()
+
+    def titles(order):
+        return {step["code"]: step["title"] for step in order["status_flow"]}
+
+    assert titles(picked)["on_the_way"] == "Готово к выдаче"
+    assert titles(picked)["done"] == "Выдано"
+    assert titles(brought)["on_the_way"] == "В пути"
+    assert titles(brought)["done"] == "Доставлено"
+
+
+def test_the_board_names_both_ways_and_the_card_its_own(client, crystal, bar_at_counter):
+    from tests.conftest import CmsClient, staff_token_for
+
+    call = guest(client, crystal)
+    line = [{"item_id": bar_at_counter["cocktail"], "quantity": 1}]
+    order = _order(
+        call, {"lines": line, "location_id": str(_place(crystal, "bar-counter").pk)}, key="board-pickup"
+    ).json()
+
+    barman = CmsClient(client, crystal, staff_token_for(client, crystal, "barman"))
+    board = barman.get("/api/tracker/orders?point=bar").json()
+    columns = {column["code"]: column for column in board["columns"]}
+    assert columns["on_the_way"]["title"] == "В пути / Готово к выдаче"
+
+    card = next(
+        entry
+        for column in board["columns"]
+        for entry in column["orders"]
+        if entry["number"] == order["number"]
+    )
+    assert card["delivery_mode"] == "pickup"
+    assert card["status"]["title"] == "Новый"
+    # Дойдя до «готово», карточка предложит именно выдачу, а не «В пути».
+    with tenant_context(crystal):
+        from apps.orders.services import change_status, get_order
+
+        change_status(get_order(order["id"]), to_code="preparing", actor_type="staff")
+    card = next(
+        entry
+        for column in barman.get("/api/tracker/orders?point=bar").json()["columns"]
+        for entry in column["orders"]
+        if entry["number"] == order["number"]
+    )
+    assert {step["code"]: step["title"] for step in card["next_statuses"]}["on_the_way"] == "Готово к выдаче"

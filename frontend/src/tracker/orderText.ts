@@ -7,8 +7,24 @@ import type { TrackerOrder } from './api/types';
 export { formatClock } from './orderAge';
 import { formatClock } from './orderAge';
 
-/** «Комната 305 · Бассейн · шезлонг 12» — everything the runner needs in one line. */
+/** Гость забирает сам — нести заказ никуда не нужно. */
+export function isPickup(order: TrackerOrder): boolean {
+  return order.delivery_mode === 'pickup';
+}
+
+/**
+ * «Комната 305 · Бассейн · шезлонг 12» — everything the runner needs in one line.
+ *
+ * ВЫДАЧА ЧИТАЕТСЯ ИНАЧЕ. «Комната 305 · Стойка бара» понималось как «нести в
+ * 305». У выдачи первым стоит место, куда придёт гость, а номер — только как
+ * указание, КТО придёт: «Выдача у стойки бара · заберёт гость из 305».
+ */
 export function whereText(order: TrackerOrder, t: TFunction): string {
+  if (isPickup(order)) {
+    const pickup = [t('tracker.card.pickupAt', { place: order.location?.title ?? '—' })];
+    if (order.room) pickup.push(t('tracker.card.pickupBy', { room: order.room }));
+    return pickup.join(' · ');
+  }
   const parts: string[] = [];
   if (order.room) parts.push(t('tracker.card.room', { room: order.room }));
   if (order.location?.title) parts.push(order.location.title);

@@ -88,6 +88,46 @@ STATUS_FLOWS: dict[str, list[tuple]] = {
 }
 
 
+# Названия статусов для выдачи (гость забирает сам). Код и ступень — общие с
+# доставкой: одна доска, один набор колонок.
+PICKUP_TITLES: dict[tuple[str, str], dict[str, str]] = {
+    (TrackerType.BOARD, "on_the_way"): {
+        "ru": "Готово к выдаче",
+        "en": "Ready for pickup",
+        "ar": "جاهز للاستلام",
+        "zh": "待取餐",
+    },
+    (TrackerType.BOARD, "done"): {
+        "ru": "Выдано",
+        "en": "Picked up",
+        "ar": "تم الاستلام",
+        "zh": "已取餐",
+    },
+}
+
+
+def status_title(status, delivery_mode: str | None, language: str | None) -> str:
+    """Название статуса для ЭТОГО заказа: у выдачи — своё, если оно задано."""
+    from apps.core.fields import translate
+
+    if delivery_mode == "pickup" and any((status.title_pickup or {}).values()):
+        return translate(status.title_pickup, language)
+    return translate(status.title, language)
+
+
+def column_title(status, language: str | None) -> str:
+    """
+    Заголовок колонки доски: на ней и доставки, и выдачи, поэтому у статуса
+    с отдельным названием для выдачи — оба через косую черту.
+    """
+    from apps.core.fields import translate
+
+    title = translate(status.title, language)
+    if any((status.title_pickup or {}).values()):
+        return f"{title} / {translate(status.title_pickup, language)}"
+    return title
+
+
 # --- Доступ к потоку -------------------------------------------------------
 #
 # Все четыре функции ниже существуют по одной причине: код статуса сам по себе
@@ -186,6 +226,7 @@ def ensure_status_flows() -> int:
                 code=code,
                 defaults={
                     "title": {"ru": ru, "en": en},
+                    "title_pickup": PICKUP_TITLES.get((flow, code), {}),
                     "stage": stage,
                     "sort_order": sort_order,
                     "is_initial": initial,

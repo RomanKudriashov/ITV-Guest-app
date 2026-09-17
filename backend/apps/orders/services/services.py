@@ -403,6 +403,7 @@ def _order_parts(order: Order, language: str | None) -> list[dict[str, Any]]:
     )
     return [
         {
+            "number": child.number,
             "point": child.execution_point.code,
             "title": translate(child.execution_point.title, language) or child.execution_point.code,
             "location": (
@@ -1032,7 +1033,7 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
                 "type": order.type,
                 "status": {
                     "code": order.status.code,
-                    "title": translate(order.status.title, language),
+                    "title": status_flows.status_title(order.status, order.delivery_mode, language),
                     "color_token": order.status.color_token,
                 },
                 "serve_by": _serve_by(order, hotel),
@@ -1431,10 +1432,12 @@ def _serve_by(order: Order, hotel) -> str | None:
     return hotel.to_local(serve_by_at).isoformat()
 
 
-def _status_payload(status: StatusDefinition, language: str | None) -> dict[str, Any]:
+def _status_payload(
+    status: StatusDefinition, language: str | None, delivery_mode: str | None = None
+) -> dict[str, Any]:
     return {
         "code": status.code,
-        "title": translate(status.title, language),
+        "title": status_flows.status_title(status, delivery_mode, language),
         "sort_order": status.sort_order,
         "is_terminal": status.is_terminal,
         "is_cancelled": status.is_cancelled,
@@ -1480,11 +1483,12 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         "number": order.number,
         "type": order.type,
         "created_at": hotel.to_local(order.created_at).isoformat(),
-        "status": _status_payload(order.status, language),
+        "status": _status_payload(order.status, language, order.delivery_mode),
         "status_flow": [
             {
                 "code": status.code,
-                "title": translate(status.title, language),
+                # «Готово к выдаче» и «Выдано» — у заказа, который гость забирает сам.
+                "title": status_flows.status_title(status, order.delivery_mode, language),
                 "sort_order": status.sort_order,
                 "is_cancelled": status.is_cancelled,
             }
@@ -1493,7 +1497,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         "history": [
             {
                 "code": change.to_status.code,
-                "title": translate(change.to_status.title, language),
+                "title": status_flows.status_title(change.to_status, order.delivery_mode, language),
                 "at": hotel.to_local(change.created_at).isoformat(),
             }
             for change in order.status_changes.all()

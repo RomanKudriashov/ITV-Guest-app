@@ -823,7 +823,10 @@
       "fromOrder": "Из заказа №{{number}} · {{service}}",
       "overdueBy": "просрочен на {{duration}}",
       "placed": "принят в {{time}}",
-      "grip": "Перетащить заказ"
+      "grip": "Перетащить заказ",
+      "pickup": "Выдача",
+      "pickupAt": "Выдача: {{place}}",
+      "pickupBy": "заберёт гость из {{room}}"
     },
     "actions": {
       "accept": "Принять",

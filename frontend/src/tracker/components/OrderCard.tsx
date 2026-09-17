@@ -12,6 +12,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import CallSplitIcon from '@mui/icons-material/CallSplit';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import { useDraggable } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +20,7 @@ import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
 import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
-import { itemsSummary, totalText, whenText, whereText } from '../orderText';
+import { isPickup, itemsSummary, totalText, whenText, whereText } from '../orderText';
 import { formatAge, formatClock, formatOverdue } from '../orderAge';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
@@ -260,9 +261,31 @@ export function OrderCard({
             />
           ) : null}
 
+          {/*
+            ПРИЗНАК ВЫДАЧИ — ДО МЕСТА. Иначе повар понесёт заказ туда, откуда
+            за ним придут: «Комната 305» в начале строки читается как адрес.
+          */}
+          {isPickup(order) ? (
+            <Chip
+              size="small"
+              color="secondary"
+              icon={<StorefrontOutlinedIcon sx={{ fontSize: 16 }} />}
+              label={t('tracker.card.pickup')}
+              data-testid={`tracker-pickup-${order.number}`}
+              sx={{ alignSelf: 'flex-start', fontWeight: 700 }}
+            />
+          ) : null}
           <Stack direction="row" spacing={0.5} alignItems="flex-start">
-            <PlaceOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: '2px' }} />
-            <Typography variant="body2" sx={{ minWidth: 0 }}>
+            {isPickup(order) ? (
+              <StorefrontOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: '2px' }} />
+            ) : (
+              <PlaceOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: '2px' }} />
+            )}
+            <Typography
+              variant="body2"
+              sx={{ minWidth: 0 }}
+              data-testid={`tracker-where-${order.number}`}
+            >
               {whereText(order, t)}
             </Typography>
           </Stack>

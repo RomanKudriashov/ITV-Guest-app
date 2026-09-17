@@ -466,6 +466,7 @@ export interface GuestOrder {
   delivery_mode: string;
   /** Parts of a two-venue order: where and how each one is received. */
   parts?: {
+    number: number;
     point: string;
     title: string;
     location: { code: string; title: string; refinement: string } | null;

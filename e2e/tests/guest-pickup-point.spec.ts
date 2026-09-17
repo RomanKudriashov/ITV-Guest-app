@@ -4,12 +4,14 @@ import { expect, test } from './fixtures'
 import {
   ADMIN,
   API,
+  BARMAN,
   DEMO_ROOM,
   HOTEL,
   apiHeaders,
   apiToken,
   guestSession,
   openCart,
+  signInToTracker,
 } from './helpers'
 
 /**
@@ -68,7 +70,11 @@ test('в корзине кухни стойки бара нет, а для ко�
  * КОРЗИНА ИЗ ДВУХ ЗАВЕДЕНИЙ: место спрашивается один раз, пока оно у всех
  * частей общее, и по каждой части — когда гость захотел разные.
  */
-test('корзина из двух заведений: одно место или по месту на часть', async ({ page, request }) => {
+test('корзина из двух заведений: одно место или по месту на часть', async ({
+  page,
+  request,
+  browser,
+}) => {
   test.slow()
   const h = apiHeaders(await apiToken(request, ADMIN))
   const tag = Date.now().toString(36)
@@ -178,6 +184,26 @@ test('корзина из двух заведений: одно место ил�
       ]),
     )
     expect(parts).toEqual({ kitchen: 'in_room:delivery', bar: 'bar-counter:pickup' })
+
+    /*
+      У бармена: признак выдачи ДО места, первым — стойка, номер — только как
+      «кто придёт». «Комната 305 · Стойка бара» читалось как «нести в 305».
+    */
+    const barNumber = placed.parts.find((part: { point: string }) => part.point === 'bar').number
+    const barContext = await browser.newContext()
+    try {
+      const barman = await barContext.newPage()
+      await signInToTracker(barman, BARMAN)
+      const card = barman.getByTestId(`tracker-order-${barNumber}`)
+      await expect(card).toBeVisible({ timeout: 25_000 })
+      await expect(card.getByTestId(`tracker-pickup-${barNumber}`)).toBeVisible()
+      const where = card.getByTestId(`tracker-where-${barNumber}`)
+      await expect(where).toHaveText(/^Выдача: Стойка лобби-бара/)
+      await expect(where).toContainText('заберёт гость из')
+      await expect(barman.getByTestId('tracker-board')).toContainText('В пути / Готово к выдаче')
+    } finally {
+      await barContext.close()
+    }
   } finally {
     await request.delete(`${API}/api/cms/services/${aggregator.id}`, { headers: h })
   }

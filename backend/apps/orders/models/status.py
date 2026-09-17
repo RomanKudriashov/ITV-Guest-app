@@ -37,6 +37,12 @@ class StatusDefinition(TenantModel):
     # на досках разных типов.
     stage = models.SlugField(max_length=32, default="new")
     title = TranslatableField()
+    # Название для заказа, который гость забирает сам. На доске кухни рядом
+    # лежат доставки и выдачи, и поток у них один: отдельный набор статусов
+    # разрезал бы кухню на два комплекта колонок. Поэтому код и ступень общие,
+    # а название выбирается по способу получения: «В пути» → «Готово к выдаче».
+    # Пусто — у статуса одно название для обоих способов.
+    title_pickup = TranslatableField()
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_initial = models.BooleanField(default=False)
     is_terminal = models.BooleanField(default=False)
