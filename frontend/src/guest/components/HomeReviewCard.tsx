@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { useGuestActiveOrders, useGuestOrder } from "../hooks/useGuestQueries";
-import { ReviewBlock } from "./ReviewBlock";
+import { useGuestActiveOrders, useGuestOrder } from '../hooks/useGuestQueries';
+import { ReviewBlock } from './ReviewBlock';
 
 /*
   Закрытую карточку помним на устройстве гостя: это его удобство, а не данные
   отеля. Хранится один номер — последнего закрытого: старые неоценённые
   следом не всплывают, сервер их и не предлагает.
 */
-const DISMISSED_KEY = "itv.guest.review.dismissed";
+const DISMISSED_KEY = 'itv.guest.review.dismissed';
 
 function readDismissed(): string | null {
   try {
@@ -37,13 +37,24 @@ export function HomeReviewCard() {
   const candidate = data?.to_review ?? null;
   const [dismissed, setDismissed] = useState<string | null>(readDismissed);
   const visible = candidate && candidate.id !== dismissed ? candidate : null;
-  const { data: order } = useGuestOrder(visible?.id);
+  const { data: order, refetch } = useGuestOrder(visible?.id);
+
+  /*
+    КЭШ ЗАКАЗА МОЖЕТ ОТСТАВАТЬ ОТ СПИСКА. Гость оформил заказ — экран
+    подтверждения положил его в кэш живым. Список уже говорит «закрыт, оцените»,
+    а кэш ещё «готовится», и блок оценки прячется: оценивать живой нельзя.
+    Сервер уже сказал, что заказ закрыт, — перечитываем.
+  */
+  const stale = Boolean(order && !order.status.is_terminal);
+  useEffect(() => {
+    if (stale) void refetch();
+  }, [stale, refetch]);
 
   if (!visible || !order) return null;
 
   const what = visible.summary
     ? visible.extra_count
-      ? t("guest.review.homeWhatMore", {
+      ? t('guest.review.homeWhatMore', {
           summary: visible.summary,
           count: visible.extra_count,
         })
@@ -56,8 +67,8 @@ export function HomeReviewCard() {
       testId="guest-home-review"
       heading={
         what
-          ? t("guest.review.homeTitle", { number: visible.number, what })
-          : t("guest.review.homeTitleShort", { number: visible.number })
+          ? t('guest.review.homeTitle', { number: visible.number, what })
+          : t('guest.review.homeTitleShort', { number: visible.number })
       }
       onClose={() => {
         writeDismissed(visible.id);
