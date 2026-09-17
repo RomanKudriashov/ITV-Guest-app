@@ -3608,12 +3608,16 @@
       "stars_other": "{{count}} نجمة",
       "since": "من",
       "until": "إلى",
-      "reset": "إعادة ضبط"
+      "reset": "إعادة ضبط",
+      "triage": "المعالجة",
+      "anyTriage": "الكل",
+      "awaiting": "بانتظار المعالجة"
     },
     "numbers": {
       "count": "التقييمات",
       "avg": "متوسط التقييم",
-      "low": "منخفضة (≤ {{threshold}})"
+      "low": "منخفضة (≤ {{threshold}})",
+      "awaiting": "بانتظار المعالجة"
     },
     "row": {
       "rating": "التقييم {{rating}} من 5",
@@ -3670,6 +3674,24 @@
       "escalated_few": "تصعيد {{count}} مرات، في {{times}}",
       "escalated_many": "تصعيد {{count}} مرة، في {{times}}",
       "escalated_other": "تصعيد {{count}} مرة، في {{times}}"
+    },
+    "triage": {
+      "title": "المعالجة",
+      "status": {
+        "new": "جديد",
+        "in_progress": "قيد المعالجة",
+        "closed": "مغلق"
+      },
+      "system": "النظام",
+      "noSteps": "لم تبدأ المعالجة بعد",
+      "placeholder": "ما الذي تم: اتصلنا، تحققنا، أصلحنا",
+      "reopenPlaceholder": "سبب إعادته إلى المعالجة",
+      "take": "بدء المعالجة",
+      "note": "إضافة ملاحظة",
+      "close": "إغلاق المعالجة",
+      "reopen": "إعادة إلى المعالجة",
+      "closeHint": "لا يمكن الإغلاق إلا بعد كتابة ما تم",
+      "failed": "لم تُحفظ خطوة المعالجة"
     }
   }
 }

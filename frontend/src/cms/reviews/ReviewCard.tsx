@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useDraftState } from '@/state/useDraftState';
 import { useAnalyticsLanguage } from '../analytics/format';
 import { replyToReview, type CmsReview } from './api';
+import { TriageChip } from './TriageBlock';
 
 /**
  * Отзыв в разделе: кто, о чём, где — и ответ гостю.
@@ -85,6 +86,7 @@ export function ReviewCard({
               </Typography>
             ) : null}
             <Box sx={{ flexGrow: 1 }} />
+            <TriageChip status={review.triage} testId={`reviews-triage-${review.order_number}`} />
             {review.is_low ? (
               <Chip size="small" color="error" label={t('reviews.row.low')} />
             ) : null}

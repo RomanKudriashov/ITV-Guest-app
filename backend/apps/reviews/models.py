@@ -15,6 +15,14 @@ from django.db import models
 from apps.core.models import TenantModel
 
 
+class TriageStatus(models.TextChoices):
+    """Разбор отзыва: без статуса отзывы копятся, и никто не отвечает."""
+
+    NEW = "new", "Новый"
+    IN_PROGRESS = "in_progress", "Разбирается"
+    CLOSED = "closed", "Закрыт"
+
+
 class Review(TenantModel):
     order = models.OneToOneField(
         "orders.Order", on_delete=models.CASCADE, related_name="review"
@@ -43,6 +51,12 @@ class Review(TenantModel):
     )
     reply_delivered = models.BooleanField(default=False)
 
+    # Статус разбора — полем на отзыве, чтобы список фильтровался одним
+    # условием; кто, когда и что сделал — в журнале `ReviewAction`.
+    triage_status = models.CharField(
+        max_length=16, choices=TriageStatus.choices, default=TriageStatus.NEW, db_index=True
+    )
+
     class Meta:
         db_table = "reviews_review"
         ordering = ["-created_at"]
@@ -67,3 +81,25 @@ class Review(TenantModel):
 
     def __str__(self) -> str:
         return f"review:{self.order_id} {self.rating}/5"
+
+
+class ReviewAction(TenantModel):
+    """
+    Шаг разбора: кто, когда, в какой статус и ЧТО СДЕЛАЛИ.
+
+    Отдельной таблицей, а не полями на отзыве: за разбор комментариев бывает
+    несколько («позвонили на кухню», «повару выговор», «гостю — десерт»), и
+    история нужна целиком — поле хранило бы только последний.
+    """
+
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="actions")
+    from_status = models.CharField(max_length=16, choices=TriageStatus.choices, blank=True)
+    to_status = models.CharField(max_length=16, choices=TriageStatus.choices)
+    comment = models.TextField(blank=True)
+    author = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        db_table = "reviews_action"
+        ordering = ["created_at"]

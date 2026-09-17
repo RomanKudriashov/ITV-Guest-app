@@ -24,7 +24,7 @@ from apps.events.bus import REVIEW_CREATED, REVIEW_LOW, emit
 from apps.hotels.models import Hotel
 from apps.orders.models import Order
 
-from apps.reviews.models import Review
+from apps.reviews.models import Review, ReviewAction, TriageStatus
 
 
 def can_review(order: Order) -> bool:
@@ -140,7 +140,7 @@ def _parse_day(value, field: str):
         raise ValidationError("Дата — в виде ГГГГ-ММ-ДД", field=field, code="bad_date") from exc
 
 
-def reviews_queryset(*, point_id=None, rating=None, date_from=None, date_to=None):
+def reviews_queryset(*, point_id=None, rating=None, date_from=None, date_to=None, triage=None):
     from apps.accounts.services.roles import managed_point_ids_or_none
     from apps.hotels.services.hotel import current_hotel
 
@@ -163,6 +163,14 @@ def reviews_queryset(*, point_id=None, rating=None, date_from=None, date_to=None
         except ValueError as exc:
             raise ValidationError("Оценка — числа от 1 до 5", field="rating") from exc
         queryset = queryset.filter(rating__in=wanted)
+
+    # «Ждут разбора» — новые и разбираемые вместе: это и есть очередь работы.
+    if triage == "open":
+        queryset = queryset.exclude(triage_status=TriageStatus.CLOSED)
+    elif triage:
+        if triage not in TriageStatus.values:
+            raise ValidationError("Неизвестный статус разбора", field="triage", code="bad_triage")
+        queryset = queryset.filter(triage_status=triage)
 
     # Границы — сутки ОТЕЛЯ, а не сервера: «отзывы за 17-е» у отеля во
     # Владивостоке начинаются в его полночь.
@@ -216,14 +224,25 @@ def serialize_cms_review(review: Review, language=None) -> dict:
         "is_low": review.is_low,
         "guest_reachable": guest_reachable(review),
         "reply": _reply_payload(review, staff=True),
+        "triage": review.triage_status,
     }
 
 
 def list_reviews(
-    *, point_id=None, rating=None, date_from=None, date_to=None, limit=None, offset=0, language=None
+    *,
+    point_id=None,
+    rating=None,
+    date_from=None,
+    date_to=None,
+    triage=None,
+    limit=None,
+    offset=0,
+    language=None,
 ) -> dict:
     queryset = (
-        reviews_queryset(point_id=point_id, rating=rating, date_from=date_from, date_to=date_to)
+        reviews_queryset(
+            point_id=point_id, rating=rating, date_from=date_from, date_to=date_to, triage=triage
+        )
         .select_related("order__room", "order__execution_point", "order__hotel", "guest_session", "reply_by")
         .prefetch_related("order__children__execution_point")
         .order_by("-created_at", "-pk")
@@ -236,12 +255,14 @@ def list_reviews(
     )
 
 
-def reviews_summary(*, point_id=None, rating=None, date_from=None, date_to=None) -> dict:
+def reviews_summary(*, point_id=None, rating=None, date_from=None, date_to=None, triage=None) -> dict:
     """Средняя в динамике — по дням отеля, тем же отбором, что и список."""
     from apps.hotels.services.hotel import current_hotel
 
     hotel = current_hotel()
-    queryset = reviews_queryset(point_id=point_id, rating=rating, date_from=date_from, date_to=date_to)
+    queryset = reviews_queryset(
+        point_id=point_id, rating=rating, date_from=date_from, date_to=date_to, triage=triage
+    )
     # distinct() и агрегаты не дружат: считаем по id, отобранным без размножения.
     base = Review.objects.filter(pk__in=queryset.values("pk"))
     is_low = Q(rating__lte=F("low_threshold"))
@@ -253,7 +274,15 @@ def reviews_summary(*, point_id=None, rating=None, date_from=None, date_to=None)
         .order_by("day")
     )
     count = totals["count"] or 0
+    # Сколько ждут разбора — по ТЕМ ЖЕ фильтрам, но без фильтра статуса:
+    # число очереди не должно обнуляться оттого, что смотрят закрытые.
+    awaiting = (
+        reviews_queryset(point_id=point_id, rating=rating, date_from=date_from, date_to=date_to)
+        .exclude(triage_status=TriageStatus.CLOSED)
+        .count()
+    )
     return {
+        "awaiting": awaiting,
         "count": count,
         "avg_rating": round(totals["avg"], 2) if totals["avg"] is not None else None,
         "low": totals["low"] or 0,
@@ -308,7 +337,72 @@ def reply_to_review(review_id, *, user, text: str) -> dict:
         Review.objects.filter(pk=review.pk).update(
             reply_text=text, reply_at=timezone.now(), reply_by=user, reply_delivered=delivered
         )
+        # Ответили гостю — разбор начат: «новым» такой отзыв уже не назвать.
+        if locked.triage_status == TriageStatus.NEW:
+            _record(locked, user, TriageStatus.IN_PROGRESS, "")
     return serialize_cms_review(get_cms_review(review.pk))
+
+
+# --- Разбор ---------------------------------------------------------------------
+
+TRIAGE_COMMENT_MAX = 2000
+
+
+def _record(review: Review, user, to_status: str, comment: str) -> ReviewAction:
+    action = ReviewAction.objects.create(
+        hotel_id=review.hotel_id,
+        review=review,
+        from_status=review.triage_status,
+        to_status=to_status,
+        comment=comment,
+        author=user,
+    )
+    Review.objects.filter(pk=review.pk).update(triage_status=to_status, updated_at=timezone.now())
+    return action
+
+
+def triage_review(review_id, *, user, status: str, comment: str = "") -> dict:
+    """
+    Шаг разбора: новый → разбирается → закрыт.
+
+    ЗАКРЫТЬ МОЖНО ТОЛЬКО СО СЛОВАМИ «ЧТО СДЕЛАЛИ». Закрытый без комментария
+    отзыв ничем не отличается от забытого — ради этого статус и заводился.
+    Закрытый можно вернуть в разбор (гость пожаловался снова). Статус тот же —
+    годится как заметка по ходу разбора: история хранит каждый шаг.
+    """
+    comment = (comment or "").strip()
+    if status not in TriageStatus.values:
+        raise ValidationError("Неизвестный статус разбора", field="status", code="bad_triage")
+    if len(comment) > TRIAGE_COMMENT_MAX:
+        raise ValidationError("Комментарий длиннее 2000 символов", field="comment")
+    if status == TriageStatus.CLOSED and not comment:
+        raise ValidationError(
+            "Закрывая разбор, напишите, что сделали", field="comment", code="triage_comment_required"
+        )
+    if status == TriageStatus.NEW:
+        raise ValidationError("Вернуть отзыв в «новые» нельзя", field="status", code="bad_triage")
+
+    review = get_cms_review(review_id)
+    with transaction.atomic():
+        locked = Review.objects.select_for_update().get(pk=review.pk)
+        if locked.triage_status == status and not comment:
+            raise ValidationError("Статус не меняется — нужна заметка", field="comment", code="triage_nothing")
+        _record(locked, user, status, comment)
+    return serialize_cms_review(get_cms_review(review.pk))
+
+
+def triage_history(review: Review) -> list[dict]:
+    hotel = review.order.hotel
+    return [
+        {
+            "from": action.from_status,
+            "to": action.to_status,
+            "comment": action.comment,
+            "by": (action.author.full_name or action.author.email) if action.author_id else "",
+            "at": hotel.to_local(action.created_at).isoformat(),
+        }
+        for action in review.actions.select_related("author").order_by("created_at")
+    ]
 
 
 def _reply_payload(review: Review, *, staff: bool) -> dict | None:

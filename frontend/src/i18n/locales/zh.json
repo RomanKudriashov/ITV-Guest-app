@@ -3494,12 +3494,16 @@
       "stars_other": "{{count}} 星",
       "since": "从",
       "until": "至",
-      "reset": "重置"
+      "reset": "重置",
+      "triage": "处理",
+      "anyTriage": "全部",
+      "awaiting": "待处理"
     },
     "numbers": {
       "count": "评价数",
       "avg": "平均评分",
-      "low": "低分（≤ {{threshold}}）"
+      "low": "低分（≤ {{threshold}}）",
+      "awaiting": "待处理"
     },
     "row": {
       "rating": "评分 {{rating}}/5",
@@ -3541,6 +3545,24 @@
       "reopened": "订单曾被重新处理",
       "noEscalation": "无升级",
       "escalated_other": "升级 {{count}} 次，时间 {{times}}"
+    },
+    "triage": {
+      "title": "处理",
+      "status": {
+        "new": "新",
+        "in_progress": "处理中",
+        "closed": "已关闭"
+      },
+      "system": "系统",
+      "noSteps": "尚未开始处理",
+      "placeholder": "采取了什么措施：致电、核实、纠正",
+      "reopenPlaceholder": "重新处理的原因",
+      "take": "开始处理",
+      "note": "添加备注",
+      "close": "关闭处理",
+      "reopen": "重新处理",
+      "closeHint": "写明采取的措施后才能关闭",
+      "failed": "处理步骤未保存"
     }
   }
 }

@@ -3524,12 +3524,16 @@
       "stars_other": "{{count}} stars",
       "since": "From",
       "until": "To",
-      "reset": "Reset"
+      "reset": "Reset",
+      "triage": "Triage",
+      "anyTriage": "Any",
+      "awaiting": "Awaiting triage"
     },
     "numbers": {
       "count": "Reviews",
       "avg": "Average rating",
-      "low": "Low (≤ {{threshold}})"
+      "low": "Low (≤ {{threshold}})",
+      "awaiting": "Awaiting triage"
     },
     "row": {
       "rating": "Rated {{rating}} of 5",
@@ -3574,6 +3578,24 @@
       "noEscalation": "No escalations",
       "escalated_one": "Escalated {{count}} time, at {{times}}",
       "escalated_other": "Escalated {{count}} times, at {{times}}"
+    },
+    "triage": {
+      "title": "Triage",
+      "status": {
+        "new": "New",
+        "in_progress": "In progress",
+        "closed": "Closed"
+      },
+      "system": "system",
+      "noSteps": "Triage has not started yet",
+      "placeholder": "What was done: called, found out, fixed",
+      "reopenPlaceholder": "Why it goes back to triage",
+      "take": "Start triage",
+      "note": "Add note",
+      "close": "Close triage",
+      "reopen": "Reopen triage",
+      "closeHint": "You can close only after writing what was done",
+      "failed": "Triage step not saved"
     }
   }
 }

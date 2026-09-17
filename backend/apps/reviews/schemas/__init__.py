@@ -17,3 +17,8 @@ class ReviewSettingsIn(Schema):
 
 class ReviewReplyIn(Schema):
     text: str
+
+
+class ReviewTriageIn(Schema):
+    status: str
+    comment: str = ""

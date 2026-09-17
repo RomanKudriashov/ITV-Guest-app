@@ -74,6 +74,7 @@ TENANT_TABLES = [
     "chat_thread",
     "chat_message",
     "reviews_review",
+    "reviews_action",
     # analytics
     "analytics_event",
     "analytics_order_daily",

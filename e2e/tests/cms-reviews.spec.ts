@@ -166,6 +166,41 @@ test.describe('CMS: раздел «Отзывы»', () => {
     await expect(panel).toBeHidden()
   })
 
+  test('разбор: новый → разбирается → закрыт со словами, и отзыв уходит из очереди', async ({
+    page,
+    request,
+  }) => {
+    const admin = await apiToken(request)
+    const { number } = await reviewedOrder(request, admin, '305', 1, `разбор ${Date.now().toString(36)}`)
+
+    await signInToCms(page, ADMIN)
+    await page.goto('/cms/reviews?triage=open')
+    const row = page.getByTestId(`reviews-row-${number}`)
+    await expect(row.getByTestId(`reviews-triage-${number}`)).toHaveText('Новый', { timeout: 20_000 })
+
+    await row.getByTestId(`reviews-investigate-${number}`).click()
+    const panel = page.getByTestId('review-investigation')
+    const triage = panel.getByTestId('review-triage')
+    await triage.getByTestId('review-triage-take').click()
+    await expect(triage.getByTestId('review-triage-status')).toHaveText('Разбирается', {
+      timeout: 15_000,
+    })
+
+    // Без слов закрыть нельзя — кнопка не нажимается.
+    await expect(triage.getByTestId('review-triage-close')).toBeDisabled()
+    await triage.getByTestId('review-triage-comment').fill('Повару замечание, гостю — десерт')
+    await triage.getByTestId('review-triage-close').click()
+    await expect(triage.getByTestId('review-triage-status')).toHaveText('Закрыт', { timeout: 15_000 })
+    await expect(triage.getByTestId('review-triage-history')).toContainText('Повару замечание')
+    await expect(row.getByTestId(`reviews-triage-${number}`)).toHaveText('Закрыт')
+
+    await panel.getByTestId('review-investigation-close').click()
+    await page.reload()
+    await expect(page.getByTestId('cms-reviews')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('reviews-awaiting')).toBeVisible()
+    await expect(page.getByTestId(`reviews-row-${number}`)).toHaveCount(0)
+  })
+
   test('фильтр «только низкие» и чужое заведение', async ({ page, request }) => {
     const admin = await apiToken(request)
     const high = await reviewedOrder(request, admin, '305', 5, `всё супер ${Date.now().toString(36)}`)

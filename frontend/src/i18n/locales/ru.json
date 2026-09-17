@@ -3559,12 +3559,16 @@
       "stars_other": "{{count}} звезды",
       "since": "С",
       "until": "По",
-      "reset": "Сбросить"
+      "reset": "Сбросить",
+      "triage": "Разбор",
+      "anyTriage": "Любой",
+      "awaiting": "Ждут разбора"
     },
     "numbers": {
       "count": "Отзывов",
       "avg": "Средняя оценка",
-      "low": "Низких (≤ {{threshold}})"
+      "low": "Низких (≤ {{threshold}})",
+      "awaiting": "Ждут разбора"
     },
     "row": {
       "rating": "Оценка {{rating}} из 5",
@@ -3615,6 +3619,24 @@
       "escalated_few": "Эскалация: {{count}} раза, в {{times}}",
       "escalated_many": "Эскалация: {{count}} раз, в {{times}}",
       "escalated_other": "Эскалация: {{count}} раза, в {{times}}"
+    },
+    "triage": {
+      "title": "Разбор",
+      "status": {
+        "new": "Новый",
+        "in_progress": "Разбирается",
+        "closed": "Закрыт"
+      },
+      "system": "система",
+      "noSteps": "Разбор ещё не начинали",
+      "placeholder": "Что сделали: позвонили, выяснили, исправили",
+      "reopenPlaceholder": "Почему возвращаете в разбор",
+      "take": "Взять в разбор",
+      "note": "Добавить заметку",
+      "close": "Закрыть разбор",
+      "reopen": "Вернуть в разбор",
+      "closeHint": "Закрыть можно, только написав, что сделали",
+      "failed": "Шаг разбора не сохранён"
     }
   }
 }

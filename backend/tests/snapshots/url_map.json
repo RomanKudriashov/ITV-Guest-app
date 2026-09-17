@@ -333,6 +333,9 @@
   "/api/v1/cms/reviews/{review_id}/reply": [
     "POST"
   ],
+  "/api/v1/cms/reviews/{review_id}/triage": [
+    "POST"
+  ],
   "/api/v1/cms/room-categories": [
     "GET",
     "POST"

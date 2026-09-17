@@ -26,8 +26,9 @@ import {
 } from './api';
 import { ReviewCard } from './ReviewCard';
 import { ReviewInvestigationPanel } from './ReviewInvestigationPanel';
+import { TriageBlock } from './TriageBlock';
 
-const DEFAULTS = { point_id: '', rating: '', date_from: '', date_to: '' };
+const DEFAULTS = { point_id: '', rating: '', triage: '', date_from: '', date_to: '' };
 
 /**
  * РАЗДЕЛ «ОТЗЫВЫ»: что гости сказали и что мы с этим сделали.
@@ -149,6 +150,27 @@ export function ReviewsPage() {
               ))}
             </TextField>
             <TextField
+              select
+              size="small"
+              label={t('reviews.filters.triage')}
+              value={params.triage}
+              onChange={(event) => patch({ triage: event.target.value })}
+              sx={{ minWidth: 170 }}
+              SelectProps={{
+                SelectDisplayProps: { 'data-testid': 'reviews-filter-triage' } as never,
+              }}
+            >
+              <MenuItem value="">{t('reviews.filters.anyTriage')}</MenuItem>
+              <MenuItem value="open" data-testid="reviews-filter-triage-open">
+                {t('reviews.filters.awaiting')}
+              </MenuItem>
+              {(['new', 'in_progress', 'closed'] as const).map((status) => (
+                <MenuItem key={status} value={status}>
+                  {t(`reviews.triage.status.${status}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
               type="date"
               size="small"
               label={t('reviews.filters.since')}
@@ -182,6 +204,12 @@ export function ReviewsPage() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
         }}
       >
+        <StatTile
+          testId="reviews-awaiting"
+          label={t('reviews.numbers.awaiting')}
+          value={body ? fmt.count(body.awaiting) : undefined}
+          loading={summary.isLoading}
+        />
         <StatTile
           testId="reviews-count"
           label={t('reviews.numbers.count')}
@@ -265,7 +293,20 @@ export function ReviewsPage() {
         }}
       </QueryState>
 
-      <ReviewInvestigationPanel reviewId={investigating} onClose={() => setInvestigating(null)} />
+      <ReviewInvestigationPanel reviewId={investigating} onClose={() => setInvestigating(null)}>
+        {(data) => (
+          <TriageBlock
+            review={data.review}
+            history={data.triage}
+            onChanged={(next) => {
+              replace(next);
+              // Разбор меняет очередь и историю — их перечитываем.
+              void queryClient.invalidateQueries({ queryKey: ['cms', 'reviews', 'one', next.id] });
+              void queryClient.invalidateQueries({ queryKey: ['cms', 'reviews', 'summary'] });
+            }}
+          />
+        )}
+      </ReviewInvestigationPanel>
     </Stack>
   );
 }

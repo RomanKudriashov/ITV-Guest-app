@@ -23,6 +23,17 @@ export interface CmsReview {
   /** Дойдёт ли ответ сейчас — экран говорит это ДО ответа. */
   guest_reachable: boolean;
   reply: ReviewReply | null;
+  triage: TriageStatus;
+}
+
+export type TriageStatus = 'new' | 'in_progress' | 'closed';
+
+export interface TriageStep {
+  from: TriageStatus | '';
+  to: TriageStatus;
+  comment: string;
+  by: string;
+  at: string;
 }
 
 export interface ReviewsPage {
@@ -34,6 +45,8 @@ export interface ReviewsPage {
 }
 
 export interface ReviewsSummary {
+  /** Ждут разбора (новые и разбираемые) — без учёта фильтра статуса. */
+  awaiting: number;
   count: number;
   avg_rating: number | null;
   low: number;
@@ -48,6 +61,8 @@ export interface ReviewsFilters {
   rating?: string;
   date_from?: string;
   date_to?: string;
+  /** `open` — новые и разбираемые вместе. */
+  triage?: string;
 }
 
 function toQuery(filters: ReviewsFilters, extra: Record<string, string | number> = {}): string {
@@ -107,6 +122,7 @@ export interface InvestigationPart {
 
 export interface ReviewInvestigation {
   review: CmsReview;
+  triage: TriageStep[];
   order: {
     id: string;
     number: number;
@@ -126,4 +142,12 @@ export interface ReviewInvestigation {
 
 export function fetchInvestigation(reviewId: string): Promise<ReviewInvestigation> {
   return api.get<ReviewInvestigation>(`/cms/reviews/${reviewId}`);
+}
+
+export function triageReview(
+  reviewId: string,
+  status: TriageStatus,
+  comment: string,
+): Promise<CmsReview> {
+  return api.post<CmsReview>(`/cms/reviews/${reviewId}/triage`, { status, comment });
 }

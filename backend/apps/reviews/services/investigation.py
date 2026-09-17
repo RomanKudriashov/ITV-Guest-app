@@ -139,7 +139,7 @@ def investigation(review_id, language=None) -> dict:
     from apps.accounts.models import User
     from apps.orders.models import Order
 
-    from .reviews import get_cms_review, serialize_cms_review
+    from .reviews import get_cms_review, serialize_cms_review, triage_history
 
     review = get_cms_review(review_id)
     order = review.order
@@ -171,6 +171,7 @@ def investigation(review_id, language=None) -> dict:
 
     return {
         "review": serialize_cms_review(review, language),
+        "triage": triage_history(review),
         "order": {
             "id": str(order.pk),
             "number": order.number,

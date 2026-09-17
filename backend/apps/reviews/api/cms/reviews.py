@@ -15,7 +15,7 @@ from apps.accounts.services.roles import require_hotel_admin
 from apps.core.context import current_language
 
 from apps.reviews import services as svc
-from apps.reviews.schemas import ReviewReplyIn, ReviewSettingsIn
+from apps.reviews.schemas import ReviewReplyIn, ReviewSettingsIn, ReviewTriageIn
 
 router = Router(tags=["cms:reviews"])
 
@@ -27,6 +27,7 @@ def list_reviews(
     rating: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    triage: str | None = None,
     limit: int | None = None,
     offset: int = 0,
 ):
@@ -35,6 +36,7 @@ def list_reviews(
         rating=rating,
         date_from=date_from,
         date_to=date_to,
+        triage=triage,
         limit=limit,
         offset=offset,
         language=current_language(),
@@ -48,9 +50,10 @@ def reviews_summary(
     rating: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    triage: str | None = None,
 ):
     return svc.reviews_summary(
-        point_id=point_id, rating=rating, date_from=date_from, date_to=date_to
+        point_id=point_id, rating=rating, date_from=date_from, date_to=date_to, triage=triage
     )
 
 
@@ -64,6 +67,13 @@ def investigate(request: HttpRequest, review_id: str):
 @router.post("/reviews/{review_id}/reply", summary="Ответить гостю")
 def reply(request: HttpRequest, review_id: str, payload: ReviewReplyIn):
     return svc.reply_to_review(review_id, user=request.user, text=payload.text)
+
+
+@router.post("/reviews/{review_id}/triage", summary="Шаг разбора: статус и что сделали")
+def triage(request: HttpRequest, review_id: str, payload: ReviewTriageIn):
+    return svc.triage_review(
+        review_id, user=request.user, status=payload.status, comment=payload.comment
+    )
 
 
 @router.get("/review-settings", summary="Настройка сбора отзывов")
