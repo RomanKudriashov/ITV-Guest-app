@@ -52,7 +52,11 @@ def _ingest(hotel_id, raws) -> None:
 # children (parent_id задан) — только исполнение, в аналитику не идут (иначе
 # двойной счёт / нулевая выручка). Обычный заказ — parent_id=None, как раньше.
 def _skip(order) -> bool:
-    return order is None or order.parent_id is not None
+    if order is None or order.parent_id is not None:
+        return True
+    # СЛУЖЕБНЫЙ ЗАКАЗ — НЕ ПРОДАЖА. «Поручение» ресепшена идёт по доске отдела
+    # как обычная задача, но в выручке, чеке и конверсии ему делать нечего.
+    return not order.items.filter(item__is_internal=False).exists()
 
 
 @subscribe(ORDER_CREATED)

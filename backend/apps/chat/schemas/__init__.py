@@ -7,3 +7,10 @@ from ninja import Schema
 
 class MessageIn(Schema):
     body: str
+
+
+class DeskTaskIn(Schema):
+    """Задача отделу: кому и что сделать."""
+
+    point: str
+    text: str

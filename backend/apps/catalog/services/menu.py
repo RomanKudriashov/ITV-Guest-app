@@ -48,7 +48,7 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
     language = options.language
 
     categories = (
-        Category.objects.filter(type=options.offering_type, is_active=True)
+        Category.objects.filter(type=options.offering_type, is_active=True, is_internal=False)
         .select_related("schedule", "image", "parent", "parent__schedule")
         .prefetch_related("schedule__intervals", "parent__schedule__intervals")
         .order_by("sort_order", "code")
@@ -261,7 +261,8 @@ def _item_queryset(offering_type: str | None = OfferingType.PRODUCT):
     услуги, пришедшие по прямой ссылке.
     """
     queryset = (
-        Item.objects.filter(is_active=True)
+        # Служебные позиции («Поручение» ресепшена) гостю не показываются.
+        Item.objects.filter(is_active=True, is_internal=False)
         .select_related("schedule", "category", "category__schedule")
         .prefetch_related(
             "schedule__intervals",

@@ -167,7 +167,9 @@ def _visible_items(hotel, settings: SearchSettings) -> QuerySet:
 
     queryset = Item.objects.filter(
         is_active=True,
+        is_internal=False,
         category__is_active=True,
+        category__is_internal=False,
     ).select_related("category", "category__service").prefetch_related("images__asset")
     # Заведение выключено или спрятано от гостя — вместе с ним уходит и меню.
     queryset = queryset.filter(

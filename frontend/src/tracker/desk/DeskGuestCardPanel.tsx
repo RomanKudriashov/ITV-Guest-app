@@ -98,6 +98,27 @@ export function DeskGuestCardPanel({ threadId }: { threadId: string | null }) {
         </Alert>
       ) : null}
 
+      <Section title={t('tracker.desk.task.tasks', { count: data.tasks.length })}>
+        {data.tasks.length ? (
+          <Stack spacing={0.75} data-testid="desk-guest-tasks">
+            {data.tasks.map((task) => (
+              <Box key={task.id} data-testid={`desk-task-${task.number}`}>
+                <OrderRow order={task} />
+                {task.comment ? (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    «{task.comment}»
+                  </Typography>
+                ) : null}
+              </Box>
+            ))}
+          </Stack>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            {t('tracker.desk.task.noTasks')}
+          </Typography>
+        )}
+      </Section>
+
       <Section title={t('tracker.desk.activeOrders', { count: data.active_orders.length })}>
         {data.active_orders.length ? (
           <Stack spacing={0.75} data-testid="desk-guest-active">

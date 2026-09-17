@@ -88,8 +88,19 @@ def guest_card(thread) -> dict:
     first = (
         GuestSession.objects.filter(pk__in=stay).order_by("created_at").values_list("created_at", flat=True).first()
     )
+    # Задачи, переданные отделам из ЭТОГО диалога: ресепшен видит, что с ними
+    # стало, не выходя из переписки (переписка остаётся у него).
+    tasks = (
+        Order.objects.filter(source_thread_id=thread.pk)
+        .select_related("status", "execution_point")
+        .order_by("-created_at")[:HISTORY_LIMIT]
+    )
     return {
         "room": thread.room.number if thread.room_id else None,
+        "tasks": [
+            {**_order_row(order, language, hotel), "comment": order.comment}
+            for order in tasks
+        ],
         "language": (session.language or "") if session is not None else "",
         "room_verified": bool(session is not None and session.room_verified_at),
         "reachable": bool(

@@ -67,3 +67,44 @@ test('ресепшен оформляет заказ за гостя из диа
   await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByTestId(`tracker-placed-by-${placedText}`)).toBeVisible({ timeout: 20_000 })
 })
+
+test('ресепшен передаёт задачу в отдел, переписка остаётся у него', async ({ page, request }) => {
+  const { token, threadId } = await guestWithDialog(request)
+
+  await signIn(page, RECEPTION)
+  await page.goto(`/tracker/desk?t=${threadId}`)
+  await expect(page.getByTestId('reception-desk')).toBeVisible({ timeout: 20_000 })
+
+  await page.getByTestId('desk-task-open').click()
+  await expect(page.getByTestId('desk-task-dialog')).toBeVisible({ timeout: 15_000 })
+  await page.getByTestId('desk-task-point').click()
+  await page.getByTestId('desk-task-point-housekeeping').click()
+  await page.getByTestId('desk-task-text').fill('принести второе одеяло')
+  await page.getByTestId('desk-task-send').click()
+  await expect(page.getByTestId('desk-task-sent')).toBeVisible({ timeout: 20_000 })
+
+  // Задача видна в карточке гостя со статусом.
+  await expect(page.getByTestId('desk-guest-tasks')).toContainText('принести второе одеяло', {
+    timeout: 15_000,
+  })
+
+  // Гостю сказано по-человечески, без номера заказа; отвечает по-прежнему ресепшен.
+  const chat = await (
+    await request.get(`${API}/api/guest/chat`, { headers: guestHeaders(token) })
+  ).json()
+  const last = chat.messages[chat.messages.length - 1]
+  expect(last.body).toContain('Передали')
+  expect(last.body).not.toContain('№')
+  expect(last.author_name).toBe('Ресепшен')
+
+  // Каталог гостя «Поручения» не знает.
+  const menu = await (
+    await request.get(`${API}/api/guest/catalog?type=service_request`, {
+      headers: guestHeaders(token),
+    })
+  ).json()
+  const titles = menu.categories.flatMap((c: { items: { title: string }[] }) =>
+    c.items.map((i) => i.title),
+  )
+  expect(titles).not.toContain('Поручение')
+})

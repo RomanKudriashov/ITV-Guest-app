@@ -44,6 +44,12 @@ class Order(TenantModel):
     # КТО ОФОРМИЛ ЗА ГОСТЯ. Пусто — гость сам (или сев). Заполнено — сотрудник
     # ресепшена оформил из чата: гость видит пометку «оформил ресепшен», иначе
     # чужой заказ в своём списке читается как взлом.
+    # ИЗ КАКОГО ДИАЛОГА задача: ресепшен передал поручение в отдел и должен
+    # видеть, что с ним стало, не выходя из переписки. Переписка при этом
+    # остаётся у ресепшена — отдел получает задачу, а не диалог.
+    source_thread = models.ForeignKey(
+        "chat.ChatThread", on_delete=models.SET_NULL, null=True, blank=True, related_name="tasks"
+    )
     placed_by = models.ForeignKey(
         "accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )

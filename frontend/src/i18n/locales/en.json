@@ -993,6 +993,18 @@
         "placed": "Order #{{number}} placed",
         "failed": "The order was not placed",
         "formsHint": "Form requests (taxi, housekeeping) are placed by the guest"
+      },
+      "task": {
+        "open": "Hand over",
+        "title": "Task for a department",
+        "hint": "The department gets the task on its board. The chat stays with the front desk.",
+        "point": "Department",
+        "what": "What to do",
+        "send": "Hand over",
+        "sent": "Handed over to “{{title}}”",
+        "failed": "The task was not handed over",
+        "tasks": "Handed to departments: {{count}}",
+        "noTasks": "No tasks handed over"
       }
     }
   },

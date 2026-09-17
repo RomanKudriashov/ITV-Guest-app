@@ -51,6 +51,10 @@ class Item(TenantModel):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # СЛУЖЕБНАЯ ПОЗИЦИЯ — не товар: «Поручение», которым ресепшен передаёт
+    # задачу в отдел (волна 9). Гостю не показывается нигде — ни в каталоге,
+    # ни в поиске, — и в аналитику как продажа не идёт.
+    is_internal = models.BooleanField(default=False)
     in_stock = models.BooleanField(default=True, help_text="Стоп-лист кухни")
     attributes = models.JSONField(default=dict, blank=True)
     # Время приготовления/подачи, мин: чип в карточке + слагаемое ETA.

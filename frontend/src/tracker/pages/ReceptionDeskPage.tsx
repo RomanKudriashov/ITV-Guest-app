@@ -11,12 +11,14 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { Theme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import Snackbar from '@mui/material/Snackbar';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/auth';
 import { DeskConversation } from '../desk/DeskConversation';
 import { DeskOrderDialog } from '../desk/DeskOrderDialog';
+import { DeskTaskDialog } from '../desk/DeskTaskDialog';
 import { DeskGuestCardPanel } from '../desk/DeskGuestCardPanel';
 import { DeskThreadList } from '../desk/DeskThreadList';
 import { useTrackerChatThreads } from '../hooks/useTrackerQueries';
@@ -37,6 +39,8 @@ export function ReceptionDeskPage() {
   const narrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('lg'));
   const [pane, setPane] = useState<'chat' | 'guest'>('chat');
   const [ordering, setOrdering] = useState(false);
+  const [handingOver, setHandingOver] = useState(false);
+  const [handedTo, setHandedTo] = useState<string | null>(null);
   const [placed, setPlaced] = useState<number | null>(null);
   const canChat = Boolean(user?.can_chat);
   const threads = useTrackerChatThreads(canChat);
@@ -70,15 +74,26 @@ export function ReceptionDeskPage() {
       threadId={selected}
       myId={user?.id}
       toolbar={
-        <Button
-          size="small"
-          variant="contained"
-          startIcon={<AddShoppingCartIcon />}
-          onClick={() => setOrdering(true)}
-          data-testid="desk-order-open"
-        >
-          {t('tracker.desk.order.open')}
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AssignmentTurnedInOutlinedIcon />}
+            onClick={() => setHandingOver(true)}
+            data-testid="desk-task-open"
+          >
+            {t('tracker.desk.task.open')}
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<AddShoppingCartIcon />}
+            onClick={() => setOrdering(true)}
+            data-testid="desk-order-open"
+          >
+            {t('tracker.desk.order.open')}
+          </Button>
+        </Stack>
       }
     />
   ) : (
@@ -102,6 +117,24 @@ export function ReceptionDeskPage() {
           }}
         />
       ) : null}
+      {selected ? (
+        <DeskTaskDialog
+          threadId={selected}
+          open={handingOver}
+          onClose={() => setHandingOver(false)}
+          onSent={(title) => {
+            setHandingOver(false);
+            setHandedTo(title);
+          }}
+        />
+      ) : null}
+      <Snackbar
+        open={handedTo !== null}
+        autoHideDuration={6000}
+        onClose={() => setHandedTo(null)}
+        message={handedTo ? t('tracker.desk.task.sent', { title: handedTo }) : ''}
+        ContentProps={{ 'data-testid': 'desk-task-sent' } as never}
+      />
       <Snackbar
         open={placed !== null}
         autoHideDuration={6000}

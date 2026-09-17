@@ -13,6 +13,7 @@ from apps.chat import services as chat_svc
 from apps.chat.services import desk_order
 from apps.core.context import current_language
 from apps.core.idempotency import IdempotencyConflict, run_idempotent
+from apps.chat.schemas import DeskTaskIn
 from apps.orders.schemas.guest import OrderIn
 
 router = Router(tags=["tracker-desk"])
@@ -47,6 +48,25 @@ def _input(payload: OrderIn):
         field_values=payload.field_values or {},
         slot_start=payload.slot_start,
     )
+
+
+@router.get("/desk/points", summary="Отделы, которым можно передать задачу")
+def desk_points(request: HttpRequest):
+    chat_svc.require_chat_access()
+    return {"points": desk_order.task_points(current_language())}
+
+
+@router.post("/desk/threads/{thread_id}/task", response={201: dict}, summary="Передать задачу в отдел")
+def desk_task(request: HttpRequest, thread_id: str, payload: DeskTaskIn):
+    from apps.orders.services import get_order, serialize_order
+
+    thread = _thread(thread_id)
+    language = current_language()
+    order, title = desk_order.hand_over(
+        thread, point_code=payload.point, text=payload.text, user=request.user, language=language
+    )
+    desk_order.announce_task(thread, title=title, user=request.user)
+    return 201, {**serialize_order(get_order(order.pk), language), "point_title": title}
 
 
 @router.get("/desk/venues", summary="Заведения для заказа за гостя")

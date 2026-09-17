@@ -39,6 +39,8 @@ class Category(TenantModel):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    # Служебный раздел: держит «Поручение» отдела. Гостю не показывается.
+    is_internal = models.BooleanField(default=False)
     # Коммерция: облагается ли категория сервисным сбором (еда — да,
     # такси — нет) и минимальная сумма заказа по категории.
     service_fee_applies = models.BooleanField(default=True)

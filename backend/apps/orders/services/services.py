@@ -104,7 +104,6 @@ class OrderInput:
 # --- Создание --------------------------------------------------------------
 
 
-@transaction.atomic
 def _actor_type(guest_session, placed_by) -> str:
     """Кто создал: сотрудник за гостя, сам гость или система (сид, задача)."""
     if placed_by is not None:
@@ -118,6 +117,7 @@ def _actor_id(guest_session, placed_by):
     return guest_session.pk if guest_session else None
 
 
+@transaction.atomic
 def create_order(data: OrderInput, *, guest_session=None, placed_by=None) -> Order:
     """
     `placed_by` — сотрудник, оформивший заказ ЗА гостя (ресепшен из чата).

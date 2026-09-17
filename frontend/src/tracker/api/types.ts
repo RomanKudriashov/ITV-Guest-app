@@ -216,6 +216,8 @@ export interface DeskGuestCard {
   /** Is the guest's session alive — will a reply reach them. */
   reachable: boolean;
   stay_since: string | null;
+  /** Задачи, переданные отделам из этого диалога. */
+  tasks: (DeskOrderRow & { comment?: string })[];
   active_orders: DeskOrderRow[];
   history: DeskOrderRow[];
   history_total: number;

@@ -120,6 +120,8 @@ def _venues(hotel: Hotel) -> list[Service]:
             has_catalog=True,
             execution_point__routes__is_active=True,
             execution_point__routes__category__is_active=True,
+            # Служебный раздел («Поручение») заведением на витрине не делает.
+            execution_point__routes__category__is_internal=False,
         )
         .select_related("schedule", "image", "execution_point")
         .prefetch_related("schedule__intervals")

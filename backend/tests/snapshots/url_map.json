@@ -800,6 +800,9 @@
   "/api/v1/tracker/desk/item/{item_id}": [
     "GET"
   ],
+  "/api/v1/tracker/desk/points": [
+    "GET"
+  ],
   "/api/v1/tracker/desk/threads/{thread_id}/locations": [
     "GET"
   ],
@@ -807,6 +810,9 @@
     "POST"
   ],
   "/api/v1/tracker/desk/threads/{thread_id}/quote": [
+    "POST"
+  ],
+  "/api/v1/tracker/desk/threads/{thread_id}/task": [
     "POST"
   ],
   "/api/v1/tracker/desk/venues": [

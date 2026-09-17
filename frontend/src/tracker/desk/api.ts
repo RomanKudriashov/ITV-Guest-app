@@ -56,6 +56,26 @@ export function quoteDeskCart(threadId: string, payload: CreateOrderPayload): Pr
   return api.post(`/tracker/desk/threads/${threadId}/quote`, payload);
 }
 
+export interface DeskPoint {
+  code: string;
+  title: string;
+  /** Как отдел называется для гостя — его и произносим в чате. */
+  public_title: string;
+}
+
+export function fetchDeskPoints(language?: string): Promise<{ points: DeskPoint[] }> {
+  return api.get('/tracker/desk/points', { headers: lang(language) });
+}
+
+/** Передать задачу отделу: заказ по его доске, переписка остаётся у ресепшена. */
+export function handOverTask(
+  threadId: string,
+  point: string,
+  text: string,
+): Promise<GuestOrder & { point_title: string }> {
+  return api.post(`/tracker/desk/threads/${threadId}/task`, { point, text });
+}
+
 export function placeDeskOrder(
   threadId: string,
   payload: CreateOrderPayload,

@@ -101,3 +101,140 @@ def announce(thread, order, *, user, language: str) -> None:
     summary = _order_summary(order, language).get("summary") or ""
     body = f"Оформили для вас заказ №{order.number}" + (f": {summary}" if summary else "")
     staff_send(thread, user, body)
+
+
+# --- Задача в отдел ------------------------------------------------------------
+
+ERRAND_CATEGORY_CODE = "internal-errand"
+ERRAND_ITEM_CODE = "errand"
+ERRAND_TITLE = {"ru": "Поручение", "en": "Errand", "ar": "مهمة", "zh": "任务"}
+
+
+def errand_item(point):
+    """
+    Служебная позиция отдела — «Поручение». Заводится при первой передаче и
+    живёт дальше: заказ из неё идёт по доске отдела как обычная задача, со
+    статусами, просрочкой и эскалацией. Гостю она не видна нигде.
+    """
+    from apps.catalog.models import Category, Item, Route
+    from apps.catalog.offerings import LocationMode, OfferingType
+
+    service = point.services.first()
+    category = _revive_or_create(
+        Category,
+        code=f"{ERRAND_CATEGORY_CODE}-{point.code}",
+        defaults={
+            "type": OfferingType.SERVICE_REQUEST,
+            "title": ERRAND_TITLE,
+            "service": service,
+            "is_internal": True,
+        },
+    )
+    Route.objects.get_or_create(category=category, execution_point=point, defaults={"priority": 0})
+    return _revive_or_create(
+        Item,
+        code=f"{ERRAND_ITEM_CODE}-{point.code}",
+        defaults={
+            "category": category,
+            "type": OfferingType.SERVICE_REQUEST,
+            "title": ERRAND_TITLE,
+            "price": None,
+            "location_mode": LocationMode.ROOM,
+            "is_internal": True,
+        },
+    )
+
+
+def _revive_or_create(model, *, code: str, defaults: dict):
+    """
+    Найти живую, поднять мягко удалённую, иначе завести.
+
+    Код занят и удалённой строкой (уникальность в базе её видит): служебную
+    позицию мог унести кто угодно — уборка стенда, чужая правка каталога, — и
+    передача задачи не должна из-за этого отказывать. Поднимаем ту же строку,
+    а не заводим вторую с чужим кодом.
+    """
+    existing = model.all_objects.filter(code=code).first()
+    if existing is None:
+        return model.objects.create(code=code, **defaults)
+    changed = []
+    if existing.deleted_at is not None:
+        existing.deleted_at = None
+        changed.append("deleted_at")
+    if not existing.is_active:
+        existing.is_active = True
+        changed.append("is_active")
+    if changed:
+        model.all_objects.filter(pk=existing.pk).update(**{f: getattr(existing, f) for f in changed})
+    return existing
+
+
+def task_points(language: str) -> list[dict]:
+    """Отделы, которым можно передать задачу: все живые исполнители отеля."""
+    from apps.core.fields import translate
+    from apps.hotels.models import ExecutionPoint
+
+    from apps.chat.services.threads import reception_point
+
+    desk = reception_point()
+    points = ExecutionPoint.objects.filter(is_active=True).order_by("code")
+    return [
+        {
+            "code": point.code,
+            "title": translate(point.title, language) or point.code,
+            "public_title": _public_title(point, language),
+        }
+        for point in points
+        if desk is None or point.pk != desk.pk
+    ]
+
+
+def _public_title(point, language: str) -> str:
+    from apps.core.fields import translate
+
+    service = point.services.first()
+    if service is not None:
+        return translate(service.public_name, language) or translate(point.title, language) or point.code
+    return translate(point.title, language) or point.code
+
+
+def hand_over(thread, *, point_code: str, text: str, user, language: str):
+    """
+    Передать задачу отделу. ПЕРЕПИСКА ОСТАЁТСЯ У РЕСЕПШЕНА: отдел получает
+    задачу на свою доску, а не диалог с гостем.
+    """
+    from apps.core.errors import ValidationError
+    from apps.hotels.models import ExecutionPoint
+    from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+    text = (text or "").strip()
+    if not text:
+        raise ValidationError("Напишите, что сделать", field="text", code="empty_task")
+    point = ExecutionPoint.objects.filter(code=point_code, is_active=True).first()
+    if point is None:
+        raise ValidationError("Отдел не найден", field="point", code="point_not_found")
+
+    session = live_session(thread)
+    room_id = thread.room_id or (session.room_id if session is not None else None)
+    item = errand_item(point)
+    order = create_order(
+        OrderInput(
+            lines=[OrderLineInput(item_id=str(item.pk))],
+            room_id=str(room_id) if room_id else None,
+            comment=text[:500],
+            timing="asap",
+        ),
+        placed_by=user,
+    )
+    order.source_thread = thread
+    order.save(update_fields=["source_thread", "updated_at"])
+    return order, _public_title(point, language)
+
+
+def announce_task(thread, *, title: str, user) -> None:
+    """Гостю — по-человечески: «передали в хозслужбу», без слова «заказ»."""
+    from apps.chat.services.threads import staff_send
+
+    if live_session(thread) is None:
+        return
+    staff_send(thread, user, f"Передали в «{title}» — сообщим, как будет сделано")
