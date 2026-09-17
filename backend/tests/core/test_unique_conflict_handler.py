@@ -56,14 +56,16 @@ def cms(client, hotel):
 @pytest.fixture
 def service_id(cms):
     """
-    Заведение свежего отеля — ресепшен, его заводит provision_hotel.
+    Заведение с каталогом в свежем отеле.
 
     Раздел без заведения не создаётся: заведение даёт исполнителя. Тестам
     уникальности всё равно, в каком заведении лежит раздел, — важно лишь, что
-    он вообще может быть создан.
+    он вообще может быть создан. Ресепшен, который заводит provision_hotel,
+    с волны 9 без каталога — разделы в нём не заводятся, поэтому своё.
     """
-    # Списки CMS отдают оболочку `items/total/limit`.
-    return cms("get", "/services").json()["items"][0]["id"]
+    created = cms("post", "/services", {"type": "restaurant", "public_name": {"ru": "Ресторан"}})
+    assert created.status_code == 201, created.content
+    return created.json()["id"]
 
 
 @pytest.fixture
