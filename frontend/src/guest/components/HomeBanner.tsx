@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { closeBanner, reportBannerClick } from '../api/guest';
 import type { GuestBanner } from '../api/types';
+import { useStorefront } from '../useStorefront';
 
 /**
  * Рекламная полоса витрины.
@@ -41,6 +42,9 @@ interface Props {
 export function HomeBanner({ banner, placement }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Цвета — ТОЛЬКО из словаря витрины: вуаль и подписи те же, что у плиток
+  // главной. Литерал здесь сделал бы полосу тёмной и в светлой теме.
+  const { tile: tileTokens } = useStorefront();
   const [closed, setClosed] = useState(false);
   const [frame, setFrame] = useState(0);
   const [page, setPage] = useState<{ title: string; body: string } | null>(null);
@@ -120,17 +124,26 @@ export function HomeBanner({ banner, placement }: Props) {
               position: 'absolute',
               inset: 'auto 0 0 0',
               p: 2,
-              // Вуаль под текстом: на светлом кадре белые буквы иначе исчезают.
-              background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
-              color: '#fff',
+              // Вуаль под текстом: на светлом кадре белые буквы иначе
+              // исчезают. Градиент — тот же, что под подписью плитки.
+              background: tileTokens.scrim,
+              color: 'common.white',
             }}
           >
             {banner.title && (
-              <Typography variant="h6" data-testid="guest-banner-title">
+              <Typography
+                variant="h6"
+                data-testid="guest-banner-title"
+                sx={{ textShadow: tileTokens.titleShadow }}
+              >
                 {banner.title}
               </Typography>
             )}
-            {banner.subtitle && <Typography variant="body2">{banner.subtitle}</Typography>}
+            {banner.subtitle && (
+              <Typography variant="body2" sx={{ textShadow: tileTokens.metaShadow }}>
+                {banner.subtitle}
+              </Typography>
+            )}
           </Stack>
         )}
         <IconButton
@@ -142,9 +155,10 @@ export function HomeBanner({ banner, placement }: Props) {
             position: 'absolute',
             top: 8,
             insetInlineEnd: 8,
-            bgcolor: 'rgba(0,0,0,0.45)',
-            color: '#fff',
-            '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
+            bgcolor: tileTokens.fallbackColor,
+            color: 'common.white',
+            opacity: 0.72,
+            '&:hover': { opacity: 1, bgcolor: tileTokens.fallbackColor },
           }}
         >
           <CloseIcon fontSize="small" />
@@ -162,7 +176,8 @@ export function HomeBanner({ banner, placement }: Props) {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  bgcolor: index === frame ? '#fff' : 'rgba(255,255,255,0.45)',
+                  bgcolor: 'common.white',
+                  opacity: index === frame ? 1 : 0.45,
                 }}
               />
             ))}
