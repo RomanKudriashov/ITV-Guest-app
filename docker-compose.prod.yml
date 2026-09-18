@@ -168,6 +168,26 @@ services:
       backend: {condition: service_healthy}
     networks: [internal]
 
+  # СЛУЖБА ОТЛОЖЕННОГО ЗАПУСКА. В dev-составе она была с волны 6, а в
+  # прод-составе её не было вовсе — и на стенде назначенные задания (отложенная
+  # публикация оформления, отложенные события уведомлений) просто не
+  # исполнялись. Заметить это молча нельзя было только по одному признаку:
+  # пульс пуст. Именно так и нашли — 19.09.2026, перед показом.
+  #
+  # Состояния у неё нет: всё в таблице заданий, перезапускать можно когда
+  # угодно. Миграции и сид делает backend, поэтому SEED_ON_START здесь "0".
+  scheduler:
+    build: ./backend
+    command: ["scheduler"]
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      <<: *backend-env
+      SEED_ON_START: "0"
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
   beat:
     build: ./backend
     command: ["beat"]

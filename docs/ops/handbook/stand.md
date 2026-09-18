@@ -165,7 +165,7 @@
 
     sudo -u deploy git fetch origin main
     sudo -u deploy git reset --hard origin/main
-    dc build backend worker beat nginx iridi-emulator connector
+    dc build backend worker beat scheduler nginx iridi-emulator connector
     dc up -d
 
 Стенд живёт на ветке `main` (раньше был на `deploy/stand-full`). Сливать
@@ -181,6 +181,24 @@
 
 Обновляться надо ИМЕННО от пользователя `deploy`: ключ доступа к репозиторию
 лежит у него, у `root` его нет.
+
+### Службы, которые не перезагружаются сами
+
+Автоперезагрузка есть только у бэкенда в dev. На стенде код запечён в образ,
+поэтому после обновления обязателен `up -d` (он пересоздаст контейнеры с новыми
+образами), а отдельным `restart` стоит пройтись по тем, чью работу видно не
+сразу:
+
+    dc restart worker beat scheduler connector iridi-emulator
+
+**Служба расписания (`scheduler`) появилась в прод-составе только 19.09.2026** —
+до этого её здесь не было вовсе, и назначенные задания на стенде не
+исполнялись. Признак один: пульс пуст.
+
+    dc exec -T backend python manage.py shell -c "
+    from apps.core.models import SchedulerHeartbeat
+    for hb in SchedulerHeartbeat.objects.using('platform').all():
+        print(hb.last_tick_at, hb.took_ms, 'ждут:', hb.pending_count)"
 
 ### Наполнение
 
