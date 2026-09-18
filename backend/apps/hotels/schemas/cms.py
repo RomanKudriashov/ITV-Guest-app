@@ -274,6 +274,10 @@ class HomeSettingsIn(Schema):
     room_status: bool = True
     latitude: float | None = None
     longitude: float | None = None
+    # Выбранный в подсказке город: сервер сам разложит его на координаты,
+    # названия на языках отеля и часовой пояс. Оператор координат не видит.
+    city_id: int | None = None
+    temperature_units: str | None = None
     # Город — подпись к погоде и часам, на языке гостя. Переводы, а не строка.
     city: dict = {}
     # Часовой пояс отеля — ИМЕНЕМ ЗОНЫ, а не смещением. Смещение врёт дважды в

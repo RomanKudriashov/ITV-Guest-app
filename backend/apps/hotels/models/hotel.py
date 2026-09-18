@@ -90,6 +90,17 @@ class Hotel(BaseModel):
     # населённый пункт, а гостю нужен тот город, за которым он приехал.
     city = TranslatableField()
 
+    class TemperatureUnits(models.TextChoices):
+        CELSIUS = "c", "Цельсий"
+        FAHRENHEIT = "f", "Фаренгейт"
+
+    # ГРАДУСЫ БЕЗ БУКВЫ ЧИТАЮТСЯ ПО-РАЗНОМУ. «24°» американский гость читает
+    # как мороз. Единицы — решение отеля (курорт в Майами и отель в Москве
+    # отвечают по-разному), а витрина всегда пишет букву.
+    temperature_units = models.CharField(
+        max_length=1, choices=TemperatureUnits.choices, default=TemperatureUnits.CELSIUS
+    )
+
     default_language = models.CharField(max_length=8, default="en")
     currency = models.CharField(max_length=3, default="RUB")
     # Число знаков после запятой, то есть ПОКАЗАТЕЛЬ СТЕПЕНИ, а не множитель:

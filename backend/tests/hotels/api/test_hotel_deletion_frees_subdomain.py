@@ -45,7 +45,13 @@ def api(client):
     return call
 
 
-def _create(api, subdomain="crystal", name="Кристалл"):
+# СВОЙ ПОДДОМЕН, А НЕ «crystal». Демо-отель заводит сев, и тест, который брал
+# его имя, проходил только пока попадал в воркер раньше сева: добавление
+# соседнего файла меняло раскладку — и он падал «отель уже существует».
+PARKED = "parkcheck"
+
+
+def _create(api, subdomain=PARKED, name="Парковка"):
     return api("post", "/hotels", {
         "subdomain": subdomain, "name": name, "admin_email": f"admin@{subdomain}.test",
     })
@@ -62,33 +68,33 @@ def test_deleted_subdomain_can_be_taken_again(api):
     assert made.status_code == 201, made.content
     hotel_id = made.json()["hotel"]["id"]
 
-    deleted = api("delete", f"/hotels/{hotel_id}?confirm_subdomain=crystal")
+    deleted = api("delete", f"/hotels/{hotel_id}?confirm_subdomain=parkcheck")
     assert deleted.status_code == 200, deleted.content
 
-    again = _create(api, name="Кристалл-2")
+    again = _create(api, name="Парковка-2")
     assert again.status_code == 201, f"поддомен сгорел: {again.status_code} {again.content[:200]}"
-    assert again.json()["hotel"]["subdomain"] == "crystal"
+    assert again.json()["hotel"]["subdomain"] == PARKED
 
 
 def test_old_row_keeps_its_real_name_apart(api):
     """Имя не потеряно: оно нужно журналу и разбору инцидента."""
     hotel_id = _create(api).json()["hotel"]["id"]
-    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=crystal")
+    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=parkcheck")
 
     with platform_scope():
         old = Hotel.all_objects.using("platform").get(pk=hotel_id)
     assert old.deleted_at is not None
-    assert old.former_subdomain == "crystal", "прежнее имя не сохранилось"
-    assert old.subdomain != "crystal", "имя не освобождено"
+    assert old.former_subdomain == PARKED, "прежнее имя не сохранилось"
+    assert old.subdomain != PARKED, "имя не освобождено"
     # Припаркованное имя читаемо и содержит дату: по нему видно, что и когда.
-    assert old.subdomain.startswith("crystal-deleted-")
+    assert old.subdomain.startswith(f"{PARKED}-deleted-")
     assert old.deleted_at.strftime("%Y%m%d") in old.subdomain
 
 
 def test_parking_is_deterministic(api):
     """Тот же отель, удалённый в тот же день, — то же имя. Иначе призраки."""
     hotel_id = _create(api).json()["hotel"]["id"]
-    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=crystal")
+    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=parkcheck")
 
     with platform_scope():
         old = Hotel.all_objects.using("platform").get(pk=hotel_id)
@@ -103,16 +109,16 @@ def test_same_name_can_be_deleted_twice(api):
     воспроизвела бы ровно ту ошибку, от которой лечит.
     """
     first = _create(api).json()["hotel"]["id"]
-    api("delete", f"/hotels/{first}?confirm_subdomain=crystal")
-    second = _create(api, name="Кристалл снова").json()["hotel"]["id"]
+    api("delete", f"/hotels/{first}?confirm_subdomain=parkcheck")
+    second = _create(api, name="Парковка снова").json()["hotel"]["id"]
 
-    deleted = api("delete", f"/hotels/{second}?confirm_subdomain=crystal")
+    deleted = api("delete", f"/hotels/{second}?confirm_subdomain=parkcheck")
     assert deleted.status_code == 200, deleted.content
 
     with platform_scope():
         parked = set(
             Hotel.all_objects.using("platform")
-            .filter(former_subdomain="crystal")
+            .filter(former_subdomain=PARKED)
             .values_list("subdomain", flat=True)
         )
     assert len(parked) == 2, f"два удаления схлопнулись в одно имя: {parked}"
@@ -130,12 +136,12 @@ def test_routing_to_the_old_name_dies_at_once(api, client):
     утверждения.
     """
     hotel_id = _create(api).json()["hotel"]["id"]
-    alive = client.get("/api/v1/guest/hotel", HTTP_HOST="crystal.guest.localhost")
+    alive = client.get("/api/v1/guest/hotel", HTTP_HOST=f"{PARKED}.guest.localhost")
     assert alive.status_code != 404, "до удаления адрес обязан работать"
 
-    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=crystal")
+    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=parkcheck")
 
-    dead = client.get("/api/v1/guest/hotel", HTTP_HOST="crystal.guest.localhost")
+    dead = client.get("/api/v1/guest/hotel", HTTP_HOST=f"{PARKED}.guest.localhost")
     assert dead.status_code == 404, f"старое имя всё ещё открывает отель: {dead.status_code}"
     assert dead.json()["code"] == "unknown_tenant"
 
@@ -143,7 +149,7 @@ def test_routing_to_the_old_name_dies_at_once(api, client):
 def test_parked_name_is_not_a_hotel_either(api, client):
     """На припаркованное имя тоже никто не отвечает — это не запасной вход."""
     hotel_id = _create(api).json()["hotel"]["id"]
-    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=crystal")
+    api("delete", f"/hotels/{hotel_id}?confirm_subdomain=parkcheck")
 
     with platform_scope():
         parked = Hotel.all_objects.using("platform").get(pk=hotel_id).subdomain

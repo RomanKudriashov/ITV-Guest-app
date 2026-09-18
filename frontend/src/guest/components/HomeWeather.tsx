@@ -51,8 +51,13 @@ import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
  * порядок — docs/ops/weather.md.
  */
 
-/** Группы состояний WMO: гостю нужен «дождь», а не «слабая замерзающая морось». */
-function conditionOf(code: number): { key: string; Icon: AppIconComponent } {
+/**
+ * Группы состояний WMO: гостю нужен «дождь», а не «слабая замерзающая морось».
+ *
+ * Экспортируется: тем же словарём подписывает погоду настройка отеля («сейчас
+ * в Сочи +18, ясно»). Второй словарь разошёлся бы с этим на первой правке.
+ */
+export function conditionOf(code: number): { key: string; Icon: AppIconComponent } {
   if (code === 0) return { key: 'clear', Icon: IconSunny };
   if (code <= 2) return { key: 'partly', Icon: IconPartlyCloudy };
   if (code === 3) return { key: 'cloudy', Icon: IconCloudy };
@@ -205,11 +210,12 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
             <Icon size={20} />
           </Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {/* Градусы Цельсия и точка — единица подписана знаком, а не словом:
-                строка живёт в ряду, где место дороже. */}
+            {/* БУКВА ОБЯЗАТЕЛЬНА. «24°» без неё американский гость читает как
+                мороз; единицы — настройка отеля, считает их сервер. */}
             {t('guest.weather.degrees', {
-              value: Math.round(weather.temperature_c),
-              defaultValue: `${Math.round(weather.temperature_c)}°`,
+              value: weather.temperature ?? Math.round(weather.temperature_c),
+              unit: (weather.units ?? 'c').toUpperCase(),
+              defaultValue: `${weather.temperature ?? Math.round(weather.temperature_c)}°${(weather.units ?? 'c').toUpperCase()}`,
             })}
           </Typography>
           <Typography variant="body2" color="text.secondary">

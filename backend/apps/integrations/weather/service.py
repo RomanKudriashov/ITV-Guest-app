@@ -138,4 +138,76 @@ def current_for(hotel) -> dict | None:
     if not is_enabled(hotel):
         return None
     ensure_fresh(hotel)
-    return cached(hotel)
+    entry = cached(hotel)
+    if entry is None:
+        return None
+    # ЕДИНИЦЫ — РЕШЕНИЕ ОТЕЛЯ, и считает их сервер. «24°» без буквы читается
+    # по-разному: американский гость прочтёт это как мороз. В кэше всегда
+    # Цельсий — пересчёт дешевле, чем два кэша и вопрос «в чём тут градусы».
+    units = getattr(hotel, "temperature_units", "c") or "c"
+    celsius = entry["temperature_c"]
+    return {
+        **entry,
+        "units": units,
+        "temperature": round(celsius * 9 / 5 + 32) if units == "f" else round(celsius),
+    }
+
+
+# --- Справочник городов ---------------------------------------------------------
+
+CITY_CACHE_SECONDS = 24 * 60 * 60
+
+
+def search_cities(query: str, language: str) -> list[dict] | None:
+    """
+    Подсказка городов для CMS. `None` — справочник не ответил (это не «ничего
+    не найдено», и экран обязан сказать об этом по-разному).
+
+    Ответы кэшируются на сутки: оператор набирает город по буквам, и каждое
+    нажатие не должно уходить к провайдеру — у него лимиты, у нас они общие
+    на весь флот.
+    """
+    query = (query or "").strip()
+    language = (language or "en").split("-")[0]
+    if len(query) < 2:
+        return []
+    key = f"{CACHE_PREFIX}:cities:{language}:{query.casefold()}"
+    hit = cache.get(key)
+    if hit is not None:
+        return hit
+    provider = get_provider()
+    matches = provider.search_cities(query, language)
+    if matches is None:
+        return None
+    payload = [match.as_payload() for match in matches]
+    cache.set(key, payload, CITY_CACHE_SECONDS)
+    return payload
+
+
+def city_by_id(city_id: int, language: str) -> dict | None:
+    """Запись справочника по идентификатору, на нужном языке. С кэшем на сутки."""
+    key = f"{CACHE_PREFIX}:city:{language}:{int(city_id)}"
+    hit = cache.get(key)
+    if hit is not None:
+        return hit
+    match = get_provider().city(int(city_id), language)
+    if match is None:
+        return None
+    payload = match.as_payload()
+    cache.set(key, payload, CITY_CACHE_SECONDS)
+    return payload
+
+
+def city_in_languages(city_id: int, languages) -> dict[str, str]:
+    """
+    Название города НА ЯЗЫКАХ ОТЕЛЯ — чтобы английская витрина не писала
+    «Москва». Берём запись по идентификатору на каждом языке: поиском это не
+    сделать, справочник ищет по написанию и «Сочи» по-английски не находит.
+    Языка без перевода нет: провайдер отдаёт английское или родное имя.
+    """
+    names: dict[str, str] = {}
+    for language in languages:
+        row = city_by_id(city_id, language)
+        if row and row.get("name"):
+            names[language] = row["name"]
+    return names

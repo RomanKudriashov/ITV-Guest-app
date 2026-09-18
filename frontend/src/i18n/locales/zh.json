@@ -739,7 +739,7 @@
       "showers": "阵雨",
       "thunder": "雷暴",
       "unknown": "天气",
-      "degrees": "{{value}}°"
+      "degrees": "{{value}}°{{unit}}"
     },
     "search": {
       "title": "搜索",
@@ -3065,7 +3065,19 @@
       "timezone": "时区",
       "timezoneHint": "首页时钟与场所营业时间均按此时区计算",
       "hotelName": "酒店名称",
-      "hotelNameHint": "客人在每个页面都会看到。专有名称在所有语言中保持原样，仅翻译其周围的词（「酒店」「度假村」）。"
+      "hotelNameHint": "客人在每个页面都会看到。专有名称在所有语言中保持原样，仅翻译其周围的词（「酒店」「度假村」）。",
+      "cityPick": "城市",
+      "cityPickHint": "开始输入名称——坐标会自动填入",
+      "cityCurrent": "当前选择：{{city}}",
+      "cityNotFound": "未找到城市",
+      "cityUnavailable": "城市目录无响应，请稍后再试",
+      "previewNow": "{{city}}现在：{{value}}°{{unit}}，{{condition}}",
+      "previewLoading": "正在获取天气…",
+      "previewUnavailable": "当前无法获取天气，无法核对所选城市",
+      "units": "温度单位",
+      "unitsHint": "客人始终看到字母：「24 °C」或「75 °F」",
+      "celsius": "摄氏度（°C）",
+      "fahrenheit": "华氏度（°F）"
     },
     "search": {
       "title": "客人搜索",

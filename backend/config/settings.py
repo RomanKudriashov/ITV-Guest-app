@@ -250,6 +250,9 @@ WEATHER_PROVIDER = os.getenv("WEATHER_PROVIDER", "open-meteo")
 WEATHER_API_URL = os.getenv("WEATHER_API_URL", "https://api.open-meteo.com")
 # Как часто ходим за погодой и докуда значение остаётся правдой. Второе больше
 # первого с запасом на одну пропущенную попытку.
+# Справочник городов ТОГО ЖЕ провайдера: у Open-Meteo он живёт своим хостом.
+# Лицензия общая с погодой — см. docs/ops/weather.md.
+WEATHER_GEOCODER_URL = os.getenv("WEATHER_GEOCODER_URL", "https://geocoding-api.open-meteo.com")
 WEATHER_REFRESH_SECONDS = int(os.getenv("WEATHER_REFRESH_SECONDS", "1200"))
 WEATHER_FRESH_SECONDS = int(os.getenv("WEATHER_FRESH_SECONDS", "2700"))
 

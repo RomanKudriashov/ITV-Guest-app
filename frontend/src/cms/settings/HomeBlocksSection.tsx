@@ -9,6 +9,7 @@ import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Autocomplete from '@mui/material/Autocomplete';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,14 @@ import { useTranslation } from 'react-i18next';
 import { QueryState } from '@/components/QueryState';
 
 import { ApiError } from '@/api/client';
-import { fetchHomeSettings, putHomeSettings } from '@/api/cms';
+import {
+  fetchHomeSettings,
+  fetchWeatherPreview,
+  putHomeSettings,
+  searchWeatherCities,
+  type WeatherCity,
+} from '@/api/cms';
+import { conditionOf } from '@/guest/components/HomeWeather';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
@@ -34,6 +42,15 @@ import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
  * показывает его отель, — хотя бы затем, чтобы ответить на вопрос гостя.
  * Лицензионная сторона: docs/ops/weather.md.
  */
+function useDebounced(value: string, delay: number): string {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const id = window.setTimeout(() => setSettled(value), delay);
+    return () => window.clearTimeout(id);
+  }, [value, delay]);
+  return settled;
+}
+
 export function HomeBlocksSection() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -45,8 +62,12 @@ export function HomeBlocksSection() {
 
   const [weather, setWeather] = useState(false);
   const [roomStatus, setRoomStatus] = useState(true);
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
+  // КООРДИНАТ ОПЕРАТОР НЕ ВИДИТ. Он знает город; широту и долготу приносит
+  // справочник. Ручной ввод пары чисел был заполнен у одного отеля из 29 —
+  // то есть включить погоду не мог почти никто.
+  const [cityChoice, setCityChoice] = useState<WeatherCity | null>(null);
+  const [cityQuery, setCityQuery] = useState('');
+  const [units, setUnits] = useState('c');
   // Город — подпись к погоде и часам у гостя, поэтому переводами, как весь
   // гостевой текст: «Москва» в арабском интерфейсе читается не лучше, чем
   // «Mainly clear».
@@ -63,20 +84,36 @@ export function HomeBlocksSection() {
     if (!query.data) return;
     setWeather(query.data.weather);
     setRoomStatus(query.data.room_status);
-    setLatitude(query.data.latitude === null ? '' : String(query.data.latitude));
-    setLongitude(query.data.longitude === null ? '' : String(query.data.longitude));
+    setUnits(query.data.temperature_units ?? 'c');
     setName(query.data.name ?? {});
     setCity(query.data.city ?? {});
     setTimezone(query.data.timezone ?? '');
   }, [query.data]);
+
+  // Подсказка городов: спрашиваем с задержкой, чтобы каждое нажатие клавиши
+  // не уходило к провайдеру — лимиты у него общие на весь флот.
+  const debounced = useDebounced(cityQuery, 350);
+  const cities = useQuery({
+    queryKey: ['cms', 'weather', 'cities', debounced],
+    queryFn: () => searchWeatherCities(debounced),
+    enabled: debounced.trim().length >= 2,
+  });
+  const cityOptions = cities.data?.cities ?? [];
+  const preview = useQuery({
+    queryKey: ['cms', 'weather', 'preview', cityChoice?.id],
+    queryFn: () => fetchWeatherPreview(cityChoice!.latitude, cityChoice!.longitude),
+    enabled: Boolean(cityChoice),
+  });
 
   const save = useMutation({
     mutationFn: () =>
       putHomeSettings({
         weather,
         room_status: roomStatus,
-        latitude: latitude.trim() === '' ? null : Number(latitude),
-        longitude: longitude.trim() === '' ? null : Number(longitude),
+        // Город выбран в подсказке — сервер сам поставит координаты, переводы
+        // и пояс; не выбирали — прежние остаются нетронутыми.
+        city_id: cityChoice ? cityChoice.id : null,
+        temperature_units: units,
         name,
         city,
         timezone,
@@ -97,7 +134,8 @@ export function HomeBlocksSection() {
       </QueryState>
     );
 
-  const point = latitude.trim() !== '' && longitude.trim() !== '';
+  const point = cityChoice !== null || query.data.latitude !== null;
+  const savedCity = Object.values(query.data.city ?? {}).find(Boolean) ?? '';
   const languages = contentLanguages;
   const provider = query.data.weather_provider;
 
@@ -112,24 +150,74 @@ export function HomeBlocksSection() {
             </Typography>
           </Stack>
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label={t('cms.homeBlocks.latitude')}
-              value={latitude}
-              onChange={(event) => setLatitude(event.target.value)}
-              inputProps={{ inputMode: 'decimal', 'data-testid': 'cms-home-latitude' }}
-              fullWidth
-              size="small"
+          {/* ГОРОД С ПОДСКАЗКОЙ. Набрал «Сочи» — выбрал из списка, координаты
+              пришли сами. Страну отдельным полем не заводим: она приезжает
+              вместе с городом. */}
+          <Stack spacing={1}>
+            <Autocomplete
+              options={cityOptions}
+              filterOptions={(options) => options}
+              getOptionLabel={(option) =>
+                [option.name, option.admin, option.country].filter(Boolean).join(', ')
+              }
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              value={cityChoice}
+              onChange={(_event, next) => setCityChoice(next)}
+              onInputChange={(_event, value) => setCityQuery(value)}
+              loading={cities.isFetching}
+              noOptionsText={
+                cities.data && cities.data.available === false
+                  ? t('cms.homeBlocks.cityUnavailable')
+                  : t('cms.homeBlocks.cityNotFound')
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  size="small"
+                  label={t('cms.homeBlocks.cityPick')}
+                  helperText={
+                    savedCity
+                      ? t('cms.homeBlocks.cityCurrent', { city: savedCity })
+                      : t('cms.homeBlocks.cityPickHint')
+                  }
+                  inputProps={{ ...params.inputProps, 'data-testid': 'cms-home-city-pick' }}
+                />
+              )}
             />
-            <TextField
-              label={t('cms.homeBlocks.longitude')}
-              value={longitude}
-              onChange={(event) => setLongitude(event.target.value)}
-              inputProps={{ inputMode: 'decimal', 'data-testid': 'cms-home-longitude' }}
-              fullWidth
-              size="small"
-            />
+            {/* «Сейчас в Сочи +18, ясно» — промах виден сразу, а не от гостя. */}
+            {cityChoice ? (
+              <Typography variant="body2" data-testid="cms-home-weather-now">
+                {preview.isFetching
+                  ? t('cms.homeBlocks.previewLoading')
+                  : preview.data?.available
+                    ? t('cms.homeBlocks.previewNow', {
+                        city: cityChoice.name,
+                        value: preview.data.temperature,
+                        unit: (preview.data.units ?? 'c').toUpperCase(),
+                        condition: t(`guest.weather.${conditionOf(preview.data.code ?? -1).key}`),
+                      })
+                    : t('cms.homeBlocks.previewUnavailable')}
+              </Typography>
+            ) : null}
           </Stack>
+
+          <TextField
+            select
+            size="small"
+            label={t('cms.homeBlocks.units')}
+            value={units}
+            onChange={(event) => setUnits(event.target.value)}
+            helperText={t('cms.homeBlocks.unitsHint')}
+            sx={{ maxWidth: 280 }}
+            SelectProps={{ SelectDisplayProps: { 'data-testid': 'cms-home-units' } as never }}
+          >
+            <MenuItem value="c" data-testid="cms-home-units-c">
+              {t('cms.homeBlocks.celsius')}
+            </MenuItem>
+            <MenuItem value="f" data-testid="cms-home-units-f">
+              {t('cms.homeBlocks.fahrenheit')}
+            </MenuItem>
+          </TextField>
 
           {/*
             Часовой пояс — ИМЕНЕМ зоны, а не смещением: смещение врёт дважды в

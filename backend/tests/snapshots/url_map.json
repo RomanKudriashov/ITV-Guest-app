@@ -432,6 +432,12 @@
   "/api/v1/cms/staff/{user_id}/assignments": [
     "PUT"
   ],
+  "/api/v1/cms/weather/cities": [
+    "GET"
+  ],
+  "/api/v1/cms/weather/preview": [
+    "GET"
+  ],
   "/api/v1/guest/cart/quote": [
     "POST"
   ],

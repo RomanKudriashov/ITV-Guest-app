@@ -42,6 +42,33 @@ class CurrentWeather:
         }
 
 
+@dataclass(frozen=True)
+class CityMatch:
+    """
+    Город из справочника провайдера: то, что оператор выбирает вместо
+    координат. Координаты приезжают ВМЕСТЕ с городом и отелю не показываются.
+    """
+
+    id: int
+    name: str
+    country: str
+    admin: str
+    latitude: float
+    longitude: float
+    timezone: str
+
+    def as_payload(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "country": self.country,
+            "admin": self.admin,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "timezone": self.timezone,
+        }
+
+
 class WeatherProvider(Protocol):
     """
     Текущая погода по координатам. `None` — провайдер не ответил или ответил
@@ -50,3 +77,19 @@ class WeatherProvider(Protocol):
     """
 
     def current(self, latitude: float, longitude: float) -> CurrentWeather | None: ...
+
+    def city(self, city_id: int, language: str) -> CityMatch | None:
+        """
+        Город ПО ИДЕНТИФИКАТОРУ на нужном языке. Поиском переводы не набрать:
+        справочник ищет по написанию, и «Сочи» по-английски не находится
+        вовсе — а гость в английской витрине должен видеть «Sochi».
+        """
+        ...
+
+    def search_cities(self, query: str, language: str, count: int = 10) -> list[CityMatch]:
+        """
+        Подсказка городов. У ТОГО ЖЕ провайдера, что и погода: справочник и
+        прогноз обязаны говорить об одной точке, и лицензионный вопрос у них
+        общий — сменим провайдера, сменится и справочник, одной заменой слоя.
+        """
+        ...

@@ -623,6 +623,10 @@ export interface GuestQuickAction {
  */
 export interface GuestWeather {
   temperature_c: number;
+  /** Температура в единицах отеля — считает сервер, витрина только пишет букву. */
+  temperature?: number;
+  /** `c` | `f` — решение отеля: «24°» без буквы читается по-разному. */
+  units?: string;
   /** Код состояния WMO — витрина переводит его СВОИМИ строками. */
   code: number;
   is_day: boolean;

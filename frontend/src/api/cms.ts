@@ -665,6 +665,8 @@ export interface HomeSettings {
   timezone: string;
   /** Список зон приходит с сервера: он меняется решениями правительств. */
   timezone_options: string[];
+  /** Единицы температуры отеля: `c` | `f`. Витрина всегда пишет букву. */
+  temperature_units: string;
   /** Погоду нельзя включить без координат — сервер говорит об этом прямо. */
   weather_available: boolean;
   /** Строка номера имеет смысл только с модулем управления. */
@@ -673,15 +675,52 @@ export interface HomeSettings {
   weather_provider: { name: string; url: string };
 }
 
+/** Город из справочника провайдера: координаты приезжают вместе с ним. */
+export interface WeatherCity {
+  id: number;
+  name: string;
+  country: string;
+  admin: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+}
+
+/** `available: false` — справочник молчит; это не «ничего не найдено». */
+export function searchWeatherCities(
+  q: string,
+  lang?: string,
+): Promise<{ cities: WeatherCity[]; available: boolean }> {
+  return api.get('/cms/weather/cities', { query: lang ? { q, lang } : { q } });
+}
+
+export interface WeatherPreview {
+  available: boolean;
+  units?: string;
+  temperature?: number;
+  code?: number;
+  is_day?: boolean;
+}
+
+/** «Сейчас в Сочи +18, ясно» — ошибка выбора видна сразу, а не от гостя. */
+export function fetchWeatherPreview(latitude: number, longitude: number): Promise<WeatherPreview> {
+  return api.get('/cms/weather/preview', {
+    query: { latitude: String(latitude), longitude: String(longitude) },
+  });
+}
+
 export function fetchHomeSettings(): Promise<HomeSettings> {
   return api.get<HomeSettings>('/cms/home-settings');
 }
 
 export function putHomeSettings(
-  payload: Pick<
-    HomeSettings,
-    'weather' | 'room_status' | 'latitude' | 'longitude' | 'city' | 'timezone' | 'name'
-  >,
+  payload: Pick<HomeSettings, 'weather' | 'room_status' | 'city' | 'timezone' | 'name'> & {
+    latitude?: number | null;
+    longitude?: number | null;
+    /** Выбранный город: сервер сам разложит его на координаты и переводы. */
+    city_id?: number | null;
+    temperature_units?: string;
+  },
 ): Promise<HomeSettings> {
   return api.put<HomeSettings>('/cms/home-settings', payload);
 }

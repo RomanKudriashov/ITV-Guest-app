@@ -743,7 +743,7 @@
       "showers": "Showers",
       "thunder": "Thunderstorm",
       "unknown": "Weather",
-      "degrees": "{{value}}°"
+      "degrees": "{{value}}°{{unit}}"
     },
     "search": {
       "title": "Search",
@@ -3096,7 +3096,19 @@
       "timezone": "Time zone",
       "timezoneHint": "The home screen clock and venue schedules are computed from it",
       "hotelName": "Hotel name",
-      "hotelNameHint": "Shown to the guest on every screen. Keep the proper name as it is in all languages — translate the word around it («hotel», «resort»)."
+      "hotelNameHint": "Shown to the guest on every screen. Keep the proper name as it is in all languages — translate the word around it («hotel», «resort»).",
+      "cityPick": "City",
+      "cityPickHint": "Start typing the name — coordinates are filled in for you",
+      "cityCurrent": "Currently: {{city}}",
+      "cityNotFound": "City not found",
+      "cityUnavailable": "The city directory is not responding — try later",
+      "previewNow": "Now in {{city}}: {{value}}°{{unit}}, {{condition}}",
+      "previewLoading": "Checking the weather…",
+      "previewUnavailable": "The weather is unavailable right now — the choice cannot be checked",
+      "units": "Temperature units",
+      "unitsHint": "The guest always sees the letter: “24 °C” or “75 °F”",
+      "celsius": "Celsius (°C)",
+      "fahrenheit": "Fahrenheit (°F)"
     },
     "search": {
       "title": "Guest search",
