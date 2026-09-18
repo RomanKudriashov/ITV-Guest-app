@@ -23,6 +23,8 @@ export const guestKeys = {
   cartQuote: (signature: string, language: string) =>
     ['guest', 'cartQuote', signature, language] as const,
   home: (language: string) => ['guest', 'home', language] as const,
+  /** Баннер витрины — свой ключ: его запрос не связан с главной. */
+  banner: (language: string) => ['guest', 'banner', language] as const,
   /** Single thread per guest — a stable key the WS snapshot overwrites. */
   chat: ['guest', 'chat'] as const,
   /**

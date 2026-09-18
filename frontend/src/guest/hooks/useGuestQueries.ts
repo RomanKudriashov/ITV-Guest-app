@@ -5,6 +5,7 @@ import type { OfferingType } from '@/offerings/behaviour';
 import {
   fetchActiveOrders,
   fetchCatalog,
+  fetchBanner,
   fetchChat,
   fetchHome,
   fetchItem,
@@ -24,6 +25,7 @@ import type {
   CreateOrderPayload,
   GuestActiveOrders,
   GuestCatalog,
+  GuestBannerAnswer,
   GuestHome,
   GuestLocations,
   GuestOrder,
@@ -197,6 +199,28 @@ export function useGuestActiveOrders() {
  * The home screen, assembled by the server from the hotel's real offerings. Also
  * the source of the chat tab's unread badge (`unread_chat`).
  */
+/**
+ * Баннер витрины — СВОЙ запрос, отдельный от главной.
+ *
+ * Это и есть выполнение требования «на медленном соединении баннер не должен
+ * задерживать витрину»: главная не ждёт рекламу, а реклама приезжает сама.
+ * Не пришла — `data` пуст, и экран просто не рисует полосу.
+ *
+ * `retry: false` намеренно: реклама не тот случай, ради которого стоит
+ * ходить на сервер трижды. Не ответил — не показываем.
+ */
+export function useGuestBanner() {
+  const language = useGuestLanguage();
+  const { isReady } = useGuestSession();
+  return useQuery<GuestBannerAnswer>({
+    queryKey: guestKeys.banner(language),
+    queryFn: () => fetchBanner(language),
+    enabled: isReady,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useGuestHome() {
   const language = useGuestLanguage();
   const { isReady } = useGuestSession();

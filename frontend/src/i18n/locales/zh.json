@@ -767,6 +767,9 @@
       "tomorrow": "明天 {{time}} 开放",
       "later": "{{day}} {{time}} 开放",
       "unknown": "{{time}} 开放"
+    },
+    "banner": {
+      "close": "关闭"
     }
   },
   "tracker": {
@@ -3666,6 +3669,65 @@
       "reopen": "重新处理",
       "closeHint": "写明采取的措施后才能关闭",
       "failed": "处理步骤未保存"
+    }
+  },
+  "banners": {
+    "title": "横幅",
+    "subtitle": "客人前台的广告：在哪里、给谁、效果如何。每屏只有一条，且随时可关闭。",
+    "what": "横幅",
+    "add": "新建横幅",
+    "edit": "横幅",
+    "empty": "暂无横幅，新建后会显示在这里。",
+    "off": "已关闭",
+    "name": "名称",
+    "nameHint": "内部名称：只有您看得到，客人看不到。",
+    "bannerTitle": "标题",
+    "bannerSubtitle": "副标题",
+    "sizeLabel": "尺寸",
+    "placeLabel": "位置",
+    "priority": "优先级",
+    "priorityHint": "多条同时符合时，优先级高者展示。",
+    "priorityShort": "优先级 {{value}}",
+    "pictures": "图片",
+    "addPicture": "添加图片",
+    "saveFirst": "请先保存横幅，再添加图片。",
+    "actionLabel": "点击后的动作",
+    "url": "链接",
+    "venue": "场所",
+    "pageTitle": "页面标题",
+    "pageBody": "页面正文",
+    "rules": "展示规则",
+    "rulesHint": "规则同时生效：日期、时间、语言与房型。",
+    "from": "起始日期",
+    "to": "结束日期",
+    "timeFrom": "起",
+    "timeTo": "止",
+    "timeHint": "允许跨零点的时段：22:00–06:00。",
+    "firstVisit": "仅首次进入时",
+    "firstVisitShort": "首次进入",
+    "languages": "客人语言",
+    "languagesHint": "留空表示所有语言。",
+    "categories": "房型",
+    "categoriesHint": "留空表示所有房间。",
+    "categoriesShort": "房型：{{count}}",
+    "active": "展示",
+    "noRules": "无限制",
+    "saveFailed": "横幅未保存",
+    "stats": "展示 {{impressions}} · 点击 {{clicks}} · 到达 {{reached}} · CTR {{ctr}}%",
+    "size": {
+      "s": "窄",
+      "m": "中",
+      "l": "大"
+    },
+    "place": {
+      "top": "顶部",
+      "bottom": "底部"
+    },
+    "action": {
+      "none": "无动作",
+      "link": "外部链接",
+      "venue": "本店场所",
+      "page": "说明页"
     }
   }
 }

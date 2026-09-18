@@ -10,6 +10,7 @@ import type {
   CreateSessionPayload,
   GuestActiveOrders,
   GuestCatalog,
+  GuestBannerAnswer,
   GuestHome,
   GuestHotel,
   GuestLocations,
@@ -148,6 +149,26 @@ export function cancelOrder(
  */
 export function fetchHome(language?: string): Promise<GuestHome> {
   return guestApi.get<GuestHome>('/guest/home', { query: { lang: language } });
+}
+
+/**
+ * Баннер витрины — ОТДЕЛЬНЫМ запросом, а не полем главной.
+ *
+ * Лежи он в теле `/guest/home`, гость на медленном канале ждал бы рекламу,
+ * чтобы увидеть меню. Здесь витрина рисуется сразу, баннер догоняет; не
+ * пришёл — не показываем, и это нормальное состояние экрана.
+ */
+export function fetchBanner(language?: string): Promise<GuestBannerAnswer> {
+  return guestApi.get<GuestBannerAnswer>('/guest/banner', { query: { lang: language } });
+}
+
+export function reportBannerClick(bannerId: string): Promise<{ ok: boolean }> {
+  return guestApi.post<{ ok: boolean }>(`/guest/banner/${bannerId}/click`, {});
+}
+
+/** Закрытие живёт на СЕРВЕРЕ: перезагрузка страницы не должна возвращать баннер. */
+export function closeBanner(bannerId: string): Promise<{ ok: boolean }> {
+  return guestApi.post<{ ok: boolean }>(`/guest/banner/${bannerId}/close`, {});
 }
 
 /** The guest's thread + messages. Creates the thread on first call (contract §3). */

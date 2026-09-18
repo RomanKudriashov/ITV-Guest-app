@@ -46,6 +46,7 @@ from apps.hotels.models import (
     HotelLanguage,
     Location,
     Room,
+    RoomCategory,
     Schedule,
     ScheduleInterval,
     Service,
@@ -420,9 +421,30 @@ class Command(BaseCommand):
             created_users[prefix] = user
         return created_users
 
+    # Тарифные категории номера: «Стандарт», «Делюкс», «Люкс». Заведены в
+    # волне 5, но ни сид, ни стенд их не наполняли — и правило показа баннера
+    # «по категориям номеров» проверять было не на чем: 0 категорий и 0
+    # размеченных комнат из 35 на всём стенде. Демо-набор обязан показывать
+    # механизм работающим, а не существующим.
+    ROOM_CATEGORIES = (
+        ("standard", {"ru": "Стандарт", "en": "Standard", "ar": "غرفة عادية", "zh": "标准房"}),
+        ("deluxe", {"ru": "Делюкс", "en": "Deluxe", "ar": "غرفة ديلوكس", "zh": "豪华房"}),
+        ("suite", {"ru": "Люкс", "en": "Suite", "ar": "جناح", "zh": "套房"}),
+    )
+
+    def _seed_room_categories(self) -> list[RoomCategory]:
+        categories = []
+        for order, (code, title) in enumerate(self.ROOM_CATEGORIES):
+            category, _ = RoomCategory.objects.get_or_create(
+                code=code, defaults={"title": title, "sort_order": order}
+            )
+            categories.append(category)
+        return categories
+
     def _seed_rooms(self) -> list[Room]:
+        categories = self._seed_room_categories()
         rooms = []
-        for floor in ("2", "3", "4"):
+        for floor_index, floor in enumerate(("2", "3", "4")):
             for index in ("01", "05", "12"):
                 room, _ = Room.objects.get_or_create(
                     number=f"{floor}{index}",
@@ -432,6 +454,13 @@ class Command(BaseCommand):
                         "source": Room.Source.MANUAL,
                     },
                 )
+                # Категория ДОВОДИТСЯ, а не ставится только при создании:
+                # иначе на уже поднятом стенде номера остались бы без неё.
+                # Этаж выше — категория дороже: так демо-данные читаются.
+                wanted = categories[floor_index]
+                if room.category_id != wanted.pk:
+                    room.category = wanted
+                    room.save(update_fields=["category", "updated_at"])
                 rooms.append(room)
         return rooms
 

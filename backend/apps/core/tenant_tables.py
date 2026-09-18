@@ -75,6 +75,11 @@ TENANT_TABLES = [
     "chat_message",
     "reviews_review",
     "reviews_action",
+    # реклама на витрине
+    "promo_banner",
+    "promo_banner_category",
+    "promo_banner_image",
+    "promo_banner_view",
     # автоперевод
     "translate_mark",
     "translate_run",

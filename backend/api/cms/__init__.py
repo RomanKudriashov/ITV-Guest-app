@@ -3,6 +3,7 @@ from ninja import Router
 from apps.catalog.api.router import cms_router as catalog_router
 from apps.analytics.api.router import cms_router as analytics_router
 from apps.translate.api.router import cms_router as translate_router
+from apps.promo.api.router import cms_router as promo_router
 from apps.notifications.api.router import cms_router as notifications_router
 from apps.reviews.api.router import cms_router as reviews_router
 from apps.chat.api.router import cms_router as chat_router
@@ -26,5 +27,6 @@ router.add_router("", reviews_router)
 router.add_router("", chat_router)
 router.add_router("", analytics_router)
 router.add_router("", translate_router)
+router.add_router("", promo_router)
 
 __all__ = ["router"]

@@ -24,7 +24,7 @@ import type { OfferingNoun } from '@/offerings/nouns';
 /** Translatable field: `{"ru": "Горячее", "en": "Hot"}`. Empty languages absent. */
 export type Translated = Record<string, string>;
 
-export type MediaKind = 'item' | 'category' | 'brand';
+export type MediaKind = 'item' | 'category' | 'brand' | 'banner';
 export type MediaStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
 /** Рамка кадра в ДОЛЯХ оригинала (0..1) — не в пикселях. */

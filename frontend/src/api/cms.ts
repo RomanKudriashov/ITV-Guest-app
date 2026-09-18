@@ -757,3 +757,73 @@ export function fetchShowcase(): Promise<ShowcaseSettings> {
 export function putShowcase(payload: ShowcaseSavePayload): Promise<ShowcaseSettings> {
   return api.put<ShowcaseSettings>('/cms/showcase', payload);
 }
+
+/* ── 10. Рекламные баннеры витрины ─────────────────────────────────────── */
+
+/**
+ * Статистика приходит ВМЕСТЕ с баннером, а не отдельной ручкой: числа читают,
+ * чтобы поправить правило показа, и держать их на другом экране значило бы
+ * заставлять оператора сверять две вкладки.
+ */
+export interface BannerStats {
+  impressions: number;
+  clicks: number;
+  reached: number;
+  closed: number;
+  ctr: number;
+}
+
+export interface BannerImage {
+  id: string;
+  asset_id: string;
+  url: string;
+}
+
+export interface Banner {
+  id: string;
+  name: string;
+  title: Record<string, string>;
+  subtitle: Record<string, string>;
+  size: 's' | 'm' | 'l';
+  placement: 'top' | 'bottom';
+  action: 'none' | 'link' | 'venue' | 'page';
+  action_url: string;
+  action_service_id: string | null;
+  page_title: Record<string, string>;
+  page_body: Record<string, string>;
+  is_active: boolean;
+  starts_on: string | null;
+  ends_on: string | null;
+  time_from: string | null;
+  time_to: string | null;
+  first_visit_only: boolean;
+  languages: string[];
+  room_category_ids: string[];
+  priority: number;
+  images: BannerImage[];
+  stats: BannerStats;
+}
+
+export function fetchBanners(): Promise<Banner[]> {
+  return api.get<ListPage<Banner>>('/cms/banners').then((page) => page.items);
+}
+
+export function createBanner(payload: Partial<Banner>): Promise<Banner> {
+  return api.post<Banner>('/cms/banners', payload);
+}
+
+export function updateBanner(id: string, payload: Partial<Banner>): Promise<Banner> {
+  return api.patch<Banner>(`/cms/banners/${id}`, payload);
+}
+
+export function deleteBanner(id: string): Promise<void> {
+  return api.delete<void>(`/cms/banners/${id}`);
+}
+
+export function addBannerImage(id: string, assetId: string): Promise<Banner> {
+  return api.post<Banner>(`/cms/banners/${id}/images`, { asset_id: assetId });
+}
+
+export function removeBannerImage(id: string, imageId: string): Promise<Banner> {
+  return api.delete<Banner>(`/cms/banners/${id}/images/${imageId}`);
+}

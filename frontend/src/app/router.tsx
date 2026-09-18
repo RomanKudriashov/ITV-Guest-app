@@ -17,7 +17,7 @@ import { DashboardPage } from '@/cms/dashboard/DashboardPage';
 import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 import { ReviewsPage } from '@/cms/reviews/ReviewsPage';
-import { BadgesPage } from '@/cms/badges/BadgesPage';
+import { MarketingPage } from '@/cms/marketing/MarketingPage';
 import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
 import { ModulePendingPage } from '@/pages/ModulePendingPage';
 import { ProfilePage } from '@/pages/ProfilePage';
@@ -148,7 +148,7 @@ const shellChildren: RouteObject[] = [
 
       // Модульные разделы: пункт в навигации появляется только с модулем,
       // но маршрут существует всегда — иначе прямая ссылка ломалась бы молча.
-      { path: 'marketing', element: <BadgesPage /> },
+      { path: 'marketing', element: <MarketingPage /> },
       { path: 'room-control', element: <RoomControlPage /> },
       // Эти три навигация показывает, а экранов под них ещё нет. Без маршрута
       // адрес проваливался в корневую ветку и уезжал на гостевую главную —

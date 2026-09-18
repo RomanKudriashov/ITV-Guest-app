@@ -41,6 +41,7 @@ from apps.hotels.models import (
     Hotel,
     Location,
     Room,
+    RoomCategory,
     Schedule,
     ScheduleInterval,
     Service,
@@ -531,9 +532,30 @@ class Command(BaseCommand):
             locations.append(location)
         return locations
 
+    # Тарифные категории — те же три, что у демо-отеля. Без них правило показа
+    # баннера «по категориям номеров» проверять не на чем: до волны 10 на всём
+    # стенде было 0 категорий при 35 комнатах.
+    ROOM_CATEGORIES = (
+        ("standard", {"ru": "Стандарт", "en": "Standard", "ar": "غرفة عادية", "zh": "标准房"}),
+        ("deluxe", {"ru": "Делюкс", "en": "Deluxe", "ar": "غرفة ديلوكس", "zh": "豪华房"}),
+        ("suite", {"ru": "Люкс", "en": "Suite", "ar": "جناح", "zh": "套房"}),
+    )
+
     def _rooms(self, spec: list[tuple[str, str]]) -> None:
-        for number, floor in spec:
-            Room.objects.get_or_create(number=number, defaults={"floor": floor})
+        categories = []
+        for order, (code, title) in enumerate(self.ROOM_CATEGORIES):
+            category, _ = RoomCategory.objects.get_or_create(
+                code=code, defaults={"title": title, "sort_order": order}
+            )
+            categories.append(category)
+        for index, (number, floor) in enumerate(spec):
+            room, _ = Room.objects.get_or_create(number=number, defaults={"floor": floor})
+            # Доводим, а не ставим при создании: на поднятом стенде номера уже
+            # есть, и «только при создании» оставило бы их без категории.
+            wanted = categories[index % len(categories)]
+            if room.category_id != wanted.pk:
+                room.category = wanted
+                room.save(update_fields=["category", "updated_at"])
 
     def _restaurant(self, spec: dict, locations: list[Location]) -> Service:
         start, end = spec["hours"]

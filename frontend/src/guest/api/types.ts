@@ -633,6 +633,33 @@ export interface GuestWeather {
   observed_at: string;
 }
 
+/* ── Рекламный баннер ──────────────────────────────────────────────────────── */
+
+/** Действие приезжает РАЗОБРАННЫМ: витрина не гадает по непустому полю. */
+export type GuestBannerAction =
+  | { kind: 'none' }
+  | { kind: 'link'; url: string }
+  | { kind: 'venue'; venue_code: string }
+  | { kind: 'page'; page: { title: string; body: string } };
+
+export interface GuestBanner {
+  id: string;
+  title: string;
+  subtitle: string;
+  /** Высота полосы: узкая / средняя / крупная. */
+  size: 's' | 'm' | 'l';
+  /** Куда его класть на витрине. */
+  placement: 'top' | 'bottom';
+  /** Один кадр — картинка, несколько — карусель. */
+  images: string[];
+  action: GuestBannerAction;
+}
+
+/** Ответ ручки баннера: один баннер на экран или ничего. */
+export interface GuestBannerAnswer {
+  banner: GuestBanner | null;
+}
+
 export interface GuestHome {
   hotel: {
     name: string;

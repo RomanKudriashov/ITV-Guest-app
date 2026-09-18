@@ -15,8 +15,9 @@ import { BentoGrid } from '../components/Bento';
 import { HomeHero } from '../components/HomeHero';
 import { HomeReviewCard } from '../components/HomeReviewCard';
 import { HomeRoomStatus } from '../components/HomeRoomStatus';
+import { HomeBanner } from '../components/HomeBanner';
 import { HomeWeather } from '../components/HomeWeather';
-import { useGuestHome } from '../hooks/useGuestQueries';
+import { useGuestBanner, useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 
 /**
@@ -30,6 +31,9 @@ export function HomePage() {
   const navigate = useNavigate();
   const { hotel } = useGuestSession();
   const { data, isLoading, error, refetch } = useGuestHome();
+  // Реклама едет ОТДЕЛЬНО и не участвует ни в `isLoading`, ни в `error`
+  // главной: витрина не должна ждать баннер и не должна краснеть из-за него.
+  const banner = useGuestBanner().data?.banner ?? null;
 
   // Bento columns by spec §4: 2 (phone) / 3 (tablet) / 4 (desktop).
   const isTablet = useMediaQuery('(min-width:768px)');
@@ -63,6 +67,12 @@ export function HomePage() {
           отсутствие любого из них — нормальное состояние главной, а не дыра:
           ни заглушек, ни зарезервированного места под то, чего нет.
         */}
+        {/* Реклама вверху витрины — до полосы «прямо сейчас», но ПОСЛЕ
+            парадной: отель продаёт гостю, а не встречает его рекламой. */}
+        <Box sx={{ mb: { xs: 2, md: 3 } }}>
+          <HomeBanner banner={banner} placement="top" />
+        </Box>
+
         <Stack spacing={{ xs: 1.5, md: 2 }} sx={{ mb: { xs: 3, md: 4 } }}>
           <HomeWeather
             weather={data?.weather}
@@ -100,6 +110,10 @@ export function HomePage() {
         ) : (
           <BentoGrid tiles={tiles} columns={columns} onOpen={(route) => navigate(route)} />
         )}
+
+        <Box sx={{ mt: { xs: 3, md: 4 } }}>
+          <HomeBanner banner={banner} placement="bottom" />
+        </Box>
       </Container>
     </Box>
   );

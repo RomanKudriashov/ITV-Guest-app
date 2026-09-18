@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "apps.chat",
     "apps.reviews",
     "apps.translate",
+    "apps.promo",
     "apps.analytics",
     "apps.grms",
     # Пакет интеграций — приложение без моделей. В списке он ради одного:

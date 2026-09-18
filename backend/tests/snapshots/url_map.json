@@ -57,6 +57,21 @@
   "/api/v1/cms/badges/{badge_id}/items/{item_id}": [
     "PUT"
   ],
+  "/api/v1/cms/banners": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/banners/{banner_id}": [
+    "DELETE",
+    "GET",
+    "PATCH"
+  ],
+  "/api/v1/cms/banners/{banner_id}/images": [
+    "POST"
+  ],
+  "/api/v1/cms/banners/{banner_id}/images/{image_id}": [
+    "DELETE"
+  ],
   "/api/v1/cms/bootstrap": [
     "GET"
   ],
@@ -450,6 +465,15 @@
   ],
   "/api/v1/cms/weather/preview": [
     "GET"
+  ],
+  "/api/v1/guest/banner": [
+    "GET"
+  ],
+  "/api/v1/guest/banner/{banner_id}/click": [
+    "POST"
+  ],
+  "/api/v1/guest/banner/{banner_id}/close": [
+    "POST"
   ],
   "/api/v1/guest/cart/quote": [
     "POST"

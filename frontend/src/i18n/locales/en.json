@@ -771,6 +771,9 @@
       "tomorrow": "Opens tomorrow at {{time}}",
       "later": "Opens on {{day}} at {{time}}",
       "unknown": "Opens at {{time}}"
+    },
+    "banner": {
+      "close": "Close"
     }
   },
   "tracker": {
@@ -3701,6 +3704,65 @@
       "reopen": "Reopen triage",
       "closeHint": "You can close only after writing what was done",
       "failed": "Triage step not saved"
+    }
+  },
+  "banners": {
+    "title": "Banners",
+    "subtitle": "Advertising on the guest showcase: where, to whom and with what result. One banner per screen, always closable.",
+    "what": "banners",
+    "add": "New banner",
+    "edit": "Banner",
+    "empty": "No banners yet. The first one will appear here.",
+    "off": "Off",
+    "name": "Name",
+    "nameHint": "Internal: you see it, the guest never does.",
+    "bannerTitle": "Headline",
+    "bannerSubtitle": "Caption",
+    "sizeLabel": "Size",
+    "placeLabel": "Placement",
+    "priority": "Priority",
+    "priorityHint": "If several match, the higher one wins.",
+    "priorityShort": "priority {{value}}",
+    "pictures": "Pictures",
+    "addPicture": "Add a frame",
+    "saveFirst": "Save the banner first, then add pictures.",
+    "actionLabel": "Tap action",
+    "url": "Link",
+    "venue": "Venue",
+    "pageTitle": "Page headline",
+    "pageBody": "Page text",
+    "rules": "Display rules",
+    "rulesHint": "Rules apply together: dates and time and language and category.",
+    "from": "From date",
+    "to": "To date",
+    "timeFrom": "From",
+    "timeTo": "To",
+    "timeHint": "A window across midnight is allowed: 22:00–06:00.",
+    "firstVisit": "First visit only",
+    "firstVisitShort": "first visit",
+    "languages": "Guest languages",
+    "languagesHint": "Empty means every language.",
+    "categories": "Room categories",
+    "categoriesHint": "Empty means every room.",
+    "categoriesShort": "categories: {{count}}",
+    "active": "Show",
+    "noRules": "No limits",
+    "saveFailed": "Banner not saved",
+    "stats": "Impressions {{impressions}} · clicks {{clicks}} · reached {{reached}} · CTR {{ctr}}%",
+    "size": {
+      "s": "Narrow",
+      "m": "Medium",
+      "l": "Large"
+    },
+    "place": {
+      "top": "Top",
+      "bottom": "Bottom"
+    },
+    "action": {
+      "none": "No action",
+      "link": "External link",
+      "venue": "Our venue",
+      "page": "Description page"
     }
   }
 }
