@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.chat",
     "apps.reviews",
+    "apps.translate",
     "apps.analytics",
     "apps.grms",
     # Пакет интеграций — приложение без моделей. В списке он ради одного:
@@ -248,13 +249,18 @@ EVENT_BUS_CHANNEL_PREFIX = "guestapp.events"
 # Порядок действий и условия лицензии: docs/ops/weather.md.
 WEATHER_PROVIDER = os.getenv("WEATHER_PROVIDER", "open-meteo")
 WEATHER_API_URL = os.getenv("WEATHER_API_URL", "https://api.open-meteo.com")
-# Как часто ходим за погодой и докуда значение остаётся правдой. Второе больше
-# первого с запасом на одну пропущенную попытку.
 # Справочник городов ТОГО ЖЕ провайдера: у Open-Meteo он живёт своим хостом.
 # Лицензия общая с погодой — см. docs/ops/weather.md.
 WEATHER_GEOCODER_URL = os.getenv("WEATHER_GEOCODER_URL", "https://geocoding-api.open-meteo.com")
+# Как часто ходим за погодой и докуда значение остаётся правдой. Второе больше
+# первого с запасом на одну пропущенную попытку.
 WEATHER_REFRESH_SECONDS = int(os.getenv("WEATHER_REFRESH_SECONDS", "1200"))
 WEATHER_FRESH_SECONDS = int(os.getenv("WEATHER_FRESH_SECONDS", "2700"))
+
+# Автоперевод. Пусто = «модель не подключена», и механизм честно об этом
+# говорит, а не заполняет витрину похожим на перевод текстом. Подключение —
+# путь к классу с методом `translate` (см. apps/translate/providers.py).
+TRANSLATION_PROVIDER = os.getenv("TRANSLATION_PROVIDER", "none")
 
 
 CACHES = {

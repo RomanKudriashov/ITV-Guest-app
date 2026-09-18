@@ -432,6 +432,19 @@
   "/api/v1/cms/staff/{user_id}/assignments": [
     "PUT"
   ],
+  "/api/v1/cms/translate/coverage": [
+    "GET"
+  ],
+  "/api/v1/cms/translate/runs": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/translate/runs/{run_id}": [
+    "GET"
+  ],
+  "/api/v1/cms/translate/usage": [
+    "GET"
+  ],
   "/api/v1/cms/weather/cities": [
     "GET"
   ],

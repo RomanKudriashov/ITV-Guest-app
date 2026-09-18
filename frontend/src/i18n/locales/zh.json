@@ -2086,6 +2086,22 @@
       "wait": "回复时限（分钟）",
       "waitHint": "1 到 240。夜间同理：设定前台工作时间后，客人会看到何时能得到回复。",
       "saveFailed": "设置未保存"
+    },
+    "translate": {
+      "title": "前台译文",
+      "subtitle": "前台哪些译文缺失、如何补齐。按酒店真实数据统计：只有文本确实为该语言才算已完成。",
+      "notConnected": "机器翻译尚未接入。覆盖率照常统计，可以手工翻译——模型稍后接入。",
+      "notConnectedShort": "未接入",
+      "language": "语言",
+      "done": "已翻译",
+      "suspicious": "疑似其他语言",
+      "details": "详情",
+      "run": "翻译缺失内容",
+      "ofTotal": "{{total}} 条中的 {{filled}} 条",
+      "suspiciousCount": "疑似其他语言：{{count}}",
+      "whatIsCounted": "只统计客人看得到的文本：{{groups}}。订单快照与员工用标签不翻译。",
+      "usage": "机器翻译用量",
+      "usageRow": "{{period}} — 调用 {{calls}} 次，{{characters}} 字符"
     }
   },
   "dashboard": {
@@ -3137,7 +3153,8 @@
       "slaOverrides": "超时阈值",
       "commerceOverrides": "各场所的自有商务设置",
       "notificationEvents": "事件设置",
-      "chatSettings": "聊天设置"
+      "chatSettings": "聊天设置",
+      "translateCoverage": "翻译覆盖率"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
   },

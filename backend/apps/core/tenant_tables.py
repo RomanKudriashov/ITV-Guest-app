@@ -75,6 +75,10 @@ TENANT_TABLES = [
     "chat_message",
     "reviews_review",
     "reviews_action",
+    # автоперевод
+    "translate_mark",
+    "translate_run",
+    "translate_usage",
     # analytics
     "analytics_event",
     "analytics_order_daily",

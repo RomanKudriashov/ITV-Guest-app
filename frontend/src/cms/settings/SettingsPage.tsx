@@ -8,6 +8,7 @@ import { HomeBlocksSection } from './HomeBlocksSection';
 import { ReviewsSection } from './ReviewsSection';
 import { ChatSection } from './ChatSection';
 import { SearchSection } from './SearchSection';
+import { TranslationSection } from './TranslationSection';
 
 import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { LocationsPage } from '@/pages/hotel/LocationsPage';
@@ -57,6 +58,11 @@ export function SettingsPage() {
 
         <ReviewsSection />
         <ChatSection />
+
+        <Divider />
+
+        {/* Переводы витрины: охват работает уже сейчас, модель — позже. */}
+        <TranslationSection />
 
         <Divider />
 

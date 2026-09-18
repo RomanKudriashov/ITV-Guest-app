@@ -2106,6 +2106,22 @@
       "wait": "Reply target, minutes",
       "waitHint": "From 1 to 240. At night it works the same: with front-desk hours the guest sees when they will be answered.",
       "saveFailed": "The setting was not saved"
+    },
+    "translate": {
+      "title": "Showcase translations",
+      "subtitle": "Where the showcase is missing translations and how to close the gaps. Counted from live hotel data: a value counts as done only when the text is IN THAT LANGUAGE.",
+      "notConnected": "Machine translation is not connected yet. Coverage is counted and you can translate by hand — the model comes later.",
+      "notConnectedShort": "Not connected",
+      "language": "Language",
+      "done": "Translated",
+      "suspicious": "Looks like another language",
+      "details": "Details",
+      "run": "Translate what is missing",
+      "ofTotal": "{{filled}} of {{total}}",
+      "suspiciousCount": "looks like another language: {{count}}",
+      "whatIsCounted": "Only guest-facing texts are counted: {{groups}}. Order snapshots and staff-facing labels are never translated.",
+      "usage": "Machine translation usage",
+      "usageRow": "{{period}} — {{calls}} calls, {{characters}} characters"
     }
   },
   "dashboard": {
@@ -3168,7 +3184,8 @@
       "slaOverrides": "the overdue thresholds",
       "commerceOverrides": "the venues' own commerce",
       "notificationEvents": "the event settings",
-      "chatSettings": "chat settings"
+      "chatSettings": "chat settings",
+      "translateCoverage": "translation coverage"
     },
     "truncated": "Showing the first {{shown}} of {{total}}"
   },
