@@ -15,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { api } from '@/api/client';
+import type { ListPage } from '@/api/types';
 import { QueryState } from '@/components/QueryState';
 
 /**
@@ -71,7 +72,7 @@ export function TranslationSection() {
   });
   const usage = useQuery({
     queryKey: ['cms', 'translate', 'usage'],
-    queryFn: () => api.get<{ items: UsageRow[] }>('/cms/translate/usage'),
+    queryFn: () => api.get<ListPage<UsageRow>>('/cms/translate/usage'),
   });
 
   const start = useMutation({

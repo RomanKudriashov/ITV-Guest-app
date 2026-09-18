@@ -14,6 +14,7 @@ from ninja import Router
 from apps.accounts.services.roles import require_hotel_admin
 from apps.core.context import current_actor
 from apps.core.errors import ConflictError
+from apps.core.listing import envelope
 from apps.hotels.services.hotel import current_hotel
 
 from apps.translate.providers import get_provider
@@ -60,7 +61,8 @@ def start_run(request: HttpRequest, payload: RunIn):
 @router.get("/translate/runs", summary="Прогоны автоперевода")
 def list_runs(request: HttpRequest):
     require_hotel_admin()
-    return {"items": reports.recent_runs()}
+    rows = reports.recent_runs()
+    return envelope(rows, total=len(rows), limit=len(rows))
 
 
 @router.get("/translate/runs/{run_id}", summary="Отчёт прогона")
@@ -76,4 +78,5 @@ def get_usage(request: HttpRequest):
     флота, и узнают об этом по счёту.
     """
     require_hotel_admin()
-    return {"items": reports.usage_rows()}
+    rows = reports.usage_rows()
+    return envelope(rows, total=len(rows), limit=len(rows))

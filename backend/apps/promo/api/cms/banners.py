@@ -16,6 +16,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.accounts.services.roles import require_hotel_admin
+from apps.core.listing import envelope
 from apps.core.errors import PermissionDenied
 from apps.hotels.models import HotelModule
 from apps.hotels.module_registry import enabled_module_codes
@@ -41,7 +42,10 @@ def _gate() -> None:
 @router.get("/banners", summary="Баннеры витрины со статистикой")
 def list_banners(request: HttpRequest):
     _gate()
-    return {"items": svc.list_banners()}
+    rows = svc.list_banners()
+    # Настоящий конверт выдачи, а не «объект с полем items»: у фронта список
+    # объявлен страницей, и сторож контрактов сверяет именно семейство формы.
+    return envelope(rows, total=len(rows), limit=len(rows))
 
 
 @router.post("/banners", response={201: dict}, summary="Завести баннер")

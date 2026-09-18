@@ -124,6 +124,7 @@ test('форма ответа каждой ручки CMS совпадает с 
 
   const mismatches: string[] = []
   const unreachable: string[] = []
+  const gated: string[] = []
   const seen = new Set<string>()
 
   for (const call of declared) {
@@ -132,6 +133,20 @@ test('форма ответа каждой ручки CMS совпадает с 
 
     const response = await request.get(`${API}/api${call.path}`, { headers })
     if (!response.ok()) {
+      /*
+        403 «модуль выключен» — НЕ расхождение контракта, а законный гейт.
+
+        Раздел за модулем закрыт на сервере намеренно: спрятать пункт меню в
+        бандле значит не закрыть ничего. Фронт такой адрес зовёт, и это
+        правильно — на экране он показывает отказ, а не вечный скелет. Форму
+        ответа такой ручки сторож проверить не может и честно об этом говорит
+        строкой ниже, вместо того чтобы краснеть на исправном устройстве.
+      */
+      const body = (await response.json().catch(() => ({}))) as { code?: string }
+      if (response.status() === 403 && body.code === 'module_disabled') {
+        gated.push(`${call.path} (${call.file})`)
+        continue
+      }
       unreachable.push(`${call.path} → ${response.status()} (${call.file})`)
       continue
     }
@@ -149,6 +164,11 @@ test('форма ответа каждой ручки CMS совпадает с 
     Фронт зовёт адрес, которого нет или который отвечает отказом; на экране это
     вечный скелет или пустой список.
   */
+  // Пропущенные печатаем: «сторож молча пропустил» — это как раз то, из-за
+  // чего дыры живут годами.
+  if (gated.length) {
+    console.log(`Не сверены — раздел выключен модулем:\n${gated.join('\n')}`)
+  }
   expect(unreachable, `Ручки, которых фронт зовёт, а сервер не отдаёт:\n${unreachable.join('\n')}`)
     .toEqual([])
   expect(mismatches, `Расхождения формы ответа:\n${mismatches.join('\n')}`).toEqual([])
