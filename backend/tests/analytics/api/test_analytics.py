@@ -542,8 +542,11 @@ def test_room_category_is_a_snapshot_not_a_lookup_by_room(crystal, django_captur
     from apps.orders.models import Order
 
     with tenant_context(crystal):
-        standard = RoomCategory.objects.create(code="standard", title={"ru": "Стандарт"})
-        deluxe = RoomCategory.objects.create(code="deluxe", title={"ru": "Делюкс"})
+        # Коды СВОИ, не из демо-набора: с волны 10 сид заводит отелю
+        # «standard/deluxe/suite», и тест, взявший те же коды, падал бы на
+        # уникальном ограничении — то есть зависел бы от содержимого сида.
+        standard = RoomCategory.objects.create(code="an-standard", title={"ru": "Стандарт"})
+        deluxe = RoomCategory.objects.create(code="an-deluxe", title={"ru": "Делюкс"})
         room = Room.objects.create(number="7001", category=standard)
 
         order = Order(room=room)
@@ -573,8 +576,8 @@ def test_breakdown_by_room_category_compares_per_room(crystal):
 
     with tenant_context(crystal):
         admin = _admin(crystal)
-        suite = RoomCategory.objects.create(code="suite", title={"ru": "Люкс"})
-        standard = RoomCategory.objects.create(code="std", title={"ru": "Стандарт"})
+        suite = RoomCategory.objects.create(code="an-suite", title={"ru": "Люкс"})
+        standard = RoomCategory.objects.create(code="an-std", title={"ru": "Стандарт"})
         # Два люкса и десять стандартов — как в жизни.
         for index in range(2):
             Room.objects.create(number=f"S{index}", category=suite)
