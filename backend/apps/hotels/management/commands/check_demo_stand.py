@@ -84,6 +84,11 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--subdomain", default="crystal")
         parser.add_argument(
+            "--skip-health",
+            action="store_true",
+            help="Не проверять службы, миграции и погоду — только наполнение",
+        )
+        parser.add_argument(
             "--fleet-only",
             action="store_true",
             help="Только наполнение трёх отелей, без разбора каталога демо-отеля",
@@ -97,6 +102,9 @@ class Command(BaseCommand):
 
         problems: list[str] = []
         notes: list[str] = []
+
+        if not options["skip_health"]:
+            problems.extend(self._check_health(notes))
 
         problems.extend(self._check_fleet())
 
@@ -166,6 +174,200 @@ class Command(BaseCommand):
         self._finish(problems, notes, subdomain)
 
     # --- Наполнение трёх отелей ---------------------------------------------
+
+    # --- Здоровье стенда -------------------------------------------------
+    #
+    # ВСЕ СЕМЬ ПРОВЕРОК НИЖЕ ВЗЯТЫ ИЗ НАСТОЯЩИХ ПОЛОМОК, каждая один раз уже
+    # выстрелила — 18–19.09.2026, на выкатке перед показом. Наполнение тогда
+    # было в порядке, команда говорила «стенд цел», а:
+    #
+    #   * службы расписания не существовало в прод-составе вовсе, и назначенные
+    #     задания молча не исполнялись;
+    #   * у всех 35 комнат не было категории — правило показа баннера по
+    #     категориям работало бы вхолостую;
+    #   * на пульте висела точка исполнения от остатка прогонов, и убрать её
+    #     удалением заведения было нельзя.
+    #
+    # «Стенд цел» без этих проверок означало «каталог на месте», а не «стендом
+    # можно показывать».
+
+    # Насколько свежим должен быть пульс расписания. Круг у службы 60 с;
+    # пять минут — три пропущенных круга подряд, это уже не задержка.
+    SCHEDULER_STALE_MINUTES = 5
+
+    def _check_health(self, notes: list[str]) -> list[str]:
+        problems: list[str] = []
+        problems.extend(self._check_migrations())
+        problems.extend(self._check_worker())
+        problems.extend(self._check_scheduler())
+        problems.extend(self._check_connector(notes))
+        problems.extend(self._check_room_categories())
+        problems.extend(self._check_weather(notes))
+        problems.extend(self._check_orphan_points())
+        return problems
+
+    def _check_migrations(self) -> list[str]:
+        """
+        Непримененная миграция — стенд на половине кода: таблица новая, а
+        колонки нет. Снаружи это выглядит как случайная пятисотка в одном
+        разделе.
+        """
+        from django.db import connections
+        from django.db.migrations.executor import MigrationExecutor
+
+        executor = MigrationExecutor(connections["default"])
+        plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        if plan:
+            # План отдаёт пары (миграция, назад ли) — сами объекты, а не
+            # ключи графа. Перепутать легко, и проверка падает ровно там, где
+            # должна была сказать правду.
+            names = ", ".join(f"{m.app_label}.{m.name}" for m, _ in plan[:5])
+            more = "" if len(plan) <= 5 else f" и ещё {len(plan) - 5}"
+            return [f"миграции НЕ применены: {len(plan)} — {names}{more}"]
+        self.stdout.write("  миграции: применены все")
+        return []
+
+    def _check_worker(self) -> list[str]:
+        """
+        Воркер нужен обработке картинок, экспорту, публикации бренда и командам
+        управления номером. Без него они просто не случаются — без ошибки.
+        """
+        from config.celery import app as celery_app
+
+        try:
+            answer = celery_app.control.ping(timeout=3) or []
+        except Exception as exc:  # noqa: BLE001 — брокер может быть недоступен
+            return [f"воркер: не удалось спросить брокер ({exc})"]
+        if not answer:
+            return ["воркер НЕ ОТВЕЧАЕТ: задачи копятся в очереди и не исполняются"]
+        self.stdout.write(f"  воркер: откликнулись {len(answer)}")
+        return []
+
+    def _check_scheduler(self) -> list[str]:
+        """
+        Пульс, а не «служба запущена»: запущенный процесс, который перестал
+        делать круги, выглядит живым и не делает ничего.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.core.models import SchedulerHeartbeat
+
+        beat = SchedulerHeartbeat.objects.using("platform").first()
+        if beat is None or beat.last_tick_at is None:
+            return [
+                "служба расписания НЕ ОСТАВИЛА ПУЛЬСА: назначенные задания "
+                "(отложенная публикация, отложенные события) не исполняются"
+            ]
+        age = timezone.now() - beat.last_tick_at
+        if age > timedelta(minutes=self.SCHEDULER_STALE_MINUTES):
+            return [
+                f"пульс расписания протух: последний круг {int(age.total_seconds() // 60)} мин назад"
+            ]
+        self.stdout.write(
+            f"  расписание: круг {int(age.total_seconds())} с назад, "
+            f"ждут {beat.pending_count}, просрочено {beat.overdue_count}"
+        )
+        return []
+
+    def _check_connector(self, notes: list[str]) -> list[str]:
+        """
+        Коннектор с эмулятором. Узел отмечается сам; «онлайн» — это «отмечался
+        недавно», дозвониться до него отсюда мы не можем в принципе.
+        """
+        from apps.grms.transport import transport
+        from apps.hotels.models import HotelModule
+        from apps.hotels.module_registry import enabled_module_codes
+
+        hotel = Hotel.all_objects.filter(subdomain="crystal").first()
+        if hotel is None:
+            return []
+        if HotelModule.Code.ROOM_CONTROL not in enabled_module_codes(hotel):
+            notes.append("управление номером выключено модулем — коннектор не проверялся")
+            return []
+        if not transport.node_is_online(hotel):
+            return ["коннектор управления номером НЕ НА СВЯЗИ: номер покажет «нет связи»"]
+        self.stdout.write("  коннектор управления номером: на связи")
+        return []
+
+    def _check_room_categories(self) -> list[str]:
+        """
+        Категория номера — тарифная («Стандарт», «Делюкс»). По ней работают
+        правила показа баннера и разрез аналитики. Пустой справочник не ломает
+        ничего заметного — он делает правило бессмысленным.
+        """
+        from apps.hotels.models import RoomCategory
+
+        problems = []
+        for code in FLEET:
+            hotel = Hotel.all_objects.filter(subdomain=code).first()
+            if hotel is None:
+                continue
+            with tenant_context(hotel):
+                categories = RoomCategory.objects.count()
+                rooms = Room.objects.count()
+                marked = Room.objects.filter(category__isnull=False).count()
+            if categories == 0:
+                problems.append(f"{code}: НЕТ ни одной категории номера")
+            elif marked == 0 and rooms:
+                problems.append(f"{code}: ни один из {rooms} номеров не отнесён к категории")
+            else:
+                self.stdout.write(
+                    f"  {code:14} категорий {categories}, размечено {marked} из {rooms}"
+                )
+        return problems
+
+    def _check_weather(self, notes: list[str]) -> list[str]:
+        """
+        Погода — первое, что видит гость на главной. Нет города — блока нет
+        вовсе, и это выглядит как «верстка поехала», а не как настройка.
+        """
+        from apps.integrations.weather import service as weather
+
+        problems = []
+        for code in FLEET:
+            hotel = Hotel.all_objects.filter(subdomain=code).first()
+            if hotel is None:
+                continue
+            if hotel.latitude is None or hotel.longitude is None:
+                problems.append(f"{code}: город не выбран — блока погоды у гостя не будет")
+                continue
+            with tenant_context(hotel):
+                current = weather.current_for(hotel)
+            if current is None:
+                # Кэш холодный или провайдер молчит: это не поломка стенда, но
+                # знать об этом до показа надо.
+                notes.append(f"{code}: погода не отдалась (холодный кэш или провайдер молчит)")
+            else:
+                self.stdout.write(f"  {code:14} погода {current.get('temperature')}°")
+        return problems
+
+    def _check_orphan_points(self) -> list[str]:
+        """
+        Точка исполнения без живого заведения — строка-призрак на пульте
+        отеля: заведение удалили, а очередь осталась, и убрать её с экрана
+        нечем (пункт 37 бэклога).
+        """
+        from apps.hotels.models import ExecutionPoint
+
+        problems = []
+        for code in FLEET:
+            hotel = Hotel.all_objects.filter(subdomain=code).first()
+            if hotel is None:
+                continue
+            with tenant_context(hotel):
+                alive = set(Service.objects.values_list("execution_point_id", flat=True))
+                orphans = [
+                    point.code
+                    for point in ExecutionPoint.objects.filter(is_active=True)
+                    if point.pk not in alive
+                ]
+            if orphans:
+                problems.append(
+                    f"{code}: точки на пульте без живого заведения: {', '.join(sorted(orphans))}"
+                )
+        return problems
 
     def _check_fleet(self) -> list[str]:
         """
