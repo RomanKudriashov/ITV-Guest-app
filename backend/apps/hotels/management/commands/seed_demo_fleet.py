@@ -58,6 +58,12 @@ from apps.media.models import MediaAsset
 AZURE = {
     "subdomain": "azure",
     "name": "Азур Резорт",
+    # Город — подпись к погоде и часам, и без него блока погоды у гостя НЕ
+    # БУДЕТ ВОВСЕ. До 19.09.2026 у флота его не было, и две витрины из трёх
+    # стояли без погоды — заметить это можно было только открыв их глазами.
+    # Курорт на Чёрном море: часовой пояс тот же, что у отеля.
+    "city": {"ru": "Сочи", "en": "Sochi", "ar": "سوتشي", "zh": "索契"},
+    "coords": ("43.585472", "39.723098"),
     # Тёмная бирюза — третий цвет во флоте: у «Кристалла» тёмно-синий, у
     # «Люмена» светлый лён. Три отеля рядом должны различаться с первого взгляда.
     "preset": "tiffany_night",
@@ -233,6 +239,8 @@ AZURE = {
 LUMEN = {
     "subdomain": "lumen",
     "name": "Люмен Бутик",
+    "city": {"ru": "Санкт-Петербург", "en": "Saint Petersburg", "ar": "سانت بطرسبرغ", "zh": "圣彼得堡"},
+    "coords": ("59.938784", "30.314997"),
     # Светлый лён: у отеля СВЕТЛЫЙ бренд по умолчанию. Это не «светлая тема
     # интерфейса», а выбор отеля — и на флоте видно, что тема может быть
     # свойством бренда, а не только тумблером у гостя.
@@ -377,6 +385,7 @@ class Command(BaseCommand):
 
         with tenant_context(hotel):
             ensure_status_flows()
+            self._city(hotel, profile)
             locations = self._locations()
             self._rooms(profile["rooms"])
 
@@ -518,6 +527,31 @@ class Command(BaseCommand):
                     schedule=schedule, weekday=weekday, start_time=start, end_time=end
                 )
         return schedule
+
+    def _city(self, hotel, profile) -> None:
+        """
+        Город и координаты. ДОВОДИМ, а не ставим при создании: на поднятом
+        стенде отели уже есть, и «только при заведении» оставило бы их без
+        погоды навсегда.
+        """
+        from decimal import Decimal
+
+        latitude, longitude = profile["coords"]
+        changed = []
+        if hotel.latitude is None or hotel.longitude is None:
+            hotel.latitude = Decimal(latitude)
+            hotel.longitude = Decimal(longitude)
+            changed += ["latitude", "longitude"]
+        if not hotel.city:
+            hotel.city = profile["city"]
+            changed.append("city")
+        settings = dict(hotel.settings or {})
+        if "home" not in settings:
+            settings["home"] = {"weather": True, "room_status": True}
+            hotel.settings = settings
+            changed.append("settings")
+        if changed:
+            hotel.save(update_fields=[*changed, "updated_at"])
 
     def _locations(self) -> list[Location]:
         locations = []

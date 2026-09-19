@@ -340,7 +340,10 @@ class Command(BaseCommand):
                 # знать об этом до показа надо.
                 notes.append(f"{code}: погода не отдалась (холодный кэш или провайдер молчит)")
             else:
-                self.stdout.write(f"  {code:14} погода {current.get('temperature')}°")
+                # Единицы печатаем: «67°» без них читается как мороз в июле —
+                # у отеля могут быть выставлены градусы Фаренгейта.
+                unit = str(current.get("units", "c")).upper()
+                self.stdout.write(f"  {code:14} погода {current.get('temperature')}°{unit}")
         return problems
 
     def _check_orphan_points(self) -> list[str]:
