@@ -755,7 +755,8 @@
       "showers": "زخات مطر",
       "thunder": "عاصفة رعدية",
       "unknown": "الطقس",
-      "degrees": "{{value}}°{{unit}}"
+      "degrees": "{{value}}°{{unit}}",
+      "source": "الطقس: Open-Meteo"
     },
     "search": {
       "title": "البحث",

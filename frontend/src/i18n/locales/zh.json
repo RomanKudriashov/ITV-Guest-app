@@ -739,7 +739,8 @@
       "showers": "阵雨",
       "thunder": "雷暴",
       "unknown": "天气",
-      "degrees": "{{value}}°{{unit}}"
+      "degrees": "{{value}}°{{unit}}",
+      "source": "天气数据：Open-Meteo"
     },
     "search": {
       "title": "搜索",

@@ -749,7 +749,8 @@
       "showers": "Ливень",
       "thunder": "Гроза",
       "unknown": "Погода",
-      "degrees": "{{value}}°{{unit}}"
+      "degrees": "{{value}}°{{unit}}",
+      "source": "Погода: Open-Meteo"
     },
     "search": {
       "title": "Поиск",

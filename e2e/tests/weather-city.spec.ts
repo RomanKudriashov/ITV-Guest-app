@@ -67,3 +67,36 @@ test('город выбирается подсказкой, координаты
     })
   }
 })
+
+/**
+ * АТРИБУЦИЯ ИСТОЧНИКА — условие лицензии, а не украшение.
+ *
+ * Данные Open-Meteo под CC BY 4.0: указание источника требуется на любом
+ * плане. Подпись однажды сняли по указанию владельца продукта и вернули
+ * 21.09.2026 решением встречи. Укус нужен, чтобы её не сняли в третий раз
+ * «как лишнюю»: цена ошибки — нарушение лицензии, и по экрану это не видно.
+ */
+test('на витрине подписан источник погоды', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(() => {
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+  })
+  await page.goto('/')
+  await page.getByTestId('guest-browse-only').click()
+  await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 30_000 })
+
+  const source = page.getByTestId('guest-home-weather-source')
+  await expect(source, 'подпись источника пропала — это нарушение CC BY 4.0').toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(source).toContainText('Open-Meteo')
+
+  // Стоит ВНИЗУ блока и мельче остального: выполнение лицензии, а не
+  // сообщение гостю.
+  const box = await source.boundingBox()
+  const block = await page.getByTestId('guest-home-weather').boundingBox()
+  expect(box!.y).toBeGreaterThan(block!.y)
+  const size = await source.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize))
+  expect(size).toBeLessThanOrEqual(12)
+})

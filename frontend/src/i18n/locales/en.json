@@ -743,7 +743,8 @@
       "showers": "Showers",
       "thunder": "Thunderstorm",
       "unknown": "Weather",
-      "degrees": "{{value}}°{{unit}}"
+      "degrees": "{{value}}°{{unit}}",
+      "source": "Weather: Open-Meteo"
     },
     "search": {
       "title": "Search",
