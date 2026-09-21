@@ -25,7 +25,15 @@ import { useTranslation } from 'react-i18next';
 import { cmsPath } from '@/app/hostRole';
 
 import { ApiError } from '@/api/client';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+
 import { QueryState } from '@/components/QueryState';
+import { fetchStaff } from '@/api/hotelAdmin';
+import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/auth/AuthProvider';
 
@@ -379,13 +387,85 @@ function CommerceTab({ service }: { service: CmsService }) {
   );
 }
 
+/**
+ * Вкладка «Персонал» заведения — СПИСОК ЛЮДЕЙ, а не число со ссылкой.
+ *
+ * Раньше здесь стояло «сотрудников: 4» и кнопка «в раздел персонала».
+ * Управляющий, открывший карточку заведения, хотел ответа на вопрос «кто у
+ * меня работает и кто из них старший», а получал предложение поискать самому
+ * — в общем списке отеля, где его люди перемешаны с чужими.
+ *
+ * Список берётся из общей выдачи персонала и фильтруется по ТОЧКЕ ИСПОЛНЕНИЯ
+ * этого заведения: право видеть чужих людей выдача уже соблюдает сама
+ * (управляющий получает только свои заведения), и второго правила доступа мы
+ * здесь не заводим.
+ */
 function StaffTab({ service }: { service: CmsService }) {
   const { t } = useTranslation();
+  const pointId = service.execution_point?.id ?? null;
+
+  const staff = useQuery({
+    queryKey: [...queryKeys.staff, 'of-point', pointId],
+    queryFn: () => fetchStaff(),
+    enabled: Boolean(pointId),
+  });
+
+  const rows = (staff.data ?? [])
+    .map((person) => ({
+      person,
+      assignment: person.assignments.find(
+        (entry) => entry.execution_point_id === pointId && entry.is_active,
+      ),
+    }))
+    .filter((row) => row.assignment)
+    // Старшие выше: смена читает список сверху вниз, и первым должен стоять
+    // тот, к кому идут с вопросом.
+    .sort((a, b) => {
+      const weight = (level?: string) => (level === 'manager' ? 0 : level === 'lead' ? 1 : 2);
+      const byLevel = weight(a.assignment?.level) - weight(b.assignment?.level);
+      return byLevel !== 0 ? byLevel : a.person.full_name.localeCompare(b.person.full_name, 'ru');
+    });
+
   return (
     <Stack spacing={2} data-testid="service-staff">
-      <Typography variant="body2" color="text.secondary">
-        {t('services.staffCount', { count: service.staff_count })}
-      </Typography>
+      <QueryState query={staff} what={t('services.tabs.staff')}>
+        {() =>
+          rows.length === 0 ? (
+            <Alert severity="info" data-testid="service-staff-empty">
+              {t('services.staffEmpty')}
+            </Alert>
+          ) : (
+            <Table size="small" data-testid="service-staff-table">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('hotel.staff.fullName')}</TableCell>
+                  <TableCell>{t('hotel.staff.email')}</TableCell>
+                  <TableCell>{t('services.staffLevel')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map(({ person, assignment }) => (
+                  <TableRow key={person.id} data-testid={`service-staff-row-${person.id}`}>
+                    <TableCell>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <span>{person.full_name}</span>
+                        {!person.is_active && (
+                          <Chip size="small" label={t('services.staffOff')} />
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell>{person.email}</TableCell>
+                    <TableCell data-testid={`service-staff-level-${person.id}`}>
+                      {t(`hotel.staff.levels.${assignment!.level}`)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )
+        }
+      </QueryState>
+
       <Button
         variant="outlined"
         href="/cms/staff"

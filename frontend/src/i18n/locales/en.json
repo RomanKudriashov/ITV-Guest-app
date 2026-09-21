@@ -2062,7 +2062,10 @@
     "photo": "Venue photo",
     "noCatalog": "No catalog",
     "noCatalogHint": "A department without a menu or commerce: it is not on the storefront; guests message it, and it places orders for guests and passes tasks to departments.",
-    "hasCatalog": "Has a catalog (menu, services, commerce)"
+    "hasCatalog": "Has a catalog (menu, services, commerce)",
+    "staffEmpty": "Nobody is assigned to this venue yet. Assign people in the Staff section.",
+    "staffLevel": "Level",
+    "staffOff": "Disabled"
   },
   "inclusions": {
     "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",
