@@ -265,6 +265,10 @@ def create_room(data: dict) -> Room:
     zone = str(data.get("zone") or "").strip()
     is_active = data.get("is_active", True)
     extra = _room_fields(data)
+    # Выбран корпус — строка следует за ним: она снимок, и расходиться со
+    # справочником ей нельзя. Корпус не выбран — остаётся то, что прислали.
+    if extra.get("building") is not None:
+        zone = extra["building"].title_i18n
 
     buried = Room.all_objects.filter(number=number, deleted_at__isnull=False).first()
     if buried is not None:
@@ -323,12 +327,11 @@ def _room_fields(data: dict) -> dict:
         value = data.get("category_id")
         fields["category"] = _category_or_none(value)
     if "building_id" in data:
-        # Корпус СПРАВОЧНИКОМ. Строку `zone` ведём следом за ним: она остаётся
-        # снимком на случай, если запись справочника потом удалят, и по ней же
-        # читаются номера, заведённые до переноса.
-        building = _building_or_none(data.get("building_id"))
-        fields["building"] = building
-        fields["zone"] = building.title_i18n if building is not None else ""
+        # ТОЛЬКО ссылка. Строку `zone` здесь НЕ трогаем: она приходит из
+        # запроса своим полем, и запись её отсюда означала бы два источника
+        # одного значения в одном словаре — именно на этом создание номера
+        # падало с «got multiple values for keyword argument».
+        fields["building"] = _building_or_none(data.get("building_id"))
     if "housekeeping" in data and data.get("housekeeping") is not None:
         value = str(data["housekeeping"])
         if value not in Room.Housekeeping.values:
@@ -537,8 +540,12 @@ def update_room(room_id, data: dict) -> Room:
         room.zone = str(data["zone"] or "").strip()
     if "is_active" in data:
         room.is_active = data["is_active"]
-    for field, value in _room_fields(data).items():
+    fields = _room_fields(data)
+    for field, value in fields.items():
         setattr(room, field, value)
+    # Строка корпуса следует за справочником — и снимается вместе с ним.
+    if "building" in fields:
+        room.zone = fields["building"].title_i18n if fields["building"] is not None else ""
     room.save()
     return room
 
