@@ -74,6 +74,25 @@ def touch(thread: ChatThread, user, *, force: bool = False) -> None:
     thread.holder_seen_at = now
 
 
+def handover_by_id(thread: ChatThread, *, user_id, by_user) -> None:
+    """
+    Передать по идентификатору. Проверка «кому можно» и выборка человека —
+    здесь: вьюха не ходит в базу, и правило доступа живёт в одном месте с
+    самой передачей, а не рядом с ней.
+    """
+    from apps.accounts.models import User
+    from apps.chat.services.threads import handover_targets
+    from apps.core.errors import ValidationError
+
+    if str(user_id) not in {row["id"] for row in handover_targets(by_user)}:
+        raise ValidationError(
+            "Этому сотруднику передать нельзя: он не ведёт переписку с гостями",
+            field="user_id",
+            code="handover_not_allowed",
+        )
+    handover(thread, to_user=User.objects.get(pk=user_id), by_user=by_user)
+
+
 def handover(thread: ChatThread, *, to_user, by_user) -> None:
     """
     Передать диалог ПОИМЁННО.

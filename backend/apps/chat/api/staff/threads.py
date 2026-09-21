@@ -47,23 +47,12 @@ def staff_handover_targets(request: HttpRequest):
 @router.post("/chat/threads/{thread_id}/handover", summary="Передать диалог сотруднику")
 def staff_thread_handover(request: HttpRequest, thread_id: str, payload: HandoverIn):
     """
-    ПОИМЁННАЯ передача. Отдать диалог можно только тому, кто вправе его читать:
-    список адресатов строится тем же правилом, что и доступ к чату.
+    ПОИМЁННАЯ передача. Кому можно — решает сервис тем же правилом, что и
+    доступ к чату: второй список разошёлся бы с первым.
     """
-    from apps.core.errors import ValidationError
-
     chat_svc.require_chat_access()
     thread = chat_svc.get_thread(thread_id)
-    allowed = {row["id"] for row in chat_svc.handover_targets(request.user)}
-    if payload.user_id not in allowed:
-        raise ValidationError(
-            "Этому сотруднику передать нельзя: он не ведёт переписку с гостями",
-            field="user_id",
-            code="handover_not_allowed",
-        )
-    from apps.accounts.models import User
-
-    holding.handover(thread, to_user=User.objects.get(pk=payload.user_id), by_user=request.user)
+    holding.handover_by_id(thread, user_id=payload.user_id, by_user=request.user)
     return _staff_snapshot(thread, request.user)
 
 
