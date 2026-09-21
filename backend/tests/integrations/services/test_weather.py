@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -240,3 +241,83 @@ def test_base_url_from_settings(monkeypatch, settings):
     settings.WEATHER_API_URL = "http://weather.internal:8080"
     provider = service.get_provider()
     assert provider.base_url == "http://weather.internal:8080"
+
+
+# --- Кулдаун: короткий до успеха, длинный после -----------------------------
+#
+# Найдено на стенде 21.09.2026. Провайдер ответил 503 в момент перезапуска,
+# и блок погоды погас у всех трёх отелей НА ДВАДЦАТЬ МИНУТ: кулдаун ставился
+# до попытки и не снимался при неудаче, а повторить было некому — следующий
+# гость видел пустой блок и уходил, ничего не запустив. Пятью минутами позже
+# тот же запрос с того же сервера отвечал 200.
+
+
+def test_a_failed_attempt_lets_the_next_guest_try_soon(monkeypatch, hotel_with_point):
+    """
+    Провайдер отказал — следующая попытка приходит ПО КОРОТКОМУ сроку, а не
+    через двадцать минут.
+
+    Проверяем ПОВЕДЕНИЕМ, а не длиной ключа в кэше: сколько там секунд — дело
+    реализации, а важно, получит ли гость погоду.
+    """
+    monkeypatch.setattr(service, "RETRY_AFTER_FAILURE", 1)
+    silent = FakeProvider(None)
+    _use(monkeypatch, silent)
+
+    assert service.current_for(hotel_with_point) is None
+    assert silent.calls == 1
+
+    # Сразу второй гость лишней попытки не создаёт: провайдера бережём.
+    service.current_for(hotel_with_point)
+    assert silent.calls == 1, "после отказа пошла вторая попытка подряд"
+
+    # Короткий срок истёк — провайдер уже отвечает, и гость получает погоду.
+    time.sleep(1.2)
+    alive = FakeProvider(observation())
+    _use(monkeypatch, alive)
+    service.current_for(hotel_with_point)
+    assert alive.calls == 1, "после отказа новая попытка так и не пришла"
+    assert service.current_for(hotel_with_point) is not None
+
+
+def test_a_long_outage_is_polled_no_more_than_once_per_window(monkeypatch, hotel_with_point):
+    """
+    Обратная сторона: провайдер лежит по-настоящему — долбить его нельзя.
+
+    Совсем снять кулдаун было бы хуже болезни: каждый гость на главной звал бы
+    лежащий сервис. Десять гостей подряд дают ОДНУ попытку.
+    """
+    down = FakeProvider(None)
+    _use(monkeypatch, down)
+
+    for _ in range(10):
+        service.current_for(hotel_with_point)
+    assert down.calls == 1, f"лежащий провайдер получил {down.calls} попыток вместо одной"
+
+
+def test_a_success_extends_the_cooldown_to_the_full_term(monkeypatch, hotel_with_point):
+    """
+    Удача продлевает кулдаун до штатного: данные свежие, ходить незачем.
+
+    Без этого короткий ключ означал бы поход к провайдеру раз в минуту ВСЕГДА
+    — ровно ту долбёжку, от которой кулдаун и защищает.
+
+    Значение берём постаревшее: обновлять уже пора (старше `REFRESH_AFTER`), а
+    показывать ещё можно (моложе `FRESH_FOR`). Тогда каждая следующая попытка
+    упирается именно в кулдаун, а не в проверку возраста.
+    """
+    monkeypatch.setattr(service, "RETRY_AFTER_FAILURE", 1)
+    stale_but_shown = observation(minutes_ago=service.REFRESH_AFTER // 60 + 5)
+    provider = FakeProvider(stale_but_shown)
+    _use(monkeypatch, provider)
+
+    service.current_for(hotel_with_point)
+    assert provider.calls == 1
+
+    # Короткий срок заведомо истёк. Если бы удача его не продлила, здесь пошла
+    # бы вторая попытка — и так каждую минуту до скончания века.
+    time.sleep(1.2)
+    service.current_for(hotel_with_point)
+    assert provider.calls == 1, (
+        f"после удачи кулдаун остался коротким: попыток {provider.calls} — провайдера зовут каждую минуту"
+    )

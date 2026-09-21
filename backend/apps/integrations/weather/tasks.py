@@ -15,8 +15,13 @@ def refresh_hotel_weather(hotel_id: str) -> None:
     Один вызов провайдера и запись в кэш.
 
     БЕЗ РЕТРАЕВ. Не ответил — значит, в этот раз погоды нет; следующая попытка
-    придёт по кулдауну через штатные минуты. Повторять сейчас значит долбить
-    лежащий сервис ради украшения экрана.
+    придёт по кулдауну. Повторять сейчас значит долбить лежащий сервис ради
+    украшения экрана.
+
+    КУЛДАУН ПРОДЛЕВАЕТ ТОЛЬКО УДАЧА. Перед попыткой он поставлен на минуту;
+    ответил провайдер — продлеваем до штатных двадцати минут, не ответил —
+    ключ истечёт сам, и через минуту гость получит новую попытку, а не пустой
+    блок на треть часа.
     """
     from apps.hotels.models import Hotel
     from apps.integrations.weather import service
@@ -30,6 +35,11 @@ def refresh_hotel_weather(hotel_id: str) -> None:
 
     observation = service.get_provider().current(*point)
     if observation is None:
-        logger.info("Погода: обновление отеля %s не удалось", hotel_id)
+        logger.info(
+            "Погода: обновление отеля %s не удалось — повтор через %s с",
+            hotel_id,
+            service.RETRY_AFTER_FAILURE,
+        )
         return
     service.store(hotel.pk, observation)
+    service.mark_refreshed(hotel.pk)
