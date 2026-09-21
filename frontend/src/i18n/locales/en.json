@@ -1160,7 +1160,10 @@
         "channel": "Exactly the chosen channel"
       },
       "channel": "Channel",
-      "stepTitle": "Note"
+      "stepTitle": "Note",
+      "stepSummary": "after {{minutes}} min → {{target}}",
+      "noChannelsWarning": "The hotel has no active notification channel. Rules will fire, but nothing will be delivered.",
+      "muteHint": "This rule has nowhere to deliver: no active channel for its steps."
     },
     "log": {
       "title": "Notification journal",

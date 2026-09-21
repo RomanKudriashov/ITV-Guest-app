@@ -40,6 +40,7 @@ import {
 } from '@/notifications/escalation';
 import { useDraftState } from '@/state/useDraftState';
 import { pickTranslated } from '@/utils/translated';
+import { EscalationRulesTable } from './EscalationRulesTable';
 import { EscalationStepsEditor } from './EscalationStepsEditor';
 
 export interface EscalationTabProps {
@@ -211,7 +212,17 @@ function RuleEditor({
       <CardContent sx={{ p: 2 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
           <Stack>
-            <Typography variant="h6">{t('notifications.escalation.title')}</Typography>
+            {/*
+              ЗАГОЛОВОК — ИМЯ ПРАВИЛА, а не название вкладки. Человек выбрал
+              строку в таблице и должен видеть, что он правит: одинаковая
+              шапка «Правило передачи выше» над восемью разными правилами
+              стоила ровно столько же, сколько её отсутствие.
+            */}
+            <Typography variant="h6" data-testid="cms-escalation-heading">
+              {draft.id
+                ? draft.name || pointTitle(draft.execution_point_id)
+                : t('notifications.escalation.newRule')}
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               {t('notifications.escalation.hint')}
             </Typography>
@@ -240,26 +251,25 @@ function RuleEditor({
         </Stack>
         <Divider sx={{ mb: 2 }} />
 
+        {/*
+          Таблица правил — сводка «кому / когда / куда» по всему отелю разом.
+          Выпадающий список показывал одно имя за раз, и вопрос «что у нас
+          вообще настроено» требовал перебрать его до конца.
+        */}
+        {rules.length > 0 ? (
+          <Box sx={{ mb: 2 }}>
+            <EscalationRulesTable
+              rules={rules}
+              channels={channelsQuery.data ?? []}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              pointTitle={pointTitle}
+            />
+          </Box>
+        ) : null}
+
         <Stack spacing={2.5}>
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="flex-start">
-            <TextField
-              select
-              size="small"
-              label={t('notifications.escalation.rule')}
-              value={selectedId}
-              onChange={(event) => onSelect(event.target.value)}
-              sx={{ minWidth: 260 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'cms-escalation-rule-select' }}
-            >
-              {rules.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name || pointTitle(entry.execution_point_id)}
-                </option>
-              ))}
-              <option value={NEW_RULE}>{t('notifications.escalation.newRule')}</option>
-            </TextField>
 
             <TextField
               size="small"

@@ -91,8 +91,10 @@ test.describe('Уведомления: журнал и второе правил
     await expect(page.getByTestId('cms-escalation-new')).toBeVisible({ timeout: 20_000 })
 
     // Кнопка «+ Новое правило» обязана ОСТАВИТЬ выбор на новом правиле.
+    // Выбор больше не в выпадающем списке: правила показаны таблицей, а то,
+    // что сейчас правят, названо в заголовке карточки.
     await page.getByTestId('cms-escalation-new').click()
-    await expect(page.getByTestId('cms-escalation-rule-select')).toHaveValue('new')
+    await expect(page.getByTestId('cms-escalation-heading')).toHaveText('Новое правило')
     // Имя пустое — значит открыта пустая форма, а не чужое правило.
     await expect(page.getByTestId('cms-escalation-name')).toHaveValue('')
 
