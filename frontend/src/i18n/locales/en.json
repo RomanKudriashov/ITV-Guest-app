@@ -1010,6 +1010,13 @@
         "failed": "The task was not handed over",
         "tasks": "Handed to departments: {{count}}",
         "noTasks": "No tasks handed over"
+      },
+      "handover": {
+        "open": "Hand over",
+        "title": "Hand the chat over to",
+        "nobody": "Nobody to hand over to: no one else is on reception.",
+        "confirm": "Hand over",
+        "failed": "Handover failed"
       }
     }
   },

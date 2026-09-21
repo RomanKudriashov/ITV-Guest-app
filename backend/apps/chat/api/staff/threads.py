@@ -7,7 +7,7 @@ from ninja import Router
 
 from apps.chat import services as chat_svc
 from apps.chat.services import holding
-from apps.chat.schemas import MessageIn
+from apps.chat.schemas import HandoverIn, MessageIn
 
 router = Router(tags=["tracker-chat"])
 
@@ -35,6 +35,35 @@ def staff_thread_take(request: HttpRequest, thread_id: str):
     chat_svc.require_chat_access()
     thread = chat_svc.get_thread(thread_id)
     holding.touch(thread, request.user, force=True)
+    return _staff_snapshot(thread, request.user)
+
+
+@router.get("/chat/handover-targets", summary="Кому можно передать диалог")
+def staff_handover_targets(request: HttpRequest):
+    chat_svc.require_chat_access()
+    return {"items": chat_svc.handover_targets(request.user)}
+
+
+@router.post("/chat/threads/{thread_id}/handover", summary="Передать диалог сотруднику")
+def staff_thread_handover(request: HttpRequest, thread_id: str, payload: HandoverIn):
+    """
+    ПОИМЁННАЯ передача. Отдать диалог можно только тому, кто вправе его читать:
+    список адресатов строится тем же правилом, что и доступ к чату.
+    """
+    from apps.core.errors import ValidationError
+
+    chat_svc.require_chat_access()
+    thread = chat_svc.get_thread(thread_id)
+    allowed = {row["id"] for row in chat_svc.handover_targets(request.user)}
+    if payload.user_id not in allowed:
+        raise ValidationError(
+            "Этому сотруднику передать нельзя: он не ведёт переписку с гостями",
+            field="user_id",
+            code="handover_not_allowed",
+        )
+    from apps.accounts.models import User
+
+    holding.handover(thread, to_user=User.objects.get(pk=payload.user_id), by_user=request.user)
     return _staff_snapshot(thread, request.user)
 
 

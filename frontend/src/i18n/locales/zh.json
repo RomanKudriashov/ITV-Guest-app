@@ -1000,6 +1000,13 @@
         "failed": "任务未转交",
         "tasks": "已转交部门：{{count}}",
         "noTasks": "没有转交的任务"
+      },
+      "handover": {
+        "open": "转交",
+        "title": "将对话转交给",
+        "nobody": "无人可转交：前台没有其他人。",
+        "confirm": "转交",
+        "failed": "转交失败"
       }
     }
   },

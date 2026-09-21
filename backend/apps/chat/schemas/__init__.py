@@ -9,6 +9,12 @@ class MessageIn(Schema):
     body: str
 
 
+class HandoverIn(Schema):
+    """Кому передаём диалог. Поимённо: отдел — это не адресат."""
+
+    user_id: str
+
+
 class DeskTaskIn(Schema):
     """Задача отделу: кому и что сделать."""
 

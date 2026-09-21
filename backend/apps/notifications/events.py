@@ -44,7 +44,12 @@ AUDIENCE_MANAGER = "manager"  # личные каналы руководител
 # прежняя рассылка брала «всё без отдела» и доставала каждого, у кого есть
 # личный канал, — на стенде это были все семь получателей событий оформления.
 AUDIENCE_HOTEL = "hotel"
-AUDIENCES = (AUDIENCE_POINT, AUDIENCE_LEAD, AUDIENCE_MANAGER, AUDIENCE_HOTEL)
+# Личные каналы ОДНОГО человека. Адресат известен не по должности, а поимённо:
+# так устроена передача диалога — её получает тот, кому передали, и никто
+# больше. Отдел здесь не при чём: сказать «ресепшену» значит не сказать никому
+# конкретно.
+AUDIENCE_USER = "user"
+AUDIENCES = (AUDIENCE_POINT, AUDIENCE_LEAD, AUDIENCE_MANAGER, AUDIENCE_HOTEL, AUDIENCE_USER)
 
 _PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 
@@ -221,6 +226,34 @@ EVENTS: dict[str, EventSpec] = {
             placeholders=("room_number", "preview"),
             # Каждое сообщение гостя в чат отдела — ровно тот поток, от
             # которого канал перестают читать. Чат и так виден на экране.
+        ),
+        EventSpec(
+            code="chat.handover",
+            title={
+                "ru": "Вам передали диалог",
+                "en": "A chat was handed over to you",
+                "ar": "تم تحويل محادثة إليك",
+                "zh": "有对话转交给你",
+            },
+            subject={
+                "ru": "Диалог из номера {{room_number}} — от {{from_name}}",
+                "en": "Chat from room {{room_number}} — from {{from_name}}",
+                "ar": "محادثة من الغرفة {{room_number}} — من {{from_name}}",
+                "zh": "{{room_number}} 号房的对话 — 来自 {{from_name}}",
+            },
+            body={
+                "ru": "{{preview}}",
+                "en": "{{preview}}",
+                "ar": "{{preview}}",
+                "zh": "{{preview}}",
+            },
+            # ПОИМЁННО. Передали конкретному человеку — он и должен узнать;
+            # рассылка на отдел означала бы «пусть кто-нибудь заметит», то
+            # есть ровно то, от чего передача и уводит.
+            audience=AUDIENCE_USER,
+            placeholders=("room_number", "from_name", "preview"),
+            defaults=(("room_number", "no_room"),),
+            enabled_by_default=True,
         ),
         EventSpec(
             code="chat.unanswered",

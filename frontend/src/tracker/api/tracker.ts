@@ -173,6 +173,29 @@ export function takeChatThread(threadId: string, language?: string): Promise<Tra
   });
 }
 
+/** Кому можно передать диалог: смена ресепшена, кроме себя. */
+export function fetchHandoverTargets(): Promise<Array<{ id: string; name: string }>> {
+  return api
+    .get<{ items: Array<{ id: string; name: string }> }>('/tracker/chat/handover-targets')
+    .then((page) => page.items);
+}
+
+/**
+ * Передать диалог ПОИМЁННО. Отличается от «Взять себе» адресатом: там я беру,
+ * здесь я отдаю конкретному человеку, и он об этом узнаёт.
+ */
+export function handOverChatThread(
+  threadId: string,
+  userId: string,
+  language?: string,
+): Promise<TrackerChatSnapshot> {
+  return api.post<TrackerChatSnapshot>(
+    `/tracker/chat/threads/${threadId}/handover`,
+    { user_id: userId },
+    { headers: langHeaders(language) },
+  );
+}
+
 /** Let go of one's own dialog: closed it or moved to another. */
 export function releaseChatThread(threadId: string): Promise<TrackerChatSnapshot> {
   return api.post<TrackerChatSnapshot>(`/tracker/chat/threads/${threadId}/release`, {});

@@ -74,6 +74,50 @@ def touch(thread: ChatThread, user, *, force: bool = False) -> None:
     thread.holder_seen_at = now
 
 
+def handover(thread: ChatThread, *, to_user, by_user) -> None:
+    """
+    Передать диалог ПОИМЁННО.
+
+    До этого отдать переписку можно было только отделу — «Поручением», — либо
+    ждать, пока коллега перехватит её сам. Обе дороги отвечают «пусть
+    кто-нибудь займётся», а у смены ресепшена это и есть способ потерять
+    гостя: каждый думает, что взял другой.
+
+    Передача делает три вещи и все три обязательны:
+      * держателем становится тот, кому передали;
+      * в переписке остаётся строка о передаче — иначе следующий читающий не
+        поймёт, почему отвечает другой человек;
+      * адресат получает уведомление ЛИЧНО. Отдел здесь не адресат.
+    """
+    from apps.chat.services.threads import staff_send
+    from apps.notifications.services.events import notify
+
+    now = timezone.now()
+    ChatThread.objects.filter(pk=thread.pk).update(holder=to_user, holder_seen_at=now)
+    thread.holder = to_user
+    thread.holder_id = to_user.pk
+    thread.holder_seen_at = now
+
+    from_name = by_user.full_name or by_user.email
+    to_name = to_user.full_name or to_user.email
+    # Строка видна и гостю: он читает, что его вопросом занялся другой
+    # человек, а не что разговор оборвался.
+    staff_send(thread, by_user, f"Диалог передан: {to_name}")
+
+    last = thread.messages.order_by("-created_at").first()
+    notify(
+        "chat.handover",
+        {
+            "room_number": getattr(getattr(thread, "guest_session", None), "room", None)
+            and thread.guest_session.room.number,
+            "from_name": from_name,
+            "preview": (getattr(last, "body", "") or "")[:160],
+        },
+        user_id=to_user.pk,
+        dedupe_key=f"chat.handover:{thread.pk}:{to_user.pk}:{int(now.timestamp())}",
+    )
+
+
 def release(thread: ChatThread, user) -> None:
     """Отпустить свой диалог. Чужой так не отпускается — только перехватом."""
     if thread.holder_id == user.pk:

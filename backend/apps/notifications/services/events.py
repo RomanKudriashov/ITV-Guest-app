@@ -51,7 +51,7 @@ UNDELIVERED = "notification.undelivered"
 
 
 def channels_for_audience(
-    audience: str, point_id=None, *, channel_id=None, channel_types=()
+    audience: str, point_id=None, *, channel_id=None, channel_types=(), user_id=None
 ) -> list[NotificationChannel]:
     """
     Каналы адресата. Разрешаются В МОМЕНТ ОТПРАВКИ: состав смены меняется.
@@ -76,6 +76,12 @@ def channels_for_audience(
 
     if audience == registry.AUDIENCE_HOTEL:
         return list(active.filter(execution_point__isnull=True, user__isnull=True))
+
+    if audience == registry.AUDIENCE_USER:
+        # Поимённый адресат: личные каналы одного человека. Нет адресата или у
+        # него нет личного канала — никому не шлём, и это видно в журнале, а не
+        # разливается по отделу.
+        return list(active.filter(user_id=user_id)) if user_id else []
 
     if not point_id:
         # Событие отдела без отдела — адресовать некого, и это видно в журнале.
@@ -129,6 +135,7 @@ def notify(
     values: dict,
     *,
     point_id=None,
+    user_id=None,
     dedupe_key: str | None = None,
     exclude_channel_ids=(),
 ):
@@ -173,6 +180,7 @@ def notify(
             point_id,
             channel_id=setting.channel_id,
             channel_types=setting.channel_types,
+            user_id=user_id,
         )
         if str(channel.pk) not in excluded
     ]

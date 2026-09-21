@@ -11,12 +11,14 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { Theme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import Snackbar from '@mui/material/Snackbar';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/auth';
 import { DeskConversation } from '../desk/DeskConversation';
+import { DeskHandoverDialog } from '@/tracker/desk/DeskHandoverDialog';
 import { DeskOrderDialog } from '../desk/DeskOrderDialog';
 import { DeskTaskDialog } from '../desk/DeskTaskDialog';
 import { DeskGuestCardPanel } from '../desk/DeskGuestCardPanel';
@@ -41,6 +43,9 @@ export function ReceptionDeskPage() {
   const [ordering, setOrdering] = useState(false);
   const [handingOver, setHandingOver] = useState(false);
   const [handedTo, setHandedTo] = useState<string | null>(null);
+  // Передача диалога человеку — отдельное состояние от «Поручения»: это
+  // разные действия, и путать их на экране нельзя.
+  const [passingTo, setPassingTo] = useState(false);
   const [placed, setPlaced] = useState<number | null>(null);
   const canChat = Boolean(user?.can_chat);
   const threads = useTrackerChatThreads(canChat);
@@ -84,6 +89,20 @@ export function ReceptionDeskPage() {
           >
             {t('tracker.desk.task.open')}
           </Button>
+          {/*
+            Передать ЧЕЛОВЕКУ — рядом с «Поручением», но это разные вещи:
+            поручение отдаёт работу отделу, передача отдаёт переписку
+            конкретному сотруднику, и он об этом узнаёт лично.
+          */}
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PersonAddAltOutlinedIcon />}
+            onClick={() => setPassingTo(true)}
+            data-testid="desk-handover-open"
+          >
+            {t('tracker.desk.handover.open')}
+          </Button>
           <Button
             size="small"
             variant="contained"
@@ -105,6 +124,14 @@ export function ReceptionDeskPage() {
 
   return (
     <>
+      {selected ? (
+        <DeskHandoverDialog
+          threadId={selected}
+          open={passingTo}
+          onClose={() => setPassingTo(false)}
+          onDone={() => setPassingTo(false)}
+        />
+      ) : null}
       {selected ? (
         <DeskOrderDialog
           key={selected}

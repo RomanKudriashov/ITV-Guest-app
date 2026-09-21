@@ -822,6 +822,9 @@
   "/api/v1/staff/me/contacts/{messenger}/binding-code": [
     "POST"
   ],
+  "/api/v1/tracker/chat/handover-targets": [
+    "GET"
+  ],
   "/api/v1/tracker/chat/threads": [
     "GET"
   ],
@@ -831,6 +834,9 @@
   ],
   "/api/v1/tracker/chat/threads/{thread_id}/guest": [
     "GET"
+  ],
+  "/api/v1/tracker/chat/threads/{thread_id}/handover": [
+    "POST"
   ],
   "/api/v1/tracker/chat/threads/{thread_id}/read": [
     "POST"

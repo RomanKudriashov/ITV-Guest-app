@@ -120,6 +120,33 @@ def require_chat_access() -> None:
         )
 
 
+def handover_targets(me) -> list[dict]:
+    """
+    Кому можно передать диалог: те, кто ВПРАВЕ его читать, — смена ресепшена.
+
+    Список строится из того же правила, что и доступ к чату (`can_read_chat`),
+    а не из своего: второй список разошёлся бы с первым, и однажды диалог
+    передали бы тому, кто его не откроет.
+    """
+    from apps.accounts.models import StaffAssignment, User
+
+    point = reception_point()
+    if point is None:
+        return []
+    user_ids = StaffAssignment.objects.filter(
+        execution_point_id=point.pk, is_active=True
+    ).values_list("user_id", flat=True)
+    people = (
+        User.objects.filter(pk__in=list(user_ids), is_active=True, is_staff_member=True)
+        .exclude(pk=getattr(me, "pk", None))
+        .order_by("full_name", "email")
+    )
+    return [
+        {"id": str(user.pk), "name": user.full_name or user.email}
+        for user in people
+    ]
+
+
 def get_thread(thread_id) -> ChatThread:
     thread = ChatThread.objects.filter(pk=thread_id).first()
     if thread is None:
