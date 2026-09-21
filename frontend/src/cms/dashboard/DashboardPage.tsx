@@ -4,6 +4,8 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -72,6 +74,7 @@ export function DashboardPage() {
             {/* Управляющему единственного заведения разрез не нужен: оно и так
                 весь экран, и список из одной строки только отнимает место. */}
             {data.venues.length > 1 ? <Venues data={data} /> : null}
+            <LowReviews data={data} />
           </Stack>
         )}
       </QueryState>
@@ -295,6 +298,69 @@ function Delta({ value }: { value?: number | null }) {
         {t('dashboard.vsYesterday')}
       </Typography>
     </Stack>
+  );
+}
+
+/* ── Отзывы, с которыми надо что-то делать ──────────────────────────────── */
+
+/**
+ * Последние НИЗКИЕ, ждущие ответа.
+ *
+ * На пульте была одна средняя оценка — а средняя молчит ровно о том, что
+ * требует действия: 4,05 при двадцати шести отзывах без ответа выглядят
+ * благополучно. Здесь показано то, с чем надо что-то делать, и сразу ссылкой
+ * на сам отзыв.
+ *
+ * Ничего не ждёт — блока нет. Пустая карточка «отзывов без ответа: 0» — это
+ * строка, которую перестают читать.
+ */
+function LowReviews({ data }: { data: DashboardData }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const reviews = data.reviews;
+  if (!reviews || reviews.items.length === 0) return null;
+
+  return (
+    <Box data-testid="dashboard-reviews">
+      <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }}>
+        <Typography variant="h6">{t('dashboard.reviewsTitle')}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('dashboard.reviewsAwaiting', { count: reviews.awaiting })}
+        </Typography>
+      </Stack>
+      <Stack spacing={1}>
+        {reviews.items.map((review) => (
+          <Card
+            key={review.id}
+            variant="outlined"
+            data-testid={`dashboard-review-${review.id}`}
+            onClick={() => navigate(review.route)}
+            sx={{ cursor: 'pointer' }}
+          >
+            <CardContent sx={{ py: 1.25, '&:last-child': { pb: 1.25 } }}>
+              <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                <Chip
+                  size="small"
+                  color="error"
+                  label={t('dashboard.reviewRating', { rating: review.rating })}
+                  data-testid={`dashboard-review-rating-${review.id}`}
+                />
+                <Stack sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" noWrap>
+                    {review.comment || t('dashboard.reviewNoComment')}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {review.order_number
+                      ? t('dashboard.reviewOrder', { number: review.order_number })
+                      : t('dashboard.reviewNoOrder')}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
+    </Box>
   );
 }
 

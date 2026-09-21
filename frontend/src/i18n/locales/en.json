@@ -2181,8 +2181,17 @@
         "services": "venues",
         "rooms": "rooms",
         "staff": "staff"
-      }
-    }
+      },
+      "reviews_awaiting": "Reviews awaiting a reply: {{count}}",
+      "reviewsAwaitingHint": "A guest wrote and is waiting. Silence reads as indifference.",
+      "reviewsAwaitingLowHint": "Low-rated among them: {{count}}. An unhappy guest is still without an answer."
+    },
+    "reviewsTitle": "Reviews awaiting a reply",
+    "reviewsAwaiting": "waiting in total: {{count}}",
+    "reviewRating": "{{rating}} of 5",
+    "reviewOrder": "order #{{number}}",
+    "reviewNoOrder": "no order",
+    "reviewNoComment": "No text — rating only"
   },
   "admin": {
     "brand": {

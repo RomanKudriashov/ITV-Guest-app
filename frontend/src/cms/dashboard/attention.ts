@@ -40,6 +40,15 @@ export function attentionText(
           ? `${t('dashboard.card.noEscalationHint')} · ${card.names.join(', ')}`
           : t('dashboard.card.noEscalationHint'),
       };
+    case 'reviews_awaiting':
+      return {
+        title: t('dashboard.card.reviews_awaiting', { count: card.count ?? 0 }),
+        // Из скольких — низкие: это разница между «очередь» и «гость уже
+        // недоволен, и ему до сих пор не ответили».
+        hint: card.low
+          ? t('dashboard.card.reviewsAwaitingLowHint', { count: card.low })
+          : t('dashboard.card.reviewsAwaitingHint'),
+      };
     case 'delivery_failed':
       return {
         title: t('dashboard.card.delivery_failed', { count: card.count ?? 0 }),

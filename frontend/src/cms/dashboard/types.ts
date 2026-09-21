@@ -8,6 +8,7 @@ export interface DashboardAttention {
     | 'escalated'
     | 'no_escalation'
     | 'stop_list'
+    | 'reviews_awaiting'
     | 'node_offline'
     | 'tariff_over';
   severity: 'error' | 'warning';
@@ -22,6 +23,18 @@ export interface DashboardAttention {
   limit?: number;
   /** Только у `no_escalation`: чьи именно заведения. */
   names?: string[];
+  /** Только у `reviews_awaiting`: сколько из ждущих — с низкой оценкой. */
+  low?: number;
+}
+
+/** Отзыв на пульте: строка работы, а не читалка. Полный текст — по ссылке. */
+export interface DashboardReview {
+  id: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  order_number: number | null;
+  route: string;
 }
 
 export interface DashboardVenue {
@@ -53,4 +66,13 @@ export interface DashboardData {
     in_work: number;
   };
   venues: DashboardVenue[];
+  /**
+   * Отзывы, с которыми надо что-то делать. `items` — последние низкие,
+   * ждущие ответа; пятёрка без ответа подождёт.
+   */
+  reviews: {
+    awaiting: number;
+    low_awaiting: number;
+    items: DashboardReview[];
+  };
 }

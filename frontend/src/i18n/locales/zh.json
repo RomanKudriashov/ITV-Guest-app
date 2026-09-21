@@ -2156,8 +2156,17 @@
         "services": "场所",
         "rooms": "房间",
         "staff": "员工"
-      }
-    }
+      },
+      "reviews_awaiting": "待回复评价：{{count}}",
+      "reviewsAwaitingHint": "客人已留言并在等待。沉默会被理解为不在意。",
+      "reviewsAwaitingLowHint": "其中低分：{{count}}。不满意的客人至今没有得到回复。"
+    },
+    "reviewsTitle": "待回复的评价",
+    "reviewsAwaiting": "共待处理：{{count}}",
+    "reviewRating": "{{rating}} / 5",
+    "reviewOrder": "订单 №{{number}}",
+    "reviewNoOrder": "无订单",
+    "reviewNoComment": "无文字，仅评分"
   },
   "admin": {
     "brand": {

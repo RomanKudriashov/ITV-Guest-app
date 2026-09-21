@@ -2249,8 +2249,17 @@
         "services": "الأماكن",
         "rooms": "الغرف",
         "staff": "الموظفون"
-      }
-    }
+      },
+      "reviews_awaiting": "تقييمات بلا رد: {{count}}",
+      "reviewsAwaitingHint": "كتب الضيف وينتظر. الصمت يُقرأ كعدم اهتمام.",
+      "reviewsAwaitingLowHint": "منها بتقييم منخفض: {{count}}. ضيف غير راضٍ ما زال بلا رد."
+    },
+    "reviewsTitle": "تقييمات بلا رد",
+    "reviewsAwaiting": "في الانتظار إجمالًا: {{count}}",
+    "reviewRating": "{{rating}} من 5",
+    "reviewOrder": "طلب رقم {{number}}",
+    "reviewNoOrder": "بلا طلب",
+    "reviewNoComment": "بلا نص — تقييم فقط"
   },
   "admin": {
     "brand": {

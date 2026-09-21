@@ -366,6 +366,8 @@ class DashboardAttentionOut(Schema):
     used: int | None = None
     limit: int | None = None
     names: list[str] | None = None
+    # У `reviews_awaiting`: сколько из ждущих ответа — с низкой оценкой.
+    low: int | None = None
 
 
 class DashboardTodayOut(Schema):
@@ -400,8 +402,26 @@ class DashboardVenueOut(Schema):
     route: str
 
 
+class DashboardReviewOut(Schema):
+    id: str
+    rating: int
+    # Текст РЕЗАНЫЙ: пульт — список работы, а не читалка. Полный отзыв
+    # открывается по `route`.
+    comment: str
+    created_at: str
+    order_number: int | None = None
+    route: str
+
+
+class DashboardReviewsOut(Schema):
+    awaiting: int
+    low_awaiting: int
+    items: list[DashboardReviewOut]
+
+
 class DashboardOut(Schema):
     scope: DashboardScopeOut
     attention: list[DashboardAttentionOut]
     today: DashboardTodayOut
     venues: list[DashboardVenueOut]
+    reviews: DashboardReviewsOut

@@ -84,6 +84,10 @@ def build(hotel: Hotel, user) -> dict:
         "attention": _attention(hotel, user, points, shift, scope),
         "today": _today(hotel, user, shift),
         "venues": _venues(hotel, points),
+        # Отзывы НА ПУЛЬТЕ, а не только отдельным разделом: гость, которому не
+        # ответили, — это работа, а работа живёт здесь. Раздел «Отзывы» видит
+        # только тот, кто туда зашёл.
+        "reviews": _reviews(hotel),
     }
 
 
@@ -135,6 +139,25 @@ def _attention(hotel, user, points, shift, scope) -> list[dict]:
         cards.append(
             {"code": "no_escalation", "severity": "warning", "count": len(without_rules),
              "names": without_rules, "route": "/cms/notifications"}
+        )
+
+    # ЖДУЩИЙ ОТВЕТА ОТЗЫВ — ТАКАЯ ЖЕ РАБОТА, КАК НЕВЗЯТЫЙ ЗАКАЗ.
+    #
+    # Раньше на пульт из отзывов выходила одна средняя оценка. Средняя молчит
+    # ровно о том, что требует действия: на стенде она была 4,05 при двадцати
+    # шести отзывах, ждущих ответа, и пульт об этом не говорил ни словом.
+    awaiting, low_awaiting = _reviews_awaiting()
+    if awaiting:
+        cards.append(
+            {
+                "code": "reviews_awaiting",
+                # Низкая оценка без ответа — ошибка, которую гость уже заметил;
+                # остальное — просто очередь.
+                "severity": "error" if low_awaiting else "warning",
+                "count": awaiting,
+                "low": low_awaiting,
+                "route": "/cms/reviews",
+            }
         )
 
     stopped = _stop_list(points)
@@ -291,6 +314,57 @@ def _live_guests(hotel) -> int:
 
 
 # --- По заведениям ---------------------------------------------------------
+
+
+# --- Отзывы ----------------------------------------------------------------
+#
+# Отбор берём у самого раздела отзывов (`reviews_queryset`): он уже режет их по
+# точкам, которыми человек распоряжается, — управляющий кухней не читает
+# отзывы спа. Свой отбор здесь означал бы второе правило доступа, и однажды
+# они разошлись бы.
+
+REVIEWS_ON_BOARD = 5
+
+
+def _reviews_awaiting() -> tuple[int, int]:
+    """Сколько отзывов ждут ответа и сколько из них с низкой оценкой."""
+    from apps.reviews.services.reviews import reviews_queryset
+
+    waiting = reviews_queryset(triage="open")
+    return waiting.count(), reviews_queryset(triage="open", rating="low").count()
+
+
+def _reviews(hotel) -> dict:
+    """
+    Последние НИЗКИЕ, ждущие ответа. Не «последние вообще»: пульт показывает
+    то, с чем надо что-то делать, а пятёрка без ответа подождёт.
+
+    Текст режется: пульт — это список работы, а не читалка. Полный отзыв
+    открывается по ссылке, и она здесь же.
+    """
+    from apps.reviews.services.reviews import reviews_queryset
+
+    rows = (
+        reviews_queryset(triage="open", rating="low")
+        .select_related("order")
+        .order_by("-created_at")[:REVIEWS_ON_BOARD]
+    )
+    awaiting, low_awaiting = _reviews_awaiting()
+    return {
+        "awaiting": awaiting,
+        "low_awaiting": low_awaiting,
+        "items": [
+            {
+                "id": str(review.pk),
+                "rating": review.rating,
+                "comment": (review.comment or "")[:160],
+                "created_at": review.created_at.isoformat(),
+                "order_number": getattr(review.order, "number", None),
+                "route": f"/cms/reviews?review={review.pk}",
+            }
+            for review in rows
+        ],
+    }
 
 
 def _venues(hotel, points) -> list[dict]:

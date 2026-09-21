@@ -2212,8 +2212,17 @@
         "services": "заведения",
         "rooms": "комнаты",
         "staff": "сотрудники"
-      }
-    }
+      },
+      "reviews_awaiting": "Отзывов без ответа: {{count}}",
+      "reviewsAwaitingHint": "Гость написал и ждёт. Молчание он читает как «им всё равно».",
+      "reviewsAwaitingLowHint": "Из них с низкой оценкой: {{count}}. Недовольный гость до сих пор без ответа."
+    },
+    "reviewsTitle": "Отзывы без ответа",
+    "reviewsAwaiting": "всего ждут: {{count}}",
+    "reviewRating": "{{rating}} из 5",
+    "reviewOrder": "заказ №{{number}}",
+    "reviewNoOrder": "без заказа",
+    "reviewNoComment": "Без текста — только оценка"
   },
   "admin": {
     "brand": {
