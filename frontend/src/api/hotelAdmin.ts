@@ -2,6 +2,7 @@
 import { API_BASE, HOTEL_SUBDOMAIN, api, tokenStorage } from './client';
 import type { ListPage } from './types';
 import type {
+  Building,
   HotelLocation,
   LocationMatrix,
   LocationPayload,
@@ -96,6 +97,35 @@ export function bulkUpdateRooms(
   patch: RoomBulkPatch,
 ): Promise<RoomBulkUpdateResult> {
   return api.post<RoomBulkUpdateResult>('/cms/rooms/bulk-update', { selection, patch });
+}
+
+/* ── 1a. Корпуса ───────────────────────────────────────────────────────── */
+//
+// Устроены как категории номеров и намеренно: это два справочника одного
+// экрана, и разный вид означал бы разное поведение там, где человек ждёт
+// одинакового.
+
+export function fetchBuildings(): Promise<Building[]> {
+  return api.get<ListPage<Building>>('/cms/buildings').then((page) => page.items);
+}
+
+export function createBuilding(payload: {
+  title: Record<string, string>;
+  code?: string;
+  sort_order?: number;
+}): Promise<Building> {
+  return api.post<Building>('/cms/buildings', payload);
+}
+
+export function updateBuilding(
+  id: string,
+  payload: { title?: Record<string, string>; sort_order?: number; is_active?: boolean },
+): Promise<Building> {
+  return api.patch<Building>(`/cms/buildings/${id}`, payload);
+}
+
+export function deleteBuilding(id: string): Promise<void> {
+  return api.delete(`/cms/buildings/${id}`).then(() => undefined);
 }
 
 /* ── 1b. Room categories ───────────────────────────────────────────────── */

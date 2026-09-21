@@ -46,6 +46,7 @@ class RoomIn(Schema):
     number: str
     floor: str = ""
     zone: str = ""
+    building_id: str | None = None
     is_active: bool = True
     category_id: str | None = None
     housekeeping: str | None = None
@@ -55,6 +56,7 @@ class RoomPatch(Schema):
     number: str | None = None
     floor: str | None = None
     zone: str | None = None
+    building_id: str | None = None
     is_active: bool | None = None
     category_id: str | None = None
     housekeeping: str | None = None
@@ -93,6 +95,9 @@ class RoomOut(Schema):
     # Фонд: категория тарифная (из справочника отеля), уборка ставится
     # персоналом, «вне продажи» — отдельно от `is_active`, который про вход.
     category_id: str | None = None
+    # Корпус справочником; `zone` рядом остаётся строкой-снимком.
+    building_id: str | None = None
+    building: dict | None = None
     housekeeping: str = "unknown"
     out_of_service: bool = False
     # Правда: номер ВОЗВРАЩЁН из удалённых, а не создан с нуля — вместе с ним
@@ -119,6 +124,7 @@ class BulkRoomsIn(Schema):
     to: int | None = None
     floor: str = ""
     zone: str = ""
+    building_id: str | None = None
     prefix: str = ""
     suffix: str = ""
     category_id: str | None = None
@@ -160,6 +166,7 @@ class RoomBulkPatchIn(Schema):
     number: str | None = None
     floor: str | None = None
     zone: str | None = None
+    building_id: str | None = None
     category_id: str | None = None
     housekeeping: str | None = None
     out_of_service: bool | None = None
@@ -174,6 +181,32 @@ class BulkUpdateIn(Schema):
 class BulkUpdateOut(Schema):
     matched: int
     changed: int
+
+
+class BuildingIn(Schema):
+    """Корпус: название переводимое, код можно не задавать — сделаем из названия."""
+
+    title: dict[str, str]
+    code: str | None = None
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class BuildingPatch(Schema):
+    title: dict[str, str] | None = None
+    code: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
+class BuildingOut(Schema):
+    id: str
+    code: str
+    title: dict[str, str]
+    title_i18n: str
+    sort_order: int
+    is_active: bool
+    rooms_count: int = 0
 
 
 class RoomCategoryIn(Schema):

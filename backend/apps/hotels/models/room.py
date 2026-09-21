@@ -69,7 +69,20 @@ class Room(TenantModel):
 
     number = models.CharField(max_length=32, db_index=True)
     floor = models.CharField(max_length=16, blank=True)
-    zone = models.CharField(max_length=64, blank=True, help_text="Корпус, крыло, зона")
+    # СТРОКА ОСТАЁТСЯ — как снимок и как дорога назад.
+    #
+    # Справочник корпусов появился позже фонда, и у номеров уже лежали строки.
+    # Стереть их при переносе значило бы потерять единственное, что о корпусе
+    # известно, если запись справочника потом удалят. Пишет сюда теперь только
+    # перенос и выбор корпуса; руками это поле больше не правят.
+    zone = models.CharField(max_length=64, blank=True, help_text="Корпус строкой (историческое)")
+    building = models.ForeignKey(
+        "hotels.Building",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="rooms",
+    )
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.MANUAL)
     external_id = models.CharField(max_length=128, blank=True)
 

@@ -1570,7 +1570,11 @@
       "panelOrders": "房间订单",
       "panelControl": "客房控制",
       "panelNoControl": "该房间没有设备控制",
-      "panelGuestUrl": "二维码所编码的链接"
+      "panelGuestUrl": "二维码所编码的链接",
+      "buildings": "楼栋",
+      "buildingsEmpty": "尚无楼栋。先新建一个，再在房间卡片中选择。",
+      "buildingNew": "楼栋名称",
+      "building": "楼栋"
     },
     "locations": {
       "title": "位置",

@@ -14,7 +14,10 @@ export interface Room {
   id: string;
   number: string;
   floor: string;
+  /** Корпус СТРОКОЙ — историческое поле: его ведёт справочник, руками не правят. */
   zone: string;
+  building_id?: string | null;
+  building?: { id: string; code: string; title: string } | null;
   /** `manual` | `import` … — how the room entered the system. */
   source: string;
   is_active: boolean;
@@ -47,6 +50,17 @@ export interface Room {
 }
 
 export type RoomHousekeeping = 'unknown' | 'clean' | 'dirty' | 'in_progress';
+
+/** Корпус отеля: справочник вместо свободной строки `zone`. */
+export interface Building {
+  id: string;
+  code: string;
+  title: Record<string, string>;
+  title_i18n: string;
+  sort_order: number;
+  is_active: boolean;
+  rooms_count: number;
+}
 
 export interface RoomCategory {
   id: string;

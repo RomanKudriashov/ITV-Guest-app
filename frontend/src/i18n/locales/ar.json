@@ -1633,7 +1633,11 @@
       "panelOrders": "طلبات الغرفة",
       "panelControl": "التحكم بالغرفة",
       "panelNoControl": "هذه الغرفة بلا تحكم بالأجهزة",
-      "panelGuestUrl": "الرابط الذي يرمّزه رمز QR"
+      "panelGuestUrl": "الرابط الذي يرمّزه رمز QR",
+      "buildings": "المباني",
+      "buildingsEmpty": "لا توجد مبانٍ بعد. أضف الأول ثم اخترْه في بطاقة الغرفة.",
+      "buildingNew": "اسم المبنى",
+      "building": "المبنى"
     },
     "locations": {
       "title": "المواقع",

@@ -19,6 +19,7 @@ TENANT_TABLES = [
     "hotels_hotel_language",
     "hotels_room",
     "hotels_room_category",
+    "hotels_building",
     "hotels_execution_point",
     "hotels_location",
     "hotels_schedule",

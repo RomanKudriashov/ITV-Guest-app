@@ -53,11 +53,14 @@ import {
   bulkUpdateRooms,
   checkOutRoom,
   createRoom,
+  createBuilding,
   createRoomCategory,
   deleteRoom,
+  deleteBuilding,
   deleteRoomCategory,
   downloadRoomQrPng,
   fetchRenameImpact,
+  fetchBuildings,
   fetchRoomCategories,
   fetchRoomQrSheetHtml,
   fetchRoomQrSvg,
@@ -66,6 +69,7 @@ import {
   updateRoom,
 } from '@/api/hotelAdmin';
 import type {
+  Building,
   GridRoom,
   Room,
   RoomBulkPatch,
@@ -163,6 +167,12 @@ export function RoomsPage() {
     ],
     queryFn: () => fetchRooms(params.search, { limit: ROOMS_PAGE_SIZE, offset }, filters),
   });
+  const buildingsQuery = useQuery({
+    queryKey: [...queryKeys.rooms, 'buildings'],
+    queryFn: fetchBuildings,
+  });
+  const buildings = buildingsQuery.data ?? [];
+
   const categoriesQuery = useQuery({
     queryKey: [...queryKeys.rooms, 'categories'],
     queryFn: fetchRoomCategories,
@@ -186,6 +196,7 @@ export function RoomsPage() {
   const [allMatching, setAllMatching] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [buildingsOpen, setBuildingsOpen] = useState(false);
   /*
     ВИД ЖИВЁТ В АДРЕСЕ, как поиск и фильтры: ссылкой на сетку можно поделиться,
     и F5 не выкидывает обратно в таблицу.
@@ -392,6 +403,9 @@ export function RoomsPage() {
                   <GridViewIcon fontSize="small" />
                 </ToggleButton>
               </ToggleButtonGroup>
+              <Button onClick={() => setBuildingsOpen(true)} data-testid="room-buildings-open">
+                {t('hotel.rooms.buildings')}
+              </Button>
               <Button onClick={() => setCategoriesOpen(true)} data-testid="room-categories-open">
                 {t('hotel.rooms.categories')}
               </Button>
@@ -828,6 +842,7 @@ export function RoomsPage() {
         <RoomPanel
           room={panelRoom}
           categories={categories}
+          buildings={buildings}
           onClose={() => setPanelRoom(null)}
           onChanged={() => void invalidate()}
           onShowQr={() => setQrRoom(panelRoom)}
@@ -850,6 +865,14 @@ export function RoomsPage() {
             resetSelection();
             void invalidate();
           }}
+        />
+      ) : null}
+
+      {buildingsOpen ? (
+        <BuildingsDialog
+          buildings={buildings}
+          onClose={() => setBuildingsOpen(false)}
+          onChanged={() => void invalidate()}
         />
       ) : null}
 
@@ -1309,6 +1332,109 @@ function BulkEditDialog({
 /* ── Categories ────────────────────────────────────────────────────────── */
 
 /** Справочник категорий: завести, переименовать, убрать пустую. */
+/**
+ * КОРПУСА — СПРАВОЧНИК, устроенный как категории номеров.
+ *
+ * До этого корпус был свободной строкой в карточке номера: «Главный корпус»,
+ * «главный корпус» и «Гл. корпус» жили как три разных здания, и фильтр делил
+ * фонд на три части, притом что здание одно. Одинаковое устройство с
+ * категориями намеренно: это два справочника одного экрана.
+ */
+function BuildingsDialog({
+  buildings,
+  onClose,
+  onChanged,
+}: {
+  buildings: Building[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [title, setTitle] = useState('');
+
+  const fail = (error: unknown) =>
+    toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
+
+  const create = useMutation({
+    mutationFn: () => createBuilding({ title: { ru: title.trim() } }),
+    onSuccess: () => {
+      setTitle('');
+      onChanged();
+    },
+    onError: fail,
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteBuilding(id),
+    onSuccess: onChanged,
+    onError: fail,
+  });
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth data-testid="rooms-buildings-dialog">
+      <DialogTitle>{t('hotel.rooms.buildings')}</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={1} sx={{ pt: 1 }}>
+          {buildings.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t('hotel.rooms.buildingsEmpty')}
+            </Typography>
+          ) : (
+            buildings.map((building) => (
+              <Stack
+                key={building.id}
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                data-testid={`room-building-row-${building.code}`}
+              >
+                <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                  {building.title_i18n || building.code}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t('hotel.rooms.categoryRooms', { count: building.rooms_count })}
+                </Typography>
+                <IconButton
+                  size="small"
+                  disabled={remove.isPending}
+                  onClick={() => remove.mutate(building.id)}
+                  aria-label={t('common.delete')}
+                  data-testid={`room-building-delete-${building.code}`}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            ))
+          )}
+          <Divider sx={{ my: 1 }} />
+          <Stack direction="row" spacing={1}>
+            <TextField
+              size="small"
+              label={t('hotel.rooms.buildingNew')}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              inputProps={{ 'data-testid': 'room-building-title' }}
+              fullWidth
+            />
+            <Button
+              variant="contained"
+              disabled={!title.trim() || create.isPending}
+              onClick={() => create.mutate()}
+              data-testid="room-building-add"
+            >
+              {t('common.add')}
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.close')}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 function CategoriesDialog({
   categories,
   onClose,

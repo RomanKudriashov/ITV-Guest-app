@@ -128,6 +128,14 @@
   "/api/v1/cms/brand/versions/{version_id}/restore": [
     "POST"
   ],
+  "/api/v1/cms/buildings": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/cms/buildings/{building_id}": [
+    "DELETE",
+    "PATCH"
+  ],
   "/api/v1/cms/categories": [
     "GET",
     "POST"

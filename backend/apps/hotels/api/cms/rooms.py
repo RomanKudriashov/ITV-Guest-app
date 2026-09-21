@@ -12,6 +12,9 @@ from apps.hotels.schemas.cms import (
     BulkRoomsPreviewOut,
     BulkUpdateIn,
     BulkUpdateOut,
+    BuildingIn,
+    BuildingOut,
+    BuildingPatch,
     RoomCategoryIn,
     RoomCategoryOut,
     RoomCategoryPatch,
@@ -35,6 +38,7 @@ def list_rooms(
     offset: int = 0,
     floor: str = "",
     zone: str = "",
+    building_id: str = "",
     category: str = "",
     housekeeping: str = "",
     out_of_service: bool | None = None,
@@ -53,6 +57,7 @@ def list_rooms(
         filters={
             "floor": floor,
             "zone": zone,
+            "building_id": building_id,
             "category": category,
             "housekeeping": housekeeping,
             "out_of_service": out_of_service,
@@ -94,6 +99,32 @@ def bulk_update_rooms(request: HttpRequest, payload: BulkUpdateIn):
     Номер пачкой не меняется (см. сервис).
     """
     return svc.bulk_update_rooms(payload.dict())
+
+
+# --- Корпуса ---------------------------------------------------------------
+
+
+@router.get("/buildings", summary="Корпуса отеля")
+def list_buildings(request: HttpRequest):
+    return svc.list_buildings()
+
+
+@router.post("/buildings", response={201: BuildingOut}, summary="Завести корпус")
+def create_building(request: HttpRequest, payload: BuildingIn):
+    return 201, svc.serialize_building(svc.create_building(payload.dict()))
+
+
+@router.patch("/buildings/{building_id}", response=BuildingOut, summary="Изменить корпус")
+def update_building(request: HttpRequest, building_id: str, payload: BuildingPatch):
+    return svc.serialize_building(
+        svc.update_building(building_id, payload.dict(exclude_unset=True))
+    )
+
+
+@router.delete("/buildings/{building_id}", response=OkOut, summary="Удалить корпус")
+def delete_building(request: HttpRequest, building_id: str):
+    svc.delete_building(building_id)
+    return {"ok": True}
 
 
 # --- Категории номеров -----------------------------------------------------

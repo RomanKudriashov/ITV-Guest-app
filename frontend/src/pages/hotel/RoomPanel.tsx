@@ -29,7 +29,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { ApiError } from '@/api/client';
 import { cmsPath } from '@/app/hostRole';
 import { updateRoom } from '@/api/hotelAdmin';
-import type { GridRoom, RoomCategory, RoomHousekeeping } from '@/api/hotelAdminTypes';
+import type { Building, GridRoom, RoomCategory, RoomHousekeeping } from '@/api/hotelAdminTypes';
 import { useToast } from '@/components/ToastProvider';
 
 const HOUSEKEEPING: RoomHousekeeping[] = ['unknown', 'clean', 'dirty', 'in_progress'];
@@ -37,12 +37,14 @@ const HOUSEKEEPING: RoomHousekeeping[] = ['unknown', 'clean', 'dirty', 'in_progr
 export function RoomPanel({
   room,
   categories,
+  buildings,
   onClose,
   onChanged,
   onShowQr,
 }: {
   room: GridRoom;
   categories: RoomCategory[];
+  buildings: Building[];
   onClose: () => void;
   onChanged: () => void;
   onShowQr: () => void;
@@ -53,7 +55,11 @@ export function RoomPanel({
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
 
   const patch = useMutation({
-    mutationFn: (data: { category_id?: string | null; housekeeping?: RoomHousekeeping }) =>
+    mutationFn: (data: {
+      category_id?: string | null;
+      building_id?: string | null;
+      housekeeping?: RoomHousekeeping;
+    }) =>
       updateRoom(room.id, data),
     onSuccess: () => {
       toast.show(t('hotel.rooms.saved'), 'success');
@@ -137,6 +143,33 @@ export function RoomPanel({
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.title_i18n || category.code}
+            </option>
+          ))}
+        </TextField>
+
+        {/*
+          КОРПУС — ИЗ СПРАВОЧНИКА. Раньше это была свободная строка, и
+          «Главный корпус», «главный корпус» и «Гл. корпус» жили как три
+          разных здания: фильтр делил фонд на три части, а здание было одно.
+        */}
+        <TextField
+          select
+          size="small"
+          label={t('hotel.rooms.building')}
+          value={room.building_id ?? ''}
+          onChange={(event) =>
+            patch.mutate({ building_id: event.target.value ? event.target.value : null })
+          }
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ 'data-testid': 'room-panel-building' }}
+          disabled={patch.isPending}
+          fullWidth
+        >
+          <option value="">{t('hotel.rooms.buildingNone')}</option>
+          {buildings.map((building) => (
+            <option key={building.id} value={building.id}>
+              {building.title_i18n || building.code}
             </option>
           ))}
         </TextField>

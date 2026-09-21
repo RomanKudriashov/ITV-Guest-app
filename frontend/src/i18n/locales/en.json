@@ -1589,7 +1589,11 @@
       "panelOrders": "Room orders",
       "panelControl": "Room control",
       "panelNoControl": "This room has no equipment control",
-      "panelGuestUrl": "The link the QR encodes"
+      "panelGuestUrl": "The link the QR encodes",
+      "buildings": "Buildings",
+      "buildingsEmpty": "No buildings yet. Add the first one and pick it on a room card.",
+      "buildingNew": "Building name",
+      "building": "Building"
     },
     "locations": {
       "title": "Locations",

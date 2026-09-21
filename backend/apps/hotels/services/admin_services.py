@@ -34,6 +34,7 @@ from apps.hotels.models import (
     Hotel,
     Location,
     Room,
+    Building,
     RoomCategory,
     Schedule,
     Service,
@@ -55,7 +56,19 @@ def serialize_room(
         "id": str(room.pk),
         "number": room.number,
         "floor": room.floor,
+        # Строка корпуса — историческая: её показывает только номер, заведённый
+        # до справочника. Новый экран читает `building`.
         "zone": room.zone,
+        "building_id": str(room.building_id) if room.building_id else None,
+        "building": (
+            {
+                "id": str(room.building_id),
+                "code": room.building.code,
+                "title": room.building.title_i18n,
+            }
+            if room.building_id
+            else None
+        ),
         "source": room.source,
         "is_active": room.is_active,
         "guest_url": hotel.room_deeplink(room.number),
@@ -96,6 +109,7 @@ def serialize_room(
 ROOM_FILTERS = (
     "floor",
     "zone",
+    "building_id",
     "category",
     "housekeeping",
     "out_of_service",
@@ -118,6 +132,8 @@ def rooms_queryset(*, search: str = "", filters: dict | None = None):
         rooms = rooms.filter(floor=filters["floor"])
     if filters.get("zone"):
         rooms = rooms.filter(zone=filters["zone"])
+    if filters.get("building_id"):
+        rooms = rooms.filter(building_id=filters["building_id"])
     if filters.get("category"):
         # «none» — номера БЕЗ категории: их надо уметь найти, чтобы назначить.
         value = filters["category"]
@@ -306,6 +322,13 @@ def _room_fields(data: dict) -> dict:
     if "category_id" in data:
         value = data.get("category_id")
         fields["category"] = _category_or_none(value)
+    if "building_id" in data:
+        # Корпус СПРАВОЧНИКОМ. Строку `zone` ведём следом за ним: она остаётся
+        # снимком на случай, если запись справочника потом удалят, и по ней же
+        # читаются номера, заведённые до переноса.
+        building = _building_or_none(data.get("building_id"))
+        fields["building"] = building
+        fields["zone"] = building.title_i18n if building is not None else ""
     if "housekeeping" in data and data.get("housekeeping") is not None:
         value = str(data["housekeeping"])
         if value not in Room.Housekeeping.values:
@@ -317,6 +340,16 @@ def _room_fields(data: dict) -> dict:
         fields["out_of_service"] = bool(data["out_of_service"])
 
     return fields
+
+
+def _building_or_none(value):
+    """Корпус по идентификатору — или `None`, если его снимают."""
+    if not value:
+        return None
+    building = Building.objects.filter(pk=value).first()
+    if building is None:
+        raise ValidationError("Корпус не найден", field="building_id")
+    return building
 
 
 def _category_or_none(value):
@@ -860,7 +893,17 @@ def _device_state() -> str:
 # требует подтверждения на КАЖДЫЙ номер (наклейка QR и имя устройства iRidi у
 # каждого свои), а «подтвердить всё разом» — это ровно то молчание, от
 # которого мы ушли в одиночной правке.
-BULK_PATCH_FIELDS = ("floor", "zone", "category_id", "housekeeping", "out_of_service", "is_active")
+BULK_PATCH_FIELDS = (
+    "floor",
+    "zone",
+    # Корпус правится пачкой: перевести крыло из одного корпуса в другой —
+    # это ровно то, ради чего массовая правка и существует.
+    "building_id",
+    "category_id",
+    "housekeeping",
+    "out_of_service",
+    "is_active",
+)
 
 
 def resolve_selection(selection: dict):
@@ -951,6 +994,97 @@ def bulk_update_rooms(payload: dict) -> dict:
         payload={"matched": len(rooms), "changed": changed, "patch": sorted(patch)},
     )
     return {"matched": len(rooms), "changed": changed}
+
+
+# --- Корпуса ---------------------------------------------------------------
+#
+# Устроены как категории номеров и намеренно: это два справочника одного
+# экрана, и разное устройство означало бы разное поведение там, где человек
+# ждёт одинакового.
+
+
+def serialize_building(building: Building, *, counts: dict | None = None) -> dict:
+    return {
+        "id": str(building.pk),
+        "code": building.code,
+        "title": building.title,
+        "title_i18n": building.title_i18n,
+        "sort_order": building.sort_order,
+        "is_active": building.is_active,
+        "rooms_count": (counts or {}).get(building.pk, 0),
+    }
+
+
+def list_buildings() -> dict:
+    require_hotel_admin()
+    from django.db.models import Count
+
+    counts = dict(
+        Room.objects.exclude(building__isnull=True)
+        .values_list("building_id")
+        .annotate(total=Count("id"))
+    )
+    rows = list(Building.objects.all())
+    return {
+        "items": [serialize_building(row, counts=counts) for row in rows],
+        "total": len(rows),
+    }
+
+
+def get_building(building_id) -> Building:
+    require_hotel_admin()
+    building = Building.objects.filter(pk=building_id).first()
+    if building is None:
+        raise NotFoundError("Корпус не найден")
+    return building
+
+
+@transaction.atomic
+def create_building(data: dict) -> Building:
+    require_hotel_admin()
+    title = data.get("title") or {}
+    if not any((value or "").strip() for value in title.values()):
+        raise ValidationError("Укажите название", field="title")
+    code = str(data.get("code") or "").strip() or _category_code_from(title)
+    if Building.objects.filter(code=code).exists():
+        raise ConflictError(f"Корпус «{code}» уже существует", code="building_exists")
+    return Building.objects.create(
+        code=code,
+        title=title,
+        sort_order=int(data.get("sort_order") or 0),
+        is_active=data.get("is_active", True),
+    )
+
+
+@transaction.atomic
+def update_building(building_id, data: dict) -> Building:
+    building = get_building(building_id)
+    if "title" in data and data["title"] is not None:
+        building.title = data["title"]
+    if "code" in data and data["code"]:
+        code = str(data["code"]).strip()
+        if Building.objects.filter(code=code).exclude(pk=building.pk).exists():
+            raise ConflictError(f"Корпус «{code}» уже существует", code="building_exists")
+        building.code = code
+    if "sort_order" in data and data["sort_order"] is not None:
+        building.sort_order = int(data["sort_order"])
+    if "is_active" in data and data["is_active"] is not None:
+        building.is_active = bool(data["is_active"])
+    building.save()
+    return building
+
+
+def delete_building(building_id) -> None:
+    """Занятый корпус не удаляем, а называем число — как у категорий."""
+    building = get_building(building_id)
+    busy = Room.objects.filter(building=building).count()
+    if busy:
+        raise ConflictError(
+            f"В корпусе {busy} номеров — сначала переназначьте их",
+            code="building_in_use",
+            rooms_count=busy,
+        )
+    building.delete()
 
 
 # --- Категории номеров -----------------------------------------------------
