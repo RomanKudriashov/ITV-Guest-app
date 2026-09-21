@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { alpha, type Theme } from '@mui/material/styles';
 
@@ -58,11 +58,34 @@ export function KitImage({
 }: KitImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
-  // A new source restarts the load/skeleton cycle.
+  /*
+    КАРТИНКА ИЗ КЭША УСПЕВАЕТ ЗАГРУЗИТЬСЯ ДО ТОГО, КАК РЕАКТ ПОВЕСИТ `onLoad`.
+
+    Так на витрине и появлялись чёрные плитки: название на месте, кадр
+    загружен целиком — и невидим. Проверено на стенде, двадцать кругов
+    «главная → заведение → назад»: у пустых плиток `naturalWidth=600`,
+    `complete=true`, сервер 200 `image/webp` нужного размера, ни одного
+    неудачного запроса. То есть пиксели БЫЛИ, а `opacity` оставалась нулём,
+    потому что событие загрузки прошло мимо обработчика.
+
+    Чаще всего это случалось после возврата назад — там кэш уже тёплый, и
+    гонка выигрывается браузером почти всегда. Отсюда и «иногда»: на холодном
+    кэше загрузка занимает время, и обработчик успевает.
+
+    Поэтому состояние берётся не только из события, но и СПРАШИВАЕТСЯ У САМОГО
+    ЭЛЕМЕНТА: `complete && naturalWidth > 0` значит «уже нарисована», и ждать
+    события нечего — его не будет.
+  */
   useEffect(() => {
-    setLoaded(false);
     setErrored(false);
+    const node = imgRef.current;
+    if (node?.complete && node.naturalWidth > 0) {
+      setLoaded(true);
+      return;
+    }
+    setLoaded(false);
   }, [src]);
 
   const showImage = Boolean(src) && !errored;
@@ -98,6 +121,7 @@ export function KitImage({
           ) : null}
           <Box
             component="img"
+            ref={imgRef}
             src={src as string}
             alt={alt}
             loading="lazy"
