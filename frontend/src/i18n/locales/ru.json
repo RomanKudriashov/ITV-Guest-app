@@ -933,7 +933,9 @@
       "reset": "Сбросить",
       "since": "Закрыт с",
       "until": "Закрыт по",
-      "room": "Комната"
+      "room": "Комната",
+      "status": "Статус",
+      "anyStatus": "Любой"
     },
     "handover": {
       "takenBy": "Заказ №{{number}} взял {{name}}",

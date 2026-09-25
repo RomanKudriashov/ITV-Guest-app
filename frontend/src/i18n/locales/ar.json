@@ -951,7 +951,9 @@
       "reset": "إعادة تعيين",
       "since": "أُغلق من",
       "until": "أُغلق إلى",
-      "room": "الغرفة"
+      "room": "الغرفة",
+      "status": "الحالة",
+      "anyStatus": "الكل"
     },
     "handover": {
       "takenBy": "الطلب رقم {{number}} استلمه {{name}}",

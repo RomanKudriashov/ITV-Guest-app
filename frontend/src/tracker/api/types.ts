@@ -258,6 +258,12 @@ export interface TrackerColumn {
   date?: string;
 }
 
+export interface TrackerStatusOption {
+  code: string;
+  title: string;
+  color_token?: string;
+}
+
 export interface TrackerBoard {
   point: TrackerPointRef;
   scope: TrackerScope;
@@ -274,6 +280,14 @@ export interface TrackerBoard {
    * управляющий не проверит, почему у человека пусто.
    */
   assignees?: TrackerAssignee[];
+  /**
+   * Чем наполнять фильтр «Статус» — приходит ТОЛЬКО для истории.
+   *
+   * Коды статусов живут в потоке точки («готовится → в пути» у кухни,
+   * «в работе → готово» у хозслужбы), поэтому список едет с доской, а не
+   * зашит на клиенте. На активной доске его нет: там статус и есть колонка.
+   */
+  statuses?: TrackerStatusOption[] | null;
   next_cursor?: string | null;
   /**
    * Цифры ПО ТЕКУЩЕЙ ВЫБОРКЕ — приходят только для истории.

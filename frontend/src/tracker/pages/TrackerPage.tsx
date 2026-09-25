@@ -244,10 +244,11 @@ export function TrackerPage() {
     overdue: '',
     assignee: '',
     order_type: '',
-    // Только для истории: период по моменту ЗАКРЫТИЯ и точная комната.
+    // Только для истории: период по моменту ЗАКРЫТИЯ, точная комната, статус.
     since: '',
     until: '',
     room: '',
+    status: '',
   });
   const focus = listParams.focus as ShiftFocus;
   const filters = useMemo(
@@ -260,12 +261,14 @@ export function TrackerPage() {
       since: listParams.since,
       until: listParams.until,
       room: listParams.room,
+      status: listParams.status,
     }),
     [
       listParams.mine,
       listParams.since,
       listParams.until,
       listParams.room,
+      listParams.status,
       listParams.unassigned,
       listParams.overdue,
       listParams.assignee,
@@ -840,6 +843,7 @@ export function TrackerPage() {
         onChange={(next) => patchList(next)}
         onReset={resetList}
         assignees={boardQuery.data?.assignees ?? []}
+        statuses={boardQuery.data?.statuses ?? []}
         activeCount={activeFilters}
       />
 

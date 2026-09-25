@@ -923,7 +923,9 @@
       "reset": "Reset",
       "since": "Closed from",
       "until": "Closed to",
-      "room": "Room"
+      "room": "Room",
+      "status": "Status",
+      "anyStatus": "Any"
     },
     "handover": {
       "takenBy": "Order #{{number}} was taken by {{name}}",

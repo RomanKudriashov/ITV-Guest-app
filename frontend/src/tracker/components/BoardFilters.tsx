@@ -10,7 +10,7 @@ import TextField from '@mui/material/TextField';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useTranslation } from 'react-i18next';
 
-import type { TrackerAssignee } from '../api/types';
+import type { TrackerAssignee, TrackerStatusOption } from '../api/types';
 
 /**
  * ПАНЕЛЬ ФИЛЬТРОВ ДОСКИ.
@@ -38,10 +38,11 @@ export interface BoardFilterValues {
   overdue: string;
   assignee: string;
   order_type: string;
-  /** Только для истории: период по моменту ЗАКРЫТИЯ и точная комната. */
+  /** Только для истории: период по моменту ЗАКРЫТИЯ, точная комната, статус. */
   since: string;
   until: string;
   room: string;
+  status: string;
 }
 
 export interface BoardFiltersProps {
@@ -60,6 +61,12 @@ export interface BoardFiltersProps {
   onChange: (next: Partial<BoardFilterValues>) => void;
   onReset: () => void;
   assignees: TrackerAssignee[];
+  /**
+   * Статусы для фильтра — те, что прислал сервер для ЭТОЙ точки. Пустой
+   * список значит «сервер их не прислал», и поле не рисуется: выпадающий
+   * список с одним «Любой» — обещание, за которым ничего нет.
+   */
+  statuses?: TrackerStatusOption[];
   activeCount: number;
 }
 
@@ -71,6 +78,7 @@ export function BoardFilters({
   onChange,
   onReset,
   assignees,
+  statuses = [],
   activeCount,
 }: BoardFiltersProps) {
   const { t } = useTranslation();
@@ -217,6 +225,31 @@ export function BoardFilters({
                   onChange={(event) => onChange({ room: event.target.value })}
                   inputProps={{ 'data-testid': 'tracker-filter-room' }}
                 />
+                {/*
+                  СТАТУС — только в истории и только из списка сервера.
+                  «Покажи одни отменённые» — вопрос к закрытым заказам; на
+                  активной доске тот же вопрос уже отвечен колонкой.
+                */}
+                {statuses.length > 0 ? (
+                  <TextField
+                    select
+                    size="small"
+                    fullWidth
+                    label={t('tracker.filters.status')}
+                    value={values.status}
+                    onChange={(event) => onChange({ status: event.target.value })}
+                    SelectProps={{
+                      SelectDisplayProps: { 'data-testid': 'tracker-filter-status' } as never,
+                    }}
+                  >
+                    <MenuItem value="">{t('tracker.filters.anyStatus')}</MenuItem>
+                    {statuses.map((status) => (
+                      <MenuItem key={status.code} value={status.code}>
+                        {status.title}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                ) : null}
               </Stack>
             ) : null}
 

@@ -159,3 +159,103 @@ test.describe('Доска: фильтры', () => {
     await expect(page.getByRole('option', { name: PETR.name })).toBeVisible()
   })
 })
+
+/**
+ * ФИЛЬТР «СТАТУС» В ИСТОРИИ (партия 20, хвост пункта 3).
+ *
+ * Сужать по статусу сервер умел и раньше — выбрать статус было не из чего, и
+ * «покажи только отменённые» в истории сделать было нельзя. Список статусов
+ * приходит С ДОСКОЙ: коды живут в потоке точки, и зашивать их в клиенте
+ * значит соврать первому же отелю со своим потоком.
+ */
+const HISTORY_STATUSES = [
+  { code: 'done', title: 'Доставлено', color_token: 'success' },
+  { code: 'cancelled', title: 'Отменён', color_token: 'danger' },
+]
+
+/** Доска, которая отвечает историей и приносит статусы для фильтра. */
+async function watchHistoryBoard(page: Page): Promise<string[]> {
+  const asked: string[] = []
+  await page.routeWebSocket('**/ws/**', (ws) => ws.close())
+  await page.route('**/api/v1/tracker/orders**', async (route) => {
+    const url = route.request().url()
+    asked.push(url)
+    const history = url.includes('scope=history')
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        point: POINT,
+        scope: history ? 'history' : 'active',
+        server_time: new Date().toISOString(),
+        tracker_type: 'board',
+        layout: 'columns',
+        columns: history
+          ? [{ code: 'history', title: '', orders: [] }]
+          : [{ code: 'new', title: 'Новый', color_token: 'info', orders: [] }],
+        next_cursor: null,
+        shift: {
+          new: 0,
+          in_work: 0,
+          overdue: 0,
+          done: 0,
+          median_minutes: null,
+          median_accept_minutes: null,
+          shift_started_at: new Date().toISOString(),
+          sla_minutes: 20,
+          last_order_at: null,
+        },
+        assignees: [PETR],
+        // Только в истории: на активной доске статус и есть колонка.
+        statuses: history ? HISTORY_STATUSES : null,
+        selection: history
+          ? { orders: 0, revenue_minor: 0, cancelled: 0, median_minutes: null }
+          : undefined,
+      }),
+    })
+  })
+  return asked
+}
+
+test.describe('История: фильтр по статусу', () => {
+  test('УКУС: «только отменённые» уходит на сервер и живёт в адресе', async ({ page }) => {
+    const urls = await watchHistoryBoard(page)
+    await signInToTracker(page, CREDENTIALS)
+
+    await page.getByTestId('tracker-history-tab').click()
+    await expect.poll(() => asked(urls, 'scope=history'), { timeout: 15_000 }).toBe(true)
+
+    await page.getByTestId('tracker-filters-toggle').click()
+    await expect(page.getByTestId('tracker-filters-panel')).toBeVisible()
+
+    // Список наполнен тем, что прислал сервер, а не зашитым набором.
+    await page.getByTestId('tracker-filter-status').click()
+    await expect(page.getByRole('option', { name: 'Отменён' })).toBeVisible()
+    await page.getByRole('option', { name: 'Отменён' }).click()
+
+    await expect.poll(() => asked(urls, 'status=cancelled'), { timeout: 15_000 }).toBe(true)
+    await expect(page).toHaveURL(/status=cancelled/)
+  })
+
+  test('сброс фильтров снимает и статус', async ({ page }) => {
+    await watchHistoryBoard(page)
+    await signInToTracker(page, CREDENTIALS)
+    await page.getByTestId('tracker-history-tab').click()
+    await page.getByTestId('tracker-filters-toggle').click()
+    await page.getByTestId('tracker-filter-status').click()
+    await page.getByRole('option', { name: 'Отменён' }).click()
+    await expect(page).toHaveURL(/status=cancelled/)
+
+    await page.getByTestId('tracker-filters-reset').click()
+    await expect(page).not.toHaveURL(/status=cancelled/)
+  })
+
+  test('на активной доске фильтра по статусу нет: там статус — это колонка', async ({ page }) => {
+    await watchHistoryBoard(page)
+    await signInToTracker(page, CREDENTIALS)
+
+    await page.getByTestId('tracker-filters-toggle').click()
+    await expect(page.getByTestId('tracker-filters-panel')).toBeVisible()
+    await expect(page.getByTestId('tracker-filter-status')).toHaveCount(0)
+  })
+})

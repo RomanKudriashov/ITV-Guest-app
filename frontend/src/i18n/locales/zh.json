@@ -915,7 +915,9 @@
       "reset": "重置",
       "since": "关闭自",
       "until": "关闭至",
-      "room": "房间"
+      "room": "房间",
+      "status": "状态",
+      "anyStatus": "全部"
     },
     "handover": {
       "takenBy": "{{name}} 已接单 №{{number}}",

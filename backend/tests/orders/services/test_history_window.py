@@ -25,6 +25,7 @@ from apps.hotels.models import ExecutionPoint
 from apps.orders.models import Order
 from apps.orders.services import OrderInput, OrderLineInput, create_order
 from apps.orders.services.services import change_status
+from apps.orders.services import status_flows
 from apps.orders.services.tracker import build_board
 
 pytestmark = pytest.mark.django_db
@@ -243,3 +244,49 @@ def test_a_guest_cancelling_does_not_have_to_explain_himself(crystal):
 
         assert order.status.is_cancelled
         assert order.cancel_reason == Order.CancelReason.GUEST_REFUSED
+
+
+# --- Чем наполнять фильтр «Статус» -----------------------------------------
+
+
+def test_history_carries_the_statuses_its_filter_can_offer(crystal):
+    """
+    Сужать по статусу сервер умел и раньше — выбрать его было НЕ ИЗ ЧЕГО.
+
+    Список кодов живёт в потоке точки: у кухни он один, у хозслужбы другой.
+    Поэтому он едет с доской, как и «исполнитель», а не зашивается в клиенте.
+    """
+    with tenant_context(crystal):
+        board = build_board(_kitchen(), scope="history", language="ru")
+
+        codes = [row["code"] for row in board["statuses"]]
+        assert codes, "история пришла без списка статусов — фильтру нечем наполниться"
+        assert "cancelled" in codes, "«Отменён» не предложить, а отменённые в истории есть"
+        # Подпись человеческая, а не код: её показывают в выпадающем списке.
+        assert all(row["title"] and row["title"] != row["code"] for row in board["statuses"])
+
+
+def test_the_status_filter_offers_only_what_history_can_show(crystal):
+    """
+    Только терминальные. `_history_queryset` отбирает `is_terminal=True`, и
+    «Готовится» в списке означал бы выборку, которая ВСЕГДА пуста.
+    """
+    with tenant_context(crystal):
+        board = build_board(_kitchen(), scope="history", language="ru")
+        offered = {row["code"] for row in board["statuses"]}
+
+        point = _kitchen()
+        flow_statuses = status_flows.statuses_for_flow(status_flows.flow_for_point(point))
+        terminal = {s.code for s in flow_statuses if s.is_terminal}
+        alive = {s.code for s in flow_statuses if not s.is_terminal}
+
+        assert offered == terminal
+        assert not (offered & alive), "в фильтре статус, которого в истории не бывает"
+
+
+def test_the_active_board_does_not_offer_a_status_filter(crystal):
+    """На активной доске статус И ЕСТЬ колонка: второй отбор по нему — второй
+    ответ на тот же вопрос."""
+    with tenant_context(crystal):
+        board = build_board(_kitchen(), scope="active", language="ru")
+        assert board["statuses"] is None
