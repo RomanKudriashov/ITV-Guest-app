@@ -1236,6 +1236,10 @@
         "failed": "فشل",
         "skipped": "متخطى",
         "cancelled": "ملغى"
+      },
+      "receipt": "الإيصال",
+      "receipts": {
+        "logged": "سُجّل في سجل التطبيق"
       }
     },
     "validation": {

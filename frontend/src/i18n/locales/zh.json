@@ -1190,6 +1190,10 @@
         "failed": "失败",
         "skipped": "已跳过",
         "cancelled": "已取消"
+      },
+      "receipt": "回执",
+      "receipts": {
+        "logged": "已写入应用日志"
       }
     },
     "validation": {

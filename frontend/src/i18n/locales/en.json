@@ -1200,6 +1200,10 @@
         "failed": "Failed",
         "skipped": "Skipped",
         "cancelled": "Cancelled"
+      },
+      "receipt": "Receipt",
+      "receipts": {
+        "logged": "Written to the application log"
       }
     },
     "validation": {

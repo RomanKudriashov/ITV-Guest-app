@@ -1214,6 +1214,10 @@
         "failed": "Ошибка",
         "skipped": "Пропущено",
         "cancelled": "Отменено"
+      },
+      "receipt": "Квитанция",
+      "receipts": {
+        "logged": "Записано в журнал приложения"
       }
     },
     "validation": {

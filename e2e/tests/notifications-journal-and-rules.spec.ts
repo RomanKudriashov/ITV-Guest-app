@@ -129,3 +129,75 @@ test.describe('Уведомления: журнал и второе правил
     await request.delete(`${API}/api/cms/escalation-rules/${created!.id}`, { headers })
   })
 })
+
+/**
+ * `logged` КРАСНЫМ У УСПЕШНОЙ СТРОКИ (партия 20, хвост пункта 5).
+ *
+ * Сервер кладёт в поле `error` две разные вещи: текст ошибки, когда отправка не
+ * удалась, и ОТВЕТ КАНАЛА, когда удалась (`logged` у лог-канала, идентификатор
+ * письма у почты). Журнал показывал поле одной колонкой «Ошибка» и красным —
+ * рядом с зелёным «Отправлено» горело красное `logged`, и читалось это как
+ * «ушло, но что-то сломалось».
+ */
+test('у успешной строки журнала «Ошибка» пуста, а ответ канала — не красный', async ({
+  page,
+  request,
+}) => {
+  const token = await apiToken(request)
+  const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+  const log = await request.get(`${API}/api/cms/notification-log?limit=100`, { headers })
+  const entries = (await log.json()).items as Array<{
+    order_number: number
+    status: string
+    error: string | null
+  }>
+  const sent = entries.find((entry) => entry.status === 'sent' && (entry.error ?? '').trim())
+  test.skip(!sent, 'в журнале стенда нет успешной отправки с ответом канала')
+
+  await signInToCms(page)
+  await page.goto('/cms/notifications')
+  await page.getByTestId('cms-notifications-tab-log').click()
+  await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
+  await page.getByTestId('cms-log-order-filter').fill(String(sent.order_number))
+
+  const rows = page.locator('[data-testid^="cms-log-row-"]').filter({ hasText: 'Отправлено' })
+  await expect(rows.first()).toBeVisible({ timeout: 20_000 })
+
+  /*
+    У КАЖДОЙ успешной строки «Ошибка» пуста. Ответ канала лежит не у всякой:
+    ступень сама по себе ничего не отправляет, отправляют её строки доставки —
+    поэтому квитанцию ищем среди них, а не берём первую попавшуюся.
+  */
+  const indexes: string[] = []
+  for (const row of await rows.all()) {
+    indexes.push(((await row.getAttribute('data-testid')) ?? '').replace('cms-log-row-', ''))
+  }
+  let withReceipt = ''
+  for (const index of indexes) {
+    await expect(
+      page.getByTestId(`cms-log-error-${index}`),
+      'у успешной отправки колонка «Ошибка» непуста',
+    ).toHaveText('')
+    if (!withReceipt && (await page.getByTestId(`cms-log-receipt-${index}`).innerText()).trim()) {
+      withReceipt = index
+    }
+  }
+  expect(withReceipt, 'ни у одной успешной доставки не показан ответ канала').not.toBe('')
+
+  const receipt = page.getByTestId(`cms-log-receipt-${withReceipt}`)
+  // Ответ канала НАЗВАН ПО-ЧЕЛОВЕЧЕСКИ, а не техническим словом.
+  if (sent.error?.trim() === 'logged') {
+    await expect(receipt).toHaveText('Записано в журнал приложения')
+  }
+
+  /*
+    И ОН НЕ КРАСНЫЙ. Проверяем ВЫЧИСЛЕННЫМ цветом, а не тем, что колонка
+    другая: наличие ячейки ничего не говорит о том, каким её видит человек.
+  */
+  const colour = await receipt.evaluate((node) => getComputedStyle(node).color)
+  const [r, g, b] = (colour.match(/\d+/g) ?? ['0', '0', '0']).map(Number)
+  expect(
+    r - g > 40 && r - b > 40,
+    `ответ канала нарисован красным (${colour}) — снова читается как ошибка`,
+  ).toBe(false)
+})

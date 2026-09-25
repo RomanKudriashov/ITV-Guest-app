@@ -25,6 +25,7 @@ import type { NotificationChannel, NotificationLogEntry } from '@/api/notificati
 import { EmptyState } from '@/components/EmptyState';
 import {
   LOG_STATUSES,
+  deliveryNote,
   flattenLog,
   groupLog,
   logStatusSlot,
@@ -162,12 +163,14 @@ export function LogTab({ channels }: LogTabProps) {
                   <TableCell>{t('notifications.log.channel')}</TableCell>
                   <TableCell>{t('notifications.log.status')}</TableCell>
                   <TableCell>{t('notifications.log.error')}</TableCell>
+                  <TableCell>{t('notifications.log.receipt')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {rows.map(({ entry, depth }, index) => {
                   const spec = logStatusSpec(entry.status);
                   const slot = logStatusSlot(entry.status);
+                  const note = deliveryNote(entry);
                   return (
                     <TableRow
                       key={entry.id}
@@ -209,8 +212,22 @@ export function LogTab({ channels }: LogTabProps) {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: 'error.main', maxWidth: 260 }}>
-                        {entry.error || ''}
+                      {/*
+                        ОШИБКА — ТОЛЬКО ОШИБКА. У успешной отправки в том же
+                        поле лежит ответ канала (`logged`, идентификатор
+                        письма), и красным он читался как поломка.
+                      */}
+                      <TableCell
+                        data-testid={`cms-log-error-${index}`}
+                        sx={{ color: 'error.main', maxWidth: 260 }}
+                      >
+                        {note.failure}
+                      </TableCell>
+                      <TableCell
+                        data-testid={`cms-log-receipt-${index}`}
+                        sx={{ color: 'text.secondary', maxWidth: 220 }}
+                      >
+                        {note.receiptKey ? t(note.receiptKey) : note.receipt}
                       </TableCell>
                     </TableRow>
                   );

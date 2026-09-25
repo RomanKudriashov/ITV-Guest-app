@@ -51,6 +51,48 @@ export function logStatusSlot(status: string | null | undefined): StatusPaletteS
   return statusSlot(logStatusSpec(status).colorToken);
 }
 
+/* ── Квитанция канала против ошибки ─────────────────────────────────────── */
+
+/*
+  ОДНО ПОЛЕ, ДВА РАЗНЫХ СМЫСЛА — И ЭТО НЕ НАША ВОЛЬНОСТЬ, А ФАКТ ХРАНЕНИЯ.
+
+  Сервер кладёт в `error` и текст ошибки (когда отправка не удалась), и ОТВЕТ
+  КАНАЛА, когда удалась: `delivery.py` пишет туда `reference` от адаптера.
+  У лог-канала это слово `logged`, у почты и телеграма — идентификатор
+  сообщения. Экран показывал поле одной колонкой «Ошибка» и красным, поэтому у
+  успешной строки рядом с зелёным «Отправлено» горело красное `logged`.
+
+  Читается это как «отправлено, но что-то сломалось», и на разборе 24.09.2026
+  именно так и прочли. Здесь решается, что из поля показать как ошибку, а что —
+  как квитанцию; цвет и колонку выбирает уже компонент.
+*/
+
+/** Ответы каналов, у которых есть человеческое имя. Прочие — как есть (id). */
+const RECEIPT_KEYS: Record<string, string> = {
+  logged: 'notifications.log.receipts.logged',
+};
+
+export interface DeliveryNote {
+  /** Настоящая ошибка: показывать в колонке «Ошибка», красным. */
+  failure: string;
+  /** Ответ канала у успешной отправки: своя колонка, спокойным цветом. */
+  receipt: string;
+  /** Ключ перевода квитанции, если ответ канала — известное слово, а не id. */
+  receiptKey: string | null;
+}
+
+export function deliveryNote(entry: {
+  status?: string | null;
+  error?: string | null;
+}): DeliveryNote {
+  const value = (entry.error ?? '').trim();
+  // Успех — единственное состояние, где в поле лежит НЕ ошибка.
+  if (entry.status === 'sent') {
+    return { failure: '', receipt: value, receiptKey: RECEIPT_KEYS[value] ?? null };
+  }
+  return { failure: value, receipt: '', receiptKey: null };
+}
+
 /* ── Two-level grouping ────────────────────────────────────────────────── */
 
 export interface LogNode {
