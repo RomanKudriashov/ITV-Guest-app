@@ -228,6 +228,117 @@ for (const file of walk(DOCS)) {
   }
 }
 
+/*
+  ПАРОЛЬ, ЗА КОТОРЫМ КНИГА ПОСЫЛАЕТ В НИКУДА.
+
+  24.09.2026 проверка на внешнем стенде встала на первом шаге: книга называла
+  источником пароля демо-сотрудников переменную `STAND_HOTEL_ADMIN_PASSWORD` из
+  `.env.prod`, вход по ней отвечал 401, а учётка была жива. Переменную не читает
+  НИКТО — её нет в образцах окружения, — а пароль задаёт константа сида.
+
+  Почему этого не поймал сторож переменных выше: он судит только помеченные
+  блоки `<!-- check:env -->`, а обещание про пароль живёт прозой. Прозу целиком
+  сторожить нельзя (пробовали — краснеет на кодах ошибок), поэтому здесь сужено
+  до ПАРОЛЕЙ: `*_PASSWORD` — это всегда обещание «вот этим ты войдёшь», и цена
+  вранья тут не спор о словах, а потерянный час.
+
+  Оговорка разрешена и даже полезна: назвать ложный след можно, если рядом
+  сказано, что он ложный.
+*/
+const PASSWORD_VARIABLE = /`([A-Z][A-Z0-9_]*_PASSWORD)`/g;
+const DISCLAIMED = ['не читает', 'ложный след'];
+let passwordClaims = 0;
+
+/*
+  «СИСТЕМА ЧИТАЕТ ПЕРЕМЕННУЮ» — ЭТО ПРО КОД, А НЕ ПРО ОБРАЗЕЦ ОКРУЖЕНИЯ.
+
+  Первая редакция сторожа судила по `.env*.example` и покраснела на
+  `PLATFORM_PASSWORD` и `E2E_ADMIN_PASSWORD` — а их читают обходные скрипты и
+  смок стенда, то есть книга про них не врёт. Образец описывает окружение
+  СЛУЖБ; переменные инструментов живут только в коде инструментов.
+*/
+const CODE_DIRS = ['backend', 'e2e', 'frontend/src', 'frontend/scripts', 'infra'];
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '__pycache__', '.venv', 'test-results']);
+
+function passwordNamesInCode() {
+  const found = new Set();
+  /*
+    СЕБЯ СТОРОЖ НЕ ЧИТАЕТ. Проверено укусом: имя `STAND_HOTEL_ADMIN_PASSWORD`
+    стоит в комментарии выше — и сторож, наткнувшись на него, объявил
+    переменную читаемой и промолчал на возвращённой в книгу неправде. Сторож,
+    который считает собственный текст доказательством, бесполезен.
+  */
+  const SELF = fileURLToPath(import.meta.url);
+  const scan = (dir) => {
+    for (const name of readdirSync(dir)) {
+      if (SKIP_DIRS.has(name)) continue;
+      const full = join(dir, name);
+      if (full === SELF) continue;
+      if (statSync(full).isDirectory()) scan(full);
+      else if (/\.(py|ts|tsx|mjs|js|yml|yaml|env|example|sh)$/.test(name)) {
+        for (const [match] of readFileSync(full, 'utf8').matchAll(/\b[A-Z][A-Z0-9_]*_PASSWORD\b/g)) {
+          found.add(match);
+        }
+      }
+    }
+  };
+  for (const dir of CODE_DIRS) {
+    const full = join(ROOT, dir);
+    if (existsSync(full)) scan(full);
+  }
+  for (const file of ['docker-compose.yml', 'docker-compose.prod.yml']) {
+    const full = join(ROOT, file);
+    if (!existsSync(full)) continue;
+    for (const [match] of readFileSync(full, 'utf8').matchAll(/\b[A-Z][A-Z0-9_]*_PASSWORD\b/g)) {
+      found.add(match);
+    }
+  }
+  return found;
+}
+
+const readPasswords = passwordNamesInCode();
+
+for (const file of walk(DOCS)) {
+  const short = file.slice(ROOT.length);
+  const text = readFileSync(file, 'utf8').replace(/^```[\s\S]*?^```/gm, '');
+  for (const block of text.split(/\n\s*\n/)) {
+    const disclaimed = DISCLAIMED.some((word) => block.includes(word));
+    for (const [, name] of block.matchAll(PASSWORD_VARIABLE)) {
+      passwordClaims += 1;
+      if (env.has(name) || readPasswords.has(name) || disclaimed) continue;
+      problems.push(
+        `  ${short} — за паролем послано в переменную, которой система не читает: ${name}`,
+      );
+    }
+  }
+}
+
+/*
+  ПАРОЛЬ ДЕМО-СОТРУДНИКОВ: ОДИН ИСТОЧНИК НА СИД И НА СМОК.
+
+  Книга обещает, что расхождение заметит первая же проверка, — и это правда,
+  только пока сид и умолчание смока говорят одно и то же. Разойдутся — смок
+  будет ходить одним паролем, стенд жить другим, и 401 снова спишут на книгу.
+*/
+const seedSource = readFileSync(
+  join(ROOT, 'backend/apps/hotels/management/commands/seed_demo_hotel.py'),
+  'utf8',
+);
+const smokeSource = readFileSync(join(ROOT, 'e2e/stand-smoke/stand.ts'), 'utf8');
+const seeded = new Set(
+  [...seedSource.matchAll(/(?:admin_)?password="([^"]+)"/g)].map((match) => match[1]),
+);
+const smokeDefault = smokeSource.match(/E2E_ADMIN_PASSWORD \?\? '([^']+)'/);
+if (!seeded.size) {
+  problems.push('  сид больше не задаёт пароль демо-сотрудников явно — сторожу нечего сверять');
+} else if (!smokeDefault) {
+  problems.push('  у смока стенда пропало умолчание E2E_ADMIN_PASSWORD');
+} else if (!seeded.has(smokeDefault[1])) {
+  problems.push(
+    '  умолчание смока разошлось с паролем сида: смок ходит одним, стенд заведён другим',
+  );
+}
+
 if (problems.length) {
   console.error('Книга разошлась с кодом:');
   console.error(problems.join('\n'));
@@ -236,5 +347,6 @@ if (problems.length) {
 }
 
 console.log(
-  `Книга сверена: экранов названо ${screenClaims}, переменных заявлено ${envClaims}, снимков ${shots.size}`,
+  `Книга сверена: экранов названо ${screenClaims}, переменных заявлено ${envClaims}, ` +
+    `паролей названо ${passwordClaims}, снимков ${shots.size}`,
 );
