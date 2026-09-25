@@ -1172,7 +1172,9 @@
       "stepTitle": "Note",
       "stepSummary": "after {{minutes}} min → {{target}}",
       "noChannelsWarning": "The hotel has no active notification channel. Rules will fire, but nothing will be delivered.",
-      "muteHint": "This rule has nowhere to deliver: no active channel for its steps."
+      "muteHint": "This rule has nowhere to deliver: no active channel for its steps.",
+      "pointTaken": "This venue already has the rule “{{name}}”. The server will not accept a second active one.",
+      "openTakenRule": "Open"
     },
     "log": {
       "title": "Notification journal",

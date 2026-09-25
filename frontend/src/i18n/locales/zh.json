@@ -1162,7 +1162,9 @@
       "stepTitle": "说明",
       "stepSummary": "{{minutes}} 分钟后 → {{target}}",
       "noChannelsWarning": "酒店没有任何启用的通知渠道。规则会触发，但消息无处可送。",
-      "muteHint": "该规则无处投递：其阶梯没有可用渠道。"
+      "muteHint": "该规则无处投递：其阶梯没有可用渠道。",
+      "pointTaken": "该场所已有规则「{{name}}」。服务器不会接受第二条启用的规则。",
+      "openTakenRule": "打开"
     },
     "log": {
       "title": "通知日志",

@@ -89,3 +89,93 @@ test('правило, которому некуда доставлять, пом
     }
   }
 })
+
+/**
+ * ОДНО АКТИВНОЕ ПРАВИЛО НА ЗАВЕДЕНИЕ — СКАЗАНО ДО «СОХРАНИТЬ» (партия 20).
+ *
+ * Сервер держит это ограничение с самого начала, но узнавали о нём отказом
+ * после заполнения формы, и отказ «уже есть активное правило» читается как
+ * «второе правило завести нельзя вообще». Теперь занятое заведение называет
+ * себя сразу и даёт ссылку на то правило, которое его заняло.
+ */
+test('занятое заведение говорит об этом при выборе, а не после отказа', async ({
+  page,
+  request,
+}) => {
+  const token = await apiToken(request)
+  const rules = await (
+    await request.get(`${API}/api/cms/escalation-rules`, { headers: apiHeaders(token) })
+  ).json()
+  const items = rules.items ?? rules
+  /*
+    Берём заведение с РОВНО ОДНИМ активным правилом. Двух через API не завести,
+    но сид кладёт правила мимо API, и на стенде нашлась точка с двумя активными
+    (СПА). На ней предупреждение не исчезнет и после перехода — оно там верное,
+    и проверять им работу ссылки значит проверять состояние стенда.
+  */
+  const activeByPoint = new Map<string, number>()
+  for (const rule of items) {
+    if (!rule.is_active || !rule.execution_point_id) continue
+    activeByPoint.set(
+      rule.execution_point_id,
+      (activeByPoint.get(rule.execution_point_id) ?? 0) + 1,
+    )
+  }
+  const taken = items.find(
+    (rule: { is_active: boolean; execution_point_id: string | null; name: string }) =>
+      rule.is_active &&
+      rule.execution_point_id &&
+      rule.name &&
+      activeByPoint.get(rule.execution_point_id) === 1,
+  )
+  test.skip(!taken, 'на стенде нет заведения ровно с одним активным правилом')
+
+  await signInToCms(page)
+  await page.goto('/cms/notifications')
+  await page.getByTestId('cms-notifications-tab-escalation').click()
+  await expect(page.getByTestId('cms-escalation-rules')).toBeVisible({ timeout: 20_000 })
+
+  await page.getByTestId('cms-escalation-new').click()
+  // Пока заведение не выбрано, предупреждать не о чем.
+  await expect(page.getByTestId('cms-escalation-point-taken')).toHaveCount(0)
+
+  await page.selectOption('[data-testid="cms-escalation-point"]', taken.execution_point_id)
+
+  const warning = page.getByTestId('cms-escalation-point-taken')
+  await expect(warning, 'занятое заведение молчит до самого отказа сервера').toBeVisible({
+    timeout: 10_000,
+  })
+  // Имя занявшего правила названо: иначе «уже есть» — это тупик без выхода.
+  await expect(warning).toContainText(taken.name)
+
+  // И выход есть: ссылка открывает то самое правило.
+  await page.getByTestId('cms-escalation-point-taken-open').click()
+  await expect(page.getByTestId('cms-escalation-heading')).toHaveText(taken.name)
+  await expect(page.getByTestId('cms-escalation-point-taken')).toHaveCount(0)
+})
+
+test('свободное заведение не предупреждает ни о чём', async ({ page, request }) => {
+  const token = await apiToken(request)
+  const [rules, bootstrap] = await Promise.all([
+    (await request.get(`${API}/api/cms/escalation-rules`, { headers: apiHeaders(token) })).json(),
+    (await request.get(`${API}/api/cms/bootstrap`, { headers: apiHeaders(token) })).json(),
+  ])
+  const items = rules.items ?? rules
+  const busy = new Set(
+    items
+      .filter((rule: { is_active: boolean }) => rule.is_active)
+      .map((rule: { execution_point_id: string | null }) => rule.execution_point_id),
+  )
+  const free = (bootstrap.execution_points ?? []).find(
+    (point: { id: string }) => !busy.has(point.id),
+  )
+  test.skip(!free, 'все заведения заняты активными правилами')
+
+  await signInToCms(page)
+  await page.goto('/cms/notifications')
+  await page.getByTestId('cms-notifications-tab-escalation').click()
+  await page.getByTestId('cms-escalation-new').click()
+  await page.selectOption('[data-testid="cms-escalation-point"]', free.id)
+
+  await expect(page.getByTestId('cms-escalation-point-taken')).toHaveCount(0)
+})

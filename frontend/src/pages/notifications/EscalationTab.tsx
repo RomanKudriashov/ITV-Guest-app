@@ -199,6 +199,36 @@ function RuleEditor({
     saveMutation.mutate(draft);
   };
 
+  /*
+    КТО УЖЕ ЗАНЯЛ ЭТО ЗАВЕДЕНИЕ.
+
+    Сервер держит одно АКТИВНОЕ правило на точку (`_check_unique_rule`), и до
+    этой правки человек узнавал об этом только отказом после «Сохранить» —
+    заполнив имя, заведение и ступени. Отказ «уже есть активное правило»
+    читается как «второе правило завести нельзя вообще», и именно так его и
+    прочитали на разборе.
+
+    Поэтому то же самое говорится СРАЗУ при выборе заведения и со ссылкой на
+    занявшее правило: спор двух экранов о том, что настроено, заканчивается
+    переходом к настроенному.
+
+    Условия повторяют серверные, а не приблизительно похожи на них: считаем
+    только АКТИВНЫЕ правила, «Общее для отеля» (пустая точка) — такая же точка,
+    и собственное правило из счёта исключается. Неактивный черновик не
+    предупреждаем: его сервер и не отклонит.
+  */
+  const takenBy = useMemo(() => {
+    if (!draft.is_active) return null;
+    return (
+      rules.find(
+        (entry) =>
+          entry.id !== draft.id &&
+          entry.is_active &&
+          (entry.execution_point_id ?? null) === (draft.execution_point_id ?? null),
+      ) ?? null
+    );
+  }, [draft.execution_point_id, draft.id, draft.is_active, rules]);
+
   const pointTitle = (id: string | null | undefined) => {
     if (!id) return t('notifications.escalation.hotelWide');
     const point = bootstrap?.execution_points.find((entry) => entry.id === id);
@@ -317,6 +347,27 @@ function RuleEditor({
               label={t('notifications.escalation.active')}
             />
           </Stack>
+
+          {takenBy ? (
+            <Alert
+              severity="warning"
+              data-testid="cms-escalation-point-taken"
+              action={
+                <Button
+                  size="small"
+                  color="inherit"
+                  onClick={() => onSelect(takenBy.id)}
+                  data-testid="cms-escalation-point-taken-open"
+                >
+                  {t('notifications.escalation.openTakenRule')}
+                </Button>
+              }
+            >
+              {t('notifications.escalation.pointTaken', {
+                name: takenBy.name || pointTitle(takenBy.execution_point_id),
+              })}
+            </Alert>
+          ) : null}
 
           <Divider />
 
