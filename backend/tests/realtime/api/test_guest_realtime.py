@@ -20,6 +20,7 @@ from channels.testing import WebsocketCommunicator
 from apps.core.context import tenant_context
 from config.asgi import application
 
+from tests.realtime.refusal import refused_with
 from tests.conftest import host_for
 
 # transaction=True обязателен: событие эмитится в transaction.on_commit, а в
@@ -204,9 +205,7 @@ def test_bad_token_is_rejected(crystal, guest_order):
         communicator = WebsocketCommunicator(
             application, ws_url(guest_order["order"]["id"], "totally-not-a-token")
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -224,9 +223,7 @@ def test_another_guests_order_is_rejected(client, crystal, guest_order):
         communicator = WebsocketCommunicator(
             application, ws_url(guest_order["order"]["id"], stranger)
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -237,9 +234,7 @@ def test_unknown_hotel_is_rejected(crystal, guest_order):
             application,
             ws_url(guest_order["order"]["id"], guest_order["token"], hotel_subdomain="nope"),
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4404
+        assert await refused_with(communicator, WS_TIMEOUT) == 4404
 
     async_to_sync(scenario)()
 

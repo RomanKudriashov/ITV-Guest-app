@@ -37,6 +37,22 @@ CLOSE_UNAUTHORIZED = 4401
 CLOSE_FORBIDDEN = 4403
 
 
+async def _refuse(consumer, code: int) -> None:
+    """
+    ОТКАЗ — ПРИНЯТЬ И ЗАКРЫТЬ С КОДОМ, А НЕ ЗАКРЫТЬ ДО ПРИНЯТИЯ.
+
+    `close()` до `accept()` Channels превращает в отказ рукопожатия: браузер
+    получает HTTP 403 и видит код 1006 — «соединение оборвалось». Коды 4401 /
+    4404 до него не доходили никогда, и ветка клиента «4401 — не
+    переподключаться» была мёртвой: гость с протухшим токеном стучался заново
+    с растущей паузой бесконечно. Тесты этого не видели — тестовый
+    коммуникатор показывает код и при отказе до принятия (найдено при
+    разборе E2E-003 внешнего аудита).
+    """
+    await consumer.accept()
+    await consumer.close(code=code)
+
+
 def _query_param(scope, name: str) -> str:
     query = parse_qs((scope.get("query_string") or b"").decode())
     values = query.get(name) or []
@@ -163,7 +179,7 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         hotel = await _resolve_hotel(self.scope)
         if hotel is None:
-            await self.close(code=CLOSE_NO_TENANT)
+            await _refuse(self, CLOSE_NO_TENANT)
             return
 
         self.hotel = hotel
@@ -173,12 +189,12 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
 
         user, point = await _authorize_tracker(hotel, token, point_code, self.language)
         if user is None:
-            await self.close(code=CLOSE_UNAUTHORIZED)
+            await _refuse(self, CLOSE_UNAUTHORIZED)
             return
         if point is None:
             # Одинаковый отказ и для «точки нет», и для «не твоя точка»:
             # чужому незачем узнавать, какие точки существуют в отеле.
-            await self.close(code=CLOSE_FORBIDDEN)
+            await _refuse(self, CLOSE_FORBIDDEN)
             return
 
         self.point_id = str(point.pk)
@@ -242,7 +258,7 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         hotel = await _resolve_hotel(self.scope)
         if hotel is None:
-            await self.close(code=CLOSE_NO_TENANT)
+            await _refuse(self, CLOSE_NO_TENANT)
             return
 
         self.hotel = hotel
@@ -252,7 +268,7 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
 
         session, snapshot = await _load_guest_order(hotel, token, self.order_id, self.language)
         if session is None or snapshot is None:
-            await self.close(code=CLOSE_UNAUTHORIZED)
+            await _refuse(self, CLOSE_UNAUTHORIZED)
             return
 
         self.group_name = f"order.{hotel.pk}.{self.order_id}"
@@ -364,7 +380,7 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         hotel = await _resolve_hotel(self.scope)
         if hotel is None:
-            await self.close(code=CLOSE_NO_TENANT)
+            await _refuse(self, CLOSE_NO_TENANT)
             return
 
         self.hotel = hotel
@@ -373,7 +389,7 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
 
         thread, snapshot = await _load_guest_thread(hotel, token, self.language)
         if thread is None:
-            await self.close(code=CLOSE_UNAUTHORIZED)
+            await _refuse(self, CLOSE_UNAUTHORIZED)
             return
 
         self.thread_id = str(thread.pk)
@@ -474,7 +490,7 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         hotel = await _resolve_hotel(self.scope)
         if hotel is None:
-            await self.close(code=CLOSE_NO_TENANT)
+            await _refuse(self, CLOSE_NO_TENANT)
             return
 
         self.hotel = hotel
@@ -483,10 +499,10 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
 
         session, snapshot = await _load_room_state(hotel, self.token, self.language)
         if session is None:
-            await self.close(code=CLOSE_UNAUTHORIZED)
+            await _refuse(self, CLOSE_UNAUTHORIZED)
             return
         if snapshot is None:
-            await self.close(code=CLOSE_FORBIDDEN)
+            await _refuse(self, CLOSE_FORBIDDEN)
             return
 
         self.room_id = str(session.room_id)
@@ -542,7 +558,7 @@ class StaffChatConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         hotel = await _resolve_hotel(self.scope)
         if hotel is None:
-            await self.close(code=CLOSE_NO_TENANT)
+            await _refuse(self, CLOSE_NO_TENANT)
             return
 
         self.hotel = hotel
@@ -552,10 +568,10 @@ class StaffChatConsumer(AsyncJsonWebsocketConsumer):
 
         user, snapshot = await _load_staff_thread(hotel, token, self.thread_id, self.language)
         if user is None:
-            await self.close(code=CLOSE_UNAUTHORIZED)
+            await _refuse(self, CLOSE_UNAUTHORIZED)
             return
         if snapshot is None:
-            await self.close(code=CLOSE_FORBIDDEN)
+            await _refuse(self, CLOSE_FORBIDDEN)
             return
 
         self.group_name = f"chat.{hotel.pk}.{self.thread_id}"

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { closeSocket } from '@/api/socket';
 import { trackerSocketUrl } from '../api/tracker';
 import { trackerKeys } from '../api/queryKeys';
 import { useTrackerLanguage } from './useTrackerQueries';
@@ -206,7 +207,7 @@ export function useBoardLive(
         socket.onclose = null;
         socket.onerror = null;
         socket.onmessage = null;
-        socket.close();
+        closeSocket(socket);
       }
     };
   }, [pointCode, enabled, language, queryClient]);

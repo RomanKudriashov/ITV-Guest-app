@@ -15,6 +15,7 @@ from channels.testing import WebsocketCommunicator
 from apps.core.context import tenant_context
 from config.asgi import application
 
+from tests.realtime.refusal import refused_with
 from tests.conftest import host_for, staff_token_for
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -66,9 +67,7 @@ def staff_ws(thread_id, token, hotel="crystal"):
 def test_guest_chat_requires_valid_token(crystal):
     async def scenario():
         communicator = WebsocketCommunicator(application, guest_ws("garbage"))
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -88,9 +87,7 @@ def test_staff_chat_refuses_other_hotel(client, crystal, aurora, guest_token):
         communicator = WebsocketCommunicator(
             application, staff_ws(thread_id, aurora_token, hotel="crystal")
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -104,9 +101,7 @@ def test_guest_token_cannot_open_staff_chat(crystal, guest_token):
 
         thread_id = await _thread_id_for_room(crystal)
         communicator = WebsocketCommunicator(application, staff_ws(thread_id, guest_token))
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -191,8 +186,7 @@ def test_the_cooks_socket_is_refused(client, crystal, guest_token):
         await guest_comm.receive_json_from(timeout=WS_TIMEOUT)
         thread_id = await _thread_id_for_room(crystal)
         cook_comm = WebsocketCommunicator(application, staff_ws(thread_id, cook_jwt))
-        connected, _ = await cook_comm.connect(timeout=WS_TIMEOUT)
-        assert not connected
+        assert await refused_with(cook_comm, WS_TIMEOUT) == 4403
         await guest_comm.disconnect()
 
     async_to_sync(scenario)()

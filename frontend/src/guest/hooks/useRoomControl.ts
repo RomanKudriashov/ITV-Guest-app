@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { closeSocket } from '@/api/socket';
 import { guestApi, guestRoomSocketUrl } from '../api/client';
 import { guestKeys } from '../api/queryKeys';
 import { useGuestSession } from '../session/GuestSessionProvider';
@@ -306,7 +307,7 @@ export function useRoomLive(enabled = true): {
         socket.onclose = null;
         socket.onerror = null;
         socket.onmessage = null;
-        socket.close();
+        closeSocket(socket);
       }
     };
   }, [enabled, language, queryClient]);

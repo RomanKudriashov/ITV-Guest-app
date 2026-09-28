@@ -19,6 +19,7 @@ from channels.testing import WebsocketCommunicator
 from apps.core.context import tenant_context
 from config.asgi import application
 
+from tests.realtime.refusal import refused_with
 from tests.conftest import host_for, staff_token_for
 
 # transaction=True: событие эмитится в transaction.on_commit, а в обычном
@@ -111,9 +112,7 @@ def test_tracker_requires_a_valid_staff_token(crystal):
 
     async def scenario():
         communicator = WebsocketCommunicator(application, tracker_url("kitchen", "garbage"))
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -126,9 +125,7 @@ def test_tracker_refuses_a_point_the_staffer_is_not_assigned_to(crystal, staff_t
 
     async def scenario():
         communicator = WebsocketCommunicator(application, tracker_url("bar", staff_token))
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4403
+        assert await refused_with(communicator, WS_TIMEOUT) == 4403
 
     async_to_sync(scenario)()
 
@@ -136,9 +133,7 @@ def test_tracker_refuses_a_point_the_staffer_is_not_assigned_to(crystal, staff_t
 def test_tracker_refuses_unknown_point(crystal, staff_token):
     async def scenario():
         communicator = WebsocketCommunicator(application, tracker_url("nowhere", staff_token))
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4403
+        assert await refused_with(communicator, WS_TIMEOUT) == 4403
 
     async_to_sync(scenario)()
 
@@ -151,9 +146,7 @@ def test_tracker_refuses_staff_of_another_hotel(client, crystal, aurora):
         communicator = WebsocketCommunicator(
             application, tracker_url("kitchen", aurora_token, hotel="crystal")
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -163,9 +156,7 @@ def test_tracker_refuses_a_guest_token(crystal, guest):
         communicator = WebsocketCommunicator(
             application, tracker_url("kitchen", guest["token"])
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4401
+        assert await refused_with(communicator, WS_TIMEOUT) == 4401
 
     async_to_sync(scenario)()
 
@@ -175,9 +166,7 @@ def test_tracker_refuses_unknown_hotel(crystal, staff_token):
         communicator = WebsocketCommunicator(
             application, tracker_url("kitchen", staff_token, hotel="nope")
         )
-        connected, code = await communicator.connect(timeout=WS_TIMEOUT)
-        assert connected is False
-        assert code == 4404
+        assert await refused_with(communicator, WS_TIMEOUT) == 4404
 
     async_to_sync(scenario)()
 

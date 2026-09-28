@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { closeSocket } from '@/api/socket';
 import { guestOrderSocketUrl } from '../api/client';
 import { guestKeys } from '../api/queryKeys';
 import { useGuestLanguage } from './useGuestQueries';
@@ -135,7 +136,7 @@ export function useOrderLive(orderId: string | undefined, enabled = true): LiveS
         socket.onclose = null;
         socket.onerror = null;
         socket.onmessage = null;
-        socket.close();
+        closeSocket(socket);
       }
     };
   }, [orderId, enabled, language, queryClient]);

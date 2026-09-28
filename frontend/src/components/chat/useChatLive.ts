@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 
 import type { ChatSnapshot } from '@/guest/api/types';
+import { closeSocket } from '@/api/socket';
 
 export type LiveStatus = 'connecting' | 'online' | 'offline';
 
@@ -157,7 +158,7 @@ export function useChatLive({
         socket.onclose = null;
         socket.onerror = null;
         socket.onmessage = null;
-        socket.close();
+        closeSocket(socket);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
