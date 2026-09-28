@@ -419,9 +419,15 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
 def _order_parts(order: Order, language: str | None) -> list[dict[str, Any]]:
     if order.parent_id is not None:
         return []
-    children = list(
-        order.children.select_related("execution_point", "location").order_by("created_at")
-    )
+    cache = getattr(order, "_prefetched_objects_cache", None) or {}
+    if "children" in cache:
+        # `order_queryset` уже загрузил части — у обычного заказа список пуст,
+        # и спрашивать базу о пустоте незачем.
+        children = sorted(cache["children"], key=lambda child: child.created_at)
+    else:
+        children = list(
+            order.children.select_related("execution_point", "location").order_by("created_at")
+        )
     return [
         {
             "number": child.number,
@@ -1514,9 +1520,15 @@ def _status_payload(
     }
 
 
-def _item_image(order_item: OrderItem) -> str:
+def _item_image(order_item: OrderItem, cache: dict | None = None) -> str:
     item = order_item.item
     link = next(iter(item.images.all()), None) if item else None
+    if link is None and cache is not None:
+        # Позиция без фото получает общую заглушку — одну на страницу списка,
+        # а не запрос в справочник заглушек на каждую строку.
+        if "placeholder" not in cache:
+            cache["placeholder"] = image_url(None, variant="thumb")
+        return cache["placeholder"]
     return image_url(link.asset if link else None, variant="thumb")
 
 
@@ -1532,6 +1544,27 @@ def _order_review(order: Order) -> dict | None:
     return get_review(order)
 
 
+def _status_flow(order: Order) -> list[StatusDefinition]:
+    """
+    Поток статусов исполнителя заказа. Список, который сериализует много заказов
+    сразу (раздел «Заказы»), вешает на них общий словарь `_serialization_cache`:
+    поток одного отдела одинаков у всех его заказов, и спрашивать его на каждой
+    строке — полсотни одинаковых запросов на страницу.
+    """
+    cache = getattr(order, "_serialization_cache", None)
+    key = ("flow", order.hotel_id, order.status.flow)
+    if cache is not None and key in cache:
+        return cache[key]
+    flow = list(
+        StatusDefinition.objects.filter(hotel_id=order.hotel_id, flow=order.status.flow).order_by(
+            "sort_order"
+        )
+    )
+    if cache is not None:
+        cache[key] = flow
+    return flow
+
+
 def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]:
     """
     Один и тот же вид у REST и у WebSocket — чтобы клиент не собирал состояние
@@ -1541,9 +1574,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
     hotel = order.hotel
     # Гостю показываем таймлайн ЕГО заказа — поток его исполнителя, а не все
     # статусы отеля скопом (после R3 их четыре набора).
-    flow = StatusDefinition.objects.filter(
-        hotel_id=order.hotel_id, flow=order.status.flow
-    ).order_by("sort_order")
+    flow = _status_flow(order)
     item_lines = _order_lines(order)  # у parent-агрегата — позиции всех children
 
     return {
@@ -1638,7 +1669,7 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
                 "unit_price": line.unit_price_snapshot,
                 "line_total": line.line_total,
                 "comment": line.comment,
-                "image_url": _item_image(line),
+                "image_url": _item_image(line, getattr(order, "_serialization_cache", None)),
                 "modifiers": [
                     {
                         "code": modifier.get("code", ""),

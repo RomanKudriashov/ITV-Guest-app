@@ -193,3 +193,35 @@ def test_a_foreign_venue_in_the_url_is_ignored_not_obeyed(cms_manager, crystal):
     body = cms_manager.get(f"/api/cms/orders?limit=200&point={bar_id}").json()
     assert body["orders"], "подмена заведения оставила управляющего с пустым экраном"
     assert all(row["execution_point"]["code"] == "kitchen" for row in body["orders"])
+
+
+def test_the_list_costs_the_same_for_five_orders_and_for_twenty(cms, crystal):
+    """
+    ЦЕНА СПИСКА НЕ РАСТЁТ С ЧИСЛОМ ЗАКАЗОВ (ADM-002 внешнего аудита).
+
+    Страница из 50 заказов стоила 602 SQL-запроса — около двенадцати на
+    заказ, — и отвечала полторы секунды на стенде. Всё, что сериализатор
+    дочитывал по заказу, теперь приходит одним запросом на выборку. Проверяем
+    не число (оно меняется от любой новой связи), а то, что оно не зависит от
+    длины страницы: пятнадцать лишних заказов не добавляют ни одного запроса.
+    """
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    def cost() -> tuple[int, int]:
+        with CaptureQueriesContext(connection) as ctx:
+            body = cms.get("/api/cms/orders?limit=200").json()
+        return len(ctx.captured_queries), len(body["orders"])
+
+    with tenant_context(crystal):
+        for code in ("kitchen", "bar", "kitchen", "spa", "bar"):
+            _order_at(code, cancel=code == "bar")
+    small, small_n = cost()
+
+    with tenant_context(crystal):
+        for index in range(15):
+            _order_at(("kitchen", "bar", "spa")[index % 3], cancel=index % 4 == 0)
+    large, large_n = cost()
+
+    assert large_n == small_n + 15, "проверка ничего не проверяет: заказы не легли в список"
+    assert large == small, f"{small} запросов на {small_n} заказов, {large} — на {large_n}"

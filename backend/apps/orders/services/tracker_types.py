@@ -183,6 +183,14 @@ def tracker_type_for_point(point) -> str:
     return POINT_KIND_TO_TRACKER.get(point.kind, TrackerType.BOARD)
 
 
+def _has_slot_booking(order) -> bool:
+    """Бронь есть — из prefetch, если вызывающий его сделал (список заказов CMS)."""
+    cache = getattr(order, "_prefetched_objects_cache", None) or {}
+    if "slot_bookings" in cache:
+        return bool(cache["slot_bookings"])
+    return order.slot_bookings.exists()
+
+
 def _service_of(point):
     cache = getattr(point, "_prefetched_objects_cache", None) or {}
     if "services" in cache:
@@ -303,7 +311,7 @@ def guest_card_for_order(order) -> str:
     заявке хозслужбы, и «ожидаемое время подачи» там обещает то, чего никто не
     обещал.
     """
-    if order.slot_bookings.exists():
+    if _has_slot_booking(order):
         return GuestCard.BOOKING
     point = getattr(order, "execution_point", None)
     return guest_card_for_point(point) if point is not None else GuestCard.REQUEST

@@ -237,10 +237,18 @@ def release_bookings(order) -> int:
 
 
 def serialize_slot(order, language: str | None = None) -> dict | None:
-    booking = order.slot_bookings.filter(is_active=True).select_related("item").first()
-    if booking is None:
-        # Отменённая бронь: показываем последний слот, помечая что он снят.
-        booking = order.slot_bookings.select_related("item").order_by("-created_at").first()
+    cache = getattr(order, "_prefetched_objects_cache", None) or {}
+    if "slot_bookings" in cache:
+        # Список заказов CMS загрузил брони заранее — выбираем из них по тем же
+        # правилам, что и запросы ниже: первая активная по началу, иначе последняя.
+        bookings = list(cache["slot_bookings"])
+        active = sorted((b for b in bookings if b.is_active), key=lambda b: b.starts_at)
+        booking = active[0] if active else max(bookings, key=lambda b: b.created_at, default=None)
+    else:
+        booking = order.slot_bookings.filter(is_active=True).select_related("item").first()
+        if booking is None:
+            # Отменённая бронь: показываем последний слот, помечая что он снят.
+            booking = order.slot_bookings.select_related("item").order_by("-created_at").first()
     if booking is None:
         return None
 

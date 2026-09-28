@@ -34,7 +34,24 @@ def can_review(order: Order) -> bool:
         return False
     if not order.status.is_terminal or order.status.is_cancelled:
         return False
+    known, review = _cached_review(order)
+    if known:
+        # Как и запрос ниже, считается и удалённый отзыв: второй раз не оценивают.
+        return review is None
     return not Review.all_objects.filter(order=order).exists()
+
+
+def _cached_review(order: Order) -> tuple[bool, Review | None]:
+    """
+    Отзыв из `select_related("review")`, если вызывающий его сделал (список
+    заказов CMS). `(False, None)` — не загружен, спросить базу.
+    """
+    if not Order.review.is_cached(order):
+        return False, None
+    try:
+        return True, order.review
+    except Review.DoesNotExist:
+        return True, None
 
 
 def serialize_review(review: Review) -> dict:
@@ -50,6 +67,10 @@ def serialize_review(review: Review) -> dict:
 
 
 def get_review(order: Order) -> dict | None:
+    known, review = _cached_review(order)
+    if known:
+        # `select_related` идёт мимо менеджера — удалённый отзыв отсеиваем сами.
+        return serialize_review(review) if review and review.deleted_at is None else None
     review = Review.objects.filter(order=order).first()
     return serialize_review(review) if review else None
 

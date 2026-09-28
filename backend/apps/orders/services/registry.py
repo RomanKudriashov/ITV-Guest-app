@@ -33,11 +33,38 @@ from apps.orders.services.selection import selection_summary
 
 def _visible_points() -> list[ExecutionPoint]:
     """Заведения, о которых этот человек вправе спрашивать."""
-    points = ExecutionPoint.objects.filter(is_active=True).order_by("code")
+    # `hotel` — ради языка отеля в `title_i18n`: без него название каждой точки
+    # в фильтре «Заведение» стоило отдельного запроса.
+    points = ExecutionPoint.objects.filter(is_active=True).select_related("hotel").order_by("code")
     managed = managed_point_ids_or_none()
     if managed is not None:
         points = points.filter(pk__in=managed)
     return list(points)
+
+
+def _with_list_prefetch(queryset):
+    """
+    ВСЁ, ЧТО СЕРИАЛИЗАТОР ДОЧИТЫВАЛ ПО ЗАКАЗУ, — ОДНИМ ЗАПРОСОМ НА ВЫБОРКУ.
+
+    ADM-002 внешнего аудита: список 50 заказов отвечал 1,5 с, и это были
+    602 SQL-запроса — около двенадцати на заказ: сервис точки (трижды), бронь
+    слота (трижды), отель, поток статусов, отзыв, пустой список частей.
+    Сериализатор общий с доской и карточкой и читает prefetch, если он есть.
+
+    ТОЛЬКО ЗДЕСЬ, А НЕ В ОБЩЕМ `order_queryset`. Этот путь только читает.
+    Пути записи сериализуют тот же экземпляр после изменения — заранее
+    загруженная бронь или отзыв показали бы там состояние ДО изменения
+    (снятая бронь — активной, только что оставленный отзыв — отсутствующим).
+    """
+    from django.db.models import Prefetch
+
+    from apps.hotels.models import Service
+
+    return queryset.select_related("hotel", "review").prefetch_related(
+        # `Service.objects` — тот же менеджер и порядок, что у `point.services.first()`.
+        Prefetch("execution_point__services", queryset=Service.objects.all()),
+        "slot_bookings__item",
+    )
 
 
 def list_orders(
@@ -61,7 +88,7 @@ def list_orders(
     Заказы-агрегаты (`parent`) исключены: гостевой заказ, разъехавшийся на два
     заведения, иначе считался бы трижды — сам и оба своих исполнения.
     """
-    from apps.orders.services import tracker
+    from apps.orders.services import status_flows, tracker
 
     require_cms_access()
 
@@ -111,17 +138,32 @@ def list_orders(
                 Q(closed_key__lt=moment) | Q(closed_key=moment, pk__lt=cursor_id)
             )
 
-    rows = list(paged[: page_size + 1])
+    rows = list(_with_list_prefetch(paged)[: page_size + 1])
     has_more = len(rows) > page_size
     rows = rows[:page_size]
     next_cursor = (
         f"{rows[-1].closed_key.isoformat()}|{rows[-1].pk}" if has_more and rows else None
     )
 
+    # Общий кэш страницы: поток статусов отдела и заглушка картинки одинаковы
+    # у всех строк — спрашивать их на каждой значило полсотни одинаковых
+    # запросов (`services._serialization_cache`).
+    shared: dict = {}
+    for order in rows:
+        order._serialization_cache = shared
+    flows: dict[str, list] = {}
+
+    def statuses_of(order):
+        flow = order.status.flow
+        if flow not in flows:
+            flows[flow] = status_flows.statuses_for_flow(flow)
+        return flows[flow]
+
     actors = tracker.actor_names(rows)
     return {
         "orders": [
-            tracker.serialize_tracker_order(order, language, None, actors) for order in rows
+            tracker.serialize_tracker_order(order, language, statuses_of(order), actors)
+            for order in rows
         ],
         # Цифры СЧИТАЮТСЯ ПО ВЫБОРКЕ, а не по странице: «заказов 50» на первой
         # странице из тысячи — это враньё счётчиком, которое у нас уже было.
