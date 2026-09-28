@@ -291,7 +291,7 @@ history[], history_total, had_low_review, low_reviews[], reviews_count}`.
 
 | Метод | Путь |
 |---|---|
-| GET | `/api/v1/guest/order/{id}/review` | отзыв, если оставлен; `404`, если ещё нет (сценарий «не оценивал», витрина показывает форму) |
+| GET | `/api/v1/guest/order/{id}/review` | `{review: {…}}`, если оставлен; `{review: null}`, если ещё нет — «не оценивал» штатное состояние, а не 404 (витрина показывает форму). `404` — только чужой/несуществующий заказ |
 | POST | `/api/v1/guest/order/{id}/review` | `{rating: 1..5, comment?}` |
 
 Один отзыв на заказ (идемпотентно): повтор — `409 review_exists`.

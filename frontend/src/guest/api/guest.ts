@@ -1,7 +1,6 @@
 /** Guest storefront endpoints — one function per route in the contract. */
 
 import type { OfferingType } from '@/offerings/behaviour';
-import { ApiError } from '@/api/client';
 import { guestApi } from './client';
 import type {
   CartQuote,
@@ -187,18 +186,15 @@ export function markChatRead(language?: string): Promise<ChatSnapshot> {
 }
 
 /**
- * The review left for an order, or `null` when none exists yet. A 404 is a
- * scenario ("not reviewed"), not an error, so it resolves to `null`.
+ * The review left for an order, or `null` when none exists yet. «Не оценивал» —
+ * штатное состояние: сервер отвечает `200 {review: null}`, а не 404 (E2E-002 —
+ * 404 на каждом заказе без отзыва сыпался в консоль ошибкой).
  */
 export async function fetchReview(orderId: string, language?: string): Promise<GuestReview | null> {
-  try {
-    return await guestApi.get<GuestReview>(`/guest/order/${orderId}/review`, {
-      query: { lang: language },
-    });
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) return null;
-    throw error;
-  }
+  const body = await guestApi.get<{ review: GuestReview | null }>(`/guest/order/${orderId}/review`, {
+    query: { lang: language },
+  });
+  return body.review;
 }
 
 /**

@@ -222,6 +222,24 @@ def test_review_can_be_left_after_completion(client, crystal, guest):
     assert after["review"]["rating"] == 5
 
 
+def test_missing_review_is_an_empty_answer_not_a_404(client, crystal, guest):
+    """
+    «Не оценивал» — штатное состояние заказа: 200 и `review: null`, а не 404,
+    который браузер пишет в консоль ошибкой на каждом заказе (E2E-002). Тот же
+    конверт несёт и оставленный отзыв — «есть» и «нет» одной формы.
+    """
+    order_id = _finished_order(client, crystal, guest, key="rev-empty")
+
+    before = guest.get(f"/api/guest/order/{order_id}/review")
+    assert before.status_code == 200, before.content
+    assert before.json() == {"review": None}
+
+    guest.post(f"/api/guest/order/{order_id}/review", {"rating": 4, "comment": "хорошо"})
+    after = guest.get(f"/api/guest/order/{order_id}/review")
+    assert after.status_code == 200
+    assert after.json()["review"]["rating"] == 4
+
+
 def test_review_before_completion_is_refused(client, crystal, guest):
     menu = guest.get("/api/guest/catalog?type=product").json()
     item_id = next(i["id"] for c in menu["categories"] for i in c["items"] if i["code"] == "caesar")

@@ -148,7 +148,7 @@ def test_a_reply_reaches_a_guest_who_is_still_here(client, crystal, cms, guest):
 
     chat = guest.get("/api/guest/chat").json()
     assert any(m["body"] == "Простите, исправим" and m["author_type"] == "staff" for m in chat["messages"])
-    assert guest.get(f"/api/guest/order/{order_id}/review").json()["reply"]["text"] == "Простите, исправим"
+    assert guest.get(f"/api/guest/order/{order_id}/review").json()["review"]["reply"]["text"] == "Простите, исправим"
 
     again = cms.post(f"/api/cms/reviews/{review_id}/reply", {"text": "ещё"})
     assert again.status_code == 409 and again.json()["code"] == "reply_exists"

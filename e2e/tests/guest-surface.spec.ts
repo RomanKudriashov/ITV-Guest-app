@@ -194,7 +194,40 @@ test.describe('Гостевой контур', () => {
       { headers: { Authorization: `Bearer ${guestToken}`, 'X-Hotel-Subdomain': 'crystal' } },
     )
     expect(review.ok()).toBeTruthy()
-    expect((await review.json()).rating).toBe(5)
+    expect((await review.json()).review.rating).toBe(5)
+  })
+
+  test('отзыва ещё нет — форма, и ни одного 404 в консоли', async ({ page, request }) => {
+    // E2E-002 внешнего аудита: «не оценивал» отвечало 404, и браузер писал
+    // его в консоль ошибкой на каждом завершённом заказе без отзыва. Форма при
+    // этом рисовалась верно — поэтому смотрим именно на сеть и консоль.
+    const staff = await apiToken(request)
+    const notFound: string[] = []
+    const consoleErrors: string[] = []
+    page.on('response', (response) => {
+      if (response.url().includes('/review') && response.status() === 404) notFound.push(response.url())
+    })
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
+    })
+
+    await enterAsGuest(page)
+    await page.getByTestId('guest-qty-plus-caesar').click()
+    await openCart(page)
+    await page.getByTestId('guest-place-order').click()
+    await expect(page.getByTestId('guest-confirmation')).toBeVisible({ timeout: 20_000 })
+    const orderId = page.url().split('/orders/')[1]?.split('?')[0] as string
+    await page.getByTestId('guest-track-order').click()
+    await moveOrderStatus(request, staff, orderId, 'done')
+
+    const reviewAsked = page.waitForResponse((r) => r.url().includes(`/order/${orderId}/review`))
+    await page.reload()
+    const answer = await reviewAsked
+    expect(answer.status(), 'отсутствие отзыва — штатное состояние').toBe(200)
+    expect(await answer.json()).toEqual({ review: null })
+    await expect(page.getByTestId('guest-review-submit')).toBeVisible({ timeout: 15_000 })
+    expect(notFound, '404 на отзыве').toEqual([])
+    expect(consoleErrors.filter((text) => text.includes('404'))).toEqual([])
   })
 
   test('на главной — одна карточка «оцените» после закрытия, и она закрывается', async ({
