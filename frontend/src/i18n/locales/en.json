@@ -518,7 +518,12 @@
     },
     "confirmation": {
       "title": "Order received",
-      "subtitle": "We have passed it to the kitchen — follow the status below",
+      "subtitle": {
+        "delivery": "The venue already has your order — follow the status below",
+        "request": "Your request has been passed on — follow the status below",
+        "ride": "Your ride request has been passed on — follow the status below",
+        "booking": "Your booking is confirmed — follow the status below"
+      },
       "track": "Track status",
       "toMenu": "To the menu"
     },
@@ -531,7 +536,12 @@
       "byTime": "By {{time}}",
       "cancel": "Cancel order",
       "cancelConfirmTitle": "Cancel the order?",
-      "cancelConfirmBody": "You can cancel until the hotel starts preparing it.",
+      "cancelConfirmBody": {
+        "delivery": "You can cancel until the order is being prepared.",
+        "request": "You can cancel until the request is taken into work.",
+        "ride": "You can cancel until the request is taken into work.",
+        "booking": "You can cancel until the booking is taken into work."
+      },
       "allOrders": "All my orders",
       "offline": "Offline",
       "inProgress": "Now",
@@ -564,7 +574,7 @@
       "refinementRequired": "Please specify the delivery spot",
       "requestedTimeInvalid": "Pick a time within the next 24 hours",
       "mixedCategories": "One order can only contain items from a single category",
-      "cancelNotAllowed": "The order is already being prepared and cannot be cancelled",
+      "cancelNotAllowed": "The request is already in progress and cannot be cancelled",
       "belowMinimum": "The order is below the minimum amount",
       "fieldRequired": "A required field of the request is empty",
       "fieldInvalid": "That value does not fit the field",

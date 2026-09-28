@@ -516,7 +516,12 @@
     },
     "confirmation": {
       "title": "订单已收到",
-      "subtitle": "我们已通知厨房，可在下方查看状态",
+      "subtitle": {
+        "delivery": "场所已收到您的订单，可在下方查看状态",
+        "request": "您的请求已转交处理，可在下方查看状态",
+        "ride": "您的用车请求已转交，可在下方查看状态",
+        "booking": "预约已确认，可在下方查看状态"
+      },
       "track": "查看状态",
       "toMenu": "去菜单"
     },
@@ -529,7 +534,12 @@
       "byTime": "{{time}} 前",
       "cancel": "取消订单",
       "cancelConfirmTitle": "取消订单？",
-      "cancelConfirmBody": "在酒店开始制作前可以取消。",
+      "cancelConfirmBody": {
+        "delivery": "在订单开始制作前可以取消。",
+        "request": "在请求开始处理前可以取消。",
+        "ride": "在请求开始处理前可以取消。",
+        "booking": "在预约开始处理前可以取消。"
+      },
       "allOrders": "我的全部订单",
       "offline": "无连接",
       "inProgress": "进行中",
@@ -562,7 +572,7 @@
       "refinementRequired": "请补充送达位置",
       "requestedTimeInvalid": "请选择未来 24 小时内的时间",
       "mixedCategories": "一个订单只能包含同一分类的菜品",
-      "cancelNotAllowed": "订单已在制作中，无法取消",
+      "cancelNotAllowed": "请求已在处理中，无法取消",
       "belowMinimum": "订单金额低于起送金额",
       "fieldRequired": "必填字段未填写",
       "fieldInvalid": "字段值不符合要求",

@@ -239,7 +239,12 @@ export function OrderStatusPage() {
                 <Typography variant="h6">{t('guest.confirmation.title')}</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                {t('guest.confirmation.subtitle')}
+                {/*
+                  По виду карточки, а не одной фразой на всех: «передали на
+                  кухню» читал и гость прачечной (E2E-004). Вид — из того же
+                  реестра типов сервиса, что и тип трекера персонала.
+                */}
+                {t(`guest.confirmation.subtitle.${kind}`)}
               </Typography>
               {serveByChip}
               {/*
@@ -421,7 +426,7 @@ export function OrderStatusPage() {
         open={confirmOpen}
         testId="guest-cancel"
         title={t('guest.order.cancelConfirmTitle')}
-        description={t('guest.order.cancelConfirmBody')}
+        description={t(`guest.order.cancelConfirmBody.${kind}`)}
         confirmLabel={t('guest.order.cancel')}
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => {
