@@ -112,7 +112,7 @@ export function ReviewsPage() {
   const body = summary.data;
 
   return (
-    <Stack spacing={2} data-testid="cms-reviews">
+    <Stack spacing={2} sx={{ p: 3 }} data-testid="cms-reviews">
       <Typography variant="h5" data-testid="cms-page-title">
         {t('reviews.title')}
       </Typography>

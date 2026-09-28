@@ -85,7 +85,7 @@ export function OrdersPage() {
   const venues = query.data?.points ?? [];
 
   return (
-    <Stack spacing={2} data-testid="cms-orders">
+    <Stack spacing={2} sx={{ p: 3 }} data-testid="cms-orders">
       <Typography variant="h5" data-testid="cms-page-title">
         {t('orders.title')}
       </Typography>
