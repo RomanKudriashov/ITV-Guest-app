@@ -31,7 +31,6 @@ export function ReviewsTab({ controller }: { controller: UseAnalyticsFilters }) 
   const query = useQuery({
     queryKey: queryKeys.analyticsReviews(slice),
     queryFn: () => fetchReviews(params),
-    retry: 1,
   });
 
   if (query.isError) {

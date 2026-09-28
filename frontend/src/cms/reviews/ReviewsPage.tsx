@@ -7,6 +7,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import { useTranslation } from 'react-i18next';
 
@@ -54,12 +55,24 @@ export function ReviewsPage() {
   const [investigating, setInvestigating] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // ПЕРЕВЁРНУТЫЙ ПЕРИОД ЛОВИТСЯ ДО ЗАПРОСА. Сервер его отклоняет (422
+  // `bad_range`), но спрашивать сервер о заведомо неверном незачем: раньше
+  // уходили список и сводка, каждый с повтором — четыре отказа в консоли, а
+  // на экране общее «не удалось загрузить» без причины (ADM-001). Строки
+  // `YYYY-MM-DD` сравниваются как даты. Подсвечено то поле, которое называет
+  // сервер, — `date_from`.
+  const reversedRange = Boolean(
+    params.date_from && params.date_to && params.date_from > params.date_to,
+  );
+
   const scope = useQuery({ queryKey: ['cms', 'analytics', 'scope'], queryFn: fetchScope });
   const summary = useQuery({
     queryKey: ['cms', 'reviews', 'summary', params],
     queryFn: () => fetchReviewsSummary(filters),
+    enabled: !reversedRange,
   });
   const list = useQuery({
+    enabled: !reversedRange,
     queryKey: ['cms', 'reviews', 'list', params],
     queryFn: async () => {
       const page = await fetchReviewsPage(filters);
@@ -178,6 +191,8 @@ export function ReviewsPage() {
               onChange={(event) => patch({ date_from: event.target.value })}
               InputLabelProps={{ shrink: true }}
               inputProps={{ 'data-testid': 'reviews-filter-since' }}
+              error={reversedRange}
+              helperText={reversedRange ? t('reviews.filters.badRange') : undefined}
             />
             <TextField
               type="date"
@@ -251,47 +266,53 @@ export function ReviewsPage() {
         </Card>
       ) : null}
 
-      <QueryState query={list} what={t('reviews.what')}>
-        {(page) => {
-          const rows = [...page.items, ...extra];
-          if (!rows.length) {
-            return (
-              <ListEmpty
-                isFiltered={isFiltered}
-                onReset={reset}
-                what={t('reviews.what')}
-                emptyHint={t('reviews.emptyHint')}
-              />
-            );
-          }
-          return (
-            <Stack spacing={1} data-testid="reviews-list">
-              <Typography variant="caption" color="text.secondary" data-testid="reviews-shown">
-                {t('reviews.shown', { shown: rows.length, total: page.total })}
-              </Typography>
-              {rows.map((review) => (
-                <ReviewCard
-                  key={review.id}
-                  review={review}
-                  onChanged={replace}
-                  onInvestigate={setInvestigating}
+      {reversedRange ? (
+        <Alert severity="warning" data-testid="reviews-bad-range">
+          {t('reviews.filters.badRange')}
+        </Alert>
+      ) : (
+        <QueryState query={list} what={t('reviews.what')}>
+          {(page) => {
+            const rows = [...page.items, ...extra];
+            if (!rows.length) {
+              return (
+                <ListEmpty
+                  isFiltered={isFiltered}
+                  onReset={reset}
+                  what={t('reviews.what')}
+                  emptyHint={t('reviews.emptyHint')}
                 />
-              ))}
-              {rows.length < page.total ? (
-                <Button
-                  variant="outlined"
-                  onClick={() => void loadMore()}
-                  disabled={loadingMore}
-                  data-testid="reviews-load-more"
-                  sx={{ alignSelf: 'center' }}
-                >
-                  {t('reviews.loadMore')}
-                </Button>
-              ) : null}
-            </Stack>
-          );
-        }}
-      </QueryState>
+              );
+            }
+            return (
+              <Stack spacing={1} data-testid="reviews-list">
+                <Typography variant="caption" color="text.secondary" data-testid="reviews-shown">
+                  {t('reviews.shown', { shown: rows.length, total: page.total })}
+                </Typography>
+                {rows.map((review) => (
+                  <ReviewCard
+                    key={review.id}
+                    review={review}
+                    onChanged={replace}
+                    onInvestigate={setInvestigating}
+                  />
+                ))}
+                {rows.length < page.total ? (
+                  <Button
+                    variant="outlined"
+                    onClick={() => void loadMore()}
+                    disabled={loadingMore}
+                    data-testid="reviews-load-more"
+                    sx={{ alignSelf: 'center' }}
+                  >
+                    {t('reviews.loadMore')}
+                  </Button>
+                ) : null}
+              </Stack>
+            );
+          }}
+        </QueryState>
+      )}
 
       <ReviewInvestigationPanel reviewId={investigating} onClose={() => setInvestigating(null)}>
         {(data) => (

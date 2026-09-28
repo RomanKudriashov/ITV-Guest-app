@@ -26,7 +26,6 @@ export function TrafficTab({ controller }: { controller: UseAnalyticsFilters }) 
   const query = useQuery({
     queryKey: queryKeys.analyticsTraffic(slice),
     queryFn: () => fetchTraffic(params),
-    retry: 1,
   });
 
   if (query.isError) {

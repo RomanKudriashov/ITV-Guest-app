@@ -9,11 +9,13 @@ import { AuthProvider } from '@/auth';
 import { ToastProvider } from '@/components/ToastProvider';
 import { router } from '@/app/router';
 import { attachWebManifest } from '@/app/manifestLink';
+import { retryTransient } from '@/api/retry';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      // Только сбой сети и 5xx: 4xx — ответ, повтором не лечится (api/retry.ts).
+      retry: retryTransient,
       refetchOnWindowFocus: false,
       staleTime: 30_000,
     },

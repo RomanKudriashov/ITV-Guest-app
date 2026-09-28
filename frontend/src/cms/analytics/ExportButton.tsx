@@ -59,7 +59,6 @@ export function ExportButton({ params }: { params: AnalyticsQuery }) {
     queryKey: queryKeys.analyticsExport(jobId ?? 'none'),
     queryFn: () => fetchExportJob(jobId as string),
     enabled: Boolean(jobId),
-    retry: 1,
     refetchInterval: (query) => {
       const status = (query.state.data as ExportJob | undefined)?.status;
       if (status === 'ready' || status === 'failed') return false;

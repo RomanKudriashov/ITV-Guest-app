@@ -7,6 +7,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { ApiError } from '@/api/client';
+
 
 /**
  * Три исхода запроса — и они РАЗНЫЕ на экране.
@@ -27,6 +29,7 @@ import { useTranslation } from 'react-i18next';
  *
  *   загрузка — спиннер, и только пока запрос действительно идёт;
  *   ошибка   — что именно не загрузилось + кнопка повторить;
+ *   отказ    — сервер ОТВЕТИЛ 4xx: его причина, без «повторить».
  *   пустота  — фраза утверждением («узлов пока нет»), а не пустое место.
  *
  * Почему render-prop, а не `{children}`: ветка с данными обязана получить их
@@ -56,6 +59,22 @@ export function QueryState<T>({
       <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }} data-testid="state-loading">
         <CircularProgress />
       </Box>
+    );
+  }
+
+  // ОТКАЗ — НЕ СБОЙ. Сервер ответил и назвал причину («начало периода позже
+  // конца»); общее «не удалось загрузить» её теряло, а «Повторить» обещало
+  // другой исход, которого не будет — повторы 4xx сняты и в клиенте
+  // (api/retry.ts). Известный код переводится словарём, незнакомый — текстом
+  // сервера: он хотя бы правдив.
+  const refusal = refusalOf(query.error);
+  if (refusal) {
+    return (
+      <Alert severity="warning" data-testid="state-refused" sx={{ mt: 2 }}>
+        {t(`state.refused.${refusal.code}`, {
+          defaultValue: refusal.detail || t('state.loadFailed', { what }),
+        })}
+      </Alert>
     );
   }
 
@@ -98,4 +117,11 @@ export function QueryState<T>({
   }
 
   return <>{children(query.data)}</>;
+}
+
+/** 4xx с ответом сервера — кроме 401: протухший вход уводит на форму сам. */
+function refusalOf(error: unknown): ApiError | null {
+  if (!(error instanceof ApiError)) return null;
+  if (error.status < 400 || error.status >= 500 || error.status === 401) return null;
+  return error;
 }

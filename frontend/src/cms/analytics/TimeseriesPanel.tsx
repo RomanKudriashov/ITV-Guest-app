@@ -43,7 +43,6 @@ export function TimeseriesPanel({
   const timeseries = useQuery({
     queryKey: queryKeys.analyticsTimeseries(`${sliceKey}|${granularity}`),
     queryFn: () => fetchTimeseries(query),
-    retry: 1,
   });
 
   const points = timeseries.data?.points ?? [];

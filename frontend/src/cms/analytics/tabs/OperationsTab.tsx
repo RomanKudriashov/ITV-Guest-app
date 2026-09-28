@@ -29,7 +29,6 @@ export function OperationsTab({ controller }: { controller: UseAnalyticsFilters 
   const query = useQuery({
     queryKey: queryKeys.analyticsOperations(slice),
     queryFn: () => fetchOperations(params),
-    retry: 1,
   });
 
   if (query.isError) {

@@ -3226,7 +3226,11 @@
       "chatSettings": "chat settings",
       "translateCoverage": "translation coverage"
     },
-    "truncated": "Showing the first {{shown}} of {{total}}"
+    "truncated": "Showing the first {{shown}} of {{total}}",
+    "refused": {
+      "bad_range": "The start date is after the end date — adjust the period.",
+      "bad_date": "The date could not be read — adjust the period."
+    }
   },
   "access": {
     "cmsTitle": "Section closed",
@@ -3671,7 +3675,8 @@
       "reset": "Reset",
       "triage": "Triage",
       "anyTriage": "Any",
-      "awaiting": "Awaiting triage"
+      "awaiting": "Awaiting triage",
+      "badRange": "The start date is after the end date"
     },
     "numbers": {
       "count": "Reviews",

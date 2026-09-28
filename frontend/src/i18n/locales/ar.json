@@ -3314,7 +3314,11 @@
       "chatSettings": "إعدادات المحادثة",
       "translateCoverage": "تغطية الترجمة"
     },
-    "truncated": "عرض أول {{shown}} من {{total}}"
+    "truncated": "عرض أول {{shown}} من {{total}}",
+    "refused": {
+      "bad_range": "تاريخ البداية بعد تاريخ النهاية — عدّل الفترة.",
+      "bad_date": "تعذّرت قراءة التاريخ — عدّل الفترة."
+    }
   },
   "access": {
     "cmsTitle": "القسم مغلق",
@@ -3763,7 +3767,8 @@
       "reset": "إعادة ضبط",
       "triage": "المعالجة",
       "anyTriage": "الكل",
-      "awaiting": "بانتظار المعالجة"
+      "awaiting": "بانتظار المعالجة",
+      "badRange": "تاريخ البداية بعد تاريخ النهاية"
     },
     "numbers": {
       "count": "التقييمات",

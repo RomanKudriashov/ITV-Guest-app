@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { ApiError, api } from '@/api/client';
+import { retryTransientUpTo } from '@/api/retry';
 
 /**
  * Разделы CMS приходят С СЕРВЕРА.
@@ -36,10 +37,7 @@ export function useNavigation() {
     // Отказ по правам повтором не лечится: у линейного сотрудника раздела нет
     // и через три попытки. Три лишних круга с паузами — это только задержка
     // перед тем, как показать ему отказ.
-    retry: (count, error) =>
-      error instanceof ApiError && error.status >= 400 && error.status < 500
-        ? false
-        : count < 3,
+    retry: retryTransientUpTo(3),
   });
 }
 

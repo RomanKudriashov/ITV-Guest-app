@@ -1,7 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import { ApiError } from '@/api/client';
 import {
   fetchChatThread,
   fetchChatThreads,
@@ -89,12 +88,6 @@ export function useTrackerOrder(orderId: string | undefined, enabled: boolean) {
     queryFn: () => fetchTrackerOrder(orderId as string, language),
     enabled: enabled && Boolean(orderId),
     staleTime: 10_000,
-    retry: (failureCount, error) => {
-      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-        return false;
-      }
-      return failureCount < 1;
-    },
   });
 }
 

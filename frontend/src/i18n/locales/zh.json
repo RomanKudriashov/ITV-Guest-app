@@ -3195,7 +3195,11 @@
       "chatSettings": "聊天设置",
       "translateCoverage": "翻译覆盖率"
     },
-    "truncated": "显示前 {{shown}} 条，共 {{total}} 条"
+    "truncated": "显示前 {{shown}} 条，共 {{total}} 条",
+    "refused": {
+      "bad_range": "开始日期晚于结束日期——请调整时间段。",
+      "bad_date": "无法识别日期——请调整时间段。"
+    }
   },
   "access": {
     "cmsTitle": "该板块已关闭",
@@ -3639,7 +3643,8 @@
       "reset": "重置",
       "triage": "处理",
       "anyTriage": "全部",
-      "awaiting": "待处理"
+      "awaiting": "待处理",
+      "badRange": "开始日期晚于结束日期"
     },
     "numbers": {
       "count": "评价数",

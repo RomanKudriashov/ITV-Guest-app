@@ -15,6 +15,5 @@ export function useAnalyticsScope() {
     queryFn: fetchScope,
     staleTime: 5 * 60 * 1000,
     // Backend may 404 until it lands — don't hammer it.
-    retry: 1,
   });
 }

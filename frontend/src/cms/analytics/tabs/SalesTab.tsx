@@ -33,7 +33,6 @@ export function SalesTab({ controller }: { controller: UseAnalyticsFilters }) {
   const summary = useQuery({
     queryKey: queryKeys.analyticsSummary(baseSlice),
     queryFn: () => fetchSummary(baseParams),
-    retry: 1,
   });
 
   const breakdownParams = controller.toQuery({ dimension, sort, order });
@@ -41,7 +40,6 @@ export function SalesTab({ controller }: { controller: UseAnalyticsFilters }) {
   const breakdown = useQuery({
     queryKey: queryKeys.analyticsBreakdown(breakdownSlice),
     queryFn: () => fetchBreakdown(breakdownParams),
-    retry: 1,
   });
 
   const onSort = (column: string) => {

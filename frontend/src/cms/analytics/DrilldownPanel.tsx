@@ -99,7 +99,6 @@ export function DrilldownPanel({
   const drilldown = useQuery({
     queryKey: queryKeys.analyticsDrilldown(`${sliceKey}|${sort}|${order}`),
     queryFn: () => fetchDrilldown(query),
-    retry: 1,
   });
 
   const onSort = (column: ColumnId) => {
