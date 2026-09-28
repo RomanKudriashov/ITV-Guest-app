@@ -687,3 +687,127 @@ def test_the_reviews_report_carries_totals_and_a_row_per_venue(crystal, django_c
     assert [row["reviews"] for row in body["by_point"]] == [1]
     assert body["by_point"][0]["label"], "заведение названо, а не кодом"
     assert body["by_point"][0]["share"] == 1
+
+
+# --- Операции: форма, которую читает вкладка -------------------------------
+
+
+def _operations_feed(hotel, kitchen, spa):
+    """
+    Кухня: три заказа, два приняты (60 и 120 с), один выполнен за 300 с, один
+    отменён, один вне часов. СПА: один заказ, НИ ОДНОГО принятия — его среднее
+    обязано быть «нет», а не ноль.
+    """
+    bd = date(2026, 7, 20)
+    k = {"offering_type": "product", "point_key": kitchen}
+    for n in range(3):
+        _feed(hotel, "order_created", bd, k, {"revenue_minor": 100, "items_count": 1,
+                                             "off_hours": 1 if n == 0 else 0}, f"op-k{n}")
+    _feed(hotel, "order_accepted", bd, k, {"reaction_seconds": 60}, "op-ka1")
+    _feed(hotel, "order_accepted", bd, k, {"reaction_seconds": 120}, "op-ka2")
+    _feed(hotel, "order_completed", bd, k, {"fulfil_seconds": 300}, "op-kc1")
+    _feed(hotel, "order_cancelled", bd, k, {}, "op-kx1")
+    _feed(hotel, "order_created", bd, {"offering_type": "slot", "point_key": spa},
+          {"revenue_minor": 0, "items_count": 1}, "op-s1")
+
+
+def test_operations_totals_come_from_sums_not_from_rows(crystal):
+    """
+    Плитки вкладки «Операции» читают `totals`, таблица — `by_point`. Вкладка
+    однажды читала поля, которых сервер не слал, и рисовала NaN при живых
+    данных; эти поля и их смысл закреплены здесь.
+    """
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        kitchen, spa = _point_id("kitchen"), _point_id("spa")
+        _operations_feed(crystal, kitchen, spa)
+        body = queries.operations(crystal, admin, {"date_from": "2026-07-20", "date_to": "2026-07-20"})
+
+    totals = body["totals"]
+    assert totals["orders"] == 4
+    assert totals["cancelled"] == 1
+    assert totals["cancel_rate"] == 0.25
+    assert totals["off_hours_rate"] == 0.25
+    # Среднее по отелю — сумма секунд на число принятий (180/2), а не среднее
+    # средних отделов: отдел без принятий в знаменатель не входит.
+    assert totals["avg_reaction_seconds"] == 90
+    assert totals["avg_fulfil_seconds"] == 300
+
+    rows = {row["key"]: row for row in body["by_point"]}
+    assert rows[kitchen]["orders"] == 3
+    assert rows[kitchen]["cancel_rate"] == round(1 / 3, 4)
+    assert rows[kitchen]["avg_reaction_seconds"] == 90
+    assert rows[kitchen]["label"], "заведение названо, а не ключом"
+    # Не было ни одного принятия — «нет», а не «0 секунд».
+    assert rows[spa]["avg_reaction_seconds"] is None
+    assert rows[spa]["avg_fulfil_seconds"] is None
+    assert rows[spa]["cancel_rate"] == 0
+    assert rows[spa]["escalations"] == 0
+    assert body["escalations"] == {"fired": 0}
+
+
+def test_operations_on_an_empty_period_answers_with_zeros_and_nulls(crystal):
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        body = queries.operations(crystal, admin, {"date_from": "2020-01-01", "date_to": "2020-01-01"})
+
+    assert body["by_point"] == []
+    assert body["totals"] == {
+        "orders": 0, "completed": 0, "cancelled": 0, "cancel_rate": 0, "off_hours_rate": 0,
+        "avg_reaction_seconds": None, "avg_fulfil_seconds": None,
+    }
+    assert body["escalations"] == {"fired": 0}
+
+
+def test_operations_count_escalations_per_venue(crystal, django_capture_on_commit_callbacks):
+    """Срабатывание журнала относится к заведению ЗАКАЗА и в сумме равно итогу."""
+    from apps.notifications.models import NotificationLog
+    from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        with django_capture_on_commit_callbacks(execute=True):
+            order = create_order(
+                OrderInput(lines=[OrderLineInput(item_id=_item_id())], room_id=None),
+                guest_session=_session(),
+            )
+        # Две ступени сработали, одна ещё ждёт — в счёт идут только сработавшие.
+        for index, status in enumerate(("sent", "sent", "scheduled")):
+            NotificationLog.objects.create(
+                order=order, step_index=index, status=status, dedupe_key=f"op-esc-{index}",
+            )
+        body = queries.operations(crystal, admin, {"preset": "today"})
+
+    rows = {row["key"]: row for row in body["by_point"]}
+    point = str(order.execution_point_id)
+    assert rows[point]["escalations"] == 2
+    assert body["escalations"]["fired"] == sum(row["escalations"] for row in body["by_point"])
+
+
+def test_escalations_are_counted_in_hotel_days_not_server_days(crystal, django_capture_on_commit_callbacks):
+    """
+    Срабатывание в 00:30 по отелю — это ЕГО сутки, хотя в UTC ещё вчера. Счёт
+    по `created_at__date` (дата сервера) относил его к прошлому дню.
+    """
+    from datetime import datetime as dt, time, timedelta
+
+    from apps.analytics.services.queries import Period, _escalations_by_point
+    from apps.notifications.models import NotificationLog
+    from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        with django_capture_on_commit_callbacks(execute=True):
+            order = create_order(
+                OrderInput(lines=[OrderLineInput(item_id=_item_id())], room_id=None),
+                guest_session=_session(),
+            )
+        day = date(2026, 7, 20)
+        moment = dt.combine(day, time(0, 30)).replace(tzinfo=crystal.tzinfo)
+        assert moment.utcoffset() > timedelta(0), "проверка имеет смысл только восточнее UTC"
+        log = NotificationLog.objects.create(order=order, status="sent", dedupe_key="tz-edge")
+        NotificationLog.objects.filter(pk=log.pk).update(created_at=moment)
+
+        counts = _escalations_by_point(scope_for(admin), Period(day, day), crystal)
+
+    assert counts == {str(order.execution_point_id): 1}

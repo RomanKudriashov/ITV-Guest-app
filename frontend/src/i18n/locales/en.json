@@ -1834,7 +1834,8 @@
       "drilldown": "No orders for this slice",
       "timeseries": "No dynamics for this slice",
       "operations": "No operations data",
-      "reviews": "No reviews for this slice"
+      "reviews": "No reviews for this slice",
+      "trafficHotelOnly": "Traffic is available at hotel level only: guest visits are not tied to a venue."
     },
     "errors": {
       "breakdown": "Failed to load the breakdown",

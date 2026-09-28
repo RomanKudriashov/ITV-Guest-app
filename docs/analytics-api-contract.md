@@ -157,6 +157,34 @@
 ```
 
 ```jsonc
+// GET /analytics/operations?preset=week&group=point
+{"totals": {"orders": 7, "completed": 4, "cancelled": 1, "cancel_rate": 0.1429,
+            "off_hours_rate": 0.0,
+            "avg_reaction_seconds": 84,   // null — если не было ни одного принятия
+            "avg_fulfil_seconds": 131},   // null — если не было ни одного выполнения
+ "by_point": [{"key": "<point_id>", "label": "Панорама", "orders": 5, "completed": 3,
+               "cancelled": 1, "cancel_rate": 0.2, "avg_reaction_seconds": 84,
+               "avg_fulfil_seconds": 131, "escalations": 3}],
+ "escalations": {"fired": 3}}
+```
+
+Итоги считаются **из сумм**, а не из строк: среднее по отелю — секунды на число
+принятий, а не среднее средних отделов. Среднее, которого не было, — `null`, а не
+`0`: «реакция 0 с» читалась бы как рекорд. Эскалации — сработавшие строки журнала
+уведомлений в **сутках отеля** по заведению заказа; сумма по строкам равна
+`escalations.fired`.
+
+```jsonc
+// GET /analytics/traffic?preset=week
+{"available": true,
+ "totals": {"sessions": 410, "converted": 127, "conversion": 0.3098},
+ "by_entry": [{"key": "qr", "sessions": 300, "converted": 100, "conversion": 0.3333}],
+ "by_device": [/* та же строка */], "by_language": [/* та же строка */]}
+// Роль, ограниченная заведениями: {"available": false, "totals": {}, "by_entry": [], …}
+// — сессии к заведению не привязаны, это ответ, а не ошибка.
+```
+
+```jsonc
 // GET /analytics/drilldown?type=slot&status=cancelled&date_from&date_to
 {"orders": [{"id","number","type","point","status","total_minor","created_at",
              "room","rating"}], "total": 12}

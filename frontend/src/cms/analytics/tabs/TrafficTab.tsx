@@ -9,7 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { fetchTraffic } from '@/api/analytics';
-import type { BreakdownRow } from '@/api/analyticsTypes';
+import type { TrafficRow } from '@/api/analyticsTypes';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { Bar } from '../charts/InlineCharts';
@@ -35,6 +35,17 @@ export function TrafficTab({ controller }: { controller: UseAnalyticsFilters }) 
 
   const data = query.data;
 
+  // Роль, ограниченная заведениями, трафика не видит: сессии к заведению не
+  // привязаны. Это ответ сервера, а не сбой — и пустые плитки с «—» сказали
+  // бы «гостей не было», что неправда.
+  if (data && !data.available) {
+    return (
+      <Alert severity="info" data-testid="analytics-traffic-hotel-only">
+        {t('analytics.empty.trafficHotelOnly')}
+      </Alert>
+    );
+  }
+
   return (
     <Stack spacing={2}>
       <Box
@@ -46,12 +57,12 @@ export function TrafficTab({ controller }: { controller: UseAnalyticsFilters }) 
       >
         <StatTile
           label={t('analytics.metrics.sessions')}
-          value={data ? fmt.count(data.sessions) : undefined}
+          value={data ? fmt.count(data.totals.sessions) : undefined}
           loading={query.isLoading}
         />
         <StatTile
           label={t('analytics.metrics.conversion')}
-          value={data ? fmt.percent(data.conversion) : undefined}
+          value={data ? fmt.percent(data.totals.conversion) : undefined}
           loading={query.isLoading}
         />
       </Box>
@@ -65,7 +76,7 @@ export function TrafficTab({ controller }: { controller: UseAnalyticsFilters }) 
       >
         <BreakdownBars
           title={t('analytics.dimensions.entry_method')}
-          rows={data?.by_entry_method ?? []}
+          rows={data?.by_entry ?? []}
           loading={query.isLoading}
           labelKey="entry_method"
         />
@@ -93,13 +104,13 @@ function BreakdownBars({
   labelKey,
 }: {
   title: string;
-  rows: BreakdownRow[];
+  rows: TrafficRow[];
   loading: boolean;
   labelKey: 'entry_method' | 'device' | 'language';
 }) {
   const { t } = useTranslation();
   const fmt = useMetricFormatters();
-  const max = Math.max(...rows.map((r) => r.orders), 1);
+  const max = Math.max(...rows.map((r) => r.sessions), 1);
 
   return (
     <Card variant="outlined" sx={{ borderColor: 'divider' }}>
@@ -117,13 +128,13 @@ function BreakdownBars({
               <Box key={row.key} data-testid={`analytics-traffic-${labelKey}-${row.key}`}>
                 <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
                   <Typography variant="body2">
-                    {t(`analytics.values.${labelKey}.${row.key}`, { defaultValue: row.label })}
+                    {t(`analytics.values.${labelKey}.${row.key}`, { defaultValue: row.key || '—' })}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {fmt.count(row.orders)} · {fmt.percent(row.share)}
+                    {fmt.count(row.sessions)} · {fmt.percent(row.conversion)}
                   </Typography>
                 </Stack>
-                <Bar fraction={row.orders / max} />
+                <Bar fraction={row.sessions / max} />
               </Box>
             ))}
           </Stack>

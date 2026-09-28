@@ -163,34 +163,57 @@ export interface DrilldownResponse {
   total: number;
 }
 
-/** Per-group operations row (reaction/fulfilment/cancellations/escalations). */
-export interface OperationsRow {
+/*
+  «ОПЕРАЦИИ» И «ТРАФИК» — ФОРМА РОВНО ТА, ЧТО ОТДАЮТ `queries.operations` И
+  `queries.traffic`. Прежние типы описывали плоские `rows`, `avg_*` и
+  `sessions` верхнего уровня, которых сервер не слал никогда: вкладка
+  «Операции» рисовала «NaN» и «Нет данных» при заполненном ответе, «Трафик» —
+  то же самое. Тот же класс, что уже был у «Отзывов» ниже. Форму сторожит
+  `analytics-operations.spec.ts` — сверкой с живым ответом, а не с этим файлом.
+*/
+
+/** Меры операций. Среднее, которого не было (ни одного принятого заказа), — `null`. */
+export interface OperationsMeasures {
+  orders: number;
+  completed: number;
+  cancelled: number;
+  cancel_rate: number;
+  avg_reaction_seconds: number | null;
+  avg_fulfil_seconds: number | null;
+}
+
+/** Строка по заведению. */
+export interface OperationsRow extends OperationsMeasures {
   key: string;
   label: string;
-  orders: number;
-  avg_reaction_seconds: number;
-  avg_fulfil_seconds: number;
-  cancelled_count: number;
-  cancel_rate: number;
-  off_hours_count: number;
   escalations: number;
 }
 
 export interface OperationsResponse {
-  avg_reaction_seconds: number;
-  avg_fulfil_seconds: number;
-  cancel_rate: number;
-  off_hours_rate: number;
-  escalations: number;
-  rows: OperationsRow[];
+  /** Итог по выборке — из сумм на сервере, не среднее строк. */
+  totals: OperationsMeasures & { off_hours_rate: number };
+  by_point: OperationsRow[];
+  escalations: { fired: number };
 }
 
-export interface TrafficResponse {
+export interface TrafficRow {
+  key: string;
   sessions: number;
+  converted: number;
   conversion: number;
-  by_entry_method: BreakdownRow[];
-  by_device: BreakdownRow[];
-  by_language: BreakdownRow[];
+}
+
+/**
+ * Трафик виден только на уровне отеля: сессии к заведению не привязаны. Роли,
+ * ограниченной заведениями, сервер отвечает `available: false` и пустыми
+ * списками — это ответ, а не ошибка.
+ */
+export interface TrafficResponse {
+  available: boolean;
+  totals: { sessions?: number; converted?: number; conversion?: number };
+  by_entry: TrafficRow[];
+  by_device: TrafficRow[];
+  by_language: TrafficRow[];
 }
 
 /*

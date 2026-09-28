@@ -519,48 +519,92 @@ def _breakdown_modifiers(scope, params, period) -> list[dict]:
 # --- Операции --------------------------------------------------------------
 
 
+_OPERATIONS_SUMS = dict(
+    orders=Sum("orders_count"), completed=Sum("completed_count"), cancelled=Sum("cancelled_count"),
+    off_hours=Sum("off_hours_count"),
+    reaction_sum=Sum("reaction_seconds_sum"), reaction_n=Sum("reaction_count"),
+    fulfil_sum=Sum("fulfil_seconds_sum"), fulfil_n=Sum("fulfil_count"),
+)
+
+
+def _average_or_none(total, count):
+    """
+    Среднее, которого не было, — `null`, а не ноль. «Реакция 0 с» у отдела без
+    единого принятого заказа читалась бы как рекорд скорости.
+    """
+    return _ratio(total or 0, count, as_int=True) if count else None
+
+
+def _operations_measures(row: dict) -> dict:
+    orders = row["orders"] or 0
+    return {
+        "orders": orders,
+        "completed": row["completed"] or 0,
+        "cancelled": row["cancelled"] or 0,
+        "cancel_rate": _ratio(row["cancelled"] or 0, orders),
+        "avg_reaction_seconds": _average_or_none(row["reaction_sum"], row["reaction_n"]),
+        "avg_fulfil_seconds": _average_or_none(row["fulfil_sum"], row["fulfil_n"]),
+    }
+
+
 def operations(hotel: Hotel, user, params: dict) -> dict:
+    """
+    ИТОГИ СЧИТАЮТСЯ ИЗ СУММ, А НЕ ИЗ СТРОК. Среднее время по отелю — это сумма
+    секунд на число принятых заказов, а не среднее средних по отделам: отдел с
+    одним заказом весил бы столько же, сколько кухня с сотней. Поэтому итог —
+    отдельная агрегация на сервере, клиенту складывать нечего.
+
+    Форма ответа сторожится `test_operations_*`: вкладка однажды читала поля,
+    которых сервер не слал никогда, и рисовала «NaN» при живых данных.
+    """
     scope = scope_for(user)
     period = resolve_period(params, hotel)
+    qs = _order_qs(scope, params, period)
 
-    # Загрузка и время — по отделам.
-    by_point = _order_qs(scope, params, period).values("point_key").annotate(
-        orders=Sum("orders_count"), completed=Sum("completed_count"), cancelled=Sum("cancelled_count"),
-        reaction_sum=Sum("reaction_seconds_sum"), reaction_n=Sum("reaction_count"),
-        fulfil_sum=Sum("fulfil_seconds_sum"), fulfil_n=Sum("fulfil_count"),
-    )
+    escalations_by_point = _escalations_by_point(scope, period, hotel)
     rows = []
-    for row in by_point:
+    for row in qs.values("point_key").annotate(**_OPERATIONS_SUMS):
+        key = row["point_key"] or ""
         rows.append({
-            "key": row["point_key"] or "",
-            "orders": row["orders"] or 0,
-            "completed": row["completed"] or 0,
-            "cancelled": row["cancelled"] or 0,
-            "avg_reaction_seconds": _ratio(row["reaction_sum"] or 0, row["reaction_n"] or 0, as_int=True),
-            "avg_fulfil_seconds": _ratio(row["fulfil_sum"] or 0, row["fulfil_n"] or 0, as_int=True),
+            "key": key,
+            **_operations_measures(row),
+            "escalations": escalations_by_point.get(key, 0),
         })
     rows = _resolve_labels("point", rows)
     rows = _sort_rows(rows, params, default="orders")
 
+    totals_row = qs.aggregate(**_OPERATIONS_SUMS)
+    totals = _operations_measures(totals_row)
+    totals["off_hours_rate"] = _ratio(totals_row["off_hours"] or 0, totals["orders"])
+
     return {
+        "totals": totals,
         "by_point": rows,
-        "escalations": _escalation_counts(scope, period),
+        "escalations": {"fired": sum(escalations_by_point.values())},
     }
 
 
-def _escalation_counts(scope: Scope, period: Period) -> dict:
-    """Срабатывания эскалации — из уже персистентного журнала уведомлений."""
+def _escalations_by_point(scope: Scope, period: Period, hotel: Hotel) -> dict[str, int]:
+    """
+    Срабатывания эскалации — из уже персистентного журнала уведомлений,
+    по заведению заказа. Ключ — тот же `point_key`, что у строк роллапа.
+
+    СУТКИ — ОТЕЛЬНЫЕ. Раньше здесь стояло `created_at__date`, а это дата в
+    поясе СЕРВЕРА (UTC): с полуночи по Москве до трёх ночи всё сработавшее
+    относилось ко вчерашнему дню, и «сегодня» показывало ноль при живом
+    журнале. Нашлось, когда проверка попала ровно в это окно.
+    """
     from apps.notifications.models import NotificationLog
-    from apps.orders.models import Order
 
     qs = NotificationLog.objects.filter(
         parent__isnull=True, status="sent",
-        created_at__date__gte=period.frm, created_at__date__lte=period.to,
+        created_at__gte=_aware(period.frm, hotel, end=False),
+        created_at__lte=_aware(period.to, hotel, end=True),
     )
     if not scope.all_points:
-        order_ids = Order.objects.filter(execution_point_id__in=scope.point_ids or []).values_list("pk", flat=True)
-        qs = qs.filter(order_id__in=list(order_ids))
-    return {"fired": qs.count()}
+        qs = qs.filter(order__execution_point_id__in=scope.point_ids or [])
+    counts = qs.values("order__execution_point_id").annotate(n=Count("id"))
+    return {str(row["order__execution_point_id"] or ""): row["n"] for row in counts}
 
 
 # --- Трафик ----------------------------------------------------------------

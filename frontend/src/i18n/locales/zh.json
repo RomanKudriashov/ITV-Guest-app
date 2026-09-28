@@ -1815,7 +1815,8 @@
       "drilldown": "该切片暂无订单",
       "timeseries": "该切片暂无趋势",
       "operations": "暂无运营数据",
-      "reviews": "该切片暂无评价"
+      "reviews": "该切片暂无评价",
+      "trafficHotelOnly": "流量仅在酒店层面可见：宾客访问不与具体场所关联。"
     },
     "errors": {
       "breakdown": "加载细分失败",

@@ -37,7 +37,8 @@ export function OperationsTab({ controller }: { controller: UseAnalyticsFilters 
   }
 
   const data = query.data;
-  const rows = data?.rows ?? [];
+  const totals = data?.totals;
+  const rows = data?.by_point ?? [];
 
   return (
     <Stack spacing={2}>
@@ -49,28 +50,30 @@ export function OperationsTab({ controller }: { controller: UseAnalyticsFilters 
         }}
       >
         <StatTile
+          testId="analytics-operations-avg-reaction"
           label={t('analytics.operations.avgReaction')}
-          value={data ? fmt.duration(data.avg_reaction_seconds) : undefined}
+          value={data ? fmt.duration(totals?.avg_reaction_seconds) : undefined}
           loading={query.isLoading}
         />
         <StatTile
           label={t('analytics.operations.avgFulfil')}
-          value={data ? fmt.duration(data.avg_fulfil_seconds) : undefined}
+          value={data ? fmt.duration(totals?.avg_fulfil_seconds) : undefined}
           loading={query.isLoading}
         />
         <StatTile
           label={t('analytics.operations.cancelRate')}
-          value={data ? fmt.percent(data.cancel_rate) : undefined}
+          value={data ? fmt.percent(totals?.cancel_rate) : undefined}
           loading={query.isLoading}
         />
         <StatTile
           label={t('analytics.operations.offHours')}
-          value={data ? fmt.percent(data.off_hours_rate) : undefined}
+          value={data ? fmt.percent(totals?.off_hours_rate) : undefined}
           loading={query.isLoading}
         />
         <StatTile
+          testId="analytics-operations-escalations"
           label={t('analytics.operations.escalations')}
-          value={data ? fmt.count(data.escalations) : undefined}
+          value={data ? fmt.count(data.escalations?.fired) : undefined}
           loading={query.isLoading}
         />
       </Box>

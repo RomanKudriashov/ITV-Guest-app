@@ -13,9 +13,25 @@ export function useAnalyticsLanguage(): string {
   return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
 }
 
+/** Значение, которого нет. Одно на весь раздел, чтобы «нет» выглядело одинаково. */
+export const MISSING = '—';
+
+/** Число, которое можно показать: не `null`, не `undefined`, не NaN и не бесконечность. */
+type Maybe = number | null | undefined;
+
+function shown(value: Maybe): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 /**
  * Formatters bound to the hotel currency and the UI language. Money uses the
  * hotel's minor-unit exponent; everything else uses `Intl` in the UI locale.
+ *
+ * КАЖДЫЙ ФОРМАТТЕР ПРИНИМАЕТ «НЕТ ЗНАЧЕНИЯ» И РИСУЕТ ПРОЧЕРК. Вкладка
+ * «Операции» однажды читала поля, которых сервер не слал, и `Intl` честно
+ * отформатировал `undefined` в «NaN» и «не число %». Типы тогда не спасли:
+ * TypeScript верит объявлению ответа. Защита здесь — последняя линия: какой
+ * бы формы ни приехал ответ, в плитке будет «—», а не мусор.
  */
 export function useMetricFormatters() {
   const { hotel } = useAuth();
@@ -24,47 +40,56 @@ export function useMetricFormatters() {
   const currency = hotel?.currency ?? 'RUB';
 
   const money = useCallback(
-    (minor: number) =>
-      formatMoney(minor, currency, minorUnits, language, { trimZeroFraction: true }),
+    (minor: Maybe) =>
+      shown(minor)
+        ? formatMoney(minor, currency, minorUnits, language, { trimZeroFraction: true })
+        : MISSING,
     [currency, minorUnits, language],
   );
 
   const count = useCallback(
-    (value: number) => new Intl.NumberFormat(language).format(Math.round(value)),
+    (value: Maybe) =>
+      shown(value) ? new Intl.NumberFormat(language).format(Math.round(value)) : MISSING,
     [language],
   );
 
   const decimal = useCallback(
-    (value: number) =>
-      new Intl.NumberFormat(language, { maximumFractionDigits: 1 }).format(value),
+    (value: Maybe) =>
+      shown(value)
+        ? new Intl.NumberFormat(language, { maximumFractionDigits: 1 }).format(value)
+        : MISSING,
     [language],
   );
 
   const percent = useCallback(
-    (fraction: number) =>
-      new Intl.NumberFormat(language, {
-        style: 'percent',
-        maximumFractionDigits: 1,
-      }).format(fraction),
+    (fraction: Maybe) =>
+      shown(fraction)
+        ? new Intl.NumberFormat(language, {
+            style: 'percent',
+            maximumFractionDigits: 1,
+          }).format(fraction)
+        : MISSING,
     [language],
   );
 
   const duration = useCallback(
-    (seconds: number) => formatDuration(seconds),
+    (seconds: Maybe) => (shown(seconds) ? formatDuration(seconds) : MISSING),
     [],
   );
 
   const rating = useCallback(
-    (value: number) =>
-      new Intl.NumberFormat(language, {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }).format(value),
+    (value: Maybe) =>
+      shown(value)
+        ? new Intl.NumberFormat(language, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }).format(value)
+        : MISSING,
     [language],
   );
 
   const value = useCallback(
-    (raw: number, kind: MetricFormat) => {
+    (raw: Maybe, kind: MetricFormat) => {
       switch (kind) {
         case 'money':
           return money(raw);
@@ -85,14 +110,14 @@ export function useMetricFormatters() {
   );
 
   const signedPercent = useCallback(
-    (fraction: number) => {
-      const formatted = new Intl.NumberFormat(language, {
-        style: 'percent',
-        maximumFractionDigits: 1,
-        signDisplay: 'always',
-      }).format(fraction);
-      return formatted;
-    },
+    (fraction: Maybe) =>
+      shown(fraction)
+        ? new Intl.NumberFormat(language, {
+            style: 'percent',
+            maximumFractionDigits: 1,
+            signDisplay: 'always',
+          }).format(fraction)
+        : MISSING,
     [language],
   );
 
