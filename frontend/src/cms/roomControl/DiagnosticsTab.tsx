@@ -34,7 +34,7 @@ import {
 } from '@/api/grms';
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
-import { EmptyState } from '@/components/EmptyState';
+import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useToast } from '@/components/ToastProvider';
 
 /**
@@ -238,9 +238,15 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
       {journal.isLoading ? <Skeleton variant="rounded" height={280} /> : null}
 
       {journal.data && journal.data.rows.length === 0 ? (
-        <EmptyState
-          title={t('roomControl.diagnostics.emptyTitle')}
-          description={t('roomControl.diagnostics.emptyHint')}
+        // «Обмена пока не было» — только без фильтров. Под фильтром это
+        // неправда: обмен был, просто не этот (тот же класс, что ADM-003).
+        <ListEmpty
+          testId="diagnostics-empty"
+          isFiltered={Object.values(filters).some(Boolean)}
+          onReset={() => setFilters(EMPTY_FILTERS)}
+          what={t('roomControl.diagnostics.emptyTitle')}
+          emptyTitle={t('roomControl.diagnostics.emptyTitle')}
+          emptyHint={t('roomControl.diagnostics.emptyHint')}
         />
       ) : null}
 

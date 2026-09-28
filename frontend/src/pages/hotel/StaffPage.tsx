@@ -51,7 +51,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/auth';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FormCell, FormGrid } from '@/kit/formLayout';
-import { EmptyState } from '@/components/EmptyState';
+import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
@@ -175,11 +175,21 @@ export function StaffPage() {
               {() => null}
             </QueryState>
           ) : staff.length === 0 ? (
-            <EmptyState
+            /*
+              «Пока нет сотрудников» — только когда их действительно нет. Под
+              поиском без результата это было неправдой, а кнопкой «Добавить»
+              подталкивало завести дубль того, кто просто не попал в строку
+              (ADM-003 внешнего аудита).
+            */
+            <ListEmpty
               testId="staff-empty"
-              title={t('hotel.staff.empty')}
-              description={t('hotel.staff.emptyHint')}
-              action={
+              isFiltered={Boolean(params.search)}
+              narrowedBy="search"
+              onReset={() => patch({ search: '' })}
+              what={t('state.what.staff')}
+              emptyTitle={t('hotel.staff.empty')}
+              emptyHint={t('hotel.staff.emptyHint')}
+              emptyAction={
                 <Button variant="contained" size="small" onClick={() => setEditing('new')}>
                   {t('hotel.staff.add')}
                 </Button>

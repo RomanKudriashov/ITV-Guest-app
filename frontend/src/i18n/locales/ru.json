@@ -3327,7 +3327,10 @@
     "empty": "Здесь пока пусто",
     "found": "Найдено: {{count}}",
     "ofTotal": "Показаны {{shown}} из {{total}}",
-    "searchPlaceholder": "Поиск"
+    "searchPlaceholder": "Поиск",
+    "nothingFoundSearch": "По запросу ничего не найдено",
+    "nothingFoundSearchHint": "Записи есть, но ни одна не подходит под строку поиска.",
+    "resetSearch": "Сбросить поиск"
   },
   "wrongHost": {
     "title": "Это адрес платформы, а не отеля",

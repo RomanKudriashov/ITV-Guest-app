@@ -3378,7 +3378,10 @@
     "empty": "لا شيء هنا بعد",
     "found": "النتائج: {{count}}",
     "ofTotal": "عرض {{shown}} من {{total}}",
-    "searchPlaceholder": "بحث"
+    "searchPlaceholder": "بحث",
+    "nothingFoundSearch": "لا توجد نتائج مطابقة للبحث",
+    "nothingFoundSearchHint": "توجد سجلات، لكن لا يطابق أي منها نص البحث.",
+    "resetSearch": "مسح البحث"
   },
   "wrongHost": {
     "title": "هذا عنوان المنصّة، لا عنوان فندق",

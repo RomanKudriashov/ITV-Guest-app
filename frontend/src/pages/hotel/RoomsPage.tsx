@@ -84,7 +84,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { RoomGrid } from './RoomGrid';
 import { RoomPanel } from './RoomPanel';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { EmptyState } from '@/components/EmptyState';
+import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useToast } from '@/components/ToastProvider';
 
 interface RoomForm {
@@ -150,6 +150,10 @@ export function RoomsPage() {
   const isFiltered = Boolean(
     params.search || params.floor || params.category || params.housekeeping || params.orders || params.control,
   );
+  const clearFilters = () => {
+    resetSelection();
+    patch({ search: '', floor: '', category: '', housekeeping: '', orders: '', control: '', page: 1 });
+  };
   // На сетке те же фильтры — она гасит ими кубики, не запрашивая ничего
   // нового: выборка на экране и выборка на сервере должны совпадать.
   const gridFilters = filters;
@@ -510,18 +514,7 @@ export function RoomsPage() {
             {isFiltered ? (
               <Button
                 size="small"
-                onClick={() => {
-                  resetSelection();
-                  patch({
-                    search: '',
-                    floor: '',
-                    category: '',
-                    housekeeping: '',
-                    orders: '',
-                    control: '',
-                    page: 1,
-                  });
-                }}
+                onClick={clearFilters}
                 data-testid="rooms-filters-reset"
               >
                 {t('list.resetFilters')}
@@ -599,11 +592,21 @@ export function RoomsPage() {
               {() => null}
             </QueryState>
           ) : rooms.length === 0 ? (
-            <EmptyState
+            // Пусто под фильтром — не «номеров нет» с кнопкой завести ещё (ADM-003).
+            <ListEmpty
               testId="rooms-empty"
-              title={t('hotel.rooms.empty')}
-              description={t('hotel.rooms.emptyHint')}
-              action={
+              isFiltered={isFiltered}
+              narrowedBy={
+                params.search &&
+                !(params.floor || params.category || params.housekeeping || params.orders || params.control)
+                  ? 'search'
+                  : 'filters'
+              }
+              onReset={clearFilters}
+              what={t('state.what.rooms')}
+              emptyTitle={t('hotel.rooms.empty')}
+              emptyHint={t('hotel.rooms.emptyHint')}
+              emptyAction={
                 <Button variant="contained" size="small" onClick={() => setBulkOpen(true)}>
                   {t('hotel.rooms.bulkAdd')}
                 </Button>

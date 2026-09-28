@@ -3259,7 +3259,10 @@
     "empty": "这里还是空的",
     "found": "找到 {{count}} 条",
     "ofTotal": "显示 {{shown}} / {{total}}",
-    "searchPlaceholder": "搜索"
+    "searchPlaceholder": "搜索",
+    "nothingFoundSearch": "没有符合搜索条件的结果",
+    "nothingFoundSearchHint": "记录存在，但没有与搜索内容匹配的记录。",
+    "resetSearch": "清除搜索"
   },
   "wrongHost": {
     "title": "这是平台地址，不是酒店地址",

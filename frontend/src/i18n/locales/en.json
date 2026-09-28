@@ -3290,7 +3290,10 @@
     "empty": "Nothing here yet",
     "found": "Found: {{count}}",
     "ofTotal": "Showing {{shown}} of {{total}}",
-    "searchPlaceholder": "Search"
+    "searchPlaceholder": "Search",
+    "nothingFoundSearch": "Nothing matches your search",
+    "nothingFoundSearchHint": "There are records, but none match the search text.",
+    "resetSearch": "Clear search"
   },
   "wrongHost": {
     "title": "This is the platform address, not a hotel one",

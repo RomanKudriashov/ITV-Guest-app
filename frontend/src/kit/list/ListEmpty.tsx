@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 
@@ -20,6 +21,16 @@ import { EmptyState } from '@/components/EmptyState';
 export function ListEmpty({
   isFiltered,
   onReset,
+  /*
+    Чем отсеяно: только строкой поиска — «по запросу ничего не найдено» и
+    «сбросить поиск»; фильтрами (или поиском вместе с ними) — «снять фильтры».
+    Кнопка должна называть то, что человек сам ввёл.
+  */
+  narrowedBy = 'filters',
+  /** Своя фраза настоящей пустоты («Пока нет сотрудников») — иначе общая. */
+  emptyTitle,
+  /** Действие для по-настоящему пустого списка — «Добавить сотрудника». */
+  emptyAction,
   /** Что именно пусто, именительный: «сотрудников», «блюд». */
   what,
   /** Подсказка для по-настоящему пустого списка: как завести первую запись. */
@@ -36,6 +47,9 @@ export function ListEmpty({
 }: {
   isFiltered: boolean;
   onReset?: () => void;
+  narrowedBy?: 'search' | 'filters';
+  emptyTitle?: string;
+  emptyAction?: ReactNode;
   what: string;
   emptyHint?: string;
   testId?: string;
@@ -43,15 +57,16 @@ export function ListEmpty({
   const { t } = useTranslation();
 
   if (isFiltered) {
+    const bySearch = narrowedBy === 'search';
     return (
       <EmptyState
         testId={testId}
-        title={t('list.nothingFound')}
-        description={t('list.nothingFoundHint')}
+        title={t(bySearch ? 'list.nothingFoundSearch' : 'list.nothingFound')}
+        description={t(bySearch ? 'list.nothingFoundSearchHint' : 'list.nothingFoundHint')}
         action={
           onReset ? (
             <Button size="small" onClick={onReset} data-testid="list-reset-filters">
-              {t('list.resetFilters')}
+              {t(bySearch ? 'list.resetSearch' : 'list.resetFilters')}
             </Button>
           ) : undefined
         }
@@ -62,8 +77,9 @@ export function ListEmpty({
   return (
     <EmptyState
       testId={testId}
-      title={t('list.empty', { what })}
+      title={emptyTitle ?? t('list.empty', { what })}
       description={emptyHint}
+      action={emptyAction}
     />
   );
 }
