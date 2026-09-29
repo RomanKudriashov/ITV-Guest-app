@@ -158,9 +158,26 @@ test.describe('Типизированные трекеры', () => {
       .then((page) => page.items)) as Array<{ id: string; code: string }>
     const kitchen = services.find((s) => s.code === 'kitchen')!
     const bar = services.find((s) => s.code === 'bar')!
-    const barPointId = (
-      await request.get(`${API}/api/cms/services/${bar.id}`, { headers: h }).then((r) => r.json())
-    ).execution_point.id
+    const barDetail = await request
+      .get(`${API}/api/cms/services/${bar.id}`, { headers: h })
+      .then((r) => r.json())
+    const barPointId = barDetail.execution_point.id
+
+    /*
+      ЧАСЫ БАРА — УСЛОВИЕ ТЕСТА, А НЕ ВРЕМЯ СУТОК. Бар по сиду работает с
+      16:00, и днём тест падал на «Негрони недоступна — доступна с 16:00»:
+      доступность позиции проверяет и часы заведения. Время сервера из e2e не
+      зафиксировать, поэтому на время теста у бара снимаем часы и в `finally`
+      возвращаем прежние. Тест проверяет разъезд заказа, а не расписание.
+    */
+    const barSchedule: string | null = barDetail.schedule_id
+    const setBarSchedule = (scheduleId: string | null) =>
+      request.patch(`${API}/api/cms/services/${bar.id}`, {
+        data: { schedule_id: scheduleId },
+        headers: h,
+      })
+    expect((await setBarSchedule(null)).ok(), 'снять часы бара на время теста').toBeTruthy()
+    try {
 
     // 1. Бару — свой раздел и коктейль в нём.
     const barCategory = await request
@@ -247,6 +264,9 @@ test.describe('Типизированные трекеры', () => {
     const board = page.getByTestId('tracker-board')
     await expect(board).toContainText(new RegExp(`Негрони ${tag}`, 'i'))
     await expect(board).not.toContainText(/цезарь/i)
+    } finally {
+      expect((await setBarSchedule(barSchedule)).ok(), 'вернуть бару его часы').toBeTruthy()
+    }
   })
 })
 
