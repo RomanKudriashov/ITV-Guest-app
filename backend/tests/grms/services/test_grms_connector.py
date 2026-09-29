@@ -362,21 +362,39 @@ def test_browser_socket_without_origin_is_still_refused(crystal):
 
     Гостевой сокет зовёт страница, и у неё Origin есть всегда. Его отсутствие —
     признак того, что зовут не оттуда, и такой вызов по-прежнему отвергается.
+
+    ВАЛИДАТОР СОБИРАЕТСЯ ЗДЕСЬ, А НЕ БЕРЁТСЯ ИЗ `config.asgi`. Тот читает
+    `ALLOWED_HOSTS` один раз, при импорте, — `override_settings` его не
+    достаёт, и под тестами он пропускал всё (`*`). Прежняя редакция проходила
+    не благодаря проверке источника, а потому что потребитель отказывал раньше
+    неё: у запроса нет ни отеля, ни токена. Когда отказ потребителя стал
+    «принять и закрыть с кодом» (партия 22), проверка покраснела — и выяснилось,
+    что источник она не проверяла никогда. Теперь контроль рядом: с
+    разрешённым Origin тот же запрос проходит валидатор и доходит до
+    потребителя (4404 «нет отеля») — значит, отказ без Origin дал именно он.
     """
+    from channels.routing import URLRouter
+    from channels.security.websocket import AllowedHostsOriginValidator
     from django.test import override_settings
 
-    from config.asgi import application
+    from apps.realtime.routing import browser_urlpatterns
 
-    async def scenario():
-        communicator = WebsocketCommunicator(application, "/ws/v1/guest/room/")
+    async def scenario(app, headers):
+        communicator = WebsocketCommunicator(app, "/ws/v1/guest/room/", headers=headers)
         connected, _ = await communicator.connect(timeout=10)
+        code = None
+        if connected:
+            code = (await communicator.receive_output(timeout=10)).get("code")
         await communicator.disconnect()
-        return connected
+        return connected, code
 
     with override_settings(ALLOWED_HOSTS=STRICT_HOSTS, DEBUG=False):
-        assert async_to_sync(scenario)() is False, (
-            "проверка источника снята только с он-прем канала"
-        )
+        app = AllowedHostsOriginValidator(URLRouter(browser_urlpatterns))
+        refused = async_to_sync(scenario)(app, [])
+        passed = async_to_sync(scenario)(app, [(b"origin", b"https://stand.example.test")])
+
+    assert refused == (False, None), "без Origin браузерный сокет обязан отвергаться"
+    assert passed == (True, 4404), "с разрешённым Origin запрос обязан доходить до потребителя"
 
 
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
