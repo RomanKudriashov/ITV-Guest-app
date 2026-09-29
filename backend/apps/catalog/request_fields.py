@@ -136,6 +136,21 @@ def parse_field_value(field, raw: Any, *, language: str | None = None) -> Parsed
     return parser(raw, field)
 
 
+#: Демо-поля, ответ на которые — СРОК заявки (`RequestField.sets_requested_time`).
+#: Только там, где время — момент, к которому ждут исполнителя: забрать,
+#: подать, доставить. «Время прилёта», «Со скольких», «Когда» столика — нет.
+#: Читают сид (новое поле) и разовая команда `mark_requested_time_fields`
+#: (уже заведённые) — список один, чтобы они не разошлись.
+DEMO_REQUESTED_TIME_FIELDS = frozenset(
+    {
+        ("laundry-service", "when"),
+        ("taxi", "when"),
+        ("airport-dropoff", "when"),
+        ("flowers", "when"),
+    }
+)
+
+
 def build_field_snapshot(fields: list, values: dict[str, Any], *, language: str | None = None) -> list[dict]:
     """
     Проверяет ответы и собирает снимок для заказа.

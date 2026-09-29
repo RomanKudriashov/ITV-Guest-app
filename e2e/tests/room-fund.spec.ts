@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM } from './helpers'
+import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, findItemByTitle, guestSession, HOTEL } from './helpers'
 
 /**
  * Номерной фонд: листание, человеческий порядок, переименование.
@@ -305,21 +305,49 @@ test.describe('Сетка номерного фонда', () => {
 })
 
 test.describe('Аналитика: разрез по категории номера', () => {
-  test('УКУС: «без категории» показана и объяснена, а не спрятана', async ({ page }) => {
-    await openAdmin(page, '/cms/analytics')
-    // Вкладка продаж — там живёт разбивка.
-    await expect(page.getByTestId('analytics-breakdown-table')).toBeVisible({ timeout: 30_000 })
+  test('УКУС: «без категории» показана и объяснена, а не спрятана', async ({ page, request }) => {
+    /*
+      УСЛОВИЕ ЗАДАЁТСЯ ЗДЕСЬ, А НЕ БЕРЁТСЯ СО СТЕНДА. Прежняя редакция
+      полагалась на «на стенде категорий нет ни у одного номера» — с волны 10
+      сид раздаёт категории демо-номерам, и после любого прогона сида проверка
+      краснела не на коде, а на данных (партия 22). Теперь она сама делает
+      заказ из номера без категории и в конце возвращает номеру категорию.
+    */
+    const token = await apiToken(request, ADMIN)
+    const headers = apiHeaders(token)
+    const rooms = await (await request.get(`${API}/api/cms/rooms?limit=500`, { headers })).json()
+    const room = rooms.items.find((entry: { number: string }) => entry.number === '201')
+    expect(room, 'демо-номер 201').toBeTruthy()
+    const before: string | null = room.category_id
 
-    // Селект здесь не нативный (MUI Select): открываем список и выбираем пункт
-    // по подписи — ровно так же, как это делает человек.
-    await page.getByTestId('analytics-breakdown-dimension').click()
-    await page.getByRole('option', { name: 'Категория номера' }).click()
+    const patch = (categoryId: string | null) =>
+      request.patch(`${API}/api/cms/rooms/${room.id}`, { headers, data: { category_id: categoryId } })
+    expect((await patch(null)).ok(), 'снять категорию с номера 201').toBeTruthy()
+    try {
+      const guest = await guestSession(request, '201')
+      const caesar = await findItemByTitle(request, token, 'Цезарь')
+      const placed = await request.post(`${API}/api/guest/order`, {
+        headers: { Authorization: `Bearer ${guest}`, 'X-Hotel-Subdomain': HOTEL, 'Idempotency-Key': `rf-${Date.now()}` },
+        data: { lines: [{ item_id: caesar!.id, quantity: 1 }], timing: 'asap' },
+      })
+      expect(placed.ok(), `заказ из номера без категории -> ${placed.status()}`).toBeTruthy()
 
-    // На стенде категорий нет ни у одного номера, и весь объём попадает в
-    // «Без категории». Экран обязан это сказать словами, а не показать пустоту.
-    await expect(page.getByTestId('analytics-category-unknown')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('analytics-category-unknown')).toContainText('до появления')
-    await expect(page.getByTestId('analytics-breakdown-table')).toContainText('Без категории')
+      await openAdmin(page, '/cms/analytics')
+      // Вкладка продаж — там живёт разбивка.
+      await expect(page.getByTestId('analytics-breakdown-table')).toBeVisible({ timeout: 30_000 })
+
+      // Селект здесь не нативный (MUI Select): открываем список и выбираем пункт
+      // по подписи — ровно так же, как это делает человек.
+      await page.getByTestId('analytics-breakdown-dimension').click()
+      await page.getByRole('option', { name: 'Категория номера' }).click()
+
+      // Заказ без категории обязан быть назван словами, а не пропасть из разреза.
+      await expect(page.getByTestId('analytics-category-unknown')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('analytics-category-unknown')).toContainText('до появления')
+      await expect(page.getByTestId('analytics-breakdown-table')).toContainText('Без категории')
+    } finally {
+      expect((await patch(before)).ok(), 'вернуть номеру 201 категорию').toBeTruthy()
+    }
   })
 })
 

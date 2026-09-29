@@ -35,7 +35,7 @@ from apps.catalog.models import (
     ServiceLocation,
     SlotConfig,
 )
-from apps.catalog.request_fields import FieldType
+from apps.catalog.request_fields import DEMO_REQUESTED_TIME_FIELDS, FieldType
 from apps.core.context import tenant_context
 from apps.core.errors import DomainError
 from apps.core.fields import translate
@@ -276,7 +276,6 @@ class Command(BaseCommand):
             self._seed_item_facets()
             self._seed_services(points, schedules)
             self._seed_concierge(points, schedules)
-            self._mark_requested_time_fields()
             self._seed_info_pages()
             self._seed_slot_resources(points, schedules)
             if with_rich:
@@ -1141,33 +1140,6 @@ class Command(BaseCommand):
         )
         return category
 
-    # Поля, ответ на которые — СРОК заявки (`RequestField.sets_requested_time`).
-    # Только там, где время — это момент, к которому ждут исполнителя: забрать,
-    # подать, доставить. «Время прилёта», «Со скольких», «Когда» столика — нет.
-    REQUESTED_TIME_FIELDS = {
-        ("laundry-service", "when"),
-        ("taxi", "when"),
-        ("airport-dropoff", "when"),
-        ("flowers", "when"),
-    }
-
-    def _mark_requested_time_fields(self) -> None:
-        """
-        Отметка «время заказа» — ВНЕ ветки `created`, иначе до уже поднятого
-        стенда она не дошла бы никогда: поля там заведены раньше, чем отметка
-        появилась. Идемпотентно.
-
-        Услугу, у которой время заказа уже отмечено (на этом поле или другом),
-        не трогаем: это решение администратора, и оно сильнее сида.
-        """
-        for item_code, field_code in sorted(self.REQUESTED_TIME_FIELDS):
-            fields = RequestField.objects.filter(item__code=item_code)
-            if fields.filter(sets_requested_time=True).exists():
-                continue
-            fields.filter(code=field_code, field_type=FieldType.TIME).update(
-                sets_requested_time=True
-            )
-
     def _seed_request_fields(self, item: Item, specs):
         for order, (code, ru, en, field_type, required, help_text, minimum, maximum, options) in enumerate(specs):
             RequestField.objects.get_or_create(
@@ -1182,6 +1154,12 @@ class Command(BaseCommand):
                     "max_value": maximum,
                     "options": options,
                     "sort_order": order,
+                    # Только новому полю. Уже заведённые сид не трогает:
+                    # повторный прогон по живому отелю переписывает слишком
+                    # многое (пароль владельца, категории, фото, расписания),
+                    # и отметку до стенда доносит разовая команда
+                    # `mark_requested_time_fields`, трогающая только её.
+                    "sets_requested_time": (item.code, code) in DEMO_REQUESTED_TIME_FIELDS,
                 },
             )
 
