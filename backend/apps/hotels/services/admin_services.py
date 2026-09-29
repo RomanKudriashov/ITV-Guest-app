@@ -843,7 +843,7 @@ def _active_orders_by_room(room_ids: list) -> dict:
     from django.utils import timezone
 
     from apps.orders.models import Order
-    from apps.orders.services.tracker_types import effective_sla_minutes
+    from apps.orders.services.tracker_types import effective_sla_minutes, work_clock_start
 
     if not room_ids:
         return {}
@@ -868,7 +868,7 @@ def _active_orders_by_room(room_ids: list) -> dict:
             continue
         if point.pk not in thresholds:
             thresholds[point.pk] = timedelta(minutes=effective_sla_minutes(point))
-        if now - order.created_at >= thresholds[point.pk]:
+        if now - work_clock_start(order) >= thresholds[point.pk]:
             stats["overdue"] += 1
     return result
 

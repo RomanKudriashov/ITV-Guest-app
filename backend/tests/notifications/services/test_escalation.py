@@ -600,3 +600,21 @@ def _place_housekeeping_request(client, crystal) -> Order:
         return Order.objects.select_related("status", "execution_point").get(
             pk=response.json()["id"]
         )
+
+
+def test_steps_of_a_request_for_later_count_from_the_named_time(crystal, order, notifications_on, no_dispatch):
+    """
+    Заявка «на 12:00», созданная в 10:15: руководителя звать в 10:20 незачем.
+    Ступени с задержкой — от названного гостем времени; ступень «сразу» —
+    известие заведению — уходит при оформлении, чтобы к сроку о заявке знали.
+    """
+    from datetime import timedelta
+
+    with tenant_context(crystal):
+        named = order.created_at + timedelta(hours=2)
+        Order.objects.filter(pk=order.pk).update(requested_time=named)
+        order.refresh_from_db()
+        planned = plan_escalation(order)
+
+    assert planned[0].scheduled_for == order.created_at
+    assert [(log.scheduled_for - named).total_seconds() / 60 for log in planned[1:]] == [5, 15]

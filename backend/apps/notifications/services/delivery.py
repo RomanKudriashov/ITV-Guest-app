@@ -248,11 +248,20 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
         return []
 
     from apps.core.services import scheduler
+    from apps.orders.services.tracker_types import work_clock_start
 
     now = timezone.now()
     planned: list[NotificationLog] = []
     for index, step in enumerate(steps):
-        scheduled_for = order.created_at + timedelta(minutes=step.delay_minutes)
+        # Ступень «сразу» — это известие заведению о заявке: оно уходит при
+        # оформлении, и к 12:00 заведение уже знает о прачечной. Ступени с
+        # задержкой — это ПРОСРОЧКА, и отсчёт у неё от времени, названного
+        # гостем (`work_clock_start`), а не от оформления: иначе заявку «на
+        # 12:00», созданную в 10:15, руководитель получал бы в 10:25.
+        if step.delay_minutes:
+            scheduled_for = work_clock_start(order) + timedelta(minutes=step.delay_minutes)
+        else:
+            scheduled_for = order.created_at
         log = _get_or_create_log(
             order=order,
             rule=rule,

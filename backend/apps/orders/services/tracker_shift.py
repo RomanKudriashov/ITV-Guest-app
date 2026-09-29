@@ -30,7 +30,7 @@ from datetime import timedelta
 
 from apps.orders.models import Order
 from apps.orders.services.closing import closing_moments
-from apps.orders.services.tracker_types import effective_sla_minutes
+from apps.orders.services.tracker_types import effective_sla_minutes, work_clock_start
 
 
 def _median(values: list[int]) -> int | None:
@@ -95,7 +95,7 @@ def shift_summary_for(points, *, hotel, now=None) -> dict:
         else:
             in_work += 1
         threshold = thresholds.get(order.execution_point_id)
-        if threshold is not None and local_now - order.created_at >= threshold:
+        if threshold is not None and local_now - work_clock_start(order) >= threshold:
             overdue += 1
 
     # Отменённые в «сделано» НЕ идут: это про выполненную работу. Отказы важны,

@@ -198,6 +198,37 @@ def _service_of(point):
     return point.services.first()
 
 
+def work_clock_start(order):
+    """
+    МОМЕНТ, ОТ КОТОРОГО ИДЁТ НОРМА ВРЕМЕНИ, — ОДИН НА ВСЕХ ЧИТАТЕЛЕЙ.
+
+    Позднейший из трёх: создание; время, названное гостем (`requested_time`:
+    заказ ко времени или поле формы «время заказа»); последний возврат в
+    работу. Заявка, созданная в 10:15 «забрать в 12:00», до 12:00 опоздать не
+    может — а считали от 10:15, и доска красила её, а эскалация звала
+    руководителя через десять минут после оформления (партия 22).
+
+    Читают: карточка доски (`is_overdue`), фильтр «просроченные», счётчик
+    пульта, кубик номера, ступени эскалации. Раньше возврат в работу учитывала
+    одна карточка — остальные трое считали от создания и расходились с ней.
+    Возраст заказа («ждёт 3 часа») сюда не относится: он честно от создания.
+    """
+    moments = [order.created_at, order.requested_time, order.reopened_at]
+    return max(moment for moment in moments if moment is not None)
+
+
+def work_clock_start_expression():
+    """`work_clock_start` для выборки — то же правило одним выражением SQL."""
+    from django.db.models import F
+    from django.db.models.functions import Coalesce, Greatest
+
+    return Greatest(
+        F("created_at"),
+        Coalesce(F("requested_time"), F("created_at")),
+        Coalesce(F("reopened_at"), F("created_at")),
+    )
+
+
 def effective_sla_minutes(point) -> int:
     """
     ПОРОГ ПРОСРОЧКИ ТОЧКИ — ОДНО МЕСТО НА ВСЕХ ЧИТАТЕЛЕЙ.

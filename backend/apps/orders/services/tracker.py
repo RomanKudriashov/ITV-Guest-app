@@ -40,6 +40,8 @@ from apps.orders.services.tracker_types import (
     GroupBy,
     behaviour_for_type,
     effective_sla_minutes,
+    work_clock_start,
+    work_clock_start_expression,
     tracker_type_for_point,
 )
 
@@ -530,7 +532,9 @@ def _narrow(
         # `is_overdue` на карточке. Два разных правила «что такое просрочка»
         # разошлись бы на первой же правке настройки.
         edge = timezone.now() - timedelta(minutes=effective_sla_minutes(point))
-        queryset = queryset.filter(created_at__lte=edge)
+        queryset = queryset.alias(work_clock=work_clock_start_expression()).filter(
+            work_clock__lte=edge
+        )
 
     # «Ничьи» и «конкретный исполнитель» — взаимоисключающие по смыслу.
     # Побеждает «ничьи»: его выбирают в час пик, когда важно, что НЕ ВЗЯТО, и
@@ -736,7 +740,7 @@ def serialize_tracker_order(
     # только что лёг на доску. Считать его просрочку от создания значило бы
     # красить всю возвращённую карточку в красное и обесценить красный цвет
     # для тех, кто действительно опаздывает.
-    since = order.reopened_at or order.created_at
+    since = work_clock_start(order)
     in_work = int((now - since).total_seconds() // 60)
     overdue = in_work - sla if not order.status.is_terminal and in_work >= sla else None
 
