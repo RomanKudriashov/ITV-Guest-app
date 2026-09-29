@@ -52,13 +52,20 @@ case "$MODE" in
         fi
 
         echo "[entrypoint] uvicorn (ASGI: HTTP + WebSocket)…"
+        # KEEP-ALIVE 30 С, А НЕ УМОЛЧАНИЕ 5. На 5 с uvicorn закрывает
+        # простаивающее соединение ровно тогда, когда клиент шлёт в него
+        # следующий запрос: e2e ловили «socket hang up» по одной-две случайные
+        # проверки за заход. Опыт (партия 22): пауза ~5 с между запросами по
+        # одному соединению — 9 обрывов из 24; с 30 с — 0 из 24.
         if [ "${UVICORN_RELOAD:-1}" = "1" ]; then
             # dev: авто-перезагрузка на правках, один процесс.
             exec uvicorn config.asgi:application --host 0.0.0.0 --port 8000 \
+                --timeout-keep-alive 30 \
                 --reload --reload-dir /app
         else
             # prod: без reload, воркеры по числу ядер (WEB_CONCURRENCY).
             exec uvicorn config.asgi:application --host 0.0.0.0 --port 8000 \
+                --timeout-keep-alive 30 \
                 --workers "${WEB_CONCURRENCY:-3}"
         fi
         ;;
