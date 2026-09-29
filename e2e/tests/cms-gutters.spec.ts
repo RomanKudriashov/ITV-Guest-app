@@ -30,14 +30,35 @@ test('у каждого раздела заголовок не прижат к �
 
   const flush: string[] = []
   for (const key of keys) {
-    await page.getByTestId(`cms-nav-${key}`).click()
+    const link = page.getByTestId(`cms-nav-${key}`)
+    const href = await link.getAttribute('href')
+    await link.click()
+    /*
+      ЖДЁМ НОВЫЙ РАЗДЕЛ, А НЕ ЛЮБОЙ ЗАГОЛОВОК. Заголовок ПРЕДЫДУЩЕГО раздела
+      ещё виден сразу после клика, ожидание проходило мгновенно, а к замеру
+      страница уже сменялась — `querySelector` возвращал null (партия 22,
+      одна красная из 148). Сначала адрес нажатого пункта, потом замер
+      локатором, который сам дожидается своего элемента.
+    */
+    if (href) await expect(page).toHaveURL(new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\?|$)`), { timeout: 20_000 })
     const title = page.getByTestId('cms-page-title').first()
     await expect(title, `у раздела ${key} нет заголовка`).toBeVisible({ timeout: 20_000 })
-    const gap = await page.evaluate(() => {
-      const t = document.querySelector('[data-testid="cms-page-title"]')!.getBoundingClientRect()
-      const main = document.querySelector('main')!.getBoundingClientRect()
-      return Math.round(t.left - main.left)
-    })
+    // Замер повторяется, пока обе рамки на месте: «Аналитика» перемонтирует
+    // шапку, когда догружает область видимости, и узел заголовка на миг
+    // пропадает — одиночный замер ловил эту щель (`boundingBox` → null).
+    let gap = Number.NaN
+    await expect
+      .poll(
+        async () => {
+          const titleBox = await title.boundingBox()
+          const mainBox = await page.locator('main').first().boundingBox()
+          if (!titleBox || !mainBox) return false
+          gap = Math.round(titleBox.x - mainBox.x)
+          return true
+        },
+        { message: `раздел ${key}: заголовок или рабочая область не на экране`, timeout: 20_000 },
+      )
+      .toBe(true)
     if (gap < 16) flush.push(`${key}: ${gap}px`)
   }
   expect(flush, 'разделы без отступа от меню').toEqual([])
