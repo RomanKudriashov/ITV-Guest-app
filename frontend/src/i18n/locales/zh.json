@@ -374,7 +374,12 @@
       },
       "activeOrder": {
         "title": "订单 #{{number}} · {{status}}",
-        "serveBy": "{{time}} 送达",
+        "serveBy": {
+          "delivery": "{{time}} 前送达",
+          "request": "{{time}}",
+          "ride": "{{time}} 接车",
+          "booking": "{{time}}"
+        },
         "more": "另有 {{count}} 项",
         "view": "查看"
       },
@@ -1049,7 +1054,8 @@
       "date": "日期",
       "time": "时间",
       "select": "下拉"
-    }
+    },
+    "setsRequestedTime": "这是订单时间——执行人员的期限"
   },
   "notifications": {
     "title": "通知",

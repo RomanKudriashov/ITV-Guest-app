@@ -28,6 +28,8 @@ export interface DraftField {
   help_text: Translated;
   field_type: RequestFieldType;
   is_required: boolean;
+  /** «Это время заказа» — только у поля «время», одно на услугу. */
+  sets_requested_time: boolean;
   minInput: string;
   maxInput: string;
   options: DraftFieldOption[];
@@ -45,6 +47,7 @@ export function emptyField(): DraftField {
     help_text: {},
     field_type: 'text',
     is_required: false,
+    sets_requested_time: false,
     minInput: '',
     maxInput: '',
     options: [],
@@ -78,6 +81,7 @@ export function fieldsToDrafts(fields: RequestField[] | undefined): DraftField[]
       help_text: { ...(field.help_text ?? {}) },
       field_type: field.field_type,
       is_required: field.is_required,
+      sets_requested_time: Boolean(field.sets_requested_time),
       minInput: numberInput(field.min_value),
       maxInput: numberInput(field.max_value),
       options: (field.options ?? []).map((option) => ({
@@ -221,6 +225,7 @@ export async function syncRequestFields(
       help_text: compactTranslated(draft.help_text),
       field_type: draft.field_type,
       is_required: draft.is_required,
+      sets_requested_time: draft.field_type === 'time' && draft.sets_requested_time,
       options: spec.supportsOptions ? toOptions(draft) : [],
       min_value: spec.supportsBounds ? (parseBound(draft.minInput) ?? null) : null,
       max_value: spec.supportsBounds ? (parseBound(draft.maxInput) ?? null) : null,

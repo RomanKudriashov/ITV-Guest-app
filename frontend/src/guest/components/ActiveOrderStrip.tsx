@@ -48,7 +48,10 @@ function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: numb
   const parts: string[] = [];
   if (order.summary) parts.push(order.summary);
   if (order.extra_count > 0) parts.push(t('guest.home.activeOrder.more', { count: order.extra_count }));
-  if (time) parts.push(t('guest.home.activeOrder.serveBy', { time }));
+  // Срок сервер присылает только названный (время гостя или расчётная
+  // подача доставки), подпись — по виду: у прачечной «на 12:00», а не
+  // «подадут к» (E2E-004/005).
+  if (time) parts.push(t(`guest.home.activeOrder.serveBy.${order.card_kind ?? 'delivery'}`, { time }));
   // Оформлен не гостем — сказано сразу, до того как гость решит, что это чужое.
   if (order.placed_by_staff) parts.unshift(t('guest.order.placedBy', { by: order.placed_by_label }));
   const detail = parts.join(' · ');

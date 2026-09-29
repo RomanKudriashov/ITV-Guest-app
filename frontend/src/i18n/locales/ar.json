@@ -384,7 +384,12 @@
       },
       "activeOrder": {
         "title": "الطلب رقم {{number}} · {{status}}",
-        "serveBy": "بحلول {{time}}",
+        "serveBy": {
+          "delivery": "يُقدَّم بحلول {{time}}",
+          "request": "في {{time}}",
+          "ride": "الانطلاق في {{time}}",
+          "booking": "في {{time}}"
+        },
         "more": "و{{count}} أخرى",
         "view": "عرض"
       },
@@ -1095,7 +1100,8 @@
       "date": "تاريخ",
       "time": "وقت",
       "select": "قائمة"
-    }
+    },
+    "setsRequestedTime": "هذا وقت الطلب — الموعد النهائي للموظفين"
   },
   "notifications": {
     "title": "الإشعارات",

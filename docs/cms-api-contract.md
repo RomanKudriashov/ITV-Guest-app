@@ -199,7 +199,10 @@ sort_order, is_active}`. `code` генерируется из title, если н
   "is_required": true,
   "options": [{"value": "econom", "label": {"ru": "Эконом"}}],
   "min_value": null, "max_value": null,
-  "sort_order": 0
+  "sort_order": 0,
+  "sets_requested_time": false       // «время заказа»: только у time; отметка на
+                                     // новом поле снимает её с прежнего; на не-time —
+                                     // 422 requested_time_field_type
 }
 ```
 

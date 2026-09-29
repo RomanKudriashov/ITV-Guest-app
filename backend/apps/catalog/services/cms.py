@@ -1101,6 +1101,7 @@ def serialize_request_field(entry: RequestField) -> dict:
         "min_value": entry.min_value,
         "max_value": entry.max_value,
         "sort_order": entry.sort_order,
+        "sets_requested_time": entry.sets_requested_time,
     }
 
 
@@ -1178,6 +1179,29 @@ def _clean_bounds(data: dict, field_type: str, current: RequestField | None = No
     return minimum, maximum
 
 
+def _clean_sets_requested_time(value: bool, field_type: str) -> bool:
+    """Сроком заявки бывает только время: у текста или числа срока нет."""
+    if value and field_type != FieldType.TIME:
+        raise ValidationError(
+            "Временем заказа может быть только поле «время»",
+            field="sets_requested_time",
+            code="requested_time_field_type",
+        )
+    return bool(value)
+
+
+def _keep_single_requested_time(entry: RequestField) -> None:
+    """
+    Одно время заказа на услугу. Отметка на новом поле СНИМАЕТ её с прежнего,
+    а не отказывает: в редакторе это переключатель «вот это поле — время», и
+    отказ «сначала снимите с другого» был бы лишним шагом без смысла.
+    """
+    if entry.sets_requested_time:
+        RequestField.objects.filter(item_id=entry.item_id, sets_requested_time=True).exclude(
+            pk=entry.pk
+        ).update(sets_requested_time=False)
+
+
 @transaction.atomic
 def create_request_field(item_id, data: dict) -> RequestField:
     item = get_item(item_id)
@@ -1191,7 +1215,7 @@ def create_request_field(item_id, data: dict) -> RequestField:
     options = _clean_options(data.get("options"), field_type)
     minimum, maximum = _clean_bounds(data, field_type)
 
-    return RequestField.objects.create(
+    entry = RequestField.objects.create(
         hotel_id=item.hotel_id,
         item=item,
         code=data.get("code")
@@ -1206,7 +1230,12 @@ def create_request_field(item_id, data: dict) -> RequestField:
         sort_order=data.get("sort_order")
         if data.get("sort_order") is not None
         else _next_sort_order(RequestField.objects.filter(item=item)),
+        sets_requested_time=_clean_sets_requested_time(
+            data.get("sets_requested_time", False), field_type
+        ),
     )
+    _keep_single_requested_time(entry)
+    return entry
 
 
 @transaction.atomic
@@ -1234,8 +1263,18 @@ def update_request_field(field_id, data: dict) -> RequestField:
         data.get("options", entry.options), entry.field_type
     )
     entry.min_value, entry.max_value = _clean_bounds(data, entry.field_type, entry)
+    if data.get("sets_requested_time") is not None:
+        entry.sets_requested_time = data["sets_requested_time"]
+    elif entry.sets_requested_time and entry.field_type != FieldType.TIME:
+        # Поле перестало быть временем — перестало быть и сроком, молча:
+        # отказ здесь запрещал бы менять тип отмеченного поля вовсе.
+        entry.sets_requested_time = False
+    entry.sets_requested_time = _clean_sets_requested_time(
+        entry.sets_requested_time, entry.field_type
+    )
 
     entry.save()
+    _keep_single_requested_time(entry)
     return entry
 
 

@@ -376,7 +376,12 @@
       },
       "activeOrder": {
         "title": "Order #{{number}} · {{status}}",
-        "serveBy": "by {{time}}",
+        "serveBy": {
+          "delivery": "served by {{time}}",
+          "request": "for {{time}}",
+          "ride": "pickup at {{time}}",
+          "booking": "at {{time}}"
+        },
         "more": "+{{count}} more",
         "view": "View"
       },
@@ -1059,7 +1064,8 @@
       "date": "Date",
       "time": "Time",
       "select": "Select"
-    }
+    },
+    "setsRequestedTime": "This is the order time — the deadline for staff"
   },
   "notifications": {
     "title": "Notifications",

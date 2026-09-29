@@ -219,6 +219,10 @@ export function OrderStatusPage() {
       order.items.length ? order.items.map((line) => line.title).join(' · ') : null,
     );
     push(t('guest.order.acceptedAt'), at(order.created_at, { ...clock, dateStyle: undefined }));
+    // Срок у заявки бывает, только если время назвал гость («Когда забрать:
+    // 12:00» — поле «время заказа», E2E-005). Нет его — строки нет: расчётное
+    // время заявке никто не обещал.
+    if (order.requested_time) push(t('guest.order.when'), whenText);
   } else {
     push(t('guest.order.where'), where === '—' ? null : where);
     push(t('guest.order.when'), whenText);

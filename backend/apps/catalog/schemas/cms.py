@@ -161,6 +161,7 @@ class RequestFieldIn(Schema):
     min_value: int | None = None
     max_value: int | None = None
     sort_order: int | None = None
+    sets_requested_time: bool = False
 
 class RequestFieldPatch(Schema):
     label: Translations | None = None
@@ -172,6 +173,7 @@ class RequestFieldPatch(Schema):
     min_value: int | None = None
     max_value: int | None = None
     sort_order: int | None = None
+    sets_requested_time: bool | None = None
 
 class RequestFieldOut(Schema):
     id: str
@@ -185,6 +187,7 @@ class RequestFieldOut(Schema):
     min_value: int | None
     max_value: int | None
     sort_order: int
+    sets_requested_time: bool
 
 class ModifierOptionIn(Schema):
     title: Translations

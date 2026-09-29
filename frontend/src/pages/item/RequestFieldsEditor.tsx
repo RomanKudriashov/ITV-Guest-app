@@ -74,9 +74,12 @@ export function RequestFieldsEditor({
 
   const patchField = (key: string, changes: Partial<DraftField>) =>
     onChange(
-      fields.map((field) =>
-        field.key === key ? normalizeField({ ...field, ...changes }) : field,
-      ),
+      fields.map((field) => {
+        if (field.key === key) return normalizeField({ ...field, ...changes });
+        // Время заказа одно на услугу: отметили это поле — с прочих снимается.
+        // Сервер делает то же самое, черновик не должен показывать двух.
+        return changes.sets_requested_time ? { ...field, sets_requested_time: false } : field;
+      }),
     );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -279,6 +282,28 @@ function FieldCard({
             }
             label={t('requestFields.required')}
           />
+
+          {/*
+            Время заказа — только у поля «время»: ответ гостя становится
+            сроком заявки, а не строкой среди ответов (E2E-005).
+          */}
+          {field.field_type === 'time' ? (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={field.sets_requested_time}
+                  onChange={(event) => onPatch({ sets_requested_time: event.target.checked })}
+                  inputProps={
+                    { 'data-testid': `cms-request-field-requested-time-${index}` } as Record<
+                      string,
+                      string
+                    >
+                  }
+                />
+              }
+              label={t('requestFields.setsRequestedTime')}
+            />
+          ) : null}
 
           {/* Bounds exist only where the field-type table says they do. */}
           {spec.supportsBounds ? (

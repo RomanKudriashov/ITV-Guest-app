@@ -36,6 +36,16 @@ test('заявка консьержу: ни в подтверждении, ни 
   await expect(confirmation).toContainText(/исполнителю|passed on/)
   await expect(confirmation).not.toContainText(KITCHEN)
 
+  // Срок заявки — выбранное гостем время, а не «создание + 25 минут» (E2E-005).
+  await page.getByTestId('guest-track-order').click()
+  await expect(page.getByTestId('guest-order-status')).toContainText('12:00')
+  await page.getByTestId('guest-nav-home').click()
+  const strip = page.getByTestId('guest-active-order-strip')
+  await expect(strip).toContainText(/на 12:00|for 12:00/, { timeout: 15_000 })
+  await expect(strip).not.toContainText(/подадут|served by/)
+  await page.goBack()
+  await expect(page.getByTestId('guest-order-status')).toBeVisible()
+
   await page.getByTestId('guest-cancel-order').click()
   const dialog = page.getByTestId('guest-cancel')
   await expect(dialog).toBeVisible()

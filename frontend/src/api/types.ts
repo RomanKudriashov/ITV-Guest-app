@@ -286,6 +286,8 @@ export interface RequestField {
   min_value?: number | null;
   max_value?: number | null;
   sort_order: number;
+  /** Ответ на это поле — срок заявки. Только у поля «время», одно на услугу. */
+  sets_requested_time?: boolean;
 }
 
 export interface RequestFieldPayload {
@@ -298,6 +300,7 @@ export interface RequestFieldPayload {
   min_value?: number | null;
   max_value?: number | null;
   sort_order?: number;
+  sets_requested_time?: boolean;
 }
 
 export interface Item {

@@ -34,6 +34,13 @@ class RequestField(TenantModel):
     min_value = models.IntegerField(null=True, blank=True)
     max_value = models.IntegerField(null=True, blank=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
+    # ЭТО ВРЕМЯ ЗАКАЗА. Ответ на отмеченное поле становится сроком заявки
+    # (`Order.requested_time`), а не строкой среди прочих ответов. Отмечается
+    # явно, а не угадывается по типу: «Когда забрать» — срок для исполнителя,
+    # а «Время прилёта» или «Со скольких» — нет. Только у поля «время» и
+    # только одно на услугу (catalog/services/cms.py). E2E-005 внешнего
+    # аудита: гость выбирал 12:00, а срок стоял «создание + 25 минут».
+    sets_requested_time = models.BooleanField(default=False)
 
     class Meta:
         db_table = "catalog_request_field"

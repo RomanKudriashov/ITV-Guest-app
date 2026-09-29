@@ -18,7 +18,7 @@ from __future__ import annotations
 import dataclasses
 import math
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, time as dt_time, timedelta
 from typing import Any
 
 from django.db import transaction
@@ -30,7 +30,7 @@ from apps.catalog.models import Category, Item, ModifierOption, Route
 from apps.catalog.offerings import LocationMode, behaviour_for
 from apps.catalog.request_fields import build_field_snapshot
 from apps.catalog.services import slots as slot_svc
-from apps.orders.services.tracker_types import effective_sla_minutes, guest_card_for_order
+from apps.orders.services.tracker_types import GuestCard, effective_sla_minutes, guest_card_for_order
 from apps.core.context import require_hotel_id
 from apps.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from apps.core.fields import translate
@@ -196,6 +196,8 @@ def create_order(data: OrderInput, *, guest_session=None, placed_by=None) -> Ord
     location = _resolve_location(data, items[0], items)
     room = _resolve_room(data, guest_session)
     requested_time = _validate_requested_time(data, hotel)
+    if requested_time is None and field_values:
+        requested_time = _requested_time_from_fields(items[0], field_values, hotel)
     status = _initial_status(execution_point)
 
     order = Order.objects.create(
@@ -933,6 +935,52 @@ def _resolve_room(data: OrderInput, guest_session) -> Room | None:
     return getattr(guest_session, "room", None)
 
 
+def _requested_time_from_fields(item: Item, field_values: list[dict], hotel: Hotel) -> datetime | None:
+    """
+    СРОК ЗАЯВКИ — ИЗ ОТВЕТА ГОСТЯ НА ПОЛЕ «ВРЕМЯ ЗАКАЗА» (E2E-005).
+
+    Гость выбирал «Когда забрать: 12:00», а заявка получала срок «создание +
+    25 минут»: время ложилось строкой в ответы формы, и до `requested_time` не
+    доходило. Срок же читают витрина («к 12:00» на главной) и трекер
+    («когда»). Какое поле — срок, решает отметка в редакторе, а не тип поля:
+    «Время прилёта» или «Со скольких» — тоже время, но не срок исполнителю.
+
+    Время без даты — БЛИЖАЙШЕЕ БУДУЩЕЕ в поясе отеля: в 23:00 «забрать в
+    08:00» — это завтра, а не прошедшее сегодня. Есть поле даты — дата его;
+    назначенное в прошлом отклоняется, как у заказа ко времени. Потолка «не
+    дальше суток» здесь нет: экскурсию на пятницу заказывают во вторник.
+    """
+    marked = next(
+        (field for field in item.request_fields.all() if field.sets_requested_time), None
+    )
+    if marked is None:
+        return None
+    answers = {entry["code"]: entry for entry in field_values}
+    answer = answers.get(marked.code)
+    if not answer or not answer.get("value"):
+        return None
+
+    hours, minutes = (int(part) for part in str(answer["value"]).split(":")[:2])
+    at = dt_time(hours, minutes)
+    dated = next(
+        (entry for entry in field_values if entry.get("field_type") == "date" and entry.get("value")),
+        None,
+    )
+    local_now = hotel.local_now()
+    if dated is None:
+        moment = datetime.combine(local_now.date(), at, tzinfo=hotel.tzinfo)
+        if moment < local_now - timedelta(minutes=1):
+            moment = datetime.combine(local_now.date() + timedelta(days=1), at, tzinfo=hotel.tzinfo)
+        return moment
+
+    moment = datetime.combine(date.fromisoformat(dated["value"]), at, tzinfo=hotel.tzinfo)
+    if moment < local_now - timedelta(minutes=1):
+        raise OrderValidationError(
+            "Это время уже прошло", code="requested_time_invalid", field=marked.code
+        )
+    return moment
+
+
 def _validate_requested_time(data: OrderInput, hotel: Hotel) -> datetime | None:
     """«Как можно скорее» — это отсутствие времени, а не now(): now() устарел бы
     к моменту, когда заказ дойдёт до кухни."""
@@ -1057,6 +1105,7 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
     payload = []
     for order in orders:
         hotel = order.hotel
+        card = guest_card_for_order(order)
         payload.append(
             {
                 "id": str(order.pk),
@@ -1067,7 +1116,17 @@ def list_active_orders(guest_session, language: str | None = None) -> dict[str, 
                     "title": status_flows.status_title(order.status, order.delivery_mode, language),
                     "color_token": order.status.color_token,
                 },
-                "serve_by": _serve_by(order, hotel),
+                # СРОК — ТОЛЬКО ЕСЛИ ЕГО КТО-ТО НАЗВАЛ. Время гостя («Когда
+                # забрать: 12:00») — да; расчётная подача — только у доставки.
+                # Заявке прачечной полоса обещала «подадут к 10:40» — создание
+                # плюс 25 минут, которых никто не обещал (E2E-004/005). Экран
+                # статуса решал так же, но у себя; теперь решает сервер.
+                "serve_by": (
+                    _serve_by(order, hotel)
+                    if order.requested_time or card == GuestCard.DELIVERY
+                    else None
+                ),
+                "card_kind": card,
                 "total": order.total,
                 "currency": order.currency,
                 **_order_summary(order, language),

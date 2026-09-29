@@ -554,3 +554,94 @@ def test_services_are_isolated_between_hotels(cms, cms_aurora):
 
     assert crystal_services and aurora_services
     assert {i["id"] for i in crystal_services}.isdisjoint({i["id"] for i in aurora_services})
+
+
+# --- Срок заявки из времени гостя (E2E-005) -------------------------------
+#
+# Гость выбирал «Когда забрать: 12:00», а срок заявки стоял «создание + 25
+# минут»: время ложилось строкой в ответы формы и до `requested_time` не
+# доходило. Срок читают витрина («к 12:00» на главной) и трекер («когда»).
+# Сроком становится ответ на поле, отмеченное «время заказа», — у такси это
+# «Когда подать» (сид).
+
+
+def _clock(moment) -> str:
+    return moment.strftime("%H:%M")
+
+
+def test_guest_time_becomes_the_deadline_of_the_request(guest, taxi, crystal):
+    from datetime import timedelta
+
+    local_now = crystal.local_now().replace(second=0, microsecond=0)
+    later = local_now + timedelta(hours=2)
+    body = place(guest, taxi_order(taxi, field_values={"when": _clock(later)}), "svc-rt-1").json()
+
+    with tenant_context(crystal):
+        stored = Order.objects.get(pk=body["id"])
+    # Через два часа — это «сегодня в …», а если перевалило за полночь, то
+    # завтра: `later` сам несёт нужную дату.
+    assert crystal.to_local(stored.requested_time) == later
+    # Срок — то самое время, а не «создание + 25 минут».
+    assert body["serve_by"].startswith(later.isoformat()[:16])
+
+
+def test_time_already_past_today_means_tomorrow(guest, taxi, crystal):
+    from datetime import timedelta
+
+    local_now = crystal.local_now().replace(second=0, microsecond=0)
+    earlier = local_now - timedelta(hours=2)
+    body = place(guest, taxi_order(taxi, field_values={"when": _clock(earlier)}), "svc-rt-2").json()
+
+    with tenant_context(crystal):
+        stored = Order.objects.get(pk=body["id"])
+    assert crystal.to_local(stored.requested_time) == earlier + timedelta(days=1), (
+        "«подать в 08:00», сказанное в 23:00, — это завтра, а не прошедшее утро"
+    )
+
+
+def test_unmarked_time_is_an_answer_not_a_deadline(guest, taxi, crystal):
+    """Без отметки время остаётся ответом формы — и полоса гостя срок не обещает."""
+    with tenant_context(crystal):
+        RequestField.objects.filter(item__code="taxi").update(sets_requested_time=False)
+
+    body = place(guest, taxi_order(taxi), "svc-rt-3").json()
+    with tenant_context(crystal):
+        assert Order.objects.get(pk=body["id"]).requested_time is None
+
+    strip = guest.get("/api/guest/orders/active").json()["orders"]
+    row = next(entry for entry in strip if entry["id"] == body["id"])
+    assert row["card_kind"] == "request"
+    assert row["serve_by"] is None, "полоса обещала «подадут к» создание + 25 минут"
+
+
+def test_strip_promises_the_time_the_guest_named(guest, taxi, crystal):
+    from datetime import timedelta
+
+    later = crystal.local_now().replace(second=0, microsecond=0) + timedelta(hours=3)
+    body = place(guest, taxi_order(taxi, field_values={"when": _clock(later)}), "svc-rt-4").json()
+
+    strip = guest.get("/api/guest/orders/active").json()["orders"]
+    row = next(entry for entry in strip if entry["id"] == body["id"])
+    assert row["serve_by"].startswith(later.isoformat()[:16])
+
+
+def test_cms_order_time_is_only_a_time_field_and_only_one(cms, crystal):
+    with tenant_context(crystal):
+        taxi = Item.objects.get(code="taxi")
+        destination = RequestField.objects.get(item=taxi, code="destination")
+        when = RequestField.objects.get(item=taxi, code="when")
+
+    refused = cms.patch(f"/api/cms/request-fields/{destination.pk}", {"sets_requested_time": True})
+    assert refused.status_code == 422, refused.content
+    assert refused.json()["code"] == "requested_time_field_type"
+
+    second = cms.post(
+        f"/api/cms/items/{taxi.pk}/request-fields",
+        {"label": {"ru": "Когда вернуться"}, "field_type": "time", "sets_requested_time": True},
+    )
+    assert second.status_code == 201, second.content
+    assert second.json()["sets_requested_time"] is True
+
+    with tenant_context(crystal):
+        when.refresh_from_db()
+    assert when.sets_requested_time is False, "два срока у одной услуги"

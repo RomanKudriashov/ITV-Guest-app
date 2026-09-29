@@ -380,7 +380,12 @@
       },
       "activeOrder": {
         "title": "Заказ №{{number}} · {{status}}",
-        "serveBy": "подадут к {{time}}",
+        "serveBy": {
+          "delivery": "подадут к {{time}}",
+          "request": "на {{time}}",
+          "ride": "подача в {{time}}",
+          "booking": "в {{time}}"
+        },
         "more": "ещё {{count}}",
         "view": "Смотреть"
       },
@@ -1073,7 +1078,8 @@
       "date": "Дата",
       "time": "Время",
       "select": "Список"
-    }
+    },
+    "setsRequestedTime": "Это время заказа — срок для исполнителя"
   },
   "notifications": {
     "title": "Уведомления",

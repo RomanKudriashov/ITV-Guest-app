@@ -704,6 +704,8 @@ export interface GuestActiveOrder {
   type?: 'cart' | 'request' | 'booking';
   status: GuestActiveOrderStatus;
   serve_by: string | null;
+  /** Вид карточки — по нему подпись срока: «подадут к», «на», «подача в». */
+  card_kind?: 'booking' | 'delivery' | 'ride' | 'request';
   total: number | null;
   currency: string;
   /** Short composition, already localized (e.g. «Стейк рибай, Паста карбонара»). */
