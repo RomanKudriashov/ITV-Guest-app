@@ -18,6 +18,9 @@ import { login } from './helpers'
 test('у каждого раздела заголовок не прижат к меню', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await login(page)
+  // Меню приходит отдельным запросом (`/cms/navigation`) — ждём его, а не
+  // читаем пустое место сразу после входа.
+  await expect(page.getByTestId('cms-nav-orders')).toBeVisible({ timeout: 20_000 })
   const keys = (
     await page.$$eval('[data-testid^="cms-nav-"]', (els) =>
       els.map((el) => el.getAttribute('data-testid')!.replace('cms-nav-', '')),
