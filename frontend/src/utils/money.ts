@@ -32,12 +32,23 @@ export function inputToMinor(value: string, minorUnits: number): number | null {
   return Math.round(parsed * factor(minorUnits));
 }
 
+/**
+ * ЗНАК ВАЛЮТЫ — УЗКИЙ, НА ЛЮБОМ ЯЗЫКЕ (партия 25).
+ *
+ * `Intl` по умолчанию пишет знак «по-местному»: для рубля он есть только в
+ * русской локали, а английская, арабская и китайская пишут код — «RUB 1,450».
+ * Гость отеля в Москве читает цену рублями на любом языке; `narrowSymbol`
+ * даёт «₽» везде, где у валюты есть знак, и код — где его нет.
+ */
+const CURRENCY_DISPLAY = 'narrowSymbol' as const;
+
 /** "RUB" → "₽" for field adornments; falls back to the ISO code. */
 export function currencySymbol(currency: string, language: string): string {
   try {
     const parts = new Intl.NumberFormat(language, {
       style: 'currency',
       currency,
+      currencyDisplay: CURRENCY_DISPLAY,
     }).formatToParts(0);
     return parts.find((part) => part.type === 'currency')?.value ?? currency;
   } catch {
@@ -68,6 +79,7 @@ export function formatMoney(
     return new Intl.NumberFormat(language, {
       style: 'currency',
       currency,
+      currencyDisplay: CURRENCY_DISPLAY,
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     }).format(amount);

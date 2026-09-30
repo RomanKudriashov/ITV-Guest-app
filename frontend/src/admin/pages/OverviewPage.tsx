@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { accent, ink, panelSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { getOverview, type OverviewHealth } from '../adminClient';
+import { formatMoney } from '@/utils/money';
 
 /**
  * Сводка по платформе — первое, что видит владелец.
@@ -38,13 +39,9 @@ export function OverviewPage() {
     data.gross_today.length === 0
       ? '—'
       : data.gross_today
-          .map((entry) =>
-            new Intl.NumberFormat(i18n.language, {
-              style: 'currency',
-              currency: entry.currency,
-              maximumFractionDigits: 0,
-            }).format(entry.minor / 100),
-          )
+          // Тем же форматом, что витрина и панель отеля (партия 25): знак
+          // валюты, а не код, на любом языке.
+          .map((entry) => formatMoney(entry.minor, entry.currency, 2, i18n.language, { trimZeroFraction: true }))
           .join(' · ');
   const peak = Math.max(1, ...data.growth.map((point) => point.hotels));
 
