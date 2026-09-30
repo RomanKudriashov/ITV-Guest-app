@@ -2304,7 +2304,8 @@
     "reviewRating": "{{rating}} من 5",
     "reviewOrder": "طلب رقم {{number}}",
     "reviewNoOrder": "بلا طلب",
-    "reviewNoComment": "بلا نص — تقييم فقط"
+    "reviewNoComment": "بلا نص — تقييم فقط",
+    "awaitingAcceptance": "بانتظار القبول"
   },
   "admin": {
     "brand": {

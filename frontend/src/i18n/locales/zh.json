@@ -2211,7 +2211,8 @@
     "reviewRating": "{{rating}} / 5",
     "reviewOrder": "订单 №{{number}}",
     "reviewNoOrder": "无订单",
-    "reviewNoComment": "无文字，仅评分"
+    "reviewNoComment": "无文字，仅评分",
+    "awaitingAcceptance": "待接单"
   },
   "admin": {
     "brand": {

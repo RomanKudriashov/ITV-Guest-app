@@ -161,8 +161,20 @@ test.describe('Дашборд: пульт', () => {
     await expect(venue).toContainText('4')
     await expect(venue).toContainText('12')
     await expect(venue).not.toContainText(/сотр\./i)
+    // Число новых подписано тем, что оно считает, — не «Заказов» (бэклог 44):
+    // рядом плитка «Заказов сегодня», и то же слово читалось как «всего».
+    const counts = page.getByTestId('dashboard-venue-counts-kitchen')
+    await expect(counts).toContainText(/Ждут приёма|Awaiting acceptance/)
+    await expect(counts).not.toContainText(/Заказов|Orders/)
 
+    // Ссылка ведёт на доску ЭТОГО заведения. Параметр `point` доска забирает
+    // и убирает из адреса (партия 23, бэклог 49), поэтому проверяем не адрес,
+    // а выбранную точку.
     await venue.click()
-    await expect(page).toHaveURL(/point=kitchen/)
+    await expect
+      .poll(() => page.locator('[data-testid="tracker-point-select"] input').inputValue(), {
+        timeout: 20_000,
+      })
+      .toBe('kitchen')
   })
 })

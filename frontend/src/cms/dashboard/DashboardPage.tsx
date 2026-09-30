@@ -412,8 +412,19 @@ function Venues({ data }: { data: DashboardData }) {
               Справочные «2 сотр. · 8 позиций» уехали в карточку сервиса, где их
               и правят.
             */}
-            <Typography variant="caption" color="text.secondary">
-              {t('dashboard.inWork')}: {venue.in_work} · {t('dashboard.orders')}: {venue.new}
+            {/*
+              «ЖДУТ ПРИЁМА», А НЕ «ЗАКАЗОВ». Число — заказы в начальном статусе
+              потока, ещё не принятые (`tracker_shift`: `new`). Подпись
+              «Заказов: 0» стояла рядом с плиткой «Заказов сегодня: 3» тем же
+              словом и читалась как «всего» — внешний аудит принял её за
+              нулевой счёт (бэклог 44). Счёт не менялся, только имя.
+            */}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              data-testid={`dashboard-venue-counts-${venue.code}`}
+            >
+              {t('dashboard.inWork')}: {venue.in_work} · {t('dashboard.awaitingAcceptance')}: {venue.new}
             </Typography>
             {venue.overdue ? (
               <Typography variant="caption" color="error.main" sx={{ fontWeight: 700 }}>

@@ -2236,7 +2236,8 @@
     "reviewRating": "{{rating}} of 5",
     "reviewOrder": "order #{{number}}",
     "reviewNoOrder": "no order",
-    "reviewNoComment": "No text — rating only"
+    "reviewNoComment": "No text — rating only",
+    "awaitingAcceptance": "Awaiting acceptance"
   },
   "admin": {
     "brand": {

@@ -2267,7 +2267,8 @@
     "reviewRating": "{{rating}} из 5",
     "reviewOrder": "заказ №{{number}}",
     "reviewNoOrder": "без заказа",
-    "reviewNoComment": "Без текста — только оценка"
+    "reviewNoComment": "Без текста — только оценка",
+    "awaitingAcceptance": "Ждут приёма"
   },
   "admin": {
     "brand": {
