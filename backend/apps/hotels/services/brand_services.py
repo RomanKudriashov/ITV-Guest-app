@@ -126,7 +126,11 @@ def resolve_media(tokens: dict) -> dict:
     background = brand.get("background")
     if isinstance(background, dict) and background.get("imageAssetId"):
         resolved = dict(background)
-        resolved["imageUrl"] = _asset_url(background["imageAssetId"])
+        # ВАРИАНТ `full` (1200), а не `card` (600) — партия 25. Фон и обложка
+        # главной растянуты на весь экран: 600 точек на телефоне с плотностью
+        # 3 — это втрое меньше, чем экран, и картинка «мыльная»; на 1440 —
+        # вдвое. 1200 — самый крупный вариант нарезки.
+        resolved["imageUrl"] = _asset_url(background["imageAssetId"], variant="full")
         out_brand["background"] = resolved
 
     if out_brand == brand:
