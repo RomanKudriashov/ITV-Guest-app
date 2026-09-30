@@ -121,10 +121,19 @@ test.describe('Публикация и откат', () => {
 
     // Откат к предыдущей версии.
     await page.getByTestId('brand-version-restore').first().click()
-    await expect(page.getByTestId('brand-version-live')).toBeVisible({ timeout: 15_000 })
-
-    const themeAfterRestore = await guestPrimary(request)
-    expect(themeAfterRestore.toLowerCase(), 'откат не вернул прежнее оформление').toBe(base)
+    /*
+      ОЖИДАНИЕ — ПО ВИТРИНЕ, А НЕ ПО ЯРЛЫКУ (партия 24). Ярлык «действует»
+      стоит на первой строке истории всегда, и до щелчка тоже: ждать его —
+      не ждать ничего. Гостевая ручка спрашивалась раньше, чем откат доходил
+      до сервера, и проверка краснела на исправном коде (полный прогон, один
+      раз; поодиночке 3 из 3).
+    */
+    await expect
+      .poll(async () => (await guestPrimary(request)).toLowerCase(), {
+        message: 'откат не вернул прежнее оформление',
+        timeout: 15_000,
+      })
+      .toBe(base)
 
     // ОТКАТ ВИДЕН КАК ОТКАТ: строка истории говорит, к какой версии вернули.
     await expect(page.getByTestId('brand-versions')).toContainText(/возврат к версии \d+/i)
