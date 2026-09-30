@@ -196,7 +196,7 @@ export function GuestTopBar({
               badgeContent={cartCount}
               color="primary"
               data-testid="guest-topbar-cart-count"
-              sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}
+              sx={{ '& .MuiBadge-badge': { fontSize: fontPx(10), height: 16, minWidth: 16 } }}
             >
               <IconBag />
             </Badge>

@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 
 import { IconRunning, IconOffline } from '@/icons';
+import { fontPx } from '@/theme/fontPx';
 
 /**
  * Room-controls kit — VISUAL ONLY. No logic, no backend, no live state: these
@@ -347,7 +348,7 @@ function DialStep({
         border: 1,
         borderColor: 'divider',
         color: 'text.primary',
-        fontSize: 20,
+        fontSize: fontPx(20),
         lineHeight: 1,
         '&:disabled': { opacity: 0.4 },
         '&.Mui-focusVisible': {

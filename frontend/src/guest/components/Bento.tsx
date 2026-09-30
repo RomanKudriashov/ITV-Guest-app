@@ -171,7 +171,7 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
             fontFamily: th.typography.h1.fontFamily,
             fontWeight: 800,
             letterSpacing: '-0.01em',
-            fontSize: compact ? 16 : 20,
+            fontSize: compact ? fontPx(16, 'heading') : fontPx(20, 'heading'),
             lineHeight: 1.1,
             textShadow: tileTokens.titleShadow,
           })}

@@ -15,6 +15,7 @@ import type { ChatMessage, ChatSnapshot } from '@/guest/api/types';
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import type { LiveStatus } from './useChatLive';
+import { fontPx } from '@/theme/fontPx';
 
 export interface ChatTestIds {
   /** Root of the screen, e.g. `guest-chat` / `tracker-chat`. */
@@ -248,7 +249,7 @@ export function ChatConversation({
                 position: 'absolute',
                 pointerEvents: 'none',
                 color: hintColor ?? 'text.secondary',
-                fontSize: 15,
+                fontSize: fontPx(15),
               }}
             >
               {t('guest.chat.placeholder')}
@@ -275,7 +276,7 @@ export function ChatConversation({
               // языке интерфейса.
               dir: 'auto',
             }}
-            sx={{ fontSize: 15 }}
+            sx={{ fontSize: fontPx(15) }}
           />
           </Box>
           {/* Кнопка ВНУТРИ прямоугольника: снаружи она превращала спокойную

@@ -7,6 +7,7 @@ import type { Theme } from '@mui/material/styles';
 
 import { ICON_REGISTRY, IconHit, IconStatusNew, IconChefChoice } from '@/icons';
 import type { AppIconComponent } from '@/icons';
+import { fontPx } from '@/theme/fontPx';
 
 /* ── Price pill ───────────────────────────────────────────────────────────── */
 
@@ -38,7 +39,7 @@ export function PricePill({ price, emphasis = false, testId = 'price-pill' }: Pr
         sx={(theme) => ({
           fontFamily: theme.typography.h1.fontFamily,
           fontWeight: theme.typography.fontWeightBold,
-          fontSize: '0.95rem',
+          fontSize: fontPx(15.2),
           lineHeight: 1,
         })}
       >
@@ -180,7 +181,7 @@ export function KitBadge({ kind, label, testId }: KitBadgeProps) {
         borderRadius: `${theme.palette.brand.radius.pill}px`,
         bgcolor: meta.color(theme),
         color: theme.palette.getContrastText(meta.color(theme)),
-        fontSize: '0.72rem',
+        fontSize: fontPx(11.52),
         fontWeight: theme.typography.fontWeightBold,
         lineHeight: 1.4,
       })}
@@ -219,7 +220,7 @@ export function FlagChip({ code, label, tone = 'flag', testId }: FlagChipProps) 
         borderColor: allergen ? 'warning.main' : 'divider',
         color: allergen ? 'warning.main' : 'text.secondary',
         bgcolor: allergen ? 'transparent' : theme.palette.brand.surfaceMuted,
-        fontSize: '0.72rem',
+        fontSize: fontPx(11.52),
         lineHeight: 1,
       })}
     >
@@ -306,7 +307,7 @@ export function OfferingBadge({ label, role, size = 'md', testId }: OfferingBadg
           // Контраст считается ОТ ЗАЛИВКИ, а не задаётся отдельно: метку
           // заводят под светлую тему, а смотрят в обеих.
           color: theme.palette.getContrastText(fill),
-          fontSize: small ? '0.68rem' : '0.72rem',
+          fontSize: small ? fontPx(10.88) : fontPx(11.52),
           fontWeight: theme.typography.fontWeightBold,
           lineHeight: 1.4,
           whiteSpace: 'nowrap',
@@ -409,7 +410,7 @@ export function StatusIndicator({
           borderRadius: `${theme.palette.brand.radius.pill}px`,
           color: meta.color(theme),
           bgcolor: `color-mix(in srgb, ${meta.color(theme)} 16%, transparent)`,
-          fontSize: '0.75rem',
+          fontSize: fontPx(12),
           fontWeight: theme.typography.fontWeightMedium,
         })}
       >

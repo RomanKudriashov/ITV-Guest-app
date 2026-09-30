@@ -8,6 +8,7 @@ import type { AppIconComponent } from '@/icons';
 import { KitImage } from './KitImage';
 import { pressableSx, revealSx } from './motion';
 import { MEDIA_OVERLAY } from '@/theme/tokens';
+import { fontPx } from '@/theme/fontPx';
 
 /**
  * Shared photo layer: lazy image with a skeleton when present, else a DESIGNED
@@ -196,7 +197,7 @@ export function MosaicTile({
           sx={(theme) => ({
             fontFamily: theme.typography.h1.fontFamily,
             fontWeight: 800,
-            fontSize: { xs: 16, md: 19 },
+            fontSize: { xs: fontPx(16, 'heading'), md: fontPx(19, 'heading') },
             letterSpacing: '-0.02em',
             lineHeight: 1.15,
             textShadow: MEDIA_OVERLAY.titleShadow,

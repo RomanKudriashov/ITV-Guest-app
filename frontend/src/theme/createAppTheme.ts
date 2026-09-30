@@ -1,4 +1,5 @@
 import { createTheme, alpha, darken, lighten, type Theme } from '@mui/material/styles';
+import { fontPx } from './fontPx';
 import {
   colorsForMode,
   type BrandTokens,
@@ -67,7 +68,13 @@ export function createAppTheme(
   const c = colorsForMode(tokens, mode);
   const { typography, shape, spacingUnit } = tokens;
   const headingFamily = typography.headingFontFamily ?? typography.fontFamily;
-  const h = (rem: number) => `${(rem * typography.headingScale).toFixed(3)}rem`;
+  /*
+    Заголовки — через ту же шкалу, что и витрина (партия 24): и размер текста,
+    и масштаб заголовков. Было `rem × headingScale` — размер текста до
+    заголовков темы не доходил, а переменная `--heading-scale` в корне
+    стояла, но ими не читалась.
+  */
+  const h = (rem: number) => fontPx(rem * 16, 'heading');
 
   // Derived redesign-v2 tokens — pure functions of the 18 base tokens, so the
   // "colours only from tokens" rule holds and nothing hardcoded leaks in.

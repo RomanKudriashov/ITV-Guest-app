@@ -18,6 +18,7 @@ import {
 } from '@/icons';
 import type { GuestWeather } from '../api/types';
 import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { fontPx } from '@/theme/fontPx';
 
 /**
  * Погода отеля и его местное время.
@@ -249,7 +250,7 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
           variant="caption"
           color="text.secondary"
           data-testid="guest-home-weather-source"
-          sx={{ width: '100%', opacity: 0.7, fontSize: 11, lineHeight: 1.2 }}
+          sx={{ width: '100%', opacity: 0.7, fontSize: fontPx(11), lineHeight: 1.2 }}
         >
           {t('guest.weather.source')}
         </Typography>

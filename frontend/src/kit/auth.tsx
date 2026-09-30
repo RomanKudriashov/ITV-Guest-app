@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import { alpha, type Theme } from '@mui/material/styles';
 
 import { revealSx } from '@/kit/motion';
+import { fontPx } from '@/theme/fontPx';
 
 /**
  * ОБЩИЙ ЯЗЫК ЭКРАНА ВХОДА — один на CMS отеля и на консоль платформы.
@@ -107,7 +108,7 @@ export function GlassPill({
           border: `1px solid ${alpha(theme.palette.common.white, 0.22)}`,
           backgroundColor: alpha(theme.palette.common.black, 0.28),
           color: theme.palette.common.white,
-          fontSize: 12,
+          fontSize: fontPx(12),
           fontWeight: theme.typography.fontWeightBold,
           transition: 'background-color .2s',
           '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
@@ -148,7 +149,7 @@ export const inputSx = (theme: Theme) => {
     flex: 1,
     color: theme.palette.common.white,
     fontWeight: theme.typography.fontWeightMedium,
-    fontSize: { xs: 17, md: 19 },
+    fontSize: { xs: fontPx(17), md: fontPx(19) },
     '& input': {
       padding: 0,
       color: theme.palette.common.white,
@@ -234,7 +235,7 @@ export function AuthError({ children, testId }: { children: ReactNode; testId: s
         border: `1px solid ${alpha(theme.palette.error.main, 0.5)}`,
         backgroundColor: alpha(theme.palette.error.main, 0.16),
         color: theme.palette.common.white,
-        fontSize: 13,
+        fontSize: fontPx(13),
       })}
     >
       {children}
@@ -252,7 +253,7 @@ export function AuthHint({ children, index = 5 }: { children: ReactNode; index?:
         alignItems: 'center',
         gap: '9px',
         color: alpha(theme.palette.common.white, 0.4),
-        fontSize: 12.5,
+        fontSize: fontPx(12.5),
         ...revealSx({ index }),
       })}
     >
@@ -332,7 +333,7 @@ export function AuthBrand({
               sx={(theme: Theme) => ({
                 display: 'block',
                 fontFamily: theme.typography.h1.fontFamily,
-                fontSize: { xs: 15, md: 17 },
+                fontSize: { xs: fontPx(15, 'heading'), md: fontPx(17, 'heading') },
                 fontWeight: theme.typography.fontWeightMedium,
                 lineHeight: 1.1,
               })}
@@ -345,7 +346,7 @@ export function AuthBrand({
                 sx={(theme: Theme) => ({
                   display: 'block',
                   mt: '3px',
-                  fontSize: 10,
+                  fontSize: fontPx(10),
                   letterSpacing: '.16em',
                   textTransform: 'uppercase',
                   color: alpha(theme.palette.common.white, 0.55),
@@ -407,7 +408,7 @@ export function AuthTitle({ children, tight }: { children: ReactNode; tight?: bo
         fontFamily: theme.typography.h1.fontFamily,
         fontWeight: theme.typography.fontWeightBold,
         color: theme.palette.common.white,
-        fontSize: { xs: 38, md: 58 },
+        fontSize: { xs: fontPx(38, 'heading'), md: fontPx(58, 'heading') },
         lineHeight: 0.98,
         letterSpacing: '-0.035em',
         maxWidth: { xs: tight ? '7ch' : 'none', md: 'none' },
@@ -425,7 +426,7 @@ export function AuthSubtitle({ children }: { children: ReactNode }) {
     <Typography
       sx={(theme: Theme) => ({
         color: alpha(theme.palette.common.white, 0.6),
-        fontSize: 14.5,
+        fontSize: fontPx(14.5),
         mt: '13px',
         maxWidth: 400,
         ...revealSx({ index: 2 }),

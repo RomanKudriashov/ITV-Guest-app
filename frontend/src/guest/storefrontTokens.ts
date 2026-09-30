@@ -21,6 +21,7 @@
 import { alpha, decomposeColor, recomposeColor } from '@mui/material/styles';
 
 import type { ThemeMode } from '@/theme/tokens';
+import { fontPx } from '@/theme/fontPx';
 
 export interface GlassSurface {
   background: string;
@@ -619,23 +620,8 @@ export function cardSurface(style: SurfaceStyle, mode: ThemeMode): SurfaceTokens
  * НЕтекстовых элементов: состояние здесь читается заливкой и свечением, а не
  * буквами.
  */
-/**
- * АВТОРСКИЙ ПИКСЕЛЬ → МАСШТАБИРОВАННЫЙ.
- *
- * Витрина нарисована в кеглях: `fontSize: fontPx(33)` читается так же, как
- * читалось `fontSize: 33`, но слушает настройку «размер текста» из оформления.
- * Считает браузер, а не мы: `calc` с переменной корня работает и в обычном
- * окне, и в рамке показа, и не требует ни хука, ни пересборки дерева.
- *
- * `heading` — для того, что гость читает как ЗАГОЛОВОК: сверх базовой шкалы
- * применяется масштаб заголовков. Отель, которому нужен спокойный экран,
- * уменьшает заголовки, не трогая читаемость основного текста.
- */
-export function fontPx(px: number, kind: 'body' | 'heading' = 'body'): string {
-  return kind === 'heading'
-    ? `calc(${px}px * var(--type-scale, 1) * var(--heading-scale, 1))`
-    : `calc(${px}px * var(--type-scale, 1))`;
-}
+// Живёт в теме: им пользуются и витрина, и кит, и общий чат (партия 24).
+export { fontPx };
 
 export const NON_TEXT_CONTRAST = 3;
 
@@ -1023,7 +1009,7 @@ export const itemCard = {
    * свою пятую часть строки, ряд переносился, и КБЖУ читалось двумя этажами.
    */
   macroIcon: 14,
-  macroLabel: '0.6875rem',
+  macroLabel: fontPx(11),
   /** Метка категории поверх кадра: отступ от края и размер её значка. */
   categoryChipInset: 12,
   categoryChipIcon: 14,
@@ -1034,7 +1020,7 @@ export const itemCard = {
    * карточке, на десктопе оно ведёт колонку содержимого и заметно крупнее.
    * Одно значение на обе ширины делало десктопную карточку безголовой.
    */
-  titleSize: { xs: '1.6875rem', sm: '2.125rem' },
+  titleSize: { xs: fontPx(27, 'heading'), sm: fontPx(34, 'heading') },
   /** Карточка добавки: внутренние поля и круглая кнопка справа. */
   addonPaddingX: 1.5,
   addonPaddingY: 0.875,

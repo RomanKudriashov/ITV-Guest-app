@@ -3,6 +3,7 @@ import IconButton from '@mui/material/IconButton';
 import { useTranslation } from 'react-i18next';
 
 import { IconBag } from '@/icons';
+import { fontPx } from '@/theme/fontPx';
 
 /**
  * ПОСТОЯННЫЙ ВХОД В КОРЗИНУ.
@@ -34,7 +35,7 @@ export function CartButton({ count, onOpen }: { count: number; onOpen: () => voi
         badgeContent={count}
         color="primary"
         data-testid="guest-cart-count"
-        sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}
+        sx={{ '& .MuiBadge-badge': { fontSize: fontPx(10), height: 16, minWidth: 16 } }}
       >
         <IconBag />
       </Badge>
