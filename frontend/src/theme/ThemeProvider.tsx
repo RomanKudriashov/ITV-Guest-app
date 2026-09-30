@@ -212,6 +212,22 @@ export function AppThemeProvider({
     [override],
   );
 
+  /*
+    РЕЖИМ, ЗАДАННЫЙ СНАРУЖИ, — СЛЕДИТ ЗА ВХОДОМ, А НЕ ЧИТАЕТСЯ ОДИН РАЗ.
+
+    `initialMode` передаёт один потребитель — показ бренда в панели, где режим
+    переключают кнопкой «Светлая / Тёмная». Состояние же бралось из него только
+    при монтировании: показ навсегда оставался в режиме, с которым смонтировался
+    кадр, и переключатель менял кнопку, но не показ. Отсюда и «плавающая»
+    проверка цвета текста (бэклог 30): она зеленела, когда кадр успевал
+    смонтироваться до того, как страница выставляла тёмный режим бренда, и
+    краснела, когда после. Витрина гостя `initialMode` не передаёт — её это
+    не касается.
+  */
+  useEffect(() => {
+    if (initialMode) setModeState(initialMode);
+  }, [initialMode]);
+
   // The hotel brand often arrives after first paint (session fetch). Honor its
   // defaultMode once it lands, unless the guest already chose or saved a mode.
   useEffect(() => {
