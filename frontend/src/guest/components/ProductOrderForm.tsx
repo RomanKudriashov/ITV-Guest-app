@@ -61,7 +61,7 @@ export interface ProductOrderFormProps {
  */
 export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: ProductOrderFormProps) {
   const { t } = useTranslation();
-  const { format, delta } = useMoney();
+  const { delta, price } = useMoney();
   const cart = useCart();
 
   const groups = useMemo(() => item.modifier_groups ?? [], [item]);
@@ -293,7 +293,7 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
             data-testid="guest-add-to-cart"
             sx={[ctaGradientSx, { minHeight: 52 }]}
           >
-            {t('guest.item.addToCart', { price: format(totalPrice) })}
+            {t('guest.item.addToCart', { price: price(totalPrice) })}
           </Button>
         )}
       </SheetFooter>

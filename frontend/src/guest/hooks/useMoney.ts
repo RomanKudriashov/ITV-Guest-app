@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { formatDelta, formatMoney } from '@/utils/money';
 import { useGuestSession } from '../session/GuestSessionProvider';
@@ -26,14 +27,26 @@ export function useMoney() {
   );
 
   /**
+   * ЦЕНА, А НЕ СУММА (партия 25): ноль — «Бесплатно», а не «0 ₽». Для
+   * позиций, строк корзины, подытога и итога. Сборы, налог и чаевые остаются
+   * суммами (`format`): нулевой сбор — не «бесплатная позиция».
+   */
+  const { t } = useTranslation();
+  const price = useCallback(
+    (minor: number) => (minor === 0 ? t('guest.money.free') : format(minor)),
+    [format, t],
+  );
+
+  /**
    * `null` means "price not set" (a service may be unpriced) — the caller gets
    * `null` back and hides the element instead of printing a misleading "0 ₽".
+   * Zero is a price, and reads «Бесплатно».
    */
   const formatOptional = useCallback(
     (minor: number | null | undefined) =>
-      minor === null || minor === undefined ? null : format(minor),
-    [format],
+      minor === null || minor === undefined ? null : price(minor),
+    [price],
   );
 
-  return { format, formatOptional, delta, currency, minorUnits };
+  return { format, formatOptional, price, delta, currency, minorUnits };
 }

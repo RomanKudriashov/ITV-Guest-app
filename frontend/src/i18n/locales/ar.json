@@ -803,6 +803,9 @@
     },
     "banner": {
       "close": "إغلاق"
+    },
+    "money": {
+      "free": "مجانًا"
     }
   },
   "tracker": {

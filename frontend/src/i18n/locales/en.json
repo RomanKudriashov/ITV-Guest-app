@@ -791,6 +791,9 @@
     },
     "banner": {
       "close": "Close"
+    },
+    "money": {
+      "free": "Free"
     }
   },
   "tracker": {

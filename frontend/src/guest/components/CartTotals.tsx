@@ -44,13 +44,13 @@ function ChargeRow({
  */
 export function CartTotals({ quote, loading }: CartTotalsProps) {
   const { t } = useTranslation();
-  const { format } = useMoney();
+  const { format, price } = useMoney();
 
   return (
     <Stack spacing={0.75}>
       {quote ? (
         <>
-          <ChargeRow label={t('guest.cart.subtotal')} value={format(quote.subtotal_minor)} />
+          <ChargeRow label={t('guest.cart.subtotal')} value={price(quote.subtotal_minor)} />
           {quote.service_fee_minor !== 0 ? (
             <ChargeRow
               label={t('guest.cart.serviceFee')}
@@ -99,7 +99,7 @@ export function CartTotals({ quote, loading }: CartTotalsProps) {
               fontSize: fontPx(17),
             })}
           >
-            {format(quote.total_minor)}
+            {price(quote.total_minor)}
           </Typography>
         ) : loading ? (
           <Skeleton variant="text" width={84} data-testid="guest-cart-total" />

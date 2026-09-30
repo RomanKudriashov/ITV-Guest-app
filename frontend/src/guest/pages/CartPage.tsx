@@ -88,7 +88,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
-  const { format, minorUnits } = useMoney();
+  const { format, minorUnits, price } = useMoney();
   const cart = useCart();
   const { canOrder } = useGuestSession();
   const locationsQuery = useGuestLocations(
@@ -352,7 +352,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
       {isPending
         ? t('guest.cart.placing')
         : quote
-          ? t('guest.cart.place', { price: format(quote.total_minor) })
+          ? t('guest.cart.place', { price: price(quote.total_minor) })
           : t('guest.cart.placeShort')}
     </Button>
   );
@@ -404,7 +404,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                       return (
                         <>
                           <Typography variant="body2">
-                            {format(shown * line.quantity)}
+                            {price(shown * line.quantity)}
                           </Typography>
                           {changed ? (
                             <Typography
@@ -413,8 +413,8 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                               data-testid={`guest-cart-price-changed-${line.item_code}`}
                             >
                               {t('guest.cart.priceChanged', {
-                                was: format(line.unit_price),
-                                now: format(shown),
+                                was: price(line.unit_price),
+                                now: price(shown),
                               })}
                             </Typography>
                           ) : null}
