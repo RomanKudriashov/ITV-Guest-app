@@ -1381,7 +1381,7 @@ onSubmit>` с `type="submit"` у кнопки; проверить тем же e2
 
 ---
 
-## 47. Аналитика ждёт `is_platform_admin`, которого сервер не шлёт (приоритет 3) — В БЭКЛОГЕ
+## 47. Аналитика ждёт `is_platform_admin`, которого сервер не шлёт (приоритет 3) — ИСПРАВЛЕНО (партия 23)
 
 **Источник:** сторож контракта CMS после расширения на поля (партия 22).
 **Где:** `frontend/src/api/analyticsTypes.ts` (`AnalyticsScope`),
@@ -1419,7 +1419,7 @@ onSubmit>` с `type="submit"` у кнопки; проверить тем же e2
 
 ---
 
-## 49. Ссылки пульта `/tracker?point=…` открывают не ту доску (приоритет 2) — В БЭКЛОГЕ
+## 49. Ссылки пульта `/tracker?point=…` открывают не ту доску (приоритет 2) — ИСПРАВЛЕНО (партия 23)
 
 **Где:** `frontend/src/tracker/hooks/usePointSelection.ts` (выбор точки),
 `apps/hotels/services/dashboard.py:410` (`"route": f"/tracker?point={code}"`).

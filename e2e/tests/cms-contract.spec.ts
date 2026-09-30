@@ -193,11 +193,7 @@ function carriers(type: string): { envelope: string | null; item: string | null 
   пункт 47). Список ЗАКРЫТЫЙ: новое расхождение краснеет, а починенное
   здесь — тоже (строку надо убрать, иначе список врёт).
 */
-const KNOWN_FIELD_GAPS = new Set<string>([
-  // Панель фильтров аналитики считает «админом» и администратора платформы,
-  // а сервер этого флага не шлёт: у него в CMS отеля фильтры урезаны.
-  '/cms/analytics/scope AnalyticsScope.is_platform_admin',
-])
+const KNOWN_FIELD_GAPS = new Set<string>([])
 
 /**
  * Имена типов, объявленных как страница: `interface X extends ListPage<…>`.

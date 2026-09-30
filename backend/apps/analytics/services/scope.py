@@ -53,7 +53,11 @@ def scope_payload(user) -> dict:
     return {
         "all_points": scope.all_points,
         "is_hotel_admin": scope.is_hotel_admin,
-        "is_platform": scope.is_platform,
+        # Имя — то, что читает фронт (`AnalyticsScope.is_platform_admin`).
+        # Было `is_platform`: его не читал никто, а объявленное фронтом поле не
+        # приходило никогда — сторож контракта нашёл это при включении сверки
+        # полей (партия 22, бэклог 47).
+        "is_platform_admin": scope.is_platform,
         "points": [
             {"id": str(p.pk), "code": p.code, "title": p.title_i18n or p.code, "kind": p.kind}
             for p in points

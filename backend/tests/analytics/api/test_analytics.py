@@ -811,3 +811,21 @@ def test_escalations_are_counted_in_hotel_days_not_server_days(crystal, django_c
         counts = _escalations_by_point(scope_for(admin), Period(day, day), crystal)
 
     assert counts == {str(order.execution_point_id): 1}
+
+
+def test_scope_carries_the_flags_the_filter_panel_reads(crystal):
+    """
+    Панель фильтров аналитики читает `is_hotel_admin` и `is_platform_admin`.
+    Второго сервер не слал никогда (слал `is_platform`, которого не читал
+    никто) — бэклог 47, найдено сторожем контракта.
+    """
+    from apps.accounts.models import User
+    from apps.analytics.services.scope import scope_payload
+
+    with tenant_context(crystal):
+        owner = User.objects.get(email="owner@crystal.local")
+        body = scope_payload(owner)
+
+    assert body["is_hotel_admin"] is True
+    assert body["is_platform_admin"] is False
+    assert "is_platform" not in body
