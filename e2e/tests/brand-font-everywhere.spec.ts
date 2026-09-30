@@ -57,7 +57,8 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 20_000 })
       failures.push(...(await strangers(page, 'меню')))
 
-      await page.getByTestId('guest-item-ribeye').click()
+      // По фото вверху карточки: нижняя часть (КБЖУ, цена) карточку не открывает.
+      await page.getByTestId('guest-item-ribeye').click({ position: { x: 24, y: 24 } })
       await expect(page.getByTestId('guest-item-sheet').first()).toBeVisible({ timeout: 15_000 })
       failures.push(...(await strangers(page, 'карточка')))
       await page.keyboard.press('Escape')

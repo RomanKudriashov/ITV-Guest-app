@@ -83,7 +83,9 @@ async function walk(browser: Browser, base: number, scale: number): Promise<Reco
   await page.goto('/venue/kitchen')
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 20_000 })
   screens['меню'] = await measure(page)
-  await page.getByTestId('guest-item-ribeye').click()
+  // По фото вверху карточки, а не по центру: при крупном тексте кнопка уходит
+  // на вторую строку, карточка выше, и в центре оказывается строка КБЖУ.
+  await page.getByTestId('guest-item-ribeye').click({ position: { x: 24, y: 24 } })
   await expect(page.getByTestId('guest-item-sheet').first()).toBeVisible({ timeout: 15_000 })
   await expect(page.getByTestId('guest-item-macro').first()).toBeVisible()
   screens['карточка'] = await measure(page)
