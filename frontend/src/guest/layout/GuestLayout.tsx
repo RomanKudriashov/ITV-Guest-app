@@ -127,6 +127,7 @@ export function GuestLayout() {
   });
 
   const hotelName = hotel?.name ?? session?.hotel.name ?? '';
+  const phoneLogo = pickLogo(tokens, mode) ?? null;
 
   useEffect(() => {
     if (hotelName) document.title = hotelName;
@@ -231,6 +232,22 @@ export function GuestLayout() {
           boxShadow: th.shadows[6],
         })}
       >
+        {/*
+          ЛОГОТИП ОТЕЛЯ — В ВЕРХНЕЙ ПАНЕЛИ ТЕЛЕФОНА, ЕСЛИ ЗАГРУЖЕН (партия 25,
+          п.51). На телефоне гость видел знак отеля только на входе. Панель
+          здесь — эта плавающая группа: отдельный чип слева лёг бы на кнопки
+          «назад» экранов. Знак — по режиму, как в шапке ПК: стекло группы
+          светлое в светлой теме и тёмное в тёмной.
+        */}
+        {phoneLogo ? (
+          <Box
+            component="img"
+            src={phoneLogo}
+            alt={hotelName}
+            data-testid="guest-phone-logo"
+            sx={{ height: 22, maxWidth: 88, objectFit: 'contain', px: 0.75, display: 'block' }}
+          />
+        ) : null}
         {/* Без номера чип не исчезает, а становится входом по номеру:
             иначе из режима просмотра некуда вернуться. */}
         <RoomMenu room={room} variant="floating" />

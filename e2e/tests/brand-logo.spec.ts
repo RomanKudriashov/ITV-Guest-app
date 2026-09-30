@@ -2,7 +2,7 @@ import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
 import { ADMIN, API, apiHeaders, apiToken } from './helpers'
-import { brandSession } from './brandGuest'
+import { brandSession, guestPage } from './brandGuest'
 import { pngRGBA } from './pngFixture'
 
 /**
@@ -140,6 +140,38 @@ test('экран входа тёмный — на нём знак под тём�
     await brand.apply({ brand: { logoLight: light, logoDark: dark } })
     await entry(page, 'light')
     await expect(page.getByTestId('guest-brand-logo')).toHaveAttribute('src', dark)
+  } finally {
+    await brand.restore()
+  }
+})
+
+test('логотип в верхней панели телефона — если загружен, по режиму', async ({ browser, request }) => {
+  test.setTimeout(120_000)
+  const brand = await brandSession(request)
+  try {
+    const light = await uploadBrandMedia(request, { name: 'light.png', mimeType: 'image/png', buffer: LOGO })
+    const dark = await uploadBrandMedia(request, {
+      name: 'dark.png',
+      mimeType: 'image/png',
+      buffer: pngRGBA(60, 60, () => [240, 240, 240, 255]),
+    })
+    await brand.apply({ brand: { logoLight: light, logoDark: dark } })
+    for (const [theme, expected] of [['light', light], ['dark', dark]] as const) {
+      const page = await guestPage(browser, { width: 390, theme })
+      const logo = page.getByTestId('guest-phone-logo')
+      await expect(logo, `нет логотипа в панели телефона (${theme})`).toBeVisible()
+      await expect(logo).toHaveAttribute('src', expected)
+      // Группа с логотипом остаётся на экране: не уезжает за левый край.
+      const box = (await logo.boundingBox())!
+      expect(box.x, 'логотип вытолкнул панель за край экрана').toBeGreaterThanOrEqual(0)
+      await page.context().close()
+    }
+
+    await brand.apply({ brand: { logoLight: '', logoDark: '' } })
+    const page = await guestPage(browser, { width: 390 })
+    await expect(page.getByTestId('guest-home')).toBeVisible()
+    await expect(page.getByTestId('guest-phone-logo'), 'пустое место под логотип без логотипа').toHaveCount(0)
+    await page.context().close()
   } finally {
     await brand.restore()
   }
