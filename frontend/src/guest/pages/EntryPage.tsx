@@ -55,7 +55,7 @@ export function EntryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { roomNumber: deepLinkRoom } = useParams<{ roomNumber: string }>();
-  const { hotel, isReady, isBootstrapping, start } = useGuestSession();
+  const { hotel, isReady, isBootstrapping, isPreview, start } = useGuestSession();
   const { tokens, mode, setBrandTokens } = useAppTheme();
   const { onMedia, entryScrim, tile } = useStorefront();
 
@@ -67,6 +67,13 @@ export function EntryPage() {
 
   // Load the brand publicly by subdomain so the entry themes before any session.
   useEffect(() => {
+    /*
+      В ПОКАЗЕ — НИЧЕГО (партия 25). Показ рисует ЧЕРНОВИК оператора, а этот
+      запрос приносил опубликованную тему и клал её поверх: экран входа через
+      мгновение после отрисовки возвращал то, что оператор как раз меняет.
+      Отель показа уже есть в его сессии — из ручки показа, а не гостевой.
+    */
+    if (isPreview) return;
     let alive = true;
     void fetchPublicHotel()
       .then((h) => {
@@ -80,7 +87,7 @@ export function EntryPage() {
     return () => {
       alive = false;
     };
-  }, [setBrandTokens]);
+  }, [isPreview, setBrandTokens]);
 
   const submit = async (value: string | null) => {
     setBusy(true);
