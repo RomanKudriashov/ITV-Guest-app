@@ -915,7 +915,9 @@
       "hoursMinutes": "{{hours}} h {{minutes}} min",
       "days_one": "{{count}} day",
       "days_other": "{{count}} days",
-      "yesterday": "yesterday, {{time}}"
+      "yesterday": "yesterday, {{time}}",
+      "dueAt": "for {{time}}, in {{in}}",
+      "inMinutes": "{{count}} min"
     },
     "shift": {
       "new": "New",

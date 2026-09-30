@@ -907,7 +907,9 @@
       "hours_other": "{{count}} 小时",
       "hoursMinutes": "{{hours}} 小时 {{minutes}} 分",
       "days_other": "{{count}} 天",
-      "yesterday": "昨天 {{time}}"
+      "yesterday": "昨天 {{time}}",
+      "dueAt": "{{time}}，{{in}}后",
+      "inMinutes": "{{count}} 分钟"
     },
     "shift": {
       "new": "新单",

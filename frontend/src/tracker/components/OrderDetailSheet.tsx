@@ -21,7 +21,7 @@ import { OrderJournal } from './OrderJournal';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
 import { formatClock, totalText, whenText, whereText } from '../orderText';
-import { formatAge, formatOverdue } from '../orderAge';
+import { formatWaiting, formatOverdue } from '../orderAge';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
@@ -131,10 +131,10 @@ export function OrderDetailSheet({
                   value={
                     order.is_overdue
                       ? t('tracker.detail.waitingOverdue', {
-                          age: formatAge(order.waiting_minutes, order.created_at, t, language),
+                          age: formatWaiting(order, t, language),
                           overdue: formatOverdue(order.overdue_minutes ?? 0, t),
                         })
-                      : formatAge(order.waiting_minutes, order.created_at, t, language)
+                      : formatWaiting(order, t, language)
                   }
                   emphasize={order.is_overdue}
                 />

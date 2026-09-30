@@ -943,7 +943,9 @@
       "days_few": "{{count}} أيام",
       "days_many": "{{count}} يومًا",
       "days_other": "{{count}} يوم",
-      "yesterday": "أمس، {{time}}"
+      "yesterday": "أمس، {{time}}",
+      "dueAt": "لـ {{time}}، بعد {{in}}",
+      "inMinutes": "{{count}} د"
     },
     "shift": {
       "new": "جديدة",

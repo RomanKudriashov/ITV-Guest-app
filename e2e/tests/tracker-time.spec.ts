@@ -177,4 +177,36 @@ test.describe('Доска: время и пороги', () => {
     await expect(page.getByTestId('tracker-waiting-9001')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('tracker-overdue-9001')).toHaveCount(0)
   })
+
+  test('УКУС: заявка ко времени до срока — «на 12:00, через …», а не «ждёт»', async ({ page }) => {
+    // Партия 23, бэклог 48: создана в 10:15 «на 12:00», в 11:45 карточка
+    // писала «ждёт 90 минут» — ждать ещё было нечего.
+    const due = new Date(Date.now() + 15 * 60_000)
+    await showBoard(page, [
+      order({
+        created_at: minutesAgo(90),
+        requested_time: due.toISOString(),
+        waiting_minutes: 0,
+        due_in_minutes: 15,
+      }),
+    ])
+    await signInToTracker(page, CREDENTIALS)
+    const clock = due.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    const waiting = page.getByTestId('tracker-waiting-9001')
+    await expect(waiting).toHaveText(`на ${clock}, через 15 мин`, { timeout: 20_000 })
+    await expect(waiting).not.toContainText('90')
+  })
+
+  test('срок наступил — снова «ждёт», числом с сервера', async ({ page }) => {
+    await showBoard(page, [
+      order({
+        created_at: minutesAgo(120),
+        requested_time: new Date(Date.now() - 7 * 60_000).toISOString(),
+        waiting_minutes: 7,
+        due_in_minutes: null,
+      }),
+    ])
+    await signInToTracker(page, CREDENTIALS)
+    await expect(page.getByTestId('tracker-waiting-9001')).toHaveText('7 минут', { timeout: 20_000 })
+  })
 })

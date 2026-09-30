@@ -83,3 +83,22 @@ def test_named_time_passed_long_ago_is_overdue_everywhere(crystal):
         probe.delete()
         order = _order(age=timedelta(hours=8), requested_in=-timedelta(minutes=sla + 30))
         assert _readers(order) == {"card": True, "filter": True, "shift": True, "room": True}
+
+
+def test_waiting_before_the_named_time_is_a_countdown_not_an_age(crystal):
+    """
+    Бэклог 48: до названного времени карточка получает «через сколько», а не
+    «ждёт» от создания; после — «ждёт» от того же момента, что и просрочка.
+    """
+    from apps.orders.services import tracker
+
+    with tenant_context(crystal):
+        later = _order(age=timedelta(minutes=90), requested_in=timedelta(minutes=15))
+        body = tracker.serialize_tracker_order(later, "ru")
+        assert body["due_in_minutes"] in (15, 16)
+        assert body["waiting_minutes"] == 0, "до срока ждать нечего"
+
+        passed = _order(age=timedelta(hours=3), requested_in=-timedelta(minutes=30))
+        body = tracker.serialize_tracker_order(passed, "ru")
+        assert body["due_in_minutes"] is None
+        assert body["waiting_minutes"] in (29, 30), "ждёт — от срока, а не три часа от создания"

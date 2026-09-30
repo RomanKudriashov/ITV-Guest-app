@@ -21,7 +21,7 @@ import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderActions } from './OrderActions';
 import { statusSlot } from '../statusColor';
 import { isPickup, itemsSummary, totalText, whenText, whereText } from '../orderText';
-import { formatAge, formatClock, formatOverdue } from '../orderAge';
+import { formatWaiting, formatClock, formatOverdue } from '../orderAge';
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
@@ -219,7 +219,7 @@ export function OrderCard({
                 sx={{ display: 'block', lineHeight: 1.2 }}
                 data-testid={`tracker-waiting-${order.number}`}
               >
-                {formatAge(order.waiting_minutes, order.created_at, t, language)}
+                {formatWaiting(order, t, language)}
               </Typography>
             </Box>
           </Stack>

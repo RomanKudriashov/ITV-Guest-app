@@ -728,20 +728,27 @@ def serialize_tracker_order(
 
     payload = serialize_order(order, language)
     now = timezone.now()
-    waiting = int((now - order.created_at).total_seconds() // 60)
     point = order.execution_point
     sla = effective_sla_minutes(point)
-    # ПРОСРОЧКА СЧИТАЕТСЯ ОТ ПОСЛЕДНЕГО ВОЗВРАТА В РАБОТУ, А ВОЗРАСТ — ОТ
-    # СОЗДАНИЯ. Это два разных числа, и путать их нельзя.
+    # ОЖИДАНИЕ И ПРОСРОЧКА — ОТ ОДНОГО МОМЕНТА, `work_clock_start`: позднейший
+    # из создания, времени гостя и возврата в работу (партия 23, бэклог 48).
     #
-    # «Ждёт 3 часа» — правда для гостя: он ждёт с момента заказа, что бы с
-    # карточкой ни делали на кухне. А вот норма времени меряет РАБОТУ: заказ,
-    # закрытый вчера и возвращённый минуту назад, не опоздал на сутки — он
-    # только что лёг на доску. Считать его просрочку от создания значило бы
-    # красить всю возвращённую карточку в красное и обесценить красный цвет
-    # для тех, кто действительно опаздывает.
+    # Раньше «ждёт N минут» считалось от создания, и заявка, созданная в 10:15
+    # «забрать в 12:00», в 11:45 показывала «ждёт 90 минут» — хотя ждать ещё
+    # было нечего. Возвращённый в работу заказ теперь тоже «ждёт» от возврата:
+    # доска меряет работу, и число рядом с красным чипом должно отвечать на тот
+    # же вопрос, что и сам чип.
+    #
+    # До наступления времени гостя «ждёт» не показывается вовсе: `due_in_minutes`
+    # — сколько осталось до названного времени, карточка пишет «на 12:00, через
+    # 15 мин».
     since = work_clock_start(order)
     in_work = int((now - since).total_seconds() // 60)
+    waiting = in_work
+    due_in = None
+    if order.requested_time and order.requested_time > now and not order.status.is_terminal:
+        # Вверх: «через 0 мин» при оставшихся 40 секундах читалось бы как «уже».
+        due_in = -(-int((order.requested_time - now).total_seconds()) // 60)
     overdue = in_work - sla if not order.status.is_terminal and in_work >= sla else None
 
     payload.update(
@@ -768,6 +775,7 @@ def serialize_tracker_order(
                 else None
             ),
             "waiting_minutes": max(waiting, 0),
+            "due_in_minutes": due_in,
             "is_overdue": overdue is not None,
             # НАСКОЛЬКО просрочен, а не только «да».
             #

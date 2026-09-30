@@ -106,6 +106,8 @@ export interface TrackerOrder extends GuestOrder {
   accepted_at: string | null;
   /** How long the order has been waiting, minutes. */
   waiting_minutes: number;
+  /** Минут до названного гостем времени, пока оно не наступило; иначе null. */
+  due_in_minutes?: number | null;
   /** Waiting longer than the point's threshold. */
   is_overdue: boolean;
   /**

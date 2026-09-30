@@ -139,3 +139,43 @@ function formatOverdueSpan(minutes: number, t: TFunction): string {
   }
   return t('tracker.age.days', { count: Math.floor(value / MIN_PER_DAY) });
 }
+
+/**
+ * ОЖИДАНИЕ НА КАРТОЧКЕ — ИЛИ СРОК, ЕСЛИ ОН ЕЩЁ НЕ НАСТАЛ (партия 23, бэклог 48).
+ *
+ * Заявка «забрать в 12:00», созданная в 10:15, в 11:45 показывала «ждёт 90
+ * минут» — ждать ещё было нечего. Пока названное гостем время не наступило,
+ * сервер присылает `due_in_minutes`, и карточка говорит «на 12:00, через 15
+ * мин». После — обычное «ждёт», которое сервер считает от того же момента,
+ * что и просрочку (`work_clock_start`).
+ *
+ * «Через N мин» — сокращением: полное «через 1 минута» в русском было бы в
+ * неверном падеже, а склонять под предлог перевод не умеет.
+ */
+export function formatWaiting(
+  order: {
+    waiting_minutes: number;
+    created_at: string | null | undefined;
+    requested_time?: string | null;
+    due_in_minutes?: number | null;
+  },
+  t: TFunction,
+  language: string,
+): string {
+  const due = order.due_in_minutes;
+  if (due != null && order.requested_time) {
+    const value = Math.max(0, Math.round(due));
+    let span: string;
+    if (value < MIN_PER_HOUR) span = t('tracker.age.inMinutes', { count: value });
+    else {
+      const hours = Math.floor(value / MIN_PER_HOUR);
+      const rest = value % MIN_PER_HOUR;
+      span =
+        rest === 0
+          ? t('tracker.age.hours', { count: hours })
+          : t('tracker.age.hoursMinutes', { hours, minutes: rest });
+    }
+    return t('tracker.age.dueAt', { time: formatClock(order.requested_time, language), in: span });
+  }
+  return formatAge(order.waiting_minutes, order.created_at, t, language);
+}

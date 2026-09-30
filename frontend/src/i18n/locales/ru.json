@@ -925,7 +925,9 @@
       "days_one": "{{count}} сутки",
       "days_few": "{{count}} суток",
       "days_many": "{{count}} суток",
-      "yesterday": "вчера, {{time}}"
+      "yesterday": "вчера, {{time}}",
+      "dueAt": "на {{time}}, через {{in}}",
+      "inMinutes": "{{count}} мин"
     },
     "shift": {
       "new": "Новых",
