@@ -1035,7 +1035,8 @@
         "confirm": "Hand over",
         "failed": "Handover failed"
       }
-    }
+    },
+    "pointUnavailable": "This board is not available to you — showing yours: {{current}}"
   },
   "requestFields": {
     "title": "Request fields",

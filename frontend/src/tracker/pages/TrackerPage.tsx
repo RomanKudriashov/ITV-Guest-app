@@ -216,7 +216,8 @@ export function TrackerPage() {
 
   const pointsQuery = useTrackerPoints();
   const points = pointsQuery.data?.points;
-  const { selected: pointCode, select } = usePointSelection(points);
+  const { selected: pointCode, select, refused: refusedPoint, dismissRefused } =
+    usePointSelection(points);
 
   // День ленты записей. Пустая строка = «сегодня по времени отеля»: считать
   // сегодняшнюю дату на клиенте нельзя — у отеля своя таймзона, и в полночь
@@ -737,6 +738,24 @@ export function TrackerPage() {
         chatUnread={chatUnread}
         onOpenChat={canChat ? () => navigate('/tracker/desk') : undefined}
       />
+
+      {/*
+        Ссылка вела на доску, которой у человека нет (не привязан или такой
+        точки нет) — говорим это, а не подменяем молча другой доской: иначе
+        «пусто» на чужой доске читается как «заявок нет».
+      */}
+      {refusedPoint ? (
+        <Alert
+          severity="warning"
+          onClose={dismissRefused}
+          sx={{ mx: 2, mt: 1 }}
+          data-testid="tracker-point-refused"
+        >
+          {t('tracker.pointUnavailable', {
+            current: points?.find((point) => point.code === pointCode)?.title ?? pointCode ?? '',
+          })}
+        </Alert>
+      ) : null}
 
       {/*
         ОБЫЧНЫЕ ВКЛАДКИ, КАК В «УВЕДОМЛЕНИЯХ».

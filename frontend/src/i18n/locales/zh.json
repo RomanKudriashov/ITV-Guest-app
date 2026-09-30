@@ -1025,7 +1025,8 @@
         "confirm": "转交",
         "failed": "转交失败"
       }
-    }
+    },
+    "pointUnavailable": "您无权查看此看板——已显示您的看板：{{current}}"
   },
   "requestFields": {
     "title": "申请字段",

@@ -1071,7 +1071,8 @@
         "confirm": "تحويل",
         "failed": "تعذّر التحويل"
       }
-    }
+    },
+    "pointUnavailable": "هذه اللوحة غير متاحة لك — تُعرض لوحتك: {{current}}"
   },
   "requestFields": {
     "title": "حقول الطلب",
