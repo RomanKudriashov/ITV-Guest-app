@@ -88,11 +88,11 @@ export function BrandPreview({
     [screenId],
   );
   const language = rtl ? 'ar' : appLanguage;
-  const { client, isLoading, error, venue } = usePreviewData(screen, language);
+  const { client, isLoading, error, venue, hotel, item } = usePreviewData(screen, language);
 
   // Адрес собирается ПОСЛЕ ответа: код заведения называет сервер. `null` —
   // гостевых заведений у отеля нет, и показывать этот экран нечем.
-  const route = resolveRoute(screen, venue);
+  const route = resolveRoute(screen, venue, item);
 
   // Во сколько ужать рамку, чтобы она влезла в колонку. Меряем колонку, а не
   // гадаем: ширина панели зависит от окна оператора и от того, свёрнуто ли меню.
@@ -122,6 +122,7 @@ export function BrandPreview({
       height={frame.height}
       scale={fit}
       client={client}
+      hotel={hotel}
       hotelName={hotelName}
       currency={currency}
       minorUnits={minorUnits}

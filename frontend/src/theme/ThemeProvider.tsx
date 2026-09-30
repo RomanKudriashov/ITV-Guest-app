@@ -100,6 +100,17 @@ function withMatchMedia(theme: Theme, frameWindow?: Window | null): Theme {
       MuiUseMediaQuery: {
         defaultProps: { matchMedia: frameWindow.matchMedia.bind(frameWindow) },
       },
+      /*
+        ВСПЛЫВАЮЩЕЕ — В ТОТ ЖЕ ДОКУМЕНТ, ЧТО И ЭКРАН (партия 24).
+
+        Портал MUI по умолчанию кладёт шторку, диалог и меню в `document.body`
+        ОКНА, где выполняется код, — то есть в панель. Карточка позиции в
+        показе открывалась поверх редактора оформления, а в рамке её не было
+        вовсе. Модалки (шторки, диалоги, меню, поповеры) и попперы (подсказки)
+        — в тело окна рамки.
+      */
+      MuiModal: { defaultProps: { container: () => frameWindow.document.body } },
+      MuiPopper: { defaultProps: { container: () => frameWindow.document.body } },
     },
   } as Theme;
 }

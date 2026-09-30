@@ -54,6 +54,7 @@ import { MemoryRouter, useRoutes, type RouteObject } from 'react-router-dom';
 
 import { guestBranch } from '@/app/router';
 import { GuestShellProviders } from '@/guest/GuestRoot';
+import type { GuestHotel } from '@/guest/api/types';
 import { PreviewSessionProvider } from '@/guest/session/GuestSessionProvider';
 import { AppThemeProvider, type BrandTokens, type ThemeMode } from '@/theme';
 import { previewI18n } from './previewI18n';
@@ -73,6 +74,8 @@ export interface PreviewStageProps {
   scale: number;
   /** Кэш с данными экранов — заполнен ответами серверной ручки показа. */
   client: QueryClient;
+  /** Отель гостя из ручки показа; пока не пришёл — одно имя. */
+  hotel: GuestHotel | null;
   hotelName: string;
   currency: string;
   minorUnits: number;
@@ -80,14 +83,19 @@ export interface PreviewStageProps {
 }
 
 /** Маршруты витрины с подменённым корнем: сессия показа вместо гостевой. */
-function usePreviewRoutes(hotelName: string, currency: string, minorUnits: number) {
+function usePreviewRoutes(
+  hotel: GuestHotel | null,
+  hotelName: string,
+  currency: string,
+  minorUnits: number,
+) {
   return useMemo<RouteObject[]>(
     () => [
       {
         ...guestBranch,
         element: (
           <PreviewSessionProvider
-            hotel={{ name: hotelName } as never}
+            hotel={hotel ?? ({ name: hotelName } as never)}
             currency={currency}
             minorUnits={minorUnits}
           >
@@ -96,7 +104,7 @@ function usePreviewRoutes(hotelName: string, currency: string, minorUnits: numbe
         ),
       },
     ],
-    [hotelName, currency, minorUnits],
+    [hotel, hotelName, currency, minorUnits],
   );
 }
 
@@ -114,6 +122,7 @@ export function PreviewStage({
   height,
   scale,
   client,
+  hotel,
   hotelName,
   currency,
   minorUnits,
@@ -122,7 +131,7 @@ export function PreviewStage({
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const [doc, setDoc] = useState<Document | null>(null);
   const rootRef = useRef<Root | null>(null);
-  const routes = usePreviewRoutes(hotelName, currency, minorUnits);
+  const routes = usePreviewRoutes(hotel, hotelName, currency, minorUnits);
 
   // Документ рамки готов не в момент монтирования: `about:blank` доезжает
   // отдельным тиком, и портал в несуществующее тело молча ничего не покажет.

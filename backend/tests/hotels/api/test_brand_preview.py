@@ -125,3 +125,18 @@ def test_preview_locations_are_seen_by_a_guest_without_a_room(cms, crystal):
     assert "in_room" not in kinds, "«в номер» предложено без номера"
     assert payload["locations"], "локаций не осталось вовсе"
     assert all(location["is_default"] is False for location in payload["locations"])
+
+
+def test_preview_hotel_is_what_the_guest_gets_before_entry(cms, client, crystal):
+    """
+    Отель показа — тот же, что гостю до входа (партия 24).
+
+    Показ клал в сессию одно имя: экран номера читал `room_control_enabled`
+    как «выключено» и рисовал «недоступно» у отеля, где управление работает, а
+    главная оставалась без обложки. Сверка с публичной ручкой гостя, а не с
+    перечнем полей: добавят поле гостю — показ получит его сам.
+    """
+    guest = client.get("/api/v1/guest/hotel", HTTP_HOST=host_for(crystal))
+    assert guest.status_code == 200, guest.content
+
+    assert _preview(cms, "hotel") == guest.json()

@@ -42,6 +42,12 @@ export interface PreviewScreen {
   payloads: PreviewPayloadId[];
   /** Рисуется ли экран внутри гостевой оболочки (шапка/нижнее меню). */
   inShell: boolean;
+  /**
+   * Экран — открытая карточка позиции поверх заведения (партия 24). Витрина
+   * открывает её параметром `?item=`, и без него «карточка» в показе была
+   * тем же каталогом.
+   */
+  opensItem?: boolean;
 }
 
 /**
@@ -57,16 +63,25 @@ export const VENUE_ROUTE = '/venue/:venue';
  * совпадёт ни с одним маршрутом, и показ вместо честного «у отеля нет
  * заведений» показал бы пустой экран неизвестно чего.
  */
-export function resolveRoute(screen: PreviewScreen, venue: string | null): string | null {
+export function resolveRoute(
+  screen: PreviewScreen,
+  venue: string | null,
+  item: string | null = null,
+): string | null {
   if (!screen.route.includes(':venue')) return screen.route;
-  return venue ? screen.route.replace(':venue', venue) : null;
+  if (!venue) return null;
+  const path = screen.route.replace(':venue', venue);
+  return screen.opensItem && item ? `${path}?item=${encodeURIComponent(item)}` : path;
 }
 
-export type PreviewPayloadId = 'home' | 'venues' | 'catalog' | 'item' | 'locations' | 'room';
+export type PreviewPayloadId = 'hotel' | 'home' | 'venues' | 'catalog' | 'item' | 'locations' | 'room';
 
 /** Куда класть ответ сервера, чтобы настоящий экран нашёл его как свой. */
 export function cacheKeyFor(payload: PreviewPayloadId, language: string, point?: string) {
   switch (payload) {
+    case 'hotel':
+      // Отель идёт не в кэш, а в сессию показа — см. `usePreviewData`.
+      return null;
     case 'home':
       return guestKeys.home(language);
     case 'venues':
@@ -109,6 +124,7 @@ export const PREVIEW_SCREENS: PreviewScreen[] = [
     route: VENUE_ROUTE,
     payloads: ['home', 'catalog', 'item'],
     inShell: true,
+    opensItem: true,
   },
   // Корзина и оформление — ОДИН экран витрины с двумя оболочками, а не два:
   // делить показ там, где код не делится, значило бы показывать выдуманную

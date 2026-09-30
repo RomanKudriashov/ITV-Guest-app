@@ -21,7 +21,8 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { fetchPreviewScreen } from '@/api/brand';
 import { guestKeys } from '@/guest/api/queryKeys';
-import { cacheKeyFor, type PreviewScreen } from './previewScreens';
+import type { GuestHotel } from '@/guest/api/types';
+import { cacheKeyFor, type PreviewPayloadId, type PreviewScreen } from './previewScreens';
 
 export interface PreviewData {
   client: QueryClient;
@@ -36,6 +37,14 @@ export interface PreviewData {
    * честный ответ, а не поломка показа.
    */
   venue: string | null;
+  /**
+   * Отель — тот же, что гость получает до входа (партия 24). Нужен сессии
+   * показа: без него номер читал «управление выключено», главная — «обложки
+   * нет». Приходит на каждом экране: сессия одна на всю витрину.
+   */
+  hotel: GuestHotel | null;
+  /** Позиция, которую выбрал сервер для экрана карточки; `null` — не этот экран. */
+  item: string | null;
 }
 
 export function usePreviewData(screen: PreviewScreen, language: string): PreviewData {
@@ -67,22 +76,31 @@ export function usePreviewData(screen: PreviewScreen, language: string): Preview
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [venue, setVenue] = useState<string | null>(null);
+  const [hotel, setHotel] = useState<GuestHotel | null>(null);
+  const [item, setItem] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setError(null);
 
-    Promise.all(screen.payloads.map((id) => fetchPreviewScreen(id).then((data) => [id, data] as const)))
+    const ids: PreviewPayloadId[] = ['hotel', ...screen.payloads];
+    Promise.all(ids.map((id) => fetchPreviewScreen(id).then((data) => [id, data] as const)))
       .then((pairs) => {
         if (!alive) return;
         let point: string | null = null;
+        let chosen: string | null = null;
         for (const [id, data] of pairs) {
+          if (id === 'hotel') {
+            setHotel(data as GuestHotel);
+            continue;
+          }
           if (id === 'item') {
             // Ключ карточки собирается из полученного идентификатора — заранее
             // его знать неоткуда, позицию выбирает сервер.
             const item = data as { id?: string };
             if (item?.id) client.setQueryData(guestKeys.item(item.id, language), data);
+            chosen = item?.id ?? null;
             continue;
           }
           if (id === 'catalog') {
@@ -102,6 +120,7 @@ export function usePreviewData(screen: PreviewScreen, language: string): Preview
           if (key) client.setQueryData(key, data);
         }
         setVenue(point);
+        setItem(chosen);
         setLoading(false);
       })
       .catch((reason) => {
@@ -115,5 +134,5 @@ export function usePreviewData(screen: PreviewScreen, language: string): Preview
     };
   }, [client, screen, language]);
 
-  return { client, isLoading, error, venue };
+  return { client, isLoading, error, venue, hotel, item };
 }

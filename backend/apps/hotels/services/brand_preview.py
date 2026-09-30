@@ -31,7 +31,7 @@ from apps.accounts.services.roles import require_cms_access
 from apps.core.errors import ValidationError
 
 
-SCREENS = ("home", "venues", "catalog", "item", "locations", "room")
+SCREENS = ("hotel", "home", "venues", "catalog", "item", "locations", "room")
 
 
 def preview_payload(
@@ -61,6 +61,15 @@ def preview_payload(
             field="screen",
             code="unknown_screen",
         )
+
+    if screen == "hotel":
+        from apps.hotels.services.brand_payload import serialize_hotel
+
+        # Отель — тем же сериализатором, что гостю до входа (партия 24). Показ
+        # подставлял в сессию одно имя: номер без `room_control_enabled`
+        # рисовал «недоступно» у отеля, где всё работает, главная — без
+        # обложки. Тема отсюда показом не применяется: он рисует черновик.
+        return serialize_hotel(hotel)
 
     if screen == "home":
         from apps.catalog.services.home import home_payload
