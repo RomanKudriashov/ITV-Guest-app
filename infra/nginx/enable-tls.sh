@@ -13,7 +13,7 @@ set -eu
 
 EMAIL="${1:?укажите почту для Let's Encrypt}"
 BASE="${APP_DOMAIN:-app.147.45.245.172.sslip.io}"
-DOMAINS="$BASE crystal.$BASE azure.$BASE lumen.$BASE"
+DOMAINS="$BASE crystal.$BASE azure.$BASE lumen.$BASE sialia.$BASE"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 ARGS=""
