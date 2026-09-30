@@ -68,7 +68,7 @@ import { errorMessage } from '../errors';
 import { useRoomCommand, useRoomLive, useRoomState, useRoomVerify } from '../hooks/useRoomControl';
 import { BOTTOM_NAV_SPACE, DESKTOP_QUERY } from '../layout/constants';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { fontPx, layout, roomCard, surfaceRadius } from '../storefrontTokens';
+import { cardSurfaceCss, fontPx, layout, roomCard, surfaceRadius } from '../storefrontTokens';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useStorefront } from '../useStorefront';
 import type {
@@ -798,7 +798,9 @@ function Panel({
   children: ReactNode;
   testId: string;
 }) {
-  const { glass } = useStorefront();
+  // Панель номера — карточка, и поверхность у неё стилем отеля (партия 25):
+  // здесь было всегда стекло, какой бы стиль отель ни выбрал.
+  const { cardSurface } = useStorefront();
   return (
     <Stack
       spacing={1.5}
@@ -806,7 +808,7 @@ function Panel({
       sx={(theme) => ({
         p: 2,
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
-        ...glass.panel,
+        ...cardSurfaceCss(cardSurface, theme),
       })}
     >
       {title || hint ? (

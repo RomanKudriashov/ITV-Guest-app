@@ -10,7 +10,7 @@ import { useStorefront } from '../useStorefront';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
 import { ItemBadges, PrepMinutesChip } from './ItemBadges';
-import { fontPx, cardSubtitleColor, storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { fontPx, cardSubtitleColor, cardSurfaceCss, storefrontTokens, surfaceRadius } from '../storefrontTokens';
 
 export interface CatalogRowViewProps {
   testId: string;
@@ -77,11 +77,7 @@ export function CatalogRowView({
           нарисована `Box`'ом и о выборе не знала — в показе стиль было видно,
           у гостя нет.
         */
-        bgcolor: surface.background,
-        border: surface.border === '1px solid' ? 1 : 0,
-        borderColor: 'divider',
-        boxShadow: surface.boxShadow,
-        backdropFilter: surface.backdropFilter,
+        ...cardSurfaceCss(surface, theme),
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         overflow: 'hidden',
         /*

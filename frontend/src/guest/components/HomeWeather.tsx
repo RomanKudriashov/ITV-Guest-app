@@ -17,7 +17,8 @@ import {
   type AppIconComponent,
 } from '@/icons';
 import type { GuestWeather } from '../api/types';
-import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { cardSurfaceCss, surfaceRadius } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 import { fontPx } from '@/theme/fontPx';
 
 /**
@@ -139,6 +140,7 @@ export interface HomeWeatherProps {
 }
 
 export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
+  const { cardSurface } = useStorefront();
   const { t, i18n } = useTranslation();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
   const clock = useHotelClock(timezone, i18n.language);
@@ -165,7 +167,9 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
     <Box
       data-testid="guest-home-weather"
       sx={(theme) => ({
-        ...storefrontTokens(theme.palette.mode).glass.panel,
+        // Поверхность — стилем отеля, как у всех карточек витрины (партия 25):
+        // здесь было всегда стекло, какой бы стиль отель ни выбрал.
+        ...cardSurfaceCss(cardSurface, theme),
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         px: { xs: 1.5, md: 2 },
         py: { xs: 1, md: 1.25 },

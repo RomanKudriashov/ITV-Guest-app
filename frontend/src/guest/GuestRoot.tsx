@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { StickyStackProvider } from './layout/stickyStack';
 import { GuestSessionProvider } from './session/GuestSessionProvider';
 import { CartProvider } from './state/cart';
+import { GuestSurfaceTheme } from './GuestSurfaceTheme';
 
 /**
  * Обвязка витрины НИЖЕ сессии: корзина и стек липких слоёв.
@@ -29,7 +30,9 @@ export function GuestShellProviders({ children }: { children?: ReactNode }) {
     <CartProvider serviceCode={serviceCode}>
       {/* Стек липких слоёв — ОДИН на всю витрину: шелл и экраны кладут свои
           полосы в него, а не считают чужие высоты у себя. */}
-      <StickyStackProvider>{children ?? <Outlet />}</StickyStackProvider>
+      <StickyStackProvider>
+        <GuestSurfaceTheme>{children ?? <Outlet />}</GuestSurfaceTheme>
+      </StickyStackProvider>
     </CartProvider>
   );
 }

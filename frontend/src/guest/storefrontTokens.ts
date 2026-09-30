@@ -18,7 +18,7 @@
  * ослаблены, потому что затемнять нужно меньше.
  */
 
-import { alpha, decomposeColor, recomposeColor } from '@mui/material/styles';
+import { alpha, decomposeColor, recomposeColor, type Theme } from '@mui/material/styles';
 
 import type { ThemeMode } from '@/theme/tokens';
 import { fontPx } from '@/theme/fontPx';
@@ -603,6 +603,30 @@ export function cardSurface(style: SurfaceStyle, mode: ThemeMode): SurfaceTokens
   }
   // Плоский — то, что было до настройки: волосяная граница, без тени.
   return { background: 'background.paper', border: '1px solid', boxShadow: 'none' };
+}
+
+/**
+ * РЕЦЕПТ КАРТОЧКИ — КОНКРЕТНЫМ CSS, ОДНИМ МЕСТОМ ДЛЯ ВСЕХ КАРТОЧЕК ВИТРИНЫ
+ * (партия 25).
+ *
+ * Стиль поверхности доходил до одной карточки из десятка: каталог брал рецепт,
+ * а погода, панели номера, корзина, заказы, отзывы красили себя сами. Теперь
+ * их поверхность — отсюда: карточки-`Box`'ы зовут эту функцию, а
+ * `Paper variant="outlined"` витрины получает её же через тему витрины
+ * (`GuestSurfaceTheme`).
+ *
+ * Конкретные цвета, а не пути палитры (`'background.paper'`): рецепт идёт и в
+ * `sx`, и в `styleOverrides` темы, а там путей не понимают.
+ */
+export function cardSurfaceCss(surface: SurfaceTokens, theme: Theme) {
+  return {
+    background:
+      surface.background === 'background.paper' ? theme.palette.background.paper : surface.background,
+    border: surface.border === '1px solid' ? `1px solid ${theme.palette.divider}` : surface.border,
+    boxShadow: surface.boxShadow,
+    backdropFilter: surface.backdropFilter ?? 'none',
+    WebkitBackdropFilter: surface.backdropFilter ?? 'none',
+  };
 }
 
 /**
