@@ -208,6 +208,7 @@
     "constraints": "JPEG、PNG 或 WebP，最大 10 MB",
     "choose": "选择文件",
     "unsupportedType": "仅支持 JPEG、PNG 和 WebP",
+    "unsupportedTypeBrand": "支持 JPEG、PNG、WebP 和 SVG",
     "tooLarge": "文件超过 10 MB",
     "uploadFailed": "上传失败",
     "processingFailed": "图片处理失败",

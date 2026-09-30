@@ -124,7 +124,13 @@ export function EntryPage() {
   const canSubmit = room.trim().length > 0 && !busy;
   const shownHotel = publicHotel ?? hotel;
   const hotelName = shownHotel?.name ?? '';
-  const logoSrc = pickLogo(tokens, mode);
+  /*
+    ЛОГОТИП — ПО ПОВЕРХНОСТИ, А НЕ ПО РЕЖИМУ (партия 25). Экран входа тёмный
+    в обеих темах: фото под затемнением, текст белый (`onMedia`). Логотип для
+    светлой темы — это знак под светлый фон, и на входе он тонул. Здесь всегда
+    знак под тёмный фон; нет его — тот, что есть.
+  */
+  const logoSrc = pickLogo(tokens, 'dark');
   const backdrop = resolveBackground(tokens, mode);
 
   return (

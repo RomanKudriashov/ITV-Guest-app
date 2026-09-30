@@ -151,12 +151,20 @@ def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
     with Image.open(io.BytesIO(raw)) as image:
         # EXIF-поворот: фотографии с телефона иначе лягут боком.
         image = ImageOps.exif_transpose(image)
-        image = image.convert("RGB")
+        # ПРОЗРАЧНОСТЬ СОХРАНЯЕТСЯ (партия 25). Всё шло через `convert("RGB")`,
+        # и логотип с прозрачным фоном приезжал к гостю на белом квадрате —
+        # на тёмном экране входа и на стеклянной шапке одинаково. WebP держит
+        # альфу, так что путь один на всех: есть прозрачность — RGBA, нет
+        # (фото) — RGB, как было.
+        has_alpha = image.mode in ("RGBA", "LA") or (
+            image.mode == "P" and "transparency" in image.info
+        )
+        image = image.convert("RGBA" if has_alpha else "RGB")
         # Размеры и яркость считаем по ОРИГИНАЛУ, до кадрирования: `width`/
         # `height` описывают загруженный файл, и подменять их размерами кадра
         # значило бы потерять то, по чему кадр вообще считается.
         asset.width, asset.height = image.size
-        asset.luminance = _mean_luminance(image)
+        asset.luminance = _mean_luminance(image.convert("RGB"))
 
         # КАДР. Режем один раз здесь, а не в каждом варианте: варианты — это
         # размеры одного и того же кадра, а не разные кадры.

@@ -9,7 +9,7 @@ CMS: загрузка изображений и статус обработки.
 from __future__ import annotations
 
 from django.http import HttpRequest
-from ninja import File, Router
+from ninja import File, Form, Router
 from ninja.files import UploadedFile
 
 from apps.core.errors import ValidationError
@@ -20,11 +20,20 @@ router = Router(tags=["cms"])
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+# SVG — только для бренда (логотип из брендбука) и только очищенный, см.
+# `apps/media/services/svg.py`. Фото блюд в SVG не бывает, а резать его
+# варианты Pillow не умеет.
+SVG_CONTENT_TYPE = "image/svg+xml"
 
 
 @router.post("/media", response={201: MediaOut}, summary="Загрузить изображение")
-def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str = "item"):
+def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str = Form("item")):
     """
+    `kind` — ПОЛЕ ФОРМЫ, как его и шлёт клиент (партия 25). Был параметром
+    адреса: панель клала вид в форму, сервер его не видел, и логотипы с
+    обложками лежали видом `item`. Пока от вида ничего не зависело, это было
+    незаметно; SVG принимается только для бренда — и стало заметно.
+
     Оригинал сразу уезжает в MinIO, варианты режет Celery. Ответ приходит со
     статусом `pending` — клиент показывает локальное превью и опрашивает
     `GET /media/{id}`, пока статус не станет `ready`.
@@ -38,6 +47,17 @@ def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str
             code="file_too_large",
         )
     content_type = (file.content_type or "").lower()
+    if kind == MediaAsset.Kind.BRAND and content_type == SVG_CONTENT_TYPE:
+        from apps.media.services import store_ready_asset
+        from apps.media.services.svg import sanitize_svg
+
+        asset = store_ready_asset(
+            content=sanitize_svg(file.read()),
+            filename=file.name or "logo.svg",
+            kind=kind,
+            content_type=SVG_CONTENT_TYPE,
+        )
+        return 201, serialize_asset(asset)
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise ValidationError(
             "Поддерживаются только JPEG, PNG и WebP",

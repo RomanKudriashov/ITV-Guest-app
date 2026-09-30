@@ -131,6 +131,12 @@ def set_crop(asset_id, *, crop: dict | None, ratio: float | None) -> MediaAsset:
     from apps.media.tasks import process_media_asset
 
     asset = get_asset(asset_id)
+    if asset.content_type == "image/svg+xml":
+        # Вектор не режется на варианты — и кадрировать его нечем: рамку
+        # задаёт сам файл. Отказ словами, а не упавшая нарезка (партия 25).
+        from apps.core.errors import ValidationError
+
+        raise ValidationError("SVG не кадрируется — рамку задаёт сам файл", code="svg_no_crop")
     asset.crop = crop or None
     asset.crop_ratio = ratio
     asset.status = MediaAsset.Status.PENDING

@@ -211,6 +211,7 @@
     "constraints": "JPEG, PNG или WebP, до 10 МБ",
     "choose": "Выбрать файл",
     "unsupportedType": "Поддерживаются только JPEG, PNG и WebP",
+    "unsupportedTypeBrand": "Поддерживаются JPEG, PNG, WebP и SVG",
     "tooLarge": "Файл больше 10 МБ",
     "uploadFailed": "Не удалось загрузить файл",
     "processingFailed": "Не удалось обработать изображение",

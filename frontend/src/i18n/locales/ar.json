@@ -213,6 +213,7 @@
     "constraints": "JPEG أو PNG أو WebP، حتى 10 ميغابايت",
     "choose": "اختيار ملف",
     "unsupportedType": "الصيغ المدعومة: JPEG وPNG وWebP",
+    "unsupportedTypeBrand": "الصيغ المدعومة: JPEG وPNG وWebP وSVG",
     "tooLarge": "حجم الملف أكبر من 10 ميغابايت",
     "uploadFailed": "فشل الرفع",
     "processingFailed": "فشلت معالجة الصورة",

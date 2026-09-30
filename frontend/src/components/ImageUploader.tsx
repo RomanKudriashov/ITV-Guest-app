@@ -63,6 +63,15 @@ export interface EditableImage {
 }
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
+/**
+ * SVG — только бренду (партия 25): логотип из брендбука живёт в векторе.
+ * Сервер его чистит и не режет на варианты, поэтому и кадрировать нечего.
+ */
+const ACCEPTED_BRAND = [...ACCEPTED, 'image/svg+xml'];
+
+function isVector(image: EditableImage): boolean {
+  return /\.svg(\?|$)/i.test(image.original_url ?? image.url ?? '');
+}
 const MAX_BYTES = 10 * 1024 * 1024;
 const POLL_INTERVAL_MS = 1500;
 const POLL_MAX_ATTEMPTS = 20;
@@ -189,8 +198,8 @@ export function ImageUploader({
 
   const uploadFile = useCallback(
     async (file: File) => {
-      if (!ACCEPTED.includes(file.type)) {
-        setError(t('media.unsupportedType'));
+      if (!(kind === 'brand' ? ACCEPTED_BRAND : ACCEPTED).includes(file.type)) {
+        setError(t(kind === 'brand' ? 'media.unsupportedTypeBrand' : 'media.unsupportedType'));
         return;
       }
       if (file.size > MAX_BYTES) {
@@ -337,7 +346,7 @@ export function ImageUploader({
           ref={inputRef}
           type="file"
           hidden
-          accept={ACCEPTED.join(',')}
+          accept={(kind === 'brand' ? ACCEPTED_BRAND : ACCEPTED).join(',')}
           multiple={multiple}
           data-testid={`${testId}-input`}
           onChange={(event) => {
@@ -521,7 +530,7 @@ function SortableThumb({
             появления кроппера, исходник тоже есть — он никуда не девался, —
             поэтому кнопка работает и у них.
           */}
-          {surface && image.original_url ? (
+          {surface && image.original_url && !isVector(image) ? (
             <IconButton
               size="small"
               onClick={onCrop}

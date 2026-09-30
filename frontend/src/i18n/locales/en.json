@@ -209,6 +209,7 @@
     "constraints": "JPEG, PNG or WebP, up to 10 MB",
     "choose": "Choose file",
     "unsupportedType": "Only JPEG, PNG and WebP are supported",
+    "unsupportedTypeBrand": "JPEG, PNG, WebP and SVG are supported",
     "tooLarge": "The file is larger than 10 MB",
     "uploadFailed": "Upload failed",
     "processingFailed": "Image processing failed",
