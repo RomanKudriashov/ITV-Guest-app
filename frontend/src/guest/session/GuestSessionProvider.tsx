@@ -109,8 +109,19 @@ export function GuestSessionProvider({ children }: { children: ReactNode }) {
         setSession(restored);
         applyHotel(restored.hotel);
       })
-      .catch(() => {
-        if (!cancelled) guestTokenStorage.clear();
+      .catch((error: unknown) => {
+        /*
+          ТОКЕН СТИРАЕТСЯ, ТОЛЬКО ЕСЛИ СЕРВЕР ОТКАЗАЛ СЕССИИ (партия 25).
+          Раньше — при ЛЮБОЙ ошибке: обрыв сети, прерванный переходом запрос,
+          сбой сервера. Гость на неустойчивом Wi-Fi отеля, открыв приложение,
+          оказывался на входе и вводил номер заново; то же — если уходил со
+          страницы, пока сессия поднималась. Отказ — это ответ сервера
+          «такой сессии нет» (401/403/404); всё прочее — повод попробовать
+          ещё раз, а не выйти.
+        */
+        if (!cancelled && error instanceof ApiError && [401, 403, 404].includes(error.status)) {
+          guestTokenStorage.clear();
+        }
       })
       .finally(() => {
         if (!cancelled) setBootstrapping(false);
