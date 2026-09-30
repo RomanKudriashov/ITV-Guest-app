@@ -67,18 +67,42 @@ export function logStatusSlot(status: string | null | undefined): StatusPaletteS
   как квитанцию; цвет и колонку выбирает уже компонент.
 */
 
-/** Ответы каналов, у которых есть человеческое имя. Прочие — как есть (id). */
-const RECEIPT_KEYS: Record<string, string> = {
+/*
+  ТРЕТИЙ СМЫСЛ — ПРИЧИНА (партия 23, бэклог 40). У отменённой ступени в поле
+  лежит «Заказ взят в работу» — не ошибка, а ровно то, ради чего эскалация и
+  заводилась: успели принять. У пропущенной — «не нашлось активных каналов»:
+  тоже не сбой отправки, отправлять было некуда. Красной «Ошибкой» обе
+  читались как поломка доставки.
+
+  Разведение: «Ошибка» — только у `failed`, красным. Всё остальное, что лежит в
+  поле, — ПОЯСНЕНИЕ, в одной колонке с квитанцией: у строки всегда ровно один
+  из смыслов (квитанция у отправленной, причина у отменённой или пропущенной),
+  и вторая колонка стояла бы пустой почти всегда. Отмена — спокойным цветом,
+  пропуск — предупреждающим: на пропущенной ступени не уведомлён никто, и это
+  стоит заметить, хотя это и не сбой.
+*/
+
+/** Известные слова в поле, у которых есть человеческое имя. Прочие — как есть. */
+const NOTE_KEYS: Record<string, string> = {
   logged: 'notifications.log.receipts.logged',
+  // Сервер пишет причины по-русски в двух местах (`delivery.py`): гашение при
+  // приёме (`cancel_pending`) и проверка перед отправкой ступени. Оба «принят»
+  // ведут к одной подписи — для читающего это одно и то же событие.
+  'Заказ взят в работу': 'notifications.log.reasons.accepted',
+  'Заказ уже в работе — эскалация не нужна': 'notifications.log.reasons.accepted',
+  'Отель выключил уведомления о просрочке': 'notifications.log.reasons.eventDisabled',
+  'Для этой ступени не нашлось активных каналов': 'notifications.log.reasons.noChannels',
 };
 
 export interface DeliveryNote {
-  /** Настоящая ошибка: показывать в колонке «Ошибка», красным. */
+  /** Настоящая ошибка отправки: колонка «Ошибка», красным. Только у `failed`. */
   failure: string;
-  /** Ответ канала у успешной отправки: своя колонка, спокойным цветом. */
+  /** Пояснение: квитанция канала, причина отмены или пропуска. */
   receipt: string;
-  /** Ключ перевода квитанции, если ответ канала — известное слово, а не id. */
+  /** Ключ перевода пояснения, если это известное слово, а не id письма. */
   receiptKey: string | null;
+  /** Тон пояснения: спокойный — квитанция и отмена; предупреждение — пропуск. */
+  tone: 'quiet' | 'warning';
 }
 
 export function deliveryNote(entry: {
@@ -86,11 +110,15 @@ export function deliveryNote(entry: {
   error?: string | null;
 }): DeliveryNote {
   const value = (entry.error ?? '').trim();
-  // Успех — единственное состояние, где в поле лежит НЕ ошибка.
-  if (entry.status === 'sent') {
-    return { failure: '', receipt: value, receiptKey: RECEIPT_KEYS[value] ?? null };
+  if (entry.status === 'failed') {
+    return { failure: value, receipt: '', receiptKey: null, tone: 'quiet' };
   }
-  return { failure: value, receipt: '', receiptKey: null };
+  return {
+    failure: '',
+    receipt: value,
+    receiptKey: NOTE_KEYS[value] ?? null,
+    tone: entry.status === 'skipped' ? 'warning' : 'quiet',
+  };
 }
 
 /* ── Two-level grouping ────────────────────────────────────────────────── */

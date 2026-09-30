@@ -201,3 +201,76 @@ test('у успешной строки журнала «Ошибка» пуст�
     `ответ канала нарисован красным (${colour}) — снова читается как ошибка`,
   ).toBe(false)
 })
+
+/**
+ * ПРИЧИНА ОТМЕНЫ — НЕ ОШИБКА (партия 23, бэклог 40).
+ *
+ * У ступени, погашенной принятием заказа, в поле `error` лежит «Заказ взят в
+ * работу» — ровно то, ради чего эскалация и заводилась. Журнал показывал это
+ * красным в колонке «Ошибка», и читалось как поломка доставки. Теперь
+ * «Ошибка» — только у настоящего сбоя, причина — в «Пояснении», спокойно.
+ *
+ * Условие создаётся здесь: заказ на кухню и его приём гасят ступени +5 и +15.
+ */
+test('у отменённой ступени «Ошибка» пуста, а причина — словами и не красным', async ({
+  page,
+  request,
+}) => {
+  const token = await apiToken(request)
+  const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
+
+  const session = await request.post(`${API}/api/guest/session`, {
+    data: { room_number: '305' },
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  const guest = (await session.json()).token
+  const catalog = await (
+    await request.get(`${API}/api/guest/catalog?type=product`, {
+      headers: { Authorization: `Bearer ${guest}`, 'X-Hotel-Subdomain': HOTEL },
+    })
+  ).json()
+  const caesar = catalog.categories.flatMap((c: { items: Array<{ id: string; code: string }> }) => c.items)
+    .find((item: { code: string }) => item.code === 'caesar')
+  const placed = await request.post(`${API}/api/guest/order`, {
+    data: { lines: [{ item_id: caesar.id, quantity: 1 }], timing: 'asap' },
+    headers: {
+      Authorization: `Bearer ${guest}`,
+      'X-Hotel-Subdomain': HOTEL,
+      'Idempotency-Key': unique('cancel-reason'),
+    },
+  })
+  expect(placed.ok(), await placed.text()).toBeTruthy()
+  const order = await placed.json()
+  const accepted = await request.post(`${API}/api/tracker/order/${order.id}/accept`, { headers })
+  expect(accepted.ok(), await accepted.text()).toBeTruthy()
+
+  // Гашение идёт через событие — ждём строки «Отменено» в журнале сервера.
+  await expect
+    .poll(
+      async () => {
+        const log = await request.get(`${API}/api/cms/notification-log?limit=200`, { headers })
+        const items = (await log.json()).items as Array<{ order_number: number; status: string }>
+        return items.filter((e) => e.order_number === order.number && e.status === 'cancelled').length
+      },
+      { timeout: 30_000 },
+    )
+    .toBeGreaterThan(0)
+
+  await signInToCms(page)
+  await page.goto('/cms/notifications')
+  await page.getByTestId('cms-notifications-tab-log').click()
+  await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
+  await page.getByTestId('cms-log-order-filter').fill(String(order.number))
+
+  const rows = page.locator('[data-testid^="cms-log-row-"]').filter({ hasText: 'Отменено' })
+  await expect(rows.first()).toBeVisible({ timeout: 20_000 })
+  for (const row of await rows.all()) {
+    const index = ((await row.getAttribute('data-testid')) ?? '').replace('cms-log-row-', '')
+    await expect(page.getByTestId(`cms-log-error-${index}`), 'у отменённой ступени «Ошибка» непуста').toHaveText('')
+    const note = page.getByTestId(`cms-log-receipt-${index}`)
+    await expect(note).toHaveText('Заказ взят в работу — ступень больше не нужна')
+    const colour = await note.evaluate((node) => getComputedStyle(node).color)
+    const [r, g, b] = (colour.match(/\d+/g) ?? ['0', '0', '0']).map(Number)
+    expect(r - g > 40 && r - b > 40, `причина отмены нарисована красным (${colour})`).toBe(false)
+  }
+})

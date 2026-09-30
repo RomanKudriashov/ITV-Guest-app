@@ -1218,9 +1218,14 @@
         "skipped": "Skipped",
         "cancelled": "Cancelled"
       },
-      "receipt": "Receipt",
+      "receipt": "Note",
       "receipts": {
         "logged": "Written to the application log"
+      },
+      "reasons": {
+        "accepted": "Order taken into work — step no longer needed",
+        "noChannels": "Nobody to notify: the step has no active channels",
+        "eventDisabled": "The hotel turned off overdue notifications"
       }
     },
     "validation": {

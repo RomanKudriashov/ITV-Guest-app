@@ -1208,9 +1208,14 @@
         "skipped": "已跳过",
         "cancelled": "已取消"
       },
-      "receipt": "回执",
+      "receipt": "说明",
       "receipts": {
         "logged": "已写入应用日志"
+      },
+      "reasons": {
+        "accepted": "订单已开始处理——此步骤不再需要",
+        "noChannels": "无人可通知：该步骤没有启用的渠道",
+        "eventDisabled": "酒店已关闭逾期通知"
       }
     },
     "validation": {

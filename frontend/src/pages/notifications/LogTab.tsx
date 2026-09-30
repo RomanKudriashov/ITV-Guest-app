@@ -213,9 +213,9 @@ export function LogTab({ channels }: LogTabProps) {
                         />
                       </TableCell>
                       {/*
-                        ОШИБКА — ТОЛЬКО ОШИБКА. У успешной отправки в том же
-                        поле лежит ответ канала (`logged`, идентификатор
-                        письма), и красным он читался как поломка.
+                        ОШИБКА — ТОЛЬКО ОШИБКА ОТПРАВКИ (`failed`). В том же
+                        поле сервер хранит квитанцию канала и причину отмены
+                        или пропуска — они в «Пояснении» (notifications/log.ts).
                       */}
                       <TableCell
                         data-testid={`cms-log-error-${index}`}
@@ -225,7 +225,10 @@ export function LogTab({ channels }: LogTabProps) {
                       </TableCell>
                       <TableCell
                         data-testid={`cms-log-receipt-${index}`}
-                        sx={{ color: 'text.secondary', maxWidth: 220 }}
+                        sx={{
+                          color: note.tone === 'warning' ? 'warning.main' : 'text.secondary',
+                          maxWidth: 220,
+                        }}
                       >
                         {note.receiptKey ? t(note.receiptKey) : note.receipt}
                       </TableCell>
