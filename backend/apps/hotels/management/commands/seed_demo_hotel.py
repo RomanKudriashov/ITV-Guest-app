@@ -1227,27 +1227,48 @@ class Command(BaseCommand):
                 },
             )
 
-        rule, created = EscalationRule.objects.get_or_create(
-            name="Кухня: подъём по смене",
-            defaults={"execution_point": points["kitchen"]},
-        )
-        if created:
-            # Короткие тайминги — чтобы демо было видно за минуты, а не за час.
-            steps = [
+        # Короткие тайминги — чтобы демо было видно за минуты, а не за час.
+        self._ensure_point_rule(
+            points["kitchen"],
+            "Кухня: подъём по смене",
+            [
                 (0, TargetKind.POINT, "Сразу — в чат кухни"),
                 (5, TargetKind.LEAD, "Через 5 минут — старшему смены"),
                 (15, TargetKind.MANAGER, "Через 15 минут — руководителю"),
-            ]
-            for index, (delay, target, title) in enumerate(steps):
-                EscalationStep.objects.create(
-                    rule=rule,
-                    sort_order=index,
-                    delay_minutes=delay,
-                    target_kind=target,
-                    title=title,
-                )
+            ],
+        )
 
         self._seed_service_escalation(points, users)
+
+    def _ensure_point_rule(self, point: ExecutionPoint, name: str, steps) -> EscalationRule | None:
+        """
+        ПРАВИЛО ИЩЕТСЯ ПО ТОЧКЕ, А НЕ ПО ИМЕНИ — и заводится через ту же
+        проверку, что у API.
+
+        Раньше сид искал правило по имени, а имя собирал из названия
+        заведения. Заведение переименовали («SPA-центр» → «СПА «Кристалл»») —
+        сид правила под новым именем не нашёл и завёл второе активное на ту же
+        точку, мимо серверного запрета «одно активное правило на точку» (пункт
+        39 бэклога; дубль есть и на стенде). Срабатывало старое — первое по
+        имени, — а экран «Передача выше» предупреждал, что у точки уже есть
+        правило, даже на открытом.
+
+        Теперь: у точки есть активное правило — сид его не трогает, какое бы
+        имя оно ни носило (переименование, правка администратора). Нет —
+        заводит новое, но сначала спрашивает `_check_unique_rule`: запрет один
+        на API и на сид.
+        """
+        from apps.notifications.services.cms import _check_unique_rule
+
+        if EscalationRule.objects.filter(execution_point=point, is_active=True).exists():
+            return None
+        _check_unique_rule(point.pk)
+        rule = EscalationRule.objects.create(name=name, execution_point=point)
+        for index, (delay, target, title) in enumerate(steps):
+            EscalationStep.objects.create(
+                rule=rule, sort_order=index, delay_minutes=delay, target_kind=target, title=title
+            )
+        return rule
 
     def _seed_service_escalation(self, points, users) -> None:
         """
@@ -1285,28 +1306,18 @@ class Command(BaseCommand):
                 },
             )
 
-            rule, created = EscalationRule.objects.get_or_create(
-                name=f"{title}: подъём по норме",
-                defaults={"execution_point": point},
+            self._ensure_point_rule(
+                point,
+                f"{title}: подъём по норме",
+                [
+                    (0, TargetKind.POINT, "Сразу — в чат отдела"),
+                    (
+                        point.sla_minutes,
+                        TargetKind.MANAGER,
+                        f"Через {point.sla_minutes} мин — управляющему сервисом",
+                    ),
+                ],
             )
-            if created:
-                for index, (delay, target, step_title) in enumerate(
-                    [
-                        (0, TargetKind.POINT, "Сразу — в чат отдела"),
-                        (
-                            point.sla_minutes,
-                            TargetKind.MANAGER,
-                            f"Через {point.sla_minutes} мин — управляющему сервисом",
-                        ),
-                    ]
-                ):
-                    EscalationStep.objects.create(
-                        rule=rule,
-                        sort_order=index,
-                        delay_minutes=delay,
-                        target_kind=target,
-                        title=step_title,
-                    )
 
         # Личный канал каждому управляющему: без него ступень MANAGER находит
         # нужного человека, но отправить ему нечего — в журнале «skipped».
