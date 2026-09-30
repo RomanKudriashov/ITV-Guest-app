@@ -71,3 +71,28 @@ def test_fresh_seed_leaves_no_point_with_two_active_rules(crystal):
             EscalationRule.objects.filter(is_active=True).values_list("execution_point_id", flat=True)
         )
     assert [point for point, n in counts.items() if n > 1] == []
+
+
+def test_the_database_refuses_a_second_active_rule_on_a_point(crystal):
+    """
+    Запрет в базе (миграция notifications 0004): мимо API второе активное
+    правило на точку не встаёт. Выключенное и общее правило отеля — свои случаи.
+    """
+    from django.db import IntegrityError, transaction
+
+    with tenant_context(crystal):
+        spa = ExecutionPoint.objects.get(code="spa")
+        EscalationRule.objects.filter(execution_point=spa).delete()
+        EscalationRule.objects.create(name="первое", execution_point=spa)
+
+        with pytest.raises(IntegrityError), transaction.atomic():
+            EscalationRule.objects.create(name="второе", execution_point=spa)
+
+        # Выключенное — не в счёт.
+        EscalationRule.objects.create(name="выключенное", execution_point=spa, is_active=False)
+
+        # Общее правило отеля — одно активное; NULL в индексе ограничен отдельно.
+        EscalationRule.objects.filter(execution_point__isnull=True).delete()
+        EscalationRule.objects.create(name="общее", execution_point=None)
+        with pytest.raises(IntegrityError), transaction.atomic():
+            EscalationRule.objects.create(name="второе общее", execution_point=None)

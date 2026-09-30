@@ -29,6 +29,28 @@ class EscalationRule(TenantModel):
     class Meta:
         db_table = "notifications_escalation_rule"
         ordering = ["name"]
+        # ОДНО АКТИВНОЕ ПРАВИЛО НА ТОЧКУ — ЗАПРЕТ В БАЗЕ, А НЕ ТОЛЬКО В API.
+        # Сервисный `_check_unique_rule` обходили все, кто пишет мимо него: сид
+        # завёл второе правило СПА после переименования заведения (бэклог 39), и
+        # срабатывало из двух первое по имени. Два индекса, потому что NULL в
+        # уникальном индексе Postgres друг другу не равны: общее правило отеля
+        # (без точки) нужно ограничить отдельно. Выключенные и удалённые не в счёт.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "execution_point"],
+                condition=models.Q(
+                    is_active=True, deleted_at__isnull=True, execution_point__isnull=False
+                ),
+                name="uniq_active_rule_per_point",
+            ),
+            models.UniqueConstraint(
+                fields=["hotel"],
+                condition=models.Q(
+                    is_active=True, deleted_at__isnull=True, execution_point__isnull=True
+                ),
+                name="uniq_active_default_rule_per_hotel",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
