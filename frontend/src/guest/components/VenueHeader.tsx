@@ -31,7 +31,23 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
       data-testid="guest-venue-header"
       sx={{
         position: 'relative',
-        height: { xs: layout.venueHeadPhone, md: layout.venueHeadWide },
+        /*
+          ВЫСОТА — НЕ МЕНЬШЕ, А НЕ РОВНО (партия 25). Название было прижато к
+          низу шапки фиксированной высоты: длинное переносилось и росло вверх —
+          под «К сервисам» и под стеклянную группу. Теперь название в потоке,
+          сверху под верхнюю полосу оставлено место, и длинное название делает
+          шапку выше, а не лезет под кнопки.
+        */
+        minHeight: { xs: layout.venueHeadPhone, md: layout.venueHeadWide },
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+        pt: {
+          // Низ верхней полосы (кнопка «назад»: 14 + 36; плавающая группа: 10 + 38) и 12 px воздуха.
+          xs: 'calc(62px + env(safe-area-inset-top, 0px))',
+          md: '70px',
+        },
+        pb: { xs: `${14 + layout.panelOverlap}px`, md: `${30 + layout.panelOverlap}px` },
         borderRadius: (theme) => ({ xs: 0, md: surfaceRadius.panel(theme.palette.brand.radius) }),
         overflow: 'hidden',
         mt: { xs: 0, md: 1 },
@@ -111,10 +127,9 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
       */}
       <Box
         sx={{
-          position: 'absolute',
-          left: { xs: 18, md: 34 },
-          right: 18,
-          bottom: { xs: 14 + layout.panelOverlap, md: 30 + layout.panelOverlap },
+          position: 'relative',
+          pl: { xs: '18px', md: '34px' },
+          pr: '18px',
         }}
       >
         <Typography
