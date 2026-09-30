@@ -934,7 +934,7 @@ export interface RoomPlan {
  * `offline` — идти на ресепшен, само не починится;
  * `no_room` — назвать номер комнаты.
  */
-export type RoomUnavailableKind = 'reading' | 'offline' | 'no_room';
+export type RoomUnavailableKind = 'reading' | 'offline' | 'no_room' | 'unmanaged';
 
 export interface RoomStateSnapshot {
   availability: 'online' | 'unavailable';

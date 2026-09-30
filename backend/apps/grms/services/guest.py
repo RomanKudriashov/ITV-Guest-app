@@ -74,12 +74,24 @@ _UNAVAILABLE_TEXT = {
 UNAVAILABLE_READING = "reading"
 UNAVAILABLE_OFFLINE = "offline"
 UNAVAILABLE_NO_ROOM = "no_room"
+# Номер без типа управления (партия 25). Это не отказ оборудования, а его
+# отсутствие: в номере нечем управлять — и гостю незачем видеть на главной
+# «управление временно недоступно, обратитесь на ресепшен» в каждом таком
+# номере отеля, где модуль включён. Главная такой снимок не показывает.
+UNAVAILABLE_UNMANAGED = "unmanaged"
 
 _READING_TEXT = {
     "ru": "Читаем состояние номера…",
     "en": "Reading the room state…",
     "ar": "جارٍ قراءة حالة الغرفة…",
     "zh": "正在读取客房状态…",
+}
+
+_UNMANAGED_TEXT = {
+    "ru": "В этом номере нет управления освещением и климатом.",
+    "en": "This room has no lighting or climate control.",
+    "ar": "لا يتوفر في هذه الغرفة تحكم في الإضاءة والمناخ.",
+    "zh": "此客房没有照明和空调控制。",
 }
 
 _NO_ROOM_TEXT = {
@@ -94,6 +106,7 @@ _NO_ROOM_TEXT = {
 _UNAVAILABLE_KIND = {
     REASON_NO_ROOM: UNAVAILABLE_NO_ROOM,
     REASON_UNREADABLE: UNAVAILABLE_READING,
+    REASON_NO_TYPE: UNAVAILABLE_UNMANAGED,
     # DEVICE_SILENT сюда не вписан намеренно: подтверждённое молчание — это
     # честный отказ (`offline`), как и молчание всего канала. Разница между
     # ними в ОБЛАСТИ (комната против отеля), а не в том, что видит гость.
@@ -102,6 +115,7 @@ _UNAVAILABLE_KIND = {
 _KIND_TEXT = {
     UNAVAILABLE_READING: _READING_TEXT,
     UNAVAILABLE_NO_ROOM: _NO_ROOM_TEXT,
+    UNAVAILABLE_UNMANAGED: _UNMANAGED_TEXT,
     UNAVAILABLE_OFFLINE: _UNAVAILABLE_TEXT,
 }
 

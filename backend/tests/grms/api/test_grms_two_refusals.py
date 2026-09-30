@@ -210,11 +210,18 @@ def test_a_session_without_a_room_is_asked_for_the_room_number(client, crystal, 
     assert payload["can_command"] is False
 
 
-def test_other_reasons_stay_neutral(client, crystal, stand):
+def test_a_room_without_a_control_type_is_unmanaged_not_broken(client, crystal, stand):
     """
-    УКУС. Разговорчивость — не бесплатная: чем больше видов недоступности, тем
-    легче протащить наружу техническую причину. Комната без опубликованной
-    конфигурации остаётся нейтральным отказом, а не отдельным откровением.
+    Номер без типа управления — `unmanaged`, а не отказ (партия 25).
+
+    Раньше такой номер получал нейтральный отказ «управление временно
+    недоступно, обратитесь на ресепшен» — и главная показывала его в КАЖДОМ
+    номере без управления у отеля, где модуль включён. Сломано при этом ничего
+    не было: управлять в номере нечем. Главная такой снимок не показывает.
+
+    Остальное из прежнего укуса держится: техническая причина наружу не выходит.
+    Прочие причины (нет опубликованной конфигурации, коннектор, чтение) — по-
+    прежнему нейтральный отказ: вид заведён ровно для одного случая.
     """
     from apps.accounts.models import GuestSession
     from apps.hotels.models import Room
@@ -235,8 +242,9 @@ def test_other_reasons_stay_neutral(client, crystal, stand):
         HTTP_AUTHORIZATION=f"Bearer {token}",
     ).json()
 
-    assert payload["unavailable_kind"] == room_guest.UNAVAILABLE_OFFLINE
-    assert "ресепшен" in payload["message"]
+    assert payload["unavailable_kind"] == room_guest.UNAVAILABLE_UNMANAGED
+    assert "ресепшен" not in payload["message"], "сломано ничего не было"
+    assert payload["can_command"] is False
     for marker in ("NO_ROOM_TYPE", "NO_PUBLISHED_CONFIG", "STATE_UNREADABLE", "CONNECTOR"):
         assert marker not in payload["message"]
 

@@ -42,6 +42,10 @@ export function HomeRoomStatus({ allowed = true }: { allowed?: boolean }) {
   const { data: snapshot, isPending, isError } = useRoomState(gated);
 
   if (!gated || isPending || isError || !snapshot) return null;
+  // Номер без типа управления — в нём нечем управлять, и «недоступно» на
+  // главной ему не к чему (партия 25): блок не показывается вовсе. Отказ
+  // оборудования в управляемом номере по-прежнему виден.
+  if (snapshot.unavailable_kind === 'unmanaged') return null;
 
   const unavailable = snapshot.availability === 'unavailable';
 
