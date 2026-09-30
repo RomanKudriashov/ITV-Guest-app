@@ -266,7 +266,15 @@ export function CatalogRowView({
             услуги, у которой нет ни цены, ни кнопки, — то же зарезервированное
             место под несуществующее содержимое, что и в описании.
           */
-          sx={{ mt: 'auto', minHeight: priceLabel || action ? 40 : 0 }}
+          sx={{
+            mt: 'auto',
+            minHeight: priceLabel || action ? 40 : 0,
+            // Не помещается кнопка рядом с ценой (узкая колонка телефона,
+            // крупный текст, «Забронировать») — уходит на строку ниже, а не
+            // обрезается краем карточки (партия 25).
+            flexWrap: 'wrap',
+            rowGap: 1,
+          }}
         >
           {/* "No price" is a normal state for a service — never print "0 ₽". */}
           <Stack spacing={0} sx={{ minWidth: 0 }}>
@@ -288,7 +296,18 @@ export function CatalogRowView({
               </Typography>
             ) : null}
           </Stack>
-          {action ? <Box sx={{ flexShrink: 0 }}>{action}</Box> : null}
+          {action ? (
+            <Box
+              sx={{
+                flexShrink: 0,
+                maxWidth: '100%',
+                ml: 'auto',
+                '& .MuiButton-root': { maxWidth: '100%', whiteSpace: 'normal', lineHeight: 1.15 },
+              }}
+            >
+              {action}
+            </Box>
+          ) : null}
         </Stack>
       </Box>
     </Box>

@@ -34,6 +34,7 @@ import { STICKY, useStickyLayer } from './stickyStack';
 import { layout as storefrontLayout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { GuestBackdrop } from './GuestBackdrop';
+import { fontPx } from '@/theme/fontPx';
 import {
   BOTTOM_NAV_HEIGHT,
   BOTTOM_NAV_INSET,
@@ -327,7 +328,21 @@ export function GuestLayout() {
                   <tab.Icon size={22} />
                 )
               }
-              sx={{ minWidth: 44 }}
+              sx={{
+                minWidth: 44,
+                /*
+                  ПОДПИСЬ ВЛЕЗАЕТ В СВОЮ ВКЛАДКУ (партия 25). Шесть вкладок на
+                  390 — по 60 px; при крупном размере текста подписи
+                  («Главная», «Номер») обрезались краем вкладки. Подпись растёт
+                  с настройкой, но не шире, чем позволяет телефон; у активной —
+                  тот же размер: скачок 12 → 14 выталкивал её за край первой.
+                */
+                px: 0.25,
+                '& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected': {
+                  fontSize: `min(${fontPx(12)}, 3vw)`,
+                  whiteSpace: 'nowrap',
+                },
+              }}
             />
           ))}
         </BottomNavigation>

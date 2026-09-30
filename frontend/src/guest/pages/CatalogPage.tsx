@@ -163,7 +163,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: isDesktopShell ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
+            gridTemplateColumns: isDesktopShell ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))',
             gap: '16px',
           }}
         >
@@ -324,7 +324,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: isDesktopShell ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
+                  gridTemplateColumns: isDesktopShell ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))',
                   gap: '16px',
                 }}
               >
