@@ -311,6 +311,24 @@ def _validate_steps(steps: Iterable[dict]) -> list[dict]:
     return cleaned
 
 
+def points_with_escalation(point_ids: Iterable) -> set:
+    """
+    Какие из точек закрыты действующим правилом подъёма — ОДНО ПРАВИЛО
+    ПОДСЧЁТА для списка сервисов панели и для пульта (партия 25).
+
+    Правило с пустой точкой — общее на отель: оно закрывает все точки разом.
+    Пульт это знал, а список сервисов — нет: при живом общем правиле у каждого
+    сервиса стояло «нет эскалации», а пульт говорил, что всё настроено.
+    """
+    point_ids = set(point_ids)
+    rules = EscalationRule.objects.filter(is_active=True)
+    if rules.filter(execution_point__isnull=True).exists():
+        return point_ids
+    return set(
+        rules.filter(execution_point_id__in=point_ids).values_list("execution_point_id", flat=True)
+    )
+
+
 def _check_unique_rule(execution_point_id, exclude_id=None) -> None:
     queryset = EscalationRule.objects.filter(
         execution_point_id=execution_point_id or None, is_active=True

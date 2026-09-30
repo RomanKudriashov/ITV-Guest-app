@@ -185,6 +185,32 @@ def test_a_hotel_wide_escalation_rule_covers_every_venue(crystal):
         assert "no_escalation" not in _codes(build(crystal, _admin()))
 
 
+def test_service_list_and_dashboard_count_escalation_the_same_way(cms, crystal):
+    """
+    «Нет эскалации» — одно правило подсчёта для списка сервисов и пульта
+    (партия 25).
+
+    Список сервисов не видел общего на отель правила: у каждого сервиса стояло
+    has_escalation=False, а пульт при том же правиле молчал. Проверяются оба
+    состояния — без правил и с одним общим — и в обоих ответы совпадают.
+    """
+    from apps.notifications.models import EscalationRule
+
+    def listed() -> dict[str, bool]:
+        items = cms.get("/api/cms/services").json()["items"]
+        return {item["code"]: item["has_escalation"] for item in items if item.get("is_guest_facing", True)}
+
+    with tenant_context(crystal):
+        EscalationRule.objects.all().delete()
+    assert not any(listed().values()), "без правил сервис с эскалацией"
+    with tenant_context(crystal):
+        assert "no_escalation" in _codes(build(crystal, _admin()))
+
+        EscalationRule.objects.create(hotel=crystal, execution_point=None, is_active=True)
+        assert "no_escalation" not in _codes(build(crystal, _admin()))
+    assert all(listed().values()), "общее правило есть, а в списке сервисов «нет эскалации»"
+
+
 def test_speed_is_the_median_from_the_shift_summary(crystal):
     """
     Не второй счётчик. Число на пульте обязано совпадать с тем, что показывает

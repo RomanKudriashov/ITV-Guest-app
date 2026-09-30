@@ -217,20 +217,19 @@ def _services_without_escalation(points) -> list[str]:
     ответа, и требовать от них эскалацию значило бы завести вечную метку.
     """
     from apps.hotels.models import Service
-    from apps.notifications.models import EscalationRule
+    from apps.notifications.services.cms import points_with_escalation
 
-    rules = EscalationRule.objects.filter(is_active=True)
-    # ПРАВИЛО С ПУСТОЙ ТОЧКОЙ — ОБЩЕЕ НА ОТЕЛЬ. Оно закрывает всех разом, и
-    # ругаться на «сервис без эскалации» при живом общем правиле значило бы
-    # гнать человека настраивать то, что уже настроено.
-    if rules.filter(execution_point__isnull=True).exists():
-        return []
-    with_rules = set(rules.values_list("execution_point_id", flat=True))
-    return [
-        translate(service.public_name, None) or service.code
-        for service in Service.objects.filter(
+    services = list(
+        Service.objects.filter(
             execution_point__in=points, is_active=True, is_guest_facing=True
         ).select_related("execution_point")
+    )
+    # Правило подсчёта — общее со списком сервисов панели (партия 25): общее
+    # на отель правило закрывает всех, и там, и здесь.
+    with_rules = points_with_escalation(service.execution_point_id for service in services)
+    return [
+        translate(service.public_name, None) or service.code
+        for service in services
         if service.execution_point_id not in with_rules
     ]
 

@@ -1555,7 +1555,7 @@ def counts_for(services: "list[Service]") -> dict:
 
     from apps.accounts.models import StaffAssignment
     from apps.catalog.models import ServiceInclusion
-    from apps.notifications.models import EscalationRule, NotificationChannel
+    from apps.notifications.models import NotificationChannel
 
     if not services:
         return {}
@@ -1584,11 +1584,9 @@ def counts_for(services: "list[Service]") -> dict:
         .values_list("including_service_id")
         .annotate(n=Count("id"))
     )
-    with_rules = set(
-        EscalationRule.objects.filter(
-            is_active=True, execution_point_id__in=point_ids
-        ).values_list("execution_point_id", flat=True)
-    )
+    from apps.notifications.services.cms import points_with_escalation
+
+    with_rules = points_with_escalation(point_ids)
 
     return {
         service.pk: {
