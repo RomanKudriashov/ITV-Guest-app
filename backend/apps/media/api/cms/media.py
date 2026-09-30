@@ -27,12 +27,14 @@ SVG_CONTENT_TYPE = "image/svg+xml"
 
 
 @router.post("/media", response={201: MediaOut}, summary="Загрузить изображение")
-def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str = Form("item")):
+def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str = Form("")):
     """
-    `kind` — ПОЛЕ ФОРМЫ, как его и шлёт клиент (партия 25). Был параметром
+    `kind` — ПОЛЕ ФОРМЫ ИЛИ ПАРАМЕТР АДРЕСА (партия 25). Был только параметром
     адреса: панель клала вид в форму, сервер его не видел, и логотипы с
-    обложками лежали видом `item`. Пока от вида ничего не зависело, это было
-    незаметно; SVG принимается только для бренда — и стало заметно.
+    обложками из панели лежали видом `item`. Пока от вида ничего не зависело,
+    это было незаметно; SVG принимается только для бренда — и стало заметно.
+    Адрес по-прежнему принимается: через него грузят данные скриптами по API
+    (так заведён бренд «Сиалии» на стенде), и ломать им загрузку нельзя.
 
     Оригинал сразу уезжает в MinIO, варианты режет Celery. Ответ приходит со
     статусом `pending` — клиент показывает локальное превью и опрашивает
@@ -40,6 +42,7 @@ def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str
     """
     from apps.media.models import MediaAsset
 
+    kind = kind or request.GET.get("kind", "") or MediaAsset.Kind.ITEM
     if file.size and file.size > MAX_UPLOAD_BYTES:
         raise ValidationError(
             f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ",

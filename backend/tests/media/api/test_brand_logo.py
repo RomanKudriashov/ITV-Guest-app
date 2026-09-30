@@ -132,3 +132,21 @@ def test_svg_is_not_cropped(cms):
     )
     assert response.status_code == 422
     assert response.json()["code"] == "svg_no_crop"
+
+
+@pytest.mark.parametrize("where", ["form", "query"])
+def test_kind_is_read_from_form_and_from_query(cms, crystal, where):
+    """
+    Вид ассета — из формы (так шлёт панель) и из адреса (так грузят скриптами по
+    API). Раньше читался только адрес, и всё из панели ложилось видом `item`.
+    """
+    buffer = io.BytesIO()
+    Image.new("RGB", (10, 10)).save(buffer, format="PNG")
+    file = {"file": SimpleUploadedFile("a.png", buffer.getvalue(), content_type="image/png")}
+    if where == "form":
+        response = cms.upload("/api/v1/cms/media", file, {"kind": "brand"})
+    else:
+        response = cms.upload("/api/v1/cms/media?kind=brand", file)
+    assert response.status_code == 201, response.content
+    with tenant_context(crystal):
+        assert MediaAsset.objects.get(pk=response.json()["id"]).kind == "brand"
