@@ -33,6 +33,7 @@ import { GuestTopBar } from './GuestTopBar';
 import { STICKY, useStickyLayer } from './stickyStack';
 import { layout as storefrontLayout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
+import { GuestBackdrop } from './GuestBackdrop';
 import {
   BOTTOM_NAV_HEIGHT,
   BOTTOM_NAV_INSET,
@@ -174,7 +175,8 @@ export function GuestLayout() {
   // ── Планшет и десктоп: верхняя стеклянная строка, контент, корзина колонкой ──
   if (isDesktop) {
     return (
-      <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
+      <Box sx={{ minHeight: '100dvh', position: 'relative', isolation: 'isolate' }}>
+        <GuestBackdrop />
         <GuestTopBar
           hotelName={hotelName}
           logo={pickLogo(tokens, mode) ?? null}
@@ -207,7 +209,8 @@ export function GuestLayout() {
 
   // ── Phone / tablet: floating controls + bottom bar (unchanged behaviour) ──
   return (
-    <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ minHeight: '100dvh', position: 'relative', isolation: 'isolate', display: 'flex', flexDirection: 'column' }}>
+      <GuestBackdrop />
       <Stack
         ref={floating.ref}
         direction="row"

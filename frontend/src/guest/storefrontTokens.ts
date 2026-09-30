@@ -1092,3 +1092,46 @@ export const roomCard = {
 
 /** Размеры плиток bento. Крупная занимает две строки, широкая — две колонки. */
 export type TileSize = 'S' | 'M' | 'L';
+
+/**
+ * ВУАЛЬ СТРАНИЦЫ ПОВЕРХ ФОНА БРЕНДА (партия 25, п.51 партии 24).
+ *
+ * Фон бренда (цвет, градиент, фактура, фото) теперь стоит за всеми экранами
+ * гостя, а не только за входом. Между ним и содержимым — вуаль цветом
+ * страницы: на светлой теме она осветляет, на тёмной затеняет, и текст,
+ * стоящий прямо на странице (заголовки разделов, подписи), остаётся читаемым.
+ *
+ * Плотность не задаётся на глаз — подбирается: минимальная, при которой текст
+ * и вторичный текст держат 4,5:1 к КАЖДОМУ цвету, который может оказаться под
+ * ними. Для цвета и градиента эти цвета известны; для фактуры — её штрих и
+ * фон; для фото — любой пиксель, то есть и чёрный, и белый.
+ *
+ * Порог — 4,5:1. Если отель сам поставил цвет, который и на чистой странице
+ * ниже 4,5 (так бывает у вторичного текста), вуаль его не вытянет — для него
+ * порог 3:1, как у крупного текста по WCAG. Требовать «не хуже, чем на чистой
+ * странице» значило бы закрыть фон целиком при любом таком цвете: фон бренда
+ * пропал бы из-за цвета подписи.
+ */
+export function pageVeilAlpha(veil: string, texts: string[], behind: string[]): number {
+  const veilRgb = rgbOf(veil);
+  const under = behind.map(rgbOf);
+  const targets = texts.map((text) => {
+    const rgb = rgbOf(text);
+    const onPage = contrast(rgb, veilRgb);
+    return { rgb, need: onPage >= TEXT_CONTRAST ? TEXT_CONTRAST : Math.min(NON_TEXT_CONTRAST, onPage) };
+  });
+  for (let alpha = 0; alpha <= 1; alpha = Math.round((alpha + MIX_STEP) * 100) / 100) {
+    const ok = under.every((colour) => {
+      const seen = flatten(veilRgb, alpha, colour);
+      return targets.every(({ rgb, need }) => contrast(rgb, seen) >= need);
+    });
+    if (ok) return alpha;
+  }
+  return 1;
+}
+
+/** Цвет между двумя: вес 0 — `from`, 1 — `to`. */
+export function mixColors(from: string, to: string, weight: number): string {
+  const [r, g, b] = mix(rgbOf(from), rgbOf(to), weight).map(Math.round);
+  return `rgb(${r}, ${g}, ${b})`;
+}

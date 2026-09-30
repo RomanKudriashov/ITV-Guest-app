@@ -236,7 +236,16 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
           // допущении, что панель уходит за нижний край экрана. Она туда не
           // уходит: под ней кончается меню, и низ панели читался обрубленным.
           borderRadius: (theme) => surfaceRadius.panel(theme.palette.brand.radius),
-          bgcolor: 'background.default',
+          /*
+            НЕПРОЗРАЧНА ТОЛЬКО ПОЛОСА НАХЛЁСТА (партия 25). Панель закрывала
+            весь экран цветом страницы — и фон бренда, стоящий теперь за всеми
+            экранами, в меню не был виден нигде. Цвет страницы нужен ровно там,
+            где скругление наезжает на кадр; ниже панель — это страница, и
+            под ней фон с вуалью. Переход мягкий, чтобы по низу кадра не шёл
+            шов.
+          */
+          background: (theme) =>
+            `linear-gradient(to bottom, ${theme.palette.background.default} ${storefrontLayout.panelOverlap}px, transparent ${storefrontLayout.panelOverlap + 24}px)`,
           pt: 0.5,
         }}
       >
