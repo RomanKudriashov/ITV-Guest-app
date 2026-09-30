@@ -112,7 +112,12 @@ def test_only_steps_that_fired_late_count_as_escalations(client, crystal, cms):
         from apps.orders.services import change_status, get_order
 
         change_status(get_order(order_id), to_code="done", actor_type="staff")
-        rule = EscalationRule.objects.create(name="разбор", execution_point=ExecutionPoint.objects.get(code="kitchen"))
+        # Выключенное: у кухни уже есть активное правило из сида, а второе
+        # активное на точку база с партии 23 не принимает (notifications 0004).
+        # Разбору нужны только ступени для строк журнала, не активность правила.
+        rule = EscalationRule.objects.create(
+            name="разбор", execution_point=ExecutionPoint.objects.get(code="kitchen"), is_active=False
+        )
         now_step = EscalationStep.objects.create(rule=rule, sort_order=0, delay_minutes=0)
         late_step = EscalationStep.objects.create(rule=rule, sort_order=1, delay_minutes=20)
         order = Order.objects.get(pk=order_id)
