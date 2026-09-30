@@ -170,3 +170,23 @@ def test_only_the_admin_uploads_a_font(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "signature, name, css",
+    [
+        (b"OTTO", "Гарнитура.otf", "opentype"),
+        (b"\x00\x01\x00\x00", "Гарнитура.ttf", "truetype"),
+        (b"wOFF", "Гарнитура.woff", "woff"),
+    ],
+)
+def test_font_format_is_a_css_value_not_a_suffix(cms, signature, name, css):
+    """
+    `format` уходит в `@font-face` как есть (партия 25).
+
+    Отдавали суффикс: `format('otf')`/`format('ttf')` в CSS не существуют, и
+    браузер пропускал источник молча — OTF/TTF-шрифт отеля не грузился вовсе.
+    """
+    response = _upload(cms, signature + b"\x00" * 64, name=name)
+    assert response.status_code == 200, response.content
+    assert response.json()["format"] == css

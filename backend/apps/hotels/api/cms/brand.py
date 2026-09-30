@@ -18,6 +18,7 @@ from apps.core.errors import ValidationError
 from apps.hotels.brand_library import (
     ABSTRACTIONS,
     FONT_MAX_BYTES,
+    CSS_FONT_FORMAT,
     FONT_SIGNATURES,
     FONTS,
     font_family_of,
@@ -139,7 +140,7 @@ def upload_brand_font(request: HttpRequest, file: UploadedFile = File(...), name
         "name": family_name,
         "family": font_family_of(family_name),
         "url": asset.url("original"),
-        "format": suffix,
+        "format": CSS_FONT_FORMAT[suffix],
     }
 
 

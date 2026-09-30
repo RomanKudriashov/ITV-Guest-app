@@ -53,6 +53,12 @@ FONT_SIGNATURES = {
     b"true": ("ttf", "font/ttf"),
 }
 
+# Значение для `format()` в `@font-face` — по суффиксу файла (партия 25).
+# Это НЕ суффикс: `format('otf')` и `format('ttf')` в CSS не существуют, и
+# браузер, встретив незнакомый формат, пропускает источник молча — свой шрифт
+# отеля не грузился вовсе, если он был в OTF или TTF.
+CSS_FONT_FORMAT = {"woff2": "woff2", "woff": "woff", "otf": "opentype", "ttf": "truetype"}
+
 
 def font_family_of(name: str) -> str:
     """

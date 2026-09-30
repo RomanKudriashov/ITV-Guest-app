@@ -146,6 +146,28 @@ function useStyleCache(container: HTMLElement | null | undefined, direction: 'lt
  * этот провайдер кладёт стили: в обычном приложении это `<head>` страницы, в
  * показе бренда — `<head>` рамки.
  */
+/**
+ * `format()` для `@font-face` — из того, что лежит в токенах (партия 25).
+ *
+ * Сервер писал туда суффикс файла: `otf`, `ttf`. Таких значений у CSS нет —
+ * браузер молча пропускал источник, и шрифт отеля не грузился. Сервер теперь
+ * пишет `opentype`/`truetype`, а здесь переводятся и старые значения: у
+ * отелей, загрузивших шрифт раньше, он заработает без правки их токенов.
+ */
+const CSS_FONT_FORMAT: Record<string, string> = {
+  woff2: 'woff2',
+  woff: 'woff',
+  otf: 'opentype',
+  opentype: 'opentype',
+  ttf: 'truetype',
+  truetype: 'truetype',
+};
+
+export function cssFontFormat(format: string | undefined): string | undefined {
+  if (!format) return undefined;
+  return CSS_FONT_FORMAT[format.toLowerCase()];
+}
+
 function useCustomFontFace(container: HTMLElement | null | undefined, font: CustomFontToken | undefined) {
   useEffect(() => {
     const doc = container?.ownerDocument ?? (typeof document === 'undefined' ? null : document);
@@ -156,9 +178,12 @@ function useCustomFontFace(container: HTMLElement | null | undefined, font: Cust
     // `font-display: swap` — текст обязан быть виден СРАЗУ. Пока файл едет,
     // гость читает запасным шрифтом, а не смотрит на пустые строки: меню без
     // букв три секунды хуже, чем меню не тем шрифтом три секунды.
+    // Незнакомый формат — без `format()`: браузер определит его сам по файлу,
+    // а не выбросит источник, как выбросил бы с неверной подсказкой.
+    const format = cssFontFormat(font.format);
     style.textContent =
       `@font-face { font-family: '${font.name}'; src: url('${font.url}')` +
-      (font.format ? ` format('${font.format}')` : '') +
+      (format ? ` format('${format}')` : '') +
       `; font-display: swap; }`;
     (container ?? doc.head).appendChild(style);
     return () => style.remove();
