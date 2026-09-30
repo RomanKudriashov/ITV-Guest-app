@@ -175,6 +175,16 @@ export function createAppTheme(
             '--type-scale': (typography.fontSizeBase / 16).toFixed(4),
             '--heading-scale': typography.headingScale.toFixed(4),
           },
+          /*
+            ПОЛЯ И КНОПКИ — ШРИФТОМ БРЕНДА, А НЕ БРАУЗЕРА (партия 24).
+
+            Браузер задаёт `button` и полям собственный системный шрифт, а не
+            наследует его. `Button` MUI шрифт ставит сам, голый `ButtonBase` —
+            нет: плитки главной, плашки меток, «К сервисам», пилюли номера
+            рисовались Arial при любом шрифте отеля. Наследование — здесь, в
+            одном месте, а не заплаткой на каждом экране.
+          */
+          'button, input, select, textarea': { fontFamily: 'inherit' },
         },
       },
       MuiCard: {
