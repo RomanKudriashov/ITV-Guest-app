@@ -19,7 +19,15 @@ export function useHeroGone(heroId: string): boolean {
     const hero = document.querySelector(`[data-testid="${heroId}"]`);
     if (!hero) return undefined;
     const observer = new IntersectionObserver(
-      ([entry]) => setGone(!entry.isIntersecting),
+      /*
+        ПО ПОСЛЕДНЕЙ ЗАПИСИ, а не по первой (партия 25). Наблюдатель отдаёт
+        записи пачкой, если не успел вызвать обработчик между изменениями: на
+        занятом главном потоке «ещё видна» и «уже не видна» приходили вместе,
+        `([entry])` брал устаревшую — и полоса не выезжала, хотя обложка была
+        целиком выше окна. Других изменений не будет, и ошибка оставалась
+        навсегда, до следующей прокрутки через порог.
+      */
+      (entries) => setGone(!entries[entries.length - 1].isIntersecting),
       // Полоса появляется, когда от обложки осталась четверть: не в тот
       // момент, когда исчез последний её пиксель.
       { threshold: 0.25 },
