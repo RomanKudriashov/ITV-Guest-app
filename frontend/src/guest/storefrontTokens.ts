@@ -1130,6 +1130,14 @@ export function pageVeilAlpha(veil: string, texts: string[], behind: string[]): 
   return 1;
 }
 
+/**
+ * КРАЙНИЕ ТОЧКИ ФОТО ПОД ВУАЛЬЮ (партия 25). Фото-фон бренда может дать под
+ * текстом любой пиксель — от чёрного до белого; вуаль страницы считается по
+ * всему этому диапазону. Цвета живут здесь, в словаре: вне словаря их не
+ * пропускает сторож сборки (`check-colors`).
+ */
+export const PHOTO_EXTREMES = ['#000000', '#FFFFFF'] as const;
+
 /** Цвет между двумя: вес 0 — `from`, 1 — `to`. */
 export function mixColors(from: string, to: string, weight: number): string {
   const [r, g, b] = mix(rgbOf(from), rgbOf(to), weight).map(Math.round);

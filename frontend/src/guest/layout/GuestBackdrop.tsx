@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import { useAppTheme } from '@/theme';
 import { resolveBackground } from '@/theme/brandBackground';
 import { colorsForMode } from '@/theme/tokens';
-import { mixColors, pageVeilAlpha } from '../storefrontTokens';
+import { PHOTO_EXTREMES, mixColors, pageVeilAlpha } from '../storefrontTokens';
 
 /**
  * ФОН БРЕНДА ЗА ВСЕМИ ЭКРАНАМИ ГОСТЯ (партия 25, п.51 партии 24).
@@ -38,7 +38,7 @@ export function GuestBackdrop() {
     bg?.kind === 'gradient' && bg.gradient
       ? between(bg.gradient.from, bg.gradient.to)
       : bg?.kind === 'image' && bg.imageUrl
-        ? between('#000000', '#FFFFFF')
+        ? between(...PHOTO_EXTREMES)
         : bg?.kind === 'abstraction' && bg.abstraction
           ? between(colors.text, colors.background)
           : [backdrop.css.backgroundColor ?? colors.background];

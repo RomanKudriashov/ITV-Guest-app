@@ -71,7 +71,7 @@ git pull --ff-only
 
 ---
 
-## 2. Сборка: **все шесть образов, поимённо**
+## 2. Сборка: **все семь образов, поимённо**
 
 > **Стоило нам 39 часов.** Воркер и планировщик собираются из того же каталога
 > `./backend`, но это **отдельные образы** с отдельными именами. `up -d --build
@@ -88,6 +88,7 @@ git pull --ff-only
 | `itv-guest-prod-backend` | API и WebSocket |
 | `itv-guest-prod-worker` | фоновые задачи (публикация, уведомления) |
 | `itv-guest-prod-beat` | расписание |
+| `itv-guest-prod-scheduler` | расписание отложенных задач |
 | `itv-guest-prod-nginx` | **собранный фронт** плюс сам nginx |
 | `itv-guest-prod-connector` | коннектор (только стенд) |
 | `itv-guest-prod-iridi-emulator` | эмулятор оборудования (только стенд) |
@@ -102,15 +103,21 @@ git pull --ff-only
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod build \
-  backend worker beat nginx connector iridi-emulator
+  backend worker beat scheduler nginx connector iridi-emulator
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
 Правило простое: **перечисляйте сервисы, а не полагайтесь на `--build` при
-`up`.** Список из шести имён скучен, зато не зависит от того, вспомнил ли
+`up`.** Список из семи имён скучен, зато не зависит от того, вспомнил ли
 человек про воркер.
 
 ---
+
+> **До сервера — `npm run build:image` локально** (партия 25). Образ nginx
+> собирает фронт этой командой: сторожа (`check-colors`, `check-locales`,
+> `check-icons`), `tsc`, `vite build`. Локальный `tsc` и e2e сторожей не
+> гоняют — цвет вне словаря прошёл всю проверку партии и уронил сборку уже
+> на стенде.
 
 ## 3. Проверка сборки — чтением **внутри** контейнера
 
@@ -302,7 +309,7 @@ Postgres перестал писать. С той стороны это выгл
    отказы, и лечатся они разным.
 4. Только потом перезапуск, и после него — те же проверки исполнением из §5.
 
-Откат — это выкатка предыдущего коммита по тому же порядку, **включая все шесть
+Откат — это выкатка предыдущего коммита по тому же порядку, **включая все семь
 образов**. Откатить один бэкенд означает оставить воркер на новом коде: ровно
 та же ошибка, что стоила 39 часов, только зеркальная.
 
@@ -314,7 +321,7 @@ Postgres перестал писать. С той стороны это выгл
 [ ] pytest зелёный
 [ ] e2e зелёный (ПОСЛЕ pytest, не одновременно)
 [ ] git pull --ff-only, посмотрел, что едет
-[ ] build: backend worker beat nginx connector iridi-emulator — все шесть
+[ ] build: backend worker beat scheduler nginx connector iridi-emulator — все семь
 [ ] up -d
 [ ] прочитал новый код ВНУТРИ backend, worker, beat
 [ ] проверил домен и новую строку в бандле nginx (не сумму)
