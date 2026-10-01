@@ -491,6 +491,10 @@ export function RoomPage() {
         pt: isDesktop ? 2 : `${plateLayer.top}px`,
       }}
       data-testid="room-page"
+      // Состояние живого канала — наружу, для проверок (партия 25): пока сокет
+      // подключается, над панелями стоит плашка, и замер раскладки обязан ждать
+      // открытого канала, а не «плашки пока нет» — её нет и до подключения.
+      data-live={live.status}
     >
       <RoomStatusPills snapshot={snapshot} />
 

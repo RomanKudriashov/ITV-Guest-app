@@ -257,6 +257,15 @@ for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
     for (const route of ROUTES) {
       await page.goto(route)
       await waitForLayout(page)
+      // Номер: плашка «подключаемся» (47 px) стоит, пока не открылся сокет, и
+      // уход или возврат её после прокрутки двигает низ страницы под меню.
+      // Канал — условие замера, а не случай (партия 25; та же гонка, что у
+      // «высоты документа» в партии 24).
+      if (route === '/room') {
+        // Не «плашки нет» — её нет и ДО подключения: ждём открытого канала.
+        await expect(page.locator('[data-testid="room-page"][data-live="online"]')).toBeVisible({ timeout: 20_000 })
+        await expect(page.getByTestId('room-live-offline')).toHaveCount(0)
+      }
       /*
         Прокрутка ДО УСТОЯВШЕЙСЯ высоты, а не один раз.
 
@@ -327,7 +336,10 @@ test('высота документа не меняется на прокрут�
     была и на `main` (плашка на момент замера в 3 из 10), партия 24 ускорила
     отрисовку плана и сделала её частой (6 из 10). Ждём канал явно.
   */
-  await expect(page.getByTestId('room-live-offline')).toHaveCount(0, { timeout: 20_000 })
+  // Канал открыт — и только потом «плашки нет»: до подключения её тоже нет
+  // (замер партии 25: плашка появляется через ~250 мс после отрисовки плана).
+  await expect(page.locator('[data-testid="room-page"][data-live="online"]')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('room-live-offline')).toHaveCount(0)
 
   const heights: number[] = []
   for (const y of [0, 60, 120, 200, 320, 480, 700]) {
