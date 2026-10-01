@@ -3,7 +3,7 @@ import { expect, test } from './fixtures'
 
 import { STORAGE_KEYS } from '../fixtures/appState'
 
-import { ADMIN, API, BARMAN, DEMO_ROOM, apiHeaders, apiToken, openCart, signInToTracker, waitForLayout } from './helpers'
+import { ADMIN, API, BARMAN, DEMO_ROOM, apiHeaders, apiToken, openCart, signInToTracker, waitForLayout, withoutHours } from './helpers'
 
 /**
  * R5: витрина гостя.
@@ -75,6 +75,8 @@ test.describe('Посервисная корзина и разъезд', () => {
     browser,
     request,
   }) => {
+    // Часы бара (16:00–02:00) — не предмет проверки: снимаются на время теста (партия 25, п.52).
+    await withoutHours(request, { services: ['bar'] }, async () => {
     const token = await apiToken(request, ADMIN)
     const h = apiHeaders(token)
     const tag = Date.now().toString(36)
@@ -178,6 +180,7 @@ test.describe('Посервисная корзина и разъезд', () => {
       await guestContext.close()
       await barContext.close()
     }
+      })
   })
 })
 

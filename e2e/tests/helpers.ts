@@ -590,3 +590,65 @@ export async function signInToTracker(
   await page.goto('/tracker')
   await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
 }
+
+/**
+ * ЧАСЫ РАБОТЫ — УСЛОВИЕ ПРОВЕРКИ, А НЕ ВРЕМЯ СУТОК (партия 25, п.52).
+ *
+ * У демо-отеля бар работает 16:00–02:00, ресепшен 07:00–23:00, «Сакура» и
+ * «Терраса» — 12:00–23:00, сырники — только к завтраку. Проверка, которая
+ * заказывает оттуда, зеленеет днём и краснеет ночью (или наоборот) — и
+ * падает таймаутом с ничего не говорящим «Target page… has been closed».
+ *
+ * Тот же способ, что в typed-trackers: на время проверки у названных сервисов
+ * и разделов снимаются часы (расписание `null` — «работает всегда»), в
+ * `finally` возвращаются ровно прежние. Проверка разъезда заказа, места
+ * выдачи, корзины — не проверка расписания; расписание проверяют свои тесты.
+ */
+export async function withoutHours<T>(
+  request: APIRequestContext,
+  scope: { services?: string[]; categories?: string[] },
+  run: () => Promise<T>,
+): Promise<T> {
+  const headers = { Authorization: `Bearer ${await apiToken(request, ADMIN)}`, 'X-Hotel-Subdomain': HOTEL }
+  const restore: Array<() => Promise<unknown>> = []
+  try {
+    if (scope.services?.length) {
+      const list = (await (await request.get(`${API}/api/cms/services`, { headers })).json()).items as Array<{
+        id: string
+        code: string
+      }>
+      for (const code of scope.services) {
+        const service = list.find((s) => s.code === code)
+        expect(service, `сервиса ${code} нет`).toBeTruthy()
+        const detail = await (await request.get(`${API}/api/cms/services/${service!.id}`, { headers })).json()
+        const before: string | null = detail.schedule_id ?? null
+        if (!before) continue
+        const off = await request.patch(`${API}/api/cms/services/${service!.id}`, { headers, data: { schedule_id: null } })
+        expect(off.ok(), `снять часы сервиса ${code}`).toBeTruthy()
+        restore.push(() => request.patch(`${API}/api/cms/services/${service!.id}`, { headers, data: { schedule_id: before } }))
+      }
+    }
+    if (scope.categories?.length) {
+      const list = (await (await request.get(`${API}/api/cms/categories?type=product`, { headers })).json()) as Array<{
+        id: string
+        code: string
+        schedule_id: string | null
+      }>
+      for (const code of scope.categories) {
+        const category = list.find((c) => c.code === code)
+        expect(category, `раздела ${code} нет`).toBeTruthy()
+        const before = category!.schedule_id
+        if (!before) continue
+        const off = await request.patch(`${API}/api/cms/categories/${category!.id}`, { headers, data: { schedule_id: null } })
+        expect(off.ok(), `снять часы раздела ${code}`).toBeTruthy()
+        restore.push(() => request.patch(`${API}/api/cms/categories/${category!.id}`, { headers, data: { schedule_id: before } }))
+      }
+    }
+    return await run()
+  } finally {
+    for (const back of restore.reverse()) {
+      const response = (await back()) as { ok(): boolean }
+      expect(response.ok(), 'вернуть часы').toBeTruthy()
+    }
+  }
+}

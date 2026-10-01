@@ -12,6 +12,7 @@ import {
   guestSession,
   openCart,
   signInToTracker,
+  withoutHours,
 } from './helpers'
 
 /**
@@ -75,6 +76,8 @@ test('корзина из двух заведений: одно место ил�
   request,
   browser,
 }) => {
+    // Часы бара (16:00–02:00) — не предмет проверки: снимаются на время теста (партия 25, п.52).
+    await withoutHours(request, { services: ['bar'] }, async () => {
   test.slow()
   const h = apiHeaders(await apiToken(request, ADMIN))
   const tag = Date.now().toString(36)
@@ -207,4 +210,5 @@ test('корзина из двух заведений: одно место ил�
   } finally {
     await request.delete(`${API}/api/cms/services/${aggregator.id}`, { headers: h })
   }
-})
+    })
+  })
