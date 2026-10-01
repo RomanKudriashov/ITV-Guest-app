@@ -175,3 +175,22 @@ WEATHER_API_URL=http://open-meteo:8080
 По порядку: заданы ли координаты (CMS), включена ли погода (CMS), отвечает ли
 `WEATHER_API_URL` из контейнера бэкенда, жив ли воркер Celery (обновление —
 фоновая задача). В логах бэкенда ищите `Погода:`.
+
+## Разработка и e2e: эмулятор вместо интернета (партия 25)
+
+Локально (`docker-compose.yml`) погода и справочник городов идут в
+`weather-emulator` — тот же HTTP, что у Open-Meteo (`/v1/forecast`,
+`/v1/search`, `/v1/get`), на четырёх городах (Москва, Сочи, Санкт-Петербург,
+Дубай; идентификаторы GeoNames настоящие). Код:
+`backend/apps/integrations/weather/emulator.py`, чистый stdlib.
+
+Почему. Из docker-сети машины разработки TLS-рукопожатие с
+`api.open-meteo.com` и `geocoding-api.open-meteo.com` рвётся через раз
+(`SSLEOFError: UNEXPECTED_EOF_WHILE_READING` в логе бэкенда). e2e
+`weather-city` краснела в полном прогоне два раза подряд и зеленела
+поодиночке — проверка зависела от внешней сети, а не от нашего кода.
+
+Стенд и бой — настоящий Open-Meteo: `docker-compose.prod.yml` и `.env.prod`
+этих адресов не переопределяют. Нужен в разработке настоящий провайдер —
+уберите `WEATHER_API_URL`/`WEATHER_GEOCODER_URL` из окружения бэкенда, воркера
+и расписания и пересоздайте их.

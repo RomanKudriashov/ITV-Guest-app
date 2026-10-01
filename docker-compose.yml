@@ -85,6 +85,11 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       CHANNELS_REDIS_URL: redis://redis:6379/3
       CACHE_URL: redis://redis:6379/4
+      # Погода и города — локальный эмулятор Open-Meteo, а не интернет (партия 25):
+      # из docker-сети этой машины TLS с api.open-meteo.com рвётся через раз, и
+      # e2e зависела от внешней сети. Стенд и бой — настоящий Open-Meteo (.env.prod).
+      WEATHER_API_URL: http://weather-emulator:1086
+      WEATHER_GEOCODER_URL: http://weather-emulator:1086
       MINIO_ENDPOINT: minio:9000
       # Почта: без неё консоль не заводит отели и не сбрасывает пароли —
       # пароль уходит администратору письмом, и «отправить нечем» это отказ.
@@ -134,6 +139,11 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       CHANNELS_REDIS_URL: redis://redis:6379/3
       CACHE_URL: redis://redis:6379/4
+      # Погода и города — локальный эмулятор Open-Meteo, а не интернет (партия 25):
+      # из docker-сети этой машины TLS с api.open-meteo.com рвётся через раз, и
+      # e2e зависела от внешней сети. Стенд и бой — настоящий Open-Meteo (.env.prod).
+      WEATHER_API_URL: http://weather-emulator:1086
+      WEATHER_GEOCODER_URL: http://weather-emulator:1086
       MINIO_ENDPOINT: minio:9000
       # Тот же адрес, что у backend: воркер тоже собирает ссылки на варианты,
       # и разъехавшись, они дали бы картинки, работающие через раз.
@@ -164,6 +174,11 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       CACHE_URL: redis://redis:6379/4
+      # Погода и города — локальный эмулятор Open-Meteo, а не интернет (партия 25):
+      # из docker-сети этой машины TLS с api.open-meteo.com рвётся через раз, и
+      # e2e зависела от внешней сети. Стенд и бой — настоящий Open-Meteo (.env.prod).
+      WEATHER_API_URL: http://weather-emulator:1086
+      WEATHER_GEOCODER_URL: http://weather-emulator:1086
       MINIO_ENDPOINT: minio:9000
       MINIO_PUBLIC_ENDPOINT: ${DEV_HOST:-localhost}:${MINIO_HOST_PORT:-59000}
       # Сид и миграции делает backend — служба только читает и выполняет.
@@ -203,6 +218,16 @@ services:
   # Оба под профилем `grms`: обычный `docker compose up` их не поднимает.
   # Эмулятор изображает оборудование, и молча запускать его вместе со стендом
   # значило бы однажды перепутать его с настоящим объектом.
+
+  weather-emulator:
+    build: ./backend
+    # Чистый stdlib, как эмулятор iRidi. Без профиля: погоду спрашивают главная,
+    # настройки отеля и e2e — эмулятор нужен всегда, когда поднят бэкенд.
+    command: ["python", "-m", "apps.integrations.weather.emulator"]
+    environment:
+      WEATHER_EMULATOR_PORT: "1086"
+    volumes:
+      - ./backend:/app
 
   iridi-emulator:
     profiles: ["grms"]
