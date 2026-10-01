@@ -427,13 +427,17 @@ test('переход едет, а при просьбе не двигать — 
   })
   // Раздел из середины страницы, а не последний: у последнего цель ниже дна
   // прокрутки, страница упирается в него, и замер мерил бы упор, а не переход.
-  const target = await calm.evaluate(
-    () => document.getElementById('how')!.getBoundingClientRect().top + window.scrollY,
-  )
+  //
+  // ГДЕ РАЗДЕЛ ПОСЛЕ ПРЫЖКА, а не «куда он был» до клика (партия 25). Картинки
+  // лендинга ленивые и растягивают документ, пока он грузится: цель, снятая до
+  // клика, под нагрузкой устаревала на 57 px — приложение прыгало к новому
+  // положению (оно пересчитывает цель, см. scrollToSection), а проверка
+  // сравнивала со старым. Прыжок без анимации — это раздел под полосой (64 px:
+  // её 52 и зазор 12) сразу после клика, без промежуточных кадров.
   await calm.getByTestId('landing-nav-how').click()
   await calm.waitForTimeout(40)
-  const landed = await calm.evaluate(() => window.scrollY)
-  expect(Math.abs(landed - (target - 64)), 'при просьбе не двигать переход всё-таки анимируется')
+  const sectionTop = await calm.evaluate(() => document.getElementById('how')!.getBoundingClientRect().top)
+  expect(Math.abs(sectionTop - 64), 'при просьбе не двигать переход всё-таки анимируется')
     .toBeLessThan(24)
   await calm.close()
 })
@@ -448,7 +452,27 @@ test('значки языка и темы стоят по средней лин�
   await page.goto(`${ROOT}/`)
   await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
   const nav = page.getByTestId('landing-nav')
-  await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 })
+  /*
+    ФАКТЫ НА СЛУЧАЙ ПРОВАЛА (партия 25). Полоса однажды не выехала в прогоне
+    части, а поодиночке — 26 из 26; артефакты того раза потеряны, и четыре
+    версии (прокрутка до отрисовки, медленная прокрутка, медленные модули,
+    плавная прокрутка) замером не подтвердились. Чтобы следующий провал нёс
+    диагноз, а не повод гадать, он пишет, где была прокрутка и обложка.
+  */
+  await expect(nav).toHaveAttribute('data-shown', 'true', { timeout: 20_000 }).catch(async (error) => {
+    const facts = await page.evaluate(() => {
+      const hero = document.querySelector('[data-testid="landing-hero"]')?.getBoundingClientRect()
+      return {
+        scrollY: window.scrollY,
+        innerHeight: window.innerHeight,
+        docHeight: document.documentElement.scrollHeight,
+        hero: hero ? { top: Math.round(hero.top), bottom: Math.round(hero.bottom) } : null,
+        shown: document.querySelector('[data-testid="landing-nav"]')?.getAttribute('data-shown'),
+        readyState: document.readyState,
+      }
+    })
+    throw new Error(`полоса не выехала: ${JSON.stringify(facts)}\n${String(error)}`)
+  })
   /*
     Полоса ВЫЕЗЖАЕТ СДВИГОМ: замер на полпути сравнивал бы значки с ещё не
     приехавшей полосой и врал бы на её высоту.
