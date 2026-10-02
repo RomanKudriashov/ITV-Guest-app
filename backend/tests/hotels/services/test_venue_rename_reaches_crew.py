@@ -52,10 +52,13 @@ def renamed(cms):
 
 def test_rename_reaches_the_storefront(renamed, client, crystal, guest_token):
     """1. Витрина гостя — то, ради чего имя и меняли."""
-    home = client.get(
-        "/api/v1/guest/home", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {guest_token}"
-    ).json()
-    titles = {tile.get("title") for tile in home["tiles"]}
+    # Кухня — в плитке-группе «Рестораны и бары» (партия 29): имя видно в её списке.
+    venues = client.get(
+        "/api/v1/guest/venues?group=restaurants",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()["venues"]
+    titles = {venue.get("title") for venue in venues}
     assert NEW in titles
 
 

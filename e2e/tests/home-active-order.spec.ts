@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { apiToken, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
+import { apiToken, DEMO_ROOM, moveOrderStatus, openCart, openVenueFromHome } from './helpers'
 
 /**
  * Стартовая: полоса активного заказа. Гость оформляет заказ → на
@@ -26,7 +26,7 @@ async function enterAsGuest(page: Page, room = DEMO_ROOM): Promise<void> {
 async function openMenu(page: Page): Promise<void> {
   // Через плитку заведения на главной-витрине (уровень 3).
   await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 15_000 })
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 

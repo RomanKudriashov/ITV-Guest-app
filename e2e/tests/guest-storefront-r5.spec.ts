@@ -3,7 +3,7 @@ import { expect, test } from './fixtures'
 
 import { STORAGE_KEYS } from '../fixtures/appState'
 
-import { ADMIN, API, BARMAN, DEMO_ROOM, apiHeaders, apiToken, openCart, signInToTracker, waitForLayout, withoutHours } from './helpers'
+import { ADMIN, API, BARMAN, DEMO_ROOM, apiHeaders, apiToken, openCart, signInToTracker, waitForLayout, withoutHours, openVenueFromHome } from './helpers'
 
 /**
  * R5: витрина гостя.
@@ -33,7 +33,7 @@ test.describe('Парадная и проваливание', () => {
 
   test('гость проваливается в ресторан и видит ЕГО меню', async ({ page }) => {
     await enterAsGuest(page)
-    await page.getByTestId('guest-home-tile-kitchen').click()
+    await openVenueFromHome(page)
 
     // Заведение представилось собой, а не отелем — это и была главная поломка.
     const venue = page.getByTestId('guest-venue')
@@ -321,7 +321,7 @@ test.describe('Карточка позиции', () => {
   /** Открыть карточку ссылкой — порядок позиций в меню на это не влияет. */
   async function openItem(page: Page, code: string): Promise<void> {
     await enterAsGuest(page)
-    await page.getByTestId('guest-home-tile-kitchen').click()
+    await openVenueFromHome(page)
     await expect(page.getByTestId(`guest-qty-plus-${code}`)).toBeVisible({ timeout: 15_000 })
     await page.getByTestId(`guest-item-${code}`).click()
     await expect(page.getByTestId('guest-item-sheet')).toBeVisible()
@@ -502,7 +502,7 @@ for (const mode of ['dark', 'light'] as const) {
     })
     expect(paperIsDark, `тема ${mode} не доехала до страницы`).toBe(mode === 'dark')
 
-    await page.getByTestId('guest-home-tile-kitchen').click()
+    await openVenueFromHome(page)
     await expect(page.getByTestId('guest-item-ribeye')).toBeVisible({ timeout: 15_000 })
     await waitForLayout(page)
 

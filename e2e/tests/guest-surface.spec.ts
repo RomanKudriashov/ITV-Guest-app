@@ -10,8 +10,7 @@ import {
   moveOrderStatus,
   openCart,
   RECEPTION,
-  signInToTracker,
-} from './helpers'
+  signInToTracker, openVenueFromHome } from './helpers'
 
 /**
  * Гостевой контур: главная из данных, чат гость↔персонал и отзыв после
@@ -38,7 +37,7 @@ async function enterAsGuest(page: Page, room = DEMO_ROOM): Promise<void> {
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
   // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
   // и путь теста совпадает с путём живого гостя — плитка на главной.
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 
@@ -67,11 +66,11 @@ test.describe('Гостевой контур', () => {
 
     // Витрина собрана из данных: ресторан-заведение, спа и инфо — плитками.
     await expect(page.getByTestId('guest-home-bento')).toBeVisible()
-    await expect(page.getByTestId('guest-home-tile-kitchen')).toBeVisible()
+    await expect(page.getByTestId('guest-home-tile-restaurants')).toBeVisible()
     await expect(page.getByTestId('guest-home-tile-spa')).toBeVisible()
 
     // Плитка заведения ведёт в ЕГО каталог (уровень 3), а не в общее меню.
-    await page.getByTestId('guest-home-tile-kitchen').click()
+    await openVenueFromHome(page)
     await expect(page).toHaveURL(/\/venue\/kitchen/)
     await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 

@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, apiHeaders, apiToken, DEMO_ROOM, openCart } from './helpers'
+import { API, apiHeaders, apiToken, DEMO_ROOM, openCart, openVenueFromHome } from './helpers'
 
 /**
  * Витрина главной (C4): три уровня иерархии.
@@ -30,7 +30,7 @@ test.describe('Витрина главной', () => {
     await enterAsGuest(page)
 
     // Уровень 3: плитка заведения ведёт в ЕГО каталог.
-    await page.getByTestId('guest-home-tile-kitchen').click()
+    await openVenueFromHome(page)
     await expect(page).toHaveURL(/\/venue\/kitchen/)
     await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 

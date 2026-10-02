@@ -1,7 +1,7 @@
 import { type APIRequestContext } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM } from './helpers'
+import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, openVenueFromHome } from './helpers'
 
 /**
  * ЗАКРЫТОЕ ЗАВЕДЕНИЕ ОТКРЫВАЕТСЯ ДЛЯ ПРОСМОТРА.
@@ -89,7 +89,7 @@ test.describe('Закрытое заведение: смотреть можно'
       await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
 
       // 1. ПЛИТКА ОТКРЫВАЕТСЯ, а не гаснет.
-      await page.getByTestId('guest-home-tile-kitchen').click()
+      await openVenueFromHome(page)
       await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 20_000 })
 
       // 2. Шапка говорит прямо: закрыто, когда откроется, и что смотреть можно.
@@ -196,12 +196,17 @@ test.describe('Закрытое заведение: смотреть можно'
       // формулировка и врала.
       const named = /(сегодня|завтра|понедельник|вторник|сред|четверг|пятниц|суббот|воскресень)/i
 
-      const tile = await page.getByTestId('guest-home-tile-kitchen').innerText()
+      // Кухня на главной — внутри плитки «Рестораны и бары» (партия 29): «когда
+      // откроется» говорит её карточка в списке группы.
+      await page.getByTestId('guest-home-tile-restaurants').click()
+      const card = page.getByTestId('guest-venue-kitchen')
+      await expect(card).toBeVisible({ timeout: 20_000 })
+      const tile = await card.innerText()
       const fromTile = tile.split('\n').find((line) => /Откроется/i.test(line))
-      expect(fromTile, 'плитка на главной не сказала, когда откроется').toBeTruthy()
-      expect(fromTile!, 'плитка назвала только час').toMatch(named)
+      expect(fromTile, 'карточка кухни не сказала, когда откроется').toBeTruthy()
+      expect(fromTile!, 'карточка назвала только час').toMatch(named)
 
-      await page.getByTestId('guest-home-tile-kitchen').click()
+      await card.click()
       await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 20_000 })
 
       const banner = await page.getByTestId('guest-venue-closed').innerText()

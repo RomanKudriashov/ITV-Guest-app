@@ -12,7 +12,7 @@ from django.db import transaction
 from apps.core.context import require_hotel_id
 
 from apps.media.services import storage
-from apps.media.models import CategoryPlaceholder, MediaAsset
+from apps.media.models import MediaAsset
 
 
 def upload_asset(
@@ -147,13 +147,21 @@ def set_crop(asset_id, *, crop: dict | None, ratio: float | None) -> MediaAsset:
     return asset
 
 
-def image_url(asset: MediaAsset | None, *, variant: str = "card", fallback_code: str = "") -> str:
-    """Единая точка получения картинки: ассет → заглушка по категории → пусто."""
+def image_url(asset: MediaAsset | None, *, variant: str = "card") -> str:
+    """
+    Единая точка получения картинки: ассет → пусто.
+
+    ЗАГЛУШКИ НА СЕРВЕРЕ БОЛЬШЕ НЕТ (партия 29, п.61 бэклога). Раньше на месте
+    пустого фото отдавался `/static/placeholders/<код>.svg` — файлов таких нет
+    (локально 404, на стенде `index.html` витрины), и каждая позиция без фото
+    делала запрос в никуда, а витрина всё равно рисовала свой знак. Теперь
+    пусто значит пусто: знак по типу заведения рисует витрина.
+    """
     if asset is not None:
         url = asset.url(variant)
         if url:
             return url
-    return CategoryPlaceholder.url_for(fallback_code or "default")
+    return ""
 
 
 def object_keys_of(asset: MediaAsset) -> list[str]:

@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, BARMAN, CREDENTIALS, DEMO_ROOM, MAID, RESTAURANT_MANAGER, apiHeaders, apiToken, moveOrderTo, openCart, signInToTracker } from './helpers'
+import { ADMIN, API, BARMAN, CREDENTIALS, DEMO_ROOM, MAID, RESTAURANT_MANAGER, apiHeaders, apiToken, moveOrderTo, openCart, signInToTracker, openVenueFromHome } from './helpers'
 
 /**
  * R3: типизированные трекеры и роль управляющего.
@@ -48,7 +48,7 @@ test.describe('Типизированные трекеры', () => {
       await enterAsGuest(guest)
       // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
       // и путь теста совпадает с путём живого гостя — плитка на главной.
-      await guest.getByTestId('guest-home-tile-kitchen').click()
+      await openVenueFromHome(guest)
       await expect(guest.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
       await guest.getByTestId('guest-qty-plus-caesar').click()
       await openCart(guest)

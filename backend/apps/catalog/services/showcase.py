@@ -53,6 +53,11 @@ SERVICE_TYPE_GROUP = {
 
 # Порядок групп на главной и их локализованный титул/подпись-плюрал.
 GROUP_ORDER = ["restaurants", "in_room", "spa", "services"]
+# Группы, которые ВСЕГДА одна плитка, если в них два сервиса и больше,
+# независимо от порога отеля (решение заказчика, партия 29): гость ищет
+# «где поесть» и «что принесут в номер», а не конкретное заведение. Один
+# сервис — его плитка-группа ведёт сразу в него. Остальные — по порогу.
+ALWAYS_GROUPED = {"restaurants", "in_room"}
 GROUP_TITLES = {
     "restaurants": {
         "ru": "Рестораны и бары",
@@ -90,7 +95,7 @@ def _service_image(service: Service) -> str | None:
         .first()
     )
     if category and category.image_id:
-        return image_url(category.image, variant="card", fallback_code=None)
+        return image_url(category.image, variant="card") or None
     return None
 
 
@@ -191,7 +196,8 @@ def build_showcase(
         services = groups.get(group_key) or []
         if not services:
             continue
-        if len(services) > threshold:
+        always = group_key in ALWAYS_GROUPED
+        if len(services) > threshold or (always and len(services) >= 1):
             # Свёрнутая плитка-категория с превью обложек заведений внутри.
             previews = [img for img in (_service_image(s) for s in services) if img][:4]
             base = {

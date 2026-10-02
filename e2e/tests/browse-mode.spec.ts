@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { DEMO_ROOM } from './helpers'
+import { DEMO_ROOM, openVenueFromHome } from './helpers'
 import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
@@ -60,7 +60,7 @@ test.describe('Режим просмотра без номера', () => {
         [STORAGE_KEYS.theme, mode] as const,
       )
       await browseWithoutRoom(page)
-      await page.getByTestId('guest-home-tile-kitchen').click()
+      await openVenueFromHome(page)
 
       const notice = page.getByTestId('guest-view-only-notice')
       await expect(notice).toBeVisible({ timeout: 20_000 })

@@ -1,7 +1,7 @@
 import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM } from './helpers'
+import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, openVenueFromHome } from './helpers'
 
 /**
  * КОРЗИНА ПЕРЕСТАЁТ ВРАТЬ О ПОЗИЦИЯХ.
@@ -26,7 +26,8 @@ async function enterAndAdd(page: Page): Promise<void> {
   await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
   await page.getByTestId('guest-room-submit').click()
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
-  await page.locator('[data-testid^="guest-home-tile-"]').first().click()
+  // Кухня — в плитке «Рестораны и бары» (партия 29), а не первой плиткой главной.
+  await openVenueFromHome(page)
   await expect(page.getByTestId(`guest-qty-plus-${ITEM}`)).toBeVisible({ timeout: 20_000 })
   await page.getByTestId(`guest-qty-plus-${ITEM}`).click()
 }

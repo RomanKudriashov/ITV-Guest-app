@@ -652,3 +652,13 @@ export async function withoutHours<T>(
     }
   }
 }
+
+/**
+ * С ГЛАВНОЙ — В ЗАВЕДЕНИЕ ГРУППЫ (партия 29). «Рестораны и бары» и «В номер»
+ * на главной — всегда одна плитка-группа, если сервисов в ней два и больше:
+ * кухня открывается через неё и карточку заведения в списке.
+ */
+export async function openVenueFromHome(page: Page, code = 'kitchen', group = 'restaurants'): Promise<void> {
+  await page.getByTestId(`guest-home-tile-${group}`).click()
+  await page.getByTestId(`guest-venue-${code}`).click()
+}

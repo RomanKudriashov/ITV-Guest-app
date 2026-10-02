@@ -51,9 +51,10 @@ def test_showcase_default_has_venue_service_info_tiles(client, crystal, guest_to
     for tile in tiles:
         by_type.setdefault(tile["type"], []).append(tile)
 
-    # Кухня ресторана — venue; спа — venue; консьерж/хозслужба — venue; + инфо.
+    # Рестораны и бары — всегда одна плитка-группа (партия 29); спа — venue; + инфо.
     venue_keys = {t["key"] for t in by_type.get("venue", [])}
-    assert "kitchen" in venue_keys
+    assert "kitchen" not in venue_keys
+    assert any(t["key"] == "restaurants" for t in by_type.get("service-category", []))
     assert "spa" in venue_keys
     assert any(t["type"] == "info" for t in tiles)
 
@@ -69,23 +70,18 @@ def test_showcase_default_has_venue_service_info_tiles(client, crystal, guest_to
 
 
 def test_showcase_venues_separate_at_or_below_threshold(client, crystal, guest_token):
-    # crystal по умолчанию: ДВА заведения группы «Рестораны» — кухня и бар.
-    # Бар попал в группу не случайно: витрина держит еду и напитки вместе
-    # (SERVICE_TYPE_GROUP), а собственная карта у бара появилась вместе с
-    # чисткой демо-данных — до этого он был пуст и на витрину не выходил.
-    # Добавим ещё один → всего 3 = порог.
+    """
+    Порог решает группы, кроме «Ресторанов и баров» и «В номер» (партия 29): спа
+    из двух заведений при пороге 3 — две отдельные плитки, а рестораны (кухня и
+    бар, тоже ниже порога) — всё равно одна плитка-группа.
+    """
     with tenant_context(crystal):
-        _add_restaurant(crystal, "panorama")
+        _add_service(crystal, "hammam", Service.Type.SPA)
     home = _home(client, crystal, guest_token)
-    # Считаем ГРУППУ, а не один вид: в «Рестораны» входят и кухня, и бар, и
-    # рум-сервис. Фильтр по `kind == "kitchen"` пропускал бы бар и отвечал бы
-    # не на тот вопрос — «сколько кухонь», а не «свернулась ли группа».
-    restaurant_venues = [
-        t for t in home["tiles"] if t["type"] == "venue" and t["kind"] in {"kitchen", "bar"}
-    ]
-    assert len(restaurant_venues) == 3
-    # Свёрнутой плитки-категории ресторанов нет.
-    assert not any(t["type"] == "service-category" and t["key"] == "restaurants" for t in home["tiles"])
+    spa_venues = {t["key"] for t in home["tiles"] if t["type"] == "venue"} & {"spa", "hammam"}
+    assert spa_venues == {"spa", "hammam"}
+    assert not any(t["type"] == "service-category" and t["key"] == "spa" for t in home["tiles"])
+    assert any(t["type"] == "service-category" and t["key"] == "restaurants" for t in home["tiles"])
 
 
 def test_showcase_groups_restaurants_over_threshold(client, crystal, guest_token):
@@ -118,15 +114,15 @@ def test_showcase_threshold_setting_changes_grouping(client, crystal, guest_toke
 
 def test_showcase_tile_overlay_size_order_and_disable(client, crystal, guest_token):
     with tenant_context(crystal):
-        ShowcaseTile.objects.create(hotel=crystal, key="kitchen", size="l", sort_order=99)
+        ShowcaseTile.objects.create(hotel=crystal, key="restaurants", size="s", sort_order=99)
         ShowcaseTile.objects.create(hotel=crystal, key="spa", is_enabled=False)
     home = _home(client, crystal, guest_token)
-    kitchen = next(t for t in home["tiles"] if t["key"] == "kitchen")
-    assert kitchen["size"] == "l"
+    restaurants = next(t for t in home["tiles"] if t["key"] == "restaurants")
+    assert restaurants["size"] == "s"
     # Выключенная плитка исчезает.
     assert not any(t["key"] == "spa" for t in home["tiles"])
-    # order=99 уводит kitchen в конец.
-    assert home["tiles"][-1]["key"] == "kitchen"
+    # order=99 уводит плитку группы в конец.
+    assert home["tiles"][-1]["key"] == "restaurants"
 
 
 # --- Скоуп по тенанту ------------------------------------------------------
@@ -134,7 +130,7 @@ def test_showcase_tile_overlay_size_order_and_disable(client, crystal, guest_tok
 
 def test_showcase_scoped_to_tenant(client, crystal, aurora, guest_token):
     with tenant_context(crystal):
-        _add_restaurant(crystal, "crystal-only")
+        _add_service(crystal, "crystal-only", Service.Type.SPA)
     home = _home(client, crystal, guest_token)
     assert any(t["key"] == "crystal-only" for t in home["tiles"])
 
@@ -210,7 +206,7 @@ def test_cms_showcase_get_lists_tiles(cms):
     body = cms.get("/api/v1/cms/showcase").json()
     assert body["group_threshold"] == 3
     keys = {t["key"] for t in body["tiles"]}
-    assert "kitchen" in keys and "info" in keys
+    assert "restaurants" in keys and "info" in keys
     for tile in body["tiles"]:
         assert tile["size"] in ("s", "m", "l") and "shown" in tile
 
@@ -227,15 +223,15 @@ def test_cms_showcase_size_and_hide_reach_guest(client, crystal, cms, guest_toke
     cms.put(
         "/api/v1/cms/showcase",
         {"tiles": [
-            {"key": "kitchen", "size": "s", "sort_order": 2},
+            {"key": "restaurants", "size": "s", "sort_order": 2},
             {"key": "spa", "is_enabled": False},
         ]},
     )
     home = client.get(
         "/api/v1/guest/home", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {guest_token}"
     ).json()
-    kitchen = next(t for t in home["tiles"] if t["key"] == "kitchen")
-    assert kitchen["size"] == "s"
+    restaurants = next(t for t in home["tiles"] if t["key"] == "restaurants")
+    assert restaurants["size"] == "s"
     # Скрытая плитка исчезает из гостевой выдачи, но остаётся в CMS.
     assert not any(t["key"] == "spa" for t in home["tiles"])
     cms_tiles = {t["key"]: t for t in cms.get("/api/v1/cms/showcase").json()["tiles"]}
@@ -261,8 +257,13 @@ def test_default_guest_facing_rule():
 
 
 def test_showcase_uses_public_name_and_tagline(client, crystal, guest_token):
-    home = _home(client, crystal, guest_token)
-    kitchen = next(t for t in home["tiles"] if t["key"] == "kitchen")
+    # Кухня — в списке группы «Рестораны и бары» (партия 29), её карточка.
+    venues = client.get(
+        "/api/v1/guest/venues?group=restaurants",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()["venues"]
+    kitchen = next(v for v in venues if v["code"] == "kitchen")
     # Гостю показываем public_name/tagline, а не служебное «Кухня ресторана».
     assert kitchen["title"] == "Панорама"
     assert kitchen["subtitle"] == "Европейская кухня"
@@ -297,7 +298,15 @@ def test_toggling_guest_facing_shows_and_hides(client, crystal, guest_token):
         Route.objects.create(hotel=crystal, category=category, execution_point=point)
 
     def keys():
-        return {t["key"] for t in _home(client, crystal, guest_token)["tiles"]}
+        # Бар — внутри группы «Рестораны и бары» (партия 29): смотрим её список.
+        return {
+            v["code"]
+            for v in client.get(
+                "/api/v1/guest/venues?group=restaurants",
+                HTTP_HOST=host_for(crystal),
+                HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+            ).json()["venues"]
+        }
 
     assert "wine" not in keys()  # служебная — скрыта
     with tenant_context(crystal):
@@ -519,3 +528,66 @@ def test_catalog_items_carry_their_venue_type(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     ).json()
     assert {i["service_type"] for c in kitchen["categories"] for i in c["items"]} == {"restaurant"}
+
+
+def test_item_card_also_carries_the_venue_type(client, crystal, guest_token):
+    """Карточка позиции (шторка) — тот же `service_type`: схема ответа его не режет."""
+    catalog = client.get(
+        "/api/v1/guest/catalog?type=product&point=kitchen",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    item_id = catalog["categories"][0]["items"][0]["id"]
+    card = client.get(
+        f"/api/v1/guest/item/{item_id}", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {guest_token}"
+    ).json()
+    assert card["service_type"] == "restaurant"
+
+
+def test_no_server_placeholder_for_items_without_a_photo(client, crystal, guest_token):
+    """
+    П.61 (партия 29): у позиции без фото — пустой список, а не адрес заглушки
+    `/static/placeholders/…`, которой нет (локально 404, на стенде `index.html`).
+    Знак без фото рисует витрина по типу заведения.
+    """
+    from apps.catalog.models import Item
+
+    with tenant_context(crystal):
+        _add_service(crystal, "linen", Service.Type.HOUSEKEEPING)
+        Item.objects.create(
+            hotel=crystal, category=Category.objects.get(code="linen-menu"), code="pillow", type="product",
+            title={"ru": "Подушка", "en": "Pillow"}, price=0, is_active=True,
+        )
+    auth = {"HTTP_HOST": host_for(crystal), "HTTP_AUTHORIZATION": f"Bearer {guest_token}"}
+    response = client.get("/api/v1/guest/catalog?type=product&point=linen", **auth)
+    items = {i["code"]: i for c in response.json()["categories"] for i in c["items"]}
+    assert items["pillow"]["images"] == []
+    card = client.get(f"/api/v1/guest/item/{items['pillow']['id']}", **auth)
+    assert card.json()["images"] == []
+    assert "placeholders/" not in response.content.decode() + card.content.decode()
+
+
+def test_restaurants_and_in_room_are_one_tile_regardless_of_threshold(client, crystal, guest_token):
+    """
+    Решение заказчика (партия 29): «Рестораны и бары» и «В номер» — одна плитка
+    при двух сервисах и больше, какой бы ни был порог; один сервис — плитка
+    ведёт сразу в него. Порог отеля — 8: раньше при нём рестораны стояли
+    отдельными плитками.
+    """
+    with tenant_context(crystal):
+        crystal.showcase_group_threshold = 8
+        crystal.save(update_fields=["showcase_group_threshold"])
+        _add_service(crystal, "rs", Service.Type.ROOM_SERVICE)
+
+    tiles = {t["key"]: t for t in _home(client, crystal, guest_token)["tiles"]}
+    assert tiles["restaurants"]["type"] == "service-category"
+    assert tiles["restaurants"]["route"] == "/category/restaurants"
+    assert "kitchen" not in tiles and "bar" not in tiles, "рестораны не отдельными плитками"
+    one = tiles["in_room"]
+    assert (one["venue_count"], one["route"]) == (1, "/venue/rs"), "один сервис — сразу в него"
+
+    with tenant_context(crystal):
+        _add_service(crystal, "mb", Service.Type.MINIBAR)
+    tiles = {t["key"]: t for t in _home(client, crystal, guest_token)["tiles"]}
+    assert (tiles["in_room"]["venue_count"], tiles["in_room"]["route"]) == (2, "/category/in_room")
+    assert "rs" not in tiles and "mb" not in tiles

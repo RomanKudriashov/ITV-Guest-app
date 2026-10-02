@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { STORAGE_KEYS } from '../fixtures/appState'
-import { waitForLayout } from './helpers'
+import { waitForLayout, openVenueFromHome } from './helpers'
 
 /**
  * Раскладки, которые уже один раз разъехались, — под сторожем.
@@ -37,7 +37,7 @@ async function venueMenu(page: Page, mode: 'dark' | 'light'): Promise<void> {
   await page.goto('/')
   await page.getByTestId('guest-browse-only').click()
   await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 20_000 })
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 20_000 })
 }
 
@@ -118,7 +118,10 @@ test.describe('Карточка позиции', () => {
 
       const sheet = page.getByTestId('guest-item-sheet')
       await expect(sheet).toBeVisible({ timeout: 15_000 })
-      await waitForLayout(page)
+      // Ждём, пока встанут сама шторка и крестик: без списка элементов ожидание
+      // не ловило выезд шторки, и после перезапуска стека замер попадал на
+      // середину анимации — крестик «над кадром» (партия 29, два захода части).
+      await waitForLayout(page, ['guest-item-sheet', 'guest-item-sheet-close'])
 
       const sheetBox = (await sheet.boundingBox())!
       const media = (await sheet.locator('img').first().boundingBox())!

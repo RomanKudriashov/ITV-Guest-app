@@ -75,7 +75,7 @@ async function walk(browser: Browser, base: number, scale: number): Promise<Reco
 
   const page = await guestPage(browser)
   await brandArrived(page, base, scale)
-  await expect(page.getByTestId('guest-home-tile-kitchen')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('guest-home-tile-restaurants')).toBeVisible({ timeout: 20_000 })
   screens['главная'] = await measure(page)
   await page.goto('/category/restaurants')
   await expect(page.getByTestId('guest-venue-kitchen')).toBeVisible({ timeout: 20_000 })

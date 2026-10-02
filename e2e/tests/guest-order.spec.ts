@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { apiToken, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
+import { apiToken, DEMO_ROOM, moveOrderStatus, openCart, openVenueFromHome } from './helpers'
 
 /**
  * Полный гостевой поток: вход по номеру → меню → карточка блюда с обязательным
@@ -22,7 +22,7 @@ async function openMenu(page: Page): Promise<void> {
   // Продуктовое поведение C4: со входа гость на главной-витрине; в каталог
   // ресторана ведёт его плитка (уровень 3), а не общее меню.
   await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 15_000 })
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page).toHaveURL(/\/venue\/kitchen/)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }

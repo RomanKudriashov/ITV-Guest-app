@@ -73,7 +73,7 @@ test('экраны гостя на 390 не шире экрана — 4 язык
     await brand.apply({ typography: { fontFamily: widest.family, headingFontFamily: widest.family, fontSizeBase: 20 } })
 
     const guest = await guestPage(browser, { width: 390 })
-    await guest.getByTestId('guest-home-tile-kitchen').waitFor()
+    await guest.getByTestId('guest-home-tile-restaurants').waitFor()
     for (const language of LANGUAGES) {
       await setLanguage(guest, language)
       for (const route of [...FIXED, ...venues]) {

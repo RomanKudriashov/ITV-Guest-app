@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { DEMO_ROOM, openCart } from './helpers'
+import { DEMO_ROOM, openCart, openVenueFromHome } from './helpers'
 
 /**
  * Тот же заказ, но на телефоне (390px). Десктопная витрина не должна была
@@ -26,7 +26,7 @@ test('телефон: полный заказ через нижнюю навиг
 
   // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
   // и путь теста совпадает с путём живого гостя — плитка на главной.
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 
   // Салат без обязательных модификаторов — добавляется прямо из списка.

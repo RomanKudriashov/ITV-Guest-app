@@ -1,7 +1,7 @@
 import { type WebSocket as PwSocket } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { apiToken, DEMO_ROOM, moveOrderStatus, openCart } from './helpers'
+import { apiToken, DEMO_ROOM, moveOrderStatus, openCart, openVenueFromHome } from './helpers'
 
 /**
  * ЖИВОЙ СТАТУС У ГОСТЯ ИДЁТ ПО СОКЕТУ, И КОНСОЛЬ ЧИСТА (E2E-003).
@@ -32,7 +32,7 @@ test('сокет заказа приносит смену статуса, кон
   await page.getByTestId('guest-room-input').fill(DEMO_ROOM)
   await page.getByTestId('guest-room-submit').click()
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await page.getByTestId('guest-qty-plus-caesar').click()
   await openCart(page)
   await page.getByTestId('guest-place-order').click()

@@ -101,8 +101,11 @@ for (const { label, typeLabel, savedToast } of [
     const guest = await context.newPage()
     await enterAsGuest(guest)
 
+    // Ресторан на главной — внутри плитки «Рестораны и бары» (партия 29):
+    // его карточка в списке группы. «Свой» — отдельной плиткой, как раньше.
+    if (label === 'Ресторан') await guest.getByTestId('guest-home-tile-restaurants').click()
     const tile = guest
-      .locator('[data-testid^="guest-home-tile-"]')
+      .locator(label === 'Ресторан' ? '[data-testid^="guest-venue-"]:not([data-testid="guest-venue-list"])' : '[data-testid^="guest-home-tile-"]')
       .filter({ hasText: serviceName })
     await expect(
       tile,

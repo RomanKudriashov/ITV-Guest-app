@@ -12,8 +12,7 @@ import {
   guestSession,
   openCart,
   signInToTracker,
-  withoutHours,
-} from './helpers'
+  withoutHours, openVenueFromHome } from './helpers'
 
 /**
  * МЕСТО ПОЛУЧЕНИЯ — ПО МАТРИЦЕ «КАТЕГОРИЯ × ЛОКАЦИЯ».
@@ -38,7 +37,7 @@ async function enterAsGuest(page: Page): Promise<void> {
 
 test('в корзине кухни стойки бара нет, а для коктейлей она есть', async ({ page, request }) => {
   await enterAsGuest(page)
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
   await page.getByTestId('guest-item-ribeye').click()
   await page.getByTestId('guest-add-to-cart').click()

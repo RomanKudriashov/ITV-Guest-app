@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { DEMO_ROOM } from './helpers'
+import { DEMO_ROOM, openVenueFromHome } from './helpers'
 
 /**
  * КОРЗИНА НЕ ЗАНИМАЕТ ПОСТОЯННУЮ ПОЛОСУ.
@@ -32,7 +32,8 @@ async function enterAsGuest(page: Page): Promise<void> {
  * обходим.
  */
 async function openKitchen(page: Page): Promise<void> {
-  await page.locator('[data-testid^="guest-home-tile-"]').first().click()
+  // Кухня — в плитке «Рестораны и бары» (партия 29), а не первой плиткой главной.
+  await openVenueFromHome(page)
   await expect(page.getByTestId(`guest-qty-plus-${DIRECT_ITEM}`)).toBeVisible({
     timeout: 20_000,
   })

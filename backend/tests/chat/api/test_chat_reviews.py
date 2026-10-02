@@ -75,9 +75,12 @@ def test_home_is_built_from_data(guest):
     body = guest.get("/api/guest/home").json()
     tiles = body["tiles"]
     venue_keys = {t["key"] for t in tiles if t["type"] == "venue"}
-    # Заведения-точки с наполненным каталогом стали плитками: ресторан (kitchen),
-    # спа (slot), консьерж/хозслужба (услуги).
-    assert "kitchen" in venue_keys
+    # Заведения-точки с наполненным каталогом стали плитками: спа (slot),
+    # консьерж/хозслужба (услуги); рестораны и бары — всегда одной плиткой-группой
+    # (партия 29), кухня в её списке.
+    assert any(t["key"] == "restaurants" and t["type"] == "service-category" for t in tiles)
+    venues = guest.get("/api/guest/venues?group=restaurants").json()["venues"]
+    assert "kitchen" in {v["code"] for v in venues}
     assert "spa" in venue_keys
     # Инфо отеля наполнено сидом — плитка инфо присутствует.
     assert any(t["type"] == "info" for t in tiles)

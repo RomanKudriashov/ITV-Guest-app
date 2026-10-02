@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { acceptOrderOnBoard, CONCIERGE, DEMO_ROOM, moveOrderTo } from './helpers'
+import { acceptOrderOnBoard, CONCIERGE, DEMO_ROOM, moveOrderTo, openVenueFromHome } from './helpers'
 
 /**
  * Второй тип предложения проходит тот же путь, что и еда.
@@ -21,7 +21,7 @@ async function enterAsGuest(page: Page): Promise<void> {
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
   // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
   // и путь теста совпадает с путём живого гостя — плитка на главной.
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 

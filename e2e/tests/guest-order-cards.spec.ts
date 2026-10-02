@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { DEMO_ROOM, waitForLayout } from './helpers'
+import { DEMO_ROOM, waitForLayout, openVenueFromHome } from './helpers'
 
 /**
  * Карточка заявки — по виду, а не одна на всех.
@@ -121,7 +121,7 @@ test.describe('Гость: карточка заявки по виду', () => {
 test('описание в карточке блюда занимает столько строк, сколько в нём есть', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await enterAsGuest(page)
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-venue')).toBeVisible({ timeout: 20_000 })
   await waitForLayout(page)
 

@@ -80,7 +80,7 @@ test('заголовки витрины и входа — шрифт и вес �
     expectBrandFace('обложка главной', await face(page.locator('h1').first()), weight)
     expectBrandFace(
       'плитка главной',
-      await face(page.getByTestId('guest-home-tile-kitchen').locator('p, span, h2, h3').filter({ hasText: /\S/ }).first()),
+      await face(page.getByTestId('guest-home-tile-restaurants').locator('p, span, h2, h3').filter({ hasText: /\S/ }).first()),
       weight,
     )
 

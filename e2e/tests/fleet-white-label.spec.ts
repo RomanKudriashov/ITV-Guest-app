@@ -40,20 +40,21 @@ const FLEET = [
     subdomain: 'crystal',
     name: 'Кристалл',
     // Заведения, которых нет у соседей: по ним видно, что витрина не общая.
-    own: 'guest-home-tile-kitchen',
-    foreign: ['guest-home-tile-marina', 'guest-home-tile-bistro'],
+    // Карточки в списке «Рестораны и бары».
+    own: 'guest-venue-kitchen',
+    foreign: ['guest-venue-marina', 'guest-venue-bistro'],
   },
   {
     subdomain: 'azure',
     name: 'Азур',
-    own: 'guest-home-tile-marina',
-    foreign: ['guest-home-tile-kitchen', 'guest-home-tile-bistro'],
+    own: 'guest-venue-marina',
+    foreign: ['guest-venue-kitchen', 'guest-venue-bistro'],
   },
   {
     subdomain: 'lumen',
     name: 'Люмен',
-    own: 'guest-home-tile-bistro',
-    foreign: ['guest-home-tile-kitchen', 'guest-home-tile-marina'],
+    own: 'guest-venue-bistro',
+    foreign: ['guest-venue-kitchen', 'guest-venue-marina'],
   },
 ]
 
@@ -68,7 +69,9 @@ test.describe('Флот: три отеля, три витрины', () => {
       const brand = page.getByTestId('guest-topbar-brand')
       await expect(brand.getByText(hotel.name).or(brand.getByAltText(hotel.name))).toBeVisible()
 
-      // Своё заведение есть.
+      // Своё заведение есть — в списке «Рестораны и бары» (партия 29: рестораны
+      // на главной всегда одной плиткой-группой).
+      await page.getByTestId('guest-home-tile-restaurants').click()
       await expect(page.getByTestId(hotel.own)).toBeVisible({ timeout: 15_000 })
 
       // Чужих нет. Это и есть изоляция со стороны гостя.
@@ -103,7 +106,9 @@ test.describe('Флот: три отеля, три витрины', () => {
 
     // Рум-сервис своего меню не имеет: всё, что в нём есть, заимствовано у
     // «Марины». Если бы ссылка не работала, заведение открылось бы пустым.
-    await page.getByTestId('guest-home-tile-azure-room-service').click()
+    // Рум-сервис — единственный в группе «В номер» (партия 29): её плитка ведёт
+    // сразу в него.
+    await page.getByTestId('guest-home-tile-in_room').click()
     await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('guest-item-seabass')).toBeVisible({ timeout: 15_000 })
   })
