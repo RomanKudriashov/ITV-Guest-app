@@ -1,5 +1,7 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
+import { platformPassword } from './platformPassword.mjs'
+
 /**
  * Адреса и учётки стенда. ДВА РАЗНЫХ ХОСТА — и это не придирка: консоль
  * платформы на стенде живёт на своём имени и отвечает `platform_wrong_host`
@@ -15,9 +17,10 @@ export const ADMIN = {
   email: process.env.E2E_ADMIN_EMAIL ?? `owner@${HOTEL}.local`,
   password: process.env.E2E_ADMIN_PASSWORD ?? 'chef12345',
 }
+// Пароль платформы — из файла вне репозитория (см. platformPassword.mjs).
 export const PLATFORM = {
-  email: process.env.E2E_PLATFORM_EMAIL ?? '',
-  password: process.env.E2E_PLATFORM_PASSWORD ?? '',
+  email: process.env.E2E_PLATFORM_EMAIL ?? 'owner@itv.local',
+  password: platformPassword(),
 }
 
 /** Ключи хранилища — те же, что читает приложение. */

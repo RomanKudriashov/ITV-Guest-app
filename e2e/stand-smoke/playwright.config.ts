@@ -18,9 +18,10 @@ import { defineConfig, devices } from '@playwright/test'
  * а не приделывать к набору уборку. Один раз заведённая уборка однажды
  * сработает не вовремя.
  *
+ *     # Пароль платформы смок берёт сам из ~/.config/itv-stand/platform-password
+ *     # (права 600; переопределить — E2E_PLATFORM_PASSWORD или E2E_PLATFORM_PASSWORD_FILE).
  *     E2E_STAND=https://app.147.45.245.172.sslip.io \
  *     E2E_STAND_HOTEL=https://crystal.app.147.45.245.172.sslip.io \
- *     E2E_PLATFORM_EMAIL=... E2E_PLATFORM_PASSWORD=... \
  *     npx playwright test --config stand-smoke/playwright.config.ts
  */
 export default defineConfig({

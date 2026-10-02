@@ -1,6 +1,7 @@
 import { chromium } from '@playwright/test'
 import { STORAGE_KEYS } from './fixtures/appState.mjs'
 import fs from 'node:fs'
+import { PLATFORM_PASSWORD_FILE, platformPassword } from './stand-smoke/platformPassword.mjs'
 
 /**
  * Обход стенда глазами: гость, панель отеля и платформенная консоль в двух
@@ -21,8 +22,8 @@ const ROOM = process.env.ROOM ?? '401'
 const STAFF = { email: 'owner@crystal.local', password: 'chef12345' }
 // Пароль владельца стенда — из окружения. Зашитый в файл, он уезжает в
 // репозиторий вместе со скриптом: `PLATFORM_PASSWORD=… node e2e/stand-sweep.mjs`.
-const OWNER = { email: process.env.PLATFORM_EMAIL ?? 'owner@itv.local', password: process.env.PLATFORM_PASSWORD }
-if (!OWNER.password) throw new Error('нужен PLATFORM_PASSWORD — пароль владельца стенда (см. .env.prod на сервере)')
+const OWNER = { email: process.env.PLATFORM_EMAIL ?? 'owner@itv.local', password: platformPassword('PLATFORM_PASSWORD') }
+if (!OWNER.password) throw new Error(`нужен пароль владельца стенда: файл ${PLATFORM_PASSWORD_FILE} (права 600) или PLATFORM_PASSWORD`)
 
 const VIEWPORTS = {
   phone: { width: 390, height: 844 },

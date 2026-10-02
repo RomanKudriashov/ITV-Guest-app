@@ -339,6 +339,72 @@ if (!seeded.size) {
   );
 }
 
+/*
+  ЗНАЧЕНИЕ ПАРОЛЯ В ДОКУМЕНТАХ — КРАСНАЯ (партия 27).
+
+  Документ может сказать, ГДЕ лежит пароль (файл, переменная), но не сам
+  пароль. 01.10.2026 пароль владельца платформы попал в вывод терминала из
+  документа на сервере и был сменён; в репозитории он жил с 12 по 27.08 и
+  остался в истории. Чтобы это не повторилось в репозитории, проверяются ВСЕ
+  `.md` репозитория, а не только книга: архив здесь не исключение — секрет в
+  датированном отчёте всё равно секрет.
+
+  Что считается паролем:
+  1. В строке про пароль (`пароль`, `password`) — значение в обратных
+     кавычках, похожее на секрет: от 8 знаков, есть и буквы, и цифры (или
+     знаки), не имя переменной, не путь, не заглушка и не демо-пароль сида
+     (тот общий и задан в коде — сторож сида выше).
+  2. В любой команде, включая блоки кода, — `…PASSWORD=значение`, если
+     значение не заглушка (`...`, `…`, `<…>`) и не подстановка (`$…`).
+*/
+const PLACEHOLDER = /^(\.\.\.|…|\*+|<[^>]*>|\$\S*|xxx+|password|пароль)$/i;
+const SECRET_LIKE = (value) =>
+  value.length >= 8 &&
+  !/^-/.test(value) && // ключ команды: --password
+  !/@.*\./.test(value) && // почта
+  !/\.[A-Za-z0-9]{1,5}$/.test(value) && // файл: stand-sweep.mjs
+  !/^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(value) && // идентификатор: admin_password
+  !/^[A-Z][A-Z0-9_]*$/.test(value) && // имя переменной
+  !/[\/~\\ ]/.test(value) && // путь или фраза
+  /[A-Za-z]/.test(value) &&
+  /[0-9]/.test(value) &&
+  !seeded.has(value) &&
+  !PLACEHOLDER.test(value);
+
+function* allMarkdown(dir) {
+  for (const name of readdirSync(dir)) {
+    if (SKIP_DIRS.has(name) || name === '.git' || name === '.claude') continue;
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) yield* allMarkdown(full);
+    else if (name.endsWith('.md')) yield full;
+  }
+}
+
+let secretLines = 0;
+for (const file of allMarkdown(ROOT)) {
+  const short = file.slice(ROOT.length);
+  readFileSync(file, 'utf8')
+    .split('\n')
+    .forEach((line, index) => {
+      const where = `${short}:${index + 1}`;
+      if (/парол|password/i.test(line)) {
+        for (const [, value] of line.matchAll(/`([^`\n]+)`/g)) {
+          if (SECRET_LIKE(value.trim())) {
+            secretLines += 1;
+            problems.push(`  ${where} — в документе значение пароля, а не место, где он лежит`);
+          }
+        }
+      }
+      for (const [, value] of line.matchAll(/[A-Z0-9_]*PASSWORD=("[^"]*"|'[^']*'|[^\s\\`]+)/g)) {
+        const bare = value.replace(/^["']|["']$/g, '');
+        if (!PLACEHOLDER.test(bare) && !seeded.has(bare) && bare.length > 0) {
+          secretLines += 1;
+          problems.push(`  ${where} — в команде записан пароль: …PASSWORD=<значение>`);
+        }
+      }
+    });
+}
+
 if (problems.length) {
   console.error('Книга разошлась с кодом:');
   console.error(problems.join('\n'));
@@ -348,5 +414,5 @@ if (problems.length) {
 
 console.log(
   `Книга сверена: экранов названо ${screenClaims}, переменных заявлено ${envClaims}, ` +
-    `паролей названо ${passwordClaims}, снимков ${shots.size}`,
+    `паролей названо ${passwordClaims}, снимков ${shots.size}, значений паролей в документах ${secretLines}`,
 );
