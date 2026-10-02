@@ -23,6 +23,7 @@ import { RequestFieldControl } from './RequestFieldControl';
 import { ctaGradientSx } from '@/kit';
 import { SheetFooter, SheetScroll } from './sheetLayout';
 import { errorMessage } from '../errors';
+import { closedOnlyByHours } from '../bookAhead';
 import { useGuestLocations } from '../hooks/useGuestQueries';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { useGuestSession } from '../session/GuestSessionProvider';
@@ -102,6 +103,9 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
     return errors;
   }, [fields, draft.values, t]);
 
+  // Заявка со сроком гостя: закрыто СЕЙЧАС — не помеха, доступность решает
+  // срок, и его проверит сервер (партия 29, п.60).
+  const dueLater = closedOnlyByHours(item) && fields.some((field) => field.sets_requested_time);
   const invalid =
     Object.keys(fieldErrors).length > 0 ||
     refinementMissing ||
@@ -266,7 +270,7 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
           // Live validation, honestly reflected: while a required answer is
           // missing the request cannot be sent, and the guest sees which field
           // is at fault as soon as they touch it.
-          disabled={!canOrder || isPending || !item.is_available || invalid}
+          disabled={!canOrder || isPending || !(item.is_available || dueLater) || invalid}
           onClick={handleSubmit}
           data-testid="guest-request-submit"
           sx={[ctaGradientSx, { minHeight: 52 }]}

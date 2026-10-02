@@ -20,6 +20,7 @@ import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { CatalogRowView } from '../components/CatalogRow';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
+import { closedOnlyByHours } from '../bookAhead';
 import { ItemSheet } from '../components/ItemSheet';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
@@ -505,7 +506,9 @@ function CatalogRow({
 
   // An `info` row is a pure read link — the whole row opens the page, there is
   // no order control at all (`behaviour.createsOrder === false`).
-  const action = !available || behaviour.usesContent ? null : (
+  // Слот закрыт СЕЙЧАС только по часам — записаться на утро можно (партия 29).
+  const bookAhead = behaviour.usesSlots && closedOnlyByHours(item);
+  const action = (!available && !bookAhead) || behaviour.usesContent ? null : (
     needsSheet ? (
       <Button
         variant="outlined"

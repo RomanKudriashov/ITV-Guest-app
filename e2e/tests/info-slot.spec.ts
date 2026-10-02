@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { apiToken, CONCIERGE, DEMO_ROOM, HOTEL, staffToken } from './helpers'
+import { apiToken, CONCIERGE, DEMO_ROOM, HOTEL, staffToken, openVenueFromHome } from './helpers'
 
 /**
  * Типы info и slot проходят тем же гостевым потоком, что еда и заявки.
@@ -23,7 +23,7 @@ async function enterAsGuest(page: Page): Promise<void> {
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 15_000 })
   // К блюдам гость идёт ЧЕРЕЗ заведение: плоского меню отеля больше нет,
   // и путь теста совпадает с путём живого гостя — плитка на главной.
-  await page.getByTestId('guest-home-tile-kitchen').click()
+  await openVenueFromHome(page)
   await expect(page.getByTestId('guest-menu')).toBeVisible({ timeout: 15_000 })
 }
 
@@ -74,6 +74,38 @@ test.describe('Тип slot', () => {
     const now = Date.now()
     const gone = starts.filter((iso) => new Date(iso).getTime() < now)
     expect(gone, 'в сетке слоты, чьё время прошло').toEqual([])
+  })
+
+  test('спа закрыто сейчас — записаться на завтра всё равно можно (партия 29, п.60)', async ({ page }) => {
+    // Сервер считает доступность на время слота; витрина не должна прятать
+    // слоты из-за «закрыто сейчас». Условие задаётся в браузере: позиция в
+    // ответах каталога и карточки помечается закрытой по часам заведения.
+    const closedNow = (entry: Record<string, unknown>) => {
+      if (entry.code !== 'massage') return
+      entry.is_available = false
+      entry.unavailable_reason = 'venue_closed'
+      entry.available_from = '10:00'
+    }
+    await page.route(/\/api\/(v1\/)?guest\/(catalog|item)/, async (route) => {
+      const response = await route.fetch()
+      const body = await response.json()
+      if (Array.isArray(body.categories)) {
+        for (const category of body.categories) for (const item of category.items ?? []) closedNow(item)
+      } else closedNow(body)
+      await route.fulfill({ response, json: body })
+    })
+    await enterAsGuest(page)
+    await page.goto('/venue/spa')
+    await page.getByTestId('guest-slot-massage').click()
+    await expect(page.getByTestId('guest-slot-form')).toBeVisible({ timeout: 15_000 })
+    const tomorrow = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10)
+    await page.getByTestId('guest-slot-date').fill(tomorrow)
+    const free = page.locator('[data-testid^="guest-slot-"][data-testid*="T"]:not([disabled])').first()
+    await expect(free, 'слоты на завтра не показаны — форма заблокирована «закрыто сейчас»').toBeVisible({
+      timeout: 15_000,
+    })
+    await free.click()
+    await expect(page.getByTestId('guest-slot-book')).toBeEnabled()
   })
 
   test('гость бронирует слот → доска SPA видит → отмена освобождает', async ({

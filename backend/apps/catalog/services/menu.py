@@ -88,7 +88,7 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
                 "parent_id": str(category.parent_id) if category.parent_id else None,
                 "title": translate(category.title, language),
                 "description": translate(category.description, language),
-                "image_url": image_url(category.image, variant="card", fallback_code=category.code),
+                "image_url": image_url(category.image, variant="card"),
                 "sort_order": category.sort_order,
                 **state.as_dict(),
                 "items": serialized_items,
@@ -132,7 +132,7 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
                         "title": translate(block_cat.title, language),
                         "description": translate(block_cat.description, language),
                         "image_url": image_url(
-                            block_cat.image, variant="card", fallback_code=block_cat.code
+                            block_cat.image, variant="card"
                         ),
                         "sort_order": 1000 + block_cat.sort_order,
                         **block_state.as_dict(),
@@ -311,6 +311,9 @@ def _serialize_request_field(request_field: RequestField, language: str | None) 
         "help_text": translate(request_field.help_text, language),
         "field_type": request_field.field_type,
         "is_required": request_field.is_required,
+        # Ответ на это поле — срок заявки: по нему решается доступность, и
+        # заявку ночью можно оформить на утро (партия 29, п.60).
+        "sets_requested_time": request_field.sets_requested_time,
         "options": [
             {"value": option.get("value"), "label": translate(option.get("label"), language)}
             for option in (request_field.options or [])
@@ -336,7 +339,7 @@ def _serialize_item(
         state = apply_overlay_availability(state, inclusion, moment)
 
     images = [
-        image_url(link.asset, variant="card", fallback_code=category.code)
+        image_url(link.asset, variant="card")
         for link in item.images.all()
     ]
     # ЯРКОСТЬ ПЕРВОГО КАДРА — витрине, чтобы подобрать плотность затемнения под
@@ -345,7 +348,8 @@ def _serialize_item(
     # витрина чужие пиксели не читает.
     first_asset = next((link.asset for link in item.images.all() if link.asset), None)
     image_luminance = getattr(first_asset, "luminance", None) if first_asset else None
-    images = [url for url in images if url] or [image_url(None, fallback_code=category.code)]
+    # Нет фото — пустой список: знак без фото рисует витрина (партия 29, п.61).
+    images = [url for url in images if url]
 
     groups = list(item.modifier_groups.all())
     return {

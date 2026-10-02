@@ -110,6 +110,8 @@ export interface RequestField {
   min_value?: number | null;
   max_value?: number | null;
   sort_order?: number;
+  /** The answer is the request's due time — availability is judged at it. */
+  sets_requested_time?: boolean;
 }
 
 /** A marketing badge on a menu item; `label` arrives already localized. */
@@ -269,10 +271,11 @@ export interface GuestSlot {
   available: boolean;
   /**
    * Why: `free`, `taken` (no places left), `past` (time passed or closer than
-   * the booking lead), `later` (beyond the booking horizon). Older servers
+   * the booking lead), `later` (beyond the booking horizon), `closed` (the
+   * venue is closed at that time). Older servers
    * omit it — then only `available` is known.
    */
-  state?: 'free' | 'taken' | 'past' | 'later';
+  state?: 'free' | 'taken' | 'past' | 'later' | 'closed';
 }
 
 /** `GET /api/guest/slots?item_id=&date=` — availability for one day. */

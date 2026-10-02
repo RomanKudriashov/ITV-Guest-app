@@ -111,6 +111,10 @@ def available_slots(item: Item, date_str: str) -> dict:
     horizon = now + timedelta(days=config.horizon_days)
 
     booked = _booked_counts(item, starts)
+    # Часы заведения НА ВРЕМЯ СЛОТА (партия 29): запись ночью на утро решает
+    # то, открыто ли спа в 10:00, а не в 02:00.
+    from apps.catalog.services.availability import item_availability
+
     slots = []
     for start in starts:
         end = start + timedelta(minutes=config.duration_minutes)
@@ -125,6 +129,8 @@ def available_slots(item: Item, date_str: str) -> dict:
             state = "past"
         elif start > horizon:
             state = "later"
+        elif not item_availability(item, start).is_available:
+            state = "closed"
         elif left <= 0:
             state = "taken"
         else:
@@ -134,7 +140,7 @@ def available_slots(item: Item, date_str: str) -> dict:
                 "starts_at": start.isoformat(),
                 "ends_at": end.isoformat(),
                 "capacity_left": max(left, 0),
-                "available": left > 0 and in_window,
+                "available": state == "free",
                 "state": state,
             }
         )

@@ -133,7 +133,7 @@ def create_order(data: OrderInput, *, guest_session=None, placed_by=None) -> Ord
     # Агрегатор резолвим ДО проверки позиций: от него зависит, чьи часы решают
     # доступность заимствованного блюда — источника или включающего заведения.
     aggregator = _resolve_cart_service(data)
-    items = [_resolve_item(line, aggregator=aggregator) for line in data.lines]
+    items = [_resolve_item(line) for line in data.lines]
     behaviour = _resolve_behaviour(items)
 
     if not behaviour.creates_order:
@@ -161,6 +161,14 @@ def create_order(data: OrderInput, *, guest_session=None, placed_by=None) -> Ord
         for item, line in zip(items, data.lines)
     ]
     field_values = _resolve_field_values(behaviour, items, data)
+
+    # ДОСТУПНОСТЬ — НА ВРЕМЯ, НА КОТОРОЕ ЗАКАЗ (партия 29, п.60 бэклога): слот
+    # — на время слота, заявка или заказ ко времени — на время гостя, заказ
+    # «сейчас» — на текущие часы. Ночью в 02:00 гость записывается в спа на
+    # 10:00, а заказать еду «сейчас» в закрытое заведение по-прежнему нельзя.
+    moment = order_moment(data, items, field_values, hotel)
+    for item in items:
+        _require_available(item, aggregator=aggregator, moment=moment)
 
     # Резолв исполнителя: агрегатор (по service_code — с разъездом) или маршрут.
     if aggregator is not None:
@@ -325,6 +333,9 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
     from apps.catalog.services.availability import item_availability
 
     aggregator = _resolve_cart_service(data)
+    # Котировка — на то же время, что и оформление: корзина «к 08:00» ночью
+    # не должна краснеть закрытой кухней (партия 29).
+    quote_moment = order_moment(data, hotel=hotel)
     priced_lines: list[tuple[int, bool]] = []
     categories = set()
     quoted_lines: list[dict[str, Any]] = []
@@ -357,7 +368,7 @@ def quote_cart(data: OrderInput) -> dict[str, Any]:
         unit_price = None if base_price is None else base_price + sum(o.price_delta for o in options)
         line_total = None if unit_price is None else unit_price * line.quantity
 
-        state = item_availability(item, service=_executing_service(aggregator, item))
+        state = item_availability(item, quote_moment, service=_executing_service(aggregator, item))
         quoted_lines.append({
             "item_id": str(item.pk),
             "title": item.title_i18n,
@@ -676,8 +687,9 @@ def _create_fanned_order(
     return parent
 
 
-def _resolve_item(line: OrderLineInput, *, aggregator=None) -> Item:
-    """Позиция существует, доступна и запрошена в разумном количестве."""
+def _resolve_item(line: OrderLineInput) -> Item:
+    """Позиция существует и запрошена в разумном количестве. Доступность — отдельно,
+    на момент заказа (`_require_available`): его знают только после разбора формы."""
     item = (
         Item.objects.select_related("category", "schedule", "category__schedule")
         .prefetch_related("modifier_groups__options", "request_fields")
@@ -686,17 +698,45 @@ def _resolve_item(line: OrderLineInput, *, aggregator=None) -> Item:
     )
     if item is None:
         raise OrderValidationError(f"Позиция {line.item_id} не найдена", code="item_not_found")
+    if line.quantity < 1:
+        raise OrderValidationError("Количество должно быть положительным", code="bad_quantity")
+    return item
 
-    state = item_availability(item, service=_executing_service(aggregator, item))
+
+def _require_available(item: Item, *, aggregator=None, moment: datetime | None = None) -> None:
+    state = item_availability(item, moment, service=_executing_service(aggregator, item))
     if not state.is_available:
-        message = f"«{item.title_i18n}» сейчас недоступна"
+        when = "на это время" if moment is not None else "сейчас"
+        message = f"«{item.title_i18n}» {when} недоступна"
         if state.available_from:
             message += f" — доступна с {state.available_from}"
         raise OrderValidationError(message, code="item_unavailable", field="lines")
 
-    if line.quantity < 1:
-        raise OrderValidationError("Количество должно быть положительным", code="bad_quantity")
-    return item
+
+def order_moment(
+    data: OrderInput, items: list[Item] | None = None, field_values=None, hotel: Hotel | None = None
+) -> datetime | None:
+    """
+    НА КАКОЕ ВРЕМЯ ЗАКАЗ (партия 29). Слот — время слота; заказ ко времени —
+    время гостя; заявка с полем «срок» — ответ гостя; иначе None, то есть
+    «сейчас». Кривое время здесь не ошибка: его отклонят свои проверки
+    (`validate_and_reserve`, `_validate_requested_time`) со своими кодами, а
+    доступность тогда считается на «сейчас».
+    """
+    if data.slot_start:
+        try:
+            return slot_svc._parse_start(data.slot_start)
+        except Exception:  # noqa: BLE001 — разбор слота отклонит бронь со своим кодом
+            return None
+    if data.timing == "scheduled" and data.requested_time is not None:
+        moment = data.requested_time
+        return moment if timezone.is_aware(moment) else timezone.make_aware(moment, hotel.tzinfo if hotel else None)
+    if items and field_values and hotel is not None:
+        try:
+            return _requested_time_from_fields(items[0], field_values, hotel)
+        except OrderValidationError:
+            return None
+    return None
 
 
 def _resolve_behaviour(items: list[Item]):
@@ -1580,14 +1620,9 @@ def _status_payload(
 
 
 def _item_image(order_item: OrderItem, cache: dict | None = None) -> str:
+    """Фото строки заказа; нет фото — пусто, знак рисует витрина (партия 29, п.61)."""
     item = order_item.item
     link = next(iter(item.images.all()), None) if item else None
-    if link is None and cache is not None:
-        # Позиция без фото получает общую заглушку — одну на страницу списка,
-        # а не запрос в справочник заглушек на каждую строку.
-        if "placeholder" not in cache:
-            cache["placeholder"] = image_url(None, variant="thumb")
-        return cache["placeholder"]
     return image_url(link.asset if link else None, variant="thumb")
 
 

@@ -47,6 +47,9 @@ class GuestItemDetailOut(Schema):
     description: str
     price: int | None
     images: list[str]
+    # Тип заведения раздела: знак без фото — по нему (партия 29). Без поля в
+    # схеме ответ его молча отрезал, и шторка рисовала «вилку и нож».
+    service_type: str | None = None
     # Аллергены/маркеры/характеристики — локализованные объекты; пустые не
     # приходят (карточка не рисует пустой блок).
     allergens: list[dict[str, Any]] = []

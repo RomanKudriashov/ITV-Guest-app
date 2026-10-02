@@ -501,3 +501,119 @@ def test_slots_are_isolated_between_hotels(guest, cms_aurora):
             f"/api/guest/slots?item_id={aurora_massage}&date={next_working_date()}"
         )
         assert response.status_code == 404
+
+
+# ===========================================================================
+# ЗАПИСЬ НА БУДУЩЕЕ: ДОСТУПНОСТЬ — НА ВРЕМЯ ЗАКАЗА (партия 29, п.60)
+# ===========================================================================
+
+
+def _hours(hotel, start_hour: int, end_hour: int):
+    """Расписание «каждый день с start до end» — часы заведения."""
+    from datetime import time
+
+    from apps.hotels.models import Schedule, ScheduleInterval
+
+    schedule = Schedule.objects.create(hotel=hotel, name=f"{start_hour}–{end_hour}")
+    for weekday in range(7):
+        ScheduleInterval.objects.create(
+            hotel=hotel, schedule=schedule, weekday=weekday,
+            start_time=time(start_hour), end_time=time(end_hour),
+        )
+    return schedule
+
+
+@pytest.fixture
+def night(monkeypatch, crystal):
+    """«Сейчас» — завтра, 02:00 по отелю. Возвращает этот день (дату отеля)."""
+    from datetime import time
+
+    day = crystal.local_now().date() + timedelta(days=1)
+    fake = datetime.combine(day, time(2, 0), tzinfo=crystal.tzinfo)
+    monkeypatch.setattr(timezone, "now", lambda: fake)
+    return day
+
+
+def _venue_hours(crystal, code: str, start: int, end: int) -> None:
+    from apps.hotels.models import Service
+
+    with tenant_context(crystal):
+        Service.objects.filter(code=code).update(schedule=_hours(crystal, start, end))
+
+
+def test_at_night_a_guest_books_the_spa_for_ten_in_the_morning(guest, crystal, night):
+    """Спа закрыто сейчас (02:00), но слот в 10:00 свободен и бронируется."""
+    _venue_hours(crystal, "spa", 10, 20)
+    item = massage(guest)
+    assert item["is_available"] is False and item["unavailable_reason"] == "venue_closed", "в 02:00 спа закрыто"
+
+    slots = guest.get(f"/api/guest/slots?item_id={item['id']}&date={night.isoformat()}").json()["slots"]
+    ten = next(s for s in slots if s["starts_at"][11:16] == "10:00")
+    assert (ten["state"], ten["available"]) == ("free", True)
+
+    booked = guest.post(
+        "/api/guest/order",
+        {"lines": [{"item_id": item["id"]}], "slot_start": ten["starts_at"]},
+        HTTP_IDEMPOTENCY_KEY="night-spa",
+    )
+    assert booked.status_code == 201, booked.content
+
+
+def test_a_slot_when_the_venue_is_closed_is_closed(guest, crystal, night):
+    """Сетка слотов 10–20, а спа открыто с 12: 10:00 и 11:00 — «закрыто», бронь не проходит."""
+    _venue_hours(crystal, "spa", 12, 20)
+    item = massage(guest)
+    slots = guest.get(f"/api/guest/slots?item_id={item['id']}&date={night.isoformat()}").json()["slots"]
+    by_hour = {s["starts_at"][11:16]: s for s in slots}
+    assert by_hour["10:00"]["state"] == "closed" and by_hour["12:00"]["state"] == "free"
+    refused = guest.post(
+        "/api/guest/order",
+        {"lines": [{"item_id": item["id"]}], "slot_start": by_hour["10:00"]["starts_at"]},
+        HTTP_IDEMPOTENCY_KEY="night-spa-closed",
+    )
+    assert refused.status_code == 422 and refused.json()["code"] == "item_unavailable"
+
+
+def _caesar(guest):
+    catalog = guest.get("/api/guest/catalog?type=product").json()
+    return next(e for c in catalog["categories"] for e in c["items"] if e["code"] == "caesar")
+
+
+def test_food_now_in_a_closed_kitchen_is_still_refused(guest, crystal, night):
+    """Заказ «сейчас» — по текущим часам, как было."""
+    _venue_hours(crystal, "kitchen", 8, 23)
+    refused = guest.post(
+        "/api/guest/order",
+        {"lines": [{"item_id": _caesar(guest)["id"], "quantity": 1}], "timing": "asap"},
+        HTTP_IDEMPOTENCY_KEY="night-food-now",
+    )
+    assert refused.status_code == 422 and refused.json()["code"] == "item_unavailable"
+
+
+def test_food_for_the_morning_ordered_at_night_is_accepted(guest, crystal, night):
+    """Заказ ко времени — по времени гостя: в 02:00 на 10:30 кухня открыта."""
+    from datetime import time
+
+    _venue_hours(crystal, "kitchen", 8, 23)
+    at = datetime.combine(night, time(10, 30), tzinfo=crystal.tzinfo)
+    accepted = guest.post(
+        "/api/guest/order",
+        {
+            "lines": [{"item_id": _caesar(guest)["id"], "quantity": 1}],
+            "timing": "scheduled",
+            "requested_time": at.isoformat(),
+        },
+        HTTP_IDEMPOTENCY_KEY="night-food-later",
+    )
+    assert accepted.status_code == 201, accepted.content
+    early = datetime.combine(night, time(5, 0), tzinfo=crystal.tzinfo)
+    refused = guest.post(
+        "/api/guest/order",
+        {
+            "lines": [{"item_id": _caesar(guest)["id"], "quantity": 1}],
+            "timing": "scheduled",
+            "requested_time": early.isoformat(),
+        },
+        HTTP_IDEMPOTENCY_KEY="night-food-early",
+    )
+    assert refused.status_code == 422 and refused.json()["code"] == "item_unavailable", "в 05:00 кухня закрыта"

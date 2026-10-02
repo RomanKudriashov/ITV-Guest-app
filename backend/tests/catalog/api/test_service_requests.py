@@ -645,3 +645,39 @@ def test_cms_order_time_is_only_a_time_field_and_only_one(cms, crystal):
     with tenant_context(crystal):
         when.refresh_from_db()
     assert when.sets_requested_time is False, "два срока у одной услуги"
+
+
+# --- Заявка со сроком гостя — доступность на этот срок (партия 29, п.60) ---
+
+
+def test_a_request_for_the_morning_is_accepted_at_night(guest, taxi, crystal, monkeypatch):
+    """
+    Ночью (02:00) консьерж закрыт (часы 8–23), но такси на 10:00 заказать
+    можно: доступность решает срок гостя. На 05:00 — нельзя: закрыто и тогда.
+    """
+    from datetime import datetime, time, timedelta
+
+    from django.utils import timezone
+
+    from apps.catalog.models import Item
+    from apps.hotels.models import Schedule, ScheduleInterval, Service
+
+    day = crystal.local_now().date() + timedelta(days=1)
+    monkeypatch.setattr(timezone, "now", lambda: datetime.combine(day, time(2, 0), tzinfo=crystal.tzinfo))
+    with tenant_context(crystal):
+        schedule = Schedule.objects.create(hotel=crystal, name="8–23")
+        for weekday in range(7):
+            ScheduleInterval.objects.create(
+                hotel=crystal, schedule=schedule, weekday=weekday, start_time=time(8), end_time=time(23)
+            )
+        service = Item.objects.select_related("category__service").get(pk=taxi["id"]).category.service
+        Service.objects.filter(pk=service.pk).update(schedule=schedule)
+
+    detail = guest.get(f"/api/guest/item/{taxi['id']}").json()
+    assert detail["is_available"] is False, "в 02:00 консьерж закрыт"
+    assert any(f.get("sets_requested_time") for f in detail["request_fields"]), "витрина знает поле срока"
+
+    accepted = place(guest, taxi_order(taxi, field_values={"when": "10:00"}), "svc-night-10")
+    assert accepted.status_code == 201, accepted.content
+    refused = place(guest, taxi_order(taxi, field_values={"when": "05:00"}), "svc-night-05")
+    assert refused.status_code == 422 and refused.json()["code"] == "item_unavailable"

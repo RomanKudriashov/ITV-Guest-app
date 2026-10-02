@@ -20,6 +20,7 @@ import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type { CreateOrderPayload, GuestSlot, ItemDetail } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
+import { closedOnlyByHours } from '../bookAhead';
 
 export interface SlotBookingFormProps {
   item: ItemDetail;
@@ -63,10 +64,16 @@ export function SlotBookingForm({ item, titleRef, onClose }: SlotBookingFormProp
   const [date, setDate] = useState(today);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const slotsQuery = useGuestSlots(item.id, date, item.is_available);
+  // Запись на будущее: закрыто СЕЙЧАС — не повод не показать утренние слоты.
+  const bookable = item.is_available || closedOnlyByHours(item);
+  const slotsQuery = useGuestSlots(item.id, date, bookable);
   // Прошедшее время и ещё не открытая бронь — не «занято»: таких слотов гость
   // не видит вовсе (партия 29). «Занято» остаётся только у слотов без мест.
-  const slots = (slotsQuery.data?.slots ?? []).filter((slot) => slot.state !== 'past' && slot.state !== 'later');
+  // Прошедшее, ещё не открытое и время, когда заведение закрыто, — не «занято»:
+  // таких слотов гость не видит вовсе. «Занято» — только у слотов без мест.
+  const slots = (slotsQuery.data?.slots ?? []).filter(
+    (slot) => slot.state !== 'past' && slot.state !== 'later' && slot.state !== 'closed',
+  );
   const capacity = slotsQuery.data?.capacity ?? 1;
 
   const payload = useMemo<CreateOrderPayload | null>(
@@ -177,7 +184,7 @@ export function SlotBookingForm({ item, titleRef, onClose }: SlotBookingFormProp
           fullWidth
           size="large"
           variant="contained"
-          disabled={!canOrder || isPending || !item.is_available || !selected}
+          disabled={!canOrder || isPending || !bookable || !selected}
           onClick={handleBook}
           data-testid="guest-slot-book"
           sx={[ctaGradientSx, { minHeight: 52 }]}
