@@ -1,8 +1,10 @@
 import {
+  IconBath,
   IconRestaurant,
   IconServices,
   IconSlots,
   IconInfo,
+  IconMakeUpRoom,
   type AppIconComponent,
 } from '@/icons';
 import { behaviourFor } from '@/offerings/behaviour';
@@ -20,6 +22,31 @@ const ICON_BY_TYPE: Record<string, AppIconComponent> = {
   info: IconInfo,
 };
 
-export function fallbackIconFor(type: string | null | undefined): AppIconComponent {
-  return ICON_BY_TYPE[behaviourFor(type).type];
+/**
+ * ЗАГЛУШКА ПО ТИПУ ЗАВЕДЕНИЯ (партия 29). Вид предложения у товара всегда
+ * `product`, и подушка хозслужбы или масло спа без фото получали «вилку и
+ * нож». Заведение говорит о вещи больше: спа — ванна, хозслужба — уборка,
+ * еда и напитки — приборы, прочие услуги — общий знак. Тип заведения
+ * неизвестен (старый сервер, позиция без заведения) — по виду предложения.
+ */
+const ICON_BY_SERVICE_TYPE: Record<string, AppIconComponent> = {
+  restaurant: IconRestaurant,
+  bar: IconRestaurant,
+  room_service: IconRestaurant,
+  minibar: IconRestaurant,
+  spa: IconBath,
+  pool: IconBath,
+  housekeeping: IconMakeUpRoom,
+  concierge: IconServices,
+  transfer: IconServices,
+  excursions: IconServices,
+  custom: IconServices,
+  info: IconInfo,
+};
+
+export function fallbackIconFor(
+  type: string | null | undefined,
+  serviceType?: string | null,
+): AppIconComponent {
+  return (serviceType && ICON_BY_SERVICE_TYPE[serviceType]) || ICON_BY_TYPE[behaviourFor(type).type];
 }

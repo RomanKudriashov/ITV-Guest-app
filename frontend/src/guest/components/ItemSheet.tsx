@@ -68,7 +68,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
   // sheet itself stays ignorant of which body it renders.
   const behaviour = item ? behaviourFor(item.type) : null;
   const usesFields = item ? (item.has_fields ?? behaviour!.usesFields) : false;
-  const fallbackIcon = fallbackIconFor(item?.type);
+  const fallbackIcon = fallbackIconFor(item?.type, item?.service_type);
 
   const layout = useMemo(
     () => ({ mediaBeside: isDesktop, fallbackIcon }),

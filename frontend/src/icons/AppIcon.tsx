@@ -58,7 +58,9 @@ const BaseIcon = forwardRef<SVGSVGElement, AppIconProps & { children: ReactNode 
 export function createIcon(displayName: string, paths: ReactNode) {
   const Comp = forwardRef<SVGSVGElement, AppIconProps>(function Icon(props, ref) {
     return (
-      <BaseIcon ref={ref} {...props}>
+      // Имя знака в разметке: проверки видят, КАКАЯ иконка нарисована, а не
+      // только что какая-то есть (партия 29: заглушка по типу заведения).
+      <BaseIcon ref={ref} data-icon={displayName} {...props}>
         {paths}
       </BaseIcon>
     );

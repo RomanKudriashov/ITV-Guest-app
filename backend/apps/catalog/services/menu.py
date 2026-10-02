@@ -263,7 +263,7 @@ def _item_queryset(offering_type: str | None = OfferingType.PRODUCT):
     queryset = (
         # Служебные позиции («Поручение» ресепшена) гостю не показываются.
         Item.objects.filter(is_active=True, is_internal=False)
-        .select_related("schedule", "category", "category__schedule")
+        .select_related("schedule", "category", "category__schedule", "category__service")
         .prefetch_related(
             "schedule__intervals",
             "category__schedule__intervals",
@@ -373,6 +373,10 @@ def _serialize_item(
         # Время подачи, мин: чип в карточке; null — не показывать.
         "prep_minutes": item.prep_minutes,
         "images": [url for url in images if url],
+        # Тип заведения, которому принадлежит раздел позиции (партия 29): по нему
+        # витрина рисует заглушку без фото. Иконка по виду предложения давала
+        # «вилку и нож» любому товару — подушке хозслужбы и маслу спа тоже.
+        "service_type": getattr(getattr(category, "service", None), "type", None),
         # Витрине важно заранее знать, открывать ли карточку: позицию без
         # модификаторов можно добавить прямо из списка одним тапом.
         "has_modifiers": bool(groups),

@@ -56,6 +56,26 @@ test.describe('Тип info', () => {
 })
 
 test.describe('Тип slot', () => {
+  test('прошедшее время не показано «Занято» — его просто нет (партия 29)', async ({ page }) => {
+    // Форма открывается на сегодня. Слоты, чьё время прошло, раньше стояли в
+    // сетке выключенными с подписью «Занято»: гость читал «всё разобрали».
+    // До открытия спа (10:00) прошедших слотов ещё нет — тогда проверка просто
+    // ничего не находит; после — обязана не найти ни одного.
+    await enterAsGuest(page)
+    await page.goto('/venue/spa')
+    await page.getByTestId('guest-slot-massage').click()
+    await expect(page.getByTestId('guest-slot-form')).toBeVisible({ timeout: 15_000 })
+    await expect(
+      page.locator('[data-testid^="guest-slot-"][data-testid*="T"]').or(page.getByTestId('guest-slot-empty')).first(),
+    ).toBeVisible({ timeout: 15_000 })
+    const starts = await page
+      .locator('[data-testid^="guest-slot-"][data-testid*="T"]')
+      .evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset.testid!.replace('guest-slot-', '')))
+    const now = Date.now()
+    const gone = starts.filter((iso) => new Date(iso).getTime() < now)
+    expect(gone, 'в сетке слоты, чьё время прошло').toEqual([])
+  })
+
   test('гость бронирует слот → доска SPA видит → отмена освобождает', async ({
     browser,
     request,

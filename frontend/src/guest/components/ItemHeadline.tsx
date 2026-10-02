@@ -55,7 +55,7 @@ export function ItemMedia({
    */
   bleed?: boolean;
 }) {
-  const Icon = fallbackIcon ?? fallbackIconFor(item.type);
+  const Icon = fallbackIcon ?? fallbackIconFor(item.type, item.service_type);
   const icon = Icon;
   const isRail = variant === 'rail';
   const { glass } = useStorefront();

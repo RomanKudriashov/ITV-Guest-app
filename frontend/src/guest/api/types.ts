@@ -129,6 +129,8 @@ export interface MenuItem {
   /** `null` — "price not set" (a request-service may be unpriced), not "free". */
   price: number | null;
   images: string[];
+  /** Type of the venue owning the item's section — picks the no-photo placeholder icon. */
+  service_type?: string | null;
   /** Allergens («contains») — localized dictionary entries, ordered. Empty → omit. */
   allergens: ItemFacet[];
   /** Dietary markers («suitable») — localized, rendered as green pills. Empty → omit. */
@@ -265,6 +267,12 @@ export interface GuestSlot {
   capacity_left: number;
   /** `capacity_left > 0`, not in the past and within the horizon. */
   available: boolean;
+  /**
+   * Why: `free`, `taken` (no places left), `past` (time passed or closer than
+   * the booking lead), `later` (beyond the booking horizon). Older servers
+   * omit it — then only `available` is known.
+   */
+  state?: 'free' | 'taken' | 'past' | 'later';
 }
 
 /** `GET /api/guest/slots?item_id=&date=` — availability for one day. */

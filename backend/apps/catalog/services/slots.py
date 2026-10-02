@@ -116,12 +116,26 @@ def available_slots(item: Item, date_str: str) -> dict:
         end = start + timedelta(minutes=config.duration_minutes)
         left = config.capacity - booked.get(start, 0)
         in_window = earliest <= start <= horizon
+        # ПОЧЕМУ НЕДОСТУПЕН — словом (партия 29). Раньше был только флаг, и
+        # витрина любой недоступный слот подписывала «Занято»: гость видел
+        # «занятыми» утренние слоты, время которых просто прошло. Теперь
+        # «занято» — только когда мест нет; прошедшее (и ближе, чем
+        # `lead_minutes`) — `past`, дальше горизонта брони — `later`.
+        if start < earliest:
+            state = "past"
+        elif start > horizon:
+            state = "later"
+        elif left <= 0:
+            state = "taken"
+        else:
+            state = "free"
         slots.append(
             {
                 "starts_at": start.isoformat(),
                 "ends_at": end.isoformat(),
                 "capacity_left": max(left, 0),
                 "available": left > 0 and in_window,
+                "state": state,
             }
         )
 

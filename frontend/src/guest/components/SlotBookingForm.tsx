@@ -64,7 +64,9 @@ export function SlotBookingForm({ item, titleRef, onClose }: SlotBookingFormProp
   const [selected, setSelected] = useState<string | null>(null);
 
   const slotsQuery = useGuestSlots(item.id, date, item.is_available);
-  const slots = slotsQuery.data?.slots ?? [];
+  // Прошедшее время и ещё не открытая бронь — не «занято»: таких слотов гость
+  // не видит вовсе (партия 29). «Занято» остаётся только у слотов без мест.
+  const slots = (slotsQuery.data?.slots ?? []).filter((slot) => slot.state !== 'past' && slot.state !== 'later');
   const capacity = slotsQuery.data?.capacity ?? 1;
 
   const payload = useMemo<CreateOrderPayload | null>(

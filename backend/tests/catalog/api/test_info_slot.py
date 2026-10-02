@@ -147,6 +147,41 @@ def test_booked_slot_shows_less_capacity(guest, crystal):
     assert first["available"] is True  # вместимость 2, ещё есть место
 
 
+def test_slot_says_why_it_is_unavailable(guest, crystal):
+    """
+    Партия 29: недоступный слот говорит почему. Витрина любой недоступный
+    подписывала «Занято» — и утренние слоты, чьё время просто прошло, гость
+    видел «занятыми».
+    """
+    item = massage(guest)
+
+    def day(date):
+        return guest.get(f"/api/guest/slots?item_id={item['id']}&date={date}").json()["slots"]
+
+    yesterday = (timezone.localdate() - timedelta(days=1)).isoformat()
+    past = day(yesterday)
+    assert past, "вчера SPA тоже работало — слоты есть"
+    assert {s["state"] for s in past} == {"past"}, "прошедшее — не «занято»"
+    assert all(s["capacity_left"] == 2 and not s["available"] for s in past)
+
+    far = (timezone.localdate() + timedelta(days=40)).isoformat()
+    assert {s["state"] for s in day(far)} <= {"later"}, "дальше горизонта брони — «позже»"
+
+    free = day(next_working_date())
+    assert {s["state"] for s in free} == {"free"}
+
+    target = free[0]["starts_at"]
+    for key in ("slot-full-1", "slot-full-2"):
+        booked = guest.post(
+            "/api/guest/order",
+            {"lines": [{"item_id": item["id"]}], "slot_start": target},
+            HTTP_IDEMPOTENCY_KEY=key,
+        )
+        assert booked.status_code == 201, booked.content
+    full = next(s for s in day(next_working_date()) if s["starts_at"] == target)
+    assert (full["state"], full["available"]) == ("taken", False)
+
+
 # ===========================================================================
 # slot — бронь
 # ===========================================================================
