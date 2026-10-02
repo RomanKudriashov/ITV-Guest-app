@@ -95,7 +95,7 @@ export function CartTotals({ quote, loading }: CartTotalsProps) {
             data-testid="guest-cart-total"
             sx={(theme) => ({
               fontFamily: theme.typography.h1.fontFamily,
-              fontWeight: 800,
+              fontWeight: theme.typography.h1.fontWeight,
               fontSize: fontPx(17),
             })}
           >

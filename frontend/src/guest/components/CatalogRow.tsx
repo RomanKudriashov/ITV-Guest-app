@@ -119,7 +119,7 @@ export function CatalogRowView({
             variant="subtitle2"
             sx={(theme) => ({
               fontFamily: theme.typography.h1.fontFamily,
-              fontWeight: 800,
+              fontWeight: theme.typography.h1.fontWeight,
               fontSize: fontPx(15),
               letterSpacing: '-0.01em',
               lineHeight: 1.25,
@@ -282,7 +282,7 @@ export function CatalogRowView({
               <Typography
                 sx={(theme) => ({
                   fontFamily: theme.typography.h1.fontFamily,
-                  fontWeight: 800,
+                  fontWeight: theme.typography.h1.fontWeight,
                   fontSize: fontPx(19),
                   letterSpacing: '-0.02em',
                 })}

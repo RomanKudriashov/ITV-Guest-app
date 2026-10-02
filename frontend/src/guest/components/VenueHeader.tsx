@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { IconBack } from '@/icons';
-import { fontPx, layout, surfaceRadius } from '../storefrontTokens';
+import { fontPx, layout, surfaceRadius, titlePlate } from '../storefrontTokens';
+import { useAppTheme } from '@/theme';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
 import { openingLabel } from '../nextOpening';
@@ -25,6 +26,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { glass, scrim, onMedia, mediaFallback } = useStorefront();
+  const { mode } = useAppTheme();
 
   return (
     <Box
@@ -87,6 +89,8 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
       <ButtonBase
         onClick={() => navigate('/home')}
         data-testid="guest-venue-back"
+        // Метка для плавающей группы: её логотип не должен ложиться сюда.
+        data-topbar-start=""
         aria-label={t('guest.venue.back')}
         sx={{
           position: 'absolute',
@@ -126,17 +130,38 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
         под полосу категорий — наполовину видимый и нечитаемый.
       */}
       <Box
+        data-testid="guest-venue-title-block"
         sx={{
           position: 'relative',
+          // Подложка живёт под буквами, но над кадром: свой контекст наложения.
+          isolation: 'isolate',
           pl: { xs: '18px', md: '34px' },
           pr: '18px',
+          // На ПК кадр широкий — подложка по ширине текста, а не во всю шапку.
+          alignSelf: { xs: 'stretch', md: 'flex-start' },
+          maxWidth: '100%',
+          /*
+            ПОДЛОЖКА ПОД НАЗВАНИЕМ (партия 29). Плотность — из контраста
+            (`titlePlate`): белое название держит 4,5:1 на любом кадре. Край
+            размыт, а сама подложка шире текста на величину размытия — внутри
+            текста плотность полная, а плашки на кадре не видно.
+          */
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: '-40px -40px -40px -40px',
+            zIndex: -1,
+            pointerEvents: 'none',
+            background: titlePlate(mode),
+            filter: 'blur(14px)',
+          },
         }}
       >
         <Typography
           component="h1"
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
-            fontWeight: 800,
+            fontWeight: th.typography.h1.fontWeight,
             letterSpacing: '-.03em',
             lineHeight: 1,
             color: onMedia.primary,

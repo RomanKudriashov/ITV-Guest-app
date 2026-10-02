@@ -90,24 +90,38 @@ export function GuestTopBar({
         })}
         data-testid="guest-topbar-brand"
       >
+        {/*
+          ЛОГОТИП ИЛИ ИМЯ — НЕ ОБА (партия 29). Логотип отеля и есть его имя:
+          рядом с ним то же имя прописью читалось дублем. Есть логотип — имя
+          уходит в `alt` (его читает экранный диктор и показывает браузер,
+          если картинка не загрузилась); нет — имя текстом, как раньше.
+        */}
         {logo ? (
-          <Box component="img" src={logo} alt="" sx={{ height: 22, width: 'auto' }} />
-        ) : null}
-        <Typography
-          sx={(th) => ({
-            fontFamily: th.typography.h1.fontFamily,
-            fontSize: fontPx(12),
-            fontWeight: 600,
-            letterSpacing: '.28em',
-            textTransform: 'uppercase',
-            // Строка стеклянная и лежит над страницей, а не над кадром: имя
-            // отеля обязано читаться в обеих темах, поэтому цвет текстовый, а
-            // не белый. Белым он был всегда — и на светлой пропадал.
-            color: th.palette.text.primary,
-          })}
-        >
-          {hotelName}
-        </Typography>
+          <Box
+            component="img"
+            src={logo}
+            alt={hotelName}
+            data-testid="guest-topbar-logo"
+            sx={{ height: 22, width: 'auto', maxWidth: 180, objectFit: 'contain' }}
+          />
+        ) : (
+          <Typography
+            data-testid="guest-topbar-name"
+            sx={(th) => ({
+              fontFamily: th.typography.h1.fontFamily,
+              fontSize: fontPx(12),
+              fontWeight: 600,
+              letterSpacing: '.28em',
+              textTransform: 'uppercase',
+              // Строка стеклянная и лежит над страницей, а не над кадром: имя
+              // отеля обязано читаться в обеих темах, поэтому цвет текстовый, а
+              // не белый. Белым он был всегда — и на светлой пропадал.
+              color: th.palette.text.primary,
+            })}
+          >
+            {hotelName}
+          </Typography>
+        )}
       </ButtonBase>
 
       <Box component="nav" sx={{ display: 'flex', gap: 0.5, ml: 0.75 }}>

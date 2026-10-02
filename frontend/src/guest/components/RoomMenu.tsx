@@ -8,6 +8,7 @@ import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { IconDoor } from '@/icons';
 import { useOptionalGuestSession } from '../session/GuestSessionProvider';
 import { fontPx, surfaceRadius } from '../storefrontTokens';
 
@@ -36,10 +37,13 @@ import { fontPx, surfaceRadius } from '../storefrontTokens';
 export function RoomMenu({
   room,
   variant = 'bar',
+  compact = false,
 }: {
   /** `null` — гость смотрит витрину без номера (режим просмотра). */
   room: string | null;
   variant?: 'bar' | 'floating';
+  /** Узкий экран: «Войти по номеру» — значком, текст — в `aria-label` (партия 29). */
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -73,12 +77,17 @@ export function RoomMenu({
       <ButtonBase
         onClick={leave}
         data-testid="guest-identify"
+        data-compact={compact ? 'true' : 'false'}
+        aria-label={compact ? t('guest.session.identify') : undefined}
+        title={compact ? t('guest.session.identify') : undefined}
         sx={(th) => ({
           display: 'inline-flex',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: 0.75,
           height: variant === 'bar' ? 34 : 36,
-          px: variant === 'bar' ? 1.6 : 1.25,
+          minWidth: compact ? 36 : undefined,
+          px: compact ? 0 : variant === 'bar' ? 1.6 : 1.25,
           borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
           fontSize: variant === 'bar' ? 12 : 12.5,
           fontWeight: 700,
@@ -88,7 +97,7 @@ export function RoomMenu({
           bgcolor: alpha(th.palette.primary.main, 0.08),
         })}
       >
-        {t('guest.session.identify')}
+        {compact ? <IconDoor size={18} /> : t('guest.session.identify')}
       </ButtonBase>
     );
   }

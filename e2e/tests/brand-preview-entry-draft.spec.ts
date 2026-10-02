@@ -15,10 +15,15 @@ import { brandSession } from './brandGuest'
  * (не сохранён). В рамке показа на экране входа — второй и ни одного первого.
  * Шрифт, а не цвет: основного цвета на экране входа нет — там белый текст
  * поверх фона.
+ *
+ * Заголовки — третьим шрифтом (партия 29): с тех пор как заголовок входа
+ * рисуется шрифтом заголовков бренда, а не Onest у всех, общий для текста и
+ * заголовков опубликованный шрифт законно остаётся в заголовке черновика.
  */
 
 const PUBLISHED = { family: "'Lora', Georgia, serif", name: 'Lora' }
 const DRAFT = { family: "'Playfair Display', Georgia, serif", name: 'Playfair Display' }
+const HEADING = { family: "'Manrope', system-ui, sans-serif", name: 'Manrope' }
 
 async function stageFrame(page: Page): Promise<Frame> {
   const handle = await page.getByTestId('brand-preview-stage-frame').elementHandle()
@@ -41,7 +46,7 @@ test('экран входа в показе — черновик, а не опу
   test.setTimeout(120_000)
   const brand = await brandSession(request)
   try {
-    await brand.apply({ typography: { fontFamily: PUBLISHED.family, headingFontFamily: PUBLISHED.family } })
+    await brand.apply({ typography: { fontFamily: PUBLISHED.family, headingFontFamily: HEADING.family } })
     await page.setViewportSize({ width: 1440, height: 1000 })
     await signInToCms(page, ADMIN)
     await page.goto('/cms/brand')

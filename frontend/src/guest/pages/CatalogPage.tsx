@@ -438,7 +438,7 @@ function CatalogHero({
           component="h1"
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
-            fontWeight: 800,
+            fontWeight: th.typography.h1.fontWeight,
             letterSpacing: '-0.025em',
             fontSize: { xs: fontPx(30, 'heading'), md: fontPx(40, 'heading') },
             color: onMedia.primary,
@@ -549,7 +549,7 @@ function CatalogRow({
       title={item.title}
       description={item.description}
       imageSrc={item.images?.[0]}
-      fallbackIcon={fallbackIconFor(item.type ?? fallbackType)}
+      fallbackIcon={fallbackIconFor(item.type ?? fallbackType, item.service_type)}
       markers={item.markers}
       badges={item.badges}
       prepMinutes={item.prep_minutes}

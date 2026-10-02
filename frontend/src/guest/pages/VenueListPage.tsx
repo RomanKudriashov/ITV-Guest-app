@@ -17,6 +17,7 @@ import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
 import { fontPx, surfaceRadius } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
+import { STICKY, useStickyLayer } from '../layout/stickyStack';
 
 /**
  * Level 2 of the showcase: the venues of one group (restaurants / spa / services).
@@ -31,15 +32,19 @@ export function VenueListPage() {
   const { data, isLoading, error, refetch } = useGuestVenues(group);
 
   const venues = data?.venues ?? [];
+  // Низ плавающей группы телефона — измеренный (партия 29). Заголовок стоял в
+  // 24 px от верха, под группой: короткое «Рестораны» до неё не доставало, а
+  // «Рестораны и бары» ушло под чип номера. На ПК группы нет — слой пуст.
+  const shell = useStickyLayer<HTMLDivElement>(STICKY.plate, { enabled: false });
 
   return (
     <Box data-testid="guest-venue-list">
-      <Container maxWidth="lg" sx={{ pt: { xs: 3, md: 5 }, pb: { xs: 5, md: 8 } }}>
+      <Container maxWidth="lg" sx={{ pt: { xs: `${Math.max(shell.top, 24)}px`, md: 5 }, pb: { xs: 5, md: 8 } }}>
         <Typography
           component="h1"
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
-            fontWeight: 800,
+            fontWeight: th.typography.h1.fontWeight,
             letterSpacing: '-0.02em',
             fontSize: { xs: fontPx(24, 'heading'), md: fontPx(30, 'heading') },
             mb: { xs: 2, md: 3 },
@@ -122,7 +127,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
           </Box>
         ) : null}
         <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.5 }}>
-          <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: 800, fontSize: fontPx(20, 'heading'), lineHeight: 1.1, textShadow: tile.titleShadow })}>
+          <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: th.typography.h1.fontWeight, fontSize: fontPx(20, 'heading'), lineHeight: 1.1, textShadow: tile.titleShadow })}>
             {venue.title}
           </Typography>
           {venue.subtitle ?? statusText ? (

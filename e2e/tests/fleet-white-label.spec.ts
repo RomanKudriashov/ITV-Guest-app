@@ -63,8 +63,10 @@ test.describe('Флот: три отеля, три витрины', () => {
       await asHotel(page, hotel.subdomain)
       await enterBrowsing(page)
 
-      // Имя отеля — на своём месте, а не соседское.
-      await expect(page.getByTestId('guest-topbar-brand')).toContainText(hotel.name)
+      // Имя отеля — на своём месте, а не соседское. С логотипом оно в `alt`
+      // знака, без логотипа — текстом (партия 29: не оба сразу).
+      const brand = page.getByTestId('guest-topbar-brand')
+      await expect(brand.getByText(hotel.name).or(brand.getByAltText(hotel.name))).toBeVisible()
 
       // Своё заведение есть.
       await expect(page.getByTestId(hotel.own)).toBeVisible({ timeout: 15_000 })

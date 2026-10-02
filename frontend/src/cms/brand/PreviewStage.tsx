@@ -144,6 +144,22 @@ export function PreviewStage({
     return () => frame.removeEventListener('load', ready);
   }, []);
 
+  /*
+    ШРИФТЫ — И В ДОКУМЕНТЕ РАМКИ (партия 29). Набор шрифтов витрины
+    подключается в `index.html` (`/fonts/fonts.css`), то есть только в
+    документ панели. У рамки свой документ, и в нём не было ни одного
+    `@font-face`: показ называл шрифт бренда, а рисовал запасным — и жирный
+    заголовок любым весом. Нашёл сторож «нет синтетического жирного».
+  */
+  useEffect(() => {
+    if (!doc || doc.querySelector('link[data-preview-fonts]')) return;
+    const link = doc.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = new URL('/fonts/fonts.css', window.location.origin).href;
+    link.dataset.previewFonts = '';
+    doc.head.appendChild(link);
+  }, [doc]);
+
   useEffect(() => {
     if (!doc) return;
     doc.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');

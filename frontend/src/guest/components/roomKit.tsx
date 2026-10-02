@@ -759,7 +759,7 @@ export function RoomDial({
               background: t.accent,
               color: t.accentContrast,
               fontFamily: th.typography.h1.fontFamily,
-              fontWeight: 800,
+              fontWeight: th.typography.h1.fontWeight,
               fontSize: fontPx(15),
               whiteSpace: 'nowrap',
             })}
@@ -785,7 +785,7 @@ export function RoomDial({
             sx={(th) => ({
               fontFamily: th.typography.h1.fontFamily,
               fontSize: fontPx(50, 'heading'),
-              fontWeight: 800,
+              fontWeight: th.typography.h1.fontWeight,
               letterSpacing: '-.03em',
               lineHeight: 1,
               my: 0.4,

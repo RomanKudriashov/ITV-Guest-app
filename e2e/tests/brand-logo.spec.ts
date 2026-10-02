@@ -1,8 +1,7 @@
-import { type APIRequestContext, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, apiHeaders, apiToken } from './helpers'
-import { brandSession, guestPage } from './brandGuest'
+import { brandSession, guestPage, uploadBrandMedia } from './brandGuest'
 import { pngRGBA } from './pngFixture'
 
 /**
@@ -24,31 +23,6 @@ const CLEAR_WHITE: [number, number, number, number] = [255, 255, 255, 0]
 
 /** Круглый знак на прозрачном поле; прозрачное — белое, чтобы потеря альфы была видна. */
 const LOGO = pngRGBA(240, 240, (x, y) => ((x - 120) ** 2 + (y - 120) ** 2 < 90 ** 2 ? RED : CLEAR_WHITE))
-
-async function uploadBrandMedia(
-  request: APIRequestContext,
-  file: { name: string; mimeType: string; buffer: Buffer },
-): Promise<string> {
-  const headers = apiHeaders(await apiToken(request, ADMIN))
-  const response = await request.post(`${API}/api/v1/cms/media`, {
-    headers,
-    multipart: { file, kind: 'brand' },
-  })
-  expect(response.status(), await response.text()).toBe(201)
-  const { id } = await response.json()
-  let url = ''
-  await expect
-    .poll(
-      async () => {
-        const asset = await (await request.get(`${API}/api/v1/cms/media/${id}`, { headers })).json()
-        url = asset.url
-        return asset.status
-      },
-      { timeout: 30_000, message: 'логотип не нарезался' },
-    )
-    .toBe('ready')
-  return url
-}
 
 async function entry(page: Page, theme: 'light' | 'dark'): Promise<void> {
   await page.addInitScript((mode) => localStorage.setItem('itv.theme-mode', mode), theme)

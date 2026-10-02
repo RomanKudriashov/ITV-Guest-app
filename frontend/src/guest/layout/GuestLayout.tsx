@@ -34,6 +34,7 @@ import { STICKY, useStickyLayer } from './stickyStack';
 import { layout as storefrontLayout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { GuestBackdrop } from './GuestBackdrop';
+import { LOGO_HEIGHT, LOGO_MAX, useTopBarFit } from './phoneLogoFit';
 import { fontPx } from '@/theme/fontPx';
 import {
   BOTTOM_NAV_HEIGHT,
@@ -129,6 +130,8 @@ export function GuestLayout() {
 
   const hotelName = hotel?.name ?? session?.hotel.name ?? '';
   const phoneLogo = pickLogo(tokens, mode) ?? null;
+  // Плавающая группа не ложится на кнопки экрана: уступает логотип, потом текст чипа.
+  const topBarFit = useTopBarFit(phoneLogo, !isDesktop, location.pathname);
 
   useEffect(() => {
     if (hotelName) document.title = hotelName;
@@ -215,6 +218,7 @@ export function GuestLayout() {
       <GuestBackdrop />
       <Stack
         ref={floating.ref}
+        data-testid="guest-floating-group"
         direction="row"
         spacing={0.5}
         alignItems="center"
@@ -246,12 +250,18 @@ export function GuestLayout() {
             src={phoneLogo}
             alt={hotelName}
             data-testid="guest-phone-logo"
-            sx={{ height: 22, maxWidth: 88, objectFit: 'contain', px: 0.75, display: 'block' }}
+            sx={{
+              height: LOGO_HEIGHT,
+              maxWidth: LOGO_MAX,
+              objectFit: 'contain',
+              px: 0.75,
+              display: topBarFit.logo ? 'block' : 'none',
+            }}
           />
         ) : null}
         {/* Без номера чип не исчезает, а становится входом по номеру:
             иначе из режима просмотра некуда вернуться. */}
-        <RoomMenu room={room} variant="floating" />
+        <RoomMenu room={room} variant="floating" compact={topBarFit.compact} />
         {/*
           КОРЗИНА — ПОСТОЯННЫЙ ВХОД, и на телефоне он здесь.
           Нижняя полоса «в корзине N позиций» висела мебелью на каждом экране

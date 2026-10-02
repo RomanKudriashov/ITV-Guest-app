@@ -265,18 +265,22 @@ export function EntryPage() {
         <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: 'min(470px, 60%)' } }}>
           <Typography
             component="h1"
-            sx={{
-              // Onest display per the acceptance mock — deliberately the same on
-              // every brand, so the entry canvas reads consistently regardless of
-              // a brand's serif heading font.
-              fontFamily: ONEST,
+            sx={(th) => ({
+              /*
+                ШРИФТ И ВЕС ЗАГОЛОВКА — БРЕНДА (партия 29). Решение приёмки
+                «Onest 800 у всех» изменено: вход — первый экран отеля, и он
+                обязан говорить его голосом, а не общим шрифтом платформы. Вес —
+                тот, что у заголовков бренда: у шрифтов бренда нет начертания
+                800, и вписанное число давало синтетический жирный.
+              */
+              fontFamily: th.typography.h1.fontFamily,
               color: 'common.white',
-              fontWeight: 800,
+              fontWeight: th.typography.h1.fontWeight,
               letterSpacing: '-0.035em',
               fontSize: { xs: fontPx(40, 'heading'), md: fontPx(52, 'heading') },
               lineHeight: 0.98,
               textShadow: tile.titleShadow,
-            }}
+            })}
           >
             {t(greetingKey())}
           </Typography>

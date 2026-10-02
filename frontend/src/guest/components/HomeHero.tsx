@@ -91,7 +91,7 @@ export function HomeHeroView({
           component="h1"
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
-            fontWeight: 800,
+            fontWeight: th.typography.h1.fontWeight,
             letterSpacing: '-.03em',
             lineHeight: 1.02,
             color: onMedia.primary,

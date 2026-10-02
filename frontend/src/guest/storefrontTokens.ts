@@ -1143,3 +1143,35 @@ export function mixColors(from: string, to: string, weight: number): string {
   const [r, g, b] = mix(rgbOf(from), rgbOf(to), weight).map(Math.round);
   return `rgb(${r}, ${g}, ${b})`;
 }
+
+/**
+ * ПОДЛОЖКА ПОД НАЗВАНИЕМ ЗАВЕДЕНИЯ НА КАДРЕ (партия 29).
+ *
+ * Название стоит на фото заведения, а градиент шапки был один на все кадры:
+ * на тёмной «Террасе» хватало, на светлом зале «Сиалии» 13 шапок из 25
+ * давали ниже 3:1. Пикселей чужого фото витрина не читает, значит, кадр под
+ * названием может быть любым — от чёрного до белого.
+ *
+ * Плотность — тем же способом, что вуаль фона в партии 25 (`pageVeilAlpha`):
+ * минимальная, при которой название держит 4,5:1 к ЛЮБОМУ пикселю кадра,
+ * плюс запас на округление браузера и сглаживание краёв подложки. Цвет —
+ * база затемнения кадра из словаря: название на кадре белое в обеих темах.
+ */
+const TITLE_PLATE_MARGIN = 0.06;
+
+/** Любой пиксель кадра: концы `PHOTO_EXTREMES` и 15 ступеней между ними. */
+const ANY_PIXEL = Array.from({ length: 17 }, (_, i) => {
+  const [from, to] = PHOTO_EXTREMES.map(rgbOf);
+  const [r, g, b] = mix(from, to, i / 16).map(Math.round);
+  return `rgb(${r},${g},${b})`;
+});
+
+export function titlePlate(mode: ThemeMode): string {
+  const tokens = storefrontTokens(mode);
+  const alpha = Math.min(
+    1,
+    pageVeilAlpha(tokens.onMedia.dimBase, [tokens.onMedia.primary], ANY_PIXEL) + TITLE_PLATE_MARGIN,
+  );
+  const [r, g, b] = rgbOf(tokens.onMedia.dimBase).map(Math.round);
+  return `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+}

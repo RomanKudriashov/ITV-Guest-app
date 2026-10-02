@@ -89,3 +89,39 @@ export function firstFamily(fontFamily: string): string {
 }
 
 export { HOTEL }
+
+/**
+ * Загрузить картинку в медиатеку отеля и дождаться нарезки. `kind` — вид
+ * медиа (`brand` — логотип, `category` — обложка заведения). Возвращает
+ * адрес и id: логотип ставится адресом, обложка — id.
+ */
+export async function uploadMedia(
+  request: APIRequestContext,
+  file: { name: string; mimeType: string; buffer: Buffer },
+  kind: 'brand' | 'category' = 'brand',
+): Promise<{ id: string; url: string }> {
+  const headers = apiHeaders(await apiToken(request, ADMIN))
+  const response = await request.post(`${API}/api/v1/cms/media`, { headers, multipart: { file, kind } })
+  expect(response.status(), await response.text()).toBe(201)
+  const { id } = await response.json()
+  let url = ''
+  await expect
+    .poll(
+      async () => {
+        const asset = await (await request.get(`${API}/api/v1/cms/media/${id}`, { headers })).json()
+        url = asset.url
+        return asset.status
+      },
+      { timeout: 30_000, message: 'картинка не нарезалась' },
+    )
+    .toBe('ready')
+  return { id, url }
+}
+
+/** Загрузить логотип бренда: адрес, который ставится в `logoLight` / `logoDark`. */
+export async function uploadBrandMedia(
+  request: APIRequestContext,
+  file: { name: string; mimeType: string; buffer: Buffer },
+): Promise<string> {
+  return (await uploadMedia(request, file, 'brand')).url
+}
