@@ -853,7 +853,7 @@ image-crop, hotel-groups, platform-console), меняет то, что сосе�
 
 ---
 
-## 31. Telegram-адаптер не выполнялся ни разу (приоритет 2) — ИСПРАВЛЕНО (партия 28), кроме имени старого теста
+## 31. Telegram-адаптер не выполнялся ни разу (приоритет 2) — ИСПРАВЛЕНО (партия 28)
 
 **Где:** `backend/apps/notifications/channels/adapters.py`, `TelegramAdapter.send`.
 
@@ -911,10 +911,10 @@ Telegram», чтобы имя не обещало того, чего он не �
   * 403 «bot was blocked» — отметка «бот заблокирован» на канале и в карточке
     сотрудника, канал больше не адресуется до первого сообщения человека боту.
 
-**Осталось:** тест `test_failed_channel_does_not_affect_the_order` по-прежнему
-подменяет `LogAdapter.send`, и его имя обещает больше, чем он проверяет.
-Telegram-путь теперь покрыт другими тестами; переименование — мелочь, в
-бэклоге.
+Старый тест `test_failed_channel_does_not_affect_the_order` подменял
+`LogAdapter.send`, а имя и описание обещали «упавший Telegram». Переименован по
+тому, что проверяет: `test_a_channel_refusing_delivery_leaves_the_order_on_the_board`
+— отказ канала кухни не убирает заявку с доски.
 
 ---
 

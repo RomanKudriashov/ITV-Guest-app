@@ -389,10 +389,17 @@ def test_permanent_channel_error_fails_immediately(
         assert "токен" in result.error
 
 
-def test_failed_channel_does_not_affect_the_order(
+def test_a_channel_refusing_delivery_leaves_the_order_on_the_board(
     crystal, order, tracker, notifications_on, no_dispatch, monkeypatch
 ):
-    """Упавший Telegram не должен мешать кухне работать с заявкой."""
+    """
+    Канал, отказавший в отправке, не мешает кухне работать с заявкой.
+
+    Отказывает здесь канал кухни (`LogAdapter`, неповторяемой ошибкой), а не
+    Telegram: прежнее имя «упавший Telegram» обещало больше, чем проверялось
+    (п.31 бэклога). Отказы самого Telegram — блокировка, 429, сеть —
+    проверяются против эмулятора Bot API в `tests/notifications/test_telegram_bot.py`.
+    """
     from apps.notifications.channels import adapters
 
     monkeypatch.setattr(
