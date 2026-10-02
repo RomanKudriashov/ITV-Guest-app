@@ -375,7 +375,8 @@
       "venueCount_many": "{{count}} заведений",
       "venueCount_other": "{{count}} заведения",
       "group": {
-        "restaurants": "Рестораны",
+        "restaurants": "Рестораны и бары",
+        "in_room": "В номер",
         "spa": "Спа и велнес",
         "services": "Услуги"
       },

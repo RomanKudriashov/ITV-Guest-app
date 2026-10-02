@@ -402,3 +402,120 @@ def test_venue_catalog_still_wears_the_venue_photo(crystal, monkeypatch):
         hero = _catalog_hero_image("bar", "product")
 
     assert hero == f"asset:{service.image_id}"
+
+
+# --- Группы по типу сервиса (партия 29) --------------------------------------
+
+
+def _add_service(hotel, code: str, service_type: str):
+    """Заведение заданного типа — сервис, его исполнитель и активная категория."""
+    point = ExecutionPoint.objects.create(
+        hotel=hotel, code=code, kind=ExecutionPoint.Kind.KITCHEN, title={"ru": code, "en": code}
+    )
+    service = Service.objects.create(
+        hotel=hotel, execution_point=point, code=code, type=service_type,
+        public_name={"ru": code, "en": code}, is_guest_facing=True,
+    )
+    category = Category.objects.create(
+        hotel=hotel, code=f"{code}-menu", type="product", title={"ru": code, "en": code},
+        is_active=True, service=service,
+    )
+    Route.objects.create(hotel=hotel, category=category, execution_point=point)
+    return service
+
+
+def _always_group(hotel):
+    hotel.showcase_group_threshold = 0
+    hotel.save(update_fields=["showcase_group_threshold"])
+
+
+def test_in_room_services_are_their_own_group_not_restaurants(client, crystal, guest_token):
+    """Рум-сервис и мини-бар — «В номер», ресторан и бар — «Рестораны и бары»."""
+    with tenant_context(crystal):
+        _add_service(crystal, "rs", Service.Type.ROOM_SERVICE)
+        _add_service(crystal, "mb", Service.Type.MINIBAR)
+        _always_group(crystal)
+    tiles = {t["key"]: t for t in _home(client, crystal, guest_token)["tiles"] if t["type"] == "service-category"}
+    assert tiles["in_room"]["venue_count"] == 2
+    assert tiles["in_room"]["route"] == "/category/in_room"
+    assert tiles["in_room"]["title"] == "В номер"
+    assert tiles["restaurants"]["title"] == "Рестораны и бары"
+
+    def listed(group):
+        return {
+            v["code"]
+            for v in client.get(
+                f"/api/v1/guest/venues?group={group}",
+                HTTP_HOST=host_for(crystal),
+                HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+            ).json()["venues"]
+        }
+
+    assert listed("in_room") == {"rs", "mb"}
+    assert not {"rs", "mb"} & listed("restaurants"), "мини-бар больше не среди ресторанов"
+
+
+def test_group_titles_are_in_four_languages(crystal):
+    from apps.catalog.services.showcase import build_showcase
+
+    with tenant_context(crystal):
+        _add_service(crystal, "rs", Service.Type.ROOM_SERVICE)
+        _always_group(crystal)
+        titles = {
+            language: {t["key"]: t["title"] for t in build_showcase(crystal, language=language)}
+            for language in ("ru", "en", "ar", "zh")
+        }
+    assert {lang: t["restaurants"] for lang, t in titles.items()} == {
+        "ru": "Рестораны и бары",
+        "en": "Restaurants & bars",
+        "ar": "المطاعم والبارات",
+        "zh": "餐厅与酒吧",
+    }
+    assert {lang: t["in_room"] for lang, t in titles.items()} == {
+        "ru": "В номер",
+        "en": "In-room",
+        "ar": "إلى الغرفة",
+        "zh": "送至客房",
+    }
+
+
+def test_a_group_of_one_service_goes_straight_into_it(client, crystal, guest_token):
+    """Свёрнутая группа из одного заведения — плитка ведёт сразу в него, без списка."""
+    with tenant_context(crystal):
+        _add_service(crystal, "rs", Service.Type.ROOM_SERVICE)
+        _always_group(crystal)
+    tile = next(t for t in _home(client, crystal, guest_token)["tiles"] if t["key"] == "in_room")
+    assert (tile["type"], tile["venue_count"], tile["route"]) == ("service-category", 1, "/venue/rs")
+    # Группа из нескольких — по-прежнему список.
+    restaurants = next(t for t in _home(client, crystal, guest_token)["tiles"] if t["key"] == "restaurants")
+    assert restaurants["route"] == "/category/restaurants"
+
+
+def test_catalog_items_carry_their_venue_type(client, crystal, guest_token):
+    """
+    Партия 29: позиция знает тип заведения своего раздела — по нему витрина
+    рисует заглушку без фото (у товара хозслужбы — не «вилка и нож»).
+    """
+    with tenant_context(crystal):
+        service = _add_service(crystal, "linen", Service.Type.HOUSEKEEPING)
+        from apps.catalog.models import Item
+
+        category = Category.objects.get(code="linen-menu")
+        Item.objects.create(
+            hotel=crystal, category=category, code="pillow", type="product",
+            title={"ru": "Подушка", "en": "Pillow"}, price=0, is_active=True,
+        )
+        assert service.type == Service.Type.HOUSEKEEPING
+    catalog = client.get(
+        "/api/v1/guest/catalog?type=product&point=linen",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    items = {i["code"]: i for c in catalog["categories"] for i in c["items"]}
+    assert items["pillow"]["service_type"] == "housekeeping"
+    kitchen = client.get(
+        "/api/v1/guest/catalog?type=product&point=kitchen",
+        HTTP_HOST=host_for(crystal),
+        HTTP_AUTHORIZATION=f"Bearer {guest_token}",
+    ).json()
+    assert {i["service_type"] for c in kitchen["categories"] for i in c["items"]} == {"restaurant"}

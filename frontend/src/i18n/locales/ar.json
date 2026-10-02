@@ -379,7 +379,8 @@
       "venueCount_many": "{{count}} مكانًا",
       "venueCount_other": "{{count}} مكان",
       "group": {
-        "restaurants": "المطاعم",
+        "restaurants": "المطاعم والبارات",
+        "in_room": "إلى الغرفة",
         "spa": "سبا وعافية",
         "services": "الخدمات"
       },

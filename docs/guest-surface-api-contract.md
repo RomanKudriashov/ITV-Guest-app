@@ -37,7 +37,7 @@
       "order": 0,                  // порядок показа
       "enabled": true              // false → плитка-заглушка (room-control)
     },
-    {"key": "restaurants", "type": "service-category", "title": "Рестораны",
+    {"key": "restaurants", "type": "service-category", "title": "Рестораны и бары",
      "venue_count": 5, "cover_previews": ["…","…"], "route": "/category/restaurants",
      "size": "l", "order": 0, "enabled": true},
     {"key": "info", "type": "info", "title": "Об отеле", "route": "/info",
@@ -51,9 +51,12 @@
 Правила:
 - **Заведение = точка исполнения** (ExecutionPoint, в CMS «отдел»). Плитка venue
   — только у точки с ≥1 активной замаршрутизированной категорией.
-- **Группировка по порогу** `hotel.showcase_group_threshold` (умолч. 3): точки
-  одного рода (рестораны = kitchen+bar, спа, услуги) ≤ порога — отдельные плитки;
-  больше — одна `service-category` с `cover_previews`.
+- **Группировка по типу сервиса и порогу** `hotel.showcase_group_threshold`
+  (умолч. 3). Группы (партия 29): `restaurants` «Рестораны и бары» — ресторан и
+  бар; `in_room` «В номер» — рум-сервис и мини-бар; `spa` — спа и бассейн;
+  `services` — остальное. Группа ≤ порога — отдельные плитки; больше — одна
+  `service-category` с `cover_previews`. Свёрнутая группа из ОДНОГО сервиса
+  (порог 0) ведёт сразу в него: `route` — `/venue/<код>`, а не список.
 - **Обложка** — каскад: фото точки → фото первой её категории → `null` (фронт
   завершает фоном бренда/градиентом).
 - **status** считается сервером из расписания точки в TZ отеля; строки пилюли

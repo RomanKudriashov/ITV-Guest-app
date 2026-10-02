@@ -369,7 +369,8 @@
       "comingSoon": "即将推出",
       "venueCount_other": "{{count}} 家",
       "group": {
-        "restaurants": "餐厅",
+        "restaurants": "餐厅与酒吧",
+        "in_room": "送至客房",
         "spa": "水疗与养生",
         "services": "服务"
       },

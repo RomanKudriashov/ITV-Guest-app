@@ -371,7 +371,8 @@
       "venueCount_one": "{{count}} venue",
       "venueCount_other": "{{count}} venues",
       "group": {
-        "restaurants": "Restaurants",
+        "restaurants": "Restaurants & bars",
+        "in_room": "In-room",
         "spa": "Spa & wellness",
         "services": "Services"
       },

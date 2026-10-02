@@ -26,16 +26,21 @@ from apps.media.services import image_url
 
 from apps.catalog.models import Category, OfferingType
 
-# Тип сервиса → группа главной. Рестораны — еда и напитки вместе (ресторан, бар,
-# рум-сервис, мини-бар); спа — спа и бассейн; остальное — услуги. Порог
-# группировки считается ПО ГРУППЕ. Синхронно с миграцией kind→type: kitchen→
-# restaurant→restaurants, bar→bar→restaurants, spa→spa, reception→concierge→
-# services, housekeeping→services — так группировка не меняется для старых точек.
+# Тип сервиса → группа главной (партия 29: группировка по типу сервиса).
+# «Рестораны и бары» — ресторан и бар: куда пойти поесть и выпить. «В номер» —
+# рум-сервис и мини-бар: то, что приносят в номер. До партии 29 все четыре
+# жили одной группой «Рестораны», и мини-бар стоял в одном списке с
+# ресторанами, хотя гость ищет его в другом месте. Спа — спа и бассейн;
+# остальное — услуги. Порог группировки считается ПО ГРУППЕ.
+#
+# Ключ `restaurants` сохранён за ресторанами и барами: на нём адрес
+# `/category/restaurants`, раскладка отеля и показ бренда, и менять его ради
+# подписи значило бы сломать закладки.
 SERVICE_TYPE_GROUP = {
     Service.Type.RESTAURANT: "restaurants",
     Service.Type.BAR: "restaurants",
-    Service.Type.ROOM_SERVICE: "restaurants",
-    Service.Type.MINIBAR: "restaurants",
+    Service.Type.ROOM_SERVICE: "in_room",
+    Service.Type.MINIBAR: "in_room",
     Service.Type.SPA: "spa",
     Service.Type.POOL: "spa",
     Service.Type.TRANSFER: "services",
@@ -47,9 +52,15 @@ SERVICE_TYPE_GROUP = {
 }
 
 # Порядок групп на главной и их локализованный титул/подпись-плюрал.
-GROUP_ORDER = ["restaurants", "spa", "services"]
+GROUP_ORDER = ["restaurants", "in_room", "spa", "services"]
 GROUP_TITLES = {
-    "restaurants": {"ru": "Рестораны", "en": "Restaurants", "ar": "المطاعم", "zh": "餐厅"},
+    "restaurants": {
+        "ru": "Рестораны и бары",
+        "en": "Restaurants & bars",
+        "ar": "المطاعم والبارات",
+        "zh": "餐厅与酒吧",
+    },
+    "in_room": {"ru": "В номер", "en": "In-room", "ar": "إلى الغرفة", "zh": "送至客房"},
     "spa": {"ru": "Спа и велнес", "en": "Spa & wellness", "ar": "سبا وعافية", "zh": "水疗与养生"},
     "services": {"ru": "Услуги", "en": "Services", "ar": "الخدمات", "zh": "服务"},
 }
@@ -193,7 +204,11 @@ def build_showcase(
                 "status": None,
                 "image": previews[0] if previews else None,
                 "cover_previews": previews,
-                "route": f"/category/{group_key}",
+                # Один сервис в группе — плитка ведёт сразу в него: список из
+                # одного заведения — лишний шаг (партия 29).
+                "route": (
+                    f"/venue/{services[0].code}" if len(services) == 1 else f"/category/{group_key}"
+                ),
                 "enabled": True,
             }
             applied = _apply_overlay(base, overlays.get(group_key), order, "l", include_hidden)
