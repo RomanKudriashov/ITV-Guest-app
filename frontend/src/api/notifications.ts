@@ -16,6 +16,23 @@ import type {
   NotificationStaffUser,
 } from './notificationTypes';
 
+/* ── Telegram ──────────────────────────────────────────────────────────── */
+
+export interface TelegramSettings {
+  /** The hotel's switch: off — no bindings, no personal Telegram, no buttons. */
+  enabled: boolean;
+  /** The platform bot: online and its name (asked from Telegram, not configured). */
+  bot: { connected: boolean; username: string };
+}
+
+export function fetchTelegramSettings(): Promise<TelegramSettings> {
+  return api.get<TelegramSettings>('/cms/notifications/telegram');
+}
+
+export function saveTelegramSettings(enabled: boolean): Promise<TelegramSettings> {
+  return api.put<TelegramSettings>('/cms/notifications/telegram', { enabled });
+}
+
 /* ── Channels ──────────────────────────────────────────────────────────── */
 
 export function fetchNotificationChannels(): Promise<NotificationChannel[]> {

@@ -18,6 +18,9 @@ class RenderedMessage:
 
     subject: str
     body: str
+    # Кнопки под сообщением (партия 28): «Взять в работу», «Открыть в трекере»,
+    # «Разобрать». Канал, который кнопок не умеет (почта, лог), их не рисует.
+    buttons: tuple = ()
 
 
 class ChannelError(Exception):
@@ -29,10 +32,22 @@ class ChannelError(Exception):
     журнале появится честное «failed».
     """
 
-    def __init__(self, detail: str, *, retryable: bool = True):
+    def __init__(
+        self,
+        detail: str,
+        *,
+        retryable: bool = True,
+        retry_after: int | None = None,
+        blocked: bool = False,
+    ):
         super().__init__(detail)
         self.detail = detail
         self.retryable = retryable
+        # Канал сам сказал, сколько ждать (429 Retry-After): повтор — не раньше.
+        self.retry_after = retry_after
+        # Получатель заблокировал бота: повторять бессмысленно, а карточке
+        # сотрудника есть что показать.
+        self.blocked = blocked
 
 
 class ChannelAdapter(Protocol):

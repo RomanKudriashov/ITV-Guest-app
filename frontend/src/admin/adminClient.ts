@@ -344,6 +344,10 @@ export interface OverviewHealth {
   seconds?: number | null;
   /** Scheduler signals only: the same numbers split by kind of job. */
   kinds?: SchedulerKindCounts[];
+  /** Bot signals only: bot name, token tail (never the token), last error. */
+  name?: string;
+  tail?: string;
+  error?: string;
 }
 
 export interface SchedulerKindCounts {

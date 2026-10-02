@@ -55,6 +55,7 @@ import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
+import { StaffMessengers } from './StaffMessengers';
 
 interface AssignmentDraft {
   key: string;
@@ -231,22 +232,7 @@ export function StaffPage() {
                             {member.phone}
                           </Typography>
                         ) : null}
-                        {member.messengers ? (
-                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
-                            {(['telegram', 'max'] as const).map((messenger) =>
-                              member.messengers?.[messenger]?.linked ? (
-                                <Chip
-                                  key={messenger}
-                                  size="small"
-                                  variant="outlined"
-                                  color="success"
-                                  label={t(`profile.contacts.messengers.${messenger}`)}
-                                  data-testid={`staff-messenger-${member.email}-${messenger}`}
-                                />
-                              ) : null,
-                            )}
-                          </Stack>
-                        ) : null}
+                        <StaffMessengers member={member} />
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>

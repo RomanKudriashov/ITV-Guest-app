@@ -47,6 +47,23 @@ class NotificationChannel(TenantModel):
     # {lang: {"subject": "...", "body": "..."}}
     templates = models.JSONField(default=dict, blank=True)
 
+    # ЛИЧНЫЙ TELEGRAM ЧЕРЕЗ БОТА ПЛАТФОРМЫ (партия 28). Такой канал заводит
+    # привязка, а не администратор: токена в нём нет (он один на платформу и
+    # живёт в окружении), адрес — `telegram_chat_id` сотрудника, читается в
+    # момент отправки. Отвязка канал выключает. В списке каналов отеля его нет:
+    # им управляет человек из профиля, а не форма канала.
+    via_platform_bot = models.BooleanField(default=False)
+
+    # Чем кончилась последняя отправка — для карточки сотрудника: «доставлено
+    # в 14:32» или «последняя ошибка: …». Журнал хранит всё, здесь — итог.
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=500, blank=True)
+    last_error_at = models.DateTimeField(null=True, blank=True)
+    # Человек заблокировал бота. Пока отметка стоит, канал не адресуется —
+    # иначе каждое событие давало бы отказ и письмо «не доставлено»; снимает её
+    # первое же сообщение человека боту.
+    blocked_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         db_table = "notifications_channel"
         ordering = ["title"]

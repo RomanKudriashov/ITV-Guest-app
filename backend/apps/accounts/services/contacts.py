@@ -10,9 +10,15 @@
 введённый ID отправлял бы сообщения постороннему, и заметить это некому.
 Привязка = одноразовый код (`ContactBindingCode`), который человек отдаёт боту.
 
-БОТОВ ПОКА НЕТ — учётки ждут заказчика. Пока бот не настроен
-(`settings.CONTACT_BOTS`), выдача кода отвечает `409 binding_unavailable`, и
-экран говорит «пока недоступно», а не рисует рабочую кнопку.
+БОТ — ОДИН НА ПЛАТФОРМУ (партия 28), служба `bot`. Его имя берётся из пульса
+службы (`getMe`), а не из настроек. Пока бот не на связи — нет токена, токен
+не принят, служба стоит — выдача кода отвечает `409 binding_unavailable`, и
+экран говорит «бот не подключён», а не рисует рабочую кнопку. Отель, который
+выключил Telegram, отвечает `409 telegram_disabled`. Max — только интерфейс:
+бота у него нет, и подключение недоступно всегда.
+
+ПРИВЯЗКА ЗАВОДИТ ЛИЧНЫЙ КАНАЛ УВЕДОМЛЕНИЙ, отвязка его выключает
+(`apps/notifications/services/personal.py`).
 """
 
 from __future__ import annotations
@@ -90,19 +96,42 @@ def can_see_phone(viewer, subject: User) -> bool:
 
 
 def bot_for(messenger: str) -> str:
-    return (getattr(settings, "CONTACT_BOTS", {}) or {}).get(messenger, "") or ""
+    """Имя бота, если он на связи. Max — только интерфейс, бота нет."""
+    if messenger != "telegram":
+        return ""
+    from apps.notifications.services import personal
+
+    return personal.bot_username(messenger)
+
+
+def unavailable_reason(user: User, messenger: str) -> str:
+    """Почему подключить нельзя: `no_bot` / `hotel_off`, пусто — можно."""
+    if not bot_for(messenger):
+        return "no_bot"
+    from apps.notifications.services import personal
+
+    if user.hotel_id and not personal.hotel_allows(user.hotel_id):
+        return "hotel_off"
+    return ""
 
 
 def messenger_state(user: User, messenger: str) -> dict:
     id_field, confirmed_field = _FIELDS[messenger]
     confirmed_at = getattr(user, confirmed_field)
-    return {
+    reason = unavailable_reason(user, messenger)
+    state = {
         "linked": bool(getattr(user, id_field)),
         "confirmed_at": confirmed_at.isoformat() if confirmed_at else None,
         "username": user.telegram_username if messenger == "telegram" else "",
         # Можно ли подключить прямо сейчас. Нет бота — нет и подключения.
-        "binding_available": bool(bot_for(messenger)),
+        "binding_available": not reason,
+        "unavailable_reason": reason,
     }
+    if messenger == "telegram":
+        from apps.notifications.services import personal
+
+        state["blocked"] = personal.delivery_status(user)["blocked"] if state["linked"] else False
+    return state
 
 
 def contacts_of(user: User) -> dict:
@@ -113,15 +142,26 @@ def contacts_of(user: User) -> dict:
     }
 
 
-def public_status(user: User) -> dict:
-    """Подключён ли мессенджер — без ID. Для списка сотрудников."""
-    return {
-        messenger: {
-            "linked": messenger_state(user, messenger)["linked"],
-            "confirmed_at": messenger_state(user, messenger)["confirmed_at"],
+def public_status(user: User, *, with_delivery: bool = False) -> dict:
+    """
+    Подключён ли мессенджер — без ID. Для списка сотрудников.
+
+    `with_delivery` — для администратора отеля: последняя доставка, последняя
+    ошибка и «бот заблокирован». Управляющему хватает «подключён / нет».
+    """
+    status = {}
+    for messenger in MESSENGERS:
+        id_field, confirmed_field = _FIELDS[messenger]
+        confirmed_at = getattr(user, confirmed_field)
+        status[messenger] = {
+            "linked": bool(getattr(user, id_field)),
+            "confirmed_at": confirmed_at.isoformat() if confirmed_at else None,
         }
-        for messenger in MESSENGERS
-    }
+    if with_delivery:
+        from apps.notifications.services import personal
+
+        status["telegram"].update(personal.delivery_status(user))
+    return status
 
 
 def update_own_phone(user: User, phone: str) -> dict:
@@ -159,8 +199,13 @@ def issue_code(user: User, messenger: str) -> dict:
     bot = bot_for(messenger)
     if not bot:
         raise ConflictError(
-            "Подключение пока недоступно: бот ещё не заведён",
+            "Подключение недоступно: бот не подключён",
             code="binding_unavailable",
+        )
+    if unavailable_reason(user, messenger) == "hotel_off":
+        raise ConflictError(
+            "Отель выключил уведомления в Telegram",
+            code="telegram_disabled",
         )
 
     code = secrets.token_urlsafe(24)
@@ -226,6 +271,10 @@ def redeem_code(messenger: str, code: str, *, external_id: str, username: str = 
         user = users.filter(pk=binding.user_id, is_active=True, deleted_at__isnull=True).first()
         if user is None:
             raise BindingRejected("inactive")
+        from apps.notifications.services import personal
+
+        if messenger == "telegram" and not personal.hotel_allows(user.hotel_id):
+            raise BindingRejected("hotel_off")
         taken = (
             users.filter(hotel_id=user.hotel_id, deleted_at__isnull=True, **{id_field: external_id})
             .exclude(pk=user.pk)
@@ -244,6 +293,8 @@ def redeem_code(messenger: str, code: str, *, external_id: str, username: str = 
         if messenger == "telegram":
             changes["telegram_username"] = (username or "")[:64]
         users.filter(pk=user.pk).update(**changes)
+        if messenger == "telegram":
+            personal.ensure_channel(user, using="platform")
         AuditLog.objects.using("platform").create(
             hotel_id=user.hotel_id,
             actor_type=AuditLog.ActorType.SYSTEM,
@@ -266,6 +317,10 @@ def unlink(user: User, messenger: str) -> dict:
         User.objects.filter(pk=user.pk).update(**changes)
         for field, value in changes.items():
             setattr(user, field, value)
+        if messenger == "telegram":
+            from apps.notifications.services import personal
+
+            personal.disable_channel(user)
         AuditLog.record(
             "staff.contact.unlinked",
             object_type="user",
@@ -273,3 +328,129 @@ def unlink(user: User, messenger: str) -> dict:
             payload={"messenger": messenger},
         )
     return contacts_of(user)
+
+
+def unlink_chat(messenger: str, external_id: str) -> list[User]:
+    """
+    Отвязка командой боту: все учётки этого аккаунта, во всех отелях — один
+    человек в двух отелях пишет боту «/stop» один раз. Зовёт бот, отеля у
+    него нет, поэтому платформенным подключением.
+    """
+    _require_messenger(messenger)
+    external_id = str(external_id or "").strip()
+    if not external_id:
+        return []
+    from apps.core.context import platform_scope
+    from apps.notifications.services import personal
+
+    id_field, confirmed_field = _FIELDS[messenger]
+    with platform_scope(), transaction.atomic(using="platform"):
+        users = User.all_objects.using("platform")
+        bound = list(users.filter(deleted_at__isnull=True, **{id_field: external_id}).select_related("hotel"))
+        for user in bound:
+            changes = {id_field: "", confirmed_field: None, "updated_at": timezone.now()}
+            if messenger == "telegram":
+                changes["telegram_username"] = ""
+            users.filter(pk=user.pk).update(**changes)
+            if messenger == "telegram":
+                personal.disable_channel(user, using="platform")
+            AuditLog.objects.using("platform").create(
+                hotel_id=user.hotel_id,
+                actor_type=AuditLog.ActorType.STAFF,
+                actor_id=user.pk,
+                action="staff.contact.unlinked",
+                object_type="user",
+                object_id=user.pk,
+                payload={"messenger": messenger, "by": "bot"},
+            )
+    return bound
+
+
+def bound_users(messenger: str, external_id: str) -> list[User]:
+    """Кто привязан к этому аккаунту — во всех отелях. Для бота."""
+    external_id = str(external_id or "").strip()
+    if not external_id:
+        return []
+    from apps.core.context import platform_scope
+
+    id_field, _ = _FIELDS[messenger]
+    with platform_scope():
+        return list(
+            User.all_objects.using("platform")
+            .filter(deleted_at__isnull=True, is_active=True, **{id_field: external_id})
+            .select_related("hotel")
+        )
+
+
+
+# --- Приглашение письмом -----------------------------------------------------------
+
+INVITE_PATH = "/admin/profile?connect=telegram"
+
+_INVITE_SUBJECT = {
+    "ru": "Подключите уведомления в Telegram",
+    "en": "Connect Telegram notifications",
+}
+_INVITE_BODY = {
+    "ru": (
+        "Здравствуйте!\n\n"
+        "Администратор отеля «{hotel}» приглашает вас получать рабочие уведомления в Telegram.\n\n"
+        "Откройте ссылку, войдите своим логином и нажмите «Открыть бота»:\n{url}\n\n"
+        "Пароль в боте вводить не нужно и некуда: бот узнаёт вас по одноразовому коду из профиля.\n"
+    ),
+    "en": (
+        "Hello!\n\n"
+        "The administrator of {hotel} invites you to receive work notifications in Telegram.\n\n"
+        "Open the link, sign in and press “Open the bot”:\n{url}\n\n"
+        "The bot never asks for a password: it recognises you by a one-time code from your profile.\n"
+    ),
+}
+
+
+def invite(user: User) -> dict:
+    """
+    Приглашение письмом от администратора отеля.
+
+    В письме — ССЫЛКА НА ПРОФИЛЬ, А НЕ КОД. Код живёт десять минут (решение
+    волны 6) — письмо читают через час. И письмо, ушедшее не туда, ничего не
+    привязывает: код выдаётся только тому, кто вошёл своим логином.
+    """
+    from apps.core.fields import translate
+    from apps.core.models import AuditLog
+    from apps.hotels.services.admin_credentials import MailNotConfigured, MailNotSent, mail_is_deliverable
+
+    if user.telegram_chat_id:
+        raise ConflictError("Telegram у сотрудника уже подключён", code="already_linked")
+    if not bot_for("telegram"):
+        raise ConflictError("Подключение недоступно: бот не подключён", code="binding_unavailable")
+    if unavailable_reason(user, "telegram") == "hotel_off":
+        raise ConflictError("Отель выключил уведомления в Telegram", code="telegram_disabled")
+    if not mail_is_deliverable():
+        raise MailNotConfigured("Почта не настроена: приглашение отправить нечем", code="mail_not_configured")
+
+    from django.core.mail import EmailMessage
+
+    hotel = user.hotel
+    language = "en" if (user.language or "").startswith("en") else "ru"
+    url = hotel.public_guest_url(INVITE_PATH)
+    message = EmailMessage(
+        subject=_INVITE_SUBJECT[language],
+        body=_INVITE_BODY[language].format(
+            hotel=translate(hotel.name, language) or hotel.subdomain, url=url
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+    )
+    try:
+        sent = message.send(fail_silently=False)
+    except Exception as exc:  # noqa: BLE001 — сеть, SMTP: исход один
+        raise MailNotSent("Письмо-приглашение не ушло. Повторите позже.", code="mail_not_sent") from exc
+    if not sent:
+        raise MailNotSent("Почтовый сервер не принял письмо", code="mail_not_sent")
+    AuditLog.record(
+        "staff.contact.invited",
+        object_type="user",
+        object_id=user.pk,
+        payload={"messenger": "telegram"},
+    )
+    return {"delivered_to": user.email, "sent_at": timezone.now().isoformat()}

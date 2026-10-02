@@ -188,6 +188,23 @@ services:
       backend: {condition: service_healthy}
     networks: [internal]
 
+  # БОТ ПЛАТФОРМЫ (партия 28). ОДИН ТОКЕН — ОДИН ОПРАШИВАЮЩИЙ: Telegram отдаёт
+  # бота только одному серверу (второй получает 409). Перед запуском здесь
+  # локальная служба с тем же токеном должна быть остановлена. Токен —
+  # TELEGRAM_BOT_TOKEN в .env.prod; без него служба спит, а консоль говорит
+  # «бот не подключён». Состояния нет — перезапускать можно когда угодно.
+  bot:
+    build: ./backend
+    command: ["bot"]
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      <<: *backend-env
+      SEED_ON_START: "0"
+    depends_on:
+      backend: {condition: service_healthy}
+    networks: [internal]
+
   beat:
     build: ./backend
     command: ["beat"]

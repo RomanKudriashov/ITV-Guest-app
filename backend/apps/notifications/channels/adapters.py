@@ -75,6 +75,15 @@ class EmailAdapter:
 
 
 class TelegramAdapter:
+    """
+    Telegram: личный канал через бота платформы (`platform_bot`, токен из
+    окружения) или общий чат со своим ботом отеля (`bot_token` в конфигурации).
+
+    Запрос, разметка и разбор ошибок — в `messengers/telegram.py`: HTML с
+    экранированием вместо Markdown, 429 с Retry-After, блокировка бота
+    получателем, токен в тексте ошибки не появляется (п.31 бэклога).
+    """
+
     type = "telegram"
     secret_fields: tuple[str, ...] = ("bot_token",)
 
@@ -89,31 +98,32 @@ class TelegramAdapter:
             )
 
     def send(self, message: RenderedMessage, config: dict) -> str:
-        import requests
+        from apps.notifications.messengers import MessengerError
+        from apps.notifications.messengers.telegram import TelegramBot
 
-        token = str(config.get("bot_token") or "").strip()
         chat_id = str(config.get("chat_id") or "").strip()
-        text = f"*{message.subject}*\n{message.body}" if message.subject else message.body
+        if config.get("platform_bot"):
+            bot = TelegramBot()
+            if not bot.configured():
+                raise ChannelError("Бот не подключён: токен не задан", retryable=False)
+            if not chat_id:
+                raise ChannelError("Telegram отвязан — адреса нет", retryable=False)
+            buttons = list(message.buttons or ())
+        else:
+            bot = TelegramBot(token=str(config.get("bot_token") or ""))
+            # Кнопки — только у бота платформы: нажатия чужого бота нам не придут.
+            buttons = []
 
-        url = f"{settings.TELEGRAM_API_URL.rstrip('/')}/bot{token}/sendMessage"
         try:
-            response = requests.post(
-                url,
-                json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
-                timeout=10,
-            )
-        except Exception as exc:  # noqa: BLE001 — сеть, повторить имеет смысл
-            raise ChannelError(f"Telegram недоступен: {exc}") from exc
-
-        if response.status_code == 200:
-            return f"telegram:{response.json().get('result', {}).get('message_id', '')}"
-
-        # 4xx кроме 429 — это наша ошибка настройки, повторять нечего.
-        retryable = response.status_code >= 500 or response.status_code == 429
-        raise ChannelError(
-            f"Telegram ответил {response.status_code}: {response.text[:200]}",
-            retryable=retryable,
-        )
+            message_id = bot.send(chat_id, message.subject, message.body, buttons)
+        except MessengerError as exc:
+            raise ChannelError(
+                exc.detail,
+                retryable=exc.retryable,
+                retry_after=exc.retry_after,
+                blocked=exc.blocked,
+            ) from None
+        return f"telegram:{message_id}"
 
 
 ADAPTERS: dict[str, object] = {

@@ -155,3 +155,12 @@ def scheduler_state(request: HttpRequest):
     from apps.core.services import scheduler
 
     return scheduler.heartbeat_state()
+
+
+@router.get("/bot", summary="Бот платформы: жив ли, имя, последний опрос, ошибки")
+@requires(READ)
+def bot_state(request: HttpRequest):
+    """Пульс службы бота (партия 28). Токена в ответе нет — только хвост."""
+    from apps.notifications.services import personal
+
+    return personal.bot_health()

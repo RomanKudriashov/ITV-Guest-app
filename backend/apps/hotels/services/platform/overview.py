@@ -124,6 +124,36 @@ def _live_sessions() -> int:
         )
 
 
+def _bot_signal() -> dict:
+    """
+    БОТ ПЛАТФОРМЫ — В ЗДОРОВЬЕ (партия 28): жив ли, как зовут, когда опрашивал,
+    что сломалось. Молчащий бот выглядит как работающий: сообщения просто не
+    приходят. Токена здесь нет — только хвост.
+    """
+    from apps.notifications.services import personal
+
+    bot = personal.bot_health()
+    base = {
+        "name": bot["username"],
+        "tail": bot["token_tail"],
+        "error": bot["last_error"],
+        "seconds": bot["age_seconds"],
+        "count": (bot["age_seconds"] or 0) // 60,
+    }
+    status = bot["status"]
+    if status == "no_token":
+        return {"level": "warn", "code": "bot_no_token", **base}
+    if status == "rejected":
+        return {"level": "bad", "code": "bot_rejected", **base}
+    if not bot["alive"]:
+        return {"level": "bad", "code": "bot_down", **base}
+    if status == "conflict":
+        return {"level": "bad", "code": "bot_conflict", **base}
+    if status == "error":
+        return {"level": "warn", "code": "bot_error", **base}
+    return {"level": "ok", "code": "bot_ok", **base}
+
+
 def _health(hotels: list[Hotel], today: date) -> list[dict]:
     """
     Здоровье системы: список того, что требует внимания. Пустой список — это
@@ -192,6 +222,8 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
         signals.append(
             {"level": "ok", "code": "scheduler_ok", "count": beat.get("pending", 0), "kinds": kinds}
         )
+
+    signals.append(_bot_signal())
 
     expiring = [
         {"hotel": hotel.name_i18n, "subdomain": hotel.subdomain, "days": tariffs.trial_days_left(hotel, today)}

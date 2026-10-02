@@ -333,6 +333,10 @@
   "/api/v1/cms/notification-log": [
     "GET"
   ],
+  "/api/v1/cms/notifications/telegram": [
+    "GET",
+    "PUT"
+  ],
   "/api/v1/cms/orders": [
     "GET"
   ],
@@ -454,6 +458,9 @@
   ],
   "/api/v1/cms/staff/{user_id}/assignments": [
     "PUT"
+  ],
+  "/api/v1/cms/staff/{user_id}/telegram-invite": [
+    "POST"
   ],
   "/api/v1/cms/translate/coverage": [
     "GET"
@@ -596,6 +603,9 @@
   ],
   "/api/v1/platform/auth/sessions/{session_id}": [
     "DELETE"
+  ],
+  "/api/v1/platform/bot": [
+    "GET"
   ],
   "/api/v1/platform/brand/looks": [
     "GET"

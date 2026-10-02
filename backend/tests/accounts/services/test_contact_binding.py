@@ -22,13 +22,31 @@ pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "plat
 
 
 @pytest.fixture(autouse=True)
-def bot(settings):
-    settings.CONTACT_BOTS = {"telegram": "itv_test_bot", "max": "itv_max_bot"}
+def bot(db):
+    """Пульс бота: на связи (партия 28 — имя из пульса, а не из настроек)."""
+    from apps.notifications.models import MessengerBotState
+
+    MessengerBotState.objects.update_or_create(
+        messenger="telegram",
+        defaults={"status": "ok", "username": "itv_test_bot", "last_poll_at": timezone.now()},
+    )
 
 
 def _issue(hotel, email, messenger="telegram"):
     with tenant_context(hotel):
         user = User.objects.get(email=email)
+        if messenger != "telegram":
+            # У Max бота нет — выдачу кода закрывает сервис; обмен проверяется
+            # на коде, заведённом напрямую: поля Max — часть интерфейса.
+            code = "max-code-for-tests"
+            ContactBindingCode.objects.create(
+                hotel_id=user.hotel_id,
+                user=user,
+                messenger=messenger,
+                code_hash=contacts.hash_code(code),
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+            return user, code
         return user, contacts.issue_code(user, messenger)["code"]
 
 

@@ -97,7 +97,9 @@ def resolve_channels(step: EscalationStep, order: Order) -> list[NotificationCha
     минут состав смены успевает поменяться, и уведомлять надо тех, кто на месте
     сейчас.
     """
-    active = NotificationChannel.objects.filter(is_active=True)
+    from apps.notifications.services import personal
+
+    active = personal.deliverable(NotificationChannel.objects.filter(is_active=True))
 
     if step.target_kind == TargetKind.CHANNEL:
         return list(active.filter(pk=step.channel_id)) if step.channel_id else []
@@ -434,7 +436,13 @@ def send_delivery(log_id) -> NotificationLog:
     Одна отправка в один канал. Бросает ChannelError, чтобы Celery повторил;
     неповторяемые ошибки помечает `failed` сразу.
     """
-    log = NotificationLog.objects.select_related("channel", "order").filter(pk=log_id).first()
+    from apps.notifications.services import personal
+
+    log = (
+        NotificationLog.objects.select_related("channel__user", "order__hotel", "order__status")
+        .filter(pk=log_id)
+        .first()
+    )
     if log is None or log.channel_id is None:
         return log
     if log.status != NotificationStatus.SCHEDULED:
@@ -442,15 +450,24 @@ def send_delivery(log_id) -> NotificationLog:
 
     adapter = get_adapter(log.channel.type)
     message = RenderedMessage(subject=log.subject, body=log.body)
+    if log.channel.via_platform_bot:
+        # Кнопки — по состоянию заказа В МОМЕНТ ОТПРАВКИ: взятому «Взять» не рисуем.
+        from apps.notifications.services import bot_actions
+        from apps.notifications.services.events import recipient_language
+
+        message.buttons = bot_actions.order_buttons(
+            log.order, recipient_language(log.channel, log.order.hotel)
+        )
 
     # Попытку считаем до отправки: упавшая попытка тоже попытка. Обновляем и
     # объект в памяти — иначе вызывающий получит устаревший счётчик.
     log.attempts += 1
     NotificationLog.objects.filter(pk=log.pk).update(attempts=log.attempts)
     try:
-        reference = adapter.send(message, log.channel.config or {})
+        reference = adapter.send(message, personal.config_for(log.channel))
     except ChannelError as exc:
         log.error = exc.detail[:2000]
+        personal.note_result(log.channel_id, ok=False, error=exc.detail, blocked=exc.blocked)
         if exc.retryable:
             log.save(update_fields=["error", "updated_at"])
             raise
@@ -459,6 +476,7 @@ def send_delivery(log_id) -> NotificationLog:
         _report_failed(log)
         return log
 
+    personal.note_result(log.channel_id, ok=True)
     log.status = NotificationStatus.SENT
     log.sent_at = timezone.now()
     log.error = reference[:2000]
@@ -548,8 +566,10 @@ def send_test_message(channel: NotificationChannel, language: str | None = None)
         subject="Проверка канала",
         body=f"Канал «{channel.title}» настроен верно.",
     )
+    from apps.notifications.services import personal
+
     try:
-        reference = adapter.send(message, channel.config or {})
+        reference = adapter.send(message, personal.config_for(channel))
     except ChannelError as exc:
         return {"ok": False, "detail": exc.detail}
     return {"ok": True, "detail": reference}

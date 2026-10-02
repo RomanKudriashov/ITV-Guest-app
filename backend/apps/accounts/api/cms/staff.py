@@ -53,3 +53,17 @@ def delete_staff(request: HttpRequest, user_id: str):
 def put_assignments(request: HttpRequest, user_id: str, payload: AssignmentsIn):
     user = staff_svc.replace_assignments(user_id, [a.dict() for a in payload.assignments])
     return staff_svc.serialize_staff(user)
+
+
+@router.post("/staff/{user_id}/telegram-invite", summary="Пригласить сотрудника в Telegram письмом")
+def invite_to_telegram(request: HttpRequest, user_id: str):
+    """
+    Письмо со ссылкой на профиль: войти и открыть бота (партия 28). Приглашает
+    только администратор отеля. В письме нет кода — он выдаётся тому, кто
+    вошёл своим логином, и живёт десять минут.
+    """
+    from apps.accounts.services import contacts
+    from apps.accounts.services.roles import require_hotel_admin
+
+    require_hotel_admin()
+    return contacts.invite(staff_svc.get_staff(user_id))

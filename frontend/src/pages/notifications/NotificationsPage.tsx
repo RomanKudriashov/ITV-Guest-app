@@ -14,6 +14,7 @@ import { ChannelsTab } from './ChannelsTab';
 import { EscalationTab } from './EscalationTab';
 import { EventsTab } from './EventsTab';
 import { LogTab } from './LogTab';
+import { TelegramCard } from './TelegramCard';
 
 type Section = 'channels' | 'events' | 'escalation' | 'log';
 
@@ -47,6 +48,8 @@ export function NotificationsPage() {
             {t('notifications.subtitle')}
           </Typography>
         </Stack>
+
+        <TelegramCard />
 
         <Tabs
           value={section}

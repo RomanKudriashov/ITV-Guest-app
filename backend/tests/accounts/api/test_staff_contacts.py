@@ -63,6 +63,8 @@ def test_line_staff_sees_and_edits_own_contacts(chef, crystal):
         "confirmed_at": None,
         "username": "",
         "binding_available": False,
+        "unavailable_reason": "no_bot",
+        "blocked": False,
     }
 
     saved = chef.patch(CONTACTS, {"phone": "8 (916) 123-45-67"})
@@ -86,14 +88,25 @@ def test_connect_is_honestly_unavailable_without_a_bot(chef, crystal):
         assert not ContactBindingCode.objects.exists()
 
 
-def test_unknown_messenger_is_rejected(chef, settings):
-    settings.CONTACT_BOTS = {"telegram": "itv_test_bot", "max": ""}
+@pytest.fixture
+def bot_alive(db):
+    """Пульс бота: на связи, имя спрошено у Telegram (партия 28)."""
+    from django.utils import timezone
+
+    from apps.notifications.models import MessengerBotState
+
+    MessengerBotState.objects.update_or_create(
+        messenger="telegram",
+        defaults={"status": "ok", "username": "itv_test_bot", "last_poll_at": timezone.now()},
+    )
+
+
+def test_unknown_messenger_is_rejected(chef, bot_alive):
     response = chef.post(f"{CONTACTS}/icq/binding-code")
     assert response.status_code == 422
 
 
-def test_code_is_shown_once_and_only_its_hash_is_kept(chef, crystal, settings):
-    settings.CONTACT_BOTS = {"telegram": "itv_test_bot", "max": ""}
+def test_code_is_shown_once_and_only_its_hash_is_kept(chef, crystal, bot_alive):
     first = chef.post(f"{CONTACTS}/telegram/binding-code")
     assert first.status_code == 200, first.content
     body = first.json()
@@ -151,7 +164,15 @@ def test_hotel_admin_sees_and_sets_a_phone(cms, crystal):
 
     row = _row(cms.get("/api/cms/staff?limit=100"), "chef@crystal.local")
     assert row["phone"] == "+79030001122"
-    assert row["messengers"]["telegram"] == {"linked": False, "confirmed_at": None}
+    # Администратору — и итог доставки в Telegram (партия 28).
+    assert row["messengers"]["telegram"] == {
+        "linked": False,
+        "confirmed_at": None,
+        "last_sent_at": None,
+        "last_error": "",
+        "last_error_at": None,
+        "blocked": False,
+    }
 
 
 def test_a_manager_does_not_see_or_change_phones(cms, cms_manager, crystal):

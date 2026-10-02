@@ -1336,6 +1336,15 @@
           "failed_delivery": "undelivered message to channel “{{channel}}”"
         }
       }
+    },
+    "telegram": {
+      "title": "Telegram",
+      "hint": "Personal notifications to staff through the platform bot. Staff connect Telegram in their profile; who gets what follows the events and rules below.",
+      "switch": "Telegram notifications",
+      "turnedOn": "Telegram is on",
+      "turnedOff": "Telegram is off: the bot does not message hotel staff, connections are kept",
+      "botOnline": "Bot @{{name}} is online",
+      "botMissing": "The bot is not connected — staff cannot connect Telegram yet."
     }
   },
   "brand": {
@@ -1704,7 +1713,15 @@
       "deleteBody": "Employee “{{name}}” will be deleted.",
       "emailTaken": "This email is already taken",
       "weakPassword": "Password too short (minimum 8 characters)",
-      "cannotRemoveSelf": "You cannot delete or deactivate yourself"
+      "cannotRemoveSelf": "You cannot delete or deactivate yourself",
+      "telegram": {
+        "blocked": "Bot blocked",
+        "invite": "Invite to Telegram",
+        "invited": "Invitation sent to {{email}}",
+        "lastSent": "Delivered {{time}}",
+        "neverSent": "No notifications yet",
+        "lastError": "Error {{time}}: {{error}}"
+      }
     }
   },
   "slotConfig": {
@@ -2342,7 +2359,13 @@
         "notification": {
           "escalation_step": "escalation steps"
         }
-      }
+      },
+      "bot_ok": "Bot @{{name}} is online",
+      "bot_no_token": "Telegram bot not connected: no token set",
+      "bot_rejected": "Telegram bot: token rejected ({{tail}})",
+      "bot_conflict": "Bot @{{name}}: another server is polling it (409)",
+      "bot_down": "The bot service has not responded for {{count}} min",
+      "bot_error": "Bot @{{name}}: Telegram unreachable — {{error}}"
     },
     "fleet": {
       "title": "Hotels",
@@ -2686,14 +2709,20 @@
         "bulk_updated": "Rooms updated in bulk"
       },
       "notification": {
-        "event_settings_changed": "Notification settings changed"
+        "event_settings_changed": "Notification settings changed",
+        "telegram_switched": "Hotel Telegram switched"
       },
       "staff": {
         "contact": {
           "phone_changed": "Employee phone changed",
           "linked": "Employee connected a messenger",
-          "unlinked": "Employee disconnected a messenger"
+          "unlinked": "Employee disconnected a messenger",
+          "invited": "Telegram invitation sent"
         }
+      },
+      "bot": {
+        "take": "Order taken with a Telegram button",
+        "triage": "Review taken with a Telegram button"
       }
     },
     "enter": {
@@ -3307,9 +3336,11 @@
       "connect": "Connect",
       "unlink": "Disconnect",
       "unlinked": "Messenger disconnected",
-      "unavailable": "Connecting is not available yet: the notification bot has not been set up. Once it exists, a link to it will appear here.",
+      "unavailable": "The bot is not connected, so the messenger cannot be connected yet. Once the bot is up, a link to it will appear here.",
       "openBot": "Open the bot and press “Start”",
-      "codeExpires": "The link is valid until {{time}}"
+      "codeExpires": "The link is valid until {{time}}",
+      "unavailableHotelOff": "The hotel has turned Telegram notifications off — it cannot be connected now.",
+      "blocked": "You have blocked the bot — notifications do not arrive. Unblock it in Telegram and send it any message."
     }
   },
   "list": {

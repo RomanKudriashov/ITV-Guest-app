@@ -8,6 +8,7 @@ export const queryKeys = {
   slotConfig: (id: string) => ['cms', 'items', 'slot-config', id] as const,
   schedules: ['cms', 'schedules'] as const,
   notificationChannels: ['cms', 'notification-channels'] as const,
+  telegramSettings: ['cms', 'notifications', 'telegram'] as const,
   escalationRules: ['cms', 'escalation-rules'] as const,
   /** The journal is polled while the tab is open, hence the filters in the key. */
   notificationLog: (status: string, orderId: string, limit: number) =>

@@ -188,7 +188,7 @@
 
     sudo -u deploy git fetch origin main
     sudo -u deploy git reset --hard origin/main
-    dc build backend worker beat scheduler nginx iridi-emulator connector
+    dc build backend worker beat scheduler bot nginx iridi-emulator connector
     dc up -d
 
 Стенд живёт на ветке `main` (раньше был на `deploy/stand-full`). Сливать
@@ -212,7 +212,7 @@
 образами), а отдельным `restart` стоит пройтись по тем, чью работу видно не
 сразу:
 
-    dc restart worker beat scheduler connector iridi-emulator
+    dc restart worker beat scheduler bot connector iridi-emulator
 
 **Служба расписания (`scheduler`) появилась в прод-составе только 19.09.2026** —
 до этого её здесь не было вовсе, и назначенные задания на стенде не
@@ -222,6 +222,27 @@
     from apps.core.models import SchedulerHeartbeat
     for hb in SchedulerHeartbeat.objects.using('platform').all():
         print(hb.last_tick_at, hb.took_ms, 'ждут:', hb.pending_count)"
+
+### Бот Telegram (служба `bot`, с партии 28)
+
+Один бот на платформу, длинный опрос. **Один токен — один опрашивающий:**
+Telegram отдаёт бота только одному серверу, второй получает 409, и в консоли
+платформы бот краснеет «его опрашивает другой сервер». Поэтому перед запуском
+здесь бот с тем же токеном на машине разработчика должен быть остановлен
+(`docker compose stop bot` локально, либо локальный `.env` без
+`TELEGRAM_BOT_TOKEN` — тогда локальная служба говорит с эмулятором).
+
+Токен — `TELEGRAM_BOT_TOKEN` в `.env.prod` на сервере, больше нигде: в
+журналах и консоли виден только хвост из четырёх символов. Имя бота задавать
+не нужно — служба спрашивает его у Telegram. Без токена служба спит, а
+консоль говорит «бот не подключён»; токен не принят — служба не падает, а
+ждёт с растущей паузой.
+
+Проверить, что бот на связи:
+
+    dc logs --tail=5 bot          # «Бот telegram: @<имя>, токен …abcd»
+    dc exec -T backend python manage.py shell -c "
+    from apps.notifications.services import personal; print(personal.bot_health())"
 
 ### Наполнение
 

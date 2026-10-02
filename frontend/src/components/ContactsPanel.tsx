@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -33,6 +34,10 @@ const MESSENGERS: Messenger[] = ['telegram', 'max'];
  * «Подключить» работает только там, где есть бот. Пока бота нет, кнопка
  * выключена и прямо говорит почему — рисовать рабочей заглушку нельзя: человек
  * нажал бы, ничего бы не случилось, и уведомления он ждал бы напрасно.
+ *
+ * Ссылка из письма-приглашения ведёт сюда с `?connect=telegram` (партия 28):
+ * вошедший человек сразу получает свою ссылку на бота — код выдаётся только
+ * ему, а не лежит в письме.
  */
 export function ContactsPanel() {
   const { t } = useTranslation();
@@ -120,6 +125,7 @@ function MessengerRow({ messenger, contacts }: { messenger: Messenger; contacts:
   const queryClient = useQueryClient();
   const state = contacts.messengers[messenger];
   const [code, setCode] = useState<BindingCode | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const issue = useMutation({
     mutationFn: () => requestBindingCode(messenger),
@@ -134,6 +140,18 @@ function MessengerRow({ messenger, contacts }: { messenger: Messenger; contacts:
       toast.show(t('profile.contacts.unlinked'), 'success');
     },
   });
+
+  // Приглашение письмом: открыть профиль и сразу получить ссылку на бота.
+  // Один раз — параметр снимается, и обновление страницы кода не перевыпускает.
+  const autoConnect = useRef(false);
+  useEffect(() => {
+    if (autoConnect.current || searchParams.get('connect') !== messenger) return;
+    autoConnect.current = true;
+    const next = new URLSearchParams(searchParams);
+    next.delete('connect');
+    setSearchParams(next, { replace: true });
+    if (!state.linked && state.binding_available) issue.mutate();
+  }, [issue, messenger, searchParams, setSearchParams, state.binding_available, state.linked]);
 
   const confirmed = state.confirmed_at
     ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(
@@ -194,7 +212,16 @@ function MessengerRow({ messenger, contacts }: { messenger: Messenger; contacts:
           sx={{ mt: 1 }}
           data-testid={`profile-messenger-${messenger}-unavailable`}
         >
-          {t('profile.contacts.unavailable')}
+          {t(
+            state.unavailable_reason === 'hotel_off'
+              ? 'profile.contacts.unavailableHotelOff'
+              : 'profile.contacts.unavailable',
+          )}
+        </Alert>
+      ) : null}
+      {state.linked && state.blocked ? (
+        <Alert severity="warning" sx={{ mt: 1 }} data-testid={`profile-messenger-${messenger}-blocked`}>
+          {t('profile.contacts.blocked')}
         </Alert>
       ) : null}
       {code ? (

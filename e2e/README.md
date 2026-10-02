@@ -149,3 +149,12 @@ docker compose exec backend python manage.py seed_demo_hotel \
 вместо интернета (`docs/ops/weather.md`); лендинг — цель перехода считалась
 до клика, а полоса не выезжала из-за ошибки в хуке наблюдателя
 (`landing-hero-batch.spec.ts`).
+
+## Бот Telegram (партия 28)
+
+Проверки бота (`telegram-bot.spec.ts`) говорят не с Telegram, а с эмулятором
+Bot API — службой `telegram-emulator` (порт 1087, адрес меняется
+`E2E_TELEGRAM_EMULATOR`). Служба `bot` и воркер в разработке ходят туда же.
+Нужны все три: `docker compose up -d telegram-emulator bot worker`. Если в
+локальном `.env` задан живой токен и `TELEGRAM_API_URL=https://api.telegram.org`,
+эти проверки идут не туда — для прогона верните эмулятор.

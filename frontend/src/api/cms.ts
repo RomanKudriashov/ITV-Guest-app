@@ -96,8 +96,12 @@ export interface OwnMessengerState {
   linked: boolean;
   confirmed_at: string | null;
   username: string;
-  /** A bot is configured — only then can a binding code be issued. */
+  /** The platform bot is online and the hotel allows it — only then can a code be issued. */
   binding_available: boolean;
+  /** Why not: `no_bot` — the bot is not connected; `hotel_off` — the hotel turned Telegram off. */
+  unavailable_reason: '' | 'no_bot' | 'hotel_off';
+  /** Telegram only: the person has blocked the bot, notifications do not arrive. */
+  blocked?: boolean;
 }
 
 export interface OwnContacts {
@@ -120,7 +124,7 @@ export function saveOwnPhone(phone: string): Promise<OwnContacts> {
   return api.patch<OwnContacts>('/staff/me/contacts', { phone });
 }
 
-/** `409 binding_unavailable` while no bot exists. */
+/** `409 binding_unavailable` while the bot is offline, `409 telegram_disabled` when the hotel turned it off. */
 export function requestBindingCode(messenger: Messenger): Promise<BindingCode> {
   return api.post<BindingCode>(`/staff/me/contacts/${messenger}/binding-code`);
 }

@@ -308,6 +308,11 @@ export function deleteStaff(id: string): Promise<void> {
   return api.delete<void>(`/cms/staff/${id}`);
 }
 
+/** E-mail with a link to the profile: sign in and open the bot. Hotel admin only. */
+export function inviteToTelegram(id: string): Promise<{ delivered_to: string; sent_at: string }> {
+  return api.post<{ delivered_to: string; sent_at: string }>(`/cms/staff/${id}/telegram-invite`);
+}
+
 /** Replaces the whole set of assignments. */
 export function updateStaffAssignments(
   id: string,

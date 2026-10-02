@@ -330,13 +330,28 @@ PATCH/POST и `image` (сериализованный ассет с `url`/`statu
 ```jsonc
 {"phone": "+79161234567",
  "messengers": {"telegram": {"linked": false, "confirmed_at": null, "username": "",
-                             "binding_available": false}, "max": {...}}}
+                             "binding_available": false, "unavailable_reason": "no_bot",
+                             "blocked": false}, "max": {...}}}
 ```
 
-**Бота пока нет** (учётки ждут заказчика). Пока бот не настроен
-(`TELEGRAM_CONTACT_BOT`, `MAX_CONTACT_BOT`), `binding_available: false`, а
-выдача кода отвечает `409 binding_unavailable`. Экран «подключить» говорит
-«пока недоступно» и кнопку не включает.
+**Бот — один на платформу (партия 28), служба `bot`.** Имя бота не задаётся
+настройкой: служба спрашивает его у Telegram (`getMe`) и кладёт в пульс
+(`notifications_bot_state`). Пока бот не на связи (токена нет, токен не
+принят, служба стоит больше трёх минут), `binding_available: false`,
+`unavailable_reason: "no_bot"`, а выдача кода отвечает `409
+binding_unavailable`. Отель выключил Telegram — `unavailable_reason:
+"hotel_off"`, `409 telegram_disabled`. У Max только интерфейс — подключение
+недоступно всегда. Заблокировавшему бота сотруднику профиль показывает
+`blocked: true`.
+
+Привязка заводит сотруднику личный канал уведомлений (`via_platform_bot`),
+отвязка — из профиля или командой боту `/stop` — его выключает. Приглашение
+администратора — `POST /cms/staff/{id}/telegram-invite`: письмо со ссылкой на
+профиль (`/admin/profile?connect=telegram`), а не с кодом. Администратор в
+списке сотрудников видит по Telegram ещё `last_sent_at`, `last_error`,
+`last_error_at`, `blocked`. Выключатель отеля — `GET/PUT
+/cms/notifications/telegram` (`{"enabled": bool}`, менять — только
+администратору отеля).
 
 **Одноразовый код привязки** — по образцу входа поддержки:
 

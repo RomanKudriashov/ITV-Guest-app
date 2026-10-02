@@ -303,6 +303,12 @@ export interface MessengerStatus {
   linked: boolean;
   /** When the account was bound through the bot; `null` — not connected. */
   confirmed_at: string | null;
+  /** Telegram, hotel admin only: outcome of the latest personal delivery. */
+  last_sent_at?: string | null;
+  last_error?: string;
+  last_error_at?: string | null;
+  /** The person has blocked the bot. */
+  blocked?: boolean;
 }
 
 export interface StaffMember {

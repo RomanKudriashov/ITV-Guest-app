@@ -59,6 +59,8 @@ def chat_unanswered(payload: dict) -> dict:
 
 def review_low(payload: dict) -> dict:
     return {
+        # Не плейсхолдер: по нему бот находит отзыв для кнопки «Разобрать».
+        "order_id": payload.get("order_id") or None,
         "rating": payload.get("rating"),
         "number": payload.get("number"),
         "comment": payload.get("comment", ""),
@@ -79,6 +81,8 @@ def order_cancelled(order, comment: str = "") -> dict:
 
     reason_key = f"cancel_reason.{order.cancel_reason}" if order.cancel_reason else ""
     return {
+        # Не плейсхолдер: по нему бот строит «Открыть в трекере».
+        "order_id": str(order.pk),
         "number": order.number,
         "room": (
             _per_language(

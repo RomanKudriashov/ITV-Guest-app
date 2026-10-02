@@ -307,12 +307,14 @@ NOTIFICATIONS_ENABLED = env_bool("NOTIFICATIONS_ENABLED", True)
 # локальную заглушку и не ходили наружу.
 TELEGRAM_API_URL = os.getenv("TELEGRAM_API_URL", "https://api.telegram.org")
 
-# Боты привязки контактов сотрудников. Пусто — бота нет, и «подключить»
-# честно отвечает «пока недоступно» (учётки ботов ждут заказчика).
-CONTACT_BOTS = {
-    "telegram": os.getenv("TELEGRAM_CONTACT_BOT", ""),
-    "max": os.getenv("MAX_CONTACT_BOT", ""),
-}
+# БОТ ПЛАТФОРМЫ (партия 28). Один токен на всю платформу, только из окружения
+# (`.env` / `.env.prod`), никогда — в коде, логах и ответах API: наружу
+# показывается хвост из четырёх символов. Пусто — служба `bot` спит, а панель
+# честно говорит «бот не подключён». Имя бота здесь не задаётся: служба
+# спрашивает его у Telegram (`getMe`) и кладёт в пульс.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+# Длинный опрос: сколько секунд Telegram держит запрос `getUpdates` открытым.
+TELEGRAM_POLL_TIMEOUT = int(os.getenv("TELEGRAM_POLL_TIMEOUT", "25"))
 # Сколько живёт одноразовый код привязки: открыть мессенджер и нажать «Старт».
 CONTACT_BINDING_CODE_MINUTES = int(os.getenv("CONTACT_BINDING_CODE_MINUTES", "10"))
 

@@ -29,11 +29,17 @@ logger = logging.getLogger("apps.notifications")
 DELIVERY_RETRIES = 5
 
 
-def _backoff(retries: int) -> int:
-    """15 с, 30 с, 1 мин, 2 мин, 4 мин — и не больше 10 минут, плюс разброс."""
+def _backoff(retries: int, retry_after: int | None = None) -> int:
+    """
+    15 с, 30 с, 1 мин, 2 мин, 4 мин — и не больше 10 минут, плюс разброс.
+
+    Если канал сам сказал, сколько ждать (429 Retry-After у Telegram), — не
+    раньше этого: повтор раньше срока получил бы новый 429 (п.31 бэклога).
+    """
     import random
 
-    return min(600, 15 * 2**retries) + random.randint(0, 5)
+    pause = min(600, 15 * 2**retries) + random.randint(0, 5)
+    return max(pause, int(retry_after or 0) + 1)
 
 
 @shared_task(bind=True, max_retries=3, acks_late=True)
@@ -74,7 +80,7 @@ def deliver_notification(self, log_id: str, hotel_id: str) -> dict:
             if self.request.retries >= self.max_retries:
                 mark_delivery_failed(log_id, f"Канал недоступен: {exc.detail}")
                 return {"log_id": log_id, "status": "failed"}
-            raise self.retry(exc=exc, countdown=_backoff(self.request.retries)) from exc
+            raise self.retry(exc=exc, countdown=_backoff(self.request.retries, exc.retry_after)) from exc
 
         return {"log_id": log_id, "status": log.status if log else "missing"}
 
@@ -94,7 +100,7 @@ def deliver_event(self, delivery_id: str, hotel_id: str) -> dict:
             if self.request.retries >= self.max_retries:
                 mark_event_delivery_failed(delivery_id, f"Канал недоступен: {exc.detail}")
                 return {"delivery_id": delivery_id, "status": "failed"}
-            raise self.retry(exc=exc, countdown=_backoff(self.request.retries)) from exc
+            raise self.retry(exc=exc, countdown=_backoff(self.request.retries, exc.retry_after)) from exc
 
         return {
             "delivery_id": delivery_id,

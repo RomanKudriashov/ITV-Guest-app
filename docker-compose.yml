@@ -90,6 +90,12 @@ services:
       # e2e зависела от внешней сети. Стенд и бой — настоящий Open-Meteo (.env.prod).
       WEATHER_API_URL: http://weather-emulator:1086
       WEATHER_GEOCODER_URL: http://weather-emulator:1086
+      # Telegram (партия 28): по умолчанию — эмулятор Bot API, а не настоящий
+      # Telegram: у бота один токен и один опрашивающий, и машина разработчика,
+      # опрашивая боевого бота, выбила бы стенд ответом 409. Живой бот локально —
+      # TELEGRAM_BOT_TOKEN и TELEGRAM_API_URL=https://api.telegram.org в .env.
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL:-http://telegram-emulator:1087}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-emulator-token}
       MINIO_ENDPOINT: minio:9000
       # Почта: без неё консоль не заводит отели и не сбрасывает пароли —
       # пароль уходит администратору письмом, и «отправить нечем» это отказ.
@@ -144,6 +150,12 @@ services:
       # e2e зависела от внешней сети. Стенд и бой — настоящий Open-Meteo (.env.prod).
       WEATHER_API_URL: http://weather-emulator:1086
       WEATHER_GEOCODER_URL: http://weather-emulator:1086
+      # Telegram (партия 28): по умолчанию — эмулятор Bot API, а не настоящий
+      # Telegram: у бота один токен и один опрашивающий, и машина разработчика,
+      # опрашивая боевого бота, выбила бы стенд ответом 409. Живой бот локально —
+      # TELEGRAM_BOT_TOKEN и TELEGRAM_API_URL=https://api.telegram.org в .env.
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL:-http://telegram-emulator:1087}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-emulator-token}
       MINIO_ENDPOINT: minio:9000
       # Тот же адрес, что у backend: воркер тоже собирает ссылки на варианты,
       # и разъехавшись, они дали бы картинки, работающие через раз.
@@ -218,6 +230,47 @@ services:
   # Оба под профилем `grms`: обычный `docker compose up` их не поднимает.
   # Эмулятор изображает оборудование, и молча запускать его вместе со стендом
   # значило бы однажды перепутать его с настоящим объектом.
+
+  # БОТ ПЛАТФОРМЫ (партия 28): длинный опрос Telegram, привязка сотрудников и
+  # кнопки под уведомлениями. Один токен — один опрашивающий: на машине
+  # разработчика бот по умолчанию говорит с эмулятором (`telegram-emulator`).
+  # Без токена служба спит, токен не принят — ждёт с растущей паузой; падать
+  # по кругу ей не из-за чего. Состояние — в консоли платформы («Здоровье»).
+  bot:
+    build: ./backend
+    command: ["bot"]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      CACHE_URL: redis://redis:6379/4
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL:-http://telegram-emulator:1087}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-emulator-token}
+      SEED_ON_START: "0"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      telegram-emulator:
+        condition: service_started
+
+  # Эмулятор Telegram Bot API (партия 28): тот же HTTP, что у Telegram, плюс
+  # управление под /_emulator/ — e2e «пишет боту» и «жмёт кнопки» через него.
+  # Порт наружу — для e2e с машины разработчика.
+  telegram-emulator:
+    build: ./backend
+    command: ["python", "-m", "apps.notifications.messengers.emulator"]
+    environment:
+      TELEGRAM_EMULATOR_PORT: "1087"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "${TELEGRAM_EMULATOR_HOST_PORT:-1087}:1087"
 
   weather-emulator:
     build: ./backend

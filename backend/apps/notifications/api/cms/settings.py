@@ -7,7 +7,7 @@ from __future__ import annotations
 
 
 from django.http import HttpRequest
-from ninja import Router
+from ninja import Router, Schema
 from apps.core.schemas import OkOut
 
 from apps.notifications.schemas import (
@@ -27,6 +27,10 @@ from apps.notifications.services import send_test_message
 
 
 router = Router(tags=["cms:notifications"])
+
+
+class TelegramSwitchIn(Schema):
+    enabled: bool
 
 
 # --- Схемы -----------------------------------------------------------------
@@ -172,3 +176,29 @@ def preview_notification_event(request: HttpRequest, code: str, payload: EventPr
     from apps.notifications.services import event_preview
 
     return event_preview.preview(code, payload.dict(exclude_unset=True))
+
+
+# --- Telegram ----------------------------------------------------------------
+
+
+@router.get("/notifications/telegram", summary="Telegram в отеле: выключатель и состояние бота")
+def telegram_settings(request: HttpRequest):
+    from apps.notifications.services import personal
+
+    return personal.hotel_settings()
+
+
+@router.put("/notifications/telegram", summary="Включить или выключить Telegram в отеле")
+def save_telegram_settings(request: HttpRequest, payload: TelegramSwitchIn):
+    """
+    Выключенный Telegram: бот не принимает коды привязки отеля, не шлёт его
+    сотрудникам и не исполняет кнопки по его заказам. Привязки остаются —
+    включили обратно, и всё работает без повторной привязки.
+    """
+    from apps.accounts.services.roles import require_hotel_admin
+    from apps.hotels.services.hotel import current_hotel
+    from apps.notifications.services import personal
+
+    require_hotel_admin()
+    personal.set_hotel_switch(current_hotel(), payload.enabled)
+    return personal.hotel_settings()

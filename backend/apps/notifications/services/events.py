@@ -66,8 +66,11 @@ def channels_for_audience(
     `channel_types` сужает любой адресат до выбранных видов каналов.
     """
     from apps.accounts.models import StaffAssignment
+    from apps.notifications.services import personal
 
-    active = NotificationChannel.objects.filter(is_active=True).select_related("user")
+    active = personal.deliverable(
+        NotificationChannel.objects.filter(is_active=True).select_related("user")
+    )
     if channel_types:
         active = active.filter(type__in=list(channel_types))
 
@@ -252,8 +255,10 @@ def send_event_delivery(delivery_id) -> EventDelivery | None:
     Блокировок здесь нет: запрос к каналу идёт вне транзакции. Повтор задачи
     отсекается статусом — отправленное второй раз не уходит.
     """
+    from apps.notifications.services import personal
+
     delivery = (
-        EventDelivery.objects.select_related("channel", "record").filter(pk=delivery_id).first()
+        EventDelivery.objects.select_related("channel__user", "record").filter(pk=delivery_id).first()
     )
     if delivery is None or delivery.status != NotificationStatus.SCHEDULED:
         return delivery
@@ -264,11 +269,18 @@ def send_event_delivery(delivery_id) -> EventDelivery | None:
     delivery.attempts += 1
     EventDelivery.objects.filter(pk=delivery.pk).update(attempts=delivery.attempts)
     message = RenderedMessage(subject=delivery.subject, body=delivery.body)
+    if delivery.channel.via_platform_bot:
+        from apps.notifications.services import bot_actions
+
+        message.buttons = bot_actions.event_buttons(
+            delivery.record.code, delivery.record.payload, delivery.language
+        )
     try:
         reference = adapters.get_adapter(delivery.channel.type).send(
-            message, delivery.channel.config or {}
+            message, personal.config_for(delivery.channel)
         )
     except ChannelError as exc:
+        personal.note_result(delivery.channel_id, ok=False, error=exc.detail, blocked=exc.blocked)
         if exc.retryable:
             EventDelivery.objects.filter(pk=delivery.pk).update(error=exc.detail[:2000])
             raise
@@ -277,8 +289,10 @@ def send_event_delivery(delivery_id) -> EventDelivery | None:
         logger.warning(
             "Канал %s не принял событие %s", delivery.channel_id, delivery.record.code, exc_info=True
         )
+        personal.note_result(delivery.channel_id, ok=False, error=type(exc).__name__)
         _finish(delivery, NotificationStatus.FAILED, f"{type(exc).__name__}: {exc}")
     else:
+        personal.note_result(delivery.channel_id, ok=True)
         _finish(delivery, NotificationStatus.SENT, str(reference))
     return delivery
 

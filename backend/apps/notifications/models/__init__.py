@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .bot_state import MessengerBotState
 from .channel import NotificationChannel
 from .escalation import EscalationRule, EscalationStep
 from .event_log import EventDelivery, EventRecord
@@ -16,6 +17,7 @@ __all__ = [
     "EventDelivery",
     "EventRecord",
     "EventSetting",
+    "MessengerBotState",
     "NotificationChannel",
     "NotificationLog",
     "NotificationStatus",

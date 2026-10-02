@@ -42,6 +42,9 @@ const DOMAINS = [
   'room',
   'notification',
   'staff',
+  // Нажатия кнопок под уведомлениями в Telegram (партия 28): кто взял заказ
+  // или отзыв из мессенджера — тоже должно читаться словами.
+  'bot',
 ];
 const CODE = new RegExp(`"((?:${DOMAINS.join('|')})\\.[a-z_.]+)"`, 'g');
 

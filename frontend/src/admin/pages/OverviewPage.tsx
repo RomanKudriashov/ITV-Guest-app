@@ -183,6 +183,10 @@ function HealthRow({ signal }: { signal: OverviewHealth }) {
           count: signal.count ?? 0,
           hotel: signal.hotel ?? '',
           days: signal.days ?? 0,
+          // Бот платформы (партия 28): имя, хвост токена, последняя ошибка.
+          name: signal.name ?? '',
+          tail: signal.tail ?? '',
+          error: signal.error ?? '',
           defaultValue: signal.code,
         })}
         {signal.kinds?.length ? (

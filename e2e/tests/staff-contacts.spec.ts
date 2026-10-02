@@ -18,6 +18,9 @@ import {
  * Повар — линейный сотрудник: разделов CMS у него нет, но профиль свой, и
  * мессенджер он подключает именно там. Кнопка «подключить» без бота честно
  * говорит «пока недоступно» и не нажимается — рабочей заглушка не выглядит.
+ * С партии 28 бот Telegram есть (в разработке — эмулятор Bot API), и
+ * «без бота» остаётся у Max: у него только интерфейс. Подключение Telegram
+ * целиком — `telegram-bot.spec.ts`.
  *
  * Телефон — контакт человека: видят его он сам и администратор отеля, а
  * управляющий — нет. Номер повара тест ставит явно и возвращает прежний.
@@ -59,7 +62,7 @@ test.describe('Контакты сотрудника', () => {
     await setOwnPhone(request, chefToken || (await staffToken(request, CREDENTIALS)), original)
   })
 
-  test('повар открывает свой профиль, сохраняет телефон и видит честное «пока недоступно»', async ({
+  test('повар открывает свой профиль, сохраняет телефон и видит честное «пока недоступно» у Max', async ({
     page,
     request,
   }) => {
@@ -77,15 +80,15 @@ test.describe('Контакты сотрудника', () => {
     await expect.poll(() => ownPhone(request, chefToken)).toBe('+79165550102')
     await expect(page.getByTestId('profile-phone')).toHaveValue('+79165550102')
 
-    for (const messenger of ['telegram', 'max']) {
-      const connect = page.getByTestId(`profile-messenger-${messenger}-connect`)
-      await expect(connect, messenger).toBeVisible()
-      await expect(connect, `${messenger}: кнопка не должна притворяться рабочей`).toBeDisabled()
-      await expect(page.getByTestId(`profile-messenger-${messenger}-unavailable`)).toBeVisible()
-    }
+    const connect = page.getByTestId('profile-messenger-max-connect')
+    await expect(connect).toBeVisible()
+    await expect(connect, 'Max: кнопка не должна притворяться рабочей').toBeDisabled()
+    await expect(page.getByTestId('profile-messenger-max-unavailable')).toBeVisible()
+    // Telegram — рабочий: бот на связи.
+    await expect(page.getByTestId('profile-messenger-telegram-connect')).toBeEnabled()
 
     // И сервер говорит то же самое, что экран.
-    const code = await request.post(`${API}/api/staff/me/contacts/telegram/binding-code`, {
+    const code = await request.post(`${API}/api/staff/me/contacts/max/binding-code`, {
       headers: headers(chefToken),
     })
     expect(code.status()).toBe(409)

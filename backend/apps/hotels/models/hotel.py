@@ -146,6 +146,10 @@ class Hotel(BaseModel):
     review_enabled = models.BooleanField(default=True)
     # Оценка «≤ порога» — низкая. Две звезды и ниже — решение заказчика.
     review_low_threshold = models.PositiveSmallIntegerField(default=2)
+    # Личные уведомления сотрудникам в Telegram через бота платформы (партия
+    # 28). Выключено — бот не принимает коды привязки этого отеля, не шлёт его
+    # сотрудникам и не исполняет кнопки по его заказам; привязки сохраняются.
+    telegram_enabled = models.BooleanField(default=True)
 
     # --- Коммерция. По умолчанию всё выключено: суммы = сумме позиций,
     # поведение старых заказов не меняется, пока отель не включит в CMS. ---

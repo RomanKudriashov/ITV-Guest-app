@@ -80,7 +80,12 @@ def serialize_channel(channel: NotificationChannel) -> dict:
 
 
 def list_channels(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
-    queryset = NotificationChannel.objects.select_related("execution_point", "user")
+    # Личный Telegram через бота платформы заводит и снимает привязка в профиле
+    # сотрудника, а не форма канала: токена в нём нет, и правка формой его бы
+    # сломала. Его состояние — на карточке сотрудника (партия 28).
+    queryset = NotificationChannel.objects.select_related("execution_point", "user").filter(
+        via_platform_bot=False
+    )
     managed = managed_point_ids_or_none()
     if managed is not None:
         # Канал управляющего — канал его отдела либо его собственный. Личные
@@ -94,7 +99,7 @@ def list_channels(*, search: str = "", limit: int | None = None, offset: int = 0
 
 
 def get_channel(channel_id) -> NotificationChannel:
-    channel = NotificationChannel.objects.filter(pk=channel_id).first()
+    channel = NotificationChannel.objects.filter(pk=channel_id, via_platform_bot=False).first()
     if channel is None:
         raise NotFoundError("Канал не найден")
     _require_point(channel.execution_point_id, "Канал")

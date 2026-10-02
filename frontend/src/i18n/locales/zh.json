@@ -1325,6 +1325,15 @@
           "failed_delivery": "发往渠道「{{channel}}」的未送达消息"
         }
       }
+    },
+    "telegram": {
+      "title": "Telegram",
+      "hint": "通过平台机器人向员工发送个人通知。员工在个人资料中绑定 Telegram；谁收到什么按下方的事件和规则执行。",
+      "switch": "Telegram 通知",
+      "turnedOn": "Telegram 已开启",
+      "turnedOff": "Telegram 已关闭：机器人不再给酒店员工发消息，绑定保留",
+      "botOnline": "机器人 @{{name}} 在线",
+      "botMissing": "机器人未连接，员工暂时无法绑定 Telegram。"
     }
   },
   "brand": {
@@ -1685,7 +1694,15 @@
       "deleteBody": "将删除“{{name}}”。",
       "emailTaken": "该邮箱已被占用",
       "weakPassword": "密码过短",
-      "cannotRemoveSelf": "不能删除或停用自己"
+      "cannotRemoveSelf": "不能删除或停用自己",
+      "telegram": {
+        "blocked": "机器人被屏蔽",
+        "invite": "邀请绑定 Telegram",
+        "invited": "邀请已发送至 {{email}}",
+        "lastSent": "已送达 {{time}}",
+        "neverSent": "尚无通知",
+        "lastError": "错误 {{time}}：{{error}}"
+      }
     }
   },
   "slotConfig": {
@@ -2317,7 +2334,13 @@
         "notification": {
           "escalation_step": "升级步骤"
         }
-      }
+      },
+      "bot_ok": "机器人 @{{name}} 在线",
+      "bot_no_token": "Telegram 机器人未连接：未设置令牌",
+      "bot_rejected": "Telegram 机器人：令牌被拒绝（{{tail}}）",
+      "bot_conflict": "机器人 @{{name}}：另一台服务器正在轮询它（409）",
+      "bot_down": "机器人服务已 {{count}} 分钟无响应",
+      "bot_error": "机器人 @{{name}}：Telegram 不可用 — {{error}}"
     },
     "fleet": {
       "title": "酒店",
@@ -2659,14 +2682,20 @@
         "bulk_updated": "已批量修改房间"
       },
       "notification": {
-        "event_settings_changed": "通知设置已更改"
+        "event_settings_changed": "通知设置已更改",
+        "telegram_switched": "已切换酒店 Telegram"
       },
       "staff": {
         "contact": {
           "phone_changed": "员工电话已更改",
           "linked": "员工已连接即时通讯",
-          "unlinked": "员工已断开即时通讯"
+          "unlinked": "员工已断开即时通讯",
+          "invited": "已发送 Telegram 邀请"
         }
+      },
+      "bot": {
+        "take": "通过 Telegram 按钮接单",
+        "triage": "通过 Telegram 按钮处理评价"
       }
     },
     "enter": {
@@ -3276,9 +3305,11 @@
       "connect": "连接",
       "unlink": "断开",
       "unlinked": "已断开即时通讯",
-      "unavailable": "暂时无法连接：通知机器人尚未创建。创建后，这里会显示它的链接。",
+      "unavailable": "机器人未连接，暂时无法绑定。机器人上线后，这里会出现它的链接。",
       "openBot": "打开机器人并点击「Start」",
-      "codeExpires": "链接有效期至 {{time}}"
+      "codeExpires": "链接有效期至 {{time}}",
+      "unavailableHotelOff": "酒店已关闭 Telegram 通知，目前无法绑定。",
+      "blocked": "你已屏蔽机器人，通知无法送达。请在 Telegram 中解除屏蔽并给它发送任意消息。"
     }
   },
   "list": {
