@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 /**
@@ -24,6 +24,14 @@ export function useListQuery<T extends Record<string, string | number>>(
   isFiltered: boolean;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
+  // Последний записанный адрес — см. `patch`. Догоняет его только НОВЫЙ адрес
+  // роутера: посторонняя перерисовка до перехода не откатит ref к старому.
+  const latest = useRef(searchParams);
+  const seen = useRef(searchParams);
+  if (seen.current !== searchParams) {
+    seen.current = searchParams;
+    latest.current = searchParams;
+  }
 
   const params = useMemo(() => {
     const result = { ...defaults };
@@ -41,7 +49,6 @@ export function useListQuery<T extends Record<string, string | number>>(
 
   const patch = useCallback(
     (next: Partial<T>) => {
-      const merged = { ...params, ...next };
       /*
         Правим ТОЛЬКО свои ключи, чужие в адресе не трогаем.
 
@@ -49,9 +56,18 @@ export function useListQuery<T extends Record<string, string | number>>(
         стирала всё остальное, в том числе раздел консоли: набрал букву в
         поиске, и экран уехал на «Сводку». Список распоряжается своими
         параметрами, а не всем адресом.
+
+        И ТОЛЬКО ТЕ КЛЮЧИ, ЧТО ПЕРЕДАНЫ, ПОВЕРХ НЫНЕШНЕГО АДРЕСА (партия 28).
+        Раньше правка сливалась с `params` прошлой отрисовки: две быстрые
+        правки подряд («С», сразу за ней «По») под нагрузкой успевали раньше
+        перерисовки, и вторая затирала первую старым значением — «С» пропадал
+        (`reviews-period-and-retries`, два захода части Б подряд). Теперь
+        правка ложится поверх ПОСЛЕДНЕГО ЗАПИСАННОГО адреса (`latest`), который
+        обновляется сразу при записи. Функциональная форма `setSearchParams`
+        не спасает: react-router отдаёт в неё тот же адрес прошлой отрисовки.
       */
-      const search = new URLSearchParams(searchParams);
-      for (const [key, value] of Object.entries(merged)) {
+      const search = new URLSearchParams(latest.current);
+      for (const [key, value] of Object.entries(next)) {
         const isDefault = String(value) === String(defaults[key as keyof T]);
         if (value === '' || value === undefined || value === null || isDefault) {
           search.delete(key);
@@ -59,20 +75,22 @@ export function useListQuery<T extends Record<string, string | number>>(
         }
         search.set(key, String(value));
       }
+      latest.current = search;
       // `replace`: набор фильтров — это уточнение одного экрана, а не переход.
       // Иначе каждая буква в поиске оставляла бы запись в истории, и «назад»
       // пришлось бы жать столько раз, сколько букв набрали.
       setSearchParams(search, { replace: true });
     },
-    [params, defaults, searchParams, setSearchParams],
+    [defaults, setSearchParams],
   );
 
   /** Снять СВОИ фильтры. Чужие параметры адреса остаются — они не наши. */
   const reset = useCallback(() => {
-    const search = new URLSearchParams(searchParams);
+    const search = new URLSearchParams(latest.current);
     for (const key of Object.keys(defaults)) search.delete(key);
+    latest.current = search;
     setSearchParams(search, { replace: true });
-  }, [defaults, searchParams, setSearchParams]);
+  }, [defaults, setSearchParams]);
 
   const isFiltered = useMemo(
     () =>

@@ -74,6 +74,28 @@ test.describe('Отзывы: период и повторы', () => {
       .toBeTruthy()
   })
 
+  test('две правки фильтра в одном такте — обе остаются (партия 28)', async ({ page }) => {
+    // Под нагрузкой «По» вводился раньше, чем экран перерисовался после «С», и
+    // правка «По» затирала «С» значением прошлой отрисовки — общий хук списков
+    // (`kit/list/useListQuery.ts`). Здесь обе правки — в одном такте, без
+    // всякой перерисовки между ними: нагрузка не нужна, чтобы увидеть дефект.
+    await openReviews(page)
+    await expect(page.getByTestId('reviews-count')).toBeVisible()
+    await page.evaluate(() => {
+      const set = (testId: string, value: string) => {
+        const input = document.querySelector<HTMLInputElement>(`[data-testid="${testId}"]`)!
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+        setter.call(input, value)
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      set('reviews-filter-since', '2026-09-24')
+      set('reviews-filter-until', '2026-09-01')
+    })
+    await expect(page).toHaveURL(/date_from=2026-09-24/)
+    await expect(page).toHaveURL(/date_to=2026-09-01/)
+    await expect(page.getByTestId('reviews-bad-range')).toBeVisible()
+  })
+
   test('отказ 422 не повторяется, и на экране причина, а не «не удалось»', async ({ page }) => {
     await page.route(/\/cms\/reviews(\?|$)/, (route) =>
       route.fulfill({
