@@ -286,6 +286,10 @@ def delete_hotel_row(hotel: Hotel) -> None:
     Поддомен при этом освобождается: `Hotel.delete()` переименовывает его в
     припаркованный вид, а прежнее имя кладёт в `former_subdomain`.
     """
+    from apps.accounts.services import sessions as session_svc
+
+    # Удалённый отель — без живых входов сотрудников (партия 30).
+    session_svc.revoke_hotel(hotel.pk, reason="hotel_deleted")
     with platform_scope():
         AuditLog.all_objects.using("platform").filter(hotel_id=hotel.pk).delete()
     Hotel.objects.filter(pk=hotel.pk).delete()

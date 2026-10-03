@@ -138,7 +138,7 @@ def update_member(user_id: str, *, role: str | None, is_active: bool | None, act
                 # висят в реестре, а выйти из-под отключённого нельзя.
                 from apps.accounts.services import sessions as session_svc
 
-                session_svc.revoke_all(member.pk, scope="platform")
+                session_svc.revoke_all(member.pk, scope="platform", reason="deactivated")
     return member
 
 

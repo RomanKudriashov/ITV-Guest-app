@@ -71,6 +71,11 @@ def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
     action = "activated" if payload.is_active else "deactivated"
     for hotel in changed:
         console.audit_hotel(hotel, f"platform.hotel.{action}", actor_id=request.user.pk, ip=ip, payload={"bulk": True})
+        if not payload.is_active:
+            # Отключённый отель — без живых входов сотрудников (партия 30).
+            from apps.accounts.services import sessions as session_svc
+
+            session_svc.revoke_hotel(hotel.pk, reason="hotel_deactivated")
     console.audit_platform(
         "platform.fleet.bulk",
         actor_id=request.user.pk,

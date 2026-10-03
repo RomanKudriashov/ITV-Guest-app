@@ -162,7 +162,7 @@ def close_session(request: HttpRequest, session_id: str):
     """Закрыть можно только СВОЮ сессию — чужая по идентификатору не найдётся."""
     from apps.accounts.services import sessions as session_svc
 
-    return {"ok": session_svc.revoke(session_id, user_id=request.user.pk)}
+    return {"ok": session_svc.revoke(session_id, user_id=request.user.pk, reason="closed")}
 
 
 @router.get("/auth/me", response=MeOut, auth=staff_auth, summary="Текущий пользователь")

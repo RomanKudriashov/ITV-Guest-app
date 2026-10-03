@@ -19,7 +19,7 @@ from apps.events.bus import SESSION_STARTED, emit
 from apps.hotels.models import Room
 
 from apps.accounts.models import GuestSession, ImpersonationGrant, TrustLevel, User
-from apps.accounts.services.tokens import encode_refresh_token, encode_staff_token
+from apps.accounts.services.tokens import encode_staff_token
 
 
 class AuthenticationFailed(Exception):
@@ -105,7 +105,7 @@ def authenticate_staff_credentials(email: str, password: str, *, request=None) -
         "access": encode_staff_token(
             user, execution_point_ids=execution_point_ids, session_id=session.pk
         ),
-        "refresh": encode_refresh_token(user, session_id=session.pk),
+        "refresh": session_svc.issue_refresh(session, user),
         "user_id": str(user.pk),
     }
 
@@ -126,7 +126,6 @@ def refresh_session(refresh_token: str, *, scope: str, hotel_id=None) -> dict:
     from apps.accounts.services.tokens import (
         TokenError,
         decode_refresh_token,
-        encode_refresh_token,
         encode_staff_token,
     )
 
@@ -151,11 +150,7 @@ def refresh_session(refresh_token: str, *, scope: str, hotel_id=None) -> dict:
         execution_point_ids = list(
             user.assignments.filter(is_active=True).values_list("execution_point_id", flat=True)
         )
-        session = session_svc.get_active(claims.get("sid"), user_id=user.pk, scope=scope)
-        if session is None:
-            # Сессию оборвали выходом, «выйти везде» или сменой пароля — либо
-            # токен выписан до появления реестра. Обменивать нечего.
-            raise expired
+        session, refresh = _rotate(claims, user, scope, expired)
         access = encode_staff_token(
             user, execution_point_ids=execution_point_ids, session_id=session.pk
         )
@@ -170,9 +165,7 @@ def refresh_session(refresh_token: str, *, scope: str, hotel_id=None) -> dict:
             )
         if user is None:
             raise expired
-        session = session_svc.get_active(claims.get("sid"), user_id=user.pk, scope=scope)
-        if session is None:
-            raise expired
+        session, refresh = _rotate(claims, user, scope, expired)
         # Второй фактор переносится в новый access: обновление НЕ обходит 2FA,
         # но и не требует вводить код каждый час.
         access = encode_staff_token(user, mfa=user.totp_enabled, session_id=session.pk)
@@ -180,10 +173,38 @@ def refresh_session(refresh_token: str, *, scope: str, hotel_id=None) -> dict:
     # Активность продлевает и строку реестра: скользящее окно считается в
     # одном месте с тем, что записано в токене.
     session_svc.touch(session)
-    return {
-        "access": access,
-        "refresh": encode_refresh_token(user, scope=scope, session_id=session.pk),
-    }
+    # `refresh: None` — вторая вкладка в окне терпимости: свежий refresh уже
+    # лежит в хранилище браузера, его положила первая (партия 30).
+    return {"access": access, "refresh": refresh}
+
+
+def _rotate(claims: dict, user: User, scope: str, expired: Exception):
+    """
+    Обмен с ротацией (партия 30, п.25 бэклога): старый refresh гаснет, новый
+    выдаётся; повтор погашенного вне окна терпимости — кража, и вся цепочка
+    этого входа обрывается, с записью в журнал.
+    """
+    from apps.accounts.services import sessions as session_svc
+
+    try:
+        session, refresh = session_svc.rotate(
+            claims.get("sid"), claims.get("jti") or "", user=user, scope=scope
+        )
+    except session_svc.RefreshReused as exc:
+        AuditLog.objects.using("platform" if scope == "platform" else "default").create(
+            hotel_id=user.hotel_id,
+            actor_type=AuditLog.ActorType.SYSTEM,
+            action="staff.session.refresh_reused",
+            object_type="user",
+            object_id=user.pk,
+            payload={"session": str(exc), "scope": scope},
+        )
+        raise expired from exc
+    if session is None:
+        # Сессию оборвали выходом, «выйти везде», сменой пароля, выключением —
+        # или токен выписан до появления реестра. Обменивать нечего.
+        raise expired
+    return session, refresh
 
 
 @transaction.atomic

@@ -136,6 +136,12 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
 
     if fields:
         hotel.save(update_fields=[*fields, "updated_at"])
+    if activation_change == "deactivated":
+        # Отключённый отель — без живых входов сотрудников (партия 30): иначе
+        # их refresh ожили бы при обратном включении.
+        from apps.accounts.services import sessions as session_svc
+
+        session_svc.revoke_hotel(hotel.pk, reason="hotel_deactivated")
 
     if "languages" in data and data["languages"] is not None:
         language_change = console.replace_languages(hotel, data["languages"])

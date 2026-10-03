@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import secrets
 import uuid
 from datetime import timedelta
 
@@ -31,6 +33,16 @@ from apps.core.context import platform_scope
 from apps.accounts.models import StaffSession, User
 
 PLATFORM = StaffSession.Scope.PLATFORM
+
+# ОКНО ТЕРПИМОСТИ ДЛЯ ДВУХ ВКЛАДОК (партия 30). Вкладки делят один refresh в
+# localStorage; если обе обновились почти одновременно, вторая предъявляет
+# refresh, который первая только что погасила. Это не кража, и выбивать
+# человека за открытую вторую вкладку нельзя. В этом окне погашенный refresh
+# ещё даёт новый access (без нового refresh — свежий уже лежит в хранилище,
+# его положила первая вкладка). Вне окна повтор погашенного — кража: гаснет
+# вся цепочка этого входа. Основная защита от гонки — на клиенте (одно
+# обновление на вход через Web Locks), окно — подстраховка.
+REFRESH_GRACE_SECONDS = 30
 
 # Сколько держим отработавшие строки после истечения. Нужны они только для
 # ответа на вопрос «а что это был за вход» — неделя такой памяти достаточно.
@@ -84,6 +96,82 @@ def open_session(user: User, *, scope: str, request=None) -> StaffSession:
     return session
 
 
+def fingerprint(jti: str, session_id) -> str:
+    """
+    Отпечаток refresh — по его идентификатору и сессии. Пустой `jti` у токенов,
+    выданных до ротации: у них общий на сессию отпечаток, и первый их обмен
+    переводит сессию на ротацию, никого не выбивая при выкатке.
+    """
+    return hashlib.sha256(f"{session_id}:{jti or 'legacy'}".encode()).hexdigest()
+
+
+def issue_refresh(session: StaffSession, user: User) -> str:
+    """
+    Новый refresh для сессии: идентификатор случайный, в строку пишется только
+    его отпечаток. Прежний действующий уходит в `previous_hash`.
+    """
+    from apps.accounts.services.tokens import encode_refresh_token
+
+    jti = secrets.token_hex(16)
+    now = timezone.now()
+    changes = {
+        "refresh_hash": fingerprint(jti, session.pk),
+        "previous_hash": session.refresh_hash,
+        "rotated_at": now if session.refresh_hash else None,
+        "updated_at": now,
+    }
+    _rows(session.scope).filter(pk=session.pk).update(**changes)
+    for field, value in changes.items():
+        setattr(session, field, value)
+    return encode_refresh_token(user, scope=session.scope, session_id=session.pk, jti=jti)
+
+
+class RefreshReused(Exception):
+    """Предъявлен погашенный refresh вне окна терпимости — цепочка оборвана."""
+
+
+def rotate(session_id, presented_jti: str, *, user: User, scope: str) -> tuple[StaffSession, str | None]:
+    """
+    Обмен refresh. Возвращает сессию и НОВЫЙ refresh — либо None, если
+    предъявлен только что погашенный refresh в окне терпимости (вторая
+    вкладка): тогда клиент оставляет refresh, который уже положила первая.
+
+    Под блокировкой строки: два одновременных обмена одного токена не
+    выдадут две ветки цепочки.
+    """
+    from django.db import transaction
+
+    db = "platform" if scope == PLATFORM else "default"
+    with transaction.atomic(using=db):
+        session = _rows(scope).select_for_update().filter(pk=session_id, user_id=user.pk).first()
+        if session is None or not session.is_active:
+            return None, None
+        presented = fingerprint(presented_jti, session.pk)
+        if not session.refresh_hash and not presented_jti:
+            # Сессия и токен — до ротации: первый обмен переводит её на ротацию.
+            # Отпечаток старого токена уходит в «предыдущий» — вторая вкладка с
+            # тем же старым токеном в окне терпимости не будет принята за вора.
+            session.refresh_hash = presented
+            return session, issue_refresh(session, user)
+        if presented == session.refresh_hash:
+            return session, issue_refresh(session, user)
+        grace = timedelta(seconds=REFRESH_GRACE_SECONDS)
+        if (
+            presented == session.previous_hash
+            and session.rotated_at is not None
+            and timezone.now() - session.rotated_at <= grace
+        ):
+            return session, None
+        # Погашенный (или чужой для этой сессии) refresh — копию увели либо
+        # хозяин опоздал на окно. В обоих случаях цепочка входа обрывается:
+        # дальше по ней не пойдёт ни вор, ни хозяин — хозяин войдёт заново.
+        now = timezone.now()
+        _rows(scope).filter(pk=session.pk).update(
+            revoked_at=now, revoked_reason="refresh_reused", updated_at=now
+        )
+    raise RefreshReused(str(session.pk))
+
+
 def touch(session: StaffSession) -> None:
     """
     Активность продлевает и строку тоже.
@@ -115,15 +203,17 @@ def get_active(session_id, *, user_id=None, scope: str | None = None) -> StaffSe
     return session if session is not None and session.is_active else None
 
 
-def revoke(session_id, *, user_id, scope: str | None = None) -> bool:
+def revoke(session_id, *, user_id, scope: str | None = None, reason: str = "logout") -> bool:
     """Оборвать одну сессию — свою. Чужую по идентификатору не оборвать."""
     updated = _rows(scope).filter(
         pk=session_id, user_id=user_id, revoked_at__isnull=True
-    ).update(revoked_at=timezone.now(), updated_at=timezone.now())
+    ).update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
     return bool(updated)
 
 
-def revoke_all(user_id, *, keep: uuid.UUID | str | None = None, scope: str | None = None) -> int:
+def revoke_all(
+    user_id, *, keep: uuid.UUID | str | None = None, scope: str | None = None, reason: str = "logout_all"
+) -> int:
     """
     Оборвать все сессии учётки.
 
@@ -135,7 +225,22 @@ def revoke_all(user_id, *, keep: uuid.UUID | str | None = None, scope: str | Non
     queryset = _rows(scope).filter(user_id=user_id, revoked_at__isnull=True)
     if keep:
         queryset = queryset.exclude(pk=keep)
-    return queryset.update(revoked_at=timezone.now(), updated_at=timezone.now())
+    return queryset.update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+
+
+def revoke_hotel(hotel_id, *, reason: str) -> int:
+    """
+    Оборвать все входы сотрудников отеля — при его отключении и удалении
+    (партия 30). Раньше отключённый отель лишь переставал находиться по
+    поддомену: refresh сотрудников оставались живыми и ожили бы при обратном
+    включении, а при удалении — висели бы в реестре до истечения.
+    """
+    with platform_scope():
+        return (
+            StaffSession.all_objects.using("platform")
+            .filter(hotel_id=hotel_id, revoked_at__isnull=True)
+            .update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+        )
 
 
 def purge_stale(user: User | None = None, *, scope: str | None = None) -> int:

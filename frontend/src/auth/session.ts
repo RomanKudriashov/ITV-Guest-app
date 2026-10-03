@@ -14,7 +14,15 @@
  *   * обновление ОДНО на все параллельные запросы: остальные ждут его, а не
  *     заводят своё (иначе десять вкладок дают десять обменов, и выигравший
  *     последним затирает refresh, которым уже воспользовались);
- *   * вместе с access приходит новый refresh — активность продлевает сессию.
+ *   * вместе с access приходит новый refresh — активность продлевает сессию;
+ *   * ОДНО ОБНОВЛЕНИЕ НА ВХОД ДЛЯ ВСЕХ ВКЛАДОК (партия 30). С ротацией refresh
+ *     одноразовый: вкладки делят его через localStorage, и две вкладки,
+ *     обменявшие его почти одновременно, выглядели бы для сервера кражей.
+ *     Поэтому обмен идёт под браузерной блокировкой (Web Locks) на область, а
+ *     получив её, вкладка ПЕРЕЧИТЫВАЕТ хранилище: если соседняя уже обменяла
+ *     токен, свой обмен не нужен — берётся её свежий access. Где блокировок
+ *     нет, страхует окно терпимости сервера (30 с): погашенный refresh в нём
+ *     даёт access без нового refresh, и клиент оставляет тот, что уже лежит.
  */
 
 export interface SessionScope {
@@ -96,31 +104,48 @@ export function createSession(scope: SessionScope) {
   function refresh(): Promise<string | null> {
     if (inFlight) return inFlight;
 
-    const token = store.refresh();
-    if (!token) {
+    const seen = store.refresh();
+    if (!seen) {
       // Нечего обменивать — сессии нет, и притворяться незачем.
       return Promise.resolve(null);
     }
 
-    inFlight = fetch(scope.refreshUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(scope.headers?.() ?? {}) },
-      body: JSON.stringify({ refresh: token }),
-    })
-      .then(async (response) => {
+    const exchange = async (): Promise<string | null> => {
+      // Под блокировкой — заново: пока ждали, соседняя вкладка могла обменять.
+      const token = store.refresh();
+      if (!token) return null;
+      if (token !== seen) {
+        const fresh = store.access();
+        if (fresh && !isStale(fresh)) return fresh;
+      }
+      try {
+        const response = await fetch(scope.refreshUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(scope.headers?.() ?? {}) },
+          body: JSON.stringify({ refresh: token }),
+        });
         if (!response.ok) return null;
-        const data = (await response.json()) as { access?: string; refresh?: string };
+        const data = (await response.json()) as { access?: string; refresh?: string | null };
         if (!data.access) return null;
-        store.set(data.access, data.refresh);
+        // `refresh: null` — окно терпимости сервера: свежий refresh уже в
+        // хранилище, его положила соседняя вкладка.
+        store.set(data.access, data.refresh ?? undefined);
         return data.access;
-      })
-      .catch(() => null)
-      .finally(() => {
-        // Снимаем ПОСЛЕ разрешения: пока промис висит, все ждут его.
-        inFlight = null;
-      });
+      } catch {
+        return null;
+      }
+    };
 
-    return inFlight;
+    const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+    const run = locks
+      ? (locks.request(`itv-refresh:${scope.refreshKey}`, exchange) as unknown as Promise<string | null>)
+      : exchange();
+    const pending = run.finally(() => {
+      // Снимаем ПОСЛЕ разрешения: пока промис висит, все ждут его.
+      inFlight = null;
+    });
+    inFlight = pending;
+    return pending;
   }
 
   /** Обновить, если срок на исходе. Возвращает токен, с которым идти дальше. */

@@ -422,4 +422,15 @@ def set_hotel_admin(hotel: Hotel, *, email: str, password: str | None = None) ->
             user.save()
 
     delivery = send_admin_password(hotel, email=email, password=new_password, is_new=is_new)
+    if not is_new:
+        # Сброс пароля платформой — смена пароля (партия 30): все входы
+        # администратора гаснут. Оставлять нечего: сбрасывает не он сам. После
+        # письма, внутри той же транзакции: не ушло письмо — ни пароля, ни отзыва.
+        # В КОНТЕКСТЕ ОТЕЛЯ: сброс зовёт консоль платформы, у которой тенанта
+        # нет, а сессии сотрудников под RLS — без контекста отзыв проходил бы
+        # вхолостую (поймал тест `test_platform_resetting_…`).
+        from apps.accounts.services import sessions as session_svc
+
+        with tenant_context(hotel):
+            session_svc.revoke_all(user.pk, reason="password_reset")
     return user, delivery

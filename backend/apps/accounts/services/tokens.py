@@ -88,7 +88,11 @@ def decode_staff_token(token: str) -> dict[str, Any]:
 
 
 def encode_refresh_token(
-    user, *, scope: str | None = None, session_id: uuid.UUID | str | None = None
+    user,
+    *,
+    scope: str | None = None,
+    session_id: uuid.UUID | str | None = None,
+    jti: str | None = None,
 ) -> str:
     """
     Долгоживущий токен ОБНОВЛЕНИЯ. Обменивается на access и на себя же —
@@ -113,6 +117,10 @@ def encode_refresh_token(
         # отпечаток рвал все сессии разом, включая ту, из которой пароль
         # меняли, и «выйти на этом устройстве» им было не выразить.
         "sid": str(session_id) if session_id else None,
+        # Идентификатор ЭТОГО refresh (партия 30). Сервер хранит его отпечаток
+        # и при каждом обновлении выдаёт новый: старый гаснет, его повтор —
+        # признак кражи. Выдаётся только через `sessions.issue_refresh`.
+        "jti": jti or "",
         "iat": int(issued.timestamp()),
         "exp": int(
             (issued + timedelta(days=settings.JWT_REFRESH_TTL_DAYS)).timestamp()

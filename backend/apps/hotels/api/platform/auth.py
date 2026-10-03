@@ -23,7 +23,7 @@ def platform_login(request: HttpRequest, payload: PlatformLoginIn):
     from django.contrib.auth.hashers import check_password
 
     from apps.accounts.services.platform_access import client_ip, ip_allowed
-    from apps.accounts.services.tokens import encode_refresh_token, encode_staff_token
+    from apps.accounts.services.tokens import encode_staff_token
     from apps.accounts.services.totp import verify as verify_totp
 
     # Рубеж «откуда» проверяем и на входе: иначе с чужой сети можно было бы
@@ -57,7 +57,7 @@ def platform_login(request: HttpRequest, payload: PlatformLoginIn):
     session = session_svc.open_session(user, scope="platform", request=request)
     return 200, {
         "access": encode_staff_token(user, mfa=user.totp_enabled, session_id=session.pk),
-        "refresh": encode_refresh_token(user, session_id=session.pk),
+        "refresh": session_svc.issue_refresh(session, user),
         "user": console.me(user),
     }
 
@@ -144,7 +144,7 @@ def platform_sessions(request: HttpRequest, limit: int | None = None, offset: in
 def platform_close_session(request: HttpRequest, session_id: str):
     from apps.accounts.services import sessions as session_svc
 
-    return {"ok": session_svc.revoke(session_id, user_id=request.user.pk, scope="platform")}
+    return {"ok": session_svc.revoke(session_id, user_id=request.user.pk, scope="platform", reason="closed")}
 
 
 @router.get("/auth/me", summary="Текущий платформенный админ")

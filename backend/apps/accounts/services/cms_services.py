@@ -274,7 +274,7 @@ def update_staff(user_id, data: dict, *, acting_user_id=None, current_session_id
         # реестре живые входы уволенного и не понял бы, откуда они.
         from apps.accounts.services import sessions as session_svc
 
-        session_svc.revoke_all(user.pk)
+        session_svc.revoke_all(user.pk, reason="deactivated")
     if password_changed:
         # Смена пароля закрывает сессии — все, кроме той, из которой её и
         # сделали. Раньше это решал отпечаток пароля в токене: он рвал ВСЁ
@@ -288,7 +288,7 @@ def update_staff(user_id, data: dict, *, acting_user_id=None, current_session_id
         from apps.accounts.services import sessions as session_svc
 
         keep = current_session_id if str(acting_user_id) == str(user.pk) else None
-        session_svc.revoke_all(user.pk, keep=keep)
+        session_svc.revoke_all(user.pk, keep=keep, reason="password_changed")
     if "assignments" in data:
         _replace_assignments(user, data["assignments"])
     return get_staff(user.pk)
@@ -307,7 +307,7 @@ def delete_staff(user_id, *, acting_user_id=None) -> None:
     from apps.accounts.services import sessions as session_svc
 
     # Удалённый — без живых входов, по той же причине, что и выключенный.
-    session_svc.revoke_all(user.pk)
+    session_svc.revoke_all(user.pk, reason="deleted")
     StaffAssignment.objects.filter(user=user).delete()
     user.delete()
 

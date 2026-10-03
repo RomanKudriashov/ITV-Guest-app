@@ -41,6 +41,18 @@ class StaffSession(BaseModel):
     user_agent = models.CharField(max_length=200, blank=True)
     ip = models.GenericIPAddressField(null=True, blank=True)
 
+    # РОТАЦИЯ REFRESH (партия 30, п.25 бэклога). Хранится ОТПЕЧАТОК (SHA-256)
+    # идентификатора выданного refresh, не сам токен: утечка таблицы не даёт
+    # ни одного рабочего токена. Каждое обновление выдаёт новый refresh, а
+    # прежний переезжает в `previous_hash` — его повтор вне окна терпимости
+    # значит, что копию увели, и сессия гаснет целиком.
+    refresh_hash = models.CharField(max_length=64, blank=True)
+    previous_hash = models.CharField(max_length=64, blank=True)
+    rotated_at = models.DateTimeField(null=True, blank=True)
+    # Чем оборвана: выход, смена пароля, повтор погашенного refresh… — для
+    # реестра и разбора, а не для логики.
+    revoked_reason = models.CharField(max_length=32, blank=True)
+
     last_seen_at = models.DateTimeField(default=timezone.now, db_index=True)
     # Совпадает со сроком refresh: дальше строка бесполезна и подлежит уборке.
     expires_at = models.DateTimeField(db_index=True)
