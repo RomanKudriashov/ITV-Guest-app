@@ -93,3 +93,16 @@ def test_an_inactive_point_is_not_a_ghost(command, crystal):
         point.is_active = False
         point.save(update_fields=["is_active", "updated_at"])
     assert command._check_orphan_points() == []
+
+
+def test_venues_inside_a_group_tile_count_as_on_the_storefront(crystal):
+    """
+    Партия 29: кухня и бар — внутри плитки «Рестораны и бары», рум-сервис — за
+    плиткой «В номер». Проверка стенда обязана видеть их, а не звать пересевать.
+    """
+    from apps.core.context import tenant_context
+    from apps.hotels.management.commands.check_demo_stand import reachable_venue_codes
+
+    with tenant_context(crystal):
+        codes = reachable_venue_codes(crystal)
+    assert {"kitchen", "bar"} <= codes, codes

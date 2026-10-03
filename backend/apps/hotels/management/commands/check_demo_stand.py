@@ -113,7 +113,7 @@ class Command(BaseCommand):
 
         with tenant_context(hotel):
             services = {service.code: service for service in Service.objects.all()}
-            tiles = {tile.get("key") for tile in build_showcase(hotel, language="ru")}
+            tiles = reachable_venue_codes(hotel)
 
             for code, expected in EXPECTED_VENUES.items():
                 service = services.get(code)
@@ -144,7 +144,7 @@ class Command(BaseCommand):
                     )
 
                 if code not in tiles:
-                    problems.append(f"{code}: заведения НЕТ на главной витрине гостя")
+                    problems.append(f"{code}: заведения НЕТ на витрине гостя — ни плиткой, ни в группе")
 
                 self.stdout.write(
                     f"  {code:14} разделов {categories:<3} позиций {items:<4} "
@@ -467,3 +467,25 @@ class Command(BaseCommand):
                 f"{len(EXPECTED_VENUES)} заведений на витрине, управление номером на месте"
             )
         )
+
+
+def reachable_venue_codes(hotel) -> set[str]:
+    """
+    Заведения, до которых гость доходит с главной: плиткой или через плитку-
+    группу (партия 29: «Рестораны и бары» и «В номер» — всегда одна плитка, и
+    кухня живёт в её списке). Раньше считались только ключи плиток, и после
+    группировки проверка объявила «НЕТ на главной» пять живых заведений
+    «Кристалла» — ложная тревога, которая звала пересевать стенд.
+    """
+    from apps.catalog.services.showcase import list_venues
+
+    codes: set[str] = set()
+    for tile in build_showcase(hotel, language="ru"):
+        codes.add(tile.get("key"))
+        route = tile.get("route") or ""
+        if route.startswith("/venue/"):
+            codes.add(route.removeprefix("/venue/"))
+        if tile.get("type") == "service-category":
+            codes.update(venue["code"] for venue in list_venues(hotel, tile["key"], language="ru")["venues"])
+    return codes
+
