@@ -662,7 +662,9 @@ def test_a_request_for_the_morning_is_accepted_at_night(guest, taxi, crystal, mo
     from apps.catalog.models import Item
     from apps.hotels.models import Schedule, ScheduleInterval, Service
 
-    day = crystal.local_now().date() + timedelta(days=1)
+    # 02:00 СЕГОДНЯ, а не завтра: сессия гостя создана по настоящим часам, и
+    # «завтра в 02:00» уходило за срок её жизни (см. `night` в test_info_slot).
+    day = crystal.local_now().date()
     monkeypatch.setattr(timezone, "now", lambda: datetime.combine(day, time(2, 0), tzinfo=crystal.tzinfo))
     with tenant_context(crystal):
         schedule = Schedule.objects.create(hotel=crystal, name="8–23")

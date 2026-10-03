@@ -525,10 +525,18 @@ def _hours(hotel, start_hour: int, end_hour: int):
 
 @pytest.fixture
 def night(monkeypatch, crystal):
-    """«Сейчас» — завтра, 02:00 по отелю. Возвращает этот день (дату отеля)."""
+    """
+    «Сейчас» — 02:00 СЕГОДНЯ по отелю. Возвращает этот день (дату отеля).
+
+    Сегодня, а не завтра: гостевая сессия создаётся по настоящим часам, и
+    «завтра в 02:00», сказанное в полдень, уходит за срок её жизни — сессия
+    истекала, и проверка падала в зависимости от того, когда её запустили
+    (вчера в 21:30 — зелёная, сегодня в 12:26 — красная). Прошедшие 02:00
+    сессии не мешают, а смысл тот же: сейчас ночь, слот — в 10:00.
+    """
     from datetime import time
 
-    day = crystal.local_now().date() + timedelta(days=1)
+    day = crystal.local_now().date()
     fake = datetime.combine(day, time(2, 0), tzinfo=crystal.tzinfo)
     monkeypatch.setattr(timezone, "now", lambda: fake)
     return day
