@@ -373,3 +373,19 @@ def test_closed_now_schedules_left_by_runs_are_removed_and_real_ones_kept(crysta
     with tenant_context(crystal):
         left = set(Schedule.all_objects.filter(pk__in=[residue.pk, fresh.pk, in_use.pk, real.pk]).values_list("pk", flat=True))
     assert left == {fresh.pk, in_use.pk, real.pk}
+
+
+def test_review_chat_residue_is_removed_and_real_chat_kept(crystal):
+    """Сообщение разбора отзыва из прогона уходит; похожее живое — остаётся."""
+    from apps.chat.models import ChatMessage, ChatThread
+    from apps.hotels.models import Room
+
+    with tenant_context(crystal):
+        thread = ChatThread.objects.create(room=Room.objects.first(), last_message_at=timezone.now())
+        residue = ChatMessage.objects.create(thread=thread, author_type="guest", body="где мой заказ mutsc0v3")
+        real = ChatMessage.objects.create(thread=thread, author_type="guest", body="где мой заказ? жду час")
+
+    call_command("clean_test_residue", "--subdomain", "crystal", "--apply", verbosity=0)
+    with tenant_context(crystal):
+        alive = set(ChatMessage.objects.filter(pk__in=[residue.pk, real.pk]).values_list("pk", flat=True))
+    assert alive == {real.pk}
