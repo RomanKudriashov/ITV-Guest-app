@@ -194,6 +194,12 @@ order.accepted / order.status_changed(терминальный) / order.cancelle
 | PATCH | `/api/v1/cms/escalation-rules/{id}` (`steps` заменяют набор целиком) |
 | DELETE | `/api/v1/cms/escalation-rules/{id}` |
 
+Создание, правка и удаление правил и каналов пишутся в журнал действий
+(`notification.escalation_rule_created|changed|deleted`,
+`notification.channel_created|changed|deleted`): автор и время — поля записи,
+`payload.before` / `payload.after` — правило или канал целиком, секреты маской,
+как в ответе API. Сохранение без изменений записи не даёт (партия 30, п.57).
+
 Правила:
 * `delay_minutes` неотрицательный, ступени упорядочены по возрастанию задержки —
   иначе `422 steps_out_of_order`;

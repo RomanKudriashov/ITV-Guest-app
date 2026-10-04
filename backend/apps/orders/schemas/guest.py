@@ -46,6 +46,8 @@ class OrderIn(Schema):
     group_locations: list[GroupLocationIn] = []
     timing: str = "asap"
     requested_time: datetime | None = None
+    # Время без даты («12:00»): ближайшее будущее в поясе отеля (п.46).
+    requested_clock: str | None = None
     comment: str = ""
     # Ответы на поля заявки-услуги: {code поля: значение}. У товаров пусто.
     field_values: dict[str, Any] = {}

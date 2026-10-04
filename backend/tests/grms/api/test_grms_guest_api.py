@@ -743,3 +743,34 @@ def test_scene_hint_travels_from_the_element_to_the_guest(guest):
     assert all(hints.values()), f"сцена без подписи: {hints}"
     # Подписи РАЗНЫЕ: одна на всех означала бы, что она у вида, а не у элемента.
     assert len(set(hints.values())) == len(hints)
+
+
+def test_demo_entry_mark_is_set_only_after_the_record_lands(guest, crystal, monkeypatch):
+    """
+    П.38 (партия 30): отметка «событие записано» ставится ПОСЛЕ записи. Раньше
+    она ставилась до попытки — упала запись, и события не было сутки.
+    """
+    from apps.accounts.models import GuestSession
+    from apps.grms.services import guest as svc
+
+    _demo_entry(crystal, True)
+    with platform_scope():
+        session = GuestSession.all_objects.using("platform").filter(hotel=crystal).order_by("-created_at").first()
+
+    real = AuditLog.record
+    calls = {"n": 0}
+
+    def flaky(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("журнал недоступен")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(AuditLog, "record", flaky)
+    with pytest.raises(RuntimeError):
+        svc._note_demo_entry(crystal, session)
+    svc._note_demo_entry(crystal, session)  # повтор обязан записать
+    svc._note_demo_entry(crystal, session)  # а третий — уже нет: один раз на сессию
+    with platform_scope():
+        entries = AuditLog.all_objects.using("platform").filter(action="grms.demo_entry", object_id=session.pk)
+    assert entries.count() == 1

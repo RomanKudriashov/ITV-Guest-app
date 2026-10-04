@@ -5,7 +5,7 @@ import type { TrackerOrder } from './api/types';
 // Часы живут в `orderAge` вместе с остальным временем доски: две реализации
 // одного форматирования однажды разошлись бы в том, какой это часовой пояс.
 export { formatClock } from './orderAge';
-import { formatClock } from './orderAge';
+import { dueText } from '@/utils/dueTime';
 
 /** Гость забирает сам — нести заказ никуда не нужно. */
 export function isPickup(order: TrackerOrder): boolean {
@@ -35,7 +35,7 @@ export function whereText(order: TrackerOrder, t: TFunction): string {
 /** ASAP or "by 19:30" — the delivery promise, not the creation time. */
 export function whenText(order: TrackerOrder, t: TFunction, language: string): string {
   if (order.requested_time) {
-    return t('tracker.card.byTime', { time: formatClock(order.requested_time, language) });
+    return t('tracker.card.byTime', { time: dueText(order.requested_time, language) ?? '' });
   }
   return t('tracker.card.asap');
 }

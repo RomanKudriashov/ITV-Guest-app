@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { dueText } from '@/utils/dueTime';
 
 /**
  * ВОЗРАСТ ЗАДАЧИ НА ДОСКЕ — СЛОВАМИ, А НЕ ЧИСЛОМ МИНУТ.
@@ -175,7 +176,8 @@ export function formatWaiting(
           ? t('tracker.age.hours', { count: hours })
           : t('tracker.age.hoursMinutes', { hours, minutes: rest });
     }
-    return t('tracker.age.dueAt', { time: formatClock(order.requested_time, language), in: span });
+    // Срок не сегодня — с датой (партия 30, п.46).
+    return t('tracker.age.dueAt', { time: dueText(order.requested_time, language) ?? '', in: span });
   }
   return formatAge(order.waiting_minutes, order.created_at, t, language);
 }

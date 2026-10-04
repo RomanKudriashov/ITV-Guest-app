@@ -2783,9 +2783,18 @@
       },
       "notification": {
         "event_settings_changed": "تم تغيير إعدادات الإشعار",
-        "telegram_switched": "تم تبديل تيليجرام الفندق"
+        "telegram_switched": "تم تبديل تيليجرام الفندق",
+        "escalation_rule_created": "تم إنشاء قاعدة تصعيد",
+        "escalation_rule_changed": "تم تغيير قاعدة تصعيد",
+        "escalation_rule_deleted": "تم حذف قاعدة تصعيد",
+        "channel_created": "تم إنشاء قناة إشعارات",
+        "channel_changed": "تم تغيير قناة إشعارات",
+        "channel_deleted": "تم حذف قناة إشعارات"
       },
       "staff": {
+        "session": {
+          "refresh_reused": "إعادة استخدام رمز التحديث — أُلغيت الجلسة"
+        },
         "contact": {
           "phone_changed": "تم تغيير هاتف الموظف",
           "linked": "ربط الموظف تطبيق مراسلة",

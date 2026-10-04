@@ -2744,9 +2744,18 @@
       },
       "notification": {
         "event_settings_changed": "Изменены настройки уведомления",
-        "telegram_switched": "Переключён Telegram отеля"
+        "telegram_switched": "Переключён Telegram отеля",
+        "escalation_rule_created": "Создано правило эскалации",
+        "escalation_rule_changed": "Изменено правило эскалации",
+        "escalation_rule_deleted": "Удалено правило эскалации",
+        "channel_created": "Создан канал уведомлений",
+        "channel_changed": "Изменён канал уведомлений",
+        "channel_deleted": "Удалён канал уведомлений"
       },
       "staff": {
+        "session": {
+          "refresh_reused": "Повтор погашенного токена — вход отозван"
+        },
         "contact": {
           "phone_changed": "Изменён телефон сотрудника",
           "linked": "Сотрудник подключил мессенджер",

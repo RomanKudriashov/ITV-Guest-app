@@ -9,7 +9,7 @@ import { pressableSx, revealSx, statusTokenColor } from '@/kit';
 import { IconBack } from '@/icons';
 import { useGuestActiveOrders } from '../hooks/useGuestQueries';
 import { useOrderLive } from '../hooks/useOrderLive';
-import { serveByTime } from '../utils/serveBy';
+import { dueText } from '@/utils/dueTime';
 import type { GuestActiveOrder } from '../api/types';
 import { fontPx, surfaceRadius } from '../storefrontTokens';
 
@@ -37,14 +37,14 @@ export function ActiveOrderStrip() {
 }
 
 function ActiveOrderRow({ order, index }: { order: GuestActiveOrder; index: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   // Reuse the per-order channel. Every snapshot invalidates `['guest','orders']`,
   // refetching the strip's list — full-snapshot reconciliation, never a delta.
   useOrderLive(order.id);
 
-  const time = serveByTime(order.serve_by);
+  const time = dueText(order.serve_by, i18n.resolvedLanguage ?? 'en');
   const parts: string[] = [];
   if (order.summary) parts.push(order.summary);
   if (order.extra_count > 0) parts.push(t('guest.home.activeOrder.more', { count: order.extra_count }));

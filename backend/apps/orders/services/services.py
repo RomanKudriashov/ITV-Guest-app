@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import re
+
 import dataclasses
 import math
 from dataclasses import dataclass, field
@@ -93,6 +95,8 @@ class OrderInput:
     group_locations: dict[str, tuple[str | None, str]] = field(default_factory=dict)
     timing: str = "asap"
     requested_time: datetime | None = None
+    # Время без даты («12:00») — его дату решает сервер в поясе отеля (п.46).
+    requested_clock: str | None = None
     comment: str = ""
     field_values: dict[str, Any] = field(default_factory=dict)
     slot_start: str | None = None
@@ -728,6 +732,9 @@ def order_moment(
             return slot_svc._parse_start(data.slot_start)
         except Exception:  # noqa: BLE001 — разбор слота отклонит бронь со своим кодом
             return None
+    if data.timing == "scheduled" and data.requested_time is None and data.requested_clock and hotel is not None:
+        at = parse_clock(data.requested_clock)
+        return nearest_future(at, hotel) if at else None
     if data.timing == "scheduled" and data.requested_time is not None:
         moment = data.requested_time
         return moment if timezone.is_aware(moment) else timezone.make_aware(moment, hotel.tzinfo if hotel else None)
@@ -975,6 +982,31 @@ def _resolve_room(data: OrderInput, guest_session) -> Room | None:
     return getattr(guest_session, "room", None)
 
 
+def nearest_future(at: dt_time, hotel: Hotel) -> datetime:
+    """
+    ВРЕМЯ БЕЗ ДАТЫ — БЛИЖАЙШЕЕ БУДУЩЕЕ В ПОЯСЕ ОТЕЛЯ (партия 30, п.46). Одно
+    правило на все места: поле «время заказа» заявки и заказ ко времени из
+    корзины. В 23:00 «08:00» — это завтра; минута запаса — чтобы «сейчас» не
+    уехало на сутки из-за секунд в пути.
+    """
+    local_now = hotel.local_now()
+    moment = datetime.combine(local_now.date(), at, tzinfo=hotel.tzinfo)
+    if moment < local_now - timedelta(minutes=1):
+        moment = datetime.combine(local_now.date() + timedelta(days=1), at, tzinfo=hotel.tzinfo)
+    return moment
+
+
+def parse_clock(value: str) -> dt_time | None:
+    """«12:00» → время; не похоже на часы и минуты — None."""
+    match = re.fullmatch(r"\s*(\d{1,2}):(\d{2})\s*", str(value or ""))
+    if not match:
+        return None
+    hours, minutes = int(match.group(1)), int(match.group(2))
+    if hours > 23 or minutes > 59:
+        return None
+    return dt_time(hours, minutes)
+
+
 def _requested_time_from_fields(item: Item, field_values: list[dict], hotel: Hotel) -> datetime | None:
     """
     СРОК ЗАЯВКИ — ИЗ ОТВЕТА ГОСТЯ НА ПОЛЕ «ВРЕМЯ ЗАКАЗА» (E2E-005).
@@ -1008,10 +1040,7 @@ def _requested_time_from_fields(item: Item, field_values: list[dict], hotel: Hot
     )
     local_now = hotel.local_now()
     if dated is None:
-        moment = datetime.combine(local_now.date(), at, tzinfo=hotel.tzinfo)
-        if moment < local_now - timedelta(minutes=1):
-            moment = datetime.combine(local_now.date() + timedelta(days=1), at, tzinfo=hotel.tzinfo)
-        return moment
+        return nearest_future(at, hotel)
 
     moment = datetime.combine(date.fromisoformat(dated["value"]), at, tzinfo=hotel.tzinfo)
     if moment < local_now - timedelta(minutes=1):
@@ -1026,6 +1055,15 @@ def _validate_requested_time(data: OrderInput, hotel: Hotel) -> datetime | None:
     к моменту, когда заказ дойдёт до кухни."""
     if data.timing != "scheduled":
         return None
+    if data.requested_time is None and data.requested_clock:
+        # Корзина присылает время без даты («12:00»): дату решает отель, а не
+        # пояс телефона гостя (партия 30, п.46).
+        at = parse_clock(data.requested_clock)
+        if at is None:
+            raise OrderValidationError(
+                "Время — часы и минуты, например 12:30", code="requested_time_invalid", field="requested_time"
+            )
+        data.requested_time = nearest_future(at, hotel)
     if data.requested_time is None:
         raise OrderValidationError(
             "Укажите время", code="requested_time_invalid", field="requested_time"

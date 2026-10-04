@@ -19,6 +19,7 @@ from apps.accounts.services.roles import (
     require_point_scope,
 )
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
+from apps.core.models import AuditLog
 from apps.hotels.models import ExecutionPoint
 
 from apps.notifications.channels.adapters import get_adapter
@@ -168,7 +169,7 @@ def create_channel(data: dict) -> NotificationChannel:
     if not title:
         raise ValidationError("Укажите название канала", field="title")
 
-    return NotificationChannel.objects.create(
+    channel = NotificationChannel.objects.create(
         type=channel_type,
         title=title,
         is_active=data.get("is_active", True),
@@ -177,11 +178,39 @@ def create_channel(data: dict) -> NotificationChannel:
         config=config,
         templates=data.get("templates") or {},
     )
+    _audit("notification.channel_created", channel, before=None, after=_channel_state(channel))
+    return channel
+
+
+def _channel_state(channel: NotificationChannel) -> dict:
+    """Канал для журнала — тем же видом, что в ответе API: секреты маской."""
+    state = serialize_channel(channel)
+    state.pop("id")
+    return state
+
+
+def _audit(action: str, obj, *, before: dict | None, after: dict | None) -> None:
+    """
+    Каналы и правила эскалации — настройки, как остальные: кто, когда, что было,
+    что стало (партия 30, п.57). Кто и когда — поля самой записи журнала.
+    """
+    AuditLog.record(
+        action,
+        actor_type=AuditLog.ActorType.STAFF,
+        object_type="notification_channel" if isinstance(obj, NotificationChannel) else "escalation_rule",
+        object_id=obj.pk,
+        payload={
+            "name": getattr(obj, "title", None) or getattr(obj, "name", ""),
+            "before": before,
+            "after": after,
+        },
+    )
 
 
 @transaction.atomic
 def update_channel(channel_id, data: dict) -> NotificationChannel:
     channel = get_channel(channel_id)
+    before = _channel_state(channel)
     if "type" in data and data["type"] and data["type"] != channel.type:
         raise ValidationError(
             "Тип канала нельзя изменить — создайте новый",
@@ -211,12 +240,18 @@ def update_channel(channel_id, data: dict) -> NotificationChannel:
         channel.config = config
 
     channel.save()
+    after = _channel_state(channel)
+    if after != before:
+        _audit("notification.channel_changed", channel, before=before, after=after)
     return channel
 
 
 @transaction.atomic
 def delete_channel(channel_id) -> None:
-    get_channel(channel_id).delete()
+    channel = get_channel(channel_id)
+    before = _channel_state(channel)
+    channel.delete()
+    _audit("notification.channel_deleted", channel, before=before, after=None)
 
 
 # --- Правила эскалации -----------------------------------------------------
@@ -367,12 +402,24 @@ def create_rule(data: dict) -> EscalationRule:
         name=name, execution_point_id=point_id, is_active=is_active
     )
     _replace_steps(rule, steps)
-    return get_rule(rule.pk)
+    rule = get_rule(rule.pk)
+    _audit("notification.escalation_rule_created", rule, before=None, after=_rule_state(rule))
+    return rule
+
+
+def _rule_state(rule: EscalationRule) -> dict:
+    """Что видно в журнале: правило без служебных id ступеней — они меняются при каждой замене."""
+    state = serialize_rule(rule)
+    state.pop("id")
+    for step in state["steps"]:
+        step.pop("id")
+    return state
 
 
 @transaction.atomic
 def update_rule(rule_id, data: dict) -> EscalationRule:
     rule = get_rule(rule_id)
+    before = _rule_state(rule)
 
     if "name" in data:
         name = (data["name"] or "").strip()
@@ -393,7 +440,11 @@ def update_rule(rule_id, data: dict) -> EscalationRule:
         # картину, а дельта-обновления породили бы рассинхрон порядка.
         _replace_steps(rule, _validate_steps(data["steps"]))
 
-    return get_rule(rule.pk)
+    rule = get_rule(rule.pk)
+    after = _rule_state(rule)
+    if after != before:
+        _audit("notification.escalation_rule_changed", rule, before=before, after=after)
+    return rule
 
 
 def _replace_steps(rule: EscalationRule, steps: list[dict]) -> None:
@@ -405,8 +456,10 @@ def _replace_steps(rule: EscalationRule, steps: list[dict]) -> None:
 @transaction.atomic
 def delete_rule(rule_id) -> None:
     rule = get_rule(rule_id)
+    before = _rule_state(rule)
     EscalationStep.objects.filter(rule=rule).delete()
     rule.delete()
+    _audit("notification.escalation_rule_deleted", rule, before=before, after=None)
 
 
 # --- Журнал ----------------------------------------------------------------

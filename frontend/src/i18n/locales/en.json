@@ -2711,9 +2711,18 @@
       },
       "notification": {
         "event_settings_changed": "Notification settings changed",
-        "telegram_switched": "Hotel Telegram switched"
+        "telegram_switched": "Hotel Telegram switched",
+        "escalation_rule_created": "Escalation rule created",
+        "escalation_rule_changed": "Escalation rule changed",
+        "escalation_rule_deleted": "Escalation rule deleted",
+        "channel_created": "Notification channel created",
+        "channel_changed": "Notification channel changed",
+        "channel_deleted": "Notification channel deleted"
       },
       "staff": {
+        "session": {
+          "refresh_reused": "Reused refresh token — session revoked"
+        },
         "contact": {
           "phone_changed": "Employee phone changed",
           "linked": "Employee connected a messenger",

@@ -66,6 +66,10 @@ async function closeKitchen(request: APIRequestContext, token: string): Promise<
         data: { schedule_id: was },
         headers: apiHeaders(token),
       })
+      // Своё расписание — за собой: иначе у «Кристалла» копились сотни
+      // «Закрыто сейчас …» (партия 30, п.56).
+      const dropped = await request.delete(`${API}/api/cms/schedules/${scheduleId}`, { headers: apiHeaders(token) })
+      expect(dropped.ok(), await dropped.text()).toBeTruthy()
     },
   }
 }

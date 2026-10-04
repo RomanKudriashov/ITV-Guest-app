@@ -2684,9 +2684,18 @@
       },
       "notification": {
         "event_settings_changed": "通知设置已更改",
-        "telegram_switched": "已切换酒店 Telegram"
+        "telegram_switched": "已切换酒店 Telegram",
+        "escalation_rule_created": "已创建升级规则",
+        "escalation_rule_changed": "已更改升级规则",
+        "escalation_rule_deleted": "已删除升级规则",
+        "channel_created": "已创建通知渠道",
+        "channel_changed": "已更改通知渠道",
+        "channel_deleted": "已删除通知渠道"
       },
       "staff": {
+        "session": {
+          "refresh_reused": "刷新令牌被重复使用——会话已撤销"
+        },
         "contact": {
           "phone_changed": "员工电话已更改",
           "linked": "员工已连接即时通讯",

@@ -77,8 +77,11 @@ export function FlowDiagram({
     if (reducedMotion || !container.current) return;
     const node = container.current;
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
+      // Схема запускается один раз — значит, хватит того, что её видели хоть в
+      // одной записи пачки. Первая запись на занятом потоке — устаревшая
+      // «не видна» (партия 30, п.55).
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
           setPlaying(true);
           observer.disconnect();
         }

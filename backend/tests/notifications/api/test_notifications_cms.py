@@ -251,6 +251,80 @@ def test_delete_rule(cms):
     assert rule_id not in {rule["id"] for rule in cms.get("/api/cms/escalation-rules").json()["items"]}
 
 
+
+def test_rule_changes_land_in_the_audit_log_with_before_and_after(cms, crystal):
+    """
+    Правило эскалации — настройка, как остальные (партия 30, п.57): кто, когда,
+    что было, что стало. Сохранение без изменений журнал не засоряет.
+    """
+    from apps.core.models import AuditLog
+
+    def entries(action):
+        with tenant_context(crystal):
+            return list(AuditLog.objects.filter(action=action).order_by("created_at"))
+
+    rules = cms.get("/api/cms/escalation-rules").json()["items"]
+    rule = next(rule for rule in rules if rule["name"] == "Кухня: подъём по смене")
+    url = f"/api/cms/escalation-rules/{rule['id']}"
+
+    assert cms.patch(url, {"name": rule["name"]}).status_code == 200
+    assert entries("notification.escalation_rule_changed") == [], "ничего не поменялось — записи нет"
+
+    assert cms.patch(
+        url, {"name": "Кухня: быстрее", "steps": [{"delay_minutes": 0, "target_kind": "point"}]}
+    ).status_code == 200
+    [changed] = entries("notification.escalation_rule_changed")
+    assert changed.actor_type == "staff" and changed.actor_id is not None, "кто"
+    assert changed.created_at is not None, "когда"
+    before, after = changed.payload["before"], changed.payload["after"]
+    assert before["name"] == "Кухня: подъём по смене" and after["name"] == "Кухня: быстрее"
+    assert [step["delay_minutes"] for step in before["steps"]] == [0, 5, 15]
+    assert [step["delay_minutes"] for step in after["steps"]] == [0]
+
+    assert cms.delete(url).status_code == 200
+    [deleted] = entries("notification.escalation_rule_deleted")
+    assert deleted.payload["before"]["name"] == "Кухня: быстрее" and deleted.payload["after"] is None
+
+    created = cms.post(
+        "/api/cms/escalation-rules",
+        {
+            "name": "Кухня заново",
+            "execution_point_id": rule["execution_point_id"],
+            "steps": [{"delay_minutes": 0, "target_kind": "point"}],
+        },
+    )
+    assert created.status_code == 201, created.content
+    [made] = entries("notification.escalation_rule_created")
+    assert made.payload["before"] is None and made.payload["after"]["name"] == "Кухня заново"
+
+
+
+def test_channel_changes_land_in_the_audit_log_and_the_secret_stays_masked(cms, crystal):
+    """Вопрос п.57 «кто и когда выключил» — про канал тоже. Токен в журнал не попадает."""
+    import json as _json
+
+    from apps.core.models import AuditLog
+
+    channel = cms.post(
+        "/api/cms/notification-channels",
+        {"type": "telegram", "title": "Бот смены", "config": {"bot_token": "777:TOPSECRET", "chat_id": "-5"}},
+    ).json()
+    assert cms.patch(f"/api/cms/notification-channels/{channel['id']}", {"is_active": False}).status_code == 200
+    assert cms.delete(f"/api/cms/notification-channels/{channel['id']}").status_code == 200
+
+    with tenant_context(crystal):
+        rows = list(AuditLog.objects.filter(object_id=channel["id"]).order_by("created_at"))
+    assert [row.action for row in rows] == [
+        "notification.channel_created",
+        "notification.channel_changed",
+        "notification.channel_deleted",
+    ]
+    changed = rows[1]
+    assert changed.actor_type == "staff" and changed.actor_id is not None
+    assert (changed.payload["before"]["is_active"], changed.payload["after"]["is_active"]) == (True, False)
+    assert "TOPSECRET" not in _json.dumps([row.payload for row in rows], ensure_ascii=False)
+
+
 # --- Журнал ----------------------------------------------------------------
 
 

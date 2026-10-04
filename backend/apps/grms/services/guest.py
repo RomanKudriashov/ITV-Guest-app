@@ -330,9 +330,10 @@ def _note_demo_entry(hotel, session) -> None:
     глаза при разборе, утонет в собственных повторах.
     """
     from django.core.cache import cache
+    from django.utils import timezone
 
     key = f"grms:demo_entry:{session.pk}"
-    if not cache.add(key, 1, 24 * 3600):
+    if cache.get(key):
         return
     with tenant_context(hotel):
         AuditLog.record(
@@ -346,6 +347,14 @@ def _note_demo_entry(hotel, session) -> None:
             },
             hotel_id=hotel.pk,
         )
+    # ОТМЕТКА — ПОСЛЕ ЗАПИСИ (партия 30, п.38). Раньше `cache.add` ставил её до
+    # попытки: запись падала — события не было сутки, и повторить было некому
+    # (тот же класс, что кулдаун погоды). И срок — до конца сессии гостя, а не
+    # ровно сутки: «один раз на сессию» при проживании дольше суток иначе
+    # превращалось в «раз в сутки». Две одновременные первые отрисовки могут
+    # записать событие дважды — это честнее, чем не записать ни разу.
+    remaining = int((session.expires_at - timezone.now()).total_seconds()) if session.expires_at else 0
+    cache.set(key, 1, max(remaining, 3600))
 
 
 # --- Снапшот ---------------------------------------------------------------

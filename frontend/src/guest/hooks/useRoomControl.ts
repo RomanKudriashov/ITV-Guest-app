@@ -289,11 +289,19 @@ export function useRoomLive(enabled = true): {
       };
     }
 
-    connect();
+    // ПЕРВОЕ ПОДКЛЮЧЕНИЕ — СЛЕДУЮЩИМ ТИКОМ (партия 30, п.53). Эффект может
+    // отработать и тут же сняться (StrictMode в разработке гоняет его дважды):
+    // сокет, созданный синхронно, успевал уйти на сервер и закрывался уже
+    // после открытия — на каждый вход в номер два соединения. Отложенный старт
+    // снимается `clearTimer` в уборке раньше, чем сокет появится.
+    timerRef.current = window.setTimeout(connect, 0);
 
     const onOnline = () => {
       attemptRef.current = 0;
-      if (!socketRef.current) connect();
+      if (!socketRef.current) {
+        clearTimer();
+        connect();
+      }
     };
     window.addEventListener('online', onOnline);
 

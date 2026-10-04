@@ -137,8 +137,11 @@ export function RoomPlan({ calm }: { calm: boolean }) {
       timer = null;
     };
 
+    // Решает ПОСЛЕДНЯЯ запись: на занятом потоке наблюдатель отдаёт пачку, и
+    // первая в ней — устаревшая (партия 30, п.55; тот же случай, что у полосы
+    // лендинга в партии 25).
     const observer = new IntersectionObserver(
-      ([entry]) => (entry.isIntersecting ? start() : stop()),
+      (entries) => (entries[entries.length - 1].isIntersecting ? start() : stop()),
       { threshold: 0.4 },
     );
     observer.observe(node);

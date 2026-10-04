@@ -335,3 +335,41 @@ def test_stale_e2e_sessions_are_closed_as_a_safety_net(crystal):
     assert _revoked(api)
     assert not _revoked(fresh), "свежий вход может быть идущим прогоном"
     assert not _revoked(human), "без метки строка неотличима от настоящего браузера"
+
+
+# --- Расписания «Закрыто сейчас» (партия 30, п.56) ---------------------------
+
+
+def test_closed_now_schedules_left_by_runs_are_removed_and_real_ones_kept(crystal):
+    """
+    Остаток прогона — расписание `Закрыто сейчас <13 цифр>`, ни к чему не
+    привязанное и не свежее. Привязанное, свежее и настоящее остаются.
+    """
+    from datetime import time
+
+    from apps.hotels.models import Schedule, ScheduleInterval, Service
+
+    stamp = "1759500000000"
+    with tenant_context(crystal):
+        residue = Schedule.objects.create(name=f"Закрыто сейчас {stamp}")
+        fresh = Schedule.objects.create(name="Закрыто сейчас 1759500000001")
+        in_use = Schedule.objects.create(name="Закрыто сейчас 1759500000002")
+        real = Schedule.objects.create(name="Закрыто сейчас на ремонт")
+        Schedule.objects.filter(pk__in=[residue.pk, in_use.pk, real.pk]).update(
+            created_at=timezone.now() - timedelta(hours=1)
+        )
+        Service.objects.filter(code="kitchen").update(schedule=in_use)
+        # Как у прогона: часы у расписания есть. Свои интервалы — не «ссылка».
+        for schedule in (residue, fresh, in_use, real):
+            ScheduleInterval.objects.create(
+                schedule=schedule, weekday=0, start_time=time(3, 0), end_time=time(4, 0)
+            )
+
+    call_command("clean_test_residue", "--subdomain", "crystal", verbosity=0)
+    with tenant_context(crystal):
+        assert Schedule.objects.filter(pk=residue.pk).exists(), "пробный проход ничего не трогает"
+
+    call_command("clean_test_residue", "--subdomain", "crystal", "--apply", verbosity=0)
+    with tenant_context(crystal):
+        left = set(Schedule.all_objects.filter(pk__in=[residue.pk, fresh.pk, in_use.pk, real.pk]).values_list("pk", flat=True))
+    assert left == {fresh.pk, in_use.pk, real.pk}

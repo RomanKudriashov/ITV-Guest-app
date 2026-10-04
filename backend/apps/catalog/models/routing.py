@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from apps.core.models import TenantModel
 from .category import Category
@@ -49,24 +48,11 @@ class ServiceLocation(TenantModel):
     (точка выдачи — гость забирает сам, остальное — несут).
     """
 
-    class DeliveryMode(models.TextChoices):
-        DELIVERY = "delivery", "Доставка"
-        PICKUP = "pickup", "Самовывоз"
-
     category = models.ForeignKey(
         Category, on_delete=models.CASCADE, related_name="service_locations"
     )
     location = models.ForeignKey(
         "hotels.Location", on_delete=models.CASCADE, related_name="service_locations"
-    )
-    # МЁРТВОЕ ПОЛЕ (волна 7): его больше никто не читает и не пишет. Способ
-    # получения следует из вида локации, а «доставка + самовывоз» в ячейке
-    # означало лишь «доступно здесь». Колонка оставлена на одну волну, чтобы
-    # откат был дешёвым; удалить — в следующей волне вместе с `DeliveryMode`.
-    delivery_modes = ArrayField(
-        models.CharField(max_length=16, choices=DeliveryMode.choices),
-        default=list,
-        blank=True,
     )
     is_enabled = models.BooleanField(default=True)
 

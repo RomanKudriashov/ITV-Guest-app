@@ -614,6 +614,13 @@ export function RoomsPage() {
             />
           ) : (
             <Box data-testid="rooms-list">
+              {/*
+                ТАБЛИЦА ПРОКРУЧИВАЕТСЯ САМА, СТРАНИЦА — НЕТ (партия 30, п.43,
+                аудит ADM-007). На 768 px крайняя колонка обрезалась правым краем
+                без признака прокрутки, а действия сжимались в столбик. Теперь
+                у таблицы своя горизонтальная прокрутка с видимой полосой.
+              */}
+              <Box data-testid="rooms-table-scroll" sx={{ overflowX: 'auto', maxWidth: '100%' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -740,7 +747,7 @@ export function RoomsPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <IconButton
                           size="small"
                           onClick={() => setQrRoom(room)}
@@ -779,6 +786,7 @@ export function RoomsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </Box>
 
               {/*
                 Счётчик — обязательная часть листания, а не украшение: он

@@ -68,16 +68,6 @@ interface CheckoutDraft {
 }
 
 /** "19:30" → ISO with offset. Times already past today are read as tomorrow. */
-function timeToIso(time: string): string | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
-  if (!match) return null;
-  const now = new Date();
-  const target = new Date(now);
-  target.setHours(Number(match[1]), Number(match[2]), 0, 0);
-  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
-  return target.toISOString();
-}
-
 /**
  * The cart / checkout. ONE component, two shells (spec §4): a full screen on
  * phone/tablet (`page`), a persistent right column on desktop (`column`). All the
@@ -181,7 +171,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
   const placeMissing = splitMode
     ? parts.some((part, index) => !placeIsComplete(partLocations(index), choiceFor(part.code, index)))
     : !placeIsComplete(locations, { locationId: draft.locationId, refinement: draft.refinement });
-  const timeMissing = draft.timing === 'scheduled' && !timeToIso(draft.time);
+  const timeMissing = draft.timing === 'scheduled' && !/^\s*([01]?\d|2[0-3]):[0-5]\d\s*$/.test(draft.time);
 
   // The guest's tip choice, resolved into the API's two mutually-exclusive fields:
   // a preset sends `tip_percent`, a positive custom amount sends `tip_minor`, and
@@ -220,7 +210,10 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
             location_refinement: needsRefinement ? draft.refinement.trim() : '',
           }),
       timing: draft.timing,
-      requested_time: draft.timing === 'scheduled' ? timeToIso(draft.time) : null,
+      // Время без даты — как есть: дату (сегодня или завтра) решает сервер в
+      // поясе ОТЕЛЯ, а не телефона гостя (партия 30, п.46).
+      requested_time: null,
+      requested_clock: draft.timing === 'scheduled' ? draft.time.trim() : null,
       comment: draft.comment.trim(),
       ...tipFields,
     }),

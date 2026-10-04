@@ -32,7 +32,7 @@ import { errorMessage } from '../errors';
 import { useGuestLanguage, useGuestOrder } from '../hooks/useGuestQueries';
 import { useOrderLive } from '../hooks/useOrderLive';
 import { useMoney } from '../hooks/useMoney';
-import { serveByTime } from '../utils/serveBy';
+import { dueText } from '@/utils/dueTime';
 import type { GuestOrder } from '../api/types';
 
 export function OrderStatusPage() {
@@ -143,7 +143,7 @@ export function OrderStatusPage() {
   // The promised serve time, in the hotel's TZ. One chip, shown on the just-placed
   // confirmation banner OR on the live status header — never both at once, so the
   // `guest-serve-by` testid stays unique.
-  const serveBy = promisesServeTime ? serveByTime(order.serve_by) : null;
+  const serveBy = promisesServeTime ? dueText(order.serve_by, i18n.resolvedLanguage ?? 'en') : null;
   const serveByChip = serveBy ? (
     <Chip
       size="small"
@@ -176,7 +176,7 @@ export function OrderStatusPage() {
   const clock = { hour: '2-digit', minute: '2-digit' } as const;
 
   const whenText = order.requested_time
-    ? t('guest.order.byTime', { time: at(order.requested_time, clock) })
+    ? t('guest.order.byTime', { time: dueText(order.requested_time, locale) ?? '' })
     : t('guest.cart.asap');
 
   /*

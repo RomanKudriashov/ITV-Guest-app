@@ -87,6 +87,17 @@ PLATFORM_TEST_EMAIL = re.compile(r"^(?:eyes|support)-\d{10,}@platform\.test$")
 # метки неотличим от настоящего Chrome — такие строки правило не трогает.
 E2E_AGENT = re.compile(r"Playwright/|HeadlessChrome|ITV-E2E")
 
+# РАСПИСАНИЯ «ЗАКРЫТО СЕЙЧАС». Спеки закрытого заведения (`cart-truth`,
+# `venue-closed-browsable`) заводят расписание `Закрыто сейчас <Date.now()>` и
+# до партии 30 не удаляли его: у «Кристалла» их набралось 300 — список часов в
+# CMS стал непролистываемым (п.56 бэклога). Спеки теперь удаляют своё в
+# `finally`; это правило подбирает то, что прогон не довёл до `finally`.
+# Имя — с якорями и ровно 13 цифрами миллисекунд: настоящее расписание отеля
+# так не называется. Расписание, на которое кто-то ссылается, не трогаем, — и
+# свежее тоже: идущий прогон мог создать его и ещё не успеть назначить.
+CLOSED_NOW_SCHEDULE = re.compile(r"^Закрыто сейчас \d{13}$")
+FRESH_SCHEDULE_MINUTES = 10
+
 # Через сколько часов открытый заказ считается брошенным. Сутки с запасом:
 # смена длится меньше, и ни один живой заказ столько в работе не висит.
 STALE_HOURS = 24
@@ -318,9 +329,47 @@ class Command(BaseCommand):
             if e2e_sessions:
                 self.stdout.write(f"  сессий прогонов, не закрытых выходом: {len(e2e_sessions)}")
 
+            # --- Расписания «Закрыто сейчас» ---------------------------------
+            from django.apps import apps as django_apps
+
+            from apps.hotels.models import Schedule, ScheduleInterval
+
+            # Кто ПОЛЬЗУЕТСЯ расписанием. Собственные интервалы — его часть, а
+            # не пользователь: без исключения каждое расписание с часами
+            # считалось занятым, и правило не находило ни одного из 346.
+            references = [
+                (model, field.name)
+                for model in django_apps.get_models()
+                if model is not ScheduleInterval
+                for field in model._meta.fields
+                if getattr(field, "related_model", None) is Schedule
+            ]
+            fresh = now - timedelta(minutes=FRESH_SCHEDULE_MINUTES)
+            closed_schedules = [
+                schedule.pk
+                for schedule in Schedule.objects.filter(created_at__lt=fresh)
+                if CLOSED_NOW_SCHEDULE.match(schedule.name or "")
+                and not any(
+                    getattr(model, "all_objects", model._default_manager).filter(**{field: schedule.pk}).exists()
+                    for model, field in references
+                )
+            ]
+            if closed_schedules:
+                self.stdout.write(f"  расписаний «Закрыто сейчас»: {len(closed_schedules)}")
+
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
                 return
+
+            # ЖЁСТКО: мягкое удаление оставило бы те же 300 строк в таблице.
+            # Интервалы уходят каскадом.
+            dropped_schedules = (
+                Schedule.all_objects.filter(pk__in=closed_schedules)
+                .hard_delete()[1]
+                .get("hotels.Schedule", 0)
+                if closed_schedules
+                else 0
+            )
 
             with platform_scope():
                 closed_sessions = StaffSession.all_objects.using("platform").filter(
@@ -445,6 +494,7 @@ class Command(BaseCommand):
                 + 
                 f"сообщений удалено {deleted_msgs}; "
                 f"привязок удалённых сотрудников убрано {dropped_assignments}; "
+                f"расписаний «Закрыто сейчас» удалено {dropped_schedules}; "
                 f"типов номеров удалено {deleted_types}; "
                 f"счётчиков PIN сброшено {cleared_pins}; "
                 f"брошенных заказов закрыто {closed}"

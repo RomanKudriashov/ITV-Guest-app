@@ -451,7 +451,26 @@ function StaffDialog({
     }));
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth data-testid="staff-dialog">
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      data-testid="staff-dialog"
+      /*
+        ОКНО — ФОРМА (партия 30, п.41, аудит ADM-004). Поля и кнопка без <form>:
+        Enter не отправлял, менеджер паролей не предлагал сохранить пароль, а
+        Chromium писал «Password field is not contained in a form».
+      */
+      PaperProps={{
+        component: 'form',
+        noValidate: true,
+        onSubmit: (event: React.FormEvent) => {
+          event.preventDefault();
+          if (!(emailInvalid || passwordInvalid || mutation.isPending)) mutation.mutate();
+        },
+      }}
+    >
       <DialogTitle>{isNew ? t('hotel.staff.newTitle') : t('hotel.staff.editTitle')}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
@@ -663,11 +682,11 @@ function StaffDialog({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        <Button type="button" onClick={onClose}>{t('common.cancel')}</Button>
         <Button
+          type="submit"
           variant="contained"
           disabled={emailInvalid || passwordInvalid || mutation.isPending}
-          onClick={() => mutation.mutate()}
           data-testid="staff-save"
         >
           {t('common.save')}

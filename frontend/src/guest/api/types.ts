@@ -317,6 +317,8 @@ export interface CreateOrderPayload {
   group_locations?: { point: string; location_id: string | null; location_refinement: string }[];
   timing: OrderTiming;
   requested_time: string | null;
+  /** Time without a date («12:00»): the server picks today or tomorrow in the HOTEL timezone. */
+  requested_clock?: string | null;
   comment: string;
   /** `code` → answer. Empty for a product order. */
   field_values?: Record<string, string | number>;

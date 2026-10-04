@@ -103,6 +103,7 @@ def place_order(
         group_locations=_group_locations(payload),
         timing=payload.timing,
         requested_time=payload.requested_time,
+        requested_clock=payload.requested_clock,
         comment=payload.comment,
         field_values=payload.field_values or {},
         slot_start=payload.slot_start,

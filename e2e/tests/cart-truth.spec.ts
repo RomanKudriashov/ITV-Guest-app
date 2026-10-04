@@ -249,6 +249,9 @@ test.describe('Закрытое заведение', () => {
         data: { schedule_id: wasSchedule },
         headers: apiHeaders(token),
       })
+      // Своё расписание — за собой (партия 30, п.56).
+      const dropped = await request.delete(`${API}/api/cms/schedules/${closedId}`, { headers: apiHeaders(token) })
+      expect(dropped.ok(), await dropped.text()).toBeTruthy()
     }
   })
 })
