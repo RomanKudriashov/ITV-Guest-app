@@ -2,6 +2,7 @@ import { test as base, expect, request as playwrightRequest } from '@playwright/
 import type { APIRequestContext, APIResponse, Browser, BrowserContext } from '@playwright/test'
 
 import { API } from './helpers'
+import { checkBody } from '../fixtures/requestBodies'
 
 /**
  * ОБЩАЯ ОСНОВА ПРОВЕРОК: КАЖДЫЙ ВХОД ЗАКАНЧИВАЕТСЯ ВЫХОДОМ.
@@ -85,10 +86,18 @@ function watchRequests(context: APIRequestContext): void {
 const STAFF_CALL = /\/api\/(?:v1\/)?(?:cms|staff|tracker)\//
 const PLATFORM_CALL = /\/api\/v1\/platform\//
 
+// Нарушения контракта тел запросов (DEV-01) за время текущей проверки.
+const BODY_PROBLEMS: string[] = []
+
 function watchContext(context: BrowserContext): void {
   const marked = context as BrowserContext & { __logoutWatched?: boolean }
   if (marked.__logoutWatched) return
   marked.__logoutWatched = true
+  context.on('request', (request) => {
+    for (const problem of checkBody(request.method(), request.url(), request.postData())) {
+      if (!BODY_PROBLEMS.includes(problem)) BODY_PROBLEMS.push(problem)
+    }
+  })
   context.on('response', (response) => {
     if (!LOGIN.test(response.url())) return
     const hotel = header(response.request().headers(), 'X-Hotel-Subdomain')
@@ -172,7 +181,27 @@ async function logoutAll(): Promise<{ closed: number; failed: number }> {
   return { closed, failed }
 }
 
-export const test = base.extend<Record<string, never>, { _logoutAtEnd: void }>({
+export const test = base.extend<{ _requestBodies: void }, { _logoutAtEnd: void }>({
+  // Сторож тел запросов: фронт прислал поле, которого ручка не знает, или не
+  // прислал обязательное — проверка красная с адресом и именами полей.
+  _requestBodies: [
+    async ({}, use, testInfo) => {
+      BODY_PROBLEMS.length = 0
+      await use()
+      const found = [...BODY_PROBLEMS]
+      BODY_PROBLEMS.length = 0
+      // BODY_GUARD=report — обход всего набора: нарушения в файл, проверка не падает.
+      if (process.env.BODY_GUARD === 'report') {
+        if (found.length) {
+          const { appendFileSync } = await import('node:fs')
+          appendFileSync('.body-report.txt', found.map((line) => `${testInfo.file.split('/').pop()}\t${line}\n`).join(''))
+        }
+        return
+      }
+      expect(found, 'фронт шлёт тело, которого не ждёт ручка (сторож контракта)').toEqual([])
+    },
+    { auto: true },
+  ],
   _logoutAtEnd: [
     async ({ playwright, browser }, use) => {
       const probe = await playwright.request.newContext()

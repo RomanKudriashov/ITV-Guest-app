@@ -17,6 +17,7 @@ import type {
   TrackerPointsResponse,
   TrackerScope,
 } from './types';
+import type { CancelReasonCode } from '../cancelReasons';
 
 /** Server-side localization is driven by `Accept-Language`, as in the CMS. */
 function langHeaders(language?: string): Record<string, string> | undefined {
@@ -109,14 +110,22 @@ export function moveTrackerOrderPosition(
   );
 }
 
+/**
+ * Отмена: КОД причины обязателен (`cancel_reason`, справочник сервера), текст
+ * — уточнение по желанию (`reason`). До партии 31 уходил только текст, и
+ * сервер отвечал 422 `cancel_reason_required` (DEV-01).
+ */
 export function cancelTrackerOrder(
   orderId: string,
+  cancelReason: CancelReasonCode,
   reason: string,
   language?: string,
 ): Promise<TrackerOrder> {
-  return api.post<TrackerOrder>(`/tracker/order/${orderId}/cancel`, { reason }, {
-    headers: langHeaders(language),
-  });
+  return api.post<TrackerOrder>(
+    `/tracker/order/${orderId}/cancel`,
+    { cancel_reason: cancelReason, reason },
+    { headers: langHeaders(language) },
+  );
 }
 
 /**

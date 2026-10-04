@@ -9,6 +9,7 @@ import {
 } from '../api/tracker';
 import { useTrackerLanguage } from './useTrackerQueries';
 import type { TrackerOrder } from '../api/types';
+import type { CancelReasonCode } from '../cancelReasons';
 
 type ActionKind = 'accept' | 'status' | 'cancel' | 'position';
 
@@ -17,6 +18,7 @@ interface ActionVariables {
   orderId: string;
   status?: string;
   reason?: string;
+  cancelReason?: CancelReasonCode;
   /** Соседи по колонке для перестановки: между кем встала карточка. */
   after?: string | null;
   before?: string | null;
@@ -63,7 +65,12 @@ export function useOrderActions() {
           );
         case 'cancel':
         default:
-          return cancelTrackerOrder(variables.orderId, variables.reason ?? '', language);
+          return cancelTrackerOrder(
+            variables.orderId,
+            variables.cancelReason ?? 'other',
+            variables.reason ?? '',
+            language,
+          );
       }
     },
     onMutate: (variables) => {
@@ -120,8 +127,8 @@ export function useOrderActions() {
   );
 
   const cancel = useCallback(
-    (orderId: string, reason: string) =>
-      mutation.mutateAsync({ kind: 'cancel', orderId, reason }).catch(() => undefined),
+    (orderId: string, cancelReason: CancelReasonCode, reason: string) =>
+      mutation.mutateAsync({ kind: 'cancel', orderId, cancelReason, reason }).catch(() => undefined),
     [mutation],
   );
 

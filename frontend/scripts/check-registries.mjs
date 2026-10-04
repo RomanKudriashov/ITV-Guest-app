@@ -262,6 +262,23 @@ if (pyPatterns.length === 0 || tsPatterns.length === 0) {
   problems.push(`паттерны фона: сервер [${pyPatterns}], фронт [${tsPatterns}]`);
 }
 
+/* ── Причины отмены (партия 31, DEV-01) ──────────────────────────────────────
+   Трекер шлёт КОД причины; коды — справочник `Order.CancelReason`. Код,
+   которого нет на сервере, — 422 у человека с заказом в руках.
+*/
+
+const orderModel = read(`${BACKEND}/apps/orders/models/order.py`);
+const reasonBlock = orderModel.slice(orderModel.indexOf('class CancelReason'), orderModel.indexOf('cancel_reason = models'));
+const pyReasons = [...reasonBlock.matchAll(/^\s+[A-Z_]+ = "([a-z_]+)",/gm)].map((m) => m[1]).sort();
+const tsReasons = [
+  ...read(new URL('../src/tracker/cancelReasons.ts', import.meta.url)).matchAll(/^\s{2}'([a-z_]+)',/gm),
+].map((m) => m[1]).sort();
+if (pyReasons.length === 0 || tsReasons.length === 0) {
+  problems.push('причины отмены не прочитались — сторож ослеп');
+} else if (pyReasons.join(',') !== tsReasons.join(',')) {
+  problems.push(`причины отмены: сервер [${pyReasons}], фронт [${tsReasons}]`);
+}
+
 /* ── Ответ ──────────────────────────────────────────────────────────────── */
 
 if (problems.length) {
@@ -272,5 +289,5 @@ if (problems.length) {
 console.log(
   `Реестры сходятся: слов ${Object.keys(pyNouns).length} на ${serviceTypes.length} типов заведений, ` +
     `поведений ${Object.keys(py).length}, областей справочников ${Object.keys(pyKinds).length}, ` +
-    `паттернов ${pyPatterns.length}`,
+    `паттернов ${pyPatterns.length}, причин отмены ${pyReasons.length}`,
 );

@@ -1252,10 +1252,10 @@ export function TrackerPage() {
         orderNumber={cancelTarget?.number ?? null}
         busy={Boolean(cancelTarget && actions.pendingOrderId === cancelTarget.id)}
         onClose={() => setCancelTarget(null)}
-        onConfirm={(reason) => {
+        onConfirm={(cancelReason, reason) => {
           const target = cancelTarget;
           setCancelTarget(null);
-          if (target) void actions.cancel(target.id, reason);
+          if (target) void actions.cancel(target.id, cancelReason, reason);
         }}
       />
     </Box>

@@ -274,6 +274,25 @@ def test_staff_can_cancel_running_order(tracker, order, django_capture_on_commit
     assert repeat.json()["code"] == "cancel_not_allowed"
 
 
+
+def test_cancel_with_text_only_is_refused_by_the_schema(tracker, order):
+    """
+    DEV-01 (QA, партия 31): трекер слал `{"reason": …}` без кода. Код причины
+    обязателен уже в СХЕМЕ — карта тел запросов для сторожа e2e видит его
+    обязательным, а заказ остаётся в работе.
+    """
+    response = tracker.post(f"/api/tracker/order/{order['id']}/cancel", {"reason": "нет продуктов"})
+    assert response.status_code == 422, response.content
+    assert "cancel_reason" in response.content.decode()
+    assert tracker.get(f"/api/tracker/order/{order['id']}").json()["status"]["is_cancelled"] is False
+
+
+def test_cancel_body_map_marks_the_reason_code_required():
+    from apps.core.management.commands.export_request_bodies import body_map
+
+    spec = body_map()["POST /api/v1/tracker/order/{order_id}/cancel"]
+    assert spec["required"] == ["cancel_reason"] and "reason" in spec["fields"]
+
 def test_actions_on_another_points_order_are_refused(tracker, order, crystal):
     """Заказ переехал на бар — кухня теряет к нему доступ."""
     with tenant_context(crystal):

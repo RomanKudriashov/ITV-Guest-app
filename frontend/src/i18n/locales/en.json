@@ -881,11 +881,21 @@
     },
     "cancel": {
       "title": "Cancel order #{{number}}?",
-      "body": "The guest sees the cancellation immediately. Add a reason — it goes into the order history.",
-      "reason": "Reason",
+      "body": "The guest sees the cancellation at once. Pick a reason — it goes to the request history and analytics.",
+      "reason": "Details (optional)",
       "reasonPlaceholder": "For example: out of ingredients",
       "keep": "Keep it",
-      "confirm": "Cancel order"
+      "confirm": "Cancel order",
+      "reasonCode": "Cancellation reason",
+      "reasonRequired": "Pick a cancellation reason",
+      "reasons": {
+        "out_of_stock": "Out of stock",
+        "guest_refused": "Guest declined",
+        "no_capacity": "No one to do it",
+        "duplicate": "Duplicate request",
+        "mistake": "Entered by mistake",
+        "other": "Other"
+      }
     },
     "errors": {
       "pointNotAssigned": "You are not assigned to this venue",

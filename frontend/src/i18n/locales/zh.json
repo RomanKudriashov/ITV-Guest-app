@@ -876,11 +876,21 @@
     },
     "cancel": {
       "title": "取消第 {{number}} 号订单？",
-      "body": "客人会立即看到取消。",
-      "reason": "原因",
+      "body": "客人会立即看到取消。请选择原因——它会记入请求历史和分析。",
+      "reason": "补充说明（可选）",
       "reasonPlaceholder": "例如：原料用完",
       "keep": "不取消",
-      "confirm": "取消订单"
+      "confirm": "取消订单",
+      "reasonCode": "取消原因",
+      "reasonRequired": "请选择取消原因",
+      "reasons": {
+        "out_of_stock": "缺货",
+        "guest_refused": "客人拒绝",
+        "no_capacity": "无人可执行",
+        "duplicate": "重复请求",
+        "mistake": "下单有误",
+        "other": "其他"
+      }
     },
     "errors": {
       "pointNotAssigned": "你未被分配到该场所",
