@@ -87,6 +87,12 @@ class OrderStatusChange(TenantModel):
     )
     actor_type = models.CharField(max_length=16, default="system")
     actor_id = models.UUIDField(null=True, blank=True)
+    # ИМЯ АВТОРА — СНИМКОМ НА МОМЕНТ СОБЫТИЯ (партия 31, DEV-02 QA). Раньше
+    # имя искали по `actor_id` среди живых учёток: удалили сотрудника — его
+    # действия в истории стали «гостем». Снимок не зависит от того, что потом
+    # стало с учёткой (удалили, переименовали); пометку «удалён» добавляет
+    # сериализация.
+    actor_name = models.CharField(max_length=255, blank=True)
     comment = models.CharField(max_length=255, blank=True)
 
     class Meta:
@@ -95,6 +101,17 @@ class OrderStatusChange(TenantModel):
 
     def __str__(self) -> str:
         return f"{self.order_id}: {self.from_status_id} → {self.to_status_id}"
+
+    def save(self, *args, **kwargs):
+        # Снимок ставится здесь, а не в каждом из мест записи: дверей в журнал
+        # четыре, и пятая однажды забыла бы имя.
+        if not self.actor_name and self.actor_type == "staff" and self.actor_id:
+            from apps.accounts.models import User
+
+            user = User.all_objects.filter(pk=self.actor_id).only("full_name", "email").first()
+            if user is not None:
+                self.actor_name = (user.full_name or user.email)[:255]
+        super().save(*args, **kwargs)
 
     @property
     def is_rollback(self) -> bool:

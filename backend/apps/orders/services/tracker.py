@@ -701,9 +701,11 @@ def actor_names(orders) -> dict:
     }
     if not ids:
         return {}
+    # ВКЛЮЧАЯ УДАЛЁННЫХ (партия 31, DEV-02): живой выборкой удалённый
+    # сотрудник пропадал, и его действия в истории читались «гостем».
     return {
-        user.pk: (user.full_name or user.email)
-        for user in User.objects.filter(pk__in=ids)
+        user.pk: {"name": user.full_name or user.email, "deleted": user.deleted_at is not None}
+        for user in User.all_objects.filter(pk__in=ids)
     }
 
 
@@ -819,7 +821,11 @@ def serialize_tracker_order(
                     ),
                     "at": order.hotel.to_local(change.created_at).isoformat(),
                     "actor_type": change.actor_type,
-                    "actor_name": (actors or {}).get(change.actor_id),
+                    # Имя — снимком на момент события; учётка — только чтобы
+                    # сказать «удалён». Гостем запись делает лишь actor_type.
+                    "actor_name": change.actor_name
+                    or ((actors or {}).get(change.actor_id) or {}).get("name"),
+                    "actor_deleted": bool(((actors or {}).get(change.actor_id) or {}).get("deleted")),
                     # Откат считает сервер: правило «назад по потоку» живёт в
                     # порядке статусов, и второй его экземпляр на клиенте
                     # разошёлся бы с первым при любой перенастройке пресета.

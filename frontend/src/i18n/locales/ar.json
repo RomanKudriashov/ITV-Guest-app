@@ -1011,7 +1011,9 @@
       "backFrom": "أُعيد من «{{from}}»",
       "bySystem": "أُعيد احتسابه تلقائيًا",
       "byPerson": "{{name}}",
-      "byGuest": "الضيف"
+      "byGuest": "الضيف",
+      "byDeleted": "{{name}} (محذوف)",
+      "byStaff": "موظف"
     },
     "loadMore": "عرض المزيد",
     "loadingMore": "جارٍ التحميل…",

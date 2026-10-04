@@ -75,7 +75,7 @@ def _part(order, hotel, language, names) -> dict:
             {
                 "title": status_flows.status_title(change.to_status, order.delivery_mode, language),
                 "at": local(change.created_at).isoformat(),
-                "by": names.get(change.actor_id) if change.actor_id else None,
+                "by": _change_author(change, names),
                 "actor_type": change.actor_type,
                 "comment": change.comment,
             }
@@ -101,13 +101,33 @@ def _was_escalation(log) -> bool:
     return log.step_index > 0
 
 
+DELETED_MARK = " (удалён)"
+
+
+def _signed(name: str, *, deleted: bool) -> str:
+    return f"{name}{DELETED_MARK}" if deleted else name
+
+
+def _change_author(change, names: dict) -> str | None:
+    """Автор записи истории: имя-снимок на момент события, пометка — по учётке."""
+    if not change.actor_id:
+        return None
+    current = names.get(change.actor_id)
+    if not change.actor_name:
+        return current
+    return _signed(change.actor_name, deleted=bool(current and current.endswith(DELETED_MARK)))
+
+
 def _who_led(order, names) -> str | None:
     """
     Кто вёл: взявший заказ кнопкой «взять», а если так не брали — первый, кто
     сдвинул статус руками. Пусто — заказ двигала только система.
     """
     if order.assignee_id:
-        return order.assignee.full_name or order.assignee.email
+        return _signed(
+            order.assignee.full_name or order.assignee.email,
+            deleted=order.assignee.deleted_at is not None,
+        )
     for change in order.status_changes.all():
         if change.actor_id and change.actor_id in names:
             return names[change.actor_id]
@@ -159,8 +179,11 @@ def investigation(review_id, language=None) -> dict:
     actor_ids = {
         change.actor_id for part in parts for change in part.status_changes.all() if change.actor_id
     }
+    # Включая удалённых (DEV-02): «кто вёл» удалённого сотрудника — он сам с
+    # пометкой «(удалён)», а не пусто и не «гость».
     names = {
-        user.pk: (user.full_name or user.email) for user in User.objects.filter(pk__in=actor_ids)
+        user.pk: _signed(user.full_name or user.email, deleted=user.deleted_at is not None)
+        for user in User.all_objects.filter(pk__in=actor_ids)
     }
 
     lines = []

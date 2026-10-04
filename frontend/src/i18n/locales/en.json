@@ -983,7 +983,9 @@
       "backFrom": "returned from “{{from}}”",
       "bySystem": "recalculated automatically",
       "byPerson": "{{name}}",
-      "byGuest": "guest"
+      "byGuest": "guest",
+      "byDeleted": "{{name}} (deleted)",
+      "byStaff": "staff member"
     },
     "loadMore": "Show more",
     "loadingMore": "Loading…",

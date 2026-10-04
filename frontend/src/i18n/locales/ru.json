@@ -993,7 +993,9 @@
       "backFrom": "вернули из «{{from}}»",
       "bySystem": "пересчиталось само",
       "byPerson": "{{name}}",
-      "byGuest": "гость"
+      "byGuest": "гость",
+      "byDeleted": "{{name}} (удалён)",
+      "byStaff": "сотрудник"
     },
     "loadMore": "Показать ещё",
     "loadingMore": "Загружаем…",

@@ -200,6 +200,35 @@ def test_accept_assigns_the_order_and_moves_status(
         assert stored.accepted_at is not None
 
 
+
+def test_deleted_staff_stays_the_author_in_order_history(
+    tracker, order, cms, crystal, django_capture_on_commit_callbacks
+):
+    """
+    DEV-02 (QA, партия 31): повар принял заказ, его удалили — в истории он
+    был «гостем». Автор — снимком на момент события, тип — сотрудник, а
+    удалённость — отдельным флагом.
+    """
+    from apps.accounts.models import User
+    from apps.accounts.services.cms_services import delete_staff
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert tracker.post(f"/api/tracker/order/{order['id']}/accept", {}).status_code == 200
+    with tenant_context(crystal):
+        chef = User.objects.get(email="chef@crystal.local")
+        delete_staff(chef.pk)
+
+    # Повара больше нет — карточку смотрит администратор отеля.
+    response = cms.get(f"/api/tracker/order/{order['id']}")
+    assert response.status_code == 200, response.content
+    card = response.json()
+    accepted = next(entry for entry in card["journal"] if entry["to"] == "accepted")
+    assert accepted["actor_type"] == "staff", "действие сотрудника не превращается в гостевое"
+    assert accepted["actor_name"] == "Пётр, повар"
+    assert accepted["actor_deleted"] is True
+    created = card["journal"][0]
+    assert created["actor_type"] == "guest" and created["actor_deleted"] is False
+
 def test_second_accept_is_refused_with_the_current_assignee(
     tracker, order, django_capture_on_commit_callbacks
 ):

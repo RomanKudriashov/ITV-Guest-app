@@ -975,7 +975,9 @@
       "backFrom": "从“{{from}}”退回",
       "bySystem": "系统自动重算",
       "byPerson": "{{name}}",
-      "byGuest": "客人"
+      "byGuest": "客人",
+      "byDeleted": "{{name}}（已删除）",
+      "byStaff": "员工"
     },
     "loadMore": "显示更多",
     "loadingMore": "加载中…",

@@ -94,6 +94,8 @@ export interface TrackerJournalEntry {
   /** `staff`, `guest` или `system` — пересчёт агрегата человеком не является. */
   actor_type: string;
   actor_name: string | null;
+  /** Учётку автора удалили — имя показывается с пометкой (DEV-02). */
+  actor_deleted?: boolean;
   /** Движение назад по потоку. Считает сервер: правило живёт в пресете. */
   is_rollback: boolean;
 }

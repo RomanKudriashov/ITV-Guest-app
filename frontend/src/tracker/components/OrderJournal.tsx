@@ -80,11 +80,17 @@ export function OrderJournal({ entries }: { entries: TrackerJournalEntry[] }) {
                   ? t('tracker.journal.backFrom', { from: entry.from })
                   : null}
                 {entry.is_rollback && entry.from ? ' · ' : ''}
+                {/* «Гость» — только у гостя (DEV-02): запись сотрудника без имени
+                    раньше тоже читалась гостем. Удалённый — с пометкой. */}
                 {entry.actor_type === 'system'
                   ? t('tracker.journal.bySystem')
-                  : entry.actor_name
-                    ? t('tracker.journal.byPerson', { name: entry.actor_name })
-                    : t('tracker.journal.byGuest')}
+                  : entry.actor_type === 'guest'
+                    ? t('tracker.journal.byGuest')
+                    : entry.actor_name
+                      ? entry.actor_deleted
+                        ? t('tracker.journal.byDeleted', { name: entry.actor_name })
+                        : t('tracker.journal.byPerson', { name: entry.actor_name })
+                      : t('tracker.journal.byStaff')}
               </Typography>
             </Stack>
           </Stack>
