@@ -625,3 +625,74 @@ def test_steps_of_a_request_for_later_count_from_the_named_time(crystal, order, 
 
     assert planned[0].scheduled_for == order.created_at
     assert [(log.scheduled_for - named).total_seconds() / 60 for log in planned[1:]] == [5, 15]
+
+
+# --- Причина остановки — по событию (партия 31, DEV-05 QA) --------------------
+
+
+def _stopped_reasons(order) -> set[str]:
+    return set(
+        NotificationLog.objects.filter(order=order, status=NotificationStatus.CANCELLED).values_list(
+            "error", flat=True
+        )
+    )
+
+
+def test_guest_cancellation_stops_escalation_with_the_guest_reason(
+    crystal, order, notifications_on, no_dispatch, django_capture_on_commit_callbacks
+):
+    """QA: гость отменил «новую» — ступени гасли с причиной «Заказ взят в работу»."""
+    from apps.orders.services.services import cancel_order_by_guest
+
+    with tenant_context(crystal):
+        plan_escalation(order)
+        with django_capture_on_commit_callbacks(execute=True):
+            cancel_order_by_guest(order, guest_session=order.guest_session)
+        assert _stopped_reasons(order) == {"Заказ отменён гостем"}
+
+
+def test_staff_cancellation_and_acceptance_have_their_own_reasons(
+    crystal, client, notifications_on, no_dispatch, django_capture_on_commit_callbacks, tracker
+):
+    from apps.orders.services import change_status, get_order
+
+    def fresh(key):
+        token = client.post(
+            "/api/guest/session", data={"room_number": "305"}, content_type="application/json",
+            HTTP_HOST=host_for(crystal),
+        ).json()["token"]
+        menu = client.get(
+            "/api/guest/catalog?type=product", HTTP_HOST=host_for(crystal), HTTP_AUTHORIZATION=f"Bearer {token}"
+        ).json()
+        item_id = next(e["id"] for c in menu["categories"] for e in c["items"] if e["code"] == "caesar")
+        created = client.post(
+            "/api/guest/order", data={"lines": [{"item_id": item_id, "quantity": 1}], "timing": "asap"},
+            content_type="application/json", HTTP_HOST=host_for(crystal),
+            HTTP_AUTHORIZATION=f"Bearer {token}", HTTP_IDEMPOTENCY_KEY=key,
+        ).json()
+        with tenant_context(crystal):
+            return Order.objects.get(pk=created["id"])
+
+    accepted, cancelled = fresh("dev05-a"), fresh("dev05-b")
+    with tenant_context(crystal):
+        plan_escalation(accepted)
+        plan_escalation(cancelled)
+    with django_capture_on_commit_callbacks(execute=True):
+        tracker.post(f"/api/tracker/order/{accepted.pk}/accept", {})
+    with django_capture_on_commit_callbacks(execute=True):
+        tracker.post(f"/api/tracker/order/{cancelled.pk}/cancel", {"cancel_reason": "out_of_stock"})
+    with tenant_context(crystal):
+        assert _stopped_reasons(accepted) == {"Заказ взят в работу"}
+        assert _stopped_reasons(cancelled) == {"Заказ отменён персоналом"}
+
+
+def test_step_firing_after_a_guest_cancel_names_the_cancel(crystal, order, notifications_on, no_dispatch):
+    """Гонка: ступень сработала после отмены — причина та же, что у события."""
+    from apps.orders.services import change_status, get_order
+
+    with tenant_context(crystal):
+        plan_escalation(order)
+        log = NotificationLog.objects.filter(order=order, status=NotificationStatus.SCHEDULED).first()
+        change_status(get_order(order.pk), to_code="cancelled", actor_type="guest", cancel_reason="guest_refused")
+        result = execute_step(log.pk)
+        assert result.error == "Заказ отменён гостем — эскалация не нужна"

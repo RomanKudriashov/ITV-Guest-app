@@ -68,7 +68,8 @@ def stop_escalation_when_handled(event: Event) -> None:
         order = order_queryset().filter(pk=order_id).first()
         if order is None or not escalation_should_stop(order):
             return
-        cancelled = cancel_pending(order)
+        # Причина — по событию: принят, отменён гостем или персоналом, выполнен.
+        cancelled = cancel_pending(order, actor_type=event.actor_type)
         if cancelled:
             logger.info("Эскалация заказа %s погашена (%s ступеней)", order_id, cancelled)
 

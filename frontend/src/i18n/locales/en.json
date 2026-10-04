@@ -1244,7 +1244,11 @@
       "reasons": {
         "accepted": "Order taken into work — step no longer needed",
         "noChannels": "Nobody to notify: the step has no active channels",
-        "eventDisabled": "The hotel turned off overdue notifications"
+        "eventDisabled": "The hotel turned off overdue notifications",
+        "cancelledByGuest": "Cancelled by the guest — step no longer needed",
+        "cancelledByStaff": "Cancelled by staff — step no longer needed",
+        "cancelled": "Order cancelled — step no longer needed",
+        "fulfilled": "Order completed — step no longer needed"
       }
     },
     "validation": {

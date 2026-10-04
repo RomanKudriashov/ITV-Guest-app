@@ -1234,7 +1234,11 @@
       "reasons": {
         "accepted": "订单已开始处理——此步骤不再需要",
         "noChannels": "无人可通知：该步骤没有启用的渠道",
-        "eventDisabled": "酒店已关闭逾期通知"
+        "eventDisabled": "酒店已关闭逾期通知",
+        "cancelledByGuest": "客人已取消订单——此步骤不再需要",
+        "cancelledByStaff": "员工已取消订单——此步骤不再需要",
+        "cancelled": "订单已取消——此步骤不再需要",
+        "fulfilled": "订单已完成——此步骤不再需要"
       }
     },
     "validation": {

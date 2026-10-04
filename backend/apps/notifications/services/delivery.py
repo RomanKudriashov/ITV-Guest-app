@@ -367,7 +367,7 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
         # когда заказ приняли, и отмена задачи не успела бы.
         log.status = NotificationStatus.CANCELLED
         log.accepted_at_send = True
-        log.error = "Заказ уже в работе — эскалация не нужна"
+        log.error = f"{stop_reason(order)} — эскалация не нужна"
         log.save(update_fields=["status", "accepted_at_send", "error", "updated_at"])
         return log
 
@@ -510,7 +510,30 @@ def _report_failed(log: NotificationLog) -> None:
 # --- Остановка -------------------------------------------------------------
 
 
-def cancel_pending(order: Order, reason: str = "Заказ взят в работу") -> int:
+def stop_reason(order: Order, actor_type: str | None = None) -> str:
+    """
+    Почему гаснет эскалация — по тому, ЧТО случилось с заказом (партия 31,
+    DEV-05 QA). Раньше любая остановка подписывалась «Заказ взят в работу», и
+    отмена гостем в журнале выглядела принятием.
+
+    `actor_type` — кто вызвал событие; без него берётся автор последней записи
+    истории заказа.
+    """
+    status = order.status
+    if status.is_cancelled:
+        if actor_type is None:
+            last = order.status_changes.order_by("-created_at").first()
+            actor_type = last.actor_type if last else None
+        return {
+            "guest": "Заказ отменён гостем",
+            "staff": "Заказ отменён персоналом",
+        }.get(actor_type or "", "Заказ отменён")
+    if status.is_terminal:
+        return "Заказ выполнен"
+    return "Заказ взят в работу"
+
+
+def cancel_pending(order: Order, reason: str | None = None, *, actor_type: str | None = None) -> int:
     """
     Гасит запланированные ступени и отзывает задачи.
 
@@ -528,6 +551,7 @@ def cancel_pending(order: Order, reason: str = "Заказ взят в рабо�
     )
     if not pending:
         return 0
+    reason = reason or stop_reason(order, actor_type)
 
     NotificationLog.objects.filter(pk__in=[log.pk for log in pending]).update(
         status=NotificationStatus.CANCELLED, error=reason

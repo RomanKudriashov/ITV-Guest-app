@@ -90,6 +90,17 @@ const NOTE_KEYS: Record<string, string> = {
   // ведут к одной подписи — для читающего это одно и то же событие.
   'Заказ взят в работу': 'notifications.log.reasons.accepted',
   'Заказ уже в работе — эскалация не нужна': 'notifications.log.reasons.accepted',
+  'Заказ взят в работу — эскалация не нужна': 'notifications.log.reasons.accepted',
+  // Причина — по событию (партия 31, DEV-05): отмена гостем раньше
+  // подписывалась «взят в работу».
+  'Заказ отменён гостем': 'notifications.log.reasons.cancelledByGuest',
+  'Заказ отменён гостем — эскалация не нужна': 'notifications.log.reasons.cancelledByGuest',
+  'Заказ отменён персоналом': 'notifications.log.reasons.cancelledByStaff',
+  'Заказ отменён персоналом — эскалация не нужна': 'notifications.log.reasons.cancelledByStaff',
+  'Заказ отменён': 'notifications.log.reasons.cancelled',
+  'Заказ отменён — эскалация не нужна': 'notifications.log.reasons.cancelled',
+  'Заказ выполнен': 'notifications.log.reasons.fulfilled',
+  'Заказ выполнен — эскалация не нужна': 'notifications.log.reasons.fulfilled',
   'Отель выключил уведомления о просрочке': 'notifications.log.reasons.eventDisabled',
   'Для этой ступени не нашлось активных каналов': 'notifications.log.reasons.noChannels',
 };
