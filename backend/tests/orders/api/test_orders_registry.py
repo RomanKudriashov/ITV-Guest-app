@@ -211,7 +211,11 @@ def test_the_list_costs_the_same_for_five_orders_and_for_twenty(cms, crystal):
     def cost() -> tuple[int, int]:
         with CaptureQueriesContext(connection) as ctx:
             body = cms.get("/api/cms/orders?limit=200").json()
-        return len(ctx.captured_queries), len(body["orders"])
+        # Сверка сессии входа (партия 30) — один запрос на обращение, и то
+        # только когда кэш «жива» остыл: к длине страницы отношения не имеет,
+        # а первый замер платил бы его, второй — нет.
+        own = [q for q in ctx.captured_queries if "accounts_staff_session" not in q["sql"]]
+        return len(own), len(body["orders"])
 
     with tenant_context(crystal):
         for code in ("kitchen", "bar", "kitchen", "spa", "bar"):
