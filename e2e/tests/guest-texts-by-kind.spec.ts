@@ -41,7 +41,9 @@ test('заявка консьержу: ни в подтверждении, ни 
   await expect(page.getByTestId('guest-order-status')).toContainText('12:00')
   await page.getByTestId('guest-nav-home').click()
   const strip = page.getByTestId('guest-active-order-strip')
-  await expect(strip).toContainText(/на 12:00|for 12:00/, { timeout: 15_000 })
+  // После полудня 12:00 — завтра, и с партии 30 (п.46) срок не сегодня
+  // показывается с датой: «на пн, 5 окт., 12:00».
+  await expect(strip).toContainText(/на [^·]*12:00|for [^·]*12:00/, { timeout: 15_000 })
   await expect(strip).not.toContainText(/подадут|served by/)
   await page.goBack()
   await expect(page.getByTestId('guest-order-status')).toBeVisible()
