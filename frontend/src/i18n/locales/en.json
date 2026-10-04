@@ -3322,7 +3322,10 @@
     "cmsTitle": "Section closed",
     "cmsBody": "Your role has no access to management sections. Your work lives on the order board.",
     "toTracker": "Go to the tracker",
-    "noSections": "You have no management sections — the tracker is yours"
+    "noSections": "You have no management sections — the tracker is yours",
+    "sectionClosedTitle": "Section closed",
+    "sectionClosedBody": "This section is for the hotel administrator. Your sections are in the menu.",
+    "sectionClosedHome": "To the dashboard"
   },
   "modulePending": {
     "body": "The module is connected, but its settings screen is still being built. It will open right here once it ships.",

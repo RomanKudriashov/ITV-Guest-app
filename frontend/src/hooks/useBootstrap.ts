@@ -6,11 +6,12 @@ import { queryKeys } from '@/api/queryKeys';
 import type { Bootstrap } from '@/api/types';
 
 /** CMS bootstrap — everything the editors need before the first render. */
-export function useBootstrap() {
+export function useBootstrap(enabled = true) {
   return useQuery<Bootstrap>({
     queryKey: queryKeys.bootstrap,
     queryFn: fetchBootstrap,
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 }
 

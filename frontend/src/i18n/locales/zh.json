@@ -3291,7 +3291,10 @@
     "cmsTitle": "该板块已关闭",
     "cmsBody": "您的角色无权访问管理板块。您的工作在订单看板上。",
     "toTracker": "前往工作台",
-    "noSections": "您没有管理板块 — 仅可使用工单看板"
+    "noSections": "您没有管理板块 — 仅可使用工单看板",
+    "sectionClosedTitle": "此栏目不可用",
+    "sectionClosedBody": "此栏目仅限酒店管理员。您的栏目在菜单中。",
+    "sectionClosedHome": "返回面板首页"
   },
   "modulePending": {
     "body": "模块已接入，但设置界面仍在开发中。上线后将在此处打开。",

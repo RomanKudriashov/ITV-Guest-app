@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { cmsPath, toCmsRoot } from '@/app/hostRole';
+import { CMS_ROOT, cmsPath, toCmsRoot } from '@/app/hostRole';
 
 import { ScreenBoundary } from '@/components/ScreenBoundary';
 
@@ -46,6 +46,8 @@ import { useAuth } from '@/auth';
 import { isForbidden, useNavigation } from '@/hooks/useNavigation';
 import { useBootstrap } from '@/hooks/useBootstrap';
 import { NoCmsAccess } from './NoCmsAccess';
+import { SectionClosed } from './SectionClosed';
+import { allowedSections, sectionOf } from './sectionGate';
 import type { SupportSession } from '@/api/types';
 import { StaffScale } from '@/theme/StaffScale';
 
@@ -84,8 +86,10 @@ export function AppShell() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, hotel, logout } = useAuth();
-  const { data: bootstrap } = useBootstrap();
   const navigation = useNavigation();
+  // Сводка отеля — ручка панели: линейному сотруднику она ответит 403. Спрашиваем,
+  // только когда сервер подтвердил доступ к панели (DEV-07: без лишних отказов).
+  const { data: bootstrap } = useBootstrap(navigation.isSuccess);
   const isNarrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
   const [navOpen, setNavOpen] = useState(false);
 
@@ -131,6 +135,18 @@ export function AppShell() {
     return <NoCmsAccess />;
   }
   const showNav = !noSections;
+  /*
+    ПРЯМОЙ АДРЕС РАЗДЕЛА — СНАЧАЛА ПРАВО, ПОТОМ ЭКРАН (партия 31, DEV-07 QA).
+    Пока сервер не ответил, какие разделы открыты, экран раздела не
+    монтируется: иначе он успевал выстрелить десятком запросов в закрытые
+    ручки (у повара — до 12 ответов 403 в консоли). Раздела нет в ответе —
+    одно понятное «раздел закрыт» вместо полуживого экрана с «Не удалось
+    загрузить». Серверные 403 остаются второй, настоящей стеной.
+  */
+  const section = sectionOf(location.pathname, CMS_ROOT);
+  const navPending = Boolean(section) && !navigation.isSuccess && !navigation.isError;
+  const sectionClosed =
+    Boolean(section) && navigation.isSuccess && !allowedSections(navGroups).has(section as string);
 
   return (
     <StaffScale>
@@ -305,7 +321,7 @@ export function AppShell() {
           message={t('state.crashed')}
           actionLabel={t('state.reload')}
         >
-          <Outlet />
+          {navPending ? null : sectionClosed ? <SectionClosed /> : <Outlet />}
         </ScreenBoundary>
       </Box>
     </Box>
