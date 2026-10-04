@@ -379,7 +379,10 @@ class Command(BaseCommand):
             with platform_scope():
                 closed_sessions = StaffSession.all_objects.using("platform").filter(
                     pk__in=e2e_sessions, revoked_at__isnull=True
-                ).update(revoked_at=now, updated_at=now)
+                ).update(revoked_at=now, revoked_reason="e2e_cleanup", updated_at=now)
+            from apps.accounts.services import sessions as session_svc
+
+            session_svc.forget(e2e_sessions)
 
             hidden = Item.objects.filter(pk__in=[i.pk for i in keep]).update(
                 is_active=False, in_stock=False

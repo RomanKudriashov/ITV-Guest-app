@@ -105,6 +105,16 @@ def authenticate_staff(token: str) -> User | None:
         logger.warning("Отклонён токен отозванной или истёкшей сессии поддержки")
         return None
 
+    # ОТОЗВАННАЯ СЕССИЯ ЛОМАЕТ УЖЕ ВЫДАННЫЙ ACCESS (партия 30) — тот же
+    # принцип, что у гранта выше. Вход под аудитом живёт грантом, остальные —
+    # строкой реестра сессий. Токена без того и другого боевой код не выдаёт.
+    if not claims.get("imp"):
+        from apps.accounts.services import sessions as session_svc
+
+        if not session_svc.is_live(claims.get("sid"), user_id=user.pk, scope="staff"):
+            logger.info("Отклонён access отозванной или истёкшей сессии, user=%s", user.pk)
+            return None
+
     user.impersonated_by = claims.get("imp")
     user.token_claims = claims
     return user
@@ -207,6 +217,13 @@ class PlatformAuth(HttpBearer):
         # до включения 2FA, признака не несёт и перестаёт работать сразу.
         if user.totp_enabled and not claims.get("mfa"):
             logger.warning("Платформа: токен без подтверждения 2FA, user=%s", user.pk)
+            return None
+
+        # Закрытая сессия консоли — 401 на следующем же запросе (партия 30).
+        from apps.accounts.services import sessions as session_svc
+
+        if not session_svc.is_live(claims.get("sid"), user_id=user.pk, scope="platform"):
+            logger.info("Платформа: access отозванной сессии, user=%s", user.pk)
             return None
 
         # Клеймы нужны и здесь: из них берётся `sid` — какая именно сессия

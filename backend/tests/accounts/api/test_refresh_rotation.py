@@ -231,3 +231,118 @@ def test_closing_a_console_session_from_the_registry_kills_its_refresh(client):
         HTTP_HOST="guest.localhost",
     ).status_code
     assert status == 401
+
+
+# --- Отзыв действует СРАЗУ: живой access после отзыва — 401 ------------------
+
+
+@pytest.fixture
+def staff_api(client, hotel):
+    host = host_for(hotel)
+
+    def login(email=STAFF[0], password=STAFF[1]):
+        return client.post(
+            "/api/v1/staff/auth/login",
+            data=json.dumps({"email": email, "password": password}),
+            content_type="application/json",
+            HTTP_HOST=host,
+        ).json()
+
+    def call(method, path, access, body=None):
+        return getattr(client, method)(
+            path,
+            data=json.dumps(body) if body is not None else None,
+            content_type="application/json",
+            HTTP_HOST=host,
+            HTTP_AUTHORIZATION=f"Bearer {access}",
+        )
+
+    return login, call
+
+
+def test_deactivated_staff_access_is_refused_on_the_next_request(staff_api):
+    login, call = staff_api
+    admin = login()["access"]
+    created = call(
+        "post", "/api/v1/cms/staff", admin,
+        {"email": "cook@rotation.test", "full_name": "Повар", "password": "cook-pass-12345"},
+    )
+    assert created.status_code == 201, created.content
+    cook = login("cook@rotation.test", "cook-pass-12345")["access"]
+    assert call("get", "/api/v1/staff/auth/me", cook).status_code == 200
+
+    assert call("patch", f"/api/v1/cms/staff/{created.json()['id']}", admin, {"is_active": False}).status_code == 200
+    assert call("get", "/api/v1/staff/auth/me", cook).status_code == 401
+
+
+def test_closed_session_access_is_refused_on_the_next_request(staff_api):
+    """Закрыли вход с другого устройства — его access не работает со следующего запроса."""
+    login, call = staff_api
+    laptop, phone = login()["access"], login()["access"]
+    assert call("get", "/api/v1/staff/auth/me", phone).status_code == 200  # кэш «жива» прогрет
+    sessions = call("get", "/api/v1/staff/auth/sessions", laptop).json()["items"]
+    other = next(item["id"] for item in sessions if not item.get("is_current"))
+    assert call("delete", f"/api/v1/staff/auth/sessions/{other}", laptop).status_code == 200
+    assert call("get", "/api/v1/staff/auth/me", phone).status_code == 401
+    assert call("get", "/api/v1/staff/auth/me", laptop).status_code == 200
+
+
+def test_password_reset_refuses_live_access_at_once(staff_api, hotel, settings):
+    from apps.hotels.services.provisioning import set_hotel_admin
+
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    login, call = staff_api
+    access = login()["access"]
+    assert call("get", "/api/v1/staff/auth/me", access).status_code == 200
+    set_hotel_admin(hotel, email=STAFF[0])
+    assert call("get", "/api/v1/staff/auth/me", access).status_code == 401
+
+
+def test_hotel_deactivation_refuses_live_access_at_once(staff_api, hotel):
+    from apps.accounts.services import sessions as session_svc
+
+    login, call = staff_api
+    access = login()["access"]
+    assert call("get", "/api/v1/staff/auth/me", access).status_code == 200
+    session_svc.revoke_hotel(hotel.pk, reason="hotel_deactivated")
+    assert call("get", "/api/v1/staff/auth/me", access).status_code == 401
+
+
+def test_closed_console_session_access_is_refused_at_once(client):
+    ensure_platform_admin(email=PLATFORM[0], password=PLATFORM[1])
+
+    def login():
+        return client.post(
+            "/api/v1/platform/auth/login",
+            data=json.dumps({"email": PLATFORM[0], "password": PLATFORM[1]}),
+            content_type="application/json",
+            HTTP_HOST="guest.localhost",
+        ).json()
+
+    def me(access):
+        return client.get(
+            "/api/v1/platform/auth/me", HTTP_HOST="guest.localhost", HTTP_AUTHORIZATION=f"Bearer {access}"
+        ).status_code
+
+    laptop, phone = login(), login()
+    assert me(phone["access"]) == 200
+    listing = client.get(
+        "/api/v1/platform/auth/sessions", HTTP_HOST="guest.localhost", HTTP_AUTHORIZATION=f"Bearer {laptop['access']}"
+    ).json()
+    other = next(item["id"] for item in listing["items"] if not item.get("is_current"))
+    client.delete(
+        f"/api/v1/platform/auth/sessions/{other}",
+        HTTP_HOST="guest.localhost",
+        HTTP_AUTHORIZATION=f"Bearer {laptop['access']}",
+    )
+    assert me(phone["access"]) == 401
+    assert me(laptop["access"]) == 200
+
+
+def test_access_without_session_is_refused(staff_api):
+    """Токен персонала без `sid` и без гранта боевой код не выдаёт — его не принимают."""
+    from apps.accounts.services.tokens import encode_staff_token
+
+    _, call = staff_api
+    user = User.all_objects.using("platform").get(email=STAFF[0])
+    assert call("get", "/api/v1/staff/auth/me", encode_staff_token(user)).status_code == 401

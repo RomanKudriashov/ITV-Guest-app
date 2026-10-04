@@ -26,6 +26,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 
 from apps.core.context import platform_scope
@@ -169,6 +170,7 @@ def rotate(session_id, presented_jti: str, *, user: User, scope: str) -> tuple[S
         _rows(scope).filter(pk=session.pk).update(
             revoked_at=now, revoked_reason="refresh_reused", updated_at=now
         )
+    forget([session.pk])
     raise RefreshReused(str(session.pk))
 
 
@@ -203,11 +205,54 @@ def get_active(session_id, *, user_id=None, scope: str | None = None) -> StaffSe
     return session if session is not None and session.is_active else None
 
 
+# --- Живость сессии на каждом запросе (партия 30) ---------------------------
+#
+# ОТЗЫВ ДЕЙСТВУЕТ СРАЗУ, а не «когда истечёт access». Подписанный JWT живёт
+# час, и до партии 30 закрытая сессия, сменённый пароль или выключенный отель
+# пускали ещё до часа. Теперь каждый запрос персонала и консоли сверяет `sid`
+# токена с реестром — так же, как вход под аудитом сверяет грант (17.08).
+#
+# Кэш — только «жива» и только на LIVE_CACHE_SECONDS: каждый отзыв ниже
+# сбрасывает кэш своих сессий, поэтому кэш не продлевает жизнь отозванной,
+# а лишь избавляет живую от запроса в базу на каждом обращении.
+LIVE_CACHE_SECONDS = 30
+
+
+def _live_key(session_id) -> str:
+    return f"auth:session-live:{session_id}"
+
+
+def forget(session_ids) -> None:
+    """Сбросить кэш живости — после любого отзыва."""
+    keys = [_live_key(pk) for pk in session_ids]
+    if keys:
+        cache.delete_many(keys)
+
+
+def is_live(session_id, *, user_id, scope: str) -> bool:
+    """Сессия токена жива: не отозвана, не истекла и принадлежит этой учётке."""
+    if not session_id:
+        return False
+    key = _live_key(session_id)
+    if cache.get(key) == str(user_id):
+        return True
+    if scope == PLATFORM:
+        with platform_scope():
+            session = get_active(session_id, user_id=user_id, scope=scope)
+    else:
+        session = get_active(session_id, user_id=user_id, scope=scope)
+    if session is None:
+        return False
+    cache.set(key, str(user_id), LIVE_CACHE_SECONDS)
+    return True
+
+
 def revoke(session_id, *, user_id, scope: str | None = None, reason: str = "logout") -> bool:
     """Оборвать одну сессию — свою. Чужую по идентификатору не оборвать."""
     updated = _rows(scope).filter(
         pk=session_id, user_id=user_id, revoked_at__isnull=True
     ).update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+    forget([session_id])
     return bool(updated)
 
 
@@ -225,7 +270,10 @@ def revoke_all(
     queryset = _rows(scope).filter(user_id=user_id, revoked_at__isnull=True)
     if keep:
         queryset = queryset.exclude(pk=keep)
-    return queryset.update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+    ids = list(queryset.values_list("pk", flat=True))
+    count = queryset.update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+    forget(ids)
+    return count
 
 
 def revoke_hotel(hotel_id, *, reason: str) -> int:
@@ -236,11 +284,13 @@ def revoke_hotel(hotel_id, *, reason: str) -> int:
     включении, а при удалении — висели бы в реестре до истечения.
     """
     with platform_scope():
-        return (
-            StaffSession.all_objects.using("platform")
-            .filter(hotel_id=hotel_id, revoked_at__isnull=True)
-            .update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+        queryset = StaffSession.all_objects.using("platform").filter(
+            hotel_id=hotel_id, revoked_at__isnull=True
         )
+        ids = list(queryset.values_list("pk", flat=True))
+        count = queryset.update(revoked_at=timezone.now(), revoked_reason=reason, updated_at=timezone.now())
+    forget(ids)
+    return count
 
 
 def purge_stale(user: User | None = None, *, scope: str | None = None) -> int:
