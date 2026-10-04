@@ -182,16 +182,19 @@ test.describe('Доска: время и пороги', () => {
     // Партия 23, бэклог 48: создана в 10:15 «на 12:00», в 11:45 карточка
     // писала «ждёт 90 минут» — ждать ещё было нечего.
     const due = new Date(Date.now() + 15 * 60_000)
+    // Как настоящий API: срок со смещением ОТЕЛЯ (Europe/Moscow, +03:00), а не в
+    // UTC — с партии 30 (п.46) карточка показывает часы отеля по этому смещению.
+    const hotelIso = new Date(due.getTime() + 3 * 3_600_000).toISOString().replace('Z', '+03:00')
     await showBoard(page, [
       order({
         created_at: minutesAgo(90),
-        requested_time: due.toISOString(),
+        requested_time: hotelIso,
         waiting_minutes: 0,
         due_in_minutes: 15,
       }),
     ])
     await signInToTracker(page, CREDENTIALS)
-    const clock = due.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    const clock = due.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' })
     const waiting = page.getByTestId('tracker-waiting-9001')
     await expect(waiting).toHaveText(`на ${clock}, через 15 мин`, { timeout: 20_000 })
     await expect(waiting).not.toContainText('90')
