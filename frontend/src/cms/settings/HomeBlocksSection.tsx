@@ -52,7 +52,7 @@ function useDebounced(value: string, delay: number): string {
 }
 
 export function HomeBlocksSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -135,7 +135,14 @@ export function HomeBlocksSection() {
     );
 
   const point = cityChoice !== null || query.data.latitude !== null;
-  const savedCity = Object.values(query.data.city ?? {}).find(Boolean) ?? '';
+  // Город — на языке интерфейса; первый непустой — только если его нет.
+  // Прежде брался первый по порядку ключей, и русская панель показывала
+  // «Сейчас выбран: موسكو» — у города, сохранённого со всеми языками.
+  const cityNames: Record<string, string> = query.data.city ?? {};
+  const savedCity =
+    cityNames[(i18n.resolvedLanguage ?? i18n.language ?? 'ru').split('-')[0]] ||
+    Object.values(cityNames).find(Boolean) ||
+    '';
   const languages = contentLanguages;
   const provider = query.data.weather_provider;
 
