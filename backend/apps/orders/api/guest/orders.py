@@ -15,7 +15,7 @@ from apps.core.context import current_language
 from apps.core.errors import PermissionDenied
 from apps.core.idempotency import IdempotencyConflict, run_idempotent
 from apps.core.schemas import ErrorOut
-from apps.orders.schemas.guest import CancelIn, OrderIn, OrderOut, OrdersOut
+from apps.orders.schemas.guest import GuestCancelIn, OrderIn, OrderOut, OrdersOut
 from apps.orders.services import (
     OrderInput,
     OrderLineInput,
@@ -154,7 +154,7 @@ def read_order(request: HttpRequest, order_id: str):
     auth=guest_auth,
     summary="Отменить заявку, если статус позволяет",
 )
-def cancel_order(request: HttpRequest, order_id: str, payload: CancelIn):
+def cancel_order(request: HttpRequest, order_id: str, payload: GuestCancelIn):
     session = request.guest_session
     order = get_order(order_id, guest_session=session)
     cancelled = cancel_order_by_guest(order, guest_session=session, reason=payload.reason)

@@ -502,3 +502,34 @@ def test_every_platform_route_declares_a_right():
         "роли «только чтение». Меняет своё же (второй фактор) — объявляйте "
         "SELF, чужое — WRITE или OWNER:\n" + "\n".join(too_weak)
     )
+
+
+# --- 9. Имена схем уникальны ------------------------------------------------
+
+
+def test_schema_class_names_are_unique():
+    """
+    ОДНО ИМЯ — ОДНА СХЕМА (партия 31).
+
+    OpenAPI называет схему именем класса. Две разные `CancelIn` (гость и
+    трекер) склеились в одну: описание гостевой отмены требовало
+    `cancel_reason`, которого гостевая ручка не знает, — и сторож тел запросов
+    e2e принял правильное тело за ошибку. Так же склеивались `ScheduleIn`
+    бренда и расписаний.
+    """
+    from collections import defaultdict
+
+    from ninja import Schema
+
+    import api  # noqa: F401 — монтирует все модули со схемами
+
+    owners: dict[str, set[str]] = defaultdict(set)
+
+    def walk(cls):
+        for sub in cls.__subclasses__():
+            owners[sub.__name__].add(sub.__module__)
+            walk(sub)
+
+    walk(Schema)
+    clashes = {name: sorted(mods) for name, mods in owners.items() if len(mods) > 1}
+    assert not clashes, f"Схемы с одинаковым именем склеятся в OpenAPI: {clashes}"

@@ -44,6 +44,13 @@ export function OrderStatusPage() {
   const language = useGuestLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const justPlaced = searchParams.get('placed') === '1';
+  /*
+    ПЛАШКА «ЗАЯВКА ПРИНЯТА» — ПО СТАДИИ, А НЕ ПО ФАКТУ ОФОРМЛЕНИЯ (партия 31,
+    DEV-06 QA). Она висела, пока в адресе `?placed=1`: «уже передали
+    исполнителю» читалось и у новой, и у отменённой, и у выполненной.
+    Новая — «отправлена, ждёт подтверждения»; в работе — «приняли»;
+    выполнена или отменена — плашки нет, статус ниже говорит сам.
+  */
 
   /*
     ДВА РАЗНЫХ ОПРОСА, И ЭТО НЕ ИЗБЫТОЧНОСТЬ.
@@ -136,6 +143,15 @@ export function OrderStatusPage() {
   */
   const kind =
     order.card_kind ?? (order.slot ? 'booking' : fieldValues.length ? 'request' : 'delivery');
+  // Новая — «отправлена»; в работе и готова — «приняли»; итог — без плашки.
+  const stage =
+    order.status.stage ?? (order.status.is_cancelled ? 'cancelled' : order.status.is_terminal ? 'done' : undefined);
+  const confirmationStage: 'sent' | 'accepted' | null =
+    stage === 'cancelled' || stage === 'done' || order.status.is_terminal
+      ? null
+      : stage === 'new'
+        ? 'sent'
+        : 'accepted';
   // Обещания времени подачи — только там, где подача есть. У записи время
   // назначено, у заявки его никто не обещал.
   const promisesServeTime = kind === 'delivery';
@@ -231,7 +247,7 @@ export function OrderStatusPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 2 }} data-testid="guest-order-status">
       <Stack spacing={2.5}>
-        {justPlaced ? (
+        {justPlaced && confirmationStage ? (
           <Paper
             variant="outlined"
             sx={{ p: 2, borderColor: 'success.main' }}
@@ -240,7 +256,9 @@ export function OrderStatusPage() {
             <Stack spacing={1.5} alignItems="flex-start">
               <Stack direction="row" spacing={1} alignItems="center">
                 <CheckCircleOutlineIcon color="success" />
-                <Typography variant="h6">{t('guest.confirmation.title')}</Typography>
+                <Typography variant="h6" data-testid="guest-confirmation-title">
+                  {t(confirmationStage === 'sent' ? 'guest.confirmation.titleSent' : 'guest.confirmation.title')}
+                </Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 {/*
@@ -248,7 +266,9 @@ export function OrderStatusPage() {
                   кухню» читал и гость прачечной (E2E-004). Вид — из того же
                   реестра типов сервиса, что и тип трекера персонала.
                 */}
-                {t(`guest.confirmation.subtitle.${kind}`)}
+                {confirmationStage === 'sent'
+                  ? t('guest.confirmation.subtitleSent')
+                  : t(`guest.confirmation.subtitle.${kind}`)}
               </Typography>
               {serveByChip}
               {/*

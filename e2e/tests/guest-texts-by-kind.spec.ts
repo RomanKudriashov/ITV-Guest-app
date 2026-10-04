@@ -33,7 +33,9 @@ test('заявка консьержу: ни в подтверждении, ни 
 
   const confirmation = page.getByTestId('guest-confirmation')
   await expect(confirmation).toBeVisible({ timeout: 20_000 })
-  await expect(confirmation).toContainText(/исполнителю|passed on/)
+  // Заявка только что ушла и ещё новая: плашка говорит «отправлена», а не
+  // «приняли» (партия 31, DEV-06). Слова вида — после принятия.
+  await expect(confirmation).toContainText(/Заявка отправлена|Request sent/)
   await expect(confirmation).not.toContainText(KITCHEN)
 
   // Срок заявки — выбранное гостем время, а не «создание + 25 минут» (E2E-005).

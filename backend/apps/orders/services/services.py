@@ -1654,6 +1654,10 @@ def _status_payload(
         "is_cancelled": status.is_cancelled,
         "color_token": status.color_token,
         "allows_guest_cancel": status.allows_guest_cancel,
+        # Стадия — то, по чему гостю говорят правду о заявке (партия 31,
+        # DEV-06): «отправлена» и «приняли» — разные слова, а коды статусов у
+        # потоков разные.
+        "stage": status.stage,
     }
 
 

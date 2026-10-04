@@ -57,7 +57,7 @@ class OrderIn(Schema):
     tip_minor: int | None = None
     tip_percent: float | None = None
 
-class CancelIn(Schema):
+class GuestCancelIn(Schema):
     reason: str = ""
 
 class OrderOut(Schema):

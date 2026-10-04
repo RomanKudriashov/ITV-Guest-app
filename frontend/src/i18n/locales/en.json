@@ -526,13 +526,15 @@
     "confirmation": {
       "title": "Order received",
       "subtitle": {
-        "delivery": "The venue already has your order — follow the status below",
-        "request": "Your request has been passed on — follow the status below",
-        "ride": "Your ride request has been passed on — follow the status below",
-        "booking": "Your booking is confirmed — follow the status below"
+        "delivery": "Order accepted — the venue is on it. Follow the status below",
+        "request": "Request accepted — someone is already on it. Follow the status below",
+        "ride": "Ride accepted — follow the status below",
+        "booking": "Booking confirmed — follow the status below"
       },
       "track": "Track status",
-      "toMenu": "To the menu"
+      "toMenu": "To the menu",
+      "titleSent": "Request sent",
+      "subtitleSent": "Waiting for confirmation — the status below updates by itself"
     },
     "order": {
       "number": "Order #{{number}}",

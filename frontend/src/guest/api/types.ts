@@ -406,6 +406,8 @@ export interface OrderStatus {
   is_cancelled: boolean;
   color_token?: string;
   allows_guest_cancel: boolean;
+  /** Стадия сервера: new / working / ready / done / cancelled (DEV-06). */
+  stage?: 'new' | 'working' | 'ready' | 'done' | 'cancelled';
 }
 
 export interface OrderStatusFlowStep {

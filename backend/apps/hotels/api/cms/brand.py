@@ -235,7 +235,7 @@ def publish_brand_draft(request: HttpRequest, draft_id: str, confirm_stale: bool
     return versions_svc.publish_draft(draft_id, confirm_stale=confirm_stale)
 
 
-class ScheduleIn(Schema):
+class BrandScheduleIn(Schema):
     """
     Момент называют В МЕСТНОМ ВРЕМЕНИ ОТЕЛЯ, без часового пояса.
 
@@ -260,7 +260,7 @@ def brand_schedule_list(request: HttpRequest):
 
 
 @router.post("/brand/drafts/{draft_id}/schedule", summary="Опубликовать по расписанию")
-def schedule_brand_draft(request: HttpRequest, draft_id: str, payload: ScheduleIn):
+def schedule_brand_draft(request: HttpRequest, draft_id: str, payload: BrandScheduleIn):
     from apps.hotels.services.brand_schedule import schedule_publication, serialize_job
 
     return serialize_job(

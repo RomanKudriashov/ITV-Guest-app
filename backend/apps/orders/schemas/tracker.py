@@ -10,7 +10,7 @@ class StatusIn(Schema):
     comment: str = ""
 
 
-class CancelIn(Schema):
+class TrackerCancelIn(Schema):
     """
     `cancel_reason` — КОД из справочника `Order.CancelReason`, обязателен.
     `reason` — необязательное уточнение словами, попадает в журнал.

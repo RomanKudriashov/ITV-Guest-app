@@ -11,7 +11,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.core.context import current_language
-from apps.orders.schemas.tracker import AcceptIn, CancelIn, PositionIn, StatusIn
+from apps.orders.schemas.tracker import AcceptIn, PositionIn, StatusIn, TrackerCancelIn
 from apps.orders.services import tracker as svc
 
 router = Router(tags=["tracker"])
@@ -111,7 +111,7 @@ def reorder(request: HttpRequest, order_id: str, payload: PositionIn):
 
 
 @router.post("/order/{order_id}/cancel", summary="Отменить заказ")
-def cancel(request: HttpRequest, order_id: str, payload: CancelIn):
+def cancel(request: HttpRequest, order_id: str, payload: TrackerCancelIn):
     order = svc.cancel_order_by_staff(
         request.user, order_id, reason=payload.reason, cancel_reason=payload.cancel_reason
     )
