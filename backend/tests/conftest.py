@@ -14,6 +14,17 @@ from apps.core.context import clear_request_context, tenant_context
 from apps.hotels.models import Hotel
 
 
+def pytest_sessionstart(session):
+    """Сторож: бэкенд смотрит в настоящий Telegram — прогон не стартует (партия 30)."""
+    import os
+
+    from tests._telegram_guard import points_to_real_telegram, refusal
+
+    url = os.environ.get("TELEGRAM_API_URL", "")
+    if points_to_real_telegram(url):
+        pytest.exit(refusal("бэкенд", url), returncode=4)
+
+
 def pytest_configure_node(node):
     """
     Передать признак прогона воркеру. Хук зовётся ТОЛЬКО в контроллере.
