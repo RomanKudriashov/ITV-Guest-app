@@ -546,10 +546,10 @@
       "cancel": "Cancel order",
       "cancelConfirmTitle": "Cancel the order?",
       "cancelConfirmBody": {
-        "delivery": "You can cancel until the order is being prepared.",
-        "request": "You can cancel until the request is taken into work.",
-        "ride": "You can cancel until the request is taken into work.",
-        "booking": "You can cancel until the booking is taken into work."
+        "delivery": "You can cancel until the order is accepted.",
+        "request": "You can cancel until the request is accepted.",
+        "ride": "You can cancel until the request is accepted.",
+        "booking": "You can cancel until the booking is accepted."
       },
       "allOrders": "All my orders",
       "offline": "Offline",
@@ -564,7 +564,9 @@
       "durationMinutes": "{{minutes}} min",
       "pickupAt": "You collect it: {{place}}",
       "placedBy": "Placed by {{by}}",
-      "sentAt": "Sent at"
+      "sentAt": "Sent at",
+      "cancelInWork": "The request is already in progress — message the reception if your plans changed.",
+      "writeReception": "Message"
     },
     "orders": {
       "active": "Active",

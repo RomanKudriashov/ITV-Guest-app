@@ -443,6 +443,20 @@ export function OrderStatusPage() {
           >
             {t('guest.order.cancel')}
           </Button>
+        ) : !order.status.is_terminal ? (
+          /* Отмена — только пока заявка новая (партия 31). Приняли — кнопки
+             нет, но и тупика нет: дорога к человеку, который может помочь. */
+          <Alert
+            severity="info"
+            data-testid="guest-cancel-in-work"
+            action={
+              <Button color="inherit" size="small" onClick={() => navigate('/chat')} data-testid="guest-cancel-to-chat">
+                {t('guest.order.writeReception')}
+              </Button>
+            }
+          >
+            {t('guest.order.cancelInWork')}
+          </Alert>
         ) : null}
 
         <Button variant="text" onClick={() => navigate('/orders')} sx={{ minHeight: 44 }}>

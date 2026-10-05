@@ -544,10 +544,10 @@
       "cancel": "取消订单",
       "cancelConfirmTitle": "取消订单？",
       "cancelConfirmBody": {
-        "delivery": "在订单开始制作前可以取消。",
-        "request": "在请求开始处理前可以取消。",
-        "ride": "在请求开始处理前可以取消。",
-        "booking": "在预约开始处理前可以取消。"
+        "delivery": "订单被受理前可以取消。",
+        "request": "请求被受理前可以取消。",
+        "ride": "请求被受理前可以取消。",
+        "booking": "预约被受理前可以取消。"
       },
       "allOrders": "我的全部订单",
       "offline": "无连接",
@@ -562,7 +562,9 @@
       "durationMinutes": "{{minutes}} 分钟",
       "pickupAt": "自取：{{place}}",
       "placedBy": "由{{by}}代下单",
-      "sentAt": "发送时间"
+      "sentAt": "发送时间",
+      "cancelInWork": "请求已在处理中——如计划有变，请联系前台。",
+      "writeReception": "发消息"
     },
     "orders": {
       "active": "进行中",

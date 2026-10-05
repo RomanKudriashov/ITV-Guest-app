@@ -64,6 +64,11 @@ test('новая → «отправлена», принятая → «приня
   await page.reload()
   await expect(title).toHaveText(/Заявка принята/, { timeout: 20_000 })
   await expect(page.getByTestId('guest-confirmation')).toContainText(/приняли/)
+  // Отмена — только пока новая (партия 31): принятую не отменить, но дорога к
+  // ресепшену есть.
+  await expect(page.getByTestId('guest-cancel-order')).toHaveCount(0)
+  await expect(page.getByTestId('guest-cancel-in-work')).toContainText('уже в работе')
+  await expect(page.getByTestId('guest-cancel-to-chat')).toBeVisible()
 
   await moveOrderStatus(request, await apiToken(request, ADMIN), order.id, 'done')
   await page.reload()

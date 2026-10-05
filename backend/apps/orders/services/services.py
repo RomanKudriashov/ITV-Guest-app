@@ -1494,17 +1494,28 @@ def _sync_parent_status(parent_id, *, actor_type, actor_id) -> None:
     )
 
 
+def guest_can_cancel(status: StatusDefinition) -> bool:
+    """
+    ПРАВИЛО ОТМЕНЫ ГОСТЕМ (партия 31, решение по INV-03 QA): только пока
+    заявка «Новая» — до того, как её приняли. Флаг отеля
+    `allows_guest_cancel` остаётся дополнительным запретом, но разрешить
+    отмену принятой заявки больше не может: QA отменил гостем #514–#516 уже
+    подтверждёнными, а диалог обещал «пока не взяли в работу».
+    """
+    return bool(status.allows_guest_cancel) and status.stage == status_flows.Stage.NEW and not status.is_terminal
+
+
 def cancel_order_by_guest(
     order: Order, *, guest_session, reason: str = "", cancel_reason: str = ""
 ) -> Order:
     """
-    Отмена гостем разрешена ровно в тех статусах, где отель её разрешил
-    (`allows_guest_cancel`). Проверка на сервере, даже если кнопки в UI нет:
-    между отрисовкой экрана и нажатием кухня успевает взять заказ в работу.
+    Отмена гостем — ТОЛЬКО ПОКА ЗАЯВКА НОВАЯ (`guest_can_cancel`). Проверка на
+    сервере, даже если кнопки в UI нет: между отрисовкой экрана и нажатием
+    кухня успевает взять заказ в работу.
     """
-    if not order.status.allows_guest_cancel:
+    if not guest_can_cancel(order.status):
         raise ConflictError(
-            f"Заказ в статусе «{order.status.title_i18n}» уже нельзя отменить",
+            "Заявка уже в работе — напишите на ресепшен",
             code="cancel_not_allowed",
         )
 
@@ -1653,7 +1664,7 @@ def _status_payload(
         "is_terminal": status.is_terminal,
         "is_cancelled": status.is_cancelled,
         "color_token": status.color_token,
-        "allows_guest_cancel": status.allows_guest_cancel,
+        "allows_guest_cancel": guest_can_cancel(status),
         # Стадия — то, по чему гостю говорят правду о заявке (партия 31,
         # DEV-06): «отправлена» и «приняли» — разные слова, а коды статусов у
         # потоков разные.
