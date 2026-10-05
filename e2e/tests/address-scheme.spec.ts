@@ -434,6 +434,26 @@ test('переход едет, а при просьбе не двигать — 
   // положению (оно пересчитывает цель, см. scrollToSection), а проверка
   // сравнивала со старым. Прыжок без анимации — это раздел под полосой (64 px:
   // её 52 и зазор 12) сразу после клика, без промежуточных кадров.
+  //
+  // КАРТИНКИ — ДО КЛИКА (партия 32). Ленивые картинки над разделом догружались
+  // уже после прыжка и сдвигали его на 58 px: проверка меряла догрузку, а не
+  // анимацию, и краснела стабильно, когда картинки отдавались медленнее.
+  // Здесь они грузятся сразу и до конца — остаётся ровно вопрос «был ли
+  // промежуточный кадр».
+  await calm.evaluate(async () => {
+    const images = Array.from(document.images)
+    for (const image of images) image.loading = 'eager'
+    await Promise.all(
+      images.map((image) =>
+        image.complete
+          ? null
+          : new Promise((resolve) => {
+              image.addEventListener('load', resolve, { once: true })
+              image.addEventListener('error', resolve, { once: true })
+            }),
+      ),
+    )
+  })
   await calm.getByTestId('landing-nav-how').click()
   await calm.waitForTimeout(40)
   const sectionTop = await calm.evaluate(() => document.getElementById('how')!.getBoundingClientRect().top)
