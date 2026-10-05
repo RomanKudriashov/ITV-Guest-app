@@ -50,3 +50,14 @@ test('гость отменил заказ — отправка «заказ о�
   await page.getByTestId('cms-log-order-filter').fill(String(order.number))
   await expect(page.getByTestId('cms-notification-log')).toContainText(/Событие: .*отмен/i, { timeout: 20_000 })
 })
+
+test('подпись ступеней называет базу отсчёта как есть (п.12)', async ({ page }) => {
+  // Сервер считает от позднейшего: создание, время гостя, возврат в работу
+  // (`work_clock_start`). Подпись обещала «от создания» — QA видел у #521
+  // ступень от времени гостя и счёл это расхождением.
+  await signInToCms(page, ADMIN)
+  await page.goto('/cms/notifications')
+  await page.getByTestId('cms-notifications-tab-escalation').click()
+  await page.getByTestId('cms-escalation-new').click()
+  await expect(page.getByText(/если гость назвал время — от этого времени/)).toBeVisible({ timeout: 20_000 })
+})

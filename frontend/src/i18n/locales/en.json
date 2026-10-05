@@ -1191,7 +1191,7 @@
       "hotelWide": "Hotel-wide",
       "active": "Active",
       "stepsTitle": "Steps",
-      "stepsHint": "The delay counts from the creation of the order, not from the previous step",
+      "stepsHint": "The delay counts from when the order was placed — or from the time the guest asked for, or from when it was reopened, whichever is latest. Not from the previous step.",
       "addStep": "Step",
       "noSteps": "No steps yet",
       "stepN": "Step {{n}}",
