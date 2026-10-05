@@ -74,6 +74,15 @@ ACTIVITY_MARK = "actgen:v1"
 # Доля заказов, которая не доходит до конца. Не круглые числа: ровно 10%
 # отмен на дашборде выглядят как настройка, а не как жизнь.
 CANCELLED_SHARE = 0.11
+# Причины отмены — с перекосом, как в жизни: чаще «нет в наличии» и «гость
+# отказался», реже дубль и ошибка. Список из справочника заказа, не выдуманный:
+# по коду считают отмены в аналитике.
+CANCEL_REASONS = [
+    "out_of_stock", "out_of_stock", "out_of_stock",
+    "guest_refused", "guest_refused", "guest_refused",
+    "no_capacity", "no_capacity",
+    "duplicate", "mistake", "other",
+]
 # Доля «зависших» — приняты и брошены дольше SLA. Ради них на доске есть
 # эскалация, и без них её не на чем показать.
 STALE_SHARE = 0.06
@@ -703,8 +712,11 @@ class Command(BaseCommand):
             if target is None:
                 return
             at = created + timedelta(minutes=rng.randrange(3, 25))
+            # Причина отмены обязательна (партия 31, DEV-01): без неё переход
+            # отвергается, и генератор падал на первой же отмене.
             change_status(order, to_code=target.code, actor_type="staff",
-                          actor_id=actor.pk if actor else None)
+                          actor_id=actor.pk if actor else None,
+                          cancel_reason=rng.choice(CANCEL_REASONS))
             OrderStatusChange.objects.filter(
                 order_id=order.pk, to_status__code=target.code
             ).update(created_at=at)
