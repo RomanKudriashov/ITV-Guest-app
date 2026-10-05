@@ -284,6 +284,24 @@ def test_status_moves_forward_and_back_again(
     assert on_board[0]["status"]["code"] == "new"
 
 
+
+def test_rollback_to_new_takes_the_assignee_off_and_keeps_history(
+    tracker, order, crystal, django_capture_on_commit_callbacks
+):
+    """
+    INV-03 (QA #516): откат «Подтверждена → Новая» оставлял исполнителя и
+    момент принятия. «Новая» значит «никто не взял»; кто брал — в истории.
+    """
+    with django_capture_on_commit_callbacks(execute=True):
+        assert tracker.post(f"/api/tracker/order/{order['id']}/accept", {}).status_code == 200
+        back = tracker.post(f"/api/tracker/order/{order['id']}/status", {"status": "new"})
+    assert back.status_code == 200, back.content
+    body = back.json()
+    assert body["status"]["code"] == "new"
+    assert body["assignee"] is None and body["accepted_at"] is None
+    accepted = [entry for entry in body["journal"] if entry["to"] == "accepted"]
+    assert accepted and accepted[0]["actor_name"] == "Пётр, повар"
+
 def test_staff_can_cancel_running_order(tracker, order, django_capture_on_commit_callbacks):
     with django_capture_on_commit_callbacks(execute=True):
         response = tracker.post(

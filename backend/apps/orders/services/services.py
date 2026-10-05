@@ -1380,6 +1380,15 @@ def change_status(
         order.closed_at = None
         order.reopened_at = timezone.now()
         changed += ["closed_at", "reopened_at"]
+    # ОТКАТ В «НОВУЮ» СНИМАЕТ ИСПОЛНИТЕЛЯ (партия 31, INV-03 QA). «Новая» —
+    # это «никто не взял»: у #516 после отката остались исполнитель и момент
+    # принятия, и доска показывала взятой заявку, которую вернули в очередь.
+    # Кто и когда принимал — остаётся в истории переходов.
+    if target.stage == status_flows.Stage.NEW and previous.stage != status_flows.Stage.NEW:
+        if order.assignee_id or order.accepted_at:
+            order.assignee = None
+            order.accepted_at = None
+            changed += ["assignee", "accepted_at"]
     order.save(update_fields=changed)
 
     if target.is_cancelled:
