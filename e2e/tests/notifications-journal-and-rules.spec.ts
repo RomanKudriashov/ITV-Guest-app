@@ -28,10 +28,14 @@ test.describe('Уведомления: журнал и второе правил
 
     // Записи в журнале на стенде есть — иначе проверять «показывает записи»
     // нечем, и это состояние стенда, а не молчаливый пропуск.
-    const log = await request.get(`${API}/api/cms/notification-log?limit=5`, { headers })
+    const log = await request.get(`${API}/api/cms/notification-log?limit=100`, { headers })
     expect(log.status(), await log.text()).toBe(200)
-    const entries = (await log.json()).items as Array<{ order_number: number }>
-    expect(entries.length, 'в журнале стенда нет ни одной записи').toBeGreaterThan(0)
+    // С партии 31 (INV-06) в журнале и доставки событий — у сообщения гостя
+    // или оценки заказа нет; фильтр по заказу проверяется на строке, где он есть.
+    const entries = ((await log.json()).items as Array<{ order_number: number | null }>).filter(
+      (entry) => entry.order_number,
+    )
+    expect(entries.length, 'в журнале стенда нет ни одной записи с заказом').toBeGreaterThan(0)
 
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(String(error)))
@@ -47,7 +51,7 @@ test.describe('Уведомления: журнал и второе правил
 
     // Фильтр принимает ТО, ЧТО НАПИСАНО В ТАБЛИЦЕ, — номер заказа.
     const number = String(entries[0].order_number)
-    await expect(page.getByTestId('cms-log-row-0')).toContainText('№')
+    await expect(page.getByTestId('cms-notification-log')).toContainText('№')
     await page.getByTestId('cms-log-order-filter').fill(number)
 
     await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
@@ -147,11 +151,13 @@ test('у успешной строки журнала «Ошибка» пуст�
   const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
   const log = await request.get(`${API}/api/cms/notification-log?limit=100`, { headers })
   const entries = (await log.json()).items as Array<{
-    order_number: number
+    order_number: number | null
     status: string
     error: string | null
   }>
-  const sent = entries.find((entry) => entry.status === 'sent' && (entry.error ?? '').trim())
+  // Строка с заказом: фильтр журнала — по номеру заказа (доставки событий без
+  // заказа — с партии 31 — им не найти).
+  const sent = entries.find((entry) => entry.order_number && entry.status === 'sent' && (entry.error ?? '').trim())
   test.skip(!sent, 'в журнале стенда нет успешной отправки с ответом канала')
 
   await signInToCms(page)
