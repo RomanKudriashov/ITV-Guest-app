@@ -14,6 +14,7 @@ import type {
   NotificationLogEntry,
   NotificationLogQuery,
   NotificationStaffUser,
+  GroupConnect,
 } from './notificationTypes';
 
 /* ── Telegram ──────────────────────────────────────────────────────────── */
@@ -45,6 +46,21 @@ export function createNotificationChannel(
   payload: NotificationChannelPayload,
 ): Promise<NotificationChannel> {
   return api.post<NotificationChannel>('/cms/notification-channels', payload);
+}
+
+/** Telegram-группа через бота платформы: канал «ждёт подключения» и код (партия 32). */
+export function createTelegramGroup(payload: {
+  title: string;
+  execution_point_id: string | null;
+  is_active: boolean;
+  templates: Record<string, { subject: string; body: string }>;
+}): Promise<{ channel: NotificationChannel; connect: GroupConnect }> {
+  return api.post('/cms/notification-channels/telegram-group', payload);
+}
+
+/** Новый код подключения группы — прежний гаснет. */
+export function issueGroupCode(id: string): Promise<GroupConnect> {
+  return api.post<GroupConnect>(`/cms/notification-channels/${id}/connect-code`);
 }
 
 export function updateNotificationChannel(

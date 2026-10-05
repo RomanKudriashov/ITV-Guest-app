@@ -1115,14 +1115,16 @@
       "on": "开",
       "off": "关",
       "types": {
-        "telegram": "Telegram",
+        "telegram": "Telegram（自有机器人）",
         "email": "邮件",
-        "log": "日志"
+        "log": "日志",
+        "telegram_group": "Telegram 群组"
       },
       "typeHint": {
-        "telegram": "机器人把消息发到指定聊天",
+        "telegram": "旧方式：使用带令牌的自有机器人。新的 Telegram 渠道请通过平台机器人连接群组。",
         "email": "邮件发给列表中的所有收件人",
-        "log": "写入应用日志，总是成功"
+        "log": "写入应用日志，总是成功",
+        "telegram_group": "通知通过平台机器人发送到值班群。无需令牌：保存后会得到群组代码。"
       },
       "binding": "绑定",
       "bindings": {
@@ -1364,6 +1366,20 @@
       "turnedOff": "Telegram 已关闭：机器人不再给酒店员工发消息，绑定保留",
       "botOnline": "机器人 @{{name}} 在线",
       "botMissing": "机器人未连接，员工暂时无法绑定 Telegram。"
+    },
+    "group": {
+      "state": {
+        "pending": "等待连接",
+        "connected": "已连接",
+        "removed": "机器人已被移出群组"
+      },
+      "chat": "群组：「{{title}}」",
+      "removedHint": "机器人已被移出群组——通知不会发送到那里。请重新添加机器人并发送新代码。",
+      "steps": "把 @{{bot}} 加入值班群，并在群内发送：",
+      "link": "或打开链接——Telegram 会让你选择群组并自动发送代码",
+      "noBot": "平台机器人当前未连接——它恢复后代码即可生效。",
+      "until": "代码有效期至 {{time}}。新代码会作废旧代码。",
+      "newCode": "新代码"
     }
   },
   "brand": {
@@ -2722,7 +2738,9 @@
         "escalation_rule_deleted": "已删除升级规则",
         "channel_created": "已创建通知渠道",
         "channel_changed": "已更改通知渠道",
-        "channel_deleted": "已删除通知渠道"
+        "channel_deleted": "已删除通知渠道",
+        "telegram_group_connected": "Telegram 群组已连接",
+        "telegram_group_removed": "机器人已被移出 Telegram 群组"
       },
       "staff": {
         "session": {

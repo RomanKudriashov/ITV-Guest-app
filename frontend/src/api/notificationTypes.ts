@@ -29,6 +29,24 @@ export interface NotificationChannel {
    */
   config_public?: Record<string, unknown> | null;
   templates?: Record<string, ChannelTemplate> | null;
+  /** Telegram-группа через бота платформы (партия 32): состояние подключения. */
+  group?: TelegramGroupState | null;
+}
+
+export interface TelegramGroupState {
+  /** pending — ждёт /connect; connected — подключена; removed — бота удалили. */
+  state: 'pending' | 'connected' | 'removed';
+  chat_title: string;
+  code_expires_at: string | null;
+  bot_username: string;
+}
+
+/** Одноразовый код подключения: в группе `/connect КОД` или ссылка `?startgroup=`. */
+export interface GroupConnect {
+  code: string;
+  expires_at: string;
+  bot_username: string;
+  link: string;
 }
 
 export interface NotificationChannelPayload {

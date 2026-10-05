@@ -25,14 +25,16 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { ApiError } from '@/api/client';
 import {
   createNotificationChannel,
+  createTelegramGroup,
   deleteNotificationChannel,
   fetchNotificationChannels,
   fetchStaffUsers,
+  issueGroupCode,
   testNotificationChannel,
   updateNotificationChannel,
 } from '@/api/notifications';
 import { queryKeys } from '@/api/queryKeys';
-import type { NotificationChannel } from '@/api/notificationTypes';
+import type { GroupConnect, NotificationChannel } from '@/api/notificationTypes';
 import type { Bootstrap } from '@/api/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
@@ -62,6 +64,8 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<NotificationChannel | null>(null);
+  /** Код подключения Telegram-группы — показывается в открытом диалоге (партия 32). */
+  const [connect, setConnect] = useState<GroupConnect | null>(null);
 
   const channelsQuery = useQuery({
     queryKey: queryKeys.notificationChannels,
@@ -92,6 +96,42 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
     }
     toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error');
   };
+
+  /*
+    НОВАЯ TELEGRAM-ГРУППА (партия 32): канал заводится «ждёт подключения», и
+    диалог НЕ закрывается — в нём сразу код для группы. Закрыть его до того,
+    как код переписан, значило бы заводить группу заново.
+  */
+  const groupMutation = useMutation({
+    mutationFn: (value: ChannelDraft) => {
+      const payload = channelPayload(value);
+      return createTelegramGroup({
+        title: payload.title,
+        execution_point_id: payload.execution_point_id,
+        is_active: payload.is_active,
+        templates: payload.templates,
+      });
+    },
+    onSuccess: ({ channel, connect: issued }) => {
+      setServerErrors({});
+      setConnect(issued);
+      setDraft(channelToDraft(channel));
+      queryClient.setQueryData<NotificationChannel[]>(queryKeys.notificationChannels, (current) =>
+        current ? [...current, channel] : current,
+      );
+      void invalidate();
+    },
+    onError: applyError,
+  });
+
+  const codeMutation = useMutation({
+    mutationFn: (id: string) => issueGroupCode(id),
+    onSuccess: (issued) => {
+      setConnect(issued);
+      void invalidate();
+    },
+    onError: applyError,
+  });
 
   const saveMutation = useMutation({
     mutationFn: (value: ChannelDraft) =>
@@ -236,7 +276,21 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
                 {channels.map((channel) => (
                   <TableRow key={channel.id} hover data-testid={`cms-channel-${channel.id}`}>
                     <TableCell>
-                      <Chip size="small" label={t(`notifications.channels.types.${channel.type}`)} />
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Chip
+                          size="small"
+                          label={t(`notifications.channels.types.${channel.group ? 'telegram_group' : channel.type}`)}
+                        />
+                        {channel.group ? (
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            color={channel.group.state === 'connected' ? 'success' : channel.group.state === 'removed' ? 'warning' : 'default'}
+                            label={t(`notifications.group.state.${channel.group.state}`)}
+                            data-testid={`cms-channel-group-state-${channel.id}`}
+                          />
+                        ) : null}
+                      </Stack>
                     </TableCell>
                     <TableCell>{channel.title}</TableCell>
                     <TableCell>{bindingLabel(channel)}</TableCell>
@@ -283,10 +337,19 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
           open
           draft={draft}
           onChange={(next) => setDraft(next)}
-          onClose={() => setDraft(null)}
-          onSave={() => saveMutation.mutate(draft)}
+          onClose={() => {
+            setDraft(null);
+            setConnect(null);
+          }}
+          onSave={() =>
+            !draft.id && draft.type === 'telegram_group' ? groupMutation.mutate(draft) : saveMutation.mutate(draft)
+          }
           onTest={() => draft.id && testMutation.mutate(draft.id)}
-          saving={saveMutation.isPending}
+          saving={saveMutation.isPending || groupMutation.isPending}
+          group={editing?.group}
+          connect={connect}
+          onNewCode={() => draft.id && codeMutation.mutate(draft.id)}
+          codeBusy={codeMutation.isPending}
           testing={testMutation.isPending}
           testResult={testResult}
           serverErrors={serverErrors}

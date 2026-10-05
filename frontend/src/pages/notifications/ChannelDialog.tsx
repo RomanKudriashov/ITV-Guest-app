@@ -20,11 +20,12 @@ import Typography from '@mui/material/Typography';
 import SendIcon from '@mui/icons-material/Send';
 
 import type { ExecutionPoint } from '@/api/types';
-import type { NotificationStaffUser } from '@/api/notificationTypes';
+import type { GroupConnect, NotificationStaffUser, TelegramGroupState } from '@/api/notificationTypes';
+import { TelegramGroupPanel } from './TelegramGroupPanel';
 import {
-  CHANNEL_BINDINGS,
-  CHANNEL_TYPES,
   TEMPLATE_PLACEHOLDERS,
+  bindingsFor,
+  channelTypesFor,
   channelSpec,
   maskedSecret,
   validateChannel,
@@ -45,6 +46,11 @@ export interface ChannelDialogProps {
   testing: boolean;
   /** Result of the last probe, or `null` while none was made. */
   testResult: { ok: boolean; message: string } | null;
+  /** Telegram-группа (партия 32): состояние канала, только что выданный код. */
+  group?: TelegramGroupState | null;
+  connect?: GroupConnect | null;
+  onNewCode?: () => void;
+  codeBusy?: boolean;
   /** `title` / `execution_point_id` / `user_id` / `config.<name>` → message. */
   serverErrors: Record<string, string>;
   /** Masked secrets as the server reports them, for the placeholder hint. */
@@ -77,6 +83,10 @@ export function ChannelDialog({
   saving,
   testing,
   testResult,
+  group,
+  connect,
+  onNewCode,
+  codeBusy,
   serverErrors,
   configPublic,
   executionPoints,
@@ -138,13 +148,22 @@ export function ChannelDialog({
               size="small"
               label={t('notifications.channels.type')}
               value={draft.type}
-              onChange={(event) => patch({ type: event.target.value as ChannelType, config: {} })}
+              onChange={(event) => {
+                const type = event.target.value as ChannelType;
+                // У группы нет сотрудника — привязка «сотрудник» сбрасывается на отель.
+                const keep = bindingsFor(type).includes(draft.binding);
+                patch({
+                  type,
+                  config: {},
+                  ...(keep ? {} : { binding: 'hotel' as ChannelBinding, user_id: null }),
+                });
+              }}
               sx={{ minWidth: 200 }}
               SelectProps={{ native: true }}
               InputLabelProps={{ shrink: true }}
               inputProps={{ 'data-testid': 'cms-channel-type' }}
             >
-              {CHANNEL_TYPES.map((type) => (
+              {channelTypesFor(draft).map((type) => (
                 <option key={type} value={type}>
                   {t(`notifications.channels.types.${type}`)}
                 </option>
@@ -180,6 +199,15 @@ export function ChannelDialog({
             {t(`notifications.channels.typeHint.${draft.type}`)}
           </Typography>
 
+          {draft.type === 'telegram_group' ? (
+            <TelegramGroupPanel
+              group={group}
+              connect={connect ?? null}
+              onNewCode={draft.id ? onNewCode : undefined}
+              busy={codeBusy}
+            />
+          ) : null}
+
           <Divider />
 
           {/* ── Binding ─────────────────────────────────────────────── */}
@@ -201,7 +229,7 @@ export function ChannelDialog({
               InputLabelProps={{ shrink: true }}
               inputProps={{ 'data-testid': 'cms-channel-binding' }}
             >
-              {CHANNEL_BINDINGS.map((binding) => (
+              {bindingsFor(draft.type).map((binding) => (
                 <option key={binding} value={binding}>
                   {t(`notifications.channels.bindings.${binding}`)}
                 </option>

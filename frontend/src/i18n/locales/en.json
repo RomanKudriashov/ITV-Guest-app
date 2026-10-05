@@ -1125,14 +1125,16 @@
       "on": "On",
       "off": "Off",
       "types": {
-        "telegram": "Telegram",
+        "telegram": "Telegram (own bot)",
         "email": "E-mail",
-        "log": "Log"
+        "log": "Log",
+        "telegram_group": "Telegram group"
       },
       "typeHint": {
-        "telegram": "The bot posts the message into the given chat",
+        "telegram": "Legacy: your own bot with a token. New Telegram channels are groups via the platform bot.",
         "email": "A letter goes to every recipient on the list",
-        "log": "Writes into the application log and always succeeds — for demos and CI"
+        "log": "Writes into the application log and always succeeds — for demos and CI",
+        "telegram_group": "Notifications go to the shift chat via the platform bot. No token needed: after saving you get a code for the group."
       },
       "binding": "Bound to",
       "bindings": {
@@ -1375,6 +1377,20 @@
       "turnedOff": "Telegram is off: the bot does not message hotel staff, connections are kept",
       "botOnline": "Bot @{{name}} is online",
       "botMissing": "The bot is not connected — staff cannot connect Telegram yet."
+    },
+    "group": {
+      "state": {
+        "pending": "Waiting to connect",
+        "connected": "Connected",
+        "removed": "Bot removed from the group"
+      },
+      "chat": "Group: “{{title}}”",
+      "removedHint": "The bot was removed from the group — nothing is delivered there. Add the bot again and send a new code.",
+      "steps": "Add @{{bot}} to the shift group and send there:",
+      "link": "Or open the link — Telegram will let you pick the group and send the code itself",
+      "noBot": "The platform bot is not connected right now — the code will work once it is.",
+      "until": "The code is valid until {{time}}. A new code cancels the previous one.",
+      "newCode": "New code"
     }
   },
   "brand": {
@@ -2749,7 +2765,9 @@
         "escalation_rule_deleted": "Escalation rule deleted",
         "channel_created": "Notification channel created",
         "channel_changed": "Notification channel changed",
-        "channel_deleted": "Notification channel deleted"
+        "channel_deleted": "Notification channel deleted",
+        "telegram_group_connected": "Telegram group connected",
+        "telegram_group_removed": "Bot removed from the Telegram group"
       },
       "staff": {
         "session": {

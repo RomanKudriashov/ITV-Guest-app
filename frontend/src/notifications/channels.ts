@@ -11,7 +11,13 @@
  * here — the same discipline as `src/offerings/behaviour.ts`.
  */
 
-export type ChannelType = 'telegram' | 'email' | 'log';
+/**
+ * `telegram_group` — Telegram-группа через бота платформы (партия 32): токена
+ * и chat_id в форме нет, адрес ставит бот по коду из панели. На сервере это
+ * канал `type=telegram` с `via_platform_bot`; вид формы — отдельный ряд.
+ * `telegram` (свой бот с токеном) остаётся только у уже заведённых каналов.
+ */
+export type ChannelType = 'telegram' | 'telegram_group' | 'email' | 'log';
 
 /** How one config value is typed in: a single line or a list of lines. */
 export type ChannelFieldControl = 'text' | 'list';
@@ -43,6 +49,7 @@ const SPECS: Record<ChannelType, ChannelTypeSpec> = {
       { name: 'chat_id', control: 'text', secret: false, required: true },
     ],
   },
+  telegram_group: { type: 'telegram_group', fields: [] },
   email: {
     type: 'email',
     fields: [
@@ -55,7 +62,18 @@ const SPECS: Record<ChannelType, ChannelTypeSpec> = {
   log: { type: 'log', fields: [] },
 };
 
-export const CHANNEL_TYPES: ChannelType[] = ['telegram', 'email', 'log'];
+/** Что можно завести НОВЫМ: Telegram — только группой через бота платформы. */
+export const CHANNEL_TYPES: ChannelType[] = ['telegram_group', 'email', 'log'];
+
+/** Виды в выпадающем списке: свой бот — только у канала, который уже им стал. */
+export function channelTypesFor(draft: { id?: string; type: ChannelType }): ChannelType[] {
+  return draft.id && draft.type === 'telegram' ? ['telegram', ...CHANNEL_TYPES] : CHANNEL_TYPES;
+}
+
+/** У группы нет сотрудника: личный Telegram подключается в профиле. */
+export function bindingsFor(type: ChannelType): ChannelBinding[] {
+  return type === 'telegram_group' ? ['hotel', 'point'] : CHANNEL_BINDINGS;
+}
 
 export function isChannelType(value: unknown): value is ChannelType {
   return typeof value === 'string' && value in SPECS;
@@ -153,9 +171,10 @@ export function channelToDraft(
     user_id?: string | null;
     config_public?: Record<string, unknown> | null;
     templates?: Record<string, { subject?: string; body?: string }> | null;
+    group?: unknown;
   },
 ): ChannelDraft {
-  const spec = channelSpec(channel.type);
+  const spec = channelSpec(channel.group ? 'telegram_group' : channel.type);
   const source = channel.config_public ?? {};
   const config: ChannelConfigDraft = {};
   for (const field of spec.fields) {
@@ -277,7 +296,8 @@ export function channelPayload(draft: ChannelDraft): {
   }
 
   return {
-    type: draft.type,
+    // Группа на сервере — `telegram` через бота платформы; адрес ставит бот.
+    type: draft.type === 'telegram_group' ? 'telegram' : draft.type,
     title: draft.title.trim(),
     is_active: draft.is_active,
     execution_point_id: draft.binding === 'point' ? draft.execution_point_id : null,
