@@ -29,6 +29,22 @@
 Сертификат на голый IP выпустить нельзя, а без поддоменов схема адресов не
 собирается вовсе.
 
+**Исходящий доступ.** Боевому серверу нужен исходящий HTTPS к
+`api.telegram.org` (бот уведомлений) и к `acme-v02.api.letsencrypt.org`
+(выпуск и продление сертификата), а также к поставщику погоды. Проверка с
+хоста — по IPv4 и IPv6 отдельно:
+
+    for h in api.telegram.org acme-v02.api.letsencrypt.org api.open-meteo.com; do
+      curl -4 -s -m 8 -o /dev/null -w "$h IPv4 %{http_code}\n" https://$h/
+      curl -6 -s -m 8 -o /dev/null -w "$h IPv6 %{http_code}\n" https://$h/
+    done
+
+**На стенде 147.45.245.172 Telegram и Let's Encrypt доступны ТОЛЬКО по IPv6**
+(по IPv4 — таймаут, фаервол хоста исходящее не режет, блокировка выше
+сервера; замер 05.10.2026). Поэтому сеть compose `internal` работает с IPv6
+(`enable_ipv6` и приватная подсеть в `docker-compose.prod.yml`, наружу — NAT66
+Docker). На сервере, где по IPv4 видно всё, это не мешает.
+
 ---
 
 ## 1. Код и окружение
