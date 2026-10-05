@@ -78,11 +78,34 @@ the tokens endpoint responds. `mergeBrandTokens()` in `tokens.ts` is the single 
 ## How to add a language
 
 1. Add `src/i18n/locales/<lng>.json` (copy `en.json`, translate all keys).
-2. Register it in `src/i18n/config.ts`: `SUPPORTED_LANGUAGES`, `LANGUAGE_LABELS`, `resources`.
+2. Register it in `src/i18n/config.ts`: `SUPPORTED_LANGUAGES`, `LANGUAGE_LABELS`, `DICTIONARIES`
+   (one lazy `import()` per language — a guest downloads only the dictionary of their own language).
 3. If the language is right-to-left, add its code to `RTL_LANGUAGES`
    (`ar`, `he`, `fa`, `ur` are already there). Nothing else is needed —
    `ThemeProvider` reacts to the i18next language change, flips `direction`,
    swaps the emotion cache to `stylis-plugin-rtl` and updates `document.dir` / `lang`.
 
 Language is auto-detected in order: `?lang=` querystring → `localStorage` → browser
-`navigator` settings, with `en` as the fallback.
+`navigator` settings, with `en` as the fallback for a language we do not have.
+For our own four languages there is no fallback dictionary: key parity is
+enforced by `scripts/check-locales.mjs`.
+
+## Bundle parts (batch 35)
+
+The app is split into parts loaded by route (`src/app/parts/*`, wired in
+`src/app/router.tsx` through `src/app/lazyPart.tsx`): guest storefront, hotel
+panel, panel login, tracker, platform console, landing. A guest who scans a QR
+code downloads the entry file, the guest part and one dictionary — not the
+panel.
+
+* A new screen goes into its part's barrel file and into the router via
+  `lazyFrom(part, 'Name')` — never as a static import in `router.tsx`.
+* If a part fails to load (an old tab after a deploy: nginx answers 404 for the
+  previous build's files), the page reloads once; a second failure within a
+  minute shows an error with a reload button instead of looping.
+* `scripts/guest-bundle-guard.mjs` runs inside `vite build`: the guest's
+  first-visit set must not contain panel, tracker, console or landing modules,
+  and must stay under `GUEST_LIMIT_BYTES` (gzip). `GUEST_BUNDLE_REPORT=1 npx vite
+  build` prints the set and its largest pieces.
+* Measure a first visit with `e2e/measure-bundle.mjs` (production build behind
+  nginx, HTTP/2, Fast 3G, cold cache, median of 5).
