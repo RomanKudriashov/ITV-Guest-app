@@ -186,11 +186,13 @@ export function LogTab({ channels }: LogTabProps) {
                           <span>{timeLabel(entry)}</span>
                         </Stack>
                       </TableCell>
-                      <TableCell>№{entry.order_number}</TableCell>
-                      <TableCell>
-                        {depth === 0
-                          ? t('notifications.log.stepN', { n: entry.step_index + 1 })
-                          : t('notifications.log.delivery')}
+                      <TableCell>{entry.order_number ? `№${entry.order_number}` : '—'}</TableCell>
+                      <TableCell data-testid={`cms-log-step-${index}`}>
+                        {entry.kind === 'event'
+                          ? t('notifications.log.event', { title: entry.event_title ?? entry.event_code })
+                          : depth === 0
+                            ? t('notifications.log.stepN', { n: entry.step_index + 1 })
+                            : t('notifications.log.delivery')}
                       </TableCell>
                       <TableCell>
                         {entry.target_kind

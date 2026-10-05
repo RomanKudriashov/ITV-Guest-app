@@ -85,8 +85,16 @@ export interface EscalationRulePayload {
 
 export interface NotificationLogEntry {
   id: string;
-  order_id: string;
-  order_number: number;
+  /**
+   * Вид строки (партия 31, INV-06): ступень эскалации заказа или доставка
+   * события (`order.cancelled`, сообщение гостя, низкая оценка…). Журнал
+   * показывает все отправки, а не только эскалацию.
+   */
+  kind?: 'escalation' | 'event';
+  event_code?: string;
+  event_title?: string;
+  order_id: string | null;
+  order_number: number | null;
   rule_id?: string | null;
   step_id?: string | null;
   step_index: number;

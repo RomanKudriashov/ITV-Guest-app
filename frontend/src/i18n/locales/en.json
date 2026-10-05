@@ -1220,7 +1220,7 @@
     },
     "log": {
       "title": "Notification journal",
-      "hint": "Refreshes every 10 seconds while the tab is open",
+      "hint": "All hotel sends: escalation steps and event notifications — cancellations, guest messages, ratings.",
       "loadError": "Could not load the journal",
       "empty": "No records yet",
       "emptyHint": "Fired steps and sent messages will appear here",
@@ -1255,7 +1255,8 @@
         "cancelledByStaff": "Cancelled by staff — step no longer needed",
         "cancelled": "Order cancelled — step no longer needed",
         "fulfilled": "Order completed — step no longer needed"
-      }
+      },
+      "event": "Event: {{title}}"
     },
     "validation": {
       "titleRequired": "Give the channel a name",

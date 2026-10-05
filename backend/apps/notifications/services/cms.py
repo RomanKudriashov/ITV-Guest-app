@@ -468,6 +468,7 @@ def delete_rule(rule_id) -> None:
 def serialize_log(entry: NotificationLog) -> dict:
     return {
         "id": str(entry.pk),
+        "kind": "escalation",
         "order_id": str(entry.order_id),
         "order_number": entry.order.number,
         "rule_id": str(entry.rule_id) if entry.rule_id else None,
@@ -553,7 +554,88 @@ def list_logs(
     if status:
         queryset = queryset.filter(status=status)
     queryset = apply_search(queryset, search, ("channel__title", "target_kind"))
-    return list_page(queryset, limit=limit, offset=offset, serialize=serialize_log)
+
+    # ВСЕ ОТПРАВКИ, А НЕ ТОЛЬКО ЭСКАЛАЦИЯ (партия 31, INV-06 QA). Доставки
+    # событий (`order.cancelled`, сообщение гостя, низкая оценка…) писались
+    # всегда — в свою таблицу, — но журнал читал только ступени эскалации, и
+    # QA не нашёл отмену #517 там, куда смотрел. Здесь оба вида идут одной
+    # лентой по времени, с одними фильтрами.
+    events = _event_deliveries(managed=managed, order_id=order_id, status=status, search=search)
+    from apps.core.listing import clamp, envelope
+
+    limit = clamp(limit)
+    offset = max(0, offset or 0)
+    head = offset + limit
+    merged = sorted(
+        [(row.created_at, "log", row) for row in queryset[:head]]
+        + [(row.created_at, "event", row) for row in events[:head]],
+        key=lambda item: item[0],
+        reverse=True,
+    )[offset:head]
+    items = [serialize_log(row) if kind == "log" else serialize_event_delivery(row) for _, kind, row in merged]
+    return envelope(items, queryset.count() + events.count(), limit, offset=offset)
+
+
+def _event_deliveries(*, managed, order_id, status: str, search: str):
+    """Доставки событий — с теми же фильтрами, что строки эскалации."""
+    from django.db.models import Q
+
+    from apps.notifications.models import EventDelivery
+
+    queryset = EventDelivery.objects.select_related("record").order_by("-created_at")
+    if managed is not None:
+        queryset = queryset.filter(record__execution_point_id__in=managed)
+    if order_id:
+        # Как у эскалации: UUID заказа или его номер; прочее — пусто, не «всё».
+        raw = str(order_id).strip().lstrip("№#").strip()
+        match = Q(record__payload__order_id=raw)
+        if raw.isdigit():
+            match |= Q(record__payload__number=int(raw))
+        queryset = queryset.filter(match)
+    if status:
+        queryset = queryset.filter(status=status)
+    if search:
+        queryset = queryset.filter(Q(channel_title__icontains=search) | Q(record__code__icontains=search))
+    return queryset
+
+
+def serialize_event_delivery(delivery) -> dict:
+    """Доставка события — в форме строки журнала (`kind: "event"`)."""
+    from apps.core.context import current_language
+    from apps.notifications import events as registry
+
+    record = delivery.record
+    payload = record.payload or {}
+    try:
+        title = registry.get(record.code).text("title", current_language() or "ru", registry.FALLBACK_LANGUAGE)
+    except Exception:  # noqa: BLE001 — неизвестный код старой записи показываем кодом
+        title = record.code
+    number = payload.get("number")
+    return {
+        "id": str(delivery.pk),
+        "kind": "event",
+        "event_code": record.code,
+        "event_title": title,
+        "order_id": payload.get("order_id"),
+        "order_number": number if isinstance(number, int) else None,
+        "rule_id": None,
+        "step_id": None,
+        "step_index": 0,
+        "parent_id": None,
+        "channel_id": str(delivery.channel_id) if delivery.channel_id else None,
+        "channel_type": delivery.channel_type,
+        "channel_title": delivery.channel_title,
+        "target_kind": "",
+        "status": delivery.status,
+        "scheduled_for": None,
+        "sent_at": delivery.sent_at.isoformat() if delivery.sent_at else None,
+        "created_at": delivery.created_at.isoformat(),
+        "attempts": delivery.attempts,
+        "error": delivery.error,
+        "subject": delivery.subject,
+        "body": delivery.body,
+        "accepted_at_send": False,
+    }
 
 
 # --- Журнал событий --------------------------------------------------------

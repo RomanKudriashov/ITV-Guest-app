@@ -426,3 +426,47 @@ def test_guest_cannot_reach_notification_settings(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
     assert response.status_code == 401
+
+
+# --- Журнал: все отправки, не только эскалация (партия 31, INV-06 QA) ---------
+
+
+def test_log_shows_event_deliveries_next_to_escalation(
+    client, crystal, cms, notifications_on, monkeypatch, django_capture_on_commit_callbacks
+):
+    """
+    QA отменял заявку гостем и не находил отправки `order.cancelled` в журнале:
+    события писались в свою таблицу, а журнал читал только эскалацию.
+    """
+    from apps.notifications import tasks
+    from apps.orders.models import Order
+    from tests.conftest import host_for
+
+    monkeypatch.setattr(tasks.deliver_event, "delay", lambda *a, **k: None)
+    monkeypatch.setattr(tasks.deliver_notification, "delay", lambda *a, **k: None)
+    token = client.post(
+        "/api/guest/session", data={"room_number": "305"}, content_type="application/json", HTTP_HOST=host_for(crystal)
+    ).json()["token"]
+    auth = {"HTTP_HOST": host_for(crystal), "HTTP_AUTHORIZATION": f"Bearer {token}"}
+    menu = client.get("/api/guest/catalog?type=product", **auth).json()
+    item_id = next(e["id"] for c in menu["categories"] for e in c["items"] if e["code"] == "caesar")
+    with django_capture_on_commit_callbacks(execute=True):
+        created = client.post(
+            "/api/guest/order", data={"lines": [{"item_id": item_id, "quantity": 1}]},
+            content_type="application/json", HTTP_IDEMPOTENCY_KEY="inv06", **auth,
+        ).json()
+    from apps.notifications.services import plan_escalation
+
+    with tenant_context(crystal):
+        plan_escalation(Order.objects.get(pk=created["id"]))
+    with django_capture_on_commit_callbacks(execute=True):
+        assert client.post(
+            f"/api/guest/order/{created['id']}/cancel", data={}, content_type="application/json", **auth
+        ).status_code == 200
+
+    rows = cms.get(f"/api/cms/notification-log?order_id={created['number']}").json()["items"]
+    kinds = {(row["kind"], row.get("event_code")) for row in rows}
+    assert ("event", "order.cancelled") in kinds, rows
+    event = next(row for row in rows if row.get("event_code") == "order.cancelled")
+    assert event["order_number"] == created["number"] and event["channel_title"]
+    assert any(row["kind"] == "escalation" for row in rows), "эскалация заказа в той же ленте"
