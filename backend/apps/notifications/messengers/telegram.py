@@ -164,7 +164,7 @@ class TelegramBot:
     def updates(self, offset: int, timeout: int) -> list[Incoming]:
         result = self._call(
             "getUpdates",
-            {"offset": offset, "timeout": timeout, "allowed_updates": ["message", "callback_query"]},
+            {"offset": offset, "timeout": timeout, "allowed_updates": ["message", "callback_query", "my_chat_member"]},
             timeout=timeout + 10,
         )
         return [item for item in (self._incoming(raw) for raw in result or []) if item is not None]
@@ -197,6 +197,9 @@ class TelegramBot:
             if "not modified" not in exc.detail:
                 raise
 
+    def leave(self, chat_id: str) -> None:
+        self._call("leaveChat", {"chat_id": chat_id})
+
     def answer(self, callback_id: str, text: str, *, alert: bool = False) -> None:
         self._call(
             "answerCallbackQuery",
@@ -226,7 +229,30 @@ class TelegramBot:
                 message_id=str(message.get("message_id") or ""),
                 message_text=str(message.get("text") or ""),
             )
+        member = raw.get("my_chat_member")
+        if member:
+            # Бота добавили в группу или удалили из неё (партия 32): `text` —
+            # новое состояние бота в чате (member / administrator / left / kicked).
+            chat = member.get("chat") or {}
+            sender = member.get("from") or {}
+            return Incoming(
+                kind="membership",
+                update_id=update_id,
+                chat_id=str(chat.get("id") or ""),
+                sender_id=str(sender.get("id") or ""),
+                chat_type=str(chat.get("type") or "private"),
+                text=str((member.get("new_chat_member") or {}).get("status") or ""),
+            )
         message = raw.get("message")
+        if message and message.get("migrate_to_chat_id"):
+            # Группа стала супергруппой — у неё новый адрес.
+            return Incoming(
+                kind="migrate",
+                update_id=update_id,
+                chat_id=str((message.get("chat") or {}).get("id") or ""),
+                sender_id="",
+                data=str(message.get("migrate_to_chat_id")),
+            )
         if message:
             sender = message.get("from") or {}
             chat = message.get("chat") or {}
@@ -240,6 +266,9 @@ class TelegramBot:
                 language=str(sender.get("language_code") or ""),
                 text=str(message.get("text") or ""),
                 message_id=str(message.get("message_id") or ""),
+                # Название чата — для групп: бот называет группу в ответе, панель
+                # показывает, к какой группе подключён канал.
+                chat_title=str(chat.get("title") or ""),
             )
         # Прочие виды обновлений мы не заказывали; пришедшее — пропускаем,
         # но `update_id` всё равно сдвигает очередь.

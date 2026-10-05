@@ -179,7 +179,8 @@ def config_for(channel: NotificationChannel) -> dict:
     """Адрес — в момент отправки, из привязки: второго места, где лежит chat_id, нет."""
     if not channel.via_platform_bot:
         return channel.config or {}
-    chat_id = channel.user.telegram_chat_id if channel.user_id else ""
+    # Группа через бота платформы (партия 32) — адрес в конфиге, его ставит бот.
+    chat_id = channel.user.telegram_chat_id if channel.user_id else str((channel.config or {}).get("chat_id") or "")
     return {"platform_bot": True, "chat_id": chat_id}
 
 

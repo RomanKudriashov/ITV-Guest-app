@@ -167,9 +167,41 @@ class Handler(BaseHTTPRequestHandler):
                     "message": {
                         "message_id": int(time.time() * 1000) % 1_000_000_000,
                         "from": _user(chat_id, payload.get("username", ""), payload.get("language", "ru")),
-                        "chat": {"id": chat_id, "type": payload.get("chat_type", "private")},
+                        "chat": {
+                            "id": chat_id,
+                            "type": payload.get("chat_type", "private"),
+                            # Групповой чат (партия 32) — с названием, как у Telegram.
+                            **({"title": payload["chat_title"]} if payload.get("chat_title") else {}),
+                        },
                         "date": int(time.time()),
                         "text": payload.get("text", ""),
+                    }
+                }
+            )
+            return self._json(200, {"ok": True, "update_id": update_id})
+        if action == "member":
+            # Бота добавили в группу или удалили из неё: status member / left / kicked.
+            chat_id = int(payload["chat_id"])
+            update_id = STATE.push(
+                {
+                    "my_chat_member": {
+                        "chat": {"id": chat_id, "type": payload.get("chat_type", "group"), "title": payload.get("chat_title", "")},
+                        "from": _user(int(payload.get("from_id") or 1), "", "ru"),
+                        "date": int(time.time()),
+                        "new_chat_member": {"status": payload.get("status", "left"), "user": {"id": 1, "is_bot": True}},
+                    }
+                }
+            )
+            return self._json(200, {"ok": True, "update_id": update_id})
+        if action == "migrate":
+            # Группа стала супергруппой: старому чату приходит migrate_to_chat_id.
+            update_id = STATE.push(
+                {
+                    "message": {
+                        "message_id": int(time.time() * 1000) % 1_000_000_000,
+                        "chat": {"id": int(payload["chat_id"]), "type": "group"},
+                        "date": int(time.time()),
+                        "migrate_to_chat_id": int(payload["to_chat_id"]),
                     }
                 }
             )
@@ -241,6 +273,10 @@ class Handler(BaseHTTPRequestHandler):
                 STATE.messages[message_id] = stored
             return self._ok(True)
         if method == "answerCallbackQuery":
+            return self._ok(True)
+        if method == "leaveChat":
+            with STATE.lock:
+                STATE.blocked.add(str(payload.get("chat_id", "")))
             return self._ok(True)
         return self._fail(404, "Not Found: method not found")
 

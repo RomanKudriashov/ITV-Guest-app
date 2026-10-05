@@ -22,6 +22,27 @@ class ChannelIn(Schema):
     templates: dict[str, Any] = {}
 
 
+class TelegramGroupIn(Schema):
+    """Telegram-группа через бота платформы (партия 32): токен и chat_id не нужны."""
+
+    title: str
+    execution_point_id: str | None = None
+    is_active: bool = True
+    templates: dict[str, Any] = {}
+
+
+class GroupCodeOut(Schema):
+    code: str
+    expires_at: str
+    bot_username: str
+    link: str
+
+
+class TelegramGroupOut(Schema):
+    channel: dict[str, Any]
+    connect: GroupCodeOut
+
+
 class ChannelPatch(Schema):
     type: str | None = None
     title: str | None = None
@@ -41,6 +62,8 @@ class ChannelOut(Schema):
     user_id: str | None
     config_public: dict[str, Any]
     templates: dict[str, Any]
+    # Telegram-группа через бота платформы (партия 32): состояние подключения.
+    group: dict[str, Any] | None = None
 
 
 class TestOut(Schema):

@@ -308,9 +308,15 @@
     "GET",
     "POST"
   ],
+  "/api/v1/cms/notification-channels/telegram-group": [
+    "POST"
+  ],
   "/api/v1/cms/notification-channels/{channel_id}": [
     "DELETE",
     "PATCH"
+  ],
+  "/api/v1/cms/notification-channels/{channel_id}/connect-code": [
+    "POST"
   ],
   "/api/v1/cms/notification-channels/{channel_id}/test": [
     "POST"

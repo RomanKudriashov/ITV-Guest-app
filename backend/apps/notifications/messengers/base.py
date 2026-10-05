@@ -31,7 +31,7 @@ class Button:
 class Incoming:
     """Входящее от человека: сообщение боту или нажатие кнопки."""
 
-    kind: str  # "message" | "callback"
+    kind: str  # "message" | "callback" | "membership" | "migrate"
     update_id: int
     # Куда отвечать (личный чат) и кто это сделал. В личном чате совпадают;
     # привязка и права всегда идут по `sender_id` — по человеку, а не по чату.
@@ -47,6 +47,7 @@ class Incoming:
     data: str = ""
     message_id: str = ""
     message_text: str = ""
+    chat_title: str = ""
 
 
 class MessengerError(Exception):
@@ -104,3 +105,6 @@ class Messenger(Protocol):
 
     def answer(self, callback_id: str, text: str, *, alert: bool = False) -> None:
         """Ответ на нажатие — всплывающая строка у того, кто нажал."""
+
+    def leave(self, chat_id: str) -> None:
+        """Выйти из группы — когда её канал удалён в панели (партия 32)."""

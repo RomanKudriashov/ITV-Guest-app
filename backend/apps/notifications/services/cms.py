@@ -77,15 +77,25 @@ def serialize_channel(channel: NotificationChannel) -> dict:
         "user_id": str(channel.user_id) if channel.user_id else None,
         "config_public": mask_config(channel),
         "templates": channel.templates or {},
+        # Группа через бота платформы: состояние подключения, без кода.
+        "group": _group_public(channel),
     }
+
+
+def _group_public(channel: NotificationChannel) -> dict | None:
+    from apps.notifications.services import telegram_group
+
+    return telegram_group.public_state(channel) if telegram_group.is_group_channel(channel) else None
 
 
 def list_channels(*, search: str = "", limit: int | None = None, offset: int = 0) -> dict:
     # Личный Telegram через бота платформы заводит и снимает привязка в профиле
     # сотрудника, а не форма канала: токена в нём нет, и правка формой его бы
     # сломала. Его состояние — на карточке сотрудника (партия 28).
-    queryset = NotificationChannel.objects.select_related("execution_point", "user").filter(
-        via_platform_bot=False
+    # Группы через бота платформы (партия 32) — обычные каналы отеля; личные
+    # каналы бота (с сотрудником) — нет.
+    queryset = NotificationChannel.objects.select_related("execution_point", "user").exclude(
+        via_platform_bot=True, user__isnull=False
     )
     managed = managed_point_ids_or_none()
     if managed is not None:
@@ -100,7 +110,11 @@ def list_channels(*, search: str = "", limit: int | None = None, offset: int = 0
 
 
 def get_channel(channel_id) -> NotificationChannel:
-    channel = NotificationChannel.objects.filter(pk=channel_id, via_platform_bot=False).first()
+    channel = (
+        NotificationChannel.objects.filter(pk=channel_id)
+        .exclude(via_platform_bot=True, user__isnull=False)
+        .first()
+    )
     if channel is None:
         raise NotFoundError("Канал не найден")
     _require_point(channel.execution_point_id, "Канал")
@@ -234,7 +248,8 @@ def update_channel(channel_id, data: dict) -> NotificationChannel:
         channel.user_id = data["user_id"] or None
     if "templates" in data:
         channel.templates = data["templates"] or {}
-    if "config" in data:
+    if "config" in data and not channel.via_platform_bot:
+        # Адрес группы ставит бот по коду, а не форма (партия 32).
         config = _merge_secrets(channel.config or {}, data["config"] or {}, adapter)
         adapter.validate_config(config)
         channel.config = config
@@ -250,6 +265,11 @@ def update_channel(channel_id, data: dict) -> NotificationChannel:
 def delete_channel(channel_id) -> None:
     channel = get_channel(channel_id)
     before = _channel_state(channel)
+    from apps.notifications.services import telegram_group
+
+    if telegram_group.is_group_channel(channel):
+        # Бот прощается в группе и выходит — не остаётся в чате смены молча.
+        transaction.on_commit(lambda: telegram_group.farewell(channel))
     channel.delete()
     _audit("notification.channel_deleted", channel, before=before, after=None)
 

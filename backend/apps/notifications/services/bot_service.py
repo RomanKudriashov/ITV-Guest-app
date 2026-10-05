@@ -133,8 +133,17 @@ class BotService:
 
         if incoming.kind == "callback":
             return bot_actions.handle_press(self.bot, incoming)
+        if incoming.kind == "membership":
+            return self._membership(incoming)
+        if incoming.kind == "migrate":
+            from apps.notifications.services import telegram_group
+
+            telegram_group.migrate(incoming.chat_id, incoming.data)
+            return "migrated"
         if incoming.kind != "message":
             return "skipped"
+        if incoming.chat_type in ("group", "supergroup"):
+            return self._group(incoming)
 
         # Написал боту — значит, не заблокировал: отметка «бот заблокирован» снимается.
         personal.unblock_chat(incoming.sender_id)
@@ -143,9 +152,59 @@ class BotService:
         command = command.split("@")[0].lower()
         if command == "/start" and argument.strip():
             return self._bind(incoming, argument.strip())
+        if command == "/connect":
+            self._reply(incoming, say("connect_in_group_only", incoming.language))
+            return "connect_private"
         if command in ("/stop", "/unlink"):
             return self._unbind(incoming)
         return self._help(incoming)
+
+    # --- Группы (партия 32) -------------------------------------------------------
+
+    def _group(self, incoming: Incoming) -> str:
+        """
+        В группе бот отвечает ТОЛЬКО на свои команды: переписка смены — не ему,
+        и ответ «помощью» на каждое сообщение превратил бы чат в шум.
+        """
+        from apps.notifications.services import telegram_group
+
+        text = (incoming.text or "").strip()
+        command, _, argument = text.partition(" ")
+        command = command.split("@")[0].lower()
+        language = incoming.language
+        if command in ("/connect", "/start") and argument.strip():
+            try:
+                channel = telegram_group.redeem(
+                    argument.strip(), chat_id=incoming.chat_id, chat_title=incoming.chat_title
+                )
+            except telegram_group.GroupCodeRejected as rejected:
+                self._reply(incoming, say(f"group_code_{rejected.reason}", language))
+                return rejected.reason
+            from apps.core.fields import translate
+
+            where = (
+                translate(channel.execution_point.title, language)
+                if channel.execution_point_id and channel.execution_point
+                else say("group_hotel_wide", language)
+            )
+            hotel = translate(channel.hotel.name, language) or channel.hotel.subdomain
+            self._reply(incoming, say("group_connected", language, title=channel.title, where=where, hotel=hotel))
+            return "group_connected"
+        if command in ("/disconnect", "/stop", "/unlink"):
+            self._reply(incoming, say("group_disconnect_in_panel", language))
+            return "group_disconnect_refused"
+        return "group_ignored"
+
+    def _membership(self, incoming: Incoming) -> str:
+        from apps.notifications.services import telegram_group
+
+        if incoming.text in ("left", "kicked"):
+            telegram_group.mark_removed(incoming.chat_id)
+            return "group_removed"
+        if incoming.chat_type in ("group", "supergroup") and incoming.text in ("member", "administrator"):
+            self._reply(incoming, say("group_added_hint", incoming.language))
+            return "group_added"
+        return "skipped"
 
     def _reply(self, incoming: Incoming, text: str) -> None:
         try:

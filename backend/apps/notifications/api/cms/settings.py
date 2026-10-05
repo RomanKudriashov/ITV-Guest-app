@@ -11,6 +11,9 @@ from ninja import Router, Schema
 from apps.core.schemas import OkOut
 
 from apps.notifications.schemas import (
+    GroupCodeOut,
+    TelegramGroupIn,
+    TelegramGroupOut,
     ChannelIn,
     ChannelOut,
     ChannelPatch,
@@ -49,6 +52,37 @@ def list_channels(
 def create_channel(request: HttpRequest, payload: ChannelIn):
     channel = svc.create_channel(payload.dict(exclude_unset=True))
     return 201, svc.serialize_channel(channel)
+
+
+@router.post(
+    "/notification-channels/telegram-group",
+    response={201: TelegramGroupOut},
+    summary="Telegram-группа через бота платформы",
+)
+def create_telegram_group(request: HttpRequest, payload: TelegramGroupIn):
+    """
+    Канал «ждёт подключения» и одноразовый код: в группе — `/connect КОД` или
+    ссылка `t.me/<бот>?startgroup=<код>` (партия 32).
+    """
+    from apps.notifications.services import telegram_group
+
+    channel, connect = telegram_group.create_group_channel(payload.dict())
+    return 201, {"channel": svc.serialize_channel(channel), "connect": connect}
+
+
+@router.post(
+    "/notification-channels/{channel_id}/connect-code",
+    response=GroupCodeOut,
+    summary="Новый код подключения Telegram-группы",
+)
+def new_group_code(request: HttpRequest, channel_id: str):
+    from apps.core.errors import ValidationError
+    from apps.notifications.services import telegram_group
+
+    channel = svc.get_channel(channel_id)
+    if not telegram_group.is_group_channel(channel):
+        raise ValidationError("Код подключения — только у Telegram-группы", code="not_a_group")
+    return telegram_group.issue_code(channel)
 
 
 @router.patch(

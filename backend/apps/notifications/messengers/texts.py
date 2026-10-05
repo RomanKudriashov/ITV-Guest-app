@@ -53,6 +53,20 @@ PHRASES: dict[str, dict[str, str]] = {
     "bind_taken": {"ru": "Этот Telegram уже подключён к другому сотруднику этого отеля.", "en": "This Telegram is already connected to another staff member of this hotel.", "ar": "حساب تيليجرام هذا مربوط بموظف آخر في هذا الفندق.", "zh": "此 Telegram 已绑定到该酒店的其他员工。"},
     "bind_hotel_off": {"ru": "Отель выключил уведомления в Telegram.", "en": "The hotel has turned Telegram notifications off.", "ar": "أوقف الفندق إشعارات تيليجرام.", "zh": "酒店已关闭 Telegram 通知。"},
     "bind_no_account": {"ru": "Не удалось определить ваш аккаунт Telegram.", "en": "Could not identify your Telegram account.", "ar": "تعذر تحديد حساب تيليجرام الخاص بك.", "zh": "无法识别你的 Telegram 账号。"},
+    # Группа смены через бота платформы (партия 32)
+    "group_connected": {
+        "ru": "Группа подключена: «{title}» — {where}, {hotel}. Сюда будут приходить уведомления смены. Отключить — в панели отеля.",
+        "en": "Group connected: “{title}” — {where}, {hotel}. Shift notifications will arrive here. Disconnect in the hotel panel.",
+        "ar": "تم ربط المجموعة: «{title}» — {where}، {hotel}. ستصل إشعارات المناوبة هنا. يمكن الفصل من لوحة الفندق.",
+        "zh": "群组已连接：「{title}」— {where}，{hotel}。值班通知将发送到这里。可在酒店后台断开。",
+    },
+    "group_hotel_wide": {"ru": "весь отель", "en": "whole hotel", "ar": "الفندق بأكمله", "zh": "整个酒店"},
+    "group_code_unknown": {"ru": "Код не найден. Получите новый в панели отеля: «Уведомления → Каналы».", "en": "Code not found. Get a new one in the hotel panel: Notifications → Channels.", "ar": "الرمز غير موجود. احصل على رمز جديد من لوحة الفندق: الإشعارات ← القنوات.", "zh": "未找到代码。请在酒店后台“通知 → 渠道”中重新获取。"},
+    "group_code_expired": {"ru": "Код истёк: он действует 30 минут. Получите новый в панели отеля.", "en": "The code has expired (it lasts 30 minutes). Get a new one in the hotel panel.", "ar": "انتهت صلاحية الرمز (30 دقيقة). احصل على رمز جديد من لوحة الفندق.", "zh": "代码已过期（有效期 30 分钟）。请在酒店后台重新获取。"},
+    "group_disconnect_in_panel": {"ru": "Отключить группу можно только в панели отеля — так её не оборвёт случайное сообщение.", "en": "The group can only be disconnected in the hotel panel, so a stray message can't cut it off.", "ar": "لا يمكن فصل المجموعة إلا من لوحة الفندق، كي لا تقطعها رسالة عابرة.", "zh": "只能在酒店后台断开群组，以免被随意的消息误断。"},
+    "group_added_hint": {"ru": "Чтобы сюда приходили уведомления смены, отправьте /connect и код из панели отеля («Уведомления → Каналы → Telegram-группа»).", "en": "To receive shift notifications here, send /connect with the code from the hotel panel (Notifications → Channels → Telegram group).", "ar": "لتلقي إشعارات المناوبة هنا، أرسل ‎/connect مع الرمز من لوحة الفندق (الإشعارات ← القنوات ← مجموعة تيليجرام).", "zh": "要在此接收值班通知，请发送 /connect 加上酒店后台的代码（通知 → 渠道 → Telegram 群组）。"},
+    "connect_in_group_only": {"ru": "Команда /connect — для группы: добавьте бота в чат смены и отправьте её там.", "en": "/connect is for a group: add the bot to the shift chat and send it there.", "ar": "الأمر ‎/connect مخصص للمجموعات: أضف البوت إلى محادثة المناوبة وأرسله هناك.", "zh": "/connect 用于群组：请把机器人加入值班群并在群内发送。"},
+    "group_farewell": {"ru": "Канал «{title}» отключён в панели отеля — бот выходит из группы.", "en": "Channel “{title}” was disconnected in the hotel panel — the bot is leaving the group.", "ar": "تم فصل القناة «{title}» من لوحة الفندق — البوت يغادر المجموعة.", "zh": "渠道「{title}」已在酒店后台断开——机器人将退出群组。"},
     "group_only_private": {"ru": "Подключение — только в личном чате с ботом.", "en": "Connect only in a private chat with the bot.", "ar": "الربط متاح فقط في محادثة خاصة مع البوت.", "zh": "只能在与机器人的私聊中绑定。"},
     # Команды
     "help_unbound": {
