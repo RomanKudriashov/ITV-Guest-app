@@ -130,6 +130,7 @@ services:
       retries: 12
       start_period: 90s
     volumes:
+      - ./infra/docker/gai.conf:/etc/gai.conf:ro  # IPv6 первым: Telegram со стенда только по IPv6
       # Кадры и замеры демо-плана номера. Лежат в docs/, то есть ВНЕ backend/,
       # а в образ едет только backend/ — без этого сид тихо оставляет тип без
       # плана: он намеренно не падает из-за отсутствия демо-картинки, и стенд
@@ -156,6 +157,7 @@ services:
     environment:
       <<: *backend-env
     volumes:
+      - ./infra/docker/gai.conf:/etc/gai.conf:ro  # IPv6 первым: Telegram со стенда только по IPv6
       # Кадры и замеры демо-плана номера. Лежат в docs/, то есть ВНЕ backend/,
       # а в образ едет только backend/ — без этого сид тихо оставляет тип без
       # плана: он намеренно не падает из-за отсутствия демо-картинки, и стенд
@@ -204,6 +206,8 @@ services:
     depends_on:
       backend: {condition: service_healthy}
     networks: [internal]
+    volumes:
+      - ./infra/docker/gai.conf:/etc/gai.conf:ro  # IPv6 первым: Telegram со стенда только по IPv6
 
   beat:
     build: ./backend
