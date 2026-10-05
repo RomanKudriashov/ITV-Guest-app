@@ -169,7 +169,13 @@ export function AppShell() {
           bgcolor: 'background.paper',
         }}
       >
-        <Toolbar sx={{ gap: 2 }}>
+        {/*
+          На телефоне шапка обязана уместиться (партия 31, DEV-08 QA): зазоры
+          по 16 px и поля тулбара выталкивали профиль за край — 373–394 px при
+          рабочей ширине 360–375. Узко — зазоры и поля меньше, разделителя нет,
+          а длинное имя отеля сжимается многоточием, а не толкает соседей.
+        */}
+        <Toolbar sx={{ gap: { xs: 0.5, sm: 2 }, px: { xs: 1, sm: 2 } }}>
           {/*
             На узком экране навигация уезжает в выдвижную панель: постоянная
             занимала 246px из 390 и оставляла контенту колонку в одно слово.
@@ -186,13 +192,13 @@ export function AppShell() {
               <MenuIcon />
             </IconButton>
           ) : null}
-          <Typography variant="h6" data-testid="hotel-name">
+          <Typography variant="h6" noWrap data-testid="hotel-name" sx={{ minWidth: 0, flexShrink: 1 }}>
             {hotelName}
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <LanguageSwitcher compact />
           <ThemeModeToggle />
-          <Divider orientation="vertical" flexItem sx={{ my: 1.5 }} />
+          <Divider orientation="vertical" flexItem sx={{ my: 1.5, display: { xs: 'none', sm: 'block' } }} />
           {/*
             Блок пользователя — монограмма с выпадающим меню, тем же, что в
             консоли платформы (`ProfileMenu`). Раньше здесь стояла текстовая
