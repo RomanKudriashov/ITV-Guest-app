@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, HOTEL, signInToCms } from './helpers'
+import { API, HOTEL, settleNetwork, signInToCms } from './helpers'
 
 /**
  * ДВА СПЛОШНЫХ ОБХОДА CMS — по одному правилу на обход.
@@ -96,7 +96,7 @@ test.describe('CMS: заголовки и язык', () => {
     for (const item of items) {
       await openSection(page, item)
       // Списки доезжают позже заголовка — иначе обход прошёл бы по скелетам.
-      await page.waitForLoadState('networkidle')
+      await settleNetwork(page)
 
       const text = await page.locator('main').innerText()
       const found = text.match(new RegExp(`.{0,24}${FOREIGN.source}.{0,24}`, 'u'))

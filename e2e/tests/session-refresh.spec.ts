@@ -143,6 +143,14 @@ test('консоль платформы: тот же механизм — refres
   await page.reload()
 
   // Оболочка жива, на вход не выкинуло, обновление ровно одно.
+  //
+  // Оболочка рисуется по одному наличию токена, а запросы — и обновление с
+  // ними — уходят ПОСЛЕ первого кадра. Счёт сразу по появлению оболочки был
+  // гонкой; с ленивой консолью (партия 35) и под нагрузкой она проигрывалась
+  // (0 вместо 1). Ждём, пока обновление случится, и проверяем, что второго нет.
   await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 40_000 })
-  expect(refreshes).toBe(1)
+  await expect.poll(() => refreshes, { timeout: 20_000 }).toBeGreaterThanOrEqual(1)
+  await page.waitForTimeout(1500)
+  await expect(page.getByTestId('admin-shell')).toBeVisible()
+  expect(refreshes, 'одно протухшее access — одно обновление').toBe(1)
 })

@@ -3,6 +3,21 @@ import { expect, type Page, type APIRequestContext } from '@playwright/test'
 export const HOTEL = 'crystal'
 export const API = process.env.E2E_API_URL ?? 'http://localhost:8010'
 /**
+ * Дождаться затишья в сети — НЕ ДОЛЬШЕ `timeout` (партия 35).
+ *
+ * Обходы разделов ждали `networkidle` без предела, рассчитывая, что оно
+ * наступает всегда. С ленивой панелью (партия 35) рамка показа бренда
+ * появляется уже после `load` страницы, и учёт Playwright иногда так и не
+ * объявляет затишье: Chrome шлёт `networkIdle` и для страницы, и для рамки,
+ * открытых запросов ноль (замер CDP), а ожидание висит до таймаута теста.
+ * Затишье здесь — «списки доехали», а не проверка, поэтому предел: ждём, сколько
+ * нужно, но не вечно.
+ */
+export async function settleNetwork(page: Page, timeout = 10_000): Promise<void> {
+  await page.waitForLoadState('networkidle', { timeout }).catch(() => {})
+}
+
+/**
  * Повар — ЛИНЕЙНЫЙ сотрудник: трекер и операции над заказами, но не CMS.
  * С R3 раздел управления закрыт ролью, и под ним туда больше не войти.
  */

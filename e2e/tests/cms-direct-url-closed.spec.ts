@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { CREDENTIALS, signIn } from './helpers'
+import { CREDENTIALS, settleNetwork, signIn } from './helpers'
 
 /**
  * ПРЯМОЙ АДРЕС ЗАКРЫТОГО РАЗДЕЛА — ОДНО ПОНЯТНОЕ СОСТОЯНИЕ (партия 31, DEV-07 QA).
@@ -20,7 +20,7 @@ async function openCounting403(page: Page, path: string): Promise<string[]> {
     if (response.status() === 403 && response.url().includes('/api/')) refused.push(new URL(response.url()).pathname)
   })
   await page.goto(path)
-  await page.waitForLoadState('networkidle').catch(() => {})
+  await settleNetwork(page)
   await page.waitForTimeout(1500)
   return refused
 }

@@ -16,6 +16,7 @@
 export const STORAGE_KEYS = {
   theme: 'itv.theme-mode',
   language: 'itv.lang',
+  partReload: 'itv.part-reload',
 }
 
 /**

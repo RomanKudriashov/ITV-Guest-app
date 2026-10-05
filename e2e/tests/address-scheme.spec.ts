@@ -470,6 +470,10 @@ test('значки языка и темы стоят по средней лин�
     снова, совпадение центров — нет.
   */
   await page.goto(`${ROOT}/`)
+  // Прокрутка — по нарисованной странице: лендинг стал своей частью сборки
+  // (партия 35) и к `load` может ещё ехать. Тогда прокручивать нечего —
+  // `scrollY: 0` в фактах ниже, — и полоса не выезжает. Так же ждут соседи.
+  await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
   await page.evaluate(() => window.scrollBy(0, Math.round(window.innerHeight * 1.2)))
   const nav = page.getByTestId('landing-nav')
   /*

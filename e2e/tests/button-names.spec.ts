@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, PLATFORM, apiHeaders, apiToken, signInToCms } from './helpers'
+import { ADMIN, API, PLATFORM, apiHeaders, apiToken, settleNetwork, signInToCms } from './helpers'
 import { guestPage } from './brandGuest'
 
 /**
@@ -50,7 +50,7 @@ test('панель отеля: у всех кнопок есть имя', async 
   const found: string[] = []
   for (const route of [...CMS, `/cms/services/${services[0].id}`]) {
     await page.goto(route)
-    await page.waitForLoadState('networkidle').catch(() => {})
+    await settleNetwork(page)
     await page.waitForTimeout(1200)
     for (const line of await unnamedButtons(page)) found.push(`${route}: ${line}`)
   }
@@ -64,7 +64,7 @@ test('витрина гостя: у всех кнопок есть имя — т
     const page = await guestPage(browser, { width })
     for (const route of GUEST) {
       await page.goto(route)
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await settleNetwork(page)
       await page.waitForTimeout(1200)
       for (const line of await unnamedButtons(page)) found.push(`${width} ${route}: ${line}`)
     }
@@ -86,7 +86,7 @@ test('консоль платформы: у всех кнопок есть им�
   const found: string[] = []
   for (const route of ['/admin', '/admin/hotels', '/admin/audit', '/admin/team', '/admin/sessions']) {
     await page.goto(route)
-    await page.waitForLoadState('networkidle').catch(() => {})
+    await settleNetwork(page)
     await page.waitForTimeout(1200)
     for (const line of await unnamedButtons(page)) found.push(`${route}: ${line}`)
   }

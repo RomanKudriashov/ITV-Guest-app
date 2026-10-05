@@ -68,6 +68,12 @@ async function enterHotel(page: Page, reason: string): Promise<{ cms: Page; gran
   // страница входа.
   await expect(cms).toHaveURL(/\/cms/, { timeout: 25_000 })
   await expect(cms.getByTestId('login-submit')).toHaveCount(0)
+  // «Вкладка живая» — это нарисованная панель, а не только адрес: с ленивой
+  // панелью (партия 35) формы входа нет и пока часть ещё едет, а первые
+  // запросы данных уходят позже. Отзыв, успевший раньше них, выкидывал вкладку
+  // до перезагрузки, и проверка «следующий запрос отвергнут» ждала впустую.
+  // Название отеля в шапке приходит из bootstrap — значит, панель загружена.
+  await expect(cms.getByTestId('hotel-name')).toBeVisible({ timeout: 25_000 })
   return { cms, grantId: body.grant_id }
 }
 

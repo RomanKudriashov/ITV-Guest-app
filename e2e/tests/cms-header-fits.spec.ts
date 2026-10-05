@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { ADMIN, signIn } from './helpers'
+import { ADMIN, settleNetwork, signIn } from './helpers'
 
 /**
  * ШАПКА ПАНЕЛИ УМЕЩАЕТСЯ НА ТЕЛЕФОНЕ (партия 31, DEV-08 QA).
@@ -35,7 +35,7 @@ for (const width of [360, 390]) {
     for (const path of SECTIONS) {
       await page.goto(path)
       await expect(page.getByTestId('hotel-name')).toBeVisible({ timeout: 20_000 })
-      await page.waitForLoadState('networkidle').catch(() => {})
+      await settleNetwork(page)
       const result = await page.evaluate(() => {
         const limit = document.documentElement.clientWidth
         const bar = document.querySelector('header .MuiToolbar-root')
