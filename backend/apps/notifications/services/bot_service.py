@@ -178,6 +178,11 @@ class BotService:
                     argument.strip(), chat_id=incoming.chat_id, chat_title=incoming.chat_title
                 )
             except telegram_group.GroupCodeRejected as rejected:
+                if rejected.reason == "unknown" and self._is_personal_code(argument.strip()):
+                    # Личный код по ошибке отправили в группу: подсказка — куда
+                    # его нести, а не «код не найден» (так было и до партии 32).
+                    self._reply(incoming, say("group_only_private", language))
+                    return "group"
                 self._reply(incoming, say(f"group_code_{rejected.reason}", language))
                 return rejected.reason
             from apps.core.fields import translate
@@ -194,6 +199,14 @@ class BotService:
             self._reply(incoming, say("group_disconnect_in_panel", language))
             return "group_disconnect_refused"
         return "group_ignored"
+
+    def _is_personal_code(self, code: str) -> bool:
+        from apps.accounts.models import ContactBindingCode
+        from apps.accounts.services.contacts import hash_code
+        from apps.core.context import platform_scope
+
+        with platform_scope():
+            return ContactBindingCode.objects.using("platform").filter(code_hash=hash_code(code)).exists()
 
     def _membership(self, incoming: Incoming) -> str:
         from apps.notifications.services import telegram_group
