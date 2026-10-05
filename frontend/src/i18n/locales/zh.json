@@ -793,6 +793,10 @@
     },
     "money": {
       "free": "免费"
+    },
+    "comment": {
+      "counter": "{{used}}/{{max}}",
+      "trimmed": "文本已截断为 {{max}} 个字符 — {{used}}/{{max}}"
     }
   },
   "tracker": {

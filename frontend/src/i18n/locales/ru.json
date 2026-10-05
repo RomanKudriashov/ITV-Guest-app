@@ -803,6 +803,10 @@
     },
     "money": {
       "free": "Бесплатно"
+    },
+    "comment": {
+      "counter": "{{used}}/{{max}}",
+      "trimmed": "Текст обрезан до {{max}} символов — {{used}}/{{max}}"
     }
   },
   "tracker": {

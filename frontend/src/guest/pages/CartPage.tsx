@@ -44,6 +44,7 @@ import { useDraftState } from '@/state/useDraftState';
 import { fetchCatalog } from '../api/guest';
 import type { CreateOrderPayload, OrderTiming, QuoteLine } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
+import { CommentField } from '../components/CommentField';
 
 /** How the guest set the tip: none, a percentage preset, or a custom amount. */
 type TipKind = 'none' | 'preset' | 'custom';
@@ -594,15 +595,12 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
             ) : null}
           </Stack>
 
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
+          <CommentField
             label={t('guest.cart.comment')}
             placeholder={t('guest.cart.commentPlaceholder')}
             value={draft.comment}
-            onChange={(event) => setDraft((prev) => ({ ...prev, comment: event.target.value }))}
-            inputProps={{ maxLength: 300, 'data-testid': 'guest-order-comment' }}
+            onChange={(value) => setDraft((prev) => ({ ...prev, comment: value }))}
+            testId="guest-order-comment"
           />
 
           {/* Tips — presets (percent) from the quote, a custom amount or none.

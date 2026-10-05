@@ -17,6 +17,13 @@ from datetime import datetime
 from typing import Any
 
 from ninja import Schema
+from pydantic import Field
+
+# ПРЕДЕЛ КОММЕНТАРИЯ ГОСТЯ — ОДИН НА ВИТРИНЕ И НА СЕРВЕРЕ (партия 31, DEV-10 QA).
+# Витрина пускала 300 знаков, а сервер молча резал комментарий позиции до 255,
+# комментарий заказа не ограничивал вовсе. Считаются символы, как `len()`:
+# эмодзи — один знак (витрина считает так же, а не единицами UTF-16).
+COMMENT_MAX = 300
 
 
 
@@ -24,7 +31,7 @@ class OrderLineIn(Schema):
     item_id: str
     quantity: int = 1
     modifier_option_ids: list[str] = []
-    comment: str = ""
+    comment: str = Field("", max_length=COMMENT_MAX)
 
 class GroupLocationIn(Schema):
     point: str
@@ -48,7 +55,7 @@ class OrderIn(Schema):
     requested_time: datetime | None = None
     # Время без даты («12:00»): ближайшее будущее в поясе отеля (п.46).
     requested_clock: str | None = None
-    comment: str = ""
+    comment: str = Field("", max_length=COMMENT_MAX)
     # Ответы на поля заявки-услуги: {code поля: значение}. У товаров пусто.
     field_values: dict[str, Any] = {}
     # Выбранное время слота (тип slot), ISO 8601.

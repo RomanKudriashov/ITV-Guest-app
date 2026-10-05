@@ -809,6 +809,10 @@
     },
     "money": {
       "free": "مجانًا"
+    },
+    "comment": {
+      "counter": "{{used}}/{{max}}",
+      "trimmed": "تم قص النص إلى {{max}} حرفًا — {{used}}/{{max}}"
     }
   },
   "tracker": {

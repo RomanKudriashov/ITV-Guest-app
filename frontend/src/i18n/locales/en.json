@@ -797,6 +797,10 @@
     },
     "money": {
       "free": "Free"
+    },
+    "comment": {
+      "counter": "{{used}}/{{max}}",
+      "trimmed": "Text cut to {{max}} characters — {{used}}/{{max}}"
     }
   },
   "tracker": {

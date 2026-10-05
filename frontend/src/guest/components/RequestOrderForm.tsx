@@ -28,6 +28,7 @@ import { useGuestLocations } from '../hooks/useGuestQueries';
 import { useOrderSubmit } from '../hooks/useOrderSubmit';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type { CreateOrderPayload, ItemDetail, RequestField } from '../api/types';
+import { CommentField } from './CommentField';
 
 interface RequestDraft {
   /** field code → raw value as typed. */
@@ -242,15 +243,12 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
             </Stack>
           ) : null}
 
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
+          <CommentField
             label={t('guest.request.comment')}
             placeholder={t('guest.request.commentPlaceholder')}
             value={draft.comment}
-            onChange={(event) => setDraft((prev) => ({ ...prev, comment: event.target.value }))}
-            inputProps={{ maxLength: 300, 'data-testid': 'guest-request-comment' }}
+            onChange={(value) => setDraft((prev) => ({ ...prev, comment: value }))}
+            testId="guest-request-comment"
           />
 
           {failure ? (

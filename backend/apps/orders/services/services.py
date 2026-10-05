@@ -863,7 +863,7 @@ def _create_order_item(order: Order, resolved: dict[str, Any]) -> OrderItem:
             for option in options
         ],
         line_total=None if unit_price is None else unit_price * line.quantity,
-        comment=line.comment[:255],
+        comment=line.comment,
     )
 
 

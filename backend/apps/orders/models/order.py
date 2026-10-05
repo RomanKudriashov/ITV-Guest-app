@@ -236,7 +236,9 @@ class OrderItem(TenantModel):
     unit_price_snapshot = models.IntegerField(null=True, blank=True, default=0)
     modifiers_snapshot = models.JSONField(default=list, blank=True)
     line_total = models.IntegerField(null=True, blank=True, default=0)
-    comment = models.CharField(max_length=255, blank=True)
+    # 300 — предел витрины и схемы (DEV-10): раньше колонка была на 255, и
+    # сервер молча отрезал хвост того, что гость видел целиком.
+    comment = models.CharField(max_length=300, blank=True)
 
     class Meta:
         db_table = "orders_order_item"

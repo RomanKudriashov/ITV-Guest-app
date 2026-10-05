@@ -3,7 +3,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +18,7 @@ import { toCartModifier, unitPriceOf, useCart } from '../state/cart';
 import type { ItemDetail, ModifierGroup } from '../api/types';
 import { fontPx, itemCard } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
+import { CommentField } from './CommentField';
 
 interface ProductDraft {
   /** group id → selected option ids. */
@@ -228,15 +228,12 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
 
           <Divider />
 
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
+          <CommentField
             label={t('guest.item.comment')}
             placeholder={t('guest.item.commentPlaceholder')}
             value={draft.comment}
-            onChange={(event) => setDraft((prev) => ({ ...prev, comment: event.target.value }))}
-            inputProps={{ maxLength: 300, 'data-testid': 'guest-item-comment' }}
+            onChange={(value) => setDraft((prev) => ({ ...prev, comment: value }))}
+            testId="guest-item-comment"
           />
 
           <Stack direction="row" alignItems="center" justifyContent="space-between">
