@@ -21,6 +21,17 @@ def _new_item(cms, category_id, **overrides):
 # --- CRUD ------------------------------------------------------------------
 
 
+
+def test_prep_minutes_set_at_creation_is_kept(cms, category_id):
+    """
+    Партия 31, находка сторожа тел запросов e2e: форма слала `prep_minutes` при
+    создании, схема создания его не знала — время подачи молча терялось.
+    """
+    created = _new_item(cms, category_id, prep_minutes=25)
+    assert created.status_code == 201, created.content
+    assert created.json()["prep_minutes"] == 25
+    assert _new_item(cms, category_id, code="neg", prep_minutes=-1).status_code == 422
+
 def test_create_and_read_item(cms, category_id):
     response = _new_item(cms, category_id)
     assert response.status_code == 201, response.content

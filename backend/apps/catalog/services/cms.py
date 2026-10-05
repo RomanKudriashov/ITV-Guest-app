@@ -696,6 +696,7 @@ def create_item(data: dict) -> Item:
         else _next_sort_order(Item.objects.filter(category=category)),
         is_active=data.get("is_active", True),
         in_stock=data.get("in_stock", True),
+        prep_minutes=_validate_prep_minutes(data.get("prep_minutes")),
     )
     if data.get("image_ids"):
         set_item_images(item.pk, data["image_ids"])

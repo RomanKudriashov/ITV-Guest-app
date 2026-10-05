@@ -102,6 +102,10 @@ class ItemIn(Schema):
     sort_order: int | None = None
     is_active: bool = True
     in_stock: bool = True
+    # Время приготовления — и при создании (партия 31, найдено сторожем тел
+    # запросов): форма слала его всегда, схема создания не знала, и ninja молча
+    # его отбрасывал — у нового блюда время пропадало до первой правки.
+    prep_minutes: int | None = None
 
 class ItemPatch(Schema):
     category_id: str | None = None
