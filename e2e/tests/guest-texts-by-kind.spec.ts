@@ -53,7 +53,8 @@ test('заявка консьержу: ни в подтверждении, ни 
   await page.getByTestId('guest-cancel-order').click()
   const dialog = page.getByTestId('guest-cancel')
   await expect(dialog).toBeVisible()
-  await expect(dialog).toContainText(/взяли в работу|taken into work/)
+  // Правило отмены — «пока не приняли» (партия 31, п.10), текст диалога тот же.
+  await expect(dialog).toContainText(/не приняли|until the request is accepted/)
   await expect(dialog).not.toContainText(KITCHEN)
   // Заявку отменяем: прачечная в демо-отеле не должна копить тестовые заявки.
   await page.getByTestId('guest-cancel-confirm').click()

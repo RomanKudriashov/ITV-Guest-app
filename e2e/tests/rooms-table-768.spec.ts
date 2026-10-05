@@ -11,8 +11,9 @@ import { ADMIN, signInToCms } from './helpers'
  * кнопка видна целиком; действия — в одну строку.
  */
 
-test('768 px: страница без горизонтальной прокрутки, действия таблицы достижимы и в строку', async ({ page }) => {
-  await page.setViewportSize({ width: 768, height: 1000 })
+// 390 — партия 31: QA (DEV-03) мерил и телефон, а проверка держала только 768.
+for (const width of [768, 390]) test(`${width} px: страница без горизонтальной прокрутки, действия таблицы достижимы и в строку`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 })
   await signInToCms(page, ADMIN)
   await page.goto('/cms/rooms')
   await page.getByTestId('rooms-view-list').click().catch(() => {})
@@ -33,7 +34,7 @@ test('768 px: страница без горизонтальной прокру�
   const area = (await scroller.boundingBox())!
   expect(box, 'кнопки удаления не нашлось').toBeTruthy()
   expect(box!.x + box!.width, 'последняя кнопка обрезана краем таблицы').toBeLessThanOrEqual(area.x + area.width + 1)
-  expect(box!.x + box!.width, 'последняя кнопка за краем экрана').toBeLessThanOrEqual(768)
+  expect(box!.x + box!.width, 'последняя кнопка за краем экрана').toBeLessThanOrEqual(width)
 
   const code = (await row.getAttribute('data-testid'))!.replace('room-delete-', '')
   const tops = await Promise.all(
