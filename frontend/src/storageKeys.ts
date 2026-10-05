@@ -17,4 +17,7 @@ export const STORAGE_KEYS = {
   theme: 'itv.theme-mode',
   /** Выбранный язык. Читает детектор i18n. */
   language: 'itv.lang',
+  /** sessionStorage: когда страница в последний раз перезапускалась из-за
+   *  ненайденной части сборки (`app/lazyPart.tsx`). Не даёт уйти в петлю. */
+  partReload: 'itv.part-reload',
 } as const;

@@ -3,11 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import '@/i18n';
+import { i18nReady } from '@/i18n';
 import { AppThemeProvider } from '@/theme';
 import { AuthProvider } from '@/auth';
 import { ToastProvider } from '@/components/ToastProvider';
-import { router } from '@/app/router';
+import { preloadPartFor, router } from '@/app/router';
 import { attachWebManifest } from '@/app/manifestLink';
 import { retryTransient } from '@/api/retry';
 
@@ -29,7 +29,12 @@ if (!container) {
   throw new Error('Root container #root not found in index.html');
 }
 
-ReactDOM.createRoot(container).render(
+// Часть адреса и словарь едут параллельно; рисуем, когда есть словарь —
+// часть экран дождётся сам (`app/lazyPart.tsx`). Словарь не приехал — рисуем
+// всё равно: ключи вместо слов лучше белого экрана, а смена языка догрузит.
+preloadPartFor(window.location.pathname);
+void i18nReady.catch(() => undefined).then(() =>
+  ReactDOM.createRoot(container).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AppThemeProvider>
@@ -41,4 +46,5 @@ ReactDOM.createRoot(container).render(
       </AppThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>,
+  ),
 );

@@ -1,56 +1,114 @@
+import type { ReactNode } from 'react';
 import { Navigate, createBrowserRouter, useLocation, type RouteObject } from 'react-router-dom';
-
-import { RequireAuth } from '@/auth';
-import { AppShell } from '@/layouts/AppShell';
-import { LoginPage } from '@/pages/LoginPage';
-import { CategoryEditorPage } from '@/pages/category/CategoryEditorPage';
-import { ItemEditorPage } from '@/pages/item/ItemEditorPage';
-import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
-import { OrdersPage as CmsOrdersPage } from '@/cms/orders/OrdersPage';
-import { RoomsPage } from '@/pages/hotel/RoomsPage';
-import { StaffPage } from '@/pages/hotel/StaffPage';
-import { BrandPage } from '@/cms/brand/BrandPage';
-import { ServicesPage } from '@/cms/services/ServicesPage';
-import { ServiceWorkspacePage } from '@/cms/services/ServiceWorkspacePage';
-import { SettingsPage } from '@/cms/settings/SettingsPage';
-import { DashboardPage } from '@/cms/dashboard/DashboardPage';
-import { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
-import { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
-import { ReviewsPage } from '@/cms/reviews/ReviewsPage';
-import { MarketingPage } from '@/cms/marketing/MarketingPage';
-import { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
-import { ModulePendingPage } from '@/pages/ModulePendingPage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { RoomControlPage } from '@/cms/roomControl/RoomControlPage';
-import { DictionariesPage } from '@/cms/dictionaries/DictionariesPage';
-import { AdminApp } from '@/admin/AdminApp';
-import App from '@/App';
-
 import { useTranslation } from 'react-i18next';
 
-import { ScreenBoundary } from '@/components/ScreenBoundary';
-import { TrackerPage } from '@/tracker/pages/TrackerPage';
-import { ReceptionDeskPage } from '@/tracker/pages/ReceptionDeskPage';
-
-import { CMS_ROOT, HOST_ROLE, cmsPath } from '@/app/hostRole';
-import { LandingPage } from '@/landing/LandingPage';
-import { WrongHostNotice } from '@/pages/WrongHostNotice';
-
-import { GuestRoot } from '@/guest/GuestRoot';
-import { GuestLayout } from '@/guest/layout/GuestLayout';
-import { EntryPage } from '@/guest/pages/EntryPage';
-import { HomePage } from '@/guest/pages/HomePage';
-import { CatalogPage } from '@/guest/pages/CatalogPage';
-import { VenuePage } from '@/guest/pages/VenuePage';
-import { VenueListPage } from '@/guest/pages/VenueListPage';
-import { CartPage } from '@/guest/pages/CartPage';
-import { ChatPage } from '@/guest/pages/ChatPage';
-import { OrdersPage } from '@/guest/pages/OrdersPage';
-import { RoomPage } from '@/guest/pages/RoomPage';
-import { SearchPage } from '@/guest/pages/SearchPage';
-import { OrderStatusPage } from '@/guest/pages/OrderStatusPage';
-import { useAuth } from '@/auth';
+import { RequireAuth, useAuth } from '@/auth';
 import { homePathFor } from '@/auth/home';
+import { ScreenBoundary } from '@/components/ScreenBoundary';
+import { CMS_ROOT, HOST_ROLE, cmsPath } from '@/app/hostRole';
+import { Part, lazyFrom, partLoader } from '@/app/lazyPart';
+import { WrongHostNotice } from '@/pages/WrongHostNotice';
+import { REFRESH_STORAGE_KEY } from '@/api/client';
+
+/*
+  ЭКРАНЫ — ИЗ ЧАСТЕЙ СБОРКИ (партия 35, п.65). Здесь только адреса и лёгкие
+  перенаправления; каждый экран приезжает файлом своей части, когда туда
+  пошли: гость по QR не качает панель, трекер и консоль. Статический импорт
+  экрана сюда снова склеил бы части — его ловит сторож сборки
+  `scripts/check-guest-bundle.mjs`.
+*/
+const guestPart = partLoader(() => import('@/app/parts/guest'));
+const loginPart = partLoader(() => import('@/app/parts/login'));
+const panelPart = partLoader(() => import('@/app/parts/panel'));
+const trackerPart = partLoader(() => import('@/app/parts/tracker'));
+const consolePart = partLoader(() => import('@/app/parts/console'));
+const landingPart = partLoader(() => import('@/app/parts/landing'));
+const devThemePart = partLoader(() => import('@/app/parts/devTheme'));
+
+const GuestRoot = lazyFrom(guestPart, 'GuestRoot');
+const GuestLayout = lazyFrom(guestPart, 'GuestLayout');
+const EntryPage = lazyFrom(guestPart, 'EntryPage');
+const HomePage = lazyFrom(guestPart, 'HomePage');
+const CatalogPage = lazyFrom(guestPart, 'CatalogPage');
+const VenuePage = lazyFrom(guestPart, 'VenuePage');
+const VenueListPage = lazyFrom(guestPart, 'VenueListPage');
+const CartPage = lazyFrom(guestPart, 'CartPage');
+const ChatPage = lazyFrom(guestPart, 'ChatPage');
+const OrdersPage = lazyFrom(guestPart, 'OrdersPage');
+const RoomPage = lazyFrom(guestPart, 'RoomPage');
+const SearchPage = lazyFrom(guestPart, 'SearchPage');
+const OrderStatusPage = lazyFrom(guestPart, 'OrderStatusPage');
+
+const AppShell = lazyFrom(panelPart, 'AppShell');
+const LoginPage = lazyFrom(loginPart, 'LoginPage');
+const CategoryEditorPage = lazyFrom(panelPart, 'CategoryEditorPage');
+const ItemEditorPage = lazyFrom(panelPart, 'ItemEditorPage');
+const NotificationsPage = lazyFrom(panelPart, 'NotificationsPage');
+const CmsOrdersPage = lazyFrom(panelPart, 'CmsOrdersPage');
+const RoomsPage = lazyFrom(panelPart, 'RoomsPage');
+const StaffPage = lazyFrom(panelPart, 'StaffPage');
+const BrandPage = lazyFrom(panelPart, 'BrandPage');
+const ServicesPage = lazyFrom(panelPart, 'ServicesPage');
+const ServiceWorkspacePage = lazyFrom(panelPart, 'ServiceWorkspacePage');
+const SettingsPage = lazyFrom(panelPart, 'SettingsPage');
+const DashboardPage = lazyFrom(panelPart, 'DashboardPage');
+const StyleguidePage = lazyFrom(panelPart, 'StyleguidePage');
+const AnalyticsPage = lazyFrom(panelPart, 'AnalyticsPage');
+const ReviewsPage = lazyFrom(panelPart, 'ReviewsPage');
+const MarketingPage = lazyFrom(panelPart, 'MarketingPage');
+const QuickActionsPage = lazyFrom(panelPart, 'QuickActionsPage');
+const ModulePendingPage = lazyFrom(panelPart, 'ModulePendingPage');
+const ProfilePage = lazyFrom(panelPart, 'ProfilePage');
+const RoomControlPage = lazyFrom(panelPart, 'RoomControlPage');
+const DictionariesPage = lazyFrom(panelPart, 'DictionariesPage');
+
+const TrackerPage = lazyFrom(trackerPart, 'TrackerPage');
+const ReceptionDeskPage = lazyFrom(trackerPart, 'ReceptionDeskPage');
+const AdminApp = lazyFrom(consolePart, 'AdminApp');
+const LandingPage = lazyFrom(landingPart, 'LandingPage');
+const DevThemePage = lazyFrom(devThemePart, 'DevThemePage');
+
+/**
+ * Начать качать часть ТЕКУЩЕГО адреса, не дожидаясь первого рендера.
+ *
+ * Иначе цепочка последовательная: входной файл → словарь → рендер → только
+ * тогда импорт части. `main.tsx` зовёт это рядом с загрузкой словаря, и часть
+ * едет параллельно с ним. Догадка по префиксу адреса — только про заранее:
+ * промах стоит лишних байт, а не неверного экрана, экран всё равно решает
+ * роутер.
+ */
+export function preloadPartFor(pathname: string): void {
+  const under = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
+  if (HOST_ROLE === 'platform') {
+    void (under('/admin') ? consolePart() : pathname === '/' ? landingPart() : null);
+    return;
+  }
+  // Без сессии сотрудник увидит вход, а не панель: качать её раньше входа —
+  // делить с формой и без того узкий канал.
+  const staff = (() => {
+    try {
+      return Boolean(window.localStorage.getItem(REFRESH_STORAGE_KEY));
+    } catch {
+      return false;
+    }
+  })();
+  const shell = () => void (staff ? panelPart() : loginPart());
+  if (under('/tracker')) {
+    shell();
+    if (staff) void trackerPart();
+  } else if (under('/login')) {
+    void loginPart();
+  } else if (under(CMS_ROOT) || under('/cms')) {
+    shell();
+  } else if (HOST_ROLE === 'single' && under('/admin')) {
+    void consolePart();
+  } else if (!under('/dev')) {
+    void guestPart();
+  }
+}
+
+/** Экран части — под своей заглушкой на время, пока едет её файл. */
+const part = (screen: ReactNode) => <Part>{screen}</Part>;
 
 /**
  * Data router — required for `useBlocker` (the unsaved-changes guard in the CMS).
@@ -70,7 +128,7 @@ function DeskScreen() {
   const { t } = useTranslation();
   return (
     <ScreenBoundary message={t('state.crashed')} actionLabel={t('state.reload')}>
-      <ReceptionDeskPage />
+      {part(<ReceptionDeskPage />)}
     </ScreenBoundary>
   );
 }
@@ -79,7 +137,7 @@ function TrackerScreen() {
   const { t } = useTranslation();
   return (
     <ScreenBoundary message={t('state.crashed')} actionLabel={t('state.reload')}>
-      <TrackerPage />
+      {part(<TrackerPage />)}
     </ScreenBoundary>
   );
 }
@@ -110,32 +168,32 @@ const shellChildren: RouteObject[] = [
     path: CMS_ROOT,
     children: [
       { index: true, element: <CmsHome /> },
-      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'dashboard', element: part(<DashboardPage />) },
       // Профиль сотрудника: его собственные входы. Не в настройках отеля —
       // те открыты только администратору, а сессии есть у каждого.
-      { path: 'profile', element: <ProfilePage /> },
+      { path: 'profile', element: part(<ProfilePage />) },
 
       // Структура отеля: сервисы верхним уровнем, меню — внутри сервиса.
-      { path: 'services', element: <ServicesPage /> },
-      { path: 'services/:id', element: <ServiceWorkspacePage /> },
-      { path: 'rooms', element: <RoomsPage /> },
-      { path: 'staff', element: <StaffPage /> },
+      { path: 'services', element: part(<ServicesPage />) },
+      { path: 'services/:id', element: part(<ServiceWorkspacePage />) },
+      { path: 'rooms', element: part(<RoomsPage />) },
+      { path: 'staff', element: part(<StaffPage />) },
 
       // Редакторы позиции и категории — общие, вызываются из меню сервиса.
       { path: 'menu', element: <Navigate to={cmsPath('/services')} replace /> },
-      { path: 'menu/categories/new', element: <CategoryEditorPage /> },
-      { path: 'menu/categories/:id', element: <CategoryEditorPage /> },
-      { path: 'menu/items/new', element: <ItemEditorPage /> },
-      { path: 'menu/items/:id', element: <ItemEditorPage /> },
+      { path: 'menu/categories/new', element: part(<CategoryEditorPage />) },
+      { path: 'menu/categories/:id', element: part(<CategoryEditorPage />) },
+      { path: 'menu/items/new', element: part(<ItemEditorPage />) },
+      { path: 'menu/items/:id', element: part(<ItemEditorPage />) },
 
       // Оформление: бренд и витрина — один раздел.
-      { path: 'brand', element: <BrandPage /> },
-      { path: 'analytics', element: <AnalyticsPage /> },
-      { path: 'reviews', element: <ReviewsPage /> },
+      { path: 'brand', element: part(<BrandPage />) },
+      { path: 'analytics', element: part(<AnalyticsPage />) },
+      { path: 'reviews', element: part(<ReviewsPage />) },
 
       // Настройки: сюда растворилась «Коммерция» и переехал справочник локаций.
-      { path: 'settings', element: <SettingsPage /> },
-      { path: 'notifications', element: <NotificationsPage /> },
+      { path: 'settings', element: part(<SettingsPage />) },
+      { path: 'notifications', element: part(<NotificationsPage />) },
       // Заказы: разбор по всем заведениям. Раздел сам режется по
       // подведомственным точкам, поэтому маршрут общий для админа и
       // управляющего — линейного сюда не пускает гейт CMS.
@@ -143,19 +201,19 @@ const shellChildren: RouteObject[] = [
       // Имя импорта с приставкой: `OrdersPage` уже занят ГОСТЕВЫМ экраном
       // «мои заказы», и это разные вещи — гость смотрит свои, отель смотрит
       // все.
-      { path: 'orders', element: <CmsOrdersPage /> },
-      { path: 'dictionaries', element: <DictionariesPage /> },
+      { path: 'orders', element: part(<CmsOrdersPage />) },
+      { path: 'dictionaries', element: part(<DictionariesPage />) },
 
       // Модульные разделы: пункт в навигации появляется только с модулем,
       // но маршрут существует всегда — иначе прямая ссылка ломалась бы молча.
-      { path: 'marketing', element: <MarketingPage /> },
-      { path: 'room-control', element: <RoomControlPage /> },
+      { path: 'marketing', element: part(<MarketingPage />) },
+      { path: 'room-control', element: part(<RoomControlPage />) },
       // Эти три навигация показывает, а экранов под них ещё нет. Без маршрута
       // адрес проваливался в корневую ветку и уезжал на гостевую главную —
       // админ из своей панели попадал к гостю.
-      { path: 'pms', element: <ModulePendingPage moduleKey="pms" /> },
-      { path: 'payments', element: <ModulePendingPage moduleKey="payments" /> },
-      { path: 'mobile-key', element: <ModulePendingPage moduleKey="mobileKey" /> },
+      { path: 'pms', element: part(<ModulePendingPage moduleKey="pms" />) },
+      { path: 'payments', element: part(<ModulePendingPage moduleKey="payments" />) },
+      { path: 'mobile-key', element: part(<ModulePendingPage moduleKey="mobileKey" />) },
 
       // Служебное: витрина отдельным адресом больше не нужна (слита с брендом),
       // старые ссылки уводим туда же, а не в 404.
@@ -163,8 +221,8 @@ const shellChildren: RouteObject[] = [
       { path: 'commerce', element: <Navigate to={cmsPath('/settings')} replace /> },
       { path: 'locations', element: <Navigate to={cmsPath('/settings')} replace /> },
       { path: 'departments', element: <Navigate to={cmsPath('/services')} replace /> },
-      { path: 'quick-actions', element: <QuickActionsPage /> },
-      { path: 'styleguide', element: <StyleguidePage /> },
+      { path: 'quick-actions', element: part(<QuickActionsPage />) },
+      { path: 'styleguide', element: part(<StyleguidePage />) },
 
       // СТОРОЖ: из /cms не выпадают к гостю.
       //
@@ -195,8 +253,8 @@ const shellBranch: RouteObject = {
   element: (
     // `fallback` — вход на месте: на хосте отеля адрес панели и адрес входа
     // совпали (`/admin`), и увод на `/login` дал бы петлю.
-    <RequireAuth fallback={HOST_ROLE === 'hotel' ? <LoginPage /> : undefined}>
-      <AppShell />
+    <RequireAuth fallback={HOST_ROLE === 'hotel' ? part(<LoginPage />) : undefined}>
+      {part(<AppShell />)}
     </RequireAuth>
   ),
   children: shellChildren,
@@ -212,15 +270,15 @@ const shellBranch: RouteObject = {
 export const guestBranch: RouteObject =
   {
     path: '/',
-    element: <GuestRoot />,
+    element: part(<GuestRoot />),
     children: [
-      { index: true, element: <EntryPage /> },
+      { index: true, element: part(<EntryPage />) },
       // QR deep link — creates the session for the scanned room right away.
-      { path: 'r/:roomNumber', element: <EntryPage /> },
+      { path: 'r/:roomNumber', element: part(<EntryPage />) },
       {
-        element: <GuestLayout />,
+        element: part(<GuestLayout />),
         children: [
-          { path: 'home', element: <HomePage /> },
+          { path: 'home', element: part(<HomePage />) },
           // Every catalog is the same screen with a different offering type;
           // there is deliberately no separate page component per type.
           // Плоских каталогов отеля больше нет: и блюда, и заявки, и слоты
@@ -234,19 +292,19 @@ export const guestBranch: RouteObject =
           { path: 'menu', element: <Navigate to="/home" replace /> },
           { path: 'services', element: <Navigate to="/home" replace /> },
           { path: 'slots', element: <Navigate to="/home" replace /> },
-          { path: 'info', element: <CatalogPage type="info" /> },
+          { path: 'info', element: part(<CatalogPage type="info" />) },
           // Showcase levels 2 and 3: a group's venue list, and a venue's own catalog.
-          { path: 'category/:group', element: <VenueListPage /> },
-          { path: 'venue/:code', element: <VenuePage /> },
-          { path: 'cart', element: <CartPage /> },
-          { path: 'chat', element: <ChatPage /> },
+          { path: 'category/:group', element: part(<VenueListPage />) },
+          { path: 'venue/:code', element: part(<VenuePage />) },
+          { path: 'cart', element: part(<CartPage />) },
+          { path: 'chat', element: part(<ChatPage />) },
           // Управление номером. Гейт по модулю отеля живёт НА СЕРВЕРЕ:
           // маршрут доступен, но данные без модуля не отдаются (403).
           // Скрытый на клиенте пункт — удобство, а не защита.
-          { path: 'room', element: <RoomPage /> },
-          { path: 'search', element: <SearchPage /> },
-          { path: 'orders', element: <OrdersPage /> },
-          { path: 'orders/:id', element: <OrderStatusPage /> },
+          { path: 'room', element: part(<RoomPage />) },
+          { path: 'search', element: part(<SearchPage />) },
+          { path: 'orders', element: part(<OrdersPage />) },
+          { path: 'orders/:id', element: part(<OrderStatusPage />) },
         ],
       },
       { path: '*', element: <Navigate to="/" replace /> },
@@ -291,10 +349,10 @@ function LegacyCmsRedirect() {
 
 /** Корень платформы: лендинг и наша консоль. Гостя и CMS здесь нет. */
 const platformRoutes: RouteObject[] = [
-  { path: '/', element: <LandingPage /> },
-  { path: '/admin', element: <AdminApp /> },
+  { path: '/', element: part(<LandingPage />) },
+  { path: '/admin', element: part(<AdminApp />) },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
-  { path: '/dev/theme', element: <App /> },
+  { path: '/dev/theme', element: part(<DevThemePage />) },
   // Пришли по старой ссылке — объясняем адрес, а не показываем мёртвую форму
   // ввода номера, которая раньше отвечала ошибкой сервера на нажатие.
   { path: '/login', element: <WrongHostNotice /> },
@@ -311,7 +369,7 @@ const hotelRoutes: RouteObject[] = [
   // в переписке, и 404 на них читался бы как «панель отеля пропала».
   { path: '/login', element: <Navigate to={CMS_ROOT} replace /> },
   { path: '/cms/*', element: <LegacyCmsRedirect /> },
-  { path: '/dev/theme', element: <App /> },
+  { path: '/dev/theme', element: part(<DevThemePage />) },
   shellBranch,
   guestBranch,
 ];
@@ -321,9 +379,9 @@ const hotelRoutes: RouteObject[] = [
  * консоль на `/admin`. Это режим машины разработчика.
  */
 const singleHostRoutes: RouteObject[] = [
-  { path: '/login', element: <LoginPage /> },
-  { path: '/dev/theme', element: <App /> },
-  { path: '/admin', element: <AdminApp /> },
+  { path: '/login', element: part(<LoginPage />) },
+  { path: '/dev/theme', element: part(<DevThemePage />) },
+  { path: '/admin', element: part(<AdminApp />) },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
   shellBranch,
   guestBranch,

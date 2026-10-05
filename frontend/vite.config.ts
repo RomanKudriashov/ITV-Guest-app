@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
 import { DEFAULT_BRAND_TOKENS } from './src/theme/tokens';
+// @ts-expect-error — сторож написан на .mjs без деклараций, как остальные scripts/*
+import { guestBundleGuard } from './scripts/guest-bundle-guard.mjs';
 
 /**
  * The PWA manifest is GENERATED from the brand tokens rather than checked in as
@@ -49,7 +51,7 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = env.VITE_API_PROXY || 'http://localhost:8000';
 
   return {
-    plugins: [react(), webManifestPlugin()],
+    plugins: [react(), webManifestPlugin(), guestBundleGuard()],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

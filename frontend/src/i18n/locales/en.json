@@ -3303,6 +3303,7 @@
     "empty": "Nothing here yet.",
     "crashed": "This screen failed to open because of a data error. The rest of the console works.",
     "reload": "Reload",
+    "partFailed": "Could not load this screen. Check the connection and reload the page.",
     "what": {
       "overview": "the overview",
       "fleet": "the hotel list",

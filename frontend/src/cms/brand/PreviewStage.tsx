@@ -57,7 +57,7 @@ import { GuestShellProviders } from '@/guest/GuestRoot';
 import type { GuestHotel } from '@/guest/api/types';
 import { PreviewSessionProvider } from '@/guest/session/GuestSessionProvider';
 import { AppThemeProvider, type BrandTokens, type ThemeMode } from '@/theme';
-import { previewI18n } from './previewI18n';
+import { loadPreviewLanguage, previewI18n } from './previewI18n';
 
 export interface PreviewStageProps {
   tokens: BrandTokens;
@@ -167,15 +167,25 @@ export function PreviewStage({
     doc.body.style.margin = '0';
   }, [doc, rtl, language]);
 
+  // Словарь языка показа едет по требованию: до его приезда дерево не
+  // рисуется (вместо слов были бы ключи), при смене языка старый экран стоит,
+  // пока не приедет новый словарь.
+  const [dictionaryReady, setDictionaryReady] = useState(false);
   useEffect(() => {
-    void previewI18n.changeLanguage(language);
+    let alive = true;
+    void loadPreviewLanguage(language).then(() => {
+      if (alive) setDictionaryReady(true);
+    });
+    return () => {
+      alive = false;
+    };
   }, [language]);
 
   // Дерево показа живёт в СВОЁМ корне: контекста панели у него нет, и роутер
   // витрины больше ни во что не вложен. Перерисовываем на каждое изменение
   // входов — токены меняются на каждый щелчок в редакторе.
   useEffect(() => {
-    if (!doc) return;
+    if (!doc || !dictionaryReady) return;
     // Корень вешается на СВОЙ узел, а не на `body`: React просит так, и он
     // прав — в тело документа лезут расширения браузера и посторонние скрипты.
     let host = doc.getElementById('preview-root');
@@ -219,7 +229,7 @@ export function PreviewStage({
         </AppThemeProvider>
       </>,
     );
-  }, [doc, tokens, mode, client, route, routes]);
+  }, [doc, dictionaryReady, tokens, mode, client, route, routes]);
 
   // Корень снимается вместе с рамкой: оставленный, он продолжит рисовать в
   // документ, которого уже нет.
