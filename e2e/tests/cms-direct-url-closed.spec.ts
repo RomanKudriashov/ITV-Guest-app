@@ -43,3 +43,12 @@ test('управляющая СПА на «Настройках» — «разд
   await page.getByTestId('section-closed-home').click()
   await expect(page.getByTestId('cms-section-closed')).toHaveCount(0)
 })
+
+test('администратор на модульном разделе без модуля — экран раздела, а не «раздел закрыт»', async ({ page }) => {
+  // Модульный пункт меню появляется только с модулем, но маршрут живёт всегда
+  // и сам объясняет, что модуль выключен. Охрана по роли его не закрывает.
+  await signIn(page)
+  await page.goto('/cms/marketing')
+  await expect(page.getByTestId('cms-page-title').or(page.locator('main h5')).first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('cms-section-closed')).toHaveCount(0)
+})
