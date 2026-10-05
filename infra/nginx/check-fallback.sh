@@ -62,5 +62,7 @@ check /cms/logo.png 404 no
 # Кэш (партия 31, ADM-002): сборка с хэшем — надолго, оболочка — без кэша.
 header() { curl -s -D - -o /dev/null "http://127.0.0.1:$port$1" | tr -d '\r' | grep -i '^cache-control:' | cut -d' ' -f2-; }
 if [[ "$(header /assets/app.js)" != *immutable* ]]; then echo "КРАСНОЕ /assets/app.js: нет долгого кэша ($(header /assets/app.js))"; fail=1; else echo "ок /assets/app.js → кэш надолго"; fi
-if [[ "$(header /home)" != *no-cache* ]]; then echo "КРАСНОЕ /home: оболочка кэшируется ($(header /home))"; fail=1; else echo "ок /home → без кэша"; fi
+for screen in / /home; do
+  if [[ "$(header $screen)" != *no-cache* ]]; then echo "КРАСНОЕ $screen: оболочка кэшируется ($(header $screen))"; fail=1; else echo "ок $screen → без кэша"; fi
+done
 exit $fail
