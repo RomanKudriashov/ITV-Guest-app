@@ -1759,6 +1759,9 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         "requested_time": (
             hotel.to_local(order.requested_time).isoformat() if order.requested_time else None
         ),
+        # Момент ПРИНЯТИЯ (партия 31, QP04-Q01 QA): гость читал «Когда приняли»,
+        # а показывалось время создания. Не приняли — пусто.
+        "accepted_at": hotel.to_local(order.accepted_at).isoformat() if order.accepted_at else None,
         "eta_minutes": _eta_minutes(order),
         "comment": order.comment,
         "total": order.total,

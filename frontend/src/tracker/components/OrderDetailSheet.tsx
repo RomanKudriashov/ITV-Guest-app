@@ -121,7 +121,17 @@ export function OrderDetailSheet({
 
             <Paper variant="outlined" sx={{ p: 1.5 }}>
               <Stack spacing={0.75}>
-                <Row label={t('tracker.detail.where')} value={whereText(order, t)} />
+                {/* Подпись по смыслу поля (партия 31, QA п.1): у поездки и
+                    заявки номер — это номер ГОСТЯ, а куда ехать — в ответах
+                    формы ниже. «Куда: Комната 305» над адресом сбивало. */}
+                <Row
+                  label={
+                    order.card_kind === 'ride' || order.card_kind === 'request'
+                      ? t('tracker.detail.guestRoom')
+                      : t('tracker.detail.where')
+                  }
+                  value={whereText(order, t)}
+                />
                 <Row label={t('tracker.detail.when')} value={whenText(order, t, language)} />
                 {/* Та же лестница, что на карточке: минуты → часы → вчера →
                     дата. Две разные формулировки одного возраста на карточке и

@@ -500,6 +500,8 @@ export interface GuestOrder {
    */
   card_kind?: 'booking' | 'delivery' | 'ride' | 'request';
   requested_time: string | null;
+  /** Когда заявку приняли (QP04-Q01); `null` — ещё не приняли. */
+  accepted_at?: string | null;
   eta_minutes: number | null;
   comment: string;
   /** `cart` for food, `request` for a service, `booking` for a slot. */

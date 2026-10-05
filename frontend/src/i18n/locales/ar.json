@@ -571,7 +571,8 @@
       "acceptedAt": "وقت الاستلام",
       "durationMinutes": "{{minutes}} دقيقة",
       "pickupAt": "ستستلمه بنفسك: {{place}}",
-      "placedBy": "طلبه {{by}}"
+      "placedBy": "طلبه {{by}}",
+      "sentAt": "وقت الإرسال"
     },
     "orders": {
       "active": "النشطة",
@@ -899,7 +900,8 @@
       "loading": "جارٍ التحميل…",
       "notFound": "الطلب غير موجود",
       "review": "تقييم الضيف",
-      "waitingOverdue": "{{age}} · {{overdue}}"
+      "waitingOverdue": "{{age}} · {{overdue}}",
+      "guestRoom": "غرفة الضيف"
     },
     "cancel": {
       "title": "إلغاء الطلب رقم {{number}}؟",

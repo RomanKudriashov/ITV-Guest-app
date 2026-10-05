@@ -563,7 +563,8 @@
       "acceptedAt": "Accepted",
       "durationMinutes": "{{minutes}} min",
       "pickupAt": "You collect it: {{place}}",
-      "placedBy": "Placed by {{by}}"
+      "placedBy": "Placed by {{by}}",
+      "sentAt": "Sent at"
     },
     "orders": {
       "active": "Active",
@@ -883,7 +884,8 @@
       "loading": "Loading the order…",
       "notFound": "This order is not on the board",
       "review": "Guest review",
-      "waitingOverdue": "{{age}} · {{overdue}}"
+      "waitingOverdue": "{{age}} · {{overdue}}",
+      "guestRoom": "Guest's room"
     },
     "cancel": {
       "title": "Cancel order #{{number}}?",

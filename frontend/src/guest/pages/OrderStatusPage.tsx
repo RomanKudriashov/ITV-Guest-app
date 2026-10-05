@@ -234,7 +234,13 @@ export function OrderStatusPage() {
       t('guest.order.asked'),
       order.items.length ? order.items.map((line) => line.title).join(' · ') : null,
     );
-    push(t('guest.order.acceptedAt'), at(order.created_at, { ...clock, dateStyle: undefined }));
+    // Отправили — момент создания; приняли — только когда приняли (QP04-Q01):
+    // прежде под «Когда приняли» стояло время создания.
+    push(t('guest.order.sentAt'), at(order.created_at, { ...clock, dateStyle: undefined }));
+    push(
+      t('guest.order.acceptedAt'),
+      order.accepted_at ? at(order.accepted_at, { ...clock, dateStyle: undefined }) : null,
+    );
     // Срок у заявки бывает, только если время назвал гость («Когда забрать:
     // 12:00» — поле «время заказа», E2E-005). Нет его — строки нет: расчётное
     // время заявке никто не обещал.

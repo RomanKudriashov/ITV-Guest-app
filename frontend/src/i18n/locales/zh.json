@@ -561,7 +561,8 @@
       "acceptedAt": "受理时间",
       "durationMinutes": "{{minutes}} 分钟",
       "pickupAt": "自取：{{place}}",
-      "placedBy": "由{{by}}代下单"
+      "placedBy": "由{{by}}代下单",
+      "sentAt": "发送时间"
     },
     "orders": {
       "active": "进行中",
@@ -878,7 +879,8 @@
       "loading": "加载中…",
       "notFound": "看板上没有该订单",
       "review": "客人评价",
-      "waitingOverdue": "{{age}} · {{overdue}}"
+      "waitingOverdue": "{{age}} · {{overdue}}",
+      "guestRoom": "客人房间"
     },
     "cancel": {
       "title": "取消第 {{number}} 号订单？",

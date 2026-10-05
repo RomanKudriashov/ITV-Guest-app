@@ -567,7 +567,8 @@
       "acceptedAt": "Когда приняли",
       "durationMinutes": "{{minutes}} мин",
       "pickupAt": "Заберёте сами: {{place}}",
-      "placedBy": "Оформил {{by}}"
+      "placedBy": "Оформил {{by}}",
+      "sentAt": "Когда отправили"
     },
     "orders": {
       "active": "Активные",
@@ -890,7 +891,8 @@
       "loading": "Загружаем заказ…",
       "notFound": "Заказ не найден на этой доске",
       "review": "Отзыв гостя",
-      "waitingOverdue": "{{age}} · {{overdue}}"
+      "waitingOverdue": "{{age}} · {{overdue}}",
+      "guestRoom": "Номер гостя"
     },
     "cancel": {
       "title": "Отменить заявку №{{number}}?",
