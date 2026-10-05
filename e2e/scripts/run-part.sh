@@ -7,6 +7,10 @@
 set -u
 LIST=$1
 LOGS=${2:-/tmp}
+mkdir -p "$LOGS"
+# Нет списка или он пуст — стоп: иначе `playwright test` без аргументов
+# запустил бы ВЕСЬ набор под именем части.
+[ -s "$LIST" ] || { echo "список частей «$LIST» пуст или не найден — стоп"; exit 1; }
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 ROOT=$(cd "$HERE/.." && pwd)
 NAME=$(basename "$LIST" .txt)
@@ -24,5 +28,9 @@ for run in 1 2; do
   (cd "$HERE" && npx playwright test $(tr '\n' ' ' < "$LIST") --reporter=line --trace=off > "$LOGS/$NAME-run$run.txt" 2>&1)
   echo "$NAME run $run: $(grep -E '^\s+[0-9]+ (passed|failed|flaky)' "$LOGS/$NAME-run$run.txt" | tr -s ' ' | tr '\n' ' ') @ $(date +%H:%M)"
   grep -qE '^\s+[0-9]+ failed' "$LOGS/$NAME-run$run.txt" && { echo "$NAME: КРАСНАЯ в заходе $run — стоп, диагноз"; exit 1; }
+  # Нет итога «N passed» — прогона не было (лог не записался, набор не стартовал).
+  # Такой заход не чистый, а пустой (партия 31: без каталога логов скрипт
+  # объявлял «ДВА ЗАХОДА ЧИСТЫЕ», не прогнав ни одной проверки).
+  grep -qE '^\s+[0-9]+ passed' "$LOGS/$NAME-run$run.txt" 2>/dev/null || { echo "$NAME: в заходе $run нет итога — стоп"; exit 1; }
 done
 echo "$NAME: ДВА ЗАХОДА ЧИСТЫЕ"
