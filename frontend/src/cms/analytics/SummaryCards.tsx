@@ -72,6 +72,12 @@ export function SummaryCards({
               <Typography variant="caption" color="text.secondary">
                 {t(`analytics.metrics.${spec.id}`)}
               </Typography>
+              {spec.id === 'avg_check' ? (
+                /* Что в делителе — прямо на плитке (партия 31, INV-05 QA). */
+                <Typography variant="caption" color="text.secondary" component="div" sx={{ opacity: 0.8 }}>
+                  {t('analytics.avgCheckHint')}
+                </Typography>
+              ) : null}
               {isLoading ? (
                 <Skeleton variant="text" width="70%" height={32} />
               ) : (

@@ -752,8 +752,10 @@ def test_operations_on_an_empty_period_answers_with_zeros_and_nulls(crystal):
         body = queries.operations(crystal, admin, {"date_from": "2020-01-01", "date_to": "2020-01-01"})
 
     assert body["by_point"] == []
+    # Счётчики — ноль; доли и средние без единого заказа — «нет значения»,
+    # а не ноль (партия 31, INV-05 QA: «0s» против «—»).
     assert body["totals"] == {
-        "orders": 0, "completed": 0, "cancelled": 0, "cancel_rate": 0, "off_hours_rate": 0,
+        "orders": 0, "completed": 0, "cancelled": 0, "cancel_rate": None, "off_hours_rate": None,
         "avg_reaction_seconds": None, "avg_fulfil_seconds": None,
     }
     assert body["escalations"] == {"fired": 0}
@@ -829,3 +831,39 @@ def test_scope_carries_the_flags_the_filter_panel_reads(crystal):
     assert body["is_hotel_admin"] is True
     assert body["is_platform_admin"] is False
     assert "is_platform" not in body
+
+
+
+def test_average_check_counts_only_priced_orders_that_were_not_cancelled(crystal):
+    """
+    Партия 31 (INV-05 QA): средний чек делился на ВСЕ заказы — отменённый и
+    бесплатный тянули его вниз. Теперь: выручка неотменённых с ценой / их число.
+    Отдельный день, сырые события — чтобы сид не участвовал.
+    """
+    from datetime import date, datetime, timezone as tz
+
+    from apps.analytics.services import collector
+
+    day = date(2020, 2, 2)
+    at = datetime(2020, 2, 2, 12, tzinfo=tz.utc)
+
+    def raw(kind, key, revenue):
+        return {
+            "dedupe_key": f"{kind}:{key}", "bus_event_id": None, "kind": kind, "name": kind,
+            "occurred_at": at, "business_date": day, "order_id": None, "dimensions": {},
+            "measures": {"revenue_minor": revenue},
+        }
+
+    with tenant_context(crystal):
+        for item in (
+            raw("order_created", "a", 1000),
+            raw("order_created", "b", 3000),
+            raw("order_created", "free", 0),
+            raw("order_cancelled", "b", 3000),
+        ):
+            collector.record(crystal.pk, item)
+        body = queries.summary(crystal, _admin(crystal), {"date_from": "2020-02-02", "date_to": "2020-02-02"})
+
+    current = body["current"]
+    assert current["orders"] == 3
+    assert current["avg_check_minor"] == 1000, "по прежней формуле было бы 4000 / 3"

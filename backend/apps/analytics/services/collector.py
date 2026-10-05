@@ -136,6 +136,7 @@ def apply_event(raw: AnalyticsEvent) -> None:
                 "tip_minor": int(m.get("tip_minor", 0)),
                 "items_count": int(m.get("items_count", 0)),
                 "off_hours_count": int(m.get("off_hours", 0)),
+                "priced_count": 1 if int(m.get("revenue_minor", 0)) > 0 else 0,
             },
         )
     elif kind == "order_accepted":
@@ -155,7 +156,16 @@ def apply_event(raw: AnalyticsEvent) -> None:
             },
         )
     elif kind == "order_cancelled":
-        _bump(OrderDaily, _order_daily_keys(bd, d), {"cancelled_count": 1})
+        revenue = int(m.get("revenue_minor", 0))
+        _bump(
+            OrderDaily,
+            _order_daily_keys(bd, d),
+            {
+                "cancelled_count": 1,
+                "cancelled_revenue_minor": revenue,
+                "cancelled_priced_count": 1 if revenue > 0 else 0,
+            },
+        )
     elif kind == "session_started":
         _bump(
             SessionDaily,
@@ -447,7 +457,8 @@ def build_cancelled(order, hotel: Hotel, *, when: datetime | None = None, bus_ev
             "business_date": dim.business_date_for(hotel, order.created_at),
             "order_id": order.pk,
             "dimensions": _order_dims(order, order.guest_session),
-            "measures": {},
+            # Выручка отменённого — чтобы средний чек считался по неотменённым.
+            "measures": {"revenue_minor": int(order.subtotal_minor or order.total or 0)},
         }
     ]
 

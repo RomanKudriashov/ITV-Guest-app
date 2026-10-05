@@ -1845,7 +1845,7 @@
     },
     "metrics": {
       "orders": "Orders",
-      "revenue": "Revenue",
+      "revenue": "Revenue incl. charges",
       "avg_check": "Average check",
       "items_per_order": "Items / order",
       "completed_rate": "Completed rate",
@@ -1973,7 +1973,10 @@
       "perRoom": "Orders per room",
       "compare": "{{leader}} orders {{ratio}}× more often than {{base}}, per room.",
       "unknown": "“No category” — {{count}} orders: this covers both rooms without a category and orders created before this breakdown existed. Their category cannot be recovered: it did not exist at the time of the order."
-    }
+    },
+    "updatedAt": "Updated at {{time}}",
+    "refresh": "Refresh",
+    "avgCheckHint": "Non-cancelled priced orders"
   },
   "commerce": {
     "title": "Commerce settings",

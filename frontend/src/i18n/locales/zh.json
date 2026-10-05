@@ -1826,7 +1826,7 @@
     },
     "metrics": {
       "orders": "订单",
-      "revenue": "收入",
+      "revenue": "含附加费用的收入",
       "avg_check": "平均客单价",
       "items_per_order": "每单项目数",
       "completed_rate": "完成率",
@@ -1954,7 +1954,10 @@
       "perRoom": "每间房订单数",
       "compare": "按每间房计算，{{leader}} 的下单频率是 {{base}} 的 {{ratio}} 倍。",
       "unknown": "「无类别」——{{count}} 笔订单：其中既有未设类别的房间，也有本维度出现之前创建的订单。它们的类别无法补齐：下单时该类别尚不存在。"
-    }
+    },
+    "updatedAt": "更新于 {{time}}",
+    "refresh": "刷新",
+    "avgCheckHint": "按未取消且有价格的订单"
   },
   "commerce": {
     "title": "商务设置",

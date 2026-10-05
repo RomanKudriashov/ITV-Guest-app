@@ -43,6 +43,10 @@ class OrderDaily(TenantModel):
     cancelled_count = models.IntegerField(default=0)
     completed_count = models.IntegerField(default=0)
     off_hours_count = models.IntegerField(default=0)
+    # Для среднего чека (партия 31): заказы с ценой и то, что из них отменили.
+    priced_count = models.IntegerField(default=0)
+    cancelled_priced_count = models.IntegerField(default=0)
+    cancelled_revenue_minor = models.BigIntegerField(default=0)
     reaction_seconds_sum = models.BigIntegerField(default=0)
     reaction_count = models.IntegerField(default=0)
     fulfil_seconds_sum = models.BigIntegerField(default=0)

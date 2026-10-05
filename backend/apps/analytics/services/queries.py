@@ -187,6 +187,9 @@ def _order_totals(qs) -> dict:
         reaction_n=Sum("reaction_count"),
         fulfil_sum=Sum("fulfil_seconds_sum"),
         fulfil_n=Sum("fulfil_count"),
+        priced=Sum("priced_count"),
+        cancelled_priced=Sum("cancelled_priced_count"),
+        cancelled_revenue=Sum("cancelled_revenue_minor"),
     )
     return {k: (v or 0) for k, v in agg.items()}
 
@@ -211,7 +214,13 @@ def _summary_block(scope: Scope, params: dict, period: Period) -> dict:
         "cancelled": o["cancelled"],
         "completed": o["completed"],
         "off_hours": o["off_hours"],
-        "avg_check_minor": _ratio(o["revenue"], o["orders"], as_int=True),
+        # СРЕДНИЙ ЧЕК — по неотменённым заказам С ЦЕНОЙ (партия 31, решение
+        # по INV-05 QA). Делили на все заказы: отменённые и бесплатные заявки
+        # (прачечная без цены, уборка) тянули чек вниз. Числитель — их же
+        # выручка по позициям.
+        "avg_check_minor": _ratio(
+            o["revenue"] - o["cancelled_revenue"], o["priced"] - o["cancelled_priced"], as_int=True
+        ),
         "items_per_order": _ratio(o["items"], o["orders"]),
         "completed_rate": _ratio(o["completed"], o["orders"]),
         "cancel_rate": _ratio(o["cancelled"], o["orders"]),
@@ -749,8 +758,10 @@ def _aware(day: date, hotel: Hotel, *, end: bool):
 
 
 def _ratio(numerator, denominator, *, as_int: bool = False):
+    # Нечего делить — значения НЕТ, а не ноль (партия 31, INV-05 QA): сводка
+    # печатала «0s» и «0 ₽» там, где «Операции» честно ставили «—».
     if not denominator:
-        return 0
+        return None
     value = numerator / denominator
     return int(round(value)) if as_int else round(value, 4)
 
