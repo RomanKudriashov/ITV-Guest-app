@@ -721,15 +721,18 @@ naturalWidth > 0`), а не ждёт события.
 обновлений: `my_chat_member`). Режим приватности бота в BotFather трогать не
 нужно: панель показывает команду с именем бота, ссылка шлёт адресную команду сама.
 
-## Сеть стенда: Telegram и Let's Encrypt — только по IPv6 (05.10.2026)
+## Сеть стенда: Telegram — только по IPv6 (05.10.2026)
 
 Боевому серверу нужен исходящий доступ к `api.telegram.org`; **на стенде он
-есть только по IPv6**. Замер с хоста: по IPv4 закрыты `api.telegram.org` и
-`acme-v02.api.letsencrypt.org` (таймаут 8 с), открыты Open-Meteo, GitHub,
-1.1.1.1; по IPv6 Telegram отвечает за 0,16 с, Let's Encrypt — за 5,2 с.
+есть только по IPv6**. Замер с хоста в 15:05 UTC: по IPv4 закрыты
+`api.telegram.org` и `acme-v02.api.letsencrypt.org` (таймаут 8 с), открыты
+Open-Meteo, GitHub, 1.1.1.1; по IPv6 Telegram отвечает за 0,16 с, Let's
+Encrypt — за 5,2 с. Повтор в 15:50 UTC: Let's Encrypt по IPv4 — 10 из 10,
+Telegram — 0 из 10; закрыт постоянно только Telegram.
 Фаервол хоста исходящее не режет (`ufw`: allow outgoing; OUTPUT — ACCEPT).
 Сеть compose `internal` переведена на IPv6 с приватной подсетью и NAT66
 Docker — без этого бот платформы не видит Telegram. Продление сертификата
-(certbot на хосте) идёт по IPv6. Порядок проверки — `docs/ops/handbook/install.md`,
+(certbot на хосте) идёт по IPv6: `certbot renew --dry-run` 05.10.2026 —
+«all simulated renewals succeeded», адрес LE первым — IPv6. Порядок проверки — `docs/ops/handbook/install.md`,
 «Исходящий доступ».
 
