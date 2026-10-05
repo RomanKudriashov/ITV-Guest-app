@@ -11,6 +11,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { useAuth } from '@/auth/AuthProvider';
 import { QueryState } from '@/components/QueryState';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
@@ -83,6 +84,7 @@ export function OrdersPage() {
 
   const rows = pages.flatMap((page) => page.orders);
   const venues = query.data?.points ?? [];
+  const { user } = useAuth();
 
   return (
     <Stack spacing={2} sx={{ p: 3 }} data-testid="cms-orders">
@@ -233,7 +235,14 @@ export function OrdersPage() {
                 isFiltered={isFiltered}
                 onReset={reset}
                 what={t('orders.what')}
-                emptyHint={t('orders.emptyHint')}
+                emptyHint={
+                  /* Подпись — по области, а не одна на всех (партия 31, QA п.14):
+                     старший ресепшен видит только «Ресепшен», где заказов нет, а
+                     читал «все заведения сразу». */
+                  user?.is_hotel_admin || !venues.length
+                    ? t('orders.emptyHint')
+                    : t('orders.emptyHintScoped', { venues: venues.map((venue) => venue.title).join(', ') })
+                }
               />
             )}
 

@@ -3759,7 +3759,8 @@
       "assignee": "نفّذها",
       "nobody": "لم يستلمها أحد",
       "cancelled": "ملغاة: {{reason}}"
-    }
+    },
+    "emptyHintScoped": "ستظهر هنا طلبات أماكنك: {{venues}}. طلبات الأماكن الأخرى لا تظهر هنا."
   },
   "catalog": {
     "dish": {

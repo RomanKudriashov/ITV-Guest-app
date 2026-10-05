@@ -3671,7 +3671,8 @@
       "assignee": "Handled by",
       "nobody": "nobody took it",
       "cancelled": "Cancelled: {{reason}}"
-    }
+    },
+    "emptyHintScoped": "Orders of your venues will appear here: {{venues}}. Other venues' orders are not shown."
   },
   "catalog": {
     "dish": {

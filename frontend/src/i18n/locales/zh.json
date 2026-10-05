@@ -3640,7 +3640,8 @@
       "assignee": "负责人",
       "nobody": "无人接单",
       "cancelled": "已取消：{{reason}}"
-    }
+    },
+    "emptyHintScoped": "这里将显示您所管理场所的订单：{{venues}}。其他场所的订单不在此显示。"
   },
   "catalog": {
     "dish": {
