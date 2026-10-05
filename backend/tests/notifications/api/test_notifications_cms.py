@@ -470,3 +470,32 @@ def test_log_shows_event_deliveries_next_to_escalation(
     event = next(row for row in rows if row.get("event_code") == "order.cancelled")
     assert event["order_number"] == created["number"] and event["channel_title"]
     assert any(row["kind"] == "escalation" for row in rows), "эскалация заказа в той же ленте"
+
+
+# --- Пробная отправка почты говорит, куда ушло письмо (партия 31, INV-01 QA) ---
+
+
+@pytest.mark.parametrize(
+    "backend,host,port,expected",
+    [
+        ("django.core.mail.backends.smtp.EmailBackend", "mailpit", 1025, "test_mailbox"),
+        ("django.core.mail.backends.smtp.EmailBackend", "localhost", 1025, "test_mailbox"),
+        ("django.core.mail.backends.console.EmailBackend", "localhost", 25, "test_mailbox"),
+        ("django.core.mail.backends.smtp.EmailBackend", "smtp.yandex.ru", 465, "provider"),
+    ],
+)
+def test_email_sink_is_named_honestly(settings, backend, host, port, expected):
+    from apps.notifications.services.delivery import _email_sink
+
+    settings.EMAIL_BACKEND, settings.EMAIL_HOST, settings.EMAIL_PORT = backend, host, port
+    assert _email_sink() == expected
+
+
+def test_channel_test_send_reports_the_test_mailbox(cms, settings):
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    channel = cms.post(
+        "/api/cms/notification-channels",
+        {"type": "email", "title": "Почта смены", "config": {"to": ["shift@crystal.local"]}},
+    ).json()
+    result = cms.post(f"/api/cms/notification-channels/{channel['id']}/test", {}).json()
+    assert result["ok"] is True and result["delivered_to"] == "test_mailbox"

@@ -46,6 +46,8 @@ export interface ChannelTestResult {
   ok: boolean;
   detail?: string;
   error?: string;
+  /** Почта: `test_mailbox` — поймал тестовый ящик стенда (Mailpit); `provider` — настоящий сервер. */
+  delivered_to?: 'test_mailbox' | 'provider' | null;
 }
 
 export interface EscalationStep {

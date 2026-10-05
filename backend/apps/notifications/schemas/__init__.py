@@ -46,6 +46,9 @@ class ChannelOut(Schema):
 class TestOut(Schema):
     ok: bool
     detail: str
+    # `test_mailbox` — письмо поймал тестовый ящик стенда (Mailpit), адресату
+    # оно не уйдёт; `provider` — настоящий почтовый сервер; не почта — null.
+    delivered_to: str | None = None
 
 
 class StepIn(Schema):

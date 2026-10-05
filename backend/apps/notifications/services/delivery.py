@@ -595,5 +595,25 @@ def send_test_message(channel: NotificationChannel, language: str | None = None)
     try:
         reference = adapter.send(message, personal.config_for(channel))
     except ChannelError as exc:
-        return {"ok": False, "detail": exc.detail}
-    return {"ok": True, "detail": reference}
+        return {"ok": False, "detail": exc.detail, "delivered_to": None}
+    return {"ok": True, "detail": reference, "delivered_to": _email_sink() if channel.type == "email" else None}
+
+
+def _email_sink() -> str:
+    """
+    КУДА НА САМОМ ДЕЛЕ УШЛО ПИСЬМО (партия 31, INV-01 QA).
+
+    На стенде почтовый сервер — Mailpit: письмо принято, но адресату не
+    доставляется, а ловится в тестовый ящик стенда. Пробная отправка отвечала
+    «ок», и QA ждал письмо в настоящей почте. `test_mailbox` — Mailpit или
+    почта в консоль/память; `provider` — настоящий SMTP.
+    """
+    from django.conf import settings
+
+    backend = (settings.EMAIL_BACKEND or "").lower()
+    if "console" in backend or "locmem" in backend or "dummy" in backend or "filebased" in backend:
+        return "test_mailbox"
+    host = (settings.EMAIL_HOST or "").lower()
+    if "mailpit" in host or "mailhog" in host or int(settings.EMAIL_PORT or 0) == 1025:
+        return "test_mailbox"
+    return "provider"

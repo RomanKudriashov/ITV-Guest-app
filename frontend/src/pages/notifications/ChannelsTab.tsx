@@ -120,9 +120,15 @@ export function ChannelsTab({ bootstrap, languages }: ChannelsTabProps) {
       const ok = result?.ok !== false;
       setTestResult({
         ok,
-        message: ok
-          ? result?.detail || t('notifications.channels.testOk')
-          : result?.error || result?.detail || t('notifications.channels.testFailed'),
+        /* Куда письмо ушло на самом деле (партия 31, INV-01 QA): на стенде его
+           ловит тестовый ящик Mailpit, а «ок» читалось как «доставлено». */
+        message: !ok
+          ? result?.error || result?.detail || t('notifications.channels.testFailed')
+          : result?.delivered_to === 'test_mailbox'
+            ? t('notifications.channels.testMailbox', { to: result.detail ?? '' })
+            : result?.delivered_to === 'provider'
+              ? t('notifications.channels.testProvider', { to: result.detail ?? '' })
+              : result?.detail || t('notifications.channels.testOk'),
       });
     },
     onError: (error) =>

@@ -1163,7 +1163,9 @@
       "test": "发送测试",
       "testNeedsSave": "请先保存渠道",
       "testOk": "测试消息已发送",
-      "testFailed": "测试消息发送失败"
+      "testFailed": "测试消息发送失败",
+      "testMailbox": "已发送到测试环境的测试邮箱（Mailpit），而非收件人：{{to}}",
+      "testProvider": "邮件服务器已接收发往 {{to}} 的邮件——是否送达仅以邮箱为准"
     },
     "escalation": {
       "title": "上报规则",

@@ -1173,7 +1173,9 @@
       "test": "Send a test",
       "testNeedsSave": "Save the channel first",
       "testOk": "Test message sent",
-      "testFailed": "Test message did not go through"
+      "testFailed": "Test message did not go through",
+      "testMailbox": "Sent to the stand's test mailbox (Mailpit), not to the recipient: {{to}}",
+      "testProvider": "The mail server accepted the message for {{to}} — only the mailbox itself confirms delivery"
     },
     "escalation": {
       "title": "Hand-up rule",
