@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { DEMO_ROOM, waitForLayout, scrollAndSettle } from './helpers'
+import { DEMO_ROOM, settleNetwork, waitForLayout, scrollAndSettle } from './helpers'
 import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
@@ -257,6 +257,18 @@ for (const vp of VIEWPORTS.filter((v) => v.width < 1024)) {
     for (const route of ROUTES) {
       await page.goto(route)
       await waitForLayout(page)
+      /*
+        ДАННЫЕ ЭКРАНА ПРИЕХАЛИ — ДО ЗАМЕРА (партия 37, п.54). Ожидание ниже
+        ловит «высота перестала меняться», а пока ответ главной в пути, высота
+        тоже стоит: замер шёл по пустой странице (проба: через 0,8 с после
+        маркера главной — ноль плиток, высота в один экран), и плитки
+        въезжали под меню уже после него. Сначала затишье сети, на главной —
+        ещё и сами плитки: без них проверка проходила бы вхолостую.
+      */
+      await settleNetwork(page)
+      if (route === '/home') {
+        await expect(page.locator('[data-testid^="guest-home-tile-"]').first()).toBeVisible({ timeout: 20_000 })
+      }
       // Номер: плашка «подключаемся» (47 px) стоит, пока не открылся сокет, и
       // уход или возврат её после прокрутки двигает низ страницы под меню.
       // Канал — условие замера, а не случай (партия 25; та же гонка, что у
