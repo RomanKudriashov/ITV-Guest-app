@@ -223,10 +223,17 @@ def _live_key(session_id) -> str:
 
 
 def forget(session_ids) -> None:
-    """Сбросить кэш живости — после любого отзыва."""
+    """
+    Сбросить кэш живости — после любого отзыва — и закрыть уже открытые сокеты
+    этих сессий (п.64: иначе доска и чат продолжали жить до обрыва сами).
+    """
+    from apps.realtime.sessions import close_sockets, session_group
+
+    session_ids = list(session_ids)
     keys = [_live_key(pk) for pk in session_ids]
     if keys:
         cache.delete_many(keys)
+    close_sockets([session_group(pk) for pk in session_ids])
 
 
 def is_live(session_id, *, user_id, scope: str) -> bool:

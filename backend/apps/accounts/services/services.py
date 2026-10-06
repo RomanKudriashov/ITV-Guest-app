@@ -328,6 +328,10 @@ def revoke_impersonation(grant_id, *, actor) -> ImpersonationGrant:
             )
         grant.revoked_at = timezone.now()
         grant.revoked_by = actor
+        # Открытые сокеты вкладки поддержки закрываются вместе с грантом (п.64).
+        from apps.realtime.sessions import close_sockets, grant_group
+
+        close_sockets([grant_group(grant.pk)])
         # Журнал отеля пишется В ЕГО КОНТЕКСТЕ: платформенный запрос идёт без
         # тенанта, и RLS справедливо отвергает строку с чужим hotel_id.
         from apps.core.context import tenant_context

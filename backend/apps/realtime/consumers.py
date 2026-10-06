@@ -53,6 +53,24 @@ async def _refuse(consumer, code: int) -> None:
     await consumer.close(code=code)
 
 
+async def _join_session(consumer, user) -> None:
+    """
+    Вступить в группу своей сессии: её отзыв закроет этот сокет (п.64).
+    Вызывать ДО `accept`: отзыв, пришедший между ними, иначе бы потерялся.
+    """
+    from apps.realtime.sessions import group_for_claims
+
+    consumer.session_group = group_for_claims(getattr(user, "token_claims", None))
+    if consumer.session_group:
+        await consumer.channel_layer.group_add(consumer.session_group, consumer.channel_name)
+
+
+async def _leave_session(consumer) -> None:
+    group = getattr(consumer, "session_group", None)
+    if group:
+        await consumer.channel_layer.group_discard(group, consumer.channel_name)
+
+
 def _query_param(scope, name: str) -> str:
     query = parse_qs((scope.get("query_string") or b"").decode())
     values = query.get(name) or []
@@ -202,6 +220,7 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
         # ПОДПИСКА ПЕРВОЙ, СНИМОК ВТОРЫМ — см. `_authorize_tracker`: заявка,
         # пришедшая за время сборки снимка, иначе теряется навсегда.
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await _join_session(self, user)
         await self.accept()
 
         board = await _board_snapshot(hotel, self.point_id, self.language)
@@ -221,6 +240,11 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group_name", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        await _leave_session(self)
+
+    async def session_closed(self, message):
+        """Сессию отозвали — сокет закрывается кодом «не авторизован» (п.64)."""
+        await self.close(code=CLOSE_UNAUTHORIZED)
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
@@ -576,6 +600,7 @@ class StaffChatConsumer(AsyncJsonWebsocketConsumer):
 
         self.group_name = f"chat.{hotel.pk}.{self.thread_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await _join_session(self, user)
         await self.accept()
         await self.send_json({"type": "chat.snapshot", "event": "connected", "thread": snapshot})
 
@@ -583,6 +608,11 @@ class StaffChatConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group_name", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        await _leave_session(self)
+
+    async def session_closed(self, message):
+        """Сессию отозвали — сокет закрывается кодом «не авторизован» (п.64)."""
+        await self.close(code=CLOSE_UNAUTHORIZED)
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
