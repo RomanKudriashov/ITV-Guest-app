@@ -66,6 +66,7 @@ cp .env.prod.example .env.prod
 | Переменная | Что это | Если не задать |
 |---|---|---|
 | `APP_DOMAIN` | базовый домен платформы | отель не найдётся по поддомену, консоль откроется где угодно |
+| `APP_DOMAINS` | несколько баз через запятую, первая — главная (партия 39); перекрывает `APP_DOMAIN` | старый домен после переезда перестанет открываться |
 | `DJANGO_SECRET_KEY` | ключ подписи Django | значение по умолчанию небезопасно |
 | `JWT_SECRET` | ключ токенов персонала и платформы | то же |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | база приложения | контейнер не поднимется |
@@ -202,7 +203,10 @@ ERROR itv.connector конфиг не загружен: не найден клю
 Пока сертификата нет, nginx отвечает по HTTP. Выпуск:
 
 ```bash
-APP_DOMAIN=example.com ./infra/nginx/enable-tls.sh admin@example.com
+./infra/nginx/enable-tls.sh admin@example.com
+# Имена берутся из `manage.py tls_names`: каждая база и каждый действующий
+# отель под каждой базой. Имя без записи DNS на этот сервер скрипт ПРОПУСКАЕТ
+# с предупреждением; появился отель или запись DNS — прогнать скрипт заново.
 docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx
 ```
 

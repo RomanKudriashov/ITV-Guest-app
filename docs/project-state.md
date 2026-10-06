@@ -783,3 +783,30 @@ Docker — без этого бот платформы не видит Telegram.
    не трогает.
 4. Три проверки (`check_demo_stand`, `check_stand_api` — +1 адрес:
    `analytics/drilldown/summary`, смок).
+## Партия 39 — второй домен для всех отелей (06.10.2026)
+
+Базы адресов — списком `APP_DOMAINS` (первая — главная): отели работают по
+`<код>.naviapp.navicentric.ru` И `<код>.app.147.45.245.172.sslip.io`, консоль
+и лендинг — на обоих корнях; QR, письма, бот, приглашения, вход поддержки —
+по главной (`naviapp.navicentric.ru`). Схема — `docs/addressing.md`.
+
+**Нужны записи DNS (на 06.10.2026 есть только `sialia.naviapp.navicentric.ru`):**
+
+    naviapp.navicentric.ru      A  147.45.245.172
+    *.naviapp.navicentric.ru    A  147.45.245.172   (или по отелю: crystal, azure, lumen)
+
+AAAA — не нужна; если заводить, только на IPv6 самого стенда.
+
+**Выкатка партии 39 (по «выкатывай») — ПОСЛЕ записей DNS:** без них главная
+база уводила бы QR и ссылки бота на неразрешимые адреса.
+
+1. Проверить DNS: `dig +short A crystal.naviapp.navicentric.ru` → 147.45.245.172.
+2. `.env.prod` через редактор: `APP_DOMAINS=naviapp.navicentric.ru,app.147.45.245.172.sslip.io`;
+   `python3 infra/check-env.py .env.prod`.
+3. Пересобрать `backend worker beat scheduler bot nginx` (nginx вшивает список баз).
+4. Сертификат: `DRY_RUN=1 ./infra/nginx/enable-tls.sh` → зелёный; затем без
+   `DRY_RUN`; `restart nginx`; `certbot renew --dry-run`. Почта учётки —
+   79263820654@yandex.ru (скрипт обновляет). Имена без DNS пропускаются.
+5. Фактом по обеим базам: консоль, витрина и `/admin` Кристалла и Сиалии,
+   вход, сокет трекера; `curl -v` без `-k` по новым адресам; QR в панели —
+   новый адрес; бот — ссылка на новый адрес. Три проверки.

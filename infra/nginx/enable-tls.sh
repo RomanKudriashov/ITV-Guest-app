@@ -13,6 +13,7 @@
 # просто перекладывается заново.
 #
 #   ./infra/nginx/enable-tls.sh [почта]      # из корня репозитория на стенде
+#   DRY_RUN=1 ./infra/nginx/enable-tls.sh    # проверка на тестовом сервере LE: ничего не меняет
 set -eu
 
 EMAIL="${1:-79263820654@yandex.ru}"
@@ -50,6 +51,15 @@ done
 echo "в сертификат: $TAKEN имён, пропущено: $SKIPPED"
 
 mkdir -p /var/www/certbot "$HERE/live"
+
+if [ -n "${DRY_RUN:-}" ]; then
+    # Холостой выпуск: тестовый сервер LE, сертификат и конфигурация не меняются.
+    # shellcheck disable=SC2086
+    certbot certonly --webroot -w /var/www/certbot --dry-run \
+        --non-interactive --agree-tos --email "$EMAIL" --cert-name stand $ARGS
+    echo "Холостой выпуск прошёл — боевой: без DRY_RUN."
+    exit 0
+fi
 
 # Почта учётной записи — на ней письма об истечении. Прежняя учётка заведена
 # без почты (--register-unsafely-without-email): обновляем, не перерегистрируя.
