@@ -1,7 +1,9 @@
 /**
  * ЗАМЕР ПЕРВОГО ЗАХОДА (партия 35, п.65): сколько качает и как быстро рисует.
  *
- * Не тест — инструмент, как `measure-stage.mjs`. Гоняется по ПРОД-сборке за
+ * Не тест — инструмент, как `measure-stage.mjs`. С `ADMIN_EMAIL`/`ADMIN_PASSWORD`
+ * добавляется сцена ADM-002: вошедший администратор, холодный заход на «Заказы».
+ * Гоняется по ПРОД-сборке за
  * nginx как на стенде (TLS, HTTP/2, gzip, настоящий `app.locations.conf`), не
  * по дев-серверу: дев отдаёт сотни модулей по одному и ничего не говорит о
  * том, что получит телефон. HTTP/2 обязателен: на HTTP/1.1 браузер держит
@@ -36,6 +38,11 @@ const SCENES = [
   { name: 'гость /r/305 → главная', path: '/r/305', marker: '[data-testid="guest-home"]' },
   { name: 'панель /admin → вход', path: '/admin', marker: '[data-testid="login-email"]' },
 ]
+// ADM-002: вошедший администратор, холодный заход на «Заказы» — до первой
+// строки списка. Только если учётка задана окружением (пароль в файл не пишется).
+if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+  SCENES.push({ name: 'панель /admin/orders (вошёл) → строки заказов', path: '/admin/orders', marker: '[data-testid^="orders-row-"]', staff: true })
+}
 const only = process.env.SCENE
 
 function kind(url) {
@@ -51,6 +58,20 @@ function kind(url) {
 
 async function once(browser, scene) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true, locale: 'ru-RU', viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true })
+  if (scene.staff) {
+    // Node не разрешает *.localhost (браузер — да): локально вход идёт прямо в
+    // бэкенд (`LOGIN_API=http://localhost:8010`), отель — заголовком, как у панели.
+    const login = await context.request.post(`${process.env.LOGIN_API ?? BASE}/api/staff/auth/login`, {
+      data: { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD },
+      headers: { 'X-Hotel-Subdomain': new URL(BASE).hostname.split('.')[0] },
+    })
+    if (!login.ok()) throw new Error(`вход администратора: ${login.status()}`)
+    const { access, refresh } = await login.json()
+    await context.addInitScript(([a, r]) => {
+      localStorage.setItem('itv.cms.access', a)
+      localStorage.setItem('itv.cms.refresh', r)
+    }, [access, refresh])
+  }
   const page = await context.newPage()
   await page.addInitScript((marker) => {
     const seen = () => {
