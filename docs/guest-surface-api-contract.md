@@ -28,6 +28,7 @@
       "title": "Панорама",         // локализовано; для venue — название точки
       "subtitle": "Ресторан",      // подпись рода (venue) | null
       "kind": "kitchen",           // род точки (venue) | null
+      "service_type": "restaurant", // тип заведения (venue) — значок без фото, п.68
       "venue_count": null,         // число заведений (только service-category)
       "status": {"state": "open", "until": "23:00", "opens_at": null},
       "image": "https://…/card.webp",   // обложка (каскад) | null → фронт даёт градиент
@@ -78,7 +79,7 @@
   "title": "Рестораны",
   "venues": [
     {"code": "panorama", "title": "Панорама", "subtitle": "Ресторан",
-     "kind": "kitchen", "image": "…", "status": {"state":"open","until":"23:00"},
+     "kind": "kitchen", "service_type": "restaurant", "image": "…", "status": {"state":"open","until":"23:00"},
      "route": "/venue/panorama"}
   ]
 }
@@ -397,3 +398,10 @@ history[], history_total, had_low_review, low_reviews[], reviews_count}`.
 Новые таблицы (`chat_thread`, `chat_message`, `review`) — тенант-скоуп + RLS.
 Гость видит только свой тред и свои отзывы; сотрудник — только своего отеля.
 Сторож `test_rls_coverage` должен остаться зелёным.
+
+### Значок заведения (партия 38, п.68)
+
+Плитка заведения, карточка списка заведений и строка заведения в поиске несут
+`service_type` (тип заведения). Значок: есть обложка — квадрат из неё
+(`object-fit: cover`); нет — иконка по типу на основном цвете бренда. Строке
+поиска (56×56) обложка отдаётся вариантом `thumb`, а не `card`.

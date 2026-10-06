@@ -20,6 +20,20 @@ import { openingLabel } from '../nextOpening';
  * mode, so a light fallback would break contrast. This is the last step of the
  * cover cascade: point photo → category photo → this gradient.
  */
+/** Иконка типа заведения в центре плитки без фото (п.68). */
+export function TileTypeIcon({ serviceType }: { serviceType: string }) {
+  const Icon = fallbackIconFor('product', serviceType);
+  return (
+    <Box
+      data-testid="venue-type-icon"
+      data-service-type={serviceType}
+      sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'common.white', opacity: 0.85 }}
+    >
+      <Icon size={40} />
+    </Box>
+  );
+}
+
 export function tileCoverFallbackSx(theme: Theme) {
   const { tile } = storefrontTokens(theme.palette.mode);
   return {
@@ -136,9 +150,12 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
           ))}
         </Box>
       ) : tile.image ? (
-        <KitImage src={tile.image} alt={tile.title} fill fallbackIcon={fallbackIconFor('product')} />
+        <KitImage src={tile.image} alt={tile.title} fill fallbackIcon={fallbackIconFor('product', tile.service_type)} />
       ) : (
-        <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })} />
+        <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
+          {/* Без фото — иконка по типу заведения на фирменном фоне (п.68). */}
+          {tile.service_type ? <TileTypeIcon serviceType={tile.service_type} /> : null}
+        </Box>
       )}
 
       {/* Bottom-only scrim so the lower-left text reads; the centre stays clear. */}

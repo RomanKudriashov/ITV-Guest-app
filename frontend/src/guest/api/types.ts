@@ -586,6 +586,8 @@ export interface GuestShowcaseTile {
   title: string;
   subtitle: string | null;
   kind: string | null;
+  /** Тип заведения у плитки заведения — для значка без фото (п.68). */
+  service_type?: string | null;
   /** Number of venues collapsed into a `service-category` tile. */
   venue_count: number | null;
   status: GuestVenueStatus | null;
@@ -604,6 +606,8 @@ export interface GuestVenue {
   title: string;
   subtitle: string | null;
   kind: string | null;
+  /** Тип заведения — для значка без фото (п.68). */
+  service_type?: string | null;
   image: string | null;
   status: GuestVenueStatus | null;
   route: string;
@@ -1010,6 +1014,8 @@ export interface GuestSearchRow {
   /** Маршрут витрины: ведёт ПРЯМО в карточку или заведение, не в список. */
   route: string;
   image: string | null;
+  /** У строки заведения — его тип, для значка без фото (п.68). */
+  service_type?: string | null;
   price?: number | null;
 }
 

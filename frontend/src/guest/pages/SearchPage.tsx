@@ -14,6 +14,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
 import { IconClose, IconForward, IconSearch } from '@/icons';
+import { VenueMark } from '@/guest/components/VenueMark';
 import { KitImage } from '@/kit';
 import { guestApi } from '../api/client';
 import { guestKeys } from '../api/queryKeys';
@@ -299,7 +300,13 @@ function ResultRow({
           overflow: 'hidden',
         })}
       >
-        <KitImage src={row.image ?? null} alt="" fill />
+        {row.kind === 'service' ? (
+          <Box data-testid={`guest-search-mark-${row.code}`} sx={{ position: 'absolute', inset: 0 }}>
+            <VenueMark image={row.image} serviceType={row.service_type} />
+          </Box>
+        ) : (
+          <KitImage src={row.image ?? null} alt="" fill />
+        )}
       </Box>
       <Stack sx={{ minWidth: 0, flex: 1 }} spacing={0.25}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/EmptyState';
 import { KitImage, SkeletonCard } from '@/kit';
 import { errorMessage } from '../errors';
-import { tileCoverFallbackSx } from '../components/Bento';
+import { tileCoverFallbackSx, TileTypeIcon } from '../components/Bento';
 import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
@@ -99,9 +99,12 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
     >
       <Box sx={{ position: 'relative', height: { xs: 168, md: 190 } }}>
         {venue.image ? (
-          <KitImage src={venue.image} alt={venue.title} fill fallbackIcon={fallbackIconFor('product')} />
+          <KitImage src={venue.image} alt={venue.title} fill fallbackIcon={fallbackIconFor('product', venue.service_type)} />
         ) : (
-          <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })} />
+          <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
+            {/* Без фото — иконка по типу заведения на фирменном фоне (п.68). */}
+            {venue.service_type ? <TileTypeIcon serviceType={venue.service_type} /> : null}
+          </Box>
         )}
         <Box
           aria-hidden

@@ -233,6 +233,10 @@ def build_showcase(
                     # Род исполнителя (kitchen/bar/spa…) — как и раньше, чтобы
                     # payload витрины не менялся.
                     "kind": service.execution_point.kind,
+                    # Тип заведения — для значка без фото (п.68): иконка по
+                    # типу, а не «блюдо» у СПА и хозслужбы; `kind` точки
+                    # исполнения этого не знает.
+                    "service_type": service.type,
                     "venue_count": None,
                     "status": _service_status(service, moment),
                     "image": _service_image(service),
@@ -304,6 +308,7 @@ def _venue_card(service: Service, language: str | None, moment: datetime | None)
         "title": translate(service.public_title, language) or service.code,
         "subtitle": translate(service.tagline, language) or None,
         "kind": service.execution_point.kind,
+        "service_type": service.type,
         "image": _service_image(service),
         "status": _service_status(service, moment),
         "route": f"/venue/{service.code}",

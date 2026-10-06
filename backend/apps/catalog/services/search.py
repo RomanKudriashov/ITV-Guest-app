@@ -271,7 +271,9 @@ def _is_info(item) -> bool:
 def _service_image(service) -> str | None:
     from apps.media.services import image_url
 
-    return image_url(getattr(service, "image", None), variant="card") or None
+    # Значок 56×56 (п.68): вариант `thumb` (200 px), а не `card` (600 px) —
+    # квадрат вырезается из обложки на клиенте, лишние байты гостю не нужны.
+    return image_url(getattr(service, "image", None), variant="thumb") or None
 
 
 def _item_image(item) -> str | None:
@@ -297,6 +299,8 @@ def _service_row(service, language: str | None) -> dict:
         # Маршрут витрины: тап ведёт В ЗАВЕДЕНИЕ, а не в список заведений.
         "route": f"/venue/{service.code}",
         "image": _service_image(service),
+        # Тип — для значка без фото: иконка по типу заведения (п.68).
+        "service_type": service.type,
     }
 
 
