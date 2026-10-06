@@ -42,33 +42,10 @@ PLATFORM_PATH_PREFIXES = (
 
 
 def resolve_subdomain(host: str) -> str | None:
-    """
-    Отрезает базовый домен и возвращает поддомен отеля.
+    """Код отеля по адресу — правило в `apps.core.hosts` (несколько баз, партия 39)."""
+    from .hosts import resolve_subdomain as _resolve
 
-    Поддерживает и localhost-варианты (crystal.guest.localhost:8000), и
-    голый localhost (тенанта нет → платформенный уровень).
-    """
-    host = (host or "").split(":", 1)[0].lower().strip(".")
-    if not host:
-        return None
-
-    base = settings.GUEST_APP_BASE_DOMAIN.lower().strip(".")
-    if base and host.endswith("." + base):
-        subdomain = host[: -(len(base) + 1)]
-    elif host == base:
-        return None
-    else:
-        # Домен не наш (кастомный домен отеля или прямой IP) — берём первую
-        # метку, если их больше одной. Для «localhost» вернётся None.
-        parts = host.split(".")
-        if len(parts) < 2:
-            return None
-        subdomain = parts[0]
-
-    subdomain = subdomain.split(".")[-1] if subdomain else ""
-    if not subdomain or subdomain in settings.GUEST_APP_RESERVED_SUBDOMAINS:
-        return None
-    return subdomain
+    return _resolve(host)
 
 
 class TenantMiddleware:
@@ -85,7 +62,10 @@ class TenantMiddleware:
             subdomain = request.headers.get("X-Hotel-Subdomain") or request.GET.get(
                 "hotel"
             )
-        subdomain = subdomain or resolve_subdomain(request.get_host())
+        from .hosts import custom_domain_hotel, is_platform_host
+
+        host = request.get_host()
+        subdomain = subdomain or resolve_subdomain(host)
 
         hotel = None
         if subdomain:
@@ -95,6 +75,10 @@ class TenantMiddleware:
                     {"detail": f"Отель '{subdomain}' не найден", "code": "unknown_tenant"},
                     status=404,
                 )
+        else:
+            # Собственный домен отеля — только явной записью; чужой адрес
+            # отеля не даёт (раньше давал первую метку имени).
+            hotel = custom_domain_hotel(host)
 
         # НАША КОНСОЛЬ ЖИВЁТ ТОЛЬКО НА КОРНЕ.
         #
@@ -110,7 +94,9 @@ class TenantMiddleware:
         if request.path.startswith("/api/v1/platform/") or request.path.startswith(
             "/api/platform/"
         ):
-            if resolve_subdomain(request.get_host()):
+            # Консоль — только на базе (любой из баз) и на машине разработчика:
+            # на адресе отеля и на чужом домене её нет.
+            if not is_platform_host(host):
                 # 404, а не 403: на этом адресе консоли НЕ СУЩЕСТВУЕТ. Отказ
                 # означал бы «есть, но нельзя» — и подсказывал бы, что она тут.
                 return JsonResponse(

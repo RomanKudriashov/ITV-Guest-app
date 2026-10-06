@@ -92,7 +92,10 @@ def _resolve_hotel(scope):
     # отель приходит query-параметром. В проде он берётся из Host.
     subdomain = _query_param(scope, "hotel") or resolve_subdomain(_host(scope))
     if not subdomain:
-        return None
+        # Собственный домен отеля — то же правило, что у HTTP (`core.hosts`).
+        from apps.core.hosts import custom_domain_hotel
+
+        return custom_domain_hotel(_host(scope))
     return Hotel.objects.filter(subdomain=subdomain, is_active=True).first()
 
 

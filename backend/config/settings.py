@@ -39,17 +39,20 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "*")
 
-# Единый домен приложения. Одна переменная APP_DOMAIN задаёт и разрешённые
-# хосты (базовый + все тенант-поддомены), и доверенные CSRF-источники. Замена
-# sslip-заглушки на реальный домен потом — правка одного APP_DOMAIN.
-APP_DOMAIN = os.getenv("APP_DOMAIN", "").strip().lstrip(".")
-if APP_DOMAIN:
-    # Ведущая точка — wildcard поддоменов в Django: покрывает и сам домен, и
-    # любой <hotel>.APP_DOMAIN.
-    ALLOWED_HOSTS = env_list(
-        "DJANGO_ALLOWED_HOSTS", f".{APP_DOMAIN},{APP_DOMAIN},localhost,127.0.0.1"
-    )
-    CSRF_TRUSTED_ORIGINS = [f"https://*.{APP_DOMAIN}", f"http://*.{APP_DOMAIN}"]
+# БАЗЫ АДРЕСОВ (партия 39) — `config/domains.py`. `APP_DOMAINS` через
+# запятую, первая — главная (по ней строятся адреса наружу); `APP_DOMAIN` —
+# прежняя переменная, список из одной базы. Из списка ВЫВОДЯТСЯ разрешённые
+# хосты (а через них — проверка источника сокетов в asgi.py) и доверенные
+# источники форм: руками адреса не перечисляются нигде.
+from config.domains import allowed_hosts as _allowed_hosts  # noqa: E402
+from config.domains import csrf_trusted_origins as _csrf_origins  # noqa: E402
+from config.domains import parse_bases  # noqa: E402
+
+APP_DOMAINS = parse_bases(os.getenv("APP_DOMAINS") or os.getenv("APP_DOMAIN", ""))
+APP_DOMAIN = APP_DOMAINS[0] if APP_DOMAINS else ""
+if APP_DOMAINS:
+    ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ",".join(_allowed_hosts(APP_DOMAINS)))
+    CSRF_TRUSTED_ORIGINS = _csrf_origins(APP_DOMAINS)
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
@@ -150,7 +153,11 @@ DATABASE_ROUTERS = ["apps.core.routers.PlatformAliasRouter"]
 # Базовый домен, от которого отрезается поддомен отеля:
 #   crystal.guest.localhost -> subdomain "crystal"
 # По умолчанию берётся из единого APP_DOMAIN (если задан), иначе — dev-значение.
-GUEST_APP_BASE_DOMAIN = os.getenv("GUEST_APP_BASE_DOMAIN") or APP_DOMAIN or "guest.localhost"
+# Все базы, под которыми ищется отель; первая — главная. Без APP_DOMAINS —
+# прежняя одна база (GUEST_APP_BASE_DOMAIN) или dev-значение.
+GUEST_APP_BASE_DOMAINS = APP_DOMAINS or parse_bases(os.getenv("GUEST_APP_BASE_DOMAINS") or os.getenv("GUEST_APP_BASE_DOMAIN") or "guest.localhost")
+# Главная база — по ней строятся адреса наружу (QR, письма, бот).
+GUEST_APP_BASE_DOMAIN = GUEST_APP_BASE_DOMAINS[0]
 
 # Поддомены платформенного уровня — тенантом не считаются.
 GUEST_APP_RESERVED_SUBDOMAINS = set(
