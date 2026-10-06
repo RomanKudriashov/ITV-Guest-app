@@ -57,6 +57,22 @@ logging.getLogger("urllib3.connectionpool").addFilter(RedactTokens())
 # Режем с запасом на теги заголовка и строку статуса, которую допишет действие.
 TEXT_LIMIT = 3800
 
+# Подключение к Telegram: сколько ждать и сколько раз сразу повторить (п.66).
+CONNECT_TIMEOUT = 5
+CONNECT_RETRIES = 2
+
+
+def _not_connected(exc) -> bool:
+    """Запрос не ушёл: подключение не установилось (таймаут или отказ сокета)."""
+    import requests
+
+    if isinstance(exc, requests.ConnectTimeout):
+        return True
+    if isinstance(exc, requests.ConnectionError) and not isinstance(exc, requests.ReadTimeout):
+        text = repr(exc)
+        return "NewConnectionError" in text or "Failed to establish" in text or "ConnectTimeout" in text
+    return False
+
 
 def token_tail(token: str) -> str:
     token = (token or "").strip()
@@ -112,16 +128,36 @@ class TelegramBot:
     # --- Запрос ---------------------------------------------------------------
 
     def _call(self, method: str, payload: dict, *, timeout: float = 10):
+        """
+        ПОДКЛЮЧЕНИЕ — КОРОТКО И С ПОВТОРОМ, ЧТЕНИЕ — КАК БЫЛО (п.66).
+
+        Один таймаут на всё означал, что потерянное подключение ждало столько
+        же, сколько длинный опрос, — 35 с, — и после отказа служба уходила в
+        паузу 5 → 10 → 20 … с. Маршрут до Telegram со стенда теряет около 5
+        подключений из 30 (только IPv6, п.67): каждая такая потеря стоила
+        минуты без ответов. Теперь подключение ждёт CONNECT_TIMEOUT и при
+        неудаче сразу пробует ещё CONNECT_RETRIES раз; пауза — только если не
+        помогли и повторы.
+
+        Повторяется ТОЛЬКО неустановленное подключение: запрос до Telegram не
+        дошёл, повтор ничего не задвоит. Обрыв посреди ответа не повторяем —
+        сообщение могло уже уйти.
+        """
         import requests
 
         if not self._token:
             raise MessengerError("Бот не подключён: токен не задан", retryable=False, unauthorized=True)
         url = f"{self._api}/bot{self._token}/{method}"
-        try:
-            response = requests.post(url, json=payload, timeout=timeout)
-        except requests.RequestException as exc:
-            # str(exc) содержит адрес — а в адресе токен.
-            raise MessengerError(f"Telegram недоступен: {self.redact(exc)}") from None
+        for attempt in range(CONNECT_RETRIES + 1):
+            try:
+                response = requests.post(url, json=payload, timeout=(CONNECT_TIMEOUT, timeout))
+                break
+            except requests.RequestException as exc:
+                if _not_connected(exc) and attempt < CONNECT_RETRIES:
+                    logger.info("Telegram: подключение не установилось (%s), повтор %s", method, attempt + 1)
+                    continue
+                # str(exc) содержит адрес — а в адресе токен.
+                raise MessengerError(f"Telegram недоступен: {self.redact(exc)}") from None
 
         try:
             data = response.json()
