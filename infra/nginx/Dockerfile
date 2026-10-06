@@ -12,6 +12,9 @@ COPY frontend/ ./
 # что задаёт домен бэкенду: две переменные разъехались бы молча.
 ARG APP_DOMAIN=""
 ENV VITE_APP_DOMAIN=$APP_DOMAIN
+# Несколько баз через запятую, первая — главная (партия 39); перекрывает APP_DOMAIN.
+ARG APP_DOMAINS=""
+ENV VITE_APP_DOMAINS=$APP_DOMAINS
 # Прод-сборка Vite: типы + бандл в /app/dist.
 #
 # `build:image`, а не `build`: полная цель гоняет ещё и сторожа кодов событий,

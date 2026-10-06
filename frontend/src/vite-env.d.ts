@@ -11,6 +11,8 @@ interface ImportMetaEnv {
    * Пусто — режим одного хоста, см. `src/app/hostRole.ts`.
    */
   readonly VITE_APP_DOMAIN?: string;
+  /** Базы через запятую, первая — главная (партия 39). Перекрывает VITE_APP_DOMAIN. */
+  readonly VITE_APP_DOMAINS?: string;
 }
 
 interface ImportMeta {

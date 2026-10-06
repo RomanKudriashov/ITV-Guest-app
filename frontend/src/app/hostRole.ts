@@ -49,13 +49,20 @@ function isDeveloperHost(host: string): boolean {
  * `guest.localhost` — это базовый домен разработки, а не «localhost», и
  * `crystal.guest.localhost` кончается на `.localhost`, но это отель.
  */
-export function hostRole(hostname: string, baseDomain: string): HostRole {
+export function hostRole(hostname: string, baseDomains: string | readonly string[]): HostRole {
   const host = (hostname || '').toLowerCase().replace(/\.$/, '').split(':')[0];
-  const base = (baseDomain || '').toLowerCase().replace(/^\.|\.$/g, '');
+  const bases = (typeof baseDomains === 'string' ? [baseDomains] : baseDomains)
+    .map((base) => (base || '').toLowerCase().replace(/^\.|\.$/g, ''))
+    .filter(Boolean);
 
-  if (!base) return 'single';
-  if (host === base || host === `www.${base}`) return 'platform';
-  if (host.endsWith(`.${base}`)) return 'hotel';
+  if (!bases.length) return 'single';
+  // НЕСКОЛЬКО БАЗ (партия 39): адрес сверяется с каждой. С одной базой старый
+  // корень после переезда читался бы как «чужой домен», то есть как отель, —
+  // и на месте консоли открылась бы витрина несуществующего отеля.
+  for (const base of bases) {
+    if (host === base || host === `www.${base}`) return 'platform';
+    if (host.endsWith(`.${base}`)) return 'hotel';
+  }
   if (isDeveloperHost(host)) return 'single';
   // Чужой домен при заданном базовом — это кастомный домен отеля: поле
   // `Hotel.custom_domain` существует, и такой адрес обязан вести к отелю, а не
@@ -63,12 +70,26 @@ export function hostRole(hostname: string, baseDomain: string): HostRole {
   return 'hotel';
 }
 
-/** Базовый домен, как его знает сборка. Пусто — режим одного хоста. */
-export const APP_DOMAIN: string = (import.meta.env.VITE_APP_DOMAIN as string | undefined) ?? '';
+/**
+ * Базы адресов, как их знает сборка (партия 39): `VITE_APP_DOMAINS` через
+ * запятую — тот же список, что `APP_DOMAINS` бэкенда; первая — главная.
+ * Прежняя `VITE_APP_DOMAIN` — одна база. Пусто — режим одного хоста.
+ */
+export const APP_DOMAINS: readonly string[] = (
+  (import.meta.env.VITE_APP_DOMAINS as string | undefined) ||
+  (import.meta.env.VITE_APP_DOMAIN as string | undefined) ||
+  ''
+)
+  .split(',')
+  .map((base) => base.trim().toLowerCase().replace(/^\.|\.$/g, ''))
+  .filter(Boolean);
+
+/** Главная база — по ней подсказываем адрес отеля. */
+export const APP_DOMAIN: string = APP_DOMAINS[0] ?? '';
 
 export const HOST_ROLE: HostRole = hostRole(
   typeof window === 'undefined' ? '' : window.location.hostname,
-  APP_DOMAIN,
+  APP_DOMAINS,
 );
 
 /**
