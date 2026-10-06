@@ -653,10 +653,15 @@ def reviews(hotel: Hotel, user, params: dict) -> dict:
     scope = scope_for(user)
     period = resolve_period(params, hotel)
     qs = _review_qs(scope, params, period)
-    totals = qs.aggregate(reviews=Sum("reviews_count"), rating=Sum("rating_sum"), low=Sum("low_count"))
+    # ИТОГ — ОТЗЫВ ОДИН РАЗ (п.36). Без фильтра по заведению итог и динамика
+    # идут по основным строкам: строки частей повторяют тот же отзыв для
+    # кухни и бара. С фильтром — по всем строкам заведения: у кухни отзыв о
+    # заказе «кухня + бар» есть, как в разделе «Отзывы».
+    counted = qs if params.get("point_id") else qs.filter(part=False)
+    totals = counted.aggregate(reviews=Sum("reviews_count"), rating=Sum("rating_sum"), low=Sum("low_count"))
     reviews_n = totals["reviews"] or 0
 
-    by_day = qs.values("business_date").annotate(
+    by_day = counted.values("business_date").annotate(
         reviews=Sum("reviews_count"), rating=Sum("rating_sum"), low=Sum("low_count")
     ).order_by("business_date")
     trend = [{"bucket": row["business_date"].isoformat(),

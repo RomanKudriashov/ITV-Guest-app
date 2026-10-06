@@ -140,6 +140,12 @@ class ReviewDaily(TenantModel):
     business_date = models.DateField(db_index=True)
     point_key = models.CharField(max_length=64, blank=True)
     offering_type = models.CharField(max_length=32, blank=True)
+    # СТРОКА ЧАСТИ ЗАКАЗА (п.36). Отзыв о заказе из нескольких заведений
+    # раздел «Отзывы» показывает у каждой части; аналитика клала его только на
+    # точку заказа. Теперь отзыв — основная строка (точка заказа, part=False)
+    # и по строке на каждую часть (part=True): разрез по заведениям берёт все,
+    # итог отеля — только основные, чтобы отзыв считался один раз.
+    part = models.BooleanField(default=False)
 
     reviews_count = models.IntegerField(default=0)
     rating_sum = models.IntegerField(default=0)
@@ -149,7 +155,7 @@ class ReviewDaily(TenantModel):
         db_table = "analytics_review_daily"
         constraints = [
             models.UniqueConstraint(
-                fields=["hotel", "business_date", "point_key", "offering_type"],
-                name="uniq_review_daily",
+                fields=["hotel", "business_date", "point_key", "offering_type", "part"],
+                name="uniq_review_daily_part",
             )
         ]

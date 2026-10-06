@@ -181,6 +181,7 @@ def apply_event(raw: AnalyticsEvent) -> None:
                 "business_date": bd,
                 "point_key": d.get("point_key", ""),
                 "offering_type": d.get("offering_type", ""),
+                "part": bool(d.get("part", False)),
             },
             {
                 "reviews_count": 1,
@@ -484,10 +485,20 @@ def build_session(session, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
 
 
 def build_review(review, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
+    """
+    Отзыв — основная строка на точку заказа и по строке на каждую часть (п.36).
+
+    Раздел «Отзывы» видит отзыв о заказе из двух заведений у каждой части
+    (`reviews._touches_points`); аналитика клала его только на точку заказа —
+    у кухни и бара такого отзыва не было. Строки частей помечены `part`:
+    итог отеля их не считает, разрез по заведениям — считает.
+    """
     order = review.order
     # Снимок порога на отзыве — тот же ответ, что в разделе «Отзывы».
     low = 1 if review.is_low else 0
-    return [
+    measures = {"rating": review.rating, "low": low}
+    offering = dim.offering_type_for_order(order) if order else ""
+    events = [
         {
             "dedupe_key": f"review:{review.pk}",
             "bus_event_id": bus_event_id,
@@ -499,8 +510,21 @@ def build_review(review, hotel: Hotel, *, bus_event_id=None) -> list[dict]:
             "subject_id": review.pk,
             "dimensions": {
                 "point_key": str(order.execution_point_id) if (order and order.execution_point_id) else "",
-                "offering_type": dim.offering_type_for_order(order) if order else "",
+                "offering_type": offering,
+                "part": False,
             },
-            "measures": {"rating": review.rating, "low": low},
+            "measures": measures,
         }
     ]
+    if order is not None:
+        own_point = str(order.execution_point_id or "")
+        part_points = sorted(
+            {str(pk) for pk in order.children.values_list("execution_point_id", flat=True) if pk} - {own_point}
+        )
+        for point in part_points:
+            events.append({
+                **events[0],
+                "dedupe_key": f"review:{review.pk}:part:{point}",
+                "dimensions": {"point_key": point, "offering_type": offering, "part": True},
+            })
+    return events

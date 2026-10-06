@@ -84,3 +84,58 @@ def test_recompute_counts_parent_once(crystal):
         # Позиция стейка атрибутирована кухне (исполнителю), не агрегатору.
         steak_daily = ItemDaily.objects.filter(item_key=str(ctx["steak"].pk)).first()
         assert steak_daily is not None and steak_daily.point_key == str(ctx["kitchen_ep"].pk)
+
+
+# --- Отзыв о заказе из нескольких заведений — как в разделе «Отзывы» (п.36) --
+
+
+def _review_on(order, ctx, rating=2):
+    from apps.reviews.models import Review
+
+    return Review.objects.create(order=order, guest_session=ctx["session"], rating=rating, low_threshold=3)
+
+
+def test_a_review_of_a_two_venue_order_reaches_each_venue_and_counts_once(crystal):
+    """
+    Раздел «Отзывы» показывает отзыв о заказе «кухня + бар» у обеих частей;
+    аналитика клала его только на рум-сервис. Теперь — у каждой части, а итог
+    отеля считает его один раз.
+    """
+    from apps.analytics.models import ReviewDaily
+    from apps.analytics.services import queries
+    from apps.accounts.models import User
+
+    with tenant_context(crystal):
+        ctx = _setup()
+        parent = _place(ctx)
+        review = _review_on(parent, ctx)
+        collector.write_raw(crystal.pk, collector.build_review(review, crystal))
+        recompute_aggregates(crystal.pk)
+
+        points = {row.point_key: row.part for row in ReviewDaily.objects.all()}
+        assert points == {str(ctx["rs_ep"].pk): False, str(ctx["kitchen_ep"].pk): True, str(ctx["bar_ep"].pk): True}
+
+        admin = User.objects.create_user(
+            email="admin36@crystal.local", password="x", hotel=crystal, is_hotel_admin=True, is_staff_member=True
+        )
+        whole = queries.reviews(crystal, admin, {"preset": "month"})
+        assert whole["totals"]["reviews"] == 1, "по отелю отзыв один"
+        by_point = {row["key"]: row["reviews"] for row in whole["by_point"]}
+        assert by_point[str(ctx["kitchen_ep"].pk)] == 1 and by_point[str(ctx["bar_ep"].pk)] == 1
+
+        kitchen = queries.reviews(crystal, admin, {"preset": "month", "point_id": str(ctx["kitchen_ep"].pk)})
+        assert kitchen["totals"]["reviews"] == 1 and kitchen["totals"]["low"] == 1, "у кухни отзыв есть"
+
+
+def test_recompute_from_orders_puts_old_reviews_on_their_parts(crystal):
+    """Команда пересчёта истории раскладывает уже оставленные отзывы по частям."""
+    from apps.analytics.models import ReviewDaily
+
+    with tenant_context(crystal):
+        ctx = _setup()
+        parent = _place(ctx)
+        _review_on(parent, ctx, rating=5)
+        rebuild_raw_from_orders(crystal.pk)
+        recompute_aggregates(crystal.pk)
+        parts = set(ReviewDaily.objects.filter(part=True).values_list("point_key", flat=True))
+    assert parts == {str(ctx["kitchen_ep"].pk), str(ctx["bar_ep"].pk)}

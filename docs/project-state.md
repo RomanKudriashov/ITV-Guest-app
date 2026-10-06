@@ -759,3 +759,27 @@ Docker — без этого бот платформы не видит Telegram.
 
 Открытые до выкатки вкладки на первом переходе в незагруженную часть
 перезапустятся один раз сами (`frontend/src/app/lazyPart.tsx`) — это ожидаемо.
+
+## Партия 38 — решения по бэклогу (06.10.2026)
+
+Пункты 68 (значок заведения у гостя), 18 (лента аналитики страницами),
+36 (отзыв о заказе из нескольких заведений), 37 (удалённое заведение уходит
+с пульта). Подробности — `docs/ops/stand-defects.md`.
+
+**Выкатка партии 38 — сверх обычной (по «выкатывай»):**
+
+1. Пересобрать `backend worker beat scheduler bot nginx`.
+2. Миграция `analytics 0007` (поле `part` у отзывов аналитики):
+   `migrate --database=platform` — обычная роль не владелец таблицы.
+3. **Пересчёт истории по каждому отелю** — п.36: старые отзывы о заказах из
+   нескольких заведений раскладываются по частям, у кухни и бара появятся
+   их отзывы; итог отеля не меняется (отзыв по-прежнему один):
+
+       for h in $(dc exec -T backend python manage.py shell -c "from apps.hotels.models import Hotel; print(' '.join(Hotel.objects.values_list('subdomain', flat=True)))" | tail -1); do
+         dc exec -T backend python manage.py recompute_analytics --hotel "$h" --from-orders
+       done
+
+   Команда пересобирает журнал аналитики из живых заказов; заказы и отзывы
+   не трогает.
+4. Три проверки (`check_demo_stand`, `check_stand_api` — +1 адрес:
+   `analytics/drilldown/summary`, смок).
