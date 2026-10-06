@@ -33,6 +33,7 @@ CUTS = [
     "traffic",
     "reviews",
     "drilldown",
+    "drilldown/summary",
 ]
 
 

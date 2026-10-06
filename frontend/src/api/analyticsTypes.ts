@@ -158,9 +158,18 @@ export interface DrilldownOrder {
   rating: number | null;
 }
 
+/** Страница ленты среза — по 100, сортировка на сервере (п.18). */
 export interface DrilldownResponse {
   orders: DrilldownOrder[];
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+/** Итоги среза — число заказов и сумма — отдельной ручкой (п.18). */
+export interface DrilldownSummary {
   total: number;
+  total_minor: number;
 }
 
 /*

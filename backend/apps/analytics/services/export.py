@@ -26,6 +26,9 @@ from apps.analytics.models import AnalyticsExport
 
 # --- Набор данных ----------------------------------------------------------
 
+# Потолок выгрузки ленты: годовая история не должна вешать задачу экспорта.
+EXPORT_DRILLDOWN_LIMIT = 50_000
+
 
 def build_dataset(hotel: Hotel, user, kind: str, params: dict) -> tuple[list[str], list[list]]:
     if kind == "breakdown":
@@ -36,10 +39,21 @@ def build_dataset(hotel: Hotel, user, kind: str, params: dict) -> tuple[list[str
         return headers, rows
 
     if kind == "drilldown":
-        data = queries.drilldown(hotel, user, params)
+        # ВЕСЬ СРЕЗ, А НЕ ПЕРВАЯ СТРАНИЦА (партия 37/38). Выгрузка брала то же,
+        # что панель, — а панель с п.18 листает по 100; до того лента резалась
+        # на 200, и выгрузка молча теряла остальное. Теперь — все страницы,
+        # но не больше EXPORT_DRILLDOWN_LIMIT строк.
+        orders: list[dict] = []
+        page = 1
+        while True:
+            data = queries.drilldown(hotel, user, {**params, "page": page})
+            orders.extend(data["orders"])
+            if not data["has_more"] or len(orders) >= EXPORT_DRILLDOWN_LIMIT:
+                break
+            page += 1
         headers = ["number", "point", "status", "total_minor", "room", "rating", "created_at"]
         rows = [[o["number"], o["point"], o["status"], o["total_minor"], o["room"],
-                 o["rating"], o["created_at"]] for o in data["orders"]]
+                 o["rating"], o["created_at"]] for o in orders[:EXPORT_DRILLDOWN_LIMIT]]
         return headers, rows
 
     if kind == "operations":

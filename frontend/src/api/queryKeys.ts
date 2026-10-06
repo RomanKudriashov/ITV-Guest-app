@@ -35,6 +35,7 @@ export const queryKeys = {
   analyticsTraffic: (slice: string) => ['cms', 'analytics', 'traffic', slice] as const,
   analyticsReviews: (slice: string) => ['cms', 'analytics', 'reviews', slice] as const,
   analyticsDrilldown: (slice: string) => ['cms', 'analytics', 'drilldown', slice] as const,
+  analyticsDrilldownSummary: (slice: string) => ['cms', 'analytics', 'drilldown-summary', slice] as const,
   analyticsExport: (id: string) => ['cms', 'analytics', 'export', id] as const,
   /* ── Commerce & marketing ───────────────────────────────────────────── */
   commerceSettings: ['cms', 'commerce-settings'] as const,

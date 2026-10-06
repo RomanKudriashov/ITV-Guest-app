@@ -5,6 +5,7 @@ import type {
   AnalyticsScope,
   BreakdownResponse,
   DrilldownResponse,
+  DrilldownSummary,
   ExportFormat,
   ExportJob,
   OperationsResponse,
@@ -47,8 +48,12 @@ export function fetchReviews(params: AnalyticsQuery): Promise<ReviewsResponse> {
   return api.get<ReviewsResponse>(`${BASE}/reviews`, { query: toQuery(params) });
 }
 
-export function fetchDrilldown(params: AnalyticsQuery): Promise<DrilldownResponse> {
-  return api.get<DrilldownResponse>(`${BASE}/drilldown`, { query: toQuery(params) });
+export function fetchDrilldown(params: AnalyticsQuery, page = 1): Promise<DrilldownResponse> {
+  return api.get<DrilldownResponse>(`${BASE}/drilldown`, { query: { ...toQuery(params), page } });
+}
+
+export function fetchDrilldownSummary(params: AnalyticsQuery): Promise<DrilldownSummary> {
+  return api.get<DrilldownSummary>(`${BASE}/drilldown/summary`, { query: toQuery(params) });
 }
 
 /** Permission scope — the front-end reads this instead of guessing. */

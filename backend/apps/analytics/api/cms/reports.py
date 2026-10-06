@@ -69,9 +69,14 @@ def analytics_reviews(request: HttpRequest):
     return queries.reviews(_hotel(), request.user, _params(request))
 
 
-@router.get("/analytics/drilldown", summary="Список конкретных заявок среза")
+@router.get("/analytics/drilldown", summary="Заявки среза — страница из 100")
 def analytics_drilldown(request: HttpRequest):
     return queries.drilldown(_hotel(), request.user, _params(request))
+
+
+@router.get("/analytics/drilldown/summary", summary="Итоги среза: число заказов и сумма")
+def analytics_drilldown_summary(request: HttpRequest):
+    return queries.drilldown_summary(_hotel(), request.user, _params(request))
 
 
 # --- Экспорт ---------------------------------------------------------------

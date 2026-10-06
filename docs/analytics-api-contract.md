@@ -98,7 +98,8 @@
 | GET | `/analytics/operations` | реакция/выполнение/отмены/эскалации/загрузка |
 | GET | `/analytics/traffic` | сессии/источник/устройство/язык/конверсия |
 | GET | `/analytics/reviews` | `totals{reviews, avg_rating, low, low_rate}`, `trend[]{bucket, reviews, avg_rating, low}`, `by_point[]{key, label, reviews, avg_rating, low, share}` |
-| GET | `/analytics/drilldown` | список конкретных заявок под срезом |
+| GET | `/analytics/drilldown` | конкретные заявки под срезом — страница из 100 |
+| GET | `/analytics/drilldown/summary` | итоги среза: число заказов и сумма |
 | POST | `/analytics/export` | поставить экспорт среза (Celery) → `{id}` |
 | GET | `/analytics/export/{id}` | статус; когда `ready` — ссылка на файл |
 | GET | `/analytics/scope` | что доступно пользователю (точки, отели) |
@@ -185,10 +186,18 @@
 ```
 
 ```jsonc
-// GET /analytics/drilldown?type=slot&status=cancelled&date_from&date_to
-{"orders": [{"id","number","type","point","status","total_minor","created_at",
-             "room","rating"}], "total": 12}
+// GET /analytics/drilldown?type=slot&status=cancelled&date_from&date_to&sort=total_minor&order=desc&page=2
+// Страница — 100 строк; сортировка на сервере: number | point | status |
+// total_minor | created_at (по умолчанию) | rating (п.18, партия 38).
+{"orders": [{"id","number","point","status","status_title","total_minor",
+             "created_at","room","rating"}], "page": 2, "page_size": 100, "has_more": true}
+
+// GET /analytics/drilldown/summary?type=slot&status=cancelled&date_from&date_to
+// Итоги среза отдельной ручкой: не пересчитываются на каждой странице.
+{"total": 312, "total_minor": 4520000}
 ```
+
+Экспорт ленты (`kind=drilldown`) берёт все страницы, не больше 50 000 строк.
 
 ## Права (существующая модель)
 

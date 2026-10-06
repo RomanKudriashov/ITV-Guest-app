@@ -13,6 +13,9 @@
   "/api/v1/cms/analytics/drilldown": [
     "GET"
   ],
+  "/api/v1/cms/analytics/drilldown/summary": [
+    "GET"
+  ],
   "/api/v1/cms/analytics/export": [
     "POST"
   ],

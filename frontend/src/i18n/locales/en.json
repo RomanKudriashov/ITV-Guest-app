@@ -1918,7 +1918,8 @@
         "room": "Room",
         "rating": "Rating"
       },
-      "toOrders": "Show these orders"
+      "toOrders": "Show these orders",
+      "more": "Show more"
     },
     "empty": {
       "breakdown": "No data for this slice",

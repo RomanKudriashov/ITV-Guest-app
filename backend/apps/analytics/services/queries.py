@@ -693,18 +693,31 @@ def reviews(hotel: Hotel, user, params: dict) -> dict:
 # --- Drill-down (живые заявки) ---------------------------------------------
 
 
-def drilldown(hotel: Hotel, user, params: dict, *, limit: int = 200) -> dict:
+# СТРАНИЦЫ ПО 100, ИТОГИ ОТДЕЛЬНО (п.18, решение 06.10.2026). Лента отдавала
+# весь срез одним ответом (за 90 дней на стенде — 1,1 с и 64 КБ, растёт
+# линейно с историей) и считала итог тем же запросом. Теперь страница — 100
+# строк с СЕРВЕРНОЙ сортировкой по колонке панели (сортировка одной страницы
+# на клиенте врала бы), а число и сумма среза — своей ручкой: их не нужно
+# пересчитывать на каждой следующей странице.
+DRILLDOWN_PAGE = 100
+DRILLDOWN_SORTS = {
+    "number": "number",
+    "point": "execution_point__code",
+    "status": "status__code",
+    "total_minor": "total",
+    "created_at": "created_at",
+    "rating": "review__rating",
+}
+
+
+def _drilldown_queryset(hotel: Hotel, user, params: dict):
     scope = scope_for(user)
     period = resolve_period(params, hotel)
     from apps.orders.models import Order
 
     # children (исполнение фанного заказа) в ленту не идут — единица гостевого
     # заказа это parent-агрегат (несёт деньги); иначе двойной счёт и дубли строк.
-    qs = (
-        Order.objects.filter(parent__isnull=True)
-        .select_related("status", "execution_point", "room", "review")
-        .order_by("-created_at")
-    )
+    qs = Order.objects.filter(parent__isnull=True)
 
     # Диапазон дат — в сутках отеля: границы дня переводим в аварные моменты.
     qs = qs.filter(
@@ -728,10 +741,31 @@ def drilldown(hotel: Hotel, user, params: dict, *, limit: int = 200) -> dict:
         qs = qs.filter(items__item_id=params["item_id"]).distinct()
     if params.get("type"):
         qs = qs.filter(items__item__category__type=params["type"]).distinct()
+    return qs
 
-    total = qs.count()
+
+def drilldown(hotel: Hotel, user, params: dict) -> dict:
+    """Страница ленты среза: 100 строк, сортировка — по колонке панели."""
+    from django.db.models import F
+
+    field = DRILLDOWN_SORTS.get(params.get("sort") or "", "created_at")
+    descending = (params.get("order") or "desc") != "asc"
+    ordering = F(field).desc(nulls_last=True) if descending else F(field).asc(nulls_last=True)
+    try:
+        page = max(1, int(params.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+
+    qs = (
+        _drilldown_queryset(hotel, user, params)
+        .select_related("status", "execution_point", "room", "review")
+        .order_by(ordering, "-pk")
+    )
+    start = (page - 1) * DRILLDOWN_PAGE
+    rows = list(qs[start : start + DRILLDOWN_PAGE + 1])
+    has_more = len(rows) > DRILLDOWN_PAGE
     orders = []
-    for order in qs[:limit]:
+    for order in rows[:DRILLDOWN_PAGE]:
         review = getattr(order, "review", None)
         orders.append({
             "id": str(order.pk),
@@ -744,7 +778,20 @@ def drilldown(hotel: Hotel, user, params: dict, *, limit: int = 200) -> dict:
             "room": order.room.number if order.room_id else "",
             "rating": review.rating if review else None,
         })
-    return {"orders": orders, "total": total}
+    return {"orders": orders, "page": page, "page_size": DRILLDOWN_PAGE, "has_more": has_more}
+
+
+def drilldown_summary(hotel: Hotel, user, params: dict) -> dict:
+    """Итоги среза — число заказов и их сумма — без самих строк."""
+    from django.db.models import Count, Sum
+    from apps.orders.models import Order
+
+    # Сумма — по ключам среза, а не по самому срезу: фильтр по позиции
+    # соединяет строки заказа, и заказ с двумя такими позициями посчитался бы
+    # дважды.
+    keys = _drilldown_queryset(hotel, user, params).values("pk")
+    totals = Order.objects.filter(pk__in=keys).aggregate(orders_count=Count("pk"), money=Sum("total"))
+    return {"total": totals["orders_count"] or 0, "total_minor": totals["money"] or 0}
 
 
 def _aware(day: date, hotel: Hotel, *, end: bool):

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -19,7 +19,7 @@ import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
 
-import { fetchDrilldown } from '@/api/analytics';
+import { fetchDrilldown, fetchDrilldownSummary } from '@/api/analytics';
 import type { AnalyticsQuery, SortOrder } from '@/api/analyticsTypes';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
@@ -96,9 +96,21 @@ export function DrilldownPanel({
   const [order, setOrder] = useState<SortOrder>('desc');
 
   const query = { ...params, sort, order };
-  const drilldown = useQuery({
+  /*
+    СТРАНИЦЫ ПО 100, ИТОГ ОТДЕЛЬНО (п.18). Лента отдавала весь срез одним
+    ответом и считала итог тем же запросом; теперь сервер листает и
+    сортирует сам (сортировка одной страницы на клиенте врала бы), а число
+    заказов приходит своей ручкой — его не пересчитывают на каждой странице.
+  */
+  const drilldown = useInfiniteQuery({
     queryKey: queryKeys.analyticsDrilldown(`${sliceKey}|${sort}|${order}`),
-    queryFn: () => fetchDrilldown(query),
+    queryFn: ({ pageParam }) => fetchDrilldown(query, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.has_more ? last.page + 1 : undefined),
+  });
+  const summary = useQuery({
+    queryKey: queryKeys.analyticsDrilldownSummary(sliceKey),
+    queryFn: () => fetchDrilldownSummary(params),
   });
 
   const onSort = (column: ColumnId) => {
@@ -114,7 +126,7 @@ export function DrilldownPanel({
     timeStyle: 'short',
   });
 
-  const orders = drilldown.data?.orders ?? [];
+  const orders = drilldown.data?.pages.flatMap((page) => page.orders) ?? [];
 
   return (
     <Card variant="outlined" sx={{ borderColor: 'divider' }} data-testid="analytics-drilldown">
@@ -123,7 +135,7 @@ export function DrilldownPanel({
           <Stack>
             <Typography variant="subtitle1">{t('analytics.drilldown.title')}</Typography>
             <Typography variant="caption" color="text.secondary">
-              {t('analytics.drilldown.count', { count: drilldown.data?.total ?? orders.length })}
+              {t('analytics.drilldown.count', { count: summary.data?.total ?? orders.length })}
             </Typography>
           </Stack>
           <Stack direction="row" spacing={1} alignItems="center">
@@ -220,6 +232,18 @@ export function DrilldownPanel({
                 ))}
               </TableBody>
             </Table>
+            {drilldown.hasNextPage ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+                <Button
+                  size="small"
+                  onClick={() => void drilldown.fetchNextPage()}
+                  disabled={drilldown.isFetchingNextPage}
+                  data-testid="analytics-drilldown-more"
+                >
+                  {t('analytics.drilldown.more')}
+                </Button>
+              </Box>
+            ) : null}
           </Box>
         )}
       </CardContent>

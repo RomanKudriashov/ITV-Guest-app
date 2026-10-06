@@ -867,3 +867,62 @@ def test_average_check_counts_only_priced_orders_that_were_not_cancelled(crystal
     current = body["current"]
     assert current["orders"] == 3
     assert current["avg_check_minor"] == 1000, "по прежней формуле было бы 4000 / 3"
+
+
+# --- Лента среза: страницами, итоги отдельно (п.18) -------------------------
+
+
+def _orders(count: int, quantity_of=lambda i: 1):
+    from apps.orders.services import OrderInput, OrderLineInput, create_order
+
+    session = _session()
+    for index in range(count):
+        create_order(
+            OrderInput(lines=[OrderLineInput(item_id=_item_id(), quantity=quantity_of(index))], room_id=None),
+            guest_session=session,
+        )
+
+
+def test_drilldown_comes_in_pages_and_the_summary_counts_the_whole_slice(crystal, monkeypatch):
+    """Лента — страницами (здесь по 3), итог — по всему срезу, а не по странице."""
+    monkeypatch.setattr(queries, "DRILLDOWN_PAGE", 3)
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        _orders(7)
+        params = {"preset": "today"}
+        pages = [queries.drilldown(crystal, admin, {**params, "page": n}) for n in (1, 2, 3)]
+        summary = queries.drilldown_summary(crystal, admin, params)
+
+    assert [len(page["orders"]) for page in pages] == [3, 3, 1]
+    assert [page["has_more"] for page in pages] == [True, True, False]
+    numbers = [row["number"] for page in pages for row in page["orders"]]
+    assert len(set(numbers)) == 7, "страницы не повторяют и не теряют строки"
+    assert summary["total"] == 7
+    assert summary["total_minor"] == sum(row["total_minor"] for page in pages for row in page["orders"])
+
+
+def test_drilldown_sorts_on_the_server_across_pages(crystal, monkeypatch):
+    """Сортировка по колонке — по всему срезу: первая страница по сумме — самые дорогие."""
+    monkeypatch.setattr(queries, "DRILLDOWN_PAGE", 2)
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        _orders(5, quantity_of=lambda i: i + 1)
+        first = queries.drilldown(crystal, admin, {"preset": "today", "sort": "total_minor", "order": "desc"})
+        everything = queries.drilldown_summary(crystal, admin, {"preset": "today"})
+
+    totals = [row["total_minor"] for row in first["orders"]]
+    assert totals == sorted(totals, reverse=True)
+    assert everything["total"] == 5
+    assert totals[0] == max(totals) and totals[0] >= everything["total_minor"] / 5
+
+
+def test_export_of_the_slice_takes_every_page_not_the_first(crystal, monkeypatch):
+    """Выгрузка берёт весь срез: раньше лента резалась на 200, и выгрузка теряла остальное."""
+    from apps.analytics.services.export import build_dataset
+
+    monkeypatch.setattr(queries, "DRILLDOWN_PAGE", 2)
+    with tenant_context(crystal):
+        admin = _admin(crystal)
+        _orders(5)
+        _headers, rows = build_dataset(crystal, admin, "drilldown", {"preset": "today"})
+    assert len(rows) == 5
