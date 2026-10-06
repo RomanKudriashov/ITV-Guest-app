@@ -164,6 +164,8 @@ class Command(BaseCommand):
             # Без этого они копились каждым прогоном: за время работы стенда
             # их набралось 58 при семи настоящих.
             services = [s for s in Service.objects.all() if TEST_SUFFIX.search(s.code or "")]
+            # Пустое заведение удаляется всегда; занятое — работа, только пока
+            # оно включено или видно гостю (см. ниже, «уже выключенное»).
 
             # Заказы, брошенные прогонами: открыты дольше порога. Опознаём по
             # возрасту и незавершённости, а не по имени — у заказа нет кода, за
@@ -202,6 +204,19 @@ class Command(BaseCommand):
             keep, drop = [], []
             for item in items:
                 (keep if OrderItem.objects.filter(item=item).exists() else drop).append(item)
+            # УЖЕ ВЫКЛЮЧЕННОЕ — НЕ РАБОТА (партия 41). Позиция и заведение с
+            # заказами остаются в таблице навсегда, и без этого фильтра каждый
+            # проход заново находил их и рапортовал «выключить 195» — отчёт о
+            # работе, которой нет, тот же, что был с учётками платформы.
+            keep = [item for item in keep if item.is_active or item.in_stock]
+            # Раздел — работа, пока он включён или станет пустым после уборки.
+            drop_ids = {item.pk for item in drop}
+            categories = [
+                c
+                for c in categories
+                if c.is_active
+                or not Item.objects.filter(category=c).exclude(pk__in=drop_ids).exists()
+            ]
 
             # Заведения — по тому же признаку и той же причиной, по которой
             # отказывает CMS (`409 service_has_orders`): заказы ссылаются на
@@ -217,6 +232,7 @@ class Command(BaseCommand):
                     execution_point=service.execution_point_id
                 ).exists()
                 (drop_services if purge or not busy_service else keep_services).append(service)
+            keep_services = [s for s in keep_services if s.is_active or s.is_guest_facing]
 
             # Заказы остатков и их фан-аут. Дочерний заказ исполняется НАСТОЯЩЕЙ
             # точкой (кухня, бар), но заведён тем же прогоном и уйдёт с
@@ -234,11 +250,11 @@ class Command(BaseCommand):
                 purge_orders = parent_ids + child_ids
 
             self.stdout.write(
-                f"Найдено: позиций {len(items)} (удалить {len(drop)}, выключить {len(keep)} — "
+                f"Найдено: позиций {len(drop) + len(keep)} (удалить {len(drop)}, выключить {len(keep)} — "
                 f"на них есть заказы), разделов {len(categories)}, сообщений чата {len(messages)}, "
                 f"брошенных заказов {len(stale)} (открыты дольше {options['stale_hours']} ч), "
                 f"типов номеров из прогона GRMS {len(grms_types)}, "
-                f"заведений {len(services)} (удалить {len(drop_services)}, "
+                f"заведений {len(drop_services) + len(keep_services)} (удалить {len(drop_services)}, "
                 f"выключить {len(keep_services)} — на них есть заказы)"
             )
             if purge:
@@ -395,7 +411,7 @@ class Command(BaseCommand):
             # Раздел удаляем, только если в нём не осталось ни одной позиции:
             # иначе он держит выключенные и обязан остаться вместе с ними.
             empty = [c for c in categories if not Item.objects.filter(category=c).exists()]
-            busy = [c for c in categories if c not in empty]
+            busy = [c for c in categories if c not in empty and c.is_active]
             deleted_cats = Category.objects.filter(pk__in=[c.pk for c in empty]).delete()
             hidden_cats = Category.objects.filter(pk__in=[c.pk for c in busy]).update(is_active=False)
 
@@ -427,9 +443,11 @@ class Command(BaseCommand):
             else:
                 deleted_services = Service.objects.filter(pk__in=service_ids).delete()
                 ExecutionPoint.objects.filter(pk__in=point_ids).delete()
+            # Выключить И спрятать от гостя: выключенное, но «видное гостю»
+            # заведение — противоречие, которое всплывёт при первом включении.
             hidden_services = Service.objects.filter(
                 pk__in=[s.pk for s in keep_services]
-            ).update(is_active=False)
+            ).update(is_active=False, is_guest_facing=False)
 
             dropped_assignments = 0
             if dangling_assignments:

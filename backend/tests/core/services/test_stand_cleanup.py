@@ -162,6 +162,65 @@ def test_residue_service_with_orders_is_switched_off_not_deleted(crystal):
         alive = Service.objects.filter(pk=service.pk).first()
         assert alive is not None, "заведение с заказами удалять нельзя"
         assert alive.is_active is False, "но выключить обязано"
+        assert alive.is_guest_facing is False, "и спрятать от гостя (партия 41)"
+
+
+def _run(hotel, *, apply: bool) -> str:
+    from io import StringIO
+
+    out = StringIO()
+    call_command("clean_test_residue", subdomain=hotel.subdomain, apply=apply, stdout=out)
+    return out.getvalue()
+
+
+def test_already_hidden_residue_is_not_work_again(crystal):
+    """
+    Второй проход не рапортует о работе, которой нет (партия 41).
+
+    Заведение с заказами остаётся в таблице навсегда. Раньше каждый проход
+    находил его заново и писал «выключить 195» — при том, что всё давно
+    выключено: по такому отчёту нельзя понять, чисто ли.
+    """
+    service = _residue_service(crystal, "rum-servis-mtagain1")
+    order = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        Order.objects.filter(pk=order.pk).update(execution_point=service.execution_point_id)
+
+    first = _run(crystal, apply=True)
+    assert "заведений удалено 0, выключено 1" in first, first
+
+    second = _run(crystal, apply=False)
+    assert "rum-servis-mtagain1" not in second, second
+    assert "заведений 0 " in second, second
+
+
+def test_forgotten_cocktail_category_with_ordered_item_is_hidden_with_it(crystal):
+    """
+    «Коктейли <метка>» прогонов: позиция с заказом выключается, раздел — тоже,
+    и на втором проходе это уже не работа (партия 41).
+    """
+    from apps.catalog.models import Category, Item
+    from apps.orders.models import OrderItem
+
+    with tenant_context(crystal):
+        category = Category.objects.create(code="kokteyli-mtcockt1", title={"ru": "Коктейли"}, type="product")
+        item = Item.objects.create(
+            category=category, code="shprits-mtcockt1", title={"ru": "Шприц"}, type="product", price=100
+        )
+    order = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        OrderItem.objects.create(order=order, item=item, title_snapshot={"ru": "Шприц"})
+
+    _run(crystal, apply=True)
+
+    with tenant_context(crystal):
+        item.refresh_from_db()
+        category.refresh_from_db()
+        assert item.is_active is False and item.in_stock is False
+        assert category.is_active is False
+
+    second = _run(crystal, apply=False)
+    assert "позиций 0 " in second and "разделов 0," in second, second
 
 
 def test_real_services_are_never_touched(crystal):
