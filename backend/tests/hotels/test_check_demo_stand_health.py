@@ -57,15 +57,25 @@ def test_marked_rooms_pass(command, crystal):
 
 def test_a_point_without_a_live_venue_is_a_ghost_on_the_board(command, crystal):
     """
-    Пульт считает по точкам исполнения: удалили заведение — очередь осталась,
-    и строка на пульте осталась вместе с ней (пункт 37 бэклога).
+    Пульт считает по точкам исполнения: очередь без живого заведения — строка-
+    призрак на пульте (пункт 37 бэклога). С партии 38 мягкое удаление
+    заведения выключает его очередь само, поэтому призрак здесь — очередь,
+    у которой заведение стёрто мимо модели (жёстко): проверка обязана его
+    видеть, откуда бы он ни взялся.
     """
     with tenant_context(crystal):
         service = Service.objects.first()
         point_code = service.execution_point.code
-        service.delete()
+        service.delete(hard=True)
     problems = command._check_orphan_points()
     assert any(point_code in line for line in problems), problems
+
+
+def test_a_soft_deleted_venue_leaves_no_ghost(command, crystal):
+    """Партия 38, п.37: мягкое удаление заведения выключает его очередь — призрака нет."""
+    with tenant_context(crystal):
+        Service.objects.first().delete()
+    assert command._check_orphan_points() == []
 
 
 def test_every_point_has_its_venue_by_default(command, crystal):
