@@ -8,8 +8,8 @@
  * симметрии названий — платить совместимостью за косметику.
  */
 
+import { errorDetail, httpErrorText } from '@/api/httpError';
 import { createSession } from "@/auth/session";
-import { i18n } from "@/i18n";
 
 /**
  * Человеческий текст отказа.
@@ -26,10 +26,9 @@ import { i18n } from "@/i18n";
  * Сам код НЕ выброшен: он уезжает в `PlatformError.status`, по нему работают
  * ветвления (401 гасит сессию) и он виден в консоли разработчика.
  */
+/** Фраза по коду — общий справочник (`api/httpError`), как у панели и гостя. */
 function humanError(status: number): string {
-  if (status === 403) return i18n.t("admin.errors.forbidden");
-  if (status === 0) return i18n.t("admin.errors.network");
-  return i18n.t("admin.errors.http");
+  return httpErrorText(status);
 }
 
 const BASE = "/api/v1/platform";
@@ -108,7 +107,8 @@ export async function platformUpload<T>(path: string, form: FormData): Promise<T
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   if (!res.ok) {
     if (res.status === 401) platformSession.expire();
-    const detail = (data && (data.detail as string)) || humanError(res.status);
+    // Текст сервера — только наш JSON с текстом; иначе фраза по коду.
+    const detail = errorDetail(res.status, data);
     throw new PlatformError(res.status, detail, data?.code);
   }
   return data as T;
@@ -140,7 +140,8 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
     // 401 после обновления — сессии больше нет. Уводим на вход с поводом,
     // а не оставляем экран собирать отказы.
     if (res.status === 401 && !anonymous) platformSession.expire();
-    const detail = (data && (data.detail as string)) || humanError(res.status);
+    // Текст сервера — только наш JSON с текстом; иначе фраза по коду.
+    const detail = errorDetail(res.status, data);
     throw new PlatformError(res.status, detail, data?.code);
   }
   return data as T;

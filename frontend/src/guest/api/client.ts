@@ -11,6 +11,7 @@
  * `X-Hotel-Subdomain` on every request, errors parsed into `ApiError`.
  */
 
+import { errorDetail } from '@/api/httpError';
 import { ApiError, API_BASE, HOTEL_SUBDOMAIN, WS_BASE } from '@/api/client';
 
 export const GUEST_TOKEN_KEY = 'itv.guest.token';
@@ -94,19 +95,15 @@ async function parseBody(response: Response): Promise<unknown> {
 }
 
 function toApiError(status: number, body: unknown): ApiError {
+  // Текст для человека — только наш JSON; чужой ответ (HTML прокси или
+  // Django) — фраза по коду (`api/httpError`), без тела.
+  const detail = errorDetail(status, body);
   if (body && typeof body === 'object') {
     const record = body as Record<string, unknown>;
-    const detail =
-      typeof record.detail === 'string'
-        ? record.detail
-        : typeof record.message === 'string'
-          ? record.message
-          : `HTTP ${status}`;
     const code = typeof record.code === 'string' ? record.code : `http_${status}`;
     const field = typeof record.field === 'string' ? record.field : undefined;
     return new ApiError(status, detail, code, field, record);
   }
-  const detail = typeof body === 'string' && body ? body : `HTTP ${status}`;
   return new ApiError(status, detail, `http_${status}`);
 }
 

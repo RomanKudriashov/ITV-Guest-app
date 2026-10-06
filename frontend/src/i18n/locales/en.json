@@ -5,6 +5,16 @@
     "supportPresence": "Platform support is working in this panel: {{actor}}, from {{from}} until {{until}}"
   },
   "common": {
+    "httpErrors": {
+      "network": "No connection to the server. Check your connection and try again.",
+      "badRequest": "The request was not accepted. Reload the page and try again.",
+      "unauthorized": "Your session has ended — please sign in again.",
+      "forbidden": "You do not have rights for this action.",
+      "notFound": "Not found. The address may be out of date.",
+      "tooMany": "Too many attempts. Please wait a little and try again.",
+      "server": "The server is not responding. Please try again in a minute.",
+      "generic": "Something went wrong. Please try again."
+    },
     "language": "Language",
     "theme": "Theme",
     "light": "Light",

@@ -14,7 +14,9 @@ import { ApiError } from './client';
  * попыток, — `retryTransientUpTo(n)`, но не другое правило.
  */
 export function isTransient(error: unknown): boolean {
-  if (error instanceof ApiError) return error.status >= 500;
+  // status 0 — запрос не дошёл (сеть): клиент заворачивает обрыв в ApiError
+  // с понятным текстом (`api/httpError`), но это по-прежнему сбой сети.
+  if (error instanceof ApiError) return error.status === 0 || error.status >= 500;
   // Не ApiError — значит до ответа сервера не дошло: сеть, обрыв, CORS.
   // Отмена запроса (AbortError) повтором не лечится и не нужна.
   return !(error instanceof DOMException && error.name === 'AbortError');

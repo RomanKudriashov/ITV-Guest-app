@@ -12,6 +12,7 @@
 // ЕДИНСТВЕННОЕ место, где задаётся версия API/WS. Весь фронт ходит через эти
 // две константы — сменить версию или снять алиас можно правкой одной строки.
 // Пути в вызовах остаются без версии (`/guest/...`), префикс добавляется здесь.
+import { errorDetail, httpErrorText } from '@/api/httpError';
 import { createSession } from '@/auth/session';
 
 export const API_BASE = '/api/v1';
@@ -125,19 +126,15 @@ async function parseBody(response: Response): Promise<unknown> {
 }
 
 function toApiError(status: number, body: unknown): ApiError {
+  // Текст для человека — только наш JSON; чужой ответ (HTML прокси или
+  // Django) — фраза по коду (`api/httpError`), без тела.
+  const detail = errorDetail(status, body);
   if (body && typeof body === 'object') {
     const record = body as Record<string, unknown>;
-    const detail =
-      typeof record.detail === 'string'
-        ? record.detail
-        : typeof record.message === 'string'
-          ? record.message
-          : `HTTP ${status}`;
     const code = typeof record.code === 'string' ? record.code : `http_${status}`;
     const field = typeof record.field === 'string' ? record.field : undefined;
     return new ApiError(status, detail, code, field, record);
   }
-  const detail = typeof body === 'string' && body ? body : `HTTP ${status}`;
   return new ApiError(status, detail, `http_${status}`);
 }
 
@@ -154,7 +151,14 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     payload = JSON.stringify(body);
   }
 
+  // ОБРЫВ СЕТИ — ПОНЯТНОЙ ОШИБКОЙ (партия 39): `fetch` бросает TypeError
+  // «Failed to fetch», и этот текст доходил до экрана. Отмену не трогаем.
   const send = (token: string | null) =>
+    sendRaw(token).catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error;
+      throw new ApiError(0, httpErrorText(0), 'network');
+    });
+  const sendRaw = (token: string | null) =>
     fetch(buildUrl(path, query), {
       method,
       headers: {
@@ -210,7 +214,14 @@ export async function requestFile(
 ): Promise<{ blob: Blob; filename: string }> {
   const { query, signal, skipAuthRedirect, fallbackName } = options;
 
+  // ОБРЫВ СЕТИ — ПОНЯТНОЙ ОШИБКОЙ (партия 39): `fetch` бросает TypeError
+  // «Failed to fetch», и этот текст доходил до экрана. Отмену не трогаем.
   const send = (token: string | null) =>
+    sendRaw(token).catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error;
+      throw new ApiError(0, httpErrorText(0), 'network');
+    });
+  const sendRaw = (token: string | null) =>
     fetch(buildUrl(path, query), {
       method: 'GET',
       headers: {

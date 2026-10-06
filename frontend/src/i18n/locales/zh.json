@@ -5,6 +5,16 @@
     "supportPresence": "平台支持人员正在此面板中操作：{{actor}}，{{from}} 至 {{until}}"
   },
   "common": {
+    "httpErrors": {
+      "network": "无法连接服务器。请检查网络后重试。",
+      "badRequest": "请求未被接受。请刷新页面后重试。",
+      "unauthorized": "会话已结束，请重新登录。",
+      "forbidden": "您没有执行此操作的权限。",
+      "notFound": "未找到。地址可能已过期。",
+      "tooMany": "尝试次数过多。请稍候再试。",
+      "server": "服务器无响应。请一分钟后重试。",
+      "generic": "出了点问题。请重试。"
+    },
     "language": "语言",
     "theme": "主题",
     "light": "浅色",
