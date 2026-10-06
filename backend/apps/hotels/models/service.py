@@ -101,6 +101,22 @@ class Service(TenantModel):
     def __str__(self) -> str:
         return self.code
 
+    def delete(self, using=None, keep_parents=False, *, hard: bool = False):
+        """
+        УДАЛЁННОЕ ЗАВЕДЕНИЕ УХОДИТ С ПУЛЬТА (п.37, решение 06.10.2026).
+
+        Пульт считает по ОЧЕРЕДЯМ (точкам исполнения), а не по заведениям: у
+        заведения, удалённого мимо `delete_service` (та удаляет и очередь), его
+        очередь оставалась включённой, и строка-призрак висела на пульте, пока
+        кто-то не выключал точку руками. Теперь мягкое удаление заведения
+        выключает его очередь, если других живых заведений на ней нет. Очередь
+        не удаляется — к ней привязана история заказов.
+        """
+        result = super().delete(using=using, keep_parents=keep_parents, hard=hard)
+        if not hard and self.execution_point_id:
+            retire_orphan_points([self.execution_point_id])
+        return result
+
     @property
     def public_title(self) -> dict:
         """Гостевое название с падением на служебное имя исполнителя."""
@@ -113,3 +129,15 @@ class Service(TenantModel):
         """
         own = getattr(self, field)
         return own if own is not None else getattr(hotel, field)
+
+
+def retire_orphan_points(point_ids) -> int:
+    """Выключить очереди, на которых не осталось ни одного живого заведения."""
+    from .execution_point import ExecutionPoint
+
+    point_ids = [pk for pk in point_ids if pk]
+    alive = set(Service.objects.filter(execution_point_id__in=point_ids).values_list("execution_point_id", flat=True))
+    orphans = [pk for pk in point_ids if pk not in alive]
+    if not orphans:
+        return 0
+    return ExecutionPoint.objects.filter(pk__in=orphans, is_active=True).update(is_active=False)
