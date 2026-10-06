@@ -116,3 +116,34 @@ def test_venues_inside_a_group_tile_count_as_on_the_storefront(crystal):
     with tenant_context(crystal):
         codes = reachable_venue_codes(crystal)
     assert {"kitchen", "bar"} <= codes, codes
+
+
+# --- Срок сертификата стенда (партия 41) -------------------------------------
+
+
+def test_a_certificate_with_ten_days_left_is_a_warning(command, monkeypatch, settings):
+    """Let's Encrypt писем не шлёт — 10 дней до истечения обязаны быть видны."""
+    from apps.hotels.management.commands import check_demo_stand
+
+    settings.APP_DOMAINS = ["stand.example.test"]
+    monkeypatch.setattr(check_demo_stand, "certificate_days_left", lambda host: 10)
+    notes: list[str] = []
+    command._check_certificate(notes)
+    assert any("ПРЕДУПРЕЖДЕНИЕ" in line and "10 дн." in line and "stand.example.test" in line for line in notes), notes
+
+
+def test_a_fresh_certificate_is_quiet(command, monkeypatch, settings):
+    from apps.hotels.management.commands import check_demo_stand
+
+    settings.APP_DOMAINS = ["stand.example.test"]
+    monkeypatch.setattr(check_demo_stand, "certificate_days_left", lambda host: 80)
+    notes: list[str] = []
+    command._check_certificate(notes)
+    assert notes == []
+
+
+def test_without_a_base_the_certificate_is_not_checked(command, settings):
+    settings.APP_DOMAINS = []
+    notes: list[str] = []
+    command._check_certificate(notes)
+    assert notes == []

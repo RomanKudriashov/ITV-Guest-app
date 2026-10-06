@@ -204,7 +204,41 @@ class Command(BaseCommand):
         problems.extend(self._check_room_categories())
         problems.extend(self._check_weather(notes))
         problems.extend(self._check_orphan_points())
+        self._check_certificate(notes)
         return problems
+
+    # Предупреждать, когда сертификату стенда осталось меньше стольких дней.
+    CERT_WARN_DAYS = 20
+
+    def _check_certificate(self, notes: list[str]) -> None:
+        """
+        СРОК СЕРТИФИКАТА — ПРЕДУПРЕЖДЕНИЕМ (партия 41).
+
+        Let's Encrypt больше не шлёт писем об истечении: контакт учётки certbot
+        у них пустой (06.10.2026, проверено при выкатке 38+39), и истечение
+        стало бы новостью только по отказу браузеров. Продлевает таймер
+        certbot; эта проверка — на случай, если он молча встал. Смотрим
+        сертификат на ГЛАВНОЙ базе по TLS — файл на хосте из контейнера не
+        виден. Меньше CERT_WARN_DAYS дней — предупреждение (стенд при этом
+        цел: это не поломка, а срок). В деве базы нет — проверять нечего.
+        """
+        from django.conf import settings
+
+        bases = getattr(settings, "APP_DOMAINS", None) or []
+        if not bases:
+            return
+        try:
+            days = certificate_days_left(bases[0])
+        except Exception as exc:  # noqa: BLE001 — сеть или TLS: сказать, а не упасть
+            notes.append(f"ПРЕДУПРЕЖДЕНИЕ: срок сертификата {bases[0]} не прочитан ({exc.__class__.__name__})")
+            return
+        if days < self.CERT_WARN_DAYS:
+            notes.append(
+                f"ПРЕДУПРЕЖДЕНИЕ: сертификату {bases[0]} осталось {days} дн. — проверить certbot.timer "
+                "(`certbot renew --dry-run`); писем от Let's Encrypt не будет"
+            )
+        else:
+            self.stdout.write(f"  сертификат      {bases[0]}: осталось {days} дн.")
 
     def _check_migrations(self) -> list[str]:
         """
@@ -489,3 +523,16 @@ def reachable_venue_codes(hotel) -> set[str]:
             codes.update(venue["code"] for venue in list_venues(hotel, tile["key"], language="ru")["venues"])
     return codes
 
+
+def certificate_days_left(host: str, port: int = 443, timeout: float = 5.0) -> int:
+    """Сколько целых дней осталось сертификату адреса (по TLS, с проверкой цепочки)."""
+    import socket
+    import ssl
+    from datetime import datetime, timezone
+
+    context = ssl.create_default_context()
+    with socket.create_connection((host, port), timeout=timeout) as raw:
+        with context.wrap_socket(raw, server_hostname=host) as tls:
+            not_after = tls.getpeercert()["notAfter"]
+    expires = datetime.fromtimestamp(ssl.cert_time_to_seconds(not_after), tz=timezone.utc)
+    return (expires - datetime.now(timezone.utc)).days
