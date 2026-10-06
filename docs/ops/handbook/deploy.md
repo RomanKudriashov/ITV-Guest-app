@@ -101,6 +101,14 @@ git pull --ff-only
 
 Собирать явно и всё сразу:
 
+Сначала — полон ли набор переменных (п.7 бэклога: пропущенный
+`POSTGRES_SUPERUSER` валил всю сборку невнятным «dependency failed to start»).
+Скрипт печатает только имена, значения — никогда:
+
+```bash
+python3 infra/check-env.py .env.prod
+```
+
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod build \
   backend worker beat scheduler nginx connector iridi-emulator
@@ -321,6 +329,7 @@ Postgres перестал писать. С той стороны это выгл
 [ ] pytest зелёный
 [ ] e2e зелёный (ПОСЛЕ pytest, не одновременно)
 [ ] git pull --ff-only, посмотрел, что едет
+[ ] python3 infra/check-env.py .env.prod — набор переменных полон
 [ ] build: backend worker beat scheduler nginx connector iridi-emulator — все семь
 [ ] up -d
 [ ] прочитал новый код ВНУТРИ backend, worker, beat

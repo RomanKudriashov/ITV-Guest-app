@@ -122,6 +122,7 @@ PLATFORM_ADMIN_PASSWORD выглядят как настройка, но не ч
 ## 2. Первый запуск
 
 ```bash
+python3 infra/check-env.py .env.prod   # все переменные compose на месте (только имена)
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 
