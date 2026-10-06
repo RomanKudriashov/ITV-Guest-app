@@ -1965,11 +1965,21 @@ class Command(BaseCommand):
         Хозслужбу гость не видит, но админ видит её карточку в CMS, и «серый
         прямоугольник вместо фото» там читается ровно так же плохо.
         """
+        from apps.media.services import seed_photos
+
         for service in Service.objects.select_related("execution_point", "image"):
             # Процедурную обложку R1/R2 (PNG) считаем отсутствующей: её и
             # пришли заменить настоящим снимком. Устаревший кадр манифеста —
             # тоже повод переснять.
             photo_code = _venue_photo_code(service.code)
+            # СНИМОК — ТОЛЬКО ДЛЯ ЗАВЕДЕНИЙ ДЕМО-НАБОРА (п.17). Проход шёл по
+            # ВСЕМ сервисам отеля, и на каждое заведение не из манифеста —
+            # остаток прогона, заведение, созданное отелем, — печатал «фото
+            # недоступно, прогоните fetch_seed_photos» (на стенде разработки —
+            # 191 строка). Такое заведение снимка не ждёт; предупреждение
+            # остаётся для того, что в манифесте есть, а в кэше — нет.
+            if photo_code not in seed_photos.PHOTOS:
+                continue
             fresh = service.image_id is not None and service.image.content_type == "image/jpeg"
             if fresh and not self._from_stale_manifest(service.image, photo_code):
                 continue
