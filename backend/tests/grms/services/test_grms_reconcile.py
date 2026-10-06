@@ -17,7 +17,7 @@ from apps.grms.models import RoomType, Variable
 
 from tests.grms.grms_harness import wire
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 TYPE = "std"
 # Эмулятор seed'ит устройства теми же именами, что найдены на боевом сервере.

@@ -29,7 +29,7 @@ from apps.grms.management.commands.seed_grms_demo import DEMO_PIN
 from apps.hotels.models import HotelModule
 from tests.grms.grms_harness import GuestClient, _session
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 
 # --- Оснастка ---------------------------------------------------------------

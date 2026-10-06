@@ -44,7 +44,7 @@ from apps.grms.management.commands.seed_grms_demo import (
 from apps.grms.models import PublishedConfig, RoomType
 from apps.media.models import MediaAsset
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 
 @pytest.fixture
@@ -231,6 +231,8 @@ def test_a_type_without_a_plan_publishes_without_one(seeded):
 # --- Картинка ---------------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_the_server_resolves_both_frames_and_hands_out_ready_urls(seeded):
     """
     Гость получает АДРЕСА, а не идентификаторы записей: адрес зависит от
@@ -272,6 +274,8 @@ def test_the_night_frame_is_pixel_aligned_with_the_lit_one(seeded):
     assert (lit.width, lit.height) == (off.width, off.height)
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_a_type_without_a_night_frame_still_gets_a_plan(seeded):
     """
     Ночного кадра нет — план остаётся, плита работает затемняющей маской.
@@ -342,6 +346,8 @@ def test_reseeding_neither_duplicates_the_asset_nor_bumps_the_version(seeded):
 # --- Зеркальная планировка --------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_mirrored_layout_travels_to_the_guest(seeded):
     """
     Номера по разные стороны коридора — одна планировка, отражённая. Флажок
@@ -370,6 +376,8 @@ def test_mirrored_layout_travels_to_the_guest(seeded):
     assert for_guest["zones"][0]["hit"] == payload["plan"]["zones"][0]["hit"]
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_a_plan_without_the_flag_is_not_mirrored(seeded):
     payload = _current(seeded)
     assert payload["plan"]["mirrored"] is False

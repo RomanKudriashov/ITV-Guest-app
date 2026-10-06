@@ -17,7 +17,7 @@ from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.services.provisioning import ensure_platform_admin
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 OWNER = ("root@platform.test", "platform12345")
@@ -116,6 +116,8 @@ def test_unchanged_fields_do_not_make_journal_noise(api, hotel):
     assert len(_updates(hotel)) == before
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_read_only_role_cannot_edit(api, client, hotel):
     """Правка — право `write`. Роль «только чтение» получает отказ, а не тихий успех."""
     invited = api("post", "/team", {"email": "eyes@platform.test", "role": "read_only"}).json()

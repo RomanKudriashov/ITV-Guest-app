@@ -56,7 +56,7 @@ def test_platform_scope_alone_is_not_enough(crystal, aurora):
         assert Item.objects.count() == 0
 
 
-@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_platform_role_bypasses_rls():
     """Платформенная роль (BYPASSRLS) видит все отели — это её назначение."""
     from django.core.management import call_command

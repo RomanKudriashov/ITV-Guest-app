@@ -24,7 +24,7 @@ from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 OWNER_EMAIL = "root@platform.test"
@@ -69,6 +69,8 @@ def _password_from_letter(letter) -> str:
     return match.group(1)
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_password_never_reaches_the_operator(api, hotel, caplog):
     """Обыск ПО ЗНАЧЕНИЮ: ответ, заголовки, журнал аудита, логи приложения."""
     mail.outbox.clear()

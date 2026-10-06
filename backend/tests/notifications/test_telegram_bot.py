@@ -624,5 +624,7 @@ def test_the_token_never_reaches_the_journal_api_or_logs(client, crystal, cms, b
     assert TOKEN.split(":")[1] not in joined
 
 
+# Без событий после коммита и второго подключения — хватает отката (партия 41).
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_compose_escapes_everything_but_our_bold_subject():
     assert compose("A & <B>", "x < y > z & *w*") == "<b>A &amp; &lt;B&gt;</b>\nx &lt; y &gt; z &amp; *w*"

@@ -20,7 +20,7 @@ from apps.core.context import tenant_context
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 from tests.conftest import host_for
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 OWNER = ("root@platform.test", "platform12345")
@@ -211,6 +211,8 @@ def test_three_handles_keep_their_own_words(cms, hotel, client):
     assert staff_again.json()["code"] == "email_taken", staff_again.json()
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_other_integrity_errors_stay_server_errors(client, hotel):
     """
     Внешний ключ и NOT NULL — дефекты кода, а не выбор оператора. Вежливый 409
@@ -238,6 +240,8 @@ def test_other_integrity_errors_stay_server_errors(client, hotel):
 # --- Платформенный уровень --------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_platform_handles_are_covered_too(platform_api):
     """Шаблон онбординга: то же удаление, тот же повтор, тот же отказ."""
     made = platform_api("post", "/templates", {"code": "boutique", "name": {"ru": "Бутик"}})

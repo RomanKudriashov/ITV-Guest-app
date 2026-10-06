@@ -200,6 +200,8 @@ def test_platform_resetting_the_admin_password_kills_their_refresh(api, hotel, s
     assert _session(hotel).revoked_reason == "password_reset"
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_closing_a_console_session_from_the_registry_kills_its_refresh(client):
     ensure_platform_admin(email=PLATFORM[0], password=PLATFORM[1])
 
@@ -260,6 +262,8 @@ def staff_api(client, hotel):
     return login, call
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_deactivated_staff_access_is_refused_on_the_next_request(staff_api):
     login, call = staff_api
     admin = login()["access"]
@@ -275,6 +279,8 @@ def test_deactivated_staff_access_is_refused_on_the_next_request(staff_api):
     assert call("get", "/api/v1/staff/auth/me", cook).status_code == 401
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_closed_session_access_is_refused_on_the_next_request(staff_api):
     """Закрыли вход с другого устройства — его access не работает со следующего запроса."""
     login, call = staff_api
@@ -287,6 +293,8 @@ def test_closed_session_access_is_refused_on_the_next_request(staff_api):
     assert call("get", "/api/v1/staff/auth/me", laptop).status_code == 200
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_password_reset_refuses_live_access_at_once(staff_api, hotel, settings):
     from apps.hotels.services.provisioning import set_hotel_admin
 
@@ -308,6 +316,8 @@ def test_hotel_deactivation_refuses_live_access_at_once(staff_api, hotel):
     assert call("get", "/api/v1/staff/auth/me", access).status_code == 401
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_closed_console_session_access_is_refused_at_once(client):
     ensure_platform_admin(email=PLATFORM[0], password=PLATFORM[1])
 

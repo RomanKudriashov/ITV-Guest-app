@@ -46,6 +46,8 @@ def test_two_live_hotels_cannot_share_a_domain():
                 )
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_empty_domain_is_not_a_value():
     """Пустых значений большинство — общий unique запретил бы второй отель."""
     _hotel("dom3")

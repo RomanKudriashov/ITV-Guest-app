@@ -25,7 +25,7 @@ from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.services.provisioning import ensure_platform_admin
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 OWNER = ("root@platform.test", "platform12345")
@@ -81,6 +81,8 @@ def _queries(func):
 # --- Список отелей: число запросов не зависит от числа отелей ---------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_hotels_list_does_not_grow_queries_with_hotels(api):
     """
     ГЛАВНОЕ. Пять отелей и тридцать пять отелей — одинаковая цена запроса.
@@ -101,6 +103,8 @@ def test_hotels_list_does_not_grow_queries_with_hotels(api):
     )
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_hotels_list_is_bounded_and_says_so(api):
     """Предел есть, и выдача честно говорит, сколько всего."""
     _hotels(150)

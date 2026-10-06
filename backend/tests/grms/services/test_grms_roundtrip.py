@@ -39,7 +39,7 @@ from apps.hotels.models import OnPremNode
 from apps.hotels.services.onprem import register_node
 from itv_connector.executor import Endpoint, execute
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 DEVICE = "Modbus TCP Server (Slave mode) 701"
 

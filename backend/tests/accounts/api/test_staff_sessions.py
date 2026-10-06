@@ -19,7 +19,7 @@ from apps.core.context import tenant_context
 from apps.hotels.services.provisioning import provision_hotel
 from tests.conftest import host_for
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 STAFF = ("admin@sessions.test", "hotel-admin-12345")
 

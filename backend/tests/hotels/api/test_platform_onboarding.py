@@ -18,11 +18,12 @@ from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, OnboardingTemplate, Service, SystemDictionaryEntry
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
-# transaction=True обязателен: список отелей считает счётчики ПЛАТФОРМЕННЫМ
-# подключением (батчем, а не по отелю), а второе подключение не видит данных,
-# не вышедших из транзакции теста. Раньше счёт шёл по одному отелю в его же
-# тенантном контексте и обходился одним соединением.
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+# Список отелей считает счётчики ПЛАТФОРМЕННЫМ подключением (батчем, а не по
+# отелю), а второе подключение не видит данных, не вышедших из транзакции
+# теста. Поэтому `transaction=True` — только у проверок, где платформа читает
+# записанное самим тестом; остальным хватает отката (партия 41, п.26: следы
+# платформенных запросов в обоих режимах совпали запрос в запрос).
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 EMAIL = "root@platform.test"

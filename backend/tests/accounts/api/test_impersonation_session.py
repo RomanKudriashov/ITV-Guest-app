@@ -212,6 +212,8 @@ def test_hotel_sees_the_support_session(api, hotel, client):
     assert session["started_at"] and session["expires_at"]
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_no_session_no_banner(api, hotel, client):
     """«Никого нет» — это null, а не пустой объект: их видно по-разному."""
     admin_token = client.post(

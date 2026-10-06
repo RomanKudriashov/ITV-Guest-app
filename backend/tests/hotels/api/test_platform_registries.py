@@ -506,6 +506,7 @@ def test_usage_reports_over_limit(api):
 # видна. Прецедент — test_tenant_isolation.
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_node_key_is_shown_once_and_stored_hashed(api, client):
     hotel = _hotel("nodehotel", "С узлом")
@@ -531,6 +532,7 @@ def test_node_key_is_shown_once_and_stored_hashed(api, client):
     assert node.is_online and node.version == "1.2.3"
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_revoked_node_key_stops_working_but_row_remains(api, client):
     hotel = _hotel("revoker", "Отзыв")
@@ -565,6 +567,7 @@ def test_unknown_key_answers_the_same_as_revoked(client):
 # --- Команда и роли --------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_every_platform_route_refuses_read_only(client, api):
     """
@@ -614,6 +617,7 @@ def test_every_platform_route_refuses_read_only(client, api):
     assert not wrong, "Граница прав не там, где объявлена:\n" + "\n".join(wrong)
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_owner_passes_where_read_only_is_refused(client, api):
     """
@@ -648,7 +652,7 @@ def test_owner_passes_where_read_only_is_refused(client, api):
     assert not denied, "Рубеж запер владельца:\n" + "\n".join(denied)
 
 
-@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_tariff_has_one_door(client, api):
     """
     Тариф меняется ТОЛЬКО через PUT /hotels/{id}/tariff.
@@ -672,6 +676,7 @@ def test_tariff_has_one_door(client, api):
     assert hotel.tariff == "resort", "своя дверь обязана работать"
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_support_can_enter_hotels_but_not_manage_team(client, api):
     hotel = _hotel("supported", "Поддержка")
@@ -714,6 +719,7 @@ def test_owner_cannot_lock_himself_out(api, token):
 # --- Вход в отель ----------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_enter_hotel_requires_reason_and_is_audited(api):
     hotel = _hotel("entered", "Вход")
@@ -736,6 +742,7 @@ def test_enter_hotel_requires_reason_and_is_audited(api):
     assert "impersonation.started" in actions
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_enter_token_is_marked_as_impersonation(api, client):
     """
@@ -769,7 +776,7 @@ def test_enter_token_is_marked_as_impersonation(api, client):
     assert claims["gid"] == body["grant_id"]
 
 
-@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_enter_needs_an_active_hotel_admin(api):
     hotel = _hotel("noadmin", "Без админа")
     with tenant_context(hotel):
@@ -783,6 +790,7 @@ def test_enter_needs_an_active_hotel_admin(api):
 # --- Аудит -----------------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_audit_feed_shows_platform_actions_with_hotel_names(api):
     hotel = _hotel("audited", "Журнал")

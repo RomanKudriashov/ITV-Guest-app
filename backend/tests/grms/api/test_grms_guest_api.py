@@ -35,7 +35,7 @@ from apps.hotels.models import HotelModule, OnPremNode
 from tests.conftest import host_for
 from tests.grms.grms_harness import GuestClient, _session
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 
 # --- Оснастка ---------------------------------------------------------------
@@ -109,6 +109,8 @@ def test_unbound_element_never_reaches_the_guest(guest):
     assert "master.off" not in _controls(guest.get("/api/v1/guest/room/state").json())
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_no_technical_fields_ever_leave_the_server(guest):
     """
     СТОРОЖ КОНТРАКТА §8.
@@ -250,6 +252,8 @@ def test_second_tap_while_in_flight_does_not_queue_a_second_command(guest, queue
     assert second.json()["code"] == "command_in_flight"
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_scene_is_accepted_not_faked_as_confirmed(guest, crystal):
     """Сцена: успешная отправка и есть результат, подтверждать нечем."""
     response = guest.post(
@@ -272,6 +276,8 @@ def test_scene_is_accepted_not_faked_as_confirmed(guest, crystal):
     assert entry.payload["result"] == commands.RESULT_ACCEPTED
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_unconfirmed_returns_the_element_to_its_actual_state(guest, stand, crystal):
     """
     Команда ушла, feedback не догнал за окно → элемент показывает ФАКТ.
@@ -324,6 +330,8 @@ def test_current_temperature_accepts_no_commands(guest):
 # --- Оффлайн ----------------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_offline_node_hides_every_value_instead_of_showing_stale_ones(guest, crystal):
     """
     КРИТИЧНОЕ. Связи нет — значений нет. Ни старых, ни «последних известных».
@@ -412,6 +420,8 @@ def test_with_the_demo_flag_off_a_command_without_pin_is_refused(guest, crystal)
     assert response.json()["code"] == "trust_required"
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_with_the_demo_flag_on_a_command_passes_and_lands_in_the_journal(guest, crystal):
     _demo_entry(crystal, True)
 
@@ -480,6 +490,8 @@ def test_wrong_pin_counts_down_and_then_blocks(guest, crystal):
     assert guest.post("/api/v1/guest/room/verify", {"pin": DEMO_PIN}).status_code == 429
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_pin_never_appears_in_the_journal(guest, crystal):
     _demo_entry(crystal, False)
     guest.post("/api/v1/guest/room/verify", {"pin": DEMO_PIN})
@@ -745,6 +757,8 @@ def test_scene_hint_travels_from_the_element_to_the_guest(guest):
     assert len(set(hints.values())) == len(hints)
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_demo_entry_mark_is_set_only_after_the_record_lands(guest, crystal, monkeypatch):
     """
     П.38 (партия 30): отметка «событие записано» ставится ПОСЛЕ записи. Раньше

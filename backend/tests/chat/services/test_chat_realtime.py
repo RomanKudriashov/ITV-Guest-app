@@ -64,6 +64,8 @@ def staff_ws(thread_id, token, hotel="crystal"):
 # --- Авторизация -----------------------------------------------------------
 
 
+# Без событий после коммита и второго подключения — хватает отката (партия 41).
+@pytest.mark.django_db
 def test_guest_chat_requires_valid_token(crystal):
     async def scenario():
         communicator = WebsocketCommunicator(application, guest_ws("garbage"))

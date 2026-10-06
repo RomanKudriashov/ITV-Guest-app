@@ -98,6 +98,8 @@ def test_a_stale_code_does_not_bind(crystal, spoil, reason):
     assert User.all_objects.using("platform").get(pk=user.pk).telegram_chat_id == ""
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_an_unknown_code_does_not_bind(crystal):
     with pytest.raises(contacts.BindingRejected) as rejected:
         contacts.redeem_code("telegram", "nope", external_id="1")
@@ -122,6 +124,8 @@ def test_an_inactive_employee_cannot_be_bound(crystal):
     assert rejected.value.reason == "inactive"
 
 
+# Платформенное подключение здесь не читает записанного тестом — хватает отката.
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_codes_are_isolated_between_hotels(crystal, aurora):
     _issue(crystal, "chef@crystal.local")
     with tenant_context(aurora):

@@ -14,11 +14,12 @@ from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
-# transaction=True обязателен: список отелей считает счётчики ПЛАТФОРМЕННЫМ
-# подключением (батчем, а не по отелю), а второе подключение не видит данных,
-# не вышедших из транзакции теста. Раньше счёт шёл по одному отелю в его же
-# тенантном контексте и обходился одним соединением.
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+# Список отелей считает счётчики ПЛАТФОРМЕННЫМ подключением (батчем, а не по
+# отелю), а второе подключение не видит данных, не вышедших из транзакции
+# теста. Поэтому `transaction=True` — только у проверок, где платформа читает
+# записанное самим тестом; остальным хватает отката (партия 41, п.26: следы
+# платформенных запросов в обоих режимах совпали запрос в запрос).
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 BASE_HOST = "guest.localhost"
 
@@ -66,6 +67,8 @@ def test_platform_login_and_wrong_password(client):
 # --- CRUD отелей -----------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_create_list_get_hotel(client, platform_token):
     call = _p(client, platform_token)
     created = call("post", "/hotels", {
@@ -117,6 +120,8 @@ def test_patch_profile_and_set_admin(client, platform_token):
 # --- Деактивация -----------------------------------------------------------
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_deactivation_blocks_storefront_but_platform_still_sees(client, platform_token):
     call = _p(client, platform_token)
     hid = call("post", "/hotels", {"subdomain": "grand", "name": "Grand", "admin_email": "a@grand.test"}).json()["hotel"]["id"]

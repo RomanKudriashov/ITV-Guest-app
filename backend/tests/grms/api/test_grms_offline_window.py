@@ -31,7 +31,7 @@ from apps.grms.services import commands, liveness
 from apps.grms.management.commands.seed_grms_demo import DEMO_ROOM
 from apps.hotels.models import OnPremNode, Room
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 
 def _connector_dies(stand, hotel):
@@ -251,6 +251,8 @@ def test_a_live_room_stays_online(guest):
     assert [v for v in values if v is not None], "у живой комнаты значения есть"
 
 
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_the_plan_survives_unavailability(guest, crystal, stand):
     """
     УКУС. План — КОНФИГУРАЦИЯ, а не состояние: разметка комнаты не перестаёт

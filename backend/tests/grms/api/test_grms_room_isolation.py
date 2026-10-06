@@ -31,7 +31,7 @@ from apps.grms.models import RoomType, RoomTypeRoom
 from apps.hotels.models import Room
 from tests.grms.grms_harness import GuestClient, _session
 
-pytestmark = pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
 # Комната, которую эмулятор знает (см. DEFAULT_ROOMS), и та, что рядом.
 LIVE_ROOM = "305"

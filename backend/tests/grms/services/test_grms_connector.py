@@ -249,7 +249,8 @@ def test_connector_socket_accepts_a_registered_node(crystal):
     assert hello["hotel"] == crystal.subdomain
 
 
-@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+# Без событий после коммита и второго подключения — хватает отката (партия 41).
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_connector_socket_refuses_unknown_key():
     from config.asgi import application
 
@@ -329,7 +330,8 @@ def test_onprem_socket_connects_without_origin(crystal):
         )
 
 
-@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+# Без событий после коммита и второго подключения — хватает отката (партия 41).
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_onprem_socket_without_origin_still_needs_a_valid_key():
     """
     Снята ПРОВЕРКА ИСТОЧНИКА, а не аутентификация.
@@ -355,7 +357,8 @@ def test_onprem_socket_without_origin_still_needs_a_valid_key():
         assert async_to_sync(scenario)() is False
 
 
-@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+# Без событий после коммита и второго подключения — хватает отката (партия 41).
+@pytest.mark.django_db(databases=["default", "platform"])
 def test_browser_socket_without_origin_is_still_refused(crystal):
     """
     Остальные каналы под проверкой ОСТАЛИСЬ.

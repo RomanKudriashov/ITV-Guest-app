@@ -22,9 +22,11 @@ from config.asgi import application
 from tests.realtime.refusal import refused_with
 from tests.conftest import host_for, staff_token_for
 
-# transaction=True: событие эмитится в transaction.on_commit, а в обычном
-# TestCase транзакция не коммитится — снимок бы не пришёл.
-pytestmark = pytest.mark.django_db(transaction=True)
+# Событие эмитится в transaction.on_commit, а в обычном TestCase транзакция не
+# коммитится — снимок бы не пришёл. Поэтому `transaction=True` — только у
+# проверок доставки; отказам и пингу хватает отката: потребитель ходит в базу
+# в потоке теста и видит его данные (партия 41, п.26).
+pytestmark = pytest.mark.django_db
 
 WS_TIMEOUT = 10
 
@@ -151,6 +153,8 @@ def test_tracker_refuses_staff_of_another_hotel(client, crystal, aurora):
     async_to_sync(scenario)()
 
 
+# Ждёт событий после коммита или второго подключения — нужен коммит.
+@pytest.mark.django_db(transaction=True)
 def test_tracker_refuses_a_guest_token(crystal, guest):
     async def scenario():
         communicator = WebsocketCommunicator(
@@ -174,6 +178,8 @@ def test_tracker_refuses_unknown_hotel(crystal, staff_token):
 # --- Доставка --------------------------------------------------------------
 
 
+# Ждёт событий после коммита или второго подключения — нужен коммит.
+@pytest.mark.django_db(transaction=True)
 def test_board_snapshot_on_connect(crystal, staff_token, guest):
     place_order(guest, crystal, key="snapshot-1")
 
@@ -203,6 +209,8 @@ def test_board_snapshot_on_connect(crystal, staff_token, guest):
     async_to_sync(scenario)()
 
 
+# Ждёт событий после коммита или второго подключения — нужен коммит.
+@pytest.mark.django_db(transaction=True)
 def test_new_order_lands_on_the_board_in_real_time(crystal, staff_token, guest):
     async def scenario():
         communicator = WebsocketCommunicator(application, tracker_url("kitchen", staff_token))
@@ -226,6 +234,8 @@ def test_new_order_lands_on_the_board_in_real_time(crystal, staff_token, guest):
     async_to_sync(scenario)()
 
 
+# Ждёт событий после коммита или второго подключения — нужен коммит.
+@pytest.mark.django_db(transaction=True)
 def test_one_event_reaches_the_kitchen_and_the_guest_at_once(crystal, staff_token, guest):
     """
     Ради этого весь срез и собирался: сотрудник принял заказ — доска и экран
@@ -262,6 +272,8 @@ def test_one_event_reaches_the_kitchen_and_the_guest_at_once(crystal, staff_toke
     async_to_sync(scenario)()
 
 
+# Ждёт событий после коммита или второго подключения — нужен коммит.
+@pytest.mark.django_db(transaction=True)
 def test_other_points_board_does_not_move(crystal, client, staff_token, guest):
     """Заказ на кухню не должен дёргать доску бара."""
     from apps.accounts.models import StaffAssignment, User
