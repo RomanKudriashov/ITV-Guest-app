@@ -140,11 +140,21 @@ export function useChatLive({
       };
     }
 
-    connect();
+    // ПЕРВОЕ ПОДКЛЮЧЕНИЕ — СЛЕДУЮЩИМ ТИКОМ (партия 37, п.63 — как номер в
+    // п.53). Чат включается при монтировании, а StrictMode в разработке гоняет
+    // эффект дважды: сокет, созданный синхронно, успевал уйти на сервер — на
+    // каждый вход два соединения (замер: 2). Отложенный старт снимается
+    // `clearTimer` в уборке раньше, чем сокет появится. Доске и заказу это не
+    // нужно: их сокет включается по приехавшим данным, после монтирования
+    // (замер: по одному и без правки).
+    timerRef.current = window.setTimeout(connect, 0);
 
     const onOnline = () => {
       attemptRef.current = 0;
-      if (!socketRef.current) connect();
+      if (!socketRef.current) {
+        clearTimer();
+        connect();
+      }
     };
     window.addEventListener('online', onOnline);
 
