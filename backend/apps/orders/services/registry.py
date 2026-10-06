@@ -138,7 +138,16 @@ def list_orders(
                 Q(closed_key__lt=moment) | Q(closed_key=moment, pk__lt=cursor_id)
             )
 
-    rows = list(_with_list_prefetch(paged)[: page_size + 1])
+    # СНАЧАЛА СТРАНИЦА, ПОТОМ ПОДРОБНОСТИ (п.45). Одним запросом Postgres
+    # присоединял статус, номер, место, исполнителя и автора к КАЖДОМУ заказу
+    # выборки и только потом брал 51: фильтр RLS сбивает оценку (ждёт 1 строку,
+    # приходит 5 тыс.), и план — вложенные циклы по всей выборке. Замер на
+    # 5,4 тыс. заказах: 73 мс выполнения и 40 мс планирования против 9 мс у
+    # отбора одних ключей. Теперь ключи страницы — по индексу сортировки, а
+    # подробности — только к ним; порядок держит список ключей.
+    page_keys = list(paged.values_list("pk", flat=True)[: page_size + 1])
+    by_key = {order.pk: order for order in _with_list_prefetch(queryset.filter(pk__in=page_keys))}
+    rows = [by_key[key] for key in page_keys if key in by_key]
     has_more = len(rows) > page_size
     rows = rows[:page_size]
     next_cursor = (
