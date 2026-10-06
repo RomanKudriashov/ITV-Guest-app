@@ -235,3 +235,39 @@ def test_a_guest_cannot_read_drafts(client, crystal, guest_token):
         HTTP_AUTHORIZATION=f"Bearer {guest_token}",
     )
     assert response.status_code == 401
+
+
+# --- Черновик проверяется так же, как прямая правка (п.50) ------------------
+
+
+def _code(response) -> str:
+    body = response.json()
+    return body.get("code") or (body.get("error") or {}).get("code") or str(body)
+
+
+def test_a_draft_with_a_font_outside_the_list_is_refused(cms):
+    """Черновик был обходной дорогой мимо проверки PATCH: шрифт не из списка доезжал до гостя."""
+    response = cms.post(
+        "/api/cms/brand/drafts", {"name": "чужой шрифт", "tokens": {"typography": {"fontFamily": "Comic Sans MS"}}}
+    )
+    assert response.status_code == 422, response.content
+    assert "font_not_allowed" in _code(response)
+    assert _drafts(cms) == []
+
+
+def test_editing_a_draft_to_an_oversized_text_is_refused(cms):
+    draft = _new_draft(cms, "кегль", {"typography": {"fontSizeBase": 16}})
+    response = cms.patch(f"/api/cms/brand/drafts/{draft['id']}", {"tokens": {"typography": {"fontSizeBase": 40}}})
+    assert response.status_code == 422, response.content
+    assert "font_size_out_of_range" in _code(response)
+
+
+def test_a_bad_draft_saved_before_the_fix_does_not_reach_the_guest(client, crystal, cms):
+    """Черновики, записанные до правки, проверяются ещё раз при публикации."""
+    with tenant_context(crystal):
+        draft = BrandVersion.objects.create(
+            kind=BrandVersion.Kind.DRAFT, name="старый", tokens={"typography": {"fontSizeBase": 40}}
+        )
+    refused = cms.post(f"/api/cms/brand/drafts/{draft.pk}/publish")
+    assert refused.status_code == 422, refused.content
+    assert _versions(cms) == [], "отказ не оставил публикации"

@@ -26,7 +26,21 @@ from apps.core.context import current_actor
 from apps.core.errors import ValidationError
 from apps.hotels.models import BrandVersion
 
-from .brand_services import get_or_create_brand
+from .brand_services import get_or_create_brand, validate_tokens_patch
+
+
+def _validate_draft(tokens: dict) -> None:
+    """
+    ЧЕРНОВИК ПРОВЕРЯЕТСЯ ТЕМИ ЖЕ ПРАВИЛАМИ, ЧТО ПРЯМАЯ ПРАВКА (п.50).
+
+    `PATCH`/`PUT` бренда отвергали шрифт не из списка, кегль вне 14–20, битые
+    цвета, а путь через черновик не проверял ничего: черновик со шрифтом
+    вне списка или кеглем 40 публиковался и доезжал до гостя. Теперь —
+    одна проверка на создании, правке, публикации и откате (последние две —
+    для черновиков и версий, записанных до правки). Своё семейство шрифта
+    разрешено, если файл загружен — в черновике или у отеля.
+    """
+    validate_tokens_patch(tokens or {}, get_or_create_brand().tokens or {})
 
 
 def _actor():
@@ -117,6 +131,7 @@ def create_draft(*, name: str, tokens: dict) -> dict:
     будет уже неоткуда.
     """
     require_hotel_admin()
+    _validate_draft(tokens)
     user = _actor()
     draft = BrandVersion.objects.create(
         kind=BrandVersion.Kind.DRAFT,
@@ -140,6 +155,7 @@ def update_draft(draft_id, *, name: str | None = None, tokens: dict | None = Non
     if name is not None:
         draft.name = name.strip()[:120]
     if tokens is not None:
+        _validate_draft(tokens)
         draft.tokens = tokens
     draft.save(update_fields=["name", "tokens", "updated_at"])
     return serialize(draft, with_tokens=True)
@@ -214,6 +230,7 @@ def publish_draft(draft_id, *, confirm_stale: bool = False) -> dict:
             code="draft_stale",
         )
 
+    _validate_draft(draft.tokens)
     version = publish_tokens(draft.tokens, name=draft.name)
     draft.delete()
     return serialize(version)
@@ -248,5 +265,6 @@ def restore_version(version_id) -> dict:
     if source is None:
         raise ValidationError("Версия не найдена", field="version", code="version_not_found")
 
+    _validate_draft(source.tokens)
     version = publish_tokens(source.tokens, name=source.name, restored_from=source)
     return serialize(version)
