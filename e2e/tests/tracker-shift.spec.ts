@@ -131,9 +131,13 @@ test.describe('Доска: сводка смены', () => {
     await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 })
     await page.goto('/tracker')
 
-    // Экран говорит о СВЯЗИ, а не о том, что заявок нет.
-    const trouble = page.getByText(/связь|Связь/i).first()
-    await expect(trouble).toBeVisible({ timeout: 25_000 })
+    // Экран говорит о СВЯЗИ, а не о том, что заявок нет, и не об отказе
+    // сервера. Карточка — по testid: прежнее `getByText(/связь/)` ловило любую
+    // строку со словом и пропустило регрессию партии 39 — обрыв, завёрнутый в
+    // ApiError, давал плашку «Не удалось выполнить действие» (партия 41).
+    await expect(page.getByTestId('tracker-empty-offline')).toBeVisible({ timeout: 25_000 })
+    await expect(page.getByTestId('tracker-empty-offline')).toContainText('Связь с доской потеряна')
+    await expect(page.getByRole('alert').filter({ hasText: 'Не удалось выполнить действие' })).toHaveCount(0)
     await expect(page.getByTestId('tracker-empty-summary')).toHaveCount(0)
   })
 

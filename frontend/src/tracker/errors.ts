@@ -36,6 +36,8 @@ export function acceptedByName(error: unknown): string | null {
 }
 
 export function trackerErrorMessage(error: unknown, t: TFunction): string {
+  // Обрыв сети — фраза про связь, а не «не удалось выполнить действие».
+  if (error instanceof ApiError && error.status === 0) return error.detail;
   if (error instanceof ApiError) {
     if (error.code === 'already_accepted') {
       const name = acceptedByName(error);
@@ -69,8 +71,12 @@ export function trackerErrorMessage(error: unknown, t: TFunction): string {
  * посылает половину людей не туда.
  *
  * Признак — ОТСУТСТВИЕ ответа: у `ApiError` есть статус, значит сервер ответил,
- * что бы он ни ответил.
+ * что бы он ни ответил. Кроме статуса 0: с партии 39 клиент панели сам
+ * заворачивает обрыв в `ApiError(0, …, 'network')` ради понятного текста, и
+ * прежний признак «не ApiError» перестал его узнавать — доска при обрыве
+ * показывала отказ сервера вместо «связь с доской потеряна» (партия 41).
  */
 export function isTransportFailure(error: unknown): boolean {
-  return Boolean(error) && !(error instanceof ApiError);
+  if (error instanceof ApiError) return error.status === 0;
+  return Boolean(error);
 }
