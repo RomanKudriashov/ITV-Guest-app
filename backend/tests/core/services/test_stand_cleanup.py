@@ -448,3 +448,103 @@ def test_review_chat_residue_is_removed_and_real_chat_kept(crystal):
     with tenant_context(crystal):
         alive = set(ChatMessage.objects.filter(pk__in=[residue.pk, real.pk]).values_list("pk", flat=True))
     assert alive == {real.pk}
+
+
+# --- Жёстко и только локально (партия 41, п.70) -------------------------------
+
+LOCAL = dict(DEBUG=True, APP_DOMAINS=[], GUEST_APP_BASE_DOMAINS=["guest.localhost", "naviapp.localhost"])
+
+
+@pytest.mark.parametrize(
+    "stand",
+    [
+        dict(LOCAL, DEBUG=False),
+        dict(LOCAL, APP_DOMAINS=["naviapp.navicentric.ru"]),
+        dict(LOCAL, GUEST_APP_BASE_DOMAINS=["app.147.45.245.172.sslip.io"]),
+    ],
+    ids=["debug-off", "app-domains", "public-base"],
+)
+def test_hard_local_refuses_anywhere_but_local(crystal, stand):
+    """
+    Признак стенда — любой из трёх — и команда отказывается, ничего не тронув.
+    Заказ это история и выручка; локальность доказывается всеми признаками сразу.
+    """
+    from django.core.management.base import CommandError
+    from django.test import override_settings
+
+    from apps.hotels.models import Service
+
+    service = _residue_service(crystal, "rum-servis-mtstand1")
+    order = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        Order.objects.filter(pk=order.pk).update(execution_point=service.execution_point_id)
+
+    with override_settings(**stand), pytest.raises(CommandError, match="только для локальной базы"):
+        call_command("clean_test_residue", subdomain=crystal.subdomain, apply=True, hard_local=True)
+
+    with tenant_context(crystal):
+        assert Service.all_objects.filter(pk=service.pk).exists()
+        assert Order.all_objects.filter(pk=order.pk).exists()
+
+
+def test_hard_local_removes_residue_with_its_orders(crystal):
+    """
+    Локально остатки уходят ФИЗИЧЕСКИ: заведение прогона с заказами, раздел
+    коктейлей с заказанной позицией, мягко удалённая позиция прошлой уборки.
+    Настоящие заведения и чужие заказы — на месте.
+    """
+    from django.test import override_settings
+
+    from apps.catalog.models import Category, Item
+    from apps.hotels.models import ExecutionPoint, Service
+    from apps.orders.models import OrderItem
+
+    service = _residue_service(crystal, "rum-servis-mthard01")
+    aggregated = _make_order(crystal, age_hours=1, status_code="new")
+    bar_order = _make_order(crystal, age_hours=1, status_code="new")
+    real_order = _make_order(crystal, age_hours=1, status_code="new")
+    with tenant_context(crystal):
+        Order.objects.filter(pk=aggregated.pk).update(execution_point=service.execution_point_id)
+        category = Category.objects.create(code="kokteyli-mthard01", title={"ru": "Коктейли"}, type="product")
+        item = Item.objects.create(category=category, code="shprits-mthard01", title={"ru": "Шприц"}, type="product", price=100)
+        ghost = Item.objects.create(category=category, code="negroni-mthard01", title={"ru": "Негрони"}, type="product", price=100)
+        OrderItem.objects.create(order=bar_order, item=item, title_snapshot={"ru": "Шприц"})
+        ghost.delete()  # мягко — как оставляла прежняя уборка
+        real = {s.code for s in Service.objects.all() if "-m" not in s.code}
+
+    with override_settings(**LOCAL):
+        call_command("clean_test_residue", subdomain=crystal.subdomain, apply=True, hard_local=True)
+
+    with tenant_context(crystal):
+        assert not Service.all_objects.filter(pk=service.pk).exists()
+        assert not ExecutionPoint.all_objects.filter(pk=service.execution_point_id).exists()
+        assert not Category.all_objects.filter(pk=category.pk).exists()
+        assert not Item.all_objects.filter(pk__in=[item.pk, ghost.pk]).exists()
+        assert not Order.all_objects.filter(pk__in=[aggregated.pk, bar_order.pk]).exists()
+        assert Order.all_objects.filter(pk=real_order.pk).exists(), "чужой заказ не трогаем"
+        assert real <= {s.code for s in Service.objects.all()}, "настоящие заведения на месте"
+
+
+def test_apply_refuses_a_hotel_outside_the_demo_fleet():
+    """
+    Живой отель — только пробный проход (партия 41). Шаблон метки прогона
+    совпадает со словами: у Сиалии на стенде под него подошли `spa-manicure` и
+    `shop-tea-matsesta`, и `--apply` по ней удалил бы настоящий маникюр.
+    """
+    from django.core.management.base import CommandError
+    from django.test import override_settings
+
+    with pytest.raises(CommandError, match="не демо-отель"):
+        call_command("clean_test_residue", subdomain="sialia", apply=True)
+    # И локально, где жёсткий режим разрешён, — живой отель всё равно мимо.
+    with override_settings(**LOCAL), pytest.raises(CommandError, match="не демо-отель"):
+        call_command("clean_test_residue", subdomain="sialia", apply=True, hard_local=True)
+
+
+def test_dry_run_on_any_hotel_is_allowed():
+    """Посмотреть можно где угодно: пробный проход ничего не меняет."""
+    from io import StringIO
+
+    out = StringIO()
+    call_command("clean_test_residue", subdomain="sialia", stderr=out, stdout=out)
+    assert "не найден" in out.getvalue()

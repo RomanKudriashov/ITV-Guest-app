@@ -38,8 +38,9 @@ from __future__ import annotations
 
 import re
 
+from django.conf import settings
 from django.core.cache import cache
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel, Room
@@ -57,6 +58,15 @@ from apps.hotels.models import Hotel, Room
 # строки по-прежнему обязателен: без него шаблон поймал бы обычное имя, где
 # такие буквы случайны.
 TEST_SUFFIX = re.compile(r"-m[0-9a-z]{7}$")
+
+# ГДЕ УБОРКА ВООБЩЕ ДОПУСТИМА (партия 41). Шаблон выше ловит и СЛОВА: метка
+# прогона — время в base36, по виду неотличимое от восьмибуквенного слова на
+# «m». На стенде у Сиалии под него подошли настоящие позиции `spa-manicure` и
+# `shop-tea-matsesta`: уборка по Сиалии удалила бы маникюр. Признак
+# происхождения отеля (`Hotel.origin`) помочь не может — у демо-отелей стенда
+# он тоже `live`. Поэтому список явный: убирать (`--apply`) можно только в
+# демо-флоте, где прогоны и живут; живой отель — только пробный проход.
+DEMO_SUBDOMAINS = frozenset({"crystal", "azure", "lumen", "aurora"})
 # «где мой заказ <метка>» — сообщение гостя из разбора отзыва
 # (`cms-reviews.spec.ts`). Его никто не читает, и каждый прогон добавлял
 # НЕПРОЧИТАННЫЙ диалог: к партии 30 их стало 36, непрочитанные идут на
@@ -108,6 +118,27 @@ FRESH_SCHEDULE_MINUTES = 10
 STALE_HOURS = 24
 
 
+def not_local_reason() -> str | None:
+    """
+    Почему это НЕ локальное окружение — или None, если локальное.
+
+    `--hard-local` удаляет заказы физически, и цена ошибки адресом — выручка и
+    история настоящего отеля. Поэтому признаков три, и нужны ВСЕ: отладка
+    включена (на стенде `DJANGO_DEBUG=0`), публичных баз нет (`APP_DOMAINS` на
+    стенде задан), и все базы адресов — `*.localhost`. Достаточно одного
+    несовпадения, чтобы отказаться.
+    """
+    if not settings.DEBUG:
+        return "DEBUG выключен — так работает стенд"
+    if getattr(settings, "APP_DOMAINS", None):
+        return f"задан APP_DOMAINS ({', '.join(settings.APP_DOMAINS)}) — это публичные адреса"
+    bases = list(getattr(settings, "GUEST_APP_BASE_DOMAINS", []) or [])
+    foreign = [b for b in bases if b != "localhost" and not b.endswith(".localhost")]
+    if foreign:
+        return f"база адресов не локальная: {', '.join(foreign)}"
+    return None
+
+
 class Command(BaseCommand):
     help = "Показать (и по флагу убрать) остатки автотестов в отеле"
 
@@ -130,6 +161,16 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--hard-local",
+            action="store_true",
+            help=(
+                "ТОЛЬКО ЛОКАЛЬНО (партия 41, п.70). Остатки прогонов — заведения, "
+                "разделы, позиции — удалить ЖЁСТКО вместе с их тестовыми заказами: "
+                "локальная база, ценности в них нет, а копящиеся строки вытесняют "
+                "настоящие заведения из списков. Вне локального окружения — отказ"
+            ),
+        )
+        parser.add_argument(
             "--stale-hours",
             type=int,
             default=STALE_HOURS,
@@ -148,6 +189,18 @@ class Command(BaseCommand):
         from apps.hotels.models import ExecutionPoint, Service
         from apps.orders.models import Order, OrderItem, StatusDefinition
 
+        hard = options["hard_local"]
+        if hard:
+            reason = not_local_reason()
+            if reason:
+                raise CommandError(f"--hard-local только для локальной базы: {reason}. Ничего не тронуто.")
+
+        if options["apply"] and options["subdomain"] not in DEMO_SUBDOMAINS:
+            raise CommandError(
+                f"«{options['subdomain']}» не демо-отель: убирать можно только в "
+                f"{', '.join(sorted(DEMO_SUBDOMAINS))}. Без --apply — пробный проход. Ничего не тронуто."
+            )
+
         hotel = Hotel.objects.filter(subdomain=options["subdomain"]).first()
         if hotel is None:
             self.stderr.write(f"Отель «{options['subdomain']}» не найден")
@@ -155,15 +208,20 @@ class Command(BaseCommand):
 
         apply = options["apply"]
         with tenant_context(hotel):
-            items = [item for item in Item.objects.all() if TEST_SUFFIX.search(item.code)]
-            categories = [c for c in Category.objects.all() if TEST_SUFFIX.search(c.code)]
+            # Жёсткий режим подбирает и мягко удалённое прошлыми уборками: эти
+            # строки лежат в таблице и держат за собой заказы.
+            item_rows = Item.all_objects if hard else Item.objects
+            category_rows = Category.all_objects if hard else Category.objects
+            items = [item for item in item_rows.all() if TEST_SUFFIX.search(item.code)]
+            categories = [c for c in category_rows.all() if TEST_SUFFIX.search(c.code)]
             messages = [m for m in ChatMessage.objects.all() if CHAT_BODY.match((m.body or "").strip())]
 
             # Заведения прогонов. Тем же признаком, что позиции и разделы, —
             # суффиксом, который генерирует спека, а не «похожестью имени».
             # Без этого они копились каждым прогоном: за время работы стенда
             # их набралось 58 при семи настоящих.
-            services = [s for s in Service.objects.all() if TEST_SUFFIX.search(s.code or "")]
+            service_rows = Service.all_objects if hard else Service.objects
+            services = [s for s in service_rows.all() if TEST_SUFFIX.search(s.code or "")]
             # Пустое заведение удаляется всегда; занятое — работа, только пока
             # оно включено или видно гостю (см. ниже, «уже выключенное»).
 
@@ -209,12 +267,17 @@ class Command(BaseCommand):
             # проход заново находил их и рапортовал «выключить 195» — отчёт о
             # работе, которой нет, тот же, что был с учётками платформы.
             keep = [item for item in keep if item.is_active or item.in_stock]
+            if hard:
+                # Локально заказ на позицию прогона — сам след прогона: он
+                # уходит, и позиция удаляется, а не выключается.
+                drop, keep = items, []
             # Раздел — работа, пока он включён или станет пустым после уборки.
             drop_ids = {item.pk for item in drop}
             categories = [
                 c
                 for c in categories
-                if c.is_active
+                if hard
+                or c.is_active
                 or not Item.objects.filter(category=c).exclude(pk__in=drop_ids).exists()
             ]
 
@@ -225,7 +288,7 @@ class Command(BaseCommand):
             #
             # `--purge-orders` снимает именно ЭТО ограничение, и только на
             # стенде: там заказ не история и не выручка, а след прогона.
-            purge = options["purge_orders"]
+            purge = options["purge_orders"] or hard
             keep_services, drop_services = [], []
             for service in services:
                 busy_service = Order.all_objects.filter(
@@ -248,6 +311,16 @@ class Command(BaseCommand):
                     Order.all_objects.filter(parent__in=parent_ids).values_list("id", flat=True)
                 )
                 purge_orders = parent_ids + child_ids
+            if hard and items:
+                # Заказы на позиции прогона, сделанные в НАСТОЯЩИХ заведениях
+                # (корзина гостя прямо в бар), — тоже след прогона.
+                with_items = list(
+                    OrderItem.objects.filter(item__in=items).values_list("order_id", flat=True)
+                )
+                children = list(
+                    Order.all_objects.filter(parent__in=with_items).values_list("id", flat=True)
+                )
+                purge_orders = list(dict.fromkeys([*purge_orders, *with_items, *children]))
 
             self.stdout.write(
                 f"Найдено: позиций {len(drop) + len(keep)} (удалить {len(drop)}, выключить {len(keep)} — "
@@ -260,7 +333,7 @@ class Command(BaseCommand):
             if purge:
                 self.stdout.write(
                     self.style.WARNING(
-                        f"  РЕЖИМ СТЕНДА: заказов будет удалено {len(purge_orders)} "
+                        f"  {'ЛОКАЛЬНО, ЖЁСТКО' if hard else 'РЕЖИМ СТЕНДА'}: заказов будет удалено {len(purge_orders)} "
                         f"(вместе с фан-аутом по настоящим точкам)"
                     )
                 )
@@ -400,22 +473,8 @@ class Command(BaseCommand):
 
             session_svc.forget(e2e_sessions)
 
-            hidden = Item.objects.filter(pk__in=[i.pk for i in keep]).update(
-                is_active=False, in_stock=False
-            )
-            # Удаление в проекте МЯГКОЕ (`deleted_at`), и оно здесь уместно:
-            # это не офбординг по закону, а уборка стенда — строка должна
-            # перестать попадаться, но незачем терять её след.
-            deleted_items = Item.objects.filter(pk__in=[i.pk for i in drop]).delete()
-
-            # Раздел удаляем, только если в нём не осталось ни одной позиции:
-            # иначе он держит выключенные и обязан остаться вместе с ними.
-            empty = [c for c in categories if not Item.objects.filter(category=c).exists()]
-            busy = [c for c in categories if c not in empty and c.is_active]
-            deleted_cats = Category.objects.filter(pk__in=[c.pk for c in empty]).delete()
-            hidden_cats = Category.objects.filter(pk__in=[c.pk for c in busy]).update(is_active=False)
-
-            # Заказы — ДО заведений: точка защищена от них PROTECT. Жёстко, а не
+            # Заказы — ДО позиций и заведений: строка заказа держит позицию, а
+            # заказ — точку, обе связи PROTECT. Жёстко, а не
             # мягко: мягкое оставило бы строки, ради которых всё и затевалось.
             # Событие аналитики ссылается на заказ полем без FK, каскад его не
             # унесёт — убираем явно, иначе журнал будет считать удалённое.
@@ -425,6 +484,31 @@ class Command(BaseCommand):
                 purged_orders = Order.all_objects.filter(
                     pk__in=purge_orders
                 ).hard_delete()[1].get("orders.Order", 0)
+
+            hidden = Item.objects.filter(pk__in=[i.pk for i in keep]).update(
+                is_active=False, in_stock=False
+            )
+            # Удаление в проекте МЯГКОЕ (`deleted_at`), и оно здесь уместно:
+            # это не офбординг по закону, а уборка стенда — строка должна
+            # перестать попадаться, но незачем терять её след.
+            # Локально (`--hard-local`) — жёстко: мягкая строка осталась бы в
+            # таблице и попадалась бы следующей выборке.
+            if hard:
+                deleted_items = Item.all_objects.filter(pk__in=[i.pk for i in drop]).hard_delete()[1].get("catalog.Item", 0)
+            else:
+                deleted_items = Item.objects.filter(pk__in=[i.pk for i in drop]).delete()
+
+            # Раздел удаляем, только если в нём не осталось ни одной позиции:
+            # иначе он держит выключенные и обязан остаться вместе с ними.
+            empty = [c for c in categories if not Item.all_objects.filter(category=c).exists()] if hard else [
+                c for c in categories if not Item.objects.filter(category=c).exists()
+            ]
+            busy = [c for c in categories if c not in empty and c.is_active]
+            if hard:
+                deleted_cats = Category.all_objects.filter(pk__in=[c.pk for c in empty]).hard_delete()[1].get("catalog.Category", 0)
+            else:
+                deleted_cats = Category.objects.filter(pk__in=[c.pk for c in empty]).delete()
+            hidden_cats = Category.objects.filter(pk__in=[c.pk for c in busy]).update(is_active=False)
 
             # Заведение уносит с собой свою точку исполнения: связь 1:1, и
             # точка без сервиса — это осиротевший исполнитель, которого не
@@ -438,7 +522,7 @@ class Command(BaseCommand):
             # следующей выборке.
             service_ids = [s.pk for s in drop_services]
             if purge:
-                deleted_services = Service.all_objects.filter(pk__in=service_ids).hard_delete()
+                deleted_services = Service.all_objects.filter(pk__in=service_ids).hard_delete()[1].get("hotels.Service", 0)
                 ExecutionPoint.all_objects.filter(pk__in=point_ids).hard_delete()
             else:
                 deleted_services = Service.objects.filter(pk__in=service_ids).delete()
