@@ -17,7 +17,7 @@ async function serviceOfType(
   token: string,
   type: string,
 ): Promise<{ id: string; code: string; noun: string }> {
-  const response = await request.get(`${API}/api/cms/services?limit=200`, {
+  const response = await request.get(`${API}/api/cms/services?limit=500`, {
     headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
   })
   expect(response.ok()).toBeTruthy()

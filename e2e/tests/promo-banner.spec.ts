@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, HOTEL, apiHeaders, apiToken, guestSession, signIn } from './helpers'
+import { ADMIN, API, DEMO_ROOM, HOTEL, apiHeaders, apiToken, guestSession, signIn } from './helpers'
 
 /**
  * Рекламный баннер на витрине (пункт 20).
@@ -105,7 +105,7 @@ test('баннер виден на витрине и закрывается кн
   const banner = await created.json()
 
   try {
-    await page.goto(`/r/305`)
+    await page.goto(`/r/${DEMO_ROOM}`)
     await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 20_000 })
     const strip = page.getByTestId('guest-banner')
     await expect(strip).toBeVisible({ timeout: 20_000 })

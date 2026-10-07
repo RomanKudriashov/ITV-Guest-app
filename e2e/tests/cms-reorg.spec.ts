@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, DEMO_ROOM, apiHeaders, apiToken, signInToCms } from './helpers'
+import { ADMIN, API, DEMO_ROOM, apiHeaders, apiToken, removeService, serviceName, signInToCms } from './helpers'
 
 /**
  * R4: реорганизованная CMS.
@@ -106,7 +106,7 @@ test.describe('Пространство сервиса', () => {
   test('меню на вкладке принадлежит ИМЕННО этому заведению', async ({ page, request }) => {
     const token = await apiToken(request, ADMIN)
     const services = (await request
-      .get(`${API}/api/cms/services`, { headers: apiHeaders(token) })
+      .get(`${API}/api/cms/services?limit=500`, { headers: apiHeaders(token) })
       .then((r) => r.json())
       .then((page) => page.items)) as Array<{ id: string; code: string }>
 
@@ -144,10 +144,12 @@ test.describe('Включённый контент', () => {
     const tag = Date.now().toString(36)
 
     const services = (await request
-      .get(`${API}/api/cms/services`, { headers: h })
+      .get(`${API}/api/cms/services?limit=500`, { headers: h })
       .then((r) => r.json())
       .then((page) => page.items)) as Array<{ id: string; code: string }>
     const kitchen = services.find((s) => s.code === 'kitchen')!
+    // Имя кухни в списке источников — из её карточки, а не из сида (партия 41, п.28).
+    const kitchenName = await serviceName(request, 'kitchen')
 
     // Новый агрегатор без собственного меню.
     const aggregator = await request
@@ -158,6 +160,7 @@ test.describe('Включённый контент', () => {
       .then((r) => r.json())
 
     const aggregatorPoint = aggregator.execution_point.code
+    try {
 
     // Пока ничего не включено — меню агрегатора пусто у гостя.
     const before = await guestMenu(request, aggregatorPoint)
@@ -170,7 +173,7 @@ test.describe('Включённый контент', () => {
     await expect(page.getByTestId('service-inclusions')).toBeVisible()
 
     await page.getByTestId('inclusion-add-source').click()
-    await page.getByRole('option', { name: /Панорама/ }).click()
+    await page.getByRole('option', { name: kitchenName }).click()
 
     // Включение появилось карточкой с overlay-настройками.
     await expect(page.locator('[data-testid^="inclusion-"]').first()).toBeVisible({
@@ -185,6 +188,9 @@ test.describe('Включённый контент', () => {
     const after = await guestMenu(request, aggregatorPoint)
     expect(after).toContain('caesar')
     expect(kitchen).toBeTruthy()
+    } finally {
+      await removeService(request, h, aggregator.id)
+    }
   })
 })
 

@@ -21,7 +21,7 @@ const LONG = 'Панорамный ресторан высокой кухни н
 test('длинное название заведения на 390 — ниже верхних кнопок, с отступом', async ({ browser, request }) => {
   test.setTimeout(120_000)
   const headers = { Authorization: `Bearer ${await apiToken(request, ADMIN)}`, 'X-Hotel-Subdomain': HOTEL }
-  const services = (await (await request.get(`${API}/api/cms/services`, { headers })).json()).items as Array<{
+  const services = (await (await request.get(`${API}/api/cms/services?limit=500`, { headers })).json()).items as Array<{
     id: string
     code: string
   }>

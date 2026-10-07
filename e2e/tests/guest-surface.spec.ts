@@ -111,7 +111,7 @@ test.describe('Гостевой контур', () => {
       })
       // Шапка — отдел и номер; справа — карточка гостя этого номера.
       await expect(staff.getByTestId('desk-conversation-title')).toContainText('Ресепшен')
-      await expect(staff.getByTestId('desk-guest-room')).toContainText('305')
+      await expect(staff.getByTestId('desk-guest-room')).toContainText(DEMO_ROOM)
 
       // --- Персонал отвечает — гость получает ответ БЕЗ перезагрузки. ------
       await staff.getByTestId('tracker-chat-input').fill(answer)

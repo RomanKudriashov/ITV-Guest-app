@@ -222,7 +222,7 @@ async function openKitchenMenu(
 ): Promise<void> {
   const token = await apiToken(request)
   const services = (await request
-    .get(`${API}/api/cms/services`, {
+    .get(`${API}/api/cms/services?limit=500`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
     .then((r) => r.json())

@@ -128,9 +128,18 @@ test.describe('Бот Telegram', () => {
     const managerToken = await bindByApi(request, RESTAURANT_MANAGER, managerChat)
 
     // Первая ступень правила кухни — руководителям: им и придёт личное сообщение.
+    // Правило ищется по точке исполнения с кодом `kitchen`, а не по имени
+    // (партия 41, п.28): название правила — данные сида, его можно переименовать.
+    const kitchen = (
+      (await (await request.get(`${API}/api/cms/bootstrap`, { headers: apiHeaders(adminToken) })).json()).execution_points as Array<{
+        id: string
+        code: string
+      }>
+    ).find((p) => p.code === 'kitchen')
+    expect(kitchen, 'у демо-отеля нет точки исполнения kitchen').toBeTruthy()
     const rules = (await (await request.get(`${API}/api/cms/escalation-rules?limit=100`, { headers: apiHeaders(adminToken) })).json())
-      .items as Array<{ id: string; name: string; is_active: boolean; steps: Array<Record<string, unknown>> }>
-    const rule = rules.find((r) => r.is_active && r.name.startsWith('Кухня'))
+      .items as Array<{ id: string; execution_point_id: string | null; is_active: boolean; steps: Array<Record<string, unknown>> }>
+    const rule = rules.find((r) => r.is_active && r.execution_point_id === kitchen!.id)
     expect(rule, 'у кухни демо-отеля нет активного правила эскалации').toBeTruthy()
     const original = rule!.steps.map((s) => ({
       delay_minutes: s.delay_minutes,

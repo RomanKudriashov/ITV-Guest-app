@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { API, HOTEL, apiToken, signInToCms, unique } from './helpers'
+import { API, DEMO_ROOM, HOTEL, apiToken, signInToCms, unique } from './helpers'
 
 /**
  * ДВЕ ДЫРЫ В НАБОРЕ, ЗАКРЫТЫЕ ЗДЕСЬ.
@@ -226,7 +226,7 @@ test('у отменённой ступени «Ошибка» пуста, а п�
   const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
 
   const session = await request.post(`${API}/api/guest/session`, {
-    data: { room_number: '305' },
+    data: { room_number: DEMO_ROOM },
     headers: { 'X-Hotel-Subdomain': HOTEL },
   })
   const guest = (await session.json()).token

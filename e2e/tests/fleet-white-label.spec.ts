@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test'
+import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
 import { API } from './helpers'
@@ -35,10 +35,24 @@ async function enterBrowsing(page: Page): Promise<void> {
   await expect(page.getByTestId('guest-home-bento')).toBeVisible({ timeout: 20_000 })
 }
 
+/**
+ * Имя отеля — из его же API, а не записанное в тест (партия 41, п.28): сид с
+ * другими названиями не должен красить проверку изоляции. Доказательство
+ * то же — у каждого отеля своё имя, и чужого на витрине нет.
+ */
+async function hotelName(request: APIRequestContext, subdomain: string): Promise<string> {
+  const response = await request.get(`${API}/api/v1/guest/hotel?lang=ru`, {
+    headers: { 'X-Hotel-Subdomain': subdomain },
+  })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  const { name } = (await response.json()) as { name: string }
+  expect(name, `${subdomain}: имя отеля`).toBeTruthy()
+  return name
+}
+
 const FLEET = [
   {
     subdomain: 'crystal',
-    name: 'Кристалл',
     // Заведения, которых нет у соседей: по ним видно, что витрина не общая.
     // Карточки в списке «Рестораны и бары».
     own: 'guest-venue-kitchen',
@@ -46,13 +60,11 @@ const FLEET = [
   },
   {
     subdomain: 'azure',
-    name: 'Азур',
     own: 'guest-venue-marina',
     foreign: ['guest-venue-kitchen', 'guest-venue-bistro'],
   },
   {
     subdomain: 'lumen',
-    name: 'Люмен',
     own: 'guest-venue-bistro',
     foreign: ['guest-venue-kitchen', 'guest-venue-marina'],
   },
@@ -60,14 +72,22 @@ const FLEET = [
 
 test.describe('Флот: три отеля, три витрины', () => {
   for (const hotel of FLEET) {
-    test(`${hotel.subdomain}: гость видит свой отель и не видит чужие`, async ({ page }) => {
+    test(`${hotel.subdomain}: гость видит свой отель и не видит чужие`, async ({ page, request }) => {
+      const name = await hotelName(request, hotel.subdomain)
+      const neighbours = await Promise.all(
+        FLEET.filter((other) => other !== hotel).map((other) => hotelName(request, other.subdomain)),
+      )
       await asHotel(page, hotel.subdomain)
       await enterBrowsing(page)
 
       // Имя отеля — на своём месте, а не соседское. С логотипом оно в `alt`
       // знака, без логотипа — текстом (партия 29: не оба сразу).
       const brand = page.getByTestId('guest-topbar-brand')
-      await expect(brand.getByText(hotel.name).or(brand.getByAltText(hotel.name))).toBeVisible()
+      await expect(brand.getByText(name).or(brand.getByAltText(name))).toBeVisible()
+      for (const other of neighbours) {
+        await expect(brand.getByText(other, { exact: true })).toHaveCount(0)
+        await expect(brand.getByAltText(other, { exact: true })).toHaveCount(0)
+      }
 
       // Своё заведение есть — в списке «Рестораны и бары» (партия 29: рестораны
       // на главной всегда одной плиткой-группой).
@@ -83,6 +103,7 @@ test.describe('Флот: три отеля, три витрины', () => {
 
   test('у трёх отелей три разных бренда', async ({ request }) => {
     const presets = new Map<string, string>()
+    const names = new Set<string>()
     for (const hotel of FLEET) {
       const response = await request.get(`${API}/api/v1/guest/hotel?lang=ru`, {
         headers: { 'X-Hotel-Subdomain': hotel.subdomain },
@@ -92,11 +113,12 @@ test.describe('Флот: три отеля, три витрины', () => {
         name: string
         theme: { preset?: string; brand?: { background?: { imageUrl?: string } } }
       }
-      expect(body.name).toContain(hotel.name)
+      names.add(body.name)
       // Обложка у каждого своя и настоящая — не заглушка.
       expect(body.theme.brand?.background?.imageUrl, `${hotel.subdomain}: обложка`).toBeTruthy()
       presets.set(hotel.subdomain, body.theme.preset ?? '')
     }
+    expect(names.size, `имена: ${[...names]}`).toBe(3)
     expect(new Set(presets.values()).size, `пресеты: ${[...presets]}`).toBe(3)
   })
 

@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, HOTEL, apiToken } from './helpers'
+import { ADMIN, API, DEMO_ROOM, HOTEL, apiToken } from './helpers'
 
 /**
  * ГЛАВНАЯ НЕ ПИШЕТ «НЕДОСТУПНО» В НОМЕРЕ БЕЗ УПРАВЛЕНИЯ (партия 25).
@@ -25,7 +25,7 @@ test('номер без типа управления: блока состоян
   try {
     for (const [room, expected] of [
       [number, 0],
-      ['305', 1],
+      [DEMO_ROOM, 1],
     ] as const) {
       const context = await browser.newContext({ viewport: { width: 390, height: 900 }, locale: 'ru-RU' })
       const page = await context.newPage()

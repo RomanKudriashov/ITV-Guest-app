@@ -145,32 +145,44 @@ test.describe('Профиль отеля: правка', () => {
     const was = await currency.inputValue()
     const next = was === 'RUB' ? 'EUR' : 'RUB'
 
-    const saved = page.waitForResponse(
-      (r) => r.url().includes('/platform/hotels/') && r.request().method() === 'PATCH',
-    )
-    await currency.fill(next)
-    await page.getByTestId('admin-hotel-save').click()
-    expect((await saved).ok(), 'сохранение профиля отклонено').toBeTruthy()
-
     const owner = await request
       .post(`${API}/api/v1/platform/auth/login`, { data: PLATFORM })
       .then((r) => r.json())
-    const audit = await request
-      .get(`${API}/api/v1/platform/audit?action=platform.hotel.updated&limit=20`, {
+    const fleet = await request
+      .get(`${API}/api/v1/platform/fleet?search=${DEMO}&origin=all`, {
         headers: { Authorization: `Bearer ${owner.access}` },
       })
       .then((r) => r.json())
+    const hotelId = fleet.items[0].id
 
-    const entry = audit.items.find(
-      (row: { payload: { changes?: Record<string, { from: string; to: string }> } }) =>
-        row.payload?.changes?.currency?.to === next,
-    )
-    expect(entry, `смена валюты на ${next} обязана быть в журнале`).toBeTruthy()
-    expect(entry.payload.changes.currency.from).toBe(was)
+    try {
+      const saved = page.waitForResponse(
+        (r) => r.url().includes('/platform/hotels/') && r.request().method() === 'PATCH',
+      )
+      await currency.fill(next)
+      await page.getByTestId('admin-hotel-save').click()
+      expect((await saved).ok(), 'сохранение профиля отклонено').toBeTruthy()
 
-    // Возвращаем стенд как было — он общий.
-    await currency.fill(was)
-    await page.getByTestId('admin-hotel-save').click()
-    await expect(page.getByTestId('admin-hotel-dirty')).toHaveCount(0, { timeout: 15_000 })
+      const audit = await request
+        .get(`${API}/api/v1/platform/audit?action=platform.hotel.updated&limit=20`, {
+          headers: { Authorization: `Bearer ${owner.access}` },
+        })
+        .then((r) => r.json())
+
+      const entry = audit.items.find(
+        (row: { payload: { changes?: Record<string, { from: string; to: string }> } }) =>
+          row.payload?.changes?.currency?.to === next,
+      )
+      expect(entry, `смена валюты на ${next} обязана быть в журнале`).toBeTruthy()
+      expect(entry.payload.changes.currency.from).toBe(was)
+    } finally {
+      // Стенд общий: валюта возвращается и тогда, когда проверка упала на
+      // полпути (партия 41, п.28) — сосед не должен увидеть чужую валюту.
+      const restored = await request.patch(`${API}/api/v1/platform/hotels/${hotelId}`, {
+        data: { currency: was },
+        headers: { Authorization: `Bearer ${owner.access}` },
+      })
+      expect(restored.ok(), 'вернуть демо-отелю его валюту').toBeTruthy()
+    }
   })
 })

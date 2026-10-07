@@ -4,6 +4,7 @@ import { expect, test } from './fixtures'
 import {
   ADMIN,
   API,
+  DEMO_ROOM,
   HOTEL,
   apiHeaders,
   apiToken,
@@ -81,7 +82,7 @@ test.describe('CMS: раздел «Отзывы»', () => {
   test('ответ гостю, который ещё здесь, уходит в его чат', async ({ page, request }) => {
     const admin = await apiToken(request)
     const comment = `холодный суп ${Date.now().toString(36)}`
-    const { guest, number } = await reviewedOrder(request, admin, '305', 2, comment)
+    const { guest, number } = await reviewedOrder(request, admin, DEMO_ROOM, 2, comment)
 
     await signInToCms(page, ADMIN)
     await page.getByTestId('cms-nav-reviews').click()
@@ -142,7 +143,7 @@ test.describe('CMS: раздел «Отзывы»', () => {
   }) => {
     const admin = await apiToken(request)
     const chat = `где мой заказ ${Date.now().toString(36)}`
-    const { number } = await reviewedOrder(request, admin, '305', 1, 'так и не дождались', chat)
+    const { number } = await reviewedOrder(request, admin, DEMO_ROOM, 1, 'так и не дождались', chat)
 
     await signInToCms(page, ADMIN)
     await page.goto('/cms/reviews?rating=low')
@@ -171,7 +172,7 @@ test.describe('CMS: раздел «Отзывы»', () => {
     request,
   }) => {
     const admin = await apiToken(request)
-    const { number } = await reviewedOrder(request, admin, '305', 1, `разбор ${Date.now().toString(36)}`)
+    const { number } = await reviewedOrder(request, admin, DEMO_ROOM, 1, `разбор ${Date.now().toString(36)}`)
 
     await signInToCms(page, ADMIN)
     await page.goto('/cms/reviews?triage=open')
@@ -203,7 +204,7 @@ test.describe('CMS: раздел «Отзывы»', () => {
 
   test('фильтр «только низкие» и чужое заведение', async ({ page, request }) => {
     const admin = await apiToken(request)
-    const high = await reviewedOrder(request, admin, '305', 5, `всё супер ${Date.now().toString(36)}`)
+    const high = await reviewedOrder(request, admin, DEMO_ROOM, 5, `всё супер ${Date.now().toString(36)}`)
 
     await signInToCms(page, ADMIN)
     await page.goto('/cms/reviews')

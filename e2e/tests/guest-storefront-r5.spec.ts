@@ -3,7 +3,22 @@ import { expect, test } from './fixtures'
 
 import { STORAGE_KEYS } from '../fixtures/appState'
 
-import { ADMIN, API, BARMAN, DEMO_ROOM, apiHeaders, apiToken, openCart, signInToTracker, waitForLayout, withoutHours, openVenueFromHome } from './helpers'
+import {
+  ADMIN,
+  API,
+  BARMAN,
+  DEMO_ROOM,
+  apiHeaders,
+  apiToken,
+  openCart,
+  openVenueFromHome,
+  removeCategory,
+  removeService,
+  serviceName,
+  signInToTracker,
+  waitForLayout,
+  withoutHours,
+} from './helpers'
 
 /**
  * R5: витрина гостя.
@@ -31,7 +46,9 @@ test.describe('Парадная и проваливание', () => {
     await expect(page.getByTestId('guest-home-bento')).toBeVisible()
   })
 
-  test('гость проваливается в ресторан и видит ЕГО меню', async ({ page }) => {
+  test('гость проваливается в ресторан и видит ЕГО меню', async ({ page, request }) => {
+    // Имя кухни — из её карточки по коду, а не из сида (партия 41, п.28).
+    const kitchenName = await serviceName(request, 'kitchen')
     await enterAsGuest(page)
     await openVenueFromHome(page)
 
@@ -39,7 +56,7 @@ test.describe('Парадная и проваливание', () => {
     const venue = page.getByTestId('guest-venue')
     await expect(venue).toBeVisible({ timeout: 15_000 })
     await expect(venue).toHaveAttribute('data-content', 'product')
-    await expect(page.getByTestId('guest-venue-name')).toContainText(/Панорама/)
+    await expect(page.getByTestId('guest-venue-name')).toContainText(kitchenName)
     await expect(page.getByTestId('guest-venue-status')).toBeVisible()
 
     // И в нём его блюда.
@@ -83,7 +100,7 @@ test.describe('Посервисная корзина и разъезд', () => {
 
     // --- Заведение-агрегатор, включающее кухню и бар (модель R2, UI R4) ----
     const services = (await request
-      .get(`${API}/api/cms/services`, { headers: h })
+      .get(`${API}/api/cms/services?limit=500`, { headers: h })
       .then((r) => r.json())
       .then((page) => page.items)) as Array<{ id: string; code: string }>
     const kitchen = services.find((s) => s.code === 'kitchen')!
@@ -179,6 +196,8 @@ test.describe('Посервисная корзина и разъезд', () => {
     } finally {
       await guestContext.close()
       await barContext.close()
+      await removeService(request, h, aggregator.id)
+      await removeCategory(request, h, barCategory.id)
     }
       })
   })

@@ -12,7 +12,11 @@ import {
   guestSession,
   openCart,
   signInToTracker,
-  withoutHours, openVenueFromHome } from './helpers'
+  openVenueFromHome,
+  removeCategory,
+  removeService,
+  withoutHours,
+} from './helpers'
 
 /**
  * МЕСТО ПОЛУЧЕНИЯ — ПО МАТРИЦЕ «КАТЕГОРИЯ × ЛОКАЦИЯ».
@@ -82,7 +86,7 @@ test('корзина из двух заведений: одно место ил�
   const tag = Date.now().toString(36)
 
   const services = (await request
-    .get(`${API}/api/cms/services`, { headers: h })
+    .get(`${API}/api/cms/services?limit=500`, { headers: h })
     .then((r) => r.json())
     .then((body) => body.items)) as Array<{ id: string; code: string }>
   const kitchen = services.find((s) => s.code === 'kitchen')!
@@ -207,7 +211,8 @@ test('корзина из двух заведений: одно место ил�
       await barContext.close()
     }
   } finally {
-    await request.delete(`${API}/api/cms/services/${aggregator.id}`, { headers: h })
+    await removeService(request, h, aggregator.id)
+    await removeCategory(request, h, category.id)
   }
     })
   })

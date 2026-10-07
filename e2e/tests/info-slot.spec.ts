@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { apiToken, CONCIERGE, DEMO_ROOM, HOTEL, staffToken, openVenueFromHome } from './helpers'
+import { API, apiHeaders, apiToken, CONCIERGE, DEMO_ROOM, HOTEL, staffToken, openVenueFromHome } from './helpers'
 
 /**
  * Типы info и slot проходят тем же гостевым потоком, что еда и заявки.
@@ -38,7 +38,18 @@ async function staffOpensBoard(page: Page, creds: { email: string; password: str
 }
 
 test.describe('Тип info', () => {
-  test('инфо-страница читается и не предлагает заказ', async ({ page }) => {
+  test('инфо-страница читается и не предлагает заказ', async ({ page, request }) => {
+    // Что должно быть на странице — из её же карточки по коду `wifi`, а не
+    // имя сети из сида (партия 41, п.28): первая строка текста, не заголовок.
+    const items = (await (await request.get(`${API}/api/cms/items?limit=500`, { headers: apiHeaders(await apiToken(request)) })).json())
+      .items as Array<{ code: string; content?: Record<string, string> }>
+    const markdown = items.find((item) => item.code === 'wifi')?.content?.ru ?? ''
+    const firstLine = markdown
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('#'))
+      .map((line) => line.replace(/[*_`>]/g, '').trim())
+      .find((line) => line.length > 0)
+    expect(firstLine, 'у инфо-страницы wifi нет текста').toBeTruthy()
     await enterAsGuest(page)
     await page.goto('/info')
 
@@ -47,7 +58,7 @@ test.describe('Тип info', () => {
 
     const content = page.getByTestId('guest-info-content')
     await expect(content).toBeVisible()
-    await expect(content).toContainText(/Crystal-Guest/)
+    await expect(content).toContainText(firstLine!)
 
     // Никакой кнопки заказа/брони на инфо-странице.
     await expect(page.getByTestId('guest-add-to-cart')).toBeHidden()

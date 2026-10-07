@@ -10,7 +10,7 @@ import { ADMIN, API, apiHeaders, apiToken, signInToCms } from './helpers'
 test('ресепшен — отдел без меню, кухня — с меню', async ({ page, request }) => {
   const token = await apiToken(request)
   const services = await (
-    await request.get(`${API}/api/cms/services?limit=100`, { headers: apiHeaders(token) })
+    await request.get(`${API}/api/cms/services?limit=500`, { headers: apiHeaders(token) })
   ).json()
   const list = services.items ?? services
   const reception = list.find((s: { code: string }) => s.code === 'reception')

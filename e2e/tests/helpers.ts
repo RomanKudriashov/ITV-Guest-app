@@ -161,7 +161,12 @@ export async function findItemByTitle(
 
 /* ── Гостевая витрина ──────────────────────────────────────────────────── */
 
-export const DEMO_ROOM = '305'
+/**
+ * Демо-номер — ОДНО место (партия 41, п.28). Номер с управлением номером в
+ * демо-отеле; тесты не пишут «305» сами. Сид с другими номерами — одна
+ * переменная E2E_DEMO_ROOM, а не правка двух десятков файлов.
+ */
+export const DEMO_ROOM = process.env.E2E_DEMO_ROOM ?? '305'
 
 /** Токен персонала нужен E2E, чтобы двигать статус «от лица кухни». */
 export async function moveOrderStatus(
@@ -628,7 +633,7 @@ export async function withoutHours<T>(
   const restore: Array<() => Promise<unknown>> = []
   try {
     if (scope.services?.length) {
-      const list = (await (await request.get(`${API}/api/cms/services`, { headers })).json()).items as Array<{
+      const list = (await (await request.get(`${API}/api/cms/services?limit=500`, { headers })).json()).items as Array<{
         id: string
         code: string
       }>
@@ -676,4 +681,39 @@ export async function withoutHours<T>(
 export async function openVenueFromHome(page: Page, code = 'kitchen', group = 'restaurants'): Promise<void> {
   await page.getByTestId(`guest-home-tile-${group}`).click()
   await page.getByTestId(`guest-venue-${code}`).click()
+}
+
+/**
+ * Убрать заведение, заведённое тестом (партия 41, п.28). Заведение с заказами
+ * сервер не удаляет (409 `service_has_orders` — история не сиротеет), и
+ * прежние тесты на этом молча оставляли его гостю: в демо-отеле копились
+ * «Рум-сервис <метка>», видные на витрине. Такое заведение выключается и
+ * прячется от гостя.
+ */
+export async function removeService(request: APIRequestContext, headers: Record<string, string>, id: string): Promise<void> {
+  const removed = await request.delete(`${API}/api/cms/services/${id}`, { headers })
+  if (removed.ok()) return
+  const hidden = await request.patch(`${API}/api/cms/services/${id}`, {
+    data: { is_active: false, is_guest_facing: false },
+    headers,
+  })
+  expect(hidden.ok(), `заведение ${id} не удалено и не выключено: ${await hidden.text()}`).toBeTruthy()
+}
+
+/** Убрать категорию теста вместе с её позициями. */
+export async function removeCategory(request: APIRequestContext, headers: Record<string, string>, id: string): Promise<void> {
+  const removed = await request.delete(`${API}/api/cms/categories/${id}?cascade=true`, { headers })
+  expect(removed.ok(), `категория ${id} не удалена: ${await removed.text()}`).toBeTruthy()
+}
+
+/** Публичное имя заведения по коду — вместо имени из сида в тексте теста. */
+export async function serviceName(request: APIRequestContext, code: string): Promise<string> {
+  const response = await request.get(`${API}/api/cms/services?limit=500`, {
+    headers: apiHeaders(await apiToken(request, ADMIN)),
+  })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  const rows = (await response.json()).items as Array<{ code: string; public_name?: Record<string, string> }>
+  const name = rows.find((row) => row.code === code)?.public_name?.ru
+  expect(name, `у демо-отеля нет заведения ${code} с именем`).toBeTruthy()
+  return name!
 }

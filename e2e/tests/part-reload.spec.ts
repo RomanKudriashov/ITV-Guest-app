@@ -1,5 +1,7 @@
 import { expect, test } from './fixtures'
 
+import { DEMO_ROOM } from './helpers'
+
 /**
  * ЧАСТЬ СБОРКИ ИСЧЕЗЛА С СЕРВЕРА (партия 35, п.65).
  *
@@ -29,7 +31,7 @@ test('часть пропала один раз — один тихий пере
     loads += 1
   })
 
-  await page.goto('/r/305')
+  await page.goto(`/r/${DEMO_ROOM}`)
   await expect(page.getByTestId('guest-home')).toBeVisible({ timeout: 30_000 })
   expect(refused, 'часть гостя отказала один раз').toBe(1)
   expect(loads, 'страница загружалась дважды: заход и один перезапуск').toBe(2)
@@ -47,7 +49,7 @@ test('часть не приходит и после перезапуска — 
     loads += 1
   })
 
-  await page.goto('/r/305')
+  await page.goto(`/r/${DEMO_ROOM}`)
   await expect(page.getByTestId('part-failed')).toBeVisible({ timeout: 30_000 })
   // Петля видна только во времени: ждём дольше, чем идёт перезапуск.
   await page.waitForTimeout(4_000)

@@ -186,7 +186,7 @@ test.describe('Меню отеля', () => {
       .then((r) => r.json())
       .then((b) => b.access)
     const services = await request
-      .get(`${API}/api/cms/services`, {
+      .get(`${API}/api/cms/services?limit=500`, {
         headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
       })
       .then((r) => r.json())

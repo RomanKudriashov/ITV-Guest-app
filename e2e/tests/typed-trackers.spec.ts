@@ -1,7 +1,23 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, BARMAN, CREDENTIALS, DEMO_ROOM, MAID, RESTAURANT_MANAGER, apiHeaders, apiToken, moveOrderTo, openCart, signInToTracker, openVenueFromHome } from './helpers'
+import {
+  ADMIN,
+  API,
+  BARMAN,
+  CREDENTIALS,
+  DEMO_ROOM,
+  MAID,
+  RESTAURANT_MANAGER,
+  apiHeaders,
+  apiToken,
+  moveOrderTo,
+  openCart,
+  openVenueFromHome,
+  removeCategory,
+  removeService,
+  signInToTracker,
+} from './helpers'
 
 /**
  * R3: типизированные трекеры и роль управляющего.
@@ -153,7 +169,7 @@ test.describe('Типизированные трекеры', () => {
     const tag = Date.now().toString(36)
 
     const services = (await request
-      .get(`${API}/api/cms/services`, { headers: h })
+      .get(`${API}/api/cms/services?limit=500`, { headers: h })
       .then((r) => r.json())
       .then((page) => page.items)) as Array<{ id: string; code: string }>
     const kitchen = services.find((s) => s.code === 'kitchen')!
@@ -177,6 +193,9 @@ test.describe('Типизированные трекеры', () => {
         headers: h,
       })
     expect((await setBarSchedule(null)).ok(), 'снять часы бара на время теста').toBeTruthy()
+    // Что тест завёл — то и убирает (партия 41, п.28).
+    let barCategoryId = ''
+    let aggregatorId = ''
     try {
 
     // 1. Бару — свой раздел и коктейль в нём.
@@ -186,6 +205,7 @@ test.describe('Типизированные трекеры', () => {
         headers: h,
       })
       .then((r) => r.json())
+    barCategoryId = barCategory.id
 
     // 2. Маршрут раздела на бар — ради этого эндпоинта R4 и заводился.
     await request.put(`${API}/api/cms/categories/${barCategory.id}/routes`, {
@@ -212,6 +232,7 @@ test.describe('Типизированные трекеры', () => {
         headers: h,
       })
       .then((r) => r.json())
+    aggregatorId = aggregator.id
 
     for (const sourceId of [kitchen.id, bar.id]) {
       const included = await request.post(
@@ -265,6 +286,8 @@ test.describe('Типизированные трекеры', () => {
     await expect(board).toContainText(new RegExp(`Негрони ${tag}`, 'i'))
     await expect(board).not.toContainText(/цезарь/i)
     } finally {
+      if (aggregatorId) await removeService(request, h, aggregatorId)
+      if (barCategoryId) await removeCategory(request, h, barCategoryId)
       expect((await setBarSchedule(barSchedule)).ok(), 'вернуть бару его часы').toBeTruthy()
     }
   })

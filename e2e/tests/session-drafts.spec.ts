@@ -48,7 +48,7 @@ test('редактор блюда: набранное возвращается �
     .get(`${API}/api/cms/categories?service_id=`, { headers })
     .then((r) => r.json())
   const services = await request
-    .get(`${API}/api/cms/services`, { headers })
+    .get(`${API}/api/cms/services?limit=500`, { headers })
     .then((r) => r.json())
     .then((page) => page.items)
   const kitchen = services.find((s: { code: string }) => s.code === 'kitchen')

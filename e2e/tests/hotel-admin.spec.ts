@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { apiToken, ADMIN, HOTEL } from './helpers'
+import { API, apiHeaders, apiToken, ADMIN, HOTEL } from './helpers'
 
 /**
  * Админка отеля: номера/QR, персонал, локации.
@@ -12,6 +12,37 @@ import { apiToken, ADMIN, HOTEL } from './helpers'
  */
 
 const uniq = () => Date.now().toString().slice(-6)
+
+/**
+ * ЧТО ТЕСТ ЗАВЁЛ — УБИРАЕТСЯ И ПРИ ПАДЕНИИ (партия 41, п.28). Раньше удаление
+ * стояло последним шагом: упавшая проверка оставляла в общем отеле свой номер,
+ * сотрудника или канал. Теперь тест записывает созданное, а `afterEach`
+ * убирает его в любом исходе — ищет по номеру, почте и заголовку.
+ */
+const made = { rooms: [] as string[], staff: [] as string[], channels: [] as string[] }
+
+test.afterEach(async ({ request }) => {
+  const headers = apiHeaders(await apiToken(request))
+  const list = async (path: string) => ((await (await request.get(`${API}${path}`, { headers })).json()).items ?? []) as Array<Record<string, string>>
+  if (made.channels.length) {
+    for (const channel of await list('/api/cms/notification-channels?limit=500')) {
+      if (made.channels.includes(channel.title)) await request.delete(`${API}/api/cms/notification-channels/${channel.id}`, { headers })
+    }
+  }
+  if (made.staff.length) {
+    for (const member of await list('/api/cms/staff?limit=500')) {
+      if (made.staff.includes(member.email)) await request.delete(`${API}/api/cms/staff/${member.id}`, { headers })
+    }
+  }
+  if (made.rooms.length) {
+    for (const room of await list('/api/cms/rooms?limit=500')) {
+      if (made.rooms.includes(room.number)) await request.delete(`${API}/api/cms/rooms/${room.id}`, { headers })
+    }
+  }
+  made.rooms = []
+  made.staff = []
+  made.channels = []
+})
 
 async function openAdmin(page: Page, path: string): Promise<void> {
   await page.goto('/login')
@@ -28,6 +59,7 @@ test.describe('Админка отеля', () => {
     await expect(page.getByTestId('rooms-list')).toBeVisible({ timeout: 20_000 })
 
     const number = `9${uniq()}`
+    made.rooms.push(number)
     await page.getByTestId('room-add').click()
     await page.getByTestId('room-number').fill(number)
     await page.getByTestId('room-dialog').getByTestId('room-save').click()
@@ -52,11 +84,6 @@ test.describe('Админка отеля', () => {
       { headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL } },
     )
     expect(svg.headers()['content-type']).toContain('image/svg')
-
-    // Убираем за собой.
-    await request.delete(`http://localhost:8010/api/cms/rooms/${created.id}`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
   })
 
   test('УКУС: выезд отмечается кнопкой — гостевой токен перестаёт отвечать', async ({
@@ -72,6 +99,7 @@ test.describe('Админка отеля', () => {
     const token = await apiToken(request)
     const api = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
     const number = `9${uniq()}`
+    made.rooms.push(number)
 
     const created = await request.post('http://localhost:8010/api/cms/rooms', {
       data: { number },
@@ -107,15 +135,15 @@ test.describe('Админка отеля', () => {
         { timeout: 15_000, message: 'токен гостя обязан умереть после выезда' },
       )
       .toBe(401)
-
-    await request.delete(`http://localhost:8010/api/cms/rooms/${room.id}`, { headers: api })
+    expect(room.id).toBeTruthy()
   })
 
-  test('добавление диапазоном показывает созданные и пропущенные', async ({ page, request }) => {
+  test('добавление диапазоном показывает созданные и пропущенные', async ({ page }) => {
     await openAdmin(page, '/cms/rooms')
     await expect(page.getByTestId('rooms-list')).toBeVisible({ timeout: 20_000 })
 
     const base = Number(`8${uniq().slice(-4)}`)
+    made.rooms.push(...[0, 1, 2, 3].map((step) => String(base + step)))
     await page.getByTestId('room-bulk-add').click()
     // Пара «с/по» уступила место одной строке: она принимает и диапазон, и
     // буквенные номера («3А», «Люкс-1»), которые прежде заводили поштучно.
@@ -126,19 +154,6 @@ test.describe('Админка отеля', () => {
     await page.getByTestId('room-bulk-submit').click()
 
     await expect(page.getByTestId('room-bulk-result')).toContainText(String(base))
-
-    const token = await apiToken(request)
-    for (let n = base; n <= base + 3; n++) {
-      const rooms = await request.get('http://localhost:8010/api/cms/rooms', {
-        headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-      })
-      const room = (await rooms.json()).items.find((r: { number: string }) => r.number === String(n))
-      if (room) {
-        await request.delete(`http://localhost:8010/api/cms/rooms/${room.id}`, {
-          headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-        })
-      }
-    }
   })
 
   test('создать сотрудника с привязкой к отделу', async ({ page, request }) => {
@@ -146,6 +161,7 @@ test.describe('Админка отеля', () => {
     await expect(page.getByTestId('staff-list')).toBeVisible({ timeout: 20_000 })
 
     const email = `e2e-${uniq()}@crystal.local`
+    made.staff.push(email)
     await page.getByTestId('staff-add').click()
     await page.getByTestId('staff-email').fill(email)
     await page.getByTestId('staff-full-name').fill('E2E Сотрудник')
@@ -167,10 +183,6 @@ test.describe('Админка отеля', () => {
     const member = (await staff.json()).items.find((m: { email: string }) => m.email === email)
     expect(member.assignments.length).toBeGreaterThan(0)
     expect(member.assignments[0].level).toBe('lead')
-
-    await request.delete(`http://localhost:8010/api/cms/staff/${member.id}`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
   })
 
   test('созданного сотрудника можно выбрать в персональном канале', async ({
@@ -194,6 +206,7 @@ test.describe('Админка отеля', () => {
     */
     const token = await apiToken(request)
     const email = `chan-${uniq()}@crystal.local`
+    made.staff.push(email)
     const created = await request.post('http://localhost:8010/api/cms/staff', {
       data: { email, full_name: 'Канальный', password: 'secret12345' },
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
@@ -206,6 +219,7 @@ test.describe('Админка отеля', () => {
     await expect(page.getByTestId('cms-channel-type')).toBeVisible({ timeout: 15_000 })
 
     const title = `Личный ${uniq()}`
+    made.channels.push(title)
     await page.getByTestId('cms-channel-title').fill(title)
     await page.getByTestId('cms-channel-binding').selectOption('user')
 
@@ -235,19 +249,6 @@ test.describe('Админка отеля', () => {
         { timeout: 15_000 },
       )
       .toBe(userId)
-
-    const channels = await request.get('http://localhost:8010/api/cms/notification-channels', {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
-    const mine = (await channels.json()).items.find(
-      (channel: { title: string }) => channel.title === title,
-    )
-    await request.delete(`http://localhost:8010/api/cms/notification-channels/${mine.id}`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
-    await request.delete(`http://localhost:8010/api/cms/staff/${userId}`, {
-      headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-    })
   })
 
   test('создать локацию с уточнением и привязать категорию в матрице', async ({

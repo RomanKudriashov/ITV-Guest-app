@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, DEMO_ROOM, apiHeaders, apiToken, guestTheme } from './helpers'
+import { ADMIN, API, DEMO_ROOM, apiHeaders, apiToken, guestTheme, serviceName } from './helpers'
 import { STORAGE_KEYS } from '../fixtures/appState'
 
 /**
@@ -36,10 +36,12 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`
 }
 
-test('заведение с обложкой — квадрат из неё, лёгкий вариант', async ({ page }) => {
+test('заведение с обложкой — квадрат из неё, лёгкий вариант', async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 844 })
+  // Имя кухни — из её карточки по коду, а не из сида (партия 41, п.28).
+  const name = await serviceName(request, 'kitchen')
   await enterLight(page)
-  await search(page, 'Кухня')
+  await search(page, name)
   const mark = page.getByTestId('guest-search-mark-kitchen')
   await expect(mark.locator('img')).toBeVisible({ timeout: 20_000 })
   const look = await mark.evaluate((node) => {

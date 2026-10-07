@@ -46,7 +46,7 @@ test('панель отеля по-английски: цены меню зна�
   const token = await apiToken(request, ADMIN)
   const services = (
     await (
-      await request.get(`${API}/api/cms/services`, {
+      await request.get(`${API}/api/cms/services?limit=500`, {
         headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
       })
     ).json()

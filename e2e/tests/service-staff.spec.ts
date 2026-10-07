@@ -13,7 +13,7 @@ import { ADMIN, API, apiHeaders, apiToken, signIn } from './helpers'
 test('вкладка «Персонал» показывает людей с ролями', async ({ page, request }) => {
   const token = await apiToken(request)
   const services = await (
-    await request.get(`${API}/api/cms/services`, { headers: apiHeaders(token) })
+    await request.get(`${API}/api/cms/services?limit=500`, { headers: apiHeaders(token) })
   ).json()
   const staff = await (
     await request.get(`${API}/api/cms/staff`, { headers: apiHeaders(token) })
@@ -57,7 +57,7 @@ test('вкладка «Персонал» показывает людей с р�
 test('у заведения без людей вкладка говорит об этом словами', async ({ page, request }) => {
   const token = await apiToken(request)
   const services = await (
-    await request.get(`${API}/api/cms/services`, { headers: apiHeaders(token) })
+    await request.get(`${API}/api/cms/services?limit=500`, { headers: apiHeaders(token) })
   ).json()
   const staff = await (
     await request.get(`${API}/api/cms/staff`, { headers: apiHeaders(token) })

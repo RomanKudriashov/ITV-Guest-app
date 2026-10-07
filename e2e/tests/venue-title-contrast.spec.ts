@@ -68,7 +68,7 @@ async function titleContrast(page: Page): Promise<number> {
 /** Коды заведений на витрине гостя: плитки главной и списки свёрнутых групп. */
 async function venueCodes(request: APIRequestContext): Promise<string[]> {
   const headers = apiHeaders(await apiToken(request, ADMIN))
-  const services = (await (await request.get(`${API}/api/cms/services?limit=200`, { headers })).json()).items as Array<{
+  const services = (await (await request.get(`${API}/api/cms/services?limit=500`, { headers })).json()).items as Array<{
     code: string
     is_active: boolean
     is_guest_facing?: boolean
@@ -82,7 +82,7 @@ test.describe('Название заведения на кадре', () => {
   test('белый кадр: название держит 4,5:1 — телефон и ПК, обе темы', async ({ browser, request }) => {
     test.setTimeout(180_000)
     const headers = { ...apiHeaders(await apiToken(request, ADMIN)), 'X-Hotel-Subdomain': HOTEL }
-    const services = (await (await request.get(`${API}/api/cms/services?limit=200`, { headers })).json()).items as Array<{
+    const services = (await (await request.get(`${API}/api/cms/services?limit=500`, { headers })).json()).items as Array<{
       id: string
       code: string
       image: { id: string } | null
