@@ -2181,3 +2181,58 @@ e2e берут максимум сервера (`limit=500`); заодно ож�
 **Рядом (конфигурация, не данные):** `desk-handover:18`, `escalation-table:21/47/131/172`,
 `service-staff:76`, `hotel-admin:184` — опираются на правила, персонал и
 привязки, которые лежат на стенде.
+
+---
+
+## 76. Мягкое удаление при безусловной уникальности: удалили — завести снова нельзя (приоритет 2) — 4 МЕСТА ИСПРАВЛЕНО (партия 43), ОСТАЛЬНОЕ В БЭКЛОГЕ
+
+**Класс** тот же, что «сожжённый поддомен» (`5e24257`, 14.08) и PIN номера
+(п.74). `BaseModel.delete()` и `QuerySet.delete()` только ставят `deleted_at`,
+а уникальный индекс мёртвую строку видит наравне с живой. Создание, которое ищет
+через `objects`, мёртвую не видит и упирается в индекс. С `c5cb135` это 409
+«занят удалённой записью», а не 500, но ключ так и остаётся занятым.
+
+**Прочёс 08.10.2026:** 67 пар «модель — уникальность» среди моделей с
+`deleted_at` без условия `deleted_at IS NULL` (перечень — интроспекцией Django).
+
+| Модель | Ключ | Удаление из панели/API | Повторное заведение | Ломается |
+|---|---|---|---|---|
+| grms.RoomPin | room | мягко, «Снять» | «Завести» | **да — п.74, партия 43** |
+| grms.Variable | тип, ключ | мягко, импорт ПНР «заменить» | тот же файл | **да — исправлено** |
+| promo.BannerRoomCategory | баннер, категория | мягко, каждое сохранение | те же пары | **да — исправлено** |
+| hotels.HotelGroup | code | мягко (описание обещало «жёстко») | новая группа с тем же кодом | **да — исправлено** |
+| hotels.HotelGroupMember | группа, отель | мягко, «убрать из группы» | вернуть отель | **да — исправлено** |
+| hotels.Location | отель, code | мягко | только API с ручным кодом (панель код не шлёт) | скрыто — бэклог |
+| hotels.Service | отель, code | мягко | тот же код | ключ сгорает, отказ внятный 409 — бэклог (решение) |
+| catalog.Category, Item, ModifierGroup, ModifierOption, RequestField | код | мягко | только API с ручным кодом; панель — `make_code` по `all_objects` | скрыто — бэклог |
+| catalog.Allergen, DietaryMarker | отель, code | мягко | только API с ручным кодом; проверка по `objects` | скрыто — бэклог |
+| hotels.ExecutionPoint | отель, code | мягко | код по `all_objects`, запасной `{code}-ep` без перепроверки | почти нет — бэклог |
+| grms.Binding | элемент, способность / переменная | только сид `seed_grms_demo` | повторный сид | только дев — бэклог |
+| hotels.Hotel, HotelLanguage; accounts.User, StaffAssignment; catalog.ItemBadge, ItemAllergen, ItemDietaryMarker, ServiceInclusion*, Route, ServiceLocation; reviews.Review; orders.Order; grms.RoomTypeRoom, PublishedConfig; notifications.EventSetting; analytics.* (суточные, события) | — | жёстко / паркуется / поднимается / новый ключ | — | нет |
+| остальные 20 (IdempotencyKey, PlatformScopeGroup, HotelModule, OnPremNode, OnboardingTemplate, SystemDictionaryEntry, PublicationResult, ShowcaseTile, ContactBindingCode, GuestSession, CategoryPlaceholder, SlotConfig, StatusDefinition, BannerView, ChatThread, EventRecord, EventDelivery, NotificationLog, TranslationMark, TranslationUsage; grms.RoomType, Zone, ControlElement) | — | удаления нет / ключ случайный | — | нет |
+
+**Исправлено (партия 43), укус на каждое — на прежнем коде красные все 7:**
+- импорт ПНР «заменить»: гаснут только ключи, которых нет в новом файле;
+  остальные поднимаются (`all_objects`, `deleted_at=None`); тип пишется в
+  транзакции — отказ на середине больше не оставляет тип без переменных;
+- категории баннера: связка удаляется по-настоящему (как значки, маршруты);
+  `create_banner`/`update_banner` — в транзакции;
+- группа: удаление жёсткое (как и обещало описание; состав и область — каскадом);
+  код, занятый мягко удалённой прежде группой, освобождается при создании;
+- состав группы: снятие жёсткое; пара, снятая мягко прежде, при возврате
+  отеля удаляется и заводится заново.
+
+**В бэклоге:**
+- `Location`, `Category`, `Item`, `ModifierGroup/Option`, `RequestField`,
+  `Allergen`, `DietaryMarker` — ручной код через API, совпавший с удалённым, даёт
+  409 и горит; из панели недостижимо. Лечение — проверка по `all_objects` с
+  внятным отказом или условные индексы `WHERE deleted_at IS NULL`.
+- `Service` (code) — удалённый `bar` занят навсегда: 409 внятный, но ключ не
+  освобождается. Решение тек-лида: жёстко удалять сервис без заказов (его и так
+  не удаляют при заказах) или парковать код, как поддомен.
+- `ExecutionPoint` — запасной код `{code}-ep` не перепроверяется по `all_objects`.
+- `seed_grms_demo` гасит привязки мягко — повторный сид может упереться.
+- Скрытые риски без поломки сегодня: `recompute`/`clean_test_residue` жёстко
+  удаляют через `objects`, а не `all_objects` (мёртвую строку пропустят);
+  `events.py`/`delivery.py` считают `IntegrityError` «уже сделано» — мёртвая
+  строка молча погасит событие.
