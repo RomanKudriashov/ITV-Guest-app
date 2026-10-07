@@ -147,6 +147,9 @@ def create(data: dict) -> HotelGroup:
         raise ValidationError("У группы должно быть название", field="title", code="title_required")
     if HotelGroup.objects.filter(code=code).exists():
         raise ValidationError(f"Группа с кодом «{code}» уже есть", field="code", code="code_taken")
+    # Код мог занять группа, удалённая МЯГКО до п.76: уникальность её видит, и
+    # создание падало 409. Группе-метке помнить нечего — освобождаем код.
+    HotelGroup.all_objects.filter(code=code, deleted_at__isnull=False).hard_delete()
 
     return HotelGroup.objects.create(
         code=code,
@@ -174,7 +177,7 @@ def delete(group: HotelGroup) -> str:
     удалённая продолжала бы занимать свой уникальный код.
     """
     code = group.code
-    group.delete()
+    group.delete(hard=True)
     return code
 
 
@@ -196,6 +199,11 @@ def add_members(group: HotelGroup, hotel_ids_: list[str], *, actor_id=None) -> i
     )
     fresh = [hid for hid in Hotel.objects.filter(pk__in=hotel_ids_).values_list("pk", flat=True)
              if hid not in existing]
+    # Пара, снятая МЯГКО до п.76, держит уникальность (группа, отель): без этого
+    # отель, однажды убранный из группы, обратно не добавлялся (409).
+    HotelGroupMember.all_objects.filter(
+        group=group, hotel_id__in=fresh, deleted_at__isnull=False
+    ).hard_delete()
     HotelGroupMember.objects.bulk_create(
         [HotelGroupMember(group=group, hotel_id=hid, added_by=actor_id) for hid in fresh]
     )
@@ -204,7 +212,9 @@ def add_members(group: HotelGroup, hotel_ids_: list[str], *, actor_id=None) -> i
 
 def remove_member(group: HotelGroup, hotel_id: str) -> int:
     _refuse_rule(group)
-    deleted, _ = HotelGroupMember.objects.filter(group=group, hotel_id=hotel_id).delete()
+    # Жёстко (п.76): у членства нет истории, а мягко снятая пара занимала место
+    # и не давала вернуть отель в группу.
+    deleted, _ = HotelGroupMember.objects.filter(group=group, hotel_id=hotel_id).hard_delete()
     return deleted
 
 

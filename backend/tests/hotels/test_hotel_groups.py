@@ -211,3 +211,51 @@ def test_a_missing_group_shows_nothing_rather_than_everything(api):
     _hotel("ghost", city="Уфа")
     fleet = api("get", "/fleet?group=00000000-0000-0000-0000-000000000000").json()
     assert fleet["total"] == 0
+
+
+# --- Удалили — можно завести снова (п.76) ------------------------------------
+
+
+def test_a_deleted_group_code_can_be_used_again(api):
+    """УКУС. Группу удалили — код свободен: новая с тем же кодом заводится."""
+    first = api("post", "/groups", {"code": "again", "title": "Раз", "mode": "list"})
+    assert first.status_code == 201, first.content
+    assert api("delete", f"/groups/{first.json()['id']}").status_code in (200, 204)
+
+    second = api("post", "/groups", {"code": "again", "title": "Два", "mode": "list"})
+    assert second.status_code == 201, second.content
+
+
+def test_a_code_held_by_a_softly_deleted_group_is_freed(api):
+    """Группа, удалённая мягко прежним кодом, не держит свой код вечно."""
+    stale = HotelGroup.objects.create(code="stale", title="Старая")
+    stale.delete()  # мягко — как удалял прежний groups.delete
+
+    created = api("post", "/groups", {"code": "stale", "title": "Новая", "mode": "list"})
+    assert created.status_code == 201, created.content
+
+
+def test_a_hotel_removed_from_a_group_can_be_added_back(api):
+    """УКУС. Отель убрали из группы — его можно вернуть, а не 409."""
+    hotel = _hotel("backagain")
+    group_id = api("post", "/groups", {"code": "back", "title": "Back", "mode": "list"}).json()["id"]
+    assert api("post", f"/groups/{group_id}/members", {"hotel_ids": [str(hotel.pk)]}).status_code == 200
+    assert api("delete", f"/groups/{group_id}/members/{hotel.pk}").status_code in (200, 204)
+
+    again = api("post", f"/groups/{group_id}/members", {"hotel_ids": [str(hotel.pk)]})
+    assert again.status_code == 200, again.content
+    assert {row["code"] for row in groups_svc.groups_of(hotel)} == {"back"}
+
+
+def test_a_membership_softly_removed_by_the_old_code_does_not_block(api):
+    """Пара, снятая мягко прежним кодом, не мешает вернуть отель в группу."""
+    from apps.hotels.models import HotelGroupMember
+
+    hotel = _hotel("oldpair")
+    group_id = api("post", "/groups", {"code": "oldpair", "title": "Old", "mode": "list"}).json()["id"]
+    api("post", f"/groups/{group_id}/members", {"hotel_ids": [str(hotel.pk)]})
+    HotelGroupMember.objects.filter(group_id=group_id, hotel=hotel).delete()  # мягко
+
+    again = api("post", f"/groups/{group_id}/members", {"hotel_ids": [str(hotel.pk)]})
+    assert again.status_code == 200, again.content
+    assert {row["code"] for row in groups_svc.groups_of(hotel)} == {"oldpair"}

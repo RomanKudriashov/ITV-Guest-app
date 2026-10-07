@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import date, time
 
+from django.db import transaction
+
 from apps.core.errors import NotFoundError, ValidationError
 from apps.hotels.models import RoomCategory, Service
 from apps.media.models import MediaAsset
@@ -113,7 +115,11 @@ def _set_categories(banner: Banner, ids) -> None:
         raise ValidationError(
             "Категория номера не найдена", field="room_category_ids", code="category_not_found"
         )
-    BannerRoomCategory.objects.filter(banner=banner).delete()
+    # Связку заменяем ЦЕЛИКОМ и удаляем НАСТОЯЩИМ удалением (п.76): мягко
+    # удалённая пара держит уникальность (banner, room_category), и редактор,
+    # шлющий при каждом сохранении весь черновик, получал 409 на тех же
+    # категориях. Связочной строке помнить нечего — как значкам и маршрутам.
+    BannerRoomCategory.all_objects.filter(banner=banner).hard_delete()
     for pk in wanted:
         BannerRoomCategory.objects.create(
             hotel_id=banner.hotel_id, banner=banner, room_category_id=pk
@@ -137,6 +143,7 @@ def banner_payload(banner: Banner) -> dict:
     return cms_payload(banner, stats=stats_for([banner.pk]))
 
 
+@transaction.atomic
 def create_banner(data: dict) -> Banner:
     banner = Banner()
     fields = _apply(banner, data)
@@ -149,6 +156,7 @@ def create_banner(data: dict) -> Banner:
     return banner
 
 
+@transaction.atomic
 def update_banner(banner_id, data: dict) -> Banner:
     banner = get_banner(banner_id)
     fields = _apply(banner, data)

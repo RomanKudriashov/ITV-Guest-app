@@ -237,3 +237,43 @@ def test_cyrillic_type_names_do_not_collapse_into_one_code():
     codes = [_slug(name) for name in ("ТИП1", "ТИП2", "ТИП3")]
     assert codes == ["tip1", "tip2", "tip3"]
     assert len(set(codes)) == 3
+
+
+@pytest.mark.django_db
+def test_the_same_file_can_be_imported_again_with_replace(crystal, preview):
+    """
+    УКУС (п.76). «Заменить» гасило все переменные типа мягко и тут же
+    вставляло те же ключи: уникальность (тип, ключ) видела мёртвые, второй
+    импорт того же файла падал 409, а тип оставался без переменных.
+    """
+    builder.save_import(crystal, preview)
+    with tenant_context(crystal):
+        before = Variable.objects.count()
+    assert before > 0
+
+    builder.save_import(crystal, preview, replace=True)
+    builder.save_import(crystal, preview, replace=True)
+
+    with tenant_context(crystal):
+        assert Variable.objects.count() == before
+        assert not Variable.all_objects.filter(deleted_at__isnull=False).exists()
+
+
+@pytest.mark.django_db
+def test_replace_retires_only_the_keys_missing_from_the_new_file(crystal, preview):
+    """«Заменить» гасит лишь ключи, которых нет в новом файле, и поднимает вернувшиеся."""
+    from dataclasses import replace as dc_replace
+
+    report = builder.save_import(crystal, preview)
+    first = preview.types[0]
+    type_code = report["types"][0]
+    dropped = first.variables[0].key
+    shorter = dc_replace(preview, types=[dc_replace(first, variables=first.variables[1:]), *preview.types[1:]])
+
+    builder.save_import(crystal, shorter, replace=True)
+    with tenant_context(crystal):
+        assert not Variable.objects.filter(room_type__code=type_code, key=dropped).exists()
+
+    builder.save_import(crystal, preview, replace=True)
+    with tenant_context(crystal):
+        assert Variable.objects.filter(room_type__code=type_code, key=dropped).count() == 1

@@ -138,3 +138,20 @@ def test_a_banner_can_be_edited_and_removed(cms):
 
     assert cms.delete(f"/api/cms/banners/{banner_id}").status_code == 204
     assert cms.get(f"/api/cms/banners/{banner_id}").status_code == 404
+
+
+def test_saving_a_banner_twice_with_the_same_categories_works(cms, crystal):
+    """
+    УКУС (п.76). Редактор шлёт весь черновик при каждом сохранении, вместе с
+    категориями. Связи гасились мягко и тут же вставлялись те же пары —
+    уникальность видела мёртвые, и второе сохранение отвечало 409, оставив
+    баннер вовсе без категорий.
+    """
+    with tenant_context(crystal):
+        suite = RoomCategory.objects.get(code="suite")
+    banner_id = _create(cms, room_category_ids=[str(suite.pk)]).json()["id"]
+
+    for _ in range(2):
+        saved = cms.patch(f"/api/cms/banners/{banner_id}", {"room_category_ids": [str(suite.pk)]})
+        assert saved.status_code == 200, saved.content
+        assert saved.json()["room_category_ids"] == [str(suite.pk)]

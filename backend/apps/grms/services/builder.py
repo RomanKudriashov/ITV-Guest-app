@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from django.db import transaction
+
 from apps.core.context import tenant_context
 from apps.core.errors import NotFoundError, ValidationError
 from apps.grms.services import catalog
@@ -56,54 +58,66 @@ def save_import(hotel, preview, *, replace: bool = False) -> dict:
         }
 
         for parsed in preview.types:
-            room_type, is_new = RoomType.objects.get_or_create(
-                code=_slug(parsed.name),
-                defaults={
-                    "title": {"ru": parsed.name},
-                    "device_name_template": parsed.device_name_template,
-                },
-            )
-            if not is_new and replace:
-                room_type.device_name_template = parsed.device_name_template
-                room_type.save(update_fields=["device_name_template", "updated_at"])
-                Variable.objects.filter(room_type=room_type).delete()
-
-            for variable in parsed.variables:
-                Variable.objects.update_or_create(
-                    room_type=room_type,
-                    key=variable.key,
+            # Тип пишется целиком или никак: отказ на середине оставлял тип без
+            # переменных, а его привязки — на удалённых (п.76).
+            with transaction.atomic():
+                room_type, is_new = RoomType.objects.get_or_create(
+                    code=_slug(parsed.name),
                     defaults={
-                        "command": variable.command,
-                        "feedback": variable.feedback,
-                        "value_kind": variable.value_kind,
-                        "min_value": variable.min_value,
-                        "max_value": variable.max_value,
-                        "raw_range": variable.raw_range,
-                        "description": variable.description,
+                        "title": {"ru": parsed.name},
+                        "device_name_template": parsed.device_name_template,
                     },
                 )
+                if not is_new and replace:
+                    room_type.device_name_template = parsed.device_name_template
+                    room_type.save(update_fields=["device_name_template", "updated_at"])
+                    # Заменяются только переменные, которых в новом файле НЕТ.
+                    # Прежде гасились все и тут же вставлялись те же ключи:
+                    # мягко удалённая строка держит уникальность (тип, ключ), и
+                    # повторный импорт того же файла падал 409 (п.76).
+                    Variable.objects.filter(room_type=room_type).exclude(
+                        key__in=[variable.key for variable in parsed.variables]
+                    ).delete()
 
-            for number in parsed.rooms:
-                room = known_rooms.get(number)
-                if room is None:
-                    skipped_rooms.append(number)
-                    continue
-                existing = taken.get(room.pk)
-                if existing and existing != room_type.pk:
-                    # Комната уже отнесена к другому типу — молча переклеивать
-                    # нельзя: оборудование у типов разное.
-                    conflicts.append(number)
-                    continue
-                RoomTypeRoom.objects.update_or_create(
-                    room=room,
-                    defaults={
-                        "room_type": room_type,
-                        "is_reference": number == parsed.reference_room,
-                    },
-                )
-                taken[room.pk] = room_type.pk
+                for variable in parsed.variables:
+                    # `all_objects` и `deleted_at=None`: ключ, погашенный прежним
+                    # импортом, поднимается, а не упирается в уникальность.
+                    Variable.all_objects.update_or_create(
+                        room_type=room_type,
+                        key=variable.key,
+                        defaults={
+                            "deleted_at": None,
+                            "command": variable.command,
+                            "feedback": variable.feedback,
+                            "value_kind": variable.value_kind,
+                            "min_value": variable.min_value,
+                            "max_value": variable.max_value,
+                            "raw_range": variable.raw_range,
+                            "description": variable.description,
+                        },
+                    )
 
-            created.append(room_type.code)
+                for number in parsed.rooms:
+                    room = known_rooms.get(number)
+                    if room is None:
+                        skipped_rooms.append(number)
+                        continue
+                    existing = taken.get(room.pk)
+                    if existing and existing != room_type.pk:
+                        # Комната уже отнесена к другому типу — молча переклеивать
+                        # нельзя: оборудование у типов разное.
+                        conflicts.append(number)
+                        continue
+                    RoomTypeRoom.objects.update_or_create(
+                        room=room,
+                        defaults={
+                            "room_type": room_type,
+                            "is_reference": number == parsed.reference_room,
+                        },
+                    )
+                    taken[room.pk] = room_type.pk
+
+                created.append(room_type.code)
 
     return {
         "types": created,
