@@ -823,7 +823,8 @@
     "retry": "Retry",
     "offline": "Offline",
     "liveOn": "The board updates in real time",
-    "liveOff": "Connection lost — refreshing every 15 seconds",
+    "liveReconnecting": "Reconnecting — refreshing every 15 seconds meanwhile",
+    "liveLost": "No connection to the board — restoring, please stay on this screen",
     "toCms": "Go to the dashboard",
     "sound": {
       "on": "Sound is on",

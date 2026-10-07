@@ -193,3 +193,48 @@ test.describe('Доска: сводка смены', () => {
     await expect(page).not.toHaveURL(/overdue=1/)
   })
 })
+
+/*
+  ПОДПИСЬ ПОД ДОСКОЙ И КАРТОЧКА ОБРЫВА — ОДНО СУЖДЕНИЕ О СВЯЗИ (партия 42).
+
+  На стенде сокет жил и присылал снимки, а запрос доски оборвался: карточка
+  «Связь с доской потеряна» смотрела на запрос, подпись — на сокет, и смена
+  видела разом «связь потеряна» и «обновляется в реальном времени». Теперь обе
+  читают `boardLink`.
+*/
+test.describe('Доска: подпись о связи', () => {
+  test('УКУС: сокет жив, запрос доски оборвался — нет ни карточки обрыва, ни спора с подписью', async ({ page }) => {
+    // Сокет НЕ трогаем: он настоящий и принесёт снимок. Обрываем только REST —
+    // и с задержкой, как было на стенде: снимок уже лёг, а запрос оборвался
+    // ПОСЛЕ него. Обрыв раньше снимка снимок бы и затёр.
+    let aborted = 0
+    await page.route('**/api/v1/tracker/orders**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 3_000))
+      aborted += 1
+      await route.abort()
+    })
+    await signInToTracker(page, CREDENTIALS)
+
+    const caption = page.getByTestId('tracker-live-caption')
+    await expect(caption).toBeVisible({ timeout: 25_000 })
+    // Судим ПОСЛЕ обрыва: запрос и его повтор оба оборвались, ошибка легла
+    // поверх снимка. До этого момента спорить карточке и подписи не о чем.
+    await expect.poll(() => aborted, { timeout: 20_000 }).toBeGreaterThanOrEqual(2)
+    await page.waitForTimeout(1_000)
+    await expect(caption).toHaveAttribute('data-link', 'online')
+    await expect(caption).toHaveText('Доска обновляется в реальном времени')
+    await expect(page.getByTestId('tracker-empty-offline')).toHaveCount(0)
+  })
+
+  test('сокета нет, опрос отвечает — «переподключаемся», а не «в реальном времени»', async ({ page }) => {
+    await board(page, { summary: shift({ done: 3 }) })
+    await signInToTracker(page, CREDENTIALS)
+
+    const caption = page.getByTestId('tracker-live-caption')
+    await expect(caption).toBeVisible({ timeout: 25_000 })
+    await expect(caption).toHaveAttribute('data-link', 'reconnecting')
+    await expect(caption).not.toContainText('в реальном времени')
+    await expect(caption).toContainText('Переподключаемся')
+    await expect(page.getByTestId('tracker-empty-offline')).toHaveCount(0)
+  })
+})

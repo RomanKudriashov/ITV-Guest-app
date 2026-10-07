@@ -819,7 +819,8 @@
     "retry": "重试",
     "offline": "已离线",
     "liveOn": "实时更新",
-    "liveOff": "连接中断 — 每 15 秒刷新",
+    "liveReconnecting": "正在重新连接 — 暂时每 15 秒刷新",
+    "liveLost": "与看板断开连接 — 正在恢复，请停留在此页面",
     "toCms": "进入管理后台",
     "sound": {
       "on": "提示音已开",

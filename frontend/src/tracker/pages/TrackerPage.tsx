@@ -62,6 +62,7 @@ import {
   useTrackerPoints,
 } from '../hooks/useTrackerQueries';
 import { isTransportFailure, trackerErrorMessage } from '../errors';
+import { BOARD_LINK_CAPTION, boardLink } from '../boardLink';
 import type { TrackerOrder, TrackerScope } from '../api/types';
 import { useAuth } from '@/auth';
 
@@ -385,9 +386,8 @@ export function TrackerPage() {
     только когда молчат оба канала: тогда и говорим об этом, а не показываем
     спокойный итог смены поверх копящихся на сервере заявок.
   */
-  const boardUnconfirmed =
-    live === 'offline' &&
-    (!boardQuery.dataUpdatedAt || Date.now() - boardQuery.dataUpdatedAt > OFFLINE_POLL_MS * 2);
+  const link = boardLink(live, boardQuery.dataUpdatedAt, Date.now(), OFFLINE_POLL_MS);
+  const boardUnconfirmed = link === 'offline';
 
   // Which shape the server asked for. Records (spa) come as one ordered day —
   // grouping an appointment by status would hide the only thing that matters
@@ -924,9 +924,11 @@ export function TrackerPage() {
           >
             {trackerErrorMessage(boardQuery.error, t)}
           </Alert>
-        ) : boardQuery.error ? (
+        ) : boardQuery.error && !boardQuery.data ? (
           /*
-            До сервера не достучались, и доски у нас нет. Это НЕ «заявок нет» и
+            До сервера не достучались, и доски у нас нет. Есть доска — значит,
+            её принёс сокет или прошлый опрос: показываем её, а о связи
+            говорит подпись по `boardLink` (партия 42). Это НЕ «заявок нет» и
             не «сервер отказал»: молчащая доска читается как «работы нет», и
             смена спокойно ждёт, пока заявки копятся на сервере. Говорим то же,
             что при неподтверждённой пустоте, — потому что случай тот же.
@@ -1152,8 +1154,10 @@ export function TrackerPage() {
             variant="caption"
             color="text.secondary"
             sx={{ display: 'block', textAlign: 'center', pt: 2 }}
+            data-testid="tracker-live-caption"
+            data-link={link}
           >
-            {live === 'online' ? t('tracker.liveOn') : t('tracker.liveOff')}
+            {t(BOARD_LINK_CAPTION[link])}
           </Typography>
         ) : null}
       </Box>
