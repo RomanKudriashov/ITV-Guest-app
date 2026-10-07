@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, CREDENTIALS, HOTEL, signInToTracker } from './helpers'
+import { ADMIN, API, CREDENTIALS, HOTEL, closeOrder, placeKitchenOrder, signInToTracker } from './helpers'
 
 /**
  * Общий инструментарий списков: поиск, фильтры, состояние в адресе.
@@ -341,75 +341,84 @@ test.describe('Доска трекера', () => {
       .then((b) => b.access)
     const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
 
-    const points = await request
-      .get(`${API}/api/tracker/points`, { headers })
-      .then((r) => r.json())
-    const code = (points.points ?? points)[0].code
+    /*
+      СВОЙ ЗАКАЗ, А НЕ «УЖЕ ЛЕЖАЩИЙ» (партия 42, п.75). Тест брал первую точку
+      и рассчитывал, что на её доске что-то есть. Уборка перед заходом
+      закрывает открытые заказы старше трёх часов, и после ночного перерыва
+      доска бара была пуста — красная без поломки. Теперь заказ заводится
+      здесь, на кухне, и закрывается в `finally`.
+    */
+    const code = 'kitchen'
     const count = (board: { columns: { orders: unknown[] }[] }) =>
       board.columns.reduce((n, column) => n + column.orders.length, 0)
 
-    const all = await request
-      .get(`${API}/api/tracker/orders?point=${code}`, { headers })
-      .then((r) => r.json())
-    expect(count(all), 'на доске нет заказов — проверять нечего').toBeGreaterThan(0)
+    const own = await placeKitchenOrder(request)
+    try {
+      const all = await request
+        .get(`${API}/api/tracker/orders?point=${code}`, { headers })
+        .then((r) => r.json())
+      const numbers = all.columns.flatMap((c: { orders: { number: number }[] }) => c.orders.map((o) => o.number))
+      expect(numbers, 'свой заказ не встал на доску кухни').toContain(own.number)
 
-    // Поиск по НОМЕРУ ЗАКАЗА находит ровно его.
-    const one = all.columns.flatMap((c: { orders: { number: number }[] }) => c.orders)[0]
-    const found = await request
-      .get(`${API}/api/tracker/orders?point=${code}&search=${one.number}`, { headers })
-      .then((r) => r.json())
-    expect(count(found), 'поиск по номеру заказа вернул не один заказ').toBe(1)
+      // Поиск по НОМЕРУ ЗАКАЗА находит ровно его.
+      const found = await request
+        .get(`${API}/api/tracker/orders?point=${code}&search=${own.number}`, { headers })
+        .then((r) => r.json())
+      expect(count(found), 'поиск по номеру заказа вернул не один заказ').toBe(1)
 
-    // Заведомо отсутствующий номер — честный ноль, а не вся доска.
-    const none = await request
-      .get(`${API}/api/tracker/orders?point=${code}&search=99999999`, { headers })
-      .then((r) => r.json())
-    expect(count(none), 'поиск не сузил доску — фильтрует не сервер').toBe(0)
+      // Заведомо отсутствующий номер — честный ноль, а не вся доска.
+      const none = await request
+        .get(`${API}/api/tracker/orders?point=${code}&search=99999999`, { headers })
+        .then((r) => r.json())
+      expect(count(none), 'поиск не сузил доску — фильтрует не сервер').toBe(0)
 
-    /*
-      ЖИВОЙ КОНТУР. Доска обновляется сама, и снимок из сокета приходит
-      НЕФИЛЬТРОВАННЫМ. Проверяем поведением: с активным поиском доска остаётся
-      отфильтрованной, а не подменяется полным снимком.
-    */
-    // Вход трекером — своим хелпером: у линейного повара CMS закрыта, и общий
-    // вход увёл бы его на экран отказа.
-    //
-    // Сокет ловим ДО входа: он открывается вместе с доской, и подписаться
-    // после — значит пропустить его создание.
-    const socket = page.waitForEvent('websocket', { timeout: 30_000 }).catch(() => null)
-    await signInToTracker(page, CREDENTIALS)
+      /*
+        ЖИВОЙ КОНТУР. Доска обновляется сама, и снимок из сокета приходит
+        НЕФИЛЬТРОВАННЫМ. Проверяем поведением: с активным поиском доска остаётся
+        отфильтрованной, а не подменяется полным снимком.
+      */
+      // Вход трекером — своим хелпером: у линейного повара CMS закрыта, и общий
+      // вход увёл бы его на экран отказа.
+      //
+      // Сокет ловим ДО входа: он открывается вместе с доской, и подписаться
+      // после — значит пропустить его создание.
+      const socket = page.waitForEvent('websocket', { timeout: 30_000 }).catch(() => null)
+      await signInToTracker(page, CREDENTIALS)
 
-    const asked = page.waitForRequest(
-      (r) => r.url().includes('/tracker/orders') && r.url().includes('search=99999999'),
-      { timeout: 20_000 },
-    )
-    await page.getByTestId('tracker-search').fill('99999999')
-    await asked
-    await expect.poll(() => page.url()).toContain('search=99999999')
+      const asked = page.waitForRequest(
+        (r) => r.url().includes('/tracker/orders') && r.url().includes('search=99999999'),
+        { timeout: 20_000 },
+      )
+      await page.getByTestId('tracker-search').fill('99999999')
+      await asked
+      await expect.poll(() => page.url()).toContain('search=99999999')
 
-    // Под поиском доска пуста И ГОВОРИТ ПОЧЕМУ — «ничего не найдено», а не
-    // «заказов нет»: это разные ответы.
-    await expect(page.getByTestId('tracker-empty')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('tracker-empty')).toContainText(/не найдено/i)
+      // Под поиском доска пуста И ГОВОРИТ ПОЧЕМУ — «ничего не найдено», а не
+      // «заказов нет»: это разные ответы.
+      await expect(page.getByTestId('tracker-empty')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('tracker-empty')).toContainText(/не найдено/i)
 
-    /*
-      И ДОСКА ЖИВА: полный снимок из сокета её не подменил.
+      /*
+        И ДОСКА ЖИВА: полный снимок из сокета её не подменил.
 
-      Здесь стояла пауза 6000 мс — «подождём, вдруг придёт». Ждём САМ СНИМОК:
-      как только по сокету пришёл кадр, проверка идёт дальше, а не досиживает
-      остаток. Если кадра не случилось вовсе, утверждение всё равно выполняется
-      — оно про то, что доска ОСТАЛАСЬ отфильтрованной.
-    */
-    const ws = await socket
-    if (ws) {
-      await ws
-        .waitForEvent('framereceived', { timeout: 8_000 })
-        .catch(() => null)
+        Здесь стояла пауза 6000 мс — «подождём, вдруг придёт». Ждём САМ СНИМОК:
+        как только по сокету пришёл кадр, проверка идёт дальше, а не досиживает
+        остаток. Если кадра не случилось вовсе, утверждение всё равно выполняется
+        — оно про то, что доска ОСТАЛАСЬ отфильтрованной.
+      */
+      const ws = await socket
+      if (ws) {
+        await ws
+          .waitForEvent('framereceived', { timeout: 8_000 })
+          .catch(() => null)
+      }
+      await expect(
+        page.getByTestId('tracker-empty'),
+        'живой снимок подменил отфильтрованную доску',
+      ).toBeVisible()
+    } finally {
+      await closeOrder(request, own.id)
     }
-    await expect(
-      page.getByTestId('tracker-empty'),
-      'живой снимок подменил отфильтрованную доску',
-    ).toBeVisible()
   })
 
   test('история листается курсором и не повторяет записи', async ({ request }) => {
@@ -421,10 +430,8 @@ test.describe('Доска трекера', () => {
       пустой истории он зеленел ВСЕГДА, то есть не проверял ничего: «истории
       нет» и «пагинация работает» давали один и тот же результат.
 
-      Стало: «короче страницы» и «пусто» разведены. Точка ищется та, у которой
-      история ДЛИННЕЕ страницы, — только на такой пагинацию вообще есть чем
-      проверять. Если такой точки нет ни одной, это не «нечего проверять», а
-      сломанный стенд, и тест обязан сказать это вслух, а не промолчать.
+      Стало: история длиннее страницы задаётся самим тестом (см. ниже), и
+      отсутствие курсора — красная, а не тихий выход.
     */
     const token = await request
       .post(`${API}/api/staff/auth/login`, {
@@ -434,12 +441,6 @@ test.describe('Доска трекера', () => {
       .then((r) => r.json())
       .then((b) => b.access)
     const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
-    const points = await request
-      .get(`${API}/api/tracker/points`, { headers })
-      .then((r) => r.json())
-    const codes = (points.points ?? points).map((p: { code: string }) => p.code)
-    expect(codes.length, 'сотруднику не видно ни одной точки').toBeGreaterThan(0)
-
     const historyPage = (code: string, cursor?: string) =>
       request
         .get(
@@ -449,23 +450,19 @@ test.describe('Доска трекера', () => {
         )
         .then((r) => r.json())
 
-    // Точка с историей ДЛИННЕЕ страницы: короткая история курсора не даёт, и
-    // листать в ней нечего — это не поломка, но и не проверка.
-    const shortHistory: string[] = []
-    let chosen: { code: string; page: Record<string, any> } | null = null
-    for (const code of codes) {
-      const page = await historyPage(code)
-      if (page.next_cursor) {
-        chosen = { code, page }
-        break
-      }
-      shortHistory.push(`${code}: ${page.columns[0].orders.length}`)
+    /*
+      ИСТОРИЯ — СВОЯ (партия 42, п.75). Раньше тест искал точку, у которой
+      история уже длиннее страницы, то есть опирался на то, что накопили
+      прошлые прогоны и сид. Два своих закрытых заказа на кухне дают ровно
+      две страницы при `limit=1` — на любом стенде, в том числе на чистом.
+    */
+    for (let i = 0; i < 2; i += 1) {
+      const own = await placeKitchenOrder(request)
+      await closeOrder(request, own.id)
     }
-
-    expect(
-      chosen,
-      `ни у одной точки история не длиннее страницы — листать нечего, стенд без истории: ${shortHistory.join(', ')}`,
-    ).not.toBeNull()
+    const page = await historyPage('kitchen')
+    expect(page.next_cursor, 'у кухни два закрытых заказа, а курсора следующей страницы нет').toBeTruthy()
+    const chosen = { code: 'kitchen', page }
 
     const firstIds = chosen!.page.columns[0].orders.map((o: { id: string }) => o.id)
     expect(firstIds, 'страница истории пуста при живом курсоре').toHaveLength(1)

@@ -1,6 +1,35 @@
 import { expect, test } from './fixtures'
 
-import { API, DEMO_ROOM, HOTEL, apiToken, signInToCms, unique } from './helpers'
+import { API, DEMO_ROOM, HOTEL, apiToken, signInToCms, unique, withKitchenOrder } from './helpers'
+
+type LogEntry = { order_number: number | null; status: string; error: string | null }
+
+/**
+ * СТРОКА ЖУРНАЛА ПО СВОЕМУ ЗАКАЗУ (партия 42, п.75). Проверки брали «уже
+ * лежащие» записи журнала: на чистом стенде или после уборки их нет. Свой заказ
+ * на кухню порождает доставку в канал журнала кухни; её пишет воркер — поэтому
+ * ждём опросом, а не читаем один раз.
+ */
+async function ownLogEntry(
+  request: Parameters<typeof apiToken>[0],
+  headers: Record<string, string>,
+  number: number,
+  match: (entry: LogEntry) => boolean = () => true,
+): Promise<LogEntry> {
+  let found: LogEntry | undefined
+  await expect
+    .poll(
+      async () => {
+        const log = await request.get(`${API}/api/cms/notification-log?limit=100`, { headers })
+        const items = (await log.json()).items as LogEntry[]
+        found = items.find((entry) => entry.order_number === number && match(entry))
+        return Boolean(found)
+      },
+      { timeout: 30_000, message: `в журнале не появилось строки по своему заказу №${number}` },
+    )
+    .toBe(true)
+  return found!
+}
 
 /**
  * ДВЕ ДЫРЫ В НАБОРЕ, ЗАКРЫТЫЕ ЗДЕСЬ.
@@ -26,48 +55,43 @@ test.describe('Уведомления: журнал и второе правил
     const token = await apiToken(request)
     const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
 
-    // Записи в журнале на стенде есть — иначе проверять «показывает записи»
-    // нечем, и это состояние стенда, а не молчаливый пропуск.
-    const log = await request.get(`${API}/api/cms/notification-log?limit=100`, { headers })
-    expect(log.status(), await log.text()).toBe(200)
-    // С партии 31 (INV-06) в журнале и доставки событий — у сообщения гостя
-    // или оценки заказа нет; фильтр по заказу проверяется на строке, где он есть.
-    const entries = ((await log.json()).items as Array<{ order_number: number | null }>).filter(
-      (entry) => entry.order_number,
-    )
-    expect(entries.length, 'в журнале стенда нет ни одной записи с заказом').toBeGreaterThan(0)
+    await withKitchenOrder(request, async (own) => {
+      // Запись с заказом — своя: фильтр по номеру проверяется на строке, где
+      // номер есть (с партии 31 в журнале и доставки событий без заказа).
+      await ownLogEntry(request, headers, own.number)
 
-    const errors: string[] = []
-    page.on('pageerror', (error) => errors.push(String(error)))
+      const errors: string[] = []
+      page.on('pageerror', (error) => errors.push(String(error)))
 
-    await signInToCms(page)
-    await page.goto('/cms/notifications')
-    await page.getByTestId('cms-notifications-tab-log').click()
+      await signInToCms(page)
+      await page.goto('/cms/notifications')
+      await page.getByTestId('cms-notifications-tab-log').click()
 
-    // Таблица, а не пустое состояние и не белый экран.
-    await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('cms-log-row-0')).toBeVisible()
-    expect(errors, `вкладка упала: ${errors.join(' | ')}`).toEqual([])
+      // Таблица, а не пустое состояние и не белый экран.
+      await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('cms-log-row-0')).toBeVisible()
+      expect(errors, `вкладка упала: ${errors.join(' | ')}`).toEqual([])
 
-    // Фильтр принимает ТО, ЧТО НАПИСАНО В ТАБЛИЦЕ, — номер заказа.
-    const number = String(entries[0].order_number)
-    await expect(page.getByTestId('cms-notification-log')).toContainText('№')
-    await page.getByTestId('cms-log-order-filter').fill(number)
+      // Фильтр принимает ТО, ЧТО НАПИСАНО В ТАБЛИЦЕ, — номер заказа.
+      const number = String(own.number)
+      await expect(page.getByTestId('cms-notification-log')).toContainText('№')
+      await page.getByTestId('cms-log-order-filter').fill(number)
 
-    await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('cms-log-row-0')).toContainText(`№${number}`)
-    // И в отфильтрованной таблице нет ЧУЖИХ заказов.
-    const shown = await page.getByTestId('cms-notification-log').innerText()
-    const otherNumbers = [...shown.matchAll(/№(\d+)/g)].map((m) => m[1])
-    expect(new Set(otherNumbers), `в выдаче по №${number} чужие заказы`).toEqual(new Set([number]))
-    expect(errors, `вкладка упала после фильтра: ${errors.join(' | ')}`).toEqual([])
+      await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('cms-log-row-0')).toContainText(`№${number}`)
+      // И в отфильтрованной таблице нет ЧУЖИХ заказов.
+      const shown = await page.getByTestId('cms-notification-log').innerText()
+      const otherNumbers = [...shown.matchAll(/№(\d+)/g)].map((m) => m[1])
+      expect(new Set(otherNumbers), `в выдаче по №${number} чужие заказы`).toEqual(new Set([number]))
+      expect(errors, `вкладка упала после фильтра: ${errors.join(' | ')}`).toEqual([])
 
-    // И «не нашли по фильтру» — ОТДЕЛЬНЫЙ ответ, а не «записей пока нет».
-    // Вторая фраза утверждает, что уведомлений в отеле не было вовсе, и по ней
-    // решают, не сломались ли уведомления.
-    await page.getByTestId('cms-log-order-filter').fill('999999999')
-    await expect(page.getByTestId('cms-log-nothing-found')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('cms-log-empty')).toHaveCount(0)
+      // И «не нашли по фильтру» — ОТДЕЛЬНЫЙ ответ, а не «записей пока нет».
+      // Вторая фраза утверждает, что уведомлений в отеле не было вовсе, и по ней
+      // решают, не сломались ли уведомления.
+      await page.getByTestId('cms-log-order-filter').fill('999999999')
+      await expect(page.getByTestId('cms-log-nothing-found')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('cms-log-empty')).toHaveCount(0)
+    })
   })
 
   test('второе правило эскалации создаётся через интерфейс', async ({ page, request }) => {
@@ -149,63 +173,64 @@ test('у успешной строки журнала «Ошибка» пуст�
 }) => {
   const token = await apiToken(request)
   const headers = { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL }
-  const log = await request.get(`${API}/api/cms/notification-log?limit=100`, { headers })
-  const entries = (await log.json()).items as Array<{
-    order_number: number | null
-    status: string
-    error: string | null
-  }>
-  // Строка с заказом: фильтр журнала — по номеру заказа (доставки событий без
-  // заказа — с партии 31 — им не найти).
-  const sent = entries.find((entry) => entry.order_number && entry.status === 'sent' && (entry.error ?? '').trim())
-  test.skip(!sent, 'в журнале стенда нет успешной отправки с ответом канала')
+  await withKitchenOrder(request, async (own) => {
+    // Успешная доставка с ответом канала — по своему заказу: канал журнала кухни
+    // отвечает «logged». Раньше бралась «уже лежащая» и без неё тест молча
+    // пропускался.
+    const sent = await ownLogEntry(
+      request,
+      headers,
+      own.number,
+      (entry) => entry.status === 'sent' && Boolean((entry.error ?? '').trim()),
+    )
 
-  await signInToCms(page)
-  await page.goto('/cms/notifications')
-  await page.getByTestId('cms-notifications-tab-log').click()
-  await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
-  await page.getByTestId('cms-log-order-filter').fill(String(sent.order_number))
+    await signInToCms(page)
+    await page.goto('/cms/notifications')
+    await page.getByTestId('cms-notifications-tab-log').click()
+    await expect(page.getByTestId('cms-notification-log')).toBeVisible({ timeout: 20_000 })
+    await page.getByTestId('cms-log-order-filter').fill(String(sent.order_number))
 
-  const rows = page.locator('[data-testid^="cms-log-row-"]').filter({ hasText: 'Отправлено' })
-  await expect(rows.first()).toBeVisible({ timeout: 20_000 })
+    const rows = page.locator('[data-testid^="cms-log-row-"]').filter({ hasText: 'Отправлено' })
+    await expect(rows.first()).toBeVisible({ timeout: 20_000 })
 
-  /*
-    У КАЖДОЙ успешной строки «Ошибка» пуста. Ответ канала лежит не у всякой:
-    ступень сама по себе ничего не отправляет, отправляют её строки доставки —
-    поэтому квитанцию ищем среди них, а не берём первую попавшуюся.
-  */
-  const indexes: string[] = []
-  for (const row of await rows.all()) {
-    indexes.push(((await row.getAttribute('data-testid')) ?? '').replace('cms-log-row-', ''))
-  }
-  let withReceipt = ''
-  for (const index of indexes) {
-    await expect(
-      page.getByTestId(`cms-log-error-${index}`),
-      'у успешной отправки колонка «Ошибка» непуста',
-    ).toHaveText('')
-    if (!withReceipt && (await page.getByTestId(`cms-log-receipt-${index}`).innerText()).trim()) {
-      withReceipt = index
+    /*
+      У КАЖДОЙ успешной строки «Ошибка» пуста. Ответ канала лежит не у всякой:
+      ступень сама по себе ничего не отправляет, отправляют её строки доставки —
+      поэтому квитанцию ищем среди них, а не берём первую попавшуюся.
+    */
+    const indexes: string[] = []
+    for (const row of await rows.all()) {
+      indexes.push(((await row.getAttribute('data-testid')) ?? '').replace('cms-log-row-', ''))
     }
-  }
-  expect(withReceipt, 'ни у одной успешной доставки не показан ответ канала').not.toBe('')
+    let withReceipt = ''
+    for (const index of indexes) {
+      await expect(
+        page.getByTestId(`cms-log-error-${index}`),
+        'у успешной отправки колонка «Ошибка» непуста',
+      ).toHaveText('')
+      if (!withReceipt && (await page.getByTestId(`cms-log-receipt-${index}`).innerText()).trim()) {
+        withReceipt = index
+      }
+    }
+    expect(withReceipt, 'ни у одной успешной доставки не показан ответ канала').not.toBe('')
 
-  const receipt = page.getByTestId(`cms-log-receipt-${withReceipt}`)
-  // Ответ канала НАЗВАН ПО-ЧЕЛОВЕЧЕСКИ, а не техническим словом.
-  if (sent.error?.trim() === 'logged') {
-    await expect(receipt).toHaveText('Записано в журнал приложения')
-  }
+    const receipt = page.getByTestId(`cms-log-receipt-${withReceipt}`)
+    // Ответ канала НАЗВАН ПО-ЧЕЛОВЕЧЕСКИ, а не техническим словом.
+    if (sent.error?.trim() === 'logged') {
+      await expect(receipt).toHaveText('Записано в журнал приложения')
+    }
 
-  /*
-    И ОН НЕ КРАСНЫЙ. Проверяем ВЫЧИСЛЕННЫМ цветом, а не тем, что колонка
-    другая: наличие ячейки ничего не говорит о том, каким её видит человек.
-  */
-  const colour = await receipt.evaluate((node) => getComputedStyle(node).color)
-  const [r, g, b] = (colour.match(/\d+/g) ?? ['0', '0', '0']).map(Number)
-  expect(
-    r - g > 40 && r - b > 40,
-    `ответ канала нарисован красным (${colour}) — снова читается как ошибка`,
-  ).toBe(false)
+    /*
+      И ОН НЕ КРАСНЫЙ. Проверяем ВЫЧИСЛЕННЫМ цветом, а не тем, что колонка
+      другая: наличие ячейки ничего не говорит о том, каким её видит человек.
+    */
+    const colour = await receipt.evaluate((node) => getComputedStyle(node).color)
+    const [r, g, b] = (colour.match(/\d+/g) ?? ['0', '0', '0']).map(Number)
+    expect(
+      r - g > 40 && r - b > 40,
+      `ответ канала нарисован красным (${colour}) — снова читается как ошибка`,
+    ).toBe(false)
+  })
 })
 
 /**

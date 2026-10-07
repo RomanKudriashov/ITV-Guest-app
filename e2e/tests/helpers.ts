@@ -237,6 +237,77 @@ export async function staffToken(
   return (await response.json()).access
 }
 
+/* ── Свой заказ ────────────────────────────────────────────────────────── */
+
+/** Позиция по коду где угодно в дереве каталога гостя. */
+function findItemByCode(node: unknown, code: string): string | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findItemByCode(child, code)
+      if (found) return found
+    }
+    return null
+  }
+  if (node && typeof node === 'object') {
+    const record = node as Record<string, unknown>
+    if (record.code === code && typeof record.id === 'string') return record.id
+    for (const value of Object.values(record)) {
+      const found = findItemByCode(value, code)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/**
+ * ЗАКАЗ НА КУХНЮ, ЗАВЕДЁННЫЙ САМИМ ТЕСТОМ (партия 42, п.75).
+ *
+ * Проверка, которая ждёт «уже лежащий» заказ, читает стенд — и становится им:
+ * уборка перед заходом закрывает открытые заказы старше трёх часов, и после
+ * ночного перерыва доска пуста. Тест, которому нужен заказ, заводит его сам и
+ * сам же закрывает (`closeOrder` в `finally`).
+ *
+ * Часы кухни снимаются только на время оформления: проверка про доску, а не
+ * про расписание, и ночью она обязана идти так же, как днём.
+ */
+export async function placeKitchenOrder(
+  request: APIRequestContext,
+): Promise<{ id: string; number: number }> {
+  return withoutHours(request, { services: ['kitchen'] }, async () => {
+    const guestToken = await guestSession(request)
+    const guest = { Authorization: `Bearer ${guestToken}`, 'X-Hotel-Subdomain': HOTEL }
+    const catalog = await request.get(`${API}/api/guest/catalog`, { headers: guest })
+    expect(catalog.ok(), `каталог гостя -> ${catalog.status()}`).toBeTruthy()
+    const itemId = findItemByCode(await catalog.json(), 'caesar')
+    expect(itemId, 'в каталоге демо-отеля не нашлось «Цезаря»').toBeTruthy()
+    const created = await request.post(`${API}/api/guest/order`, {
+      data: { lines: [{ item_id: itemId, quantity: 1 }] },
+      headers: { ...guest, 'Idempotency-Key': `e2e-own-${Date.now()}-${Math.random().toString(36).slice(2)}` },
+    })
+    expect(created.ok(), `заказ не создался -> ${created.status()}`).toBeTruthy()
+    const order = await created.json()
+    return { id: order.id, number: order.number }
+  })
+}
+
+/** Закрыть свой заказ: удалить заказ нельзя (история выручки), отмена убирает его с доски. */
+export async function closeOrder(request: APIRequestContext, orderId: string): Promise<void> {
+  await moveOrderStatus(request, await staffToken(request, ADMIN), orderId, 'cancelled')
+}
+
+/** Свой открытый заказ на кухне — на время проверки; закрывается в `finally`. */
+export async function withKitchenOrder<T>(
+  request: APIRequestContext,
+  run: (order: { id: string; number: number }) => Promise<T>,
+): Promise<T> {
+  const order = await placeKitchenOrder(request)
+  try {
+    return await run(order)
+  } finally {
+    await closeOrder(request, order.id)
+  }
+}
+
 /* ── Бренд ─────────────────────────────────────────────────────────────── */
 
 /** Текущая тема отеля глазами гостя — для проверки «сохранил → витрина отражает». */

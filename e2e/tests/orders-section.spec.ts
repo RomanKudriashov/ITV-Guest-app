@@ -1,6 +1,16 @@
 import { expect, test } from './fixtures'
 
-import { ADMIN, CREDENTIALS, RESTAURANT_MANAGER, signInToCms, signInToTracker } from './helpers'
+import {
+  ADMIN,
+  CREDENTIALS,
+  RESTAURANT_MANAGER,
+  closeOrder,
+  placeKitchenOrder,
+  serviceName,
+  signInToCms,
+  signInToTracker,
+  withKitchenOrder,
+} from './helpers'
 
 /**
  * РАЗДЕЛ «ЗАКАЗЫ» И ИСТОРИЯ БЕЗ ОКНА.
@@ -8,47 +18,62 @@ import { ADMIN, CREDENTIALS, RESTAURANT_MANAGER, signInToCms, signInToTracker } 
  * Проверки идут по ЖИВОМУ стенду: раздел режется правами и считает цифры по
  * выборке, а и то и другое — состояние сервера. Мок показал бы, что экран умеет
  * рисовать, и промолчал бы о том, что видит управляющий.
+ *
+ * ЗАКАЗЫ — СВОИ (партия 42, п.75). Проверки ждали, что заказы на стенде уже
+ * лежат: строка списка, карточка на доске, история длиннее страницы. Уборка
+ * перед заходом закрывает открытые заказы старше трёх часов, и после ночного
+ * перерыва доска пуста. Теперь каждая проверка заводит нужное сама.
  */
 
 test.describe('Раздел «Заказы»', () => {
-  test('администратор видит раздел, цифры и список', async ({ page }) => {
-    await signInToCms(page, ADMIN)
-    await page.goto('/cms/orders')
+  test('администратор видит раздел, цифры и список', async ({ page, request }) => {
+    await withKitchenOrder(request, async () => {
+      await signInToCms(page, ADMIN)
+      await page.goto('/cms/orders')
 
-    await expect(page.getByTestId('cms-orders')).toBeVisible({ timeout: 25_000 })
-    await expect(page.getByTestId('orders-numbers')).toBeVisible()
+      await expect(page.getByTestId('cms-orders')).toBeVisible({ timeout: 25_000 })
+      await expect(page.getByTestId('orders-numbers')).toBeVisible()
 
-    // Четыре числа по выборке — каждое названо, а не «просто есть».
-    for (const key of ['orders', 'revenue', 'cancelled', 'speed']) {
-      await expect(page.getByTestId(`orders-number-${key}`)).toBeVisible()
-    }
-    await expect(page.getByTestId('orders-list').getByTestId(/^orders-row-/).first()).toBeVisible({
-      timeout: 20_000,
+      // Четыре числа по выборке — каждое названо, а не «просто есть».
+      for (const key of ['orders', 'revenue', 'cancelled', 'speed']) {
+        await expect(page.getByTestId(`orders-number-${key}`)).toBeVisible()
+      }
+      await expect(page.getByTestId('orders-list').getByTestId(/^orders-row-/).first()).toBeVisible({
+        timeout: 20_000,
+      })
     })
   })
 
-  test('цифры меняются вместе с фильтром, а не остаются от всей выборки', async ({ page }) => {
-    await signInToCms(page, ADMIN)
-    await page.goto('/cms/orders')
-    await expect(page.getByTestId('orders-number-orders')).toBeVisible({ timeout: 25_000 })
+  test('цифры меняются вместе с фильтром, а не остаются от всей выборки', async ({ page, request }) => {
+    const kitchen = await serviceName(request, 'kitchen')
+    await withKitchenOrder(request, async () => {
+      await signInToCms(page, ADMIN)
+      await page.goto('/cms/orders')
+      await expect(page.getByTestId('orders-number-orders')).toBeVisible({ timeout: 25_000 })
 
-    const before = Number((await page.getByTestId('orders-number-orders').innerText()).replace(/\D/g, ''))
-    expect(before, 'на стенде нет заказов — проверять нечего').toBeGreaterThan(0)
+      const before = Number((await page.getByTestId('orders-number-orders').innerText()).replace(/\D/g, ''))
+      expect(before, 'на стенде нет заказов — проверять нечего').toBeGreaterThan(0)
 
-    // Сужаем по заведению: первое в списке, кроме «все заведения».
-    await page.getByTestId('orders-filter-venue').click()
-    await page.locator('[role="option"], li[role="menuitem"]').nth(1).click()
+      // Сужаем по заведению — любому, кроме кухни: свой заказ лежит на кухне,
+      // и выборка без неё строго меньше всей. Первый пункт — «все заведения».
+      await page.getByTestId('orders-filter-venue').click()
+      await page
+        .locator('[role="option"], li[role="menuitem"]')
+        .filter({ hasNotText: kitchen })
+        .nth(1)
+        .click()
 
-    await expect
-      .poll(
-        async () =>
-          Number((await page.getByTestId('orders-number-orders').innerText()).replace(/\D/g, '')),
-        { timeout: 15_000, message: 'цифры не изменились после фильтра — считаются не по выборке' },
-      )
-      .toBeLessThan(before)
+      await expect
+        .poll(
+          async () =>
+            Number((await page.getByTestId('orders-number-orders').innerText()).replace(/\D/g, '')),
+          { timeout: 15_000, message: 'цифры не изменились после фильтра — считаются не по выборке' },
+        )
+        .toBeLessThan(before)
 
-    // И фильтр уехал в адрес — ссылку можно послать коллеге.
-    expect(page.url()).toContain('point=')
+      // И фильтр уехал в адрес — ссылку можно послать коллеге.
+      expect(page.url()).toContain('point=')
+    })
   })
 
   test('управляющий видит раздел и только свои заведения', async ({ page }) => {
@@ -74,30 +99,47 @@ test.describe('Раздел «Заказы»', () => {
 })
 
 test.describe('История доски', () => {
-  test('над историей стоят цифры выборки, а не сводка смены', async ({ page }) => {
-    await signInToTracker(page, CREDENTIALS)
-    await page.goto('/tracker')
-    await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 25_000 })
-    /*
-      Ждём КАРТОЧКУ, а не каркас доски: `tracker-board` появляется до ответа
-      сервера, и проверка плиток срабатывала раньше, чем приходили числа.
-      Замер: в пробе счётчики читались нулями, а ответ доски печатался строкой
-      ниже — то есть тест мерил пустой экран, а не отсутствие плиток.
-    */
-    await page.getByTestId(/^tracker-order-/).first().waitFor({ timeout: 25_000 })
+  test('над историей стоят цифры выборки, а не сводка смены', async ({ page, request }) => {
+    await withKitchenOrder(request, async () => {
+      await signInToTracker(page, CREDENTIALS)
+      await page.goto('/tracker')
+      await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 25_000 })
+      /*
+        Ждём КАРТОЧКУ, а не каркас доски: `tracker-board` появляется до ответа
+        сервера, и проверка плиток срабатывала раньше, чем приходили числа.
+        Замер: в пробе счётчики читались нулями, а ответ доски печатался строкой
+        ниже — то есть тест мерил пустой экран, а не отсутствие плиток.
+      */
+      await page.getByTestId(/^tracker-order-/).first().waitFor({ timeout: 25_000 })
 
-    // На активной доске — сводка смены с «Новых».
-    await expect(page.getByTestId('tracker-tile-done')).toBeVisible()
-    await expect(page.getByTestId('tracker-tile-new')).toBeVisible()
+      // На активной доске — сводка смены с «Новых».
+      await expect(page.getByTestId('tracker-tile-done')).toBeVisible()
+      await expect(page.getByTestId('tracker-tile-new')).toBeVisible()
 
-    await page.getByTestId('tracker-history-tab').click()
+      await page.getByTestId('tracker-history-tab').click()
 
-    // На истории — четыре числа по выборке, и плиток «Новых»/«В работе» нет.
-    await expect(page.getByTestId('orders-numbers')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('tracker-tile-new')).toHaveCount(0)
+      // На истории — четыре числа по выборке, и плиток «Новых»/«В работе» нет.
+      await expect(page.getByTestId('orders-numbers')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('tracker-tile-new')).toHaveCount(0)
+    })
   })
 
-  test('история листается кнопкой и не повторяет записи', async ({ page }) => {
+  test('история листается кнопкой и не повторяет записи', async ({ page, request }) => {
+    /*
+      Страница истории — 50 записей; заводить 51 заказ ради кнопки незачем.
+      Запрос истории идёт на НАСТОЯЩИЙ сервер, только с `limit=1`: пагинация
+      та же, а для двух страниц хватает двух своих закрытых заказов на кухне.
+    */
+    for (let i = 0; i < 2; i += 1) {
+      const own = await placeKitchenOrder(request)
+      await closeOrder(request, own.id)
+    }
+    await page.route('**/api/v1/tracker/orders**', async (route) => {
+      const url = new URL(route.request().url())
+      if (url.searchParams.get('scope') !== 'history') return route.continue()
+      url.searchParams.set('limit', '1')
+      return route.continue({ url: url.toString() })
+    })
     await signInToTracker(page, CREDENTIALS)
     await page.goto('/tracker')
     await page.getByTestId('tracker-history-tab').click()
