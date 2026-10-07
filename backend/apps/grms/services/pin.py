@@ -267,12 +267,17 @@ def set_pin(hotel, room, *, pin: str, valid_until=None):
         )
 
     with tenant_context(hotel):
-        record, _created = RoomPin.objects.update_or_create(
+        # `all_objects`, и `deleted_at` в defaults: прежний `clear_pin` снимал
+        # мягко, и такая строка держит единственное место номера
+        # (`OneToOneField`). Живой менеджер её не видит, вставка второй
+        # отбивается уникальностью — номер оставался без PIN навсегда.
+        record, _created = RoomPin.all_objects.update_or_create(
             room=room,
             defaults={
                 "pin_hash": make_password(pin),
                 "valid_until": valid_until,
                 "issued_at": timezone.now(),
+                "deleted_at": None,
             },
         )
         GuestSession.objects.filter(room=room, room_verified_at__isnull=False).update(
@@ -283,12 +288,17 @@ def set_pin(hotel, room, *, pin: str, valid_until=None):
 
 
 def clear_pin(hotel, room) -> None:
-    """Снять PIN номера и подтверждения вместе с ним."""
+    """
+    Снять PIN номера и подтверждения вместе с ним.
+
+    Удаление НАСТОЯЩЕЕ, не мягкое: хеш снятого кода хранить незачем, а мёртвая
+    строка занимает единственное место номера и не даёт завести код снова.
+    """
     from apps.accounts.models import GuestSession
     from apps.grms.models import RoomPin
 
     with tenant_context(hotel):
-        RoomPin.objects.filter(room=room).delete()
+        RoomPin.all_objects.filter(room=room).hard_delete()
         GuestSession.objects.filter(room=room, room_verified_at__isnull=False).update(
             room_verified_at=None
         )
