@@ -584,7 +584,8 @@
       "placedBy": "طلبه {{by}}",
       "sentAt": "وقت الإرسال",
       "cancelInWork": "الطلب قيد التنفيذ بالفعل — راسل الاستقبال إذا تغيّرت خططك.",
-      "writeReception": "مراسلة"
+      "writeReception": "مراسلة",
+      "transferred": "تم تحويله إلى «{{to}}»"
     },
     "orders": {
       "active": "النشطة",
@@ -900,7 +901,8 @@
       "more": "إجراءات أخرى",
       "undo": "تراجع",
       "undoHint": "تغيّرت حالة الطلب رقم {{number}}",
-      "assign": "إسناد"
+      "assign": "إسناد",
+      "transfer": "نقل إلى نقطة أخرى"
     },
     "detail": {
       "where": "إلى أين",
@@ -1040,7 +1042,9 @@
       "byDeleted": "{{name}} (محذوف)",
       "byStaff": "موظف",
       "assigned": "أُسند إلى {{name}}",
-      "reassigned": "أُسند إلى {{name}} (بدلًا من {{previous}})"
+      "reassigned": "أُسند إلى {{name}} (بدلًا من {{previous}})",
+      "transferred": "نُقل من «{{from}}» إلى «{{to}}»",
+      "unassignedByTransfer": "أُزيل المنفّذ بسبب النقل: {{name}}"
     },
     "loadMore": "عرض المزيد",
     "loadingMore": "جارٍ التحميل…",
@@ -1124,6 +1128,14 @@
       "empty": "لا يوجد أحد في هذه النقطة بعد.",
       "cancel": "عدم الإسناد",
       "confirm": "إسناد"
+    },
+    "transfer": {
+      "title": "نقل الطلب رقم {{number}}",
+      "body": "في النقطة الجديدة يبدأ الطلب من الحالة الأولى دون منفّذ؛ ويُحتسب الوقت من لحظة النقل.",
+      "point": "إلى أين",
+      "reason": "سبب النقل",
+      "cancel": "عدم النقل",
+      "confirm": "نقل"
     }
   },
   "requestFields": {

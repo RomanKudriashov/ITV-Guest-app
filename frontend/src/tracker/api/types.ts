@@ -90,7 +90,7 @@ export interface TrackerJournalEntry {
    * `status` — переход статуса, `assign` — назначение исполнителя (партия 47).
    * Старые ответы поля не несут — значит, переход.
    */
-  kind?: 'status' | 'assign';
+  kind?: 'status' | 'assign' | 'transfer';
   /** Статус, ИЗ которого ушли; `null` у самой первой записи. */
   from?: string | null;
   to?: string;
@@ -108,6 +108,11 @@ export interface TrackerJournalEntry {
   /** Назначение: на кого и с кого (снимки имён). */
   assignee_name?: string;
   previous_name?: string;
+  /** `transfer` — исполнитель снят переносом (партия 48). */
+  reason?: string;
+  /** Перенос: откуда и куда (снимки названий точек). */
+  from_title?: string;
+  to_title?: string;
 }
 
 /**
@@ -121,6 +126,8 @@ export interface TrackerOrderRights {
   cancel: boolean;
   reopen: boolean;
   assign: boolean;
+  /** Передать на другую точку (партия 48). */
+  transfer?: boolean;
 }
 
 export interface TrackerOrder extends GuestOrder {
@@ -314,6 +321,8 @@ export interface TrackerBoard {
   assignees?: TrackerAssignee[];
   /** Права зрителя на этой доске (по уровню на точке), партия 47. */
   rights?: Record<string, boolean>;
+  /** Куда можно передать заказ — только тому, кому можно (партия 48). */
+  transfer_targets?: Array<{ code: string; title: string }>;
   /**
    * Чем наполнять фильтр «Статус» — приходит ТОЛЬКО для истории.
    *

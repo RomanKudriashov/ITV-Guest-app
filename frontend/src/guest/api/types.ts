@@ -525,6 +525,8 @@ export interface GuestOrder {
   can_review?: boolean;
   /** Оформлен сотрудником за гостя — показываем «оформил ресепшен». */
   placed_by_staff?: boolean;
+  /** Перенос на другую точку (партия 48): «Передали в «{to}»». */
+  transfer?: { to: string; at: string } | null;
   /** Кем, для гостя: отдел («Ресепшен»), не имя сотрудника. */
   placed_by_label?: string | null;
 }

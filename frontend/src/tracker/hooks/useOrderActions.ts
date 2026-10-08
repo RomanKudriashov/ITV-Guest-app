@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   acceptTrackerOrder,
   assignTrackerOrder,
+  transferTrackerOrder,
   cancelTrackerOrder,
   changeTrackerOrderStatus,
   moveTrackerOrderPosition,
@@ -12,7 +13,7 @@ import { useTrackerLanguage } from './useTrackerQueries';
 import type { TrackerOrder } from '../api/types';
 import type { CancelReasonCode } from '../cancelReasons';
 
-type ActionKind = 'accept' | 'status' | 'cancel' | 'position' | 'assign';
+type ActionKind = 'accept' | 'status' | 'cancel' | 'position' | 'assign' | 'transfer';
 
 interface ActionVariables {
   kind: ActionKind;
@@ -22,6 +23,8 @@ interface ActionVariables {
   comment?: string;
   /** Кого назначить исполнителем. */
   assignee?: string;
+  /** Куда передать заказ (код точки). */
+  point?: string;
   reason?: string;
   cancelReason?: CancelReasonCode;
   /** Соседи по колонке для перестановки: между кем встала карточка. */
@@ -60,6 +63,13 @@ export function useOrderActions() {
           return changeTrackerOrderStatus(
             variables.orderId,
             { status: variables.status as string, comment: variables.comment ?? '' },
+            language,
+          );
+        case 'transfer':
+          return transferTrackerOrder(
+            variables.orderId,
+            variables.point as string,
+            variables.reason ?? '',
             language,
           );
         case 'assign':
@@ -148,5 +158,12 @@ export function useOrderActions() {
 
   const clearError = useCallback(() => setActionError(null), []);
 
-  return { pendingOrderId, actionError, clearError, accept, assign, changeStatus, moveTo, cancel };
+  /** Передать на другую точку — отказ показывает карточка (партия 48). */
+  const transfer = useCallback(
+    (orderId: string, point: string, reason: string) =>
+      mutation.mutateAsync({ kind: 'transfer', orderId, point, reason }).catch(() => undefined),
+    [mutation],
+  );
+
+  return { pendingOrderId, actionError, clearError, accept, assign, changeStatus, moveTo, cancel, transfer };
 }

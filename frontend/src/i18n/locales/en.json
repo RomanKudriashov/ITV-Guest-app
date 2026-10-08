@@ -576,7 +576,8 @@
       "placedBy": "Placed by {{by}}",
       "sentAt": "Sent at",
       "cancelInWork": "The request is already in progress — message the reception if your plans changed.",
-      "writeReception": "Message"
+      "writeReception": "Message",
+      "transferred": "Passed to “{{to}}”"
     },
     "orders": {
       "active": "Active",
@@ -884,7 +885,8 @@
       "more": "More actions",
       "undo": "Undo",
       "undoHint": "Status of order #{{number}} changed",
-      "assign": "Assign"
+      "assign": "Assign",
+      "transfer": "Move to another point"
     },
     "detail": {
       "where": "Where",
@@ -1012,7 +1014,9 @@
       "byDeleted": "{{name}} (deleted)",
       "byStaff": "staff member",
       "assigned": "Assigned to {{name}}",
-      "reassigned": "Assigned to {{name}} (instead of {{previous}})"
+      "reassigned": "Assigned to {{name}} (instead of {{previous}})",
+      "transferred": "Moved from “{{from}}” to “{{to}}”",
+      "unassignedByTransfer": "Assignee removed by the move: {{name}}"
     },
     "loadMore": "Show more",
     "loadingMore": "Loading…",
@@ -1088,6 +1092,14 @@
       "empty": "No one is assigned to this point yet.",
       "cancel": "Don’t assign",
       "confirm": "Assign"
+    },
+    "transfer": {
+      "title": "Move request #{{number}}",
+      "body": "At the new point the request starts from the first status, unassigned; the time norm counts from the move.",
+      "point": "Where to",
+      "reason": "Why are you moving it",
+      "cancel": "Don’t move",
+      "confirm": "Move"
     }
   },
   "requestFields": {

@@ -92,6 +92,20 @@ export function assignTrackerOrder(
   );
 }
 
+/** Передать заказ на другую точку (партия 48): точка-цель и причина. */
+export function transferTrackerOrder(
+  orderId: string,
+  point: string,
+  reason: string,
+  language?: string,
+): Promise<TrackerOrder> {
+  return api.post<TrackerOrder>(
+    `/tracker/order/${orderId}/transfer`,
+    { point, reason },
+    { headers: langHeaders(language) },
+  );
+}
+
 export function changeTrackerOrderStatus(
   orderId: string,
   payload: StatusChangePayload,

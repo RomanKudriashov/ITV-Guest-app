@@ -66,7 +66,14 @@ export function OrderJournal({ entries }: { entries: TrackerJournalEntry[] }) {
               <Stack direction="row" spacing={0.75} alignItems="center" useFlexGap flexWrap="wrap">
                 {/* Назначение исполнителя (партия 47) — своя строка: статус не менялся. */}
                 <Typography variant="body2">
-                  {entry.kind === 'assign'
+                  {entry.kind === 'transfer'
+                    ? t('tracker.journal.transferred', {
+                        from: entry.from_title ?? '',
+                        to: entry.to_title ?? '',
+                      })
+                    : entry.kind === 'assign' && entry.reason === 'transfer'
+                      ? t('tracker.journal.unassignedByTransfer', { name: entry.previous_name ?? '' })
+                      : entry.kind === 'assign'
                     ? entry.previous_name
                       ? t('tracker.journal.reassigned', {
                           name: entry.assignee_name ?? '',

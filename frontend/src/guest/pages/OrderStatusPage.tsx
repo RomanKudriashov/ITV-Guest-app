@@ -322,6 +322,16 @@ export function OrderStatusPage() {
               data-testid="guest-order-placed-by"
             />
           ) : null}
+          {/* Заказ передали на другую точку (партия 48) — гостю только куда. */}
+          {order.transfer ? (
+            <Chip
+              size="small"
+              color="info"
+              variant="outlined"
+              label={t('guest.order.transferred', { to: order.transfer.to })}
+              data-testid="guest-order-transferred"
+            />
+          ) : null}
           {/*
             Тест-идентификатор на ТЕКУЩЕМ статусе. Без него проверкам
             доставалась только карточка целиком, а в ней ниже лежит лента всех

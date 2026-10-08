@@ -281,7 +281,7 @@ function findItemByCode(node: unknown, code: string): string | null {
  */
 export async function placeKitchenOrder(
   request: APIRequestContext,
-): Promise<{ id: string; number: number }> {
+): Promise<{ id: string; number: number; guestToken: string }> {
   return withoutHours(request, { services: ['kitchen'] }, async () => {
     const guestToken = await guestSession(request)
     const guest = { Authorization: `Bearer ${guestToken}`, 'X-Hotel-Subdomain': HOTEL }
@@ -295,7 +295,7 @@ export async function placeKitchenOrder(
     })
     expect(created.ok(), `заказ не создался -> ${created.status()}`).toBeTruthy()
     const order = await created.json()
-    return { id: order.id, number: order.number }
+    return { id: order.id, number: order.number, guestToken }
   })
 }
 

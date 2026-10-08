@@ -44,6 +44,7 @@ import { BoardColumn } from '../components/BoardColumn';
 import { CancelDialog } from '../components/CancelDialog';
 import { ReopenDialog } from '../components/ReopenDialog';
 import { AssignDialog } from '../components/AssignDialog';
+import { TransferDialog } from '../components/TransferDialog';
 import { OrderCard } from '../components/OrderCard';
 import { OrderDetailSheet } from '../components/OrderDetailSheet';
 import { TrackerTopBar } from '../components/TrackerTopBar';
@@ -204,6 +205,7 @@ export function TrackerPage() {
   const [undo, setUndo] = useState<{ orderId: string; number: number; back: string } | null>(null);
   /** Закрытый заказ, который просят вернуть в работу, и куда именно. */
   const [assignTarget, setAssignTarget] = useState<TrackerOrder | null>(null);
+  const [transferTarget, setTransferTarget] = useState<TrackerOrder | null>(null);
   const [reopenTarget, setReopenTarget] = useState<{ order: TrackerOrder; code: string } | null>(
     null,
   );
@@ -656,6 +658,7 @@ export function TrackerPage() {
       onStatus={(code) => requestStatus(order, code)}
       onCancel={() => setCancelTarget(order)}
       onAssign={() => setAssignTarget(order)}
+      onTransfer={() => setTransferTarget(order)}
       onReorder={(direction) => reorderByKeyboard(order, direction)}
     />
   );
@@ -1183,6 +1186,20 @@ export function TrackerPage() {
         onStatus={(code) => openOrder && requestStatus(openOrder, code)}
         onCancel={() => openOrder && setCancelTarget(openOrder)}
         onAssign={() => openOrder && setAssignTarget(openOrder)}
+        onTransfer={() => openOrder && setTransferTarget(openOrder)}
+      />
+
+      <TransferDialog
+        open={Boolean(transferTarget)}
+        orderNumber={transferTarget?.number ?? null}
+        targets={boardQuery.data?.transfer_targets ?? []}
+        busy={Boolean(transferTarget && actions.pendingOrderId === transferTarget.id)}
+        onClose={() => setTransferTarget(null)}
+        onConfirm={(point, reason) => {
+          const target = transferTarget;
+          setTransferTarget(null);
+          if (target) void actions.transfer(target.id, point, reason);
+        }}
       />
 
       <AssignDialog

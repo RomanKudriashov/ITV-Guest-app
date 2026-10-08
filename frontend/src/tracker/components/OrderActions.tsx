@@ -20,6 +20,8 @@ export interface OrderActionsProps {
   onCancel: () => void;
   /** «Назначить исполнителя» — показывается по `rights.assign` (партия 47). */
   onAssign?: () => void;
+  /** «Передать на другую точку» — по `rights.transfer` (партия 48). */
+  onTransfer?: () => void;
   size?: 'small' | 'medium';
 }
 
@@ -46,6 +48,7 @@ export function OrderActions({
   onStatus,
   onCancel,
   onAssign,
+  onTransfer,
   size = 'medium',
 }: OrderActionsProps) {
   const { t } = useTranslation();
@@ -57,14 +60,15 @@ export function OrderActions({
     ? order.rights.accept
     : !order.accepted_at && !order.status.is_terminal;
   const canAssign = Boolean(order.rights?.assign && onAssign);
+  const canTransfer = Boolean(order.rights?.transfer && onTransfer);
 
-  if (!canAccept && !order.next_statuses.length && !order.can_cancel && !canAssign) return null;
+  if (!canAccept && !order.next_statuses.length && !order.can_cancel && !canAssign && !canTransfer) return null;
 
   // Пока заказ не принят, главное — принять его; дальше главным становится
   // следующий шаг потока. Всё, что осталось, уходит в меню.
   const [primaryStatus, ...restStatuses] = canAccept ? [] : order.next_statuses;
   const overflow = canAccept ? order.next_statuses : restStatuses;
-  const hasOverflow = overflow.length > 0 || order.can_cancel || canAssign;
+  const hasOverflow = overflow.length > 0 || order.can_cancel || canAssign || canTransfer;
 
   const close = () => setAnchor(null);
   const pick = (code: string) => {
@@ -133,6 +137,17 @@ export function OrderActions({
                 data-testid={`tracker-assign-${order.number}`}
               >
                 {t('tracker.actions.assign')}
+              </MenuItem>
+            ) : null}
+            {canTransfer ? (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  onTransfer?.();
+                }}
+                data-testid={`tracker-transfer-${order.number}`}
+              >
+                {t('tracker.actions.transfer')}
               </MenuItem>
             ) : null}
             {order.can_cancel ? (

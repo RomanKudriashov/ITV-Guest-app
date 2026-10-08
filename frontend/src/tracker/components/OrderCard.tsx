@@ -41,6 +41,7 @@ export interface OrderCardProps {
   onCancel: () => void;
   /** «Назначить исполнителя» — по `rights.assign` (партия 47). */
   onAssign?: () => void;
+  onTransfer?: () => void;
   /**
    * Переставить карточку на шаг вверх/вниз внутри своей колонки.
    *
@@ -62,6 +63,7 @@ export function OrderCard({
   onStatus,
   onCancel,
   onAssign,
+  onTransfer,
   onReorder,
 }: OrderCardProps) {
   const { t } = useTranslation();
@@ -392,6 +394,7 @@ export function OrderCard({
           onStatus={onStatus}
           onCancel={onCancel}
           onAssign={onAssign}
+              onTransfer={onTransfer}
         />
       </Box>
     </Card>

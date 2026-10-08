@@ -574,7 +574,8 @@
       "placedBy": "由{{by}}代下单",
       "sentAt": "发送时间",
       "cancelInWork": "请求已在处理中——如计划有变，请联系前台。",
-      "writeReception": "发消息"
+      "writeReception": "发消息",
+      "transferred": "已转交“{{to}}”"
     },
     "orders": {
       "active": "进行中",
@@ -879,7 +880,8 @@
       "more": "更多操作",
       "undo": "撤销",
       "undoHint": "订单 #{{number}} 的状态已更改",
-      "assign": "分配"
+      "assign": "分配",
+      "transfer": "转到其他点位"
     },
     "detail": {
       "where": "送达",
@@ -1004,7 +1006,9 @@
       "byDeleted": "{{name}}（已删除）",
       "byStaff": "员工",
       "assigned": "已分配给 {{name}}",
-      "reassigned": "已分配给 {{name}}（替换 {{previous}}）"
+      "reassigned": "已分配给 {{name}}（替换 {{previous}}）",
+      "transferred": "已从“{{from}}”转到“{{to}}”",
+      "unassignedByTransfer": "因转移移除执行人：{{name}}"
     },
     "loadMore": "显示更多",
     "loadingMore": "加载中…",
@@ -1078,6 +1082,14 @@
       "empty": "此点位暂无人员。",
       "cancel": "不分配",
       "confirm": "分配"
+    },
+    "transfer": {
+      "title": "转移请求 #{{number}}",
+      "body": "在新点位，请求从第一个状态开始，无执行人；时限从转移时起算。",
+      "point": "转到",
+      "reason": "转移原因",
+      "cancel": "不转移",
+      "confirm": "转移"
     }
   },
   "requestFields": {
