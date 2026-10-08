@@ -432,4 +432,78 @@ test.describe('Просроченное ниже экрана', () => {
       )
       .toBeLessThan(hidden)
   })
+
+  test('11. УКУС: состав колонки сменился, пока кадр пересчёта ждал, — прокрутка всё равно пересчитывает', async ({
+    page,
+    request,
+  }) => {
+    /*
+      ПАРТИЯ 48: проверка 10 краснела в части p-f дважды подряд и зеленела в
+      одиночку. Пересчёт баннера откладывается до кадра; очистка эффекта кадр
+      отменяла, но ссылку на него не обнуляла — и если состав колонки менялся
+      (новая карточка, карточка стала просроченной), пока кадр ждал, каждый
+      следующий `schedule()` считал кадр запланированным и выходил. Пересчёт на
+      прокрутке умирал до следующей смены состава; под нагрузкой это окно
+      ловилось, в одиночку — нет.
+
+      Здесь окно открыто нарочно: кадры держит сама проверка.
+    */
+    await page.addInitScript(() => {
+      const queue = new Map<number, FrameRequestCallback>()
+      let next = 0
+      const w = window as unknown as { __frames: () => void }
+      window.requestAnimationFrame = (callback) => {
+        next += 1
+        queue.set(next, callback)
+        return next
+      }
+      window.cancelAnimationFrame = (id) => {
+        queue.delete(id)
+      }
+      w.__frames = () => {
+        const pending = Array.from(queue.values())
+        queue.clear()
+        pending.forEach((callback) => callback(performance.now()))
+      }
+    })
+    const flush = () => page.evaluate(() => (window as unknown as { __frames: () => void }).__frames())
+
+    const token = await apiToken(request, CREDENTIALS)
+    expect((await boardColumn(request, token, 'new')).length, 'проверке нужна длинная колонка').toBeGreaterThan(10)
+
+    await openBoard(page)
+    const board = page.getByTestId('tracker-column-new')
+    const banner = page.getByTestId('tracker-overdue-below-new')
+    await expect(board.getByTestId(/^tracker-order-/).first()).toBeVisible({ timeout: 20_000 })
+    const hidden = await board.evaluate(
+      (node) =>
+        Array.from(node.querySelectorAll('[data-overdue="true"]')).filter(
+          (card) => card.getBoundingClientRect().top >= window.innerHeight,
+        ).length,
+    )
+    test.skip(hidden === 0, 'вся колонка на экране — окна для проверки нет')
+    await expect(banner).toContainText(String(hidden))
+
+    // Кадр пересчёта запланирован и ждёт…
+    await page.evaluate(() => window.dispatchEvent(new Event('scroll')))
+    // …а состав колонки тем временем сменился: новая карточка пришла по сокету.
+    const fresh = await placeOrder(request)
+    try {
+      await expect(board.getByTestId(`tracker-order-${fresh.number}`)).toBeVisible({ timeout: 20_000 })
+
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      await expect
+        .poll(
+          async () => {
+            await flush()
+            if (!(await banner.isVisible())) return 0
+            return Number(((await banner.textContent()) ?? '').replace(/\D+/g, '')) || 0
+          },
+          { timeout: 10_000, message: 'прокрутка после смены состава обязана пересчитать баннер' },
+        )
+        .toBeLessThan(hidden)
+    } finally {
+      await moveOrderStatus(request, token, fresh.id, 'cancelled')
+    }
+  })
 })

@@ -58,7 +58,11 @@ export function OverdueBelow({ columnCode, signature }: OverdueBelowProps) {
     return () => {
       window.removeEventListener('scroll', schedule);
       window.removeEventListener('resize', schedule);
+      // Отменённый кадр — ЗАБЫТЫЙ кадр. Без обнуления следующий эффект (сменился
+      // состав колонки) считал бы его запланированным, и `schedule` выходил бы
+      // на каждой прокрутке: баннер застывал на старом числе (партия 48).
       if (frame.current !== null) window.cancelAnimationFrame(frame.current);
+      frame.current = null;
     };
   }, [columnCode, signature]);
 
