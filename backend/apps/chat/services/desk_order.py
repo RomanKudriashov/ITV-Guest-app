@@ -154,7 +154,12 @@ def _revive_or_create(model, *, code: str, defaults: dict):
     передача задачи не должна из-за этого отказывать. Поднимаем ту же строку,
     а не заводим вторую с чужим кодом.
     """
-    existing = model.all_objects.filter(code=code).first()
+    # Живая — первой (п.76): уникальность кода теперь только среди живых, и
+    # рядом с живой может лежать удалённая с тем же кодом. Поднять удалённую при
+    # живой значило бы завести вторую живую.
+    existing = model.objects.filter(code=code).first() or (
+        model.all_objects.filter(code=code).order_by("-updated_at").first()
+    )
     if existing is None:
         return model.objects.create(code=code, **defaults)
     changed = []

@@ -100,12 +100,16 @@ class Binding(TenantModel):
         ordering = ["capability"]
         constraints = [
             models.UniqueConstraint(
-                fields=["hotel", "element", "capability"], name="uniq_grms_binding_per_element"
+                fields=["hotel", "element", "capability"], name="uniq_grms_binding_per_element",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)
             ),
             # Одна переменная не используется дважды внутри типа — иначе два
             # элемента управляли бы одним каналом и расходились в состоянии.
             models.UniqueConstraint(
-                fields=["hotel", "variable"], name="uniq_grms_variable_used_once"
+                fields=["hotel", "variable"], name="uniq_grms_variable_used_once",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)
             ),
         ]
 

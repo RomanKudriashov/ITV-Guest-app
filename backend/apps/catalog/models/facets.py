@@ -35,7 +35,9 @@ class Allergen(TenantModel):
         db_table = "catalog_allergen"
         ordering = ["sort_order", "code"]
         constraints = [
-            models.UniqueConstraint(fields=["hotel", "code"], name="uniq_allergen_per_hotel")
+            models.UniqueConstraint(fields=["hotel", "code"], name="uniq_allergen_per_hotel",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True))
         ]
 
     def __str__(self) -> str:
@@ -83,7 +85,9 @@ class DietaryMarker(TenantModel):
         db_table = "catalog_dietary_marker"
         ordering = ["sort_order", "code"]
         constraints = [
-            models.UniqueConstraint(fields=["hotel", "code"], name="uniq_dietary_marker_per_hotel")
+            models.UniqueConstraint(fields=["hotel", "code"], name="uniq_dietary_marker_per_hotel",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True))
         ]
 
     def __str__(self) -> str:

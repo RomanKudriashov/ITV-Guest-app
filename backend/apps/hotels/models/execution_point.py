@@ -51,7 +51,9 @@ class ExecutionPoint(TenantModel):
         ordering = ["code"]
         constraints = [
             models.UniqueConstraint(
-                fields=["hotel", "code"], name="uniq_execution_point_per_hotel"
+                fields=["hotel", "code"], name="uniq_execution_point_per_hotel",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)
             )
         ]
 

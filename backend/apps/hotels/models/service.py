@@ -92,7 +92,9 @@ class Service(TenantModel):
         db_table = "hotels_service"
         ordering = ["sort_order", "code"]
         constraints = [
-            models.UniqueConstraint(fields=["hotel", "code"], name="uniq_service_per_hotel"),
+            models.UniqueConstraint(fields=["hotel", "code"], name="uniq_service_per_hotel",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)),
             models.UniqueConstraint(
                 fields=["hotel", "execution_point"], name="uniq_service_per_execution_point"
             ),

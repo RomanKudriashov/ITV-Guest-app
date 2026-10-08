@@ -46,7 +46,9 @@ class RequestField(TenantModel):
         db_table = "catalog_request_field"
         ordering = ["sort_order", "code"]
         constraints = [
-            models.UniqueConstraint(fields=["item", "code"], name="uniq_request_field_per_item")
+            models.UniqueConstraint(fields=["item", "code"], name="uniq_request_field_per_item",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True))
         ]
 
     def __str__(self) -> str:
@@ -78,7 +80,9 @@ class ModifierGroup(TenantModel):
         ordering = ["sort_order", "code"]
         constraints = [
             models.UniqueConstraint(
-                fields=["item", "code"], name="uniq_modifier_group_per_item"
+                fields=["item", "code"], name="uniq_modifier_group_per_item",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)
             )
         ]
 
@@ -103,7 +107,9 @@ class ModifierOption(TenantModel):
         ordering = ["sort_order", "code"]
         constraints = [
             models.UniqueConstraint(
-                fields=["group", "code"], name="uniq_modifier_option_per_group"
+                fields=["group", "code"], name="uniq_modifier_option_per_group",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)
             )
         ]
 

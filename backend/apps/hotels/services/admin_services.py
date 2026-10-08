@@ -1730,6 +1730,24 @@ def service_templates() -> list[dict]:
 
 
 @transaction.atomic
+def _free_point_code(code: str) -> str:
+    """
+    Код исполнителя под новое заведение — первый свободный среди живых.
+
+    Запасной `{code}-ep` раньше не перепроверялся: если занят и он, заведение
+    падало на уникальности (п.76). Теперь ряд `code`, `code-ep`, `code-ep-2`…
+    """
+    taken = set(
+        ExecutionPoint.objects.filter(code__startswith=code).values_list("code", flat=True)
+    )
+    if code not in taken:
+        return code
+    candidate, n = f"{code}-ep", 2
+    while candidate in taken:
+        candidate, n = f"{code}-ep-{n}", n + 1
+    return candidate
+
+
 def create_service(data: dict) -> Service:
     """
     Завести заведение. Исполнителя под него создаём сами: отель выбирает
@@ -1749,11 +1767,13 @@ def create_service(data: dict) -> Service:
     from apps.catalog.services.cms import make_code
 
     code = data.get("code") or make_code(Service, public_name, prefix="service")
-    if Service.all_objects.filter(code=code).exists():
+    # Только среди ЖИВЫХ (п.76): уникальность кода условная, и удалённый «bar»
+    # код не держит — новый «bar» заводится. Два живых — по-прежнему отказ.
+    if Service.objects.filter(code=code).exists():
         raise ConflictError(f"Сервис «{code}» уже существует", code="service_exists")
 
     kind = SERVICE_TYPE_TO_KIND.get(service_type, ExecutionPoint.Kind.OTHER)
-    point_code = code if not ExecutionPoint.all_objects.filter(code=code).exists() else f"{code}-ep"
+    point_code = _free_point_code(code)
     point = ExecutionPoint.objects.create(
         code=point_code,
         # Служебное имя бригады = гостевое имя заведения, пока отель не задал

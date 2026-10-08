@@ -51,7 +51,9 @@ class Location(TenantModel):
         ordering = ["sort_order", "code"]
         constraints = [
             models.UniqueConstraint(
-                fields=["hotel", "code"], name="uniq_location_per_hotel"
+                fields=["hotel", "code"], name="uniq_location_per_hotel",
+                # Только среди живых (п.76): мягко удалённая строка ключ не держит.
+                condition=models.Q(deleted_at__isnull=True)
             )
         ]
 
