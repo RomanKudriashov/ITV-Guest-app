@@ -86,10 +86,15 @@ export interface TrackerNextStatus {
  * начинается именно с них.
  */
 export interface TrackerJournalEntry {
+  /**
+   * `status` — переход статуса, `assign` — назначение исполнителя (партия 47).
+   * Старые ответы поля не несут — значит, переход.
+   */
+  kind?: 'status' | 'assign';
   /** Статус, ИЗ которого ушли; `null` у самой первой записи. */
-  from: string | null;
-  to: string;
-  title: string;
+  from?: string | null;
+  to?: string;
+  title?: string;
   at: string;
   /** `staff`, `guest` или `system` — пересчёт агрегата человеком не является. */
   actor_type: string;
@@ -97,13 +102,36 @@ export interface TrackerJournalEntry {
   /** Учётку автора удалили — имя показывается с пометкой (DEV-02). */
   actor_deleted?: boolean;
   /** Движение назад по потоку. Считает сервер: правило живёт в пресете. */
-  is_rollback: boolean;
+  is_rollback?: boolean;
+  /** Уточнение: причина возврата, отмены. */
+  comment?: string;
+  /** Назначение: на кого и с кого (снимки имён). */
+  assignee_name?: string;
+  previous_name?: string;
+}
+
+/**
+ * Права ТОГО, КТО СМОТРИТ, на эту карточку (партия 47). Считает сервер — по
+ * уровню на точке и состоянию заказа; кнопки рисуются по ним, а не по догадке.
+ */
+export interface TrackerOrderRights {
+  accept: boolean;
+  move: boolean;
+  reorder: boolean;
+  cancel: boolean;
+  reopen: boolean;
+  assign: boolean;
 }
 
 export interface TrackerOrder extends GuestOrder {
   execution_point: TrackerPointRef;
   /** Оформил сотрудник за гостя (ресепшен из чата) — кто именно. */
   placed_by?: { id: string; name: string } | null;
+  /** «Поручение» отдела отделу (п.79): откуда и кто дал. У поручения нет «за гостя». */
+  errand?: { from_point: string; by: string } | null;
+  rights?: TrackerOrderRights;
+  /** Назначен на меня и ещё не принят — «Назначено вам». */
+  assigned_to_me?: boolean;
   assignee: TrackerAssignee | null;
   accepted_at: string | null;
   /** How long the order has been waiting, minutes. */
@@ -284,6 +312,8 @@ export interface TrackerBoard {
    * управляющий не проверит, почему у человека пусто.
    */
   assignees?: TrackerAssignee[];
+  /** Права зрителя на этой доске (по уровню на точке), партия 47. */
+  rights?: Record<string, boolean>;
   /**
    * Чем наполнять фильтр «Статус» — приходит ТОЛЬКО для истории.
    *

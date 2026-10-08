@@ -4,6 +4,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface ReopenDialogProps {
@@ -13,7 +15,8 @@ export interface ReopenDialogProps {
   statusTitle: string | null;
   busy: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Причина обязательна (партия 47) — она уходит в историю заказа. */
+  onConfirm: (reason: string) => void;
 }
 
 /**
@@ -26,8 +29,10 @@ export interface ReopenDialogProps {
  * попадают неточно, и промах по закрытой карточке был бы неотличим от
  * намерения.
  *
- * Вопрос без поля причины: причина уже записана журналом (кто, когда, откуда,
- * куда), а лишнее поле в спешке заполняют мусором.
+ * ПРИЧИНА ОБЯЗАТЕЛЬНА (партия 47, решение тек-лида 24.09). Журнал и так
+ * пишет кто, когда, откуда и куда — но не ЗАЧЕМ, а возврат закрытого
+ * разбирают именно по этому вопросу. Вернуть может старший смены и выше;
+ * исполнителю диалог не открывается вовсе — целей возврата сервер ему не даёт.
  */
 export function ReopenDialog({
   open,
@@ -38,6 +43,11 @@ export function ReopenDialog({
   onConfirm,
 }: ReopenDialogProps) {
   const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+  useEffect(() => {
+    if (open) setReason('');
+  }, [open]);
+  const ready = reason.trim().length > 0;
 
   return (
     <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
@@ -46,6 +56,18 @@ export function ReopenDialog({
         <DialogContentText variant="body2" data-testid="tracker-reopen-body">
           {t('tracker.reopen.body', { status: statusTitle ?? '' })}
         </DialogContentText>
+        <TextField
+          autoFocus
+          fullWidth
+          required
+          multiline
+          minRows={2}
+          margin="dense"
+          label={t('tracker.reopen.reason')}
+          value={reason}
+          onChange={(event) => setReason(event.target.value.slice(0, 255))}
+          inputProps={{ 'data-testid': 'tracker-reopen-reason', maxLength: 255 }}
+        />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={busy} sx={{ minHeight: 44 }}>
@@ -53,8 +75,8 @@ export function ReopenDialog({
         </Button>
         <Button
           variant="contained"
-          onClick={onConfirm}
-          disabled={busy}
+          onClick={() => onConfirm(reason.trim())}
+          disabled={busy || !ready}
           data-testid="tracker-reopen-confirm"
           sx={{ minHeight: 44 }}
         >

@@ -869,14 +869,17 @@
       "pickup": "自取",
       "pickupAt": "取餐点：{{place}}",
       "pickupBy": "由 {{room}} 号房客人自取",
-      "placedBy": "代客下单：{{name}}"
+      "placedBy": "代客下单：{{name}}",
+      "assignedToMe": "已分配给你",
+      "errand": "来自“{{point}}”的任务：{{name}}"
     },
     "actions": {
       "accept": "接单",
       "cancel": "取消",
       "more": "更多操作",
       "undo": "撤销",
-      "undoHint": "订单 #{{number}} 的状态已更改"
+      "undoHint": "订单 #{{number}} 的状态已更改",
+      "assign": "分配"
     },
     "detail": {
       "where": "送达",
@@ -988,7 +991,8 @@
       "title": "将订单 #{{number}} 退回处理？",
       "body": "该订单已关闭：客人已看到“已送达”，班次也已上报。退回“{{status}}”会记入订单历史——谁在何时退回。",
       "keep": "保持关闭",
-      "confirm": "退回处理"
+      "confirm": "退回处理",
+      "reason": "重新打开的原因"
     },
     "journal": {
       "title": "订单的处理记录",
@@ -998,7 +1002,9 @@
       "byPerson": "{{name}}",
       "byGuest": "客人",
       "byDeleted": "{{name}}（已删除）",
-      "byStaff": "员工"
+      "byStaff": "员工",
+      "assigned": "已分配给 {{name}}",
+      "reassigned": "已分配给 {{name}}（替换 {{previous}}）"
     },
     "loadMore": "显示更多",
     "loadingMore": "加载中…",
@@ -1066,7 +1072,13 @@
         "failed": "转交失败"
       }
     },
-    "pointUnavailable": "您无权查看此看板——已显示您的看板：{{current}}"
+    "pointUnavailable": "您无权查看此看板——已显示您的看板：{{current}}",
+    "assign": {
+      "title": "请求 #{{number}} 分配给谁？",
+      "empty": "此点位暂无人员。",
+      "cancel": "不分配",
+      "confirm": "分配"
+    }
   },
   "requestFields": {
     "title": "申请字段",

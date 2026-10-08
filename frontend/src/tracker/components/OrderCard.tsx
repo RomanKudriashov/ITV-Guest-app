@@ -39,6 +39,8 @@ export interface OrderCardProps {
   onAccept: () => void;
   onStatus: (code: string) => void;
   onCancel: () => void;
+  /** «Назначить исполнителя» — по `rights.assign` (партия 47). */
+  onAssign?: () => void;
   /**
    * Переставить карточку на шаг вверх/вниз внутри своей колонки.
    *
@@ -59,6 +61,7 @@ export function OrderCard({
   onAccept,
   onStatus,
   onCancel,
+  onAssign,
   onReorder,
 }: OrderCardProps) {
   const { t } = useTranslation();
@@ -246,7 +249,29 @@ export function OrderCard({
             of the order they actually placed — without this line the two never
             meet.
           */}
-          {order.placed_by ? (
+          {/* Назначено мне, ещё не принято (партия 47) — нажать «Принять». */}
+          {order.assigned_to_me ? (
+            <Chip
+              size="small"
+              color="primary"
+              data-testid={`tracker-assigned-to-me-${order.number}`}
+              label={t('tracker.card.assignedToMe')}
+              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+            />
+          ) : null}
+          {/* Поручение отдела отделу (п.79): гостя в нём нет — «за гостя» неправда. */}
+          {order.errand ? (
+            <Chip
+              size="small"
+              variant="outlined"
+              data-testid={`tracker-errand-${order.number}`}
+              label={t('tracker.card.errand', {
+                point: order.errand.from_point,
+                name: order.errand.by,
+              })}
+              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+            />
+          ) : order.placed_by ? (
             <Chip
               size="small"
               variant="outlined"
@@ -366,6 +391,7 @@ export function OrderCard({
           onAccept={onAccept}
           onStatus={onStatus}
           onCancel={onCancel}
+          onAssign={onAssign}
         />
       </Box>
     </Card>

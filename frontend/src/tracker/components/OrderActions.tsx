@@ -18,6 +18,8 @@ export interface OrderActionsProps {
   onAccept: () => void;
   onStatus: (code: string) => void;
   onCancel: () => void;
+  /** «Назначить исполнителя» — показывается по `rights.assign` (партия 47). */
+  onAssign?: () => void;
   size?: 'small' | 'medium';
 }
 
@@ -43,19 +45,26 @@ export function OrderActions({
   onAccept,
   onStatus,
   onCancel,
+  onAssign,
   size = 'medium',
 }: OrderActionsProps) {
   const { t } = useTranslation();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const canAccept = !order.accepted_at && !order.status.is_terminal;
+  // ПРАВА — С СЕРВЕРА (партия 47): «принять» — это не только «ещё не принят»,
+  // но и «не назначен другому», а это знает сервер. Старый ответ без `rights`
+  // (кэш до выкатки) — прежнее правило.
+  const canAccept = order.rights
+    ? order.rights.accept
+    : !order.accepted_at && !order.status.is_terminal;
+  const canAssign = Boolean(order.rights?.assign && onAssign);
 
-  if (!canAccept && !order.next_statuses.length && !order.can_cancel) return null;
+  if (!canAccept && !order.next_statuses.length && !order.can_cancel && !canAssign) return null;
 
   // Пока заказ не принят, главное — принять его; дальше главным становится
   // следующий шаг потока. Всё, что осталось, уходит в меню.
   const [primaryStatus, ...restStatuses] = canAccept ? [] : order.next_statuses;
   const overflow = canAccept ? order.next_statuses : restStatuses;
-  const hasOverflow = overflow.length > 0 || order.can_cancel;
+  const hasOverflow = overflow.length > 0 || order.can_cancel || canAssign;
 
   const close = () => setAnchor(null);
   const pick = (code: string) => {
@@ -115,6 +124,17 @@ export function OrderActions({
                 {next.title}
               </MenuItem>
             ))}
+            {canAssign ? (
+              <MenuItem
+                onClick={() => {
+                  close();
+                  onAssign?.();
+                }}
+                data-testid={`tracker-assign-${order.number}`}
+              >
+                {t('tracker.actions.assign')}
+              </MenuItem>
+            ) : null}
             {order.can_cancel ? (
               <MenuItem
                 onClick={() => {

@@ -93,8 +93,9 @@ test.describe('Возврат заказа в работу', () => {
 
     const closed = await placeOrder(request)
     await moveOrderStatus(request, token, closed.id, 'done')
+    // Возврат закрытого — с причиной (партия 47); повар кухни — старший смены.
     const back = await request.post(`${API}/api/tracker/order/${closed.id}/status`, {
-      data: { status: 'preparing' },
+      data: { status: 'preparing', comment: 'закрыли по ошибке' },
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
     expect(back.status(), 'закрытый заказ обязан возвращаться в работу').toBe(200)
@@ -134,8 +135,13 @@ test.describe('Возврат заказа в работу', () => {
     })
     expect((await stillClosed.json()).status.code).toBe('done')
 
+    // Причина обязательна (партия 47): без неё кнопка не нажимается.
+    await expect(confirm).toBeDisabled()
+    await page.getByTestId('tracker-reopen-reason').fill('нажали «Доставлено» не на той карточке')
     await confirm.click()
     await expect(detail).toContainText(/Готовится/i, { timeout: 20_000 })
+    // И причина — в журнале заказа.
+    await expect(page.getByTestId('tracker-journal-comment').first()).toContainText('не на той карточке')
   })
 
   test('3. журнал показывает возврат КАК возврат и называет, кто вернул', async ({
@@ -146,7 +152,7 @@ test.describe('Возврат заказа в работу', () => {
     const order = await placeOrder(request)
     await moveOrderStatus(request, token, order.id, 'done')
     await request.post(`${API}/api/tracker/order/${order.id}/status`, {
-      data: { status: 'preparing' },
+      data: { status: 'preparing', comment: 'гость вернул блюдо' },
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
     })
 

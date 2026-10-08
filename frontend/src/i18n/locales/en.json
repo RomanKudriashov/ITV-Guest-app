@@ -874,14 +874,17 @@
       "pickup": "Pickup",
       "pickupAt": "Pickup at {{place}}",
       "pickupBy": "collected by the guest from {{room}}",
-      "placedBy": "Placed for the guest by {{name}}"
+      "placedBy": "Placed for the guest by {{name}}",
+      "assignedToMe": "Assigned to you",
+      "errand": "Errand from “{{point}}”: {{name}}"
     },
     "actions": {
       "accept": "Accept",
       "cancel": "Cancel",
       "more": "More actions",
       "undo": "Undo",
-      "undoHint": "Status of order #{{number}} changed"
+      "undoHint": "Status of order #{{number}} changed",
+      "assign": "Assign"
     },
     "detail": {
       "where": "Where",
@@ -996,7 +999,8 @@
       "title": "Return order #{{number}} to work?",
       "body": "The order is already closed: the guest saw it delivered and the shift has reported it. Returning it to “{{status}}” goes into the order history — who returned it and when.",
       "keep": "Keep it closed",
-      "confirm": "Return to work"
+      "confirm": "Return to work",
+      "reason": "Why are you reopening it"
     },
     "journal": {
       "title": "What was done with the order",
@@ -1006,7 +1010,9 @@
       "byPerson": "{{name}}",
       "byGuest": "guest",
       "byDeleted": "{{name}} (deleted)",
-      "byStaff": "staff member"
+      "byStaff": "staff member",
+      "assigned": "Assigned to {{name}}",
+      "reassigned": "Assigned to {{name}} (instead of {{previous}})"
     },
     "loadMore": "Show more",
     "loadingMore": "Loading…",
@@ -1076,7 +1082,13 @@
         "failed": "Handover failed"
       }
     },
-    "pointUnavailable": "This board is not available to you — showing yours: {{current}}"
+    "pointUnavailable": "This board is not available to you — showing yours: {{current}}",
+    "assign": {
+      "title": "Who should handle request #{{number}}?",
+      "empty": "No one is assigned to this point yet.",
+      "cancel": "Don’t assign",
+      "confirm": "Assign"
+    }
   },
   "requestFields": {
     "title": "Request fields",

@@ -890,14 +890,17 @@
       "pickup": "استلام",
       "pickupAt": "الاستلام: {{place}}",
       "pickupBy": "سيستلمه ضيف الغرفة {{room}}",
-      "placedBy": "طلبه نيابةً عن الضيف: {{name}}"
+      "placedBy": "طلبه نيابةً عن الضيف: {{name}}",
+      "assignedToMe": "مُسند إليك",
+      "errand": "مهمة من «{{point}}»: {{name}}"
     },
     "actions": {
       "accept": "قبول",
       "cancel": "إلغاء",
       "more": "إجراءات أخرى",
       "undo": "تراجع",
-      "undoHint": "تغيّرت حالة الطلب رقم {{number}}"
+      "undoHint": "تغيّرت حالة الطلب رقم {{number}}",
+      "assign": "إسناد"
     },
     "detail": {
       "where": "إلى أين",
@@ -1024,7 +1027,8 @@
       "title": "إعادة الطلب رقم {{number}} إلى العمل؟",
       "body": "الطلب مغلق بالفعل: رأى الضيف أنه سُلّم وسجّلته الوردية. ستُسجّل الإعادة إلى «{{status}}» في سجل الطلب — من أعادها ومتى.",
       "keep": "إبقاؤه مغلقًا",
-      "confirm": "إعادة إلى العمل"
+      "confirm": "إعادة إلى العمل",
+      "reason": "سبب الإعادة"
     },
     "journal": {
       "title": "ما جرى على الطلب",
@@ -1034,7 +1038,9 @@
       "byPerson": "{{name}}",
       "byGuest": "الضيف",
       "byDeleted": "{{name}} (محذوف)",
-      "byStaff": "موظف"
+      "byStaff": "موظف",
+      "assigned": "أُسند إلى {{name}}",
+      "reassigned": "أُسند إلى {{name}} (بدلًا من {{previous}})"
     },
     "loadMore": "عرض المزيد",
     "loadingMore": "جارٍ التحميل…",
@@ -1112,7 +1118,13 @@
         "failed": "تعذّر التحويل"
       }
     },
-    "pointUnavailable": "هذه اللوحة غير متاحة لك — تُعرض لوحتك: {{current}}"
+    "pointUnavailable": "هذه اللوحة غير متاحة لك — تُعرض لوحتك: {{current}}",
+    "assign": {
+      "title": "لمن يُسند الطلب رقم {{number}}؟",
+      "empty": "لا يوجد أحد في هذه النقطة بعد.",
+      "cancel": "عدم الإسناد",
+      "confirm": "إسناد"
+    }
   },
   "requestFields": {
     "title": "حقول الطلب",

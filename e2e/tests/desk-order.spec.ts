@@ -1,7 +1,7 @@
 import { type APIRequestContext } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, CREDENTIALS, HOTEL, RECEPTION, guestSession, signIn } from './helpers'
+import { API, CREDENTIALS, HOTEL, MAID, RECEPTION, guestSession, signIn } from './helpers'
 
 /**
  * Заказ от имени гостя: ресепшен собирает корзину из чата, гость видит заказ
@@ -107,4 +107,17 @@ test('ресепшен передаёт задачу в отдел, перепи
     c.items.map((i) => i.title),
   )
   expect(titles).not.toContain('Поручение')
+
+  // Доска хозслужбы (п.79, партия 47): поручение подписано, ОТКУДА и КТО дал,
+  // и без «за гостя» — гостя в поручении нет.
+  await signIn(page, MAID)
+  await page.goto('/tracker')
+  // Текст поручения на карточке доски не печатается (он в подробностях), поэтому
+  // карточку находим по самой метке поручения.
+  const errand = page.locator('[data-testid^="tracker-errand-"]').first()
+  await expect(errand).toBeVisible({ timeout: 20_000 })
+  await expect(errand).toContainText('Поручение от «')
+  await expect(errand).toContainText('Игорь, ресепшен')
+  const card = page.locator('[data-testid^="tracker-order-"]').filter({ has: errand }).first()
+  await expect(card).not.toContainText('за гостя')
 })

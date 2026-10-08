@@ -43,6 +43,7 @@ import { RoomGroup } from '../components/RoomGroup';
 import { BoardColumn } from '../components/BoardColumn';
 import { CancelDialog } from '../components/CancelDialog';
 import { ReopenDialog } from '../components/ReopenDialog';
+import { AssignDialog } from '../components/AssignDialog';
 import { OrderCard } from '../components/OrderCard';
 import { OrderDetailSheet } from '../components/OrderDetailSheet';
 import { TrackerTopBar } from '../components/TrackerTopBar';
@@ -202,6 +203,7 @@ export function TrackerPage() {
   */
   const [undo, setUndo] = useState<{ orderId: string; number: number; back: string } | null>(null);
   /** Закрытый заказ, который просят вернуть в работу, и куда именно. */
+  const [assignTarget, setAssignTarget] = useState<TrackerOrder | null>(null);
   const [reopenTarget, setReopenTarget] = useState<{ order: TrackerOrder; code: string } | null>(
     null,
   );
@@ -653,6 +655,7 @@ export function TrackerPage() {
       }}
       onStatus={(code) => requestStatus(order, code)}
       onCancel={() => setCancelTarget(order)}
+      onAssign={() => setAssignTarget(order)}
       onReorder={(direction) => reorderByKeyboard(order, direction)}
     />
   );
@@ -1179,6 +1182,21 @@ export function TrackerPage() {
         onAccept={() => openOrder && void actions.accept(openOrder.id)}
         onStatus={(code) => openOrder && requestStatus(openOrder, code)}
         onCancel={() => openOrder && setCancelTarget(openOrder)}
+        onAssign={() => openOrder && setAssignTarget(openOrder)}
+      />
+
+      <AssignDialog
+        open={Boolean(assignTarget)}
+        orderNumber={assignTarget?.number ?? null}
+        currentId={assignTarget?.assignee?.id ?? null}
+        people={boardQuery.data?.assignees ?? []}
+        busy={Boolean(assignTarget && actions.pendingOrderId === assignTarget.id)}
+        onClose={() => setAssignTarget(null)}
+        onConfirm={(assigneeId) => {
+          const target = assignTarget;
+          setAssignTarget(null);
+          if (target) void actions.assign(target.id, assigneeId);
+        }}
       />
 
       {/*
@@ -1245,12 +1263,12 @@ export function TrackerPage() {
         }
         busy={Boolean(reopenTarget && actions.pendingOrderId === reopenTarget.order.id)}
         onClose={() => setReopenTarget(null)}
-        onConfirm={() => {
+        onConfirm={(reason) => {
           const target = reopenTarget;
           setReopenTarget(null);
           if (!target) return;
           handover.mark(target.order.id);
-          void actions.changeStatus(target.order.id, target.code);
+          void actions.changeStatus(target.order.id, target.code, undefined, reason);
         }}
       />
 

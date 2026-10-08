@@ -79,6 +79,19 @@ export function acceptTrackerOrder(orderId: string, language?: string): Promise<
   });
 }
 
+/** Назначить исполнителя (партия 47): статус и «принято» не меняются. */
+export function assignTrackerOrder(
+  orderId: string,
+  assignee: string,
+  language?: string,
+): Promise<TrackerOrder> {
+  return api.post<TrackerOrder>(
+    `/tracker/order/${orderId}/assign`,
+    { assignee },
+    { headers: langHeaders(language) },
+  );
+}
+
 export function changeTrackerOrderStatus(
   orderId: string,
   payload: StatusChangePayload,

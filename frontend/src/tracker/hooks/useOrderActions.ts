@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   acceptTrackerOrder,
+  assignTrackerOrder,
   cancelTrackerOrder,
   changeTrackerOrderStatus,
   moveTrackerOrderPosition,
@@ -11,12 +12,16 @@ import { useTrackerLanguage } from './useTrackerQueries';
 import type { TrackerOrder } from '../api/types';
 import type { CancelReasonCode } from '../cancelReasons';
 
-type ActionKind = 'accept' | 'status' | 'cancel' | 'position';
+type ActionKind = 'accept' | 'status' | 'cancel' | 'position' | 'assign';
 
 interface ActionVariables {
   kind: ActionKind;
   orderId: string;
   status?: string;
+  /** Уточнение к смене статуса — у возврата закрытого обязательно (партия 47). */
+  comment?: string;
+  /** Кого назначить исполнителем. */
+  assignee?: string;
   reason?: string;
   cancelReason?: CancelReasonCode;
   /** Соседи по колонке для перестановки: между кем встала карточка. */
@@ -54,9 +59,11 @@ export function useOrderActions() {
         case 'status':
           return changeTrackerOrderStatus(
             variables.orderId,
-            { status: variables.status as string, comment: '' },
+            { status: variables.status as string, comment: variables.comment ?? '' },
             language,
           );
+        case 'assign':
+          return assignTrackerOrder(variables.orderId, variables.assignee as string, language);
         case 'position':
           return moveTrackerOrderPosition(
             variables.orderId,
@@ -99,11 +106,18 @@ export function useOrderActions() {
    * обработчик, читающий его сразу после ответа, взял бы значение прошлого.
    */
   const changeStatus = useCallback(
-    (orderId: string, status: string, onFailure?: (error: unknown) => void) =>
-      mutation.mutateAsync({ kind: 'status', orderId, status }).catch((error: unknown) => {
+    (orderId: string, status: string, onFailure?: (error: unknown) => void, comment?: string) =>
+      mutation.mutateAsync({ kind: 'status', orderId, status, comment }).catch((error: unknown) => {
         onFailure?.(error);
         return undefined;
       }),
+    [mutation],
+  );
+
+  /** Назначить исполнителя — отказ показывает карточка, как у остальных действий. */
+  const assign = useCallback(
+    (orderId: string, assignee: string) =>
+      mutation.mutateAsync({ kind: 'assign', orderId, assignee }).catch(() => undefined),
     [mutation],
   );
 
@@ -134,5 +148,5 @@ export function useOrderActions() {
 
   const clearError = useCallback(() => setActionError(null), []);
 
-  return { pendingOrderId, actionError, clearError, accept, changeStatus, moveTo, cancel };
+  return { pendingOrderId, actionError, clearError, accept, assign, changeStatus, moveTo, cancel };
 }

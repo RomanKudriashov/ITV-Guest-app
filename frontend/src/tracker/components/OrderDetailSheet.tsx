@@ -39,6 +39,7 @@ export interface OrderDetailSheetProps {
   onAccept: () => void;
   onStatus: (code: string) => void;
   onCancel: () => void;
+  onAssign?: () => void;
 }
 
 /**
@@ -57,6 +58,7 @@ export function OrderDetailSheet({
   onAccept,
   onStatus,
   onCancel,
+  onAssign,
 }: OrderDetailSheetProps) {
   const { t } = useTranslation();
   const language = useTrackerLanguage();
@@ -262,6 +264,7 @@ export function OrderDetailSheet({
               onAccept={onAccept}
               onStatus={onStatus}
               onCancel={onCancel}
+              onAssign={onAssign}
             />
           </Stack>
         )}

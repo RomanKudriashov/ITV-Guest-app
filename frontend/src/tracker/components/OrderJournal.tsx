@@ -53,6 +53,7 @@ export function OrderJournal({ entries }: { entries: TrackerJournalEntry[] }) {
             role="listitem"
             data-testid={`tracker-journal-entry-${entries.length - 1 - index}`}
             data-rollback={entry.is_rollback ? 'true' : 'false'}
+            data-kind={entry.kind ?? 'status'}
           >
             <Typography
               variant="caption"
@@ -63,7 +64,17 @@ export function OrderJournal({ entries }: { entries: TrackerJournalEntry[] }) {
             </Typography>
             <Stack spacing={0.25} sx={{ minWidth: 0, flexGrow: 1 }}>
               <Stack direction="row" spacing={0.75} alignItems="center" useFlexGap flexWrap="wrap">
-                <Typography variant="body2">{entry.title}</Typography>
+                {/* Назначение исполнителя (партия 47) — своя строка: статус не менялся. */}
+                <Typography variant="body2">
+                  {entry.kind === 'assign'
+                    ? entry.previous_name
+                      ? t('tracker.journal.reassigned', {
+                          name: entry.assignee_name ?? '',
+                          previous: entry.previous_name,
+                        })
+                      : t('tracker.journal.assigned', { name: entry.assignee_name ?? '' })
+                    : entry.title}
+                </Typography>
                 {entry.is_rollback ? (
                   <Chip
                     size="small"
@@ -92,6 +103,17 @@ export function OrderJournal({ entries }: { entries: TrackerJournalEntry[] }) {
                         : t('tracker.journal.byPerson', { name: entry.actor_name })
                       : t('tracker.journal.byStaff')}
               </Typography>
+              {/* Причина возврата или уточнение отмены — словами (партия 47). */}
+              {entry.comment ? (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  data-testid="tracker-journal-comment"
+                  sx={{ fontStyle: 'italic', overflowWrap: 'anywhere' }}
+                >
+                  {entry.comment}
+                </Typography>
+              ) : null}
             </Stack>
           </Stack>
         ))}
