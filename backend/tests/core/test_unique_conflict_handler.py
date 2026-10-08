@@ -91,12 +91,14 @@ def platform_api(client):
 # --- Главное: 409 вместо 500 ------------------------------------------------
 
 
-def test_deleted_category_code_answers_409_not_500(cms, service_id):
+def test_deleted_category_code_is_free_again(cms, service_id):
     """
-    ГЛАВНОЕ. Удалить раздел меню и завести с тем же кодом — внятный отказ.
+    Удалить раздел меню и завести с тем же кодом — заводится (партия 44, п.76).
 
-    Пятисотка здесь была бы не «строгостью», а дезинформацией: раздела в
-    списке нет, код на вид свободен, а система молча ломается.
+    Раньше здесь был внятный 409 «занят удалённой записью»: уникальность видела
+    мёртвую строку. Теперь индекс условный (`deleted_at IS NULL`), и удалённый
+    раздел код не держит. Отказ «занят удалённой» остаётся у моделей с
+    безусловной уникальностью — см. `test_platform_handles_are_covered_too`.
     """
     created = cms(
         "post",
@@ -111,15 +113,7 @@ def test_deleted_category_code_answers_409_not_500(cms, service_id):
         "/categories",
         {"title": {"ru": "Завтрак снова"}, "code": "breakfast", "service_id": service_id},
     )
-
-    assert again.status_code == 409, f"ожидался отказ, получено {again.status_code}"
-    body = again.json()
-    assert body["code"] == "unique_conflict"
-    # Текст НАЗЫВАЕТ занятое и объясняет, почему свободное на вид — занято.
-    assert "breakfast" in body["detail"], body["detail"]
-    assert "удал" in body["detail"].lower(), body["detail"]
-    assert body["field"] == "code"
-    assert body["blocked_by"] == "deleted"
+    assert again.status_code == 201, again.content
 
 
 def test_live_row_conflict_says_simply_occupied(cms, service_id):
@@ -154,16 +148,23 @@ def test_live_row_conflict_says_simply_occupied(cms, service_id):
 def test_the_same_holds_for_handles_nobody_taught(cms, path, body, key):
     """
     Ни одна из этих ручек про уникальность не знает — и всё равно отвечает
-    отказом. В этом и смысл общей точки.
+    отказом на ЖИВОМ дубле. В этом и смысл общей точки. Удалённая запись код не
+    держит (п.76): после удаления тот же код заводится снова.
     """
     created = cms("post", path, body)
     assert created.status_code in (200, 201), created.content
+
+    twin = cms("post", path, body)
+    assert twin.status_code == 409, f"{path}: {twin.status_code} {twin.content[:200]}"
+    # Аллергены и метки ловят живой дубль своей предпроверкой («Код уже
+    # используется») — до общего обработчика дело не доходит. Ключ в тексте —
+    # обещание общего обработчика.
+    if twin.json().get("code") == "unique_conflict":
+        assert key in twin.json()["detail"]
+
     cms("delete", f"{path}/{created.json()['id']}")
-
     again = cms("post", path, body)
-
-    assert again.status_code == 409, f"{path}: {again.status_code} {again.content[:200]}"
-    assert key in again.json()["detail"]
+    assert again.status_code in (200, 201), f"{path}: {again.status_code} {again.content[:200]}"
 
 
 # --- Что обработчик трогать не должен ---------------------------------------
@@ -196,11 +197,14 @@ def test_three_handles_keep_their_own_words(cms, hotel, client):
     assert restored.status_code == 201, restored.content
     assert restored.json()["restored"] is True
 
+    # Сервис: живой код занят — отказ своим текстом; удалённый — свободен (п.76).
     service = cms("post", "/services", {"public_name": {"ru": "Спа"}, "code": "spa_svc"})
+    service_twin = cms("post", "/services", {"public_name": {"ru": "Спа"}, "code": "spa_svc"})
+    assert service_twin.status_code == 409
+    assert service_twin.json()["code"] == "service_exists", service_twin.json()
     cms("delete", f"/services/{service.json()['id']}")
     service_again = cms("post", "/services", {"public_name": {"ru": "Спа"}, "code": "spa_svc"})
-    assert service_again.status_code == 409
-    assert service_again.json()["code"] == "service_exists", service_again.json()
+    assert service_again.status_code == 201, service_again.content
 
     staff = cms("post", "/staff", {
         "email": "cook@uniq.test", "password": "staff-12345", "full_name": "Повар"})
@@ -243,7 +247,10 @@ def test_other_integrity_errors_stay_server_errors(client, hotel):
 # Второе (платформенное) подключение читает записанное тестом — нужен коммит.
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_platform_handles_are_covered_too(platform_api):
-    """Шаблон онбординга: то же удаление, тот же повтор, тот же отказ."""
+    """
+    Шаблон онбординга: уникальность безусловная — удалённый держит код, и отказ
+    обязан это сказать (`blocked_by: deleted`).
+    """
     made = platform_api("post", "/templates", {"code": "boutique", "name": {"ru": "Бутик"}})
     assert made.status_code in (200, 201), made.content
 
@@ -256,3 +263,4 @@ def test_platform_handles_are_covered_too(platform_api):
     again = platform_api("post", "/templates", {"code": "boutique", "name": {"ru": "Бутик 2"}})
     assert again.status_code == 409, f"{again.status_code} {again.content[:200]}"
     assert "boutique" in again.json()["detail"]
+    assert again.json()["blocked_by"] == "deleted"
