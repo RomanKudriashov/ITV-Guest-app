@@ -63,6 +63,7 @@ import {
 } from '../hooks/useTrackerQueries';
 import { isTransportFailure, trackerErrorMessage } from '../errors';
 import { BOARD_LINK_CAPTION, boardLink } from '../boardLink';
+import { useNetworkClock } from '../hooks/useNetworkClock';
 import type { TrackerOrder, TrackerScope } from '../api/types';
 import { useAuth } from '@/auth';
 
@@ -386,7 +387,10 @@ export function TrackerPage() {
     только когда молчат оба канала: тогда и говорим об этом, а не показываем
     спокойный итог смены поверх копящихся на сервере заявок.
   */
-  const link = boardLink(live, boardQuery.dataUpdatedAt, Date.now(), OFFLINE_POLL_MS);
+  // Часы тикают, пока доска не на сокете: свежесть опроса пересчитывается сама,
+  // а не ждёт запроса, которого при выключенной сети не будет (п.77).
+  const network = useNetworkClock(live !== 'online');
+  const link = boardLink(live, boardQuery.dataUpdatedAt, network.now, OFFLINE_POLL_MS, network.online);
   const boardUnconfirmed = link === 'offline';
 
   // Which shape the server asked for. Records (spa) come as one ordered day —

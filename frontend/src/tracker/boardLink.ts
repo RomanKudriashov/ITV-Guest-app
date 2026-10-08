@@ -12,8 +12,14 @@ import type { LiveStatus } from './hooks/useBoardLive';
  *   online       — сокет на связи: доска живая;
  *   reconnecting — сокета нет, но опрос отвечает: данные свежие, только не
  *                  мгновенные;
- *   offline      — сокета нет и опрос молчит дольше двух своих интервалов:
+ *   offline      — сокета нет и опрос молчит дольше двух своих интервалов,
+ *                  ИЛИ браузер сам знает, что сети нет (партия 44, п.77):
  *                  пустоте верить нельзя.
+ *
+ * Сеть браузера проверяется ПЕРВОЙ, раньше сокета: при выключенной сети уже
+ * открытый сокет может ещё числиться живым (Chromium его не рвёт сразу), а
+ * опрос стоит на паузе — «в реальном времени» и «переподключаемся» оба были бы
+ * неправдой.
  */
 export type BoardLink = 'online' | 'reconnecting' | 'offline';
 
@@ -22,7 +28,9 @@ export function boardLink(
   dataUpdatedAt: number,
   now: number,
   pollMs: number,
+  networkOnline = true,
 ): BoardLink {
+  if (!networkOnline) return 'offline';
   if (live === 'online') return 'online';
   const fresh = dataUpdatedAt > 0 && now - dataUpdatedAt <= pollMs * 2;
   return fresh ? 'reconnecting' : 'offline';

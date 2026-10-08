@@ -237,4 +237,28 @@ test.describe('Доска: подпись о связи', () => {
     await expect(caption).toContainText('Переподключаемся')
     await expect(page.getByTestId('tracker-empty-offline')).toHaveCount(0)
   })
+
+  /*
+    УКУС п.77 (партия 44). При выключенной сети браузера React Query ставит опрос
+    на паузу — ни запроса, ни ошибки, ни рендера, — и подпись застывала на «пока
+    обновляем раз в 15 секунд» (на стенде — 90 секунд подряд). Теперь сеть
+    браузера — первый признак: «Нет связи» не позже 5 секунд, без ожидания
+    запроса. Сокет и опрос здесь настоящие: проверяется ровно положение стенда.
+  */
+  test('УКУС: сеть браузера выключена — «Нет связи» не позже 5 с, вернулась — «в реальном времени»', async ({
+    page,
+    context,
+  }) => {
+    await signInToTracker(page, CREDENTIALS)
+    const caption = page.getByTestId('tracker-live-caption')
+    await expect(caption).toHaveAttribute('data-link', 'online', { timeout: 25_000 })
+
+    await context.setOffline(true)
+    await expect(caption).toHaveAttribute('data-link', 'offline', { timeout: 5_000 })
+    await expect(caption).toContainText('Нет связи с доской')
+
+    await context.setOffline(false)
+    await expect(caption).toHaveAttribute('data-link', 'online', { timeout: 20_000 })
+    await expect(caption).toHaveText('Доска обновляется в реальном времени')
+  })
 })
