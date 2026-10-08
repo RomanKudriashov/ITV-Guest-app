@@ -24,7 +24,7 @@ from apps.core.errors import ConflictError, NotFoundError, PermissionDenied, Val
 from apps.core.fields import translate
 from apps.hotels.models import ExecutionPoint, Hotel, Service
 
-from apps.events.bus import ORDER_ACCEPTED, ORDER_STATUS_CHANGED, emit
+from apps.events.bus import ORDER_ACCEPTED, ORDER_STATUS_CHANGED, ORDER_TRANSFERRED, emit
 
 from apps.orders.services import status_flows, tracker_shift
 from apps.orders.services.selection import selection_summary
@@ -142,6 +142,7 @@ class Action:
     CANCEL = "cancel"
     REOPEN = "reopen"
     ASSIGN = "assign"
+    TRANSFER = "transfer"
 
 
 ADMIN_RANK = 4
@@ -160,10 +161,13 @@ _NEEDS = {
     Action.CANCEL: 1,
     Action.REOPEN: 2,
     Action.ASSIGN: 2,
+    # Передать на другую точку (партия 48) — старший смены точки-источника и выше.
+    Action.TRANSFER: 2,
 }
 _REFUSALS = {
     Action.REOPEN: "Вернуть закрытый заказ может старший смены, руководитель или администратор",
     Action.ASSIGN: "Назначать исполнителя может старший смены, руководитель или администратор",
+    Action.TRANSFER: "Передать заказ на другую точку может старший смены, руководитель или администратор",
 }
 
 
@@ -216,6 +220,9 @@ def with_viewer(order: dict, rank: int, viewer_id: str | None) -> dict:
         "cancel": base[Action.CANCEL] and not terminal,
         "reopen": base[Action.REOPEN] and terminal and not cancelled,
         "assign": base[Action.ASSIGN] and not terminal,
+        # Остальные запреты переноса (бронь, составной заказ) сервер объясняет
+        # отказом: кнопку прячем только по праву и завершённости.
+        "transfer": base[Action.TRANSFER] and not terminal,
     }
     order["rights"] = rights
     order["assigned_to_me"] = bool(viewer_id) and assignee == viewer_id and not accepted
@@ -237,7 +244,21 @@ def apply_viewer(payload: dict, viewer, point) -> dict:
         with_viewer(order, rank, viewer_id)
     if "columns" in payload:
         payload["rights"] = rights_from_rank(rank)
+        # Куда можно передать (партия 48) — только тому, кому можно передавать.
+        payload["transfer_targets"] = (
+            transfer_targets(point) if payload["rights"][Action.TRANSFER] else []
+        )
     return payload
+
+
+def transfer_targets(point) -> list[dict]:
+    """Активные точки отеля, кроме этой, — цели переноса."""
+    return [
+        {"code": target.code, "title": translate(target.title, None) or target.code}
+        for target in ExecutionPoint.objects.filter(is_active=True)
+        .exclude(pk=point.pk)
+        .order_by("code")
+    ]
 
 
 def require_right(user, action: str, point, *, rank: int | None = None) -> int:
@@ -871,7 +892,12 @@ def serialize_tracker_order(
     # 15 мин»; после — «ждёт» от 12:00.
     since = work_clock_start(order)
     in_work = int((now - since).total_seconds() // 60)
-    guest_clock = max(moment for moment in (order.created_at, order.requested_time) if moment)
+    # Перенесённый заказ «ждёт» на новой доске от момента переноса (партия 48).
+    guest_clock = max(
+        moment
+        for moment in (order.created_at, order.requested_time, order.transferred_at)
+        if moment
+    )
     waiting = int((now - guest_clock).total_seconds() // 60)
     due_in = None
     if order.requested_time and order.requested_time > now and not order.status.is_terminal:
@@ -987,9 +1013,23 @@ def _journal(order: Order, language: str | None, actors: dict | None) -> list[di
             "actor_name": item.actor_name,
             "assignee_name": item.assignee_name,
             "previous_name": item.previous_name,
+            "reason": item.reason,
             "_sort": item.created_at,
         }
         for item in order.assignments.all()
+    ]
+    entries += [
+        {
+            "kind": "transfer",
+            "at": order.hotel.to_local(item.created_at).isoformat(),
+            "actor_type": "staff",
+            "actor_name": item.actor_name,
+            "from_title": item.from_title,
+            "to_title": item.to_title,
+            "comment": item.reason,
+            "_sort": item.created_at,
+        }
+        for item in order.transfers.all()
     ]
     entries.sort(key=lambda entry: entry["_sort"])
     for entry in entries:
@@ -1338,3 +1378,109 @@ def _notify_assigned(order: Order, target, by_user) -> None:
             logging.getLogger(__name__).warning("Уведомление о назначении %s не записано", order.pk, exc_info=True)
 
     transaction.on_commit(send)
+
+
+
+@transaction.atomic
+def transfer_order(user, order_id, *, to_point_code: str, reason: str) -> Order:
+    """
+    Передать заказ на другую точку (партия 48).
+
+    Решения тек-лида (разведка партии 48): статус — в НАЧАЛЬНЫЙ статус потока
+    новой точки (1б); переносится только незавершённый заказ без брони, не
+    часть составного и не его родитель (2а); исполнитель и «принято» сброшены
+    (3а); норма времени на новой доске — от момента переноса (4а); эскалация
+    старой точки гаснет, новой — планируется от переноса (5а); перенос пишется
+    в свой журнал (7а).
+
+    Журнал статусов НЕ пишется: сброс в начальный статус — не «откат», и лента
+    гостя не должна показывать возврат назад. Перенос виден в журнале
+    переносов, а гостю — строкой «Передали в «…»».
+    """
+    from apps.orders.models import OrderAssignment, OrderTransfer
+    from apps.orders.services.services import board_edge
+
+    order = get_tracker_order(user, order_id, Action.TRANSFER)
+    order = Order.objects.select_for_update().select_related("status", "execution_point").get(pk=order.pk)
+
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError("Укажите причину переноса", code="transfer_reason_required", field="reason")
+    if order.status.is_terminal:
+        raise ValidationError("Завершённый заказ не переносят", code="transfer_order_finished")
+    if order.parent_id is not None:
+        raise ValidationError(
+            "Часть составного заказа не переносят — она привязана к своему заведению",
+            code="transfer_part_of_composite",
+        )
+    if Order.objects.filter(parent_id=order.pk).exists():
+        raise ValidationError("Составной заказ не переносят", code="transfer_composite_parent")
+    if order.slot_bookings.exists():
+        raise ValidationError(
+            "Заказ с бронью времени не переносят — бронь занимает слот своей точки",
+            code="transfer_has_booking",
+        )
+
+    target = ExecutionPoint.objects.filter(code=to_point_code, is_active=True).first()
+    if target is None:
+        raise ValidationError("Точка не найдена", code="transfer_point_not_found", field="point")
+    source = order.execution_point
+    if target.pk == source.pk:
+        raise ValidationError("Заказ уже на этой точке", code="transfer_same_point", field="point")
+
+    initial = status_flows.initial_status(status_flows.flow_for_point(target))
+    if initial is None:
+        raise ValidationError(
+            "У новой точки нет начального статуса", code="status_preset_missing"
+        )
+
+    now = timezone.now()
+    number = OrderTransfer.all_objects.filter(order=order).count() + 1
+    previous_assignee = (
+        User.all_objects.filter(pk=order.assignee_id).first() if order.assignee_id else None
+    )
+    actor_name = (user.full_name or user.email)[:255]
+
+    Order.objects.filter(pk=order.pk).update(
+        execution_point=target,
+        status=initial,
+        assignee=None,
+        accepted_at=None,
+        transferred_at=now,
+        board_position=board_edge(target.pk, initial.pk, top=True),
+        updated_at=now,
+    )
+    OrderTransfer.objects.create(
+        order=order,
+        number=number,
+        from_point=source,
+        to_point=target,
+        from_title=(translate(source.title, None) or source.code)[:255],
+        to_title=(translate(target.title, None) or target.code)[:255],
+        actor_id=user.pk,
+        actor_name=actor_name,
+        reason=reason[:255],
+    )
+    if previous_assignee is not None:
+        OrderAssignment.objects.create(
+            order=order,
+            assignee_id_snapshot=None,
+            assignee_name="",
+            previous_name=(previous_assignee.full_name or previous_assignee.email)[:255],
+            actor_id=user.pk,
+            actor_name=actor_name,
+            reason="transfer",
+        )
+
+    order.refresh_from_db()
+    payload = _event_payload(order)
+    payload.update(
+        {
+            "from_point_id": str(source.pk),
+            "to_point_id": str(target.pk),
+            "transfer_number": number,
+            "to_title": translate(target.title, None) or target.code,
+        }
+    )
+    emit(ORDER_TRANSFERRED, payload, hotel_id=order.hotel_id, actor_type="staff", actor_id=user.pk)
+    return get_tracker_order(user, order_id) if rank_on(user, target) else order

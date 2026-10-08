@@ -11,7 +11,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from apps.core.context import current_language
-from apps.orders.schemas.tracker import AcceptIn, AssignIn, PositionIn, StatusIn, TrackerCancelIn
+from apps.orders.schemas.tracker import AcceptIn, AssignIn, PositionIn, StatusIn, TrackerCancelIn, TransferIn
 from apps.orders.services import tracker as svc
 
 router = Router(tags=["tracker"])
@@ -130,4 +130,14 @@ def cancel(request: HttpRequest, order_id: str, payload: TrackerCancelIn):
 def assign(request: HttpRequest, order_id: str, payload: AssignIn):
     """Старший смены, руководитель, администратор (партия 47). Статус не меняет."""
     order = svc.assign_order(request.user, order_id, assignee_id=payload.assignee)
+    return _out(request, order)
+
+
+@router.post("/order/{order_id}/transfer", summary="Передать заказ на другую точку")
+def transfer(request: HttpRequest, order_id: str, payload: TransferIn):
+    """
+    Старший смены точки-источника и выше (партия 48). Статус — начальный в
+    потоке новой точки, исполнитель снят, норма времени — от переноса.
+    """
+    order = svc.transfer_order(request.user, order_id, to_point_code=payload.point, reason=payload.reason)
     return _out(request, order)

@@ -224,6 +224,22 @@ def _status_title(order: Order, language: str) -> str:
 # --- Планирование ----------------------------------------------------------
 
 
+def _step_prefix(order: Order) -> str:
+    """
+    Начало ключа ступеней: заказ и НОМЕР ПЕРЕНОСА (партия 48).
+
+    Ключ записи ступени уникален (`notifications/models/log.py`), а погашенная
+    запись продолжает его занимать. Без номера переноса ступени новой точки
+    упирались бы в погашенные ступени старой (то же правило отеля по умолчанию
+    — те же `step.pk`) и молча не планировались. До первого переноса ключ
+    прежний — старые записи остаются в силе.
+    """
+    from apps.orders.models import OrderTransfer
+
+    number = OrderTransfer.all_objects.filter(order=order).count()
+    return f"{order.pk}:t{number}" if number else f"{order.pk}"
+
+
 def plan_escalation(order: Order) -> list[NotificationLog]:
     """
     Создаёт запись на каждую ступень и ставит отложенные задачи.
@@ -253,6 +269,7 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
     from apps.orders.services.tracker_types import work_clock_start
 
     now = timezone.now()
+    prefix = _step_prefix(order)
     planned: list[NotificationLog] = []
     for index, step in enumerate(steps):
         # Ступень «сразу» — это известие заведению о заявке: оно уходит при
@@ -263,7 +280,9 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
         if step.delay_minutes:
             scheduled_for = work_clock_start(order) + timedelta(minutes=step.delay_minutes)
         else:
-            scheduled_for = order.created_at
+            # После переноса «сразу» — это известие НОВОЙ точке в момент
+            # переноса (партия 48), а не задним числом от создания.
+            scheduled_for = getattr(order, "transferred_at", None) or order.created_at
         log = _get_or_create_log(
             order=order,
             rule=rule,
@@ -271,7 +290,7 @@ def plan_escalation(order: Order) -> list[NotificationLog]:
             channel=None,
             parent=None,
             step_index=index,
-            dedupe_key=f"{order.pk}:step:{step.pk}",
+            dedupe_key=f"{prefix}:step:{step.pk}",
             scheduled_for=scheduled_for,
         )
         if log is None:
@@ -394,7 +413,8 @@ def execute_step(log_id, *, now=None) -> NotificationLog:
             channel=channel,
             parent=log,
             step_index=log.step_index,
-            dedupe_key=f"{order.pk}:step:{log.step_id}:channel:{channel.pk}",
+            # От ключа ступени: доставка наследует её номер переноса (партия 48).
+            dedupe_key=f"{log.dedupe_key}:channel:{channel.pk}",
             scheduled_for=log.scheduled_for,
         )
         if delivery is None:

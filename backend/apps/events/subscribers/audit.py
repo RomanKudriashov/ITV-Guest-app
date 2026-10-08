@@ -14,6 +14,7 @@ from apps.core.context import tenant_context
 from apps.core.models import AuditLog
 from apps.events.bus import (
     ORDER_CANCELLED,
+    ORDER_TRANSFERRED,
     ORDER_CREATED,
     ORDER_STATUS_CHANGED,
     Event,
@@ -23,7 +24,7 @@ from apps.events.bus import (
 logger = logging.getLogger(__name__)
 
 
-@subscribe(ORDER_CREATED, ORDER_STATUS_CHANGED, ORDER_CANCELLED)
+@subscribe(ORDER_CREATED, ORDER_STATUS_CHANGED, ORDER_CANCELLED, ORDER_TRANSFERRED)
 def write_audit_entry(event: Event) -> None:
     order_id = event.payload.get("order_id")
     with tenant_context(event.hotel_id):

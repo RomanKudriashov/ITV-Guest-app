@@ -212,8 +212,17 @@ def work_clock_start(order):
     пульта, кубик номера, ступени эскалации. Раньше возврат в работу учитывала
     одна карточка — остальные трое считали от создания и расходились с ней.
     Возраст заказа («ждёт 3 часа») сюда не относится: он честно от создания.
+
+    ПЕРЕНОС НА ДРУГУЮ ТОЧКУ (партия 48) — четвёртый момент: на новой доске норма
+    идёт от переноса, иначе заказ, полежавший на старой точке, приезжал бы на
+    новую уже красным.
     """
-    moments = [order.created_at, order.requested_time, order.reopened_at]
+    moments = [
+        order.created_at,
+        order.requested_time,
+        order.reopened_at,
+        getattr(order, "transferred_at", None),
+    ]
     return max(moment for moment in moments if moment is not None)
 
 
@@ -226,6 +235,7 @@ def work_clock_start_expression():
         F("created_at"),
         Coalesce(F("requested_time"), F("created_at")),
         Coalesce(F("reopened_at"), F("created_at")),
+        Coalesce(F("transferred_at"), F("created_at")),
     )
 
 

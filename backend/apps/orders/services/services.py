@@ -1130,6 +1130,8 @@ def order_queryset():
         "status_changes__from_status",
         # Журнал назначений (партия 47) — та же лента истории для персонала.
         "assignments",
+        # Журнал переносов (партия 48).
+        "transfers",
         # Для parent-агрегата: позиции живут на children — подтягиваем их разом.
         "children__items__item__images__asset",
         "children__status",
@@ -1248,6 +1250,26 @@ def _order_to_review(guest_session, language: str | None) -> dict | None:
         "closed_at": order.closed_at.isoformat(),
         **_order_summary(order, language),
     }
+
+
+def transfer_payload(order: Order, language: str | None) -> dict | None:
+    """
+    Куда передали заказ — гостевым названием сервиса новой точки (партия 48).
+
+    Только факт и место: кто и почему передал, гостю не нужно — это внутреннее
+    дело отеля. Лента статусов при переносе не откатывается: журнал статусов
+    перенос не пишет, гость видит новую ленту с начала.
+    """
+    if not getattr(order, "transferred_at", None):
+        return None
+    from apps.core.fields import translate
+    from apps.hotels.models import Service
+
+    service = Service.objects.filter(execution_point_id=order.execution_point_id).first()
+    title = (
+        translate(service.public_name, language) if service is not None else ""
+    ) or translate(order.execution_point.title, language) or order.execution_point.code
+    return {"to": title, "at": order.hotel.to_local(order.transferred_at).isoformat()}
 
 
 def placed_by_payload(order: Order, language: str | None) -> dict:
@@ -1822,6 +1844,8 @@ def serialize_order(order: Order, language: str | None = None) -> dict[str, Any]
         # Оформлен НЕ гостем: у гостя в списке пометка «оформил ресепшен».
         # Имени сотрудника гость не видит — ему отвечает отдел.
         **placed_by_payload(order, language),
+        # Перенос на другую точку (партия 48): гостю — «Передали в «{сервис}»».
+        "transfer": transfer_payload(order, language),
         "review": _order_review(order),
         "items": [
             {

@@ -312,3 +312,50 @@ def _audit(hotel_id, user, action, object_type, object_id, result, incoming: Inc
             object_id=object_id,
             payload={"messenger": "telegram", "result": result, "via": "telegram_button"},
         )
+
+
+# --- Перенос заказа гасит кнопки (партия 48) -----------------------------------
+
+
+def extinguish_order_buttons(order_id, line: str) -> int:
+    """
+    Убрать «Взять» из уже отправленных сообщений о заказе и дописать строку.
+
+    Заказ ушёл на другую точку — кнопка в сообщениях СТАРОЙ точки обещала бы
+    то, чего уже нет: нажатие ответило бы «нет доступа». Сообщения правятся по
+    квитанции отправки (`telegram:<message_id>`) — и ступени эскалации, и
+    события («Вам назначили заявку»). Только бот платформы: кнопки бывают лишь
+    у него. Сбой одной правки не останавливает остальные.
+    """
+    from apps.notifications.messengers.telegram import TelegramBot
+    from apps.notifications.models import EventDelivery, NotificationLog, NotificationStatus
+    from apps.notifications.services import personal
+
+    bot = TelegramBot()
+    if not bot.configured():
+        return 0
+    sent = [
+        *NotificationLog.objects.filter(
+            order_id=order_id, status=NotificationStatus.SENT, error__startswith="telegram:"
+        ).select_related("channel", "channel__user"),
+        *EventDelivery.objects.filter(
+            record__payload__order_id=str(order_id),
+            status=NotificationStatus.SENT,
+            error__startswith="telegram:",
+        ).select_related("channel", "channel__user"),
+    ]
+    done = 0
+    for item in sent:
+        channel = item.channel
+        if channel is None or not channel.via_platform_bot:
+            continue
+        chat_id = str(personal.config_for(channel).get("chat_id") or "")
+        message_id = item.error.split(":", 1)[1]
+        if not chat_id or not message_id.isdigit():
+            continue
+        try:
+            bot.edit(chat_id, message_id, item.subject, f"{item.body}\n\n{line}", [])
+            done += 1
+        except Exception:  # noqa: BLE001 — правка одного сообщения не валит остальные
+            logger.warning("Не удалось погасить кнопку в сообщении %s", message_id, exc_info=True)
+    return done

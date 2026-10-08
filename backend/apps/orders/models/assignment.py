@@ -26,6 +26,9 @@ class OrderAssignment(TenantModel):
     previous_name = models.CharField(max_length=255, blank=True)
     actor_id = models.UUIDField(null=True, blank=True)
     actor_name = models.CharField(max_length=255, blank=True)
+    # Почему запись: пусто — назначение старшим; `transfer` — исполнитель снят
+    # переносом на другую точку (партия 48).
+    reason = models.CharField(max_length=32, blank=True)
 
     class Meta:
         db_table = "orders_order_assignment"

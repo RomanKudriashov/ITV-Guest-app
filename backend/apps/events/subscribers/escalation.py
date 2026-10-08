@@ -17,6 +17,7 @@ from apps.core.context import tenant_context
 from apps.events.bus import (
     ORDER_ACCEPTED,
     ORDER_CANCELLED,
+    ORDER_TRANSFERRED,
     ORDER_CREATED,
     ORDER_STATUS_CHANGED,
     Event,
@@ -120,3 +121,50 @@ def notify_point_of_cancellation(event: Event) -> None:
             )
     except Exception:  # noqa: BLE001 — уведомление не вправе уронить отмену
         logger.warning("Уведомление об отмене %s не записано", order_id, exc_info=True)
+
+
+@subscribe(ORDER_TRANSFERRED)
+def replan_escalation_on_transfer(event: Event) -> None:
+    """
+    Перенос на другую точку (партия 48): ступени СТАРОЙ точки гаснут, по
+    правилу НОВОЙ — планируются от момента переноса.
+
+    Без этого ступени старой точки сработали бы со своими задержками, но
+    адресатов брали бы уже по новой точке (`resolve_channels` читает текущую),
+    а новая точка не получила бы ни известия, ни подъёма. Ключ ступеней
+    расширен номером переноса (`delivery._step_prefix`), поэтому погашенная
+    запись старой точки не держит место ступени новой.
+    """
+    if not settings.NOTIFICATIONS_ENABLED:
+        return
+
+    from apps.notifications.services import cancel_pending
+    from apps.notifications.tasks import plan_escalation_task
+    from apps.orders.models import Order
+
+    order_id = event.payload.get("order_id")
+    if not order_id:
+        return
+    with tenant_context(event.hotel_id):
+        order = Order.objects.select_related("status").filter(pk=order_id).first()
+        if order is None:
+            return
+        cancel_pending(order, "Заказ передан на другую точку")
+    plan_escalation_task.delay(order_id, event.hotel_id)
+
+
+@subscribe(ORDER_TRANSFERRED)
+def extinguish_take_buttons_on_transfer(event: Event) -> None:
+    """Кнопки «Взять» в сообщениях старой точки — погашены (партия 48)."""
+    from apps.notifications.services.bot_actions import extinguish_order_buttons
+
+    order_id = event.payload.get("order_id")
+    if not order_id:
+        return
+    try:
+        with tenant_context(event.hotel_id):
+            extinguish_order_buttons(
+                order_id, f"Передан в «{event.payload.get('to_title') or ''}»"
+            )
+    except Exception:  # noqa: BLE001 — бот не вправе уронить перенос
+        logger.warning("Кнопки заказа %s после переноса не погашены", order_id, exc_info=True)

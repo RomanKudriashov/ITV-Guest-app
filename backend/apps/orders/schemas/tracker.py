@@ -50,3 +50,10 @@ class AssignIn(Schema):
     """Кого назначить исполнителем (партия 47) — id сотрудника точки заказа."""
 
     assignee: str
+
+
+class TransferIn(Schema):
+    """Куда передать заказ и почему (партия 48)."""
+
+    point: str
+    reason: str = ""

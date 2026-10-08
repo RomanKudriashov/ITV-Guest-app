@@ -43,6 +43,9 @@ ORDER_CREATED = "order.created"
 ORDER_ACCEPTED = "order.accepted"
 ORDER_STATUS_CHANGED = "order.status_changed"
 ORDER_CANCELLED = "order.cancelled"
+# Перенос на другую точку (партия 48): обе доски обновляются, эскалация старой
+# точки гаснет, новой — планируется от момента переноса.
+ORDER_TRANSFERRED = "order.transferred"
 CHAT_MESSAGE = "chat.message"
 REVIEW_LOW = "review.low"
 # Отзыв оставлен (любой оценки) и старт гостевой сессии — нужны аналитике,

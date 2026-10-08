@@ -180,6 +180,9 @@ class Order(TenantModel):
     # однажды дал два разных ответа на «когда закрыт», второго такого источника
     # правды не заводим.
     reopened_at = models.DateTimeField(null=True, blank=True)
+    # Последний перенос на другую точку (партия 48): от него идёт норма времени
+    # на новой доске, ожидание и эскалация новой точки.
+    transferred_at = models.DateTimeField(null=True, blank=True)
 
     # МЕСТО В КОЛОНКЕ — ОБЩЕЕ ДЛЯ ВСЕЙ СМЕНЫ, а не личное.
     #

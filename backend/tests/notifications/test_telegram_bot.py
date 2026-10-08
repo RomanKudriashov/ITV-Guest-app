@@ -651,3 +651,27 @@ def test_take_on_an_order_assigned_to_someone_else_names_the_assignee(crystal, b
         assert order.assignee_id == chef.pk and order.accepted_at is None
         audit = AuditLog.objects.filter(action="bot.take", object_id=order.pk).latest("created_at")
         assert audit.payload["result"] == "assigned_to_other"
+
+
+def test_transfer_extinguishes_the_take_button_in_old_messages(
+    crystal, bot, tg, escalated, monkeypatch, django_capture_on_commit_callbacks
+):
+    """
+    УКУС (партия 48). Заказ кухни ушёл в хозслужбу — в уже отправленном
+    сообщении руководителю кухни кнопки «Взять» больше нет, а строка говорит,
+    куда заказ передан.
+    """
+    from apps.notifications import tasks
+    from apps.orders.services.tracker import transfer_order
+
+    monkeypatch.setattr(tasks.plan_escalation_task, "delay", lambda *a: None)
+    order, manager, message = escalated["order"], escalated["manager"], escalated["message"]
+    assert message["buttons"], "до переноса кнопки нет — проверка без смысла"
+
+    with django_capture_on_commit_callbacks(execute=True):
+        with tenant_context(crystal):
+            transfer_order(manager, order.pk, to_point_code="housekeeping", reason="не кухня")
+
+    edited = next(m for m in tg.messages(MANAGER_CHAT) if m["message_id"] == message["message_id"])
+    assert edited["buttons"] == [], "кнопка «Взять» осталась в сообщении старой точки"
+    assert "Передан в «" in edited["plain"]

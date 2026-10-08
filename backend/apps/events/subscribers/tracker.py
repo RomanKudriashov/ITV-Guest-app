@@ -15,6 +15,7 @@ from channels.layers import get_channel_layer
 
 from apps.events.bus import (
     ORDER_CANCELLED,
+    ORDER_TRANSFERRED,
     ORDER_CREATED,
     ORDER_STATUS_CHANGED,
     Event,
@@ -32,7 +33,7 @@ def _send(group: str, message: dict) -> None:
     async_to_sync(layer.group_send)(group, message)
 
 
-@subscribe(ORDER_CREATED, ORDER_STATUS_CHANGED, ORDER_CANCELLED)
+@subscribe(ORDER_CREATED, ORDER_STATUS_CHANGED, ORDER_CANCELLED, ORDER_TRANSFERRED)
 def broadcast_order_event(event: Event) -> None:
     payload = event.payload
     hotel_id = event.hotel_id
@@ -49,5 +50,10 @@ def broadcast_order_event(event: Event) -> None:
 
     if execution_point_id:
         _send(f"tracker.{hotel_id}.{execution_point_id}", message)
+    # Перенос (партия 48): старая доска обязана убрать карточку СРАЗУ — без
+    # этого она узнала бы об уходе заказа только по следующему своему событию.
+    from_point_id = payload.get("from_point_id")
+    if from_point_id and from_point_id != execution_point_id:
+        _send(f"tracker.{hotel_id}.{from_point_id}", message)
     if order_id:
         _send(f"order.{hotel_id}.{order_id}", message)

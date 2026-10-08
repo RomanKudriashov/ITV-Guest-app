@@ -913,6 +913,9 @@
   "/api/v1/tracker/order/{order_id}/status": [
     "POST"
   ],
+  "/api/v1/tracker/order/{order_id}/transfer": [
+    "POST"
+  ],
   "/api/v1/tracker/orders": [
     "GET"
   ],
