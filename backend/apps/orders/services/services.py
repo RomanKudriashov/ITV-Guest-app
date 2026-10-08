@@ -1119,13 +1119,17 @@ def order_queryset():
     return Order.objects.select_related(
         # parent нужен доске исполнителя: у суб-заказа она показывает номер
         # гостевого заказа-агрегата («коктейль из заказа №41»).
-        "status", "room", "location", "execution_point", "parent", "placed_by"
+        "status", "room", "location", "execution_point", "parent", "placed_by",
+        # Поручение (партия 47, п.79): точка, из которой его дали.
+        "source_thread__execution_point",
     ).prefetch_related(
         "items__item__images__asset",
         "status_changes__to_status",
         # `from_status` нужен журналу персонала: «откуда» — половина ответа на
         # вопрос «что случилось», и без неё откат неотличим от обычного шага.
         "status_changes__from_status",
+        # Журнал назначений (партия 47) — та же лента истории для персонала.
+        "assignments",
         # Для parent-агрегата: позиции живут на children — подтягиваем их разом.
         "children__items__item__images__asset",
         "children__status",

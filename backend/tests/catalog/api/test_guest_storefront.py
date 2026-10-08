@@ -434,7 +434,11 @@ def test_a_closed_order_returns_to_work_but_a_cancelled_one_never_does(
     with django_capture_on_commit_callbacks(execute=True):
         cms.post(f"/api/tracker/order/{order_id}/status", {"status": "done"})
 
-    reopened = cms.post(f"/api/tracker/order/{order_id}/status", {"status": "preparing"})
+    # Возврат закрытого — с причиной (партия 47): она уходит в историю.
+    reopened = cms.post(
+        f"/api/tracker/order/{order_id}/status",
+        {"status": "preparing", "comment": "закрыли по ошибке"},
+    )
     assert reopened.status_code == 200, reopened.content
     assert reopened.json()["status"]["code"] == "preparing"
 

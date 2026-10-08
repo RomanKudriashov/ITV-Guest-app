@@ -208,6 +208,33 @@ EVENTS: dict[str, EventSpec] = {
             enabled_by_default=True,
         ),
         EventSpec(
+            code="order.assigned",
+            title={
+                "ru": "Вам назначили заявку",
+                "en": "A request was assigned to you",
+                "ar": "تم إسناد طلب إليك",
+                "zh": "有请求分配给你",
+            },
+            subject={
+                "ru": "Заявка №{{number}} назначена вам — {{point}}",
+                "en": "Request #{{number}} assigned to you — {{point}}",
+                "ar": "الطلب رقم {{number}} مُسند إليك — {{point}}",
+                "zh": "请求 #{{number}} 已分配给你 — {{point}}",
+            },
+            body={
+                "ru": "{{room}}\n{{summary}}\nНазначил: {{by_name}}",
+                "en": "{{room}}\n{{summary}}\nAssigned by: {{by_name}}",
+                "ar": "{{room}}\n{{summary}}\nأسنده: {{by_name}}",
+                "zh": "{{room}}\n{{summary}}\n分配人：{{by_name}}",
+            },
+            # ПОИМЁННО и ВКЛЮЧЕНО ПО УМОЛЧАНИЮ (партия 47): назначение требует
+            # действия — назначенный должен нажать «Принять», иначе заявка так и
+            # поднимается по эскалации.
+            audience=AUDIENCE_USER,
+            placeholders=("number", "room", "point", "summary", "by_name"),
+            enabled_by_default=True,
+        ),
+        EventSpec(
             code="chat.guest_message",
             title={
                 "ru": "Сообщение гостя",

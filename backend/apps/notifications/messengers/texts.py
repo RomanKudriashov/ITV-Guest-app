@@ -23,6 +23,7 @@ PHRASES: dict[str, dict[str, str]] = {
     "taken_ok": {"ru": "Заказ ваш", "en": "The order is yours", "ar": "الطلب لك", "zh": "订单归你了"},
     "triage_ok": {"ru": "Отзыв ваш", "en": "The review is yours", "ar": "المراجعة لك", "zh": "评价由你处理"},
     "already_taken": {"ru": "Уже взял {name}", "en": "Already taken by {name}", "ar": "استلمه بالفعل {name}", "zh": "{name} 已经接单"},
+    "assigned_to_other": {"ru": "Заявка назначена на {name}", "en": "Assigned to {name}", "ar": "الطلب مُسند إلى {name}", "zh": "已分配给 {name}"},
     "already_yours": {"ru": "Вы уже взяли этот заказ", "en": "You have already taken this order", "ar": "لقد استلمت هذا الطلب بالفعل", "zh": "你已经接了这个订单"},
     "already_triage": {"ru": "Уже разбирает {name}", "en": "Already handled by {name}", "ar": "يعالجه بالفعل {name}", "zh": "{name} 已在处理"},
     "order_closed": {"ru": "Заказ уже закрыт", "en": "The order is already closed", "ar": "الطلب مغلق بالفعل", "zh": "订单已关闭"},

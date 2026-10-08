@@ -177,8 +177,14 @@ def _replace_assignments(user: User, assignments: Iterable[dict]) -> None:
         raise ValidationError(
             "Укажите хотя бы один отдел из ваших", field="assignments"
         )
+    before = set(
+        StaffAssignment.objects.filter(user=user, is_active=True).values_list(
+            "execution_point_id", flat=True
+        )
+    )
     StaffAssignment.objects.filter(user=user).hard_delete()
     valid_levels = set(dict(StaffAssignment.Level.choices))
+    after = set()
     for entry in assignments:
         point = _resolve_point(entry.get("execution_point_id"))
         level = entry.get("level") or StaffAssignment.Level.MEMBER
@@ -187,6 +193,13 @@ def _replace_assignments(user: User, assignments: Iterable[dict]) -> None:
         StaffAssignment.objects.create(
             hotel_id=user.hotel_id, user=user, execution_point=point, level=level
         )
+        after.add(point.pk)
+
+    # Сняли с точки — открытые доски этой точки у него закрываются сразу
+    # (п.78, партия 47), а не после отзыва сессии.
+    from apps.realtime.sessions import revoke_point_access
+
+    revoke_point_access(user.pk, before - after)
 
 
 @transaction.atomic

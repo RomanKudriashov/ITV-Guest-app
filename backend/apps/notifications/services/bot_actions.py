@@ -81,6 +81,13 @@ def event_buttons(code: str, payload: dict, language: str) -> tuple[Button, ...]
 
         url = tracker_url(Hotel.objects.get(pk=require_hotel_id()), order_id)
         return (Button(label=say("open", language), url=url),) if url else ()
+    if code == "order.assigned":
+        # Назначение требует действия (партия 47): «Взять» — тем же `accept_order`,
+        # что и на доске; назначенному он разрешён.
+        from apps.orders.models import Order
+
+        order = Order.objects.filter(pk=order_id).select_related("status", "hotel").first()
+        return order_buttons(order, language) if order is not None else ()
     if code == "review.low":
         from apps.reviews.models import Review, TriageStatus
 
@@ -199,6 +206,11 @@ def _take(bot, incoming, user, order_id, language) -> str:
                 return "already_yours"
             _answer(bot, incoming, say("already_taken", language, name=_name(assignee)), alert=True)
             return "already_taken"
+        if exc.code == "assigned_to_other":
+            # Назначен другому, ещё не принят (партия 47) — не «закрыто».
+            assignee = User.objects.filter(pk=order.assignee_id).first()
+            _answer(bot, incoming, say("assigned_to_other", language, name=_name(assignee)), alert=True)
+            return "assigned_to_other"
         _rewrite(bot, incoming, say("order_closed_line", language), open_only)
         _answer(bot, incoming, say("order_closed", language), alert=True)
         return "closed"

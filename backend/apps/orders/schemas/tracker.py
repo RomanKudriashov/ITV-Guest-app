@@ -44,3 +44,9 @@ class PositionIn(Schema):
 
     after: str | None = None
     before: str | None = None
+
+
+class AssignIn(Schema):
+    """Кого назначить исполнителем (партия 47) — id сотрудника точки заказа."""
+
+    assignee: str

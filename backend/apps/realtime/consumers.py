@@ -141,16 +141,18 @@ def _authorize_tracker(hotel, token: str, point_code: str, language: str):
 
 
 @database_sync_to_async
-def _board_snapshot(hotel, point_id, language: str):
+def _board_snapshot(hotel, point_id, language: str, viewer=None):
     from apps.hotels.models import ExecutionPoint
-    from apps.orders.services.tracker import build_board
+    from apps.orders.services.tracker import apply_viewer, build_board
 
     language = language or hotel.default_language
     with tenant_context(hotel, language=language):
         point = ExecutionPoint.objects.filter(pk=point_id).first()
         if point is None:
             return None
-        return build_board(point, language=language)
+        # Права того, кто смотрит (партия 47): снимок кладётся в тот же кэш,
+        # что и ответ REST, и обязан нести те же `rights`.
+        return apply_viewer(build_board(point, language=language), viewer, point)
 
 
 @database_sync_to_async
@@ -219,14 +221,21 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
             return
 
         self.point_id = str(point.pk)
+        self.user = user
         self.group_name = f"tracker.{hotel.pk}.{point.pk}"
         # ПОДПИСКА ПЕРВОЙ, СНИМОК ВТОРЫМ — см. `_authorize_tracker`: заявка,
         # пришедшая за время сборки снимка, иначе теряется навсегда.
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await _join_session(self, user)
+        # «Этот человек — эта точка» (п.78, партия 47): снятие назначения
+        # закроет сокет сразу, а не после отзыва сессии.
+        from apps.realtime.sessions import point_access_group
+
+        self.access_group = point_access_group(user.pk, point.pk)
+        await self.channel_layer.group_add(self.access_group, self.channel_name)
         await self.accept()
 
-        board = await _board_snapshot(hotel, self.point_id, self.language)
+        board = await _board_snapshot(hotel, self.point_id, self.language, user)
         if board is None:
             await self.close(code=CLOSE_FORBIDDEN)
             return
@@ -240,14 +249,18 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def disconnect(self, code):
-        group = getattr(self, "group_name", None)
-        if group:
-            await self.channel_layer.group_discard(group, self.channel_name)
+        for group in (getattr(self, "group_name", None), getattr(self, "access_group", None)):
+            if group:
+                await self.channel_layer.group_discard(group, self.channel_name)
         await _leave_session(self)
 
     async def session_closed(self, message):
         """Сессию отозвали — сокет закрывается кодом «не авторизован» (п.64)."""
         await self.close(code=CLOSE_UNAUTHORIZED)
+
+    async def point_access_revoked(self, message):
+        """Сотрудника сняли с этой точки — доска закрывается «нет доступа» (п.78)."""
+        await self.close(code=CLOSE_FORBIDDEN)
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
@@ -266,7 +279,7 @@ class TrackerConsumer(AsyncJsonWebsocketConsumer):
         экономии трафика. `order_id` отдаём отдельно, чтобы клиент знал, что
         подсветить и на что дать звук.
         """
-        board = await _board_snapshot(self.hotel, self.point_id, self.language)
+        board = await _board_snapshot(self.hotel, self.point_id, self.language, getattr(self, "user", None))
         if board is None:
             return
         await self.send_json(

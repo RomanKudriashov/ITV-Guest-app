@@ -62,3 +62,39 @@ def close_sockets(groups) -> None:
                 logger.warning("Не удалось закрыть сокеты группы %s", group, exc_info=True)
 
     transaction.on_commit(send)
+
+
+# --- Снятие с точки закрывает сокеты доски этой точки (п.78, партия 47) -------
+#
+# Сокет доски проверял привязку только на `connect`: сотрудника сняли с точки —
+# открытый сокет продолжал получать снимки, пока не отзовут сессию. Теперь сокет
+# доски вступает в группу «этот человек — эта точка», и снятие назначения шлёт в
+# неё «закрыться». Отправка — после фиксации, как у отзыва сессии.
+
+POINT_ACCESS_REVOKED = "point.access_revoked"
+
+
+def point_access_group(user_id, point_id) -> str:
+    return f"tracker-access.{_hex(user_id)}.{_hex(point_id)}"
+
+
+def _hex(value) -> str:
+    return getattr(value, "hex", None) or str(value).replace("-", "")
+
+
+def revoke_point_access(user_id, point_ids) -> None:
+    groups = [point_access_group(user_id, point_id) for point_id in point_ids if point_id]
+    if not groups:
+        return
+
+    def send() -> None:
+        layer = get_channel_layer()
+        if layer is None:
+            return
+        for group in groups:
+            try:
+                async_to_sync(layer.group_send)(group, {"type": POINT_ACCESS_REVOKED})
+            except Exception:  # шина недоступна — HTTP-проверки всё равно действуют
+                logger.warning("Не удалось закрыть сокеты группы %s", group, exc_info=True)
+
+    transaction.on_commit(send)

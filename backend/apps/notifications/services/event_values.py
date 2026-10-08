@@ -107,6 +107,39 @@ def order_cancelled(order, comment: str = "") -> dict:
     }
 
 
+def order_assigned(order, by_name: str) -> dict:
+    """Назначение (партия 47): номер, комната, отдел, состав, кто назначил."""
+    hotel_language = order.hotel.default_language
+
+    def summary(language: str) -> str:
+        lines = []
+        for line in order.items.all():
+            title = translate(line.title_snapshot, language)
+            lines.append(f"{line.quantity}× {title}" if line.quantity > 1 else title)
+        return "\n".join(lines)
+
+    return {
+        # Не плейсхолдер: по нему бот строит «Взять» и «Открыть в трекере».
+        "order_id": str(order.pk),
+        "number": order.number,
+        "room": (
+            _per_language(
+                lambda language: registry.word(
+                    "room", language, hotel_language, n=order.room.number
+                )
+            )
+            if order.room_id
+            else ""
+        ),
+        "point": _per_language(
+            lambda language: translate(order.execution_point.title, language)
+            or order.execution_point.code
+        ),
+        "summary": _per_language(summary),
+        "by_name": by_name,
+    }
+
+
 def cancel_comment(order) -> str:
     """Уточнение к отмене живёт в журнале статусов, рядом с тем, кто отменил."""
     from apps.orders.models import OrderStatusChange
@@ -182,6 +215,19 @@ def _cancelled(code: str) -> Example | None:
             "number": order.number,
             "at": _at(order.closed_at or order.updated_at),
         },
+        order=order,
+    )
+
+
+def _assigned(code: str) -> Example | None:
+    order = _latest_order(assignee__isnull=False)
+    if order is None:
+        return None
+    by = order.assignee.full_name or order.assignee.email if order.assignee_id else ""
+    return Example(
+        values=order_assigned(order, by),
+        point_id=str(order.execution_point_id),
+        source={"kind": "order", "number": order.number, "at": _at(order.created_at)},
         order=order,
     )
 
@@ -356,6 +402,7 @@ def _undelivered(code: str) -> Example | None:
 _FINDERS = {
     "order.overdue": _overdue,
     "order.cancelled": _cancelled,
+    "order.assigned": _assigned,
     "chat.guest_message": _chat,
     "chat.unanswered": _unanswered,
     "chat.unanswered_long": _unanswered,

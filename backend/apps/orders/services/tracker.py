@@ -112,19 +112,144 @@ def require_point(user, point_code: str) -> ExecutionPoint:
     return point
 
 
-def require_point_for_order(user, order: Order) -> ExecutionPoint:
-    """Действия над заказом разрешены только исполнителям его точки."""
+def require_point_for_order(user, order: Order, action: str = "read") -> ExecutionPoint:
+    """Действие над заказом — по праву уровня на ЕГО точке (см. «Права по уровню»)."""
     point = order.execution_point
+    require_right(user, action, point)
+    return point
+
+
+# --- Права по уровню (партия 47) ---------------------------------------------
+#
+# ОДНА ФУНКЦИЯ НА ВОПРОС «МОЖЕТ ЛИ X СДЕЛАТЬ Y С ЗАКАЗОМ ТОЧКИ P». До партии 47
+# проверка была одна — «назначен на точку», и старший смены на доске не отличался
+# от исполнителя. Набор прав решён тек-лидом 24.09.2026 (`docs/project-state.md`,
+# «Решено, не начато»): исполнитель < старший смены < руководитель < администратор.
+#
+# Уровень проверяет СЕРВЕР, здесь. Фронт рисует кнопки по `rights` из ответа, а
+# не по своей догадке о роли — второй экземпляр правила разъехался бы с первым.
+
+
+class LevelTooLow(PermissionDenied):
+    code = "level_too_low"
+
+
+class Action:
+    READ = "read"
+    ACCEPT = "accept"
+    MOVE = "move"
+    REORDER = "reorder"
+    CANCEL = "cancel"
+    REOPEN = "reopen"
+    ASSIGN = "assign"
+
+
+ADMIN_RANK = 4
+_RANK = {
+    StaffAssignment.Level.MEMBER: 1,
+    StaffAssignment.Level.LEAD: 2,
+    StaffAssignment.Level.MANAGER: 3,
+}
+# Отмена — у всех на точке (решение 24.09: без изменений). Вернуть закрытый и
+# назначить исполнителя — от старшего смены.
+_NEEDS = {
+    Action.READ: 1,
+    Action.ACCEPT: 1,
+    Action.MOVE: 1,
+    Action.REORDER: 1,
+    Action.CANCEL: 1,
+    Action.REOPEN: 2,
+    Action.ASSIGN: 2,
+}
+_REFUSALS = {
+    Action.REOPEN: "Вернуть закрытый заказ может старший смены, руководитель или администратор",
+    Action.ASSIGN: "Назначать исполнителя может старший смены, руководитель или администратор",
+}
+
+
+def rank_on(user, point) -> int:
+    """0 — к точке не привязан; 1–3 — уровень назначения; 4 — администратор отеля."""
     if sees_every_point(user):
-        return point
-    if not StaffAssignment.objects.filter(
+        return ADMIN_RANK
+    levels = StaffAssignment.objects.filter(
         user=user, execution_point=point, is_active=True
-    ).exists():
+    ).values_list("level", flat=True)
+    return max((_RANK.get(level, 0) for level in levels), default=0)
+
+
+def rights_from_rank(rank: int) -> dict:
+    return {action: rank >= need for action, need in _NEEDS.items()}
+
+
+def _order_dicts(node):
+    """Все карточки в ответе доски — где бы они ни лежали (колонки, группы, лента)."""
+    if isinstance(node, dict):
+        if "next_statuses" in node and "id" in node and "status" in node:
+            yield node
+            return
+        for value in node.values():
+            yield from _order_dicts(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _order_dicts(value)
+
+
+def with_viewer(order: dict, rank: int, viewer_id: str | None) -> dict:
+    """
+    Права ЗРИТЕЛЯ на ЭТУ карточку — фронт рисует кнопки по ним, а не по догадке.
+
+    Считается по уже собранному объекту заказа, поэтому одно и то же правило
+    работает для ответа REST и для снимка сокета, где карточки собираются теми
+    же функциями, но без знания, кто смотрит.
+    """
+    status = order.get("status") or {}
+    terminal = bool(status.get("is_terminal"))
+    cancelled = bool(status.get("is_cancelled"))
+    base = rights_from_rank(rank)
+    assignee = (order.get("assignee") or {}).get("id")
+    accepted = bool(order.get("accepted_at"))
+    rights = {
+        "accept": base[Action.ACCEPT] and not terminal and not accepted
+        and (assignee is None or assignee == viewer_id),
+        "move": base[Action.MOVE] and not cancelled and (not terminal or base[Action.REOPEN]),
+        "reorder": base[Action.REORDER] and not terminal,
+        "cancel": base[Action.CANCEL] and not terminal,
+        "reopen": base[Action.REOPEN] and terminal and not cancelled,
+        "assign": base[Action.ASSIGN] and not terminal,
+    }
+    order["rights"] = rights
+    order["assigned_to_me"] = bool(viewer_id) and assignee == viewer_id and not accepted
+    if terminal and not rights["reopen"]:
+        # Вернуть закрытый нельзя — и целей возврата на карточке нет.
+        order["next_statuses"] = []
+    if not rights["cancel"]:
+        order["can_cancel"] = False
+    return order
+
+
+def apply_viewer(payload: dict, viewer, point) -> dict:
+    """Доска или карточка + права того, кто смотрит (партия 47)."""
+    if viewer is None:
+        return payload
+    rank = rank_on(viewer, point)
+    viewer_id = str(viewer.pk)
+    for order in _order_dicts(payload):
+        with_viewer(order, rank, viewer_id)
+    if "columns" in payload:
+        payload["rights"] = rights_from_rank(rank)
+    return payload
+
+
+def require_right(user, action: str, point, *, rank: int | None = None) -> int:
+    rank = rank_on(user, point) if rank is None else rank
+    if rank == 0:
         raise PointNotAssigned(
             f"Заказ обслуживает точка «{point.title_i18n or point.code}», "
             "а вы к ней не привязаны"
         )
-    return point
+    if rank < _NEEDS[action]:
+        raise LevelTooLow(_REFUSALS.get(action, "Это действие вам недоступно"), action=action)
+    return rank
 
 
 def serialize_point(point: ExecutionPoint, language: str | None = None, **extra) -> dict:
@@ -772,11 +897,15 @@ def serialize_tracker_order(
             ),
             "source_order": _source_order(order, language),
             # Кто оформил за гостя — персонал видит имя (гость — только отдел).
+            # У ПОРУЧЕНИЯ гостя нет (партия 47, п.79): «Оформил за гостя» там
+            # неправда, поэтому `placed_by` пуст, а `errand` называет точку,
+            # из которой его дали, и того, кто дал.
             "placed_by": (
                 {"id": str(order.placed_by_id), "name": order.placed_by.full_name or order.placed_by.email}
-                if order.placed_by_id
+                if order.placed_by_id and not order.source_thread_id
                 else None
             ),
+            "errand": _errand(order, language),
             "waiting_minutes": max(waiting, 0),
             "due_in_minutes": due_in,
             "is_overdue": overdue is not None,
@@ -812,8 +941,20 @@ def serialize_tracker_order(
             # смене: путь молчит о том, что заказ возвращали, кто это сделал и
             # откуда он вернулся. Разбор смены начинается именно с этих трёх
             # вопросов.
-            "journal": [
+            "journal": _journal(order, language, actors),
+        }
+    )
+    return payload
+
+
+def _journal(order: Order, language: str | None, actors: dict | None) -> list[dict]:
+    """
+    Журнал для персонала: переходы статусов и назначения — одной лентой по
+    времени (партия 47: «кто кого назначил» — в истории заказа).
+    """
+    entries = [
                 {
+                    "kind": "status",
                     "from": change.from_status.code if change.from_status_id else None,
                     "to": change.to_status.code,
                     "title": status_flows.status_title(
@@ -834,12 +975,41 @@ def serialize_tracker_order(
                     # раньше, но наружу не отдавалось, и прочитать его было
                     # негде.
                     "comment": change.comment or "",
+                    "_sort": change.created_at,
                 }
                 for change in order.status_changes.all()
-            ],
+    ]
+    entries += [
+        {
+            "kind": "assign",
+            "at": order.hotel.to_local(item.created_at).isoformat(),
+            "actor_type": "staff",
+            "actor_name": item.actor_name,
+            "assignee_name": item.assignee_name,
+            "previous_name": item.previous_name,
+            "_sort": item.created_at,
         }
-    )
-    return payload
+        for item in order.assignments.all()
+    ]
+    entries.sort(key=lambda entry: entry["_sort"])
+    for entry in entries:
+        del entry["_sort"]
+    return entries
+
+
+def _errand(order: Order, language: str | None) -> dict | None:
+    """Поручение отдела отделу: откуда (точка переписки) и кто дал (п.79)."""
+    if not order.source_thread_id:
+        return None
+    thread = order.source_thread
+    point = getattr(thread, "execution_point", None)
+    by = order.placed_by
+    return {
+        "from_point": (
+            (translate(point.title, language) or point.code) if point is not None else ""
+        ),
+        "by": (by.full_name or by.email) if by is not None else "",
+    }
 
 
 def _source_order(order: Order, language: str | None) -> dict | None:
@@ -869,11 +1039,11 @@ def _source_order(order: Order, language: str | None) -> dict | None:
     }
 
 
-def get_tracker_order(user, order_id) -> Order:
+def get_tracker_order(user, order_id, action: str = Action.READ) -> Order:
     order = order_queryset().select_related("assignee").filter(pk=order_id).first()
     if order is None:
         raise NotFoundError("Заказ не найден")
-    require_point_for_order(user, order)
+    require_point_for_order(user, order, action)
     return order
 
 
@@ -889,16 +1059,28 @@ def accept_order(user, order_id) -> Order:
     обычное дело, и «перехват» без предупреждения был бы неприятным сюрпризом
     для того, кто уже понёс заказ.
     """
-    order = get_tracker_order(user, order_id)
+    order = get_tracker_order(user, order_id, Action.ACCEPT)
     # select_related по assignee здесь нельзя: поле nullable, Django строит
     # LEFT JOIN, а Postgres не умеет FOR UPDATE по nullable-стороне внешнего
     # соединения. Исполнителя дочитываем отдельно — он нужен только для текста
     # ошибки.
     order = Order.objects.select_for_update().select_related("status").get(pk=order.pk)
 
-    if order.assignee_id is not None:
+    # НАЗНАЧЕН, НО НЕ ПРИНЯТ (партия 47). Назначение старшего смены — не
+    # «принято»: исполнитель жмёт «Принять» сам, и только тогда ставится момент
+    # принятия и гаснет эскалация. Назначенному ему — можно; заказ, назначенный
+    # другому, перехватить нельзя — это и есть смысл назначения.
+    if order.assignee_id is not None and (
+        order.accepted_at is not None or order.assignee_id != user.pk
+    ):
         assignee = User.objects.filter(pk=order.assignee_id).first()
         name = (assignee.full_name or assignee.email) if assignee else "другой сотрудник"
+        if order.accepted_at is None:
+            raise ConflictError(
+                f"Заказ назначен на {name}",
+                code="assigned_to_other",
+                assignee={"id": str(order.assignee_id), "name": name},
+            )
         raise ConflictError(
             f"Заказ уже принял {name}",
             code="already_accepted",
@@ -934,7 +1116,7 @@ def _first_working_status(order: Order) -> StatusDefinition | None:
 
 @transaction.atomic
 def move_status(user, order_id, *, to_code: str, comment: str = "") -> Order:
-    order = get_tracker_order(user, order_id)
+    order = get_tracker_order(user, order_id, Action.MOVE)
 
     # ОТМЕНА ОБЪЯСНЯЕТСЯ ОТДЕЛЬНО, А НЕ СУХИМ «НЕЛЬЗЯ ПЕРЕЙТИ».
     #
@@ -948,6 +1130,16 @@ def move_status(user, order_id, *, to_code: str, comment: str = "") -> Order:
             code="order_cancelled",
         )
 
+    # ВЕРНУТЬ ЗАКРЫТЫЙ — право старшего смены и выше, причина обязательна
+    # (партия 47). Отдельной ручки нет: возврат — это смена статуса из
+    # завершённого, поэтому право проверяется здесь, по факту перехода.
+    if order.status.is_terminal:
+        require_right(user, Action.REOPEN, order.execution_point)
+        if not (comment or "").strip():
+            raise ValidationError(
+                "Укажите причину возврата в работу", code="reopen_reason_required", field="comment"
+            )
+
     allowed = {status.code for status in next_statuses(order)}
     if to_code not in allowed:
         raise ValidationError(
@@ -960,6 +1152,9 @@ def move_status(user, order_id, *, to_code: str, comment: str = "") -> Order:
         # Двинул статус — значит, взял на себя. Иначе доска показывала бы
         # «Готовится» вообще без исполнителя.
         Order.objects.filter(pk=order.pk).update(assignee=user, accepted_at=timezone.now())
+    elif order.accepted_at is None and order.assignee_id == user.pk:
+        # Назначенный сам двинул статус — значит, принял (партия 47).
+        Order.objects.filter(pk=order.pk).update(accepted_at=timezone.now())
 
     change_status(order, to_code=to_code, actor_type="staff", actor_id=user.pk, comment=comment)
     return get_tracker_order(user, order_id)
@@ -981,7 +1176,7 @@ def move_position(user, order_id, *, after_id: str | None, before_id: str | None
 
     Терминальный заказ переставлять нечего: на активной доске его нет.
     """
-    order = get_tracker_order(user, order_id)
+    order = get_tracker_order(user, order_id, Action.REORDER)
     if order.status.is_terminal:
         raise ConflictError("Завершённого заказа на доске нет", code="order_finished")
 
@@ -1038,7 +1233,7 @@ def move_position(user, order_id, *, after_id: str | None, before_id: str | None
 
 @transaction.atomic
 def cancel_order_by_staff(user, order_id, *, reason: str = "", cancel_reason: str = "") -> Order:
-    order = get_tracker_order(user, order_id)
+    order = get_tracker_order(user, order_id, Action.CANCEL)
     if order.status.is_terminal:
         raise ConflictError("Заказ уже завершён", code="cancel_not_allowed")
 
@@ -1057,3 +1252,89 @@ def cancel_order_by_staff(user, order_id, *, reason: str = "", cancel_reason: st
         cancel_reason=cancel_reason,
     )
     return get_tracker_order(user, order_id)
+
+
+@transaction.atomic
+def assign_order(user, order_id, *, assignee_id) -> Order:
+    """
+    Назначить исполнителя (партия 47) — старший смены, руководитель, администратор.
+
+    НАЗНАЧЕНИЕ — НЕ «ПРИНЯТО». Статус не меняется, `accepted_at` не ставится:
+    эскалация идёт, пока назначенный сам не нажмёт «Принять». Иначе назначение
+    глушило бы подъём заявки ровно тогда, когда за неё ещё никто не взялся.
+
+    Выбрать можно ТОЛЬКО того, кто назначен на точку заказа: человек с другой
+    точки этой доски не видит, и заказ, назначенный ему, повис бы ничьим.
+    Переназначить тоже можно — в любой незавершённой ступени.
+    """
+    import uuid as _uuid
+
+    from apps.orders.models import OrderAssignment
+
+    order = get_tracker_order(user, order_id, Action.ASSIGN)
+    order = Order.objects.select_for_update().select_related("status").get(pk=order.pk)
+    if order.status.is_terminal:
+        raise ConflictError("Заказ уже завершён", code="order_finished")
+
+    try:
+        target_id = _uuid.UUID(str(assignee_id))
+    except (TypeError, ValueError):
+        target_id = None
+    target = User.objects.filter(pk=target_id).first() if target_id else None
+    if target is None or not StaffAssignment.objects.filter(
+        user=target, execution_point_id=order.execution_point_id, is_active=True
+    ).exists():
+        raise ValidationError(
+            "Назначить можно только сотрудника этой точки",
+            code="assignee_not_on_point",
+            field="assignee",
+        )
+    if order.assignee_id == target.pk:
+        return get_tracker_order(user, order_id)
+
+    previous = User.all_objects.filter(pk=order.assignee_id).first() if order.assignee_id else None
+    Order.objects.filter(pk=order.pk).update(assignee=target)
+    OrderAssignment.objects.create(
+        order=order,
+        assignee_id_snapshot=target.pk,
+        assignee_name=(target.full_name or target.email)[:255],
+        previous_name=((previous.full_name or previous.email) if previous else "")[:255],
+        actor_id=user.pk,
+        actor_name=(user.full_name or user.email)[:255],
+    )
+    order.refresh_from_db()
+
+    # Доска обновляется у всех: как перестановка — событием «статус тот же».
+    payload = _event_payload(order)
+    payload["from_status"] = order.status.code
+    payload["to_status"] = order.status.code
+    emit(ORDER_STATUS_CHANGED, payload, hotel_id=order.hotel_id, actor_type="staff", actor_id=user.pk)
+
+    _notify_assigned(order, target, user)
+    return get_tracker_order(user, order_id)
+
+
+def _notify_assigned(order: Order, target, by_user) -> None:
+    """Назначенному — событие «Вам назначили заказ» (поимённо, после коммита)."""
+    from apps.notifications.services import event_values
+    from apps.notifications.services.events import notify
+
+    values = event_values.order_assigned(order, by_user.full_name or by_user.email)
+    dedupe = f"order.assigned:{order.pk}:{target.pk}:{int(timezone.now().timestamp())}"
+
+    hotel_id = order.hotel_id
+
+    def send() -> None:
+        # После коммита контекст отеля мог уже закрыться (колбэк — вне запроса):
+        # ставим его явно, иначе журнал событий отказывает «нужен отель».
+        from apps.core.context import tenant_context
+
+        try:
+            with tenant_context(hotel_id):
+                notify("order.assigned", values, user_id=target.pk, dedupe_key=dedupe)
+        except Exception:  # noqa: BLE001 — уведомление не вправе уронить назначение
+            import logging
+
+            logging.getLogger(__name__).warning("Уведомление о назначении %s не записано", order.pk, exc_info=True)
+
+    transaction.on_commit(send)
