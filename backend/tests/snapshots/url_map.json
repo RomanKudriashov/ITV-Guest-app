@@ -901,6 +901,9 @@
   "/api/v1/tracker/order/{order_id}/accept": [
     "POST"
   ],
+  "/api/v1/tracker/order/{order_id}/assign": [
+    "POST"
+  ],
   "/api/v1/tracker/order/{order_id}/cancel": [
     "POST"
   ],
