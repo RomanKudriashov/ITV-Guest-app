@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, apiHeaders, apiToken, CONCIERGE, DEMO_ROOM, HOTEL, staffToken, openVenueFromHome } from './helpers'
+import { API, apiHeaders, apiToken, CONCIERGE, DEMO_ROOM, HOTEL, moveOrderStatus, staffToken, openVenueFromHome } from './helpers'
 
 /**
  * Типы info и slot проходят тем же гостевым потоком, что еда и заявки.
@@ -230,11 +230,7 @@ test.describe('Тип slot', () => {
         if (await confirm.isVisible().catch(() => false)) await confirm.click()
       } else {
         // Кнопки нет (статус уже не позволяет) — отменяем через API.
-        const token = await apiToken(request)
-        await request.post(`http://localhost:8010/api/orders/${orderId}/status`, {
-          data: { status: 'cancelled' },
-          headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },
-        })
+        await moveOrderStatus(request, await apiToken(request), orderId, 'cancelled')
       }
 
       // Отменённая бронь вернула СВОЮ ячейку — вместимость та же, что и до неё.

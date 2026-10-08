@@ -387,14 +387,17 @@ def test_guest_sees_only_own_orders(client, crystal, guest):
 
 
 # --- Смена статуса персоналом ----------------------------------------------
+#
+# Только ручками трекера (партия 46): обходная `POST /orders/{id}/status` —
+# без проверки точки и переходов — убрана из API.
 
 
 def test_staff_status_endpoint_moves_the_order(guest, cms, django_capture_on_commit_callbacks):
     order_id = place(guest, order_body(guest), key="staff-1").json()["id"]
 
     with django_capture_on_commit_callbacks(execute=True):
-        response = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
-    assert response.status_code == 200
+        response = cms.post(f"/api/tracker/order/{order_id}/status", {"status": "preparing"})
+    assert response.status_code == 200, response.content
     assert response.json()["status"]["code"] == "preparing"
 
     # И гость видит это же состояние через свой эндпоинт.
@@ -403,8 +406,15 @@ def test_staff_status_endpoint_moves_the_order(guest, cms, django_capture_on_com
 
 def test_status_endpoint_is_closed_to_guests(guest):
     order_id = place(guest, order_body(guest), key="staff-2").json()["id"]
-    response = guest.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
+    response = guest.post(f"/api/tracker/order/{order_id}/status", {"status": "preparing"})
     assert response.status_code == 401
+
+
+def test_the_bypass_status_door_is_gone(guest, cms):
+    """Обходной ручки больше нет: ни 200, ни «нет прав» — её просто не существует."""
+    order_id = place(guest, order_body(guest), key="staff-4").json()["id"]
+    response = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
+    assert response.status_code in (404, 405), response.status_code
 
 
 def test_a_closed_order_returns_to_work_but_a_cancelled_one_never_does(
@@ -422,19 +432,15 @@ def test_a_closed_order_returns_to_work_but_a_cancelled_one_never_does(
     order_id = place(guest, order_body(guest), key="staff-3").json()["id"]
 
     with django_capture_on_commit_callbacks(execute=True):
-        cms.post(f"/api/orders/{order_id}/status", {"status": "done"})
+        cms.post(f"/api/tracker/order/{order_id}/status", {"status": "done"})
 
-    reopened = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
-    assert reopened.status_code == 200
+    reopened = cms.post(f"/api/tracker/order/{order_id}/status", {"status": "preparing"})
+    assert reopened.status_code == 200, reopened.content
     assert reopened.json()["status"]["code"] == "preparing"
 
     with django_capture_on_commit_callbacks(execute=True):
-        # Причина обязательна и здесь: смена статуса — третья дверь в отмену.
-        cms.post(
-            f"/api/orders/{order_id}/status",
-            {"status": "cancelled", "cancel_reason": "mistake"},
-        )
+        cms.post(f"/api/tracker/order/{order_id}/cancel", {"cancel_reason": "mistake"})
 
-    refused = cms.post(f"/api/orders/{order_id}/status", {"status": "preparing"})
+    refused = cms.post(f"/api/tracker/order/{order_id}/status", {"status": "preparing"})
     assert refused.status_code == 409
     assert refused.json()["code"] == "order_cancelled"

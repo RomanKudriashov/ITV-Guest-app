@@ -13,15 +13,6 @@
 
 from __future__ import annotations
 
-from ninja import Schema
-
-
-
-class StatusChangeIn(Schema):
-    status: str
-    comment: str = ""
-    # Причина отмены — код справочника. Обязателен, когда целевой статус
-    # отменённый: это ТРЕТЬЯ дверь в отмену (кроме `/cancel` у трекера и
-    # гостевой), и без этого поля она осталась бы единственной, через
-    # которую отменяют молча.
-    cancel_reason: str = ""
+# Входных схем для персонала здесь сейчас нет: единственная — `StatusChangeIn`
+# обходной ручки `POST /orders/{id}/status` — ушла вместе с ручкой (партия 46).
+# Действия над заказом идут через трекер: `apps/orders/schemas/tracker.py`.

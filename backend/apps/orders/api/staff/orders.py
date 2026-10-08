@@ -1,9 +1,13 @@
 """
 Операции персонала над заказами.
 
-Живёт вне /api/guest, потому что это действия сотрудника, а не гостя. UI
-трекера — отдельно; сейчас эндпоинт нужен, чтобы живой статус у гостя
-был настоящим и проверяемым тестом, а не имитацией.
+Живёт вне /api/guest, потому что это действия сотрудника, а не гостя.
+
+СМЕНЫ СТАТУСА ЗДЕСЬ НЕТ (партия 46). `POST /orders/{id}/status` была обходной
+дверью: любой сотрудник отеля менял любой статус любому заказу — без проверки
+точки и без проверки переходов. Интерфейс её не звал. Статус меняется только
+ручками трекера (`/tracker/order/{id}/accept|status|cancel`) — с теми же
+проверками, что у людей.
 """
 
 from __future__ import annotations
@@ -11,31 +15,12 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 from apps.orders.schemas.guest import OrderOut
-from apps.orders.schemas.staff import StatusChangeIn
 
 from apps.core.context import current_language
-from apps.orders.services import change_status, get_order, serialize_order
+from apps.orders.services import get_order, serialize_order
 
 
 router = Router(tags=["orders"])
-
-
-@router.post(
-    "/{order_id}/status",
-    response=OrderOut,
-    summary="Сменить статус заказа (переиспользуется трекером)",
-)
-def set_status(request: HttpRequest, order_id: str, payload: StatusChangeIn):
-    order = get_order(order_id)
-    updated = change_status(
-        order,
-        to_code=payload.status,
-        actor_type="staff",
-        actor_id=getattr(request.user, "pk", None),
-        comment=payload.comment,
-        cancel_reason=payload.cancel_reason,
-    )
-    return serialize_order(updated, current_language())
 
 
 @router.get("/{order_id}", response=OrderOut, summary="Заказ глазами персонала")

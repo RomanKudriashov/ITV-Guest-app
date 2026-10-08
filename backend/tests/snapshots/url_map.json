@@ -574,9 +574,6 @@
   "/api/v1/orders/{order_id}": [
     "GET"
   ],
-  "/api/v1/orders/{order_id}/status": [
-    "POST"
-  ],
   "/api/v1/platform/audit": [
     "GET"
   ],

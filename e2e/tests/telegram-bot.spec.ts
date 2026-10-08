@@ -13,6 +13,7 @@ import {
   signIn,
   signInToCms,
   staffToken,
+  moveOrderStatus,
 } from './helpers'
 
 /**
@@ -209,10 +210,7 @@ test.describe('Бот Telegram', () => {
       })
       await unbind(request, RESTAURANT_MANAGER)
       if (orderId) {
-        await request.post(`${API}/api/orders/${orderId}/status`, {
-          data: { status: 'done', cancel_reason: 'mistake' },
-          headers: apiHeaders(managerToken),
-        })
+        await moveOrderStatus(request, managerToken, orderId, 'done')
       }
     }
   })

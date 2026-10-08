@@ -168,21 +168,30 @@ export async function findItemByTitle(
  */
 export const DEMO_ROOM = process.env.E2E_DEMO_ROOM ?? '305'
 
-/** Токен персонала нужен E2E, чтобы двигать статус «от лица кухни». */
+/**
+ * Сменить статус заказа ОТ ЛИЦА СОТРУДНИКА — теми же ручками трекера, что у
+ * людей (партия 46): `/tracker/order/{id}/status`, а отмена —
+ * `/tracker/order/{id}/cancel` с причиной. Обходная `POST /orders/{id}/status`
+ * (без проверки точки и переходов) убрана из API; помощник больше не может
+ * сделать то, чего не может сотрудник, чей токен ему передали.
+ */
 export async function moveOrderStatus(
   request: APIRequestContext,
   token: string,
   orderId: string,
   status: string,
 ): Promise<void> {
-  const response = await request.post(`${API}/api/orders/${orderId}/status`, {
-    // Причина обязательна при отмене — это третья дверь в отменённый статус,
-    // кроме `/cancel` у трекера и гостевой. Для остальных статусов поле
-    // игнорируется, поэтому шлём его всегда.
-    data: { status, cancel_reason: 'mistake' },
-    headers: apiHeaders(token),
-  })
-  expect(response.ok(), `смена статуса на ${status} -> ${response.status()}`).toBeTruthy()
+  const cancel = status === 'cancelled'
+  const response = cancel
+    ? await request.post(`${API}/api/tracker/order/${orderId}/cancel`, {
+        data: { cancel_reason: 'mistake' },
+        headers: apiHeaders(token),
+      })
+    : await request.post(`${API}/api/tracker/order/${orderId}/status`, {
+        data: { status },
+        headers: apiHeaders(token),
+      })
+  expect(response.ok(), `смена статуса на ${status} -> ${response.status()} ${await response.text()}`).toBeTruthy()
 }
 
 export interface GuestOrder {
