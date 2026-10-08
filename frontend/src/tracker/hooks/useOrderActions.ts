@@ -10,7 +10,7 @@ import {
   moveTrackerOrderPosition,
 } from '../api/tracker';
 import { useTrackerLanguage } from './useTrackerQueries';
-import type { TrackerOrder } from '../api/types';
+import type { TrackerBoard, TrackerOrder } from '../api/types';
 import type { CancelReasonCode } from '../cancelReasons';
 
 type ActionKind = 'accept' | 'status' | 'cancel' | 'position' | 'assign' | 'transfer';
@@ -95,6 +95,32 @@ export function useOrderActions() {
       setActionError(null);
     },
     onError: (error, variables) => setActionError({ orderId: variables.orderId, error }),
+    /*
+      ПЕРЕНОС — ИСКЛЮЧЕНИЕ ИЗ «БЕЗ ОПТИМИЗМА», И НЕ ОПТИМИЗМ ВОВСЕ (партия 48).
+
+      Ответ 200 — уже не просьба, а факт сервера: заказ живёт на другой точке.
+      Доска прежней точки обязана отпустить карточку сразу, а ждать снимка или
+      перечитывания нельзя: на длинной доске оно стоит секунды (замер под
+      нагрузкой — 6 с на 280 карточек), и карточка, которой здесь уже нет,
+      висела бы с живой кнопкой «Принять». Убираем только из досок ДРУГИХ точек
+      — доску новой точки по-прежнему приносят снимок и перечитывание.
+    */
+    onSuccess: (order, variables) => {
+      if (variables.kind !== 'transfer') return;
+      const target = order.execution_point?.id;
+      const drop = (orders: TrackerOrder[]) => orders.filter((item) => item.id !== order.id);
+      queryClient.setQueriesData<TrackerBoard>({ queryKey: ['tracker', 'board'] }, (board) => {
+        if (!board || !board.columns || board.point?.id === target) return board;
+        return {
+          ...board,
+          columns: board.columns.map((column) => ({
+            ...column,
+            orders: drop(column.orders),
+            groups: column.groups?.map((group) => ({ ...group, orders: drop(group.orders) })),
+          })),
+        };
+      });
+    },
     onSettled: () => {
       setPendingOrderId(null);
       void queryClient.invalidateQueries({ queryKey: ['tracker', 'board'] });
