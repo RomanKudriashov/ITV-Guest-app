@@ -628,3 +628,26 @@ def test_the_token_never_reaches_the_journal_api_or_logs(client, crystal, cms, b
 @pytest.mark.django_db(databases=["default", "platform"])
 def test_compose_escapes_everything_but_our_bold_subject():
     assert compose("A & <B>", "x < y > z & *w*") == "<b>A &amp; &lt;B&gt;</b>\nx &lt; y &gt; z &amp; *w*"
+
+
+def test_take_on_an_order_assigned_to_someone_else_names_the_assignee(crystal, bot, tg, escalated):
+    """
+    УКУС (партия 47). Заказ назначен повару — руководитель жмёт «Взять» в боте.
+    Человек видит «Назначено: Пётр, повар», а не ошибку и не «заявка закрыта»;
+    заказ остаётся за поваром и не становится «принятым».
+    """
+    from apps.orders.services.tracker import assign_order
+
+    order, manager, chef = escalated["order"], escalated["manager"], escalated["chef"]
+    with tenant_context(crystal):
+        assign_order(manager, order.pk, assignee_id=chef.pk)
+
+    tg.press(MANAGER_CHAT, escalated["message"]["message_id"], escalated["take"])
+    bot.tick()
+
+    assert f"Назначено: {chef.full_name}" in tg.answers()
+    with tenant_context(crystal):
+        order.refresh_from_db()
+        assert order.assignee_id == chef.pk and order.accepted_at is None
+        audit = AuditLog.objects.filter(action="bot.take", object_id=order.pk).latest("created_at")
+        assert audit.payload["result"] == "assigned_to_other"
