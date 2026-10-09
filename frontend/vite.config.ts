@@ -14,8 +14,8 @@ import { guestBundleGuard } from './scripts/guest-bundle-guard.mjs';
 function webManifestPlugin(): Plugin {
   const colors = DEFAULT_BRAND_TOKENS.palette.light;
   const manifest = {
-    name: 'ITV Guest',
-    short_name: 'ITV Guest',
+    name: 'NaviRoom',
+    short_name: 'NaviRoom',
     description: 'In-room ordering and hotel services',
     start_url: '/',
     scope: '/',

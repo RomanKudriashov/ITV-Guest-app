@@ -29,7 +29,7 @@ from .cms import router as cms_router
 from apps.core.api.health import router as health_router
 
 api = NinjaAPI(
-    title="ITV Guest App API",
+    title="NaviRoom API",
     # Стабильный v1: маршруты под /api/v1/. Ломающие изменения — только в новой
     # мажорной версии пути (/api/v2/), политика в docs/api-versioning.md.
     version="1.0.0",

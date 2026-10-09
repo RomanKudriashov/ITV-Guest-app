@@ -11,7 +11,7 @@ from apps.hotels.management.commands.tls_names import certificate_names
 
 pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 
-BASES = ["naviapp.example.test", "app.10.0.0.1.sslip.io"]
+BASES = ["naviroom.example.test", "app.10.0.0.1.sslip.io"]
 
 
 @override_settings(GUEST_APP_BASE_DOMAINS=BASES)

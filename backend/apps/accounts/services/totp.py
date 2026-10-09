@@ -64,7 +64,7 @@ def verify(secret: str, code: str, moment: float | None = None) -> bool:
     )
 
 
-def provisioning_uri(secret: str, *, account: str, issuer: str = "ITV Platform") -> str:
+def provisioning_uri(secret: str, *, account: str, issuer: str = "NaviRoom") -> str:
     """otpauth-ссылка для QR в приложении-аутентификаторе."""
     label = quote(f"{issuer}:{account}", safe="")
     return (

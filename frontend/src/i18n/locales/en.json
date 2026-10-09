@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "ITV Guest App",
+    "title": "NaviRoom",
     "subtitle": "Multi-tenant hotel guest experience",
     "supportPresence": "Platform support is working in this panel: {{actor}}, from {{from}} until {{until}}"
   },
@@ -2361,7 +2361,7 @@
   },
   "admin": {
     "brand": {
-      "name": "ITV Platform",
+      "name": "NaviRoom Platform",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -3631,14 +3631,12 @@
     "contact": {
       "title": "Getting started",
       "body": "We will show it on a live stand and price it for your property: number of rooms, venues and the modules you need.",
-      "email": "hello@itv.example",
       "phone": "+7 900 000-00-00",
       "phoneHref": "+79000000000",
-      "pricing": "Pricing on request: it depends on the number of rooms, venues and enabled modules.",
-      "hint": "Drop us an email — we answer the same day."
+      "pricing": "Pricing on request: it depends on the number of rooms, venues and enabled modules."
     },
     "footer": {
-      "copy": "ITV Guest — hotel guest service",
+      "copy": "NaviRoom — hotel guest service",
       "console": "Platform staff sign-in"
     },
     "blocks": {
@@ -3690,7 +3688,7 @@
       "desktop": "Large screen"
     },
     "nav": {
-      "brand": "ITV Guest",
+      "brand": "NaviRoom",
       "devices": "Devices",
       "how": "How data moves",
       "contact": "Getting started",

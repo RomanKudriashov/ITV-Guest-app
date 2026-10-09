@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "تطبيق نزلاء ITV",
+    "title": "NaviRoom",
     "subtitle": "تجربة نزلاء لفنادق متعددة",
     "supportPresence": "دعم المنصة يعمل في هذه اللوحة: {{actor}}، من {{from}} حتى {{until}}"
   },
@@ -2429,7 +2429,7 @@
   },
   "admin": {
     "brand": {
-      "name": "ITV Platform",
+      "name": "NaviRoom Platform",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -3719,14 +3719,12 @@
     "contact": {
       "title": "كيف تبدأ",
       "body": "نعرضه على منصّة حيّة ونحسب كلفته لمنشأتك: عدد الغرف والمنشآت والوحدات المطلوبة.",
-      "email": "hello@itv.example",
       "phone": "+7 900 000-00-00",
       "phoneHref": "+79000000000",
-      "pricing": "السعر عند الطلب: يعتمد على عدد الغرف والمنشآت والوحدات المفعّلة.",
-      "hint": "راسلنا بالبريد — نردّ في اليوم نفسه."
+      "pricing": "السعر عند الطلب: يعتمد على عدد الغرف والمنشآت والوحدات المفعّلة."
     },
     "footer": {
-      "copy": "ITV Guest — خدمة ضيوف الفندق",
+      "copy": "NaviRoom — خدمة ضيوف الفندق",
       "console": "دخول موظفي المنصّة"
     },
     "blocks": {
@@ -3778,7 +3776,7 @@
       "desktop": "شاشة كبيرة"
     },
     "nav": {
-      "brand": "ITV Guest",
+      "brand": "NaviRoom",
       "devices": "الأجهزة",
       "how": "كيف تتحرك البيانات",
       "contact": "كيف تبدأ",

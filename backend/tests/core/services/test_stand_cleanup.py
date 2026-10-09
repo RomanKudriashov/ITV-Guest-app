@@ -452,14 +452,14 @@ def test_review_chat_residue_is_removed_and_real_chat_kept(crystal):
 
 # --- Жёстко и только локально (партия 41, п.70) -------------------------------
 
-LOCAL = dict(DEBUG=True, APP_DOMAINS=[], GUEST_APP_BASE_DOMAINS=["guest.localhost", "naviapp.localhost"])
+LOCAL = dict(DEBUG=True, APP_DOMAINS=[], GUEST_APP_BASE_DOMAINS=["guest.localhost", "naviroom.localhost"])
 
 
 @pytest.mark.parametrize(
     "stand",
     [
         dict(LOCAL, DEBUG=False),
-        dict(LOCAL, APP_DOMAINS=["naviapp.navicentric.ru"]),
+        dict(LOCAL, APP_DOMAINS=["naviroom.navicentric.ru"]),
         dict(LOCAL, GUEST_APP_BASE_DOMAINS=["app.147.45.245.172.sslip.io"]),
     ],
     ids=["debug-off", "app-domains", "public-base"],

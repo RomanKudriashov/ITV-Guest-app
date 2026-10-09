@@ -5,7 +5,7 @@ import { CREDENTIALS, DEMO_ROOM } from './helpers'
 /**
  * ВТОРАЯ БАЗА АДРЕСОВ (партия 39).
  *
- * В деве вторая база — `naviapp.localhost` рядом с `guest.localhost`
+ * В деве вторая база — `naviroom.localhost` рядом с `guest.localhost`
  * (`GUEST_APP_BASE_DOMAINS` бэкенда и `VITE_APP_DOMAINS` сборки). Всё, что
  * работает под первой (`address-scheme.spec.ts`), обязано работать и под
  * второй: корень — лендинг и консоль, `<код>.<база>` — витрина гостя, панель
@@ -13,8 +13,8 @@ import { CREDENTIALS, DEMO_ROOM } from './helpers'
  */
 
 const PORT = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5183').port || '5183'
-const ROOT = `http://naviapp.localhost:${PORT}`
-const HOTEL = `http://crystal.naviapp.localhost:${PORT}`
+const ROOT = `http://naviroom.localhost:${PORT}`
+const HOTEL = `http://crystal.naviroom.localhost:${PORT}`
 
 test('корень второй базы — лендинг, а на /admin — консоль платформы', async ({ page }) => {
   await page.goto(`${ROOT}/`)
@@ -46,5 +46,5 @@ test('отель под второй базой — вход сотрудник�
   await expect(page).toHaveURL(/\/tracker/, { timeout: 30_000 })
   await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 30_000 })
   await expect.poll(() => snapshots.length, { timeout: 20_000, message: 'сокет доски с новой базы не получил снимок' }).toBeGreaterThan(0)
-  expect(snapshots[0]).toContain('crystal.naviapp.localhost')
+  expect(snapshots[0]).toContain('crystal.naviroom.localhost')
 })

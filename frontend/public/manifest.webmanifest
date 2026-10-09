@@ -1,6 +1,6 @@
 {
-  "name": "ITV Guest",
-  "short_name": "ITV Guest",
+  "name": "NaviRoom",
+  "short_name": "NaviRoom",
   "description": "Room service, room control and hotel services",
   "start_url": "/",
   "scope": "/",

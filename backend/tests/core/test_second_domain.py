@@ -19,7 +19,7 @@ from django.test import override_settings
 from apps.core import hosts
 from config.domains import allowed_hosts, csrf_trusted_origins, parse_bases
 
-NEW = "naviapp.example.test"
+NEW = "naviroom.example.test"
 OLD = "app.10.0.0.1.sslip.io"
 BASES = [NEW, OLD]
 

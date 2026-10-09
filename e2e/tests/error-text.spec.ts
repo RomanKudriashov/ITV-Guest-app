@@ -6,7 +6,8 @@ import { ADMIN, DEMO_ROOM } from './helpers'
 /**
  * ОШИБКИ БЕЗ СЫРОГО HTML (партия 39).
  *
- * На экран входа гостя на sialia.naviapp.navicentric.ru попала сырая страница
+ * На экран входа гостя на sialia.naviapp.navicentric.ru (ныне третья база; главная —
+ * naviroom.navicentric.ru, партия 50) попала сырая страница
  * Django «<!doctype html>…Bad Request (400)…»: клиент клал тело ответа в
  * текст ошибки, если оно не JSON. Теперь тело показывается, только если это
  * наш JSON с текстом, иначе — фраза по коду на языке интерфейса

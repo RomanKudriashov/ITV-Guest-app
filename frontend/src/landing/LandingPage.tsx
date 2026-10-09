@@ -416,17 +416,13 @@ export function LandingPage() {
           {/*
             ФОРМЫ ЗДЕСЬ НЕТ НАМЕРЕННО. Форма — это ручка на бэкенде, приём
             персональных данных и защита от ботов; лендинг обязан открываться
-            без единого запроса. Почта и телефон работают без всего этого.
+            без единого запроса. Телефон работает без всего этого.
+
+            ПОЧТЫ НЕТ (партия 50, решение тек-лида): прежний адрес был
+            заглушкой `hello@itv.example`, настоящего контакта пока нет, а
+            кнопка, ведущая в никуда, хуже отсутствующей.
           */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1 }}>
-            <Button
-              variant="contained"
-              size="large"
-              href={`mailto:${t('landing.contact.email')}`}
-              data-testid="landing-email"
-            >
-              {t('landing.contact.email')}
-            </Button>
             <Button
               variant="outlined"
               size="large"

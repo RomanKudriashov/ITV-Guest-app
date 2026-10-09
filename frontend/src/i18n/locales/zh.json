@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "ITV 客人应用",
+    "title": "NaviRoom",
     "subtitle": "多酒店客人服务平台",
     "supportPresence": "平台支持人员正在此面板中操作：{{actor}}，{{from}} 至 {{until}}"
   },
@@ -2336,7 +2336,7 @@
   },
   "admin": {
     "brand": {
-      "name": "ITV Platform",
+      "name": "NaviRoom Platform",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -3600,14 +3600,12 @@
     "contact": {
       "title": "如何开始",
       "body": "我们会用真实环境演示，并按您的物业测算：房间数、门店数与所需模块。",
-      "email": "hello@itv.example",
       "phone": "+7 900 000-00-00",
       "phoneHref": "+79000000000",
-      "pricing": "价格面议：取决于房间数、门店数与启用的模块。",
-      "hint": "发邮件给我们——当天回复。"
+      "pricing": "价格面议：取决于房间数、门店数与启用的模块。"
     },
     "footer": {
-      "copy": "ITV Guest — 酒店客人服务",
+      "copy": "NaviRoom — 酒店客人服务",
       "console": "平台员工登录"
     },
     "blocks": {
@@ -3659,7 +3657,7 @@
       "desktop": "大屏"
     },
     "nav": {
-      "brand": "ITV Guest",
+      "brand": "NaviRoom",
       "devices": "设备",
       "how": "数据如何流动",
       "contact": "如何接入",

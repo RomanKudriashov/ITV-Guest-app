@@ -1,4 +1,4 @@
-# ITV Guest App — Frontend
+# NaviRoom — Frontend
 
 Guest web app for hotels (order food & services by scanning a QR code).
 Multi-tenant SaaS: every hotel gets its own brand tokens, language set and direction.

@@ -9,7 +9,7 @@
 ;   sudo systemctl enable --now itv-connector
 
 [Unit]
-Description=ITV Guest App — Local Connector (GRMS)
+Description=NaviRoom — Local Connector (GRMS)
 Documentation=file:///opt/itv-connector/README.md
 After=network-online.target
 Wants=network-online.target
