@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone as datetime_timezone
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, prefetch_related_objects
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -310,6 +310,51 @@ def points_payload(user, language: str | None = None) -> dict:
             for point in points
         ]
     }
+
+
+# Что из сводки смены идёт в строку «Моих точек» — без карточек и без медианы
+# исполнения: экран отвечает «где сейчас горит», а не разбирает смену.
+MY_POINTS_FIELDS = ("new", "in_work", "overdue", "done", "median_accept_minutes")
+
+
+def my_points_payload(user, language: str | None = None) -> dict:
+    """
+    «МОИ ТОЧКИ» (партия 49, решение тек-лида 9а).
+
+    Строка на точку: новые, в работе, просрочено, сделано за смену, медиана до
+    принятия. Скоуп — тот же, что у трекера (`assigned_points`): назначенные
+    точки, администратору — все активные. Чужая точка сюда не попадает.
+
+    Сводка — `shift_summary_for` ПО ОДНОЙ ТОЧКЕ, как строки дашборда отеля:
+    медианы нельзя складывать, и строка обязана совпадать с плиткой сводки на
+    доске этой точки. Карточек нет вовсе — экран опрашивается раз в 30 секунд,
+    и платить за сотни карточек на каждом опросе незачем.
+    """
+    points = assigned_points(user)
+    if not points:
+        return {"points": []}
+    hotel = Hotel.objects.get(pk=points[0].hotel_id)
+    # Сервис точки спрашивают и тип трекера, и порог просрочки — по нескольку
+    # раз на точку. Один prefetch вместо четырёх запросов на каждую строку.
+    prefetch_related_objects(points, "services")
+    # Уровни — одним запросом, а не `assignment_level` на каждую точку.
+    levels = dict(
+        StaffAssignment.objects.filter(
+            user=user, is_active=True, execution_point__in=points
+        ).values_list("execution_point_id", "level")
+    )
+    rows = []
+    for point in points:
+        summary = tracker_shift.shift_summary_for([point], hotel=hotel)
+        rows.append(
+            serialize_point(
+                point,
+                language,
+                level=levels.get(point.pk, ""),
+                summary={field: summary[field] for field in MY_POINTS_FIELDS},
+            )
+        )
+    return {"points": rows}
 
 
 def _counts_by_point(point_ids: list) -> dict:

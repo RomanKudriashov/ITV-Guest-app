@@ -1090,6 +1090,18 @@
       "reason": "转移原因",
       "cancel": "不转移",
       "confirm": "转移"
+    },
+    "myPoints": {
+      "title": "我的点位",
+      "caption": "每个点位的本班汇总。每 30 秒刷新一次。点击点位即可打开其看板。",
+      "toBoard": "返回看板",
+      "error": "无法加载点位汇总",
+      "new": "新订单",
+      "inWork": "处理中",
+      "overdue": "已超时",
+      "done": "本班已完成",
+      "medianAccept": "接单中位时长",
+      "minutes": "{{value}} 分钟"
     }
   },
   "requestFields": {

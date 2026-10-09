@@ -1100,6 +1100,18 @@
       "reason": "Why are you moving it",
       "cancel": "Don’t move",
       "confirm": "Move"
+    },
+    "myPoints": {
+      "title": "My points",
+      "caption": "Shift summary for each of your points. Refreshes every 30 seconds. Tap a point to open its board.",
+      "toBoard": "To the board",
+      "error": "Could not load the points summary",
+      "new": "New",
+      "inWork": "In progress",
+      "overdue": "Overdue",
+      "done": "Done this shift",
+      "medianAccept": "Median to accept",
+      "minutes": "{{value}} min"
     }
   },
   "requestFields": {

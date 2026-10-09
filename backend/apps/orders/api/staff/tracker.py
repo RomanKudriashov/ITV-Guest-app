@@ -22,6 +22,11 @@ def list_points(request: HttpRequest):
     return svc.points_payload(request.user, current_language())
 
 
+@router.get("/my-points", summary="«Мои точки»: сводка смены по каждой точке сотрудника")
+def my_points(request: HttpRequest):
+    return svc.my_points_payload(request.user, current_language())
+
+
 @router.get("/orders", summary="Задачи заведения (доска / очередь / записи / заявки)")
 def board(
     request: HttpRequest,

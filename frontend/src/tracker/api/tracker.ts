@@ -15,6 +15,7 @@ import type {
   TrackerChatThreadsPage,
   TrackerOrder,
   TrackerPointsResponse,
+  MyPointsResponse,
   TrackerScope,
 } from './types';
 import type { CancelReasonCode } from '../cancelReasons';
@@ -26,6 +27,13 @@ function langHeaders(language?: string): Record<string, string> | undefined {
 
 export function fetchTrackerPoints(language?: string): Promise<TrackerPointsResponse> {
   return api.get<TrackerPointsResponse>('/tracker/points', {
+    headers: langHeaders(language),
+  });
+}
+
+/** «Мои точки»: сводка смены по каждой точке сотрудника (партия 49). */
+export function fetchMyPoints(language?: string): Promise<MyPointsResponse> {
+  return api.get<MyPointsResponse>('/tracker/my-points', {
     headers: langHeaders(language),
   });
 }

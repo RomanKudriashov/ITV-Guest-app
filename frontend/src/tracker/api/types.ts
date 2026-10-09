@@ -39,6 +39,24 @@ export interface TrackerPointsResponse {
   points: TrackerPoint[];
 }
 
+/** Строка «Моих точек» (партия 49): сводка смены точки, без карточек. */
+export interface MyPointSummary {
+  new: number;
+  in_work: number;
+  overdue: number;
+  done: number;
+  /** Медиана до принятия, минуты; `null` — за смену ещё нечего мерить. */
+  median_accept_minutes: number | null;
+}
+
+export interface MyPoint extends TrackerPoint {
+  summary: MyPointSummary;
+}
+
+export interface MyPointsResponse {
+  points: MyPoint[];
+}
+
 export interface TrackerPointRef {
   id: string;
   code: string;

@@ -11,7 +11,9 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 import type { TrackerPoint } from '../api/types';
 import type { LiveStatus } from '../hooks/useBoardLive';
@@ -57,6 +59,7 @@ export function TrackerTopBar({
   onOpenChat,
 }: TrackerTopBarProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   return (
     <Stack
@@ -105,6 +108,20 @@ export function TrackerTopBar({
           label={t('tracker.offline')}
           data-testid="tracker-offline"
         />
+      ) : null}
+
+      {/* «Мои точки» (партия 49) — только тому, у кого их две и больше. */}
+      {points.length >= 2 ? (
+        <Tooltip title={t('tracker.myPoints.title')}>
+          <IconButton
+            onClick={() => navigate('/tracker/my-points')}
+            aria-label={t('tracker.myPoints.title')}
+            data-testid="tracker-my-points-open"
+            sx={{ minWidth: 44, minHeight: 44 }}
+          >
+            <SpaceDashboardOutlinedIcon />
+          </IconButton>
+        </Tooltip>
       ) : null}
 
       {onOpenChat ? (

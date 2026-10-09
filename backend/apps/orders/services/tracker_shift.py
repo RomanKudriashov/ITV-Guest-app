@@ -108,7 +108,10 @@ def shift_summary_for(points, *, hotel, now=None) -> dict:
             created_at__gte=started_at,
         )
         .exclude(children__isnull=False)
-        .only("pk", "created_at", "accepted_at")
+        # `closed_at` — в выборке: `closing_moments` читает его у каждого заказа,
+        # и отложенное поле догружалось бы по запросу на заказ (партия 49:
+        # 44 лишних запроса на «Моих точках» «Кристалла»).
+        .only("pk", "created_at", "accepted_at", "closed_at")
     )
 
     # МОМЕНТ ЗАКРЫТИЯ — ИЗ ОБЩЕГО ИСТОЧНИКА, А НЕ ИЗ СВОЕЙ ФОРМУЛЫ.

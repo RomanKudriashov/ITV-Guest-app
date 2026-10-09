@@ -19,6 +19,9 @@ import type { StaffUser } from '@/api/types';
  */
 export function homePathFor(user: StaffUser | null): string {
   if (user?.has_cms_access) return cmsPath('/dashboard');
+  // Две точки и больше — сначала «Мои точки» (партия 49): выбрать, где горит,
+  // а не открывать доски по очереди. Одна — сразу её доска.
+  if ((user?.member_point_ids?.length ?? 0) >= 2) return '/tracker/my-points';
   return '/tracker';
 }
 

@@ -4,6 +4,7 @@ import type { TrackerScope } from './types';
 export const trackerKeys = {
   all: ['tracker'] as const,
   points: (language: string) => ['tracker', 'points', language] as const,
+  myPoints: (language: string) => ['tracker', 'my-points', language] as const,
   boards: ['tracker', 'board'] as const,
   /*
     `search` — ПОСЛЕДНИЙ сегмент, и пустая строка означает «доска как есть».

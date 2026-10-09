@@ -64,6 +64,7 @@ const DictionariesPage = lazyFrom(panelPart, 'DictionariesPage');
 
 const TrackerPage = lazyFrom(trackerPart, 'TrackerPage');
 const ReceptionDeskPage = lazyFrom(trackerPart, 'ReceptionDeskPage');
+const MyPointsPage = lazyFrom(trackerPart, 'MyPointsPage');
 const AdminApp = lazyFrom(consolePart, 'AdminApp');
 const LandingPage = lazyFrom(landingPart, 'LandingPage');
 const DevThemePage = lazyFrom(devThemePart, 'DevThemePage');
@@ -129,6 +130,15 @@ function DeskScreen() {
   return (
     <ScreenBoundary message={t('state.crashed')} actionLabel={t('state.reload')}>
       {part(<ReceptionDeskPage />)}
+    </ScreenBoundary>
+  );
+}
+
+function MyPointsScreen() {
+  const { t } = useTranslation();
+  return (
+    <ScreenBoundary message={t('state.crashed')} actionLabel={t('state.reload')}>
+      {part(<MyPointsPage />)}
     </ScreenBoundary>
   );
 }
@@ -241,6 +251,8 @@ const shellChildren: RouteObject[] = [
   { path: '/tracker', element: <TrackerScreen /> },
   // Рабочее место ресепшена: диалоги с гостями, переписка, карточка гостя.
   { path: '/tracker/desk', element: <DeskScreen /> },
+  // «Мои точки» (партия 49): сводка по каждой точке человека, касание — на доску.
+  { path: '/tracker/my-points', element: <MyPointsScreen /> },
   {
     // Deep link to one order: the board stays mounted underneath and opens the
     // detail sheet, so the URL is shareable without a second data source.

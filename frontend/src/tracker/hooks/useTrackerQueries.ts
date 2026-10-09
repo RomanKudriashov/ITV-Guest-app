@@ -8,6 +8,7 @@ import {
   fetchTrackerBoard,
   fetchTrackerOrder,
   fetchTrackerPoints,
+  fetchMyPoints,
 } from '../api/tracker';
 import { trackerKeys } from '../api/queryKeys';
 import type {
@@ -16,6 +17,7 @@ import type {
   TrackerChatSnapshot,
   TrackerOrder,
   TrackerPointsResponse,
+  MyPointsResponse,
   TrackerScope,
 } from '../api/types';
 
@@ -31,6 +33,23 @@ export function useTrackerPoints() {
     queryKey: trackerKeys.points(language),
     queryFn: () => fetchTrackerPoints(language),
     staleTime: 60_000,
+  });
+}
+
+/**
+ * «МОИ ТОЧКИ» — ОПРОСОМ, БЕЗ СОКЕТОВ (решение тек-лида 9а).
+ *
+ * Сокет на каждую точку ради четырёх чисел — дорого и незачем: экран
+ * отвечает «где сейчас горит», и тридцати секунд для этого достаточно.
+ */
+export const MY_POINTS_POLL_MS = 30_000;
+
+export function useMyPoints() {
+  const language = useTrackerLanguage();
+  return useQuery<MyPointsResponse>({
+    queryKey: trackerKeys.myPoints(language),
+    queryFn: () => fetchMyPoints(language),
+    refetchInterval: MY_POINTS_POLL_MS,
   });
 }
 
