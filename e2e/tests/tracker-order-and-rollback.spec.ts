@@ -1,7 +1,7 @@
 import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, CREDENTIALS, DEMO_ROOM, HOTEL, apiToken, moveOrderStatus, signInToTracker } from './helpers'
+import { ADMIN, API, CREDENTIALS, DEMO_ROOM, HOTEL, apiToken, moveOrderStatus, signInToTracker } from './helpers'
 
 /**
  * ПАРТИЯ 5: СТАТУСЫ НАЗАД И РУЧНОЙ ПОРЯДОК НА ДОСКЕ.
@@ -371,10 +371,76 @@ test.describe('Порядок на экране', () => {
   })
 })
 
+/**
+ * ДЛИННАЯ КОЛОНКА ПРОСРОЧЕННЫХ — СВОЯ, А НЕ НАЙДЕННАЯ (партия 49).
+ *
+ * Проверки 10 и 11 жили на чужих заказах: на стенде с сотнями брошенных
+ * карточек колонка была длинной и красной сама, после уборки — пустой, и 10
+ * молча уходила в ветку «баннера нет», а 11 пропускалась. Проверка, читающая
+ * стенд, сама им становится (п.75): теперь колонку заводит проверка.
+ *
+ * Порог просрочки кухни на время проверки — 0 минут: любая открытая карточка
+ * просрочена сразу, ждать не нужно. Порог и заказы возвращаются в `finally`.
+ * Проверки идут в один поток (`workers: 1`) — соседям ноль не достанется.
+ */
+async function withOverdueColumn<T>(
+  request: APIRequestContext,
+  count: number,
+  run: (orders: Array<{ id: string; number: number }>) => Promise<T>,
+): Promise<T> {
+  const admin = { Authorization: `Bearer ${await apiToken(request, ADMIN)}`, 'X-Hotel-Subdomain': HOTEL }
+  const services = (await (await request.get(`${API}/api/cms/services?limit=500`, { headers: admin })).json())
+    .items as Array<{ id: string; code: string }>
+  const kitchen = services.find((service) => service.code === 'kitchen')
+  expect(kitchen, 'сервиса kitchen нет').toBeTruthy()
+  const detail = await (await request.get(`${API}/api/cms/services/${kitchen!.id}`, { headers: admin })).json()
+  // Порог живёт на точке сервиса, а не на самом сервисе.
+  const before = detail.execution_point?.sla_minutes as number | null | undefined
+  // Пустой порог PATCH вернуть не умеет (null там значит «не менять») — лучше
+  // упасть здесь, чем оставить кухне ноль. Число — строго: `undefined` (поле не
+  // там, где ищем) прошёл бы «не null» и оставил бы ноль навсегда.
+  expect(typeof before, 'порог кухни не прочитан — вернуть его после проверки нечем').toBe('number')
+
+  const token = await apiToken(request, CREDENTIALS)
+  const orders: Array<{ id: string; number: number }> = []
+  try {
+    const zero = await request.patch(`${API}/api/cms/services/${kitchen!.id}`, {
+      headers: admin,
+      data: { sla_minutes: 0 },
+    })
+    expect(zero.ok(), 'порог кухни не снялся').toBeTruthy()
+    for (let i = 0; i < count; i += 1) orders.push(await placeOrder(request))
+    return await run(orders)
+  } finally {
+    for (const order of orders) await moveOrderStatus(request, token, order.id, 'cancelled').catch(() => undefined)
+    const back = await request.patch(`${API}/api/cms/services/${kitchen!.id}`, {
+      headers: admin,
+      data: { sla_minutes: before },
+    })
+    expect((await back.json()).execution_point?.sla_minutes, 'порог кухни не вернулся').toBe(before)
+  }
+}
+
+/** Сколько просроченных карточек колонки — за нижним краем окна. */
+async function overdueBelow(page: Page): Promise<number> {
+  return page.getByTestId('tracker-column-new').evaluate((node) => {
+    const cards = Array.from(node.querySelectorAll('[data-overdue="true"]'))
+    return cards.filter((card) => card.getBoundingClientRect().top >= window.innerHeight).length
+  })
+}
+
+/** Число на баннере; баннера нет — ноль. */
+async function bannerCount(page: Page): Promise<number> {
+  const banner = page.getByTestId('tracker-overdue-below-new')
+  if (!(await banner.isVisible())) return 0
+  return Number(((await banner.textContent()) ?? '').replace(/\D+/g, '')) || 0
+}
+
+// Своих карточек столько, чтобы колонка заведомо ушла за край окна.
+const LONG_COLUMN = 14
+
 test.describe('Просроченное ниже экрана', () => {
   test('10. доска говорит, сколько просроченных осталось ниже', async ({ page, request }) => {
-    const token = await apiToken(request, CREDENTIALS)
-
     /*
       БАННЕР — ОТВЕТ НА ЦЕНУ РУЧНОГО ПОРЯДКА.
 
@@ -383,54 +449,38 @@ test.describe('Просроченное ниже экрана', () => {
       молчать нельзя — отодвинутая карточка уезжает за край экрана вместе со
       своим красным. Доска не переставляет, а ГОВОРИТ.
     */
-    const column = await boardColumn(request, token, 'new')
-    expect(column.length, 'проверке нужна длинная колонка').toBeGreaterThan(10)
+    await withOverdueColumn(request, LONG_COLUMN, async (orders) => {
+      await openBoard(page)
+      const board = page.getByTestId('tracker-column-new')
+      const banner = page.getByTestId('tracker-overdue-below-new')
+      // Своя последняя карточка на доске — значит, вся своя колонка доехала.
+      await expect(board.getByTestId(`tracker-order-${orders[orders.length - 1].number}`)).toBeVisible({
+        timeout: 20_000,
+      })
 
-    await openBoard(page)
-    const banner = page.getByTestId('tracker-overdue-below-new')
-    const board = page.getByTestId('tracker-column-new')
-    await expect(board.getByTestId(/^tracker-order-/).first()).toBeVisible({ timeout: 20_000 })
+      // Сколько просроченных ЗА нижним краем окна — считаем сами, по разметке,
+      // и сравниваем с тем, что говорит баннер. Число «просто есть» ничего не
+      // доказывает: ошибка на единицу так и живёт незамеченной.
+      await expect.poll(() => overdueBelow(page), { message: 'своя колонка не ушла за край окна' }).toBeGreaterThan(0)
+      const hidden = await overdueBelow(page)
+      await expect(banner).toBeVisible()
+      await expect(banner).toContainText(String(hidden))
 
-    // Сколько просроченных ЗА нижним краем окна — считаем сами, по разметке,
-    // и сравниваем с тем, что говорит баннер. Число «просто есть» ничего не
-    // доказывает: ошибка на единицу так и живёт незамеченной.
-    const hidden = await board.evaluate((node) => {
-      const cards = Array.from(node.querySelectorAll('[data-overdue="true"]'))
-      return cards.filter((card) => card.getBoundingClientRect().top >= window.innerHeight).length
-    })
+      /*
+        Прокрутили В САМЫЙ НИЗ — число обязано уменьшиться, а не замереть.
 
-    if (hidden === 0) {
-      // Вся колонка уместилась на экране — тогда баннера быть не должно, и это
-      // тоже проверяемое утверждение, а не повод пропустить проверку.
-      await expect(banner).toBeHidden()
-      return
-    }
-
-    await expect(banner).toBeVisible()
-    await expect(banner).toContainText(String(hidden))
-
-    /*
-      Прокрутили В САМЫЙ НИЗ — число обязано уменьшиться, а не замереть.
-
-      Первая версия крутила на 4000 пикселей и краснела на исправной доске:
-      колонка «Новый» на стенде высотой в двадцать тысяч, просроченные лежат в
-      самом низу, и после такой прокрутки НИЖЕ ЭКРАНА оставались все двадцать
-      девять — баннер был прав, а проверка нет.
-    */
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-    await expect
-      .poll(
-        async () => {
-          if (!(await banner.isVisible())) return 0
-          const text = (await banner.textContent()) ?? ''
-          return Number(text.replace(/\D+/g, '')) || 0
-        },
-        {
+        Первая версия крутила на 4000 пикселей и краснела на исправной доске:
+        колонка «Новый» на стенде высотой в двадцать тысяч, просроченные лежат
+        в самом низу, и после такой прокрутки НИЖЕ ЭКРАНА оставались все.
+      */
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      await expect
+        .poll(() => bannerCount(page), {
           timeout: 10_000,
           message: 'после прокрутки ниже осталось меньше — баннер обязан это знать',
-        },
-      )
-      .toBeLessThan(hidden)
+        })
+        .toBeLessThan(hidden)
+    })
   })
 
   test('11. УКУС: состав колонки сменился, пока кадр пересчёта ждал, — прокрутка всё равно пересчитывает', async ({
@@ -468,27 +518,38 @@ test.describe('Просроченное ниже экрана', () => {
     })
     const flush = () => page.evaluate(() => (window as unknown as { __frames: () => void }).__frames())
 
-    const token = await apiToken(request, CREDENTIALS)
-    expect((await boardColumn(request, token, 'new')).length, 'проверке нужна длинная колонка').toBeGreaterThan(10)
+    await withOverdueColumn(request, LONG_COLUMN, async (orders) => {
+      await openBoard(page)
+      const board = page.getByTestId('tracker-column-new')
+      const banner = page.getByTestId('tracker-overdue-below-new')
+      await expect(board.getByTestId(`tracker-order-${orders[orders.length - 1].number}`)).toBeVisible({
+        timeout: 20_000,
+      })
+      await expect
+        .poll(
+          async () => {
+            await flush()
+            return overdueBelow(page)
+          },
+          { message: 'своя колонка не ушла за край окна' },
+        )
+        .toBeGreaterThan(0)
+      const hidden = await overdueBelow(page)
+      await expect
+        .poll(
+          async () => {
+            await flush()
+            return bannerCount(page)
+          },
+          { message: 'баннер не назвал число скрытых' },
+        )
+        .toBe(hidden)
 
-    await openBoard(page)
-    const board = page.getByTestId('tracker-column-new')
-    const banner = page.getByTestId('tracker-overdue-below-new')
-    await expect(board.getByTestId(/^tracker-order-/).first()).toBeVisible({ timeout: 20_000 })
-    const hidden = await board.evaluate(
-      (node) =>
-        Array.from(node.querySelectorAll('[data-overdue="true"]')).filter(
-          (card) => card.getBoundingClientRect().top >= window.innerHeight,
-        ).length,
-    )
-    test.skip(hidden === 0, 'вся колонка на экране — окна для проверки нет')
-    await expect(banner).toContainText(String(hidden))
-
-    // Кадр пересчёта запланирован и ждёт…
-    await page.evaluate(() => window.dispatchEvent(new Event('scroll')))
-    // …а состав колонки тем временем сменился: новая карточка пришла по сокету.
-    const fresh = await placeOrder(request)
-    try {
+      // Кадр пересчёта запланирован и ждёт…
+      await page.evaluate(() => window.dispatchEvent(new Event('scroll')))
+      // …а состав колонки тем временем сменился: новая карточка пришла по сокету.
+      const fresh = await placeOrder(request)
+      orders.push(fresh)
       await expect(board.getByTestId(`tracker-order-${fresh.number}`)).toBeVisible({ timeout: 20_000 })
 
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
@@ -496,14 +557,11 @@ test.describe('Просроченное ниже экрана', () => {
         .poll(
           async () => {
             await flush()
-            if (!(await banner.isVisible())) return 0
-            return Number(((await banner.textContent()) ?? '').replace(/\D+/g, '')) || 0
+            return bannerCount(page)
           },
           { timeout: 10_000, message: 'прокрутка после смены состава обязана пересчитать баннер' },
         )
         .toBeLessThan(hidden)
-    } finally {
-      await moveOrderStatus(request, token, fresh.id, 'cancelled')
-    }
+    })
   })
 })
