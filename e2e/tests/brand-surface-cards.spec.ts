@@ -1,7 +1,7 @@
 import { type APIRequestContext, type Browser, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, HOTEL } from './helpers'
+import { API, DEMO_ROOM, HOTEL } from './helpers'
 import { brandSession, guestPage } from './brandGuest'
 
 /**
@@ -111,8 +111,36 @@ async function walk(browser: Browser, request: APIRequestContext): Promise<Recor
   return screens
 }
 
+/**
+ * ПОГОДА — УСЛОВИЕ ПРОВЕРКИ, А НЕ ВЕЗЕНИЕ (п.81, партия 49).
+ *
+ * Главная берёт погоду ТОЛЬКО из кэша: кэш холодный — ставит обновление и
+ * отдаёт `weather: null`, и карточки погоды на этом ответе нет. Проверка ждала
+ * её на том же ответе и краснела, когда кэш остыл (запись живёт 45 минут), —
+ * в одиночку зеленея на кэше, который нагрел кто-то до неё. Теперь кэш греет
+ * она сама: спрашивает главную, пока погода не придёт.
+ */
+async function warmWeather(request: APIRequestContext): Promise<void> {
+  const session = await request.post(`${API}/api/guest/session`, {
+    data: { room_number: DEMO_ROOM },
+    headers: { 'X-Hotel-Subdomain': HOTEL },
+  })
+  expect(session.ok(), 'гостевая сессия не открылась').toBeTruthy()
+  const headers = { Authorization: `Bearer ${(await session.json()).token}`, 'X-Hotel-Subdomain': HOTEL }
+  await expect
+    .poll(
+      async () => {
+        const home = await request.get(`${API}/api/guest/home`, { headers })
+        return home.ok() ? Boolean((await home.json()).weather) : false
+      },
+      { timeout: 30_000, intervals: [500, 1_000, 2_000], message: 'погода не пришла и после обновления кэша' },
+    )
+    .toBe(true)
+}
+
 test('стиль поверхности меняет каждую карточку витрины, стекла поверх фото нет', async ({ browser, request }) => {
   test.setTimeout(300_000)
+  await warmWeather(request)
   const brand = await brandSession(request)
   const failures: string[] = []
   let compared = 0
