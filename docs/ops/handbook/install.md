@@ -203,7 +203,7 @@ ERROR itv.connector конфиг не загружен: не найден клю
 Пока сертификата нет, nginx отвечает по HTTP. Выпуск:
 
 ```bash
-./infra/nginx/enable-tls.sh admin@example.com
+LE_EMAIL=admin@example.com ./infra/nginx/enable-tls.sh
 # Имена берутся из `manage.py tls_names`: каждая база и каждый действующий
 # отель под каждой базой. Имя без записи DNS на этот сервер скрипт ПРОПУСКАЕТ
 # с предупреждением; появился отель или запись DNS — прогнать скрипт заново.

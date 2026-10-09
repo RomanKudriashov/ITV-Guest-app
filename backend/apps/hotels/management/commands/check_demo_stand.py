@@ -93,9 +93,16 @@ class Command(BaseCommand):
             action="store_true",
             help="Только наполнение трёх отелей, без разбора каталога демо-отеля",
         )
+        parser.add_argument(
+            "--base",
+            default="",
+            help="База, чей сертификат проверять (по умолчанию — главная, первая в APP_DOMAINS)",
+        )
 
     def handle(self, *args, **options):
         subdomain = options["subdomain"]
+        # Второй прогон по другой базе (партия 51): `--base app.…sslip.io`.
+        self.base = options.get("base") or ""
         hotel = Hotel.all_objects.filter(subdomain=subdomain).first()
         if hotel is None:
             raise CommandError(f"Отеля «{subdomain}» нет вовсе — стенд не развёрнут")
@@ -225,20 +232,23 @@ class Command(BaseCommand):
         from django.conf import settings
 
         bases = getattr(settings, "APP_DOMAINS", None) or []
-        if not bases:
+        # По умолчанию — ГЛАВНАЯ база (первая в APP_DOMAINS, с партии 50 —
+        # naviroom); `--base` — второй прогон по другой (sslip).
+        host = getattr(self, "base", "") or (bases[0] if bases else "")
+        if not host:
             return
         try:
-            days = certificate_days_left(bases[0])
+            days = certificate_days_left(host)
         except Exception as exc:  # noqa: BLE001 — сеть или TLS: сказать, а не упасть
-            notes.append(f"ПРЕДУПРЕЖДЕНИЕ: срок сертификата {bases[0]} не прочитан ({exc.__class__.__name__})")
+            notes.append(f"ПРЕДУПРЕЖДЕНИЕ: срок сертификата {host} не прочитан ({exc.__class__.__name__})")
             return
         if days < self.CERT_WARN_DAYS:
             notes.append(
-                f"ПРЕДУПРЕЖДЕНИЕ: сертификату {bases[0]} осталось {days} дн. — проверить certbot.timer "
+                f"ПРЕДУПРЕЖДЕНИЕ: сертификату {host} осталось {days} дн. — проверить certbot.timer "
                 "(`certbot renew --dry-run`); писем от Let's Encrypt не будет"
             )
         else:
-            self.stdout.write(f"  сертификат      {bases[0]}: осталось {days} дн.")
+            self.stdout.write(f"  сертификат      {host}: осталось {days} дн.")
 
     def _check_migrations(self) -> list[str]:
         """

@@ -12,11 +12,21 @@
 # Идемпотентен: certbot сам решит, перевыпускать или нет, а конфигурация
 # просто перекладывается заново.
 #
-#   ./infra/nginx/enable-tls.sh [почта]      # из корня репозитория на стенде
-#   DRY_RUN=1 ./infra/nginx/enable-tls.sh    # проверка на тестовом сервере LE: ничего не меняет
+#   LE_EMAIL=… ./infra/nginx/enable-tls.sh          # из корня репозитория на стенде
+#   DRY_RUN=1 LE_EMAIL=… ./infra/nginx/enable-tls.sh # тестовый сервер LE: ничего не меняет
+#
+# ПОЧТА УЧЁТКИ (п.9, партия 51) — из LE_EMAIL, и только оттуда: личного адреса
+# по умолчанию в скрипте больше нет. На неё Let's Encrypt шлёт письма об
+# истечении.
+#   * LE_EMAIL пуст — скрипт ГРОМКО говорит об этом и выпускает без почты:
+#     сертификат важнее письма, но молчать об этом нельзя.
+#   * LE_EMAIL задан, а LE его не принял — ОШИБКА, выпуск не идёт. Раньше отказ
+#     глушился (`|| true`), и учётка годами жила без почты, пока все думали,
+#     что почта есть (06.10 и 09.10.2026: контактов 0 у обеих учёток).
 set -eu
 
-EMAIL="${1:-79263820654@yandex.ru}"
+EMAIL="${LE_EMAIL:-}"
+WEBROOT="${WEBROOT:-/var/www/certbot}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 
@@ -50,26 +60,44 @@ done
 [ "$TAKEN" -gt 0 ] || { echo "ни одно имя не указывает на сервер — стоп"; exit 1; }
 echo "в сертификат: $TAKEN имён, пропущено: $SKIPPED"
 
-mkdir -p /var/www/certbot "$HERE/live"
+mkdir -p "$WEBROOT" "$HERE/live"
+
+if [ -n "$EMAIL" ]; then
+    EMAIL_ARGS="--email $EMAIL"
+else
+    EMAIL_ARGS="--register-unsafely-without-email"
+    echo "================================================================"
+    echo "ВНИМАНИЕ: LE_EMAIL не задан — сертификат выпускается БЕЗ почты."
+    echo "Писем об истечении от Let's Encrypt не будет. Задайте LE_EMAIL."
+    echo "================================================================"
+fi
 
 if [ -n "${DRY_RUN:-}" ]; then
     # Холостой выпуск: тестовый сервер LE, сертификат и конфигурация не меняются.
     # shellcheck disable=SC2086
-    certbot certonly --webroot -w /var/www/certbot --dry-run \
-        --non-interactive --agree-tos --email "$EMAIL" --cert-name stand $ARGS
+    certbot certonly --webroot -w "$WEBROOT" --dry-run \
+        --non-interactive --agree-tos $EMAIL_ARGS --cert-name stand $ARGS
     echo "Холостой выпуск прошёл — боевой: без DRY_RUN."
     exit 0
 fi
 
 # Почта учётной записи — на ней письма об истечении. Прежняя учётка заведена
 # без почты (--register-unsafely-without-email): обновляем, не перерегистрируя.
-certbot update_account --non-interactive --email "$EMAIL" --no-eff-email >/dev/null 2>&1 || true
+# Отказ НЕ глушим: адрес задан — значит, его ждут, и молчаливый отказ хуже
+# громкого (п.9).
+if [ -n "$EMAIL" ]; then
+    if ! certbot update_account --non-interactive --email "$EMAIL" --no-eff-email; then
+        echo "ОШИБКА: Let's Encrypt не принял почту учётки ($EMAIL) — выпуск остановлен."
+        exit 1
+    fi
+    echo "почта учётки Let's Encrypt: $EMAIL"
+fi
 
 # webroot, а не standalone: nginx остаётся ПОДНЯТЫМ. Гасить его ради продления
 # значит ронять стенд каждые три месяца.
 # shellcheck disable=SC2086
-certbot certonly --webroot -w /var/www/certbot \
-    --non-interactive --agree-tos --email "$EMAIL" \
+certbot certonly --webroot -w "$WEBROOT" \
+    --non-interactive --agree-tos $EMAIL_ARGS \
     --cert-name stand $ARGS
 
 sed 's/STAND_CERT/stand/g' "$HERE/tls.enabled.conf.template" > "$HERE/live/tls.enabled.conf"

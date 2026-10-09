@@ -7,7 +7,13 @@
 открываются, ручки отвечают, всё зелёное, а половины волны нет. Мы на этом уже
 обжигались, и ловили руками. Здесь ловится одной командой:
 
+    python3 backend/scripts/check_stand_api.py              # главная база стенда
     python3 backend/scripts/check_stand_api.py https://crystal.app.147.45.245.172.sslip.io
+
+Без аргумента — адрес отеля (`STAND_HOTEL`, по умолчанию crystal) на ГЛАВНОЙ
+базе: первая в `APP_DOMAINS`, если переменная задана, иначе MAIN_BASE — та же,
+что первой стоит в `.env.prod` стенда (с партии 50 — naviroom). Вторым прогоном
+— явный адрес на другой базе (sslip).
 
 Сверяется ПЕРЕЧЕНЬ АДРЕСОВ И МЕТОДОВ, а не тела ответов: схема OpenAPI живёт на
 стенде сама и не требует ни входа, ни данных. Появился адрес в коде — он обязан
@@ -62,11 +68,27 @@ def snapshot_paths() -> dict[str, set[str]]:
     }
 
 
+# Главная база стенда — первая в APP_DOMAINS его `.env.prod` (партия 50).
+MAIN_BASE = "naviroom.navicentric.ru"
+
+
+def stand_url(argv: list[str], env: dict[str, str]) -> str:
+    """Адрес проверки: явный аргумент, иначе отель на главной базе."""
+    if len(argv) > 1 and argv[1] not in ("-h", "--help"):
+        return argv[1]
+    bases = [part.strip() for part in env.get("APP_DOMAINS", "").split(",") if part.strip()]
+    base = bases[0] if bases else MAIN_BASE
+    return f"https://{env.get('STAND_HOTEL', 'crystal')}.{base}"
+
+
 def main() -> int:
-    if len(sys.argv) < 2:
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
         print(__doc__.strip())
         return 2
-    base = sys.argv[1]
+    import os
+
+    base = stand_url(sys.argv, dict(os.environ))
+    print(f"стенд: {base}")
 
     stand = stand_paths(base)
     snapshot = snapshot_paths()

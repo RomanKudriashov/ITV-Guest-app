@@ -147,3 +147,30 @@ def test_without_a_base_the_certificate_is_not_checked(command, settings):
     notes: list[str] = []
     command._check_certificate(notes)
     assert notes == []
+
+
+# --- Какую базу проверять (партия 51) ------------------------------------------
+
+
+def test_by_default_the_main_base_is_checked(command, monkeypatch, settings):
+    """УКУС. Без `--base` — главная база, первая в APP_DOMAINS (с партии 50 — naviroom)."""
+    from apps.hotels.management.commands import check_demo_stand
+
+    settings.APP_DOMAINS = ["naviroom.example.test", "app.10.0.0.1.sslip.io"]
+    seen: list[str] = []
+    monkeypatch.setattr(check_demo_stand, "certificate_days_left", lambda host: seen.append(host) or 80)
+    command.base = ""
+    command._check_certificate([])
+    assert seen == ["naviroom.example.test"]
+
+
+def test_base_option_checks_the_second_base(command, monkeypatch, settings):
+    """УКУС. `--base` — второй прогон по другой базе (sslip), а не снова главная."""
+    from apps.hotels.management.commands import check_demo_stand
+
+    settings.APP_DOMAINS = ["naviroom.example.test", "app.10.0.0.1.sslip.io"]
+    seen: list[str] = []
+    monkeypatch.setattr(check_demo_stand, "certificate_days_left", lambda host: seen.append(host) or 80)
+    command.base = "app.10.0.0.1.sslip.io"
+    command._check_certificate([])
+    assert seen == ["app.10.0.0.1.sslip.io"]

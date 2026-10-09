@@ -416,22 +416,14 @@ export function LandingPage() {
           {/*
             ФОРМЫ ЗДЕСЬ НЕТ НАМЕРЕННО. Форма — это ручка на бэкенде, приём
             персональных данных и защита от ботов; лендинг обязан открываться
-            без единого запроса. Телефон работает без всего этого.
+            без единого запроса.
 
-            ПОЧТЫ НЕТ (партия 50, решение тек-лида): прежний адрес был
-            заглушкой `hello@itv.example`, настоящего контакта пока нет, а
-            кнопка, ведущая в никуда, хуже отсутствующей.
+            КОНТАКТОВ ТОЖЕ НЕТ (партии 50–51, решение тек-лида): почта и телефон
+            были заглушками (`hello@itv.example`, `+7 900 000-00-00`), настоящих
+            пока нет, а кнопка, ведущая в никуда, хуже отсутствующей. Появится
+            контакт — кнопка вернётся с ним; сторож `check-brand-name.mjs` не
+            пустит заглушку обратно.
           */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1 }}>
-            <Button
-              variant="outlined"
-              size="large"
-              href={`tel:${t('landing.contact.phoneHref')}`}
-              data-testid="landing-phone"
-            >
-              {t('landing.contact.phone')}
-            </Button>
-          </Stack>
           <Typography variant="caption" color="text.secondary" sx={{ pt: 1 }}>
             {t('landing.contact.pricing')}
           </Typography>

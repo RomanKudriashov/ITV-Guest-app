@@ -3631,8 +3631,6 @@
     "contact": {
       "title": "Getting started",
       "body": "We will show it on a live stand and price it for your property: number of rooms, venues and the modules you need.",
-      "phone": "+7 900 000-00-00",
-      "phoneHref": "+79000000000",
       "pricing": "Pricing on request: it depends on the number of rooms, venues and enabled modules."
     },
     "footer": {

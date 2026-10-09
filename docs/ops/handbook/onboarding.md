@@ -55,7 +55,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod \
 списке не появится сам:
 
 ```bash
-APP_DOMAIN=example.com ./infra/nginx/enable-tls.sh admin@example.com
+APP_DOMAIN=example.com LE_EMAIL=admin@example.com ./infra/nginx/enable-tls.sh
 docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx
 ```
 

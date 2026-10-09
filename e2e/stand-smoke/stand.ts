@@ -1,6 +1,10 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
 import { platformPassword } from './platformPassword.mjs'
+// Адреса по умолчанию — главная база стенда, см. `standBase.ts`.
+import { HOTEL, HOTEL_BASE, STAND } from './standBase'
+
+export { HOTEL, HOTEL_BASE, STAND }
 
 /**
  * Адреса и учётки стенда. ДВА РАЗНЫХ ХОСТА — и это не придирка: консоль
@@ -8,9 +12,6 @@ import { platformPassword } from './platformPassword.mjs'
  * на запрос, пришедший с адреса отеля. Основной набор знает один адрес API —
  * ровно поэтому он против стенда и не идёт.
  */
-export const STAND = process.env.E2E_STAND ?? 'http://localhost:5183'
-export const HOTEL_BASE = process.env.E2E_STAND_HOTEL ?? STAND
-export const HOTEL = process.env.E2E_HOTEL ?? 'crystal'
 
 /** Пароли — только из окружения: в репозиторий пароли стенда не кладём. */
 export const ADMIN = {

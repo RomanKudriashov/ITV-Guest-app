@@ -31,13 +31,15 @@ for (const language of LANGUAGES) {
   })
 }
 
-test('лендинг — NaviRoom, без почты-заглушки', async ({ page }) => {
+test('лендинг — NaviRoom, без заглушек почты и телефона', async ({ page }) => {
   await page.goto(`${ROOT}/`)
   await expect(page.getByTestId('landing-hero')).toBeVisible({ timeout: 30_000 })
   await page.getByTestId('landing-contact').scrollIntoViewIfNeeded()
   await expect(page.getByTestId('landing-contact')).toContainText('NaviRoom — гостевой сервис отеля')
   await expect(page.getByTestId('landing-email')).toHaveCount(0)
-  await expect(page.locator('body')).not.toContainText(/ITV Guest|itv\.example/)
+  // Телефон-заглушка ушёл вслед за почтой (партия 51).
+  await expect(page.getByTestId('landing-phone')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText(/ITV Guest|itv\.example|000-00-00/)
 })
 
 test('консоль платформы — NaviRoom Platform', async ({ page }) => {

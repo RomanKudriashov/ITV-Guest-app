@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { STAND } from './standBase'
+
 /**
  * СМОКОВЫЙ НАБОР ДЛЯ СТЕНДА — свой проект, и это главное в нём.
  *
@@ -20,9 +22,8 @@ import { defineConfig, devices } from '@playwright/test'
  *
  *     # Пароль платформы смок берёт сам из ~/.config/itv-stand/platform-password
  *     # (права 600; переопределить — E2E_PLATFORM_PASSWORD или E2E_PLATFORM_PASSWORD_FILE).
- *     E2E_STAND=https://app.147.45.245.172.sslip.io \
- *     E2E_STAND_HOTEL=https://crystal.app.147.45.245.172.sslip.io \
- *     npx playwright test --config stand-smoke/playwright.config.ts
+ *     npm run smoke                                            # главная база (naviroom)
+ *     E2E_STAND_BASE=app.147.45.245.172.sslip.io npm run smoke # второй прогон — sslip
  */
 export default defineConfig({
   testDir: './tests',
@@ -33,7 +34,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   reporter: [['list']],
   use: {
-    baseURL: process.env.E2E_STAND ?? 'http://localhost:5183',
+    baseURL: STAND,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',

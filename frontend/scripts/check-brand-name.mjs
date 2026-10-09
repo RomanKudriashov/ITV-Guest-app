@@ -34,10 +34,33 @@ function scan(label, text) {
   });
 }
 
+/*
+  ЗАГЛУШКИ КОНТАКТОВ (партия 51). На лендинге стояли `hello@itv.example` и
+  `+7 900 000-00-00` — кнопки, ведущие в никуда. Пример ФОРМАТА в подсказке
+  поля («например +7 900 000-00-00») — законен: ключи `…Hint` и `…placeholder`
+  сторож пропускает, остальные строки — нет.
+*/
+const PLACEHOLDER_CONTACT = /000[\s-]?00[\s-]?00|@[\w.-]*\.example\b|\bitv\.example\b/i;
+const EXAMPLE_KEY = /(hint|placeholder)$/i;
+
+function scanContacts(label, node, path = '') {
+  if (typeof node === 'string') {
+    const key = path.split('.').pop() ?? '';
+    if (PLACEHOLDER_CONTACT.test(node) && !EXAMPLE_KEY.test(key)) {
+      problems.push(`${label}: ${path} = «${node}» — заглушка контакта на виду`);
+    }
+    return;
+  }
+  if (node && typeof node === 'object') {
+    for (const [key, value] of Object.entries(node)) scanContacts(label, value, path ? `${path}.${key}` : key);
+  }
+}
+
 const languages = readdirSync(LOCALES).filter((file) => file.endsWith('.json'));
 for (const file of languages) {
   const text = readFileSync(LOCALES + file, 'utf8');
   scan(`src/i18n/locales/${file}`, text);
+  scanContacts(`src/i18n/locales/${file}`, JSON.parse(text));
   const title = JSON.parse(text).app?.title;
   if (title !== NAME) problems.push(`src/i18n/locales/${file}: app.title = «${title}», а не «${NAME}»`);
 }
@@ -65,4 +88,4 @@ if (problems.length) {
   console.error(`Видимое имя продукта — ${NAME}. Найдено прежнее:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Имя продукта сверено: ${languages.length} словаря, index.html, манифест (копия и сборка) — везде ${NAME}`);
+console.log(`Имя продукта сверено: ${languages.length} словаря, index.html, манифест (копия и сборка) — везде ${NAME}; заглушек контактов нет`);

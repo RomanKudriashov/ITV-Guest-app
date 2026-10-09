@@ -257,7 +257,8 @@ Telegram отдаёт бота только одному серверу, вто�
 
 **Изнутри — «стенд здоров»:**
 
-    dc exec backend python manage.py check_demo_stand
+    dc exec backend python manage.py check_demo_stand                                   # сертификат главной базы
+    dc exec backend python manage.py check_demo_stand --base app.147.45.245.172.sslip.io  # второй прогон
 
 Кроме наполнения она проверяет ЗДОРОВЬЕ — семь вещей, каждая из которых уже
 один раз подвела на выкатке 19.09.2026, когда наполнение было в порядке, а
@@ -277,9 +278,8 @@ Telegram отдаёт бота только одному серверу, вто�
 
 **Снаружи — «экраны и ручки живы»** (гоняется с машины разработчика):
 
-    cd e2e && E2E_STAND=https://app.147.45.245.172.sslip.io \
-      E2E_STAND_HOTEL=https://crystal.app.147.45.245.172.sslip.io \
-      npm run smoke
+    cd e2e && npm run smoke                                            # главная база (naviroom)
+    cd e2e && E2E_STAND_BASE=app.147.45.245.172.sslip.io npm run smoke # второй прогон — sslip
 
 Пароль владельца платформы смок (и `stand-sweep.mjs`, `console-audit.mjs`)
 берёт из файла **на машине разработчика**: `~/.config/itv-stand/platform-password`,
@@ -312,7 +312,8 @@ Telegram отдаёт бота только одному серверу, вто�
 
 **Снаружи — «тот ли код»:**
 
-    python3 backend/scripts/check_stand_api.py https://crystal.app.147.45.245.172.sslip.io
+    python3 backend/scripts/check_stand_api.py                                          # главная база
+    python3 backend/scripts/check_stand_api.py https://crystal.app.147.45.245.172.sslip.io  # второй прогон
 
 Сверяет карту адресов стенда со снимком репозитория. Ловит ровно ту ошибку,
 на которой здесь уже обжигались: образ не пересобрали, стенд молча работает по
