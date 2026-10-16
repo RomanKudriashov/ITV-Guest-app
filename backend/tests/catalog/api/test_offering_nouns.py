@@ -119,3 +119,44 @@ def test_spa_categories_never_say_dish(cms, in_crystal):
     assert nodes, "у спа нет разделов ни одного типа — проверять нечего"
     for node in nodes:
         assert node["noun"] == OfferingNoun.SERVICE, node["code"]
+
+
+def test_category_payload_names_its_service(cms, in_crystal, django_assert_max_num_queries):
+    """
+    УКУС (партия 56). Раздел говорит, чей он: `service_id` и имя заведения.
+
+    Без них редактор позиции не знал, в меню какого заведения вернуться, и
+    «Назад» вёл в общий список сервисов. Имя берётся у уже загруженного
+    сервиса — список разделов не должен вырасти на запрос за каждый раздел.
+    """
+    from apps.catalog.models import Category
+
+    with django_assert_max_num_queries(25):
+        response = cms.get("/api/cms/categories")
+    assert response.status_code == 200
+    rows = response.json()
+    assert rows, "на стенде нет разделов — проверять нечего"
+
+    def walk(nodes):
+        for node in nodes:
+            yield node
+            yield from walk(node.get("children") or [])
+
+    nodes = list(walk(rows))
+    # Менеджер по умолчанию режет разделы по виду — берём полный.
+    # Запрос к API сбрасывает контекст отеля на выходе — выставляем заново.
+    from apps.core.context import tenant_context
+
+    with tenant_context(in_crystal):
+        known = {
+            str(c.pk): c
+            for c in Category.all_objects.select_related("service").filter(pk__in=[n["id"] for n in nodes])
+        }
+    assert len(known) == len(nodes)
+    for node in nodes:
+        category = known[node["id"]]
+        assert node["service_id"] == (str(category.service_id) if category.service_id else None)
+        if category.service_id:
+            assert node["service_name"] == (category.service.public_name or {})
+    assert any(node["service_id"] for node in nodes), "ни у одного раздела не названо заведение"
+

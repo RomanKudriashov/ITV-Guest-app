@@ -15,6 +15,9 @@ import { useTranslation } from 'react-i18next';
 
 import { api } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
+import { PageContainer } from '@/components/PageContainer';
+import { glassSx } from '@/kit/glass';
+import { useGlassPage } from '@/layouts/glassScope';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { formatMoney } from '@/utils/money';
 import { pickTranslated } from '@/utils/translated';
@@ -45,6 +48,8 @@ const REFRESH_MS = 60_000;
 
 export function DashboardPage() {
   const { t } = useTranslation();
+  // Образец стеклянного стиля (партия 56, шаг 1).
+  useGlassPage();
 
   const dashboard = useQuery({
     queryKey: ['cms', 'dashboard'],
@@ -53,7 +58,17 @@ export function DashboardPage() {
   });
 
   return (
-    <Box sx={{ p: 3 }} data-testid="cms-dashboard">
+    <PageContainer
+      testId="cms-dashboard"
+      sx={(theme) => ({
+        // Плитки и карточки — стекло над подложкой: меньше рамок, мягкая тень,
+        // одно скругление. Текст внутри — на планке контраста темы.
+        '& .MuiCard-root.MuiPaper-outlined': {
+          ...glassSx(theme, 'panel'),
+          borderRadius: `${theme.palette.brand.radius.lg}px`,
+        },
+      })}
+    >
       <Typography variant="h5" data-testid="cms-page-title" sx={{ mb: 0.5 }}>
         {t('dashboard.title')}
       </Typography>
@@ -78,7 +93,7 @@ export function DashboardPage() {
           </Stack>
         )}
       </QueryState>
-    </Box>
+    </PageContainer>
   );
 }
 
@@ -132,7 +147,19 @@ function Attention({ cards }: { cards: DashboardAttention[] }) {
                 alignItems: 'center',
                 gap: 2,
                 flexWrap: 'wrap',
-                borderColor: card.severity === 'error' ? 'error.main' : 'warning.main',
+                position: 'relative',
+                // Важность — полосой у начала строки, а не цветной рамкой
+                // вокруг всей карточки: меньше рамок, тот же сигнал.
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  insetInlineStart: 0,
+                  top: 12,
+                  bottom: 12,
+                  width: 4,
+                  borderRadius: 4,
+                  bgcolor: card.severity === 'error' ? 'error.main' : 'warning.main',
+                },
               }}
             >
               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
@@ -275,7 +302,7 @@ function Delta({ value }: { value?: number | null }) {
   const { t } = useTranslation();
   if (value === null || value === undefined) {
     return (
-      <Typography variant="caption" color="text.disabled">
+      <Typography variant="caption" color="text.secondary">
         {t('dashboard.noDelta')}
       </Typography>
     );
@@ -296,7 +323,8 @@ function Delta({ value }: { value?: number | null }) {
       >
         {flat ? '0%' : `${percent > 0 ? '+' : ''}${percent}%`}
       </Typography>
-      <Typography variant="caption" color="text.disabled">
+      {/* Не `text.disabled`: это живая подпись, а не неактивное — нужна планка 4.5 (партия 56). */}
+      <Typography variant="caption" color="text.secondary">
         {t('dashboard.vsYesterday')}
       </Typography>
     </Stack>

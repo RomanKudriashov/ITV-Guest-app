@@ -1,3 +1,5 @@
+import { glassShadow, glassSx, solidSx } from '@/kit/glass';
+import { useGlassPage } from '@/layouts/glassScope';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,6 +46,7 @@ const STATUS_TONE = {
  * необратимое (удаление, офбординг) делается по одному отелю и с подтверждением.
  */
 export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }) {
+  useGlassPage();
   const actionFailed = useActionFailed();
   const { canWrite } = useRights();
   const { t, i18n } = useTranslation();
@@ -122,6 +125,8 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
 
   return (
     <Box data-testid="admin-fleet">
+      {/* Образец стеклянного стиля (партия 56, шаг 1): фильтры — на стекле,
+          реестр — плотной таблицей. */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{ flexGrow: 1 }}>
           <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
@@ -146,7 +151,12 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         ) : null}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, mt: 2.25, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box
+        sx={[
+          { display: 'flex', gap: 1, mt: 2.25, flexWrap: 'wrap', alignItems: 'center' },
+          (theme) => ({ ...glassSx(theme, 'panel'), borderRadius: `${theme.palette.brand.radius.lg}px`, p: 1.5 }),
+        ]}
+      >
         {/* Поиск — общим полем поиска (лупа + подсказка), а не самодельной
             рамкой с InputBase (партия 55). */}
         <SearchField
@@ -270,7 +280,13 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
 
       <QueryState query={fleet} what={t('state.what.fleet')}>
         {() => (
-        <Box sx={{ mt: 1.5, overflowX: 'auto' }}>
+        <Box
+          sx={[
+            { mt: 1.5, overflowX: 'auto', px: 1 },
+            // Реестр — содержимое: непрозрачно, текст на планке контраста.
+            (theme) => ({ ...solidSx(theme), boxShadow: glassShadow(theme) }),
+          ]}
+        >
           <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
             <Box component="thead">
               <Box component="tr">

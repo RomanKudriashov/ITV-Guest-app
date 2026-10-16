@@ -190,6 +190,9 @@ export interface Category {
    * повторяет этот вывод, он его читает. См. `@/offerings/nouns`.
    */
   noun?: OfferingNoun;
+  /** Заведение раздела — родитель для «← Меню «…»» в редакторах (партия 56). */
+  service_id?: string | null;
+  service_name?: Record<string, string>;
   children?: Category[];
 }
 

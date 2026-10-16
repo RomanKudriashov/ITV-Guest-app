@@ -160,6 +160,13 @@ def serialize_category(
         # обязан знать слово, не сходив за заведением. Выводится из типа
         # заведения — см. `apps/catalog/nouns.py`.
         "noun": noun_for_service(category.service),
+        # ЧЕЙ ЭТО РАЗДЕЛ — для «← Меню «Панорамы»» в редакторах (партия 56):
+        # без него редактор позиции не знал, в меню какого заведения вернуться,
+        # и вёл в общий список сервисов. Имя — `public_name` уже загруженного
+        # сервиса, без похода за исполнителем: на списке разделов это был бы
+        # лишний запрос на каждый раздел.
+        "service_id": str(category.service_id) if category.service_id else None,
+        "service_name": (category.service.public_name or {}) if category.service_id else {},
         "title": category.title or {},
         "description": category.description or {},
         "image": serialize_asset(category.image),

@@ -21,6 +21,9 @@ import { MOTION, usePrefersReducedMotion } from '@/kit/motion';
 import { STORAGE_KEYS } from '@/storageKeys';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { accent, ink, layout, pageBackground, shape, surface, typo } from './adminTokens';
+import { glassEdge, glassSx } from '@/kit/glass';
+import { PageBackdrop } from '@/components/PageBackdrop';
+import { GlassScope, useGlassState } from '@/layouts/glassScope';
 import type { PlatformMe } from './adminClient';
 
 export interface AdminSection {
@@ -89,7 +92,10 @@ export function AdminShell({
   const [collapsed, toggleCollapsed] = useNavCollapsed(STORAGE_KEYS.platformNavCollapsed);
   const mini = collapsed && !isNarrow;
   const reduceMotion = usePrefersReducedMotion();
-  const rtl = useTheme().direction === 'rtl';
+  const theme = useTheme();
+  const rtl = theme.direction === 'rtl';
+  // Стекло рамки включает экран-образец (партия 56, шаг 1).
+  const glass = useGlassState();
   const tipPlacement = rtl ? 'left' : 'right';
   const groups = sections.reduce<{ group: string | undefined; items: AdminSection[] }[]>(
     (acc, section) => {
@@ -278,11 +284,14 @@ export function AdminShell({
   );
 
   return (
+    <GlassScope value={glass}>
     <Box
       data-testid="admin-shell"
       sx={{
         minHeight: '100dvh',
-        background: pageBackground,
+        // Под стеклом — подложка-градиент (свой слой), а не ровный фон.
+        background: glass.on ? 'transparent' : pageBackground,
+        isolation: 'isolate',
         color: ink.hi,
         display: 'grid',
         // Содержимое сдвигается вместе с шириной панели (партия 55).
@@ -292,6 +301,7 @@ export function AdminShell({
           : `grid-template-columns ${MOTION.duration.base}ms ${MOTION.easing.entrance}`,
       }}
     >
+      {glass.on ? <PageBackdrop /> : null}
       {/*
         На узком экране навигация уезжает в шторку. До этого её попросту не
         было: панель скрывалась через `display: none`, а замены не появилось —
@@ -331,8 +341,9 @@ export function AdminShell({
           height: '100dvh',
           minWidth: 0,
           overflow: 'hidden',
-          bgcolor: surface.s1,
-          borderRight: `1px solid ${surface.line}`,
+          ...(glass.on
+            ? { ...glassSx(theme, 'panel', { edge: false, shadow: false }), borderRight: glassEdge(theme) }
+            : { bgcolor: surface.s1, borderRight: `1px solid ${surface.line}` }),
         }}
       >
         {renderNavigation(mini)}
@@ -374,9 +385,20 @@ export function AdminShell({
             alignItems: 'center',
             gap: 1.5,
             px: 3,
-            bgcolor: surface.bar,
-            backdropFilter: 'blur(24px) saturate(1.5)',
-            borderBottom: `1px solid ${surface.hair}`,
+            ...(glass.on
+              ? {
+                  // Липкая: под ней проходит реестр — размытию есть что размывать.
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                  ...glassSx(theme, 'bar', { edge: false, shadow: false }),
+                  borderBottom: glassEdge(theme),
+                }
+              : {
+                  bgcolor: surface.bar,
+                  backdropFilter: 'blur(24px) saturate(1.5)',
+                  borderBottom: `1px solid ${surface.hair}`,
+                }),
           }}
         >
           <IconButton
@@ -401,5 +423,6 @@ export function AdminShell({
         </Box>
       </Box>
     </Box>
+    </GlassScope>
   );
 }

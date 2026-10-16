@@ -59,6 +59,9 @@ import { SectionClosed } from './SectionClosed';
 import { allowedSections, sectionOf } from './sectionGate';
 import type { SupportSession } from '@/api/types';
 import { StaffScale } from '@/theme/StaffScale';
+import { glassEdge, glassSx } from '@/kit/glass';
+import { PageBackdrop } from '@/components/PageBackdrop';
+import { GlassScope, useGlassState } from './glassScope';
 
 const DRAWER_WIDTH = 248;
 /** Свёрнутое меню — одни иконки (партия 55). */
@@ -116,6 +119,8 @@ const FALLBACK_ICON = <GroupWorkOutlinedIcon fontSize="small" />;
 
 export function AppShell() {
   const location = useLocation();
+  // Стекло рамки включает экран-образец (партия 56, шаг 1).
+  const glass = useGlassState();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, hotel, logout } = useAuth();
@@ -199,7 +204,17 @@ export function AppShell() {
 
   return (
     <StaffScale>
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <GlassScope value={glass}>
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        // Под стеклом фон — подложка-градиент (свой слой ниже), а не ровный цвет.
+        bgcolor: glass.on ? 'transparent' : 'background.default',
+        isolation: 'isolate',
+      }}
+    >
+      {glass.on ? <PageBackdrop /> : null}
       {/*
         ЧУЖОЕ ПРИСУТСТВИЕ. Пока поддержка внутри отеля, отель обязан это
         видеть — и видеть постоянно, а не в разделе, куда надо зайти.
@@ -211,12 +226,23 @@ export function AppShell() {
       <AppBar
         position="fixed"
         color="inherit"
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          borderBottom: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
+        sx={[
+          {
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            borderBottom: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          },
+          // Стекло (партия 56): под шапкой прокручивается содержимое — размытие
+          // здесь и работает. Кромка — только снизу, тени нет: шапка — край.
+          glass.on
+            ? (theme) => ({
+                ...glassSx(theme, 'bar', { edge: false, shadow: false }),
+                borderBottom: glassEdge(theme),
+                boxShadow: 'none',
+              })
+            : {},
+        ]}
       >
         {/*
           На телефоне шапка обязана уместиться (партия 31, DEV-08 QA): зазоры
@@ -312,9 +338,11 @@ export function AppShell() {
             transition: widthTransition,
             overflowX: 'hidden',
             boxSizing: 'border-box',
-            borderRight: 1,
             borderColor: 'divider',
-            bgcolor: 'background.paper',
+            // Меню — стекло над подложкой; кромка справа вместо серой черты.
+            ...(glass.on
+              ? { ...glassSx(theme, 'panel', { edge: false, shadow: false }), borderRight: glassEdge(theme) }
+              : { borderRight: 1, bgcolor: 'background.paper' }),
           },
         }}
       >
@@ -474,6 +502,7 @@ export function AppShell() {
         </ScreenBoundary>
       </Box>
     </Box>
+    </GlassScope>
     </StaffScale>
   );
 }

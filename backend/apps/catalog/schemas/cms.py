@@ -76,6 +76,9 @@ class CategoryOut(Schema):
     # молча не доезжало до экрана. Умолчание нейтральное — раздел без
     # заведения теоретически возможен, и «блюдом» его звать не за что.
     noun: str = "item"
+    # Заведение раздела — родитель для «← Назад» в редакторах (партия 56).
+    service_id: str | None = None
+    service_name: Translations = {}
 
 class CategoryTreeOut(CategoryOut):
     children: list[dict[str, Any]] = []

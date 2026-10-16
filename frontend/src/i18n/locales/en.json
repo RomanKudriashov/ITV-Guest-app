@@ -3994,5 +3994,9 @@
       "venue": "Our venue",
       "page": "Description page"
     }
+  },
+  "back": {
+    "serviceMenu": "{{name}} menu",
+    "menu": "Menu"
   }
 }

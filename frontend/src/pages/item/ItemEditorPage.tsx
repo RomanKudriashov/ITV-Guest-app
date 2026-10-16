@@ -1,9 +1,13 @@
+import { BackLink } from '@/kit/BackLink';
+import { glassSx } from '@/kit/glass';
+import { useGlassPage } from '@/layouts/glassScope';
+import { parentOf } from '@/app/backMap';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -23,7 +27,6 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -218,6 +221,7 @@ function categoryOptions(flat: FlatCategory[], title: (category: Category) => st
 }
 
 export function ItemEditorPage() {
+  useGlassPage();
   const { t } = useTranslation();
   const { id: routeId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -284,6 +288,21 @@ export function ItemEditorPage() {
     const chosen = flatCategories.find((row) => row.category.id === form.category_id);
     return (chosen?.category.noun as OfferingNoun | undefined) ?? null;
   }, [flatCategories, form.category_id]);
+
+  // Родитель для «← Назад»: заведение раздела, в котором лежит позиция.
+  const location = useLocation();
+  const parentCategory = flatCategories.find((row) => row.category.id === form.category_id)?.category;
+  const back = parentOf(
+    location.pathname,
+    {
+      service: parentCategory?.service_id
+        ? { id: parentCategory.service_id, name: parentCategory.service_name }
+        : null,
+      language: languages.displayLanguage,
+      fallbackLanguage: languages.defaultCode,
+    },
+    t,
+  );
   const w = useCatalogWords(noun);
 
   /*
@@ -822,7 +841,18 @@ export function ItemEditorPage() {
   const currency = currencySymbol(bootstrap.hotel.currency, languages.displayLanguage);
 
   return (
-    <PageContainer sx={{ pb: 10 }}>
+    <PageContainer
+      sx={(theme) => ({
+        pb: 10,
+        // Образец стекла (партия 56): секции — стекло над подложкой, поля
+        // внутри — плотные, текст ввода не зависит от того, что просвечивает.
+        '& .MuiCard-root.MuiPaper-outlined': {
+          ...glassSx(theme, 'panel'),
+          borderRadius: `${theme.palette.brand.radius.lg}px`,
+        },
+        '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' },
+      })}
+    >
       {/* Шапка переносится, а не режет название многоточием: на 390
           «Брускетта» не помещалась рядом с «Назад» и «Сохранить» (партия 55). */}
       <Stack
@@ -834,13 +864,9 @@ export function ItemEditorPage() {
         rowGap={1}
         sx={{ mb: 2 }}
       >
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(cmsPath('/menu'))}
-          data-testid="item-back-button"
-        >
-          {t('common.back')}
-        </Button>
+        {/* «← Меню «Панорамы»» — в меню СВОЕГО заведения по карте маршрутов
+            (партия 56); было «Назад» в общий список сервисов. */}
+        {back ? <BackLink to={back.to} label={back.label} testId="item-back-button" /> : null}
         <Stack sx={{ flex: '1 1 160px', minWidth: 0 }}>
           <Typography variant="h5" sx={{ overflowWrap: 'anywhere' }}>
             {isNew

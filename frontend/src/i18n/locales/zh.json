@@ -3959,5 +3959,9 @@
       "venue": "本店场所",
       "page": "说明页"
     }
+  },
+  "back": {
+    "serviceMenu": "「{{name}}」菜单",
+    "menu": "菜单"
   }
 }
