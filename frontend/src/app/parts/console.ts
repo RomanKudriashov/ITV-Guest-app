@@ -1,2 +1,2 @@
-/** ЧАСТЬ «КОНСОЛЬ ПЛАТФОРМЫ» — `/admin` корня платформы. */
+/** ЧАСТЬ «NAVIROOM CONTROL» — `/admin` корня платформы. */
 export { AdminApp } from '@/admin/AdminApp';

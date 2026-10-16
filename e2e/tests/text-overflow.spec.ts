@@ -329,7 +329,7 @@ for (const mode of ['dark', 'light'] as const) {
       await waitForLayout(page)
       expect(await clippedTexts(page), `/login (${mode}/${vp.name})`).toEqual([])
 
-      // Платформенная консоль: сводка и флот — экраны с плотными счётчиками,
+      // NaviRoom Control: сводка и флот — экраны с плотными счётчиками,
       // где чипы и плашки обрезаются в первую очередь.
       await page.goto('/admin')
       await page.getByTestId('admin-login-email').fill('platform@itv.local')
@@ -339,7 +339,7 @@ for (const mode of ['dark', 'light'] as const) {
       await waitForLayout(page)
       expect(await clippedTexts(page), `/admin сводка (${mode}/${vp.name})`).toEqual([])
 
-      // Флот — только там, где до него есть навигация. Консоль платформы
+      // Флот — только там, где до него есть навигация. NaviRoom Control
       // десктопная, и на узком экране боковое меню свёрнуто: гоняться за ним
       // здесь значило бы проверять не переполнение текста, а вёрстку меню.
       // Условие ШИРИНЫ, а не «видно ли кнопку». Проба видимости молчала бы и

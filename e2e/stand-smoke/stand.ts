@@ -41,7 +41,7 @@ export async function hotelToken(request: APIRequestContext): Promise<string> {
 export async function platformToken(request: APIRequestContext): Promise<string | null> {
   if (!PLATFORM.email || !PLATFORM.password) return null
   const response = await request.post(`${STAND}/api/platform/auth/login`, { data: PLATFORM })
-  expect(response.ok(), `вход в консоль платформы: ${response.status()}`).toBeTruthy()
+  expect(response.ok(), `вход в NaviRoom Control: ${response.status()}`).toBeTruthy()
   return (await response.json()).access
 }
 

@@ -45,7 +45,7 @@ import { DiagnosticsTab } from './DiagnosticsTab';
 type TabKey = 'access' | 'check' | 'diagnostics';
 
 /**
- * КОНФИГУРАЦИЯ ЖИВЁТ В КОНСОЛИ ПЛАТФОРМЫ, А НЕ ЗДЕСЬ.
+ * КОНФИГУРАЦИЯ ЖИВЁТ В NAVIROOM CONTROL, А НЕ ЗДЕСЬ.
  *
  * Импорт ПНР, конструктор, план и версии уехали: это наша пусконаладка, а не
  * работа отеля — администратор не открывает Excel с картой каналов и не
@@ -81,7 +81,7 @@ export function RoomControlPage() {
 
 function RoomControlSection() {
   const { t } = useTranslation();
-  // База API — из области: CMS отеля или консоль платформы.
+  // База API — из области: CMS отеля или NaviRoom Control.
   const { transport, languages } = useGrmsScope();
   const base = transport.base;
   const navigate = useNavigate();

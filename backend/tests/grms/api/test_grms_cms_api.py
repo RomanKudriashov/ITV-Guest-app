@@ -50,7 +50,7 @@ def _upload(cms, path: str, handle):
 def test_module_off_closes_every_endpoint(cms, crystal):
     """
     Гейтинг проверяется по тем ручкам, что у отеля ОСТАЛИСЬ: конфигурация
-    переехала в консоль платформы, и её маршрутов под `/cms` больше нет вовсе.
+    переехала в NaviRoom Control, и её маршрутов под `/cms` больше нет вовсе.
     Гейтинг платформенной стороны — в `test_grms_ownership`.
     """
     _enable_module(crystal, False)

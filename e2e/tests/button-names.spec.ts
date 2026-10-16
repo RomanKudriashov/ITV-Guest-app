@@ -73,7 +73,7 @@ test('витрина гостя: у всех кнопок есть имя — т
   expect(found, 'кнопки без имени для экранного диктора').toEqual([])
 })
 
-test('консоль платформы: у всех кнопок есть имя', async ({ page }) => {
+test('NaviRoom Control: у всех кнопок есть имя', async ({ page }) => {
   test.setTimeout(180_000)
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/admin')

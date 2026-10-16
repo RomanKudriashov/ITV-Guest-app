@@ -102,7 +102,7 @@ class TenantMiddleware:
                 return JsonResponse(
                     {
                         "detail": (
-                            "Консоль платформы живёт на "
+                            "NaviRoom Control живёт на "
                             f"{settings.GUEST_APP_BASE_DOMAIN}, а не на адресе отеля."
                         ),
                         "code": "platform_wrong_host",

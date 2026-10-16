@@ -215,7 +215,7 @@ test.describe('Бот Telegram', () => {
     }
   })
 
-  test('консоль платформы и экран уведомлений видят бота', async ({ page }) => {
+  test('NaviRoom Control и экран уведомлений видят бота', async ({ page }) => {
     test.setTimeout(90_000)
     await signInToCms(page, ADMIN)
     await page.goto('/cms/notifications')

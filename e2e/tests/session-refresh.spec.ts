@@ -118,7 +118,7 @@ test('десять параллельных запросов на протухш
   expect(refreshes, 'десять запросов затеяли несколько обновлений разом').toBe(1)
 })
 
-test('консоль платформы: тот же механизм — refresh хранится и обновляет', async ({ page }) => {
+test('NaviRoom Control: тот же механизм — refresh хранится и обновляет', async ({ page }) => {
   await page.goto('/admin')
   await page.evaluate(() => window.localStorage.clear())
   await page.goto('/admin')

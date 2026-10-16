@@ -32,7 +32,7 @@ const FORBIDDEN = [
   { re: /\/src\/pages\/(?!WrongHostNotice\.tsx)/, what: 'экран панели (src/pages)' },
   { re: /\/src\/layouts\//, what: 'оболочка панели (src/layouts)' },
   { re: /\/src\/tracker\//, what: 'трекер (src/tracker)' },
-  { re: /\/src\/admin\//, what: 'консоль платформы (src/admin)' },
+  { re: /\/src\/admin\//, what: 'NaviRoom Control (src/admin)' },
   { re: /\/src\/landing\//, what: 'лендинг (src/landing)' },
   { re: /\/src\/app\/parts\/(?!guest\.ts)/, what: 'чужая часть сборки (src/app/parts)' },
   { re: /\/src\/App\.tsx$/, what: 'служебная страница темы (src/App.tsx)' },

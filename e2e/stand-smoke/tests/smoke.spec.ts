@@ -243,7 +243,7 @@ test('витрины всех отелей стенда открываются',
   expect(broken, `витрины не открылись:\n${broken.join('\n')}`).toEqual([])
 })
 
-test('консоль платформы открывается', async ({ page, request }) => {
+test('NaviRoom Control открывается', async ({ page, request }) => {
   test.skip(!PLATFORM.email, 'пароль платформы не задан — консоль не проверяется')
   const token = await platformToken(request)
   await useToken(page, KEYS.platform, token as string)

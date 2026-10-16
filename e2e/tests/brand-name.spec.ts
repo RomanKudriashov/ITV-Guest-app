@@ -60,22 +60,22 @@ test('лендинг — NaviRoom, без заглушек почты и тел�
   браузера, марка в сайдбаре после входа.
 */
 for (const language of LANGUAGES) {
-  test(`консоль платформы на «${language}» — NaviRoom Control на входе и во вкладке`, async ({ page }) => {
+  test(`NaviRoom Control на «${language}» — на входе и во вкладке, без «Root · admin»`, async ({ page }) => {
     await page.addInitScript((lang) => window.localStorage.setItem('itv.lang', lang), language)
     await page.goto(`${ROOT}/admin`)
     await expect(page.getByTestId('admin-login-email')).toBeVisible({ timeout: 30_000 })
     await expect(page.getByText('NaviRoom Control', { exact: true })).toHaveCount(2)
     await expect(page).toHaveTitle('NaviRoom Control')
     await expect(page.locator('body')).not.toContainText(
-      /ITV Platform|NaviRoom Platform|Корневая админка|Root admin|لوحة الجذر|根管理台/,
+      /ITV Platform|NaviRoom Platform|Корневая админка|Root admin|Root · admin|لوحة الجذر|根管理台/,
     )
   })
 }
 
-test('консоль платформы после входа — NaviRoom Control в сайдбаре и во вкладке', async ({ page }) => {
+test('NaviRoom Control после входа — в сайдбаре и во вкладке, без «Root · admin»', async ({ page }) => {
   await loginConsoleByForm(page)
   await expect(page.getByTestId('admin-shell')).toContainText('NaviRoom Control')
   await expect(page.getByTestId('admin-brand-mark')).toHaveText('NC')
   await expect(page).toHaveTitle('NaviRoom Control')
-  await expect(page.getByTestId('admin-shell')).not.toContainText('NaviRoom Platform')
+  await expect(page.getByTestId('admin-shell')).not.toContainText(/NaviRoom Platform|Root · admin/i)
 })

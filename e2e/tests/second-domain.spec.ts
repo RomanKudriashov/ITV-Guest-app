@@ -16,7 +16,7 @@ const PORT = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5183').port |
 const ROOT = `http://naviroom.localhost:${PORT}`
 const HOTEL = `http://crystal.naviroom.localhost:${PORT}`
 
-test('корень второй базы — лендинг, а на /admin — консоль платформы', async ({ page }) => {
+test('корень второй базы — лендинг, а на /admin — NaviRoom Control', async ({ page }) => {
   await page.goto(`${ROOT}/`)
   await expect(page.getByTestId('landing')).toBeVisible({ timeout: 30_000 })
   await page.goto(`${ROOT}/admin`)

@@ -26,7 +26,7 @@ async function hotelId(request: APIRequestContext, headers: Record<string, strin
   const found = (await hotels.json()).items.find(
     (row: { subdomain: string }) => row.subdomain === HOTEL,
   )
-  expect(found, `отель ${HOTEL} не найден в консоли платформы`).toBeTruthy()
+  expect(found, `отель ${HOTEL} не найден в NaviRoom Control`).toBeTruthy()
   return found.id as string
 }
 

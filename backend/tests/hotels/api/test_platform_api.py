@@ -1,5 +1,5 @@
 """
-Платформенная консоль: логин, CRUD отелей, hotel-admin, деактивация,
+NaviRoom Control: логин, CRUD отелей, hotel-admin, деактивация,
 безопасность (scope в обе стороны), аудит. Контракт — docs/platform-api-contract.md.
 """
 

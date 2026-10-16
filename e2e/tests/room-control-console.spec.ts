@@ -6,7 +6,7 @@ import path from 'node:path'
 import { ADMIN, API, apiGet, apiHeaders, apiToken, HOTEL, PLATFORM, setPlanLevel, waitForLayout } from './helpers'
 
 /**
- * КОНФИГУРАЦИЯ УПРАВЛЕНИЯ НОМЕРОМ — В КОНСОЛИ ПЛАТФОРМЫ.
+ * КОНФИГУРАЦИЯ УПРАВЛЕНИЯ НОМЕРОМ — В NAVIROOM CONTROL.
  *
  * Эти проверки жили в наборе CMS отеля, потому что и раздел жил там. Услуга
  * платная и оказываем её мы: импорт ПНР, конструктор, план и публикация

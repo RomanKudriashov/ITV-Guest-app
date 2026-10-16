@@ -68,7 +68,7 @@ async function loginPanel(page: Page): Promise<void> {
   await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 })
 }
 
-// --- Книга консоли платформы -------------------------------------------------
+// --- Книга NaviRoom Control -------------------------------------------------
 
 test('консоль: сводка', async ({ page }) => {
   await loginConsole(page)

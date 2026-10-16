@@ -120,7 +120,7 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   const isSimple = level === 'simple';
   const isTiles = level === 'tiles';
   const { t } = useTranslation();
-  // База API — из области: CMS отеля или консоль платформы.
+  // База API — из области: CMS отеля или NaviRoom Control.
   const { transport, languages } = useGrmsScope();
   const base = transport.base;
   const toast = useToast();

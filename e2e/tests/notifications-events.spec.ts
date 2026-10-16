@@ -265,7 +265,7 @@ test.describe('Уведомления: события', () => {
       .toMatchObject({ enabled: false, customized: false })
   })
 
-  test('консоль платформы: служба расписания показывает виды заданий', async ({
+  test('NaviRoom Control: служба расписания показывает виды заданий', async ({
     page,
     request,
   }) => {

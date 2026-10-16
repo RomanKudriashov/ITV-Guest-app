@@ -161,7 +161,7 @@ def test_module_settings_survive_a_registry_switch(crystal):
 
     Реестр перезаписывал `config` целиком, и запрос без него молча очищал
     конфигурацию. В управлении номером там лежит флаг демо-входа: один заход в
-    платформенную консоль перед показом — и гость упирается в PIN, которого
+    NaviRoom Control перед показом — и гость упирается в PIN, которого
     никто не знает.
     """
     from apps.core.context import tenant_context

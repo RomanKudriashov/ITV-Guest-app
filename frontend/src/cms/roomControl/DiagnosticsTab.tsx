@@ -84,7 +84,7 @@ const EMPTY_FILTERS = {
 export function DiagnosticsTab({ type }: { type: GrmsType }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
-  // База API — из области: CMS отеля или консоль платформы.
+  // База API — из области: CMS отеля или NaviRoom Control.
   const { transport } = useGrmsScope();
   const base = transport.base;
 

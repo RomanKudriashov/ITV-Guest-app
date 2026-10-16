@@ -68,7 +68,7 @@ export function GrmsScopeProvider({
   languages,
   children,
 }: {
-  /** Задан — консоль платформы; не задан — CMS отеля. */
+  /** Задан — NaviRoom Control; не задан — CMS отеля. */
   hotelId?: string;
   /** Языки контента ОТЕЛЯ. Хозяин экрана приносит их сам — см. `GrmsScope`. */
   languages?: ContentLanguages;

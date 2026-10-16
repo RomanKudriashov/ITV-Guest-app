@@ -114,13 +114,13 @@ def test_setting_the_level_writes_the_journal_inside_the_tenant(crystal, room_ty
     `core_audit_log` — тенантная таблица под политикой: вставка снаружи
     контекста не «проходит как-нибудь», а отбивается InsufficientPrivilege.
     Первая редакция писала журнал во вьюхе, уже после выхода из контекста, и
-    падала только на пути платформенной консоли, где тенант не выставлен по
+    падала только на пути NaviRoom Control, где тенант не выставлен по
     умолчанию, — то есть ровно там, где эта ручка и живёт.
     """
     from apps.core.models import AuditLog
     from apps.grms.services import builder
 
-    # Контекст НЕ выставлен снаружи — как в платформенной консоли.
+    # Контекст НЕ выставлен снаружи — как в NaviRoom Control.
     builder.set_plan_level(crystal, room_type_code=room_type.code, level="simple", actor_type=SYSTEM_ACTOR)
 
     with tenant_context(crystal):

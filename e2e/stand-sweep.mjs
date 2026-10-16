@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { PLATFORM_PASSWORD_FILE, platformPassword } from './stand-smoke/platformPassword.mjs'
 
 /**
- * Обход стенда глазами: гость, панель отеля и платформенная консоль в двух
+ * Обход стенда глазами: гость, панель отеля и NaviRoom Control в двух
  * темах, на четырёх языках, на телефоне и десктопе.
  *
  * Скрипт НИЧЕГО НЕ СОЗДАЁТ — только открывает экраны. Стенд общий, и обход,
@@ -155,7 +155,7 @@ for (const viewport of ['desktop', 'phone']) {
   }
 }
 
-// --- Платформенная консоль -------------------------------------------------
+// --- NaviRoom Control -------------------------------------------------
 for (const theme of ['dark', 'light']) {
   const { ctx, page } = await open('desktop', { theme })
   const tag = `platform-${theme}`

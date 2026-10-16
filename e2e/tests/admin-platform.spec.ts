@@ -4,7 +4,7 @@ import { expect, test } from './fixtures'
 import { API, apiHeaders, apiToken, ADMIN } from './helpers'
 
 /**
- * R6: корневая админка /admin.
+ * R6: NaviRoom Control /admin.
  *
  * Главное, что здесь проверяется, — что админка УПРАВЛЯЕТ, а не показывает:
  * тумблер модуля меняет навигацию CMS живого отеля, вход в отель попадает в

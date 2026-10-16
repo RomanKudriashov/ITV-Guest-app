@@ -23,7 +23,7 @@ import { useAppTheme } from '@/theme';
 import { platformLogin, platformSession, PlatformError } from './adminClient';
 
 /**
- * Вход в консоль платформы.
+ * Вход в NaviRoom Control.
  *
  * Второй фактор открывается ПО ОТВЕТУ СЕРВЕРА, а не по догадке клиента: знать
  * до проверки пароля, заведена ли у этого адреса 2FA, клиент не должен — иначе
@@ -33,7 +33,7 @@ import { platformLogin, platformSession, PlatformError } from './adminClient';
  * Была светлая карточка 380px по центру серого поля: поля MUI по умолчанию,
  * заливная кнопка, ничего общего с дверью, через которую входят в тот же
  * продукт этажом ниже. Отличается ровно то, что и должно отличаться, —
- * подпись под маркой: «Root · admin».
+ * имя под маркой: NaviRoom Control. Подпись «Root · admin» убрана (партия 53).
  */
 export function AdminLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { t } = useTranslation();
@@ -83,7 +83,7 @@ export function AdminLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
     >
       <AuthAtmosphere />
 
-      <AuthBrand name={t('admin.brand.name')} caption={t('admin.brand.tagline')} />
+      <AuthBrand name={t('admin.brand.name')} />
 
       <AuthTopControls>
         <GlassPill

@@ -50,7 +50,7 @@ import { pickTranslated } from '@/utils/translated';
  */
 export function BuilderTab({ type }: { type: GrmsType }) {
   const { t } = useTranslation();
-  // База API — из области: CMS отеля или консоль платформы.
+  // База API — из области: CMS отеля или NaviRoom Control.
   const { transport, languages } = useGrmsScope();
   const base = transport.base;
   const toast = useToast();

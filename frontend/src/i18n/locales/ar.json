@@ -2429,8 +2429,7 @@
   },
   "admin": {
     "brand": {
-      "name": "NaviRoom Control",
-      "tagline": "Root · admin"
+      "name": "NaviRoom Control"
     },
     "nav": {
       "overview": "الملخص",

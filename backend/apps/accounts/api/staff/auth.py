@@ -119,7 +119,7 @@ def refresh(request: HttpRequest, payload: RefreshIn):
 # --- Сессии: выход и список ------------------------------------------------
 #
 # Ручки тонкие: вся работа в apps/accounts/services/sessions.py, тот же слой
-# зовёт и консоль платформы. Механизм сессии один на обе области.
+# зовёт и NaviRoom Control. Механизм сессии один на обе области.
 
 
 def _current_session_id(request: HttpRequest):

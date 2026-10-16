@@ -56,7 +56,7 @@ def bot_username(messenger: str = "telegram") -> str:
 
 
 def bot_health(messenger: str = "telegram") -> dict:
-    """Для консоли платформы: жив ли, имя, последний опрос, последняя ошибка. Без токена."""
+    """Для NaviRoom Control: жив ли, имя, последний опрос, последняя ошибка. Без токена."""
     state = bot_state(messenger)
     if state is None:
         return {

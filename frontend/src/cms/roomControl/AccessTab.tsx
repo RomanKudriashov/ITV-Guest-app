@@ -39,7 +39,7 @@ import { useToast } from '@/components/ToastProvider';
  */
 export function AccessTab() {
   const { t } = useTranslation();
-  // База API — из области: CMS отеля или консоль платформы.
+  // База API — из области: CMS отеля или NaviRoom Control.
   const { transport } = useGrmsScope();
   const toast = useToast();
   const queryClient = useQueryClient();

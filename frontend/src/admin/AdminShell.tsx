@@ -103,9 +103,6 @@ export function AdminShell({
           <Typography noWrap sx={{ ...typo.panelTitle, color: ink.hi }}>
             {t('admin.brand.name')}
           </Typography>
-          <Typography noWrap sx={{ ...typo.label, fontSize: 10, color: ink.low }}>
-            {t('admin.brand.tagline')}
-          </Typography>
         </Box>
       </Box>
 

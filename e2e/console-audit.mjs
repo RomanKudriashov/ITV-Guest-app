@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { PLATFORM_PASSWORD_FILE, platformPassword } from './stand-smoke/platformPassword.mjs'
 
 /**
- * Обход платформенной консоли для аудита. ТОЛЬКО ЧТЕНИЕ.
+ * Обход NaviRoom Control для аудита. ТОЛЬКО ЧТЕНИЕ.
  *
  * Разрушающего не нажимает ничего: ни офбординга, ни очистки, ни удаления,
  * ни отзыва ключей. Три отеля на стенде настоящие и наполнены — их и смотрим.

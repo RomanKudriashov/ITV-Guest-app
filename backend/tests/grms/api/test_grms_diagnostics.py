@@ -359,7 +359,7 @@ def test_line_staff_cannot_reach_diagnostics(cms_line_staff, crystal):
 
 @pytest.fixture
 def engineer(client, crystal):
-    """Чтение журнала НАШЕЙ учёткой: полная глубина живёт в консоли платформы."""
+    """Чтение журнала НАШЕЙ учёткой: полная глубина живёт в NaviRoom Control."""
     import json as _json
 
     from apps.hotels.services.provisioning import ensure_platform_admin

@@ -28,7 +28,7 @@ BASE_HOST = "guest.localhost"
 
 @pytest.fixture
 def api(client):
-    """Консоль платформы: токен владельца плюс адресация корневым хостом."""
+    """NaviRoom Control: токен владельца плюс адресация корневым хостом."""
     from apps.hotels.services.provisioning import ensure_platform_admin
 
     ensure_platform_admin(email=PLATFORM_EMAIL, password=PLATFORM_PASSWORD)

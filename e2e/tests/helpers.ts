@@ -456,7 +456,7 @@ export async function setPlanLevel(
   const hotel = (await hotels.json()).items.find(
     (row: { subdomain: string }) => row.subdomain === HOTEL,
   )
-  expect(hotel, `отель ${HOTEL} не найден в консоли платформы`).toBeTruthy()
+  expect(hotel, `отель ${HOTEL} не найден в NaviRoom Control`).toBeTruthy()
 
   const response = await request.post(
     `${API}/api/v1/platform/hotels/${hotel.id}/grms/types/${typeCode}/plan-level`,
@@ -639,7 +639,7 @@ export async function signIn(
   )
 }
 
-/** То же для консоли платформы: у неё своя область хранилища. */
+/** То же для NaviRoom Control: у неё своя область хранилища. */
 export async function signInPlatform(
   page: Page,
   credentials: { email: string; password: string } = PLATFORM,

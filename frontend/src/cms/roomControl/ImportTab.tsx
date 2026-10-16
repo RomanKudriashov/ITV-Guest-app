@@ -44,7 +44,7 @@ import { useToast } from '@/components/ToastProvider';
  */
 export function ImportTab({ onImported }: { onImported: () => void }) {
   const { t } = useTranslation();
-  // База API — из области: CMS отеля или консоль платформы.
+  // База API — из области: CMS отеля или NaviRoom Control.
   const { transport } = useGrmsScope();
   const base = transport.base;
   const toast = useToast();
