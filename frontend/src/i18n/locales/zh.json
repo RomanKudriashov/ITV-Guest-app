@@ -2336,7 +2336,7 @@
   },
   "admin": {
     "brand": {
-      "name": "NaviRoom Platform",
+      "name": "NaviRoom Control",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -2387,7 +2387,7 @@
       "done": "完成"
     },
     "login": {
-      "title": "根管理台",
+      "title": "NaviRoom Control",
       "email": "邮箱",
       "password": "密码",
       "code": "验证码",

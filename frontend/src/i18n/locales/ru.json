@@ -2392,7 +2392,7 @@
   },
   "admin": {
     "brand": {
-      "name": "NaviRoom Platform",
+      "name": "NaviRoom Control",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -2443,7 +2443,7 @@
       "done": "Готово"
     },
     "login": {
-      "title": "Корневая админка",
+      "title": "NaviRoom Control",
       "email": "Email",
       "password": "Пароль",
       "code": "Код из приложения",

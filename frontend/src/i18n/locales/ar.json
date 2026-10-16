@@ -2429,7 +2429,7 @@
   },
   "admin": {
     "brand": {
-      "name": "NaviRoom Platform",
+      "name": "NaviRoom Control",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -2480,7 +2480,7 @@
       "done": "تم"
     },
     "login": {
-      "title": "لوحة الجذر",
+      "title": "NaviRoom Control",
       "email": "البريد الإلكتروني",
       "password": "كلمة المرور",
       "code": "رمز التطبيق",

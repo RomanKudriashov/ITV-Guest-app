@@ -1,4 +1,8 @@
+import type { Page } from '@playwright/test'
+
 import { expect, test } from './fixtures'
+
+import { PLATFORM } from './helpers'
 
 /**
  * ВИДИМОЕ ИМЯ ПРОДУКТА — NaviRoom (партия 50, решение тек-лида).
@@ -12,6 +16,14 @@ import { expect, test } from './fixtures'
 const PORT = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5183').port || '5183'
 const ROOT = `http://guest.localhost:${PORT}`
 const LANGUAGES = ['ru', 'en', 'ar', 'zh'] as const
+
+async function loginConsoleByForm(page: Page): Promise<void> {
+  await page.goto(`${ROOT}/admin`)
+  await page.getByTestId('admin-login-email').fill(PLATFORM.email)
+  await page.getByTestId('admin-login-password').fill(PLATFORM.password)
+  await page.getByTestId('admin-login-submit').click()
+  await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 30_000 })
+}
 
 test('вкладка и значок PWA — NaviRoom', async ({ page, request }) => {
   await page.goto('/login')
@@ -42,9 +54,28 @@ test('лендинг — NaviRoom, без заглушек почты и тел�
   await expect(page.locator('body')).not.toContainText(/ITV Guest|itv\.example|000-00-00/)
 })
 
-test('консоль платформы — NaviRoom Platform', async ({ page }) => {
-  await page.goto(`${ROOT}/admin`)
-  await expect(page.getByTestId('admin-login-email')).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByText('NaviRoom Platform', { exact: true })).toBeVisible()
-  await expect(page.locator('body')).not.toContainText('ITV Platform')
+/*
+  КОНСОЛЬ — NaviRoom Control (партия 53): латиницей, на всех языках одинаково.
+  Смотрим три места, где имя видит человек: марка и заголовок на входе, вкладка
+  браузера, марка в сайдбаре после входа.
+*/
+for (const language of LANGUAGES) {
+  test(`консоль платформы на «${language}» — NaviRoom Control на входе и во вкладке`, async ({ page }) => {
+    await page.addInitScript((lang) => window.localStorage.setItem('itv.lang', lang), language)
+    await page.goto(`${ROOT}/admin`)
+    await expect(page.getByTestId('admin-login-email')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText('NaviRoom Control', { exact: true })).toHaveCount(2)
+    await expect(page).toHaveTitle('NaviRoom Control')
+    await expect(page.locator('body')).not.toContainText(
+      /ITV Platform|NaviRoom Platform|Корневая админка|Root admin|لوحة الجذر|根管理台/,
+    )
+  })
+}
+
+test('консоль платформы после входа — NaviRoom Control в сайдбаре и во вкладке', async ({ page }) => {
+  await loginConsoleByForm(page)
+  await expect(page.getByTestId('admin-shell')).toContainText('NaviRoom Control')
+  await expect(page.getByTestId('admin-brand-mark')).toHaveText('NC')
+  await expect(page).toHaveTitle('NaviRoom Control')
+  await expect(page.getByTestId('admin-shell')).not.toContainText('NaviRoom Platform')
 })

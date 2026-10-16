@@ -12,6 +12,11 @@
  *   2. `app.title` на всех языках — ровно «NaviRoom». Без второго прежние
  *      переводы («تطبيق نزلاء ITV», «ITV 客人应用») прошли бы мимо первого.
  *
+ * Консоль платформы называется NaviRoom Control (партия 53): латиницей на всех
+ * языках, без перевода. Поэтому третье условие — `admin.brand.name` (марка в
+ * сайдбаре и на входе, она же вкладка) и `admin.login.title` на всех языках —
+ * ровно «NaviRoom Control», а «NaviRoom Platform» — в списке прежних имён.
+ *
  * ITV в прочих местах (ключи браузера, внутренние имена) не трогаем —
  * решение тек-лида, `docs/decisions.md`.
  *
@@ -24,7 +29,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const LOCALES = `${ROOT}src/i18n/locales/`;
 const NAME = 'NaviRoom';
-const OLD = /ITV Guest|ITV Platform|NaviApp/i;
+const CONSOLE = 'NaviRoom Control';
+const OLD = /ITV Guest|ITV Platform|NaviRoom Platform|NaviApp/i;
 
 const problems = [];
 
@@ -63,6 +69,10 @@ for (const file of languages) {
   scanContacts(`src/i18n/locales/${file}`, JSON.parse(text));
   const title = JSON.parse(text).app?.title;
   if (title !== NAME) problems.push(`src/i18n/locales/${file}: app.title = «${title}», а не «${NAME}»`);
+  const admin = JSON.parse(text).admin;
+  for (const [key, value] of [['admin.brand.name', admin?.brand?.name], ['admin.login.title', admin?.login?.title]]) {
+    if (value !== CONSOLE) problems.push(`src/i18n/locales/${file}: ${key} = «${value}», а не «${CONSOLE}»`);
+  }
 }
 scan('index.html', readFileSync(`${ROOT}index.html`, 'utf8'));
 const manifestText = readFileSync(`${ROOT}public/manifest.webmanifest`, 'utf8');
@@ -88,4 +98,4 @@ if (problems.length) {
   console.error(`Видимое имя продукта — ${NAME}. Найдено прежнее:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Имя продукта сверено: ${languages.length} словаря, index.html, манифест (копия и сборка) — везде ${NAME}; заглушек контактов нет`);
+console.log(`Имя продукта сверено: ${languages.length} словаря, index.html, манифест (копия и сборка) — везде ${NAME}, консоль — ${CONSOLE}; заглушек контактов нет`);

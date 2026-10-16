@@ -94,7 +94,7 @@ enforced by `scripts/check-locales.mjs`.
 
 The app is split into parts loaded by route (`src/app/parts/*`, wired in
 `src/app/router.tsx` through `src/app/lazyPart.tsx`): guest storefront, hotel
-panel, panel login, tracker, platform console, landing. A guest who scans a QR
+panel, panel login, tracker, platform console (NaviRoom Control), landing. A guest who scans a QR
 code downloads the entry file, the guest part and one dictionary — not the
 panel.
 

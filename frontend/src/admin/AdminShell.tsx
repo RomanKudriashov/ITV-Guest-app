@@ -87,8 +87,11 @@ export function AdminShell({
             fontSize: 13,
             color: accent.onBrand,
           }}
+          data-testid="admin-brand-mark"
+          aria-hidden
         >
-          IT
+          {/* Буквы NaviRoom Control (партия 53); до неё здесь стояло «IT» от ITV. */}
+          NC
         </Box>
         <Box sx={{ minWidth: 0 }}>
           {/*

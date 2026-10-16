@@ -31,7 +31,7 @@ import { accent, ink, typo } from './adminTokens';
 import { getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
 
 /**
- * Корневая админка `/admin` — уровень владельца платформы.
+ * NaviRoom Control — консоль `/admin`, уровень владельца платформы.
  *
  * Раздел держится в состоянии, а не в маршруте: админка — это одно рабочее
  * место с реестрами, а не набор страниц, на которые ссылаются извне. Ссылка
@@ -73,12 +73,24 @@ const SECTIONS: AdminSection[] = [
  */
 function AdminScope({ children }: { children: ReactNode }) {
   const { mode, direction } = useAppTheme();
+  const { t } = useTranslation();
   const theme = useMemo(
     // Шкала персонала поверх бренда: та же палитра, другой масштаб.
     () => compactTheme(createAppTheme(DEFAULT_BRAND_TOKENS, mode, direction)),
     [mode, direction],
   );
   const vars = useMemo(() => adminCssVars(mode), [mode]);
+
+  // Вкладка браузера — имя консоли, а не продукта: `index.html` общий у всех
+  // частей и говорит «NaviRoom», и две открытые вкладки — консоль и панель
+  // отеля — иначе не различить. Уходя, вкладка возвращает прежнее имя.
+  useEffect(() => {
+    const before = document.title;
+    document.title = t('admin.brand.name');
+    return () => {
+      document.title = before;
+    };
+  }, [t]);
 
   return (
     <MuiThemeProvider theme={theme}>

@@ -1,5 +1,5 @@
 """
-TOTP (RFC 6238) для усиленного входа в корневую админку.
+TOTP (RFC 6238) для усиленного входа в консоль платформы — NaviRoom Control.
 
 Реализовано на стандартной библиотеке, а не пакетом: алгоритм — это HMAC и
 динамическое усечение, тридцать строк с фиксированным RFC-описанием, и держать
@@ -64,8 +64,14 @@ def verify(secret: str, code: str, moment: float | None = None) -> bool:
     )
 
 
-def provisioning_uri(secret: str, *, account: str, issuer: str = "NaviRoom") -> str:
-    """otpauth-ссылка для QR в приложении-аутентификаторе."""
+def provisioning_uri(secret: str, *, account: str, issuer: str = "NaviRoom Control") -> str:
+    """
+    otpauth-ссылка для QR в приложении-аутентификаторе.
+
+    Издатель — имя консоли, а не продукта: второй фактор включают только там, и
+    в списке приложения строка должна говорить, КУДА этот код (партия 53). Уже
+    заведённые учётки остаются под прежней подписью — секрет тот же, коды верны.
+    """
     label = quote(f"{issuer}:{account}", safe="")
     return (
         f"otpauth://totp/{label}?secret={secret}"

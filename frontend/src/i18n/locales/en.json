@@ -2361,7 +2361,7 @@
   },
   "admin": {
     "brand": {
-      "name": "NaviRoom Platform",
+      "name": "NaviRoom Control",
       "tagline": "Root · admin"
     },
     "nav": {
@@ -2412,7 +2412,7 @@
       "done": "Done"
     },
     "login": {
-      "title": "Root admin",
+      "title": "NaviRoom Control",
       "email": "Email",
       "password": "Password",
       "code": "Authenticator code",
