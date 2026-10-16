@@ -216,7 +216,9 @@ function SessionRow({
             <Chip size="small" color="success" label={t('sessions.current')} />
           ) : null}
         </Stack>
-        <Typography variant="caption" color="text.secondary" noWrap>
+        {/* Даты входа и активности переносятся — их обрезать нельзя (партия 55);
+            многоточие оставлено только у строки браузера ниже. */}
+        <Typography variant="caption" color="text.secondary">
           {t('sessions.entered', { when: when(row.created_at) })}
           {' · '}
           {t('sessions.seen', { when: when(row.last_seen_at) })}

@@ -9,36 +9,45 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { useState } from 'react';
 import Drawer from '@mui/material/Drawer';
-import MenuIcon from '@mui/icons-material/Menu';
+import MenuIcon from '@mui/icons-material/MenuOutlined';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { Theme } from '@mui/material/styles';
+import { useTheme, type Theme } from '@mui/material/styles';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
-import RoomServiceIcon from '@mui/icons-material/RoomService';
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+// Иконки меню — все КОНТУРНЫЕ (партия 55): залитые вперемешку с контурными
+// читались как два разных набора.
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import DashboardCustomizeOutlinedIcon from '@mui/icons-material/DashboardCustomizeOutlined';
+import RoomServiceOutlinedIcon from '@mui/icons-material/RoomServiceOutlined';
+import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
 import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
-import InsightsIcon from '@mui/icons-material/Insights';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
-import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
-import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
-import GroupWorkIcon from '@mui/icons-material/GroupWork';
-import SettingsIcon from '@mui/icons-material/Settings';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
+import GroupWorkOutlinedIcon from '@mui/icons-material/GroupWorkOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
+import KeyboardDoubleArrowLeftOutlinedIcon from '@mui/icons-material/KeyboardDoubleArrowLeftOutlined';
+import KeyboardDoubleArrowRightOutlinedIcon from '@mui/icons-material/KeyboardDoubleArrowRightOutlined';
 
-import { IconBrand } from '@/icons';
+import { MOTION, usePrefersReducedMotion } from '@/kit/motion';
+import { STORAGE_KEYS } from '@/storageKeys';
+import { useNavCollapsed } from '@/hooks/useNavCollapsed';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
@@ -52,6 +61,25 @@ import type { SupportSession } from '@/api/types';
 import { StaffScale } from '@/theme/StaffScale';
 
 const DRAWER_WIDTH = 248;
+/** Свёрнутое меню — одни иконки (партия 55). */
+const DRAWER_MINI = 64;
+
+/**
+ * Текст пункта в свёрнутом меню — ВИЗУАЛЬНО скрыт, но в DOM: его читают
+ * экранный диктор и проверки по `innerText` пунктов (партия 55).
+ * `display: none` убрал бы его из обоих.
+ */
+const VISUALLY_HIDDEN = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  p: 0,
+  m: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+} as const;
 
 /**
  * Иконка на ключ раздела. Сам СПИСОК разделов приходит с сервера
@@ -60,26 +88,31 @@ const DRAWER_WIDTH = 248;
  * отеля есть.
  */
 const NAV_ICONS: Record<string, JSX.Element> = {
-  dashboard: <DashboardCustomizeIcon fontSize="small" />,
-  tracker: <ReceiptLongIcon fontSize="small" />,
+  dashboard: <DashboardCustomizeOutlinedIcon fontSize="small" />,
+  tracker: <ReceiptLongOutlinedIcon fontSize="small" />,
   desk: <SupportAgentOutlinedIcon fontSize="small" />,
-  services: <RoomServiceIcon fontSize="small" />,
-  rooms: <MeetingRoomIcon fontSize="small" />,
-  staff: <PeopleAltIcon fontSize="small" />,
+  // У «Заказов» своя иконка (партия 55): была запасная, общая с прочими
+  // пунктами без иконки.
+  orders: <ListAltOutlinedIcon fontSize="small" />,
+  services: <RoomServiceOutlinedIcon fontSize="small" />,
+  rooms: <MeetingRoomOutlinedIcon fontSize="small" />,
+  staff: <PeopleAltOutlinedIcon fontSize="small" />,
   brand: <PaletteOutlinedIcon fontSize="small" />,
-  analytics: <InsightsIcon fontSize="small" />,
+  analytics: <InsightsOutlinedIcon fontSize="small" />,
   reviews: <RateReviewOutlinedIcon fontSize="small" />,
-  settings: <SettingsIcon fontSize="small" />,
-  notifications: <NotificationsActiveIcon fontSize="small" />,
+  settings: <SettingsOutlinedIcon fontSize="small" />,
+  notifications: <NotificationsActiveOutlinedIcon fontSize="small" />,
   dictionaries: <ScienceOutlinedIcon fontSize="small" />,
   marketing: <LocalOfferOutlinedIcon fontSize="small" />,
   roomControl: <BoltOutlinedIcon fontSize="small" />,
   payments: <PaymentsOutlinedIcon fontSize="small" />,
   pms: <GridViewOutlinedIcon fontSize="small" />,
-  mobileKey: <IconBrand size={20} />,
+  // Была своя `IconBrand` — палитра, то есть знак «Бренда», а не ключа
+  // (партия 55): ключ — контурный, из того же набора.
+  mobileKey: <KeyOutlinedIcon fontSize="small" />,
 };
 
-const FALLBACK_ICON = <GroupWorkIcon fontSize="small" />;
+const FALLBACK_ICON = <GroupWorkOutlinedIcon fontSize="small" />;
 
 export function AppShell() {
   const location = useLocation();
@@ -92,6 +125,22 @@ export function AppShell() {
   const { data: bootstrap } = useBootstrap(navigation.isSuccess);
   const isNarrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
   const [navOpen, setNavOpen] = useState(false);
+  /*
+    СВЁРНУТОЕ МЕНЮ — ТОЛЬКО У ПОСТОЯННОЙ ПАНЕЛИ (партия 55). Шторка на узком
+    экране всегда полная: она и так закрыта, пока её не позвали, а иконки без
+    подписей под пальцем — угадайка.
+  */
+  const [collapsed, toggleCollapsed] = useNavCollapsed(STORAGE_KEYS.cmsNavCollapsed);
+  const mini = collapsed && !isNarrow;
+  const navWidth = mini ? DRAWER_MINI : DRAWER_WIDTH;
+  const reduceMotion = usePrefersReducedMotion();
+  const widthTransition = reduceMotion
+    ? 'none'
+    : `width ${MOTION.duration.base}ms ${MOTION.easing.entrance}`;
+  const theme = useTheme();
+  const rtl = theme.direction === 'rtl';
+  // Подпись — в сторону содержимого: справа от панели, в RTL — слева.
+  const tipPlacement = rtl ? 'left' : 'right';
 
   const hotelName = bootstrap?.hotel?.name ?? hotel?.name ?? t('app.title');
 
@@ -192,7 +241,26 @@ export function AppShell() {
               <MenuIcon />
             </IconButton>
           ) : null}
-          <Typography variant="h6" noWrap data-testid="hotel-name" sx={{ minWidth: 0, flexShrink: 1 }}>
+          {/*
+            Имя отеля на телефоне — в ДВЕ строки, а не многоточием (партия 55):
+            на 390 «Отель «Кристалл»» обрезалось, хотя второй строке в шапке
+            место есть. Многоточие остаётся только для имён длиннее двух строк.
+          */}
+          <Typography
+            variant="h6"
+            data-testid="hotel-name"
+            sx={{
+              minWidth: 0,
+              flexShrink: 1,
+              fontSize: { xs: '1rem', sm: undefined },
+              lineHeight: { xs: 1.2, sm: 1.6 },
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: { xs: 2, sm: 1 },
+              overflow: 'hidden',
+              overflowWrap: 'anywhere',
+            }}
+          >
             {hotelName}
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
@@ -232,11 +300,17 @@ export function AppShell() {
         open={isNarrow ? navOpen : true}
         onClose={() => setNavOpen(false)}
         ModalProps={{ keepMounted: true }}
+        data-testid="main-nav-drawer"
+        data-collapsed={mini ? 'true' : undefined}
         sx={{
-          width: isNarrow ? 0 : DRAWER_WIDTH,
+          // Содержимое сдвигается вместе с панелью: ширину держит корень ящика.
+          width: isNarrow ? 0 : navWidth,
           flexShrink: 0,
+          transition: widthTransition,
           '& .MuiDrawer-paper': {
-            width: DRAWER_WIDTH,
+            width: isNarrow ? DRAWER_WIDTH : navWidth,
+            transition: widthTransition,
+            overflowX: 'hidden',
             boxSizing: 'border-box',
             borderRight: 1,
             borderColor: 'divider',
@@ -245,53 +319,122 @@ export function AppShell() {
         }}
       >
         <Toolbar />
-        <List sx={{ px: 1.5, py: 2 }} data-testid="main-nav" onClick={() => setNavOpen(false)}>
-          {navGroups.map((group) => (
+        <List
+          sx={{ px: mini ? '8px' : 1.5, py: 2, flex: 1, overflowY: 'auto', overflowX: 'hidden' }}
+          data-testid="main-nav"
+          onClick={() => setNavOpen(false)}
+        >
+          {navGroups.map((group, groupIndex) => (
             <Box key={group.key} sx={{ mb: 1.5 }} data-testid={`nav-group-${group.key}`}>
               {/*
                 Заголовок группы — не украшение: он и есть починка «плоской
                 простыни». Шестнадцать равнозначных пунктов подряд читаются
                 как свалка, потому что не отвечают на вопрос «где искать».
+                В свёрнутом меню слову места нет — группы делит черта, а слово
+                остаётся диктору (партия 55).
               */}
+              {mini && groupIndex > 0 ? <Divider sx={{ mx: '4px', mb: 1.5 }} /> : null}
               <Typography
                 variant="overline"
-                sx={{ px: 2, color: 'text.secondary', letterSpacing: '.08em' }}
+                sx={mini ? VISUALLY_HIDDEN : { px: 2, color: 'text.secondary', letterSpacing: '.08em' }}
               >
                 {t(`nav.groups.${group.key}`)}
               </Typography>
 
-              {group.items.map((item) => (
-                <ListItemButton
-                  key={item.key}
-                  component={NavLink}
-                  // Сервер отдаёт КАНОНИЧЕСКИЙ путь раздела (`/cms/...`) — он
-                  // про хост клиента не знает и знать не должен. Куда этот
-                  // путь положить, решает клиент: на адресе отеля панель живёт
-                  // в `/admin`.
-                  to={toCmsRoot(item.to)}
-                  data-testid={`cms-nav-${item.key}`}
-                  sx={{
-                    borderRadius: 2,
-                    mb: 0.5,
-                    '&.active': {
-                      bgcolor: 'brand.surfaceSelected',
-                      color: 'primary.main',
-                      '& .MuiListItemIcon-root': { color: 'primary.main' },
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    {NAV_ICONS[item.key] ?? FALLBACK_ICON}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={t(`nav.${item.key}`)}
-                    primaryTypographyProps={{ variant: 'body2' }}
-                  />
-                </ListItemButton>
-              ))}
+              {group.items.map((item) => {
+                const label = t(`nav.${item.key}`);
+                /*
+                  «Трекер» (`/tracker`) — предок адресов ресепшена и «моих
+                  точек», и NavLink подсвечивал его на всех (партия 55). На
+                  ресепшене подсвечен только «Ресепшен»: у трекера `end`, а
+                  прочие его подадреса (заказ, мои точки) — явной пометкой.
+                */
+                const isTracker = item.key === 'tracker';
+                const trackerSub =
+                  isTracker &&
+                  location.pathname.startsWith('/tracker/') &&
+                  !location.pathname.startsWith('/tracker/desk');
+                return (
+                  <Tooltip
+                    key={item.key}
+                    title={mini ? label : ''}
+                    placement={tipPlacement}
+                    // Имя пункта — его текст в DOM; подсказка лишь описывает,
+                    // иначе пустой title стирал бы имя ссылки.
+                    describeChild
+                  >
+                    <ListItemButton
+                      component={NavLink}
+                      // Сервер отдаёт КАНОНИЧЕСКИЙ путь раздела (`/cms/...`) — он
+                      // про хост клиента не знает и знать не должен. Куда этот
+                      // путь положить, решает клиент: на адресе отеля панель живёт
+                      // в `/admin`.
+                      to={toCmsRoot(item.to)}
+                      end={isTracker}
+                      data-testid={`cms-nav-${item.key}`}
+                      data-active={trackerSub ? 'true' : undefined}
+                      sx={{
+                        borderRadius: 2,
+                        mb: 0.5,
+                        position: 'relative',
+                        ...(mini ? { justifyContent: 'center', px: 0, minHeight: 40 } : null),
+                        '&.active, &[data-active="true"]': {
+                          bgcolor: 'brand.surfaceSelected',
+                          // Акцент как текст — с планкой 4.5 (партия 55): было 2.63 в тёмной.
+                          color: 'brand.primaryText',
+                          '& .MuiListItemIcon-root': { color: 'brand.primaryText' },
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: mini ? 0 : 36 }}>
+                        {NAV_ICONS[item.key] ?? FALLBACK_ICON}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={label}
+                        primaryTypographyProps={{ variant: 'body2' }}
+                        sx={mini ? VISUALLY_HIDDEN : undefined}
+                      />
+                    </ListItemButton>
+                  </Tooltip>
+                );
+              })}
             </Box>
           ))}
         </List>
+        {/*
+          Свернуть/развернуть — внизу панели, у постоянной панели только
+          (партия 55): шторка на телефоне всегда полная.
+        */}
+        {isNarrow ? null : (
+          <Box
+            sx={{
+              flex: 'none',
+              borderTop: 1,
+              borderColor: 'divider',
+              display: 'flex',
+              justifyContent: mini ? 'center' : 'flex-end',
+              p: 1,
+            }}
+          >
+            <Tooltip title={t(mini ? 'nav.expand' : 'nav.collapse')} placement={tipPlacement}>
+              <IconButton
+                size="small"
+                onClick={toggleCollapsed}
+                data-testid="nav-collapse"
+                aria-label={t(mini ? 'nav.expand' : 'nav.collapse')}
+                aria-expanded={!mini}
+                sx={{ color: 'text.secondary' }}
+              >
+                {/* Стрелка смотрит туда, куда уедет край панели; в RTL — зеркально. */}
+                {mini !== rtl ? (
+                  <KeyboardDoubleArrowRightOutlinedIcon fontSize="small" />
+                ) : (
+                  <KeyboardDoubleArrowLeftOutlinedIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
       </Drawer>
       ) : null}
 

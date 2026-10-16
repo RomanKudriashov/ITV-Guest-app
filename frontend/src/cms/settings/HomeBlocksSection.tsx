@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -43,6 +44,19 @@ import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
  * показывает его отель, — хотя бы затем, чтобы ответить на вопрос гостя.
  * Лицензионная сторона: docs/ops/weather.md.
  */
+/**
+ * Сетка «по колонке на язык» — общая для названия, города и единиц
+ * температуры (партия 55): поле единиц занимает ровно одну колонку и встаёт
+ * краем к полю первого языка. На телефоне — одна колонка.
+ */
+function langGridSx(count: number) {
+  return {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: { xs: '1fr', sm: `repeat(${Math.max(count, 1)}, minmax(0, 1fr))` },
+  } as const;
+}
+
 function useDebounced(value: string, delay: number): string {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
@@ -210,19 +224,22 @@ export function HomeBlocksSection() {
             ) : null}
           </Stack>
 
-          <SelectField
-            size="small"
-            label={t('cms.homeBlocks.units')}
-            value={units}
-            onChange={setUnits}
-            helperText={t('cms.homeBlocks.unitsHint')}
-            sx={{ maxWidth: 280 }}
-            testId="cms-home-units"
-            options={[
-              { value: 'c', label: t('cms.homeBlocks.celsius'), testId: 'cms-home-units-c' },
-              { value: 'f', label: t('cms.homeBlocks.fahrenheit'), testId: 'cms-home-units-f' },
-            ]}
-          />
+          {/* Ширина — колонка той же сетки, что у полей названия по языкам
+              (партия 55): было maxWidth 280, край не совпадал с полем «RU». */}
+          <Box sx={langGridSx(languages.codes.length)}>
+            <SelectField
+              size="small"
+              label={t('cms.homeBlocks.units')}
+              value={units}
+              onChange={setUnits}
+              helperText={t('cms.homeBlocks.unitsHint')}
+              testId="cms-home-units"
+              options={[
+                { value: 'c', label: t('cms.homeBlocks.celsius'), testId: 'cms-home-units-c' },
+                { value: 'f', label: t('cms.homeBlocks.fahrenheit'), testId: 'cms-home-units-f' },
+              ]}
+            />
+          </Box>
 
           {/*
             Часовой пояс — ИМЕНЕМ зоны, а не смещением: смещение врёт дважды в
@@ -249,7 +266,7 @@ export function HomeBlocksSection() {
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {t('cms.homeBlocks.hotelName')}
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            <Box sx={langGridSx(languages.codes.length)}>
               {languages.codes.map((code) => (
                 <TextField
                   key={code}
@@ -261,7 +278,7 @@ export function HomeBlocksSection() {
                   fullWidth
                 />
               ))}
-            </Stack>
+            </Box>
             <Typography variant="caption" color="text.secondary">
               {t('cms.homeBlocks.hotelNameHint')}
             </Typography>
@@ -272,7 +289,7 @@ export function HomeBlocksSection() {
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {t('cms.homeBlocks.city')}
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            <Box sx={langGridSx(languages.codes.length)}>
               {languages.codes.map((code) => (
                 <TextField
                   key={code}
@@ -284,7 +301,7 @@ export function HomeBlocksSection() {
                   fullWidth
                 />
               ))}
-            </Stack>
+            </Box>
           </Stack>
 
           <FormControlLabel

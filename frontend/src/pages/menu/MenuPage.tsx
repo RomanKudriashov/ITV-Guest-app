@@ -323,9 +323,23 @@ export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
     : '';
 
   return (
-    <Box sx={{ p: 3, display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+    /*
+      Внутри рабочего места сервиса отступ уже даёт его PageContainer — свой
+      `p: 3` давал двойной. На узком — столбиком: две колонки (разделы 360 +
+      позиции) выходили за край на 390 (партия 55).
+    */
+    <Box
+      sx={{
+        p: serviceId ? 0 : 3,
+        display: 'flex',
+        flexDirection: { xs: 'column', lg: 'row' },
+        gap: 3,
+        alignItems: { xs: 'stretch', lg: 'flex-start' },
+        minWidth: 0,
+      }}
+    >
       {/* Categories */}
-      <Card variant="outlined" sx={{ width: 360, flexShrink: 0, borderColor: 'divider' }}>
+      <Card variant="outlined" sx={{ width: { xs: 'auto', lg: 360 }, flexShrink: 0, borderColor: 'divider' }}>
         <CardContent sx={{ p: 2 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
             <Typography variant="h6">{t('menu.categories')}</Typography>
@@ -395,7 +409,7 @@ export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
             sx={{ mb: 1 }}
           >
             <Stack sx={{ minWidth: 0 }}>
-              <Typography variant="h6" noWrap>
+              <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
                 {selectedTitle || w('plural')}
               </Typography>
               <Typography variant="caption" color="text.secondary">

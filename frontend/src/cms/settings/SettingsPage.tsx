@@ -12,6 +12,7 @@ import { TranslationSection } from './TranslationSection';
 
 import { CommerceSettingsPage } from '@/cms/commerce/CommerceSettingsPage';
 import { LocationsPage } from '@/pages/hotel/LocationsPage';
+import { PageContainer } from '@/components/PageContainer';
 
 /**
  * Настройки отеля — новый дом для того, что раньше жило отдельными пунктами.
@@ -33,7 +34,7 @@ export function SettingsPage() {
   const { t } = useTranslation();
 
   return (
-    <Box sx={{ p: 3 }} data-testid="cms-settings">
+    <PageContainer testId="cms-settings">
       <Typography variant="h5" data-testid="cms-page-title" sx={{ mb: 0.5 }}>
         {t('settings.title')}
       </Typography>
@@ -88,6 +89,6 @@ export function SettingsPage() {
           <LocationsPage embedded />
         </Box>
       </Stack>
-    </Box>
+    </PageContainer>
   );
 }

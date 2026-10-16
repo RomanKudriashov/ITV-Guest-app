@@ -52,6 +52,21 @@ export interface OrderCardProps {
   onReorder?: (direction: -1 | 1) => void;
 }
 
+/**
+ * ДЛИННАЯ ПОМЕТКА ПЕРЕНОСИТСЯ, А НЕ ОБРЕЗАЕТСЯ (партия 55).
+ *
+ * «Оформил за гостя: Игорь, ресепшен» на 1024 теряла последние буквы под
+ * многоточием — а это имя того, кого спрашивать о заказе. Пометка с именем
+ * или номером обязана читаться целиком: у чипа снимается высота в одну
+ * строку, и подпись переносится по словам.
+ */
+const WRAPPING_CHIP = {
+  alignSelf: 'flex-start',
+  maxWidth: '100%',
+  height: 'auto',
+  '& .MuiChip-label': { whiteSpace: 'normal', overflowWrap: 'anywhere', py: 0.25 },
+} as const;
+
 export function OrderCard({
   order,
   busy,
@@ -271,7 +286,7 @@ export function OrderCard({
                 point: order.errand.from_point,
                 name: order.errand.by,
               })}
-              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+              sx={WRAPPING_CHIP}
             />
           ) : order.placed_by ? (
             <Chip
@@ -279,7 +294,7 @@ export function OrderCard({
               variant="outlined"
               data-testid={`tracker-placed-by-${order.number}`}
               label={t('tracker.card.placedBy', { name: order.placed_by.name })}
-              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+              sx={WRAPPING_CHIP}
             />
           ) : null}
           {order.source_order ? (
@@ -293,7 +308,7 @@ export function OrderCard({
                 number: order.source_order.number,
                 service: order.source_order.service_title,
               })}
-              sx={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+              sx={WRAPPING_CHIP}
             />
           ) : null}
 

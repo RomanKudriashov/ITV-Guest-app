@@ -1,7 +1,7 @@
 import { type Page, type Request } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN } from './helpers'
+import { ADMIN, fillDate } from './helpers'
 
 /**
  * «ОТЗЫВЫ»: ПЕРЕВЁРНУТЫЙ ПЕРИОД И ПОВТОРЫ (ADM-001 внешнего аудита).
@@ -48,8 +48,8 @@ test.describe('Отзывы: период и повторы', () => {
     await page.waitForLoadState('networkidle')
     const calls = reviewsCalls(page)
 
-    await page.getByTestId('reviews-filter-since').fill('2026-09-24')
-    await page.getByTestId('reviews-filter-until').fill('2026-09-01')
+    await fillDate(page, 'reviews-filter-since', '2026-09-24')
+    await fillDate(page, 'reviews-filter-until', '2026-09-01')
 
     await expect(page.getByTestId('reviews-bad-range')).toBeVisible()
     await expect(page.getByTestId('reviews-filter-since')).toHaveAttribute('aria-invalid', 'true')
@@ -66,7 +66,7 @@ test.describe('Отзывы: период и повторы', () => {
     expect(consoleErrors.filter((text) => text.includes('422'))).toEqual([])
 
     // Поправили период — данные вернулись, подсветка ушла.
-    await page.getByTestId('reviews-filter-until').fill('2026-09-30')
+    await fillDate(page, 'reviews-filter-until', '2026-09-30')
     await expect(page.getByTestId('reviews-bad-range')).toHaveCount(0)
     await expect(page.getByTestId('reviews-filter-since')).not.toHaveAttribute('aria-invalid', 'true')
     await expect
@@ -81,16 +81,10 @@ test.describe('Отзывы: период и повторы', () => {
     // всякой перерисовки между ними: нагрузка не нужна, чтобы увидеть дефект.
     await openReviews(page)
     await expect(page.getByTestId('reviews-count')).toBeVisible()
-    await page.evaluate(() => {
-      const set = (testId: string, value: string) => {
-        const input = document.querySelector<HTMLInputElement>(`[data-testid="${testId}"]`)!
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
-        setter.call(input, value)
-        input.dispatchEvent(new Event('input', { bubbles: true }))
-      }
-      set('reviews-filter-since', '2026-09-24')
-      set('reviews-filter-until', '2026-09-01')
-    })
+    // Поля дат — с маской (партия 55): значение не вставить сеттером в один
+    // такт, как раньше. Вводим подряд без пауз — ближайшее к прежнему условию.
+    await fillDate(page, 'reviews-filter-since', '2026-09-24')
+    await fillDate(page, 'reviews-filter-until', '2026-09-01')
     await expect(page).toHaveURL(/date_from=2026-09-24/)
     await expect(page).toHaveURL(/date_to=2026-09-01/)
     await expect(page.getByTestId('reviews-bad-range')).toBeVisible()

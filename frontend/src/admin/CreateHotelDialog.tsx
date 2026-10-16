@@ -199,8 +199,9 @@ export function CreateHotelDialog({
           helperText={emailTouched && form.admin_email && !emailOk ? t('admin.create.emailInvalid') : ' '}
           inputProps={{ 'data-testid': 'admin-create-admin-email' }}
         />
+        {/* Пополам с языками: «RUB — Российский рубль» в трети строки обрезался. */}
         <ChoiceField
-          span={4}
+          span={6}
           label={t('admin.create.currency')}
           value={form.currency}
           onChange={choose('currency')}
@@ -209,7 +210,7 @@ export function CreateHotelDialog({
           testId="admin-create-currency"
         />
         <MultiChoiceField
-          span={8}
+          span={6}
           label={t('admin.create.languages')}
           value={languages}
           onChange={setLanguages}

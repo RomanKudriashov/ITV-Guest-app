@@ -1,5 +1,6 @@
 import { createTheme, alpha, darken, lighten, type Theme } from '@mui/material/styles';
 import { fontPx } from './fontPx';
+import { mix, readable } from './contrast';
 import {
   colorsForMode,
   type BrandTokens,
@@ -41,6 +42,8 @@ export interface BrandPaletteExtension {
   primaryGlow: string;
   /** Third text level below textSecondary — captions, disabled hints. */
   textTertiary: string;
+  /** Акцент как ЦВЕТ ТЕКСТА: primary, доведённый до 4.5:1 на всех фонах темы. */
+  primaryText: string;
   /** Radius scale (px). */
   radius: { sm: number; md: number; lg: number; pill: number };
   /** Depth scale — box-shadow strings keyed by level. */
@@ -84,7 +87,20 @@ export function createAppTheme(
   const primaryStrong = shift(c.primary, 0.18);
   const primarySoft = alpha(c.primary, isDark ? 0.16 : 0.1);
   const primaryGlow = `0 0 0 1px ${alpha(c.primary, 0.35)}, 0 8px 30px -8px ${alpha(c.primary, 0.5)}`;
-  const textTertiary = alpha(c.textSecondary, 0.72);
+  /*
+    ТЕКСТ — НЕ НИЖЕ 4.5:1 НА ЛЮБОМ ФОНЕ ТЕМЫ (партия 55). Фоны — все, на
+    которых лежит текст: страница, поверхность, приглушённая и выбранная.
+    Третий уровень был `alpha(textSecondary, .72)` — 3.81 на фоне страницы, и
+    им написаны подписи групп меню, роли, мета строк. Теперь он сплошной:
+    между вторичным и основным, но не тише планки. Акцент как текст (активный
+    пункт меню, текстовые кнопки, вкладки) — отдельный `primaryText`: заливки
+    кнопок остаются цветом бренда, а буквы на поверхности — читаемыми.
+  */
+  const textBackgrounds = [c.background, c.surface, c.surfaceMuted, c.surfaceSelected];
+  const textSecondary = readable(c.textSecondary, textBackgrounds, mode);
+  const textTertiary = readable(mix(c.textSecondary, c.surface, 0.28), textBackgrounds, mode);
+  const primaryText = readable(c.primary, textBackgrounds, mode);
+  const errorText = readable(c.error, textBackgrounds, mode);
   const radius = {
     sm: Math.round(shape.borderRadius * 0.6),
     md: shape.borderRadius,
@@ -121,10 +137,16 @@ export function createAppTheme(
       secondary: { main: c.secondary, contrastText: c.secondaryContrast },
       success: { main: c.success },
       warning: { main: c.warning },
-      error: { main: c.error },
+      // Ошибка — это прежде всего ТЕКСТ (подсказки полей, «просрочено»): main
+      // доводится до читаемого так же, как вторичный текст.
+      error: { main: errorText },
+      // Текст на залитых цветах (чипы, кнопки) MUI выбирает сам — с той же
+      // планкой 4.5, а не с порогом 3 по умолчанию: белое на #EF5350 давало
+      // 3.4 у «Просрочено» в тёмной теме.
+      contrastThreshold: 4.5,
       info: { main: c.info },
       background: { default: c.background, paper: c.surface },
-      text: { primary: c.text, secondary: c.textSecondary },
+      text: { primary: c.text, secondary: textSecondary },
       divider: c.divider,
       brand: {
         // Стиль поверхности КЛАДЁТСЯ В ПАЛИТРУ, а не остаётся локальной
@@ -142,6 +164,7 @@ export function createAppTheme(
         primarySoft,
         primaryGlow,
         textTertiary,
+        primaryText,
         radius,
         elevation,
       },
@@ -215,6 +238,19 @@ export function createAppTheme(
       MuiButton: {
         styleOverrides: {
           root: { borderRadius: shape.borderRadius },
+          // Текстовые и контурные кнопки — акцент как ТЕКСТ на поверхности.
+          textPrimary: { color: primaryText },
+          outlinedPrimary: { color: primaryText },
+        },
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: { '&.Mui-selected': { color: primaryText } },
+        },
+      },
+      MuiLink: {
+        styleOverrides: {
+          root: { color: primaryText },
         },
       },
       MuiDialogContent: {

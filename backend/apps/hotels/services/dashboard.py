@@ -179,10 +179,13 @@ def _attention(hotel, user, points, shift, scope) -> list[dict]:
                 {"code": "node_offline", "severity": "error", "minutes": offline,
                  "route": "/cms/room-control"}
             )
+        # Тариф отель не меняет — у него нет такого экрана. Прежняя ссылка
+        # вела в настройки, где тарифа нет: без адреса карточка честно
+        # говорит «свяжитесь с платформой» (партия 55).
         for row in _tariff_overage(hotel):
             cards.append(
                 {"code": "tariff_over", "severity": "warning", "resource": row["key"],
-                 "used": row["used"], "limit": row["limit"], "route": "/cms/settings"}
+                 "used": row["used"], "limit": row["limit"], "route": None}
             )
 
     return cards

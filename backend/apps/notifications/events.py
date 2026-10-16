@@ -426,6 +426,9 @@ EVENTS: dict[str, EventSpec] = {
             },
             audience=AUDIENCE_HOTEL,
             placeholders=("version", "draft_name", "delay_seconds"),
+            # Черновик ждёт решения человека: выключенное по умолчанию событие
+            # молча оставляло отель с неопубликованным оформлением (партия 55).
+            enabled_by_default=True,
         ),
         EventSpec(
             code="notification.undelivered",

@@ -151,7 +151,11 @@ export function useBoardLive(
           void queryClient.invalidateQueries({
             queryKey: trackerKeys.boards,
             refetchType: 'active',
-            predicate: (query) => Boolean(query.queryKey[6]),
+            // Лента записей на ДРУГОЙ день (сегмент даты) — тоже: снимок
+            // приходит за сегодня, и подменить им другой день нельзя, а
+            // перечитать — можно. Без этого пустой день обещал «новые записи
+            // появятся здесь сами» и не выполнял (партия 55).
+            predicate: (query) => Boolean(query.queryKey[6]) || Boolean(query.queryKey[5]),
           });
           // Point badges (active/new counts) move with the board.
           void queryClient.invalidateQueries({

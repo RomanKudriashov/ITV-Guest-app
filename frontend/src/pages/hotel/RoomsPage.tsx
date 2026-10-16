@@ -85,6 +85,8 @@ import { RoomGrid } from './RoomGrid';
 import { RoomPanel } from './RoomPanel';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListEmpty } from '@/kit/list/ListEmpty';
+import { PageContainer } from '@/components/PageContainer';
+import { SearchField } from '@/components/SearchField';
 import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 
@@ -346,7 +348,7 @@ export function RoomsPage() {
   });
 
   return (
-    <Box sx={{ p: 3 }}>
+    <PageContainer>
       <Card variant="outlined" sx={{ borderColor: 'divider' }}>
         <CardContent sx={{ p: 2 }}>
           <Stack
@@ -365,20 +367,6 @@ export function RoomsPage() {
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-              <TextField
-                size="small"
-                value={params.search}
-                /* Новый поиск — всегда с первой страницы: иначе набранное
-                   слово находит три номера, а экран стоит на седьмой
-                   странице и показывает пусто. */
-                onChange={(event) => {
-                  resetSelection();
-                  patch({ search: event.target.value, page: 1 });
-                }}
-                placeholder={t('list.searchPlaceholder')}
-                inputProps={{ 'data-testid': 'rooms-search' }}
-                sx={{ minWidth: 200 }}
-              />
               <Button
                 startIcon={<PrintOutlinedIcon />}
                 disabled={printing}
@@ -434,6 +422,22 @@ export function RoomsPage() {
             alignItems="center"
             sx={{ mb: 1 }}
           >
+            {/* Поиск — первым в ряду фильтров и по правилу поиска: лупа и
+                подсказка, без подписи (партия 55). Стоял среди кнопок шапки
+                полем с подсказкой рядом с полями с подписью. */}
+            <SearchField
+              value={params.search}
+              /* Новый поиск — всегда с первой страницы: иначе набранное
+                 слово находит три номера, а экран стоит на седьмой
+                 странице и показывает пусто. */
+              onChange={(next) => {
+                resetSelection();
+                patch({ search: next, page: 1 });
+              }}
+              placeholder={t('list.searchPlaceholder')}
+              testId="rooms-search"
+              sx={{ minWidth: 200 }}
+            />
             <SelectField
               size="small"
               fullWidth={false}
@@ -912,7 +916,7 @@ export function RoomsPage() {
         onClose={() => setPendingDelete(null)}
         onConfirm={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
       />
-    </Box>
+    </PageContainer>
   );
 }
 

@@ -35,6 +35,8 @@ import { SchedulePicker } from '@/components/SchedulePicker';
 import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
+import { PageContainer } from '@/components/PageContainer';
+import { FormCell, FormGrid } from '@/kit/formLayout';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { findCategory, flattenCategories, subtreeIds, type FlatCategory } from '@/utils/categories';
@@ -227,18 +229,18 @@ export function CategoryEditorPage() {
 
   if (bootstrapLoading || categoriesQuery.isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <Skeleton variant="rounded" height={64} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={360} />
-      </Box>
+      </PageContainer>
     );
   }
 
   if (!bootstrap) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <Alert severity="error">{t('errors.loadBootstrap')}</Alert>
-      </Box>
+      </PageContainer>
     );
   }
 
@@ -247,17 +249,27 @@ export function CategoryEditorPage() {
   // потом отказывает при сохранении.
   if (categoriesQuery.isError || categoriesQuery.data === undefined) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <QueryState query={categoriesQuery} what={t('state.what.category')}>
           {() => null}
         </QueryState>
-      </Box>
+      </PageContainer>
     );
   }
 
   return (
-    <Box sx={{ p: 3, pb: 10 }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+    <PageContainer sx={{ pb: 10 }}>
+      {/* Шапка переносится, а не режет заголовок многоточием: на 390 «Новая
+          категория» не помещалась рядом с «Назад» и «Сохранить» (партия 55). */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={2}
+        rowGap={1}
+        sx={{ mb: 2 }}
+      >
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate(backPath)}
@@ -265,8 +277,8 @@ export function CategoryEditorPage() {
         >
           {t('common.back')}
         </Button>
-        <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h5" noWrap>
+        <Stack sx={{ flex: '1 1 160px', minWidth: 0 }}>
+          <Typography variant="h5" sx={{ overflowWrap: 'anywhere' }}>
             {isNew
               ? t('category.newTitle')
               : pickTranslated(form.title, languages.displayLanguage, languages.defaultCode) ||
@@ -292,7 +304,11 @@ export function CategoryEditorPage() {
         </Button>
       </Stack>
 
-      <Stack direction="row" spacing={3} alignItems="flex-start">
+      {/* Две колонки — только там, где форме остаётся место (от lg). Уже —
+          столбиком: форма сверху, изображение ниже. Ряд на 390 схлопывал
+          форму в полоску, а колонка изображения в 380 ложилась поверх
+          (партия 55). */}
+      <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems={{ xs: 'stretch', lg: 'flex-start' }}>
         <Card variant="outlined" sx={{ flexGrow: 1, minWidth: 0, borderColor: 'divider' }}>
           <CardContent>
             <Stack spacing={2.5}>
@@ -324,63 +340,70 @@ export function CategoryEditorPage() {
                 onActiveLanguageChange={setActiveLanguage}
               />
 
-              <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                {/* Отступ глубины пробелами в списке схлопывался, а в поле мешал
-                    бы — вложенность видна по родителю второй строкой. */}
-                <SelectField
-                  size="small"
-                  fullWidth={false}
-                  label={t('category.parent')}
-                  value={form.parent_id ?? ROOT}
-                  onChange={(next) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      parent_id: next === ROOT || next === '' ? null : next,
-                    }))
-                  }
-                  sx={{ minWidth: 260 }}
-                  testId="category-parent-select"
-                  options={[
-                    { value: ROOT, label: t('category.noParent') },
-                    ...categoryOptions(
-                      flattenCategories(tree),
-                      (category) =>
-                        pickTranslated(
-                          category.title,
-                          languages.displayLanguage,
-                          languages.defaultCode,
-                        ) || category.code,
-                    ).filter((option) => !forbiddenParents.has(option.value)),
-                  ]}
-                />
+              {/* Общая сетка формы: края полей одной колонки совпадают, на узком
+                  экране всё во всю ширину (партия 55). */}
+              <FormGrid>
+                <FormCell span={6}>
+                  {/* Отступ глубины пробелами в списке схлопывался, а в поле мешал
+                      бы — вложенность видна по родителю второй строкой. */}
+                  <SelectField
+                    size="small"
+                    label={t('category.parent')}
+                    value={form.parent_id ?? ROOT}
+                    onChange={(next) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        parent_id: next === ROOT || next === '' ? null : next,
+                      }))
+                    }
+                    testId="category-parent-select"
+                    options={[
+                      { value: ROOT, label: t('category.noParent') },
+                      ...categoryOptions(
+                        flattenCategories(tree),
+                        (category) =>
+                          pickTranslated(
+                            category.title,
+                            languages.displayLanguage,
+                            languages.defaultCode,
+                          ) || category.code,
+                      ).filter((option) => !forbiddenParents.has(option.value)),
+                    ]}
+                  />
+                </FormCell>
 
-                <TextField
-                  size="small"
-                  type="number"
-                  label={t('category.sortOrder')}
-                  value={form.sort_order}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, sort_order: Number(event.target.value) }))
-                  }
-                  sx={{ width: 160 }}
-                  inputProps={{ 'data-testid': 'category-sort-input' }}
-                />
+                <FormCell span={3}>
+                  <TextField
+                    size="small"
+                    type="number"
+                    fullWidth
+                    label={t('category.sortOrder')}
+                    value={form.sort_order}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, sort_order: Number(event.target.value) }))
+                    }
+                    inputProps={{ 'data-testid': 'category-sort-input' }}
+                  />
+                </FormCell>
 
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={form.is_active}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, is_active: event.target.checked }))
-                      }
-                      inputProps={
-                        { 'data-testid': 'category-active-switch' } as Record<string, string>
-                      }
-                    />
-                  }
-                  label={t('category.active')}
-                />
-              </Stack>
+                <FormCell span={3}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.is_active}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, is_active: event.target.checked }))
+                        }
+                        inputProps={
+                          { 'data-testid': 'category-active-switch' } as Record<string, string>
+                        }
+                      />
+                    }
+                    label={t('category.active')}
+                    sx={{ minHeight: 40 }}
+                  />
+                </FormCell>
+              </FormGrid>
 
               <Box>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
@@ -399,47 +422,52 @@ export function CategoryEditorPage() {
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
                   {t('category.commerceSection')}
                 </Typography>
-                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="flex-start">
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={form.service_fee_applies}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, service_fee_applies: event.target.checked }))
-                        }
-                        inputProps={
-                          { 'data-testid': 'cms-category-service-fee' } as Record<string, string>
-                        }
-                      />
-                    }
-                    label={t('category.serviceFeeApplies')}
-                  />
-                  <TextField
-                    size="small"
-                    label={t('category.minOrder')}
-                    value={form.minOrderInput}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, minOrderInput: event.target.value }))
-                    }
-                    error={Boolean(fieldErrors.min_order_minor)}
-                    helperText={fieldErrors.min_order_minor ?? t('category.minOrderHint')}
-                    sx={{ width: 220 }}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          {currencySymbol(bootstrap.hotel.currency, languages.displayLanguage)}
-                        </InputAdornment>
-                      ),
-                    }}
-                    inputProps={{ 'data-testid': 'cms-category-min-order', inputMode: 'decimal' }}
-                  />
-                </Stack>
+                <FormGrid>
+                  <FormCell span={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={form.service_fee_applies}
+                          onChange={(event) =>
+                            setForm((prev) => ({ ...prev, service_fee_applies: event.target.checked }))
+                          }
+                          inputProps={
+                            { 'data-testid': 'cms-category-service-fee' } as Record<string, string>
+                          }
+                        />
+                      }
+                      label={t('category.serviceFeeApplies')}
+                      sx={{ minHeight: 40 }}
+                    />
+                  </FormCell>
+                  <FormCell span={6}>
+                    <TextField
+                      size="small"
+                      label={t('category.minOrder')}
+                      value={form.minOrderInput}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, minOrderInput: event.target.value }))
+                      }
+                      error={Boolean(fieldErrors.min_order_minor)}
+                      helperText={fieldErrors.min_order_minor ?? t('category.minOrderHint')}
+                      fullWidth
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            {currencySymbol(bootstrap.hotel.currency, languages.displayLanguage)}
+                          </InputAdornment>
+                        ),
+                      }}
+                      inputProps={{ 'data-testid': 'cms-category-min-order', inputMode: 'decimal' }}
+                    />
+                  </FormCell>
+                </FormGrid>
               </Box>
             </Stack>
           </CardContent>
         </Card>
 
-        <Card variant="outlined" sx={{ width: 380, flexShrink: 0, borderColor: 'divider' }}>
+        <Card variant="outlined" sx={{ width: { xs: 'auto', lg: 380 }, flexShrink: 0, borderColor: 'divider' }}>
           <CardContent>
             <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
               {t('category.image')}
@@ -467,6 +495,6 @@ export function CategoryEditorPage() {
         onConfirm={guard.proceed}
         onClose={guard.reset}
       />
-    </Box>
+    </PageContainer>
   );
 }

@@ -6,15 +6,22 @@ import CardContent from '@mui/material/CardContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
-import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 
+import { DateField } from '@/components/DateField';
 import { SelectField } from '@/components/SelectField';
 import type { AnalyticsScope, Dimension, PeriodPreset } from '@/api/analyticsTypes';
 import { FILTER_DIMENSIONS, STATIC_DIMENSION_VALUES, dimensionValueLabel } from './dimensions';
 import type { UseAnalyticsFilters } from './useAnalyticsFilters';
+
+/** Одна сетка на даты и измерения — колонки совпадают по краям (партия 55). */
+const FILTER_GRID_SX = {
+  display: 'grid',
+  gap: 1.5,
+  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+} as const;
 
 const PRESETS: Exclude<PeriodPreset, 'custom'>[] = ['today', 'week', 'month'];
 
@@ -79,49 +86,26 @@ export function FilterPanel({
             alignItems={{ xs: 'stretch', md: 'center' }}
             justifyContent="space-between"
           >
-            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
-              <ToggleButtonGroup
-                size="small"
-                exclusive
-                color="primary"
-                value={filters.preset === 'custom' ? null : filters.preset}
-                onChange={(_e, next) => {
-                  if (next) setPreset(next as PeriodPreset);
-                }}
-                aria-label={t('analytics.filters.period')}
-              >
-                {PRESETS.map((preset) => (
-                  <ToggleButton
-                    key={preset}
-                    value={preset}
-                    data-testid={`analytics-filter-preset-${preset}`}
-                  >
-                    {t(`analytics.presets.${preset}`)}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-
-              <Stack direction="row" spacing={1} alignItems="center">
-                <TextField
-                  type="date"
-                  size="small"
-                  label={t('analytics.filters.from')}
-                  InputLabelProps={{ shrink: true }}
-                  value={filters.dateFrom}
-                  onChange={(e) => setCustomRange(e.target.value, filters.dateTo || e.target.value)}
-                  inputProps={{ 'data-testid': 'analytics-filter-date-from' }}
-                />
-                <TextField
-                  type="date"
-                  size="small"
-                  label={t('analytics.filters.to')}
-                  InputLabelProps={{ shrink: true }}
-                  value={filters.dateTo}
-                  onChange={(e) => setCustomRange(filters.dateFrom || e.target.value, e.target.value)}
-                  inputProps={{ 'data-testid': 'analytics-filter-date-to' }}
-                />
-              </Stack>
-            </Stack>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              color="primary"
+              value={filters.preset === 'custom' ? null : filters.preset}
+              onChange={(_e, next) => {
+                if (next) setPreset(next as PeriodPreset);
+              }}
+              aria-label={t('analytics.filters.period')}
+            >
+              {PRESETS.map((preset) => (
+                <ToggleButton
+                  key={preset}
+                  value={preset}
+                  data-testid={`analytics-filter-preset-${preset}`}
+                >
+                  {t(`analytics.presets.${preset}`)}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
 
             <FormControlLabel
               control={
@@ -136,6 +120,28 @@ export function FilterPanel({
               label={t('analytics.filters.compare')}
             />
           </Stack>
+
+          {/* «С» и «По» — в тех же колонках, что и измерения ниже (партия 55):
+              раньше даты стояли своим рядом без переноса, на 390 вылезали
+              за карточку, и правый край «По» не совпадал с колонкой фильтров. */}
+          <Box sx={FILTER_GRID_SX}>
+            <DateField
+              size="small"
+              fullWidth
+              label={t('analytics.filters.from')}
+              value={filters.dateFrom}
+              onChange={(next) => setCustomRange(next, filters.dateTo || next)}
+              testId="analytics-filter-date-from"
+            />
+            <DateField
+              size="small"
+              fullWidth
+              label={t('analytics.filters.to')}
+              value={filters.dateTo}
+              onChange={(next) => setCustomRange(filters.dateFrom || next, next)}
+              testId="analytics-filter-date-to"
+            />
+          </Box>
 
           <Box>
             <Stack
@@ -156,13 +162,7 @@ export function FilterPanel({
                 {t('analytics.filters.clear')}
               </Button>
             </Stack>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1.5,
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-              }}
-            >
+            <Box sx={FILTER_GRID_SX}>
               {FILTER_DIMENSIONS.map((dimension) => {
                 const { options, locked } = optionsFor(dimension);
                 const value = filters.dimensions[dimension] ?? '';

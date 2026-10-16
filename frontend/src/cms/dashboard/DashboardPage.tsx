@@ -145,14 +145,16 @@ function Attention({ cards }: { cards: DashboardAttention[] }) {
                   {text.hint}
                 </Typography>
               </Box>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => navigate(card.route)}
-                data-testid={`dashboard-go-${card.code}`}
-              >
-                {t('dashboard.go')}
-              </Button>
+              {card.route ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => card.route && navigate(card.route)}
+                  data-testid={`dashboard-go-${card.code}`}
+                >
+                  {t('dashboard.go')}
+                </Button>
+              ) : null}
             </Card>
           );
         })}

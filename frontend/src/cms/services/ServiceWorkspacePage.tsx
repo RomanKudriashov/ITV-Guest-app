@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import {
   ImageUploader,
   mediaToEditable,
@@ -11,6 +11,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import Link from '@mui/material/Link';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
@@ -27,9 +28,11 @@ import { ApiError } from '@/api/client';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
+import { PageContainer } from '@/components/PageContainer';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { fetchStaff } from '@/api/hotelAdmin';
@@ -80,7 +83,7 @@ export function ServiceWorkspacePage() {
   }
   if (service.error || !service.data) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         {/*
           Здесь стояло `String(service.error)` — на экран выезжало «ApiError:
           боль». Имя класса и текст исключения оператору бесполезны, а про
@@ -89,7 +92,7 @@ export function ServiceWorkspacePage() {
         <QueryState query={service} what={t('state.what.service')}>
           {() => null}
         </QueryState>
-      </Box>
+      </PageContainer>
     );
   }
 
@@ -100,7 +103,7 @@ export function ServiceWorkspacePage() {
     data.public_name[i18n.resolvedLanguage ?? 'ru'] ?? data.public_name.ru ?? data.code;
 
   return (
-    <Box sx={{ p: 3 }} data-testid="cms-service-workspace">
+    <PageContainer testId="cms-service-workspace">
       <Button
         size="small"
         startIcon={<ArrowBackIcon />}
@@ -110,8 +113,19 @@ export function ServiceWorkspacePage() {
         {t('services.backToList')}
       </Button>
 
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
-        <Typography variant="h5">{name}</Typography>
+      {/* Имя и пометки переносятся: в ряд на 390 не помещались (партия 55). */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={1.5}
+        rowGap={1}
+        sx={{ mb: 2 }}
+      >
+        <Typography variant="h5" sx={{ overflowWrap: 'anywhere', minWidth: 0 }}>
+          {name}
+        </Typography>
         <Chip size="small" variant="outlined" label={t(`services.types.${data.type}`)} />
         {/* Вид рабочего экрана персонала следует из типа (R3) — показываем сразу. */}
         <Chip
@@ -147,7 +161,7 @@ export function ServiceWorkspacePage() {
 
       {tab === 'menu' ? (
         // Меню ЭТОГО заведения: тот же экран каталога, но в области сервиса.
-        <Box data-testid="service-menu">
+        <Box data-testid="service-menu" sx={{ minWidth: 0 }}>
           <MenuPage serviceId={data.id} noun={data.noun} />
         </Box>
       ) : null}
@@ -156,7 +170,7 @@ export function ServiceWorkspacePage() {
       {tab === 'delivery' ? <DeliveryTab /> : null}
       {tab === 'commerce' ? <CommerceTab service={data} /> : null}
       {tab === 'staff' ? <StaffTab service={data} /> : null}
-    </Box>
+    </PageContainer>
   );
 }
 
@@ -217,13 +231,31 @@ function ScheduleTab({ service }: { service: CmsService }) {
         ]}
       />
 
+      {/*
+        Подпись брала `services.sla` — а это ветка словаря (порог по точкам), и
+        на экран выезжало «key … returned an object». Подсказка обещала, что
+        просрочка «поднимается управляющему», — сама по себе она лишь
+        подсвечивается на доске; тревогу поднимает правило эскалации, туда и
+        ссылка (партия 55).
+      */}
       <TextField
         size="small"
         type="number"
-        label={t('services.sla')}
+        label={t('services.slaLabel')}
         defaultValue={service.execution_point.sla_minutes}
         onBlur={(event) => save.mutate({ sla_minutes: Number(event.target.value) })}
-        helperText={t('services.slaHint')}
+        helperText={
+          <>
+            {t('services.slaHint')}{' '}
+            <Link
+              component={RouterLink}
+              to={cmsPath('/notifications?tab=escalation')}
+              data-testid="service-sla-escalation-link"
+            >
+              {t('services.slaEscalationLink')}
+            </Link>
+          </>
+        }
         data-testid="service-sla"
       />
 
@@ -434,33 +466,37 @@ function StaffTab({ service }: { service: CmsService }) {
               {t('services.staffEmpty')}
             </Alert>
           ) : (
-            <Table size="small" data-testid="service-staff-table">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t('hotel.staff.fullName')}</TableCell>
-                  <TableCell>{t('hotel.staff.email')}</TableCell>
-                  <TableCell>{t('services.staffLevel')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map(({ person, assignment }) => (
-                  <TableRow key={person.id} data-testid={`service-staff-row-${person.id}`}>
-                    <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <span>{person.full_name}</span>
-                        {!person.is_active && (
-                          <Chip size="small" label={t('services.staffOff')} />
-                        )}
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{person.email}</TableCell>
-                    <TableCell data-testid={`service-staff-level-${person.id}`}>
-                      {t(`hotel.staff.levels.${assignment!.level}`)}
-                    </TableCell>
+            // Широкая таблица прокручивается в своей рамке, а не раздвигает
+            // страницу: на 390 почта не помещалась, выход за край +62 (партия 55).
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" data-testid="service-staff-table">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('hotel.staff.fullName')}</TableCell>
+                    <TableCell>{t('hotel.staff.email')}</TableCell>
+                    <TableCell>{t('services.staffLevel')}</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {rows.map(({ person, assignment }) => (
+                    <TableRow key={person.id} data-testid={`service-staff-row-${person.id}`}>
+                      <TableCell>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <span>{person.full_name}</span>
+                          {!person.is_active && (
+                            <Chip size="small" label={t('services.staffOff')} />
+                          )}
+                        </Stack>
+                      </TableCell>
+                      <TableCell>{person.email}</TableCell>
+                      <TableCell data-testid={`service-staff-level-${person.id}`}>
+                        {t(`hotel.staff.levels.${assignment!.level}`)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )
         }
       </QueryState>

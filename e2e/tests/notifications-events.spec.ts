@@ -26,7 +26,7 @@ const CODES = [
   'brand.schedule_failed',
   'notification.undelivered',
 ]
-const ACTIONABLE = new Set(['order.overdue', 'order.cancelled', 'review.low', 'notification.undelivered'])
+const ACTIONABLE = new Set(['order.overdue', 'order.cancelled', 'review.low', 'notification.undelivered', 'brand.schedule_failed'])
 
 interface SettingItem {
   code: string

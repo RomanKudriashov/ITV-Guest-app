@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useNavigate } from 'react-router-dom';
 
+import { PageContainer } from '@/components/PageContainer';
+
 import { useMyPoints } from '../hooks/useTrackerQueries';
 import type { MyPoint } from '../api/types';
 
@@ -35,7 +37,9 @@ export function MyPointsPage() {
   if (points && points.length < 2) return <Navigate to="/tracker" replace />;
 
   return (
-    <Box data-testid="my-points" sx={{ px: { xs: 2, sm: 3 }, py: 2, maxWidth: 960, mx: 'auto' }}>
+    // Во всю ширину с отступом страницы: узкая колонка 960 по центру на
+    // широком экране оставляла по 140 пикселей пустоты с боков (партия 55).
+    <PageContainer testId="my-points">
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
         <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate('/tracker')}>
           {t('tracker.myPoints.toBoard')}
@@ -64,7 +68,7 @@ export function MyPointsPage() {
           <PointRow key={point.code} point={point} onOpen={() => navigate(`/tracker?point=${point.code}`)} />
         ))}
       </Stack>
-    </Box>
+    </PageContainer>
   );
 }
 

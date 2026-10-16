@@ -4,11 +4,11 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, pillSx, surface, typo } from '../adminTokens';
+import { accent, fieldSx, ink, panelSx, pillSx, surface, typo } from '../adminTokens';
+import { SearchField } from '@/components/SearchField';
 import { QueryState } from '@/components/QueryState';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
@@ -80,7 +80,9 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
       {/* Активные / история / все — и поиск. Всё в адресе: ссылкой на разбор
           можно поделиться, и она откроется той же выборкой. */}
       {hotelId ? null : (
-        <Box sx={{ ...panelSx, mt: 2, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+        <Box sx={{ ...panelSx, mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
+          {/* С переносом: на 390 поиск уходит своей строкой, а счётчик не
+              вылезает за панель (партия 55). */}
           {(['active', 'history', 'all'] as const).map((state) => (
             <ButtonBase
               key={state}
@@ -100,13 +102,13 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
               {t(`admin.support.state.${state}`)}
             </ButtonBase>
           ))}
-          <TextField
-            size="small"
+          {/* Поиск — общим полем поиска с лупой (партия 55). */}
+          <SearchField
             value={params.search}
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => patch({ search: event.target.value })}
+            onChange={(next) => patch({ search: next })}
             placeholder={t('list.searchPlaceholder')}
-            inputProps={{ 'data-testid': 'admin-support-search' }}
-            sx={{ minWidth: 200 }}
+            testId="admin-support-search"
+            sx={[fieldSx, { width: { xs: '100%', sm: 240 } }]}
           />
           <Box sx={{ flexGrow: 1 }} />
           {sessions.data ? (

@@ -21,6 +21,7 @@ import { ApiError } from '@/api/client';
 import { createSchedule } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { Schedule, ScheduleInterval } from '@/api/types';
+import { TimeField } from '@/components/DateField';
 import { SelectField } from '@/components/SelectField';
 
 const ALWAYS = '__always__';
@@ -49,8 +50,15 @@ export function SchedulePicker({
   const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // На узком экране — столбиком: в ряд с «Новое» поле выбора сжималось до
+  // 42 px и «Всегда доступно» обрезалось. Поле всегда тянется на всю
+  // оставшуюся ширину, а не по содержимому (партия 55).
   return (
-    <Stack direction="row" spacing={1} alignItems="flex-start">
+    <Stack
+      direction={{ xs: 'column', sm: 'row' }}
+      spacing={1}
+      alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+    >
       <SelectField
         size="small"
         label={label ?? t('schedule.label')}
@@ -58,6 +66,7 @@ export function SchedulePicker({
         onChange={(next) => onChange(next === ALWAYS || next === '' ? null : next)}
         helperText={t('schedule.helper')}
         testId={testId}
+        sx={{ flex: 1, minWidth: 0 }}
         options={[
           { value: ALWAYS, label: t('schedule.always') },
           ...schedules.map((schedule) => ({
@@ -73,7 +82,7 @@ export function SchedulePicker({
         startIcon={<AddIcon />}
         onClick={() => setDialogOpen(true)}
         data-testid={`${testId}-create`}
-        sx={{ mt: 0.5, flexShrink: 0 }}
+        sx={{ mt: { xs: 0, sm: 0.5 }, flexShrink: 0, alignSelf: { xs: 'flex-start', sm: 'auto' } }}
       >
         {t('schedule.create')}
       </Button>
@@ -157,7 +166,13 @@ function ScheduleCreateDialog({
     !name.trim() ||
     (!alwaysOpen &&
       (intervals.length === 0 ||
-        intervals.some((interval) => interval.start_time === interval.end_time)));
+        intervals.some(
+          // Пустое время — недонабранное в TimeField: на сервер его не шлём.
+          (interval) =>
+            !interval.start_time ||
+            !interval.end_time ||
+            interval.start_time === interval.end_time,
+        )));
 
   const patch = (key: string, changes: Partial<DraftInterval>) =>
     setIntervals((prev) =>
@@ -196,42 +211,55 @@ function ScheduleCreateDialog({
                 {t('schedule.intervals')}
               </Typography>
               {intervals.map((interval) => (
-                <Stack key={interval.key} direction="row" spacing={1} alignItems="center">
+                /*
+                  Интервал — сетка, а не ряд: пять полей в строку на 390 вылезали
+                  за край. На узком: день на всю строку, «С»/«По» парой, часть
+                  дня и удаление — следом (партия 55).
+                */
+                <Box
+                  key={interval.key}
+                  sx={{
+                    display: 'grid',
+                    gap: 1,
+                    alignItems: 'center',
+                    gridTemplateColumns: {
+                      xs: '1fr 1fr',
+                      // День — по самому длинному («Понедельник», «Воскресенье»): 132 px срезали 9 (партия 55).
+                      sm: 'minmax(156px, 1.5fr) 1fr 1fr minmax(148px, 1.4fr) auto',
+                    },
+                  }}
+                >
                   <SelectField
                     size="small"
-                    fullWidth={false}
                     label={t('schedule.weekday')}
                     value={String(interval.weekday)}
                     onChange={(next) => patch(interval.key, { weekday: Number(next) })}
-                    sx={{ minWidth: 132 }}
+                    sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' }, minWidth: 0 }}
                     options={[0, 1, 2, 3, 4, 5, 6].map((day) => ({
                       value: String(day),
                       label: weekdayLabels[day] ?? String(day),
                     }))}
                   />
-                  <TextField
+                  <TimeField
                     size="small"
-                    type="time"
+                    fullWidth
                     label={t('schedule.from')}
                     value={interval.start_time}
-                    onChange={(event) => patch(interval.key, { start_time: event.target.value })}
-                    InputLabelProps={{ shrink: true }}
+                    onChange={(next) => patch(interval.key, { start_time: next })}
                   />
-                  <TextField
+                  <TimeField
                     size="small"
-                    type="time"
+                    fullWidth
                     label={t('schedule.to')}
                     value={interval.end_time}
-                    onChange={(event) => patch(interval.key, { end_time: event.target.value })}
-                    InputLabelProps={{ shrink: true }}
+                    onChange={(next) => patch(interval.key, { end_time: next })}
                   />
                   <SelectField
                     size="small"
-                    fullWidth={false}
                     label={t('schedule.dayPart')}
                     value={interval.day_part ?? ''}
                     onChange={(next) => patch(interval.key, { day_part: next || null })}
-                    sx={{ minWidth: 132 }}
+                    sx={{ minWidth: 0 }}
                     options={[
                       { value: '', label: t('common.none') },
                       ...dayParts.map((part) => ({
@@ -246,10 +274,11 @@ function ScheduleCreateDialog({
                       setIntervals((prev) => prev.filter((entry) => entry.key !== interval.key))
                     }
                     aria-label={t('common.delete')}
+                    sx={{ justifySelf: 'start' }}
                   >
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
-                </Stack>
+                </Box>
               ))}
               <Box>
                 <Button

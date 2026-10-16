@@ -15,6 +15,7 @@ import {
   type MultiSelectFieldProps,
   type SelectFieldProps,
 } from '@/components/SelectField';
+import { DateField, type DateFieldProps } from '@/components/DateField';
 
 export { FormCell, FormGrid } from '@/kit/formLayout';
 
@@ -156,4 +157,22 @@ export function MultiChoiceField<V extends string = string>({
   ...props
 }: Omit<MultiSelectFieldProps<V>, 'sx' | 'fieldSx'> & { span?: FormSpan }) {
   return <MultiSelectField<V> {...props} sx={spanSx(span)} fieldSx={fieldSx} />;
+}
+
+/**
+ * Дата в форме консоли: общий `DateField` с видом поля консоли (партия 55).
+ * В сетке ширину задаёт `span`; в ряду фильтров, где сетки нет, — `width`
+ * (у `fieldSx` ширина 100%, и без неё поле съело бы весь ряд).
+ */
+export function DateChoiceField({
+  span = 12,
+  width,
+  ...props
+}: Omit<DateFieldProps, 'sx'> & { span?: FormSpan; width?: number }) {
+  return (
+    <DateField
+      {...props}
+      sx={[fieldSx, spanSx(span), width ? { width, flex: '0 0 auto' } : {}]}
+    />
+  );
 }

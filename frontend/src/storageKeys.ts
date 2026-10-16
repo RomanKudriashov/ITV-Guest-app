@@ -20,4 +20,8 @@ export const STORAGE_KEYS = {
   /** sessionStorage: когда страница в последний раз перезапускалась из-за
    *  ненайденной части сборки (`app/lazyPart.tsx`). Не даёт уйти в петлю. */
   partReload: 'itv.part-reload',
+  /** Левое меню CMS свёрнуто до иконок: `1` | нет ключа (партия 55). */
+  cmsNavCollapsed: 'itv.cms.nav-collapsed',
+  /** Левое меню NaviRoom Control свёрнуто до иконок: `1` | нет ключа (партия 55). */
+  platformNavCollapsed: 'itv.platform.nav-collapsed',
 } as const;

@@ -20,6 +20,7 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 
 import { ShowcaseEditorPage } from '@/cms/showcase/ShowcaseEditorPage';
+import { PageContainer } from '@/components/PageContainer';
 import { BrandPreview } from './BrandPreview';
 import { useBrandDraft } from './useBrandDraft';
 import { BrandLookChip } from './BrandLookChip';
@@ -101,7 +102,7 @@ export function BrandPage() {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
+    <PageContainer>
       <Stack
         direction="row"
         spacing={2}
@@ -144,6 +145,9 @@ export function BrandPage() {
       <Tabs
         value={section}
         onChange={(_event, next: 'brand' | 'showcase' | 'versions') => setSection(next)}
+        // Три вкладки на 390 не помещались (+6 px) — прокрутка ряда (партия 55).
+        variant="scrollable"
+        scrollButtons={false}
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
       >
         <Tab value="brand" label={t('brand.tabs.brand')} data-testid="brand-tab-brand" />
@@ -173,9 +177,15 @@ export function BrandPage() {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 440px)' },
+            // minmax(0, …), а не 1fr: у 1fr нижняя граница — ширина
+            // содержимого, и на 390 колонка витрины вылезала на 18 px (партия 55).
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 440px)' },
             gap: 3,
             alignItems: 'start',
+            // Ячейка сетки по умолчанию не уже своего содержимого (min-width:
+            // auto, а при mx:auto у редактора — ещё и не растягивается) —
+            // редактор витрины держал 371 px в колонке 342 (партия 55).
+            '& > *': { minWidth: 0, width: '100%' },
           }}
           data-testid="brand-showcase-section"
         >
@@ -197,7 +207,7 @@ export function BrandPage() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 440px)' },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 440px)' },
           gap: 3,
           alignItems: 'start',
         }}
@@ -218,6 +228,6 @@ export function BrandPage() {
         </Box>
       </Box>
       )}
-    </Box>
+    </PageContainer>
   );
 }

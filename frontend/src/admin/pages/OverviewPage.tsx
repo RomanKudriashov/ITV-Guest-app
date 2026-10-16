@@ -19,7 +19,14 @@ import { formatMoney } from '@/utils/money';
  */
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
-  const overview = useQuery({ queryKey: ['admin', 'overview'], queryFn: getOverview });
+  // Раз в минуту, и только на видимой вкладке: подзаголовок обещает «что идёт
+  // сейчас», а без опроса цифры застывали на моменте открытия (партия 55).
+  const overview = useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: getOverview,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+  });
 
   if (overview.isPending || overview.isError || overview.data === undefined) {
     // Загрузка и отказ — обе ветки общей механики: сводка целиком зависит от

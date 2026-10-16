@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
 import AlertTitle from '@mui/material/AlertTitle';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -25,6 +26,8 @@ import { fetchAccess, setDemoEntry, setRoomPin } from '@/api/grms';
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
+import { DateField } from '@/components/DateField';
+import { formGridSx, spanSx } from '@/kit/formLayout';
 
 /**
  * Доступ гостя к управлению номером: PIN проживания и демо-вход.
@@ -112,9 +115,13 @@ export function AccessTab() {
               {t('roomControl.access.pinMuted')}
             </Alert>
           ) : null}
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+          {/* Поля PIN — на общей сетке формы (партия 55): в ряд с переносом
+              края поля даты с подсказкой и полей без неё расходились. */}
+          <Box sx={{ ...formGridSx, mb: 2 }}>
             <TextField
               size="small"
+              fullWidth
+              sx={spanSx(3)}
               label={t('roomControl.builder.room')}
               value={room}
               onChange={(e) => setRoom(e.target.value)}
@@ -122,32 +129,37 @@ export function AccessTab() {
             />
             <TextField
               size="small"
+              fullWidth
+              sx={spanSx(3)}
               label={t('roomControl.access.pin')}
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               data-testid="grms-pin-value"
             />
-            <TextField
+            <DateField
               size="small"
-              type="date"
+              fullWidth
+              sx={spanSx(4)}
               label={t('roomControl.access.validUntil')}
               value={validUntil}
-              onChange={(e) => setValidUntil(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'grms-pin-until' }}
+              onChange={setValidUntil}
+              testId="grms-pin-until"
               helperText={t('roomControl.access.validUntilHint')}
             />
-            <Button
-              variant="contained"
-              disabled={!room.trim() || !pin.trim() || pinMutation.isPending}
-              onClick={() =>
-                pinMutation.mutate({ room: room.trim(), pin: pin.trim(), validUntil })
-              }
-              data-testid="grms-pin-save"
-            >
-              {t('roomControl.access.pinSave')}
-            </Button>
-          </Stack>
+            <Box sx={spanSx(2)}>
+              <Button
+                variant="contained"
+                fullWidth
+                disabled={!room.trim() || !pin.trim() || pinMutation.isPending}
+                onClick={() =>
+                  pinMutation.mutate({ room: room.trim(), pin: pin.trim(), validUntil })
+                }
+                data-testid="grms-pin-save"
+              >
+                {t('roomControl.access.pinSave')}
+              </Button>
+            </Box>
+          </Box>
 
           {state.pins.length === 0 ? (
             <Typography variant="caption" color="text.secondary">

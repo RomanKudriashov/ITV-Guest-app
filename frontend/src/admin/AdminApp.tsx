@@ -28,6 +28,19 @@ import { SecurityPage } from './pages/SecurityPage';
 import { SupportSessionsPage } from './pages/SupportSessionsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { accent, ink, typo } from './adminTokens';
+// Иконки пунктов меню — все КОНТУРНЫЕ (партия 55): в свёрнутом меню пункт
+// узнают только по ним.
+import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
+import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
+import WorkspacesOutlinedIcon from '@mui/icons-material/WorkspacesOutlined';
+import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
+import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
+import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
+import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
 
 /**
@@ -38,23 +51,23 @@ import { getMe, platformLogoutHere, platformSession, platformToken } from './adm
  * нужна ровно одна — на саму админку, и она есть.
  */
 const SECTIONS: AdminSection[] = [
-  { key: 'overview', labelKey: 'admin.nav.overview' },
-  { key: 'fleet', labelKey: 'admin.nav.fleet' },
+  { key: 'overview', labelKey: 'admin.nav.overview', icon: <SpaceDashboardOutlinedIcon fontSize="small" /> },
+  { key: 'fleet', labelKey: 'admin.nav.fleet', icon: <ApartmentOutlinedIcon fontSize="small" /> },
   // Ниже — то, что относится к самой платформе, а не к отелям. Группировка та
   // же, что в CMS (R4): плоская простыня одинаковых пунктов не даёт понять,
   // где кончаются отели и начинается платформа.
   // Группы — рядом с флотом, а не в блоке платформы: это разрез ОТЕЛЕЙ, и
   // человек идёт сюда из той же задачи, из которой открывает флот.
-  { key: 'groups', labelKey: 'admin.nav.groups' },
+  { key: 'groups', labelKey: 'admin.nav.groups', icon: <WorkspacesOutlinedIcon fontSize="small" /> },
   // Публикация — тоже про отели, а не про платформу: адресуется группами.
-  { key: 'publications', labelKey: 'admin.nav.publications' },
-  { key: 'modules', labelKey: 'admin.nav.modules', group: 'admin.nav.platformGroup' },
-  { key: 'nodes', labelKey: 'admin.nav.nodes', group: 'admin.nav.platformGroup' },
-  { key: 'templates', labelKey: 'admin.nav.templates', group: 'admin.nav.platformGroup' },
-  { key: 'team', labelKey: 'admin.nav.team', group: 'admin.nav.platformGroup' },
-  { key: 'support', labelKey: 'admin.nav.support', group: 'admin.nav.platformGroup' },
-  { key: 'security', labelKey: 'admin.nav.security', group: 'admin.nav.platformGroup' },
-  { key: 'audit', labelKey: 'admin.nav.audit', group: 'admin.nav.platformGroup' },
+  { key: 'publications', labelKey: 'admin.nav.publications', icon: <PublishOutlinedIcon fontSize="small" /> },
+  { key: 'modules', labelKey: 'admin.nav.modules', icon: <ExtensionOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'nodes', labelKey: 'admin.nav.nodes', icon: <DnsOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'templates', labelKey: 'admin.nav.templates', icon: <LibraryBooksOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'team', labelKey: 'admin.nav.team', icon: <ManageAccountsOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'support', labelKey: 'admin.nav.support', icon: <SupportAgentOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'security', labelKey: 'admin.nav.security', icon: <ShieldOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'audit', labelKey: 'admin.nav.audit', icon: <HistoryOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
 ];
 
 /**

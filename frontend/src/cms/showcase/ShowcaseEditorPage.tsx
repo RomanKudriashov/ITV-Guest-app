@@ -136,7 +136,10 @@ export function ShowcaseEditorPage({ embedded = false }: ShowcaseEditorPageProps
         {tiles.map((tile, index) => (
           <Card key={tile.key} variant="outlined" data-testid={`cms-showcase-tile-${tile.key}`}>
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
+              {/* На узком экране размер и показ уходят под название, а не теснят
+                  его: на 390 «Рестораны и …» обрезались, а счётчик заведений
+                  налезал на поле размера (партия 55). */}
+              <Stack direction="row" columnGap={1.5} rowGap={1} alignItems="center" flexWrap="wrap">
                 <Stack>
                   <IconButton size="small" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t('showcaseCms.moveUp')}>
                     <ArrowUpwardIcon fontSize="inherit" />
@@ -146,20 +149,21 @@ export function ShowcaseEditorPage({ embedded = false }: ShowcaseEditorPageProps
                   </IconButton>
                 </Stack>
 
-                <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 600 }} noWrap>
+                <Stack sx={{ flex: '1 1 160px', minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
                     {tile.title}
                   </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack direction="row" columnGap={1} rowGap={0.5} alignItems="center" flexWrap="wrap">
                     <Chip size="small" label={t(`showcaseCms.type.${tile.type}`, { defaultValue: tile.type })} />
                     {tile.venue_count != null ? (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                         {t('showcaseCms.venueCount', { count: tile.venue_count })}
                       </Typography>
                     ) : null}
                   </Stack>
                 </Stack>
 
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 'none', marginInlineStart: 'auto' }}>
                 <SelectField<CmsShowcaseTile['size']>
                   size="small"
                   fullWidth={false}
@@ -176,6 +180,7 @@ export function ShowcaseEditorPage({ embedded = false }: ShowcaseEditorPageProps
                   onChange={(e) => patch(tile.key, { shown: e.target.checked })}
                   inputProps={{ 'aria-label': t('showcaseCms.shown'), 'data-testid': `cms-showcase-shown-${tile.key}` } as never}
                 />
+                </Stack>
               </Stack>
             </CardContent>
           </Card>

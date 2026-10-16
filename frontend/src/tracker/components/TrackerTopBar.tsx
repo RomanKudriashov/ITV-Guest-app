@@ -66,7 +66,8 @@ export function TrackerTopBar({
       direction="row"
       alignItems="center"
       spacing={1}
-      sx={{ px: 3, pt: 2, pb: 1, flexWrap: 'wrap', rowGap: 1 }}
+      // Края даёт контейнер страницы (партия 55) — свои поля здесь удвоили бы их.
+      sx={{ pb: 1, flexWrap: 'wrap', rowGap: 1 }}
       data-testid="tracker-toolbar"
     >
       <Typography variant="h5" data-testid="cms-page-title">

@@ -5,14 +5,14 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
-import InputBase from '@mui/material/InputBase';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../useRights';
 
-import { accent, ink, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
+import { accent, fieldSx, ink, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
+import { SearchField } from '@/components/SearchField';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
@@ -147,26 +147,15 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, mt: 2.25, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            height: 34,
-            width: 280,
-            px: 1.5,
-            borderRadius: '10px',
-            border: `1px solid ${surface.line}`,
-            bgcolor: surface.s2,
-          }}
-        >
-          <InputBase
-            value={query.search ?? ''}
-            onChange={(e) => patch({ search: e.target.value })}
-            placeholder={t('admin.fleet.searchPlaceholder')}
-            inputProps={{ 'data-testid': 'admin-fleet-search' }}
-            sx={{ ...typo.caption, color: ink.hi, width: '100%' }}
-          />
-        </Box>
+        {/* Поиск — общим полем поиска (лупа + подсказка), а не самодельной
+            рамкой с InputBase (партия 55). */}
+        <SearchField
+          value={query.search ?? ''}
+          onChange={(next) => patch({ search: next })}
+          placeholder={t('admin.fleet.searchPlaceholder')}
+          testId="admin-fleet-search"
+          sx={[fieldSx, { width: { xs: '100%', sm: 280 } }]}
+        />
 
         {/*
           ФИЛЬТР ПО ГРУППЕ. Состав считает сервер: у группы-правила он

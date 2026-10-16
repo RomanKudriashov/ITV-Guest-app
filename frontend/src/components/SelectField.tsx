@@ -1,4 +1,6 @@
 import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
+import ArrowDropDownOutlinedIcon from '@mui/icons-material/ArrowDropDownOutlined';
 import TextField from '@mui/material/TextField';
 import type { SxProps, Theme } from '@mui/material/styles';
 import type { ReactNode } from 'react';
@@ -102,6 +104,8 @@ export function SelectField<V extends string = string>({
       disableClearable={!clearable}
       openOnFocus
       autoHighlight
+      // Стрелка — контурная, как остальные иконки шапки и меню (партия 55).
+      popupIcon={<ArrowDropDownOutlinedIcon />}
       fullWidth={fullWidth}
       disabled={disabled}
       loading={loading}
@@ -126,7 +130,7 @@ export function SelectField<V extends string = string>({
           <li key={key} {...rest} data-value={option.value} data-testid={option.testId}>
             <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{option.label}</span>
             {option.secondary ? (
-              <span style={{ opacity: 0.6, marginInlineStart: 12, whiteSpace: 'nowrap' }}>{option.secondary}</span>
+              <Box component="span" sx={{ color: 'text.secondary', marginInlineStart: 1.5, whiteSpace: 'nowrap' }}>{option.secondary}</Box>
             ) : null}
           </li>
         );
@@ -191,12 +195,28 @@ export function MultiSelectField<V extends string = string>({
       onChange={(_event, next) => onChange(next.map((option) => option.value))}
       openOnFocus
       autoHighlight
+      // Стрелка — контурная, как остальные иконки шапки и меню (партия 55).
+      popupIcon={<ArrowDropDownOutlinedIcon />}
       disableCloseOnSelect
       fullWidth={fullWidth}
       disabled={disabled}
       loading={loading}
       size={size}
-      sx={sx}
+      // ВЫСОТА — КАК У СОСЕДНИХ ПОЛЕЙ (партия 55). Фишки обычного размера
+      // (24 px + отступы) раздували поле до 45 px против 32 у соседей в ряду
+      // («Новый отель»: «Валюта» и «Языки»). Мелкие фишки по 20 px без
+      // вертикальных полей укладываются в строку поля.
+      ChipProps={{ size: 'small' }}
+      // И в одну строку: фишки, что не влезли, сворачиваются в «+N», пока поле
+      // не в фокусе, — иначе узкое поле переносило их и росло до 52 px.
+      limitTags={2}
+      sx={[
+        {
+          '& .MuiAutocomplete-tag': { height: 20, my: 0, maxWidth: 'calc(100% - 8px)' },
+          '& .MuiAutocomplete-inputRoot:not(.Mui-focused)': { flexWrap: 'nowrap', overflow: 'hidden' },
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
       getOptionLabel={(option) => option.label}
       getOptionDisabled={(option) => Boolean(option.disabled)}
       isOptionEqualToValue={(a, b) => a.value === b.value}
@@ -214,7 +234,7 @@ export function MultiSelectField<V extends string = string>({
           <li key={key} {...rest} data-value={option.value} data-testid={option.testId}>
             <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{option.label}</span>
             {option.secondary ? (
-              <span style={{ opacity: 0.6, marginInlineStart: 12, whiteSpace: 'nowrap' }}>{option.secondary}</span>
+              <Box component="span" sx={{ color: 'text.secondary', marginInlineStart: 1.5, whiteSpace: 'nowrap' }}>{option.secondary}</Box>
             ) : null}
           </li>
         );

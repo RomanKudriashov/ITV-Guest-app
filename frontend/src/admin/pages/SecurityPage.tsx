@@ -196,7 +196,20 @@ export function SecurityPage() {
 
       {/* Мои входы — здесь же, в «Безопасности»: 2FA и список сессий отвечают
           на один вопрос «кто и чем заходит под этой учёткой». */}
-      <Box sx={{ ...panelSx, mt: 2.25, maxWidth: 560 }}>
+      {/* Строка «вход … · активность …» на 390 обрезалась многоточием на
+          полуслове — здесь ей разрешён перенос. Строка браузера (последняя)
+          остаётся в одну строку с многоточием намеренно (партия 55).
+          Общий SessionsPanel не наш файл — правка точечная, по разметке. */}
+      <Box
+        sx={{
+          ...panelSx,
+          mt: 2.25,
+          maxWidth: 560,
+          '& [data-testid^="session-row"] .MuiTypography-caption:not(:last-child)': {
+            whiteSpace: 'normal',
+          },
+        }}
+      >
         <SessionsPanel
           queryKey={['platform', 'sessions']}
           fetchSessions={listSessions}

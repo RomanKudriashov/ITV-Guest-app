@@ -12,12 +12,11 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
-import { SelectField } from '@/components/SelectField';
+import { ChoiceField, Field, FormGrid } from '../form';
 import { ink, panelSx, typo } from '../adminTokens';
 import { useRights } from '../useRights';
 import {
@@ -115,8 +114,13 @@ export function PublicationsPage() {
       <Box sx={{ ...panelSx, p: 2, mb: 3 }}>
         <Stack spacing={2} sx={{ maxWidth: 640 }}>
           <Typography sx={typo.panelTitle}>{t('admin.publications.what')}</Typography>
-          <Stack direction="row" spacing={1.5}>
-            <TextField
+          {/* Оба ряда — на одной сетке формы: «Код пресета» над «Целью»,
+              «Название бейджа» над «Группой», края совпадают. Были две строки
+              Stack с разными ширинами — расходились на 2 px, а на 390 ряд
+              уезжал за край (партия 55). */}
+          <FormGrid>
+            <Field
+              span={4}
               size="small"
               label={t('admin.publications.preset')}
               value={form.preset}
@@ -124,22 +128,21 @@ export function PublicationsPage() {
               inputProps={{ 'data-testid': 'admin-pub-preset' }}
               helperText={t('admin.publications.presetHint')}
             />
-            <TextField
+            <Field
+              span={8}
               size="small"
-              fullWidth
               label={t('admin.publications.label')}
               value={form.label}
               onChange={(e) => setForm({ ...form, label: e.target.value })}
               inputProps={{ 'data-testid': 'admin-pub-label' }}
             />
-          </Stack>
+          </FormGrid>
 
           <Typography sx={typo.panelTitle}>{t('admin.publications.whom')}</Typography>
-          <Stack direction="row" spacing={1.5}>
-            <SelectField<PublicationTarget['scope']>
+          <FormGrid>
+            <ChoiceField<PublicationTarget['scope']>
+              span={4}
               size="small"
-              fullWidth={false}
-              sx={{ minWidth: 200 }}
               label={t('admin.publications.scope')}
               value={form.scope}
               onChange={(next) => {
@@ -164,10 +167,9 @@ export function PublicationsPage() {
             />
 
             {form.scope === 'group' ? (
-              <SelectField
+              <ChoiceField
+                span={8}
                 size="small"
-                fullWidth={false}
-                sx={{ minWidth: 220 }}
                 label={t('admin.publications.group')}
                 value={form.groupId}
                 onChange={(next) => {
@@ -181,9 +183,9 @@ export function PublicationsPage() {
                 }))}
               />
             ) : null}
-          </Stack>
+          </FormGrid>
 
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
             <Button
               variant="outlined"
               disabled={!ready || preview.isPending}

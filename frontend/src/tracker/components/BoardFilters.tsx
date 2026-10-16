@@ -1,4 +1,3 @@
-import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -7,8 +6,10 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DateField } from '@/components/DateField';
 import { SelectField } from '@/components/SelectField';
 
 import type { TrackerAssignee, TrackerStatusOption } from '../api/types';
@@ -69,6 +70,16 @@ export interface BoardFiltersProps {
    */
   statuses?: TrackerStatusOption[];
   activeCount: number;
+  /**
+   * Что стоит в строке панели ДО кнопки и ПОСЛЕ неё (партия 55).
+   *
+   * Поиск стоял отдельной полосой ниже кнопки, и на истории до него
+   * добирались через сводку и подсказку порога. Теперь панель — одна строка:
+   * поиск первым, за ним «Фильтры», в конце — то, что экран хочет сказать о
+   * свежести (на истории «Обновлено в … · Обновить»).
+   */
+  leading?: ReactNode;
+  trailing?: ReactNode;
 }
 
 export function BoardFilters({
@@ -81,25 +92,62 @@ export function BoardFilters({
   assignees,
   statuses = [],
   activeCount,
+  leading,
+  trailing,
 }: BoardFiltersProps) {
   const { t } = useTranslation();
   const flag = (value: string) => value === '1';
 
   return (
-    <Box sx={{ px: { xs: 1.5, md: 2 }, pt: 1 }}>
-      <Badge badgeContent={activeCount} color="primary">
+    <Box sx={{ pt: 2 }} data-testid="tracker-panel">
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={1}
+        data-testid="tracker-panel-row"
+      >
+        {leading}
+        {/*
+          КНОПКА — КАК ОСТАЛЬНЫЕ В ПАНЕЛИ, СЧЁТЧИК ВНУТРИ (партия 55).
+
+          Счётчик висел значком на углу кнопки и налезал на её рамку, а сама
+          кнопка была выше поля поиска рядом. Теперь высота — как у поля, а
+          число активных фильтров — частью подписи: «Фильтры 2».
+        */}
         <Button
-          size="small"
           variant={open ? 'contained' : 'outlined'}
           startIcon={<FilterListIcon />}
           onClick={onToggle}
           data-testid="tracker-filters-toggle"
           aria-expanded={open}
-          sx={{ minHeight: 44 }}
+          sx={{ minHeight: 40, flexShrink: 0 }}
         >
           {t('tracker.filters.button')}
+          {activeCount ? (
+            <Box
+              component="span"
+              data-testid="tracker-filters-count"
+              sx={(theme) => ({
+                ml: 1,
+                minWidth: 20,
+                px: 0.75,
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                lineHeight: '20px',
+                textAlign: 'center',
+                bgcolor: open ? theme.palette.primary.contrastText : theme.palette.primary.main,
+                color: open ? theme.palette.primary.main : theme.palette.primary.contrastText,
+              })}
+            >
+              {activeCount}
+            </Box>
+          ) : null}
         </Button>
-      </Badge>
+        {trailing}
+      </Stack>
 
       <Collapse in={open} unmountOnExit>
         <Box
@@ -186,25 +234,24 @@ export function BoardFilters({
             */}
             {history ? (
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <TextField
-                  type="date"
+                {/* Даты — общим полем, а не системным браузера (партия 55). */}
+                <DateField
                   size="small"
                   fullWidth
                   label={t('tracker.filters.since')}
                   value={values.since}
-                  onChange={(event) => onChange({ since: event.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ 'data-testid': 'tracker-filter-since' }}
+                  max={values.until || undefined}
+                  onChange={(value) => onChange({ since: value })}
+                  testId="tracker-filter-since"
                 />
-                <TextField
-                  type="date"
+                <DateField
                   size="small"
                   fullWidth
                   label={t('tracker.filters.until')}
                   value={values.until}
-                  onChange={(event) => onChange({ until: event.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ 'data-testid': 'tracker-filter-until' }}
+                  min={values.since || undefined}
+                  onChange={(value) => onChange({ until: value })}
+                  testId="tracker-filter-until"
                 />
                 <TextField
                   size="small"

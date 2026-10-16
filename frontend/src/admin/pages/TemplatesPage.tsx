@@ -117,11 +117,18 @@ function TemplatesTab() {
             >
               {template.tariff || '—'}
             </Box>
-            <Switch
-              checked={template.is_active}
-              onChange={(e) => save.mutate({ id: template.id, patch: { is_active: e.target.checked } })}
-              inputProps={{ 'data-testid': `admin-template-active-${template.code}` } as Record<string, string>}
-            />
+            {/* Невидимое поле переключателя MUI втрое шире ползунка и торчало
+                за панель почти до края окна: замер видел отступ 3 px вместо 24.
+                Поле — по ползунку, а нажатие по всей дорожке даёт обёртка-label
+                (партия 55). */}
+            <Box component="label" sx={{ display: 'inline-flex', cursor: 'pointer' }}>
+              <Switch
+                checked={template.is_active}
+                onChange={(e) => save.mutate({ id: template.id, patch: { is_active: e.target.checked } })}
+                inputProps={{ 'data-testid': `admin-template-active-${template.code}` } as Record<string, string>}
+                sx={{ '& .MuiSwitch-input': { left: 0, width: '100%' } }}
+              />
+            </Box>
           </Box>
 
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mt: 1.25 }}>

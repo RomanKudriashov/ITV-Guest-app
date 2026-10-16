@@ -12,8 +12,11 @@ export interface DashboardAttention {
     | 'node_offline'
     | 'tariff_over';
   severity: 'error' | 'warning';
-  /** Куда идти чинить. Считает сервер: экран не выдумывает адресов. */
-  route: string;
+  /**
+   * Куда идти чинить. Считает сервер: экран не выдумывает адресов. `null` —
+   * чинить негде у отеля (тариф), кнопки перехода нет (партия 55).
+   */
+  route: string | null;
   count?: number;
   /** Только у `node_offline`. */
   minutes?: number;

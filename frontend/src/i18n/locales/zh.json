@@ -82,7 +82,9 @@
     "open": "打开菜单",
     "orders": "订单",
     "reviews": "评价",
-    "desk": "前台"
+    "desk": "前台",
+    "collapse": "收起菜单",
+    "expand": "展开菜单"
   },
   "dictionaries": {
     "title": "字典",
@@ -360,7 +362,6 @@
       "roomHelper": "房卡上可以找到",
       "submit": "继续",
       "connecting": "连接中…",
-      "scanQr": "扫描二维码",
       "qrHint": "用手机摄像头扫描房间内的二维码，将自动填入房间号。",
       "qrShort": "或扫描房间内的二维码",
       "or": "或",
@@ -505,7 +506,7 @@
       "belowMinimum": "再加 {{amount}} 即可达到起送金额",
       "quoteError": "无法计算金额，请重试。",
       "total": "合计",
-      "totalHint": "最终金额以酒店确认为准",
+      "totalHint": "不支持在线支付——按酒店的规定与酒店结算",
       "place": "下单 · {{price}}",
       "placeShort": "下单",
       "placing": "提交中…",
@@ -793,8 +794,8 @@
     },
     "notifications": {
       "orderTitle": "订单 #{{number}}",
-      "offer": "订单出发时通知您？",
-      "offerHint": "状态变更时推送通知。无论如何，状态都会显示在此页面。",
+      "offer": "订单状态变化时通知您？",
+      "offerHint": "仅在此浏览器窗口打开时推送通知。无论如何，状态都会显示在此页面。",
       "enable": "开启"
     },
     "opening": {
@@ -841,12 +842,12 @@
       "emptyTitle": "暂无订单",
       "emptyBody": "新订单会自动出现，无需刷新",
       "emptyHistoryTitle": "暂无历史",
-      "emptyHistoryBody": "这里显示最近 24 小时的已结束订单",
+      "emptyHistoryBody": "此处将显示本场所已结束的订单（已完成和已取消）",
       "day": "{{date}} 的预约",
       "emptyTimelineTitle": "当天没有预约",
       "emptyTimelineBody": "新预约会自动显示在这里",
       "today": "今天",
-      "slaHint": "超过下单后 {{minutes}} 分钟即为超时",
+      "slaHint": "超过以下最晚时刻后 {{minutes}} 分钟即为超时：下单、客人指定的时间、重新开始处理或转到本场所",
       "offlineTitle": "与看板的连接已断开",
       "offlineBody": "这不是「没有订单」：新订单可能正在产生，只是没有到达本屏。系统正在自动重连，请留在此页面。",
       "shiftFresh": "本班 {{time}} 开始，暂无订单",
@@ -854,7 +855,7 @@
       "shiftSpeed": "通常耗时 {{duration}}",
       "shiftAccept": "{{duration}} 内接单",
       "lastOrder": "最近一单 — {{age}}",
-      "slaHintDefault": "超过下单后 {{minutes}} 分钟即为超时（此类型的默认值）",
+      "slaHintDefault": "超过以下最晚时刻后 {{minutes}} 分钟即为超时：下单、客人指定的时间、重新开始处理或转到本场所（此类型的默认值）",
       "dropHere": "放到这里",
       "overdueBelow": "下方有超时订单：{{count}}"
     },
@@ -903,7 +904,7 @@
     },
     "cancel": {
       "title": "取消第 {{number}} 号订单？",
-      "body": "客人会立即看到取消。请选择原因——它会记入请求历史和分析。",
+      "body": "客人会立即看到取消。请选择原因——它会保存在请求中，并显示在 CMS 订单里。",
       "reason": "补充说明（可选）",
       "reasonPlaceholder": "例如：原料用完",
       "keep": "不取消",
@@ -1103,6 +1104,10 @@
       "done": "本班已完成",
       "medianAccept": "接单中位时长",
       "minutes": "{{value}} 分钟"
+    },
+    "history": {
+      "updatedAt": "更新于 {{time}}",
+      "refresh": "刷新"
     }
   },
   "requestFields": {
@@ -1149,7 +1154,7 @@
       "hint": "酒店把请求发往何处",
       "add": "渠道",
       "empty": "暂无渠道",
-      "emptyHint": "没有渠道就没人看到请求",
+      "emptyHint": "请求会显示在看板上，但不会发出通知——请先添加部门聊天",
       "loadError": "无法加载渠道",
       "saved": "渠道已保存",
       "deleted": "渠道已删除",
@@ -1585,8 +1590,9 @@
       "scheduled": "已排期的发布",
       "scheduledEmpty": "暂无排期",
       "cancelSchedule": "取消",
-      "whenLabel": "发布时间",
-      "whenHint": "酒店时间。若在此之前外观被他人更改，发布将不会执行——我们会通知您"
+      "whenHint": "酒店时间。若在此之前外观被他人更改，发布将不会执行——我们会通知您",
+      "whenDate": "发布日期",
+      "whenTime": "时间"
     }
   },
   "hotel": {
@@ -2145,7 +2151,7 @@
       "reset": "恢复默认",
       "resetDone": "该执行点已恢复继承"
     },
-    "slaHint": "超过后任务视为超时，并上报给管理者。",
+    "slaHint": "超时任务会在看板上高亮显示。如需发出警报，请设置升级规则。",
     "guestFacing": "在门店展示给客人",
     "staffCount": "员工：{{count}}",
     "toStaff": "前往员工",
@@ -2211,7 +2217,9 @@
     "hasCatalog": "有目录（菜单、服务、销售）",
     "staffEmpty": "尚无员工归属该场所。可在「员工」板块中分配。",
     "staffLevel": "级别",
-    "staffOff": "已停用"
+    "staffOff": "已停用",
+    "slaLabel": "超时阈值（分钟）",
+    "slaEscalationLink": "升级规则"
   },
   "inclusions": {
     "explainer": "引入是链接而非复制：源头的修改会立即体现，隐藏某项也不会从其归属方删除。",
@@ -2311,13 +2319,13 @@
       "escalated_other": "今日 {{count}} 次上报",
       "escalatedHint": "请求未及时接单而被上报",
       "no_escalation_other": "{{count}} 个场所没有上报规则",
-      "noEscalationHint": "无人接的请求不会浮现 — 只能等客人来说",
+      "noEscalationHint": "无人接的请求会显示在看板上，但不会有人为它发出警报",
       "stop_list_other": "{{count}} 项在停售名单",
       "stopListHint": "客人无法下单",
       "node_offline": "节点已 {{minutes}} 分钟无响应",
       "nodeOfflineHint": "客人无法使用客房控制",
       "tariff_over": "套餐超限：{{resource}} {{used}} / {{limit}}",
-      "tariffOverHint": "套餐变更需通过平台",
+      "tariffOverHint": "套餐由平台变更——请联系平台",
       "resource": {
         "services": "场所",
         "rooms": "房间",
@@ -2352,7 +2360,9 @@
       "support": "支持会话",
       "security": "安全",
       "groups": "分组",
-      "publications": "发布"
+      "publications": "发布",
+      "collapse": "收起菜单",
+      "expand": "展开菜单"
     },
     "role": {
       "owner": "平台所有者",
@@ -2398,7 +2408,7 @@
     },
     "overview": {
       "title": "平台概览",
-      "subtitle": "一眼看全平台：多少家酒店、此刻有多少订单在跑、一切是否有响应。每天先看这里，确认夜里没有卡住的地方。",
+      "subtitle": "一眼看全平台：多少家酒店、打开页面时有多少订单在处理、一切是否有响应。每天先看这里，确认夜里没有卡住的地方。",
       "loadFailed": "无法加载概览",
       "growth": "每月新增酒店",
       "health": "系统健康",
@@ -2644,7 +2654,7 @@
       "nodeName": "节点名称",
       "createFailed": "无法添加节点",
       "reissueFailed": "无法重新签发密钥",
-      "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效，连接器会使用新密钥重连。"
+      "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效。连接器不会自行重新读取密钥——请用新密钥重启连接器。"
     },
     "team": {
       "title": "平台用户",
@@ -3584,7 +3594,8 @@
           "title": "分析",
           "body": "按门店与时段统计营收、执行速度与负载。"
         }
-      }
+      },
+      "soon": "即将推出"
     },
     "audience": {
       "title": "适合谁",
@@ -3631,12 +3642,12 @@
     },
     "extras": {
       "devices": {
-        "title": "客房平板与门口呼叫屏",
-        "body": "服务以应用形式安装在床头平板与门口呼叫屏上。房内设备是产品的一部分，而不仅是客人的手机。"
+        "title": "客房平板",
+        "body": "客人应用在床头平板的浏览器中打开——与客人手机上的界面相同，无需安装。"
       },
       "languages": {
         "title": "语言",
-        "body": "目前为俄语、英语、阿拉伯语与中文，含从右到左书写。语言列表不受我们代码限制：下一步是语言模型。"
+        "body": "目前为俄语、英语、阿拉伯语与中文，含从右到左书写。酒店在 CMS 中为每种语言填写文本；自动翻译需单独接入。"
       }
     },
     "claims": {
@@ -3686,7 +3697,7 @@
   "orders": {
     "title": "订单",
     "what": "订单",
-    "emptyHint": "客人的订单会显示在这里——所有场所一起。",
+    "emptyHint": "暂无订单。刷新页面后可看到新订单——所有场所一起。",
     "loadMore": "显示更多",
     "row": {
       "room": "房间 {{room}}"

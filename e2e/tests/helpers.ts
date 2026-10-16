@@ -824,3 +824,27 @@ export async function pickOption(
   }
   await expect(listbox).toBeHidden({ timeout: 10_000 })
 }
+
+/**
+ * ДАТА И ВРЕМЯ В `DateField` / `TimeField` (партия 55).
+ *
+ * Поля — MUI X Date Pickers с маской дд.мм.гггг, а не системный `type="date"`:
+ * `fill('2026-09-24')` в маску не ложится. Вводим так же, как человек, —
+ * цифрами по секциям, выделив поле целиком. Код значения — в `data-value`.
+ */
+export async function fillDate(page: Page, testId: string, iso: string): Promise<void> {
+  const [year, month, day] = iso.split('-')
+  const input = page.getByTestId(testId)
+  await input.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.type(`${day}${month}${year}`)
+  await expect(input).toHaveAttribute('data-value', iso)
+}
+
+export async function fillTime(page: Page, testId: string, hhmm: string): Promise<void> {
+  const input = page.getByTestId(testId)
+  await input.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.type(hhmm.replace(':', ''))
+  await expect(input).toHaveAttribute('data-value', hhmm)
+}

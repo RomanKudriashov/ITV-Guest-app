@@ -17,6 +17,7 @@ import { useRights } from '../useRights';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { formGridSx, spanSx } from '@/kit/formLayout';
 import { MultiSelectField, SelectField } from '@/components/SelectField';
 import { currencyOptions, languageOptions, timezoneOptions } from '@/components/hotelFieldOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -109,8 +110,9 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
 
   return (
     <Box data-testid="admin-hotel">
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box sx={{ flexGrow: 1 }}>
+      {/* На 390 кнопки уходят под имя, а не сжимают его в три строки (партия 55). */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ flexGrow: 1, minWidth: 200 }}>
           <Typography sx={{ ...typo.pageTitle, color: ink.hi }}
             data-testid="admin-hotel-name">
             {hotel.name}
@@ -128,7 +130,24 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         ) : null}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 0.5, mt: 2, borderBottom: `1px solid ${surface.line}` }}>
+      {/*
+        Семь вкладок на 390 шире экрана. Без прокрутки ряд распирал колонку
+        оболочки, и вся карточка уезжала вбок (+100 px, партия 55). Прокрутка
+        своя, а `width: 0` + `minWidth: 100%` не дают ряду участвовать в
+        расчёте ширины колонки.
+      */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 0.5,
+          mt: 2,
+          borderBottom: `1px solid ${surface.line}`,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          width: 0,
+          minWidth: '100%',
+        }}
+      >
         {TABS.map((key) => (
           <ButtonBase
             key={key}
@@ -136,6 +155,8 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
             data-testid={`admin-hotel-tab-${key}`}
             data-active={tab === key ? 'true' : undefined}
             sx={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
               px: 1.75,
               py: 1.25,
               ...typo.body,
@@ -421,10 +442,12 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           testId="admin-hotel-timezone-input"
           sx={{ mb: 1.25 }}
         />
-        <Box sx={{ display: 'flex', gap: 1.25, mb: 1.25 }}>
+        {/* Валюта и знаки — пополам по сетке формы, на узком экране в столбик.
+            Были 280 + 200 px: на 390 ряд распирал карточку на +100 px, а в
+            арабском подпись «Знаки после запятой» не влезала в 200 (партия 55). */}
+        <Box sx={{ ...formGridSx, columnGap: 1.25, rowGap: 1.25, mb: 1.25 }}>
           <SelectField
             size="small"
-            fullWidth={false}
             label={t('admin.hotel.field.currency')}
             value={draft.currency}
             onChange={(next) =>
@@ -440,19 +463,18 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             options={currencies}
             loading={reference.isLoading}
             testId="admin-hotel-currency-input"
-            sx={{ width: 280 }}
+            sx={spanSx(6)}
           />
           {/* Размерность валюты — рядом с самой валютой: менять их порознь
               бессмысленно, цены хранятся в минимальных единицах. */}
           <SelectField
             size="small"
-            fullWidth={false}
             label={t('admin.hotel.field.minorUnits')}
             value={String(draft.currency_minor_units)}
             onChange={(next) => setDraft((prev) => ({ ...prev, currency_minor_units: Number(next) }))}
             testId="admin-hotel-minor-units"
             helperText={t('admin.hotel.field.minorUnitsHint')}
-            sx={{ width: 200 }}
+            sx={spanSx(6)}
             options={[0, 2, 3].map((value) => ({ value: String(value), label: String(value) }))}
           />
         </Box>

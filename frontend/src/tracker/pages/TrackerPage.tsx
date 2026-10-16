@@ -16,8 +16,6 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core';
 
-import TextField from '@mui/material/TextField';
-
 import { useListQuery } from '@/kit/list/useListQuery';
 import { useMatch, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
@@ -32,9 +30,12 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { alpha, useTheme } from '@mui/material/styles';
 import GroupWorkOutlinedIcon from '@mui/icons-material/GroupWorkOutlined';
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/EmptyState';
+import { PageContainer } from '@/components/PageContainer';
+import { SearchField } from '@/components/SearchField';
 import { EmptyBoard } from '../components/EmptyBoard';
 import { ShiftTiles, type ShiftFocus } from '../components/ShiftTiles';
 import { OrdersNumbers } from '@/cms/orders/OrdersNumbers';
@@ -66,6 +67,7 @@ import {
 import { isTransportFailure, trackerErrorMessage } from '../errors';
 import { BOARD_LINK_CAPTION, boardLink } from '../boardLink';
 import { useNetworkClock } from '../hooks/useNetworkClock';
+import { formatClock } from '../orderAge';
 import type { TrackerOrder, TrackerScope } from '../api/types';
 import { useAuth } from '@/auth';
 
@@ -292,6 +294,24 @@ export function TrackerPage() {
     focus,
     filters,
   );
+  /*
+    ИСТОРИЯ ПЕРЕЧИТЫВАЕТСЯ ПРИ ПЕРЕКЛЮЧЕНИИ НА НЕЁ (партия 55).
+
+    Ключ истории свой, и вернувшись на вкладку через пять минут человек видел
+    кэш пятиминутной давности — свежий для запроса (`staleTime`), но не для
+    смены, которая за это время закрыла десяток заказов. Без кэша запрос и так
+    уже идёт — второй не шлём.
+  */
+  const refetchBoard = boardQuery.refetch;
+  const boardFetching = boardQuery.isFetching;
+  const boardFetchingRef = useRef(boardFetching);
+  boardFetchingRef.current = boardFetching;
+  useEffect(() => {
+    if (scope !== 'history') return;
+    if (!boardFetchingRef.current) void refetchBoard();
+    // Только на смену вкладки: перечитывать на каждый новый `refetch` незачем.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope]);
   const sound = useTrackerSound();
   const actions = useOrderActions();
 
@@ -695,7 +715,7 @@ export function TrackerPage() {
   // No assignment is not an error — it is a different screen, not an empty board.
   if (!points?.length) {
     return (
-      <Box data-testid="tracker-screen">
+      <PageContainer testId="tracker-screen">
         <TrackerTopBar
           points={[]}
           onSelect={select}
@@ -729,15 +749,63 @@ export function TrackerPage() {
             }
           />
         </Box>
-      </Box>
+      </PageContainer>
     );
   }
 
   const currentColumn =
     columns.find((column) => column.code === activeColumn) ?? columns[0] ?? null;
 
+  /*
+    СВЕЖЕСТЬ ИСТОРИИ — ВРЕМЕНЕМ, А НЕ ОБЕЩАНИЕМ (партия 55).
+
+    Под историей стояло «Доска обновляется в реальном времени» — подпись
+    активной доски. Сокет историю не ведёт, и обещание было неправдой: закрытый
+    заказ появлялся в ней только после перезагрузки. Теперь история говорит,
+    когда её последний раз получили с сервера, и даёт обновить руками;
+    сама она перечитывается при возврате на вкладку браузера и при
+    переключении на «Историю».
+  */
+  const historyUpdatedAt =
+    scope === 'history' && boardQuery.dataUpdatedAt
+      ? formatClock(new Date(boardQuery.dataUpdatedAt).toISOString(), language)
+      : '';
+  const historyFreshness =
+    scope === 'history' ? (
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        sx={{ ml: { sm: 'auto' } }}
+        data-testid="tracker-history-freshness"
+      >
+        {historyUpdatedAt ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            data-testid="tracker-history-updated"
+            data-updated-at={boardQuery.dataUpdatedAt}
+          >
+            {t('tracker.history.updatedAt', { time: historyUpdatedAt })}
+          </Typography>
+        ) : null}
+        <Button
+          variant="outlined"
+          startIcon={
+            boardFetching ? <CircularProgress size={16} color="inherit" /> : <RefreshOutlinedIcon />
+          }
+          onClick={() => void refetchBoard()}
+          disabled={boardFetching}
+          data-testid="tracker-history-refresh"
+          sx={{ minHeight: 40, flexShrink: 0 }}
+        >
+          {t('tracker.history.refresh')}
+        </Button>
+      </Stack>
+    ) : null;
+
   return (
-    <Box data-testid="tracker-screen">
+    <PageContainer testId="tracker-screen">
       <TrackerTopBar
         points={points}
         selected={pointCode}
@@ -758,7 +826,7 @@ export function TrackerPage() {
         <Alert
           severity="warning"
           onClose={dismissRefused}
-          sx={{ mx: 2, mt: 1 }}
+          sx={{ mt: 1 }}
           data-testid="tracker-point-refused"
         >
           {t('tracker.pointUnavailable', {
@@ -777,7 +845,7 @@ export function TrackerPage() {
       <Tabs
         value={scope}
         onChange={(_event, next: TrackerScope) => setScope(next)}
-        sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
       >
         <Tab value="active" label={t('tracker.scope.active')} data-testid="tracker-active-tab" />
         <Tab value="history" label={t('tracker.scope.history')} data-testid="tracker-history-tab" />
@@ -832,6 +900,35 @@ export function TrackerPage() {
         </Tabs>
       ) : null}
 
+      <BoardFilters
+        open={filtersOpen}
+        history={scope === 'history'}
+        onToggle={() => setFiltersOpen((value) => !value)}
+        values={filters}
+        onChange={(next) => patchList(next)}
+        onReset={resetList}
+        assignees={boardQuery.data?.assignees ?? []}
+        statuses={boardQuery.data?.statuses ?? []}
+        activeCount={activeFilters}
+        /*
+          ПОИСК — ПЕРВЫМ В ПАНЕЛИ (партия 55). Стоял отдельной полосой под
+          сводкой и подсказкой порога, на истории — третьим сверху. Он про эту
+          доску и нужен чаще фильтров, поэтому открывает строку.
+        */
+        leading={
+          <SearchField
+            value={listParams.search}
+            onChange={(value) => patchList({ search: value })}
+            placeholder={t('tracker.searchPlaceholder')}
+            testId="tracker-search"
+            inputMode="numeric"
+            sx={{ flex: '1 1 200px', minWidth: 0 }}
+          />
+        }
+        trailing={historyFreshness}
+      />
+
+
       {/*
         Сводка смены. Приезжает В ТОМ ЖЕ ответе, что и колонки, и в том же
         снимке из сокета — поэтому числа над доской и карточки под ней не могут
@@ -850,7 +947,11 @@ export function TrackerPage() {
         выглядеть одинаково, иначе через полгода их будет два разных.
       */}
       {scope === 'history' && selection ? (
-        <OrdersNumbers summary={selection} />
+        // Отступ сверху свой: сводка сама полей не задаёт (она общая с
+        // разделом «Заказы»), а края даёт контейнер страницы (партия 55).
+        <Box sx={{ pt: 2 }}>
+          <OrdersNumbers summary={selection} />
+        </Box>
       ) : shift ? (
         <ShiftTiles
           shift={shift}
@@ -864,17 +965,6 @@ export function TrackerPage() {
         />
       ) : null}
 
-      <BoardFilters
-        open={filtersOpen}
-        history={scope === 'history'}
-        onToggle={() => setFiltersOpen((value) => !value)}
-        values={filters}
-        onChange={(next) => patchList(next)}
-        onReset={resetList}
-        assignees={boardQuery.data?.assignees ?? []}
-        statuses={boardQuery.data?.statuses ?? []}
-        activeCount={activeFilters}
-      />
 
       {/*
         ПОРОГ ПРОСРОЧКИ НАЗВАН СЛОВАМИ.
@@ -893,7 +983,7 @@ export function TrackerPage() {
         <Typography
           variant="caption"
           color="text.secondary"
-          sx={{ display: 'block', px: { xs: 1.5, md: 2 }, pt: { xs: 1.5, md: 2 } }}
+          sx={{ display: 'block', pt: 2 }}
           data-testid="tracker-sla-hint"
         >
           {t(
@@ -905,19 +995,7 @@ export function TrackerPage() {
         </Typography>
       ) : null}
 
-      {/* Поиск по доске. Рядом с ней, а не в шапке: он про эту доску. */}
-      <Box sx={{ px: { xs: 1.5, md: 2 }, pt: { xs: 1.5, md: 2 } }}>
-        <TextField
-          size="small"
-          fullWidth
-          value={listParams.search}
-          onChange={(event) => patchList({ search: event.target.value })}
-          placeholder={t('tracker.searchPlaceholder')}
-          inputProps={{ 'data-testid': 'tracker-search', inputMode: 'numeric' }}
-        />
-      </Box>
-
-      <Box sx={{ p: { xs: 1.5, md: 2 } }} data-testid="tracker-board">
+      <Box sx={{ pt: 2 }} data-testid="tracker-board">
         {boardQuery.isLoading ? (
           <Stack alignItems="center" sx={{ py: 6 }}>
             <CircularProgress aria-label={t('tracker.loading')} />
@@ -1159,7 +1237,9 @@ export function TrackerPage() {
           </Box>
         ) : null}
 
-        {boardQuery.data?.server_time ? (
+        {/* На истории свежесть сказана в панели временем — «в реальном
+            времени» здесь было бы неправдой (партия 55). */}
+        {boardQuery.data?.server_time && scope !== 'history' ? (
           <Typography
             variant="caption"
             color="text.secondary"
@@ -1301,6 +1381,6 @@ export function TrackerPage() {
           if (target) void actions.cancel(target.id, cancelReason, reason);
         }}
       />
-    </Box>
+    </PageContainer>
   );
 }

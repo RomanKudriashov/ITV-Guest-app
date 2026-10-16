@@ -27,12 +27,25 @@ export function useTrackerLanguage(): string {
   return (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
 }
 
+/**
+ * ПОКА ТОЧЕК НЕТ — СПРАШИВАЕМ САМИ (партия 55).
+ *
+ * Экран «вас ещё не назначили» обещает, что доска появится после назначения,
+ * а список точек запрашивался один раз: администратор привязал человека, а
+ * тот смотрел на тот же отказ, пока не догадается обновить страницу. Пока
+ * точек нет — опрос раз в 20 секунд и перечитка при возврате на вкладку; как
+ * только точка появилась, опрос гаснет — дальше счётчики двигает сокет доски.
+ */
+export const NO_POINTS_POLL_MS = 20_000;
+
 export function useTrackerPoints() {
   const language = useTrackerLanguage();
   return useQuery<TrackerPointsResponse>({
     queryKey: trackerKeys.points(language),
     queryFn: () => fetchTrackerPoints(language),
     staleTime: 60_000,
+    refetchInterval: (query) => (query.state.data?.points?.length ? false : NO_POINTS_POLL_MS),
+    refetchOnWindowFocus: (query) => (query.state.data?.points?.length ? false : 'always'),
   });
 }
 
@@ -89,6 +102,16 @@ export function useTrackerBoard(
     enabled: Boolean(point),
     staleTime: 10_000,
     refetchInterval: pollMs && pollMs > 0 ? pollMs : false,
+    /*
+      ИСТОРИЮ ПЕРЕЧИТЫВАЕМ ПРИ ВОЗВРАТЕ НА ВКЛАДКУ БРАУЗЕРА (партия 55).
+
+      Сокет присылает только активную доску, и история жила тем, что получила
+      при открытии, — а подпись под ней обещала «в реальном времени». Теперь
+      история говорит, когда обновлена, и перечитывается сама там, где человек
+      этого ждёт: вернулся на вкладку. Активной доске это не нужно — её ведёт
+      сокет, а при обрыве опрос.
+    */
+    refetchOnWindowFocus: scope === 'history' ? 'always' : false,
   });
 }
 

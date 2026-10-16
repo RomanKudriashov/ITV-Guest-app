@@ -196,7 +196,10 @@ function MemberLine({
           value={member.role}
           onChange={onRole}
           testId={`admin-team-role-${member.email}`}
-          sx={{ minWidth: 150 }}
+          // Самая длинная роль («Владелец платформы») — 157 px текста плюс
+          // стрелка и отступы. В 150 она обрезалась; ширина жёсткая, чтобы
+          // таблица на узком экране прокручивалась, а не сжимала поле (партия 55).
+          sx={{ width: 230, minWidth: 230 }}
           options={ROLES.map((code) => ({ value: code, label: t(`admin.role.${code}`) }))}
         />
       </Box>

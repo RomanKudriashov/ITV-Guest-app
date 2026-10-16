@@ -288,7 +288,9 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            // Колонка шире (было 140): описание пресета переносится в 2–3
+            // строки целиком, а не режется многоточием (партия 55).
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: 1.5,
           }}
         >
@@ -328,7 +330,7 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
                   {preset.name}
                 </Typography>
                 {preset.description ? (
-                  <Typography variant="caption" color="text.secondary" noWrap display="block">
+                  <Typography variant="caption" color="text.secondary" display="block">
                     {preset.description}
                   </Typography>
                 ) : null}
@@ -344,10 +346,10 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
         {/*
           ЧТО ПРОИЗОЙДЁТ ПРИ ВЫБОРЕ — сказано до нажатия, а не после.
 
-          `applyPreset` заменяет черновик ЦЕЛИКОМ, а в самих пресетах логотипы
-          пустые. То есть один клик убирает загруженный логотип и картинку
-          фона — молча, без вопроса. Отменяется это «Сбросить», пока не нажато
-          «Сохранить», и вот ровно про эти две вещи и написано ниже.
+          Пресет меняет цвета, шрифты, скругления и вид фона; логотипы и
+          картинка фона отеля сохраняются (useBrandDraft.applyPreset). Отмена —
+          «Сбросить», пока не нажато «Сохранить» (комментарий поправлен в
+          партии 55: прежний утверждал, что логотип стирается).
         */}
         <Typography
           variant="caption"

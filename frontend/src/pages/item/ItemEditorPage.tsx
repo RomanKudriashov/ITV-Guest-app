@@ -53,6 +53,8 @@ import { SchedulePicker } from '@/components/SchedulePicker';
 import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
+import { PageContainer } from '@/components/PageContainer';
+import { FormCell, FormGrid } from '@/kit/formLayout';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useAuth } from '@/auth';
@@ -779,28 +781,28 @@ export function ItemEditorPage() {
 
   if (bootstrapLoading || (itemId && itemQuery.isLoading)) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <Skeleton variant="rounded" height={64} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={420} />
-      </Box>
+      </PageContainer>
     );
   }
 
   if (!bootstrap) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <Alert severity="error">{t('errors.loadBootstrap')}</Alert>
-      </Box>
+      </PageContainer>
     );
   }
 
   if (itemId && itemQuery.isError) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <QueryState query={itemQuery} what={t('state.what.item')}>
           {() => null}
         </QueryState>
-      </Box>
+      </PageContainer>
     );
   }
 
@@ -809,19 +811,29 @@ export function ItemEditorPage() {
   // молча предлагал заполнить форму, которую всё равно не сохранить.
   if (categoriesQuery.isError || categoriesQuery.data === undefined) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <QueryState query={categoriesQuery} what={t('state.what.category')}>
           {() => null}
         </QueryState>
-      </Box>
+      </PageContainer>
     );
   }
 
   const currency = currencySymbol(bootstrap.hotel.currency, languages.displayLanguage);
 
   return (
-    <Box sx={{ p: 3, pb: 10 }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+    <PageContainer sx={{ pb: 10 }}>
+      {/* Шапка переносится, а не режет название многоточием: на 390
+          «Брускетта» не помещалась рядом с «Назад» и «Сохранить» (партия 55). */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={2}
+        rowGap={1}
+        sx={{ mb: 2 }}
+      >
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate(cmsPath('/menu'))}
@@ -829,8 +841,8 @@ export function ItemEditorPage() {
         >
           {t('common.back')}
         </Button>
-        <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h5" noWrap>
+        <Stack sx={{ flex: '1 1 160px', minWidth: 0 }}>
+          <Typography variant="h5" sx={{ overflowWrap: 'anywhere' }}>
             {isNew
               ? w('newTitle')
               : pickTranslated(form.title, languages.displayLanguage, languages.defaultCode) ||
@@ -870,7 +882,10 @@ export function ItemEditorPage() {
         </Button>
       </Stack>
 
-      <Stack direction="row" spacing={3} alignItems="flex-start">
+      {/* Две колонки — только от lg, где форме остаётся место. Уже —
+          столбиком: форма сверху, боковая колонка ниже. Ряд на 390 схлопывал
+          форму в полоску, а боковая колонка в 380 ложилась поверх (партия 55). */}
+      <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems={{ xs: 'stretch', lg: 'flex-start' }}>
         <Stack spacing={3} sx={{ flexGrow: 1, minWidth: 0 }}>
           {/* Basics */}
           <Card variant="outlined" sx={{ borderColor: 'divider' }}>
@@ -887,8 +902,10 @@ export function ItemEditorPage() {
                   <Typography variant="caption" color="text.secondary">
                     {t('item.type')}
                   </Typography>
+                  {/* Переносится: четыре типа в ряд шире 390 (партия 55). */}
                   <ToggleButtonGroup
                     exclusive
+                    sx={{ flexWrap: 'wrap' }}
                     size="small"
                     color="primary"
                     value={form.type}
@@ -951,123 +968,135 @@ export function ItemEditorPage() {
                   onActiveLanguageChange={setActiveLanguage}
                 />
 
-                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                  <SelectField
-                    size="small"
-                    fullWidth={false}
-                    label={t('item.category')}
-                    value={form.category_id}
-                    onChange={(next) => setForm((prev) => ({ ...prev, category_id: next }))}
-                    error={Boolean(formErrors.category_id)}
-                    helperText={formErrors.category_id}
-                    sx={{ minWidth: 260 }}
-                    testId="item-category-select"
-                    options={categoryOptions(
-                      flatCategories,
-                      (category) =>
-                        pickTranslated(
-                          category.title,
-                          languages.displayLanguage,
-                          languages.defaultCode,
-                        ) || category.code,
-                    )}
-                  />
+                {/* Общая сетка формы вместо ряда с переносом: ширины «260 / 220 /
+                    200» давали лестницу, края полей одной колонки расходились
+                    на 2–6 px. Теперь пары полей по полстроки, на узком — во
+                    всю ширину (партия 55). */}
+                <FormGrid>
+                  <FormCell span={6}>
+                    <SelectField
+                      size="small"
+                      label={t('item.category')}
+                      value={form.category_id}
+                      onChange={(next) => setForm((prev) => ({ ...prev, category_id: next }))}
+                      error={Boolean(formErrors.category_id)}
+                      helperText={formErrors.category_id}
+                      testId="item-category-select"
+                      options={categoryOptions(
+                        flatCategories,
+                        (category) =>
+                          pickTranslated(
+                            category.title,
+                            languages.displayLanguage,
+                            languages.defaultCode,
+                          ) || category.code,
+                      )}
+                    />
+                  </FormCell>
 
                   {/* Location mode only exists for the types that route to a
                       place — a booking uses its department, an info page none. */}
                   {behaviour.configuresLocation ? (
-                    <SelectField<LocationMode>
-                      size="small"
-                      fullWidth={false}
-                      label={t('item.locationMode')}
-                      value={form.location_mode}
-                      onChange={(next) => setForm((prev) => ({ ...prev, location_mode: next }))}
-                      helperText={t(`item.locationModes.${form.location_mode}Hint`)}
-                      sx={{ minWidth: 220 }}
-                      testId="cms-location-mode"
-                      options={LOCATION_MODES.map((mode) => ({
-                        value: mode,
-                        label: t(`item.locationModes.${mode}`),
-                      }))}
-                    />
+                    <FormCell span={6}>
+                      <SelectField<LocationMode>
+                        size="small"
+                        label={t('item.locationMode')}
+                        value={form.location_mode}
+                        onChange={(next) => setForm((prev) => ({ ...prev, location_mode: next }))}
+                        helperText={t(`item.locationModes.${form.location_mode}Hint`)}
+                        testId="cms-location-mode"
+                        options={LOCATION_MODES.map((mode) => ({
+                          value: mode,
+                          label: t(`item.locationModes.${mode}`),
+                        }))}
+                      />
+                    </FormCell>
                   ) : null}
 
                   {/* An info page has no price at all — the box is hidden, not
                       shown empty. Slots and services keep it (optionally). */}
                   {behaviour.priced !== 'never' ? (
-                    <TextField
-                      size="small"
-                      label={t('item.price')}
-                      value={form.priceInput}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, priceInput: event.target.value }))
-                      }
-                      error={Boolean(formErrors.price)}
-                      helperText={
-                        formErrors.price ??
-                        (behaviour.priced === 'optional'
-                          ? t('item.priceOptionalHint')
-                          : t('item.priceHint'))
-                      }
-                      sx={{ width: 200 }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">{currency}</InputAdornment>
-                        ),
-                      }}
-                      inputProps={{ 'data-testid': 'item-price-input', inputMode: 'decimal' }}
-                    />
+                    <FormCell span={6}>
+                      <TextField
+                        size="small"
+                        fullWidth
+                        label={t('item.price')}
+                        value={form.priceInput}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, priceInput: event.target.value }))
+                        }
+                        error={Boolean(formErrors.price)}
+                        helperText={
+                          formErrors.price ??
+                          (behaviour.priced === 'optional'
+                            ? t('item.priceOptionalHint')
+                            : t('item.priceHint'))
+                        }
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">{currency}</InputAdornment>
+                          ),
+                        }}
+                        inputProps={{ 'data-testid': 'item-price-input', inputMode: 'decimal' }}
+                      />
+                    </FormCell>
                   ) : null}
 
-                  <TextField
-                    size="small"
-                    type="number"
-                    label={t('item.prepMinutes')}
-                    value={form.prepInput}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, prepInput: event.target.value }))
-                    }
-                    error={Boolean(formErrors.prep_minutes)}
-                    helperText={formErrors.prep_minutes ?? t('item.prepMinutesHint')}
-                    sx={{ width: 200 }}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">{t('item.minutesUnit')}</InputAdornment>
-                      ),
-                    }}
-                    inputProps={{ 'data-testid': 'cms-item-prep-minutes', min: 0, step: 1 }}
-                  />
+                  <FormCell span={6}>
+                    <TextField
+                      size="small"
+                      type="number"
+                      fullWidth
+                      label={t('item.prepMinutes')}
+                      value={form.prepInput}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, prepInput: event.target.value }))
+                      }
+                      error={Boolean(formErrors.prep_minutes)}
+                      helperText={formErrors.prep_minutes ?? t('item.prepMinutesHint')}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">{t('item.minutesUnit')}</InputAdornment>
+                        ),
+                      }}
+                      inputProps={{ 'data-testid': 'cms-item-prep-minutes', min: 0, step: 1 }}
+                    />
+                  </FormCell>
 
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={form.is_active}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, is_active: event.target.checked }))
+                  <FormCell span={12}>
+                    <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={form.is_active}
+                            onChange={(event) =>
+                              setForm((prev) => ({ ...prev, is_active: event.target.checked }))
+                            }
+                            inputProps={
+                              { 'data-testid': 'item-active-switch' } as Record<string, string>
+                            }
+                          />
                         }
-                        inputProps={
-                          { 'data-testid': 'item-active-switch' } as Record<string, string>
-                        }
+                        label={t('item.active')}
                       />
-                    }
-                    label={t('item.active')}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        color="success"
-                        checked={form.in_stock}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, in_stock: event.target.checked }))
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            color="success"
+                            checked={form.in_stock}
+                            onChange={(event) =>
+                              setForm((prev) => ({ ...prev, in_stock: event.target.checked }))
+                            }
+                            inputProps={
+                              { 'data-testid': 'item-stock-switch' } as Record<string, string>
+                            }
+                          />
                         }
-                        inputProps={
-                          { 'data-testid': 'item-stock-switch' } as Record<string, string>
-                        }
+                        label={t('item.inStock')}
                       />
-                    }
-                    label={t('item.inStock')}
-                  />
-                </Stack>
+                    </Stack>
+                  </FormCell>
+                </FormGrid>
               </Stack>
             </CardContent>
           </Card>
@@ -1135,7 +1164,7 @@ export function ItemEditorPage() {
         </Stack>
 
         {/* Side column */}
-        <Stack spacing={3} sx={{ width: 380, flexShrink: 0 }}>
+        <Stack spacing={3} sx={{ width: { xs: 'auto', lg: 380 }, flexShrink: 0, minWidth: 0 }}>
           <Card variant="outlined" sx={{ borderColor: 'divider' }}>
             <CardContent>
               <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
@@ -1222,8 +1251,15 @@ export function ItemEditorPage() {
                 <Typography variant="subtitle1">{t('item.characteristics')}</Typography>
                 <Stack spacing={1.5} data-testid="cms-item-characteristics">
                   {form.characteristics.map((row, index) => (
-                    <Stack key={index} direction="row" spacing={1} alignItems="flex-start">
-                      <Box sx={{ flex: 1 }}>
+                    // На узком — название и значение друг под другом: два поля
+                    // с вкладками языков в ряд не помещались (партия 55).
+                    <Stack
+                      key={index}
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+                    >
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
                         <TranslatedField
                           label={t('item.characteristicName')}
                           value={row.name}
@@ -1239,7 +1275,7 @@ export function ItemEditorPage() {
                           testId={`characteristic-name-${index}`}
                         />
                       </Box>
-                      <Box sx={{ flex: 1 }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
                         <TranslatedField
                           label={t('item.characteristicValue')}
                           value={row.value}
@@ -1264,7 +1300,7 @@ export function ItemEditorPage() {
                           }))
                         }
                         data-testid={`characteristic-remove-${index}`}
-                        sx={{ mt: 0.5 }}
+                        sx={{ mt: 0.5, alignSelf: { xs: 'flex-end', sm: 'auto' } }}
                       >
                         <CloseIcon fontSize="small" />
                       </IconButton>
@@ -1356,6 +1392,6 @@ export function ItemEditorPage() {
         onConfirm={guard.proceed}
         onClose={guard.reset}
       />
-    </Box>
+    </PageContainer>
   );
 }

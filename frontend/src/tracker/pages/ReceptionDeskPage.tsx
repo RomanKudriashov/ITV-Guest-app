@@ -17,6 +17,7 @@ import Snackbar from '@mui/material/Snackbar';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/auth';
+import { PageContainer } from '@/components/PageContainer';
 import { DeskConversation } from '../desk/DeskConversation';
 import { DeskHandoverDialog } from '@/tracker/desk/DeskHandoverDialog';
 import { DeskOrderDialog } from '../desk/DeskOrderDialog';
@@ -169,11 +170,21 @@ export function ReceptionDeskPage() {
         message={placed !== null ? t('tracker.desk.order.placed', { number: placed }) : ''}
         ContentProps={{ 'data-testid': 'desk-order-placed' } as never}
       />
-      <Box
-        data-testid="reception-desk"
-        sx={{ height: 'calc(100dvh - 64px)', display: 'flex', flexDirection: 'column' }}
+      {/*
+        ОТСТУП СТРАНИЦЫ — ОБЩИЙ (партия 55): было 8 px на 1440 и 0 на 1024.
+        Высота прежняя — экран во всю высоту под шапкой; поля контейнера
+        входят в неё (`border-box`), иначе страница прокручивалась бы на 48 px.
+      */}
+      <PageContainer
+        testId="reception-desk"
+        sx={{
+          height: 'calc(100dvh - 64px)',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 2, py: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ pb: 2 }}>
           <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate('/tracker')}>
             {t('tracker.desk.toBoard')}
           </Button>
@@ -224,9 +235,7 @@ export function ReceptionDeskPage() {
               minHeight: 0,
               display: 'grid',
               gridTemplateColumns: '320px minmax(0, 1fr) 340px',
-              gap: 1,
-              px: 1,
-              pb: 1,
+              gap: 2,
             }}
           >
             <Paper variant="outlined" sx={{ overflowY: 'auto' }}>
@@ -240,7 +249,7 @@ export function ReceptionDeskPage() {
             </Paper>
           </Box>
         )}
-      </Box>
+      </PageContainer>
     </>
   );
 }

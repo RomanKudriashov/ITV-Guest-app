@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -27,7 +28,11 @@ const SECTIONS: Section[] = ['channels', 'events', 'escalation', 'log'];
  */
 export function NotificationsPage() {
   const { t } = useTranslation();
-  const [section, setSection] = useState<Section>('channels');
+  // Вкладку можно назвать в адресе (`?tab=escalation`): на неё ведёт ссылка из
+  // подсказки нормы времени сервиса (партия 55) — иначе она открывала «Каналы».
+  const [params] = useSearchParams();
+  const asked = params.get('tab') as Section | null;
+  const [section, setSection] = useState<Section>(asked && SECTIONS.includes(asked) ? asked : 'channels');
 
   const { data: bootstrap } = useBootstrap();
   const languages = useContentLanguages(bootstrap);

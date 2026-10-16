@@ -13,6 +13,7 @@ import { accent, ink, panelSx, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { getAudit, getAuditActions } from '../adminClient';
+import { DateChoiceField } from '../form';
 
 /**
  * Аудит платформы — один список, а не разрез по отелям.
@@ -102,25 +103,27 @@ export function AuditPage() {
             })),
           ]}
         />
-        <TextField
+        {/* Даты — общим полем вместо системного `type="date"`: формат дд.мм.гггг
+            и календарь на языке интерфейса, а не ОС (партия 55). */}
+        <DateChoiceField
           size="small"
-          type="date"
+          width={170}
           label={t('admin.audit.filterSince')}
           value={since}
-          onChange={(event) => {
-            setFilter({ since: event.target.value });
+          max={until || undefined}
+          onChange={(next) => {
+            setFilter({ since: next });
           }}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ 'data-testid': 'admin-audit-filter-since' }}
+          testId="admin-audit-filter-since"
         />
-        <TextField
+        <DateChoiceField
           size="small"
-          type="date"
+          width={170}
           label={t('admin.audit.filterUntil')}
           value={until}
-          onChange={(event) => setFilter({ until: event.target.value })}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ 'data-testid': 'admin-audit-filter-until' }}
+          min={since || undefined}
+          onChange={(next) => setFilter({ until: next })}
+          testId="admin-audit-filter-until"
         />
         <TextField
           size="small"
@@ -158,9 +161,13 @@ export function AuditPage() {
                 <Box
                   key={row.id}
                   data-testid={`admin-audit-${row.action}`}
+                  // На 390 время + автор занимают всю ширину, и действие
+                  // уходило за край (+92 px): ряд переносится (партия 55).
                   sx={{
                     display: 'flex',
-                    gap: 1.5,
+                    flexWrap: 'wrap',
+                    columnGap: 1.5,
+                    rowGap: 0.25,
                     alignItems: 'baseline',
                     py: 1.1,
                     borderBottom: `1px solid ${surface.hair}`,
@@ -179,7 +186,7 @@ export function AuditPage() {
                     которому нужен ключ для поиска в логах. Отдать одному за
                     счёт другого нельзя, поэтому здесь оба.
                   */}
-                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                  <Box sx={{ flex: '1 1 180px', minWidth: 0 }}>
                     <Typography sx={{ color: ink.mid, ...typo.caption }}>
                       {t(`admin.action.${row.action}`, { defaultValue: row.action })}
                     </Typography>

@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
@@ -109,83 +110,87 @@ export function TranslationSection() {
               </Alert>
             )}
 
-            <Table size="small" data-testid="cms-translate-coverage">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t('settings.translate.language')}</TableCell>
-                  <TableCell>{t('settings.translate.done')}</TableCell>
-                  <TableCell>{t('settings.translate.suspicious')}</TableCell>
-                  <TableCell align="right" />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.languages.map((row) => (
-                  <Fragment key={row.language}>
-                    <TableRow data-testid={`cms-translate-row-${row.language}`}>
-                      <TableCell>{t(`analytics.values.language.${row.language}`, row.language)}</TableCell>
-                      <TableCell data-testid={`cms-translate-done-${row.language}`}>
-                        {t('settings.translate.ofTotal', { filled: row.filled, total: row.total })}
-                        <LinearProgress
-                          variant="determinate"
-                          value={row.total ? (row.filled / row.total) * 100 : 0}
-                          sx={{ mt: 0.5, width: 160 }}
-                        />
-                      </TableCell>
-                      <TableCell data-testid={`cms-translate-suspicious-${row.language}`}>
-                        {row.suspicious ? (
-                          <Chip size="small" color="warning" label={row.suspicious} />
-                        ) : (
-                          '—'
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Stack direction="row" spacing={1} justifyContent="flex-end">
-                          <Button
-                            size="small"
-                            onClick={() => setOpened(opened === row.language ? null : row.language)}
-                            data-testid={`cms-translate-details-${row.language}`}
-                          >
-                            {t('settings.translate.details')}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            disabled={!data.provider.connected || start.isPending}
-                            onClick={() => start.mutate(row.language)}
-                            data-testid={`cms-translate-run-${row.language}`}
-                          >
-                            {data.provider.connected
-                              ? t('settings.translate.run')
-                              : t('settings.translate.notConnectedShort')}
-                          </Button>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                    {opened === row.language &&
-                      row.groups.map((group) => (
-                        <TableRow key={`${row.language}-${group.group}`}>
-                          <TableCell sx={{ pl: 4 }} colSpan={2}>
-                            <Typography variant="body2" color="text.secondary">
-                              {group.group}:{' '}
-                              {t('settings.translate.ofTotal', {
-                                filled: group.filled,
-                                total: group.total,
-                              })}
-                            </Typography>
-                          </TableCell>
-                          <TableCell colSpan={2}>
-                            <Typography variant="body2" color="text.secondary">
-                              {group.suspicious
-                                ? t('settings.translate.suspiciousCount', { count: group.suspicious })
-                                : ''}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </Fragment>
-                ))}
-              </TableBody>
-            </Table>
+            {/* На 390 таблица шире экрана (+234 px) — прокрутка в своей рамке,
+                а не всей страницы (партия 55). */}
+            <TableContainer sx={{ overflowX: 'auto', maxWidth: '100%' }}>
+              <Table size="small" data-testid="cms-translate-coverage">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{t('settings.translate.language')}</TableCell>
+                    <TableCell>{t('settings.translate.done')}</TableCell>
+                    <TableCell>{t('settings.translate.suspicious')}</TableCell>
+                    <TableCell align="right" />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.languages.map((row) => (
+                    <Fragment key={row.language}>
+                      <TableRow data-testid={`cms-translate-row-${row.language}`}>
+                        <TableCell>{t(`analytics.values.language.${row.language}`, row.language)}</TableCell>
+                        <TableCell data-testid={`cms-translate-done-${row.language}`}>
+                          {t('settings.translate.ofTotal', { filled: row.filled, total: row.total })}
+                          <LinearProgress
+                            variant="determinate"
+                            value={row.total ? (row.filled / row.total) * 100 : 0}
+                            sx={{ mt: 0.5, width: 160 }}
+                          />
+                        </TableCell>
+                        <TableCell data-testid={`cms-translate-suspicious-${row.language}`}>
+                          {row.suspicious ? (
+                            <Chip size="small" color="warning" label={row.suspicious} />
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Button
+                              size="small"
+                              onClick={() => setOpened(opened === row.language ? null : row.language)}
+                              data-testid={`cms-translate-details-${row.language}`}
+                            >
+                              {t('settings.translate.details')}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              disabled={!data.provider.connected || start.isPending}
+                              onClick={() => start.mutate(row.language)}
+                              data-testid={`cms-translate-run-${row.language}`}
+                            >
+                              {data.provider.connected
+                                ? t('settings.translate.run')
+                                : t('settings.translate.notConnectedShort')}
+                            </Button>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                      {opened === row.language &&
+                        row.groups.map((group) => (
+                          <TableRow key={`${row.language}-${group.group}`}>
+                            <TableCell sx={{ pl: 4 }} colSpan={2}>
+                              <Typography variant="body2" color="text.secondary">
+                                {group.group}:{' '}
+                                {t('settings.translate.ofTotal', {
+                                  filled: group.filled,
+                                  total: group.total,
+                                })}
+                              </Typography>
+                            </TableCell>
+                            <TableCell colSpan={2}>
+                              <Typography variant="body2" color="text.secondary">
+                                {group.suspicious
+                                  ? t('settings.translate.suspiciousCount', { count: group.suspicious })
+                                  : ''}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
             <Typography variant="body2" color="text.secondary">
               {t('settings.translate.whatIsCounted', {

@@ -4,7 +4,6 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -12,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 
 import { fetchScope } from '@/api/analytics';
 import { QueryState } from '@/components/QueryState';
+import { DateField } from '@/components/DateField';
+import { PageContainer } from '@/components/PageContainer';
 import { SelectField } from '@/components/SelectField';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
@@ -112,206 +113,203 @@ export function ReviewsPage() {
   const body = summary.data;
 
   return (
-    <Stack spacing={2} sx={{ p: 3 }} data-testid="cms-reviews">
-      <Typography variant="h5" data-testid="cms-page-title">
-        {t('reviews.title')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {t('reviews.subtitle')}
-      </Typography>
+    <PageContainer testId="cms-reviews">
+      <Stack spacing={2}>
+        <Typography variant="h5" data-testid="cms-page-title">
+          {t('reviews.title')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('reviews.subtitle')}
+        </Typography>
 
-      <Card variant="outlined">
-        <CardContent>
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-            <SelectField
-              size="small"
-              fullWidth={false}
-              label={t('reviews.filters.venue')}
-              value={params.point_id}
-              onChange={(next) => patch({ point_id: next })}
-              sx={{ minWidth: 180 }}
-              testId="reviews-filter-venue"
-              options={[
-                { value: '', label: t('reviews.filters.allVenues') },
-                ...venues.map((venue) => ({ value: venue.id, label: venue.title })),
-              ]}
-            />
-            <SelectField
-              size="small"
-              fullWidth={false}
-              label={t('reviews.filters.rating')}
-              value={params.rating}
-              onChange={(next) => patch({ rating: next })}
-              sx={{ minWidth: 150 }}
-              testId="reviews-filter-rating"
-              options={[
-                { value: '', label: t('reviews.filters.anyRating') },
-                { value: 'low', label: t('reviews.filters.low'), testId: 'reviews-filter-rating-low' },
-                ...[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: t('reviews.filters.stars', { count: n }) })),
-              ]}
-            />
-            <SelectField
-              size="small"
-              fullWidth={false}
-              label={t('reviews.filters.triage')}
-              value={params.triage}
-              onChange={(next) => patch({ triage: next })}
-              sx={{ minWidth: 170 }}
-              testId="reviews-filter-triage"
-              options={[
-                { value: '', label: t('reviews.filters.anyTriage') },
-                { value: 'open', label: t('reviews.filters.awaiting'), testId: 'reviews-filter-triage-open' },
-                ...(['new', 'in_progress', 'closed'] as const).map((status) => ({
-                  value: status,
-                  label: t(`reviews.triage.status.${status}`),
-                })),
-              ]}
-            />
-            <TextField
-              type="date"
-              size="small"
-              label={t('reviews.filters.since')}
-              value={params.date_from}
-              onChange={(event) => patch({ date_from: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'reviews-filter-since' }}
-              error={reversedRange}
-              helperText={reversedRange ? t('reviews.filters.badRange') : undefined}
-            />
-            <TextField
-              type="date"
-              size="small"
-              label={t('reviews.filters.until')}
-              value={params.date_to}
-              onChange={(event) => patch({ date_to: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'reviews-filter-until' }}
-            />
-            {isFiltered ? (
-              <Button onClick={reset} data-testid="reviews-filter-reset">
-                {t('reviews.filters.reset')}
-              </Button>
-            ) : null}
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 1.5,
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-        }}
-      >
-        <StatTile
-          testId="reviews-awaiting"
-          label={t('reviews.numbers.awaiting')}
-          value={body ? fmt.count(body.awaiting) : undefined}
-          loading={summary.isLoading}
-        />
-        <StatTile
-          testId="reviews-count"
-          label={t('reviews.numbers.count')}
-          value={body ? fmt.count(body.count) : undefined}
-          loading={summary.isLoading}
-        />
-        <StatTile
-          testId="reviews-avg"
-          label={t('reviews.numbers.avg')}
-          value={body?.avg_rating != null ? fmt.rating(body.avg_rating) : body ? '—' : undefined}
-          loading={summary.isLoading}
-        />
-        <StatTile
-          testId="reviews-low"
-          label={t('reviews.numbers.low', { threshold: body?.low_threshold ?? 2 })}
-          value={body?.low_rate != null ? fmt.percent(body.low_rate) : body ? '—' : undefined}
-          loading={summary.isLoading}
-        />
-      </Box>
-
-      {body && body.trend.length > 1 ? (
         <Card variant="outlined">
           <CardContent>
-            <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
-              {t('reviews.trend')}
-            </Typography>
-            <LineChart
-              testId="reviews-trend"
-              points={body.trend.map((point) => ({
-                label: new Intl.DateTimeFormat(language, { day: '2-digit', month: 'short' }).format(
-                  new Date(point.day),
-                ),
-                value: point.avg_rating,
-              }))}
-              formatValue={(value) => fmt.rating(value)}
-              ariaLabel={t('reviews.trend')}
-            />
+            {/* Фильтры — равными колонками, как плитки цифр ниже (партия 55). */}
+            <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', alignItems: 'start' }}>
+              <SelectField
+                size="small"
+                label={t('reviews.filters.venue')}
+                value={params.point_id}
+                onChange={(next) => patch({ point_id: next })}
+                testId="reviews-filter-venue"
+                options={[
+                  { value: '', label: t('reviews.filters.allVenues') },
+                  ...venues.map((venue) => ({ value: venue.id, label: venue.title })),
+                ]}
+              />
+              <SelectField
+                size="small"
+                label={t('reviews.filters.rating')}
+                value={params.rating}
+                onChange={(next) => patch({ rating: next })}
+                testId="reviews-filter-rating"
+                options={[
+                  { value: '', label: t('reviews.filters.anyRating') },
+                  { value: 'low', label: t('reviews.filters.low'), testId: 'reviews-filter-rating-low' },
+                  ...[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: t('reviews.filters.stars', { count: n }) })),
+                ]}
+              />
+              <SelectField
+                size="small"
+                label={t('reviews.filters.triage')}
+                value={params.triage}
+                onChange={(next) => patch({ triage: next })}
+                testId="reviews-filter-triage"
+                options={[
+                  { value: '', label: t('reviews.filters.anyTriage') },
+                  { value: 'open', label: t('reviews.filters.awaiting'), testId: 'reviews-filter-triage-open' },
+                  ...(['new', 'in_progress', 'closed'] as const).map((status) => ({
+                    value: status,
+                    label: t(`reviews.triage.status.${status}`),
+                  })),
+                ]}
+              />
+              <DateField
+                size="small"
+                fullWidth
+                label={t('reviews.filters.since')}
+                value={params.date_from}
+                onChange={(next) => patch({ date_from: next })}
+                testId="reviews-filter-since"
+                error={reversedRange}
+                helperText={reversedRange ? t('reviews.filters.badRange') : undefined}
+              />
+              <DateField
+                size="small"
+                fullWidth
+                label={t('reviews.filters.until')}
+                value={params.date_to}
+                onChange={(next) => patch({ date_to: next })}
+                testId="reviews-filter-until"
+              />
+              {isFiltered ? (
+                <Box>
+                  <Button onClick={reset} data-testid="reviews-filter-reset">
+                    {t('reviews.filters.reset')}
+                  </Button>
+                </Box>
+              ) : null}
+            </Box>
           </CardContent>
         </Card>
-      ) : null}
 
-      {reversedRange ? (
-        <Alert severity="warning" data-testid="reviews-bad-range">
-          {t('reviews.filters.badRange')}
-        </Alert>
-      ) : (
-        <QueryState query={list} what={t('reviews.what')}>
-          {(page) => {
-            const rows = [...page.items, ...extra];
-            if (!rows.length) {
-              return (
-                <ListEmpty
-                  isFiltered={isFiltered}
-                  onReset={reset}
-                  what={t('reviews.what')}
-                  emptyHint={t('reviews.emptyHint')}
-                />
-              );
-            }
-            return (
-              <Stack spacing={1} data-testid="reviews-list">
-                <Typography variant="caption" color="text.secondary" data-testid="reviews-shown">
-                  {t('reviews.shown', { shown: rows.length, total: page.total })}
-                </Typography>
-                {rows.map((review) => (
-                  <ReviewCard
-                    key={review.id}
-                    review={review}
-                    onChanged={replace}
-                    onInvestigate={setInvestigating}
-                  />
-                ))}
-                {rows.length < page.total ? (
-                  <Button
-                    variant="outlined"
-                    onClick={() => void loadMore()}
-                    disabled={loadingMore}
-                    data-testid="reviews-load-more"
-                    sx={{ alignSelf: 'center' }}
-                  >
-                    {t('reviews.loadMore')}
-                  </Button>
-                ) : null}
-              </Stack>
-            );
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
           }}
-        </QueryState>
-      )}
-
-      <ReviewInvestigationPanel reviewId={investigating} onClose={() => setInvestigating(null)}>
-        {(data) => (
-          <TriageBlock
-            review={data.review}
-            history={data.triage}
-            onChanged={(next) => {
-              replace(next);
-              // Разбор меняет очередь и историю — их перечитываем.
-              void queryClient.invalidateQueries({ queryKey: ['cms', 'reviews', 'one', next.id] });
-              void queryClient.invalidateQueries({ queryKey: ['cms', 'reviews', 'summary'] });
-            }}
+        >
+          <StatTile
+            testId="reviews-awaiting"
+            label={t('reviews.numbers.awaiting')}
+            value={body ? fmt.count(body.awaiting) : undefined}
+            loading={summary.isLoading}
           />
+          <StatTile
+            testId="reviews-count"
+            label={t('reviews.numbers.count')}
+            value={body ? fmt.count(body.count) : undefined}
+            loading={summary.isLoading}
+          />
+          <StatTile
+            testId="reviews-avg"
+            label={t('reviews.numbers.avg')}
+            value={body?.avg_rating != null ? fmt.rating(body.avg_rating) : body ? '—' : undefined}
+            loading={summary.isLoading}
+          />
+          <StatTile
+            testId="reviews-low"
+            label={t('reviews.numbers.low', { threshold: body?.low_threshold ?? 2 })}
+            value={body?.low_rate != null ? fmt.percent(body.low_rate) : body ? '—' : undefined}
+            loading={summary.isLoading}
+          />
+        </Box>
+
+        {body && body.trend.length > 1 ? (
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
+                {t('reviews.trend')}
+              </Typography>
+              <LineChart
+                testId="reviews-trend"
+                points={body.trend.map((point) => ({
+                  label: new Intl.DateTimeFormat(language, { day: '2-digit', month: 'short' }).format(
+                    new Date(point.day),
+                  ),
+                  value: point.avg_rating,
+                }))}
+                formatValue={(value) => fmt.rating(value)}
+                ariaLabel={t('reviews.trend')}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {reversedRange ? (
+          <Alert severity="warning" data-testid="reviews-bad-range">
+            {t('reviews.filters.badRange')}
+          </Alert>
+        ) : (
+          <QueryState query={list} what={t('reviews.what')}>
+            {(page) => {
+              const rows = [...page.items, ...extra];
+              if (!rows.length) {
+                return (
+                  <ListEmpty
+                    isFiltered={isFiltered}
+                    onReset={reset}
+                    what={t('reviews.what')}
+                    emptyHint={t('reviews.emptyHint')}
+                  />
+                );
+              }
+              return (
+                <Stack spacing={1} data-testid="reviews-list">
+                  <Typography variant="caption" color="text.secondary" data-testid="reviews-shown">
+                    {t('reviews.shown', { shown: rows.length, total: page.total })}
+                  </Typography>
+                  {rows.map((review) => (
+                    <ReviewCard
+                      key={review.id}
+                      review={review}
+                      onChanged={replace}
+                      onInvestigate={setInvestigating}
+                    />
+                  ))}
+                  {rows.length < page.total ? (
+                    <Button
+                      variant="outlined"
+                      onClick={() => void loadMore()}
+                      disabled={loadingMore}
+                      data-testid="reviews-load-more"
+                      sx={{ alignSelf: 'center' }}
+                    >
+                      {t('reviews.loadMore')}
+                    </Button>
+                  ) : null}
+                </Stack>
+              );
+            }}
+          </QueryState>
         )}
-      </ReviewInvestigationPanel>
-    </Stack>
+
+        <ReviewInvestigationPanel reviewId={investigating} onClose={() => setInvestigating(null)}>
+          {(data) => (
+            <TriageBlock
+              review={data.review}
+              history={data.triage}
+              onChanged={(next) => {
+                replace(next);
+                // Разбор меняет очередь и историю — их перечитываем.
+                void queryClient.invalidateQueries({ queryKey: ['cms', 'reviews', 'one', next.id] });
+                void queryClient.invalidateQueries({ queryKey: ['cms', 'reviews', 'summary'] });
+              }}
+            />
+          )}
+        </ReviewInvestigationPanel>
+      </Stack>
+    </PageContainer>
   );
 }

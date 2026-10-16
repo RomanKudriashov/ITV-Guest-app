@@ -2,9 +2,9 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { PageContainer } from '@/components/PageContainer';
 import { SelectField } from '@/components/SelectField';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -64,7 +64,9 @@ const API = {
 export function DictionariesPage() {
   const { t } = useTranslation();
   return (
-    <Box sx={{ maxWidth: 820, mx: 'auto', p: { xs: 2, md: 3 } }} data-testid="cms-dictionaries">
+    // Во всю ширину с отступом 24 (партия 55): узкая колонка 820 по центру
+    // оставляла на 1440 по 210 px пустоты с каждой стороны.
+    <PageContainer testId="cms-dictionaries">
       <Stack spacing={0.5} sx={{ mb: 3 }}>
         <Typography variant="h5" data-testid="cms-page-title" sx={{ fontWeight: 700 }}>
           {t('dictionaries.title')}
@@ -77,7 +79,7 @@ export function DictionariesPage() {
         <DictSection kind="allergens" />
         <DictSection kind="markers" />
       </Stack>
-    </Box>
+    </PageContainer>
   );
 }
 
@@ -303,7 +305,10 @@ function DictSection({ kind }: { kind: Kind }) {
           <TextField
             size="small"
             inputRef={addRef}
-            placeholder={t('dictionaries.addPlaceholder')}
+            // Подпись на рамке, а не подсказка внутри (партия 55): это поле
+            // ввода, не поиск, — подсказка рядом с «Показать для» читалась
+            // как поиск по справочнику.
+            label={t('dictionaries.addPlaceholder')}
             value={draftRu}
             onChange={(e) => setDraftRu(e.target.value)}
             inputProps={{ 'data-testid': `cms-dict-new-${kind}` }}

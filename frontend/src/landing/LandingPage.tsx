@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import CardContent from '@mui/material/CardContent';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
@@ -75,6 +76,13 @@ const MODULES = [
   «включить».
 */
 const EXTRAS = ['devices', 'languages'] as const;
+
+/*
+  Модули, которых в продукте ещё нет: реестр их знает, но работающего кода за
+  ними нет. Без метки карточка обещала бы то, что отель не сможет включить
+  (партия 55).
+*/
+const SOON = new Set<(typeof MODULES)[number]>(['payment', 'pms', 'mobileKey', 'nativeApp']);
 
 const AUDIENCES = ['cityHotel', 'resort', 'apartments'] as const;
 
@@ -362,11 +370,26 @@ export function LandingPage() {
           ))}
           {MODULES.map((code) => (
             <Reveal key={code} calm={calm}>
-              <Card variant="outlined" sx={{ height: '100%' }}>
+              <Card
+                variant="outlined"
+                sx={{ height: '100%' }}
+                data-testid={`landing-module-${code}`}
+                data-soon={SOON.has(code) ? 'true' : undefined}
+              >
                 <CardContent>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {t(`landing.modules.items.${code}.title`)}
-                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {t(`landing.modules.items.${code}.title`)}
+                    </Typography>
+                    {SOON.has(code) && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={t('landing.modules.soon')}
+                        data-testid={`landing-module-soon-${code}`}
+                      />
+                    )}
+                  </Stack>
                   <Typography variant="body2" color="text.secondary">
                     {t(`landing.modules.items.${code}.body`)}
                   </Typography>

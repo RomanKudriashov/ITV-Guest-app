@@ -3,7 +3,12 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
+import MenuIcon from '@mui/icons-material/MenuOutlined';
+import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
+import { useTheme } from '@mui/material/styles';
+import KeyboardDoubleArrowLeftOutlinedIcon from '@mui/icons-material/KeyboardDoubleArrowLeftOutlined';
+import KeyboardDoubleArrowRightOutlinedIcon from '@mui/icons-material/KeyboardDoubleArrowRightOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 import Typography from '@mui/material/Typography';
@@ -11,6 +16,9 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 
 import { ProfileMenu } from '@/components/ProfileMenu';
+import { useNavCollapsed } from '@/hooks/useNavCollapsed';
+import { MOTION, usePrefersReducedMotion } from '@/kit/motion';
+import { STORAGE_KEYS } from '@/storageKeys';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { accent, ink, layout, pageBackground, shape, surface, typo } from './adminTokens';
 import type { PlatformMe } from './adminClient';
@@ -20,7 +28,25 @@ export interface AdminSection {
   labelKey: string;
   group?: string;
   badge?: number;
+  /** Контурная иконка пункта — в свёрнутом меню пункт узнают по ней (партия 55). */
+  icon?: ReactNode;
 }
+
+/** Свёрнутое меню — одни иконки, как в CMS (партия 55). */
+const NAV_MINI = 64;
+
+/** Текст в DOM, но не на экране: диктору и проверкам по тексту (партия 55). */
+const VISUALLY_HIDDEN = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  p: 0,
+  m: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+} as const;
 
 /**
  * Каркас консоли: левая навигация, верхняя строка, содержимое.
@@ -59,6 +85,12 @@ export function AdminShell({
   const { t } = useTranslation();
   const isNarrow = useMediaQuery('(max-width:899px)');
   const [navOpen, setNavOpen] = useState(false);
+  // Свёрнутость — только у постоянной панели; шторка всегда полная (партия 55).
+  const [collapsed, toggleCollapsed] = useNavCollapsed(STORAGE_KEYS.platformNavCollapsed);
+  const mini = collapsed && !isNarrow;
+  const reduceMotion = usePrefersReducedMotion();
+  const rtl = useTheme().direction === 'rtl';
+  const tipPlacement = rtl ? 'left' : 'right';
   const groups = sections.reduce<{ group: string | undefined; items: AdminSection[] }[]>(
     (acc, section) => {
       const last = acc[acc.length - 1];
@@ -71,9 +103,18 @@ export function AdminShell({
 
   // Одна и та же разметка навигации служит и постоянной панели, и шторке:
   // две копии списка разделов однажды разъехались бы.
-  const navigation = (
+  const renderNavigation = (mini: boolean) => (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: '18px 18px 14px' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.25,
+          p: mini ? '18px 0 14px' : '18px 18px 14px',
+          justifyContent: mini ? 'center' : 'flex-start',
+          flex: 'none',
+        }}
+      >
         <Box
           sx={{
             width: 30,
@@ -93,7 +134,7 @@ export function AdminShell({
           {/* Буквы NaviRoom Control (партия 53); до неё здесь стояло «IT» от ITV. */}
           NC
         </Box>
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={mini ? VISUALLY_HIDDEN : { minWidth: 0 }}>
           {/*
             Название платформы — обычный текст на поверхности, а не надпись на
             заливке. Оно и раньше красилось `on-brand`, но заливки под ним нет:
@@ -106,16 +147,26 @@ export function AdminShell({
         </Box>
       </Box>
 
+      {/* Своя прокрутка у списка: шапка с маркой и кнопка внизу на месте (партия 55). */}
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
       {groups.map((group, index) => (
         <Box key={group.group ?? `top-${index}`} sx={{ mb: 0.5 }}>
+          {/* В свёрнутом меню группы делит черта, слово остаётся диктору. */}
+          {group.group && mini ? <Divider sx={{ mx: 1.5, my: 1, borderColor: surface.line }} /> : null}
           {group.group ? (
-            <Typography sx={{ ...typo.label, color: ink.low, p: '14px 18px 6px' }}>
+            <Typography sx={mini ? VISUALLY_HIDDEN : { ...typo.label, color: ink.low, p: '14px 18px 6px' }}>
               {t(group.group)}
             </Typography>
           ) : null}
           {group.items.map((section) => (
-            <ButtonBase
+            <Tooltip
               key={section.key}
+              title={mini ? t(section.labelKey) : ''}
+              placement={tipPlacement}
+              // Имя ссылки — её текст; пустой title без этого стирал бы его.
+              describeChild
+            >
+            <ButtonBase
               /*
                 НАСТОЯЩАЯ ССЫЛКА, А НЕ КНОПКА.
 
@@ -141,11 +192,13 @@ export function AdminShell({
               data-active={active === section.key ? 'true' : undefined}
               sx={{
                 display: 'flex',
+                position: 'relative',
                 width: 'calc(100% - 20px)',
-                justifyContent: 'flex-start',
+                justifyContent: mini ? 'center' : 'flex-start',
+                alignItems: 'center',
                 gap: 1.4,
                 m: '1px 10px',
-                p: '9px 12px',
+                p: mini ? '9px 0' : '9px 12px',
                 borderRadius: `${shape.radius}px`,
                 ...typo.body,
                 fontWeight: 600,
@@ -155,11 +208,20 @@ export function AdminShell({
                 '&:hover': { bgcolor: active === section.key ? accent.wash : surface.s2 },
               }}
             >
-              {t(section.labelKey)}
+              {section.icon ? (
+                <Box component="span" aria-hidden sx={{ display: 'inline-flex', flex: 'none' }}>
+                  {section.icon}
+                </Box>
+              ) : null}
+              <Box component="span" sx={mini ? VISUALLY_HIDDEN : { minWidth: 0 }}>
+                {t(section.labelKey)}
+              </Box>
               {section.badge ? (
                 <Box
                   sx={{
                     ml: 'auto',
+                    // В свёрнутом меню счётчик — на углу иконки.
+                    ...(mini ? { position: 'absolute', top: 2, insetInlineEnd: 2, fontSize: 10, px: 0.5 } : null),
                     ...typo.label,
                     letterSpacing: 0,
                     bgcolor: surface.s3,
@@ -172,9 +234,11 @@ export function AdminShell({
                 </Box>
               ) : null}
             </ButtonBase>
+            </Tooltip>
           ))}
         </Box>
       ))}
+      </Box>
     </>
   );
 
@@ -221,7 +285,11 @@ export function AdminShell({
         background: pageBackground,
         color: ink.hi,
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: `${layout.nav}px 1fr` },
+        // Содержимое сдвигается вместе с шириной панели (партия 55).
+        gridTemplateColumns: { xs: '1fr', md: `${mini ? NAV_MINI : layout.nav}px 1fr` },
+        transition: reduceMotion
+          ? 'none'
+          : `grid-template-columns ${MOTION.duration.base}ms ${MOTION.easing.entrance}`,
       }}
     >
       {/*
@@ -241,21 +309,60 @@ export function AdminShell({
             onClick={() => setNavOpen(false)}
             data-testid="admin-nav-drawer"
           >
-            {navigation}
+            {renderNavigation(false)}
           </Box>
         </Drawer>
       ) : null}
 
+      {/*
+        Панель ЛИПКАЯ, со своей прокруткой (партия 55): на длинном реестре
+        страница уезжала вниз вместе с меню, и до разделов приходилось
+        листать обратно.
+      */}
       <Box
         component="aside"
+        data-testid="admin-nav"
+        data-collapsed={mini ? 'true' : undefined}
         sx={{
           display: { xs: 'none', md: 'flex' },
           flexDirection: 'column',
+          position: 'sticky',
+          top: 0,
+          height: '100dvh',
+          minWidth: 0,
+          overflow: 'hidden',
           bgcolor: surface.s1,
           borderRight: `1px solid ${surface.line}`,
         }}
       >
-        {navigation}
+        {renderNavigation(mini)}
+        <Box
+          sx={{
+            flex: 'none',
+            borderTop: `1px solid ${surface.line}`,
+            display: 'flex',
+            justifyContent: mini ? 'center' : 'flex-end',
+            p: 1,
+          }}
+        >
+          <Tooltip title={t(mini ? 'admin.nav.expand' : 'admin.nav.collapse')} placement={tipPlacement}>
+            <IconButton
+              size="small"
+              onClick={toggleCollapsed}
+              data-testid="admin-nav-collapse"
+              aria-label={t(mini ? 'admin.nav.expand' : 'admin.nav.collapse')}
+              aria-expanded={!mini}
+              sx={{ color: ink.mid }}
+            >
+              {/* Стрелка — к краю, куда уедет панель; в RTL зеркально. */}
+              {mini !== rtl ? (
+                <KeyboardDoubleArrowRightOutlinedIcon fontSize="small" />
+              ) : (
+                <KeyboardDoubleArrowLeftOutlinedIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>

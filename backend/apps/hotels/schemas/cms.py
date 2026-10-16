@@ -392,7 +392,9 @@ class DashboardAttentionOut(Schema):
 
     code: str
     severity: str
-    route: str
+    # Нет адреса — чинить негде у отеля (тариф меняет платформа): кнопку
+    # «Перейти» экран не рисует, а не ведёт туда, где нужного нет (партия 55).
+    route: str | None = None
     count: int | None = None
     minutes: int | None = None
     resource: str | None = None

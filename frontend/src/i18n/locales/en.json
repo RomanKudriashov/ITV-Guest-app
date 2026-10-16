@@ -82,7 +82,9 @@
     "open": "Open menu",
     "orders": "Orders",
     "reviews": "Reviews",
-    "desk": "Front desk"
+    "desk": "Front desk",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
   },
   "dictionaries": {
     "title": "Dictionaries",
@@ -361,7 +363,6 @@
       "roomHelper": "You will find it on your key card",
       "submit": "Continue",
       "connecting": "Connecting…",
-      "scanQr": "Scan QR",
       "qrHint": "Point your phone camera at the QR code in your room — it opens this app with the room already filled in.",
       "qrShort": "Or scan the QR code in your room",
       "or": "or",
@@ -507,7 +508,7 @@
       "belowMinimum": "Add {{amount}} more to reach the order minimum",
       "quoteError": "Could not calculate the amount. Please try again.",
       "total": "Total",
-      "totalHint": "The hotel confirms the final amount",
+      "totalHint": "No online payment — you settle with the hotel as it usually does",
       "place": "Place order · {{price}}",
       "placeShort": "Place order",
       "placing": "Sending…",
@@ -797,8 +798,8 @@
     },
     "notifications": {
       "orderTitle": "Order #{{number}}",
-      "offer": "Let you know when the order is on its way?",
-      "offerHint": "A notification when the status changes. The status stays visible on this screen either way.",
+      "offer": "Notify you when the order status changes?",
+      "offerHint": "Notifications arrive while this browser window is open. The status stays visible on this screen either way.",
       "enable": "Enable"
     },
     "opening": {
@@ -845,12 +846,12 @@
       "emptyTitle": "No orders",
       "emptyBody": "New orders appear here on their own — no need to refresh",
       "emptyHistoryTitle": "History is empty",
-      "emptyHistoryBody": "Closed orders of the last 24 hours will show up here",
+      "emptyHistoryBody": "Closed orders of this venue — completed and cancelled — will show up here",
       "day": "Appointments for {{date}}",
       "emptyTimelineTitle": "No appointments for this day",
       "emptyTimelineBody": "New bookings will appear here on their own",
       "today": "Today",
-      "slaHint": "Overdue means later than {{minutes}} min after intake",
+      "slaHint": "Overdue means later than {{minutes}} min after the latest of: placing the order, the time the guest asked for, reopening or transfer to this venue",
       "offlineTitle": "Lost connection to the board",
       "offlineBody": "This is not \"no requests\": new ones may be arriving but not reaching this screen. Reconnecting on our own — stay on the page.",
       "shiftFresh": "Shift started at {{time}}. No requests yet",
@@ -859,7 +860,7 @@
       "shiftSpeed": "Usually takes {{duration}}",
       "shiftAccept": "Taken on within {{duration}}",
       "lastOrder": "Last request — {{age}}",
-      "slaHintDefault": "Overdue means later than {{minutes}} min after intake (default for this kind)",
+      "slaHintDefault": "Overdue means later than {{minutes}} min after the latest of: placing the order, the time the guest asked for, reopening or transfer to this venue (default for this kind)",
       "dropHere": "Drop here",
       "overdueBelow": "Overdue below: {{count}}"
     },
@@ -908,7 +909,7 @@
     },
     "cancel": {
       "title": "Cancel order #{{number}}?",
-      "body": "The guest sees the cancellation at once. Pick a reason — it goes to the request history and analytics.",
+      "body": "The guest sees the cancellation at once. Pick a reason — it is saved with the request and shown in CMS orders.",
       "reason": "Details (optional)",
       "reasonPlaceholder": "For example: out of ingredients",
       "keep": "Keep it",
@@ -1113,6 +1114,10 @@
       "done": "Done this shift",
       "medianAccept": "Median to accept",
       "minutes": "{{value}} min"
+    },
+    "history": {
+      "updatedAt": "Updated at {{time}}",
+      "refresh": "Refresh"
     }
   },
   "requestFields": {
@@ -1159,7 +1164,7 @@
       "hint": "Where the hotel sends requests: a department chat, e-mail, the log",
       "add": "Channel",
       "empty": "No channels yet",
-      "emptyHint": "Without a channel nobody sees the request — start with the department chat",
+      "emptyHint": "Requests show on the board, but no notifications go out — start with the department chat",
       "loadError": "Could not load channels",
       "saved": "Channel saved",
       "deleted": "Channel deleted",
@@ -1596,8 +1601,9 @@
       "scheduled": "Scheduled publications",
       "scheduledEmpty": "Nothing scheduled",
       "cancelSchedule": "Cancel",
-      "whenLabel": "When to publish",
-      "whenHint": "Hotel time. If the look changes before then, the publication will not happen — we will tell you"
+      "whenHint": "Hotel time. If the look changes before then, the publication will not happen — we will tell you",
+      "whenDate": "Publish date",
+      "whenTime": "Time"
     }
   },
   "hotel": {
@@ -2164,7 +2170,7 @@
       "reset": "Return to default",
       "resetDone": "The point inherits the default again"
     },
-    "slaHint": "Past this a task counts as overdue and is raised to the manager.",
+    "slaHint": "Overdue tasks are highlighted on the board. To raise an alert, set up an escalation rule.",
     "guestFacing": "Show to guests on the storefront",
     "staffCount": "Staff: {{count}}",
     "toStaff": "To staff",
@@ -2231,7 +2237,9 @@
     "hasCatalog": "Has a catalog (menu, services, commerce)",
     "staffEmpty": "Nobody is assigned to this venue yet. Assign people in the Staff section.",
     "staffLevel": "Level",
-    "staffOff": "Disabled"
+    "staffOff": "Disabled",
+    "slaLabel": "Overdue threshold, min",
+    "slaEscalationLink": "Escalation rules"
   },
   "inclusions": {
     "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",
@@ -2335,14 +2343,14 @@
       "escalatedHint": "Requests were not picked up in time and were raised",
       "no_escalation_one": "{{count}} venue without escalation",
       "no_escalation_other": "{{count}} venues without escalation",
-      "noEscalationHint": "An unclaimed request surfaces nowhere — the guest will tell you",
+      "noEscalationHint": "An unclaimed request shows on the board, but nobody raises an alarm about it",
       "stop_list_one": "{{count}} item on the stop list",
       "stop_list_other": "{{count}} items on the stop list",
       "stopListHint": "Guests cannot order them",
       "node_offline": "Node silent for {{minutes}} min",
       "nodeOfflineHint": "Room control is unavailable to guests",
       "tariff_over": "Tariff exceeded: {{resource}} {{used}} / {{limit}}",
-      "tariffOverHint": "Change the tariff via the platform",
+      "tariffOverHint": "The tariff is changed by the platform — contact it",
       "resource": {
         "services": "venues",
         "rooms": "rooms",
@@ -2377,7 +2385,9 @@
       "support": "Support sessions",
       "security": "Security",
       "groups": "Groups",
-      "publications": "Publishing"
+      "publications": "Publishing",
+      "collapse": "Collapse menu",
+      "expand": "Expand menu"
     },
     "role": {
       "owner": "Platform owner",
@@ -2423,7 +2433,7 @@
     },
     "overview": {
       "title": "Platform overview",
-      "subtitle": "The whole platform at a glance: how many hotels, how many orders are running right now, whether everything responds. This is the first stop — to be sure nothing stalled overnight.",
+      "subtitle": "The whole platform at a glance: how many hotels, how many orders were in progress when the page opened, whether everything responds. This is the first stop — to be sure nothing stalled overnight.",
       "loadFailed": "Could not load the overview",
       "growth": "New hotels by month",
       "health": "System health",
@@ -2671,7 +2681,7 @@
       "nodeName": "Node name",
       "createFailed": "Could not add the node",
       "reissueFailed": "Could not reissue the key",
-      "reissueWarning": "Reissue the key for node “{{name}}”? The old key stops working immediately; the connector will reconnect with the new one."
+      "reissueWarning": "Reissue the key for node “{{name}}”? The old key stops working immediately. The connector does not reload the key by itself — restart it with the new key."
     },
     "team": {
       "title": "Platform users",
@@ -3615,7 +3625,8 @@
           "title": "Analytics",
           "body": "Revenue, fulfilment speed and load by venue and by time of day."
         }
-      }
+      },
+      "soon": "soon"
     },
     "audience": {
       "title": "Who it is for",
@@ -3662,12 +3673,12 @@
     },
     "extras": {
       "devices": {
-        "title": "Tablet and door panel in the room",
-        "body": "The service installs as an app on the bedside tablet and on the door call panel. The device in the room is part of the product, not just the guest's phone."
+        "title": "Tablet in the room",
+        "body": "The guest app opens in the browser of the bedside tablet — the same storefront as on the guest's phone, nothing to install."
       },
       "languages": {
         "title": "Languages",
-        "body": "Today Russian, English, Arabic and Chinese — right-to-left included. The list is not limited by our code: a language model comes next."
+        "body": "Today Russian, English, Arabic and Chinese — right-to-left included. The hotel fills in its texts for each language in the CMS; automatic translation is connected separately."
       }
     },
     "claims": {
@@ -3717,7 +3728,7 @@
   "orders": {
     "title": "Orders",
     "what": "orders",
-    "emptyHint": "Guest orders will appear here — all venues at once.",
+    "emptyHint": "No orders yet. New ones appear after a page refresh — all venues at once.",
     "loadMore": "Show more",
     "row": {
       "room": "Room {{room}}"

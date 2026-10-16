@@ -68,8 +68,8 @@ export function ShiftTiles({ shift, focus, overdueOn, onFocus, onOverdue }: Shif
         display: 'flex',
         flexWrap: 'wrap',
         gap: 0.75,
-        px: { xs: 1, md: 1.5 },
-        pt: { xs: 1, md: 1.5 },
+        // Края — от контейнера страницы, как у панели и доски (партия 55).
+        pt: 2,
       }}
     >
       {tiles.map((tile) => (

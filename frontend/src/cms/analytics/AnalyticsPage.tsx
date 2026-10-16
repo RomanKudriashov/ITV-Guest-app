@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import Stack from '@mui/material/Stack';
@@ -18,6 +17,7 @@ import { TrafficTab } from './tabs/TrafficTab';
 import { ReviewsTab } from './tabs/ReviewsTab';
 import { useAnalyticsFilters } from './useAnalyticsFilters';
 import { useAnalyticsScope } from './useAnalyticsScope';
+import { PageContainer } from '@/components/PageContainer';
 
 const TABS: AnalyticsTab[] = ['sales', 'operations', 'traffic', 'reviews'];
 
@@ -56,7 +56,7 @@ export function AnalyticsPage() {
   }, [fetching, queryClient]);
 
   return (
-    <Box sx={{ p: 3 }} data-testid="cms-analytics">
+    <PageContainer testId="cms-analytics">
       <Stack spacing={2}>
         <Stack
           direction={{ xs: 'column', md: 'row' }}
@@ -119,6 +119,6 @@ export function AnalyticsPage() {
         {tab === 'traffic' ? <TrafficTab controller={controller} /> : null}
         {tab === 'reviews' ? <ReviewsTab controller={controller} /> : null}
       </Stack>
-    </Box>
+    </PageContainer>
   );
 }

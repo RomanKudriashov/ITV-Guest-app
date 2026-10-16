@@ -97,7 +97,12 @@ export function InclusionsTab({ service }: { service: CmsService }) {
 
       <Divider />
 
-      <Stack direction="row" spacing={1} alignItems="center">
+      {/* На узком — столбиком: поле в 260 и ошибка рядом не помещались в 390 (партия 55). */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+      >
         <SelectField
           // Поле — кнопка «добавить», а не хранимое значение: после добавления
           // источник уходит из кандидатов, ключ меняется, поле снова пустое.
@@ -106,7 +111,7 @@ export function InclusionsTab({ service }: { service: CmsService }) {
           fullWidth={false}
           label={t('inclusions.addSource')}
           value=""
-          sx={{ minWidth: 260 }}
+          sx={{ minWidth: { xs: 0, sm: 260 } }}
           onChange={(next) => next && add.mutate(next)}
           testId="inclusion-add-source"
           disabled={!candidates.length}
@@ -149,8 +154,17 @@ function InclusionCard({
 
   return (
     <Card variant="outlined" sx={{ p: 2 }} data-testid={`inclusion-${inclusion.id}`}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+      {/* Шапка карточки переносится: имя, охват, «Активно» и «Удалить» в ряд
+          шире 390 (партия 55). */}
+      <Stack
+        direction="row"
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={1}
+        sx={{ mb: 2 }}
+      >
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, overflowWrap: 'anywhere', minWidth: 0 }}>
           {sourceName}
         </Typography>
         <Chip

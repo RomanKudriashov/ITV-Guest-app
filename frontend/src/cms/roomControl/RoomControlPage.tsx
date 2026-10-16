@@ -6,7 +6,7 @@ import { cmsPath } from '@/app/hostRole';
 import { QueryState } from '@/components/QueryState';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
+import { PageContainer } from '@/components/PageContainer';
 import Chip from '@mui/material/Chip';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
@@ -107,10 +107,10 @@ function RoomControlSection() {
 
   if (types.isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <Skeleton variant="rounded" height={64} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={360} />
-      </Box>
+      </PageContainer>
     );
   }
 
@@ -118,20 +118,20 @@ function RoomControlSection() {
   // формы — обещать работу, которой не будет.
   if (types.isError && types.error instanceof ApiError && types.error.status === 403) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <Alert severity="info" data-testid="grms-module-off">
           {types.error.detail}
         </Alert>
-      </Box>
+      </PageContainer>
     );
   }
   if (types.isError || !types.data) {
     return (
-      <Box sx={{ p: 3 }}>
+      <PageContainer>
         <QueryState query={types} what={t('state.what.roomTypes')}>
           {() => null}
         </QueryState>
-      </Box>
+      </PageContainer>
     );
   }
 
@@ -139,7 +139,7 @@ function RoomControlSection() {
   const current = list.find((type) => type.code === typeCode) ?? null;
 
   return (
-    <Box sx={{ p: 3, pb: 10 }} data-testid="cms-room-control">
+    <PageContainer testId="cms-room-control" sx={{ pb: 10 }}>
       <Stack
         direction="row"
         spacing={2}
@@ -222,6 +222,6 @@ function RoomControlSection() {
 
       {current && tab === 'check' && <CheckTab type={current} />}
       {current && tab === 'diagnostics' && <DiagnosticsTab type={current} />}
-    </Box>
+    </PageContainer>
   );
 }

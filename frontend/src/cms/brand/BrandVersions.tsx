@@ -45,6 +45,7 @@ import {
   type BrandVersionRecord,
 } from '@/api/brand';
 import { queryKeys } from '@/api/queryKeys';
+import { DateField, TimeField } from '@/components/DateField';
 import type { PartialBrandTokens } from '@/theme/tokens';
 
 const DRAFTS_KEY = ['cms', 'brand', 'drafts'] as const;
@@ -130,14 +131,19 @@ export function BrandVersions({ tokens, onOpen }: BrandVersionsProps) {
     onSuccess: refresh,
   });
 
-  const [runAt, setRunAt] = useState('');
+  // Дата и время — двумя полями, значение для API — та же строка
+  // `YYYY-MM-DDTHH:mm`, что отдавал datetime-local (партия 55).
+  const [runDate, setRunDate] = useState('');
+  const [runTime, setRunTime] = useState('');
+  const runAt = runDate && runTime ? `${runDate}T${runTime}` : '';
   const [scheduleFor, setScheduleFor] = useState<string>('');
 
   const schedulePublication = useMutation({
     mutationFn: ({ id, at }: { id: string; at: string }) => scheduleBrandDraft(id, at),
     onSuccess: () => {
       setScheduleFor('');
-      setRunAt('');
+      setRunDate('');
+      setRunTime('');
       refresh();
     },
     onError: (error) =>
@@ -250,15 +256,22 @@ export function BrandVersions({ tokens, onOpen }: BrandVersionsProps) {
                   {t('common.delete')}
                 </Button>
                 {scheduleFor === draft.id ? (
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
-                    <TextField
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ width: '100%' }}>
+                    <DateField
                       size="small"
-                      type="datetime-local"
-                      label={t('brand.versions.whenLabel')}
-                      value={runAt}
-                      onChange={(event) => setRunAt(event.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ 'data-testid': 'brand-schedule-when' }}
+                      label={t('brand.versions.whenDate')}
+                      value={runDate}
+                      onChange={setRunDate}
+                      testId="brand-schedule-when"
+                      sx={{ width: 180 }}
+                    />
+                    <TimeField
+                      size="small"
+                      label={t('brand.versions.whenTime')}
+                      value={runTime}
+                      onChange={setRunTime}
+                      testId="brand-schedule-when-time"
+                      sx={{ width: 130 }}
                     />
                     <Button
                       size="small"

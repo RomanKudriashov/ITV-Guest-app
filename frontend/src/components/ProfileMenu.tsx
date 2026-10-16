@@ -7,7 +7,8 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import LogoutIcon from '@mui/icons-material/Logout';
+// Контурная, как и остальные иконки меню профиля (партия 55).
+import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import { alpha, darken, lighten, type Theme } from '@mui/material/styles';
 
 /**

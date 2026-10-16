@@ -101,6 +101,9 @@ def test_only_actionable_events_are_on_by_default():
         # заявку на человека — тот обязан нажать «Принять», иначе заявка так и
         # поднимается по эскалации. Решение тек-лида: требует действия.
         "order.assigned",
+        # Назначенная публикация оформления сорвалась (партия 55): черновик
+        # лежит неопубликованным, пока человек не откроет его и не решит.
+        "brand.schedule_failed",
     }
 
 
@@ -164,3 +167,41 @@ def test_brand_events_reach_shared_channels_not_personal_ones(crystal, monkeypat
 
     assert "shared" in sent
     assert "personal" not in sent
+
+
+@pytest.mark.django_db
+def test_failed_brand_schedule_reaches_a_hotel_that_never_touched_settings(
+    crystal, monkeypatch, deliver_inline
+):
+    """
+    Партия 55: сорванная публикация оформления ждёт решения человека. Отель,
+    не открывавший настройки событий, должен о ней узнать — прежде событие
+    было выключено по умолчанию и молча не уходило никуда.
+    """
+    from apps.core.context import tenant_context
+    from apps.notifications.channels import adapters
+    from apps.notifications.models import ChannelType, EventSetting, NotificationChannel
+    from apps.notifications.services import announce, event_settings
+
+    with tenant_context(crystal):
+        assert not EventSetting.objects.filter(code="brand.schedule_failed").exists()
+        assert event_settings.is_enabled("brand.schedule_failed")
+        NotificationChannel.objects.create(
+            type=ChannelType.LOG, title="общий", config={"marker": "shared"}
+        )
+
+    sent: list[str] = []
+
+    class Recorder:
+        def send(self, message, config):
+            sent.append(message.subject)
+            return "recorded"
+
+    monkeypatch.setattr(adapters, "get_adapter", lambda channel_type: Recorder())
+
+    with tenant_context(crystal):
+        announce.announce_to_hotel(
+            "brand.schedule_failed", {"version": 4, "draft_name": "Осень"}
+        )
+
+    assert sent, "событие по умолчанию включено и доходит до общего канала"

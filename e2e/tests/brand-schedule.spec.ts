@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, signInToCms } from './helpers'
+import { ADMIN, signInToCms, fillDate, fillTime } from './helpers'
 
 /*
   ПУБЛИКАЦИЯ ПО РАСПИСАНИЮ — ЧЕРЕЗ ИНТЕРФЕЙС.
@@ -82,7 +82,10 @@ test.describe('Публикация по расписанию', () => {
     await expect(page.getByText(name, { exact: false }).first()).toBeVisible({ timeout: 15_000 })
 
     await page.getByTestId('brand-draft-schedule').first().click()
-    await page.getByTestId('brand-schedule-when').fill(tomorrowNight())
+    // Дата и время — два поля с маской (партия 55), а не одно datetime-local.
+    const [whenDate, whenTime] = tomorrowNight().split('T')
+    await fillDate(page, 'brand-schedule-when', whenDate)
+    await fillTime(page, 'brand-schedule-when-time', whenTime)
     await page.getByTestId('brand-schedule-confirm').click()
 
     // НАЗНАЧЕННОЕ ВИДНО — со временем, поясом и тем, кто назначил.
@@ -115,7 +118,8 @@ test.describe('Публикация по расписанию', () => {
     await expect(page.getByText(name, { exact: false }).first()).toBeVisible({ timeout: 15_000 })
 
     await page.getByTestId('brand-draft-schedule').first().click()
-    await page.getByTestId('brand-schedule-when').fill('2020-01-01T03:00')
+    await fillDate(page, 'brand-schedule-when', '2020-01-01')
+    await fillTime(page, 'brand-schedule-when-time', '03:00')
     await page.getByTestId('brand-schedule-confirm').click()
 
     // Отказ сказан словами, а не проглочен: иначе оператор уйдёт уверенным, что

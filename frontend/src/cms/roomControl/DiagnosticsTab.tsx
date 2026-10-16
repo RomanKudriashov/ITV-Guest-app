@@ -33,6 +33,7 @@ import {
 } from '@/api/grms';
 import { useGrmsScope } from './scope';
 import { SelectField } from '@/components/SelectField';
+import { DateField } from '@/components/DateField';
 import { queryKeys } from '@/api/queryKeys';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useToast } from '@/components/ToastProvider';
@@ -163,23 +164,22 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
           <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
             {t('roomControl.diagnostics.filtersTitle')}
           </Typography>
-          <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+          {/* Фильтры — равными колонками (партия 55), а не шириной по месту. */}
+          <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', alignItems: 'center' }}>
             <TextField
               size="small"
               label={t('roomControl.diagnostics.room')}
               value={filters.room}
               onChange={(event) => setFilters({ ...filters, room: event.target.value })}
               inputProps={{ 'data-testid': 'diagnostics-filter-room' }}
-              sx={{ minWidth: 140 }}
+              fullWidth
             />
             <SelectField
               size="small"
-              fullWidth={false}
               label={t('roomControl.diagnostics.elementKind')}
               value={filters.element_kind}
               onChange={(next) => setFilters({ ...filters, element_kind: next })}
               testId="diagnostics-filter-kind"
-              sx={{ minWidth: 200 }}
               options={[
                 { value: '', label: t('roomControl.diagnostics.anyKind') },
                 ...(values.data?.element_kinds ?? []).map((kind) => ({ value: kind.code, label: kind.title })),
@@ -187,12 +187,10 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
             />
             <SelectField
               size="small"
-              fullWidth={false}
               label={t('roomControl.diagnostics.outcome')}
               value={filters.outcome}
               onChange={(next) => setFilters({ ...filters, outcome: next })}
               testId="diagnostics-filter-outcome"
-              sx={{ minWidth: 200 }}
               options={[
                 { value: '', label: t('roomControl.diagnostics.anyOutcome') },
                 ...(values.data?.outcomes ?? []).map((outcome) => ({
@@ -201,32 +199,32 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
                 })),
               ]}
             />
-            <TextField
+            <DateField
               size="small"
-              type="date"
+              fullWidth
               label={t('roomControl.diagnostics.dateFrom')}
               value={filters.date_from}
-              onChange={(event) => setFilters({ ...filters, date_from: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'diagnostics-filter-from' }}
+              onChange={(next) => setFilters({ ...filters, date_from: next })}
+              testId="diagnostics-filter-from"
             />
-            <TextField
+            <DateField
               size="small"
-              type="date"
+              fullWidth
               label={t('roomControl.diagnostics.dateTo')}
               value={filters.date_to}
-              onChange={(event) => setFilters({ ...filters, date_to: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'diagnostics-filter-to' }}
+              onChange={(next) => setFilters({ ...filters, date_to: next })}
+              testId="diagnostics-filter-to"
             />
-            <Button
-              size="small"
-              onClick={() => setFilters(EMPTY_FILTERS)}
-              data-testid="diagnostics-filter-reset"
-            >
-              {t('roomControl.diagnostics.reset')}
-            </Button>
-          </Stack>
+            <Box>
+              <Button
+                size="small"
+                onClick={() => setFilters(EMPTY_FILTERS)}
+                data-testid="diagnostics-filter-reset"
+              >
+                {t('roomControl.diagnostics.reset')}
+              </Button>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
 

@@ -29,6 +29,7 @@ import { fetchRoomCategories } from '@/api/hotelAdmin';
 import { MultiSelectField, SelectField } from '@/components/SelectField';
 import { fetchServices } from '@/cms/services/api';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
+import { DateField, TimeField } from '@/components/DateField';
 
 /**
  * Форма баннера: что показать, куда вести и кому показывать.
@@ -260,31 +261,32 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
             {t('banners.rulesHint')}
           </Typography>
           <Stack direction="row" spacing={1}>
-            <TextField
-              size="small" type="date" fullWidth InputLabelProps={{ shrink: true }}
+            {/* Даты и время — общим полем, не системным (партия 55). */}
+            <DateField
+              size="small" fullWidth
               label={t('banners.from')}
               value={draft.starts_on ?? ''}
-              onChange={(event) => set({ starts_on: event.target.value || null })}
+              onChange={(next) => set({ starts_on: next || null })}
             />
-            <TextField
-              size="small" type="date" fullWidth InputLabelProps={{ shrink: true }}
+            <DateField
+              size="small" fullWidth
               label={t('banners.to')}
               value={draft.ends_on ?? ''}
-              onChange={(event) => set({ ends_on: event.target.value || null })}
+              onChange={(next) => set({ ends_on: next || null })}
             />
           </Stack>
-          <Stack direction="row" spacing={1}>
-            <TextField
-              size="small" type="time" fullWidth InputLabelProps={{ shrink: true }}
+          <Stack direction="row" spacing={1} alignItems="flex-start">
+            <TimeField
+              size="small" fullWidth
               label={t('banners.timeFrom')}
               value={draft.time_from ?? ''}
-              onChange={(event) => set({ time_from: event.target.value || null })}
+              onChange={(next) => set({ time_from: next || null })}
             />
-            <TextField
-              size="small" type="time" fullWidth InputLabelProps={{ shrink: true }}
+            <TimeField
+              size="small" fullWidth
               label={t('banners.timeTo')}
               value={draft.time_to ?? ''}
-              onChange={(event) => set({ time_to: event.target.value || null })}
+              onChange={(next) => set({ time_to: next || null })}
               helperText={t('banners.timeHint')}
             />
           </Stack>

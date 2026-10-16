@@ -375,14 +375,21 @@ function LocationDialog({
             testId="location-title"
           />
 
-          <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+          {/* Ряд — сеткой равных колонок, а не ширинами по месту: край «Тип»
+              совпадает с краем поля ниже (партия 55, аудит: grid_edge). */}
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              alignItems: 'center',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+            }}
+          >
             <SelectField<LocationKind>
               size="small"
-              fullWidth={false}
               label={t('hotel.locations.kind')}
               value={form.kind}
               onChange={(next) => setForm((prev) => ({ ...prev, kind: next }))}
-              sx={{ minWidth: 200 }}
               testId="location-kind"
               options={LOCATION_KINDS.map((kind) => ({
                 value: kind,
@@ -398,7 +405,7 @@ function LocationDialog({
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, sort_order: Number(event.target.value) }))
               }
-              sx={{ width: 140 }}
+              fullWidth
               inputProps={{ 'data-testid': 'location-sort' }}
             />
 
@@ -415,7 +422,7 @@ function LocationDialog({
               error={deliveryFeeInvalid}
               helperText={deliveryFeeInvalid ? t('hotel.locations.deliveryFeeInvalid') : undefined}
               InputProps={{ endAdornment: currencySymbol(currency, languages.displayLanguage) }}
-              sx={{ width: 180 }}
+              fullWidth
               inputProps={{ 'data-testid': 'cms-location-delivery-fee', inputMode: 'decimal' }}
             />
             )}
@@ -429,7 +436,7 @@ function LocationDialog({
               }
               label={t('hotel.locations.active')}
             />
-          </Stack>
+          </Box>
 
           {isPickup ? (
             <Alert severity="info" data-testid="location-pickup-hint">
