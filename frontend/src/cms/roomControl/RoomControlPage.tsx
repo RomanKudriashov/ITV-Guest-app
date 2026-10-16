@@ -8,12 +8,10 @@ import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
@@ -22,6 +20,7 @@ import { GrmsScopeProvider, useGrmsScope } from './scope';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
+import { SelectField } from '@/components/SelectField';
 import { pickTranslated } from '@/utils/translated';
 import { AccessTab } from './AccessTab';
 import { CheckTab } from './CheckTab';
@@ -170,22 +169,19 @@ function RoomControlSection() {
           />
         )}
         {list.length > 0 && (
-          <TextField
-            select
+          <SelectField
             size="small"
+            fullWidth={false}
             sx={{ minWidth: 220 }}
             label={t('roomControl.type')}
             value={typeCode}
-            onChange={(e) => setTypeCode(e.target.value)}
-            data-testid="grms-type-select"
-          >
-            {list.map((type) => (
-              <MenuItem key={type.code} value={type.code}>
-                {pickTranslated(type.title, languages.displayLanguage, languages.defaultCode) ||
-                  type.code}
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={setTypeCode}
+            testId="grms-type-select"
+            options={list.map((type) => ({
+              value: type.code,
+              label: pickTranslated(type.title, languages.displayLanguage, languages.defaultCode) || type.code,
+            }))}
+          />
         )}
       </Stack>
 

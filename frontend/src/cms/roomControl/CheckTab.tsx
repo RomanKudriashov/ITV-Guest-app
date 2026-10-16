@@ -7,7 +7,6 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -22,6 +21,7 @@ import { ApiError } from '@/api/client';
 import { checkElement, fetchTypeStatus, type CheckResult, type GrmsType } from '@/api/grms';
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 
 /**
@@ -97,56 +97,43 @@ export function CheckTab({ type }: { type: GrmsType }) {
           </Alert>
         ) : (
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 200 }}
               label={t('roomControl.builder.element')}
               value={element}
-              onChange={(e) => {
-                setElement(e.target.value);
+              onChange={(next) => {
+                setElement(next);
                 setCapability('');
               }}
-              data-testid="grms-check-element"
-            >
-              {elements.map((item) => (
-                <MenuItem key={item.slug} value={item.slug}>
-                  {item.slug}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              testId="grms-check-element"
+              options={elements.map((item) => ({ value: item.slug, label: item.slug }))}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 140 }}
               label={t('roomControl.builder.room')}
               value={room}
-              onChange={(e) => setRoom(e.target.value)}
-              data-testid="grms-check-room"
-            >
-              {type.rooms.map((number) => (
-                <MenuItem key={number} value={number}>
-                  {number}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              onChange={setRoom}
+              testId="grms-check-room"
+              options={type.rooms.map((number) => ({ value: number, label: number }))}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 160 }}
               label={t('roomControl.builder.capability')}
               value={capability}
-              onChange={(e) => setCapability(e.target.value)}
+              onChange={setCapability}
               disabled={!element}
-              data-testid="grms-check-capability"
-            >
-              <MenuItem value="">{t('roomControl.check.defaultCapability')}</MenuItem>
-              {capabilities.map((item) => (
-                <MenuItem key={item} value={item}>
-                  {item}
-                </MenuItem>
-              ))}
-            </TextField>
+              testId="grms-check-capability"
+              options={[
+                { value: '', label: t('roomControl.check.defaultCapability') },
+                ...capabilities.map((item) => ({ value: item, label: item })),
+              ]}
+            />
             <TextField
               size="small"
               type="number"

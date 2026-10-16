@@ -6,7 +6,6 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Collapse from '@mui/material/Collapse';
 import LinearProgress from '@mui/material/LinearProgress';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -18,6 +17,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { ink, panelSx, typo } from '../adminTokens';
 import { useRights } from '../useRights';
 import {
@@ -136,50 +136,50 @@ export function PublicationsPage() {
 
           <Typography sx={typo.panelTitle}>{t('admin.publications.whom')}</Typography>
           <Stack direction="row" spacing={1.5}>
-            <TextField
-              select
+            <SelectField<PublicationTarget['scope']>
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 200 }}
               label={t('admin.publications.scope')}
               value={form.scope}
-              onChange={(e) => {
+              onChange={(next) => {
                 preview.reset();
-                setForm({ ...form, scope: e.target.value as PublicationTarget['scope'] });
+                setForm({ ...form, scope: next });
               }}
-              SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-pub-scope' } as never }}
-            >
-              <MenuItem value="group">{t('admin.publications.scopes.group')}</MenuItem>
-              {/*
+              testId="admin-pub-scope"
+              /*
                 ВЕС ДЕЙСТВИЯ ВИДЕН. Весь флот — владельческое право, и поддержке
                 этот пункт показывается недоступным с причиной, а не исчезает:
                 пропавший пункт читается как «такой возможности нет».
-              */}
-              <MenuItem value="all" disabled={!isOwner} data-testid="admin-pub-scope-all">
-                {t('admin.publications.scopes.all')}
-                {!isOwner ? ` — ${t('admin.publications.ownerOnly')}` : ''}
-              </MenuItem>
-            </TextField>
+              */
+              options={[
+                { value: 'group', label: t('admin.publications.scopes.group') },
+                {
+                  value: 'all',
+                  label: `${t('admin.publications.scopes.all')}${!isOwner ? ` — ${t('admin.publications.ownerOnly')}` : ''}`,
+                  disabled: !isOwner,
+                  testId: 'admin-pub-scope-all',
+                },
+              ]}
+            />
 
             {form.scope === 'group' ? (
-              <TextField
-                select
+              <SelectField
                 size="small"
+                fullWidth={false}
                 sx={{ minWidth: 220 }}
                 label={t('admin.publications.group')}
                 value={form.groupId}
-                onChange={(e) => {
+                onChange={(next) => {
                   preview.reset();
-                  setForm({ ...form, groupId: e.target.value });
+                  setForm({ ...form, groupId: next });
                 }}
-                SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-pub-group' } as never }}
-              >
-                {(groups.data?.items ?? []).map((group) => (
-                  <MenuItem key={group.id} value={group.id}>
-                    {group.title}
-                    {group.size !== undefined ? ` · ${group.size}` : ''}
-                  </MenuItem>
-                ))}
-              </TextField>
+                testId="admin-pub-group"
+                options={(groups.data?.items ?? []).map((group) => ({
+                  value: String(group.id),
+                  label: `${group.title}${group.size !== undefined ? ` · ${group.size}` : ''}`,
+                }))}
+              />
             ) : null}
           </Stack>
 

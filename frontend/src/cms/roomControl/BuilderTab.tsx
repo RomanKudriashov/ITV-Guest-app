@@ -8,7 +8,6 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -32,6 +31,7 @@ import {
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 import { pickTranslated } from '@/utils/translated';
 
@@ -315,21 +315,16 @@ export function BuilderTab({ type }: { type: GrmsType }) {
 
             <Divider sx={{ my: 1.5 }} />
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <TextField
-                select
+              <SelectField
                 size="small"
+                fullWidth={false}
                 sx={{ minWidth: 180 }}
                 label={t('roomControl.builder.kind')}
                 value={elementKind}
-                onChange={(e) => setElementKind(e.target.value)}
-                data-testid="grms-element-kind"
-              >
-                {catalog.data.elements.map((kind) => (
-                  <MenuItem key={kind.kind} value={kind.kind}>
-                    {kind.title}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={setElementKind}
+                testId="grms-element-kind"
+                options={catalog.data.elements.map((kind) => ({ value: kind.kind, label: kind.title }))}
+              />
               <TextField
                 size="small"
                 label={t('roomControl.builder.slug')}
@@ -337,22 +332,22 @@ export function BuilderTab({ type }: { type: GrmsType }) {
                 onChange={(e) => setElementSlug(e.target.value)}
                 data-testid="grms-element-slug"
               />
-              <TextField
-                select
+              <SelectField
                 size="small"
+                fullWidth={false}
                 sx={{ minWidth: 160 }}
                 label={t('roomControl.builder.zone')}
                 value={elementZone}
-                onChange={(e) => setElementZone(e.target.value)}
-                data-testid="grms-element-zone"
-              >
-                <MenuItem value="">{t('roomControl.builder.noZone')}</MenuItem>
-                {draft.zones.map((zone) => (
-                  <MenuItem key={zone.code} value={zone.code}>
-                    {pickTranslated(zone.title, languages.displayLanguage, languages.defaultCode) || zone.code}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={setElementZone}
+                testId="grms-element-zone"
+                options={[
+                  { value: '', label: t('roomControl.builder.noZone') },
+                  ...draft.zones.map((zone) => ({
+                    value: zone.code,
+                    label: pickTranslated(zone.title, languages.displayLanguage, languages.defaultCode) || zone.code,
+                  })),
+                ]}
+              />
               <TextField
                 size="small"
                 label={t('roomControl.builder.elementTitle')}
@@ -382,56 +377,43 @@ export function BuilderTab({ type }: { type: GrmsType }) {
           </Typography>
           <Divider sx={{ my: 1.5 }} />
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 200 }}
               label={t('roomControl.builder.element')}
               value={bindElement}
-              onChange={(e) => {
-                setBindElement(e.target.value);
+              onChange={(next) => {
+                setBindElement(next);
                 setBindCapability('');
               }}
-              data-testid="grms-bind-element"
-            >
-              {draft.elements.map((element) => (
-                <MenuItem key={element.slug} value={element.slug}>
-                  {pickTranslated(element.title, languages.displayLanguage, languages.defaultCode) ||
-                        element.slug}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              testId="grms-bind-element"
+              options={draft.elements.map((element) => ({
+                value: element.slug,
+                label: pickTranslated(element.title, languages.displayLanguage, languages.defaultCode) || element.slug,
+              }))}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 180 }}
               label={t('roomControl.builder.capability')}
               value={bindCapability}
-              onChange={(e) => setBindCapability(e.target.value)}
+              onChange={setBindCapability}
               disabled={!bindElement}
-              data-testid="grms-bind-capability"
-            >
-              {capabilitiesFor.map((capability) => (
-                <MenuItem key={capability} value={capability}>
-                  {capability}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              testId="grms-bind-capability"
+              options={capabilitiesFor.map((capability) => ({ value: capability, label: capability }))}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 200 }}
               label={t('roomControl.builder.variable')}
               value={bindVariable}
-              onChange={(e) => setBindVariable(e.target.value)}
-              data-testid="grms-bind-variable"
-            >
-              {type.variables.map((variable) => (
-                <MenuItem key={variable.key} value={variable.key}>
-                  {variable.key}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setBindVariable}
+              testId="grms-bind-variable"
+              options={type.variables.map((variable) => ({ value: variable.key, label: variable.key }))}
+            />
             <Button
               variant="contained"
               disabled={!bindElement || !bindCapability || !bindVariable || bindMutation.isPending}
@@ -456,21 +438,16 @@ export function BuilderTab({ type }: { type: GrmsType }) {
             {t('roomControl.builder.overrideHint')}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               sx={{ minWidth: 160 }}
               label={t('roomControl.builder.room')}
               value={overrideRoom}
-              onChange={(e) => setOverrideRoom(e.target.value)}
-              data-testid="grms-override-room"
-            >
-              {type.rooms.map((room) => (
-                <MenuItem key={room} value={room}>
-                  {room}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setOverrideRoom}
+              testId="grms-override-room"
+              options={type.rooms.map((room) => ({ value: room, label: room }))}
+            />
             <TextField
               size="small"
               sx={{ minWidth: 220 }}

@@ -4,11 +4,12 @@ import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import Collapse from '@mui/material/Collapse';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useTranslation } from 'react-i18next';
+
+import { SelectField } from '@/components/SelectField';
 
 import type { TrackerAssignee, TrackerStatusOption } from '../api/types';
 
@@ -152,42 +153,30 @@ export function BoardFilters({
             </Stack>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <TextField
-                select
+              <SelectField
                 size="small"
-                fullWidth
                 label={t('tracker.filters.assignee')}
                 value={values.assignee}
                 disabled={flag(values.unassigned)}
-                onChange={(event) => onChange({ assignee: event.target.value, mine: '' })}
-                // Метку вешаем на ВИДИМУЮ часть селекта: `inputProps` у MUI
-                // садится на скрытый нативный input, по которому не кликнуть.
-                SelectProps={{
-                  SelectDisplayProps: { 'data-testid': 'tracker-filter-assignee' } as never,
-                }}
-              >
-                <MenuItem value="">{t('tracker.filters.anyone')}</MenuItem>
-                {assignees.map((person) => (
-                  <MenuItem key={person.id} value={person.id}>
-                    {person.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
+                onChange={(value) => onChange({ assignee: value, mine: '' })}
+                testId="tracker-filter-assignee"
+                options={[
+                  { value: '', label: t('tracker.filters.anyone') },
+                  ...assignees.map((person) => ({ value: person.id, label: person.name })),
+                ]}
+              />
+              <SelectField
                 size="small"
-                fullWidth
                 label={t('tracker.filters.type')}
                 value={values.order_type}
-                onChange={(event) => onChange({ order_type: event.target.value })}
-                SelectProps={{
-                  SelectDisplayProps: { 'data-testid': 'tracker-filter-type' } as never,
-                }}
-              >
-                <MenuItem value="">{t('tracker.filters.anyType')}</MenuItem>
-                <MenuItem value="cart">{t('tracker.filters.typeCart')}</MenuItem>
-                <MenuItem value="request">{t('tracker.filters.typeRequest')}</MenuItem>
-              </TextField>
+                onChange={(value) => onChange({ order_type: value })}
+                testId="tracker-filter-type"
+                options={[
+                  { value: '', label: t('tracker.filters.anyType') },
+                  { value: 'cart', label: t('tracker.filters.typeCart') },
+                  { value: 'request', label: t('tracker.filters.typeRequest') },
+                ]}
+              />
             </Stack>
 
             {/*
@@ -231,24 +220,17 @@ export function BoardFilters({
                   активной доске тот же вопрос уже отвечен колонкой.
                 */}
                 {statuses.length > 0 ? (
-                  <TextField
-                    select
+                  <SelectField
                     size="small"
-                    fullWidth
                     label={t('tracker.filters.status')}
                     value={values.status}
-                    onChange={(event) => onChange({ status: event.target.value })}
-                    SelectProps={{
-                      SelectDisplayProps: { 'data-testid': 'tracker-filter-status' } as never,
-                    }}
-                  >
-                    <MenuItem value="">{t('tracker.filters.anyStatus')}</MenuItem>
-                    {statuses.map((status) => (
-                      <MenuItem key={status.code} value={status.code}>
-                        {status.title}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    onChange={(value) => onChange({ status: value })}
+                    testId="tracker-filter-status"
+                    options={[
+                      { value: '', label: t('tracker.filters.anyStatus') },
+                      ...statuses.map((status) => ({ value: status.code, label: status.title })),
+                    ]}
+                  />
                 ) : null}
               </Stack>
             ) : null}

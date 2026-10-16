@@ -10,7 +10,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -21,6 +20,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/auth';
+import { SelectField } from '@/components/SelectField';
 import {
   defaultPlace,
   placeIsComplete,
@@ -225,21 +225,21 @@ export function DeskOrderDialog({
         >
           <Stack spacing={1.5} sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <TextField
-                select
+              <SelectField
                 size="small"
+                fullWidth={false}
                 label={t('tracker.desk.order.venue')}
                 value={venueCode}
-                onChange={(event) => switchVenue(event.target.value)}
+                onChange={switchVenue}
+                testId="desk-order-venue"
+                loading={venues.isLoading}
                 sx={{ minWidth: 220 }}
-                SelectProps={{ SelectDisplayProps: { 'data-testid': 'desk-order-venue' } as never }}
-              >
-                {(venues.data?.venues ?? []).map((v) => (
-                  <MenuItem key={v.code} value={v.code} data-testid={`desk-order-venue-${v.code}`}>
-                    {v.title}
-                  </MenuItem>
-                ))}
-              </TextField>
+                options={(venues.data?.venues ?? []).map((v) => ({
+                  value: v.code,
+                  label: v.title,
+                  testId: `desk-order-venue-${v.code}`,
+                }))}
+              />
               <TextField
                 size="small"
                 label={t('tracker.desk.order.search')}

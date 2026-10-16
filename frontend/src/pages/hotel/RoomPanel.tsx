@@ -20,7 +20,6 @@ import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
@@ -30,6 +29,7 @@ import { ApiError } from '@/api/client';
 import { cmsPath } from '@/app/hostRole';
 import { updateRoom } from '@/api/hotelAdmin';
 import type { Building, GridRoom, RoomCategory, RoomHousekeeping } from '@/api/hotelAdminTypes';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 
 const HOUSEKEEPING: RoomHousekeeping[] = ['unknown', 'clean', 'dirty', 'in_progress'];
@@ -125,75 +125,55 @@ export function RoomPanel({
       <Divider sx={{ my: 1 }} />
 
       <Stack spacing={2}>
-        <TextField
-          select
+        <SelectField
           size="small"
           label={t('hotel.rooms.category')}
           value={room.category_id ?? ''}
-          onChange={(event) =>
-            patch.mutate({ category_id: event.target.value ? event.target.value : null })
-          }
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ 'data-testid': 'room-panel-category' }}
+          onChange={(next) => patch.mutate({ category_id: next ? next : null })}
+          testId="room-panel-category"
           disabled={patch.isPending}
-          fullWidth
-        >
-          <option value="">{t('hotel.rooms.categoryNone')}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.title_i18n || category.code}
-            </option>
-          ))}
-        </TextField>
+          options={[
+            { value: '', label: t('hotel.rooms.categoryNone') },
+            ...categories.map((category) => ({
+              value: category.id,
+              label: category.title_i18n || category.code,
+            })),
+          ]}
+        />
 
         {/*
           КОРПУС — ИЗ СПРАВОЧНИКА. Раньше это была свободная строка, и
           «Главный корпус», «главный корпус» и «Гл. корпус» жили как три
           разных здания: фильтр делил фонд на три части, а здание было одно.
         */}
-        <TextField
-          select
+        <SelectField
           size="small"
           label={t('hotel.rooms.building')}
           value={room.building_id ?? ''}
-          onChange={(event) =>
-            patch.mutate({ building_id: event.target.value ? event.target.value : null })
-          }
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ 'data-testid': 'room-panel-building' }}
+          onChange={(next) => patch.mutate({ building_id: next ? next : null })}
+          testId="room-panel-building"
           disabled={patch.isPending}
-          fullWidth
-        >
-          <option value="">{t('hotel.rooms.buildingNone')}</option>
-          {buildings.map((building) => (
-            <option key={building.id} value={building.id}>
-              {building.title_i18n || building.code}
-            </option>
-          ))}
-        </TextField>
+          options={[
+            { value: '', label: t('hotel.rooms.buildingNone') },
+            ...buildings.map((building) => ({
+              value: building.id,
+              label: building.title_i18n || building.code,
+            })),
+          ]}
+        />
 
-        <TextField
-          select
+        <SelectField<RoomHousekeeping>
           size="small"
           label={t('hotel.rooms.housekeeping')}
           value={room.housekeeping}
-          onChange={(event) =>
-            patch.mutate({ housekeeping: event.target.value as RoomHousekeeping })
-          }
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ 'data-testid': 'room-panel-housekeeping' }}
+          onChange={(next) => patch.mutate({ housekeeping: next })}
+          testId="room-panel-housekeeping"
           disabled={patch.isPending}
-          fullWidth
-        >
-          {HOUSEKEEPING.map((value) => (
-            <option key={value} value={value}>
-              {t(`hotel.rooms.housekeeping_${value}`)}
-            </option>
-          ))}
-        </TextField>
+          options={HOUSEKEEPING.map((value) => ({
+            value,
+            label: t(`hotel.rooms.housekeeping_${value}`),
+          }))}
+        />
 
         <Stack spacing={1}>
           <Button

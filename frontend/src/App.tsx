@@ -6,11 +6,7 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -23,6 +19,7 @@ import {
   SUPPORTED_LANGUAGES,
   type SupportedLanguage,
 } from '@/i18n';
+import { SelectField } from '@/components/SelectField';
 import { useAppTheme } from '@/theme';
 
 export default function App() {
@@ -44,24 +41,18 @@ export default function App() {
           </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
-            <FormControl size="small" sx={{ minWidth: 180 }}>
-              <InputLabel id="language-select-label">{t('common.language')}</InputLabel>
-              <Select
-                labelId="language-select-label"
-                id="language-select"
-                value={language}
-                label={t('common.language')}
-                onChange={(event) => {
-                  void i18n.changeLanguage(event.target.value);
-                }}
-              >
-                {SUPPORTED_LANGUAGES.map((lng) => (
-                  <MenuItem key={lng} value={lng}>
-                    {LANGUAGE_LABELS[lng]}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <SelectField<SupportedLanguage>
+              id="language-select"
+              size="small"
+              fullWidth={false}
+              sx={{ minWidth: 180 }}
+              label={t('common.language')}
+              value={language}
+              onChange={(next) => {
+                void i18n.changeLanguage(next);
+              }}
+              options={SUPPORTED_LANGUAGES.map((lng) => ({ value: lng, label: LANGUAGE_LABELS[lng] }))}
+            />
 
             <ToggleButtonGroup
               size="small"

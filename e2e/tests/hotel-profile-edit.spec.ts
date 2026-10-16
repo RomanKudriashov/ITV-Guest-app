@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API } from './helpers'
+import { API, pickOption } from './helpers'
 
 /**
  * Профиль отеля правится с экрана.
@@ -33,19 +33,21 @@ test.describe('Профиль отеля: правка', () => {
   test('видно, что изменено, и отмена возвращает как было', async ({ page }) => {
     await openHotelCard(page)
 
+    // Пояс — выбор из списка (партия 54): код — в `data-value`, в поле — подпись.
     const timezone = page.getByTestId('admin-hotel-timezone-input')
-    const was = await timezone.inputValue()
+    const was = await timezone.getAttribute('data-value')
 
     // До правки сохранять нечего — кнопка заперта.
     await expect(page.getByTestId('admin-hotel-save')).toBeDisabled()
     await expect(page.getByTestId('admin-hotel-dirty')).toHaveCount(0)
 
-    await timezone.fill('Asia/Tokyo')
+    await pickOption(page, 'admin-hotel-timezone-input', { value: 'Asia/Tokyo' })
+    await expect(timezone).toHaveValue(/^Asia\/Tokyo \(UTC\+9\)$/)
     await expect(page.getByTestId('admin-hotel-dirty')).toBeVisible()
     await expect(page.getByTestId('admin-hotel-save')).toBeEnabled()
 
     await page.getByTestId('admin-hotel-cancel').click()
-    await expect(timezone).toHaveValue(was)
+    await expect(timezone).toHaveAttribute('data-value', was ?? '')
     await expect(page.getByTestId('admin-hotel-dirty')).toHaveCount(0)
   })
 
@@ -69,8 +71,10 @@ test.describe('Профиль отеля: правка', () => {
       })
     })
 
+    // Валюта — из списка ISO; отказ сервера подменён маршрутом выше.
     const currency = page.getByTestId('admin-hotel-currency-input')
-    await currency.fill('XYZ')
+    const choice = (await currency.getAttribute('data-value')) === 'EUR' ? 'USD' : 'EUR'
+    await pickOption(page, 'admin-hotel-currency-input', { value: choice })
     await page.getByTestId('admin-hotel-save').click()
 
     const error = page.getByTestId('admin-hotel-save-error')
@@ -80,7 +84,7 @@ test.describe('Профиль отеля: правка', () => {
     await expect(error).not.toContainText(/ApiError|undefined|\[object/)
 
     // ГЛАВНОЕ: набранное не отобрали вместе с отказом.
-    await expect(currency).toHaveValue('XYZ')
+    await expect(currency).toHaveAttribute('data-value', choice)
     await expect(page.getByTestId('admin-hotel-dirty')).toBeVisible()
   })
 
@@ -142,7 +146,7 @@ test.describe('Профиль отеля: правка', () => {
     await openHotelCard(page)
 
     const currency = page.getByTestId('admin-hotel-currency-input')
-    const was = await currency.inputValue()
+    const was = await currency.getAttribute('data-value')
     const next = was === 'RUB' ? 'EUR' : 'RUB'
 
     const owner = await request
@@ -159,7 +163,7 @@ test.describe('Профиль отеля: правка', () => {
       const saved = page.waitForResponse(
         (r) => r.url().includes('/platform/hotels/') && r.request().method() === 'PATCH',
       )
-      await currency.fill(next)
+      await pickOption(page, 'admin-hotel-currency-input', { value: next })
       await page.getByTestId('admin-hotel-save').click()
       expect((await saved).ok(), 'сохранение профиля отклонено').toBeTruthy()
 

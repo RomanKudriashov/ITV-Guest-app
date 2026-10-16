@@ -15,6 +15,7 @@ import { fetchSlotConfig, putSlotConfig } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { ExecutionPoint, Schedule, SlotConfig } from '@/api/types';
 import { SchedulePicker } from '@/components/SchedulePicker';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 import { pickTranslated } from '@/utils/translated';
 
@@ -210,28 +211,23 @@ export function SlotConfigEditor({
         ) : null}
       </Box>
 
-      <TextField
-        select
+      <SelectField
         size="small"
         label={t('slotConfig.department')}
         value={form.executionPointId}
-        onChange={(event) =>
-          setForm((prev) => ({ ...prev, executionPointId: event.target.value }))
-        }
+        onChange={(next) => setForm((prev) => ({ ...prev, executionPointId: next }))}
         error={Boolean(errors.executionPointId)}
         helperText={errors.executionPointId ?? t('slotConfig.departmentHint')}
         sx={{ maxWidth: 320 }}
-        SelectProps={{ native: true }}
-        InputLabelProps={{ shrink: true }}
-        inputProps={{ 'data-testid': 'cms-slot-department' }}
-      >
-        <option value="">{t('slotConfig.departmentPlaceholder')}</option>
-        {executionPoints.map((point) => (
-          <option key={point.id} value={point.id}>
-            {pickTranslated(point.title, displayLanguage, fallbackLanguage) || point.code}
-          </option>
-        ))}
-      </TextField>
+        testId="cms-slot-department"
+        options={[
+          { value: '', label: t('slotConfig.departmentPlaceholder') },
+          ...executionPoints.map((point) => ({
+            value: point.id,
+            label: pickTranslated(point.title, displayLanguage, fallbackLanguage) || point.code,
+          })),
+        ]}
+      />
 
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         <TextField

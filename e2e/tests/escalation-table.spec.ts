@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { API, apiHeaders, apiToken, signInToCms } from './helpers'
+import { API, apiHeaders, apiToken, signInToCms, pickOption } from './helpers'
 
 /**
  * ВКЛАДКА «ПЕРЕДАЧА ВЫШЕ» — ТАБЛИЦА ПРАВИЛ (пункт 4 разбора).
@@ -139,7 +139,7 @@ test('занятое заведение говорит об этом при вы
   // Пока заведение не выбрано, предупреждать не о чем.
   await expect(page.getByTestId('cms-escalation-point-taken')).toHaveCount(0)
 
-  await page.selectOption('[data-testid="cms-escalation-point"]', taken.execution_point_id)
+  await pickOption(page, 'cms-escalation-point', { value: taken.execution_point_id })
 
   const warning = page.getByTestId('cms-escalation-point-taken')
   await expect(warning, 'занятое заведение молчит до самого отказа сервера').toBeVisible({
@@ -175,7 +175,7 @@ test('свободное заведение не предупреждает ни
   await page.goto('/cms/notifications')
   await page.getByTestId('cms-notifications-tab-escalation').click()
   await page.getByTestId('cms-escalation-new').click()
-  await page.selectOption('[data-testid="cms-escalation-point"]', free.id)
+  await pickOption(page, 'cms-escalation-point', { value: free.id })
 
   await expect(page.getByTestId('cms-escalation-point-taken')).toHaveCount(0)
 })

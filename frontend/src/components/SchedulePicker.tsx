@@ -10,7 +10,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -22,6 +21,7 @@ import { ApiError } from '@/api/client';
 import { createSchedule } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { Schedule, ScheduleInterval } from '@/api/types';
+import { SelectField } from '@/components/SelectField';
 
 const ALWAYS = '__always__';
 
@@ -51,26 +51,23 @@ export function SchedulePicker({
 
   return (
     <Stack direction="row" spacing={1} alignItems="flex-start">
-      <TextField
-        select
+      <SelectField
         size="small"
-        fullWidth
         label={label ?? t('schedule.label')}
         value={value ?? ALWAYS}
-        onChange={(event) =>
-          onChange(event.target.value === ALWAYS ? null : event.target.value)
-        }
+        onChange={(next) => onChange(next === ALWAYS || next === '' ? null : next)}
         helperText={t('schedule.helper')}
-        inputProps={{ 'data-testid': testId }}
-      >
-        <MenuItem value={ALWAYS}>{t('schedule.always')}</MenuItem>
-        {schedules.map((schedule) => (
-          <MenuItem key={schedule.id} value={schedule.id}>
-            {schedule.name}
-            {schedule.is_always_open ? ` — ${t('schedule.alwaysOpen')}` : ''}
-          </MenuItem>
-        ))}
-      </TextField>
+        testId={testId}
+        options={[
+          { value: ALWAYS, label: t('schedule.always') },
+          ...schedules.map((schedule) => ({
+            value: schedule.id,
+            label: schedule.is_always_open
+              ? `${schedule.name} — ${t('schedule.alwaysOpen')}`
+              : schedule.name,
+          })),
+        ]}
+      />
       <Button
         size="small"
         startIcon={<AddIcon />}
@@ -200,22 +197,18 @@ function ScheduleCreateDialog({
               </Typography>
               {intervals.map((interval) => (
                 <Stack key={interval.key} direction="row" spacing={1} alignItems="center">
-                  <TextField
-                    select
+                  <SelectField
                     size="small"
+                    fullWidth={false}
                     label={t('schedule.weekday')}
-                    value={interval.weekday}
-                    onChange={(event) =>
-                      patch(interval.key, { weekday: Number(event.target.value) })
-                    }
+                    value={String(interval.weekday)}
+                    onChange={(next) => patch(interval.key, { weekday: Number(next) })}
                     sx={{ minWidth: 132 }}
-                  >
-                    {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                      <MenuItem key={day} value={day}>
-                        {weekdayLabels[day] ?? String(day)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    options={[0, 1, 2, 3, 4, 5, 6].map((day) => ({
+                      value: String(day),
+                      label: weekdayLabels[day] ?? String(day),
+                    }))}
+                  />
                   <TextField
                     size="small"
                     type="time"
@@ -232,23 +225,21 @@ function ScheduleCreateDialog({
                     onChange={(event) => patch(interval.key, { end_time: event.target.value })}
                     InputLabelProps={{ shrink: true }}
                   />
-                  <TextField
-                    select
+                  <SelectField
                     size="small"
+                    fullWidth={false}
                     label={t('schedule.dayPart')}
                     value={interval.day_part ?? ''}
-                    onChange={(event) =>
-                      patch(interval.key, { day_part: event.target.value || null })
-                    }
+                    onChange={(next) => patch(interval.key, { day_part: next || null })}
                     sx={{ minWidth: 132 }}
-                  >
-                    <MenuItem value="">{t('common.none')}</MenuItem>
-                    {dayParts.map((part) => (
-                      <MenuItem key={part} value={part}>
-                        {t(`dayParts.${part}`, { defaultValue: part })}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    options={[
+                      { value: '', label: t('common.none') },
+                      ...dayParts.map((part) => ({
+                        value: part,
+                        label: t(`dayParts.${part}`, { defaultValue: part }),
+                      })),
+                    ]}
+                  />
                   <IconButton
                     size="small"
                     onClick={() =>

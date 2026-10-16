@@ -170,7 +170,7 @@ test.describe('Замкнутый цикл: гость → кухня → гос
     */
     const selector = page.getByTestId('tracker-point-select')
     await expect(selector).toBeVisible({ timeout: 20_000 })
-    await expect(selector).not.toContainText(/бар/i)
+    await expect(selector).not.toHaveValue(/бар/i)
     /*
       И в нём стоит ГОСТЕВОЕ имя своего заведения — «Панорама», а не служебное
       «Кухня»: доска зовёт заведение так же, как витрина. Имя не зашито, а
@@ -185,7 +185,7 @@ test.describe('Замкнутый цикл: гость → кухня → гос
       .then((response) => response.json())
     const titles = (points.points ?? points).map((point: { title: string }) => point.title)
     expect(titles.length, 'у повара нет ни одной точки').toBe(1)
-    await expect(selector).toContainText(titles[0])
+    await expect(selector).toHaveValue(titles[0])
     await expect(page.getByTestId('tracker-board')).toBeVisible()
   })
 })

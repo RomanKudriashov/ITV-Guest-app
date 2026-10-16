@@ -19,9 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
@@ -32,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { BrandTokens, ThemeMode } from '@/theme';
 import type { BrandAbstraction } from '@/api/brand';
+import { SelectField } from '@/components/SelectField';
 import { PreviewStage } from './PreviewStage';
 import { PREVIEW_SCREENS, resolveRoute, type PreviewScreenId } from './previewScreens';
 import { usePreviewData } from './usePreviewData';
@@ -163,23 +162,20 @@ export function BrandPreview({
       <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
         {/* ЭКРАН — ПЕРВЫЙ ОРГАН УПРАВЛЕНИЯ: показ теперь про весь путь гостя,
             а не про верхнюю треть одного экрана. */}
-        <TextField
-          select
+        <SelectField<PreviewScreenId>
           size="small"
+          fullWidth={false}
           label={t('brand.preview.screen.label')}
           value={screenId}
-          onChange={(event) => setScreenId(event.target.value as PreviewScreenId)}
+          onChange={setScreenId}
           sx={{ minWidth: 200 }}
-          SelectProps={{
-            SelectDisplayProps: { 'data-testid': 'brand-preview-screen' } as never,
-          }}
-        >
-          {PREVIEW_SCREENS.map((row) => (
-            <MenuItem key={row.id} value={row.id} data-testid={`brand-preview-screen-${row.id}`}>
-              {t(row.labelKey)}
-            </MenuItem>
-          ))}
-        </TextField>
+          testId="brand-preview-screen"
+          options={PREVIEW_SCREENS.map((row) => ({
+            value: row.id,
+            label: t(row.labelKey),
+            testId: `brand-preview-screen-${row.id}`,
+          }))}
+        />
 
         <ToggleButtonGroup
           size="small"

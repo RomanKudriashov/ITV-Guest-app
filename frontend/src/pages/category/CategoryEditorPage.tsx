@@ -13,7 +13,6 @@ import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -33,11 +32,12 @@ import {
   type EditableImage,
 } from '@/components/ImageUploader';
 import { SchedulePicker } from '@/components/SchedulePicker';
+import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
-import { findCategory, flattenCategories, subtreeIds } from '@/utils/categories';
+import { findCategory, flattenCategories, subtreeIds, type FlatCategory } from '@/utils/categories';
 import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
 
@@ -66,6 +66,18 @@ const EMPTY_FORM: CategoryForm = {
 };
 
 const ROOT = '__root__';
+
+/** Варианты категорий: вложенность — родителем во второй строке, а не отступом. */
+function categoryOptions(flat: FlatCategory[], title: (category: Category) => string) {
+  const path: string[] = [];
+  return flat.map(({ category, depth }) => {
+    const label = title(category);
+    path.length = depth;
+    const parent = depth > 0 ? path[depth - 1] : undefined;
+    path.push(label);
+    return { value: category.id, label, secondary: parent };
+  });
+}
 
 export function CategoryEditorPage() {
   const { t } = useTranslation();
@@ -313,35 +325,34 @@ export function CategoryEditorPage() {
               />
 
               <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                <TextField
-                  select
+                {/* Отступ глубины пробелами в списке схлопывался, а в поле мешал
+                    бы — вложенность видна по родителю второй строкой. */}
+                <SelectField
                   size="small"
+                  fullWidth={false}
                   label={t('category.parent')}
                   value={form.parent_id ?? ROOT}
-                  onChange={(event) =>
+                  onChange={(next) =>
                     setForm((prev) => ({
                       ...prev,
-                      parent_id: event.target.value === ROOT ? null : event.target.value,
+                      parent_id: next === ROOT || next === '' ? null : next,
                     }))
                   }
                   sx={{ minWidth: 260 }}
-                  inputProps={{ 'data-testid': 'category-parent-select' }}
-                >
-                  <MenuItem value={ROOT}>{t('category.noParent')}</MenuItem>
-                  {flattenCategories(tree)
-                    .filter(({ category }) => !forbiddenParents.has(category.id))
-                    .map(({ category, depth }) => (
-                      <MenuItem key={category.id} value={category.id}>
-                        {`${' '.repeat(depth * 3)}${
-                          pickTranslated(
-                            category.title,
-                            languages.displayLanguage,
-                            languages.defaultCode,
-                          ) || category.code
-                        }`}
-                      </MenuItem>
-                    ))}
-                </TextField>
+                  testId="category-parent-select"
+                  options={[
+                    { value: ROOT, label: t('category.noParent') },
+                    ...categoryOptions(
+                      flattenCategories(tree),
+                      (category) =>
+                        pickTranslated(
+                          category.title,
+                          languages.displayLanguage,
+                          languages.defaultCode,
+                        ) || category.code,
+                    ).filter((option) => !forbiddenParents.has(option.value)),
+                  ]}
+                />
 
                 <TextField
                   size="small"

@@ -4,7 +4,6 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -15,6 +14,7 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { DictionaryDivergence } from './DictionaryDivergence';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import {
   getDictionary,
   getTemplates,
@@ -212,18 +212,19 @@ function DictionaryTab() {
       <DictionaryDivergence />
 
       <Box sx={{ ...panelSx, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-        <TextField
-          select
+        <SelectField
           size="small"
+          fullWidth={false}
           label={t('admin.templates.dictKind')}
           value={kind}
-          onChange={(e) => setKind(e.target.value)}
-          SelectProps={{ inputProps: { 'data-testid': 'admin-dict-kind' } }}
+          onChange={setKind}
+          testId="admin-dict-kind"
           sx={{ minWidth: 200 }}
-        >
-          <MenuItem value="allergen">{t('admin.templates.kind.allergen')}</MenuItem>
-          <MenuItem value="marker">{t('admin.templates.kind.marker')}</MenuItem>
-        </TextField>
+          options={[
+            { value: 'allergen', label: t('admin.templates.kind.allergen') },
+            { value: 'marker', label: t('admin.templates.kind.marker') },
+          ]}
+        />
         <TextField
           size="small"
           label={t('admin.templates.dictCode')}

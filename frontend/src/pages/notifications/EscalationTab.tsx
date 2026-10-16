@@ -28,6 +28,7 @@ import { queryKeys } from '@/api/queryKeys';
 import type { EscalationRule } from '@/api/notificationTypes';
 import type { Bootstrap } from '@/api/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 import type { ContentLanguages } from '@/hooks/useBootstrap';
 import {
@@ -310,29 +311,26 @@ function RuleEditor({
               inputProps={{ 'data-testid': 'cms-escalation-name', maxLength: 120 }}
             />
 
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('notifications.escalation.point')}
               value={draft.execution_point_id ?? ''}
-              onChange={(event) =>
-                setDraft({ ...draft, execution_point_id: event.target.value || null })
-              }
+              onChange={(next) => setDraft({ ...draft, execution_point_id: next || null })}
               error={Boolean(errors.execution_point_id)}
               helperText={errors.execution_point_id ?? t('notifications.escalation.pointHint')}
               sx={{ minWidth: 240 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'cms-escalation-point' }}
-            >
-              <option value="">{t('notifications.escalation.hotelWide')}</option>
-              {(bootstrap?.execution_points ?? []).map((point) => (
-                <option key={point.id} value={point.id}>
-                  {pickTranslated(point.title, languages.displayLanguage, languages.defaultCode) ||
-                    point.code}
-                </option>
-              ))}
-            </TextField>
+              testId="cms-escalation-point"
+              options={[
+                { value: '', label: t('notifications.escalation.hotelWide') },
+                ...(bootstrap?.execution_points ?? []).map((point) => ({
+                  value: point.id,
+                  label:
+                    pickTranslated(point.title, languages.displayLanguage, languages.defaultCode) ||
+                    point.code,
+                })),
+              ]}
+            />
 
             <FormControlLabel
               control={

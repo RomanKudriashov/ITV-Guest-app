@@ -6,11 +6,12 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+
+import { SelectField } from '@/components/SelectField';
 
 import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { fetchDeskPoints, handOverTask } from './api';
@@ -60,20 +61,19 @@ export function DeskTaskDialog({
           <Typography variant="body2" color="text.secondary">
             {t('tracker.desk.task.hint')}
           </Typography>
-          <TextField
-            select
+          <SelectField
             size="small"
             label={t('tracker.desk.task.point')}
             value={point}
-            onChange={(event) => setPoint(event.target.value)}
-            SelectProps={{ SelectDisplayProps: { 'data-testid': 'desk-task-point' } as never }}
-          >
-            {(points.data?.points ?? []).map((row) => (
-              <MenuItem key={row.code} value={row.code} data-testid={`desk-task-point-${row.code}`}>
-                {row.public_title}
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={setPoint}
+            testId="desk-task-point"
+            loading={points.isLoading}
+            options={(points.data?.points ?? []).map((row) => ({
+              value: row.code,
+              label: row.public_title,
+              testId: `desk-task-point-${row.code}`,
+            }))}
+          />
           <TextField
             multiline
             minRows={3}

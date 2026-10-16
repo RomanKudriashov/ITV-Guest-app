@@ -15,7 +15,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -50,6 +49,7 @@ import type { Translated } from '@/api/types';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
 import { SchedulePicker } from '@/components/SchedulePicker';
+import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
@@ -376,23 +376,19 @@ function LocationDialog({
           />
 
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField<LocationKind>
               size="small"
+              fullWidth={false}
               label={t('hotel.locations.kind')}
               value={form.kind}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, kind: event.target.value as LocationKind }))
-              }
+              onChange={(next) => setForm((prev) => ({ ...prev, kind: next }))}
               sx={{ minWidth: 200 }}
-              inputProps={{ 'data-testid': 'location-kind' }}
-            >
-              {LOCATION_KINDS.map((kind) => (
-                <MenuItem key={kind} value={kind}>
-                  {t(`hotel.locations.kinds.${kind}`)}
-                </MenuItem>
-              ))}
-            </TextField>
+              testId="location-kind"
+              options={LOCATION_KINDS.map((kind) => ({
+                value: kind,
+                label: t(`hotel.locations.kinds.${kind}`),
+              }))}
+            />
 
             <TextField
               size="small"

@@ -22,6 +22,7 @@
     "save": "حفظ",
     "cancel": "إلغاء",
     "confirm": "تأكيد",
+    "nothingFound": "لا توجد نتائج",
     "delete": "حذف",
     "edit": "تعديل",
     "back": "العودة إلى القائمة",
@@ -2670,7 +2671,7 @@
       "adminEmail": "بريد أول مدير",
       "currency": "العملة",
       "languages": "اللغات",
-      "languagesHint": "مفصولة بفواصل",
+      "languagesHint": "الأولى هي لغة الفندق الافتراضية",
       "timezone": "المنطقة الزمنية",
       "preset": "النمط",
       "submit": "إنشاء الفندق",
@@ -2680,7 +2681,13 @@
       "doneHint": "يكمل الفندق إعداد نفسه من لوحته.",
       "template": "قالب البداية",
       "doneServices": "الخدمات المنشأة: {{count}}",
-      "donePasswordSent": "تم إرسال كلمة المرور إلى المسؤول على {{email}}"
+      "donePasswordSent": "تم إرسال كلمة المرور إلى المسؤول على {{email}}",
+      "subdomainFree": "متاح: {{host}}",
+      "subdomainChecking": "جارٍ التحقق…",
+      "subdomain_format": "من {{min}} إلى {{max}} حرفًا: أحرف لاتينية وأرقام وشرطة ليست في الطرفين",
+      "subdomain_reserved": "هذا الاسم محجوز للمنصة",
+      "hotel_exists": "يوجد فندق بهذا النطاق الفرعي",
+      "emailInvalid": "عنوان غير صالح"
     },
     "module": {
       "room_control": "التحكم بالغرفة",

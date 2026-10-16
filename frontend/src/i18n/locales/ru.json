@@ -22,6 +22,7 @@
     "save": "Сохранить",
     "cancel": "Отмена",
     "confirm": "Подтвердить",
+    "nothingFound": "Ничего не найдено",
     "delete": "Удалить",
     "edit": "Редактировать",
     "back": "К меню",
@@ -2631,7 +2632,7 @@
       "adminEmail": "Email первого админа",
       "currency": "Валюта",
       "languages": "Языки",
-      "languagesHint": "через запятую",
+      "languagesHint": "первый — язык отеля по умолчанию",
       "timezone": "Таймзона",
       "preset": "Пресет",
       "submit": "Создать отель",
@@ -2641,7 +2642,13 @@
       "doneHint": "Дальше отель настраивает себя сам в CMS.",
       "template": "Стартовый шаблон",
       "doneServices": "Создано сервисов: {{count}}",
-      "donePasswordSent": "Пароль отправлен администратору на {{email}}"
+      "donePasswordSent": "Пароль отправлен администратору на {{email}}",
+      "subdomainFree": "Свободен: {{host}}",
+      "subdomainChecking": "Проверяем…",
+      "subdomain_format": "От {{min}} до {{max}} знаков: латиница, цифры, дефис не по краям",
+      "subdomain_reserved": "Имя занято платформой",
+      "hotel_exists": "Такой отель уже есть",
+      "emailInvalid": "Неверный адрес"
     },
     "module": {
       "room_control": "Управление номером",

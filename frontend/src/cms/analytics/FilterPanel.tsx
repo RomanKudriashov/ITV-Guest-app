@@ -4,7 +4,6 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -12,6 +11,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 
+import { SelectField } from '@/components/SelectField';
 import type { AnalyticsScope, Dimension, PeriodPreset } from '@/api/analyticsTypes';
 import { FILTER_DIMENSIONS, STATIC_DIMENSION_VALUES, dimensionValueLabel } from './dimensions';
 import type { UseAnalyticsFilters } from './useAnalyticsFilters';
@@ -167,29 +167,19 @@ export function FilterPanel({
                 const { options, locked } = optionsFor(dimension);
                 const value = filters.dimensions[dimension] ?? '';
                 return (
-                  <TextField
+                  <SelectField
                     key={dimension}
-                    select
                     size="small"
                     label={t(`analytics.dimensions.${dimension}`)}
                     value={value}
                     disabled={locked || options.length === 0}
-                    onChange={(e) => setDimension(dimension, e.target.value || null)}
-                    SelectProps={{
-                      SelectDisplayProps: {
-                        'data-testid': `analytics-filter-${dimension}`,
-                      } as React.HTMLAttributes<HTMLDivElement>,
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>{t('analytics.filters.all')}</em>
-                    </MenuItem>
-                    {options.map((option) => (
-                      <MenuItem key={option.key} value={option.key}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    onChange={(next) => setDimension(dimension, next || null)}
+                    testId={`analytics-filter-${dimension}`}
+                    options={[
+                      { value: '', label: t('analytics.filters.all') },
+                      ...options.map((option) => ({ value: option.key, label: option.label })),
+                    ]}
+                  />
                 );
               })}
             </Box>

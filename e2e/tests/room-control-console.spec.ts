@@ -88,13 +88,8 @@ async function fillField(testId: string, value: string): Promise<void> {
  * открывал меню, и тест падал на ожидании пункта, которого не показали.
  */
 async function openSelect(testId: string): Promise<void> {
-  const root = page.getByTestId(testId)
-  const inner = root.locator('[role="combobox"]')
-  if (await inner.count()) {
-    await inner.click()
-    return
-  }
-  await root.click()
+  // testid стоит на самом поле выбора (role=combobox, партия 54).
+  await page.getByTestId(testId).click()
 }
 
 /** Открыть карточку отеля на вкладке управления номером. */

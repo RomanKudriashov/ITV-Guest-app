@@ -3,13 +3,12 @@ import { useMutation } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { ink, primaryButtonSx, quietButtonSx, state, typo } from './adminTokens';
-import { AdminDialog, Field, FormCell, FormGrid } from './form';
+import { AdminDialog, ChoiceField, Field, FormCell, FormGrid } from './form';
 import { enterHotel, PlatformError, type EnterResult } from './adminClient';
 
 const TTL_CHOICES = [15, 30, 60];
@@ -86,20 +85,17 @@ export function EnterHotelDialog({
           minRows={2}
           inputProps={{ 'data-testid': 'admin-enter-reason' }}
         />
-        <Field
+        <ChoiceField
           span={6}
-          select
           label={t('admin.enter.ttl')}
-          value={ttl}
-          onChange={(e) => setTtl(Number(e.target.value))}
-          SelectProps={{ inputProps: { 'data-testid': 'admin-enter-ttl' } }}
-        >
-          {TTL_CHOICES.map((minutes) => (
-            <MenuItem key={minutes} value={minutes}>
-              {t('admin.enter.minutes', { minutes })}
-            </MenuItem>
-          ))}
-        </Field>
+          value={String(ttl)}
+          onChange={(next) => setTtl(Number(next))}
+          testId="admin-enter-ttl"
+          options={TTL_CHOICES.map((minutes) => ({
+            value: String(minutes),
+            label: t('admin.enter.minutes', { minutes }),
+          }))}
+        />
       </FormGrid>
     </AdminDialog>
   );

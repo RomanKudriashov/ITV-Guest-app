@@ -1,8 +1,10 @@
+import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { SelectField } from '@/components/SelectField';
 import { fieldSpec } from '@/offerings/requestFields';
 import { QuantityStepper } from './QuantityStepper';
 import type { RequestField } from '../api/types';
@@ -70,23 +72,26 @@ export function RequestFieldControl({
   };
 
   if (spec.control === 'select') {
+    // Был нативный select (колесо телефона); теперь общий SelectField с
+    // поиском (партия 54). «Не выбрано» — законный вариант '': поле, как и
+    // раньше, показывает его текстом и даёт вернуться к пустому ответу.
+    // onBlur у SelectField нет — ловим уход фокуса обёрткой: фокус в нём
+    // живёт только на поле ввода, список фокус не забирает.
     return (
-      // A native select on purpose: the phone opens its own wheel picker, and
-      // the testid lands on a real <select> the tests can drive.
-      <TextField
-        {...common}
-        select
-        SelectProps={{ native: true }}
-        InputLabelProps={{ shrink: true }}
-        inputProps={{ 'data-testid': testId }}
-      >
-        <option value="">{t('guest.request.selectPlaceholder')}</option>
-        {(field.options ?? []).map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </TextField>
+      <Box onBlur={onBlur}>
+        <SelectField
+          label={label}
+          value={value}
+          onChange={onChange}
+          error={Boolean(error)}
+          helperText={helperText}
+          testId={testId}
+          options={[
+            { value: '', label: t('guest.request.selectPlaceholder') },
+            ...(field.options ?? []).map((option) => ({ value: option.value, label: option.label })),
+          ]}
+        />
+      </Box>
     );
   }
 

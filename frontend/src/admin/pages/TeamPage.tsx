@@ -3,16 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { useRights } from '../useRights';
 
 import { ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
-import { Field, FormCell, FormGrid } from '../form';
+import { ChoiceField, Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { getTeam, inviteMember, patchMember, type TeamMember } from '../adminClient';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
@@ -76,20 +75,14 @@ export function TeamPage() {
             onChange={(e) => setEmail(e.target.value)}
             inputProps={{ 'data-testid': 'admin-team-email' }}
           />
-          <Field
+          <ChoiceField
             span={4}
-            select
             label={t('admin.team.role')}
             value={role}
-            onChange={(e) => setRole(e.target.value)}
-            SelectProps={{ inputProps: { 'data-testid': 'admin-team-role' } }}
-          >
-            {ROLES.map((code) => (
-              <MenuItem key={code} value={code}>
-                {t(`admin.role.${code}`)}
-              </MenuItem>
-            ))}
-          </Field>
+            onChange={setRole}
+            testId="admin-team-role"
+            options={ROLES.map((code) => ({ value: code, label: t(`admin.role.${code}`) }))}
+          />
           {/*
             Кнопка стоит в своей ячейке и по нижнему краю ряда полей — иначе
             при появлении подписи под полем она уезжает вверх относительно них.
@@ -197,21 +190,15 @@ function MemberLine({
         ) : null}
       </Box>
       <Box component="td" sx={cell}>
-        <TextField
-          select
+        <SelectField
           size="small"
+          fullWidth={false}
           value={member.role}
-          onChange={(e) => onRole(e.target.value)}
-          variant="standard"
-          SelectProps={{ inputProps: { 'data-testid': `admin-team-role-${member.email}` } }}
+          onChange={onRole}
+          testId={`admin-team-role-${member.email}`}
           sx={{ minWidth: 150 }}
-        >
-          {ROLES.map((code) => (
-            <MenuItem key={code} value={code}>
-              {t(`admin.role.${code}`)}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={ROLES.map((code) => ({ value: code, label: t(`admin.role.${code}`) }))}
+        />
       </Box>
       <Box component="td" sx={cell}>
         <Button

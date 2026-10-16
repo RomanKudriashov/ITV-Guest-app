@@ -1,7 +1,7 @@
 import { type APIRequestContext } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, apiHeaders, apiToken, signInToCms } from './helpers'
+import { ADMIN, API, apiHeaders, apiToken, signInToCms, pickOption } from './helpers'
 
 /**
  * TELEGRAM-ГРУППА ЧЕРЕЗ БОТА ПЛАТФОРМЫ — ПУТЬ ЧЕЛОВЕКА (партия 32).
@@ -41,10 +41,10 @@ test('группа: код из панели, /connect, «Подключена»
   await signInToCms(page, ADMIN)
   await page.goto('/cms/notifications')
   await page.getByTestId('cms-channel-add').click()
-  await page.getByTestId('cms-channel-type').selectOption('telegram_group')
+  await pickOption(page, 'cms-channel-type', { value: 'telegram_group' })
   await page.getByTestId('cms-channel-title').fill(title)
-  await page.getByTestId('cms-channel-binding').selectOption('point')
-  await page.getByTestId('cms-channel-point').selectOption(kitchen.id)
+  await pickOption(page, 'cms-channel-binding', { value: 'point' })
+  await pickOption(page, 'cms-channel-point', { value: kitchen.id })
   await page.getByTestId('cms-channel-save').click()
 
   const shown = (await page.getByTestId('cms-group-code').textContent({ timeout: 20_000 }))!.trim()

@@ -8,7 +8,6 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -21,12 +20,14 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { ink, panelSx, typo } from '../adminTokens';
 import {
   addGroupMembers,
   createGroup,
   deleteGroup,
   getFleet,
+  getFleetCities,
   getGroupMembers,
   getGroups,
   removeGroupMember,
@@ -282,6 +283,7 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
     city: '',
     origin: '',
   });
+  const cities = useQuery({ queryKey: ['admin', 'reference', 'cities'], queryFn: getFleetCities });
 
   const save = useMutation({
     mutationFn: () =>
@@ -320,54 +322,58 @@ function CreateDialog({ onClose }: { onClose: () => void }) {
             onChange={(event) => setForm({ ...form, code: event.target.value })}
             inputProps={{ 'data-testid': 'admin-group-code' }}
           />
-          <TextField
-            select
+          <SelectField
             size="small"
             label={t('admin.groups.kind')}
             value={form.kind}
-            onChange={(event) => setForm({ ...form, kind: event.target.value })}
-            SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-group-kind' } as never }}
-          >
-            {['network', 'brand', 'city', 'test', 'campaign', 'custom'].map((kind) => (
-              <MenuItem key={kind} value={kind}>
-                {t(`admin.groups.kinds.${kind}`)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
+            onChange={(next) => setForm({ ...form, kind: next })}
+            testId="admin-group-kind"
+            options={['network', 'brand', 'city', 'test', 'campaign', 'custom'].map((kind) => ({
+              value: kind,
+              label: t(`admin.groups.kinds.${kind}`),
+            }))}
+          />
+          <SelectField<'list' | 'rule'>
             size="small"
             label={t('admin.groups.mode')}
             value={form.mode}
-            onChange={(event) => setForm({ ...form, mode: event.target.value as 'list' | 'rule' })}
-            SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-group-mode' } as never }}
+            onChange={(next) => setForm({ ...form, mode: next })}
+            testId="admin-group-mode"
             helperText={t(`admin.groups.modeHint.${form.mode}`)}
-          >
-            <MenuItem value="list">{t('admin.groups.modes.list')}</MenuItem>
-            <MenuItem value="rule">{t('admin.groups.modes.rule')}</MenuItem>
-          </TextField>
+            options={[
+              { value: 'list', label: t('admin.groups.modes.list') },
+              { value: 'rule', label: t('admin.groups.modes.rule') },
+            ]}
+          />
 
           {form.mode === 'rule' ? (
             <>
-              <TextField
+              {/* Город — из городов флота, а не текстом (партия 54): правило
+                  сверяет подстрокой, и опечатка тихо давала пустую группу. */}
+              <SelectField
                 size="small"
                 label={t('admin.groups.ruleFields.city')}
                 value={form.city}
-                onChange={(event) => setForm({ ...form, city: event.target.value })}
-                inputProps={{ 'data-testid': 'admin-group-rule-city' }}
+                onChange={(next) => setForm({ ...form, city: next })}
+                testId="admin-group-rule-city"
+                loading={cities.isLoading}
+                options={[
+                  { value: '', label: t('admin.groups.any') },
+                  ...(cities.data?.cities ?? []).map((city) => ({ value: city, label: city })),
+                ]}
               />
-              <TextField
-                select
+              <SelectField
                 size="small"
                 label={t('admin.groups.ruleFields.origin')}
                 value={form.origin}
-                onChange={(event) => setForm({ ...form, origin: event.target.value })}
-                SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-group-rule-origin' } as never }}
-              >
-                <MenuItem value="">{t('admin.groups.any')}</MenuItem>
-                <MenuItem value="live">{t('admin.groups.originLive')}</MenuItem>
-                <MenuItem value="demo">{t('admin.groups.originDemo')}</MenuItem>
-              </TextField>
+                onChange={(next) => setForm({ ...form, origin: next })}
+                testId="admin-group-rule-origin"
+                options={[
+                  { value: '', label: t('admin.groups.any') },
+                  { value: 'live', label: t('admin.groups.originLive') },
+                  { value: 'demo', label: t('admin.groups.originDemo') },
+                ]}
+              />
             </>
           ) : null}
         </Stack>

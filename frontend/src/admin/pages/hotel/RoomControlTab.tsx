@@ -2,17 +2,16 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
 import { useTranslation } from 'react-i18next';
 
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
+import { SelectField } from '@/components/SelectField';
 import { BuilderTab } from '@/cms/roomControl/BuilderTab';
 import { DiagnosticsTab } from '@/cms/roomControl/DiagnosticsTab';
 import { ImportTab } from '@/cms/roomControl/ImportTab';
@@ -120,23 +119,16 @@ function Inner() {
           ))}
         </Tabs>
         {list.length > 0 && (
-          <TextField
-            select
+          <SelectField
             size="small"
+            fullWidth={false}
             sx={{ minWidth: 200 }}
             label={t('roomControl.type')}
             value={typeCode}
-            onChange={(event) => setTypeCode(event.target.value)}
-            SelectProps={{
-              SelectDisplayProps: { 'data-testid': 'admin-grms-type-select' } as never,
-            }}
-          >
-            {list.map((type) => (
-              <MenuItem key={type.code} value={type.code}>
-                {type.title?.ru ?? type.code}
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={setTypeCode}
+            testId="admin-grms-type-select"
+            options={list.map((type) => ({ value: type.code, label: type.title?.ru ?? type.code }))}
+          />
         )}
       </Stack>
 

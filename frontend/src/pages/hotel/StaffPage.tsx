@@ -17,7 +17,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -52,6 +51,7 @@ import { useAuth } from '@/auth';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FormCell, FormGrid } from '@/kit/formLayout';
 import { ListEmpty } from '@/kit/list/ListEmpty';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { pickTranslated } from '@/utils/translated';
@@ -536,21 +536,17 @@ function StaffDialog({
               />
             </FormCell>
             <FormCell span={6}>
-              <TextField
-                select
+              <SelectField
                 size="small"
                 label={t('hotel.staff.language')}
                 value={form.language}
-                onChange={(event) => setForm((prev) => ({ ...prev, language: event.target.value }))}
-                inputProps={{ 'data-testid': 'staff-language' }}
-                fullWidth
-              >
-                {languageCodes.map((code) => (
-                  <MenuItem key={code} value={code}>
-                    {languageLabels[code] ?? code}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(next) => setForm((prev) => ({ ...prev, language: next }))}
+                testId="staff-language"
+                options={languageCodes.map((code) => ({
+                  value: code,
+                  label: languageLabels[code] ?? code,
+                }))}
+              />
             </FormCell>
             <FormCell>
               <Stack direction="row" spacing={2} flexWrap="wrap">
@@ -623,44 +619,32 @@ function StaffDialog({
                       кнопки: «Отдел» шире «Уровня», потому что в нём длинные
                       названия, а не потому, что ему достался остаток строки.
                     */}
-                    <TextField
-                      select
+                    <SelectField
                       size="small"
                       label={t('hotel.staff.department')}
                       value={assignment.execution_point_id}
-                      onChange={(event) =>
-                        patchAssignment(assignment.key, { execution_point_id: event.target.value })
+                      onChange={(next) =>
+                        patchAssignment(assignment.key, { execution_point_id: next })
                       }
-                      SelectProps={{ native: true }}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ 'data-testid': `staff-assignment-point-${index}` }}
+                      testId={`staff-assignment-point-${index}`}
                       sx={{ flex: 2, minWidth: 0 }}
-                    >
-                      {departments.map((department) => (
-                        <option key={department.id} value={department.id}>
-                          {departmentLabel(department)}
-                        </option>
-                      ))}
-                    </TextField>
-                    <TextField
-                      select
+                      options={departments.map((department) => ({
+                        value: department.id,
+                        label: departmentLabel(department),
+                      }))}
+                    />
+                    <SelectField<StaffLevel>
                       size="small"
                       label={t('hotel.staff.level')}
                       value={assignment.level}
-                      onChange={(event) =>
-                        patchAssignment(assignment.key, { level: event.target.value as StaffLevel })
-                      }
-                      SelectProps={{ native: true }}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ 'data-testid': `staff-assignment-level-${index}` }}
+                      onChange={(next) => patchAssignment(assignment.key, { level: next })}
+                      testId={`staff-assignment-level-${index}`}
                       sx={{ flex: 1, minWidth: 0 }}
-                    >
-                      {STAFF_LEVELS.map((level) => (
-                        <option key={level} value={level}>
-                          {t(`hotel.staff.levels.${level}`)}
-                        </option>
-                      ))}
-                    </TextField>
+                      options={STAFF_LEVELS.map((level) => ({
+                        value: level,
+                        label: t(`hotel.staff.levels.${level}`),
+                      }))}
+                    />
                     <IconButton
                       size="small"
                       aria-label={t('common.delete')}

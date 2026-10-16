@@ -4,12 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 
+import { SelectField } from '@/components/SelectField';
 import { fetchBreakdown, fetchSummary } from '@/api/analytics';
 import type { BreakdownRow, Dimension, SortOrder } from '@/api/analyticsTypes';
 import { queryKeys } from '@/api/queryKeys';
@@ -90,28 +89,19 @@ export function SalesTab({ controller }: { controller: UseAnalyticsFilters }) {
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
-              <TextField
-                select
+              <SelectField<Dimension>
                 size="small"
+                fullWidth={false}
                 label={t('analytics.breakdown.dimension')}
                 value={dimension}
-                onChange={(e) => {
-                  setDimension(e.target.value as Dimension);
+                onChange={(next) => {
+                  setDimension(next);
                   setDrilldownOpen(false);
                 }}
                 sx={{ minWidth: 170 }}
-                SelectProps={{
-                  SelectDisplayProps: {
-                    'data-testid': 'analytics-breakdown-dimension',
-                  } as React.HTMLAttributes<HTMLDivElement>,
-                }}
-              >
-                {BREAKDOWN_DIMENSIONS.map((dim) => (
-                  <MenuItem key={dim} value={dim}>
-                    {t(`analytics.dimensions.${dim}`)}
-                  </MenuItem>
-                ))}
-              </TextField>
+                testId="analytics-breakdown-dimension"
+                options={BREAKDOWN_DIMENSIONS.map((dim) => ({ value: dim, label: t(`analytics.dimensions.${dim}`) }))}
+              />
               <Button
                 size="small"
                 variant="outlined"

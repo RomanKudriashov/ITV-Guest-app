@@ -2,8 +2,6 @@ import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -14,6 +12,8 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+
+import { SelectField } from '@/components/SelectField';
 
 import type { TrackerPoint } from '../api/types';
 import type { LiveStatus } from '../hooks/useBoardLive';
@@ -74,26 +74,24 @@ export function TrackerTopBar({
       </Typography>
 
       {points.length ? (
-        <Select
+        // Подпись «Точка» — она же имя поля для чтеца (раньше aria-label):
+        // у маленького поля высота та же, подпись садится в рамку. Ширина
+        // фиксирована — у Autocomplete нет «по содержимому», а кнопка-стрелка
+        // съедает место у узкого поля. Счётчик новых — второй строкой в списке.
+        <SelectField
           size="small"
+          fullWidth={false}
+          label={t('tracker.point')}
           value={selected ?? ''}
-          onChange={(event) => onSelect(String(event.target.value))}
-          data-testid="tracker-point-select"
-          inputProps={{ 'aria-label': t('tracker.point') }}
-          sx={{ minWidth: 120, maxWidth: { xs: 168, sm: 260 }, ml: 1 }}
-        >
-          {points.map((point) => (
-            <MenuItem key={point.code} value={point.code}>
-              <Badge
-                color="error"
-                badgeContent={point.new_count || 0}
-                sx={{ '& .MuiBadge-badge': { right: -10 } }}
-              >
-                {point.title}
-              </Badge>
-            </MenuItem>
-          ))}
-        </Select>
+          onChange={onSelect}
+          testId="tracker-point-select"
+          sx={{ width: { xs: 168, sm: 240 }, ml: 1 }}
+          options={points.map((point) => ({
+            value: point.code,
+            label: point.title,
+            secondary: point.new_count ? String(point.new_count) : undefined,
+          }))}
+        />
       ) : null}
 
       <Box sx={{ flexGrow: 1 }} />

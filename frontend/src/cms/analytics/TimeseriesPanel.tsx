@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
@@ -66,20 +65,15 @@ export function TimeseriesPanel({
         >
           <Typography variant="subtitle1">{t('analytics.timeseries.title')}</Typography>
           <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField<SeriesMetric>
               size="small"
+              fullWidth={false}
               label={t('analytics.timeseries.metric')}
               value={metric}
-              onChange={(e) => setMetric(e.target.value as SeriesMetric)}
+              onChange={setMetric}
               sx={{ minWidth: 150 }}
-            >
-              {METRICS.map((m) => (
-                <MenuItem key={m} value={m}>
-                  {t(`analytics.series.${m}`)}
-                </MenuItem>
-              ))}
-            </TextField>
+              options={METRICS.map((m) => ({ value: m, label: t(`analytics.series.${m}`) }))}
+            />
             <ToggleButtonGroup
               size="small"
               exclusive

@@ -11,7 +11,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -27,6 +26,7 @@ import {
   type Banner,
 } from '@/api/cms';
 import { fetchRoomCategories } from '@/api/hotelAdmin';
+import { MultiSelectField, SelectField } from '@/components/SelectField';
 import { fetchServices } from '@/cms/services/api';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 
@@ -132,28 +132,22 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
           ))}
 
           <Stack direction="row" spacing={1}>
-            <TextField
-              select size="small" fullWidth
+            <SelectField<Banner['size']>
+              size="small"
               label={t('banners.sizeLabel')}
               value={draft.size ?? 'm'}
-              onChange={(event) => set({ size: event.target.value as Banner['size'] })}
-              inputProps={{ 'data-testid': 'cms-banner-size' }}
-            >
-              {(['s', 'm', 'l'] as const).map((value) => (
-                <MenuItem key={value} value={value}>{t(`banners.size.${value}`)}</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select size="small" fullWidth
+              onChange={(next) => set({ size: next })}
+              testId="cms-banner-size"
+              options={(['s', 'm', 'l'] as const).map((value) => ({ value, label: t(`banners.size.${value}`) }))}
+            />
+            <SelectField<Banner['placement']>
+              size="small"
               label={t('banners.placeLabel')}
               value={draft.placement ?? 'top'}
-              onChange={(event) => set({ placement: event.target.value as Banner['placement'] })}
-              inputProps={{ 'data-testid': 'cms-banner-placement' }}
-            >
-              {(['top', 'bottom'] as const).map((value) => (
-                <MenuItem key={value} value={value}>{t(`banners.place.${value}`)}</MenuItem>
-              ))}
-            </TextField>
+              onChange={(next) => set({ placement: next })}
+              testId="cms-banner-placement"
+              options={(['top', 'bottom'] as const).map((value) => ({ value, label: t(`banners.place.${value}`) }))}
+            />
             <TextField
               size="small" type="number" fullWidth
               label={t('banners.priority')}
@@ -205,17 +199,17 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
           <Divider textAlign="left">
             <Typography variant="caption">{t('banners.actionLabel')}</Typography>
           </Divider>
-          <TextField
-            select size="small"
+          <SelectField<Banner['action']>
+            size="small"
             label={t('banners.actionLabel')}
             value={draft.action ?? 'none'}
-            onChange={(event) => set({ action: event.target.value as Banner['action'] })}
-            inputProps={{ 'data-testid': 'cms-banner-action' }}
-          >
-            {(['none', 'link', 'venue', 'page'] as const).map((value) => (
-              <MenuItem key={value} value={value}>{t(`banners.action.${value}`)}</MenuItem>
-            ))}
-          </TextField>
+            onChange={(next) => set({ action: next })}
+            testId="cms-banner-action"
+            options={(['none', 'link', 'venue', 'page'] as const).map((value) => ({
+              value,
+              label: t(`banners.action.${value}`),
+            }))}
+          />
           {draft.action === 'link' && (
             <TextField
               size="small"
@@ -226,18 +220,17 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
             />
           )}
           {draft.action === 'venue' && (
-            <TextField
-              select size="small"
+            <SelectField
+              size="small"
               label={t('banners.venue')}
               value={draft.action_service_id ?? ''}
-              onChange={(event) => set({ action_service_id: event.target.value })}
-            >
-              {(services.data ?? []).map((service) => (
-                <MenuItem key={service.id} value={service.id}>
-                  {service.public_name?.[languages.displayLanguage] ?? service.code}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={(next) => set({ action_service_id: next })}
+              loading={services.isLoading}
+              options={(services.data ?? []).map((service) => ({
+                value: service.id,
+                label: service.public_name?.[languages.displayLanguage] ?? service.code,
+              }))}
+            />
           )}
           {draft.action === 'page' && (
             <Stack spacing={1}>
@@ -305,35 +298,27 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
             }
             label={t('banners.firstVisit')}
           />
-          <TextField
-            select size="small" SelectProps={{ multiple: true }}
+          <MultiSelectField
+            size="small"
             label={t('banners.languages')}
             value={draft.languages ?? []}
-            onChange={(event) =>
-              set({ languages: event.target.value as unknown as string[] })
-            }
+            onChange={(next) => set({ languages: next })}
             helperText={t('banners.languagesHint')}
-          >
-            {languages.codes.map((code) => (
-              <MenuItem key={code} value={code}>{code}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select size="small" SelectProps={{ multiple: true }}
+            options={languages.codes.map((code) => ({ value: code, label: code }))}
+          />
+          <MultiSelectField
+            size="small"
             label={t('banners.categories')}
             value={draft.room_category_ids ?? []}
-            onChange={(event) =>
-              set({ room_category_ids: event.target.value as unknown as string[] })
-            }
+            onChange={(next) => set({ room_category_ids: next })}
             helperText={t('banners.categoriesHint')}
-            inputProps={{ 'data-testid': 'cms-banner-categories' }}
-          >
-            {(categories.data ?? []).map((category) => (
-              <MenuItem key={category.id} value={category.id}>
-                {category.title_i18n || category.code}
-              </MenuItem>
-            ))}
-          </TextField>
+            testId="cms-banner-categories"
+            loading={categories.isLoading}
+            options={(categories.data ?? []).map((category) => ({
+              value: category.id,
+              label: category.title_i18n || category.code,
+            }))}
+          />
           <FormControlLabel
             control={
               <Checkbox

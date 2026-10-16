@@ -2,13 +2,13 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
-import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -229,24 +229,19 @@ function DictSection({ kind }: { kind: Kind }) {
           <Typography variant="subtitle1" sx={{ fontWeight: 600, flexGrow: 1 }}>
             {t(`dictionaries.${kind}`)}
           </Typography>
-          <TextField
-            select
+          <SelectField<'' | OfferingNoun>
             size="small"
+            fullWidth={false}
             label={t('dictionaries.scopeLabel')}
             value={noun}
-            onChange={(event) => setNoun(event.target.value as '' | OfferingNoun)}
+            onChange={setNoun}
             sx={{ minWidth: 180 }}
-            SelectProps={{
-              SelectDisplayProps: { 'data-testid': `cms-dict-filter-${kind}` } as never,
-            }}
-          >
-            <MenuItem value="">{t('dictionaries.scopeAll')}</MenuItem>
-            {OFFERING_NOUNS.map((word) => (
-              <MenuItem key={word} value={word}>
-                {nounTitle(word)}
-              </MenuItem>
-            ))}
-          </TextField>
+            testId={`cms-dict-filter-${kind}`}
+            options={[
+              { value: '', label: t('dictionaries.scopeAll') },
+              ...OFFERING_NOUNS.map((word) => ({ value: word, label: nounTitle(word) })),
+            ]}
+          />
         </Stack>
 
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>

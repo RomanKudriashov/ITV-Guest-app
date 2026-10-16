@@ -8,7 +8,6 @@ import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -16,6 +15,7 @@ import Typography from '@mui/material/Typography';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
+import { SelectField } from '@/components/SelectField';
 import { useActionFailed } from '@/hooks/useActionFailed';
 
 import {
@@ -98,22 +98,23 @@ export function InclusionsTab({ service }: { service: CmsService }) {
       <Divider />
 
       <Stack direction="row" spacing={1} alignItems="center">
-        <TextField
-          select
+        <SelectField
+          // Поле — кнопка «добавить», а не хранимое значение: после добавления
+          // источник уходит из кандидатов, ключ меняется, поле снова пустое.
+          key={candidates.length}
           size="small"
+          fullWidth={false}
           label={t('inclusions.addSource')}
           value=""
           sx={{ minWidth: 260 }}
-          onChange={(event) => add.mutate(event.target.value)}
-          SelectProps={{ SelectDisplayProps: { 'data-testid': 'inclusion-add-source' } as never }}
+          onChange={(next) => next && add.mutate(next)}
+          testId="inclusion-add-source"
           disabled={!candidates.length}
-        >
-          {candidates.map((candidate) => (
-            <MenuItem key={candidate.id} value={candidate.id}>
-              {label(candidate.public_name, candidate.code)}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={candidates.map((candidate) => ({
+            value: candidate.id,
+            label: label(candidate.public_name, candidate.code),
+          }))}
+        />
         {add.error ? <Alert severity="error">{String(add.error)}</Alert> : null}
       </Stack>
     </Stack>
@@ -181,32 +182,34 @@ function InclusionCard({
       </Stack>
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextField
-          select
+        <SelectField<Inclusion['scope']>
           size="small"
+          fullWidth={false}
           label={t('inclusions.scopeLabel')}
           value={inclusion.scope}
-          onChange={(event) => save.mutate({ scope: event.target.value })}
+          onChange={(next) => save.mutate({ scope: next })}
           sx={{ minWidth: 200 }}
-          data-testid={`inclusion-scope-${inclusion.id}`}
-        >
-          <MenuItem value="all">{t('inclusions.scope.all')}</MenuItem>
-          <MenuItem value="categories">{t('inclusions.scope.categories')}</MenuItem>
-        </TextField>
+          testId={`inclusion-scope-${inclusion.id}`}
+          options={[
+            { value: 'all', label: t('inclusions.scope.all') },
+            { value: 'categories', label: t('inclusions.scope.categories') },
+          ]}
+        />
 
-        <TextField
-          select
+        <SelectField<Inclusion['markup_kind']>
           size="small"
+          fullWidth={false}
           label={t('inclusions.markupKind')}
           value={inclusion.markup_kind}
-          onChange={(event) => save.mutate({ markup_kind: event.target.value })}
+          onChange={(next) => save.mutate({ markup_kind: next })}
           sx={{ minWidth: 180 }}
-          data-testid={`inclusion-markup-kind-${inclusion.id}`}
-        >
-          <MenuItem value="none">{t('inclusions.markup.none')}</MenuItem>
-          <MenuItem value="percent">{t('inclusions.markup.percent')}</MenuItem>
-          <MenuItem value="fixed">{t('inclusions.markup.fixed')}</MenuItem>
-        </TextField>
+          testId={`inclusion-markup-kind-${inclusion.id}`}
+          options={[
+            { value: 'none', label: t('inclusions.markup.none') },
+            { value: 'percent', label: t('inclusions.markup.percent') },
+            { value: 'fixed', label: t('inclusions.markup.fixed') },
+          ]}
+        />
 
         {inclusion.markup_kind !== 'none' ? (
           <TextField
@@ -228,19 +231,20 @@ function InclusionCard({
           />
         ) : null}
 
-        <TextField
-          select
+        <SelectField<Inclusion['executor']>
           size="small"
+          fullWidth={false}
           label={t('inclusions.executor')}
           value={inclusion.executor}
-          onChange={(event) => save.mutate({ executor: event.target.value })}
+          onChange={(next) => save.mutate({ executor: next })}
           sx={{ minWidth: 220 }}
-          data-testid={`inclusion-executor-${inclusion.id}`}
+          testId={`inclusion-executor-${inclusion.id}`}
           helperText={t('inclusions.executorHint')}
-        >
-          <MenuItem value="source">{t('inclusions.executorSource')}</MenuItem>
-          <MenuItem value="own">{t('inclusions.executorOwn')}</MenuItem>
-        </TextField>
+          options={[
+            { value: 'source', label: t('inclusions.executorSource') },
+            { value: 'own', label: t('inclusions.executorOwn') },
+          ]}
+        />
       </Stack>
 
       {inclusion.hidden_item_ids.length ? (

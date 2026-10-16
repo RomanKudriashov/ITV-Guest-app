@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -13,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { fetchScope } from '@/api/analytics';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { LineChart } from '../analytics/charts/InlineCharts';
@@ -123,66 +123,50 @@ export function ReviewsPage() {
       <Card variant="outlined">
         <CardContent>
           <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('reviews.filters.venue')}
               value={params.point_id}
-              onChange={(event) => patch({ point_id: event.target.value })}
+              onChange={(next) => patch({ point_id: next })}
               sx={{ minWidth: 180 }}
-              SelectProps={{
-                SelectDisplayProps: { 'data-testid': 'reviews-filter-venue' } as never,
-              }}
-            >
-              <MenuItem value="">{t('reviews.filters.allVenues')}</MenuItem>
-              {venues.map((venue) => (
-                <MenuItem key={venue.id} value={venue.id}>
-                  {venue.title}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              testId="reviews-filter-venue"
+              options={[
+                { value: '', label: t('reviews.filters.allVenues') },
+                ...venues.map((venue) => ({ value: venue.id, label: venue.title })),
+              ]}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('reviews.filters.rating')}
               value={params.rating}
-              onChange={(event) => patch({ rating: event.target.value })}
+              onChange={(next) => patch({ rating: next })}
               sx={{ minWidth: 150 }}
-              SelectProps={{
-                SelectDisplayProps: { 'data-testid': 'reviews-filter-rating' } as never,
-              }}
-            >
-              <MenuItem value="">{t('reviews.filters.anyRating')}</MenuItem>
-              <MenuItem value="low" data-testid="reviews-filter-rating-low">
-                {t('reviews.filters.low')}
-              </MenuItem>
-              {[5, 4, 3, 2, 1].map((n) => (
-                <MenuItem key={n} value={String(n)}>
-                  {t('reviews.filters.stars', { count: n })}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              testId="reviews-filter-rating"
+              options={[
+                { value: '', label: t('reviews.filters.anyRating') },
+                { value: 'low', label: t('reviews.filters.low'), testId: 'reviews-filter-rating-low' },
+                ...[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: t('reviews.filters.stars', { count: n }) })),
+              ]}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('reviews.filters.triage')}
               value={params.triage}
-              onChange={(event) => patch({ triage: event.target.value })}
+              onChange={(next) => patch({ triage: next })}
               sx={{ minWidth: 170 }}
-              SelectProps={{
-                SelectDisplayProps: { 'data-testid': 'reviews-filter-triage' } as never,
-              }}
-            >
-              <MenuItem value="">{t('reviews.filters.anyTriage')}</MenuItem>
-              <MenuItem value="open" data-testid="reviews-filter-triage-open">
-                {t('reviews.filters.awaiting')}
-              </MenuItem>
-              {(['new', 'in_progress', 'closed'] as const).map((status) => (
-                <MenuItem key={status} value={status}>
-                  {t(`reviews.triage.status.${status}`)}
-                </MenuItem>
-              ))}
-            </TextField>
+              testId="reviews-filter-triage"
+              options={[
+                { value: '', label: t('reviews.filters.anyTriage') },
+                { value: 'open', label: t('reviews.filters.awaiting'), testId: 'reviews-filter-triage-open' },
+                ...(['new', 'in_progress', 'closed'] as const).map((status) => ({
+                  value: status,
+                  label: t(`reviews.triage.status.${status}`),
+                })),
+              ]}
+            />
             <TextField
               type="date"
               size="small"

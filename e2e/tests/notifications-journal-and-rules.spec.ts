@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 
-import { API, DEMO_ROOM, HOTEL, apiToken, signInToCms, unique, withKitchenOrder } from './helpers'
+import { API, DEMO_ROOM, HOTEL, apiToken, signInToCms, unique, withKitchenOrder, pickOption } from './helpers'
 
 type LogEntry = { order_number: number | null; status: string; error: string | null }
 
@@ -128,13 +128,13 @@ test.describe('Уведомления: журнал и второе правил
 
     const name = `Правило ${unique('esc')}`
     await page.getByTestId('cms-escalation-name').fill(name)
-    await page.getByTestId('cms-escalation-point').selectOption(free!.id)
+    await pickOption(page, 'cms-escalation-point', { value: free!.id })
     // Пустая форма приходит С ОДНОЙ ступенью — добавлять вторую здесь незачем,
     // и вторая с той же задержкой была бы ошибкой формы, а не проверкой.
     await expect(page.getByTestId('cms-step-0')).toBeVisible()
     await expect(page.getByTestId('cms-step-1')).toHaveCount(0)
     await page.getByTestId('cms-step-delay-0').fill('5')
-    await page.getByTestId('cms-step-target-0').selectOption('point')
+    await pickOption(page, 'cms-step-target-0', { value: 'point' })
     await page.getByTestId('cms-escalation-save').click()
 
     // Правда — на сервере, и правило принадлежит выбранной точке.

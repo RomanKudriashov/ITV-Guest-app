@@ -31,6 +31,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import { REQUEST_FIELD_TYPES, fieldSpec, type RequestFieldType } from '@/offerings/requestFields';
 import {
@@ -236,25 +237,19 @@ function FieldCard({
         />
 
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="flex-start">
-          <TextField
-            select
+          <SelectField<RequestFieldType>
             size="small"
+            fullWidth={false}
             label={t('requestFields.type')}
             value={field.field_type}
-            onChange={(event) =>
-              onPatch({ field_type: event.target.value as RequestFieldType })
-            }
+            onChange={(next) => onPatch({ field_type: next })}
             sx={{ minWidth: 200 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ 'data-testid': `cms-request-field-type-${index}` }}
-          >
-            {REQUEST_FIELD_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(`requestFields.types.${type}`)}
-              </option>
-            ))}
-          </TextField>
+            testId={`cms-request-field-type-${index}`}
+            options={REQUEST_FIELD_TYPES.map((type) => ({
+              value: type,
+              label: t(`requestFields.types.${type}`),
+            }))}
+          />
 
           <TextField
             size="small"

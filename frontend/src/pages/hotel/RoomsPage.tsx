@@ -85,6 +85,7 @@ import { RoomGrid } from './RoomGrid';
 import { RoomPanel } from './RoomPanel';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListEmpty } from '@/kit/list/ListEmpty';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 
 interface RoomForm {
@@ -433,51 +434,45 @@ export function RoomsPage() {
             alignItems="center"
             sx={{ mb: 1 }}
           >
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('hotel.rooms.filterCategory')}
               value={params.category}
-              onChange={(event) => {
+              onChange={(next) => {
                 resetSelection();
-                patch({ category: event.target.value, page: 1 });
+                patch({ category: next, page: 1 });
               }}
               sx={{ minWidth: 180 }}
-              /* Нативный select — как у остальных списков CMS: он доступен с
-                 клавиатуры и его умеет выбирать проверка. */
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'rooms-filter-category' }}
-            >
-              <option value="">{t('common.all')}</option>
-              <option value="none">{t('hotel.rooms.categoryNone')}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.title_i18n || category.code}
-                </option>
-              ))}
-            </TextField>
-            <TextField
-              select
+              testId="rooms-filter-category"
+              options={[
+                { value: '', label: t('common.all') },
+                { value: 'none', label: t('hotel.rooms.categoryNone') },
+                ...categories.map((category) => ({
+                  value: category.id,
+                  label: category.title_i18n || category.code,
+                })),
+              ]}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('hotel.rooms.filterHousekeeping')}
               value={params.housekeeping}
-              onChange={(event) => {
+              onChange={(next) => {
                 resetSelection();
-                patch({ housekeeping: event.target.value, page: 1 });
+                patch({ housekeeping: next, page: 1 });
               }}
               sx={{ minWidth: 180 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'rooms-filter-housekeeping' }}
-            >
-              <option value="">{t('common.all')}</option>
-              {HOUSEKEEPING.map((value) => (
-                <option key={value} value={value}>
-                  {t(`hotel.rooms.housekeeping_${value}`)}
-                </option>
-              ))}
-            </TextField>
+              testId="rooms-filter-housekeeping"
+              options={[
+                { value: '', label: t('common.all') },
+                ...HOUSEKEEPING.map((value) => ({
+                  value,
+                  label: t(`hotel.rooms.housekeeping_${value}`),
+                })),
+              ]}
+            />
             <TextField
               size="small"
               label={t('hotel.rooms.filterFloor')}
@@ -1246,51 +1241,42 @@ function BulkEditDialog({
               : t('hotel.rooms.bulkEditScopePicked', { count })}
           </Alert>
 
-          <TextField
-            select
+          {/* «Без категории» хранится как null — и показывается им, а не
+              «оставить как есть». */}
+          <SelectField
             size="small"
             label={t('hotel.rooms.category')}
-            value={patch.category_id ?? ''}
-            onChange={(event) =>
-              setField(
-                'category_id',
-                event.target.value === 'none' ? null : event.target.value || undefined,
-              )
+            value={patch.category_id === null ? 'none' : (patch.category_id ?? '')}
+            onChange={(next) =>
+              setField('category_id', next === 'none' ? null : next || undefined)
             }
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ 'data-testid': 'rooms-bulk-category' }}
-            fullWidth
-          >
-            <option value="">{t('hotel.rooms.bulkKeep')}</option>
-            <option value="none">{t('hotel.rooms.categoryNone')}</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.title_i18n || category.code}
-              </option>
-            ))}
-          </TextField>
+            testId="rooms-bulk-category"
+            options={[
+              { value: '', label: t('hotel.rooms.bulkKeep') },
+              { value: 'none', label: t('hotel.rooms.categoryNone') },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.title_i18n || category.code,
+              })),
+            ]}
+          />
 
-          <TextField
-            select
+          <SelectField
             size="small"
             label={t('hotel.rooms.housekeeping')}
             value={patch.housekeeping ?? ''}
-            onChange={(event) =>
-              setField('housekeeping', (event.target.value || undefined) as RoomHousekeeping)
+            onChange={(next) =>
+              setField('housekeeping', (next || undefined) as RoomHousekeeping | undefined)
             }
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ 'data-testid': 'rooms-bulk-housekeeping' }}
-            fullWidth
-          >
-            <option value="">{t('hotel.rooms.bulkKeep')}</option>
-            {HOUSEKEEPING.map((value) => (
-              <option key={value} value={value}>
-                {t(`hotel.rooms.housekeeping_${value}`)}
-              </option>
-            ))}
-          </TextField>
+            testId="rooms-bulk-housekeeping"
+            options={[
+              { value: '', label: t('hotel.rooms.bulkKeep') },
+              ...HOUSEKEEPING.map((value) => ({
+                value,
+                label: t(`hotel.rooms.housekeeping_${value}`),
+              })),
+            ]}
+          />
 
           <TextField
             size="small"

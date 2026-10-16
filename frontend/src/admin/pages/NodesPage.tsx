@@ -3,14 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { useActionFailed } from '@/hooks/useActionFailed';
 
 import { ink, panelSx, pillSx, primaryButtonSx, quietButtonSx, surface, typo } from '../adminTokens';
-import { Field, FormCell, FormGrid } from '../form';
+import { ChoiceField, Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
 import {
   createNode,
@@ -105,20 +104,14 @@ export function NodesPage() {
               перескакивали по одному и ряд читался лестницей.
             */
             <FormGrid>
-              <Field
+              <ChoiceField
                 span={4}
-                select
                 label={t('admin.nodes.hotel')}
                 value={form.hotelId}
-                onChange={(event) => setForm((prev) => ({ ...prev, hotelId: event.target.value }))}
-                SelectProps={{ inputProps: { 'data-testid': 'admin-node-hotel' } }}
-              >
-                {(fleet.data?.items ?? []).map((row) => (
-                  <MenuItem key={row.id} value={row.id}>
-                    {row.subdomain}
-                  </MenuItem>
-                ))}
-              </Field>
+                onChange={(next) => setForm((prev) => ({ ...prev, hotelId: next }))}
+                testId="admin-node-hotel"
+                options={(fleet.data?.items ?? []).map((row) => ({ value: String(row.id), label: row.subdomain }))}
+              />
               <Field
                 span={4}
                 label={t('admin.nodes.nodeName')}
@@ -126,20 +119,17 @@ export function NodesPage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                 inputProps={{ 'data-testid': 'admin-node-name' }}
               />
-              <Field
+              <ChoiceField
                 span={4}
-                select
                 label={t('admin.nodes.col.purpose')}
                 value={form.purpose}
-                onChange={(event) => setForm((prev) => ({ ...prev, purpose: event.target.value }))}
-                SelectProps={{ inputProps: { 'data-testid': 'admin-node-purpose' } }}
-              >
-                {['grms', 'pms'].map((code) => (
-                  <MenuItem key={code} value={code}>
-                    {t(`admin.nodes.purpose.${code}`, { defaultValue: code })}
-                  </MenuItem>
-                ))}
-              </Field>
+                onChange={(next) => setForm((prev) => ({ ...prev, purpose: next }))}
+                testId="admin-node-purpose"
+                options={['grms', 'pms'].map((code) => ({
+                  value: code,
+                  label: t(`admin.nodes.purpose.${code}`, { defaultValue: code }),
+                }))}
+              />
               <FormCell>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button

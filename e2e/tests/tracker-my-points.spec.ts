@@ -53,7 +53,7 @@ test('сотрудник на двух точках: после входа — �
 
     await page.getByTestId('my-points-row-bar').click()
     await expect(page.getByTestId('tracker-board')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('tracker-point-select')).toContainText(/бар|bar/i)
+    await expect(page.getByTestId('tracker-point-select')).toHaveValue(/бар|bar/i)
     // С доски — обратно: кнопка есть у того, у кого точек две и больше.
     await page.getByTestId('tracker-my-points-open').click()
     await expect(page).toHaveURL(/\/tracker\/my-points/)

@@ -9,6 +9,12 @@ import Typography from '@mui/material/Typography';
 
 import { accent, fieldSx, ink, shadow, shape, surface, typo } from './adminTokens';
 import { spanSx, type FormSpan } from '@/kit/formLayout';
+import {
+  MultiSelectField,
+  SelectField,
+  type MultiSelectFieldProps,
+  type SelectFieldProps,
+} from '@/components/SelectField';
 
 export { FormCell, FormGrid } from '@/kit/formLayout';
 
@@ -134,4 +140,20 @@ export function ChoicePill({
       {children}
     </Box>
   );
+}
+
+/** Выбор из списка в форме консоли: общий `SelectField` с видом поля консоли. */
+export function ChoiceField<V extends string = string>({
+  span = 12,
+  ...props
+}: Omit<SelectFieldProps<V>, 'sx' | 'fieldSx'> & { span?: FormSpan }) {
+  return <SelectField<V> {...props} sx={spanSx(span)} fieldSx={fieldSx} />;
+}
+
+/** То же для нескольких значений. */
+export function MultiChoiceField<V extends string = string>({
+  span = 12,
+  ...props
+}: Omit<MultiSelectFieldProps<V>, 'sx' | 'fieldSx'> & { span?: FormSpan }) {
+  return <MultiSelectField<V> {...props} sx={spanSx(span)} fieldSx={fieldSx} />;
 }

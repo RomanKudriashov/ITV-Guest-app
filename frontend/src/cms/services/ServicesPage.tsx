@@ -11,7 +11,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -23,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { createService, fetchServiceTemplates, fetchServices } from './api';
 import type { CmsService } from './api';
 import { SlaOverridesList } from './SlaOverridesList';
@@ -259,21 +259,16 @@ function CreateServiceDialog({
       <DialogTitle>{t('services.create.title')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField
-            select
+          <SelectField
             label={t('services.create.type')}
             value={type}
-            onChange={(event) => setType(event.target.value)}
-            data-testid="service-create-type"
-          >
-            {(templates.data ?? []).map((template) => (
-              <MenuItem key={template.type} value={template.type}>
-                {template.title[i18n.resolvedLanguage ?? 'ru'] ??
-                  template.title.ru ??
-                  template.type}
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={setType}
+            testId="service-create-type"
+            options={(templates.data ?? []).map((template) => ({
+              value: template.type,
+              label: template.title[i18n.resolvedLanguage ?? 'ru'] ?? template.title.ru ?? template.type,
+            }))}
+          />
 
           {/*
             Шаблон — это «из каких кирпичей собран тип». Показываем сразу: из

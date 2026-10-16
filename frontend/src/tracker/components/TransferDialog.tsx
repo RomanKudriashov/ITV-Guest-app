@@ -5,9 +5,10 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import { useTranslation } from 'react-i18next';
+
+import { SelectField } from '@/components/SelectField';
 
 export interface TransferDialogProps {
   open: boolean;
@@ -52,26 +53,20 @@ export function TransferDialog({
         <DialogContentText variant="body2" sx={{ mb: 1 }}>
           {t('tracker.transfer.body')}
         </DialogContentText>
-        <TextField
-          select
-          fullWidth
+        <SelectField
           required
-          margin="dense"
           label={t('tracker.transfer.point')}
           value={point}
-          onChange={(event) => setPoint(event.target.value)}
-          SelectProps={{ SelectDisplayProps: { 'data-testid': 'tracker-transfer-point' } as never }}
-        >
-          {targets.map((target) => (
-            <MenuItem
-              key={target.code}
-              value={target.code}
-              data-testid={`tracker-transfer-point-${target.code}`}
-            >
-              {target.title}
-            </MenuItem>
-          ))}
-        </TextField>
+          onChange={setPoint}
+          testId="tracker-transfer-point"
+          // margin="dense" у TextField — те же отступы руками.
+          sx={{ mt: 1, mb: 0.5 }}
+          options={targets.map((target) => ({
+            value: target.code,
+            label: target.title,
+            testId: `tracker-transfer-point-${target.code}`,
+          }))}
+        />
         <TextField
           fullWidth
           required

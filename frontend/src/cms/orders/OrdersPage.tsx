@@ -5,7 +5,6 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -13,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '@/auth/AuthProvider';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { fetchOrders, type OrdersPage as OrdersPageBody } from './api';
@@ -100,29 +100,19 @@ export function OrdersPage() {
             <Card variant="outlined">
               <CardContent>
                 <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
-                  <TextField
-                    select
+                  <SelectField
                     size="small"
+                    fullWidth={false}
                     label={t('orders.filters.venue')}
                     value={params.point}
-                    onChange={(event) => patch({ point: event.target.value })}
+                    onChange={(next) => patch({ point: next })}
                     sx={{ minWidth: 180 }}
-                    // Метка — на ВИДИМУЮ часть селекта: `inputProps` у MUI
-                    // садится на скрытый нативный input, по которому не
-                    // кликнуть. Эти грабли у нас уже описаны в `BoardFilters`.
-                    SelectProps={{
-                      SelectDisplayProps: {
-                        'data-testid': 'orders-filter-venue',
-                      } as never,
-                    }}
-                  >
-                    <MenuItem value="">{t('orders.filters.allVenues')}</MenuItem>
-                    {venues.map((venue) => (
-                      <MenuItem key={venue.id} value={venue.id}>
-                        {venue.title}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    testId="orders-filter-venue"
+                    options={[
+                      { value: '', label: t('orders.filters.allVenues') },
+                      ...venues.map((venue) => ({ value: venue.id, label: venue.title })),
+                    ]}
+                  />
 
                   <TextField
                     type="date"
@@ -157,23 +147,20 @@ export function OrdersPage() {
                     на двух экранах обязано называться одинаково, иначе через
                     полгода это будут два разных списка.
                   */}
-                  <TextField
-                    select
+                  <SelectField
                     size="small"
+                    fullWidth={false}
                     label={t('tracker.filters.type')}
                     value={params.order_type}
-                    onChange={(event) => patch({ order_type: event.target.value })}
+                    onChange={(next) => patch({ order_type: next })}
                     sx={{ minWidth: 150 }}
-                    SelectProps={{
-                      SelectDisplayProps: {
-                        'data-testid': 'orders-filter-type',
-                      } as never,
-                    }}
-                  >
-                    <MenuItem value="">{t('tracker.filters.anyType')}</MenuItem>
-                    <MenuItem value="cart">{t('tracker.filters.typeCart')}</MenuItem>
-                    <MenuItem value="request">{t('tracker.filters.typeRequest')}</MenuItem>
-                  </TextField>
+                    testId="orders-filter-type"
+                    options={[
+                      { value: '', label: t('tracker.filters.anyType') },
+                      { value: 'cart', label: t('tracker.filters.typeCart') },
+                      { value: 'request', label: t('tracker.filters.typeRequest') },
+                    ]}
+                  />
 
                   <TextField
                     size="small"

@@ -6,8 +6,6 @@ import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
 import InputBase from '@mui/material/InputBase';
-import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +14,7 @@ import { useRights } from '../useRights';
 
 import { accent, ink, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
   bulkSetActive,
@@ -175,25 +174,24 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           массовое действие. Отсюда же оно и адресуется — «выключить всё, что
           вижу» обязано означать ровно то, что видно.
         */}
-        <TextField
-          select
+        <SelectField
           size="small"
+          fullWidth={false}
           value={query.group ?? ''}
-          onChange={(event) => {
+          onChange={(next) => {
             setSelected([]);
-            patch({ group: event.target.value });
+            patch({ group: next });
           }}
-          SelectProps={{ SelectDisplayProps: { 'data-testid': 'admin-fleet-group' } as never }}
+          testId="admin-fleet-group"
           sx={{ minWidth: 180 }}
-        >
-          <MenuItem value="">{t('admin.fleet.allGroups')}</MenuItem>
-          {(groups.data?.items ?? []).map((group) => (
-            <MenuItem key={group.id} value={group.id}>
-              {group.title}
-              {group.size !== undefined ? ` · ${group.size}` : ''}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={[
+            { value: '', label: t('admin.fleet.allGroups') },
+            ...(groups.data?.items ?? []).map((group) => ({
+              value: String(group.id),
+              label: `${group.title}${group.size !== undefined ? ` · ${group.size}` : ''}`,
+            })),
+          ]}
+        />
 
         {(['', 'active', 'trial', 'disabled'] as const).map((status) => (
           <ButtonBase

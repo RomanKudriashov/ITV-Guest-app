@@ -9,7 +9,6 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -33,6 +32,7 @@ import {
   type GrmsType,
 } from '@/api/grms';
 import { useGrmsScope } from './scope';
+import { SelectField } from '@/components/SelectField';
 import { queryKeys } from '@/api/queryKeys';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useToast } from '@/components/ToastProvider';
@@ -172,40 +172,35 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
               inputProps={{ 'data-testid': 'diagnostics-filter-room' }}
               sx={{ minWidth: 140 }}
             />
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('roomControl.diagnostics.elementKind')}
               value={filters.element_kind}
-              onChange={(event) => setFilters({ ...filters, element_kind: event.target.value })}
-              SelectProps={{ SelectDisplayProps: { 'data-testid': 'diagnostics-filter-kind' } as never }}
+              onChange={(next) => setFilters({ ...filters, element_kind: next })}
+              testId="diagnostics-filter-kind"
               sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">{t('roomControl.diagnostics.anyKind')}</MenuItem>
-              {(values.data?.element_kinds ?? []).map((kind) => (
-                <MenuItem key={kind.code} value={kind.code}>
-                  {kind.title}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              options={[
+                { value: '', label: t('roomControl.diagnostics.anyKind') },
+                ...(values.data?.element_kinds ?? []).map((kind) => ({ value: kind.code, label: kind.title })),
+              ]}
+            />
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('roomControl.diagnostics.outcome')}
               value={filters.outcome}
-              onChange={(event) => setFilters({ ...filters, outcome: event.target.value })}
-              SelectProps={{
-                SelectDisplayProps: { 'data-testid': 'diagnostics-filter-outcome' } as never,
-              }}
+              onChange={(next) => setFilters({ ...filters, outcome: next })}
+              testId="diagnostics-filter-outcome"
               sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">{t('roomControl.diagnostics.anyOutcome')}</MenuItem>
-              {(values.data?.outcomes ?? []).map((outcome) => (
-                <MenuItem key={outcome} value={outcome}>
-                  {t(`roomControl.diagnostics.results.${outcome}`, { defaultValue: outcome })}
-                </MenuItem>
-              ))}
-            </TextField>
+              options={[
+                { value: '', label: t('roomControl.diagnostics.anyOutcome') },
+                ...(values.data?.outcomes ?? []).map((outcome) => ({
+                  value: outcome,
+                  label: t(`roomControl.diagnostics.results.${outcome}`, { defaultValue: outcome }),
+                })),
+              ]}
+            />
             <TextField
               size="small"
               type="date"

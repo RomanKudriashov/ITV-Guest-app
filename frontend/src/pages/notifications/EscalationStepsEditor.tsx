@@ -41,6 +41,7 @@ import {
   type StepDraft,
   type TargetKind,
 } from '@/notifications/escalation';
+import { SelectField } from '@/components/SelectField';
 
 export interface EscalationStepsEditorProps {
   steps: StepDraft[];
@@ -245,47 +246,38 @@ function StepCard({ step, index, channels, errors, disabled, onPatch, onRemove }
             inputProps={{ 'data-testid': `cms-step-delay-${index}`, inputMode: 'numeric' }}
           />
 
-          <TextField
-            select
+          <SelectField<TargetKind>
             size="small"
+            fullWidth={false}
             label={t('notifications.escalation.target')}
             value={step.target_kind}
-            onChange={(event) => onPatch({ target_kind: event.target.value as TargetKind })}
+            onChange={(next) => onPatch({ target_kind: next })}
             sx={{ minWidth: 220 }}
-            SelectProps={{ native: true }}
-            InputLabelProps={{ shrink: true }}
             helperText={t(`notifications.escalation.targetHint.${step.target_kind}`)}
-            inputProps={{ 'data-testid': `cms-step-target-${index}` }}
-          >
-            {TARGET_KINDS.map((kind) => (
-              <option key={kind} value={kind}>
-                {t(`notifications.escalation.targets.${kind}`)}
-              </option>
-            ))}
-          </TextField>
+            testId={`cms-step-target-${index}`}
+            options={TARGET_KINDS.map((kind) => ({
+              value: kind,
+              label: t(`notifications.escalation.targets.${kind}`),
+            }))}
+          />
 
           {/* A channel picker exists only where the target table says so. */}
           {spec.requiresChannel ? (
-            <TextField
-              select
+            <SelectField
               size="small"
+              fullWidth={false}
               label={t('notifications.escalation.channel')}
               value={step.channel_id ?? ''}
-              onChange={(event) => onPatch({ channel_id: event.target.value || null })}
+              onChange={(next) => onPatch({ channel_id: next || null })}
               error={Boolean(channelError)}
               helperText={channelError}
               sx={{ minWidth: 240 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': `cms-step-channel-${index}` }}
-            >
-              <option value="">{t('common.none')}</option>
-              {channels.map((channel) => (
-                <option key={channel.id} value={channel.id}>
-                  {channel.title}
-                </option>
-              ))}
-            </TextField>
+              testId={`cms-step-channel-${index}`}
+              options={[
+                { value: '', label: t('common.none') },
+                ...channels.map((channel) => ({ value: channel.id, label: channel.title })),
+              ]}
+            />
           ) : null}
 
           <TextField

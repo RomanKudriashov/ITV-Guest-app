@@ -102,6 +102,9 @@ export function touchTarget(size: number = density.touch) {
  * Сжав основание, мы сжали бы и его — поэтому шкала накрывает только те три
  * поверхности, где сидят за работой.
  */
+/** Вертикальный отступ поля ввода: от него считаются и высота, и подпись. */
+const FIELD_PAD = 6;
+
 export function compactTheme(base: Theme): Theme {
   const { font, control, pad } = density;
   const px = (value: number) => `${value}px`;
@@ -132,10 +135,44 @@ export function compactTheme(base: Theme): Theme {
         // Поле и список — по строке текста, а не по кнопке.
         styleOverrides: {
           root: { fontSize: px(font.body) },
-          input: { paddingTop: 6, paddingBottom: 6, minHeight: control.row - 12 },
+          input: { paddingTop: FIELD_PAD, paddingBottom: FIELD_PAD, minHeight: control.row - 2 * FIELD_PAD },
+          // Многострочное поле: отступ — у корня, у текста ноль, как у MUI;
+          // иначе первая строка уезжала на 14.5 px вниз от подписи.
+          multiline: { paddingTop: FIELD_PAD, paddingBottom: FIELD_PAD },
+          inputMultiline: { paddingTop: 0, paddingBottom: 0 },
         },
       },
-      MuiInputLabel: { styleOverrides: { root: { fontSize: px(font.body) } } },
+      /*
+        ПОДПИСЬ — ПОД ПОЛЕ, КОТОРОЕ МЫ САМИ УМЕНЬШИЛИ (партия 54).
+
+        Отступы поля выше — 6 вместо 8.5 у MUI, а положение подписи MUI считает
+        от своих 8.5: пустая подпись стояла на 3 px ниже центра, поднятая — на
+        2 px выше рамки. Считаем от наших чисел: поле = 6 + строка + 6, строка
+        подписи та же (`1.4375em`), значит пустая — ровно на 6 сверху; поднятая
+        (×0.75) центром ложится на рамку при −7. Сторож — e2e `field-labels`.
+      */
+      MuiInputLabel: {
+        styleOverrides: {
+          root: {
+            fontSize: px(font.body),
+            '&.MuiInputLabel-outlined.MuiInputLabel-sizeSmall:not(.MuiInputLabel-shrink)': {
+              transform: `translate(14px, ${FIELD_PAD}px) scale(1)`,
+            },
+            '&.MuiInputLabel-outlined.MuiInputLabel-shrink': {
+              transform: 'translate(14px, -7px) scale(0.75)',
+            },
+          },
+        },
+      },
+      // Выбор из списка (`kit/SelectField`) — та же высота, что у поля:
+      // у Autocomplete свои отступы (6 у корня + 2.5 у ввода), сводим к 6.
+      MuiAutocomplete: {
+        styleOverrides: {
+          inputRoot: {
+            '&.MuiInputBase-sizeSmall': { paddingTop: FIELD_PAD - 2.5, paddingBottom: FIELD_PAD - 2.5 },
+          },
+        },
+      },
       MuiSelect: { defaultProps: { size: 'small' } },
       MuiTextField: { defaultProps: { size: 'small' } },
       MuiFormControl: { defaultProps: { size: 'small' } },

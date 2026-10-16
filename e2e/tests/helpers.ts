@@ -797,3 +797,30 @@ export async function serviceName(request: APIRequestContext, code: string): Pro
   expect(name, `у демо-отеля нет заведения ${code} с именем`).toBeTruthy()
   return name!
 }
+
+/**
+ * ВЫБОР ИЗ СПИСКА (`components/SelectField`, партия 54).
+ *
+ * Все выпадающие списки — Autocomplete с поиском: testid стоит на поле ввода,
+ * код выбранного — в его `data-value`, у вариантов — свой `data-value`.
+ * `{ value }` выбирает по коду (бывший `selectOption(code)`), строка или
+ * регулярка — по видимой подписи, `{ index }` — по порядку в списке.
+ */
+export async function pickOption(
+  page: Page,
+  testId: string,
+  choice: string | RegExp | { value: string } | { index: number },
+): Promise<void> {
+  const field = page.getByTestId(testId)
+  await field.click()
+  const listbox = page.getByRole('listbox')
+  await expect(listbox).toBeVisible({ timeout: 10_000 })
+  if (typeof choice === 'object' && 'value' in choice) {
+    await listbox.locator(`[role="option"][data-value="${choice.value}"]`).click()
+  } else if (typeof choice === 'object' && 'index' in choice) {
+    await listbox.getByRole('option').nth(choice.index).click()
+  } else {
+    await listbox.getByRole('option', { name: choice, exact: typeof choice === 'string' }).first().click()
+  }
+  await expect(listbox).toBeHidden({ timeout: 10_000 })
+}

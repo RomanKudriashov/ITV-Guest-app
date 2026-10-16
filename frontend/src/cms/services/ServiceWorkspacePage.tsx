@@ -13,7 +13,6 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Tab from '@mui/material/Tab';
@@ -32,6 +31,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { fetchStaff } from '@/api/hotelAdmin';
 import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
@@ -202,21 +202,20 @@ function ScheduleTab({ service }: { service: CmsService }) {
       <Typography variant="body2" color="text.secondary">
         {t('services.scheduleHint')}
       </Typography>
-      <TextField
-        select
+      <SelectField
         size="small"
         label={t('services.schedule')}
         value={service.schedule_id ?? ''}
-        onChange={(event) => save.mutate({ schedule_id: event.target.value || null })}
-        data-testid="service-schedule-select"
-      >
-        <MenuItem value="">{t('services.scheduleAlways')}</MenuItem>
-        {(bootstrap?.schedules ?? []).map((schedule: { id: string; name: string }) => (
-          <MenuItem key={schedule.id} value={schedule.id}>
-            {schedule.name}
-          </MenuItem>
-        ))}
-      </TextField>
+        onChange={(next) => save.mutate({ schedule_id: next || null })}
+        testId="service-schedule-select"
+        options={[
+          { value: '', label: t('services.scheduleAlways') },
+          ...(bootstrap?.schedules ?? []).map((schedule: { id: string; name: string }) => ({
+            value: schedule.id,
+            label: schedule.name,
+          })),
+        ]}
+      />
 
       <TextField
         size="small"

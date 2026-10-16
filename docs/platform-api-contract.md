@@ -59,13 +59,30 @@
 // 409 { "detail":"…", "code":"hotel_exists" }  — subdomain занят
 // 422 валидация (неизвестный пресет, пустой язык …)
 ```
+Поля из списка проверяются на сервере (партия 54), отказ — `422` с `field` и `code`:
+`subdomain_format` (3–30 знаков, `[a-z0-9-]`, дефис не по краям),
+`subdomain_reserved` (имя из `GUEST_APP_RESERVED_SUBDOMAINS`), `timezone_unknown`
+(не зона IANA), `currency_unknown` (не ISO 4217; регистр приводится),
+`language_unsupported` (не из `SUPPORTED_LANGUAGES`), `email_invalid`.
+
+### `GET /platform/reference/hotel-fields`
+Списки для формы отеля — из тех же источников, что проверка выше:
+`{ "timezones": [...], "currencies": [{"code","minor_units"}], "languages": [...],
+"subdomain": {"min","max","pattern","reserved": [...]} }`.
+
+### `GET /platform/reference/subdomain-check?value=…`
+Проверка поддомена на ходу: `{ "value", "ok", "code": null | "subdomain_format" |
+"subdomain_reserved" | "hotel_exists" }`.
+
+### `GET /platform/reference/cities`
+Города отелей флота на всех языках — для правила группы: `{ "cities": [...] }`.
 
 ### `GET /platform/hotels/{id}`
 Профиль отеля. `404`, если отеля нет.
 
 ### `PATCH /platform/hotels/{id}`
 Правка профиля. Допустимо: `name`, `timezone`, `currency`, `languages`,
-`is_active`. **`subdomain` игнорируется/запрещён.** Ответ `200` — профиль.
+`is_active`. Пояс, валюта и языки — с теми же проверками, что при создании. **`subdomain` игнорируется/запрещён.** Ответ `200` — профиль.
 Деактивация: `{"is_active": false}` → витрина и CMS-логин отеля перестают
 резолвиться (middleware отдаёт «отель недоступен»); платформа отель видит.
 

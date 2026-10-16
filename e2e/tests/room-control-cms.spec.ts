@@ -105,7 +105,8 @@ async function fillField(testId: string, value: string): Promise<void> {
  * поле, — и меню не открывается.
  */
 async function openSelect(testId: string): Promise<void> {
-  await page.getByTestId(testId).locator('[role="combobox"]').click()
+  // testid стоит на самом поле выбора (role=combobox, партия 54).
+  await page.getByTestId(testId).click()
 }
 
 async function openTab(key: string): Promise<void> {
@@ -246,7 +247,7 @@ test.describe('Связь номерного фонда и управления 
     // которого по нему пошли.
     await expect(page.getByTestId('cms-room-control')).toBeVisible({ timeout: 20_000 })
     await expect(page).toHaveURL(new RegExp(`type=${encodeURIComponent(shown)}`))
-    await expect(page.getByTestId('grms-type-select')).toContainText(/./)
+    await expect(page.getByTestId('grms-type-select')).toHaveValue(/./)
   })
 
   test('обратно: шапка управления говорит, сколько номеров на типе', async () => {

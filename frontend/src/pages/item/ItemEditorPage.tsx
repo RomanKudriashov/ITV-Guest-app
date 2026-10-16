@@ -16,7 +16,6 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Skeleton from '@mui/material/Skeleton';
@@ -41,7 +40,7 @@ import {
   updateItem,
 } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
-import type { CmsCharacteristic, Item, Translated } from '@/api/types';
+import type { Category, CmsCharacteristic, Item, Translated } from '@/api/types';
 import { badgeRoleColor } from '@/kit/chips';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
@@ -51,13 +50,14 @@ import {
   type EditableImage,
 } from '@/components/ImageUploader';
 import { SchedulePicker } from '@/components/SchedulePicker';
+import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import { useToast } from '@/components/ToastProvider';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useAuth } from '@/auth';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
-import { flattenCategories } from '@/utils/categories';
+import { flattenCategories, type FlatCategory } from '@/utils/categories';
 import { useCatalogWords, type OfferingNoun } from '@/offerings/nouns';
 import { currencySymbol, inputToMinor, minorToInput } from '@/utils/money';
 import { compactTranslated, pickTranslated } from '@/utils/translated';
@@ -201,6 +201,18 @@ function badgeIdsFromItem(item: Item): string[] {
   return [...(item.badges ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((link) => link.id);
+}
+
+/** Варианты категорий: вложенность — родителем во второй строке, а не отступом. */
+function categoryOptions(flat: FlatCategory[], title: (category: Category) => string) {
+  const path: string[] = [];
+  return flat.map(({ category, depth }) => {
+    const label = title(category);
+    path.length = depth;
+    const parent = depth > 0 ? path[depth - 1] : undefined;
+    path.push(label);
+    return { value: category.id, label, secondary: parent };
+  });
 }
 
 export function ItemEditorPage() {
@@ -940,58 +952,44 @@ export function ItemEditorPage() {
                 />
 
                 <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                  <TextField
-                    select
+                  <SelectField
                     size="small"
+                    fullWidth={false}
                     label={t('item.category')}
                     value={form.category_id}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, category_id: event.target.value }))
-                    }
+                    onChange={(next) => setForm((prev) => ({ ...prev, category_id: next }))}
                     error={Boolean(formErrors.category_id)}
                     helperText={formErrors.category_id}
                     sx={{ minWidth: 260 }}
-                    inputProps={{ 'data-testid': 'item-category-select' }}
-                  >
-                    {flatCategories.map(({ category, depth }) => (
-                      <MenuItem key={category.id} value={category.id}>
-                        {`${' '.repeat(depth * 3)}${
-                          pickTranslated(
-                            category.title,
-                            languages.displayLanguage,
-                            languages.defaultCode,
-                          ) || category.code
-                        }`}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    testId="item-category-select"
+                    options={categoryOptions(
+                      flatCategories,
+                      (category) =>
+                        pickTranslated(
+                          category.title,
+                          languages.displayLanguage,
+                          languages.defaultCode,
+                        ) || category.code,
+                    )}
+                  />
 
                   {/* Location mode only exists for the types that route to a
                       place — a booking uses its department, an info page none. */}
                   {behaviour.configuresLocation ? (
-                    <TextField
-                      select
+                    <SelectField<LocationMode>
                       size="small"
+                      fullWidth={false}
                       label={t('item.locationMode')}
                       value={form.location_mode}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          location_mode: event.target.value as LocationMode,
-                        }))
-                      }
+                      onChange={(next) => setForm((prev) => ({ ...prev, location_mode: next }))}
                       helperText={t(`item.locationModes.${form.location_mode}Hint`)}
                       sx={{ minWidth: 220 }}
-                      SelectProps={{ native: true }}
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ 'data-testid': 'cms-location-mode' }}
-                    >
-                      {LOCATION_MODES.map((mode) => (
-                        <option key={mode} value={mode}>
-                          {t(`item.locationModes.${mode}`)}
-                        </option>
-                      ))}
-                    </TextField>
+                      testId="cms-location-mode"
+                      options={LOCATION_MODES.map((mode) => ({
+                        value: mode,
+                        label: t(`item.locationModes.${mode}`),
+                      }))}
+                    />
                   ) : null}
 
                   {/* An info page has no price at all — the box is hidden, not

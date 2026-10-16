@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, apiHeaders, apiToken, ADMIN, HOTEL } from './helpers'
+import { API, apiHeaders, apiToken, ADMIN, HOTEL, pickOption } from './helpers'
 
 /**
  * Админка отеля: номера/QR, персонал, локации.
@@ -169,8 +169,8 @@ test.describe('Админка отеля', () => {
 
     await page.getByTestId('staff-assignment-add').click()
     // Выбираем первый отдел и уровень — селекты нативные.
-    await page.getByTestId('staff-assignment-point-0').selectOption({ index: 1 })
-    await page.getByTestId('staff-assignment-level-0').selectOption('lead')
+    await pickOption(page, 'staff-assignment-point-0', { index: 1 })
+    await pickOption(page, 'staff-assignment-level-0', { value: 'lead' })
 
     await page.getByTestId('staff-save').click()
     await expect(page.getByTestId(`staff-row-${email}`)).toBeVisible({ timeout: 15_000 })
@@ -221,7 +221,7 @@ test.describe('Админка отеля', () => {
     const title = `Личный ${uniq()}`
     made.channels.push(title)
     await page.getByTestId('cms-channel-title').fill(title)
-    await page.getByTestId('cms-channel-binding').selectOption('user')
+    await pickOption(page, 'cms-channel-binding', { value: 'user' })
 
     // Поле «Сотрудник» появляется вместе с привязкой и обязано быть ЖИВЫМ.
     const userSelect = page.getByTestId('channel-user-select')
@@ -229,8 +229,11 @@ test.describe('Админка отеля', () => {
     await expect(userSelect, 'поле «Сотрудник» заблокировано').toBeEnabled()
 
     // Свежесозданный сотрудник обязан быть В СПИСКЕ, а не «список непустой».
-    await expect(userSelect.locator(`option[value="${userId}"]`)).toHaveCount(1)
-    await userSelect.selectOption(userId)
+    // Список — с поиском (партия 54): варианты видны, когда он открыт.
+    await userSelect.click()
+    const userOption = page.getByRole('listbox').locator(`[role="option"][data-value="${userId}"]`)
+    await expect(userOption).toHaveCount(1)
+    await userOption.click()
     await page.getByTestId('cms-channel-save').click()
 
     // Правда — на сервере: канал создан и привязан к ТОМУ сотруднику.

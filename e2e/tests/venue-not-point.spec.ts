@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { CREDENTIALS, signInToCms, signInToTracker } from './helpers'
+import { CREDENTIALS, signInToCms, signInToTracker, pickOption } from './helpers'
 
 /**
  * УКУС ПАРТИИ 6: слова «точка исполнения» на экранах больше нет.
@@ -40,12 +40,15 @@ test.describe('Заведение вместо точки исполнения',
     // нечего и тест проходил бы вхолостую.
     await page.getByTestId('cms-channel-add').click()
     await expect(page.getByTestId('cms-channel-type')).toBeVisible({ timeout: 15_000 })
-    await page.getByTestId('cms-channel-binding').selectOption('point')
+    await pickOption(page, 'cms-channel-binding', { value: 'point' })
     await expect(page.getByTestId('cms-channel-point')).toBeVisible({ timeout: 15_000 })
+    // Варианты закрытого списка в текст страницы не попадают — открываем.
+    await page.getByTestId('cms-channel-point').click()
     expect(await bodyText(page)).not.toMatch(BANNED)
     // И в списке стоят имена заведений, а не служебные вторые имена.
-    expect(await page.getByTestId('cms-channel-point').innerText()).toMatch(/\S/)
-    await page.keyboard.press('Escape')
+    await expect(page.getByRole('listbox').getByRole('option').nth(1)).toHaveText(/\S/)
+    await page.keyboard.press('Escape') // список
+    await page.keyboard.press('Escape') // окно
 
     // Вкладка эскалаций: адресат правила.
     await page.getByTestId('cms-notifications-tab-escalation').click()
@@ -79,6 +82,7 @@ test.describe('Заведение вместо точки исполнения',
     // вокруг проверки делало её необязательной ровно там, где она нужна.
     const select = page.getByTestId('tracker-point-select')
     await expect(select).toBeVisible({ timeout: 20_000 })
-    await expect(select).not.toContainText(BANNED)
+    // У поля выбора подпись — в value, а не в тексте.
+    await expect(select).not.toHaveValue(BANNED)
   })
 })

@@ -35,7 +35,7 @@ test('город выбирается подсказкой, координаты
 
     await page.getByTestId('cms-home-units').click()
     await page.getByTestId('cms-home-units-f').click()
-    await expect(page.getByTestId('cms-home-units')).toContainText('Фаренгейт')
+    await expect(page.getByTestId('cms-home-units')).toHaveValue(/Фаренгейт/)
     // Ждём ОТВЕТ сервера, а не «кнопку нажали»: иначе проверка читает
     // настройки, пока сохранение ещё летит, и видит прежнее состояние.
     const savedResponse = page.waitForResponse(

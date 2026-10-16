@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, findItemByTitle, guestSession, HOTEL } from './helpers'
+import { ADMIN, API, apiHeaders, apiToken, DEMO_ROOM, findItemByTitle, guestSession, HOTEL, pickOption } from './helpers'
 
 /**
  * Номерной фонд: листание, человеческий порядок, переименование.
@@ -224,7 +224,7 @@ test.describe('Номерной фонд: заведение пачкой и м�
 
       await page.getByTestId('rooms-bulk-edit').click()
       await expect(page.getByTestId('rooms-bulk-edit-scope')).toContainText('60')
-      await page.getByTestId('rooms-bulk-category').selectOption(category.id)
+      await pickOption(page, 'rooms-bulk-category', { value: category.id })
       await page.getByTestId('rooms-bulk-apply').click()
 
       // Проверяем фактом на сервере: изменились все шестьдесят.

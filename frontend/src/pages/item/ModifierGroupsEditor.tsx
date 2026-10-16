@@ -6,7 +6,6 @@ import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
-import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -34,6 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+import { SelectField } from '@/components/SelectField';
 import { TranslatedField } from '@/components/TranslatedField';
 import {
   emptyGroup,
@@ -238,20 +238,19 @@ function GroupCard({
         />
 
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="flex-start">
-          <TextField
-            select
+          <SelectField<DraftGroup['selection']>
             size="small"
+            fullWidth={false}
             label={t('modifiers.selection')}
             value={group.selection}
-            onChange={(event) =>
-              onPatch({ selection: event.target.value as DraftGroup['selection'] })
-            }
+            onChange={(next) => onPatch({ selection: next })}
             sx={{ minWidth: 160 }}
-            inputProps={{ 'data-testid': `modifier-group-selection-${index}` }}
-          >
-            <MenuItem value="single">{t('modifiers.single')}</MenuItem>
-            <MenuItem value="multi">{t('modifiers.multi')}</MenuItem>
-          </TextField>
+            testId={`modifier-group-selection-${index}`}
+            options={[
+              { value: 'single', label: t('modifiers.single') },
+              { value: 'multi', label: t('modifiers.multi') },
+            ]}
+          />
 
           <FormControlLabel
             control={

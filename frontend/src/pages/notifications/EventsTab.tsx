@@ -11,7 +11,6 @@ import Collapse from '@mui/material/Collapse';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import LinearProgress from '@mui/material/LinearProgress';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Tab from '@mui/material/Tab';
@@ -30,6 +29,7 @@ import type {
 import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/auth/AuthProvider';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 import type { ContentLanguages } from '@/hooks/useBootstrap';
 import { CHANNEL_TYPES, type ChannelType } from '@/notifications/channels';
@@ -308,45 +308,35 @@ function EventCard({ item, channels, languages, canEdit }: EventCardProps) {
                 <Alert severity="info">{t('notifications.events.rulesHint')}</Alert>
               ) : (
                 <>
-                  <TextField
-                    select
+                  <SelectField<EventDraft['audience']>
                     size="small"
                     label={t('notifications.events.audience')}
                     value={draft.audience}
-                    onChange={(event) =>
-                      update({ audience: event.target.value as EventDraft['audience'] })
-                    }
+                    onChange={(next) => update({ audience: next })}
                     disabled={!canEdit}
                     helperText={t(`notifications.events.audienceHint.${draft.audience}`)}
-                    inputProps={{ 'data-testid': `event-audience-${code}` }}
-                  >
-                    {AUDIENCES.map((audience) => (
-                      <MenuItem key={audience} value={audience}>
-                        {t(`notifications.events.audiences.${audience}`)}
-                        {audience === item.audience ? ` · ${t('notifications.events.registry')}` : ''}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    testId={`event-audience-${code}`}
+                    options={AUDIENCES.map((audience) => ({
+                      value: audience,
+                      label: t(`notifications.events.audiences.${audience}`),
+                      secondary:
+                        audience === item.audience ? t('notifications.events.registry') : undefined,
+                    }))}
+                  />
                   {draft.audience === 'channel' ? (
-                    <TextField
-                      select
+                    <SelectField
                       size="small"
                       label={t('notifications.events.channel')}
                       value={draft.channelId}
-                      onChange={(event) => update({ channelId: event.target.value })}
+                      onChange={(next) => update({ channelId: next })}
                       disabled={!canEdit}
                       error={Boolean(fieldError('channel_id'))}
                       helperText={fieldError('channel_id')}
-                      inputProps={{ 'data-testid': `event-channel-${code}` }}
-                    >
-                      {channels
+                      testId={`event-channel-${code}`}
+                      options={channels
                         .filter((channel) => channel.is_active)
-                        .map((channel) => (
-                          <MenuItem key={channel.id} value={channel.id}>
-                            {channel.title}
-                          </MenuItem>
-                        ))}
-                    </TextField>
+                        .map((channel) => ({ value: channel.id, label: channel.title }))}
+                    />
                   ) : null}
                   <Stack spacing={0.75}>
                     <Typography variant="body2" color="text.secondary">

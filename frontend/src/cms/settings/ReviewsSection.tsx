@@ -2,15 +2,14 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { api } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 
 /**
  * Сбор отзывов: включён ли и что считать низкой оценкой.
@@ -76,25 +75,19 @@ export function ReviewsSection() {
               </Typography>
             </Stack>
 
-            <TextField
-              select
+            <SelectField
               size="small"
               label={t('settings.reviews.threshold')}
               value={String(data.low_rating_threshold)}
               // Порог имеет смысл только при включённом сборе: выключенный
               // отзыв не с чем сравнивать.
               disabled={!data.enabled || save.isPending}
-              onChange={(event) => save.mutate({ low_rating_threshold: Number(event.target.value) })}
-              SelectProps={{ inputProps: { 'data-testid': 'reviews-threshold' } }}
+              onChange={(next) => save.mutate({ low_rating_threshold: Number(next) })}
+              testId="reviews-threshold"
               helperText={t('settings.reviews.thresholdHint')}
               sx={{ maxWidth: 320 }}
-            >
-              {[1, 2, 3, 4, 5].map((value) => (
-                <MenuItem key={value} value={String(value)}>
-                  {value}
-                </MenuItem>
-              ))}
-            </TextField>
+              options={[1, 2, 3, 4, 5].map((value) => ({ value: String(value), label: String(value) }))}
+            />
 
             {error ? (
               <Alert severity="error" data-testid="reviews-error" onClose={() => setError(null)}>

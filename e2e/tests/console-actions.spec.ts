@@ -1,7 +1,7 @@
 import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API } from './helpers'
+import { API, pickOption } from './helpers'
 
 /**
  * Действия, которые API умел, а интерфейс не давал.
@@ -173,10 +173,7 @@ test.describe('Консоль: разрушающее и ключи', () => {
     await page.getByTestId('admin-nav-nodes').click()
     await page.getByTestId('admin-node-create').click()
 
-    // MUI-селект открывается списком, а не нативным `select`: тест-идентификатор
-    // стоит на скрытом input, кликать надо по видимой части.
-    await page.getByTestId('admin-node-hotel').locator('..').click()
-    await page.locator(`li[data-value="${hotel.id}"]`).click()
+    await pickOption(page, 'admin-node-hotel', { value: String(hotel.id) })
     await page.getByTestId('admin-node-name').fill('e2e-узел')
     await page.getByTestId('admin-node-create-submit').click()
 

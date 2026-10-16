@@ -34,6 +34,7 @@ import {
   type ChannelType,
 } from '@/notifications/channels';
 import { pickTranslated } from '@/utils/translated';
+import { SelectField } from '@/components/SelectField';
 
 export interface ChannelDialogProps {
   open: boolean;
@@ -143,13 +144,12 @@ export function ChannelDialog({
       <DialogContent dividers>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           <Stack direction="row" spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField<ChannelType>
               size="small"
+              fullWidth={false}
               label={t('notifications.channels.type')}
               value={draft.type}
-              onChange={(event) => {
-                const type = event.target.value as ChannelType;
+              onChange={(type) => {
                 // У группы нет сотрудника — привязка «сотрудник» сбрасывается на отель.
                 const keep = bindingsFor(type).includes(draft.binding);
                 patch({
@@ -159,16 +159,12 @@ export function ChannelDialog({
                 });
               }}
               sx={{ minWidth: 200 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'cms-channel-type' }}
-            >
-              {channelTypesFor(draft).map((type) => (
-                <option key={type} value={type}>
-                  {t(`notifications.channels.types.${type}`)}
-                </option>
-              ))}
-            </TextField>
+              testId="cms-channel-type"
+              options={channelTypesFor(draft).map((type) => ({
+                value: type,
+                label: t(`notifications.channels.types.${type}`),
+              }))}
+            />
 
             <TextField
               size="small"
@@ -212,60 +208,54 @@ export function ChannelDialog({
 
           {/* ── Binding ─────────────────────────────────────────────── */}
           <Stack direction="row" spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
-            <TextField
-              select
+            <SelectField<ChannelBinding>
               size="small"
+              fullWidth={false}
               label={t('notifications.channels.binding')}
               value={draft.binding}
-              onChange={(event) =>
+              onChange={(binding) =>
                 patch({
-                  binding: event.target.value as ChannelBinding,
+                  binding,
                   execution_point_id: null,
                   user_id: null,
                 })
               }
               sx={{ minWidth: 200 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'cms-channel-binding' }}
-            >
-              {bindingsFor(draft.type).map((binding) => (
-                <option key={binding} value={binding}>
-                  {t(`notifications.channels.bindings.${binding}`)}
-                </option>
-              ))}
-            </TextField>
+              testId="cms-channel-binding"
+              options={bindingsFor(draft.type).map((binding) => ({
+                value: binding,
+                label: t(`notifications.channels.bindings.${binding}`),
+              }))}
+            />
 
             {draft.binding === 'point' ? (
-              <TextField
-                select
+              <SelectField
                 size="small"
+                fullWidth={false}
                 label={t('notifications.channels.point')}
                 value={draft.execution_point_id ?? ''}
-                onChange={(event) => patch({ execution_point_id: event.target.value || null })}
+                onChange={(next) => patch({ execution_point_id: next || null })}
                 error={Boolean(errors.execution_point_id)}
                 helperText={errors.execution_point_id}
                 sx={{ minWidth: 240 }}
-                SelectProps={{ native: true }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ 'data-testid': 'cms-channel-point' }}
-              >
-                <option value="">{t('common.none')}</option>
-                {executionPoints.map((point) => (
-                  <option key={point.id} value={point.id}>
-                    {pickTranslated(point.title, displayLanguage, defaultLanguage) || point.code}
-                  </option>
-                ))}
-              </TextField>
+                testId="cms-channel-point"
+                options={[
+                  { value: '', label: t('common.none') },
+                  ...executionPoints.map((point) => ({
+                    value: point.id,
+                    label: pickTranslated(point.title, displayLanguage, defaultLanguage) || point.code,
+                  })),
+                ]}
+              />
             ) : null}
 
             {draft.binding === 'user' ? (
-              <TextField
-                select
+              <SelectField
                 size="small"
+                fullWidth={false}
                 label={t('notifications.channels.user')}
                 value={draft.user_id ?? ''}
-                onChange={(event) => patch({ user_id: event.target.value || null })}
+                onChange={(next) => patch({ user_id: next || null })}
                 error={Boolean(errors.user_id) || staffFailed}
                 helperText={
                   errors.user_id ??
@@ -277,17 +267,15 @@ export function ChannelDialog({
                 }
                 disabled={staffFailed || staffUsers.length === 0}
                 sx={{ minWidth: 240 }}
-                SelectProps={{ native: true }}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ 'data-testid': 'channel-user-select' }}
-              >
-                <option value="">{t('common.none')}</option>
-                {staffUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.full_name || user.email}
-                  </option>
-                ))}
-              </TextField>
+                testId="channel-user-select"
+                options={[
+                  { value: '', label: t('common.none') },
+                  ...staffUsers.map((user) => ({
+                    value: user.id,
+                    label: user.full_name || user.email,
+                  })),
+                ]}
+              />
             ) : null}
           </Stack>
 

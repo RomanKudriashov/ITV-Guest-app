@@ -792,6 +792,15 @@
   "/api/v1/platform/publications/{job_id}": [
     "GET"
   ],
+  "/api/v1/platform/reference/cities": [
+    "GET"
+  ],
+  "/api/v1/platform/reference/hotel-fields": [
+    "GET"
+  ],
+  "/api/v1/platform/reference/subdomain-check": [
+    "GET"
+  ],
   "/api/v1/platform/scheduler": [
     "GET"
   ],

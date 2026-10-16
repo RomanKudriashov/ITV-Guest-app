@@ -22,6 +22,7 @@
     "save": "保存",
     "cancel": "取消",
     "confirm": "确认",
+    "nothingFound": "未找到结果",
     "delete": "删除",
     "edit": "编辑",
     "back": "返回菜单",
@@ -2571,7 +2572,7 @@
       "adminEmail": "首位管理员邮箱",
       "currency": "货币",
       "languages": "语言",
-      "languagesHint": "用逗号分隔",
+      "languagesHint": "第一个为酒店默认语言",
       "timezone": "时区",
       "preset": "预设",
       "submit": "创建酒店",
@@ -2581,7 +2582,13 @@
       "doneHint": "酒店接下来在自己的后台完成配置。",
       "template": "起始模板",
       "doneServices": "已创建服务：{{count}}",
-      "donePasswordSent": "密码已发送给管理员：{{email}}"
+      "donePasswordSent": "密码已发送给管理员：{{email}}",
+      "subdomainFree": "可用：{{host}}",
+      "subdomainChecking": "正在检查…",
+      "subdomain_format": "{{min}}–{{max}} 个字符：拉丁字母、数字，连字符不能在首尾",
+      "subdomain_reserved": "该名称已被平台保留",
+      "hotel_exists": "已存在使用该子域名的酒店",
+      "emailInvalid": "地址无效"
     },
     "module": {
       "room_control": "客房控制",

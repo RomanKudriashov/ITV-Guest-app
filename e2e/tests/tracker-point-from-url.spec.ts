@@ -18,7 +18,8 @@ import { ADMIN, CREDENTIALS, login } from './helpers'
 const STORAGE_KEY = 'itv.tracker.point'
 
 async function selectedPoint(page: Page): Promise<string> {
-  return page.locator('[data-testid="tracker-point-select"] input').inputValue()
+  // Код точки — в `data-value` поля выбора; в самом поле — её название.
+  return (await page.getByTestId('tracker-point-select').getAttribute('data-value')) ?? ''
 }
 
 async function signIn(page: Page, credentials: { email: string; password: string }) {

@@ -115,8 +115,16 @@ def get_hotel(request: HttpRequest, hotel_id: str):
 @router.patch("/hotels/{hotel_id}", summary="Изменить профиль отеля")
 @requires(WRITE)
 def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
+    from apps.hotels.services.hotel_fields import clean_currency, clean_timezone
+
     hotel = console.get_hotel(hotel_id)
     data = payload.dict(exclude_unset=True)
+    # Пояс и валюта — из списка и на сервере тоже (партия 54): раньше профиль
+    # писал их как есть, и опечатка в поясе молча превращала отель в UTC.
+    if data.get("timezone") is not None:
+        data["timezone"] = clean_timezone(data["timezone"])
+    if data.get("currency") is not None:
+        data["currency"] = clean_currency(data["currency"])
     fields: list[str] = []
     # СТАРЫЕ ЗНАЧЕНИЯ СНИМАЕМ ДО ЗАПИСИ. Журнал, в котором сказано только
     # «изменено поле currency», через месяц не отвечает на вопрос, ради

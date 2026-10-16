@@ -159,9 +159,18 @@ GUEST_APP_BASE_DOMAINS = APP_DOMAINS or parse_bases(os.getenv("GUEST_APP_BASE_DO
 # Главная база — по ней строятся адреса наружу (QR, письма, бот).
 GUEST_APP_BASE_DOMAIN = GUEST_APP_BASE_DOMAINS[0]
 
-# Поддомены платформенного уровня — тенантом не считаются.
-GUEST_APP_RESERVED_SUBDOMAINS = set(
-    env_list("GUEST_APP_RESERVED_SUBDOMAINS", "www,api,admin,platform,static,media")
+# Поддомены платформенного уровня — тенантом не считаются, отель на них не
+# заводится. СПИСОК ОДИН (партия 54): по нему режет и разбор хоста, и создание
+# отеля (`hotels/services/hotel_fields.py`). Базовые имена — в коде, всегда;
+# переменная окружения только ДОБАВЛЯЕТ свои: стенд с явным списком в `.env`
+# не должен терять новые запреты молча.
+RESERVED_SUBDOMAINS_BASE = (
+    "www", "api", "admin", "platform", "control", "static", "media", "assets", "cdn",
+    "app", "ws", "mail", "smtp", "status", "help", "support", "docs", "login", "auth",
+    "root", "dashboard",
+)
+GUEST_APP_RESERVED_SUBDOMAINS = set(RESERVED_SUBDOMAINS_BASE) | set(
+    env_list("GUEST_APP_RESERVED_SUBDOMAINS", "")
 )
 
 # В деве удобно уметь подменять тенанта заголовком/квери-параметром, не поднимая

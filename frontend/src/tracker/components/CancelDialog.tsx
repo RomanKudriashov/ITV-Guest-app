@@ -4,10 +4,10 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import { useTranslation } from 'react-i18next';
 
+import { SelectField } from '@/components/SelectField';
 import { useDraftState } from '@/state/useDraftState';
 
 import { CANCEL_REASONS, type CancelReasonCode } from '../cancelReasons';
@@ -48,24 +48,21 @@ export function CancelDialog({
         <DialogContentText variant="body2" sx={{ mb: 2 }}>
           {t('tracker.cancel.body')}
         </DialogContentText>
-        <TextField
-          select
+        <SelectField<CancelReasonCode>
           autoFocus
-          fullWidth
           required
           label={t('tracker.cancel.reasonCode')}
           value={code}
-          onChange={(event) => setCode(event.target.value as CancelReasonCode)}
+          onChange={setCode}
           helperText={code ? ' ' : t('tracker.cancel.reasonRequired')}
           sx={{ mb: 2 }}
-          SelectProps={{ SelectDisplayProps: { 'data-testid': 'tracker-cancel-reason-code' } as object }}
-        >
-          {CANCEL_REASONS.map((item) => (
-            <MenuItem key={item} value={item} data-testid={`tracker-cancel-reason-${item}`}>
-              {t(`tracker.cancel.reasons.${item}`)}
-            </MenuItem>
-          ))}
-        </TextField>
+          testId="tracker-cancel-reason-code"
+          options={CANCEL_REASONS.map((item) => ({
+            value: item,
+            label: t(`tracker.cancel.reasons.${item}`),
+            testId: `tracker-cancel-reason-${item}`,
+          }))}
+        />
         <TextField
           fullWidth
           multiline

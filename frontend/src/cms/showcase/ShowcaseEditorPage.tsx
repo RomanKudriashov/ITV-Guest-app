@@ -9,7 +9,6 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
-import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
@@ -20,6 +19,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { fetchShowcase, putShowcase } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { CmsShowcaseTile } from '@/api/types';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 
 const SIZES: Array<CmsShowcaseTile['size']> = ['s', 'm', 'l'];
@@ -160,21 +160,16 @@ export function ShowcaseEditorPage({ embedded = false }: ShowcaseEditorPageProps
                   </Stack>
                 </Stack>
 
-                <TextField
-                  select
+                <SelectField<CmsShowcaseTile['size']>
                   size="small"
+                  fullWidth={false}
                   label={t('showcaseCms.size')}
                   value={tile.size}
-                  onChange={(e) => patch(tile.key, { size: e.target.value as CmsShowcaseTile['size'] })}
-                  inputProps={{ 'data-testid': `cms-showcase-size-${tile.key}` }}
+                  onChange={(next) => patch(tile.key, { size: next })}
+                  testId={`cms-showcase-size-${tile.key}`}
                   sx={{ width: 96 }}
-                >
-                  {SIZES.map((size) => (
-                    <MenuItem key={size} value={size}>
-                      {size.toUpperCase()}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  options={SIZES.map((size) => ({ value: size, label: size.toUpperCase() }))}
+                />
 
                 <Switch
                   checked={tile.shown}

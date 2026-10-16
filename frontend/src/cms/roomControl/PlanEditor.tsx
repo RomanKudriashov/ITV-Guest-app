@@ -11,7 +11,6 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -38,6 +37,7 @@ import {
 } from '@/api/grms';
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
+import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 import { pickTranslated } from '@/utils/translated';
 import { storefrontTokens } from '@/guest/storefrontTokens';
@@ -435,6 +435,8 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
   const baseUrl = preview && offUrl ? offUrl : litUrl;
 
   const zoneLit = (zone: PlanZone) => Boolean(litZones[zone.code || zone.controlId]);
+  // Один список управлений на четыре поля привязки (зона, шторы, блэкаут, воздух).
+  const controlOptions = plan.controls.map((control) => ({ value: control.controlId, label: control.title }));
 
   return (
     <Stack spacing={2} data-testid="grms-plan-editor">
@@ -853,22 +855,18 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                   value={draft.zones[selected.index].code}
                   onChange={(e) => patchZone(selected.index, { code: e.target.value })}
                 />
-                <TextField
-                  select
+                <SelectField
                   size="small"
                   label={t('roomControl.plan.control')}
                   value={draft.zones[selected.index].controlId}
-                  onChange={(e) => patchZone(selected.index, { controlId: e.target.value })}
-                  data-testid="grms-plan-form-control"
+                  onChange={(next) => patchZone(selected.index, { controlId: next })}
+                  testId="grms-plan-form-control"
                   helperText={t('roomControl.plan.controlHint')}
-                >
-                  <MenuItem value="">{t('roomControl.plan.unbound')}</MenuItem>
-                  {plan.controls.map((control) => (
-                    <MenuItem key={control.controlId} value={control.controlId}>
-                      {control.title}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  options={[
+                    { value: '', label: t('roomControl.plan.unbound') },
+                    ...controlOptions,
+                  ]}
+                />
                 <RectFields
                   rect={draft.zones[selected.index].hit}
                   onChange={(hit) => patchZone(selected.index, { hit })}
@@ -884,49 +882,37 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
                   value={draft.windows[selected.index].code}
                   onChange={(e) => patchWindow(selected.index, { code: e.target.value })}
                 />
-                <TextField
-                  select
+                <SelectField<PlanWindow['orientation']>
                   size="small"
                   label={t('roomControl.plan.orientation')}
                   value={draft.windows[selected.index].orientation}
-                  onChange={(e) =>
-                    patchWindow(selected.index, {
-                      orientation: e.target.value as PlanWindow['orientation'],
-                    })
-                  }
-                >
-                  <MenuItem value="horizontal">{t('roomControl.plan.horizontal')}</MenuItem>
-                  <MenuItem value="vertical">{t('roomControl.plan.vertical')}</MenuItem>
-                </TextField>
-                <TextField
-                  select
+                  onChange={(next) => patchWindow(selected.index, { orientation: next })}
+                  options={[
+                    { value: 'horizontal', label: t('roomControl.plan.horizontal') },
+                    { value: 'vertical', label: t('roomControl.plan.vertical') },
+                  ]}
+                />
+                <SelectField
                   size="small"
                   label={t('roomControl.plan.curtain')}
                   value={draft.windows[selected.index].curtainId}
-                  onChange={(e) => patchWindow(selected.index, { curtainId: e.target.value })}
-                  data-testid="grms-plan-form-curtain"
-                >
-                  <MenuItem value="">{t('roomControl.plan.unbound')}</MenuItem>
-                  {plan.controls.map((control) => (
-                    <MenuItem key={control.controlId} value={control.controlId}>
-                      {control.title}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
+                  onChange={(next) => patchWindow(selected.index, { curtainId: next })}
+                  testId="grms-plan-form-curtain"
+                  options={[
+                    { value: '', label: t('roomControl.plan.unbound') },
+                    ...controlOptions,
+                  ]}
+                />
+                <SelectField
                   size="small"
                   label={t('roomControl.plan.blackout')}
                   value={draft.windows[selected.index].blackoutId}
-                  onChange={(e) => patchWindow(selected.index, { blackoutId: e.target.value })}
-                >
-                  <MenuItem value="">{t('roomControl.plan.noBlackout')}</MenuItem>
-                  {plan.controls.map((control) => (
-                    <MenuItem key={control.controlId} value={control.controlId}>
-                      {control.title}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  onChange={(next) => patchWindow(selected.index, { blackoutId: next })}
+                  options={[
+                    { value: '', label: t('roomControl.plan.noBlackout') },
+                    ...controlOptions,
+                  ]}
+                />
                 <RectFields
                   rect={draft.windows[selected.index]}
                   onChange={(rect) => patchWindow(selected.index, rect)}
@@ -936,21 +922,17 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
 
             {selected?.kind === 'point' && draft.points[selected.index] && (
               <Stack spacing={1.5} data-testid="grms-plan-form-point">
-                <TextField
-                  select
+                <SelectField
                   size="small"
                   label={t('roomControl.plan.airPoint')}
                   value={draft.points[selected.index].controlId}
-                  onChange={(e) => patchPoint(selected.index, { controlId: e.target.value })}
-                  data-testid="grms-plan-form-air"
-                >
-                  <MenuItem value="">{t('roomControl.plan.unbound')}</MenuItem>
-                  {plan.controls.map((control) => (
-                    <MenuItem key={control.controlId} value={control.controlId}>
-                      {control.title}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  onChange={(next) => patchPoint(selected.index, { controlId: next })}
+                  testId="grms-plan-form-air"
+                  options={[
+                    { value: '', label: t('roomControl.plan.unbound') },
+                    ...controlOptions,
+                  ]}
+                />
                 <Stack direction="row" spacing={1}>
                   <TextField
                     size="small"
@@ -1005,27 +987,20 @@ export function PlanEditor({ code, types }: { code: string; types: GrmsType[] })
               {t('roomControl.plan.copyHint')}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-              <TextField
-                select
+              <SelectField
                 size="small"
-                fullWidth
                 label={t('roomControl.plan.copyFrom')}
                 value={copySource}
-                onChange={(e) => setCopySource(e.target.value)}
-                data-testid="grms-plan-copy-source"
-              >
-                {types
+                onChange={setCopySource}
+                testId="grms-plan-copy-source"
+                options={types
                   .filter((type) => type.code !== code)
-                  .map((type) => (
-                    <MenuItem key={type.code} value={type.code}>
-                      {pickTranslated(
-                        type.title,
-                        languages.displayLanguage,
-                        languages.defaultCode,
-                      ) || type.code}
-                    </MenuItem>
-                  ))}
-              </TextField>
+                  .map((type) => ({
+                    value: type.code,
+                    label:
+                      pickTranslated(type.title, languages.displayLanguage, languages.defaultCode) || type.code,
+                  }))}
+              />
               <Button
                 variant="outlined"
                 disabled={!copySource || copyMutation.isPending}

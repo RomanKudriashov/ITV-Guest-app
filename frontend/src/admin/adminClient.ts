@@ -291,6 +291,27 @@ export const listHotels = (limit = 100) => request<Page<HotelBrief>>(`/hotels?li
 export const getHotel = (id: string) => request<HotelProfile>(`/hotels/${id}`);
 export const createHotel = (body: CreateHotelInput) =>
   request<CreateHotelResult>('/hotels', 'POST', body);
+
+/** Списки для формы отеля — с сервера, из тех же источников, что проверка (партия 54). */
+export interface HotelFieldReference {
+  timezones: string[];
+  currencies: { code: string; minor_units: number }[];
+  languages: string[];
+  subdomain: { min: number; max: number; pattern: string; reserved: string[] };
+}
+export const getHotelFieldReference = () => request<HotelFieldReference>('/reference/hotel-fields');
+
+export type SubdomainProblem = 'subdomain_format' | 'subdomain_reserved' | 'hotel_exists';
+export interface SubdomainStatus {
+  value: string;
+  ok: boolean;
+  code: SubdomainProblem | null;
+}
+export const checkSubdomain = (value: string) =>
+  request<SubdomainStatus>(`/reference/subdomain-check?value=${encodeURIComponent(value)}`);
+
+/** Города отелей флота — для правила группы. */
+export const getFleetCities = () => request<{ cities: string[] }>('/reference/cities');
 export interface HotelPatch {
   name?: string;
   /** Город — переводимое поле, поэтому словарь: `{ru: "Москва"}`. */

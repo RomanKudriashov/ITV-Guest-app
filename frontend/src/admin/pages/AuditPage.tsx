@@ -5,13 +5,13 @@ import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { accent, ink, panelSx, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
 import { getAudit, getAuditActions } from '../adminClient';
 
 /**
@@ -84,24 +84,24 @@ export function AuditPage() {
       </Typography>
 
       <Box sx={{ ...panelSx, mt: 2, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-        <TextField
-          select
+        <SelectField
           size="small"
+          fullWidth={false}
           label={t('admin.audit.filterAction')}
           value={action}
-          onChange={(event) => {
-            setFilter({ action: event.target.value });
+          onChange={(next) => {
+            setFilter({ action: next });
           }}
-          SelectProps={{ inputProps: { 'data-testid': 'admin-audit-filter-action' } }}
+          testId="admin-audit-filter-action"
           sx={{ minWidth: 220 }}
-        >
-          <MenuItem value="">{t('admin.audit.filterAny')}</MenuItem>
-          {(actions.data ?? []).map((code) => (
-            <MenuItem key={code} value={code}>
-              {t(`admin.action.${code}`, { defaultValue: code })}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={[
+            { value: '', label: t('admin.audit.filterAny') },
+            ...(actions.data ?? []).map((code) => ({
+              value: code,
+              label: t(`admin.action.${code}`, { defaultValue: code }),
+            })),
+          ]}
+        />
         <TextField
           size="small"
           type="date"

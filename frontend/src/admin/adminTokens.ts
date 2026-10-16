@@ -344,8 +344,10 @@ export const fieldSx = {
     '&:hover fieldset': { borderColor: ink.low },
     '&.Mui-focused fieldset': { borderColor: accent.main, borderWidth: '1px' },
   },
-  '& .MuiInputBase-input': { ...typo.body, color: ink.hi },
-  '& .MuiInputLabel-root': { ...typo.caption, color: ink.mid },
+  // Кегль поля и подписи — из темы (`theme/density`), не свой: свои 13.5 и
+  // 12.5 сдвигали подпись с центра и сужали вырез в рамке (партия 54).
+  '& .MuiInputBase-input': { color: ink.hi },
+  '& .MuiInputLabel-root': { color: ink.mid },
   '& .MuiInputLabel-root.Mui-focused': { color: accent.soft },
   '& .MuiFormHelperText-root': { ...typo.caption, color: ink.low, mx: 0 },
 } as const;

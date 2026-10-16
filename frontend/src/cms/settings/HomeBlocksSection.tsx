@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -9,12 +9,13 @@ import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Autocomplete from '@mui/material/Autocomplete';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { SelectField } from '@/components/SelectField';
+import { timezoneOptions } from '@/components/hotelFieldOptions';
 
 import { ApiError } from '@/api/client';
 import {
@@ -59,6 +60,7 @@ export function HomeBlocksSection() {
   const { data: bootstrap } = useBootstrap();
   const contentLanguages = useContentLanguages(bootstrap);
   const query = useQuery({ queryKey: queryKeys.homeSettings, queryFn: fetchHomeSettings });
+  const timezoneChoices = useMemo(() => timezoneOptions(query.data?.timezone_options ?? []), [query.data]);
 
   const [weather, setWeather] = useState(false);
   const [roomStatus, setRoomStatus] = useState(true);
@@ -208,42 +210,34 @@ export function HomeBlocksSection() {
             ) : null}
           </Stack>
 
-          <TextField
-            select
+          <SelectField
             size="small"
             label={t('cms.homeBlocks.units')}
             value={units}
-            onChange={(event) => setUnits(event.target.value)}
+            onChange={setUnits}
             helperText={t('cms.homeBlocks.unitsHint')}
             sx={{ maxWidth: 280 }}
-            SelectProps={{ SelectDisplayProps: { 'data-testid': 'cms-home-units' } as never }}
-          >
-            <MenuItem value="c" data-testid="cms-home-units-c">
-              {t('cms.homeBlocks.celsius')}
-            </MenuItem>
-            <MenuItem value="f" data-testid="cms-home-units-f">
-              {t('cms.homeBlocks.fahrenheit')}
-            </MenuItem>
-          </TextField>
+            testId="cms-home-units"
+            options={[
+              { value: 'c', label: t('cms.homeBlocks.celsius'), testId: 'cms-home-units-c' },
+              { value: 'f', label: t('cms.homeBlocks.fahrenheit'), testId: 'cms-home-units-f' },
+            ]}
+          />
 
           {/*
             Часовой пояс — ИМЕНЕМ зоны, а не смещением: смещение врёт дважды в
             год на переходе и не умеет получаса (Индия, Иран).
           */}
-          <Autocomplete
-            options={query.data?.timezone_options ?? []}
-            value={timezone || null}
-            onChange={(_event, next) => setTimezone(next ?? '')}
-            disableClearable={false}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                size="small"
-                label={t('cms.homeBlocks.timezone')}
-                helperText={t('cms.homeBlocks.timezoneHint')}
-                inputProps={{ ...params.inputProps, 'data-testid': 'cms-home-timezone' }}
-              />
-            )}
+          {/* Тот же список, что в NaviRoom Control: «Europe/Moscow (UTC+3)». */}
+          <SelectField
+            size="small"
+            options={timezoneChoices}
+            value={timezone}
+            onChange={setTimezone}
+            clearable
+            label={t('cms.homeBlocks.timezone')}
+            helperText={t('cms.homeBlocks.timezoneHint')}
+            testId="cms-home-timezone"
           />
 
           {/*

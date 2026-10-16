@@ -32,6 +32,7 @@ import {
   logStatusSpec,
   type LogStatus,
 } from '@/notifications/log';
+import { SelectField } from '@/components/SelectField';
 
 /** Kept short so «ступень сработала → ушло в два канала» stays legible live. */
 const REFETCH_MS = 10_000;
@@ -103,24 +104,22 @@ export function LogTab({ channels }: LogTabProps) {
               sx={{ width: 220 }}
               inputProps={{ 'data-testid': 'cms-log-order-filter' }}
             />
-            <TextField
-              select
+            <SelectField<LogStatus | ''>
               size="small"
+              fullWidth={false}
               label={t('notifications.log.status')}
               value={status}
-              onChange={(event) => setStatus(event.target.value as LogStatus | '')}
+              onChange={(next) => setStatus(next)}
               sx={{ width: 200 }}
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ 'data-testid': 'cms-log-status-filter' }}
-            >
-              <option value="">{t('notifications.log.allStatuses')}</option>
-              {LOG_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`notifications.log.statuses.${value}`)}
-                </option>
-              ))}
-            </TextField>
+              testId="cms-log-status-filter"
+              options={[
+                { value: '', label: t('notifications.log.allStatuses') },
+                ...LOG_STATUSES.map((value) => ({
+                  value,
+                  label: t(`notifications.log.statuses.${value}`),
+                })),
+              ]}
+            />
           </Stack>
         </Stack>
         <Divider sx={{ mb: 1 }} />

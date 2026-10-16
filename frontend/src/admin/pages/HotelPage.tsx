@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
-import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -18,6 +17,8 @@ import { useRights } from '../useRights';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { MultiSelectField, SelectField } from '@/components/SelectField';
+import { currencyOptions, languageOptions, timezoneOptions } from '@/components/hotelFieldOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
@@ -30,6 +31,7 @@ import {
   getActivity,
   getHotel,
   getHotelAdmins,
+  getHotelFieldReference,
   getModules,
   getTariffs,
   removeHotelAdmin,
@@ -216,6 +218,19 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     languages: hotel.languages.map((lang) => lang.code).join(', '),
   });
   const [saveError, setSaveError] = useState<string | null>(null);
+  const { i18n } = useTranslation();
+  const reference = useQuery({
+    queryKey: ['admin', 'reference', 'hotel-fields'],
+    queryFn: getHotelFieldReference,
+    staleTime: Infinity,
+  });
+  const uiLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
+  const timezones = useMemo(() => timezoneOptions(reference.data?.timezones ?? []), [reference.data]);
+  const currencies = useMemo(
+    () => currencyOptions((reference.data?.currencies ?? []).map((c) => c.code), uiLanguage),
+    [reference.data, uiLanguage],
+  );
+  const languageChoices = useMemo(() => languageOptions(reference.data?.languages ?? []), [reference.data]);
 
   /*
     ФОРМУ ВИДИТ ТОТ, КОМУ СЕРВЕР РАЗРЕШИТ.
@@ -280,8 +295,8 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
         // — вторая форма ввода ради города, который он пишет по-русски,
         // означала бы четыре поля вместо одного.
         city: draft.city.trim() ? { [hotel.default_language]: draft.city.trim() } : {},
-        timezone: draft.timezone.trim(),
-        currency: draft.currency.trim().toUpperCase(),
+        timezone: draft.timezone,
+        currency: draft.currency,
         currency_minor_units: Number(draft.currency_minor_units),
         languages: draft.languages
           .split(/[,\s]+/)
@@ -394,52 +409,63 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
         <Typography sx={{ ...typo.caption, color: ink.low, mb: 1.25 }}>
           {t('admin.hotel.field.subdomainWhy')}
         </Typography>
-        <TextField
+        {/* Пояс, валюта, языки — выбором из справочника сервера, а не вводом
+            (партия 54): опечатка в поясе молча делала отель UTC-шным. */}
+        <SelectField
           size="small"
-          fullWidth
           label={t('admin.hotel.field.timezone')}
           value={draft.timezone}
-          onChange={(event) => setDraft((prev) => ({ ...prev, timezone: event.target.value }))}
-          inputProps={{ 'data-testid': 'admin-hotel-timezone-input' }}
+          onChange={(next) => setDraft((prev) => ({ ...prev, timezone: next }))}
+          options={timezones}
+          loading={reference.isLoading}
+          testId="admin-hotel-timezone-input"
           sx={{ mb: 1.25 }}
         />
         <Box sx={{ display: 'flex', gap: 1.25, mb: 1.25 }}>
-          <TextField
+          <SelectField
             size="small"
+            fullWidth={false}
             label={t('admin.hotel.field.currency')}
             value={draft.currency}
-            onChange={(event) => setDraft((prev) => ({ ...prev, currency: event.target.value }))}
-            inputProps={{ 'data-testid': 'admin-hotel-currency-input', maxLength: 3 }}
-            sx={{ width: 120 }}
+            onChange={(next) =>
+              setDraft((prev) => ({
+                ...prev,
+                currency: next,
+                // Размерность — вместе с валютой, из того же справочника: иена
+                // без копеек, динар с тремя знаками. Поправить можно рядом.
+                currency_minor_units:
+                  reference.data?.currencies.find((c) => c.code === next)?.minor_units ?? prev.currency_minor_units,
+              }))
+            }
+            options={currencies}
+            loading={reference.isLoading}
+            testId="admin-hotel-currency-input"
+            sx={{ width: 280 }}
           />
           {/* Размерность валюты — рядом с самой валютой: менять их порознь
               бессмысленно, цены хранятся в минимальных единицах. */}
-          <TextField
-            select
+          <SelectField
             size="small"
+            fullWidth={false}
             label={t('admin.hotel.field.minorUnits')}
             value={String(draft.currency_minor_units)}
-            onChange={(event) =>
-              setDraft((prev) => ({ ...prev, currency_minor_units: Number(event.target.value) }))
-            }
-            SelectProps={{ inputProps: { 'data-testid': 'admin-hotel-minor-units' } }}
+            onChange={(next) => setDraft((prev) => ({ ...prev, currency_minor_units: Number(next) }))}
+            testId="admin-hotel-minor-units"
             helperText={t('admin.hotel.field.minorUnitsHint')}
             sx={{ width: 200 }}
-          >
-            {[0, 2, 3].map((value) => (
-              <MenuItem key={value} value={String(value)}>
-                {value}
-              </MenuItem>
-            ))}
-          </TextField>
+            options={[0, 2, 3].map((value) => ({ value: String(value), label: String(value) }))}
+          />
         </Box>
-        <TextField
+        <MultiSelectField
           size="small"
-          fullWidth
           label={t('admin.hotel.field.languages')}
-          value={draft.languages}
-          onChange={(event) => setDraft((prev) => ({ ...prev, languages: event.target.value }))}
-          inputProps={{ 'data-testid': 'admin-hotel-languages-input' }}
+          // Черновик держит языки строкой «ru, en» — так он хранился и раньше,
+          // и сохранённые черновики не ломаются.
+          value={draft.languages.split(/[,\s]+/).filter(Boolean)}
+          onChange={(next) => setDraft((prev) => ({ ...prev, languages: next.join(', ') }))}
+          options={languageChoices}
+          loading={reference.isLoading}
+          testId="admin-hotel-languages-input"
           helperText={t('admin.hotel.field.languagesHint')}
         />
 
@@ -885,25 +911,22 @@ function TariffTab({ id }: { id: string }) {
         <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
           {t('admin.hotel.tariffHint')}
         </Typography>
-        <TextField
-          select
+        <SelectField
           size="small"
-          fullWidth
           label={t('admin.hotel.tariffLabel')}
           value={codes.includes(selected) ? selected : ''}
-          onChange={(e) => {
-            setNext(e.target.value);
+          onChange={(next) => {
+            setNext(next);
             setWarnings([]);
           }}
-          SelectProps={{ inputProps: { 'data-testid': 'admin-tariff-select' } }}
+          testId="admin-tariff-select"
           sx={{ maxWidth: 320 }}
-        >
-          {(grid.data ?? []).map((row) => (
-            <MenuItem key={row.code} value={row.code} data-testid={`admin-tariff-option-${row.code}`}>
-              {row.title[i18n.language] ?? row.title.en ?? row.code}
-            </MenuItem>
-          ))}
-        </TextField>
+          options={(grid.data ?? []).map((row) => ({
+            value: row.code,
+            label: row.title[i18n.language] ?? row.title.en ?? row.code,
+            testId: `admin-tariff-option-${row.code}`,
+          }))}
+        />
 
         {data.trial_ends_at ? (
           <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.25 }}>

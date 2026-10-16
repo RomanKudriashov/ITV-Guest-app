@@ -172,7 +172,7 @@ test.describe('Дашборд: пульт', () => {
     // а выбранную точку.
     await venue.click()
     await expect
-      .poll(() => page.locator('[data-testid="tracker-point-select"] input').inputValue(), {
+      .poll(() => page.getByTestId('tracker-point-select').getAttribute('data-value'), {
         timeout: 20_000,
       })
       .toBe('kitchen')

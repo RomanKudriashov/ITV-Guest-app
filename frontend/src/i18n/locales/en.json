@@ -22,6 +22,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "nothingFound": "Nothing found",
     "delete": "Delete",
     "edit": "Edit",
     "back": "Back to menu",
@@ -2598,7 +2599,7 @@
       "adminEmail": "First admin email",
       "currency": "Currency",
       "languages": "Languages",
-      "languagesHint": "comma separated",
+      "languagesHint": "the first one is the hotel default",
       "timezone": "Timezone",
       "preset": "Preset",
       "submit": "Create hotel",
@@ -2608,7 +2609,13 @@
       "doneHint": "The hotel sets itself up from here in its CMS.",
       "template": "Starting template",
       "doneServices": "Services created: {{count}}",
-      "donePasswordSent": "Password sent to the administrator at {{email}}"
+      "donePasswordSent": "Password sent to the administrator at {{email}}",
+      "subdomainFree": "Available: {{host}}",
+      "subdomainChecking": "Checking…",
+      "subdomain_format": "{{min}} to {{max}} characters: Latin letters, digits, a hyphen not at the ends",
+      "subdomain_reserved": "This name is reserved by the platform",
+      "hotel_exists": "A hotel with this subdomain already exists",
+      "emailInvalid": "Invalid address"
     },
     "module": {
       "room_control": "Room control",

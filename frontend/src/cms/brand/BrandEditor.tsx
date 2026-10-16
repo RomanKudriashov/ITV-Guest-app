@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
-import Select from '@mui/material/Select';
 import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -16,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import Button from '@mui/material/Button';
 
 import { uploadBrandFont } from '@/api/brand';
+import { SelectField } from '@/components/SelectField';
 import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
 import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
@@ -237,6 +234,10 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
     () => (custom ? [...fonts, { family: custom.family, name: custom.name }] : fonts),
     [fonts, custom],
   );
+  const fontOptions = useMemo(
+    () => choices.map((font) => ({ value: font.family, label: font.name })),
+    [choices],
+  );
 
   const onFontFile = async (file: File) => {
     setFontBusy(true);
@@ -377,22 +378,14 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
 
       {/* Background */}
       <Section title={t('brand.sections.background')} where={t('brand.where.background')}>
-        <FormControl size="small" fullWidth>
-          <InputLabel id="brand-bg-kind-label">{t('brand.bgKind')}</InputLabel>
-          <Select
-            labelId="brand-bg-kind-label"
-            label={t('brand.bgKind')}
-            value={bgKind}
-            onChange={(e) => setBackground({ kind: e.target.value as BackgroundKind })}
-            data-testid="brand-bg-kind"
-          >
-            {BACKGROUND_KINDS.map((kind) => (
-              <MenuItem key={kind} value={kind}>
-                {t(`brand.bg.${kind}`)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SelectField<BackgroundKind>
+          size="small"
+          label={t('brand.bgKind')}
+          value={bgKind}
+          onChange={(next) => setBackground({ kind: next })}
+          testId="brand-bg-kind"
+          options={BACKGROUND_KINDS.map((kind) => ({ value: kind, label: t(`brand.bg.${kind}`) }))}
+        />
 
         {/*
           КАРТИНКА ЛЕЖИТ, НО НЕ ВИДНА — и об этом надо сказать.
@@ -603,42 +596,28 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
 
       {/* Fonts */}
       <Section title={t('brand.sections.fonts')} where={t('brand.where.fonts')}>
-        <FormControl size="small" fullWidth>
-          <InputLabel id="brand-font-body-label">{t('brand.fontBody')}</InputLabel>
-          <Select
-            labelId="brand-font-body-label"
-            label={t('brand.fontBody')}
-            value={choices.some((f) => f.family === merged.typography.fontFamily)
-              ? merged.typography.fontFamily
-              : ''}
-            onChange={(e) => setTypography({ fontFamily: e.target.value })}
-            data-testid="brand-font-body"
-          >
-            {choices.map((font) => (
-              <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
-                {font.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl size="small" fullWidth>
-          <InputLabel id="brand-font-heading-label">{t('brand.fontHeading')}</InputLabel>
-          <Select
-            labelId="brand-font-heading-label"
-            label={t('brand.fontHeading')}
-            value={choices.some((f) => f.family === merged.typography.headingFontFamily)
-              ? merged.typography.headingFontFamily
-              : ''}
-            onChange={(e) => setTypography({ headingFontFamily: e.target.value })}
-            data-testid="brand-font-heading"
-          >
-            {choices.map((font) => (
-              <MenuItem key={font.family} value={font.family} sx={{ fontFamily: font.family }}>
-                {font.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {/* Подпись шрифта — текстом: поле выбора одно на весь фронт, образец
+            шрифта виден в предпросмотре справа. */}
+        <SelectField
+          size="small"
+          label={t('brand.fontBody')}
+          value={choices.some((f) => f.family === merged.typography.fontFamily)
+            ? merged.typography.fontFamily
+            : ''}
+          onChange={(next) => setTypography({ fontFamily: next })}
+          testId="brand-font-body"
+          options={fontOptions}
+        />
+        <SelectField
+          size="small"
+          label={t('brand.fontHeading')}
+          value={choices.some((f) => f.family === merged.typography.headingFontFamily)
+            ? merged.typography.headingFontFamily
+            : ''}
+          onChange={(next) => setTypography({ headingFontFamily: next })}
+          testId="brand-font-heading"
+          options={fontOptions}
+        />
 
         {/*
           СВОЙ ШРИФТ — ДОБАВКА К СПИСКУ, А НЕ ОБХОД ЕГО.
@@ -802,22 +781,14 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
 
       {/* Default mode */}
       <Section title={t('brand.sections.defaultMode')} where={t('brand.where.defaultMode')}>
-        <FormControl size="small" fullWidth>
-          <InputLabel id="brand-default-mode-label">{t('brand.defaultMode')}</InputLabel>
-          <Select
-            labelId="brand-default-mode-label"
-            label={t('brand.defaultMode')}
-            value={merged.brand?.defaultMode ?? 'light'}
-            onChange={(e) => setBrandExtras({ defaultMode: e.target.value as 'light' | 'dark' | 'system' })}
-            data-testid="brand-default-mode"
-          >
-            {DEFAULT_MODES.map((m) => (
-              <MenuItem key={m} value={m}>
-                {t(`brand.mode.${m}`)}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <SelectField<(typeof DEFAULT_MODES)[number]>
+          size="small"
+          label={t('brand.defaultMode')}
+          value={merged.brand?.defaultMode ?? 'light'}
+          onChange={(next) => setBrandExtras({ defaultMode: next })}
+          testId="brand-default-mode"
+          options={DEFAULT_MODES.map((m) => ({ value: m, label: t(`brand.mode.${m}`) }))}
+        />
       </Section>
     </Stack>
   );

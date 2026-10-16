@@ -20,12 +20,14 @@ from __future__ import annotations
 import secrets
 from dataclasses import dataclass
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from apps.accounts.models import User
 from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.brand_library import preset_tokens
+from apps.hotels.services.hotel_fields import clean_currency, clean_email, clean_subdomain, clean_timezone
 from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Service
 from apps.orders.services.status_flows import ensure_status_flows
 
@@ -50,9 +52,18 @@ def _generate_password() -> str:
 
 
 def _clean_languages(languages) -> list[str]:
+    # Белый список (партия 54): интерфейс и словари есть только на этих языках.
+    # Код «de» раньше заводил язык с названием «DE», которого не видел никто.
+    supported = list(settings.SUPPORTED_LANGUAGES)
     seen: list[str] = []
     for code in languages:
         code = str(code).strip().lower()
+        if code and code not in supported:
+            raise ValidationError(
+                f"Язык «{code}» не поддерживается. Доступны: {', '.join(supported)}",
+                field="languages",
+                code="language_unsupported",
+            )
         if code and code not in seen:
             seen.append(code)
     if not seen:
@@ -121,15 +132,15 @@ def provision_hotel(
     полу-созданного отеля. `exist_ok=True` (сид): дозаполняет недостающее
     идемпотентно.
     """
-    subdomain = subdomain.strip().lower()
-    name = name.strip()
-    admin_email = admin_email.strip().lower()
-    if not subdomain:
-        raise ValidationError("Нужен поддомен", field="subdomain")
+    # Поля, которые форма даёт выбрать из списка, проверяются и здесь — для
+    # консоли, CLI и сидов одинаково (партия 54).
+    subdomain = clean_subdomain(subdomain)
+    name = name.strip() if isinstance(name, str) else name
     if not name:
         raise ValidationError("Нужно название", field="name")
-    if not admin_email:
-        raise ValidationError("Нужен email администратора", field="admin_email")
+    admin_email = clean_email(admin_email)
+    timezone = clean_timezone(timezone)
+    currency = clean_currency(currency)
 
     tokens = preset_tokens(preset)
     if tokens is None:
