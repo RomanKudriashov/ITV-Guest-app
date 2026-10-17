@@ -12,6 +12,7 @@ import { useGuestCatalog } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { errorMessage } from '../errors';
 import { openingLabel } from '../nextOpening';
+import { resolveMenuView, useMenuViewChoice } from '../menuView/menuViewStore';
 
 /**
  * Пространство одного заведения — главная починка R5.
@@ -50,6 +51,8 @@ export function VenuePage() {
   const { code = '' } = useParams<{ code: string }>();
   const { t } = useTranslation();
   const { canOrder } = useGuestSession();
+  // Выбор гостя — один на всё приложение и сильнее вида заведения (партия 57).
+  const [menuViewChoice, setMenuViewChoice] = useMenuViewChoice();
 
   // Идентичность заведения читаем товарным каталогом: он отвечает всегда, даже
   // когда товаров у заведения нет, и несёт блок `venue`.
@@ -81,10 +84,20 @@ export function VenuePage() {
   }
 
   const content = CONTENT_BY_TYPE[venue.type] ?? 'product';
+  /*
+    ВИД МЕНЮ (партия 57). Переключатель — только у товарных заведений: сервер
+    шлёт `menu_view: null` услугам, слотам и инфо. Сверяем ещё и тип
+    содержимого: мозаика бывает только у товаров.
+  */
+  const hasMenuView = content === 'product' && venue.menu_view != null;
+  const menuView = hasMenuView ? resolveMenuView(menuViewChoice, venue.menu_view) : 'cards';
 
   return (
     <Box data-testid="guest-venue" data-venue-type={venue.type} data-content={content}>
-      <VenueHeader venue={venue} />
+      <VenueHeader
+        venue={venue}
+        menuView={hasMenuView ? { value: menuView, onChange: setMenuViewChoice } : null}
+      />
 
       {/*
         ЗАВЕДЕНИЕ ЗАКРЫТО — СКАЗАТЬ ЭТО СТРОКОЙ, А НЕ ПИЛЮЛЕЙ В УГЛУ.
@@ -151,7 +164,7 @@ export function VenuePage() {
         (см. offerings). Отдельная страница на тип означала бы четыре копии
         фильтров, локализации и расписаний.
       */}
-      <CatalogPage type={content} point={code} embedded />
+      <CatalogPage type={content} point={code} embedded view={menuView} />
     </Box>
   );
 }

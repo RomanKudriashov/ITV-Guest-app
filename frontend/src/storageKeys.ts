@@ -24,4 +24,7 @@ export const STORAGE_KEYS = {
   cmsNavCollapsed: 'itv.cms.nav-collapsed',
   /** Левое меню NaviRoom Control свёрнуто до иконок: `1` | нет ключа (партия 55). */
   platformNavCollapsed: 'itv.platform.nav-collapsed',
+  /** Вид меню гостя: `cards` | `mosaic` | нет ключа — гость не выбирал,
+   *  действует вид заведения (партия 57). Один на всё приложение. */
+  guestMenuView: 'itv.guest.menu-view',
 } as const;

@@ -36,6 +36,10 @@ import { useCart } from '../state/cart';
 import { useCartToast } from '../state/useCartToast';
 import type { MenuItem } from '../api/types';
 import { openingLabel } from '../nextOpening';
+import { decideAdd } from '../menuView/addAction';
+import { MenuMosaic } from '../menuView/MenuMosaic';
+import type { MenuView } from '../menuView/menuViewStore';
+import { unavailableNote as unavailableNoteOf } from '../menuView/unavailableNote';
 
 const TABS_HEIGHT = 48;
 
@@ -49,6 +53,11 @@ export interface CatalogPageProps {
    * уже представилось собственной, и вторая была бы повтором.
    */
   embedded?: boolean;
+  /**
+   * Вид меню (партия 57): «карточки» или «мозаика». Мозаика — только у
+   * товаров; услуги, слоты и инфо всегда карточками.
+   */
+  view?: MenuView;
 }
 
 /**
@@ -58,7 +67,7 @@ export interface CatalogPageProps {
  * row can be dropped into the cart, and all three come from the behaviour
  * registry rather than from conditions spread over the markup.
  */
-export function CatalogPage({ type, point, embedded = false }: CatalogPageProps) {
+export function CatalogPage({ type, point, embedded = false, view = 'cards' }: CatalogPageProps) {
   const { glass } = useStorefront();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -95,6 +104,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
   const justAdded = useCartToast(cart.addedTicks);
   const behaviour = behaviourFor(type);
   const ns = behaviour.guestCatalogNamespace;
+  const mosaic = view === 'mosaic' && type === 'product';
   const { data, isLoading, error, refetch } = useGuestCatalog(type, true, point);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -208,7 +218,7 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
   const showCartBar = behaviour.usesCart && !cart.isEmpty && !isDesktopShell && justAdded;
 
   return (
-    <Box data-testid={behaviour.guestCatalogTestId}>
+    <Box data-testid={behaviour.guestCatalogTestId} data-menu-view={mosaic ? 'mosaic' : 'cards'}>
       {/* Full-bleed hero (reference `.cathero`): venue photo from brand settings
           with a graceful fallback to the theme-token gradient while no photo is
           set. The content panel below overlaps it with rounded top corners. */}
@@ -321,26 +331,36 @@ export function CatalogPage({ type, point, embedded = false }: CatalogPageProps)
                 ) : null}
               </Stack>
 
-              {/* Dense card grid — 4 columns on desktop, 2 under 1100px (reference `.grid`). */}
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: isDesktopShell ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                {category.items.map((item, i) => (
-                  <Box key={item.id} sx={revealSx({ index: i })}>
-                    <CatalogRow
-                      item={item}
-                      fallbackType={type}
-                      categoryAvailable={category.is_available}
-                      onOpen={() => openItem(item)}
-                      formatPrice={formatOptional}
-                    />
-                  </Box>
-                ))}
-              </Box>
+              {mosaic ? (
+                <MenuMosaic
+                  items={category.items}
+                  fallbackType={type}
+                  categoryAvailable={category.is_available}
+                  onOpen={openItem}
+                  formatPrice={formatOptional}
+                />
+              ) : (
+                /* Dense card grid — 3 columns from 1024px, 2 below. */
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: isDesktopShell ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))',
+                    gap: '16px',
+                  }}
+                >
+                  {category.items.map((item, i) => (
+                    <Box key={item.id} sx={revealSx({ index: i })}>
+                      <CatalogRow
+                        item={item}
+                        fallbackType={type}
+                        categoryAvailable={category.is_available}
+                        onOpen={() => openItem(item)}
+                        formatPrice={formatOptional}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </Box>
           ))}
         </Stack>
@@ -474,42 +494,22 @@ function CatalogRow({
   const { t } = useTranslation();
   const cart = useCart();
   const behaviour = behaviourFor(item.type ?? fallbackType);
-  const usesFields = item.has_fields ?? behaviour.usesFields;
   const available = item.is_available && categoryAvailable;
-  // A form-filled offering, a booking or a dish with required modifiers always
-  // opens the sheet; a plain dish only when it must be configured. Either way the
-  // guest ends up in the same sheet.
-  const needsSheet =
-    usesFields ||
-    behaviour.usesSlots ||
-    (item.has_required_modifiers ?? Boolean(item.modifier_groups?.some((g) => g.is_required)));
+  // Слот закрыт СЕЙЧАС только по часам — записаться на утро можно (партия 29).
+  const bookAhead = behaviour.usesSlots && closedOnlyByHours(item);
+  /*
+    «СРАЗУ ИЛИ КАРТОЧКА» — общее решение с мозаикой (партия 57). Лист теперь
+    открывает ЛЮБОЙ выбор, в том числе необязательные модификаторы: раньше «+»
+    клал голое блюдо, и гость не узнавал о добавках.
+  */
+  const decision = decideAdd(item, fallbackType, { available, bookAhead });
   const quantity = cart.simpleQuantity(item.id);
   // An `info` page has no price; a booking may or may not, like a service.
   const price = behaviour.usesContent ? null : formatPrice(item.price);
+  const unavailableNote = unavailableNoteOf(item, available, t);
 
-  /*
-    ПРИЧИНА НАЗЫВАЕТСЯ СВОИМИ СЛОВАМИ.
-
-    «Доступно с 03:00» у блюда в закрытом ресторане — верно по факту и неверно
-    по смыслу: закрыто ЗАВЕДЕНИЕ, а не блюдо, и гость шёл искать, что не так
-    именно с этим салатом. Причину сервер и так присылает
-    (`unavailable_reason`), оставалось перестать её игнорировать.
-  */
-  const unavailableNote = !available
-    ? (openingLabel(item, t) ??
-      (item.unavailable_reason === 'venue_closed'
-        ? t('guest.menu.venueClosed')
-        : item.unavailable_reason === 'out_of_stock'
-          ? t('guest.menu.outOfStock')
-          : t('guest.menu.unavailable')))
-    : null;
-
-  // An `info` row is a pure read link — the whole row opens the page, there is
-  // no order control at all (`behaviour.createsOrder === false`).
-  // Слот закрыт СЕЙЧАС только по часам — записаться на утро можно (партия 29).
-  const bookAhead = behaviour.usesSlots && closedOnlyByHours(item);
-  const action = (!available && !bookAhead) || behaviour.usesContent ? null : (
-    needsSheet ? (
+  const action = decision.mode === 'none' ? null : (
+    decision.mode === 'sheet' ? (
       <Button
         variant="outlined"
         size="small"
@@ -517,9 +517,9 @@ function CatalogRow({
         data-testid={`guest-qty-plus-${item.code}`}
         sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
       >
-        {behaviour.usesSlots
+        {decision.reason === 'slot'
           ? t('guest.slot.choose')
-          : usesFields
+          : decision.reason === 'fields'
             ? t('guest.services.order')
             : t('guest.menu.choose')}
       </Button>

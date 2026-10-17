@@ -45,7 +45,7 @@ import { useBootstrap } from '@/hooks/useBootstrap';
 import { MenuPage } from '@/pages/menu/MenuPage';
 import { InclusionsTab } from './InclusionsTab';
 import { fetchService, updateService } from './api';
-import type { CmsService } from './api';
+import type { CmsService, MenuView } from './api';
 
 /**
  * Рабочее пространство одного заведения.
@@ -159,6 +159,7 @@ export function ServiceWorkspacePage() {
       {tab === 'menu' ? (
         // Меню ЭТОГО заведения: тот же экран каталога, но в области сервиса.
         <Box data-testid="service-menu" sx={{ minWidth: 0 }}>
+          {data.menu_view_available ? <MenuViewField service={data} /> : null}
           <MenuPage serviceId={data.id} noun={data.noun} />
         </Box>
       ) : null}
@@ -199,6 +200,39 @@ function useSaveService(service: CmsService) {
       toast.show(human ?? t('services.saveFailed'), 'error');
     },
   });
+}
+
+/**
+ * Вид меню у гостя по умолчанию (партия 57): карточки или мозаика.
+ *
+ * Стоит над меню, а не в настройках: решение про то, КАК гость увидит именно
+ * эти позиции, принимают, глядя на них. Только у товарных заведений —
+ * сервер отвечает 422 `menu_view_unsupported` остальным, и поле, которое
+ * нельзя сохранить, не показываем. Выбор гостя сильнее — об этом подсказка.
+ */
+function MenuViewField({ service }: { service: CmsService }) {
+  const { t } = useTranslation();
+  const save = useSaveService(service);
+  const value: MenuView = service.menu_view ?? 'cards';
+  return (
+    <SelectField<MenuView>
+      size="small"
+      fullWidth={false}
+      sx={{ width: '100%', maxWidth: 360, mb: 2 }}
+      label={t('services.menuView.label')}
+      value={value}
+      onChange={(next) => {
+        if (next && next !== value) save.mutate({ menu_view: next });
+      }}
+      disabled={save.isPending}
+      testId="service-menu-view-select"
+      helperText={t('services.menuView.hint')}
+      options={[
+        { value: 'cards', label: t('services.menuView.cards'), testId: 'service-menu-view-cards' },
+        { value: 'mosaic', label: t('services.menuView.mosaic'), testId: 'service-menu-view-mosaic' },
+      ]}
+    />
+  );
 }
 
 function ScheduleTab({ service }: { service: CmsService }) {

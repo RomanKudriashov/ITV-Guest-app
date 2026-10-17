@@ -76,6 +76,7 @@ import {
 import { ModifierGroupsEditor } from './ModifierGroupsEditor';
 import { RequestFieldsEditor } from './RequestFieldsEditor';
 import { SlotConfigEditor } from './SlotConfigEditor';
+import { fetchService } from '@/cms/services/api';
 import {
   groupsToDrafts,
   syncModifierGroups,
@@ -102,6 +103,8 @@ interface ItemForm {
   priceInput: string;
   is_active: boolean;
   in_stock: boolean;
+  /** «Крупно в мозаике» — плитка 2×2 в виде меню «мозаика» (партия 57). */
+  mosaic_large: boolean;
   /** Assigned from the tenant dictionaries (join). */
   allergen_ids: string[];
   marker_ids: string[];
@@ -161,6 +164,7 @@ function emptyForm(categoryId: string, type: OfferingType = 'product'): ItemForm
     priceInput: behaviour.priced === 'always' ? '0.00' : '',
     is_active: true,
     in_stock: true,
+    mosaic_large: false,
     allergen_ids: [],
     marker_ids: [],
     characteristics: [],
@@ -185,6 +189,7 @@ function formFromItem(item: Item, minorUnits: number): ItemForm {
       : minorToInput(item.price, minorUnits),
     is_active: item.is_active,
     in_stock: item.in_stock,
+    mosaic_large: Boolean(item.mosaic_large),
     allergen_ids: [...(item.allergen_ids ?? [])],
     marker_ids: [...(item.marker_ids ?? [])],
     characteristics: (item.characteristics ?? []).map((c) => ({
@@ -304,6 +309,24 @@ export function ItemEditorPage() {
     t,
   );
   const w = useCatalogWords(noun);
+
+  /*
+    «КРУПНО В МОЗАИКЕ» — ТОЛЬКО У ТОВАРНОГО ЗАВЕДЕНИЯ (партия 57).
+
+    Мозаика есть у ресторана, бара, рум-сервиса и мини-бара; решает сервер
+    (`menu_view_available` у сервиса раздела). В спа галочка ничего бы не
+    меняла — гость там мозаику не увидит. Заведение неизвестно или не
+    ответило (нет прав на сервис) — судим по типу позиции: товар.
+  */
+  const sectionServiceId = parentCategory?.service_id ?? searchParams.get('service_id') ?? '';
+  const sectionService = useQuery({
+    queryKey: ['cms', 'service', sectionServiceId],
+    queryFn: () => fetchService(sectionServiceId),
+    enabled: Boolean(sectionServiceId),
+    retry: false,
+  });
+  const mosaicAvailable =
+    sectionService.data?.menu_view_available ?? (form.type === 'product' && !sectionService.isLoading);
 
   /*
     СПРАВОЧНИКИ СПРАШИВАЮТСЯ ПОД СЛОВО ЭТОЙ ПОЗИЦИИ.
@@ -691,6 +714,7 @@ export function ItemEditorPage() {
         schedule_id: form.schedule_id,
         is_active: form.is_active,
         in_stock: form.in_stock,
+        mosaic_large: form.mosaic_large,
         prep_minutes: form.prepInput.trim() ? Number(form.prepInput) : null,
       };
 
@@ -1113,6 +1137,36 @@ export function ItemEditorPage() {
                       />
                     </Stack>
                   </FormCell>
+
+                  {mosaicAvailable ? (
+                    <FormCell span={12}>
+                      <FormControlLabel
+                        data-testid="item-mosaic-large"
+                        control={
+                          <Switch
+                            checked={form.mosaic_large}
+                            onChange={(event) =>
+                              setForm((prev) => ({ ...prev, mosaic_large: event.target.checked }))
+                            }
+                            inputProps={
+                              { 'data-testid': 'item-mosaic-large-switch' } as Record<string, string>
+                            }
+                          />
+                        }
+                        label={t('item.mosaicLarge')}
+                      />
+                      {/* Подсказка под галочкой: без неё «крупно» читается как
+                          «крупное фото в карточке», а речь о плитке мозаики. */}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        data-testid="item-mosaic-large-hint"
+                      >
+                        {t('item.mosaicLargeHint')}
+                      </Typography>
+                    </FormCell>
+                  ) : null}
                 </FormGrid>
               </Stack>
             </CardContent>

@@ -147,7 +147,9 @@ function FieldLine({ field }: { field: CommerceOverrideField }) {
         {field.label}
       </Typography>
       <Typography variant="caption">{format(field.own)}</Typography>
-      <Typography variant="caption" color="text.disabled">
+      {/* «у отеля N» — не выключенный текст, а сравнение: text.disabled давал
+          2.67 на светлой; text.secondary держит планку 4.5 (партия 57). */}
+      <Typography variant="caption" color="text.secondary">
         {t('commerce.own.atHotel', { value: format(field.hotel) })}
       </Typography>
       <Chip
@@ -156,6 +158,9 @@ function FieldLine({ field }: { field: CommerceOverrideField }) {
         // Закреплённое — не тревога, но и не «как у отеля»: оно за отелем не
         // пойдёт. Нейтральный тон и отдельное слово, а не общая метка «своё».
         color={pinned ? 'default' : 'warning'}
+        // Тревога — рамкой, буквы — основным текстом: warning.main буквами на
+        // светлой давал 3.02 (партия 57).
+        sx={{ color: 'text.primary' }}
         label={t(pinned ? 'commerce.own.pinned' : 'commerce.own.changed')}
       />
     </Stack>

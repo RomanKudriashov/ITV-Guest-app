@@ -1195,3 +1195,57 @@ export function titlePlate(mode: ThemeMode): string {
   const [r, g, b] = rgbOf(tokens.onMedia.dimBase).map(Math.round);
   return `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
 }
+
+/**
+ * ПЛИТКА МОЗАИКИ (партия 57) — текст на фото белый в ОБЕИХ темах.
+ *
+ * Читаемость держит не тема, а подложка под текстом: два слоя градиента.
+ *   1) общий градиент снизу — «глубина» кадра, лёгкий;
+ *   2) подложка самого текстового блока — под буквами не светлее `plateMin`
+ *      при любой длине названия (худший случай — белый кадр: смешение идёт в
+ *      sRGB, 0.72 чёрного над белым дают серый 71 — контраст белого ≈ 9:1).
+ * Плотность обоих слоёв растёт со средней яркостью кадра (`image_luminance`,
+ * считает сервер): тёмному кадру меньше вуали — меньше «грязи» на фото.
+ *
+ * Стекло (backdrop-filter) здесь ЗАПРЕЩЕНО: плиток на экране десятки, и
+ * размытие на каждой роняет прокрутку на телефоне.
+ */
+export const mosaicTile = {
+  scrimBase: 'rgb(8,10,22)',
+  /** Плотность подложки под текстом: от тёмного кадра к светлому. */
+  plateMin: 0.72,
+  plateMax: 0.86,
+  /** Общий градиент снизу. */
+  depthMin: 0.25,
+  depthMax: 0.42,
+  /** Затемнение стоп-листа поверх кадра и его плашка. */
+  offDim: 'rgba(8,10,22,.55)',
+  offPlate: 'rgba(8,10,22,.72)',
+  offPlateBorder: 'rgba(255,255,255,.28)',
+  textShadow: '0 1px 8px rgba(0,0,0,.55)',
+  actionShadow: '0 4px 14px rgba(0,0,0,.35)',
+  /** Кольцо фокуса у «+» поверх тёмной подложки. */
+  focusOnMedia: '#FFFFFF',
+} as const;
+
+/** Яркость кадра → 0..1 доля между «тёмным» и «светлым» кадром. */
+function mosaicLightness(luminance: number | null | undefined): number {
+  const value = luminance ?? 0.5;
+  return Math.min(1, Math.max(0, (value - 0.15) / 0.5));
+}
+
+/** Два слоя подложки плитки по яркости кадра; `textEdge` — где кончается текст. */
+export function mosaicScrim(luminance: number | null | undefined, textEdge: number): {
+  depth: string;
+  plate: string;
+} {
+  const k = mosaicLightness(luminance);
+  const [r, g, b] = rgbOf(mosaicTile.scrimBase).map(Math.round);
+  const rgba = (a: number) => `rgba(${r},${g},${b},${a.toFixed(2)})`;
+  const plate = mosaicTile.plateMin + (mosaicTile.plateMax - mosaicTile.plateMin) * k;
+  const depth = mosaicTile.depthMin + (mosaicTile.depthMax - mosaicTile.depthMin) * k;
+  return {
+    depth: `linear-gradient(to top, ${rgba(depth)} 0%, ${rgba(0)} 45%)`,
+    plate: `linear-gradient(to top, ${rgba(Math.min(1, plate + 0.12))} 0%, ${rgba(plate)} calc(100% - ${textEdge}px), ${rgba(0)} 100%)`,
+  };
+}

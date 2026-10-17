@@ -205,7 +205,9 @@
     "prepInvalid": "Expected a non-negative integer",
     "minutesUnit": "min",
     "badges": "Badges",
-    "noBadges": "No active badges"
+    "noBadges": "No active badges",
+    "mosaicLarge": "Large in mosaic",
+    "mosaicLargeHint": "A large 2×2 tile in the “Mosaic” menu view. If no item is marked, large tiles are picked by position in the list."
   },
   "editor": {
     "translationsFilled": "Translations: {{filled}} of {{total}}",
@@ -448,7 +450,16 @@
       "decrease": "Remove one",
       "emptyTitle": "The menu is empty",
       "emptyHint": "Please check back later — the hotel is still preparing the menu",
-      "venueClosed": "Closed right now"
+      "venueClosed": "Closed right now",
+      "view": {
+        "group": "Menu view",
+        "cards": "Cards",
+        "mosaic": "Mosaic"
+      },
+      "tileAria": "{{title}}, {{price}}",
+      "tileAriaOff": "{{title}} — {{note}}",
+      "chooseAria": "Choose options: “{{title}}”",
+      "inCartAria": "In cart: {{count}}"
     },
     "item": {
       "title": "Dish",
@@ -2123,8 +2134,7 @@
     "presetLocked": "A preset badge — we keep it updated"
   },
   "quickActions": {
-    "title": "Quick actions",
-    "subtitle": "What to show on the guest home and in what order",
+    "subtitle": "Which tiles the guest sees on the room screen and in what order",
     "saved": "Quick actions saved",
     "loadError": "Failed to load quick actions",
     "selectedSection": "Selected",
@@ -2234,7 +2244,13 @@
     "staffLevel": "Level",
     "staffOff": "Disabled",
     "slaLabel": "Overdue threshold, min",
-    "slaEscalationLink": "Escalation rules"
+    "slaEscalationLink": "Escalation rules",
+    "menuView": {
+      "label": "Default guest menu view",
+      "hint": "Guests can switch the view themselves — their choice wins.",
+      "cards": "Cards",
+      "mosaic": "Mosaic"
+    }
   },
   "inclusions": {
     "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",
@@ -3162,7 +3178,8 @@
       "check": "Check",
       "versions": "Versions",
       "access": "Access",
-      "diagnostics": "Diagnostics"
+      "diagnostics": "Diagnostics",
+      "tiles": "Room screen tiles"
     },
     "access": {
       "demoTitle": "Demo entry without a PIN — for the whole hotel",

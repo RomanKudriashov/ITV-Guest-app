@@ -1601,6 +1601,9 @@ def counts_for(services: "list[Service]") -> dict:
     }
 
 
+from apps.hotels.models.service import MENU_VIEW_TYPES  # noqa: E402
+
+
 def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
     """
     Сервис глазами CMS: гостевая идентичность + исполнение + коммерция вместе.
@@ -1632,6 +1635,9 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
         # «блюдо» у ресторана, «услуга» у спа. Выводится из типа, как и трекер
         # выше, и по той же причине — см. `apps/catalog/nouns.py`.
         "noun": noun_for_service_type(service.type),
+        # Вид меню у гостя по умолчанию и можно ли его выбирать (партия 57).
+        "menu_view": service.menu_view,
+        "menu_view_available": service.type in MENU_VIEW_TYPES,
         # Исполнение — внутри: снаружи отель настраивает заведение, а бригада
         # за ним детали реализации.
         "execution_point": {
@@ -1797,6 +1803,7 @@ def create_service(data: dict) -> Service:
         image=_resolve_asset(data.get("image_id")),
         is_active=data.get("is_active", True),
         sort_order=data.get("sort_order") or 0,
+        menu_view=_clean_menu_view(data.get("menu_view") or Service.MenuView.CARDS),
     )
 
 
@@ -1814,6 +1821,13 @@ SERVICE_COMMERCE_FIELDS = (
 
 
 @transaction.atomic
+def _clean_menu_view(value: str) -> str:
+    """Вид меню по умолчанию (партия 57): только из списка."""
+    if value not in dict(Service.MenuView.choices):
+        raise ValidationError(f"Неизвестный вид меню: {value}", field="menu_view", code="bad_menu_view")
+    return value
+
+
 def update_service(service_id, data: dict) -> Service:
     """
     Админ отеля меняет что угодно; управляющий — только своё заведение и только
@@ -1856,6 +1870,8 @@ def update_service(service_id, data: dict) -> Service:
         service.image = _resolve_asset(data["image_id"])
     if "sort_order" in data and data["sort_order"] is not None:
         service.sort_order = data["sort_order"]
+    if data.get("menu_view") is not None:
+        service.menu_view = _clean_menu_view(data["menu_view"])
     if "type" in data and data["type"]:
         if data["type"] not in dict(Service.Type.choices):
             raise ValidationError(f"Неизвестный тип сервиса: {data['type']}", field="type")
@@ -1878,6 +1894,11 @@ def update_service(service_id, data: dict) -> Service:
     for field in commerce:
         setattr(service, field, _validate_service_commerce(field, data[field]))
 
+    # Мозаика — только у товарных заведений (партия 57): у услуг, слотов и
+    # инфо её нет, и тихо сохранить «мозаику» спа значило бы обещать то, чего
+    # гость не увидит.
+    if data.get("menu_view") == Service.MenuView.MOSAIC and service.type not in MENU_VIEW_TYPES:
+        raise ValidationError("Мозаика бывает только у ресторана, бара, рум-сервиса и мини-бара", field="menu_view", code="menu_view_unsupported")
     point.save()
     service.save()
     return get_service(service_id)

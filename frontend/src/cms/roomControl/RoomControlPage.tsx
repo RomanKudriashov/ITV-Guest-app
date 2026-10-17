@@ -25,6 +25,7 @@ import { pickTranslated } from '@/utils/translated';
 import { AccessTab } from './AccessTab';
 import { CheckTab } from './CheckTab';
 import { DiagnosticsTab } from './DiagnosticsTab';
+import { QuickActionsPanel } from '@/cms/quickActions/QuickActionsPanel';
 
 /**
  * Раздел «Управление номером» в CMS.
@@ -41,7 +42,7 @@ import { DiagnosticsTab } from './DiagnosticsTab';
  * Раздел закрыт модулем `room_control` на каждом эндпоинте: без модуля здесь
  * честная заглушка, а не пустые формы, которые всё равно ответят 403.
  */
-type TabKey = 'access' | 'check' | 'diagnostics';
+type TabKey = 'access' | 'tiles' | 'check' | 'diagnostics';
 
 /**
  * КОНФИГУРАЦИЯ ЖИВЁТ В NAVIROOM CONTROL, А НЕ ЗДЕСЬ.
@@ -58,7 +59,13 @@ const MOVED_TABS = new Set(['import', 'builder', 'plan', 'versions']);
 
 // Диагностика стоит ПОСЛЕ проверки: сначала прогоняют элемент, потом идут
 // смотреть, что из этого записалось и почему не получилось.
-const TABS: TabKey[] = ['access', 'check', 'diagnostics'];
+//
+// «Плитки экрана номера» (бывший раздел «Быстрые действия», партия 57) — рядом
+// с доступом: обе вкладки про то, что гость видит в номере, и обе — на отель,
+// а не на тип управления.
+const TABS: TabKey[] = ['access', 'tiles', 'check', 'diagnostics'];
+const isTabKey = (value: string | null): value is TabKey =>
+  value !== null && (TABS as string[]).includes(value);
 
 export function RoomControlPage() {
   /*
@@ -84,8 +91,22 @@ function RoomControlSection() {
   const { transport, languages } = useGrmsScope();
   const base = transport.base;
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const [tab, setTab] = useState<TabKey>('access');
+  const [params, setParams] = useSearchParams();
+  /*
+    ВКЛАДКА — В АДРЕСЕ (?tab=, партия 57): на «Плитки экрана номера» ведёт
+    старый адрес /cms/quick-actions, и ссылку на вкладку можно переслать.
+  */
+  const askedTab = params.get('tab');
+  const tab: TabKey = isTabKey(askedTab) ? askedTab : 'access';
+  const setTab = (next: TabKey) =>
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        out.set('tab', next);
+        return out;
+      },
+      { replace: true },
+    );
   // Пришли по старой ссылке на переехавшую вкладку — говорим об этом, а не
   // молча показываем другую: человек искал конкретный экран.
   const askedMoved = MOVED_TABS.has(params.get('tab') ?? '');
@@ -211,8 +232,9 @@ function RoomControlSection() {
       </Alert>
 
       {tab === 'access' && <AccessTab />}
+      {tab === 'tiles' && <QuickActionsPanel />}
 
-      {tab !== 'access' && !current && (
+      {tab !== 'access' && tab !== 'tiles' && !current && (
         <EmptyState
           testId="grms-no-types"
           title={t('roomControl.noTypes')}

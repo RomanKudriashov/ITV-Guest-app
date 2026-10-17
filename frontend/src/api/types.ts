@@ -331,6 +331,8 @@ export interface Item {
   in_stock: boolean;
   /** Preparation/serving time, minutes; `null` — not set. */
   prep_minutes?: number | null;
+  /** «Крупно в мозаике»: плитка 2×2 в виде меню «мозаика» (партия 57). */
+  mosaic_large?: boolean;
   /** Marketing badges assigned to the item, in display order. */
   badges?: ItemBadgeLink[];
   modifier_groups?: ModifierGroup[];
@@ -399,6 +401,8 @@ export interface ItemPayload {
   in_stock?: boolean;
   /** Preparation/serving time, minutes; `null` — not set. */
   prep_minutes?: number | null;
+  /** «Крупно в мозаике» (партия 57). */
+  mosaic_large?: boolean;
 }
 
 export interface ReorderEntry {

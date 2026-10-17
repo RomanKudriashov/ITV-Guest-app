@@ -55,9 +55,14 @@ export function OrderTimeline({ order }: { order: GuestOrder }) {
           direction="row"
           spacing={1.5}
           role="listitem"
-          sx={{ opacity: step.done || step.current ? 1 : 0.42 }}
         >
-          <Stack alignItems="center" sx={{ width: 28 }}>
+          {/*
+            ПРИГЛУШЕНИЕ БУДУЩЕГО — ТОЛЬКО ТОЧКЕ И ЛИНИИ (партия 57). Прозрачность
+            0.42 стояла на всей строке вместе с подписью: контраст 1.87 в
+            светлой и 2.12 в тёмной. Подпись будущего шага — просто
+            text.secondary: у токена своя планка 4.5.
+          */}
+          <Stack alignItems="center" sx={{ width: 28, opacity: step.done || step.current ? 1 : 0.42 }}>
             <Box
               sx={(theme) => ({
                 width: 24,

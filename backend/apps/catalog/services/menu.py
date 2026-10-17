@@ -174,9 +174,14 @@ def _venue_identity(point_code: str | None, language: str | None, moment) -> dic
     availability = (
         service.schedule.availability_at(moment) if service.schedule_id else None
     )
+    from apps.hotels.models.service import MENU_VIEW_TYPES
+
     return {
         "code": service.code,
         "type": service.type,
+        # Вид меню по умолчанию (партия 57) — только у товарных заведений;
+        # у остальных переключателя нет и вид всегда «карточки».
+        "menu_view": service.menu_view if service.type in MENU_VIEW_TYPES else None,
         "title": translate(service.public_title, language),
         "tagline": translate(service.tagline, language),
         "image": image_url(service.image, variant="card") or None,
@@ -348,6 +353,9 @@ def _serialize_item(
     # витрина чужие пиксели не читает.
     first_asset = next((link.asset for link in item.images.all() if link.asset), None)
     image_luminance = getattr(first_asset, "luminance", None) if first_asset else None
+    # Большой размер первого кадра — для srcset витрины и большой плитки
+    # мозаики (партия 57; мозаика берёт его с `object-fit: cover` по центру).
+    image_full = image_url(first_asset, variant="full") if first_asset is not None else ""
     # Нет фото — пустой список: знак без фото рисует витрина (партия 29, п.61).
     images = [url for url in images if url]
 
@@ -357,6 +365,9 @@ def _serialize_item(
         "code": item.code,
         "type": item.type,
         "image_luminance": image_luminance,
+        # Большой размер первого кадра — для srcset (партия 57).
+        "image_full": image_full or None,
+        "mosaic_large": item.mosaic_large,
         "location_mode": item.location_mode,
         "category_id": str(item.category_id),
         "title": translate(item.title, language),

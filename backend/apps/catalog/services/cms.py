@@ -556,6 +556,7 @@ def serialize_item(item: Item, *, with_modifiers: bool = False) -> dict:
         "sort_order": item.sort_order,
         "is_active": item.is_active,
         "in_stock": item.in_stock,
+        "mosaic_large": item.mosaic_large,
     }
     if with_modifiers:
         # Оба блока приезжают всегда, лишний просто пуст: редактор смотрит на
@@ -703,6 +704,7 @@ def create_item(data: dict) -> Item:
         else _next_sort_order(Item.objects.filter(category=category)),
         is_active=data.get("is_active", True),
         in_stock=data.get("in_stock", True),
+        mosaic_large=bool(data.get("mosaic_large", False)),
         prep_minutes=_validate_prep_minutes(data.get("prep_minutes")),
     )
     if data.get("image_ids"):
@@ -744,6 +746,8 @@ def update_item(item_id, data: dict) -> Item:
         item.is_active = data["is_active"]
     if "in_stock" in data:
         item.in_stock = data["in_stock"]
+    if data.get("mosaic_large") is not None:
+        item.mosaic_large = bool(data["mosaic_large"])
     if "prep_minutes" in data:
         item.prep_minutes = _validate_prep_minutes(data["prep_minutes"])
     if data.get("code"):

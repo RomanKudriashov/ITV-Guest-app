@@ -204,7 +204,9 @@
     "prepInvalid": "需为非负整数",
     "minutesUnit": "分钟",
     "badges": "徽章",
-    "noBadges": "无启用的徽章"
+    "noBadges": "无启用的徽章",
+    "mosaicLarge": "在马赛克中放大",
+    "mosaicLargeHint": "在“马赛克”菜单视图中显示为 2×2 大图块。若未标记任何项目，则按列表位置选择大图块。"
   },
   "editor": {
     "translationsFilled": "翻译：{{filled}} / {{total}}",
@@ -446,7 +448,16 @@
       "decrease": "减少一份",
       "emptyTitle": "菜单暂时为空",
       "emptyHint": "请稍后再看，酒店正在准备菜单",
-      "venueClosed": "目前休息"
+      "venueClosed": "目前休息",
+      "view": {
+        "group": "菜单视图",
+        "cards": "卡片",
+        "mosaic": "拼图"
+      },
+      "tileAria": "{{title}}，{{price}}",
+      "tileAriaOff": "{{title}} — {{note}}",
+      "chooseAria": "选择选项：“{{title}}”",
+      "inCartAria": "购物车中：{{count}}"
     },
     "item": {
       "title": "菜品",
@@ -2104,8 +2115,7 @@
     "presetLocked": "预设标签，由我方维护"
   },
   "quickActions": {
-    "title": "快捷操作",
-    "subtitle": "在客人首页显示哪些内容及其顺序",
+    "subtitle": "客人在房间屏幕上看到哪些图块及其顺序",
     "saved": "快捷操作已保存",
     "loadError": "无法加载快捷操作",
     "selectedSection": "已选",
@@ -2214,7 +2224,13 @@
     "staffLevel": "级别",
     "staffOff": "已停用",
     "slaLabel": "超时阈值（分钟）",
-    "slaEscalationLink": "升级规则"
+    "slaEscalationLink": "升级规则",
+    "menuView": {
+      "label": "客人默认菜单视图",
+      "hint": "客人可以自行切换视图——以客人的选择为准。",
+      "cards": "卡片",
+      "mosaic": "马赛克"
+    }
   },
   "inclusions": {
     "explainer": "引入是链接而非复制：源头的修改会立即体现，隐藏某项也不会从其归属方删除。",
@@ -3132,7 +3148,8 @@
       "check": "验证",
       "versions": "版本",
       "access": "访问",
-      "diagnostics": "诊断"
+      "diagnostics": "诊断",
+      "tiles": "房间屏幕图块"
     },
     "access": {
       "demoTitle": "免 PIN 演示入口 — 面向整个酒店",

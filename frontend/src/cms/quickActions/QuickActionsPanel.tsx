@@ -49,7 +49,16 @@ function ActionIcon({ name }: { name: string }) {
   return <Icon fontSize="small" />;
 }
 
-export function QuickActionsPage() {
+/**
+ * Плитки экрана номера — вкладка «Управление номером» (партия 57).
+ *
+ * Было отдельным разделом «Быстрые действия» по адресу /cms/quick-actions:
+ * эти плитки гость видит на экране номера, и искать их администратор шёл
+ * туда же, где PIN и проверка элементов, а не в отдельный пункт. Старый
+ * адрес уводит на вкладку (router.tsx). Заголовок раздела рисует хозяин —
+ * здесь только пояснение и кнопка сохранения.
+ */
+export function QuickActionsPanel() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -117,7 +126,7 @@ export function QuickActionsPage() {
 
   if (query.isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box>
         <Skeleton variant="rounded" height={64} sx={{ mb: 2 }} />
         <Skeleton variant="rounded" height={360} />
       </Box>
@@ -126,23 +135,18 @@ export function QuickActionsPage() {
 
   if (query.isError || !query.data) {
     return (
-      <Box sx={{ p: 3 }}>
-        <QueryState query={query} what={t('state.what.quickActions')}>
-          {() => null}
-        </QueryState>
-      </Box>
+      <QueryState query={query} what={t('state.what.quickActions')}>
+        {() => null}
+      </QueryState>
     );
   }
 
   return (
-    <Box sx={{ p: 3, pb: 10 }}>
+    <Box data-testid="cms-quick-actions">
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-        <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="h5">{t('quickActions.title')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('quickActions.subtitle')}
-          </Typography>
-        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, minWidth: 0 }}>
+          {t('quickActions.subtitle')}
+        </Typography>
         <Button
           variant="contained"
           disabled={!isDirty || saveMutation.isPending}

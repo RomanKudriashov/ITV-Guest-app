@@ -56,7 +56,6 @@ const StyleguidePage = lazyFrom(panelPart, 'StyleguidePage');
 const AnalyticsPage = lazyFrom(panelPart, 'AnalyticsPage');
 const ReviewsPage = lazyFrom(panelPart, 'ReviewsPage');
 const MarketingPage = lazyFrom(panelPart, 'MarketingPage');
-const QuickActionsPage = lazyFrom(panelPart, 'QuickActionsPage');
 const ModulePendingPage = lazyFrom(panelPart, 'ModulePendingPage');
 const ProfilePage = lazyFrom(panelPart, 'ProfilePage');
 const RoomControlPage = lazyFrom(panelPart, 'RoomControlPage');
@@ -231,7 +230,9 @@ const shellChildren: RouteObject[] = [
       { path: 'commerce', element: <Navigate to={cmsPath('/settings')} replace /> },
       { path: 'locations', element: <Navigate to={cmsPath('/settings')} replace /> },
       { path: 'departments', element: <Navigate to={cmsPath('/services')} replace /> },
-      { path: 'quick-actions', element: part(<QuickActionsPage />) },
+      // «Быстрые действия» стали вкладкой «Плитки экрана номера» в
+      // «Управлении номером» (партия 57) — старые ссылки ведут на неё.
+      { path: 'quick-actions', element: <Navigate to={cmsPath('/room-control?tab=tiles')} replace /> },
       { path: 'styleguide', element: part(<StyleguidePage />) },
 
       // СТОРОЖ: из /cms не выпадают к гостю.

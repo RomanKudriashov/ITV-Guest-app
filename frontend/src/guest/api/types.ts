@@ -131,6 +131,15 @@ export interface MenuItem {
   /** `null` — "price not set" (a request-service may be unpriced), not "free". */
   price: number | null;
   images: string[];
+  /**
+   * Большой кадр (1200) для srcset; `images[0]` — карточный (600). Большая
+   * плитка мозаики берёт его. Нет фото — null (партия 57).
+   */
+  image_full?: string | null;
+  /** «Крупно в мозаике»: позиция встаёт на место большой плитки (партия 57). */
+  mosaic_large?: boolean;
+  /** Средняя яркость первого кадра (0..1) — плотность подложки текста на плитке. */
+  image_luminance?: number | null;
   /** Type of the venue owning the item's section — picks the no-photo placeholder icon. */
   service_type?: string | null;
   /** Allergens («contains») — localized dictionary entries, ordered. Empty → omit. */
@@ -217,6 +226,11 @@ export interface VenueIdentity {
   is_open: boolean;
   available_until: string | null;
   available_from: string | null;
+  /**
+   * Вид меню по умолчанию (партия 57). `null` — у нетоварного заведения
+   * (услуги, слоты, инфо): там переключателя вида нет вовсе.
+   */
+  menu_view?: 'cards' | 'mosaic' | null;
 }
 
 /** `GET /api/guest/catalog?type=…` — one envelope for every offering type. */

@@ -20,7 +20,6 @@ export { StyleguidePage } from '@/cms/styleguide/StyleguidePage';
 export { AnalyticsPage } from '@/cms/analytics/AnalyticsPage';
 export { ReviewsPage } from '@/cms/reviews/ReviewsPage';
 export { MarketingPage } from '@/cms/marketing/MarketingPage';
-export { QuickActionsPage } from '@/cms/quickActions/QuickActionsPage';
 export { ModulePendingPage } from '@/pages/ModulePendingPage';
 export { ProfilePage } from '@/pages/ProfilePage';
 export { RoomControlPage } from '@/cms/roomControl/RoomControlPage';

@@ -224,6 +224,9 @@ export function OrdersPage() {
                               color="warning"
                               variant="outlined"
                               label={order.cancel_reason_title}
+                              // Отмена видна рамкой, а причину читают: буквы
+                              // warning.main на светлой — 3.02 (партия 57).
+                              sx={{ color: 'text.primary' }}
                               data-testid={`orders-row-reason-${order.number}`}
                             />
                           ) : null}

@@ -55,7 +55,16 @@ export interface CmsService {
   channel_count: number;
   inclusion_count: number;
   has_escalation: boolean;
+  /**
+   * Вид меню у гостя по умолчанию (партия 57). Гость может переключить сам —
+   * его выбор сильнее. Мозаика есть только у товарных заведений:
+   * `menu_view_available` — ресторан, бар, рум-сервис, мини-бар.
+   */
+  menu_view?: MenuView;
+  menu_view_available?: boolean;
 }
+
+export type MenuView = 'cards' | 'mosaic';
 
 export interface ServiceTemplate {
   type: string;
@@ -78,6 +87,7 @@ export interface ServicePayload {
   sla_minutes?: number | null;
   image_id?: string | null;
   sort_order?: number | null;
+  menu_view?: MenuView;
 }
 
 export function fetchServices(search = ''): Promise<CmsService[]> {

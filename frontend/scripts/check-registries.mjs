@@ -100,11 +100,10 @@ for (const key of new Set([...Object.keys(pyNouns), ...Object.keys(tsNouns)])) {
 
 /* ── 2. Каждый тип заведения назван ─────────────────────────────────────── */
 
-const serviceTypes = [
-  ...read(`${BACKEND}/apps/hotels/models/service.py`).matchAll(
-    /^\s{8}[A-Z_]+\s*=\s*"([a-z_]+)"/gm,
-  ),
-].map((m) => m[1]);
+// Только блок `class Type` — в модели есть и другие выборы (вид меню, партия 57).
+const typeBlock =
+  read(`${BACKEND}/apps/hotels/models/service.py`).match(/^\s{4}class Type\(models\.TextChoices\):\n((?:\s{8}.*\n)+)/m)?.[1] ?? '';
+const serviceTypes = [...typeBlock.matchAll(/^\s{8}[A-Z_]+\s*=\s*"([a-z_]+)"/gm)].map((m) => m[1]);
 
 if (serviceTypes.length === 0) problems.push('типы заведений не прочитались — сторож ослеп');
 for (const type of serviceTypes) {

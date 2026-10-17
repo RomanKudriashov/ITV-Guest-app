@@ -105,6 +105,8 @@ class ItemIn(Schema):
     sort_order: int | None = None
     is_active: bool = True
     in_stock: bool = True
+    # «Крупно в мозаике» (партия 57).
+    mosaic_large: bool = False
     # Время приготовления — и при создании (партия 31, найдено сторожем тел
     # запросов): форма слала его всегда, схема создания не знала, и ninja молча
     # его отбрасывал — у нового блюда время пропадало до первой правки.
@@ -127,6 +129,7 @@ class ItemPatch(Schema):
     sort_order: int | None = None
     is_active: bool | None = None
     in_stock: bool | None = None
+    mosaic_large: bool | None = None
     # Время подачи, мин; null очищает — чип на витрине пропадает.
     prep_minutes: int | None = None
 
@@ -151,6 +154,7 @@ class ItemOut(Schema):
     sort_order: int
     is_active: bool
     in_stock: bool
+    mosaic_large: bool = False
     prep_minutes: int | None = None
     badges: list[dict[str, Any]] = []
 

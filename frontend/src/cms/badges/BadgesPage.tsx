@@ -401,7 +401,9 @@ export function BadgesPage() {
                             borderRadius: 1,
                             px: 0.75,
                             py: 0.25,
-                            color: badge.items_count ? 'primary.main' : 'text.secondary',
+                            // Акцент буквами — primaryText с планкой 4.5:
+                            // primary.main на тёмной давал 2.97 (партия 57).
+                            color: badge.items_count ? 'brand.primaryText' : 'text.secondary',
                             fontWeight: 600,
                             fontSize: '0.82rem',
                           }}

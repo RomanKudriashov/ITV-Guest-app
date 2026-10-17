@@ -10,6 +10,8 @@ import { useAppTheme } from '@/theme';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
 import { openingLabel } from '../nextOpening';
+import { MenuViewToggle } from '../menuView/MenuViewToggle';
+import type { MenuView } from '../menuView/menuViewStore';
 
 /**
  * Шапка заведения — то, ради чего затевалось проваливание.
@@ -22,7 +24,14 @@ import { openingLabel } from '../nextOpening';
  * Скрим разный по ширине: на телефоне текст внизу, на десктопе — слева, и
  * затемнение обязано идти оттуда же, иначе оно гасит не ту часть кадра.
  */
-export function VenueHeader({ venue }: { venue: VenueIdentity }) {
+export function VenueHeader({
+  venue,
+  menuView = null,
+}: {
+  venue: VenueIdentity;
+  /** Переключатель вида меню; `null` — у заведения его нет (партия 57). */
+  menuView?: { value: MenuView; onChange: (view: MenuView) => void } | null;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { glass, scrim, onMedia, mediaFallback } = useStorefront();
@@ -180,7 +189,7 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
           </Typography>
         ) : null}
 
-        <Box sx={{ display: 'flex', gap: 0.9, mt: 1.5, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.9, mt: 1.5, flexWrap: 'wrap' }}>
           {/*
             Статус часов — первое, что гость хочет знать о заведении: заказать
             он сможет только пока оно открыто.
@@ -195,6 +204,16 @@ export function VenueHeader({ venue }: { venue: VenueIdentity }) {
                 : (openingLabel(venue, t) ?? t('guest.venue.closed'))
             }
           />
+          {/*
+            Вид меню — в строке статуса (партия 57): на телефоне прижат к
+            концу строки, на ПК — рядом со статусом, под названием. Логические
+            отступы: в арабском встаёт зеркально.
+          */}
+          {menuView ? (
+            <Box sx={{ marginInlineStart: { xs: 'auto', md: 1 } }}>
+              <MenuViewToggle value={menuView.value} onChange={menuView.onChange} />
+            </Box>
+          ) : null}
         </Box>
       </Box>
     </Box>

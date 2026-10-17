@@ -56,6 +56,9 @@ class Item(TenantModel):
     # ни в поиске, — и в аналитику как продажа не идёт.
     is_internal = models.BooleanField(default=False)
     in_stock = models.BooleanField(default=True, help_text="Стоп-лист кухни")
+    # «КРУПНО В МОЗАИКЕ» (партия 57): позиция встаёт на место большой плитки
+    # в виде меню «мозаика». Нет отметок — большие плитки по месту в списке.
+    mosaic_large = models.BooleanField(default=False)
     attributes = models.JSONField(default=dict, blank=True)
     # Время приготовления/подачи, мин: чип в карточке + слагаемое ETA.
     prep_minutes = models.PositiveSmallIntegerField(null=True, blank=True)

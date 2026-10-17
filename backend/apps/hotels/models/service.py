@@ -77,6 +77,15 @@ class Service(TenantModel):
         "hotels.Schedule", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     is_active = models.BooleanField(default=True)
+
+    class MenuView(models.TextChoices):
+        CARDS = "cards", "Карточки"
+        MOSAIC = "mosaic", "Мозаика"
+
+    # ВИД МЕНЮ У ГОСТЯ ПО УМОЛЧАНИЮ (партия 57). Выбор гостя в витрине — один
+    # на всё приложение и сильнее этой настройки; она решает только первый
+    # показ. Смысл есть лишь у товарных заведений (MENU_VIEW_TYPES).
+    menu_view = models.CharField(max_length=16, choices=MenuView.choices, default=MenuView.CARDS)
     sort_order = models.PositiveSmallIntegerField(default=0)
 
     # --- Коммерция уровня сервиса. null = наследовать значение отеля. Налог,
@@ -143,3 +152,8 @@ def retire_orphan_points(point_ids) -> int:
     if not orphans:
         return 0
     return ExecutionPoint.objects.filter(pk__in=orphans, is_active=True).update(is_active=False)
+
+
+# Товарные заведения — у них меню можно показать мозаикой (партия 57). У
+# услуг, слотов и инфо мозаики нет: там нечего показывать плиткой с ценой.
+MENU_VIEW_TYPES = frozenset({Service.Type.RESTAURANT, Service.Type.BAR, Service.Type.ROOM_SERVICE, Service.Type.MINIBAR})

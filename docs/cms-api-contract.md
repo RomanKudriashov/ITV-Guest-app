@@ -133,9 +133,16 @@ sort_order, is_active}`. `code` генерируется из title, если н
   "characteristics": [{"name":{lang},"value":{lang}}],  // пары, порядок сохранён
   "schedule_id": null,
   "sort_order": 0, "is_active": true, "in_stock": true,
+  "mosaic_large": false,                    // «крупно в мозаике» (партия 57)
   "modifier_groups": [ ...см. §5... ]
 }
 ```
+
+Сервис (`GET`/`PATCH /api/v1/cms/services/{id}`) несёт `menu_view`
+(`"cards"` | `"mosaic"`, по умолчанию `"cards"`) — вид меню у гостя по
+умолчанию — и `menu_view_available` (товарное заведение). `menu_view="mosaic"`
+у нетоварного → `422 menu_view_unsupported`, неизвестное значение →
+`422 bad_menu_view` (партия 57).
 
 Аллергены/маркеры/характеристики позиции задаются в `POST`/`PATCH` того же
 объекта: `allergen_ids`, `marker_ids` (UUID из словарей §4a), `characteristics`

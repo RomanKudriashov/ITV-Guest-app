@@ -277,6 +277,8 @@ class ServiceIn(Schema):
     is_active: bool = True
     image_id: str | None = None
     sort_order: int | None = None
+    # Вид меню у гостя по умолчанию: cards | mosaic (партия 57).
+    menu_view: str | None = None
 
 class ServicePatch(Schema):
     type: str | None = None
@@ -295,6 +297,7 @@ class ServicePatch(Schema):
     min_order_minor: int | None = None
     free_delivery_threshold_minor: int | None = None
     price_round_to_minor: int | None = None
+    menu_view: str | None = None
 
 class HomeSettingsIn(Schema):
     """

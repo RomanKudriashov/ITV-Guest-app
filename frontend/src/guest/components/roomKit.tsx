@@ -139,7 +139,7 @@ export function ControlRow({
   pressed,
   testId,
 }: ControlRowProps) {
-  const { roomControl: t } = useStorefront();
+  const { roomControl: t, roomText } = useStorefront();
   const theme = useTheme();
   // Кнопкой строка остаётся и когда заблокирована: `disabled` на настоящей
   // кнопке экранный диктор произносит, а немой `div` — нет.
@@ -196,7 +196,8 @@ export function ControlRow({
         </Typography>
         <Typography
           variant="caption"
-          sx={{ color: busy ? t.cold : on ? t.accent : 'text.secondary' }}
+          // Подпись — текст: цвет с планкой 4.5 (roomText), а не сырой акцент (партия 57).
+          sx={{ color: busy ? roomText.cold : on ? roomText.accent : 'text.secondary' }}
           noWrap
         >
           {subtitle}
