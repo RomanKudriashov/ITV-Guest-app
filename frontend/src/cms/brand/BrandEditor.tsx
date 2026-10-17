@@ -14,6 +14,7 @@ import Button from '@mui/material/Button';
 import { uploadBrandFont } from '@/api/brand';
 import { SelectField } from '@/components/SelectField';
 import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
+import type { ImageRef } from '@/kit/imageRef';
 import type { SurfaceKey } from '@/media/surfaces';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
 import { patternDataUri } from '@/theme/brandPatterns';
@@ -143,8 +144,14 @@ function LogoField({
   onChangeUrl,
   testId,
   surface,
+  imageRef,
 }: {
   url: string | undefined;
+  /**
+   * Объект картинки для адреса из токенов (партия 58а) — превью рисует его,
+   * как витрина. Нет — превью по адресу строкой (логотипы, старый ответ).
+   */
+  imageRef?: ImageRef | null;
   /**
    * Второй аргумент — id ассета. Обложка обязана храниться ССЫЛКОЙ, а не
    * замороженным адресом: адрес переживает и смену публичного хоста медиа, и
@@ -159,7 +166,7 @@ function LogoField({
   // as the same value so seeding never looks like a real edit.
   const norm = (v: string | undefined): string => v ?? '';
   const seed = (u: string | undefined): EditableImage[] =>
-    u ? [{ id: u, url: u, status: 'ready' }] : [];
+    u ? [{ id: u, url: u, status: 'ready', ref: imageRef ?? null }] : [];
   const [images, setImages] = useState<EditableImage[]>(() => seed(url));
   const lastEmitted = useRef<string | undefined>(url);
 
@@ -479,6 +486,9 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
             <LogoField
               surface="background"
               url={bg?.imageUrl}
+              // Объект — только при картинке отеля по ссылке на ассет: адрес из
+              // пресета без ассета со старым объектом не совпадёт.
+              imageRef={bg?.imageAssetId ? bg?.imageRef : null}
               onChangeUrl={(u, assetId) =>
                 // Пустая строка, а не undefined: id надо УБРАТЬ, когда картинку
                 // сняли, иначе сервер продолжит собирать адрес по старой ссылке.

@@ -302,10 +302,10 @@ function ResultRow({
       >
         {row.kind === 'service' ? (
           <Box data-testid={`guest-search-mark-${row.code}`} sx={{ position: 'absolute', inset: 0 }}>
-            <VenueMark image={row.image} serviceType={row.service_type} />
+            <VenueMark image={row.image} imageRef={row.image_ref} sizes="56px" serviceType={row.service_type} />
           </Box>
         ) : (
-          <KitImage src={row.image ?? null} alt="" fill />
+          <KitImage image={row.image_ref} src={row.image ?? null} sizes="56px" alt="" fill />
         )}
       </Box>
       <Stack sx={{ minWidth: 0, flex: 1 }} spacing={0.25}>

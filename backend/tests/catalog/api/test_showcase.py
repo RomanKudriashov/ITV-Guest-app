@@ -391,7 +391,8 @@ def test_flat_catalog_wears_its_own_cover_not_the_first_venue(crystal, monkeypat
             f"asset:{service.image_id}"
             for service in Service.objects.filter(is_active=True, image__isnull=False)
         }
-        hero = _catalog_hero_image(None, "info")
+        # Функция отдаёт ассет (партия 58а: из него и адрес, и объект картинки).
+        hero = _catalog_hero_image(None, "info").url()
 
     assert hero == f"asset:{info_category.image_id}", "шапка раздела показывает не свою обложку"
     assert hero not in venue_covers, "в шапке раздела снимок заведения"
@@ -408,7 +409,7 @@ def test_venue_catalog_still_wears_the_venue_photo(crystal, monkeypatch):
     with tenant_context(crystal):
         service = Service.objects.filter(is_active=True, image__isnull=False, code="bar").first()
         assert service is not None
-        hero = _catalog_hero_image("bar", "product")
+        hero = _catalog_hero_image("bar", "product").url()
 
     assert hero == f"asset:{service.image_id}"
 

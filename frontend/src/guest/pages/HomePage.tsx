@@ -58,6 +58,7 @@ export function HomePage() {
         hotelName={hotelName}
         greeting={t('guest.home.greeting')}
         cover={hotel?.cover_image ?? null}
+        coverRef={hotel?.cover_image_ref ?? null}
       />
 
       <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 3 }, pb: { xs: 5, md: 8 } }}>

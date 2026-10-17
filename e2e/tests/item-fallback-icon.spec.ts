@@ -32,6 +32,8 @@ test('позиция без фото: знак по типу заведения 
       const item = items[index]
       if (!item) return
       item.images = []
+      // Фото — и строками, и объектами (партия 58а): у позиции без фото пусты оба.
+      item.photos = []
       item.service_type = serviceType
       picked[item.code as string] = icon
     })

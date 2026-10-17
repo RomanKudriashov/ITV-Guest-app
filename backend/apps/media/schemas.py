@@ -27,6 +27,9 @@ class MediaOut(Schema):
     original_url: str = ""
     crop: dict | None = None
     crop_ratio: float | None = None
+    # Точка фокуса и объект картинки (партия 58а).
+    focus: dict | None = None
+    ref: dict | None = None
 
 
 class CropIn(Schema):

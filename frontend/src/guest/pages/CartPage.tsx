@@ -23,6 +23,7 @@ import { ctaGradientSx } from '@/kit';
 import { EmptyState } from '@/components/EmptyState';
 import { inputToMinor } from '@/utils/money';
 import { ItemThumb } from '../components/ItemMeta';
+import type { ImageRef } from '@/kit/imageRef';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { StickyFooter } from '../components/StickyFooter';
 import { TipSelector } from '../components/TipSelector';
@@ -118,6 +119,14 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
     const map = new Map<string, string | null>();
     for (const category of catalogQuery.data?.categories ?? []) {
       for (const item of category.items) map.set(item.id, item.images?.[0] ?? null);
+    }
+    return map;
+  }, [catalogQuery.data]);
+  // Объект кадра из живого каталога (партия 58а): миниатюра 56 px берёт свой файл.
+  const liveRefById = useMemo(() => {
+    const map = new Map<string, ImageRef | null>();
+    for (const category of catalogQuery.data?.categories ?? []) {
+      for (const item of category.items) map.set(item.id, item.photos?.[0] ?? null);
     }
     return map;
   }, [catalogQuery.data]);
@@ -374,7 +383,7 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
                   alignItems="flex-start"
                   data-testid={`guest-cart-line-${line.item_code}`}
                 >
-                  <ItemThumb src={liveImage(line)} alt={line.title} size={56} />
+                  <ItemThumb src={liveImage(line)} image={liveRefById.get(line.item_id) ?? null} alt={line.title} size={56} />
                   <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2">{line.title}</Typography>
                     {line.modifiers.length ? (

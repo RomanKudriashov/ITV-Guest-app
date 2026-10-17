@@ -18,7 +18,7 @@ from typing import Any
 
 from apps.core.fields import translate
 from apps.hotels.models import Hotel
-from apps.media.services import image_url
+from apps.media.services import image_ref, image_url
 
 from .availability import category_availability, item_availability
 from apps.catalog.offerings import behaviour_for
@@ -89,6 +89,7 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
                 "title": translate(category.title, language),
                 "description": translate(category.description, language),
                 "image_url": image_url(category.image, variant="card"),
+                "image_ref": image_ref(category.image),
                 "sort_order": category.sort_order,
                 **state.as_dict(),
                 "items": serialized_items,
@@ -134,6 +135,7 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
                         "image_url": image_url(
                             block_cat.image, variant="card"
                         ),
+                        "image_ref": image_ref(block_cat.image),
                         "sort_order": 1000 + block_cat.sort_order,
                         **block_state.as_dict(),
                         "items": block_items,
@@ -141,10 +143,12 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
                 )
 
     hotel = hotel or Hotel.objects.filter(pk=_current_hotel_id()).first()
+    hero = _catalog_hero_image(options.point_code, options.offering_type)
     return {
         "language": language,
         "server_time": (hotel.local_now().isoformat() if hotel else None),
-        "hero_image": _catalog_hero_image(options.point_code, options.offering_type),
+        "hero_image": hero.url("card") if hero else None,
+        "hero_image_ref": image_ref(hero),
         "venue": _venue_identity(options.point_code, language, options.moment),
         "categories": payload_categories,
     }
@@ -185,6 +189,7 @@ def _venue_identity(point_code: str | None, language: str | None, moment) -> dic
         "title": translate(service.public_title, language),
         "tagline": translate(service.tagline, language),
         "image": image_url(service.image, variant="card") or None,
+        "image_ref": image_ref(service.image),
         "is_open": (availability.is_open if availability else True),
         "available_until": (availability.available_until if availability else None),
         "available_from": (availability.available_from if availability else None),
@@ -200,7 +205,7 @@ def _venue_identity(point_code: str | None, language: str | None, moment) -> dic
 
 def _catalog_hero_image(
     point_code: str | None = None, offering_type: str | None = None
-) -> str | None:
+):
     """
     Кадр в шапке каталога — ТОГО, ЧТО ОТКРЫТО, а не первого попавшегося.
 
@@ -235,10 +240,11 @@ def _catalog_hero_image(
 
     # Первый сервис с ГОТОВЫМ фото, а не просто с привязанным: пока
     # медиапайплайн режет варианты, url("card") пуст.
+    # Возвращает АССЕТ (партия 58а): выдача строит из него и адрес, и объект.
     for service in services.select_related("image").order_by("code"):
         url = service.image.url("card") if service.image else ""
         if url:
-            return url
+            return service.image
 
     if point_code:
         return None
@@ -249,7 +255,7 @@ def _catalog_hero_image(
     for category in categories.select_related("image").order_by("sort_order", "code"):
         url = category.image.url("card") if category.image else ""
         if url:
-            return url
+            return category.image
     return None
 
 
@@ -343,10 +349,10 @@ def _serialize_item(
         price = inclusion.apply_markup(price)
         state = apply_overlay_availability(state, inclusion, moment)
 
-    images = [
-        image_url(link.asset, variant="card")
-        for link in item.images.all()
-    ]
+    links = [link for link in item.images.all()]
+    images = [image_url(link.asset, variant="card") for link in links]
+    # Объекты картинок (партия 58а) — в том же порядке, без пустых.
+    photos = [ref for ref in (image_ref(link.asset) for link in links if link.asset) if ref]
     # ЯРКОСТЬ ПЕРВОГО КАДРА — витрине, чтобы подобрать плотность затемнения под
     # стеклянной панелью: над тёмным стейком хватает лёгкой вуали, светлая
     # моцарелла пробивает её насквозь. Считает сервер при обработке кадра;
@@ -365,7 +371,7 @@ def _serialize_item(
         "code": item.code,
         "type": item.type,
         "image_luminance": image_luminance,
-        # Большой размер первого кадра — для srcset (партия 57).
+        # УСТАРЕЛО (партия 58а): большой кадр мозаики 57; вместо него `photos`.
         "image_full": image_full or None,
         "mosaic_large": item.mosaic_large,
         "location_mode": item.location_mode,
@@ -388,6 +394,7 @@ def _serialize_item(
         # Время подачи, мин: чип в карточке; null — не показывать.
         "prep_minutes": item.prep_minutes,
         "images": [url for url in images if url],
+        "photos": photos,
         # Тип заведения, которому принадлежит раздел позиции (партия 29): по нему
         # витрина рисует заглушку без фото. Иконка по виду предложения давала
         # «вилку и нож» любому товару — подушке хозслужбы и маслу спа тоже.

@@ -90,8 +90,28 @@ function StatusPill({ status }: { status: { text: string; open: boolean } }) {
   );
 }
 
+/*
+  ШИРИНА ПЛИТКИ ДЛЯ `sizes` (партия 58а). Сетка: `columns` колонок с зазором
+  14 px (md) в контейнере lg с полями 24 — на ≥1080 это 1032 px (замер 17.10:
+  широкая 1032, обычная 509 на 1440; 358 на 390 при двух колонках). Уже 1080 —
+  доля экрана по пролёту колонок.
+*/
+const BENTO_WIDE = 1032;
+const BENTO_GAP = 14;
+
+export function bentoTileSizes(colSpan: number, columns: number, part = 1): string {
+  const col = (BENTO_WIDE - (columns - 1) * BENTO_GAP) / columns;
+  const px = Math.round(((colSpan * col + (colSpan - 1) * BENTO_GAP) * part));
+  const vw = Math.round((100 * colSpan * part) / columns);
+  return `(min-width: 1080px) ${px}px, ${vw}vw`;
+}
+
 interface BentoTileProps {
   tile: GuestShowcaseTile;
+  /** Ширина места для `sizes` картинки (по пролёту в сетке). */
+  sizes?: string;
+  /** То же для четверти коллажа. */
+  cellSizes?: string;
   /** Narrow footprint (1 column) — hide the meta line, keep only the title. */
   compact: boolean;
   onOpen: (route: string) => void;
@@ -102,7 +122,7 @@ interface BentoTileProps {
  * scrim, the title + meta in the lower-left, and a status pill in the upper-right.
  * The centre stays clear.
  */
-export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
+export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTileProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   // `tileTokens`, а не `tile`: проп плитки уже занял это имя.
@@ -112,7 +132,13 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
   const disabled = !tile.enabled || !tile.route;
 
   const previews = tile.cover_previews ?? [];
-  const collage = tile.type === 'service-category' && previews.length > 1;
+  const previewRefs = tile.cover_preview_refs ?? [];
+  const collage = tile.type === 'service-category' && Math.max(previews.length, previewRefs.length) > 1;
+  // Объект кадра коллажа, если сервер его дал; иначе адрес строкой.
+  const collageCells = (previewRefs.length ? previewRefs : previews).slice(0, 4).map((_, i) => ({
+    image: previewRefs[i] ?? null,
+    src: previews[i] ?? null,
+  }));
 
   // Подпись: tagline (subtitle), а если его нет — часы/статус. Тип точки на
   // плитке не показываем никогда.
@@ -145,14 +171,28 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
       {/* Cover: single photo, a collage of previews, or a brand-gradient fallback. */}
       {collage ? (
         <Box sx={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' }}>
-          {previews.slice(0, 4).map((src, i) => (
+          {collageCells.map((cell, i) => (
             <Box key={i} sx={{ position: 'relative', overflow: 'hidden' }}>
-              <KitImage src={src} alt="" fill fallbackIcon={fallbackIconFor('product')} />
+              <KitImage
+                image={cell.image}
+                src={cell.src}
+                sizes={cellSizes}
+                alt=""
+                fill
+                fallbackIcon={fallbackIconFor('product')}
+              />
             </Box>
           ))}
         </Box>
-      ) : tile.image ? (
-        <KitImage src={tile.image} alt={tile.title} fill fallbackIcon={fallbackIconFor('product', tile.service_type)} />
+      ) : tile.image_ref || tile.image ? (
+        <KitImage
+          image={tile.image_ref}
+          src={tile.image}
+          sizes={sizes}
+          alt={tile.title}
+          fill
+          fallbackIcon={fallbackIconFor('product', tile.service_type)}
+        />
       ) : (
         <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
           {/* Без фото — иконка по типу заведения на фирменном фоне (п.68). */}
@@ -234,7 +274,13 @@ export function BentoGrid({ tiles, columns, onOpen }: BentoGridProps) {
             gridRow: `${p.rowStart} / span ${p.rowSpan}`,
           }}
         >
-          <BentoTile tile={p.tile} compact={p.colSpan === 1} onOpen={onOpen} />
+          <BentoTile
+            tile={p.tile}
+            compact={p.colSpan === 1}
+            onOpen={onOpen}
+            sizes={bentoTileSizes(p.colSpan, columns)}
+            cellSizes={bentoTileSizes(p.colSpan, columns, 0.5)}
+          />
         </Box>
       ))}
     </Box>

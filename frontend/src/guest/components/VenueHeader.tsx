@@ -9,6 +9,7 @@ import { fontPx, layout, surfaceRadius, titlePlate } from '../storefrontTokens';
 import { useAppTheme } from '@/theme';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
+import { useCoverBackground } from '@/kit/useCoverBackground';
 import { openingLabel } from '../nextOpening';
 import { MenuViewToggle } from '../menuView/MenuViewToggle';
 import type { MenuView } from '../menuView/menuViewStore';
@@ -36,6 +37,8 @@ export function VenueHeader({
   const navigate = useNavigate();
   const { glass, scrim, onMedia, mediaFallback } = useStorefront();
   const { mode } = useAppTheme();
+  // Шапка 1080×290 (1440) / 390×214 (390): фон по ширине места (партия 58а).
+  const bg = useCoverBackground(venue.image_ref);
 
   return (
     <Box
@@ -65,15 +68,16 @@ export function VenueHeader({
         backgroundImage: mediaFallback,
       }}
     >
-      {venue.image ? (
+      {bg.sx || venue.image ? (
         <Box
           aria-hidden
+          ref={bg.ref}
+          data-testid="guest-venue-header-cover"
           sx={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url(${venue.image})`,
+            ...(bg.sx ?? { backgroundImage: `url(${venue.image})`, backgroundPosition: 'center' }),
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
           }}
         />
       ) : null}

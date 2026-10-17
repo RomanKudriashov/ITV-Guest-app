@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import { useAppTheme } from '@/theme';
 import { resolveBackground } from '@/theme/brandBackground';
 import { colorsForMode } from '@/theme/tokens';
+import { useCoverBackground } from '@/kit/useCoverBackground';
 import { PHOTO_EXTREMES, mixColors, pageVeilAlpha } from '../storefrontTokens';
 
 /**
@@ -28,6 +29,8 @@ export function GuestBackdrop() {
   const colors = colorsForMode(tokens, mode);
   const backdrop = resolveBackground(tokens, mode);
   const bg = tokens.brand?.background;
+  // Фото фона объектом (партия 58а): ширина — по экрану, положение — по фокусу.
+  const cover = useCoverBackground(bg?.kind === 'image' ? bg.imageRef : null);
 
   /*
     ЧТО МОЖЕТ ОКАЗАТЬСЯ ПОД ТЕКСТОМ — ВЕСЬ ДИАПАЗОН, А НЕ КОНЦЫ. Для текста
@@ -61,7 +64,15 @@ export function GuestBackdrop() {
       <Box
         aria-hidden
         data-testid="guest-backdrop"
-        sx={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', ...backdrop.css }}
+        ref={cover.ref}
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+          ...backdrop.css,
+          ...(cover.sx ? { ...cover.sx, backgroundColor: backdrop.css.backgroundColor } : {}),
+        }}
       />
       <Box
         aria-hidden

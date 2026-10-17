@@ -88,6 +88,7 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
                 "width",
                 "height",
                 "luminance",
+                "average_color",
                 "updated_at",
             ]
         )
@@ -118,36 +119,55 @@ def _mean_luminance(image) -> float:
     return round(total / len(pixels), 4)
 
 
-def _apply_crop(image, crop: dict | None):
-    """
-    Вырезать выбранную рамку. Пусто — берём кадр целиком.
+def _average_color(image) -> str:
+    """Средний цвет кадра `#rrggbb` — по копии 1×1, тем же приёмом, что яркость."""
+    tiny = image.convert("RGB").resize((1, 1), Image.Resampling.BOX)
+    r, g, b = tiny.getpixel((0, 0))
+    return f"#{r:02x}{g:02x}{b:02x}"
 
-    Координаты — ДОЛИ оригинала (0..1), а не пиксели: оригинал может быть
-    перезалит другого размера, а рамка «правая треть сверху» от этого не
-    меняется. Значения подрезаем по границам: кадр, уехавший за край, — это
-    ошибка клиента, но ронять из-за неё обработку всей картинки незачем.
+
+def focus_from_crop(crop: dict | None) -> dict:
+    """
+    Фокус из старого кадра — центр его рамки (партия 58а). Нет кадра — центр.
+
+    Значения подрезаются по границам тем же правилом, что резала рамка: кадр,
+    уехавший за край, — ошибка клиента, а не повод уронить обработку.
     """
     if not crop:
-        return image
-
-    width, height = image.size
+        return {"x": 0.5, "y": 0.5}
     try:
         x = min(max(float(crop.get("x", 0.0)), 0.0), 1.0)
         y = min(max(float(crop.get("y", 0.0)), 0.0), 1.0)
         w = min(max(float(crop.get("w", 1.0)), 0.0), 1.0 - x)
         h = min(max(float(crop.get("h", 1.0)), 0.0), 1.0 - y)
     except (TypeError, ValueError):
-        return image
-
-    left, top = round(x * width), round(y * height)
-    right, bottom = round((x + w) * width), round((y + h) * height)
-    # Вырожденная рамка (нулевой ширины или высоты) — не кадр, а промах мышью.
-    if right - left < 1 or bottom - top < 1:
-        return image
-    return image.crop((left, top, right, bottom))
+        return {"x": 0.5, "y": 0.5}
+    return {"x": round(x + w / 2, 4), "y": round(y + h / 2, 4)}
 
 
-def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
+def target_widths(original_width: int) -> list[int]:
+    """
+    Ряд ширин для оригинала: не шире его; уже самой узкой — одна, своя.
+
+    Оригинал заметно шире последней ширины ряда (1400 при ряде до 1200) —
+    последней идёт его собственная ширина: иначе шапке 1080 при DPR 2 доставалось
+    1200 из 1400 имеющихся, и 200 точек пропадали зря (замер 17.10).
+    """
+    widths = [w for w in settings.MEDIA_WIDTHS if w <= original_width]
+    if not widths:
+        return [original_width]
+    # Только ЗАЗОР ниже потолка ряда: шире 2400 гостю не нужно ни на одном месте.
+    if widths[-1] < settings.MEDIA_WIDTHS[-1] and original_width > widths[-1] * 1.15:
+        widths.append(original_width)
+    return widths
+
+
+def render_variant_bytes(raw: bytes, asset: MediaAsset) -> dict[str, bytes]:
+    """
+    Оригинал → байты вариантов `{имя: webp}`; заодно ставит ассету размеры,
+    яркость и средний цвет. Ничего не пишет — это делает `_render_variants`,
+    а `rerender_media --dry-run` по этим байтам считает объём (партия 58а).
+    """
     with Image.open(io.BytesIO(raw)) as image:
         # EXIF-поворот: фотографии с телефона иначе лягут боком.
         image = ImageOps.exif_transpose(image)
@@ -160,30 +180,36 @@ def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
             image.mode == "P" and "transparency" in image.info
         )
         image = image.convert("RGBA" if has_alpha else "RGB")
-        # Размеры и яркость считаем по ОРИГИНАЛУ, до кадрирования: `width`/
-        # `height` описывают загруженный файл, и подменять их размерами кадра
-        # значило бы потерять то, по чему кадр вообще считается.
         asset.width, asset.height = image.size
         asset.luminance = _mean_luminance(image.convert("RGB"))
+        asset.average_color = _average_color(image)
 
-        # КАДР. Режем один раз здесь, а не в каждом варианте: варианты — это
-        # размеры одного и того же кадра, а не разные кадры.
-        image = _apply_crop(image, asset.crop)
+        # КАДР БОЛЬШЕ НЕ ВЫРЕЗАЕТСЯ (партия 58а). Варианты — целый оригинал в
+        # его пропорциях; куда смотреть, место показа берёт из `focus`. Вырезанная
+        # рамка подходила одной форме, а фото показывают в десятке: баннер терял
+        # на сервере 69% и ещё половину остатка в браузере (замер 17.10).
+        sizes: dict[str, int] = {"thumb": settings.MEDIA_THUMB_WIDTH}
+        for width in target_widths(image.width):
+            sizes[f"w{width}"] = width
 
-        variants: dict[str, str] = {}
-        for name, width in settings.MEDIA_VARIANTS.items():
+        out: dict[str, bytes] = {}
+        for name, width in sizes.items():
             variant = image.copy()
+            # Только уменьшение: `thumbnail` не растягивает. Высота не мешает —
+            # предел по ней вчетверо выше ширины.
             variant.thumbnail((width, width * 4), Image.Resampling.LANCZOS)
-
             buffer = io.BytesIO()
-            variant.save(buffer, format="WEBP", quality=82, method=4)
+            variant.save(buffer, format="WEBP", quality=settings.MEDIA_WEBP_QUALITY, method=4)
+            out[name] = buffer.getvalue()
+    return out
 
-            key = storage.object_key(
-                asset.hotel_id, asset.kind, f"{uuid.uuid4().hex}.webp", variant=name
-            )
-            storage.put_bytes(key, buffer.getvalue(), content_type="image/webp")
-            variants[name] = key
 
+def _render_variants(raw: bytes, asset: MediaAsset) -> dict[str, str]:
+    variants: dict[str, str] = {}
+    for name, body in render_variant_bytes(raw, asset).items():
+        key = storage.object_key(asset.hotel_id, asset.kind, f"{uuid.uuid4().hex}.webp", variant=name)
+        storage.put_bytes(key, body, content_type="image/webp")
+        variants[name] = key
     return variants
 
 

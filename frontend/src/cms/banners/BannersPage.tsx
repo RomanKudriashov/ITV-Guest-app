@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { refImgProps } from '@/media/refImg';
 import { deleteBanner, fetchBanners, type Banner } from '@/api/cms';
 import { BannerEditor } from './BannerEditor';
 
@@ -79,7 +80,8 @@ export function BannersPage() {
                       {banner.images[0] && (
                         <Box
                           component="img"
-                          src={banner.images[0].url}
+                          // Кадр баннера объектом картинки (партия 58а); место 120×72.
+                          {...refImgProps(banner.images[0], '120px')}
                           alt=""
                           sx={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 1 }}
                         />

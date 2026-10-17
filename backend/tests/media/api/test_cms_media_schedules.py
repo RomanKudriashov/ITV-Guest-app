@@ -47,7 +47,8 @@ def test_pipeline_produces_variants(cms, crystal):
     with tenant_context(crystal):
         asset = MediaAsset.objects.get(pk=asset_id)
     assert asset.status == MediaAsset.Status.READY
-    assert set(asset.variants) == {"thumb", "card", "full"}
+    # Ряд ширин не шире оригинала (800): 400 и 800, плюс миниатюра CMS (партия 58а).
+    assert set(asset.variants) == {"thumb", "w400", "w800"}
     assert asset.width == 800 and asset.height == 600
 
     body = cms.get(f"/api/cms/media/{asset_id}").json()

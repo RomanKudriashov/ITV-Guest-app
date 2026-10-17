@@ -3,6 +3,8 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { KitImage } from '@/kit/KitImage';
+import type { ImageRef } from '@/kit/imageRef';
+import { refImgProps } from './refImg';
 import { SURFACES, type SurfaceKey } from './surfaces';
 
 /**
@@ -22,6 +24,14 @@ import { SURFACES, type SurfaceKey } from './surfaces';
  */
 export interface SurfacePreviewProps {
   src?: string | null;
+  /**
+   * Объект картинки (партия 58а). Есть — превью ведёт себя как витрина: тот же
+   * `KitImage` с `srcset`, фокусом и пределом обрезки. Нет (старый ответ,
+   * локальное превью `blob:` до загрузки) — прежний адрес строкой.
+   */
+  image?: ImageRef | null;
+  /** Ширина места для выбора файла. По умолчанию — ширина превью. */
+  sizes?: string;
   surface: SurfaceKey;
   /** Ширина превью в пикселях. По умолчанию — телефонная. */
   width?: number;
@@ -34,6 +44,8 @@ export interface SurfacePreviewProps {
 
 export function SurfacePreview({
   src,
+  image,
+  sizes,
   surface,
   width = 300,
   caption = true,
@@ -43,6 +55,7 @@ export function SurfacePreview({
   const { t } = useTranslation();
   const spec = SURFACES[surface];
   const isLogo = surface === 'logo';
+  const placeSizes = sizes ?? `${width}px`;
 
   return (
     <Box data-testid={testId} sx={fill ? { position: 'absolute', inset: 0 } : undefined}>
@@ -69,13 +82,14 @@ export function SurfacePreview({
           src ? (
             <Box
               component="img"
-              src={src}
+              // Логотип: без предела обрезки и без сдвига по фокусу — вписан целиком.
+              {...refImgProps({ url: src ?? undefined, ref: image }, placeSizes, false)}
               alt=""
               sx={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }}
             />
           ) : null
         ) : (
-          <KitImage src={src} alt="" fill />
+          <KitImage image={image} src={src} sizes={placeSizes} alt="" fill />
         )}
       </Box>
       {/* Подпись — где именно это появится. Человек не обязан помнить. */}

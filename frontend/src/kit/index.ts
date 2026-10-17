@@ -69,6 +69,8 @@ export { KitTextField, KitTabs, type KitTabsProps } from './forms';
 
 // Media
 export { KitImage, mediaFallbackSx, type KitImageProps } from './KitImage';
+export * from './imageRef';
+export { useCoverBackground } from './useCoverBackground';
 
 // Vector flags (language switcher — block 8)
 export { FlagIcon, FLAG_FOR_LANGUAGE, type FlagIconProps, type FlagCode } from './FlagIcon';

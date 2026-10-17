@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { OfferingType } from '@/offerings/behaviour';
 import type { MenuItem } from '../api/types';
+import { KitImage } from '@/kit/KitImage';
+import { focusPosition, srcSetOf } from '@/kit/imageRef';
 import { ItemBadges } from '../components/ItemBadges';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
@@ -32,6 +34,24 @@ const GAP = { phone: 6, wide: 8 };
 const ROW_RATIO = 0.75;
 /** Ширина контейнера витрины на ПК (Container lg) — для запасной высоты без cqw. */
 const SHELL_MAX = 1200;
+
+/*
+  ШИРИНА ПЛИТКИ ДЛЯ `sizes` (партия 58а) — по раскладке, а не одной цифрой на
+  всё: пролёт колонок × ширина колонки контейнера. ПК (4 колонки) — контейнер lg,
+  1032 px на ≥1080; середина (3) — контейнер sm, 552 px; телефон (2) — экран
+  без полей 16. Большая плитка 2×2 получает вдвое больше мелкой.
+*/
+const WIDE_INNER = 1032;
+const MID_INNER = 552;
+
+export function mosaicTileSizes(colSpan: number, cols: number, gap: number): string {
+  const span = (inner: number) => Math.round(colSpan * ((inner - (cols - 1) * gap) / cols) + (colSpan - 1) * gap);
+  if (cols >= 4) {
+    return `(min-width: 1080px) ${span(WIDE_INNER)}px, ${Math.round((100 * colSpan) / cols)}vw`;
+  }
+  if (cols === 3) return `${span(MID_INNER)}px`;
+  return `${Math.round((100 * colSpan) / cols)}vw`;
+}
 
 export interface MenuMosaicProps {
   items: MenuItem[];
@@ -74,6 +94,7 @@ export function MenuMosaic({ items, fallbackType, categoryAvailable, onOpen, for
             row={p.row}
             colSpan={p.colSpan}
             rowSpan={p.rowSpan}
+            sizes={mosaicTileSizes(p.colSpan, cols, gap)}
             fallbackType={fallbackType}
             available={p.item.is_available && categoryAvailable}
             onOpen={onOpen}
@@ -92,6 +113,8 @@ interface MosaicTileProps {
   row: number;
   colSpan: number;
   rowSpan: number;
+  /** Ширина места плитки для `sizes` (по её пролёту в раскладке). */
+  sizes: string;
   fallbackType: OfferingType;
   available: boolean;
   onOpen: (item: MenuItem) => void;
@@ -105,6 +128,7 @@ const MosaicTile = memo(function MosaicTile({
   row,
   colSpan,
   rowSpan,
+  sizes,
   fallbackType,
   available,
   onOpen,
@@ -114,9 +138,10 @@ const MosaicTile = memo(function MosaicTile({
   const { tile } = useStorefront();
   const [broken, setBroken] = useState(false);
   const big = size === 'l';
-  const card = item.images?.[0] ?? null;
-  const full = item.image_full ?? null;
-  const showImage = Boolean(card || full) && !broken;
+  // Объект кадра (партия 58а): ряд ширин и фокус. Нет — прежний адрес строкой.
+  const photo = item.photos?.[0] ?? null;
+  const src = photo?.src || item.images?.[0] || null;
+  const showImage = Boolean(src) && !broken;
   const FallbackIcon = fallbackIconFor(item.type ?? fallbackType, item.service_type);
   const note = unavailableNote(item, available, t);
   // Один бейдж — старший: первый по порядку, как их сортирует сервер.
@@ -178,29 +203,34 @@ const MosaicTile = memo(function MosaicTile({
           '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
         }}
       >
-        {showImage ? (
+        {showImage && photo?.widths.length ? (
           /*
-            Кадра 4:3 нет: берём кадр как есть, обрезка по центру `cover`
-            (решение тек-лида — обрезку будут переделывать целиком). Большой
-            плитке — большой кадр сразу, мелкой — выбор браузера по srcset.
+            Объект картинки — общий примитив витрины (партия 58а): файл по
+            ширине плитки (`sizes` от раскладки), кадр по фокусу и ПРЕДЕЛ
+            ОБРЕЗКИ. Растянутый на весь ряд «хвост» (1032×189 при вертикальном
+            фото) показывал 12% кадра; меньше 60% — фото целиком поверх
+            размытого себя.
           */
+          <KitImage image={photo} sizes={sizes} alt="" fill fallbackIcon={FallbackIcon} fallbackIconSize={big ? 72 : 44} />
+        ) : showImage ? (
+          /* Строкой пришедшая картинка (старый ответ) — как было. */
           <Box
             component="img"
-            src={(big ? full : card) ?? full ?? card ?? undefined}
-            srcSet={!big && card && full ? `${card} 600w, ${full} 1200w` : undefined}
-            sizes={
-              !big && card && full
-                ? size === 'wide'
-                  ? '(min-width: 1024px) 600px, 100vw'
-                  : '(min-width: 1024px) 300px, (min-width: 600px) 33vw, 50vw'
-                : undefined
-            }
+            src={src ?? undefined}
+            srcSet={photo?.widths.length ? srcSetOf(photo) : undefined}
+            sizes={photo?.widths.length ? sizes : undefined}
             alt=""
             loading="lazy"
             decoding="async"
             draggable={false}
             onError={() => setBroken(true)}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: photo ? focusPosition(photo) : 'center',
+              display: 'block',
+            }}
           />
         ) : (
           <Box sx={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: 'common.white' }}>

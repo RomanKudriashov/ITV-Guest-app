@@ -44,6 +44,7 @@ import type { CropRect, MediaKind, MediaStatus } from '@/api/types';
 import { CropDialog } from '@/media/CropDialog';
 import { SurfacePreview } from '@/media/SurfacePreview';
 import { SURFACES, type SurfaceKey } from '@/media/surfaces';
+import type { ImageRef } from '@/kit/imageRef';
 
 /** Media as held by an editor: a server asset plus an optional local preview. */
 export interface EditableImage {
@@ -60,6 +61,8 @@ export interface EditableImage {
   original_url?: string;
   /** Выбранная рамка в долях оригинала. null/undefined — кадр целиком. */
   crop?: CropRect | null;
+  /** Объект картинки (партия 58а) — превью рисует его, как витрина. */
+  ref?: ImageRef | null;
 }
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
@@ -92,6 +95,7 @@ export function mediaToEditable(asset: {
   status: MediaStatus;
   original_url?: string;
   crop?: CropRect | null;
+  ref?: ImageRef | null;
 }): EditableImage {
   return {
     id: asset.id,
@@ -100,6 +104,7 @@ export function mediaToEditable(asset: {
     status: asset.status,
     original_url: asset.original_url,
     crop: asset.crop ?? null,
+    ref: asset.ref ?? null,
   };
 }
 
@@ -181,6 +186,7 @@ export function ImageUploader({
             status: asset.status,
             original_url: asset.original_url,
             crop: asset.crop ?? null,
+            ref: asset.ref ?? null,
           });
           if (asset.status === 'ready') return;
           if (asset.status === 'failed') {
@@ -234,6 +240,7 @@ export function ImageUploader({
                   status: asset.status,
                   original_url: asset.original_url,
                   crop: asset.crop ?? null,
+                  ref: asset.ref ?? null,
                   localPreview,
                 }
               : image,
@@ -432,6 +439,9 @@ function SortableThumb({
 
   const src = image.status === 'ready' && image.url ? image.url : (image.localPreview ?? image.url);
   const busy = image.status !== 'ready' && !image.error;
+  // Объект — только у готовой картинки: до этого на экране локальное превью
+  // (`blob:`) или прежний кадр, пока режется новый.
+  const ref = image.status === 'ready' && image.url ? (image.ref ?? null) : null;
 
   return (
     <Box
@@ -456,7 +466,16 @@ function SortableThumb({
         начинает врать — правдоподобно и потому незаметно.
       */}
       {surface ? (
-        <SurfacePreview src={src} surface={surface} caption={false} fill />
+        <SurfacePreview
+          src={src}
+          image={ref}
+          surface={surface}
+          caption={false}
+          fill
+          // Плитка сетки minmax(240px, 1fr): ~316 px на широком окне, во всю
+          // ширину колонки на телефоне.
+          sizes="(max-width: 599px) calc(100vw - 32px), 340px"
+        />
       ) : src ? (
         <Box
           component="img"

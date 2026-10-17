@@ -138,6 +138,13 @@ sort_order, is_active}`. `code` генерируется из title, если н
 }
 ```
 
+Медиа (`serialize_asset`: `GET /api/v1/cms/media/{id}`, фото позиции,
+обложки, баннеры) несёт `focus` (`{x, y}`, доли кадра) и `ref` — объект
+картинки, как у гостя (см. guest-api-contract, «Объект картинки», партия 58а).
+`PUT /api/v1/cms/media/{id}/crop` по-прежнему принимает рамку и ставит фокус в
+её центр; вариантов по рамке сервер больше не режет. Миниатюры списков —
+`thumb_url` (200).
+
 Сервис (`GET`/`PATCH /api/v1/cms/services/{id}`) несёт `menu_view`
 (`"cards"` | `"mosaic"`, по умолчанию `"cards"`) — вид меню у гостя по
 умолчанию — и `menu_view_available` (товарное заведение). `menu_view="mosaic"`

@@ -23,6 +23,7 @@ class MenuOut(Schema):
     language: str | None
     server_time: str | None
     hero_image: str | None = None
+    hero_image_ref: dict[str, Any] | None = None
     # Заполнен при скоупе на заведение: его имя, подпись, ТИП (по нему витрина
     # выбирает блок контента) и статус часов. None — общий каталог отеля.
     venue: dict[str, Any] | None = None
@@ -40,7 +41,8 @@ class GuestItemDetailOut(Schema):
     # затемнения под стеклянной панелью; `None` — кадра нет или он ещё не
     # обработан, и витрина возьмёт безопасное умолчание.
     image_luminance: float | None = None
-    # Мозаика и srcset (партия 57).
+    # УСТАРЕЛО (партия 58а): большой кадр мозаики 57 — вместо него `photos`.
+    # Уходит через релиз.
     image_full: str | None = None
     mosaic_large: bool = False
     location_mode: str
@@ -50,6 +52,9 @@ class GuestItemDetailOut(Schema):
     description: str
     price: int | None
     images: list[str]
+    # Объекты картинок (партия 58а): ширины для srcset, форма, фокус, цвет.
+    # `images` — те же фото строками, на релиз для старых клиентов.
+    photos: list[dict[str, Any]] = []
     # Тип заведения раздела: знак без фото — по нему (партия 29). Без поля в
     # схеме ответ его молча отрезал, и шторка рисовала «вилку и нож».
     service_type: str | None = None

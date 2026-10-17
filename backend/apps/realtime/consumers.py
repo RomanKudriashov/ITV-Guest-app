@@ -25,6 +25,7 @@ from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.conf import settings
 
 from apps.core.context import tenant_context
 from apps.core.middleware import resolve_subdomain
@@ -89,8 +90,12 @@ def _resolve_hotel(scope):
     from apps.hotels.models import Hotel
 
     # В деве поддомена нет: WS идёт мимо vite-прокси и заголовков, поэтому
-    # отель приходит query-параметром. В проде он берётся из Host.
-    subdomain = _query_param(scope, "hotel") or resolve_subdomain(_host(scope))
+    # отель приходит query-параметром. В проде он берётся ТОЛЬКО из Host — то же
+    # правило, что у HTTP (`TenantMiddleware`, флаг = DEBUG). Раньше параметр
+    # побеждал всегда, а витрина шлёт `hotel=crystal` из сборки: гость любого
+    # другого отеля стучался в «Кристалл», и его сокеты закрывались (партия 58а).
+    override = _query_param(scope, "hotel") if settings.GUEST_APP_ALLOW_TENANT_OVERRIDE_HEADER else ""
+    subdomain = override or resolve_subdomain(_host(scope))
     if not subdomain:
         # Собственный домен отеля — то же правило, что у HTTP (`core.hosts`).
         from apps.core.hosts import custom_domain_hotel

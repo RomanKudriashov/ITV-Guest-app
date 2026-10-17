@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from '@/kit';
+import type { ImageRef } from '@/kit/imageRef';
 import { useStorefront } from '../useStorefront';
 import type { ItemDetail, ItemFacet, MenuBadge } from '../api/types';
 import { MarkerChips, NutritionInline } from './ItemMeta';
@@ -17,6 +18,10 @@ export interface CatalogRowViewProps {
   title: string;
   description?: string;
   imageSrc?: string | null;
+  /** Объект картинки (партия 58а) — есть, браузер берёт файл по `imageSizes`. */
+  image?: ImageRef | null;
+  /** Ширина места карточки для `sizes`. */
+  imageSizes?: string;
   /** Icon on the designed fallback when the row has no photo. */
   fallbackIcon?: AppIconComponent;
   /** Dietary markers («suitable») — green chips on the card. */
@@ -36,6 +41,13 @@ export interface CatalogRowViewProps {
   action?: ReactNode;
 }
 
+/*
+  ШИРИНА КАРТОЧКИ В СЕТКЕ ЗАВЕДЕНИЯ (партия 58а, замер 17.10): три колонки в
+  контейнере lg от 1024 (331 px на 1440), две в контейнере sm ниже (169 на 390).
+*/
+export const CATALOG_CARD_SIZES =
+  '(min-width: 1080px) 331px, (min-width: 1024px) 31vw, (min-width: 600px) 268px, 47vw';
+
 /**
  * The presentational body of one catalog card (the `.card` block): a
  * photo on top that dissolves nowhere — a fixed 146px image — then the body with
@@ -50,6 +62,8 @@ export function CatalogRowView({
   title,
   description,
   imageSrc,
+  image,
+  imageSizes = CATALOG_CARD_SIZES,
   fallbackIcon,
   markers,
   badges,
@@ -107,7 +121,7 @@ export function CatalogRowView({
         sx={{ display: 'block', textAlign: 'start', width: '100%' }}
       >
         <Box sx={{ position: 'relative', height: 146 }}>
-          <KitImage src={imageSrc} alt={title} fill fallbackIcon={fallbackIcon} fallbackIconSize={44} />
+          <KitImage image={image} src={imageSrc} sizes={imageSizes} alt={title} fill fallbackIcon={fallbackIcon} fallbackIconSize={44} />
           {badges?.length ? (
             <Box sx={{ position: 'absolute', top: 8, insetInlineStart: 8, maxWidth: 'calc(100% - 16px)' }}>
               <ItemBadges badges={badges} size="sm" />

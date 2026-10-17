@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import type { AppIconComponent } from '@/icons';
 import { KitImage } from './KitImage';
+import type { ImageRef } from './imageRef';
 import { pressableSx, revealSx } from './motion';
 import { MEDIA_OVERLAY } from '@/theme/tokens';
 import { fontPx } from '@/theme/fontPx';
@@ -16,17 +17,22 @@ import { fontPx } from '@/theme/fontPx';
  */
 function PhotoLayer({
   src,
+  image,
+  sizes,
   alt,
   fallbackIcon,
   fallbackIconSize,
 }: {
   src?: string | null;
+  /** Объект картинки (партия 58а) и ширина места для `sizes`. */
+  image?: ImageRef | null;
+  sizes?: string;
   alt: string;
   fallbackIcon?: AppIconComponent;
   fallbackIconSize?: number;
 }) {
   return (
-    <KitImage src={src} alt={alt} fill fallbackIcon={fallbackIcon} fallbackIconSize={fallbackIconSize} />
+    <KitImage image={image} src={src} sizes={sizes} alt={alt} fill fallbackIcon={fallbackIcon} fallbackIconSize={fallbackIconSize} />
   );
 }
 
@@ -36,6 +42,9 @@ export interface PhotoCardProps {
   title: string;
   subtitle?: string;
   imageSrc?: string | null;
+  /** Объект картинки (партия 58а): есть — файл по ширине места `imageSizes`. */
+  image?: ImageRef | null;
+  imageSizes?: string;
   /** Icon drawn on the designed fallback when there is no image. */
   fallbackIcon?: AppIconComponent;
   /** Overlaid top-start slot — badges, price pill, etc. */
@@ -49,6 +58,8 @@ export function PhotoCard({
   title,
   subtitle,
   imageSrc,
+  image,
+  imageSizes,
   fallbackIcon,
   overlay,
   onClick,
@@ -78,7 +89,7 @@ export function PhotoCard({
         pressableSx,
       ]}
     >
-      <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} />
+      <PhotoLayer src={imageSrc} image={image} sizes={imageSizes} alt={title} fallbackIcon={fallbackIcon} />
       {/* Scrim so the caption always reads over any photo. */}
       <Box
         aria-hidden
@@ -121,6 +132,9 @@ export function PhotoCard({
 export interface MosaicTileProps {
   title: string;
   imageSrc?: string | null;
+  /** Объект картинки (партия 58а): есть — файл по ширине места `imageSizes`. */
+  image?: ImageRef | null;
+  imageSizes?: string;
   icon?: ReactNode;
   /** Icon drawn on the designed fallback when there is no image. */
   fallbackIcon?: AppIconComponent;
@@ -139,6 +153,8 @@ export interface MosaicTileProps {
 export function MosaicTile({
   title,
   imageSrc,
+  image,
+  imageSizes,
   icon,
   fallbackIcon,
   onClick,
@@ -174,7 +190,7 @@ export function MosaicTile({
         revealIndex != null ? revealSx({ index: revealIndex }) : {},
       ]}
     >
-      <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={44} />
+      <PhotoLayer src={imageSrc} image={image} sizes={imageSizes} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={44} />
       {/* Reference `.mt .vg` — a strong vertical bottom scrim so the label reads
           on any backdrop, photo or the token fallback. */}
       <Box
@@ -215,6 +231,9 @@ export function MosaicTile({
 export interface CarouselItemProps {
   title: string;
   imageSrc?: string | null;
+  /** Объект картинки (партия 58а): есть — файл по ширине места `imageSizes`. */
+  image?: ImageRef | null;
+  imageSizes?: string;
   /** Icon drawn on the designed fallback when there is no image. */
   fallbackIcon?: AppIconComponent;
   caption?: ReactNode;
@@ -226,6 +245,8 @@ export interface CarouselItemProps {
 export function CarouselItem({
   title,
   imageSrc,
+  image,
+  imageSizes,
   fallbackIcon,
   caption,
   onClick,
@@ -257,7 +278,7 @@ export function CarouselItem({
       ]}
     >
       <Box sx={{ position: 'relative', height: 112 }}>
-        <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} />
+        <PhotoLayer src={imageSrc} image={image} sizes={imageSizes ?? `${width}px`} alt={title} fallbackIcon={fallbackIcon} />
       </Box>
       <Stack spacing={0.25} sx={{ p: 1.25 }}>
         <Typography variant="subtitle2" noWrap>
@@ -276,6 +297,9 @@ export interface OrderLineRowProps {
   qty: number;
   price: string;
   imageSrc?: string | null;
+  /** Объект картинки (партия 58а): есть — файл по ширине места `imageSizes`. */
+  image?: ImageRef | null;
+  imageSizes?: string;
   /** Icon drawn on the designed fallback when there is no image. */
   fallbackIcon?: AppIconComponent;
   note?: string;
@@ -288,6 +312,8 @@ export function OrderLineRow({
   qty,
   price,
   imageSrc,
+  image,
+  imageSizes,
   fallbackIcon,
   note,
   action,
@@ -311,7 +337,7 @@ export function OrderLineRow({
           overflow: 'hidden',
         }}
       >
-        <PhotoLayer src={imageSrc} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={22} />
+        <PhotoLayer src={imageSrc} image={image} sizes={imageSizes ?? '48px'} alt={title} fallbackIcon={fallbackIcon} fallbackIconSize={22} />
       </Box>
       <Stack sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="subtitle2" noWrap>

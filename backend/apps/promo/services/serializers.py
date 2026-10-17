@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.db.models import Count, Q, Sum
 
 from apps.core.fields import translate
-from apps.media.services.assets import image_url
+from apps.media.services.assets import image_ref, image_url
 
 from apps.promo.models import Banner, BannerView
 
@@ -16,6 +16,12 @@ def _images(banner: Banner) -> list[str]:
         for link in banner.images.all()
         if link.asset_id
     ]
+
+
+def _image_refs(banner: Banner) -> list[dict]:
+    """Кадры баннера объектами картинок (партия 58а) — в порядке `_images`."""
+    refs = [image_ref(link.asset) for link in banner.images.all() if link.asset_id]
+    return [ref for ref in refs if ref]
 
 
 def guest_payload(banner: Banner, *, language: str) -> dict:
@@ -40,6 +46,7 @@ def guest_payload(banner: Banner, *, language: str) -> dict:
         "size": banner.size,
         "placement": banner.placement,
         "images": _images(banner),
+        "image_refs": _image_refs(banner),
         "action": action,
     }
 
@@ -100,7 +107,12 @@ def cms_payload(banner: Banner, *, stats: dict | None = None) -> dict:
         "room_category_ids": [str(pk) for pk in banner.room_categories.values_list("pk", flat=True)],
         "priority": banner.priority,
         "images": [
-            {"id": str(link.pk), "asset_id": str(link.asset_id), "url": image_url(link.asset, variant="full")}
+            {
+                "id": str(link.pk),
+                "asset_id": str(link.asset_id),
+                "url": image_url(link.asset, variant="full"),
+                "ref": image_ref(link.asset),
+            }
             for link in banner.images.all()
         ],
         "stats": (stats or {}).get(

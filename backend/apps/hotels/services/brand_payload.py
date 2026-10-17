@@ -29,6 +29,14 @@ def _brand_cover_url(tokens: dict) -> str | None:
     return background.get("imageUrl") or None
 
 
+def _brand_cover_ref(tokens: dict) -> dict | None:
+    """Обложка объектом картинки (партия 58а) — то же правило, что адрес выше."""
+    background = ((tokens or {}).get("brand") or {}).get("background") or {}
+    if background.get("kind") != "image":
+        return None
+    return background.get("imageRef") or None
+
+
 def serialize_hotel(hotel: Hotel) -> dict:
     """
     Отдаём вместе с сессией и вместе с ошибкой «номер не найден»: на экране
@@ -62,6 +70,7 @@ def serialize_hotel(hotel: Hotel) -> dict:
         # витрина не должна знать, как из id картинки получается url, и уж
         # тем более собирать его строкой.
         "cover_image": _brand_cover_url(tokens),
+        "cover_image_ref": _brand_cover_ref(tokens),
         # УЗКИЙ флаг, а не список модулей отеля. Гостю незачем знать платный
         # обвес: «у нас есть аналитика и PMS» — это разговор отеля с
         # платформой, а не с человеком в номере. Флаг отвечает ровно на один

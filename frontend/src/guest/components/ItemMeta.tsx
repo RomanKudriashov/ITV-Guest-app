@@ -6,6 +6,7 @@ import { Fragment, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { KitImage } from '@/kit';
+import type { ImageRef } from '@/kit/imageRef';
 import {
   IconCarbs,
   IconFat,
@@ -361,12 +362,15 @@ export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutriti
  */
 export function ItemThumb({
   src,
+  image,
   alt,
   size = 72,
   dimmed = false,
   fallbackIcon,
 }: {
   src?: string | null;
+  /** Объект картинки (партия 58а) — файл по размеру миниатюры. */
+  image?: ImageRef | null;
   alt: string;
   size?: number;
   dimmed?: boolean;
@@ -384,7 +388,15 @@ export function ItemThumb({
         opacity: dimmed ? 0.5 : 1,
       }}
     >
-      <KitImage src={src} alt={alt} fill fallbackIcon={fallbackIcon} fallbackIconSize={Math.round(size * 0.4)} />
+      <KitImage
+        image={image}
+        src={src}
+        sizes={`${size}px`}
+        alt={alt}
+        fill
+        fallbackIcon={fallbackIcon}
+        fallbackIconSize={Math.round(size * 0.4)}
+      />
     </Box>
   );
 }

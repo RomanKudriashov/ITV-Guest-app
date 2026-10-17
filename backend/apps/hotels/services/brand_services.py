@@ -83,6 +83,23 @@ def serialize_brand(theme: BrandTheme) -> dict:
 # производное, которое пересобирается на каждом чтении.
 
 
+def _asset_ref(asset_id: Any) -> dict | None:
+    """Объект картинки по id ассета (партия 58а). Мусор вместо id — None."""
+    if not asset_id:
+        return None
+
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    from apps.media.models import MediaAsset
+    from apps.media.services import image_ref
+
+    try:
+        asset = MediaAsset.objects.filter(pk=asset_id).first()
+    except (DjangoValidationError, TypeError, ValueError):
+        return None
+    return image_ref(asset)
+
+
 def _asset_url(asset_id: Any, variant: str = "card") -> str:
     """Адрес варианта по id ассета. Мусор вместо id — не 500, а «нет адреса»."""
     if not asset_id:
@@ -131,6 +148,9 @@ def resolve_media(tokens: dict) -> dict:
         # 3 — это втрое меньше, чем экран, и картинка «мыльная»; на 1440 —
         # вдвое. 1200 — самый крупный вариант нарезки.
         resolved["imageUrl"] = _asset_url(background["imageAssetId"], variant="full")
+        # Объект картинки (партия 58а): фон на весь экран при DPR 2 — это 2880
+        # точек, а `full` — 1200; витрина берёт ширину по экрану (image-set).
+        resolved["imageRef"] = _asset_ref(background["imageAssetId"])
         out_brand["background"] = resolved
 
     if out_brand == brand:
@@ -346,12 +366,27 @@ def _forget_stale_cover_asset(merged: dict, patch: dict) -> dict:
     return {**merged, "brand": brand}
 
 
+def _drop_resolved_refs(tokens: dict) -> dict:
+    """
+    `imageRef` собирается на выдаче (`resolve_media`) и в хранимые токены не
+    попадает: редактор, вернувший фон целиком, иначе сохранил бы объект с
+    адресами, которые протухнут при первой перенарезке (партия 58а).
+    """
+    background = ((tokens or {}).get("brand") or {}).get("background")
+    if not isinstance(background, dict) or "imageRef" not in background:
+        return tokens
+    brand = dict(tokens["brand"])
+    brand["background"] = {k: v for k, v in background.items() if k != "imageRef"}
+    return {**tokens, "brand": brand}
+
+
 def update_brand(patch_tokens: dict) -> BrandTheme:
     require_hotel_admin()
     theme = get_or_create_brand()
     validate_tokens_patch(patch_tokens, theme.tokens or {})
 
     merged = _forget_stale_cover_asset(_deep_merge(theme.tokens or {}, patch_tokens), patch_tokens)
+    merged = _drop_resolved_refs(merged)
 
     # Любая ручная правка снимает ярлык пресета: набор больше не «чистый».
     # Исключение — если сам preset пришёл в патче (это применение пресета).

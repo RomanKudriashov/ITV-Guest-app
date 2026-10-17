@@ -98,8 +98,16 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
       sx={(th) => ({ display: 'block', textAlign: 'start', borderRadius: surfaceRadius.panel(th.palette.brand.radius), overflow: 'hidden', width: '100%', color: 'common.white' })}
     >
       <Box sx={{ position: 'relative', height: { xs: 168, md: 190 } }}>
-        {venue.image ? (
-          <KitImage src={venue.image} alt={venue.title} fill fallbackIcon={fallbackIconFor('product', venue.service_type)} />
+        {venue.image_ref || venue.image ? (
+          /* Объект кадра (партия 58а); место — колонка сетки 1/2/3 в контейнере lg. */
+          <KitImage
+            image={venue.image_ref}
+            src={venue.image}
+            sizes="(min-width: 1080px) 333px, (min-width: 900px) 31vw, (min-width: 600px) 47vw, calc(100vw - 32px)"
+            alt={venue.title}
+            fill
+            fallbackIcon={fallbackIconFor('product', venue.service_type)}
+          />
         ) : (
           <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
             {/* Без фото — иконка по типу заведения на фирменном фоне (п.68). */}

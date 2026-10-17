@@ -23,6 +23,7 @@ import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
+import { refImgProps } from '@/media/refImg';
 import { createService, fetchServiceTemplates, fetchServices } from './api';
 import type { CmsService } from './api';
 import { SlaOverridesList } from './SlaOverridesList';
@@ -161,7 +162,12 @@ function ServiceCard({
         {service.image ? (
           <Box
             component="img"
-            src={service.image.url}
+            // Объект картинки (партия 58а): место 369×132 на 1440 (три колонки),
+            // половина окна на планшете, во всю ширину на телефоне (340 на 390).
+            {...refImgProps(
+              service.image,
+              '(min-width: 1200px) 370px, (min-width: 600px) 50vw, 100vw',
+            )}
             alt=""
             sx={{ width: '100%', height: 132, objectFit: 'cover', display: 'block' }}
           />

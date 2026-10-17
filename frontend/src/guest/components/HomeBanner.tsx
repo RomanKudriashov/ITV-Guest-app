@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { closeBanner, reportBannerClick } from '../api/guest';
 import type { GuestBanner } from '../api/types';
+import { KitImage } from '@/kit/KitImage';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -33,6 +34,9 @@ const HEIGHTS: Record<GuestBanner['size'], { xs: number; md: number }> = {
 };
 
 const CAROUSEL_MS = 5000;
+
+/** Ширина полосы баннера для `sizes`: контейнер lg, поля 24 (≥600) и 16. */
+const BANNER_SIZES = '(min-width: 1080px) 1032px, (min-width: 600px) calc(100vw - 48px), calc(100vw - 32px)';
 
 interface Props {
   banner: GuestBanner | null | undefined;
@@ -72,6 +76,7 @@ export function HomeBanner({ banner, placement }: Props) {
   if (!banner || banner.placement !== placement || closed) return null;
 
   const height = HEIGHTS[banner.size] ?? HEIGHTS.m;
+  const frameRef = banner.image_refs?.[frame] ?? null;
 
   const act = () => {
     // Нажатие отмечаем и идём дальше, не дожидаясь ответа: статистика не
@@ -109,14 +114,22 @@ export function HomeBanner({ banner, placement }: Props) {
           bgcolor: 'action.hover',
         }}
       >
-        {images[frame] && (
+        {images[frame] && frameRef?.widths.length ? (
+          /*
+            Кадр объектом (партия 58а) — общий примитив: файл по ширине места
+            (полоса контейнера 1032 на 1440, 358 на 390), кадр по фокусу и предел
+            обрезки — полоса 5:1 против кадра 3:2 показывала 30% фото.
+          */
+          <KitImage image={frameRef} sizes={BANNER_SIZES} alt="" fill testId="guest-banner-image" />
+        ) : images[frame] ? (
           <Box
             component="img"
+            data-testid="guest-banner-image"
             src={images[frame]}
             alt=""
             sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
-        )}
+        ) : null}
         {(banner.title || banner.subtitle) && (
           <Stack
             spacing={0.25}

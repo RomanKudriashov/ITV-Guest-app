@@ -1,6 +1,9 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
+import type { ImageRef } from '@/kit/imageRef';
+import { useCoverBackground } from '@/kit/useCoverBackground';
+
 import { fontPx, layout, surfaceRadius, type StorefrontTokens } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
@@ -18,12 +21,17 @@ export function HomeHero({
   hotelName,
   greeting,
   cover,
+  coverRef,
 }: {
   hotelName: string;
   greeting: string;
   cover: string | null;
+  /** Объект обложки (партия 58а) — есть, фон берётся по ширине места. */
+  coverRef?: ImageRef | null;
 }) {
-  return <HomeHeroView hotelName={hotelName} greeting={greeting} cover={cover} tokens={useStorefront()} />;
+  return (
+    <HomeHeroView hotelName={hotelName} greeting={greeting} cover={cover} coverRef={coverRef} tokens={useStorefront()} />
+  );
 }
 
 /**
@@ -41,14 +49,18 @@ export function HomeHeroView({
   hotelName,
   greeting,
   cover,
+  coverRef,
   tokens,
 }: {
   hotelName: string;
   greeting: string;
   cover: string | null;
+  coverRef?: ImageRef | null;
   tokens: StorefrontTokens;
 }) {
   const { scrim, onMedia, mediaFallback } = tokens;
+  // Место 1080×304 (1440) / 390×252 (390) — хук меряет его сам.
+  const bg = useCoverBackground(coverRef);
 
   return (
     <Box
@@ -62,15 +74,16 @@ export function HomeHeroView({
         backgroundImage: mediaFallback,
       }}
     >
-      {cover ? (
+      {bg.sx || cover ? (
         <Box
           aria-hidden
+          ref={bg.ref}
+          data-testid="guest-home-hero-cover"
           sx={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url(${cover})`,
+            ...(bg.sx ?? { backgroundImage: `url(${cover})`, backgroundPosition: 'center' }),
             backgroundSize: 'cover',
-            backgroundPosition: 'center',
           }}
         />
       ) : null}

@@ -100,7 +100,19 @@ export function ItemMedia({
             }),
       })}
     >
-      <KitImage src={item.images?.[0]} alt={item.title} fill fallbackIcon={icon} fallbackIconSize={isRail ? 64 : 48} />
+      {/*
+        Кадр объектом (партия 58а). Место: колонка 400 px в окне на ПК
+        (`rail`), во всю ширину шторки на телефоне и планшете (`top`).
+      */}
+      <KitImage
+        image={item.photos?.[0] ?? null}
+        src={item.images?.[0]}
+        sizes={isRail ? '400px' : '100vw'}
+        alt={item.title}
+        fill
+        fallbackIcon={icon}
+        fallbackIconSize={isRail ? 64 : 48}
+      />
       {/*
         РАСТВОРЕНИЯ КРАЯ БОЛЬШЕ НЕТ.
 

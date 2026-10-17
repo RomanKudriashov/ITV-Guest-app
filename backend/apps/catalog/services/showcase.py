@@ -22,7 +22,7 @@ from typing import Any
 
 from apps.core.fields import translate
 from apps.hotels.models import Hotel, Service, ShowcaseTile
-from apps.media.services import image_url
+from apps.media.services import image_ref, image_url
 
 from apps.catalog.models import Category, OfferingType
 
@@ -73,6 +73,17 @@ INFO_TITLE = {"ru": "Об отеле", "en": "About the hotel", "ar": "عن ال
 
 
 def _service_image(service: Service) -> str | None:
+    """Адрес обложки заведения (см. `_service_asset`)."""
+    asset = _service_asset(service)
+    return (asset.url("card") or None) if asset is not None else None
+
+
+def _service_ref(service: Service) -> dict | None:
+    """Обложка заведения объектом картинки (партия 58а)."""
+    return image_ref(_service_asset(service))
+
+
+def _service_asset(service: Service):
     """Обложка заведения: фото сервиса → фото первой его категории → None.
 
     Дальше каскад продолжает фронт (фон бренда → градиент токенов), поэтому
@@ -81,7 +92,7 @@ def _service_image(service: Service) -> str | None:
     if service.image_id:
         url = service.image.url("card")
         if url:
-            return url
+            return service.image
     category = (
         Category.objects.filter(
             is_active=True,
@@ -93,8 +104,8 @@ def _service_image(service: Service) -> str | None:
         .order_by("sort_order", "code")
         .first()
     )
-    if category and category.image_id:
-        return image_url(category.image, variant="card") or None
+    if category and category.image_id and image_url(category.image, variant="card"):
+        return category.image
     return None
 
 
@@ -198,7 +209,9 @@ def build_showcase(
         always = group_key in ALWAYS_GROUPED
         if len(services) > threshold or (always and len(services) >= 1):
             # Свёрнутая плитка-категория с превью обложек заведений внутри.
-            previews = [img for img in (_service_image(s) for s in services) if img][:4]
+            assets = [a for a in (_service_asset(s) for s in services) if a is not None and a.url("card")][:4]
+            previews = [a.url("card") for a in assets]
+            preview_refs = [image_ref(a) for a in assets]
             base = {
                 "key": group_key,
                 "type": "service-category",
@@ -208,7 +221,9 @@ def build_showcase(
                 "venue_count": len(services),
                 "status": None,
                 "image": previews[0] if previews else None,
+                "image_ref": preview_refs[0] if preview_refs else None,
                 "cover_previews": previews,
+                "cover_preview_refs": preview_refs,
                 # Один сервис в группе — плитка ведёт сразу в него: список из
                 # одного заведения — лишний шаг (партия 29).
                 "route": (
@@ -239,6 +254,7 @@ def build_showcase(
                     "venue_count": None,
                     "status": _service_status(service, moment),
                     "image": _service_image(service),
+                    "image_ref": _service_ref(service),
                     "cover_previews": [],
                     "route": f"/venue/{service.code}",
                     "enabled": True,
@@ -267,6 +283,7 @@ def build_showcase(
             # Обложка берётся у инфо-раздела: плитка без фото среди
             # фотографических соседей читается как незагрузившаяся.
             "image": image_url(info_category.image, variant="card") or None,
+            "image_ref": image_ref(info_category.image),
             "cover_previews": [],
             "route": "/info",
             "enabled": True,
@@ -291,6 +308,7 @@ def _venue_card(service: Service, language: str | None, moment: datetime | None)
         "kind": service.execution_point.kind,
         "service_type": service.type,
         "image": _service_image(service),
+        "image_ref": _service_ref(service),
         "status": _service_status(service, moment),
         "route": f"/venue/{service.code}",
     }

@@ -39,6 +39,10 @@ export interface MediaAsset {
   id: string;
   url: string;
   thumb_url?: string;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  ref?: import('@/kit/imageRef').ImageRef | null;
+  /** Точка фокуса (партия 58а), доли кадра. */
+  focus?: { x: number; y: number } | null;
   status: MediaStatus;
   original_filename?: string;
   sort_order?: number;

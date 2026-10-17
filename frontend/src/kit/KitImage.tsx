@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { alpha, type Theme } from '@mui/material/styles';
 
 import { IconRestaurant, type AppIconComponent } from '@/icons';
 import { fadeInSx } from './motion';
+import { coverWidth, focusPosition, MIN_VISIBLE_SHARE, srcSetOf, visibleShare, type ImageRef } from './imageRef';
 
 /**
  * The storefront's single image primitive.
@@ -16,7 +17,23 @@ import { fadeInSx } from './motion';
  * only from theme tokens.
  */
 export interface KitImageProps {
+  /**
+   * Объект картинки (партия 58а): ряд ширин, форма кадра, фокус, цвет. Есть —
+   * файл выбирает браузер по `srcset`/`sizes`, кадр ложится по фокусу.
+   */
+  image?: ImageRef | null;
+  /** Адрес строкой — для мест, где объекта нет (логотип в токенах, старые клиенты). */
   src?: string | null;
+  /**
+   * Ширина места для выбора файла — ЗАДАЁТ МЕСТО (`'(min-width: 1024px) 400px, 100vw'`).
+   * Без неё браузер считает место во весь экран и тянет лишнее.
+   */
+  sizes?: string;
+  /**
+   * Предел обрезки: видно меньше 60% кадра — фото целиком поверх размытого
+   * себя. Выключается там, где резать нельзя иначе (логотип рисует `contain` сам).
+   */
+  limit?: boolean;
   alt: string;
   /** CSS aspect-ratio (e.g. `'16 / 9'`). Ignored when `fill` is set. */
   ratio?: string;
@@ -47,7 +64,10 @@ export function mediaFallbackSx(theme: Theme) {
 }
 
 export function KitImage({
-  src,
+  image,
+  src: srcProp,
+  sizes = '100vw',
+  limit = true,
   alt,
   ratio = '16 / 9',
   fill = false,
@@ -59,6 +79,45 @@ export function KitImage({
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const src = image?.src || srcProp || null;
+
+  /*
+    ПРЕДЕЛ ОБРЕЗКИ (партия 58а). Место меряется само (ResizeObserver): форма
+    места против формы кадра даёт видимую долю. Меньше 60% — `cover` отрезал бы
+    больше, чем показал (окно «House rules»: 21%), и фото ложится целиком
+    (`contain`) поверх размытого себя. Форма кадра — из объекта; строкой
+    пришедшую картинку не судим.
+  */
+  const [share, setShare] = useState(1);
+  const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    const node = frameRef.current;
+    if (!node || !image?.w || !image?.h) {
+      setShare(1);
+      return undefined;
+    }
+    const measure = () => {
+      setBox({ w: node.clientWidth, h: node.clientHeight });
+      setShare(limit ? visibleShare(image, node.clientWidth, node.clientHeight) : 1);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [image, limit]);
+  const whole = limit && share < MIN_VISIBLE_SHARE;
+  /*
+    `sizes` места — ширина места; но `cover` в узком месте режет по ВЫСОТЕ и
+    требует файл шире места (окно инфо 388×224 при кадре 2,4:1 — 1080 точек, а
+    не 776). Измерив место, считаем нужную ширину сами; до замера — `sizes` места.
+  */
+  const effectiveSizes =
+    image?.w && image?.h && box.w > 0 && box.h > 0
+      ? `${Math.ceil(whole ? Math.min(box.w, box.h * (image.w / image.h)) : coverWidth(image, box.w, box.h))}px`
+      : sizes;
+  const backdropSrc = image?.widths[0]?.url ?? null;
 
   /*
     КАРТИНКА ИЗ КЭША УСПЕВАЕТ ЗАГРУЗИТЬСЯ ДО ТОГО, КАК РЕАКТ ПОВЕСИТ `onLoad`.
@@ -96,11 +155,16 @@ export function KitImage({
 
   return (
     <Box
+      ref={frameRef}
       data-testid={testId}
+      data-fit={showImage ? (whole ? 'contain' : 'cover') : undefined}
+      data-visible-share={showImage && image ? share.toFixed(2) : undefined}
       sx={{
         ...frameSx,
         overflow: 'hidden',
         ...(radius != null ? { borderRadius: `${radius}px` } : {}),
+        // Средний цвет — подложка, пока файл грузится, и под фото целиком.
+        ...(image?.color ? { backgroundColor: image.color } : {}),
       }}
     >
       {showImage ? (
@@ -119,10 +183,39 @@ export function KitImage({
               })}
             />
           ) : null}
+          {whole && backdropSrc ? (
+            /*
+              Размытое то же фото под целым. Самая узкая ширина: после размытия
+              деталей не видно, а байты — те же. При `prefers-reduced-transparency`
+              размытия нет — остаётся подложка средним цветом.
+            */
+            <Box
+              aria-hidden
+              component="img"
+              data-testid={testId ? `${testId}-backdrop` : 'kit-image-backdrop'}
+              src={backdropSrc}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: 'blur(24px) saturate(1.2)',
+                transform: 'scale(1.15)',
+                opacity: 0.85,
+                '@media (prefers-reduced-transparency: reduce)': { display: 'none' },
+              }}
+            />
+          ) : null}
           <Box
             component="img"
             ref={imgRef}
             src={src as string}
+            srcSet={image && image.widths.length ? srcSetOf(image) : undefined}
+            sizes={image && image.widths.length ? effectiveSizes : undefined}
             alt={alt}
             loading="lazy"
             decoding="async"
@@ -134,7 +227,8 @@ export function KitImage({
                 inset: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: whole ? 'contain' : 'cover',
+                objectPosition: image && !whole ? focusPosition(image) : '50% 50%',
                 opacity: loaded ? 1 : 0,
               },
               loaded ? fadeInSx() : {},

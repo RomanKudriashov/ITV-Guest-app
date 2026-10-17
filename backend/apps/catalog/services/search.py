@@ -276,6 +276,23 @@ def _service_image(service) -> str | None:
     return image_url(getattr(service, "image", None), variant="thumb") or None
 
 
+def _service_ref(service) -> dict | None:
+    from apps.media.services import image_ref
+
+    return image_ref(getattr(service, "image", None))
+
+
+def _item_ref(item) -> dict | None:
+    """Первый кадр позиции объектом картинки (партия 58а)."""
+    from apps.media.services import image_ref
+
+    for link in item.images.all():
+        ref = image_ref(link.asset) if link.asset_id else None
+        if ref:
+            return ref
+    return None
+
+
 def _item_image(item) -> str | None:
     """
     Первый кадр позиции. У позиции их несколько (`images`), а не одно поле —
@@ -299,6 +316,7 @@ def _service_row(service, language: str | None) -> dict:
         # Маршрут витрины: тап ведёт В ЗАВЕДЕНИЕ, а не в список заведений.
         "route": f"/venue/{service.code}",
         "image": _service_image(service),
+        "image_ref": _service_ref(service),
         # Тип — для значка без фото: иконка по типу заведения (п.68).
         "service_type": service.type,
     }
@@ -330,5 +348,6 @@ def _item_row(item, language: str | None) -> dict:
             else (f"/venue/{service.code}?item={item.pk}" if service else f"/menu?item={item.pk}")
         ),
         "image": _item_image(item),
+        "image_ref": _item_ref(item),
         "price": item.price,
     }

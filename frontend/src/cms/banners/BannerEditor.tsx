@@ -30,6 +30,7 @@ import { MultiSelectField, SelectField } from '@/components/SelectField';
 import { fetchServices } from '@/cms/services/api';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { DateField, TimeField } from '@/components/DateField';
+import { refImgProps } from '@/media/refImg';
 
 /**
  * Форма баннера: что показать, куда вести и кому показывать.
@@ -169,7 +170,8 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
                 <Box key={image.id} sx={{ position: 'relative' }}>
                   <Box
                     component="img"
-                    src={image.url}
+                    // Кадр баннера объектом картинки (партия 58а); место 120×72.
+                    {...refImgProps(image, '120px')}
                     alt=""
                     sx={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 1 }}
                   />

@@ -66,7 +66,14 @@ class MediaAsset(TenantModel):
     # карточки — тем более незачем. Значение не меняется после загрузки.
     luminance = models.FloatField(null=True, blank=True)
 
-    # {"thumb": "hotels/<id>/thumb/....webp", "card": "...", "full": "..."}
+    # Средний цвет кадра `#rrggbb` (партия 58а): подложка, пока файл грузится,
+    # и замена размытого фона при `prefers-reduced-transparency`.
+    average_color = models.CharField(max_length=7, blank=True)
+
+    # {"thumb": "hotels/<id>/thumb/....webp", "w400": "...", "w800": "...", ...}
+    # Ширины — из `settings.MEDIA_WIDTHS`, не больше оригинала, в пропорциях
+    # оригинала. У ассетов до перенарезки (партия 58а) лежат старые `card`/`full`,
+    # вырезанные по `crop`: `url()` и `image_ref()` понимают оба вида.
     variants = models.JSONField(default=dict, blank=True)
 
     # КАДР — КООРДИНАТЫ, А НЕ НОВЫЙ ФАЙЛ.
@@ -84,6 +91,15 @@ class MediaAsset(TenantModel):
     # обрезанными: считать кадр в браузере значит гнать по сети лишние
     # мегабайты и отдать выбор рамки `object-fit`, то есть браузеру.
     crop = models.JSONField(null=True, blank=True)
+    # ТОЧКА ФОКУСА (партия 58а) — {"x": 0..1, "y": 0..1}, доли оригинала.
+    #
+    # Сменила вырезанный кадр: варианты режутся из ЦЕЛОГО оригинала, а место
+    # показа само кладёт фото по фокусу (`object-position`). Кадр резал фото один
+    # раз под одну форму, а показывают его в десятке форм — баннер Метрополя
+    # терял 69% на сервере и ещё половину остатка в браузере (замер 17.10).
+    # `crop` остаётся на релиз: старый редактор кадра пишет его, сервер
+    # пересчитывает отсюда фокус по центру рамки, а вариантов по нему не режет.
+    focus = models.JSONField(default=dict, blank=True)
     # Соотношение, под которое кадр выбирали. Нужно и рендеру (какой формы
     # резать), и редактору (в какой рамке переоткрыть). Без него «переоткрыть
     # обрезку» показывало бы другую рамку, чем ту, что человек настроил.
@@ -113,14 +129,37 @@ class MediaAsset(TenantModel):
         scheme = settings.GUEST_APP_PUBLIC_SCHEME
         return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{self.object_key}"
 
+    def width_variants(self) -> list[tuple[int, str]]:
+        """Нарезка по ширинам (партия 58а): [(ширина, ключ)] по возрастанию."""
+        out = []
+        for name, key in (self.variants or {}).items():
+            if name.startswith("w") and name[1:].isdigit() and key:
+                out.append((int(name[1:]), key))
+        return sorted(out)
+
+    def key_for_width(self, width: int) -> str:
+        """Ключ наименьшей ширины не уже `width`; не нашлось — самой широкой."""
+        series = self.width_variants()
+        if not series:
+            return ""
+        for w, key in series:
+            if w >= width:
+                return key
+        return series[-1][1]
+
     def url(self, variant: str = "card") -> str:
         """
         Публичный URL варианта. Фолбэк-цепочка: запрошенный вариант →
         оригинал → пусто (вызывающий подставит заглушку по категории).
+
+        Старые имена (`card`, `full`) после перенарезки берутся из ряда ширин —
+        ими ещё зовут план номера, логотип и устаревшее `image_full`.
         """
-        key = self.variants.get(variant) or (
-            self.object_key if self.status == self.Status.READY else ""
-        )
+        key = (self.variants or {}).get(variant)
+        if not key and variant in settings.MEDIA_LEGACY_VARIANT_WIDTH:
+            key = self.key_for_width(settings.MEDIA_LEGACY_VARIANT_WIDTH[variant])
+        if not key:
+            key = self.object_key if self.status == self.Status.READY else ""
         if not key:
             return ""
         # Схема — та, по которой гость открывает приложение, а НЕ MINIO_SECURE.
@@ -129,5 +168,10 @@ class MediaAsset(TenantModel):
         # адрес уезжает В БРАУЗЕР ГОСТЯ. На HTTPS-странице http-картинка не
         # «грузится чуть хуже» — она блокируется, и это выглядит как «пропали
         # все фотографии», причём ровно на боевом стенде и никогда локально.
+        scheme = settings.GUEST_APP_PUBLIC_SCHEME
+        return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{key}"
+
+    def key_url(self, key: str) -> str:
+        """Публичный URL объекта бакета — по той же схеме, что `url()`."""
         scheme = settings.GUEST_APP_PUBLIC_SCHEME
         return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{key}"

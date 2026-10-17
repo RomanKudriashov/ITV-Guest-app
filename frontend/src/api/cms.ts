@@ -781,6 +781,8 @@ export interface BannerImage {
   id: string;
   asset_id: string;
   url: string;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус. */
+  ref?: import('@/kit/imageRef').ImageRef | null;
 }
 
 export interface Banner {

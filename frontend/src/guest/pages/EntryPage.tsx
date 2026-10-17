@@ -17,6 +17,7 @@ import { useAppTheme } from '@/theme';
 import { useStorefront } from '../useStorefront';
 import { pickLogo } from '@/theme/tokens';
 import { resolveBackground } from '@/theme/brandBackground';
+import { useCoverBackground } from '@/kit/useCoverBackground';
 import { GuestLanguageMenu } from '../components/GuestLanguageMenu';
 import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { fetchPublicHotel } from '../api/guest';
@@ -113,6 +114,10 @@ export function EntryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkRoom, isReady, isBootstrapping]);
 
+  // Хук — до ранних выходов. Фото бренда объектом (партия 58а): файл по ширине экрана, кадр по фокусу.
+  const brandBg = tokens.brand?.background;
+  const cover = useCoverBackground(brandBg?.kind === 'image' ? brandBg.imageRef : null);
+
   if (isReady) return <Navigate to="/home" replace />;
 
   if (isBootstrapping || (deepLinkRoom && busy)) {
@@ -154,6 +159,8 @@ export function EntryPage() {
       {/* Atmospheric backdrop: brand photo/gradient, slow Ken Burns drift. */}
       <Box
         aria-hidden
+        ref={cover.ref}
+        data-testid="guest-entry-backdrop"
         sx={{
           /*
             Кадр отеля во всю ширину и БЕЗ движения.
@@ -169,6 +176,7 @@ export function EntryPage() {
           position: 'absolute',
           inset: 0,
           ...backdrop.css,
+          ...(cover.sx ?? {}),
         }}
       />
       {backdrop.dim > 0 ? (

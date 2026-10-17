@@ -16,6 +16,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard, revealSx } from '@/kit';
 import { useAppTheme } from '@/theme';
 import { resolveBackground } from '@/theme/brandBackground';
+import type { ImageRef } from '@/kit/imageRef';
+import { useCoverBackground } from '@/kit/useCoverBackground';
 import { behaviourFor, type OfferingType } from '@/offerings/behaviour';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import { CatalogRowView } from '../components/CatalogRow';
@@ -227,6 +229,7 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
           hotelName={hotelName}
           sectionTitle={t(`${ns}.heroTitle`, { defaultValue: hotelName })}
           heroImage={data?.hero_image ?? null}
+          heroImageRef={data?.hero_image_ref ?? null}
           tokens={tokens}
           mode={mode}
         />
@@ -407,12 +410,14 @@ function CatalogHero({
   hotelName,
   sectionTitle,
   heroImage,
+  heroImageRef,
   tokens,
   mode,
 }: {
   hotelName: string;
   sectionTitle: string;
   heroImage: string | null;
+  heroImageRef?: ImageRef | null;
   tokens: ReturnType<typeof useAppTheme>['tokens'];
   mode: ReturnType<typeof useAppTheme>['mode'];
 }) {
@@ -430,10 +435,24 @@ function CatalogHero({
         dim: 0,
       }
     : brand;
+  /*
+    Объект того кадра, что выбран каскадом (партия 58а): фото точки — его
+    объект; фото бренда — объект фона бренда. Шапка 1080×272 / 390×218 —
+    хук меряет место сам. Объекта нет — прежний `url()`.
+  */
+  const brandBg = tokens.brand?.background;
+  const cover = useCoverBackground(
+    heroImage || heroImageRef ? heroImageRef : brandBg?.kind === 'image' ? brandBg.imageRef : null,
+  );
   const showSub = Boolean(hotelName) && sectionTitle !== hotelName;
   return (
     <Box aria-hidden={false} sx={{ position: 'relative', height: { xs: 218, md: 272 }, overflow: 'hidden' }}>
-      <Box aria-hidden sx={{ position: 'absolute', inset: 0, ...bg.css }} />
+      <Box
+        aria-hidden
+        ref={cover.ref}
+        data-testid="guest-catalog-hero-cover"
+        sx={{ position: 'absolute', inset: 0, ...bg.css, ...(cover.sx ?? {}), ...(cover.sx ? { backgroundSize: 'cover' } : {}) }}
+      />
       {bg.dim > 0 ? (
         <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, bg.dim) }} />
       ) : null}
@@ -552,6 +571,7 @@ function CatalogRow({
       title={item.title}
       description={item.description}
       imageSrc={item.images?.[0]}
+      image={item.photos?.[0] ?? null}
       fallbackIcon={fallbackIconFor(item.type ?? fallbackType, item.service_type)}
       markers={item.markers}
       badges={item.badges}

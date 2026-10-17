@@ -113,22 +113,25 @@ def serialize_asset(asset: MediaAsset | None) -> dict | None:
         "original_url": asset.original_url(),
         "crop": asset.crop,
         "crop_ratio": asset.crop_ratio,
+        "focus": asset.focus or {"x": 0.5, "y": 0.5},
+        # Объект картинки (партия 58а): списки и предпросмотры CMS берут файл
+        # по ширине места, как витрина.
+        "ref": image_ref(asset),
     }
 
 
 def set_crop(asset_id, *, crop: dict | None, ratio: float | None) -> MediaAsset:
     """
-    Переобрезать: записать рамку и пересчитать варианты из ОРИГИНАЛА.
+    Старый редактор кадра (до партии 58в): записать рамку и ФОКУС по её центру.
 
-    Именно из оригинала, а не из прошлого результата: иначе вторая обрезка
-    резала бы уже обрезанное, и «передумал» стоило бы человеку потерянных
-    пикселей. Оригинал в MinIO не трогается ни при первой обрезке, ни при
-    десятой.
+    Вариантов по рамке больше не режем (партия 58а): они — целый оригинал, а
+    место показа кладёт фото по фокусу. Рамка хранится на релиз — редактор
+    переоткрывает её такой, какой человек её оставил.
 
-    Статус возвращается в PENDING: до конца нарезки на экране старые варианты,
-    и делать вид, что новые уже готовы, значило бы показывать не то.
+    Нарезка ставится, только если у ассета ещё старая (`card`/`full` по рамке):
+    тогда он заодно переезжает на ряд ширин.
     """
-    from apps.media.tasks import process_media_asset
+    from apps.media.tasks import focus_from_crop, process_media_asset
 
     asset = get_asset(asset_id)
     if asset.content_type == "image/svg+xml":
@@ -139,12 +142,74 @@ def set_crop(asset_id, *, crop: dict | None, ratio: float | None) -> MediaAsset:
         raise ValidationError("SVG не кадрируется — рамку задаёт сам файл", code="svg_no_crop")
     asset.crop = crop or None
     asset.crop_ratio = ratio
-    asset.status = MediaAsset.Status.PENDING
-    asset.save(update_fields=["crop", "crop_ratio", "status", "updated_at"])
+    asset.focus = focus_from_crop(asset.crop)
+    fields = ["crop", "crop_ratio", "focus", "updated_at"]
+    legacy = not asset.width_variants()
+    if legacy:
+        asset.status = MediaAsset.Status.PENDING
+        fields.append("status")
+    asset.save(update_fields=fields)
 
-    hotel_id = require_hotel_id()
-    transaction.on_commit(lambda: process_media_asset.delay(str(asset.pk), str(hotel_id)))
+    if legacy:
+        hotel_id = require_hotel_id()
+        transaction.on_commit(lambda: process_media_asset.delay(str(asset.pk), str(hotel_id)))
     return asset
+
+
+def image_ref(asset: MediaAsset | None) -> dict | None:
+    """
+    ОБЪЕКТ КАРТИНКИ (партия 58а) — единый вид фото для гостя и CMS.
+
+        {"src": url, "widths": [{"w": 400, "url": ...}, ...], "w": 3624, "h": 1510,
+         "focus": {"x": .5, "y": .5}, "color": "#7a6b5c", "luminance": 0.31}
+
+    `widths` — для `srcset`: место показа само выбирает файл по `sizes`.
+    `w`/`h` — форма КАДРА, который лежит в файлах: витрина считает по ней,
+    сколько фото уцелеет в месте, и при < 60% показывает его целиком.
+    `src` — средняя ширина (800 или ближайшая): запасной адрес без srcset.
+
+    Ассет до перенарезки: ширины — его старые `card`/`full`, а форма — его
+    рамки, потому что эти файлы вырезаны по ней.
+    """
+    if asset is None:
+        return None
+    from django.conf import settings
+
+    w, h = asset.width, asset.height
+    focus = asset.focus or {"x": 0.5, "y": 0.5}
+    series = asset.width_variants()
+    if series:
+        widths = [{"w": width, "url": asset.key_url(key)} for width, key in series]
+        # Миниатюра — тоже ширина ряда (200, в пропорциях оригинала): значку
+        # 56×56 в поиске и корзине браузер возьмёт её, а не 400.
+        thumb = (asset.variants or {}).get("thumb")
+        if thumb and w and widths[0]["w"] > settings.MEDIA_THUMB_WIDTH:
+            widths.insert(0, {"w": min(settings.MEDIA_THUMB_WIDTH, w), "url": asset.key_url(thumb)})
+    else:
+        crop = asset.crop or None
+        if w and h and crop:
+            w, h = round(w * float(crop.get("w", 1))), round(h * float(crop.get("h", 1)))
+            focus = {"x": 0.5, "y": 0.5}  # файл уже вырезан по рамке
+        widths = []
+        for name, width in settings.MEDIA_LEGACY_VARIANT_WIDTH.items():
+            key = (asset.variants or {}).get(name)
+            if key:
+                widths.append({"w": min(width, w) if w else width, "url": asset.key_url(key)})
+        if not widths:
+            url = asset.url("original")
+            if not url:
+                return None
+            widths = [{"w": w or 0, "url": url}]
+    src = next((x["url"] for x in widths if x["w"] >= 800), widths[-1]["url"])
+    return {
+        "src": src,
+        "widths": widths,
+        "w": w,
+        "h": h,
+        "focus": {"x": float(focus.get("x", 0.5)), "y": float(focus.get("y", 0.5))},
+        "color": asset.average_color or None,
+        "luminance": asset.luminance,
+    }
 
 
 def image_url(asset: MediaAsset | None, *, variant: str = "card") -> str:

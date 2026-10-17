@@ -113,6 +113,11 @@ export interface BrandBackground {
   imageUrl?: string;
   /** The asset the cover really is. Source of truth for `imageUrl`. */
   imageAssetId?: string;
+  /**
+   * Объект картинки фона (партия 58а) — собирается сервером на выдаче
+   * (`resolve_media`), в хранимые токены не пишется. Фон берёт ширину по экрану.
+   */
+  imageRef?: import('@/kit/imageRef').ImageRef | null;
   /** Code of a built-in abstraction pattern for `kind === 'abstraction'`. */
   abstraction?: string;
   /** Auto-dimming layer drawn over an image so text stays readable, 0..1. */

@@ -67,7 +67,8 @@ def test_photo_without_alpha_stays_rgb(cms, crystal):
     with tenant_context(crystal):
         asset = MediaAsset.objects.get(pk=response.json()["id"])
         variants = _render_variants(storage.get_bytes(asset.object_key), asset)
-    with Image.open(io.BytesIO(storage.get_bytes(variants["card"]))) as variant:
+    widest = max((k for k in variants if k.startswith("w")), key=lambda k: int(k[1:]))
+    with Image.open(io.BytesIO(storage.get_bytes(variants[widest]))) as variant:
         assert variant.mode == "RGB"
 
 

@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 
 import { KitImage } from '@/kit/KitImage';
+import type { ImageRef } from '@/kit/imageRef';
 import { fallbackIconFor } from './typeFallbackIcon';
 
 /**
@@ -15,16 +16,22 @@ import { fallbackIconFor } from './typeFallbackIcon';
  */
 export function VenueMark({
   image,
+  imageRef,
+  sizes = '56px',
   serviceType,
   iconSize = 28,
 }: {
   image: string | null | undefined;
+  /** Объект обложки (партия 58а) — файл по размеру значка. */
+  imageRef?: ImageRef | null;
+  /** Размер места значка для `sizes` (по умолчанию — строка поиска, 56 px). */
+  sizes?: string;
   serviceType: string | null | undefined;
   iconSize?: number;
 }) {
   const Icon = fallbackIconFor(null, serviceType);
-  if (image) {
-    return <KitImage src={image} alt="" fill fallbackIcon={Icon} fallbackIconSize={iconSize} />;
+  if (imageRef || image) {
+    return <KitImage image={imageRef} src={image} sizes={sizes} alt="" fill fallbackIcon={Icon} fallbackIconSize={iconSize} />;
   }
   return (
     <Box

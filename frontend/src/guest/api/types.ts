@@ -8,6 +8,7 @@
 
 import type { LocationMode, OfferingType } from '@/offerings/behaviour';
 import type { RequestFieldType } from '@/offerings/requestFields';
+import type { ImageRef } from '@/kit/imageRef';
 import type { PartialBrandTokens } from '@/theme/tokens';
 
 export type GuestTrust = 'anonymous' | 'room_scanned' | 'pms_verified' | 'staff_verified';
@@ -34,6 +35,8 @@ export interface GuestHotel {
    * Готовый url: витрина не резолвит ассеты и не собирает адреса строкой.
    */
   cover_image?: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  cover_image_ref?: ImageRef | null;
   /**
    * Включён ли у отеля модуль «Управление номером».
    *
@@ -131,10 +134,9 @@ export interface MenuItem {
   /** `null` — "price not set" (a request-service may be unpriced), not "free". */
   price: number | null;
   images: string[];
-  /**
-   * Большой кадр (1200) для srcset; `images[0]` — карточный (600). Большая
-   * плитка мозаики берёт его. Нет фото — null (партия 57).
-   */
+  /** Те же фото объектами картинок (партия 58а) — места берут их, а не `images`. */
+  photos?: ImageRef[];
+  /** УСТАРЕЛО (партия 58а): вместо него `photos`. Уходит через релиз. */
   image_full?: string | null;
   /** «Крупно в мозаике»: позиция встаёт на место большой плитки (партия 57). */
   mosaic_large?: boolean;
@@ -202,6 +204,8 @@ export interface MenuCategory {
   title: string;
   description: string;
   image_url: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  image_ref?: ImageRef | null;
   sort_order: number;
   is_available: boolean;
   unavailable_reason: UnavailableReason | null;
@@ -223,6 +227,8 @@ export interface VenueIdentity {
   title: string;
   tagline: string;
   image: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  image_ref?: ImageRef | null;
   is_open: boolean;
   available_until: string | null;
   available_from: string | null;
@@ -239,6 +245,8 @@ export interface GuestCatalog {
   server_time?: string;
   /** Venue photo for the catalog hero; null → fall back to the brand background. */
   hero_image?: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  hero_image_ref?: ImageRef | null;
   /** Заполнен при скоупе на заведение; null — общий каталог отеля. */
   venue?: VenueIdentity | null;
   categories: MenuCategory[];
@@ -608,8 +616,11 @@ export interface GuestShowcaseTile {
   venue_count: number | null;
   status: GuestVenueStatus | null;
   image: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  image_ref?: ImageRef | null;
   /** Up to 4 cover previews shown inside a collapsed category tile. */
   cover_previews: string[];
+  cover_preview_refs?: ImageRef[];
   route: string | null;
   size: ShowcaseTileSize;
   order: number;
@@ -625,6 +636,8 @@ export interface GuestVenue {
   /** Тип заведения — для значка без фото (п.68). */
   service_type?: string | null;
   image: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  image_ref?: ImageRef | null;
   status: GuestVenueStatus | null;
   route: string;
 }
@@ -689,6 +702,8 @@ export interface GuestBanner {
   placement: 'top' | 'bottom';
   /** Один кадр — картинка, несколько — карусель. */
   images: string[];
+  /** Кадры объектами картинок (партия 58а), в порядке `images`. */
+  image_refs?: ImageRef[];
   action: GuestBannerAction;
 }
 
@@ -1030,6 +1045,8 @@ export interface GuestSearchRow {
   /** Маршрут витрины: ведёт ПРЯМО в карточку или заведение, не в список. */
   route: string;
   image: string | null;
+  /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
+  image_ref?: ImageRef | null;
   /** У строки заведения — его тип, для значка без фото (п.68). */
   service_type?: string | null;
   price?: number | null;

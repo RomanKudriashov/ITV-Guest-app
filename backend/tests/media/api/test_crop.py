@@ -120,20 +120,33 @@ def test_broken_frame_is_refused_not_swallowed(uploaded, cms):
     assert response.json()["code"] == "bad_crop"
 
 
-def test_renderer_cuts_the_frame_out_of_the_original():
+def test_variants_are_not_cut_by_the_frame_any_more():
     """
-    Сам рез — отдельно от API: проверяем, что из оригинала берётся ИМЕННО
-    выбранный прямоугольник, а вырожденная рамка не роняет обработку.
+    ВАРИАНТЫ — ЦЕЛЫЙ ОРИГИНАЛ (партия 58а). Рамка остаётся координатами для
+    старого редактора, но файлы гостю режутся из всего кадра: куда смотреть,
+    место показа берёт из фокуса. Рамка резала фото под одну форму, а показывают
+    его в десятке, и баннер терял 69% ещё на сервере (замер 17.10).
     """
-    from apps.media.tasks import _apply_crop
+    from types import SimpleNamespace
 
-    image = Image.open(io.BytesIO(_png(400, 300)))
-    assert _apply_crop(image, None).size == (400, 300)
-    assert _apply_crop(image, {"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.5}).size == (200, 150)
-    # Рамка за краем подрезается по границе, а не роняет задачу.
-    assert _apply_crop(image, {"x": 0.9, "y": 0.9, "w": 0.5, "h": 0.5}).size == (40, 30)
-    # Промах мышью — нулевая рамка: возвращаем картинку целиком.
-    assert _apply_crop(image, {"x": 0.5, "y": 0.5, "w": 0.0, "h": 0.0}).size == (400, 300)
+    from apps.media.tasks import render_variant_bytes
+
+    asset = SimpleNamespace(crop={"x": 0.0, "y": 0.0, "w": 0.5, "h": 0.5})
+    bodies = render_variant_bytes(_png(400, 300), asset)
+    sizes = {name: Image.open(io.BytesIO(body)).size for name, body in bodies.items()}
+    assert sizes["w400"] == (400, 300), f"вариант вырезан по рамке: {sizes}"
+    assert sizes["thumb"] == (200, 150)
+
+
+def test_crop_sets_the_focus_to_the_frame_centre(uploaded, cms, crystal):
+    """Старый редактор пишет рамку — сервер ставит фокус в её центр."""
+    body = cms.put(
+        f"/api/v1/cms/media/{uploaded['id']}/crop",
+        {"crop": {"x": 0.5, "y": 0.0, "w": 0.5, "h": 0.4}, "ratio": 2.0},
+    ).json()
+    assert body["focus"] == {"x": 0.75, "y": 0.2}
+    cleared = cms.put(f"/api/v1/cms/media/{uploaded['id']}/crop", {"crop": None}).json()
+    assert cleared["focus"] == {"x": 0.5, "y": 0.5}
 
 
 def test_images_uploaded_before_the_cropper_stay_as_they_were(cms, crystal):
@@ -149,8 +162,6 @@ def test_images_uploaded_before_the_cropper_stay_as_they_were(cms, crystal):
     под новые правила» стоил бы отелю разъехавшихся кадров во всём каталоге
     разом — и никто бы не понял, почему.
     """
-    from apps.media.tasks import _apply_crop
-
     response = cms.upload(
         "/api/v1/cms/media",
         {"file": SimpleUploadedFile("old.png", _png(400, 300), content_type="image/png")},
@@ -171,6 +182,4 @@ def test_images_uploaded_before_the_cropper_stay_as_they_were(cms, crystal):
         asset = MediaAsset.objects.get(pk=asset_id)
         assert asset.variants == variants_before, "варианты пересчитались сами по себе"
 
-    # И сам рендер без рамки отдаёт исходный кадр целиком.
-    image = Image.open(io.BytesIO(_png(400, 300)))
-    assert _apply_crop(image, asset.crop).size == (400, 300)
+
