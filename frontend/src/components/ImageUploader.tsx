@@ -76,6 +76,12 @@ function isVector(image: EditableImage): boolean {
   return /\.svg(\?|$)/i.test(image.original_url ?? image.url ?? '');
 }
 const MAX_BYTES = 10 * 1024 * 1024;
+/**
+ * Логотип уходит гостю КАК ЕСТЬ, без пережатия (партия 58а), — предел свой и
+ * проверяется до загрузки, с понятной причиной (партия 58б). Сервер держит тот
+ * же предел (`LOGO_MAX_BYTES`): скрипт по API мимо панели его не обойдёт.
+ */
+const LOGO_MAX_BYTES = 1024 * 1024;
 const POLL_INTERVAL_MS = 1500;
 const POLL_MAX_ATTEMPTS = 20;
 
@@ -208,6 +214,10 @@ export function ImageUploader({
         setError(t(kind === 'brand' ? 'media.unsupportedTypeBrand' : 'media.unsupportedType'));
         return;
       }
+      if (surface === 'logo' && file.size > LOGO_MAX_BYTES) {
+        setError(t('media.logoTooLarge'));
+        return;
+      }
       if (file.size > MAX_BYTES) {
         setError(t('media.tooLarge'));
         return;
@@ -227,7 +237,7 @@ export function ImageUploader({
       onChange((prev) => (multiple ? [...prev, placeholder] : [placeholder]));
 
       try {
-        const asset = await uploadMedia(file, kind);
+        const asset = await uploadMedia(file, kind, surface === 'logo' ? 'logo' : undefined);
         if (!mounted.current) return;
         // Swap the temp entry for the real media id, keeping the local preview.
         onChange((prev) =>
@@ -255,7 +265,7 @@ export function ImageUploader({
         dropImage(tempId);
       }
     },
-    [dropImage, kind, multiple, onChange, pollUntilReady, t],
+    [dropImage, kind, multiple, onChange, pollUntilReady, surface, t],
   );
 
   const handleFiles = useCallback(

@@ -8,9 +8,9 @@ import type { Theme } from '@mui/material/styles';
 
 import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
-import { packBento, type Placed } from './bentoPack';
+import { packBento, type BentoShape, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
-import { fontPx, storefrontTokens, surfaceRadius, titlePlate } from '../storefrontTokens';
+import { fontPx, storefrontTokens, surfaceRadius, textPlateSx, titlePlate } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { openingLabel } from '../nextOpening';
 
@@ -98,6 +98,23 @@ function StatusPill({ status }: { status: { text: string; open: boolean } }) {
 */
 const BENTO_WIDE = 1032;
 const BENTO_GAP = 14;
+
+/**
+ * ВЫСОТА РЯДА И ФОРМА КЛЕТКИ (партия 58б). Ряд на ПК — 170, а не 150: при 150
+ * плитка 2×1 была 509×150 (3,4:1), при 170 — ровно предел 3:1. Форма клетки
+ * передаётся раскладке: дыры она добирает ростом плиток вниз, а не полосой.
+ */
+export const BENTO_ROW = { xs: 128, md: 170 } as const;
+const BENTO_MAX_RATIO = 3;
+
+export function bentoShape(columns: number): BentoShape {
+  // Телефон: две колонки на 358 с зазором 10; ПК: четыре на 1032 с зазором 14;
+  // планшет — три колонки примерно по 175.
+  if (columns <= 2) return { cell: (358 - 10) / 2 / BENTO_ROW.xs, gap: 10 / BENTO_ROW.xs, maxRatio: BENTO_MAX_RATIO };
+  if (columns === 3) return { cell: 175 / BENTO_ROW.md, gap: BENTO_GAP / BENTO_ROW.md, maxRatio: BENTO_MAX_RATIO };
+  const col = (BENTO_WIDE - (columns - 1) * BENTO_GAP) / columns;
+  return { cell: col / BENTO_ROW.md, gap: BENTO_GAP / BENTO_ROW.md, maxRatio: BENTO_MAX_RATIO };
+}
 
 export function bentoTileSizes(colSpan: number, columns: number, part = 1): string {
   const col = (BENTO_WIDE - (columns - 1) * BENTO_GAP) / columns;
@@ -196,21 +213,16 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
           fallbackIcon={fallbackIconFor('product', tile.service_type)}
         />
       ) : (
-        <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
+        <Box aria-hidden data-fallback="" sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
           {/* Без фото — иконка по типу заведения на фирменном фоне (п.68). */}
           {tile.service_type ? <TileTypeIcon serviceType={tile.service_type} /> : null}
         </Box>
       )}
 
-      {/* Bottom-only scrim so the lower-left text reads; the centre stays clear. */}
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: tileTokens.scrim,
-        }}
-      />
+      {/*
+        Скрима на всю плитку нет (партия 58б): одно затемнение — подложка под
+        подписью (`textPlateSx`), кадр вне неё не тронут.
+      */}
 
       {/* Статус заведения, вверху справа. Пилюли «Скоро» больше нет: её
           носила только заглушка «Мой номер», убранная с сервера (партия 56). */}
@@ -220,7 +232,21 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
 
       {/* Title + meta, lower-left. Left inset clears the corner radius so the
           first glyph is never clipped by the rounded corner. */}
-      <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.75, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          insetInlineStart: 0,
+          maxWidth: '100%',
+          bottom: 0,
+          pl: 2.25,
+          pr: 2,
+          pb: 1.75,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.25,
+          ...textPlateSx(theme.palette.mode, 24),
+        }}
+      >
         <Typography
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
@@ -257,14 +283,14 @@ export interface BentoGridProps {
  * holes or orphan tiles, and renders each at its computed column/row span.
  */
 export function BentoGrid({ tiles, columns, onOpen }: BentoGridProps) {
-  const placed: Placed<GuestShowcaseTile>[] = packBento(tiles, columns);
+  const placed: Placed<GuestShowcaseTile>[] = packBento(tiles, columns, bentoShape(columns));
   return (
     <Box
       data-testid="guest-home-bento"
       sx={{
         display: 'grid',
         gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gridAutoRows: { xs: 128, md: 150 },
+        gridAutoRows: { xs: BENTO_ROW.xs, md: BENTO_ROW.md },
         gap: { xs: 1.25, md: 1.75 },
       }}
     >

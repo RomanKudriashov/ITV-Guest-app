@@ -32,7 +32,7 @@ import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
 import { fontPx, layout as storefrontLayout,
-  surfaceRadius, } from '../storefrontTokens';
+  surfaceRadius, textPlateSx } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import { useCartToast } from '../state/useCartToast';
@@ -42,6 +42,8 @@ import { decideAdd } from '../menuView/addAction';
 import { MenuMosaic } from '../menuView/MenuMosaic';
 import type { MenuView } from '../menuView/menuViewStore';
 import { unavailableNote as unavailableNoteOf } from '../menuView/unavailableNote';
+import { useBackdropPlateSx } from '../components/backdropPlate';
+import { IconAdd } from '@/icons';
 
 const TABS_HEIGHT = 48;
 
@@ -70,6 +72,7 @@ export interface CatalogPageProps {
  * registry rather than from conditions spread over the markup.
  */
 export function CatalogPage({ type, point, embedded = false, view = 'cards' }: CatalogPageProps) {
+  const plate = useBackdropPlateSx();
   const { glass } = useStorefront();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -208,6 +211,7 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
   if (!categories.length) {
     return (
       <EmptyState
+            plateSx={plate}
         title={t(`${ns}.emptyTitle`)}
         description={t(`${ns}.emptyHint`)}
         testId={`${behaviour.guestTestIdPrefix}-catalog-empty`}
@@ -277,10 +281,10 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
           // переменная CSS, и они расходились на каждой новой ширине.
           top: `${barLayer.top}px`,
           zIndex: (theme) => theme.zIndex.appBar - 1,
-          // Липкая строка — накладной слой: под ней продолжается меню, и
-          // глухой фон страницы здесь читался как обрыв. Стекло из словаря,
-          // то же, что у верхней строки.
-          ...glass.bar,
+          // Липкая строка — накладной слой над меню: почти сплошное стекло
+          // `nav` (партия 58б) — сквозь прежнее `bar` 0,38 читались цены и
+          // кнопки карточек под ней.
+          ...glass.nav,
           // Липкая строка — накладной блок, а не срез панели: у неё скруглены
           // все четыре угла, иначе снизу она обрывается прямым краем прямо
           // посреди списка.
@@ -296,7 +300,9 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
           allowScrollButtonsMobile
           aria-label={t(`${ns}.categories`)}
           // Запас справа больше не нужен: полосы разведены по вертикали.
-          sx={{ minHeight: TABS_HEIGHT }}
+          // Поля внутри прокрутки (партия 58б): первая вкладка упиралась в
+          // скруглённый край строки, и «Горячее» на телефоне срезалось слева.
+          sx={{ minHeight: TABS_HEIGHT, '& .MuiTabs-scroller': { px: 1 } }}
         >
           {categories.map((category) => (
             <Tab
@@ -323,7 +329,8 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
             >
               {/* Reference `.secttl` — title, a flex hairline, then an aside note. */}
               <Stack direction="row" alignItems="baseline" spacing={1.5} sx={{ mb: { xs: 1.25, md: 1.75 } }}>
-                <Typography variant="h5" component="h2">
+                {/* Заголовок раздела лежит прямо на фото фона — подложка под ним (партия 58б). */}
+                <Typography variant="h5" component="h2" data-testid="guest-section-title" data-plate="" sx={{ px: 1, ...plate }}>
                   {category.title}
                 </Typography>
                 <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
@@ -446,7 +453,18 @@ function CatalogHero({
   );
   const showSub = Boolean(hotelName) && sectionTitle !== hotelName;
   return (
-    <Box aria-hidden={false} sx={{ position: 'relative', height: { xs: 218, md: 272 }, overflow: 'hidden' }}>
+    <Box
+      aria-hidden={false}
+      data-testid="guest-catalog-hero"
+      sx={{
+        position: 'relative',
+        height: { xs: 218, md: 'auto' },
+        // Предел формы 3:1 (партия 58б): 1080×272 было 3,97:1.
+        minHeight: { md: 272 },
+        aspectRatio: { md: `${storefrontLayout.maxHeroRatio} / 1` },
+        overflow: 'hidden',
+      }}
+    >
       <Box
         aria-hidden
         ref={cover.ref}
@@ -454,19 +472,24 @@ function CatalogHero({
         sx={{ position: 'absolute', inset: 0, ...bg.css, ...(cover.sx ?? {}), ...(cover.sx ? { backgroundSize: 'cover' } : {}) }}
       />
       {bg.dim > 0 ? (
-        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, bg.dim) }} />
+        <Box aria-hidden data-dim="" sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, bg.dim) }} />
       ) : null}
+      {/*
+        Градиентов на весь кадр нет (партия 58б): снизу кадр растворялся в цвет
+        страницы — в светлой теме это белый под белым заголовком (контраст
+        1,5), сверху лежал чёрный 0,42 там, где текста нет. Одно затемнение —
+        подложка под текстом; слайдер `dim` выше действует как везде.
+      */}
       <Box
-        aria-hidden
-        sx={(th) => ({
+        sx={{
           position: 'absolute',
-          inset: 0,
-          background: `linear-gradient(to top, ${th.palette.background.default} 0%, ${alpha(
-            th.palette.background.default, 0.55,
-          )} 22%, transparent 58%), linear-gradient(to bottom, ${alpha(onMedia.dimBase, 0.42)} 0%, transparent 44%)`,
-        })}
-      />
-      <Box sx={{ position: 'absolute', insetInline: { xs: 20, md: 26 }, bottom: { xs: 40, md: 48 }, zIndex: 2 }}>
+          insetInlineStart: { xs: 20, md: 26 },
+          maxWidth: { xs: 'calc(100% - 40px)', md: 'calc(100% - 52px)' },
+          bottom: { xs: 40, md: 48 },
+          zIndex: 2,
+          ...textPlateSx(mode),
+        }}
+      >
         {showSub ? (
           <Typography
             sx={{ fontSize: fontPx(11), letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha(onMedia.primary, 0.72), fontWeight: 700 }}
@@ -558,9 +581,10 @@ function CatalogRow({
         onClick={() => cart.addSimple(item)}
         data-testid={`guest-qty-plus-${item.code}`}
         aria-label={t('guest.menu.addAria', { title: item.title })}
-        sx={{ minHeight: 44, minWidth: 44, flexShrink: 0 }}
+        sx={{ minHeight: 44, minWidth: 44, flexShrink: 0, px: 1.25 }}
       >
-        +
+        {/* Иконка, а не символ «+» шрифта (партия 58б): тот был мелким и тонким. */}
+        <IconAdd size={22} strokeWidth={2.6} data-testid="guest-add-icon" />
       </Button>
     )
   );

@@ -14,6 +14,11 @@ import type { AppIconComponent } from '@/icons';
 export interface ItemSheetLayout {
   /** True when the sheet renders the media in a side rail (desktop). */
   mediaBeside: boolean;
+  /**
+   * Кадр сверху во всю ширину окна на ПК (партия 58б): форма — по самому фото
+   * в пределах 16:9…21:9, а не колонка 400 px, где кадр резался до 21 %.
+   */
+  mediaWide?: boolean;
   /** Icon for the designed fallback when the item has no photo. */
   fallbackIcon?: AppIconComponent;
 }

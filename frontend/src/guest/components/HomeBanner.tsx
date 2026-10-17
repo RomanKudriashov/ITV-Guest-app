@@ -11,6 +11,7 @@ import { closeBanner, reportBannerClick } from '../api/guest';
 import type { GuestBanner } from '../api/types';
 import { KitImage } from '@/kit/KitImage';
 import { useStorefront } from '../useStorefront';
+import { textPlateSx } from '../storefrontTokens';
 
 /**
  * Рекламная полоса витрины.
@@ -133,15 +134,17 @@ export function HomeBanner({ banner, placement }: Props) {
         {(banner.title || banner.subtitle) && (
           <Stack
             spacing={0.25}
-            sx={{
+            sx={(th) => ({
               position: 'absolute',
-              inset: 'auto 0 0 0',
+              insetInlineStart: 0,
+              bottom: 0,
+              maxWidth: '100%',
               p: 2,
-              // Вуаль под текстом: на светлом кадре белые буквы иначе
-              // исчезают. Градиент — тот же, что под подписью плитки.
-              background: tileTokens.scrim,
+              // Одно затемнение — подложка под текстом (партия 58б), а не
+              // градиент по всей нижней полосе баннера.
+              ...textPlateSx(th.palette.mode, 24),
               color: 'common.white',
-            }}
+            })}
           >
             {banner.title && (
               <Typography

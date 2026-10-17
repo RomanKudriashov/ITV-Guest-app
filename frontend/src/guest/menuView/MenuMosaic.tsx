@@ -16,7 +16,7 @@ import { useCart } from '../state/cart';
 import { fontPx, mosaicScrim, mosaicTile, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { decideAdd } from './addAction';
-import { layoutGallery, type TileSize } from './layoutGallery';
+import { CELL_RATIO, layoutGallery, type TileSize } from './layoutGallery';
 import { unavailableNote } from './unavailableNote';
 
 /**
@@ -31,7 +31,7 @@ import { unavailableNote } from './unavailableNote';
  */
 const GAP = { phone: 6, wide: 8 };
 /** Высота клетки = 0.75 ширины колонки (≈4:3, как у образца). */
-const ROW_RATIO = 0.75;
+const ROW_RATIO = CELL_RATIO;
 /** Ширина контейнера витрины на ПК (Container lg) — для запасной высоты без cqw. */
 const SHELL_MAX = 1200;
 
@@ -146,7 +146,11 @@ const MosaicTile = memo(function MosaicTile({
   const note = unavailableNote(item, available, t);
   // Один бейдж — старший: первый по порядку, как их сортирует сервер.
   const badge = item.badges?.length ? [...item.badges].sort((a, b) => a.sort_order - b.sort_order)[0] : null;
-  const scrim = mosaicScrim(item.image_luminance, big ? 40 : 28);
+  // Затухание подложки — только в верхних 24/14 px блока, выше букв (поле
+  // сверху 40/28): при прежних 40/28 полная плотность начиналась ровно на
+  // строке названия, и её верх лежал на затухании — 3,3:1 на светлом кадре
+  // (замер 58б).
+  const scrim = mosaicScrim(item.image_luminance, big ? 24 : 14);
   const open = () => onOpen(item);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -241,8 +245,11 @@ const MosaicTile = memo(function MosaicTile({
         )}
       </Box>
 
-      {/* Слой 1 — лёгкий общий градиент снизу. Читаемость держит слой 2. */}
-      <Box aria-hidden sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: scrim.depth }} />
+      {/*
+        Общего градиента «глубины» больше нет (партия 58б): он лежал вторым
+        слоем под подложкой и затемнял кадр там, где текста нет. Одно
+        затемнение — подложка текстового блока ниже.
+      */}
 
       {badge ? (
         <Box sx={{ position: 'absolute', top: 8, insetInlineStart: 8, maxWidth: 'calc(100% - 16px)' }}>
@@ -275,7 +282,7 @@ const MosaicTile = memo(function MosaicTile({
         </Box>
       ) : null}
 
-      {/* Слой 2 — подложка текстового блока: под буквами не светлее plateMin. */}
+      {/* Подложка текстового блока: под буквами не светлее plateMin. */}
       <Box
         sx={{
           position: 'absolute',

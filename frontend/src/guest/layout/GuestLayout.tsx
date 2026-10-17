@@ -300,6 +300,7 @@ export function GuestLayout() {
       */}
       <Paper
         elevation={0}
+        data-testid="guest-bottom-nav"
         sx={(th) => ({
           position: 'fixed',
           insetInline: `${BOTTOM_NAV_INSET}px`,
@@ -311,10 +312,9 @@ export function GuestLayout() {
           overflow: 'hidden',
           maxWidth: 720,
           mx: 'auto',
-          // Прототип держит нижнее меню ЗАМЕТНО прозрачнее (.6 + blur 28), чем
-          // почти глухие .94: под меню должен продолжаться контент, иначе
-          // накладной слой читается как вторая страница.
-          ...glass.sheet,
+          // Почти сплошное стекло `nav` (партия 58б): при прежних .6 подписи
+          // меню налезали на цены и «+» карточек под ним.
+          ...glass.nav,
         })}
       >
         <BottomNavigation

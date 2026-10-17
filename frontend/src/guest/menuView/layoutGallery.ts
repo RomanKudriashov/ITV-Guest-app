@@ -14,6 +14,11 @@
  * каком числе позиций. Тот же набор → та же мозаика: вёрстка не прыгает между
  * рендерами.
  *
+ * ПРЕДЕЛ ФОРМЫ ХВОСТА ~3:1 (партия 58б). Одна позиция хвоста на 4 колонки
+ * была полосой 1032×189 (5,5:1) — фото резалось до 12–27 %. Плитка хвоста шире
+ * `TAIL_MAX_RATIO` растёт в высоту на второй ряд: она во всю ширину, и дыр это
+ * не даёт. Одна позиция на 4 колонки — 4×2 (≈2,6:1), на 3 — 3×2 (≈2:1).
+ *
  * КТО КРУПНО. Позиции с отметкой «крупно в мозаике» встают на места больших
  * по порядку; остальные места больших — по месту в списке. Нет отметок —
  * раскладка ровно как у образца: большая — та, что по счёту попала на место.
@@ -30,6 +35,16 @@ export interface PlacedTile<T> {
   colSpan: number;
   rowSpan: number;
   size: TileSize;
+}
+
+/** Высота клетки к её ширине — как `ROW_RATIO` в `MenuMosaic`. */
+export const CELL_RATIO = 0.75;
+/** Предел формы плитки хвоста: шире — растёт на ряд вниз (партия 58б). */
+export const TAIL_MAX_RATIO = 3;
+
+/** Сколько рядов нужно плитке шириной `span` клеток, чтобы не быть шире предела. */
+export function tailRowSpan(span: number): number {
+  return Math.max(1, Math.ceil(span / (TAIL_MAX_RATIO * CELL_RATIO)));
 }
 
 export function layoutGallery<T>(
@@ -65,14 +80,17 @@ export function layoutGallery<T>(
     const base = Math.floor(columns / n);
     let extra = columns % n;
     let col = 1;
+    // Высота хвоста — одна на весь ряд: по самой широкой плитке. Иначе рядом с
+    // плиткой в два ряда осталась бы дыра.
+    const rows = tailRowSpan(base + (extra > 0 ? 1 : 0));
     for (let k = 0; k < n; k += 1) {
       const span = base + (extra > 0 ? 1 : 0);
       if (extra > 0) extra -= 1;
       const item = feature && k === 0 ? takeLarge() : takeSmall();
-      place(item, col, row, span, 1, span >= 2 ? 'wide' : 's');
+      place(item, col, row, span, rows, span >= 2 ? 'wide' : 's');
       col += span;
     }
-    row += 1;
+    row += rows;
   };
 
   while (left() > 0) {

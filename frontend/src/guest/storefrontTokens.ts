@@ -22,6 +22,7 @@ import { alpha, decomposeColor, recomposeColor, type Theme } from '@mui/material
 
 import type { ThemeMode } from '@/theme/tokens';
 import { fontPx } from '@/theme/fontPx';
+import { photoPlate, photoPlateSx } from '@/theme/contrast';
 
 export interface GlassSurface {
   background: string;
@@ -39,15 +40,12 @@ export interface StorefrontGlass {
   sheet: GlassSurface;
   /** Полоса активного заказа и карточки-удобства. */
   panel: GlassSurface;
-}
-
-export interface StorefrontScrim {
-  /** Обложка отеля и шапка заведения на телефоне: затемнение снизу. */
-  hero: string;
-  /** Шапка заведения на десктопе: текст слева, поэтому затемнение сбоку. */
-  heroWide: string;
-  /** Плитка витрины: подпись живёт в нижней трети. */
-  tile: string;
+  /**
+   * Навигация поверх меню: липкая строка категорий и нижнее меню телефона
+   * (партия 58б). Почти сплошное стекло: сквозь `bar`/`sheet` (0,38–0,6)
+   * читались цены и «+» прокручиваемых карточек — подписи налезали на них.
+   */
+  nav: GlassSurface;
 }
 
 export interface StorefrontTokens {
@@ -60,7 +58,6 @@ export interface StorefrontTokens {
    * правило `::placeholder` в рантайме роняет префиксер stylis.
    */
   chatHint: string;
-  scrim: StorefrontScrim;
   /** Золото — цвет действия, ведущего к заказу. */
   goldCta: { background: string; color: string; fontWeight: number };
   /**
@@ -269,12 +266,9 @@ export interface StorefrontTokens {
   };
   /** Затемнение позади модалок и шторок. */
   dialogBackdrop: string;
-  /** Скрим экрана входа: кадр отеля во весь экран, форма поверх него. */
-  entryScrim: string;
   tile: {
     fallbackColor: string;
     fallbackGradient: string;
-    scrim: string;
     titleShadow: string;
     metaShadow: string;
   };
@@ -362,12 +356,11 @@ const DARK: StorefrontTokens = {
       border: '1px solid rgba(255,255,255,.1)',
       backdropFilter: 'blur(16px)',
     },
-  },
-  scrim: {
-    hero: 'linear-gradient(180deg,rgba(5,8,14,.22),transparent 42%,rgba(10,15,23,.95))',
-    heroWide:
-      'linear-gradient(90deg,rgba(5,8,14,.82),transparent 62%),linear-gradient(180deg,transparent,rgba(5,8,14,.5))',
-    tile: 'linear-gradient(180deg,transparent,rgba(5,8,14,.9))',
+    nav: {
+      background: 'rgba(11,17,27,.9)',
+      border: '1px solid rgba(255,255,255,.1)',
+      backdropFilter: 'blur(24px) saturate(1.4)',
+    },
   },
   goldCta: {
     background: 'linear-gradient(180deg,#E0C588,#CBA96C)',
@@ -411,17 +404,9 @@ const DARK: StorefrontTokens = {
     fadeEdge: 'linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%)',
   },
   dialogBackdrop: 'rgba(4,9,16,0.62)',
-  // Ровно `.a .scrim` из `login-ac.html`: затемнение идёт СБОКУ, оттуда же,
-  // где стоит форма. Чисто вертикальный скрим оставлял середину кадра почти
-  // открытой — подсказка про QR и «просто посмотреть меню» ложились на
-  // светлую часть фотографии и переставали читаться.
-  entryScrim:
-    'linear-gradient(90deg,rgba(6,10,17,.9) 0%,rgba(6,10,17,.55) 44%,rgba(6,10,17,.15) 100%),linear-gradient(180deg,rgba(6,10,17,.5),transparent 32%,rgba(6,10,17,.7))',
   tile: {
     fallbackColor: '#0a0f18',
     fallbackGradient: 'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
-    scrim:
-      'linear-gradient(to top, rgba(5,7,12,.82) 0%, rgba(5,7,12,.5) 22%, transparent 46%)',
     titleShadow: '0 2px 14px rgba(0,0,0,0.6)',
     metaShadow: '0 1px 8px rgba(0,0,0,0.55)',
   },
@@ -463,12 +448,11 @@ const LIGHT: StorefrontTokens = {
       border: '1px solid rgba(18,32,47,.09)',
       backdropFilter: 'blur(16px)',
     },
-  },
-  scrim: {
-    hero: 'linear-gradient(180deg,rgba(5,8,14,.14),transparent 44%,rgba(8,13,20,.82))',
-    heroWide:
-      'linear-gradient(90deg,rgba(5,8,14,.72),transparent 64%),linear-gradient(180deg,transparent,rgba(5,8,14,.38))',
-    tile: 'linear-gradient(180deg,transparent,rgba(5,8,14,.82))',
+    nav: {
+      background: 'rgba(255,255,255,.93)',
+      border: '1px solid rgba(18,32,47,.1)',
+      backdropFilter: 'blur(24px) saturate(1.3)',
+    },
   },
   // Золото на светлом берём на два тона глубже: прототипное #E0C588 на белом
   // теряется и перестаёт читаться как главное действие.
@@ -548,18 +532,10 @@ const LIGHT: StorefrontTokens = {
     fadeEdge: 'linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%)',
   },
   dialogBackdrop: 'rgba(18,32,47,0.38)',
-  // Экран входа стоит на фотографии отеля в ОБЕИХ темах, и форма на нём одна
-  // и та же — белая по кадру. Ослаблять затемнение «ради светлой темы» здесь
-  // значит сделать форму нечитаемой: режим интерфейса не меняет того, что под
-  // текстом лежит снимок. Держим тот же скрим, что и в тёмной.
-  entryScrim:
-    'linear-gradient(90deg,rgba(6,10,17,.9) 0%,rgba(6,10,17,.55) 44%,rgba(6,10,17,.15) 100%),linear-gradient(180deg,rgba(6,10,17,.5),transparent 32%,rgba(6,10,17,.7))',
   // Плитка одинакова в обеих темах — см. комментарий у `tile` в типе.
   tile: {
     fallbackColor: '#0a0f18',
     fallbackGradient: 'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
-    scrim:
-      'linear-gradient(to top, rgba(5,7,12,.82) 0%, rgba(5,7,12,.5) 22%, transparent 46%)',
     titleShadow: '0 2px 14px rgba(0,0,0,0.6)',
     metaShadow: '0 1px 8px rgba(0,0,0,0.55)',
   },
@@ -772,77 +748,6 @@ const contrast = (a: Rgb, b: Rgb): number => {
   return (light + 0.05) / (dark + 0.05);
 };
 
-/**
- * ПЛОТНОСТЬ ЗАТЕМНЕНИЯ ПОД СТЕКЛЯННОЙ ПАНЕЛЬЮ — ПО ЯРКОСТИ КАДРА.
- *
- * Стекло показывает то, что под ним, и под панелью карточки лежит размытая
- * фотография блюда. Фиксированная прозрачность закрывает один случай и ломает
- * другой: над тёмным стейком хватает лёгкой вуали, а светлая моцарелла
- * пробивает её насквозь, и подпись перестаёт читаться. Замер это уже показал —
- * 3.93:1 при пороге 4.5.
- *
- * Поэтому вуаль подбирается: плотность растёт, пока контраст текста к
- * фактическому фону не дотянет до AA с тем же запасом, что у цвета подписи.
- * Яркость кадра приезжает с сервера (он считает её один раз при обработке);
- * витрина чужие пиксели не читает.
- *
- * ЦВЕТ ВУАЛИ — ИЗ СЛОВАРЯ, и он разный у тем: на тёмной затемняем, на светлой
- * ОСВЕТЛЯЕМ. Светлая вуаль поверх светлой карточки — это то же стекло, только
- * плотнее; тёмная превратила бы светлую тему в тёмную.
- *
- * Кадра нет или он ещё не обработан — берём безопасное умолчание: считаем кадр
- * светлым. Ошибиться в сторону «читается, но плотнее» дешевле, чем наоборот.
- */
-const UNKNOWN_LUMINANCE = 0.75;
-/** Шаг подбора. Мельче — дольше считать, крупнее — заметный скачок плотности. */
-const SCRIM_STEP = 0.04;
-
-/** Яркость (0..1) → серый той же яркости, чтобы считать наложение по цвету. */
-function greyOf(luminance: number): Rgb {
-  const clamped = Math.min(1, Math.max(0, luminance));
-  const channel =
-    clamped <= 0.0031308 ? clamped * 12.92 : 1.055 * clamped ** (1 / 2.4) - 0.055;
-  const value = Math.round(channel * 255);
-  return [value, value, value];
-}
-
-export function panelScrim(
-  imageLuminance: number | null | undefined,
-  mode: ThemeMode,
-  surface: string,
-  textColor: string,
-): string {
-  const tokens = storefrontTokens(mode);
-  const key = `${mode}|${imageLuminance ?? 'x'}|${surface}|${textColor}`;
-  const hit = cache.get(key);
-  if (hit) return hit;
-
-  const photo = greyOf(imageLuminance ?? UNKNOWN_LUMINANCE);
-  const glass = decomposeColor(tokens.glass.panel.background);
-  const glassRgb = glass.values.slice(0, 3).map(Math.round) as Rgb;
-  const glassAlpha = glass.values.length > 3 ? (glass.values[3] ?? 1) : 1;
-  // На тёмной теме гасим чёрным (база затемнения из словаря), на светлой —
-  // поверхностью самой карточки: вуаль обязана осветлять, а не темнить.
-  const veil = rgbOf(mode === 'dark' ? tokens.onMedia.dimBase : surface);
-  const text = decomposeColor(textColor);
-  const textRgb = text.values.slice(0, 3).map(Math.round) as Rgb;
-  const textAlpha = text.values.length > 3 ? (text.values[3] ?? 1) : 1;
-
-  let alpha = 0;
-  let background = flatten(glassRgb, glassAlpha, photo);
-  while (
-    alpha < 1 &&
-    contrast(flatten(textRgb, textAlpha, background), background) < AA_CONTRAST + AA_MARGIN
-  ) {
-    alpha = Math.min(1, alpha + SCRIM_STEP);
-    background = flatten(veil, alpha, flatten(glassRgb, glassAlpha, photo));
-  }
-
-  const value = `rgba(${veil.join(",")},${alpha.toFixed(2)})`;
-  cache.set(key, value);
-  return value;
-}
-
 const cache = new Map<string, string>();
 
 export function cardSubtitleColor(accent: string, surface: string, mode: ThemeMode): string {
@@ -884,6 +789,8 @@ export const layout = {
   heroWide: 304,
   venueHeadPhone: 214,
   venueHeadWide: 290,
+  /** Предел формы шапок на ПК (партия 58б): шире 3:1 кадр — полоса. */
+  maxHeroRatio: 3,
   /**
    * На столько панель контента наезжает скруглением на кадр над ней.
    *
@@ -1027,6 +934,13 @@ export const itemCard = {
   mediaHeight: { xs: 224, sm: 268 },
   /** Кадр в боковой колонке десктопной карточки. */
   railMinHeight: { xs: 220, sm: 460 },
+  /**
+   * Окно позиции на ПК (партия 58б): кадр сверху во всю ширину окна, форма —
+   * по фото в этих пределах. Шире 21:9 кадр — полоса, уже 16:9 — съедает окно.
+   */
+  wideMediaRatio: { min: 16 / 9, max: 21 / 9 },
+  /** Ширина окна позиции на ПК — по ней же `sizes` кадра. */
+  wideWindow: 880,
   /**
    * Колонка НАЗВАНИЙ характеристик. Фиксированная ширина — не украшение:
    * значения обязаны стоять одно под другим, а с автошириной «Способ
@@ -1197,10 +1111,44 @@ export function titlePlate(mode: ThemeMode): string {
 }
 
 /**
+ * ОДНО ЗАТЕМНЕНИЕ НА МЕСТО — ПОДЛОЖКОЙ ПОД ТЕКСТОМ (партия 58б).
+ *
+ * Шапки, плитки, вход и логин держали текст градиентом на весь кадр (0,82–0,95
+ * снизу, 0,22–0,42 сверху, где текста нет), а шапка заведения — ещё и
+ * подложкой поверх градиента. Теперь на фото одно затемнение — размытая
+ * подложка ровно под текстовым блоком; кадр вне её не тронут.
+ *
+ * Плотность — из контраста, как у `titlePlate`, но по ВСЕМ цветам блока с их
+ * собственной прозрачностью: вторичная подпись (белый 74 %) видна поверх уже
+ * затемнённого пикселя, и считать её непрозрачной белой значило бы завысить
+ * контраст. Худший пиксель кадра — любой от чёрного до белого.
+ */
+/** Цвет подложки под белым текстом на фото: держит 4,5 у основного и вторичного. */
+export function textPlate(mode: ThemeMode): string {
+  const tokens = storefrontTokens(mode);
+  return photoPlate(tokens.onMedia.dimBase, [tokens.onMedia.primary, tokens.onMedia.secondary]);
+}
+
+/** Подложка блока белого текста на фото — см. `photoPlateSx`. */
+export function textPlateSx(mode: ThemeMode, spread = 40) {
+  return photoPlateSx(textPlate(mode), spread);
+}
+
+/**
+ * Подложка под текстом цветом страницы — для заголовков и пустых состояний,
+ * что лежат прямо на фоне бренда (партия 58б). Вуаль на весь экран снята:
+ * фото фона видно, а читаемость держит подложка под самим текстом.
+ */
+export function pagePlate(page: string, texts: string[]): string {
+  return photoPlate(page, texts);
+}
+
+/**
  * ПЛИТКА МОЗАИКИ (партия 57) — текст на фото белый в ОБЕИХ темах.
  *
  * Читаемость держит не тема, а подложка под текстом: два слоя градиента.
- *   1) общий градиент снизу — «глубина» кадра, лёгкий;
+ *   1) общий градиент снизу — «глубина» кадра (снят в партии 58б: второй
+ *      слой затемнения без текста);
  *   2) подложка самого текстового блока — под буквами не светлее `plateMin`
  *      при любой длине названия (худший случай — белый кадр: смешение идёт в
  *      sRGB, 0.72 чёрного над белым дают серый 71 — контраст белого ≈ 9:1).
@@ -1215,9 +1163,6 @@ export const mosaicTile = {
   /** Плотность подложки под текстом: от тёмного кадра к светлому. */
   plateMin: 0.72,
   plateMax: 0.86,
-  /** Общий градиент снизу. */
-  depthMin: 0.25,
-  depthMax: 0.42,
   /** Затемнение стоп-листа поверх кадра и его плашка. */
   offDim: 'rgba(8,10,22,.55)',
   offPlate: 'rgba(8,10,22,.72)',
@@ -1234,18 +1179,18 @@ function mosaicLightness(luminance: number | null | undefined): number {
   return Math.min(1, Math.max(0, (value - 0.15) / 0.5));
 }
 
-/** Два слоя подложки плитки по яркости кадра; `textEdge` — где кончается текст. */
+/**
+ * Подложка текстового блока плитки по яркости кадра; `textEdge` — где кончается
+ * текст. Общего градиента «глубины» нет с партии 58б: одно затемнение на место.
+ */
 export function mosaicScrim(luminance: number | null | undefined, textEdge: number): {
-  depth: string;
   plate: string;
 } {
   const k = mosaicLightness(luminance);
   const [r, g, b] = rgbOf(mosaicTile.scrimBase).map(Math.round);
   const rgba = (a: number) => `rgba(${r},${g},${b},${a.toFixed(2)})`;
   const plate = mosaicTile.plateMin + (mosaicTile.plateMax - mosaicTile.plateMin) * k;
-  const depth = mosaicTile.depthMin + (mosaicTile.depthMax - mosaicTile.depthMin) * k;
   return {
-    depth: `linear-gradient(to top, ${rgba(depth)} 0%, ${rgba(0)} 45%)`,
     plate: `linear-gradient(to top, ${rgba(Math.min(1, plate + 0.12))} 0%, ${rgba(plate)} calc(100% - ${textEdge}px), ${rgba(0)} 100%)`,
   };
 }

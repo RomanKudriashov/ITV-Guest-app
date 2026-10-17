@@ -61,7 +61,10 @@ test('город выбирается подсказкой, координаты
         city: before.city,
         name: before.name,
         timezone: before.timezone,
-        temperature_units: before.temperature_units,
+        // ЕДИНИЦЫ — ЯВНО °C, а не «как было» (партия 58б). Прерванный прогон
+        // оставлял °F, и следующий прогон «возвращал» уже °F: у «Кристалла»
+        // Москва показывала 46°F. Отель стенда — в России, сид ставит °C.
+        temperature_units: 'c',
       },
       headers: apiHeaders(token),
     })

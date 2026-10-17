@@ -474,9 +474,24 @@ class Command(BaseCommand):
                     + (seed_cover.original_filename if seed_cover else "обложки сида нет — градиент")
                 )
 
+            # --- Единицы погоды — °F из автотеста --------------------------------
+            # `weather-city` переключает °F и в конце возвращает то, что прочитал
+            # в начале. Прерванный прогон оставлял °F, и следующий «возвращал»
+            # уже °F: у «Кристалла» Москва показывала «46°F» (партия 58б).
+            # Демо-отели — в России, их единицы — °C, как у сида.
+            stuck_units = hotel.temperature_units not in ("", None, Hotel.TemperatureUnits.CELSIUS)
+            if stuck_units:
+                self.stdout.write(f"  единицы погоды — «{hotel.temperature_units}» (сид — °C)")
+
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
                 return
+
+            healed_units = False
+            if stuck_units:
+                hotel.temperature_units = Hotel.TemperatureUnits.CELSIUS
+                hotel.save(update_fields=["temperature_units", "updated_at"])
+                healed_units = True
 
             healed_backdrop = False
             if stuck is not None:
@@ -652,6 +667,7 @@ class Command(BaseCommand):
                 + 
                 f"сообщений удалено {deleted_msgs}; "
                 f"фон бренда из теста возвращён: {'да' if healed_backdrop else 'нет'}; "
+                f"единицы погоды возвращены в °C: {'да' if healed_units else 'нет'}; "
                 f"привязок удалённых сотрудников убрано {dropped_assignments}; "
                 f"расписаний «Закрыто сейчас» удалено {dropped_schedules}; "
                 f"типов номеров удалено {deleted_types}; "

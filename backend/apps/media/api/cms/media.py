@@ -19,6 +19,9 @@ from apps.media.services import get_asset, serialize_asset, set_crop, upload_ass
 router = Router(tags=["cms"])
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+# Логотип уходит гостю КАК ЕСТЬ, без пережатия (партия 58а) — значит, и весит
+# у гостя столько же. Предел — при загрузке, с понятной причиной (партия 58б).
+LOGO_MAX_BYTES = 1024 * 1024
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 # SVG — только для бренда (логотип из брендбука) и только очищенный, см.
 # `apps/media/services/svg.py`. Фото блюд в SVG не бывает, а резать его
@@ -27,7 +30,12 @@ SVG_CONTENT_TYPE = "image/svg+xml"
 
 
 @router.post("/media", response={201: MediaOut}, summary="Загрузить изображение")
-def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str = Form("")):
+def upload_media(
+    request: HttpRequest,
+    file: UploadedFile = File(...),
+    kind: str = Form(""),
+    purpose: str = Form(""),
+):
     """
     `kind` — ПОЛЕ ФОРМЫ ИЛИ ПАРАМЕТР АДРЕСА (партия 25). Был только параметром
     адреса: панель клала вид в форму, сервер его не видел, и логотипы с
@@ -43,6 +51,14 @@ def upload_media(request: HttpRequest, file: UploadedFile = File(...), kind: str
     from apps.media.models import MediaAsset
 
     kind = kind or request.GET.get("kind", "") or MediaAsset.Kind.ITEM
+    purpose = purpose or request.GET.get("purpose", "")
+    if purpose == "logo" and file.size and file.size > LOGO_MAX_BYTES:
+        raise ValidationError(
+            f"Логотип больше {LOGO_MAX_BYTES // (1024 * 1024)} МБ. Он уходит гостю как есть, "
+            "без пережатия, — уменьшите файл (SVG или PNG поменьше) и загрузите снова",
+            field="file",
+            code="logo_too_large",
+        )
     if file.size and file.size > MAX_UPLOAD_BYTES:
         raise ValidationError(
             f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ",

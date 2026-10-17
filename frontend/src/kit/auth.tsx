@@ -7,6 +7,7 @@ import { alpha, type Theme } from '@mui/material/styles';
 
 import { revealSx } from '@/kit/motion';
 import { fontPx } from '@/theme/fontPx';
+import { useAuthPlateSx } from './AuthAtmosphere';
 
 /**
  * ОБЩИЙ ЯЗЫК ЭКРАНА ВХОДА — один на CMS отеля и на NaviRoom Control.
@@ -283,6 +284,7 @@ export function AuthBrand({
   caption?: string;
   logoTestId?: string;
 }) {
+  const plate = useAuthPlateSx(20);
   return (
     <Box
       sx={(theme: Theme) => ({
@@ -290,6 +292,7 @@ export function AuthBrand({
         insetInlineStart: { xs: 24, md: 56 },
         insetBlockStart: { xs: 26, md: 34 },
         zIndex: 7,
+        ...plate,
         color: theme.palette.common.white,
         display: 'flex',
         alignItems: 'center',
@@ -383,9 +386,11 @@ export function AuthTopControls({ children }: { children: ReactNode }) {
 
 /** Нижний левый блок: заголовок, подпись, форма. */
 export function AuthPanel({ children }: { children: ReactNode }) {
+  const plate = useAuthPlateSx();
   return (
     <Box
       sx={{
+        ...plate,
         position: 'absolute',
         insetInlineStart: { xs: 24, md: 56 },
         insetInlineEnd: { xs: 24, md: 'auto' },

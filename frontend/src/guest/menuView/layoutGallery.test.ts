@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { layoutGallery, mosaicColumns, type PlacedTile } from './layoutGallery';
+import { CELL_RATIO, TAIL_MAX_RATIO, layoutGallery, mosaicColumns, type PlacedTile } from './layoutGallery';
 
 interface Dish {
   id: string;
@@ -81,6 +81,22 @@ describe('layoutGallery', () => {
       [3, 1, 's'],
       [4, 1, 's'],
     ]);
+  });
+
+  it.each([2, 3, 4])('ни одна плитка на %i колонках не шире ~3:1 (партия 58б)', (cols) => {
+    // Замер 58а: одна позиция хвоста на 4 колонки — полоса 1032×189 (5,5:1).
+    for (let n = 1; n <= 40; n += 1) {
+      for (const p of layoutGallery(dishes(n), cols, isLarge)) {
+        const ratio = p.colSpan / (p.rowSpan * CELL_RATIO);
+        expect(ratio, `n=${n} ${p.item.id} ${p.colSpan}×${p.rowSpan}`).toBeLessThanOrEqual(TAIL_MAX_RATIO);
+      }
+    }
+  });
+
+  it('одна позиция хвоста на 4 колонки — 4×2, а не полоса 4×1', () => {
+    // 5 (акцент) + 4 (ряд) + 1.
+    const tail = layoutGallery(dishes(10), 4, isLarge).filter((p) => p.row === 4);
+    expect(tail.map((p) => [p.col, p.colSpan, p.rowSpan])).toEqual([[1, 4, 2]]);
   });
 
   it('отмеченные «крупно» встают на места больших по порядку', () => {

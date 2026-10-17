@@ -226,6 +226,7 @@
     "unsupportedType": "Only JPEG, PNG and WebP are supported",
     "unsupportedTypeBrand": "JPEG, PNG, WebP and SVG are supported",
     "tooLarge": "The file is larger than 10 MB",
+    "logoTooLarge": "The logo is larger than 1 MB. Guests receive it as is, without recompression — make the file smaller (SVG or a smaller PNG) and upload it again",
     "uploadFailed": "Upload failed",
     "processingFailed": "Image processing failed",
     "processingTimeout": "Image processing is taking too long",

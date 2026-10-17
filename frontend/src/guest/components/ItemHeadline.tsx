@@ -15,11 +15,7 @@ import { fallbackIconFor } from './typeFallbackIcon';
 import { useItemSheetLayout } from './itemSheetLayout';
 import { useMoney } from '../hooks/useMoney';
 import type { ItemDetail } from '../api/types';
-import { fontPx, cardSubtitleColor,
-  itemCard,
-  panelScrim,
-  storefrontTokens,
-  surfaceRadius, } from '../storefrontTokens';
+import { fontPx, cardSubtitleColor, itemCard } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
 
 /**
@@ -34,10 +30,16 @@ export function ItemMedia({
   variant = 'top',
   fallbackIcon,
   bleed = false,
+  wide = false,
   categoryLabel,
 }: {
   item: ItemDetail;
   variant?: 'top' | 'rail';
+  /**
+   * Кадр сверху окна на ПК (партия 58б): высота — по форме фото в пределах
+   * 16:9…21:9, а не потолок шторки телефона.
+   */
+  wide?: boolean;
   fallbackIcon?: AppIconComponent;
   /**
    * Название категории — чипом в углу кадра. Приходит сверху, а не читается
@@ -59,6 +61,9 @@ export function ItemMedia({
   const icon = Icon;
   const isRail = variant === 'rail';
   const { glass } = useStorefront();
+  const photo = item.photos?.[0] ?? null;
+  const ratio = photo?.w && photo.h ? photo.w / photo.h : itemCard.wideMediaRatio.min;
+  const wideRatio = Math.min(itemCard.wideMediaRatio.max, Math.max(itemCard.wideMediaRatio.min, ratio));
   return (
     <Box
       sx={(theme) => ({
@@ -78,7 +83,7 @@ export function ItemMedia({
               // Кадр держит ВЕРХ карточки, а не ленточку под заголовком:
               // 200px на телефоне читались полоской. Потолок остаётся —
               // высокая картинка не должна выталкивать тело за экран.
-              height: itemCard.mediaHeight,
+              ...(wide ? { aspectRatio: String(wideRatio) } : { height: itemCard.mediaHeight }),
               flexShrink: 0,
               /*
                 Вынос за поля СДВИГОМ, а не отрицательным полем.
@@ -101,13 +106,13 @@ export function ItemMedia({
       })}
     >
       {/*
-        Кадр объектом (партия 58а). Место: колонка 400 px в окне на ПК
-        (`rail`), во всю ширину шторки на телефоне и планшете (`top`).
+        Кадр объектом (партия 58а). Место: во всю ширину окна на ПК (`wide`,
+        партия 58б), во всю ширину шторки на телефоне и планшете (`top`).
       */}
       <KitImage
-        image={item.photos?.[0] ?? null}
+        image={photo}
         src={item.images?.[0]}
-        sizes={isRail ? '400px' : '100vw'}
+        sizes={isRail ? '400px' : wide ? `${itemCard.wideWindow}px` : '100vw'}
         fit="whole"
         alt={item.title}
         fill
@@ -171,6 +176,8 @@ export interface ItemHeadlineViewProps {
   hideMedia?: boolean;
   /** Вынести кадр за поля контейнера — см. `ItemMedia`. */
   bleedMedia?: boolean;
+  /** Кадр сверху окна на ПК — см. `ItemMedia`. */
+  wideMedia?: boolean;
   /** Icon for the designed fallback when the item has no photo. */
   fallbackIcon?: AppIconComponent;
 }
@@ -185,7 +192,7 @@ export interface ItemHeadlineViewProps {
  */
 export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewProps>(
   function ItemHeadlineView(
-    { item, priceLabel, hideMedia = false, fallbackIcon, bleedMedia = false },
+    { item, priceLabel, hideMedia = false, fallbackIcon, bleedMedia = false, wideMedia = false },
     titleRef,
   ) {
     const { t } = useTranslation();
@@ -200,6 +207,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
             variant="top"
             fallbackIcon={fallbackIcon}
             bleed={bleedMedia}
+            wide={wideMedia}
             categoryLabel={item.category_title}
           />
         )}
@@ -241,50 +249,12 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
           </Stack>
           {item.description ? (
             /*
-              ТОТ ЖЕ ПРИЁМ, ЧТО НА КАРТОЧКЕ СПИСКА, и теми же вызовами, а не
-              повторённый по памяти: подпись в списке и подпись в открытой
-              позиции — один и тот же текст, и разъехаться — цветом ли,
-              подложкой ли — они могут только если собирать их порознь.
+              ТОТ ЖЕ ПРИЁМ, ЧТО НА КАРТОЧКЕ СПИСКА: описание — обычным
+              текстом (партия 58б), без стекла с кантом, которое читалось полем
+              ввода. Фото теперь над окном, а не под текстом, — вуаль под
+              подписью больше не нужна.
             */
-            <Box
-              sx={(theme) => {
-                /*
-                  СТЕКЛО, А НЕ ГЛУХАЯ ПОВЕРХНОСТЬ. Под панелью просвечивает
-                  размытое фото блюда — как и задумано. Непрозрачная основа,
-                  стоявшая здесь раньше, была вынужденной: стекло над фото
-                  давало 3.93:1 при пороге 4.5, и читаемость купили ценой вида.
-                  Теперь платить не нужно.
-                  
-                  ЧИТАЕМОСТЬ ДЕРЖИТ АДАПТИВНАЯ ВУАЛЬ. Её плотность подбирается
-                  под фактическую яркость кадра, пока контраст подписи не
-                  дотянет до AA с запасом: над тёмным стейком она почти
-                  прозрачна, над светлым лимонадом плотнее. Фиксированная
-                  прозрачность закрыла бы один случай и сломала другой.
-                */
-                const glass = storefrontTokens(theme.palette.mode).glass.panel;
-                const color = cardSubtitleColor(
-                  theme.palette.primary.main,
-                  theme.palette.background.paper,
-                  theme.palette.mode,
-                );
-                const scrim = panelScrim(
-                  item.image_luminance,
-                  theme.palette.mode,
-                  theme.palette.background.paper,
-                  color,
-                );
-                return {
-                  ...glass,
-                  // Вуаль лежит НАД стеклом и ПОД текстом: оба слоя
-                  // полупрозрачны, поэтому фотография остаётся видна.
-                  backgroundColor: glass.background,
-                  backgroundImage: `linear-gradient(${scrim}, ${scrim})`,
-                  borderRadius: surfaceRadius.inner(theme.palette.brand.radius),
-                  px: 1.25,
-                  py: 1,
-                };
-              }}
-            >
+            <Box>
               <Typography
                 variant="body2"
                 sx={(theme) => ({
@@ -329,7 +299,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
 export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>(
   function ItemHeadline({ item }, titleRef) {
     const { formatOptional } = useMoney();
-    const { mediaBeside, fallbackIcon } = useItemSheetLayout();
+    const { mediaBeside, mediaWide = false, fallbackIcon } = useItemSheetLayout();
     return (
       <ItemHeadlineView
         ref={titleRef}
@@ -337,6 +307,7 @@ export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>
         priceLabel={formatOptional(item.price)}
         hideMedia={mediaBeside}
         bleedMedia
+        wideMedia={mediaWide}
         fallbackIcon={fallbackIcon}
       />
     );

@@ -5,7 +5,7 @@ import { useAppTheme } from '@/theme';
 import { resolveBackground } from '@/theme/brandBackground';
 import { colorsForMode } from '@/theme/tokens';
 import { useCoverBackground } from '@/kit/useCoverBackground';
-import { PHOTO_EXTREMES, mixColors, pageVeilAlpha } from '../storefrontTokens';
+import { PHOTO_EXTREMES, mixColors, pageVeilAlpha, storefrontTokens } from '../storefrontTokens';
 
 /**
  * ФОН БРЕНДА ЗА ВСЕМИ ЭКРАНАМИ ГОСТЯ (партия 25, п.51 партии 24).
@@ -18,6 +18,14 @@ import { PHOTO_EXTREMES, mixColors, pageVeilAlpha } from '../storefrontTokens';
  *
  * Оба слоя `fixed`: фон не уезжает с прокруткой и не растягивается по длине
  * меню, как растянулась бы картинка на всю высоту документа.
+ *
+ * ФОТО ФОНА — БЕЗ ВУАЛИ НА ВЕСЬ ЭКРАН (партия 58б). Вуаль из контраста
+ * выходила 0,85–1,0: фото отеля за витриной было закрыто почти целиком.
+ * Теперь над фото — только слайдер «Затемнение» из оформления (`dim`) тем же
+ * слоем, что на входе, логине и в шапке каталога; читаемость держат
+ * подложки под самим текстом (`pagePlate`) и стекло поверхностей. Градиент,
+ * фактура и ровный цвет — как прежде: это не фото, и вуаль там лишь
+ * выравнивает фактуру под текстом.
  */
 /** Концы и 15 промежуточных цветов между ними. */
 function between(from: string, to: string): string[] {
@@ -53,11 +61,16 @@ export function GuestBackdrop() {
     без третьего уровня — подписи чата и пустых заказов давали 4.44 на фото.
   */
   const palette = useTheme().palette;
-  const veil = pageVeilAlpha(
-    colors.background,
-    [palette.text.primary, palette.text.secondary, palette.brand.textTertiary],
-    behind,
-  );
+  const isPhoto = bg?.kind === 'image' && Boolean(bg.imageUrl);
+  const veil = isPhoto
+    ? (bg?.dim ?? 0)
+    : pageVeilAlpha(
+        colors.background,
+        [palette.text.primary, palette.text.secondary, palette.brand.textTertiary],
+        behind,
+      );
+  // Слайдер — тем же цветом, что везде над фото (`onMedia.dimBase`).
+  const veilColor = isPhoto ? storefrontTokens(mode).onMedia.dimBase : colors.background;
 
   return (
     <>
@@ -78,7 +91,7 @@ export function GuestBackdrop() {
         aria-hidden
         data-testid="guest-backdrop-veil"
         data-veil={veil}
-        sx={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', bgcolor: colors.background, opacity: veil }}
+        sx={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', bgcolor: veilColor, opacity: veil }}
       />
     </>
   );

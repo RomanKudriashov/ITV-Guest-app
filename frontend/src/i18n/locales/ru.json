@@ -228,6 +228,7 @@
     "unsupportedType": "Поддерживаются только JPEG, PNG и WebP",
     "unsupportedTypeBrand": "Поддерживаются JPEG, PNG, WebP и SVG",
     "tooLarge": "Файл больше 10 МБ",
+    "logoTooLarge": "Логотип больше 1 МБ. Он уходит гостю как есть, без пережатия, — уменьшите файл (SVG или PNG поменьше) и загрузите снова",
     "uploadFailed": "Не удалось загрузить файл",
     "processingFailed": "Не удалось обработать изображение",
     "processingTimeout": "Обработка изображения занимает слишком долго",

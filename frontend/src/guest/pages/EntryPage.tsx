@@ -24,7 +24,7 @@ import { fetchPublicHotel } from '../api/guest';
 import { errorMessage } from '../errors';
 import { useGuestSession } from '../session/GuestSessionProvider';
 import type { GuestHotel } from '../api/types';
-import { fontPx, surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius, textPlateSx } from '../storefrontTokens';
 
 const ONEST = '"Onest", system-ui, sans-serif';
 
@@ -58,7 +58,7 @@ export function EntryPage() {
   const { roomNumber: deepLinkRoom } = useParams<{ roomNumber: string }>();
   const { hotel, isReady, isBootstrapping, isPreview, start } = useGuestSession();
   const { tokens, mode, setBrandTokens } = useAppTheme();
-  const { onMedia, entryScrim, tile } = useStorefront();
+  const { onMedia, tile } = useStorefront();
 
   const [publicHotel, setPublicHotel] = useState<GuestHotel | null>(null);
   const [room, setRoom] = useState(deepLinkRoom ?? '');
@@ -180,22 +180,18 @@ export function EntryPage() {
         }}
       />
       {backdrop.dim > 0 ? (
-        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, backdrop.dim) }} />
+        <Box aria-hidden data-dim="" sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, backdrop.dim) }} />
       ) : null}
-      {/* Scrim: radial glow + darker edges so text and controls read. */}
-      <Box
-        aria-hidden
-        sx={(th) => ({
-          position: 'absolute',
-          inset: 0,
-          background: `radial-gradient(120% 90% at 50% 8%, ${alpha(th.palette.primary.main, 0.18)}, transparent 60%), ${entryScrim}`,
-        })}
-      />
+      {/*
+        Скрима на весь кадр нет (партия 58б): он затемнял и правую часть, где
+        текста нет, и красил кадр тинтом акцента. Над фото — только слайдер
+        «Затемнение» (выше); текст и поле держит подложка под колонкой.
+      */}
 
       {/* Logo top-left (brand token or monogram fallback). */}
       <Box
         data-testid="guest-entry-mark"
-        sx={{
+        sx={(th) => ({
           position: 'absolute',
           // `.a .mark` / `.m .mark` прототипа: 56/34 на широком, 24/26 на узком.
           top: { xs: 'calc(26px + env(safe-area-inset-top, 0px))', md: 'calc(34px + env(safe-area-inset-top, 0px))' },
@@ -205,7 +201,9 @@ export function EntryPage() {
           alignItems: 'center',
           gap: 1.25,
           color: 'common.white',
-        }}
+          // Марка на фото без скрима — подложка под ней (партия 58б).
+          ...textPlateSx(th.palette.mode, 20),
+        })}
       >
         {logoSrc ? (
           <Box component="img" src={logoSrc} alt={hotelName} data-testid="guest-brand-logo" sx={{ height: 30, maxWidth: 200, objectFit: 'contain' }} />
@@ -270,7 +268,14 @@ export function EntryPage() {
           px: { xs: '24px', md: '56px' },
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: 'min(470px, 60%)' } }}>
+        <Box
+          sx={(th) => ({
+            position: 'relative',
+            width: '100%',
+            maxWidth: { xs: '100%', md: 'min(470px, 60%)' },
+            ...textPlateSx(th.palette.mode),
+          })}
+        >
           <Typography
             component="h1"
             sx={(th) => ({

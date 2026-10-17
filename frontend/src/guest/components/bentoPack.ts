@@ -24,7 +24,34 @@ const FOOTPRINT: Record<BentoSize, [number, number]> = {
   l: [2, 2],
 };
 
-export function packBento<T extends { size: BentoSize }>(tiles: T[], cols: number): Placed<T>[] {
+/**
+ * ФОРМА КЛЕТКИ И ПРЕДЕЛ ФОРМЫ ПЛИТКИ (партия 58б).
+ *
+ * Дыры раньше закрывались расширением соседа слева: одинокая плитка «Инфо» в
+ * последнем ряду растягивалась на 4 колонки — полоса 1032×150 (6,9:1), фото
+ * резалось до 26 %. Теперь у кандидатов (слева, сверху, справа) считается
+ * форма после роста, и берётся первый, кто не шире `maxRatio`; не уложился
+ * никто — тот, у кого форма ближе к пределу. Ряд добирается ростом плиток
+ * сверху вниз, а не полосой.
+ */
+export interface BentoShape {
+  /** Ширина колонки к высоте ряда. */
+  cell: number;
+  /** Зазор к высоте ряда. */
+  gap: number;
+  /** Предел формы ширина:высота. */
+  maxRatio: number;
+}
+
+export function tileRatio(colSpan: number, rowSpan: number, shape: BentoShape): number {
+  return (colSpan * shape.cell + (colSpan - 1) * shape.gap) / (rowSpan + (rowSpan - 1) * shape.gap);
+}
+
+export function packBento<T extends { size: BentoSize }>(
+  tiles: T[],
+  cols: number,
+  shape: BentoShape | null = null,
+): Placed<T>[] {
   const grid: boolean[][] = [];
   const ensureRow = (r: number) => {
     while (grid.length <= r) grid.push(new Array(cols).fill(false));
@@ -64,7 +91,8 @@ export function packBento<T extends { size: BentoSize }>(tiles: T[], cols: numbe
     }
   }
 
-  absorbHoles(placed, cols);
+  absorbHoles(placed, cols, shape);
+  if (shape) growFullRows(placed, cols, shape);
   return placed;
 }
 
@@ -85,7 +113,7 @@ function at<T>(placed: Placed<T>[], r: number, c: number): Placed<T> | undefined
  * if the WHOLE new footprint of that tile is empty (a tall tile spans several
  * rows, so widening it must not collide with a tile beside it on another row).
  */
-function absorbHoles<T>(placed: Placed<T>[], cols: number): void {
+function absorbHoles<T>(placed: Placed<T>[], cols: number, shape: BentoShape | null): void {
   const rectFree = (p: Placed<T>, colStart: number, colSpan: number, rowStart: number, rowSpan: number) => {
     for (let r = rowStart - 1; r < rowStart - 1 + rowSpan; r += 1) {
       for (let c = colStart - 1; c < colStart - 1 + colSpan; c += 1) {
@@ -103,26 +131,44 @@ function absorbHoles<T>(placed: Placed<T>[], cols: number): void {
     for (let c = 0; c < cols; c += 1) {
       if (at(placed, r, c)) continue;
 
-      // Left neighbour ends at this column — widen it if its whole extended
-      // column (across all its rows) is free.
+      // Кандидаты на дыру: сосед слева (шире), сверху (выше), справа (шире).
+      type Grow = { tile: Placed<T>; apply: () => void; ratio: number };
+      const options: Grow[] = [];
       const left = c > 0 ? at(placed, r, c - 1) : undefined;
       if (left && left.colStart - 1 + left.colSpan === c && rectFree(left, c + 1, 1, left.rowStart, left.rowSpan)) {
-        left.colSpan += 1;
-        continue;
+        const tile = left;
+        options.push({ tile, apply: () => { tile.colSpan += 1; }, ratio: shape ? tileRatio(tile.colSpan + 1, tile.rowSpan, shape) : 0 });
       }
-      // Tile above ends at this row — extend it down if its whole extended row is free.
       const above = r > 0 ? at(placed, r - 1, c) : undefined;
       if (above && above.rowStart - 1 + above.rowSpan === r && rectFree(above, above.colStart, above.colSpan, r + 1, 1)) {
-        above.rowSpan += 1;
-        continue;
+        const tile = above;
+        options.push({ tile, apply: () => { tile.rowSpan += 1; }, ratio: shape ? tileRatio(tile.colSpan, tile.rowSpan + 1, shape) : 0 });
       }
-      // Right neighbour starts just after the gap — pull it left over the gap.
       const right = c + 1 < cols ? at(placed, r, c + 1) : undefined;
       if (right && right.colStart - 1 === c + 1 && rectFree(right, c + 1, 1, right.rowStart, right.rowSpan)) {
-        right.colStart -= 1;
-        right.colSpan += 1;
-        continue;
+        const tile = right;
+        options.push({ tile, apply: () => { tile.colStart -= 1; tile.colSpan += 1; }, ratio: shape ? tileRatio(tile.colSpan + 1, tile.rowSpan, shape) : 0 });
       }
+      if (!options.length) continue;
+      const fits = shape ? options.find((o) => o.ratio <= shape.maxRatio) : options[0];
+      (fits ?? options.reduce((a, b) => (b.ratio < a.ratio ? b : a))).apply();
     }
+  }
+}
+
+/**
+ * Плитка во всю ширину, которой не нашлось соседа сверху (одна-единственная
+ * на витрине, первый ряд), растёт в высоту до предела формы. Она во всю
+ * ширину — дыр это не даёт; ряды ниже сдвигаются.
+ */
+function growFullRows<T>(placed: Placed<T>[], cols: number, shape: BentoShape): void {
+  for (const p of [...placed].sort((a, b) => a.rowStart - b.rowStart)) {
+    if (p.colSpan !== cols) continue;
+    let extra = 0;
+    while (tileRatio(p.colSpan, p.rowSpan + extra, shape) > shape.maxRatio) extra += 1;
+    if (!extra) continue;
+    const bottom = p.rowStart + p.rowSpan;
+    for (const q of placed) if (q !== p && q.rowStart >= bottom) q.rowStart += extra;
+    p.rowSpan += extra;
   }
 }

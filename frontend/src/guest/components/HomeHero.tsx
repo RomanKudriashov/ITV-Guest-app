@@ -4,7 +4,8 @@ import Typography from '@mui/material/Typography';
 import type { ImageRef } from '@/kit/imageRef';
 import { useCoverBackground } from '@/kit/useCoverBackground';
 
-import { fontPx, layout, surfaceRadius, type StorefrontTokens } from '../storefrontTokens';
+import { fontPx, layout, surfaceRadius, textPlateSx, type StorefrontTokens } from '../storefrontTokens';
+import { useAppTheme } from '@/theme';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -58,7 +59,8 @@ export function HomeHeroView({
   coverRef?: ImageRef | null;
   tokens: StorefrontTokens;
 }) {
-  const { scrim, onMedia, mediaFallback } = tokens;
+  const { onMedia, mediaFallback } = tokens;
+  const { mode } = useAppTheme();
   // Место 1080×304 (1440) / 390×252 (390) — хук меряет его сам.
   const bg = useCoverBackground(coverRef);
 
@@ -67,7 +69,10 @@ export function HomeHeroView({
       data-testid="guest-home-hero"
       sx={{
         position: 'relative',
-        height: { xs: layout.heroPhone, md: layout.heroWide },
+        height: { xs: layout.heroPhone, md: 'auto' },
+        // Предел формы 3:1 (партия 58б): 1080×304 было 3,55:1.
+        minHeight: { md: layout.heroWide },
+        aspectRatio: { md: `${layout.maxHeroRatio} / 1` },
         borderRadius: (theme) => ({ xs: 0, md: surfaceRadius.panel(theme.palette.brand.radius) }),
         overflow: 'hidden',
         mt: { xs: 0, md: 1 },
@@ -88,9 +93,10 @@ export function HomeHeroView({
         />
       ) : null}
 
-      {/* Скрим: белый текст поверх произвольного кадра иначе нечитаем. */}
-      <Box aria-hidden sx={{ position: 'absolute', inset: 0, background: scrim.hero }} />
-
+      {/*
+        Скрима на весь кадр нет (партия 58б): верх затемнялся там, где текста
+        нет. Белый текст держит подложка под самим блоком (`textPlateSx`).
+      */}
 
       <Box
         sx={{
@@ -98,6 +104,7 @@ export function HomeHeroView({
           left: { xs: 18, md: 34 },
           right: 18,
           bottom: { xs: 16, md: 28 },
+          ...textPlateSx(mode),
         }}
       >
         <Typography

@@ -22,7 +22,8 @@ import type { GuestSearchResult, GuestSearchRow } from '../api/types';
 import { useGuestLanguage } from '../hooks/useGuestQueries';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { surfaceRadius } from '../storefrontTokens';
+import { useStorefront } from '../useStorefront';
 
 /**
  * Глобальный поиск: заведения, позиции меню и информационные страницы.
@@ -68,6 +69,7 @@ function rememberQuery(query: string): string[] {
 }
 
 export function SearchPage() {
+  const { glass: denseGlass } = useStorefront();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -137,7 +139,7 @@ export function SearchPage() {
           // Прилипает к тому же краю, от которого отсчитан отступ страницы.
           top: `${barLayer.top}px`,
           zIndex: 2,
-          ...storefrontTokens(theme.palette.mode).glass.bar,
+          ...denseGlass.bar,
           borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
           mx: { xs: 1.5, md: 0 },
           p: 1,
@@ -269,12 +271,13 @@ function ResultRow({
   calm: boolean;
   onOpen: (route: string) => void;
 }) {
+  const { glass: denseGlass } = useStorefront();
   return (
     <ButtonBase
       data-testid={`guest-search-result-${row.code}`}
       onClick={() => onOpen(row.route)}
       sx={(theme) => ({
-        ...storefrontTokens(theme.palette.mode).glass.panel,
+        ...denseGlass.panel,
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         p: 1,
         gap: 1.25,

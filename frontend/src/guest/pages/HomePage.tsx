@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { SkeletonCard } from '@/kit';
 import { errorMessage } from '../errors';
 import { ActiveOrderStrip } from '../components/ActiveOrderStrip';
-import { BentoGrid } from '../components/Bento';
+import { BENTO_ROW, BentoGrid } from '../components/Bento';
 import { HomeHero } from '../components/HomeHero';
 import { HomeReviewCard } from '../components/HomeReviewCard';
 import { HomeRoomStatus } from '../components/HomeRoomStatus';
@@ -19,6 +19,7 @@ import { HomeBanner } from '../components/HomeBanner';
 import { HomeWeather } from '../components/HomeWeather';
 import { useGuestBanner, useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
+import { useBackdropPlateSx } from '../components/backdropPlate';
 
 /**
  * Home is the SERVICE showcase for every hotel: a greeting, the live-order strip,
@@ -27,6 +28,7 @@ import { useGuestSession } from '../session/GuestSessionProvider';
  * lives inside a restaurant, one level down.
  */
 export function HomePage() {
+  const plate = useBackdropPlateSx();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { hotel } = useGuestSession();
@@ -86,7 +88,7 @@ export function HomePage() {
         </Stack>
 
         {isLoading ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gridAutoRows: { xs: 128, md: 150 }, gap: { xs: 1.25, md: 1.75 } }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gridAutoRows: { xs: BENTO_ROW.xs, md: BENTO_ROW.md }, gap: { xs: 1.25, md: 1.75 } }}>
             {Array.from({ length: isDesktop ? 6 : 4 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -104,6 +106,7 @@ export function HomePage() {
           </Alert>
         ) : !tiles.length ? (
           <EmptyState
+            plateSx={plate}
             title={t('guest.home.emptyTitle')}
             description={t('guest.home.emptyHint')}
             testId="guest-home-empty"

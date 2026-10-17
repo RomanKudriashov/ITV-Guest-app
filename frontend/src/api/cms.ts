@@ -385,10 +385,12 @@ export function reorderModifierOptions(
 
 /* ── 6. Media ──────────────────────────────────────────────────────────── */
 
-export function uploadMedia(file: File, kind: MediaKind = 'item'): Promise<MediaAsset> {
+export function uploadMedia(file: File, kind: MediaKind = 'item', purpose?: 'logo'): Promise<MediaAsset> {
   const form = new FormData();
   form.append('file', file);
   form.append('kind', kind);
+  // Назначение: логотип уходит гостю как есть — у него свой предел (партия 58б).
+  if (purpose) form.append('purpose', purpose);
   return request<MediaAsset>('/cms/media', { method: 'POST', formData: form });
 }
 

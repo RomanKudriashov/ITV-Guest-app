@@ -7,7 +7,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import Drawer from '@mui/material/Drawer';
 import MenuIcon from '@mui/icons-material/MenuOutlined';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -227,6 +227,8 @@ export function AppShell() {
         sx={[
           {
             zIndex: (theme) => theme.zIndex.drawer + 1,
+            // Под полосой поддержки, а не под ней спрятанной (партия 58б).
+            top: SUPPORT_OFFSET,
             borderBottom: 1,
             borderColor: 'divider',
             bgcolor: 'background.paper',
@@ -332,6 +334,8 @@ export function AppShell() {
           flexShrink: 0,
           transition: widthTransition,
           '& .MuiDrawer-paper': {
+            top: SUPPORT_OFFSET,
+            height: `calc(100% - ${SUPPORT_OFFSET})`,
             width: isNarrow ? DRAWER_WIDTH : navWidth,
             transition: widthTransition,
             overflowX: 'hidden',
@@ -464,7 +468,7 @@ export function AppShell() {
       </Drawer>
       ) : null}
 
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, pt: SUPPORT_OFFSET }}>
         <Toolbar />
         {/*
           СТРОКА ВМЕСТО ПАНЕЛИ — И ВИДНА НА ЛЮБОЙ ШИРИНЕ.
@@ -509,8 +513,32 @@ export function AppShell() {
  * отель ВИДИТ сессию, но не рвёт её — иначе разбор инцидента блокируется
  * изнутри того самого отеля, который разбирают.
  */
+/**
+ * ВЫСОТА ПОЛОСЫ — ПЕРЕМЕННОЙ CSS (партия 58б). Полоса закреплена над всем
+ * интерфейсом, а шапка, меню и содержимое о ней не знали: она наезжала на шапку
+ * и срезала название отеля, выбор языка и аватар. Полоса меряет себя (текст
+ * переносится на узком экране — высота не постоянная) и публикует высоту;
+ * шапка, меню и содержимое сдвигаются на неё. Нет полосы — 0.
+ */
+const SUPPORT_VAR = '--itv-support-bar';
+const SUPPORT_OFFSET = `var(${SUPPORT_VAR}, 0px)`;
+
 function SupportPresenceBar({ session }: { session: SupportSession }) {
   const { t, i18n } = useTranslation();
+  const barRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const node = barRef.current;
+    if (!node) return undefined;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty(SUPPORT_VAR, `${node.getBoundingClientRect().height}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(SUPPORT_VAR);
+    };
+  }, []);
   const time = (iso: string) =>
     new Intl.DateTimeFormat(i18n.resolvedLanguage ?? 'ru', {
       hour: '2-digit',
@@ -519,6 +547,7 @@ function SupportPresenceBar({ session }: { session: SupportSession }) {
 
   return (
     <Box
+      ref={barRef}
       data-testid="cms-support-presence"
       sx={{
         position: 'fixed',

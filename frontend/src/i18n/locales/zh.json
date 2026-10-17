@@ -225,6 +225,7 @@
     "unsupportedType": "仅支持 JPEG、PNG 和 WebP",
     "unsupportedTypeBrand": "支持 JPEG、PNG、WebP 和 SVG",
     "tooLarge": "文件超过 10 MB",
+    "logoTooLarge": "徽标超过 1 MB。它会原样发送给客人，不会重新压缩——请缩小文件（SVG 或更小的 PNG）后重新上传",
     "uploadFailed": "上传失败",
     "processingFailed": "图片处理失败",
     "processingTimeout": "图片处理时间过长",

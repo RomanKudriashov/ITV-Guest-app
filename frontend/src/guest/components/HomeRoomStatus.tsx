@@ -8,8 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { IconForward, IconOffline } from '@/icons';
 import { useRoomState } from '../hooks/useRoomControl';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { surfaceRadius } from '../storefrontTokens';
 import { RoomStatusPills } from './RoomStatusPills';
+import { useStorefront } from '../useStorefront';
 
 /**
  * Состояние номера на главной: та же строка пилюль, что на экране номера.
@@ -33,6 +34,7 @@ import { RoomStatusPills } from './RoomStatusPills';
  * тем же обманом, что и выключенный свет включённым.
  */
 export function HomeRoomStatus({ allowed = true }: { allowed?: boolean }) {
+  const { glass: denseGlass } = useStorefront();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const calm = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -56,7 +58,7 @@ export function HomeRoomStatus({ allowed = true }: { allowed?: boolean }) {
       onClick={() => navigate('/room')}
       aria-label={t('guest.home.roomStrip.open')}
       sx={(theme) => ({
-        ...storefrontTokens(theme.palette.mode).glass.panel,
+        ...denseGlass.panel,
         borderRadius: surfaceRadius.panel(theme.palette.brand.radius),
         width: '100%',
         px: { xs: 1.5, md: 2 },

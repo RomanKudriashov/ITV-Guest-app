@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { IconBack } from '@/icons';
-import { fontPx, layout, surfaceRadius, titlePlate } from '../storefrontTokens';
+import { fontPx, layout, surfaceRadius, textPlateSx } from '../storefrontTokens';
 import { useAppTheme } from '@/theme';
 import { useStorefront } from '../useStorefront';
 import type { VenueIdentity } from '../api/types';
@@ -35,7 +35,7 @@ export function VenueHeader({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { glass, scrim, onMedia, mediaFallback } = useStorefront();
+  const { glass, onMedia, mediaFallback } = useStorefront();
   const { mode } = useAppTheme();
   // Шапка 1080×290 (1440) / 390×214 (390): фон по ширине места (партия 58а).
   const bg = useCoverBackground(venue.image_ref);
@@ -53,6 +53,9 @@ export function VenueHeader({
           шапку выше, а не лезет под кнопки.
         */
         minHeight: { xs: layout.venueHeadPhone, md: layout.venueHeadWide },
+        // Предел формы 3:1 (партия 58б): 1080×290 было 3,7:1 — кадр резался
+        // до 40 %. Высота — не меньше трети ширины; кадр по фокусу.
+        aspectRatio: { md: `${layout.maxHeroRatio} / 1` },
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-end',
@@ -81,14 +84,11 @@ export function VenueHeader({
           }}
         />
       ) : null}
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: { xs: scrim.hero, md: scrim.heroWide },
-        }}
-      />
+      {/*
+        Градиента на весь кадр больше нет (партия 58б): он затемнял и верх
+        шапки, где текста нет, а под названием лежал ВТОРЫМ слоем поверх
+        подложки. Одно затемнение — подложка под текстовым блоком.
+      */}
 
       {/*
         Выход из заведения. Ведёт на главную ЯВНО, а не через историю браузера:
@@ -146,28 +146,18 @@ export function VenueHeader({
         data-testid="guest-venue-title-block"
         sx={{
           position: 'relative',
-          // Подложка живёт под буквами, но над кадром: свой контекст наложения.
-          isolation: 'isolate',
           pl: { xs: '18px', md: '34px' },
           pr: '18px',
           // На ПК кадр широкий — подложка по ширине текста, а не во всю шапку.
           alignSelf: { xs: 'stretch', md: 'flex-start' },
           maxWidth: '100%',
           /*
-            ПОДЛОЖКА ПОД НАЗВАНИЕМ (партия 29). Плотность — из контраста
-            (`titlePlate`): белое название держит 4,5:1 на любом кадре. Край
-            размыт, а сама подложка шире текста на величину размытия — внутри
-            текста плотность полная, а плашки на кадре не видно.
+            ПОДЛОЖКА ПОД НАЗВАНИЕМ (партия 29) — единственное затемнение шапки
+            (партия 58б). Плотность — из контраста по названию и подписи
+            (`textPlate`): 4,5 на любом кадре. Край размыт, подложка шире
+            текста на величину размытия — плашки на кадре не видно.
           */
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: '-40px -40px -40px -40px',
-            zIndex: -1,
-            pointerEvents: 'none',
-            background: titlePlate(mode),
-            filter: 'blur(14px)',
-          },
+          ...textPlateSx(mode),
         }}
       >
         <Typography

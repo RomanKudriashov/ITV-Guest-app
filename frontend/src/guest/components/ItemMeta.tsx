@@ -300,10 +300,16 @@ export function NutritionBlock({
 }
 
 /**
- * Compact one-line КБЖУ for a catalog card (reference `.nutri`): the calorie
- * value reads in the display face, the macros follow as a muted, dot-separated
- * run. Rendered only from the data the item actually carries. Units stay numeric
- * (ккал / г) so the single line is correct in every language, not just RU.
+ * Compact КБЖУ for a catalog card (reference `.nutri`): the calorie value reads
+ * in the display face, the macros follow as a muted run. Rendered only from the
+ * data the item actually carries. Units stay numeric (ккал / г) so the line is
+ * correct in every language, not just RU.
+ *
+ * БЕЗ ВИСЯЩИХ ТОЧЕК (партия 58б). Разделители «·» были отдельными элементами
+ * переноса: в узкой карточке строка разваливалась на три, и точка висела в
+ * конце строки («506 ккал ·»). Теперь куски — неразрывные («506 ккал»,
+ * «32 · 27 · 12 г», «порция 185 г»), между ними — только зазор: переносится кусок
+ * целиком, точки внутри куска не отрываются.
  */
 export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutrition'] }) {
   const { t } = useTranslation();
@@ -311,6 +317,7 @@ export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutriti
   const { calories, protein, fat, carbs, portion } = nutrition;
   const macros = [protein, fat, carbs].filter((v): v is number => v != null);
   if (calories == null && !macros.length) return null;
+  const piece = { whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' } as const;
 
   return (
     <Typography
@@ -318,17 +325,16 @@ export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutriti
       variant="caption"
       color="text.secondary"
       data-testid="guest-item-nutrition-inline"
-      sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}
+      sx={{ display: 'flex', alignItems: 'baseline', columnGap: 1.25, rowGap: 0.25, flexWrap: 'wrap' }}
     >
       {calories != null ? (
-        <Box component="span">
+        <Box component="span" sx={piece}>
           <Box
             component="b"
             sx={(theme) => ({
               color: 'text.secondary',
               fontFamily: theme.typography.h1.fontFamily,
               fontWeight: theme.typography.fontWeightBold,
-              fontVariantNumeric: 'tabular-nums',
               mr: 0.375,
             })}
           >
@@ -337,19 +343,15 @@ export function NutritionInline({ nutrition }: { nutrition?: ItemDetail['nutriti
           {t('guest.item.kcal')}
         </Box>
       ) : null}
-      {calories != null && macros.length ? <Box component="span">·</Box> : null}
       {macros.length ? (
-        <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+        <Box component="span" sx={piece}>
           {macros.join(' · ')} {t('guest.item.gram')}
         </Box>
       ) : null}
       {portion != null ? (
-        <>
-          <Box component="span">·</Box>
-          <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-            {t('guest.item.portion')} {portion} {t('guest.item.gram')}
-          </Box>
-        </>
+        <Box component="span" sx={piece}>
+          {t('guest.item.portion')} {portion} {t('guest.item.gram')}
+        </Box>
       ) : null}
     </Typography>
   );

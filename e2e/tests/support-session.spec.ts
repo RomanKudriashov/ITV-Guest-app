@@ -110,6 +110,22 @@ test.describe('Вход под аудитом', () => {
     // Скрыть нечем: ни крестика, ни «оборвать» — решение осознанное.
     await expect(banner.getByRole('button')).toHaveCount(0)
 
+    // Полоса НЕ наезжает на шапку (партия 58б): шапка, меню и содержимое
+    // сдвинуты на её высоту — название отеля, язык и аватар видны целиком.
+    for (const [path, width] of [['/cms/dashboard', 1440], ['/cms/dashboard', 390], ['/tracker', 1440], ['/tracker', 390]] as const) {
+      await hotelTab.setViewportSize({ width, height: 900 })
+      await hotelTab.goto(path)
+      await expect(banner).toBeVisible({ timeout: 20_000 })
+      const bar = await banner.boundingBox()
+      const header = await hotelTab.locator('header.MuiAppBar-root').first().boundingBox()
+      expect(header!.y, `${path} ${width}: шапка под полосой`).toBeGreaterThanOrEqual(bar!.y + bar!.height - 1)
+      const name = hotelTab.getByTestId('hotel-name')
+      if (await name.isVisible()) {
+        const nb = await name.boundingBox()
+        expect(nb!.y, `${path} ${width}: название отеля срезано полосой`).toBeGreaterThanOrEqual(bar!.y + bar!.height - 1)
+      }
+    }
+
     await hotelCtx.close()
     await cms.close()
   })

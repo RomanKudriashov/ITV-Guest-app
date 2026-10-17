@@ -93,7 +93,7 @@ function textsOnPage(page: Page) {
       return (x + 0.05) / (y + 0.05)
     }
     const pageColour = parse(getComputedStyle(document.querySelector('[data-testid="guest-backdrop-veil"]')!).backgroundColor)
-    const out: Array<{ label: string; colour: number[]; onPage: number; box: { x: number; y: number; width: number; height: number } }> = []
+    const out: Array<{ label: string; colour: number[]; onPage: number; onPlate: boolean; box: { x: number; y: number; width: number; height: number } }> = []
     for (const el of document.querySelectorAll('main *')) {
       if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim())) continue
       // Рамка — самих БУКВ, а не элемента: блок во всю ширину цепляет чужое
@@ -114,6 +114,10 @@ function textsOnPage(page: Page) {
           onPage = true
           break
         }
+        // ПОДЛОЖКА ПОД ТЕКСТОМ (партия 58б): вуали на весь экран нет, текст на
+        // фото фона стоит на своей подложке. Её проходим насквозь — меряем
+        // буквы по настоящим пикселям «фото + подложка».
+        if ((e as HTMLElement).dataset?.plate !== undefined) continue
         if (e === el || e.contains(el)) {
           const cs = getComputedStyle(e)
           const bg = parse(cs.backgroundColor)
@@ -132,6 +136,7 @@ function textsOnPage(page: Page) {
         label: `«${el.textContent!.trim().slice(0, 24)}»`,
         colour,
         onPage: ratio(colour, pageColour),
+        onPlate: Boolean(el.closest('[data-plate]')),
         box: { x: box.x, y: Math.max(0, box.y), width: box.width, height: Math.min(box.height, innerHeight - Math.max(0, box.y)) },
       })
     }
@@ -209,7 +214,8 @@ for (const theme of ['light', 'dark'] as const) {
         const texts = await textsOnPage(page)
         await page.addStyleTag({ content: 'main * { color: transparent !important; text-shadow: none !important; caret-color: transparent !important }' })
         for (const text of texts) {
-          const need = text.onPage >= 4.5 ? 4.5 : 3
+          // На подложке порог — полные 4,5: её плотность считается из них.
+          const need = text.onPlate || text.onPage >= 4.5 ? 4.5 : 3
           const worst = await worstContrast(page, text.colour, text.box)
           measured++
           if (worst < need - 0.05) failures.push(`${name}: ${text.label} ${worst.toFixed(2)} < ${need}`)

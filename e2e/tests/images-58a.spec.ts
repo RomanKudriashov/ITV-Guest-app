@@ -68,7 +68,20 @@ test('API: у фото ряд ширин не шире кадра, форма и
   expect(photo.focus.y).toBeLessThanOrEqual(1)
 })
 
-test('окно позиции на 1440: srcset/sizes, видно < 60% — фото целиком поверх размытого', async ({ page, request }) => {
+async function itemId(request: APIRequestContext, code: string): Promise<string> {
+  const token = await guestSession(request)
+  const res = await request.get(`${API}/api/guest/catalog?type=product&point=kitchen`, {
+    headers: { 'X-Hotel-Subdomain': HOTEL, Authorization: `Bearer ${token}` },
+  })
+  const items = ((await res.json()).categories as Array<{ items: Array<{ id: string; code: string }> }>).flatMap((c) => c.items)
+  const item = items.find((i) => i.code === code)
+  expect(item, `нет «${code}» в меню кухни`).toBeTruthy()
+  return item!.id
+}
+
+test('окно позиции на 1440: srcset/sizes, кадр во всю ширину окна — заполнен по фокусу', async ({ page, request }) => {
+  // Партия 58б: кадр сверху во всю ширину окна, форма по фото в 16:9…21:9 —
+  // горизонтальный кадр больше не режется колонкой 400 px.
   const { id } = await caesar(request)
   await enter(page, 1440)
   await page.goto(`/venue/kitchen?item=${id}`)
@@ -76,7 +89,18 @@ test('окно позиции на 1440: srcset/sizes, видно < 60% — фо
   expect(photo.srcset, 'у фото нет srcset').toContain('400w')
   expect(photo.sizes, 'место не назвало свою ширину').not.toBe('')
   expect(photo.sizes).not.toBe('100vw')
-  // Колонка 400 × высота текста против кадра 1,5:1 — режется больше 40%.
+  expect(photo.share).toBeGreaterThanOrEqual(0.6)
+  expect(photo.fit).toBe('cover')
+  expect(photo.backdrop).toBeFalsy()
+})
+
+test('окно позиции на 1440, вертикальное фото: видно < 60% — целиком поверх размытого', async ({ page, request }) => {
+  // Окно — место «показать целиком»: вертикальный кадр 2:3 в окне 16:9 не
+  // режется до трети, а встаёт целиком на размытую копию себя.
+  const id = await itemId(request, 'duck-breast')
+  await enter(page, 1440)
+  await page.goto(`/venue/kitchen?item=${id}`)
+  const photo = await sheetPhoto(page)
   expect(photo.share).toBeLessThan(0.6)
   expect(photo.fit).toBe('contain')
   expect(photo.objectFit).toBe('contain')
@@ -123,7 +147,8 @@ test('фон-фото на телефоне — image-set, а не просто�
 })
 
 test('prefers-reduced-transparency: размытая подложка снимается правилом', async ({ page, request }) => {
-  const { id } = await caesar(request)
+  // Подложка есть только у вертикального кадра в окне (партия 58б).
+  const id = await itemId(request, 'duck-breast')
   await enter(page, 1440)
   await page.goto(`/venue/kitchen?item=${id}`)
   await sheetPhoto(page)

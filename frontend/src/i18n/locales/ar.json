@@ -230,6 +230,7 @@
     "unsupportedType": "الصيغ المدعومة: JPEG وPNG وWebP",
     "unsupportedTypeBrand": "الصيغ المدعومة: JPEG وPNG وWebP وSVG",
     "tooLarge": "حجم الملف أكبر من 10 ميغابايت",
+    "logoTooLarge": "حجم الشعار أكبر من 1 ميغابايت. يصل إلى الضيف كما هو دون إعادة ضغط — صغّر الملف (SVG أو PNG أصغر) ثم ارفعه مرة أخرى",
     "uploadFailed": "فشل الرفع",
     "processingFailed": "فشلت معالجة الصورة",
     "processingTimeout": "معالجة الصورة تستغرق وقتاً طويلاً",
