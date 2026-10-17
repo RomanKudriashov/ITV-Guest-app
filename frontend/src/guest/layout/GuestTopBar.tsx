@@ -14,6 +14,7 @@ import { RoomMenu } from '../components/RoomMenu';
 import { fontPx, layout, surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { STICKY, useStickyLayer } from './stickyStack';
+import { mix, readable, TEXT_CONTRAST } from '@/theme/contrast';
 
 export interface TopBarTab {
   value: string;
@@ -136,7 +137,18 @@ export function GuestTopBar({
               px: 1.6,
               py: 1,
               borderRadius: (theme) => surfaceRadius.chip(theme.palette.brand.radius),
-              color: active === tab.value ? th.palette.primary.main : th.palette.text.secondary,
+              // Акцент как текст — с планкой 4.5 к СВОЕЙ подложке: `primaryText`
+              // темы считан к страницам и поверхностям, а у активной вкладки под
+              // буквами ещё .14 акцента — на тёмной выходило 4.39 (партия 56).
+              color:
+                active === tab.value
+                  ? readable(
+                      th.palette.brand.primaryText,
+                      [mix(th.palette.background.default, th.palette.primary.main, 0.14), mix(th.palette.background.paper, th.palette.primary.main, 0.14)],
+                      th.palette.mode,
+                      TEXT_CONTRAST + 0.15,
+                    )
+                  : th.palette.text.secondary,
               // Активная вкладка держится подложкой из акцента, а не готовым
               // светлым прямоугольником: прежняя `rgba(119,173,224,.16)` поверх
               // тёмного читалась как отдельная светлая плашка (Г22), а на

@@ -23,7 +23,6 @@ import { ThemeModeToggle } from '@/components/ThemeModeToggle';
 import { accent, ink, layout, pageBackground, shape, surface, typo } from './adminTokens';
 import { glassEdge, glassSx } from '@/kit/glass';
 import { PageBackdrop } from '@/components/PageBackdrop';
-import { GlassScope, useGlassState } from '@/layouts/glassScope';
 import type { PlatformMe } from './adminClient';
 
 export interface AdminSection {
@@ -94,8 +93,8 @@ export function AdminShell({
   const reduceMotion = usePrefersReducedMotion();
   const theme = useTheme();
   const rtl = theme.direction === 'rtl';
-  // Стекло рамки включает экран-образец (партия 56, шаг 1).
-  const glass = useGlassState();
+  // Рамка — стекло на всех экранах (партия 56, шаг 2; правила — kit/glass.ts).
+  const glass = { on: true };
   const tipPlacement = rtl ? 'left' : 'right';
   const groups = sections.reduce<{ group: string | undefined; items: AdminSection[] }[]>(
     (acc, section) => {
@@ -284,7 +283,6 @@ export function AdminShell({
   );
 
   return (
-    <GlassScope value={glass}>
     <Box
       data-testid="admin-shell"
       sx={{
@@ -342,7 +340,7 @@ export function AdminShell({
           minWidth: 0,
           overflow: 'hidden',
           ...(glass.on
-            ? { ...glassSx(theme, 'panel', { edge: false, shadow: false }), borderRight: glassEdge(theme) }
+            ? { ...glassSx(theme, 'panel', { edge: false, shadow: false, blur: false }), borderRight: glassEdge(theme) }
             : { bgcolor: surface.s1, borderRight: `1px solid ${surface.line}` }),
         }}
       >
@@ -423,6 +421,5 @@ export function AdminShell({
         </Box>
       </Box>
     </Box>
-    </GlassScope>
   );
 }

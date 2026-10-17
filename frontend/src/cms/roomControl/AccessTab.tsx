@@ -166,7 +166,14 @@ export function AccessTab() {
               {t('roomControl.access.noPins')}
             </Typography>
           ) : (
-            <Table size="small" sx={state.demo_entry.enabled ? { opacity: 0.5 } : undefined}>
+            // Гасим ЦВЕТОМ, а не прозрачностью: `opacity: .5` роняла шапку
+            // таблицы до 3.19. Вторичный текст темы держит 4.5 и всё равно
+            // читается тише рабочей таблицы (партия 56).
+            <Table
+              size="small"
+              data-muted={state.demo_entry.enabled ? 'true' : 'false'}
+              sx={state.demo_entry.enabled ? { '& .MuiTableCell-root': { color: 'text.secondary' } } : undefined}
+            >
               <TableHead>
                 <TableRow>
                   <TableCell>{t('roomControl.builder.room')}</TableCell>

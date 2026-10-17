@@ -338,8 +338,12 @@ export function GuestLayout() {
                   <tab.Icon size={22} />
                 )
               }
-              sx={{
+              sx={(th) => ({
                 minWidth: 44,
+                // Активная вкладка — акцент как ТЕКСТ (`primaryText`, ≥4.5), а не
+                // заливочный `primary.main`: тот на тёмном стекле давал 2.83 у
+                // «Номера» (партия 56).
+                '&.Mui-selected': { color: th.palette.brand.primaryText },
                 /*
                   ПОДПИСЬ ВЛЕЗАЕТ В СВОЮ ВКЛАДКУ (партия 25). Шесть вкладок на
                   390 — по 60 px; при крупном размере текста подписи
@@ -352,7 +356,7 @@ export function GuestLayout() {
                   fontSize: `min(${fontPx(12)}, 3vw)`,
                   whiteSpace: 'nowrap',
                 },
-              }}
+              })}
             />
           ))}
         </BottomNavigation>

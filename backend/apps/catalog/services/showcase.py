@@ -12,7 +12,7 @@
 их ≤ порога — отдельные плитки, больше — одна плитка-категория.
 
 Набор плиток ВЫЧИСЛЯЕМЫЙ; ShowcaseTile лишь накладывает размер/порядок/показ по
-стабильному ключу (код сервиса, код группы, «info», «room-control»).
+стабильному ключу (код сервиса, код группы, «info»).
 """
 
 from __future__ import annotations
@@ -70,7 +70,6 @@ GROUP_TITLES = {
     "services": {"ru": "Услуги", "en": "Services", "ar": "الخدمات", "zh": "服务"},
 }
 INFO_TITLE = {"ru": "Об отеле", "en": "About the hotel", "ar": "عن الفندق", "zh": "酒店信息"}
-ROOM_CONTROL_TITLE = {"ru": "Мой номер", "en": "My room", "ar": "غرفتي", "zh": "我的房间"}
 
 
 def _service_image(service: Service) -> str | None:
@@ -277,27 +276,9 @@ def build_showcase(
             tiles.append(applied)
             order += 1
 
-    # «Мой номер» — заглушка за флагом (GRMS-фаза). По умолчанию выключена и не
-    # показывается; отель включает превью флагом, плитка приходит disabled.
-    if (hotel.settings or {}).get("show_room_control"):
-        room = {
-            "key": "room-control",
-            "type": "room-control",
-            "title": translate(ROOM_CONTROL_TITLE, language),
-            "subtitle": None,
-            "kind": None,
-            "venue_count": None,
-            "status": None,
-            "image": None,
-            "cover_previews": [],
-            "route": None,
-            "enabled": False,
-        }
-        applied = _apply_overlay(room, overlays.get("room-control"), order, "m", include_hidden)
-        if applied:
-            tiles.append(applied)
-            order += 1
-
+    # Плитки-заглушки «Мой номер» здесь больше нет (партия 56): она висела
+    # мёртвой «Скоро» за флагом `show_room_control`, который нигде не ставился,
+    # а управление номером у гостя живёт своим разделом (/room).
     tiles.sort(key=lambda entry: entry["order"])
     return tiles
 

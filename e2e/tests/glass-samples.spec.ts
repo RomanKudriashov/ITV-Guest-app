@@ -43,7 +43,7 @@ test('блюдо: «← Меню «…»» ведёт в меню своего �
   await expect(page.getByTestId('cms-service-workspace')).toBeVisible({ timeout: 20_000 })
 })
 
-test('дашборд и редактор: рамка — стекло, поля — плотные; на других экранах стекла нет', async ({ page }) => {
+test('рамка — стекло на любом экране, поля — плотные (партия 56, шаг 2)', async ({ page }) => {
   await signIn(page, ADMIN)
   await page.goto('/cms/dashboard')
   await expect(page.getByTestId('cms-dashboard')).toBeVisible({ timeout: 20_000 })
@@ -52,11 +52,25 @@ test('дашборд и редактор: рамка — стекло, поля 
   const tile = await isGlass(page, '[data-testid="cms-dashboard"] .MuiCard-root')
   expect(tile.blur && tile.alpha < 1, 'плитка дашборда не стеклянная').toBeTruthy()
 
-  // Стекло — только у образцов (шаг 1): соседний экран остаётся прежним.
+  // Шаг 2 — стекло раскатано: любой экран, не только образец; поля — плотные.
   await page.goto('/cms/staff')
   await expect(page.getByTestId('cms-page-title')).toBeVisible({ timeout: 20_000 })
-  const plain = await isGlass(page, 'header.MuiAppBar-root')
-  expect(plain.blur, 'стекло протекло на экран, который не образец').toBeFalsy()
+  const other = await isGlass(page, 'header.MuiAppBar-root')
+  expect(other.blur && other.alpha < 1, 'шапка персонала не стеклянная').toBeTruthy()
+  const field = await page.locator('main .MuiOutlinedInput-root').first().evaluate((el) => {
+    const s = getComputedStyle(el)
+    return { bg: s.backgroundColor, blur: s.backdropFilter }
+  })
+  expect(field.blur.includes('blur'), 'поле размыто').toBeFalsy()
+  expect(field.bg, 'поле полупрозрачное').not.toMatch(/rgba\([^)]*,\s*0?\.\d+\)/)
+  // Карточки доски — плотные: стекло на 300 карточках срезало кадры вдвое.
+  await page.goto('/tracker')
+  await page.getByTestId('tracker-history-tab').click()
+  const card = page.locator('[data-testid^="tracker-order-"]').first()
+  if (await card.count()) {
+    const style = await card.evaluate((el) => getComputedStyle(el).backdropFilter)
+    expect(style.includes('blur'), 'карточка доски размыта').toBeFalsy()
+  }
 })
 
 test('Control, список отелей: фильтры — на стекле, реестр — плотный', async ({ page }) => {

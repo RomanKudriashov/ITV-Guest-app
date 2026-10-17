@@ -378,7 +378,6 @@
       "offers": "今日推荐",
       "sectionsTitle": "去哪看看",
       "quickActionsTitle": "快捷操作",
-      "comingSoon": "即将推出",
       "venueCount_other": "{{count}} 家",
       "group": {
         "restaurants": "餐厅与酒吧",
@@ -941,7 +940,6 @@
       "emptyTitle": "暂无消息",
       "emptyBody": "还没有客人留言",
       "emptyThread": "开始对话",
-      "back": "返回",
       "more": "显示更多"
     },
     "searchPlaceholder": "订单号或房间号",
@@ -1016,7 +1014,6 @@
     "loadingMore": "加载中…",
     "desk": {
       "title": "前台：客人对话",
-      "toBoard": "返回看板",
       "reception": "前台",
       "pickDialog": "请在左侧选择对话",
       "cardFailed": "客人卡片加载失败",
@@ -1096,7 +1093,6 @@
     "myPoints": {
       "title": "我的点位",
       "caption": "每个点位的本班汇总。每 30 秒刷新一次。点击点位即可打开其看板。",
-      "toBoard": "返回看板",
       "error": "无法加载点位汇总",
       "new": "新订单",
       "inWork": "处理中",
@@ -2131,7 +2127,6 @@
     "disabled": "已停用",
     "itemCount": "{{count}} 个条目",
     "inclusionCount": "引入：{{count}}",
-    "backToList": "返回服务列表",
     "notFound": "未找到服务",
     "saved": "已保存",
     "saveFailed": "保存失败",
@@ -2486,7 +2481,6 @@
     },
     "hotel": {
       "crumb": "酒店详情",
-      "back": "返回列表",
       "loadFailed": "无法加载酒店",
       "tab": {
         "profile": "资料",
@@ -2572,7 +2566,8 @@
         "lastHint": "最后一位无法撤销：酒店将失去对自己 CMS 的访问。",
         "existing": "酒店已有管理员：{{list}}。请核对地址 — 第二位全权管理员通常是打错造成的。",
         "never": "从未登录"
-      }
+      },
+      "crumbNamed": "酒店「{{name}}」"
     },
     "create": {
       "title": "新建酒店",
@@ -3962,6 +3957,8 @@
   },
   "back": {
     "serviceMenu": "「{{name}}」菜单",
-    "menu": "菜单"
+    "menu": "菜单",
+    "board": "看板",
+    "dialogs": "对话"
   }
 }

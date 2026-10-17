@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
@@ -9,14 +9,15 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { Theme } from '@mui/material/styles';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import Snackbar from '@mui/material/Snackbar';
 import { useTranslation } from 'react-i18next';
 
+import { parentOf, recallBoardSearch } from '@/app/backMap';
 import { useAuth } from '@/auth';
+import { BackLink } from '@/kit/BackLink';
 import { PageContainer } from '@/components/PageContainer';
 import { DeskConversation } from '../desk/DeskConversation';
 import { DeskHandoverDialog } from '@/tracker/desk/DeskHandoverDialog';
@@ -35,7 +36,7 @@ import { useTrackerChatThreads } from '../hooks/useTrackerQueries';
  */
 export function ReceptionDeskPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const selected = params.get('t');
@@ -54,6 +55,17 @@ export function ReceptionDeskPage() {
   if (user && !canChat) return <Navigate to="/tracker" replace />;
 
   const rows = threads.data?.pages.flatMap((page) => page.items) ?? [];
+  /*
+    ДВА ВОЗВРАТА ПО КАРТЕ МАРШРУТОВ (партия 56): экран целиком — на доску (с её
+    фильтрами), открытый диалог на узком экране — к списку диалогов (снять
+    `?t=`). Ссылки, а не переходы из кода: адрес родителя виден и открывается
+    в новой вкладке.
+  */
+  const boardSearch = recallBoardSearch();
+  const toBoard = parentOf(location.pathname, { boardSearch }, t);
+  const toDialogs = selected
+    ? parentOf(location.pathname, { search: location.search, boardSearch }, t)
+    : null;
   const open = (id: string | null) => {
     const next = new URLSearchParams(params);
     if (id) next.set('t', id);
@@ -185,9 +197,7 @@ export function ReceptionDeskPage() {
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1} sx={{ pb: 2 }}>
-          <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate('/tracker')}>
-            {t('tracker.desk.toBoard')}
-          </Button>
+          {toBoard ? <BackLink to={toBoard.to} label={toBoard.label} testId="desk-to-board" sx={{ alignSelf: 'center' }} /> : null}
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             {t('tracker.desk.title')}
           </Typography>
@@ -199,14 +209,11 @@ export function ReceptionDeskPage() {
             ) : (
               <>
                 <Stack direction="row" alignItems="center" sx={{ px: 1 }}>
-                  <Button
-                    size="small"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => open(null)}
-                    data-testid="desk-back"
-                  >
-                    {t('tracker.chat.back')}
-                  </Button>
+                  {toDialogs ? (
+                    // replace: диалог открывается заменой адреса, и возврат к
+                    // списку не должен копить записи истории.
+                    <BackLink to={toDialogs.to} label={toDialogs.label} testId="desk-back" replace sx={{ alignSelf: 'center', ml: 0 }} />
+                  ) : null}
                   <Tabs value={pane} onChange={(_e, next) => setPane(next)} sx={{ ml: 'auto' }}>
                     <Tab value="chat" label={t('tracker.desk.chatTab')} />
                     <Tab

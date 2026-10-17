@@ -1,6 +1,4 @@
 import { BackLink } from '@/kit/BackLink';
-import { glassSx } from '@/kit/glass';
-import { useGlassPage } from '@/layouts/glassScope';
 import { parentOf } from '@/app/backMap';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -221,7 +219,6 @@ function categoryOptions(flat: FlatCategory[], title: (category: Category) => st
 }
 
 export function ItemEditorPage() {
-  useGlassPage();
   const { t } = useTranslation();
   const { id: routeId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -295,9 +292,12 @@ export function ItemEditorPage() {
   const back = parentOf(
     location.pathname,
     {
+      // Раздел ещё не доехал — заведение из адреса (его кладёт меню, партия 56).
       service: parentCategory?.service_id
         ? { id: parentCategory.service_id, name: parentCategory.service_name }
-        : null,
+        : searchParams.get('service_id')
+          ? { id: searchParams.get('service_id') as string }
+          : null,
       language: languages.displayLanguage,
       fallbackLanguage: languages.defaultCode,
     },
@@ -775,7 +775,9 @@ export function ItemEditorPage() {
         */
         hydratedIdRef.current = saved.id;
         setItemId(saved.id);
-        navigate(cmsPath(`/menu/items/${saved.id}`), { replace: true });
+        // Запрос адреса (`service_id`, …) остаётся: «← Меню» после сохранения
+        // ведёт туда же, откуда пришли (партия 56).
+        navigate(`${cmsPath(`/menu/items/${saved.id}`)}${location.search}`, { replace: true });
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.item(saved.id) });
     },
@@ -841,18 +843,7 @@ export function ItemEditorPage() {
   const currency = currencySymbol(bootstrap.hotel.currency, languages.displayLanguage);
 
   return (
-    <PageContainer
-      sx={(theme) => ({
-        pb: 10,
-        // Образец стекла (партия 56): секции — стекло над подложкой, поля
-        // внутри — плотные, текст ввода не зависит от того, что просвечивает.
-        '& .MuiCard-root.MuiPaper-outlined': {
-          ...glassSx(theme, 'panel'),
-          borderRadius: `${theme.palette.brand.radius.lg}px`,
-        },
-        '& .MuiOutlinedInput-root': { bgcolor: 'background.paper' },
-      })}
-    >
+    <PageContainer sx={{ pb: 10 }}>
       {/* Шапка переносится, а не режет название многоточием: на 390
           «Брускетта» не помещалась рядом с «Назад» и «Сохранить» (партия 55). */}
       <Stack

@@ -1,5 +1,6 @@
 import type { Theme } from '@mui/material/styles';
 import { createTheme } from '@mui/material/styles';
+import { glassSx } from '@/kit/glass';
 
 /**
  * ШКАЛА РАЗМЕРОВ ДЛЯ ПОВЕРХНОСТЕЙ ПЕРСОНАЛА — одна на консоль, CMS и трекер.
@@ -134,7 +135,8 @@ export function compactTheme(base: Theme): Theme {
       MuiOutlinedInput: {
         // Поле и список — по строке текста, а не по кнопке.
         styleOverrides: {
-          root: { fontSize: px(font.body) },
+          // Поле — плотное и на стекле: текст ввода на непрозрачной подложке.
+          root: { fontSize: px(font.body), backgroundColor: base.palette.background.paper },
           input: { paddingTop: FIELD_PAD, paddingBottom: FIELD_PAD, minHeight: control.row - 2 * FIELD_PAD },
           // Многострочное поле: отступ — у корня, у текста ноль, как у MUI;
           // иначе первая строка уезжала на 14.5 px вниз от подписи.
@@ -165,18 +167,44 @@ export function compactTheme(base: Theme): Theme {
         },
       },
       // Выбор из списка (`kit/SelectField`) — та же высота, что у поля:
-      // у Autocomplete свои отступы (6 у корня + 2.5 у ввода), сводим к 6.
+      // у Autocomplete свои отступы (6 у корня + 2.5 у ввода), сводим к 6
+      // (переопределение — в блоке стекла ниже, вместе с бумагой списка).
+      MuiSelect: { defaultProps: { size: 'small' } },
+      MuiTextField: { defaultProps: { size: 'small' } },
+      MuiFormControl: { defaultProps: { size: 'small' } },
+      MuiMenuItem: { styleOverrides: { root: { fontSize: px(font.body), minHeight: control.row } } },
+      /*
+        СТЕКЛО ПАНЕЛИ (партия 56): правила `kit/glass.ts`. Рамка — стекло:
+        карточки-плитки, окна, меню и выпадашки. Содержимое — плотное: поля
+        ввода и таблицы непрозрачны, текст на планке контраста не зависит от
+        того, что просвечивает. Вложенная карточка размытие не повторяет —
+        второе размытие поверх первого ничего не добавляет, а кадры стоит.
+        Карточки доски трекера плотные сами (`OrderCard`): 300 размытых
+        карточек — минус половина кадров при прокрутке.
+      */
+      MuiCard: {
+        styleOverrides: {
+          root: ({ ownerState }: { ownerState: { variant?: string } }) =>
+            ownerState.variant === 'outlined'
+              ? {
+                  ...glassSx(base, 'panel'),
+                  borderRadius: `${base.palette.brand.radius.lg}px`,
+                  '& .MuiCard-root': { backdropFilter: 'none', WebkitBackdropFilter: 'none', boxShadow: 'none' },
+                }
+              : {},
+        },
+      },
+      MuiDialog: { styleOverrides: { paper: { ...glassSx(base, 'sheet') } } },
+      MuiPopover: { styleOverrides: { paper: { ...glassSx(base, 'menu') } } },
       MuiAutocomplete: {
         styleOverrides: {
+          paper: { ...glassSx(base, 'menu') },
           inputRoot: {
             '&.MuiInputBase-sizeSmall': { paddingTop: FIELD_PAD - 2.5, paddingBottom: FIELD_PAD - 2.5 },
           },
         },
       },
-      MuiSelect: { defaultProps: { size: 'small' } },
-      MuiTextField: { defaultProps: { size: 'small' } },
-      MuiFormControl: { defaultProps: { size: 'small' } },
-      MuiMenuItem: { styleOverrides: { root: { fontSize: px(font.body), minHeight: control.row } } },
+      MuiTable: { styleOverrides: { root: { backgroundColor: base.palette.background.paper } } },
       MuiChip: {
         defaultProps: { size: 'small' },
         styleOverrides: { root: { fontSize: px(font.caption) } },

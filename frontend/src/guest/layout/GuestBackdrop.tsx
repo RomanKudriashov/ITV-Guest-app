@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
 
 import { useAppTheme } from '@/theme';
 import { resolveBackground } from '@/theme/brandBackground';
@@ -42,7 +43,18 @@ export function GuestBackdrop() {
         : bg?.kind === 'abstraction' && bg.abstraction
           ? between(colors.text, colors.background)
           : [backdrop.css.backgroundColor ?? colors.background];
-  const veil = pageVeilAlpha(colors.background, [colors.text, colors.textSecondary], behind);
+  /*
+    ЦВЕТА ТЕКСТА — ТЕ, КОТОРЫМИ ОН НАРИСОВАН (партия 56): тема доводит
+    вторичный и третий уровень до 4.5 (theme/contrast.ts), и текст на экране
+    уже не цвета токена бренда. Вуаль считалась по сырому `textSecondary` и
+    без третьего уровня — подписи чата и пустых заказов давали 4.44 на фото.
+  */
+  const palette = useTheme().palette;
+  const veil = pageVeilAlpha(
+    colors.background,
+    [palette.text.primary, palette.text.secondary, palette.brand.textTertiary],
+    behind,
+  );
 
   return (
     <>

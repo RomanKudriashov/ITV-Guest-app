@@ -379,7 +379,6 @@
       "offers": "Recommended today",
       "sectionsTitle": "Where to look",
       "quickActionsTitle": "Quick actions",
-      "comingSoon": "Soon",
       "venueCount_one": "{{count}} venue",
       "venueCount_other": "{{count}} venues",
       "group": {
@@ -946,7 +945,6 @@
       "emptyTitle": "No messages",
       "emptyBody": "No guests have written yet",
       "emptyThread": "Start the conversation",
-      "back": "Back",
       "more": "Show more"
     },
     "searchPlaceholder": "Order or room number",
@@ -1024,7 +1022,6 @@
     "loadingMore": "Loading…",
     "desk": {
       "title": "Front desk: guest dialogs",
-      "toBoard": "To the board",
       "reception": "Front desk",
       "pickDialog": "Pick a dialog on the left",
       "cardFailed": "The guest card did not load",
@@ -1106,7 +1103,6 @@
     "myPoints": {
       "title": "My points",
       "caption": "Shift summary for each of your points. Refreshes every 30 seconds. Tap a point to open its board.",
-      "toBoard": "To the board",
       "error": "Could not load the points summary",
       "new": "New",
       "inWork": "In progress",
@@ -2150,7 +2146,6 @@
     "disabled": "Disabled",
     "itemCount": "{{count}} items",
     "inclusionCount": "inclusions: {{count}}",
-    "backToList": "Back to services",
     "notFound": "Service not found",
     "saved": "Saved",
     "saveFailed": "Could not save",
@@ -2512,7 +2507,6 @@
     },
     "hotel": {
       "crumb": "Hotel",
-      "back": "Back to list",
       "loadFailed": "Could not load the hotel",
       "tab": {
         "profile": "Profile",
@@ -2599,7 +2593,8 @@
         "lastHint": "The last one cannot be revoked: the hotel would lose access to its CMS.",
         "existing": "The hotel already has an administrator: {{list}}. Check the address — a second full admin is usually a typo.",
         "never": "never signed in"
-      }
+      },
+      "crumbNamed": "Hotel “{{name}}”"
     },
     "create": {
       "title": "New hotel",
@@ -3997,6 +3992,8 @@
   },
   "back": {
     "serviceMenu": "{{name}} menu",
-    "menu": "Menu"
+    "menu": "Menu",
+    "board": "Board",
+    "dialogs": "Conversations"
   }
 }

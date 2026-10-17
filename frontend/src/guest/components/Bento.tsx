@@ -10,7 +10,7 @@ import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { packBento, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
-import { fontPx, storefrontTokens, surfaceRadius } from '../storefrontTokens';
+import { fontPx, storefrontTokens, surfaceRadius, titlePlate } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { openingLabel } from '../nextOpening';
 
@@ -77,7 +77,9 @@ function StatusPill({ status }: { status: { text: string; open: boolean } }) {
         fontWeight: 700,
         lineHeight: 1.4,
         color: 'common.white',
-        bgcolor: alpha(th.palette.common.black, 0.42),
+        // Подложка — `titlePlate`: белые буквы держат 4.5 на ЛЮБОМ кадре. Чёрные
+        // .42 на светлом фото (полотенце СПА) давали около 3:1 (партия 56).
+        bgcolor: titlePlate(th.palette.mode),
         backdropFilter: 'blur(8px)',
         border: `1px solid ${alpha(status.open ? th.palette.success.light : th.palette.common.white, 0.5)}`,
         whiteSpace: 'nowrap',
@@ -98,7 +100,7 @@ interface BentoTileProps {
 /**
  * One bento tile — reference login-canvas style: a full-bleed cover, a bottom-only
  * scrim, the title + meta in the lower-left, and a status pill in the upper-right.
- * The centre stays clear. A disabled tile (room-control stub) reads as "coming".
+ * The centre stays clear.
  */
 export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
   const { t } = useTranslation();
@@ -167,17 +169,11 @@ export function BentoTile({ tile, compact, onOpen }: BentoTileProps) {
           background: tileTokens.scrim,
         }}
       />
-      {disabled ? (
-        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: tileTokens.disabledVeil }} />
-      ) : null}
 
-      {/* Status / "coming" pill, upper-right. */}
+      {/* Статус заведения, вверху справа. Пилюли «Скоро» больше нет: её
+          носила только заглушка «Мой номер», убранная с сервера (партия 56). */}
       <Box sx={{ position: 'absolute', top: 10, insetInlineEnd: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-        {disabled ? (
-          <StatusPill status={{ text: t('guest.home.comingSoon'), open: false }} />
-        ) : status ? (
-          <StatusPill status={status} />
-        ) : null}
+        {status ? <StatusPill status={status} /> : null}
       </Box>
 
       {/* Title + meta, lower-left. Left inset clears the corner radius so the

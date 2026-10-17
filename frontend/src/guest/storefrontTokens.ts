@@ -221,6 +221,15 @@ export interface StorefrontTokens {
     /** Обводка и фон пилюли статуса. */
     pillBorder: string;
     pillBackground: string;
+    /**
+     * Подложка ПИЛЮЛИ СОСТОЯНИЯ номера (партия 56). Отдельно от `pillBackground`:
+     * тот почти прозрачен и лежит под сегментами внутри панели, а строка
+     * состояния стоит прямо на странице, над фоном бренда (фактура, фото). На
+     * прозрачной подложке вторичный текст давал 4.43 на тёмной — буквы ложились
+     * на светлые клетки фактуры. Плотная подложка делает фон под текстом
+     * известным, и цвет букв (`*Text` в `useStorefront`) считается к нему.
+     */
+    statusPillBackground: string;
     /** Неактивная точка пилюли. */
     pillDot: string;
     /** Дорожка вкладок и её подчёркивание. */
@@ -266,7 +275,6 @@ export interface StorefrontTokens {
     fallbackColor: string;
     fallbackGradient: string;
     scrim: string;
-    disabledVeil: string;
     titleShadow: string;
     metaShadow: string;
   };
@@ -397,6 +405,7 @@ const DARK: StorefrontTokens = {
     switchKnobOff: '#DFE6F2',
     pillBorder: 'rgba(255,255,255,.12)',
     pillBackground: 'rgba(255,255,255,.02)',
+    statusPillBackground: 'rgba(14,21,33,.72)',
     pillDot: 'rgba(255,255,255,.4)',
     tabTrack: 'rgba(255,255,255,.09)',
     fadeEdge: 'linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%)',
@@ -413,7 +422,6 @@ const DARK: StorefrontTokens = {
     fallbackGradient: 'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
     scrim:
       'linear-gradient(to top, rgba(5,7,12,.82) 0%, rgba(5,7,12,.5) 22%, transparent 46%)',
-    disabledVeil: 'rgba(5,7,12,.35)',
     titleShadow: '0 2px 14px rgba(0,0,0,0.6)',
     metaShadow: '0 1px 8px rgba(0,0,0,0.55)',
   },
@@ -534,6 +542,7 @@ const LIGHT: StorefrontTokens = {
     switchKnobOff: '#FFFFFF',
     pillBorder: 'rgba(18,32,47,.14)',
     pillBackground: 'rgba(255,255,255,.5)',
+    statusPillBackground: 'rgba(255,255,255,.86)',
     pillDot: 'rgba(18,32,47,.35)',
     tabTrack: 'rgba(18,32,47,.12)',
     fadeEdge: 'linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%)',
@@ -551,7 +560,6 @@ const LIGHT: StorefrontTokens = {
     fallbackGradient: 'linear-gradient(160deg, #16233b 0%, #080c14 92%)',
     scrim:
       'linear-gradient(to top, rgba(5,7,12,.82) 0%, rgba(5,7,12,.5) 22%, transparent 46%)',
-    disabledVeil: 'rgba(5,7,12,.35)',
     titleShadow: '0 2px 14px rgba(0,0,0,0.6)',
     metaShadow: '0 1px 8px rgba(0,0,0,0.55)',
   },
@@ -1137,6 +1145,18 @@ export function pageVeilAlpha(veil: string, texts: string[], behind: string[]): 
  * пропускает сторож сборки (`check-colors`).
  */
 export const PHOTO_EXTREMES = ['#000000', '#FFFFFF'] as const;
+
+/**
+ * Что видит глаз под полупрозрачным слоем: `top` поверх сплошного `under`
+ * (партия 56). Контраст меряется только к сплошному цвету — прозрачный фон
+ * читается по тому, что под ним.
+ */
+export function overlayColor(top: string, under: string): string {
+  const t = decomposeColor(top);
+  const a = t.values.length > 3 ? (t.values[3] ?? 1) : 1;
+  const [r, g, b] = flatten(rgbOf(top), a, rgbOf(under)).map(Math.round);
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 /** Цвет между двумя: вес 0 — `from`, 1 — `to`. */
 export function mixColors(from: string, to: string, weight: number): string {

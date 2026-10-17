@@ -96,7 +96,11 @@ export function createAppTheme(
     пункт меню, текстовые кнопки, вкладки) — отдельный `primaryText`: заливки
     кнопок остаются цветом бренда, а буквы на поверхности — читаемыми.
   */
-  const textBackgrounds = [c.background, c.surface, c.surfaceMuted, c.surfaceSelected];
+  // Однотонный фон бренда — тоже фон под текстом (партия 56): без него вуаль
+  // гостя закрывала фон отеля, чтобы вытянуть контраст третьего уровня.
+  const brandSolid =
+    tokens.brand?.background?.kind === 'solid' && tokens.brand.background.color ? [tokens.brand.background.color] : [];
+  const textBackgrounds = [c.background, c.surface, c.surfaceMuted, c.surfaceSelected, ...brandSolid];
   const textSecondary = readable(c.textSecondary, textBackgrounds, mode);
   const textTertiary = readable(mix(c.textSecondary, c.surface, 0.28), textBackgrounds, mode);
   const primaryText = readable(c.primary, textBackgrounds, mode);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useParams } from 'react-router-dom';
 import {
   ImageUploader,
   mediaToEditable,
@@ -20,9 +20,10 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslation } from 'react-i18next';
 import { cmsPath } from '@/app/hostRole';
+import { parentOf } from '@/app/backMap';
+import { BackLink } from '@/kit/BackLink';
 
 import { ApiError } from '@/api/client';
 import Table from '@mui/material/Table';
@@ -64,7 +65,7 @@ const CATALOG_TABS: ReadonlySet<TabKey> = new Set(['menu', 'delivery', 'commerce
 
 export function ServiceWorkspacePage() {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
+  const location = useLocation();
   const { id = '' } = useParams();
   const [chosenTab, setTab] = useState<TabKey | null>(null);
 
@@ -101,17 +102,13 @@ export function ServiceWorkspacePage() {
   const tab: TabKey = chosenTab && tabs.includes(chosenTab) ? chosenTab : tabs[0];
   const name =
     data.public_name[i18n.resolvedLanguage ?? 'ru'] ?? data.public_name.ru ?? data.code;
+  const back = parentOf(location.pathname, {}, t);
 
   return (
     <PageContainer testId="cms-service-workspace">
-      <Button
-        size="small"
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(cmsPath('/services'))}
-        sx={{ mb: 1 }}
-      >
-        {t('services.backToList')}
-      </Button>
+      {/* «← Сервисы» — родитель по карте маршрутов (партия 56); было
+          «К списку сервисов» кнопкой с переходом из кода. */}
+      {back ? <BackLink to={back.to} label={back.label} testId="service-back" sx={{ mb: 1 }} /> : null}
 
       {/* Имя и пометки переносятся: в ряд на 390 не помещались (партия 55). */}
       <Stack

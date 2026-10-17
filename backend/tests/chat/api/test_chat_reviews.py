@@ -85,7 +85,10 @@ def test_home_is_built_from_data(guest):
     # Инфо отеля наполнено сидом — плитка инфо присутствует.
     assert any(t["type"] == "info" for t in tiles)
     for tile in tiles:
-        assert tile["type"] in {"venue", "service-category", "info", "room-control"}
+        # Заглушки «Мой номер» на главной нет (партия 56): ни одна плитка не
+        # приходит выключенной и без маршрута.
+        assert tile["type"] in {"venue", "service-category", "info"}
+        assert tile["enabled"] is True and tile["route"]
     for venue in (t for t in tiles if t["type"] == "venue"):
         assert venue["route"] == f"/venue/{venue['key']}"
 

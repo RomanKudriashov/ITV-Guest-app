@@ -41,7 +41,7 @@ import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlin
 import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import { getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
+import { getHotel, getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
 
 /**
  * NaviRoom Control — консоль `/admin`, уровень владельца платформы.
@@ -107,7 +107,14 @@ function AdminScope({ children }: { children: ReactNode }) {
 
   return (
     <MuiThemeProvider theme={theme}>
-      <GlobalStyles styles={{ ':root': vars }} />
+      <GlobalStyles
+        styles={{
+          ':root': vars,
+          // Таблицы — плотное содержимое (партия 56): на стеклянной панели
+          // строки не должны просвечивать.
+          '[data-testid="admin-shell"] table': { backgroundColor: 'var(--adm-surface-s1)' },
+        }}
+      />
       {children}
     </MuiThemeProvider>
   );
@@ -227,6 +234,18 @@ function Console({ onLogout }: { onLogout: () => void }) {
     setSearchParams(params);
   };
 
+  /*
+    КРОШКА НАЗЫВАЕТ ОТЕЛЬ (партия 56): «Отели › Отель «Кристалл»», а не
+    безличная «Карточка отеля». Запрос тот же, что у карточки (общий ключ
+    кэша) — второго обращения к серверу нет. Пока имя не пришло — прежняя
+    подпись.
+  */
+  const crumbHotel = useQuery({
+    queryKey: ['admin', 'hotel', hotelId],
+    queryFn: () => getHotel(hotelId ?? ''),
+    enabled: Boolean(hotelId) && section === 'fleet',
+  });
+  const crumbName = crumbHotel.data?.name;
   const crumb =
     hotelId && section === 'fleet' ? (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -238,7 +257,12 @@ function Console({ onLogout }: { onLogout: () => void }) {
           {t('admin.nav.fleet')}
         </ButtonBase>
         <Box sx={{ color: ink.low }}>›</Box>
-        <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }}>{t('admin.hotel.crumb')}</Box>
+        <Box
+          sx={{ ...typo.body, color: ink.hi, fontWeight: 700, minWidth: 0, overflowWrap: 'anywhere' }}
+          data-testid="admin-crumb-hotel"
+        >
+          {crumbName ? t('admin.hotel.crumbNamed', { name: crumbName }) : t('admin.hotel.crumb')}
+        </Box>
       </Box>
     ) : (
       <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }}>{t(`admin.nav.${section}`)}</Box>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -18,9 +18,12 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import { ApiError } from '@/api/client';
+import { parentOf } from '@/app/backMap';
+import { cmsPath } from '@/app/hostRole';
+import { BackLink } from '@/kit/BackLink';
+import { fetchService } from '@/cms/services/api';
 import { createCategory, fetchCategories, updateCategory } from '@/api/cms';
 import { queryKeys } from '@/api/queryKeys';
 import type { Category, Translated } from '@/api/types';
@@ -94,8 +97,8 @@ export function CategoryEditorPage() {
    * значит принадлежность приходит адресом и никак иначе. Пусто — раздел
    * уровня отеля (прежнее поведение).
    */
-  const serviceId = searchParams.get('service_id');
-  const backPath = serviceId ? `/cms/services/${serviceId}` : '/cms/menu';
+  const queryServiceId = searchParams.get('service_id');
+  const location = useLocation();
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -114,6 +117,26 @@ export function CategoryEditorPage() {
   });
   const tree = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
   const current = categoryId ? findCategory(tree, categoryId) : null;
+  /*
+    ЗАВЕДЕНИЕ РАЗДЕЛА — ИЗ АДРЕСА ИЛИ ИЗ САМОГО РАЗДЕЛА (партия 56).
+
+    Новый раздел знает заведение только адресом; существующий несёт его сам
+    (`service_id`/`service_name` с сервера), и прямой заход по ссылке без
+    `?service_id` всё равно ведёт «← Меню «<заведение>»», а не в общий список.
+  */
+  const serviceId = queryServiceId ?? current?.service_id ?? null;
+  const knownServiceName =
+    current?.service_id === serviceId && current?.service_name
+      ? current.service_name
+      : flattenCategories(tree).find((row) => row.category.service_id === serviceId && row.category.service_name)
+          ?.category.service_name;
+  // Имени нет ни у одного раздела (первый раздел заведения) — спросить само
+  // заведение; из меню заведения оно уже в кэше.
+  const serviceQuery = useQuery({
+    queryKey: ['cms', 'service', serviceId],
+    queryFn: () => fetchService(serviceId ?? ''),
+    enabled: Boolean(serviceId) && !knownServiceName && !categoriesQuery.isLoading,
+  });
 
   const [form, setForm] = useState<CategoryForm>(EMPTY_FORM);
   const [image, setImage] = useState<EditableImage[]>([]);
@@ -209,8 +232,8 @@ export function CategoryEditorPage() {
         // из сервиса в общее меню отеля — не туда, откуда пришли.
         navigate(
           serviceId
-            ? `/cms/menu/categories/${saved.id}?service_id=${serviceId}`
-            : `/cms/menu/categories/${saved.id}`,
+            ? cmsPath(`/menu/categories/${saved.id}?service_id=${serviceId}`)
+            : cmsPath(`/menu/categories/${saved.id}`),
           { replace: true },
         );
       }
@@ -226,6 +249,17 @@ export function CategoryEditorPage() {
   });
 
   const guard = useUnsavedChangesGuard(isDirty && !saveMutation.isPending);
+  const back = parentOf(
+    location.pathname,
+    {
+      service: serviceId
+        ? { id: serviceId, name: knownServiceName ?? serviceQuery.data?.public_name }
+        : null,
+      language: languages.displayLanguage,
+      fallbackLanguage: languages.defaultCode,
+    },
+    t,
+  );
 
   if (bootstrapLoading || categoriesQuery.isLoading) {
     return (
@@ -270,13 +304,9 @@ export function CategoryEditorPage() {
         rowGap={1}
         sx={{ mb: 2 }}
       >
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(backPath)}
-          data-testid="category-back-button"
-        >
-          {t('common.back')}
-        </Button>
+        {/* «← Меню «<заведение>»» по карте маршрутов (партия 56); было
+            безличное «Назад» в `/cms/menu` — мимо адреса панели на хосте отеля. */}
+        {back ? <BackLink to={back.to} label={back.label} testId="category-back-button" /> : null}
         <Stack sx={{ flex: '1 1 160px', minWidth: 0 }}>
           <Typography variant="h5" sx={{ overflowWrap: 'anywhere' }}>
             {isNew

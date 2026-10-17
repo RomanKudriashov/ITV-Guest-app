@@ -47,7 +47,7 @@ function iconFor(code: string): AppIconComponent {
 export function RoomQuickActions() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { roomControl } = useStorefront();
+  const { roomControl, roomText } = useStorefront();
   const home = useGuestHome();
   const orders = useGuestActiveOrders();
 
@@ -169,8 +169,9 @@ export function RoomQuickActions() {
                 {order.summary || t('guest.roomControl.requestNumber', { number: order.number })}
               </Typography>
               {/* Слово статуса — С СЕРВЕРА и локализованное: это тот же статус,
-                  что персонал двигает на трекере. */}
-              <Typography variant="caption" sx={{ color: roomControl.accent, fontWeight: 700 }}>
+                  что персонал двигает на трекере. Акцент как ТЕКСТ — доведённый
+                  до 4.5, а не цвет заливки (партия 56). */}
+              <Typography variant="caption" sx={{ color: roomText.accent, fontWeight: 700 }}>
                 {order.status.title}
               </Typography>
             </ButtonBase>

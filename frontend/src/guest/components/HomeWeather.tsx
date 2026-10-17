@@ -248,13 +248,15 @@ export function HomeWeather({ weather, timezone, city }: HomeWeatherProps) {
         Источник данных. Стоит ПОСЛЕДНИМ и мельче остального: это выполнение
         лицензии, а не сообщение гостю. Показывается только когда погода
         действительно есть: подпись под пустым блоком — подпись ни к чему.
+        Тише — кеглем, а не прозрачностью: `opacity: .7` поверх вторичного
+        цвета давала 3.07 на светлой и 3.77 на тёмной (партия 56).
       */}
       {weather ? (
         <Typography
           variant="caption"
           color="text.secondary"
           data-testid="guest-home-weather-source"
-          sx={{ width: '100%', opacity: 0.7, fontSize: fontPx(11), lineHeight: 1.2 }}
+          sx={{ width: '100%', fontSize: fontPx(11), lineHeight: 1.2 }}
         >
           {t('guest.weather.source')}
         </Typography>

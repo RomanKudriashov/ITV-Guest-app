@@ -35,8 +35,10 @@ const ALPHA: Record<GlassLevel, { light: number; dark: number }> = {
 /** Радиус размытия, px. */
 const BLUR: Record<GlassLevel, number> = { bar: 20, panel: 16, sheet: 24, menu: 18 };
 
-const SUPPORTS = '@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))';
-const REDUCED = '@media (prefers-reduced-transparency: reduce)';
+export const GLASS_SUPPORTS = '@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))';
+export const GLASS_REDUCED = '@media (prefers-reduced-transparency: reduce)';
+const SUPPORTS = GLASS_SUPPORTS;
+const REDUCED = GLASS_REDUCED;
 
 /** Тонкая светлая кромка: блик по краю стекла. */
 export function glassEdge(theme: Theme): string {
@@ -50,10 +52,16 @@ export function glassShadow(theme: Theme): string {
   return `0 10px 34px -18px ${alpha(theme.palette.brand.scrim, dark ? 0.9 : 0.55)}`;
 }
 
-export function glassSx(theme: Theme, level: GlassLevel, { edge = true, shadow = true } = {}): SystemStyleObject<Theme> {
+export function glassSx(
+  theme: Theme,
+  level: GlassLevel,
+  { edge = true, shadow = true, blur = true } = {},
+): SystemStyleObject<Theme> {
   const dark = theme.palette.mode === 'dark';
   const surface = theme.palette.background.paper;
-  const filter = `blur(${BLUR[level]}px) saturate(1.5)`;
+  // Без размытия — только полупрозрачность: там, где под стеклом ничего не
+  // движется (левое меню над неподвижной подложкой), размытие — пустая цена.
+  const filter = blur ? `blur(${BLUR[level]}px) saturate(1.5)` : 'none';
   return {
     // Без поддержки размытия — непрозрачная подложка того же цвета.
     backgroundColor: surface,

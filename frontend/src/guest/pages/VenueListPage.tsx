@@ -15,7 +15,7 @@ import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
-import { fontPx, surfaceRadius } from '../storefrontTokens';
+import { fontPx, surfaceRadius, titlePlate } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
 
@@ -121,7 +121,8 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
               borderRadius: (theme) => surfaceRadius.pill(theme.palette.brand.radius),
               fontSize: fontPx(11),
               fontWeight: 700,
-              bgcolor: alpha(th.palette.common.black, 0.42),
+              // Та же подложка, что у пилюли плитки: 4.5 на любом кадре (партия 56).
+              bgcolor: titlePlate(th.palette.mode),
               backdropFilter: 'blur(8px)',
               border: `1px solid ${alpha(status?.state === 'open' ? th.palette.success.light : th.palette.common.white, 0.5)}`,
             })}

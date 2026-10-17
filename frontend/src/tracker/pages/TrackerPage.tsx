@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { fetchTrackerBoard } from '../api/tracker';
 import { cmsPath } from '@/app/hostRole';
+import { parentOf, recallBoardSearch, rememberBoardSearch } from '@/app/backMap';
 
 import {
   DndContext,
@@ -17,7 +18,7 @@ import {
 } from '@dnd-kit/core';
 
 import { useListQuery } from '@/kit/list/useListQuery';
-import { useMatch, useNavigate } from 'react-router-dom';
+import { useLocation, useMatch, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -182,6 +183,24 @@ export function TrackerPage() {
   );
   const detailMatch = useMatch('/tracker/order/:id');
   const openOrderId = detailMatch?.params.id ?? null;
+  /*
+    ДОСКА НЕ ТЕРЯЕТ ФИЛЬТРЫ НА КАРТОЧКЕ ЗАКАЗА (партия 56).
+
+    Фильтры доски живут в запросе адреса. Открытие заказа уводило на голый
+    `/tracker/order/:id`, закрытие — на голый `/tracker`, и выборка «мои,
+    просроченные» сбрасывалась на каждом заказе. Теперь запрос едет вместе с
+    заказом и возвращается с «← Доска»; прямой заход по ссылке берёт
+    последний запрос доски этой вкладки (`rememberBoardSearch`).
+  */
+  const location = useLocation();
+  useEffect(() => {
+    if (!openOrderId || location.search) rememberBoardSearch(location.search);
+  }, [openOrderId, location.search]);
+  const boardBack = parentOf(
+    location.pathname,
+    { boardSearch: openOrderId ? location.search || recallBoardSearch() : location.search },
+    t,
+  );
 
   const [scope, setScope] = useState<TrackerScope>('active');
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
@@ -606,7 +625,8 @@ export function TrackerPage() {
   );
   const openOrder = boardOrder ?? detailQuery.data ?? null;
 
-  const closeDetail = useCallback(() => navigate('/tracker'), [navigate]);
+  const closeTo = boardBack?.to ?? '/tracker';
+  const closeDetail = useCallback(() => navigate(closeTo), [navigate, closeTo]);
 
   const errorFor = (order: TrackerOrder): string | null =>
     actions.actionError && actions.actionError.orderId === order.id
@@ -670,7 +690,7 @@ export function TrackerPage() {
       busy={actions.pendingOrderId === order.id}
       highlighted={Boolean(highlighted[order.id])}
       errorText={errorFor(order)}
-      onOpen={() => navigate(`/tracker/order/${order.id}`)}
+      onOpen={() => navigate(`/tracker/order/${order.id}${location.search}`)}
       onAccept={() => {
         handover.mark(order.id);
         void actions.accept(order.id);
@@ -1262,6 +1282,7 @@ export function TrackerPage() {
         busy={Boolean(openOrder && actions.pendingOrderId === openOrder.id)}
         errorText={openOrder ? errorFor(openOrder) : null}
         onClose={closeDetail}
+        back={boardBack}
         onAccept={() => openOrder && void actions.accept(openOrder.id)}
         onStatus={(code) => openOrder && requestStatus(openOrder, code)}
         onCancel={() => openOrder && setCancelTarget(openOrder)}

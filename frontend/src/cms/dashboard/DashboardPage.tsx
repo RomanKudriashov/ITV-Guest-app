@@ -16,8 +16,6 @@ import { useTranslation } from 'react-i18next';
 import { api } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
 import { PageContainer } from '@/components/PageContainer';
-import { glassSx } from '@/kit/glass';
-import { useGlassPage } from '@/layouts/glassScope';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { formatMoney } from '@/utils/money';
 import { pickTranslated } from '@/utils/translated';
@@ -48,8 +46,6 @@ const REFRESH_MS = 60_000;
 
 export function DashboardPage() {
   const { t } = useTranslation();
-  // Образец стеклянного стиля (партия 56, шаг 1).
-  useGlassPage();
 
   const dashboard = useQuery({
     queryKey: ['cms', 'dashboard'],
@@ -58,17 +54,8 @@ export function DashboardPage() {
   });
 
   return (
-    <PageContainer
-      testId="cms-dashboard"
-      sx={(theme) => ({
-        // Плитки и карточки — стекло над подложкой: меньше рамок, мягкая тень,
-        // одно скругление. Текст внутри — на планке контраста темы.
-        '& .MuiCard-root.MuiPaper-outlined': {
-          ...glassSx(theme, 'panel'),
-          borderRadius: `${theme.palette.brand.radius.lg}px`,
-        },
-      })}
-    >
+    // Плитки — стекло темы персонала (theme/density.ts, партия 56).
+    <PageContainer testId="cms-dashboard">
       <Typography variant="h5" data-testid="cms-page-title" sx={{ mb: 0.5 }}>
         {t('dashboard.title')}
       </Typography>

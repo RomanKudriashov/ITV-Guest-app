@@ -70,7 +70,10 @@ export function DeskThreadList({
               textAlign: 'start',
               borderInlineStart: 3,
               borderColor: late ? 'error.main' : 'transparent',
-              bgcolor: selected === thread.thread_id ? 'action.selected' : 'transparent',
+              // Выбранная строка — `brand.surfaceSelected`: на нём тема держит
+              // вторичный текст ≥4.5. `action.selected` (белое .16 на тёмной)
+              // в эту планку не входил — 3.61 у языка, времени и превью (партия 56).
+              bgcolor: selected === thread.thread_id ? 'brand.surfaceSelected' : 'transparent',
             }}
           >
             <Badge color="error" badgeContent={thread.unread} max={99} sx={{ mt: 0.5 }}>

@@ -574,7 +574,7 @@ export interface GuestVenueStatus {
   opens_at: string | null;
 }
 
-export type ShowcaseTileType = 'venue' | 'service-category' | 'info' | 'room-control';
+export type ShowcaseTileType = 'venue' | 'service-category' | 'info';
 export type ShowcaseTileSize = 's' | 'm' | 'l';
 
 /**

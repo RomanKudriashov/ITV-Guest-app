@@ -1,14 +1,15 @@
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+
+import { parentOf, recallBoardSearch } from '@/app/backMap';
+import { BackLink } from '@/kit/BackLink';
 
 import { PageContainer } from '@/components/PageContainer';
 
@@ -31,19 +32,20 @@ import type { MyPoint } from '../api/types';
 export function MyPointsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const query = useMyPoints();
   const points = query.data?.points;
 
   if (points && points.length < 2) return <Navigate to="/tracker" replace />;
+  const back = parentOf(location.pathname, { boardSearch: recallBoardSearch() }, t);
 
   return (
     // Во всю ширину с отступом страницы: узкая колонка 960 по центру на
     // широком экране оставляла по 140 пикселей пустоты с боков (партия 55).
     <PageContainer testId="my-points">
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-        <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate('/tracker')}>
-          {t('tracker.myPoints.toBoard')}
-        </Button>
+        {/* «← Доска» по карте маршрутов, с фильтрами доски (партия 56). */}
+        {back ? <BackLink to={back.to} label={back.label} testId="my-points-back" sx={{ alignSelf: 'center' }} /> : null}
         <Typography variant="h6" component="h1" sx={{ flexGrow: 1 }}>
           {t('tracker.myPoints.title')}
         </Typography>

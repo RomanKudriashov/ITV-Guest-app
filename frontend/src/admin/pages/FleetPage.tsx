@@ -1,5 +1,4 @@
 import { glassShadow, glassSx, solidSx } from '@/kit/glass';
-import { useGlassPage } from '@/layouts/glassScope';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -46,7 +45,6 @@ const STATUS_TONE = {
  * необратимое (удаление, офбординг) делается по одному отелю и с подтверждением.
  */
 export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }) {
-  useGlassPage();
   const actionFailed = useActionFailed();
   const { canWrite } = useRights();
   const { t, i18n } = useTranslation();

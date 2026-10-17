@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -11,6 +11,9 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { RoomControlTab } from './hotel/RoomControlTab';
+
+import { parentOf } from '@/app/backMap';
+import { BackLink } from '@/kit/BackLink';
 
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../useRights';
@@ -97,19 +100,38 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
     setSearchParams(params, { replace: true });
   };
   const [entering, setEntering] = useState(false);
+  /*
+    ОДНА «← ОТЕЛИ» СЛЕВА СВЕРХУ (партия 56).
+
+    Было два выхода: крошка «Отели» в шапке и кнопка «К списку» справа от
+    имени. Остался один — ссылкой по карте маршрутов: список отелей с ЕГО
+    фильтрами (они лежат в том же адресе), а не голый `?section=fleet`.
+    Крошка в шапке — указатель «где я», а не вторая кнопка.
+  */
+  const location = useLocation();
+  const back = parentOf(location.pathname, { search: location.search }, t) ?? {
+    to: '?section=fleet',
+    label: t('admin.nav.fleet'),
+  };
   const profile = useQuery({ queryKey: ['admin', 'hotel', id], queryFn: () => getHotel(id) });
 
   if (profile.isPending || profile.isError || profile.data === undefined) {
+    // Выход есть и у неоткрывшейся карточки: чужая ссылка на удалённый отель
+    // не должна оставлять человека без дороги к списку (партия 56).
     return (
-      <QueryState query={profile} what={t('state.what.hotel')}>
-        {() => null}
-      </QueryState>
+      <Box data-testid="admin-hotel-pending">
+        <BackLink to={back.to} label={back.label} testId="admin-hotel-back" sx={{ mb: 1 }} />
+        <QueryState query={profile} what={t('state.what.hotel')}>
+          {() => null}
+        </QueryState>
+      </Box>
     );
   }
   const hotel = profile.data;
 
   return (
     <Box data-testid="admin-hotel">
+      <BackLink to={back.to} label={back.label} testId="admin-hotel-back" sx={{ mb: 1 }} />
       {/* На 390 кнопки уходят под имя, а не сжимают его в три строки (партия 55). */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <Box sx={{ flexGrow: 1, minWidth: 200 }}>
@@ -119,9 +141,6 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
           </Typography>
           <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{hotel.subdomain}</Typography>
         </Box>
-        <Button onClick={onBack} data-testid="admin-hotel-back" sx={{ color: ink.mid }}>
-          {t('admin.hotel.back')}
-        </Button>
         {/* Вход в отель — право WRITE (`POST /hotels/{id}/enter`). */}
         {canWrite ? (
           <Button onClick={() => setEntering(true)} data-testid="admin-hotel-enter" sx={primaryButtonSx}>

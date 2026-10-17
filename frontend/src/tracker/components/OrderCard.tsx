@@ -26,6 +26,7 @@ import { useTrackerLanguage } from '../hooks/useTrackerQueries';
 import { useTrackerMoney } from '../hooks/useTrackerMoney';
 import type { TrackerOrder } from '../api/types';
 import { touchTarget } from '@/theme/density';
+import { readable, TEXT_CONTRAST } from '@/theme/contrast';
 
 export interface OrderCardProps {
   order: TrackerOrder;
@@ -150,6 +151,18 @@ export function OrderCard({
         onReorder(event.key === 'ArrowDown' ? 1 : -1);
       }}
       sx={{
+        // КАРТОЧКА ДОСКИ — ПЛОТНАЯ, НЕ СТЕКЛО (партия 56). Тема делает стеклом
+        // все outlined-карточки, а замер на доске с 300 карточками: стекло на
+        // каждой — 45 к/с против 88 (×4 CPU — 37 и 42 долгих кадра).
+        backgroundColor: 'background.paper',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        '@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))': {
+          backgroundColor: 'background.paper',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+        },
+        boxShadow: 'none',
         borderColor: highlighted ? `${colorSlot}.main` : 'divider',
         borderWidth: highlighted ? 2 : 1,
         overflow: 'hidden',
@@ -214,7 +227,18 @@ export function OrderCard({
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
               {t('tracker.card.number', { number: order.number })}
             </Typography>
-            <Chip size="small" label={order.status.title} color={colorSlot} variant="outlined" />
+            {/* Буквы статуса — цветом слота, доведённым до 4.5 к карточке:
+                `main` слота давал 4.44 на «Новый»/«Принят» (партия 56). Обводка
+                остаётся цветом слота — ей хватает 3:1. */}
+            <Chip
+              size="small"
+              label={order.status.title}
+              color={colorSlot}
+              variant="outlined"
+              sx={(th) => ({
+                color: readable(th.palette[colorSlot].main, [th.palette.background.paper], th.palette.mode, TEXT_CONTRAST + 0.15),
+              })}
+            />
             <Box sx={{ flexGrow: 1 }} />
             {/*
               ЧАС КРУПНО, ВОЗРАСТ СЕРЫМ.

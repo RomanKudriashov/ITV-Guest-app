@@ -14,6 +14,9 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
 
+import type { BackTarget } from '@/app/backMap';
+import { BackLink } from '@/kit/BackLink';
+
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
 import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderTimeline } from '@/guest/components/OrderTimeline';
@@ -36,6 +39,11 @@ export interface OrderDetailSheetProps {
   /** The deep-linked order could not be loaded — 403/404, spelled out. */
   loadError?: string | null;
   onClose: () => void;
+  /**
+   * «← Доска» — куда вернуться, с фильтрами доски (партия 56). Есть — вместо
+   * крестика ссылка с подписью родителя; нет — прежний крестик.
+   */
+  back?: BackTarget | null;
   onAccept: () => void;
   onStatus: (code: string) => void;
   onCancel: () => void;
@@ -56,6 +64,7 @@ export function OrderDetailSheet({
   loading,
   loadError,
   onClose,
+  back,
   onAccept,
   onStatus,
   onCancel,
@@ -96,12 +105,21 @@ export function OrderDetailSheet({
                 {loadError ?? t('tracker.detail.notFound')}
               </Alert>
             )}
-            <Button onClick={onClose} sx={{ minHeight: 44 }} data-testid="tracker-detail-close">
-              {t('tracker.detail.close')}
-            </Button>
+            {back ? (
+              <BackLink to={back.to} label={back.label} testId="tracker-detail-close" sx={{ minHeight: 44, alignSelf: 'center' }} />
+            ) : (
+              <Button onClick={onClose} sx={{ minHeight: 44 }} data-testid="tracker-detail-close">
+                {t('tracker.detail.close')}
+              </Button>
+            )}
           </Stack>
         ) : (
           <Stack spacing={2}>
+            {/* Возврат — ссылкой с именем родителя слева сверху, как на всех
+                внутренних экранах (партия 56); крестик остался только без неё. */}
+            {back ? (
+              <BackLink to={back.to} label={back.label} testId="tracker-detail-close" sx={{ minHeight: 44 }} />
+            ) : null}
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography variant="h6" sx={{ flexGrow: 1 }}>
                 {t('tracker.card.number', { number: order.number })}
@@ -111,14 +129,16 @@ export function OrderDetailSheet({
                 label={order.status.title}
                 color={statusSlot(order.status.color_token)}
               />
-              <IconButton
-                onClick={onClose}
-                aria-label={t('tracker.detail.close')}
-                data-testid="tracker-detail-close"
-                sx={{ minWidth: 44, minHeight: 44 }}
-              >
-                <CloseIcon />
-              </IconButton>
+              {back ? null : (
+                <IconButton
+                  onClick={onClose}
+                  aria-label={t('tracker.detail.close')}
+                  data-testid="tracker-detail-close"
+                  sx={{ minWidth: 44, minHeight: 44 }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              )}
             </Stack>
 
             {errorText ? <Alert severity="error">{errorText}</Alert> : null}

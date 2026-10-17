@@ -1,4 +1,11 @@
 import { useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+
+import { parentOf } from '@/app/backMap';
+import { useAuth } from '@/auth';
+import { homePathFor } from '@/auth/home';
+import { BackLink } from '@/kit/BackLink';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -94,9 +101,15 @@ export function StyleguidePage() {
   const [tab, setTab] = useState('all');
   const [light, setLight] = useState(true);
   const [scene, setScene] = useState('evening');
+  // Служебный экран без пункта меню: выход — домой по правам (партия 56).
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const location = useLocation();
+  const back = parentOf(location.pathname, { home: homePathFor(user) }, t);
 
   return (
     <Box data-testid="styleguide" sx={{ p: { xs: 2, md: 3 }, maxWidth: 1200, mx: 'auto' }}>
+      {back ? <BackLink to={back.to} label={back.label} testId="styleguide-back" sx={{ mb: 1 }} /> : null}
       <Stack spacing={0.5} sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1">
           Design system

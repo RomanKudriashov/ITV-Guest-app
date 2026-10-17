@@ -50,8 +50,11 @@ export function StatusPill({
   children: ReactNode;
   testId?: string;
 }) {
-  const { roomControl: t } = useStorefront();
+  const { roomControl: t, roomText } = useStorefront();
   const color = tone === 'cold' ? t.cold : tone === 'active' ? t.accent : '';
+  // Буквы — своим цветом, доведённым до 4.5 к подложке пилюли; обводка и точка
+  // остаются цветом тона (партия 56).
+  const textColor = tone === 'cold' ? roomText.cold : tone === 'active' ? roomText.accent : roomText.neutral;
 
   return (
     <Stack
@@ -68,8 +71,8 @@ export function StatusPill({
         py: 0.75,
         borderRadius: `${theme.palette.brand.radius.pill}px`,
         border: `1px solid ${color || t.pillBorder}`,
-        background: t.pillBackground,
-        color: tone === 'neutral' ? 'text.secondary' : color,
+        background: t.statusPillBackground,
+        color: textColor,
         fontSize: fontPx(11),
         fontWeight: 700,
         whiteSpace: 'nowrap',

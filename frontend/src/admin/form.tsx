@@ -7,7 +7,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { accent, fieldSx, ink, shadow, shape, surface, typo } from './adminTokens';
+import { accent, fieldSx, glassPanel, ink, shadow, shape, surface, typo } from './adminTokens';
 import { spanSx, type FormSpan } from '@/kit/formLayout';
 import {
   MultiSelectField,
@@ -61,9 +61,9 @@ export function AdminDialog({
       slotProps={{
         paper: {
           sx: {
-            bgcolor: surface.s1,
+            // Окно — стекло (партия 56): над ним затемнение и подложка страницы.
+            ...glassPanel('sheet'),
             backgroundImage: 'none',
-            border: `1px solid ${surface.line}`,
             borderRadius: `${shape.radiusLarge}px`,
             boxShadow: shadow.dialog,
           },

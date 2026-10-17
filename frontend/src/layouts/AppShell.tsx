@@ -61,7 +61,6 @@ import type { SupportSession } from '@/api/types';
 import { StaffScale } from '@/theme/StaffScale';
 import { glassEdge, glassSx } from '@/kit/glass';
 import { PageBackdrop } from '@/components/PageBackdrop';
-import { GlassScope, useGlassState } from './glassScope';
 
 const DRAWER_WIDTH = 248;
 /** Свёрнутое меню — одни иконки (партия 55). */
@@ -119,8 +118,8 @@ const FALLBACK_ICON = <GroupWorkOutlinedIcon fontSize="small" />;
 
 export function AppShell() {
   const location = useLocation();
-  // Стекло рамки включает экран-образец (партия 56, шаг 1).
-  const glass = useGlassState();
+  // Рамка — стекло на всех экранах (партия 56, шаг 2; правила — kit/glass.ts).
+  const glass = { on: true };
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, hotel, logout } = useAuth();
@@ -204,7 +203,6 @@ export function AppShell() {
 
   return (
     <StaffScale>
-    <GlassScope value={glass}>
     <Box
       sx={{
         display: 'flex',
@@ -341,7 +339,7 @@ export function AppShell() {
             borderColor: 'divider',
             // Меню — стекло над подложкой; кромка справа вместо серой черты.
             ...(glass.on
-              ? { ...glassSx(theme, 'panel', { edge: false, shadow: false }), borderRight: glassEdge(theme) }
+              ? { ...glassSx(theme, 'panel', { edge: false, shadow: false, blur: false }), borderRight: glassEdge(theme) }
               : { borderRight: 1, bgcolor: 'background.paper' }),
           },
         }}
@@ -502,7 +500,6 @@ export function AppShell() {
         </ScreenBoundary>
       </Box>
     </Box>
-    </GlassScope>
     </StaffScale>
   );
 }

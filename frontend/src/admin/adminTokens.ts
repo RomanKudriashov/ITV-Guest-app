@@ -30,6 +30,7 @@
  * браузер выбрасывает целиком, и рамки у пилюль просто не было.
  */
 
+import { GLASS_REDUCED, GLASS_SUPPORTS } from '@/kit/glass';
 import { alpha, darken, lighten } from '@mui/material/styles';
 
 import { DEFAULT_BRAND_TOKENS, type ThemeMode } from '@/theme/tokens';
@@ -118,6 +119,14 @@ function paletteFor(mode: ThemeMode) {
     'state-muted-wash': alpha(c.textSecondary, isDark ? 0.14 : 0.12),
 
     'page-background': c.background,
+
+    // Стекло (партия 56; правила — kit/glass.ts): доля поверхности в цвете
+    // панели и окна, светлая кромка, мягкая тень. Отдельными переменными —
+    // склейка «var + альфа» строкой не работает.
+    'glass-panel': alpha(c.surface, isDark ? 0.5 : 0.62),
+    'glass-sheet': alpha(c.surface, isDark ? 0.74 : 0.86),
+    'glass-edge': alpha('#FFFFFF', isDark ? 0.09 : 0.6),
+    'glass-shadow': `0 10px 34px -18px ${alpha(c.scrim, isDark ? 0.9 : 0.55)}`,
     'elevation-dialog': `0 24px 60px -28px ${c.scrim}`,
     'elevation-menu': `0 12px 32px -16px ${c.scrim}`,
   } satisfies Record<string, string>;
@@ -269,9 +278,32 @@ export const layout = {
 export const pageBackground = v('page-background');
 
 /** Панель-карточка — основной контейнер консоли. */
+/** Стекло консоли: панель (плитка, блок) и окно — переменными темы. */
+export const glass = {
+  panel: v('glass-panel'),
+  sheet: v('glass-sheet'),
+  edge: v('glass-edge'),
+  shadow: v('glass-shadow'),
+} as const;
+
+/**
+ * Стекло по правилам kit/glass.ts: без поддержки размытия — непрозрачная
+ * подложка того же цвета; при `prefers-reduced-transparency` — тоже.
+ */
+export function glassPanel(level: 'panel' | 'sheet' = 'panel', blurPx = level === 'sheet' ? 24 : 16) {
+  const filter = `blur(${blurPx}px) saturate(1.5)`;
+  return {
+    bgcolor: surface.s1,
+    border: `1px solid ${glass.edge}`,
+    boxShadow: glass.shadow,
+    [GLASS_SUPPORTS]: { bgcolor: glass[level], backdropFilter: filter, WebkitBackdropFilter: filter },
+    [GLASS_REDUCED]: { bgcolor: surface.s1, backdropFilter: 'none', WebkitBackdropFilter: 'none' },
+  } as const;
+}
+
 export const panelSx = {
-  bgcolor: surface.s1,
-  border: `1px solid ${surface.line}`,
+  // Панель консоли — стекло (партия 56): меньше рамок, мягкая тень.
+  ...glassPanel('panel'),
   borderRadius: `${shape.radiusLarge}px`,
   // Отступ панели — по шкале, а не 2.25 «на глаз»: плитка в 118px высотой
   // ради двух строк текста съедала первый экран сводки.

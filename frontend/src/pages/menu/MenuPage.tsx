@@ -80,9 +80,17 @@ export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
   // Редактор раздела — общий экран отеля, и заведение он знает только отсюда.
   // Без этого раздел, заведённый внутри сервиса, создавался без привязки и
   // в тот же список не возвращался: сохранение проходило, показать было нечего.
-  const newCategoryPath = serviceId
-    ? `/cms/menu/categories/new?service_id=${serviceId}`
-    : '/cms/menu/categories/new';
+  //
+  // ЗАВЕДЕНИЕ ЕДЕТ ВО ВСЕ РЕДАКТОРЫ (партия 56): и в новый раздел, и в
+  // существующий, и в позицию — «← Меню «<заведение>»» редактора и возврат
+  // после сохранения берут его из адреса, пока данные раздела не доехали.
+  const editorPath = (path: string, query: Record<string, string> = {}) => {
+    const params = new URLSearchParams(query);
+    if (serviceId) params.set('service_id', serviceId);
+    const search = params.toString();
+    return cmsPath(`${path}${search ? `?${search}` : ''}`);
+  };
+  const newCategoryPath = editorPath('/menu/categories/new');
 
   /*
     Выбранный раздел и поиск живут В АДРЕСЕ: ссылку на «горячее, фильтр
@@ -387,7 +395,7 @@ export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
               onToggle={(category, isActive) =>
                 toggleCategoryMutation.mutate({ id: category.id, isActive })
               }
-              onEdit={(category) => navigate(cmsPath(`/menu/categories/${category.id}`))}
+              onEdit={(category) => navigate(editorPath(`/menu/categories/${category.id}`))}
               onDelete={(category) => {
                 setPendingDelete(category);
                 setCascade(false);
@@ -436,7 +444,7 @@ export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
                 startIcon={<AddIcon />}
                 disabled={!selectedId}
                 data-testid="add-item-button"
-                onClick={() => navigate(cmsPath(`/menu/items/new?category_id=${selectedId ?? ''}`))}
+                onClick={() => navigate(editorPath('/menu/items/new', { category_id: selectedId ?? '' }))}
               >
                 {w('add')}
               </Button>
@@ -472,7 +480,7 @@ export function MenuPage({ serviceId, noun }: MenuPageProps = {}) {
               bootstrap={bootstrap}
               displayLanguage={languages.displayLanguage}
               fallbackLanguage={languages.defaultCode}
-              onOpen={(item) => navigate(cmsPath(`/menu/items/${item.id}`))}
+              onOpen={(item) => navigate(editorPath(`/menu/items/${item.id}`))}
               onDelete={(item) => setItemToDelete(item)}
               onToggleActive={(item, isActive) =>
                 toggleItemMutation.mutate({ id: item.id, isActive })
