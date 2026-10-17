@@ -87,7 +87,7 @@ test.describe('Кадр изображения', () => {
     // Ассет заводим через API: тест про КАДР, а не про drag-and-drop файла.
     const uploaded = await request.post(`${API}/api/v1/cms/media`, {
       multipart: {
-        file: { name: 'tall.png', mimeType: 'image/png', buffer: tallPng() },
+        file: { name: 'e2e-tall.png', mimeType: 'image/png', buffer: tallPng() },
         kind: 'category',
       },
       headers: apiHeaders(token),
@@ -118,7 +118,7 @@ test.describe('Кадр изображения', () => {
     const asset = await request
       .post(`${API}/api/v1/cms/media`, {
         multipart: {
-          file: { name: 'tall.png', mimeType: 'image/png', buffer: tallPng() },
+          file: { name: 'e2e-tall.png', mimeType: 'image/png', buffer: tallPng() },
           kind: 'category',
         },
         headers: apiHeaders(token),
@@ -151,12 +151,12 @@ test.describe('Кадр изображения', () => {
     expect(wider.crop).toEqual({ x: 0, y: 0, w: 1, h: 1 })
   })
 
-  test('гость видит ровно то, что было в превью', async ({ request }) => {
+  test('кадр становится фокусом: гостю — целый кадр, место кладёт его по центру рамки', async ({ request }) => {
     const token = await apiToken(request)
     const asset = await request
       .post(`${API}/api/v1/cms/media`, {
         multipart: {
-          file: { name: 'tall.png', mimeType: 'image/png', buffer: tallPng() },
+          file: { name: 'e2e-tall.png', mimeType: 'image/png', buffer: tallPng() },
           kind: 'item',
         },
         headers: apiHeaders(token),
@@ -184,25 +184,15 @@ test.describe('Кадр изображения', () => {
     }
     expect(ready, 'варианты так и не нарезались').toBeTruthy()
 
-    // ГЛАВНОЕ: гостю уезжает УЖЕ ОБРЕЗАННЫЙ вариант, а не исходник, который
-    // браузер обрежет по-своему. Значит форма кадра — та, что в превью.
-    const cardUrl = String(ready!.url)
-    expect(cardUrl).toBeTruthy()
-    expect(cardUrl, 'гостю отдали исходник — кадр выберет браузер').not.toBe(
-      ready!.original_url,
-    )
-
-    const delivered = await request.get(cardUrl)
+    // С партии 58а сервер кадр НЕ вырезает: варианты — целый оригинал, а
+    // рамка старого редактора становится фокусом (центр рамки). Место показа
+    // режет по фокусу само — в любой своей форме, а не в одной.
+    expect(ready!.focus, 'фокус не из центра рамки').toEqual({ x: 0.5, y: 0.2 })
+    const delivered = await request.get(String(ready!.url))
     expect(delivered.ok(), `вариант не отдаётся: ${delivered.status()}`).toBeTruthy()
-    const bytes = Buffer.from(await delivered.body())
-    // Исходник вертикальный (200×600). Отданный вариант обязан быть ШИРЕ
-    // своей высоты — иначе обрезка не применилась.
-    const size = webpSize(bytes)
+    const size = webpSize(Buffer.from(await delivered.body()))
     expect(size, 'вариант не WebP').toBeTruthy()
-    expect(
-      size!.width / size!.height,
-      `кадр не применился: отдали ${size!.width}×${size!.height} от вертикального 200×600`,
-    ).toBeGreaterThan(1)
+    expect(size!.height / size!.width, `вариант вырезан по рамке: ${size!.width}×${size!.height}`).toBeCloseTo(3, 1)
   })
 })
 

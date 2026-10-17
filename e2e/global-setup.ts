@@ -1,4 +1,4 @@
-import { snapshotStand } from './fixtures/stand'
+import { healBrandBeforeRun, snapshotStand } from './fixtures/stand'
 import { assertTelegramEmulator } from './fixtures/telegramGuard'
 import { exportRequestBodies } from './fixtures/requestBodies'
 
@@ -11,5 +11,6 @@ export default async function globalSetup(): Promise<void> {
   await assertTelegramEmulator()
   // Карта тел запросов — для сторожа контракта в tests/fixtures.ts.
   await exportRequestBodies()
+  await healBrandBeforeRun()
   await snapshotStand()
 }

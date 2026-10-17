@@ -25,7 +25,7 @@ test('ПК 1440: с логотипом имя только в alt, без лог
     expect(name, 'имя отеля без логотипа — текстом').not.toEqual('')
     await page.context().close()
 
-    const url = await uploadBrandMedia(request, { name: 'mark.png', mimeType: 'image/png', buffer: MARK })
+    const url = await uploadBrandMedia(request, { name: 'e2e-mark.png', mimeType: 'image/png', buffer: MARK })
     await brand.apply({ brand: { logoLight: url, logoDark: url } })
     page = await guestPage(browser, { width: 1440 })
     const logo = page.getByTestId('guest-topbar-logo')

@@ -68,7 +68,7 @@ export {
 export { KitTextField, KitTabs, type KitTabsProps } from './forms';
 
 // Media
-export { KitImage, mediaFallbackSx, type KitImageProps } from './KitImage';
+export { KitImage, mediaFallbackSx, type KitImageFit, type KitImageProps } from './KitImage';
 export * from './imageRef';
 export { useCoverBackground } from './useCoverBackground';
 

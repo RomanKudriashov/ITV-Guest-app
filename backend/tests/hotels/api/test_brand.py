@@ -225,14 +225,16 @@ def test_logo_upload_and_attach(cms, crystal):
     from apps.media.tasks import process_media_asset
 
     process_media_asset.apply(args=(asset_id, str(crystal.pk))).get()
-    url = cms.get(f"/api/cms/media/{asset_id}").json()["url"]
+    media = cms.get(f"/api/cms/media/{asset_id}").json()
+    url = media["url"]
     assert url.startswith("http")
 
     saved = cms.patch("/api/cms/brand", {"tokens": {"brand": {"logoLight": url}}}).json()
-    assert saved["tokens"]["brand"]["logoLight"] == url
+    # Логотип отдаётся как загружен — исходником (партия 58а).
+    assert saved["tokens"]["brand"]["logoLight"] == media["original_url"]
 
     # И логотип доезжает до гостя.
-    assert _guest_theme(cms.client, crystal)["brand"]["logoLight"] == url
+    assert _guest_theme(cms.client, crystal)["brand"]["logoLight"] == media["original_url"]
 
 
 # --- Изоляция --------------------------------------------------------------

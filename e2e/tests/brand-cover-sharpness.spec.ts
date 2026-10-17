@@ -22,7 +22,7 @@ async function uploadBrandImage(request: APIRequestContext): Promise<string> {
   const headers = apiHeaders(await apiToken(request, ADMIN))
   const response = await request.post(`${API}/api/v1/cms/media`, {
     headers,
-    multipart: { file: { name: 'cover.png', mimeType: 'image/png', buffer: WIDE }, kind: 'brand' },
+    multipart: { file: { name: 'e2e-cover.png', mimeType: 'image/png', buffer: WIDE }, kind: 'brand' },
   })
   expect(response.status(), await response.text()).toBe(201)
   const { id } = await response.json()

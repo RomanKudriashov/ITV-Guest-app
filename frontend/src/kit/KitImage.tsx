@@ -16,6 +16,8 @@ import { coverWidth, focusPosition, MIN_VISIBLE_SHARE, srcSetOf, visibleShare, t
  * textured token surface with depth, never a flat coloured circle. Colours come
  * only from theme tokens.
  */
+export type KitImageFit = 'fill' | 'whole';
+
 export interface KitImageProps {
   /**
    * Объект картинки (партия 58а): ряд ширин, форма кадра, фокус, цвет. Есть —
@@ -30,10 +32,15 @@ export interface KitImageProps {
    */
   sizes?: string;
   /**
-   * Предел обрезки: видно меньше 60% кадра — фото целиком поверх размытого
-   * себя. Выключается там, где резать нельзя иначе (логотип рисует `contain` сам).
+   * ТИП МЕСТА — выбирает каждое место явно (партия 58а, решение тек-лида по
+   * снимкам карточек меню: узкая полоса блюда на размытом фоне — плохо).
+   *
+   * - `fill` — «заполнить»: карточки позиций, плитки, мозаика, шапки, значки.
+   *   ВСЕГДА `cover` по фокусу, без размытого фона, при любой доле.
+   * - `whole` — «показать целиком»: окна позиции и инфо, баннеры, крупный
+   *   просмотр. Видно меньше 60% кадра — фото целиком поверх размытого себя.
    */
-  limit?: boolean;
+  fit: KitImageFit;
   alt: string;
   /** CSS aspect-ratio (e.g. `'16 / 9'`). Ignored when `fill` is set. */
   ratio?: string;
@@ -67,7 +74,7 @@ export function KitImage({
   image,
   src: srcProp,
   sizes = '100vw',
-  limit = true,
+  fit,
   alt,
   ratio = '16 / 9',
   fill = false,
@@ -83,11 +90,12 @@ export function KitImage({
   const src = image?.src || srcProp || null;
 
   /*
-    ПРЕДЕЛ ОБРЕЗКИ (партия 58а). Место меряется само (ResizeObserver): форма
-    места против формы кадра даёт видимую долю. Меньше 60% — `cover` отрезал бы
-    больше, чем показал (окно «House rules»: 21%), и фото ложится целиком
-    (`contain`) поверх размытого себя. Форма кадра — из объекта; строкой
-    пришедшую картинку не судим.
+    ПРЕДЕЛ ОБРЕЗКИ (партия 58а) — только у мест `whole`. Место меряется само
+    (ResizeObserver): форма места против формы кадра даёт видимую долю. Меньше
+    60% — `cover` отрезал бы больше, чем показал (окно «House rules»: 21%), и
+    фото ложится целиком (`contain`) поверх размытого себя. Места `fill`
+    режутся по фокусу всегда. Форма кадра — из объекта; строкой пришедшую
+    картинку не судим.
   */
   const [share, setShare] = useState(1);
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -99,15 +107,15 @@ export function KitImage({
     }
     const measure = () => {
       setBox({ w: node.clientWidth, h: node.clientHeight });
-      setShare(limit ? visibleShare(image, node.clientWidth, node.clientHeight) : 1);
+      setShare(visibleShare(image, node.clientWidth, node.clientHeight));
     };
     measure();
     if (typeof ResizeObserver === 'undefined') return undefined;
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [image, limit]);
-  const whole = limit && share < MIN_VISIBLE_SHARE;
+  }, [image]);
+  const whole = fit === 'whole' && share < MIN_VISIBLE_SHARE;
   /*
     `sizes` места — ширина места; но `cover` в узком месте режет по ВЫСОТЕ и
     требует файл шире места (окно инфо 388×224 при кадре 2,4:1 — 1080 точек, а

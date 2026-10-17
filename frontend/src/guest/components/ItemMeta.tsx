@@ -392,6 +392,7 @@ export function ItemThumb({
         image={image}
         src={src}
         sizes={`${size}px`}
+        fit="fill"
         alt={alt}
         fill
         fallbackIcon={fallbackIcon}

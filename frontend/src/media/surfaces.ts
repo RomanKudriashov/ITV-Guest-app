@@ -28,6 +28,8 @@ export interface Surface {
   alsoSeenAs?: number;
   /** Ключ i18n с объяснением: где именно это увидит гость. */
   whereKey: string;
+  /** Тип места в `KitImage` — как его покажет гость (партия 58а). */
+  fit?: 'fill' | 'whole';
 }
 
 /**
@@ -44,7 +46,7 @@ export const SURFACES = {
   /** Фото заведения: плитка в списке и шапка внутри. */
   venue: { ratio: 358 / 266, alsoSeenAs: 509 / 314, whereKey: 'media.where.venue' },
   /** Карточка блюда: главный кадр позиции. */
-  item: { ratio: 390 / 224, alsoSeenAs: 560 / 268, whereKey: 'media.where.item' },
+  item: { ratio: 390 / 224, alsoSeenAs: 560 / 268, whereKey: 'media.where.item', fit: 'whole' },
   /**
    * Логотип. Своё соотношение и своя логика: логотипы бывают и квадратные, и
    * вытянутые, и резать их рамкой значило бы портить знак. Здесь кадр —

@@ -5,10 +5,11 @@
 `crop`; теперь — `thumb` и ряд `MEDIA_WIDTHS` из ЦЕЛОГО оригинала, плюс средний
 цвет. Команда переводит старые ассеты на новый вид.
 
-Фону бренда ряд продолжается до `MEDIA_BACKDROP_WIDTH` (3200, не шире оригинала).
+Ряд и качество — из `MEDIA_WIDTHS`/`MEDIA_WEBP_QUALITY` (docs/decisions.md,
+п.16). Ассет, нарезанный другим рядом или другим качеством (`variant_quality`),
+перенарезается; так команда ловит и прежние 80/2400 партии 58а.
 
-Идемпотентна: ассет, у которого уже есть ряд ширин и средний цвет (а у фона
-бренда — и верхняя ширина), пропускается
+Идемпотентна: ассет, нарезанный нынешним рядом и качеством, пропускается
 (`--force` — перенарезать всё). `--dry-run` ничего не пишет: режет в память и
 считает объём — по всем или по выборке (`--sample N`, оценка с экстраполяцией).
 
@@ -37,12 +38,9 @@ SKIP_KINDS = {MediaAsset.Kind.FONT}
 
 
 def _needs(asset: MediaAsset) -> bool:
-    from apps.media.tasks import is_brand_backdrop, missing_backdrop_width
+    from apps.media.tasks import needs_rerender
 
-    if not asset.width_variants() or not asset.average_color:
-        return True
-    # Фон бренда без своей верхней ширины (`MEDIA_BACKDROP_WIDTH`).
-    return missing_backdrop_width(asset) and is_brand_backdrop(asset)
+    return needs_rerender(asset)
 
 
 def _mb(n: int) -> str:
@@ -104,12 +102,27 @@ class Command(BaseCommand):
                             )
                             storage.put_bytes(key, body, content_type="image/webp")
                             variants[name] = key
-                        # Старые ключи (`card`/`full`) остаются рядом — на них
-                        # ещё смотрят адреса-строки (логотип в токенах).
-                        legacy = {k: v for k, v in (asset.variants or {}).items() if k in ("card", "full")}
+                        # Старые ключи остаются рядом — на них ещё смотрят
+                        # адреса-строки (логотип в токенах): `card`/`full` как
+                        # были, прежний ряд ширин — под `old-<имя>`, чтобы не
+                        # путаться с нынешним. Объекты уходят вместе с ассетом.
+                        legacy = {}
+                        for name, value in (asset.variants or {}).items():
+                            if name in ("card", "full") or name.startswith("old-"):
+                                legacy[name] = value
+                            elif value not in variants.values():
+                                legacy[f"old-{name}"] = value
                         asset.variants = {**legacy, **variants}
                         asset.save(
-                            update_fields=["variants", "width", "height", "luminance", "average_color", "updated_at"]
+                            update_fields=[
+                                "variants",
+                                "width",
+                                "height",
+                                "luminance",
+                                "average_color",
+                                "variant_quality",
+                                "updated_at",
+                            ]
                         )
                     written += 1
                 except Exception as exc:  # noqa: BLE001 — битый кадр не повод падать

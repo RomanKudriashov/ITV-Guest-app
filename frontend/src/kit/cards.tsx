@@ -32,7 +32,7 @@ function PhotoLayer({
   fallbackIconSize?: number;
 }) {
   return (
-    <KitImage image={image} src={src} sizes={sizes} alt={alt} fill fallbackIcon={fallbackIcon} fallbackIconSize={fallbackIconSize} />
+    <KitImage image={image} src={src} sizes={sizes} fit="fill" alt={alt} fill fallbackIcon={fallbackIcon} fallbackIconSize={fallbackIconSize} />
   );
 }
 

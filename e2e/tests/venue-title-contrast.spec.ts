@@ -89,7 +89,7 @@ test.describe('Название заведения на кадре', () => {
     }>
     const terrace = services.find((s) => s.code === 'terrace') ?? services.find((s) => s.code === 'kitchen')!
     const original = terrace.image?.id ?? null
-    const white = await uploadMedia(request, { name: 'white.png', mimeType: 'image/png', buffer: WHITE }, 'category')
+    const white = await uploadMedia(request, { name: 'e2e-white.png', mimeType: 'image/png', buffer: WHITE }, 'category')
     try {
       const set = await request.patch(`${API}/api/cms/services/${terrace.id}`, { headers, data: { image_id: white.id } })
       expect(set.ok(), await set.text()).toBeTruthy()

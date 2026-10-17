@@ -177,6 +177,7 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
                 image={cell.image}
                 src={cell.src}
                 sizes={cellSizes}
+                fit="fill"
                 alt=""
                 fill
                 fallbackIcon={fallbackIconFor('product')}
@@ -189,6 +190,7 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
           image={tile.image_ref}
           src={tile.image}
           sizes={sizes}
+          fit="fill"
           alt={tile.title}
           fill
           fallbackIcon={fallbackIconFor('product', tile.service_type)}

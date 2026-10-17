@@ -323,9 +323,15 @@ async function subdomainOf(
 
 /**
  * Остатки переписки убираем командой бэкенда: API продукта удалять сообщения
- * гостя не умеет — и не должен.
+ * гостя не умеет — и не должен. Та же команда возвращает фон бренда, если на
+ * нём осталась картинка теста (`e2e-…`, партия 58а).
  */
 async function cleanChatResidue(): Promise<string> {
+  const line = await residueCommand()
+  return line.includes('сообщений') ? `, чат: ${line.split('сообщений')[1].trim()}` : ''
+}
+
+async function residueCommand(): Promise<string> {
   const { execFile } = await import('node:child_process')
   const { promisify } = await import('node:util')
   const run = promisify(execFile)
@@ -334,9 +340,21 @@ async function cleanChatResidue(): Promise<string> {
       'compose', 'exec', '-T', 'backend',
       'python', 'manage.py', 'clean_test_residue', '--apply',
     ], { cwd: process.cwd() + '/..', timeout: 60_000 })
-    const line = stdout.trim().split('\n').pop() ?? ''
-    return line.includes('сообщений') ? `, чат: ${line.split('сообщений')[1].trim()}` : ''
+    return stdout.trim().split('\n').pop() ?? ''
   } catch {
     return ''
+  }
+}
+
+/**
+ * ДО СНИМКА — фон бренда без картинки теста. Прерванный прогон (05.10) оставил
+ * шахматку обложкой «Кристалла», и каждый следующий тест снимал её как
+ * «исходное» и честно возвращал. Уборка в конце прогона прерванный прогон не
+ * спасает — её тоже прервали; поэтому та же уборка и в начале.
+ */
+export async function healBrandBeforeRun(): Promise<void> {
+  const line = await residueCommand()
+  if (line.includes('фон бренда из теста возвращён: да')) {
+    console.warn('[стенд] фон бренда стоял картинкой теста — возвращена обложка сида')
   }
 }

@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { brandSession, guestPage, uploadBrandMedia } from './brandGuest'
+import { brandSession, guestPage, uploadBrandLogo, uploadBrandMedia } from './brandGuest'
 import { pngRGBA } from './pngFixture'
 
 /**
@@ -71,9 +71,11 @@ test('прозрачный PNG-логотип прозрачен у гостя �
   test.setTimeout(120_000)
   const brand = await brandSession(request)
   try {
-    const url = await uploadBrandMedia(request, { name: 'logo.png', mimeType: 'image/png', buffer: LOGO })
+    const url = await uploadBrandMedia(request, { name: 'e2e-logo.png', mimeType: 'image/png', buffer: LOGO })
     await brand.apply({ brand: { logoLight: url, logoDark: url } })
     await entry(page, 'dark')
+    // Логотип — как загружен: исходный PNG, а не WebP-вариант с потерями (партия 58а).
+    await expect(page.getByTestId('guest-brand-logo')).toHaveAttribute('src', /\/original\/[^/]+\.png$/)
     const px = await logoPixels(page)
     expect(distance(px.corner, px.outside), `угол логотипа не прозрачен: ${px.corner} против фона ${px.outside}`).toBeLessThan(24)
     expect(distance(px.centre, RED), `знак не нарисован: ${px.centre}`).toBeLessThan(40)
@@ -89,7 +91,7 @@ test('SVG-логотип грузится через редактор и рис�
     const svg = Buffer.from(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><rect width="40" height="20" rx="4" fill="#c81428"/></svg>',
     )
-    const url = await uploadBrandMedia(request, { name: 'logo.svg', mimeType: 'image/svg+xml', buffer: svg })
+    const url = await uploadBrandMedia(request, { name: 'e2e-logo.svg', mimeType: 'image/svg+xml', buffer: svg })
     expect(url, 'у SVG нет адреса').toMatch(/\.svg$/)
     await brand.apply({ brand: { logoLight: url, logoDark: url } })
     await entry(page, 'light')
@@ -105,15 +107,15 @@ test('экран входа тёмный — на нём знак под тём�
   test.setTimeout(120_000)
   const brand = await brandSession(request)
   try {
-    const light = await uploadBrandMedia(request, { name: 'light.png', mimeType: 'image/png', buffer: LOGO })
-    const dark = await uploadBrandMedia(request, {
-      name: 'dark.png',
+    const light = await uploadBrandLogo(request, { name: 'e2e-light.png', mimeType: 'image/png', buffer: LOGO })
+    const dark = await uploadBrandLogo(request, {
+      name: 'e2e-dark.png',
       mimeType: 'image/png',
       buffer: pngRGBA(60, 60, () => [240, 240, 240, 255]),
     })
-    await brand.apply({ brand: { logoLight: light, logoDark: dark } })
+    await brand.apply({ brand: { logoLight: light.url, logoDark: dark.url } })
     await entry(page, 'light')
-    await expect(page.getByTestId('guest-brand-logo')).toHaveAttribute('src', dark)
+    await expect(page.getByTestId('guest-brand-logo')).toHaveAttribute('src', dark.served)
   } finally {
     await brand.restore()
   }
@@ -123,14 +125,14 @@ test('логотип в верхней панели телефона — есл�
   test.setTimeout(120_000)
   const brand = await brandSession(request)
   try {
-    const light = await uploadBrandMedia(request, { name: 'light.png', mimeType: 'image/png', buffer: LOGO })
-    const dark = await uploadBrandMedia(request, {
-      name: 'dark.png',
+    const light = await uploadBrandLogo(request, { name: 'e2e-light.png', mimeType: 'image/png', buffer: LOGO })
+    const dark = await uploadBrandLogo(request, {
+      name: 'e2e-dark.png',
       mimeType: 'image/png',
       buffer: pngRGBA(60, 60, () => [240, 240, 240, 255]),
     })
-    await brand.apply({ brand: { logoLight: light, logoDark: dark } })
-    for (const [theme, expected] of [['light', light], ['dark', dark]] as const) {
+    await brand.apply({ brand: { logoLight: light.url, logoDark: dark.url } })
+    for (const [theme, expected] of [['light', light.served], ['dark', dark.served]] as const) {
       const page = await guestPage(browser, { width: 390, theme })
       const logo = page.getByTestId('guest-phone-logo')
       await expect(logo, `нет логотипа в панели телефона (${theme})`).toBeVisible()

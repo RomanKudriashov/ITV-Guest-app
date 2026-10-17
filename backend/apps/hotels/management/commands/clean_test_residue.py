@@ -451,9 +451,57 @@ class Command(BaseCommand):
             if closed_schedules:
                 self.stdout.write(f"  расписаний «Закрыто сейчас»: {len(closed_schedules)}")
 
+            # --- Фон бренда — картинка автотеста ------------------------------
+            # Прерванный e2e не вернул бренд; следующий снял бы картинку теста
+            # как «исходное» и закрепил её. Возвращаем обложку сида.
+            from apps.hotels.services.brand_services import fixture_backdrop, get_or_create_brand
+
+            theme = get_or_create_brand(hotel)
+            stuck = fixture_backdrop(theme.tokens or {})
+            seed_cover = None
+            if stuck is not None:
+                from apps.media.models import MediaAsset
+
+                seed_cover = (
+                    MediaAsset.objects.filter(
+                        original_filename__startswith="hotel-cover-", status=MediaAsset.Status.READY
+                    )
+                    .order_by("-created_at")
+                    .first()
+                )
+                self.stdout.write(
+                    f"  фон бренда — картинка теста «{stuck.original_filename}»; вернуть: "
+                    + (seed_cover.original_filename if seed_cover else "обложки сида нет — градиент")
+                )
+
             if not apply:
                 self.stdout.write(self.style.WARNING("Пробный проход. Повторите с --apply."))
                 return
+
+            healed_backdrop = False
+            if stuck is not None:
+                tokens = dict(theme.tokens or {})
+                brand = dict(tokens.get("brand") or {})
+                # `imageRef` собирается на выдаче; в токенах ему не место.
+                background = {k: v for k, v in (brand.get("background") or {}).items() if k != "imageRef"}
+                if seed_cover is not None:
+                    background.update(
+                        # dim — как у сида (`_seed_hotel_cover`): тест ставил свой.
+                        {
+                            "kind": "image",
+                            "imageAssetId": str(seed_cover.pk),
+                            "imageUrl": seed_cover.url("card"),
+                            "dim": 0.15,
+                        }
+                    )
+                else:
+                    background = {k: v for k, v in background.items() if k not in ("imageAssetId", "imageUrl")}
+                    background["kind"] = "gradient"
+                brand["background"] = background
+                tokens["brand"] = brand
+                theme.tokens = tokens
+                theme.save(update_fields=["tokens", "updated_at"])
+                healed_backdrop = True
 
             # ЖЁСТКО: мягкое удаление оставило бы те же 300 строк в таблице.
             # Интервалы уходят каскадом.
@@ -603,6 +651,7 @@ class Command(BaseCommand):
                 + (f"заказов удалено {purged_orders}; " if purge else "")
                 + 
                 f"сообщений удалено {deleted_msgs}; "
+                f"фон бренда из теста возвращён: {'да' if healed_backdrop else 'нет'}; "
                 f"привязок удалённых сотрудников убрано {dropped_assignments}; "
                 f"расписаний «Закрыто сейчас» удалено {dropped_schedules}; "
                 f"типов номеров удалено {deleted_types}; "

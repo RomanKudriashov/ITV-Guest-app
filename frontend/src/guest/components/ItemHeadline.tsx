@@ -108,6 +108,7 @@ export function ItemMedia({
         image={item.photos?.[0] ?? null}
         src={item.images?.[0]}
         sizes={isRail ? '400px' : '100vw'}
+        fit="whole"
         alt={item.title}
         fill
         fallbackIcon={icon}

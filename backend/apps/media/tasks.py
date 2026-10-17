@@ -89,6 +89,7 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
                 "height",
                 "luminance",
                 "average_color",
+                "variant_quality",
                 "updated_at",
             ]
         )
@@ -145,20 +146,15 @@ def focus_from_crop(crop: dict | None) -> dict:
     return {"x": round(x + w / 2, 4), "y": round(y + h / 2, 4)}
 
 
-def target_widths(original_width: int, *, backdrop: bool = False) -> list[int]:
+def target_widths(original_width: int) -> list[int]:
     """
     Ряд ширин для оригинала: не шире его; уже самой узкой — одна, своя.
 
     Оригинал заметно шире последней ширины ряда (1400 при ряде до 1200) —
     последней идёт его собственная ширина: иначе шапке 1080 при DPR 2 доставалось
     1200 из 1400 имеющихся, и 200 точек пропадали зря (замер 17.10).
-
-    `backdrop` — ассет стоит фоном бренда: ряд продолжается до
-    `MEDIA_BACKDROP_WIDTH` (партия 58а, дочистка).
     """
     series = tuple(settings.MEDIA_WIDTHS)
-    if backdrop:
-        series += (settings.MEDIA_BACKDROP_WIDTH,)
     widths = [w for w in series if w <= original_width]
     if not widths:
         return [original_width]
@@ -168,30 +164,16 @@ def target_widths(original_width: int, *, backdrop: bool = False) -> list[int]:
     return widths
 
 
-def is_brand_backdrop(asset: MediaAsset) -> bool:
+def needs_rerender(asset: MediaAsset) -> bool:
     """
-    Стоит ли ассет фоном бренда своего отеля (токены основной темы,
-    `brand.background.imageAssetId`). Звать в контексте отеля ассета.
+    Нарезка ассета не та, что режет код сейчас: нет ряда ширин, ряд другой
+    (ряд вырос до 3840) или качество другое (было 80, стало 90). Её и ловит
+    `rerender_media` (партия 58а, дочистка 2).
     """
-    from apps.hotels.models import BrandTheme, Hotel
-
-    # Без отеля (заготовка ассета в памяти) фоном бренда быть нечему.
-    if not getattr(asset, "hotel_id", None):
-        return False
-    theme_id = Hotel.all_objects.filter(pk=asset.hotel_id).values_list("default_theme_id", flat=True).first()
-    if not theme_id:
-        return False
-    tokens = BrandTheme.objects.filter(pk=theme_id).values_list("tokens", flat=True).first() or {}
-    background = (tokens.get("brand") or {}).get("background") or {}
-    return str(background.get("imageAssetId") or "") == str(asset.pk)
-
-
-def missing_backdrop_width(asset: MediaAsset) -> bool:
-    """Фон бренда нарезан обычным рядом — ширины сверх ряда у него ещё нет."""
-    if not asset.width:
-        return False
-    have = {w for w, _ in asset.width_variants()}
-    return target_widths(asset.width, backdrop=True)[-1] not in have
+    series = [w for w, _ in asset.width_variants()]
+    if not series or not asset.average_color or not asset.width:
+        return True
+    return series != target_widths(asset.width) or asset.variant_quality != settings.MEDIA_WEBP_QUALITY
 
 
 def render_variant_bytes(raw: bytes, asset: MediaAsset) -> dict[str, bytes]:
@@ -215,13 +197,17 @@ def render_variant_bytes(raw: bytes, asset: MediaAsset) -> dict[str, bytes]:
         asset.width, asset.height = image.size
         asset.luminance = _mean_luminance(image.convert("RGB"))
         asset.average_color = _average_color(image)
+        asset.variant_quality = settings.MEDIA_WEBP_QUALITY
 
+        # КАЧЕСТВО НЕ ЭКОНОМИМ — docs/decisions.md, п.16: WebP 90 и ряд до 3840
+        # для всех; вес на телефоне снимает srcset, а не сжатие.
+        #
         # КАДР БОЛЬШЕ НЕ ВЫРЕЗАЕТСЯ (партия 58а). Варианты — целый оригинал в
         # его пропорциях; куда смотреть, место показа берёт из `focus`. Вырезанная
         # рамка подходила одной форме, а фото показывают в десятке: баннер терял
         # на сервере 69% и ещё половину остатка в браузере (замер 17.10).
         sizes: dict[str, int] = {"thumb": settings.MEDIA_THUMB_WIDTH}
-        for width in target_widths(image.width, backdrop=is_brand_backdrop(asset)):
+        for width in target_widths(image.width):
             sizes[f"w{width}"] = width
 
         out: dict[str, bytes] = {}

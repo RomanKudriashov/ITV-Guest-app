@@ -116,6 +116,28 @@ def _asset_url(asset_id: Any, variant: str = "card") -> str:
     return (asset.url(variant) or "") if asset is not None else ""
 
 
+def _logo_as_uploaded(url: str) -> str:
+    """Адрес варианта нашего ассета → адрес его исходника; иначе — как был."""
+    start = url.find("hotels/")
+    if start < 0:
+        return url
+    key = url[start:].split("?")[0]
+    parts = key.split("/")
+    # hotels/<отель>/<вид>/<вариант>/<файл> — вариант; hotels/<отель>/<вид>/<файл> — исходник.
+    if len(parts) != 5:
+        return url
+
+    from apps.media.models import MediaAsset
+
+    # Перенарезка держит прежний ряд под `old-<имя>` — строка в токенах могла
+    # остаться от него.
+    asset = (
+        MediaAsset.objects.filter(**{f"variants__{parts[3]}": key}).first()
+        or MediaAsset.objects.filter(**{f"variants__old-{parts[3]}": key}).first()
+    )
+    return asset.original_url() if asset is not None else url
+
+
 def resolve_media(tokens: dict) -> dict:
     """
     Токены на выдачу: адреса картинок бренда пересобраны из ассетов.
@@ -140,6 +162,17 @@ def resolve_media(tokens: dict) -> dict:
     if isinstance(custom, dict) and custom.get("assetId"):
         out_brand["customFont"] = {**custom, "url": _asset_url(custom["assetId"], variant="original")}
 
+    # ЛОГОТИП — КАК ЗАГРУЖЕН (партия 58а, решение 16 в docs/decisions.md).
+    # В токенах он адрес строкой, и CMS клала туда `card` — WebP 600 с потерями:
+    # контур букв мылился, широкий логотип (3513×946) терял две трети точек.
+    # Отдаём исходник: PNG с прозрачностью, SVG вектором. Строка в токенах та же
+    # — адрес пересобирается на выдаче, и старые логотипы стенда чинятся без
+    # миграции. Чужой адрес (не наш ассет) остаётся как есть.
+    for key in ("logoLight", "logoDark"):
+        value = brand.get(key)
+        if isinstance(value, str) and value:
+            out_brand[key] = _logo_as_uploaded(value)
+
     background = brand.get("background")
     if isinstance(background, dict) and background.get("imageAssetId"):
         resolved = dict(background)
@@ -158,6 +191,38 @@ def resolve_media(tokens: dict) -> dict:
     return {**tokens, "brand": out_brand}
 
 
+# КАРТИНКИ АВТОТЕСТОВ. e2e грузят их отелю как фон бренда и обязаны вернуть
+# прежний; прерванный прогон не возвращает — и шахматка `brand-backdrop` с
+# 05.10 стояла обложкой «Кристалла», а каждый следующий прогон снимал её как
+# «исходное» и честно возвращал (партия 58а, дочистка 2). Имя файла — признак:
+# `e2e-` у всех загрузок тестов, `checker.png` — та, что была до признака.
+E2E_FIXTURE_PREFIX = "e2e-"
+LEGACY_FIXTURE_NAMES = frozenset({"checker.png"})
+
+
+def is_test_fixture(asset) -> bool:
+    name = (getattr(asset, "original_filename", "") or "").strip()
+    return name.startswith(E2E_FIXTURE_PREFIX) or name in LEGACY_FIXTURE_NAMES
+
+
+def fixture_backdrop(tokens: dict):
+    """Ассет картинки теста, стоящий фоном бренда, — или None."""
+    background = ((tokens or {}).get("brand") or {}).get("background") or {}
+    asset_id = background.get("imageAssetId")
+    if not asset_id:
+        return None
+
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    from apps.media.models import MediaAsset
+
+    try:
+        asset = MediaAsset.objects.filter(pk=asset_id).first()
+    except (DjangoValidationError, TypeError, ValueError):
+        return None
+    return asset if asset is not None and is_test_fixture(asset) else None
+
+
 def cover_is_alive(tokens: dict) -> bool:
     """
     Есть ли у отеля обложка, которую действительно можно показать.
@@ -170,6 +235,9 @@ def cover_is_alive(tokens: dict) -> bool:
         return False
     asset_id = background.get("imageAssetId")
     if asset_id:
+        # Картинка автотеста — не обложка отеля, даже живая: сид заведёт свою.
+        if fixture_backdrop(tokens) is not None:
+            return False
         return bool(_asset_url(asset_id))
     # Без ссылки на ассет судить не о чем: адрес мог протухнуть молча.
     return False

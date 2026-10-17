@@ -31,7 +31,7 @@ export function VenueMark({
 }) {
   const Icon = fallbackIconFor(null, serviceType);
   if (imageRef || image) {
-    return <KitImage image={imageRef} src={image} sizes={sizes} alt="" fill fallbackIcon={Icon} fallbackIconSize={iconSize} />;
+    return <KitImage image={imageRef} src={image} sizes={sizes} fit="fill" alt="" fill fallbackIcon={Icon} fallbackIconSize={iconSize} />;
   }
   return (
     <Box

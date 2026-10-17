@@ -89,7 +89,16 @@ export function SurfacePreview({
             />
           ) : null
         ) : (
-          <KitImage image={image} src={src} sizes={placeSizes} alt="" fill />
+          <KitImage
+            image={image}
+            src={src}
+            sizes={placeSizes}
+            // Превью показывает место так, как его покажет гость: окно позиции —
+            // целиком при обрезке, остальное — заполнено по фокусу.
+            fit={('fit' in spec && spec.fit) || 'fill'}
+            alt=""
+            fill
+          />
         )}
       </Box>
       {/* Подпись — где именно это появится. Человек не обязан помнить. */}

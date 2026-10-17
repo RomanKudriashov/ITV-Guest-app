@@ -93,6 +93,25 @@ test('окно позиции на 390: место по форме кадра �
   expect(photo.backdrop).toBeFalsy()
 })
 
+for (const width of [1440, 390]) {
+  test(`карточка меню с вертикальным фото — заполнена по фокусу, без размытого фона (${width})`, async ({ page }) => {
+    // Решение тек-лида по снимкам: узкая полоса блюда на размытом фоне — плохо.
+    // Карточки, плитки, мозаика — место «заполнить»: всегда cover.
+    await enter(page, width)
+    await page.evaluate(() => localStorage.setItem('itv.guest.menu-view', 'cards'))
+    await page.goto('/venue/kitchen')
+    const card = page.getByTestId('guest-item-duck-breast')
+    await expect(card).toBeVisible({ timeout: 15_000 })
+    await card.scrollIntoViewIfNeeded()
+    const frame = card.locator('[data-fit]').first()
+    await expect.poll(() => frame.getAttribute('data-visible-share')).not.toBeNull()
+    // Кадр 2:3 в карточке — видна заметно меньше 60%: прежде здесь включалось «целиком».
+    expect(Number(await frame.getAttribute('data-visible-share'))).toBeLessThan(0.6)
+    expect(await frame.getAttribute('data-fit')).toBe('cover')
+    expect(await card.locator('[data-testid$="backdrop"]').count(), 'под фото карточки — размытый фон').toBe(0)
+  })
+}
+
 test('фон-фото на телефоне — image-set, а не простой url под 2x', async ({ page }) => {
   // `sx` читал массив [url, image-set] как брейкпойнты: до 600 px действовал
   // запасной url (файл под 2x), и телефон с DPR 1 качал вдвое шире (замер 17.10).

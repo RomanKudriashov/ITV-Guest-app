@@ -211,7 +211,7 @@ const MosaicTile = memo(function MosaicTile({
             фото) показывал 12% кадра; меньше 60% — фото целиком поверх
             размытого себя.
           */
-          <KitImage image={photo} sizes={sizes} alt="" fill fallbackIcon={FallbackIcon} fallbackIconSize={big ? 72 : 44} />
+          <KitImage image={photo} sizes={sizes} fit="fill" alt="" fill fallbackIcon={FallbackIcon} fallbackIconSize={big ? 72 : 44} />
         ) : showImage ? (
           /* Строкой пришедшая картинка (старый ответ) — как было. */
           <Box

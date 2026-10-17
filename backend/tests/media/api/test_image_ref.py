@@ -53,11 +53,12 @@ def test_guest_item_gets_widths_not_wider_than_the_original(client, cms, crystal
     assert body["images"] and body["image_full"]
 
 
-def test_series_tops_at_2400_and_fills_the_gap_below_it():
-    """Ряд кончается 2400; оригинал между ширинами ряда — своей шириной, но не выше потолка."""
+def test_series_tops_at_3840_and_fills_the_gap_below_it():
+    """Ряд кончается 3840; оригинал между ширинами ряда — своей шириной, но не выше потолка."""
     from apps.media.tasks import target_widths
 
-    assert target_widths(3624) == [400, 800, 1200, 1600, 2400]
+    assert target_widths(3624) == [400, 800, 1200, 1600, 2400, 3200]  # 3624 < 3200×1,15
+    assert target_widths(4000) == [400, 800, 1200, 1600, 2400, 3200, 3840]
     assert target_widths(1400) == [400, 800, 1200, 1400]
     assert target_widths(1300) == [400, 800, 1200]  # 1300 < 1200×1,15 — зазора нет
     assert target_widths(300) == [300]

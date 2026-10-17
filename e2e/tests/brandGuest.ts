@@ -99,23 +99,25 @@ export async function uploadMedia(
   request: APIRequestContext,
   file: { name: string; mimeType: string; buffer: Buffer },
   kind: 'brand' | 'category' = 'brand',
-): Promise<{ id: string; url: string }> {
+): Promise<{ id: string; url: string; original_url: string }> {
   const headers = apiHeaders(await apiToken(request, ADMIN))
   const response = await request.post(`${API}/api/v1/cms/media`, { headers, multipart: { file, kind } })
   expect(response.status(), await response.text()).toBe(201)
   const { id } = await response.json()
   let url = ''
+  let original_url = ''
   await expect
     .poll(
       async () => {
         const asset = await (await request.get(`${API}/api/v1/cms/media/${id}`, { headers })).json()
         url = asset.url
+        original_url = asset.original_url
         return asset.status
       },
       { timeout: 30_000, message: 'картинка не нарезалась' },
     )
     .toBe('ready')
-  return { id, url }
+  return { id, url, original_url }
 }
 
 /** Загрузить логотип бренда: адрес, который ставится в `logoLight` / `logoDark`. */
@@ -124,4 +126,16 @@ export async function uploadBrandMedia(
   file: { name: string; mimeType: string; buffer: Buffer },
 ): Promise<string> {
   return (await uploadMedia(request, file, 'brand')).url
+}
+
+/**
+ * Логотип: адрес, который кладут в токены, и адрес, который отдаст витрина, —
+ * исходник как загружен (партия 58а: логотип без потерь, с прозрачностью).
+ */
+export async function uploadBrandLogo(
+  request: APIRequestContext,
+  file: { name: string; mimeType: string; buffer: Buffer },
+): Promise<{ url: string; served: string }> {
+  const media = await uploadMedia(request, file, 'brand')
+  return { url: media.url, served: media.original_url }
 }

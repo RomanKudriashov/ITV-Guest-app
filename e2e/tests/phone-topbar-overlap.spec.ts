@@ -51,7 +51,7 @@ test('широкий логотип не ложится на «К сервиса
   test.setTimeout(150_000)
   const brand = await brandSession(request)
   try {
-    const url = await uploadBrandMedia(request, { name: 'wide.png', mimeType: 'image/png', buffer: WIDE })
+    const url = await uploadBrandMedia(request, { name: 'e2e-wide.png', mimeType: 'image/png', buffer: WIDE })
     await brand.apply({ brand: { logoLight: url, logoDark: url } })
 
     for (const width of [390, 360]) {
@@ -81,7 +81,7 @@ test('режим просмотра: «Войти по номеру» не ло�
   try {
     for (const withLogo of [false, true]) {
       if (withLogo) {
-        const url = await uploadBrandMedia(request, { name: 'wide.png', mimeType: 'image/png', buffer: WIDE })
+        const url = await uploadBrandMedia(request, { name: 'e2e-wide.png', mimeType: 'image/png', buffer: WIDE })
         await brand.apply({ brand: { logoLight: url, logoDark: url } })
       } else {
         await brand.apply({ brand: { logoLight: '', logoDark: '' } })

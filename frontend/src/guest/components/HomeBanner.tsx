@@ -120,7 +120,7 @@ export function HomeBanner({ banner, placement }: Props) {
             (полоса контейнера 1032 на 1440, 358 на 390), кадр по фокусу и предел
             обрезки — полоса 5:1 против кадра 3:2 показывала 30% фото.
           */
-          <KitImage image={frameRef} sizes={BANNER_SIZES} alt="" fill testId="guest-banner-image" />
+          <KitImage image={frameRef} sizes={BANNER_SIZES} fit="whole" alt="" fill testId="guest-banner-image" />
         ) : images[frame] ? (
           <Box
             component="img"

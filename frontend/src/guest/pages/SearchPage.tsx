@@ -305,7 +305,7 @@ function ResultRow({
             <VenueMark image={row.image} imageRef={row.image_ref} sizes="56px" serviceType={row.service_type} />
           </Box>
         ) : (
-          <KitImage image={row.image_ref} src={row.image ?? null} sizes="56px" alt="" fill />
+          <KitImage image={row.image_ref} src={row.image ?? null} sizes="56px" fit="fill" alt="" fill />
         )}
       </Box>
       <Stack sx={{ minWidth: 0, flex: 1 }} spacing={0.25}>

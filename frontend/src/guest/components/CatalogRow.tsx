@@ -121,7 +121,7 @@ export function CatalogRowView({
         sx={{ display: 'block', textAlign: 'start', width: '100%' }}
       >
         <Box sx={{ position: 'relative', height: 146 }}>
-          <KitImage image={image} src={imageSrc} sizes={imageSizes} alt={title} fill fallbackIcon={fallbackIcon} fallbackIconSize={44} />
+          <KitImage image={image} src={imageSrc} sizes={imageSizes} fit="fill" alt={title} fill fallbackIcon={fallbackIcon} fallbackIconSize={44} />
           {badges?.length ? (
             <Box sx={{ position: 'absolute', top: 8, insetInlineStart: 8, maxWidth: 'calc(100% - 16px)' }}>
               <ItemBadges badges={badges} size="sm" />

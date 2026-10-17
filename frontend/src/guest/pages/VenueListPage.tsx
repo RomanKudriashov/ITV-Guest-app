@@ -104,6 +104,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
             image={venue.image_ref}
             src={venue.image}
             sizes="(min-width: 1080px) 333px, (min-width: 900px) 31vw, (min-width: 600px) 47vw, calc(100vw - 32px)"
+            fit="fill"
             alt={venue.title}
             fill
             fallbackIcon={fallbackIconFor('product', venue.service_type)}
