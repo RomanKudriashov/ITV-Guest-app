@@ -2817,7 +2817,9 @@
         "created": "Order created",
         "accepted": "Order accepted",
         "cancelled": "Order cancelled",
-        "status_changed": "Order status changed"
+        "status_changed": "Order status changed",
+        "assigned": "Assignee set",
+        "transferred": "Order moved to another point"
       },
       "brand": {
         "publication_scheduled": "Branding publication scheduled",

@@ -2790,7 +2790,9 @@
         "created": "订单已创建",
         "accepted": "订单已接受",
         "cancelled": "订单已取消",
-        "status_changed": "订单状态已更改"
+        "status_changed": "订单状态已更改",
+        "assigned": "已指派执行人",
+        "transferred": "订单已转到其他点位"
       },
       "brand": {
         "publication_scheduled": "已安排品牌外观发布",

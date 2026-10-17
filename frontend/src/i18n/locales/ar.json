@@ -2889,7 +2889,9 @@
         "created": "تم إنشاء الطلب",
         "accepted": "تم قبول الطلب",
         "cancelled": "تم إلغاء الطلب",
-        "status_changed": "تغيّرت حالة الطلب"
+        "status_changed": "تغيّرت حالة الطلب",
+        "assigned": "تم تعيين المنفّذ",
+        "transferred": "نُقل الطلب إلى نقطة أخرى"
       },
       "brand": {
         "publication_scheduled": "تمت جدولة نشر الهوية البصرية",

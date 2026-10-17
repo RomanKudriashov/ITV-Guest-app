@@ -122,8 +122,10 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ---
 
 > **До сервера — `npm run build:image` локально** (партия 25). Образ nginx
-> собирает фронт этой командой: сторожа (`check-colors`, `check-locales`,
-> `check-icons`), `tsc`, `vite build`. Локальный `tsc` и e2e сторожей не
+> собирает фронт её частью `build:docker`: сторожа (`check-colors`,
+> `check-locales`, `check-icons`), `tsc`, `vite build`; `build:image` сверх
+> того гоняет сторожа кодов событий — ему нужен `backend/`, которого в образе
+> нет (партия 57). Локальный `tsc` и e2e сторожей не
 > гоняют — цвет вне словаря прошёл всю проверку партии и уронил сборку уже
 > на стенде.
 
