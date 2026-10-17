@@ -5,7 +5,10 @@
 `crop`; теперь — `thumb` и ряд `MEDIA_WIDTHS` из ЦЕЛОГО оригинала, плюс средний
 цвет. Команда переводит старые ассеты на новый вид.
 
-Идемпотентна: ассет, у которого уже есть ряд ширин и средний цвет, пропускается
+Фону бренда ряд продолжается до `MEDIA_BACKDROP_WIDTH` (3200, не шире оригинала).
+
+Идемпотентна: ассет, у которого уже есть ряд ширин и средний цвет (а у фона
+бренда — и верхняя ширина), пропускается
 (`--force` — перенарезать всё). `--dry-run` ничего не пишет: режет в память и
 считает объём — по всем или по выборке (`--sample N`, оценка с экстраполяцией).
 
@@ -34,7 +37,12 @@ SKIP_KINDS = {MediaAsset.Kind.FONT}
 
 
 def _needs(asset: MediaAsset) -> bool:
-    return not asset.width_variants() or not asset.average_color
+    from apps.media.tasks import is_brand_backdrop, missing_backdrop_width
+
+    if not asset.width_variants() or not asset.average_color:
+        return True
+    # Фон бренда без своей верхней ширины (`MEDIA_BACKDROP_WIDTH`).
+    return missing_backdrop_width(asset) and is_brand_backdrop(asset)
 
 
 def _mb(n: int) -> str:

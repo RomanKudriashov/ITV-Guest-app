@@ -93,6 +93,16 @@ test('окно позиции на 390: место по форме кадра �
   expect(photo.backdrop).toBeFalsy()
 })
 
+test('фон-фото на телефоне — image-set, а не простой url под 2x', async ({ page }) => {
+  // `sx` читал массив [url, image-set] как брейкпойнты: до 600 px действовал
+  // запасной url (файл под 2x), и телефон с DPR 1 качал вдвое шире (замер 17.10).
+  await enter(page, 390)
+  await page.goto('/venue/kitchen')
+  const cover = page.getByTestId('guest-venue-header-cover')
+  await expect(cover).toBeVisible({ timeout: 15_000 })
+  await expect.poll(() => cover.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('image-set(')
+})
+
 test('prefers-reduced-transparency: размытая подложка снимается правилом', async ({ page, request }) => {
   const { id } = await caesar(request)
   await enter(page, 1440)

@@ -4,6 +4,7 @@ import {
   backgroundImageSx,
   coverWidth,
   focusPosition,
+  IMAGE_SET_SUPPORTS,
   imageSetCss,
   MIN_VISIBLE_SHARE,
   pickWidth,
@@ -71,9 +72,11 @@ describe('фон через image-set', () => {
     expect(imageSetCss(ref(400, 300, [400]), 1080)).toBe('image-set(url("/w400.webp") 1x)');
   });
 
-  it('sx: сначала простой url (запасной), потом image-set', () => {
+  it('sx: простой url (запасной), image-set — под @supports, не массивом', () => {
     const sx = backgroundImageSx(ref(3840, 1600), 1080);
-    expect(sx.backgroundImage[0]).toBe('url("/w2400.webp")');
-    expect(sx.backgroundImage[1]).toContain('image-set(');
+    // Массив в sx — значения по брейкпойнтам: до 600 px image-set не действовал.
+    expect(Array.isArray(sx.backgroundImage)).toBe(false);
+    expect(sx.backgroundImage).toBe('url("/w2400.webp")');
+    expect(sx[IMAGE_SET_SUPPORTS].backgroundImage).toContain('image-set(');
   });
 });

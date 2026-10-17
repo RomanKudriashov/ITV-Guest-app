@@ -177,6 +177,31 @@ def _draft_or_error(draft_id) -> BrandVersion:
 
 
 @transaction.atomic
+def _widen_backdrop(tokens: dict) -> None:
+    """
+    Новый фон бренда нарезан обычным рядом (до 2400) — дорезать ему верхнюю
+    ширину `MEDIA_BACKDROP_WIDTH` (партия 58а, дочистка). Задача — после
+    коммита: воркер должен увидеть уже опубликованные токены.
+    """
+    asset_id = (((tokens or {}).get("brand") or {}).get("background") or {}).get("imageAssetId")
+    if not asset_id:
+        return
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from django.db import transaction
+
+    from apps.media.models import MediaAsset
+    from apps.media.tasks import missing_backdrop_width, process_media_asset
+
+    try:
+        asset = MediaAsset.objects.filter(pk=asset_id, status=MediaAsset.Status.READY).first()
+    except (DjangoValidationError, TypeError, ValueError):
+        return
+    if asset is None or not missing_backdrop_width(asset):
+        return
+    pk, hotel_id = str(asset.pk), str(asset.hotel_id)
+    transaction.on_commit(lambda: process_media_asset.delay(pk, hotel_id))
+
+
 def publish_tokens(
     tokens: dict,
     *,
@@ -193,6 +218,7 @@ def publish_tokens(
     theme = get_or_create_brand()
     theme.tokens = tokens
     theme.save(update_fields=["tokens", "updated_at"])
+    _widen_backdrop(tokens)
 
     user = _actor()
     return BrandVersion.objects.create(

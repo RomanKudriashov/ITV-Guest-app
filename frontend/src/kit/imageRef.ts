@@ -75,10 +75,22 @@ export function imageSetCss(ref: ImageRef, cssWidth: number): string {
 }
 
 /**
- * Фон для `sx`: сначала простой `url()` (браузер без `image-set` возьмёт его),
- * потом `image-set` — emotion выводит массив значений запасными объявлениями.
+ * Фон для `sx`: простой `url()` (браузер без `image-set` возьмёт его), а
+ * `image-set` — под `@supports`.
+ *
+ * НЕ МАССИВОМ. `sx` читает массив как значения по брейкпойнтам: `[url, set]`
+ * давал `url` до 600 px и `image-set` шире — телефон с DPR 1 качал файл под 2x
+ * (замер 17.10: фон 390×844 брал 3200 вместо 2400).
  */
-export function backgroundImageSx(ref: ImageRef, cssWidth: number): { backgroundImage: string[] } {
+export const IMAGE_SET_SUPPORTS = '@supports (background-image: image-set(url("x.webp") 1x))';
+
+export function backgroundImageSx(
+  ref: ImageRef,
+  cssWidth: number,
+): { backgroundImage: string; [IMAGE_SET_SUPPORTS]: { backgroundImage: string } } {
   const fallback = pickWidth(ref, Math.ceil(cssWidth * 2))?.url ?? ref.src;
-  return { backgroundImage: [`url("${fallback}")`, imageSetCss(ref, cssWidth)] };
+  return {
+    backgroundImage: `url("${fallback}")`,
+    [IMAGE_SET_SUPPORTS]: { backgroundImage: imageSetCss(ref, cssWidth) },
+  };
 }
