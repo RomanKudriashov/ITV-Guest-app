@@ -321,8 +321,13 @@ export function EntryPage() {
                 '&:focus-within': { borderColor: alpha(onMedia.primary, 0.7) },
               }}
             >
+              {/*
+                В ПОКАЗЕ — БЕЗ ФОКУСА. Показ — рамка внутри панели: поле номера
+                с autoFocus забирало фокус у оператора, и открытый им список
+                (вид фона и любой другой) закрывался сам (полная проверка 58).
+              */}
               <InputBase
-                autoFocus
+                autoFocus={!isPreview}
                 fullWidth
                 value={room}
                 onChange={(event) => setRoom(event.target.value)}

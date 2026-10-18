@@ -172,3 +172,26 @@ test.describe('Показ оформлен, а не только размече�
     expect(look.radius, 'карточка в рамке без скругления — стили ушли в панель').not.toBe('0px')
   })
 })
+
+test.describe('Показ не отбирает фокус у панели', () => {
+  /*
+    ПОЛНАЯ ПРОВЕРКА 58: поле номера на экране входа стояло с autoFocus и в
+    показе забирало фокус у оператора — список, открытый им в панели, закрывался
+    сам («Паттерн» в виде фона не находился, ~20 % прогонов brand-patterns).
+    Мерим сам фокус внутри рамки: от порядка загрузки он не зависит.
+  */
+  test('поле номера в показе входа без фокуса, список панели остаётся открытым', async ({ page }) => {
+    await openPreview(page)
+    await chooseScreen(page, 'entry')
+    const input = stage(page).getByTestId('guest-room-input')
+    await expect(input).toBeVisible({ timeout: 25_000 })
+    expect(
+      await input.evaluate((el) => el.ownerDocument.activeElement === el),
+      'поле номера в показе взяло фокус',
+    ).toBe(false)
+
+    await page.getByTestId('brand-bg-kind').click()
+    await expect(page.getByRole('option', { name: 'Паттерн', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+  })
+})
