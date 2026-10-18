@@ -284,7 +284,7 @@
   "/api/v1/cms/media/{asset_id}": [
     "GET"
   ],
-  "/api/v1/cms/media/{asset_id}/crop": [
+  "/api/v1/cms/media/{asset_id}/focus": [
     "PUT"
   ],
   "/api/v1/cms/modifier-groups/{group_id}": [
