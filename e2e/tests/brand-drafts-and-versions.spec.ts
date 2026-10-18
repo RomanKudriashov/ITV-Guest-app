@@ -153,7 +153,10 @@ test.describe('Публикация и откат', () => {
       await save.click()
       await expect(page.getByTestId('brand-dirty')).toBeHidden({ timeout: 15_000 })
     }
-    await expect.poll(() => guestPrimary(request), { timeout: 15_000 }).toBe(before)
+    // Регистр не сравниваем: сид пишет `#2456A0`, поле цвета отдаёт строчные.
+    await expect
+      .poll(async () => (await guestPrimary(request)).toLowerCase(), { timeout: 15_000 })
+      .toBe(before.toLowerCase())
   })
 })
 

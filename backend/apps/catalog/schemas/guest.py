@@ -41,9 +41,6 @@ class GuestItemDetailOut(Schema):
     # затемнения под стеклянной панелью; `None` — кадра нет или он ещё не
     # обработан, и витрина возьмёт безопасное умолчание.
     image_luminance: float | None = None
-    # УСТАРЕЛО (партия 58а): большой кадр мозаики 57 — вместо него `photos`.
-    # Уходит через релиз.
-    image_full: str | None = None
     mosaic_large: bool = False
     location_mode: str
     category_id: str

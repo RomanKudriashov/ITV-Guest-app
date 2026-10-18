@@ -9,7 +9,7 @@ import type {
   Badge,
   BadgeItem,
   BadgePayload,
-  CropRect,
+  FocusPoint,
   Bootstrap,
   Category,
   CategoryPayload,
@@ -607,15 +607,11 @@ export function setBadgeOnItem(
 }
 
 /**
- * Записать рамку кадра. Сервер режет варианты ИЗ ОРИГИНАЛА и возвращает ассет
- * в статусе `pending`: нарезка идёт в воркере.
+ * Записать точку главного (партия 58в). Нарезка не перезапускается: места
+ * показа сами кладут фото по точке, ответ сразу `ready`.
  */
-export function setMediaCrop(
-  id: string,
-  crop: CropRect | null,
-  ratio?: number,
-): Promise<MediaAsset> {
-  return api.put<MediaAsset>(`/cms/media/${id}/crop`, { crop, ratio: ratio ?? null });
+export function setMediaFocus(id: string, focus: FocusPoint): Promise<MediaAsset> {
+  return api.put<MediaAsset>(`/cms/media/${id}/focus`, focus);
 }
 
 export function createBadge(payload: BadgePayload): Promise<Badge> {
@@ -785,6 +781,8 @@ export interface BannerImage {
   url: string;
   /** Объект картинки (партия 58а): ширины для srcset, форма, фокус. */
   ref?: import('@/kit/imageRef').ImageRef | null;
+  /** Исходник — для точки главного (партия 58в). */
+  original_url?: string;
 }
 
 export interface Banner {

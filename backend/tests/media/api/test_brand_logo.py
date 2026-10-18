@@ -125,14 +125,12 @@ def test_svg_is_brand_only(cms):
     assert response.json()["code"] == "unsupported_media"
 
 
-def test_svg_is_not_cropped(cms):
+def test_svg_has_no_focus_point(cms):
+    """Вектор показывается целиком — точка главного ему не нужна (партия 58в)."""
     asset_id = _upload_svg(cms, HOSTILE_SVG).json()["id"]
-    response = cms.put(
-        f"/api/v1/cms/media/{asset_id}/crop",
-        {"crop": {"x": 0, "y": 0, "w": 0.5, "h": 0.5}, "ratio": 1},
-    )
+    response = cms.put(f"/api/v1/cms/media/{asset_id}/focus", {"x": 0.2, "y": 0.2})
     assert response.status_code == 422
-    assert response.json()["code"] == "svg_no_crop"
+    assert response.json()["code"] == "svg_no_focus"
 
 
 @pytest.mark.parametrize("where", ["form", "query"])

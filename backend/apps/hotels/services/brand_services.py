@@ -131,9 +131,13 @@ def _logo_as_uploaded(url: str) -> str:
 
     # Перенарезка держит прежний ряд под `old-<имя>` — строка в токенах могла
     # остаться от него.
+    # Уборка прежней нарезки (`clean_old_variants`, партия 58в) удаляет файлы,
+    # но держит их имена в `variants["retired"]` — адрес из токенов и из истории
+    # версий бренда по-прежнему ведёт к исходнику.
     asset = (
         MediaAsset.objects.filter(**{f"variants__{parts[3]}": key}).first()
         or MediaAsset.objects.filter(**{f"variants__old-{parts[3]}": key}).first()
+        or MediaAsset.objects.filter(variants__retired__contains=[key]).first()
     )
     return asset.original_url() if asset is not None else url
 

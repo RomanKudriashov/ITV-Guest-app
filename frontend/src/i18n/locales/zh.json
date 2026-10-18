@@ -229,22 +229,44 @@
     "uploadFailed": "上传失败",
     "processingFailed": "图片处理失败",
     "processingTimeout": "图片处理时间过长",
-    "where": {
-      "hotelCover": "门店页头图：酒店名称、时钟和天气叠加其上。宽屏上只能看到中间一条。",
-      "homeTile": "首页展示卡片。",
-      "categoryCover": "分区页头的图片。宽屏上只能看到中间一条。",
-      "venue": "列表中的场所卡片以及场所内的页头。",
-      "item": "菜品卡片，以及列表中的卡片。",
-      "logo": "客人页头中的标志。裁剪用于去掉标志周围的留白，而不是把它塞进某个比例。",
-      "background": "整个门店页面的背景。宽屏上只能看到中间一条。"
+    "role": {
+      "item": "菜单卡片、拼图、菜品窗口和搜索。",
+      "info": "信息页卡片及其窗口。",
+      "venue": "场所页眉、列表卡片和首页卡片。",
+      "categoryCover": "栏目页眉和首页卡片。",
+      "background": "店面背景、入口页面、首页封面和栏目页眉。",
+      "banner": "首页横幅。",
+      "logo": "客人页眉中的标志——按上传原样完整显示。"
     },
-    "crop": {
-      "title": "取景",
-      "apply": "应用取景",
-      "open": "选择取景",
-      "zoom": "缩放",
-      "safeHint": "虚线框内是宽屏上仍可见的部分，框外在宽屏上会被裁掉。"
-    }
+    "focus": {
+      "title": "照片的重点",
+      "open": "标记重点",
+      "hint": "点击照片中的重点——人脸、菜品或招牌。下面每个位置都会让这一点保持可见。",
+      "aria": "重点：方向键移动，Shift 大步移动，Enter 保存",
+      "value": "重点：横向 {{x}}，纵向 {{y}}",
+      "keys": "方向键移动，Shift 大步，Enter 保存",
+      "save": "保存"
+    },
+    "place": {
+      "screenWide": "1440 屏幕",
+      "screenPhone": "390 手机",
+      "card": "菜单卡片",
+      "mosaic": "拼图卡片",
+      "mosaicLarge": "大拼图卡片",
+      "window": "菜品窗口",
+      "search": "搜索和购物车缩略图",
+      "venueHeader": "场所页眉",
+      "venueTile": "场所列表卡片",
+      "homeTile": "首页卡片",
+      "homeTileLarge": "首页大卡片",
+      "sectionHeader": "栏目页眉",
+      "backdrop": "店面背景和入口页面",
+      "homeHero": "首页封面",
+      "banner": "横幅",
+      "wholeShrunk": "只能看到 {{share}}%——照片将完整显示在模糊背景上",
+      "needOriginal": "需要至少 {{px}} 像素宽的原图"
+    },
+    "weakOriginal": "原图宽 {{have}} 像素：在大屏幕上会显得发虚。最好 {{need}} 像素以上——如有更大的请上传。"
   },
   "modifiers": {
     "title": "加料分组",
@@ -1535,7 +1557,10 @@
         "request": "服务申请",
         "room": "客房控制"
       },
-      "noVenue": "酒店没有面向客人的场所，此屏幕没有可展示的内容。"
+      "noVenue": "酒店没有面向客人的场所，此屏幕没有可展示的内容。",
+      "venue": "场所",
+      "venueItems_other": "{{count}} 项",
+      "venueEmpty": "菜单为空"
     },
     "tabs": {
       "brand": "品牌",

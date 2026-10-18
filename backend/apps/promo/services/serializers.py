@@ -112,6 +112,8 @@ def cms_payload(banner: Banner, *, stats: dict | None = None) -> dict:
                 "asset_id": str(link.asset_id),
                 "url": image_url(link.asset, variant="full"),
                 "ref": image_ref(link.asset),
+                # Исходник — для точки главного в редакторе баннера (партия 58в).
+                "original_url": link.asset.original_url() if link.asset else "",
             }
             for link in banner.images.all()
         ],

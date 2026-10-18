@@ -13,8 +13,8 @@ from ninja import File, Form, Router
 from ninja.files import UploadedFile
 
 from apps.core.errors import ValidationError
-from apps.media.schemas import CropIn, MediaOut
-from apps.media.services import get_asset, serialize_asset, set_crop, upload_asset
+from apps.media.schemas import FocusIn, MediaOut
+from apps.media.services import get_asset, serialize_asset, set_focus, upload_asset
 
 router = Router(tags=["cms"])
 
@@ -100,24 +100,11 @@ def get_media(request: HttpRequest, asset_id: str):
     return serialize_asset(get_asset(asset_id))
 
 
-@router.put("/media/{asset_id}/crop", response=MediaOut, summary="Выбрать кадр")
-def set_media_crop(request: HttpRequest, asset_id: str, payload: CropIn):
+@router.put("/media/{asset_id}/focus", response=MediaOut, summary="Точка главного")
+def set_media_focus(request: HttpRequest, asset_id: str, payload: FocusIn):
     """
-    Кадр хранится КООРДИНАТАМИ, оригинал не переписывается никогда.
-
-    Поэтому обрезку можно переоткрыть через неделю и увидеть всю картинку:
-    варианты каждый раз режутся заново из исходника, а не из прошлого
-    результата. `crop: null` снимает рамку и возвращает кадр целиком.
-
-    Ответ приходит со статусом `pending` — как и при загрузке: нарезка идёт в
-    воркере, и до её конца на экране честно старые варианты.
+    Точка главного (партия 58в) вместо рамки кадра: каждое место показа само
+    кладёт фото так, чтобы эта точка осталась в кадре. Нарезка не перезапускается
+    — варианты от точки не зависят, ответ сразу `ready`.
     """
-    if payload.crop is not None:
-        missing = {"x", "y", "w", "h"} - set(payload.crop)
-        if missing:
-            raise ValidationError(
-                "В рамке не хватает полей: " + ", ".join(sorted(missing)),
-                field="crop",
-                code="bad_crop",
-            )
-    return serialize_asset(set_crop(asset_id, crop=payload.crop, ratio=payload.ratio))
+    return serialize_asset(set_focus(asset_id, x=payload.x, y=payload.y))

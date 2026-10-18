@@ -230,22 +230,44 @@
     "uploadFailed": "Upload failed",
     "processingFailed": "Image processing failed",
     "processingTimeout": "Image processing is taking too long",
-    "where": {
-      "hotelCover": "Storefront header: hotel name, clock and weather sit on top. On a wide screen only the central strip is visible.",
-      "homeTile": "Tile on the main storefront.",
-      "categoryCover": "The frame in a section header. On a wide screen only the central strip is visible.",
-      "venue": "Venue tile in the list and the header inside it.",
-      "item": "The dish card and the card in the list.",
-      "logo": "The logo in the guest header. Cropping trims the padding around the mark, it does not fit it into a format.",
-      "background": "Background behind the whole storefront. On a wide screen only the central strip is visible."
+    "role": {
+      "item": "Menu card, mosaic, item window and search.",
+      "info": "Info page card and its window.",
+      "venue": "Venue header, list tile and home tile.",
+      "categoryCover": "Section header and home tile.",
+      "background": "Storefront background, entry screen, home cover and section headers.",
+      "banner": "Home banner.",
+      "logo": "Logo in the guest header — served as uploaded, whole."
     },
-    "crop": {
-      "title": "Frame",
-      "apply": "Apply frame",
-      "open": "Choose the frame",
-      "zoom": "Zoom",
-      "safeHint": "The dashed box is what stays visible on a wide screen. Everything outside it is cut off there."
-    }
+    "focus": {
+      "title": "Main point of the photo",
+      "open": "Mark the main point",
+      "hint": "Click the main thing in the photo — a face, a dish, a sign. Every place below lays the photo out so this point stays visible.",
+      "aria": "Main point: arrows move it, Shift moves further, Enter saves",
+      "value": "Main point: {{x}} across, {{y}} down",
+      "keys": "arrows move, Shift moves further, Enter saves",
+      "save": "Save"
+    },
+    "place": {
+      "screenWide": "1440 screen",
+      "screenPhone": "390 phone",
+      "card": "Menu card",
+      "mosaic": "Mosaic tile",
+      "mosaicLarge": "Large mosaic tile",
+      "window": "Item window",
+      "search": "Search and cart thumbnail",
+      "venueHeader": "Venue header",
+      "venueTile": "Venue list tile",
+      "homeTile": "Home tile",
+      "homeTileLarge": "Large home tile",
+      "sectionHeader": "Section header",
+      "backdrop": "Storefront background and entry screen",
+      "homeHero": "Home cover",
+      "banner": "Banner",
+      "wholeShrunk": "Only {{share}}% visible — the photo goes whole on a blurred backdrop",
+      "needOriginal": "Needs an original of at least {{px}} px"
+    },
+    "weakOriginal": "The original is {{have}} px: on a large screen the photo will look soft. {{need}} px or more is better — upload a larger one if you have it."
   },
   "modifiers": {
     "title": "Modifier groups",
@@ -1546,7 +1568,11 @@
         "request": "Request",
         "room": "Room control"
       },
-      "noVenue": "The hotel has no guest-facing venues — there is nothing to show on this screen."
+      "noVenue": "The hotel has no guest-facing venues — there is nothing to show on this screen.",
+      "venue": "Venue",
+      "venueItems_one": "{{count}} item",
+      "venueItems_other": "{{count}} items",
+      "venueEmpty": "empty menu"
     },
     "tabs": {
       "brand": "Brand",

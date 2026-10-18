@@ -34,6 +34,7 @@ import { SelectField } from '@/components/SelectField';
 import { PreviewStage } from './PreviewStage';
 import { PREVIEW_SCREENS, resolveRoute, type PreviewScreenId } from './previewScreens';
 import { usePreviewData } from './usePreviewData';
+import { fetchPreviewScreen } from '@/api/brand';
 
 /**
  * НАСТОЯЩИЕ РАЗМЕРЫ УСТРОЙСТВ, а не круглые числа.
@@ -87,7 +88,30 @@ export function BrandPreview({
     [screenId],
   );
   const language = rtl ? 'ar' : appLanguage;
-  const { client, isLoading, error, venue, hotel, item } = usePreviewData(screen, language);
+  /*
+    ЗАВЕДЕНИЕ ПОКАЗА (партия 58в). По умолчанию выбирает сервер — первое с
+    позициями; оператор может открыть любое. Список с числом позиций: видно,
+    у какого заведения меню пустое.
+  */
+  const [venueCode, setVenueCode] = useState<string | null>(null);
+  const [venueOptions, setVenueOptions] = useState<Array<{ code: string; title: string; items: number }>>([]);
+  useEffect(() => {
+    let alive = true;
+    void fetchPreviewScreen('venue_options', { lang: language })
+      .then((data) => {
+        if (alive) setVenueOptions((data as { venues?: typeof venueOptions }).venues ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [language]);
+  const usesVenue = screen.route.includes(':venue');
+  const { client, isLoading, error, venue, hotel, item } = usePreviewData(
+    screen,
+    language,
+    usesVenue ? venueCode : null,
+  );
 
   // Адрес собирается ПОСЛЕ ответа: код заведения называет сервер. `null` —
   // гостевых заведений у отеля нет, и показывать этот экран нечем.
@@ -176,6 +200,23 @@ export function BrandPreview({
             testId: `brand-preview-screen-${row.id}`,
           }))}
         />
+
+        {usesVenue && venueOptions.length > 1 ? (
+          <SelectField<string>
+            size="small"
+            fullWidth={false}
+            label={t('brand.preview.venue')}
+            value={venue ?? venueCode ?? venueOptions[0].code}
+            onChange={setVenueCode}
+            sx={{ minWidth: 220 }}
+            testId="brand-preview-venue"
+            options={venueOptions.map((row) => ({
+              value: row.code,
+              label: row.items ? `${row.title} · ${t('brand.preview.venueItems', { count: row.items })}` : `${row.title} · ${t('brand.preview.venueEmpty')}`,
+              testId: `brand-preview-venue-${row.code}`,
+            }))}
+          />
+        ) : null}
 
         <ToggleButtonGroup
           size="small"

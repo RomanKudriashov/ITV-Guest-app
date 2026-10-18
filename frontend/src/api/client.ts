@@ -21,8 +21,23 @@ export const WS_BASE = '/ws/v1';
 export const TOKEN_STORAGE_KEY = 'itv.cms.access';
 export const REFRESH_STORAGE_KEY = 'itv.cms.refresh';
 
+/**
+ * Отель в деве (тенант по заголовку и параметру сокета). Только в dev-сборке
+ * его можно переопределить ключом `itv.dev.hotel`: e2e гоняют проверки,
+ * правящие настройки, на своём отеле прогона (партия 58в), и сокеты тоже должны
+ * идти туда. Продакшн-сборка ключ не читает — отель там определяет адрес.
+ */
+function devHotelOverride(): string | null {
+  if (!import.meta.env.DEV) return null;
+  try {
+    return window.localStorage.getItem('itv.dev.hotel');
+  } catch {
+    return null;
+  }
+}
+
 export const HOTEL_SUBDOMAIN: string =
-  (import.meta.env.VITE_HOTEL_SUBDOMAIN as string | undefined) || 'crystal';
+  devHotelOverride() || (import.meta.env.VITE_HOTEL_SUBDOMAIN as string | undefined) || 'crystal';
 
 /**
  * Сессия CMS — на общем механизме (`auth/session`), том же, что у консоли

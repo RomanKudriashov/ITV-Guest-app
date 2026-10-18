@@ -27,12 +27,10 @@ export type Translated = Record<string, string>;
 export type MediaKind = 'item' | 'category' | 'brand' | 'banner';
 export type MediaStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
-/** Рамка кадра в ДОЛЯХ оригинала (0..1) — не в пикселях. */
-export interface CropRect {
+/** Точка главного в ДОЛЯХ оригинала (0..1) — не в пикселях (партия 58в). */
+export interface FocusPoint {
   x: number;
   y: number;
-  w: number;
-  h: number;
 }
 
 export interface MediaAsset {
@@ -41,16 +39,13 @@ export interface MediaAsset {
   thumb_url?: string;
   /** Объект картинки (партия 58а): ширины для srcset, форма, фокус, цвет. */
   ref?: import('@/kit/imageRef').ImageRef | null;
-  /** Точка фокуса (партия 58а), доли кадра. */
-  focus?: { x: number; y: number } | null;
+  /** Точка главного (партия 58а/58в), доли кадра. */
+  focus?: FocusPoint | null;
   status: MediaStatus;
   original_filename?: string;
   sort_order?: number;
-  /** Исходник без кадрирования — только для редактора кадра. */
+  /** Исходник — только для редактора точки главного. */
   original_url?: string;
-  /** Выбранная рамка. null — кадр не выбирали, картинка идёт целиком. */
-  crop?: CropRect | null;
-  crop_ratio?: number | null;
 }
 
 export interface StaffUser {

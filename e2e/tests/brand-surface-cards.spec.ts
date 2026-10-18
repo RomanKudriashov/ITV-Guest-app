@@ -1,5 +1,5 @@
 import { type APIRequestContext, type Browser, type Page } from '@playwright/test'
-import { expect, test } from './fixtures'
+import { expect, test, roomControlLive } from './fixtures'
 
 import { API, DEMO_ROOM, HOTEL } from './helpers'
 import { brandSession, guestPage } from './brandGuest'
@@ -98,9 +98,11 @@ async function walk(browser: Browser, request: APIRequestContext): Promise<Recor
     await expect(page.getByTestId(`guest-order-card-${orderId}`).or(page.locator('main')).first()).toBeVisible()
     await page.waitForTimeout(800)
     screens['заказы'] = await page.evaluate(MEASURE)
-    await page.goto('/room')
-    await expect(page.getByTestId('room-panel-quick')).toBeVisible({ timeout: 20_000 })
-    screens['номер'] = await page.evaluate(MEASURE)
+    if (roomControlLive()) {
+      await page.goto('/room')
+      await expect(page.getByTestId('room-panel-quick')).toBeVisible({ timeout: 20_000 })
+      screens['номер'] = await page.evaluate(MEASURE)
+    }
   } finally {
     await request.post(`${API}/api/v1/guest/order/${orderId}/cancel`, {
       headers: { Authorization: `Bearer ${token}`, 'X-Hotel-Subdomain': HOTEL },

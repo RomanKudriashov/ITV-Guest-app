@@ -13,9 +13,10 @@ import Button from '@mui/material/Button';
 
 import { uploadBrandFont } from '@/api/brand';
 import { SelectField } from '@/components/SelectField';
-import { ImageUploader, type EditableImage } from '@/components/ImageUploader';
+import { ImageUploader, mediaToEditable, type EditableImage } from '@/components/ImageUploader';
 import type { ImageRef } from '@/kit/imageRef';
-import type { SurfaceKey } from '@/media/surfaces';
+import type { MediaRole } from '@/media/places';
+import { fetchMedia } from '@/api/cms';
 import type { BackgroundKind, SurfaceStyle, ThemeMode } from '@/theme/tokens';
 import { patternDataUri } from '@/theme/brandPatterns';
 import type { BrandDraft } from './useBrandDraft';
@@ -145,6 +146,7 @@ function LogoField({
   testId,
   surface,
   imageRef,
+  assetId,
 }: {
   url: string | undefined;
   /**
@@ -159,8 +161,13 @@ function LogoField({
    */
   onChangeUrl: (url: string | undefined, assetId?: string) => void;
   testId: string;
-  /** Где это увидит гость: задаёт и рамку кадра, и вид превью. */
-  surface: SurfaceKey;
+  /** Роль фото: места показа, точка главного, вид превью (партия 58в). */
+  surface: MediaRole;
+  /**
+   * Ассет картинки (фон бренда хранится ссылкой). Есть — загрузчик подтянет
+   * исходник и объект, и у фона появится точка главного (партия 58в).
+   */
+  assetId?: string;
 }) {
   // An empty string from the server means "no logo" — treat it and `undefined`
   // as the same value so seeding never looks like a real edit.
@@ -169,6 +176,22 @@ function LogoField({
     u ? [{ id: u, url: u, status: 'ready', ref: imageRef ?? null }] : [];
   const [images, setImages] = useState<EditableImage[]>(() => seed(url));
   const lastEmitted = useRef<string | undefined>(url);
+
+  // Фон по ссылке на ассет — подтянуть его исходник и объект: без них точку
+  // главного ставить не по чему. Адрес оставляем прежний, чтобы сохранение не
+  // увидело правки там, где её нет.
+  useEffect(() => {
+    if (!assetId || !url) return;
+    let alive = true;
+    void fetchMedia(assetId)
+      .then((asset) => {
+        if (alive) setImages([{ ...mediaToEditable(asset), url }]);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [assetId, url]);
 
   useEffect(() => {
     if (norm(url) !== norm(lastEmitted.current)) {
@@ -193,7 +216,7 @@ function LogoField({
       kind="brand"
       multiple={false}
       testId={testId}
-      surface={surface}
+      role={surface}
     />
   );
 }
@@ -489,6 +512,7 @@ export function BrandEditor({ brand, mode }: BrandEditorProps) {
               // Объект — только при картинке отеля по ссылке на ассет: адрес из
               // пресета без ассета со старым объектом не совпадёт.
               imageRef={bg?.imageAssetId ? bg?.imageRef : null}
+              assetId={bg?.imageAssetId || undefined}
               onChangeUrl={(u, assetId) =>
                 // Пустая строка, а не undefined: id надо УБРАТЬ, когда картинку
                 // сняли, иначе сервер продолжит собирать адрес по старой ссылке.

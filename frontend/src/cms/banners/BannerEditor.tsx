@@ -15,6 +15,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CenterFocusStrongOutlinedIcon from '@mui/icons-material/CenterFocusStrongOutlined';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -24,6 +25,7 @@ import {
   updateBanner,
   uploadMedia,
   type Banner,
+  type BannerImage,
 } from '@/api/cms';
 import { fetchRoomCategories } from '@/api/hotelAdmin';
 import { MultiSelectField, SelectField } from '@/components/SelectField';
@@ -31,6 +33,8 @@ import { fetchServices } from '@/cms/services/api';
 import { useBootstrap, useContentLanguages } from '@/hooks/useBootstrap';
 import { DateField, TimeField } from '@/components/DateField';
 import { refImgProps } from '@/media/refImg';
+import { FocusEditor } from '@/media/FocusEditor';
+import { setMediaFocus } from '@/api/cms';
 
 /**
  * Форма баннера: что показать, куда вести и кому показывать.
@@ -64,6 +68,18 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
   const [draft, setDraft] = useState<Partial<Banner>>(banner ?? EMPTY);
   const [images, setImages] = useState(banner?.images ?? []);
   const [error, setError] = useState<string | null>(null);
+  /** Кадр баннера, у которого ставят точку главного (партия 58в). */
+  const [focusing, setFocusing] = useState<BannerImage | null>(null);
+
+  const focus = useMutation({
+    // Точка — у АССЕТА картинки (`asset_id`), не у строки привязки к баннеру.
+    mutationFn: ({ id, point }: { id: string; point: { x: number; y: number } }) => setMediaFocus(id, point),
+    onSuccess: (asset) => {
+      setImages((prev) => prev.map((image) => (image.asset_id === asset.id ? { ...image, ref: asset.ref ?? image.ref } : image)));
+      setFocusing(null);
+    },
+    onError: (cause) => setError(cause instanceof Error ? cause.message : t('banners.saveFailed')),
+  });
 
   const categories = useQuery({ queryKey: ['cms', 'rooms', 'categories'], queryFn: fetchRoomCategories });
   const services = useQuery({ queryKey: ['cms', 'services', 'for-banner'], queryFn: () => fetchServices() });
@@ -182,6 +198,17 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
                   >
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
+                  {image.original_url && image.ref ? (
+                    <IconButton
+                      size="small"
+                      onClick={() => setFocusing(image)}
+                      aria-label={t('media.focus.open')}
+                      data-testid={`media-focus-${image.id}`}
+                      sx={{ position: 'absolute', top: 0, insetInlineStart: 0, bgcolor: 'background.paper' }}
+                    >
+                      <CenterFocusStrongOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  ) : null}
                 </Box>
               ))}
               <Button component="label" variant="outlined" size="small" data-testid="cms-banner-upload">
@@ -198,6 +225,18 @@ export function BannerEditor({ banner, onClose, onSaved }: Props) {
               </Button>
             </Stack>
           )}
+
+          {focusing && focusing.original_url && focusing.ref ? (
+            <FocusEditor
+              open
+              src={focusing.original_url}
+              image={focusing.ref}
+              role="banner"
+              busy={focus.isPending}
+              onCancel={() => setFocusing(null)}
+              onSave={(point) => focus.mutate({ id: focusing.asset_id, point })}
+            />
+          ) : null}
 
           <Divider textAlign="left">
             <Typography variant="caption">{t('banners.actionLabel')}</Typography>

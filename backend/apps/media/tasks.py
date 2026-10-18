@@ -44,10 +44,6 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
         asset.status = MediaAsset.Status.PROCESSING
         asset.save(update_fields=["status", "updated_at"])
 
-        # ПОД КАКОЙ КАДР РЕЖЕМ. Запоминаем до работы: пока идёт нарезка,
-        # человек может выбрать другой кадр и поставить вторую задачу.
-        rendered_for = asset.crop
-
         try:
             raw = storage.get_bytes(asset.object_key)
             variants = _render_variants(raw, asset)
@@ -57,24 +53,9 @@ def process_media_asset(self, asset_id: str, hotel_id: str) -> dict:
             asset.save(update_fields=["status", "error", "updated_at"])
             raise
 
-        # УСТАРЕВШАЯ НАРЕЗКА НЕ ПУБЛИКУЕТСЯ.
-        #
-        # Загрузка ставит первую задачу, обрезка — вторую, и порядок их
-        # завершения ничем не задан: первая (по целому кадру) успевает
-        # финишировать позже и затирает результат второй. На экране после этого
-        # кадр, который человек не выбирал, — и повторить это нельзя, потому что
-        # зависит от того, кто из воркеров был быстрее.
-        #
-        # Сверяем кадр, под который резали, с тем, что в базе СЕЙЧАС. Разошлись
-        # — наш результат устарел: молча уходим и не трогаем ни варианты, ни
-        # статус. Свежая задача доведёт дело сама.
-        current_crop = (
-            MediaAsset.objects.filter(pk=asset_id).values_list("crop", flat=True).first()
-        )
-        if current_crop != rendered_for:
-            logger.info("Ассет %s: кадр сменился во время нарезки, результат отброшен", asset_id)
-            return {"status": "superseded"}
-
+        # Сверки «кадр сменился во время нарезки» больше нет (партия 58в):
+        # варианты режутся из ЦЕЛОГО оригинала и от выбора человека не зависят —
+        # точка главного меняет только `focus`, нарезку она не трогает.
         asset.variants = variants
         asset.status = MediaAsset.Status.READY
         asset.error = ""
@@ -125,25 +106,6 @@ def _average_color(image) -> str:
     tiny = image.convert("RGB").resize((1, 1), Image.Resampling.BOX)
     r, g, b = tiny.getpixel((0, 0))
     return f"#{r:02x}{g:02x}{b:02x}"
-
-
-def focus_from_crop(crop: dict | None) -> dict:
-    """
-    Фокус из старого кадра — центр его рамки (партия 58а). Нет кадра — центр.
-
-    Значения подрезаются по границам тем же правилом, что резала рамка: кадр,
-    уехавший за край, — ошибка клиента, а не повод уронить обработку.
-    """
-    if not crop:
-        return {"x": 0.5, "y": 0.5}
-    try:
-        x = min(max(float(crop.get("x", 0.0)), 0.0), 1.0)
-        y = min(max(float(crop.get("y", 0.0)), 0.0), 1.0)
-        w = min(max(float(crop.get("w", 1.0)), 0.0), 1.0 - x)
-        h = min(max(float(crop.get("h", 1.0)), 0.0), 1.0 - y)
-    except (TypeError, ValueError):
-        return {"x": 0.5, "y": 0.5}
-    return {"x": round(x + w / 2, 4), "y": round(y + h / 2, 4)}
 
 
 def target_widths(original_width: int) -> list[int]:

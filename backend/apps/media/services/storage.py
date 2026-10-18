@@ -117,6 +117,14 @@ def delete_objects(keys: list[str]) -> dict[str, list[str]]:
     return {"deleted": deleted, "failed": failed}
 
 
+def object_size(key: str) -> int:
+    """Размер объекта в байтах; объекта нет — 0 (уборке это значит «уже убран»)."""
+    try:
+        return int(get_client().stat_object(settings.MINIO_BUCKET, key).size or 0)
+    except S3Error:
+        return 0
+
+
 def list_keys(prefix: str = "") -> list[str]:
     """
     Ключи объектов в бакете. Нужен ревизору: сверять хранилище с базой можно

@@ -2684,16 +2684,24 @@ class Command(BaseCommand):
         if Order.objects.filter(execution_point__code="room_service", parent__isnull=True).exists():
             return  # демо-заказ уже есть
 
+        from apps.orders.services.services import OrderValidationError
+
         _raw, token_hash = GuestSession.issue_token()
         session = GuestSession.objects.create(
             room=room, token_hash=token_hash, trust=TrustLevel.ROOM_SCANNED,
             expires_at=GuestSession.default_expiry(),
         )
-        create_order(
-            OrderInput(
-                lines=[OrderLineInput(item_id=str(dish.pk)), OrderLineInput(item_id=str(cocktail.pk))],
-                service_code="room_service",
-                room_id=str(room.pk),
-            ),
-            guest_session=session,
-        )
+        try:
+            create_order(
+                OrderInput(
+                    lines=[OrderLineInput(item_id=str(dish.pk)), OrderLineInput(item_id=str(cocktail.pk))],
+                    service_code="room_service",
+                    room_id=str(room.pk),
+                ),
+                guest_session=session,
+            )
+        except OrderValidationError as exc:
+            # Бар работает 16:00–02:00: ночью коктейль недоступен, и сид падал
+            # целиком. Демо-заказ — украшение, а не основа отеля: пропускаем его
+            # (повторный сид днём досоздаст), отель заводится в любое время.
+            self.stdout.write(f"Демо-заказ рум-сервиса не заведён: {exc}")

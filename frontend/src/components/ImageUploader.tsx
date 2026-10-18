@@ -8,6 +8,7 @@ import {
   type SetStateAction,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -19,7 +20,7 @@ import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import CropIcon from '@mui/icons-material/Crop';
+import CenterFocusStrongOutlinedIcon from '@mui/icons-material/CenterFocusStrongOutlined';
 import {
   DndContext,
   KeyboardSensor,
@@ -39,11 +40,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { ApiError } from '@/api/client';
-import { fetchMedia, setMediaCrop, uploadMedia } from '@/api/cms';
-import type { CropRect, MediaKind, MediaStatus } from '@/api/types';
-import { CropDialog } from '@/media/CropDialog';
+import { fetchMedia, setMediaFocus, uploadMedia } from '@/api/cms';
+import type { FocusPoint, MediaKind, MediaStatus } from '@/api/types';
+import { FocusEditor } from '@/media/FocusEditor';
 import { SurfacePreview } from '@/media/SurfacePreview';
-import { SURFACES, type SurfaceKey } from '@/media/surfaces';
+import { ROLE_PLACES, roleNeedWidth, roleThumbRatio, type MediaRole } from '@/media/places';
 import type { ImageRef } from '@/kit/imageRef';
 
 /** Media as held by an editor: a server asset plus an optional local preview. */
@@ -57,10 +58,8 @@ export interface EditableImage {
   localPreview?: string;
   /** Upload/processing failure message. */
   error?: string;
-  /** Исходник без кадрирования — то, что открывает редактор кадра. */
+  /** Исходник — то, по чему ставится точка главного. */
   original_url?: string;
-  /** Выбранная рамка в долях оригинала. null/undefined — кадр целиком. */
-  crop?: CropRect | null;
   /** Объект картинки (партия 58а) — превью рисует его, как витрина. */
   ref?: ImageRef | null;
 }
@@ -100,7 +99,6 @@ export function mediaToEditable(asset: {
   thumb_url?: string;
   status: MediaStatus;
   original_url?: string;
-  crop?: CropRect | null;
   ref?: ImageRef | null;
 }): EditableImage {
   return {
@@ -109,7 +107,6 @@ export function mediaToEditable(asset: {
     thumb_url: asset.thumb_url,
     status: asset.status,
     original_url: asset.original_url,
-    crop: asset.crop ?? null,
     ref: asset.ref ?? null,
   };
 }
@@ -123,14 +120,11 @@ export interface ImageUploaderProps {
   disabled?: boolean;
   testId?: string;
   /**
-   * ГДЕ ЭТО УВИДИТ ГОСТЬ. Задаёт и соотношение кадра, и вид превью.
-   *
-   * Не необязательная украшательство: без неё загрузчик снова показывает
-   * квадратную миниатюру файла — форму, в которой картинка не появляется у
-   * гостя нигде, — и человек одобряет не тот кадр. Оставлено необязательным
-   * только ради плана номера, где кадры парные и обрезка их рассовместит.
+   * РОЛЬ ФОТО — ГДЕ ЕГО УВИДИТ ГОСТЬ (партия 58в, `media/places.ts`). Задаёт
+   * форму миниатюры, места в редакторе точки главного и порог «слабого
+   * оригинала». Необязательна только ради плана номера: там кадры парные.
    */
-  surface?: SurfaceKey;
+  role?: MediaRole;
 }
 
 export function ImageUploader({
@@ -140,14 +134,14 @@ export function ImageUploader({
   multiple = true,
   disabled = false,
   testId = 'image-uploader',
-  surface,
+  role,
 }: ImageUploaderProps) {
   const { t } = useTranslation();
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Картинка, у которой сейчас правят кадр. */
-  const [cropping, setCropping] = useState<EditableImage | null>(null);
-  const [cropBusy, setCropBusy] = useState(false);
+  /** Картинка, у которой сейчас ставят точку главного. */
+  const [focusing, setFocusing] = useState<EditableImage | null>(null);
+  const [focusBusy, setFocusBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const objectUrls = useRef<string[]>([]);
   const mounted = useRef(true);
@@ -191,8 +185,7 @@ export function ImageUploader({
             thumb_url: asset.thumb_url,
             status: asset.status,
             original_url: asset.original_url,
-            crop: asset.crop ?? null,
-            ref: asset.ref ?? null,
+                    ref: asset.ref ?? null,
           });
           if (asset.status === 'ready') return;
           if (asset.status === 'failed') {
@@ -214,7 +207,7 @@ export function ImageUploader({
         setError(t(kind === 'brand' ? 'media.unsupportedTypeBrand' : 'media.unsupportedType'));
         return;
       }
-      if (surface === 'logo' && file.size > LOGO_MAX_BYTES) {
+      if (role === 'logo' && file.size > LOGO_MAX_BYTES) {
         setError(t('media.logoTooLarge'));
         return;
       }
@@ -237,7 +230,7 @@ export function ImageUploader({
       onChange((prev) => (multiple ? [...prev, placeholder] : [placeholder]));
 
       try {
-        const asset = await uploadMedia(file, kind, surface === 'logo' ? 'logo' : undefined);
+        const asset = await uploadMedia(file, kind, role === 'logo' ? 'logo' : undefined);
         if (!mounted.current) return;
         // Swap the temp entry for the real media id, keeping the local preview.
         onChange((prev) =>
@@ -249,8 +242,7 @@ export function ImageUploader({
                   thumb_url: asset.thumb_url,
                   status: asset.status,
                   original_url: asset.original_url,
-                  crop: asset.crop ?? null,
-                  ref: asset.ref ?? null,
+                                ref: asset.ref ?? null,
                   localPreview,
                 }
               : image,
@@ -265,7 +257,7 @@ export function ImageUploader({
         dropImage(tempId);
       }
     },
-    [dropImage, kind, multiple, onChange, pollUntilReady, surface, t],
+    [dropImage, kind, multiple, onChange, pollUntilReady, role, t],
   );
 
   const handleFiles = useCallback(
@@ -278,27 +270,25 @@ export function ImageUploader({
   );
 
   /*
-    ПРИМЕНИТЬ КАДР. Сервер режет варианты заново ИЗ ОРИГИНАЛА и возвращает
-    ассет в `pending` — дальше обычный опрос, тот же, что после загрузки.
-    Пока идёт нарезка, на экране честно прежний кадр, а не пустое место.
+    СОХРАНИТЬ ТОЧКУ ГЛАВНОГО (партия 58в). Нарезка не перезапускается — ассет
+    приходит `ready` с новым фокусом в объекте картинки, превью сдвигается сразу.
   */
-  const applyCrop = useCallback(
-    async (image: EditableImage, crop: CropRect, ratio: number) => {
-      setCropBusy(true);
+  const applyFocus = useCallback(
+    async (image: EditableImage, focus: FocusPoint) => {
+      setFocusBusy(true);
       try {
-        const asset = await setMediaCrop(image.id, crop, ratio);
+        const asset = await setMediaFocus(image.id, focus);
         if (!mounted.current) return;
-        patchImage(image.id, { status: asset.status, crop: asset.crop ?? crop });
-        setCropping(null);
-        await pollUntilReady(image.id);
-      } catch (cropError) {
+        patchImage(image.id, { status: asset.status, ref: asset.ref ?? image.ref ?? null });
+        setFocusing(null);
+      } catch (focusError) {
         if (!mounted.current) return;
-        setError(cropError instanceof ApiError ? cropError.detail : t('errors.generic'));
+        setError(focusError instanceof ApiError ? focusError.detail : t('errors.generic'));
       } finally {
-        if (mounted.current) setCropBusy(false);
+        if (mounted.current) setFocusBusy(false);
       }
     },
-    [patchImage, pollUntilReady, t],
+    [patchImage, t],
   );
 
   const sensors = useSensors(
@@ -387,7 +377,7 @@ export function ImageUploader({
                 display: 'grid',
                 // Под поверхность, а не под квадрат: превью показывает кадр
                 // гостя, и 120×120 в него не помещается по смыслу.
-                gridTemplateColumns: surface
+                gridTemplateColumns: role
                   ? 'repeat(auto-fill, minmax(240px, 1fr))'
                   : 'repeat(auto-fill, minmax(120px, 1fr))',
                 gap: 1.5,
@@ -398,9 +388,9 @@ export function ImageUploader({
                   key={image.id}
                   image={image}
                   sortable={multiple}
-                  surface={surface}
+                  role={role}
                   onRemove={() => dropImage(image.id)}
-                  onCrop={() => setCropping(image)}
+                  onFocus={() => setFocusing(image)}
                 />
               ))}
             </Box>
@@ -409,19 +399,35 @@ export function ImageUploader({
       ) : null}
 
       {/*
-        Диалог монтируется ТОЛЬКО открытым: библиотека принимает стартовую
-        рамку один раз, при монтировании. Иначе «переоткрыть обрезку» показывало
-        бы кадр целиком вместо прежней рамки.
+        СЛАБЫЙ ОРИГИНАЛ (партия 58в). Ширины не хватает самому крупному месту
+        роли при DPR 2 — предупреждаем словами и числом из мест, но не
+        запрещаем: лучше мягкое фото, чем никакого.
       */}
-      {cropping && surface && cropping.original_url ? (
-        <CropDialog
+      {role
+        ? value.map((image) => {
+            const w = image.ref?.w ?? 0;
+            const h = image.ref?.h ?? 0;
+            if (!w || !h || isTempImage(image) || isVector(image)) return null;
+            const need = roleNeedWidth(role, w, h);
+            if (!need || w >= need) return null;
+            return (
+              <Alert key={`weak-${image.id}`} severity="warning" data-testid={`media-weak-${image.id}`}>
+                {t('media.weakOriginal', { have: w, need })}
+              </Alert>
+            );
+          })
+        : null}
+
+      {/* Редактор монтируется открытым: точка берётся из объекта картинки один раз. */}
+      {focusing && role && focusing.original_url && focusing.ref ? (
+        <FocusEditor
           open
-          src={cropping.original_url}
-          surface={surface}
-          value={cropping.crop}
-          busy={cropBusy}
-          onCancel={() => setCropping(null)}
-          onApply={(crop, ratio) => void applyCrop(cropping, crop, ratio)}
+          src={focusing.original_url}
+          image={focusing.ref}
+          role={role}
+          busy={focusBusy}
+          onCancel={() => setFocusing(null)}
+          onSave={(focus) => void applyFocus(focusing, focus)}
         />
       ) : null}
     </Stack>
@@ -431,15 +437,15 @@ export function ImageUploader({
 function SortableThumb({
   image,
   sortable,
-  surface,
+  role,
   onRemove,
-  onCrop,
+  onFocus,
 }: {
   image: EditableImage;
   sortable: boolean;
-  surface?: SurfaceKey;
+  role?: MediaRole;
   onRemove: () => void;
-  onCrop: () => void;
+  onFocus: () => void;
 }) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -461,7 +467,7 @@ function SortableThumb({
       sx={{
         position: 'relative',
         // Кадр гостя, а не квадрат файла: человек одобряет то, что увидят.
-        aspectRatio: surface ? String(SURFACES[surface].ratio) : '1 / 1',
+        aspectRatio: role ? String(roleThumbRatio(role)) : '1 / 1',
         borderRadius: 2,
         overflow: 'hidden',
         border: 1,
@@ -475,11 +481,11 @@ function SortableThumb({
         вёрстка расходится с гостевой на первой же правке дизайна, и превью
         начинает врать — правдоподобно и потому незаметно.
       */}
-      {surface ? (
+      {role ? (
         <SurfacePreview
           src={src}
           image={ref}
-          surface={surface}
+          role={role}
           caption={false}
           fill
           // Плитка сетки minmax(240px, 1fr): ~316 px на широком окне, во всю
@@ -555,19 +561,23 @@ function SortableThumb({
         )}
         <Box sx={{ display: 'flex' }}>
           {/*
-            Кадр правится, пока есть исходник. У картинок, загруженных ДО
-            появления кроппера, исходник тоже есть — он никуда не девался, —
-            поэтому кнопка работает и у них.
+            Точка главного — у фото с местами показа и исходником. У вектора
+            и логотипа её нет: они показываются целиком.
           */}
-          {surface && image.original_url && !isVector(image) ? (
+          {role &&
+          ROLE_PLACES[role].length &&
+          image.status === 'ready' &&
+          image.original_url &&
+          image.ref?.w &&
+          !isVector(image) ? (
             <IconButton
               size="small"
-              onClick={onCrop}
-              aria-label={t('media.crop.open')}
-              data-testid={`media-crop-${image.id}`}
+              onClick={onFocus}
+              aria-label={t('media.focus.open')}
+              data-testid={`media-focus-${image.id}`}
               sx={{ color: 'primary.contrastText' }}
             >
-              <CropIcon fontSize="small" />
+              <CenterFocusStrongOutlinedIcon fontSize="small" />
             </IconButton>
           ) : null}
           <IconButton

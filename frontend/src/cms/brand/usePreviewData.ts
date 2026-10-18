@@ -47,7 +47,12 @@ export interface PreviewData {
   item: string | null;
 }
 
-export function usePreviewData(screen: PreviewScreen, language: string): PreviewData {
+export function usePreviewData(
+  screen: PreviewScreen,
+  language: string,
+  /** Заведение, выбранное оператором (партия 58в); пусто — выбирает сервер. */
+  venueCode: string | null = null,
+): PreviewData {
   const client = useMemo(
     () =>
       new QueryClient({
@@ -85,7 +90,15 @@ export function usePreviewData(screen: PreviewScreen, language: string): Preview
     setError(null);
 
     const ids: PreviewPayloadId[] = ['hotel', ...screen.payloads];
-    Promise.all(ids.map((id) => fetchPreviewScreen(id).then((data) => [id, data] as const)))
+    /*
+      ЯЗЫК ПОКАЗА — ЯВНО, `?lang=` (партия 58в). Без него сервер брал язык из
+      `Accept-Language` браузера: панель на русском, а названия отеля, заведений
+      и позиций в показе — английские («Crystal Hotel», «Lobby bar»), и наоборот:
+      у Метрополя с панелью на английском — «Ресепшен» рядом с «No services yet».
+      Тексты интерфейса показа и данные отеля — на одном языке, языке показа.
+    */
+    const params = { lang: language, ...(venueCode ? { point: venueCode } : {}) };
+    Promise.all(ids.map((id) => fetchPreviewScreen(id, params).then((data) => [id, data] as const)))
       .then((pairs) => {
         if (!alive) return;
         let point: string | null = null;
@@ -132,7 +145,7 @@ export function usePreviewData(screen: PreviewScreen, language: string): Preview
     return () => {
       alive = false;
     };
-  }, [client, screen, language]);
+  }, [client, screen, language, venueCode]);
 
   return { client, isLoading, error, venue, hotel, item };
 }

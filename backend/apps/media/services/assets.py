@@ -108,11 +108,9 @@ def serialize_asset(asset: MediaAsset | None) -> dict | None:
         "url": asset.url("card"),
         "thumb_url": asset.url("thumb"),
         "original_filename": asset.original_filename,
-        # Исходник и рамка — только для редактора кадра. Гостевые ручки этот
+        # Исходник — только для редактора точки главного. Гостевые ручки этот
         # сериализатор не зовут: он живёт в CMS.
         "original_url": asset.original_url(),
-        "crop": asset.crop,
-        "crop_ratio": asset.crop_ratio,
         "focus": asset.focus or {"x": 0.5, "y": 0.5},
         # Объект картинки (партия 58а): списки и предпросмотры CMS берут файл
         # по ширине места, как витрина.
@@ -120,39 +118,23 @@ def serialize_asset(asset: MediaAsset | None) -> dict | None:
     }
 
 
-def set_crop(asset_id, *, crop: dict | None, ratio: float | None) -> MediaAsset:
+def set_focus(asset_id, *, x: float, y: float) -> MediaAsset:
     """
-    Старый редактор кадра (до партии 58в): записать рамку и ФОКУС по её центру.
+    ТОЧКА ГЛАВНОГО (партия 58в) — то, что не должно уйти из кадра ни в одном
+    месте показа. Сменила рамку: варианты режутся из целого оригинала, а место
+    само кладёт фото по фокусу. Нарезка не нужна — меняется одна точка.
 
-    Вариантов по рамке больше не режем (партия 58а): они — целый оригинал, а
-    место показа кладёт фото по фокусу. Рамка хранится на релиз — редактор
-    переоткрывает её такой, какой человек её оставил.
-
-    Нарезка ставится, только если у ассета ещё старая (`card`/`full` по рамке):
-    тогда он заодно переезжает на ряд ширин.
+    Значения подрезаются в 0..1: точка, уехавшая за край, — ошибка клиента, а
+    не повод сохранить мусор. SVG — отказ словами: вектор показывается целиком.
     """
-    from apps.media.tasks import focus_from_crop, process_media_asset
+    from apps.core.errors import ValidationError
 
     asset = get_asset(asset_id)
     if asset.content_type == "image/svg+xml":
-        # Вектор не режется на варианты — и кадрировать его нечем: рамку
-        # задаёт сам файл. Отказ словами, а не упавшая нарезка (партия 25).
-        from apps.core.errors import ValidationError
-
-        raise ValidationError("SVG не кадрируется — рамку задаёт сам файл", code="svg_no_crop")
-    asset.crop = crop or None
-    asset.crop_ratio = ratio
-    asset.focus = focus_from_crop(asset.crop)
-    fields = ["crop", "crop_ratio", "focus", "updated_at"]
-    legacy = not asset.width_variants()
-    if legacy:
-        asset.status = MediaAsset.Status.PENDING
-        fields.append("status")
-    asset.save(update_fields=fields)
-
-    if legacy:
-        hotel_id = require_hotel_id()
-        transaction.on_commit(lambda: process_media_asset.delay(str(asset.pk), str(hotel_id)))
+        raise ValidationError("SVG показывается целиком — точка главного ему не нужна", code="svg_no_focus")
+    clamp = lambda v: round(min(max(float(v), 0.0), 1.0), 4)  # noqa: E731
+    asset.focus = {"x": clamp(x), "y": clamp(y)}
+    asset.save(update_fields=["focus", "updated_at"])
     return asset
 
 
@@ -168,8 +150,8 @@ def image_ref(asset: MediaAsset | None) -> dict | None:
     сколько фото уцелеет в месте, и при < 60% показывает его целиком.
     `src` — средняя ширина (800 или ближайшая): запасной адрес без srcset.
 
-    Ассет до перенарезки: ширины — его старые `card`/`full`, а форма — его
-    рамки, потому что эти файлы вырезаны по ней.
+    Ассет до перенарезки: ширины — его старые `card`/`full` (вырезанные когда-то
+    по рамке; рамки в базе больше нет — форма считается по оригиналу).
     """
     if asset is None:
         return None
@@ -186,10 +168,6 @@ def image_ref(asset: MediaAsset | None) -> dict | None:
         if thumb and w and widths[0]["w"] > settings.MEDIA_THUMB_WIDTH:
             widths.insert(0, {"w": min(settings.MEDIA_THUMB_WIDTH, w), "url": asset.key_url(thumb)})
     else:
-        crop = asset.crop or None
-        if w and h and crop:
-            w, h = round(w * float(crop.get("w", 1))), round(h * float(crop.get("h", 1)))
-            focus = {"x": 0.5, "y": 0.5}  # файл уже вырезан по рамке
         widths = []
         for name, width in settings.MEDIA_LEGACY_VARIANT_WIDTH.items():
             key = (asset.variants or {}).get(name)
@@ -236,10 +214,11 @@ def object_keys_of(asset: MediaAsset) -> list[str]:
     Вариантов может не быть (нарезка не дошла) — тогда останется один оригинал.
     Пустые значения отбрасываем: ключ, которого нет, удалять нечего.
     """
-    keys = [asset.object_key, *(asset.variants or {}).values()]
+    # `retired` — список имён уже удалённых файлов (партия 58в), не объект.
+    keys = [asset.object_key, *(v for k, v in (asset.variants or {}).items() if k != "retired")]
     seen: list[str] = []
     for key in keys:
-        if key and key not in seen:
+        if key and isinstance(key, str) and key not in seen:
             seen.append(key)
     return seen
 

@@ -144,6 +144,9 @@ export function ChatConversation({
             icon={<CloudOffIcon sx={{ fontSize: 16 }} />}
             label={t('guest.chat.offline')}
             data-testid={`${testIds.root}-offline`}
+            // Своя подложка (партия 58в): контурный чип был прозрачным и после
+            // снятия вуали фона (58б) лежал прямо на фото — контраст 1,0.
+            sx={{ bgcolor: 'background.paper' }}
           />
         </Stack>
       ) : null}

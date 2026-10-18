@@ -1,5 +1,5 @@
 import { type APIRequestContext, type Page } from '@playwright/test'
-import { expect, test } from './fixtures'
+import { expect, roomControlLive, test } from './fixtures'
 
 import { ADMIN, API, apiHeaders, apiToken } from './helpers'
 import { brandSession, guestPage } from './brandGuest'
@@ -188,6 +188,7 @@ test('фон бренда виден на каждом экране гостя',
     for (const width of [390, 1440]) {
       const page = await guestPage(browser, { width, theme: 'light' })
       for (const [name, path, ready] of SCREENS) {
+        if (path === '/room' && !roomControlLive()) continue
         await open(page, path, ready)
         if ((await share(page, [242, 215, 224])) < 0.03) failures.push(`${name} ${width}: фона бренда не видно`)
       }
@@ -210,6 +211,7 @@ for (const theme of ['light', 'dark'] as const) {
       const failures: string[] = []
       let measured = 0
       for (const [name, path, ready] of SCREENS) {
+        if (path === '/room' && !roomControlLive()) continue
         await open(page, path, ready)
         const texts = await textsOnPage(page)
         await page.addStyleTag({ content: 'main * { color: transparent !important; text-shadow: none !important; caret-color: transparent !important }' })

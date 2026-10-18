@@ -359,9 +359,6 @@ def _serialize_item(
     # витрина чужие пиксели не читает.
     first_asset = next((link.asset for link in item.images.all() if link.asset), None)
     image_luminance = getattr(first_asset, "luminance", None) if first_asset else None
-    # Большой размер первого кадра — для srcset витрины и большой плитки
-    # мозаики (партия 57; мозаика берёт его с `object-fit: cover` по центру).
-    image_full = image_url(first_asset, variant="full") if first_asset is not None else ""
     # Нет фото — пустой список: знак без фото рисует витрина (партия 29, п.61).
     images = [url for url in images if url]
 
@@ -371,8 +368,6 @@ def _serialize_item(
         "code": item.code,
         "type": item.type,
         "image_luminance": image_luminance,
-        # УСТАРЕЛО (партия 58а): большой кадр мозаики 57; вместо него `photos`.
-        "image_full": image_full or None,
         "mosaic_large": item.mosaic_large,
         "location_mode": item.location_mode,
         "category_id": str(item.category_id),

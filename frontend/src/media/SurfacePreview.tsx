@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { KitImage } from '@/kit/KitImage';
 import type { ImageRef } from '@/kit/imageRef';
 import { refImgProps } from './refImg';
-import { SURFACES, type SurfaceKey } from './surfaces';
+import { ROLE_PLACES, roleThumbRatio, type MediaRole } from './places';
 
 /**
  * ПРЕВЬЮ — ЭТО ТО, ЧТО УВИДИТ ГОСТЬ, а не миниатюра файла.
@@ -32,7 +32,8 @@ export interface SurfacePreviewProps {
   image?: ImageRef | null;
   /** Ширина места для выбора файла. По умолчанию — ширина превью. */
   sizes?: string;
-  surface: SurfaceKey;
+  /** Роль фото (партия 58в): по ней — форма миниатюры и подпись «где». */
+  role: MediaRole;
   /** Ширина превью в пикселях. По умолчанию — телефонная. */
   width?: number;
   /** Подпись «где это увидит гость». Выключается, когда рядом уже есть своя. */
@@ -46,15 +47,15 @@ export function SurfacePreview({
   src,
   image,
   sizes,
-  surface,
+  role,
   width = 300,
   caption = true,
   fill = false,
   testId = 'surface-preview',
 }: SurfacePreviewProps) {
   const { t } = useTranslation();
-  const spec = SURFACES[surface];
-  const isLogo = surface === 'logo';
+  const first = ROLE_PLACES[role][0];
+  const isLogo = role === 'logo';
   const placeSizes = sizes ?? `${width}px`;
 
   return (
@@ -67,7 +68,7 @@ export function SurfacePreview({
                 position: 'relative',
                 width,
                 maxWidth: '100%',
-                aspectRatio: String(spec.ratio),
+                aspectRatio: String(roleThumbRatio(role)),
                 border: 1,
                 borderColor: 'divider',
               }),
@@ -95,7 +96,7 @@ export function SurfacePreview({
             sizes={placeSizes}
             // Превью показывает место так, как его покажет гость: окно позиции —
             // целиком при обрезке, остальное — заполнено по фокусу.
-            fit={('fit' in spec && spec.fit) || 'fill'}
+            fit={first?.fit ?? 'fill'}
             alt=""
             fill
           />
@@ -104,7 +105,7 @@ export function SurfacePreview({
       {/* Подпись — где именно это появится. Человек не обязан помнить. */}
       {caption ? (
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-          {t(spec.whereKey)}
+          {t(`media.role.${role}`)}
         </Typography>
       ) : null}
     </Box>

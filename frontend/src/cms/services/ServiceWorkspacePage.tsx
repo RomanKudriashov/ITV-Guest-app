@@ -322,7 +322,7 @@ function ScheduleTab({ service }: { service: CmsService }) {
       <Box>
         <Typography variant="subtitle2">{t('services.photo')}</Typography>
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-          {t('media.where.venue')}
+          {t('media.role.venue')}
         </Typography>
         <ServicePhotoField
           image={service.image}
@@ -366,7 +366,7 @@ function ServicePhotoField({
       onChange={setImages}
       kind="item"
       multiple={false}
-      surface="venue"
+      role="venue"
       testId="service-photo"
     />
   );

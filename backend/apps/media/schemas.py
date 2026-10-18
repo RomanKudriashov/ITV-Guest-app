@@ -23,17 +23,15 @@ class MediaOut(Schema):
     url: str
     thumb_url: str
     original_filename: str
-    # Исходник и рамка — для редактора кадра в CMS. Гостю не отдаются.
+    # Исходник — для редактора точки главного в CMS. Гостю не отдаётся.
     original_url: str = ""
-    crop: dict | None = None
-    crop_ratio: float | None = None
     # Точка фокуса и объект картинки (партия 58а).
     focus: dict | None = None
     ref: dict | None = None
 
 
-class CropIn(Schema):
-    """Рамка в долях ОРИГИНАЛА. `crop=None` — снять обрезку, вернуть целиком."""
+class FocusIn(Schema):
+    """Точка главного в долях ОРИГИНАЛА (партия 58в): 0..1 по каждой оси."""
 
-    crop: dict | None = None
-    ratio: float | None = None
+    x: float
+    y: float

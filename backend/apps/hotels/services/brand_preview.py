@@ -31,7 +31,7 @@ from apps.accounts.services.roles import require_cms_access
 from apps.core.errors import ValidationError
 
 
-SCREENS = ("hotel", "home", "venues", "catalog", "item", "locations", "room")
+SCREENS = ("hotel", "home", "venues", "catalog", "item", "locations", "room", "venue_options")
 
 
 def preview_payload(
@@ -71,6 +71,11 @@ def preview_payload(
         # обложки. Тема отсюда показом не применяется: он рисует черновик.
         return serialize_hotel(hotel)
 
+    if screen == "venue_options":
+        # Список для выбора заведения в показе (партия 58в): код, название и
+        # число позиций — оператор видит, у какого заведения меню пустое.
+        return {"venues": _venue_options(hotel, language)}
+
     if screen == "home":
         from apps.catalog.services.home import home_payload
 
@@ -82,7 +87,10 @@ def preview_payload(
     if screen == "venues":
         from apps.catalog.services.showcase import list_venues
 
-        return {"venues": list_venues(hotel, group or "restaurants", language=language, moment=hotel.local_now())}
+        # Та же форма, что у гостевой ручки (`{title, venues}`), а не обёрнутая
+        # ещё раз: обёртка `{"venues": {...}}` давала экрану пустой список —
+        # «Заведений пока нет» у отеля с четырьмя ресторанами (партия 58в).
+        return list_venues(hotel, group or "restaurants", language=language, moment=hotel.local_now())
 
     if screen == "catalog":
         from apps.catalog.services.menu import MenuOptions, build_menu
@@ -163,19 +171,46 @@ def _room_for_preview(hotel, room_number: str):
     return link.room if link else None
 
 
+def _venue_options(hotel, language: str | None) -> list[dict]:
+    """Гостевые заведения по порядку витрины: код точки, название, число позиций."""
+    from apps.catalog.models import Item
+    from apps.core.fields import translate
+    from apps.hotels.models import Service
+
+    out = []
+    for service in (
+        Service.objects.filter(is_active=True, is_guest_facing=True)
+        .select_related("execution_point")
+        .order_by("sort_order", "code")
+    ):
+        code = service.execution_point.code if service.execution_point_id else None
+        if not code:
+            continue
+        items = (
+            Item.objects.filter(
+                is_active=True,
+                category__routes__execution_point__code=code,
+                category__routes__is_active=True,
+            )
+            .distinct()
+            .count()
+        )
+        title = translate(service.public_name, language) or translate(service.execution_point.title, language) or code
+        out.append({"code": code, "title": title, "items": items})
+    return out
+
+
 def _first_venue_code(hotel) -> str | None:
     """
-    Код первого гостевого заведения отеля.
+    Код первого гостевого заведения С ПОЗИЦИЯМИ (партия 58в); нет таких — первого.
+
+    Первое по порядку у Метрополя — «Ресепшен» без позиций: показ витрины
+    заведения открывался пустым «Услуг пока нет». Оператор смотрит, как
+    выглядит меню, — значит, по умолчанию заведение, у которого меню есть.
 
     `None` — гостевых заведений у отеля нет вовсе. Тогда экран показа честно
     говорит «показывать нечем»: это ответ, а не поломка.
     """
-    from apps.hotels.models import Service
-
-    service = (
-        Service.objects.filter(is_active=True, is_guest_facing=True)
-        .select_related("execution_point")
-        .order_by("sort_order", "code")
-        .first()
-    )
-    return service.execution_point.code if service else None
+    options = _venue_options(hotel, None)
+    with_items = next((row["code"] for row in options if row["items"]), None)
+    return with_items or (options[0]["code"] if options else None)

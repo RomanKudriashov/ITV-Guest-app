@@ -49,8 +49,8 @@ def test_guest_item_gets_widths_not_wider_than_the_original(client, cms, crystal
     assert photo["focus"] == {"x": 0.5, "y": 0.5}
     assert photo["color"] and photo["color"].startswith("#") and len(photo["color"]) == 7
     assert photo["src"] == photo["widths"][2]["url"], "запасной адрес — не 800"
-    # Строками — на релиз, для старых клиентов.
-    assert body["images"] and body["image_full"]
+    # Строками — `images` для старых клиентов; `image_full` снят (партия 58в).
+    assert body["images"] and "image_full" not in body
 
 
 def test_series_tops_at_3840_and_fills_the_gap_below_it():
@@ -81,21 +81,20 @@ def test_cms_media_carries_the_ref(cms, crystal):
     assert body["focus"] == {"x": 0.5, "y": 0.5}
 
 
-def test_asset_cut_before_58a_describes_its_frame_not_the_original(cms, crystal):
+def test_asset_before_58a_describes_the_original(cms, crystal):
     """
-    Ассет до перенарезки: файлы `card`/`full` вырезаны по рамке. Форма в объекте —
-    рамки (по ней витрина считает видимую долю), фокус — центр файла.
+    Ассет до перенарезки: только `card`/`full`. Рамки кадра больше нет (партия
+    58в) — форма в объекте по оригиналу, фокус — какой стоит у ассета.
     """
     asset_id = _processed(cms, crystal, (1000, 500))
     with tenant_context(crystal):
         asset = MediaAsset.objects.get(pk=asset_id)
         asset.variants = {"thumb": "x/thumb.webp", "card": "x/card.webp", "full": "x/full.webp"}
-        asset.crop = {"x": 0.0, "y": 0.0, "w": 0.5, "h": 1.0}
         asset.focus = {"x": 0.25, "y": 0.5}
         ref = image_ref(asset)
-    assert (ref["w"], ref["h"]) == (500, 500)
-    assert ref["focus"] == {"x": 0.5, "y": 0.5}
-    assert [x["w"] for x in ref["widths"]] == [500, 500] or [x["w"] for x in ref["widths"]] == [500]
+    assert (ref["w"], ref["h"]) == (1000, 500)
+    assert ref["focus"] == {"x": 0.25, "y": 0.5}
+    assert [x["w"] for x in ref["widths"]] == [600, 1000]
     # Старое имя варианта ведёт в ряд ширин, когда ряд есть: `full` (1200) у
     # оригинала 1000 — его собственная ширина, последняя в ряду (1000 > 800×1,15).
     with tenant_context(crystal):

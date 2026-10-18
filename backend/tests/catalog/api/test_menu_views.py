@@ -60,7 +60,7 @@ def test_menu_view_only_for_product_venues(cms, crystal):
 
 
 def test_item_mosaic_large_and_full_image_reach_the_guest(cms, guest, crystal):
-    """УКУС. «Крупно в мозаике» ставится в CMS и доезжает до гостя; есть большой кадр для srcset."""
+    """УКУС. «Крупно в мозаике» ставится в CMS и доезжает до гостя; большой кадр — объектом в `photos`."""
     with tenant_context(crystal):
         item = Item.objects.filter(is_active=True, type="product").first()
     assert item is not None, "в сиде нет товарной позиции"
@@ -71,8 +71,9 @@ def test_item_mosaic_large_and_full_image_reach_the_guest(cms, guest, crystal):
         catalog = guest.get("/api/guest/catalog?type=product").json()
         found = next(i for c in catalog["categories"] for i in c["items"] if i["id"] == str(item.pk))
         assert found["mosaic_large"] is True
-        # Большой кадр для srcset: есть фото — адрес, нет — пусто (знак рисует витрина).
-        assert "image_full" in found
+        # Устаревший `image_full` снят (партия 58в): большой кадр — объектом в `photos`.
+        assert "image_full" not in found
+        assert "photos" in found
         detail = guest.get(f"/api/guest/item/{item.pk}").json()
         assert detail["mosaic_large"] is True
     finally:

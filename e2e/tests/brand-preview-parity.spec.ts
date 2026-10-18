@@ -1,5 +1,5 @@
 import { type Frame, type Page } from '@playwright/test'
-import { expect, test } from './fixtures'
+import { expect, test, roomControlLive } from './fixtures'
 
 import { ADMIN, signInToCms } from './helpers'
 import { brandSession } from './brandGuest'
@@ -78,14 +78,18 @@ for (const device of ['phone', 'desktop'] as const) {
       await expect(page.getByTestId('brand-preview')).toBeVisible({ timeout: 25_000 })
       await page.getByTestId(`brand-preview-device-${device}`).click()
 
-      // Номер: настоящий номер отеля, а не «недоступно».
-      let frame = await openScreen(page, 'room')
-      await expect(frame.getByTestId('room-pills'), 'номер в показе не нарисован').toBeVisible({ timeout: 25_000 })
-      await expect(frame.getByTestId('room-unavailable')).toHaveCount(0)
-      await expect
-        .poll(() => accentNodes(frame), { message: 'акцент отеля в показе номера не виден' })
-        .not.toEqual([])
-      expect(await foreignText(frame), 'текст номера в показе не шрифтом отеля').toEqual([])
+      // Номер: настоящий номер отеля, а не «недоступно». Только где управление
+      // номером на связи (см. `roomControlLive`).
+      let frame
+      if (roomControlLive()) {
+        frame = await openScreen(page, 'room')
+        await expect(frame.getByTestId('room-pills'), 'номер в показе не нарисован').toBeVisible({ timeout: 25_000 })
+        await expect(frame.getByTestId('room-unavailable')).toHaveCount(0)
+        await expect
+          .poll(() => accentNodes(frame!), { message: 'акцент отеля в показе номера не виден' })
+          .not.toEqual([])
+        expect(await foreignText(frame), 'текст номера в показе не шрифтом отеля').toEqual([])
+      }
 
       // Карточка: открыта В РАМКЕ, и в документе панели её нет.
       frame = await openScreen(page, 'item')

@@ -503,7 +503,7 @@ export function CategoryEditorPage() {
               {t('category.image')}
             </Typography>
             <ImageUploader
-              surface="categoryCover"
+              role="categoryCover"
               value={image}
               onChange={setImage}
               kind="category"
