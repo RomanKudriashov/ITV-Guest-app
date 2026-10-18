@@ -109,7 +109,12 @@ export function HomeBanner({ banner, placement }: Props) {
           position: 'relative',
           borderRadius: 3,
           overflow: 'hidden',
-          height,
+          // На ПК форма не шире 3:1 (партия 58в, доводка): 1032×200 было 5:1, и
+          // по фокусу оставалось ~30 % кадра. Размер баннера из CMS — нижняя
+          // граница высоты; телефон — как был.
+          height: { xs: height.xs, md: 'auto' },
+          minHeight: { md: height.md },
+          aspectRatio: { md: '3 / 1' },
           cursor: banner.action.kind === 'none' ? 'default' : 'pointer',
           bgcolor: 'action.hover',
         }}

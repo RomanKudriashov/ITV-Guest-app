@@ -36,6 +36,11 @@ describe('roleNeedWidth', () => {
     expect(need).toBe(Math.max(2880, Math.ceil(844 * 2 * 1.5)));
   });
 
+  it('ни одно место на ПК не шире 3:1 — и баннер (партия 58в, доводка)', () => {
+    for (const places of Object.values(ROLE_PLACES))
+      for (const place of places) if (place.wide) expect(place.wide[0] / place.wide[1], place.key).toBeLessThanOrEqual(3.01);
+  });
+
   it('логотип мест не имеет — порога нет', () => {
     expect(ROLE_PLACES.logo).toHaveLength(0);
     expect(roleNeedWidth('logo', 200, 80)).toBe(0);

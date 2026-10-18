@@ -65,7 +65,8 @@ export const ROLE_PLACES: Record<MediaRole, readonly Place[]> = {
     { key: 'homeHero', labelKey: 'media.place.homeHero', fit: 'fill', wide: [1080, 360], phone: [390, 252] },
     SECTION_HEADER,
   ],
-  banner: [{ key: 'banner', labelKey: 'media.place.banner', fit: 'fill', wide: [1032, 200], phone: [358, 150] }],
+  // Баннер на ПК — не шире 3:1 (партия 58в, доводка): 1032×344.
+  banner: [{ key: 'banner', labelKey: 'media.place.banner', fit: 'fill', wide: [1032, 344], phone: [358, 150] }],
   // Логотип отдаётся как загружен и вписан целиком: точки главного у него нет.
   logo: [],
 };

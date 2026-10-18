@@ -75,6 +75,34 @@ for (const width of [1440, 390]) {
   })
 }
 
+for (const [width, max] of [[1440, 3.02], [390, null]] as const) {
+  test(`баннер главной: на ПК не шире 3:1, на телефоне как был (${width})`, async ({ page, request }) => {
+    // Баннера у демо-отеля нет — подставляем ответ ручки с настоящим фото позиции.
+    const token = await guestSession(request)
+    const res = await request.get(`${API}/api/guest/catalog?type=product&point=kitchen`, {
+      headers: { 'X-Hotel-Subdomain': HOTEL, Authorization: `Bearer ${token}` },
+    })
+    const items = ((await res.json()).categories as Array<{ items: Array<{ photos?: Array<{ src: string }> }> }>).flatMap((c) => c.items)
+    const photo = items.find((i) => i.photos?.length)!.photos![0]
+    await page.route('**/api/**/guest/banner**', (route) =>
+      route.fulfill({
+        json: {
+          banner: {
+            id: 'e2e-banner', title: 'Баннер', subtitle: '', size: 'm', placement: 'top',
+            images: [photo.src], image_refs: [photo], action: { kind: 'none' },
+          },
+        },
+      }),
+    )
+    await enter(page, width)
+    const banner = page.getByTestId('guest-banner').first()
+    await expect(banner).toBeVisible({ timeout: 15_000 })
+    const box = (await banner.boundingBox())!
+    if (max) expect(box.width / box.height, 'баннер полосой шире 3:1').toBeLessThanOrEqual(max)
+    else expect(Math.round(box.height)).toBe(150)
+  })
+}
+
 test('шапки на ПК не шире 3:1', async ({ page }) => {
   await enter(page, 1440)
   const hero = page.getByTestId('guest-home-hero')
