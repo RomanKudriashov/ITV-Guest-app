@@ -56,6 +56,8 @@ import {
   type OrderStatusKind,
 } from '@/kit';
 
+import { EntityCardSamples } from './entityCards/EntityCardSamples';
+
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
     <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
@@ -121,6 +123,11 @@ export function StyleguidePage() {
       </Stack>
 
       <Stack spacing={3}>
+        {/* Партия 59, разведка: образцы всплывающих карточек сущностей. */}
+        <Section title="Карточки сущностей (образцы, партия 59)" subtitle="Заведение, позиция, заказ, номер — стекло kit/glass.ts, уровень menu.">
+          <EntityCardSamples />
+        </Section>
+
         {/* Signature */}
         <Section title="Signature — enamel room tag" subtitle="One bright object; everything else restrained.">
           <Stack direction="row" spacing={3} alignItems="flex-end" flexWrap="wrap" useFlexGap>
