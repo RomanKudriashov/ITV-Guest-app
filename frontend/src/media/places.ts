@@ -25,24 +25,21 @@ export interface Place {
   /** Место на 1440 (ПК) и 390 (телефон); null — на этой ширине места нет. */
   wide: PlaceSize | null;
   phone: PlaceSize | null;
-  /**
-   * Высота по форме ФОТО в пределах (окно позиции на ПК, партия 58б): место
-   * шириной `wide[0]`, высота — ширина / форма фото, зажатая в [min, max].
-   */
-  wideRatioFromPhoto?: { min: number; max: number };
 }
 
-/** Окно позиции на ПК: форма по фото в пределах 16:9…21:9 (`itemCard.wideMediaRatio`). */
-const WINDOW_RATIO = { min: 16 / 9, max: 21 / 9 } as const;
 
 const ITEM_CARD: Place = { key: 'card', labelKey: 'media.place.card', fit: 'fill', wide: [331, 146], phone: [169, 146] };
+/**
+ * Окно позиции (партия 58б, откат): на ПК фото колонкой слева — 44 % окна
+ * 1040 (`itemCard.railWindow/railShare`), высота по тексту, не ниже 460; на
+ * телефоне — сверху шторки. «Заполнить» по фокусу, как всё у гостя.
+ */
 const ITEM_WINDOW: Place = {
   key: 'window',
   labelKey: 'media.place.window',
-  fit: 'whole',
-  wide: [878, 494],
+  fit: 'fill',
+  wide: [458, 600],
   phone: [388, 224],
-  wideRatioFromPhoto: WINDOW_RATIO,
 };
 const HOME_TILE: Place = { key: 'homeTile', labelKey: 'media.place.homeTile', fit: 'fill', wide: [509, 170], phone: [358, 132] };
 const SECTION_HEADER: Place = { key: 'sectionHeader', labelKey: 'media.place.sectionHeader', fit: 'fill', wide: [1080, 360], phone: [390, 218] };
@@ -68,7 +65,7 @@ export const ROLE_PLACES: Record<MediaRole, readonly Place[]> = {
     { key: 'homeHero', labelKey: 'media.place.homeHero', fit: 'fill', wide: [1080, 360], phone: [390, 252] },
     SECTION_HEADER,
   ],
-  banner: [{ key: 'banner', labelKey: 'media.place.banner', fit: 'whole', wide: [1032, 200], phone: [358, 150] }],
+  banner: [{ key: 'banner', labelKey: 'media.place.banner', fit: 'fill', wide: [1032, 200], phone: [358, 150] }],
   // Логотип отдаётся как загружен и вписан целиком: точки главного у него нет.
   logo: [],
 };
@@ -81,54 +78,40 @@ export function roleThumbRatio(role: MediaRole): number {
 
 /** Размер места на ширине экрана с учётом формы фото (окно позиции на ПК). */
 export function placeSize(place: Place, screen: 'wide' | 'phone', photoRatio: number): PlaceSize | null {
-  const size = place[screen];
-  if (!size) return null;
-  if (screen === 'wide' && place.wideRatioFromPhoto) {
-    const { min, max } = place.wideRatioFromPhoto;
-    const ratio = Math.min(max, Math.max(min, photoRatio || min));
-    return [size[0], Math.round(size[0] / ratio)];
-  }
-  return size;
+  void photoRatio;
+  return place[screen];
 }
 
 /** DPR, под который считается «хватает ли оригинала»: телефон и ноутбук — 2. */
 export const CHECK_DPR = 2;
-/** Видно меньше этой доли — место «целиком» показывает фото на размытом (KitImage). */
-export const WHOLE_SHARE = 0.6;
 
 export interface PlaceCheck {
-  /** Доля кадра, видимая при заполнении места (как `data-visible-share` у KitImage). */
+  /** Доля кадра, видимая в месте (как `data-visible-share` у KitImage) — подписью. */
   share: number;
-  /** Как покажет место: `cover` по фокусу или `contain` целиком. */
-  shown: 'cover' | 'contain';
   /** Ширина оригинала, нужная месту при DPR 2. */
   needWidth: number;
   /** Растяжение файла при DPR 2 (>1 — источника не хватает). */
   stretch: number;
-  /** Место «целиком» видит < 60%. */
-  wholeShrunk: boolean;
-  /** Красная метка: место «целиком» < 60% или оригинала не хватает. */
+  /**
+   * Красная метка — ТОЛЬКО «оригинала не хватает» (партия 58б, откат). Режима
+   * «целиком» у гостя больше нет: каждое место заполняется по точке главного,
+   * и доля кадра — справка, а не ошибка.
+   */
   bad: boolean;
 }
 
 /**
  * Разбор места для фото `w×h`. Та же математика, что у `KitImage` (доля
- * кадра) и у замера 58а/58б (растяжение при DPR 2).
+ * кадра) и у замера 58а/58б (растяжение при DPR 2). Место всегда заполняется.
  */
-export function checkPlace(fit: KitImageFit, size: PlaceSize, w: number, h: number): PlaceCheck {
+export function checkPlace(_fit: KitImageFit, size: PlaceSize, w: number, h: number): PlaceCheck {
   const [pw, ph] = size;
   const photo = w / h;
   const box = pw / ph;
   const share = Math.min(box / photo, photo / box);
-  const wholeShrunk = fit === 'whole' && share < WHOLE_SHARE;
-  const shown = wholeShrunk ? 'contain' : 'cover';
-  // cover: кадр покрывает место — нужна ширина, при которой и высота покрыта;
-  // contain: кадр вписан — хватит ширины, при которой он вписывается.
-  const needWidth = Math.ceil(
-    shown === 'cover' ? Math.max(pw, ph * photo) * CHECK_DPR : Math.min(pw, ph * photo) * CHECK_DPR,
-  );
+  const needWidth = Math.ceil(Math.max(pw, ph * photo) * CHECK_DPR);
   const stretch = Math.round((needWidth / w) * 100) / 100;
-  return { share, shown, needWidth, stretch, wholeShrunk, bad: wholeShrunk || stretch > 1 };
+  return { share, needWidth, stretch, bad: stretch > 1 };
 }
 
 /**

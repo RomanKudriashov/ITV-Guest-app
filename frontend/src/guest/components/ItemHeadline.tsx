@@ -30,16 +30,10 @@ export function ItemMedia({
   variant = 'top',
   fallbackIcon,
   bleed = false,
-  wide = false,
   categoryLabel,
 }: {
   item: ItemDetail;
   variant?: 'top' | 'rail';
-  /**
-   * Кадр сверху окна на ПК (партия 58б): высота — по форме фото в пределах
-   * 16:9…21:9, а не потолок шторки телефона.
-   */
-  wide?: boolean;
   fallbackIcon?: AppIconComponent;
   /**
    * Название категории — чипом в углу кадра. Приходит сверху, а не читается
@@ -62,8 +56,6 @@ export function ItemMedia({
   const isRail = variant === 'rail';
   const { glass } = useStorefront();
   const photo = item.photos?.[0] ?? null;
-  const ratio = photo?.w && photo.h ? photo.w / photo.h : itemCard.wideMediaRatio.min;
-  const wideRatio = Math.min(itemCard.wideMediaRatio.max, Math.max(itemCard.wideMediaRatio.min, ratio));
   return (
     <Box
       sx={(theme) => ({
@@ -83,7 +75,7 @@ export function ItemMedia({
               // Кадр держит ВЕРХ карточки, а не ленточку под заголовком:
               // 200px на телефоне читались полоской. Потолок остаётся —
               // высокая картинка не должна выталкивать тело за экран.
-              ...(wide ? { aspectRatio: String(wideRatio) } : { height: itemCard.mediaHeight }),
+              height: itemCard.mediaHeight,
               flexShrink: 0,
               /*
                 Вынос за поля СДВИГОМ, а не отрицательным полем.
@@ -106,14 +98,15 @@ export function ItemMedia({
       })}
     >
       {/*
-        Кадр объектом (партия 58а). Место: во всю ширину окна на ПК (`wide`,
-        партия 58б), во всю ширину шторки на телефоне и планшете (`top`).
+        Кадр объектом (партия 58а). Место: колонка слева в окне на ПК (`rail`,
+        44 % окна — партия 58б, откат), во всю ширину шторки на телефоне и
+        планшете (`top`). У гостя всё «заполнить» по фокусу — размытых полей нет.
       */}
       <KitImage
         image={photo}
         src={item.images?.[0]}
-        sizes={isRail ? '400px' : wide ? `${itemCard.wideWindow}px` : '100vw'}
-        fit="whole"
+        sizes={isRail ? `${Math.round(itemCard.railWindow * itemCard.railShare)}px` : '100vw'}
+        fit="fill"
         alt={item.title}
         fill
         fallbackIcon={icon}
@@ -176,8 +169,6 @@ export interface ItemHeadlineViewProps {
   hideMedia?: boolean;
   /** Вынести кадр за поля контейнера — см. `ItemMedia`. */
   bleedMedia?: boolean;
-  /** Кадр сверху окна на ПК — см. `ItemMedia`. */
-  wideMedia?: boolean;
   /** Icon for the designed fallback when the item has no photo. */
   fallbackIcon?: AppIconComponent;
 }
@@ -192,7 +183,7 @@ export interface ItemHeadlineViewProps {
  */
 export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewProps>(
   function ItemHeadlineView(
-    { item, priceLabel, hideMedia = false, fallbackIcon, bleedMedia = false, wideMedia = false },
+    { item, priceLabel, hideMedia = false, fallbackIcon, bleedMedia = false },
     titleRef,
   ) {
     const { t } = useTranslation();
@@ -207,7 +198,6 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
             variant="top"
             fallbackIcon={fallbackIcon}
             bleed={bleedMedia}
-            wide={wideMedia}
             categoryLabel={item.category_title}
           />
         )}
@@ -299,7 +289,7 @@ export const ItemHeadlineView = forwardRef<HTMLHeadingElement, ItemHeadlineViewP
 export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>(
   function ItemHeadline({ item }, titleRef) {
     const { formatOptional } = useMoney();
-    const { mediaBeside, mediaWide = false, fallbackIcon } = useItemSheetLayout();
+    const { mediaBeside, fallbackIcon } = useItemSheetLayout();
     return (
       <ItemHeadlineView
         ref={titleRef}
@@ -307,7 +297,6 @@ export const ItemHeadline = forwardRef<HTMLHeadingElement, { item: ItemDetail }>
         priceLabel={formatOptional(item.price)}
         hideMedia={mediaBeside}
         bleedMedia
-        wideMedia={mediaWide}
         fallbackIcon={fallbackIcon}
       />
     );

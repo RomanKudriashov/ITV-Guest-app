@@ -46,7 +46,6 @@ import { fetchCatalog } from '../api/guest';
 import type { CreateOrderPayload, OrderTiming, QuoteLine } from '../api/types';
 import { surfaceRadius } from '../storefrontTokens';
 import { CommentField } from '../components/CommentField';
-import { useBackdropPlateSx } from '../components/backdropPlate';
 
 /** How the guest set the tip: none, a percentage preset, or a custom amount. */
 type TipKind = 'none' | 'preset' | 'custom';
@@ -78,7 +77,6 @@ interface CheckoutDraft {
  * only the wrapper and the place button's placement differ.
  */
 export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } = {}) {
-  const plate = useBackdropPlateSx();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
@@ -315,7 +313,6 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
     return (
       <Box data-testid="guest-cart">
         <EmptyState
-            plateSx={plate}
           title={t('guest.cart.emptyTitle')}
           description={t('guest.cart.emptyHint')}
           testId="guest-cart-empty"

@@ -7,21 +7,18 @@ import { ROLE_PLACES, checkPlace, placeSize, roleNeedWidth } from './places';
  * (доля кадра) и у замера 58а/58б (растяжение при DPR 2).
  */
 describe('checkPlace', () => {
-  it('«целиком» с вертикальным фото в широком окне — меньше 60 %, красная метка', () => {
-    // Утиная грудка 2:3 в окне позиции 878×494 (16:9).
-    const check = checkPlace('whole', [878, 494], 1400, 2100);
-    expect(check.share).toBeLessThan(0.6);
-    expect(check.wholeShrunk).toBe(true);
-    expect(check.shown).toBe('contain');
-    expect(check.bad).toBe(true);
+  it('вертикальное фото в окне — доля подписью, без красного: у гостя всё «заполнить» (58б, откат)', () => {
+    // Утиная грудка 2:3 в колонке окна 458×600 и в карточке 331×146.
+    const window = checkPlace('fill', [458, 600], 1400, 2100)
+    expect(window.share).toBeGreaterThan(0)
+    expect(window.bad).toBe(false)
+    const card = checkPlace('fill', [331, 146], 1400, 2100)
+    expect(card.share).toBeLessThan(0.6)
+    expect(card.bad, 'малая доля — не ошибка').toBe(false)
   });
 
-  it('«заполнить» вертикальное фото не краснеет за долю — только за растяжение', () => {
-    const check = checkPlace('fill', [331, 146], 1400, 2100);
-    expect(check.wholeShrunk).toBe(false);
-    expect(check.shown).toBe('cover');
-    expect(check.stretch).toBeLessThanOrEqual(1);
-    expect(check.bad).toBe(false);
+  it('у гостя нет мест «целиком» — ни в одной роли', () => {
+    for (const places of Object.values(ROLE_PLACES)) for (const place of places) expect(place.fit).toBe('fill');
   });
 
   it('оригинала не хватает шапке 1080×360 при DPR 2 — нужен от 2160 px', () => {
@@ -44,9 +41,8 @@ describe('roleNeedWidth', () => {
     expect(roleNeedWidth('logo', 200, 80)).toBe(0);
   });
 
-  it('окно позиции на ПК берёт высоту по форме фото в пределах 16:9…21:9', () => {
+  it('окно позиции на ПК — колонка слева 44 % окна 1040', () => {
     const window = ROLE_PLACES.item.find((p) => p.key === 'window')!;
-    expect(placeSize(window, 'wide', 3)).toEqual([878, Math.round(878 / (21 / 9))]);
-    expect(placeSize(window, 'wide', 1)).toEqual([878, Math.round(878 / (16 / 9))]);
+    expect(placeSize(window, 'wide', 1.5)).toEqual([458, 600]);
   });
 });

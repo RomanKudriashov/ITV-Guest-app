@@ -9,7 +9,8 @@ import { API, DEMO_ROOM, HOTEL, guestSession } from './helpers'
  * Замер 17.10: гостю уходил card 600 на всё — окно позиции 400×700 при DPR 2
  * растягивало его ×3,5, окно «House rules» ×6,3 и показывало 21% кадра. Теперь:
  * API отдаёт ряд ширин, форму кадра и фокус; место выбирает файл по
- * srcset/sizes; видно меньше 60% — фото целиком поверх размытого себя.
+ * srcset/sizes. Каждое место «заполнить» по фокусу (58б, откат: размытых
+ * полей у гостя нет).
  */
 
 type Ref = { src: string; widths: Array<{ w: number; url: string }>; w: number; h: number; focus: { x: number; y: number } }
@@ -79,9 +80,8 @@ async function itemId(request: APIRequestContext, code: string): Promise<string>
   return item!.id
 }
 
-test('окно позиции на 1440: srcset/sizes, кадр во всю ширину окна — заполнен по фокусу', async ({ page, request }) => {
-  // Партия 58б: кадр сверху во всю ширину окна, форма по фото в 16:9…21:9 —
-  // горизонтальный кадр больше не режется колонкой 400 px.
+test('окно позиции на 1440: srcset/sizes, фото колонкой слева — заполнено по фокусу', async ({ page, request }) => {
+  // Партия 58б, откат: фото слева колонкой 44 % окна (≈458 px вместо 400).
   const { id } = await caesar(request)
   await enter(page, 1440)
   await page.goto(`/venue/kitchen?item=${id}`)
@@ -89,22 +89,18 @@ test('окно позиции на 1440: srcset/sizes, кадр во всю ши
   expect(photo.srcset, 'у фото нет srcset').toContain('400w')
   expect(photo.sizes, 'место не назвало свою ширину').not.toBe('')
   expect(photo.sizes).not.toBe('100vw')
-  expect(photo.share).toBeGreaterThanOrEqual(0.6)
   expect(photo.fit).toBe('cover')
   expect(photo.backdrop).toBeFalsy()
 })
 
-test('окно позиции на 1440, вертикальное фото: видно < 60% — целиком поверх размытого', async ({ page, request }) => {
-  // Окно — место «показать целиком»: вертикальный кадр 2:3 в окне 16:9 не
-  // режется до трети, а встаёт целиком на размытую копию себя.
+test('окно позиции на 1440, вертикальное фото: заполнено по фокусу, размытых полей нет (58б, откат)', async ({ page, request }) => {
   const id = await itemId(request, 'duck-breast')
   await enter(page, 1440)
   await page.goto(`/venue/kitchen?item=${id}`)
   const photo = await sheetPhoto(page)
-  expect(photo.share).toBeLessThan(0.6)
-  expect(photo.fit).toBe('contain')
-  expect(photo.objectFit).toBe('contain')
-  expect(photo.backdrop, 'под целым фото нет размытого').toBeTruthy()
+  expect(photo.fit).toBe('cover')
+  expect(photo.objectFit).toBe('cover')
+  expect(photo.backdrop, 'под фото размытая копия').toBeFalsy()
 })
 
 test('окно позиции на 390: место по форме кадра — режется как прежде, без подложки', async ({ page, request }) => {
@@ -144,31 +140,4 @@ test('фон-фото на телефоне — image-set, а не просто�
   const cover = page.getByTestId('guest-venue-header-cover')
   await expect(cover).toBeVisible({ timeout: 15_000 })
   await expect.poll(() => cover.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('image-set(')
-})
-
-test('prefers-reduced-transparency: размытая подложка снимается правилом', async ({ page, request }) => {
-  // Подложка есть только у вертикального кадра в окне (партия 58б).
-  const id = await itemId(request, 'duck-breast')
-  await enter(page, 1440)
-  await page.goto(`/venue/kitchen?item=${id}`)
-  await sheetPhoto(page)
-  // Playwright не эмулирует этот медиазапрос — проверяем, что правило есть и
-  // гасит именно подложку.
-  const hasRule = await page.evaluate(() => {
-    for (const sheet of [...document.styleSheets]) {
-      let rules: CSSRuleList
-      try {
-        rules = sheet.cssRules
-      } catch {
-        continue
-      }
-      for (const rule of [...rules]) {
-        if (rule instanceof CSSMediaRule && rule.conditionText.includes('prefers-reduced-transparency')) {
-          if ([...rule.cssRules].some((r) => (r as CSSStyleRule).style?.display === 'none')) return true
-        }
-      }
-    }
-    return false
-  })
-  expect(hasRule, 'нет правила, снимающего размытие при reduced-transparency').toBeTruthy()
 })

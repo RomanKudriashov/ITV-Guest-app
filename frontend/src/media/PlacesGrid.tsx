@@ -15,9 +15,9 @@ import { ROLE_PLACES, checkPlace, placeSize, type MediaRole, type Place } from '
  * врать правдоподобно. Место уменьшено, но форма у него настоящая — значит, и
  * доля кадра, и решение «целиком» те же, что у гостя.
  *
- * Красная метка — место, которое покажет плохо: «целиком» видит меньше 60 %
- * (фото встанет на размытую копию), или оригинала не хватает при DPR 2 — с
- * подсказкой, какой ширины оригинал нужен.
+ * Красная метка — только место, которому не хватает оригинала при DPR 2, с
+ * подсказкой, какой ширины оригинал нужен (партия 58б, откат). Видимая доля
+ * кадра — подписью: у гостя каждое место заполняется по точке главного.
  */
 const WIDE_MAX = 220;
 const PHONE_MAX = 120;
@@ -83,9 +83,9 @@ function PlacePreview({
       <Typography variant="caption" color="text.secondary" display="block">
         {t(screen === 'wide' ? 'media.place.screenWide' : 'media.place.screenPhone')} · {pw}×{ph}
       </Typography>
-      {check?.wholeShrunk ? (
-        <Typography variant="caption" color="error" display="block" data-testid={`${testId}-whole`}>
-          {t('media.place.wholeShrunk', { share: Math.round(check.share * 100) })}
+      {check ? (
+        <Typography variant="caption" color="text.secondary" display="block" data-testid={`${testId}-share`}>
+          {t('media.place.visibleShare', { share: Math.round(check.share * 100) })}
         </Typography>
       ) : null}
       {check && check.stretch > 1 ? (

@@ -263,8 +263,8 @@
       "backdrop": "店面背景和入口页面",
       "homeHero": "首页封面",
       "banner": "横幅",
-      "wholeShrunk": "只能看到 {{share}}%——照片将完整显示在模糊背景上",
-      "needOriginal": "需要至少 {{px}} 像素宽的原图"
+      "needOriginal": "需要至少 {{px}} 像素宽的原图",
+      "visibleShare": "可见画面 {{share}}%"
     },
     "weakOriginal": "原图宽 {{have}} 像素：在大屏幕上会显得发虚。最好 {{need}} 像素以上——如有更大的请上传。"
   },

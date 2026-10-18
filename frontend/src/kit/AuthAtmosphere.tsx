@@ -1,8 +1,7 @@
 import Box from '@mui/material/Box';
-import { alpha, useTheme, type Theme } from '@mui/material/styles';
+import { alpha, type Theme } from '@mui/material/styles';
 
 import { resolveBackground, useAppTheme } from '@/theme';
-import { photoPlate, photoPlateSx } from '@/theme/contrast';
 
 /**
  * Полотно входа — по дизайн-эталону `docs/design/login-ac.html`.
@@ -57,33 +56,29 @@ export function AuthAtmosphere() {
           sx={(theme: Theme) => ({
             position: 'absolute',
             inset: 0,
-            // Слайдер «Затемнение» — тем же чёрным, что на входе гостя, в
-            // шапке каталога и над фоном витрины (партия 58б).
-            backgroundColor: theme.palette.common.black,
+            backgroundColor: theme.palette.brand.scrim,
             opacity: dim,
           })}
         />
       ) : null}
 
-      {/*
-        Скрима читаемости на весь кадр нет (партия 58б): он затемнял и правую
-        часть, где текста нет. Над фото — только слайдер «Затемнение» (выше),
-        текст держит подложка под маркой и формой (`useAuthPlateSx`).
-      */}
+      {/* скрим читаемости — десктоп `.a`, телефон `.m` */}
+      <Box
+        sx={(theme: Theme) => {
+          const k = (a: number) => alpha(theme.palette.common.black, a);
+          const horizontal = theme.direction === 'rtl' ? 270 : 90;
+          return {
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(${horizontal}deg, ${k(0.9)} 0%, ${k(0.55)} 44%, ${k(
+              0.15,
+            )} 100%), linear-gradient(180deg, ${k(0.5)}, transparent 32%, ${k(0.7)})`,
+            [theme.breakpoints.down('md')]: {
+              background: `linear-gradient(180deg, ${k(0.55)} 0%, ${k(0.15)} 30%, ${k(0.92)} 78%)`,
+            },
+          };
+        }}
+      />
     </Box>
   );
-}
-
-/**
- * Подложка под маркой и формой входа (партия 58б) — только когда за ними фото
- * бренда: белый текст держит 4,5 на любом кадре. Без фото (градиент токенов)
- * подложки нет — фон и так тёмный и ровный.
- */
-export function useAuthPlateSx(spread = 40) {
-  const { tokens } = useAppTheme();
-  const { common } = useTheme().palette;
-  const bg = tokens.brand?.background;
-  if (!(bg?.kind === 'image' && bg.imageUrl)) return {};
-  // Белые буквы и подпись (белый 72 %) по кадру — как в форме входа.
-  return photoPlateSx(photoPlate(common.black, [common.white, alpha(common.white, 0.72)]), spread);
 }

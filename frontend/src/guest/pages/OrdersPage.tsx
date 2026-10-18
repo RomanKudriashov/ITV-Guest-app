@@ -18,10 +18,8 @@ import { useGuestOrders } from '../hooks/useGuestQueries';
 import { useOrderLive } from '../hooks/useOrderLive';
 import { useMoney } from '../hooks/useMoney';
 import type { GuestOrder } from '../api/types';
-import { useBackdropPlateSx } from '../components/backdropPlate';
 
 export function OrdersPage() {
-  const plate = useBackdropPlateSx();
   const { t } = useTranslation();
   const { data, isLoading, error, refetch } = useGuestOrders();
 
@@ -61,7 +59,6 @@ export function OrdersPage() {
     return (
       <Box data-testid="guest-orders-list">
         <EmptyState
-            plateSx={plate}
           title={t('guest.orders.emptyTitle')}
           description={t('guest.orders.emptyHint')}
           testId="guest-orders-empty"

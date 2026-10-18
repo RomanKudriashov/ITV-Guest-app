@@ -4,8 +4,7 @@ import Typography from '@mui/material/Typography';
 import type { ImageRef } from '@/kit/imageRef';
 import { useCoverBackground } from '@/kit/useCoverBackground';
 
-import { fontPx, layout, surfaceRadius, textPlateSx, type StorefrontTokens } from '../storefrontTokens';
-import { useAppTheme } from '@/theme';
+import { fontPx, layout, surfaceRadius, type StorefrontTokens } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 
 /**
@@ -59,8 +58,7 @@ export function HomeHeroView({
   coverRef?: ImageRef | null;
   tokens: StorefrontTokens;
 }) {
-  const { onMedia, mediaFallback } = tokens;
-  const { mode } = useAppTheme();
+  const { scrim, onMedia, mediaFallback } = tokens;
   // Место 1080×304 (1440) / 390×252 (390) — хук меряет его сам.
   const bg = useCoverBackground(coverRef);
 
@@ -93,10 +91,9 @@ export function HomeHeroView({
         />
       ) : null}
 
-      {/*
-        Скрима на весь кадр нет (партия 58б): верх затемнялся там, где текста
-        нет. Белый текст держит подложка под самим блоком (`textPlateSx`).
-      */}
+      {/* Скрим: белый текст поверх произвольного кадра иначе нечитаем. */}
+      <Box aria-hidden sx={{ position: 'absolute', inset: 0, background: scrim.hero }} />
+
 
       <Box
         sx={{
@@ -104,7 +101,6 @@ export function HomeHeroView({
           left: { xs: 18, md: 34 },
           right: 18,
           bottom: { xs: 16, md: 28 },
-          ...textPlateSx(mode),
         }}
       >
         <Typography

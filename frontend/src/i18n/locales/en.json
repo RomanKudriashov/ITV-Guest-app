@@ -264,8 +264,8 @@
       "backdrop": "Storefront background and entry screen",
       "homeHero": "Home cover",
       "banner": "Banner",
-      "wholeShrunk": "Only {{share}}% visible — the photo goes whole on a blurred backdrop",
-      "needOriginal": "Needs an original of at least {{px}} px"
+      "needOriginal": "Needs an original of at least {{px}} px",
+      "visibleShare": "{{share}}% of the frame visible"
     },
     "weakOriginal": "The original is {{have}} px: on a large screen the photo will look soft. {{need}} px or more is better — upload a larger one if you have it."
   },

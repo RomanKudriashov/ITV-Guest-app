@@ -10,7 +10,7 @@ import { KitImage } from '@/kit';
 import { fallbackIconFor } from './typeFallbackIcon';
 import { packBento, type BentoShape, type Placed } from './bentoPack';
 import type { GuestShowcaseTile, GuestVenueStatus } from '../api/types';
-import { fontPx, storefrontTokens, surfaceRadius, textPlateSx, titlePlate } from '../storefrontTokens';
+import { fontPx, storefrontTokens, surfaceRadius, titlePlate } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { openingLabel } from '../nextOpening';
 
@@ -219,10 +219,15 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
         </Box>
       )}
 
-      {/*
-        Скрима на всю плитку нет (партия 58б): одно затемнение — подложка под
-        подписью (`textPlateSx`), кадр вне неё не тронут.
-      */}
+      {/* Bottom-only scrim so the lower-left text reads; the centre stays clear. */}
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: tileTokens.scrim,
+        }}
+      />
 
       {/* Статус заведения, вверху справа. Пилюли «Скоро» больше нет: её
           носила только заглушка «Мой номер», убранная с сервера (партия 56). */}
@@ -232,21 +237,7 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
 
       {/* Title + meta, lower-left. Left inset clears the corner radius so the
           first glyph is never clipped by the rounded corner. */}
-      <Box
-        sx={{
-          position: 'absolute',
-          insetInlineStart: 0,
-          maxWidth: '100%',
-          bottom: 0,
-          pl: 2.25,
-          pr: 2,
-          pb: 1.75,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0.25,
-          ...textPlateSx(theme.palette.mode, 24),
-        }}
-      >
+      <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.75, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
         <Typography
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,

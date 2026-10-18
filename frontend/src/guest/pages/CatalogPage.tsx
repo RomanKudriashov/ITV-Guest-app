@@ -32,7 +32,7 @@ import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { useMoney } from '../hooks/useMoney';
 import { BOTTOM_NAV_SPACE } from '../layout/GuestLayout';
 import { fontPx, layout as storefrontLayout,
-  surfaceRadius, textPlateSx } from '../storefrontTokens';
+  surfaceRadius, } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import { useCart } from '../state/cart';
 import { useCartToast } from '../state/useCartToast';
@@ -42,7 +42,6 @@ import { decideAdd } from '../menuView/addAction';
 import { MenuMosaic } from '../menuView/MenuMosaic';
 import type { MenuView } from '../menuView/menuViewStore';
 import { unavailableNote as unavailableNoteOf } from '../menuView/unavailableNote';
-import { useBackdropPlateSx } from '../components/backdropPlate';
 import { IconAdd } from '@/icons';
 
 const TABS_HEIGHT = 48;
@@ -72,7 +71,6 @@ export interface CatalogPageProps {
  * registry rather than from conditions spread over the markup.
  */
 export function CatalogPage({ type, point, embedded = false, view = 'cards' }: CatalogPageProps) {
-  const plate = useBackdropPlateSx();
   const { glass } = useStorefront();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -211,7 +209,6 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
   if (!categories.length) {
     return (
       <EmptyState
-            plateSx={plate}
         title={t(`${ns}.emptyTitle`)}
         description={t(`${ns}.emptyHint`)}
         testId={`${behaviour.guestTestIdPrefix}-catalog-empty`}
@@ -329,8 +326,7 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
             >
               {/* Reference `.secttl` — title, a flex hairline, then an aside note. */}
               <Stack direction="row" alignItems="baseline" spacing={1.5} sx={{ mb: { xs: 1.25, md: 1.75 } }}>
-                {/* Заголовок раздела лежит прямо на фото фона — подложка под ним (партия 58б). */}
-                <Typography variant="h5" component="h2" data-testid="guest-section-title" data-plate="" sx={{ px: 1, ...plate }}>
+                <Typography variant="h5" component="h2" data-testid="guest-section-title">
                   {category.title}
                 </Typography>
                 <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
@@ -474,25 +470,31 @@ function CatalogHero({
       {bg.dim > 0 ? (
         <Box aria-hidden data-dim="" sx={{ position: 'absolute', inset: 0, bgcolor: alpha(onMedia.dimBase, bg.dim) }} />
       ) : null}
-      {/*
-        Градиентов на весь кадр нет (партия 58б): снизу кадр растворялся в цвет
-        страницы — в светлой теме это белый под белым заголовком (контраст
-        1,5), сверху лежал чёрный 0,42 там, где текста нет. Одно затемнение —
-        подложка под текстом; слайдер `dim` выше действует как везде.
-      */}
       <Box
-        sx={{
+        aria-hidden
+        sx={(th) => ({
           position: 'absolute',
-          insetInlineStart: { xs: 20, md: 26 },
-          maxWidth: { xs: 'calc(100% - 40px)', md: 'calc(100% - 52px)' },
-          bottom: { xs: 40, md: 48 },
-          zIndex: 2,
-          ...textPlateSx(mode),
-        }}
-      >
+          inset: 0,
+          // Кадр растворяется в цвет страницы (до 58б: 0,55 к 22 %) — плотнее
+          // там, где стоит заголовок (0,85 к 30 %): на прежнем градиенте белый
+          // заголовок в светлой теме ложился на светлое — контраст 1,4 (замер
+          // 58б, откат). Вид тот же — растворение кадра в страницу.
+          background: `linear-gradient(to top, ${th.palette.background.default} 0%, ${alpha(
+            th.palette.background.default, 0.85,
+          )} 30%, transparent 62%), linear-gradient(to bottom, ${alpha(onMedia.dimBase, 0.42)} 0%, transparent 44%)`,
+        })}
+      />
+      <Box sx={{ position: 'absolute', insetInline: { xs: 20, md: 26 }, bottom: { xs: 40, md: 48 }, zIndex: 2 }}>
         {showSub ? (
           <Typography
-            sx={{ fontSize: fontPx(11), letterSpacing: '0.22em', textTransform: 'uppercase', color: alpha(onMedia.primary, 0.72), fontWeight: 700 }}
+            sx={(th) => ({
+              fontSize: fontPx(11),
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              // На растворе в цвет страницы — цветом текста страницы.
+              color: th.palette.mode === 'light' ? th.palette.text.secondary : alpha(onMedia.primary, 0.72),
+            })}
           >
             {hotelName}
           </Typography>
@@ -504,9 +506,11 @@ function CatalogHero({
             fontWeight: th.typography.h1.fontWeight,
             letterSpacing: '-0.025em',
             fontSize: { xs: fontPx(30, 'heading'), md: fontPx(40, 'heading') },
-            color: onMedia.primary,
+            // Заголовок стоит на растворе кадра в цвет страницы: в светлой теме —
+            // тёмный текст страницы (белый на светлом был 1,4), в тёмной — белый.
+            color: th.palette.mode === 'light' ? th.palette.text.primary : onMedia.primary,
             lineHeight: 1.03,
-            textShadow: tile.titleShadow,
+            textShadow: th.palette.mode === 'light' ? 'none' : tile.titleShadow,
             mt: showSub ? 0.75 : 0,
           })}
         >

@@ -18,14 +18,6 @@ import { PHOTO_EXTREMES, mixColors, pageVeilAlpha, storefrontTokens } from '../s
  *
  * Оба слоя `fixed`: фон не уезжает с прокруткой и не растягивается по длине
  * меню, как растянулась бы картинка на всю высоту документа.
- *
- * ФОТО ФОНА — БЕЗ ВУАЛИ НА ВЕСЬ ЭКРАН (партия 58б). Вуаль из контраста
- * выходила 0,85–1,0: фото отеля за витриной было закрыто почти целиком.
- * Теперь над фото — только слайдер «Затемнение» из оформления (`dim`) тем же
- * слоем, что на входе, логине и в шапке каталога; читаемость держат
- * подложки под самим текстом (`pagePlate`) и стекло поверхностей. Градиент,
- * фактура и ровный цвет — как прежде: это не фото, и вуаль там лишь
- * выравнивает фактуру под текстом.
  */
 /** Концы и 15 промежуточных цветов между ними. */
 function between(from: string, to: string): string[] {
@@ -61,16 +53,15 @@ export function GuestBackdrop() {
     без третьего уровня — подписи чата и пустых заказов давали 4.44 на фото.
   */
   const palette = useTheme().palette;
+  const veil = pageVeilAlpha(
+    colors.background,
+    [palette.text.primary, palette.text.secondary, palette.brand.textTertiary],
+    behind,
+  );
+
   const isPhoto = bg?.kind === 'image' && Boolean(bg.imageUrl);
-  const veil = isPhoto
-    ? (bg?.dim ?? 0)
-    : pageVeilAlpha(
-        colors.background,
-        [palette.text.primary, palette.text.secondary, palette.brand.textTertiary],
-        behind,
-      );
-  // Слайдер — тем же цветом, что везде над фото (`onMedia.dimBase`).
-  const veilColor = isPhoto ? storefrontTokens(mode).onMedia.dimBase : colors.background;
+  const dim = bg?.dim ?? 0;
+  const dimBase = storefrontTokens(mode).onMedia.dimBase;
 
   return (
     <>
@@ -87,11 +78,26 @@ export function GuestBackdrop() {
           ...(cover.sx ? { ...cover.sx, backgroundColor: backdrop.css.backgroundColor } : {}),
         }}
       />
+      {/*
+        СЛАЙДЕР «ЗАТЕМНЕНИЕ» (`dim`) — поверх ФОТО и под тонировкой (партия 58б,
+        откат). Тонировка цветом страницы — часть бренда (зелёная у Метрополя,
+        тёмная у «Кристалла») и держит контраст текста страницы; слайдер её не
+        заменяет, а добавляет: затемняет кадр под ней, и тонировка остаётся
+        той же. Лёг бы поверх тонировки — посерел бы цвет страницы под текстом.
+      */}
+      {isPhoto && dim > 0 ? (
+        <Box
+          aria-hidden
+          data-testid="guest-backdrop-dim"
+          data-dim={dim}
+          sx={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', bgcolor: dimBase, opacity: dim }}
+        />
+      ) : null}
       <Box
         aria-hidden
         data-testid="guest-backdrop-veil"
         data-veil={veil}
-        sx={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', bgcolor: veilColor, opacity: veil }}
+        sx={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', bgcolor: colors.background, opacity: veil }}
       />
     </>
   );

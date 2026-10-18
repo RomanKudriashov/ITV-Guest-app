@@ -15,10 +15,9 @@ import { useStorefront } from '../useStorefront';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
 import { useGuestVenues } from '../hooks/useGuestQueries';
 import type { GuestVenue } from '../api/types';
-import { fontPx, surfaceRadius, textPlateSx, titlePlate } from '../storefrontTokens';
+import { fontPx, surfaceRadius, titlePlate } from '../storefrontTokens';
 import { openingLabel } from '../nextOpening';
 import { STICKY, useStickyLayer } from '../layout/stickyStack';
-import { useBackdropPlateSx } from '../components/backdropPlate';
 
 /**
  * Level 2 of the showcase: the venues of one group (restaurants / spa / services).
@@ -27,7 +26,6 @@ import { useBackdropPlateSx } from '../components/backdropPlate';
  * grouping threshold.
  */
 export function VenueListPage() {
-  const plate = useBackdropPlateSx();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { group = '' } = useParams<{ group: string }>();
@@ -44,17 +42,12 @@ export function VenueListPage() {
       <Container maxWidth="lg" sx={{ pt: { xs: `${Math.max(shell.top, 24)}px`, md: 5 }, pb: { xs: 5, md: 8 } }}>
         <Typography
           component="h1"
-          data-plate=""
           sx={(th) => ({
             fontFamily: th.typography.h1.fontFamily,
             fontWeight: th.typography.h1.fontWeight,
             letterSpacing: '-0.02em',
             fontSize: { xs: fontPx(24, 'heading'), md: fontPx(30, 'heading') },
             mb: { xs: 2, md: 3 },
-            // Заголовок лежит прямо на фото фона — подложка под ним (партия 58б).
-            display: 'inline-block',
-            px: 1,
-            ...plate,
           })}
         >
           {data?.title ?? t(`guest.home.group.${group}`, { defaultValue: '' })}
@@ -71,8 +64,7 @@ export function VenueListPage() {
             {errorMessage(error, t)}
           </Alert>
         ) : !venues.length ? (
-          <EmptyState
-            plateSx={plate} title={t('guest.venue.emptyTitle')} description={t('guest.venue.emptyHint')} testId="guest-venue-empty" />
+          <EmptyState title={t('guest.venue.emptyTitle')} description={t('guest.venue.emptyHint')} testId="guest-venue-empty" />
         ) : (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 1.5, md: 2 } }}>
             {venues.map((venue) => (
@@ -118,12 +110,15 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
             fallbackIcon={fallbackIconFor('product', venue.service_type)}
           />
         ) : (
-          <Box aria-hidden data-fallback="" sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
+          <Box aria-hidden sx={(th) => ({ position: 'absolute', inset: 0, ...tileCoverFallbackSx(th) })}>
             {/* Без фото — иконка по типу заведения на фирменном фоне (п.68). */}
             {venue.service_type ? <TileTypeIcon serviceType={venue.service_type} /> : null}
           </Box>
         )}
-        {/* Скрима на всю плитку нет (партия 58б): подложка — под подписью. */}
+        <Box
+          aria-hidden
+          sx={{ position: 'absolute', inset: 0, background: tile.scrim }}
+        />
         {statusText ? (
           <Box
             sx={(th) => ({
@@ -144,18 +139,7 @@ function VenueCard({ venue, onOpen }: { venue: GuestVenue; onOpen: () => void })
             {statusText}
           </Box>
         ) : null}
-        <Box
-          sx={(th) => ({
-            position: 'absolute',
-            insetInlineStart: 0,
-            maxWidth: '100%',
-            bottom: 0,
-            pl: 2.25,
-            pr: 2,
-            pb: 1.5,
-            ...textPlateSx(th.palette.mode, 24),
-          })}
-        >
+        <Box sx={{ position: 'absolute', insetInline: 0, bottom: 0, pl: 2.25, pr: 2, pb: 1.5 }}>
           <Typography sx={(th) => ({ fontFamily: th.typography.h1.fontFamily, fontWeight: th.typography.h1.fontWeight, fontSize: fontPx(20, 'heading'), lineHeight: 1.1, textShadow: tile.titleShadow })}>
             {venue.title}
           </Typography>

@@ -11,7 +11,6 @@ import { closeBanner, reportBannerClick } from '../api/guest';
 import type { GuestBanner } from '../api/types';
 import { KitImage } from '@/kit/KitImage';
 import { useStorefront } from '../useStorefront';
-import { textPlateSx } from '../storefrontTokens';
 
 /**
  * Рекламная полоса витрины.
@@ -121,7 +120,7 @@ export function HomeBanner({ banner, placement }: Props) {
             (полоса контейнера 1032 на 1440, 358 на 390), кадр по фокусу и предел
             обрезки — полоса 5:1 против кадра 3:2 показывала 30% фото.
           */
-          <KitImage image={frameRef} sizes={BANNER_SIZES} fit="whole" alt="" fill testId="guest-banner-image" />
+          <KitImage image={frameRef} sizes={BANNER_SIZES} fit="fill" alt="" fill testId="guest-banner-image" />
         ) : images[frame] ? (
           <Box
             component="img"
@@ -134,17 +133,15 @@ export function HomeBanner({ banner, placement }: Props) {
         {(banner.title || banner.subtitle) && (
           <Stack
             spacing={0.25}
-            sx={(th) => ({
+            sx={{
               position: 'absolute',
-              insetInlineStart: 0,
-              bottom: 0,
-              maxWidth: '100%',
+              inset: 'auto 0 0 0',
               p: 2,
-              // Одно затемнение — подложка под текстом (партия 58б), а не
-              // градиент по всей нижней полосе баннера.
-              ...textPlateSx(th.palette.mode, 24),
+              // Вуаль под текстом: на светлом кадре белые буквы иначе
+              // исчезают. Градиент — тот же, что под подписью плитки.
+              background: tileTokens.scrim,
               color: 'common.white',
-            })}
+            }}
           >
             {banner.title && (
               <Typography

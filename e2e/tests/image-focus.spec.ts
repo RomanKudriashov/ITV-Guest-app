@@ -150,9 +150,11 @@ test.describe('Точка главного', () => {
       await focusButton.click()
       const stage = page.getByTestId('focus-stage')
       await expect(stage).toBeVisible()
-      // Окно позиции — место «целиком»: 1:3 в 16:9 видно < 60 % — красная метка.
-      await expect(page.getByTestId('place-window-wide')).toHaveAttribute('data-bad', 'true')
-      await expect(page.getByTestId('place-window-wide-whole')).toBeVisible()
+      // Режима «целиком» нет (58б, откат): доля кадра — подписью, без красного;
+      // красное только «оригинала не хватает».
+      await expect(page.getByTestId('place-window-wide-share')).toContainText('%')
+      await expect(page.locator('[data-testid$="-whole"]')).toHaveCount(0)
+      await expect(page.getByTestId('place-window-wide-weak')).toContainText(/\d+ px/)
       // Шапке не хватает 200 px оригинала — подсказка с числом.
       await expect(page.getByTestId('place-card-wide-weak')).toContainText(/\d+ px/)
 

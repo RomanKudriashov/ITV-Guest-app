@@ -19,7 +19,6 @@ import { HomeBanner } from '../components/HomeBanner';
 import { HomeWeather } from '../components/HomeWeather';
 import { useGuestBanner, useGuestHome } from '../hooks/useGuestQueries';
 import { useGuestSession } from '../session/GuestSessionProvider';
-import { useBackdropPlateSx } from '../components/backdropPlate';
 
 /**
  * Home is the SERVICE showcase for every hotel: a greeting, the live-order strip,
@@ -28,7 +27,6 @@ import { useBackdropPlateSx } from '../components/backdropPlate';
  * lives inside a restaurant, one level down.
  */
 export function HomePage() {
-  const plate = useBackdropPlateSx();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { hotel } = useGuestSession();
@@ -106,7 +104,6 @@ export function HomePage() {
           </Alert>
         ) : !tiles.length ? (
           <EmptyState
-            plateSx={plate}
             title={t('guest.home.emptyTitle')}
             description={t('guest.home.emptyHint')}
             testId="guest-home-empty"

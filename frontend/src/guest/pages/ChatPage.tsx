@@ -17,7 +17,6 @@ import { STICKY, useStickyLayer } from '../layout/stickyStack';
 import { surfaceRadius } from '../storefrontTokens';
 import { useStorefront } from '../useStorefront';
 import type { ChatSnapshot } from '../api/types';
-import { useBackdropPlateSx } from '../components/backdropPlate';
 
 /**
  * Guest chat screen. The thread is reconciled by `useChatLive` (full snapshot in,
@@ -26,7 +25,6 @@ import { useBackdropPlateSx } from '../components/backdropPlate';
  * as soon as they are on screen, which clears the tab badge.
  */
 export function ChatPage() {
-  const plate = useBackdropPlateSx();
   const { t } = useTranslation();
   const language = useGuestLanguage();
   const queryClient = useQueryClient();
@@ -124,10 +122,8 @@ export function ChatPage() {
           variant="caption"
           color="text.secondary"
           textAlign="center"
-          // На фото фона без вуали — подложка под строкой (партия 58б).
-          sx={{ py: 0.5, px: 1.5, alignSelf: 'center', ...plate }}
+          sx={{ py: 0.5 }}
           data-testid="guest-chat-counterpart"
-          data-plate=""
         >
           {t('guest.chat.counterpart', { name: snapshot.counterpart })}
         </Typography>
@@ -140,14 +136,14 @@ export function ChatPage() {
         draftIdentity="guest-chat"
         emptyHint={t('guest.chat.emptyHint')}
         emptyState={
-          <Box data-testid="guest-chat-empty-plate" data-plate="" sx={{ px: 2, py: 1.5, ...plate }}>
+          <>
             <Typography variant="subtitle1" fontWeight={600} textAlign="center">
               {t('guest.chat.emptyTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary" textAlign="center">
               {t('guest.chat.emptyHint')}
             </Typography>
-          </Box>
+          </>
         }
         // Карточка ввода — тот же рецепт, что у «Ваш номер» и погоды на
         // главной: стекло `panel` из словаря и общий радиус поверхностей.

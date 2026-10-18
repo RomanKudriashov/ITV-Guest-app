@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { MOTION, useSheetTransition } from '@/kit';
 import { behaviourFor } from '@/offerings/behaviour';
 import { InfoView } from './InfoView';
+import { ItemMedia } from './ItemHeadline';
 import { ProductOrderForm } from './ProductOrderForm';
 import { RequestOrderForm } from './RequestOrderForm';
 import { SlotBookingForm } from './SlotBookingForm';
@@ -69,9 +70,8 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
   const usesFields = item ? (item.has_fields ?? behaviour!.usesFields) : false;
   const fallbackIcon = fallbackIconFor(item?.type, item?.service_type);
 
-  // Кадр на ПК — сверху во всю ширину окна (партия 58б), а не колонкой сбоку.
   const layout = useMemo(
-    () => ({ mediaBeside: false, mediaWide: isDesktop, fallbackIcon }),
+    () => ({ mediaBeside: isDesktop, fallbackIcon }),
     [isDesktop, fallbackIcon],
   );
 
@@ -104,7 +104,7 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
 
   // The close affordance and the chosen body are identical either way; only the
   // shell around them differs — a bottom sheet on phone/tablet, a centered modal
-  // on desktop with the photo across the top of the window.
+  // on desktop with the photo in a 400px side column.
   const closeButton = (
     <Box
       sx={{
@@ -164,8 +164,8 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
         slotProps={{ backdrop: { sx: { bgcolor: dialogBackdrop } } }}
         PaperProps={{
           sx: (t) => ({
-            width: `min(${itemCard.wideWindow}px, 100%)`,
-            maxWidth: `min(${itemCard.wideWindow}px, 100%)`,
+            width: `min(${itemCard.railWindow}px, 100%)`,
+            maxWidth: `min(${itemCard.railWindow}px, 100%)`,
             maxHeight: '88vh',
             m: 2,
             borderRadius: surfaceRadius.panel(t.palette.brand.radius),
@@ -182,31 +182,52 @@ export function ItemSheet({ itemId, listItem, onClose }: ItemSheetProps) {
         }}
       >
         <ItemSheetLayoutContext.Provider value={layout}>
-          {/*
-            ОДНА КОЛОНКА: КАДР СВЕРХУ ВО ВСЮ ШИРИНУ ОКНА (партия 58б).
-
-            Колонка 400 px слева резала кадр до 21 % («House rules») и тянула
-            файл ×6: высота колонки росла с текстом, а ширина стояла. Теперь
-            кадр над содержимым, форма — по самому фото в пределах 16:9…21:9
-            (`ItemMedia` с `wide`), и всё окно — стекло `glass.sheet`, как
-            шторка телефона.
-          */}
           <Box
             data-testid="guest-item-sheet"
             role="dialog"
             aria-modal
             aria-label={item?.title ?? t('guest.item.title')}
-            sx={(t) => ({
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              minHeight: 0,
+            sx={{
+              display: 'grid',
+              // Фото слева, текст справа (партия 58б, откат): колонка фото —
+              // доля окна `itemCard.railShare` (44 % от 1040 ≈ 458 px), а не
+              // прежние 400 — горизонтальному кадру в ней тесно. Сетка держит
+              // обе ячейки одной высоты: фото заполняет свою сторону по фокусу.
+              gridTemplateColumns: { xs: '1fr', sm: `${itemCard.railShare * 100}% minmax(0, 1fr)` },
               maxHeight: '88vh',
-              ...storefrontTokens(t.palette.mode).glass.sheet,
-            })}
+            }}
           >
-            {closeButton}
-            {body}
+            {item ? (
+              <Box sx={{ minHeight: itemCard.railMinHeight, overflow: 'hidden' }}>
+                <ItemMedia
+                  item={item}
+                  variant="rail"
+                  fallbackIcon={fallbackIcon}
+                  categoryLabel={item.category_title}
+                />
+              </Box>
+            ) : null}
+            {/* The content cell scrolls on its own; the CTA sits at the end of it
+                (spec .foot), the catalog behind stays dimmed. */}
+            {/*
+              ПРАВАЯ КОЛОНКА — СТЕКЛО, а не поверхность: тот же рецепт
+              `glass.sheet`, которым сделаны строка категорий и нижнее меню.
+              Сквозь неё видно размытую витрину под шторкой — ровно то, чем
+              живёт вся навигация продукта.
+            */}
+            <Box
+              sx={(t) => ({
+                position: 'relative',
+                minWidth: 0,
+                minHeight: 0,
+                maxHeight: '88vh',
+                overflowY: 'auto',
+                ...storefrontTokens(t.palette.mode).glass.sheet,
+              })}
+            >
+              {closeButton}
+              {body}
+            </Box>
           </Box>
         </ItemSheetLayoutContext.Provider>
       </Dialog>

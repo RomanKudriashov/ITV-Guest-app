@@ -245,11 +245,8 @@ const MosaicTile = memo(function MosaicTile({
         )}
       </Box>
 
-      {/*
-        Общего градиента «глубины» больше нет (партия 58б): он лежал вторым
-        слоем под подложкой и затемнял кадр там, где текста нет. Одно
-        затемнение — подложка текстового блока ниже.
-      */}
+      {/* Слой 1 — лёгкий общий градиент снизу. Читаемость держит слой 2. */}
+      <Box aria-hidden sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: scrim.depth }} />
 
       {badge ? (
         <Box sx={{ position: 'absolute', top: 8, insetInlineStart: 8, maxWidth: 'calc(100% - 16px)' }}>
@@ -282,7 +279,7 @@ const MosaicTile = memo(function MosaicTile({
         </Box>
       ) : null}
 
-      {/* Подложка текстового блока: под буквами не светлее plateMin. */}
+      {/* Слой 2 — подложка текстового блока: под буквами не светлее plateMin. */}
       <Box
         sx={{
           position: 'absolute',
