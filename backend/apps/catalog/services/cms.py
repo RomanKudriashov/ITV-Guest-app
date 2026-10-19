@@ -420,6 +420,17 @@ def create_category(data: dict) -> Category:
         priority=0,
         is_active=True,
     )
+
+    # ЕДИНСТВЕННАЯ ЛОКАЦИЯ — СРАЗУ В МАТРИЦЕ (партия 60). Без связки «раздел ×
+    # локация» гостю некуда доставить, и «Оформить» гаснет без объяснений: у
+    # нового отеля это был первый же тупик. Когда локация у отеля одна (её
+    # заводит провижининг — «В номер»), выбирать нечего, и раздел встаёт в
+    # неё сам. Где локаций несколько, решает человек в матрице.
+    from apps.hotels.models import Location
+
+    locations = list(Location.objects.filter(is_active=True)[:2])
+    if len(locations) == 1:
+        ServiceLocation.objects.get_or_create(category=category, location=locations[0])
     return category
 
 
@@ -1456,6 +1467,20 @@ def badge_items(badge_id, *, limit: int | None = None, offset: int = 0) -> dict:
     )
 
 
+def _require_marketing() -> None:
+    """
+    Метки — раздел модуля маркетинга, как и баннеры (партия 60). Гейт стоял
+    только на баннерах: метки создавались и навешивались и без модуля.
+    """
+    from apps.core.errors import PermissionDenied
+    from apps.hotels.models import HotelModule
+    from apps.hotels.module_registry import enabled_module_codes
+    from apps.hotels.services.hotel import current_hotel
+
+    if HotelModule.Code.MARKETING not in enabled_module_codes(current_hotel()):
+        raise PermissionDenied("Раздел недоступен", code="module_disabled")
+
+
 def set_badge_on_item(badge_id, item_id, *, attached: bool) -> dict:
     """
     Повесить или снять ОДНУ метку с ОДНОЙ позиции, не трогая остальные.
@@ -1463,13 +1488,15 @@ def set_badge_on_item(badge_id, item_id, *, attached: bool) -> dict:
     `assign_item_badges` заменяет весь набор — он про редактор позиции, где
     человек видит все её метки сразу. Здесь противоположный разрез: одна метка,
     много позиций, и стирать чужие метки при снятии своей было бы дико.
+
+    Позиция — через `get_item` (партия 60): он проверяет область, и
+    управляющий больше не вешает метку на блюдо чужого заведения.
     """
+    _require_marketing()
     badge = Badge.objects.filter(pk=badge_id).first()
     if badge is None:
         raise NotFoundError("Бейдж не найден")
-    item = Item.objects.filter(pk=item_id).first()
-    if item is None:
-        raise NotFoundError("Позиция не найдена")
+    item = get_item(item_id)
 
     if attached:
         ItemBadge.objects.get_or_create(
@@ -1492,6 +1519,7 @@ def _validate_role(role: str) -> str:
 
 def create_badge(data: dict) -> Badge:
     require_hotel_admin()
+    _require_marketing()
     label = data.get("label") or {}
     if not any((label.get(lang) or "").strip() for lang in label):
         raise ValidationError("Название бейджа обязательно", field="label")
@@ -1507,6 +1535,7 @@ def create_badge(data: dict) -> Badge:
 
 def update_badge(badge_id, data: dict) -> Badge:
     require_hotel_admin()
+    _require_marketing()
     badge = Badge.objects.filter(pk=badge_id).first()
     if badge is None:
         raise NotFoundError("Бейдж не найден")
@@ -1524,6 +1553,7 @@ def update_badge(badge_id, data: dict) -> Badge:
 
 def delete_badge(badge_id) -> None:
     require_hotel_admin()
+    _require_marketing()
     badge = Badge.objects.filter(pk=badge_id).first()
     if badge is None:
         raise NotFoundError("Бейдж не найден")
@@ -1533,10 +1563,17 @@ def delete_badge(badge_id) -> None:
 
 
 def assign_item_badges(item_id, badge_ids: list) -> list[dict]:
-    """Заменяет набор бейджей позиции. Join-строки удаляем жёстко."""
-    item = Item.objects.filter(pk=item_id).first()
-    if item is None:
-        raise NotFoundError("Позиция не найдена")
+    """
+    Заменяет набор бейджей позиции. Join-строки удаляем жёстко.
+
+    Область — через `get_item`, модуль — только когда навешивают НОВУЮ метку
+    (партия 60): редактор позиции шлёт набор при каждом сохранении, и без
+    модуля правка блюда с уже висящими метками не должна ломаться.
+    """
+    item = get_item(item_id)
+    current = {str(value) for value in item.item_badges.values_list("badge_id", flat=True)}
+    if {str(value) for value in badge_ids} - current:
+        _require_marketing()
 
     valid = list(Badge.objects.filter(pk__in=badge_ids).values_list("pk", flat=True))
     ItemBadge.objects.filter(item=item).hard_delete()
@@ -1571,6 +1608,7 @@ def reorder_badges(ids: list[str]) -> list[dict]:
     наша ответственность, а порядок на витрине — отеля.
     """
     require_hotel_admin()
+    _require_marketing()
     ids = [str(value) for value in ids]
     rows = {str(row.pk): row for row in Badge.objects.filter(pk__in=ids)}
     if len(rows) != len(set(ids)):

@@ -163,6 +163,17 @@ export function AccessTab() {
             </Box>
           </Box>
 
+          {/* Кому код ещё не выдан (партия 60): без демо-входа гость этих
+              номеров на экране «Номер» упирается в «код не подошёл». */}
+          {!state.demo_entry.enabled && (state.rooms_without_pin ?? []).length > 0 ? (
+            <Alert severity="warning" sx={{ mb: 2 }} data-testid="grms-rooms-without-pin">
+              {t('roomControl.access.withoutPin', {
+                count: (state.rooms_without_pin ?? []).length,
+                rooms: (state.rooms_without_pin ?? []).slice(0, 30).join(', '),
+              })}
+              {(state.rooms_without_pin ?? []).length > 30 ? ' …' : ''}
+            </Alert>
+          ) : null}
           {state.pins.length === 0 ? (
             <Typography variant="caption" color="text.secondary">
               {t('roomControl.access.noPins')}

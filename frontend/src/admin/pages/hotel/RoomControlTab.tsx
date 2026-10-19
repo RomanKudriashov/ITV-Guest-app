@@ -18,6 +18,7 @@ import { ImportTab } from '@/cms/roomControl/ImportTab';
 import { PlanEditor } from '@/cms/roomControl/PlanEditor';
 import { VersionsTab } from '@/cms/roomControl/VersionsTab';
 import { GrmsScopeProvider, useGrms } from '@/cms/roomControl/scope';
+import { useRights } from '../../useRights';
 import { contentLanguagesFrom } from '@/hooks/useBootstrap';
 import { getHotel } from '@/admin/adminClient';
 
@@ -68,10 +69,18 @@ type Section = 'import' | 'builder' | 'plan' | 'versions' | 'diagnostics';
 */
 const SECTIONS: Section[] = ['import', 'builder', 'plan', 'versions', 'diagnostics'];
 
+// Роль «только чтение» (партия 60): импорт, конструктор и план — редакторы, и
+// каждое их нажатие сервер отвергал 403. Ей остаются история версий (без
+// публикации и отката) и диагностика.
+const READ_ONLY_SECTIONS: Section[] = ['versions', 'diagnostics'];
+
 function Inner() {
   const { t } = useTranslation();
   const grms = useGrms();
-  const [section, setSection] = useState<Section>('import');
+  const { canWrite } = useRights();
+  const sections = canWrite ? SECTIONS : READ_ONLY_SECTIONS;
+  const [chosen, setSection] = useState<Section>('import');
+  const section = sections.includes(chosen) ? chosen : sections[0];
   const [typeCode, setTypeCode] = useState('');
 
   const types = useQuery({ queryKey: queryKeys.grmsTypes(grms.base), queryFn: grms.types });
@@ -109,7 +118,7 @@ function Inner() {
           scrollButtons="auto"
           sx={{ flexGrow: 1 }}
         >
-          {SECTIONS.map((key) => (
+          {sections.map((key) => (
             <Tab
               key={key}
               value={key}
@@ -144,7 +153,7 @@ function Inner() {
 
       {current && section === 'builder' && <BuilderTab type={current} />}
       {current && section === 'plan' && <PlanEditor code={current.code} types={list} />}
-      {current && section === 'versions' && <VersionsTab type={current} />}
+      {current && section === 'versions' && <VersionsTab type={current} readOnly={!canWrite} />}
       {current && section === 'diagnostics' && <DiagnosticsTab type={current} />}
     </Box>
   );

@@ -27,6 +27,16 @@ const GATED = new Set([
   'analytics',
   'settings',
   'dictionaries',
+  // Заглушки модулей (партия 60): у них нет своего экрана «модуль выключен»,
+  // и по прямому адресу «Модуль подключён… в разработке» видел кто угодно —
+  // без модуля и не администратор. Пункт меню сервер даёт только с модулем и
+  // администратору — по нему и пускаем.
+  'payments',
+  'pms',
+  'mobile-key',
+  // Витрина компонентов — служебная, в меню её нет; пускаем тех, кому открыты
+  // настройки отеля, то есть администратора (см. `allowedSections`).
+  'styleguide',
 ]);
 
 /** Редакторы меню живут внутри раздела «Сервисы». */
@@ -49,5 +59,6 @@ export function allowedSections(groups: Array<{ items: Array<{ to?: string | nul
       if (to.startsWith('/cms/')) allowed.add(to.slice('/cms/'.length).split('/')[0]);
     }
   }
+  if (allowed.has('settings')) allowed.add('styleguide');
   return allowed;
 }

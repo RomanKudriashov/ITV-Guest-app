@@ -119,7 +119,13 @@ function RoomControlSection() {
   */
   const [typeCode, setTypeCode] = useState(params.get('type') ?? '');
 
-  const types = useQuery({ queryKey: queryKeys.grmsTypes(base), queryFn: () => fetchGrmsTypes(transport) });
+  const types = useQuery({
+    queryKey: queryKeys.grmsTypes(base),
+    queryFn: () => fetchGrmsTypes(transport),
+    // Модуль и конфигурацию включает NaviRoom Control в другой вкладке —
+    // вернувшись сюда, человек видит новое состояние без перезагрузки (партия 60).
+    refetchOnWindowFocus: 'always',
+  });
 
   useEffect(() => {
     const list = types.data?.types ?? [];
@@ -238,7 +244,7 @@ function RoomControlSection() {
         <EmptyState
           testId="grms-no-types"
           title={t('roomControl.noTypes')}
-          description={t('roomControl.noTypesHint')}
+          description={t('roomControl.cmsNoTypesHint')}
         />
       )}
 

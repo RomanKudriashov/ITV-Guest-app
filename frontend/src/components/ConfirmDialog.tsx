@@ -20,6 +20,11 @@ export interface ConfirmDialogProps {
   testId?: string;
   /** Extra controls rendered between the text and the buttons. */
   children?: ReactNode;
+  /**
+   * Вернуть фокус туда, откуда открыли. Выключают, когда вопрос задан из поля
+   * выбора: фокус на нём снова раскрывает список поверх экрана.
+   */
+  restoreFocus?: boolean;
 }
 
 export function ConfirmDialog({
@@ -34,11 +39,19 @@ export function ConfirmDialog({
   onClose,
   testId = 'confirm-dialog',
   children,
+  restoreFocus = true,
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth data-testid={testId}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      data-testid={testId}
+      disableRestoreFocus={!restoreFocus}
+    >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         {description ? (

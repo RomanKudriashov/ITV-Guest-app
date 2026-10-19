@@ -255,11 +255,30 @@ class _AllScopeActor:
     pk = None
 
 
+def _own_exports():
+    """
+    Выгрузки, которые актор вправе видеть (партия 60).
+
+    Отель отрезает RLS, но внутри отеля выгрузку админа — со всеми точками и
+    выручкой — скачивал по id любой управляющий. Админ видит все выгрузки
+    отеля, остальные — только заказанные собой. Чужая — тот же 404, что и
+    несуществующая: перебором id нельзя узнать, что она есть.
+    """
+    from apps.accounts.services.roles import current_access
+    from apps.core.context import current_actor
+
+    exports = AnalyticsExport.objects.all()
+    if current_access().unrestricted:
+        return exports
+    actor = current_actor()
+    return exports.filter(requested_by=getattr(actor, "pk", None))
+
+
 def get_export(export_id):
-    """Выгрузка по идентификатору. Перенос дословный из вьюхи."""
+    """Выгрузка по идентификатору — только своя (админ отеля — любая)."""
     from apps.core.errors import NotFoundError
 
-    export = AnalyticsExport.objects.filter(pk=export_id).first()
+    export = _own_exports().filter(pk=export_id).first()
     if export is None:
         raise NotFoundError("Экспорт не найден")
     return export
@@ -269,7 +288,7 @@ def get_ready_export(export_id):
     """Готовая выгрузка: и «нет такой», и «ещё не готова» — один ответ."""
     from apps.core.errors import NotFoundError
 
-    export = AnalyticsExport.objects.filter(pk=export_id).first()
+    export = _own_exports().filter(pk=export_id).first()
     if export is None or export.status != AnalyticsExport.Status.READY or export.content is None:
         raise NotFoundError("Файл ещё не готов")
     return export

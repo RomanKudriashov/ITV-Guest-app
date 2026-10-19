@@ -67,13 +67,28 @@ def _find(node_id: str) -> tuple[OnPremNode, Hotel]:
     return node, node.hotel
 
 
-def revoke_key(node_id: str) -> tuple[OnPremNode, Hotel]:
+def _find_in_scope(node_id: str, user) -> tuple[OnPremNode, Hotel]:
+    """
+    Узел — только в области человека (партия 60). Ручки узлов адресуются по
+    `node_id`, без `{hotel_id}` в пути, и общая проверка области на них не
+    срабатывала: поддержка с одной группой отзывала ключи любого отеля. Чужой
+    узел — тот же 404, что и несуществующий.
+    """
+    node, hotel = _find(node_id)
+    if user is not None:
+        from apps.hotels.services.platform import scope
+
+        scope.assert_allows(user, hotel.pk)
+    return node, hotel
+
+
+def revoke_key(node_id: str, *, user=None) -> tuple[OnPremNode, Hotel]:
     """
     Отзыв ключа. Строку узла НЕ удаляем: платформе важно помнить, что у отеля
     был узел и когда его отключили, — иначе история «почему GRMS перестал
     работать» исчезает вместе со строкой.
     """
-    node, hotel = _find(node_id)
+    node, hotel = _find_in_scope(node_id, user)
     with tenant_context(hotel):
         OnPremNode.objects.filter(pk=node.pk).update(is_revoked=True, key_hash="")
     node.is_revoked = True
@@ -81,8 +96,8 @@ def revoke_key(node_id: str) -> tuple[OnPremNode, Hotel]:
     return node, hotel
 
 
-def reissue_key(node_id: str) -> tuple[OnPremNode, Hotel, str]:
-    node, hotel = _find(node_id)
+def reissue_key(node_id: str, *, user=None) -> tuple[OnPremNode, Hotel, str]:
+    node, hotel = _find_in_scope(node_id, user)
     key, digest = _new_key()
     now = timezone.now()
     with tenant_context(hotel):

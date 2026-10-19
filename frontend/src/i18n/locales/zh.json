@@ -2257,7 +2257,8 @@
       "hint": "客人可以自行切换视图——以客人的选择为准。",
       "cards": "卡片",
       "mosaic": "马赛克"
-    }
+    },
+    "slaInherited": "默认：{{minutes}} 分钟"
   },
   "inclusions": {
     "explainer": "引入是链接而非复制：源头的修改会立即体现，隐藏某项也不会从其归属方删除。",
@@ -2427,7 +2428,12 @@
       "disabled": "双重验证已关闭",
       "setupFailed": "无法开始设置",
       "codeRejected": "验证码不正确",
-      "disableFailed": "无法关闭双重验证"
+      "disableFailed": "无法关闭双重验证",
+      "disableConfirm": {
+        "title": "关闭双重验证？",
+        "body": "关闭后，仅凭密码即可进入控制台及平台上的所有酒店。请输入应用中的验证码以确认是您本人。",
+        "code": "应用中的验证码"
+      }
     },
     "actions": {
       "logout": "退出",
@@ -2520,7 +2526,11 @@
         "status": "状态"
       },
       "allGroups": "全部分组",
-      "selectedGroup_other": "该分组内有 {{count}} 家酒店"
+      "selectedGroup_other": "该分组内有 {{count}} 家酒店",
+      "bulkDisableConfirm": {
+        "title": "停用 {{count}} 家酒店？",
+        "body": "这些酒店的页面和后台将无法打开，也不会接收订单。可用“启用”恢复。"
+      }
     },
     "hotel": {
       "crumb": "酒店详情",
@@ -2610,7 +2620,22 @@
         "existing": "酒店已有管理员：{{list}}。请核对地址 — 第二位全权管理员通常是打错造成的。",
         "never": "从未登录"
       },
-      "crumbNamed": "酒店「{{name}}」"
+      "crumbNamed": "酒店「{{name}}」",
+      "currencyConfirm": {
+        "title": "将货币改为 {{code}}？",
+        "body": "{{code}} 的小数位数为 {{next}}，当前为 {{current}}。价格以最小单位存储，更改小数位会改变所有价格：{{before}} 将变为 {{after}}。仅当价格已按新货币录入时才更改小数位；否则请保留并检查价格。",
+        "both": "同时更改小数位（{{next}}）",
+        "keep": "仅更改货币，保留 {{current}} 位小数"
+      },
+      "activeConfirm": {
+        "offTitle": "停用酒店「{{name}}」？",
+        "offBody": "酒店页面和后台将无法打开，所有员工将被登出，不再接收订单。",
+        "off": "停用",
+        "onTitle": "启用酒店「{{name}}」？",
+        "onBody": "页面将对客人开放，员工可重新登录，开始接收订单。",
+        "on": "启用"
+      },
+      "tariffOwnerOnly": "只有平台所有者可以更改套餐。"
     },
     "create": {
       "title": "新建酒店",
@@ -2692,7 +2717,14 @@
       "nodeName": "节点名称",
       "createFailed": "无法添加节点",
       "reissueFailed": "无法重新签发密钥",
-      "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效。连接器不会自行重新读取密钥——请用新密钥重启连接器。"
+      "reissueWarning": "为节点“{{name}}”重新签发密钥？旧密钥将立即失效。连接器不会自行重新读取密钥——请用新密钥重启连接器。",
+      "revokeConfirm": {
+        "title": "吊销节点「{{name}}」的密钥？",
+        "body": "酒店「{{hotel}}」的连接器会立即断开：在签发新密钥并用它重启连接器之前，客人无法控制房间。"
+      },
+      "reissueConfirm": {
+        "title": "为节点「{{name}}」签发新密钥？"
+      }
     },
     "team": {
       "title": "平台用户",
@@ -2711,7 +2743,12 @@
         "access": "访问",
         "twofa": "2FA"
       },
-      "empty": "目前平台上只有你一个用户。"
+      "empty": "目前平台上只有你一个用户。",
+      "roleConfirm": {
+        "title": "更改 {{email}} 的角色？",
+        "body": "「{{from}}」→「{{to}}」。此人可见的所有酒店的权限将立即更改。",
+        "confirm": "更改角色"
+      }
     },
     "audit": {
       "title": "审计",
@@ -2915,6 +2952,10 @@
           "missing": "缺少该条目",
           "disabled": "被酒店关闭",
           "extra": "酒店自有条目"
+        },
+        "resetConfirm": {
+          "title": "将 {{count}} 家酒店恢复为参考版本？",
+          "body": "酒店对系统条目的修改将被清除：修改过的恢复为参考，酒店关闭的重新对客人显示，删除的重新出现。酒店自建条目保留。此操作无法撤销。"
         }
       }
     },
@@ -3000,6 +3041,10 @@
         "origin": "来源",
         "tariff": "套餐",
         "language": "语言"
+      },
+      "deleteConfirm": {
+        "title": "删除分组「{{name}}」？",
+        "body": "分组中的酒店：{{count}}。酒店保留；分组将从筛选和批量操作中消失，只能重新创建。"
       }
     },
     "publications": {
@@ -3146,7 +3191,12 @@
       "value": "数值",
       "step": "步骤",
       "channel": "通道",
-      "answer": "应答"
+      "answer": "应答",
+      "confirm": {
+        "title": "向房间 {{room}} 发送指令？",
+        "body": "房间 {{room}} 中的元素「{{element}}」（{{capability}}）将在真实设备上被设为 {{value}}。如有客人入住，会立即切换。",
+        "send": "发送到房间"
+      }
     },
     "publish": {
       "title": "发布",
@@ -3163,9 +3213,14 @@
       "noVersions": "尚未发布过",
       "noVersionsHint": "在搭建器里配好界面后发布。",
       "publishedAt": "发布时间",
-      "controls": "元素数"
+      "controls": "元素数",
+      "confirm": {
+        "publishTitle": "发布房间配置？",
+        "rollbackTitle": "回滚到版本 {{version}}？",
+        "body": "类型 {{type}} 的所有房间（当前 {{count}} 间）中，客人的“房间”页面将改变。"
+      }
     },
-    "subtitle": "客人在客房里能操作什么：灯光、窗帘、空调、场景。酒店上线时来一次，之后设备更换时再来。",
+    "subtitle": "客人在客房里能操作什么：灯光、窗帘、空调、场景。设备和房间页面由 NaviRoom Control 配置；这里管理客人访问、磁贴、检查和诊断。",
     "type": "房型",
     "loadError": "无法加载房型",
     "noTypes": "尚无房型",
@@ -3206,7 +3261,8 @@
       "validUntil": "有效期至",
       "validUntilHint": "退房日期。留空则在更换密码前一直有效",
       "noValidUntil": "长期有效",
-      "expired": "已过期"
+      "expired": "已过期",
+      "withoutPin": "无代码的房间：{{count}}。前台发放 PIN 之前，这些房间的客人无法打开“房间”页面：{{rooms}}"
     },
     "plan": {
       "frames": "平面图像",
@@ -3322,7 +3378,8 @@
     },
     "roomsOnType_other": "{{count}} 间客房",
     "moved": "客房控制的配置由平台完成：PNR 导入、界面搭建、平面图与发布都在我们这边。此处保留客人访问、元件检查与连接状态。",
-    "movedFromTab": "该板块已迁移：客房控制的配置由平台完成。此处保留客人访问、元件检查与连接状态 — 如需修改配置请联系我们。"
+    "movedFromTab": "该板块已迁移：客房控制的配置由平台完成。此处保留客人访问、元件检查与连接状态 — 如需修改配置请联系我们。",
+    "cmsNoTypesHint": "房间配置（类型、控件、平面图）由 NaviRoom Control 在接入酒店时完成。配置就绪后，这里会出现客人访问、磁贴和检查。"
   },
   "cms": {
     "homeBlocks": {
@@ -3452,7 +3509,11 @@
     "unknownIp": "地址未知",
     "unknownAgent": "浏览器未知",
     "shown": "已显示 {{shown}} / {{total}} 个其他登录",
-    "more": "显示更多"
+    "more": "显示更多",
+    "logoutAllConfirm": {
+      "title": "在所有设备上退出？",
+      "body": "此账户的所有登录（包括当前登录）都将关闭：需要在每台设备上重新登录。"
+    }
   },
   "profile": {
     "title": "个人资料",
@@ -3738,7 +3799,7 @@
   "orders": {
     "title": "订单",
     "what": "订单",
-    "emptyHint": "暂无订单。刷新页面后可看到新订单——所有场所一起。",
+    "emptyHint": "所选期间没有已关闭的订单。进行中的订单在跟踪器中。",
     "loadMore": "显示更多",
     "row": {
       "room": "房间 {{room}}"
@@ -3764,7 +3825,8 @@
       "nobody": "无人接单",
       "cancelled": "已取消：{{reason}}"
     },
-    "emptyHintScoped": "这里将显示您所管理场所的订单：{{venues}}。其他场所的订单不在此显示。"
+    "emptyHintScoped": "您门店的已关闭订单将显示在这里：{{venues}}。进行中的订单在跟踪器中。",
+    "closedOnly": "这里是已关闭的订单：已完成和已取消。进行中的订单在跟踪器中。"
   },
   "catalog": {
     "dish": {
@@ -3999,6 +4061,10 @@
       "link": "外部链接",
       "venue": "本店场所",
       "page": "说明页"
+    },
+    "deleteConfirm": {
+      "title": "删除横幅「{{title}}」？",
+      "body": "客人将立即看不到它，其展示和点击也会从统计中移除。如只需暂时隐藏，请在编辑器中关闭。"
     }
   },
   "back": {

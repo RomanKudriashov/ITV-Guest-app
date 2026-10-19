@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -180,6 +181,8 @@ function MemberLine({
 }) {
   const { t } = useTranslation();
   const cell = { p: '13px 12px', borderBottom: `1px solid ${surface.hair}`, color: ink.mid } as const;
+  // Роль меняет доступ ко всем отелям платформы — с вопросом (партия 60).
+  const [askRole, setAskRole] = useState<string | null>(null);
 
   return (
     <Box component="tr" data-testid={`admin-team-row-${member.email}`}>
@@ -194,13 +197,34 @@ function MemberLine({
           size="small"
           fullWidth={false}
           value={member.role}
-          onChange={onRole}
+          onChange={(next) => {
+            if (next === member.role) return;
+            // Поле раскрывается по фокусу — вопрос задаём после закрытия списка.
+            (document.activeElement as HTMLElement | null)?.blur();
+            window.setTimeout(() => setAskRole(next), 0);
+          }}
           testId={`admin-team-role-${member.email}`}
           // Самая длинная роль («Владелец платформы») — 157 px текста плюс
           // стрелка и отступы. В 150 она обрезалась; ширина жёсткая, чтобы
           // таблица на узком экране прокручивалась, а не сжимала поле (партия 55).
           sx={{ width: 230, minWidth: 230 }}
           options={ROLES.map((code) => ({ value: code, label: t(`admin.role.${code}`) }))}
+        />
+        <ConfirmDialog
+          open={askRole !== null}
+          testId={`admin-team-role-confirm-${member.email}`}
+          restoreFocus={false}
+          title={t('admin.team.roleConfirm.title', { email: member.email })}
+          description={t('admin.team.roleConfirm.body', {
+            from: t(`admin.role.${member.role}`),
+            to: askRole ? t(`admin.role.${askRole}`) : '',
+          })}
+          confirmLabel={t('admin.team.roleConfirm.confirm')}
+          onConfirm={() => {
+            if (askRole) onRole(askRole);
+            setAskRole(null);
+          }}
+          onClose={() => setAskRole(null)}
         />
       </Box>
       <Box component="td" sx={cell}>

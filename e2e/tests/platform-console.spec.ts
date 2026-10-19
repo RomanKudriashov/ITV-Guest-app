@@ -112,6 +112,8 @@ test('админка: создание отеля, вход admin, отключ�
   await page.getByTestId(`admin-fleet-open-${sub}`).click()
   await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
   await page.getByTestId('admin-hotel-active').click()
+  // Выключение — только после вопроса (партия 60).
+  await page.getByTestId('admin-hotel-active-confirm-confirm').click()
   await page.getByTestId('admin-hotel-back').click()
   await page.getByTestId('admin-fleet-search').fill(sub)
   await expect(page.getByTestId(`admin-fleet-status-${sub}`)).toContainText(/Отключ/, {

@@ -28,7 +28,7 @@ from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.brand_library import preset_tokens
 from apps.hotels.services.hotel_fields import clean_currency, clean_email, clean_subdomain, clean_timezone
-from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Service
+from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Location, Service
 from apps.orders.services.status_flows import ensure_status_flows
 
 DEFAULT_PRESET = "midnight_navy"
@@ -243,6 +243,20 @@ def provision_hotel(
         if not created_service and not reception_service.public_name:
             reception_service.public_name = reception_name
             reception_service.save(update_fields=["public_name", "updated_at"])
+
+        # ЛОКАЦИЯ «В НОМЕР» — ЧАСТЬ КАРКАСА (партия 60). Без неё гость нового
+        # отеля собирал корзину и упирался в пустое «Куда доставить»: заказ не
+        # оформлялся, пока кто-то не находил матрицу внизу настроек. Номер гостя
+        # известен из входа — уточнять нечего. Каждый новый раздел встаёт в эту
+        # локацию сам, пока она у отеля единственная (`create_category`).
+        if not Location.objects.exists():
+            Location.objects.create(
+                code="in_room",
+                kind=Location.Kind.IN_ROOM,
+                title={"ru": "В номер", "en": "To the room", "ar": "إلى الغرفة", "zh": "送至房间"},
+                sort_order=0,
+                is_active=True,
+            )
 
         seed_item_data_dictionaries()
         # Пресеты статусов — часть каркаса отеля, а не демо-контента. До R3 они

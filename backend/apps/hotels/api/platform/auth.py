@@ -195,10 +195,17 @@ def totp_enable(request: HttpRequest, payload: TotpEnableIn):
     }
 
 
-@router.post("/auth/2fa/disable", summary="Выключить 2FA")
+@router.post("/auth/2fa/disable", summary="Выключить 2FA, подтвердив кодом")
 @requires(SELF)
-def totp_disable(request: HttpRequest):
+def totp_disable(request: HttpRequest, payload: TotpEnableIn):
+    from apps.accounts.services.totp import verify as verify_totp
+
+    # КОД, А НЕ ОДНО НАЖАТИЕ (партия 60). Второй фактор снимал любой, у кого в
+    # руках оказалась открытая сессия, — ровно тот случай, от которого фактор и
+    # защищает. Выключить может только тот, у кого приложение с кодом.
     user = request.user
+    if user.totp_enabled and not verify_totp(user.totp_secret, payload.code):
+        raise ValidationError("Код не подошёл — второй фактор не выключен", field="code")
     console.save_platform_user(user, totp_enabled=False, totp_secret="")
     console.audit_platform("platform.2fa.disabled", actor_id=user.pk, ip=request.META.get("REMOTE_ADDR"))
     return {"ok": True}

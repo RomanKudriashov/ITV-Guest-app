@@ -15,6 +15,15 @@ from tests.conftest import host_for
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _marketing_on(crystal):
+    """Метки — раздел модуля маркетинга (партия 60): без него сервер отвечает 403."""
+    from apps.hotels.models import HotelModule
+
+    with tenant_context(crystal):
+        HotelModule.objects.update_or_create(code="marketing", defaults={"is_enabled": True})
+
+
 def _guest_menu_items(client, hotel, token, type_="product"):
     resp = client.get(
         f"/api/v1/guest/catalog?type={type_}",

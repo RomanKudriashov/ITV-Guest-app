@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ink, panelSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   closeSession,
   getMe,
@@ -45,6 +46,9 @@ export function SecurityPage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  // Выключение второго фактора — только с кодом из приложения (партия 60).
+  const [askDisable, setAskDisable] = useState(false);
+  const [disableCode, setDisableCode] = useState('');
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['admin', 'me'] });
 
@@ -76,8 +80,10 @@ export function SecurityPage() {
   });
 
   const disable = useMutation({
-    mutationFn: totpDisable,
+    mutationFn: () => totpDisable(disableCode.trim()),
     onSuccess: () => {
+      setAskDisable(false);
+      setDisableCode('');
       setDone(t('admin.security.disabled'));
       setError(null);
       refresh();
@@ -124,7 +130,10 @@ export function SecurityPage() {
 
             {user.totp_enabled ? (
               <Button
-                onClick={() => disable.mutate()}
+                onClick={() => {
+                  setError(null);
+                  setAskDisable(true);
+                }}
                 disabled={disable.isPending}
                 data-testid="admin-security-disable"
                 sx={{ color: state.bad, border: `1px solid ${state.bad}55` }}
@@ -193,6 +202,33 @@ export function SecurityPage() {
           </Box>
         )}
       </QueryState>
+      <ConfirmDialog
+        open={askDisable}
+        testId="admin-security-disable-confirm"
+        destructive
+        title={t('admin.security.disableConfirm.title')}
+        description={t('admin.security.disableConfirm.body')}
+        confirmLabel={t('admin.security.disable')}
+        busy={disableCode.trim().length < 6 || disable.isPending}
+        onConfirm={() => disable.mutate()}
+        onClose={() => {
+          setAskDisable(false);
+          setDisableCode('');
+        }}
+      >
+        <TextField
+          autoFocus
+          fullWidth
+          size="small"
+          sx={{ mt: 2 }}
+          label={t('admin.security.disableConfirm.code')}
+          value={disableCode}
+          onChange={(event) => setDisableCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+          inputProps={{ inputMode: 'numeric', 'data-testid': 'admin-security-disable-code' }}
+          error={Boolean(error) && askDisable}
+          helperText={askDisable && error ? error : undefined}
+        />
+      </ConfirmDialog>
 
       {/* Мои входы — здесь же, в «Безопасности»: 2FA и список сессий отвечают
           на один вопрос «кто и чем заходит под этой учёткой». */}

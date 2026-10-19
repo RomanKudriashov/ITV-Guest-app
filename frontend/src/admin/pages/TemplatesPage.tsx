@@ -13,6 +13,7 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { DictionaryDivergence } from './DictionaryDivergence';
+import { useRights } from '../useRights';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import {
@@ -77,6 +78,8 @@ export function TemplatesPage() {
 }
 
 function TemplatesTab() {
+  // «Только чтение» правок не делает — и элементов правки не видит (партия 60).
+  const { canWrite } = useRights();
   const actionFailed = useActionFailed();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
@@ -124,6 +127,7 @@ function TemplatesTab() {
             <Box component="label" sx={{ display: 'inline-flex', cursor: 'pointer' }}>
               <Switch
                 checked={template.is_active}
+                disabled={!canWrite}
                 onChange={(e) => save.mutate({ id: template.id, patch: { is_active: e.target.checked } })}
                 inputProps={{ 'data-testid': `admin-template-active-${template.code}` } as Record<string, string>}
                 sx={{ '& .MuiSwitch-input': { left: 0, width: '100%' } }}
@@ -169,6 +173,7 @@ function TemplatesTab() {
 }
 
 function DictionaryTab() {
+  const { canWrite } = useRights();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const dictionary = useQuery({ queryKey: ['admin', 'dictionary'], queryFn: () => getDictionary() });
@@ -218,6 +223,7 @@ function DictionaryTab() {
       */}
       <DictionaryDivergence />
 
+      {canWrite ? (
       <Box sx={{ ...panelSx, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
         <SelectField
           size="small"
@@ -258,6 +264,7 @@ function DictionaryTab() {
           {t('admin.templates.dictSave')}
         </Button>
       </Box>
+      ) : null}
       {error ? <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert> : null}
 
       <QueryState

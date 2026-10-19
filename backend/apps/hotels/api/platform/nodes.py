@@ -44,7 +44,7 @@ def create_node(request: HttpRequest, hotel_id: str, payload: NodeIn):
 def revoke_node(request: HttpRequest, node_id: str):
     from apps.hotels.services.onprem import revoke_key
 
-    node, hotel = revoke_key(node_id)
+    node, hotel = revoke_key(node_id, user=request.user)
     console.audit_hotel(
         hotel, "platform.node.revoked", actor_id=request.user.pk,
         ip=request.META.get("REMOTE_ADDR"), payload={"node": node.name},
@@ -57,7 +57,7 @@ def revoke_node(request: HttpRequest, node_id: str):
 def reissue_node(request: HttpRequest, node_id: str):
     from apps.hotels.services.onprem import reissue_key
 
-    node, hotel, key = reissue_key(node_id)
+    node, hotel, key = reissue_key(node_id, user=request.user)
     console.audit_hotel(
         hotel, "platform.node.reissued", actor_id=request.user.pk,
         ip=request.META.get("REMOTE_ADDR"), payload={"node": node.name},

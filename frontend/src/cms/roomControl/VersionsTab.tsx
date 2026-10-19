@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -20,6 +21,7 @@ import { fetchVersions, publishType, rollbackType, type GrmsType } from '@/api/g
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/ToastProvider';
 
 /**
@@ -34,7 +36,7 @@ import { useToast } from '@/components/ToastProvider';
  * не будет в этой версии»: это не придирка сторожа, а зона на плане, которая
  * перестала бы нажиматься в номере.
  */
-export function VersionsTab({ type }: { type: GrmsType }) {
+export function VersionsTab({ type, readOnly = false }: { type: GrmsType; readOnly?: boolean }) {
   const { t } = useTranslation();
   // База API — из области: CMS отеля или NaviRoom Control.
   const { transport } = useGrmsScope();
@@ -55,6 +57,9 @@ export function VersionsTab({ type }: { type: GrmsType }) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.grmsPlan(base, type.code) });
   };
 
+  // Публикация и откат сразу меняют экран «Номер» у живых гостей во всех
+  // номерах типа — только с вопросом, где сказано, сколько номеров (партия 60).
+  const [ask, setAsk] = useState<{ kind: 'publish' } | { kind: 'rollback'; version: number } | null>(null);
   const publishMutation = useMutation({
     mutationFn: () => publishType(transport, type.code),
     onSuccess: (result) => {
@@ -90,14 +95,16 @@ export function VersionsTab({ type }: { type: GrmsType }) {
               {t('roomControl.publish.hint')}
             </Typography>
           </Stack>
-          <Button
-            variant="contained"
-            disabled={publishMutation.isPending}
-            onClick={() => publishMutation.mutate()}
-            data-testid="grms-publish"
-          >
-            {t('roomControl.publish.publish')}
-          </Button>
+          {readOnly ? null : (
+            <Button
+              variant="contained"
+              disabled={publishMutation.isPending}
+              onClick={() => setAsk({ kind: 'publish' })}
+              data-testid="grms-publish"
+            >
+              {t('roomControl.publish.publish')}
+            </Button>
+          )}
         </Stack>
         <Divider sx={{ my: 1.5 }} />
 
@@ -140,20 +147,42 @@ export function VersionsTab({ type }: { type: GrmsType }) {
                   <TableCell>{new Date(version.published_at).toLocaleString()}</TableCell>
                   <TableCell align="right">{version.controls}</TableCell>
                   <TableCell align="right">
-                    <Button
-                      size="small"
-                      disabled={version.is_current || rollbackMutation.isPending}
-                      onClick={() => rollbackMutation.mutate(version.version)}
-                      data-testid={`grms-rollback-${version.version}`}
-                    >
-                      {t('roomControl.publish.rollback')}
-                    </Button>
+                    {readOnly ? null : (
+                      <Button
+                        size="small"
+                        disabled={version.is_current || rollbackMutation.isPending}
+                        onClick={() => setAsk({ kind: 'rollback', version: version.version })}
+                        data-testid={`grms-rollback-${version.version}`}
+                      >
+                        {t('roomControl.publish.rollback')}
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
+        <ConfirmDialog
+          open={ask !== null}
+          testId="grms-publish-confirm"
+          title={
+            ask?.kind === 'rollback'
+              ? t('roomControl.publish.confirm.rollbackTitle', { version: ask.version })
+              : t('roomControl.publish.confirm.publishTitle')
+          }
+          description={t('roomControl.publish.confirm.body', {
+            type: type.code,
+            count: type.rooms.length,
+          })}
+          confirmLabel={t(ask?.kind === 'rollback' ? 'roomControl.publish.rollback' : 'roomControl.publish.publish')}
+          onConfirm={() => {
+            if (ask?.kind === 'rollback') rollbackMutation.mutate(ask.version);
+            else if (ask) publishMutation.mutate();
+            setAsk(null);
+          }}
+          onClose={() => setAsk(null)}
+        />
       </CardContent>
     </Card>
   );

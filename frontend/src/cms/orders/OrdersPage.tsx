@@ -111,6 +111,11 @@ export function OrdersPage() {
         <Typography variant="h5" data-testid="cms-page-title">
           {t('orders.title')}
         </Typography>
+        {/* Экран — разбор ЗАКРЫТЫХ заказов, и это надо сказать (партия 60): свежий
+            заказ здесь искали и не находили. Открытые живут в трекере. */}
+        <Typography variant="body2" color="text.secondary" data-testid="cms-orders-scope">
+          {t('orders.closedOnly')}
+        </Typography>
 
         <QueryState query={query} what={t('orders.what')}>
           {(body) => (

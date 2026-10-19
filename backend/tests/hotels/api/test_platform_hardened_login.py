@@ -141,7 +141,7 @@ def test_disable_2fa_returns_login_to_one_step(client, admin_token):
     secret = _call(client, admin_token, "post", "/auth/2fa/setup").json()["secret"]
     fresh = _call(client, admin_token, "post", "/auth/2fa/enable",
                   {"code": totp.code_at(secret)}).json()["access"]
-    assert _call(client, fresh, "post", "/auth/2fa/disable").status_code == 200
+    assert _call(client, fresh, "post", "/auth/2fa/disable", {"code": totp.code_at(secret)}).status_code == 200
 
     assert _login(client).status_code == 200
     user = _reload()

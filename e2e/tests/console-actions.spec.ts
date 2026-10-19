@@ -211,15 +211,13 @@ test.describe('Консоль: разрушающее и ключи', () => {
     const reissue = page.getByTestId('admin-node-reissue-живой')
     await expect(reissue).toBeVisible({ timeout: 20_000 })
 
-    let warned = ''
-    page.once('dialog', (dialog) => {
-      warned = dialog.message()
-      void dialog.accept()
-    })
+    // Подтверждение — свой диалог, а не системный confirm (партия 60).
     await reissue.click()
+    const ask = page.getByTestId('admin-node-confirm-живой')
+    await expect(ask, 'предупреждение о смерти старого ключа').toContainText(/перестанет работать|переподключ/i)
+    await ask.getByTestId('admin-node-confirm-живой-confirm').click()
 
     await expect(page.getByTestId('admin-node-key')).toBeVisible({ timeout: 20_000 })
-    expect(warned, 'предупреждение о смерти старого ключа').toMatch(/перестанет работать|переподключ/i)
 
     await request.delete(
       `${API}/api/v1/platform/hotels/${hotel.id}?confirm_subdomain=${hotel.subdomain}`,

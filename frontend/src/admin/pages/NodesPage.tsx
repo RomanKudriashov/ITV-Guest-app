@@ -11,6 +11,7 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 import { ink, panelSx, pillSx, primaryButtonSx, quietButtonSx, surface, typo } from '../adminTokens';
 import { ChoiceField, Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   createNode,
   getFleet,
@@ -246,6 +247,9 @@ function NodeLine({
 }) {
   const { t } = useTranslation();
   const cell = { p: '13px 12px', borderBottom: `1px solid ${surface.hair}`, color: ink.mid } as const;
+  // Отзыв и перевыпуск рвут связь отеля с оборудованием — только с вопросом,
+  // где сказано, что именно перестанет работать (партия 60).
+  const [ask, setAsk] = useState<'revoke' | 'reissue' | null>(null);
 
   return (
     <Box component="tr" data-testid={`admin-node-${node.name}`}>
@@ -285,7 +289,7 @@ function NodeLine({
         */}
         {canWrite ? (
           node.is_revoked ? (
-            <Button size="small" onClick={onReissue} disabled={busy}
+            <Button size="small" onClick={() => setAsk('reissue')} disabled={busy}
               data-testid={`admin-node-reissue-${node.name}`} sx={{ ...typo.caption }}>
               {t('admin.nodes.reissue')}
             </Button>
@@ -293,24 +297,41 @@ function NodeLine({
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <Button
                 size="small"
-                onClick={() => {
-                  if (window.confirm(t('admin.nodes.reissueWarning', { name: node.name }))) {
-                    onReissue();
-                  }
-                }}
+                onClick={() => setAsk('reissue')}
                 disabled={busy}
                 data-testid={`admin-node-reissue-${node.name}`}
                 sx={{ ...typo.caption }}
               >
                 {t('admin.nodes.reissue')}
               </Button>
-              <Button size="small" onClick={onRevoke} disabled={busy}
+              <Button size="small" onClick={() => setAsk('revoke')} disabled={busy}
                 data-testid={`admin-node-revoke-${node.name}`} sx={{ ...typo.caption, color: ink.mid }}>
                 {t('admin.nodes.revoke')}
               </Button>
             </Box>
           )
         ) : null}
+        <ConfirmDialog
+          open={ask !== null}
+          testId={`admin-node-confirm-${node.name}`}
+          destructive
+          title={t(ask === 'revoke' ? 'admin.nodes.revokeConfirm.title' : 'admin.nodes.reissueConfirm.title', {
+            name: node.name,
+            hotel: node.hotel,
+          })}
+          description={
+            ask === 'revoke'
+              ? t('admin.nodes.revokeConfirm.body', { name: node.name, hotel: node.hotel })
+              : t('admin.nodes.reissueWarning', { name: node.name })
+          }
+          confirmLabel={t(ask === 'revoke' ? 'admin.nodes.revoke' : 'admin.nodes.reissue')}
+          onConfirm={() => {
+            if (ask === 'revoke') onRevoke();
+            else onReissue();
+            setAsk(null);
+          }}
+          onClose={() => setAsk(null)}
+        />
       </Box>
     </Box>
   );

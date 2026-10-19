@@ -329,6 +329,8 @@ export interface AccessState {
     toggled: { enabled: boolean; at: string; by: string } | null;
   };
   pins: RoomPinRecord[];
+  /** Управляемые номера без действующего PIN: гость там упрётся в «код не подошёл». */
+  rooms_without_pin?: string[];
 }
 
 export function fetchAccess(

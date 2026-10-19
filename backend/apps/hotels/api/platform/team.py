@@ -16,7 +16,7 @@ router = PlatformRouter(tags=["platform"])
 def list_team(request: HttpRequest, limit: int = 100, search: str = ""):
     from apps.hotels.services.platform.team import list_members
 
-    return list_members(limit=limit, search=search)
+    return list_members(limit=limit, search=search, user=request.user)
 
 
 @router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")

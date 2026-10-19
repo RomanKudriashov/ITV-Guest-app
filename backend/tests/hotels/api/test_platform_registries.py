@@ -669,7 +669,9 @@ def test_tariff_has_one_door(client, api):
     hotel.refresh_from_db()
     assert hotel.tariff != "resort", "тариф проехал мимо своей двери"
     # Имя при этом поменялось: PATCH не сломан, из него убрано одно поле.
-    assert hotel.name == "Через профиль"
+    # Имя — словарь переводов: строка из консоли ложится под язык отеля, не
+    # стирая остальные языки (партия 60).
+    assert hotel.name[hotel.default_language] == "Через профиль"
 
     api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "resort"})
     hotel.refresh_from_db()

@@ -237,7 +237,9 @@ export async function totpEnable(code: string): Promise<void> {
   const data = await request<{ access: string }>('/auth/2fa/enable', 'POST', { code });
   platformToken.set(data.access);
 }
-export const totpDisable = () => request<{ ok: boolean }>('/auth/2fa/disable', 'POST');
+// Выключение — с кодом из приложения (партия 60): одной открытой сессии мало.
+export const totpDisable = (code: string) =>
+  request<{ ok: boolean }>('/auth/2fa/disable', 'POST', { code });
 
 /* ── Сессии консоли ─────────────────────────────────────────────────────── */
 
@@ -591,14 +593,12 @@ export const getModules = (id: string) =>
 // Тариф этой ручкой НЕ передаётся: у него одна дверь — `setTariff` ниже,
 // запертая на владельца. Параметр здесь был, вызывающих не имел, но держал
 // лазейку открытой на сервере.
-export const putModules = (id: string, modules: ModuleEntry[]) =>
+// Только то, что человек переключил, и без `config` (партия 60): весь реестр
+// с прочитанной когда-то конфигурацией затирал намерения остальных модулей и
+// демо-вход, включённый в CMS после загрузки экрана.
+export const putModules = (id: string, modules: Pick<ModuleEntry, 'code' | 'is_enabled'>[]) =>
   request<{ tariff: string; modules: ModuleEntry[] }>(`/hotels/${id}/modules`, 'PUT', {
-    modules: modules.map((m) => ({
-      code: m.code,
-      is_enabled: m.is_enabled,
-      source: m.source,
-      config: m.config,
-    })),
+    modules: modules.map((m) => ({ code: m.code, is_enabled: m.is_enabled })),
   });
 export const setTariff = (
   id: string,

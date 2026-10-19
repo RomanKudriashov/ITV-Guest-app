@@ -14,7 +14,10 @@ export interface ServiceExecutionPoint {
   code: string;
   title: Record<string, string>;
   kind: string;
-  sla_minutes: number;
+  /** `null` — порог не задан, действует умолчание вида работы. */
+  sla_minutes: number | null;
+  /** Что действует сейчас — для подсказки у пустого поля. */
+  effective_sla_minutes: number;
 }
 
 export interface ServiceCommerce {

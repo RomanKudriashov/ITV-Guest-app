@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/auth';
 
 import { EntityName, fillNames, mark } from '@/components/entityCard';
 
@@ -38,6 +39,10 @@ export function ReviewCard({
   onInvestigate: (reviewId: string) => void;
 }) {
   const { t } = useTranslation();
+  // Ответ уходит сообщением в чат гостя — значит, и отвечает тот, кому чат
+  // открыт (партия 60). Управляющему кнопку не рисуем: сервер ответит 403.
+  const { user } = useAuth();
+  const canReply = Boolean(user?.can_chat);
   const language = useAnalyticsLanguage();
   const [open, setOpen] = useState(false);
   const [text, setText, resetText] = useDraftState<string>(() => '', review.id);
@@ -207,13 +212,15 @@ export function ReviewCard({
               >
                 {t('reviews.investigation.open')}
               </Button>
-              <Button
-                size="small"
-                onClick={() => setOpen(true)}
-                data-testid={`reviews-reply-open-${review.order_number}`}
-              >
-                {t('reviews.reply.open')}
-              </Button>
+              {canReply ? (
+                <Button
+                  size="small"
+                  onClick={() => setOpen(true)}
+                  data-testid={`reviews-reply-open-${review.order_number}`}
+                >
+                  {t('reviews.reply.open')}
+                </Button>
+              ) : null}
               {review.guest_reachable ? null : (
                 <Typography variant="caption" color="text.secondary">
                   {t('reviews.reply.guestLeft')}

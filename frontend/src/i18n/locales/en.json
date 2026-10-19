@@ -2278,7 +2278,8 @@
       "hint": "Guests can switch the view themselves — their choice wins.",
       "cards": "Cards",
       "mosaic": "Mosaic"
-    }
+    },
+    "slaInherited": "default: {{minutes}} min"
   },
   "inclusions": {
     "explainer": "An inclusion is a link, not a copy: edits at the source show up here at once, and hiding an item does not delete it for its owner.",
@@ -2453,7 +2454,12 @@
       "disabled": "Two-factor disabled",
       "setupFailed": "Could not start the setup",
       "codeRejected": "The code was rejected",
-      "disableFailed": "Could not disable two-factor"
+      "disableFailed": "Could not disable two-factor",
+      "disableConfirm": {
+        "title": "Turn off two-factor authentication?",
+        "body": "Without it, a password alone opens the console — and every hotel on the platform. Enter the code from your app to confirm it is you.",
+        "code": "Code from the app"
+      }
     },
     "actions": {
       "logout": "Sign out",
@@ -2547,7 +2553,11 @@
       },
       "allGroups": "All groups",
       "selectedGroup_one": "{{count}} hotel in the group",
-      "selectedGroup_other": "{{count}} hotels in the group"
+      "selectedGroup_other": "{{count}} hotels in the group",
+      "bulkDisableConfirm": {
+        "title": "Disable {{count}} hotels?",
+        "body": "These hotels' storefronts and panels will stop opening and orders will not be accepted. Turn them back on with “Enable”."
+      }
     },
     "hotel": {
       "crumb": "Hotel",
@@ -2638,7 +2648,22 @@
         "existing": "The hotel already has an administrator: {{list}}. Check the address — a second full admin is usually a typo.",
         "never": "never signed in"
       },
-      "crumbNamed": "Hotel “{{name}}”"
+      "crumbNamed": "Hotel “{{name}}”",
+      "currencyConfirm": {
+        "title": "Switch currency to {{code}}?",
+        "body": "{{code}} has {{next}} decimal places, the hotel now uses {{current}}. Prices are stored in minor units, so changing the decimals shifts every price: {{before}} becomes {{after}}. Change the decimals only if prices are already entered in the new currency; otherwise keep them and review prices.",
+        "both": "Change decimals too ({{next}})",
+        "keep": "Change currency only, keep {{current}} decimals"
+      },
+      "activeConfirm": {
+        "offTitle": "Disable hotel “{{name}}”?",
+        "offBody": "The storefront and panel stop opening, all staff are signed out, and orders are not accepted.",
+        "off": "Disable",
+        "onTitle": "Enable hotel “{{name}}”?",
+        "onBody": "The storefront opens to guests, staff can sign in again, and orders are accepted.",
+        "on": "Enable"
+      },
+      "tariffOwnerOnly": "Only the platform owner can change the tariff."
     },
     "create": {
       "title": "New hotel",
@@ -2720,7 +2745,14 @@
       "nodeName": "Node name",
       "createFailed": "Could not add the node",
       "reissueFailed": "Could not reissue the key",
-      "reissueWarning": "Reissue the key for node “{{name}}”? The old key stops working immediately. The connector does not reload the key by itself — restart it with the new key."
+      "reissueWarning": "Reissue the key for node “{{name}}”? The old key stops working immediately. The connector does not reload the key by itself — restart it with the new key.",
+      "revokeConfirm": {
+        "title": "Revoke the key of node “{{name}}”?",
+        "body": "The connector of “{{hotel}}” disconnects immediately: guests lose room control until you issue a new key and restart the connector with it."
+      },
+      "reissueConfirm": {
+        "title": "Issue a new key for node “{{name}}”?"
+      }
     },
     "team": {
       "title": "Platform users",
@@ -2739,7 +2771,12 @@
         "access": "Access",
         "twofa": "2FA"
       },
-      "empty": "You are the only platform user so far."
+      "empty": "You are the only platform user so far.",
+      "roleConfirm": {
+        "title": "Change the role of {{email}}?",
+        "body": "“{{from}}” → “{{to}}”. Permissions change immediately across every hotel this person can see.",
+        "confirm": "Change role"
+      }
     },
     "audit": {
       "title": "Audit",
@@ -2944,6 +2981,10 @@
           "missing": "entry absent",
           "disabled": "switched off by hotel",
           "extra": "hotel's own"
+        },
+        "resetConfirm": {
+          "title": "Reset {{count}} hotels to the reference?",
+          "body": "The hotel's edits to system entries are erased: changed entries go back to the reference, entries the hotel turned off become visible to guests again, deleted ones reappear. The hotel's own entries stay. This cannot be undone."
         }
       }
     },
@@ -3029,6 +3070,10 @@
         "origin": "Origin",
         "tariff": "Plan",
         "language": "Language"
+      },
+      "deleteConfirm": {
+        "title": "Delete group “{{name}}”?",
+        "body": "Hotels in the group: {{count}}. The hotels stay; the group disappears from filters and bulk actions, and the only way back is to create it again."
       }
     },
     "publications": {
@@ -3177,7 +3222,12 @@
       "value": "Value",
       "step": "Step",
       "channel": "Channel",
-      "answer": "Answer"
+      "answer": "Answer",
+      "confirm": {
+        "title": "Send a command to room {{room}}?",
+        "body": "In room {{room}}, element “{{element}}” ({{capability}}) is set to {{value}} on the real equipment. If a guest is staying there, it switches for them right now.",
+        "send": "Send to the room"
+      }
     },
     "publish": {
       "title": "Publishing",
@@ -3194,9 +3244,14 @@
       "noVersions": "Nothing published yet",
       "noVersionsHint": "Assemble the screen in the builder and publish it.",
       "publishedAt": "Published",
-      "controls": "Elements"
+      "controls": "Elements",
+      "confirm": {
+        "publishTitle": "Publish the room configuration?",
+        "rollbackTitle": "Roll back to version {{version}}?",
+        "body": "The “Room” screen changes for guests in every room of type {{type}} — {{count}} rooms now."
+      }
     },
-    "subtitle": "What a guest will be able to switch in their room: lights, curtains, climate, scenes. You come here once when the hotel launches, and later when equipment on site changes.",
+    "subtitle": "What a guest can switch in their room: lights, curtains, climate, scenes. NaviRoom Control sets up the equipment and the room screen; here you manage guest access, tiles, the check and diagnostics.",
     "type": "Room type",
     "loadError": "Could not load room types",
     "noTypes": "No room types yet",
@@ -3237,7 +3292,8 @@
       "validUntil": "Valid until",
       "validUntilHint": "Check-out date. Empty — until the code is changed",
       "noValidUntil": "No end date",
-      "expired": "Expired"
+      "expired": "Expired",
+      "withoutPin": "Rooms without a code: {{count}}. Guests there cannot open the “Room” screen until reception issues a PIN: {{rooms}}"
     },
     "plan": {
       "frames": "Plan frames",
@@ -3354,7 +3410,8 @@
     "roomsOnType_one": "{{count}} room",
     "roomsOnType_other": "{{count}} rooms",
     "moved": "Room control is configured by the platform: PNR import, the screen builder, the plan and publishing are on our side. Guest access, element checks and link health stay here.",
-    "movedFromTab": "This section has moved: room control is configured by the platform. Guest access, element checks and link health stay here — write to us if the configuration needs a change."
+    "movedFromTab": "This section has moved: room control is configured by the platform. Guest access, element checks and link health stay here — write to us if the configuration needs a change.",
+    "cmsNoTypesHint": "The room configuration — types, controls, plan — is set up by NaviRoom Control when the hotel is connected. Once it is ready, guest access, tiles and the check will appear here."
   },
   "cms": {
     "homeBlocks": {
@@ -3484,7 +3541,11 @@
     "unknownIp": "address unknown",
     "unknownAgent": "browser unknown",
     "shown": "Showing {{shown}} of {{total}} other sign-ins",
-    "more": "Show more"
+    "more": "Show more",
+    "logoutAllConfirm": {
+      "title": "Sign out on all devices?",
+      "body": "Every session of this account closes, including this one: you will have to sign in again on each device."
+    }
   },
   "profile": {
     "title": "Profile",
@@ -3770,7 +3831,7 @@
   "orders": {
     "title": "Orders",
     "what": "orders",
-    "emptyHint": "No orders yet. New ones appear after a page refresh — all venues at once.",
+    "emptyHint": "No closed orders in the selected period. Orders in progress are in the tracker.",
     "loadMore": "Show more",
     "row": {
       "room": "Room {{room}}"
@@ -3796,7 +3857,8 @@
       "nobody": "nobody took it",
       "cancelled": "Cancelled: {{reason}}"
     },
-    "emptyHintScoped": "Orders of your venues will appear here: {{venues}}. Other venues' orders are not shown."
+    "emptyHintScoped": "Closed orders of your venues will appear here: {{venues}}. Orders in progress are in the tracker.",
+    "closedOnly": "Closed orders are listed here: completed and cancelled. Orders in progress are in the tracker."
   },
   "catalog": {
     "dish": {
@@ -4035,6 +4097,10 @@
       "link": "External link",
       "venue": "Our venue",
       "page": "Description page"
+    },
+    "deleteConfirm": {
+      "title": "Delete banner “{{title}}”?",
+      "body": "Guests stop seeing it immediately, and its impressions and clicks are removed from the statistics. To hide it for a while, turn it off in the editor instead."
     }
   },
   "back": {

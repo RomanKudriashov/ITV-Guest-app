@@ -273,8 +273,19 @@ function ScheduleTab({ service }: { service: CmsService }) {
         size="small"
         type="number"
         label={t('services.slaLabel')}
-        defaultValue={service.execution_point.sla_minutes}
-        onBlur={(event) => save.mutate({ sla_minutes: Number(event.target.value) })}
+        defaultValue={service.execution_point.sla_minutes ?? ''}
+        // Пусто — «по умолчанию», а не ноль (партия 60): `Number('')` давал 0,
+        // и уход с пустого поля делал просроченными все заказы точки.
+        placeholder={t('services.slaInherited', { minutes: service.execution_point.effective_sla_minutes })}
+        InputLabelProps={{ shrink: true }}
+        inputProps={{ min: 1 }}
+        onBlur={(event) => {
+          const raw = event.target.value.trim();
+          const next = raw === '' ? null : Math.max(1, Math.round(Number(raw)));
+          if (raw !== '' && !Number.isFinite(next)) return;
+          if (next === service.execution_point.sla_minutes) return;
+          save.mutate({ sla_minutes: next });
+        }}
         helperText={
           <>
             {t('services.slaHint')}{' '}

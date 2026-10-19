@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActionFailed } from '@/hooks/useActionFailed';
@@ -10,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { QueryState } from '@/components/QueryState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export interface StaffSessionRow {
   id: string;
@@ -85,6 +87,8 @@ export function SessionsPanel({
     // Отказ виден: молча съеденный 403 читается как успех.
     onError: actionFailed,
   });
+  // «Выйти везде» обрывает и этот вход — только с вопросом (партия 60).
+  const [askAll, setAskAll] = useState(false);
   const everywhere = useMutation({
     mutationFn: logoutEverywhere,
     // Закрыли и текущую тоже — оставаться на экране незачем.
@@ -175,7 +179,7 @@ export function SessionsPanel({
         size="small"
         sx={{ mt: 2 }}
         disabled={everywhere.isPending}
-        onClick={() => everywhere.mutate()}
+        onClick={() => setAskAll(true)}
         data-testid="sessions-logout-all"
       >
         {t('sessions.logoutAll')}
@@ -183,6 +187,19 @@ export function SessionsPanel({
       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
         {t('sessions.logoutAllHint')}
       </Typography>
+      <ConfirmDialog
+        open={askAll}
+        testId="sessions-logout-all-confirm"
+        destructive
+        title={t('sessions.logoutAllConfirm.title')}
+        description={t('sessions.logoutAllConfirm.body')}
+        confirmLabel={t('sessions.logoutAll')}
+        onConfirm={() => {
+          setAskAll(false);
+          everywhere.mutate();
+        }}
+        onClose={() => setAskAll(false)}
+      />
     </Box>
   );
 }

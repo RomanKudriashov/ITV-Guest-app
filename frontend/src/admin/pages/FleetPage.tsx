@@ -1,5 +1,6 @@
 import { glassShadow, glassSx, solidSx } from '@/kit/glass';
 import { useState } from 'react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
@@ -79,6 +80,9 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
     page_size: 25,
   };
   const [selected, setSelected] = useState<string[]>([]);
+  // Массовое выключение отзывает входы персонала и закрывает витрины гостям —
+  // только после вопроса с числом отелей (партия 60).
+  const [askDisable, setAskDisable] = useState(false);
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreateHotelResult | null>(null);
 
@@ -228,7 +232,8 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         фильтром. Число берём с сервера (`size`), а не считаем строки на
         странице: страница показывает двадцать пять, а в группе может быть сто.
       */}
-      {selected.length || query.group ? (
+      {/* Массовые кнопки — правка: «только чтение» их не видит (партия 60). */}
+      {canWrite && (selected.length || query.group) ? (
         <Box
           data-testid="admin-fleet-bulkbar"
           sx={{
@@ -261,13 +266,30 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           </Button>
           <Button
             size="small"
-            onClick={() => bulk.mutate(false)}
+            onClick={() => setAskDisable(true)}
             disabled={bulk.isPending}
             data-testid="admin-fleet-bulk-disable"
             sx={{ color: ink.mid, border: `1px solid ${surface.line}` }}
           >
             {t('admin.fleet.bulkDisable')}
           </Button>
+          <ConfirmDialog
+            open={askDisable}
+            testId="admin-fleet-bulk-disable-confirm"
+            destructive
+            title={t('admin.fleet.bulkDisableConfirm.title', {
+              count: selected.length
+                ? selected.length
+                : ((groups.data?.items ?? []).find((group) => group.id === query.group)?.size ?? 0),
+            })}
+            description={t('admin.fleet.bulkDisableConfirm.body')}
+            confirmLabel={t('admin.fleet.bulkDisable')}
+            onConfirm={() => {
+              setAskDisable(false);
+              bulk.mutate(false);
+            }}
+            onClose={() => setAskDisable(false)}
+          />
           {bulk.data ? (
             <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-fleet-bulk-result">
               {t('admin.fleet.bulkResult', { changed: bulk.data.changed, requested: bulk.data.requested })}

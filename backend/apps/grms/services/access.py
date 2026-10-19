@@ -112,6 +112,30 @@ def list_room_pins(hotel: Hotel) -> list[dict]:
         ]
 
 
+def rooms_without_pin(hotel: Hotel) -> list[str]:
+    """
+    Управляемые номера без действующего PIN (партия 60).
+
+    Пока демо-вход выключен, гость такого номера на экране «Номер» упирается в
+    «код не подошёл» — любой код. Список отвечает на вопрос, которого экран
+    раньше не задавал: кому ресепшен ещё не выдал код.
+    """
+    from apps.core.context import tenant_context
+
+    from apps.grms.models import RoomPin, RoomTypeRoom
+
+    with tenant_context(hotel):
+        controlled = set(
+            RoomTypeRoom.objects.filter(room__is_active=True).values_list("room__number", flat=True)
+        )
+        covered = {
+            record.room.number
+            for record in RoomPin.objects.select_related("room")
+            if record.is_active
+        }
+    return sorted(controlled - covered, key=lambda number: (len(number), number))
+
+
 def find_room(hotel: Hotel, number: str):
     from apps.core.context import tenant_context
 

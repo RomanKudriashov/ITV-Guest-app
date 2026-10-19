@@ -28,7 +28,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { ApiError } from '@/api/client';
 import { cmsPath } from '@/app/hostRole';
 import { updateRoom } from '@/api/hotelAdmin';
-import type { Building, GridRoom, RoomCategory, RoomHousekeeping } from '@/api/hotelAdminTypes';
+import type { Building, GridRoom, Room, RoomCategory, RoomHousekeeping } from '@/api/hotelAdminTypes';
 import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
 
@@ -46,7 +46,8 @@ export function RoomPanel({
   categories: RoomCategory[];
   buildings: Building[];
   onClose: () => void;
-  onChanged: () => void;
+  /** Сохранённый номер — панель показывает его, а не снимок на момент открытия. */
+  onChanged: (saved: Room) => void;
   onShowQr: () => void;
 }) {
   const { t } = useTranslation();
@@ -61,9 +62,9 @@ export function RoomPanel({
       housekeeping?: RoomHousekeeping;
     }) =>
       updateRoom(room.id, data),
-    onSuccess: () => {
+    onSuccess: (saved) => {
       toast.show(t('hotel.rooms.saved'), 'success');
-      onChanged();
+      onChanged(saved);
     },
     onError: (error) =>
       toast.show(error instanceof ApiError ? error.detail : t('errors.generic'), 'error'),

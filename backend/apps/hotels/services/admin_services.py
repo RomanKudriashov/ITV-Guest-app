@@ -987,6 +987,16 @@ def bulk_update_rooms(payload: dict) -> dict:
             if room.category_id != new_id:
                 room.category = new_category
                 touched = True
+        # Корпус был разрешён в правке пачкой, но цикл его не применял: ответ
+        # «изменено N», а корпус прежний (партия 60). Строку `zone` ведём
+        # следом, как одиночная правка, — по ней группирует сетка.
+        if "building" in fields:
+            new_building = fields["building"]
+            new_id = new_building.pk if new_building is not None else None
+            if room.building_id != new_id:
+                room.building = new_building
+                room.zone = new_building.title_i18n if new_building is not None else ""
+                touched = True
         for key in ("housekeeping", "out_of_service"):
             if key in fields and getattr(room, key) != fields[key]:
                 setattr(room, key, fields[key])
@@ -1511,15 +1521,6 @@ SERVICE_TYPE_TO_KIND = {
     Service.Type.CUSTOM: ExecutionPoint.Kind.OTHER,
 }
 
-# Разумный порог просрочки на доске по роду работы (минуты). Отель правит.
-DEFAULT_SLA = {
-    ExecutionPoint.Kind.KITCHEN: 20,
-    ExecutionPoint.Kind.BAR: 15,
-    ExecutionPoint.Kind.SPA: 30,
-    ExecutionPoint.Kind.HOUSEKEEPING: 45,
-    ExecutionPoint.Kind.RECEPTION: 10,
-    ExecutionPoint.Kind.OTHER: 20,
-}
 
 
 def _resolve_asset(asset_id) -> MediaAsset | None:
@@ -1614,7 +1615,7 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
     называет содержимое каталога.
     """
     from apps.catalog.nouns import noun_for_service_type
-    from apps.orders.services.tracker_types import tracker_type_for_service_type
+    from apps.orders.services.tracker_types import effective_sla_minutes, tracker_type_for_service_type
 
     counts = counts or {}
     point = service.execution_point
@@ -1646,6 +1647,8 @@ def serialize_service(service: Service, *, counts: dict | None = None) -> dict:
             "title": point.title or {},
             "kind": point.kind,
             "sla_minutes": point.sla_minutes,
+            # Что действует при пустом поле — экран показывает его подсказкой.
+            "effective_sla_minutes": effective_sla_minutes(point),
         },
         "commerce": {
             field: getattr(service, field) for field in SERVICE_COMMERCE_FIELDS
@@ -1735,7 +1738,6 @@ def service_templates() -> list[dict]:
     ]
 
 
-@transaction.atomic
 def _free_point_code(code: str) -> str:
     """
     Код исполнителя под новое заведение — первый свободный среди живых.
@@ -1754,6 +1756,19 @@ def _free_point_code(code: str) -> str:
     return candidate
 
 
+
+def _clean_sla(value) -> int | None:
+    if value is None or value == "":
+        return None
+    minutes = int(value)
+    if minutes < 1:
+        raise ValidationError("Порог просрочки — от одной минуты; пусто — по умолчанию", field="sla_minutes", code="bad_sla")
+    return minutes
+
+
+# Атомарно (партия 60): декоратор стоял на соседнем хелпере, и упавшее
+# создание заведения оставляло исполнителя-сироту.
+@transaction.atomic
 def create_service(data: dict) -> Service:
     """
     Завести заведение. Исполнителя под него создаём сами: отель выбирает
@@ -1786,7 +1801,9 @@ def create_service(data: dict) -> Service:
         # своё: безымянный отдел в эскалациях и на трекере читается как ошибка.
         title=dict(public_name),
         kind=kind,
-        sla_minutes=data.get("sla_minutes") or DEFAULT_SLA.get(kind, 20),
+        # Пусто — «наследовать умолчание вида работы» (партия 60): закреплённое
+        # при создании число отвязывало новое заведение от общего порога.
+        sla_minutes=_clean_sla(data.get("sla_minutes")),
         is_active=True,
     )
     return Service.objects.create(
@@ -1820,7 +1837,6 @@ SERVICE_COMMERCE_FIELDS = (
 )
 
 
-@transaction.atomic
 def _clean_menu_view(value: str) -> str:
     """Вид меню по умолчанию (партия 57): только из списка."""
     if value not in dict(Service.MenuView.choices):
@@ -1828,6 +1844,7 @@ def _clean_menu_view(value: str) -> str:
     return value
 
 
+@transaction.atomic
 def update_service(service_id, data: dict) -> Service:
     """
     Админ отеля меняет что угодно; управляющий — только своё заведение и только
@@ -1881,8 +1898,10 @@ def update_service(service_id, data: dict) -> Service:
     if "is_active" in data and data["is_active"] is not None:
         service.is_active = data["is_active"]
         point.is_active = data["is_active"]
-    if "sla_minutes" in data and data["sla_minutes"] is not None:
-        point.sla_minutes = data["sla_minutes"]
+    if "sla_minutes" in data:
+        # `null` — вернуть наследование; ноль и меньше — не порог, а «всё
+        # просрочено сразу», такое не сохраняем (партия 60).
+        point.sla_minutes = _clean_sla(data["sla_minutes"])
 
     commerce = [field for field in SERVICE_COMMERCE_FIELDS if field in data]
     if commerce and not service.has_catalog:

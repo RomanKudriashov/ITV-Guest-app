@@ -112,6 +112,13 @@ def get_hotel(request: HttpRequest, hotel_id: str):
     return console.profile(console.get_hotel(hotel_id))
 
 
+def _as_translations(value, language: str) -> dict:
+    """Переводимое поле словарём: старые строки (до порчи) — под язык отеля."""
+    if isinstance(value, dict):
+        return dict(value)
+    return {language: value} if value else {}
+
+
 @router.patch("/hotels/{hotel_id}", summary="Изменить профиль отеля")
 @requires(WRITE)
 def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
@@ -125,6 +132,18 @@ def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
         data["timezone"] = clean_timezone(data["timezone"])
     if data.get("currency") is not None:
         data["currency"] = clean_currency(data["currency"])
+    # ПЕРЕВОДИМЫЕ ПОЛЯ — СЛИЯНИЕМ (партия 60). Консоль присылает название одной
+    # строкой, а город — одним языком; запись как есть превращала словарь
+    # переводов в строку и стирала остальные языки, которые отель вёл в CMS.
+    # Пришедшее кладём под язык отеля поверх существующих переводов; пустой
+    # город — явное «убрать город».
+    if data.get("name") is not None:
+        text = str(data["name"]).strip()
+        if not text:
+            raise ValidationError("Название отеля не может быть пустым", field="name", code="required")
+        data["name"] = {**_as_translations(hotel.name, hotel.default_language), hotel.default_language: text}
+    if data.get("city") is not None and data["city"]:
+        data["city"] = {**_as_translations(hotel.city, hotel.default_language), **data["city"]}
     fields: list[str] = []
     # СТАРЫЕ ЗНАЧЕНИЯ СНИМАЕМ ДО ЗАПИСИ. Журнал, в котором сказано только
     # «изменено поле currency», через месяц не отвечает на вопрос, ради

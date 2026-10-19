@@ -339,6 +339,14 @@ def reply_to_review(review_id, *, user, text: str) -> dict:
     хранится на отзыве. Мёртвая — только хранится: экран предупредил заранее,
     и `reply.delivered = false` не даст решить, что гость ответ получил.
     """
+    from apps.chat.services.threads import require_chat_access
+
+    # Сначала — видит ли он этот отзыв вообще: чужой отвечает 404, не выдавая,
+    # что такой есть. Потом — открыт ли ему чат: ответ уходит в чат гостя, и
+    # отвечает тот, кому чат открыт, — ресепшен и администратор (партия 60).
+    # Управляющий через «Ответить» писал гостю, хотя сам чат ему закрыт.
+    get_cms_review(review_id)
+    require_chat_access()
     text = (text or "").strip()
     if not text:
         raise ValidationError("Пустой ответ", field="text")

@@ -25,6 +25,7 @@ import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { SelectField } from '@/components/SelectField';
 import { useToast } from '@/components/ToastProvider';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 /**
  * Прогон элемента на живой комнате.
@@ -62,6 +63,9 @@ export function CheckTab({ type }: { type: GrmsType }) {
   const [capability, setCapability] = useState('');
   const [value, setValue] = useState('');
   const [result, setResult] = useState<CheckResult | null>(null);
+  // Со значением команда уходит в настоящий номер, где может жить гость, —
+  // только после вопроса, где назван номер и что переключится (партия 60).
+  const [askRun, setAskRun] = useState(false);
 
   const runMutation = useMutation({
     mutationFn: (withValue: boolean) =>
@@ -156,13 +160,31 @@ export function CheckTab({ type }: { type: GrmsType }) {
             <Button
               variant="contained"
               disabled={!element || !room || value === '' || runMutation.isPending}
-              onClick={() => runMutation.mutate(true)}
+              onClick={() => setAskRun(true)}
               data-testid="grms-check-run"
             >
               {t('roomControl.check.run')}
             </Button>
           </Stack>
         )}
+        <ConfirmDialog
+          open={askRun}
+          testId="grms-check-run-confirm"
+          destructive
+          title={t('roomControl.check.confirm.title', { room })}
+          description={t('roomControl.check.confirm.body', {
+            room,
+            element,
+            capability: capability || t('roomControl.check.defaultCapability'),
+            value,
+          })}
+          confirmLabel={t('roomControl.check.confirm.send')}
+          onConfirm={() => {
+            setAskRun(false);
+            runMutation.mutate(true);
+          }}
+          onClose={() => setAskRun(false)}
+        />
 
         {result && (
           <Stack spacing={1.5} sx={{ mt: 2 }} data-testid="grms-check-result">

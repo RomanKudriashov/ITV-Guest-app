@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { i18nReady } from '@/i18n';
 import { AppThemeProvider } from '@/theme';
@@ -10,8 +10,16 @@ import { ToastProvider } from '@/components/ToastProvider';
 import { preloadPartFor, router } from '@/app/router';
 import { attachWebManifest } from '@/app/manifestLink';
 import { retryTransient } from '@/api/retry';
+import { isModuleOff } from '@/hooks/useNavigation';
 
-const queryClient = new QueryClient({
+const queryClient: QueryClient = new QueryClient({
+  // «Модуль выключен» от любого экрана — меню CMS могло устареть: перечитываем
+  // его сразу, а не через кэш (партия 60).
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (isModuleOff(error)) void queryClient.invalidateQueries({ queryKey: ['cms', 'navigation'] });
+    },
+  }),
   defaultOptions: {
     queries: {
       // Только сбой сети и 5xx: 4xx — ответ, повтором не лечится (api/retry.ts).

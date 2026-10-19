@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { refImgProps } from '@/media/refImg';
 import { deleteBanner, fetchBanners, type Banner } from '@/api/cms';
 import { BannerEditor } from './BannerEditor';
@@ -34,9 +35,11 @@ import { BannerEditor } from './BannerEditor';
  * единицы. Гость, нажавший трижды, — один заинтересовавшийся.
  */
 export function BannersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Banner | 'new' | null>(null);
+  // Удаление снимает баннер у гостей и стирает его статистику — с вопросом (партия 60).
+  const [askDelete, setAskDelete] = useState<Banner | null>(null);
 
   const banners = useQuery({ queryKey: ['cms', 'banners'], queryFn: fetchBanners });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['cms', 'banners'] });
@@ -117,7 +120,7 @@ export function BannersPage() {
                           <EditOutlinedIcon fontSize="small" />
                         </IconButton>
                         <IconButton
-                          onClick={() => remove.mutate(banner.id)}
+                          onClick={() => setAskDelete(banner)}
                           data-testid={`cms-banner-delete-${banner.id}`}
                         >
                           <DeleteOutlineIcon fontSize="small" />
@@ -132,6 +135,21 @@ export function BannersPage() {
         }
       </QueryState>
 
+      <ConfirmDialog
+        open={askDelete !== null}
+        testId="cms-banner-delete-confirm"
+        destructive
+        title={t('banners.deleteConfirm.title', {
+          title: askDelete ? (askDelete.title[i18n.language] ?? Object.values(askDelete.title)[0] ?? '') : '',
+        })}
+        description={t('banners.deleteConfirm.body')}
+        confirmLabel={t('common.delete')}
+        onConfirm={() => {
+          if (askDelete) remove.mutate(askDelete.id);
+          setAskDelete(null);
+        }}
+        onClose={() => setAskDelete(null)}
+      />
       {editing && (
         <BannerEditor
           banner={editing === 'new' ? null : editing}

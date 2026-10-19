@@ -63,6 +63,7 @@ def access_state(request: HttpRequest):
             "toggled": access_svc.last_demo_entry_toggle(hotel),
         },
         "pins": rooms,
+        "rooms_without_pin": access_svc.rooms_without_pin(hotel),
     }
 
 

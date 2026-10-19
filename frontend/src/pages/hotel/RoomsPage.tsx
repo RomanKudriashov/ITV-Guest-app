@@ -698,6 +698,12 @@ export function RoomsPage() {
                         </Stack>
                       </TableCell>
                       <TableCell>{room.floor || '—'}</TableCell>
+                      {/* Ячейки «Зона» не было — строка съезжала на колонку
+                          под чужие заголовки (партия 60). Корпус из справочника,
+                          старая строка — запасным ответом. */}
+                      <TableCell data-testid={`room-zone-${room.number}`}>
+                        {room.building?.title || room.zone || '—'}
+                      </TableCell>
                       <TableCell data-testid={`room-category-${room.number}`}>
                         {room.category ? (
                           <Chip size="small" label={room.category.title || room.category.code} />
@@ -858,7 +864,12 @@ export function RoomsPage() {
           categories={categories}
           buildings={buildings}
           onClose={() => setPanelRoom(null)}
-          onChanged={() => void invalidate()}
+          onChanged={(saved) => {
+            // Панель держала снимок номера с момента открытия: селекты
+            // показывали старое значение, пока её не переоткрыть (партия 60).
+            setPanelRoom((prev) => (prev && prev.id === saved.id ? { ...prev, ...saved } : prev));
+            void invalidate();
+          }}
           onShowQr={() => setQrRoom(panelRoom)}
         />
       ) : null}

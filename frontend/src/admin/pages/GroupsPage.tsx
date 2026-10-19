@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useRights } from '../useRights';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -52,6 +54,7 @@ import {
  */
 export function GroupsPage() {
   const { t } = useTranslation();
+  const { canWrite } = useRights();
   const queryClient = useQueryClient();
   const [openGroup, setOpenGroup] = useState<HotelGroup | null>(null);
   const [creating, setCreating] = useState(false);
@@ -59,6 +62,8 @@ export function GroupsPage() {
   // ограниченный областью границы не меняет (403). Раньше ошибка глоталась, и
   // кнопка «ничего не делала».
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Удаление группы снимает её с публикаций и областей доступа — с вопросом (партия 60).
+  const [askDelete, setAskDelete] = useState<HotelGroup | null>(null);
 
   const groups = useQuery({ queryKey: ['admin', 'groups'], queryFn: getGroups });
 
@@ -71,9 +76,12 @@ export function GroupsPage() {
             {t('admin.groups.subtitle')}
           </Typography>
         </Box>
-        <Button variant="contained" onClick={() => setCreating(true)} data-testid="admin-group-add">
-          {t('admin.groups.add')}
-        </Button>
+        {/* «Только чтение» кнопок правки не видит: сервер ответил бы 403 (партия 60). */}
+        {canWrite ? (
+          <Button variant="contained" onClick={() => setCreating(true)} data-testid="admin-group-add">
+            {t('admin.groups.add')}
+          </Button>
+        ) : null}
       </Stack>
 
       <QueryState query={groups} what={t('admin.groups.title')}>
@@ -129,19 +137,19 @@ export function GroupsPage() {
                       </TableCell>
                       <TableCell align="right">{group.size ?? '—'}</TableCell>
                       <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setDeleteError(null);
-                            void deleteGroup(group.id)
-                              .then(() => queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] }))
-                              .catch((error: Error) => setDeleteError(error.message));
-                          }}
-                          aria-label={t('common.delete')}
-                          data-testid={`admin-group-delete-${group.code}`}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
+                        {canWrite ? (
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setDeleteError(null);
+                              setAskDelete(group);
+                            }}
+                            aria-label={t('common.delete')}
+                            data-testid={`admin-group-delete-${group.code}`}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -152,6 +160,23 @@ export function GroupsPage() {
         }
       </QueryState>
 
+      <ConfirmDialog
+        open={askDelete !== null}
+        testId="admin-group-delete-confirm"
+        destructive
+        title={t('admin.groups.deleteConfirm.title', { name: askDelete?.title ?? '' })}
+        description={t('admin.groups.deleteConfirm.body', { count: askDelete?.size ?? 0 })}
+        confirmLabel={t('common.delete')}
+        onConfirm={() => {
+          const group = askDelete;
+          setAskDelete(null);
+          if (!group) return;
+          void deleteGroup(group.id)
+            .then(() => queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] }))
+            .catch((error: Error) => setDeleteError(error.message));
+        }}
+        onClose={() => setAskDelete(null)}
+      />
       {openGroup ? <MembersDialog group={openGroup} onClose={() => setOpenGroup(null)} /> : null}
       {creating ? <CreateDialog onClose={() => setCreating(false)} /> : null}
     </Box>
@@ -162,6 +187,7 @@ export function GroupsPage() {
 
 function MembersDialog({ group, onClose }: { group: HotelGroup; onClose: () => void }) {
   const { t } = useTranslation();
+  const { canWrite } = useRights();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
 
@@ -203,7 +229,7 @@ function MembersDialog({ group, onClose }: { group: HotelGroup; onClose: () => v
         </Typography>
       </DialogTitle>
       <DialogContent>
-        {group.mode === 'list' ? (
+        {group.mode === 'list' && canWrite ? (
           <Stack spacing={1} sx={{ mb: 2 }}>
             <TextField
               size="small"
@@ -256,7 +282,7 @@ function MembersDialog({ group, onClose }: { group: HotelGroup; onClose: () => v
                       {member.added_at ? new Date(member.added_at).toLocaleString() : '—'}
                     </TableCell>
                     <TableCell align="right">
-                      {group.mode === 'list' ? (
+                      {group.mode === 'list' && canWrite ? (
                         <IconButton
                           size="small"
                           onClick={() => removeMutation.mutate(member.hotel_id)}

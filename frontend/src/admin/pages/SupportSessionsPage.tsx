@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { accent, fieldSx, ink, panelSx, pillSx, surface, typo } from '../adminTokens';
 import { SearchField } from '@/components/SearchField';
 import { QueryState } from '@/components/QueryState';
+import { useRights } from '../useRights';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { getImpersonations, revokeImpersonation, type ImpersonationRow } from '../adminClient';
@@ -29,6 +30,8 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  // «Оборвать» — правка (WRITE): «только чтение» кнопки не видит (партия 60).
+  const { canWrite } = useRights();
   /*
     Активные И ЗАВЕРШЁННЫЕ. Раньше выдача была только «кто внутри сейчас», и
     разбор инцидента упирался в стену: кто заходил вчера, узнать было негде,
@@ -138,7 +141,7 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
                 row={row}
                 showHotel={!hotelId}
                 busy={revoke.isPending}
-                onRevoke={() => revoke.mutate(row.id)}
+                onRevoke={canWrite ? () => revoke.mutate(row.id) : undefined}
               />
             ))}
           </Box>
@@ -158,7 +161,7 @@ function SessionRow({
   row: ImpersonationRow;
   showHotel: boolean;
   busy: boolean;
-  onRevoke: () => void;
+  onRevoke?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const time = (iso: string) =>
@@ -199,15 +202,17 @@ function SessionRow({
         {t(row.entered ? 'admin.support.inside' : 'admin.support.notYet')}
       </Box>
 
-      <Button
-        size="small"
-        color="error"
-        disabled={busy}
-        onClick={onRevoke}
-        data-testid={`admin-support-revoke-${row.id}`}
-      >
-        {t('admin.support.revoke')}
-      </Button>
+      {onRevoke ? (
+        <Button
+          size="small"
+          color="error"
+          disabled={busy}
+          onClick={onRevoke}
+          data-testid={`admin-support-revoke-${row.id}`}
+        >
+          {t('admin.support.revoke')}
+        </Button>
+      ) : null}
     </Box>
   );
 }

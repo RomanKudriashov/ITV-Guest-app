@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { QueryState } from '@/components/QueryState';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useRights } from '../useRights';
 import { ink, panelSx, typo } from '../adminTokens';
 import {
   getDictionaryDivergence,
@@ -37,6 +39,10 @@ export function DictionaryDivergence() {
   const qc = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
+  // Сброс стирает правки отелей, включая погашенное ими, — только с вопросом (партия 60).
+  const [askReset, setAskReset] = useState<string[] | null>(null);
+  // «Только чтение» видит расхождения, но не сбрасывает их (партия 60).
+  const { canWrite } = useRights();
 
   const report = useQuery({
     queryKey: ['admin', 'dictionary', 'divergence'],
@@ -100,12 +106,12 @@ export function DictionaryDivergence() {
                       picked={picked.includes(row.hotel_id)}
                       onToggleOpen={() => setOpen(open === row.hotel_id ? null : row.hotel_id)}
                       onPick={() => toggle(row.hotel_id)}
-                      onReset={() => reset.mutate([row.hotel_id])}
+                      onReset={canWrite ? () => setAskReset([row.hotel_id]) : undefined}
                       busy={reset.isPending}
                     />
                   ))}
 
-                  {picked.length ? (
+                  {picked.length && canWrite ? (
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 1.5 }}>
                       <Typography sx={{ ...typo.caption, color: ink.mid }}>
                         {t('admin.templates.divergence.picked', { count: picked.length })}
@@ -114,7 +120,7 @@ export function DictionaryDivergence() {
                         size="small"
                         variant="contained"
                         disabled={reset.isPending}
-                        onClick={() => reset.mutate(picked)}
+                        onClick={() => setAskReset(picked)}
                         data-testid="admin-dict-reset-picked"
                       >
                         {t('admin.templates.divergence.resetPicked')}
@@ -127,6 +133,19 @@ export function DictionaryDivergence() {
           );
         }}
       </QueryState>
+      <ConfirmDialog
+        open={askReset !== null}
+        testId="admin-dict-reset-confirm"
+        destructive
+        title={t('admin.templates.divergence.resetConfirm.title', { count: askReset?.length ?? 0 })}
+        description={t('admin.templates.divergence.resetConfirm.body')}
+        confirmLabel={t('admin.templates.divergence.reset')}
+        onConfirm={() => {
+          if (askReset) reset.mutate(askReset);
+          setAskReset(null);
+        }}
+        onClose={() => setAskReset(null)}
+      />
     </Box>
   );
 }
@@ -145,7 +164,8 @@ function HotelRow({
   picked: boolean;
   onToggleOpen: () => void;
   onPick: () => void;
-  onReset: () => void;
+  /** Нет — сбрасывать нельзя (роль «только чтение»): кнопки и галки не рисуем. */
+  onReset?: () => void;
   busy: boolean;
 }) {
   const { t } = useTranslation();
@@ -153,12 +173,14 @@ function HotelRow({
   return (
     <Box sx={{ borderTop: '1px solid', borderColor: 'divider', py: 1 }} data-testid={`admin-dict-diverged-${row.subdomain}`}>
       <Stack direction="row" alignItems="center" spacing={1}>
-        <Checkbox
-          size="small"
-          checked={picked}
-          onChange={onPick}
-          inputProps={{ 'data-testid': `admin-dict-pick-${row.subdomain}` } as never}
-        />
+        {onReset ? (
+          <Checkbox
+            size="small"
+            checked={picked}
+            onChange={onPick}
+            inputProps={{ 'data-testid': `admin-dict-pick-${row.subdomain}` } as never}
+          />
+        ) : null}
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography sx={{ ...typo.caption, color: ink.hi }}>{row.name}</Typography>
           <Typography sx={{ ...typo.caption, color: ink.low }}>{row.subdomain}</Typography>
@@ -182,14 +204,16 @@ function HotelRow({
         <Button size="small" onClick={onToggleOpen} data-testid={`admin-dict-details-${row.subdomain}`}>
           {t(expanded ? 'common.close' : 'admin.templates.divergence.details')}
         </Button>
-        <Button
-          size="small"
-          disabled={busy}
-          onClick={onReset}
-          data-testid={`admin-dict-reset-${row.subdomain}`}
-        >
-          {t('admin.templates.divergence.reset')}
-        </Button>
+        {onReset ? (
+          <Button
+            size="small"
+            disabled={busy}
+            onClick={onReset}
+            data-testid={`admin-dict-reset-${row.subdomain}`}
+          >
+            {t('admin.templates.divergence.reset')}
+          </Button>
+        ) : null}
       </Stack>
 
       <Collapse in={expanded} unmountOnExit>

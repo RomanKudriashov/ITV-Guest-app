@@ -330,6 +330,7 @@ test('публикация: элемент уезжает в снимок вер
   await pickType()
   await openTab('versions')
   await page.getByTestId('grms-publish').click()
+  await page.getByTestId('grms-publish-confirm-confirm').click()
 
   const expected = Math.max(0, ...before) + 1
   await expect(page.getByTestId(`grms-version-${expected}`)).toBeVisible({ timeout: 30_000 })
@@ -473,6 +474,7 @@ test('план блокирует публикацию, если ссылает�
   await pickType()
   await openTab('versions')
   await page.getByTestId('grms-publish').click()
+  await page.getByTestId('grms-publish-confirm-confirm').click()
   await expect(page.getByText(/План ссылается/)).toBeVisible({ timeout: 20_000 })
 
   // Убираем битую ссылку: следующий шаг прогона должен публиковаться.
@@ -492,12 +494,14 @@ test('откат возвращает предыдущую версию', async 
   await pickType()
   await openTab('versions')
   await page.getByTestId('grms-publish').click()
+  await page.getByTestId('grms-publish-confirm-confirm').click()
 
   const published = Math.max(...before) + 1
   await expect(page.getByTestId(`grms-version-${published}`)).toBeVisible({ timeout: 30_000 })
 
   // Откат — это НОВАЯ версия с телом старой, а не переписанная история.
   await page.getByTestId(`grms-rollback-${target}`).click()
+  await page.getByTestId('grms-publish-confirm-confirm').click()
   await expect(page.getByTestId(`grms-version-${published + 1}`)).toBeVisible({ timeout: 30_000 })
 
   const after = await versionList(request, token)

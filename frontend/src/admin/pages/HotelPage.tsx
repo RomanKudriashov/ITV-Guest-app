@@ -25,6 +25,7 @@ import { MultiSelectField, SelectField } from '@/components/SelectField';
 import { currencyOptions, languageOptions, timezoneOptions } from '@/components/hotelFieldOptions';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { EnterHotelDialog } from '../EnterHotelDialog';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SupportSessionsPage } from './SupportSessionsPage';
 import {
   cancelOffboarding,
@@ -258,6 +259,8 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     languages: hotel.languages.map((lang) => lang.code).join(', '),
   });
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Смена валюты с другой размерностью ждёт ответа человека (партия 60).
+  const [currencyAsk, setCurrencyAsk] = useState<{ code: string; units: number } | null>(null);
   const { i18n } = useTranslation();
   const reference = useQuery({
     queryKey: ['admin', 'reference', 'hotel-fields'],
@@ -327,22 +330,30 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     else kept.discard();
   }, [dirty.length, draft, kept]);
 
+  // ТОЛЬКО ИЗМЕНЁННОЕ (партия 60). Форма слала все поля разом, и сохранение
+  // часового пояса заодно переписывало название и город — одним языком
+  // поверх переводов, которые отель вёл в CMS.
   const save = useMutation({
-    mutationFn: () =>
-      patchHotel(hotel.id, {
-        name: draft.name.trim(),
-        // Переводимое поле: кладём под язык отеля. Оператор вводит одну строку
-        // — вторая форма ввода ради города, который он пишет по-русски,
-        // означала бы четыре поля вместо одного.
-        city: draft.city.trim() ? { [hotel.default_language]: draft.city.trim() } : {},
-        timezone: draft.timezone,
-        currency: draft.currency,
-        currency_minor_units: Number(draft.currency_minor_units),
-        languages: draft.languages
+    mutationFn: () => {
+      const body: Parameters<typeof patchHotel>[1] = {};
+      if (dirty.includes('name')) body.name = draft.name.trim();
+      // Переводимое поле: кладём под язык отеля, сервер сливает с остальными
+      // языками. Оператор вводит одну строку — вторая форма ввода ради
+      // города, который он пишет по-русски, означала бы четыре поля вместо одного.
+      if (dirty.includes('city')) {
+        body.city = draft.city.trim() ? { [hotel.default_language]: draft.city.trim() } : {};
+      }
+      if (dirty.includes('timezone')) body.timezone = draft.timezone;
+      if (dirty.includes('currency')) body.currency = draft.currency;
+      if (dirty.includes('currency_minor_units')) body.currency_minor_units = Number(draft.currency_minor_units);
+      if (dirty.includes('languages')) {
+        body.languages = draft.languages
           .split(/[,\s]+/)
           .map((code) => code.trim().toLowerCase())
-          .filter(Boolean),
-      }),
+          .filter(Boolean);
+      }
+      return patchHotel(hotel.id, body);
+    },
     onSuccess: () => {
       setSaveError(null);
       // Сохранили — черновик отслужил.
@@ -359,6 +370,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
   };
+  const [askActive, setAskActive] = useState<boolean | null>(null);
   const toggleActive = useMutation({
     mutationFn: (next: boolean) => patchHotel(hotel.id, { is_active: next } as Partial<HotelProfile>),
     onSuccess: refresh,
@@ -469,16 +481,21 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             size="small"
             label={t('admin.hotel.field.currency')}
             value={draft.currency}
-            onChange={(next) =>
-              setDraft((prev) => ({
-                ...prev,
-                currency: next,
-                // Размерность — вместе с валютой, из того же справочника: иена
-                // без копеек, динар с тремя знаками. Поправить можно рядом.
-                currency_minor_units:
-                  reference.data?.currencies.find((c) => c.code === next)?.minor_units ?? prev.currency_minor_units,
-              }))
-            }
+            onChange={(next) => {
+              // Размерность у валюты своя (иена без копеек, динар с тремя
+              // знаками), но цены хранятся в минимальных единицах: молча
+              // сменить знаки — значит в сто раз сдвинуть все цены отеля.
+              // Поэтому — только с вопросом и объяснением (партия 60).
+              const units = reference.data?.currencies.find((c) => c.code === next)?.minor_units;
+              if (units === undefined || units === Number(draft.currency_minor_units)) {
+                setDraft((prev) => ({ ...prev, currency: next }));
+              } else {
+                // Поле выбора раскрывается по фокусу: уводим фокус и задаём
+                // вопрос, когда список уже закрылся, — иначе он висит поверх.
+                (document.activeElement as HTMLElement | null)?.blur();
+                window.setTimeout(() => setCurrencyAsk({ code: next, units }), 0);
+              }
+            }}
             options={currencies}
             loading={reference.isLoading}
             testId="admin-hotel-currency-input"
@@ -497,6 +514,38 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             options={[0, 2, 3].map((value) => ({ value: String(value), label: String(value) }))}
           />
         </Box>
+        <ConfirmDialog
+          open={currencyAsk !== null}
+          testId="admin-hotel-currency-confirm"
+          restoreFocus={false}
+          title={t('admin.hotel.currencyConfirm.title', { code: currencyAsk?.code ?? '' })}
+          description={t('admin.hotel.currencyConfirm.body', {
+            code: currencyAsk?.code ?? '',
+            next: currencyAsk?.units ?? 0,
+            current: Number(draft.currency_minor_units),
+            before: (12345 / 10 ** Number(draft.currency_minor_units)).toFixed(Number(draft.currency_minor_units)),
+            after: (12345 / 10 ** (currencyAsk?.units ?? 0)).toFixed(currencyAsk?.units ?? 0),
+          })}
+          confirmLabel={t('admin.hotel.currencyConfirm.both', { next: currencyAsk?.units ?? 0 })}
+          onConfirm={() => {
+            if (currencyAsk) {
+              setDraft((prev) => ({ ...prev, currency: currencyAsk.code, currency_minor_units: currencyAsk.units }));
+            }
+            setCurrencyAsk(null);
+          }}
+          onClose={() => setCurrencyAsk(null)}
+        >
+          <Button
+            sx={{ mt: 1.5 }}
+            data-testid="admin-hotel-currency-confirm-keep"
+            onClick={() => {
+              if (currencyAsk) setDraft((prev) => ({ ...prev, currency: currencyAsk.code }));
+              setCurrencyAsk(null);
+            }}
+          >
+            {t('admin.hotel.currencyConfirm.keep', { current: Number(draft.currency_minor_units) })}
+          </Button>
+        </ConfirmDialog>
         <MultiSelectField
           size="small"
           label={t('admin.hotel.field.languages')}
@@ -564,19 +613,42 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           </>
         )}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-          <Switch
-            checked={hotel.is_active}
-            onChange={(e) => toggleActive.mutate(e.target.checked)}
-            inputProps={{ 'data-testid': 'admin-hotel-active' } as Record<string, string>}
-          />
-          <Typography sx={{ ...typo.caption, color: ink.mid }}>
+          {/* Роли «только чтение» тумблер не показываем: сервер ответит 403
+              (партия 60). Состояние она видит подписью. */}
+          {canEdit ? (
+            <Switch
+              checked={hotel.is_active}
+              onChange={(e) => setAskActive(e.target.checked)}
+              inputProps={{ 'data-testid': 'admin-hotel-active' } as Record<string, string>}
+            />
+          ) : null}
+          <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-hotel-active-label">
             {hotel.is_active ? t('admin.hotel.activeOn') : t('admin.hotel.activeOff')}
           </Typography>
         </Box>
+        {/* Выключение закрывает витрину и разлогинивает персонал, включение
+            открывает отель гостям — оба только с вопросом (партия 60). */}
+        <ConfirmDialog
+          open={askActive !== null}
+          testId="admin-hotel-active-confirm"
+          destructive={askActive === false}
+          title={t(askActive ? 'admin.hotel.activeConfirm.onTitle' : 'admin.hotel.activeConfirm.offTitle', {
+            name: hotel.name,
+          })}
+          description={t(askActive ? 'admin.hotel.activeConfirm.onBody' : 'admin.hotel.activeConfirm.offBody')}
+          confirmLabel={t(askActive ? 'admin.hotel.activeConfirm.on' : 'admin.hotel.activeConfirm.off')}
+          onConfirm={() => {
+            if (askActive !== null) toggleActive.mutate(askActive);
+            setAskActive(null);
+          }}
+          onClose={() => setAskActive(null)}
+        />
       </Box>
 
       <AdminsPanel hotelId={hotel.id} />
 
+      {/* «Только чтение» админа не заводит и не сбрасывает: сервер ответит 403 (партия 60). */}
+      {canEdit ? (
       <Box sx={panelSx}>
         <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
           {t('admin.hotel.adminTitle')}
@@ -652,6 +724,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           </Box>
         ) : null}
       </Box>
+      ) : null}
     </Box>
   );
 }
@@ -665,7 +738,7 @@ function ModulesTab({ id }: { id: string }) {
   const qc = useQueryClient();
   const modules = useQuery({ queryKey: ['admin', 'modules', id], queryFn: () => getModules(id) });
   const save = useMutation({
-    mutationFn: (next: ModuleEntry[]) => putModules(id, next),
+    mutationFn: (next: Pick<ModuleEntry, 'code' | 'is_enabled'>[]) => putModules(id, next),
     onSuccess: (result) => qc.setQueryData(['admin', 'modules', id], result),
   });
 
@@ -681,9 +754,7 @@ function ModulesTab({ id }: { id: string }) {
   // Клиент шлёт ТОЛЬКО «включено/выключено» — то есть решение человека.
   // Тарифную сетку знает сервер, он же и решает, чем это решение обернётся.
   const toggle = (code: string, enabled: boolean) => {
-    save.mutate(
-      list.map((entry) => (entry.code === code ? { ...entry, is_enabled: enabled } : entry)),
-    );
+    save.mutate([{ code, is_enabled: enabled }]);
   };
 
   /*

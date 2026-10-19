@@ -64,7 +64,12 @@ def _growth(hotels: list[Hotel], today: date) -> list[dict]:
     return [{"month": key, "hotels": value} for key, value in sorted(buckets.items())]
 
 
-def _orders_block(hotels: list[Hotel], today: date) -> dict:
+def _limit(queryset, hotel_ids):
+    """Область (партия 60): у ограниченного — только его отели; `None` — все."""
+    return queryset if hotel_ids is None else queryset.filter(hotel_id__in=hotel_ids)
+
+
+def _orders_block(hotels: list[Hotel], today: date, hotel_ids=None) -> dict:
     """
     Заказы и оборот за день по всей платформе — одним запросом поверх тенантов.
 
@@ -80,7 +85,7 @@ def _orders_block(hotels: list[Hotel], today: date) -> dict:
     currency_by_hotel = {hotel.pk: hotel.currency for hotel in hotels}
     with platform_scope():
         rows = list(
-            OrderDaily.all_objects.using("platform")
+            _limit(OrderDaily.all_objects.using("platform"), hotel_ids)
             .filter(business_date=today)
             .values("hotel_id")
             .annotate(
@@ -113,12 +118,12 @@ def _orders_block(hotels: list[Hotel], today: date) -> dict:
     }
 
 
-def _live_sessions() -> int:
+def _live_sessions(hotel_ids=None) -> int:
     """Гостей на витрине прямо сейчас: живая, не отозванная сессия."""
     now = timezone.now()
     with platform_scope():
         return (
-            GuestSession.all_objects.using("platform")
+            _limit(GuestSession.all_objects.using("platform"), hotel_ids)
             .filter(expires_at__gt=now, revoked_at__isnull=True)
             .count()
         )
@@ -154,7 +159,7 @@ def _bot_signal() -> dict:
     return {"level": "ok", "code": "bot_ok", **base}
 
 
-def _health(hotels: list[Hotel], today: date) -> list[dict]:
+def _health(hotels: list[Hotel], today: date, hotel_ids=None) -> list[dict]:
     """
     Здоровье системы: список того, что требует внимания. Пустой список — это
     ответ «всё в порядке», а не отсутствие данных, поэтому «норма» тоже строка.
@@ -162,7 +167,7 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
     signals: list[dict] = []
 
     with platform_scope():
-        media = MediaAsset.all_objects.using("platform").aggregate(
+        media = _limit(MediaAsset.all_objects.using("platform"), hotel_ids).aggregate(
             failed=Count("id", filter=Q(status=MediaAsset.Status.FAILED)),
             stuck=Count(
                 "id",
@@ -245,7 +250,7 @@ def _health(hotels: list[Hotel], today: date) -> list[dict]:
 
     with platform_scope():
         offline = list(
-            OnPremNode.all_objects.using("platform")
+            _limit(OnPremNode.all_objects.using("platform"), hotel_ids)
             .filter(is_revoked=False)
             .select_related("hotel")
         )
@@ -271,13 +276,16 @@ def build_overview(user=None) -> dict:
     from apps.hotels.services.platform import scope
 
     hotels = list(scope.limit_queryset(user, Hotel.objects.all()))
+    # Заказы, сессии, медиа и узлы считались по всей платформе даже у
+    # ограниченного областью (партия 60): «Отелей 1, заказов 151».
+    hotel_ids = {hotel.pk for hotel in hotels} if scope.is_limited(user) else None
     today = timezone.localdate()
     return {
         "hotels": _hotel_states(hotels, today),
-        **_orders_block(hotels, today),
-        "live_sessions": _live_sessions(),
+        **_orders_block(hotels, today, hotel_ids),
+        "live_sessions": _live_sessions(hotel_ids),
         "growth": _growth(hotels, today),
-        "health": _health(hotels, today),
+        "health": _health(hotels, today, hotel_ids),
         "tariffs": [
             {
                 "code": tariff.code,

@@ -34,7 +34,7 @@ from apps.hotels.models import Hotel
 VALID_ROLES = set(User.PlatformRole.values)
 
 
-def list_members(*, limit: int | None = None, search: str = "") -> dict:
+def list_members(*, limit: int | None = None, search: str = "", user=None) -> dict:
     """
     Команда платформы. Растёт медленно, но предел здесь всё равно осознанный:
     выдача без предела — это обещание «столько и есть», которое однажды
@@ -58,6 +58,19 @@ def list_members(*, limit: int | None = None, search: str = "") -> dict:
         queryset = User.all_objects.using("platform").filter(
             is_platform_admin=True, hotel__isnull=True, deleted_at__isnull=True
         )
+        # ОБЛАСТЬ (партия 60): ограниченный группами видит себя и тех, чья
+        # область пересекается с его, — а не всю команду платформы с её
+        # владельцами и чужими группами.
+        from apps.hotels.services.platform import scope
+
+        groups = scope.group_ids(user)
+        if groups:
+            from django.db.models import Q
+
+            from apps.hotels.models import PlatformScopeGroup
+
+            peers = PlatformScopeGroup.objects.using("platform").filter(group_id__in=groups).values("user_id")
+            queryset = queryset.filter(Q(pk__in=peers) | Q(pk=user.pk))
         # По почте и имени — по ним человека в команде и ищут.
         queryset = apply_search(queryset, search, ("email", "full_name"))
         total = queryset.count()
