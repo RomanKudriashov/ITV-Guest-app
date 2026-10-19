@@ -104,6 +104,21 @@ def _coerce_hotel_id(hotel: Any) -> uuid.UUID | None:
     return hotel.pk
 
 
+def _remember_hotel_language(hotel: Any, hotel_id: uuid.UUID | None):
+    """
+    Язык отеля — сразу из экземпляра, если он передан (партия 59а).
+
+    `translate` спрашивает язык отеля при ПЕРВОМ вызове в контексте — то есть
+    лишним запросом почти на каждый ответ, хотя middleware держит экземпляр
+    отеля в руках. Переданы id или строка — ничего не меняется: язык найдётся
+    лениво, как раньше.
+    """
+    language = getattr(hotel, "default_language", None)
+    if hotel_id is None or language is None:
+        return None
+    return _hotel_language.set((hotel_id, language))
+
+
 @contextlib.contextmanager
 def tenant_context(hotel: Any, *, language: str | None = None) -> Iterator[None]:
     """
@@ -117,6 +132,7 @@ def tenant_context(hotel: Any, *, language: str | None = None) -> Iterator[None]
     hotel_id = _coerce_hotel_id(hotel)
     token_hotel = _hotel_id.set(hotel_id)
     token_lang = _language.set(language) if language is not None else None
+    token_hotel_lang = _remember_hotel_language(hotel, hotel_id)
     set_db_tenant(hotel_id)
     try:
         yield
@@ -124,6 +140,8 @@ def tenant_context(hotel: Any, *, language: str | None = None) -> Iterator[None]
         _hotel_id.reset(token_hotel)
         if token_lang is not None:
             _language.reset(token_lang)
+        if token_hotel_lang is not None:
+            _hotel_language.reset(token_hotel_lang)
         # Возвращаем сессионную переменную к внешнему контексту (если он был),
         # иначе вложенные tenant_context «протекали» бы наружу.
         set_db_tenant(_hotel_id.get())
@@ -186,6 +204,7 @@ def set_request_context(
     _hotel_id.set(hotel_id)
     _language.set(language)
     _actor.set(actor)
+    _remember_hotel_language(hotel, hotel_id)
     set_db_tenant(hotel_id)
 
 

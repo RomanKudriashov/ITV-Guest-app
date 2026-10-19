@@ -19,6 +19,7 @@ from apps.orders.api.router import staff_router as orders_router
 from apps.orders.api.router import tracker_router
 from apps.grms.api.router import onprem_router
 from apps.hotels.api.platform import router as platform_router
+from apps.hotels.api.staff.cards import router as cards_router
 
 # Конфигурация управления номером живёт в NaviRoom Control. Подключается
 # ЗДЕСЬ, а не внутри пакета `hotels.api.platform`: модуль GRMS берёт оттуда
@@ -62,6 +63,9 @@ api.add_router("/orders", orders_router, auth=StaffAuth())
 # — те же функции зовёт WebSocket-канал, у которого middleware нет.
 api.add_router("/tracker", tracker_router, auth=StaffAuth())
 api.add_router("/tracker", chat_staff_router, auth=StaffAuth())
+# Всплывающие карточки (партия 59а): и CMS, и трекер — значит, персонал любого
+# уровня; права на конкретную карточку проверяет сервисный слой.
+api.add_router("/cards", cards_router, auth=StaffAuth())
 # Весь CMS-раздел закрыт JWT персонала И РОЛЬЮ: забыть проверку на отдельном
 # эндпоинте невозможно — она задана на уровне роутера. Линейный персонал сюда
 # не попадает вовсе (403), управляющий попадает, но видит только свой сервис —

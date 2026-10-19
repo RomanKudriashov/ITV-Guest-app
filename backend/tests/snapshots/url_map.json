@@ -1,4 +1,7 @@
 {
+  "/api/v1/cards/{card_type}/{key}": [
+    "GET"
+  ],
   "/api/v1/cms/allergens": [
     "GET",
     "POST"
