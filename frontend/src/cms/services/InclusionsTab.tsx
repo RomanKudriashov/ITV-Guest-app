@@ -15,6 +15,8 @@ import Typography from '@mui/material/Typography';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName } from '@/components/entityCard';
+
 import { SelectField } from '@/components/SelectField';
 import { useActionFailed } from '@/hooks/useActionFailed';
 
@@ -165,7 +167,9 @@ function InclusionCard({
         sx={{ mb: 2 }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: 600, overflowWrap: 'anywhere', minWidth: 0 }}>
-          {sourceName}
+          <EntityName type="venue" id={inclusion.source_service_id}>
+            {sourceName}
+          </EntityName>
         </Typography>
         <Chip
           size="small"
