@@ -31,4 +31,4 @@ def subdomain_check(request: HttpRequest, value: str = ""):
 @router.get("/reference/cities", summary="Города отелей флота — для правила группы")
 @requires(READ)
 def hotel_city_list(request: HttpRequest):
-    return {"cities": hotel_fields.hotel_cities()}
+    return {"cities": hotel_fields.hotel_cities(request.user)}

@@ -133,3 +133,41 @@ def intersect(user, hotel_ids) -> tuple[list, int]:
     allowed_text = {str(item) for item in allowed}
     inside = [hid for hid in ids if str(hid) in allowed_text]
     return inside, len(ids) - len(inside)
+
+
+def allowed_hotels(user, queryset):
+    """`limit_queryset` по самому отелю — короче там, где выборка — отели."""
+    return limit_queryset(user, queryset, field="pk")
+
+
+def assert_within(user, hotel_ids) -> list:
+    """
+    ЗАПИСЬ ПО СПИСКУ ОТЕЛЕЙ — только внутри области (партия 59а).
+
+    Отель вне области — 404, как у адреса (`assert_allows`): отказ «нельзя»
+    подтверждал бы, что чужой отель существует. Возвращает список как есть,
+    чтобы вызов стоял одной строкой перед действием.
+    """
+    from apps.core.errors import NotFoundError
+
+    ids = list(hotel_ids)
+    _inside, outside = intersect(user, ids)
+    if outside:
+        raise NotFoundError("Отель не найден")
+    return ids
+
+
+def assert_may_shape_scope(user) -> None:
+    """
+    ОБЛАСТЬ НЕ РАСШИРЯЕТ САМА СЕБЯ (партия 59а).
+
+    Группа в области — и есть её граница. Ограниченный областью, которому дали
+    право записи, правкой правила, режима или удалением своей группы раздвигал
+    бы собственную область — вплоть до всего флота: строк области нет, значит
+    ограничения нет. Менять устройство групп области может только тот, кто не
+    ограничен.
+    """
+    from apps.core.errors import PermissionDenied
+
+    if is_limited(user):
+        raise PermissionDenied("Границы области меняет только владелец платформы", code="scope_locked")

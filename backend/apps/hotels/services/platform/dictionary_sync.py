@@ -145,7 +145,7 @@ def propagate(entry: SystemDictionaryEntry, before: dict | None) -> dict[str, in
 # --- Расхождения ------------------------------------------------------------
 
 
-def report(*, limit: int | None = None) -> dict:
+def report(*, limit: int | None = None, user=None) -> dict:
     """
     Кто разошёлся с эталоном и по чему.
 
@@ -153,7 +153,9 @@ def report(*, limit: int | None = None) -> dict:
     правдой при первой же правке мимо этого пути.
     """
     source = source_map()
-    hotels = Hotel.objects.all()
+    from apps.hotels.services.platform import scope
+
+    hotels = scope.allowed_hotels(user, Hotel.objects.all())
     if limit:
         hotels = hotels[:limit]
 

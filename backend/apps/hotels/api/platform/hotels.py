@@ -47,7 +47,7 @@ router = PlatformRouter(tags=["platform"])
 @router.get("/hotels", summary="Список отелей")
 @requires(READ)
 def list_hotels(request: HttpRequest, limit: int = 100):
-    return console.list_briefs(limit=limit)
+    return console.list_briefs(limit=limit, user=request.user)
 
 
 @router.post("/hotels", response={201: dict}, summary="Создать отель")

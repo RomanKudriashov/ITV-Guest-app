@@ -14,4 +14,4 @@ router = PlatformRouter(tags=["platform"])
 @router.get("/tariffs", summary="Сетка тарифов: что открывает и какие лимиты")
 @requires(READ)
 def list_tariffs(request: HttpRequest):
-    return console.tariff_grid()
+    return console.tariff_grid(request.user)

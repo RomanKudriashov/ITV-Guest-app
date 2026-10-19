@@ -176,6 +176,17 @@ def delete(group: HotelGroup) -> str:
     Удалить группу. ЖЁСТКО: группа — метка, а не данные отеля, и мягко
     удалённая продолжала бы занимать свой уникальный код.
     """
+    from apps.core.errors import ConflictError
+
+    # ГРУППА — ЧЬЯ-ТО ОБЛАСТЬ: удалять нельзя (партия 59а). Строки области
+    # уходят каскадом, а «строк нет» значит «ограничения нет»: администратор
+    # одной сети молча получал бы весь флот. Сначала снять область в команде.
+    holders = group.scoped_users.count()
+    if holders:
+        raise ConflictError(
+            f"Группа — область {holders} сотрудник(ов) платформы: сначала снимите её в «Команде»",
+            code="group_is_scope",
+        )
     code = group.code
     group.delete(hard=True)
     return code

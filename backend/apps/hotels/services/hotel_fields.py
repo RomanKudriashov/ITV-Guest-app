@@ -158,16 +158,18 @@ def subdomain_status(value: str) -> dict:
     return {"value": value, "ok": code is None, "code": code}
 
 
-def hotel_cities() -> list[str]:
+def hotel_cities(user=None) -> list[str]:
     """
     Города отелей флота — для правила группы. Правило сверяет город подстрокой
     по всем переводам, поэтому в список идут все переводы: выбрать можно на
     любом языке, а опечатка, тихо дававшая пустую группу, невозможна.
     """
     from apps.hotels.models import Hotel
+    from apps.hotels.services.platform import scope
 
     seen: set[str] = set()
-    for city in Hotel.objects.exclude(city={}).values_list("city", flat=True):
+    # Города чужих отелей — тоже карта клиентов (партия 59а): только по области.
+    for city in scope.allowed_hotels(user, Hotel.objects.exclude(city={})).values_list("city", flat=True):
         if isinstance(city, dict):
             seen.update(text.strip() for text in city.values() if isinstance(text, str) and text.strip())
     return sorted(seen, key=str.casefold)

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -54,6 +55,10 @@ export function GroupsPage() {
   const queryClient = useQueryClient();
   const [openGroup, setOpenGroup] = useState<HotelGroup | null>(null);
   const [creating, setCreating] = useState(false);
+  // Отказ сервера — словами (партия 59а): группа-область не удаляется (409),
+  // ограниченный областью границы не меняет (403). Раньше ошибка глоталась, и
+  // кнопка «ничего не делала».
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const groups = useQuery({ queryKey: ['admin', 'groups'], queryFn: getGroups });
 
@@ -79,6 +84,11 @@ export function GroupsPage() {
             </Box>
           ) : (
             <Box sx={{ ...panelSx, overflow: 'hidden' }}>
+              {deleteError ? (
+                <Alert severity="warning" onClose={() => setDeleteError(null)} data-testid="admin-group-delete-error">
+                  {deleteError}
+                </Alert>
+              ) : null}
               <Table size="small" data-testid="admin-groups-table">
                 <TableHead>
                   <TableRow>
@@ -122,9 +132,10 @@ export function GroupsPage() {
                         <IconButton
                           size="small"
                           onClick={() => {
-                            void deleteGroup(group.id).then(() =>
-                              queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] }),
-                            );
+                            setDeleteError(null);
+                            void deleteGroup(group.id)
+                              .then(() => queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] }))
+                              .catch((error: Error) => setDeleteError(error.message));
                           }}
                           aria-label={t('common.delete')}
                           data-testid={`admin-group-delete-${group.code}`}

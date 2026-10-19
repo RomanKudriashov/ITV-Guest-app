@@ -238,3 +238,111 @@ def test_the_scope_service_answers_plainly(scoped):
     assert described["limited"] is True
     assert described["hotels"] == 1
     assert [group["title"] for group in described["groups"]] == ["Сеть"]
+
+
+# --- Партия 59а: соседние ручки списка и сводок, и область, раздвигающая себя ---
+
+
+def test_every_hotel_list_and_summary_is_cut_to_the_scope(scoped, owner):
+    """
+    УКУС. Чужой отель не виден ни в одной соседней ручке: список отелей,
+    расхождения справочника, оформления, «кого коснётся пресет», города для
+    правила группы, счёт отелей на тарифах.
+
+    До 59а «Парк» был обрезан, а `/hotels` и сводки отдавали весь флот.
+    """
+    from apps.hotels.models import Hotel
+
+    api, mine, theirs = scoped["api"], scoped["mine"], scoped["theirs"]
+    Hotel.objects.filter(pk=mine.pk).update(city={"ru": "Свойгород"})
+    Hotel.objects.filter(pk=theirs.pk).update(city={"ru": "Чужгород"})
+
+    hotels = api("get", "/hotels").json()
+    assert {row["subdomain"] for row in hotels["items"]} == {mine.subdomain}, hotels
+    assert hotels["total"] == 1
+
+    divergence = api("get", "/dictionaries/divergence").json()
+    assert theirs.subdomain not in json.dumps(divergence, ensure_ascii=False)
+
+    looks = api("get", "/brand/looks").json()
+    assert {row["subdomain"] for row in looks["hotels"]} <= {mine.subdomain}
+    assert str(theirs.pk) not in json.dumps(api("get", "/brand/presets/crystal/affected").json())
+
+    cities = api("get", "/reference/cities").json()["cities"]
+    assert "Чужгород" not in cities and "Свойгород" in cities
+
+    owner_total = sum(row["hotels"] for row in owner("get", "/tariffs").json())
+    scoped_total = sum(row["hotels"] for row in api("get", "/tariffs").json())
+    assert scoped_total < owner_total, "счёт отелей на тарифах — по всему флоту"
+
+
+def test_a_foreign_publication_is_not_in_the_scoped_history(scoped, owner):
+    """УКУС. Кампания владельца по чужому отелю — не в истории и не по адресу."""
+    from apps.hotels.services.platform import publication
+
+    api, theirs = scoped["api"], scoped["theirs"]
+    started = owner(
+        "post",
+        "/publications",
+        {
+            "kind": "badge",
+            "payload": {"preset": "scope-foreign", "label": {"ru": "Чужим"}},
+            "scope": "hotels",
+            "hotel_ids": [str(theirs.pk)],
+        },
+    )
+    assert started.status_code == 201, started.content
+    job_id = started.json()["id"]
+    publication.run(job_id)
+
+    assert job_id not in {row["id"] for row in api("get", "/publications").json()["items"]}
+    assert api("get", f"/publications/{job_id}").status_code == 404
+    # Владельцу — видно.
+    assert owner("get", f"/publications/{job_id}").status_code == 200
+
+
+def test_the_scope_cannot_widen_itself(scoped, owner):
+    """
+    УКУС. Право записи плюс область из одной группы не раздвигают область:
+
+    * чужой отель в свою группу — 404, состав не меняется;
+    * правило или режим своей группы — 403;
+    * удалить свою группу — 403 (строк области не станет — не станет и границы).
+    """
+    from apps.hotels.services.platform import scope as scope_svc
+
+    api, user, mine, theirs, group_id = (
+        scoped["api"], scoped["user"], scoped["mine"], scoped["theirs"], scoped["group_id"],
+    )
+
+    added = api("post", f"/groups/{group_id}/members", {"hotel_ids": [str(theirs.pk)]})
+    assert added.status_code == 404, added.content
+
+    ruled = api("patch", f"/groups/{group_id}", {"mode": "rule", "rule": {"field": "city", "value": ""}})
+    assert ruled.status_code == 403, ruled.content
+
+    dropped = api("delete", f"/groups/{group_id}")
+    assert dropped.status_code == 403, dropped.content
+
+    # Переименовать свою группу — можно: это не граница.
+    renamed = api("patch", f"/groups/{group_id}", {"title": "Сеть, новое имя"})
+    assert renamed.status_code == 200, renamed.content
+
+    assert scope_svc.allowed_hotel_ids(user) == {mine.pk}
+
+
+def test_a_scope_group_is_not_deleted_even_by_the_owner(scoped, owner):
+    """
+    УКУС. Группа — чья-то область: удаление каскадом снимало строки области,
+    а «строк нет» значит «весь флот». Владельцу — 409 с подсказкой, что делать.
+    """
+    dropped = owner("delete", f"/groups/{scoped['group_id']}")
+    assert dropped.status_code == 409, dropped.content
+    assert dropped.json()["code"] == "group_is_scope"
+
+
+def test_a_dictionary_reset_does_not_reach_a_foreign_hotel(scoped):
+    """УКУС. Вернуть к эталону чужой отель — 404, а не тихая запись."""
+    api, theirs = scoped["api"], scoped["theirs"]
+    reset = api("post", "/dictionaries/reset", {"hotel_ids": [str(theirs.pk)]})
+    assert reset.status_code == 404, reset.content

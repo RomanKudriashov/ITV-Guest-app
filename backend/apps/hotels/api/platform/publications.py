@@ -64,10 +64,12 @@ def create_publication(request: HttpRequest, payload: PublicationIn):
 @router.get("/publications", summary="История публикаций")
 @requires(READ)
 def list_publications(request: HttpRequest, limit: int = 50):
-    return {"items": publication_svc.history(limit=limit)}
+    return {"items": publication_svc.history(limit=limit, user=request.user)}
 
 
 @router.get("/publications/{job_id}", summary="Отчёт по каждому отелю")
 @requires(READ)
 def publication_report(request: HttpRequest, job_id: str):
-    return publication_svc.serialize(publication_svc.get(job_id), with_results=True)
+    return publication_svc.serialize(
+        publication_svc.get(job_id, request.user), with_results=True, user=request.user
+    )

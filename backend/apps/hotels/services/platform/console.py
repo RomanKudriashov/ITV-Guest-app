@@ -62,7 +62,7 @@ def brief(hotel: Hotel, counts_override: dict[str, int] | None = None) -> dict[s
     }
 
 
-def list_briefs(*, limit: int | None = None) -> dict[str, Any]:
+def list_briefs(*, limit: int | None = None, user=None) -> dict[str, Any]:
     """
     Список отелей: счёт БАТЧЕМ и с пределом.
 
@@ -77,10 +77,16 @@ def list_briefs(*, limit: int | None = None) -> dict[str, Any]:
     from apps.hotels.services.platform.fleet import _batch_counts
     from apps.hotels.services.platform.paging import clamp, envelope
 
+    from apps.hotels.services.platform import scope
+
     limit = clamp(limit)
-    with platform_scope():
-        total = Hotel.objects.using("platform").count()
-        hotels = list(Hotel.objects.using("platform").order_by("-created_at")[:limit])
+    # Область режет и список, и счёт (партия 59а): без неё администратор одной
+    # сети видел здесь весь флот, хотя «Парк» был уже обрезан. Выборка — как во
+    # «флоте» (`fleet.query`): таблица отелей не тенантная, платформенный
+    # контекст нужен только счёту по тенантным таблицам (`_batch_counts`).
+    base = scope.limit_queryset(user, Hotel.objects.all())
+    total = base.count()
+    hotels = list(base.order_by("-created_at")[:limit])
     counts_by_hotel = _batch_counts([hotel.pk for hotel in hotels])
     rows = [
         brief(
@@ -370,12 +376,14 @@ def _impersonation_row(grant) -> dict[str, Any]:
     }
 
 
-def tariff_grid() -> list[dict[str, Any]]:
+def tariff_grid(user=None) -> list[dict[str, Any]]:
     from dataclasses import asdict
 
     from apps.hotels.services import tariffs as registry
+    from apps.hotels.services.platform import scope
 
-    hotels = list(Hotel.objects.filter(origin=Hotel.Origin.LIVE))
+    # Счёт отелей на тарифе — тоже по области: число чужих клиентов — их карта.
+    hotels = list(scope.allowed_hotels(user, Hotel.objects.filter(origin=Hotel.Origin.LIVE)))
     return [
         {
             "code": tariff.code,

@@ -90,7 +90,7 @@ def put_system_dictionary(request: HttpRequest, payload: DictionaryEntryIn):
 def dictionary_divergence(request: HttpRequest, limit: int = 200):
     from apps.hotels.services.platform import dictionary_sync
 
-    return dictionary_sync.report(limit=limit)
+    return dictionary_sync.report(limit=limit, user=request.user)
 
 
 @router.post("/dictionaries/reset", summary="Вернуть копии отелей к эталону")
@@ -104,6 +104,9 @@ def dictionary_reset(request: HttpRequest, payload: DictionaryResetIn):
     """
     from apps.hotels.services.platform import dictionary_sync
 
+    from apps.hotels.services.platform import scope
+
+    scope.assert_within(request.user, payload.hotel_ids)
     result = dictionary_sync.reset(payload.hotel_ids, codes=payload.codes or None)
     console.audit_platform(
         "platform.dictionary.reset",
@@ -127,7 +130,7 @@ def brand_looks(request: HttpRequest, limit: int = 200):
     """
     from apps.hotels.services import brand_inheritance
 
-    return brand_inheritance.report(limit=limit)
+    return brand_inheritance.report(limit=limit, user=request.user)
 
 
 @router.get("/brand/presets/{code}/affected", summary="Кого коснётся правка пресета")
@@ -136,7 +139,7 @@ def brand_preset_affected(request: HttpRequest, code: str):
     """Предупреждение ПЕРЕД правкой, а не статистика после неё."""
     from apps.hotels.services import brand_inheritance
 
-    return {"preset": code, "hotel_ids": brand_inheritance.affected_by(code)}
+    return {"preset": code, "hotel_ids": brand_inheritance.affected_by(code, user=request.user)}
 
 @router.get("/scheduler", summary="Служба отложенного запуска: жива ли")
 @requires(READ)

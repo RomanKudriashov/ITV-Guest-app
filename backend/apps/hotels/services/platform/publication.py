@@ -381,24 +381,50 @@ def _actor_name(actor_id) -> str:
     return (user.full_name or user.email) if user else ""
 
 
-def get(job_id: str) -> PublicationJob:
-    """Публикация по id. Выборка живёт в сервисе — вьюха её зовёт."""
+def _visible_jobs(user):
+    """
+    Публикации, которые человеку положено видеть (партия 59а).
+
+    Ограниченный областью видит свои запуски и те, что задели его отели;
+    чужие кампании по чужим сетям — нет: их описание, группа и числа — та же
+    карта клиентов, что и список отелей.
+    """
+    from django.db.models import Q
+
+    from apps.hotels.services.platform import scope
+
+    jobs = PublicationJob.objects.all()
+    allowed = scope.allowed_hotel_ids(user)
+    if allowed is None:
+        return jobs
+    touched = PublicationResult.objects.filter(hotel_id__in=allowed).values("job_id")
+    return jobs.filter(Q(actor_id=user.pk) | Q(pk__in=touched))
+
+
+def get(job_id: str, user=None) -> PublicationJob:
+    """Публикация по id. Вне области — 404, как у отеля."""
     from apps.core.errors import NotFoundError
 
-    job = PublicationJob.objects.filter(pk=job_id).first()
+    job = _visible_jobs(user).filter(pk=job_id).first()
     if job is None:
         raise NotFoundError("Публикация не найдена")
     return job
 
 
-def history(*, limit: int = 50) -> list[dict]:
+def history(*, limit: int = 50, user=None) -> list[dict]:
     """Последние публикации с числами. Без строк по отелям — они в отчёте."""
     size = max(1, min(limit, 200))
-    return [serialize(job) for job in PublicationJob.objects.all()[:size]]
+    return [serialize(job, user=user) for job in _visible_jobs(user)[:size]]
 
 
-def serialize(job: PublicationJob, *, with_results: bool = False) -> dict:
-    results = PublicationResult.objects.filter(job=job).select_related("hotel")
+def serialize(job: PublicationJob, *, with_results: bool = False, user=None) -> dict:
+    from apps.hotels.services.platform import scope
+
+    # Строки и числа — только по отелям области: чужие исходы — чужие клиенты.
+    results = scope.limit_queryset(
+        user, PublicationResult.objects.filter(job=job).select_related("hotel"), field="hotel_id"
+    )
+    scope_groups = {str(gid) for gid in scope.group_ids(user)}
     counts: dict[str, int] = {}
     for row in results:
         counts[row.outcome] = counts.get(row.outcome, 0) + 1
@@ -410,7 +436,12 @@ def serialize(job: PublicationJob, *, with_results: bool = False) -> dict:
         # Что публиковали — словами. Код вида и payload человеку не говорят
         # ничего через неделю после запуска.
         "description": publisher.describe(job.payload) if publisher else job.kind,
-        "group": job.group.title if job.group_id and job.group else "",
+        # Название чужой группы ограниченному — не показываем: это имя сети.
+        "group": (
+            job.group.title
+            if job.group_id and job.group and (not scope_groups or str(job.group_id) in scope_groups)
+            else ""
+        ),
         "actor": _actor_name(job.actor_id),
         "scope": job.scope,
         "status": job.status,

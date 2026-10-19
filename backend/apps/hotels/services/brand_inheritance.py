@@ -63,11 +63,14 @@ def state_of(theme: BrandTheme) -> str:
     return "follows" if inheritance.is_untouched(theme.tokens, source) else inheritance.State.CHANGED.value
 
 
-def report(*, limit: int | None = None) -> dict:
+def report(*, limit: int | None = None, user=None) -> dict:
     """
     Кто на каком оформлении. Для платформы — «кого коснётся правка пресета».
+    Только отели области того, кто спрашивает (партия 59а).
     """
-    hotels = Hotel.objects.all()
+    from apps.hotels.services.platform import scope
+
+    hotels = scope.allowed_hotels(user, Hotel.objects.all())
     if limit:
         hotels = hotels[:limit]
 
@@ -147,15 +150,17 @@ def _published_version() -> dict:
     }
 
 
-def affected_by(preset: str) -> list[str]:
+def affected_by(preset: str, *, user=None) -> list[str]:
     """
     Отели, до которых доедет правка данного пресета.
 
     Отдельная функция, а не фильтр отчёта: её спрашивают ПЕРЕД правкой, и
     ответ на неё — предупреждение, а не статистика.
     """
+    from apps.hotels.services.platform import scope
+
     affected = []
-    for hotel in Hotel.objects.all():
+    for hotel in scope.allowed_hotels(user, Hotel.objects.all()):
         with tenant_context(hotel):
             theme = BrandTheme.objects.filter(is_preset=False, source_preset=preset).first()
         if theme is not None and state_of(theme) == "follows":
