@@ -10,6 +10,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { useAuth } from '@/auth/AuthProvider';
 import { QueryState } from '@/components/QueryState';
 import { DateField } from '@/components/DateField';
@@ -207,14 +209,27 @@ export function OrdersPage() {
                     >
                       <CardContent sx={{ py: 1.25 }}>
                         <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
-                          <Typography variant="subtitle2">№{order.number}</Typography>
+                          <Typography variant="subtitle2">
+                            {/* Клик — раскрыть строку, как было; карточка — наведением (59а). */}
+                            <EntityName type="order" id={order.id} testId={`orders-row-name-${order.number}`}>
+                              №{order.number}
+                            </EntityName>
+                          </Typography>
                           <Chip size="small" label={order.status.title} />
                           <Typography variant="body2" color="text.secondary">
-                            {order.execution_point.title}
+                            <EntityName type="venue" id={order.execution_point.id}>
+                              {order.execution_point.title}
+                            </EntityName>
                           </Typography>
                           {order.room ? (
                             <Typography variant="body2" color="text.secondary">
-                              {t('orders.row.room', { room: order.room })}
+                              {fillNames(t('orders.row.room', { room: mark('room') }), {
+                                room: (
+                                  <EntityName type="room" id={order.room} testId={`orders-row-room-${order.number}`}>
+                                    {order.room}
+                                  </EntityName>
+                                ),
+                              })}
                             </Typography>
                           ) : null}
                           <Box sx={{ flexGrow: 1 }} />

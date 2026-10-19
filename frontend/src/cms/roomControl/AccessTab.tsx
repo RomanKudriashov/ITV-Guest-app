@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -186,7 +188,11 @@ export function AccessTab() {
               <TableBody>
                 {state.pins.map((record) => (
                   <TableRow key={record.room} data-testid={`grms-pin-${record.room}`}>
-                    <TableCell>{record.room}</TableCell>
+                    <TableCell>
+                      <EntityName type="room" id={record.room}>
+                        {record.room}
+                      </EntityName>
+                    </TableCell>
                     <TableCell>{new Date(record.issued_at).toLocaleString()}</TableCell>
                     {/*
                       Бессрочный код — не пустая ячейка, а слово: пустое место

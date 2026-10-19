@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import { EntityName } from '@/components/entityCard';
+
 import type { Dimension } from '@/api/analyticsTypes';
 import { dimensionValueLabel } from './dimensions';
 import Alert from '@mui/material/Alert';
@@ -162,7 +164,14 @@ export function BreakdownTable({
                   `service_request`, `slot`. Имя для них знает интерфейс.
                 */}
                 <Typography variant="body2" fontWeight={500}>
-                  {dimensionValueLabel(t, dimension, row.key, row.label)}
+                  {/* Точка — с карточкой заведения (ключ — код точки, партия 59а). */}
+                  {dimension === 'point' && row.key ? (
+                    <EntityName type="venue" id={row.key}>
+                      {dimensionValueLabel(t, dimension, row.key, row.label)}
+                    </EntityName>
+                  ) : (
+                    dimensionValueLabel(t, dimension, row.key, row.label)
+                  )}
                 </Typography>
               </TableCell>
               <TableCell align="right">{fmt.count(row.orders)}</TableCell>

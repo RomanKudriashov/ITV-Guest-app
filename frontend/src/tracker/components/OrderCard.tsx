@@ -16,6 +16,8 @@ import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import { useDraggable } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { OrderFieldValues } from '@/guest/components/OrderFieldValues';
 import { OrderSlot } from '@/guest/components/OrderSlot';
 import { OrderActions } from './OrderActions';
@@ -225,7 +227,10 @@ export function OrderCard({
               </Box>
             ) : null}
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-              {t('tracker.card.number', { number: order.number })}
+              {/* Клик — как был: шторка заказа; карточка — наведением (59а). */}
+              <EntityName type="order" id={order.id} testId={`tracker-card-name-${order.number}`}>
+                {t('tracker.card.number', { number: order.number })}
+              </EntityName>
             </Typography>
             {/* Буквы статуса — цветом слота, доведённым до 4.5 к карточке:
                 `main` слота давал 4.44 на «Новый»/«Принят» (партия 56). Обводка
@@ -328,10 +333,21 @@ export function OrderCard({
               color="info"
               icon={<CallSplitIcon sx={{ fontSize: 16 }} />}
               data-testid={`tracker-source-${order.number}`}
-              label={t('tracker.card.fromOrder', {
-                number: order.source_order.number,
-                service: order.source_order.service_title,
-              })}
+              label={fillNames(
+                t('tracker.card.fromOrder', { number: mark('number'), service: mark('service') }),
+                {
+                  number: (
+                    <EntityName type="order" id={order.source_order.id}>
+                      {String(order.source_order.number)}
+                    </EntityName>
+                  ),
+                  service: (
+                    <EntityName type="venue" id={order.source_order.service_code}>
+                      {order.source_order.service_title}
+                    </EntityName>
+                  ),
+                },
+              )}
               sx={WRAPPING_CHIP}
             />
           ) : null}
@@ -361,7 +377,15 @@ export function OrderCard({
               sx={{ minWidth: 0 }}
               data-testid={`tracker-where-${order.number}`}
             >
-              {whereText(order, t)}
+              {order.room
+                ? fillNames(whereText(order, t, mark('room')), {
+                    room: (
+                      <EntityName type="room" id={order.room} testId={`tracker-card-room-${order.number}`}>
+                        {order.room}
+                      </EntityName>
+                    ),
+                  })
+                : whereText(order, t)}
             </Typography>
           </Stack>
 

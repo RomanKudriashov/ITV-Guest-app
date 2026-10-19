@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -51,6 +51,32 @@ export function ReceptionDeskPage() {
   const [placed, setPlaced] = useState<number | null>(null);
   const canChat = Boolean(user?.can_chat);
   const threads = useTrackerChatThreads(canChat);
+
+  /*
+    «ЗАКАЗ ЗА ГОСТЯ» ИЗ КАРТОЧКИ НОМЕРА (партия 59а): `?room=305&order=1`.
+    Заказ за гостя оформляется из его диалога — находим диалог номера и
+    открываем окно заказа. Диалога нет — говорим это прямо, а не открываем
+    пустое окно: оформить заказ без диалога ресепшен не может.
+  */
+  const roomParam = params.get('room');
+  const [noThreadFor, setNoThreadFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!roomParam || threads.isLoading) return;
+    const loaded = threads.data?.pages.flatMap((page) => page.items) ?? [];
+    const thread = loaded.find((row) => row.room === roomParam);
+    const next = new URLSearchParams(params);
+    const wantOrder = next.get('order') === '1';
+    next.delete('room');
+    next.delete('order');
+    if (thread) {
+      next.set('t', thread.thread_id);
+      setPane('chat');
+      if (wantOrder) setOrdering(true);
+    } else {
+      setNoThreadFor(roomParam);
+    }
+    setParams(next, { replace: true });
+  }, [roomParam, threads.isLoading, threads.data, params, setParams]);
 
   if (user && !canChat) return <Navigate to="/tracker" replace />;
 
@@ -174,6 +200,13 @@ export function ReceptionDeskPage() {
         onClose={() => setHandedTo(null)}
         message={handedTo ? t('tracker.desk.task.sent', { title: handedTo }) : ''}
         ContentProps={{ 'data-testid': 'desk-task-sent' } as never}
+      />
+      <Snackbar
+        open={noThreadFor !== null}
+        autoHideDuration={6000}
+        onClose={() => setNoThreadFor(null)}
+        message={noThreadFor !== null ? t('tracker.desk.noThreadForRoom', { room: noThreadFor }) : ''}
+        ContentProps={{ 'data-testid': 'desk-no-thread-for-room' } as never}
       />
       <Snackbar
         open={placed !== null}

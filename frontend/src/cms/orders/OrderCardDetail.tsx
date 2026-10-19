@@ -3,6 +3,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { OrderJournal } from '@/tracker/components/OrderJournal';
 import { useTrackerMoney } from '@/tracker/hooks/useTrackerMoney';
 import type { TrackerOrder } from '@/tracker/api/types';
@@ -42,7 +44,13 @@ export function OrderCardDetail({ order }: { order: TrackerOrder }) {
         </Typography>
         {order.room ? (
           <Typography variant="body2" color="text.secondary">
-            {t('orders.row.room', { room: order.room })}
+            {fillNames(t('orders.row.room', { room: mark('room') }), {
+              room: (
+                <EntityName type="room" id={order.room}>
+                  {order.room}
+                </EntityName>
+              ),
+            })}
           </Typography>
         ) : null}
         <Typography variant="body2" color="text.secondary">

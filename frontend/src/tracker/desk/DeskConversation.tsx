@@ -7,6 +7,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { ChatConversation } from '@/components/chat/ChatConversation';
 import { useChatLive } from '@/components/chat/useChatLive';
 import {
@@ -130,7 +132,15 @@ export function DeskConversation({
       >
         <Typography variant="subtitle1" sx={{ flexGrow: 1 }} data-testid="desk-conversation-title">
           {snapshot?.counterpart ?? t('tracker.desk.reception')}
-          {room ? ` · ${t('tracker.chat.room', { room })}` : ''}
+          {room
+            ? fillNames(` · ${t('tracker.chat.room', { room: mark('room') })}`, {
+                room: (
+                  <EntityName type="room" id={room}>
+                    {room}
+                  </EntityName>
+                ),
+              })
+            : ''}
         </Typography>
         {toolbar}
       </Stack>

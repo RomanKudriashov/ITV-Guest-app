@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
@@ -667,7 +669,9 @@ export function RoomsPage() {
                       <TableCell>
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Typography variant="body2" fontWeight={500}>
-                            {room.number}
+                            <EntityName type="room" id={room.id} testId={`rooms-row-name-${room.number}`}>
+                              {room.number}
+                            </EntityName>
                           </Typography>
                           {/*
                             «Вне продажи» и уборка — ЗНАЧКАМИ, не цветом

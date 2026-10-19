@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName } from '@/components/entityCard';
+
 import { QueryState } from '@/components/QueryState';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
@@ -185,7 +187,19 @@ export function LogTab({ channels }: LogTabProps) {
                           <span>{timeLabel(entry)}</span>
                         </Stack>
                       </TableCell>
-                      <TableCell>{entry.order_number ? `№${entry.order_number}` : '—'}</TableCell>
+                      <TableCell>
+                        {entry.order_number ? (
+                          entry.order_id ? (
+                            <EntityName type="order" id={entry.order_id}>
+                              №{entry.order_number}
+                            </EntityName>
+                          ) : (
+                            `№${entry.order_number}`
+                          )
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
                       <TableCell data-testid={`cms-log-step-${index}`}>
                         {entry.kind === 'event'
                           ? t('notifications.log.event', { title: entry.event_title ?? entry.event_code })

@@ -19,14 +19,16 @@ export function isPickup(order: TrackerOrder): boolean {
  * 305». У выдачи первым стоит место, куда придёт гость, а номер — только как
  * указание, КТО придёт: «Выдача у стойки бара · заберёт гость из 305».
  */
-export function whereText(order: TrackerOrder, t: TFunction): string {
+export function whereText(order: TrackerOrder, t: TFunction, room: string | null = order.room): string {
+  // `room` — что подставить вместо номера: метка, на место которой встанет имя
+  // с всплывающей карточкой (партия 59а, `fillNames`). По умолчанию — номер.
   if (isPickup(order)) {
     const pickup = [t('tracker.card.pickupAt', { place: order.location?.title ?? '—' })];
-    if (order.room) pickup.push(t('tracker.card.pickupBy', { room: order.room }));
+    if (order.room) pickup.push(t('tracker.card.pickupBy', { room }));
     return pickup.join(' · ');
   }
   const parts: string[] = [];
-  if (order.room) parts.push(t('tracker.card.room', { room: order.room }));
+  if (order.room) parts.push(t('tracker.card.room', { room }));
   if (order.location?.title) parts.push(order.location.title);
   if (order.location?.refinement) parts.push(order.location.refinement);
   return parts.join(' · ') || '—';

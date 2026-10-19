@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -114,7 +116,15 @@ export function ReviewsTab({ controller }: { controller: UseAnalyticsFilters }) 
                 <TableBody>
                   {byPoint.map((row) => (
                     <TableRow key={row.key} hover data-testid={`analytics-reviews-row-${row.key}`}>
-                      <TableCell>{row.label}</TableCell>
+                      <TableCell>
+                        {row.key ? (
+                          <EntityName type="venue" id={row.key}>
+                            {row.label}
+                          </EntityName>
+                        ) : (
+                          row.label
+                        )}
+                      </TableCell>
                       <TableCell align="right">{fmt.count(row.reviews)}</TableCell>
                       <TableCell align="right">{fmt.percent(row.share)}</TableCell>
                     </TableRow>

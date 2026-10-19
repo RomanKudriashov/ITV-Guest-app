@@ -19,6 +19,8 @@ import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { cmsPath } from '@/app/hostRole';
 
 import { QueryState } from '@/components/QueryState';
@@ -178,7 +180,9 @@ function ServiceCard({
         <Box sx={{ p: 2 }}>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
-              {label(service.public_name, service.code)}
+              <EntityName type="venue" id={service.id} testId={`services-card-name-${service.code}`}>
+                {label(service.public_name, service.code)}
+              </EntityName>
             </Typography>
             <Box sx={{ flexGrow: 1 }} />
             <Chip size="small" label={t(`services.types.${service.type}`)} variant="outlined" />

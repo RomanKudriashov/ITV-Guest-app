@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { closeSocket } from '@/api/socket';
+import { cardKeys } from '@/components/entityCard';
 import { trackerSocketUrl } from '../api/tracker';
 import { trackerKeys } from '../api/queryKeys';
 import { useTrackerLanguage } from './useTrackerQueries';
@@ -162,6 +163,9 @@ export function useBoardLive(
             queryKey: ['tracker', 'points'],
             refetchType: 'active',
           });
+          // Всплывающие карточки (партия 59а): статус, срок, счёт номера и
+          // заведения меняются с доской — кэш 60 с сбрасывается событием.
+          void queryClient.invalidateQueries({ queryKey: cardKeys.all });
           onEventRef.current?.({
             event: snapshot.event ?? 'snapshot',
             orderId: snapshot.order_id,

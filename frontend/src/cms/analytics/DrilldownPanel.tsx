@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -209,7 +211,9 @@ export function DrilldownPanel({
                   <TableRow key={row.id} hover data-testid={`analytics-drilldown-row-${row.id}`}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {row.number}
+                        <EntityName type="order" id={row.id}>
+                          {row.number}
+                        </EntityName>
                       </Typography>
                     </TableCell>
                     <TableCell>{t(`analytics.values.type.${row.type}`, { defaultValue: row.type })}</TableCell>
@@ -224,7 +228,15 @@ export function DrilldownPanel({
                     </TableCell>
                     <TableCell align="right">{fmt.money(row.total_minor)}</TableCell>
                     <TableCell>{dateFormatter.format(new Date(row.created_at))}</TableCell>
-                    <TableCell>{row.room ?? '—'}</TableCell>
+                    <TableCell>
+                      {row.room ? (
+                        <EntityName type="room" id={row.room}>
+                          {row.room}
+                        </EntityName>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
                     <TableCell align="right">
                       {row.rating === null ? '—' : fmt.rating(row.rating)}
                     </TableCell>

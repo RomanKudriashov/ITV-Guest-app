@@ -1153,7 +1153,8 @@
         "nobody": "لا أحد للتحويل إليه: لا يوجد غيرك في الاستقبال.",
         "confirm": "تحويل",
         "failed": "تعذّر التحويل"
-      }
+      },
+      "noThreadForRoom": "لا توجد محادثة مع ضيف الغرفة {{room}} — يُنشأ الطلب نيابة عن الضيف من المحادثة"
     },
     "pointUnavailable": "هذه اللوحة غير متاحة لك — تُعرض لوحتك: {{current}}",
     "assign": {
@@ -4149,5 +4150,84 @@
     "menu": "القائمة",
     "board": "اللوحة",
     "dialogs": "المحادثات"
+  },
+  "entityCard": {
+    "kind": {
+      "order": "طلب",
+      "room": "غرفة",
+      "venue": "منشأة"
+    },
+    "open": {
+      "page": "فتح",
+      "tracker": "في المتتبع"
+    },
+    "noAccess": "لا يوجد وصول — ليست نقطتك",
+    "notFound": "غير موجود — ربما تم حذفه",
+    "failed": "تعذّر التحميل",
+    "order": {
+      "title": "رقم {{number}} ← الغرفة {{room}}",
+      "titleNoRoom": "رقم {{number}}",
+      "mode": {
+        "delivery": "إلى الغرفة",
+        "pickup": "استلام"
+      },
+      "more_zero": "و{{count}} أخرى",
+      "more_one": "و{{count}} أخرى",
+      "more_two": "و{{count}} أخرى",
+      "more_few": "و{{count}} أخرى",
+      "more_many": "و{{count}} أخرى",
+      "more_other": "و{{count}} أخرى",
+      "late": "+{{minutes}} د",
+      "lateCaption": "متأخر، كان الموعد {{time}}",
+      "left": "{{minutes}} د",
+      "leftCaption": "حتى {{time}}",
+      "unassigned": "غير معيّن"
+    },
+    "room": {
+      "label": "الغرفة {{number}}",
+      "floor": "الطابق {{floor}}",
+      "outOfService": "خارج الخدمة",
+      "inactive": "معطّلة",
+      "orderForGuest": "طلب نيابة عن الضيف",
+      "orders": "طلبات الغرفة",
+      "tasks_zero": "{{count}} مهام",
+      "tasks_one": "مهمة واحدة",
+      "tasks_two": "مهمتان",
+      "tasks_few": "{{count}} مهام",
+      "tasks_many": "{{count}} مهمة",
+      "tasks_other": "{{count}} مهمة",
+      "openOrders_zero": "طلبات مفتوحة",
+      "openOrders_one": "طلب مفتوح",
+      "openOrders_two": "طلبان مفتوحان",
+      "openOrders_few": "طلبات مفتوحة",
+      "openOrders_many": "طلبًا مفتوحًا",
+      "openOrders_other": "طلب مفتوح",
+      "guestOnline": "الضيف متصل",
+      "noGuest": "لا جلسة للضيف",
+      "housekeeping": {
+        "unknown": "التنظيف: لا علامة",
+        "clean": "نظيفة",
+        "dirty": "غير نظيفة",
+        "in_progress": "قيد التنظيف"
+      },
+      "controlOnline": "التحكم متصل",
+      "controlOffline": "التحكم غير متصل"
+    },
+    "venue": {
+      "inactive": "معطّلة",
+      "always": "تعمل دائمًا",
+      "open": "مفتوح",
+      "openUntil": "مفتوح حتى {{time}}",
+      "opensAt": "يفتح في {{time}}",
+      "closed": "مغلق",
+      "items_zero": "{{count}} عناصر",
+      "items_one": "عنصر واحد",
+      "items_two": "عنصران",
+      "items_few": "{{count}} عناصر",
+      "items_many": "{{count}} عنصرًا",
+      "items_other": "{{count}} عنصر",
+      "load": "{{inWork}} قيد التنفيذ · {{overdue}} متأخر",
+      "tracker": "متتبع النقطة"
+    }
   }
 }

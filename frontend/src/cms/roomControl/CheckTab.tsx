@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -171,7 +173,15 @@ export function CheckTab({ type }: { type: GrmsType }) {
                 data-testid={`grms-check-outcome-${result.outcome}`}
               />
               <Typography variant="body2" color="text.secondary">
-                {result.device} · {result.room} · {result.capability}
+                {result.device} ·{' '}
+                {result.room ? (
+                  <EntityName type="room" id={result.room}>
+                    {result.room}
+                  </EntityName>
+                ) : (
+                  '—'
+                )}{' '}
+                · {result.capability}
               </Typography>
             </Stack>
             {result.note && <Typography variant="body2">{result.note}</Typography>}

@@ -9,6 +9,8 @@ import Typography from '@mui/material/Typography';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { EmptyState } from '@/components/EmptyState';
 import type { TrackerChatThread } from '../api/types';
 
@@ -83,7 +85,15 @@ export function DeskThreadList({
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
                   {thread.room
-                    ? t('tracker.chat.room', { room: thread.room })
+                    ? fillNames(t('tracker.chat.room', { room: mark('room') }), {
+                        // Клик по строке — открыть диалог, как было; карточка
+                        // номера — наведением (на телефоне — нажатием на номер).
+                        room: (
+                          <EntityName type="room" id={thread.room}>
+                            {thread.room}
+                          </EntityName>
+                        ),
+                      })
                     : t('tracker.chat.noRoom')}
                 </Typography>
                 {thread.language ? (

@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -89,8 +91,10 @@ export function SlaOverridesList() {
                       ключей словаря, то есть по алфавиту: в русской CMS
                       заведения назывались по-арабски, потому что «ar» < «en».
                     */}
-                    {pickTranslated(row.title, languages.displayLanguage, languages.defaultCode) ||
-                      row.code}
+                    <EntityName type="venue" id={row.point_id}>
+                      {pickTranslated(row.title, languages.displayLanguage, languages.defaultCode) ||
+                        row.code}
+                    </EntityName>
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {own

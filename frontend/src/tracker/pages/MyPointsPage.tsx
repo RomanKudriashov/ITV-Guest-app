@@ -6,6 +6,8 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { parentOf, recallBoardSearch } from '@/app/backMap';
@@ -103,7 +105,10 @@ function PointRow({ point, onOpen }: { point: MyPoint; onOpen: () => void }) {
         sx={{ width: '100%', display: 'block', textAlign: 'start', p: 2, minHeight: 44 }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, overflowWrap: 'anywhere' }}>
-          {point.title}
+          {/* Клик по строке — на доску точки, как было; карточка — наведением. */}
+          <EntityName type="venue" id={point.code}>
+            {point.title}
+          </EntityName>
         </Typography>
         <Box
           sx={{

@@ -19,6 +19,8 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { useQuery } from '@tanstack/react-query';
 
 import Alert from '@mui/material/Alert';
@@ -27,7 +29,6 @@ import Chip from '@mui/material/Chip';
 import Collapse from '@mui/material/Collapse';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
@@ -44,7 +45,6 @@ import { EmptyState } from '@/components/EmptyState';
 /** Как часто сетка перечитывает себя. Живое обновление без своего канала. */
 const REFRESH_MS = 15_000;
 /** Задержка хинта. Полсекунды: мышь, проходящая мимо, хинтов не открывает. */
-const HINT_DELAY_MS = 500;
 
 export interface GridSelection {
   picked: Set<string>;
@@ -516,7 +516,6 @@ function RoomCube({
   onOpen: () => void;
   onPick: () => void;
 }) {
-  const { t } = useTranslation();
   const category = categories.find((item) => item.id === room.category_id);
   const short = (category?.title_i18n || category?.code || '').slice(0, 10);
 
@@ -601,42 +600,15 @@ function RoomCube({
 
   if (!withHint) return cube;
 
+  /*
+    НАВЕДЕНИЕ — КАРТОЧКА НОМЕРА (партия 59а) вместо прежнего текстового хинта:
+    та же карточка, что у номера на любом экране, — номер, тип, заказы, уборка,
+    связь управления. Клик по кубику — панель номера, как было.
+  */
   return (
-    <Tooltip
-      enterDelay={HINT_DELAY_MS}
-      enterNextDelay={HINT_DELAY_MS}
-      /* ИЗ ХИНТА НИЧЕГО НЕ НАЖИМАЕТСЯ: он подсказка, а не второй интерфейс.
-         Поэтому в нём только текст и он не перехватывает мышь. */
-      disableInteractive
-      title={
-        <Stack spacing={0.25}>
-          <Typography variant="caption" fontWeight={600}>
-            {t('hotel.rooms.floorTitle', { floor: room.floor || '—' })} · {room.number}
-          </Typography>
-          <Typography variant="caption">
-            {t('hotel.rooms.category')}: {category?.title_i18n || category?.code || t('hotel.rooms.categoryNone')}
-          </Typography>
-          <Typography variant="caption">
-            {t('hotel.rooms.controlType')}: {room.control_type || '—'}
-          </Typography>
-          <Typography variant="caption">
-            {t('hotel.rooms.hintOrders', {
-              count: room.active_orders,
-              overdue: room.overdue_orders,
-            })}
-          </Typography>
-          <Typography variant="caption">
-            {t('hotel.rooms.hintDevice')}: {t(`hotel.rooms.device_${room.device ?? 'none'}`)}
-          </Typography>
-          <Typography variant="caption">
-            {t('hotel.rooms.housekeeping')}: {t(`hotel.rooms.housekeeping_${room.housekeeping}`)}
-            {room.out_of_service ? ` · ${t('hotel.rooms.outOfService')}` : ''}
-          </Typography>
-        </Stack>
-      }
-    >
+    <EntityName type="room" id={room.id} bare>
       {cube}
-    </Tooltip>
+    </EntityName>
   );
 }
 

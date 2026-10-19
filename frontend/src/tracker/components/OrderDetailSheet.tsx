@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -13,6 +14,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName, fillNames, mark } from '@/components/entityCard';
 
 import type { BackTarget } from '@/app/backMap';
 import { BackLink } from '@/kit/BackLink';
@@ -154,7 +157,17 @@ export function OrderDetailSheet({
                       ? t('tracker.detail.guestRoom')
                       : t('tracker.detail.where')
                   }
-                  value={whereText(order, t)}
+                  value={
+                    order.room
+                      ? fillNames(whereText(order, t, mark('room')), {
+                          room: (
+                            <EntityName type="room" id={order.room} testId="tracker-detail-room">
+                              {order.room}
+                            </EntityName>
+                          ),
+                        })
+                      : whereText(order, t)
+                  }
                 />
                 <Row label={t('tracker.detail.when')} value={whenText(order, t, language)} />
                 {/* Та же лестница, что на карточке: минуты → часы → вчера →
@@ -302,7 +315,7 @@ function Row({
   emphasize,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   emphasize?: boolean;
 }) {
   return (

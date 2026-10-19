@@ -1117,7 +1117,8 @@
         "nobody": "Nobody to hand over to: no one else is on reception.",
         "confirm": "Hand over",
         "failed": "Handover failed"
-      }
+      },
+      "noThreadForRoom": "Room {{room}} has no guest conversation — orders for a guest are placed from the conversation"
     },
     "pointUnavailable": "This board is not available to you — showing yours: {{current}}",
     "assign": {
@@ -4041,5 +4042,68 @@
     "menu": "Menu",
     "board": "Board",
     "dialogs": "Conversations"
+  },
+  "entityCard": {
+    "kind": {
+      "order": "Order",
+      "room": "Room",
+      "venue": "Venue"
+    },
+    "open": {
+      "page": "Open",
+      "tracker": "In tracker"
+    },
+    "noAccess": "No access — not your point",
+    "notFound": "Not found — it may have been deleted",
+    "failed": "Could not load",
+    "order": {
+      "title": "No. {{number}} → room {{room}}",
+      "titleNoRoom": "No. {{number}}",
+      "mode": {
+        "delivery": "to the room",
+        "pickup": "pickup"
+      },
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more",
+      "late": "+{{minutes}} min",
+      "lateCaption": "overdue, was due {{time}}",
+      "left": "{{minutes}} min",
+      "leftCaption": "until {{time}}",
+      "unassigned": "Not assigned"
+    },
+    "room": {
+      "label": "Room {{number}}",
+      "floor": "floor {{floor}}",
+      "outOfService": "Out of service",
+      "inactive": "Disabled",
+      "orderForGuest": "Order for the guest",
+      "orders": "Room orders",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks",
+      "openOrders_one": "open order",
+      "openOrders_other": "open orders",
+      "guestOnline": "Guest online",
+      "noGuest": "No guest session",
+      "housekeeping": {
+        "unknown": "Housekeeping: no mark",
+        "clean": "Clean",
+        "dirty": "Not clean",
+        "in_progress": "Being cleaned"
+      },
+      "controlOnline": "Controls online",
+      "controlOffline": "Controls offline"
+    },
+    "venue": {
+      "inactive": "Disabled",
+      "always": "Always open",
+      "open": "Open",
+      "openUntil": "Open until {{time}}",
+      "opensAt": "Opens at {{time}}",
+      "closed": "Closed",
+      "items_one": "{{count}} item",
+      "items_other": "{{count}} items",
+      "load": "{{inWork}} in progress · {{overdue}} overdue",
+      "tracker": "Point tracker"
+    }
   }
 }

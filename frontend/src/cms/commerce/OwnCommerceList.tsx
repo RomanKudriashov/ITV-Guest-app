@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -109,8 +111,10 @@ export function OwnCommerceList() {
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600}>
                     {/* Язык интерфейса → язык отеля → код. См. SlaOverridesList. */}
-                    {pickTranslated(row.name, languages.displayLanguage, languages.defaultCode) ||
-                      row.code}
+                    <EntityName type="venue" id={row.service_id}>
+                      {pickTranslated(row.name, languages.displayLanguage, languages.defaultCode) ||
+                        row.code}
+                    </EntityName>
                   </Typography>
                   <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                     {row.fields.map((field) => (

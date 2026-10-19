@@ -13,6 +13,8 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName } from '@/components/entityCard';
+
 import { api } from '@/api/client';
 import { QueryState } from '@/components/QueryState';
 import { PageContainer } from '@/components/PageContainer';
@@ -420,8 +422,11 @@ function Venues({ data }: { data: DashboardData }) {
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
-              {pickTranslated(venue.title, languages.displayLanguage, languages.defaultCode) ||
-                venue.code}
+              {/* Клик по плитке — к заведению, как было; карточка — наведением (59а). */}
+              <EntityName type="venue" id={venue.code}>
+                {pickTranslated(venue.title, languages.displayLanguage, languages.defaultCode) ||
+                  venue.code}
+              </EntityName>
             </Typography>
             <Box sx={{ flexGrow: 1 }} />
             {/*

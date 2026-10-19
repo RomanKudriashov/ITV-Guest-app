@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+
+import { EntityName } from '@/components/entityCard';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -102,7 +104,15 @@ export function OperationsTab({ controller }: { controller: UseAnalyticsFilters 
                 <TableBody>
                   {rows.map((row) => (
                     <TableRow key={row.key} hover data-testid={`analytics-operations-row-${row.key}`}>
-                      <TableCell>{row.label}</TableCell>
+                      <TableCell>
+                        {row.key ? (
+                          <EntityName type="venue" id={row.key}>
+                            {row.label}
+                          </EntityName>
+                        ) : (
+                          row.label
+                        )}
+                      </TableCell>
                       <TableCell align="right">{fmt.count(row.orders)}</TableCell>
                       <TableCell align="right">{fmt.duration(row.avg_reaction_seconds)}</TableCell>
                       <TableCell align="right">{fmt.duration(row.avg_fulfil_seconds)}</TableCell>

@@ -5,6 +5,8 @@ import Typography from '@mui/material/Typography';
 import MeetingRoomOutlinedIcon from '@mui/icons-material/MeetingRoomOutlined';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import type { TrackerRoomGroup } from '../api/types';
 
 /**
@@ -34,7 +36,15 @@ export function RoomGroup({
         <Typography variant="subtitle2">
           {/* Заявка без комнаты — своя группа, и назвать её надо честно, а не
               подписать чужим номером. */}
-          {group.room ? t('tracker.card.room', { room: group.room }) : t('tracker.group.noRoom')}
+          {group.room
+            ? fillNames(t('tracker.card.room', { room: mark('room') }), {
+                room: (
+                  <EntityName type="room" id={group.room}>
+                    {group.room}
+                  </EntityName>
+                ),
+              })
+            : t('tracker.group.noRoom')}
         </Typography>
         {group.orders.length > 1 ? (
           <Chip size="small" label={group.orders.length} data-testid={`tracker-room-count-${group.key}`} />

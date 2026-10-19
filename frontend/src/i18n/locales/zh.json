@@ -1107,7 +1107,8 @@
         "nobody": "无人可转交：前台没有其他人。",
         "confirm": "转交",
         "failed": "转交失败"
-      }
+      },
+      "noThreadForRoom": "{{room}} 房没有与客人的对话 — 代客下单需从对话中进行"
     },
     "pointUnavailable": "您无权查看此看板——已显示您的看板：{{current}}",
     "assign": {
@@ -4005,5 +4006,64 @@
     "menu": "菜单",
     "board": "看板",
     "dialogs": "对话"
+  },
+  "entityCard": {
+    "kind": {
+      "order": "订单",
+      "room": "房间",
+      "venue": "场所"
+    },
+    "open": {
+      "page": "打开",
+      "tracker": "在追踪器中"
+    },
+    "noAccess": "无权访问 — 不是您的点位",
+    "notFound": "未找到 — 可能已删除",
+    "failed": "加载失败",
+    "order": {
+      "title": "第 {{number}} 号 → {{room}} 房",
+      "titleNoRoom": "第 {{number}} 号",
+      "mode": {
+        "delivery": "送到房间",
+        "pickup": "自取"
+      },
+      "more_other": "另有 {{count}} 项",
+      "late": "+{{minutes}} 分钟",
+      "lateCaption": "已超时，截止 {{time}}",
+      "left": "{{minutes}} 分钟",
+      "leftCaption": "截止 {{time}}",
+      "unassigned": "未分配"
+    },
+    "room": {
+      "label": "{{number}} 房",
+      "floor": "{{floor}} 楼",
+      "outOfService": "停售",
+      "inactive": "已停用",
+      "orderForGuest": "代客下单",
+      "orders": "房间订单",
+      "tasks_other": "{{count}} 项任务",
+      "openOrders_other": "个未完成订单",
+      "guestOnline": "客人在线",
+      "noGuest": "无客人会话",
+      "housekeeping": {
+        "unknown": "清洁：无标记",
+        "clean": "已清洁",
+        "dirty": "未清洁",
+        "in_progress": "清洁中"
+      },
+      "controlOnline": "控制在线",
+      "controlOffline": "控制离线"
+    },
+    "venue": {
+      "inactive": "已停用",
+      "always": "全天营业",
+      "open": "营业中",
+      "openUntil": "营业至 {{time}}",
+      "opensAt": "{{time}} 开门",
+      "closed": "已关闭",
+      "items_other": "{{count}} 个项目",
+      "load": "{{inWork}} 处理中 · {{overdue}} 超时",
+      "tracker": "点位追踪器"
+    }
   }
 }

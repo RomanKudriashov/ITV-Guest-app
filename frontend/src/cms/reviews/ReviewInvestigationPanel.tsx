@@ -12,6 +12,8 @@ import type { Theme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { QueryState } from '@/components/QueryState';
 import { useAnalyticsLanguage } from '../analytics/format';
 import { fetchInvestigation, type InvestigationPart, type ReviewInvestigation } from './api';
@@ -112,7 +114,15 @@ function Body({ data, children }: { data: ReviewInvestigation; children?: React.
         </Typography>
         <Typography variant="caption" color="text.secondary">
           {day(review.created_at)}
-          {order.room ? ` · ${t('reviews.row.room', { room: order.room })}` : ''}
+          {order.room
+            ? fillNames(` · ${t('reviews.row.room', { room: mark('room') })}`, {
+                room: (
+                  <EntityName type="room" id={order.room}>
+                    {order.room}
+                  </EntityName>
+                ),
+              })
+            : ''}
         </Typography>
       </Stack>
 
@@ -187,9 +197,16 @@ function PartCard({ part }: { part: InvestigationPart }) {
     <Paper variant="outlined" sx={{ p: 1.5 }} data-testid={`review-part-${part.number}`}>
       <Stack spacing={1}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Typography variant="subtitle2">{part.point.title}</Typography>
+          <Typography variant="subtitle2">
+            <EntityName type="venue" id={part.point.id}>
+              {part.point.title}
+            </EntityName>
+          </Typography>
           <Typography variant="caption" color="text.secondary">
-            №{part.number} · {part.status}
+            <EntityName type="order" id={part.order_id}>
+              №{part.number}
+            </EntityName>{' '}
+            · {part.status}
           </Typography>
           {part.delivery_mode === 'pickup' ? (
             <Chip size="small" variant="outlined" label={t('tracker.card.pickup')} />

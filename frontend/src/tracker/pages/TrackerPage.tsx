@@ -34,6 +34,8 @@ import GroupWorkOutlinedIcon from '@mui/icons-material/GroupWorkOutlined';
 import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import { useTranslation } from 'react-i18next';
 
+import { EntityCardsOff, suspendEntityCards } from '@/components/entityCard';
+
 import { EmptyState } from '@/components/EmptyState';
 import { PageContainer } from '@/components/PageContainer';
 import { SearchField } from '@/components/SearchField';
@@ -1125,8 +1127,13 @@ export function TrackerPage() {
           <DndContext
             sensors={sensors}
             collisionDetection={boardCollision}
-            onDragStart={(event) => drag.onDragStart(String(event.active.id))}
+            onDragStart={(event) => {
+              // Всплывающие карточки имён гаснут, пока тащат (партия 59а).
+              suspendEntityCards(true);
+              drag.onDragStart(String(event.active.id));
+            }}
             onDragCancel={() => {
+              suspendEntityCards(false);
               setOverColumn(null);
               setOverIndex(null);
               drag.onDragCancel();
@@ -1164,6 +1171,7 @@ export function TrackerPage() {
               );
             }}
             onDragEnd={(event) => {
+              suspendEntityCards(false);
               const over = event.over ? String(event.over.id) : null;
               const index = overIndex;
               setOverColumn(null);
@@ -1219,7 +1227,8 @@ export function TrackerPage() {
                   sx={{ width: 320, maxWidth: '90vw', cursor: 'grabbing', boxShadow: 8, borderRadius: 2 }}
                   data-testid="tracker-drag-overlay"
                 >
-                  {renderCard(draggedOrder)}
+                  {/* Едущая копия — без всплывающих карточек у имён. */}
+                  <EntityCardsOff>{renderCard(draggedOrder)}</EntityCardsOff>
                 </Box>
               ) : null}
             </DragOverlay>

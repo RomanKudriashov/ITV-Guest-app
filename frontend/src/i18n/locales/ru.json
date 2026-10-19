@@ -1131,7 +1131,8 @@
         "nobody": "Передать некому: на ресепшене больше никого нет.",
         "confirm": "Передать",
         "failed": "Передать не вышло"
-      }
+      },
+      "noThreadForRoom": "У номера {{room}} нет диалога с гостем — заказ за гостя оформляется из диалога"
     },
     "pointUnavailable": "Эта доска вам недоступна — показана ваша: {{current}}",
     "assign": {
@@ -4088,5 +4089,72 @@
     "menu": "Меню",
     "board": "Доска",
     "dialogs": "Диалоги"
+  },
+  "entityCard": {
+    "kind": {
+      "order": "Заказ",
+      "room": "Номер",
+      "venue": "Заведение"
+    },
+    "open": {
+      "page": "Открыть",
+      "tracker": "В трекере"
+    },
+    "noAccess": "Нет доступа — это не ваша точка",
+    "notFound": "Не найдено — возможно, удалено",
+    "failed": "Не удалось загрузить",
+    "order": {
+      "title": "№ {{number}} → номер {{room}}",
+      "titleNoRoom": "№ {{number}}",
+      "mode": {
+        "delivery": "в номер",
+        "pickup": "выдача"
+      },
+      "more_one": "и ещё {{count}}",
+      "more_few": "и ещё {{count}}",
+      "more_many": "и ещё {{count}}",
+      "late": "+{{minutes}} мин",
+      "lateCaption": "просрочен, срок был {{time}}",
+      "left": "{{minutes}} мин",
+      "leftCaption": "до срока {{time}}",
+      "unassigned": "Не назначен"
+    },
+    "room": {
+      "label": "Номер {{number}}",
+      "floor": "{{floor}} этаж",
+      "outOfService": "Вне продажи",
+      "inactive": "Выключен",
+      "orderForGuest": "Заказ за гостя",
+      "orders": "Заказы номера",
+      "tasks_one": "{{count}} задача",
+      "tasks_few": "{{count}} задачи",
+      "tasks_many": "{{count}} задач",
+      "openOrders_one": "открытый заказ",
+      "openOrders_few": "открытых заказа",
+      "openOrders_many": "открытых заказов",
+      "guestOnline": "Гость на связи",
+      "noGuest": "Сессии гостя нет",
+      "housekeeping": {
+        "unknown": "Уборка: нет отметки",
+        "clean": "Убран",
+        "dirty": "Не убран",
+        "in_progress": "Убирается"
+      },
+      "controlOnline": "Управление на связи",
+      "controlOffline": "Управление без связи"
+    },
+    "venue": {
+      "inactive": "Выключено",
+      "always": "Работает всегда",
+      "open": "Открыто",
+      "openUntil": "Открыто до {{time}}",
+      "opensAt": "Откроется в {{time}}",
+      "closed": "Закрыто",
+      "items_one": "{{count}} позиция",
+      "items_few": "{{count}} позиции",
+      "items_many": "{{count}} позиций",
+      "load": "{{inWork}} в работе · {{overdue}} просрочено",
+      "tracker": "Трекер точки"
+    }
   }
 }

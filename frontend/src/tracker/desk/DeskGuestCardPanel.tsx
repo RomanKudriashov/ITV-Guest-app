@@ -7,6 +7,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { useDeskGuestCard } from '../hooks/useTrackerQueries';
 import type { DeskOrderRow } from '../api/types';
 
@@ -54,7 +56,15 @@ export function DeskGuestCardPanel({ threadId }: { threadId: string | null }) {
     <Stack spacing={1.5} sx={{ p: 2 }} data-testid="desk-guest-card">
       <Stack spacing={0.5}>
         <Typography variant="h6" data-testid="desk-guest-room">
-          {data.room ? t('tracker.chat.room', { room: data.room }) : t('tracker.chat.noRoom')}
+          {data.room
+            ? fillNames(t('tracker.chat.room', { room: mark('room') }), {
+                room: (
+                  <EntityName type="room" id={data.room}>
+                    {data.room}
+                  </EntityName>
+                ),
+              })
+            : t('tracker.chat.noRoom')}
         </Typography>
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {data.language ? (
@@ -164,7 +174,9 @@ function OrderRow({ order }: { order: DeskOrderRow }) {
     <Box data-testid={`desk-order-${order.number}`}>
       <Stack direction="row" spacing={0.75} alignItems="center">
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          №{order.number}
+          <EntityName type="order" id={order.id} to={`/tracker/order/${order.id}`}>
+            №{order.number}
+          </EntityName>
         </Typography>
         <Chip
           size="small"

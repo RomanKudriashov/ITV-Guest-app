@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName } from '@/components/entityCard';
+
 import { QueryState } from '@/components/QueryState';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -246,9 +248,14 @@ export function StaffPage() {
                                 key={assignment.id ?? assignment.execution_point_id}
                                 size="small"
                                 variant="outlined"
-                                label={`${departmentLabel(assignment.execution_point_id)} · ${t(
-                                  `hotel.staff.levels.${assignment.level}`,
-                                )}`}
+                                label={
+                                  <>
+                                    <EntityName type="venue" id={assignment.execution_point_id}>
+                                      {departmentLabel(assignment.execution_point_id)}
+                                    </EntityName>
+                                    {` · ${t(`hotel.staff.levels.${assignment.level}`)}`}
+                                  </>
+                                }
                               />
                             ))
                           )}

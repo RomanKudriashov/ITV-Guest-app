@@ -13,6 +13,8 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName, fillNames, mark } from '@/components/entityCard';
+
 import { useDraftState } from '@/state/useDraftState';
 import { useAnalyticsLanguage } from '../analytics/format';
 import { replyToReview, type CmsReview } from './api';
@@ -75,14 +77,35 @@ export function ReviewCard({
               )}
             </Box>
             <Typography variant="subtitle2">
-              {t('reviews.row.order', { number: review.order_number })}
+              {fillNames(t('reviews.row.order', { number: mark('number') }), {
+                number: (
+                  <EntityName type="order" id={review.order_id}>
+                    {String(review.order_number)}
+                  </EntityName>
+                ),
+              })}
             </Typography>
             {review.points.map((point) => (
-              <Chip key={point.id} size="small" variant="outlined" label={point.title} />
+              <Chip
+                key={point.id}
+                size="small"
+                variant="outlined"
+                label={
+                  <EntityName type="venue" id={point.id}>
+                    {point.title}
+                  </EntityName>
+                }
+              />
             ))}
             {review.room ? (
               <Typography variant="body2" color="text.secondary">
-                {t('reviews.row.room', { room: review.room })}
+                {fillNames(t('reviews.row.room', { room: mark('room') }), {
+                  room: (
+                    <EntityName type="room" id={review.room}>
+                      {review.room}
+                    </EntityName>
+                  ),
+                })}
               </Typography>
             ) : null}
             <Box sx={{ flexGrow: 1 }} />

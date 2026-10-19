@@ -11,6 +11,8 @@ import Typography from '@mui/material/Typography';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useTranslation } from 'react-i18next';
 
+import { EntityName } from '@/components/entityCard';
+
 import type { EscalationRule, NotificationChannel } from '@/api/notificationTypes';
 
 /**
@@ -127,7 +129,13 @@ export function EscalationRulesTable({
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" color="text.secondary">
-                    {pointTitle(rule.execution_point_id)}
+                    {rule.execution_point_id ? (
+                      <EntityName type="venue" id={rule.execution_point_id}>
+                        {pointTitle(rule.execution_point_id)}
+                      </EntityName>
+                    ) : (
+                      pointTitle(rule.execution_point_id)
+                    )}
                   </Typography>
                 </TableCell>
                 <TableCell data-testid={`cms-escalation-steps-${rule.id}`}>
