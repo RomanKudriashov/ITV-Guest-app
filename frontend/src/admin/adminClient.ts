@@ -750,6 +750,9 @@ export const inviteMember = (body: { email: string; role: string; full_name?: st
   request<{ member: TeamMember; password: string }>('/team', 'POST', body);
 export const patchMember = (id: string, body: { role?: string; is_active?: boolean }) =>
   request<TeamMember>(`/team/${id}`, 'PATCH', body);
+// Владелец снимает второй фактор участнику (партия 60); себе — только командой.
+export const resetMemberTwoFactor = (id: string) =>
+  request<TeamMember>(`/team/${id}/2fa/reset`, 'POST');
 
 export interface AuditQuery {
   limit?: number;

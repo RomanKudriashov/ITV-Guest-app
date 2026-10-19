@@ -163,3 +163,33 @@ test.describe('Control: тумблер модуля шлёт только пер
     expect(sent?.modules).toEqual([{ code: 'native_app', is_enabled: expect.any(Boolean) }])
   })
 })
+
+test.describe('Control: сброс второго фактора участнику', () => {
+  test('владелец видит «Сбросить 2FA» у другого, не у себя; сброс — после вопроса', async ({ page, request }) => {
+    const eyes = await readOnlyAccount(request)
+    // У участника фактор «включён» — подменяем список, стенд не трогаем.
+    await page.route('**/api/v1/platform/team?*', async (route) => {
+      const res = await route.fetch()
+      const body = await res.json()
+      for (const row of body.items) row.totp_enabled = true
+      await route.fulfill({ response: res, json: body })
+    })
+    let resetCalled = ''
+    await page.route('**/api/v1/platform/team/*/2fa/reset', async (route) => {
+      resetCalled = route.request().url()
+      await route.abort()
+    })
+    await signInPlatform(page, PLATFORM)
+    await page.goto('/admin?section=team')
+
+    await expect(page.getByTestId(`admin-team-2fa-reset-${eyes.email}`)).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId(`admin-team-2fa-reset-${PLATFORM.email}`)).toHaveCount(0)
+
+    await page.getByTestId(`admin-team-2fa-reset-${eyes.email}`).click()
+    const ask = page.getByTestId(`admin-team-2fa-reset-confirm-${eyes.email}`)
+    await expect(ask).toContainText(/оборвутся|журнал/)
+    expect(resetCalled).toBe('')
+    await ask.getByTestId(`admin-team-2fa-reset-confirm-${eyes.email}-confirm`).click()
+    await expect.poll(() => resetCalled).toContain('/2fa/reset')
+  })
+})

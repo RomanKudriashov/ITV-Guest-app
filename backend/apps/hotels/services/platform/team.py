@@ -155,6 +155,44 @@ def update_member(user_id: str, *, role: str | None, is_active: bool | None, act
     return member
 
 
+
+def reset_two_factor(*, email: str | None = None, user_id: str | None = None, actor_id=None) -> User:
+    """
+    Снять второй фактор с учётки Control (партия 60).
+
+    Два входа и одно действие: владелец — участнику из «Пользователей»
+    (себе — нельзя), и команда `manage.py reset_platform_2fa` на сервере — для
+    того, у кого сбросить некому (единственный владелец потерял телефон).
+    Секрет стирается целиком: включить снова можно только заново, кодом.
+    Все входы участника обрываются — сброс означает, что фактор, возможно, в
+    чужих руках, и сессии, открытые с ним, больше не наши.
+    """
+    from apps.accounts.services import sessions as session_svc
+
+    with platform_scope():
+        queryset = User.all_objects.using("platform").filter(
+            is_platform_admin=True, hotel__isnull=True, deleted_at__isnull=True
+        )
+        member = (
+            queryset.filter(email=email.strip().lower()).first()
+            if email
+            else queryset.filter(pk=user_id).first()
+        )
+        if member is None:
+            raise NotFoundError("Участник не найден")
+        if actor_id is not None and str(member.pk) == str(actor_id):
+            raise ValidationError(
+                "Себе второй фактор сбрасывают только командой на сервере — "
+                "иначе его снимал бы любой, у кого открыта ваша сессия",
+                field="user_id",
+                code="self_reset",
+            )
+        User.all_objects.using("platform").filter(pk=member.pk).update(totp_enabled=False, totp_secret="")
+        member.totp_enabled, member.totp_secret = False, ""
+    session_svc.revoke_all(member.pk, scope="platform", reason="2fa_reset")
+    return member
+
+
 def audit_feed(
     *,
     limit: int = 100,

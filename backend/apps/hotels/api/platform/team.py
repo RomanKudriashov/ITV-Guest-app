@@ -52,3 +52,23 @@ def patch_member(request: HttpRequest, user_id: str, payload: TeamPatchIn):
         payload={"email": member.email, "role": member.platform_role, "active": member.is_active},
     )
     return console.member(member)
+
+
+@router.post("/team/{user_id}/2fa/reset", summary="Сбросить второй фактор участнику")
+@requires(OWNER)
+def reset_member_two_factor(request: HttpRequest, user_id: str):
+    """
+    Владелец снимает 2FA другому участнику (партия 60): потерял телефон — без
+    этого его учётка была заперта навсегда. Себе — нельзя (только командой
+    `manage.py reset_platform_2fa`). Входы участника обрываются.
+    """
+    from apps.hotels.services.platform.team import reset_two_factor
+
+    member = reset_two_factor(user_id=user_id, actor_id=request.user.pk)
+    console.audit_platform(
+        "platform.2fa.reset",
+        actor_id=request.user.pk,
+        ip=request.META.get("REMOTE_ADDR"),
+        payload={"email": member.email, "via": "console"},
+    )
+    return console.member(member)

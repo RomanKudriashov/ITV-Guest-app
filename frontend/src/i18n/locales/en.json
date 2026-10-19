@@ -2776,6 +2776,11 @@
         "title": "Change the role of {{email}}?",
         "body": "“{{from}}” → “{{to}}”. Permissions change immediately across every hotel this person can see.",
         "confirm": "Change role"
+      },
+      "twoFactorReset": {
+        "button": "Reset 2FA",
+        "title": "Reset two-factor authentication for {{email}}?",
+        "body": "The secret is erased and all of this member's sessions end. They can sign in with the password and turn two-factor back on in “Security”. The action is logged."
       }
     },
     "audit": {

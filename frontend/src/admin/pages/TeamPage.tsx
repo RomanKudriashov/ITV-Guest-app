@@ -13,7 +13,7 @@ import { ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTo
 import { ChoiceField, Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
-import { getTeam, inviteMember, patchMember, type TeamMember } from '../adminClient';
+import { getMe, getTeam, inviteMember, patchMember, resetMemberTwoFactor, type TeamMember } from '../adminClient';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
 
@@ -55,6 +55,12 @@ export function TeamPage() {
   const change = useMutation({
     mutationFn: (body: { id: string; role?: string; is_active?: boolean }) =>
       patchMember(body.id, { role: body.role, is_active: body.is_active }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'team'] }),
+    onError: (e) => setError(e instanceof Error ? e.message : t('admin.team.changeFailed')),
+  });
+  const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe });
+  const resetTwoFactor = useMutation({
+    mutationFn: (id: string) => resetMemberTwoFactor(id),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin', 'team'] }),
     onError: (e) => setError(e instanceof Error ? e.message : t('admin.team.changeFailed')),
   });
@@ -158,6 +164,13 @@ export function TeamPage() {
                 member={member}
                 onRole={(next) => change.mutate({ id: member.id, role: next })}
                 onActive={(next) => change.mutate({ id: member.id, is_active: next })}
+                // Сброс 2FA — владельцу и не себе: себе — только командой на
+                // сервере, иначе фактор снимал бы любой с открытой сессией.
+                onResetTwoFactor={
+                  isOwner && member.totp_enabled && member.id !== me.data?.id
+                    ? () => resetTwoFactor.mutate(member.id)
+                    : undefined
+                }
               />
             ))}
           </Box>
@@ -174,15 +187,18 @@ function MemberLine({
   member,
   onRole,
   onActive,
+  onResetTwoFactor,
 }: {
   member: TeamMember;
   onRole: (role: string) => void;
   onActive: (active: boolean) => void;
+  onResetTwoFactor?: () => void;
 }) {
   const { t } = useTranslation();
   const cell = { p: '13px 12px', borderBottom: `1px solid ${surface.hair}`, color: ink.mid } as const;
   // Роль меняет доступ ко всем отелям платформы — с вопросом (партия 60).
   const [askRole, setAskRole] = useState<string | null>(null);
+  const [askReset, setAskReset] = useState(false);
 
   return (
     <Box component="tr" data-testid={`admin-team-row-${member.email}`}>
@@ -246,6 +262,29 @@ function MemberLine({
         >
           {member.totp_enabled ? t('admin.security.on') : t('admin.security.off')}
         </Box>
+        {onResetTwoFactor ? (
+          <Button
+            size="small"
+            onClick={() => setAskReset(true)}
+            data-testid={`admin-team-2fa-reset-${member.email}`}
+            sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}
+          >
+            {t('admin.team.twoFactorReset.button')}
+          </Button>
+        ) : null}
+        <ConfirmDialog
+          open={askReset}
+          testId={`admin-team-2fa-reset-confirm-${member.email}`}
+          destructive
+          title={t('admin.team.twoFactorReset.title', { email: member.email })}
+          description={t('admin.team.twoFactorReset.body')}
+          confirmLabel={t('admin.team.twoFactorReset.button')}
+          onConfirm={() => {
+            setAskReset(false);
+            onResetTwoFactor?.();
+          }}
+          onClose={() => setAskReset(false)}
+        />
       </Box>
     </Box>
   );
