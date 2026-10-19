@@ -174,3 +174,17 @@ def test_base_option_checks_the_second_base(command, monkeypatch, settings):
     command.base = "app.10.0.0.1.sslip.io"
     command._check_certificate([])
     assert seen == ["app.10.0.0.1.sslip.io"]
+
+
+def test_the_summary_line_names_every_problem(command):
+    """
+    УКУС (партия 59а). Итог называет расхождения сам: строки выше уходят в
+    stderr и терялись при `| tail -1` — «Стенд обеднел: 1 расхождений» без
+    названия звал гадать, что не так (выкатка 58-полная).
+    """
+    from django.core.management.base import CommandError
+
+    with pytest.raises(CommandError) as raised:
+        command._finish(["kitchen: сервис ВЫКЛЮЧЕН", "crystal: город не выбран"], [], "crystal")
+    text = str(raised.value)
+    assert "kitchen: сервис ВЫКЛЮЧЕН" in text and "crystal: город не выбран" in text, text

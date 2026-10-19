@@ -498,8 +498,11 @@ class Command(BaseCommand):
             self.stderr.write("")
             for problem in problems:
                 self.stderr.write(self.style.ERROR(f"  ✗ {problem}"))
+            # Расхождения — и в самой строке итога (партия 59а): строки выше
+            # уходят в stderr и теряются при обрезке вывода (`| tail -1`), и
+            # итог «1 расхождений» без названия звал гадать, что не так.
             raise CommandError(
-                f"Стенд обеднел: {len(problems)} расхождений. "
+                f"Стенд обеднел: {len(problems)} расхождений — {'; '.join(problems)}. "
                 "Починка: manage.py seed_demo_hotel --subdomain "
                 f"{subdomain} --force --with-rich-catalog --with-room-control"
                 " и manage.py seed_demo_fleet"
