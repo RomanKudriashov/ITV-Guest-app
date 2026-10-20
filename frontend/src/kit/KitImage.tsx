@@ -4,7 +4,16 @@ import { alpha, type Theme } from '@mui/material/styles';
 
 import { IconRestaurant, type AppIconComponent } from '@/icons';
 import { fadeInSx } from './motion';
-import { coverWidth, focusPosition, MIN_VISIBLE_SHARE, srcSetOf, visibleShare, type ImageRef } from './imageRef';
+import {
+  cappedSizes,
+  coverWidth,
+  densityCap,
+  focusPosition,
+  MIN_VISIBLE_SHARE,
+  srcSetOf,
+  visibleShare,
+  type ImageRef,
+} from './imageRef';
 
 /**
  * The storefront's single image primitive.
@@ -53,6 +62,12 @@ export interface KitImageProps {
   /** Corner radius (px). Defaults to no rounding (parent usually clips). */
   radius?: number;
   testId?: string;
+  /**
+   * ГЛАВНАЯ КАРТИНКА ЭКРАНА (партия 61): грузится сразу и первой
+   * (`fetchpriority="high"`, без `lazy`). Остальные — лениво: ниже первого
+   * экрана они не нужны до прокрутки.
+   */
+  priority?: boolean;
 }
 
 /** Textured token surface used behind a missing image — soft gradient + depth. */
@@ -82,6 +97,7 @@ export function KitImage({
   fallbackIconSize = 40,
   radius,
   testId,
+  priority = false,
 }: KitImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
@@ -105,13 +121,23 @@ export function KitImage({
       setShare(1);
       return undefined;
     }
-    const measure = () => {
-      setBox({ w: node.clientWidth, h: node.clientHeight });
-      setShare(visibleShare(image, node.clientWidth, node.clientHeight));
+    const apply = (w: number, h: number) => {
+      setBox({ w, h });
+      setShare(visibleShare(image, w, h));
     };
-    measure();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(measure);
+    if (typeof ResizeObserver === 'undefined') {
+      apply(node.clientWidth, node.clientHeight);
+      return undefined;
+    }
+    // ЗАМЕР — ПЕРВЫМ ОТВЕТОМ НАБЛЮДАТЕЛЯ, а не `clientWidth` сразу (партия 61).
+    // Синхронный замер при монтировании заставлял браузер раскладывать место
+    // немедленно — в меню на 800 позиций это 800 принудительных раскладок, в
+    // том числе разделов ниже экрана, которые иначе не раскладываются вовсе.
+    // Наблюдатель отвечает после раскладки и до отрисовки — в том же кадре.
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[entries.length - 1]?.contentRect;
+      if (box) apply(box.width, box.height);
+    });
     observer.observe(node);
     return () => observer.disconnect();
   }, [image]);
@@ -121,10 +147,14 @@ export function KitImage({
     требует файл шире места (окно инфо 388×224 при кадре 2,4:1 — 1080 точек, а
     не 776). Измерив место, считаем нужную ширину сами; до замера — `sizes` места.
   */
+  // Плотность выше 2 не берёт файл шире ×2 (партия 61): место «сжимается» на
+  // экранах ×3 ровно настолько, чтобы браузер выбрал ширину под ×2.
   const effectiveSizes =
     image?.w && image?.h && box.w > 0 && box.h > 0
-      ? `${Math.ceil(whole ? Math.min(box.w, box.h * (image.w / image.h)) : coverWidth(image, box.w, box.h))}px`
-      : sizes;
+      ? `${Math.ceil(
+          (whole ? Math.min(box.w, box.h * (image.w / image.h)) : coverWidth(image, box.w, box.h)) * densityCap(),
+        )}px`
+      : cappedSizes(sizes);
   const backdropSrc = image?.widths[0]?.url ?? null;
 
   /*
@@ -225,7 +255,8 @@ export function KitImage({
             srcSet={image && image.widths.length ? srcSetOf(image) : undefined}
             sizes={image && image.widths.length ? effectiveSizes : undefined}
             alt={alt}
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            {...(priority ? { fetchpriority: 'high' } : {})}
             decoding="async"
             onLoad={() => setLoaded(true)}
             onError={() => setErrored(true)}

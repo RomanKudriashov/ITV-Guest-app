@@ -113,8 +113,7 @@ class MediaAsset(TenantModel):
         """
         if not self.object_key:
             return ""
-        scheme = settings.GUEST_APP_PUBLIC_SCHEME
-        return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{self.object_key}"
+        return self.key_url(self.object_key)
 
     def width_variants(self) -> list[tuple[int, str]]:
         """Нарезка по ширинам (партия 58а): [(ширина, ключ)] по возрастанию."""
@@ -155,10 +154,15 @@ class MediaAsset(TenantModel):
         # адрес уезжает В БРАУЗЕР ГОСТЯ. На HTTPS-странице http-картинка не
         # «грузится чуть хуже» — она блокируется, и это выглядит как «пропали
         # все фотографии», причём ровно на боевом стенде и никогда локально.
-        scheme = settings.GUEST_APP_PUBLIC_SCHEME
-        return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{key}"
+        return self.key_url(key)
 
     def key_url(self, key: str) -> str:
-        """Публичный URL объекта бакета — по той же схеме, что `url()`."""
+        """
+        Публичный URL объекта бакета. Медиа на своём домене — путь без хоста
+        (`MEDIA_RELATIVE_URLS`, партия 61): картинка приходит с того же хоста,
+        что и страница. Иначе — абсолютный адрес по схеме гостя.
+        """
+        if settings.MEDIA_RELATIVE_URLS:
+            return f"/{settings.MINIO_BUCKET}/{key}"
         scheme = settings.GUEST_APP_PUBLIC_SCHEME
         return f"{scheme}://{settings.MINIO_PUBLIC_ENDPOINT}/{settings.MINIO_BUCKET}/{key}"

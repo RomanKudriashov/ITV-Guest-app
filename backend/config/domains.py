@@ -40,3 +40,15 @@ def csrf_trusted_origins(bases: list[str]) -> list[str]:
     for base in bases:
         origins += [f"https://*.{base}", f"http://*.{base}", f"https://{base}", f"http://{base}"]
     return origins
+
+
+def media_on_own_domain(endpoint: str, bases: list[str]) -> bool:
+    """
+    Публичный адрес медиа — один из доменов приложения (партия 61).
+
+    Тогда `/guest-media/` отдаёт наш же nginx на любом из них, и адрес картинки
+    можно отдавать путём без хоста: браузер возьмёт её там же, где страница.
+    Порт не важен; регистр — тоже.
+    """
+    host = (endpoint or "").split("/")[0].split(":")[0].strip().lower()
+    return bool(host) and host in {base.split(":")[0].strip().lower() for base in bases}

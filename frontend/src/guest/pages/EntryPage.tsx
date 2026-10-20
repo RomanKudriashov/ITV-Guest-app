@@ -116,7 +116,7 @@ export function EntryPage() {
 
   // Хук — до ранних выходов. Фото бренда объектом (партия 58а): файл по ширине экрана, кадр по фокусу.
   const brandBg = tokens.brand?.background;
-  const cover = useCoverBackground(brandBg?.kind === 'image' ? brandBg.imageRef : null);
+  const cover = useCoverBackground(brandBg?.kind === 'image' ? brandBg.imageRef : null, { viewport: true });
 
   if (isReady) return <Navigate to="/home" replace />;
 

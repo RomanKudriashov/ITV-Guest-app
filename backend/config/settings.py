@@ -46,7 +46,7 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "*")
 # источники форм: руками адреса не перечисляются нигде.
 from config.domains import allowed_hosts as _allowed_hosts  # noqa: E402
 from config.domains import csrf_trusted_origins as _csrf_origins  # noqa: E402
-from config.domains import parse_bases  # noqa: E402
+from config.domains import media_on_own_domain, parse_bases  # noqa: E402
 
 APP_DOMAINS = parse_bases(os.getenv("APP_DOMAINS") or os.getenv("APP_DOMAIN", ""))
 APP_DOMAIN = APP_DOMAINS[0] if APP_DOMAINS else ""
@@ -292,6 +292,13 @@ CACHES = {
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_PUBLIC_ENDPOINT = os.getenv("MINIO_PUBLIC_ENDPOINT", "localhost:9000")
+# АДРЕС МЕДИА — ОТ ХОСТА СТРАНИЦЫ (партия 61). Медиа отдаёт наш же nginx
+# (`/guest-media/` на любом домене приложения), и абсолютный адрес на
+# `MINIO_PUBLIC_ENDPOINT` уводил картинки витрины на naviroom к другому хосту —
+# app.<ip>.sslip.io: отдельное соединение и 0,4–0,5 с на запрос. Если
+# публичный адрес медиа — один из наших доменов, отдаём путь без хоста, и
+# браузер берёт картинку там же, где открыта страница. Явно: `MEDIA_RELATIVE_URLS`.
+MEDIA_RELATIVE_URLS = env_bool("MEDIA_RELATIVE_URLS", media_on_own_domain(MINIO_PUBLIC_ENDPOINT, APP_DOMAINS))
 MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "guest-media")

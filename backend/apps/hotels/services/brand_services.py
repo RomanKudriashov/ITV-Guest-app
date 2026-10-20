@@ -117,7 +117,7 @@ def _asset_url(asset_id: Any, variant: str = "card") -> str:
 
 
 def _logo_as_uploaded(url: str) -> str:
-    """Адрес варианта нашего ассета → адрес его исходника; иначе — как был."""
+    """Адрес нашего логотипа → его вариант без потерь `logo` (или исходник); чужой — как был."""
     start = url.find("hotels/")
     if start < 0:
         return url
@@ -135,11 +135,23 @@ def _logo_as_uploaded(url: str) -> str:
     # но держит их имена в `variants["retired"]` — адрес из токенов и из истории
     # версий бренда по-прежнему ведёт к исходнику.
     asset = (
-        MediaAsset.objects.filter(**{f"variants__{parts[3]}": key}).first()
+        MediaAsset.objects.filter(object_key=key).first()
+        or MediaAsset.objects.filter(**{f"variants__{parts[3]}": key}).first()
         or MediaAsset.objects.filter(**{f"variants__old-{parts[3]}": key}).first()
         or MediaAsset.objects.filter(variants__retired__contains=[key]).first()
     )
-    return asset.original_url() if asset is not None else url
+    if asset is None:
+        return url
+    # БЕЗ ПОТЕРЬ, НО ПО МЕСТУ (партия 61): логотип 3513 точек показывается не
+    # шире 200 px. Вариант `logo` — WebP без потерь шириной до 480; заводится
+    # один раз, при первой выдаче. Не вышло или не легче исходника — исходник.
+    from apps.media.services.logo import ensure_logo_variant
+
+    try:
+        logo_key = ensure_logo_variant(asset)
+    except Exception:  # noqa: BLE001 — выдача темы не падает из-за логотипа
+        logo_key = None
+    return asset.key_url(logo_key) if logo_key else asset.original_url()
 
 
 def resolve_media(tokens: dict) -> dict:

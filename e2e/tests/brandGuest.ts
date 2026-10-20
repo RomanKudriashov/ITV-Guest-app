@@ -130,12 +130,19 @@ export async function uploadBrandMedia(
 
 /**
  * Логотип: адрес, который кладут в токены, и адрес, который отдаст витрина, —
- * исходник как загружен (партия 58а: логотип без потерь, с прозрачностью).
+ * без потерь, с прозрачностью: исходник как загружен (партия 58а) или его
+ * вариант `logo` — WebP без потерь по размеру места (партия 61). Отдаём
+ * шаблоном: имя варианта заводится на сервере при первой выдаче.
  */
 export async function uploadBrandLogo(
   request: APIRequestContext,
   file: { name: string; mimeType: string; buffer: Buffer },
-): Promise<{ url: string; served: string }> {
+): Promise<{ url: string; served: RegExp }> {
   const media = await uploadMedia(request, file, 'brand')
-  return { url: media.url, served: media.original_url }
+  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const prefix = escape(media.original_url.replace(/\/original\/[^/]+$/, ''))
+  return {
+    url: media.url,
+    served: new RegExp(`^(${escape(media.original_url)}|${prefix}/logo/[0-9a-f]+\\.webp)$`),
+  }
 }

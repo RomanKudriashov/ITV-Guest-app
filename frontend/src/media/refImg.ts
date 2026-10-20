@@ -1,4 +1,4 @@
-import { focusPosition, srcSetOf, type ImageRef } from '@/kit/imageRef';
+import { cappedSizes, focusPosition, srcSetOf, type ImageRef } from '@/kit/imageRef';
 
 /**
  * ПРОСТОЙ `<img>` CMS ПО ОБЪЕКТУ КАРТИНКИ (партия 58а).
@@ -21,7 +21,7 @@ export function refImgProps(
   return {
     src: ref.src || url,
     srcSet: srcSetOf(ref),
-    sizes,
+    sizes: cappedSizes(sizes),
     ...(focus ? { style: { objectPosition: focusPosition(ref) } } : {}),
   };
 }

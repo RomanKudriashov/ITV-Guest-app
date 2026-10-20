@@ -132,6 +132,8 @@ interface BentoTileProps {
   /** Narrow footprint (1 column) — hide the meta line, keep only the title. */
   compact: boolean;
   onOpen: (route: string) => void;
+  /** Первая плитка главной — главная картинка экрана: грузится сразу (партия 61). */
+  priority?: boolean;
 }
 
 /**
@@ -139,7 +141,7 @@ interface BentoTileProps {
  * scrim, the title + meta in the lower-left, and a status pill in the upper-right.
  * The centre stays clear.
  */
-export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTileProps) {
+export function BentoTile({ tile, compact, onOpen, sizes, cellSizes, priority = false }: BentoTileProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   // `tileTokens`, а не `tile`: проп плитки уже занял это имя.
@@ -210,6 +212,7 @@ export function BentoTile({ tile, compact, onOpen, sizes, cellSizes }: BentoTile
           fit="fill"
           alt={tile.title}
           fill
+          priority={priority}
           fallbackIcon={fallbackIconFor('product', tile.service_type)}
         />
       ) : (
@@ -285,7 +288,7 @@ export function BentoGrid({ tiles, columns, onOpen }: BentoGridProps) {
         gap: { xs: 1.25, md: 1.75 },
       }}
     >
-      {placed.map((p) => (
+      {placed.map((p, index) => (
         <Box
           key={p.tile.key}
           sx={{
@@ -299,6 +302,7 @@ export function BentoGrid({ tiles, columns, onOpen }: BentoGridProps) {
             onOpen={onOpen}
             sizes={bentoTileSizes(p.colSpan, columns)}
             cellSizes={bentoTileSizes(p.colSpan, columns, 0.5)}
+            priority={index === 0}
           />
         </Box>
       ))}

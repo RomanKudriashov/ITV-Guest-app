@@ -230,11 +230,14 @@ def test_logo_upload_and_attach(cms, crystal):
     assert url.startswith("http")
 
     saved = cms.patch("/api/cms/brand", {"tokens": {"brand": {"logoLight": url}}}).json()
-    # Логотип отдаётся как загружен — исходником (партия 58а).
-    assert saved["tokens"]["brand"]["logoLight"] == media["original_url"]
+    # Логотип отдаётся без потерь — исходником (партия 58а) или его вариантом
+    # `logo` без потерь по размеру места (партия 61), но не вариантом с потерями.
+    logo = saved["tokens"]["brand"]["logoLight"]
+    assert logo == media["original_url"] or "/logo/" in logo
+    assert logo != url
 
     # И логотип доезжает до гостя.
-    assert _guest_theme(cms.client, crystal)["brand"]["logoLight"] == media["original_url"]
+    assert _guest_theme(cms.client, crystal)["brand"]["logoLight"] == logo
 
 
 # --- Изоляция --------------------------------------------------------------

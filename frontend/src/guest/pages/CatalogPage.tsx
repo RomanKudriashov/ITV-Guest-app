@@ -315,7 +315,7 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
 
       <Container maxWidth={isDesktop ? 'lg' : 'sm'} sx={{ py: { xs: 2, md: 3 }, pb: showCartBar ? 12 : 3 }}>
         <Stack spacing={{ xs: 3, md: 5 }}>
-          {categories.map((category) => (
+          {categories.map((category, index) => (
             <Box
               key={category.id}
               component="section"
@@ -323,6 +323,13 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
                 sectionRefs.current[category.code] = node;
               }}
               aria-label={category.title}
+              // РАЗДЕЛЫ НИЖЕ ЭКРАНА НЕ РАСКЛАДЫВАЮТСЯ (партия 61): в меню
+              // «Саввы» 132 раздела и 20 тысяч узлов, и раскладка всех сразу
+              // стоила полсекунды на каждом заходе. Первые два раздела —
+              // всегда целиком: верх меню не должен сдвигаться, когда ниже
+              // впервые раскладывается соседний раздел (палец и клик попадали
+              // мимо карточки). `auto` помнит прежний размер раздела.
+              sx={index < 2 ? undefined : { contentVisibility: 'auto', containIntrinsicSize: 'auto 480px' }}
             >
               {/* Reference `.secttl` — title, a flex hairline, then an aside note. */}
               <Stack direction="row" alignItems="baseline" spacing={1.5} sx={{ mb: { xs: 1.25, md: 1.75 } }}>
@@ -444,8 +451,12 @@ function CatalogHero({
     хук меряет место сам. Объекта нет — прежний `url()`.
   */
   const brandBg = tokens.brand?.background;
+  const ownPhoto = Boolean(heroImage || heroImageRef);
   const cover = useCoverBackground(
-    heroImage || heroImageRef ? heroImageRef : brandBg?.kind === 'image' ? brandBg.imageRef : null,
+    ownPhoto ? heroImageRef : brandBg?.kind === 'image' ? brandBg.imageRef : null,
+    // Фон бренда в шапке — той же ширины, что фон страницы (партия 61): один
+    // файл на экран, а не два размера одного кадра.
+    { viewport: !ownPhoto },
   );
   const showSub = Boolean(hotelName) && sectionTitle !== hotelName;
   return (

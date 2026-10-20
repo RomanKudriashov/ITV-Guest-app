@@ -22,7 +22,18 @@ from apps.media.services import image_ref, image_url
 
 from .availability import category_availability, item_availability
 from apps.catalog.offerings import behaviour_for
-from apps.catalog.models import Category, Item, ModifierGroup, OfferingType, RequestField
+from django.db.models import Prefetch
+
+from apps.catalog.models import (
+    Category,
+    Item,
+    ItemAllergen,
+    ItemBadge,
+    ItemDietaryMarker,
+    ModifierGroup,
+    OfferingType,
+    RequestField,
+)
 
 
 @dataclass(slots=True)
@@ -49,8 +60,17 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
 
     categories = (
         Category.objects.filter(type=options.offering_type, is_active=True, is_internal=False)
-        .select_related("schedule", "image", "parent", "parent__schedule")
-        .prefetch_related("schedule__intervals", "parent__schedule__intervals")
+        # Заведение раздела и его часы — тоже заранее (партия 61): доступность
+        # каждой позиции спрашивает часы заведения, и без предвыборки это был
+        # запрос интервалов на КАЖДУЮ позицию — 799 у меню «Саввы».
+        # Отель расписания — тоже: часы считаются в его поясе, и без него был
+        # запрос отеля на каждый раздел (133 у «Саввы»).
+        .select_related(
+            "schedule__hotel", "image", "parent__schedule__hotel", "service__schedule__hotel"
+        )
+        .prefetch_related(
+            "schedule__intervals", "parent__schedule__intervals", "service__schedule__intervals"
+        )
         .order_by("sort_order", "code")
     )
     if options.location_id:
@@ -65,15 +85,19 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
             routes__is_active=True,
         ).distinct()
 
+    # Позиции — только разделов этого меню (партия 61): выборка шла по всему
+    # отелю, и меню кухни из трёх разделов тянуло и предвыбирало позиции всех
+    # заведений, включая восемьсот чужих.
+    categories = list(categories)
     items_by_category: dict[Any, list[Item]] = {}
-    for item in _item_queryset(options.offering_type):
+    for item in _item_queryset(options.offering_type).filter(category_id__in=[c.pk for c in categories]):
         items_by_category.setdefault(item.category_id, []).append(item)
 
     payload_categories = []
     for category in categories:
         state = category_availability(category, options.moment)
         serialized_items = [
-            _serialize_item(item, language, options.moment, category)
+            _serialize_item(item, language, options.moment, category, first_photo_only=True)
             for item in items_by_category.get(category.pk, [])
         ]
         if not options.include_unavailable:
@@ -112,12 +136,25 @@ def build_menu(options: MenuOptions | None = None, *, hotel: Hotel | None = None
         )
         if service is not None:
             own_ids = {entry["id"] for entry in payload_categories}
-            for block_cat, inclusion, hidden in borrowed_blocks(service, options.offering_type):
+            blocks = list(borrowed_blocks(service, options.offering_type))
+            # Позиции заимствованных разделов — одним запросом (партия 61):
+            # выборка выше берёт только свои разделы меню.
+            borrowed_ids = [
+                block_cat.pk
+                for block_cat, _inclusion, _hidden in blocks
+                if str(block_cat.pk) not in own_ids and block_cat.pk not in items_by_category
+            ]
+            if borrowed_ids:
+                for item in _item_queryset(options.offering_type).filter(category_id__in=borrowed_ids):
+                    items_by_category.setdefault(item.category_id, []).append(item)
+            for block_cat, inclusion, hidden in blocks:
                 if str(block_cat.pk) in own_ids:
                     continue
                 block_state = category_availability(block_cat, options.moment)
                 block_items = [
-                    _serialize_item(item, language, options.moment, block_cat, inclusion=inclusion)
+                    _serialize_item(
+                        item, language, options.moment, block_cat, inclusion=inclusion, first_photo_only=True
+                    )
                     for item in items_by_category.get(block_cat.pk, [])
                     if str(item.pk) not in hidden
                 ]
@@ -274,13 +311,21 @@ def _item_queryset(offering_type: str | None = OfferingType.PRODUCT):
     queryset = (
         # Служебные позиции («Поручение» ресепшена) гостю не показываются.
         Item.objects.filter(is_active=True, is_internal=False)
-        .select_related("schedule", "category", "category__schedule", "category__service")
+        # Часы раздела и заведения меню берёт у раздела из своего цикла — здесь
+        # их не выбираем; карточке одной позиции они дочитаются сами.
+        .select_related("schedule__hotel", "category__service")
         .prefetch_related(
             "schedule__intervals",
-            "category__schedule__intervals",
             "images__asset",
             "modifier_groups__options",
             "request_fields",
+            # Фасеты карточки — одним запросом на вид, а не на позицию (партия
+            # 61): у меню «Саввы» это было по четыре запроса на каждую из 798
+            # позиций. Помощники ниже читают ровно эти выборки.
+            Prefetch("item_badges", queryset=ItemBadge.objects.select_related("badge")),
+            Prefetch("item_allergens", queryset=ItemAllergen.objects.select_related("allergen")),
+            Prefetch("item_markers", queryset=ItemDietaryMarker.objects.select_related("marker")),
+            "characteristics",
         )
         .order_by("sort_order", "code")
     )
@@ -337,7 +382,7 @@ def _serialize_request_field(request_field: RequestField, language: str | None) 
 
 def _serialize_item(
     item: Item, language: str | None, moment: datetime | None, category: Category,
-    *, inclusion=None,
+    *, inclusion=None, first_photo_only: bool = False,
 ) -> dict[str, Any]:
     state = item_availability(item, moment, category=category)
     price = item.price
@@ -350,6 +395,11 @@ def _serialize_item(
         state = apply_overlay_availability(state, inclusion, moment)
 
     links = [link for link in item.images.all()]
+    # СПИСОК МЕНЮ НЕСЁТ ОДНО ФОТО (партия 61). Карточка в списке и мозаика
+    # показывают первое; остальные с рядом ширин удваивали ответ («Савва»:
+    # 1,5 МБ на 798 позиций). Полный набор — у карточки позиции (`/guest/item`).
+    if first_photo_only:
+        links = links[:1]
     images = [image_url(link.asset, variant="card") for link in links]
     # Объекты картинок (партия 58а) — в том же порядке, без пустых.
     photos = [ref for ref in (image_ref(link.asset) for link in links if link.asset) if ref]
@@ -412,7 +462,7 @@ def _serialize_item(
 def _badges(item, language: str | None = None) -> list[dict[str, Any]]:
     """Активные бейджи позиции в порядке назначения — без отдельного запроса."""
     out = []
-    for link in item.item_badges.select_related("badge").all():
+    for link in item.item_badges.all():
         badge = link.badge
         if badge is not None and badge.is_active:
             out.append(
@@ -469,7 +519,7 @@ def _allergens(item, language: str | None = None) -> list[dict[str, Any]]:
     """
     from apps.catalog.facet_scope import FacetKind
 
-    links = item.item_allergens.select_related("allergen").all()
+    links = item.item_allergens.all()
     rows = [link.allergen for link in links if link.allergen]
     return _dict_facets(_applicable(FacetKind.ALLERGENS, rows, _item_noun(item)), language)
 
@@ -478,7 +528,7 @@ def _markers(item, language: str | None = None) -> list[dict[str, Any]]:
     """Диетические маркеры позиции из словаря (join). Отбор — как у аллергенов."""
     from apps.catalog.facet_scope import FacetKind
 
-    links = item.item_markers.select_related("marker").all()
+    links = item.item_markers.all()
     rows = [link.marker for link in links if link.marker]
     return _dict_facets(_applicable(FacetKind.MARKERS, rows, _item_noun(item)), language)
 

@@ -1,7 +1,7 @@
 import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { ADMIN, API, DEMO_ROOM, HOTEL, apiToken, signInToCms } from './helpers'
+import { ADMIN, API, DEMO_ROOM, HOTEL, PLATFORM, apiToken, signInToCms } from './helpers'
 
 /**
  * ПАРТИЯ 6: СЛОВО КАТАЛОГА И ПРИМЕНИМОСТЬ СПРАВОЧНИКОВ.
@@ -250,6 +250,39 @@ test.describe('Метки: панель и витрина одним кодом'
     page,
     request,
   }) => {
+    // Метки — раздел модуля «Маркетинг» (партия 60): без модуля сервер отвечает
+    // 403. Условие задаём явно и возвращаем исходное — модуль на стенде
+    // щёлкают и другие проверки консоли.
+    const restoreMarketing = await withMarketing(request)
+    try {
+      await reorderBadges(page, request)
+    } finally {
+      await restoreMarketing()
+    }
+  })
+})
+
+/** Включить «Маркетинг» отелю; вернуть функцию, которая вернёт как было. */
+async function withMarketing(request: APIRequestContext): Promise<() => Promise<void>> {
+  const owner = (await (await request.post(`${API}/api/v1/platform/auth/login`, { data: PLATFORM })).json()).access
+  const headers = { Authorization: `Bearer ${owner}` }
+  const fleet = await (await request.get(`${API}/api/v1/platform/fleet?search=${HOTEL}&origin=all`, { headers })).json()
+  const hotelId = (fleet.items as { id: string; subdomain: string }[]).find((row) => row.subdomain === HOTEL)!.id
+  const modules = await (await request.get(`${API}/api/v1/platform/hotels/${hotelId}/modules`, { headers })).json()
+  const was = (modules.modules as { code: string; is_enabled: boolean }[]).find((m) => m.code === 'marketing')!.is_enabled
+  const set = (enabled: boolean) =>
+    request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {
+      headers,
+      data: { modules: [{ code: 'marketing', is_enabled: enabled }] },
+    })
+  if (!was) await set(true)
+  return async () => {
+    if (!was) await set(false)
+  }
+}
+
+async function reorderBadges(page: Page, request: APIRequestContext): Promise<void> {
+  {
     const token = await apiToken(request, ADMIN)
     const order = async (): Promise<string[]> => {
       const response = await request.get(`${API}/api/cms/badges`, {
@@ -281,5 +314,5 @@ test.describe('Метки: панель и витрина одним кодом'
     await expect
       .poll(async () => (await order())[0], { timeout: 20_000, message: 'порядок не сохранился' })
       .toBe(before[1])
-  })
-})
+  }
+}

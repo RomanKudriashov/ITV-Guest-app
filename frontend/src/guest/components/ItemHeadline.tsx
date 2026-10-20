@@ -111,6 +111,8 @@ export function ItemMedia({
         fill
         fallbackIcon={icon}
         fallbackIconSize={isRail ? 64 : 48}
+        // Фото позиции — главное на экране окна: сразу и первым (партия 61).
+        priority
       />
       {/*
         РАСТВОРЕНИЯ КРАЯ БОЛЬШЕ НЕТ.

@@ -16,6 +16,8 @@ trap 'docker rm -f "$name" >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
 mkdir -p "$work/html/assets" "$work/html/fonts"
 echo '<!doctype html><title>витрина</title>' > "$work/html/index.html"
 echo 'console.log(1)' > "$work/html/assets/app.js"
+echo 'woff2' > "$work/html/fonts/inter-latin.woff2"
+echo '@font-face{}' > "$work/html/fonts/fonts.css"
 cat > "$work/server.conf" <<'CONF'
 upstream backend { server 127.0.0.1:9; }
 upstream minio { server 127.0.0.1:9; }
@@ -62,6 +64,13 @@ check /cms/logo.png 404 no
 # Кэш (партия 31, ADM-002): сборка с хэшем — надолго, оболочка — без кэша.
 header() { curl -s -D - -o /dev/null "http://127.0.0.1:$port$1" | tr -d '\r' | grep -i '^cache-control:' | cut -d' ' -f2-; }
 if [[ "$(header /assets/app.js)" != *immutable* ]]; then echo "КРАСНОЕ /assets/app.js: нет долгого кэша ($(header /assets/app.js))"; fail=1; else echo "ок /assets/app.js → кэш надолго"; fi
+# Партия 61: шрифты и медиа — надолго (имена медиа — uuid, шрифт меняют под
+# новым именем), таблица шрифтов — без кэша. У медиа upstream здесь мёртв, но
+# заголовок стоит `always` и обязан приехать и с ответом об ошибке.
+for path in /fonts/inter-latin.woff2 /guest-media/hotels/x/item/w400/abc.webp; do
+  if [[ "$(header $path)" != *immutable* ]]; then echo "КРАСНОЕ $path: нет долгого кэша ($(header $path))"; fail=1; else echo "ок $path → кэш надолго"; fi
+done
+if [[ "$(header /fonts/fonts.css)" != *no-cache* ]]; then echo "КРАСНОЕ /fonts/fonts.css: таблица шрифтов кэшируется ($(header /fonts/fonts.css))"; fail=1; else echo "ок /fonts/fonts.css → без кэша"; fi
 for screen in / /index.html /home; do
   if [[ "$(header $screen)" != *no-cache* ]]; then echo "КРАСНОЕ $screen: оболочка кэшируется ($(header $screen))"; fail=1; else echo "ок $screen → без кэша"; fi
 done

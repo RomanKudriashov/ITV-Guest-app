@@ -85,7 +85,11 @@ def test_logo_stored_as_an_old_variant_still_resolves_to_the_original(cms, cryst
     with tenant_context(crystal):
         asset = MediaAsset.objects.get(pk=asset_id)
         url = asset.key_url(old["card"])
-        assert _logo_as_uploaded(url) == asset.original_url()
+        # Исходник или его вариант без потерь `logo` (партия 61) — но не старый
+        # вариант с потерями.
+        resolved = _logo_as_uploaded(url)
+        assert resolved == asset.original_url() or "/logo/" in resolved
+        assert resolved != url
 
 
 def test_asset_without_series_is_untouched(cms, crystal):

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   backgroundImageSx,
+  cappedSizes,
+  densityCap,
+  MAX_BACKGROUND_WIDTH,
   coverWidth,
   focusPosition,
   IMAGE_SET_SUPPORTS,
@@ -78,5 +81,30 @@ describe('фон через image-set', () => {
     expect(Array.isArray(sx.backgroundImage)).toBe(false);
     expect(sx.backgroundImage).toBe('url("/w2400.webp")');
     expect(sx[IMAGE_SET_SUPPORTS].backgroundImage).toContain('image-set(');
+  });
+});
+
+describe('потолок плотности и ширины фона (партия 61)', () => {
+  it('плотность 3 считается как 2, плотность 1 и 2 — как есть', () => {
+    expect(densityCap(3)).toBeCloseTo(2 / 3);
+    expect(densityCap(2)).toBe(1);
+    expect(densityCap(1)).toBe(1);
+  });
+
+  it('sizes на плотности 3 сжимается до ширины под ×2, условия сохраняются', () => {
+    expect(cappedSizes('(min-width: 1024px) 400px, 100vw', 2 / 3)).toBe(
+      '(min-width: 1024px) calc(400px * 0.6667), calc(100vw * 0.6667)',
+    );
+    expect(cappedSizes('100vw', 1)).toBe('100vw');
+  });
+
+  it('фон бренда не шире потолка даже под ×2 высокого телефона', () => {
+    const wide = ref(3840, 2160, [400, 800, 1200, 1600, 2400, 3200, 3840]);
+    // 390×844, cover по высоте: 844 × 16/9 = 1500 CSS px, ×2 — 3000 → без потолка 3200.
+    expect(imageSetCss(wide, 1500)).toContain('/w3200.webp');
+    const capped = imageSetCss(wide, 1500, MAX_BACKGROUND_WIDTH);
+    expect(capped).toContain('/w2400.webp');
+    expect(capped).not.toContain('/w3200.webp');
+    expect(backgroundImageSx(wide, 1500, MAX_BACKGROUND_WIDTH).backgroundImage).toBe('url("/w2400.webp")');
   });
 });

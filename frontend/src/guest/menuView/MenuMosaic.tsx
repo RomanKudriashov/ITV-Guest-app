@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { OfferingType } from '@/offerings/behaviour';
 import type { MenuItem } from '../api/types';
 import { KitImage } from '@/kit/KitImage';
-import { focusPosition, srcSetOf } from '@/kit/imageRef';
+import { cappedSizes, focusPosition, srcSetOf } from '@/kit/imageRef';
 import { ItemBadges } from '../components/ItemBadges';
 import { QuantityStepper } from '../components/QuantityStepper';
 import { fallbackIconFor } from '../components/typeFallbackIcon';
@@ -222,7 +222,7 @@ const MosaicTile = memo(function MosaicTile({
             component="img"
             src={src ?? undefined}
             srcSet={photo?.widths.length ? srcSetOf(photo) : undefined}
-            sizes={photo?.widths.length ? sizes : undefined}
+            sizes={photo?.widths.length ? cappedSizes(sizes) : undefined}
             alt=""
             loading="lazy"
             decoding="async"

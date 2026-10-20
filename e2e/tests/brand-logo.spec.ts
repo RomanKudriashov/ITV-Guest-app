@@ -75,7 +75,9 @@ test('прозрачный PNG-логотип прозрачен у гостя �
     await brand.apply({ brand: { logoLight: url, logoDark: url } })
     await entry(page, 'dark')
     // Логотип — как загружен: исходный PNG, а не WebP-вариант с потерями (партия 58а).
-    await expect(page.getByTestId('guest-brand-logo')).toHaveAttribute('src', /\/original\/[^/]+\.png$/)
+    // Без потерь: исходный PNG или вариант `logo` (WebP без потерь, партия 61);
+    // прозрачность ниже проверяет замер пикселем.
+    await expect(page.getByTestId('guest-brand-logo')).toHaveAttribute('src', /\/(original\/[^/]+\.png|logo\/[0-9a-f]+\.webp)$/)
     const px = await logoPixels(page)
     expect(distance(px.corner, px.outside), `угол логотипа не прозрачен: ${px.corner} против фона ${px.outside}`).toBeLessThan(24)
     expect(distance(px.centre, RED), `знак не нарисован: ${px.centre}`).toBeLessThan(40)

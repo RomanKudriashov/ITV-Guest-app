@@ -30,7 +30,8 @@ export function GuestBackdrop() {
   const backdrop = resolveBackground(tokens, mode);
   const bg = tokens.brand?.background;
   // Фото фона объектом (партия 58а): ширина — по экрану, положение — по фокусу.
-  const cover = useCoverBackground(bg?.kind === 'image' ? bg.imageRef : null);
+  // Ширина — от окна (партия 61): тот же файл, что у шапки витрины и входа.
+  const cover = useCoverBackground(bg?.kind === 'image' ? bg.imageRef : null, { viewport: true });
 
   /*
     ЧТО МОЖЕТ ОКАЗАТЬСЯ ПОД ТЕКСТОМ — ВЕСЬ ДИАПАЗОН, А НЕ КОНЦЫ. Для текста

@@ -29,6 +29,46 @@ export interface ImageRef {
 /** Ниже этой доли кадра место показывает фото целиком поверх размытого. */
 export const MIN_VISIBLE_SHARE = 0.6;
 
+/**
+ * ПОТОЛОК ПЛОТНОСТИ — 2 (партия 61). Браузер берёт файл под ширину места ×
+ * плотность экрана, и телефон с плотностью 3 качал в карточку 390 px файл 1200:
+ * втрое тяжелее, а разницы с ×2 глазом не видно. Файлы не пережимаются —
+ * выбирается ширина из того же ряда.
+ */
+export const MAX_DENSITY = 2;
+
+/** Во сколько раз уменьшить «место» в `sizes`, чтобы плотность выше 2 не брала шире ×2. */
+export function densityCap(dpr: number = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1): number {
+  return dpr > MAX_DENSITY ? MAX_DENSITY / dpr : 1;
+}
+
+/**
+ * `sizes` с потолком плотности: каждое значение места умножается на
+ * `densityCap`. «(min-width: 1024px) 400px, 100vw» на плотности 3 →
+ * «(min-width: 1024px) calc(400px * 0.6667), calc(100vw * 0.6667)».
+ */
+export function cappedSizes(sizes: string, cap: number = densityCap()): string {
+  if (cap >= 1) return sizes;
+  const k = cap.toFixed(4);
+  return sizes
+    .split(',')
+    .map((entry) => {
+      const trimmed = entry.trim();
+      const cut = trimmed.lastIndexOf(' ');
+      const media = cut > 0 && trimmed.startsWith('(') ? trimmed.slice(0, cut) : '';
+      const length = media ? trimmed.slice(cut + 1) : trimmed;
+      return `${media ? `${media} ` : ''}calc(${length} * ${k})`;
+    })
+    .join(', ');
+}
+
+/**
+ * ПОТОЛОК ШИРИНЫ ФОНА — 2400 (партия 61). Фон бренда лежит под вуалью и
+ * тонировкой страницы; на телефоне `cover` по высоте экрана × 2 просил 3840
+ * (808 КБ) — без видимой разницы с 2400 под вуалью.
+ */
+export const MAX_BACKGROUND_WIDTH = 2400;
+
 export function srcSetOf(ref: ImageRef): string {
   return ref.widths.map((x) => `${x.url} ${x.w}w`).join(', ');
 }
@@ -66,9 +106,9 @@ export function coverWidth(ref: Pick<ImageRef, 'w' | 'h'>, boxW: number, boxH: n
  * Фон через `image-set`: 1x и 2x под ширину места в CSS px. Браузер берёт
  * свою плотность сам; ряд ширин тот же, что у `srcset`.
  */
-export function imageSetCss(ref: ImageRef, cssWidth: number): string {
-  const one = pickWidth(ref, Math.ceil(cssWidth));
-  const two = pickWidth(ref, Math.ceil(cssWidth * 2));
+export function imageSetCss(ref: ImageRef, cssWidth: number, maxWidth = Infinity): string {
+  const one = pickWidth(ref, Math.min(Math.ceil(cssWidth), maxWidth));
+  const two = pickWidth(ref, Math.min(Math.ceil(cssWidth * 2), maxWidth));
   if (!one || !two) return 'none';
   if (one.url === two.url) return `image-set(url("${one.url}") 1x)`;
   return `image-set(url("${one.url}") 1x, url("${two.url}") 2x)`;
@@ -87,10 +127,11 @@ export const IMAGE_SET_SUPPORTS = '@supports (background-image: image-set(url("x
 export function backgroundImageSx(
   ref: ImageRef,
   cssWidth: number,
+  maxWidth = Infinity,
 ): { backgroundImage: string; [IMAGE_SET_SUPPORTS]: { backgroundImage: string } } {
-  const fallback = pickWidth(ref, Math.ceil(cssWidth * 2))?.url ?? ref.src;
+  const fallback = pickWidth(ref, Math.min(Math.ceil(cssWidth * 2), maxWidth))?.url ?? ref.src;
   return {
     backgroundImage: `url("${fallback}")`,
-    [IMAGE_SET_SUPPORTS]: { backgroundImage: imageSetCss(ref, cssWidth) },
+    [IMAGE_SET_SUPPORTS]: { backgroundImage: imageSetCss(ref, cssWidth, maxWidth) },
   };
 }

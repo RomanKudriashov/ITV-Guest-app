@@ -12,7 +12,7 @@ from ninja import Router
 from apps.accounts.services.auth import GuestAuth
 from apps.catalog.offerings import OfferingType
 from apps.catalog.schemas.guest import MenuOut
-from apps.catalog.services.menu import MenuOptions, build_menu
+from apps.catalog.services.menu import MenuOptions
 from apps.core.context import current_language
 
 router = Router(tags=["guest"])
@@ -40,14 +40,18 @@ def get_catalog(
     третий уровень витрины при нескольких ресторанах. Без параметра — весь
     каталог типа, как раньше.
     """
-    return build_menu(
+    # Через кэш (партия 61): меню на сотни позиций пересобиралось на каждый
+    # заход; кэш протухает по отпечатку данных — правка в CMS видна сразу.
+    from apps.catalog.services.menu_cache import cached_menu_response
+
+    return cached_menu_response(
         MenuOptions(
             language=current_language(),
             include_unavailable=include_unavailable,
             offering_type=type,
             point_code=point,
         ),
-        hotel=request.hotel,
+        request.hotel,
     )
 
 
