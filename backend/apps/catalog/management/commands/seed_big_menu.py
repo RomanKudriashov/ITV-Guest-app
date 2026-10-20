@@ -1,7 +1,7 @@
 """
 Большое меню для замеров (партия 61): заведение размера «Саввы» Метрополя.
 
-    manage.py seed_big_menu --subdomain crystal [--categories 132] [--items 798]
+    manage.py seed_big_menu --subdomain crystal [--categories 132] [--items 798] [--latest-photos N]
 
 ЗАЧЕМ. На демо-отелях по три–двадцать позиций в заведении, и всё, что
 растёт с числом позиций — запросы на позицию, вес ответа, — на них не видно.
@@ -37,6 +37,9 @@ class Command(BaseCommand):
         parser.add_argument("--categories", type=int, default=132)
         parser.add_argument("--items", type=int, default=798)
         parser.add_argument("--force", action="store_true")
+        # Проверкам (партия 61-хвост): ровно N последних загруженных кадров —
+        # при `--categories N` у каждого раздела свой кадр.
+        parser.add_argument("--latest-photos", type=int, default=0)
 
     def handle(self, *args, **opts):
         from apps.accounts.models import User
@@ -86,9 +89,11 @@ class Command(BaseCommand):
                 service.schedule = hours
                 service.save(update_fields=["schedule", "updated_at"])
 
-                assets = list(
-                    MediaAsset.objects.filter(status=MediaAsset.Status.READY).exclude(variants={}).order_by("created_at")[:60]
-                )
+                ready = MediaAsset.objects.filter(status=MediaAsset.Status.READY).exclude(variants={})
+                if opts["latest_photos"]:
+                    assets = list(ready.order_by("-created_at")[: opts["latest_photos"]])[::-1]
+                else:
+                    assets = list(ready.order_by("created_at")[:60])
                 allergens = list(Allergen.objects.filter(is_active=True)[:6])
                 markers = list(DietaryMarker.objects.filter(is_active=True)[:4])
                 badges = list(Badge.objects.filter(is_active=True)[:3])

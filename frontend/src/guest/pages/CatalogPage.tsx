@@ -112,6 +112,18 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
 
   const [searchParams, setSearchParams] = useSearchParams();
   const openItemId = searchParams.get('item');
+  /*
+    МЕНЮ ПОД ОКНОМ ПОЗИЦИИ ПО ПРЯМОЙ ССЫЛКЕ (партия 61-хвост). Гость пришёл
+    сразу в окно позиции (`?item=`, ссылка или QR): на телефоне окно закрывает
+    экран, а меню под ним грузило фото первых карточек — у «Саввы» мегабайт,
+    которого гость не видит. Пока окно, открытое с порога, не закрыто, меню не
+    раскладывается (`content-visibility: hidden`) и картинок не просит.
+    Открытое из меню окно меню не трогает: его кадры уже на экране.
+  */
+  const [menuSeen, setMenuSeen] = useState(() => !openItemId);
+  useEffect(() => {
+    if (!openItemId) setMenuSeen(true);
+  }, [openItemId]);
 
   const categories = useMemo(() => data?.categories ?? [], [data]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -343,7 +355,16 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
         </Tabs>
       </Box>
 
-      <Container maxWidth={isDesktop ? 'lg' : 'sm'} sx={{ py: { xs: 2, md: 3 }, pb: showCartBar ? 12 : 3 }}>
+      <Container
+        maxWidth={isDesktop ? 'lg' : 'sm'}
+        data-menu-deferred={menuSeen || isDesktopShell ? undefined : ''}
+        sx={{
+          py: { xs: 2, md: 3 },
+          pb: showCartBar ? 12 : 3,
+          // С 1024 окно — посередине (как в ItemSheet), меню видно вокруг него.
+          ...(menuSeen || isDesktopShell ? {} : { contentVisibility: 'hidden' }),
+        }}
+      >
         <Stack spacing={{ xs: 3, md: 5 }}>
           {categories.map((category, index) => (
             <Box

@@ -47,9 +47,9 @@ export function ProductShot({
   ) : (
     <Box
       component="img"
+      loading="lazy"
       src={`/landing/${name}.jpg`}
       alt={title}
-      loading="lazy"
       onError={() => setMissing(true)}
       sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
     />

@@ -275,9 +275,9 @@ export function LandingPage() {
               <Reveal calm={calm}>
                 <Box
                   component="img"
+                  loading="lazy"
                   src={`/landing/device-${kind}.jpg`}
                   alt=""
-                  loading="lazy"
                   data-testid={`landing-device-${kind}`}
                   sx={{
                     width: '100%',

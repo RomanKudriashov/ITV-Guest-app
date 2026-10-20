@@ -220,12 +220,12 @@ const MosaicTile = memo(function MosaicTile({
           /* Строкой пришедшая картинка (старый ответ) — как было. */
           <Box
             component="img"
-            src={src ?? undefined}
-            srcSet={photo?.widths.length ? srcSetOf(photo) : undefined}
-            sizes={photo?.widths.length ? cappedSizes(sizes) : undefined}
-            alt=""
             loading="lazy"
             decoding="async"
+            sizes={photo?.widths.length ? cappedSizes(sizes) : undefined}
+            srcSet={photo?.widths.length ? srcSetOf(photo) : undefined}
+            src={src ?? undefined}
+            alt=""
             draggable={false}
             onError={() => setBroken(true)}
             sx={{

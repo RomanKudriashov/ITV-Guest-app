@@ -17,6 +17,7 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
 const OWN_HOTEL_SPECS = [
   'brand-accent-and-surface',
   'brand-backdrop',
+  'brand-background-one-file',
   'brand-cover-sharpness',
   'brand-custom-font',
   'brand-drafts-and-versions',
@@ -33,6 +34,7 @@ const OWN_HOTEL_SPECS = [
   'brand-type-scale',
   'brand',
   'catalog-tabs-big-menu',
+  'catalog-lazy-images',
   'commerce-checkout',
   'desktop-logo-or-name',
   'guest-no-horizontal-scroll',

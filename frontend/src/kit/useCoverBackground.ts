@@ -27,8 +27,16 @@ export function useCoverBackground<T extends HTMLElement = HTMLDivElement>(
   } = {},
 ) {
   const ref = useRef<T | null>(null);
-  const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const { viewport = false } = options;
+  /*
+    Окно известно до первого кадра — от него и считаем сразу (партия 61-хвост).
+    Начинали с нуля, и первый кадр брал ширину окна без поправки на `cover`
+    (1440 → файл 1600), а после замера — с поправкой (1603 → 2400): браузер
+    успевал запросить оба файла одного кадра.
+  */
+  const [box, setBox] = useState<{ w: number; h: number }>(() =>
+    viewport && typeof window !== 'undefined' ? { w: window.innerWidth, h: window.innerHeight } : { w: 0, h: 0 },
+  );
 
   useLayoutEffect(() => {
     const node = ref.current;

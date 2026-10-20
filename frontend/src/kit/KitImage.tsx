@@ -129,6 +129,11 @@ export function KitImage({
       apply(node.clientWidth, node.clientHeight);
       return undefined;
     }
+    // Главная картинка экрана ждать не может: адрес она получает после замера
+    // (см. `measured`), а ответ наблюдателя перерисуется в очереди за всем
+    // экраном — в меню на 800 позиций это +300 мс к фото окна позиции. Ей одной
+    // замер сразу: одна раскладка, а не восемьсот.
+    if (priority) apply(node.clientWidth, node.clientHeight);
     // ЗАМЕР — ПЕРВЫМ ОТВЕТОМ НАБЛЮДАТЕЛЯ, а не `clientWidth` сразу (партия 61).
     // Синхронный замер при монтировании заставлял браузер раскладывать место
     // немедленно — в меню на 800 позиций это 800 принудительных раскладок, в
@@ -140,7 +145,7 @@ export function KitImage({
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [image]);
+  }, [image, priority]);
   const whole = fit === 'whole' && share < MIN_VISIBLE_SHARE;
   /*
     `sizes` места — ширина места; но `cover` в узком месте режет по ВЫСОТЕ и
@@ -156,6 +161,15 @@ export function KitImage({
         )}px`
       : cappedSizes(sizes);
   const backdropSrc = image?.widths[0]?.url ?? null;
+  /*
+    АДРЕС — ПОСЛЕ ЗАМЕРА МЕСТА (партия 61-хвост). До замера `sizes` — от
+    пропса, после — от формы кадра, и они расходятся (карточка 169 px на ×3:
+    w400 против w800). Ленивая картинка у края экрана успевала стартовать со
+    старым `sizes`, а после замера браузер качал второй файл того же кадра.
+    Кадр с известной формой получает `src` и `srcset` только с готовым
+    `sizes`: замер приходит в том же кадре, до отрисовки, — задержки не видно.
+  */
+  const measured = !(image?.w && image?.h) || (box.w > 0 && box.h > 0);
 
   /*
     КАРТИНКА ИЗ КЭША УСПЕВАЕТ ЗАГРУЗИТЬСЯ ДО ТОГО, КАК РЕАКТ ПОВЕСИТ `onLoad`.
@@ -183,7 +197,7 @@ export function KitImage({
       return;
     }
     setLoaded(false);
-  }, [src]);
+  }, [src, measured]);
 
   const showImage = Boolean(src) && !errored;
 
@@ -231,10 +245,10 @@ export function KitImage({
               aria-hidden
               component="img"
               data-testid={testId ? `${testId}-backdrop` : 'kit-image-backdrop'}
-              src={backdropSrc}
-              alt=""
               loading="lazy"
               decoding="async"
+              src={backdropSrc}
+              alt=""
               sx={{
                 position: 'absolute',
                 inset: 0,
@@ -248,16 +262,24 @@ export function KitImage({
               }}
             />
           ) : null}
+          {/*
+            ПОРЯДОК АТРИБУТОВ — НЕ МЕНЯТЬ (партия 61-хвост). React 18 ставит
+            атрибуты в порядке пропсов, а браузер начинает грузить картинку, как
+            только у неё появился `src`: если `loading="lazy"` идёт после, ленивой
+            она уже не будет. На повторном заходе меню «Саввы» так качались
+            сотни фото ниже экрана — до 10 МБ. Поэтому сначала `loading`,
+            `sizes`, `srcSet`, и только потом `src`.
+          */}
           <Box
             component="img"
             ref={imgRef}
-            src={src as string}
-            srcSet={image && image.widths.length ? srcSetOf(image) : undefined}
-            sizes={image && image.widths.length ? effectiveSizes : undefined}
-            alt={alt}
             loading={priority ? 'eager' : 'lazy'}
             {...(priority ? { fetchpriority: 'high' } : {})}
             decoding="async"
+            sizes={measured && image && image.widths.length ? effectiveSizes : undefined}
+            srcSet={measured && image && image.widths.length ? srcSetOf(image) : undefined}
+            src={measured ? (src as string) : undefined}
+            alt={alt}
             onLoad={() => setLoaded(true)}
             onError={() => setErrored(true)}
             sx={[

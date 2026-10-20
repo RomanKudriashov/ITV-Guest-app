@@ -298,9 +298,9 @@ export function SplitBlock({
         <Reveal calm={calm} fill>
           <Box
             component="img"
+            loading="lazy"
             src={photo}
             alt=""
-            loading="lazy"
             sx={{
               width: '100%',
               // На узком экране высоту задаёт пропорция: ряда, к которому можно

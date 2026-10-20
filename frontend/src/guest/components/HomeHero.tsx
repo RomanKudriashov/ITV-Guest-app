@@ -59,8 +59,10 @@ export function HomeHeroView({
   tokens: StorefrontTokens;
 }) {
   const { scrim, onMedia, mediaFallback } = tokens;
-  // Место 1080×304 (1440) / 390×252 (390) — хук меряет его сам.
-  const bg = useCoverBackground(coverRef);
+  // Обложка главной — кадр фона бренда (`cover_image_ref`), поэтому ширина от
+  // окна, как у фона страницы: один файл на экран, а не 1200 и 2400 одного
+  // кадра (партия 61-хвост).
+  const bg = useCoverBackground(coverRef, { viewport: true });
 
   return (
     <Box
