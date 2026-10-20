@@ -109,6 +109,22 @@ test.describe('Узкий экран: строка категорий и пла�
 })
 
 test.describe('Карточка позиции', () => {
+  /*
+    МЁРТВАЯ СЕРЕДИНА КАРТОЧКИ (партия 61-хвост). Кнопкой была только верхняя
+    половина карточки — фото и название. На телефоне центр карточки приходится
+    на строку КБЖУ, и нажатие туда не делало ничего; проверка ниже кликала в
+    центр и падала 3 раза из 4 — не от нагрузки, а потому что попадала в эту
+    строку (успевала, только пока карточка не дорисовалась).
+  */
+  test('телефон: нажатие на КБЖУ и маркеры карточки открывает позицию', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await venueMenu(page, 'light')
+    const card = page.locator('[data-testid^="guest-item-"]').first()
+    await card.getByText(/ккал/).first().click()
+    await expect(page.getByTestId('guest-item-sheet')).toBeVisible({ timeout: 15_000 })
+    expect(new URL(page.url()).searchParams.get('item')).toBeTruthy()
+  })
+
   for (const [label, width, height] of SIZES.filter(([l]) => l !== 'планшет'))
   for (const mode of ['dark', 'light'] as const) {
     test(`${label}, ${mode}: кадр от самого верха и до краёв`, async ({ page }) => {

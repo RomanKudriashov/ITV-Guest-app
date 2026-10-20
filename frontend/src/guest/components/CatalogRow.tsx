@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
@@ -79,8 +79,25 @@ export function CatalogRowView({
   return (
     <Box
       data-testid={testId}
+      /*
+        ВСЯ КАРТОЧКА ОТКРЫВАЕТ ПОЗИЦИЮ (партия 61-хвост). Кнопкой была только
+        верхняя половина — фото и название; КБЖУ, маркеры и цена ниже не
+        откликались, и на телефоне середина карточки (строка КБЖУ) была мёртвой:
+        гость нажимал — ничего. Клавиатура и чтецы по-прежнему работают с
+        кнопкой наверху; здесь — только нажатие пальцем и мышью. Свои кнопки
+        карточки («Выбрать», сама кнопка наверху) обрабатывают нажатие сами.
+      */
+      onClick={
+        onOpen
+          ? (event: MouseEvent) => {
+              if ((event.target as Element).closest('button, a, input, [role="button"]')) return;
+              onOpen();
+            }
+          : undefined
+      }
       sx={(theme) => ({
         position: 'relative',
+        cursor: onOpen ? 'pointer' : undefined,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',

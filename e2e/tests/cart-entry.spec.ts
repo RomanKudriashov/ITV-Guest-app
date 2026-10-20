@@ -163,12 +163,17 @@ test.describe('Вход в корзину на телефоне', () => {
     await expect(page.getByTestId('guest-cart')).toBeVisible({ timeout: 15_000 })
 
     // В корзине есть картинка, и она ЗАГРУЗИЛАСЬ, а не осталась серым местом.
-    const loaded = await page.evaluate(() =>
-      [...document.querySelectorAll('img')]
-        .filter((img) => (img.getAttribute('src') || '').includes('guest-media'))
-        .map((img) => (img as HTMLImageElement).naturalWidth),
-    )
-    expect(loaded.length, 'в корзине нет фотографии').toBeGreaterThan(0)
-    expect(Math.max(...loaded), 'фотография не загрузилась').toBeGreaterThan(0)
+    // Ждём загрузки, а не читаем сразу: картинка ленивая и получает адрес
+    // после замера своего места (партия 61-хвост) — мгновенный замер видел 0.
+    const loaded = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('[data-testid="guest-cart"] img')]
+          .filter((img) => (img.getAttribute('src') || '').includes('guest-media'))
+          .map((img) => (img as HTMLImageElement).naturalWidth),
+      )
+    await expect.poll(async () => (await loaded()).length, { message: 'в корзине нет фотографии', timeout: 10_000 }).toBeGreaterThan(0)
+    await expect
+      .poll(async () => Math.max(...(await loaded())), { message: 'фотография не загрузилась', timeout: 10_000 })
+      .toBeGreaterThan(0)
   })
 })
