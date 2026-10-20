@@ -154,11 +154,41 @@ export function CatalogPage({ type, point, embedded = false, view = 'cards' }: C
     if (!node) return;
     suppressSpy.current = true;
     setActiveCategory(code);
-    const top = node.getBoundingClientRect().top + window.scrollY - headerOffset - TABS_HEIGHT;
-    window.scrollTo({ top, behavior: 'smooth' });
-    window.setTimeout(() => {
-      suppressSpy.current = false;
-    }, 600);
+    const line = headerOffset + TABS_HEIGHT;
+    const release = () => {
+      window.setTimeout(() => {
+        suppressSpy.current = false;
+      }, 120);
+    };
+    /*
+      ДАЛЁКИЙ РАЗДЕЛ — ПРЫЖКОМ С ДОВОДКОЙ (партия 61). Разделы ниже экрана не
+      разложены (`content-visibility`) и стоят заглушкой; плавная прокрутка
+      проходит через них, они раскладываются в настоящую высоту — и цель
+      уезжала на тысячи пикселей. Прыжок не раскладывает промежуточные, а
+      доводка в следующем кадре ловит то, что раскладка всё же сдвинула.
+      Ближний раздел (в пределах экрана) — плавно, как раньше.
+    */
+    const distance = node.getBoundingClientRect().top - line;
+    if (Math.abs(distance) < window.innerHeight) {
+      window.scrollTo({ top: window.scrollY + distance, behavior: 'smooth' });
+      window.setTimeout(() => {
+        suppressSpy.current = false;
+      }, 600);
+      return;
+    }
+    // Доводим, пока раздел не простоит на месте три кадра подряд: соседние
+    // разделы раскладываются не за один кадр.
+    const align = (attempt: number, still: number) => {
+      const delta = node.getBoundingClientRect().top - line;
+      if (Math.abs(delta) > 1) window.scrollTo({ top: window.scrollY + delta, behavior: 'auto' });
+      const steady = Math.abs(delta) <= 1 ? still + 1 : 0;
+      if (steady >= 3 || attempt >= 40) {
+        release();
+        return;
+      }
+      window.requestAnimationFrame(() => align(attempt + 1, steady));
+    };
+    align(0, 0);
   }, [headerOffset]);
 
   const openItem = (item: MenuItem) => {

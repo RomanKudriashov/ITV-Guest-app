@@ -32,6 +32,7 @@ const OWN_HOTEL_SPECS = [
   'brand-text-size-and-colour',
   'brand-type-scale',
   'brand',
+  'catalog-tabs-big-menu',
   'commerce-checkout',
   'desktop-logo-or-name',
   'guest-no-horizontal-scroll',
