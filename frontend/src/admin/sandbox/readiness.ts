@@ -19,6 +19,7 @@ export type HotelTab =
   | 'connections'
   | 'rooms'
   | 'roomControl'
+  | 'history'
   | 'journal'
   | 'data';
 
@@ -171,7 +172,7 @@ function topReason(results: string[]): string {
   for (const r of results) counts.set(r, (counts.get(r) ?? 0) + 1);
   const [reason, count] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   const label: Record<string, string> = {
-    CHANNEL_NOT_FOUND: 'канал не найден на сервере iRidi',
+    CHANNEL_NOT_FOUND: 'канал не найден на сервере управления номером',
     CONNECTOR_OFFLINE: 'коннектор не на связи',
     unconfirmed: 'команда не подтвердилась',
     failed: 'команда не прошла',

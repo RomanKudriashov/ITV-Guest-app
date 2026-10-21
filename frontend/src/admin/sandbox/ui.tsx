@@ -218,10 +218,13 @@ export function Toggle({ checked, disabled, label }: { checked: boolean; disable
 }
 
 /** Пара «подпись — значение» в профиле. */
-export function KV({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
+export function KV({ label, children, note, help }: { label: string; children: ReactNode; note?: ReactNode; help?: ReactNode }) {
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '200px 1fr' }, gap: { xs: 0.25, sm: 2 }, py: 1.25, borderBottom: `1px solid ${surface.hair}` }}>
-      <Typography sx={{ ...typo.caption, color: ink.mid, pt: { sm: 0.25 } }}>{label}</Typography>
+      <Typography sx={{ ...typo.caption, color: ink.mid, pt: { sm: 0.25 } }}>
+        {label}
+        {help ? <Help>{help}</Help> : null}
+      </Typography>
       <Box sx={{ ...typo.body, color: ink.hi, minWidth: 0 }}>
         {children}
         {note ? <Box sx={{ ...typo.caption, color: ink.low, mt: 0.25 }}>{note}</Box> : null}
@@ -243,3 +246,101 @@ export function Metric({ label, value, hint, tone }: { label: string; value: Rea
 
 export const severityTone = { bad: 'bad', warn: 'warn', info: 'info' } as const;
 export const severityLabel = { bad: 'Мешает гостю', warn: 'Требует внимания', info: 'Проверить' } as const;
+
+/** Значок «?» с подробностью: наведение на компьютере, касание на телефоне. */
+export function Help({ children }: { children: ReactNode }) {
+  return (
+    <Tooltip title={<Box sx={{ ...typo.caption, p: 0.5 }}>{children}</Box>} enterTouchDelay={0} leaveTouchDelay={6000} arrow>
+      <Box
+        component="span"
+        tabIndex={0}
+        role="button"
+        aria-label="Подробнее"
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 18,
+          height: 18,
+          ml: 0.5,
+          borderRadius: '50%',
+          border: `1px solid ${surface.line}`,
+          color: ink.mid,
+          fontSize: 11,
+          fontWeight: 700,
+          cursor: 'help',
+          verticalAlign: 'middle',
+          flex: '0 0 auto',
+        }}
+      >
+        ?
+      </Box>
+    </Tooltip>
+  );
+}
+
+/** Пустое состояние: что случилось и что делать дальше. */
+export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <Box sx={{ textAlign: 'center', py: 4, px: 2 }}>
+      <Typography sx={{ ...typo.panelTitle, color: ink.hi }}>{title}</Typography>
+      {children ? <Typography sx={{ ...typo.body, color: ink.mid, mt: 0.75, maxWidth: 520, mx: 'auto' }}>{children}</Typography> : null}
+      {action ? <Box sx={{ mt: 2 }}>{action}</Box> : null}
+    </Box>
+  );
+}
+
+/** Подсветка найденного куска текста. */
+export function Hl({ text, q }: { text: string; q: string }) {
+  if (!q) return <>{text}</>;
+  const at = text.toLowerCase().indexOf(q.toLowerCase());
+  if (at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <Box component="mark" sx={{ bgcolor: 'var(--adm-state-gold-wash)', color: 'inherit', borderRadius: '3px', px: '1px', outline: `1px solid ${state.gold}` }}>
+        {text.slice(at, at + q.length)}
+      </Box>
+      {text.slice(at + q.length)}
+    </>
+  );
+}
+
+/** Переключатель вида: «Блоки / Список» и т. п. */
+export function ViewSwitch<K extends string>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: Array<[K, string, ReactNode?]>;
+  value: K;
+  onChange: (key: K) => void;
+  label: string;
+}) {
+  return (
+    <Box role="group" aria-label={label} sx={{ display: 'inline-flex', p: 0.5, borderRadius: `${shape.radius}px`, bgcolor: surface.s2, border: `1px solid ${surface.line}`, flex: '0 0 auto' }}>
+      {options.map(([key, text, icon]) => (
+        <ButtonBase
+          key={key}
+          aria-pressed={value === key}
+          onClick={() => onChange(key)}
+          sx={{
+            gap: 0.75,
+            px: 1.25,
+            py: 0.6,
+            borderRadius: `${shape.radiusSmall}px`,
+            ...typo.caption,
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            color: value === key ? accent.soft : ink.mid,
+            bgcolor: value === key ? accent.wash : 'transparent',
+          }}
+        >
+          {icon}
+          {text}
+        </ButtonBase>
+      ))}
+    </Box>
+  );
+}

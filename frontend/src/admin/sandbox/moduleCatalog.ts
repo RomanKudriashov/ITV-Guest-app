@@ -26,7 +26,7 @@ export interface CatalogModule {
 
 export const CONNECTION_TITLE: Record<ConnectionKind, string> = {
   grms: 'коннектор управления номером',
-  pms: 'подключение к PMS',
+  pms: 'подключение к системе управления отелем',
   locks: 'система замков',
   payments: 'эквайринг',
 };
@@ -54,9 +54,9 @@ export const MODULES: CatalogModule[] = [
   },
   {
     code: 'pms',
-    title: 'PMS',
-    gives: 'Номера, заезды и выезды приходят из системы управления отелем.',
-    opens: ['Панель: номера и гости из PMS'],
+    title: 'Система управления отелем',
+    gives: 'Номера, заезды и выезды приходят из программы, в которой отель ведёт бронирования.',
+    opens: ['Панель: номера и гости приходят сами'],
     status: 'dev',
     needs: 'pms',
     defaults: [],

@@ -24,6 +24,7 @@ import { getHotel, getMe, platformSession, platformToken } from '../adminClient'
 import { FleetMock } from './FleetMock';
 import { HotelMock } from './HotelMock';
 import { ModulesCatalogMock } from './ModulesCatalogMock';
+import { PreviewMock } from './PreviewMock';
 import { Panel, SandboxNotice } from './ui';
 
 /**
@@ -112,14 +113,14 @@ function SandboxConsole({ onLogout }: { onLogout: () => void }) {
         </Box>
       </Box>
     ) : (
-      <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }}>{SECTIONS.find((s) => s.key === section)?.labelKey}</Box>
+      <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700 }}>{section === 'preview' ? 'Если отель отключён' : SECTIONS.find((s) => s.key === section)?.labelKey}</Box>
     );
 
   return (
     <AdminShell
       sections={SECTIONS}
-      active={section}
-      onNavigate={(key) => go({ s: key, hotel: null, tab: null, view: null, module: null, dialog: null, f: null, sel: null })}
+      active={section === 'preview' ? 'hotels' : section}
+      onNavigate={(key) => go(Object.fromEntries(['hotel', 'tab', 'view', 'module', 'dialog', 'sel', 'q', 'state', 'link', 'group', 'layout', 'closed', 'screen', 'mstate', 'who', 'what', 'period', 'need', 'demo', 'hq', 'on'].map((k) => [k, null]).concat([['s', key]])))}
       me={me.data ?? null}
       onLogout={onLogout}
       crumb={crumb}
@@ -130,6 +131,7 @@ function SandboxConsole({ onLogout }: { onLogout: () => void }) {
       {section === 'hotels' && !hotelId ? <FleetMock go={go} /> : null}
       {section === 'hotels' && hotelId ? <HotelMock id={hotelId} go={go} /> : null}
       {section === 'modules' ? <ModulesCatalogMock go={go} /> : null}
+      {section === 'preview' ? <PreviewMock go={go} /> : null}
       {PARKED[section] ? (
         <Panel title={SECTIONS.find((s) => s.key === section)?.labelKey}>
           <Box sx={{ ...typo.body, color: ink.mid }}>{PARKED[section]}</Box>
