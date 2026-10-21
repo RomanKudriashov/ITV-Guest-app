@@ -2822,7 +2822,8 @@
           "updated": "已修改酒店分组",
           "deleted": "已删除酒店分组",
           "members_added": "已将酒店加入分组",
-          "member_removed": "已将酒店移出分组"
+          "member_removed": "已将酒店移出分组",
+          "hotels_moved": "酒店已在分组间移动"
         },
         "publication": {
           "started": "已启动发布"
@@ -3092,6 +3093,138 @@
         "skipped": "已跳过",
         "refused": "被拒绝",
         "failed": "错误"
+      }
+    },
+    "hotels": {
+      "title": "酒店",
+      "subtitle": "平台上的所有酒店。分组把同一业主的酒店归在一起：共用管理员、共用字典和汇总。打开酒店查看它遇到的问题，或选择多家酒店同时操作。",
+      "export": "下载列表",
+      "newGroup": "+ 新建分组",
+      "newHotel": "+ 新建酒店",
+      "searchPlaceholder": "酒店、子域名、城市或分组",
+      "more": "更多",
+      "cancel": "取消",
+      "save": "保存",
+      "pick": "选择：{{name}}",
+      "selected_other": "已选 {{count}} 家酒店",
+      "layout": {
+        "label": "列表视图",
+        "groups": "按分组",
+        "list": "统一列表"
+      },
+      "filter": {
+        "state": "状态",
+        "link": "连接",
+        "module": "模块",
+        "group": "分组",
+        "reset": "重置",
+        "searchChip": "搜索：“{{text}}”",
+        "remove": "移除：{{label}}"
+      },
+      "state": {
+        "problems": "有问题",
+        "ready": "就绪",
+        "disabled": "已停用"
+      },
+      "link": {
+        "online": "在线",
+        "silent": "离线",
+        "none": "无连接器"
+      },
+      "color": {
+        "accent": "蓝色",
+        "ok": "绿色",
+        "warn": "琥珀色",
+        "bad": "红色",
+        "gold": "金色",
+        "info": "浅蓝色"
+      },
+      "col": {
+        "hotel": "酒店",
+        "group": "分组",
+        "rooms": "客房",
+        "modules": "模块",
+        "link": "连接",
+        "state": "状态"
+      },
+      "help": {
+        "link": "连接器的连接——酒店服务器上的程序，客人通过它控制灯光和空调。“离线”表示连接器超过 3 分钟没有响应。",
+        "state": "“就绪”表示酒店检查全部通过。问题数是未通过的检查数量。检查将在下一批次出现在酒店概览中。"
+      },
+      "summary": {
+        "hotels_other": "{{count}} 家酒店",
+        "rooms_other": "{{count}} 间客房",
+        "problems_other": "{{count}} 个问题",
+        "noProblems": "无问题",
+        "link": {
+          "online_other": "{{count}} 家在线",
+          "silent_other": "{{count}} 家离线",
+          "none_other": "{{count}} 家无连接器"
+        }
+      },
+      "ungrouped": {
+        "title": "未分组的酒店",
+        "short": "未分组",
+        "hint": "单独的酒店。选择它们并点击“移入分组…”，或拖到上方的分组。",
+        "empty": "所有酒店都已分组。"
+      },
+      "group": {
+        "edit": "编辑",
+        "delete": "删除",
+        "name": "名称",
+        "namePlaceholder": "例如“Metropol 酒店”",
+        "description": "描述",
+        "descriptionPlaceholder": "这些酒店属于谁，为什么放在一起",
+        "note": "团队备注",
+        "noteHint": "仅我们可见：约定、联系人、特殊情况。",
+        "color": "颜色标记",
+        "colorHint": "颜色标记——帮助在酒店列表中认出分组",
+        "emptyHint": "分组中还没有酒店。选择酒店并点击“移入分组…”，或把它们拖到这里。"
+      },
+      "create": {
+        "title": "新建分组",
+        "subtitle": "分组把同一业主的酒店归在一起。只有我们的团队能看到——客人和酒店员工看不到。",
+        "hotelsHint": "分组中的酒店——可以现在选择，也可以稍后添加",
+        "submit": "创建",
+        "submitWith_other": "创建并加入 {{count}} 家酒店"
+      },
+      "edit": {
+        "title": "编辑分组",
+        "subtitle": "名称、描述、备注和颜色仅我们的团队可见。"
+      },
+      "delete": {
+        "title": "删除分组“{{title}}”？",
+        "subtitle": "只删除分组。酒店保持原样——模块、客房和数据都保留——并移到“未分组的酒店”。",
+        "released_other": "将移到“未分组的酒店”——{{count}} 家",
+        "emptyGroup": "分组中没有酒店",
+        "confirm": "输入分组名称",
+        "confirmHint": "名称一致时按钮才会启用。",
+        "submit": "删除分组"
+      },
+      "move": {
+        "title_other": "把 {{count}} 家酒店移入分组",
+        "subtitle": "一家酒店最多属于一个分组：会自动离开原来的分组。",
+        "submit": "移动"
+      },
+      "picker": {
+        "search": "查找酒店：名称、子域名、城市",
+        "none": "没有这样的酒店。请检查拼写。",
+        "inGroup": "目前在“{{title}}”",
+        "willMove": "将从分组“{{title}}”移出",
+        "picked_other": "已选 {{count}} 家。一家酒店最多属于一个分组——会自动离开原来的分组。"
+      },
+      "bulk": {
+        "move": "移入分组…",
+        "enable": "启用",
+        "disable": "停用…",
+        "clear": "取消选择",
+        "disableTitle_other": "停用 {{count}} 家酒店？",
+        "disableBody": "客人会看到酒店不可用，员工会被登出。数据和设置会保留。"
+      },
+      "empty": {
+        "title": "没有找到",
+        "body": "没有酒店或分组符合搜索和筛选条件。请检查拼写或去掉部分筛选。",
+        "reset": "重置搜索和筛选"
       }
     }
   },

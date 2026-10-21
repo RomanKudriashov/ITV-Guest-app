@@ -645,6 +645,9 @@
     "GET",
     "POST"
   ],
+  "/api/v1/platform/groups/move": [
+    "POST"
+  ],
   "/api/v1/platform/groups/{group_id}": [
     "DELETE",
     "PATCH"

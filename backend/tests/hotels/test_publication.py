@@ -199,8 +199,7 @@ def test_the_preview_matches_what_was_applied(api):
     created = api(
         "post",
         "/groups",
-        {"code": "pubcity", "title": "Публиковка", "kind": "city", "mode": "rule",
-         "rule": {"city": "Публиковка"}},
+        {"title": "Публиковка", "hotel_ids": [str(first.pk), str(second.pk)]},
     )
     group_id = created.json()["id"]
 

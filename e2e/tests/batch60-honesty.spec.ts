@@ -105,10 +105,12 @@ test.describe('Control: роль «только чтение» не видит �
     // Ключ подписи тарифа больше не сырой.
     await expect(page.getByTestId('admin-hotel')).not.toContainText('tariffOwnerOnly')
 
-    await page.goto('/admin?section=groups')
-    await expect(page.getByText(/Группы/).first()).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('admin-group-add')).toHaveCount(0)
+    // Группы живут в «Отелях» (партия 62-A1): правки групп «только чтению» не видны.
+    await page.goto('/admin?section=fleet')
+    await expect(page.getByTestId('admin-fleet')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('admin-group-create-open')).toHaveCount(0)
     await expect(page.locator('[data-testid^="admin-group-delete-"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid^="admin-group-edit-"]')).toHaveCount(0)
 
     await page.goto('/admin?section=templates')
     await page.getByTestId('admin-templates-tab-dictionary').click()

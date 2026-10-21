@@ -2850,7 +2850,8 @@
           "updated": "Hotel group updated",
           "deleted": "Hotel group deleted",
           "members_added": "Hotels added to a group",
-          "member_removed": "Hotel removed from a group"
+          "member_removed": "Hotel removed from a group",
+          "hotels_moved": "Hotels moved between groups"
         },
         "publication": {
           "started": "Publication started"
@@ -3123,6 +3124,150 @@
         "skipped": "skipped",
         "refused": "refused",
         "failed": "error"
+      }
+    },
+    "hotels": {
+      "title": "Hotels",
+      "subtitle": "All hotels on the platform. A group brings together hotels of one owner: they share an administrator, dictionaries and a summary. Open a hotel to see what is in its way, or select several and act on all of them at once.",
+      "export": "Download list",
+      "newGroup": "+ New group",
+      "newHotel": "+ New hotel",
+      "searchPlaceholder": "Hotel, subdomain, city or group",
+      "more": "More",
+      "cancel": "Cancel",
+      "save": "Save",
+      "pick": "Select: {{name}}",
+      "selected_one": "{{count}} hotel selected",
+      "selected_other": "{{count}} hotels selected",
+      "layout": {
+        "label": "List view",
+        "groups": "By group",
+        "list": "One list"
+      },
+      "filter": {
+        "state": "State",
+        "link": "Connection",
+        "module": "Module",
+        "group": "Group",
+        "reset": "Reset",
+        "searchChip": "Search: “{{text}}”",
+        "remove": "Remove: {{label}}"
+      },
+      "state": {
+        "problems": "has problems",
+        "ready": "ready",
+        "disabled": "disabled"
+      },
+      "link": {
+        "online": "online",
+        "silent": "offline",
+        "none": "no connector"
+      },
+      "color": {
+        "accent": "Blue",
+        "ok": "Green",
+        "warn": "Amber",
+        "bad": "Red",
+        "gold": "Gold",
+        "info": "Light blue"
+      },
+      "col": {
+        "hotel": "Hotel",
+        "group": "Group",
+        "rooms": "Rooms",
+        "modules": "Modules",
+        "link": "Connection",
+        "state": "State"
+      },
+      "help": {
+        "link": "Connection of the connector — the program on the hotel server through which guests control light and climate. “Offline” — the connector has been silent for more than 3 minutes.",
+        "state": "“Ready” — the hotel checks have passed. The number of problems is how many checks failed. The checks will appear in the hotel overview in the next batch."
+      },
+      "summary": {
+        "hotels_one": "{{count}} hotel",
+        "hotels_other": "{{count}} hotels",
+        "rooms_one": "{{count}} room",
+        "rooms_other": "{{count}} rooms",
+        "problems_one": "{{count}} problem",
+        "problems_other": "{{count}} problems",
+        "noProblems": "no problems",
+        "link": {
+          "online_one": "{{count}} online",
+          "online_other": "{{count}} online",
+          "silent_one": "{{count}} offline",
+          "silent_other": "{{count}} offline",
+          "none_one": "{{count}} without connector",
+          "none_other": "{{count}} without connector"
+        }
+      },
+      "ungrouped": {
+        "title": "Hotels without a group",
+        "short": "no group",
+        "hint": "Separate hotels. Select them and press “To group…” or drag them onto a group above.",
+        "empty": "All hotels are in groups."
+      },
+      "group": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "name": "Name",
+        "namePlaceholder": "For example, “Metropol hotels”",
+        "description": "Description",
+        "descriptionPlaceholder": "Whose hotels these are and why they are together",
+        "note": "Note for the team",
+        "noteHint": "Visible only to us: agreements, contacts, specifics.",
+        "color": "Colour label",
+        "colorHint": "Colour label — helps to spot the group in the hotel list",
+        "emptyHint": "No hotels in the group yet. Select hotels and press “To group…” or drag them here."
+      },
+      "create": {
+        "title": "New group",
+        "subtitle": "A group brings together hotels of one owner. Only our team sees it — guests and hotel staff never do.",
+        "hotelsHint": "Hotels of the group — choose now or add later",
+        "submit": "Create",
+        "submitWith_one": "Create with {{count}} hotel",
+        "submitWith_other": "Create with {{count}} hotels"
+      },
+      "edit": {
+        "title": "Edit group",
+        "subtitle": "Name, description, note and colour are visible only to our team."
+      },
+      "delete": {
+        "title": "Delete group “{{title}}”?",
+        "subtitle": "Only the group is deleted. Hotels stay as they are — with modules, rooms and data — and move to “Hotels without a group”.",
+        "released_one": "Moves to “Hotels without a group” — {{count}}",
+        "released_other": "Move to “Hotels without a group” — {{count}}",
+        "emptyGroup": "The group has no hotels",
+        "confirm": "Type the group name",
+        "confirmHint": "The button turns on when the name matches.",
+        "submit": "Delete group"
+      },
+      "move": {
+        "title_one": "Move {{count}} hotel to a group",
+        "title_other": "Move {{count}} hotels to a group",
+        "subtitle": "A hotel belongs to at most one group: it leaves the previous one by itself.",
+        "submit": "Move"
+      },
+      "picker": {
+        "search": "Find a hotel: name, subdomain, city",
+        "none": "No such hotels. Check the spelling.",
+        "inGroup": "now in “{{title}}”",
+        "willMove": "Will move from group “{{title}}”",
+        "picked_one": "{{count}} selected. A hotel belongs to at most one group — it leaves the previous one by itself.",
+        "picked_other": "{{count}} selected. A hotel belongs to at most one group — it leaves the previous one by itself."
+      },
+      "bulk": {
+        "move": "To group…",
+        "enable": "Enable",
+        "disable": "Disable…",
+        "clear": "Clear selection",
+        "disableTitle_one": "Disable {{count}} hotel?",
+        "disableTitle_other": "Disable {{count}} hotels?",
+        "disableBody": "Guests will see the hotel is unavailable, staff will be signed out. Data and settings are kept."
+      },
+      "empty": {
+        "title": "Nothing found",
+        "body": "No hotel and no group match the search and filters. Check the spelling or remove some filters.",
+        "reset": "Reset search and filters"
       }
     }
   },

@@ -38,7 +38,6 @@ test.describe('Консоль: сайдбар', () => {
     await loginToConsole(page)
     const expected: Record<string, string> = {
       fleet: 'Отели',
-      groups: 'Группы',
       team: 'Пользователи',
       audit: 'Аудит',
       nodes: 'On-premise',

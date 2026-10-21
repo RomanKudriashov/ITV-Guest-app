@@ -87,7 +87,7 @@ test('Control, список отелей: фильтры — на стекле, 
     return Boolean(n)
   })
   expect(filters, 'панель фильтров не стеклянная').toBeTruthy()
-  const table = await page.locator('[data-testid="admin-fleet"] table').evaluate((el) => {
+  const table = await page.locator('[data-testid="admin-fleet"] table').first().evaluate((el) => {
     const s = getComputedStyle(el.parentElement!)
     return { bg: s.backgroundColor, blur: s.backdropFilter }
   })

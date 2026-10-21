@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, HOTEL, PLATFORM, pickOption } from './helpers'
+import { API, HOTEL, PLATFORM } from './helpers'
 
 /**
  * ВЫБОР ВМЕСТО ВВОДА В NaviRoom Control (партия 54).
@@ -92,29 +92,4 @@ test('email проверяется по форме — кнопка заперт
   await expect(page.getByTestId('admin-create-submit')).toBeDisabled()
   await email.fill('owner@mailcheck.test')
   await expect(page.getByTestId('admin-create-submit')).toBeEnabled()
-})
-
-test('город правила группы — из городов флота, а не текстом', async ({ page, request }) => {
-  const owner = await request.post(`${API}/api/v1/platform/auth/login`, { data: PLATFORM }).then((r) => r.json())
-  const cities: string[] = await request
-    .get(`${API}/api/v1/platform/reference/cities`, { headers: { Authorization: `Bearer ${owner.access}` } })
-    .then((r) => r.json())
-    .then((body) => body.cities)
-
-  await page.goto(`${ROOT}/admin`)
-  await page.getByTestId('admin-login-email').fill(PLATFORM.email)
-  await page.getByTestId('admin-login-password').fill(PLATFORM.password)
-  await page.getByTestId('admin-login-submit').click()
-  await expect(page.getByTestId('admin-shell')).toBeVisible({ timeout: 30_000 })
-  await page.goto(`${ROOT}/admin?section=groups`)
-  await page.getByTestId('admin-group-add').click()
-  await pickOption(page, 'admin-group-mode', { value: 'rule' })
-
-  await page.getByTestId('admin-group-rule-city').click()
-  const offered = await page.getByRole('listbox').getByRole('option').evaluateAll((items) =>
-    items.map((item) => item.getAttribute('data-value')),
-  )
-  // «Любой» плюс ровно города флота — ни одного придуманного.
-  expect(offered).toEqual(['', ...cities])
-  await page.keyboard.press('Escape')
 })

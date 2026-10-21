@@ -27,7 +27,7 @@ from apps.analytics.models import OrderDaily
 from apps.catalog.models import Item
 from apps.core.context import platform_scope
 from apps.hotels.services import tariffs
-from apps.hotels.models import Hotel, OnPremNode, Room, Service
+from apps.hotels.models import Hotel, HotelModule, OnPremNode, Room, Service
 
 ORDERS_WINDOW_DAYS = 7
 DEFAULT_PAGE_SIZE = 25
@@ -51,14 +51,15 @@ def _batch_counts(hotel_ids: list) -> dict:
     since = timezone.localdate() - timedelta(days=ORDERS_WINDOW_DAYS - 1)
 
     with platform_scope():
+        # ЖИВЫЕ СТРОКИ (партия 62-A1). Здесь стоял `all_objects` без условия, и
+        # мягко удалённое считалось вместе с живым: у «Кристалла» после e2e
+        # реестр показывал 56133 номера вместо 9 и 521 сотрудника вместо 16.
+        live = {"hotel_id__in": hotel_ids, "deleted_at__isnull": True}
         sources = [
-            ("rooms", Room.all_objects.using("platform").filter(hotel_id__in=hotel_ids)),
-            (
-                "staff",
-                User.all_objects.using("platform").filter(hotel_id__in=hotel_ids, is_staff_member=True),
-            ),
-            ("items", Item.all_objects.using("platform").filter(hotel_id__in=hotel_ids)),
-            ("services", Service.all_objects.using("platform").filter(hotel_id__in=hotel_ids)),
+            ("rooms", Room.all_objects.using("platform").filter(**live)),
+            ("staff", User.all_objects.using("platform").filter(**live, is_staff_member=True)),
+            ("items", Item.all_objects.using("platform").filter(**live)),
+            ("services", Service.all_objects.using("platform").filter(**live)),
         ]
         for key, queryset in sources:
             for row in queryset.values("hotel_id").annotate(n=Count("id")):
@@ -75,9 +76,16 @@ def _batch_counts(hotel_ids: list) -> dict:
 
         nodes = (
             OnPremNode.all_objects.using("platform")
-            .filter(hotel_id__in=hotel_ids, is_revoked=False)
+            .filter(hotel_id__in=hotel_ids, is_revoked=False, deleted_at__isnull=True)
             .values("hotel_id", "last_seen_at")
         )
+        modules = (
+            HotelModule.all_objects.using("platform")
+            .filter(hotel_id__in=hotel_ids, is_enabled=True, deleted_at__isnull=True)
+            .values_list("hotel_id", "code")
+        )
+        for hotel_id, code in modules:
+            result[hotel_id].setdefault("modules", []).append(code)
     threshold = timezone.now() - timedelta(seconds=OnPremNode.OFFLINE_AFTER_SECONDS)
     for row in nodes:
         entry = result[row["hotel_id"]]
@@ -120,6 +128,12 @@ def _row(hotel: Hotel, counts: dict) -> dict:
             "orders_7d": entry.get("orders_7d", 0),
         },
         "node_offline": bool(entry.get("node_offline")),
+        "city": hotel.city_i18n or "",
+        # Связь коннектора: на связи / молчит / коннектора нет.
+        "link": "silent" if entry.get("node_offline") else "online" if entry.get("has_node") else "none",
+        "modules": sorted(entry.get("modules", [])),
+        # Проблемы обзора считает сервер готовности (партия B); до неё — 0.
+        "problems": 0,
     }
 
 
@@ -142,7 +156,7 @@ def _base_queryset(params: dict, user=None):
 
     search = (params.get("search") or "").strip()
     if search:
-        queryset = queryset.filter(Q(name__icontains=search) | Q(subdomain__icontains=search))
+        queryset = queryset.filter(_search_q(search))
 
     status = (params.get("status") or "").strip()
     if status == "active":
@@ -153,20 +167,21 @@ def _base_queryset(params: dict, user=None):
         queryset = queryset.filter(is_active=False)
 
     # ФИЛЬТР ПО ГРУППЕ — ТЕМ ЖЕ КОДОМ, что и адресация массового действия.
-    # Если бы экран резал состав по-своему, «выключить всё, что вижу» однажды
-    # выключило бы не то, что видно: у правила состав вычисляемый.
-    group_id = (params.get("group") or "").strip()
-    if group_id:
-        from apps.hotels.services.platform import groups as groups_svc
+    # Несколько групп через запятую; `none` — отели без группы. Группы нет —
+    # пустая выдача, а не «все отели»: молча показать всех на удалённой группе
+    # значит предложить массовое действие не тем.
+    group_param = [g for g in (params.get("group") or "").split(",") if g.strip()]
+    if group_param:
+        from apps.hotels.models import HotelGroupMember
 
-        group = groups_svc.find(group_id)
-        # Группы нет — пустая выдача, а не «все отели». Молча показать весь
-        # флот на удалённой группе значит предложить массовое действие не тем.
-        queryset = (
-            queryset.filter(pk__in=groups_svc.hotel_ids(group))
-            if group
-            else queryset.none()
-        )
+        grouped = HotelGroupMember.objects.filter(group__deleted_at__isnull=True)
+        condition = Q(pk__in=[])
+        ids = [g for g in group_param if g != "none"]
+        if ids:
+            condition |= Q(pk__in=grouped.filter(group_id__in=_valid_uuids(ids)).values("hotel_id"))
+        if "none" in group_param:
+            condition |= ~Q(pk__in=grouped.values("hotel_id"))
+        queryset = queryset.filter(condition)
 
     tariff = (params.get("tariff") or "").strip()
     if tariff:
@@ -175,11 +190,158 @@ def _base_queryset(params: dict, user=None):
     return queryset.order_by(SORTS.get((params.get("sort") or "name"), "name"))
 
 
+def _valid_uuids(values: list[str]) -> list[str]:
+    import uuid
+
+    out = []
+    for value in values:
+        try:
+            out.append(str(uuid.UUID(value)))
+        except ValueError:
+            continue
+    return out
+
+
+def _search_q(search: str) -> Q:
+    """
+    Поиск по названию, поддомену, ГОРОДУ и НАЗВАНИЮ ГРУППЫ (партия 62-A1).
+    Город переводимый (JSON по языкам) — ищем по тексту всего значения.
+    """
+    from django.db.models import TextField
+    from django.db.models.functions import Cast
+
+    from apps.hotels.models import HotelGroupMember
+
+    in_group = HotelGroupMember.objects.filter(
+        group__deleted_at__isnull=True, group__title__icontains=search
+    ).values("hotel_id")
+    city = Hotel.objects.annotate(_city=Cast("city", TextField())).filter(_city__icontains=search).values("pk")
+    return Q(name__icontains=search) | Q(subdomain__icontains=search) | Q(pk__in=city) | Q(pk__in=in_group)
+
+
 def _trial_codes() -> list[str]:
     return [code for code, tariff in tariffs.TARIFFS.items() if tariff.is_trial]
 
 
+VIEW_FACETS = ("state", "link", "module", "group")
+
+
+def _state(row: dict) -> str:
+    if not row["is_active"]:
+        return "disabled"
+    return "problems" if row["problems"] else "ready"
+
+
+def _summary(rows: list[dict]) -> dict:
+    active = [r for r in rows if r["is_active"]]
+    return {
+        "hotels": len(rows),
+        "active": len(active),
+        "rooms": sum(r["counts"]["rooms"] for r in rows),
+        "problems": sum(r["problems"] for r in rows),
+        "link": {
+            "online": sum(1 for r in active if r["link"] == "online"),
+            "silent": sum(1 for r in active if r["link"] == "silent"),
+            "none": sum(1 for r in active if r["link"] == "none"),
+        },
+    }
+
+
+def fleet_view(params: dict, user=None) -> dict:
+    """
+    «Отели» нового вида (партия 62-A1): группы с их отелями и сводкой, ниже —
+    «без группы»; или общим списком. Без страниц: реестр — десятки отелей, а
+    сводка группы обязана считать всю группу, а не видимую страницу.
+
+    Поиск — в базе (название, поддомен, город, название группы). Фильтры —
+    поверх найденного, и счётчик у каждого значения фильтра считается при
+    остальных выбранных фильтрах: «Связь · не на связи 2» противоречить
+    видимому не может.
+    """
+    from apps.hotels.services.platform import groups as groups_svc
+
+    layout = "list" if params.get("layout") == "list" else "groups"
+    plain = {k: v for k, v in params.items() if k not in (*VIEW_FACETS, "search", "status", "page", "page_size")}
+    hotels = list(_base_queryset(plain, user))
+    search = (params.get("search") or "").strip()
+    matched = (
+        set(_base_queryset({**plain, "search": search}, user).values_list("pk", flat=True)) if search else None
+    )
+    counts = _batch_counts([hotel.pk for hotel in hotels])
+    owners = groups_svc.group_by_hotel([hotel.pk for hotel in hotels])
+
+    rows: list[dict] = []
+    for hotel in hotels:
+        row = _row(hotel, counts)
+        group = owners.get(hotel.pk)
+        row["group"] = {"id": str(group.pk), "title": group.title, "color": group.color} if group else None
+        row["_match"] = matched is None or hotel.pk in matched
+        rows.append(row)
+
+    selected = {key: {v for v in (params.get(key) or "").split(",") if v} for key in VIEW_FACETS}
+    # «Отключённые» старым параметром — то же, что состояние «отключён».
+    if params.get("status") == "disabled":
+        selected["state"].add("disabled")
+
+    def value(row: dict, key: str) -> list[str]:
+        if key == "state":
+            return [_state(row)]
+        if key == "link":
+            return [row["link"]]
+        if key == "module":
+            return row["modules"]
+        return [row["group"]["id"] if row["group"] else "none"]
+
+    def passes(row: dict, skip: str | None = None) -> bool:
+        if not row["_match"]:
+            return False
+        for key in VIEW_FACETS:
+            if key != skip and selected[key] and not selected[key].intersection(value(row, key)):
+                return False
+        return True
+
+    facets: dict[str, dict] = {}
+    for key in VIEW_FACETS:
+        bucket: dict[str, int] = {}
+        for row in rows:
+            if passes(row, skip=key):
+                for v in value(row, key):
+                    bucket[v] = bucket.get(v, 0) + 1
+        facets[key] = bucket
+
+    rank = {"problems": 0, "ready": 1, "disabled": 2}
+    shown = sorted((r for r in rows if passes(r)), key=lambda r: (rank[_state(r)], r["name"].lower()))
+    for row in rows:
+        row.pop("_match", None)
+
+    filtering = bool(search) or any(selected.values())
+    groups_out = []
+    for group in groups_svc.all_groups(user):
+        mine = [r for r in rows if r["group"] and r["group"]["id"] == str(group.pk)]
+        visible = [r for r in shown if r["group"] and r["group"]["id"] == str(group.pk)]
+        if filtering and not visible:
+            continue
+        groups_out.append(
+            {
+                **groups_svc.serialize(group, with_size=False),
+                "summary": _summary(mine),
+                "items": visible,
+            }
+        )
+    loose_all = [r for r in rows if not r["group"]]
+    return {
+        "layout": layout,
+        "total": len(shown),
+        "facets": facets,
+        "groups": groups_out if layout == "groups" else [],
+        "ungrouped": {"summary": _summary(loose_all), "items": [r for r in shown if not r["group"]]} if layout == "groups" else None,
+        "items": shown if layout == "list" else [],
+    }
+
+
 def fleet(params: dict, user=None) -> dict:
+    if params.get("layout") in ("groups", "list"):
+        return fleet_view(params, user)
     queryset = _base_queryset(params, user)
     total = queryset.count()
 

@@ -1,6 +1,4 @@
-import { glassShadow, glassSx, solidSx } from '@/kit/glass';
-import { useState } from 'react';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useState, type DragEvent, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
@@ -8,482 +6,593 @@ import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Checkbox from '@mui/material/Checkbox';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import { useTranslation } from 'react-i18next';
 
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { glassSx } from '@/kit/glass';
+import { QueryState } from '@/components/QueryState';
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../useRights';
-
-import { accent, fieldSx, ink, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
-import { SearchField } from '@/components/SearchField';
-import { QueryState } from '@/components/QueryState';
-import { SelectField } from '@/components/SelectField';
+import { accent, ink, panelSx, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../adminTokens';
 import { CreateHotelDialog, CreatedAdminDialog } from '../CreateHotelDialog';
 import {
   bulkSetActive,
-  getGroups,
   downloadFleetCsv,
-  getFleet,
+  getGroups,
+  getHotelsView,
+  moveHotels,
   type CreateHotelResult,
-  type FleetQuery,
-  type FleetRow,
+  type GroupSummary,
+  type HotelGroup,
+  type HotelState,
+  type HotelViewRow,
+  type LinkKind,
 } from '../adminClient';
-
-const STATUS_TONE = {
-  active: 'ok',
-  trial: 'info',
-  disabled: 'muted',
-} as const;
+import { CreateGroupDialog, DeleteGroupDialog, EditGroupDialog, MoveDialog } from './hotels/groupDialogs';
+import { Dot, Empty, FilterBar, GroupMark, Help, Hl, Pill, ViewSwitch, useFacetValues, type Facet, type Tone } from './hotels/hotelsUi';
 
 /**
- * Реестр отелей — рабочий экран платформы.
+ * «ОТЕЛИ» (партия 62-A1, по утверждённому макету): группы отелей одного
+ * владельца раскрывающимися блоками со сводкой, ниже — «Отели без группы»;
+ * или общим списком. Один поиск по отелям и группам с подсветкой, фильтры
+ * чипами — всё в адресе: ссылка на выборку открывает ту же выборку.
  *
- * Поиск, фильтры и сортировка живут в АДРЕСЕ запроса, а не в памяти клиента:
- * отфильтрованный список должен переживать перезагрузку и уходить в экспорт
- * ровно тем же срезом, который человек видит на экране.
- *
- * Выделение и массовые действия намеренно ограничены включением/выключением:
- * это единственная операция над отелем, которая обратима одним нажатием. Всё
- * необратимое (удаление, офбординг) делается по одному отелю и с подтверждением.
+ * Раздел «Группы» влился сюда: группы заводятся, правятся, удаляются и
+ * наполняются прямо на этом экране.
  */
+
+const FACETS = ['state', 'link', 'module', 'group'] as const;
+const LINK_TONE: Record<LinkKind, Tone> = { online: 'ok', silent: 'bad', none: 'muted' };
+const STATE_TONE: Record<HotelState, Tone> = { problems: 'warn', ready: 'ok', disabled: 'muted' };
+const MODULE_CODES = ['room_control', 'marketing', 'pms', 'payment', 'mobile_key', 'native_app', 'analytics_level', 'multi_restaurant', 'extra_languages'];
+
+const stateOf = (row: HotelViewRow): HotelState => (!row.is_active ? 'disabled' : row.problems ? 'problems' : 'ready');
+
 export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }) {
-  const actionFailed = useActionFailed();
+  const { t } = useTranslation();
   const { canWrite } = useRights();
-  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
-  /*
-    ФИЛЬТРЫ ЖИВУТ В АДРЕСЕ, А НЕ В СОСТОЯНИИ КОМПОНЕНТА.
-
-    Были в `useState`, и это терялось на каждом возврате: карточку отеля
-    рисует тот же раздел (`section === 'fleet' && !hotelId`), то есть при её
-    открытии список РАЗМОНТИРУЕТСЯ вместе со своим состоянием. Замер: фильтр
-    «crystal» давал одну строку, после закрытия карточки поле пустое —
-    и кнопкой, и «назад».
-
-    ОДИН ПАРАМЕТР НА ФИЛЬТР, а не сериализованный объект: адрес читают глазами
-    и правят руками, `?search=crystal&status=active` понятен, `?q=%7B...%7D` —
-    нет. Страница и размер страницы в адрес не идут: это место в списке, а не
-    его состав, и делить ссылкой нужно состав.
-
-    `replace: true` ОБЯЗАТЕЛЕН: каждый набранный символ в поле поиска иначе
-    становится шагом истории, и «назад» после «crystal» пришлось бы жать семь
-    раз, чтобы выйти из списка.
-  */
-  const [searchParams, setSearchParams] = useSearchParams();
-  const query: FleetQuery = {
-    search: searchParams.get('search') ?? undefined,
-    status: (searchParams.get('status') ?? '') as FleetQuery['status'],
-    group: searchParams.get('group') ?? undefined,
-    sort: searchParams.get('sort') ?? undefined,
-    origin: (searchParams.get('origin') as FleetQuery['origin']) ?? undefined,
-    tariff: searchParams.get('tariff') ?? undefined,
-    page: Number(searchParams.get('page')) || 1,
-    page_size: 25,
-  };
+  const actionFailed = useActionFailed();
+  const narrow = useMediaQuery('(max-width:899px)');
+  const [params, setParams] = useSearchParams();
+  const layout = params.get('layout') === 'list' ? 'list' : 'groups';
+  const search = params.get('search') ?? '';
+  const values = useFacetValues([...FACETS]);
+  const closed = new Set((params.get('closed') ?? '').split(',').filter(Boolean));
   const [selected, setSelected] = useState<string[]>([]);
-  // Массовое выключение отзывает входы персонала и закрывает витрины гостям —
-  // только после вопроса с числом отелей (партия 60).
-  const [askDisable, setAskDisable] = useState(false);
+  const [dialog, setDialog] = useState<null | 'create-group' | 'move' | 'disable'>(null);
+  const [editing, setEditing] = useState<HotelGroup | null>(null);
+  const [deleting, setDeleting] = useState<HotelGroup | null>(null);
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreateHotelResult | null>(null);
 
-  const fleet = useQuery({ queryKey: ['admin', 'fleet', query], queryFn: () => getFleet(query) });
+  const query: Record<string, string> = { layout };
+  if (search) query.search = search;
+  for (const key of FACETS) if (values[key].length) query[key] = values[key].join(',');
+  const origin = params.get('origin');
+  if (origin) query.origin = origin;
+
+  // Ключи под ['admin', 'fleet']: карточка отеля и создание отеля сбрасывают
+  // именно его — иначе отключённый в карточке отель оставался «готов» в списке.
+  const view = useQuery({ queryKey: ['admin', 'fleet', 'view', query], queryFn: () => getHotelsView(query) });
+  // Все отели без фильтров — для окна новой группы (выбор отелей) и подсчёта.
+  const all = useQuery({ queryKey: ['admin', 'fleet', 'all', origin], queryFn: () => getHotelsView(origin ? { layout: 'list', origin } : { layout: 'list' }) });
   const groups = useQuery({ queryKey: ['admin', 'groups'], queryFn: getGroups });
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['admin', 'groups'] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
+  };
+  const drop = useMutation({
+    mutationFn: ({ hotelId, groupId }: { hotelId: string; groupId: string | null }) => moveHotels([hotelId], groupId),
+    onSuccess: invalidate,
+    onError: actionFailed,
+  });
   const bulk = useMutation({
-    /*
-      Две адресации, одно действие. Отметили отели галочками — идут они;
-      выбрали группу и не отметили никого — идёт вся группа, и её состав
-      считает сервер в момент нажатия. Для группы-правила это существенно:
-      заведённый час назад отель обязан попасть под действие.
-    */
-    mutationFn: (isActive: boolean) =>
-      bulkSetActive(selected, isActive, selected.length ? undefined : query.group),
+    mutationFn: (isActive: boolean) => bulkSetActive(selected, isActive),
     onSuccess: () => {
       setSelected([]);
-      void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
+      invalidate();
     },
-  
-    // Отказ виден: молча съеденный 403 читается как успех.
     onError: actionFailed,
   });
 
-  const patch = (next: Partial<FleetQuery>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [key, value] of Object.entries(next)) {
-      if (key === 'page_size') continue;
-      if (value === undefined || value === null || value === '') params.delete(key);
-      else params.set(key, String(value));
-    }
-    // Смена любого фильтра возвращает на первую страницу: вторая страница
-    // прежнего состава к новому отношения не имеет.
-    if (next.page === undefined) params.delete('page');
-    setSearchParams(params, { replace: true });
+  const setClosed = (id: string) => {
+    const next = new URLSearchParams(params);
+    const now = new Set(closed);
+    if (now.has(id)) now.delete(id);
+    else now.add(id);
+    if (now.size) next.set('closed', [...now].join(','));
+    else next.delete('closed');
+    setParams(next, { replace: true });
+  };
+  const setLayout = (value: 'groups' | 'list') => {
+    const next = new URLSearchParams(params);
+    if (value === 'groups') next.delete('layout');
+    else next.set('layout', value);
+    setParams(next, { replace: true });
   };
 
-  const rows = fleet.data?.items ?? [];
-  const facets = fleet.data?.facets;
-  const toggle = (id: string) =>
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const facets = view.data?.facets;
+  const count = (key: (typeof FACETS)[number], value: string) => facets?.[key]?.[value] ?? 0;
+  const groupList = groups.data?.items ?? [];
+  const facetList: Facet[] = [
+    {
+      key: 'state',
+      label: t('admin.hotels.filter.state'),
+      options: (['problems', 'ready', 'disabled'] as HotelState[]).map((s) => ({ value: s, label: t(`admin.hotels.state.${s}`), tone: STATE_TONE[s], count: count('state', s) })),
+    },
+    {
+      key: 'link',
+      label: t('admin.hotels.filter.link'),
+      options: (['online', 'silent', 'none'] as LinkKind[]).map((k) => ({ value: k, label: t(`admin.hotels.link.${k}`), tone: LINK_TONE[k], count: count('link', k) })),
+    },
+    {
+      key: 'module',
+      label: t('admin.hotels.filter.module'),
+      options: MODULE_CODES.map((code) => ({ value: code, label: t(`admin.module.${code}`), count: count('module', code) })),
+    },
+    {
+      key: 'group',
+      label: t('admin.hotels.filter.group'),
+      options: [
+        ...groupList.map((g) => ({ value: g.id, label: g.title, count: count('group', g.id) })),
+        { value: 'none', label: t('admin.hotels.ungrouped.title'), count: count('group', 'none') },
+      ],
+    },
+  ];
+
+  const filtering = Boolean(search) || FACETS.some((k) => values[k].length);
+  const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const rowProps = {
+    selected,
+    onToggle: toggle,
+    onOpen: onOpenHotel,
+    q: search,
+    narrow,
+    draggable: canWrite,
+  };
+  const resetAll = () => {
+    const next = new URLSearchParams(params);
+    for (const key of ['search', ...FACETS]) next.delete(key);
+    setParams(next, { replace: true });
+  };
 
   return (
     <Box data-testid="admin-fleet">
-      {/* Образец стеклянного стиля (партия 56, шаг 1): фильтры — на стекле,
-          реестр — плотной таблицей. */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
-            {t('admin.fleet.title')}
-          </Typography>
-          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
-            {t('admin.fleet.subtitle')}
-          </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+        <Box sx={{ flex: '1 1 320px', minWidth: 0 }}>
+          <Typography component="h1" sx={{ ...typo.pageTitle, color: ink.hi }}>{t('admin.hotels.title')}</Typography>
+          <Typography sx={{ ...typo.body, color: ink.mid, mt: 0.5 }}>{t('admin.hotels.subtitle')}</Typography>
         </Box>
-        <Button
-          onClick={() => void downloadFleetCsv(query)}
-          data-testid="admin-fleet-export"
-          sx={{ color: ink.mid, border: `1px solid ${surface.line}`, bgcolor: surface.s2 }}
-        >
-          {t('admin.fleet.export')}
-        </Button>
-        {/* Завести отель — право WRITE. Наблюдателю кнопка ответила бы 403. */}
-        {canWrite ? (
-          <Button onClick={() => setCreating(true)} data-testid="admin-create-open" sx={primaryButtonSx}>
-            {t('admin.fleet.create')}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button onClick={() => void downloadFleetCsv({ search })} data-testid="admin-fleet-export" sx={secondaryButtonSx}>
+            {t('admin.hotels.export')}
           </Button>
-        ) : null}
+          {canWrite ? (
+            <>
+              <Button onClick={() => setDialog('create-group')} data-testid="admin-group-create-open" sx={secondaryButtonSx}>
+                {t('admin.hotels.newGroup')}
+              </Button>
+              <Button onClick={() => setCreating(true)} data-testid="admin-create-open" sx={primaryButtonSx}>
+                {t('admin.hotels.newHotel')}
+              </Button>
+            </>
+          ) : null}
+        </Box>
       </Box>
 
-      <Box
-        sx={[
-          { display: 'flex', gap: 1, mt: 2.25, flexWrap: 'wrap', alignItems: 'center' },
-          (theme) => ({ ...glassSx(theme, 'panel'), borderRadius: `${theme.palette.brand.radius.lg}px`, p: 1.5 }),
-        ]}
-      >
-        {/* Поиск — общим полем поиска (лупа + подсказка), а не самодельной
-            рамкой с InputBase (партия 55). */}
-        <SearchField
-          value={query.search ?? ''}
-          onChange={(next) => patch({ search: next })}
-          placeholder={t('admin.fleet.searchPlaceholder')}
-          testId="admin-fleet-search"
-          sx={[fieldSx, { width: { xs: '100%', sm: 280 } }]}
-        />
-
-        {/*
-          ФИЛЬТР ПО ГРУППЕ. Состав считает сервер: у группы-правила он
-          вычисляемый, и посчитанный здесь разошёлся бы с тем, к чему применится
-          массовое действие. Отсюда же оно и адресуется — «выключить всё, что
-          вижу» обязано означать ровно то, что видно.
-        */}
-        <SelectField
-          size="small"
-          fullWidth={false}
-          value={query.group ?? ''}
-          onChange={(next) => {
-            setSelected([]);
-            patch({ group: next });
-          }}
-          testId="admin-fleet-group"
-          sx={{ minWidth: 180 }}
-          options={[
-            { value: '', label: t('admin.fleet.allGroups') },
-            ...(groups.data?.items ?? []).map((group) => ({
-              value: String(group.id),
-              label: `${group.title}${group.size !== undefined ? ` · ${group.size}` : ''}`,
-            })),
-          ]}
-        />
-
-        {(['', 'active', 'trial', 'disabled'] as const).map((status) => (
-          <ButtonBase
-            key={status || 'all'}
-            onClick={() => patch({ status })}
-            data-testid={`admin-fleet-filter-${status || 'all'}`}
-            data-active={query.status === status ? 'true' : undefined}
-            sx={{
-              height: 32,
-              px: 1.5,
-              borderRadius: '9px',
-              ...typo.caption,
-              fontWeight: 600,
-              border: `1px solid ${query.status === status ? accent.main : surface.line}`,
-              bgcolor: query.status === status ? accent.washSoft : surface.s2,
-              color: query.status === status ? accent.soft : ink.mid,
-            }}
-          >
-            {t(`admin.fleet.status.${status || 'all'}`)}
-            {facets ? ` · ${facets[(status || 'all') as keyof typeof facets]}` : ''}
-          </ButtonBase>
-        ))}
-
-        <ButtonBase
-          onClick={() => patch({ sort: query.sort === 'name' ? '-name' : 'name' })}
-          data-testid="admin-fleet-sort-name"
-          sx={{ ml: 'auto', ...typo.caption, fontWeight: 600, color: ink.mid, px: 1.25, py: 1 }}
-        >
-          {t('admin.fleet.sortByName')}
-          {query.sort === '-name' ? ' ↓' : query.sort === 'name' ? ' ↑' : ''}
-        </ButtonBase>
+      {/* Фильтры — на стекле (партия 56: стекло на рамке), реестр — плотный. */}
+      <Box sx={[(theme) => ({ ...glassSx(theme, 'panel'), borderRadius: `${theme.palette.brand.radius.lg}px`, p: 1.5, pb: 0.25, mb: 1.5 })]}>
+      <FilterBar
+        facets={facetList}
+        placeholder={t('admin.hotels.searchPlaceholder')}
+        aside={
+          <ViewSwitch
+            label={t('admin.hotels.layout.label')}
+            value={layout}
+            onChange={setLayout}
+            options={[
+              ['groups', t('admin.hotels.layout.groups'), <AccountTreeOutlinedIcon key="g" fontSize="small" />],
+              ['list', t('admin.hotels.layout.list'), <ViewListOutlinedIcon key="l" fontSize="small" />],
+            ]}
+          />
+        }
+      />
       </Box>
 
-      {/*
-        Панель массового действия появляется и на выбранной ГРУППЕ без единой
-        галочки: адресация группой — это тот же выбор, только сделанный
-        фильтром. Число берём с сервера (`size`), а не считаем строки на
-        странице: страница показывает двадцать пять, а в группе может быть сто.
-      */}
-      {/* Массовые кнопки — правка: «только чтение» их не видит (партия 60). */}
-      {canWrite && (selected.length || query.group) ? (
+      {canWrite && selected.length ? (
         <Box
           data-testid="admin-fleet-bulkbar"
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            mt: 1.5,
-            p: 1.5,
-            borderRadius: '12px',
-            bgcolor: accent.washSoft,
-            border: `1px solid ${accent.main}`,
-          }}
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.5, p: 1.25, borderRadius: `${shape.radiusLarge}px`, bgcolor: accent.washSoft, border: `1px solid ${accent.main}` }}
         >
-          <Typography sx={{ ...typo.caption, fontWeight: 700, color: accent.soft }}>
-            {selected.length
-              ? t('admin.fleet.selected', { count: selected.length })
-              : t('admin.fleet.selectedGroup', {
-                  count:
-                    (groups.data?.items ?? []).find((group) => group.id === query.group)?.size ?? 0,
-                })}
-          </Typography>
-          <Button
-            size="small"
-            onClick={() => bulk.mutate(true)}
-            disabled={bulk.isPending}
-            data-testid="admin-fleet-bulk-enable"
-            sx={primaryButtonSx}
-          >
-            {t('admin.fleet.bulkEnable')}
+          <Typography sx={{ ...typo.caption, fontWeight: 700, color: accent.soft, mr: 1 }}>{t('admin.hotels.selected', { count: selected.length })}</Typography>
+          <Button size="small" sx={secondaryButtonSx} onClick={() => setDialog('move')} data-testid="admin-hotels-bulk-move">
+            {t('admin.hotels.bulk.move')}
           </Button>
-          <Button
-            size="small"
-            onClick={() => setAskDisable(true)}
-            disabled={bulk.isPending}
-            data-testid="admin-fleet-bulk-disable"
-            sx={{ color: ink.mid, border: `1px solid ${surface.line}` }}
-          >
-            {t('admin.fleet.bulkDisable')}
+          <Button size="small" sx={secondaryButtonSx} onClick={() => bulk.mutate(true)} disabled={bulk.isPending} data-testid="admin-fleet-bulk-enable">
+            {t('admin.hotels.bulk.enable')}
           </Button>
-          <ConfirmDialog
-            open={askDisable}
-            testId="admin-fleet-bulk-disable-confirm"
-            destructive
-            title={t('admin.fleet.bulkDisableConfirm.title', {
-              count: selected.length
-                ? selected.length
-                : ((groups.data?.items ?? []).find((group) => group.id === query.group)?.size ?? 0),
-            })}
-            description={t('admin.fleet.bulkDisableConfirm.body')}
-            confirmLabel={t('admin.fleet.bulkDisable')}
-            onConfirm={() => {
-              setAskDisable(false);
-              bulk.mutate(false);
-            }}
-            onClose={() => setAskDisable(false)}
-          />
-          {bulk.data ? (
-            <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-fleet-bulk-result">
-              {t('admin.fleet.bulkResult', { changed: bulk.data.changed, requested: bulk.data.requested })}
-            </Typography>
-          ) : null}
+          <Button size="small" sx={{ ...secondaryButtonSx, color: state.bad }} onClick={() => setDialog('disable')} disabled={bulk.isPending} data-testid="admin-fleet-bulk-disable">
+            {t('admin.hotels.bulk.disable')}
+          </Button>
+          <Button size="small" sx={{ ml: 'auto', color: ink.mid }} onClick={() => setSelected([])}>{t('admin.hotels.bulk.clear')}</Button>
         </Box>
       ) : null}
 
-      <QueryState query={fleet} what={t('state.what.fleet')}>
-        {() => (
-        <Box
-          sx={[
-            { mt: 1.5, overflowX: 'auto', px: 1 },
-            // Реестр — содержимое: непрозрачно, текст на планке контраста.
-            (theme) => ({ ...solidSx(theme), boxShadow: glassShadow(theme) }),
-          ]}
-        >
-          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
-            <Box component="thead">
-              <Box component="tr">
-                <Th />
-                <Th>{t('admin.fleet.col.hotel')}</Th>
-                <Th>{t('admin.fleet.col.tariff')}</Th>
-                <Th align="right">{t('admin.fleet.col.rooms')}</Th>
-                <Th align="right">{t('admin.fleet.col.services')}</Th>
-                <Th align="right">{t('admin.fleet.col.orders')}</Th>
-                <Th>{t('admin.fleet.col.status')}</Th>
-              </Box>
+      <QueryState query={view} what={t('state.what.fleet')}>
+        {(data) =>
+          !data.total && filtering ? (
+            <Box sx={panelSx}>
+              <Empty title={t('admin.hotels.empty.title')} action={<Button sx={secondaryButtonSx} onClick={resetAll}>{t('admin.hotels.empty.reset')}</Button>}>
+                {t('admin.hotels.empty.body')}
+              </Empty>
             </Box>
-            <Box component="tbody">
-              {rows.map((row) => (
-                <Row
-                  key={row.id}
-                  row={row}
-                  checked={selected.includes(row.id)}
-                  onToggle={() => toggle(row.id)}
-                  onOpen={() => onOpenHotel(row.id)}
-                  language={i18n.language}
-                />
+          ) : data.layout === 'list' ? (
+            <HotelRows rows={data.items} showGroup {...rowProps} />
+          ) : (
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              {data.groups.map((g) => (
+                <GroupBlock
+                  key={g.id}
+                  testId={`admin-hotels-group-${g.code}`}
+                  title={<Hl text={g.title} q={search} />}
+                  color={g}
+                  description={g.description}
+                  summary={g.summary}
+                  open={filtering || !closed.has(g.id)}
+                  onToggle={() => setClosed(g.id)}
+                  onDrop={canWrite ? (hotelId) => drop.mutate({ hotelId, groupId: g.id }) : undefined}
+                  actions={
+                    canWrite ? (
+                      <>
+                        <Button size="small" sx={{ color: ink.mid }} onClick={() => setEditing(g)} data-testid={`admin-group-edit-${g.code}`}>{t('admin.hotels.group.edit')}</Button>
+                        <Button size="small" sx={{ color: ink.mid }} onClick={() => setDeleting(g)} data-testid={`admin-group-delete-${g.code}`}>{t('admin.hotels.group.delete')}</Button>
+                      </>
+                    ) : null
+                  }
+                >
+                  {g.items.length ? (
+                    <HotelRows rows={g.items} {...rowProps} />
+                  ) : (
+                    <Typography sx={{ ...typo.body, color: ink.mid, p: 2 }}>{t('admin.hotels.group.emptyHint')}</Typography>
+                  )}
+                </GroupBlock>
               ))}
+              {data.ungrouped && (data.ungrouped.items.length || !filtering) ? (
+                <GroupBlock
+                  testId="admin-hotels-group-none"
+                  title={t('admin.hotels.ungrouped.title')}
+                  summary={data.ungrouped.summary}
+                  hint={t('admin.hotels.ungrouped.hint')}
+                  open={filtering || !closed.has('none')}
+                  onToggle={() => setClosed('none')}
+                  onDrop={canWrite ? (hotelId) => drop.mutate({ hotelId, groupId: null }) : undefined}
+                  muted
+                >
+                  {data.ungrouped.items.length ? (
+                    <HotelRows rows={data.ungrouped.items} {...rowProps} />
+                  ) : (
+                    <Typography sx={{ ...typo.body, color: ink.mid, p: 2 }}>{t('admin.hotels.ungrouped.empty')}</Typography>
+                  )}
+                </GroupBlock>
+              ) : null}
             </Box>
-          </Box>
-          {rows.length === 0 ? (
-            <Typography sx={{ ...typo.caption, color: ink.mid, py: 4, textAlign: 'center' }}
-              data-testid="state-empty">
-              {t('admin.fleet.empty')}
-            </Typography>
-          ) : null}
-        </Box>
-        )}
+          )
+        }
       </QueryState>
 
+      {dialog === 'create-group' ? <CreateGroupDialog rows={all.data?.items ?? []} onClose={() => setDialog(null)} /> : null}
+      {dialog === 'move' ? (
+        <MoveDialog
+          hotelIds={selected}
+          groups={groupList}
+          onClose={() => setDialog(null)}
+          onDone={() => {
+            setDialog(null);
+            setSelected([]);
+          }}
+        />
+      ) : null}
+      {editing ? <EditGroupDialog group={editing} onClose={() => setEditing(null)} /> : null}
+      {deleting ? <DeleteGroupDialog group={deleting} rows={all.data?.items ?? []} onClose={() => setDeleting(null)} /> : null}
+      <ConfirmDialog
+        open={dialog === 'disable'}
+        testId="admin-fleet-bulk-disable-confirm"
+        destructive
+        title={t('admin.hotels.bulk.disableTitle', { count: selected.length })}
+        description={t('admin.hotels.bulk.disableBody')}
+        confirmLabel={t('admin.hotels.bulk.disable')}
+        onConfirm={() => {
+          setDialog(null);
+          bulk.mutate(false);
+        }}
+        onClose={() => setDialog(null)}
+      />
       {creating ? (
         <CreateHotelDialog
           onClose={() => setCreating(false)}
           onCreated={(result) => {
             setCreating(false);
             setCreated(result);
-            void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
-            void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
+            invalidate();
           }}
         />
       ) : null}
-      {created ? (
-        <CreatedAdminDialog
-          admin={created.admin}
-          services={created.services ?? []}
-          onClose={() => setCreated(null)}
-        />
-      ) : null}
+      {created ? <CreatedAdminDialog admin={created.admin} services={created.services ?? []} onClose={() => setCreated(null)} /> : null}
+    </Box>
+  );
+}
 
-      {fleet.data && fleet.data.pages > 1 ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 2 }} data-testid="admin-fleet-pager">
-          <Button
-            size="small"
-            disabled={fleet.data.page <= 1}
-            onClick={() => patch({ page: fleet.data!.page - 1 })}
-            data-testid="admin-fleet-prev"
-            sx={{ color: ink.mid }}
-          >
-            {t('admin.fleet.prev')}
-          </Button>
-          <Typography sx={{ ...typo.caption, color: ink.mid }}>
-            {t('admin.fleet.pageOf', { page: fleet.data.page, pages: fleet.data.pages })}
-          </Typography>
-          <Button
-            size="small"
-            disabled={fleet.data.page >= fleet.data.pages}
-            onClick={() => patch({ page: fleet.data!.page + 1 })}
-            data-testid="admin-fleet-next"
-            sx={{ color: ink.mid }}
-          >
-            {t('admin.fleet.next')}
-          </Button>
+/* ── Группа ─────────────────────────────────────────────────────────────── */
+
+function GroupBlock({
+  testId,
+  title,
+  color,
+  description,
+  summary,
+  hint,
+  open,
+  onToggle,
+  onDrop,
+  actions,
+  muted,
+  children,
+}: {
+  testId: string;
+  title: ReactNode;
+  color?: HotelGroup;
+  description?: string;
+  summary: GroupSummary;
+  hint?: string;
+  open: boolean;
+  onToggle: () => void;
+  onDrop?: (hotelId: string) => void;
+  actions?: ReactNode;
+  muted?: boolean;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const [over, setOver] = useState(false);
+  const linkPart = (kind: LinkKind, n: number) =>
+    n ? (
+      <Box component="span" key={kind} sx={{ display: 'inline-flex', gap: 0.5, alignItems: 'center', whiteSpace: 'nowrap' }}>
+        <Dot tone={LINK_TONE[kind]} />
+        {t(`admin.hotels.summary.link.${kind}`, { count: n })}
+      </Box>
+    ) : null;
+  return (
+    <Box
+      data-testid={testId}
+      onDragOver={onDrop ? (e: DragEvent) => { e.preventDefault(); setOver(true); } : undefined}
+      onDragLeave={onDrop ? () => setOver(false) : undefined}
+      onDrop={
+        onDrop
+          ? (e: DragEvent) => {
+              e.preventDefault();
+              setOver(false);
+              const id = e.dataTransfer.getData('text/hotel');
+              if (id) onDrop(id);
+            }
+          : undefined
+      }
+      sx={{ ...panelSx, p: 0, overflow: 'hidden', outline: over ? `2px dashed ${accent.main}` : 'none' }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1.25, flexWrap: 'wrap', borderBottom: open ? `1px solid ${surface.line}` : 'none' }}>
+        <ButtonBase onClick={onToggle} aria-expanded={open} data-testid={`${testId}-toggle`} sx={{ gap: 0.75, borderRadius: `${shape.radius}px`, pr: 1, textAlign: 'left', minWidth: 0 }}>
+          {open ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
+          {color ? <GroupMark color={color.color} /> : null}
+          <Typography component="h2" sx={{ ...typo.panelTitle, color: muted ? ink.mid : ink.hi }}>{title}</Typography>
+        </ButtonBase>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', ...typo.caption, color: ink.mid, flex: '1 1 auto' }} data-testid={`${testId}-summary`}>
+          <span>{t('admin.hotels.summary.hotels', { count: summary.hotels })}</span>
+          <span>{t('admin.hotels.summary.rooms', { count: summary.rooms })}</span>
+          {summary.problems ? (
+            <Pill tone="warn">{t('admin.hotels.summary.problems', { count: summary.problems })}</Pill>
+          ) : summary.active ? (
+            <Pill tone="ok">{t('admin.hotels.summary.noProblems')}</Pill>
+          ) : null}
+          {linkPart('silent', summary.link.silent)}
+          {linkPart('online', summary.link.online)}
+          {linkPart('none', summary.link.none)}
+        </Box>
+        {actions}
+      </Box>
+      {open ? (
+        <Box>
+          {description ? <Typography sx={{ ...typo.caption, color: ink.mid, px: 2, pt: 1 }}>{description}</Typography> : null}
+          {hint ? <Typography sx={{ ...typo.caption, color: ink.mid, px: 2, pt: 1 }}>{hint}</Typography> : null}
+          {children}
         </Box>
       ) : null}
     </Box>
   );
 }
 
-function Th({ children, align }: { children?: React.ReactNode; align?: 'right' }) {
+/* ── Отели: таблица на широком экране, карточки на телефоне ─────────────── */
+
+function ModulesCell({ codes }: { codes: string[] }) {
+  const { t } = useTranslation();
+  if (!codes.length) return <Box component="span" sx={{ color: ink.low }}>—</Box>;
   return (
-    <Box
-      component="th"
-      sx={{
-        textAlign: align ?? 'left',
-        ...typo.caption,
-        letterSpacing: '.1em',
-        textTransform: 'uppercase',
-        color: ink.low,
-        fontWeight: 700,
-        p: '11px 12px',
-        borderBottom: `1px solid ${surface.line}`,
-        whiteSpace: 'nowrap',
-      }}
-    >
+    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+      {codes.map((code) => (
+        <Pill key={code} tone={code === 'room_control' || code === 'marketing' ? 'info' : 'muted'}>{t(`admin.module.${code}`)}</Pill>
+      ))}
+    </Box>
+  );
+}
+
+function StateCell({ row }: { row: HotelViewRow }) {
+  const { t } = useTranslation();
+  const s = stateOf(row);
+  return (
+    <Pill tone={STATE_TONE[s]} testId={`admin-fleet-status-${row.subdomain}`}>
+      {s === 'problems' ? t('admin.hotels.summary.problems', { count: row.problems }) : t(`admin.hotels.state.${s}`)}
+    </Pill>
+  );
+}
+
+function LinkCell({ kind }: { kind: LinkKind }) {
+  const { t } = useTranslation();
+  return (
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, whiteSpace: 'nowrap', color: kind === 'none' ? ink.low : ink.hi }}>
+      <Dot tone={LINK_TONE[kind]} />
+      {t(`admin.hotels.link.${kind}`)}
+    </Box>
+  );
+}
+
+function Th({ children, align }: { children?: ReactNode; align?: 'right' }) {
+  return (
+    <Box component="th" sx={{ ...typo.label, color: ink.mid, textAlign: align ?? 'left', px: 1.25, py: 1, borderBottom: `1px solid ${surface.line}`, whiteSpace: 'nowrap' }}>
       {children}
     </Box>
   );
 }
 
-function Row({
-  row,
-  checked,
+function HotelRows({
+  rows,
+  selected,
   onToggle,
   onOpen,
-  language,
+  q,
+  narrow,
+  draggable,
+  showGroup = false,
 }: {
-  row: FleetRow;
-  checked: boolean;
-  onToggle: () => void;
-  onOpen: () => void;
-  language: string;
+  rows: HotelViewRow[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  onOpen: (id: string) => void;
+  q: string;
+  narrow: boolean;
+  draggable: boolean;
+  showGroup?: boolean;
 }) {
   const { t } = useTranslation();
-  const cell = {
-    p: '13px 12px',
-    borderBottom: `1px solid ${surface.hair}`,
-    color: ink.mid,
-  } as const;
+  const drag = (id: string) =>
+    draggable ? { draggable: true, onDragStart: (e: DragEvent) => e.dataTransfer.setData('text/hotel', id) } : {};
+
+  if (narrow) {
+    return (
+      <Box sx={{ display: 'grid', gap: 1, p: showGroup ? 0 : 1 }}>
+        {rows.map((r) => (
+          <Box
+            key={r.id}
+            data-testid={`admin-fleet-row-${r.subdomain}`}
+            {...drag(r.id)}
+            sx={{ ...panelSx, p: 1.5, display: 'flex', gap: 1, opacity: r.is_active ? 1 : 0.62, outline: selected.includes(r.id) ? `2px solid ${accent.main}` : 'none' }}
+          >
+            <Checkbox size="small" checked={selected.includes(r.id)} onChange={() => onToggle(r.id)} sx={{ alignSelf: 'flex-start', m: -0.75 }} inputProps={{ 'aria-label': t('admin.hotels.pick', { name: r.name }), 'data-testid': `admin-fleet-pick-${r.subdomain}` } as Record<string, string>} />
+            <ButtonBase onClick={() => onOpen(r.id)} data-testid={`admin-fleet-open-${r.subdomain}`} sx={{ flex: 1, minWidth: 0, display: 'block', textAlign: 'left' }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}><Hl text={r.name} q={q} /></Box>
+                  <Box sx={{ ...typo.caption, color: ink.mid }}>
+                    <Hl text={r.subdomain} q={q} /> · {t('admin.hotels.summary.rooms', { count: r.counts.rooms })}
+                    {showGroup && r.group ? <> · <Hl text={r.group.title} q={q} /></> : null}
+                  </Box>
+                </Box>
+                <StateCell row={r} />
+              </Box>
+              <Box sx={{ mt: 1, ...typo.caption }}><LinkCell kind={r.link} /></Box>
+              {r.modules.length ? <Box sx={{ mt: 1 }}><ModulesCell codes={r.modules} /></Box> : null}
+            </ButtonBase>
+          </Box>
+        ))}
+      </Box>
+    );
+  }
 
   return (
-    <Box component="tr" data-testid={`admin-fleet-row-${row.subdomain}`} sx={{ '&:hover td': { bgcolor: surface.s2 } }}>
-      <Box component="td" sx={{ ...cell, width: 44 }}>
-        <Checkbox
-          size="small"
-          checked={checked}
-          onChange={onToggle}
-          inputProps={{ 'data-testid': `admin-fleet-pick-${row.subdomain}` } as Record<string, string>}
-          sx={{ color: ink.low, '&.Mui-checked': { color: accent.main } }}
-        />
-      </Box>
-      <Box component="td" sx={cell}>
-        <ButtonBase
-          onClick={onOpen}
-          data-testid={`admin-fleet-open-${row.subdomain}`}
-          sx={{ display: 'block', textAlign: 'left' }}
-        >
-          <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{row.name}</Typography>
-          <Typography sx={{ ...typo.caption, color: ink.mid }}>{row.subdomain}</Typography>
-        </ButtonBase>
-      </Box>
-      <Box component="td" sx={cell}>
-        <Typography sx={{ ...typo.caption, fontWeight: 700, color: state.gold }}>
-          {row.tariff_title[language] ?? row.tariff_title.en ?? row.tariff}
-        </Typography>
-      </Box>
-      <Box component="td" sx={{ ...cell, textAlign: 'right' }}>{row.counts.rooms}</Box>
-      <Box component="td" sx={{ ...cell, textAlign: 'right' }}>{row.counts.services}</Box>
-      <Box component="td" sx={{ ...cell, textAlign: 'right' }}>{row.counts.orders_7d}</Box>
-      <Box component="td" sx={cell}>
-        <Box
-          data-testid={`admin-fleet-status-${row.subdomain}`}
-          sx={{
-            ...pillSx(STATUS_TONE[row.status]),
-          }}
-        >
-          {row.status === 'trial' && row.trial_days_left !== null
-            ? t('admin.fleet.trialDays', { days: row.trial_days_left })
-            : t(`admin.fleet.status.${row.status}`)}
-        </Box>
-        {/* Узел офлайн важнее статуса отеля: отель «активен», а половина его
-            функций не работает — и понять это нужно из списка, не проваливаясь. */}
-        {row.node_offline ? (
-          <Box
-            data-testid={`admin-fleet-node-offline-${row.subdomain}`}
-            sx={{
-              ml: 0.75,
-              ...pillSx('warn'),
-            }}
-          >
-            {t('admin.fleet.nodeOffline')}
+    <Box sx={showGroup ? { ...panelSx, p: 0, overflowX: 'auto' } : { overflowX: 'auto' }}>
+      {/* Ширины закреплены: таблицы групп стоят одна под другой и должны идти
+          ровными столбцами. */}
+      <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 860, ...typo.body }}>
+        <colgroup>
+          <col style={{ width: 52 }} />
+          <col style={{ width: showGroup ? '22%' : '26%' }} />
+          {showGroup ? <col style={{ width: '14%' }} /> : null}
+          <col style={{ width: 84 }} />
+          <col />
+          <col style={{ width: 170 }} />
+          <col style={{ width: 150 }} />
+        </colgroup>
+        <Box component="thead">
+          <Box component="tr">
+            <Box component="th" sx={{ borderBottom: `1px solid ${surface.line}` }} />
+            <Th>{t('admin.hotels.col.hotel')}</Th>
+            {showGroup ? <Th>{t('admin.hotels.col.group')}</Th> : null}
+            <Th align="right">{t('admin.hotels.col.rooms')}</Th>
+            <Th>{t('admin.hotels.col.modules')}</Th>
+            <Th>
+              {t('admin.hotels.col.link')}
+              <Help>{t('admin.hotels.help.link')}</Help>
+            </Th>
+            <Th>
+              {t('admin.hotels.col.state')}
+              <Help>{t('admin.hotels.help.state')}</Help>
+            </Th>
           </Box>
-        ) : null}
+        </Box>
+        <Box component="tbody">
+          {rows.map((r) => (
+            <Box
+              component="tr"
+              key={r.id}
+              data-testid={`admin-fleet-row-${r.subdomain}`}
+              {...drag(r.id)}
+              sx={{
+                bgcolor: selected.includes(r.id) ? accent.washSoft : undefined,
+                opacity: r.is_active ? 1 : 0.62,
+                '&:hover': { bgcolor: surface.s2 },
+                '& td': { px: 1.25, py: 1.1, borderBottom: `1px solid ${surface.hair}`, verticalAlign: 'middle' },
+              }}
+            >
+              <Box component="td">
+                <Checkbox
+                  size="small"
+                  checked={selected.includes(r.id)}
+                  onChange={() => onToggle(r.id)}
+                  inputProps={{ 'aria-label': t('admin.hotels.pick', { name: r.name }), 'data-testid': `admin-fleet-pick-${r.subdomain}` } as Record<string, string>}
+                />
+              </Box>
+              <Box component="td">
+                <ButtonBase onClick={() => onOpen(r.id)} data-testid={`admin-fleet-open-${r.subdomain}`} sx={{ display: 'block', textAlign: 'left', borderRadius: `${shape.radiusSmall}px` }}>
+                  <Box sx={{ fontWeight: 700, color: ink.hi }}><Hl text={r.name} q={q} /></Box>
+                  <Box sx={{ ...typo.caption, color: ink.mid }}>
+                    <Hl text={r.subdomain} q={q} />
+                    {r.city ? <> · <Hl text={r.city} q={q} /></> : null}
+                  </Box>
+                </ButtonBase>
+              </Box>
+              {showGroup ? (
+                <Box component="td" sx={{ color: r.group ? ink.hi : ink.low }}>
+                  {r.group ? (
+                    <Box component="span" sx={{ display: 'inline-flex', gap: 0.75, alignItems: 'center' }}>
+                      <GroupMark color={r.group.color} size={10} />
+                      <Hl text={r.group.title} q={q} />
+                    </Box>
+                  ) : (
+                    t('admin.hotels.ungrouped.short')
+                  )}
+                </Box>
+              ) : null}
+              <Box component="td" sx={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} data-testid={`admin-fleet-rooms-${r.subdomain}`}>{r.counts.rooms}</Box>
+              <Box component="td"><ModulesCell codes={r.modules} /></Box>
+              <Box component="td"><LinkCell kind={r.link} /></Box>
+              <Box component="td"><StateCell row={r} /></Box>
+            </Box>
+          ))}
+        </Box>
       </Box>
     </Box>
   );

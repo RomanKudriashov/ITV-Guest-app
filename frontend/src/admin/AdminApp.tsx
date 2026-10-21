@@ -18,7 +18,6 @@ import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
-import { GroupsPage } from './pages/GroupsPage';
 import { PublicationsPage } from './pages/PublicationsPage';
 import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
@@ -32,7 +31,6 @@ import { accent, ink, typo } from './adminTokens';
 // узнают только по ним.
 import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
-import WorkspacesOutlinedIcon from '@mui/icons-material/WorkspacesOutlined';
 import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
@@ -56,9 +54,8 @@ const SECTIONS: AdminSection[] = [
   // Ниже — то, что относится к самой платформе, а не к отелям. Группировка та
   // же, что в CMS (R4): плоская простыня одинаковых пунктов не даёт понять,
   // где кончаются отели и начинается платформа.
-  // Группы — рядом с флотом, а не в блоке платформы: это разрез ОТЕЛЕЙ, и
-  // человек идёт сюда из той же задачи, из которой открывает флот.
-  { key: 'groups', labelKey: 'admin.nav.groups', icon: <WorkspacesOutlinedIcon fontSize="small" /> },
+  // «Группы» влились в «Отели» (партия 62-A1): группы отелей одного
+  // владельца видны и правятся прямо в списке отелей.
   // Публикация — тоже про отели, а не про платформу: адресуется группами.
   { key: 'publications', labelKey: 'admin.nav.publications', icon: <PublishOutlinedIcon fontSize="small" /> },
   { key: 'modules', labelKey: 'admin.nav.modules', icon: <ExtensionOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
@@ -171,7 +168,9 @@ function Console({ onLogout }: { onLogout: () => void }) {
     поделиться можно только целым.
   */
   const [searchParams, setSearchParams] = useSearchParams();
-  const section = searchParams.get('section') || 'overview';
+  // Старый адрес раздела групп ведёт в «Отели», где группы живут теперь.
+  const rawSection = searchParams.get('section') || 'overview';
+  const section = rawSection === 'groups' ? 'fleet' : rawSection;
   /*
     ОТКРЫТЫЙ ОТЕЛЬ — ТОЖЕ В АДРЕСЕ, и по той же причине, что раздел.
 
@@ -200,6 +199,12 @@ function Console({ onLogout }: { onLogout: () => void }) {
       'origin',
       'tariff',
       'page',
+      // Фильтры и вид «Отелей» (партия 62-A1).
+      'state',
+      'link',
+      'module',
+      'layout',
+      'closed',
     ]) {
       params.delete(key);
     }
@@ -287,7 +292,6 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'fleet' && hotelId ? (
         <HotelPage id={hotelId} onBack={closeHotel} />
       ) : null}
-      {section === 'groups' ? <GroupsPage /> : null}
       {section === 'publications' ? <PublicationsPage /> : null}
       {section === 'modules' ? <ModulesPage /> : null}
       {section === 'nodes' ? <NodesPage /> : null}

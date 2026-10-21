@@ -135,8 +135,7 @@ class TariffIn(Schema):
 class BulkActiveIn(Schema):
     """
     Кого включаем/выключаем. ДВА СПОСОБА АДРЕСАЦИИ, а не два действия:
-    перечислить отели или назвать группу. У группы-правила состав считается в
-    момент нажатия — тем же кодом, что показал число на предпросмотре.
+    перечислить отели или назвать группу.
     """
 
     hotel_ids: list[str] = []
@@ -162,18 +161,28 @@ class PublicationIn(Schema):
 
 
 class GroupIn(Schema):
-    code: str | None = None
+    """Группа: создание и правка. Код человек не вводит — он выводится из названия."""
+
     title: str | None = None
-    kind: str | None = None
-    mode: str | None = None
-    # Условие для `mode=rule`: {"city": "Москва"}. Неизвестные ключи сервис
-    # отбрасывает — правило по несуществующему признаку не выдаёт пустоту молча.
-    rule: dict | None = None
+    description: str | None = None
     note: str | None = None
+    color: str | None = None
+    sort_order: int | None = None
+    parent_id: str | None = None
+    # Только при создании: отели, которые сразу переезжают в группу.
+    hotel_ids: list[str] | None = None
+    code: str | None = None
 
 
 class GroupMembersIn(Schema):
     hotel_ids: list[str]
+
+
+class GroupMoveIn(Schema):
+    """Перенести отели в группу; `group_id = null` — убрать из группы."""
+
+    hotel_ids: list[str]
+    group_id: str | None = None
 
 class PlatformLoginIn(Schema):
     email: str

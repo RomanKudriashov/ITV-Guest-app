@@ -45,10 +45,12 @@ test.describe('Сводка и флот', () => {
     await page.getByTestId('admin-fleet-search').fill(DEMO)
     await expect(page.getByTestId(`admin-fleet-row-${DEMO}`)).toBeVisible({ timeout: 15_000 })
 
-    // Фильтр «Отключённые» не должен показывать активный отель.
-    await page.getByTestId('admin-fleet-filter-disabled').click()
+    // Фильтр «Отключён» не должен показывать работающий отель; крестик на чипе снимает фильтр.
+    await page.getByTestId('admin-hotels-facet-state').click()
+    await page.getByTestId('admin-hotels-option-state-disabled').click()
+    await page.keyboard.press('Escape')
     await expect(page.getByTestId(`admin-fleet-row-${DEMO}`)).toBeHidden({ timeout: 15_000 })
-    await page.getByTestId('admin-fleet-filter-active').click()
+    await page.getByTestId('admin-hotels-chip-state-disabled').getByRole('button').click()
     await expect(page.getByTestId(`admin-fleet-row-${DEMO}`)).toBeVisible({ timeout: 15_000 })
   })
 

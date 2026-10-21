@@ -464,18 +464,21 @@ export const bulkSetActive = (hotelIds: string[], isActive: boolean, groupId?: s
     group_id: groupId ?? null,
   });
 
-/* ── Группы отелей ─────────────────────────────────────────────────────── */
+/* ── Группы отелей (партия 62-A1: отели одного владельца) ───────────────── */
+
+export type GroupColor = 'accent' | 'ok' | 'warn' | 'bad' | 'gold' | 'info';
+export const GROUP_COLORS: GroupColor[] = ['accent', 'ok', 'warn', 'bad', 'gold', 'info'];
 
 export interface HotelGroup {
   id: string;
   code: string;
   title: string;
-  kind: string;
-  mode: 'list' | 'rule';
-  rule: Record<string, string>;
+  description: string;
   note: string;
+  color: GroupColor;
+  sort_order: number;
+  parent_id: string | null;
   created_at: string;
-  /** Размер считает сервер: у правила он вычисляемый. */
   size?: number;
 }
 
@@ -484,26 +487,48 @@ export interface GroupMember {
   name: string;
   subdomain: string;
   is_active: boolean;
-  /** У группы-правила пусто: отель попал в неё условием, а не человеком. */
   added_by: string | null;
   added_at: string | null;
 }
 
 export interface GroupsPage {
   items: HotelGroup[];
-  kinds: { code: string; title: string }[];
-  rule_fields: string[];
+  colors: { code: GroupColor; title: string }[];
+}
+
+export interface GroupInput {
+  title?: string;
+  description?: string;
+  note?: string;
+  color?: GroupColor;
+  sort_order?: number;
+  parent_id?: string | null;
+  hotel_ids?: string[];
+}
+
+export interface GroupMove {
+  hotel: string;
+  from: string;
+  to: string;
 }
 
 export const getGroups = () => request<GroupsPage>('/groups');
 
-export const createGroup = (payload: Partial<HotelGroup>) =>
-  request<HotelGroup>('/groups', 'POST', payload);
+export const createGroup = (payload: GroupInput) => request<HotelGroup>('/groups', 'POST', payload);
 
-export const patchGroup = (id: string, payload: Partial<HotelGroup>) =>
+export const patchGroup = (id: string, payload: GroupInput) =>
   request<HotelGroup>(`/groups/${id}`, 'PATCH', payload);
 
-export const deleteGroup = (id: string) => request<{ ok: boolean }>(`/groups/${id}`, 'DELETE');
+/** Удалить группу: отели уходят в «без группы». Подтверждение — названием. */
+export const deleteGroup = (id: string, confirmTitle: string) =>
+  request<{ ok: boolean; released: string[] }>(
+    `/groups/${id}?confirm_title=${encodeURIComponent(confirmTitle)}`,
+    'DELETE',
+  );
+
+/** Перенести отели в группу; `null` — убрать из группы. */
+export const moveHotels = (hotelIds: string[], groupId: string | null) =>
+  request<{ moved: number; moves: GroupMove[] }>('/groups/move', 'POST', { hotel_ids: hotelIds, group_id: groupId });
 
 export const getGroupMembers = (id: string) =>
   request<{ group: HotelGroup; members: GroupMember[] }>(`/groups/${id}/members`);
@@ -515,6 +540,46 @@ export const addGroupMembers = (id: string, hotelIds: string[]) =>
 
 export const removeGroupMember = (id: string, hotelId: string) =>
   request<{ removed: number; size: number }>(`/groups/${id}/members/${hotelId}`, 'DELETE');
+
+/* ── «Отели» нового вида: группы, поиск, фильтры (партия 62-A1) ─────────── */
+
+export type LinkKind = 'online' | 'silent' | 'none';
+export type HotelState = 'problems' | 'ready' | 'disabled';
+
+export interface HotelViewRow extends FleetRow {
+  city: string;
+  link: LinkKind;
+  modules: string[];
+  /** Проблемы обзора считает сервер готовности (партия B); до неё — 0. */
+  problems: number;
+  group: { id: string; title: string; color: GroupColor } | null;
+}
+
+export interface GroupSummary {
+  hotels: number;
+  /** Работающих (не отключённых): «без проблем» говорим только о них. */
+  active: number;
+  rooms: number;
+  problems: number;
+  link: Record<LinkKind, number>;
+}
+
+export interface HotelViewGroup extends HotelGroup {
+  summary: GroupSummary;
+  items: HotelViewRow[];
+}
+
+export interface HotelsView {
+  layout: 'groups' | 'list';
+  total: number;
+  facets: Record<'state' | 'link' | 'module' | 'group', Record<string, number>>;
+  groups: HotelViewGroup[];
+  ungrouped: { summary: GroupSummary; items: HotelViewRow[] } | null;
+  items: HotelViewRow[];
+}
+
+export const getHotelsView = (params: Record<string, string>) =>
+  request<HotelsView>(`/fleet?${new URLSearchParams(params).toString()}`);
 
 /**
  * Выгрузка. Идёт мимо `request`: ответ — CSV, а не JSON, и его нужно отдать

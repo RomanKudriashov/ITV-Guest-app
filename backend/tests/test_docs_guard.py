@@ -134,10 +134,10 @@ def test_the_tariffs_match_the_code():
     _assert_block_matches("tariffs", set(tariffs.codes()))
 
 
-def test_the_group_kinds_match_the_code():
+def test_the_group_colors_match_the_code():
     from apps.hotels.models import HotelGroup
 
-    _assert_block_matches("group-kinds", {kind.value for kind in HotelGroup.Kind})
+    _assert_block_matches("group-colors", {color.value for color in HotelGroup.Color})
 
 
 def test_the_publication_outcomes_match_the_code():

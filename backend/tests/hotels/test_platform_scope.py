@@ -306,7 +306,6 @@ def test_the_scope_cannot_widen_itself(scoped, owner):
     УКУС. Право записи плюс область из одной группы не раздвигают область:
 
     * чужой отель в свою группу — 404, состав не меняется;
-    * правило или режим своей группы — 403;
     * удалить свою группу — 403 (строк области не станет — не станет и границы).
     """
     from apps.hotels.services.platform import scope as scope_svc
@@ -318,10 +317,7 @@ def test_the_scope_cannot_widen_itself(scoped, owner):
     added = api("post", f"/groups/{group_id}/members", {"hotel_ids": [str(theirs.pk)]})
     assert added.status_code == 404, added.content
 
-    ruled = api("patch", f"/groups/{group_id}", {"mode": "rule", "rule": {"field": "city", "value": ""}})
-    assert ruled.status_code == 403, ruled.content
-
-    dropped = api("delete", f"/groups/{group_id}")
+    dropped = api("delete", f"/groups/{group_id}?confirm_title=x")
     assert dropped.status_code == 403, dropped.content
 
     # Переименовать свою группу — можно: это не граница.
