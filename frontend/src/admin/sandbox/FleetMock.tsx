@@ -21,6 +21,8 @@ import { MODULES } from './moduleCatalog';
 import { SILENT_AFTER_S, plural, quickProblems, type Problem } from './readiness';
 import { FilterBar, passes, useFilters, type Facet } from './FilterBar';
 import { Dot, Empty, Help, Hl, PageHead, Pill, Sample, ViewSwitch, type Tone } from './ui';
+import { byOrder, groupsStore, useGroups, type Group } from './groupsStore';
+import { CreateGroupDialog, GroupMark } from './groupDialogs';
 
 /**
  * МАКЕТ 1 — «ОТЕЛИ» (партия 62, второй заход): один экран вместо «Отели |
@@ -30,17 +32,6 @@ import { Dot, Empty, Help, Hl, PageHead, Pill, Sample, ViewSwitch, type Tone } f
  * Групп у платформы локально нет ни одной, поэтому состав — образец, и
  * правки (создать, переименовать, перенести) живут в памяти экрана.
  */
-
-interface Group {
-  id: string;
-  title: string;
-  hotels: string[];
-}
-
-const SAMPLE_GROUPS: Group[] = [
-  { id: 'g-demo', title: 'Демо-отели', hotels: ['crystal', 'azure'] },
-  { id: 'g-spb', title: 'Санкт-Петербург', hotels: ['lumen'] },
-];
 
 type LinkKind = 'online' | 'silent' | 'none';
 const LINK: Record<LinkKind, { tone: Tone; label: string }> = {
@@ -78,10 +69,9 @@ export function FleetMock({ go }: { go: Go }) {
   const { q, values } = useFilters(KEYS);
   const narrow = useMediaQuery('(max-width:899px)');
   const { lines, ready } = useFleetLines();
-  const [groups, setGroups] = useState<Group[]>(SAMPLE_GROUPS);
+  const groups = [...useGroups()].sort(byOrder);
   const [selected, setSelected] = useState<string[]>(() => (params.get('sel') === 'demo' ? ['lumen', 'azure'] : []));
   const [dialog, setDialog] = useState<string | null>(params.get('dialog'));
-  const [renaming, setRenaming] = useState<Group | null>(null);
 
   const views: View[] = useMemo(
     () =>
@@ -150,13 +140,7 @@ export function FleetMock({ go }: { go: Go }) {
   ];
 
   const toggle = (sub: string) => setSelected((cur) => (cur.includes(sub) ? cur.filter((s) => s !== sub) : [...cur, sub]));
-  const moveTo = (subs: string[], groupId: string | null) =>
-    setGroups((cur) =>
-      cur.map((g) => ({
-        ...g,
-        hotels: g.id === groupId ? [...new Set([...g.hotels, ...subs])] : g.hotels.filter((h) => !subs.includes(h)),
-      })),
-    );
+  const moveTo = (subs: string[], groupId: string | null) => groupsStore.move(subs, groupId);
   const setClosed = (id: string) => {
     const next = new Set(closed);
     if (next.has(id)) next.delete(id);
@@ -244,11 +228,13 @@ export function FleetMock({ go }: { go: Go }) {
               <GroupBlock
                 key={g.id}
                 title={<Hl text={g.title} q={q} />}
+                color={g}
+                onOpenGroup={() => go({ group: g.id, gtab: 'summary' })}
                 all={all}
                 open={open}
                 onToggle={() => setClosed(g.id)}
                 onDrop={(sub) => moveTo([sub], g.id)}
-                actions={<Button size="small" sx={{ color: ink.mid }} onClick={() => setRenaming(g)}>Переименовать</Button>}
+                actions={<Button size="small" sx={{ color: ink.mid }} onClick={() => go({ group: g.id, gtab: 'summary' })}>Открыть группу →</Button>}
                 emptyHint="В группе пока нет отелей. Выберите отели ниже и нажмите «В группу…» или перетащите их сюда."
               >
                 <HotelTable views={inGroup} {...tableProps} />
@@ -283,20 +269,8 @@ export function FleetMock({ go }: { go: Go }) {
           }}
         />
       ) : null}
-      {dialog === 'new-group' || renaming ? (
-        <GroupNameDialog
-          initial={renaming?.title ?? ''}
-          onClose={() => {
-            setDialog(null);
-            setRenaming(null);
-          }}
-          onSave={(title) => {
-            if (renaming) setGroups((cur) => cur.map((g) => (g.id === renaming.id ? { ...g, title } : g)));
-            else setGroups((cur) => [...cur, { id: `g-${cur.length + 1}`, title, hotels: [] }]);
-            setDialog(null);
-            setRenaming(null);
-          }}
-        />
+      {dialog === 'new-group' ? (
+        <CreateGroupDialog lines={lines} groups={groups} onClose={() => setDialog(null)} onCreated={(id) => go({ group: id, gtab: 'summary', dialog: null })} />
       ) : null}
       {dialog === 'bulk-disable' ? (
         <AdminDialog
@@ -341,6 +315,8 @@ function linkSummary(all: View[]): ReactNode {
 
 function GroupBlock({
   title,
+  color,
+  onOpenGroup,
   hint,
   emptyHint,
   all,
@@ -352,6 +328,8 @@ function GroupBlock({
   children,
 }: {
   title: ReactNode;
+  color?: Group;
+  onOpenGroup?: () => void;
   hint?: string;
   emptyHint?: string;
   all: View[];
@@ -382,9 +360,12 @@ function GroupBlock({
       sx={{ ...panelSx, p: 0, overflow: 'hidden', outline: over ? `2px dashed ${accent.main}` : 'none' }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1.25, flexWrap: 'wrap', borderBottom: open ? `1px solid ${surface.line}` : 'none' }}>
-        <ButtonBase onClick={onToggle} aria-expanded={open} sx={{ gap: 0.75, borderRadius: `${shape.radius}px`, pr: 1, textAlign: 'left', minWidth: 0 }}>
+        <ButtonBase onClick={onToggle} aria-expanded={open} aria-label={open ? 'Свернуть' : 'Развернуть'} sx={{ borderRadius: `${shape.radius}px`, p: 0.25 }}>
           {open ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-          <Typography component="h2" sx={{ ...typo.panelTitle, color: muted ? ink.mid : ink.hi }}>{title}</Typography>
+        </ButtonBase>
+        {color ? <GroupMark color={color.color} /> : null}
+        <ButtonBase onClick={onOpenGroup ?? onToggle} sx={{ borderRadius: `${shape.radius}px`, pr: 1, textAlign: 'left', minWidth: 0 }}>
+          <Typography component="h2" sx={{ ...typo.panelTitle, color: muted ? ink.mid : ink.hi, textDecoration: onOpenGroup ? 'underline' : 'none', textDecorationColor: surface.line, textUnderlineOffset: '4px' }}>{title}</Typography>
         </ButtonBase>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', ...typo.caption, color: ink.mid, flex: '1 1 auto' }}>
           <span>{all.length} {plural(all.length, 'отель', 'отеля', 'отелей')}</span>
@@ -549,7 +530,7 @@ function HotelTable({
                 </Box>
               </Box>
               {showGroup ? (
-                <Box component="td" sx={{ color: v.group ? ink.hi : ink.low }}>{v.group ? <Hl text={v.group.title} q={q} /> : 'без группы'}</Box>
+                <Box component="td" sx={{ color: v.group ? ink.hi : ink.low }}>{v.group ? <Box component="span" sx={{ display: 'inline-flex', gap: 0.75, alignItems: 'center' }}><GroupMark color={v.group.color} size={10} /><Hl text={v.group.title} q={q} /></Box> : 'без группы'}</Box>
               ) : null}
               <Box component="td" sx={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{v.rooms}</Box>
               <Box component="td"><ModulesCell codes={v.modulesOn} /></Box>
@@ -593,26 +574,6 @@ function MoveDialog({ count, groups, onClose, onMove }: { count: number; groups:
           </Box>
         </ButtonBase>
       ))}
-    </AdminDialog>
-  );
-}
-
-function GroupNameDialog({ initial, onClose, onSave }: { initial: string; onClose: () => void; onSave: (title: string) => void }) {
-  const [title, setTitle] = useState(initial);
-  return (
-    <AdminDialog
-      testId="sandbox-group-name"
-      title={initial ? 'Переименовать группу' : 'Новая группа'}
-      subtitle="Группа объединяет отели одного владельца. Название видно только в Control: гостям и сотрудникам отелей его не показываем."
-      onClose={onClose}
-      actions={
-        <>
-          <Button sx={{ color: ink.mid }} onClick={onClose}>Отмена</Button>
-          <Button sx={primaryButtonSx} disabled={!title.trim()} onClick={() => onSave(title.trim())}>{initial ? 'Сохранить' : 'Создать'}</Button>
-        </>
-      }
-    >
-      <TextField autoFocus label="Название группы" placeholder="Например, «Отели Метрополь»" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth sx={fieldSx} />
     </AdminDialog>
   );
 }

@@ -25,6 +25,8 @@ import { FleetMock } from './FleetMock';
 import { HotelMock } from './HotelMock';
 import { ModulesCatalogMock } from './ModulesCatalogMock';
 import { PreviewMock } from './PreviewMock';
+import { GroupMock } from './GroupMock';
+import { useGroups } from './groupsStore';
 import { Panel, SandboxNotice } from './ui';
 
 /**
@@ -89,6 +91,8 @@ function SandboxConsole({ onLogout }: { onLogout: () => void }) {
   const [params, setParams] = useSearchParams();
   const section = params.get('s') || 'hotels';
   const hotelId = params.get('hotel');
+  const groupId = params.get('group');
+  const groupTitle = useGroups().find((g) => g.id === groupId)?.title;
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe, retry: false });
   const hotel = useQuery({ queryKey: ['sandbox', 'hotel', hotelId], queryFn: () => getHotel(hotelId ?? ''), enabled: Boolean(hotelId) });
 
@@ -102,7 +106,15 @@ function SandboxConsole({ onLogout }: { onLogout: () => void }) {
   };
 
   const crumb =
-    section === 'hotels' && hotelId ? (
+    section === 'hotels' && groupId && !hotelId ? (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+        <ButtonBase onClick={() => go({ group: null, gtab: null, dialog: null })} sx={{ ...typo.body, color: accent.soft, fontWeight: 600, px: 0.5 }}>
+          Отели
+        </ButtonBase>
+        <Box sx={{ color: ink.low }}>›</Box>
+        <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Группа «{groupTitle ?? '…'}»</Box>
+      </Box>
+    ) : section === 'hotels' && hotelId ? (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
         <ButtonBase onClick={() => go({ hotel: null, tab: null, dialog: null })} sx={{ ...typo.body, color: accent.soft, fontWeight: 600, px: 0.5 }}>
           Отели
@@ -120,7 +132,7 @@ function SandboxConsole({ onLogout }: { onLogout: () => void }) {
     <AdminShell
       sections={SECTIONS}
       active={section === 'preview' ? 'hotels' : section}
-      onNavigate={(key) => go(Object.fromEntries(['hotel', 'tab', 'view', 'module', 'dialog', 'sel', 'q', 'state', 'link', 'group', 'layout', 'closed', 'screen', 'mstate', 'who', 'what', 'period', 'need', 'demo', 'hq', 'on'].map((k) => [k, null]).concat([['s', key]])))}
+      onNavigate={(key) => go(Object.fromEntries(['hotel', 'tab', 'view', 'module', 'dialog', 'sel', 'q', 'state', 'link', 'group', 'layout', 'closed', 'screen', 'mstate', 'who', 'what', 'period', 'need', 'demo', 'hq', 'on', 'group', 'gtab'].map((k) => [k, null]).concat([['s', key]])))}
       me={me.data ?? null}
       onLogout={onLogout}
       crumb={crumb}
@@ -128,7 +140,8 @@ function SandboxConsole({ onLogout }: { onLogout: () => void }) {
       <SandboxNotice>
         Песочница: макет новой структуры Control на утверждение. Данные — живые локальные; кнопки действий открывают окна, но ничего не сохраняют.
       </SandboxNotice>
-      {section === 'hotels' && !hotelId ? <FleetMock go={go} /> : null}
+      {section === 'hotels' && !hotelId && !groupId ? <FleetMock go={go} /> : null}
+      {section === 'hotels' && groupId && !hotelId ? <GroupMock id={groupId} go={go} /> : null}
       {section === 'hotels' && hotelId ? <HotelMock id={hotelId} go={go} /> : null}
       {section === 'modules' ? <ModulesCatalogMock go={go} /> : null}
       {section === 'preview' ? <PreviewMock go={go} /> : null}
