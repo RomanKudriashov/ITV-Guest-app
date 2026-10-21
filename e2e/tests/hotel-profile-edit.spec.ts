@@ -164,11 +164,15 @@ test.describe('Профиль отеля: правка', () => {
     const hotelId = fleet.items[0].id
 
     try {
+      // Смена валюты — опасная правка: сервер просит подтверждения (409), и
+      // сохраняет только второй запрос, после «Понимаю» (партия 62-C).
       const saved = page.waitForResponse(
-        (r) => r.url().includes('/platform/hotels/') && r.request().method() === 'PATCH',
+        (r) => r.url().includes('/platform/hotels/') && r.request().method() === 'PATCH' && r.status() !== 409,
       )
       await pickOption(page, 'admin-hotel-currency-input', { value: next })
       await page.getByTestId('admin-hotel-save').click()
+      await expect(page.getByTestId('admin-profile-confirm-currency')).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('admin-profile-confirm-submit').click()
       expect((await saved).ok(), 'сохранение профиля отклонено').toBeTruthy()
 
       const audit = await request
@@ -187,7 +191,7 @@ test.describe('Профиль отеля: правка', () => {
       // Стенд общий: валюта возвращается и тогда, когда проверка упала на
       // полпути (партия 41, п.28) — сосед не должен увидеть чужую валюту.
       const restored = await request.patch(`${API}/api/v1/platform/hotels/${hotelId}`, {
-        data: { currency: was },
+        data: { currency: was, confirm: ['currency'] },
         headers: { Authorization: `Bearer ${owner.access}` },
       })
       expect(restored.ok(), 'вернуть демо-отелю его валюту').toBeTruthy()

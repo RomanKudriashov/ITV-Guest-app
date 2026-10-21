@@ -48,7 +48,7 @@ def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
     ПРЯМО СЕЙЧАС, тем же кодом, который показал число на экране. Хранимый
     состав дал бы «выключено 12» там, где отелей уже четырнадцать.
     """
-    from apps.hotels.services.platform.fleet import bulk_set_active
+    from apps.hotels.services.platform.fleet import bulk_targets
     from apps.hotels.services.platform import groups as groups_svc
 
     ip = request.META.get("REMOTE_ADDR")
@@ -67,15 +67,21 @@ def fleet_bulk(request: HttpRequest, payload: BulkActiveIn):
     from apps.hotels.services.platform import scope
 
     target_ids, outside = scope.intersect(request.user, target_ids)
-    changed = bulk_set_active(target_ids, payload.is_active)
+    # Одна логика с карточкой (партия 62-C): причина обязательна, сессии
+    # отзываются, заглушки включаются, журнал пишет сама `activation`.
+    from apps.hotels.services.platform import activation
+
+    if not payload.is_active:
+        activation._clean_reason(payload.reason)
+    changed = bulk_targets(target_ids, payload.is_active)
     action = "activated" if payload.is_active else "deactivated"
     for hotel in changed:
-        console.audit_hotel(hotel, f"platform.hotel.{action}", actor_id=request.user.pk, ip=ip, payload={"bulk": True})
-        if not payload.is_active:
-            # Отключённый отель — без живых входов сотрудников (партия 30).
-            from apps.accounts.services import sessions as session_svc
-
-            session_svc.revoke_hotel(hotel.pk, reason="hotel_deactivated")
+        if payload.is_active:
+            activation.enable(hotel, actor_id=request.user.pk, ip=ip, extra={"bulk": True})
+        else:
+            activation.disable(
+                hotel, reason=payload.reason, enable_on=payload.enable_on, actor_id=request.user.pk, ip=ip, extra={"bulk": True}
+            )
     console.audit_platform(
         "platform.fleet.bulk",
         actor_id=request.user.pk,

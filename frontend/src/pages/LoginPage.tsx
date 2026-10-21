@@ -104,8 +104,13 @@ export function LoginPage() {
       const me = await login(email.trim(), password);
       navigate(landingPath(me, requested), { replace: true });
     } catch (loginError) {
+      // Отключённый отель — «Вход недоступен», без причины (партия 62-C).
       const message =
-        loginError instanceof ApiError ? loginError.detail : t('auth.networkError');
+        loginError instanceof ApiError
+          ? loginError.code === 'hotel_disabled'
+            ? t('auth.hotelDisabled')
+            : loginError.detail
+          : t('auth.networkError');
       setError(message);
     } finally {
       setBusy(false);

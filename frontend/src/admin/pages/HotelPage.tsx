@@ -16,6 +16,8 @@ import { JournalTab } from './hotel/JournalTab';
 import { OverviewTab } from './hotel/OverviewTab';
 import { RoomsTab } from './hotel/RoomsTab';
 import { Pill } from './hotels/hotelsUi';
+import { ConfirmChangesDialog } from './hotel/hotelDialogs';
+import { AddressPanel, GroupPanel } from './hotel/ProfileExtras';
 
 import { parentOf } from '@/app/backMap';
 import { BackLink } from '@/kit/BackLink';
@@ -54,6 +56,9 @@ import {
   setTariff,
   type DowngradeWarning,
   type FixTarget,
+  type HotelPatch,
+  type NeedsConfirmation,
+  PlatformError,
   type HotelProfile,
   type ModuleEntry,
 } from '../adminClient';
@@ -270,7 +275,6 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
 /* ── Профиль ────────────────────────────────────────────────────────────── */
 
 function ProfileTab({ hotel }: { hotel: HotelProfile }) {
-  const actionFailed = useActionFailed();
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [adminEmail, setAdminEmail] = useState('');
@@ -289,15 +293,26 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     тем более. `dirty` считается сравнением с исходным, а не флагом «трогали
     поле»: вернул значение обратно — и кнопка снова погасла.
   */
+  /*
+    НАЗВАНИЕ И ГОРОД — ПО КАЖДОМУ ЯЗЫКУ ОТЕЛЯ (партия 62-C). Раньше поле было
+    одно и писало основной язык; переводы отель вёл в CMS. Теперь видны все
+    языки сразу, а сервер получает только изменённые: чужие переводы не
+    трогаются, пустое поле убирает перевод.
+  */
+  const langs = hotel.languages.map((lang) => lang.code);
+  const initialNames = Object.fromEntries(langs.map((code) => [code, hotel.name_i18n?.[code] ?? (code === hotel.default_language ? hotel.name : '')]));
+  const initialCities = Object.fromEntries(langs.map((code) => [code, hotel.city_i18n?.[code] ?? (code === hotel.default_language ? hotel.city ?? '' : '')]));
   const [draft, setDraft] = useState({
-    name: hotel.name,
-    city: hotel.city ?? '',
+    names: initialNames,
+    cities: initialCities,
     timezone: hotel.timezone,
     currency: hotel.currency,
     currency_minor_units: hotel.currency_minor_units,
     languages: hotel.languages.map((lang) => lang.code).join(', '),
   });
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Сервер попросил подтвердить опасную правку (409) — окно последствий.
+  const [need, setNeed] = useState<NeedsConfirmation | null>(null);
   // Смена валюты с другой размерностью ждёт ответа человека (партия 60).
   const [currencyAsk, setCurrencyAsk] = useState<{ code: string; units: number } | null>(null);
   const { i18n } = useTranslation();
@@ -345,20 +360,23 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     if (keptAppliedRef.current || !me.data?.id) return;
     keptAppliedRef.current = true;
     const saved = kept.restore();
-    if (saved) setDraft(saved);
+    // Черновик прежнего вида (название строкой) не поднимаем — форма другая.
+    if (saved && saved.names && saved.cities) setDraft(saved);
   }, [me.data?.id, kept]);
 
   const initial = {
-    name: hotel.name,
-    city: hotel.city ?? '',
+    names: initialNames,
+    cities: initialCities,
     timezone: hotel.timezone,
     currency: hotel.currency,
     currency_minor_units: hotel.currency_minor_units,
     languages: hotel.languages.map((lang) => lang.code).join(', '),
   };
-  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).filter(
-    (key) => String(draft[key]).trim() !== String(initial[key]).trim(),
-  );
+  const same = (a: unknown, b: unknown) =>
+    typeof a === 'object' ? JSON.stringify(a) === JSON.stringify(b) : String(a).trim() === String(b).trim();
+  const dirty = (Object.keys(initial) as (keyof typeof initial)[]).filter((key) => !same(draft[key], initial[key]));
+  const changedLangs = (now: Record<string, string>, was: Record<string, string>) =>
+    Object.fromEntries(Object.entries(now).filter(([code, text]) => text.trim() !== (was[code] ?? '').trim()).map(([code, text]) => [code, text.trim()]));
 
   // Пишем черновик, пока есть расхождение с сохранённым.
   useEffect(() => {
@@ -373,15 +391,12 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
   // часового пояса заодно переписывало название и город — одним языком
   // поверх переводов, которые отель вёл в CMS.
   const save = useMutation({
-    mutationFn: () => {
-      const body: Parameters<typeof patchHotel>[1] = {};
-      if (dirty.includes('name')) body.name = draft.name.trim();
-      // Переводимое поле: кладём под язык отеля, сервер сливает с остальными
-      // языками. Оператор вводит одну строку — вторая форма ввода ради
-      // города, который он пишет по-русски, означала бы четыре поля вместо одного.
-      if (dirty.includes('city')) {
-        body.city = draft.city.trim() ? { [hotel.default_language]: draft.city.trim() } : {};
-      }
+    mutationFn: (confirm: string[]) => {
+      const body: HotelPatch = {};
+      // Только изменённые языки: сервер сливает их с остальными переводами.
+      if (dirty.includes('names')) body.name = changedLangs(draft.names, initial.names);
+      if (dirty.includes('cities')) body.city = changedLangs(draft.cities, initial.cities);
+      if (confirm.length) body.confirm = confirm;
       if (dirty.includes('timezone')) body.timezone = draft.timezone;
       if (dirty.includes('currency')) body.currency = draft.currency;
       if (dirty.includes('currency_minor_units')) body.currency_minor_units = Number(draft.currency_minor_units);
@@ -395,28 +410,27 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
     },
     onSuccess: () => {
       setSaveError(null);
+      setNeed(null);
       // Сохранили — черновик отслужил.
       kept.discard();
       refresh();
     },
     // Введённое НЕ трогаем: человек только что это набрал, и отобрать текст
     // вместе с отказом — самый быстрый способ заставить набирать заново.
-    onError: (error) =>
-      setSaveError(error instanceof Error ? error.message : t('admin.hotel.saveFailed')),
+    onError: (error) => {
+      // Опасная правка: сервер перечислил последствия — показываем и ждём «да».
+      if (error instanceof PlatformError && error.status === 409 && error.code === 'needs_confirmation') {
+        setNeed(error.data as NeedsConfirmation);
+        return;
+      }
+      setSaveError(error instanceof Error ? error.message : t('admin.hotel.saveFailed'));
+    },
   });
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
   };
-  const [askActive, setAskActive] = useState<boolean | null>(null);
-  const toggleActive = useMutation({
-    mutationFn: (next: boolean) => patchHotel(hotel.id, { is_active: next } as Partial<HotelProfile>),
-    onSuccess: refresh,
-  
-    // Отказ виден: молча съеденный 403 читается как успех.
-    onError: actionFailed,
-  });
   const resetAdmin = useMutation({
     mutationFn: () => setHotelAdmin(hotel.id, { email: adminEmail.trim() }),
     onSuccess: (result) => {
@@ -467,39 +481,33 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
         </Typography>
         {canEdit ? (
           <>
-        <TextField
-          size="small"
-          fullWidth
-          label={t('admin.hotel.field.name')}
-          value={draft.name}
-          onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
-          inputProps={{ 'data-testid': 'admin-hotel-name-input' }}
-          sx={{ mb: 1.25 }}
-        />
-        {/*
-          ГОРОД. Появился вместе с группами-правилами: по нему режет флот
-          правило «город Москва», и признак, который негде заполнить, делал бы
-          такое правило всегда пустым.
-        */}
-        <TextField
-          size="small"
-          fullWidth
-          label={t('admin.hotel.field.city')}
-          value={draft.city}
-          onChange={(event) => setDraft((prev) => ({ ...prev, city: event.target.value }))}
-          inputProps={{ 'data-testid': 'admin-hotel-city-input' }}
-          helperText={t('admin.hotel.field.cityHint')}
-          sx={{ mb: 1.25 }}
-        />
-        {/* Поддомен не редактируется: это ключ тенанта, и он напечатан на QR в
-            номерах. Смена поддомена превратила бы напечатанные коды в мусор. */}
-        <Kv
-          label={t('admin.hotel.field.subdomain')}
-          value={`${hotel.subdomain} · ${t('admin.hotel.field.subdomainLocked')}`}
-        />
-        <Typography sx={{ ...typo.caption, color: ink.low, mb: 1.25 }}>
-          {t('admin.hotel.field.subdomainWhy')}
-        </Typography>
+        {/* По языку на строку: основной — первым, у него те же testid, что раньше. */}
+        {[hotel.default_language, ...langs.filter((code) => code !== hotel.default_language)].map((code) => {
+          const main = code === hotel.default_language;
+          return (
+            <Box key={code} sx={{ ...formGridSx, columnGap: 1.25, rowGap: 1.25, mb: 1.25 }}>
+              <TextField
+                size="small"
+                label={`${t('admin.hotel.field.name')} · ${code.toUpperCase()}${main ? ` · ${t('admin.profile.mainLanguage')}` : ''}`}
+                value={draft.names[code] ?? ''}
+                placeholder={main ? '' : t('admin.profile.noTranslation')}
+                onChange={(event) => setDraft((prev) => ({ ...prev, names: { ...prev.names, [code]: event.target.value } }))}
+                inputProps={{ 'data-testid': main ? 'admin-hotel-name-input' : `admin-hotel-name-${code}` }}
+                sx={spanSx(6)}
+              />
+              <TextField
+                size="small"
+                label={`${t('admin.hotel.field.city')} · ${code.toUpperCase()}`}
+                value={draft.cities[code] ?? ''}
+                placeholder={t('admin.profile.noTranslation')}
+                onChange={(event) => setDraft((prev) => ({ ...prev, cities: { ...prev.cities, [code]: event.target.value } }))}
+                inputProps={{ 'data-testid': main ? 'admin-hotel-city-input' : `admin-hotel-city-${code}` }}
+                sx={spanSx(6)}
+              />
+            </Box>
+          );
+        })}
+        <Typography sx={{ ...typo.caption, color: ink.low, mt: -0.5, mb: 1.25 }}>{t('admin.profile.languagesHint')}</Typography>
         {/* Пояс, валюта, языки — выбором из справочника сервера, а не вводом
             (партия 54): опечатка в поясе молча делала отель UTC-шным. */}
         <SelectField
@@ -608,7 +616,7 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
           <Button
             sx={primaryButtonSx}
             disabled={dirty.length === 0 || save.isPending}
-            onClick={() => save.mutate()}
+            onClick={() => save.mutate([])}
             data-testid="admin-hotel-save"
           >
             {t('admin.hotel.save')}
@@ -651,40 +659,25 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
             </Typography>
           </>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-          {/* Роли «только чтение» тумблер не показываем: сервер ответит 403
-              (партия 60). Состояние она видит подписью. */}
-          {canEdit ? (
-            <Switch
-              checked={hotel.is_active}
-              onChange={(e) => setAskActive(e.target.checked)}
-              inputProps={{ 'data-testid': 'admin-hotel-active' } as Record<string, string>}
-            />
-          ) : null}
-          <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-hotel-active-label">
-            {hotel.is_active ? t('admin.hotel.activeOn') : t('admin.hotel.activeOff')}
-          </Typography>
-        </Box>
-        {/* Выключение закрывает витрину и разлогинивает персонал, включение
-            открывает отель гостям — оба только с вопросом (партия 60). */}
-        <ConfirmDialog
-          open={askActive !== null}
-          testId="admin-hotel-active-confirm"
-          destructive={askActive === false}
-          title={t(askActive ? 'admin.hotel.activeConfirm.onTitle' : 'admin.hotel.activeConfirm.offTitle', {
-            name: hotel.name,
-          })}
-          description={t(askActive ? 'admin.hotel.activeConfirm.onBody' : 'admin.hotel.activeConfirm.offBody')}
-          confirmLabel={t(askActive ? 'admin.hotel.activeConfirm.on' : 'admin.hotel.activeConfirm.off')}
-          onConfirm={() => {
-            if (askActive !== null) toggleActive.mutate(askActive);
-            setAskActive(null);
-          }}
-          onClose={() => setAskActive(null)}
-        />
+        {/* Состояние — подписью; отключают на «Обзоре», с причиной (партия 62-C). */}
+        <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.5 }} data-testid="admin-hotel-active-label">
+          {hotel.is_active ? t('admin.hotel.activeOn') : t('admin.hotel.activeOff')}
+        </Typography>
+        {need ? (
+          <ConfirmChangesDialog
+            need={need}
+            busy={save.isPending}
+            onConfirm={() => save.mutate(need.fields)}
+            onClose={() => setNeed(null)}
+          />
+        ) : null}
       </Box>
 
       <AdminsPanel hotelId={hotel.id} />
+
+      <AddressPanel hotel={hotel} />
+
+      <GroupPanel hotel={hotel} />
 
       {/* «Только чтение» админа не заводит и не сбрасывает: сервер ответит 403 (партия 60). */}
       {canEdit ? (
@@ -857,7 +850,7 @@ function ModulesTab({ id }: { id: string }) {
 /* ── Журнал ─────────────────────────────────────────────────────────────── */
 
 function ActivityTab({ id }: { id: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const activity = useQuery({ queryKey: ['admin', 'activity', id], queryFn: () => getActivity(id) });
   if (activity.isPending || activity.isError || activity.data === undefined) {
     return (
@@ -881,7 +874,7 @@ function ActivityTab({ id }: { id: string }) {
           sx={{ display: 'flex', gap: 1.5, py: 1, borderBottom: `1px solid ${surface.hair}`, ...typo.caption }}
         >
           <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 132 }}>
-            {new Date(row.at).toLocaleString()}
+            {new Date(row.at).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
           </Typography>
           <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 74 }}>
             {t(`admin.actor.${row.actor_type}`, { defaultValue: row.actor_type })}
@@ -905,6 +898,7 @@ function ActivityTab({ id }: { id: string }) {
             <Typography sx={{ color: ink.low, ...typo.caption, fontSize: 11 }}>
               {row.action}
             </Typography>
+            <ChangeLines payload={row.payload} />
           </Box>
           {/* Действие поддержки под чужой личиной обязано быть отличимо — это
               инвариант импersonation, а не украшение журнала. */}
@@ -915,6 +909,39 @@ function ActivityTab({ id }: { id: string }) {
       ))}
     </Box>
   );
+}
+
+/**
+ * «Было → стало» под строкой журнала (партия 62-C): поля правки профиля,
+ * причина и дата отключения (это Control — здесь её видно), авто-включение.
+ */
+function ChangeLines({ payload }: { payload?: Record<string, unknown> | null }) {
+  const { t, i18n } = useTranslation();
+  if (!payload) return null;
+  const show = (value: unknown): string => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
+    if (typeof value === 'object') {
+      const pairs = Object.entries(value as Record<string, unknown>).filter(([, text]) => text);
+      return pairs.length ? pairs.map(([lang, text]) => `${lang.toUpperCase()}: ${String(text)}`).join(' · ') : '—';
+    }
+    return String(value);
+  };
+  const changes = (payload.changes ?? {}) as Record<string, { from?: unknown; to?: unknown }>;
+  const lines = Object.entries(changes).map(([field, change]) => (
+    <Box key={field} data-testid={`admin-activity-change-${field}`}>
+      <b>{t(`admin.profile.field.${field}`, { defaultValue: field })}:</b> {show(change?.from)} → {show(change?.to)}
+    </Box>
+  ));
+  if (typeof payload.reason === 'string' && payload.reason) {
+    lines.push(<Box key="reason" data-testid="admin-activity-reason">{t('admin.card.activation.reason', { reason: payload.reason })}</Box>);
+  }
+  if (typeof payload.enable_on === 'string' && payload.enable_on) {
+    lines.push(<Box key="enable_on">{t('admin.card.activation.enableOn', { date: new Date(payload.enable_on).toLocaleDateString(i18n.language, { dateStyle: 'long' }) })}</Box>);
+  }
+  if (payload.auto === true) lines.push(<Box key="auto">{t('admin.card.activation.auto')}</Box>);
+  if (!lines.length) return null;
+  return <Box sx={{ color: ink.mid, ...typo.caption, mt: 0.5, display: 'grid', gap: 0.25, overflowWrap: 'anywhere' }}>{lines}</Box>;
 }
 
 /* ── Тариф и лимиты ─────────────────────────────────────────────────────── */

@@ -20,12 +20,22 @@ from apps.core.context import platform_scope
 
 
 def certificate_names() -> list[str]:
-    from apps.hotels.models import Hotel
+    from apps.hotels.models import Hotel, HotelSubdomainAlias
 
     with platform_scope():
+        # ОТКЛЮЧЁННЫЕ — ТОЖЕ (партия 62-C): гость отключённого отеля видит
+        # заглушку в его бренде, и открыться она обязана по HTTPS. И прежние
+        # поддомены: с них идёт перенаправление, QR в номерах ведут туда.
+        aliases = list(
+            HotelSubdomainAlias.objects.using("platform")
+            .filter(hotel__deleted_at__isnull=True)
+            .exclude(hotel__origin=Hotel.Origin.TEST)
+            .order_by("old")
+            .values_list("old", flat=True)
+        )
         hotels = list(
             Hotel.all_objects.using("platform")
-            .filter(is_active=True, deleted_at__isnull=True)
+            .filter(deleted_at__isnull=True)
             # Отели автотестов в сертификат не идут: у Let's Encrypt предел —
             # 100 имён, и прогоны его бы съели.
             .exclude(origin=Hotel.Origin.TEST)
@@ -36,6 +46,7 @@ def certificate_names() -> list[str]:
     for base in settings.GUEST_APP_BASE_DOMAINS:
         names.append(base)
         names += [f"{subdomain}.{base}" for subdomain, _ in hotels if subdomain]
+        names += [f"{old}.{base}" for old in aliases]
     names += [domain.lower() for _, domain in hotels if domain]
     unique: list[str] = []
     for name in names:

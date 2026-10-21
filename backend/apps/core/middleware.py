@@ -67,10 +67,19 @@ class TenantMiddleware:
         host = request.get_host()
         subdomain = subdomain or resolve_subdomain(host)
 
+        from . import hotel_gate
+
         hotel = None
         if subdomain:
-            hotel = Hotel.objects.filter(subdomain=subdomain, is_active=True).first()
+            # ОТКЛЮЧЁННЫЙ ТОЖЕ НАХОДИТСЯ (партия 62-C): раньше фильтр
+            # `is_active` отвечал «отель не найден», и гость видел безликую
+            # ошибку вместо заглушки в бренде отеля. Что ему можно — ниже.
+            hotel = Hotel.objects.filter(subdomain=subdomain).first()
             if hotel is None:
+                # Прежний поддомен: отель переехал — новый адрес, а не 404.
+                moved = hotel_gate.moved_response(host, subdomain, request.path)
+                if moved is not None:
+                    return moved
                 return JsonResponse(
                     {"detail": f"Отель '{subdomain}' не найден", "code": "unknown_tenant"},
                     status=404,
@@ -79,6 +88,12 @@ class TenantMiddleware:
             # Собственный домен отеля — только явной записью; чужой адрес
             # отеля не даёт (раньше давал первую метку имени).
             hotel = custom_domain_hotel(host)
+
+        if hotel is not None and not request.path.startswith(PLATFORM_PATH_PREFIXES):
+            if not hotel.is_active:
+                return hotel_gate.disabled_response(hotel, request.path)
+            if hotel_gate.is_status_path(request.path):
+                return hotel_gate.active_status(hotel)
 
         # НАША КОНСОЛЬ ЖИВЁТ ТОЛЬКО НА КОРНЕ.
         #

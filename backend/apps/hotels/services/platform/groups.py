@@ -359,18 +359,28 @@ def _plan(group: HotelGroup, kind: str, module: str | None) -> list[dict]:
     return rows
 
 
-def run_action(group: HotelGroup, kind: str, module: str | None, hotel_ids_: list[str], reason: str = "") -> list[dict]:
+def run_action(
+    group: HotelGroup,
+    kind: str,
+    module: str | None,
+    hotel_ids_: list[str],
+    reason: str = "",
+    *,
+    actor_id=None,
+    ip: str | None = None,
+) -> list[dict]:
     """
     Выполнить действие по группе. МЕНЯЕТСЯ РОВНО ПОКАЗАННОЕ: из присланного
     списка (то, что человек видел в показе) берутся только отели, которые
     сейчас в группе и которым действие действительно что-то меняет.
     Возвращает изменившиеся.
 
-    Отключение отеля сейчас — прежнее `is_active` с отзывом входов персонала;
-    полная логика отключения (заглушки, причина) — партия C.
+    Отключение и включение — общей логикой отеля (`activation`, партия 62-C):
+    причина, отзыв сессий, заглушки, журнал — те же, что у одиночного.
     """
     from apps.core.errors import ValidationError
     from apps.hotels.module_registry import set_modules
+    from apps.hotels.services.platform import activation
 
     _check_action(kind, module)
     if kind == "disable" and not (reason or "").strip():
@@ -385,14 +395,10 @@ def run_action(group: HotelGroup, kind: str, module: str | None, hotel_ids_: lis
             hotel = hotels[row["hotel_id"]]
             if kind in ("module_on", "module_off"):
                 set_modules(hotel, [{"code": module, "is_enabled": kind == "module_on"}])
+            elif kind == "disable":
+                activation.disable(hotel, reason=reason, actor_id=actor_id, ip=ip, extra={"group": group.code})
             else:
-                hotel.is_active = kind == "enable"
-                hotel.save(update_fields=["is_active", "updated_at"])
-    if kind == "disable":
-        from apps.accounts.services import sessions as session_svc
-
-        for row in plan:
-            session_svc.revoke_hotel(hotels[row["hotel_id"]].pk, reason="hotel_deactivated")
+                activation.enable(hotel, actor_id=actor_id, ip=ip, extra={"group": group.code})
     return plan
 
 

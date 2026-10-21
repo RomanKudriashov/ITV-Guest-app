@@ -293,7 +293,7 @@ def test_the_bulk_action_is_addressed_by_a_group(api):
     one, two = _hotel("bulk-one"), _hotel("bulk-two")
     group = _group(api, "Массовая", [one, two])
 
-    response = api("post", "/fleet/bulk", {"group_id": group["id"], "is_active": False})
+    response = api("post", "/fleet/bulk", {"group_id": group["id"], "is_active": False, "reason": "проверка"})
     assert response.status_code == 200, response.content
     assert response.json()["changed"] == 2
 

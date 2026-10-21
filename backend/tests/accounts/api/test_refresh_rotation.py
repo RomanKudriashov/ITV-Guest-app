@@ -161,7 +161,7 @@ def test_deactivating_the_hotel_kills_staff_refresh(api, hotel, client):
     ).json()["access"]
     response = client.patch(
         f"/api/v1/platform/hotels/{hotel.pk}",
-        data=json.dumps({"is_active": False}),
+        data=json.dumps({"is_active": False, "reason": "проверка"}),
         content_type="application/json",
         HTTP_HOST="guest.localhost",
         HTTP_AUTHORIZATION=f"Bearer {access}",

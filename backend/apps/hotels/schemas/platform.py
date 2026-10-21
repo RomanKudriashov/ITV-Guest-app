@@ -41,7 +41,8 @@ class HotelPatchIn(Schema):
     # и она заперта на владельца. Пока поле лежало ещё и тут (и в ModulesIn),
     # охрана стояла на двери, а рядом было две дыры в стене: тариф менялся
     # ролью «только чтение» через профиль и через реестр модулей.
-    name: str | None = None
+    # Название — строкой (основной язык) или словарём по языкам отеля (62-C).
+    name: str | dict | None = None
     timezone: str | None = None
     currency: str | None = None
     # Число знаков после запятой — ПОКАЗАТЕЛЬ СТЕПЕНИ, а не множитель: 2 → в
@@ -56,6 +57,19 @@ class HotelPatchIn(Schema):
     # задать его оператору было негде — признак существовал в базе и не
     # заполнялся ниоткуда, то есть правило по нему всегда возвращало пустоту.
     city: dict | None = None
+    # Только владелец (партия 62-C). Пустой домен — убрать свой домен.
+    subdomain: str | None = None
+    custom_domain: str | None = None
+    # Опасные правки, которые человек подтвердил в окне последствий.
+    confirm: list[str] = []
+    # Отключение через профиль — та же логика, что у /disable.
+    reason: str | None = None
+    enable_on: date | None = None
+
+
+class DisableIn(Schema):
+    reason: str
+    enable_on: date | None = None
 
 class AdminIn(Schema):
     email: str
@@ -141,6 +155,9 @@ class BulkActiveIn(Schema):
     hotel_ids: list[str] = []
     group_id: str | None = None
     is_active: bool
+    # Отключение — с причиной (обязательна) и датой авто-включения (62-C).
+    reason: str = ""
+    enable_on: date | None = None
 
 
 class DictionaryResetIn(Schema):

@@ -11,8 +11,9 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../../useRights';
 import { ink, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../../adminTokens';
 import {
+  disableHotel,
+  enableHotel,
   getModules,
-  patchHotel,
   type FixTarget,
   type HotelProfile,
   type Readiness,
@@ -20,6 +21,7 @@ import {
   type Severity,
 } from '../../adminClient';
 import { Dot, Empty, Help, Metric, Panel, Pill } from '../hotels/hotelsUi';
+import { DisableDialog } from './hotelDialogs';
 
 /**
  * ОБЗОР ОТЕЛЯ (партия 62-B, по утверждённому макету): что мешает отелю
@@ -255,52 +257,72 @@ function EnabledModules({ hotelId, onOpen }: { hotelId: string; onOpen: () => vo
 }
 
 /**
- * Отключение отеля — пока прежней логикой (`is_active` с подтверждением).
- * Причина, дата включения и заглушки гостю и сотруднику — партия C.
+ * Отключение отеля (партия 62-C): причина обязательна и видна только здесь,
+ * дата авто-включения — по желанию. Отключённый — пометка: причина, кем,
+ * когда, когда включится сам.
  */
 function Activation({ hotel }: { hotel: HotelProfile }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { canWrite } = useRights();
   const qc = useQueryClient();
   const actionFailed = useActionFailed();
-  const [ask, setAsk] = useState(false);
-  const toggle = useMutation({
-    mutationFn: () => patchHotel(hotel.id, { is_active: !hotel.is_active } as Partial<HotelProfile>),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'readiness', hotel.id] });
-      void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
-    },
+  const [dialog, setDialog] = useState<'disable' | 'enable' | null>(null);
+  const changed = () => {
+    setDialog(null);
+    void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'readiness', hotel.id] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'activity', hotel.id] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
+  };
+  const disable = useMutation({
+    mutationFn: (body: { reason: string; enable_on: string | null }) => disableHotel(hotel.id, body),
+    onSuccess: changed,
     onError: actionFailed,
   });
-  const next = !hotel.is_active;
+  const enable = useMutation({ mutationFn: () => enableHotel(hotel.id), onSuccess: changed, onError: actionFailed });
+  const off = hotel.disabled;
+  const date = (iso: string | null | undefined, withTime = false) =>
+    iso ? new Date(iso).toLocaleString(i18n.language, withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'long' }) : '';
+
   return (
     <Panel title={t('admin.card.activation.title')}>
-      <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
-        {hotel.is_active ? t('admin.card.activation.onText') : t('admin.card.activation.offText')}
-      </Typography>
+      {hotel.is_active ? (
+        <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>{t('admin.card.activation.onText')}</Typography>
+      ) : (
+        <Box data-testid="admin-hotel-disabled-mark" sx={{ mb: 1.5, p: 1.25, borderRadius: `${shape.radius}px`, bgcolor: 'var(--adm-state-bad-wash)', ...typo.caption, color: ink.hi, display: 'grid', gap: 0.5 }}>
+          <Box sx={{ fontWeight: 700 }}>{t('admin.card.activation.offTitle')}</Box>
+          {off?.reason ? <Box data-testid="admin-hotel-disabled-reason">{t('admin.card.activation.reason', { reason: off.reason })}</Box> : null}
+          {off?.at ? <Box>{t('admin.card.activation.when', { at: date(off.at, true), by: off.by || '—' })}</Box> : null}
+          <Box>{off?.enable_on ? t('admin.card.activation.enableOn', { date: date(off.enable_on) }) : t('admin.card.activation.manual')}</Box>
+          <Box sx={{ color: ink.mid }}>{t('admin.card.activation.onlyHere')}</Box>
+        </Box>
+      )}
       {canWrite ? (
         <Button
           sx={hotel.is_active ? { ...secondaryButtonSx, color: state.bad, borderColor: state.bad } : primaryButtonSx}
-          onClick={() => setAsk(true)}
-          disabled={toggle.isPending}
+          onClick={() => setDialog(hotel.is_active ? 'disable' : 'enable')}
+          disabled={disable.isPending || enable.isPending}
           data-testid={hotel.is_active ? 'admin-overview-disable' : 'admin-overview-enable'}
         >
           {hotel.is_active ? t('admin.card.activation.disable') : t('admin.card.activation.enable')}
         </Button>
       ) : null}
+      {dialog === 'disable' ? (
+        <DisableDialog
+          title={t('admin.card.disable.title', { name: hotel.name })}
+          busy={disable.isPending}
+          onSubmit={(body) => disable.mutate(body)}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       <ConfirmDialog
-        open={ask}
+        open={dialog === 'enable'}
         testId="admin-overview-active-confirm"
-        destructive={!next}
-        title={t(next ? 'admin.hotel.activeConfirm.onTitle' : 'admin.hotel.activeConfirm.offTitle', { name: hotel.name })}
-        description={t(next ? 'admin.hotel.activeConfirm.onBody' : 'admin.hotel.activeConfirm.offBody')}
-        confirmLabel={t(next ? 'admin.hotel.activeConfirm.on' : 'admin.hotel.activeConfirm.off')}
-        onConfirm={() => {
-          setAsk(false);
-          toggle.mutate();
-        }}
-        onClose={() => setAsk(false)}
+        title={t('admin.hotel.activeConfirm.onTitle', { name: hotel.name })}
+        description={t('admin.hotel.activeConfirm.onBody')}
+        confirmLabel={t('admin.hotel.activeConfirm.on')}
+        onConfirm={() => enable.mutate()}
+        onClose={() => setDialog(null)}
       />
     </Panel>
   );

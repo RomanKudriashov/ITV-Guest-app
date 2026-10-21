@@ -405,15 +405,10 @@ def export_csv(params: dict, user=None) -> str:
     return buffer.getvalue()
 
 
-def bulk_set_active(hotel_ids: list[str], is_active: bool) -> list[Hotel]:
+def bulk_targets(hotel_ids: list[str], is_active: bool) -> list[Hotel]:
     """
-    Массовое включение/отключение. Возвращает отели, которые ДЕЙСТВИТЕЛЬНО
-    изменились: аудит и отчёт «выключено N» должны считать смену состояния, а
-    не количество нажатых галок.
+    Кому массовое действие ДЕЙСТВИТЕЛЬНО что-то меняет: аудит и отчёт
+    «выключено N» считают смену состояния, а не количество нажатых галок.
+    Само включение и отключение — `activation` (партия 62-C).
     """
-    hotels = list(Hotel.objects.filter(pk__in=hotel_ids).exclude(is_active=is_active))
-    if hotels:
-        Hotel.objects.filter(pk__in=[hotel.pk for hotel in hotels]).update(
-            is_active=is_active, updated_at=timezone.now()
-        )
-    return hotels
+    return list(Hotel.objects.filter(pk__in=hotel_ids).exclude(is_active=is_active))

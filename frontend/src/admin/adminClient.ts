@@ -62,6 +62,8 @@ export class PlatformError extends Error {
     public status: number,
     message: string,
     public code?: string,
+    /** Тело ответа целиком: у 409 `needs_confirmation` в нём последствия. */
+    public data?: unknown,
   ) {
     super(message);
     this.name = 'PlatformError';
@@ -142,7 +144,7 @@ async function request<T>(path: string, method = 'GET', body?: unknown): Promise
     if (res.status === 401 && !anonymous) platformSession.expire();
     // Текст сервера — только наш JSON с текстом; иначе фраза по коду.
     const detail = errorDetail(res.status, data);
-    throw new PlatformError(res.status, detail, data?.code);
+    throw new PlatformError(res.status, detail, data?.code, data);
   }
   return data as T;
 }
@@ -179,6 +181,14 @@ export interface HotelProfile extends HotelBrief {
   languages: HotelLanguageBrief[];
   tariff?: string;
   offboarding?: OffboardState | null;
+  /** Переводы названия и города целиком (партия 62-C). */
+  name_i18n?: Record<string, string>;
+  city_i18n?: Record<string, string>;
+  custom_domain?: string;
+  /** Прежние поддомены: с них идёт перенаправление, снимается вручную. */
+  aliases?: Array<{ old: string; created_at: string }>;
+  /** Пометка «отключён» — видна только в Control. */
+  disabled?: { reason: string; at: string | null; by: string; enable_on: string | null } | null;
   /** Группа отеля — для строки «Отели › Группа › Отель» (партия 62-B). */
   group?: { id: string; title: string; color: GroupColor } | null;
 }
@@ -317,7 +327,8 @@ export const checkSubdomain = (value: string) =>
 /** Города отелей флота — для правила группы. */
 export const getFleetCities = () => request<{ cities: string[] }>('/reference/cities');
 export interface HotelPatch {
-  name?: string;
+  /** Строкой — основной язык; словарём — по языкам, пустое убирает перевод. */
+  name?: string | Record<string, string>;
   /** Город — переводимое поле, поэтому словарь: `{ru: "Москва"}`. */
   city?: Record<string, string>;
   timezone?: string;
@@ -325,7 +336,28 @@ export interface HotelPatch {
   currency_minor_units?: number;
   languages?: string[];
   is_active?: boolean;
+  /** Только владелец (партия 62-C). */
+  subdomain?: string;
+  custom_domain?: string;
+  /** Опасные правки, подтверждённые в окне последствий. */
+  confirm?: string[];
 }
+
+/** 409 `needs_confirmation`: что заметят гости и сотрудники (партия 62-C). */
+export interface NeedsConfirmation {
+  fields: string[];
+  consequences: Record<string, Array<{ code: string; text: string }>>;
+}
+
+export const disableHotel = (id: string, body: { reason: string; enable_on?: string | null }) =>
+  request<HotelProfile>(`/hotels/${id}/disable`, 'POST', body);
+export const enableHotel = (id: string) => request<HotelProfile>(`/hotels/${id}/enable`, 'POST', {});
+export const removeAlias = (id: string, old: string) =>
+  request<HotelProfile>(`/hotels/${id}/aliases/${encodeURIComponent(old)}`, 'DELETE');
+export const checkDomain = (id: string, domain: string) =>
+  request<{ domain: string; resolved: string[]; expected: string[]; points_here: boolean }>(
+    `/hotels/${id}/domain-check?domain=${encodeURIComponent(domain)}`,
+  );
 
 export const patchHotel = (id: string, body: HotelPatch | Partial<HotelProfile>) =>
   request<HotelProfile>(`/hotels/${id}`, 'PATCH', body);
@@ -459,11 +491,19 @@ export const getFleet = (query: FleetQuery) => request<FleetPage>(`/fleet${fleet
  * группой. Состав группы клиент не считает — у правила он вычисляемый, и
  * посчитанный здесь разошёлся бы с тем, к чему применилось на сервере.
  */
-export const bulkSetActive = (hotelIds: string[], isActive: boolean, groupId?: string) =>
+export const bulkSetActive = (
+  hotelIds: string[],
+  isActive: boolean,
+  groupId?: string,
+  disable?: { reason: string; enable_on?: string | null },
+) =>
   request<{ changed: number; requested: number }>('/fleet/bulk', 'POST', {
     hotel_ids: hotelIds,
     is_active: isActive,
     group_id: groupId ?? null,
+    // Отключение — с причиной и датой авто-включения (партия 62-C).
+    reason: disable?.reason ?? '',
+    enable_on: disable?.enable_on || null,
   });
 
 /* ── Группы отелей (партия 62-A1: отели одного владельца) ───────────────── */

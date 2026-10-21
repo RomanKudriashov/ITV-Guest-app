@@ -102,7 +102,7 @@ def test_profile_patch_rejects_unknown_timezone_and_currency(api):
     assert bad_tz.status_code == 422 and bad_tz.json()["code"] == "timezone_unknown"
     bad_cur = api("patch", f"/hotels/{hotel.pk}", {"currency": "XYZ"})
     assert bad_cur.status_code == 422 and bad_cur.json()["code"] == "currency_unknown"
-    good = api("patch", f"/hotels/{hotel.pk}", {"timezone": "Asia/Vladivostok", "currency": "usd"})
+    good = api("patch", f"/hotels/{hotel.pk}", {"timezone": "Asia/Vladivostok", "currency": "usd", "confirm": ["timezone", "currency", "currency_minor_units"]})
     assert good.status_code == 200, good.content
     hotel.refresh_from_db()
     assert (hotel.timezone, hotel.currency) == ("Asia/Vladivostok", "USD")

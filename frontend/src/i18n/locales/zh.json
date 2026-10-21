@@ -53,7 +53,8 @@
       "night": "晚安"
     },
     "accessHint": "访问权限由酒店管理员授予",
-    "sessionExpired": "会话已过期，请重新登录"
+    "sessionExpired": "会话已过期，请重新登录",
+    "hotelDisabled": "无法登录"
   },
   "nav": {
     "services": "服务",
@@ -846,6 +847,10 @@
     "comment": {
       "counter": "{{used}}/{{max}}",
       "trimmed": "文本已截断为 {{max}} 个字符 — {{used}}/{{max}}"
+    },
+    "closed": {
+      "title": "酒店暂不接受订单",
+      "body": "我们很快会恢复服务。如您已在酒店，请联系前台。"
     }
   },
   "tracker": {
@@ -3537,7 +3542,14 @@
         "onText": "对客人和员工关闭酒店；数据和设置会保留，随时可以重新启用。",
         "offText": "酒店已停用：客人和员工无法进入。数据和设置已保留。",
         "disable": "停用酒店…",
-        "enable": "启用酒店…"
+        "enable": "启用酒店…",
+        "offTitle": "酒店已停用",
+        "reason": "原因：{{reason}}",
+        "when": "{{by}} 于 {{at}} 停用",
+        "enableOn": "将于 {{date}} 自动启用",
+        "manual": "只能手动启用",
+        "onlyHere": "只有平台团队能看到原因。",
+        "auto": "已按日期自动启用"
       },
       "connections": {
         "nodesTitle": "连接器",
@@ -3590,6 +3602,102 @@
         "supportHelp": "平台员工何时进入此酒店面板以及原因。进行中的登录可以中断。",
         "hardware": "设备日志",
         "hardwareHelp": "客房设备的指令和读取：时间、客房、元素、结果。"
+      },
+      "disable": {
+        "title": "停用“{{name}}”？",
+        "subtitle": "数据、设置和客房都会保留，随时可以重新启用。",
+        "submit": "停用",
+        "reason": "原因",
+        "reasonPlaceholder": "例如：十月未付款",
+        "reasonHint": "只在 Control 中可见。酒店、客人和员工都看不到原因。",
+        "enableOn": "自动启用日期",
+        "enableOnHint": "可选。留空 — 酒店保持停用，直到手动启用。",
+        "whatHappens": "将会发生什么",
+        "who": {
+          "guest": "客人",
+          "staff": "员工",
+          "room": "客房",
+          "control": "Control"
+        },
+        "what": {
+          "guest": "店面换成酒店品牌的“酒店暂不接受订单”页面；订单和聊天关闭",
+          "staff": "已登录的会话结束；登录表单可见但无法登录 —“无法登录”，不显示原因",
+          "room": "不再向设备发送指令；连接器保持连接",
+          "control": "酒店在列表中标记为“已停用”，并显示原因、操作人和时间"
+        }
+      }
+    },
+    "profile": {
+      "mainLanguage": "主要",
+      "noTranslation": "未设置翻译",
+      "languagesHint": "客人会看到自己语言的名称和城市；翻译为空时显示主要语言。",
+      "confirm": {
+        "title": "确认修改",
+        "subtitle": "客人和员工会注意到这些变化。",
+        "submit": "我明白，保存"
+      },
+      "field": {
+        "name": "名称",
+        "city": "城市",
+        "timezone": "时区",
+        "currency": "货币",
+        "currency_minor_units": "小数位数",
+        "subdomain": "子域名",
+        "custom_domain": "自有域名",
+        "languages": "语言",
+        "group": "分组",
+        "subdomain_alias": "旧地址重定向"
+      },
+      "consequence": {
+        "timezone": {
+          "hours_shift": "场所营业时间和日程会移动：“08:00 起”将按新时区的 08:00 计算。",
+          "reports_day": "“今日”报表将按新时区计算一天。",
+          "logs_same": "日志时间不变——它与时区无关地存储。"
+        },
+        "currency": {
+          "no_recalc": "价格以数字存储——不会换算：1 500 ₽ 将变成新货币的 1 500。",
+          "open_orders": "未完成的订单和客人购物车保持原货币。",
+          "minor_separate": "小数位数是单独的设置，不会自动改变。"
+        },
+        "currency_minor_units": {
+          "prices_scale": "价格以最小单位存储：修改小数位后 1 500.00 可能变成 150 000 或 15.00。",
+          "check_menu": "修改后请检查酒店菜单中的价格。"
+        },
+        "subdomain": {
+          "old_redirects": "旧地址和客房二维码会重定向到新地址，直到手动移除重定向——无需重印二维码。",
+          "relogin": "员工和客人将在新地址重新登录。",
+          "tls": "新地址在测试站证书重新签发后才能通过 HTTPS 打开。"
+        }
+      },
+      "address": {
+        "title": "酒店地址",
+        "help": "客人通过此地址打开店面，客房二维码指向这里。只有所有者可以修改。",
+        "ownerOnly": "子域名和自有域名只能由平台所有者修改。",
+        "subdomainHint": "拉丁字母、数字、连字符。旧地址将通过重定向继续工作。",
+        "change": "更改…",
+        "aliases": "旧地址的重定向",
+        "aliasLine": "{{old}} → {{now}}",
+        "removeAlias": "移除",
+        "aliasHint": "重定向永久有效。只有确认不再有旧二维码和链接时才移除。",
+        "check": "检查 DNS",
+        "removeDomain": "移除域名",
+        "pointsHere": "{{domain}} 指向平台——可以保存。",
+        "pointsElsewhere": "{{domain}} 指向 {{resolved}}，而不是平台——需要 DNS 记录。",
+        "nothing": "无",
+        "howTitle": "如何接入自有域名",
+        "how": {
+          "dns": "酒店在注册商处添加 A 记录（或 CNAME 指向平台上的酒店地址）。",
+          "check": "点击“检查 DNS”——域名必须指向平台。",
+          "save": "保存域名：店面和二维码将基于它生成。",
+          "tls": "域名证书随测试站证书重新签发——需所有者同意。"
+        }
+      },
+      "group": {
+        "title": "分组",
+        "help": "分组是同一所有者的酒店。只有我们的团队可见。",
+        "label": "酒店分组",
+        "none": "无分组",
+        "hint": "移动会立即记入酒店和分组的历史。"
       }
     }
   },

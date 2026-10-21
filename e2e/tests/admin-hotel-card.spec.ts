@@ -132,11 +132,13 @@ test.describe.serial('Карточка отеля', () => {
     await expect(page.getByTestId('admin-problem-connector_silent')).toHaveCount(0, { timeout: 20_000 })
   })
 
-  test('отключить и включить отель с обзора — с подтверждением', async ({ page }) => {
+  test('отключить (с причиной) и включить отель с обзора', async ({ page }) => {
     await login(page)
     await page.goto(card(hotelId, 'overview'))
     await page.getByTestId('admin-overview-disable').click()
-    await page.getByTestId('admin-overview-active-confirm-confirm').click()
+    // Отключение — с причиной (партия 62-C).
+    await page.getByTestId('admin-disable-reason').fill('e2e: карточка')
+    await page.getByTestId('admin-disable-submit').click()
     await expect(page.getByTestId('admin-hotel-state')).toHaveText('отключён', { timeout: 20_000 })
     await page.getByTestId('admin-overview-enable').click()
     await page.getByTestId('admin-overview-active-confirm-confirm').click()

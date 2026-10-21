@@ -27,7 +27,7 @@ from apps.accounts.models import User
 from apps.core.context import tenant_context
 from apps.core.errors import ConflictError, NotFoundError, ValidationError
 from apps.hotels.brand_library import preset_tokens
-from apps.hotels.services.hotel_fields import clean_currency, clean_email, clean_subdomain, clean_timezone
+from apps.hotels.services.hotel_fields import alias_owner, clean_currency, clean_email, clean_subdomain, clean_timezone
 from apps.hotels.models import BrandTheme, ExecutionPoint, Hotel, HotelLanguage, Location, Service
 from apps.orders.services.status_flows import ensure_status_flows
 
@@ -164,6 +164,12 @@ def provision_hotel(
         raise ValidationError("Название нужно хотя бы на одном языке", field="name")
 
     existing = Hotel.objects.filter(subdomain=subdomain).first()
+    if existing is None and alias_owner(subdomain) is not None:
+        # Прежний адрес другого отеля: его QR ещё висят в номерах (62-C).
+        raise ConflictError(
+            f"Поддомен «{subdomain}» — прежний адрес другого отеля, с него идёт перенаправление",
+            code="subdomain_alias",
+        )
     if existing is not None and not exist_ok:
         raise ConflictError(
             f"Отель с поддоменом «{subdomain}» уже существует",

@@ -105,7 +105,7 @@ def test_patch_profile_and_set_admin(client, platform_token):
     call = _p(client, platform_token)
     hid = call("post", "/hotels", {"subdomain": "grand", "name": "Grand", "admin_email": "a@grand.test"}).json()["hotel"]["id"]
 
-    patched = call("patch", f"/hotels/{hid}", {"name": "Grand Renamed", "currency": "EUR"})
+    patched = call("patch", f"/hotels/{hid}", {"name": "Grand Renamed", "currency": "EUR", "confirm": ["timezone", "currency", "currency_minor_units"]})
     assert patched.status_code == 200
     assert patched.json()["name"] == "Grand Renamed"
     assert patched.json()["currency"] == "EUR"
@@ -126,7 +126,7 @@ def test_deactivation_blocks_storefront_but_platform_still_sees(client, platform
     call = _p(client, platform_token)
     hid = call("post", "/hotels", {"subdomain": "grand", "name": "Grand", "admin_email": "a@grand.test"}).json()["hotel"]["id"]
 
-    call("patch", f"/hotels/{hid}", {"is_active": False})
+    call("patch", f"/hotels/{hid}", {"is_active": False, "reason": "проверка"})
 
     # Витрина: поддомен больше не резолвится (middleware фильтрует is_active).
     session = client.post("/api/guest/session", data={"room_number": "1"},
@@ -173,7 +173,7 @@ def test_staff_token_rejected_by_platform(client, platform_token):
 def test_actions_are_audited(client, platform_token):
     call = _p(client, platform_token)
     hid = call("post", "/hotels", {"subdomain": "grand", "name": "Grand", "admin_email": "a@grand.test"}).json()["hotel"]["id"]
-    call("patch", f"/hotels/{hid}", {"is_active": False})
+    call("patch", f"/hotels/{hid}", {"is_active": False, "reason": "проверка"})
 
     hotel = Hotel.objects.get(subdomain="grand")
     with tenant_context(hotel):

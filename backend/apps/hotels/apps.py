@@ -20,6 +20,11 @@ class HotelsConfig(AppConfig):
 
         scheduler.register(brand_schedule.KIND, brand_schedule.run)
 
+        # Авто-включение отключённого отеля по дате (партия 62-C).
+        from apps.hotels.services.platform import activation
+
+        scheduler.register(activation.JOB_KIND, activation.run_enable_job)
+
         # Готовность отеля сбрасывается правкой того, из чего она считается.
         from apps.hotels import signals
 

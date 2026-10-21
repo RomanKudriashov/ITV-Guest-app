@@ -64,4 +64,5 @@ def custom_domain_hotel(host: str):
     host = normalize(host)
     if not host or is_platform_host(host) or resolve_subdomain(host):
         return None
-    return Hotel.objects.filter(custom_domain=host, is_active=True).first()
+    # Отключённый тоже: на своём домене гость видит ту же заглушку (62-C).
+    return Hotel.objects.filter(custom_domain=host).first()

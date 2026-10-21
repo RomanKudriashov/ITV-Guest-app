@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Navigate, createBrowserRouter, useLocation, type RouteObject } from 'react-router-dom';
+import { Navigate, Outlet, createBrowserRouter, useLocation, type RouteObject } from 'react-router-dom';
+import { HotelGate } from './HotelGate';
 import { useTranslation } from 'react-i18next';
 
 import { RequireAuth, useAuth } from '@/auth';
@@ -383,8 +384,10 @@ const hotelRoutes: RouteObject[] = [
   { path: '/login', element: <Navigate to={CMS_ROOT} replace /> },
   { path: '/cms/*', element: <LegacyCmsRedirect /> },
   { path: '/dev/theme', element: part(<DevThemePage />) },
-  shellBranch,
-  guestBranch,
+  // Отель закрыт или переехал (партия 62-C): гостю — заглушка в бренде,
+  // панели — как есть (вход ответит «Вход недоступен»), старый адрес — на новый.
+  { element: <HotelGate kind="staff"><Outlet /></HotelGate>, children: [shellBranch] },
+  { element: <HotelGate kind="guest"><Outlet /></HotelGate>, children: [guestBranch] },
 ];
 
 /**
@@ -396,8 +399,8 @@ const singleHostRoutes: RouteObject[] = [
   { path: '/dev/theme', element: part(<DevThemePage />) },
   { path: '/admin', element: part(<AdminApp />) },
   { path: '/platform', element: <Navigate to="/admin" replace /> },
-  shellBranch,
-  guestBranch,
+  { element: <HotelGate kind="staff"><Outlet /></HotelGate>, children: [shellBranch] },
+  { element: <HotelGate kind="guest"><Outlet /></HotelGate>, children: [guestBranch] },
 ];
 
 export const router = createBrowserRouter(

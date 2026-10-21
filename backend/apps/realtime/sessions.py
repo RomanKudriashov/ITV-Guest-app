@@ -30,6 +30,29 @@ def session_group(session_id) -> str:
     return f"staff-session.{session_id}"
 
 
+HOTEL_CLOSED = "hotel.closed"
+
+
+def hotel_guests_group(hotel_id) -> str:
+    """Все гостевые сокеты отеля: отключение отеля закрывает их разом (62-C)."""
+    return f"hotel-guests.{_hex(hotel_id)}"
+
+
+def close_hotel_guests(hotel_id) -> None:
+    """Закрыть гостевые сокеты отеля — после фиксации отключения."""
+
+    def send() -> None:
+        layer = get_channel_layer()
+        if layer is None:
+            return
+        try:
+            async_to_sync(layer.group_send)(hotel_guests_group(hotel_id), {"type": HOTEL_CLOSED})
+        except Exception:  # шина недоступна — HTTP всё равно отвечает 423
+            logger.warning("Не удалось закрыть гостевые сокеты отеля %s", hotel_id, exc_info=True)
+
+    transaction.on_commit(send)
+
+
 def grant_group(grant_id) -> str:
     return f"support-grant.{grant_id}"
 

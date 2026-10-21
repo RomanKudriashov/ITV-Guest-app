@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 CLOSE_NO_TENANT = 4404
 CLOSE_UNAUTHORIZED = 4401
 CLOSE_FORBIDDEN = 4403
+# Отель отключён: переподключаться бесполезно, пока его не включат.
+CLOSE_HOTEL_DISABLED = 4423
 
 
 async def _refuse(consumer, code: int) -> None:
@@ -64,6 +66,23 @@ async def _join_session(consumer, user) -> None:
     consumer.session_group = group_for_claims(getattr(user, "token_claims", None))
     if consumer.session_group:
         await consumer.channel_layer.group_add(consumer.session_group, consumer.channel_name)
+
+
+async def _join_hotel(consumer) -> None:
+    """
+    Гостевой сокет — в группу «гости отеля»: отключение отеля закрывает их
+    все разом (партия 62-C). Сокеты персонала закрывает отзыв их сессий.
+    """
+    from apps.realtime.sessions import hotel_guests_group
+
+    consumer.hotel_group = hotel_guests_group(consumer.hotel.pk)
+    await consumer.channel_layer.group_add(consumer.hotel_group, consumer.channel_name)
+
+
+async def _leave_hotel(consumer) -> None:
+    group = getattr(consumer, "hotel_group", None)
+    if group:
+        await consumer.channel_layer.group_discard(group, consumer.channel_name)
 
 
 async def _leave_session(consumer) -> None:
@@ -318,6 +337,7 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
 
         self.group_name = f"order.{hotel.pk}.{self.order_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await _join_hotel(self)
         await self.accept()
 
         # Первый снимок — сразу. Клиенту не нужно отдельно дёргать REST, а
@@ -328,6 +348,11 @@ class GuestOrderConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group_name", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        await _leave_hotel(self)
+
+    async def hotel_closed(self, message):
+        """Отель отключили — сокет закрывается кодом, на который клиент не переподключается."""
+        await self.close(code=CLOSE_HOTEL_DISABLED)
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
@@ -440,6 +465,7 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
         self.thread_id = str(thread.pk)
         self.group_name = f"chat.{hotel.pk}.{self.thread_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await _join_hotel(self)
         await self.accept()
         await self.send_json({"type": "chat.snapshot", "event": "connected", "thread": snapshot})
 
@@ -447,6 +473,11 @@ class GuestChatConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group_name", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        await _leave_hotel(self)
+
+    async def hotel_closed(self, message):
+        """Отель отключили — сокет закрывается кодом, на который клиент не переподключается."""
+        await self.close(code=CLOSE_HOTEL_DISABLED)
 
     async def receive(self, text_data=None, bytes_data=None):
         try:
@@ -553,6 +584,7 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
         self.room_id = str(session.room_id)
         self.group_name = f"room.{hotel.pk}.{self.room_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await _join_hotel(self)
         await self.accept()
 
         # Первый снимок — сразу, и он ПЕРЕЧИТАН, а не взят из кэша. Именно это
@@ -566,6 +598,11 @@ class RoomStateConsumer(AsyncJsonWebsocketConsumer):
         group = getattr(self, "group_name", None)
         if group:
             await self.channel_layer.group_discard(group, self.channel_name)
+        await _leave_hotel(self)
+
+    async def hotel_closed(self, message):
+        """Отель отключили — сокет закрывается кодом, на который клиент не переподключается."""
+        await self.close(code=CLOSE_HOTEL_DISABLED)
 
     async def receive(self, text_data=None, bytes_data=None):
         try:

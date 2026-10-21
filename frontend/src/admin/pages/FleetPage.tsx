@@ -13,7 +13,6 @@ import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import { useTranslation } from 'react-i18next';
 
-import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { glassSx } from '@/kit/glass';
 import { QueryState } from '@/components/QueryState';
 import { useActionFailed } from '@/hooks/useActionFailed';
@@ -35,6 +34,7 @@ import {
 } from '../adminClient';
 import { CreateGroupDialog, DeleteGroupDialog, EditGroupDialog, MoveDialog } from './hotels/groupDialogs';
 import { Dot, Empty, FilterBar, GroupMark, Help, Hl, Pill, ViewSwitch, useFacetValues, type Facet, type Tone } from './hotels/hotelsUi';
+import { DisableDialog } from './hotel/hotelDialogs';
 
 /**
  * «ОТЕЛИ» (партия 62-A1, по утверждённому макету): группы отелей одного
@@ -95,7 +95,8 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
     onError: actionFailed,
   });
   const bulk = useMutation({
-    mutationFn: (isActive: boolean) => bulkSetActive(selected, isActive),
+    mutationFn: ({ isActive, reason, enable_on }: { isActive: boolean; reason?: string; enable_on?: string | null }) =>
+      bulkSetActive(selected, isActive, undefined, isActive ? undefined : { reason: reason ?? '', enable_on }),
     onSuccess: () => {
       setSelected([]);
       invalidate();
@@ -224,7 +225,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
           <Button size="small" sx={secondaryButtonSx} onClick={() => setDialog('move')} data-testid="admin-hotels-bulk-move">
             {t('admin.hotels.bulk.move')}
           </Button>
-          <Button size="small" sx={secondaryButtonSx} onClick={() => bulk.mutate(true)} disabled={bulk.isPending} data-testid="admin-fleet-bulk-enable">
+          <Button size="small" sx={secondaryButtonSx} onClick={() => bulk.mutate({ isActive: true })} disabled={bulk.isPending} data-testid="admin-fleet-bulk-enable">
             {t('admin.hotels.bulk.enable')}
           </Button>
           <Button size="small" sx={{ ...secondaryButtonSx, color: state.bad }} onClick={() => setDialog('disable')} disabled={bulk.isPending} data-testid="admin-fleet-bulk-disable">
@@ -318,19 +319,18 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
       ) : null}
       {editing ? <EditGroupDialog group={editing} onClose={() => setEditing(null)} /> : null}
       {deleting ? <DeleteGroupDialog group={deleting} rows={all.data?.items ?? []} onClose={() => setDeleting(null)} /> : null}
-      <ConfirmDialog
-        open={dialog === 'disable'}
-        testId="admin-fleet-bulk-disable-confirm"
-        destructive
-        title={t('admin.hotels.bulk.disableTitle', { count: selected.length })}
-        description={t('admin.hotels.bulk.disableBody')}
-        confirmLabel={t('admin.hotels.bulk.disable')}
-        onConfirm={() => {
-          setDialog(null);
-          bulk.mutate(false);
-        }}
-        onClose={() => setDialog(null)}
-      />
+      {/* Массовое отключение — тем же окном, что в карточке: причина обязательна (62-C). */}
+      {dialog === 'disable' ? (
+        <DisableDialog
+          title={t('admin.hotels.bulk.disableTitle', { count: selected.length })}
+          busy={bulk.isPending}
+          onSubmit={(body) => {
+            setDialog(null);
+            bulk.mutate({ isActive: false, ...body });
+          }}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
       {creating ? (
         <CreateHotelDialog
           onClose={() => setCreating(false)}

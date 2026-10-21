@@ -116,6 +116,15 @@ class Hotel(BaseModel):
         related_name="+",
     )
     is_active = models.BooleanField(default=True)
+    # ОТКЛЮЧЕНИЕ (партия 62-C). Причину видит ТОЛЬКО Control: гость получает
+    # заглушку «Отель временно не принимает заказы», сотрудник — «Вход
+    # недоступен», и ни один ответ отеля или гостя её не несёт. Кем — id
+    # человека платформы (имя достаётся при показе). `enable_on` — дата
+    # авто-включения отложенным заданием; пусто — до ручного включения.
+    disabled_reason = models.TextField(blank=True)
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    disabled_by = models.UUIDField(null=True, blank=True)
+    enable_on = models.DateField(null=True, blank=True)
     settings = models.JSONField(default=dict, blank=True)
 
     # --- Происхождение отеля -------------------------------------------------
@@ -238,6 +247,9 @@ class Hotel(BaseModel):
             using=using,
             update_fields=["deleted_at", "subdomain", "former_subdomain", "updated_at"],
         )
+        # Перенаправления удалённого отеля вести некуда — и держать его прежние
+        # имена занятыми незачем (партия 62-C): освобождаются вместе с поддоменом.
+        HotelSubdomainAlias.all_objects.using(using or "default").filter(hotel=self).hard_delete()
         return (0, {})
 
     @property
@@ -316,3 +328,27 @@ class HotelLanguage(TenantModel):
 
     def __str__(self) -> str:
         return self.code
+
+
+class HotelSubdomainAlias(BaseModel):
+    """
+    ПРЕЖНИЙ ПОДДОМЕН ОТЕЛЯ (партия 62-C) — бессрочное перенаправление.
+
+    QR в номерах напечатаны со старым адресом, ссылки лежат в письмах и
+    закладках. После смены поддомена старый адрес отвечает «отель теперь
+    здесь», и приложение уходит на новый с тем же путём (`/r/<номер>` в том
+    числе). Снимается только вручную — удалением строки из Control.
+
+    Пока строка живёт, старый поддомен занят: другой отель его не получит,
+    иначе чужие QR повели бы гостей к нему.
+    """
+
+    old = models.SlugField(max_length=63, unique=True)
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name="subdomain_aliases")
+
+    class Meta:
+        db_table = "hotels_subdomain_alias"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.old} → {self.hotel_id}"

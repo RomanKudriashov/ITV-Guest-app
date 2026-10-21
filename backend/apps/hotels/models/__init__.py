@@ -19,7 +19,7 @@ from .brand import BrandTheme
 from .brand_version import BrandVersion
 from .execution_point import ExecutionPoint
 from .group import HotelGroup, HotelGroupMember, PlatformScopeGroup
-from .hotel import Hotel, HotelLanguage
+from .hotel import Hotel, HotelLanguage, HotelSubdomainAlias
 from .location import Location
 from .module import HotelModule
 from .onprem import OnPremNode
@@ -41,6 +41,7 @@ __all__ = [
     "PlatformScopeGroup",
     "Hotel",
     "HotelLanguage",
+    "HotelSubdomainAlias",
     "HotelModule",
     "Location",
     "OnPremNode",

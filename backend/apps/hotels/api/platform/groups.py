@@ -63,6 +63,15 @@ def move_hotels(request: HttpRequest, payload: GroupMoveIn):
     moves = groups_svc.move(payload.hotel_ids, group, actor_id=request.user.pk)
     if moves:
         _audit(request, "platform.group.hotels_moved", {"code": group.code if group else "", "moves": moves, "group_ids": groups_svc.group_ids_of(moves)})
+        # И в «Историю» каждого отеля: «группа: было → стало» (партия 62-C).
+        for row in moves:
+            console.audit_hotel(
+                console.get_hotel(row["hotel_id"]),
+                "platform.hotel.updated",
+                actor_id=request.user.pk,
+                ip=request.META.get("REMOTE_ADDR"),
+                payload={"fields": ["group"], "changes": {"group": {"from": row.get("from"), "to": row.get("to")}}},
+            )
     return {"moved": len(moves), "moves": moves}
 
 
@@ -142,26 +151,19 @@ def group_action_preview(request: HttpRequest, group_id: str, payload: GroupActi
 def group_action(request: HttpRequest, group_id: str, payload: GroupActionIn):
     group = groups_svc.get(group_id, request.user)
     scope.assert_within(request.user, groups_svc.hotel_ids(group))
-    changed = groups_svc.run_action(group, payload.kind, payload.module, payload.hotel_ids, payload.reason)
     ip = request.META.get("REMOTE_ADDR")
+    changed = groups_svc.run_action(
+        group, payload.kind, payload.module, payload.hotel_ids, payload.reason, actor_id=request.user.pk, ip=ip
+    )
+    # Отключение и включение журнал пишут сами (`activation`); модули — здесь.
     for row in changed:
-        hotel = console.get_hotel(row["hotel_id"])
         if payload.kind in ("module_on", "module_off"):
             console.audit_hotel(
-                hotel,
+                console.get_hotel(row["hotel_id"]),
                 "platform.hotel.modules_set",
                 actor_id=request.user.pk,
                 ip=ip,
                 payload={"module": payload.module, "from": row["before"], "to": row["after"], "group": group.code},
-            )
-        else:
-            action = "activated" if payload.kind == "enable" else "deactivated"
-            console.audit_hotel(
-                hotel,
-                f"platform.hotel.{action}",
-                actor_id=request.user.pk,
-                ip=ip,
-                payload={"group": group.code, "reason": payload.reason},
             )
     _audit(
         request,

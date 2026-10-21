@@ -153,6 +153,18 @@ function toApiError(status: number, body: unknown): ApiError {
   return new ApiError(status, detail, `http_${status}`);
 }
 
+/**
+ * Отель отключили (423) или он переехал (410) посреди работы — сообщить
+ * заслонке отеля (`app/HotelGate`), она спросит состояние и покажет заглушку
+ * или уведёт на новый адрес (партия 62-C).
+ */
+export function noteHotelState(status: number, body: unknown): void {
+  const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : undefined;
+  if ((status === 423 && code === 'hotel_disabled') || (status === 410 && code === 'hotel_moved')) {
+    window.dispatchEvent(new Event('itv:hotel-state'));
+  }
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, formData, query, signal, skipAuthRedirect } = options;
 
@@ -206,6 +218,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     // `expire()` и чистит, и ПОМЕЧАЕТ повод. Приложение уводит на вход своим
     // переходом (RequireAuth), в адресе флага не будет — метку прочтёт форма.
     if (response.status === 401 && !skipAuthRedirect) session.expire();
+    noteHotelState(response.status, parsed);
     throw toApiError(response.status, parsed);
   }
 

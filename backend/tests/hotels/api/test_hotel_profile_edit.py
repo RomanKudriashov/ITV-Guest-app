@@ -69,6 +69,8 @@ def test_profile_edit_saves_every_field_the_form_offers(api, hotel):
         "currency": "JPY",
         "currency_minor_units": 0,
         "languages": ["en", "ru"],
+        # Опасные правки — с подтверждением (партия 62-C).
+        "confirm": ["timezone", "currency", "currency_minor_units"],
     })
     assert resp.status_code == 200, resp.content
     body = resp.json()
@@ -86,7 +88,7 @@ def test_currency_change_is_readable_a_month_later(api, hotel):
     """
     ГЛАВНОЕ ПРО ЖУРНАЛ. По записи видно, кто, когда, с чего и на что поменял.
     """
-    api("patch", f"/hotels/{hotel.pk}", {"currency": "EUR", "currency_minor_units": 2})
+    api("patch", f"/hotels/{hotel.pk}", {"currency": "EUR", "currency_minor_units": 2, "confirm": ["timezone", "currency", "currency_minor_units"]})
 
     payload = _updates(hotel)[-1]
     assert "currency" in payload["fields"]

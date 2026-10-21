@@ -467,6 +467,12 @@ def send_delivery(log_id) -> NotificationLog:
         return log
     if log.status != NotificationStatus.SCHEDULED:
         return log
+    if log.order_id and not log.order.hotel.is_active:
+        # Отель отключили, пока уведомление ждало очереди (партия 62-C).
+        log.status = NotificationStatus.SKIPPED
+        log.error = "Отель отключён до отправки"
+        log.save(update_fields=["status", "error", "updated_at"])
+        return log
 
     adapter = get_adapter(log.channel.type)
     message = RenderedMessage(subject=log.subject, body=log.body)

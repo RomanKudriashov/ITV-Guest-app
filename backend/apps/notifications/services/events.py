@@ -161,6 +161,9 @@ def notify(
         logger.debug("Событие %s выключено отелем — не пишем и не шлём", code)
         return None
     hotel = Hotel.objects.get(pk=require_hotel_id())
+    if not hotel.is_active:
+        # Отключённый отель молчит: ни трекер, ни ресепшен, ни Telegram (62-C).
+        return None
 
     try:
         with transaction.atomic():
@@ -265,6 +268,9 @@ def send_event_delivery(delivery_id) -> EventDelivery | None:
     if delivery.channel is None or not delivery.channel.is_active:
         _finish(delivery, NotificationStatus.FAILED, "Канал удалён или выключен до отправки")
         return delivery
+    if not _hotel_is_active(delivery.record.hotel_id):
+        _finish(delivery, NotificationStatus.SKIPPED, "Отель отключён до отправки")
+        return delivery
 
     delivery.attempts += 1
     EventDelivery.objects.filter(pk=delivery.pk).update(attempts=delivery.attempts)
@@ -306,6 +312,12 @@ def mark_event_delivery_failed(delivery_id, error: str) -> None:
     )
     if delivery is not None:
         _finish(delivery, NotificationStatus.FAILED, error)
+
+
+def _hotel_is_active(hotel_id) -> bool:
+    from apps.hotels.models import Hotel
+
+    return Hotel.objects.filter(pk=hotel_id, is_active=True).exists()
 
 
 def _finish(delivery: EventDelivery, status: str, detail: str) -> None:

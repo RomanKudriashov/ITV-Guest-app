@@ -21,6 +21,7 @@ from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
 from apps.hotels.module_registry import list_modules, set_modules
 from apps.hotels.schemas.platform import (
+    DisableIn,
     AdminEmailIn,
     AdminIn,
     EnterHotelIn,
@@ -122,74 +123,57 @@ def _as_translations(value, language: str) -> dict:
 @router.patch("/hotels/{hotel_id}", summary="Изменить профиль отеля")
 @requires(WRITE)
 def patch_hotel(request: HttpRequest, hotel_id: str, payload: HotelPatchIn):
-    from apps.hotels.services.hotel_fields import clean_currency, clean_timezone
+    """
+    Правка профиля — `profile_edit.apply` (партия 62-C): переводы по языкам,
+    только изменённое, опасное — через 409 `needs_confirmation`, поддомен и
+    свой домен — владелец, журнал «было → стало».
+    """
+    from apps.hotels.services.platform import profile_edit
 
     hotel = console.get_hotel(hotel_id)
-    data = payload.dict(exclude_unset=True)
-    # Пояс и валюта — из списка и на сервере тоже (партия 54): раньше профиль
-    # писал их как есть, и опечатка в поясе молча превращала отель в UTC.
-    if data.get("timezone") is not None:
-        data["timezone"] = clean_timezone(data["timezone"])
-    if data.get("currency") is not None:
-        data["currency"] = clean_currency(data["currency"])
-    # ПЕРЕВОДИМЫЕ ПОЛЯ — СЛИЯНИЕМ (партия 60). Консоль присылает название одной
-    # строкой, а город — одним языком; запись как есть превращала словарь
-    # переводов в строку и стирала остальные языки, которые отель вёл в CMS.
-    # Пришедшее кладём под язык отеля поверх существующих переводов; пустой
-    # город — явное «убрать город».
-    if data.get("name") is not None:
-        text = str(data["name"]).strip()
-        if not text:
-            raise ValidationError("Название отеля не может быть пустым", field="name", code="required")
-        data["name"] = {**_as_translations(hotel.name, hotel.default_language), hotel.default_language: text}
-    if data.get("city") is not None and data["city"]:
-        data["city"] = {**_as_translations(hotel.city, hotel.default_language), **data["city"]}
-    fields: list[str] = []
-    # СТАРЫЕ ЗНАЧЕНИЯ СНИМАЕМ ДО ЗАПИСИ. Журнал, в котором сказано только
-    # «изменено поле currency», через месяц не отвечает на вопрос, ради
-    # которого его читают: с чего на что поменяли и было ли это ошибкой.
-    changes: dict[str, dict] = {}
-    for attr in ("name", "timezone", "currency", "currency_minor_units", "city"):
-        if attr in data and data[attr] is not None and getattr(hotel, attr) != data[attr]:
-            changes[attr] = {"from": getattr(hotel, attr), "to": data[attr]}
-            setattr(hotel, attr, data[attr])
-            fields.append(attr)
+    profile_edit.apply(hotel, payload.dict(exclude_unset=True), user=request.user, ip=request.META.get("REMOTE_ADDR"))
+    return console.profile(console.get_hotel(hotel_id))
 
-    activation_change = None
-    if "is_active" in data and data["is_active"] is not None and data["is_active"] != hotel.is_active:
-        hotel.is_active = data["is_active"]
-        fields.append("is_active")
-        activation_change = "activated" if hotel.is_active else "deactivated"
 
-    if fields:
-        hotel.save(update_fields=[*fields, "updated_at"])
-    if activation_change == "deactivated":
-        # Отключённый отель — без живых входов сотрудников (партия 30): иначе
-        # их refresh ожили бы при обратном включении.
-        from apps.accounts.services import sessions as session_svc
+@router.post("/hotels/{hotel_id}/disable", summary="Отключить отель (причина обязательна)")
+@requires(WRITE)
+def disable_hotel(request: HttpRequest, hotel_id: str, payload: DisableIn):
+    from apps.hotels.services.platform import activation
 
-        session_svc.revoke_hotel(hotel.pk, reason="hotel_deactivated")
-
-    if "languages" in data and data["languages"] is not None:
-        language_change = console.replace_languages(hotel, data["languages"])
-        if language_change:
-            changes["languages"] = language_change
-
-    ip = request.META.get("REMOTE_ADDR")
-    if changes:
-        console.audit_hotel(
-            hotel,
-            "platform.hotel.updated",
-            actor_id=request.user.pk,
-            ip=ip,
-            # `fields` оставлен ради читателей, которые уже на него смотрят;
-            # `changes` — то, ради чего журнал вообще ведут.
-            payload={"fields": sorted(changes), "changes": changes},
-        )
-    if activation_change:
-        console.audit_hotel(hotel, f"platform.hotel.{activation_change}", actor_id=request.user.pk, ip=ip)
-
+    hotel = console.get_hotel(hotel_id)
+    activation.disable(
+        hotel, reason=payload.reason, enable_on=payload.enable_on, actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR")
+    )
     return console.profile(hotel)
+
+
+@router.post("/hotels/{hotel_id}/enable", summary="Включить отель")
+@requires(WRITE)
+def enable_hotel(request: HttpRequest, hotel_id: str):
+    from apps.hotels.services.platform import activation
+
+    hotel = console.get_hotel(hotel_id)
+    activation.enable(hotel, actor_id=request.user.pk, ip=request.META.get("REMOTE_ADDR"))
+    return console.profile(hotel)
+
+
+@router.delete("/hotels/{hotel_id}/aliases/{old}", summary="Снять перенаправление со старого поддомена")
+@requires(OWNER)
+def remove_alias(request: HttpRequest, hotel_id: str, old: str):
+    from apps.hotels.services.platform import profile_edit
+
+    hotel = console.get_hotel(hotel_id)
+    profile_edit.remove_alias(hotel, old, user=request.user, ip=request.META.get("REMOTE_ADDR"))
+    return console.profile(hotel)
+
+
+@router.get("/hotels/{hotel_id}/domain-check", summary="Указывает ли свой домен на стенд")
+@requires(READ)
+def domain_check(request: HttpRequest, hotel_id: str, domain: str = ""):
+    from apps.hotels.services.platform import profile_edit
+
+    console.get_hotel(hotel_id)
+    return profile_edit.check_domain(domain)
 
 
 @router.get("/hotels/{hotel_id}/admins", summary="Администраторы отеля")

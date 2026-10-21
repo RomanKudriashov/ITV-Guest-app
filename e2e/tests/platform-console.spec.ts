@@ -111,11 +111,11 @@ test('админка: создание отеля, вход admin, отключ�
   // --- Отключение в карточке отеля ------------------------------------------
   await page.getByTestId(`admin-fleet-open-${sub}`).click()
   await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
-  // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
-  await page.getByTestId('admin-hotel-tab-profile').click()
-  await page.getByTestId('admin-hotel-active').click()
-  // Выключение — только после вопроса (партия 60).
-  await page.getByTestId('admin-hotel-active-confirm-confirm').click()
+  // Отключение — на «Обзоре», с причиной (партия 62-C).
+  await page.getByTestId('admin-overview-disable').click()
+  await page.getByTestId('admin-disable-reason').fill('e2e: проверка отключения')
+  await page.getByTestId('admin-disable-submit').click()
+  await expect(page.getByTestId('admin-hotel-disabled-mark')).toBeVisible({ timeout: 15_000 })
   await page.getByTestId('admin-hotel-back').click()
   await page.getByTestId('admin-fleet-search').fill(sub)
   await expect(page.getByTestId(`admin-fleet-status-${sub}`)).toContainText(/отключ/i, {

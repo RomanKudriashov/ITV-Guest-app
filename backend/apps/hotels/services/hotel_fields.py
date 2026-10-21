@@ -155,7 +155,17 @@ def subdomain_status(value: str) -> dict:
     code = subdomain_problem(value) if value else "subdomain_format"
     if code is None and Hotel.objects.filter(subdomain=value).exists():
         code = "hotel_exists"
+    if code is None and alias_owner(value) is not None:
+        code = "subdomain_alias"
     return {"value": value, "ok": code is None, "code": code}
+
+
+def alias_owner(value: str):
+    """Отель, чей ПРЕЖНИЙ поддомен это имя (перенаправление, партия 62-C), или None."""
+    from apps.hotels.models import HotelSubdomainAlias
+
+    alias = HotelSubdomainAlias.objects.select_related("hotel").filter(old=value).first()
+    return alias.hotel if alias else None
 
 
 def hotel_cities(user=None) -> list[str]:

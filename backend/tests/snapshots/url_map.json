@@ -694,6 +694,18 @@
   "/api/v1/platform/hotels/{hotel_id}/admins/{user_id}": [
     "DELETE"
   ],
+  "/api/v1/platform/hotels/{hotel_id}/aliases/{old}": [
+    "DELETE"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/disable": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/domain-check": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/enable": [
+    "POST"
+  ],
   "/api/v1/platform/hotels/{hotel_id}/enter": [
     "POST"
   ],

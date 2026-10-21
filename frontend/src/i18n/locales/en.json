@@ -53,7 +53,8 @@
       "night": "Good night"
     },
     "accessHint": "Your hotel administrator grants access",
-    "sessionExpired": "Your session has expired — please sign in again"
+    "sessionExpired": "Your session has expired — please sign in again",
+    "hotelDisabled": "Sign-in unavailable"
   },
   "nav": {
     "services": "Services",
@@ -850,6 +851,10 @@
     "comment": {
       "counter": "{{used}}/{{max}}",
       "trimmed": "Text cut to {{max}} characters — {{used}}/{{max}}"
+    },
+    "closed": {
+      "title": "The hotel is not taking orders right now",
+      "body": "We will be back soon. If you are already at the hotel, please contact the front desk."
     }
   },
   "tracker": {
@@ -3601,7 +3606,14 @@
         "onText": "Closes the hotel to guests and staff; data and settings are kept, and it can be enabled again at any time.",
         "offText": "The hotel is disabled: guests and staff cannot get in. Data and settings are kept.",
         "disable": "Disable hotel…",
-        "enable": "Enable hotel…"
+        "enable": "Enable hotel…",
+        "offTitle": "The hotel is disabled",
+        "reason": "Reason: {{reason}}",
+        "when": "Disabled by {{by}}, {{at}}",
+        "enableOn": "Enables automatically on {{date}}",
+        "manual": "Enables only by hand",
+        "onlyHere": "Only the platform team sees the reason.",
+        "auto": "Enabled automatically on the date"
       },
       "connections": {
         "nodesTitle": "Connectors",
@@ -3654,6 +3666,102 @@
         "supportHelp": "When platform staff entered this hotel’s panel and why. An active entry can be cut off.",
         "hardware": "Equipment log",
         "hardwareHelp": "Commands and reads of room equipment: when, room, element, how it ended."
+      },
+      "disable": {
+        "title": "Disable “{{name}}”?",
+        "subtitle": "Data, settings and rooms are kept. It can be enabled again at any time.",
+        "submit": "Disable",
+        "reason": "Reason",
+        "reasonPlaceholder": "For example: October unpaid",
+        "reasonHint": "Visible only here, in Control. The hotel, guests and staff never see the reason.",
+        "enableOn": "Enable automatically",
+        "enableOnHint": "Optional. Empty — the hotel stays disabled until enabled by hand.",
+        "whatHappens": "What happens",
+        "who": {
+          "guest": "Guest",
+          "staff": "Staff",
+          "room": "Room",
+          "control": "Control"
+        },
+        "what": {
+          "guest": "instead of the storefront — a screen in the hotel brand “The hotel is not taking orders right now”; orders and chat are closed",
+          "staff": "open sessions end; the sign-in form is shown but signing in fails — “Sign-in unavailable”, no reason given",
+          "room": "no commands go to the equipment; the connector stays connected",
+          "control": "the hotel is marked “disabled” in the list with the reason, who and when"
+        }
+      }
+    },
+    "profile": {
+      "mainLanguage": "main",
+      "noTranslation": "no translation",
+      "languagesHint": "Guests see the name and city in their language; an empty translation falls back to the main language.",
+      "confirm": {
+        "title": "Confirm the change",
+        "subtitle": "Guests and staff will notice these changes.",
+        "submit": "I understand, save"
+      },
+      "field": {
+        "name": "Name",
+        "city": "City",
+        "timezone": "Time zone",
+        "currency": "Currency",
+        "currency_minor_units": "Decimal places",
+        "subdomain": "Subdomain",
+        "custom_domain": "Own domain",
+        "languages": "Languages",
+        "group": "Group",
+        "subdomain_alias": "Redirect from the old address"
+      },
+      "consequence": {
+        "timezone": {
+          "hours_shift": "Venue hours and schedules shift: “from 08:00” becomes 08:00 in the new zone.",
+          "reports_day": "“Today” reports start counting the day in the new zone.",
+          "logs_same": "Log times stay the same — they are stored independently of the zone."
+        },
+        "currency": {
+          "no_recalc": "Prices are stored as numbers — no conversion: 1,500 ₽ becomes 1,500 in the new currency.",
+          "open_orders": "Open orders and guest carts stay in the old currency.",
+          "minor_separate": "Decimal places are a separate setting and do not change by themselves."
+        },
+        "currency_minor_units": {
+          "prices_scale": "Prices are stored in minor units: changing decimals can turn 1,500.00 into 150,000 or 15.00.",
+          "check_menu": "Check the prices in the hotel menu afterwards."
+        },
+        "subdomain": {
+          "old_redirects": "The old address and room QR codes will redirect to the new one until the redirect is removed by hand — no need to reprint QR codes.",
+          "relogin": "Staff and guests will sign in again at the new address.",
+          "tls": "The new address works over HTTPS after the stand certificate is reissued."
+        }
+      },
+      "address": {
+        "title": "Hotel address",
+        "help": "Guests open the storefront at this address, and room QR codes lead here. Only the owner changes it.",
+        "ownerOnly": "Only the platform owner changes the subdomain and own domain.",
+        "subdomainHint": "Latin letters, digits, hyphen. The old address keeps working through a redirect.",
+        "change": "Change…",
+        "aliases": "Redirects from old addresses",
+        "aliasLine": "{{old}} → {{now}}",
+        "removeAlias": "Remove",
+        "aliasHint": "The redirect never expires. Remove it only when you are sure no old QR codes or links remain.",
+        "check": "Check DNS",
+        "removeDomain": "Remove domain",
+        "pointsHere": "{{domain}} points to the platform — you can save it.",
+        "pointsElsewhere": "{{domain}} points to {{resolved}}, not to the platform — a DNS record is needed.",
+        "nothing": "nowhere",
+        "howTitle": "How to connect an own domain",
+        "how": {
+          "dns": "The hotel adds an A record at its registrar (or a CNAME to the hotel address on the platform).",
+          "check": "Press “Check DNS” — the domain must point to the platform.",
+          "save": "Save the domain: the storefront and QR codes will be built from it.",
+          "tls": "The certificate for the domain comes with the stand certificate reissue — on the owner’s word."
+        }
+      },
+      "group": {
+        "title": "Group",
+        "help": "A group is hotels of one owner. Only our team sees it.",
+        "label": "Hotel group",
+        "none": "No group",
+        "hint": "The move goes straight into the hotel and group history."
       }
     }
   },

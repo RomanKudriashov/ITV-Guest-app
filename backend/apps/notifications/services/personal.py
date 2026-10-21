@@ -91,7 +91,10 @@ def hotel_allows(hotel_id) -> bool:
     from apps.hotels.models import Hotel
 
     # `hotels_hotel` — платформенная таблица без RLS: обычное подключение.
-    return bool(Hotel.objects.filter(pk=hotel_id).values_list("telegram_enabled", flat=True).first())
+    # Отключённый отель молчит в Telegram целиком (партия 62-C).
+    return bool(
+        Hotel.objects.filter(pk=hotel_id, is_active=True).values_list("telegram_enabled", flat=True).first()
+    )
 
 
 def set_hotel_switch(hotel, enabled: bool) -> None:

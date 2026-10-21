@@ -325,6 +325,14 @@ def send_command(
     в оборудование ушла и могла сработать, во втором — точно нет. Схлопывать их
     в «ошибку» нельзя, иначе гостю покажут «не получилось» там, где получилось.
     """
+    # Отключённый отель команд в номера не шлёт (партия 62-C): коннектор
+    # остаётся на связи, но до оборудования ничего не доходит. Объект отеля в
+    # руках мог устареть — спрашиваем базу.
+    from apps.hotels.models import Hotel
+
+    if not Hotel.objects.filter(pk=hotel.pk, is_active=True).exists():
+        return {"result": RESULT_FAILED, "value": None, "error": "HOTEL_DISABLED"}
+
     request_id = adapter.new_request_id()
     body = adapter.build_set(
         device=device, channel=channel, value=value, request_id=request_id, subdevice=subdevice

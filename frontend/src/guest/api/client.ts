@@ -13,6 +13,7 @@
 
 import { errorDetail } from '@/api/httpError';
 import { ApiError, API_BASE, HOTEL_SUBDOMAIN, WS_BASE } from '@/api/client';
+import { noteHotelState } from '@/api/client';
 
 export const GUEST_TOKEN_KEY = 'itv.guest.token';
 export const GUEST_SESSION_KEY = 'itv.guest.session_id';
@@ -151,6 +152,7 @@ export async function guestRequest<T>(
       if (guestUnauthorizedHandler) guestUnauthorizedHandler();
       else defaultGuestUnauthorized();
     }
+    noteHotelState(response.status, parsed);
     throw toApiError(response.status, parsed);
   }
 

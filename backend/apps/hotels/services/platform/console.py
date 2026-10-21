@@ -103,6 +103,7 @@ def list_briefs(*, limit: int | None = None, user=None) -> dict[str, Any]:
 
 def profile(hotel: Hotel) -> dict[str, Any]:
     from apps.hotels.services.offboarding import offboarding_state
+    from apps.hotels.services.platform import activation, profile_edit
     from apps.hotels.services.platform.groups import group_by_hotel
 
     group = group_by_hotel([hotel.pk]).get(hotel.pk)
@@ -133,6 +134,13 @@ def profile(hotel: Hotel) -> dict[str, Any]:
         "offboarding": offboarding_state(hotel),
         # Группа — для строки «Отели › Группа › Отель» над карточкой (62-B).
         "group": {"id": str(group.pk), "title": group.title, "color": group.color} if group else None,
+        # Переводы названия и города целиком — профиль правит их по языкам (62-C).
+        "name_i18n": hotel.name if isinstance(hotel.name, dict) else {hotel.default_language: hotel.name or ""},
+        "city_i18n": hotel.city if isinstance(hotel.city, dict) else {},
+        "custom_domain": hotel.custom_domain,
+        "aliases": profile_edit.aliases(hotel),
+        # Пометка «отключён» — причина, кем, когда, авто-включение. Только Control.
+        "disabled": activation.disabled_info(hotel),
     }
 
 
