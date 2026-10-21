@@ -62,6 +62,12 @@ class HotelGroup(BaseModel):
     # Заметка для нашей команды: договорённости, контакты, особенности.
     note = models.TextField(blank=True)
 
+    # УМОЛЧАНИЯ ДЛЯ НОВЫХ ОТЕЛЕЙ ГРУППЫ (партия 62-A2): коды модулей, которые
+    # включаются отелю, когда его ДОБАВЛЯЮТ в группу. Уже состоящих в группе
+    # правило не трогает; выключенное правило не делает ничего.
+    auto_enabled = models.BooleanField(default=False)
+    auto_modules = models.JSONField(default=list, blank=True)
+
     class Meta:
         db_table = "hotels_group"
         ordering = ["sort_order", "title"]

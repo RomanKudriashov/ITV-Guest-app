@@ -93,7 +93,9 @@ def test_bite_a_hotel_lives_in_one_group_only(api):
 
     moved = api("post", f"/groups/{second['id']}/members", {"hotel_ids": [str(hotel.pk)]})
     assert moved.status_code == 200, moved.content
-    assert moved.json()["moves"] == [{"hotel": "onegroup", "from": "Первая", "to": "Вторая"}]
+    [move] = moved.json()["moves"]
+    assert (move["hotel"], move["from"], move["to"]) == ("onegroup", "Первая", "Вторая")
+    assert (move["from_id"], move["to_id"]) == (first["id"], second["id"])
 
     assert [g["title"] for g in groups_svc.groups_of(hotel)] == ["Вторая"]
     assert api("get", f"/groups/{first['id']}/members").json()["members"] == []
@@ -300,3 +302,121 @@ def test_a_missing_group_shows_nothing_rather_than_everything(api):
     fleet = api("get", "/fleet?group=00000000-0000-0000-0000-000000000000").json()
     assert fleet["total"] == 0
     assert _view(api, "&group=00000000-0000-0000-0000-000000000000")["total"] == 0
+
+
+# --- Партия 62-A2: действия, умолчания, история ---------------------------------
+
+
+def _modules(hotel) -> set:
+    from apps.hotels.module_registry import enabled_module_codes
+
+    return enabled_module_codes(hotel)
+
+
+def test_bite_a_group_action_changes_exactly_the_shown_hotels(api):
+    """
+    УКУС. Показ «что изменится» и выполнение — один план. Меняются только
+    отели из показа, которым действие что-то меняет; отель вне группы,
+    подсунутый в запрос, не меняется.
+    """
+    from apps.hotels.module_registry import set_modules
+
+    one, two, three, outsider = _hotel("act-one"), _hotel("act-two"), _hotel("act-three"), _hotel("act-out")
+    set_modules(two, [{"code": "marketing", "is_enabled": True}])
+    group = _group(api, "Действия", [one, two, three])
+
+    preview = api("post", f"/groups/{group['id']}/actions/preview", {"kind": "module_on", "module": "marketing"}).json()
+    plan = {row["subdomain"]: row["change"] for row in preview["items"]}
+    assert plan == {"act-one": True, "act-two": False, "act-three": True}
+    assert preview["changes"] == 2
+
+    # Человек видел показ без «act-three» (например, показ был до его добавления).
+    shown = [row["hotel_id"] for row in preview["items"] if row["subdomain"] != "act-three"] + [str(outsider.pk)]
+    done = api("post", f"/groups/{group['id']}/actions", {"kind": "module_on", "module": "marketing", "hotel_ids": shown})
+    assert done.status_code == 200, done.content
+    assert [row["subdomain"] for row in done.json()["changed"]] == ["act-one"]
+    assert "marketing" in _modules(one)
+    assert "marketing" not in _modules(three), "изменили отель, которого не было в показе"
+    assert "marketing" not in _modules(outsider), "изменили отель вне группы"
+
+
+def test_disabling_a_whole_group_needs_a_reason_and_enabling_brings_back(api):
+    one, two = _hotel("dis-one"), _hotel("dis-two")
+    group = _group(api, "Отключаемая", [one, two])
+    ids = [str(one.pk), str(two.pk)]
+
+    refused = api("post", f"/groups/{group['id']}/actions", {"kind": "disable", "hotel_ids": ids})
+    assert refused.status_code == 422 and refused.json()["code"] == "reason_required"
+
+    done = api("post", f"/groups/{group['id']}/actions", {"kind": "disable", "hotel_ids": ids, "reason": "неоплата"})
+    assert len(done.json()["changed"]) == 2
+    for hotel in (one, two):
+        hotel.refresh_from_db()
+        assert hotel.is_active is False
+
+    back = api("post", f"/groups/{group['id']}/actions", {"kind": "enable", "hotel_ids": ids})
+    assert len(back.json()["changed"]) == 2
+    one.refresh_from_db()
+    assert one.is_active is True
+
+
+def test_bite_defaults_apply_on_adding_and_leave_existing_hotels_alone(api):
+    """
+    УКУС. Правило умолчаний включает модули ПРИШЕДШЕМУ отелю и не трогает тех,
+    кто уже в группе; выключенное правило не делает ничего.
+    """
+    old, newcomer, late = _hotel("def-old"), _hotel("def-new"), _hotel("def-late")
+    group = _group(api, "Умолчания", [old])
+
+    saved = api("put", f"/groups/{group['id']}/defaults", {"enabled": True, "modules": ["marketing"]})
+    assert saved.status_code == 200 and saved.json()["auto_modules"] == ["marketing"]
+    assert "marketing" not in _modules(old), "правило тронуло отель, который уже был в группе"
+
+    moved = api("post", f"/groups/{group['id']}/members", {"hotel_ids": [str(newcomer.pk)]}).json()
+    assert moved["moves"][0]["modules_enabled"] == ["marketing"]
+    assert "marketing" in _modules(newcomer)
+
+    api("put", f"/groups/{group['id']}/defaults", {"enabled": False, "modules": ["marketing"]})
+    api("post", f"/groups/{group['id']}/members", {"hotel_ids": [str(late.pk)]})
+    assert "marketing" not in _modules(late), "выключенное правило сработало"
+
+
+def test_bite_the_history_keeps_before_and_after_for_both_groups(api):
+    """
+    УКУС. История группы: переименование «было → стало», умолчания, действие;
+    переезд отеля виден в истории ОБЕИХ групп — откуда и куда.
+    """
+    hotel = _hotel("hist-hotel")
+    source = _group(api, "Источник", [hotel])
+    target = _group(api, "Приёмник")
+
+    api("patch", f"/groups/{target['id']}", {"title": "Приёмник 2"})
+    api("put", f"/groups/{target['id']}/defaults", {"enabled": True, "modules": ["marketing"]})
+    api("post", f"/groups/{target['id']}/members", {"hotel_ids": [str(hotel.pk)]})
+
+    target_history = api("get", f"/groups/{target['id']}/history").json()["items"]
+    actions = [row["action"] for row in target_history]
+    assert actions[:3] == ["platform.group.hotels_moved", "platform.group.defaults_set", "platform.group.updated"]
+    renamed = next(r for r in target_history if r["action"] == "platform.group.updated")
+    assert renamed["payload"]["changes"]["title"] == {"from": "Приёмник", "to": "Приёмник 2"}
+    assert target_history[0]["actor"], "в истории не видно, кто сделал"
+    move = target_history[0]["payload"]["moves"][0]
+    assert (move["from"], move["to"]) == ("Источник", "Приёмник 2")
+
+    source_actions = [row["action"] for row in api("get", f"/groups/{source['id']}/history").json()["items"]]
+    assert "platform.group.hotels_moved" in source_actions, "в истории группы-источника не видно ухода отеля"
+
+
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_the_group_page_shows_summary_hotels_and_modules(api):
+    """Транзакционный: модули отелей считает платформенное подключение."""
+    from apps.hotels.module_registry import set_modules
+
+    one, two = _hotel("page-one"), _hotel("page-two")
+    set_modules(one, [{"code": "marketing", "is_enabled": True}])
+    group = _group(api, "Страница", [one, two], description="Про группу")
+    page = api("get", f"/groups/{group['id']}").json()
+    assert page["description"] == "Про группу"
+    assert page["summary"]["hotels"] == 2
+    assert page["modules"] == {"marketing": 1}
+    assert {r["subdomain"] for r in page["items"]} == {"page-one", "page-two"}

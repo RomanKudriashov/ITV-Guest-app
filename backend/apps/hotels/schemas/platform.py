@@ -178,6 +178,21 @@ class GroupMembersIn(Schema):
     hotel_ids: list[str]
 
 
+class GroupActionIn(Schema):
+    """Действие по всей группе: `module_on` / `module_off` / `disable` / `enable`."""
+
+    kind: str
+    module: str | None = None
+    # Только для выполнения: отели из показа «что изменится» — меняются ровно они.
+    hotel_ids: list[str] = []
+    reason: str = ""
+
+
+class GroupDefaultsIn(Schema):
+    enabled: bool
+    modules: list[str] = []
+
+
 class GroupMoveIn(Schema):
     """Перенести отели в группу; `group_id = null` — убрать из группы."""
 

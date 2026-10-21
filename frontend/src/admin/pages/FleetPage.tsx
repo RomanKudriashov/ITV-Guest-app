@@ -112,6 +112,14 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
     else next.delete('closed');
     setParams(next, { replace: true });
   };
+  // Страница группы (партия 62-A2): шагом истории, «назад» вернёт к списку.
+  const openGroup = (id: string) => {
+    const next = new URLSearchParams(params);
+    next.set('gpage', id);
+    next.set('gtab', 'summary');
+    for (const key of ['search', ...FACETS]) next.delete(key);
+    setParams(next);
+  };
   const setLayout = (value: 'groups' | 'list') => {
     const next = new URLSearchParams(params);
     if (value === 'groups') next.delete('layout');
@@ -248,6 +256,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
                   summary={g.summary}
                   open={filtering || !closed.has(g.id)}
                   onToggle={() => setClosed(g.id)}
+                  onOpen={() => openGroup(g.id)}
                   onDrop={canWrite ? (hotelId) => drop.mutate({ hotelId, groupId: g.id }) : undefined}
                   actions={
                     canWrite ? (
@@ -341,6 +350,7 @@ function GroupBlock({
   hint,
   open,
   onToggle,
+  onOpen,
   onDrop,
   actions,
   muted,
@@ -354,6 +364,7 @@ function GroupBlock({
   hint?: string;
   open: boolean;
   onToggle: () => void;
+  onOpen?: () => void;
   onDrop?: (hotelId: string) => void;
   actions?: ReactNode;
   muted?: boolean;
@@ -386,10 +397,17 @@ function GroupBlock({
       sx={{ ...panelSx, p: 0, overflow: 'hidden', outline: over ? `2px dashed ${accent.main}` : 'none' }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1.25, flexWrap: 'wrap', borderBottom: open ? `1px solid ${surface.line}` : 'none' }}>
-        <ButtonBase onClick={onToggle} aria-expanded={open} data-testid={`${testId}-toggle`} sx={{ gap: 0.75, borderRadius: `${shape.radius}px`, pr: 1, textAlign: 'left', minWidth: 0 }}>
+        <ButtonBase onClick={onToggle} aria-expanded={open} aria-label={t(open ? 'admin.groupPage.collapse' : 'admin.groupPage.expand')} data-testid={`${testId}-toggle`} sx={{ borderRadius: `${shape.radius}px`, p: 0.25 }}>
           {open ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
-          {color ? <GroupMark color={color.color} /> : null}
-          <Typography component="h2" sx={{ ...typo.panelTitle, color: muted ? ink.mid : ink.hi }}>{title}</Typography>
+        </ButtonBase>
+        {color ? <GroupMark color={color.color} /> : null}
+        <ButtonBase onClick={onOpen ?? onToggle} data-testid={`${testId}-open`} sx={{ borderRadius: `${shape.radius}px`, pr: 1, textAlign: 'left', minWidth: 0 }}>
+          <Typography
+            component="h2"
+            sx={{ ...typo.panelTitle, color: muted ? ink.mid : ink.hi, textDecoration: onOpen ? 'underline' : 'none', textDecorationColor: surface.line, textUnderlineOffset: '4px' }}
+          >
+            {title}
+          </Typography>
         </ButtonBase>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', ...typo.caption, color: ink.mid, flex: '1 1 auto' }} data-testid={`${testId}-summary`}>
           <span>{t('admin.hotels.summary.hotels', { count: summary.hotels })}</span>

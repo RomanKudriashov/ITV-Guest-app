@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -15,10 +15,14 @@ import { accent, fieldSx, ink, primaryButtonSx, shape, state, surface, typo } fr
 import { AdminDialog } from '../../form';
 import {
   GROUP_COLORS,
+  addGroupMembers,
   createGroup,
   deleteGroup,
   moveHotels,
   patchGroup,
+  previewGroupAction,
+  runGroupAction,
+  type GroupActionKind,
   type GroupColor,
   type HotelGroup,
   type HotelViewRow,
@@ -70,7 +74,7 @@ export function ColorPicker({ value, onChange }: { value: GroupColor; onChange: 
 }
 
 /** Выбор отелей: поиск, галочки; у отеля из другой группы — «переедет из». */
-function HotelPicker({ rows, selfId, value, onChange }: { rows: HotelViewRow[]; selfId?: string; value: string[]; onChange: (v: string[]) => void }) {
+export function HotelPicker({ rows, selfId, value, onChange }: { rows: HotelViewRow[]; selfId?: string; value: string[]; onChange: (v: string[]) => void }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const ql = q.toLowerCase();
@@ -223,7 +227,7 @@ export function EditGroupDialog({ group, onClose }: { group: HotelGroup; onClose
   );
 }
 
-export function DeleteGroupDialog({ group, rows, onClose }: { group: HotelGroup; rows: HotelViewRow[]; onClose: () => void }) {
+export function DeleteGroupDialog({ group, rows, onClose, onDeleted }: { group: HotelGroup; rows: HotelViewRow[]; onClose: () => void; onDeleted?: () => void }) {
   const { t } = useTranslation();
   const invalidate = useInvalidate();
   const actionFailed = useActionFailed();
@@ -233,7 +237,8 @@ export function DeleteGroupDialog({ group, rows, onClose }: { group: HotelGroup;
     mutationFn: () => deleteGroup(group.id, confirm.trim()),
     onSuccess: () => {
       invalidate();
-      onClose();
+      if (onDeleted) onDeleted();
+      else onClose();
     },
     onError: actionFailed,
   });
@@ -321,6 +326,159 @@ export function MoveDialog({ hotelIds, groups, onClose, onDone }: { hotelIds: st
           <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{g.title}</Box>
         </ButtonBase>
       ))}
+    </AdminDialog>
+  );
+}
+
+/** Модули, которые можно включать сейчас (остальные — заготовки, партия E). */
+export const READY_MODULES = ['room_control', 'marketing'];
+
+export function AddHotelsDialog({ group, rows, onClose }: { group: HotelGroup; rows: HotelViewRow[]; onClose: () => void }) {
+  const { t } = useTranslation();
+  const invalidate = useInvalidate();
+  const actionFailed = useActionFailed();
+  const [hotels, setHotels] = useState<string[]>([]);
+  const movers = rows.filter((r) => hotels.includes(r.id) && r.group && r.group.id !== group.id);
+  const add = useMutation({
+    mutationFn: () => addGroupMembers(group.id, hotels),
+    onSuccess: () => {
+      invalidate();
+      onClose();
+    },
+    onError: actionFailed,
+  });
+  const rule = group.auto_enabled && group.auto_modules.length
+    ? t('admin.groupPage.add.ruleOn', { modules: group.auto_modules.map((c) => t(`admin.module.${c}`)).join(', ') })
+    : t('admin.groupPage.add.ruleOff');
+  return (
+    <AdminDialog
+      testId="admin-group-add"
+      title={t('admin.groupPage.add.title', { title: group.title })}
+      subtitle={rule}
+      onClose={onClose}
+      actions={
+        <>
+          <Button sx={{ color: ink.mid }} onClick={onClose}>{t('admin.hotels.cancel')}</Button>
+          <Button sx={primaryButtonSx} disabled={!hotels.length || add.isPending} onClick={() => add.mutate()} data-testid="admin-group-add-submit">
+            {t('admin.groupPage.add.submit', { count: hotels.length })}
+          </Button>
+        </>
+      }
+    >
+      <HotelPicker rows={rows} selfId={group.id} value={hotels} onChange={setHotels} />
+      {movers.length ? (
+        <Box sx={{ mt: 1.5, p: 1.25, borderRadius: `${shape.radius}px`, bgcolor: 'var(--adm-state-warn-wash)', ...typo.caption, color: ink.hi }} data-testid="admin-group-add-movers">
+          {t('admin.groupPage.add.movers', { count: movers.length })}
+        </Box>
+      ) : null}
+    </AdminDialog>
+  );
+}
+
+/**
+ * Действие по всей группе: сначала показ «что изменится» по каждому отелю
+ * (сервер, тем же кодом, что выполнит), потом выполнение ровно показанного.
+ */
+export function GroupActionDialog({ group, kind: initial, onClose }: { group: HotelGroup; kind: 'module' | 'disable' | 'enable'; onClose: () => void }) {
+  const { t } = useTranslation();
+  const invalidate = useInvalidate();
+  const actionFailed = useActionFailed();
+  const [module, setModule] = useState(READY_MODULES[0]);
+  const [turnOn, setTurnOn] = useState(true);
+  const [reason, setReason] = useState('');
+  const kind: GroupActionKind = initial === 'module' ? (turnOn ? 'module_on' : 'module_off') : initial;
+  const preview = useQuery({
+    queryKey: ['admin', 'groups', group.id, 'preview', kind, module],
+    queryFn: () => previewGroupAction(group.id, kind, kind.startsWith('module') ? module : undefined),
+  });
+  const plan = preview.data?.items ?? [];
+  const changes = plan.filter((r) => r.change);
+  const run = useMutation({
+    mutationFn: () =>
+      runGroupAction(group.id, {
+        kind,
+        module: kind.startsWith('module') ? module : undefined,
+        hotel_ids: changes.map((r) => r.hotel_id),
+        reason,
+      }),
+    onSuccess: () => {
+      invalidate();
+      onClose();
+    },
+    onError: actionFailed,
+  });
+  const note = (r: (typeof plan)[number]) =>
+    !r.change ? t('admin.groupPage.action.same') : t(`admin.groupPage.action.will.${kind}`);
+  const needReason = kind === 'disable';
+  return (
+    <AdminDialog
+      testId={`admin-group-action-${initial}`}
+      title={t(`admin.groupPage.action.title.${initial}`, { title: group.title })}
+      subtitle={t(`admin.groupPage.action.subtitle.${initial}`)}
+      onClose={onClose}
+      actions={
+        <>
+          <Button sx={{ color: ink.mid }} onClick={onClose}>{t('admin.hotels.cancel')}</Button>
+          <Button
+            sx={kind === 'disable' ? { ...primaryButtonSx, bgcolor: state.bad } : primaryButtonSx}
+            disabled={!changes.length || run.isPending || preview.isFetching || (needReason && !reason.trim())}
+            onClick={() => run.mutate()}
+            data-testid="admin-group-action-submit"
+          >
+            {t(`admin.groupPage.action.submit.${kind}`, { count: changes.length })}
+          </Button>
+        </>
+      }
+    >
+      {initial === 'module' ? (
+        <Box sx={{ display: 'grid', gap: 1.5, mb: 2 }}>
+          <Box>
+            <Typography sx={{ ...typo.caption, color: ink.mid, mb: 0.5 }}>{t('admin.groupPage.action.module')}</Typography>
+            {READY_MODULES.map((code) => (
+              <ButtonBase key={code} onClick={() => setModule(code)} data-testid={`admin-group-action-module-${code}`} sx={{ display: 'flex', width: '100%', justifyContent: 'flex-start', gap: 1, py: 0.25, textAlign: 'left' }}>
+                <Radio size="small" checked={module === code} tabIndex={-1} />
+                <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{t(`admin.module.${code}`)}</Box>
+              </ButtonBase>
+            ))}
+            <Typography sx={{ ...typo.caption, color: ink.low, mt: 0.5 }}>{t('admin.groupPage.action.devHidden')}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {[true, false].map((on) => (
+              <ButtonBase
+                key={String(on)}
+                onClick={() => setTurnOn(on)}
+                data-testid={`admin-group-action-${on ? 'on' : 'off'}`}
+                sx={{ px: 1.5, py: 0.75, borderRadius: `${shape.radius}px`, border: `1px solid ${turnOn === on ? accent.main : surface.line}`, bgcolor: turnOn === on ? accent.washSoft : 'transparent', ...typo.body, fontWeight: 600 }}
+              >
+                {on ? t('admin.groupPage.action.on') : t('admin.groupPage.action.off')}
+              </ButtonBase>
+            ))}
+          </Box>
+        </Box>
+      ) : (
+        <TextField
+          label={t('admin.groupPage.action.reason')}
+          required={needReason}
+          multiline
+          minRows={2}
+          fullWidth
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          sx={{ ...fieldSx, mb: 2 }}
+          helperText={t('admin.groupPage.action.reasonHint')}
+          inputProps={{ 'data-testid': 'admin-group-action-reason' }}
+        />
+      )}
+      <Box sx={{ p: 1.5, borderRadius: `${shape.radius}px`, bgcolor: surface.s2 }} data-testid="admin-group-action-plan">
+        <Typography sx={{ ...typo.label, color: ink.mid, mb: 0.75 }}>{t('admin.groupPage.action.plan', { count: plan.length })}</Typography>
+        {preview.isPending ? <Box sx={{ ...typo.caption, color: ink.mid }}>{t('admin.groupPage.loading')}</Box> : null}
+        {plan.map((r) => (
+          <Box key={r.hotel_id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.4, ...typo.caption }} data-testid={`admin-group-plan-${r.subdomain}`}>
+            <Box sx={{ color: ink.hi, fontWeight: 600 }}>{r.name}</Box>
+            <Box sx={{ color: r.change ? (kind === 'disable' ? state.bad : accent.soft) : ink.low }}>{note(r)}</Box>
+          </Box>
+        ))}
+      </Box>
     </AdminDialog>
   );
 }

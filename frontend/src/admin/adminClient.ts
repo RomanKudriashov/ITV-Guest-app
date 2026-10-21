@@ -478,6 +478,9 @@ export interface HotelGroup {
   color: GroupColor;
   sort_order: number;
   parent_id: string | null;
+  /** Умолчания для новых отелей группы (партия 62-A2). */
+  auto_enabled: boolean;
+  auto_modules: string[];
   created_at: string;
   size?: number;
 }
@@ -540,6 +543,45 @@ export const addGroupMembers = (id: string, hotelIds: string[]) =>
 
 export const removeGroupMember = (id: string, hotelId: string) =>
   request<{ removed: number; size: number }>(`/groups/${id}/members/${hotelId}`, 'DELETE');
+
+/* ── Страница группы (партия 62-A2) ─────────────────────────────────────── */
+
+export type GroupActionKind = 'module_on' | 'module_off' | 'disable' | 'enable';
+
+export interface GroupPlanRow {
+  hotel_id: string;
+  subdomain: string;
+  name: string;
+  before: boolean;
+  after: boolean;
+  change: boolean;
+}
+
+export interface GroupHistoryRow {
+  id: string;
+  at: string;
+  actor: string;
+  action: string;
+  payload: Record<string, unknown>;
+}
+
+export const getGroupPage = (id: string) =>
+  request<HotelGroup & { summary: GroupSummary; modules: Record<string, number>; items: HotelViewRow[] }>(`/groups/${id}`);
+
+export const getGroupHistory = (id: string) => request<{ items: GroupHistoryRow[] }>(`/groups/${id}/history`);
+
+export const previewGroupAction = (id: string, kind: GroupActionKind, module?: string) =>
+  request<{ kind: GroupActionKind; module: string | null; items: GroupPlanRow[]; changes: number }>(
+    `/groups/${id}/actions/preview`,
+    'POST',
+    { kind, module },
+  );
+
+export const runGroupAction = (id: string, body: { kind: GroupActionKind; module?: string; hotel_ids: string[]; reason?: string }) =>
+  request<{ changed: GroupPlanRow[] }>(`/groups/${id}/actions`, 'POST', body);
+
+export const setGroupDefaults = (id: string, enabled: boolean, modules: string[]) =>
+  request<HotelGroup>(`/groups/${id}/defaults`, 'PUT', { enabled, modules });
 
 /* ── «Отели» нового вида: группы, поиск, фильтры (партия 62-A1) ─────────── */
 

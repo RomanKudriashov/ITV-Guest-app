@@ -18,6 +18,7 @@ import { ScreenBoundary } from '@/components/ScreenBoundary';
 import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
+import { GroupPage } from './pages/hotels/GroupPage';
 import { PublicationsPage } from './pages/PublicationsPage';
 import { ModulesPage } from './pages/ModulesPage';
 import { NodesPage } from './pages/NodesPage';
@@ -39,7 +40,7 @@ import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlin
 import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import { getHotel, getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
+import { getGroupPage, getHotel, getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
 
 /**
  * NaviRoom Control — консоль `/admin`, уровень владельца платформы.
@@ -180,6 +181,9 @@ function Console({ onLogout }: { onLogout: () => void }) {
     этого» было нечем. Вкладка карточки живёт в том же адресе (см. HotelPage).
   */
   const hotelId = searchParams.get('hotel');
+  // Открытая группа (партия 62-A2): страница группы внутри «Отелей». Параметр
+  // `group` в «Отелях» значит фильтр, поэтому страницу открывает `gpage`.
+  const groupPageId = searchParams.get('gpage');
   const setSection = (next: string, keepHotel = false) => {
     const params = new URLSearchParams(searchParams);
     params.set('section', next);
@@ -205,6 +209,12 @@ function Console({ onLogout }: { onLogout: () => void }) {
       'module',
       'layout',
       'closed',
+      // Страница группы и её вкладки (партия 62-A2).
+      'gpage',
+      'gtab',
+      'who',
+      'what',
+      'period',
     ]) {
       params.delete(key);
     }
@@ -220,6 +230,11 @@ function Console({ onLogout }: { onLogout: () => void }) {
       Смена раздела — это переход, а не «место на экране» (вкладка карточки
       отеля им и остаётся, `HotelPage.setTab` заменяет адрес осознанно).
     */
+    setSearchParams(params);
+  };
+  const closeGroup = () => {
+    const params = new URLSearchParams(searchParams);
+    for (const key of ['gpage', 'gtab', 'search', 'state', 'link', 'who', 'what', 'period']) params.delete(key);
     setSearchParams(params);
   };
   const closeHotel = () => {
@@ -251,8 +266,23 @@ function Console({ onLogout }: { onLogout: () => void }) {
     enabled: Boolean(hotelId) && section === 'fleet',
   });
   const crumbName = crumbHotel.data?.name;
+  const crumbGroup = useQuery({
+    queryKey: ['admin', 'fleet', 'group', groupPageId],
+    queryFn: () => getGroupPage(groupPageId ?? ''),
+    enabled: Boolean(groupPageId) && section === 'fleet' && !hotelId,
+  });
   const crumb =
-    hotelId && section === 'fleet' ? (
+    groupPageId && !hotelId && section === 'fleet' ? (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <ButtonBase onClick={closeGroup} data-testid="admin-crumb-fleet" sx={{ ...typo.body, color: accent.soft, fontWeight: 600, borderRadius: 1, px: 0.5 }}>
+          {t('admin.nav.fleet')}
+        </ButtonBase>
+        <Box sx={{ color: ink.low }}>›</Box>
+        <Box sx={{ ...typo.body, color: ink.hi, fontWeight: 700, minWidth: 0, overflowWrap: 'anywhere' }} data-testid="admin-crumb-group">
+          {crumbGroup.data ? t('admin.groupPage.crumb', { title: crumbGroup.data.title }) : t('admin.groupPage.what')}
+        </Box>
+      </Box>
+    ) : hotelId && section === 'fleet' ? (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
         <ButtonBase
           onClick={closeHotel}
@@ -288,7 +318,10 @@ function Console({ onLogout }: { onLogout: () => void }) {
         actionLabel={t('state.reload')}
       >
       {section === 'overview' ? <OverviewPage /> : null}
-      {section === 'fleet' && !hotelId ? <FleetPage onOpenHotel={openHotel} /> : null}
+      {section === 'fleet' && !hotelId && !groupPageId ? <FleetPage onOpenHotel={openHotel} /> : null}
+      {section === 'fleet' && !hotelId && groupPageId ? (
+        <GroupPage id={groupPageId} onBack={closeGroup} onOpenHotel={openHotel} />
+      ) : null}
       {section === 'fleet' && hotelId ? (
         <HotelPage id={hotelId} onBack={closeHotel} />
       ) : null}

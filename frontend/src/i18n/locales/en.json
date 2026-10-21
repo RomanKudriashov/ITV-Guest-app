@@ -2851,7 +2851,9 @@
           "deleted": "Hotel group deleted",
           "members_added": "Hotels added to a group",
           "member_removed": "Hotel removed from a group",
-          "hotels_moved": "Hotels moved between groups"
+          "hotels_moved": "Hotels moved between groups",
+          "action": "Action across the group",
+          "defaults_set": "Group defaults changed"
         },
         "publication": {
           "started": "Publication started"
@@ -3268,6 +3270,199 @@
         "title": "Nothing found",
         "body": "No hotel and no group match the search and filters. Check the spelling or remove some filters.",
         "reset": "Reset search and filters"
+      }
+    },
+    "groupPage": {
+      "what": "group",
+      "back": "All hotels",
+      "crumb": "Group “{{title}}”",
+      "noDescription": "No description — add one in the group profile.",
+      "addHotels": "+ Add hotels",
+      "loading": "Loading…",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "tab": {
+        "summary": "Summary",
+        "hotels": "Hotels",
+        "profile": "Profile",
+        "actions": "Actions",
+        "defaults": "Defaults",
+        "history": "History"
+      },
+      "about": {
+        "summary": "How the group’s hotels are doing as a whole: connection and which modules are on.",
+        "hotels": "Group members. Adding a hotel moves it here from another group or from “no group”.",
+        "profile": "How the group is named and looks in the hotel list. Only our team sees it.",
+        "actions": "One action in all hotels of the group at once. Before running, the dialog shows what changes for each hotel.",
+        "defaults": "What gets turned on for a hotel automatically when it is added to the group.",
+        "history": "Who changed what in the group and when — with before and after."
+      },
+      "summary": {
+        "hotels": "Hotels",
+        "active_one": "{{count}} running",
+        "active_other": "{{count}} running",
+        "rooms": "Rooms",
+        "roomsHint": "across all hotels of the group",
+        "problems": "Problems",
+        "problemsHint": "hotel checks arrive in the next batch",
+        "link": "Connection",
+        "linkValue": "{{online}} of {{total}}",
+        "linkHint": "offline — {{silent}}, no connector — {{none}}",
+        "modules": "Modules in the group",
+        "modulesHelp": "How many hotels of the group use the module. Turn it on or off for all at once in “Actions”.",
+        "ofTotal": "{{on}} of {{total}}",
+        "devOn": "On, but still in development and doing nothing: {{modules}}.",
+        "emptyTitle": "No hotels in the group yet",
+        "emptyBody": "The summary appears once the group has at least one hotel."
+      },
+      "hotels": {
+        "search": "Find a hotel in the group",
+        "remove": "Remove from group",
+        "removeHint": "“Remove from group” does not touch the hotel: it moves to “Hotels without a group” with all modules and data.",
+        "emptyBody": "Press “Add hotels” — take hotels without a group or move them from another group.",
+        "noMatch": "Remove some filters or change the search."
+      },
+      "profile": {
+        "title": "Group",
+        "nameHelp": "How the group is named in the hotel list and in the “Group” filter.",
+        "descriptionHelp": "Whose hotels these are and why they are together. Shown in the group header and in the hotel list.",
+        "colorHelp": "A coloured mark next to the group name — to spot it in the hotel list.",
+        "order": "Order in the list",
+        "orderHelp": "The order of groups on the “Hotels” screen. “Hotels without a group” are always at the bottom.",
+        "position": "{{n}} of {{total}}",
+        "up": "Up",
+        "down": "Down",
+        "parent": "Part of group",
+        "parentHelp": "For example, “Moscow” inside “Metropol hotels”. For now groups are one level deep.",
+        "parentNote": "Nested groups are built into the data; the choice will appear when needed.",
+        "topLevel": "none — top level",
+        "autosave": "Changes are saved as soon as you leave the field.",
+        "deleteTitle": "Delete group",
+        "delete": "Delete group…"
+      },
+      "actions": {
+        "module": "Module in all hotels",
+        "disable": "Disable all hotels",
+        "enable": "Enable all hotels",
+        "moduleButton": "Choose module…",
+        "disableButton": "Disable all…",
+        "enableButton": "Enable all…",
+        "moduleText_one": "Turn a module on or off for {{count}} hotel at once. The dialog shows what changes for whom.",
+        "moduleText_other": "Turn a module on or off for {{count}} hotels at once. The dialog shows what changes for whom.",
+        "disableText_one": "Close {{count}} running hotel to guests and staff. A reason is required; data is kept.",
+        "disableText_other": "Close {{count}} running hotels to guests and staff. A reason is required; data is kept.",
+        "enableText_one": "Reopen {{count}} disabled hotel of the group to guests and staff.",
+        "enableText_other": "Reopen {{count}} disabled hotels of the group to guests and staff.",
+        "journal": "Every action is recorded in the group history and in the log of each affected hotel."
+      },
+      "action": {
+        "title": {
+          "module": "Module in all hotels of “{{title}}”",
+          "disable": "Disable all hotels of “{{title}}”?",
+          "enable": "Enable all hotels of “{{title}}”?"
+        },
+        "subtitle": {
+          "module": "The module is turned on or off for each hotel of the group. Hotels already in that state do not change.",
+          "disable": "Hotels close to guests, staff sessions end. Data is kept; you can enable them any time.",
+          "enable": "Hotels reopen to guests and staff."
+        },
+        "module": "Module",
+        "devHidden": "Modules in development are not shown — they cannot be turned on yet.",
+        "on": "Turn on",
+        "off": "Turn off",
+        "reason": "Reason",
+        "reasonHint": "Visible only in Control — in the group history and each hotel log.",
+        "plan_one": "Group hotels — {{count}}",
+        "plan_other": "Group hotels — {{count}}",
+        "same": "already so — no change",
+        "will": {
+          "module_on": "will turn on",
+          "module_off": "will turn off",
+          "disable": "will be disabled",
+          "enable": "will be enabled"
+        },
+        "submit": {
+          "module_on_one": "Turn on for {{count}} hotel",
+          "module_on_other": "Turn on for {{count}} hotels",
+          "module_off_one": "Turn off for {{count}} hotel",
+          "module_off_other": "Turn off for {{count}} hotels",
+          "disable_one": "Disable {{count}} hotel",
+          "disable_other": "Disable {{count}} hotels",
+          "enable_one": "Enable {{count}} hotel",
+          "enable_other": "Enable {{count}} hotels"
+        }
+      },
+      "add": {
+        "title": "Add hotels to “{{title}}”",
+        "ruleOn": "The group has a rule: added hotels get {{modules}} turned on.",
+        "ruleOff": "Hotels without a group and from other groups. The “defaults for new hotels” rule is off for this group.",
+        "submit_one": "Add {{count}}",
+        "submit_other": "Add {{count}}",
+        "movers_one": "{{count}} hotel will move from another group. Modules turned on there are not turned off.",
+        "movers_other": "{{count}} hotels will move from other groups. Modules turned on there are not turned off."
+      },
+      "defaults": {
+        "title": "Modules for new hotels of the group",
+        "switch": "Rule on",
+        "on": "Rule on: a hotel added to the group gets {{modules}} turned on.",
+        "onEmpty": "Rule on, but no modules chosen — nothing will be turned on.",
+        "off": "Rule off: an added hotel keeps the modules it had.",
+        "note1": "The rule fires only when a hotel is added. Hotels already in the group do not change — use “Actions” for them.",
+        "note2": "A module that needs a connection is turned on but works once the connection appears.",
+        "note3": "Modules in development cannot be chosen."
+      },
+      "history": {
+        "who": "Who",
+        "what": "What",
+        "period": "Period",
+        "search": "Search: hotel, field, team member",
+        "periods": {
+          "day": "Last day",
+          "week": "Last week",
+          "month": "Last month"
+        },
+        "kind": {
+          "created": "Created",
+          "updated": "Profile",
+          "hotels": "Members",
+          "action": "Action",
+          "defaults": "Defaults",
+          "deleted": "Deleted"
+        },
+        "field": {
+          "title": "Name",
+          "description": "Description",
+          "note": "Note",
+          "color": "Colour label",
+          "sort_order": "Order",
+          "parent": "Part of group",
+          "auto_enabled": "Defaults rule",
+          "auto_modules": "Modules for new hotels"
+        },
+        "on": "on",
+        "off": "off",
+        "someGroup": "another group",
+        "system": "system",
+        "modulesOn": "modules turned on: {{modules}}",
+        "action": {
+          "module_on": "Module “{{module}}” turned on",
+          "module_off": "Module “{{module}}” turned off",
+          "disable": "Hotels disabled",
+          "enable": "Hotels enabled"
+        },
+        "changed_one": "{{count}} hotel changed",
+        "changed_other": "{{count}} hotels changed",
+        "reason": "reason: “{{reason}}”",
+        "createdWhat": "Group created",
+        "createdWith": "with hotels: {{hotels}}",
+        "createdEmpty": "without hotels",
+        "deletedWhat": "Group deleted",
+        "emptyTitle": "No changes yet",
+        "emptyBody": "When the group is renamed, its members change or an action runs, a record appears here: who, when and what it was before.",
+        "noMatch": "Nothing matches the filters",
+        "noMatchBody": "Remove some filters or change the search.",
+        "createdCount_one": "with {{count}} hotel",
+        "createdCount_other": "with {{count}} hotels"
       }
     }
   },

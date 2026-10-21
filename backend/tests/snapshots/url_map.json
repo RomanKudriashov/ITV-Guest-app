@@ -650,7 +650,20 @@
   ],
   "/api/v1/platform/groups/{group_id}": [
     "DELETE",
+    "GET",
     "PATCH"
+  ],
+  "/api/v1/platform/groups/{group_id}/actions": [
+    "POST"
+  ],
+  "/api/v1/platform/groups/{group_id}/actions/preview": [
+    "POST"
+  ],
+  "/api/v1/platform/groups/{group_id}/defaults": [
+    "PUT"
+  ],
+  "/api/v1/platform/groups/{group_id}/history": [
+    "GET"
   ],
   "/api/v1/platform/groups/{group_id}/members": [
     "GET",

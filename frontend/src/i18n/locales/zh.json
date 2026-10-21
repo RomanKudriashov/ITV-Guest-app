@@ -2823,7 +2823,9 @@
           "deleted": "已删除酒店分组",
           "members_added": "已将酒店加入分组",
           "member_removed": "已将酒店移出分组",
-          "hotels_moved": "酒店已在分组间移动"
+          "hotels_moved": "酒店已在分组间移动",
+          "action": "分组整体操作",
+          "defaults_set": "分组默认设置已更改"
         },
         "publication": {
           "started": "已启动发布"
@@ -3225,6 +3227,186 @@
         "title": "没有找到",
         "body": "没有酒店或分组符合搜索和筛选条件。请检查拼写或去掉部分筛选。",
         "reset": "重置搜索和筛选"
+      }
+    },
+    "groupPage": {
+      "what": "分组",
+      "back": "所有酒店",
+      "crumb": "分组“{{title}}”",
+      "noDescription": "没有描述——可以在分组资料中添加。",
+      "addHotels": "+ 添加酒店",
+      "loading": "加载中…",
+      "expand": "展开",
+      "collapse": "收起",
+      "tab": {
+        "summary": "汇总",
+        "hotels": "酒店",
+        "profile": "资料",
+        "actions": "操作",
+        "defaults": "默认设置",
+        "history": "历史"
+      },
+      "about": {
+        "summary": "分组内酒店的整体情况：连接状态、启用了哪些模块。",
+        "hotels": "分组成员。添加酒店即把它从其他分组或“未分组”移到这里。",
+        "profile": "分组在酒店列表中的名称和样式。只有我们的团队能看到。",
+        "actions": "一次在分组内所有酒店执行同一操作。执行前会显示每家酒店的变化。",
+        "defaults": "酒店加入分组时自动启用的内容。",
+        "history": "谁在什么时候改了分组的什么——包括修改前后。"
+      },
+      "summary": {
+        "hotels": "酒店",
+        "active_other": "运行中 {{count}} 家",
+        "rooms": "客房",
+        "roomsHint": "分组内所有酒店",
+        "problems": "问题",
+        "problemsHint": "酒店检查将在下一批次上线",
+        "link": "连接",
+        "linkValue": "{{online}} / {{total}}",
+        "linkHint": "离线 {{silent}} 家，无连接器 {{none}} 家",
+        "modules": "分组的模块",
+        "modulesHelp": "分组中有多少家酒店使用该模块。在“操作”中可一次为所有酒店启用或停用。",
+        "ofTotal": "{{on}} / {{total}}",
+        "devOn": "已启用但仍在开发中、不起作用：{{modules}}。",
+        "emptyTitle": "分组中还没有酒店",
+        "emptyBody": "分组中至少有一家酒店后才会显示汇总。"
+      },
+      "hotels": {
+        "search": "在分组中查找酒店",
+        "remove": "移出分组",
+        "removeHint": "“移出分组”不影响酒店：它会带着所有模块和数据移到“未分组的酒店”。",
+        "emptyBody": "点击“添加酒店”——可以选择未分组的酒店或从其他分组移来。",
+        "noMatch": "去掉部分筛选或修改搜索。"
+      },
+      "profile": {
+        "title": "分组",
+        "nameHelp": "分组在酒店列表和“分组”筛选中的名称。",
+        "descriptionHelp": "这些酒店属于谁、为什么在一起。显示在分组标题和酒店列表中。",
+        "colorHelp": "分组名称旁的彩色标记——便于在酒店列表中找到它。",
+        "order": "列表中的顺序",
+        "orderHelp": "分组在“酒店”页面上的排列顺序。“未分组的酒店”始终在最下方。",
+        "position": "第 {{n}} / {{total}}",
+        "up": "上移",
+        "down": "下移",
+        "parent": "所属分组",
+        "parentHelp": "例如“Metropol 酒店”下的“莫斯科”。目前分组只有一级。",
+        "parentNote": "嵌套分组已在数据结构中预留；需要时会出现选择。",
+        "topLevel": "无——顶级",
+        "autosave": "离开字段时即自动保存。",
+        "deleteTitle": "删除分组",
+        "delete": "删除分组…"
+      },
+      "actions": {
+        "module": "在所有酒店启用模块",
+        "disable": "停用所有酒店",
+        "enable": "启用所有酒店",
+        "moduleButton": "选择模块…",
+        "disableButton": "全部停用…",
+        "enableButton": "全部启用…",
+        "moduleText_other": "一次为 {{count}} 家酒店启用或停用模块。窗口会显示每家的变化。",
+        "disableText_other": "对客人和员工关闭 {{count}} 家运行中的酒店。必须填写原因；数据会保留。",
+        "enableText_other": "向客人和员工重新开放分组中 {{count}} 家已停用的酒店。",
+        "journal": "每个操作都会记录在分组历史和每家相关酒店的日志中。"
+      },
+      "action": {
+        "title": {
+          "module": "“{{title}}”所有酒店的模块",
+          "disable": "停用“{{title}}”的所有酒店？",
+          "enable": "启用“{{title}}”的所有酒店？"
+        },
+        "subtitle": {
+          "module": "模块会在分组每家酒店启用或停用。已处于该状态的酒店不变。",
+          "disable": "酒店将对客人关闭，员工登录将结束。数据会保留，可随时重新启用。",
+          "enable": "酒店将重新对客人和员工开放。"
+        },
+        "module": "模块",
+        "devHidden": "开发中的模块不显示——暂时不能启用。",
+        "on": "启用",
+        "off": "停用",
+        "reason": "原因",
+        "reasonHint": "仅在 Control 中可见——在分组历史和每家酒店的日志中。",
+        "plan_other": "分组酒店——{{count}} 家",
+        "same": "已是如此——不变",
+        "will": {
+          "module_on": "将启用",
+          "module_off": "将停用",
+          "disable": "将停用",
+          "enable": "将启用"
+        },
+        "submit": {
+          "module_on_other": "为 {{count}} 家酒店启用",
+          "module_off_other": "为 {{count}} 家酒店停用",
+          "disable_other": "停用 {{count}} 家酒店",
+          "enable_other": "启用 {{count}} 家酒店"
+        }
+      },
+      "add": {
+        "title": "向“{{title}}”添加酒店",
+        "ruleOn": "分组已启用规则：加入的酒店将启用 {{modules}}。",
+        "ruleOff": "未分组和其他分组的酒店。该分组的“新酒店默认设置”规则已关闭。",
+        "submit_other": "添加 {{count}} 家",
+        "movers_other": "{{count}} 家酒店将从其他分组移来。在那里启用的模块不会自动停用。"
+      },
+      "defaults": {
+        "title": "分组新酒店的模块",
+        "switch": "规则已启用",
+        "on": "规则已启用：加入分组的酒店将启用 {{modules}}。",
+        "onEmpty": "规则已启用，但未选择模块——不会启用任何内容。",
+        "off": "规则已关闭：加入的酒店保留原有模块。",
+        "note1": "规则只在添加酒店时生效。已在分组中的酒店不变——请使用“操作”。",
+        "note2": "需要连接的模块会被启用，但要等连接建立后才能工作。",
+        "note3": "不能选择开发中的模块。"
+      },
+      "history": {
+        "who": "谁",
+        "what": "什么",
+        "period": "时间",
+        "search": "搜索：酒店、字段、成员",
+        "periods": {
+          "day": "最近一天",
+          "week": "最近一周",
+          "month": "最近一月"
+        },
+        "kind": {
+          "created": "创建",
+          "updated": "资料",
+          "hotels": "成员",
+          "action": "操作",
+          "defaults": "默认设置",
+          "deleted": "删除"
+        },
+        "field": {
+          "title": "名称",
+          "description": "描述",
+          "note": "备注",
+          "color": "颜色标记",
+          "sort_order": "顺序",
+          "parent": "所属分组",
+          "auto_enabled": "默认规则",
+          "auto_modules": "新酒店的模块"
+        },
+        "on": "开",
+        "off": "关",
+        "someGroup": "其他分组",
+        "system": "系统",
+        "modulesOn": "已启用模块：{{modules}}",
+        "action": {
+          "module_on": "模块“{{module}}”已启用",
+          "module_off": "模块“{{module}}”已停用",
+          "disable": "酒店已停用",
+          "enable": "酒店已启用"
+        },
+        "changed_other": "已变更 {{count}} 家酒店",
+        "reason": "原因：“{{reason}}”",
+        "createdWhat": "分组已创建",
+        "createdWith": "包含酒店：{{hotels}}",
+        "createdEmpty": "不含酒店",
+        "deletedWhat": "分组已删除",
+        "emptyTitle": "还没有变更",
+        "emptyBody": "分组被重命名、成员变动或执行操作后，这里会出现记录：谁、何时以及修改前的内容。",
+        "noMatch": "没有符合筛选的内容",
+        "noMatchBody": "去掉部分筛选或修改搜索。",
+        "createdCount_other": "包含 {{count}} 家酒店"
       }
     }
   },

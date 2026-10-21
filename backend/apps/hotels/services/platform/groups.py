@@ -153,8 +153,9 @@ def create(data: dict, *, actor_id=None) -> HotelGroup:
             sort_order=data.get("sort_order") or last + 1,
             parent=_clean_parent(None, data.get("parent_id")),
         )
-        if data.get("hotel_ids"):
-            move(list(data["hotel_ids"]), group, actor_id=actor_id)
+        # Переезды при создании — на группе, чтобы ручка записала их в историю
+        # и прежних групп отелей (оттуда отели ушли).
+        group.created_moves = move(list(data["hotel_ids"]), group, actor_id=actor_id) if data.get("hotel_ids") else []
     return group
 
 
@@ -249,11 +250,206 @@ def move(hotel_ids_: list[str], group: HotelGroup | None, *, actor_id=None) -> l
             moves.append(
                 {
                     "hotel": hotel.subdomain,
+                    "hotel_id": str(hotel.pk),
                     "from": before.title if before else "",
+                    "from_id": str(before.pk) if before else "",
                     "to": group.title if group else "",
+                    "to_id": str(group.pk) if group else "",
+                    # Умолчания группы — только ПРИШЕДШИМ отелям (партия 62-A2):
+                    # этот цикл не доходит до тех, кто уже был в группе.
+                    "modules_enabled": _apply_defaults(group, hotel) if group is not None else [],
                 }
             )
     return moves
+
+
+def _apply_defaults(group: HotelGroup, hotel: Hotel) -> list[str]:
+    """Включить отелю модули из умолчаний группы. Возвращает включённые сейчас."""
+    from apps.hotels.module_registry import enabled_module_codes, set_modules
+
+    if not group.auto_enabled or not group.auto_modules:
+        return []
+    already = enabled_module_codes(hotel)
+    fresh = [code for code in group.auto_modules if code not in already]
+    if fresh:
+        set_modules(hotel, [{"code": code, "is_enabled": True} for code in fresh])
+    return fresh
+
+
+def group_ids_of(moves: list[dict]) -> list[str]:
+    """Группы, которых коснулся перенос, — для истории каждой из них."""
+    return sorted({m[key] for m in moves for key in ("from_id", "to_id") if m.get(key)})
+
+
+# --- Умолчания ------------------------------------------------------------------
+
+
+def set_defaults(group: HotelGroup, enabled: bool, modules: list[str]) -> dict:
+    """Правило «модули для новых отелей группы». Возвращает «было → стало»."""
+    from apps.core.errors import ValidationError
+    from apps.hotels.module_registry import ALL_CODES
+
+    unknown = [code for code in modules if code not in ALL_CODES]
+    if unknown:
+        raise ValidationError("Такого модуля нет", field="modules", code="unknown_module")
+    modules = sorted(set(modules))
+    changes = {}
+    if group.auto_enabled != enabled:
+        changes["auto_enabled"] = {"from": group.auto_enabled, "to": enabled}
+    if sorted(group.auto_modules or []) != modules:
+        changes["auto_modules"] = {"from": sorted(group.auto_modules or []), "to": modules}
+    if changes:
+        group.auto_enabled = enabled
+        group.auto_modules = modules
+        group.save(update_fields=["auto_enabled", "auto_modules", "updated_at"])
+    return changes
+
+
+# --- Действия по всей группе ------------------------------------------------------
+
+ACTIONS = ("module_on", "module_off", "disable", "enable")
+
+
+def _check_action(kind: str, module: str | None) -> None:
+    from apps.core.errors import ValidationError
+    from apps.hotels.module_registry import ALL_CODES
+
+    if kind not in ACTIONS:
+        raise ValidationError("Такого действия нет", field="kind", code="unknown_action")
+    if kind.startswith("module") and module not in ALL_CODES:
+        raise ValidationError("Выберите модуль", field="module", code="unknown_module")
+
+
+def preview_action(group: HotelGroup, kind: str, module: str | None = None) -> dict:
+    """
+    ЧТО ИЗМЕНИТСЯ — ПО КАЖДОМУ ОТЕЛЮ, ДО ВЫПОЛНЕНИЯ. Тем же кодом, что потом
+    выполнит действие (`_plan`): показ и выполнение не могут разойтись.
+    """
+    _check_action(kind, module)
+    plan = _plan(group, kind, module)
+    return {
+        "kind": kind,
+        "module": module,
+        "items": plan,
+        "changes": sum(1 for row in plan if row["change"]),
+    }
+
+
+def _plan(group: HotelGroup, kind: str, module: str | None) -> list[dict]:
+    from apps.hotels.module_registry import enabled_module_codes
+
+    rows = []
+    for hotel in queryset(group).order_by("subdomain"):
+        if kind in ("module_on", "module_off"):
+            before = module in enabled_module_codes(hotel)
+            after = kind == "module_on"
+        else:
+            before = hotel.is_active
+            after = kind == "enable"
+        rows.append(
+            {
+                "hotel_id": str(hotel.pk),
+                "subdomain": hotel.subdomain,
+                "name": hotel.name_i18n,
+                "before": before,
+                "after": after,
+                "change": before != after,
+            }
+        )
+    return rows
+
+
+def run_action(group: HotelGroup, kind: str, module: str | None, hotel_ids_: list[str], reason: str = "") -> list[dict]:
+    """
+    Выполнить действие по группе. МЕНЯЕТСЯ РОВНО ПОКАЗАННОЕ: из присланного
+    списка (то, что человек видел в показе) берутся только отели, которые
+    сейчас в группе и которым действие действительно что-то меняет.
+    Возвращает изменившиеся.
+
+    Отключение отеля сейчас — прежнее `is_active` с отзывом входов персонала;
+    полная логика отключения (заглушки, причина) — партия C.
+    """
+    from apps.core.errors import ValidationError
+    from apps.hotels.module_registry import set_modules
+
+    _check_action(kind, module)
+    if kind == "disable" and not (reason or "").strip():
+        raise ValidationError("Укажите причину отключения", field="reason", code="reason_required")
+    wanted = {str(h) for h in hotel_ids_}
+    plan = [row for row in _plan(group, kind, module) if row["change"] and row["hotel_id"] in wanted]
+    if not plan:
+        return []
+    hotels = {str(h.pk): h for h in Hotel.objects.filter(pk__in=[row["hotel_id"] for row in plan])}
+    with transaction.atomic():
+        for row in plan:
+            hotel = hotels[row["hotel_id"]]
+            if kind in ("module_on", "module_off"):
+                set_modules(hotel, [{"code": module, "is_enabled": kind == "module_on"}])
+            else:
+                hotel.is_active = kind == "enable"
+                hotel.save(update_fields=["is_active", "updated_at"])
+    if kind == "disable":
+        from apps.accounts.services import sessions as session_svc
+
+        for row in plan:
+            session_svc.revoke_hotel(hotels[row["hotel_id"]].pk, reason="hotel_deactivated")
+    return plan
+
+
+# --- Сводка и история ---------------------------------------------------------------
+
+
+def summary(group: HotelGroup, user=None) -> dict:
+    """Отели группы со сводкой и модулями — для страницы группы."""
+    from apps.hotels.services.platform.fleet import _summary, fleet_view
+
+    view = fleet_view({"layout": "list", "origin": "all", "group": str(group.pk)}, user)
+    rows = view["items"]
+    modules: dict[str, int] = {}
+    for row in rows:
+        for code in row["modules"]:
+            modules[code] = modules.get(code, 0) + 1
+    return {**serialize(group), "summary": _summary(rows), "modules": modules, "items": rows}
+
+
+GROUP_ACTIONS = (
+    "platform.group.created",
+    "platform.group.updated",
+    "platform.group.hotels_moved",
+    "platform.group.action",
+    "platform.group.defaults_set",
+    "platform.group.deleted",
+)
+
+
+def history(group: HotelGroup, limit: int = 300) -> list[dict]:
+    """
+    История группы: записи журнала, где группа названа в `group_ids`, плюс
+    старые записи по коду (до партии 62-A2 `group_ids` не писался).
+    """
+    from django.db.models import Q
+
+    from apps.core.context import platform_scope
+    from apps.core.models import AuditLog
+
+    with platform_scope():
+        rows = list(
+            AuditLog.all_objects.using("platform")
+            .filter(action__in=GROUP_ACTIONS)
+            .filter(Q(payload__group_ids__contains=[str(group.pk)]) | Q(payload__code=group.code))
+            .order_by("-created_at")[:limit]
+        )
+    actors = _actor_names([row.actor_id for row in rows if row.actor_id])
+    return [
+        {
+            "id": str(row.pk),
+            "at": row.created_at.isoformat(),
+            "actor": actors.get(row.actor_id) or "",
+            "action": row.action,
+            "payload": row.payload,
+        }
+        for row in rows
+    ]
 
 
 def add_members(group: HotelGroup, hotel_ids_: list[str], *, actor_id=None) -> int:
@@ -279,6 +475,8 @@ def serialize(group: HotelGroup, *, with_size: bool = True) -> dict:
         "color": group.color,
         "sort_order": group.sort_order,
         "parent_id": str(group.parent_id) if group.parent_id else None,
+        "auto_enabled": group.auto_enabled,
+        "auto_modules": list(group.auto_modules or []),
         "created_at": group.created_at.isoformat(),
     }
     if with_size:
