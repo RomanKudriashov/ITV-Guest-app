@@ -20,18 +20,23 @@ from django.db.models.functions import Cast
 
 
 def rules_to_lists(apps, schema_editor):
+    # ТОЛЬКО ЧЕРЕЗ ПОДКЛЮЧЕНИЕ МИГРАЦИИ. Стенд мигрирует `--database=platform`,
+    # и эта же транзакция держит `hotels_group` после ALTER TABLE; запрос через
+    # подключение по умолчанию ждал её блокировку, а она ждала его — выкатка
+    # повисла (партия 62-A1). Каждый запрос ниже — `.using(db)`.
+    db = schema_editor.connection.alias
     Group = apps.get_model("hotels", "HotelGroup")
     Member = apps.get_model("hotels", "HotelGroupMember")
     Hotel = apps.get_model("hotels", "Hotel")
 
     converted = 0
-    for index, group in enumerate(Group.objects.filter(deleted_at__isnull=True).order_by("title")):
+    for index, group in enumerate(Group.objects.using(db).filter(deleted_at__isnull=True).order_by("title")):
         group.sort_order = index + 1
-        group.save(update_fields=["sort_order"])
+        group.save(using=db, update_fields=["sort_order"])
         if group.mode != "rule":
             continue
         rule = group.rule or {}
-        hotels = Hotel.objects.filter(deleted_at__isnull=True)
+        hotels = Hotel.objects.using(db).filter(deleted_at__isnull=True)
         if (rule.get("origin") or "").strip():
             hotels = hotels.filter(origin=rule["origin"].strip())
         if (rule.get("tariff") or "").strip():
@@ -41,18 +46,18 @@ def rules_to_lists(apps, schema_editor):
         if (rule.get("language") or "").strip():
             hotels = hotels.filter(default_language=rule["language"].strip())
         for hotel_id in hotels.values_list("pk", flat=True):
-            member, _ = Member.objects.get_or_create(group=group, hotel_id=hotel_id)
+            member, _ = Member.objects.using(db).get_or_create(group=group, hotel_id=hotel_id)
             if member.deleted_at is not None:
                 member.deleted_at = None
-                member.save(update_fields=["deleted_at"])
+                member.save(using=db, update_fields=["deleted_at"])
         converted += 1
 
     # Один владелец: оставляем самое раннее живое членство отеля.
     dropped = 0
     seen = set()
-    for member in Member.objects.filter(deleted_at__isnull=True).order_by("hotel_id", "created_at"):
+    for member in Member.objects.using(db).filter(deleted_at__isnull=True).order_by("hotel_id", "created_at"):
         if member.hotel_id in seen:
-            member.delete()
+            member.delete(using=db)
             dropped += 1
         else:
             seen.add(member.hotel_id)
