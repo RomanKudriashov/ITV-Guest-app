@@ -27,6 +27,8 @@ async function openHotelCard(page: Page): Promise<void> {
   await page.getByTestId('admin-fleet-search').fill(DEMO)
   await page.getByTestId(`admin-fleet-open-${DEMO}`).click()
   await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 20_000 })
+  // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+  await page.getByTestId('admin-hotel-tab-profile').click()
 }
 
 test.describe('Профиль отеля: правка', () => {
@@ -135,6 +137,8 @@ test.describe('Профиль отеля: правка', () => {
     await page.getByTestId('admin-fleet-search').fill(DEMO)
     await page.getByTestId(`admin-fleet-open-${DEMO}`).click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 20_000 })
+    // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+    await page.getByTestId('admin-hotel-tab-profile').click()
 
     await expect(page.getByTestId('admin-hotel-save')).toHaveCount(0)
     await expect(page.getByTestId('admin-hotel-name-input')).toHaveCount(0)

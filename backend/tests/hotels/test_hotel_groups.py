@@ -261,7 +261,10 @@ def test_the_grouped_view_summarises_each_group_and_the_loose_hotels(api):
     view = _view(api)
     block = next(g for g in view["groups"] if g["id"] == group["id"])
     assert block["summary"]["hotels"] == 2
-    assert block["summary"]["problems"] == 0
+    # Проблемы — настоящие, от сервера готовности (партия 62-B): сумма по отелям.
+    from apps.hotels.services.platform.readiness import problem_count
+
+    assert block["summary"]["problems"] == problem_count(one) + problem_count(two) > 0
     assert {r["subdomain"] for r in block["items"]} == {"sum-one", "sum-two"}
     assert all(r["group"]["title"] == "Сводная" for r in block["items"])
     assert "sum-loose" in {r["subdomain"] for r in view["ungrouped"]["items"]}
@@ -278,7 +281,8 @@ def test_view_filters_combine_and_facets_count_with_the_other_filters(api):
     rows = [r["subdomain"] for g in view["groups"] for r in g["items"]] + [r["subdomain"] for r in view["ungrouped"]["items"]]
     assert rows == ["flt-off"]
     # Счётчик состояния — при выбранной группе, без учёта самого состояния.
-    assert view["facets"]["state"] == {"ready": 1, "disabled": 1}
+    # Новый отель сразу «с проблемами»: меню нет, администратор не входил (62-B).
+    assert view["facets"]["state"] == {"problems": 1, "disabled": 1}
 
     none = _view(api, "&group=none&search=flt-")
     assert none["total"] == 0

@@ -11,6 +11,11 @@ import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
 import { RoomControlTab } from './hotel/RoomControlTab';
+import { ConnectionsTab } from './hotel/ConnectionsTab';
+import { JournalTab } from './hotel/JournalTab';
+import { OverviewTab } from './hotel/OverviewTab';
+import { RoomsTab } from './hotel/RoomsTab';
+import { Pill } from './hotels/hotelsUi';
 
 import { parentOf } from '@/app/backMap';
 import { BackLink } from '@/kit/BackLink';
@@ -26,7 +31,6 @@ import { currencyOptions, languageOptions, timezoneOptions } from '@/components/
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { EnterHotelDialog } from '../EnterHotelDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { SupportSessionsPage } from './SupportSessionsPage';
 import {
   cancelOffboarding,
   changeAdminEmail,
@@ -37,6 +41,7 @@ import {
   getHotel,
   getHotelAdmins,
   getHotelFieldReference,
+  getReadiness,
   getModules,
   getTariffs,
   removeHotelAdmin,
@@ -48,30 +53,37 @@ import {
   setHotelAdmin,
   setTariff,
   type DowngradeWarning,
+  type FixTarget,
   type HotelProfile,
   type ModuleEntry,
 } from '../adminClient';
 
-const TABS = ['profile', 'tariff', 'modules', 'roomControl', 'activity', 'support', 'data'] as const;
-type Tab = (typeof TABS)[number];
+/*
+  ДЕВЯТЬ ВКЛАДОК (партия 62-B, по утверждённому макету). Порядок — от «что с
+  отелем сейчас» к «что с ним делали» и «что с его данными».
+*/
+const TABS = ['overview', 'profile', 'modules', 'connections', 'rooms', 'roomControl', 'journal', 'history', 'data'] as const;
+export type Tab = (typeof TABS)[number];
 
 /**
  * Прежние ключи вкладок, которые больше не рисуются сами по себе.
  *
- * «Использование» и «Тариф» отвечали на ОДИН вопрос — «что у отеля сейчас и
- * хватает ли ему» — и были разрезаны ровно посередине: предупреждение о
- * даунгрейде жило на одной вкладке, а цифры, по которым его можно проверить, —
- * на другой. Слиты в «Тариф и лимиты».
- *
- * Ключ `usage` остаётся живым АДРЕСОМ: тот, кто просит его (закладка, тест,
- * чужая ссылка), попадает на слитую вкладку, а не на пустой экран.
+ * Ключ остаётся живым АДРЕСОМ: тот, кто просит его (закладка, тест, чужая
+ * ссылка), попадает туда, куда переехало содержимое, а не на пустой экран.
+ *   * `usage`, `tariff` — «Тариф и лимиты» живут на «Модулях» до партии E,
+ *     где тарифы уходят совсем;
+ *   * `activity` — журнал правок отеля стал «Историей»;
+ *   * `support` — входы поддержки стали частью «Журнала».
  */
-const TAB_ALIASES: Record<string, Tab> = { usage: 'tariff' };
+const TAB_ALIASES: Record<string, Tab> = { usage: 'modules', tariff: 'modules', activity: 'history', support: 'journal' };
 
 function resolveTab(key: string): Tab {
   if ((TABS as readonly string[]).includes(key)) return key as Tab;
-  return TAB_ALIASES[key] ?? 'profile';
+  return TAB_ALIASES[key] ?? 'overview';
 }
+
+/** Фильтры и подвкладки вкладок: при смене вкладки не переносятся. */
+const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin'];
 
 /**
  * Карточка отеля — на вкладках, а не одним свитком.
@@ -97,6 +109,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
   const setTab = (key: Tab) => {
     const params = new URLSearchParams(searchParams);
     params.set('tab', key);
+    for (const name of TAB_KEYS) params.delete(name);
     // replace, а не push: вкладка — это место на экране, а не шаг назад.
     setSearchParams(params, { replace: true });
   };
@@ -115,6 +128,8 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
     label: t('admin.nav.fleet'),
   };
   const profile = useQuery({ queryKey: ['admin', 'hotel', id], queryFn: () => getHotel(id) });
+  // Готовность — для пометки в шапке и числа на «Обзоре»; сервер держит её минуту.
+  const readiness = useQuery({ queryKey: ['admin', 'readiness', id], queryFn: () => getReadiness(id), refetchInterval: 60_000 });
 
   if (profile.isPending || profile.isError || profile.data === undefined) {
     // Выход есть и у неоткрывшейся карточки: чужая ссылка на удалённый отель
@@ -129,6 +144,9 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
     );
   }
   const hotel = profile.data;
+  const problems = readiness.data?.problems ?? [];
+  const anyBad = problems.some((p) => p.severity === 'bad');
+  const openFix = (target: FixTarget) => (target === 'panel' ? setEntering(true) : setTab(target));
 
   return (
     <Box data-testid="admin-hotel">
@@ -140,7 +158,19 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
             data-testid="admin-hotel-name">
             {hotel.name}
           </Typography>
-          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{hotel.subdomain}</Typography>
+          <Box sx={{ ...typo.caption, color: ink.mid, mt: 0.5, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <span>
+              {hotel.subdomain}
+              {hotel.city ? ` · ${hotel.city}` : ''}
+            </span>
+            {!hotel.is_active ? (
+              <Pill tone="muted" testId="admin-hotel-state">{t('admin.card.state.disabled')}</Pill>
+            ) : readiness.data ? (
+              <Pill tone={anyBad ? 'bad' : problems.length ? 'warn' : 'ok'} testId="admin-hotel-state">
+                {problems.length ? t('admin.card.state.problems', { count: problems.length }) : t('admin.card.state.ready')}
+              </Pill>
+            ) : null}
+          </Box>
         </Box>
         {/* Вход в отель — право WRITE (`POST /hotels/{id}/enter`). */}
         {canWrite ? (
@@ -151,12 +181,12 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
       </Box>
 
       {/*
-        Семь вкладок на 390 шире экрана. Без прокрутки ряд распирал колонку
-        оболочки, и вся карточка уезжала вбок (+100 px, партия 55). Прокрутка
-        своя, а `width: 0` + `minWidth: 100%` не дают ряду участвовать в
-        расчёте ширины колонки.
+        Девять вкладок на 390 шире экрана. Прокрутка своя, а `width: 0` +
+        `minWidth: 100%` не дают ряду участвовать в расчёте ширины колонки
+        (иначе карточка уезжала вбок, партия 55).
       */}
       <Box
+        role="tablist"
         sx={{
           display: 'flex',
           gap: 0.5,
@@ -168,38 +198,39 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
           minWidth: '100%',
         }}
       >
-        {TABS.map((key) => (
-          <ButtonBase
-            key={key}
-            onClick={() => setTab(key)}
-            data-testid={`admin-hotel-tab-${key}`}
-            data-active={tab === key ? 'true' : undefined}
-            sx={{
-              flexShrink: 0,
-              whiteSpace: 'nowrap',
-              px: 1.75,
-              py: 1.25,
-              ...typo.body,
-              fontWeight: 700,
-              color: tab === key ? accent.soft : ink.mid,
-              borderBottom: `2px solid ${tab === key ? accent.main : 'transparent'}`,
-            }}
-          >
-            {t(`admin.hotel.tab.${key}`)}
-          </ButtonBase>
-        ))}
+        {TABS.map((key) => {
+          const badge = key === 'overview' && hotel.is_active && problems.length ? problems.length : 0;
+          return (
+            <ButtonBase
+              key={key}
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              data-testid={`admin-hotel-tab-${key}`}
+              data-active={tab === key ? 'true' : undefined}
+              sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                gap: 0.75,
+                px: 1.75,
+                py: 1.25,
+                ...typo.body,
+                fontWeight: 700,
+                color: tab === key ? accent.soft : ink.mid,
+                borderBottom: `2px solid ${tab === key ? accent.main : 'transparent'}`,
+              }}
+            >
+              {t(`admin.hotel.tab.${key}`)}
+              {badge ? <Pill tone={anyBad ? 'bad' : 'warn'} testId="admin-hotel-tab-badge">{badge}</Pill> : null}
+            </ButtonBase>
+          );
+        })}
       </Box>
 
       {/*
-        Объяснение вкладки — НАД содержимым и в одном месте на все вкладки.
-        Над, потому что читают сверху вниз: подпись под таблицей встречает
-        человека уже после того, как он не понял таблицу. В одном месте,
-        потому что иначе шесть вкладок обзаведутся шестью разными способами
-        сказать одно и то же.
-
-        У «Профиля» объяснения нет намеренно: имя, адрес и валюта отеля
-        говорят сами за себя, и подпись там была бы шумом. Пустой ключ
-        поэтому не ошибка — он просто ничего не рисует.
+        Объяснение вкладки — НАД содержимым и в одном месте на все вкладки:
+        подпись под таблицей встречает человека уже после того, как он её не
+        понял.
       */}
       {t(`admin.hotel.intro.${tab}`, { defaultValue: '' }) ? (
         <Typography
@@ -211,13 +242,21 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
       ) : null}
 
       <Box sx={{ mt: 2.25 }}>
+        {tab === 'overview' ? <OverviewTab hotel={hotel} readiness={readiness} onFix={openFix} /> : null}
         {tab === 'profile' ? <ProfileTab hotel={hotel} /> : null}
-        {tab === 'modules' ? <ModulesTab id={id} /> : null}
+        {tab === 'modules' ? (
+          <Box sx={{ display: 'grid', gap: 2.5 }}>
+            <ModulesTab id={id} />
+            {/* «Тариф и лимиты» — здесь до партии E, где тарифы уходят. */}
+            <TariffTab id={id} />
+          </Box>
+        ) : null}
+        {tab === 'connections' ? <ConnectionsTab hotelId={id} /> : null}
+        {tab === 'rooms' ? <RoomsTab hotelId={id} /> : null}
         {/* Конфигурация управления номером: наша работа, наша консоль. */}
         {tab === 'roomControl' ? <RoomControlTab hotelId={id} /> : null}
-        {tab === 'activity' ? <ActivityTab id={id} /> : null}
-        {tab === 'support' ? <SupportSessionsPage hotelId={id} /> : null}
-        {tab === 'tariff' ? <TariffTab id={id} /> : null}
+        {tab === 'journal' ? <JournalTab hotelId={id} /> : null}
+        {tab === 'history' ? <ActivityTab id={id} /> : null}
         {tab === 'data' ? <DataTab hotel={hotel} onRemoved={onBack} /> : null}
       </Box>
 

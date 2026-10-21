@@ -12,7 +12,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 
 import { SearchField } from '@/components/SearchField';
-import { accent, fieldSx, ink, pillSx, shape, state, surface, typo } from '../../adminTokens';
+import { accent, fieldSx, ink, panelSx, pillSx, shape, state, surface, typo } from '../../adminTokens';
 import type { GroupColor } from '../../adminClient';
 
 /**
@@ -107,9 +107,9 @@ export function Hl({ text, q }: { text: string; q: string }) {
   );
 }
 
-export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+export function Empty({ title, children, action, testId = 'admin-hotels-empty' }: { title: string; children?: ReactNode; action?: ReactNode; testId?: string }) {
   return (
-    <Box sx={{ textAlign: 'center', py: 4, px: 2 }} data-testid="admin-hotels-empty">
+    <Box sx={{ textAlign: 'center', py: 4, px: 2 }} data-testid={testId}>
       <Typography sx={{ ...typo.panelTitle, color: ink.hi }}>{title}</Typography>
       {children ? <Typography sx={{ ...typo.body, color: ink.mid, mt: 0.75, maxWidth: 520, mx: 'auto' }}>{children}</Typography> : null}
       {action ? <Box sx={{ mt: 2 }}>{action}</Box> : null}
@@ -122,11 +122,13 @@ export function ViewSwitch<K extends string>({
   value,
   onChange,
   label,
+  testIdPrefix = 'admin-hotels-layout',
 }: {
   options: Array<[K, string, ReactNode?]>;
   value: K;
   onChange: (key: K) => void;
   label: string;
+  testIdPrefix?: string;
 }) {
   return (
     <Box role="group" aria-label={label} sx={{ display: 'inline-flex', p: 0.5, borderRadius: `${shape.radius}px`, bgcolor: surface.s2, border: `1px solid ${surface.line}`, flex: '0 0 auto' }}>
@@ -134,7 +136,7 @@ export function ViewSwitch<K extends string>({
         <ButtonBase
           key={key}
           aria-pressed={value === key}
-          data-testid={`admin-hotels-layout-${key}`}
+          data-testid={`${testIdPrefix}-${key}`}
           onClick={() => onChange(key)}
           sx={{
             gap: 0.75,
@@ -300,6 +302,32 @@ function ActiveChip({ label, onRemove, testId }: { label: string; onRemove: () =
       <ButtonBase onClick={onRemove} aria-label={t('admin.hotels.filter.remove', { label })} sx={{ borderRadius: '50%', p: 0.25 }}>
         <CloseIcon sx={{ fontSize: 15 }} />
       </ButtonBase>
+    </Box>
+  );
+}
+
+/** Карточка цифры: подпись, число, пояснение. */
+export function Metric({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: Tone }) {
+  return (
+    <Box sx={{ ...panelSx, minWidth: 0 }}>
+      <Typography sx={{ ...typo.label, color: ink.mid }}>{label}</Typography>
+      <Typography sx={{ ...typo.metric, color: tone && tone !== 'muted' ? state[tone] : ink.hi, mt: 0.75 }}>{value}</Typography>
+      {hint ? <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{hint}</Typography> : null}
+    </Box>
+  );
+}
+
+/** Панель с заголовком и местом справа от него. */
+export function Panel({ title, aside, children }: { title?: string; aside?: ReactNode; children: ReactNode }) {
+  return (
+    <Box sx={panelSx}>
+      {title ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+          <Typography component="h2" sx={{ ...typo.panelTitle, color: ink.hi, flex: '1 1 auto' }}>{title}</Typography>
+          {aside}
+        </Box>
+      ) : null}
+      {children}
     </Box>
   );
 }

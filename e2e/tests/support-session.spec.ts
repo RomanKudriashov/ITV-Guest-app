@@ -137,7 +137,8 @@ test.describe('Вход под аудитом', () => {
 
     // Отзываем из консоли — вкладку поддержки при этом не трогаем.
     await page.getByTestId('admin-enter-granted').getByRole('button', { name: /Готово|Done/ }).click()
-    await page.getByTestId('admin-hotel-tab-support').click()
+    // Входы поддержки отеля — во вкладке «Журнал» карточки (партия 62-B).
+    await page.getByTestId('admin-hotel-tab-journal').click()
     // Рвём ИМЕННО свою сессию: на стенде рядом живут чужие, и «первая в
     // списке» проверяла бы не то.
     const row = page.getByTestId(`admin-support-revoke-${grantId}`)
@@ -179,7 +180,10 @@ test.describe('Вход под аудитом', () => {
     }
 
     await loginToAdmin(page)
-    await page.getByTestId('admin-nav-support').click()
+    // Все входы разом — «Журнал действий», вид «Входы поддержки» (62-B).
+    await page.getByTestId('admin-nav-audit').click()
+    await page.getByTestId('admin-audit-view-support').click()
+    await expect(page).toHaveURL(/view=support/)
     await expect(page.getByTestId('admin-support-sessions')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('state-empty')).toBeVisible()
   })

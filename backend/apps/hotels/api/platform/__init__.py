@@ -12,6 +12,7 @@ URL по порядку регистрации.
 from ninja import Router
 
 from .auth import router as auth_router
+from .card import router as card_router
 from .fleet import router as fleet_router
 from .groups import router as groups_router
 from .publications import router as publications_router
@@ -39,6 +40,7 @@ router.add_router("", hotels_router)
 router.add_router("", templates_router)
 router.add_router("", tariffs_router)
 router.add_router("", nodes_router)
+router.add_router("", card_router)
 router.add_router("", team_router)
 
 __all__ = ["router"]

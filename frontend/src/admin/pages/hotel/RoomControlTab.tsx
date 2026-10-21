@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -37,6 +38,26 @@ import { getHotel } from '@/admin/adminClient';
  * оператором, и все запросы адресуют его id.
  */
 export function RoomControlTab({ hotelId }: { hotelId: string }) {
+  return (
+    <HotelGrmsScope hotelId={hotelId}>
+      <Inner />
+    </HotelGrmsScope>
+  );
+}
+
+/**
+ * Журнал оборудования отеля для вкладки «Журнал» карточки (партия 62-B) —
+ * та же диагностика, что последней подвкладкой здесь, без редакторов.
+ */
+export function RoomControlJournal({ hotelId }: { hotelId: string }) {
+  return (
+    <HotelGrmsScope hotelId={hotelId}>
+      <JournalInner />
+    </HotelGrmsScope>
+  );
+}
+
+function HotelGrmsScope({ hotelId, children }: { hotelId: string; children: ReactNode }) {
   const { i18n } = useTranslation();
   /*
     Языки контента отеля — из его карточки, а не из бутстрапа CMS: под
@@ -55,9 +76,32 @@ export function RoomControlTab({ hotelId }: { hotelId: string }) {
 
   return (
     <GrmsScopeProvider hotelId={hotelId} languages={languages}>
-      <Inner />
+      {children}
     </GrmsScopeProvider>
   );
+}
+
+function JournalInner() {
+  const { t } = useTranslation();
+  const grms = useGrms();
+  const types = useQuery({ queryKey: queryKeys.grmsTypes(grms.base), queryFn: grms.types });
+  if (types.isLoading) return <Skeleton variant="rounded" height={240} />;
+  if (types.isError && types.error instanceof ApiError && types.error.status === 403) {
+    return (
+      <Alert severity="info" data-testid="admin-grms-module-off">
+        {types.error.detail}
+      </Alert>
+    );
+  }
+  if (types.isError || !types.data) return <Alert severity="error">{t('errors.generic')}</Alert>;
+  const first = types.data.types[0];
+  // Журнал общий на отель; вариант нужен только кнопке «перечитать».
+  if (!first) {
+    return (
+      <EmptyState testId="admin-grms-no-types" title={t('roomControl.noTypes')} description={t('roomControl.noTypesHint')} />
+    );
+  }
+  return <DiagnosticsTab type={first} />;
 }
 
 type Section = 'import' | 'builder' | 'plan' | 'versions' | 'diagnostics';
@@ -79,8 +123,18 @@ function Inner() {
   const grms = useGrms();
   const { canWrite } = useRights();
   const sections = canWrite ? SECTIONS : READ_ONLY_SECTIONS;
-  const [chosen, setSection] = useState<Section>('import');
-  const section = sections.includes(chosen) ? chosen : sections[0];
+  /*
+    ПОДВКЛАДКА — В АДРЕСЕ (`sub`, партия 62-B): F5 и ссылка открывают ту же,
+    как и вкладку карточки. Неизвестное значение — первая доступная.
+  */
+  const [params, setParams] = useSearchParams();
+  const chosen = params.get('sub') as Section | null;
+  const section = chosen && sections.includes(chosen) ? chosen : sections[0];
+  const setSection = (next: Section) => {
+    const out = new URLSearchParams(params);
+    out.set('sub', next);
+    setParams(out, { replace: true });
+  };
   const [typeCode, setTypeCode] = useState('');
 
   const types = useQuery({ queryKey: queryKeys.grmsTypes(grms.base), queryFn: grms.types });

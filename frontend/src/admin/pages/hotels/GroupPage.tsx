@@ -30,7 +30,7 @@ import {
   type LinkKind,
 } from '../../adminClient';
 import { AddHotelsDialog, ColorPicker, DeleteGroupDialog, GroupActionDialog, READY_MODULES } from './groupDialogs';
-import { Dot, Empty, FilterBar, GroupMark, Help, Hl, Pill, useFacetValues, type Facet, type Tone } from './hotelsUi';
+import { Dot, Empty, FilterBar, GroupMark, Help, Hl, Metric, Panel, Pill, useFacetValues, type Facet, type Tone } from './hotelsUi';
 
 /**
  * СТРАНИЦА ГРУППЫ (партия 62-A2, по утверждённому макету) —
@@ -124,30 +124,6 @@ export function GroupPage({ id, onBack, onOpenHotel }: { id: string; onBack: () 
 }
 
 type Page = HotelGroup & { summary: { hotels: number; active: number; rooms: number; problems: number; link: Record<LinkKind, number> }; modules: Record<string, number>; items: HotelViewRow[] };
-
-function Metric({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: Tone }) {
-  return (
-    <Box sx={{ ...panelSx, minWidth: 0 }}>
-      <Typography sx={{ ...typo.label, color: ink.mid }}>{label}</Typography>
-      <Typography sx={{ ...typo.metric, color: tone && tone !== 'muted' ? state[tone] : ink.hi, mt: 0.75 }}>{value}</Typography>
-      {hint ? <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{hint}</Typography> : null}
-    </Box>
-  );
-}
-
-function Panel({ title, aside, children }: { title?: string; aside?: ReactNode; children: ReactNode }) {
-  return (
-    <Box sx={panelSx}>
-      {title ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-          <Typography component="h2" sx={{ ...typo.panelTitle, color: ink.hi, flex: '1 1 auto' }}>{title}</Typography>
-          {aside}
-        </Box>
-      ) : null}
-      {children}
-    </Box>
-  );
-}
 
 /* ── Сводка ─────────────────────────────────────────────────────────────── */
 

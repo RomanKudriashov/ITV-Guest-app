@@ -2393,7 +2393,7 @@
       "modules": "模块与套餐",
       "nodes": "On-premise",
       "team": "用户",
-      "audit": "审计",
+      "audit": "操作日志",
       "templates": "模板与字典",
       "open": "打开菜单",
       "support": "支持会话",
@@ -2536,13 +2536,15 @@
       "crumb": "酒店详情",
       "loadFailed": "无法加载酒店",
       "tab": {
+        "overview": "概览",
         "profile": "资料",
         "modules": "模块",
-        "activity": "动态",
-        "tariff": "套餐与配额",
-        "data": "数据",
-        "support": "支持",
-        "roomControl": "客房控制"
+        "connections": "连接",
+        "rooms": "客房",
+        "roomControl": "客房控制",
+        "journal": "日志",
+        "history": "历史",
+        "data": "数据"
       },
       "field": {
         "name": "名称",
@@ -2599,11 +2601,14 @@
       "adminFailed": "无法重置访问",
       "adminMoveFailed": "无法更改邮箱",
       "intro": {
-        "modules": "这家酒店开启了哪些能力，各自来自套餐还是手动开通。当你要在套餐之外为酒店开启或收回某项功能时来这里。",
-        "activity": "酒店里发生了什么：客人下单、进入应用、访问客房设备。当酒店投诉、你需要看清实际情况时来这里。",
-        "support": "平台员工何时以他人账户进入本酒店、为何进入。当你要切断该访问或向酒店说明谁进来过时来这里。",
-        "tariff": "酒店在用哪个套餐、已经用掉多少、换套餐后会有什么变化。酒店触及上限要求扩容时，以及续费时来这里。",
-        "data": "导出酒店积累的全部数据，以及停用并清除数据。当酒店离开平台或依法索取其数据时来这里。"
+        "modules": "此酒店开启了哪些功能。下方是套餐和限额，直到套餐被移除。",
+        "data": "导出酒店积累的全部数据，以及停用并删除数据。酒店离开平台或依法要求其数据时来这里。",
+        "overview": "当前影响酒店运行的问题以及处理办法。检查每分钟更新。",
+        "connections": "酒店服务器上的连接器和其他外部系统：是否在线、版本、密钥。",
+        "rooms": "每间客房的楼栋、楼层、房型、控制方案和 PIN。目前仅可查看。",
+        "roomControl": "客房方案、调试文件导入、构建器、平面图、版本和设备诊断。",
+        "journal": "支持人员进入酒店面板的记录和客房设备日志。",
+        "history": "酒店发生了什么：平台和酒店管理员的修改、订单、登录、设备调用。"
       },
       "limitWontFit": "超出所选套餐",
       "moduleState": {
@@ -2756,7 +2761,7 @@
       }
     },
     "audit": {
-      "title": "审计",
+      "title": "操作日志",
       "subtitle": "平台的全部操作 — 谁、做了什么、何时",
       "empty": "暂无记录",
       "filterAction": "操作",
@@ -2766,7 +2771,10 @@
       "filterHotel": "酒店（子域）",
       "counter": "显示 {{shown}} / {{total}}",
       "prev": "上一页",
-      "next": "更多"
+      "next": "更多",
+      "viewLabel": "显示内容",
+      "viewAll": "全部操作",
+      "viewSupport": "支持登录"
     },
     "action": {
       "platform": {
@@ -3226,7 +3234,9 @@
       "empty": {
         "title": "没有找到",
         "body": "没有酒店或分组符合搜索和筛选条件。请检查拼写或去掉部分筛选。",
-        "reset": "重置搜索和筛选"
+        "reset": "重置搜索和筛选",
+        "noneTitle": "还没有酒店",
+        "noneBody": "用“新建酒店”按钮创建第一家酒店——它会显示在这里。"
       }
     },
     "groupPage": {
@@ -3260,7 +3270,7 @@
         "rooms": "客房",
         "roomsHint": "分组内所有酒店",
         "problems": "问题",
-        "problemsHint": "酒店检查将在下一批次上线",
+        "problemsHint": "来自酒店就绪检查",
         "link": "连接",
         "linkValue": "{{online}} / {{total}}",
         "linkHint": "离线 {{silent}} 家，无连接器 {{none}} 家",
@@ -3407,6 +3417,179 @@
         "noMatch": "没有符合筛选的内容",
         "noMatchBody": "去掉部分筛选或修改搜索。",
         "createdCount_other": "包含 {{count}} 家酒店"
+      }
+    },
+    "card": {
+      "what": "酒店就绪情况",
+      "state": {
+        "disabled": "已停用",
+        "ready": "就绪",
+        "problems_other": "{{count}} 个问题"
+      },
+      "metric": {
+        "rooms": "客房",
+        "roomsBound": "已设控制方案 — {{count}}",
+        "roomControlOff": "客房控制已关闭",
+        "staff": "员工",
+        "admins_other": "{{count}} 名管理员",
+        "services": "服务",
+        "menuServices": "有菜单和送达地点 — {{count}}；商品 — {{items}}",
+        "connector": "连接器",
+        "online": "在线",
+        "silent": "无响应",
+        "noConnector": "无",
+        "noConnectorHint": "未配置",
+        "commands": "24 小时指令",
+        "commandsValue": "{{ok}} / {{total}}",
+        "commandsHint": "成功；失败 — {{count}}"
+      },
+      "ago": {
+        "never": "从未连接",
+        "seconds": "{{count}} 秒前响应",
+        "minutes": "{{count}} 分钟前响应",
+        "hours": "{{count}} 小时前响应",
+        "days": "{{count}} 天前响应"
+      },
+      "problemsTitle": "影响酒店运行的问题",
+      "everyMinute": "每分钟更新",
+      "problemsHelp": "检查由服务器计算——同一数字也显示在“酒店”列表和分组摘要中。红色：客人现在就无法完成某事；黄色：需要注意；蓝色：值得检查。右侧按钮会带你去修复的地方。",
+      "disabledNote": "酒店已停用。以下检查供重新启用时参考；酒店列表不计入。",
+      "noProblems": "没有问题",
+      "noProblemsBody": "酒店已准备好接待客人。如有故障，一分钟内会在此显示。",
+      "passed": "已通过",
+      "roomRulesSkipped_other": "客房控制已关闭 — 无需 {{count}} 项客房检查。",
+      "severity": {
+        "bad": "影响客人",
+        "warn": "需要注意",
+        "info": "建议检查"
+      },
+      "rule": {
+        "module_without_connection": {
+          "title": "“{{module}}”已开启但没有连接",
+          "detail": "需要酒店服务器上的连接器。没有它，客人能看到模块但无法使用。",
+          "fix": "添加连接",
+          "passed": "已开启的模块都有连接"
+        },
+        "connector_silent": {
+          "title": "连接器“{{node}}”不在线",
+          "detail": "最后一次{{ago}}。客人的指令无法到达客房。",
+          "never": "从未连接——现场未安装密钥。",
+          "fix": "打开连接",
+          "passed": "连接器在线"
+        },
+        "rooms_without_variant": {
+          "title_other": "{{count}} 间客房没有控制方案",
+          "detail": "这些客房的客人会看到“客房不受控制”。",
+          "fix": "分配方案",
+          "passed": "所有客房都有控制方案"
+        },
+        "variant_unpublished": {
+          "title": "方案“{{variant}}”未发布",
+          "detail_other": "{{count}} 间客房在等待第一个版本。",
+          "fix": "发布",
+          "passed": "方案已发布"
+        },
+        "failed_commands": {
+          "title_other": "24 小时内 {{count}} 次设备调用失败",
+          "detail": "最常见：{{reason}}（{{reasonCount}}）。客房：{{rooms}}。",
+          "fix": "打开设备日志",
+          "passed": "指令正常执行"
+        },
+        "no_menu_service": {
+          "title": "没有带菜单和送达地点的服务",
+          "detail": "客人无可点：没有任何场所接受送到客人可取的地点的订单。",
+          "fix": "打开酒店面板",
+          "passed": "有带菜单和送达地点的服务"
+        },
+        "rooms_without_pin": {
+          "title_other": "{{count}} 间客房没有 PIN",
+          "detail": "在发放 PIN 之前，客人无法确认客房或开灯。",
+          "fix": "打开客房列表",
+          "passed": "客房都有 PIN"
+        },
+        "admin_never_logged_in": {
+          "title_other": "{{count}} 名管理员都从未登录",
+          "detail": "{{emails}} — 密码可能未送达或已丢失。",
+          "fix": "重新发送密码",
+          "passed": "管理员已登录过"
+        }
+      },
+      "reason": {
+        "CONNECTOR_OFFLINE": "连接器不在线",
+        "ENDPOINT_UNKNOWN": "客房控制服务器不可达",
+        "ENDPOINT_UNREACHABLE": "客房控制服务器不可达",
+        "TIMEOUT": "超时",
+        "TTL_EXPIRED": "超时",
+        "REQUEST_REJECTED": "连接器拒绝请求",
+        "BAD_RESPONSE": "设备响应无效",
+        "DEVICE_NOT_FOUND": "未找到设备或通道",
+        "CHANNEL_NOT_FOUND": "未找到设备或通道",
+        "DEVICE_OR_CHANNEL_NOT_FOUND": "未找到设备或通道",
+        "unconfirmed": "指令未确认",
+        "failed": "指令失败",
+        "other": "其他原因"
+      },
+      "enabled": "已开启",
+      "noModules": "没有模块——客人只能看到菜单和订单。",
+      "toModules": "模块",
+      "activation": {
+        "title": "停用酒店",
+        "onText": "对客人和员工关闭酒店；数据和设置会保留，随时可以重新启用。",
+        "offText": "酒店已停用：客人和员工无法进入。数据和设置已保留。",
+        "disable": "停用酒店…",
+        "enable": "启用酒店…"
+      },
+      "connections": {
+        "nodesTitle": "连接器",
+        "add": "+ 添加连接器",
+        "about": "安装在酒店服务器上的程序，把客人的指令传到客房设备。",
+        "aboutHelp": "连接由内向外：连接器主动向我们报到。“不在线”表示超过 3 分钟未报到。",
+        "issue": "签发密钥",
+        "issueAgain": "重新签发密钥",
+        "keyOnce": "连接器“{{name}}”的密钥只显示一次——请立即保存。之后只能重新签发。",
+        "copy": "复制密钥",
+        "copied": "已复制",
+        "emptyTitle": "没有连接器",
+        "emptyBody": "开启客房控制时需要：没有它，客人的指令无法到达设备。",
+        "lastSeen": "最后响应",
+        "version": "程序版本",
+        "keyIssued": "密钥签发时间",
+        "systemsTitle": "外部系统",
+        "roomSystem": "客房控制系统",
+        "otherSystems": "酒店管理系统、支付、门锁",
+        "otherSoon": "接入后会显示在这里"
+      },
+      "rooms": {
+        "title": "客房",
+        "what": "酒店客房",
+        "search": "查找客房",
+        "count": "显示 {{found}} / {{total}}",
+        "moduleOff": "客房控制已关闭——不使用方案和 PIN",
+        "emptyTitle": "没有客房",
+        "emptyBody": "客房由酒店在其面板中添加或通过文件导入。",
+        "noMatch": "没有符合筛选的结果",
+        "noMatchBody": "移除部分筛选或更改搜索。",
+        "none": "未设置",
+        "inactive": "已关闭入住",
+        "noVariant": "无方案",
+        "pin": {
+          "yes": "有",
+          "no": "无"
+        },
+        "col": {
+          "number": "房号",
+          "building": "楼栋",
+          "floor": "楼层",
+          "category": "房型",
+          "variant": "控制方案",
+          "pin": "PIN"
+        }
+      },
+      "journal": {
+        "support": "支持登录",
+        "supportHelp": "平台员工何时进入此酒店面板以及原因。进行中的登录可以中断。",
+        "hardware": "设备日志",
+        "hardwareHelp": "客房设备的指令和读取：时间、客房、元素、结果。"
       }
     }
   },

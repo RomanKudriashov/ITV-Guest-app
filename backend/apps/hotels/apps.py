@@ -19,3 +19,8 @@ class HotelsConfig(AppConfig):
         from apps.hotels.services import brand_schedule
 
         scheduler.register(brand_schedule.KIND, brand_schedule.run)
+
+        # Готовность отеля сбрасывается правкой того, из чего она считается.
+        from apps.hotels import signals
+
+        signals.connect()

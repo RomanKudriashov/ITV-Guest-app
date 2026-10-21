@@ -144,6 +144,8 @@ test('профиль отеля в консоли: набранное возвр
   const openFirstHotel = async () => {
     await page.getByTestId('admin-nav-fleet').click()
     await page.locator('[data-testid^="admin-fleet-open-"]').first().click()
+    // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+    await page.getByTestId('admin-hotel-tab-profile').click()
     await expect(page.getByTestId('admin-hotel-name-input')).toBeVisible({ timeout: 20_000 })
   }
 

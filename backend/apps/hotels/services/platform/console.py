@@ -103,6 +103,9 @@ def list_briefs(*, limit: int | None = None, user=None) -> dict[str, Any]:
 
 def profile(hotel: Hotel) -> dict[str, Any]:
     from apps.hotels.services.offboarding import offboarding_state
+    from apps.hotels.services.platform.groups import group_by_hotel
+
+    group = group_by_hotel([hotel.pk]).get(hotel.pk)
 
     with tenant_context(hotel):
         languages = [
@@ -128,6 +131,8 @@ def profile(hotel: Hotel) -> dict[str, Any]:
         # settings отеля — свалка внутренних ключей, и выставлять её наружу
         # значит однажды показать в интерфейсе что-то, чего там быть не должно.
         "offboarding": offboarding_state(hotel),
+        # Группа — для строки «Отели › Группа › Отель» над карточкой (62-B).
+        "group": {"id": str(group.pk), "title": group.title, "color": group.color} if group else None,
     }
 
 

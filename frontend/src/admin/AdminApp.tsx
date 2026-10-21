@@ -21,11 +21,9 @@ import { HotelPage } from './pages/HotelPage';
 import { GroupPage } from './pages/hotels/GroupPage';
 import { PublicationsPage } from './pages/PublicationsPage';
 import { ModulesPage } from './pages/ModulesPage';
-import { NodesPage } from './pages/NodesPage';
 import { TeamPage } from './pages/TeamPage';
 import { AuditPage } from './pages/AuditPage';
 import { SecurityPage } from './pages/SecurityPage';
-import { SupportSessionsPage } from './pages/SupportSessionsPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { accent, ink, typo } from './adminTokens';
 // Иконки пунктов меню — все КОНТУРНЫЕ (партия 55): в свёрнутом меню пункт
@@ -34,10 +32,8 @@ import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlin
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
-import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
 import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
-import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { getGroupPage, getHotel, getMe, platformLogoutHere, platformSession, platformToken } from './adminClient';
@@ -60,10 +56,8 @@ const SECTIONS: AdminSection[] = [
   // Публикация — тоже про отели, а не про платформу: адресуется группами.
   { key: 'publications', labelKey: 'admin.nav.publications', icon: <PublishOutlinedIcon fontSize="small" /> },
   { key: 'modules', labelKey: 'admin.nav.modules', icon: <ExtensionOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
-  { key: 'nodes', labelKey: 'admin.nav.nodes', icon: <DnsOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'templates', labelKey: 'admin.nav.templates', icon: <LibraryBooksOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'team', labelKey: 'admin.nav.team', icon: <ManageAccountsOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
-  { key: 'support', labelKey: 'admin.nav.support', icon: <SupportAgentOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'security', labelKey: 'admin.nav.security', icon: <ShieldOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'audit', labelKey: 'admin.nav.audit', icon: <HistoryOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
 ];
@@ -173,6 +167,25 @@ function Console({ onLogout }: { onLogout: () => void }) {
   const rawSection = searchParams.get('section') || 'overview';
   const section = rawSection === 'groups' ? 'fleet' : rawSection;
   /*
+    «ON-PREMISE» И «СЕССИИ ПОДДЕРЖКИ» УШЛИ ИЗ МЕНЮ (партия 62-B): узлы и входы
+    поддержки — вкладки карточки отеля. Общий список остался фильтром:
+    молчащие коннекторы — «Отели» со связью «не на связи», входы поддержки —
+    «Журнал действий». Старая ссылка ведёт туда, а не на пустой экран.
+  */
+  useEffect(() => {
+    if (rawSection !== 'nodes' && rawSection !== 'support') return;
+    const next = new URLSearchParams(searchParams);
+    if (rawSection === 'nodes') {
+      next.set('section', 'fleet');
+      next.set('link', 'silent');
+      next.set('layout', 'list');
+    } else {
+      next.set('section', 'audit');
+      next.set('view', 'support');
+    }
+    setSearchParams(next, { replace: true });
+  }, [rawSection, searchParams, setSearchParams]);
+  /*
     ОТКРЫТЫЙ ОТЕЛЬ — ТОЖЕ В АДРЕСЕ, и по той же причине, что раздел.
 
     Он оставался в `useState`, и «половина состояния» из комментария выше была
@@ -215,6 +228,15 @@ function Console({ onLogout }: { onLogout: () => void }) {
       'who',
       'what',
       'period',
+      // Вкладки карточки отеля и их фильтры (партия 62-B), вид журнала.
+      'tab',
+      'sub',
+      'building',
+      'floor',
+      'category',
+      'variant',
+      'pin',
+      'view',
     ]) {
       params.delete(key);
     }
@@ -240,8 +262,18 @@ function Console({ onLogout }: { onLogout: () => void }) {
   const closeHotel = () => {
     const params = new URLSearchParams(searchParams);
     params.delete('hotel');
-    // Вкладка карточки в списке отелей ничего не значит — уносим вместе с ней.
-    params.delete('tab');
+    // Вкладка карточки и её фильтры в списке отелей ничего не значат.
+    for (const key of ['tab', 'sub', 'search', 'building', 'floor', 'category', 'variant', 'pin']) params.delete(key);
+    setSearchParams(params);
+  };
+  /** Из карточки отеля — в список «Отелей» или на страницу группы. */
+  const openFleetPlace = (groupId: string | null) => {
+    const params = new URLSearchParams();
+    params.set('section', 'fleet');
+    if (groupId) {
+      params.set('gpage', groupId);
+      params.set('gtab', 'summary');
+    }
     setSearchParams(params);
   };
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe, retry: false });
@@ -283,20 +315,33 @@ function Console({ onLogout }: { onLogout: () => void }) {
         </Box>
       </Box>
     ) : hotelId && section === 'fleet' ? (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
         <ButtonBase
-          onClick={closeHotel}
+          onClick={() => openFleetPlace(null)}
           data-testid="admin-crumb-fleet"
           sx={{ ...typo.body, color: accent.soft, fontWeight: 600, borderRadius: 1, px: 0.5 }}
         >
           {t('admin.nav.fleet')}
         </ButtonBase>
         <Box sx={{ color: ink.low }}>›</Box>
+        {/* Группа отеля — звеном строки: «Отели › Группа › Отель» (партия 62-B). */}
+        {crumbHotel.data?.group ? (
+          <>
+            <ButtonBase
+              onClick={() => openFleetPlace(crumbHotel.data?.group?.id ?? null)}
+              data-testid="admin-crumb-hotel-group"
+              sx={{ ...typo.body, color: accent.soft, fontWeight: 600, borderRadius: 1, px: 0.5, minWidth: 0, overflowWrap: 'anywhere' }}
+            >
+              {crumbHotel.data.group.title}
+            </ButtonBase>
+            <Box sx={{ color: ink.low }}>›</Box>
+          </>
+        ) : null}
         <Box
           sx={{ ...typo.body, color: ink.hi, fontWeight: 700, minWidth: 0, overflowWrap: 'anywhere' }}
           data-testid="admin-crumb-hotel"
         >
-          {crumbName ? t('admin.hotel.crumbNamed', { name: crumbName }) : t('admin.hotel.crumb')}
+          {crumbName ?? t('admin.hotel.crumb')}
         </Box>
       </Box>
     ) : (
@@ -327,11 +372,9 @@ function Console({ onLogout }: { onLogout: () => void }) {
       ) : null}
       {section === 'publications' ? <PublicationsPage /> : null}
       {section === 'modules' ? <ModulesPage /> : null}
-      {section === 'nodes' ? <NodesPage /> : null}
       {section === 'templates' ? <TemplatesPage /> : null}
       {section === 'team' ? <TeamPage /> : null}
       {section === 'audit' ? <AuditPage /> : null}
-      {section === 'support' ? <SupportSessionsPage /> : null}
       {section === 'security' ? <SecurityPage /> : null}
       </ScreenBoundary>
     </AdminShell>

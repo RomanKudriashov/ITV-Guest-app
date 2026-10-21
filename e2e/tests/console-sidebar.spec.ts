@@ -39,8 +39,7 @@ test.describe('Консоль: сайдбар', () => {
     const expected: Record<string, string> = {
       fleet: 'Отели',
       team: 'Пользователи',
-      audit: 'Аудит',
-      nodes: 'On-premise',
+      audit: 'Журнал действий',
       overview: 'Сводка',
     }
     for (const [key, title] of Object.entries(expected)) {
@@ -59,7 +58,7 @@ test.describe('Консоль: сайдбар', () => {
     await page.getByTestId('admin-nav-team').click()
     await expect(page.getByTestId('admin-crumb')).toHaveText('Пользователи')
     await page.getByTestId('admin-nav-audit').click()
-    await expect(page.getByTestId('admin-crumb')).toHaveText('Аудит')
+    await expect(page.getByTestId('admin-crumb')).toHaveText('Журнал действий')
 
     // Каждое переключение — шаг истории. Проверяется РЕЗУЛЬТАТ шага, а не
     // счётчик: счётчик молчал бы о том, куда именно вернуло.
@@ -139,7 +138,7 @@ test.describe('Консоль: сайдбар', () => {
     const tab = await opened
     await tab.waitForLoadState('domcontentloaded')
     await expect(tab).toHaveURL(/section=audit/)
-    await expect(tab.getByTestId('admin-crumb')).toHaveText('Аудит', { timeout: 20_000 })
+    await expect(tab.getByTestId('admin-crumb')).toHaveText('Журнал действий', { timeout: 20_000 })
     await tab.close()
 
     // Исходная вкладка осталась там, где была: Cmd+клик не уводит её.

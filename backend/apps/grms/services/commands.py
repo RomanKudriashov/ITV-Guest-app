@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import Counter
 
 from apps.core.models import AuditLog
 from apps.grms.transport import adapter, transport
@@ -204,6 +205,7 @@ def read_many(
     else:
         results = _read_batch(hotel, device=device, feedbacks=feedbacks, subdevice=subdevice)
 
+    errors = [result.error for result in results.values() if not result.ok]
     _journal(
         "grms.read",
         hotel=hotel,
@@ -211,6 +213,11 @@ def read_many(
         payload={
             "device": device,
             "batch": len(feedbacks),
+            # ИТОГ ПАЧКИ (партия 62-B). Его не было: строка пакетного чтения
+            # не говорила, удалось ли оно, и правило готовности «неудачные
+            # обращения» молчащий коннектор в чтениях не видело. Итог — «ok»
+            # или самая частая причина отказа в пачке.
+            "result": Counter(errors).most_common(1)[0][0] if errors else "ok",
             "values": {
                 feedback: (result.value if result.ok else None)
                 for feedback, result in results.items()

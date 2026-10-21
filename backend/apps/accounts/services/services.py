@@ -95,6 +95,12 @@ def authenticate_staff_credentials(email: str, password: str, *, request=None) -
     if not check_password(password, user.password):
         raise AuthenticationFailed("Неверный логин или пароль")
 
+    # ОТМЕТКА ВХОДА (партия 62-B). `last_login` не писал никто, и Control
+    # показывал «администратор ни разу не входил» у всех отелей. Пишется
+    # только входом по паролю: вход поддержки — не вход отеля.
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+
     execution_point_ids = list(
         user.assignments.filter(is_active=True).values_list("execution_point_id", flat=True)
     )

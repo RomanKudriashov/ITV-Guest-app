@@ -242,6 +242,13 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
                 {t('admin.hotels.empty.body')}
               </Empty>
             </Box>
+          ) : !data.total ? (
+            // Отелей нет вовсе — фраза, а не пустое место (сторож `console-states`).
+            <Box sx={panelSx}>
+              <Empty title={t('admin.hotels.empty.noneTitle')} testId="state-empty">
+                {t('admin.hotels.empty.noneBody')}
+              </Empty>
+            </Box>
           ) : data.layout === 'list' ? (
             <HotelRows rows={data.items} showGroup {...rowProps} />
           ) : (

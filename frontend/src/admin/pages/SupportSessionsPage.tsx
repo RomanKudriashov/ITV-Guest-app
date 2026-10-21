@@ -26,7 +26,7 @@ import { getImpersonations, revokeImpersonation, type ImpersonationRow } from '.
  * Пустой список — это утверждение «сейчас в отелях никого нет», и ради него
  * пустое состояние подписано словами, а не оставлено пустым местом.
  */
-export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
+export function SupportSessionsPage({ hotelId, embedded = false }: { hotelId?: string; embedded?: boolean }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function SupportSessionsPage({ hotelId }: { hotelId?: string }) {
 
   return (
     <Box data-testid="admin-support-sessions">
-      {hotelId ? null : (
+      {hotelId || embedded ? null : (
         <>
           <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
             {t('admin.support.title')}

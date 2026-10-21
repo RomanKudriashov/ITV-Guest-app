@@ -21,16 +21,27 @@ const EMPTY_AUDIT = { items: [], total: 0, limit: 100, next_cursor: null }
 
 const SCREENS = [
   { key: 'overview', nav: 'admin-nav-overview', api: ['/overview'] },
-  { key: 'fleet', nav: 'admin-nav-fleet', api: ['/fleet'], empty: { items: [], total: 0 } },
+  // «Отели» с партии 62-A1 — группы и общий список одной выдачей.
+  {
+    key: 'fleet',
+    nav: 'admin-nav-fleet',
+    api: ['/fleet'],
+    empty: {
+      layout: 'groups',
+      total: 0,
+      facets: { state: {}, link: {}, module: {}, group: {} },
+      groups: [],
+      ungrouped: { summary: { hotels: 0, active: 0, rooms: 0, problems: 0, link: { online: 0, silent: 0, none: 0 } }, items: [] },
+      items: [],
+    },
+  },
   { key: 'modules', nav: 'admin-nav-modules', api: ['/tariffs'], empty: [] },
   // Выдачи консоли приходят оболочкой `{items, total}` — пустой ответ должен
   // быть пустым В ЭТОЙ ФОРМЕ, иначе экран честно покажет отказ разбора, а тест
   // будет думать, что проверяет пустоту.
-  { key: 'nodes', nav: 'admin-nav-nodes', api: ['/nodes'], empty: EMPTY_PAGE },
   { key: 'templates', nav: 'admin-nav-templates', api: ['/templates'], empty: EMPTY_PAGE },
   { key: 'team', nav: 'admin-nav-team', api: ['/team'], empty: EMPTY_PAGE },
   { key: 'audit', nav: 'admin-nav-audit', api: ['/audit'], empty: EMPTY_AUDIT },
-  { key: 'support', nav: 'admin-nav-support', api: ['/impersonations'], empty: { items: [], total: 0, limit: 100, truncated: false } },
 ]
 
 /**
@@ -112,7 +123,7 @@ test.describe('Консоль: отказ виден', () => {
     let attempts = 0
     await ctx.route('**/api/v1/platform/**', async (route) => {
       const url = route.request().url()
-      if (!url.includes('/platform/nodes')) return route.continue()
+      if (!url.includes('/platform/team')) return route.continue()
       attempts += 1
       if (failing) {
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
@@ -126,7 +137,7 @@ test.describe('Консоль: отказ виден', () => {
     const page = await ctx.newPage()
     await loginToAdmin(page)
 
-    await page.getByTestId('admin-nav-nodes').click()
+    await page.getByTestId('admin-nav-team').click()
     await expect(page.getByTestId('state-error')).toBeVisible({ timeout: 20_000 })
 
     const before = attempts

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { useListQuery } from '@/kit/list/useListQuery';
 import { ListEmpty } from '@/kit/list/ListEmpty';
@@ -14,6 +15,8 @@ import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { getAudit, getAuditActions } from '../adminClient';
 import { DateChoiceField } from '../form';
+import { SupportSessionsPage } from './SupportSessionsPage';
+import { ViewSwitch } from './hotels/hotelsUi';
 
 /**
  * Аудит платформы — один список, а не разрез по отелям.
@@ -32,7 +35,47 @@ import { DateChoiceField } from '../form';
  * просмотра, и при смещении вторая страница показала бы часть первой,
  * пропустив столько же — как раз там и оказался бы искомый случай.
  */
+/**
+ * ЖУРНАЛ ДЕЙСТВИЙ (партия 62-B): все действия — и, отдельным видом, входы
+ * поддержки в панели отелей (раздел «Сессии поддержки» ушёл из меню). Вид —
+ * в адресе (`view=support`): ссылка открывает тот же.
+ */
 export function AuditPage() {
+  const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const view: 'all' | 'support' = params.get('view') === 'support' ? 'support' : 'all';
+  const setView = (next: 'all' | 'support') => {
+    const out = new URLSearchParams();
+    out.set('section', 'audit');
+    if (next === 'support') out.set('view', 'support');
+    setParams(out);
+  };
+  return (
+    <Box data-testid="admin-audit-page">
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ flex: '1 1 320px', minWidth: 0 }}>
+          <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>{t('admin.audit.title')}</Typography>
+          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
+            {view === 'support' ? t('admin.support.subtitle') : t('admin.audit.subtitle')}
+          </Typography>
+        </Box>
+        <ViewSwitch
+          label={t('admin.audit.viewLabel')}
+          value={view}
+          onChange={setView}
+          testIdPrefix="admin-audit-view"
+          options={[
+            ['all', t('admin.audit.viewAll')],
+            ['support', t('admin.audit.viewSupport')],
+          ]}
+        />
+      </Box>
+      {view === 'support' ? <SupportSessionsPage embedded /> : <AuditLog />}
+    </Box>
+  );
+}
+
+function AuditLog() {
   const { t } = useTranslation();
   /*
     Фильтры живут В АДРЕСЕ: ссылку на выборку можно послать коллеге, а F5 не
@@ -77,12 +120,6 @@ export function AuditPage() {
 
   return (
     <Box data-testid="admin-audit">
-      <Typography sx={{ ...typo.pageTitle, color: ink.hi }}>
-        {t('admin.audit.title')}
-      </Typography>
-      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>
-        {t('admin.audit.subtitle')}
-      </Typography>
 
       <Box sx={{ ...panelSx, mt: 2, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
         <SelectField

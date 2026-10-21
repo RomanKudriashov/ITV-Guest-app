@@ -1,7 +1,7 @@
 import { type APIRequestContext, type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
-import { API, pickOption } from './helpers'
+import { API } from './helpers'
 
 /**
  * Действия, которые API умел, а интерфейс не давал.
@@ -72,6 +72,8 @@ async function openHotel(page: Page, subdomain: string) {
   await page.getByTestId('admin-fleet-search').fill(subdomain)
   await page.getByTestId(`admin-fleet-open-${subdomain}`).click()
   await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 20_000 })
+  // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+  await page.getByTestId('admin-hotel-tab-profile').click()
   await page.getByTestId('admin-hotel-tab-data').click()
 }
 
@@ -169,11 +171,12 @@ test.describe('Консоль: разрушающее и ключи', () => {
     const owner = await ownerToken(request)
     const hotel = await disposableHotel(request, owner)
 
+    // Узлы — вкладка «Подключения» карточки отеля (партия 62-B): отель
+    // уже выбран адресом, выбирать его в форме не нужно.
     await loginAs(page, PLATFORM.email, PLATFORM.password)
-    await page.getByTestId('admin-nav-nodes').click()
+    await page.goto(`/admin?section=fleet&hotel=${hotel.id}&tab=connections`)
     await page.getByTestId('admin-node-create').click()
 
-    await pickOption(page, 'admin-node-hotel', { value: String(hotel.id) })
     await page.getByTestId('admin-node-name').fill('e2e-узел')
     await page.getByTestId('admin-node-create-submit').click()
 
@@ -204,7 +207,7 @@ test.describe('Консоль: разрушающее и ключи', () => {
     expect(node.node.is_revoked, 'узел заводится живым').toBeFalsy()
 
     await loginAs(page, PLATFORM.email, PLATFORM.password)
-    await page.getByTestId('admin-nav-nodes').click()
+    await page.goto(`/admin?section=fleet&hotel=${hotel.id}&tab=connections`)
 
     // Раньше кнопка была только у отозванного: чтобы сменить ключ, надо было
     // сначала уронить связь. Теперь она есть у живого — и предупреждает.
@@ -258,6 +261,8 @@ test.describe('Консоль: разрушающее и ключи', () => {
     await page.getByTestId('admin-fleet-search').fill(hotel.subdomain)
     await page.getByTestId(`admin-fleet-open-${hotel.subdomain}`).click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 20_000 })
+    // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+    await page.getByTestId('admin-hotel-tab-profile').click()
     await expect(page.getByTestId('admin-hotel-admin-move')).toHaveCount(0)
     await ctx.close()
 
@@ -268,6 +273,7 @@ test.describe('Консоль: разрушающее и ключи', () => {
     await ownerPage.getByTestId('admin-nav-fleet').click()
     await ownerPage.getByTestId('admin-fleet-search').fill(hotel.subdomain)
     await ownerPage.getByTestId(`admin-fleet-open-${hotel.subdomain}`).click()
+    await ownerPage.getByTestId('admin-hotel-tab-profile').click()
     await ownerPage.getByTestId('admin-hotel-admin-email').fill(`a@${hotel.subdomain}.test`)
     await ownerPage.getByTestId('admin-hotel-admin-new-email').fill(`moved@${hotel.subdomain}.test`)
     const moved = ownerPage.waitForResponse(

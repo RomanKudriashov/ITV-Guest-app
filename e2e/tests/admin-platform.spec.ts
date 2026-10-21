@@ -96,8 +96,8 @@ test.describe('Сводка и флот', () => {
     await page.getByTestId(`admin-fleet-open-${DEMO}`).click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
 
-    // «Использование» и «Тариф» слиты в одну вкладку: вопрос был один.
-    await page.getByTestId('admin-hotel-tab-tariff').click()
+    // «Тариф и лимиты» живут на «Модулях» до партии E (62-B).
+    await page.getByTestId('admin-hotel-tab-modules').click()
     await expect(page.getByTestId('admin-hotel-usage')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('admin-usage-over-services')).toBeVisible()
 
@@ -256,8 +256,10 @@ test.describe('Реестры платформы', () => {
     await expect(page.getByTestId('admin-modules')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('admin-tariff-row-business')).toBeVisible()
 
-    await page.getByTestId('admin-nav-nodes').click()
-    await expect(page.getByTestId('admin-nodes')).toBeVisible({ timeout: 15_000 })
+    // «On-premise» ушёл в карточку отеля; старый адрес ведёт в «Отели» с
+    // фильтром «не на связи» (партия 62-B).
+    await page.goto('/admin?section=nodes')
+    await expect(page).toHaveURL(/section=fleet.*link=silent|link=silent.*section=fleet/, { timeout: 15_000 })
 
     await page.getByTestId('admin-nav-team').click()
     await expect(page.getByTestId('admin-team')).toBeVisible({ timeout: 15_000 })

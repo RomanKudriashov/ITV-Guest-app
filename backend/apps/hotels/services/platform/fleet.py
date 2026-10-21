@@ -27,6 +27,7 @@ from apps.analytics.models import OrderDaily
 from apps.catalog.models import Item
 from apps.core.context import platform_scope
 from apps.hotels.services import tariffs
+from apps.hotels.services.platform import readiness
 from apps.hotels.models import Hotel, HotelModule, OnPremNode, Room, Service
 
 ORDERS_WINDOW_DAYS = 7
@@ -132,8 +133,8 @@ def _row(hotel: Hotel, counts: dict) -> dict:
         # Связь коннектора: на связи / молчит / коннектора нет.
         "link": "silent" if entry.get("node_offline") else "online" if entry.get("has_node") else "none",
         "modules": sorted(entry.get("modules", [])),
-        # Проблемы обзора считает сервер готовности (партия B); до неё — 0.
-        "problems": 0,
+        # Проблемы — те же, что в обзоре карточки: сервер готовности, кэш 60 с.
+        "problems": readiness.problem_count(hotel),
     }
 
 

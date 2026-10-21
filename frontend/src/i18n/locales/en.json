@@ -2419,7 +2419,7 @@
       "modules": "Modules & plans",
       "nodes": "On-premise",
       "team": "Users",
-      "audit": "Audit",
+      "audit": "Activity log",
       "templates": "Templates & dictionaries",
       "open": "Open menu",
       "support": "Support sessions",
@@ -2563,13 +2563,15 @@
       "crumb": "Hotel",
       "loadFailed": "Could not load the hotel",
       "tab": {
+        "overview": "Overview",
         "profile": "Profile",
         "modules": "Modules",
-        "activity": "Activity",
-        "tariff": "Tariff and limits",
-        "data": "Data",
-        "support": "Support",
-        "roomControl": "Room control"
+        "connections": "Connections",
+        "rooms": "Rooms",
+        "roomControl": "Room control",
+        "journal": "Log",
+        "history": "History",
+        "data": "Data"
       },
       "field": {
         "name": "Name",
@@ -2627,11 +2629,14 @@
       "adminFailed": "Could not reset access",
       "adminMoveFailed": "Could not change the address",
       "intro": {
-        "modules": "Which features this hotel has on and where each came from — the tariff or a manual override. You come here to switch a feature on beyond the tariff, or to take it away.",
-        "activity": "What happened at the hotel: guest orders, app entries, calls to room equipment. You come here when a hotel complains and you need to see what actually took place.",
-        "support": "When platform staff entered this hotel under someone else’s account, and why. You come here to cut off that access or to tell the hotel who was inside.",
-        "tariff": "Which tariff the hotel is on, how much it has already used, and what changes if it moves. You come here when a hotel hits a limit and asks for more, and at renewal.",
-        "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law."
+        "modules": "Which features this hotel has on. Below are the tariff and limits, until tariffs are removed.",
+        "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law.",
+        "overview": "What keeps the hotel from working right now and what to do about it. Checks update every minute.",
+        "connections": "The connector on the hotel server and other external systems: online or not, version, key.",
+        "rooms": "Rooms, buildings, floors, categories, control variant and PIN for each room. View only for now.",
+        "roomControl": "Room variants, commissioning file upload, builder, plan, versions and equipment diagnostics.",
+        "journal": "Support entries into the hotel panel and the room equipment log.",
+        "history": "What happened to the hotel: changes by the platform and its administrators, orders, entries, equipment calls."
       },
       "limitWontFit": "does not fit the selected tariff",
       "moduleState": {
@@ -2784,7 +2789,7 @@
       }
     },
     "audit": {
-      "title": "Audit",
+      "title": "Activity log",
       "subtitle": "Every platform action — who, what, when",
       "empty": "No entries",
       "filterAction": "Action",
@@ -2794,7 +2799,10 @@
       "filterHotel": "Hotel (subdomain)",
       "counter": "Showing {{shown}} of {{total}}",
       "prev": "Back",
-      "next": "More"
+      "next": "More",
+      "viewLabel": "What to show",
+      "viewAll": "All actions",
+      "viewSupport": "Support entries"
     },
     "action": {
       "platform": {
@@ -3269,7 +3277,9 @@
       "empty": {
         "title": "Nothing found",
         "body": "No hotel and no group match the search and filters. Check the spelling or remove some filters.",
-        "reset": "Reset search and filters"
+        "reset": "Reset search and filters",
+        "noneTitle": "No hotels yet",
+        "noneBody": "Create the first hotel with the “New hotel” button — it will appear here."
       }
     },
     "groupPage": {
@@ -3304,7 +3314,7 @@
         "rooms": "Rooms",
         "roomsHint": "across all hotels of the group",
         "problems": "Problems",
-        "problemsHint": "hotel checks arrive in the next batch",
+        "problemsHint": "from hotel readiness checks",
         "link": "Connection",
         "linkValue": "{{online}} of {{total}}",
         "linkHint": "offline — {{silent}}, no connector — {{none}}",
@@ -3463,6 +3473,187 @@
         "noMatchBody": "Remove some filters or change the search.",
         "createdCount_one": "with {{count}} hotel",
         "createdCount_other": "with {{count}} hotels"
+      }
+    },
+    "card": {
+      "what": "hotel readiness",
+      "state": {
+        "disabled": "disabled",
+        "ready": "ready",
+        "problems_one": "{{count}} problem",
+        "problems_other": "{{count}} problems"
+      },
+      "metric": {
+        "rooms": "Rooms",
+        "roomsBound": "with a control variant — {{count}}",
+        "roomControlOff": "room control is off",
+        "staff": "Staff",
+        "admins_one": "{{count}} administrator",
+        "admins_other": "{{count}} administrators",
+        "services": "Services",
+        "menuServices": "with a menu and a serving place — {{count}}; items — {{items}}",
+        "connector": "Connector",
+        "online": "online",
+        "silent": "silent",
+        "noConnector": "none",
+        "noConnectorHint": "not set up",
+        "commands": "Commands in 24 h",
+        "commandsValue": "{{ok}} of {{total}}",
+        "commandsHint": "went through; failed — {{count}}"
+      },
+      "ago": {
+        "never": "has never connected",
+        "seconds": "answered {{count}} s ago",
+        "minutes": "answered {{count}} min ago",
+        "hours": "answered {{count}} h ago",
+        "days": "answered {{count}} d ago"
+      },
+      "problemsTitle": "What keeps the hotel from working",
+      "everyMinute": "updated every minute",
+      "problemsHelp": "The server runs the checks — the same number appears in the “Hotels” list and in the group summary. Red: a guest already cannot do something; yellow: needs attention; blue: worth checking. The button on the right leads to where it is fixed.",
+      "disabledNote": "The hotel is disabled. The checks below are for when it is enabled again; the hotel list does not count them.",
+      "noProblems": "No problems",
+      "noProblemsBody": "The hotel is ready for guests. If something breaks, a check appears here within a minute.",
+      "passed": "Passed",
+      "roomRulesSkipped_one": "Room control is off — {{count}} room check is not needed.",
+      "roomRulesSkipped_other": "Room control is off — {{count}} room checks are not needed.",
+      "severity": {
+        "bad": "blocks guests",
+        "warn": "needs attention",
+        "info": "worth checking"
+      },
+      "rule": {
+        "module_without_connection": {
+          "title": "“{{module}}” is on without a connection",
+          "detail": "It needs a connector on the hotel server. Until there is one, the guest sees the module but it does not work.",
+          "fix": "Add a connection",
+          "passed": "Enabled modules have a connection"
+        },
+        "connector_silent": {
+          "title": "Connector “{{node}}” is offline",
+          "detail": "Last {{ago}}. Guest commands do not reach the rooms.",
+          "never": "It has never connected — the key is not installed on site.",
+          "fix": "Open connections",
+          "passed": "The connector is online"
+        },
+        "rooms_without_variant": {
+          "title_one": "{{count}} room without a control variant",
+          "title_other": "{{count}} rooms without a control variant",
+          "detail": "Guests in these rooms will see “this room is not controlled”.",
+          "fix": "Assign a variant",
+          "passed": "Every room has a control variant"
+        },
+        "variant_unpublished": {
+          "title": "Variant “{{variant}}” is not published",
+          "detail_one": "{{count}} room is waiting for the first version.",
+          "detail_other": "{{count}} rooms are waiting for the first version.",
+          "fix": "Publish",
+          "passed": "Variants are published"
+        },
+        "failed_commands": {
+          "title_one": "{{count}} failed equipment call in 24 h",
+          "title_other": "{{count}} failed equipment calls in 24 h",
+          "detail": "Most often: {{reason}} ({{reasonCount}}). Rooms: {{rooms}}.",
+          "fix": "Open the equipment log",
+          "passed": "Commands go through"
+        },
+        "no_menu_service": {
+          "title": "No service with a menu and a serving place",
+          "detail": "Guests have nothing to order: no venue accepts orders to a place where the guest can receive them.",
+          "fix": "Open the hotel panel",
+          "passed": "There is a service with a menu and a serving place"
+        },
+        "rooms_without_pin": {
+          "title_one": "{{count}} room without a PIN",
+          "title_other": "{{count}} rooms without a PIN",
+          "detail": "A guest cannot confirm the room or switch on the light until a PIN is issued.",
+          "fix": "Open the room list",
+          "passed": "Rooms have PINs"
+        },
+        "admin_never_logged_in": {
+          "title_one": "The administrator has never signed in",
+          "title_other": "None of the {{count}} administrators has ever signed in",
+          "detail": "{{emails}} — the password may not have arrived or got lost.",
+          "fix": "Send the password again",
+          "passed": "An administrator has signed in"
+        }
+      },
+      "reason": {
+        "CONNECTOR_OFFLINE": "connector offline",
+        "ENDPOINT_UNKNOWN": "room control server unreachable",
+        "ENDPOINT_UNREACHABLE": "room control server unreachable",
+        "TIMEOUT": "timed out",
+        "TTL_EXPIRED": "timed out",
+        "REQUEST_REJECTED": "rejected by the connector",
+        "BAD_RESPONSE": "invalid equipment response",
+        "DEVICE_NOT_FOUND": "device or channel not found",
+        "CHANNEL_NOT_FOUND": "device or channel not found",
+        "DEVICE_OR_CHANNEL_NOT_FOUND": "device or channel not found",
+        "unconfirmed": "command not confirmed",
+        "failed": "command failed",
+        "other": "another reason"
+      },
+      "enabled": "Enabled",
+      "noModules": "No modules — guests see only the menu and orders.",
+      "toModules": "Modules",
+      "activation": {
+        "title": "Disabling the hotel",
+        "onText": "Closes the hotel to guests and staff; data and settings are kept, and it can be enabled again at any time.",
+        "offText": "The hotel is disabled: guests and staff cannot get in. Data and settings are kept.",
+        "disable": "Disable hotel…",
+        "enable": "Enable hotel…"
+      },
+      "connections": {
+        "nodesTitle": "Connectors",
+        "add": "+ Add connector",
+        "about": "A program on the hotel server that carries guest commands to the room equipment.",
+        "aboutHelp": "The link goes from the inside out: the connector checks in with us itself. “Offline” means it has not checked in for more than 3 minutes.",
+        "issue": "Issue key",
+        "issueAgain": "Issue key again",
+        "keyOnce": "The key of connector “{{name}}” is shown once — save it now. Later it can only be reissued.",
+        "copy": "Copy key",
+        "copied": "Copied",
+        "emptyTitle": "No connector",
+        "emptyBody": "Needed when room control is on: without it guest commands do not reach the equipment.",
+        "lastSeen": "Last response",
+        "version": "Program version",
+        "keyIssued": "Key issued",
+        "systemsTitle": "External systems",
+        "roomSystem": "Room control system",
+        "otherSystems": "Property management, payments, locks",
+        "otherSoon": "will appear here once they are connected"
+      },
+      "rooms": {
+        "title": "Rooms",
+        "what": "hotel rooms",
+        "search": "Find a room",
+        "count": "Showing {{found}} of {{total}}",
+        "moduleOff": "room control is off — variants and PINs are not used",
+        "emptyTitle": "No rooms",
+        "emptyBody": "The hotel adds rooms in its panel or uploads them from a file.",
+        "noMatch": "Nothing matches the filters",
+        "noMatchBody": "Remove some filters or change the search.",
+        "none": "not set",
+        "inactive": "entry off",
+        "noVariant": "no variant",
+        "pin": {
+          "yes": "yes",
+          "no": "no"
+        },
+        "col": {
+          "number": "Room",
+          "building": "Building",
+          "floor": "Floor",
+          "category": "Category",
+          "variant": "Control variant",
+          "pin": "PIN"
+        }
+      },
+      "journal": {
+        "support": "Support entries",
+        "supportHelp": "When platform staff entered this hotel’s panel and why. An active entry can be cut off.",
+        "hardware": "Equipment log",
+        "hardwareHelp": "Commands and reads of room equipment: when, room, element, how it ended."
       }
     }
   },

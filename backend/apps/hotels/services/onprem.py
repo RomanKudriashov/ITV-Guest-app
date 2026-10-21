@@ -67,6 +67,18 @@ def _find(node_id: str) -> tuple[OnPremNode, Hotel]:
     return node, node.hotel
 
 
+def _find_in_hotel(node_id: str, hotel: Hotel) -> tuple[OnPremNode, Hotel]:
+    """
+    Узел ИМЕННО ЭТОГО отеля (карточка, партия 62-B). Ручка карточки несёт
+    `{hotel_id}` в пути, и узел другого отеля по ней — тот же 404, что и
+    несуществующий: из карточки «Кристалла» ключ «Метрополя» не отзывается.
+    """
+    node, owner = _find(node_id)
+    if str(owner.pk) != str(hotel.pk):
+        raise NotFoundError("Узел не найден")
+    return node, owner
+
+
 def _find_in_scope(node_id: str, user) -> tuple[OnPremNode, Hotel]:
     """
     Узел — только в области человека (партия 60). Ручки узлов адресуются по
@@ -82,22 +94,25 @@ def _find_in_scope(node_id: str, user) -> tuple[OnPremNode, Hotel]:
     return node, hotel
 
 
-def revoke_key(node_id: str, *, user=None) -> tuple[OnPremNode, Hotel]:
+def revoke_key(node_id: str, *, user=None, hotel: Hotel | None = None) -> tuple[OnPremNode, Hotel]:
     """
     Отзыв ключа. Строку узла НЕ удаляем: платформе важно помнить, что у отеля
     был узел и когда его отключили, — иначе история «почему GRMS перестал
     работать» исчезает вместе со строкой.
     """
-    node, hotel = _find_in_scope(node_id, user)
+    node, hotel = _find_in_hotel(node_id, hotel) if hotel else _find_in_scope(node_id, user)
     with tenant_context(hotel):
         OnPremNode.objects.filter(pk=node.pk).update(is_revoked=True, key_hash="")
     node.is_revoked = True
     node.key_hash = ""
+    _readiness_changed(hotel)
     return node, hotel
 
 
-def reissue_key(node_id: str, *, user=None) -> tuple[OnPremNode, Hotel, str]:
-    node, hotel = _find_in_scope(node_id, user)
+def reissue_key(
+    node_id: str, *, user=None, hotel: Hotel | None = None
+) -> tuple[OnPremNode, Hotel, str]:
+    node, hotel = _find_in_hotel(node_id, hotel) if hotel else _find_in_scope(node_id, user)
     key, digest = _new_key()
     now = timezone.now()
     with tenant_context(hotel):
@@ -105,7 +120,15 @@ def reissue_key(node_id: str, *, user=None) -> tuple[OnPremNode, Hotel, str]:
             key_hash=digest, key_issued_at=now, is_revoked=False
         )
     node.key_hash, node.key_issued_at, node.is_revoked = digest, now, False
+    _readiness_changed(hotel)
     return node, hotel, key
+
+
+def _readiness_changed(hotel: Hotel) -> None:
+    # `.update()` сигналов не шлёт — сброс готовности явный.
+    from apps.hotels.services.platform.readiness import invalidate
+
+    invalidate(hotel.pk)
 
 
 def touch(key: str, *, version: str = "") -> OnPremNode | None:
@@ -129,7 +152,12 @@ def touch(key: str, *, version: str = "") -> OnPremNode | None:
         OnPremNode.all_objects.using("platform").filter(pk=node.pk).update(
             last_seen_at=now, version=version or node.version
         )
+    # Молчавший узел вышел на связь — готовность отеля поменялась сейчас, а
+    # не через минуту. Живой узел отмечается часто, и его отметки кэш не трогают.
+    was_silent = node.last_seen_at is None or (now - node.last_seen_at).total_seconds() > node.OFFLINE_AFTER_SECONDS
     node.last_seen_at = now
+    if was_silent:
+        _readiness_changed(node.hotel)
     return node
 
 
@@ -176,3 +204,10 @@ def all_nodes(*, limit: int | None = None, search: str = "", user=None) -> dict:
         total = queryset.count()
         nodes = list(queryset.order_by("hotel__name", "name")[:limit])
     return envelope([serialize_node(node, node.hotel) for node in nodes], total, limit)
+
+
+def hotel_nodes(hotel: Hotel) -> list[dict]:
+    """Узлы одного отеля — вкладка «Подключения» карточки."""
+    with tenant_context(hotel):
+        nodes = list(OnPremNode.objects.order_by("is_revoked", "name"))
+    return [serialize_node(node, hotel) for node in nodes]

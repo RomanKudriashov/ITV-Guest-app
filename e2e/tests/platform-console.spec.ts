@@ -111,6 +111,8 @@ test('админка: создание отеля, вход admin, отключ�
   // --- Отключение в карточке отеля ------------------------------------------
   await page.getByTestId(`admin-fleet-open-${sub}`).click()
   await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
+  // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+  await page.getByTestId('admin-hotel-tab-profile').click()
   await page.getByTestId('admin-hotel-active').click()
   // Выключение — только после вопроса (партия 60).
   await page.getByTestId('admin-hotel-active-confirm-confirm').click()

@@ -769,6 +769,13 @@
     "PUT"
   ],
   "/api/v1/platform/hotels/{hotel_id}/nodes": [
+    "GET",
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/nodes/{node_id}/reissue": [
+    "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/nodes/{node_id}/revoke": [
     "POST"
   ],
   "/api/v1/platform/hotels/{hotel_id}/offboard": [
@@ -776,6 +783,12 @@
   ],
   "/api/v1/platform/hotels/{hotel_id}/purge": [
     "POST"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/readiness": [
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/rooms": [
+    "GET"
   ],
   "/api/v1/platform/hotels/{hotel_id}/tariff": [
     "PUT"

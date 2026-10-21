@@ -179,6 +179,8 @@ export interface HotelProfile extends HotelBrief {
   languages: HotelLanguageBrief[];
   tariff?: string;
   offboarding?: OffboardState | null;
+  /** Группа отеля — для строки «Отели › Группа › Отель» (партия 62-B). */
+  group?: { id: string; title: string; color: GroupColor } | null;
 }
 
 export interface CreateHotelInput {
@@ -851,6 +853,80 @@ export const createNode = (hotelId: string, body: { name: string; purpose: strin
 export const revokeNode = (id: string) => request<NodeRow>(`/nodes/${id}/revoke`, 'POST');
 export const reissueNode = (id: string) =>
   request<{ node: NodeRow; key: string }>(`/nodes/${id}/reissue`, 'POST');
+
+/* ── Карточка отеля (партия 62-B) ───────────────────────────────────────── */
+
+/** Узлы одного отеля; отзыв и перевыпуск — адресом отеля (чужой узел — 404). */
+export const getHotelNodes = (hotelId: string) => request<{ items: NodeRow[] }>(`/hotels/${hotelId}/nodes`);
+export const revokeHotelNode = (hotelId: string, nodeId: string) =>
+  request<NodeRow>(`/hotels/${hotelId}/nodes/${nodeId}/revoke`, 'POST');
+export const reissueHotelNode = (hotelId: string, nodeId: string) =>
+  request<{ node: NodeRow; key: string }>(`/hotels/${hotelId}/nodes/${nodeId}/reissue`, 'POST');
+
+export type Severity = 'bad' | 'warn' | 'info';
+export type ReadinessCode =
+  | 'module_without_connection'
+  | 'connector_silent'
+  | 'rooms_without_variant'
+  | 'variant_unpublished'
+  | 'failed_commands'
+  | 'no_menu_service'
+  | 'rooms_without_pin'
+  | 'admin_never_logged_in';
+/** Куда ведёт «исправить»: вкладка карточки или `panel` — вход в панель отеля. */
+export type FixTarget = 'connections' | 'roomControl' | 'journal' | 'rooms' | 'profile' | 'modules' | 'panel';
+
+export interface ReadinessProblem {
+  code: ReadinessCode;
+  key: string;
+  severity: Severity;
+  fix: FixTarget;
+  count: number;
+  title: string;
+  params: Record<string, unknown>;
+}
+
+export interface Readiness {
+  checked_at: string;
+  problems: ReadinessProblem[];
+  rules: Array<{ code: ReadinessCode; severity: Severity; status: 'fail' | 'pass' | 'skip' }>;
+  facts: {
+    rooms: number;
+    rooms_bound: number;
+    staff: number;
+    admins: number;
+    services: number;
+    menu_services: number;
+    items: number;
+    room_control: boolean;
+    connector: { name: string; online: boolean; seconds: number | null; version: string } | null;
+    commands: { total: number; failed: number };
+  };
+}
+export const getReadiness = (hotelId: string) => request<Readiness>(`/hotels/${hotelId}/readiness`);
+
+export interface RoomRow {
+  id: string;
+  number: string;
+  building: string;
+  floor: string;
+  category: string;
+  variant: { code: string; title: string } | null;
+  pin: boolean;
+  is_active: boolean;
+}
+export interface RoomsPage {
+  room_control: boolean;
+  total: number;
+  found: number;
+  truncated: boolean;
+  items: RoomRow[];
+  facets: Record<'building' | 'floor' | 'category' | 'variant' | 'pin', Array<{ value: string; label: string; count: number }>>;
+}
+export const getHotelRooms = (hotelId: string, params: Record<string, string>) => {
+  const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+  return request<RoomsPage>(`/hotels/${hotelId}/rooms${query ? `?${query}` : ''}`);
+};
 
 export const getTeam = (limit = 100) => request<Page<TeamMember>>(`/team?limit=${limit}`);
 export const inviteMember = (body: { email: string; role: string; full_name?: string }) =>

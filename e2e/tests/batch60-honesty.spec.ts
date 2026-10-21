@@ -99,6 +99,10 @@ test.describe('Control: роль «только чтение» не видит �
 
     await page.getByTestId('admin-fleet-open-crystal').click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 20_000 })
+
+    // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+
+    await page.getByTestId('admin-hotel-tab-profile').click()
     await expect(page.getByTestId('admin-hotel-active')).toHaveCount(0)
     await expect(page.getByTestId('admin-hotel-active-label')).toBeVisible()
     await expect(page.getByTestId('admin-hotel-admin-reset')).toHaveCount(0)
@@ -125,6 +129,8 @@ test.describe('Control: профиль отеля отправляет толь�
     await page.goto('/admin?section=fleet')
     await page.getByTestId('admin-fleet-open-crystal').click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 30_000 })
+    // Карточка открывается на «Обзоре» (партия 62-B); профиль — своя вкладка.
+    await page.getByTestId('admin-hotel-tab-profile').click()
 
     let sent: Record<string, unknown> | null = null
     await page.route('**/api/v1/platform/hotels/*', async (route) => {
