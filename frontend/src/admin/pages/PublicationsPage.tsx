@@ -28,6 +28,7 @@ import {
   type PublicationJob,
   type PublicationTarget,
 } from '../adminClient';
+import { formatDateTime } from '@/utils/dates';
 
 /**
  * ПУБЛИКАЦИЯ — экран платформы.
@@ -421,7 +422,7 @@ function History({
                         ? job.group || t('admin.publications.scopes.group')
                         : t(`admin.publications.scopes.${job.scope}`)}
                     </TableCell>
-                    <TableCell>{new Date(job.created_at).toLocaleString()}</TableCell>
+                    <TableCell>{formatDateTime(job.created_at)}</TableCell>
                     <TableCell>{job.actor || '—'}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>

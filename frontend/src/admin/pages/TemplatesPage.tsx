@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -13,6 +14,7 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 
 import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { DictionaryDivergence } from './DictionaryDivergence';
+import { FilterBar, type Facet } from './hotels/hotelsUi';
 import { useRights } from '../useRights';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
@@ -39,7 +41,17 @@ type Tab = (typeof TABS)[number];
  */
 export function TemplatesPage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>('templates');
+  // Вкладка — в адресе (партия 62-D): фильтры справочника переживают F5
+  // только вместе с ней.
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = params.get('tab') === 'dictionary' ? 'dictionary' : 'templates';
+  const setTab = (next: Tab) => {
+    const out = new URLSearchParams(params);
+    out.set('tab', next);
+    out.delete('kind');
+    out.delete('search');
+    setParams(out, { replace: true });
+  };
 
   return (
     <Box data-testid="admin-templates">
@@ -176,7 +188,18 @@ function DictionaryTab() {
   const { canWrite } = useRights();
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
-  const dictionary = useQuery({ queryKey: ['admin', 'dictionary'], queryFn: () => getDictionary() });
+  // Раздел и текст — в адресе, считает сервер (партия 62-D).
+  const [params] = useSearchParams();
+  const filters = { kind: params.get('kind') ?? '', search: params.get('search') ?? '' };
+  const dictionary = useQuery({ queryKey: ['admin', 'dictionary', filters], queryFn: () => getDictionary(500, filters) });
+  const kindCounts = dictionary.data?.facets?.kind ?? {};
+  const dictFacets: Facet[] = [
+    {
+      key: 'kind',
+      label: t('admin.templates.filter.kind'),
+      options: Object.keys(kindCounts).sort().map((k) => ({ value: k, label: t(`admin.templates.kind.${k}`, { defaultValue: k }), count: kindCounts[k] })),
+    },
+  ];
   const [kind, setKind] = useState('allergen');
   const [code, setCode] = useState('');
   const [title, setTitle] = useState('');
@@ -267,6 +290,9 @@ function DictionaryTab() {
       ) : null}
       {error ? <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert> : null}
 
+      <Box sx={{ mt: 2 }}>
+        <FilterBar facets={dictFacets} placeholder={t('admin.templates.filter.search')} />
+      </Box>
       <QueryState
         query={dictionary}
         what={t('state.what.dictionary')}

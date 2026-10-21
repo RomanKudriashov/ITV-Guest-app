@@ -122,7 +122,7 @@ test.describe.serial('Отключение отеля и профиль', () => 
     await expect(page.getByTestId('admin-profile-confirm')).toHaveCount(0, { timeout: 20_000 })
 
     await page.getByTestId('admin-hotel-tab-history').click()
-    await expect(page.getByTestId('admin-activity-change-timezone').first()).toContainText('Asia/Tokyo', { timeout: 20_000 })
+    await expect(page.getByTestId('admin-journal-change-timezone').first()).toContainText('Asia/Tokyo', { timeout: 20_000 })
   })
 
   test('УКУС: новый поддомен — старый адрес и старый QR ведут на новый с тем же путём', async ({ page, request }) => {

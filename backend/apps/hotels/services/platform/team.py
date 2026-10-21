@@ -34,7 +34,9 @@ from apps.hotels.models import Hotel
 VALID_ROLES = set(User.PlatformRole.values)
 
 
-def list_members(*, limit: int | None = None, search: str = "", user=None) -> dict:
+def list_members(
+    *, limit: int | None = None, search: str = "", user=None, role: str = "", active: str = "", twofa: str = ""
+) -> dict:
     """
     Команда платформы. Растёт медленно, но предел здесь всё равно осознанный:
     выдача без предела — это обещание «столько и есть», которое однажды
@@ -73,6 +75,17 @@ def list_members(*, limit: int | None = None, search: str = "", user=None) -> di
             queryset = queryset.filter(Q(pk__in=peers) | Q(pk=user.pk))
         # По почте и имени — по ним человека в команде и ищут.
         queryset = apply_search(queryset, search, ("email", "full_name"))
+        # Фильтры — на сервере, значения через запятую, как в адресе (62-D).
+        roles = [r for r in role.split(",") if r]
+        if roles:
+            queryset = queryset.filter(platform_role__in=roles)
+        flags = {"yes": True, "no": False}
+        states = {flags[v] for v in active.split(",") if v in flags}
+        if len(states) == 1:
+            queryset = queryset.filter(is_active=states.pop())
+        factors = {flags[v] for v in twofa.split(",") if v in flags}
+        if len(factors) == 1:
+            queryset = queryset.filter(totp_enabled=factors.pop())
         total = queryset.count()
         members = list(queryset.order_by("email")[:limit])
     rows = [
@@ -202,132 +215,130 @@ def audit_feed(
     since: str | None = None,
     until: str | None = None,
     search: str | None = None,
+    who: str | None = None,
+    group_id: str | None = None,
+    period: str | None = None,
+    view: str | None = None,
     user=None,
 ) -> dict:
     """
     Журнал платформы: и действия без отеля (вход, команда, 2FA), и действия
-    НАД отелями. Одним списком — вопрос к этому экрану звучит «кто что делал»,
-    а не «в каком отеле».
+    НАД отелями. Одним списком — вопрос к этому экрану звучит «кто что делал».
 
-    ЛИСТАНИЕ КУРСОРОМ, А НЕ СМЕЩЕНИЕМ. Журнал пополняется прямо во время
-    просмотра: при `OFFSET` вторая страница показала бы часть первой, а часть
-    записей не показала бы вовсе — и вчерашний инцидент оказался бы ровно в
-    пропущенном. Курсор — это «строго раньше вот этой записи», и вставка новых
-    сверху на него не влияет.
+    ЛИСТАНИЕ КУРСОРОМ, А НЕ СМЕЩЕНИЕМ: журнал пополняется прямо во время
+    просмотра, и смещение показало бы часть первой страницы второй раз.
+    Курсор составной (`время|id`): массовая операция пишет десятки строк в
+    одну миллисекунду.
 
-    Курсор составной (`время|id`): по одному времени записи не различить —
-    массовая операция пишет десятки строк в одну миллисекунду, и листание
-    зациклилось бы на них.
-
-    ФИЛЬТРЫ. Без них глубина бессмысленна: пятьдесят тысяч записей нельзя
-    пролистать до вчерашнего инцидента, его можно только найти.
-
-    ПОИСК ПО ПОДДОМЕНУ ИДЁТ ЗДЕСЬ, а не на клиенте. Экран отсеивал уже
-    скачанную сотню — и врал счётчиком: показывал «3 записи» там, где их в
-    базе триста, просто остальные в эту сотню не попали. Отсев после предела
-    выборки — это не фильтр, а видимость фильтра.
+    ФИЛЬТРЫ — НА СЕРВЕРЕ (партия 62-D): кто, действие, отель, группа, период,
+    текст; вид «Входы поддержки». Значения — через запятую, как в адресе.
+    Старые дубли (одно действие, записанное дважды) в выдачу не попадают.
     """
-    from datetime import datetime
-
-    from django.utils import timezone as dj_timezone
-    from django.utils.dateparse import parse_datetime
+    from apps.hotels.services.platform import journal
 
     limit = max(1, min(limit, 500))
-
-    def _moment(value: str | None) -> datetime | None:
-        if not value:
-            return None
-        parsed = parse_datetime(value)
-        if parsed is None:
-            try:
-                parsed = datetime.fromisoformat(value)
-            except ValueError:
-                return None
-        return dj_timezone.make_aware(parsed) if dj_timezone.is_naive(parsed) else parsed
+    split = lambda value: [v for v in (value or "").split(",") if v]  # noqa: E731
 
     with platform_scope():
-        queryset = AuditLog.all_objects.using("platform").filter(
-            actor_type=AuditLog.ActorType.PLATFORM
+        queryset = (
+            AuditLog.all_objects.using("platform")
+            .filter(actor_type=AuditLog.ActorType.PLATFORM)
+            .exclude(action__in=journal.LEGACY_DUPLICATES)
         )
-        # ОБЛАСТЬ РЕЖЕТ ЖУРНАЛ. Администратор группы видит действия по СВОИМ
-        # отелям — и записи без отеля (наш вход, 2FA, работа с командой) он не
-        # видит вовсе: это внутренняя жизнь платформы, а не его сети.
+        # ОБЛАСТЬ РЕЖЕТ ЖУРНАЛ: администратор группы видит действия по СВОИМ
+        # отелям, а внутреннюю жизнь платформы (вход, 2FA, команда) — нет.
         from apps.hotels.services.platform import scope as scope_svc
 
         allowed = scope_svc.allowed_hotel_ids(user)
         if allowed is not None:
             queryset = queryset.filter(hotel_id__in=allowed)
 
-        if action:
-            queryset = queryset.filter(action=action)
-        if hotel_id:
-            queryset = queryset.filter(hotel_id=hotel_id)
-        term = (search or "").strip()
-        if term:
-            # Поддомен живёт в таблице отелей, а не в записи журнала: сначала
-            # находим отели, потом фильтруем журнал по ним.
-            matched = list(
-                Hotel.all_objects.using("platform")
-                .filter(subdomain__icontains=term)
-                .values_list("pk", flat=True)
-            )
-            queryset = queryset.filter(hotel_id__in=matched)
-        start_at, end_at = _moment(since), _moment(until)
+        if view == "support":
+            queryset = queryset.filter(action__startswith="impersonation.")
+        actions = split(action)
+        if actions:
+            queryset = queryset.filter(action__in=actions)
+        hotels = split(hotel_id)
+        groups = split(group_id)
+        if groups:
+            from apps.hotels.models import HotelGroupMember
+
+            hotels += [
+                str(pk)
+                for pk in HotelGroupMember.objects.using("platform")
+                .filter(group_id__in=groups, group__deleted_at__isnull=True)
+                .values_list("hotel_id", flat=True)
+            ] or ["00000000-0000-0000-0000-000000000000"]
+        if hotels:
+            queryset = queryset.filter(hotel_id__in=hotels)
+        people = split(who)
+        if people:
+            queryset = queryset.filter(actor_id__in=people)
+        start_at = journal.period_start(period or "") or journal.moment(since)
+        end_at = journal.moment(until)
         if start_at:
             queryset = queryset.filter(created_at__gte=start_at)
         if end_at:
             queryset = queryset.filter(created_at__lte=end_at)
+        term = (search or "").strip()
+        if term:
+            # Отель ищется по поддомену и названию, человек — по почте и имени,
+            # запись — по своему содержимому.
+            from django.db.models import TextField
+            from django.db.models.functions import Cast
+
+            matched = list(
+                Hotel.all_objects.using("platform")
+                .annotate(name_text=Cast("name", TextField()))
+                .filter(Q(subdomain__icontains=term) | Q(former_subdomain__icontains=term) | Q(name_text__icontains=term))
+                .values_list("pk", flat=True)
+            )
+            queryset = journal.text_filter(queryset, term, actor_ids=journal.matching_actors(term), hotel_ids=matched)
 
         total = queryset.count()
-
-        if cursor:
-            at, _, cursor_id = cursor.partition("|")
-            # `+00:00` в незакодированном URL приезжает как ` 00:00`: плюс в
-            # строке запроса значит пробел. Без этого курсор молча
-            # игнорировался бы, и листание возвращало бы одну и ту же страницу.
-            moment = _moment(at.replace(" ", "+"))
-            if moment and cursor_id:
-                queryset = queryset.filter(
-                    Q(created_at__lt=moment) | Q(created_at=moment, pk__lt=cursor_id)
-                )
-
-        # Берём на одну больше запрошенного: так видно, есть ли следующая
-        # страница, без второго запроса «а сколько там дальше».
+        queryset = journal.after_cursor(queryset, cursor)
         rows = list(queryset.order_by("-created_at", "-pk")[: limit + 1])
         has_more = len(rows) > limit
         rows = rows[:limit]
 
         hotel_ids = {row.hotel_id for row in rows if row.hotel_id}
-        hotels = {
-            item.pk: item
-            for item in Hotel.objects.using("platform").filter(pk__in=hotel_ids)
-        }
-        actor_ids = {row.actor_id for row in rows if row.actor_id}
-        actors = {
-            user.pk: user.email
-            for user in User.all_objects.using("platform").filter(pk__in=actor_ids)
-        }
+        hotels_by_id = {item.pk: item for item in Hotel.all_objects.using("platform").filter(pk__in=hotel_ids)}
 
-    items = [
-        {
-            "id": str(row.pk),
-            "at": row.created_at.isoformat(),
-            "actor": actors.get(row.actor_id, "—"),
-            "action": row.action,
-            "hotel": hotels[row.hotel_id].name_i18n if row.hotel_id in hotels else None,
-            "subdomain": hotels[row.hotel_id].subdomain if row.hotel_id in hotels else None,
-            "payload": row.payload,
-        }
-        for row in rows
-    ]
+    people_by_id = journal.actors(row.actor_id for row in rows)
+    items = []
+    for row in rows:
+        entry = journal.serialize(row, people_by_id)
+        hotel = hotels_by_id.get(row.hotel_id)
+        entry.update(
+            {
+                # Прежнее поле `actor` — почтой: его читают старые экраны.
+                "actor": (people_by_id.get(row.actor_id) or {}).get("email", "—"),
+                "actor_info": entry.pop("actor"),
+                "hotel": hotel.name_i18n if hotel else None,
+                "subdomain": (hotel.former_subdomain or hotel.subdomain) if hotel else None,
+            }
+        )
+        items.append(entry)
     return {
         "items": items,
         "total": total,
         "limit": limit,
-        "next_cursor": (
-            f"{rows[-1].created_at.isoformat()}|{rows[-1].pk}" if has_more and rows else None
-        ),
+        "next_cursor": journal.encode_cursor(rows[-1]) if has_more and rows else None,
     }
+
+
+def audit_people() -> list[dict]:
+    """Кто действовал в журнале — для фильтра «Кто»."""
+    from apps.hotels.services.platform import journal
+
+    with platform_scope():
+        ids = set(
+            AuditLog.all_objects.using("platform")
+            .filter(actor_type=AuditLog.ActorType.PLATFORM, actor_id__isnull=False)
+            .values_list("actor_id", flat=True)
+            .distinct()
+        )
+    return sorted(journal.actors(ids).values(), key=lambda person: person["name"].lower())
 
 
 def audit_actions() -> list[str]:
@@ -341,6 +352,7 @@ def audit_actions() -> list[str]:
         return sorted(
             AuditLog.all_objects.using("platform")
             .filter(actor_type=AuditLog.ActorType.PLATFORM)
+            .exclude(action__in=("platform.hotel.entered", "grms.published", "grms.rolled_back"))
             .values_list("action", flat=True)
             .distinct()
         )

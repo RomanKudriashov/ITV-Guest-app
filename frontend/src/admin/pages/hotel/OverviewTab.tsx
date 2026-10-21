@@ -271,7 +271,7 @@ function Activation({ hotel }: { hotel: HotelProfile }) {
     setDialog(null);
     void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotel.id] });
     void qc.invalidateQueries({ queryKey: ['admin', 'readiness', hotel.id] });
-    void qc.invalidateQueries({ queryKey: ['admin', 'activity', hotel.id] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'history', hotel.id] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
   };
   const disable = useMutation({

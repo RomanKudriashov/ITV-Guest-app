@@ -15,6 +15,7 @@ import { ConnectionsTab } from './hotel/ConnectionsTab';
 import { JournalTab } from './hotel/JournalTab';
 import { OverviewTab } from './hotel/OverviewTab';
 import { RoomsTab } from './hotel/RoomsTab';
+import { HistoryTab } from './hotel/HistoryTab';
 import { Pill } from './hotels/hotelsUi';
 import { ConfirmChangesDialog } from './hotel/hotelDialogs';
 import { AddressPanel, GroupPanel } from './hotel/ProfileExtras';
@@ -39,7 +40,6 @@ import {
   deleteHotel,
   getMe,
   downloadHotelExport,
-  getActivity,
   getHotel,
   getHotelAdmins,
   getHotelFieldReference,
@@ -62,6 +62,7 @@ import {
   type HotelProfile,
   type ModuleEntry,
 } from '../adminClient';
+import { formatDateTime } from '@/utils/dates';
 
 /*
   ДЕВЯТЬ ВКЛАДОК (партия 62-B, по утверждённому макету). Порядок — от «что с
@@ -88,7 +89,7 @@ function resolveTab(key: string): Tab {
 }
 
 /** Фильтры и подвкладки вкладок: при смене вкладки не переносятся. */
-const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin'];
+const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'who', 'what', 'period', 'status', 'purpose'];
 
 /**
  * Карточка отеля — на вкладках, а не одним свитком.
@@ -261,7 +262,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         {/* Конфигурация управления номером: наша работа, наша консоль. */}
         {tab === 'roomControl' ? <RoomControlTab hotelId={id} /> : null}
         {tab === 'journal' ? <JournalTab hotelId={id} /> : null}
-        {tab === 'history' ? <ActivityTab id={id} /> : null}
+        {tab === 'history' ? <HistoryTab hotelId={id} /> : null}
         {tab === 'data' ? <DataTab hotel={hotel} onRemoved={onBack} /> : null}
       </Box>
 
@@ -847,103 +848,6 @@ function ModulesTab({ id }: { id: string }) {
   );
 }
 
-/* ── Журнал ─────────────────────────────────────────────────────────────── */
-
-function ActivityTab({ id }: { id: string }) {
-  const { t, i18n } = useTranslation();
-  const activity = useQuery({ queryKey: ['admin', 'activity', id], queryFn: () => getActivity(id) });
-  if (activity.isPending || activity.isError || activity.data === undefined) {
-    return (
-      <QueryState query={activity} what={t('state.what.activity')}>
-        {() => null}
-      </QueryState>
-    );
-  }
-
-  return (
-    <Box sx={{ ...panelSx, maxWidth: 760 }} data-testid="admin-hotel-activity">
-      {activity.data.length === 0 ? (
-        <Typography sx={{ ...typo.caption, color: ink.low }} data-testid="state-empty">
-          {t('admin.hotel.activityEmpty')}
-        </Typography>
-      ) : null}
-      {activity.data.map((row) => (
-        <Box
-          key={row.id}
-          data-testid={`admin-activity-${row.action}`}
-          sx={{ display: 'flex', gap: 1.5, py: 1, borderBottom: `1px solid ${surface.hair}`, ...typo.caption }}
-        >
-          <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 132 }}>
-            {new Date(row.at).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
-          </Typography>
-          <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 74 }}>
-            {t(`admin.actor.${row.actor_type}`, { defaultValue: row.actor_type })}
-          </Typography>
-          {/*
-            Человеку — человеческое. Здесь стоял голый код (`grms.read`,
-            `guest_session.created`, `order.status_changed`), и оператор,
-            открыв карточку отеля, читал полсотни строк машинного текста.
-
-            Код при этом НЕ выброшен: он рядом, мелким и приглушённым. Инженеру
-            он нужен — по нему ищут в логах и в исходниках, — а оператору нужно
-            слово. Незнакомый код показывается как есть: подменять его общим
-            «событием» значит лишить журнал смысла, а не сделать его понятнее.
-            Чтобы «как есть» не превращалось в «так и осталось», за полнотой
-            словаря следит `scripts/check-event-codes.mjs`.
-          */}
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Typography sx={{ color: ink.mid, ...typo.caption }}>
-              {t(`admin.action.${row.action}`, { defaultValue: row.action })}
-            </Typography>
-            <Typography sx={{ color: ink.low, ...typo.caption, fontSize: 11 }}>
-              {row.action}
-            </Typography>
-            <ChangeLines payload={row.payload} />
-          </Box>
-          {/* Действие поддержки под чужой личиной обязано быть отличимо — это
-              инвариант импersonation, а не украшение журнала. */}
-          {row.impersonated_by ? (
-            <Box sx={pillSx('warn')}>{t('admin.hotel.viaSupport')}</Box>
-          ) : null}
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
-/**
- * «Было → стало» под строкой журнала (партия 62-C): поля правки профиля,
- * причина и дата отключения (это Control — здесь её видно), авто-включение.
- */
-function ChangeLines({ payload }: { payload?: Record<string, unknown> | null }) {
-  const { t, i18n } = useTranslation();
-  if (!payload) return null;
-  const show = (value: unknown): string => {
-    if (value === null || value === undefined || value === '') return '—';
-    if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
-    if (typeof value === 'object') {
-      const pairs = Object.entries(value as Record<string, unknown>).filter(([, text]) => text);
-      return pairs.length ? pairs.map(([lang, text]) => `${lang.toUpperCase()}: ${String(text)}`).join(' · ') : '—';
-    }
-    return String(value);
-  };
-  const changes = (payload.changes ?? {}) as Record<string, { from?: unknown; to?: unknown }>;
-  const lines = Object.entries(changes).map(([field, change]) => (
-    <Box key={field} data-testid={`admin-activity-change-${field}`}>
-      <b>{t(`admin.profile.field.${field}`, { defaultValue: field })}:</b> {show(change?.from)} → {show(change?.to)}
-    </Box>
-  ));
-  if (typeof payload.reason === 'string' && payload.reason) {
-    lines.push(<Box key="reason" data-testid="admin-activity-reason">{t('admin.card.activation.reason', { reason: payload.reason })}</Box>);
-  }
-  if (typeof payload.enable_on === 'string' && payload.enable_on) {
-    lines.push(<Box key="enable_on">{t('admin.card.activation.enableOn', { date: new Date(payload.enable_on).toLocaleDateString(i18n.language, { dateStyle: 'long' }) })}</Box>);
-  }
-  if (payload.auto === true) lines.push(<Box key="auto">{t('admin.card.activation.auto')}</Box>);
-  if (!lines.length) return null;
-  return <Box sx={{ color: ink.mid, ...typo.caption, mt: 0.5, display: 'grid', gap: 0.25, overflowWrap: 'anywhere' }}>{lines}</Box>;
-}
-
 /* ── Тариф и лимиты ─────────────────────────────────────────────────────── */
 
 /**
@@ -1477,7 +1381,7 @@ function AdminsPanel({ hotelId }: { hotelId: string }) {
                     </Typography>
                     <Typography sx={{ ...typo.caption, color: ink.low }}>
                       {row.last_login
-                        ? new Date(row.last_login).toLocaleString()
+                        ? formatDateTime(row.last_login)
                         : t('admin.hotel.admins.never')}
                     </Typography>
                   </Box>

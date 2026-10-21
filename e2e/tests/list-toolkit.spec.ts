@@ -72,7 +72,7 @@ test.describe('Журнал платформы', () => {
       (r) => r.url().includes('/audit?') && r.url().includes('search=crystal'),
       { timeout: 20_000 },
     )
-    await page.getByTestId('admin-audit-filter-hotel').fill('crystal')
+    await page.getByTestId('admin-fleet-search').fill('crystal')
     await asked
 
     // Выборка осела в адресе — ссылку можно послать коллеге.
@@ -83,7 +83,7 @@ test.describe('Журнал платформы', () => {
     await loginConsole(page)
     await page.getByTestId('admin-nav-audit').click()
     await expect(page.getByTestId('admin-audit')).toBeVisible({ timeout: 20_000 })
-    await page.getByTestId('admin-audit-filter-hotel').fill('crystal')
+    await page.getByTestId('admin-fleet-search').fill('crystal')
     await expect.poll(() => page.url()).toContain('search=crystal')
     // В ссылке должен быть и РАЗДЕЛ: фильтры без него открываются на сводке.
     expect(page.url(), 'раздел не попал в адрес').toContain('section=audit')
@@ -95,8 +95,8 @@ test.describe('Журнал платформы', () => {
     await second.goto(shared)
     await expect(second.getByTestId('admin-audit')).toBeVisible({ timeout: 20_000 })
     await expect(
-      second.getByTestId('admin-audit-filter-hotel'),
-      'поле поиска не восстановилось из адреса',
+      second.getByTestId('admin-fleet-search'),
+      'поле поиска не восстановилось из адреса (общее поле поиска, партия 62-D)',
     ).toHaveValue('crystal')
     await expect(
       second.getByTestId('admin-audit-total'),

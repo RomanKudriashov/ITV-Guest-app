@@ -23,6 +23,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/ToastProvider';
+import { formatDateTime } from '@/utils/dates';
 
 /**
  * Публикация и история версий.
@@ -144,7 +145,7 @@ export function VersionsTab({ type, readOnly = false }: { type: GrmsType; readOn
                       )}
                     </Stack>
                   </TableCell>
-                  <TableCell>{new Date(version.published_at).toLocaleString()}</TableCell>
+                  <TableCell>{formatDateTime(version.published_at)}</TableCell>
                   <TableCell align="right">{version.controls}</TableCell>
                   <TableCell align="right">
                     {readOnly ? null : (

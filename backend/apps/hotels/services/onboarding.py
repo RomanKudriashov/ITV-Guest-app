@@ -206,9 +206,14 @@ def list_dictionary(kind: str | None = None, *, limit: int | None = None, search
 
     limit = clamp(limit)
     queryset = SystemDictionaryEntry.objects.all()
-    if kind:
-        queryset = queryset.filter(kind=kind)
-    queryset = apply_search(queryset, search, ("code", "title"))
+    searched = apply_search(queryset, search, ("code", "title"))
+    # Счётчик у раздела — при набранном тексте, без учёта выбранного раздела
+    # (62-D): «Аллергены · 3» не противоречит видимому.
+    from django.db.models import Count
+
+    kinds_count = {row["kind"]: row["n"] for row in searched.values("kind").annotate(n=Count("id"))}
+    kinds = [k for k in (kind or "").split(",") if k]
+    queryset = searched.filter(kind__in=kinds) if kinds else searched
     total = queryset.count()
     rows = [
         {
@@ -221,7 +226,7 @@ def list_dictionary(kind: str | None = None, *, limit: int | None = None, search
         }
         for entry in queryset[:limit]
     ]
-    return envelope(rows, total, limit)
+    return {**envelope(rows, total, limit), "facets": {"kind": kinds_count}}
 
 
 def upsert_dictionary_entry(*, kind: str, code: str, title: dict, is_active: bool = True) -> SystemDictionaryEntry:

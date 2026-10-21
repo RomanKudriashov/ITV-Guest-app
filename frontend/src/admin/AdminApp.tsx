@@ -237,6 +237,13 @@ function Console({ onLogout }: { onLogout: () => void }) {
       'variant',
       'pin',
       'view',
+      // Фильтры журнала, команды, справочников и подключений (партия 62-D).
+      'hotels',
+      'role',
+      'active',
+      'twofa',
+      'kind',
+      'purpose',
     ]) {
       params.delete(key);
     }

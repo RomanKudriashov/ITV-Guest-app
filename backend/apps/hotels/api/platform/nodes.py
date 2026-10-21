@@ -72,10 +72,10 @@ def reissue_node(request: HttpRequest, node_id: str):
 
 @router.get("/hotels/{hotel_id}/nodes", summary="Узлы одного отеля")
 @requires(READ)
-def list_hotel_nodes(request: HttpRequest, hotel_id: str):
+def list_hotel_nodes(request: HttpRequest, hotel_id: str, status: str = "", purpose: str = "", search: str = ""):
     from apps.hotels.services.onprem import hotel_nodes
 
-    return {"items": hotel_nodes(console.get_hotel(hotel_id))}
+    return hotel_nodes(console.get_hotel(hotel_id), status=status, purpose=purpose, search=search)
 
 
 @router.post("/hotels/{hotel_id}/nodes/{node_id}/revoke", summary="Отозвать ключ узла этого отеля")

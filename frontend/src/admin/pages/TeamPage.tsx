@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
@@ -14,6 +15,7 @@ import { ChoiceField, Field, FormCell, FormGrid } from '../form';
 import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { getMe, getTeam, inviteMember, patchMember, resetMemberTwoFactor, type TeamMember } from '../adminClient';
+import { FilterBar, type Facet } from './hotels/hotelsUi';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
 
@@ -36,7 +38,15 @@ export function TeamPage() {
   // форма приглашения отвечала 403 — предлагать её незачем.
   const { isOwner } = useRights();
   const qc = useQueryClient();
-  const team = useQuery({ queryKey: ['admin', 'team'], queryFn: () => getTeam() });
+  // Фильтры — в адресе, считает сервер (партия 62-D).
+  const [params] = useSearchParams();
+  const filters = Object.fromEntries(['role', 'active', 'twofa', 'search'].map((key) => [key, params.get(key) ?? '']));
+  const team = useQuery({ queryKey: ['admin', 'team', filters], queryFn: () => getTeam(100, filters) });
+  const facets: Facet[] = [
+    { key: 'role', label: t('admin.team.filter.role'), options: ['owner', 'support', 'read_only'].map((r) => ({ value: r, label: t(`admin.journal.role.${r}`) })) },
+    { key: 'active', label: t('admin.team.filter.active'), options: [{ value: 'yes', label: t('admin.team.filter.activeYes') }, { value: 'no', label: t('admin.team.filter.activeNo') }] },
+    { key: 'twofa', label: t('admin.team.filter.twofa'), options: [{ value: 'yes', label: t('admin.team.filter.twofaYes') }, { value: 'no', label: t('admin.team.filter.twofaNo') }] },
+  ];
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>('support');
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
@@ -120,6 +130,9 @@ export function TeamPage() {
         </Alert>
       ) : null}
 
+      <Box sx={{ mt: 2 }}>
+        <FilterBar facets={facets} placeholder={t('admin.team.filter.search')} />
+      </Box>
       <QueryState
         query={team}
         what={t('state.what.team')}

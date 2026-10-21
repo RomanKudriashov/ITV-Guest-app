@@ -1,22 +1,19 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { useListQuery } from '@/kit/list/useListQuery';
 import { ListEmpty } from '@/kit/list/ListEmpty';
 import { useQuery } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
-import { accent, ink, panelSx, surface, typo } from '../adminTokens';
+import { ink, panelSx, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
-import { SelectField } from '@/components/SelectField';
-import { getAudit, getAuditActions } from '../adminClient';
-import { DateChoiceField } from '../form';
+import { getAudit, getAuditActions, getAuditPeople, getGroups, getHotelsView } from '../adminClient';
 import { SupportSessionsPage } from './SupportSessionsPage';
-import { ViewSwitch } from './hotels/hotelsUi';
+import { FilterBar, ViewSwitch, type Facet } from './hotels/hotelsUi';
+import { JournalRow, PERIODS } from './journalUi';
 
 /**
  * Аудит платформы — один список, а не разрез по отелям.
@@ -75,192 +72,105 @@ export function AuditPage() {
   );
 }
 
+const FILTER_KEYS = ['who', 'action', 'hotels', 'group', 'period', 'search'] as const;
+
+/**
+ * Лента журнала (партия 62-D): кто, действие, отель, группа, период, текст —
+ * чипами, в адресе, фильтрует сервер. Листание — курсором (он про место в
+ * ленте, а не про выборку, поэтому в адрес не кладётся).
+ */
 function AuditLog() {
   const { t } = useTranslation();
-  /*
-    Фильтры живут В АДРЕСЕ: ссылку на выборку можно послать коллеге, а F5 не
-    сбрасывает работу. Курсор — НЕ в адресе: он про место в ленте, а не про
-    выборку, и вклеивать его в ссылку значило бы делиться своим положением в
-    журнале, которое у получателя всё равно уже другое.
-  */
-  const { params, patch, reset, isFiltered } = useListQuery({
-    action: '',
-    since: '',
-    until: '',
-    search: '',
-  });
-  const { action, since, until, search: subdomain } = params;
-  // Стек курсоров: вперёд кладём, назад снимаем. Хранить «номер страницы»
-  // здесь нечего — страниц с номерами у курсорного листания не бывает.
-  const [cursors, setCursors] = useState<string[]>([]);
+  const [params] = useSearchParams();
+  const values = Object.fromEntries(FILTER_KEYS.map((key) => [key, params.get(key) ?? '']));
+  const filterKey = JSON.stringify(values);
+  // Стек курсоров: вперёд кладём, назад снимаем; смена фильтра — с начала.
+  const [cursors, setCursors] = useState<{ key: string; stack: string[] }>({ key: filterKey, stack: [] });
+  const stack = cursors.key === filterKey ? cursors.stack : [];
 
-  const filters = {
-    action: action || null,
-    since: since ? `${since}T00:00:00` : null,
-    until: until ? `${until}T23:59:59` : null,
-    // Поиск по поддомену уходит НА СЕРВЕР. Здесь он отсеивал уже скачанную
-    // сотню и врал счётчиком: «3 записи» там, где их в базе триста.
-    search: subdomain || null,
-    cursor: cursors[cursors.length - 1] ?? null,
+  const query = {
+    who: values.who || null,
+    action: values.action || null,
+    hotel_id: values.hotels || null,
+    group_id: values.group || null,
+    period: values.period || null,
+    search: values.search || null,
+    cursor: stack[stack.length - 1] ?? null,
   };
-
-  const audit = useQuery({
-    queryKey: ['admin', 'audit', filters],
-    queryFn: () => getAudit({ limit: 100, ...filters }),
-  });
+  const audit = useQuery({ queryKey: ['admin', 'audit', query], queryFn: () => getAudit({ limit: 100, ...query }) });
   const actions = useQuery({ queryKey: ['admin', 'audit', 'actions'], queryFn: getAuditActions });
+  const people = useQuery({ queryKey: ['admin', 'audit', 'people'], queryFn: getAuditPeople });
+  const hotels = useQuery({ queryKey: ['admin', 'fleet', 'all', 'everything'], queryFn: () => getHotelsView({ layout: 'list', origin: 'all' }) });
+  const groups = useQuery({ queryKey: ['admin', 'groups'], queryFn: getGroups });
 
-  const resetPaging = () => setCursors([]);
-  // Смена любого фильтра возвращает в начало ленты: курсор от прежней выборки
-  // указывает в середину другой.
-  const setFilter = (next: Partial<typeof params>) => {
-    patch(next);
-    resetPaging();
-  };
+  const facets: Facet[] = [
+    { key: 'who', label: t('admin.history.who'), options: (Array.isArray(people.data) ? people.data : []).map((p) => ({ value: p.id ?? '', label: p.name })) },
+    { key: 'action', label: t('admin.audit.filterAction'), options: (Array.isArray(actions.data) ? actions.data : []).map((code) => ({ value: code, label: t(`admin.action.${code}`, { defaultValue: code }) })) },
+    { key: 'hotels', label: t('admin.audit.filterHotel'), options: (hotels.data?.items ?? []).map((h) => ({ value: h.id, label: h.name })) },
+    { key: 'group', label: t('admin.audit.filterGroup'), options: (groups.data?.items ?? []).map((g) => ({ value: g.id, label: g.title })) },
+    { key: 'period', label: t('admin.history.period'), options: PERIODS.map((p) => ({ value: p, label: t(`admin.history.periods.${p}`) })) },
+  ];
+  const isFiltered = FILTER_KEYS.some((key) => values[key]);
 
   return (
-    <Box data-testid="admin-audit">
-
-      <Box sx={{ ...panelSx, mt: 2, display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-        <SelectField
-          size="small"
-          fullWidth={false}
-          label={t('admin.audit.filterAction')}
-          value={action}
-          onChange={(next) => {
-            setFilter({ action: next });
-          }}
-          testId="admin-audit-filter-action"
-          sx={{ minWidth: 220 }}
-          options={[
-            { value: '', label: t('admin.audit.filterAny') },
-            ...(actions.data ?? []).map((code) => ({
-              value: code,
-              label: t(`admin.action.${code}`, { defaultValue: code }),
-            })),
-          ]}
-        />
-        {/* Даты — общим полем вместо системного `type="date"`: формат дд.мм.гггг
-            и календарь на языке интерфейса, а не ОС (партия 55). */}
-        <DateChoiceField
-          size="small"
-          width={170}
-          label={t('admin.audit.filterSince')}
-          value={since}
-          max={until || undefined}
-          onChange={(next) => {
-            setFilter({ since: next });
-          }}
-          testId="admin-audit-filter-since"
-        />
-        <DateChoiceField
-          size="small"
-          width={170}
-          label={t('admin.audit.filterUntil')}
-          value={until}
-          min={since || undefined}
-          onChange={(next) => setFilter({ until: next })}
-          testId="admin-audit-filter-until"
-        />
-        <TextField
-          size="small"
-          label={t('admin.audit.filterHotel')}
-          value={subdomain}
-          onChange={(event) => setFilter({ search: event.target.value })}
-          inputProps={{ 'data-testid': 'admin-audit-filter-hotel' }}
-          sx={{ minWidth: 180 }}
-        />
-        <Box sx={{ flexGrow: 1 }} />
-        {audit.data ? (
-          <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-audit-total">
-            {t('admin.audit.counter', {
-              shown: audit.data.items.length,
-              total: audit.data.total,
-            })}
-          </Typography>
-        ) : null}
-      </Box>
-
+    <Box data-testid="admin-audit" sx={{ mt: 2 }}>
+      <FilterBar
+        facets={facets}
+        placeholder={t('admin.audit.search')}
+        aside={
+          audit.data ? (
+            <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-audit-total">
+              {t('admin.audit.counter', { shown: audit.data.items.length, total: audit.data.total })}
+            </Typography>
+          ) : null
+        }
+      />
       {/*
-        Пустое состояние — ОБЩЕЕ на все списки. «Ничего не найдено» и «здесь
-        пока пусто» это разные ответы: первый просит снять фильтр, второй —
-        завести первую запись. Свалить их в одно «нет данных» значит на
-        регулярной основе заводить дубль того, что просто отсеяно поиском.
+        Пустое состояние — общее на все списки: «ничего не найдено» просит
+        снять фильтр, «пока пусто» — дождаться первой записи.
       */}
       <QueryState query={audit} what={t('state.what.audit')}>
         {(page) =>
           page.items.length === 0 ? (
-            <ListEmpty isFiltered={isFiltered} onReset={reset} what={t('state.what.audit')} />
+            <ListEmpty isFiltered={isFiltered} onReset={() => undefined} what={t('state.what.audit')} />
           ) : (
-          <>
-            <Box sx={{ mt: 2.25 }}>
-              {page.items.map((row) => (
-                <Box
-                  key={row.id}
-                  data-testid={`admin-audit-${row.action}`}
-                  // На 390 время + автор занимают всю ширину, и действие
-                  // уходило за край (+92 px): ряд переносится (партия 55).
-                  sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    columnGap: 1.5,
-                    rowGap: 0.25,
-                    alignItems: 'baseline',
-                    py: 1.1,
-                    borderBottom: `1px solid ${surface.hair}`,
-                    ...typo.caption,
-                  }}
+            <>
+              <Box sx={{ ...panelSx, py: 0.5 }}>
+                {page.items.map((row) => (
+                  <JournalRow
+                    key={row.id}
+                    entry={{ ...row, actor: row.actor_info }}
+                    testId={`admin-audit-${row.action}`}
+                    aside={
+                      row.hotel ? (
+                        <Box sx={{ ...typo.caption, color: ink.hi, fontWeight: 600, textAlign: { md: 'right' } }}>
+                          {row.hotel}
+                          <Box sx={{ color: ink.low, fontWeight: 400 }}>{row.subdomain}</Box>
+                        </Box>
+                      ) : null
+                    }
+                  />
+                ))}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
+                <Button
+                  size="small"
+                  disabled={stack.length === 0}
+                  onClick={() => setCursors({ key: filterKey, stack: stack.slice(0, -1) })}
+                  data-testid="admin-audit-prev"
                 >
-                  <Typography sx={{ color: ink.low, ...typo.caption, minWidth: 140, flex: 'none' }}>
-                    {new Date(row.at).toLocaleString()}
-                  </Typography>
-                  <Typography sx={{ color: accent.soft, ...typo.caption, minWidth: 180, flex: 'none' }}>
-                    {row.actor}
-                  </Typography>
-                  {/*
-                    Слово человеку, код — рядом мелким. Журнал платформы читают
-                    двое: оператор, которому нужно «что произошло», и инженер,
-                    которому нужен ключ для поиска в логах. Отдать одному за
-                    счёт другого нельзя, поэтому здесь оба.
-                  */}
-                  <Box sx={{ flex: '1 1 180px', minWidth: 0 }}>
-                    <Typography sx={{ color: ink.mid, ...typo.caption }}>
-                      {t(`admin.action.${row.action}`, { defaultValue: row.action })}
-                    </Typography>
-                    <Typography sx={{ color: ink.low, ...typo.caption, fontSize: 11 }}>
-                      {row.action}
-                    </Typography>
-                  </Box>
-                  {row.hotel ? (
-                    <Typography sx={{ color: ink.hi, ...typo.caption, fontWeight: 600 }}>
-                      {row.hotel}
-                    </Typography>
-                  ) : null}
-                </Box>
-              ))}
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}>
-              <Button
-                size="small"
-                disabled={cursors.length === 0}
-                onClick={() => setCursors((prev) => prev.slice(0, -1))}
-                data-testid="admin-audit-prev"
-              >
-                {t('admin.audit.prev')}
-              </Button>
-              <Button
-                size="small"
-                disabled={!page.next_cursor}
-                onClick={() =>
-                  setCursors((prev) => (page.next_cursor ? [...prev, page.next_cursor] : prev))
-                }
-                data-testid="admin-audit-next"
-              >
-                {t('admin.audit.next')}
-              </Button>
-            </Box>
-          </>
+                  {t('admin.audit.prev')}
+                </Button>
+                <Button
+                  size="small"
+                  disabled={!page.next_cursor}
+                  onClick={() => page.next_cursor && setCursors({ key: filterKey, stack: [...stack, page.next_cursor] })}
+                  data-testid="admin-audit-next"
+                >
+                  {t('admin.audit.next')}
+                </Button>
+              </Box>
+            </>
           )
         }
       </QueryState>

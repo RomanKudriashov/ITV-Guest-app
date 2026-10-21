@@ -30,6 +30,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { useToast } from '@/components/ToastProvider';
 import { DateField } from '@/components/DateField';
 import { formGridSx, spanSx } from '@/kit/formLayout';
+import { formatDate, formatDateTime } from '@/utils/dates';
 
 /**
  * Доступ гостя к управлению номером: PIN проживания и демо-вход.
@@ -204,7 +205,7 @@ export function AccessTab() {
                         {record.room}
                       </EntityName>
                     </TableCell>
-                    <TableCell>{new Date(record.issued_at).toLocaleString()}</TableCell>
+                    <TableCell>{formatDateTime(record.issued_at)}</TableCell>
                     {/*
                       Бессрочный код — не пустая ячейка, а слово: пустое место
                       читается как «данные не доехали», и администратор идёт
@@ -212,7 +213,7 @@ export function AccessTab() {
                     */}
                     <TableCell data-testid={`grms-pin-until-${record.room}`}>
                       {record.valid_until
-                        ? new Date(record.valid_until).toLocaleDateString()
+                        ? formatDate(record.valid_until, 'medium')
                         : t('roomControl.access.noValidUntil')}
                     </TableCell>
                     <TableCell>
@@ -293,7 +294,7 @@ export function AccessTab() {
                   : 'roomControl.access.demoToggledOff',
                 {
                   who: state.demo_entry.toggled.by || t('roomControl.access.demoSomeone'),
-                  when: new Date(state.demo_entry.toggled.at).toLocaleString(),
+                  when: formatDateTime(state.demo_entry.toggled.at),
                 },
               )}
             </Typography>

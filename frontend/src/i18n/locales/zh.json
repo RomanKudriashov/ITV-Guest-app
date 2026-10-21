@@ -2613,7 +2613,7 @@
         "rooms": "每间客房的楼栋、楼层、房型、控制方案和 PIN。目前仅可查看。",
         "roomControl": "客房方案、调试文件导入、构建器、平面图、版本和设备诊断。",
         "journal": "支持人员进入酒店面板的记录和客房设备日志。",
-        "history": "酒店发生了什么：平台和酒店管理员的修改、订单、登录、设备调用。"
+        "history": "在 Control 中对酒店的所有修改：资料、模块、连接、分组、停用、管理员、客房控制、支持登录——谁、何时、改前和改后。"
       },
       "limitWontFit": "超出所选套餐",
       "moduleState": {
@@ -2763,6 +2763,16 @@
         "button": "重置双重验证",
         "title": "重置 {{email}} 的双重验证？",
         "body": "密钥将被清除，该成员的所有登录都会结束。其可用密码登录，并在“安全”中重新开启双重验证。此操作会记入日志。"
+      },
+      "filter": {
+        "role": "角色",
+        "active": "访问",
+        "activeYes": "启用",
+        "activeNo": "停用",
+        "twofa": "双重验证",
+        "twofaYes": "已开启",
+        "twofaNo": "未开启",
+        "search": "按邮箱或姓名查找"
       }
     },
     "audit": {
@@ -2779,7 +2789,9 @@
       "next": "更多",
       "viewLabel": "显示内容",
       "viewAll": "全部操作",
-      "viewSupport": "支持登录"
+      "viewSupport": "支持登录",
+      "search": "查找：酒店、人员、内容",
+      "filterGroup": "分组"
     },
     "action": {
       "platform": {
@@ -2978,6 +2990,10 @@
           "title": "将 {{count}} 家酒店恢复为参考版本？",
           "body": "酒店对系统条目的修改将被清除：修改过的恢复为参考，酒店关闭的重新对客人显示，删除的重新出现。酒店自建条目保留。此操作无法撤销。"
         }
+      },
+      "filter": {
+        "kind": "类别",
+        "search": "按代码或名称查找"
       }
     },
     "data": {
@@ -3569,7 +3585,11 @@
         "systemsTitle": "外部系统",
         "roomSystem": "客房控制系统",
         "otherSystems": "酒店管理系统、支付、门锁",
-        "otherSoon": "接入后会显示在这里"
+        "otherSoon": "接入后会显示在这里",
+        "filter": {
+          "status": "状态",
+          "search": "按名称或版本查找"
+        }
       },
       "rooms": {
         "title": "客房",
@@ -3698,6 +3718,66 @@
         "label": "酒店分组",
         "none": "无分组",
         "hint": "移动会立即记入酒店和分组的历史。"
+      }
+    },
+    "journal": {
+      "system": "系统",
+      "role": {
+        "owner": "所有者",
+        "support": "支持",
+        "read_only": "只读",
+        "system": "自动",
+        "hotel": "酒店员工"
+      },
+      "on": "开启",
+      "off": "关闭",
+      "yes": "是",
+      "no": "否",
+      "field": {
+        "tariff": "套餐",
+        "subdomain_alias": "重定向"
+      },
+      "object": {
+        "node": "连接器“{{name}}”",
+        "variant": "方案“{{code}}”",
+        "variantVersion": "方案“{{code}}”，版本 {{version}}"
+      },
+      "detail": {
+        "ttl_other": "时长 {{count}} 分钟",
+        "group": "通过分组操作“{{group}}”",
+        "bulk": "通过“酒店”批量操作",
+        "toVersion": "回到版本 {{version}}",
+        "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节"
+      }
+    },
+    "history": {
+      "title": "历史",
+      "what": "酒店历史",
+      "who": "谁",
+      "whatFilter": "什么",
+      "period": "时间段",
+      "periods": {
+        "day": "最近一天",
+        "week": "最近一周",
+        "month": "最近一月",
+        "quarter": "最近一季",
+        "year": "最近一年"
+      },
+      "search": "查找：字段、值、人员",
+      "count": "显示 {{shown}} / {{total}}",
+      "emptyTitle": "没有记录",
+      "emptyBody": "没有符合筛选的修改——请移除部分筛选。",
+      "more": "显示更多",
+      "section": {
+        "profile": "资料",
+        "modules": "模块",
+        "connections": "连接",
+        "group": "分组",
+        "activation": "停用",
+        "admins": "管理员",
+        "roomControl": "客房控制",
+        "support": "支持登录",
+        "data": "数据"
       }
     }
   },

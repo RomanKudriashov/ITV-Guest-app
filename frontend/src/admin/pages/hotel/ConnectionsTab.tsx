@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -16,7 +17,7 @@ import { useRights } from '../../useRights';
 import { ink, primaryButtonSx, quietButtonSx, secondaryButtonSx, shape, surface, typo } from '../../adminTokens';
 import { ChoiceField, Field, FormCell, FormGrid } from '../../form';
 import { createNode, getHotelNodes, reissueHotelNode, revokeHotelNode, type NodeRow } from '../../adminClient';
-import { Empty, Help, Panel, Pill } from '../hotels/hotelsUi';
+import { Empty, FilterBar, Help, Panel, Pill, type Facet } from '../hotels/hotelsUi';
 
 /**
  * ПОДКЛЮЧЕНИЯ ОТЕЛЯ (партия 62-B): сюда переехал раздел «On-premise» — но
@@ -30,7 +31,15 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
   const { canWrite } = useRights();
   const qc = useQueryClient();
   const actionFailed = useActionFailed();
-  const nodes = useQuery({ queryKey: ['admin', 'hotel-nodes', hotelId], queryFn: () => getHotelNodes(hotelId) });
+  // Состояние, назначение и текст — в адресе, считает сервер (партия 62-D).
+  const [params] = useSearchParams();
+  const filters = Object.fromEntries(['status', 'purpose', 'search'].map((key) => [key, params.get(key) ?? '']));
+  const nodes = useQuery({ queryKey: ['admin', 'hotel-nodes', hotelId, filters], queryFn: () => getHotelNodes(hotelId, filters) });
+  const counts = nodes.data?.facets;
+  const nodeFacets: Facet[] = [
+    { key: 'status', label: t('admin.card.connections.filter.status'), options: ['online', 'offline', 'revoked'].map((v) => ({ value: v, label: t(`admin.nodes.${v}`), count: counts?.status[v] ?? 0 })) },
+    { key: 'purpose', label: t('admin.nodes.col.purpose'), options: ['grms', 'pms', 'both'].filter((v) => counts?.purpose[v] || params.get('purpose')?.includes(v)).map((v) => ({ value: v, label: t(`admin.nodes.purpose.${v}`), count: counts?.purpose[v] ?? 0 })) },
+  ];
   const [issued, setIssued] = useState<{ name: string; key: string } | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: '', purpose: 'grms' });
@@ -118,6 +127,7 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
 
         {issued ? <IssuedKey name={issued.name} value={issued.key} onClose={() => setIssued(null)} /> : null}
 
+        {nodes.data && nodes.data.total > 0 ? <FilterBar facets={nodeFacets} placeholder={t('admin.card.connections.filter.search')} /> : null}
         <QueryState query={nodes} what={t('state.what.nodes')}>
           {(page) =>
             page.items.length ? (
@@ -133,6 +143,8 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
                   />
                 ))}
               </Box>
+            ) : page.total ? (
+              <Empty title={t('admin.card.rooms.noMatch')}>{t('admin.card.rooms.noMatchBody')}</Empty>
             ) : (
               <Empty title={t('admin.card.connections.emptyTitle')}>{t('admin.card.connections.emptyBody')}</Empty>
             )

@@ -247,7 +247,7 @@ def start_impersonation(
         impersonated_by=actor.pk,
         object_type="user",
         object_id=target_user.pk,
-        payload={"reason": grant.reason, "grant_id": str(grant.pk)},
+        payload={"reason": grant.reason, "grant_id": str(grant.pk), "ttl_minutes": ttl_minutes},
         hotel_id=target_user.hotel_id,
     )
     # Наружу уходит ОДНОРАЗОВЫЙ КОД, а не токен. Токен выдаётся в обмен на

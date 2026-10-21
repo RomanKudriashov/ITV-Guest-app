@@ -31,6 +31,10 @@ def platform_audit(
     since: str | None = None,
     until: str | None = None,
     search: str | None = None,
+    who: str | None = None,
+    group_id: str | None = None,
+    period: str | None = None,
+    view: str | None = None,
 ):
     """
     Журнал листается КУРСОРОМ и фильтруется по дате, отелю и действию.
@@ -48,7 +52,16 @@ def platform_audit(
     return audit_feed(
         limit=limit, cursor=cursor, hotel_id=hotel_id, action=action,
         since=since, until=until, search=search, user=request.user,
+        who=who, group_id=group_id, period=period, view=view,
     )
+
+
+@router.get("/audit/people", summary="Кто действовал — для фильтра журнала")
+@requires(READ)
+def platform_audit_people(request: HttpRequest):
+    from apps.hotels.services.platform.team import audit_people
+
+    return audit_people()
 
 
 @router.get("/audit/actions", summary="Виды действий для фильтра журнала")

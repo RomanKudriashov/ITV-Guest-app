@@ -739,8 +739,9 @@ def test_enter_hotel_requires_reason_and_is_audited(api):
             .filter(hotel_id=hotel.pk)
             .values_list("action", flat=True)
         )
-    # И факт входа платформы, и сам грант impersonation — оба в журнале.
-    assert "platform.hotel.entered" in actions
+    # Одно действие — одна запись (партия 62-D): вход в журнале одной строкой
+    # `impersonation.started`, без второй `platform.hotel.entered`.
+    assert "platform.hotel.entered" not in actions
     assert "impersonation.started" in actions
 
 

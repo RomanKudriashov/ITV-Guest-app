@@ -238,13 +238,13 @@ test.describe('Вход в отель', () => {
       // Журнал приходит оболочкой: страница записей плюс курсор и общее число.
       .then((page) => page.items)
     const entered = (audit as { action: string; payload: Record<string, unknown> }[]).find(
-      (row) => row.action === 'platform.hotel.entered' && row.payload.reason === reason,
+      (row) => row.action === 'impersonation.started' && row.payload.reason === reason,
     )
     expect(entered, 'вход в отель обязан быть в аудите с причиной').toBeTruthy()
 
     await page.getByTestId('admin-nav-audit').click()
     await expect(page.getByTestId('admin-audit')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('admin-audit-platform.hotel.entered').first()).toBeVisible()
+    await expect(page.getByTestId('admin-audit-impersonation.started').first()).toBeVisible()
   })
 })
 

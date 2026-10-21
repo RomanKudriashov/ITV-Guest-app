@@ -792,14 +792,39 @@ export interface TeamMember {
   totp_enabled: boolean;
 }
 
-export interface AuditRow {
+/** Кто сделал: имя, почта, роль (`owner` / `support` / `read_only` / `system`). */
+export interface JournalActor {
+  id: string | null;
+  name: string;
+  email: string;
+  role: string;
+}
+export interface JournalChange {
+  /** Поле профиля или `module:<код>`, `tariff`, `group`… */
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+/** Запись журнала одним видом — «История» отеля и «Журнал действий» (62-D). */
+export interface JournalEntry {
   id: string;
   at: string;
-  actor: string;
   action: string;
+  section: string;
+  actor: JournalActor;
+  via_support: boolean;
+  object: { kind: string; code?: string; name?: string; version?: number } | null;
+  changes: JournalChange[];
+  details: Record<string, unknown>;
+  payload: Record<string, unknown>;
+}
+
+export interface AuditRow extends Omit<JournalEntry, 'actor'> {
+  /** Почта — для прежних экранов; человек целиком — `actor_info`. */
+  actor: string;
+  actor_info: JournalActor;
   hotel: string | null;
   subdomain: string | null;
-  payload: Record<string, unknown>;
 }
 
 export interface EnterResult {
@@ -897,7 +922,12 @@ export const reissueNode = (id: string) =>
 /* ── Карточка отеля (партия 62-B) ───────────────────────────────────────── */
 
 /** Узлы одного отеля; отзыв и перевыпуск — адресом отеля (чужой узел — 404). */
-export const getHotelNodes = (hotelId: string) => request<{ items: NodeRow[] }>(`/hotels/${hotelId}/nodes`);
+export const getHotelNodes = (hotelId: string, filters: Record<string, string> = {}) => {
+  const query = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
+  return request<{ items: NodeRow[]; total: number; facets: { status: Record<string, number>; purpose: Record<string, number> } }>(
+    `/hotels/${hotelId}/nodes${query ? `?${query}` : ''}`,
+  );
+};
 export const revokeHotelNode = (hotelId: string, nodeId: string) =>
   request<NodeRow>(`/hotels/${hotelId}/nodes/${nodeId}/revoke`, 'POST');
 export const reissueHotelNode = (hotelId: string, nodeId: string) =>
@@ -968,7 +998,10 @@ export const getHotelRooms = (hotelId: string, params: Record<string, string>) =
   return request<RoomsPage>(`/hotels/${hotelId}/rooms${query ? `?${query}` : ''}`);
 };
 
-export const getTeam = (limit = 100) => request<Page<TeamMember>>(`/team?limit=${limit}`);
+export const getTeam = (limit = 100, filters: Record<string, string> = {}) => {
+  const query = new URLSearchParams({ limit: String(limit), ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
+  return request<Page<TeamMember>>(`/team?${query.toString()}`);
+};
 export const inviteMember = (body: { email: string; role: string; full_name?: string }) =>
   request<{ member: TeamMember; password: string }>('/team', 'POST', body);
 export const patchMember = (id: string, body: { role?: string; is_active?: boolean }) =>
@@ -984,8 +1017,13 @@ export interface AuditQuery {
   action?: string | null;
   since?: string | null;
   until?: string | null;
-  /** Поиск по поддомену отеля — фильтрует СЕРВЕР. */
+  /** Текст: отель, человек, содержимое записи — фильтрует СЕРВЕР. */
   search?: string | null;
+  /** Через запятую, как в адресе (партия 62-D). */
+  who?: string | null;
+  group_id?: string | null;
+  period?: string | null;
+  view?: string | null;
 }
 
 export interface AuditPage {
@@ -1005,7 +1043,7 @@ export const getAudit = (query: AuditQuery = {}) => {
   const params = new URLSearchParams({ limit: String(query.limit ?? 100) });
   // `search` В СПИСКЕ. Забыть его здесь — это фильтр, который применился на
   // экране и не уехал на сервер: выдача та же, а оператор уверен, что отфильтровал.
-  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until', 'search'] as const) {
+  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until', 'search', 'who', 'group_id', 'period', 'view'] as const) {
     const value = query[key];
     if (value) params.set(key, value);
   }
@@ -1013,6 +1051,22 @@ export const getAudit = (query: AuditQuery = {}) => {
 };
 
 export const getAuditActions = () => request<string[]>('/audit/actions');
+export const getAuditPeople = () => request<JournalActor[]>('/audit/people');
+
+export interface HistoryPage {
+  items: JournalEntry[];
+  total: number;
+  next_cursor: string | null;
+  facets: {
+    who: Array<{ value: string; label: string; role: string; count: number }>;
+    what: Array<{ value: string; count: number }>;
+  };
+}
+/** «История» отеля: правки из Control, фильтры на сервере, курсор (62-D). */
+export const getHotelHistory = (hotelId: string, params: Record<string, string>) => {
+  const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+  return request<HistoryPage>(`/hotels/${hotelId}/history${query ? `?${query}` : ''}`);
+};
 
 export const enterHotel = (id: string, body: { reason: string; ttl_minutes: number }) =>
   request<EnterResult>(`/hotels/${id}/enter`, 'POST', body);
@@ -1046,8 +1100,10 @@ export const getTemplates = (limit = 100) =>
   request<Page<OnboardingTemplate>>(`/templates?limit=${limit}`);
 export const patchTemplate = (id: string, body: Partial<OnboardingTemplate>) =>
   request<OnboardingTemplate>(`/templates/${id}`, 'PATCH', body);
-export const getDictionary = (limit = 100) =>
-  request<Page<DictionaryEntry>>(`/dictionaries?limit=${limit}`);
+export const getDictionary = (limit = 100, filters: { kind?: string; search?: string } = {}) => {
+  const query = new URLSearchParams({ limit: String(limit), ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });
+  return request<Page<DictionaryEntry> & { facets?: { kind: Record<string, number> } }>(`/dictionaries?${query.toString()}`);
+};
 export const putDictionaryEntry = (body: {
   kind: string;
   code: string;

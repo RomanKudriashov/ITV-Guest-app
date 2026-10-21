@@ -330,7 +330,7 @@ def publish(request: HttpRequest, hotel_id: str, code: str):
         actor_type=AuditLog.ActorType.PLATFORM,
         actor_id=getattr(request.auth, "pk", None),
     )
-    _audit(hotel, request, "grms.published", type=code, version=config.version)
+    # Запись в журнале одна — её пишет `publishing` с актором (партия 62-D).
     return {"version": config.version, "published_at": config.published_at}
 
 
@@ -343,7 +343,7 @@ def rollback(request: HttpRequest, hotel_id: str, code: str, payload: RollbackIn
         actor_type=AuditLog.ActorType.PLATFORM,
         actor_id=getattr(request.auth, "pk", None),
     )
-    _audit(hotel, request, "grms.rolled_back", type=code, to=payload.to_version)
+    # Запись в журнале одна — её пишет `publishing` с актором (партия 62-D).
     return {"version": config.version, "rolled_back_from": config.rolled_back_from}
 
 

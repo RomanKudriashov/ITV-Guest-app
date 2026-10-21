@@ -36,3 +36,25 @@ def hotel_rooms(
         console.get_hotel(hotel_id),
         {"search": search, "building": building, "floor": floor, "category": category, "variant": variant, "pin": pin},
     )
+
+
+@router.get("/hotels/{hotel_id}/history", summary="История отеля: правки из Control с фильтрами")
+@requires(READ)
+def hotel_history(
+    request: HttpRequest,
+    hotel_id: str,
+    who: str = "",
+    what: str = "",
+    period: str = "",
+    since: str = "",
+    until: str = "",
+    search: str = "",
+    cursor: str = "",
+    limit: int = 50,
+):
+    from apps.hotels.services.platform.journal import hotel_history as build
+
+    return build(
+        console.get_hotel(hotel_id),
+        {"who": who, "what": what, "period": period, "since": since, "until": until, "search": search, "cursor": cursor, "limit": limit},
+    )

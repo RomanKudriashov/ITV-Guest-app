@@ -433,13 +433,8 @@ def enter_hotel(request: HttpRequest, hotel_id: str, payload: EnterHotelIn):
         result = start_impersonation(
             actor=request.user, target_user=target, reason=reason, ttl_minutes=ttl
         )
-    console.audit_hotel(
-        hotel,
-        "platform.hotel.entered",
-        actor_id=request.user.pk,
-        ip=request.META.get("REMOTE_ADDR"),
-        payload={"reason": reason, "ttl_minutes": ttl},
-    )
+    # Запись в журнале одна — `impersonation.started` (партия 62-D): раньше
+    # рядом ложилась вторая, `platform.hotel.entered`, о том же входе.
     return {
         # ОДНОРАЗОВЫЙ КОД, а не токен. Консоль передаёт его в хэш-фрагменте
         # адреса, который браузер вообще не отправляет на сервер: ни в логах
@@ -599,13 +594,20 @@ def get_modules(request: HttpRequest, hotel_id: str):
 @router.put("/hotels/{hotel_id}/modules", summary="Настроить реестр модулей")
 @requires(WRITE)
 def put_modules(request: HttpRequest, hotel_id: str, payload: ModulesIn):
+    from apps.hotels.module_registry import enabled_module_codes
+
     hotel = console.get_hotel(hotel_id)
+    before = enabled_module_codes(hotel)
     modules = set_modules(hotel, [entry.dict() for entry in payload.modules])
-    console.audit_hotel(
-        hotel,
-        "platform.hotel.modules_set",
-        actor_id=request.user.pk,
-        ip=request.META.get("REMOTE_ADDR"),
-        payload={"count": len(modules)},
-    )
+    after = enabled_module_codes(hotel)
+    # ЖУРНАЛ ЧЕСТНЫЙ (партия 62-D): по записи на модуль «был → стал», а не
+    # «изменено 9». Неизменившиеся модули журнал не засоряют.
+    for code in sorted(before ^ after):
+        console.audit_hotel(
+            hotel,
+            "platform.hotel.modules_set",
+            actor_id=request.user.pk,
+            ip=request.META.get("REMOTE_ADDR"),
+            payload={"module": code, "from": code in before, "to": code in after},
+        )
     return {"tariff": hotel.tariff, "modules": modules}

@@ -38,7 +38,7 @@ function useRefresh(hotelId: string) {
   const qc = useQueryClient();
   return () => {
     void qc.invalidateQueries({ queryKey: ['admin', 'hotel', hotelId] });
-    void qc.invalidateQueries({ queryKey: ['admin', 'activity', hotelId] });
+    void qc.invalidateQueries({ queryKey: ['admin', 'history', hotelId] });
     void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
   };
 }

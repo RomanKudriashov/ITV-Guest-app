@@ -206,8 +206,27 @@ def all_nodes(*, limit: int | None = None, search: str = "", user=None) -> dict:
     return envelope([serialize_node(node, node.hotel) for node in nodes], total, limit)
 
 
-def hotel_nodes(hotel: Hotel) -> list[dict]:
-    """Узлы одного отеля — вкладка «Подключения» карточки."""
+def hotel_nodes(hotel: Hotel, *, status: str = "", purpose: str = "", search: str = "") -> dict:
+    """
+    Узлы одного отеля — вкладка «Подключения» карточки. Фильтры на сервере
+    (62-D): состояние (на связи / не на связи / отозван), назначение, текст.
+    """
     with tenant_context(hotel):
         nodes = list(OnPremNode.objects.order_by("is_revoked", "name"))
-    return [serialize_node(node, hotel) for node in nodes]
+    rows = [serialize_node(node, hotel) for node in nodes]
+    state = lambda r: "revoked" if r["is_revoked"] else "online" if r["is_online"] else "offline"  # noqa: E731
+    facets = {"status": {}, "purpose": {}}
+    for row in rows:
+        facets["status"][state(row)] = facets["status"].get(state(row), 0) + 1
+        facets["purpose"][row["purpose"]] = facets["purpose"].get(row["purpose"], 0) + 1
+    statuses = [v for v in status.split(",") if v]
+    purposes = [v for v in purpose.split(",") if v]
+    term = search.strip().lower()
+    shown = [
+        row
+        for row in rows
+        if (not statuses or state(row) in statuses)
+        and (not purposes or row["purpose"] in purposes)
+        and (not term or term in row["name"].lower() or term in (row["version"] or "").lower())
+    ]
+    return {"items": shown, "total": len(rows), "facets": facets}

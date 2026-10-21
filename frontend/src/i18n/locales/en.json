@@ -2641,7 +2641,7 @@
         "rooms": "Rooms, buildings, floors, categories, control variant and PIN for each room. View only for now.",
         "roomControl": "Room variants, commissioning file upload, builder, plan, versions and equipment diagnostics.",
         "journal": "Support entries into the hotel panel and the room equipment log.",
-        "history": "What happened to the hotel: changes by the platform and its administrators, orders, entries, equipment calls."
+        "history": "Every change made to the hotel in Control: profile, modules, connections, group, disabling, administrators, room control, support entries — who, when, what it was and what it became."
       },
       "limitWontFit": "does not fit the selected tariff",
       "moduleState": {
@@ -2791,6 +2791,16 @@
         "button": "Reset 2FA",
         "title": "Reset two-factor authentication for {{email}}?",
         "body": "The secret is erased and all of this member's sessions end. They can sign in with the password and turn two-factor back on in “Security”. The action is logged."
+      },
+      "filter": {
+        "role": "Role",
+        "active": "Access",
+        "activeYes": "active",
+        "activeNo": "disabled",
+        "twofa": "2FA",
+        "twofaYes": "on",
+        "twofaNo": "off",
+        "search": "Find by email or name"
       }
     },
     "audit": {
@@ -2807,7 +2817,9 @@
       "next": "More",
       "viewLabel": "What to show",
       "viewAll": "All actions",
-      "viewSupport": "Support entries"
+      "viewSupport": "Support entries",
+      "search": "Find: hotel, person, content",
+      "filterGroup": "Group"
     },
     "action": {
       "platform": {
@@ -3007,6 +3019,10 @@
           "title": "Reset {{count}} hotels to the reference?",
           "body": "The hotel's edits to system entries are erased: changed entries go back to the reference, entries the hotel turned off become visible to guests again, deleted ones reappear. The hotel's own entries stay. This cannot be undone."
         }
+      },
+      "filter": {
+        "kind": "Section",
+        "search": "Find by code or title"
       }
     },
     "data": {
@@ -3633,7 +3649,11 @@
         "systemsTitle": "External systems",
         "roomSystem": "Room control system",
         "otherSystems": "Property management, payments, locks",
-        "otherSoon": "will appear here once they are connected"
+        "otherSoon": "will appear here once they are connected",
+        "filter": {
+          "status": "Status",
+          "search": "Find by name or version"
+        }
       },
       "rooms": {
         "title": "Rooms",
@@ -3762,6 +3782,68 @@
         "label": "Hotel group",
         "none": "No group",
         "hint": "The move goes straight into the hotel and group history."
+      }
+    },
+    "journal": {
+      "system": "system",
+      "role": {
+        "owner": "owner",
+        "support": "support",
+        "read_only": "read only",
+        "system": "automatic",
+        "hotel": "hotel staff"
+      },
+      "on": "on",
+      "off": "off",
+      "yes": "yes",
+      "no": "no",
+      "field": {
+        "tariff": "Tariff",
+        "subdomain_alias": "Redirect"
+      },
+      "object": {
+        "node": "connector “{{name}}”",
+        "variant": "variant “{{code}}”",
+        "variantVersion": "variant “{{code}}”, version {{version}}"
+      },
+      "detail": {
+        "ttl_one": "for {{count}} minute",
+        "ttl_other": "for {{count}} minutes",
+        "group": "by group action “{{group}}”",
+        "bulk": "by a bulk action in “Hotels”",
+        "toVersion": "to version {{version}}",
+        "legacyCount_one": "{{count}} module changed — the old entry keeps no details",
+        "legacyCount_other": "{{count}} modules changed — the old entry keeps no details"
+      }
+    },
+    "history": {
+      "title": "History",
+      "what": "hotel history",
+      "who": "Who",
+      "whatFilter": "What",
+      "period": "Period",
+      "periods": {
+        "day": "Last day",
+        "week": "Last week",
+        "month": "Last month",
+        "quarter": "Last quarter",
+        "year": "Last year"
+      },
+      "search": "Find: field, value, person",
+      "count": "Showing {{shown}} of {{total}}",
+      "emptyTitle": "No entries",
+      "emptyBody": "No changes match the filters — remove some of them.",
+      "more": "Show more",
+      "section": {
+        "profile": "Profile",
+        "modules": "Modules",
+        "connections": "Connections",
+        "group": "Group",
+        "activation": "Disabling",
+        "admins": "Administrators",
+        "roomControl": "Room control",
+        "support": "Support entries",
+        "data": "Data"
       }
     }
   },
