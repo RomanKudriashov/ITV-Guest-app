@@ -87,12 +87,19 @@ def _batch_counts(hotel_ids: list) -> dict:
         )
         for hotel_id, code in modules:
             result[hotel_id].setdefault("modules", []).append(code)
+    # Связь отеля — то же правило, что везде (`onprem.link_state`): хоть один
+    # узел на связи — отель на связи. Лишний не подключавшийся узел рядом с
+    # живым «не на связи» не делает (партия 62-F-хвост).
     threshold = timezone.now() - timedelta(seconds=OnPremNode.OFFLINE_AFTER_SECONDS)
+    online: set = set()
     for row in nodes:
         entry = result[row["hotel_id"]]
         entry["has_node"] = True
         seen = row["last_seen_at"]
-        if seen is None or seen < threshold:
+        if seen is not None and seen >= threshold:
+            online.add(row["hotel_id"])
+    for hotel_id, entry in result.items():
+        if entry.get("has_node") and hotel_id not in online:
             entry["node_offline"] = True
     return result
 

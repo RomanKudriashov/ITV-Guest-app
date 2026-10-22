@@ -255,15 +255,10 @@ def link_state(hotel) -> dict:
     """
     from apps.grms.services import liveness
     from apps.grms.transport import transport
-    from apps.hotels.models import OnPremNode
+    from apps.hotels.services.onprem import hotel_node
 
     with tenant_context(hotel):
-        node = (
-            OnPremNode.objects.filter(is_revoked=False)
-            .filter(purpose__in=[OnPremNode.Purpose.GRMS, OnPremNode.Purpose.BOTH])
-            .order_by("-last_seen_at")
-            .first()
-        )
+        node = hotel_node()
         last_read = (
             AuditLog.objects.filter(action=ACTION_READ, hotel_id=hotel.pk)
             .order_by("-created_at")

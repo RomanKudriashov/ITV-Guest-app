@@ -29,9 +29,9 @@ from django.utils import timezone
 
 from apps.core.context import tenant_context
 from apps.hotels.models import Hotel
+from apps.hotels.services.onprem import link_state, pick_node
 
 CACHE_S = 60
-SILENT_AFTER_S = 180
 FAILED_PER_DAY = 10
 
 # Модуль → назначения коннектора, без которых он не работает — из реестра
@@ -139,17 +139,19 @@ def compute(hotel: Hotel) -> dict[str, Any]:
                     key=code, module=code, needs=_needs_kind(code),
                 ))
 
-        # 2. Коннектор молчит.
+        # 2. Коннектор молчит — когда НА СВЯЗИ НИ ОДНОГО узла (партия 62-F-хвост).
+        # Лишний не подключавшийся узел рядом с живым проблемой не считается:
+        # отель работает. Во вкладке «Подключения» он виден сам по себе.
         if not nodes:
             skipped.add("connector_silent")
-        for node in nodes:
+        elif link_state(nodes) != "online":
+            node = pick_node(nodes)
             seconds = node.seconds_since_seen
-            if seconds is None or seconds > SILENT_AFTER_S:
-                problems.append(_problem(
-                    "connector_silent",
-                    f"Коннектор «{node.name}» не на связи",
-                    key=str(node.pk), node=node.name, seconds=seconds,
-                ))
+            problems.append(_problem(
+                "connector_silent",
+                f"Коннектор «{node.name}» не на связи",
+                key=str(node.pk), node=node.name, seconds=seconds,
+            ))
 
         room_control = "room_control" in modules
         bound = 0
@@ -176,7 +178,8 @@ def compute(hotel: Hotel) -> dict[str, Any]:
 
     problems.sort(key=lambda p: _ORDER[p["severity"]])
     failing = {p["code"] for p in problems}
-    node = nodes[0] if nodes else None
+    # Карточка «Коннектор» — главный узел по общему правилу, а не первый по имени.
+    node = pick_node(nodes)
     return {
         "checked_at": now.isoformat(),
         "problems": problems,

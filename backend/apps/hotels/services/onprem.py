@@ -25,6 +25,52 @@ from apps.hotels.models import Hotel, OnPremNode
 KEY_BYTES = 32
 
 
+# --- Какой узел отеля «главный» (партия 62-F-хвост) ---------------------------
+#
+# ОДНО ПРАВИЛО НА ВСЕ МЕСТА: команды номера, связь в «Отелях», готовность,
+# диагностика, здоровье платформы, сводка панели, проверка стенда.
+#   * отозванные не участвуют;
+#   * берётся узел НА СВЯЗИ с самым свежим откликом;
+#   * на связи ни одного — самый свежий по отклику, не подключавшиеся — в конце.
+#
+# Раньше каждое место выбирало сам: `order_by("-last_seen_at").first()`, а в
+# Postgres по убыванию пустое значение идёт ПЕРВЫМ. На стенде у «Кристалла»
+# завели второй узел, он ни разу не подключался — и выбирался он, а не живой:
+# номер гостю говорил «нет связи» при работающем коннекторе.
+
+GRMS_PURPOSES = (OnPremNode.Purpose.GRMS, OnPremNode.Purpose.BOTH)
+
+
+def pick_node(nodes) -> OnPremNode | None:
+    """Главный узел из перечисленных — по правилу выше. Пусто — `None`."""
+    candidates = [node for node in nodes if not node.is_revoked]
+    if not candidates:
+        return None
+    online = [node for node in candidates if node.is_online]
+    pool = online or candidates
+    seen = [node for node in pool if node.last_seen_at is not None]
+    if seen:
+        return max(seen, key=lambda node: node.last_seen_at)
+    return pool[0]
+
+
+def hotel_node(purposes=GRMS_PURPOSES) -> OnPremNode | None:
+    """Главный узел ТЕКУЩЕГО отеля (вызывать под `tenant_context`)."""
+    return pick_node(OnPremNode.objects.filter(is_revoked=False, purpose__in=purposes))
+
+
+def link_state(nodes) -> str:
+    """
+    Связь отеля: `online` — хоть один узел на связи; `silent` — узлы есть, но
+    на связи ни одного; `none` — узлов нет. Лишний не подключавшийся узел
+    рядом с живым отель «не на связи» не делает.
+    """
+    live = [node for node in nodes if not node.is_revoked]
+    if not live:
+        return "none"
+    return "online" if any(node.is_online for node in live) else "silent"
+
+
 def hash_key(key: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 

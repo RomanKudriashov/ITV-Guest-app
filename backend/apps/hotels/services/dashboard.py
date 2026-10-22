@@ -241,14 +241,19 @@ def _stop_list(points) -> int:
 
 
 def _offline_node(hotel) -> int | None:
-    """Сколько минут молчит узел. `None` — узлов нет или все на связи."""
-    for node in OnPremNode.objects.all():
-        if not node.is_online:
-            seconds = node.seconds_since_seen
-            # Узел, который не появлялся НИКОГДА, — это не «офлайн», а
-            # незаконченная настройка: пугать им дежурного незачем.
-            return seconds // 60 if seconds is not None else None
-    return None
+    """
+    Сколько минут молчит связь. `None` — узлов нет или хоть один на связи
+    (партия 62-F-хвост: лишний не подключавшийся узел рядом с живым — не тревога).
+    """
+    from apps.hotels.services.onprem import link_state, pick_node
+
+    nodes = list(OnPremNode.objects.filter(is_revoked=False))
+    if link_state(nodes) != "silent":
+        return None
+    seconds = pick_node(nodes).seconds_since_seen
+    # Узел, который не появлялся НИКОГДА, — это не «офлайн», а незаконченная
+    # настройка: пугать им дежурного незачем.
+    return seconds // 60 if seconds is not None else None
 
 
 # --- День против вчерашнего ------------------------------------------------

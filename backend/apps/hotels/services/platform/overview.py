@@ -233,8 +233,15 @@ def _health(hotels: list[Hotel], today: date, hotel_ids=None) -> list[dict]:
             .filter(is_revoked=False)
             .select_related("hotel")
         )
+    # Сигнал — об отеле, у которого на связи НИ ОДНОГО узла (партия 62-F-хвост):
+    # лишний не подключавшийся узел рядом с живым платформу не тревожит.
+    from apps.hotels.services.onprem import link_state
+
+    by_hotel: dict = {}
     for node in offline:
-        if not node.is_online:
+        by_hotel.setdefault(node.hotel_id, []).append(node)
+    for node in offline:
+        if not node.is_online and link_state(by_hotel[node.hotel_id]) != "online":
             signals.append(
                 {
                     "level": "warn",

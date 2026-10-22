@@ -2863,7 +2863,8 @@
       },
       "reissueConfirm": {
         "title": "Выдать новый ключ узлу «{{name}}»?"
-      }
+      },
+      "neverConnected": "ни разу не подключался"
     },
     "team": {
       "title": "Команда",

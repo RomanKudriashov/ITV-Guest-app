@@ -881,13 +881,9 @@ def _device_state() -> str:
     открытие экрана: коннектор отвечает с бюджетом 2,5 с, и экран открывался бы
     минуту. Узел отмечается раз в минуту, три пропуска — уже не икота.
     """
-    from apps.hotels.models import OnPremNode
+    from apps.hotels.services.onprem import hotel_node
 
-    node = (
-        OnPremNode.objects.filter(purpose__in=["grms", "both"], is_revoked=False)
-        .order_by("-last_seen_at")
-        .first()
-    )
+    node = hotel_node()
     if node is None:
         return "no_node"
     return "online" if node.is_online else "offline"

@@ -2800,7 +2800,8 @@
       },
       "reissueConfirm": {
         "title": "为节点「{{name}}」签发新密钥？"
-      }
+      },
+      "neverConnected": "从未连接"
     },
     "team": {
       "title": "团队",

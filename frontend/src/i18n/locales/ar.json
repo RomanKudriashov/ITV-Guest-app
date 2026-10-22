@@ -2904,7 +2904,8 @@
       },
       "reissueConfirm": {
         "title": "إصدار مفتاح جديد للعقدة «{{name}}»؟"
-      }
+      },
+      "neverConnected": "لم يتصل قط"
     },
     "team": {
       "title": "الفريق",

@@ -41,15 +41,12 @@ def node_is_online(hotel) -> bool:
     принципе, поэтому других определений тут быть не может.
     """
     from apps.core.context import tenant_context
-    from apps.hotels.models import OnPremNode
+    from apps.hotels.services.onprem import hotel_node
 
+    # Узел выбирает одно правило на все места (`onprem.pick_node`): живой
+    # рядом с ни разу не подключавшимся — живой.
     with tenant_context(hotel):
-        node = (
-            OnPremNode.objects.filter(is_revoked=False)
-            .filter(purpose__in=[OnPremNode.Purpose.GRMS, OnPremNode.Purpose.BOTH])
-            .order_by("-last_seen_at")
-            .first()
-        )
+        node = hotel_node()
     # Ровно `is_online` модели, а не своя копия порога: у OnPremNode уже есть
     # и порог, и корректная обработка «ни разу не отмечался». Своя копия здесь
     # успела родить ошибку — `seconds_since_seen or ...` считал ТОЛЬКО ЧТО

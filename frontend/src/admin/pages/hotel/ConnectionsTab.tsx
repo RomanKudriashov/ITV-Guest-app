@@ -221,8 +221,11 @@ function NodeCard({
 }) {
   const { t, i18n } = useTranslation();
   const [ask, setAsk] = useState<'revoke' | 'reissue' | null>(null);
-  const status = node.is_revoked ? 'revoked' : node.is_online ? 'online' : 'offline';
-  const tone = node.is_revoked ? 'muted' : node.is_online ? 'ok' : 'bad';
+  // Не подключавшийся ни разу — не «молчит», а ещё не настроен: свой ярлык,
+  // приглушённый (партия 62-F-хвост; связь отеля он не портит).
+  const neverSeen = !node.is_revoked && !node.last_seen_at;
+  const status = node.is_revoked ? 'revoked' : node.is_online ? 'online' : neverSeen ? 'neverConnected' : 'offline';
+  const tone = node.is_revoked || neverSeen ? 'muted' : node.is_online ? 'ok' : 'bad';
   const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
   return (
     <Box
