@@ -69,6 +69,11 @@ class Room(TenantModel):
 
     number = models.CharField(max_length=32, db_index=True)
     floor = models.CharField(max_length=16, blank=True)
+    # ПОЗИЦИЯ НА ЭТАЖЕ (СТОЯК), ЗАДАННАЯ РУКАМИ (партия 63-1). Пусто — позиция
+    # берётся из номера по правилу отеля (`services/room_numbers.py`): у
+    # большинства номеров правило верное, руками правят исключения — «люкс
+    # 512 стоит над 410». Ручное значение сильнее правила.
+    position = models.CharField(max_length=16, blank=True)
     # СТРОКА ОСТАЁТСЯ — как снимок и как дорога назад.
     #
     # Справочник корпусов появился позже фонда, и у номеров уже лежали строки.

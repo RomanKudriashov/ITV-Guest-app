@@ -2589,7 +2589,7 @@
         "data": "导出酒店积累的全部数据，以及停用并删除数据。酒店离开平台或依法要求其数据时来这里。",
         "overview": "当前影响酒店运行的问题以及处理办法。检查每分钟更新。",
         "connections": "酒店服务器上的连接器和其他外部系统：是否在线、版本、密钥。",
-        "rooms": "每间客房的楼栋、楼层、房型、控制方案和 PIN。目前仅可查看。",
+        "rooms": "楼栋和楼层一览：客房位置、控制是否就绪以及需要修复的内容。位置相同的客房上下对齐。",
         "roomControl": "客房方案、调试文件导入、构建器、平面图、版本和设备诊断。",
         "journal": "支持人员进入酒店面板的记录和客房设备日志。",
         "history": "在 Control 中对酒店的所有修改：资料、模块、连接、分组、停用、管理员、客房控制、支持登录——谁、何时、改前和改后。"
@@ -2888,7 +2888,9 @@
           "admin_email_changed": "管理员邮箱已更改",
           "modules_changed": "模块已更改",
           "tariff_changed": "套餐已更改",
-          "admin_removed": "已移除酒店管理员"
+          "admin_removed": "已移除酒店管理员",
+          "rooms_rule_set": "房号规则已修改",
+          "room_place_set": "已设置客房位置"
         },
         "node": {
           "registered": "注册节点",
@@ -3662,8 +3664,8 @@
         "search": "查找客房",
         "count": "显示 {{found}} / {{total}}",
         "moduleOff": "客房控制已关闭——不使用方案和 PIN",
-        "emptyTitle": "没有客房",
-        "emptyBody": "客房由酒店在其面板中添加或通过文件导入。",
+        "emptyTitle": "暂无客房",
+        "emptyBody": "酒店在其面板中添加客房或上传列表。添加后，这里将显示布局：楼栋、楼层以及上下对齐的客房。",
         "noMatch": "没有符合筛选的结果",
         "noMatchBody": "移除部分筛选或更改搜索。",
         "none": "未设置",
@@ -3677,9 +3679,138 @@
           "number": "房号",
           "building": "楼栋",
           "floor": "楼层",
-          "category": "房型",
-          "variant": "控制方案",
-          "pin": "PIN"
+          "category": "类别",
+          "variant": "方案",
+          "pin": "PIN",
+          "position": "位置",
+          "control": "就绪"
+        },
+        "noBuilding": "无楼栋",
+        "noFloor": "无楼层",
+        "noPosition": "无位置",
+        "floorShort": "{{floor}} 层",
+        "floorLong": "{{floor}} 层",
+        "roomsCount": "客房：{{count}}",
+        "view": {
+          "label": "视图",
+          "table": "表格",
+          "blocks": "方块",
+          "scheme": "布局"
+        },
+        "layer": {
+          "label": "着色",
+          "control": "控制就绪",
+          "variant": "方案",
+          "pin": "PIN",
+          "problems": "阻碍",
+          "occupancy": "入住",
+          "soon": "即将推出",
+          "help": {
+            "control": "客人能否用手机控制灯光和空调。根据设置计算：酒店连接、客房方案、发布状态和 PIN。此处不轮询设备。",
+            "variant": "客房使用的控制方案。相同的客房（通常上下对齐）共用一个方案。",
+            "pin": "客房是否有有效的 PIN 供客人进入客房控制。",
+            "problems": "阻碍客房的最重要原因。所有原因见客房卡片。",
+            "occupancy": "已入住、空闲、清洁中。接入酒店预订系统后显示。"
+          }
+        },
+        "control": {
+          "ok": "一切正常",
+          "attention": "需要注意",
+          "blocked": "阻碍客人",
+          "off": "未接入控制"
+        },
+        "problem": {
+          "no_link": "与酒店无连接",
+          "no_variant": "无方案",
+          "not_published": "方案未发布",
+          "no_pin": "无 PIN",
+          "demo_entry": "无 PIN 进入（演示）",
+          "none": "无阻碍"
+        },
+        "pinValue": {
+          "yes": "有 PIN",
+          "no": "无 PIN"
+        },
+        "noVariantValue": "无方案",
+        "inactiveValue": "已禁用进入",
+        "legend": {
+          "hint": "将鼠标悬停在图例行上，布局中对应的客房会高亮。"
+        },
+        "fix": {
+          "title": "需要修复",
+          "help": "阻碍客人控制客房的原因，按重要性排序。“显示”只保留这些客房。",
+          "show": "显示",
+          "shown": "已显示",
+          "allGood": "没有任何阻碍：所有客房都有已发布的方案和 PIN，酒店在线。",
+          "moduleOff": "此酒店未接入客房控制。布局仅显示客房、楼栋和楼层。"
+        },
+        "zoom": {
+          "label": "缩放",
+          "in": "放大",
+          "out": "缩小",
+          "fit": "适应",
+          "fitted": "整栋楼"
+        },
+        "rule": {
+          "title": "如何读取房号",
+          "text": "楼层内位置 — {{position}}，楼层 — {{floor}}。",
+          "lastDigits": "末尾位数：{{n}}",
+          "floorAll": "位置之前的全部数字",
+          "floorFirst": "开头位数：{{n}}",
+          "byDefault": "默认",
+          "stats": "{{rule}} 间的楼层取自房号，{{manual}} 间的位置为手动设置。",
+          "help": "位置相同的客房上下对齐，在布局中位于同一列。客房上设置的楼层和手动位置优先于规则。",
+          "edit": "修改规则",
+          "dialogTitle": "如何读取房号",
+          "position": "楼层内位置",
+          "floor": "楼层",
+          "digits": "末尾位数：{{n}}",
+          "floorAllOption": "位置之前的全部数字",
+          "floorFirstOption": "开头位数：{{n}}",
+          "example": "例如“{{number}}”：楼层 {{floor}}，位置 {{position}}。",
+          "exampleNoFloor": "例如“{{number}}”：房号中没有楼层，位置 {{position}}。",
+          "save": "保存",
+          "cancel": "取消",
+          "saved": "规则已保存"
+        },
+        "card": {
+          "title": "客房 {{number}}",
+          "building": "楼栋",
+          "floor": "楼层",
+          "position": "位置",
+          "category": "类别",
+          "variant": "方案",
+          "pin": "PIN",
+          "control": "就绪",
+          "problems": "阻碍",
+          "fromNumber": "取自房号",
+          "manual": "手动",
+          "byRule": "按规则",
+          "notSet": "未设置",
+          "noVariant": "未分配",
+          "yes": "有",
+          "no": "无",
+          "open": "点击打开客房"
+        },
+        "place": {
+          "title": "楼层内位置",
+          "help": "位置是客房在楼层中的位置，位置相同的客房上下对齐。通常从房号读取；如果客房不在规则指示的位置，请手动设置。",
+          "byRule": "按规则：{{position}}",
+          "byRuleNone": "规则无法给出位置",
+          "manualLabel": "自定义位置",
+          "save": "保存",
+          "reset": "恢复规则",
+          "close": "关闭",
+          "saved": "位置已保存"
+        },
+        "facet": {
+          "building": "楼栋",
+          "floor": "楼层",
+          "category": "类别",
+          "variant": "方案",
+          "pin": "PIN",
+          "control": "就绪",
+          "problem": "阻碍"
         }
       },
       "journal": {
@@ -3814,12 +3945,16 @@
       "no": "否",
       "field": {
         "tariff": "套餐",
-        "subdomain_alias": "重定向"
+        "subdomain_alias": "重定向",
+        "room_floor_digits": "房号中的楼层",
+        "room_position_digits": "房号中的位置",
+        "room_position": "楼层内位置"
       },
       "object": {
         "node": "连接器“{{name}}”",
         "variant": "方案“{{code}}”",
-        "variantVersion": "方案“{{code}}”，版本 {{version}}"
+        "variantVersion": "方案“{{code}}”，版本 {{version}}",
+        "room": "客房“{{number}}”"
       },
       "detail": {
         "ttl_other": "时长 {{count}} 分钟",
@@ -3864,7 +3999,8 @@
         "admins": "管理员",
         "roomControl": "客房控制",
         "support": "支持登录",
-        "data": "数据"
+        "data": "数据",
+        "rooms": "客房"
       }
     },
     "moduleInfo": {

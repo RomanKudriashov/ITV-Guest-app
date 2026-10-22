@@ -2617,7 +2617,7 @@
         "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law.",
         "overview": "What keeps the hotel from working right now and what to do about it. Checks update every minute.",
         "connections": "The connector on the hotel server and other external systems: online or not, version, key.",
-        "rooms": "Rooms, buildings, floors, categories, control variant and PIN for each room. View only for now.",
+        "rooms": "Buildings and floors at a glance: where rooms are, whether control is ready and what to fix. Rooms with the same position are stacked.",
         "roomControl": "Room variants, commissioning file upload, builder, plan, versions and equipment diagnostics.",
         "journal": "Support entries into the hotel panel and the room equipment log.",
         "history": "Every change made to the hotel in Control: profile, modules, connections, group, disabling, administrators, room control, support entries — who, when, what it was and what it became."
@@ -2916,7 +2916,9 @@
           "admin_email_changed": "Admin address changed",
           "modules_changed": "Modules changed",
           "tariff_changed": "Tariff changed",
-          "admin_removed": "Hotel admin removed"
+          "admin_removed": "Hotel admin removed",
+          "rooms_rule_set": "Room number rule changed",
+          "room_place_set": "Room position set"
         },
         "node": {
           "registered": "Node registered",
@@ -3724,8 +3726,8 @@
         "search": "Find a room",
         "count": "Showing {{found}} of {{total}}",
         "moduleOff": "room control is off — variants and PINs are not used",
-        "emptyTitle": "No rooms",
-        "emptyBody": "The hotel adds rooms in its panel or uploads them from a file.",
+        "emptyTitle": "No rooms yet",
+        "emptyBody": "The hotel adds rooms in its panel or uploads a list. Once they exist, you will see the layout here: buildings, floors and rooms stacked above each other.",
         "noMatch": "Nothing matches the filters",
         "noMatchBody": "Remove some filters or change the search.",
         "none": "not set",
@@ -3740,8 +3742,137 @@
           "building": "Building",
           "floor": "Floor",
           "category": "Category",
-          "variant": "Control variant",
-          "pin": "PIN"
+          "variant": "Variant",
+          "pin": "PIN",
+          "position": "Position",
+          "control": "Readiness"
+        },
+        "noBuilding": "No building",
+        "noFloor": "No floor",
+        "noPosition": "no position",
+        "floorShort": "Fl. {{floor}}",
+        "floorLong": "Floor {{floor}}",
+        "roomsCount": "rooms: {{count}}",
+        "view": {
+          "label": "View",
+          "table": "Table",
+          "blocks": "Blocks",
+          "scheme": "Layout"
+        },
+        "layer": {
+          "label": "Colour by",
+          "control": "Control readiness",
+          "variant": "Variant",
+          "pin": "PIN",
+          "problems": "What blocks",
+          "occupancy": "Occupancy",
+          "soon": "soon",
+          "help": {
+            "control": "Whether a guest can control light and climate from the phone. Derived from settings: hotel link, room variant, its publication and PIN. Room equipment is not polled here.",
+            "variant": "Which control setup the room has. Identical rooms — usually stacked above each other — share one variant.",
+            "pin": "Whether the room has a valid PIN for guest access to room control.",
+            "problems": "The most important thing blocking the room. All reasons are in the room card.",
+            "occupancy": "Occupied, vacant, cleaning. Will appear once the hotel booking system is connected."
+          }
+        },
+        "control": {
+          "ok": "All working",
+          "attention": "Needs attention",
+          "blocked": "Blocks the guest",
+          "off": "Control not connected"
+        },
+        "problem": {
+          "no_link": "No link to the hotel",
+          "no_variant": "No variant",
+          "not_published": "Variant not published",
+          "no_pin": "No PIN",
+          "demo_entry": "Entry without PIN (demo)",
+          "none": "Nothing blocks"
+        },
+        "pinValue": {
+          "yes": "Has PIN",
+          "no": "No PIN"
+        },
+        "noVariantValue": "No variant",
+        "inactiveValue": "Entry disabled",
+        "legend": {
+          "hint": "Hover a legend row to highlight those rooms on the layout."
+        },
+        "fix": {
+          "title": "What to fix",
+          "help": "What stops guests from controlling the room, most important first. “Show” keeps only those rooms on screen.",
+          "show": "Show",
+          "shown": "Shown",
+          "allGood": "Nothing blocks guests: every room has a published variant, a PIN, and the hotel is online.",
+          "moduleOff": "Room control is not connected for this hotel. The layout shows rooms, buildings and floors only."
+        },
+        "zoom": {
+          "label": "Zoom",
+          "in": "Larger",
+          "out": "Smaller",
+          "fit": "Fit",
+          "fitted": "whole building"
+        },
+        "rule": {
+          "title": "How to read a room number",
+          "text": "Position on the floor — {{position}}, floor — {{floor}}.",
+          "lastDigits": "last digits: {{n}}",
+          "floorAll": "everything before the position",
+          "floorFirst": "first digits: {{n}}",
+          "byDefault": "default",
+          "stats": "Floor read from the number for {{rule}}, position set manually for {{manual}}.",
+          "help": "Rooms with the same position are stacked above each other and share a column on the layout. A floor set on the room and a manual position override the rule.",
+          "edit": "Change rule",
+          "dialogTitle": "How to read a room number",
+          "position": "Position on the floor",
+          "floor": "Floor",
+          "digits": "last digits: {{n}}",
+          "floorAllOption": "everything before the position",
+          "floorFirstOption": "first digits: {{n}}",
+          "example": "For example, “{{number}}”: floor {{floor}}, position {{position}}.",
+          "exampleNoFloor": "For example, “{{number}}”: no floor in the number, position {{position}}.",
+          "save": "Save",
+          "cancel": "Cancel",
+          "saved": "Rule saved"
+        },
+        "card": {
+          "title": "Room {{number}}",
+          "building": "Building",
+          "floor": "Floor",
+          "position": "Position",
+          "category": "Category",
+          "variant": "Variant",
+          "pin": "PIN",
+          "control": "Readiness",
+          "problems": "What blocks",
+          "fromNumber": "from the number",
+          "manual": "manual",
+          "byRule": "by rule",
+          "notSet": "not set",
+          "noVariant": "not assigned",
+          "yes": "yes",
+          "no": "no",
+          "open": "Click to open the room"
+        },
+        "place": {
+          "title": "Position on the floor",
+          "help": "The position is the room's place on its floor; rooms with the same position are stacked. It is normally read from the number — set it manually if the room is not where the rule puts it.",
+          "byRule": "By rule: {{position}}",
+          "byRuleNone": "The rule gives no position",
+          "manualLabel": "Own position",
+          "save": "Save",
+          "reset": "Back to rule",
+          "close": "Close",
+          "saved": "Position saved"
+        },
+        "facet": {
+          "building": "Building",
+          "floor": "Floor",
+          "category": "Category",
+          "variant": "Variant",
+          "pin": "PIN",
+          "control": "Readiness",
+          "problem": "What blocks"
         }
       },
       "journal": {
@@ -3876,12 +4007,16 @@
       "no": "no",
       "field": {
         "tariff": "Tariff",
-        "subdomain_alias": "Redirect"
+        "subdomain_alias": "Redirect",
+        "room_floor_digits": "Floor in number",
+        "room_position_digits": "Position in number",
+        "room_position": "Position on the floor"
       },
       "object": {
         "node": "connector “{{name}}”",
         "variant": "variant “{{code}}”",
-        "variantVersion": "variant “{{code}}”, version {{version}}"
+        "variantVersion": "variant “{{code}}”, version {{version}}",
+        "room": "room “{{number}}”"
       },
       "detail": {
         "ttl_one": "for {{count}} minute",
@@ -3928,7 +4063,8 @@
         "admins": "Administrators",
         "roomControl": "Room control",
         "support": "Support entries",
-        "data": "Data"
+        "data": "Data",
+        "rooms": "Rooms"
       }
     },
     "moduleInfo": {

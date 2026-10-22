@@ -56,6 +56,9 @@ export function useJournalWords() {
     if (key === 'default_language' || key === 'languages' || key === 'language') return languageName(item, i18n.language);
     if (key === 'timezone') return timezoneName(item, i18n.language);
     if (key === 'modules' || key === 'auto_modules' || key === 'module') return t(`admin.module.${item}`, { defaultValue: unknown });
+    // Правило номеров (партия 63-1): «0» у этажа — «всё перед позицией», не число.
+    if (key === 'room_floor_digits') return item === '0' ? t('admin.card.rooms.rule.floorAll') : t('admin.card.rooms.rule.floorFirst', { n: item });
+    if (key === 'room_position_digits') return t('admin.card.rooms.rule.lastDigits', { n: item });
     return item;
   };
   const value = (change: JournalChange, side: unknown): string => {
@@ -75,6 +78,7 @@ export function useJournalWords() {
     if (!o) return '';
     if (o.kind === 'module') return t(`admin.module.${o.code}`, { defaultValue: t('admin.hotels.filter.unknownValue') });
     if (o.kind === 'node') return withData('admin.journal.object.node', 'name', String(o.name ?? ''));
+    if (o.kind === 'room') return withData('admin.journal.object.room', 'number', String(o.number ?? ''));
     if (o.kind === 'variant') return o.version ? t('admin.journal.object.variantVersion', { code: o.code, version: o.version }) : t('admin.journal.object.variant', { code: o.code });
     return '';
   };

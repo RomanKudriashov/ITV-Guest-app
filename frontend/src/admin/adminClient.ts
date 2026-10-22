@@ -807,7 +807,7 @@ export interface JournalEntry {
   section: string;
   actor: JournalActor;
   via_support: boolean;
-  object: { kind: string; code?: string; name?: string; version?: number } | null;
+  object: { kind: string; code?: string; name?: string; number?: string; version?: number } | null;
   changes: JournalChange[];
   details: Record<string, unknown>;
   payload: Record<string, unknown>;
@@ -993,6 +993,67 @@ export const getHotelRooms = (hotelId: string, params: Record<string, string>) =
   const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
   return request<RoomsPage>(`/hotels/${hotelId}/rooms${query ? `?${query}` : ''}`);
 };
+
+/* ── Схема номерного фонда (партия 63-1) ─────────────────────────────────── */
+
+export type RoomControl = 'ok' | 'attention' | 'blocked' | 'off';
+export type RoomProblem = 'no_link' | 'no_variant' | 'not_published' | 'no_pin' | 'demo_entry';
+export interface MapRoom {
+  id: string;
+  number: string;
+  building_key: string;
+  building: string;
+  floor: string;
+  /** Откуда этаж: задан у номера, прочитан из номера по правилу, нет. */
+  floor_source: 'room' | 'rule' | 'none';
+  position: string;
+  /** Откуда позиция (стояк): задана руками, по правилу, нет. */
+  position_source: 'manual' | 'rule' | 'none';
+  category: string;
+  variant: { code: string; title: string } | null;
+  pin: boolean;
+  is_active: boolean;
+  control: RoomControl;
+  problems: RoomProblem[];
+}
+export interface MapBuilding {
+  key: string;
+  title: string;
+  rooms: number;
+  positions: string[];
+  floors: Array<{ floor: string; rooms: MapRoom[] }>;
+}
+export interface RoomRule {
+  floor_digits: number;
+  position_digits: number;
+  is_default: boolean;
+}
+export interface RoomsMap {
+  room_control: boolean;
+  link: 'online' | 'silent' | 'none';
+  demo_entry: boolean;
+  rule: RoomRule;
+  total: number;
+  found: number;
+  summary: {
+    control: Record<RoomControl, number>;
+    problems: Record<RoomProblem, number>;
+    rule_floors: number;
+    manual_positions: number;
+  };
+  buildings: MapBuilding[];
+  /** Порядок номеров для таблицы — считает сервер (сортировка 62-F). */
+  order: string[];
+  facets: Record<'building' | 'floor' | 'category' | 'variant' | 'pin' | 'control' | 'problem', Array<{ value: string; label: string; count: number }>>;
+}
+export const getRoomsMap = (hotelId: string, params: Record<string, string>) => {
+  const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+  return request<RoomsMap>(`/hotels/${hotelId}/rooms/map${query ? `?${query}` : ''}`);
+};
+export const putRoomRule = (hotelId: string, body: { floor_digits: number; position_digits: number }) =>
+  request<RoomRule>(`/hotels/${hotelId}/rooms/rule`, 'PUT', body);
+export const putRoomPlace = (hotelId: string, roomId: string, position: string) =>
+  request<{ id: string; number: string; position: string; position_source: MapRoom['position_source'] }>(`/hotels/${hotelId}/rooms/${roomId}/place`, 'PUT', { position });
 
 export const getTeam = (limit = 100, filters: Record<string, string> = {}) => {
   const query = new URLSearchParams({ limit: String(limit), ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) });

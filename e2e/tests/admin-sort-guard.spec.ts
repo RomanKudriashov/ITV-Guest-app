@@ -92,7 +92,8 @@ test.describe('Control: сортировка таблиц', () => {
       ['Отели списком', '/admin?section=fleet&layout=list&origin=all'],
       ['Модули таблицей', '/admin?section=modules&view=table'],
       ['Команда', '/admin?section=team'],
-      ['Номерной фонд', `/admin?section=fleet&hotel=${id}&tab=rooms`],
+      // С партии 63-1 по умолчанию — «Схема»; таблица — вид «Таблица».
+      ['Номерной фонд', `/admin?section=fleet&hotel=${id}&tab=rooms&view=table`],
       ['Журнал оборудования', `/admin?section=fleet&hotel=${id}&tab=journal`],
       ['Версии', `/admin?section=fleet&hotel=${id}&tab=roomControl&sub=versions`],
       ['Конструктор: переменные', `/admin?section=fleet&hotel=${id}&tab=roomControl&sub=builder`],

@@ -29,6 +29,7 @@ LEGACY_DUPLICATES = ("platform.hotel.entered", "grms.published", "grms.rolled_ba
 SUPPORT_ACTIONS = ("impersonation.started", "impersonation.revoked")
 NODE_ACTIONS = ("platform.node.registered", "platform.node.reissued", "platform.node.revoked")
 ADMIN_ACTIONS = ("platform.hotel.admin_set", "platform.hotel.admin_email_changed", "platform.hotel.admin_removed")
+ROOMS_ACTIONS = ("platform.hotel.rooms_rule_set", "platform.hotel.room_place_set")
 
 # Раздел «Истории» → действия. Поля профиля — ключи `changes`.
 SECTIONS: dict[str, Q] = {
@@ -39,6 +40,7 @@ SECTIONS: dict[str, Q] = {
     "group": Q(action="platform.hotel.updated", payload__changes__has_key="group"),
     "activation": Q(action__in=("platform.hotel.activated", "platform.hotel.deactivated")),
     "admins": Q(action__in=ADMIN_ACTIONS),
+    "rooms": Q(action__in=ROOMS_ACTIONS),
     "roomControl": Q(action__startswith="grms."),
     "support": Q(action__startswith="impersonation."),
     "data": Q(action__in=("platform.hotel.offboard_marked", "platform.hotel.purged", "platform.hotel.offboard_cancelled", "platform.hotel.exported")),
@@ -69,6 +71,8 @@ def _matches(key: str, action: str, payload: dict) -> bool:
         return action in ("platform.hotel.activated", "platform.hotel.deactivated")
     if key == "admins":
         return action in ADMIN_ACTIONS
+    if key == "rooms":
+        return action in ROOMS_ACTIONS
     if key == "roomControl":
         return action.startswith("grms.")
     if key == "support":
@@ -262,6 +266,8 @@ def object_of(row: AuditLog) -> dict | None:
         return {"kind": "node", "name": payload["node"]}
     if row.action.startswith("grms.") and payload.get("type"):
         return {"kind": "variant", "code": payload["type"], "version": payload.get("version") or payload.get("new_version")}
+    if row.action == "platform.hotel.room_place_set" and payload.get("room"):
+        return {"kind": "room", "number": payload["room"]}
     if row.action.startswith("impersonation."):
         return {"kind": "support"}
     return None
