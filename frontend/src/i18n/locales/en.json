@@ -2394,13 +2394,6 @@
       "stopListHint": "Guests cannot order them",
       "node_offline": "Node silent for {{minutes}} min",
       "nodeOfflineHint": "Room control is unavailable to guests",
-      "tariff_over": "Tariff exceeded: {{resource}} {{used}} / {{limit}}",
-      "tariffOverHint": "The tariff is changed by the platform — contact it",
-      "resource": {
-        "services": "venues",
-        "rooms": "rooms",
-        "staff": "staff"
-      },
       "reviews_awaiting": "Reviews awaiting a reply: {{count}}",
       "reviewsAwaitingHint": "A guest wrote and is waiting. Silence reads as indifference.",
       "reviewsAwaitingLowHint": "Low-rated among them: {{count}}. An unhappy guest is still without an answer."
@@ -2421,16 +2414,15 @@
       "overview": "Overview",
       "fleet": "Hotels",
       "platformGroup": "Platform",
-      "modules": "Modules & plans",
+      "modules": "Modules",
       "nodes": "On-premise",
-      "team": "Users",
+      "team": "Team",
       "audit": "Activity log",
-      "templates": "Templates & dictionaries",
+      "templates": "Dictionaries",
       "open": "Open menu",
       "support": "Support sessions",
       "security": "Security",
       "groups": "Groups",
-      "publications": "Publishing",
       "collapse": "Collapse menu",
       "expand": "Expand menu"
     },
@@ -2489,7 +2481,7 @@
       "health": "System health",
       "kpi": {
         "hotels": "Hotels",
-        "hotelsHint": "{{active}} active · {{trial}} trial · {{disabled}} off",
+        "hotelsHint": "{{active}} active · {{disabled}} off",
         "orders": "Orders today",
         "ordersHint": "across all hotels",
         "gross": "Gross today",
@@ -2502,8 +2494,6 @@
       "media_ok": "Media pipeline — healthy",
       "media_failed": "Media: failed jobs — {{count}}",
       "media_stuck": "Media: stuck in processing — {{count}}",
-      "trial_expiring": "Trial for “{{hotel}}” ends in {{days}} days",
-      "trial_expired": "Trial for “{{hotel}}” has ended",
       "node_offline": "Node at {{hotel}} is offline",
       "scheduler_down": "Scheduled-job service has not responded for {{count}} min — scheduled work is not running",
       "scheduler_overdue": "Scheduled jobs overdue: {{count}}",
@@ -2540,17 +2530,14 @@
       "prev": "Back",
       "next": "Next",
       "pageOf": "Page {{page}} of {{pages}}",
-      "trialDays": "trial · {{days}}d",
       "nodeOffline": "node offline",
       "status": {
         "all": "All",
         "active": "Active",
-        "trial": "Trial",
         "disabled": "Disabled"
       },
       "col": {
         "hotel": "Hotel",
-        "tariff": "Plan",
         "rooms": "Rooms",
         "services": "Services",
         "orders": "Orders (7d)",
@@ -2598,28 +2585,8 @@
       "adminEmail": "Administrator email",
       "adminHint": "Creates or resets access. The password is emailed to the hotel admin — the operator never sees it.",
       "adminReset": "Create / reset",
-      "trialLeft": "Trial: {{days}} days left",
-      "trialEnds": "Trial until {{date}}",
-      "limit": {
-        "services": "Services",
-        "rooms": "Rooms",
-        "staff": "Staff",
-        "none": "unlimited"
-      },
-      "limitOver": "over the limit: {{used}} of {{limit}}",
-      "limitHint": "Going over does not switch the hotel off — the platform decides.",
-      "modulesTitle": "Modules (plan {{tariff}})",
-      "modulesHint": "An enabled module appears in the hotel CMS; a disabled one is hidden. A manual decision survives a tariff change: what you switched off stays off, and what was enabled beyond the tariff goes dark if the new tariff does not include it.",
       "activityEmpty": "No entries yet",
       "viaSupport": "support",
-      "tariffLabel": "Plan",
-      "tariffApply": "Save",
-      "tariffForce": "Save anyway",
-      "tariffHint": "The plan is set by hand.",
-      "tariffNoMoney": "This is a record, not a payment: no money moves here.",
-      "downgradeTitle": "Downgrade below current usage",
-      "downgradeLimit": "{{what}}: {{used}} in use, limit {{limit}}",
-      "downgradeModules": "The plan does not include: {{modules}}",
       "adminPasswordSent": "Password sent to {{email}}",
       "save": "Save",
       "cancel": "Cancel",
@@ -2634,7 +2601,7 @@
       "adminFailed": "Could not reset access",
       "adminMoveFailed": "Could not change the address",
       "intro": {
-        "modules": "Which features this hotel has on. Below are the tariff and limits, until tariffs are removed.",
+        "modules": "What the hotel has switched on. A module that needs a connection does not work without it — the card will tell you.",
         "data": "An export of everything the hotel has accumulated, and its shutdown with data erasure. You come here when a hotel leaves the platform or demands its data by law.",
         "overview": "What keeps the hotel from working right now and what to do about it. Checks update every minute.",
         "connections": "The connector on the hotel server and other external systems: online or not, version, key.",
@@ -2642,13 +2609,6 @@
         "roomControl": "Room variants, commissioning file upload, builder, plan, versions and equipment diagnostics.",
         "journal": "Support entries into the hotel panel and the room equipment log.",
         "history": "Every change made to the hotel in Control: profile, modules, connections, group, disabling, administrators, room control, support entries — who, when, what it was and what it became."
-      },
-      "limitWontFit": "does not fit the selected tariff",
-      "moduleState": {
-        "inTariff": "included in the tariff",
-        "override": "enabled beyond the tariff",
-        "manualOff": "switched off by hand",
-        "notInTariff": "not in the tariff"
       },
       "admins": {
         "title": "Hotel administrators",
@@ -2673,7 +2633,21 @@
         "onBody": "The storefront opens to guests, staff can sign in again, and orders are accepted.",
         "on": "Enable"
       },
-      "tariffOwnerOnly": "Only the platform owner can change the tariff."
+      "modules": {
+        "state": {
+          "works": "works",
+          "broken": "on, but not working",
+          "off": "off",
+          "dev": "in development"
+        },
+        "needConnection": "Needs a connection: {{what}}",
+        "hasConnection": "Connected: {{what}}",
+        "connectionHelp": "The module works only together with this connection. It can be switched on without it — then the module will not work and the hotel overview will show a problem.",
+        "connect": "Connections →",
+        "about": "About the module",
+        "devPanel": "In development",
+        "devAside": "cannot be switched on yet"
+      }
     },
     "create": {
       "title": "New hotel",
@@ -2704,27 +2678,89 @@
     "module": {
       "room_control": "Room control",
       "payment": "Payments",
-      "pms": "Hotel management system (PMS)",
+      "pms": "Hotel management system",
       "mobile_key": "Mobile key",
-      "multi_restaurant": "Multi-restaurant",
+      "multi_restaurant": "Several venues",
       "marketing": "Marketing",
       "extra_languages": "Extra languages",
-      "native_app": "Native app",
-      "analytics_level": "Analytics level"
+      "native_app": "Hotel app",
+      "analytics_level": "Advanced analytics"
     },
     "modules": {
-      "title": "Modules & plans",
-      "subtitle": "What each tariff opens and what is switched on beyond it. You come here when a hotel asks for a feature it does not have — to see whether the tariff covers it.",
-      "trialDays": "{{days}} days",
-      "base": "base features",
-      "col": {
-        "tariff": "Plan",
-        "hotels": "Hotels",
-        "modules": "Modules",
-        "limits": "Limits"
+      "title": "Modules",
+      "subtitle": "A module is a part of the product switched on for a hotel separately: room control, marketing and others. Open a module to see what it gives and which hotels have it on.",
+      "search": "Module name or what it gives",
+      "facet": {
+        "state": "State",
+        "need": "Connection",
+        "on": "Module"
       },
-      "note": "A plan opens a set of modules; a single hotel can be given a feature off-plan — a pilot, for instance. An enabled module appears in the hotel CMS, a disabled one is hidden. Downgrading below current usage is flagged and needs a decision.",
-      "empty": "No plans yet."
+      "status": {
+        "ready": "works",
+        "dev": "in development"
+      },
+      "need": {
+        "yes": "needs a connection",
+        "no": "works on its own"
+      },
+      "view": {
+        "label": "View",
+        "blocks": "Blocks",
+        "list": "List",
+        "table": "Table"
+      },
+      "enabledIn": "on at {{count}} of {{total}} hotels",
+      "cannotEnable": "cannot be switched on yet",
+      "needs": "needs: {{what}}",
+      "connection": {
+        "grms": "room control connector",
+        "pms": "hotel management system connection",
+        "locks": "door lock system",
+        "payments": "card acquiring"
+      },
+      "col": {
+        "module": "Module",
+        "gives": "What it gives",
+        "state": "State",
+        "need": "Connection needed",
+        "hotels": "On at hotels"
+      },
+      "emptyTitle": "Nothing found",
+      "emptyText": "No module matches the search and filters. Press “Reset”.",
+      "back": "← All modules",
+      "opens": "What it opens",
+      "needsNote": "Without the “{{what}}” connection the module does not work at a hotel — the hotel overview will show it as a problem.",
+      "defaults": "Default settings",
+      "defaultsHelp": "A hotel gets this value when the module is switched on for it the first time. For a single hotel it can be changed in the hotel card.",
+      "defaultsEmpty": "No settings yet",
+      "defaultsEmptyText": "This module has no settings a new switch-on receives.",
+      "valueOn": "on",
+      "valueOff": "off",
+      "hotels": "Hotels",
+      "hotelsCount": "on at {{on}} of {{total}}",
+      "hotelsHelp": "The switch turns the module on or off for one hotel. To switch it on for many at once, open a group in “Hotels” and choose “Actions”.",
+      "hotelSearch": "Find a hotel",
+      "on": "on",
+      "off": "off",
+      "noHotels": "No such hotels",
+      "noHotelsText": "Remove the filter or change the search.",
+      "more": "Show more",
+      "disabledHotel": "disabled",
+      "journal": "Switch log",
+      "journalHelp": "Who switched this module on or off at hotels, and when. The full story is in the hotel’s “History” tab.",
+      "journalOn": "{{hotel}}: switched on",
+      "journalOff": "{{hotel}}: switched off",
+      "journalDev": "{{hotel}}: switched off — module in development",
+      "journalEmpty": "No switches yet",
+      "journalEmptyText": "When the module is switched on or off at a hotel, an entry appears here.",
+      "system": "system",
+      "devNote": "The module is still in development: it cannot be switched on. Once it works, it will get a switch.",
+      "wasOn": "on, but does nothing — switch it off",
+      "toggleHelp": "Turns the module on or off for this hotel. Other modules stay as they are; the change goes to the hotel history.",
+      "devHelp": "This module is not ready yet — it cannot be switched on. If it was on before, it can be switched off.",
+      "toggleLabel": "{{module}}: {{hotel}}",
+      "notFound": "No such module",
+      "catalogEmpty": "There are no modules yet."
     },
     "nodes": {
       "title": "On-premise",
@@ -2765,7 +2801,7 @@
       }
     },
     "team": {
-      "title": "Platform users",
+      "title": "Team",
       "subtitle": "Who can reach /admin",
       "email": "Email",
       "role": "Role",
@@ -2977,7 +3013,7 @@
       "open": "Open CMS"
     },
     "templates": {
-      "title": "Templates & dictionaries",
+      "title": "Dictionaries",
       "subtitle": "The blanks a new hotel is assembled from: a set of venues and the lists of allergens and markers shared by everyone. You come here before creating a hotel — to check what it will open with.",
       "tab": {
         "templates": "Onboarding templates",
@@ -3105,56 +3141,11 @@
       "ruleFields": {
         "city": "City",
         "origin": "Origin",
-        "tariff": "Plan",
         "language": "Language"
       },
       "deleteConfirm": {
         "title": "Delete group “{{name}}”?",
         "body": "Hotels in the group: {{count}}. The hotels stay; the group disappears from filters and bulk actions, and the only way back is to create it again."
-      }
-    },
-    "publications": {
-      "title": "Publishing",
-      "subtitle": "Apply one thing to many hotels — with a report on each",
-      "what": "What we publish",
-      "whom": "To whom",
-      "when": "When",
-      "who": "Who",
-      "result": "Result",
-      "preset": "Preset code",
-      "presetHint": "The key we find our own row by in a hotel",
-      "label": "Badge label",
-      "scope": "Target",
-      "group": "Group",
-      "preview": "Preview",
-      "start": "Publish",
-      "willApply_one": "applies to {{count}} hotel",
-      "willApply_other": "applies to {{count}} hotels",
-      "ownerOnly": "owner only",
-      "progress": "{{done}} of {{total}} reported",
-      "history": "Publication history",
-      "historyEmpty": "No publications yet.",
-      "readOnly": "The read-only role does not publish. The history below is readable.",
-      "localEdits_one": "{{count}} hotel skipped: it has its own edit",
-      "localEdits_other": "{{count}} hotels skipped: they have their own edits",
-      "localEditsHint": "A hotel's edit is never overwritten. Reset it the same way as dictionary divergence.",
-      "toDivergence": "See divergence",
-      "scopes": {
-        "group": "Group",
-        "all": "Whole fleet",
-        "hotels": "Selected hotels"
-      },
-      "status": {
-        "pending": "Queued",
-        "running": "Running",
-        "done": "Finished",
-        "failed": "Failed"
-      },
-      "outcomes": {
-        "applied": "applied",
-        "skipped": "skipped",
-        "refused": "refused",
-        "failed": "error"
       }
     },
     "hotels": {
@@ -3845,6 +3836,68 @@
         "support": "Support entries",
         "data": "Data"
       }
+    },
+    "moduleInfo": {
+      "room_control": {
+        "gives": "Guests control lights, climate and curtains from their phone.",
+        "opens": [
+          "Guest: the “Room” tab",
+          "Hotel panel: access, PIN, room check",
+          "Control: room variants, plan, command log"
+        ]
+      },
+      "marketing": {
+        "gives": "Banners on the guest home screen and labels on menu items.",
+        "opens": [
+          "Guest: banners and labels",
+          "Hotel panel: the “Marketing” section"
+        ]
+      },
+      "pms": {
+        "gives": "Rooms, check-ins and check-outs come from the program the hotel keeps bookings in.",
+        "opens": [
+          "Hotel panel: rooms and guests arrive on their own"
+        ]
+      },
+      "payment": {
+        "gives": "Guests pay for an order by card right in the storefront.",
+        "opens": [
+          "Guest: order payment"
+        ]
+      },
+      "mobile_key": {
+        "gives": "The room door opens with the guest’s phone.",
+        "opens": [
+          "Guest: key on the home screen"
+        ]
+      },
+      "native_app": {
+        "gives": "The hotel storefront in app stores under the hotel’s own name.",
+        "opens": [
+          "Guest: the hotel app"
+        ]
+      },
+      "analytics_level": {
+        "gives": "Reports on revenue, items and staff for any period.",
+        "opens": [
+          "Hotel panel: reports"
+        ]
+      },
+      "multi_restaurant": {
+        "gives": "More than one restaurant or bar, each with its own menu and hours.",
+        "opens": [
+          "Hotel panel: venues"
+        ]
+      },
+      "extra_languages": {
+        "gives": "The storefront in languages beyond Russian and English.",
+        "opens": [
+          "Guest: language choice"
+        ]
+      },
+      "config": {
+        "guest_entry_demo": "Guest entry without PIN (demo)"
+      }
     }
   },
   "roomControl": {
@@ -4196,7 +4249,6 @@
     "what": {
       "overview": "the overview",
       "fleet": "the hotel list",
-      "tariffs": "the plans",
       "nodes": "the node list",
       "templates": "the templates",
       "dictionary": "the dictionary",
@@ -4204,7 +4256,6 @@
       "audit": "the audit log",
       "support": "support sessions",
       "hotel": "the hotel card",
-      "usage": "usage",
       "hotelModules": "hotel modules",
       "activity": "activity",
       "dashboard": "the hotel summary",
@@ -4232,7 +4283,9 @@
       "commerceOverrides": "the venues' own commerce",
       "notificationEvents": "the event settings",
       "chatSettings": "chat settings",
-      "translateCoverage": "translation coverage"
+      "translateCoverage": "translation coverage",
+      "modules": "the module catalog",
+      "moduleCard": "the module card"
     },
     "truncated": "Showing the first {{shown}} of {{total}}",
     "refused": {
@@ -4248,10 +4301,6 @@
     "sectionClosedTitle": "Section closed",
     "sectionClosedBody": "This section is for the hotel administrator. Your sections are in the menu.",
     "sectionClosedHome": "To the dashboard"
-  },
-  "modulePending": {
-    "body": "The module is connected, but its settings screen is still being built. It will open right here once it ships.",
-    "toDashboard": "Back to dashboard"
   },
   "sessions": {
     "title": "My sign-ins",

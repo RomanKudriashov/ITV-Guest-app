@@ -26,7 +26,6 @@ from apps.accounts.models import User
 from apps.analytics.models import OrderDaily
 from apps.catalog.models import Item
 from apps.core.context import platform_scope
-from apps.hotels.services import tariffs
 from apps.hotels.services.platform import readiness
 from apps.hotels.models import Hotel, HotelModule, OnPremNode, Room, Service
 
@@ -98,17 +97,11 @@ def _batch_counts(hotel_ids: list) -> dict:
 
 
 def _status(hotel: Hotel) -> str:
-    """
-    Состояние строки во флоте. Триал — не отдельный статус объекта, а следствие
-    тарифа: отель на триале включён и работает, просто у него есть срок.
-    """
-    if not hotel.is_active:
-        return "disabled"
-    return "trial" if tariffs.get(hotel.tariff).is_trial else "active"
+    """Состояние строки во флоте. Тарифов и триала нет (партия 62-E1)."""
+    return "active" if hotel.is_active else "disabled"
 
 
 def _row(hotel: Hotel, counts: dict) -> dict:
-    tariff = tariffs.get(hotel.tariff)
     entry = counts.get(hotel.pk, {})
     return {
         "id": str(hotel.pk),
@@ -117,9 +110,6 @@ def _row(hotel: Hotel, counts: dict) -> dict:
         "is_active": hotel.is_active,
         "origin": hotel.origin,
         "status": _status(hotel),
-        "tariff": tariff.code,
-        "tariff_title": tariff.title,
-        "trial_days_left": tariffs.trial_days_left(hotel),
         "created_at": hotel.created_at.isoformat(),
         "counts": {
             "rooms": entry.get("rooms", 0),
@@ -161,9 +151,7 @@ def _base_queryset(params: dict, user=None):
 
     status = (params.get("status") or "").strip()
     if status == "active":
-        queryset = queryset.filter(is_active=True).exclude(tariff__in=_trial_codes())
-    elif status == "trial":
-        queryset = queryset.filter(is_active=True, tariff__in=_trial_codes())
+        queryset = queryset.filter(is_active=True)
     elif status == "disabled":
         queryset = queryset.filter(is_active=False)
 
@@ -183,10 +171,6 @@ def _base_queryset(params: dict, user=None):
         if "none" in group_param:
             condition |= ~Q(pk__in=grouped.values("hotel_id"))
         queryset = queryset.filter(condition)
-
-    tariff = (params.get("tariff") or "").strip()
-    if tariff:
-        queryset = queryset.filter(tariff=tariff)
 
     return queryset.order_by(SORTS.get((params.get("sort") or "name"), "name"))
 
@@ -218,10 +202,6 @@ def _search_q(search: str) -> Q:
     ).values("hotel_id")
     city = Hotel.objects.annotate(_city=Cast("city", TextField())).filter(_city__icontains=search).values("pk")
     return Q(name__icontains=search) | Q(subdomain__icontains=search) | Q(pk__in=city) | Q(pk__in=in_group)
-
-
-def _trial_codes() -> list[str]:
-    return [code for code, tariff in tariffs.TARIFFS.items() if tariff.is_trial]
 
 
 VIEW_FACETS = ("state", "link", "module", "group")
@@ -367,11 +347,9 @@ def _facets(params: dict, user=None) -> dict:
     scoped = dict(params)
     scoped.pop("status", None)
     queryset = _base_queryset(scoped, user)
-    trial = _trial_codes()
     return {
         "all": queryset.count(),
-        "active": queryset.filter(is_active=True).exclude(tariff__in=trial).count(),
-        "trial": queryset.filter(is_active=True, tariff__in=trial).count(),
+        "active": queryset.filter(is_active=True).count(),
         "disabled": queryset.filter(is_active=False).count(),
     }
 
@@ -389,15 +367,14 @@ def export_csv(params: dict, user=None) -> str:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
-        ["name", "subdomain", "status", "tariff", "trial_days_left",
+        ["name", "subdomain", "status",
          "rooms", "staff", "services", "items", "orders_7d", "created_at"]
     )
     for hotel in hotels:
         row = _row(hotel, counts)
         writer.writerow(
             [
-                row["name"], row["subdomain"], row["status"], row["tariff"],
-                row["trial_days_left"] if row["trial_days_left"] is not None else "",
+                row["name"], row["subdomain"], row["status"],
                 row["counts"]["rooms"], row["counts"]["staff"], row["counts"]["services"],
                 row["counts"]["items"], row["counts"]["orders_7d"], row["created_at"],
             ]

@@ -37,10 +37,7 @@ class HotelCreateIn(Schema):
     template: str | None = None
 
 class HotelPatchIn(Schema):
-    # Тарифа здесь НЕТ намеренно. У него одна дверь — PUT /hotels/{id}/tariff,
-    # и она заперта на владельца. Пока поле лежало ещё и тут (и в ModulesIn),
-    # охрана стояла на двери, а рядом было две дыры в стене: тариф менялся
-    # ролью «только чтение» через профиль и через реестр модулей.
+    # Тарифа здесь НЕТ: тарифов больше нет вовсе (партия 62-E1).
     # Название — строкой (основной язык) или словарём по языкам отеля (62-C).
     name: str | dict | None = None
     timezone: str | None = None
@@ -85,16 +82,10 @@ class AdminEmailIn(Schema):
     current_email: str
     new_email: str
 
-class ModuleEntryIn(Schema):
-    code: str
-    is_enabled: bool = False
-    source: str = "tariff"
-    config: dict = {}
+class ModuleSwitchIn(Schema):
+    """Один модуль: включить или выключить (партия 62-E1)."""
 
-class ModulesIn(Schema):
-    # Без тарифа: см. HotelPatchIn. Реестр модулей — операционная настройка,
-    # тариф — денежная, и одна ручка на двоих делала вторую необязательной.
-    modules: list[ModuleEntryIn] = []
+    enabled: bool
 
 class OffboardIn(Schema):
     reason: str = ""
@@ -108,7 +99,6 @@ class TemplateIn(Schema):
     code: str | None = None
     title: dict | None = None
     description: dict | None = None
-    tariff: str | None = None
     services: list[dict] | None = None
     modules: list[str] | None = None
     languages: list[str] | None = None
@@ -138,13 +128,6 @@ class TeamInviteIn(Schema):
 class TeamPatchIn(Schema):
     role: str | None = None
     is_active: bool | None = None
-
-class TariffIn(Schema):
-    tariff: str
-    started_on: date | None = None
-    trial_ends_at: date | None = None
-    # Осознанное подтверждение понижения ниже использования.
-    acknowledge_downgrade: bool = False
 
 class BulkActiveIn(Schema):
     """

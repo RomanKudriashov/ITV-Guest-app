@@ -129,24 +129,9 @@ NAVIGATION: tuple[NavGroup, ...] = (
         items=(
             NavItem(key="settings", to="/cms/settings", hotel_admin_only=True),
             NavItem(key="dictionaries", to="/cms/dictionaries", hotel_admin_only=True),
-            NavItem(
-                key="payments",
-                to="/cms/payments",
-                module=HotelModule.Code.PAYMENT,
-                hotel_admin_only=True,
-            ),
-            NavItem(
-                key="pms",
-                to="/cms/pms",
-                module=HotelModule.Code.PMS,
-                hotel_admin_only=True,
-            ),
-            NavItem(
-                key="mobileKey",
-                to="/cms/mobile-key",
-                module=HotelModule.Code.MOBILE_KEY,
-                hotel_admin_only=True,
-            ),
+            # Оплаты, PMS и мобильный ключ ушли из меню (партия 62-E1): модули
+            # в разработке включить нельзя, экранов у них нет. Старые адреса
+            # панель уводит на сводку.
         ),
     ),
 )

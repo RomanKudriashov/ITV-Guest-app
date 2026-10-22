@@ -74,7 +74,6 @@ export function OverviewPage() {
           value={data.hotels.total}
           hint={t('admin.overview.kpi.hotelsHint', {
             active: data.hotels.active,
-            trial: data.hotels.trial,
             disabled: data.hotels.disabled,
           })}
           testId="admin-kpi-hotels"

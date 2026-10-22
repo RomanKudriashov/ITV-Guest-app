@@ -238,14 +238,14 @@ function ProblemRow({ problem, onFix }: { problem: ReadinessProblem; onFix: () =
 }
 
 function EnabledModules({ hotelId, onOpen }: { hotelId: string; onOpen: () => void }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const modules = useQuery({ queryKey: ['admin', 'modules', hotelId], queryFn: () => getModules(hotelId) });
   const on = (modules.data?.modules ?? []).filter((m) => m.is_enabled);
   return (
     <Panel title={t('admin.card.enabled')}>
       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }} data-testid="admin-overview-modules">
         {on.map((m) => (
-          <Pill key={m.code} tone="info">{m.title[i18n.language] ?? m.title.ru ?? t(`admin.module.${m.code}`)}</Pill>
+          <Pill key={m.code} tone="info">{t(`admin.module.${m.code}`)}</Pill>
         ))}
         {modules.data && !on.length ? <Box sx={{ ...typo.caption, color: ink.low }}>{t('admin.card.noModules')}</Box> : null}
       </Box>

@@ -29,7 +29,7 @@ import {
   type HotelViewRow,
   type LinkKind,
 } from '../../adminClient';
-import { AddHotelsDialog, ColorPicker, DeleteGroupDialog, GroupActionDialog, READY_MODULES } from './groupDialogs';
+import { AddHotelsDialog, ColorPicker, DeleteGroupDialog, GroupActionDialog, useReadyModules } from './groupDialogs';
 import { Dot, Empty, FilterBar, GroupMark, Help, Hl, Metric, Panel, Pill, useFacetValues, type Facet, type Tone } from './hotelsUi';
 
 /**
@@ -129,6 +129,7 @@ type Page = HotelGroup & { summary: { hotels: number; active: number; rooms: num
 
 function Summary({ group, onTab }: { group: Page; onTab: (tab: GTab) => void }) {
   const { t } = useTranslation();
+  const ready = useReadyModules();
   const s = group.summary;
   if (!s.hotels) {
     return (
@@ -139,7 +140,7 @@ function Summary({ group, onTab }: { group: Page; onTab: (tab: GTab) => void }) 
       </Box>
     );
   }
-  const dev = Object.keys(group.modules).filter((code) => !READY_MODULES.includes(code));
+  const dev = Object.keys(group.modules).filter((code) => !ready.includes(code));
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' } }} data-testid="admin-group-summary">
@@ -154,7 +155,7 @@ function Summary({ group, onTab }: { group: Page; onTab: (tab: GTab) => void }) 
         />
       </Box>
       <Panel title={t('admin.groupPage.summary.modules')} aside={<Help>{t('admin.groupPage.summary.modulesHelp')}</Help>}>
-        {READY_MODULES.map((code) => {
+        {ready.map((code) => {
           const on = group.modules[code] ?? 0;
           return (
             <Box key={code} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 80px', sm: '220px 1fr 80px' }, gap: 1.5, alignItems: 'center', py: 0.75, borderBottom: `1px solid ${surface.hair}` }} data-testid={`admin-group-module-${code}`}>
@@ -363,6 +364,7 @@ function Actions({ group, canWrite, onOpen }: { group: Page; canWrite: boolean; 
 
 function Defaults({ group, canWrite }: { group: Page; canWrite: boolean }) {
   const { t } = useTranslation();
+  const ready = useReadyModules();
   const qc = useQueryClient();
   const actionFailed = useActionFailed();
   const save = useMutation({
@@ -390,7 +392,7 @@ function Defaults({ group, canWrite }: { group: Page; canWrite: boolean }) {
             : t('admin.groupPage.defaults.off')}
         </Box>
       </Box>
-      {READY_MODULES.map((code) => (
+      {ready.map((code) => (
         <ButtonBase
           key={code}
           onClick={() => toggle(code)}

@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 
 from django.http import HttpRequest
 
@@ -19,7 +18,7 @@ from apps.hotels.api.platform.rights import OWNER, PUBLIC, READ, WRITE, Platform
 from apps.core.errors import PermissionDenied, ValidationError
 from apps.core.models import AuditLog
 from apps.hotels.models import Hotel
-from apps.hotels.module_registry import list_modules, set_modules
+from apps.hotels.module_registry import list_modules
 from apps.hotels.schemas.platform import (
     DisableIn,
     AdminEmailIn,
@@ -27,10 +26,9 @@ from apps.hotels.schemas.platform import (
     EnterHotelIn,
     HotelCreateIn,
     HotelPatchIn,
-    ModulesIn,
+    ModuleSwitchIn,
     OffboardIn,
     PurgeIn,
-    TariffIn,
 )
 from apps.hotels.services.platform import console
 from apps.hotels.services.provisioning import (
@@ -490,15 +488,7 @@ def revoke_impersonation_session(request: HttpRequest, grant_id: str):
     return {"grant_id": str(grant.pk), "revoked_at": grant.revoked_at.isoformat()}
 
 
-# --- Использование против лимитов, активность, тариф -----------------------
-
-
-@router.get("/hotels/{hotel_id}/usage", summary="Использование против лимитов тарифа")
-@requires(READ)
-def hotel_usage(request: HttpRequest, hotel_id: str):
-    from apps.hotels.services.platform.usage import usage_for
-
-    return usage_for(console.get_hotel(hotel_id))
+# --- Активность ---------------------------------------------------------------
 
 
 @router.get("/hotels/{hotel_id}/activity", summary="Активность и журнал отеля")
@@ -509,105 +499,33 @@ def hotel_activity(request: HttpRequest, hotel_id: str, limit: int = 50):
     return activity_for(console.get_hotel(hotel_id), limit=limit)
 
 
-@router.put("/hotels/{hotel_id}/tariff", summary="Записать тариф отеля")
-@requires(OWNER)
-def set_tariff(request: HttpRequest, hotel_id: str, payload: TariffIn):
-    """
-    Тариф — ЗАПИСЬ, а не операция с деньгами: здесь нет ни сумм, ни счетов, ни
-    списаний. Шов под будущий биллинг: когда он появится, он будет читать эти
-    даты, а не заводить свои.
-    """
-    from apps.hotels.services import tariffs as tariff_registry
-    from apps.hotels.services.platform.usage import downgrade_warnings
-
-    hotel = console.get_hotel(hotel_id)
-    if payload.tariff not in tariff_registry.TARIFFS:
-        raise ValidationError(f"Неизвестный тариф «{payload.tariff}»", field="tariff")
-
-    warnings = downgrade_warnings(hotel, payload.tariff)
-    # Понижение ниже использования НЕ запрещаем, но и не делаем молча: платформа
-    # обязана знать, что у отеля станет больше сервисов, чем позволяет тариф.
-    if warnings and not payload.acknowledge_downgrade:
-        return {"ok": False, "warnings": warnings, "code": "downgrade_blocked"}
-
-    # СМЕНА — ЭТО СМЕНА, а не любая запись. Сравниваем разрешённые коды: пустое
-    # поле и «standard» — один и тот же тариф, и продлить отелю то, на чём он и
-    # так сидит, не должно гасить ему модули, выданные сверх тарифа. Иначе
-    # «записать тариф» превращается в разрушительное действие с безобидным
-    # названием, и первым на нём подорвался общий стенд.
-    changed = tariff_registry.get(hotel.tariff).code != tariff_registry.get(payload.tariff).code
-
-    hotel.tariff = payload.tariff
-    hotel.tariff_started_on = payload.started_on or timezone.localdate()
-    tariff = tariff_registry.get(payload.tariff)
-    if tariff.is_trial:
-        hotel.trial_ends_at = payload.trial_ends_at or (
-            hotel.tariff_started_on + timedelta(days=tariff.trial_days)
-        )
-    else:
-        hotel.trial_ends_at = None
-    hotel.save(update_fields=["tariff", "tariff_started_on", "trial_ends_at", "updated_at"])
-
-    # ПЕРЕСЧЁТ РЕЕСТРА — здесь, а не «как-нибудь потом». До R6 смена тарифа не
-    # трогала модули вообще: старые оставались включёнными и подписывались «по
-    # тарифу», новые не включались, а предупреждение о даунгрейде было словами
-    # без последствий. Намерения при этом не трогаем — пересчитываем следствие.
-    from apps.hotels.module_registry import apply_tariff
-
-    turned_off = apply_tariff(hotel) if changed else []
-
-    console.audit_hotel(
-        hotel,
-        "platform.hotel.tariff_set",
-        actor_id=request.user.pk,
-        ip=request.META.get("REMOTE_ADDR"),
-        payload={
-            "tariff": hotel.tariff,
-            "trial_ends_at": str(hotel.trial_ends_at or ""),
-            # Погашенные модули — в журнал поимённо: «почему у отеля пропал
-            # раздел» спрашивают через неделю, и ответ должен быть найден.
-            "modules_turned_off": turned_off,
-        },
-    )
-    return {
-        "ok": True,
-        "warnings": warnings,
-        "modules_turned_off": turned_off,
-        "profile": console.profile(hotel),
-    }
+# --- Модули отеля (партия 62-E1: без тарифов, по одному) -----------------------
 
 
-# --- Реестр модулей --------------------------------------------------------
-# Данные + API (R1). Управляющий UI — R6, гейтинг CMS-навигации — R4.
-# Контракта у механизма нет: ссылка отсюда годами вела в несуществующий файл.
-# Механизм описания заслуживает — выключенный модуль закрывает целый раздел CMS
-# ответом `403 module_disabled`. Очередь: docs/api-contracts.md.
-
-
-@router.get("/hotels/{hotel_id}/modules", summary="Реестр модулей отеля")
+@router.get("/hotels/{hotel_id}/modules", summary="Модули отеля")
 @requires(READ)
 def get_modules(request: HttpRequest, hotel_id: str):
-    hotel = console.get_hotel(hotel_id)
-    return {"tariff": hotel.tariff, "modules": list_modules(hotel)}
+    return {"modules": list_modules(console.get_hotel(hotel_id))}
 
 
-@router.put("/hotels/{hotel_id}/modules", summary="Настроить реестр модулей")
+@router.put("/hotels/{hotel_id}/modules/{code}", summary="Включить или выключить один модуль")
 @requires(WRITE)
-def put_modules(request: HttpRequest, hotel_id: str, payload: ModulesIn):
-    from apps.hotels.module_registry import enabled_module_codes
+def put_module(request: HttpRequest, hotel_id: str, code: str, payload: ModuleSwitchIn):
+    """
+    ОДИН модуль — другие не трогаются. Заготовку включить нельзя: 409
+    `module_in_development`; выключить можно. Журнал — «был → стал» (формат
+    62-D); готовность и меню CMS отеля пересчитываются от правки строки модуля.
+    """
+    from apps.hotels.module_registry import set_module
 
     hotel = console.get_hotel(hotel_id)
-    before = enabled_module_codes(hotel)
-    modules = set_modules(hotel, [entry.dict() for entry in payload.modules])
-    after = enabled_module_codes(hotel)
-    # ЖУРНАЛ ЧЕСТНЫЙ (партия 62-D): по записи на модуль «был → стал», а не
-    # «изменено 9». Неизменившиеся модули журнал не засоряют.
-    for code in sorted(before ^ after):
+    before, after = set_module(hotel, code, payload.enabled)
+    if before != after:
         console.audit_hotel(
             hotel,
             "platform.hotel.modules_set",
             actor_id=request.user.pk,
             ip=request.META.get("REMOTE_ADDR"),
-            payload={"module": code, "from": code in before, "to": code in after},
+            payload={"module": code, "from": before, "to": after},
         )
-    return {"tariff": hotel.tariff, "modules": modules}
+    return {"modules": list_modules(hotel)}

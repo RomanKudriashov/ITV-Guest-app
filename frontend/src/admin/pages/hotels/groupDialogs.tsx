@@ -18,6 +18,7 @@ import {
   addGroupMembers,
   createGroup,
   deleteGroup,
+  getModulesCatalog,
   moveHotels,
   patchGroup,
   previewGroupAction,
@@ -330,8 +331,15 @@ export function MoveDialog({ hotelIds, groups, onClose, onDone }: { hotelIds: st
   );
 }
 
-/** Модули, которые можно включать сейчас (остальные — заготовки, партия E). */
-export const READY_MODULES = ['room_control', 'marketing'];
+/**
+ * Модули, которые можно включать сейчас, — из реестра сервера (партия 62-E1):
+ * своего списка у экрана нет, иначе он разошёлся бы с тем, что сервер
+ * разрешает. Остальные — в разработке.
+ */
+export function useReadyModules(): string[] {
+  const catalog = useQuery({ queryKey: ['admin', 'modules-catalog'], queryFn: getModulesCatalog });
+  return (catalog.data?.items ?? []).filter((m) => m.status === 'ready').map((m) => m.code);
+}
 
 export function AddHotelsDialog({ group, rows, onClose }: { group: HotelGroup; rows: HotelViewRow[]; onClose: () => void }) {
   const { t } = useTranslation();
@@ -383,13 +391,17 @@ export function GroupActionDialog({ group, kind: initial, onClose }: { group: Ho
   const { t } = useTranslation();
   const invalidate = useInvalidate();
   const actionFailed = useActionFailed();
-  const [module, setModule] = useState(READY_MODULES[0]);
+  const ready = useReadyModules();
+  const [picked, setModule] = useState('');
+  const module = picked || ready[0] || '';
   const [turnOn, setTurnOn] = useState(true);
   const [reason, setReason] = useState('');
   const kind: GroupActionKind = initial === 'module' ? (turnOn ? 'module_on' : 'module_off') : initial;
   const preview = useQuery({
     queryKey: ['admin', 'groups', group.id, 'preview', kind, module],
     queryFn: () => previewGroupAction(group.id, kind, kind.startsWith('module') ? module : undefined),
+    // Модуль выбирается из каталога сервера — пока он не пришёл, спрашивать нечего.
+    enabled: !kind.startsWith('module') || Boolean(module),
   });
   const plan = preview.data?.items ?? [];
   const changes = plan.filter((r) => r.change);
@@ -434,7 +446,7 @@ export function GroupActionDialog({ group, kind: initial, onClose }: { group: Ho
         <Box sx={{ display: 'grid', gap: 1.5, mb: 2 }}>
           <Box>
             <Typography sx={{ ...typo.caption, color: ink.mid, mb: 0.5 }}>{t('admin.groupPage.action.module')}</Typography>
-            {READY_MODULES.map((code) => (
+            {ready.map((code) => (
               <ButtonBase key={code} onClick={() => setModule(code)} data-testid={`admin-group-action-module-${code}`} sx={{ display: 'flex', width: '100%', justifyContent: 'flex-start', gap: 1, py: 0.25, textAlign: 'left' }}>
                 <Radio size="small" checked={module === code} tabIndex={-1} />
                 <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>{t(`admin.module.${code}`)}</Box>

@@ -219,8 +219,8 @@ async function enableModule(
     (hotel: { subdomain: string }) => hotel.subdomain === 'crystal',
   )
 
-  const response = await request.put(`${API}/api/platform/hotels/${crystal.id}/modules`, {
-    data: { modules: [{ code, is_enabled: enabled, source: 'override' }] },
+  const response = await request.put(`${API}/api/platform/hotels/${crystal.id}/modules/${code}`, {
+    data: { enabled },
     headers: { Authorization: `Bearer ${token}` },
   })
   expect(response.ok(), await response.text()).toBeTruthy()

@@ -80,7 +80,6 @@ def export_hotel(hotel: Hotel) -> dict:
             "subdomain": hotel.subdomain,
             "timezone": hotel.timezone,
             "currency": hotel.currency,
-            "tariff": hotel.tariff,
             "created_at": hotel.created_at.isoformat(),
         },
         "languages": languages,

@@ -20,17 +20,6 @@ export function attentionText(
         title: t('dashboard.card.node_offline', { minutes: card.minutes ?? 0 }),
         hint: t('dashboard.card.nodeOfflineHint'),
       };
-    case 'tariff_over':
-      return {
-        title: t('dashboard.card.tariff_over', {
-          // Ресурс называем словом: «services 2 / 1» — это строка из кода,
-          // а не сообщение человеку.
-          resource: t(`dashboard.card.resource.${card.resource}`, card.resource ?? ''),
-          used: card.used ?? 0,
-          limit: card.limit ?? 0,
-        }),
-        hint: t('dashboard.card.tariffOverHint'),
-      };
     case 'no_escalation':
       return {
         title: t('dashboard.card.no_escalation', { count: card.count ?? 0 }),

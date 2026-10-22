@@ -35,7 +35,7 @@ const SCREENS = [
       items: [],
     },
   },
-  { key: 'modules', nav: 'admin-nav-modules', api: ['/tariffs'], empty: [] },
+  { key: 'modules', nav: 'admin-nav-modules', api: ['/modules'], empty: { hotels: 0, items: [] } },
   // Выдачи консоли приходят оболочкой `{items, total}` — пустой ответ должен
   // быть пустым В ЭТОЙ ФОРМЕ, иначе экран честно покажет отказ разбора, а тест
   // будет думать, что проверяет пустоту.

@@ -265,12 +265,13 @@ def move(hotel_ids_: list[str], group: HotelGroup | None, *, actor_id=None) -> l
 
 def _apply_defaults(group: HotelGroup, hotel: Hotel) -> list[str]:
     """Включить отелю модули из умолчаний группы. Возвращает включённые сейчас."""
-    from apps.hotels.module_registry import enabled_module_codes, set_modules
+    from apps.hotels.module_registry import enabled_module_codes, is_ready, set_modules
 
     if not group.auto_enabled or not group.auto_modules:
         return []
     already = enabled_module_codes(hotel)
-    fresh = [code for code in group.auto_modules if code not in already]
+    # Заготовку не включаем, даже если она осталась в умолчаниях старой группы.
+    fresh = [code for code in group.auto_modules if code not in already and is_ready(code)]
     if fresh:
         set_modules(hotel, [{"code": code, "is_enabled": True} for code in fresh])
     return fresh
@@ -287,11 +288,17 @@ def group_ids_of(moves: list[dict]) -> list[str]:
 def set_defaults(group: HotelGroup, enabled: bool, modules: list[str]) -> dict:
     """Правило «модули для новых отелей группы». Возвращает «было → стало»."""
     from apps.core.errors import ValidationError
-    from apps.hotels.module_registry import ALL_CODES
+    from apps.hotels.module_registry import ALL_CODES, is_ready
 
     unknown = [code for code in modules if code not in ALL_CODES]
     if unknown:
         raise ValidationError("Такого модуля нет", field="modules", code="unknown_module")
+    # Заготовку в умолчания не взять: включить её нельзя никому (партия 62-E1).
+    in_dev = [code for code in modules if not is_ready(code)]
+    if in_dev:
+        raise ValidationError(
+            "Модуль ещё в разработке — выбрать его нельзя", field="modules", code="module_in_development"
+        )
     modules = sorted(set(modules))
     changes = {}
     if group.auto_enabled != enabled:
@@ -312,12 +319,16 @@ ACTIONS = ("module_on", "module_off", "disable", "enable")
 
 def _check_action(kind: str, module: str | None) -> None:
     from apps.core.errors import ValidationError
-    from apps.hotels.module_registry import ALL_CODES
+    from apps.hotels.module_registry import ALL_CODES, is_ready
 
     if kind not in ACTIONS:
         raise ValidationError("Такого действия нет", field="kind", code="unknown_action")
     if kind.startswith("module") and module not in ALL_CODES:
         raise ValidationError("Выберите модуль", field="module", code="unknown_module")
+    if kind == "module_on" and not is_ready(module or ""):
+        raise ValidationError(
+            "Модуль ещё в разработке — включить его нельзя", field="module", code="module_in_development"
+        )
 
 
 def preview_action(group: HotelGroup, kind: str, module: str | None = None) -> dict:

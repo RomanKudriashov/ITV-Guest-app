@@ -8,6 +8,8 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import ViewModuleOutlinedIcon from '@mui/icons-material/ViewModuleOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import { useTranslation } from 'react-i18next';
 
 import { RoomControlTab } from './hotel/RoomControlTab';
@@ -16,7 +18,7 @@ import { JournalTab } from './hotel/JournalTab';
 import { OverviewTab } from './hotel/OverviewTab';
 import { RoomsTab } from './hotel/RoomsTab';
 import { HistoryTab } from './hotel/HistoryTab';
-import { Pill } from './hotels/hotelsUi';
+import { Dot, Empty, FilterBar, Help, Hl, Panel, Pill, ViewSwitch } from './hotels/hotelsUi';
 import { ConfirmChangesDialog } from './hotel/hotelDialogs';
 import { AddressPanel, GroupPanel } from './hotel/ProfileExtras';
 
@@ -26,7 +28,7 @@ import { BackLink } from '@/kit/BackLink';
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useRights } from '../useRights';
 
-import { accent, ink, panelSx, pillSx, primaryButtonSx, state, surface, typo } from '../adminTokens';
+import { accent, ink, panelSx, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { formGridSx, spanSx } from '@/kit/formLayout';
 import { MultiSelectField, SelectField } from '@/components/SelectField';
@@ -45,16 +47,12 @@ import {
   getHotelFieldReference,
   getReadiness,
   getModules,
-  getTariffs,
   removeHotelAdmin,
-  getUsage,
   patchHotel,
-  putModules,
+  putModule,
   markOffboarding,
   purgeHotel,
   setHotelAdmin,
-  setTariff,
-  type DowngradeWarning,
   type FixTarget,
   type HotelPatch,
   type NeedsConfirmation,
@@ -76,8 +74,8 @@ export type Tab = (typeof TABS)[number];
  *
  * Ключ остаётся живым АДРЕСОМ: тот, кто просит его (закладка, тест, чужая
  * ссылка), попадает туда, куда переехало содержимое, а не на пустой экран.
- *   * `usage`, `tariff` — «Тариф и лимиты» живут на «Модулях» до партии E,
- *     где тарифы уходят совсем;
+ *   * `usage`, `tariff` — «Тариф и лимиты» жили на «Модулях»; тарифов больше
+ *     нет (партия 62-E1), адрес ведёт к модулям отеля;
  *   * `activity` — журнал правок отеля стал «Историей»;
  *   * `support` — входы поддержки стали частью «Журнала».
  */
@@ -89,15 +87,14 @@ function resolveTab(key: string): Tab {
 }
 
 /** Фильтры и подвкладки вкладок: при смене вкладки не переносятся. */
-const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'who', 'what', 'period', 'status', 'purpose'];
+const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'who', 'what', 'period', 'status', 'purpose', 'view', 'mstate'];
 
 /**
  * Карточка отеля — на вкладках, а не одним свитком.
  *
  * Вкладки соответствуют разным вопросам о разной природе: «кто это» (профиль),
- * «влезает ли в тариф» (использование), «что ему открыто» (модули), «что с ним
- * делали» (журнал), «на чём он сидит» (тариф). Один свиток заставлял бы
- * прокручивать журнал, чтобы поменять валюту.
+ * «что ему открыто» (модули), «что с ним делали» (история). Один свиток
+ * заставлял бы прокручивать журнал, чтобы поменять валюту.
  */
 export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
   const { t } = useTranslation();
@@ -251,11 +248,7 @@ export function HotelPage({ id, onBack }: { id: string; onBack: () => void }) {
         {tab === 'overview' ? <OverviewTab hotel={hotel} readiness={readiness} onFix={openFix} /> : null}
         {tab === 'profile' ? <ProfileTab hotel={hotel} /> : null}
         {tab === 'modules' ? (
-          <Box sx={{ display: 'grid', gap: 2.5 }}>
-            <ModulesTab id={id} />
-            {/* «Тариф и лимиты» — здесь до партии E, где тарифы уходят. */}
-            <TariffTab id={id} />
-          </Box>
+          <ModulesTab id={id} onTab={setTab} />
         ) : null}
         {tab === 'connections' ? <ConnectionsTab hotelId={id} /> : null}
         {tab === 'rooms' ? <RoomsTab hotelId={id} /> : null}
@@ -764,15 +757,39 @@ function ProfileTab({ hotel }: { hotel: HotelProfile }) {
 
 /* ── Модули ─────────────────────────────────────────────────────────────── */
 
-function ModulesTab({ id }: { id: string }) {
-  const { t, i18n } = useTranslation();
-  // Тумблеры модулей — право WRITE (`PUT /hotels/{id}/modules`).
+type ModuleState = 'works' | 'broken' | 'off' | 'dev';
+const MODULE_TONE: Record<ModuleState, 'ok' | 'bad' | 'muted'> = { works: 'ok', broken: 'bad', off: 'muted', dev: 'muted' };
+
+/**
+ * Модули отеля (партия 62-E1, по макету): блоки или список, ОДИН выключатель
+ * на модуль — запрос уходит только по нему (`PUT /hotels/{id}/modules/{code}`).
+ *
+ * Модуль в разработке включить нельзя: выключателя у него нет. Включённый до
+ * перехода — с выключателем, чтобы его можно было погасить.
+ *
+ * «Включён, но не работает» — то же правило, что в обзоре отеля (готовность
+ * на сервере: модуль включён, подключения нет), а не своя проверка экрана.
+ */
+function ModulesTab({ id, onTab }: { id: string; onTab: (tab: Tab) => void }) {
+  const { t } = useTranslation();
+  const actionFailed = useActionFailed();
   const { canWrite } = useRights();
   const qc = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const view = params.get('view') === 'list' ? 'list' : 'blocks';
+  const q = (params.get('search') ?? '').trim();
+  const filter = (params.get('mstate') ?? '').split(',').filter(Boolean);
   const modules = useQuery({ queryKey: ['admin', 'modules', id], queryFn: () => getModules(id) });
+  const readiness = useQuery({ queryKey: ['admin', 'readiness', id], queryFn: () => getReadiness(id), refetchInterval: 60_000 });
   const save = useMutation({
-    mutationFn: (next: Pick<ModuleEntry, 'code' | 'is_enabled'>[]) => putModules(id, next),
-    onSuccess: (result) => qc.setQueryData(['admin', 'modules', id], result),
+    mutationFn: (body: { code: string; enabled: boolean }) => putModule(id, body.code, body.enabled),
+    onSuccess: (result) => {
+      qc.setQueryData(['admin', 'modules', id], result);
+      void qc.invalidateQueries({ queryKey: ['admin', 'readiness', id] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'modules-catalog'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'module'] });
+    },
+    onError: actionFailed,
   });
 
   if (modules.isPending || modules.isError || modules.data === undefined) {
@@ -783,324 +800,198 @@ function ModulesTab({ id }: { id: string }) {
     );
   }
   const list = modules.data.modules;
-
-  // Клиент шлёт ТОЛЬКО «включено/выключено» — то есть решение человека.
-  // Тарифную сетку знает сервер, он же и решает, чем это решение обернётся.
-  const toggle = (code: string, enabled: boolean) => {
-    save.mutate([{ code, is_enabled: enabled }]);
-  };
-
-  /*
-    ЧЕТЫРЕ СОСТОЯНИЯ, А НЕ ДВА.
-
-    Экран показывал одну пометку — «вне тарифа» — и то только у включённых.
-    Всё остальное выглядело одинаково: «тариф даёт и включено» ничем не
-    отличалось от «включили руками», а «выключили руками» — от «тариф этого не
-    даёт». Второе особенно дорого: оператор видел погашенный тумблер и не мог
-    понять, включать ли его обратно.
-  */
-  const stateOf = (entry: ModuleEntry): 'inTariff' | 'override' | 'manualOff' | 'notInTariff' => {
-    if (entry.is_enabled) return entry.in_tariff ? 'inTariff' : 'override';
-    return entry.in_tariff ? 'manualOff' : 'notInTariff';
-  };
-  // «Тариф не даёт» — не событие: это фон, на котором живут остальные три.
-  // Приглушённая пилюля, а не цветная.
-  const TONE = {
-    inTariff: 'ok',
-    override: 'gold',
-    manualOff: 'warn',
-    notInTariff: 'muted',
-  } as const;
-
-  return (
-    <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-modules">
-      <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1.25 }}>
-        {t('admin.hotel.modulesTitle', { tariff: modules.data.tariff })}
-      </Typography>
-      {list.map((entry) => (
-        <Box
-          key={entry.code}
-          data-testid={`admin-module-${entry.code}`}
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, borderBottom: `1px solid ${surface.hair}` }}
-        >
-          <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
-            {entry.title[i18n.language] ?? entry.title.en ?? entry.code}
-          </Typography>
-          <Box
-            data-testid={`admin-module-state-${entry.code}`}
-            data-state={stateOf(entry)}
-            sx={pillSx(TONE[stateOf(entry)])}
-          >
-            {t(`admin.hotel.moduleState.${stateOf(entry)}`)}
-          </Box>
-          <Switch
-            checked={entry.is_enabled}
-            onChange={(e) => toggle(entry.code, e.target.checked)}
-            disabled={save.isPending || !canWrite}
-            inputProps={{ 'data-testid': `admin-module-toggle-${entry.code}` } as Record<string, string>}
-          />
-        </Box>
-      ))}
-      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.75 }}>
-        {t('admin.hotel.modulesHint')}
-      </Typography>
-    </Box>
+  const broken = new Set(
+    (readiness.data?.problems ?? [])
+      .filter((p) => p.code === 'module_without_connection')
+      .map((p) => String((p.params as { module?: string }).module ?? '')),
   );
-}
+  const stateOf = (m: ModuleEntry): ModuleState =>
+    m.status === 'dev' ? 'dev' : !m.is_enabled ? 'off' : broken.has(m.code) ? 'broken' : 'works';
+  const title = (code: string) => t(`admin.module.${code}`);
+  const gives = (code: string) => t(`admin.moduleInfo.${code}.gives`);
+  const needs = (m: ModuleEntry) => (m.needs ? t(`admin.modules.connection.${m.needs}`) : '');
+  const ql = q.toLowerCase();
+  const shown = list.filter(
+    (m) => (!filter.length || filter.includes(stateOf(m))) && (!ql || `${title(m.code)} ${gives(m.code)}`.toLowerCase().includes(ql)),
+  );
+  const ready = shown.filter((m) => m.status === 'ready');
+  const dev = shown.filter((m) => m.status === 'dev');
+  const aboutModule = (code: string) => {
+    const next = new URLSearchParams();
+    next.set('section', 'modules');
+    next.set('module', code);
+    setParams(next);
+  };
 
-/* ── Тариф и лимиты ─────────────────────────────────────────────────────── */
-
-/**
- * Тариф и лимиты — ОДНА вкладка, потому что вопрос один.
- *
- * Было две: «Использование» показывало, сколько отель израсходовал, «Тариф» —
- * на чём он сидит и как это сменить. Обе кормились ОДНИМ запросом `getUsage`, и
- * название тарифа было выведено дважды из одного поля. Разрез проходил ровно по
- * живому: предупреждение «не влезет в лимит комнат» жило на одной вкладке, а
- * число 42, по которому его можно проверить, — на другой.
- *
- * Предупреждение теперь не отдельная жёлтая плашка, а ВТОРОЕ ЧИСЛО на той же
- * строке: «комнаты 42 / 30 — не влезает». Считается на клиенте по сетке
- * тарифов, поэтому видно ДО нажатия, а не после ответа сервера. Ответ сервера
- * при этом остаётся истиной: если он вернул предупреждения, показываем их —
- * сетка на клиенте могла отстать от той, что на сервере.
- */
-function TariffTab({ id }: { id: string }) {
-  const actionFailed = useActionFailed();
-  // Тариф пишет только владелец (`OWNER` на `/hotels/{id}/tariff`). Ровно здесь
-  // и жил самый дорогой молчаливый отказ: панель получала 403 и не менялась
-  // никак, а оператор уходил уверенный, что тариф записан.
-  const { isOwner } = useRights();
-  const { t, i18n } = useTranslation();
-  const qc = useQueryClient();
-  const usage = useQuery({ queryKey: ['admin', 'usage', id], queryFn: () => getUsage(id) });
-  // Сетка тарифов — ради лимитов ВЫБРАННОГО тарифа. Без неё «не влезает» можно
-  // было узнать только у сервера и только после нажатия.
-  const grid = useQuery({ queryKey: ['admin', 'tariffs'], queryFn: getTariffs });
-  const [next, setNext] = useState<string>('');
-  const [warnings, setWarnings] = useState<DowngradeWarning[]>([]);
-
-  const apply = useMutation({
-    mutationFn: (acknowledge: boolean) =>
-      setTariff(id, { tariff: next || usage.data!.tariff, acknowledge_downgrade: acknowledge }),
-    onSuccess: (result) => {
-      setWarnings(result.warnings ?? []);
-      if (result.ok) {
-        setNext('');
-        void qc.invalidateQueries({ queryKey: ['admin', 'usage', id] });
-        void qc.invalidateQueries({ queryKey: ['admin', 'fleet'] });
-        void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
-      }
-    },
-  
-    // Отказ виден: молча съеденный 403 читается как успех.
-    onError: actionFailed,
-  });
-
-  if (usage.isPending || usage.isError || usage.data === undefined) {
-    return (
-      <QueryState query={usage} what={t('state.what.usage')}>
-        {() => null}
-      </QueryState>
-    );
-  }
-
-  const data = usage.data;
-  const codes = (grid.data ?? []).map((row) => row.code);
-  const selected = next || data.tariff;
-  // Пока сетка не приехала — предпросмотра нет, но выбор и цифры уже работают.
-  const preview =
-    next && next !== data.tariff
-      ? (grid.data ?? []).find((row) => row.code === next) ?? null
-      : null;
-
-  return (
-    <Box sx={{ ...panelSx, maxWidth: 640 }} data-testid="admin-hotel-tariff">
-      <Typography sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
-        {data.tariff_title[i18n.language] ?? data.tariff_title.en ?? data.tariff}
-      </Typography>
-      {data.is_trial && data.trial_days_left !== null ? (
-        <Typography sx={{ ...typo.caption, color: state.warn, mt: 0.5 }} data-testid="admin-hotel-trial">
-          {t('admin.hotel.trialLeft', { days: data.trial_days_left })}
-        </Typography>
-      ) : null}
-
-      {/* Цифры — сразу под именем тарифа: это и есть ответ на «хватает ли». */}
-      <Box sx={{ mt: 2 }} data-testid="admin-hotel-usage">
-        {data.rows.map((row) => {
-          const nextLimit = preview ? preview.limits[row.key] ?? null : undefined;
-          const willNotFit = nextLimit !== undefined && nextLimit !== null && row.used > nextLimit;
-          return (
-            <Box key={row.key} sx={{ py: 1.25, borderBottom: `1px solid ${surface.hair}` }}
-              data-testid={`admin-usage-${row.key}`}>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-                <Typography sx={{ ...typo.caption, color: ink.mid, flexGrow: 1 }}>
-                  {t(`admin.hotel.limit.${row.key}`)}
-                </Typography>
-                <Typography
-                  sx={{
-                    ...typo.body,
-                    fontWeight: 700,
-                    color: row.over || willNotFit ? state.bad : ink.hi,
-                  }}
-                >
-                  {row.used}
-                  {/*
-                    При выбранном другом тарифе делитель — ЕГО лимит, а не
-                    сегодняшний: человек смотрит на «что будет», и показывать
-                    ему при этом старое число значит заставлять считать в уме.
-                  */}
-                  {nextLimit !== undefined
-                    ? nextLimit === null
-                      ? ` / ${t('admin.hotel.limit.none')}`
-                      : ` / ${nextLimit}`
-                    : row.limit === null
-                      ? ` / ${t('admin.hotel.limit.none')}`
-                      : ` / ${row.limit}`}
-                </Typography>
-              </Box>
-              {row.limit !== null ? (
-                <Box sx={{ mt: 0.75, height: 5, borderRadius: 999, bgcolor: surface.s3, overflow: 'hidden' }}>
-                  <Box
-                    sx={{
-                      width: `${Math.min(100, Math.round((row.ratio ?? 0) * 100))}%`,
-                      height: '100%',
-                      bgcolor: row.over || willNotFit ? state.bad : accent.main,
-                    }}
-                  />
-                </Box>
-              ) : null}
-              {willNotFit ? (
-                <Typography sx={{ ...typo.caption, color: state.bad, mt: 0.6 }}
-                  data-testid={`admin-usage-wont-fit-${row.key}`}>
-                  {t('admin.hotel.limitWontFit')}
-                </Typography>
-              ) : row.over ? (
-                <Typography sx={{ ...typo.caption, color: state.bad, mt: 0.6 }}
-                  data-testid={`admin-usage-over-${row.key}`}>
-                  {t('admin.hotel.limitOver', { used: row.used, limit: row.limit })}
-                </Typography>
-              ) : null}
-            </Box>
-          );
-        })}
-      </Box>
-      <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.75 }}>
-        {t('admin.hotel.limitHint')}
-      </Typography>
-
-      <Box sx={{ mt: 2.75, pt: 2.25, borderTop: `1px solid ${surface.line}` }}>
-        <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1.5 }}>
-          {t('admin.hotel.tariffHint')}
-        </Typography>
-        <SelectField
-          size="small"
-          label={t('admin.hotel.tariffLabel')}
-          value={codes.includes(selected) ? selected : ''}
-          onChange={(next) => {
-            setNext(next);
-            setWarnings([]);
-          }}
-          testId="admin-tariff-select"
-          sx={{ maxWidth: 320 }}
-          options={(grid.data ?? []).map((row) => ({
-            value: row.code,
-            label: row.title[i18n.language] ?? row.title.en ?? row.code,
-            testId: `admin-tariff-option-${row.code}`,
-          }))}
+  const toggle = (m: ModuleEntry) =>
+    m.status === 'dev' && !m.is_enabled ? null : (
+      <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
+        <Switch
+          checked={m.is_enabled}
+          onChange={(e) => save.mutate({ code: m.code, enabled: e.target.checked })}
+          disabled={save.isPending || !canWrite}
+          inputProps={{
+            'aria-label': title(m.code),
+            'data-testid': `admin-module-toggle-${m.code}`,
+          } as Record<string, string>}
         />
-
-        {data.trial_ends_at ? (
-          <Typography sx={{ ...typo.caption, color: ink.mid, mt: 1.25 }}>
-            {t('admin.hotel.trialEnds', { date: data.trial_ends_at })}
-          </Typography>
-        ) : null}
-
-        {/*
-          Модули из плашки не выгнать: они не имеют строки с числом, к которой
-          можно было бы прицепить подсветку. Зато список поимённый и приходит
-          ДО нажатия — из сетки тарифов, а не из ответа сервера.
-        */}
-        {preview ? (
-          <ModuleLoss hotelId={id} nextModules={preview.modules} />
-        ) : null}
-
-        {warnings.filter((warning) => warning.modules).map((warning) => (
-          <Typography
-            key={warning.key}
-            sx={{ ...typo.caption, color: state.warn, mt: 1 }}
-            data-testid="admin-tariff-warning"
-          >
-            {t('admin.hotel.downgradeModules', { modules: warning.modules!.join(', ') })}
-          </Typography>
-        ))}
-
-        <Box sx={{ display: 'flex', gap: 1, mt: 1.75 }}>
-          {isOwner ? (
-            <>
-              <Button
-                onClick={() => apply.mutate(false)}
-                disabled={apply.isPending}
-                data-testid="admin-tariff-apply"
-                sx={primaryButtonSx}
-              >
-                {t('admin.hotel.tariffApply')}
-              </Button>
-              {warnings.length ? (
-                <Button
-                  onClick={() => apply.mutate(true)}
-                  disabled={apply.isPending}
-                  data-testid="admin-tariff-force"
-                  sx={{ color: state.warn, border: `1px solid ${state.warn}55` }}
-                >
-                  {t('admin.hotel.tariffForce')}
-                </Button>
-              ) : null}
-            </>
-          ) : (
-            <Typography sx={{ ...typo.caption, color: ink.mid }} data-testid="admin-tariff-readonly">
-              {t('admin.hotel.tariffOwnerOnly')}
-            </Typography>
-          )}
-        </Box>
-        <Typography sx={{ ...typo.caption, color: ink.low, mt: 1.5 }}>
-          {t('admin.hotel.tariffNoMoney')}
-        </Typography>
+        <Help>{t(m.status === 'dev' ? 'admin.modules.devHelp' : 'admin.modules.toggleHelp')}</Help>
       </Box>
-    </Box>
+    );
+  const statePill = (m: ModuleEntry) => (
+    <Pill tone={MODULE_TONE[stateOf(m)]} testId={`admin-module-state-${m.code}`}>
+      {t(`admin.hotel.modules.state.${stateOf(m)}`)}
+    </Pill>
   );
-}
-
-/**
- * Какие модули отель ПОТЕРЯЕТ на выбранном тарифе — поимённо и до нажатия.
- *
- * Сравниваем включённое сейчас с тем, что даёт новый тариф. Ручное «включено
- * сверх тарифа» здесь тоже учитывается: именно оно гаснет громче всего, потому
- * что его включали осознанно.
- */
-function ModuleLoss({ hotelId, nextModules }: { hotelId: string; nextModules: string[] }) {
-  const { t, i18n } = useTranslation();
-  const modules = useQuery({
-    queryKey: ['admin', 'modules', hotelId],
-    queryFn: () => getModules(hotelId),
-  });
-  if (!modules.data) return null;
-
-  const granted = new Set(nextModules);
-  // Название модуля приезжает с сервера переведённым — второго словаря на
-  // клиенте заводить нечего, он разошёлся бы с первым.
-  const lost = modules.data.modules
-    .filter((entry) => entry.is_enabled && !granted.has(entry.code))
-    .map((entry) => entry.title[i18n.language] ?? entry.title.en ?? entry.code);
-  if (!lost.length) return null;
+  const connection = (m: ModuleEntry) => {
+    if (!m.needs) return null;
+    const st = stateOf(m);
+    const missing = st === 'broken';
+    return (
+      <Box
+        sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', ...typo.caption, color: missing ? state.bad : ink.mid }}
+        data-testid={`admin-module-connection-${m.code}`}
+        data-missing={missing ? 'true' : 'false'}
+      >
+        <Dot tone={missing ? 'bad' : st === 'works' ? 'ok' : 'muted'} />
+        {st === 'works' ? t('admin.hotel.modules.hasConnection', { what: needs(m) }) : t('admin.hotel.modules.needConnection', { what: needs(m) })}
+        <Help>{t('admin.hotel.modules.connectionHelp')}</Help>
+        {missing ? (
+          <Button size="small" sx={secondaryButtonSx} onClick={() => onTab('connections')} data-testid={`admin-module-connect-${m.code}`}>
+            {t('admin.hotel.modules.connect')}
+          </Button>
+        ) : null}
+      </Box>
+    );
+  };
 
   return (
-    <Typography
-      sx={{ ...typo.caption, color: state.warn, mt: 1.25 }}
-      data-testid="admin-tariff-module-loss"
-    >
-      {t('admin.hotel.downgradeModules', { modules: lost.join(', ') })}
-    </Typography>
+    <Box data-testid="admin-hotel-modules">
+      <FilterBar
+        placeholder={t('admin.modules.search')}
+        facets={[
+          {
+            key: 'mstate',
+            label: t('admin.modules.facet.state'),
+            options: (['works', 'broken', 'off', 'dev'] as ModuleState[]).map((k) => ({
+              value: k,
+              label: t(`admin.hotel.modules.state.${k}`),
+              tone: MODULE_TONE[k],
+              count: list.filter((m) => stateOf(m) === k).length,
+            })),
+          },
+        ]}
+        aside={
+          <ViewSwitch
+            label={t('admin.modules.view.label')}
+            value={view}
+            testIdPrefix="admin-hotel-modules-view"
+            onChange={(v) => {
+              const next = new URLSearchParams(params);
+              if (v === 'blocks') next.delete('view');
+              else next.set('view', v);
+              setParams(next, { replace: true });
+            }}
+            options={[
+              ['blocks', t('admin.modules.view.blocks'), <ViewModuleOutlinedIcon key="b" fontSize="small" />],
+              ['list', t('admin.modules.view.list'), <ViewListOutlinedIcon key="l" fontSize="small" />],
+            ]}
+          />
+        }
+      />
+      {!shown.length ? (
+        <Box sx={panelSx}>
+          <Empty title={t('admin.modules.emptyTitle')} testId="admin-hotel-modules-empty">
+            {t('admin.modules.emptyText')}
+          </Empty>
+        </Box>
+      ) : view === 'list' ? (
+        <Box sx={{ ...panelSx, p: 0 }}>
+          {shown.map((m, i) => (
+            <Box
+              key={m.code}
+              data-testid={`admin-module-${m.code}`}
+              data-status={m.status}
+              sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', px: 2, py: 1.25, borderTop: i ? `1px solid ${surface.hair}` : 'none' }}
+            >
+              <Box sx={{ flex: '1 1 220px', minWidth: 0 }}>
+                <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
+                  <Hl text={title(m.code)} q={q} />
+                </Box>
+                <Box sx={{ ...typo.caption, color: ink.mid }}>{gives(m.code)}</Box>
+                {m.status === 'dev' && m.is_enabled ? (
+                  <Box sx={{ ...typo.caption, color: state.warn }}>{t('admin.modules.wasOn')}</Box>
+                ) : null}
+                {stateOf(m) === 'broken' ? <Box sx={{ mt: 0.5 }}>{connection(m)}</Box> : null}
+              </Box>
+              {statePill(m)}
+              {toggle(m) ?? <Box sx={{ width: 40 }} />}
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Box sx={{ display: 'grid', gap: 2 }}>
+          {ready.length ? (
+            <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+              {ready.map((m) => (
+                <Box key={m.code} sx={panelSx} data-testid={`admin-module-${m.code}`} data-status={m.status}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography component="h3" sx={{ ...typo.panelTitle, color: ink.hi, flex: '1 1 auto' }}>
+                      <Hl text={title(m.code)} q={q} />
+                    </Typography>
+                    {statePill(m)}
+                    {toggle(m)}
+                  </Box>
+                  <Typography sx={{ ...typo.body, color: ink.mid, mt: 0.5, mb: 1 }}>{gives(m.code)}</Typography>
+                  {connection(m)}
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                    <Button size="small" sx={{ color: ink.mid }} onClick={() => aboutModule(m.code)} data-testid={`admin-module-about-${m.code}`}>
+                      {t('admin.hotel.modules.about')}
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          ) : null}
+          {dev.length ? (
+            <Panel
+              title={t('admin.hotel.modules.devPanel')}
+              aside={
+                <Box sx={{ ...typo.caption, color: ink.low, display: 'inline-flex', alignItems: 'center' }}>
+                  {t('admin.hotel.modules.devAside')}
+                  <Help>{t('admin.modules.devNote')}</Help>
+                </Box>
+              }
+            >
+              <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' } }}>
+                {dev.map((m) => (
+                  <Box
+                    key={m.code}
+                    data-testid={`admin-module-${m.code}`}
+                    data-status={m.status}
+                    sx={{ p: 1.25, borderRadius: `${shape.radius}px`, border: `1px dashed ${surface.line}`, opacity: m.is_enabled ? 1 : 0.85 }}
+                  >
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                      <Box sx={{ ...typo.body, fontWeight: 700, color: ink.hi }}>
+                        <Hl text={title(m.code)} q={q} />
+                      </Box>
+                      {statePill(m)}
+                    </Box>
+                    <Box sx={{ ...typo.caption, color: ink.mid, mt: 0.5 }}>{gives(m.code)}</Box>
+                    {m.is_enabled ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75, ...typo.caption, color: state.warn }}>
+                        <Box sx={{ flex: 1 }}>{t('admin.modules.wasOn')}</Box>
+                        {toggle(m)}
+                      </Box>
+                    ) : null}
+                  </Box>
+                ))}
+              </Box>
+            </Panel>
+          ) : null}
+        </Box>
+      )}
+    </Box>
   );
 }
 

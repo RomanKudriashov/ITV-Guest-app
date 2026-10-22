@@ -34,7 +34,7 @@ ADMIN_ACTIONS = ("platform.hotel.admin_set", "platform.hotel.admin_email_changed
 SECTIONS: dict[str, Q] = {
     "profile": Q(action__in=("platform.hotel.created",))
     | (Q(action="platform.hotel.updated") & ~Q(payload__changes__has_key="group")),
-    "modules": Q(action__in=("platform.hotel.modules_set", "platform.hotel.tariff_set")),
+    "modules": Q(action="platform.hotel.modules_set"),
     "connections": Q(action__in=NODE_ACTIONS),
     "group": Q(action="platform.hotel.updated", payload__changes__has_key="group"),
     "activation": Q(action__in=("platform.hotel.activated", "platform.hotel.deactivated")),
@@ -62,7 +62,7 @@ def _matches(key: str, action: str, payload: dict) -> bool:
     if key == "group":
         return action == "platform.hotel.updated" and has_group
     if key == "modules":
-        return action in ("platform.hotel.modules_set", "platform.hotel.tariff_set")
+        return action == "platform.hotel.modules_set"
     if key == "connections":
         return action in NODE_ACTIONS
     if key == "activation":
@@ -195,8 +195,6 @@ def changes_of(row: AuditLog) -> list[dict[str, Any]]:
             if isinstance(change, dict) and ("from" in change or "to" in change):
                 out.append({"field": field, "from": change.get("from"), "to": change.get("to")})
         return out
-    if row.action == "platform.hotel.tariff_set":
-        return [{"field": "tariff", "from": payload.get("from"), "to": payload.get("to") or payload.get("tariff")}]
     return []
 
 

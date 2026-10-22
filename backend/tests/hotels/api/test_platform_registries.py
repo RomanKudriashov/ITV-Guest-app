@@ -16,7 +16,6 @@ import pytest
 from apps.accounts.models import User
 from apps.core.context import platform_scope, tenant_context
 from apps.core.models import AuditLog
-from apps.hotels.services import tariffs
 from apps.hotels.models import Hotel, HotelModule, OnPremNode, Service
 from apps.hotels.services.provisioning import ensure_platform_admin, provision_hotel
 
@@ -95,6 +94,8 @@ def _fill(path: str, *, hotel, node, user_id):
         .replace("{user_id}", str(user_id or ""))
         .replace("{template_id}", "")
     )
+    if "/modules/" in filled:
+        filled = filled.replace("{code}", "marketing")
     return None if "{" in filled or filled.endswith("/") else filled
 
 
@@ -116,7 +117,7 @@ _BODIES = {
     "POST /hotels/{hotel_id}/purge": {"confirm_subdomain": "нарочно-неверный"},
     "POST /hotels/{hotel_id}/enter": {"reason": "проба границы"},
     "POST /hotels/{hotel_id}/nodes": {"name": "probe-node"},
-    "PUT /hotels/{hotel_id}/tariff": {"tariff": "standard"},
+    "PUT /hotels/{hotel_id}/modules/{code}": {"enabled": False},
     "PUT /dictionaries": {"kind": "probe", "code": "probe", "title": {"ru": "Проба"}},
     "POST /team": {"email": "probe@platform.test"},
     "POST /auth/2fa/enable": {"code": "000000"},
@@ -282,8 +283,7 @@ def test_module_toggle_changes_cms_navigation(api, client):
     keys_before = {item["key"] for group in before for item in group["items"]}
     assert "marketing" not in keys_before
 
-    resp = api("put", f"/hotels/{hotel.pk}/modules",
-               {"modules": [{"code": "marketing", "is_enabled": True}]})
+    resp = api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": True})
     assert resp.status_code == 200
 
     with tenant_context(hotel):
@@ -292,210 +292,10 @@ def test_module_toggle_changes_cms_navigation(api, client):
     assert "marketing" in keys_after
 
     # И обратно: выключение убирает раздел, а не оставляет его «на всякий случай».
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "marketing", "is_enabled": False}]})
+    api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": False})
     with tenant_context(hotel):
         again = build_navigation(hotel, access=access_for(admin))
     assert "marketing" not in {item["key"] for group in again for item in group["items"]}
-
-
-def test_module_source_is_decided_by_server_not_client(api):
-    """
-    Клиент не вправе объявить модуль «тарифным». Признак «выдано вне тарифа» —
-    ответ на вопрос о тарифной сетке, и знает его только сервер.
-    """
-    hotel = _hotel("override", "Пилот")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="standard")
-    hotel.refresh_from_db()
-
-    resp = api("put", f"/hotels/{hotel.pk}/modules",
-               {"modules": [{"code": "pms", "is_enabled": True, "source": "tariff"}]})
-    entry = next(m for m in resp.json()["modules"] if m["code"] == "pms")
-    # Standard не даёт PMS — значит это переопределение, что бы ни прислал клиент.
-    assert entry["source"] == "override"
-
-    # А модуль, который тариф даёт, переопределением не становится.
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="business")
-    resp = api("put", f"/hotels/{hotel.pk}/modules",
-               {"modules": [{"code": "marketing", "is_enabled": True, "source": "override"}]})
-    entry = next(m for m in resp.json()["modules"] if m["code"] == "marketing")
-    assert entry["source"] == "tariff"
-
-
-def test_modules_show_four_states_not_two(api):
-    """
-    «Выключили руками» и «тариф не даёт» — РАЗНЫЕ факты.
-
-    Раньше оба показывались одинаково: `source` вычислялся формулой «override,
-    если включено и тариф не даёт», и у выключенного модуля он всегда выходил
-    «по тарифу». Оператор смотрел на погашенный тумблер и не мог понять,
-    включать ли его обратно.
-    """
-    hotel = _hotel("fourstates", "Четыре")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="business")
-
-    # Business даёт marketing и room_control, не даёт pms.
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [
-        {"code": "marketing", "is_enabled": True},    # тариф даёт, включено
-        {"code": "pms", "is_enabled": True},          # тариф не даёт, включено руками
-        {"code": "room_control", "is_enabled": False},  # тариф даёт, погашено руками
-    ]})
-    modules = {m["code"]: m for m in api("get", f"/hotels/{hotel.pk}/modules").json()["modules"]}
-
-    assert (modules["marketing"]["is_enabled"], modules["marketing"]["in_tariff"]) == (True, True)
-    assert (modules["pms"]["is_enabled"], modules["pms"]["in_tariff"]) == (True, False)
-    assert (modules["room_control"]["is_enabled"], modules["room_control"]["in_tariff"]) == (False, True)
-    # Четвёртое: тариф не даёт и не включали.
-    assert (modules["native_app"]["is_enabled"], modules["native_app"]["in_tariff"]) == (False, False)
-
-    # Намерение записано, а не выведено обратно из включённости.
-    assert modules["room_control"]["intent"] == "off"
-    assert modules["pms"]["intent"] == "on"
-    assert modules["native_app"]["intent"] == ""
-
-
-def test_downgrade_actually_turns_off_what_it_promised(api):
-    """
-    УКУС. Предупреждение о даунгрейде обязано стать правдой.
-
-    До R6 `set_tariff` не трогал реестр вообще: он писал `hotel.tariff` и уходил.
-    Модули старого тарифа оставались включёнными и продолжали подписываться «по
-    тарифу», а список «тариф не даёт модули X» был словами — X работал дальше.
-    """
-    hotel = _hotel("downgrade", "Понижаем")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="resort")
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [
-        {"code": "pms", "is_enabled": True},
-        {"code": "mobile_key", "is_enabled": True},
-        {"code": "room_control", "is_enabled": True},
-    ]})
-
-    # Сначала отказ с поимённым списком — ДО того, как что-либо изменится.
-    blocked = api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "standard"}).json()
-    assert blocked["ok"] is False
-    promised = next(w for w in blocked["warnings"] if w["key"] == "modules")["modules"]
-    assert {"pms", "mobile_key", "room_control"} <= set(promised)
-    # Ничего ещё не погасло: отказ — это отказ.
-    assert enabled_codes(hotel) >= {"pms", "mobile_key", "room_control"}
-
-    done = api("put", f"/hotels/{hotel.pk}/tariff",
-               {"tariff": "standard", "acknowledge_downgrade": True}).json()
-    assert done["ok"] is True
-
-    # Обещанное действительно погасло — ровно то, что было перечислено.
-    still_on = enabled_codes(hotel)
-    assert not (set(promised) & still_on), f"обещали погасить {promised}, осталось {still_on}"
-    # И это записано в журнал поимённо: «почему пропал раздел» спрашивают позже.
-    assert set(done["modules_turned_off"]) == set(promised)
-
-
-def test_writing_the_same_tariff_does_not_burn_overrides(api):
-    """
-    ПРОДЛИТЬ — НЕ ЗНАЧИТ ПОНИЗИТЬ.
-
-    Пересчёт вешается на СМЕНУ тарифа, а не на всякую запись. Записать отелю
-    тот же тариф (продление, правка даты начала) — обычное действие с
-    безобидным названием, и гасить им модули, выданные сверх тарифа, значит
-    сделать «Сохранить» разрушительным. На этом первым подорвался общий стенд:
-    у демо-отеля ВСЕ модули выданы сверх тарифа.
-
-    Пустое поле и «standard» — один и тот же тариф, и разницы между ними тоже
-    быть не должно.
-    """
-    hotel = _hotel("sametariff", "Продление")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="")  # как у отеля из сида
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "pms", "is_enabled": True}]})
-    assert "pms" in enabled_codes(hotel)
-
-    # standard ≡ пустой тариф: это не смена.
-    done = api("put", f"/hotels/{hotel.pk}/tariff",
-               {"tariff": "standard", "acknowledge_downgrade": True}).json()
-    assert done["ok"] is True
-    assert done["modules_turned_off"] == []
-    assert "pms" in enabled_codes(hotel), "продление тарифа сожгло переопределение"
-
-    # А вот настоящая смена — гасит, и это по-прежнему так.
-    api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "business", "acknowledge_downgrade": True})
-    assert "pms" not in enabled_codes(hotel)
-
-
-def test_manual_off_survives_a_tariff_that_would_grant_it(api):
-    """
-    Обратная сторона: тариф не зажигает то, что человек погасил.
-
-    Иначе «выключить модуль отелю» означало бы «до ближайшей смены тарифа», и
-    решение платформы отменялось бы движением, к нему не относящимся.
-    """
-    hotel = _hotel("intentoff", "Намерение")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="standard")
-    api("put", f"/hotels/{hotel.pk}/modules",
-        {"modules": [{"code": "room_control", "is_enabled": False}]})
-
-    # Переезд на тариф, который room_control ДАЁТ.
-    api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "business", "acknowledge_downgrade": True})
-
-    assert "room_control" not in enabled_codes(hotel)
-    modules = {m["code"]: m for m in api("get", f"/hotels/{hotel.pk}/modules").json()["modules"]}
-    # На экране это отдельное состояние, а не «тариф не даёт».
-    assert modules["room_control"]["in_tariff"] is True
-    assert modules["room_control"]["intent"] == "off"
-
-    # Модули нового тарифа, которых никто не гасил, зажигаются сами.
-    assert "marketing" in enabled_codes(hotel)
-
-
-def enabled_codes(hotel) -> set[str]:
-    from apps.hotels.module_registry import enabled_module_codes
-
-    hotel.refresh_from_db()
-    return enabled_module_codes(hotel)
-
-
-# --- Тариф и лимиты --------------------------------------------------------
-
-
-def test_downgrade_below_usage_is_warned_not_silent(api):
-    hotel = _hotel("bigone", "Большой")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="business")
-    _add_service(hotel, "extra")
-
-    blocked = api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "standard"})
-    assert blocked.json()["ok"] is False
-    assert blocked.json()["code"] == "downgrade_blocked"
-    assert any(w["key"] == "services" for w in blocked.json()["warnings"])
-    assert Hotel.objects.get(pk=hotel.pk).tariff == "business"
-
-    # Но не запрещено намертво: платформа может решить и записать.
-    forced = api("put", f"/hotels/{hotel.pk}/tariff",
-                 {"tariff": "standard", "acknowledge_downgrade": True})
-    assert forced.json()["ok"] is True
-    assert Hotel.objects.get(pk=hotel.pk).tariff == "standard"
-
-
-def test_trial_gets_an_end_date_and_days_left(api):
-    hotel = _hotel("trialer", "Триальный")
-    resp = api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "trial"})
-    assert resp.json()["ok"] is True
-
-    hotel.refresh_from_db()
-    assert hotel.trial_ends_at is not None
-    left = tariffs.trial_days_left(hotel)
-    assert left is not None and 0 < left <= tariffs.get("trial").trial_days
-
-    usage = api("get", f"/hotels/{hotel.pk}/usage").json()
-    assert usage["is_trial"] is True and usage["trial_days_left"] == left
-
-
-def test_usage_reports_over_limit(api):
-    hotel = _hotel("overuse", "Переросший")
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="standard")
-    _add_service(hotel, "second")
-
-    rows = {row["key"]: row for row in api("get", f"/hotels/{hotel.pk}/usage").json()["rows"]}
-    assert rows["services"]["over"] is True
-    # «Без лимита» — это None, а не ноль: ноль означал бы «ничего нельзя».
-    Hotel.objects.filter(pk=hotel.pk).update(tariff="resort")
-    rows = {row["key"]: row for row in api("get", f"/hotels/{hotel.pk}/usage").json()["rows"]}
-    assert rows["services"]["limit"] is None and rows["services"]["over"] is False
 
 
 # --- Он-прем узлы ----------------------------------------------------------
@@ -652,30 +452,150 @@ def test_owner_passes_where_read_only_is_refused(client, api):
     assert not denied, "Рубеж запер владельца:\n" + "\n".join(denied)
 
 
-@pytest.mark.django_db(databases=["default", "platform"])
-def test_tariff_has_one_door(client, api):
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_node_key_is_shown_once_and_stored_hashed(api, client):
+    hotel = _hotel("nodehotel", "С узлом")
+    created = api("post", f"/hotels/{hotel.pk}/nodes", {"name": "connector", "purpose": "grms"})
+    assert created.status_code == 201
+    key = created.json()["key"]
+
+    with tenant_context(hotel):
+        node = OnPremNode.objects.get(name="connector")
+    # В базе — только хэш: утечка таблицы не должна давать доступ к оборудованию.
+    assert node.key_hash and key not in node.key_hash
+
+    beat = client.post(
+        "/api/v1/onprem/heartbeat",
+        data=json.dumps({"key": key, "version": "1.2.3"}),
+        content_type="application/json",
+        HTTP_HOST=BASE_HOST,
+    )
+    assert beat.status_code == 200 and beat.json()["hotel"] == "nodehotel"
+
+    with tenant_context(hotel):
+        node.refresh_from_db()
+    assert node.is_online and node.version == "1.2.3"
+
+
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_revoked_node_key_stops_working_but_row_remains(api, client):
+    hotel = _hotel("revoker", "Отзыв")
+    created = api("post", f"/hotels/{hotel.pk}/nodes", {"name": "box", "purpose": "pms"}).json()
+    key = created["key"]
+
+    api("post", f"/nodes/{created['node']['id']}/revoke")
+
+    beat = client.post(
+        "/api/v1/onprem/heartbeat",
+        data=json.dumps({"key": key}),
+        content_type="application/json",
+        HTTP_HOST=BASE_HOST,
+    )
+    assert beat.status_code == 401 and beat.json()["code"] == "node_key_rejected"
+
+    # Строку не удаляем: история «был узел и когда его отключили» ценнее чистоты.
+    with tenant_context(hotel):
+        assert OnPremNode.objects.filter(name="box", is_revoked=True).exists()
+
+
+def test_unknown_key_answers_the_same_as_revoked(client):
+    resp = client.post(
+        "/api/v1/onprem/heartbeat",
+        data=json.dumps({"key": "definitely-not-a-key"}),
+        content_type="application/json",
+        HTTP_HOST=BASE_HOST,
+    )
+    assert resp.status_code == 401 and resp.json()["code"] == "node_key_rejected"
+
+
+# --- Команда и роли --------------------------------------------------------
+
+
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_every_platform_route_refuses_read_only(client, api):
     """
-    Тариф меняется ТОЛЬКО через PUT /hotels/{id}/tariff.
+    ПЕРЕБОР ВСЕХ ручек, а не список из четырёх.
 
-    Две другие двери — профиль и реестр модулей — принимали то же поле без
-    всякой проверки: охрана стояла на одной двери, рядом было две дыры.
+    Прежняя версия перечисляла четыре адреса и была зелёной — потому что
+    проверяла ровно те, где проверка стояла. Шесть изменяющих ручек она не
+    трогала, и все шесть были открыты роли «только чтение»: переименование
+    отеля, тариф, гашение отеля гостям, создание отелей, выгрузка
+    персональных данных и сброс пароля администратора отеля (с выдачей
+    пароля в ответе).
+
+    Ручки берутся из карты маршрутов, поэтому новая приезжает в тест сама.
+    Проверяем ровно границу: read_only получает 403 на всём, что объявлено
+    правом `write` или `owner`, и НЕ получает 403 на том, что объявлено
+    `read` — иначе «закрыли всё» тоже прошло бы за успех.
     """
-    hotel = _hotel("onedoor", "Одна дверь")
-    assert hotel.tariff != "resort", "проба бессмысленна, если тариф уже целевой"
+    from apps.hotels.api.platform.rights import OWNER, READ, WRITE, declared_right
 
-    api("patch", f"/hotels/{hotel.pk}", {"tariff": "resort", "name": "Через профиль"})
-    api("put", f"/hotels/{hotel.pk}/modules", {"tariff": "resort", "modules": []})
+    hotel = _hotel("readonly", "Только чтение")
+    _enable_every_module(hotel)
+    node, _key = _node_for(hotel)
+    invited = api("post", "/team", {"email": "viewer@platform.test", "role": "read_only"}).json()
+    viewer = _login(client, "viewer@platform.test", invited["password"])
 
-    hotel.refresh_from_db()
-    assert hotel.tariff != "resort", "тариф проехал мимо своей двери"
-    # Имя при этом поменялось: PATCH не сломан, из него убрано одно поле.
-    # Имя — словарь переводов: строка из консоли ложится под язык отеля, не
-    # стирая остальные языки (партия 60).
-    assert hotel.name[hotel.default_language] == "Через профиль"
+    checked = {WRITE: 0, OWNER: 0, READ: 0}
+    wrong: list[str] = []
+    for methods, path, operation in _platform_operations():
+        right = declared_right(operation.view_func)
+        if right not in (READ, WRITE, OWNER):
+            continue  # публичный вход проверяется отдельно
+        for method in methods:
+            url = _fill(path, hotel=hotel, node=node, user_id=invited["member"]["id"])
+            if url is None:
+                continue
+            resp = _call(client, viewer, method, url, _body_for(method, path))
+            checked[right] += 1
+            forbidden = _is_rights_refusal(resp)
+            if right in (WRITE, OWNER) and not forbidden:
+                wrong.append(f"  {method} {path} — право {right}, а ответ {resp.status_code}")
+            if right == READ and forbidden:
+                wrong.append(f"  {method} {path} — право read, а наблюдателя не пустили")
 
-    api("put", f"/hotels/{hotel.pk}/tariff", {"tariff": "resort"})
-    hotel.refresh_from_db()
-    assert hotel.tariff == "resort", "своя дверь обязана работать"
+    assert checked[WRITE] >= 8, f"изменяющих ручек проверено всего {checked[WRITE]}"
+    assert checked[OWNER] >= 4, f"владельческих ручек проверено всего {checked[OWNER]}"
+    assert checked[READ] >= 8, f"читающих ручек проверено всего {checked[READ]}"
+    assert not wrong, "Граница прав не там, где объявлена:\n" + "\n".join(wrong)
+
+
+# Второе (платформенное) подключение читает записанное тестом — нужен коммит.
+@pytest.mark.django_db(transaction=True, databases=["default", "platform"])
+def test_owner_passes_where_read_only_is_refused(client, api):
+    """
+    Обратная сторона: рубеж не должен запереть и владельца.
+
+    Без этой проверки «закрыть всё наглухо» выглядело бы как успех предыдущего
+    теста.
+    """
+    from apps.hotels.api.platform.rights import OWNER, WRITE, declared_right
+
+    hotel = _hotel("ownerpass", "Владелец проходит")
+    _enable_every_module(hotel)
+    node, _key = _node_for(hotel)
+    owner = _login(client, EMAIL, PASSWORD)
+
+    denied: list[str] = []
+    for methods, path, operation in _platform_operations():
+        if declared_right(operation.view_func) not in (WRITE, OWNER):
+            continue
+        for method in methods:
+            # Разрушающее и необратимое владельцем НЕ дёргаем: тест про
+            # границу прав, а не про офбординг.
+            if any(word in path for word in ("purge", "offboard", "export")) or method == "DELETE":
+                continue
+            url = _fill(path, hotel=hotel, node=node, user_id=None)
+            if url is None:
+                continue
+            resp = _call(client, owner, method, url, _body_for(method, path))
+            if _is_rights_refusal(resp):
+                denied.append(f"  {method} {path} — владельцу отказали")
+
+    assert not denied, "Рубеж запер владельца:\n" + "\n".join(denied)
 
 
 # Второе (платформенное) подключение читает записанное тестом — нужен коммит.
@@ -797,7 +717,7 @@ def test_enter_needs_an_active_hotel_admin(api):
 @pytest.mark.django_db(transaction=True, databases=["default", "platform"])
 def test_audit_feed_shows_platform_actions_with_hotel_names(api):
     hotel = _hotel("audited", "Журнал")
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "pms", "is_enabled": True}]})
+    api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": True})
 
     feed = api("get", "/audit").json()["items"]  # выдача теперь оболочкой: items + total
     actions = {row["action"] for row in feed}

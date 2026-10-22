@@ -54,84 +54,37 @@ test.describe('Сводка и флот', () => {
     await expect(page.getByTestId(`admin-fleet-row-${DEMO}`)).toBeVisible({ timeout: 15_000 })
   })
 
-  test('карточка отеля показывает использование против лимитов', async ({ page, request }) => {
-    // Ставим тариф с малыми лимитами, чтобы превышение было настоящим, а не
-    // нарисованным: у демо-отеля шесть сервисов, у standard лимит один.
-    const token = await platformToken(request)
-    const fleet = await request
-      .get(`${API}/api/v1/platform/fleet?search=${DEMO}&origin=all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((r) => r.json())
-    const hotelId = fleet.items[0].id
-    // Тариф берём из КАРТОЧКИ: строка реестра его не несёт, и `items[0].tariff`
-    // молча дал бы undefined — то есть «восстановили» бы отель на чужой тариф.
-    const wasTariff: string =
-      (await request
-        .get(`${API}/api/v1/platform/hotels/${hotelId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((r) => r.json())).tariff || 'standard'
-    const downgrade = await request
-      .put(`${API}/api/v1/platform/hotels/${hotelId}/tariff`, {
-        data: { tariff: 'standard', acknowledge_downgrade: true },
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((r) => r.json())
-    /*
-      ПОНИЖЕНИЕ ТЕПЕРЬ С ЗУБАМИ. Раньше смена тарифа не трогала реестр модулей,
-      и этот тест мог понизить общий демо-отель и уйти. Теперь модули, которых
-      новый тариф не даёт, действительно гаснут — а у демо-отеля они ВСЕ выданы
-      сверх тарифа, и `standard` не даёт ни одного. Не вернув их, тест уносил с
-      собой «Управление номером» у гостя, и падал следующий по очереди файл.
-
-      Возвращаем по списку, который вернул сам сервер: гадать, что погасло, тест
-      не должен — тогда он разъедется с продуктом при первой правке сетки.
-    */
-    const turnedOff: string[] = downgrade.modules_turned_off ?? []
-
+  test('вкладка модулей отеля: заготовку не включить, старые ключи тарифа ведут сюда', async ({ page }) => {
+    // Тарифов нет (партия 62-E1): «Тариф и лимиты» ушли, на вкладке — только
+    // модули, по одному выключателю.
     await loginToAdmin(page)
     await page.getByTestId('admin-nav-fleet').click()
     await page.getByTestId('admin-fleet-search').fill(DEMO)
     await page.getByTestId(`admin-fleet-open-${DEMO}`).click()
     await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
 
-    // «Тариф и лимиты» живут на «Модулях» до партии E (62-B).
     await page.getByTestId('admin-hotel-tab-modules').click()
-    await expect(page.getByTestId('admin-hotel-usage')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('admin-usage-over-services')).toBeVisible()
+    await expect(page.getByTestId('admin-hotel-modules')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('admin-module-room_control')).toHaveAttribute('data-status', 'ready')
+    await expect(page.getByTestId('admin-module-toggle-room_control')).toBeVisible()
+    // Модуль в разработке — с пометкой и без выключателя.
+    await expect(page.getByTestId('admin-module-pms')).toHaveAttribute('data-status', 'dev')
+    await expect(page.getByTestId('admin-module-state-pms')).toHaveText('в разработке')
+    await expect(page.getByTestId('admin-module-toggle-pms')).toHaveCount(0)
+    await expect(page.getByTestId('admin-hotel-usage')).toHaveCount(0)
+    await expect(page.getByTestId('admin-tariff-select')).toHaveCount(0)
 
-    // Цифры и выбор тарифа теперь на одном экране — за этим слияние и делалось.
-    await expect(page.getByTestId('admin-tariff-select')).toBeVisible()
-
-    // Старый ключ не ломается: `?tab=usage` приводит на слитую вкладку, а не
-    // на пустой экран. Заодно проверяем, что адрес вообще несёт открытый отель
-    // — до этой правки F5 на карточке возвращал в список.
-    const withUsage = new URL(page.url())
-    withUsage.searchParams.set('tab', 'usage')
-    await page.goto(withUsage.toString())
-    await expect(page.getByTestId('admin-hotel')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('admin-hotel-usage')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('admin-tariff-select')).toBeVisible()
+    // Старый ключ не ломается: `?tab=usage` и `?tab=tariff` приводят к модулям.
+    for (const key of ['usage', 'tariff']) {
+      const old = new URL(page.url())
+      old.searchParams.set('tab', key)
+      await page.goto(old.toString())
+      await expect(page.getByTestId('admin-hotel-modules')).toBeVisible({ timeout: 15_000 })
+    }
 
     // Поддомен не редактируется — это ключ тенанта, напечатанный на QR.
     await page.getByTestId('admin-hotel-tab-profile').click()
     await expect(page.getByTestId('admin-hotel')).toContainText(DEMO)
-
-    // Возвращаем стенд в то состояние, в каком взяли: сперва тариф, затем
-    // погашенные модули. Порядок важен — включать модуль под тарифом, который
-    // его не даёт, значит заводить новое переопределение вместо прежнего.
-    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/tariff`, {
-      data: { tariff: wasTariff, acknowledge_downgrade: true },
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (turnedOff.length) {
-      const restored = await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {
-        data: { modules: turnedOff.map((code) => ({ code, is_enabled: true })) },
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      expect(restored.ok(), `возврат модулей -> ${restored.status()}`).toBeTruthy()
-    }
   })
 })
 
@@ -156,8 +109,8 @@ test.describe('Модули управляют CMS', () => {
     }
 
     // Приводим к известному состоянию: маркетинг выключен.
-    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {
-      data: { modules: [{ code: 'marketing', is_enabled: false }] },
+    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules/marketing`, {
+      data: { enabled: false },
       headers: { Authorization: `Bearer ${platform}` },
     })
     expect(await navKeys()).not.toContain('marketing')
@@ -170,10 +123,9 @@ test.describe('Модули управляют CMS', () => {
     await page.getByTestId('admin-hotel-tab-modules').click()
     await expect(page.getByTestId('admin-hotel-modules')).toBeVisible({ timeout: 15_000 })
     await page.getByTestId('admin-module-toggle-marketing').click()
-    // Состояние подписано у КАЖДОГО модуля, а не только у выданных сверх
-    // тарифа: «выключили руками» и «тариф не даёт» — разные факты.
+    // Тарифов нет (62-E1): состояние — «работает» или «выключен».
     const marketing = page.getByTestId('admin-module-state-marketing')
-    await expect(marketing).toHaveAttribute('data-state', /override|inTariff/, { timeout: 15_000 })
+    await expect(marketing).toHaveText('работает', { timeout: 15_000 })
 
     // И раздел появился в навигации отеля. Это и есть механизм: без модуля
     // отель не видит ни одного его экрана.
@@ -181,16 +133,16 @@ test.describe('Модули управляют CMS', () => {
       expect(await navKeys()).toContain('marketing')
     }).toPass({ timeout: 15_000 })
 
-    // Выключаем обратно — и это отдельное, ВИДИМОЕ состояние: погашенный
-    // тумблер больше не выглядит как «тариф этого не даёт».
+    // Выключаем обратно — и раздел уходит из навигации.
     await page.getByTestId('admin-module-toggle-marketing').click()
-    await expect(marketing).toHaveAttribute('data-state', /manualOff|notInTariff/, {
-      timeout: 15_000,
-    })
+    await expect(marketing).toHaveText('выключен', { timeout: 15_000 })
+    await expect(async () => {
+      expect(await navKeys()).not.toContain('marketing')
+    }).toPass({ timeout: 15_000 })
 
     // Возвращаем как было — стенд общий.
-    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {
-      data: { modules: [{ code: 'marketing', is_enabled: false }] },
+    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules/marketing`, {
+      data: { enabled: false },
       headers: { Authorization: `Bearer ${platform}` },
     })
   })
@@ -249,12 +201,12 @@ test.describe('Вход в отель', () => {
 })
 
 test.describe('Реестры платформы', () => {
-  test('модули и тарифы, узлы, команда и шаблоны открываются с данными', async ({ page }) => {
+  test('модули, узлы, команда и шаблоны открываются с данными', async ({ page }) => {
     await loginToAdmin(page)
 
     await page.getByTestId('admin-nav-modules').click()
     await expect(page.getByTestId('admin-modules')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('admin-tariff-row-business')).toBeVisible()
+    await expect(page.getByTestId('admin-modules-item-room_control')).toBeVisible()
 
     // «On-premise» ушёл в карточку отеля; старый адрес ведёт в «Отели» с
     // фильтром «не на связи» (партия 62-B).

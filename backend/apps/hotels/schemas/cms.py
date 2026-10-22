@@ -389,20 +389,16 @@ class DashboardScopeOut(Schema):
 class DashboardAttentionOut(Schema):
     """
     Карточка «требует внимания». Форма зависит от кода: у `node_offline` есть
-    `minutes`, у `tariff_over` — `resource`/`used`/`limit`, у `no_escalation` —
-    `names`. Необязательные поля именно поэтому, а не «на всякий случай».
+    `minutes`, у `no_escalation` — `names`. Необязательные поля именно поэтому, а не «на всякий случай».
     """
 
     code: str
     severity: str
-    # Нет адреса — чинить негде у отеля (тариф меняет платформа): кнопку
-    # «Перейти» экран не рисует, а не ведёт туда, где нужного нет (партия 55).
+    # Нет адреса — чинить негде у отеля: кнопку «Перейти» экран не рисует, а
+    # не ведёт туда, где нужного нет (партия 55).
     route: str | None = None
     count: int | None = None
     minutes: int | None = None
-    resource: str | None = None
-    used: int | None = None
-    limit: int | None = None
     names: list[str] | None = None
     # У `reviews_awaiting`: сколько из ждущих ответа — с низкой оценкой.
     low: int | None = None

@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActionFailed } from '@/hooks/useActionFailed';
 
-import { accent, ink, panelSx, pillSx, primaryButtonSx, surface, typo } from '../adminTokens';
+import { accent, ink, panelSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { DictionaryDivergence } from './DictionaryDivergence';
 import { FilterBar, type Facet } from './hotels/hotelsUi';
 import { useRights } from '../useRights';
@@ -36,8 +36,7 @@ type Tab = (typeof TABS)[number];
  *
  * Оба реестра лежат в базе, а не в коде, по одной причине: они меняются не по
  * нашему релизному календарю. Шаблон подкручивают, глядя на живые отели;
- * список обязательных аллергенов диктует закон. Тариф, наоборот, остался
- * кодом — он связан с деньгами и обязан проходить ревью.
+ * список обязательных аллергенов диктует закон.
  */
 export function TemplatesPage() {
   const { t } = useTranslation();
@@ -124,13 +123,6 @@ function TemplatesTab() {
               <Typography sx={{ ...typo.caption, color: ink.mid, mt: 0.4 }}>
                 {template.description[i18n.language] ?? template.description.en ?? ''}
               </Typography>
-            </Box>
-            <Box
-              sx={{
-                ...pillSx(template.is_active ? 'ok' : 'muted'),
-              }}
-            >
-              {template.tariff || '—'}
             </Box>
             {/* Невидимое поле переключателя MUI втрое шире ползунка и торчало
                 за панель почти до края окна: замер видел отступ 3 px вместо 24.

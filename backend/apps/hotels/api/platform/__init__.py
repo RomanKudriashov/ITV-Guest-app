@@ -13,6 +13,7 @@ from ninja import Router
 
 from .auth import router as auth_router
 from .card import router as card_router
+from .modules import router as modules_router
 from .fleet import router as fleet_router
 from .groups import router as groups_router
 from .publications import router as publications_router
@@ -20,7 +21,6 @@ from .reference import router as reference_router
 from .hotels import router as hotels_router
 from .nodes import router as nodes_router
 from .overview import router as overview_router
-from .tariffs import router as tariffs_router
 from .team import router as team_router
 from .templates import router as templates_router
 
@@ -38,9 +38,9 @@ router.add_router("", groups_router)
 router.add_router("", publications_router)
 router.add_router("", hotels_router)
 router.add_router("", templates_router)
-router.add_router("", tariffs_router)
 router.add_router("", nodes_router)
 router.add_router("", card_router)
+router.add_router("", modules_router)
 router.add_router("", team_router)
 
 __all__ = ["router"]

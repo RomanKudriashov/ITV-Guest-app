@@ -81,7 +81,7 @@ def test_seed_fills_empty_registries_once(api):
     assert next(e for e in again if e["id"] == first[0]["id"])["is_active"] is False
 
 
-def test_hotel_created_from_template_gets_services_and_tariff(api):
+def test_hotel_created_from_template_gets_services_and_modules(api):
     api("get", "/templates")  # засеять реестр
     resp = api("post", "/hotels", {
         "subdomain": "fromtpl", "name": "Из шаблона",
@@ -93,7 +93,10 @@ def test_hotel_created_from_template_gets_services_and_tariff(api):
     assert len(body["services"]) == 6
 
     hotel = Hotel.objects.get(subdomain="fromtpl")
-    assert hotel.tariff == "resort"
+    # Тарифов нет (62-E1): шаблон даёт модули — и только готовые.
+    from apps.hotels.module_registry import enabled_module_codes
+
+    assert enabled_module_codes(hotel) == {"marketing", "room_control"}
     with tenant_context(hotel):
         types = set(Service.objects.values_list("type", flat=True))
     assert {"spa", "pool", "excursions"} <= types
@@ -113,7 +116,7 @@ def test_editing_a_template_does_not_touch_hotels_already_created(api):
         e for e in api("get", "/templates").json()["items"] if e["code"] == "restaurant_hotel"
     )
     api("patch", f"/templates/{template['id']}", {
-        "services": [{"type": "spa", "name": {"ru": "СПА"}}], "tariff": "resort",
+        "services": [{"type": "spa", "name": {"ru": "СПА"}}], "modules": ["marketing", "room_control"],
     })
 
     # Шаблон изменился, отель — нет. Иначе платформа могла бы молча переписать
@@ -121,7 +124,9 @@ def test_editing_a_template_does_not_touch_hotels_already_created(api):
     with tenant_context(hotel):
         after = set(Service.objects.values_list("code", flat=True))
     assert after == before
-    assert Hotel.objects.get(subdomain="early").tariff == "business"
+    from apps.hotels.module_registry import enabled_module_codes
+
+    assert enabled_module_codes(hotel) == {"marketing"}
 
 
 def test_blank_template_creates_no_services(api):

@@ -25,28 +25,18 @@ pytestmark = pytest.mark.django_db(databases=["default", "platform"])
 # --- 1. Порча данных ----------------------------------------------------------
 
 
-def test_one_module_toggle_leaves_other_intents_alone(owner, crystal):  # noqa: F811
-    """
-    Один щелчок — одно намерение. Консоль раньше слала весь реестр, и каждый
-    выключенный модуль получал `off`; теперь шлёт только переключённый
-    (это проверяет e2e `batch60-honesty`), а сервер с одним модулем в запросе
-    не трогает остальные.
-    """
-    with tenant_context(crystal):
-        HotelModule.objects.update(intent="")
-    body = owner("put", f"/hotels/{crystal.pk}/modules", {"modules": [{"code": "pms", "is_enabled": True}]}).json()
-    intents = {m["code"]: m["intent"] for m in body["modules"]}
-    assert intents["pms"] == "on"
-    assert {code for code, intent in intents.items() if intent} == {"pms"}
+# «Один щелчок — один модуль» после 62-E1 держит одиночный PUT
+# (`test_modules_62e1.test_bite_one_switch_touches_exactly_one_module_and_journals_it`).
 
 
 def test_module_toggle_does_not_roll_back_demo_entry(owner, crystal):  # noqa: F811
     """Демо-вход включён в CMS после загрузки консоли — щелчок в консоли его не гасит."""
     from apps.grms.services.access import set_demo_entry
 
-    owner("put", f"/hotels/{crystal.pk}/modules", {"modules": [{"code": "room_control", "is_enabled": True}]})
+    owner("put", f"/hotels/{crystal.pk}/modules/room_control", {"enabled": True})
     set_demo_entry(crystal, True)
-    owner("put", f"/hotels/{crystal.pk}/modules", {"modules": [{"code": "pms", "is_enabled": True}]})
+    owner("put", f"/hotels/{crystal.pk}/modules/marketing", {"enabled": True})
+    owner("put", f"/hotels/{crystal.pk}/modules/room_control", {"enabled": True})
     with tenant_context(crystal):
         module = HotelModule.objects.get(code="room_control")
     assert module.config.get("guest_entry_demo") is True
@@ -60,7 +50,7 @@ def test_mass_off_migration_resets_only_the_batch_outside_the_tariff(crystal):
     from django.apps import apps as django_apps
     from django.db import connection
 
-    from apps.hotels.services import tariffs
+    from apps.hotels.migrations import _tariffs_frozen as tariffs
 
     crystal.tariff = "business"
     crystal.save(update_fields=["tariff"])

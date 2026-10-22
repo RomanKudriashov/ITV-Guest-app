@@ -9,21 +9,16 @@ export interface DashboardAttention {
     | 'no_escalation'
     | 'stop_list'
     | 'reviews_awaiting'
-    | 'node_offline'
-    | 'tariff_over';
+    | 'node_offline';
   severity: 'error' | 'warning';
   /**
    * Куда идти чинить. Считает сервер: экран не выдумывает адресов. `null` —
-   * чинить негде у отеля (тариф), кнопки перехода нет (партия 55).
+   * чинить негде у отеля, кнопки перехода нет (партия 55).
    */
   route: string | null;
   count?: number;
   /** Только у `node_offline`. */
   minutes?: number;
-  /** Только у `tariff_over`. */
-  resource?: string;
-  used?: number;
-  limit?: number;
   /** Только у `no_escalation`: чьи именно заведения. */
   names?: string[];
   /** Только у `reviews_awaiting`: сколько из ждущих — с низкой оценкой. */

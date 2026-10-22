@@ -25,12 +25,12 @@ SERVICE_TYPE_LABELS = {
 
 MODULE_LABELS = {
     "room_control":     {"ru": "Управление номером", "en": "Room control", "ar": "التحكم بالغرفة", "zh": "房间控制"},
-    "payment":          {"ru": "Оплата", "en": "Payment", "ar": "الدفع", "zh": "支付"},
-    "pms":              {"ru": "PMS", "en": "PMS", "ar": "PMS", "zh": "PMS"},
+    "payment":          {"ru": "Оплата", "en": "Payments", "ar": "الدفع", "zh": "支付"},
+    "pms":              {"ru": "Система управления отелем", "en": "Hotel management system", "ar": "نظام إدارة الفندق", "zh": "酒店管理系统"},
     "mobile_key":       {"ru": "Мобильный ключ", "en": "Mobile key", "ar": "المفتاح الرقمي", "zh": "移动钥匙"},
-    "multi_restaurant": {"ru": "Мультиресторанность", "en": "Multi-restaurant", "ar": "مطاعم متعددة", "zh": "多餐厅"},
+    "multi_restaurant": {"ru": "Несколько заведений", "en": "Several venues", "ar": "عدة منافذ", "zh": "多个餐饮场所"},
     "marketing":        {"ru": "Маркетинг", "en": "Marketing", "ar": "التسويق", "zh": "营销"},
-    "extra_languages":  {"ru": "Доп. языки", "en": "Extra languages", "ar": "لغات إضافية", "zh": "更多语言"},
-    "native_app":       {"ru": "Нативное приложение", "en": "Native app", "ar": "تطبيق أصلي", "zh": "原生应用"},
-    "analytics_level":  {"ru": "Уровень аналитики", "en": "Analytics level", "ar": "مستوى التحليلات", "zh": "分析级别"},
+    "extra_languages":  {"ru": "Дополнительные языки", "en": "Extra languages", "ar": "لغات إضافية", "zh": "更多语言"},
+    "native_app":       {"ru": "Приложение отеля", "en": "Hotel app", "ar": "تطبيق الفندق", "zh": "酒店应用"},
+    "analytics_level":  {"ru": "Расширенная аналитика", "en": "Advanced analytics", "ar": "تحليلات متقدمة", "zh": "高级分析"},
 }

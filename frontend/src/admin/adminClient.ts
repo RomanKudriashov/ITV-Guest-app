@@ -179,7 +179,6 @@ export interface HotelProfile extends HotelBrief {
   currency_minor_units: number;
   default_language: string;
   languages: HotelLanguageBrief[];
-  tariff?: string;
   offboarding?: OffboardState | null;
   /** Переводы названия и города целиком (партия 62-C). */
   name_i18n?: Record<string, string>;
@@ -416,23 +415,13 @@ export interface SchedulerKindCounts {
   overdue: number;
 }
 
-export interface TariffBrief {
-  code: string;
-  title: Record<string, string>;
-  modules: string[];
-  limits: { services: number | null; rooms: number | null; staff: number | null };
-  is_trial: boolean;
-  hotels: number;
-}
-
 export interface PlatformOverview {
-  hotels: { total: number; active: number; trial: number; disabled: number };
+  hotels: { total: number; active: number; disabled: number };
   orders_today: number;
   gross_today: { currency: string; minor: number }[];
   live_sessions: number;
   growth: { month: string; hotels: number }[];
   health: OverviewHealth[];
-  tariffs: TariffBrief[];
 }
 
 export const getOverview = () => request<PlatformOverview>('/overview');
@@ -445,10 +434,7 @@ export interface FleetRow {
   subdomain: string;
   is_active: boolean;
   origin: 'live' | 'demo' | 'test';
-  status: 'active' | 'trial' | 'disabled';
-  tariff: string;
-  tariff_title: Record<string, string>;
-  trial_days_left: number | null;
+  status: 'active' | 'disabled';
   created_at: string;
   counts: { rooms: number; staff: number; items: number; services: number; orders_7d: number };
   node_offline: boolean;
@@ -456,8 +442,7 @@ export interface FleetRow {
 
 export interface FleetQuery {
   search?: string;
-  status?: '' | 'active' | 'trial' | 'disabled';
-  tariff?: string;
+  status?: '' | 'active' | 'disabled';
   origin?: 'live' | 'demo' | 'test' | 'all';
   sort?: string;
   page?: number;
@@ -472,7 +457,7 @@ export interface FleetPage {
   page: number;
   page_size: number;
   pages: number;
-  facets: { all: number; active: number; trial: number; disabled: number };
+  facets: { all: number; active: number; disabled: number };
 }
 
 function fleetQuery(query: FleetQuery): string {
@@ -686,24 +671,6 @@ export async function downloadFleetCsv(query: FleetQuery): Promise<void> {
 
 /* ── Карточка отеля ─────────────────────────────────────────────────────── */
 
-export interface UsageRow {
-  key: 'services' | 'rooms' | 'staff';
-  used: number;
-  limit: number | null;
-  ratio: number | null;
-  over: boolean;
-}
-
-export interface HotelUsage {
-  tariff: string;
-  tariff_title: Record<string, string>;
-  is_trial: boolean;
-  trial_ends_at: string | null;
-  trial_days_left: number | null;
-  tariff_started_on: string | null;
-  rows: UsageRow[];
-}
-
 export interface ActivityRow {
   id: string;
   at: string;
@@ -715,57 +682,81 @@ export interface ActivityRow {
   payload: Record<string, unknown>;
 }
 
-export interface ModuleEntry {
+/* ── Модули (партия 62-E1: без тарифов) ────────────────────────────────── */
+
+/** `ready` — модуль работает; `dev` — в разработке, включить нельзя. */
+export type ModuleStatus = 'ready' | 'dev';
+/** Без какого подключения модуль не работает; '' — подключение не нужно. */
+export type ModuleNeeds = '' | 'grms' | 'pms' | 'locks' | 'payments';
+
+/** Модуль вне отеля — из реестра сервера, единственного места правды. */
+export interface ModuleInfo {
   code: string;
   title: Record<string, string>;
+  status: ModuleStatus;
+  needs: ModuleNeeds;
+  config_defaults: Record<string, unknown>;
+}
+
+export interface ModuleEntry extends ModuleInfo {
   is_enabled: boolean;
-  /** Решение человека: '' — не трогали, модуль следует за тарифом. */
-  intent: '' | 'on' | 'off';
-  /** Даёт ли нынешний тариф этот модуль. */
-  in_tariff: boolean;
-  /** Вычисляемая пометка «включено сверх тарифа». Следствие двух полей выше. */
-  source: 'tariff' | 'override';
   config: Record<string, unknown>;
 }
 
-export interface DowngradeWarning {
-  key: string;
-  used?: number;
-  limit?: number;
-  modules?: string[];
+export interface ModuleCatalogItem extends ModuleInfo {
+  enabled_hotels: number;
 }
 
-export const getUsage = (id: string) => request<HotelUsage>(`/hotels/${id}/usage`);
+export interface ModuleCardHotel {
+  id: string;
+  name: string;
+  subdomain: string;
+  is_active: boolean;
+  enabled: boolean;
+}
+
+export interface ModuleJournalRow {
+  id: string;
+  at: string;
+  hotel: string;
+  subdomain: string;
+  from: boolean | null;
+  to: boolean | null;
+  /** `in_development` — выключен переходом на модули без тарифов. */
+  reason: string;
+  actor: JournalActor;
+}
+
+export interface ModuleCard extends ModuleInfo {
+  counts: { on: number; off: number };
+  hotels: { items: ModuleCardHotel[]; total: number; next_cursor: string | null };
+  journal: ModuleJournalRow[];
+}
+
 export const getActivity = (id: string) => request<ActivityRow[]>(`/hotels/${id}/activity`);
-export const getModules = (id: string) =>
-  request<{ tariff: string; modules: ModuleEntry[] }>(`/hotels/${id}/modules`);
-// Тариф этой ручкой НЕ передаётся: у него одна дверь — `setTariff` ниже,
-// запертая на владельца. Параметр здесь был, вызывающих не имел, но держал
-// лазейку открытой на сервере.
-// Только то, что человек переключил, и без `config` (партия 60): весь реестр
-// с прочитанной когда-то конфигурацией затирал намерения остальных модулей и
-// демо-вход, включённый в CMS после загрузки экрана.
-export const putModules = (id: string, modules: Pick<ModuleEntry, 'code' | 'is_enabled'>[]) =>
-  request<{ tariff: string; modules: ModuleEntry[] }>(`/hotels/${id}/modules`, 'PUT', {
-    modules: modules.map((m) => ({ code: m.code, is_enabled: m.is_enabled })),
+export const getModules = (id: string) => request<{ modules: ModuleEntry[] }>(`/hotels/${id}/modules`);
+/**
+ * Один модуль одного отеля. Других модулей запрос не касается: прежний «весь
+ * список разом» ставил остальным «выключено вручную». Модуль в разработке
+ * включить нельзя — 409 `module_in_development`.
+ */
+export const putModule = (id: string, code: string, enabled: boolean) =>
+  request<{ modules: ModuleEntry[] }>(`/hotels/${id}/modules/${code}`, 'PUT', { enabled });
+
+export const getModulesCatalog = () => request<{ hotels: number; items: ModuleCatalogItem[] }>('/modules');
+export const getModuleCard = (
+  code: string,
+  query: { state?: string; search?: string; cursor?: string; limit?: number } = {},
+) => {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') params.set(key, String(value));
   });
-export const setTariff = (
-  id: string,
-  body: { tariff: string; trial_ends_at?: string | null; acknowledge_downgrade?: boolean },
-) =>
-  request<{ ok: boolean; warnings: DowngradeWarning[]; code?: string }>(`/hotels/${id}/tariff`, 'PUT', body);
+  const qs = params.toString();
+  return request<ModuleCard>(`/modules/${code}${qs ? `?${qs}` : ''}`);
+};
 
 /* ── Тарифы, узлы, команда, аудит, вход в отель ─────────────────────────── */
-
-export interface TariffRow {
-  code: string;
-  title: Record<string, string>;
-  modules: string[];
-  limits: { services: number | null; rooms: number | null; staff: number | null };
-  is_trial: boolean;
-  trial_days: number;
-  hotels: number;
-}
 
 export interface NodeRow {
   id: string;
@@ -889,7 +880,6 @@ export const getHotelAdmins = (id: string) =>
 export const removeHotelAdmin = (hotelId: string, userId: string) =>
   request<{ ok: boolean }>(`/hotels/${hotelId}/admins/${userId}`, 'DELETE');
 
-export const getTariffs = () => request<TariffRow[]>('/tariffs');
 export const getNodes = (limit = 100) => request<Page<NodeRow>>(`/nodes?limit=${limit}`);
 /**
  * Убрать отель из реестра целиком.
@@ -1078,7 +1068,6 @@ export interface OnboardingTemplate {
   code: string;
   title: Record<string, string>;
   description: Record<string, string>;
-  tariff: string;
   services: { type: string; name: Record<string, string> }[];
   modules: string[];
   languages: string[];
@@ -1143,61 +1132,6 @@ export interface DivergenceReport {
   diverged_hotels: number;
   total_hotels: number;
 }
-
-/* ── Публикация ────────────────────────────────────────────────────────── */
-
-export interface PublicationResultRow {
-  hotel_id: string;
-  subdomain: string;
-  name: string;
-  outcome: 'applied' | 'skipped' | 'refused' | 'failed';
-  detail: string;
-  /** Причина кодом: `same`, `local_edit`, `unknown_origin`, `exception`. */
-  reason: string;
-}
-
-export interface PublicationJob {
-  id: string;
-  kind: string;
-  description: string;
-  scope: 'hotels' | 'group' | 'all';
-  group: string;
-  actor: string;
-  status: 'pending' | 'running' | 'done' | 'failed';
-  planned: number;
-  error: string;
-  created_at: string;
-  finished_at: string | null;
-  counts: Record<string, number>;
-  /** Сколько ещё не отчиталось: запланировано минус записанное. */
-  pending: number;
-  results?: PublicationResultRow[];
-}
-
-export interface PublicationTarget {
-  kind: string;
-  payload: Record<string, unknown>;
-  scope: 'hotels' | 'group' | 'all';
-  group_id?: string | null;
-  hotel_ids?: string[];
-}
-
-export interface PublicationPreview {
-  kind: string;
-  description: string;
-  count: number;
-  sample: string[];
-}
-
-export const previewPublication = (body: PublicationTarget) =>
-  request<PublicationPreview>('/publications/preview', 'POST', body);
-
-export const startPublication = (body: PublicationTarget) =>
-  request<PublicationJob>('/publications', 'POST', body);
-
-export const getPublications = () => request<{ items: PublicationJob[] }>('/publications');
-
-export const getPublication = (id: string) => request<PublicationJob>(`/publications/${id}`);
 
 export const getDictionaryDivergence = () =>
   request<DivergenceReport>('/dictionaries/divergence');

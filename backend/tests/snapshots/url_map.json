@@ -783,7 +783,9 @@
     "GET"
   ],
   "/api/v1/platform/hotels/{hotel_id}/modules": [
-    "GET",
+    "GET"
+  ],
+  "/api/v1/platform/hotels/{hotel_id}/modules/{code}": [
     "PUT"
   ],
   "/api/v1/platform/hotels/{hotel_id}/nodes": [
@@ -808,17 +810,17 @@
   "/api/v1/platform/hotels/{hotel_id}/rooms": [
     "GET"
   ],
-  "/api/v1/platform/hotels/{hotel_id}/tariff": [
-    "PUT"
-  ],
-  "/api/v1/platform/hotels/{hotel_id}/usage": [
-    "GET"
-  ],
   "/api/v1/platform/impersonations": [
     "GET"
   ],
   "/api/v1/platform/impersonations/{grant_id}/revoke": [
     "POST"
+  ],
+  "/api/v1/platform/modules": [
+    "GET"
+  ],
+  "/api/v1/platform/modules/{code}": [
+    "GET"
   ],
   "/api/v1/platform/nodes": [
     "GET"
@@ -852,9 +854,6 @@
     "GET"
   ],
   "/api/v1/platform/scheduler": [
-    "GET"
-  ],
-  "/api/v1/platform/tariffs": [
     "GET"
   ],
   "/api/v1/platform/team": [

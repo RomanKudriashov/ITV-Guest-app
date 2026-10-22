@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from datetime import date, timedelta
 
 from django.db.models import Count, Q, Sum
@@ -23,13 +22,11 @@ from django.utils import timezone
 from apps.accounts.models import GuestSession
 from apps.analytics.models import OrderDaily
 from apps.core.context import platform_scope
-from apps.hotels.services import tariffs
 from apps.hotels.models import Hotel
 from apps.media.models import MediaAsset
 
 # Насколько заранее предупреждать об истечении триала. Две недели — весь срок
 # триала; за меньшее платформа не успевает поговорить с отелем.
-TRIAL_WARNING_DAYS = 7
 GROWTH_MONTHS = 10
 
 
@@ -38,16 +35,14 @@ def _month_key(moment: date) -> str:
 
 
 def _hotel_states(hotels: list[Hotel], today: date) -> dict[str, int]:
-    """Разложение флота по состояниям. Триал — не статус, а тариф со сроком."""
-    active = trial = disabled = 0
+    """Разложение флота по состояниям. Тарифов и триала нет (партия 62-E1)."""
+    active = disabled = 0
     for hotel in hotels:
         if not hotel.is_active:
             disabled += 1
-        elif tariffs.get(hotel.tariff).is_trial:
-            trial += 1
         else:
             active += 1
-    return {"total": len(hotels), "active": active, "trial": trial, "disabled": disabled}
+    return {"total": len(hotels), "active": active, "disabled": disabled}
 
 
 def _growth(hotels: list[Hotel], today: date) -> list[dict]:
@@ -230,22 +225,6 @@ def _health(hotels: list[Hotel], today: date, hotel_ids=None) -> list[dict]:
 
     signals.append(_bot_signal())
 
-    expiring = [
-        {"hotel": hotel.name_i18n, "subdomain": hotel.subdomain, "days": tariffs.trial_days_left(hotel, today)}
-        for hotel in hotels
-        if (tariffs.trial_days_left(hotel, today) or 99) <= TRIAL_WARNING_DAYS
-    ]
-    for entry in expiring:
-        signals.append(
-            {
-                "level": "warn" if (entry["days"] or 0) >= 0 else "bad",
-                "code": "trial_expiring" if (entry["days"] or 0) >= 0 else "trial_expired",
-                "hotel": entry["hotel"],
-                "subdomain": entry["subdomain"],
-                "days": entry["days"],
-            }
-        )
-
     from apps.hotels.models import OnPremNode
 
     with platform_scope():
@@ -286,15 +265,4 @@ def build_overview(user=None) -> dict:
         "live_sessions": _live_sessions(hotel_ids),
         "growth": _growth(hotels, today),
         "health": _health(hotels, today, hotel_ids),
-        "tariffs": [
-            {
-                "code": tariff.code,
-                "title": tariff.title,
-                "modules": list(tariff.modules),
-                "limits": asdict(tariff.limits),
-                "is_trial": tariff.is_trial,
-                "hotels": sum(1 for hotel in hotels if tariffs.get(hotel.tariff).code == tariff.code),
-            }
-            for tariff in tariffs.TARIFFS.values()
-        ],
     }

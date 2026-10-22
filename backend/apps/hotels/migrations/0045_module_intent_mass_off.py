@@ -31,7 +31,7 @@ WINDOW = timedelta(seconds=1)
 
 
 def forwards(apps, schema_editor):
-    from apps.hotels.services import tariffs
+    from apps.hotels.migrations import _tariffs_frozen as tariffs
 
     db = schema_editor.connection.alias
     Hotel = apps.get_model("hotels", "Hotel")

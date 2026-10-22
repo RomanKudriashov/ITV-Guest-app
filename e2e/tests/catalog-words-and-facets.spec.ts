@@ -271,9 +271,9 @@ async function withMarketing(request: APIRequestContext): Promise<() => Promise<
   const modules = await (await request.get(`${API}/api/v1/platform/hotels/${hotelId}/modules`, { headers })).json()
   const was = (modules.modules as { code: string; is_enabled: boolean }[]).find((m) => m.code === 'marketing')!.is_enabled
   const set = (enabled: boolean) =>
-    request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, {
+    request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules/marketing`, {
       headers,
-      data: { modules: [{ code: 'marketing', is_enabled: enabled }] },
+      data: { enabled },
     })
   if (!was) await set(true)
   return async () => {

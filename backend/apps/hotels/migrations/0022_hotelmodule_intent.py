@@ -28,7 +28,7 @@ def backfill(apps, schema_editor):
     HotelModule = apps.get_model("hotels", "HotelModule")
     Hotel = apps.get_model("hotels", "Hotel")
 
-    from apps.hotels.services import tariffs
+    from apps.hotels.migrations import _tariffs_frozen as tariffs
 
     grants = {
         hotel.pk: set(tariffs.modules_for(hotel.tariff)) for hotel in Hotel.objects.using(db).all()
@@ -47,7 +47,7 @@ def restore_source(apps, schema_editor):
     HotelModule = apps.get_model("hotels", "HotelModule")
     Hotel = apps.get_model("hotels", "Hotel")
 
-    from apps.hotels.services import tariffs
+    from apps.hotels.migrations import _tariffs_frozen as tariffs
 
     grants = {
         hotel.pk: set(tariffs.modules_for(hotel.tariff)) for hotel in Hotel.objects.using(db).all()

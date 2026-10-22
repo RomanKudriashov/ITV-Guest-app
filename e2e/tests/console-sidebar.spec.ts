@@ -18,7 +18,7 @@ const ROOT = 'http://localhost:5183'
  *
  * Вторая половина той же поломки: пункты были `<button>` без `href`. Адрес
  * раздела при этом рабочий (`/admin?section=team` в чистой вкладке открывает
- * «Пользователей») — то есть ссылка существовала, а открыть её в новой вкладке
+ * «Команду») — то есть ссылка существовала, а открыть её в новой вкладке
  * было нечем.
  */
 
@@ -38,7 +38,7 @@ test.describe('Консоль: сайдбар', () => {
     await loginToConsole(page)
     const expected: Record<string, string> = {
       fleet: 'Отели',
-      team: 'Пользователи',
+      team: 'Команда',
       audit: 'Журнал действий',
       overview: 'Сводка',
     }
@@ -56,15 +56,15 @@ test.describe('Консоль: сайдбар', () => {
     await page.getByTestId('admin-nav-fleet').click()
     await expect(page.getByTestId('admin-crumb')).toHaveText('Отели')
     await page.getByTestId('admin-nav-team').click()
-    await expect(page.getByTestId('admin-crumb')).toHaveText('Пользователи')
+    await expect(page.getByTestId('admin-crumb')).toHaveText('Команда')
     await page.getByTestId('admin-nav-audit').click()
     await expect(page.getByTestId('admin-crumb')).toHaveText('Журнал действий')
 
     // Каждое переключение — шаг истории. Проверяется РЕЗУЛЬТАТ шага, а не
     // счётчик: счётчик молчал бы о том, куда именно вернуло.
     await page.goBack()
-    await expect(page.getByTestId('admin-crumb'), 'назад не вернуло в «Пользователей»').toHaveText(
-      'Пользователи',
+    await expect(page.getByTestId('admin-crumb'), 'назад не вернуло в «Команду»').toHaveText(
+      'Команда',
     )
     await page.goBack()
     await expect(page.getByTestId('admin-crumb'), 'назад не вернуло в «Отели»').toHaveText('Отели')

@@ -57,7 +57,6 @@ const StyleguidePage = lazyFrom(panelPart, 'StyleguidePage');
 const AnalyticsPage = lazyFrom(panelPart, 'AnalyticsPage');
 const ReviewsPage = lazyFrom(panelPart, 'ReviewsPage');
 const MarketingPage = lazyFrom(panelPart, 'MarketingPage');
-const ModulePendingPage = lazyFrom(panelPart, 'ModulePendingPage');
 const ProfilePage = lazyFrom(panelPart, 'ProfilePage');
 const RoomControlPage = lazyFrom(panelPart, 'RoomControlPage');
 const DictionariesPage = lazyFrom(panelPart, 'DictionariesPage');
@@ -218,12 +217,12 @@ const shellChildren: RouteObject[] = [
       // но маршрут существует всегда — иначе прямая ссылка ломалась бы молча.
       { path: 'marketing', element: part(<MarketingPage />) },
       { path: 'room-control', element: part(<RoomControlPage />) },
-      // Эти три навигация показывает, а экранов под них ещё нет. Без маршрута
-      // адрес проваливался в корневую ветку и уезжал на гостевую главную —
-      // админ из своей панели попадал к гостю.
-      { path: 'pms', element: part(<ModulePendingPage moduleKey="pms" />) },
-      { path: 'payments', element: part(<ModulePendingPage moduleKey="payments" />) },
-      { path: 'mobile-key', element: part(<ModulePendingPage moduleKey="mobileKey" />) },
+      // Модули в разработке (партия 62-E1): включить их нельзя, пунктов меню
+      // у них нет. Старый адрес ведёт на сводку, а не на заглушку «модуль в
+      // разработке» и не на гостевую главную через корневую ветку.
+      { path: 'pms', element: <Navigate to={cmsPath('/dashboard')} replace /> },
+      { path: 'payments', element: <Navigate to={cmsPath('/dashboard')} replace /> },
+      { path: 'mobile-key', element: <Navigate to={cmsPath('/dashboard')} replace /> },
 
       // Служебное: витрина отдельным адресом больше не нужна (слита с брендом),
       // старые ссылки уводим туда же, а не в 404.

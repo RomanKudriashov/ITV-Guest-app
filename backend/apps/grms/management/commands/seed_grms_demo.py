@@ -288,24 +288,18 @@ class Command(BaseCommand):
     # --- Шаги ------------------------------------------------------------
 
     def _enable_module(self, hotel, *, demo_entry: bool) -> None:
-        """
-        Тариф `standard` идёт с пустым списком модулей, а менять демо-отелю
-        тариф ради одного модуля значит попутно выдать ему всё остальное из
-        `business`. Поэтому точечный override — он ровно для этого и заведён.
-        """
+        """Модуль управления номером демо-отелю — включён руками, как любой модуль."""
         with tenant_context(hotel):
             module, _ = HotelModule.objects.get_or_create(
                 code=HotelModule.Code.ROOM_CONTROL,
-                defaults={"is_enabled": True, "intent": HotelModule.Intent.ON},
+                defaults={"is_enabled": True},
             )
             config = dict(module.config or {})
             if demo_entry:
                 config["guest_entry_demo"] = True
             module.is_enabled = True
-            # Намерение, а не пометка: модуль выдан сверх тарифа осознанно.
-            module.intent = HotelModule.Intent.ON
             module.config = config
-            module.save(update_fields=["is_enabled", "intent", "config", "updated_at"])
+            module.save(update_fields=["is_enabled", "config", "updated_at"])
 
     def _room_type(self) -> RoomType:
         room_type, _ = RoomType.objects.get_or_create(

@@ -95,7 +95,7 @@ test.describe.serial('Карточка отеля', () => {
       await page.goto(card(crystalId, old))
       await expect(page.getByTestId(`admin-hotel-tab-${now}`)).toHaveAttribute('data-active', 'true', { timeout: 20_000 })
     }
-    await expect(page.getByTestId('admin-hotel-usage')).toBeVisible()
+    await expect(page.getByTestId('admin-hotel-modules')).toBeVisible()
   })
 
   test('номерной фонд: поиск и фильтры в адресе, считает сервер', async ({ page }) => {

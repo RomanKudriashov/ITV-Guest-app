@@ -63,12 +63,6 @@ def test_all_clear_says_so_once_instead_of_five_green_zeros(crystal):
         NotificationLog.objects.all().delete()
         # Общее правило на отель закрывает все заведения разом.
         EscalationRule.objects.create(hotel=crystal, execution_point=None, is_active=True)
-        # Тариф сида действительно превышен (12 заведений при лимите в одно) —
-        # и это НАСТОЯЩИЙ сигнал, а не помеха. Здесь он мешает проверить другое,
-        # поэтому переводим отель на безлимитный, а не прячем карточку.
-        crystal.tariff = "resort"
-        crystal.save(update_fields=["tariff"])
-
         data = build(crystal, _admin())
 
         assert data["attention"] == [], f"на чистом отеле что-то горит: {_codes(data)}"
@@ -105,12 +99,11 @@ def test_overdue_shows_up_with_a_route_to_the_filtered_board(crystal):
         assert card["severity"] == "error"
 
 
-def test_a_venue_manager_sees_neither_the_node_nor_the_tariff(crystal):
+def test_a_venue_manager_does_not_see_the_node(crystal):
     """
-    УКУС. Управляющий заведением не видит узел и тариф.
+    УКУС. Управляющий заведением не видит узел.
 
-    Ни то, ни другое ему не подчинено: он не может ни починить связь с
-    оборудованием, ни сменить тариф. Тревога без адресата хуже её отсутствия —
+    Узел ему не подчинён: починить связь с оборудованием он не может. Тревога без адресата хуже её отсутствия —
     человек видит красное и не знает, что делать.
     """
     with tenant_context(crystal):
@@ -121,8 +114,7 @@ def test_a_venue_manager_sees_neither_the_node_nor_the_tariff(crystal):
         theirs = build(crystal, _admin())
 
         assert "node_offline" not in _codes(mine)
-        assert "tariff_over" not in _codes(mine)
-        # Скоуп сузился по-настоящему, а не только по этим двум карточкам.
+        # Скоуп сузился по-настоящему, а не только по этой карточке.
         assert mine["scope"]["all_points"] is False
         assert len(mine["venues"]) < len(theirs["venues"])
 

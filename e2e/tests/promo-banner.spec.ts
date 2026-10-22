@@ -23,9 +23,9 @@ async function setMarketing(request: import('@playwright/test').APIRequestContex
     })
     .then((r) => r.json())
   const hotel = hotels.items.find((row: { subdomain: string }) => row.subdomain === HOTEL)
-  const answer = await request.put(`${API}/api/platform/hotels/${hotel.id}/modules`, {
+  const answer = await request.put(`${API}/api/platform/hotels/${hotel.id}/modules/marketing`, {
     headers: { Authorization: `Bearer ${token}` },
-    data: { modules: [{ code: 'marketing', is_enabled: on, source: 'override' }] },
+    data: { enabled: on },
   })
   expect(answer.ok(), await answer.text()).toBeTruthy()
 }

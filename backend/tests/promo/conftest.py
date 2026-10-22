@@ -16,7 +16,7 @@ def _marketing_on(crystal):
     with tenant_context(crystal):
         HotelModule.objects.update_or_create(
             code=HotelModule.Code.MARKETING,
-            defaults={"is_enabled": True, "intent": "on"},
+            defaults={"is_enabled": True},
         )
     return crystal
 

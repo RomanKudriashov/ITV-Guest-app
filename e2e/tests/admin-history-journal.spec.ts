@@ -44,8 +44,8 @@ test.describe.serial('История и журналы', () => {
     const body = await created.json()
     hotelId = body.hotel?.id ?? body.id
     // Модуль включили и выключили, город правили 55 раз — истории больше 50.
-    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, { data: { modules: [{ code: 'marketing', is_enabled: true }] }, headers })
-    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules`, { data: { modules: [{ code: 'marketing', is_enabled: false }] }, headers })
+    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules/marketing`, { data: { enabled: true }, headers })
+    await request.put(`${API}/api/v1/platform/hotels/${hotelId}/modules/marketing`, { data: { enabled: false }, headers })
     for (let n = 0; n < 55; n += 1) {
       await request.patch(`${API}/api/v1/platform/hotels/${hotelId}`, { data: { city: { ru: `Город ${n}` } }, headers })
     }

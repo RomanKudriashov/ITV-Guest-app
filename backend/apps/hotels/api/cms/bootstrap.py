@@ -26,8 +26,7 @@ def hotel_modules(request: HttpRequest):
     """Отель читает свой реестр модулей — основа гейтинга навигации CMS (R4)."""
     from apps.hotels.module_registry import list_modules
 
-    hotel = current_hotel()
-    return {"tariff": hotel.tariff, "modules": list_modules(hotel)}
+    return {"modules": list_modules(current_hotel())}
 
 
 # --- Навигация -------------------------------------------------------------

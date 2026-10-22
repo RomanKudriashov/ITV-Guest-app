@@ -127,7 +127,7 @@ function Attention({ cards }: { cards: DashboardAttention[] }) {
           const text = attentionText(card, t);
           return (
             <Card
-              key={`${card.code}-${card.resource ?? ''}`}
+              key={card.code}
               variant="outlined"
               data-testid={`dashboard-attention-${card.code}`}
               sx={{

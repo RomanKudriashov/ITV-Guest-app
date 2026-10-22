@@ -34,9 +34,12 @@ CACHE_S = 60
 SILENT_AFTER_S = 180
 FAILED_PER_DAY = 10
 
-# Модуль → назначения коннектора, без которых он не работает. Только готовые
-# модули: заготовки ничего не делают и с подключением тоже.
-MODULE_NEEDS: dict[str, tuple[str, ...]] = {"room_control": ("grms", "both")}
+# Модуль → назначения коннектора, без которых он не работает — из реестра
+# модулей (62-E1). Только готовые: заготовки ничего не делают и с подключением тоже.
+def _module_needs() -> dict[str, tuple[str, ...]]:
+    from apps.hotels.module_registry import MODULES, READY
+
+    return {code: m.needs_purposes for code, m in MODULES.items() if m.status == READY and m.needs_purposes}
 
 # Исходы обмена с оборудованием, которые гость видит как «сработало».
 # «Не подтвердилось» сюда НЕ входит: команда ушла, а свет не включился.
@@ -104,6 +107,12 @@ def _problem(code: str, title: str, *, count: int = 1, key: str = "", **params) 
     }
 
 
+def _needs_kind(code: str) -> str:
+    from apps.hotels.module_registry import MODULES
+
+    return MODULES[code].needs if code in MODULES else ""
+
+
 def compute(hotel: Hotel) -> dict[str, Any]:
     from apps.accounts.models import User
     from apps.hotels.models import HotelModule, OnPremNode, Room
@@ -122,12 +131,12 @@ def compute(hotel: Hotel) -> dict[str, Any]:
 
         # 1. Модуль включён, подключения нет.
         for code in sorted(modules):
-            purposes = MODULE_NEEDS.get(code)
+            purposes = _module_needs().get(code)
             if purposes and not any(node.purpose in purposes for node in nodes):
                 problems.append(_problem(
                     "module_without_connection",
                     f"Модуль «{code}» включён без подключения",
-                    key=code, module=code, needs="grms",
+                    key=code, module=code, needs=_needs_kind(code),
                 ))
 
         # 2. Коннектор молчит.

@@ -36,14 +36,13 @@ SEED_TEMPLATES = [
                         "en": "Restaurant, bar and room service — a city hotel's core.",
                         "ar": "مطعم وبار وخدمة الغرف — أساس فندق المدينة.",
                         "zh": "餐厅、酒吧与客房服务 — 城市酒店的核心。"},
-        "tariff": "business",
         "services": [
             {"type": "restaurant", "name": {"ru": "Ресторан", "en": "Restaurant"}},
             {"type": "bar", "name": {"ru": "Бар", "en": "Bar"}},
             {"type": "room_service", "name": {"ru": "Рум-сервис", "en": "Room service"}},
             {"type": "concierge", "name": {"ru": "Консьерж", "en": "Concierge"}},
         ],
-        "modules": ["multi_restaurant", "marketing"],
+        "modules": ["marketing"],
         "languages": ["ru", "en"],
         "preset": "midnight_navy",
         "sort_order": 10,
@@ -55,7 +54,6 @@ SEED_TEMPLATES = [
                         "en": "Several venues, spa and pool: at a resort the order lives outside the room.",
                         "ar": "عدة منشآت وسبا ومسبح: في المنتجع يعيش الطلب خارج الغرفة.",
                         "zh": "多个场所、水疗与泳池：度假村的订单发生在客房之外。"},
-        "tariff": "resort",
         "services": [
             {"type": "restaurant", "name": {"ru": "Основной ресторан", "en": "Main restaurant"}},
             {"type": "bar", "name": {"ru": "Пляжный бар", "en": "Beach bar"}},
@@ -64,7 +62,7 @@ SEED_TEMPLATES = [
             {"type": "excursions", "name": {"ru": "Экскурсии", "en": "Excursions"}},
             {"type": "housekeeping", "name": {"ru": "Хозслужба", "en": "Housekeeping"}},
         ],
-        "modules": ["multi_restaurant", "marketing", "room_control", "extra_languages"],
+        "modules": ["marketing", "room_control"],
         "languages": ["ru", "en", "ar"],
         "preset": "tiffany_night",
         "sort_order": 20,
@@ -76,7 +74,6 @@ SEED_TEMPLATES = [
                         "en": "An empty hotel: it adds services itself.",
                         "ar": "فندق فارغ: يضيف خدماته بنفسه.",
                         "zh": "空白酒店：由酒店自行添加服务。"},
-        "tariff": "standard",
         "services": [],
         "modules": [],
         "languages": ["ru", "en"],
@@ -114,7 +111,6 @@ def serialize_template(template: OnboardingTemplate) -> dict:
         "code": template.code,
         "title": template.title,
         "description": template.description,
-        "tariff": template.tariff,
         "services": template.services,
         "modules": template.modules,
         "languages": template.languages,
@@ -180,11 +176,13 @@ def apply_template(hotel: Hotel, template: OnboardingTemplate) -> list[Service]:
                 )
             )
 
-    if template.tariff:
-        hotel.tariff = template.tariff
-        hotel.save(update_fields=["tariff", "updated_at"])
-    if template.modules:
-        set_modules(hotel, [{"code": code, "is_enabled": True} for code in template.modules])
+    # Тарифа у шаблона нет (партия 62-E1). Модули — только готовые: заготовку
+    # включить нельзя, и шаблон, заведённый до 62-E1, не должен её включать.
+    from apps.hotels.module_registry import is_ready
+
+    ready = [code for code in (template.modules or []) if is_ready(code)]
+    if ready:
+        set_modules(hotel, [{"code": code, "is_enabled": True} for code in ready])
     return created
 
 

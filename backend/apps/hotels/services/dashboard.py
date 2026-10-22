@@ -23,7 +23,6 @@
   «за сегодня»  — `analytics.queries.summary(preset=today, compare=previous)`
                   (роллапы пишутся живьём на каждое событие заказа, поэтому
                   «сегодня» свежее);
-  тариф         — `platform.usage.usage_for`;
   эскалации     — `NotificationLog`.
 
 СКОРОСТЬ — МЕДИАНА, А НЕ СРЕДНЕЕ. У аналитики есть `avg_fulfil_seconds`, и
@@ -179,14 +178,7 @@ def _attention(hotel, user, points, shift, scope) -> list[dict]:
                 {"code": "node_offline", "severity": "error", "minutes": offline,
                  "route": "/cms/room-control"}
             )
-        # Тариф отель не меняет — у него нет такого экрана. Прежняя ссылка
-        # вела в настройки, где тарифа нет: без адреса карточка честно
-        # говорит «свяжитесь с платформой» (партия 55).
-        for row in _tariff_overage(hotel):
-            cards.append(
-                {"code": "tariff_over", "severity": "warning", "resource": row["key"],
-                 "used": row["used"], "limit": row["limit"], "route": None}
-            )
+        # Сигнала «тариф превышен» больше нет: тарифов нет (партия 62-E1).
 
     return cards
 
@@ -257,12 +249,6 @@ def _offline_node(hotel) -> int | None:
             # незаконченная настройка: пугать им дежурного незачем.
             return seconds // 60 if seconds is not None else None
     return None
-
-
-def _tariff_overage(hotel) -> list[dict]:
-    from apps.hotels.services.platform.usage import usage_for
-
-    return [row for row in usage_for(hotel).get("rows", []) if row.get("over")]
 
 
 # --- День против вчерашнего ------------------------------------------------

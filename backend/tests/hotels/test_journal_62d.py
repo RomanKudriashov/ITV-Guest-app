@@ -67,8 +67,10 @@ def _actions(hotel: Hotel, prefix: str) -> list[str]:
 
 def test_bite_modules_write_was_and_became_for_each_changed_code(api):
     hotel = _hotel("jr-modules")
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "room_control", "is_enabled": True}, {"code": "marketing", "is_enabled": True}]})
-    api("put", f"/hotels/{hotel.pk}/modules", {"modules": [{"code": "room_control", "is_enabled": False}, {"code": "marketing", "is_enabled": True}]})
+    api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": True})
+    api("put", f"/hotels/{hotel.pk}/modules/room_control", {"enabled": True})
+    api("put", f"/hotels/{hotel.pk}/modules/room_control", {"enabled": False})
+    api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": True})
     with tenant_context(hotel):
         rows = list(AuditLog.objects.filter(action="platform.hotel.modules_set").order_by("created_at").values_list("payload", flat=True))
     assert rows == [

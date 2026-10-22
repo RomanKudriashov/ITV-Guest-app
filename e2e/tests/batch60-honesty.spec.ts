@@ -46,12 +46,23 @@ test.describe('CMS: экран говорит правду', () => {
     await expect(page.getByTestId('cms-orders')).not.toContainText(/после обновления страницы/i)
   })
 
-  for (const path of ['/cms/pms', '/cms/payments', '/cms/mobile-key', '/cms/styleguide']) {
-    test(`${path}: управляющему по прямому адресу — «раздел закрыт»`, async ({ page }) => {
-      await signIn(page, RESTAURANT_MANAGER)
-      await page.goto(path)
-      await expect(page.getByTestId('cms-section-closed')).toBeVisible({ timeout: 20_000 })
-    })
+  test('/cms/styleguide: управляющему по прямому адресу — «раздел закрыт»', async ({ page }) => {
+    await signIn(page, RESTAURANT_MANAGER)
+    await page.goto('/cms/styleguide')
+    await expect(page.getByTestId('cms-section-closed')).toBeVisible({ timeout: 20_000 })
+  })
+
+  // Модули в разработке (партия 62-E1): заглушек «модуль в разработке» больше
+  // нет, старые адреса ведут на сводку — и администратора, и управляющего.
+  for (const path of ['/cms/pms', '/cms/payments', '/cms/mobile-key']) {
+    for (const [who, account] of [['администратор', ADMIN], ['управляющий', RESTAURANT_MANAGER]] as const) {
+      test(`${path}: ${who} по прямому адресу попадает на сводку`, async ({ page }) => {
+        await signIn(page, account)
+        await page.goto(path)
+        await expect(page).toHaveURL(/\/cms\/dashboard/, { timeout: 20_000 })
+        await expect(page.locator('[data-testid^="module-pending-"]')).toHaveCount(0)
+      })
+    }
   }
 
   test('порог просрочки: пустое поле уходит как «по умолчанию», а не как ноль', async ({ page, request }) => {
@@ -158,17 +169,21 @@ test.describe('Control: тумблер модуля шлёт только пер
     await page.getByTestId('admin-fleet-open-crystal').click()
     await page.getByTestId('admin-hotel-tab-modules').click()
 
-    let sent: { modules?: Array<Record<string, unknown>> } | null = null
-    await page.route('**/api/v1/platform/hotels/*/modules', async (route) => {
+    let sent: Record<string, unknown> | null = null
+    let url = ''
+    await page.route('**/api/v1/platform/hotels/*/modules/*', async (route) => {
       if (route.request().method() !== 'PUT') return route.fallback()
       sent = route.request().postDataJSON()
+      url = route.request().url()
       await route.abort()
     })
     // Весь реестр с прочитанным config затирал намерения остальных модулей
-    // и демо-вход, включённый в CMS после загрузки экрана.
-    await page.getByTestId('admin-module-toggle-native_app').click()
+    // и демо-вход, включённый в CMS после загрузки экрана. С 62-E1 адрес
+    // называет один модуль, тело — только «включён ли».
+    await page.getByTestId('admin-module-toggle-marketing').click()
     await expect.poll(() => sent).not.toBeNull()
-    expect(sent?.modules).toEqual([{ code: 'native_app', is_enabled: expect.any(Boolean) }])
+    expect(url).toMatch(/\/modules\/marketing$/)
+    expect(sent).toEqual({ enabled: expect.any(Boolean) })
   })
 })
 

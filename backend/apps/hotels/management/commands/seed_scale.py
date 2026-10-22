@@ -41,7 +41,7 @@ ACTIONS = [
     "platform.hotel.created",
     "platform.hotel.entered",
     "platform.hotel.modules_changed",
-    "platform.hotel.tariff_changed",
+    "platform.hotel.updated",
     "platform.team.invited",
     "platform.2fa.enabled",
     "impersonation.started",
@@ -84,7 +84,6 @@ class Command(BaseCommand):
                         origin=Hotel.Origin.TEST,
                         is_active=index % 7 != 0,  # часть выключена — фильтры должны это видеть
                         settings={MARK_KEY: True},
-                        tariff=random.choice(["start", "standard", "business"]),
                     )
                 )
             if fresh:

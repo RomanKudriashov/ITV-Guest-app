@@ -2504,24 +2504,15 @@ class Command(BaseCommand):
     def _seed_modules(self):
         from apps.hotels.models import HotelModule
 
-        # Намерение, а не пометка «откуда взялось»: `source` вычислялся сервером
-        # и хранить его перестали. Здесь важно, что демо-отелю модули выданы
-        # ОСОЗНАННО и должны пережить возню с тарифом на стенде.
+        # Только готовые модули: заготовки включить нельзя (партия 62-E1), и
+        # пересев не должен включать то, что миграция выключила.
         enabled = [
-            (HotelModule.Code.MULTI_RESTAURANT, {}),
             (HotelModule.Code.MARKETING, {}),
-            (HotelModule.Code.EXTRA_LANGUAGES, {}),
-            (HotelModule.Code.ANALYTICS_LEVEL, {"level": "advanced"}),
-            (HotelModule.Code.PMS, {}),
         ]
         for code, config in enabled:
             HotelModule.objects.update_or_create(
                 code=code,
-                defaults={
-                    "is_enabled": True,
-                    "intent": HotelModule.Intent.ON,
-                    "config": config,
-                },
+                defaults={"is_enabled": True, "config": config},
             )
 
     def _seed_inclusions(self):

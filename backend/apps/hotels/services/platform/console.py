@@ -127,7 +127,6 @@ def profile(hotel: Hotel) -> dict[str, Any]:
         # правило всегда пустым.
         "city": hotel.city_i18n,
         "languages": languages,
-        "tariff": hotel.tariff,
         # Состояние офбординга отдаём ОТДЕЛЬНЫМ полем, а не сырыми settings:
         # settings отеля — свалка внутренних ключей, и выставлять её наружу
         # значит однажды показать в интерфейсе что-то, чего там быть не должно.
@@ -387,25 +386,3 @@ def _impersonation_row(grant) -> dict[str, Any]:
         # Чем кончилась: для истории это и есть главный столбец.
         "revoked_at": grant.revoked_at.isoformat() if grant.revoked_at else None,
     }
-
-
-def tariff_grid(user=None) -> list[dict[str, Any]]:
-    from dataclasses import asdict
-
-    from apps.hotels.services import tariffs as registry
-    from apps.hotels.services.platform import scope
-
-    # Счёт отелей на тарифе — тоже по области: число чужих клиентов — их карта.
-    hotels = list(scope.allowed_hotels(user, Hotel.objects.filter(origin=Hotel.Origin.LIVE)))
-    return [
-        {
-            "code": tariff.code,
-            "title": tariff.title,
-            "modules": list(tariff.modules),
-            "limits": asdict(tariff.limits),
-            "is_trial": tariff.is_trial,
-            "trial_days": tariff.trial_days,
-            "hotels": sum(1 for hotel in hotels if registry.get(hotel.tariff).code == tariff.code),
-        }
-        for tariff in registry.TARIFFS.values()
-    ]

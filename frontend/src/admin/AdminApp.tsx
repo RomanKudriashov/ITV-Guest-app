@@ -19,7 +19,6 @@ import { OverviewPage } from './pages/OverviewPage';
 import { FleetPage } from './pages/FleetPage';
 import { HotelPage } from './pages/HotelPage';
 import { GroupPage } from './pages/hotels/GroupPage';
-import { PublicationsPage } from './pages/PublicationsPage';
 import { ModulesPage } from './pages/ModulesPage';
 import { TeamPage } from './pages/TeamPage';
 import { AuditPage } from './pages/AuditPage';
@@ -30,7 +29,6 @@ import { accent, ink, typo } from './adminTokens';
 // узнают только по ним.
 import SpaceDashboardOutlinedIcon from '@mui/icons-material/SpaceDashboardOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
-import PublishOutlinedIcon from '@mui/icons-material/PublishOutlined';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
 import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
@@ -53,14 +51,20 @@ const SECTIONS: AdminSection[] = [
   // где кончаются отели и начинается платформа.
   // «Группы» влились в «Отели» (партия 62-A1): группы отелей одного
   // владельца видны и правятся прямо в списке отелей.
-  // Публикация — тоже про отели, а не про платформу: адресуется группами.
-  { key: 'publications', labelKey: 'admin.nav.publications', icon: <PublishOutlinedIcon fontSize="small" /> },
+  //
+  // МЕНЮ ЦЕЛИКОМ (партия 62-E1, решение Олега): Сводка · Отели · Модули ·
+  // Справочники · Команда · Журнал действий · Безопасность. «Модули и тарифы»
+  // стали каталогом «Модули» (тарифов нет), «Публикация» ушла из меню —
+  // ручки и задача на сервере пока живут.
   { key: 'modules', labelKey: 'admin.nav.modules', icon: <ExtensionOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'templates', labelKey: 'admin.nav.templates', icon: <LibraryBooksOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'team', labelKey: 'admin.nav.team', icon: <ManageAccountsOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
-  { key: 'security', labelKey: 'admin.nav.security', icon: <ShieldOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
   { key: 'audit', labelKey: 'admin.nav.audit', icon: <HistoryOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
+  { key: 'security', labelKey: 'admin.nav.security', icon: <ShieldOutlinedIcon fontSize="small" />, group: 'admin.nav.platformGroup' },
 ];
+
+/** Прежние ключи разделов → куда переехало содержимое. */
+const SECTION_ALIASES: Record<string, string> = { groups: 'fleet', publications: 'modules' };
 
 /**
  * Область консоли: платформенная тема + переменные словаря на `:root`.
@@ -163,9 +167,10 @@ function Console({ onLogout }: { onLogout: () => void }) {
     поделиться можно только целым.
   */
   const [searchParams, setSearchParams] = useSearchParams();
-  // Старый адрес раздела групп ведёт в «Отели», где группы живут теперь.
+  // Старые адреса разделов ведут туда, куда переехало содержимое: группы —
+  // в «Отели», публикация — в «Модули» (партия 62-E1: экрана больше нет).
   const rawSection = searchParams.get('section') || 'overview';
-  const section = rawSection === 'groups' ? 'fleet' : rawSection;
+  const section = SECTION_ALIASES[rawSection] ?? rawSection;
   /*
     «ON-PREMISE» И «СЕССИИ ПОДДЕРЖКИ» УШЛИ ИЗ МЕНЮ (партия 62-B): узлы и входы
     поддержки — вкладки карточки отеля. Общий список остался фильтром:
@@ -173,9 +178,12 @@ function Console({ onLogout }: { onLogout: () => void }) {
     «Журнал действий». Старая ссылка ведёт туда, а не на пустой экран.
   */
   useEffect(() => {
-    if (rawSection !== 'nodes' && rawSection !== 'support') return;
+    if (rawSection !== 'nodes' && rawSection !== 'support' && rawSection !== 'publications') return;
     const next = new URLSearchParams(searchParams);
-    if (rawSection === 'nodes') {
+    if (rawSection === 'publications') {
+      // Адрес тоже переписывается: в нём остаётся раздел, который есть в меню.
+      next.set('section', 'modules');
+    } else if (rawSection === 'nodes') {
       next.set('section', 'fleet');
       next.set('link', 'silent');
       next.set('layout', 'list');
@@ -214,7 +222,6 @@ function Console({ onLogout }: { onLogout: () => void }) {
       // в журнале аудита означали бы совсем другое, а страница — тем более.
       'group',
       'origin',
-      'tariff',
       'page',
       // Фильтры и вид «Отелей» (партия 62-A1).
       'state',
@@ -244,6 +251,14 @@ function Console({ onLogout }: { onLogout: () => void }) {
       'twofa',
       'kind',
       'purpose',
+      // Каталог модулей и карточка модуля (партия 62-E1); `c…` — фильтры
+      // каталога, сбережённые на время открытого модуля.
+      'mstate',
+      'need',
+      'csearch',
+      'cmstate',
+      'cneed',
+      'cview',
     ]) {
       params.delete(key);
     }
@@ -270,7 +285,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
     const params = new URLSearchParams(searchParams);
     params.delete('hotel');
     // Вкладка карточки и её фильтры в списке отелей ничего не значат.
-    for (const key of ['tab', 'sub', 'search', 'building', 'floor', 'category', 'variant', 'pin']) params.delete(key);
+    for (const key of ['tab', 'sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'view', 'mstate']) params.delete(key);
     setSearchParams(params);
   };
   /** Из карточки отеля — в список «Отелей» или на страницу группы. */
@@ -377,7 +392,6 @@ function Console({ onLogout }: { onLogout: () => void }) {
       {section === 'fleet' && hotelId ? (
         <HotelPage id={hotelId} onBack={closeHotel} />
       ) : null}
-      {section === 'publications' ? <PublicationsPage /> : null}
       {section === 'modules' ? <ModulesPage /> : null}
       {section === 'templates' ? <TemplatesPage /> : null}
       {section === 'team' ? <TeamPage /> : null}

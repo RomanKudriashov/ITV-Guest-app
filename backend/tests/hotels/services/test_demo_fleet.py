@@ -173,7 +173,6 @@ def test_module_settings_survive_a_registry_switch(crystal):
             code=HotelModule.Code.ROOM_CONTROL,
             defaults={
                 "is_enabled": True,
-                "intent": HotelModule.Intent.ON,
                 "config": {"guest_entry_demo": True},
             },
         )

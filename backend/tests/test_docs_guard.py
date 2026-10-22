@@ -106,7 +106,7 @@ def _assert_block_matches(name: str, expected: set[str]) -> None:
         )
 
 
-# --- 1. Модули, роли, тарифы, области ---------------------------------------
+# --- 1. Модули, роли, заготовки, области ---------------------------------------
 
 
 def test_the_module_list_matches_the_code():
@@ -128,10 +128,10 @@ def test_the_platform_roles_match_the_code():
     _assert_block_matches("platform-roles", {role.value for role in User.PlatformRole})
 
 
-def test_the_tariffs_match_the_code():
-    from apps.hotels.services import tariffs
+def test_the_modules_in_development_match_the_code():
+    from apps.hotels.module_registry import DEV_CODES
 
-    _assert_block_matches("tariffs", set(tariffs.codes()))
+    _assert_block_matches("modules-in-development", set(DEV_CODES))
 
 
 def test_the_group_colors_match_the_code():

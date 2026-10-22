@@ -2368,13 +2368,6 @@
       "stopListHint": "客人无法下单",
       "node_offline": "节点已 {{minutes}} 分钟无响应",
       "nodeOfflineHint": "客人无法使用客房控制",
-      "tariff_over": "套餐超限：{{resource}} {{used}} / {{limit}}",
-      "tariffOverHint": "套餐由平台变更——请联系平台",
-      "resource": {
-        "services": "场所",
-        "rooms": "房间",
-        "staff": "员工"
-      },
       "reviews_awaiting": "待回复评价：{{count}}",
       "reviewsAwaitingHint": "客人已留言并在等待。沉默会被理解为不在意。",
       "reviewsAwaitingLowHint": "其中低分：{{count}}。不满意的客人至今没有得到回复。"
@@ -2395,16 +2388,15 @@
       "overview": "概览",
       "fleet": "酒店",
       "platformGroup": "平台",
-      "modules": "模块与套餐",
+      "modules": "模块",
       "nodes": "On-premise",
-      "team": "用户",
+      "team": "团队",
       "audit": "操作日志",
-      "templates": "模板与字典",
+      "templates": "字典",
       "open": "打开菜单",
       "support": "支持会话",
       "security": "安全",
       "groups": "分组",
-      "publications": "发布",
       "collapse": "收起菜单",
       "expand": "展开菜单"
     },
@@ -2463,7 +2455,7 @@
       "health": "系统健康",
       "kpi": {
         "hotels": "酒店",
-        "hotelsHint": "{{active}} 活跃 · {{trial}} 试用 · {{disabled}} 停用",
+        "hotelsHint": "{{active}} 个活跃 · {{disabled}} 个停用",
         "orders": "今日订单",
         "ordersHint": "全部酒店",
         "gross": "今日流水",
@@ -2476,8 +2468,6 @@
       "media_ok": "媒体处理正常",
       "media_failed": "媒体：失败任务 {{count}} 个",
       "media_stuck": "媒体：处理卡住 {{count}} 个",
-      "trial_expiring": "「{{hotel}}」试用将在 {{days}} 天后到期",
-      "trial_expired": "「{{hotel}}」试用已到期",
       "node_offline": "{{hotel}} 的节点离线",
       "scheduler_down": "定时任务服务已 {{count}} 分钟无响应——计划的工作未执行",
       "scheduler_overdue": "逾期的定时任务：{{count}}",
@@ -2514,17 +2504,14 @@
       "prev": "上一页",
       "next": "下一页",
       "pageOf": "第 {{page}} / {{pages}} 页",
-      "trialDays": "试用 · {{days}} 天",
       "nodeOffline": "节点离线",
       "status": {
         "all": "全部",
         "active": "活跃",
-        "trial": "试用",
         "disabled": "停用"
       },
       "col": {
         "hotel": "酒店",
-        "tariff": "套餐",
         "rooms": "客房",
         "services": "服务",
         "orders": "订单（7天）",
@@ -2571,28 +2558,8 @@
       "adminEmail": "管理员邮箱",
       "adminHint": "创建或重置访问权限。密码通过邮件发送给酒店管理员，操作员看不到密码。",
       "adminReset": "创建 / 重置",
-      "trialLeft": "试用：剩余 {{days}} 天",
-      "trialEnds": "试用至 {{date}}",
-      "limit": {
-        "services": "服务",
-        "rooms": "客房",
-        "staff": "员工",
-        "none": "不限"
-      },
-      "limitOver": "超出：已用 {{used}}，上限 {{limit}}",
-      "limitHint": "超出不会停用酒店 — 由平台决定。",
-      "modulesTitle": "模块（套餐 {{tariff}}）",
-      "modulesHint": "开启的模块会出现在酒店 CMS 中，关闭的则隐藏。手动决定在换套餐后依然有效：手动关掉的仍然关着；超出套餐开启的，若新套餐不含则会熄灭。",
       "activityEmpty": "暂无记录",
       "viaSupport": "支持",
-      "tariffLabel": "套餐",
-      "tariffApply": "保存",
-      "tariffForce": "仍然保存",
-      "tariffHint": "套餐由人工设置。",
-      "tariffNoMoney": "这是记录而非支付：此处没有资金流动。",
-      "downgradeTitle": "降级低于当前用量",
-      "downgradeLimit": "{{what}}：已用 {{used}}，上限 {{limit}}",
-      "downgradeModules": "套餐不包含：{{modules}}",
       "adminPasswordSent": "密码已发送至 {{email}}",
       "save": "保存",
       "cancel": "取消",
@@ -2606,7 +2573,7 @@
       "adminFailed": "无法重置访问",
       "adminMoveFailed": "无法更改邮箱",
       "intro": {
-        "modules": "此酒店开启了哪些功能。下方是套餐和限额，直到套餐被移除。",
+        "modules": "酒店已开启的内容。需要连接的模块没有连接就无法工作——卡片会提示。",
         "data": "导出酒店积累的全部数据，以及停用并删除数据。酒店离开平台或依法要求其数据时来这里。",
         "overview": "当前影响酒店运行的问题以及处理办法。检查每分钟更新。",
         "connections": "酒店服务器上的连接器和其他外部系统：是否在线、版本、密钥。",
@@ -2614,13 +2581,6 @@
         "roomControl": "客房方案、调试文件导入、构建器、平面图、版本和设备诊断。",
         "journal": "支持人员进入酒店面板的记录和客房设备日志。",
         "history": "在 Control 中对酒店的所有修改：资料、模块、连接、分组、停用、管理员、客房控制、支持登录——谁、何时、改前和改后。"
-      },
-      "limitWontFit": "超出所选套餐",
-      "moduleState": {
-        "inTariff": "套餐内包含",
-        "override": "超出套餐开启",
-        "manualOff": "已手动关闭",
-        "notInTariff": "套餐不含"
       },
       "admins": {
         "title": "酒店管理员",
@@ -2645,7 +2605,21 @@
         "onBody": "页面将对客人开放，员工可重新登录，开始接收订单。",
         "on": "启用"
       },
-      "tariffOwnerOnly": "只有平台所有者可以更改套餐。"
+      "modules": {
+        "state": {
+          "works": "可用",
+          "broken": "已开启但不工作",
+          "off": "已关闭",
+          "dev": "开发中"
+        },
+        "needConnection": "需要连接：{{what}}",
+        "hasConnection": "已连接：{{what}}",
+        "connectionHelp": "该模块只有配合此连接才能工作。没有连接也可以开启——但模块不会工作，酒店概览会显示问题。",
+        "connect": "连接 →",
+        "about": "关于模块",
+        "devPanel": "开发中",
+        "devAside": "暂时无法开启"
+      }
     },
     "create": {
       "title": "新建酒店",
@@ -2674,29 +2648,91 @@
       "emailInvalid": "地址无效"
     },
     "module": {
-      "room_control": "客房控制",
+      "room_control": "房间控制",
       "payment": "支付",
-      "pms": "酒店管理系统（PMS）",
-      "mobile_key": "手机钥匙",
-      "multi_restaurant": "多餐厅",
+      "pms": "酒店管理系统",
+      "mobile_key": "移动钥匙",
+      "multi_restaurant": "多个餐饮场所",
       "marketing": "营销",
-      "extra_languages": "附加语言",
-      "native_app": "原生应用",
-      "analytics_level": "分析级别"
+      "extra_languages": "更多语言",
+      "native_app": "酒店应用",
+      "analytics_level": "高级分析"
     },
     "modules": {
-      "title": "模块与套餐",
-      "subtitle": "每个套餐开放哪些能力，以及在套餐之外额外开启了什么。当酒店要求某项它没有的功能时，来这里看套餐是否包含。",
-      "trialDays": "{{days}} 天",
-      "base": "基础能力",
-      "col": {
-        "tariff": "套餐",
-        "hotels": "酒店",
-        "modules": "模块",
-        "limits": "限额"
+      "title": "模块",
+      "subtitle": "模块是为酒店单独开启的产品部分：房间控制、营销等。打开模块即可查看它提供什么以及在哪些酒店已开启。",
+      "search": "模块名称或其功能",
+      "facet": {
+        "state": "状态",
+        "need": "连接",
+        "on": "模块"
       },
-      "note": "套餐开放一组模块；也可以为单个酒店开通套餐外的功能，例如试点。启用的模块出现在酒店后台，停用的隐藏。降级到低于当前用量时会提示并需要决策。",
-      "empty": "暂无套餐。"
+      "status": {
+        "ready": "可用",
+        "dev": "开发中"
+      },
+      "need": {
+        "yes": "需要连接",
+        "no": "独立运行"
+      },
+      "view": {
+        "label": "视图",
+        "blocks": "卡片",
+        "list": "列表",
+        "table": "表格"
+      },
+      "enabledIn": "在 {{total}} 家酒店中的 {{count}} 家已开启",
+      "cannotEnable": "暂时无法开启",
+      "needs": "需要：{{what}}",
+      "connection": {
+        "grms": "房间控制连接器",
+        "pms": "酒店管理系统连接",
+        "locks": "门锁系统",
+        "payments": "银行卡收单"
+      },
+      "col": {
+        "module": "模块",
+        "gives": "功能",
+        "state": "状态",
+        "need": "所需连接",
+        "hotels": "已开启的酒店"
+      },
+      "emptyTitle": "未找到",
+      "emptyText": "没有符合搜索和筛选条件的模块。请点击“重置”。",
+      "back": "← 全部模块",
+      "opens": "开放的功能",
+      "needsNote": "没有“{{what}}”连接，该模块在酒店无法工作——酒店概览会将其显示为问题。",
+      "defaults": "默认设置",
+      "defaultsHelp": "酒店首次开启该模块时获得此值。单个酒店可在酒店卡片中修改。",
+      "defaultsEmpty": "暂无设置",
+      "defaultsEmptyText": "该模块没有新开启时获得的设置。",
+      "valueOn": "开启",
+      "valueOff": "关闭",
+      "hotels": "酒店",
+      "hotelsCount": "{{total}} 家中 {{on}} 家已开启",
+      "hotelsHelp": "开关为单个酒店开启或关闭该模块。要一次为多家开启，请在“酒店”中打开分组并选择“操作”。",
+      "hotelSearch": "查找酒店",
+      "on": "已开启",
+      "off": "已关闭",
+      "noHotels": "没有这样的酒店",
+      "noHotelsText": "请移除筛选或更改搜索。",
+      "more": "显示更多",
+      "disabledHotel": "已停用",
+      "journal": "开关日志",
+      "journalHelp": "谁在何时为酒店开启或关闭了该模块。完整记录见酒店的“历史”标签页。",
+      "journalOn": "{{hotel}}：已开启",
+      "journalOff": "{{hotel}}：已关闭",
+      "journalDev": "{{hotel}}：已关闭——模块开发中",
+      "journalEmpty": "尚无开关记录",
+      "journalEmptyText": "当酒店开启或关闭该模块时，记录会显示在这里。",
+      "system": "系统",
+      "devNote": "该模块仍在开发中，无法开启。一旦可用，就会出现开关。",
+      "wasOn": "已开启但不起作用——请关闭",
+      "toggleHelp": "为此酒店开启或关闭该模块。其他模块不变，变更会记入酒店历史。",
+      "devHelp": "该模块尚未就绪，无法开启。如果之前已开启，可以将其关闭。",
+      "toggleLabel": "{{module}}：{{hotel}}",
+      "notFound": "没有这个模块",
+      "catalogEmpty": "暂无模块。"
     },
     "nodes": {
       "title": "On-premise",
@@ -2737,7 +2773,7 @@
       }
     },
     "team": {
-      "title": "平台用户",
+      "title": "团队",
       "subtitle": "谁可以访问 /admin",
       "email": "邮箱",
       "role": "角色",
@@ -2949,7 +2985,7 @@
       "open": "打开后台"
     },
     "templates": {
-      "title": "模板与字典",
+      "title": "字典",
       "subtitle": "新酒店由此组装的模板：场所集合，以及所有酒店共用的过敏原与标记清单。开设酒店前来这里，确认它将以什么内容启用。",
       "tab": {
         "templates": "开通模板",
@@ -3076,54 +3112,11 @@
       "ruleFields": {
         "city": "城市",
         "origin": "来源",
-        "tariff": "套餐",
         "language": "语言"
       },
       "deleteConfirm": {
         "title": "删除分组「{{name}}」？",
         "body": "分组中的酒店：{{count}}。酒店保留；分组将从筛选和批量操作中消失，只能重新创建。"
-      }
-    },
-    "publications": {
-      "title": "发布",
-      "subtitle": "把同一项内容应用到多家酒店——并逐家给出结果",
-      "what": "发布什么",
-      "whom": "发给谁",
-      "when": "时间",
-      "who": "操作人",
-      "result": "结果",
-      "preset": "预设代码",
-      "presetHint": "在酒店中查找我们自己那条记录所用的键",
-      "label": "标签名称",
-      "scope": "目标",
-      "group": "分组",
-      "preview": "预览",
-      "start": "发布",
-      "willApply_other": "将应用于 {{count}} 家酒店",
-      "ownerOnly": "仅限所有者",
-      "progress": "已完成 {{done}} / {{total}}",
-      "history": "发布历史",
-      "historyEmpty": "尚无发布记录。",
-      "readOnly": "“只读”角色不能发布。下方历史可以查看。",
-      "localEdits_other": "{{count}} 家酒店因自有修改而被跳过",
-      "localEditsHint": "酒店的修改绝不会被覆盖。恢复方式与字典差异相同。",
-      "toDivergence": "查看差异",
-      "scopes": {
-        "group": "分组",
-        "all": "全部酒店",
-        "hotels": "所选酒店"
-      },
-      "status": {
-        "pending": "排队中",
-        "running": "进行中",
-        "done": "已完成",
-        "failed": "未执行"
-      },
-      "outcomes": {
-        "applied": "已应用",
-        "skipped": "已跳过",
-        "refused": "被拒绝",
-        "failed": "错误"
       }
     },
     "hotels": {
@@ -3779,6 +3772,68 @@
         "support": "支持登录",
         "data": "数据"
       }
+    },
+    "moduleInfo": {
+      "room_control": {
+        "gives": "客人用自己的手机控制灯光、空调和窗帘。",
+        "opens": [
+          "客人：“房间”标签页",
+          "酒店面板：访问、PIN、房间检查",
+          "Control：房型方案、平面图、指令日志"
+        ]
+      },
+      "marketing": {
+        "gives": "客人首页横幅和菜单项目标签。",
+        "opens": [
+          "客人：横幅和标签",
+          "酒店面板：“营销”栏目"
+        ]
+      },
+      "pms": {
+        "gives": "房间、入住和退房来自酒店管理预订的软件。",
+        "opens": [
+          "酒店面板：房间和客人自动导入"
+        ]
+      },
+      "payment": {
+        "gives": "客人直接在店面用银行卡支付订单。",
+        "opens": [
+          "客人：订单支付"
+        ]
+      },
+      "mobile_key": {
+        "gives": "用客人的手机打开房门。",
+        "opens": [
+          "客人：首页上的钥匙"
+        ]
+      },
+      "native_app": {
+        "gives": "以酒店自己的名字上架应用商店的酒店店面。",
+        "opens": [
+          "客人：酒店应用"
+        ]
+      },
+      "analytics_level": {
+        "gives": "任意时间段的营收、项目和员工报表。",
+        "opens": [
+          "酒店面板：报表"
+        ]
+      },
+      "multi_restaurant": {
+        "gives": "多个餐厅或酒吧，各有自己的菜单和营业时间。",
+        "opens": [
+          "酒店面板：餐饮场所"
+        ]
+      },
+      "extra_languages": {
+        "gives": "除俄语和英语之外的其他语言店面。",
+        "opens": [
+          "客人：语言选择"
+        ]
+      },
+      "config": {
+        "guest_entry_demo": "客人无需 PIN 进入（演示）"
+      }
     }
   },
   "roomControl": {
@@ -4129,7 +4184,6 @@
     "what": {
       "overview": "概览",
       "fleet": "酒店列表",
-      "tariffs": "套餐",
       "nodes": "节点列表",
       "templates": "模板",
       "dictionary": "字典",
@@ -4137,7 +4191,6 @@
       "audit": "审计日志",
       "support": "支持会话",
       "hotel": "酒店卡片",
-      "usage": "用量",
       "hotelModules": "酒店模块",
       "activity": "活动",
       "dashboard": "酒店概览",
@@ -4165,7 +4218,9 @@
       "commerceOverrides": "各场所的自有商务设置",
       "notificationEvents": "事件设置",
       "chatSettings": "聊天设置",
-      "translateCoverage": "翻译覆盖率"
+      "translateCoverage": "翻译覆盖率",
+      "modules": "模块目录",
+      "moduleCard": "模块卡片"
     },
     "truncated": "显示前 {{shown}} 条，共 {{total}} 条",
     "refused": {
@@ -4181,10 +4236,6 @@
     "sectionClosedTitle": "此栏目不可用",
     "sectionClosedBody": "此栏目仅限酒店管理员。您的栏目在菜单中。",
     "sectionClosedHome": "返回面板首页"
-  },
-  "modulePending": {
-    "body": "模块已接入，但设置界面仍在开发中。上线后将在此处打开。",
-    "toDashboard": "返回仪表盘"
   },
   "sessions": {
     "title": "我的登录",
