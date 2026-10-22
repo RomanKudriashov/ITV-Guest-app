@@ -42,6 +42,12 @@ def forwards(apps, schema_editor):
     AuditLog = apps.get_model("core", "AuditLog")
 
     now = timezone.now()
+    # `intent` есть в схеме на шаге 0049 и убран миграцией 0050 (партия 62-E2).
+    # По графу миграций поле здесь всегда есть; проверка — для укусов, которые
+    # гоняют эту функцию на нынешних моделях.
+    reset = {"is_enabled": False, "updated_at": now}
+    if any(field.name == "intent" for field in HotelModule._meta.get_fields()):
+        reset["intent"] = ""
     switched = 0
     for hotel in Hotel._base_manager.using(db).filter(deleted_at__isnull=True):
         with tenant_context(hotel.pk):
@@ -51,9 +57,7 @@ def forwards(apps, schema_editor):
                 )
             )
             for row in rows:
-                HotelModule._base_manager.using(db).filter(pk=row.pk).update(
-                    is_enabled=False, intent="", updated_at=now
-                )
+                HotelModule._base_manager.using(db).filter(pk=row.pk).update(**reset)
                 AuditLog._base_manager.using(db).create(
                     id=uuid.uuid4(),
                     hotel_id=hotel.pk,

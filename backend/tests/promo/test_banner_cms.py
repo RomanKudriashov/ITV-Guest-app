@@ -17,9 +17,7 @@ def _create(cms, **fields):
 def test_the_section_is_closed_without_the_marketing_module(cms, crystal):
     """Гейт стоит на сервере: спрятать пункт меню значит не закрыть ничего."""
     with tenant_context(crystal):
-        HotelModule.objects.filter(code=HotelModule.Code.MARKETING).update(
-            is_enabled=False, intent=HotelModule.Intent.OFF
-        )
+        HotelModule.objects.filter(code=HotelModule.Code.MARKETING).update(is_enabled=False)
     response = cms.get("/api/cms/banners")
     assert response.status_code == 403
     assert response.json()["code"] == "module_disabled"

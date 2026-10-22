@@ -90,14 +90,14 @@ def test_bite_one_switch_touches_exactly_one_module_and_journals_it(api):
     api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": True})
     with tenant_context(hotel):
         HotelModule.objects.update_or_create(code="room_control", defaults={"is_enabled": True, "config": {"guest_entry_demo": True}})
-        # Выключенная строка без намерения: старый «весь список» писал ей `off`.
-        HotelModule.objects.update_or_create(code="pms", defaults={"is_enabled": False, "intent": ""})
-        before = {m.code: (m.is_enabled, m.intent, m.updated_at) for m in HotelModule.objects.exclude(code="marketing")}
+        # Выключенная строка: старый «весь список» трогал и её.
+        HotelModule.objects.update_or_create(code="pms", defaults={"is_enabled": False})
+        before = {m.code: (m.is_enabled, m.config, m.updated_at) for m in HotelModule.objects.exclude(code="marketing")}
 
     response = api("put", f"/hotels/{hotel.pk}/modules/marketing", {"enabled": False})
     assert response.status_code == 200
     with tenant_context(hotel):
-        after = {m.code: (m.is_enabled, m.intent, m.updated_at) for m in HotelModule.objects.exclude(code="marketing")}
+        after = {m.code: (m.is_enabled, m.config, m.updated_at) for m in HotelModule.objects.exclude(code="marketing")}
         config = HotelModule.objects.get(code="room_control").config
     assert after == before  # другие строки не тронуты вовсе — ни флаг, ни время
     assert config == {"guest_entry_demo": True}
@@ -142,7 +142,7 @@ def test_bite_migration_0049_switches_dev_off_by_hotel_and_journals(crystal):
     from apps.hotels.models import HotelGroup
 
     with tenant_context(crystal):
-        HotelModule.objects.update_or_create(code="pms", defaults={"is_enabled": True, "intent": "on"})
+        HotelModule.objects.update_or_create(code="pms", defaults={"is_enabled": True})
         HotelModule.objects.update_or_create(code="analytics_level", defaults={"is_enabled": True})
         HotelModule.objects.update_or_create(code="marketing", defaults={"is_enabled": True})
     group = HotelGroup.objects.create(code="mig-62e1", title="Миграция", auto_enabled=True, auto_modules=["marketing", "pms"])
@@ -159,7 +159,6 @@ def test_bite_migration_0049_switches_dev_off_by_hotel_and_journals(crystal):
     state = _state(crystal)
     assert state["pms"] is False and state["analytics_level"] is False and state["marketing"] is True
     with tenant_context(crystal):
-        assert HotelModule.objects.get(code="pms").intent == ""
         assert HotelModule.objects.filter(code="pms").exists()  # строку не удалили
         journal = sorted(
             (p["module"], p["from"], p["to"], p["reason"])
@@ -233,14 +232,18 @@ def test_tariffs_endpoints_are_gone(api):
 
 
 def test_bite_nothing_reads_tariffs_any_more():
-    """Сторож: `tariff|trial_ends_at` в коде приложений — только в моделях и миграциях."""
+    """
+    Сторож: `tariff`, `trial_ends_at` и «намерение» модуля (`intent`) в коде
+    приложений — только в миграциях (партия 62-E2 убрала поля и из моделей).
+    `intent` — целым словом: `PaymentIntent` и `create_intent` платёжного
+    шлюза — не про модули.
+    """
     root = Path(__file__).resolve().parents[2] / "apps"
     offenders = []
     for path in root.rglob("*.py"):
-        parts = path.relative_to(root).parts
-        if "migrations" in parts or "models" in parts or path.name == "models.py":
+        if "migrations" in path.relative_to(root).parts:
             continue
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if re.search(r"tariff|trial_ends_at", line):
+            if re.search(r"tariff|trial_ends_at|\bintent\b", line, re.IGNORECASE):
                 offenders.append(f"{path.relative_to(root)}:{number}: {line.strip()}")
     assert offenders == [], "\n".join(offenders)

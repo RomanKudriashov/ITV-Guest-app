@@ -1,5 +1,5 @@
 """
-Подключённые модули отеля: что отель купил.
+Подключённые модули отеля: что у отеля включено.
 """
 
 from __future__ import annotations
@@ -11,49 +11,27 @@ from apps.core.models import TenantModel
 
 class HotelModule(TenantModel):
     """
-    Реестр модулей отеля: какие платные фичи включены — по тарифу или точечным
-    исключением (выдать модуль вне тарифа пилоту). В R1 — только данные + API;
-    управляющий UI — R6, гейтинг CMS-навигации — R4. Именно этот реестр решает,
-    что отель видит в своей CMS: без модуля отель не видит ни одного его экрана.
+    Реестр модулей отеля: что включено — ровно `is_enabled`, включают руками
+    по одному (тарифов нет с партии 62-E1, поля тарифа и «намерение» убраны в
+    62-E2). Что модуль умеет и готов ли он — `apps.hotels.module_registry`.
+    Этот реестр решает, что отель видит в своей CMS: без модуля отель не видит
+    ни одного его экрана.
     """
 
     class Code(models.TextChoices):
-        ROOM_CONTROL = "room_control", "Управление номером (GRMS)"
+        # Подписи — те же слова, что на экране (`MODULE_LABELS`, партия 62-E2).
+        ROOM_CONTROL = "room_control", "Управление номером"
         PAYMENT = "payment", "Оплата"
-        PMS = "pms", "PMS"
+        PMS = "pms", "Система управления отелем"
         MOBILE_KEY = "mobile_key", "Мобильный ключ"
-        MULTI_RESTAURANT = "multi_restaurant", "Мультиресторанность"
+        MULTI_RESTAURANT = "multi_restaurant", "Несколько заведений"
         MARKETING = "marketing", "Маркетинг"
-        EXTRA_LANGUAGES = "extra_languages", "Доп. языки"
-        NATIVE_APP = "native_app", "Нативное приложение"
-        ANALYTICS_LEVEL = "analytics_level", "Уровень аналитики"
-
-    class Source(models.TextChoices):
-        TARIFF = "tariff", "По тарифу"
-        OVERRIDE = "override", "Переопределение (вне тарифа)"
-
-    class Intent(models.TextChoices):
-        """
-        РЕШЕНИЕ ЧЕЛОВЕКА о модуле — отдельно от того, что даёт тариф.
-
-        Пустая строка — не трогали: модуль просто следует за тарифом. `on` и
-        `off` — трогали руками, и это решение переживает смену тарифа.
-
-        Раньше здесь стояло вычисляемое `source` («по тарифу» / «вне тарифа»),
-        которое пересчитывалось при каждой записи по формуле «override, если
-        включено и тариф не даёт». Из-за неё ВЫКЛЮЧЕННЫЙ модуль всегда получал
-        «по тарифу», и два разных факта — «мы это выключили» и «тариф этого не
-        даёт» — выглядели на экране одинаково. Третьего состояния не
-        существовало: его нечем было записать.
-        """
-
-        NONE = "", "Не трогали"
-        ON = "on", "Включено вручную"
-        OFF = "off", "Выключено вручную"
+        EXTRA_LANGUAGES = "extra_languages", "Дополнительные языки"
+        NATIVE_APP = "native_app", "Приложение отеля"
+        ANALYTICS_LEVEL = "analytics_level", "Расширенная аналитика"
 
     code = models.SlugField(max_length=32)
     is_enabled = models.BooleanField(default=False)
-    intent = models.CharField(max_length=8, choices=Intent.choices, blank=True, default=Intent.NONE)
     # Доп. конфигурация модуля (напр. уровень аналитики: {"level": "advanced"}).
     config = models.JSONField(default=dict, blank=True)
 

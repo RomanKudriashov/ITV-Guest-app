@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
 
 import { formatDate, formatDateTime } from '@/utils/dates';
@@ -11,7 +11,8 @@ import { Pill, type Tone } from './hotels/hotelsUi';
 /**
  * СТРОКА ЖУРНАЛА (партия 62-D) — одна на «Историю» отеля и «Журнал
  * действий»: когда, кто (имя и роль), что, над чем, «было → стало» и
- * подробности. Код действия — мелко ниже, для инженера.
+ * подробности. Код действия — для инженера, на экране его нет: подсказкой
+ * при наведении на запись, на телефоне — по долгому нажатию (партия 62-E2).
  */
 
 const ROLE_TONE: Record<string, Tone> = { owner: 'gold', support: 'info', read_only: 'muted', system: 'muted', hotel: 'muted' };
@@ -83,6 +84,16 @@ export function JournalRow({ entry, testId, aside }: { entry: JournalEntry; test
   const objectText = words.object(entry);
   const lines = words.details(entry);
   return (
+    <Tooltip
+      title={entry.action}
+      placement="top-start"
+      enterDelay={500}
+      enterNextDelay={500}
+      // Долгое нажатие на телефоне: короткое касание — это прокрутка списка.
+      enterTouchDelay={600}
+      leaveTouchDelay={4000}
+      slotProps={{ tooltip: { 'data-testid': 'admin-journal-code' } as Record<string, string> }}
+    >
     <Box
       data-testid={testId}
       data-action={entry.action}
@@ -114,9 +125,9 @@ export function JournalRow({ entry, testId, aside }: { entry: JournalEntry; test
         {lines.map((line) => (
           <Box key={line} sx={{ color: ink.mid, overflowWrap: 'anywhere' }}>{line}</Box>
         ))}
-        <Typography sx={{ color: ink.low, ...typo.caption, fontSize: 11 }}>{entry.action}</Typography>
       </Box>
       {aside ? <Box sx={{ justifySelf: { md: 'end' } }}>{aside}</Box> : <Box />}
     </Box>
+    </Tooltip>
   );
 }

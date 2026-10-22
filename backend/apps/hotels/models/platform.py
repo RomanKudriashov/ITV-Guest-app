@@ -17,10 +17,7 @@ class OnboardingTemplate(BaseModel):
     """
     Шаблон заведения отеля: «курорт», «ресторанный отель», «с нуля».
 
-    Хранится ТАБЛИЦЕЙ, а не кодом — в отличие от прежних тарифов (убраны в 62-E1),
-    и это осознанная асимметрия. Тариф — продуктовое обязательство: он связан с
-    деньгами и лимитами, меняется вместе с релизом и обязан проходить ревью.
-    Шаблон — содержимое: набор сервисов, с которого удобно начать отелю такого
+    Хранится ТАБЛИЦЕЙ, а не кодом. Шаблон — содержимое: набор сервисов, с которого удобно начать отелю такого
     рода. Его подкручивают, глядя на живые отели, и требовать релиз ради
     переименования сервиса значит гарантировать, что шаблоны отстанут от жизни.
 
@@ -32,7 +29,6 @@ class OnboardingTemplate(BaseModel):
     code = models.SlugField(max_length=64, unique=True)
     title = TranslatableField()
     description = TranslatableField(blank=True)
-    tariff = models.CharField(max_length=64, blank=True)
     # Сервисы, которые создаются сразу: [{"type": "restaurant", "name": {...}}].
     services = models.JSONField(default=list, blank=True)
     modules = models.JSONField(default=list, blank=True)

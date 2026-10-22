@@ -176,15 +176,7 @@ class Hotel(BaseModel):
     # одна плитка-категория с превью обложек внутри.
     showcase_group_threshold = models.PositiveSmallIntegerField(default=3)
 
-    # Тариф отеля — шов биллинга: проставляется руками (деньги вне системы).
-    # Сам по себе лишь пометка уровня; какие модули включены — в HotelModule.
-    # Тарифов больше нет (партия 62-E1): поля не читаются, удалит партия E2.
-    tariff = models.CharField(max_length=64, blank=True)
-    # Когда тариф начался и когда истекает триал. Даты, а не моменты: у тарифа
-    # нет часа начала, он живёт в календаре платформы, и «до конца дня» —
-    # ровно то поведение, которого ждут от последнего дня триала.
-    tariff_started_on = models.DateField(null=True, blank=True)
-    trial_ends_at = models.DateField(null=True, blank=True)
+    # Тарифов нет: поля тарифа и триала удалены миграцией 0050 (партия 62-E2).
 
     objects = HotelManager()
     all_objects = HotelAllObjectsManager()

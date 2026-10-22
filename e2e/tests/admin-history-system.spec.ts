@@ -82,3 +82,28 @@ test.describe('Чипы фильтров на пустой выдаче — сл
     await expect(chips).not.toContainText('00000000')
   })
 })
+
+test.describe('Код действия — только подсказкой (партия 62-E2)', () => {
+  for (const [name, url, rowId] of [
+    ['«История» отеля', 'history', 'admin-history-row'],
+    ['«Журнал действий»', 'audit', ''],
+  ] as const) {
+    test(`${name}: кода нет на экране, при наведении на запись — есть`, async ({ page, request }) => {
+      const id = await crystalId(request)
+      await signInPlatform(page, PLATFORM)
+      await page.goto(url === 'history' ? `/admin?section=fleet&hotel=${id}&tab=history` : '/admin?section=audit')
+      const rows = rowId ? page.getByTestId(rowId) : page.locator('[data-testid^="admin-audit-"][data-action]')
+      const row = rows.first()
+      await expect(row).toBeVisible({ timeout: 20_000 })
+      const code = (await row.getAttribute('data-action'))!
+      expect(code).toMatch(/\./)
+      // Видимый текст записей — без кодов действий.
+      const shown = await rows.evaluateAll((els) => els.map((el) => (el as HTMLElement).innerText).join('\n'))
+      expect(shown).not.toContain(code)
+      expect(shown).not.toMatch(/\b(platform|grms|impersonation)\.[a-z_]+/)
+
+      await row.hover()
+      await expect(page.getByTestId('admin-journal-code')).toHaveText(code, { timeout: 5_000 })
+    })
+  }
+})

@@ -8,8 +8,6 @@
 
 from __future__ import annotations
 
-import importlib
-from datetime import timedelta
 
 import pytest
 from django.utils import timezone
@@ -42,49 +40,9 @@ def test_module_toggle_does_not_roll_back_demo_entry(owner, crystal):  # noqa: F
     assert module.config.get("guest_entry_demo") is True
 
 
-def test_mass_off_migration_resets_only_the_batch_outside_the_tariff(crystal):
-    """
-    Критерий миграции 0045: `off` + выключен + тариф не даёт + записан пачкой.
-    Одиночный щелчок и `off` у модуля из тарифа — настоящие решения, их не трогаем.
-    """
-    from django.apps import apps as django_apps
-    from django.db import connection
-
-    from apps.hotels.migrations import _tariffs_frozen as tariffs
-
-    crystal.tariff = "business"
-    crystal.save(update_fields=["tariff"])
-    granted = set(tariffs.modules_for(crystal.tariff))
-    outside = [code for code in (c.value for c in HotelModule.Code) if code not in granted]
-    inside = sorted(granted)
-    assert len(outside) >= 3 and inside, "сетка тарифов поменялась — тест надо пересобрать"
-
-    long_ago = timezone.now() - timedelta(days=3)
-    with tenant_context(crystal):
-        HotelModule.objects.all().hard_delete()
-        batch = [*outside[:2], inside[0]]
-        for code in batch:
-            HotelModule.objects.create(code=code, is_enabled=False, intent="off")
-        HotelModule.objects.filter(code__in=batch).update(updated_at=long_ago)
-        HotelModule.objects.create(code=outside[2], is_enabled=False, intent="off")
-        HotelModule.objects.filter(code=outside[2]).update(updated_at=long_ago - timedelta(hours=5))
-
-    migration = importlib.import_module("apps.hotels.migrations.0045_module_intent_mass_off")
-
-    class _Editor:
-        pass
-
-    editor = _Editor()
-    editor.connection = connection
-    migration.forwards(django_apps, editor)
-
-    with tenant_context(crystal):
-        intents = dict(HotelModule.objects.values_list("code", "intent"))
-    assert intents[outside[0]] == "" and intents[outside[1]] == ""
-    # Модуль из тарифа: выключен руками — так и остаётся.
-    assert intents[inside[0]] == "off"
-    # Одиночная запись — не пачка.
-    assert intents[outside[2]] == "off"
+# Укус миграции 0045 (сброс пачечного `intent=off` вне тарифа) снят в партии
+# 62-E2: тарифа и `intent` в схеме больше нет, гонять её на нынешних моделях
+# нечем. Сама миграция осталась в графе и проходит на чистой базе.
 
 
 def test_profile_save_keeps_translations_of_name_and_city(owner, crystal):  # noqa: F811
