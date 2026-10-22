@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PlainHeader, SortHeader, sortRows, useSort, type SortColumn } from '@/admin/sort';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -17,7 +19,7 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
 import { ApiError } from '@/api/client';
-import { fetchVersions, publishType, rollbackType, type GrmsType } from '@/api/grms';
+import { fetchVersions, publishType, rollbackType, type GrmsType, type VersionRecord } from '@/api/grms';
 import { useGrmsScope } from './scope';
 import { queryKeys } from '@/api/queryKeys';
 import { EmptyState } from '@/components/EmptyState';
@@ -39,6 +41,13 @@ import { formatDateTime } from '@/utils/dates';
  */
 export function VersionsTab({ type, readOnly = false }: { type: GrmsType; readOnly?: boolean }) {
   const { t } = useTranslation();
+  // Версии сортируются на клиенте (партия 62-F), ключ `v…`.
+  const sort = useSort('v');
+  const columns: SortColumn<VersionRecord>[] = [
+    { key: 'version', label: t('roomControl.publish.version'), kind: 'number', get: (v) => v.version },
+    { key: 'published', label: t('roomControl.publish.publishedAt'), kind: 'date', get: (v) => v.published_at },
+    { key: 'controls', label: t('roomControl.publish.controls'), kind: 'number', get: (v) => v.controls },
+  ];
   // База API — из области: CMS отеля или NaviRoom Control.
   const { transport } = useGrmsScope();
   const base = transport.base;
@@ -119,14 +128,14 @@ export function VersionsTab({ type, readOnly = false }: { type: GrmsType; readOn
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>{t('roomControl.publish.version')}</TableCell>
-                <TableCell>{t('roomControl.publish.publishedAt')}</TableCell>
-                <TableCell align="right">{t('roomControl.publish.controls')}</TableCell>
-                <TableCell />
+                {columns.map((column) => (
+                  <SortHeader caps={false} key={column.key} column={column} state={sort} align={column.key === 'controls' ? 'right' : undefined} testId={`grms-versions-sort-${column.key}`} />
+                ))}
+                <PlainHeader />
               </TableRow>
             </TableHead>
             <TableBody>
-              {versions.map((version) => (
+              {sortRows(versions, columns, sort).map((version) => (
                 <TableRow key={version.version} data-testid={`grms-version-${version.version}`}>
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center">

@@ -344,6 +344,8 @@ def list_for(
     scope: str | None = None,
     limit: int | None = None,
     offset: int = 0,
+    sort: str = "",
+    direction: str = "",
 ) -> dict:
     """
     Живые сессии учётки — то, что показывается человеку. СТРАНИЦАМИ.
@@ -365,6 +367,19 @@ def list_for(
     ).order_by("-last_seen_at", "-created_at")
     current = rows.filter(pk=current_id).first() if current_id else None
     others = rows.exclude(pk=current.pk) if current is not None else rows
+    if sort:
+        # Столбец выбрал человек (Control, партия 62-F); текущая — всё равно
+        # отдельно и первой.
+        from apps.core.listing import order
+
+        others = order(
+            others,
+            sort,
+            direction,
+            {"seen": "last_seen_at", "entered": "created_at", "ip": "ip", "agent": "user_agent"},
+            default=("-last_seen_at",),
+            then=("-created_at", "pk"),
+        )
 
     limit = clamp(limit, default=PAGE_DEFAULT, maximum=PAGE_MAX)
     offset = max(0, offset or 0)

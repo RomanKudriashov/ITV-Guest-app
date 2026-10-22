@@ -15,6 +15,7 @@ import { useActionFailed } from '@/hooks/useActionFailed';
 import { accent, ink, panelSx, primaryButtonSx, surface, typo } from '../adminTokens';
 import { DictionaryDivergence } from './DictionaryDivergence';
 import { WithHelp } from './hotels/hotelsUi';
+import { SortBar, sortRows, useSort, type SortColumn } from '../sort';
 import { FilterBar, type Facet } from './hotels/hotelsUi';
 import { useRights } from '../useRights';
 import { QueryState } from '@/components/QueryState';
@@ -96,6 +97,13 @@ function TemplatesTab() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: () => getTemplates() });
+  // Шаблоны — на клиенте (партия 62-F): по названию, по тому, предлагается ли.
+  const sort = useSort('', ['title', 'active', 'services']);
+  const templateColumns: SortColumn<OnboardingTemplate>[] = [
+    { key: 'title', label: t('admin.templates.sort.title'), kind: 'text', get: (x) => x.title[i18n.language] ?? x.title.en ?? x.title.ru ?? '' },
+    { key: 'active', label: t('admin.templates.sort.active'), kind: 'rank', get: (x) => (x.is_active ? 'on' : 'off'), rank: ['on', 'off'] },
+    { key: 'services', label: t('admin.templates.sort.services'), kind: 'number', get: (x) => x.services.length },
+  ];
   const save = useMutation({
     mutationFn: (body: { id: string; patch: Partial<OnboardingTemplate> }) =>
       patchTemplate(body.id, body.patch),
@@ -114,7 +122,10 @@ function TemplatesTab() {
     >
       {(page) => (
     <Box sx={{ display: 'grid', gap: 1.75 }}>
-      {page.items.map((template) => (
+      <Box>
+        <SortBar state={sort} columns={templateColumns} testId="admin-templates-sort" />
+      </Box>
+      {sortRows(page.items, templateColumns, sort).map((template) => (
         <Box key={template.id} sx={panelSx} data-testid={`admin-template-${template.code}`}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{ flexGrow: 1 }}>

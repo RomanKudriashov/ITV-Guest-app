@@ -2462,6 +2462,10 @@
         "grossHint": "商品、服务费、配送、税、小费",
         "sessions": "在线会话",
         "sessionsHint": "当前浏览的客人"
+      },
+      "sort": {
+        "level": "重要性",
+        "text": "名称"
       }
     },
     "health": {
@@ -2596,7 +2600,12 @@
         "remove": "撤销权限",
         "lastHint": "最后一位无法撤销：酒店将失去对自己 CMS 的访问。",
         "existing": "酒店已有管理员：{{list}}。请核对地址 — 第二位全权管理员通常是打错造成的。",
-        "never": "从未登录"
+        "never": "从未登录",
+        "sort": {
+          "email": "邮箱",
+          "login": "最后登录",
+          "added": "指派时间"
+        }
       },
       "crumbNamed": "酒店「{{name}}」",
       "currencyConfirm": {
@@ -2626,7 +2635,11 @@
         "connect": "连接 →",
         "about": "关于模块",
         "devPanel": "开发中",
-        "devAside": "暂时无法开启"
+        "devAside": "暂时无法开启",
+        "sort": {
+          "name": "名称",
+          "state": "状态"
+        }
       }
     },
     "create": {
@@ -2740,7 +2753,16 @@
       "devHelp": "该模块尚未就绪，无法开启。如果之前已开启，可以将其关闭。",
       "toggleLabel": "{{module}}：{{hotel}}",
       "notFound": "没有这个模块",
-      "catalogEmpty": "暂无模块。"
+      "catalogEmpty": "暂无模块。",
+      "sort": {
+        "name": "名称",
+        "subdomain": "子域名",
+        "state": "是否开启",
+        "at": "时间",
+        "hotel": "酒店",
+        "actor": "操作人",
+        "change": "开启或关闭"
+      }
     },
     "nodes": {
       "title": "On-premise",
@@ -3037,6 +3059,11 @@
         "resetConfirm": {
           "title": "将 {{count}} 家酒店恢复为参考版本？",
           "body": "酒店对系统条目的修改将被清除：修改过的恢复为参考，酒店关闭的重新对客人显示，删除的重新出现。酒店自建条目保留。此操作无法撤销。"
+        },
+        "sort": {
+          "hotel": "酒店",
+          "subdomain": "子域名",
+          "diverged": "差异数量"
         }
       },
       "filter": {
@@ -3046,7 +3073,12 @@
       "activeHelp": "未启用的模板在新建酒店时不提供。已用它创建的酒店不受影响。",
       "dictKindHelp": "字典分类：过敏原或饮食标记。",
       "dictCodeHelp": "不含空格的简短拉丁名称：酒店更新时据此识别条目。客人和员工看不到它。",
-      "dictTitleHelp": "客人和员工看到的条目名称。其他语言的翻译由酒店自行添加。"
+      "dictTitleHelp": "客人和员工看到的条目名称。其他语言的翻译由酒店自行添加。",
+      "sort": {
+        "title": "名称",
+        "active": "是否提供",
+        "services": "服务数量"
+      }
     },
     "data": {
       "exportTitle": "数据导出",
@@ -3086,7 +3118,15 @@
         "all": "全部"
       },
       "emptyTitle": "尚无支持登录",
-      "emptyHint": "当团队成员通过“进入酒店”按钮进入酒店面板时会出现在这里——附原因和时限。"
+      "emptyHint": "当团队成员通过“进入酒店”按钮进入酒店面板时会出现在这里——附原因和时限。",
+      "sort": {
+        "hotel": "酒店",
+        "actor": "登录人",
+        "asUser": "以谁的身份",
+        "started": "开始",
+        "expires": "结束",
+        "entered": "是否在内"
+      }
     },
     "errors": {
       "http": "操作失败，请重试。",
@@ -3314,7 +3354,8 @@
         "ofTotal": "{{on}} / {{total}}",
         "devOn": "已启用但仍在开发中、不起作用：{{modules}}。",
         "emptyTitle": "分组中还没有酒店",
-        "emptyBody": "分组中至少有一家酒店后才会显示汇总。"
+        "emptyBody": "分组中至少有一家酒店后才会显示汇总。",
+        "modulesCount": "已开启的酒店"
       },
       "hotels": {
         "search": "在分组中查找酒店",
@@ -3604,6 +3645,14 @@
         "filter": {
           "status": "状态",
           "search": "按名称或版本查找"
+        },
+        "sort": {
+          "name": "名称",
+          "status": "连接",
+          "purpose": "用途",
+          "seen": "最后信号",
+          "version": "版本",
+          "key": "密钥签发"
         }
       },
       "rooms": {
@@ -3665,6 +3714,11 @@
         "typeHelp": "下方配置的房型方案：上传、构建器、平面图、版本。房间在“房间库存”标签页绑定到方案。",
         "moduleOff": "此酒店的房间控制已关闭。请在“模块”标签页开启该模块——之后这里会出现房型方案、调试文件上传、平面图和设备日志。",
         "toModules": "模块 →"
+      },
+      "sort": {
+        "severity": "重要性",
+        "title": "名称",
+        "count": "数量"
       }
     },
     "profile": {
@@ -3730,6 +3784,10 @@
           "check": "点击“检查 DNS”——域名必须指向平台。",
           "save": "保存域名：店面和二维码将基于它生成。",
           "tls": "域名证书随测试站证书重新签发——需所有者同意。"
+        },
+        "sort": {
+          "old": "旧地址",
+          "created": "更改时间"
         }
       },
       "group": {
@@ -3770,7 +3828,13 @@
         "legacyCount_other": "更改了 {{count}} 个模块——旧记录没有细节",
         "inDevelopment": "模块开发中——在改为无套餐模块时关闭"
       },
-      "otherAction": "其他操作"
+      "otherAction": "其他操作",
+      "sort": {
+        "at": "时间",
+        "who": "操作人",
+        "action": "操作",
+        "hotel": "酒店"
+      }
     },
     "history": {
       "title": "历史",
@@ -3864,7 +3928,12 @@
         "guest_entry_demo": "客人无需 PIN 进入（演示）"
       }
     },
-    "listFilteredEmpty": "未找到：请移除部分筛选或点击“重置”。"
+    "listFilteredEmpty": "未找到：请移除部分筛选或点击“重置”。",
+    "sort": {
+      "by": "按“{{column}}”排序",
+      "default": "默认顺序",
+      "label": "排序方式"
+    }
   },
   "roomControl": {
     "title": "房间控制",
@@ -4300,6 +4369,12 @@
     "logoutAllConfirm": {
       "title": "在所有设备上退出？",
       "body": "此账户的所有登录（包括当前登录）都将关闭：需要在每台设备上重新登录。"
+    },
+    "sort": {
+      "seen": "最后活动",
+      "entered": "登录",
+      "ip": "地址",
+      "agent": "浏览器"
     }
   },
   "profile": {

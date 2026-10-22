@@ -29,12 +29,17 @@ def hotel_rooms(
     category: str = "",
     variant: str = "",
     pin: str = "",
+    sort: str = "",
+    dir: str = "",
 ):
     from apps.hotels.services.platform.room_list import room_list
 
     return room_list(
         console.get_hotel(hotel_id),
-        {"search": search, "building": building, "floor": floor, "category": category, "variant": variant, "pin": pin},
+        {
+            "search": search, "building": building, "floor": floor, "category": category,
+            "variant": variant, "pin": pin, "sort": sort, "dir": dir,
+        },
     )
 
 
@@ -51,10 +56,15 @@ def hotel_history(
     search: str = "",
     cursor: str = "",
     limit: int = 50,
+    sort: str = "",
+    dir: str = "",
 ):
     from apps.hotels.services.platform.journal import hotel_history as build
 
     return build(
         console.get_hotel(hotel_id),
-        {"who": who, "what": what, "period": period, "since": since, "until": until, "search": search, "cursor": cursor, "limit": limit},
+        {
+            "who": who, "what": what, "period": period, "since": since, "until": until,
+            "search": search, "cursor": cursor, "limit": limit, "sort": sort, "dir": dir,
+        },
     )

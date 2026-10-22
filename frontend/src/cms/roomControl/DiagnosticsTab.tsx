@@ -5,6 +5,7 @@ import { EntityName } from '@/components/entityCard';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import { PlainHeader, SortHeader, sortRows, useSort, type SortColumn } from '@/admin/sort';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -152,6 +153,26 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
     случилось бы, и в отельской вкладке появился бы сырой ответ оборудования.
   */
   const deep = journal.data?.depth !== 'hotel';
+  /*
+    Сортировка журнала оборудования (партия 62-F) — на клиенте: выдача
+    ограничена пределом и вся на экране. Ключ `d…`: в карточке отеля рядом
+    стоит список входов поддержки со своим. Исход — по тяжести: отказ выше.
+  */
+  const sort = useSort('d');
+  const sortColumns: SortColumn<DiagnosticsRow>[] = [
+    { key: 'at', label: t('roomControl.diagnostics.at'), kind: 'date', get: (r) => r.at },
+    { key: 'room', label: t('roomControl.diagnostics.room'), kind: 'natural', get: (r) => r.room || null },
+    { key: 'element', label: t('roomControl.diagnostics.element'), kind: 'text', get: (r) => r.element || null },
+    ...(deep
+      ? ([
+          { key: 'device', label: t('roomControl.diagnostics.device'), kind: 'text', get: (r) => r.device || null },
+          { key: 'channel', label: t('roomControl.diagnostics.channel'), kind: 'text', get: (r) => [r.command, r.feedback].filter(Boolean).join(' → ') || null },
+        ] as SortColumn<DiagnosticsRow>[])
+      : []),
+    { key: 'sent', label: t('roomControl.diagnostics.sent'), kind: 'natural', get: (r) => (r.sent === null || r.sent === undefined ? null : String(r.sent)) },
+    ...(deep ? ([{ key: 'duration', label: t('roomControl.diagnostics.duration'), kind: 'number', get: (r) => r.duration_ms ?? null }] as SortColumn<DiagnosticsRow>[]) : []),
+    { key: 'result', label: t('roomControl.diagnostics.result'), kind: 'rank', get: (r) => r.result, rank: ['failed', 'unconfirmed', 'accepted', 'ok', 'confirmed'] },
+  ];
 
   return (
     <Stack spacing={2} data-testid="grms-diagnostics">
@@ -260,20 +281,15 @@ export function DiagnosticsTab({ type }: { type: GrmsType }) {
             <Table size="small" data-testid="diagnostics-table">
               <TableHead>
                 <TableRow>
-                  <TableCell />
-                  <TableCell>{t('roomControl.diagnostics.at')}</TableCell>
-                  <TableCell>{t('roomControl.diagnostics.room')}</TableCell>
-                  <TableCell>{t('roomControl.diagnostics.element')}</TableCell>
-                  {deep ? <TableCell>{t('roomControl.diagnostics.device')}</TableCell> : null}
-                  {deep ? <TableCell>{t('roomControl.diagnostics.channel')}</TableCell> : null}
-                  <TableCell>{t('roomControl.diagnostics.sent')}</TableCell>
-                  {deep ? <TableCell>{t('roomControl.diagnostics.duration')}</TableCell> : null}
-                  <TableCell>{t('roomControl.diagnostics.result')}</TableCell>
-                  <TableCell />
+                  <PlainHeader />
+                  {sortColumns.map((column) => (
+                    <SortHeader caps={false} key={column.key} column={column} state={sort} testId={`diagnostics-sort-${column.key}`} />
+                  ))}
+                  <PlainHeader />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {journal.data.rows.map((row) => (
+                {sortRows(journal.data.rows, sortColumns, sort, 'at').map((row) => (
                   <JournalRow
                     key={row.id}
                     row={row}

@@ -2488,6 +2488,10 @@
         "grossHint": "items, fee, delivery, tax, tips",
         "sessions": "Live sessions",
         "sessionsHint": "guests browsing now"
+      },
+      "sort": {
+        "level": "Importance",
+        "text": "Name"
       }
     },
     "health": {
@@ -2624,7 +2628,12 @@
         "remove": "Revoke rights",
         "lastHint": "The last one cannot be revoked: the hotel would lose access to its CMS.",
         "existing": "The hotel already has an administrator: {{list}}. Check the address — a second full admin is usually a typo.",
-        "never": "never signed in"
+        "never": "never signed in",
+        "sort": {
+          "email": "Email",
+          "login": "Last sign-in",
+          "added": "Assigned"
+        }
       },
       "crumbNamed": "Hotel “{{name}}”",
       "currencyConfirm": {
@@ -2654,7 +2663,11 @@
         "connect": "Connections →",
         "about": "About the module",
         "devPanel": "In development",
-        "devAside": "cannot be switched on yet"
+        "devAside": "cannot be switched on yet",
+        "sort": {
+          "name": "Name",
+          "state": "State"
+        }
       }
     },
     "create": {
@@ -2768,7 +2781,16 @@
       "devHelp": "This module is not ready yet — it cannot be switched on. If it was on before, it can be switched off.",
       "toggleLabel": "{{module}}: {{hotel}}",
       "notFound": "No such module",
-      "catalogEmpty": "There are no modules yet."
+      "catalogEmpty": "There are no modules yet.",
+      "sort": {
+        "name": "Name",
+        "subdomain": "Subdomain",
+        "state": "Whether on",
+        "at": "When",
+        "hotel": "Hotel",
+        "actor": "Who",
+        "change": "On or off"
+      }
     },
     "nodes": {
       "title": "On-premise",
@@ -3066,6 +3088,11 @@
         "resetConfirm": {
           "title": "Reset {{count}} hotels to the reference?",
           "body": "The hotel's edits to system entries are erased: changed entries go back to the reference, entries the hotel turned off become visible to guests again, deleted ones reappear. The hotel's own entries stay. This cannot be undone."
+        },
+        "sort": {
+          "hotel": "Hotel",
+          "subdomain": "Subdomain",
+          "diverged": "How many differ"
         }
       },
       "filter": {
@@ -3075,7 +3102,12 @@
       "activeHelp": "An inactive template is not offered when a new hotel is created. Hotels already created from it stay as they are.",
       "dictKindHelp": "Dictionary section: allergens or dietary markers.",
       "dictCodeHelp": "A short Latin name without spaces: hotels recognise the entry by it on updates. Guests and staff never see it.",
-      "dictTitleHelp": "How guests and staff will see the entry. A hotel adds translations to other languages itself."
+      "dictTitleHelp": "How guests and staff will see the entry. A hotel adds translations to other languages itself.",
+      "sort": {
+        "title": "Name",
+        "active": "Whether offered",
+        "services": "Number of services"
+      }
     },
     "data": {
       "exportTitle": "Data export",
@@ -3115,7 +3147,15 @@
         "all": "All"
       },
       "emptyTitle": "No support sign-ins yet",
-      "emptyHint": "They appear when a team member enters the hotel panel with “Enter the hotel” — with a reason and a time limit."
+      "emptyHint": "They appear when a team member enters the hotel panel with “Enter the hotel” — with a reason and a time limit.",
+      "sort": {
+        "hotel": "Hotel",
+        "actor": "Who entered",
+        "asUser": "As whom",
+        "started": "Start",
+        "expires": "End",
+        "entered": "Whether inside"
+      }
     },
     "errors": {
       "http": "Something went wrong. Please try again.",
@@ -3356,7 +3396,8 @@
         "ofTotal": "{{on}} of {{total}}",
         "devOn": "On, but still in development and doing nothing: {{modules}}.",
         "emptyTitle": "No hotels in the group yet",
-        "emptyBody": "The summary appears once the group has at least one hotel."
+        "emptyBody": "The summary appears once the group has at least one hotel.",
+        "modulesCount": "On at hotels"
       },
       "hotels": {
         "search": "Find a hotel in the group",
@@ -3666,6 +3707,14 @@
         "filter": {
           "status": "Status",
           "search": "Find by name or version"
+        },
+        "sort": {
+          "name": "Name",
+          "status": "Link",
+          "purpose": "Purpose",
+          "seen": "Last seen",
+          "version": "Version",
+          "key": "Key issued"
         }
       },
       "rooms": {
@@ -3727,6 +3776,11 @@
         "typeHelp": "The room variant set up below: upload, builder, plan, versions. Rooms are bound to a variant on the “Room inventory” tab.",
         "moduleOff": "Room control is off for this hotel. Switch the module on in the “Modules” tab — then room variants, the commissioning file upload, the plan and the equipment log appear here.",
         "toModules": "Modules →"
+      },
+      "sort": {
+        "severity": "Importance",
+        "title": "Name",
+        "count": "How many"
       }
     },
     "profile": {
@@ -3792,6 +3846,10 @@
           "check": "Press “Check DNS” — the domain must point to the platform.",
           "save": "Save the domain: the storefront and QR codes will be built from it.",
           "tls": "The certificate for the domain comes with the stand certificate reissue — on the owner’s word."
+        },
+        "sort": {
+          "old": "Old address",
+          "created": "When changed"
         }
       },
       "group": {
@@ -3834,7 +3892,13 @@
         "legacyCount_other": "{{count}} modules changed — the old entry keeps no details",
         "inDevelopment": "module in development — switched off on the move to modules without plans"
       },
-      "otherAction": "other action"
+      "otherAction": "other action",
+      "sort": {
+        "at": "When",
+        "who": "Who",
+        "action": "What was done",
+        "hotel": "Hotel"
+      }
     },
     "history": {
       "title": "History",
@@ -3928,7 +3992,12 @@
         "guest_entry_demo": "Guest entry without PIN (demo)"
       }
     },
-    "listFilteredEmpty": "Nothing found: remove some filters or press “Reset”."
+    "listFilteredEmpty": "Nothing found: remove some filters or press “Reset”.",
+    "sort": {
+      "by": "Sort by “{{column}}”",
+      "default": "default order",
+      "label": "Sort by"
+    }
   },
   "roomControl": {
     "title": "Room control",
@@ -4365,6 +4434,12 @@
     "logoutAllConfirm": {
       "title": "Sign out on all devices?",
       "body": "Every session of this account closes, including this one: you will have to sign in again on each device."
+    },
+    "sort": {
+      "seen": "Last activity",
+      "entered": "Signed in",
+      "ip": "Address",
+      "agent": "Browser"
     }
   },
   "profile": {

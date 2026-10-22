@@ -34,8 +34,39 @@ from apps.hotels.models import Hotel
 VALID_ROLES = set(User.PlatformRole.values)
 
 
+def _team_sorts() -> dict:
+    """Столбцы «Команды» (партия 62-F): роль — по силе, доступ и 2FA — «есть» выше."""
+    from django.db.models import Case, IntegerField, Value, When
+    from django.db.models.functions import NullIf
+
+    from apps.core.listing import russian
+
+    def flag(field: str):
+        return Case(When(**{field: True}, then=Value(0)), default=Value(1), output_field=IntegerField())
+
+    return {
+        "member": russian("email"),
+        "name": NullIf(russian("full_name"), Value("")),
+        "role": Case(
+            *(When(platform_role=code, then=Value(i)) for i, code in enumerate(("owner", "support", "read_only"))),
+            default=Value(9),
+            output_field=IntegerField(),
+        ),
+        "access": flag("is_active"),
+        "twofa": flag("totp_enabled"),
+    }
+
+
 def list_members(
-    *, limit: int | None = None, search: str = "", user=None, role: str = "", active: str = "", twofa: str = ""
+    *,
+    limit: int | None = None,
+    search: str = "",
+    user=None,
+    role: str = "",
+    active: str = "",
+    twofa: str = "",
+    sort: str = "",
+    direction: str = "",
 ) -> dict:
     """
     Команда платформы. Растёт медленно, но предел здесь всё равно осознанный:
@@ -87,7 +118,9 @@ def list_members(
         if len(factors) == 1:
             queryset = queryset.filter(totp_enabled=factors.pop())
         total = queryset.count()
-        members = list(queryset.order_by("email")[:limit])
+        from apps.core.listing import order
+
+        members = list(order(queryset, sort, direction, _team_sorts(), default=("email",), then=("email", "pk"))[:limit])
     rows = [
         {
             "id": str(member.pk),
@@ -219,6 +252,8 @@ def audit_feed(
     group_id: str | None = None,
     period: str | None = None,
     view: str | None = None,
+    sort: str | None = None,
+    direction: str | None = None,
     user=None,
 ) -> dict:
     """
@@ -296,10 +331,9 @@ def audit_feed(
             queryset = journal.text_filter(queryset, term, actor_ids=journal.matching_actors(term), hotel_ids=matched)
 
         total = queryset.count()
-        queryset = journal.after_cursor(queryset, cursor)
-        rows = list(queryset.order_by("-created_at", "-pk")[: limit + 1])
-        has_more = len(rows) > limit
-        rows = rows[:limit]
+        rows, next_cursor = journal.page_rows(
+            queryset, {"sort": sort, "dir": direction, "cursor": cursor}, limit=limit, with_hotel=True
+        )
 
         hotel_ids = {row.hotel_id for row in rows if row.hotel_id}
         hotels_by_id = {item.pk: item for item in Hotel.all_objects.using("platform").filter(pk__in=hotel_ids)}
@@ -323,7 +357,7 @@ def audit_feed(
         "items": items,
         "total": total,
         "limit": limit,
-        "next_cursor": journal.encode_cursor(rows[-1]) if has_more and rows else None,
+        "next_cursor": next_cursor,
     }
 
 

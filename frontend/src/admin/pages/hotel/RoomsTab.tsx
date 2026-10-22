@@ -8,6 +8,7 @@ import { QueryState } from '@/components/QueryState';
 import { ink, surface, typo } from '../../adminTokens';
 import { getHotelRooms, type RoomsPage } from '../../adminClient';
 import { Empty, FilterBar, Hl, Panel, Pill, type Facet } from '../hotels/hotelsUi';
+import { SortHeader, useSort, type SortState } from '../../sort';
 
 /**
  * НОМЕРНОЙ ФОНД — ПОКА ТОЛЬКО ЧТЕНИЕ (партия 62-B). Номер, корпус, этаж,
@@ -20,7 +21,12 @@ const FACET_KEYS = ['building', 'floor', 'category', 'variant', 'pin'] as const;
 export function RoomsTab({ hotelId }: { hotelId: string }) {
   const { t } = useTranslation();
   const [params] = useSearchParams();
-  const query = Object.fromEntries(['search', ...FACET_KEYS].map((k) => [k, params.get(k) ?? '']));
+  // Порядок считает сервер (партия 62-F): номер и этаж — «по-человечески».
+  const sort = useSort('', ['number', ...FACET_KEYS]);
+  const query: Record<string, string> = {
+    ...Object.fromEntries(['search', ...FACET_KEYS].map((k) => [k, params.get(k) ?? ''])),
+    ...sort.query,
+  };
   const rooms = useQuery({
     queryKey: ['admin', 'hotel-rooms', hotelId, query],
     queryFn: () => getHotelRooms(hotelId, query),
@@ -30,13 +36,13 @@ export function RoomsTab({ hotelId }: { hotelId: string }) {
   return (
     <Panel title={t('admin.card.rooms.title')}>
       <QueryState query={rooms} what={t('admin.card.rooms.what')}>
-        {(page) => <Rooms page={page} search={query.search} />}
+        {(page) => <Rooms page={page} search={query.search} sort={sort} />}
       </QueryState>
     </Panel>
   );
 }
 
-function Rooms({ page, search }: { page: RoomsPage; search: string }) {
+function Rooms({ page, search, sort }: { page: RoomsPage; search: string; sort: SortState }) {
   const { t } = useTranslation();
   const label = (key: (typeof FACET_KEYS)[number], value: string, fallback: string) => {
     if (value === 'none') return t('admin.card.rooms.none');
@@ -67,9 +73,7 @@ function Rooms({ page, search }: { page: RoomsPage; search: string }) {
             <Box component="thead">
               <Box component="tr">
                 {(['number', ...FACET_KEYS] as const).map((key) => (
-                  <Box component="th" key={key} sx={{ textAlign: 'left', ...typo.label, color: ink.mid, p: '10px 12px', borderBottom: `1px solid ${surface.line}` }}>
-                    {t(`admin.card.rooms.col.${key}`)}
-                  </Box>
+                  <SortHeader key={key} column={{ key, label: t(`admin.card.rooms.col.${key}`) }} state={sort} testId={`admin-rooms-sort-${key}`} />
                 ))}
               </Box>
             </Box>

@@ -319,6 +319,8 @@ def active_impersonations(
     state: str = "active",
     limit: int | None = None,
     offset: int = 0,
+    sort: str = "",
+    direction: str = "",
     user=None,
 ) -> dict[str, Any]:
     """
@@ -362,6 +364,27 @@ def active_impersonations(
         queryset = apply_search(
             queryset, search, ("hotel__subdomain", "actor_email", "target_user__email")
         )
+        if sort:
+            # Столбец выбрал человек (партия 62-F): отель, кто вошёл, под кем,
+            # начало, конец; вошёл ли — «внутри» выше.
+            from django.db.models import Case, IntegerField, Value, When
+
+            from apps.core.listing import order, russian
+
+            queryset = order(
+                queryset,
+                sort,
+                direction,
+                {
+                    "hotel": russian("hotel__subdomain"),
+                    "actor": russian("actor_email"),
+                    "as_user": russian("target_user__email"),
+                    "started": "created_at",
+                    "expires": "expires_at",
+                    "entered": Case(When(exchanged_at__isnull=False, then=Value(0)), default=Value(1), output_field=IntegerField()),
+                },
+                default=("-created_at",),
+            )
         return list_page(
             queryset, limit=limit, offset=offset, serialize=_impersonation_row
         )

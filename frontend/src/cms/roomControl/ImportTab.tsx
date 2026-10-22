@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SortHeader, sortRows, useSort, type SortColumn } from '@/admin/sort';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
@@ -44,6 +46,15 @@ import { useToast } from '@/components/ToastProvider';
  */
 export function ImportTab({ onImported }: { onImported: () => void }) {
   const { t } = useTranslation();
+  // Разбор файла сортируется на клиенте (партия 62-F), ключ `i…`.
+  const importSort = useSort('i');
+  const importColumns: SortColumn<ImportPreview['types'][number]>[] = [
+    { key: 'type', label: t('roomControl.import.type'), kind: 'natural', get: (r) => r.name },
+    { key: 'reference', label: t('roomControl.import.reference'), kind: 'natural', get: (r) => r.reference_room || null },
+    { key: 'template', label: t('roomControl.builder.deviceTemplate'), kind: 'natural', get: (r) => r.device_name_template || null },
+    { key: 'rooms', label: t('roomControl.import.rooms'), kind: 'number', get: (r) => r.rooms.length },
+    { key: 'variables', label: t('roomControl.import.variables'), kind: 'number', get: (r) => r.variables.length },
+  ];
   // База API — из области: CMS отеля или NaviRoom Control.
   const { transport } = useGrmsScope();
   const base = transport.base;
@@ -147,15 +158,13 @@ export function ImportTab({ onImported }: { onImported: () => void }) {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('roomControl.import.type')}</TableCell>
-                  <TableCell>{t('roomControl.import.reference')}</TableCell>
-                  <TableCell>{t('roomControl.builder.deviceTemplate')}</TableCell>
-                  <TableCell align="right">{t('roomControl.import.rooms')}</TableCell>
-                  <TableCell align="right">{t('roomControl.import.variables')}</TableCell>
+                  {importColumns.map((column) => (
+                    <SortHeader caps={false} key={column.key} column={column} state={importSort} align={column.kind === 'number' ? 'right' : undefined} testId={`grms-import-sort-${column.key}`} />
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {preview.types.map((type) => (
+                {sortRows(preview.types, importColumns, importSort).map((type) => (
                   <TableRow key={type.name} data-testid={`grms-import-type-${type.name}`}>
                     <TableCell>{type.name}</TableCell>
                     <TableCell>{type.reference_room || '—'}</TableCell>

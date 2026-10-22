@@ -19,6 +19,7 @@ import { OverviewTab } from './hotel/OverviewTab';
 import { RoomsTab } from './hotel/RoomsTab';
 import { HistoryTab } from './hotel/HistoryTab';
 import { Dot, Empty, FilterBar, Help, HelpLine, Hl, Panel, Pill, ViewSwitch } from './hotels/hotelsUi';
+import { SortBar, sortRows, useSort, type SortColumn } from '../sort';
 import { ConfirmChangesDialog } from './hotel/hotelDialogs';
 import { AddressPanel, GroupPanel } from './hotel/ProfileExtras';
 
@@ -59,6 +60,7 @@ import {
   PlatformError,
   type HotelProfile,
   type ModuleEntry,
+  type HotelAdmin,
 } from '../adminClient';
 import { formatDateTime } from '@/utils/dates';
 
@@ -87,7 +89,7 @@ function resolveTab(key: string): Tab {
 }
 
 /** Фильтры и подвкладки вкладок: при смене вкладки не переносятся. */
-const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'who', 'what', 'period', 'status', 'purpose', 'view', 'mstate'];
+const TAB_KEYS = ['sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'who', 'what', 'period', 'status', 'purpose', 'view', 'mstate', 'sort', 'dir', 'jsort', 'jdir', 'ssort', 'sdir', 'dsort', 'ddir', 'vsort', 'vdir', 'bsort', 'bdir', 'isort', 'idir', 'asort', 'adir', 'lsort', 'ldir'];
 
 /**
  * Карточка отеля — на вкладках, а не одним свитком.
@@ -779,6 +781,8 @@ function ModulesTab({ id, onTab }: { id: string; onTab: (tab: Tab) => void }) {
   const view = params.get('view') === 'list' ? 'list' : 'blocks';
   const q = (params.get('search') ?? '').trim();
   const filter = (params.get('mstate') ?? '').split(',').filter(Boolean);
+  // Сортировка — на клиенте (партия 62-F): модулей девять, все на экране.
+  const sort = useSort('', ['name', 'state']);
   const modules = useQuery({ queryKey: ['admin', 'modules', id], queryFn: () => getModules(id) });
   const readiness = useQuery({ queryKey: ['admin', 'readiness', id], queryFn: () => getReadiness(id), refetchInterval: 60_000 });
   const save = useMutation({
@@ -811,8 +815,18 @@ function ModulesTab({ id, onTab }: { id: string; onTab: (tab: Tab) => void }) {
   const gives = (code: string) => t(`admin.moduleInfo.${code}.gives`);
   const needs = (m: ModuleEntry) => (m.needs ? t(`admin.modules.connection.${m.needs}`) : '');
   const ql = q.toLowerCase();
-  const shown = list.filter(
-    (m) => (!filter.length || filter.includes(stateOf(m))) && (!ql || `${title(m.code)} ${gives(m.code)}`.toLowerCase().includes(ql)),
+  // Состояние — по важности: включён, но не работает → работает → выключен → в разработке.
+  const sortColumns: SortColumn<ModuleEntry>[] = [
+    { key: 'name', label: t('admin.hotel.modules.sort.name'), kind: 'text', get: (m) => title(m.code) },
+    { key: 'state', label: t('admin.hotel.modules.sort.state'), kind: 'rank', get: (m) => stateOf(m), rank: ['broken', 'works', 'off', 'dev'] },
+  ];
+  const shown = sortRows(
+    list.filter(
+      (m) => (!filter.length || filter.includes(stateOf(m))) && (!ql || `${title(m.code)} ${gives(m.code)}`.toLowerCase().includes(ql)),
+    ),
+    sortColumns,
+    sort,
+    'name',
   );
   const ready = shown.filter((m) => m.status === 'ready');
   const dev = shown.filter((m) => m.status === 'dev');
@@ -882,6 +896,8 @@ function ModulesTab({ id, onTab }: { id: string; onTab: (tab: Tab) => void }) {
           },
         ]}
         aside={
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <SortBar state={sort} columns={sortColumns} testId="admin-hotel-modules-sort" />
           <ViewSwitch
             label={t('admin.modules.view.label')}
             value={view}
@@ -897,6 +913,7 @@ function ModulesTab({ id, onTab }: { id: string; onTab: (tab: Tab) => void }) {
               ['list', t('admin.modules.view.list'), <ViewListOutlinedIcon key="l" fontSize="small" />],
             ]}
           />
+          </Box>
         }
       />
       {!shown.length ? (
@@ -1225,6 +1242,14 @@ function AdminsPanel({ hotelId }: { hotelId: string }) {
   const qc = useQueryClient();
   const actionFailed = useActionFailed();
   const { isOwner } = useRights();
+  // Администраторы — на клиенте (партия 62-F), ключ `a…`: на той же вкладке
+  // ниже — список старых адресов со своим.
+  const adminSort = useSort('a', ['email', 'login', 'added']);
+  const adminColumns: SortColumn<HotelAdmin>[] = [
+    { key: 'email', label: t('admin.hotel.admins.sort.email'), kind: 'text', get: (a) => a.email },
+    { key: 'login', label: t('admin.hotel.admins.sort.login'), kind: 'date', get: (a) => a.last_login },
+    { key: 'added', label: t('admin.hotel.admins.sort.added'), kind: 'date', get: (a) => a.created_at },
+  ];
 
   const admins = useQuery({
     queryKey: ['admin', 'hotel-admins', hotelId],
@@ -1255,7 +1280,12 @@ function AdminsPanel({ hotelId }: { hotelId: string }) {
             <Typography sx={{ ...typo.caption, color: ink.mid }}>—</Typography>
           ) : (
             <Box>
-              {data.admins.map((row) => (
+              {data.admins.length > 1 ? (
+                <Box sx={{ mb: 1 }}>
+                  <SortBar state={adminSort} columns={adminColumns} testId="admin-hotel-admins-sort" />
+                </Box>
+              ) : null}
+              {sortRows(data.admins, adminColumns, adminSort).map((row) => (
                 <Box
                   key={row.id}
                   data-testid={`admin-hotel-admin-${row.id}`}

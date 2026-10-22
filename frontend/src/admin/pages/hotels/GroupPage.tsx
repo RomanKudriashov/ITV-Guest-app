@@ -30,6 +30,7 @@ import {
   type LinkKind,
 } from '../../adminClient';
 import { AddHotelsDialog, ColorPicker, DeleteGroupDialog, GroupActionDialog, useReadyModules } from './groupDialogs';
+import { SortBar, sortRows, useSort, type SortColumn } from '../../sort';
 import { Dot, Empty, FilterBar, GroupMark, Help, Hl, Metric, Panel, Pill, useFacetValues, type Facet, type Tone } from './hotelsUi';
 
 /**
@@ -130,6 +131,8 @@ type Page = HotelGroup & { summary: { hotels: number; active: number; rooms: num
 function Summary({ group, onTab }: { group: Page; onTab: (tab: GTab) => void }) {
   const { t } = useTranslation();
   const ready = useReadyModules();
+  // Модули по группе — на клиенте (партия 62-F): по названию или по охвату.
+  const sort = useSort('', ['module', 'count']);
   const s = group.summary;
   if (!s.hotels) {
     return (
@@ -141,6 +144,10 @@ function Summary({ group, onTab }: { group: Page; onTab: (tab: GTab) => void }) 
     );
   }
   const dev = Object.keys(group.modules).filter((code) => !ready.includes(code));
+  const moduleColumns: SortColumn<string>[] = [
+    { key: 'module', label: t('admin.modules.col.module'), kind: 'text', get: (code) => t(`admin.module.${code}`) },
+    { key: 'count', label: t('admin.groupPage.summary.modulesCount'), kind: 'number', get: (code) => group.modules[code] ?? 0 },
+  ];
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' } }} data-testid="admin-group-summary">
@@ -154,8 +161,16 @@ function Summary({ group, onTab }: { group: Page; onTab: (tab: GTab) => void }) 
           hint={t('admin.groupPage.summary.linkHint', { silent: s.link.silent, none: s.link.none })}
         />
       </Box>
-      <Panel title={t('admin.groupPage.summary.modules')} aside={<Help>{t('admin.groupPage.summary.modulesHelp')}</Help>}>
-        {ready.map((code) => {
+      <Panel
+        title={t('admin.groupPage.summary.modules')}
+        aside={
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+            <SortBar state={sort} columns={moduleColumns} testId="admin-group-modules-sort" />
+            <Help>{t('admin.groupPage.summary.modulesHelp')}</Help>
+          </Box>
+        }
+      >
+        {sortRows(ready, moduleColumns, sort).map((code) => {
           const on = group.modules[code] ?? 0;
           return (
             <Box key={code} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 80px', sm: '220px 1fr 80px' }, gap: 1.5, alignItems: 'center', py: 0.75, borderBottom: `1px solid ${surface.hair}` }} data-testid={`admin-group-module-${code}`}>
@@ -191,6 +206,8 @@ function Hotels({ group, canWrite, onAdd, onOpenHotel }: { group: Page; canWrite
   const [params] = useSearchParams();
   const values = useFacetValues(['state', 'link']);
   const q = params.get('search') ?? '';
+  // Отели группы — на клиенте, те же правила, что у «Отелей» (партия 62-F).
+  const sort = useSort('', ['name', 'rooms', 'link', 'state']);
   const remove = useMutation({
     mutationFn: (hotelId: string) => moveHotels([hotelId], null),
     onSuccess: () => {
@@ -200,11 +217,28 @@ function Hotels({ group, canWrite, onAdd, onOpenHotel }: { group: Page; canWrite
     onError: actionFailed,
   });
   const ql = q.toLowerCase();
-  const shown = group.items.filter(
-    (r) =>
-      (!values.state.length || values.state.includes(stateOf(r))) &&
-      (!values.link.length || values.link.includes(r.link)) &&
-      (!ql || `${r.name} ${r.subdomain} ${r.city}`.toLowerCase().includes(ql)),
+  const sortColumns: SortColumn<HotelViewRow>[] = [
+    { key: 'name', label: t('admin.hotels.col.hotel'), kind: 'text', get: (r) => r.name },
+    { key: 'rooms', label: t('admin.hotels.col.rooms'), kind: 'number', get: (r) => r.counts.rooms },
+    { key: 'link', label: t('admin.hotels.col.link'), kind: 'rank', get: (r) => r.link, rank: ['silent', 'none', 'online'] },
+    {
+      key: 'state',
+      label: t('admin.hotels.col.state'),
+      kind: 'rank',
+      get: (r) => (!r.is_active ? 'disabled' : r.severity || (r.problems ? 'warn' : 'ready')),
+      rank: ['bad', 'warn', 'info', 'ready', 'disabled'],
+    },
+  ];
+  const shown = sortRows(
+    group.items.filter(
+      (r) =>
+        (!values.state.length || values.state.includes(stateOf(r))) &&
+        (!values.link.length || values.link.includes(r.link)) &&
+        (!ql || `${r.name} ${r.subdomain} ${r.city}`.toLowerCase().includes(ql)),
+    ),
+    sortColumns,
+    sort,
+    'name',
   );
   const facets: Facet[] = [
     { key: 'state', label: t('admin.hotels.filter.state'), options: (['problems', 'ready', 'disabled'] as HotelState[]).map((s) => ({ value: s, label: t(`admin.hotels.state.${s}`), tone: STATE_TONE[s] })) },
@@ -212,7 +246,16 @@ function Hotels({ group, canWrite, onAdd, onOpenHotel }: { group: Page; canWrite
   ];
   return (
     <Box>
-      <FilterBar facets={facets} placeholder={t('admin.groupPage.hotels.search')} aside={canWrite ? <Button sx={primaryButtonSx} onClick={onAdd}>{t('admin.groupPage.addHotels')}</Button> : undefined} />
+      <FilterBar
+        facets={facets}
+        placeholder={t('admin.groupPage.hotels.search')}
+        aside={
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <SortBar state={sort} columns={sortColumns} testId="admin-group-hotels-sort" />
+            {canWrite ? <Button sx={primaryButtonSx} onClick={onAdd}>{t('admin.groupPage.addHotels')}</Button> : null}
+          </Box>
+        }
+      />
       <Box sx={{ ...panelSx, p: 0 }}>
         {!group.items.length ? <Empty title={t('admin.groupPage.summary.emptyTitle')}>{t('admin.groupPage.hotels.emptyBody')}</Empty> : null}
         {group.items.length && !shown.length ? <Empty title={t('admin.hotels.empty.title')}>{t('admin.groupPage.hotels.noMatch')}</Empty> : null}
@@ -492,17 +535,26 @@ function History({ id }: { id: string }) {
   const describe = useDescribe();
   const values = useFacetValues(['who', 'what', 'period']);
   const q = (params.get('search') ?? '').toLowerCase();
+  // История группы — на клиенте (партия 62-F): когда, кто, что сделано.
+  const sort = useSort('', ['at', 'who', 'kind']);
   const rows = (history.data?.items ?? []).map((row) => ({ row, kind: KIND[row.action] ?? 'updated', lines: describe(row) }));
   const actors = [...new Set(rows.map((r) => r.row.actor).filter(Boolean))];
   const days = PERIODS.find(([k]) => k === values.period[0])?.[1];
   const since = days ? Date.now() - days * 86_400_000 : 0;
-  const shown = rows.filter(
+  type HistoryLine = (typeof rows)[number];
+  const sortColumns: SortColumn<HistoryLine>[] = [
+    { key: 'at', label: t('admin.journal.sort.at'), kind: 'date', get: (r) => r.row.at },
+    { key: 'who', label: t('admin.journal.sort.who'), kind: 'text', get: (r) => r.row.actor || t('admin.groupPage.history.system') },
+    { key: 'kind', label: t('admin.journal.sort.action'), kind: 'text', get: (r) => t(`admin.groupPage.history.kind.${r.kind}`) },
+  ];
+  const filtered = rows.filter(
     (r) =>
       (!values.who.length || values.who.includes(r.row.actor || SYSTEM)) &&
       (!values.what.length || values.what.includes(r.kind)) &&
       Date.parse(r.row.at) >= since &&
       (!q || [r.row.actor, ...r.lines.flatMap((l) => [l.what, l.from, l.to, l.text])].some((s) => s?.toLowerCase().includes(q))),
   );
+  const shown = sortRows(filtered, sortColumns, sort, 'at');
   const facets: Facet[] = [
     {
       key: 'who',
@@ -520,7 +572,11 @@ function History({ id }: { id: string }) {
   const at = (iso: string) => new Date(iso).toLocaleString(i18n.language, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   return (
     <Box>
-      <FilterBar facets={facets} placeholder={t('admin.groupPage.history.search')} />
+      <FilterBar
+        facets={facets}
+        placeholder={t('admin.groupPage.history.search')}
+        aside={<SortBar state={sort} columns={sortColumns} testId="admin-group-history-sort" />}
+      />
       <Box sx={{ ...panelSx, p: 0 }} data-testid="admin-group-history">
         {history.isPending ? <Box sx={{ p: 2, ...typo.body, color: ink.mid }}>{t('admin.groupPage.loading')}</Box> : null}
         {!history.isPending && !shown.length ? (

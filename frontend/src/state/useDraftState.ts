@@ -27,12 +27,29 @@ import { useCallback, useRef, useState, type Dispatch, type SetStateAction } fro
  * Do not introduce a third mechanism. If a screen needs local input, it uses
  * this hook (or the cart store, which is built on the same principle).
  */
+/**
+ * `carry` — what of the guest's input survives a re-seed (партия 62-F).
+ *
+ * Several forms build `identity` from server data that arrives LATER for the
+ * SAME thing: the dish's full card, the request's fields, the delivery points.
+ * Re-seeding on that wiped what the guest had already typed — on a slow
+ * network the comment field came back empty. `carry(previous, fresh, from, to)`
+ * returns the new draft; without it the re-seed is a clean slate, as before.
+ */
+/** Same thing, more data: identities `"<id>:…"` share the leading `<id>`. */
+export const sameItem = (from: string, to: string): boolean => from.split(':')[0] === to.split(':')[0];
+
+export type DraftCarry<T> = (previous: T, fresh: T, fromIdentity: string, toIdentity: string) => T;
+
 export function useDraftState<T>(
   seed: () => T,
   identity: string,
+  carry?: DraftCarry<T>,
 ): [T, Dispatch<SetStateAction<T>>, () => void] {
   const seedRef = useRef(seed);
   seedRef.current = seed;
+  const carryRef = useRef(carry);
+  carryRef.current = carry;
 
   // The previous identity is kept in STATE, not in a ref: this is React's
   // "adjusting state during render" pattern, and it is the only variant that
@@ -46,7 +63,8 @@ export function useDraftState<T>(
   let current = state.value;
   if (state.id !== identity) {
     // Re-seed synchronously during render — no frame of stale input.
-    current = seedRef.current();
+    const fresh = seedRef.current();
+    current = carryRef.current ? carryRef.current(state.value, fresh, state.id, identity) : fresh;
     setState({ id: identity, value: current });
   }
 

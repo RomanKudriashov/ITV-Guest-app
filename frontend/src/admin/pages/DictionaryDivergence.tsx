@@ -9,6 +9,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { SortBar, sortRows, useSort, type SortColumn } from '../sort';
+
 import { QueryState } from '@/components/QueryState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useRights } from '../useRights';
@@ -38,6 +40,17 @@ export function DictionaryDivergence() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
+  // Отели с расхождениями — на клиенте (партия 62-F), ключ `j…`: на той же
+  // вкладке выше стоит сам справочник.
+  const sort = useSort('j', ['hotel', 'subdomain', 'diverged', 'changed', 'missing', 'disabled']);
+  const divergenceColumns: SortColumn<DivergenceHotel>[] = [
+    { key: 'hotel', label: t('admin.templates.divergence.sort.hotel'), kind: 'text', get: (r) => r.name },
+    { key: 'subdomain', label: t('admin.templates.divergence.sort.subdomain'), kind: 'text', get: (r) => r.subdomain },
+    { key: 'diverged', label: t('admin.templates.divergence.sort.diverged'), kind: 'number', get: (r) => r.counts.diverged ?? 0 },
+    { key: 'changed', label: t('admin.templates.divergence.states.changed'), kind: 'number', get: (r) => r.counts.changed ?? 0 },
+    { key: 'missing', label: t('admin.templates.divergence.states.missing'), kind: 'number', get: (r) => r.counts.missing ?? 0 },
+    { key: 'disabled', label: t('admin.templates.divergence.states.disabled'), kind: 'number', get: (r) => r.counts.disabled ?? 0 },
+  ];
   const [picked, setPicked] = useState<string[]>([]);
   // Сброс стирает правки отелей, включая погашенное ими, — только с вопросом (партия 60).
   const [askReset, setAskReset] = useState<string[] | null>(null);
@@ -97,8 +110,11 @@ export function DictionaryDivergence() {
                   <Typography sx={{ ...typo.caption, color: ink.low, mb: 1.5, maxWidth: 720 }}>
                     {t('admin.templates.divergence.hint')}
                   </Typography>
+                  <Box sx={{ mb: 1.5 }}>
+                    <SortBar state={sort} columns={divergenceColumns} testId="admin-dict-divergence-sort" />
+                  </Box>
 
-                  {diverged.map((row) => (
+                  {sortRows(diverged, divergenceColumns, sort, 'hotel').map((row) => (
                     <HotelRow
                       key={row.hotel_id}
                       row={row}

@@ -274,11 +274,12 @@ export interface PlatformSessionPage {
   has_more: boolean;
 }
 
-export const listSessions = (page: { limit?: number; offset?: number } = {}) =>
+export const listSessions = (page: { limit?: number; offset?: number; sort?: string; dir?: string } = {}) =>
   request<PlatformSessionPage>(
     `/auth/sessions?${new URLSearchParams({
       ...(page.limit !== undefined ? { limit: String(page.limit) } : {}),
       offset: String(page.offset ?? 0),
+      ...(page.sort ? { sort: page.sort, dir: page.dir ?? 'asc' } : {}),
     })}`,
   );
 export const closeSession = (id: string) => request<{ ok: boolean }>(`/auth/sessions/${id}`, 'DELETE');
@@ -621,6 +622,8 @@ export interface HotelViewRow extends FleetRow {
   modules: string[];
   /** Проблемы обзора считает сервер готовности (партия B); до неё — 0. */
   problems: number;
+  /** Самая тяжёлая проблема: `bad` | `warn` | `info` | '' (партия 62-F, сортировка). */
+  severity?: string;
   group: { id: string; title: string; color: GroupColor } | null;
 }
 
@@ -746,7 +749,7 @@ export const putModule = (id: string, code: string, enabled: boolean) =>
 export const getModulesCatalog = () => request<{ hotels: number; items: ModuleCatalogItem[] }>('/modules');
 export const getModuleCard = (
   code: string,
-  query: { state?: string; search?: string; cursor?: string; limit?: number } = {},
+  query: { state?: string; search?: string; cursor?: string; limit?: number; sort?: string; dir?: string } = {},
 ) => {
   const params = new URLSearchParams();
   Object.entries(query).forEach(([key, value]) => {
@@ -850,6 +853,9 @@ export interface ImpersonationQuery {
   state?: 'active' | 'history' | 'all';
   search?: string;
   limit?: number;
+  /** Столбец и направление (партия 62-F), сортирует сервер. */
+  sort?: string;
+  dir?: string;
 }
 
 export const getImpersonations = (query: ImpersonationQuery = {}) => {
@@ -1014,6 +1020,9 @@ export interface AuditQuery {
   group_id?: string | null;
   period?: string | null;
   view?: string | null;
+  /** Столбец и направление (партия 62-F): сервер, курсор тогда — смещение. */
+  sort?: string | null;
+  dir?: string | null;
 }
 
 export interface AuditPage {
@@ -1033,7 +1042,7 @@ export const getAudit = (query: AuditQuery = {}) => {
   const params = new URLSearchParams({ limit: String(query.limit ?? 100) });
   // `search` В СПИСКЕ. Забыть его здесь — это фильтр, который применился на
   // экране и не уехал на сервер: выдача та же, а оператор уверен, что отфильтровал.
-  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until', 'search', 'who', 'group_id', 'period', 'view'] as const) {
+  for (const key of ['cursor', 'hotel_id', 'action', 'since', 'until', 'search', 'who', 'group_id', 'period', 'view', 'sort', 'dir'] as const) {
     const value = query[key];
     if (value) params.set(key, value);
   }

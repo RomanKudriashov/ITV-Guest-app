@@ -20,8 +20,19 @@ def modules_catalog(request: HttpRequest):
 @router.get("/modules/{code}", summary="Карточка модуля: отели и журнал включений")
 @requires(READ)
 def module_card(
-    request: HttpRequest, code: str, state: str = "", search: str = "", cursor: str = "", limit: int = 50
+    request: HttpRequest,
+    code: str,
+    state: str = "",
+    search: str = "",
+    cursor: str = "",
+    limit: int = 50,
+    sort: str = "",
+    dir: str = "",
 ):
     from apps.hotels.services.platform.modules_catalog import module_card as build
 
-    return build(code, {"state": state, "search": search, "cursor": cursor, "limit": limit}, request.user)
+    return build(
+        code,
+        {"state": state, "search": search, "cursor": cursor, "limit": limit, "sort": sort, "dir": dir},
+        request.user,
+    )

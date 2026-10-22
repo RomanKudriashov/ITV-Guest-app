@@ -14,11 +14,20 @@ router = PlatformRouter(tags=["platform"])
 @router.get("/team", summary="Команда платформы")
 @requires(READ)
 def list_team(
-    request: HttpRequest, limit: int = 100, search: str = "", role: str = "", active: str = "", twofa: str = ""
+    request: HttpRequest,
+    limit: int = 100,
+    search: str = "",
+    role: str = "",
+    active: str = "",
+    twofa: str = "",
+    sort: str = "",
+    dir: str = "",
 ):
     from apps.hotels.services.platform.team import list_members
 
-    return list_members(limit=limit, search=search, user=request.user, role=role, active=active, twofa=twofa)
+    return list_members(
+        limit=limit, search=search, user=request.user, role=role, active=active, twofa=twofa, sort=sort, direction=dir
+    )
 
 
 @router.post("/team", response={201: dict}, summary="Пригласить в команду платформы")

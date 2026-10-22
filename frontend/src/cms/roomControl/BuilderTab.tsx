@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SortHeader, sortRows, useSort, type SortColumn } from '@/admin/sort';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -50,6 +52,15 @@ import { pickTranslated } from '@/utils/translated';
  */
 export function BuilderTab({ type }: { type: GrmsType }) {
   const { t } = useTranslation();
+  // Переменные типа сортируются на клиенте (партия 62-F), ключ `b…`.
+  const varSort = useSort('b');
+  const varColumns: SortColumn<GrmsType['variables'][number]>[] = [
+    { key: 'variable', label: t('roomControl.builder.variable'), kind: 'natural', get: (v) => v.key },
+    { key: 'command', label: t('roomControl.builder.command'), kind: 'natural', get: (v) => v.command || null },
+    { key: 'feedback', label: t('roomControl.builder.feedback'), kind: 'natural', get: (v) => v.feedback || null },
+    { key: 'kind', label: t('roomControl.builder.valueKind'), kind: 'text', get: (v) => t(`roomControl.builder.kinds.${v.value_kind}`, { defaultValue: v.value_kind }) },
+    { key: 'range', label: t('roomControl.builder.range'), kind: 'number', get: (v) => ('min_value' in v ? (v as { min_value: number | null }).min_value : null) },
+  ];
   // База API — из области: CMS отеля или NaviRoom Control.
   const { transport, languages } = useGrmsScope();
   const base = transport.base;
@@ -175,15 +186,13 @@ export function BuilderTab({ type }: { type: GrmsType }) {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('roomControl.builder.variable')}</TableCell>
-                    <TableCell>{t('roomControl.builder.command')}</TableCell>
-                    <TableCell>{t('roomControl.builder.feedback')}</TableCell>
-                    <TableCell>{t('roomControl.builder.valueKind')}</TableCell>
-                    <TableCell>{t('roomControl.builder.range')}</TableCell>
+                    {varColumns.map((column) => (
+                      <SortHeader caps={false} key={column.key} column={column} state={varSort} testId={`grms-variables-sort-${column.key}`} />
+                    ))}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {type.variables.map((variable) => (
+                  {sortRows(type.variables, varColumns, varSort).map((variable) => (
                     <TableRow key={variable.key}>
                       <TableCell>{variable.key}</TableCell>
                       <TableCell>{variable.command || '—'}</TableCell>

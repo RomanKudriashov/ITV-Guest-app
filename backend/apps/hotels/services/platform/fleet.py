@@ -26,6 +26,7 @@ from apps.accounts.models import User
 from apps.analytics.models import OrderDaily
 from apps.catalog.models import Item
 from apps.core.context import platform_scope
+from apps.core.listing import sort_rows, text_key
 from apps.hotels.services.platform import readiness
 from apps.hotels.models import Hotel, HotelModule, OnPremNode, Room, Service
 
@@ -125,7 +126,16 @@ def _row(hotel: Hotel, counts: dict) -> dict:
         "modules": sorted(entry.get("modules", [])),
         # Проблемы — те же, что в обзоре карточки: сервер готовности, кэш 60 с.
         "problems": readiness.problem_count(hotel),
+        # Самая тяжёлая проблема — для сортировки по важности (партия 62-F).
+        "severity": _worst(hotel),
     }
+
+
+def _worst(hotel: Hotel) -> str:
+    if not hotel.is_active:
+        return ""
+    problems = readiness.readiness(hotel)["problems"]
+    return problems[0]["severity"] if problems else ""
 
 
 def _base_queryset(params: dict, user=None):
@@ -228,6 +238,26 @@ def _summary(rows: list[dict]) -> dict:
     }
 
 
+# Столбцы «Отелей» и как их сравнивать. Состояние — по важности: мешает гостю
+# → требует внимания → проверить → готов → отключён. Связь — не на связи →
+# нет коннектора → на связи.
+VIEW_SORTS = {
+    "name": ("text", lambda r: r["name"]),
+    "subdomain": ("text", lambda r: r["subdomain"]),
+    "group": ("text", lambda r: r["group"]["title"] if r["group"] else None),
+    "rooms": ("number", lambda r: r["counts"]["rooms"]),
+    "modules": ("number", lambda r: len(r["modules"])),
+    "link": ("rank", lambda r: r["link"], ("silent", "none", "online")),
+    "state": (
+        "rank",
+        lambda r: "disabled" if not r["is_active"] else (r["severity"] or "ready"),
+        ("bad", "warn", "info", "ready", "disabled"),
+    ),
+    "city": ("text", lambda r: r["city"] or None),
+    "created": ("date", lambda r: r["created_at"]),
+}
+
+
 def fleet_view(params: dict, user=None) -> dict:
     """
     «Отели» нового вида (партия 62-A1): группы с их отелями и сводкой, ниже —
@@ -291,7 +321,10 @@ def fleet_view(params: dict, user=None) -> dict:
         facets[key] = bucket
 
     rank = {"problems": 0, "ready": 1, "disabled": 2}
-    shown = sorted((r for r in rows if passes(r)), key=lambda r: (rank[_state(r)], r["name"].lower()))
+    by_default = sorted((r for r in rows if passes(r)), key=lambda r: (rank[_state(r)], r["name"].lower()))
+    # Столбец, который выбрал человек (партия 62-F); внутри каждой группы —
+    # тот же порядок: группы делят уже отсортированный список.
+    shown = sort_rows(by_default, params.get("sort"), params.get("dir"), VIEW_SORTS, then=lambda r: text_key(r["name"]))
     for row in rows:
         row.pop("_match", None)
 

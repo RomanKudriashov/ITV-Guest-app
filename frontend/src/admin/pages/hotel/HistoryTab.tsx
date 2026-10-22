@@ -10,6 +10,7 @@ import { ink, secondaryButtonSx, typo } from '../../adminTokens';
 import { getHotelHistory, type HistoryPage } from '../../adminClient';
 import { Empty, FilterBar, Panel, type Facet } from '../hotels/hotelsUi';
 import { JournalRow, PERIODS } from '../journalUi';
+import { SortBar, useSort } from '../../sort';
 
 /**
  * «ИСТОРИЯ» ОТЕЛЯ (партия 62-D): все правки из Control — профиль, модули,
@@ -23,7 +24,9 @@ const KEYS = ['who', 'what', 'period', 'search'] as const;
 export function HistoryTab({ hotelId }: { hotelId: string }) {
   const { t } = useTranslation();
   const [params] = useSearchParams();
-  const filters = Object.fromEntries(KEYS.map((key) => [key, params.get(key) ?? '']));
+  // Порядок — с сервера (партия 62-F); с выбранным столбцом лента листается смещением.
+  const sort = useSort('', ['at', 'who', 'action']);
+  const filters = { ...Object.fromEntries(KEYS.map((key) => [key, params.get(key) ?? ''])), ...sort.query };
   const history = useInfiniteQuery({
     queryKey: ['admin', 'history', hotelId, filters],
     queryFn: ({ pageParam }) => getHotelHistory(hotelId, { ...filters, cursor: pageParam ?? '' }),
@@ -62,7 +65,21 @@ export function HistoryTab({ hotelId }: { hotelId: string }) {
           ];
           return (
             <Box data-testid="admin-history">
-              <FilterBar facets={facets} placeholder={t('admin.history.search')} />
+              <FilterBar
+                facets={facets}
+                placeholder={t('admin.history.search')}
+                aside={
+                  <SortBar
+                    state={sort}
+                    testId="admin-history-sort"
+                    columns={[
+                      { key: 'at', label: t('admin.journal.sort.at') },
+                      { key: 'who', label: t('admin.journal.sort.who') },
+                      { key: 'action', label: t('admin.journal.sort.action') },
+                    ]}
+                  />
+                }
+              />
               <Typography sx={{ ...typo.caption, color: ink.mid, mb: 1 }} data-testid="admin-history-count">
                 {t('admin.history.count', { shown: items.length, total: first.total })}
               </Typography>

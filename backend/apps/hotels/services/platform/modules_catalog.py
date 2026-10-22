@@ -93,11 +93,31 @@ def module_card(code: str, params: dict, user=None) -> dict[str, Any]:
             Q(_name__icontains=search) | Q(subdomain__icontains=search)
         )
     total = queryset.count()
-    queryset = queryset.order_by("subdomain", "pk")
-    cursor = _decode(params.get("cursor") or "") if params.get("cursor") else None
-    if cursor:
-        queryset = queryset.filter(Q(subdomain__gt=cursor[0]) | Q(subdomain=cursor[0], pk__gt=cursor[1]))
-    rows = list(queryset[: limit + 1])
+    sort = (params.get("sort") or "").strip()
+    offset = None
+    if sort:
+        # Столбец выбрал человек (партия 62-F): листание смещением `o:N`.
+        from django.db.models import Case, IntegerField, TextField, Value, When
+        from django.db.models.fields.json import KeyTextTransform
+        from django.db.models.functions import Coalesce
+
+        from apps.core.listing import order, russian
+
+        sorts = {
+            "name": russian(Coalesce(KeyTextTransform("ru", "name"), KeyTextTransform("en", "name"), "subdomain", output_field=TextField())),
+            "subdomain": russian("subdomain"),
+            "state": Case(When(pk__in=enabled_ids, then=Value(0)), default=Value(1), output_field=IntegerField()),
+        }
+        raw = params.get("cursor") or ""
+        offset = int(raw[2:]) if raw.startswith("o:") and raw[2:].isdigit() else 0
+        queryset = order(queryset, sort, params.get("dir"), sorts, default=("subdomain",), then=("subdomain", "pk"))
+        rows = list(queryset[offset : offset + limit + 1])
+    else:
+        queryset = queryset.order_by("subdomain", "pk")
+        cursor = _decode(params.get("cursor") or "") if params.get("cursor") else None
+        if cursor:
+            queryset = queryset.filter(Q(subdomain__gt=cursor[0]) | Q(subdomain=cursor[0], pk__gt=cursor[1]))
+        rows = list(queryset[: limit + 1])
     more = len(rows) > limit
     rows = rows[:limit]
 
@@ -127,7 +147,11 @@ def module_card(code: str, params: dict, user=None) -> dict[str, Any]:
                 for h in rows
             ],
             "total": total,
-            "next_cursor": _encode(rows[-1].subdomain, rows[-1].pk) if more and rows else None,
+            "next_cursor": (
+                (f"o:{offset + limit}" if offset is not None else _encode(rows[-1].subdomain, rows[-1].pk))
+                if more and rows
+                else None
+            ),
         },
         "journal": [
             {

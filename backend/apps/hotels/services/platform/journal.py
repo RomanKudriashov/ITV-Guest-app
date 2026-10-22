@@ -112,6 +112,61 @@ def moment(value: str | None) -> datetime | None:
     return timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
 
 
+def journal_sorts(*, with_hotel: bool) -> dict:
+    """
+    Столбцы журнала (партия 62-F): когда, кто (по почте человека), что (по
+    коду действия — одинаковые рядом), отель (по названию на русском, иначе
+    по-английски). Система — без автора — в конце.
+    """
+    from django.db.models import OuterRef, Subquery
+    from django.db.models.fields.json import KeyTextTransform
+    from django.db.models.functions import Coalesce
+
+    from apps.accounts.models import User
+    from apps.core.listing import russian
+    from apps.hotels.models import Hotel
+
+    sorts = {
+        "at": "created_at",
+        "who": russian(Subquery(User.all_objects.filter(pk=OuterRef("actor_id")).values("email")[:1])),
+        "action": "action",
+    }
+    if with_hotel:
+        sorts["hotel"] = russian(Subquery(
+            Hotel.all_objects.filter(pk=OuterRef("hotel_id"))
+            .annotate(
+                label=Coalesce(
+                    KeyTextTransform("ru", "name"), KeyTextTransform("en", "name"), "subdomain", output_field=TextField()
+                )
+            )
+            .values("label")[:1]
+        ))
+    return sorts
+
+
+def page_rows(queryset, params: dict, *, limit: int, with_hotel: bool) -> tuple[list, str | None]:
+    """
+    Страница журнала: по умолчанию — курсором «время|id» (журнал пополняется
+    во время просмотра); если человек выбрал столбец — смещением `o:N`, по
+    тому же столбцу (составной курсор по произвольному столбцу ломался бы на
+    пустых значениях).
+    """
+    from apps.core.listing import order
+
+    sort = (params.get("sort") or "").strip()
+    cursor = params.get("cursor") or ""
+    if not sort:
+        rows = list(after_cursor(queryset, cursor).order_by("-created_at", "-pk")[: limit + 1])
+        more = len(rows) > limit
+        rows = rows[:limit]
+        return rows, encode_cursor(rows[-1]) if more and rows else None
+    offset = int(cursor[2:]) if cursor.startswith("o:") and cursor[2:].isdigit() else 0
+    ordered = order(queryset, sort, params.get("dir"), journal_sorts(with_hotel=with_hotel), default=("-created_at",), then=("-created_at", "-pk"))
+    rows = list(ordered[offset : offset + limit + 1])
+    more = len(rows) > limit
+    return rows[:limit], f"o:{offset + limit}" if more else None
+
+
 def encode_cursor(row: AuditLog) -> str:
     return base64.urlsafe_b64encode(f"{row.created_at.isoformat()}|{row.pk}".encode()).decode()
 
@@ -278,14 +333,12 @@ def hotel_history(hotel, params: dict) -> dict:
         term = params.get("search") or ""
         queryset = text_filter(queryset, term, actor_ids=matching_actors(term))
         total = queryset.count()
-        rows = list(after_cursor(queryset, params.get("cursor")).order_by("-created_at", "-pk")[: limit + 1])
-    more = len(rows) > limit
-    rows = rows[:limit]
+        rows, next_cursor = page_rows(queryset, params, limit=limit, with_hotel=False)
     people = actors(row.actor_id for row in rows)
     return {
         "items": [serialize(row, people) for row in rows],
         "total": total,
-        "next_cursor": encode_cursor(rows[-1]) if more and rows else None,
+        "next_cursor": next_cursor,
         "facets": facets,
     }
 

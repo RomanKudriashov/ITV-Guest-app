@@ -259,6 +259,27 @@ function Console({ onLogout }: { onLogout: () => void }) {
       'cmstate',
       'cneed',
       'cview',
+      'csort',
+      'cdir',
+      // Сортировка столбцов (партия 62-F); `j…` — второй список на экране.
+      'sort',
+      'dir',
+      'jsort',
+      'jdir',
+      'ssort',
+      'sdir',
+      'dsort',
+      'ddir',
+      'vsort',
+      'vdir',
+      'bsort',
+      'bdir',
+      'isort',
+      'idir',
+      'asort',
+      'adir',
+      'lsort',
+      'ldir',
     ]) {
       params.delete(key);
     }
@@ -285,7 +306,7 @@ function Console({ onLogout }: { onLogout: () => void }) {
     const params = new URLSearchParams(searchParams);
     params.delete('hotel');
     // Вкладка карточки и её фильтры в списке отелей ничего не значат.
-    for (const key of ['tab', 'sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'view', 'mstate']) params.delete(key);
+    for (const key of ['tab', 'sub', 'search', 'building', 'floor', 'category', 'variant', 'pin', 'view', 'mstate', 'sort', 'dir', 'jsort', 'jdir', 'ssort', 'sdir', 'dsort', 'ddir', 'vsort', 'vdir', 'bsort', 'bdir', 'isort', 'idir', 'asort', 'adir', 'lsort', 'ldir']) params.delete(key);
     setSearchParams(params);
   };
   /** Из карточки отеля — в список «Отелей» или на страницу группы. */

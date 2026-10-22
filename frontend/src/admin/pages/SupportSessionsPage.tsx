@@ -12,6 +12,7 @@ import { SearchField } from '@/components/SearchField';
 import { QueryState } from '@/components/QueryState';
 import { useRights } from '../useRights';
 import { ListEmpty } from '@/kit/list/ListEmpty';
+import { SortBar, useSort } from '../sort';
 import { useListQuery } from '@/kit/list/useListQuery';
 import { getImpersonations, revokeImpersonation, type ImpersonationRow } from '../adminClient';
 
@@ -38,14 +39,26 @@ export function SupportSessionsPage({ hotelId, embedded = false }: { hotelId?: s
     хотя записи никуда не делись.
   */
   const { params, patch, reset, isFiltered } = useListQuery({ state: 'active', search: '' });
+  // Порядок — с сервера (партия 62-F), ключ `s…`: в карточке отеля рядом
+  // стоит журнал оборудования со своим.
+  const sort = useSort('s', ['hotel', 'actor', 'as_user', 'started', 'expires', 'entered']);
   const sessions = useQuery({
-    queryKey: ['admin', 'impersonations', params.state, params.search],
+    queryKey: ['admin', 'impersonations', params.state, params.search, sort.query],
     queryFn: () =>
       getImpersonations({
         state: params.state as 'active' | 'history' | 'all',
         search: params.search,
+        ...sort.query,
       }),
   });
+  const sortColumns = [
+    ...(hotelId ? [] : [{ key: 'hotel', label: t('admin.support.sort.hotel') }]),
+    { key: 'actor', label: t('admin.support.sort.actor') },
+    { key: 'as_user', label: t('admin.support.sort.asUser') },
+    { key: 'started', label: t('admin.support.sort.started') },
+    { key: 'expires', label: t('admin.support.sort.expires') },
+    { key: 'entered', label: t('admin.support.sort.entered') },
+  ];
 
   const revoke = useMutation({
     mutationFn: (id: string) => revokeImpersonation(id),
@@ -113,6 +126,7 @@ export function SupportSessionsPage({ hotelId, embedded = false }: { hotelId?: s
             testId="admin-support-search"
             sx={[fieldSx, { width: { xs: '100%', sm: 240 } }]}
           />
+          <SortBar state={sort} columns={sortColumns} testId="admin-support-sort" />
           <Box sx={{ flexGrow: 1 }} />
           {sessions.data ? (
             <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-support-total">
@@ -125,6 +139,11 @@ export function SupportSessionsPage({ hotelId, embedded = false }: { hotelId?: s
         </Box>
       )}
 
+      {hotelId ? (
+        <Box sx={{ mb: 1 }}>
+          <SortBar state={sort} columns={sortColumns} testId="admin-support-sort" />
+        </Box>
+      ) : null}
       <QueryState query={sessions} what={t('state.what.support')}>
         {(page) =>
           mine(page).length === 0 ? (

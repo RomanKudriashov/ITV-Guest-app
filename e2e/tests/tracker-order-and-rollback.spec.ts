@@ -379,10 +379,16 @@ test.describe('Порядок на экране', () => {
  * молча уходила в ветку «баннера нет», а 11 пропускалась. Проверка, читающая
  * стенд, сама им становится (п.75): теперь колонку заводит проверка.
  *
- * Порог просрочки кухни на время проверки — 0 минут: любая открытая карточка
- * просрочена сразу, ждать не нужно. Порог и заказы возвращаются в `finally`.
- * Проверки идут в один поток (`workers: 1`) — соседям ноль не достанется.
+ * Порог просрочки кухни на время проверки — 1 минута, и проверка ждёт, пока
+ * свои карточки её перешагнут. Ноль был проще, но с партии 60 сервер его не
+ * принимает (422: «без порога» — это пустое поле, а не ноль), и проверки 10 и
+ * 11 падали на подготовке (партия 62-F). Порог и заказы возвращаются в
+ * `finally`. Проверки идут в один поток (`workers: 1`) — соседям короткий
+ * порог не достанется.
  */
+/** Самый короткий порог, который принимает сервер (0 запрещён с партии 60). */
+const SHORT_SLA_MINUTES = 1
+
 async function withOverdueColumn<T>(
   request: APIRequestContext,
   count: number,
@@ -404,12 +410,17 @@ async function withOverdueColumn<T>(
   const token = await apiToken(request, CREDENTIALS)
   const orders: Array<{ id: string; number: number }> = []
   try {
-    const zero = await request.patch(`${API}/api/cms/services/${kitchen!.id}`, {
+    const short = await request.patch(`${API}/api/cms/services/${kitchen!.id}`, {
       headers: admin,
-      data: { sla_minutes: 0 },
+      data: { sla_minutes: SHORT_SLA_MINUTES },
     })
-    expect(zero.ok(), 'порог кухни не снялся').toBeTruthy()
+    expect(short.ok(), `порог кухни не встал на ${SHORT_SLA_MINUTES} мин: ${short.status()}`).toBeTruthy()
+    const placedAt = Date.now()
     for (let i = 0; i < count; i += 1) orders.push(await placeOrder(request))
+    // Ждём, пока ПЕРВАЯ (самая старая) карточка перешагнёт порог: остальные
+    // моложе на секунды — с запасом в 10 с просрочены все.
+    const wait = SHORT_SLA_MINUTES * 60_000 + 10_000 - (Date.now() - placedAt)
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
     return await run(orders)
   } finally {
     for (const order of orders) await moveOrderStatus(request, token, order.id, 'cancelled').catch(() => undefined)
@@ -440,6 +451,8 @@ async function bannerCount(page: Page): Promise<number> {
 const LONG_COLUMN = 14
 
 test.describe('Просроченное ниже экрана', () => {
+  // Минута ожидания порога сверх обычного времени проверки.
+  test.slow()
   test('10. доска говорит, сколько просроченных осталось ниже', async ({ page, request }) => {
     /*
       БАННЕР — ОТВЕТ НА ЦЕНУ РУЧНОГО ПОРЯДКА.

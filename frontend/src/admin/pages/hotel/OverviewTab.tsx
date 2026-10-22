@@ -5,6 +5,8 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { SortBar, sortRows, useSort, type SortColumn } from '../../sort';
+
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { QueryState } from '@/components/QueryState';
 import { useActionFailed } from '@/hooks/useActionFailed';
@@ -54,6 +56,14 @@ export function OverviewTab({
 
 function Overview({ hotel, data, onFix }: { hotel: HotelProfile; data: Readiness; onFix: (target: FixTarget) => void }) {
   const { t } = useTranslation();
+  const problemText = useProblemText();
+  // Проблемы — по важности по умолчанию; можно по названию (партия 62-F).
+  const sort = useSort('', ['severity', 'title', 'count']);
+  const problemColumns: SortColumn<ReadinessProblem>[] = [
+    { key: 'severity', label: t('admin.card.sort.severity'), kind: 'rank', get: (p) => p.severity, rank: ['bad', 'warn', 'info'] },
+    { key: 'title', label: t('admin.card.sort.title'), kind: 'text', get: (p) => problemText(p).title },
+    { key: 'count', label: t('admin.card.sort.count'), kind: 'number', get: (p) => p.count },
+  ];
   const f = data.facts;
   const passed = data.rules.filter((rule) => rule.status === 'pass');
   const failed = f.commands.failed;
@@ -102,9 +112,14 @@ function Overview({ hotel, data, onFix }: { hotel: HotelProfile; data: Readiness
               {t('admin.card.disabledNote')}
             </Box>
           ) : null}
+          {data.problems.length > 1 ? (
+            <Box sx={{ mb: 1 }}>
+              <SortBar state={sort} columns={problemColumns} testId="admin-overview-problems-sort" />
+            </Box>
+          ) : null}
           {data.problems.length ? (
             <Box sx={{ display: 'grid', gap: 1 }} data-testid="admin-overview-problems">
-              {data.problems.map((problem) => (
+              {sortRows(data.problems, problemColumns, sort, 'severity').map((problem) => (
                 <ProblemRow key={problem.key} problem={problem} onFix={() => onFix(problem.fix)} />
               ))}
             </Box>

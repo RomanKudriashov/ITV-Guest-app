@@ -247,6 +247,7 @@ export function SecurityPage() {
         }}
       >
         <SessionsPanel
+          sortable
           queryKey={['platform', 'sessions']}
           fetchSessions={listSessions}
           closeSession={closeSession}

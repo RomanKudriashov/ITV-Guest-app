@@ -16,6 +16,7 @@ import { QueryState } from '@/components/QueryState';
 import { SelectField } from '@/components/SelectField';
 import { getMe, getTeam, inviteMember, patchMember, resetMemberTwoFactor, type TeamMember } from '../adminClient';
 import { FilterBar, Help, HelpLine, type Facet } from './hotels/hotelsUi';
+import { SortHeader, useSort } from '../sort';
 
 const ROLES = ['owner', 'support', 'read_only'] as const;
 
@@ -41,7 +42,10 @@ export function TeamPage() {
   // Фильтры — в адресе, считает сервер (партия 62-D).
   const [params] = useSearchParams();
   const filters = Object.fromEntries(['role', 'active', 'twofa', 'search'].map((key) => [key, params.get(key) ?? '']));
-  const team = useQuery({ queryKey: ['admin', 'team', filters], queryFn: () => getTeam(100, filters) });
+  // Порядок — с сервера (партия 62-F): столбец и направление в адресе.
+  const sort = useSort('', ['member', 'role', 'access', 'twofa']);
+  const query = { ...filters, ...sort.query };
+  const team = useQuery({ queryKey: ['admin', 'team', query], queryFn: () => getTeam(100, query) });
   const facets: Facet[] = [
     { key: 'role', label: t('admin.team.filter.role'), options: ['owner', 'support', 'read_only'].map((r) => ({ value: r, label: t(`admin.journal.role.${r}`) })) },
     { key: 'active', label: t('admin.team.filter.active'), options: [{ value: 'yes', label: t('admin.team.filter.activeYes') }, { value: 'no', label: t('admin.team.filter.activeNo') }] },
@@ -156,21 +160,10 @@ export function TeamPage() {
         <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', ...typo.body }}>
           <Box component="thead">
             <Box component="tr">
-              {['member', 'role', 'access', 'twofa'].map((key) => (
-                <Box
-                  component="th"
-                  key={key}
-                  sx={{
-                    textAlign: 'left',
-                    ...typo.label,
-                    color: ink.mid,
-                    p: '11px 12px',
-                    borderBottom: `1px solid ${surface.line}`,
-                  }}
-                >
-                  {t(`admin.team.col.${key}`)}
+              {(['member', 'role', 'access', 'twofa'] as const).map((key) => (
+                <SortHeader key={key} column={{ key, label: t(`admin.team.col.${key}`) }} state={sort} testId={`admin-team-sort-${key}`}>
                   {key === 'role' ? <Help>{t('admin.team.roleHelp')}</Help> : null}
-                </Box>
+                </SortHeader>
               ))}
             </Box>
           </Box>

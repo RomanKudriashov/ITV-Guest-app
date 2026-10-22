@@ -7,6 +7,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { SortBar, sortRows, useSort, type SortColumn } from '../../sort';
+
 import { SelectField } from '@/components/SelectField';
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { ink, panelSx, pillSx, primaryButtonSx, secondaryButtonSx, shape, state, surface, typo } from '../../adminTokens';
@@ -45,6 +47,12 @@ function useRefresh(hotelId: string) {
 
 export function AddressPanel({ hotel }: { hotel: HotelProfile }) {
   const { t } = useTranslation();
+  // Старые адреса — на клиенте (партия 62-F), ключ `l…`.
+  const aliasSort = useSort('l', ['old', 'created']);
+  const aliasColumns: SortColumn<{ old: string; created_at: string }>[] = [
+    { key: 'old', label: t('admin.profile.address.sort.old'), kind: 'text', get: (a) => a.old },
+    { key: 'created', label: t('admin.profile.address.sort.created'), kind: 'date', get: (a) => a.created_at },
+  ];
   const me = useQuery({ queryKey: ['admin', 'me'], queryFn: getMe });
   const owner = me.data?.role === 'owner';
   const refresh = useRefresh(hotel.id);
@@ -113,7 +121,12 @@ export function AddressPanel({ hotel }: { hotel: HotelProfile }) {
       {hotel.aliases?.length ? (
         <Box sx={{ mt: 1.5 }} data-testid="admin-hotel-aliases">
           <Typography sx={{ ...typo.label, color: ink.mid, mb: 0.75 }}>{t('admin.profile.address.aliases')}</Typography>
-          {hotel.aliases.map((alias) => (
+          {hotel.aliases.length > 1 ? (
+            <Box sx={{ mb: 1 }}>
+              <SortBar state={aliasSort} columns={aliasColumns} testId="admin-hotel-aliases-sort" />
+            </Box>
+          ) : null}
+          {sortRows(hotel.aliases, aliasColumns, aliasSort).map((alias) => (
             <Box key={alias.old} data-testid={`admin-hotel-alias-${alias.old}`} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, borderBottom: `1px solid ${surface.hair}`, ...typo.caption }}>
               <Box sx={{ flex: 1, color: ink.hi, overflowWrap: 'anywhere' }}>
                 {t('admin.profile.address.aliasLine', { old: alias.old, now: hotel.subdomain })}

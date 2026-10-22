@@ -206,7 +206,25 @@ def all_nodes(*, limit: int | None = None, search: str = "", user=None) -> dict:
     return envelope([serialize_node(node, node.hotel) for node in nodes], total, limit)
 
 
-def hotel_nodes(hotel: Hotel, *, status: str = "", purpose: str = "", search: str = "") -> dict:
+# Столбцы «Подключений» (партия 62-F). Связь — не на связи → отозван → на
+# связи: сначала то, что требует внимания.
+NODE_SORTS = {
+    "name": ("text", lambda r: r["name"]),
+    "status": (
+        "rank",
+        lambda r: "revoked" if r["is_revoked"] else "online" if r["is_online"] else "offline",
+        ("offline", "revoked", "online"),
+    ),
+    "purpose": ("text", lambda r: r["purpose"]),
+    "seen": ("date", lambda r: r["last_seen_at"]),
+    "version": ("natural", lambda r: r["version"] or None),
+    "key": ("date", lambda r: r["key_issued_at"]),
+}
+
+
+def hotel_nodes(
+    hotel: Hotel, *, status: str = "", purpose: str = "", search: str = "", sort: str = "", direction: str = ""
+) -> dict:
     """
     Узлы одного отеля — вкладка «Подключения» карточки. Фильтры на сервере
     (62-D): состояние (на связи / не на связи / отозван), назначение, текст.
@@ -229,4 +247,7 @@ def hotel_nodes(hotel: Hotel, *, status: str = "", purpose: str = "", search: st
         and (not purposes or row["purpose"] in purposes)
         and (not term or term in row["name"].lower() or term in (row["version"] or "").lower())
     ]
+    from apps.core.listing import sort_rows, text_key
+
+    shown = sort_rows(shown, sort, direction, NODE_SORTS, then=lambda r: text_key(r["name"]))
     return {"items": shown, "total": len(rows), "facets": facets}

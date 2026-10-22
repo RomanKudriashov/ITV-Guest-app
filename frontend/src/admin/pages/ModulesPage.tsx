@@ -24,6 +24,7 @@ import {
   type ModuleJournalRow,
 } from '../adminClient';
 import { Empty, FilterBar, Help, Hl, Panel, Pill, ViewSwitch, useFacetValues } from './hotels/hotelsUi';
+import { SortBar, SortHeader, sortRows, useSort, type SortColumn } from '../sort';
 
 /**
  * КАТАЛОГ МОДУЛЕЙ (партия 62-E1, по макету ModulesCatalogMock) — вместо
@@ -89,7 +90,7 @@ function Catalog() {
   const open = (code: string) => {
     const next = new URLSearchParams(params);
     next.set('module', code);
-    for (const key of ['search', 'mstate', 'need', 'view']) {
+    for (const key of ['search', 'mstate', 'need', 'view', 'sort', 'dir']) {
       if (next.get(key)) next.set(`c${key}`, next.get(key)!);
       next.delete(key);
     }
@@ -107,6 +108,16 @@ function Catalog() {
       (!ql || `${words.title(m.code)} ${words.gives(m.code)} ${words.opens(m.code).join(' ')}`.toLowerCase().includes(ql)),
   );
   const count = (pred: (m: ModuleCatalogItem) => boolean) => items.filter(pred).length;
+  // Сортировка каталога — на клиенте: он целиком на экране (партия 62-F).
+  const columns: SortColumn<ModuleCatalogItem>[] = [
+    { key: 'module', label: t('admin.modules.col.module'), kind: 'text', get: (m) => words.title(m.code) },
+    { key: 'gives', label: t('admin.modules.col.gives'), kind: 'text', get: (m) => words.gives(m.code) },
+    { key: 'state', label: t('admin.modules.col.state'), kind: 'rank', get: (m) => m.status, rank: ['ready', 'dev'] },
+    { key: 'need', label: t('admin.modules.col.need'), kind: 'text', get: (m) => words.needs(m) || null },
+    { key: 'hotels', label: t('admin.modules.col.hotels'), kind: 'number', get: (m) => (m.status === 'ready' ? m.enabled_hotels : null) },
+  ];
+  const sort = useSort('', columns.map((c) => c.key));
+  const sorted = sortRows(shown, columns, sort, 'module');
 
   return (
     <Box data-testid="admin-modules">
@@ -148,6 +159,11 @@ function Catalog() {
         }
       />
 
+      {view !== 'table' ? (
+        <Box sx={{ mb: 1.5 }}>
+          <SortBar columns={columns} state={sort} testId="admin-modules-sort-bar" />
+        </Box>
+      ) : null}
       <QueryState
         query={catalog}
         what={t('state.what.modules')}
@@ -163,7 +179,7 @@ function Catalog() {
             </Box>
           ) : view === 'blocks' ? (
             <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' } }}>
-              {shown.map((m) => (
+              {sorted.map((m) => (
                 <ButtonBase
                   key={m.code}
                   onClick={() => open(m.code)}
@@ -199,7 +215,7 @@ function Catalog() {
             </Box>
           ) : view === 'list' ? (
             <Box sx={{ ...panelSx, p: 0 }}>
-              {shown.map((m, i) => (
+              {sorted.map((m, i) => (
                 <ButtonBase
                   key={m.code}
                   onClick={() => open(m.code)}
@@ -240,20 +256,18 @@ function Catalog() {
                   width: '100%',
                   borderCollapse: 'collapse',
                   ...typo.body,
-                  '& td, & th': { px: 1.5, py: 1.1, borderBottom: `1px solid ${surface.hair}`, textAlign: 'start' },
+                  '& td': { px: 1.5, py: 1.1, borderBottom: `1px solid ${surface.hair}`, textAlign: 'start' },
                 }}
               >
                 <Box component="thead">
-                  <Box component="tr" sx={{ '& th': { ...typo.label, color: ink.mid, whiteSpace: 'nowrap' } }}>
-                    <th>{t('admin.modules.col.module')}</th>
-                    <th>{t('admin.modules.col.gives')}</th>
-                    <th>{t('admin.modules.col.state')}</th>
-                    <th>{t('admin.modules.col.need')}</th>
-                    <th>{t('admin.modules.col.hotels')}</th>
+                  <Box component="tr">
+                    {columns.map((c) => (
+                      <SortHeader key={c.key} column={c} state={sort} testId={`admin-modules-sort-${c.key}`} />
+                    ))}
                   </Box>
                 </Box>
                 <Box component="tbody">
-                  {shown.map((m) => (
+                  {sorted.map((m) => (
                     <Box
                       component="tr"
                       key={m.code}
@@ -300,9 +314,13 @@ function ModuleCardPage({ code }: { code: string }) {
   const state = stateFilter.length === 1 ? stateFilter[0] : '';
   const search = (params.get('search') ?? '').trim();
 
+  // Отели — порядок с сервера; журнал включений — на клиенте, своим ключом `j`.
+  const hotelSort = useSort('', ['name', 'subdomain', 'state']);
+  const journalSort = useSort('j', ['at', 'hotel', 'actor', 'change']);
   const card = useInfiniteQuery({
-    queryKey: ['admin', 'module', code, state, search],
-    queryFn: ({ pageParam }) => getModuleCard(code, { state, search, cursor: pageParam || undefined, limit: PAGE }),
+    queryKey: ['admin', 'module', code, state, search, hotelSort.query],
+    queryFn: ({ pageParam }) =>
+      getModuleCard(code, { state, search, cursor: pageParam || undefined, limit: PAGE, ...hotelSort.query }),
     initialPageParam: '',
     getNextPageParam: (last) => last.hotels.next_cursor ?? undefined,
   });
@@ -322,8 +340,8 @@ function ModuleCardPage({ code }: { code: string }) {
   const back = () => {
     const next = new URLSearchParams(params);
     next.delete('module');
-    for (const key of ['search', 'state']) next.delete(key);
-    for (const key of ['search', 'mstate', 'need', 'view']) {
+    for (const key of ['search', 'state', 'sort', 'dir', 'jsort', 'jdir']) next.delete(key);
+    for (const key of ['search', 'mstate', 'need', 'view', 'sort', 'dir']) {
       const saved = next.get(`c${key}`);
       next.delete(`c${key}`);
       if (saved) next.set(key, saved);
@@ -339,6 +357,12 @@ function ModuleCardPage({ code }: { code: string }) {
   };
 
   const first = card.data?.pages[0];
+  const journalColumns: SortColumn<ModuleJournalRow>[] = [
+    { key: 'at', label: t('admin.modules.sort.at'), kind: 'date', get: (r) => r.at },
+    { key: 'hotel', label: t('admin.modules.sort.hotel'), kind: 'text', get: (r) => r.hotel || r.subdomain },
+    { key: 'actor', label: t('admin.modules.sort.actor'), kind: 'text', get: (r) => (r.actor.role === 'system' ? t('admin.modules.system') : r.actor.name || r.actor.email) },
+    { key: 'change', label: t('admin.modules.sort.change'), kind: 'rank', get: (r) => (r.to ? 'on' : 'off'), rank: ['on', 'off'] },
+  ];
   const rows = card.data?.pages.flatMap((page) => page.hotels.items) ?? [];
 
   return (
@@ -424,6 +448,17 @@ function ModuleCardPage({ code }: { code: string }) {
                         },
                       ]}
                     />
+                    <Box sx={{ mb: 1 }}>
+                      <SortBar
+                        state={hotelSort}
+                        testId="admin-module-hotels-sort"
+                        columns={[
+                          { key: 'name', label: t('admin.modules.sort.name') },
+                          { key: 'subdomain', label: t('admin.modules.sort.subdomain') },
+                          { key: 'state', label: t('admin.modules.sort.state') },
+                        ]}
+                      />
+                    </Box>
                     {!rows.length ? (
                       <Empty title={t('admin.modules.noHotels')} testId="admin-module-hotels-empty">
                         {t('admin.modules.noHotelsText')}
@@ -486,7 +521,14 @@ function ModuleCardPage({ code }: { code: string }) {
                   </Panel>
                   <Panel title={t('admin.modules.journal')} aside={<Help>{t('admin.modules.journalHelp')}</Help>}>
                     {first.journal.length ? (
-                      first.journal.map((row) => <JournalLine key={row.id} row={row} />)
+                      <>
+                        <Box sx={{ mb: 1 }}>
+                          <SortBar state={journalSort} columns={journalColumns} testId="admin-module-journal-sort" />
+                        </Box>
+                        {sortRows(first.journal, journalColumns, journalSort, 'at').map((row) => (
+                          <JournalLine key={row.id} row={row} />
+                        ))}
+                      </>
                     ) : (
                       <Empty title={t('admin.modules.journalEmpty')} testId="admin-module-journal-empty">
                         {t('admin.modules.journalEmptyText')}

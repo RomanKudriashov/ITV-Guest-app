@@ -15,9 +15,21 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.context import tenant_context
+from apps.core.listing import natural_key, sort_rows
 from apps.hotels.models import Hotel
 
 LIMIT = 1000
+
+# Столбцы номерного фонда. Номер и этаж — «по-человечески» (2 < 10 < 101,
+# «3А» после «3»); PIN — «нет» выше: это и есть то, что ищут.
+SORTS = {
+    "number": ("natural", lambda r: r["number"]),
+    "building": ("natural", lambda r: r["building"] or None),
+    "floor": ("natural", lambda r: r["floor"] or None),
+    "category": ("text", lambda r: r["category"] or None),
+    "variant": ("text", lambda r: r["variant"]["title"] if r["variant"] else None),
+    "pin": ("rank", lambda r: "no" if not r["pin"] else "yes", ("no", "yes")),
+}
 FACETS = ("building", "floor", "category", "variant", "pin")
 NONE = "none"
 
@@ -52,6 +64,9 @@ def room_list(hotel: Hotel, params: dict[str, str]) -> dict[str, Any]:
         if (not search or search in row["number"].lower())
         and all(not values or row["facet"][key] in values for key, values in chosen.items())
     ]
+    # Сортировка по столбцу (партия 62-F) — до предела выдачи: иначе первые
+    # тысяча строк были бы первыми по умолчанию, а не по выбранному столбцу.
+    shown = sort_rows(shown, params.get("sort"), params.get("dir"), SORTS, then=lambda r: natural_key(r["number"]))
     return {
         "room_control": room_control,
         "total": len(rows),

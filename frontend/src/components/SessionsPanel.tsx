@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SortBar, useSort } from '@/admin/sort';
+
 import { useActionFailed } from '@/hooks/useActionFailed';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
@@ -40,6 +42,9 @@ export interface SessionPage {
 export interface SessionPageQuery {
   limit?: number;
   offset?: number;
+  /** Столбец и направление — сортирует сервер (Control, партия 62-F). */
+  sort?: string;
+  dir?: string;
 }
 
 /**
@@ -59,12 +64,15 @@ export function SessionsPanel({
   closeSession,
   logoutEverywhere,
   onLoggedOutEverywhere,
+  sortable = false,
 }: {
   queryKey: string[];
   fetchSessions: (page: SessionPageQuery) => Promise<SessionPage>;
   closeSession: (id: string) => Promise<unknown>;
   logoutEverywhere: () => Promise<unknown>;
   onLoggedOutEverywhere: () => void;
+  /** «Сортировать по» над списком: в Control (партия 62-F); в панели отеля — нет. */
+  sortable?: boolean;
 }) {
   const actionFailed = useActionFailed();
   const { t, i18n } = useTranslation();
@@ -73,9 +81,11 @@ export function SessionsPanel({
   // Страницами, «Показать ещё» дописывает следующую. Целиком список не
   // грузится никогда: у человека с долгой историей входов их сотни, а на
   // стенде у администратора было 7 936 — страница вытягивалась на 620 000 px.
+  const sort = useSort('', ['seen', 'entered', 'ip', 'agent']);
+  const sortQuery = sortable ? sort.query : {};
   const sessions = useInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam }) => fetchSessions({ offset: pageParam }),
+    queryKey: [...queryKey, sortQuery],
+    queryFn: ({ pageParam }) => fetchSessions({ offset: pageParam, ...sortQuery }),
     initialPageParam: 0,
     getNextPageParam: (last) => (last.has_more ? last.offset + last.items.length : undefined),
   });
@@ -129,6 +139,15 @@ export function SessionsPanel({
           const total = first?.total ?? 0;
           return (
             <>
+              {sortable ? (
+                <Box sx={{ mb: 1 }}>
+                  <SortBar
+                    state={sort}
+                    testId="sessions-sort"
+                    columns={(['seen', 'entered', 'ip', 'agent'] as const).map((key) => ({ key, label: t(`sessions.sort.${key}`) }))}
+                  />
+                </Box>
+              ) : null}
               <Stack divider={<Divider flexItem />} spacing={0}>
                 {rows.map((row) => (
                   <SessionRow

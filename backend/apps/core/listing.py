@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from django.db.models import Q, QuerySet, TextField
+from django.db.models import F, Q, QuerySet, TextField
 from django.db.models.functions import Cast
 
 DEFAULT_LIMIT = 100
@@ -87,6 +87,155 @@ def sort(queryset: QuerySet, key: str | None, allowed: dict[str, str], default: 
     модели, включая то, чего в выдаче нет.
     """
     return queryset.order_by(allowed.get((key or "").strip(), default))
+
+
+def order(
+    queryset: QuerySet,
+    key: str | None,
+    direction: str | None,
+    allowed: dict[str, Any],
+    *,
+    default: Iterable[Any],
+    then: Iterable[Any] = ("pk",),
+) -> QuerySet:
+    """
+    Сортировка по столбцу, который выбрал человек (партия 62-F, Control).
+
+    `allowed` — белый список: ключ из адреса → выражение (имя поля, `F`,
+    аннотация) или СПИСОК выражений (первичный ключ и уточняющие). Чужой ключ —
+    422 `invalid_sort`, а не тихая сортировка по умолчанию: ссылка с опечаткой
+    должна сказать об этом, а не показать «какой-то» порядок.
+
+    Пустые значения — В КОНЦЕ при любом направлении (`nulls_last`). При
+    равенстве — `then` (по умолчанию `pk`): без него страницы курсора и
+    повтор запроса могли бы переставить равные строки.
+    """
+    from django.db.models.expressions import Expression
+
+    from apps.core.errors import ValidationError
+
+    key = (key or "").strip()
+    direction = (direction or "asc").strip()
+    if not key:
+        return queryset.order_by(*default, *then)
+    if key not in allowed:
+        raise ValidationError(
+            "По этому столбцу сортировать нельзя",
+            field="sort",
+            code="invalid_sort",
+            allowed=sorted(allowed),
+        )
+    if direction not in ("asc", "desc"):
+        raise ValidationError("Направление сортировки — asc или desc", field="dir", code="invalid_sort")
+    spec = allowed[key]
+    exprs = spec if isinstance(spec, (list, tuple)) else [spec]
+    ordering = []
+    for expr in exprs:
+        node = F(expr) if isinstance(expr, str) else expr
+        if not isinstance(node, Expression) and not hasattr(node, "asc"):
+            node = F(str(node))
+        ordering.append(node.desc(nulls_last=True) if direction == "desc" else node.asc(nulls_last=True))
+    return queryset.order_by(*ordering, *then)
+
+
+def text_key(value: Any) -> str:
+    """Текст для сравнения: без регистра, «ё» = «е»."""
+    return str(value).replace("ё", "е").replace("Ё", "Е").casefold()
+
+
+def natural_key(value: Any) -> tuple:
+    """Номер «по-человечески»: (число головы, хвост) — 2 < 10 < 101, «3А» после «3»."""
+    import re
+
+    text = str(value).strip()
+    match = re.match(r"^(\d+)(.*)$", text)
+    if not match:
+        return (1, 0, text_key(text))
+    return (0, int(match.group(1)), text_key(match.group(2)))
+
+
+def sort_rows(
+    rows: list[Any],
+    key: str | None,
+    direction: str | None,
+    allowed: dict[str, tuple],
+    *,
+    default: Any = None,
+    then: Any = None,
+) -> list[Any]:
+    """
+    Сортировка уже собранных строк — для выдач, которые фильтруются в Python
+    (отели, номера, подключения). Те же правила, что у `order` и у экрана:
+
+    `allowed[key] = (вид, достать)` или `(вид, достать, порядок_важности)`;
+    вид — `text` | `natural` | `number` | `date` | `rank`. Пустое — в конце при
+    любом направлении. При равенстве — `then(строка)` по возрастанию, затем
+    исходный порядок. Чужой ключ — 422 `invalid_sort`.
+    """
+    from apps.core.errors import ValidationError
+
+    key = (key or "").strip()
+    direction = (direction or "asc").strip()
+    if not key:
+        return sorted(rows, key=default) if default else list(rows)
+    if key not in allowed:
+        raise ValidationError(
+            "По этому столбцу сортировать нельзя",
+            field="sort",
+            code="invalid_sort",
+            allowed=sorted(allowed),
+        )
+    if direction not in ("asc", "desc"):
+        raise ValidationError("Направление сортировки — asc или desc", field="dir", code="invalid_sort")
+    kind, getter, *rest = allowed[key]
+    rank = list(rest[0]) if rest else []
+
+    def empty(value: Any) -> bool:
+        return value is None or value == ""
+
+    def comparable(value: Any):
+        if kind == "number":
+            return float(value)
+        if kind == "natural":
+            return natural_key(value)
+        if kind == "rank":
+            return rank.index(value) if value in rank else len(rank)
+        if kind == "date":
+            return str(value)
+        return text_key(value)
+
+    filled = [row for row in rows if not empty(getter(row))]
+    blank = [row for row in rows if empty(getter(row))]
+    if then:
+        filled.sort(key=then)
+        blank.sort(key=then)
+    filled.sort(key=lambda row: comparable(getter(row)), reverse=direction == "desc")
+    return filled + blank
+
+
+def natural(field: str):
+    """
+    Номер «по-человечески»: числовая голова, затем хвост как текст — 2 < 10 <
+    101, «3А» после «3». Без этого «10» стояло бы перед «2».
+    """
+    from django.db.models import Func, IntegerField, Value
+    from django.db.models.functions import Cast, Lower, NullIf
+
+    head = Cast(
+        NullIf(Func(F(field), Value(r"^(\d*).*$"), Value(r"\1"), function="regexp_replace"), Value("")),
+        IntegerField(),
+    )
+    tail = Lower(Func(F(field), Value(r"^\d*"), Value(""), function="regexp_replace"))
+    return [head, tail]
+
+
+def russian(field):
+    """Текст по-русски без регистра, «ё» = «е». Поле — имя или выражение."""
+    from django.db.models import Func, TextField, Value
+    from django.db.models.functions import Lower
+
+    source = F(field) if isinstance(field, str) else field
+    return Lower(Func(source, Value("ё"), Value("е"), function="replace", output_field=TextField()))
 
 
 def envelope(rows: list[Any], total: int, limit: int, **extra: Any) -> dict[str, Any]:

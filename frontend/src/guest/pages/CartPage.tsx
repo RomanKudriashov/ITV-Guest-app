@@ -153,6 +153,15 @@ export function CartPage({ variant = 'page' }: { variant?: 'page' | 'column' } =
       tipCustom: '',
     }),
     locations.map((location) => location.id).join(','),
+    // Список мест пришёл или сменился — всё набранное остаётся; место — если
+    // оно ещё в списке, иначе место по умолчанию (партия 62-F).
+    (previous, fresh) => ({
+      ...previous,
+      locationId:
+        previous.locationId && locations.some((location) => location.id === previous.locationId)
+          ? previous.locationId
+          : fresh.locationId,
+    }),
   );
 
   const selectedLocation = locations.find((location) => location.id === draft.locationId) ?? null;

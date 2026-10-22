@@ -17,7 +17,7 @@ import {
   serializeFieldValue,
   validateFieldValue,
 } from '@/offerings/requestFields';
-import { useDraftState } from '@/state/useDraftState';
+import { sameItem, useDraftState } from '@/state/useDraftState';
 import { ItemHeadline } from './ItemHeadline';
 import { RequestFieldControl } from './RequestFieldControl';
 import { ctaGradientSx } from '@/kit';
@@ -88,6 +88,26 @@ export function RequestOrderForm({ item, titleRef, onClose }: RequestOrderFormPr
     `${item.id}:${fields.map((field) => field.code).join(',')}:${locations
       .map((location) => location.id)
       .join(',')}`,
+    // Поля и места подачи приходят ПОЗЖЕ самой карточки — тот же запрос, не
+    // новый. Набранное гостем переносится: комментарий, уточнение, тронутые
+    // поля; место — если оно ещё в списке (партия 62-F).
+    (previous, fresh, from, to) =>
+      sameItem(from, to)
+        ? {
+            ...fresh,
+            comment: previous.comment,
+            refinement: previous.refinement,
+            showErrors: previous.showErrors,
+            touched: previous.touched,
+            values: Object.fromEntries(
+              Object.entries(fresh.values).map(([code, value]) => [code, previous.touched[code] ? (previous.values[code] ?? value) : value]),
+            ),
+            locationId:
+              previous.locationId && locations.some((location) => location.id === previous.locationId)
+                ? previous.locationId
+                : fresh.locationId,
+          }
+        : fresh,
   );
 
   const selectedLocation = locations.find((location) => location.id === draft.locationId) ?? null;

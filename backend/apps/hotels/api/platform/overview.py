@@ -35,6 +35,8 @@ def platform_audit(
     group_id: str | None = None,
     period: str | None = None,
     view: str | None = None,
+    sort: str | None = None,
+    dir: str | None = None,
 ):
     """
     Журнал листается КУРСОРОМ и фильтруется по дате, отелю и действию.
@@ -52,7 +54,7 @@ def platform_audit(
     return audit_feed(
         limit=limit, cursor=cursor, hotel_id=hotel_id, action=action,
         since=since, until=until, search=search, user=request.user,
-        who=who, group_id=group_id, period=period, view=view,
+        who=who, group_id=group_id, period=period, view=view, sort=sort, direction=dir,
     )
 
 

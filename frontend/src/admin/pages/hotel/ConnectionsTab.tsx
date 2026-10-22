@@ -18,6 +18,7 @@ import { ink, primaryButtonSx, quietButtonSx, secondaryButtonSx, shape, surface,
 import { ChoiceField, Field, FormCell, FormGrid } from '../../form';
 import { createNode, getHotelNodes, reissueHotelNode, revokeHotelNode, type NodeRow } from '../../adminClient';
 import { Empty, FilterBar, Help, Panel, Pill, type Facet } from '../hotels/hotelsUi';
+import { SortBar, useSort } from '../../sort';
 
 /**
  * ПОДКЛЮЧЕНИЯ ОТЕЛЯ (партия 62-B): сюда переехал раздел «On-premise» — но
@@ -33,7 +34,9 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
   const actionFailed = useActionFailed();
   // Состояние, назначение и текст — в адресе, считает сервер (партия 62-D).
   const [params] = useSearchParams();
-  const filters = Object.fromEntries(['status', 'purpose', 'search'].map((key) => [key, params.get(key) ?? '']));
+  // Порядок — с сервера (партия 62-F): «не на связи» выше.
+  const sort = useSort('', ['name', 'status', 'purpose', 'seen', 'version', 'key']);
+  const filters = { ...Object.fromEntries(['status', 'purpose', 'search'].map((key) => [key, params.get(key) ?? ''])), ...sort.query };
   const nodes = useQuery({ queryKey: ['admin', 'hotel-nodes', hotelId, filters], queryFn: () => getHotelNodes(hotelId, filters) });
   const counts = nodes.data?.facets;
   const nodeFacets: Facet[] = [
@@ -127,7 +130,19 @@ export function ConnectionsTab({ hotelId }: { hotelId: string }) {
 
         {issued ? <IssuedKey name={issued.name} value={issued.key} onClose={() => setIssued(null)} /> : null}
 
-        {nodes.data && nodes.data.total > 0 ? <FilterBar facets={nodeFacets} placeholder={t('admin.card.connections.filter.search')} /> : null}
+        {nodes.data && nodes.data.total > 0 ? (
+          <FilterBar
+            facets={nodeFacets}
+            placeholder={t('admin.card.connections.filter.search')}
+            aside={
+              <SortBar
+                state={sort}
+                testId="admin-nodes-sort"
+                columns={(['name', 'status', 'purpose', 'seen', 'version', 'key'] as const).map((key) => ({ key, label: t(`admin.card.connections.sort.${key}`) }))}
+              />
+            }
+          />
+        ) : null}
         <QueryState query={nodes} what={t('state.what.nodes')}>
           {(page) =>
             page.items.length ? (

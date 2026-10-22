@@ -3,6 +3,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTranslation } from 'react-i18next';
 
+import { SortBar, sortRows, useSort } from '../sort';
+
 import { accent, ink, panelSx, state, surface, typo } from '../adminTokens';
 import { QueryState } from '@/components/QueryState';
 import { getOverview, type OverviewHealth } from '../adminClient';
@@ -19,6 +21,8 @@ import { formatMoney } from '@/utils/money';
  */
 export function OverviewPage() {
   const { t, i18n } = useTranslation();
+  // «Здоровье системы» — по важности по умолчанию (партия 62-F).
+  const healthSort = useSort('', ['level', 'text']);
   // Раз в минуту, и только на видимой вкладке: подзаголовок обещает «что идёт
   // сейчас», а без опроса цифры застывали на моменте открытия (партия 55).
   const overview = useQuery({
@@ -131,7 +135,25 @@ export function OverviewPage() {
           <Typography sx={{ ...typo.panelTitle, color: ink.hi, mb: 1 }}>
             {t('admin.overview.health')}
           </Typography>
-          {data.health.map((signal, index) => (
+          <Box sx={{ mb: 1 }}>
+            <SortBar
+              state={healthSort}
+              testId="admin-health-sort"
+              columns={[
+                { key: 'level', label: t('admin.overview.sort.level') },
+                { key: 'text', label: t('admin.overview.sort.text') },
+              ]}
+            />
+          </Box>
+          {sortRows(
+            data.health,
+            [
+              { key: 'level', label: '', kind: 'rank', get: (s) => s.level, rank: ['bad', 'warn', 'ok'] },
+              { key: 'text', label: '', kind: 'text', get: (s) => t(`admin.health.${s.code}`, { defaultValue: t('admin.health.otherSignal') }) },
+            ],
+            healthSort,
+            'level',
+          ).map((signal, index) => (
             <HealthRow key={`${signal.code}-${index}`} signal={signal} />
           ))}
         </Box>

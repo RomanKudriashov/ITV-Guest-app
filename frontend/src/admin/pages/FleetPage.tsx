@@ -13,6 +13,8 @@ import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import { useTranslation } from 'react-i18next';
 
+import { PlainHeader, SortBar, SortHeader, useSort, type SortState } from '../sort';
+
 import { glassSx } from '@/kit/glass';
 import { QueryState } from '@/components/QueryState';
 import { useActionFailed } from '@/hooks/useActionFailed';
@@ -71,7 +73,8 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreateHotelResult | null>(null);
 
-  const query: Record<string, string> = { layout };
+  const sort = useSort('', FLEET_SORTS);
+  const query: Record<string, string> = { layout, ...sort.query };
   if (search) query.search = search;
   for (const key of FACETS) if (values[key].length) query[key] = values[key].join(',');
   const origin = params.get('origin');
@@ -160,6 +163,7 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
   const filtering = Boolean(search) || FACETS.some((k) => values[k].length);
   const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   const rowProps = {
+    sort,
     selected,
     onToggle: toggle,
     onOpen: onOpenHotel,
@@ -235,7 +239,25 @@ export function FleetPage({ onOpenHotel }: { onOpenHotel: (id: string) => void }
         </Box>
       ) : null}
 
-      <QueryState query={view} what={t('state.what.fleet')}>
+      {/* Телефон: таблиц нет — «Сортировать по» над карточками, один на
+          экран: внутри каждой группы порядок тот же (партия 62-F). */}
+      {narrow ? (
+        <Box sx={{ mb: 1.5 }}>
+          <SortBar
+            state={sort}
+            testId="admin-fleet-sort-bar"
+            columns={[
+              { key: 'name', label: t('admin.hotels.col.hotel') },
+              ...(layout === 'list' ? [{ key: 'group', label: t('admin.hotels.col.group') }] : []),
+              { key: 'rooms', label: t('admin.hotels.col.rooms') },
+              { key: 'modules', label: t('admin.hotels.col.modules') },
+              { key: 'link', label: t('admin.hotels.col.link') },
+              { key: 'state', label: t('admin.hotels.col.state') },
+            ]}
+          />
+        </Box>
+      ) : null}
+            <QueryState query={view} what={t('state.what.fleet')}>
         {(data) =>
           !data.total && filtering ? (
             <Box sx={panelSx}>
@@ -475,15 +497,11 @@ function LinkCell({ kind }: { kind: LinkKind }) {
   );
 }
 
-function Th({ children, align }: { children?: ReactNode; align?: 'right' }) {
-  return (
-    <Box component="th" sx={{ ...typo.label, color: ink.mid, textAlign: align ?? 'left', px: 1.25, py: 1, borderBottom: `1px solid ${surface.line}`, whiteSpace: 'nowrap' }}>
-      {children}
-    </Box>
-  );
-}
+/** Столбцы «Отелей», которые сортирует сервер (партия 62-F). */
+const FLEET_SORTS = ['name', 'group', 'rooms', 'modules', 'link', 'state'] as const;
 
 function HotelRows({
+  sort,
   rows,
   selected,
   onToggle,
@@ -501,8 +519,10 @@ function HotelRows({
   narrow: boolean;
   draggable: boolean;
   showGroup?: boolean;
+  sort: SortState;
 }) {
   const { t } = useTranslation();
+  const col = (key: string, label: string) => ({ key, label });
   const drag = (id: string) =>
     draggable ? { draggable: true, onDragStart: (e: DragEvent) => e.dataTransfer.setData('text/hotel', id) } : {};
 
@@ -553,19 +573,17 @@ function HotelRows({
         </colgroup>
         <Box component="thead">
           <Box component="tr">
-            <Box component="th" sx={{ borderBottom: `1px solid ${surface.line}` }} />
-            <Th>{t('admin.hotels.col.hotel')}</Th>
-            {showGroup ? <Th>{t('admin.hotels.col.group')}</Th> : null}
-            <Th align="right">{t('admin.hotels.col.rooms')}</Th>
-            <Th>{t('admin.hotels.col.modules')}</Th>
-            <Th>
-              {t('admin.hotels.col.link')}
+            <PlainHeader />
+            <SortHeader column={col('name', t('admin.hotels.col.hotel'))} state={sort} testId="admin-fleet-sort-name" />
+            {showGroup ? <SortHeader column={col('group', t('admin.hotels.col.group'))} state={sort} testId="admin-fleet-sort-group" /> : null}
+            <SortHeader column={col('rooms', t('admin.hotels.col.rooms'))} state={sort} align="right" testId="admin-fleet-sort-rooms" />
+            <SortHeader column={col('modules', t('admin.hotels.col.modules'))} state={sort} testId="admin-fleet-sort-modules" />
+            <SortHeader column={col('link', t('admin.hotels.col.link'))} state={sort} testId="admin-fleet-sort-link">
               <Help>{t('admin.hotels.help.link')}</Help>
-            </Th>
-            <Th>
-              {t('admin.hotels.col.state')}
+            </SortHeader>
+            <SortHeader column={col('state', t('admin.hotels.col.state'))} state={sort} testId="admin-fleet-sort-state">
               <Help>{t('admin.hotels.help.state')}</Help>
-            </Th>
+            </SortHeader>
           </Box>
         </Box>
         <Box component="tbody">

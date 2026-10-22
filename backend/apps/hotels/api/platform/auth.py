@@ -131,11 +131,14 @@ def platform_logout_all(request: HttpRequest):
 
 @router.get("/auth/sessions", summary="Мои активные сессии")
 @requires(SELF)
-def platform_sessions(request: HttpRequest, limit: int | None = None, offset: int = 0):
+def platform_sessions(
+    request: HttpRequest, limit: int | None = None, offset: int = 0, sort: str = "", dir: str = ""
+):
     from apps.accounts.services import sessions as session_svc
 
     return session_svc.list_for(
-        request.user.pk, current_id=_sid(request), scope="platform", limit=limit, offset=offset
+        request.user.pk, current_id=_sid(request), scope="platform", limit=limit, offset=offset,
+        sort=sort, direction=dir,
     )
 
 

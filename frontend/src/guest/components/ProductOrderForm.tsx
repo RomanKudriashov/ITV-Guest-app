@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 
 import { ChipOption, ctaGradientSx } from '@/kit';
-import { useDraftState } from '@/state/useDraftState';
+import { sameItem, useDraftState } from '@/state/useDraftState';
 import { AddonGroup, isAddonGroup } from './ItemAddons';
 import { ItemHeadline } from './ItemHeadline';
 import { QuantityStepper } from './QuantityStepper';
@@ -76,6 +76,20 @@ export function ProductOrderForm({ item, detailLoaded, titleRef, onClose }: Prod
       showErrors: false,
     }),
     `${item.id}:${detailLoaded ? 'loaded' : 'pending'}`,
+    // Полная карточка блюда пришла позже — количество и комментарий гостя
+    // остаются; выбор модификаторов — по группам, что есть в карточке (62-F).
+    (previous, fresh, from, to) =>
+      sameItem(from, to)
+        ? {
+            ...fresh,
+            quantity: previous.quantity,
+            comment: previous.comment,
+            showErrors: previous.showErrors,
+            selections: Object.fromEntries(
+              Object.entries(fresh.selections).map(([group, chosen]) => [group, previous.selections[group]?.length ? previous.selections[group] : chosen]),
+            ),
+          }
+        : fresh,
   );
 
   const selectedOptions = useMemo(() => {

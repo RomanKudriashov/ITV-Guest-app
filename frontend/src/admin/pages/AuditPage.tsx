@@ -14,6 +14,7 @@ import { getAudit, getAuditActions, getAuditPeople, getGroups, getHotelsView } f
 import { SupportSessionsPage } from './SupportSessionsPage';
 import { FilterBar, ViewSwitch, type Facet } from './hotels/hotelsUi';
 import { JournalRow, PERIODS } from './journalUi';
+import { SortBar, useSort } from '../sort';
 
 /**
  * Аудит платформы — один список, а не разрез по отелям.
@@ -83,7 +84,9 @@ function AuditLog() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const values = Object.fromEntries(FILTER_KEYS.map((key) => [key, params.get(key) ?? '']));
-  const filterKey = JSON.stringify(values);
+  // Порядок — с сервера (партия 62-F); смена столбца, как и фильтра, — с начала ленты.
+  const sort = useSort('', ['at', 'who', 'action', 'hotel']);
+  const filterKey = JSON.stringify({ ...values, ...sort.query });
   // Стек курсоров: вперёд кладём, назад снимаем; смена фильтра — с начала.
   const [cursors, setCursors] = useState<{ key: string; stack: string[] }>({ key: filterKey, stack: [] });
   const stack = cursors.key === filterKey ? cursors.stack : [];
@@ -96,6 +99,7 @@ function AuditLog() {
     period: values.period || null,
     search: values.search || null,
     cursor: stack[stack.length - 1] ?? null,
+    ...sort.query,
   };
   const audit = useQuery({ queryKey: ['admin', 'audit', query], queryFn: () => getAudit({ limit: 100, ...query }) });
   const actions = useQuery({ queryKey: ['admin', 'audit', 'actions'], queryFn: getAuditActions });
@@ -124,11 +128,23 @@ function AuditLog() {
         facets={facets}
         placeholder={t('admin.audit.search')}
         aside={
-          audit.data ? (
-            <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-audit-total">
-              {t('admin.audit.counter', { shown: audit.data.items.length, total: audit.data.total })}
-            </Typography>
-          ) : null
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+            <SortBar
+              state={sort}
+              testId="admin-audit-sort"
+              columns={[
+                { key: 'at', label: t('admin.journal.sort.at') },
+                { key: 'who', label: t('admin.journal.sort.who') },
+                { key: 'action', label: t('admin.journal.sort.action') },
+                { key: 'hotel', label: t('admin.journal.sort.hotel') },
+              ]}
+            />
+            {audit.data ? (
+              <Typography sx={{ color: ink.low, ...typo.caption }} data-testid="admin-audit-total">
+                {t('admin.audit.counter', { shown: audit.data.items.length, total: audit.data.total })}
+              </Typography>
+            ) : null}
+          </Box>
         }
       />
       {/*

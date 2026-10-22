@@ -459,12 +459,14 @@ def list_impersonations(
     state: str = "active",
     limit: int | None = None,
     offset: int = 0,
+    sort: str = "",
+    dir: str = "",
 ):
     """Кто сейчас внутри отелей: без списка отзывать нечего выбирать."""
     from apps.hotels.services.platform.console import active_impersonations
 
     return active_impersonations(
-        search=search, state=state, limit=limit, offset=offset, user=request.user
+        search=search, state=state, limit=limit, offset=offset, sort=sort, direction=dir, user=request.user
     )
 
 
